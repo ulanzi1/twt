@@ -3,33 +3,41 @@ baseline_commit: 2581c514
 ---
 
 <!--
-⭐ CUT 2026-10-14 by `bmad-create-story 6.36` (SW1). This file KEEPS the row key `6-36-peer-mesh-school-wise-selection` — every ruling
-cites it (`-306` Consequence 1, `-308`, `-311` PM1, `-325` S1 A, `-326` BD1 A) and 6.27c waits for it.
+⭐ CUT 2026-10-14 by `bmad-create-story 6.36` (SW1). This file KEEPS the row key `6-36-peer-mesh-school-wise-selection` — every decision
+that cites it (`-306` Consequence 1, `-308`, `-311` PM1, `-325` S1 A, `-326` BD1 A, `-330`, `-338`) and 6.27c waits for it.
 ⭐ THE RECORD is 6.36a's file (`6-36a-member-workplace-and-posting-history.md` — SF1–SF17, SW1–SW30, SC1–SC4, I1–I12, the shared Task 0).
-This file BUILDS **SW18–SW27** and closes three deferred items (SW30). Where a summary here and 6.36a's text disagree, 6.36a's is the record.
-⚠ Before Task 1: `git diff --name-only 2581c514..HEAD -- packages apps scripts infra` — re-read any cited file that moved (6.36a–c will
-have moved `member_postings`, the life-events module and the mobile wizard).
+This file BUILDS **SW18–SW27**, closes two deferred items and narrows a third (SW30). Where a summary here and 6.36a's text disagree,
+6.36a's is the record — EXCEPT where this file cites a later decision (`-331`, `-333`) or a shipped fact (§Shipped substrate).
+⭐ RE-VALIDATED 2026-10-15 (v2.0) against `main` `51382898` (6.36a AND 6.36b shipped): the pin `2581c514` is an ancestor of HEAD;
+`git diff --name-only 2581c514..51382898` moved ⛔ none of the peer-mesh / claim files this story cites — every code pointer was
+re-read at `51382898` (the pointers into 6.36a's / 6.36b's tables are NEW at that SHA). ⚠ Before Task 1: re-run
+`git diff --name-only 51382898..HEAD -- packages apps scripts infra` and re-read any cited file that moved.
 
-STATUS: `backlog` — flips to `ready-for-dev` when 6.36a AND 6.36b are `done` (⭐ `2026-10-14-332`: wave 2, in parallel with 6.36c — it does ⛔ not need
-6.36c). Migration `0163` (`when` `1794195600007`); the shared test databases; worktree `.claude/worktrees/6-36`; merges to `main` THIRD
-(before 6.36c). 6.27c waits for this row AND row 6-36c.
-⭐ 2026-10-15 (`2026-10-15-338`, `08932f43` — the lines above are kept as written): built FIRST and ALONE — ⛔ not in parallel with 6.36c,
-which starts only when this row is `done`. The start condition is met (6.36a and 6.36b are on `main`, `51382898`); this file is
-re-validated against `main` first and flips to `ready-for-dev` only then. Migration, test databases and worktree as above.
-GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
+STATUS: `ready-for-dev` (v2.5, 2026-10-15) — `-338`: built FIRST and ALONE, ⛔ not in parallel with 6.36c (which starts only when this
+row is `done`). Migration `0163` (journal idx 163, `when` `1794195600007` — the journal ends at 0162 / `…006`); the shared test
+databases; worktree `.claude/worktrees/6-36`; merges to `main` before 6.36c. 6.27c waits for this row AND row 6-36c.
+⏳ ONE Panel question OPEN, ⛔ non-blocking: RF1 (which filing day counts when a death is filed again) —
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-15-6-36-refiled-claim.md`, written, ⛔ NOT yet sent. AC4 builds the
+rule as written (each claim's own filing day) behind ONE function.
+GLYPH REGISTER: `⛔` NEGATES the phrase it prefixes · `⭐` = action / emphasis · `⚠` = hazard · doubling is volume only.
+ADDRESSING RULE: ⛔ no `file:NNN` into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` — cite decision id + clause,
+item heading, row key. LETTERS: as 6.36a.
 -->
 
 # Story 6.36: The Five Are Chosen From the Member's Own Workplace — Otherwise the People They Named, Otherwise Nobody, and Then the Claim Goes On; Staff See Where Each Person Came From `[SURFACE]`
 
-Status: backlog
+Status: ready-for-dev
 
-> ⭐⭐ **WHAT THIS PART IS.** The Panel ruled who is asked about a death (`-310` CF4 A): the members at the member's workplace (and the
-> previous one after a transfer less than 90 days before the death); otherwise up to three people the member named who agreed; otherwise
-> nobody — the ground inspection carries the claim. ⛔ Never the district; the family ⛔ never chooses. This part replaces 6.6's district
-> metric with that rule, filters out anyone the Trust must ⛔ not text, records each claim's ranked group so 6.27c can replace a skipped
-> person from the SAME group, stores where each person came from and SHOWS it to staff (*"Chosen from the workplace"* / *"Named by the
-> member"* — `-308`), and — because "nobody" now happens often — lets a claim with nobody to ask go on to the ground inspection instead
-> of waiting for ever (SF4).
+> ⭐⭐ **WHAT THIS PART IS.** The Panel ruled who is asked about a death (`-310` CF4 A, Trustee-ratified): the members at the member's
+> workplace (and the previous one after a recent transfer); otherwise up to three people the member named who agreed; otherwise
+> nobody — the ground inspection carries the claim. ⛔ Never the district. `-331` SC1 A (Trustee-ratified) narrowed CF4 A twice: the
+> 90 days are counted from the FILING day (the date of death is ⛔ not known when the five are chosen), and a change on the member's
+> account before the filing day still counts — limited by asking long-standing colleagues first and telling staff of recent changes.
+> This part replaces 6.6's district metric with that rule, filters out anyone the Trust must ⛔ not text, records each claim's ranked
+> group so 6.27c can replace a skipped person from the SAME group, stores where each person came from and SHOWS it to staff
+> (*"Chosen from the workplace"* / *"Named by the member"* — `-308`, `-326` BD1 A), and — because "nobody" now happens often — lets a
+> claim with nobody to ask go on to the ground inspection instead of waiting for ever (SF4). CF4 A (3)'s letter from the head of the
+> school or office is row 6-32's, ⛔ not this part's (see §Recorded, ⛔ built here).
 
 ## Story
 
@@ -44,234 +52,512 @@ reaches the inspection that carries it.**
 
 ⭐ **This part CHANGES a predicate that gates a family's access to a benefit** — when a claim may leave `documents_pending` (SW25). In the
 member's terms: *"a family's claim is ⛔ no longer stuck because nobody worked with the member and nobody was named — it goes on to the
-ground inspection, which then carries it."* Today such a claim can ⛔ never be inspected or approved (SF4). Checked against the Niyamavali:
-§6.2 (*"The Trust verifies the qualifying event…"*) names ⛔ no neighbours and ⛔ no clause governs who is asked ⇒ ⛔ no conflict; the
-change REMOVES a block the rulebook never contained. The other predicates here (SW20–SW23) decide who is ASKED, ⛔ never what a family is
-owed: the peer mesh is a signal, ⛔ never a gate (`-263` FQ10).
+ground inspection, which then carries it."* Today such a claim can ⛔ never be inspected or approved (SF4). A consequence the family
+will notice: the claim now reaches the stage at which the certificate reminders begin (`-259` detail 3, Trustee-ratified: *"only once
+the claim is with the District Admin for checking"*), exactly as a claim with people to ask does.
+Checked against the Niyamavali (a rulebook, ⛔ not ratified and ⛔ not binding): §6.2 (*"The Trust verifies the qualifying event, the
+claimant's entitlement, and document authenticity…"*) names ⛔ no neighbours, colleagues or peers, and ⛔ no clause governs who is asked
+⇒ ⛔ no conflict; the change REMOVES a block the rulebook never contained.
+The other predicates here (SW20–SW23) decide who is ASKED, ⛔ never what a family is owed: the peer mesh is a signal, ⛔ never a gate
+(`-263` FQ10, Trustee-ratified: *"THE CHECK WITH NEIGHBOURS IS A SIGNAL, ⛔ NOT A GATE"*). SW23 deliberately asks only `active`
+members, although 6.36b lets a member in renewal grace be found and named (`-333` call 2 (d)) — being asked is ⛔ a benefit to the
+person asked.
 
 ## The rulings and decisions this part builds (6.36a is the record)
 
-- `-310` CF4 A (as put — quoted in 6.36a) · `-310` CF2 (the inspector: *"⛔ never who"*) · `-308` (each answer shows its source) ·
-  `-311` PM1 (i)–(iii) · `-325` S1 A · `-326` BD1 A (*"Row 6-36 owns the line, its wire field, and a test on BOTH surfaces"*).
-- **SW18** the new metric and grouped engine · **SW19** the anchor (the filing date) · **SW20** as recorded before the filing day · **SW21** who is AT a
-  workplace · **SW22** the ranking, recorded · **SW23** the ONE eligibility predicate · **SW24** the source, stored and shown · **SW25**
-  nobody to ask ⇒ the claim goes on · **SW26** old selections · **SW27** what 6.27c inherits · **SW30** the three deferred items closed.
+- **Trustee-ratified:** `-310` CF4 A / CF2 (the inspector: *"⛔ never who"*) / CF3 (a) (*"Every question the Panel ruled is in every
+  version from now on"*) · `-331` SC1 A (the filing-day cut, settled-first, the staff line) / SC4 A (*"school or office"*, in the next
+  version) · `-263` FQ10 · `-259` detail 3.
+- **Author-commits:** `-330` SW18–SW27 / SW30 (superseding IN PART 6.6's D3 and its review item *"Zero-candidate selection has no
+  defined disposition"*, `-306` §2 item 4, `-308` call 1, `-325` S1 A, `-276` CR3) · `-308` (each answer shows its source) · `-311` PM1
+  (i)–(iii) · `-325` S1 A · `-326` BD1 A (*"Row 6-36 owns the line, its wire field, and a test on BOTH surfaces"*) · `-329` (v3's shape)
+  · `-332` / `-338` (the build order) · `-333` call 1 (the dead member's account can ⛔ change their named people once any claim names them; a named person's own
+    withdrawal still counts — call 1 (b)) and call 2 (d)
+  (SW23 unchanged — `active` only) · `-327` BD4 / 6.27b PM25 (c) (an inspector's view of the console).
+- ⏳ **OPEN, ⛔ non-blocking:** RF1 — which filing day counts when one death has more than one claim (the routing note named in the
+  header; BigDev: *"Route to the Panel"*).
+- **SW18** the new metric and grouped engine · **SW19** the anchor (the filing date) · **SW20** as recorded before the filing day ·
+  **SW21** who is AT a workplace · **SW22** the ranking, recorded · **SW23** the ONE eligibility predicate · **SW24** the source, stored
+  and shown · **SW25** nobody to ask ⇒ the claim goes on · **SW26** old selections · **SW27** what 6.27c inherits · **SW30** two
+  deferred items closed, one narrowed, one left open.
 
 ## Acceptance Criteria
 
-1. **AC0 — ⛔ no code before 6.36a AND 6.36b are `done`** (`2026-10-14-332` — ⛔ not 6.36c), migration `0163` / `when` `1794195600007`, and SW18–SW27 as answered at 6.36a's Task 0.1 are applied here.
-2. **AC1 — the migration** (FIXED by `2026-10-14-332`: `0163`, journal idx 163, `when` `1794195600007`): `claim_peer_mesh_selections` gains `source text null CHECK IN
-   ('workplace','named_by_member')`, `previous_workplace_counted boolean null`, `recent_change_before_filing boolean null` (SW20's staff
-   line), `deceased_workplace_id uuid null`, `deceased_previous_workplace_id uuid null` (row 6-32 reads them — SW25), `ranked_member_ids
-   uuid[] null CHECK (cardinality(ranked_member_ids) <= 500)`; CHECK `metric_id <> 'workplace_named_v1' OR (ranked_member_ids IS NOT NULL
-   AND previous_workplace_counted IS NOT NULL AND recent_change_before_filing IS NOT NULL)` and CHECK `metric_id <> 'workplace_named_v1' OR
-   ((source IS NULL) = (cardinality(selected_member_ids) = 0))` — ⚠ scoped to the NEW id so the seven shipped fixtures that insert
-   selections with other ids (e.g. `'m'` — `apps/api/tests/integration/_peer-reply-fixture.ts:63`, `packages/domain/tests/integration/claim/
-   _peer-reply-fixtures.ts:48`, `rls/claim-peer-mesh-replies-policy-regression.spec.ts:58`, and four specs) stay valid; a trigger checks the
-   selected ids are the FIRST entries of `ranked_member_ids` (arrays have ⛔ no prefix operator in a CHECK); `claim_peer_mesh_pings` gains
-   `source text null CHECK IN (…)` with a BEFORE INSERT trigger requiring it to EQUAL its selection's `source` (`IS NOT DISTINCT FROM` —
-   existing fixtures pass: null = null). ⚠ GRANTS: the ping table's UPDATE is already narrowed to the delivery columns (`0156:64-65`) — keep
-   it; the SELECTION table still has a table-wide `GRANT SELECT, INSERT, UPDATE` (`0054_claim-peer-mesh.sql:77`) ⇒ REVOKE UPDATE and GRANT
-   UPDATE (`outcome`, `response_window_expires_at`, `skip_reason`) only — the only columns any writer updates (`peer-mesh-persist.ts:292`,
-   `:329`, `:361`; the one fixture that updates `selected_member_ids`, `peer-mesh-reply.spec.ts:419`, runs as superuser) ⇒ the new columns
-   are immutable by grant (I9); applied on :5432 AND :5433; the policy-regression and trigger specs (an UPDATE of `source` /
-   `ranked_member_ids` refused 42501).
+1. **AC0 — the start condition is MET** (`-332`, `-338`: 6.36a AND 6.36b are `done` and on `main` `51382898`; ⛔ not 6.36c);
+   migration `0163` / `when` `1794195600007`; SW18–SW27 as `-330` recorded them, with `-331` SC1 A and `-333` call 2 (d) applied.
+2. **AC1 — the migration** (`0163`, journal idx 163, `when` `1794195600007`):
+   - `claim_peer_mesh_selections` gains `source text null CHECK IN ('workplace','named_by_member')`, `previous_workplace_counted
+     boolean null`, `recent_change_before_filing boolean null` (SW20's staff line), `deceased_workplace_id uuid null`,
+     `deceased_previous_workplace_id uuid null` (row 6-32 reads them — SW25), `ranked_member_ids uuid[] null CHECK
+     (cardinality(ranked_member_ids) <= 500)`.
+   - CHECK `metric_id <> 'workplace_named_v1' OR (ranked_member_ids IS NOT NULL AND previous_workplace_counted IS NOT NULL AND
+     recent_change_before_filing IS NOT NULL)` and CHECK `metric_id <> 'workplace_named_v1' OR ((source IS NULL) =
+     (cardinality(selected_member_ids) = 0))` (`selected_member_ids` is `uuid[] NOT NULL` and the zero branch writes `'{}'`, so the
+     second CHECK is ⛔ vacuous). ⚠ Both are scoped to the NEW id so the TEN shipped inserts with other ids stay valid — seven with
+     `'m'` (`apps/api/tests/integration/_peer-reply-fixture.ts:63`, `packages/domain/tests/integration/claim/_peer-reply-fixtures.ts:48`,
+     `packages/domain/tests/integration/rls/claim-peer-mesh-replies-policy-regression.spec.ts:58`,
+     `apps/api/tests/integration/claims/peer-request-helpline.spec.ts:115`, `apps/api/tests/integration/claims/peer-request-member.spec.ts:69`,
+     `packages/domain/tests/integration/claim/peer-mesh-reply.spec.ts:80`, `packages/domain/tests/integration/claim/peer-mesh-reply-rtbf.spec.ts:38`)
+     and three with `'district_cohort_v1'` (`apps/api/tests/integration/claims/verifier-console.spec.ts:172`,
+     `apps/api/tests/integration/claims/verifier-console-shape.spec.ts:180`, `apps/jobs/tests/claim-peer-mesh.test.ts:736`).
+   - A trigger (`BEFORE INSERT OR UPDATE OF selected_member_ids, ranked_member_ids, metric_id` — the grant blocks `twt_app`, the owner
+     and superuser tests can still UPDATE) checks the selected ids are the FIRST entries of `ranked_member_ids` (arrays have ⛔ no
+     prefix operator in a CHECK) — ⚠ applied ONLY when `metric_id = 'workplace_named_v1'`, like the CHECKs (the legacy inserts carry a
+     non-empty `selected_member_ids` with `ranked_member_ids` NULL). An empty selection is a valid prefix (`'{}'`).
+   - `claim_peer_mesh_pings` gains `source text null CHECK IN (…)` with a BEFORE INSERT trigger (SECURITY INVOKER): it looks the
+     selection up by (`pariwar_id`, `selection_id`); NOT FOUND (absent or RLS-invisible) ⇒ `RETURN NEW` and the composite FK refuses with
+     `23503` (`claim-peer-mesh-replies-policy-regression.spec.ts:147` holds — it inserts with ⛔ no `source`); FOUND ⇒ raise unless
+     `NEW.source IS NOT DISTINCT FROM` the selection's `source` (the shipped ping inserters write NULL against NULL-source selections ⇒
+     they pass).
+   - `member_postings` gains `CREATE INDEX member_postings_pariwar_workplace_idx ON member_postings (pariwar_id, workplace_id) WHERE
+     workplace_id IS NOT NULL` (+ the matching `index()` in `packages/domain/src/schema/member_postings.ts`) — today its ONLY index is
+     `member_postings_pariwar_member_idx` (`0031_member-postings.sql:34`) and 0161 added none, so "who is at workplace W" would scan the
+     Pariwar's postings.
+   - ⚠ GRANTS: the ping table's UPDATE is already narrowed to the delivery columns (`0156:64-65`) — keep it; the SELECTION table still
+     has a table-wide `GRANT SELECT, INSERT, UPDATE` (`0054_claim-peer-mesh.sql:77`) ⇒ REVOKE UPDATE and GRANT UPDATE (`outcome`,
+     `response_window_expires_at`, `skip_reason`) only — the only columns any writer updates (`resolvePeerMeshOutcome`
+     `peer-mesh-persist.ts:292`, `extendPeerMeshWindow` `:328-329`, `skipPeerMesh` `:360-361`; ⛔ no erasure path touches the table —
+     `packages/domain/src/member/anonymize.ts` checked at `51382898`; the two test UPDATEs, `peer-mesh-reply.spec.ts:333` and `:419`, run
+     as superuser) ⇒ the new columns are immutable by grant (I9).
+   - Applied on :5432 AND :5433; the policy-regression and trigger specs (an UPDATE of `source` / `ranked_member_ids` refused 42501; a
+     ping with a mismatched `source` refused; a non-prefix selection refused; a legacy-id insert with NULL new columns accepted).
 3. **AC2 — the grouped engine is pure and replayable** (I7): `selectPeerMeshGrouped({ claimCaseId, candidates, metric })` — candidates
-   each `{ memberId, group: 'workplace_previous' | 'workplace_current' | 'named', settled: boolean }`; returns `{ source, selectedMemberIds,
-   rankedMemberIds, metricId, metricVersion }`; the `workplace` group = `workplace_previous` first (when present), then
-   `workplace_current`, each split SETTLED first (a candidate flag `settled` = their current run at that workplace began, as recorded, 90 days or
-   more before the cut — 6.36a SW22) then the rest, each ordered by
-   ascending `sha256(claimCaseId + ':' + memberId)` hex (`settled` is false for every `named` candidate); `named` by the same hash; the first non-empty
-   group wins (cap 5 / cap 3); ⛔ never two groups mixed; `rankedMemberIds` is the winning group's ranking TRUNCATED to its first 500 (the
-   column's CHECK — an office of 600 members must ⛔ never fail the job and re-create SF4's stall). Unit tests: byte-identical on replay and
-   across input order; a 6th colleague is in `rankedMemberIds` but ⛔ not selected; previous-workplace people rank first; ⛔ no fill-up from
-   `named` when `workplace` has 2; a 600-person group ⇒ 500 ranked, the first 5 selected.
-4. **AC3 — the registry** keys entries by id; `workplace_named_v1` is a NEW id (⛔ no version bump of `district_cohort_v1` — SF6); ⚠
-   FIRST give the v1 entry a LITERAL `metricId: 'district_cohort_v1'` (today it reads `metricId: DEFAULT_PEER_MESH_METRIC_ID`,
-   `peer-mesh-metric-registry.ts:102` — changing the constant would RENAME v1 and break the replay of every stored selection), THEN set
-   `DEFAULT_PEER_MESH_METRIC_ID = 'workplace_named_v1'`; `resolvePeerMeshMetric('district_cohort_v1')` still resolves the old comparator; the
-   6.6 domain test legs that resolve the DEFAULT (`packages/domain/tests/claim/peer-mesh.test.ts:25`, asserted at `:73`, `:193-199`) are
-   amended to pin `'district_cohort_v1'` explicitly — every OTHER 6.6 replay assertion stays as it is; the registry type is a discriminated
-   union (`kind: 'ranked' | 'grouped'`) and the dispatch is ONE function (`runPeerMeshMetric`) used by the job AND by replay.
-5. **AC4 — the anchor is the filing date** (SW19, SF17): the cut = the START of the claim's filing day (IST, from `claims.created_at`);
-   the select job decrypts ⛔ nothing and calls ⛔ no KMS (in v1 the certificate's OCR'd date is always empty — 6.36a SF17); ⛔ no
-   encryption dependency is added to the job. A test: a selection made with a certificate row present still cuts at the filing day.
-6. **AC5 — the snapshot, as recorded before the cut** (SW20, SW21; I8): the deceased's postings and every candidate's postings count only
-   if `member_postings.created_at` is before the cut (a member's confirmation of a staff suggestion IS a posting — 6.36c AC4 — so it is cut
-   like any other); the deceased's accepted people count only if `responded_at` is before the cut AND they were ⛔ not REMOVED before the
-   cut (a removal after it — perhaps by the family — does ⛔ not count) AND THAT link was ⛔ never WITHDRAWN (a withdrawal excludes it
-   whenever it happened — 6.36a SW17; read per LINK, so a later, separately accepted link counts on its own); the CURRENT workplace is the latest posting's; the PREVIOUS workplace is the latest
-   EARLIER posting's that names a workplace DIFFERENT from the current one, skipping retirement and *"isn't listed"* rows; it counts when the
-   CURRENT run began less than 90 days before the FILING date — 6.36a SW21 word for word: *"the latest consecutive postings of the same
-   kind, counted back from the latest posting: rows naming the current workplace (an 'isn't listed' row BETWEEN two of them ⛔ never breaks
-   the run), or — when the latest row is a retirement or an unconfirmed 'isn't listed' — the latest consecutive rows of THAT kind; its start
-   = the `started_on` of its EARLIEST row"*, where *"unconfirmed"* means ⛔ no confirming posting recorded before the cut (⛔ never the
-   request's state at selection time — I8); tests: A → B (started 120 days before) → *"isn't listed"* → B (20 days before) ⇒ the previous
-   workplace does ⛔ not count; A → an unconfirmed *"isn't listed"* 20 days before ⇒ A counts; retiring twice ⛔ never re-arms; `recent_change_before_filing` = in the 90 days before the
-   cut, the deceased's latest posting was recorded, or any of their named people was ACCEPTED or REMOVED. Live tests (rows written in SEPARATE transactions): a posting the family records on the filing day ⇒ ignored; a friend's posting at
-   the deceased's school recorded on the filing day ⇒ ignored; a friend's posting recorded 10 days before ⇒ counted but ranked after every
-   settled colleague; the 90-day boundary — 89 days ⇒ the previous workplace counts, 90 ⇒ ⛔ not; school A → *"isn't listed"* → confirmed
-   school B (60 days before) ⇒ A's colleagues count and rank first; a retirement 30 days before the filing ⇒ the previous workplace counts
-   and there is ⛔ no current one; a named person removed after the filing day began ⇒ still counted; a named person who withdrew ⇒ never
-   counted; a transfer recorded 20 days before ⇒ `recent_change_before_filing = true`.
+   each `{ memberId, group: 'workplace_previous' | 'workplace_current' | 'named', settled: boolean }`; returns `{ source,
+   selectedMemberIds, rankedMemberIds, metricId, metricVersion }`.
+   - The `workplace` group = `workplace_previous` first (when present), then `workplace_current`; each split SETTLED first, then the
+     rest; each part ordered by ascending `sha256(claimCaseId + ':' + memberId)` hex over the BRANDED (lower-case) ids — the job passes
+     its branded `claimCaseId` (`claim-peer-mesh.ts:171`), ⛔ the raw payload string.
+   - ⭐ **`settled`** = the EARLIEST row of the candidate's current run at that workplace (SW21's run, read as of the cut) has
+     `created_at` 90 days or more before the cut — the RECORDED time, ⛔ never the self-declared `started_on` (6.36a SW22 — its rejected
+     Alt B: *"start dates are self-declared ⇒ the ranking could be bought with a typed date"*; `-331` SC1 A: *"colleagues recorded at
+     the school for 90 days or more are asked first"*). `settled` is false for every `named` candidate. Recorded consequence (as
+     ratified): a colleague whose "isn't listed" row was confirmed 15 days ago has a run of the confirmed row alone ⇒ ⛔ settled — so for
+     90 days after a Pariwar's first import nobody is settled and the ranking is the hash alone.
+   - `named` is ordered by the same hash; the first non-empty group wins (cap 5 / cap 3); ⛔ never two groups mixed; `rankedMemberIds` is
+     the winning group's ranking TRUNCATED to its first 500 (the column's CHECK — an office of 600 members must ⛔ never fail the job and
+     re-create SF4's stall). The engine THROWS on a duplicate `memberId` within the input (a join duplicate would otherwise select one
+     person twice while the ping insert's `ON CONFLICT DO NOTHING`, `peer-mesh-persist.ts:113-121`, hides it).
+   - Unit tests: byte-identical on replay and across input order; a 6th colleague is in `rankedMemberIds` but ⛔ not selected;
+     previous-workplace people rank first; ⛔ no fill-up from `named` when `workplace` has 2; a 600-person group ⇒ 500 ranked, the first 5
+     selected; a candidate recorded 10 days before the cut with `started_on` five years back ⇒ ⛔ settled; a duplicate id ⇒ throws.
+4. **AC3 — the registry** keys entries by id; `workplace_named_v1` is a NEW id (⛔ no version bump of `district_cohort_v1` — SF6).
+   - ⚠ FIRST give the v1 entry a LITERAL `metricId: 'district_cohort_v1'` (today `metricId: DEFAULT_PEER_MESH_METRIC_ID`,
+     `peer-mesh-metric-registry.ts:102` — changing the constant would RENAME v1 and break the replay of every stored selection), THEN
+     set `DEFAULT_PEER_MESH_METRIC_ID = 'workplace_named_v1'`; `resolvePeerMeshMetric('district_cohort_v1')` still resolves the old
+     comparator.
+   - The registry type is a discriminated union (`kind: 'ranked' | 'grouped'`) and the dispatch is ONE function (`runPeerMeshMetric`)
+     used by the job AND by replay. `selectPeerMesh` keeps a `kind: 'ranked'` config — every caller that passes
+     `resolvePeerMeshMetric(id)` straight to it narrows first (or goes through `runPeerMeshMetric`): `packages/domain/tests/claim/
+     peer-mesh.test.ts:25` (shared by the whole file; asserted at `:73`, `:193-199` — amended to pin `'district_cohort_v1'` explicitly,
+     every OTHER 6.6 replay assertion stays as it is) and `apps/jobs/tests/claim-peer-mesh.test.ts:307`, `:350`.
+   - ⚠ The snapshot row becomes a union (Task 1) — the jobs replay legs that read `c.district` / `c.createdAt` off `candidateSnapshot`
+     (`claim-peer-mesh.test.ts:295-300`, `:340-344`) and `persistPeerMeshSelection`'s map (`peer-mesh-persist.ts:62-66`) narrow on it.
+5. **AC4 — the anchor is the filing date** (SW19, SF17): `filingDate = istDateOf(claim.createdAt)`; the cut = `istMidnightAt(filingDate)`
+   — the shipped IST helpers (`packages/domain/src/cycle-calendar/holiday-resolver.ts:178`, `:220`; ⛔ a new copy of the IST offset —
+   that file's own D6 note forbids one); 90-day date tests use `addCalendarDays` (`:201`). ⭐ Computed in ONE exported function (the
+   name is the developer's) so RF1's answer is a small change behind it, with its own test (option A needs one more read — the
+   earliest claim naming the same `deceased_member_id`; option A's own cost: a living member once wrongly reported dead, whose claim
+   was refused, would anchor a later real death at that old, false filing — option C, keyed on `-238`'s innocence finding, narrows it); it uses THIS claim's `created_at` (the rule as written — RF1 option
+   B) until the Panel rules. The select job decrypts ⛔ nothing and calls ⛔ no KMS (in v1 the certificate's OCR'd date is always empty —
+   6.36a SF17); ⛔ no encryption dependency is added to the job. Tests: a selection made with a certificate row present still cuts at the
+   filing day; a claim created at 23:59 IST cuts at that day's 00:00 IST; a second claim for the same death cuts at ITS OWN filing day
+   (the RF1 pin — the leg that flips if the Panel answers A).
+6. **AC5 — the snapshot, as recorded before the cut** (SW20, SW21; I8). Rows count only if recorded (server time) before the cut.
+   - **Posting row kinds** (as shipped — `0161_member-workplaces.sql:298-305`, `apps/api/src/modules/life-events/handlers.ts:291-301`):
+     *workplace* (`workplace_id` set); *"isn't listed"* (`workplace_request_id` set); *retirement* (`is_retirement`, both ids NULL —
+     including a `district_only` choice made with `isRetirement: true`); *district-only* (none of these — legacy rows, or a Pariwar with
+     ⛔ no imported list; such rows come before every workplace row: `district_only` is refused once `workplace_districts` has any row —
+     `apps/api/src/modules/life-events/handlers.ts:292` over `pariwarHasWorkplaceList`, `member/workplace.ts:205` — and that table has ⛔
+     DELETE grant). Order a member's rows by `created_at DESC, posting_id DESC` (as
+     `peer-mesh-read.ts` and `listMemberPostingHistory` do — ⛔ `getMemberPostingLatest`, which has ⛔ no tie-break by design).
+     ⛔ Never read `workplace_requests` — its `state` is today's (I8) and its typed text is member-typed and erasable; ⛔ never filter on
+     `workplaces.status` (a delisted workplace still counts — I3; ⛔ no join to `workplaces` is needed).
+   - **The deceased's postings and every candidate's postings** count only if `member_postings.created_at` < cut (a member's
+     confirmation of a staff suggestion IS a new workplace posting — 6.36c AC4 — so it is cut like any other).
+   - **The CURRENT workplace** is the latest posting's, when it is a *workplace* row. A latest *retirement*, unconfirmed *"isn't
+     listed"* or *district-only* row ⇒ ⛔ current workplace. *"Unconfirmed as of the cut"* ⇔ the *"isn't listed"* row is the latest
+     posting before the cut (the confirm writes a NEW *workplace* posting carrying ⛔ no request id — 6.36c AC4).
+   - **The PREVIOUS workplace** is the latest EARLIER *workplace* row naming a workplace DIFFERENT from the current one, skipping
+     *retirement*, *"isn't listed"* and *district-only* rows. It counts when the CURRENT run began less than 90 days before the FILING
+     date — 6.36a SW21 word for word: *"the latest consecutive postings of the same kind, counted back from the latest posting: rows
+     naming the current workplace (an 'isn't listed' row BETWEEN two of them ⛔ never breaks the run), or — when the latest row is a
+     retirement or an unconfirmed 'isn't listed' — the latest consecutive rows of THAT kind; its start = the `started_on` of its
+     EARLIEST row"*. A *district-only* row ⛔ never breaks a run and is ⛔ never a run of its own (vacuous today — it can ⛔ follow a
+     workplace row — but stated so the code needs no assumption). A run whose earliest row has `started_on` NULL is treated as RECENT —
+     a code comment says it is unreachable: the `workplace`, `not_listed` and `retired` arms require `startedOn`
+     (`packages/contracts/src/members/workplace.ts`); a NULL-start row (legacy, or `district_only` — with or without `isRetirement` —
+     whose `startedOn` is optional) can only come BEFORE the list, so never after a workplace row.
+   - **A candidate** is in `workplace_current` / `workplace_previous` when THEIR latest posting before the cut is a *workplace* row at
+     that workplace. Drive the read FROM `member_postings WHERE pariwar_id = $p AND workplace_id IN (current, previous) AND created_at <
+     cut` (AC1's index), then keep the members whose latest row before the cut is that row.
+   - **The deceased's named people** = `member_known_people` rows with `namer_member_id` = the deceased (the deceased is the NAMER) that
+     were ACCEPTED before the cut and still live at it: `responded_at < cut AND state IN ('accepted','removed','erased') AND (state =
+     'accepted' OR ended_at >= cut)`. ⛔ `declined` / `lapsed` never count (a decline also writes `responded_at` —
+     `0162_member-known-people.sql:40`); a `withdrawn` link ⛔ never counts, whenever it ended (6.36a SW17, read per `link_id`, so a
+     later, separately accepted link counts on its own); an `asked → removed` / `asked → erased` link has `responded_at` NULL and ⛔ never
+     counts. ≤ 3 by construction (6.36b's live-count backstop).
+   - **A removal after filing cannot happen:** once any claim names the member as the deceased, 6.36b refuses every action BY the
+     deceased's account — including a removal (`knownPeopleCallerSql`, `packages/domain/src/member/known-people.ts:107`; `-333` call 1).
+     So the "removed on or after the cut" case is a removal on the filing day BEFORE the claim row exists (the family holding the phone —
+     SF10). A NAMED person can still withdraw after the filing (`-333` call 1 (b)) — their own choice, which counts whenever it happens.
+   - **`recent_change_before_filing`** = in [cut − 90 days, cut): the deceased's latest posting's `created_at`; or any link of theirs
+     whose `responded_at` falls in the window with `state <> 'declined'` (an acceptance); or a `removed` link whose `ended_at` falls in
+     the window (from `asked` or `accepted` — 6.36a SW20 word for word: *"any of their named people was ACCEPTED or REMOVED"*); or a
+     `withdrawn` link, or an `erased` link with `responded_at IS NOT NULL` (an accepted person erased), whose `ended_at` falls in the
+     window (`-331` SC1 A's ratified sentence: *"staff are told when … the people they named changed"*). The rule: SW20's two — an
+     ACCEPTANCE into the set, or a REMOVAL by the account (even of an unanswered ask) — plus a change OUT of the accepted set (a
+     withdrawal, an accepted person's erasure). An ask, a decline, a lapse and erasing an unanswered ask are none. SW20's list omitted the withdrawal and the erasure; our reading: this
+     MATCHES the ratified sentence, ⛔ widens it.
+   - **Live tests** (rows written in SEPARATE transactions — the same-tx `now()` trap):
+     - a posting the family records on the filing day ⇒ ignored; a friend's posting at the deceased's school recorded on the filing day
+       ⇒ ignored; a friend's posting recorded 10 days before ⇒ counted but ranked after every settled colleague;
+     - the 90-day boundary — 89 days ⇒ the previous workplace counts, 90 ⇒ ⛔ not;
+     - A → B (started 120 days before) → *"isn't listed"* → B (20 days before) ⇒ the previous workplace does ⛔ not count;
+     - A → an unconfirmed *"isn't listed"* 20 days before ⇒ ⛔ current workplace, A counts as the previous one;
+     - school A → *"isn't listed"* → confirmed school B (60 days before; seeded via `insertMemberPosting({ workplaceId: B, startedOn:
+       <the request's>, exceptRequestId })` — 6.36c's confirm route does ⛔ not exist yet) ⇒ A's colleagues count and rank first;
+     - a retirement 30 days before the filing ⇒ the previous workplace counts and there is ⛔ no current one; retiring twice ⛔ never
+       re-arms;
+     - a deceased whose only rows are *district-only* ⇒ ⛔ workplace group (named people or nobody);
+     - a named person removed through `removeKnownPerson` on the filing day BEFORE the claim is inserted ⇒ still counted; removed the day
+       before ⇒ ⛔ counted; a named person who DECLINED ⇒ never counted; who withdrew ⇒ never counted; an `asked`-then-removed link ⇒ ⛔
+       counted; a named person erased after the cut ⇒ ⛔ selected (SW23 — `anonymized`);
+     - `recent_change_before_filing = true` for each of: a transfer recorded 20 days before; an ask removed 10 days before (never
+       accepted); a named person's withdrawal 10 days before; an accepted named person erased 10 days before (each of these two with its
+       acceptance seeded MORE than 90 days before the cut — e.g. 120 — so only the end date can set the flag); a named person who
+       accepted 10 days before; ⛔ true for a decline, an unanswered ask erased, an ask made (still `asked`) — each 10 days before —
+       or a lapse (`asked_at` 40 days before, so `ended_at` = 10 days before by the lapse CHECK);
+     - ONE snapshot leg runs under `SET LOCAL ROLE twt_app` (the test login is a superuser that bypasses RLS) and still sees the
+       colleagues and the named people (the policies are Pariwar-wide: `member_postings` `0031:40`, `member_known_people` `0162:53`,
+       `member_identities` `0019:109`, `members` `0018:60`, `claims` `0051:74`).
+     - Fixtures: a *workplace* posting needs `workplace_districts` and `workplaces` rows (composite FKs) — reuse
+       `packages/domain/tests/integration/member/_workplace-fixtures.ts`.
 7. **AC6 — the filter** (SW23): ONE exported predicate (`peerMeshEligibleMemberSql` — the name is the developer's) used by the snapshot
-   AND exported for 6.27c's send-time re-check: `members.state = 'active'`, ⛔ no claim naming them as the deceased (any state), an
-   `EXISTS member_identities` row, ⛔ not the deceased, ⛔ not the claimant. Tests: each exclusion; a suspended (moderated) member stays eligible
-   (6.27a F3 — recorded).
+   AND exported for 6.27c's send-time re-check: `members.state = 'active'` ONLY, ⛔ no claim naming them as the deceased (any state), an
+   `EXISTS member_identities` row, ⛔ not the deceased, ⛔ not the claimant (`claimRow.claimantActorId` is NULLABLE —
+   `claim-peer-mesh.ts:217` — a NULL claimant excludes nobody, ⛔ never everybody).
+   - ⚠ `active-in-grace` is ⛔ asked (`-333` call 2 (d): *"6.36's selection predicate (SW23) is ⛔ changed — it still asks only `active`
+     members"*), unlike 6.36b's `knownPersonEligibleSql` (`known-people.ts:94`, which admits it — its doc-block at `:91-92`: *"⛔ NOT the
+     selection's predicate … keep them two"*). Keep the two functions separate; 6.36b's deferred W5 rests on this.
+   - ⚠ An erased member is kept out by `members.state = 'anonymized'`, ⛔ by the identity row (erasure RETAINS the blind index —
+     `known-people.ts:91`) — this meets `anonymize.ts`'s note that 6.36 must ⛔ never ask an erased person.
+   - The *"⛔ a claim naming them"* leg: export 6.36b's private `namedByClaimSql` (`known-people.ts:81`) and reuse it, or copy it and
+     record the copy in the File List.
+   - Tests: each exclusion; an `active-in-grace` colleague and an `active-in-grace` accepted named person are each ⛔ selected; a NULL
+     claimant; a suspended (moderated) member stays eligible (6.27a F3 — recorded).
 8. **AC7 — fewer than five / none** (I11): two colleagues ⇒ two selected, `source = 'workplace'`; ⛔ no colleagues + two named ⇒ two
    selected, `source = 'named_by_member'`; neither ⇒ zero selected, `outcome = 'skipped'`, `skip_reason =
-   'no_workplace_colleague_or_named_person'`, `source = null`.
-9. **AC8 — nobody to ask ⇒ the claim goes on** (SW25): the zero branch emits NEW event `claim.peer_mesh_none_to_ask` (`documents_pending →
-   verification_in_progress`; payload `{ from_state, to_state, trigger: 'peer_mesh_none_to_ask', actor: 'system', metric_id,
-   metric_version }`, `.strict()`) through `projectClaimState` under its own SAVEPOINT (the `peer_mesh_pinged` shape,
-   `claim-peer-mesh.ts:277-306`); the reducer + the transition table (`packages/domain/src/claim/state.ts:131-132`, `:386`) gain the edge;
-   `CLAIM_EVENT_TYPES`, the payload map and `EVENT_TYPE_REGISTRY` gain it — and all THREE vocabulary pins move (6.36a SF16):
-   `packages/events/tests/claim-registry-coverage.test.ts` (set equality), `packages/domain/tests/claim/dpdpa-consent-events.test.ts:59`
-   (`toHaveLength(36)` ⇒ 37) and the frozen-literal diff `packages/domain/tests/claim/nominee-name-check-events.test.ts:79-135` (add the
-   literal); the shepherd-assign job is enqueued on this branch too (`claim-peer-mesh.ts:350-360`); the certificate reminder's day 0
-   reads the EARLIEST of `claim.peer_mesh_pinged` OR `claim.peer_mesh_none_to_ask` (`packages/domain/src/claim/certificate-reminder.ts:132-169`,
-   and the sweep's no-entry alarm `apps/jobs/src/scheduler/claim-certificate-reminders.ts:303`); ⛔ no window job, ⛔ no ping row. Tests: the
-   claim reaches `verification_in_progress`; a ground inspection can then be scheduled; a shepherd job is enqueued; a reminder run opens
-   from that event; a re-run of the job is a no-op (⛔ no second event).
+   'no_workplace_colleague_or_named_person'` (a NEW exported constant beside `PEER_MESH_SKIP_REASON_NO_ELIGIBLE_CANDIDATES`,
+   `peer-mesh-persist.ts:32`; `skip_reason` is plain `text` with ⛔ no CHECK — nothing to widen; the jobs test's pin at `:540` moves),
+   `source = null`.
+9. **AC8 — nobody to ask ⇒ the claim goes on, and ⛔ no edge is ever lost** (SW25):
+   - The zero branch emits NEW event `claim.peer_mesh_none_to_ask` (`documents_pending → verification_in_progress`; payload `{ from_state,
+     to_state, trigger: 'peer_mesh_none_to_ask', actor: 'system', metric_id, metric_version }`, `.strict()`; `trigger` is a free
+     `z.string()` — ⛔ no enum to widen) through `projectClaimState`.
+   - ⚠ **The lock, then the probe, on BOTH branches.** Today the job reads the claim with `getClaimCase` (⛔ no lock,
+     `claim-peer-mesh.ts:199`) AFTER the idempotency probe, and swallows `ClaimStreamConcurrencyError` as *"benign append race … pinged
+     already emitted"* (`:299-306`). ⭐ The latent defect is TWO SELECT JOBS at once — reachable only when two pollers serve the select
+     queue (a second `jobs` process, a deploy overlap, or `localConcurrency` > 1; today ONE `jobs` service runs `boss.work` with ⛔
+     options, `:505` — one job after another). One is enqueued per document upload (the
+     select queue is created with pg-boss's standard policy, `:502`, ⛔ options, on which `singletonKey` is inert: pg-boss's singleton
+     unique indexes cover only the short / singleton / stately / exclusive / key-strict-FIFO policies). Both probes find nothing; the
+     loser waits on the selection's `claim_case_id` unique index, gets the winner's row (`onConflictDoNothing` → the existing row,
+     `peer-mesh-persist.ts`), and — from its stale, unlocked `claimRow` still reading `documents_pending` — appends a SECOND
+     `claim.peer_mesh_pinged` at the next free version (the reducer ignores it, `state.ts:131-133`; the audit trail carries a duplicate
+     edge, and the zero branch would carry a duplicate `none_to_ask`). ⚠ A DIFFERENT writer (a bank save, DPDPA consent, a closure) can
+     ⛔ win the append: the selection insert's FK to `claims` (`0054_claim-peer-mesh.sql:74`) takes FOR KEY SHARE on the claim row before
+     the job reads the stream head, which serializes it against their FOR UPDATE. ⭐ So: the FIRST statement in the transaction is
+     `claim.lockClaimCase` (FOR UPDATE — `packages/domain/src/claim/read.ts`), THEN the probe, THEN the state guard — the loser waits
+     on the lock, then finds the winner's selection and no-ops; a `ClaimStreamConcurrencyError` is ⛔ never swallowed — it is rethrown
+     and pg-boss retries the whole transaction (defensive: with the lock held ⛔ known appender can race). The lock is kept as that
+     defence and as the order every other appender uses. This replaces 6.6's SAVEPOINT swallow on the `pinged` branch too.
+   - ⭐ **A selection is persisted ONLY together with its edge.** Under the lock, a claim that is ⛔ `documents_pending` returns BEFORE
+     the snapshot — `intake_converged` and every later state alike: it persists ⛔ no selection and enqueues ⛔ no window or shepherd job.
+     (Today the persist at `claim-peer-mesh.ts:237` runs BEFORE the state guard at `:277`, so a select job that ran while the claim was
+     still `intake_converged` would persist a `pending` selection with ⛔ no pings and enqueue its window job — the window then resolves
+     with nobody asked, and once the claim reaches `documents_pending` the probe returns for ever. Whether a select job can run in
+     `intake_converged` today is unproven — §Recorded.) The next document upload's OCR run enqueues a fresh select job (except a
+     death-certificate replacement in the review window — `claim-ocr-parity.ts:454`, `:495`).
+   - ⛔ **No heal of an existing selection.** A selection persisted before this commit with its claim still in `documents_pending`
+     (6.6's states: a `skipped` zero selection — REACHABLE, SF4, asserted by `claim-peer-mesh.test.ts:527-544`; a `pending` one with ⛔
+     edge — unproven; ⛔ none in production; AC14) stays as it is; the probe stays a no-op plus its shepherd self-heal.
+   - The flag the shepherd enqueue keys on (`outcome.pinged`, `:266`, read at `:350`) is TRUE on the zero branch too (rename it
+     `advanced` if preferred) ⇒ the shepherd-assign job is enqueued after COMMIT; the probe's self-heal (`:186-193`) already re-enqueues
+     it on every later select job. ⛔ No window job (`:335` already keys on `outcome === 'pending'`), ⛔ no ping row.
+   - The reducer + the transition table (`packages/domain/src/claim/state.ts:131-132`, `:386`) gain the edge; the new reducer case
+     returns `state` unchanged unless it is `documents_pending` (`packages/domain/tests/claim/suspicion-refusal.test.ts:151-156` loops
+     EVERY claim event type and requires `closed` to stay `closed`).
+   - `CLAIM_EVENT_TYPES` (`packages/domain/src/claim/events.ts:770`), the payload map (`:818`; the `satisfies` at `:851` fails to compile
+     until it has the entry) and `EVENT_TYPE_REGISTRY` (`packages/events/src/registry.ts`, beside `claim.peer_mesh_pinged`, `:206`) gain
+     it — and all THREE vocabulary pins move (6.36a SF16): `packages/events/tests/claim-registry-coverage.test.ts` (set equality),
+     `packages/domain/tests/claim/dpdpa-consent-events.test.ts:59` (`toHaveLength(36)` ⇒ 37) and the frozen-literal diff
+     `packages/domain/tests/claim/nominee-name-check-events.test.ts:79-135` (add the literal).
+   - The certificate reminder's day 0 reads the EARLIEST of `claim.peer_mesh_pinged` OR `claim.peer_mesh_none_to_ask`
+     (`readCertificateWindowEnteredAt`, `packages/domain/src/claim/certificate-reminder.ts:131-152` — the `eq(eventType, …)` at `:147`
+     becomes an `inArray`; its doc-block's *"the only edge `documents_pending → verification_in_progress`"* and the facts doc at `:169`
+     are amended) and the sweep's no-entry alarm text (`apps/jobs/src/scheduler/claim-certificate-reminders.ts:303`). ⛔ No other
+     functional reader of `claim.peer_mesh_pinged` exists at `51382898` (comment-only hits: `boot.ts`, `restoration-discipline.ts`,
+     `claim-shepherd-assign.ts`, `packages/queue/src/index.ts`, `events.ts`); re-grep at build.
+   - Tests: the claim reaches `verification_in_progress`; a ground inspection can then be scheduled (`CLAIM_REVIEW_WINDOW_STATES`
+     includes it); a shepherd job is enqueued; a reminder run opens from that event; a re-run is a no-op (⛔ second event); a select job
+     run while the claim is `intake_converged` ⇒ ⛔ selection row, ⛔ window job, and a later run after `documents_received` selects
+     normally; the race (two connections), once for each branch: connection B runs the select job's own transaction up to its edge
+     (`lockClaimCase`, the selection, the edge event) and holds it open; start the job on connection A; wait until `pg_stat_activity`
+     shows A waiting; COMMIT B; await A ⇒ exactly ONE edge event in the claim's stream (today, the PINGED leg: A's unlocked probe finds
+     nothing, waits on the selection's unique index, then appends a second edge — RED; the zero-branch leg pins the new code — there
+     is ⛔ zero-branch edge to duplicate before Task 5).
 10. **AC9 — the source on every ping** (SW24, I9): the ping intents of a `workplace_named_v1` selection carry `source`; a ping whose
     `source` differs from its selection's is refused by the trigger (a test); a `district_cohort_v1` selection's pings carry `null`.
-11. **AC10 — the wire and the screen** (SW24, I10): `PeerMeshPingView` (`packages/contracts/src/claims/verifier-console.ts:225-257`) gains
-    `source: z.enum(['workplace','named_by_member']).nullable()` — REQUIRED on the wire (⛔ not optional: an absent key would hide a defect),
-    and every fixture building a ping view is amended (the 6.27d list: `apps/admin/tests/neighbours-answers-panel.test.tsx`,
-    `apps/admin/tests/verifier-console.test.tsx`, `apps/api/tests/unit/peer-answers-stitch.test.ts`, the contracts tests
-    `claims-peer-answers.test.ts` / `claims-verifier-console.test.ts` — run vitest, they sit outside `tsc`); the assembler maps the ping
-    row's column at `apps/api/src/modules/claims/peer-answers-assembler.ts:262-271` (⛔ no new read — the ping read already selects every
-    column, so `VERIFIER_CONSOLE_MAX_READS` stays 29 and its four pins stay unchanged); `PeerMeshView` renders *"Chosen from the workplace"*
-    / *"Named by the member"* (`verifierConsoleEn.peerMesh`, `i18n-en.ts:93-152`) BESIDE the `relationship` answer row when the reply has
-    one (`PeerAnswerRow`, `PeerMeshView.tsx:72-74`, `:173-193`), otherwise in the ping header (`:53-65`) — so an unanswered ping shows it
-    too — and nothing for `null`; and `PeerMeshTranscript` (`verifier-console.ts:288-307`) gains `recentChangeBeforeFiling: boolean | null`
-    (REQUIRED, null for `district_cohort_v1`), rendered once at the top of the section on BOTH surfaces as *"The member's workplace or the
-    people they named changed in the 90 days before this claim was filed."* (6.36a SW20); tests on BOTH surfaces — the District Admin's
-    console (`verifier-console.test.tsx`) AND the approvers' panel (`neighbours-answers-panel.test.tsx`), plus the API spec that drives both
-    in one file (`apps/api/tests/integration/claims/peer-answers-approvers.spec.ts` — `consolePings` vs `read`).
-12. **AC11 — ⛔ never to the inspector, the helpline or a member** (I10): ⛔ no `source` on the ground-inspection wire
-    (`apps/admin/src/api/client.ts:1283-1296`), the showings table or `GroundInspectionPage`; ⛔ no `recentChangeBeforeFiling` there either (the
-    schema-key tests cover BOTH keys); ⛔ not on `PeerRequestDetailResponse`
-    (`packages/contracts/src/claims/peer-request.ts:79-99` — the neighbour's own view, shared by the helpline); a schema-key test on each
-    that ⛔ no key named `source` exists; ⚠ an inspector who also holds `claim.verify` sees the console's full section once their own visit
-    is complete — that is the console's existing audience (CF2's District Admin / verifiers row), recorded, ⛔ not changed.
+11. **AC10 — the wire and the screen** (SW24, I10; `-326` BD1 A):
+    - `PeerMeshPingView` (`packages/contracts/src/claims/verifier-console.ts:225-257`) gains `source: z.enum(['workplace',
+      'named_by_member']).nullable()` — REQUIRED on the wire (⛔ optional: an absent key would hide a defect); the assembler maps the ping
+      row's column at `apps/api/src/modules/claims/peer-answers-assembler.ts:262-271` (⛔ no new read — `getPeerMeshPingIntentsBySelection`
+      and `getPeerMeshSelectionByClaim` already `.select()` every column, `peer-mesh-read.ts:150`, `:172` ⇒ `VERIFIER_CONSOLE_MAX_READS`
+      stays 29 and its four pins stay unchanged).
+    - `PeerMeshTranscript` (`verifier-console.ts:288-307`) gains `recentChangeBeforeFiling: boolean | null` (REQUIRED, null for
+      `district_cohort_v1`), mapped in `assemblePeerMeshSection` (`peer-answers-assembler.ts:336-350` — the selection row is in hand).
+    - Every fixture building either type is amended (contracts tests sit outside `tsc` — run vitest): `apps/admin/tests/
+      neighbours-answers-panel.test.tsx`, `apps/admin/tests/verifier-console.test.tsx`, `apps/admin/tests/
+      peer-mesh-inspection-discrepancy.test.tsx` (a typed `PeerMeshTranscript` literal, `:12-21`), `apps/api/tests/unit/
+      peer-answers-stitch.test.ts`, `packages/contracts/tests/claims-peer-answers.test.ts`, `packages/contracts/tests/
+      claims-verifier-console.test.ts` (re-grep `callbackBasis` / `inspectionDiscrepancies` at build for any twin added since).
+    - `PeerMeshView` renders *"Chosen from the workplace"* / *"Named by the member"* (`verifierConsoleEn.peerMesh`,
+      `apps/admin/src/modules/claim-verification/i18n-en.ts:93-152` — module-local English by design, ⛔ Hindi twin) BESIDE the `relationship` answer row when
+      the reply has one (`PeerAnswerRow`, `PeerMeshView.tsx:72-74`, `:173-193`), otherwise in the ping header (`:53-65`) — so an
+      unanswered ping shows it too — and nothing for `null`; and renders `recentChangeBeforeFiling` once at the top of the section as
+      *"The member's workplace or the people they named changed in the 90 days before this claim was filed."* (6.36a SW20).
+    - Tests on BOTH surfaces — the District Admin's console (`verifier-console.test.tsx`) AND the approvers' panel
+      (`neighbours-answers-panel.test.tsx`), plus the API spec that drives both in one file (`apps/api/tests/integration/claims/
+      peer-answers-approvers.spec.ts` — `consolePings` vs `read`).
+12. **AC11 — ⛔ never to the inspector, the helpline or a member** (I10; `-310` CF2): ⛔ no `source` on the ground-inspection wire
+    (`apps/admin/src/api/client.ts:1283-1296`), the showings table or `GroundInspectionPage`; ⛔ no `recentChangeBeforeFiling` there
+    either (the schema-key tests cover BOTH keys); ⛔ not on `PeerRequestDetailResponse` (`packages/contracts/src/claims/
+    peer-request.ts:93-99` — the neighbour's own view, shared by the helpline; ⛔ `.strict()`, so the test asserts the key's ABSENCE from
+    the schema shape); a schema-key test on each that ⛔ no key named `source` exists. ⚠ An inspector who also holds `claim.verify` sees
+    the console's full section once their own visit is complete — the console's existing audience (CF2's District Admin / verifiers
+    row; `-327` BD4, 6.27b PM25 (c)), recorded, ⛔ not changed.
 13. **AC12 — the job test** (`apps/jobs/tests/claim-peer-mesh.test.ts`, the ONLY test that runs `runClaimPeerMeshSelect`; its replay legs
     already pass the stored id, `:307`, `:350`): the legs that assumed the district default are rewritten for `workplace_named_v1` (seed
-    postings with workplaces); the legacy district legs move to the pure engine + replay with `'district_cohort_v1'` pinned (⛔ not through
-    the job, whose default has moved); the zero-candidate leg now expects `verification_in_progress` and the new event.
-14. **AC13 — the 6.27 set's stale text is annotated** (Task 0.4 of 6.36a wrote them — CHECKED here): 6.27a Invariant 4 / Trap 8, 6.27c AC5
-    and its Dev Notes name `-311` PM1, `ranked_member_ids`, the SW23 predicate, the inherited ping `source`, and SF11's
-    `recordPeerMeshResponse` check (6.27c moves it to the ping rows).
-15. **AC14 — the deferred items** (SW30): the zero-candidate stall item and the `-308` hand-off item each gain an appended *"Closed by 6.36
-    (code commit <sha>)"* line, and the uncapped-snapshot item *"Closed by 6.36 for `workplace_named_v1` (code commit <sha>) — the
-    `district_cohort_v1` read is unchanged"* — written as NARROWED, ⛔ not closed, where the item's own text needs it (a very large office
-    is still unbounded) (⛔ not rewritten); the family item gains *"⛔ not taken by 6.36 — no family-link
-    data (SW23)"*.
+    postings with workplaces); the legacy district legs move to the pure engine + replay with `'district_cohort_v1'` pinned (⛔ through
+    the job, whose default has moved); the zero-candidate leg now expects `verification_in_progress`, the new event and the new
+    `skip_reason`; AC8's lock / `intake_converged` / race legs live here.
+14. **AC13 — the 6.27 set's annotations are CHECKED** (6.36a Task 0.4 wrote them; present at `51382898`): 6.27a Invariant 4 / Trap 8,
+    6.27c AC5, its Dev Notes and its v4 line name `-311` PM1, `ranked_member_ids`, the SW23 predicate, the inherited ping `source`, and
+    SF11's `recordPeerMeshResponse` check (6.27c moves it to the ping rows). Re-read them after the build; a mismatch with what was built
+    gets a dated annotation in 6.27c, ⛔ a rewrite. ALSO (Task 7): the 6.6 story file's dated annotation that D3 and its review item
+    *"Zero-candidate selection has no defined disposition"* are superseded by `2026-10-14-330`, and 6.36a SW17's dated annotation
+    naming `-333` call 1.
+15. **AC14 — the deferred items** (SW30; by item heading, ⛔ line numbers; appended lines, ⛔ rewrites):
+    - *"A claim whose peer mesh finds ZERO candidates never leaves `documents_pending`…"* ⇒ *"Closed by 6.36 (code commit <sha>) — for
+      selections made after that commit; a `district_cohort_v1` selection already `skipped` stays where it is — ⛔ none exist in
+      production."*
+    - *"`-308`'s 6.27a share — each answer's SOURCE on the reply and the console — HANDED OFF to row 6-36"* AND its `-326` sub-bullet ⇒
+      each *"Closed by 6.36 (code commit <sha>)"*.
+    - *"`getPeerMeshCandidateSnapshot` has no cap on active-roster size"* ⇒ *"⭐ NARROWED by 6.36 (code commit <sha>) for
+      `workplace_named_v1` — the snapshot reads only the deceased's two workplaces and ≤ 3 named people; a very large office is still
+      unbounded (the 500 cap limits only the STORED ranking); the `district_cohort_v1` read is unchanged. ⛔ Not closed."*
+    - *"The deceased's FAMILY who are themselves members are ⛔ not excluded from the five (PM1, RECORDED)"* ⇒ *"⛔ not taken by 6.36 — no
+      family-link data (SW23); stays OPEN."*
+    - A NEW item (Task 7): the OCR job's swallowed `ClaimStreamConcurrencyError` (below, §Recorded — reachability unproven).
 16. **AC15 — `pnpm ci:local` green.**
-17. **AC16 — the next version of the neighbours' questions, `peer_mesh.v4`** (`2026-10-14-331` SC4 A — *"school or office", in the next
-    version (answers already given keep their words)"*; built here on our reading, in `-329`'s v3 shape): `packages/domain/src/questionnaires/
-    peer-mesh.ts` gains v4 = v3's pages with ONE change — the `relationship` option `school_colleague` (code UNCHANGED, so stored answers keep
-    their meaning; `:110-113`) takes a NEW copy key `peer_request_questions.relationship.school_or_office_colleague` (*"A colleague at the
-    same school or office"* + Hindi — the reviewed Hindi is Row 28's), its `approvedBy` gaining `-331`; v4 becomes LIVE for every Pariwar and
-    v3 HISTORICAL; a reply keeps the version it pinned (a v3 reply shows *"A colleague at the same school"*); every question the Panel ruled is
-    in v4 (`-310` CF3 (a) — the validator); the two `'pending'` health questions and their `counselBasis` carry over unchanged (6.27c's AC2b
-    hold reads `resolveLiveVersion` — ⛔ never a version name). Tests: the validator accepts v4; a new reply pins v4; a v3 reply renders v3's
-    words; the copy keys resolve in en + hi (the real-`t()` lockstep test).
+17. **AC16 — the next version of the neighbours' questions, `peer_mesh.v4`** (`-331` SC4 A — *"school or office", in the next version
+    (answers already given keep their words)*; who builds it is our reading, ⛔ ratified; built in `-329`'s v3 shape):
+    - `packages/domain/src/questionnaires/peer-mesh.ts` gains `PEER_MESH_QUESTIONNAIRE_V4` = v3's pages with ONE change — the
+      `relationship` option `school_colleague` (code UNCHANGED, so stored answers keep their meaning; defined in v2 at `:110-113`, which v3
+      spreads) takes a NEW copy key `peer_request_questions.relationship.school_or_office_colleague` (*"A colleague at the same school or
+      office"* + Hindi in `packages/i18n/locales/{en,hi}/claim.json` — the reviewed Hindi is Row 28's); `-331` in BOTH the `relationship`
+      question's `approvedBy` and the version's (the v3 precedent). v4 `status: 'live'`, v3 flipped to `'historical'`.
+    - ⚠ `packages/domain/src/questionnaires/keys.ts` — add `'2026-10-14-331'` to `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS` (`:62-68`):
+      `validator.ts:55-58` rejects an unlisted `approvedBy` and `registry.ts:21` validates every version at MODULE LOAD ⇒ without the entry the
+      boot fails. The list's comment says adding one is a reviewed code edit that cites its decision.
+    - `packages/domain/src/questionnaires/registry.ts` — import + append v4 to `QUESTIONNAIRE_REGISTRY`. ⛔ No DB row, seed or migration:
+      liveness is the code constant `status` / `scope` read by `resolveLiveVersion`; replies pin a text version id. (The recipe 6.27b
+      used for v3: `peer-mesh.ts` + `registry.ts` + `keys.ts` + en/hi `claim.json` + `questionnaires.test.ts`.)
+    - A reply keeps the version it pinned (a v3 reply shows *"A colleague at the same school"* — labels resolve per reply version,
+      `peer-answers-assembler.ts:200-209`); every question the Panel ruled is in v4 (`-310` CF3 (a) — the validator); the two `'pending'`
+      health questions and their `counselBasis` carry over unchanged (6.27c's AC2b hold reads `resolveLiveVersion` — ⛔ a version name).
+    - ⚠ The v3-live pins MOVE: `packages/domain/tests/questionnaires/questionnaires.test.ts:80-90` (the registry list, v3 `'live'`,
+      `resolveLiveVersion → V3`) and `:109-114` (fixtures spread from V3 with `versionId: 'peer_mesh.v4'` — once v3 is historical the
+      spread inherits `status: 'historical'` and the legs go vacuous, AND the id collides with the real v4 ⇒ rebuild them from V4 as
+      `peer_mesh.v5`, the 6.27b trap recorded at `:107-108`); `apps/api/tests/integration/claims/peer-request-member.spec.ts:151`,
+      `:160-173`; `packages/domain/tests/integration/claim/peer-mesh-reply.spec.ts:60`, `:179`.
+    - Tests: the validator accepts v4; a new reply pins v4; a v3 reply renders v3's words; the copy keys exist in en AND hi
+      (`questionnaires.test.ts:352-363`, a JSON read over every registered version — covers v4 automatically) and resolve through the real
+      `t()` in en AND hi (`peer-request-member.spec.ts:160-173`'s leg, moved to v4).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — the migration (AC1, AC9).** Columns, the scoped CHECKs, the two triggers, the REVOKE UPDATE + column GRANT on the selection
-      table; the Drizzle schema (`claim_peer_mesh_selections.ts`: the
-      snapshot row type becomes a union — the legacy `{ memberId, district, createdAt }` and the grouped `{ memberId, group, settled }` (the
-      ranking reads `settled` — I7: a replay rebuilds the ranking from the PERSISTED snapshot alone; a test replays a stored selection);
-      `claim_peer_mesh_pings.ts`); apply on :5432 and :5433.
+- [ ] **Task 1 — the migration (AC0 checked, AC1, AC9).** Columns, the scoped CHECKs, the scoped prefix trigger, the ping `source`
+      trigger (⛔ raises on a missing selection), the `member_postings` workplace index, the REVOKE UPDATE + column GRANT on the selection table; the Drizzle
+      schema (`claim_peer_mesh_selections.ts`: the snapshot row type becomes a union — the legacy `{ memberId, district, createdAt }` and
+      the grouped `{ memberId, group, settled }` (the ranking reads `settled` — I7: a replay rebuilds the ranking from the PERSISTED
+      snapshot alone; a test replays a stored selection); `claim_peer_mesh_pings.ts`; `member_postings.ts`'s `index()`); the policy-regression and trigger specs
+      (AC1). ⚠ The legacy `deceased_created_at` is NOT NULL (`0054_claim-peer-mesh.sql:51`; `deceased_district`, `:50`, is nullable): for
+      `workplace_named_v1` both are still written from `getPeerMeshDeceasedAttributes` (unchanged) and are read by nothing in the grouped
+      metric or its replay — the schema comment says so. Apply on :5432 and :5433.
 - [ ] **Task 2 — the engine and the registry (AC2, AC3).** FIRST the v1 entry's literal id (AC3). `packages/domain/src/claim/peer-mesh.ts`:
-      keep `selectPeerMesh`; add `selectPeerMeshGrouped` (with the 500 truncation) and `runPeerMeshMetric`; rewrite the header's *"DO NOT add … school-proximity … inputs here"* to name SW18 (it
-      supersedes 6.6 D3). `peer-mesh-metric-registry.ts`: the union type, the new entry, the new default, the header comment. The hash —
-      `node:crypto` `createHash('sha256')` (pure, deterministic; the domain package runs on Node).
-- [ ] **Task 3 — the snapshot reads (AC5, AC6).** In `packages/domain/src/claim/peer-mesh-read.ts`: `getPeerMeshWorkplaceSnapshot(db,
-      { pariwarId, deceasedMemberId, claimantActorId, cutStart, filingDate })` — the deceased's postings as of the cut (current, previous, the
-      90-day test against the filing date), the candidates (each with its `settled` flag) whose latest posting as of the cut is at either workplace, each through the SW23 predicate; and
-      `getPeerMeshNamedSnapshot` — the deceased's accepted people as of the cut, through the same predicate. ⚠ Every correlated subquery
-      over `member_postings` uses the LITERAL `"members"."member_id"` qualifier (the CORRELATION FIX note, `peer-mesh-read.ts:60-71`; the
-      qualifier itself at `:84`, `:126`). ⚠ The
-      snapshot is BOUNDED by the two workplaces and ≤ 3 named people — ⛔ not the whole roster (closes the 6.6 uncapped-snapshot item for this
-      metric).
-- [ ] **Task 4 — the job (AC4–AC8, AC12).** `apps/jobs/src/claim-peer-mesh.ts` `runClaimPeerMeshSelect`: unchanged in shape — the idempotency
-      probe (and its self-heal), then the cut from the claim's `created_at`, the snapshot, `runPeerMeshMetric`, the persist (new columns), the
-      pinged branch with `source` on the ping intents, the zero branch with `claim.peer_mesh_none_to_ask` + `skipPeerMesh` + the shepherd
-      enqueue. `persistPeerMeshSelection` / `persistPeerMeshPingIntents` (`peer-mesh-persist.ts:58-123`) take the new fields.
-- [ ] **Task 5 — the event (AC8).** `packages/domain/src/claim/events.ts` (the type tuple at `:770`, the payload schema, the map at `:818`),
-      `state.ts` (reducer + table), `packages/events/src/registry.ts` (beside `claim.peer_mesh_pinged`, `:206`), the certificate-reminder
-      reader and its sweep. Every reader of the edge is listed in SF4 — re-grep `peer_mesh_pinged` in `apps/*/src packages/*/src` at build
-      for any reader added since.
-- [ ] **Task 6 — the wire and the screen (AC10, AC11).** Contracts, the assembler mapping, `PeerMeshView`, the copy, the fixtures, the
-      tests on both surfaces, the negative schema tests.
-- [ ] **Task 7 — records and close (AC13–AC15).** CHECK 6.36a Task 0.4's annotations; the deferred-work appended lines (by item heading —
-      ⛔ never line numbers); the 6.6 story file gains a dated annotation that D3 and its review Decision 1 are superseded (SW18, SW25); the
-      Change Log and File List; `pnpm ci:local`.
-- [ ] **Task 8 — `peer_mesh.v4` (AC16).** The version, the copy key (en + hi + `$comment` naming `-331`), the module header's version list,
-      the tests; the 6.27c annotation already names v4 (6.36a's Task 0 follow-up).
+      keep `selectPeerMesh` (`:61-84`); add `selectPeerMeshGrouped` (the 500 truncation, the duplicate-id throw) and `runPeerMeshMetric`;
+      rewrite the header's *"DO NOT add … school-proximity … inputs here"* to name SW18 (it supersedes 6.6 D3 — `-330`; AC3).
+      `peer-mesh-metric-registry.ts`: the union type, the new entry, the new default, the header comment. The hash — `node:crypto`
+      `createHash('sha256')` (pure, deterministic; the domain package runs on Node). Narrow every `resolvePeerMeshMetric(…)` →
+      `selectPeerMesh` caller (AC3).
+- [ ] **Task 3 — the cut and the snapshot reads (AC4, AC5, AC6).** The ONE cut function (AC4 — the shipped IST helpers). In
+      `packages/domain/src/claim/peer-mesh-read.ts`: `getPeerMeshWorkplaceSnapshot(db, { pariwarId, deceasedMemberId, claimantActorId,
+      cut, filingDate })` — the deceased's postings as of the cut (the row kinds; current, previous, the 90-day test against the filing
+      date), the candidates driven from the workplace index (each with its `settled` flag from the run's EARLIEST `created_at`) whose latest
+      posting as of the cut is at either workplace, each through the SW23 predicate; and `getPeerMeshNamedSnapshot` — the deceased's links
+      by AC5's predicate, through the same SW23 predicate; and the `recent_change_before_filing` read. The SW23 predicate (AC6) beside
+      them. ⚠ Every correlated subquery over `member_postings` uses the LITERAL `"members"."member_id"` qualifier (the CORRELATION FIX
+      note, `peer-mesh-read.ts:60-71`; the qualifier itself at `:84`, `:126`). ⚠ The snapshot read is BOUNDED by the two workplaces and ≤
+      3 named people — ⛔ the whole roster (NARROWS the 6.6 uncapped-snapshot item for this metric — ⛔ closed).
+- [ ] **Task 4 — the job (AC4–AC9, AC12).** `apps/jobs/src/claim-peer-mesh.ts` `runClaimPeerMeshSelect`: FIRST `lockClaimCase`, THEN
+      the idempotency probe (unchanged — a no-op plus its shepherd self-heal), THEN the state guard (⛔ `documents_pending` ⇒ return before
+      the snapshot, ⛔ selection); the cut from the claim's `created_at`;
+      the snapshot; `runPeerMeshMetric`; the persist (new columns); the pinged branch with `source` on the ping intents; the zero branch
+      with `claim.peer_mesh_none_to_ask` + `skipPeerMesh` (the new skip constant) + the shepherd enqueue. ⭐ REPLACE the SAVEPOINT swallow
+      of `ClaimStreamConcurrencyError` with the lock + rethrow on BOTH branches (AC8). `persistPeerMeshSelection` /
+      `persistPeerMeshPingIntents` (`peer-mesh-persist.ts:58-95`, `:102-123`) take the new fields. ⭐ Preserve: the winning-row rule, the
+      after-COMMIT enqueues, the window job only for `pending`.
+- [ ] **Task 5 — the event (AC8).** `events.ts` (the type tuple, the payload schema, the map), `state.ts` (reducer + table),
+      `packages/events/src/registry.ts`, the three vocabulary pins, the certificate-reminder reader (+ its doc-blocks) and its sweep's
+      alarm text. Re-grep `peer_mesh_pinged` in `apps/*/src packages/*/src scripts` at build for any reader added since `51382898`.
+- [ ] **Task 6 — the wire and the screen (AC10, AC11).** Contracts, the two assembler mappings, `PeerMeshView`, the copy, the six fixture
+      files, the tests on both surfaces, the negative schema tests.
+- [ ] **Task 7 — records and close (AC13–AC15).** CHECK 6.36a Task 0.4's annotations (AC13); the deferred-work appended lines (AC14 — by
+      item heading) and ONE new item for the OCR job's swallowed race (§Recorded — reachability unproven); the 6.6 story file gains a dated annotation (⛔ a
+      rewrite) that D3 and its review item *"Zero-candidate selection has no defined disposition"* are superseded by `2026-10-14-330`
+      (SW18, SW25 — author-commit); 6.36a's SW17 *"perhaps by the family"* gains a dated annotation naming `-333` call 1 (⛔ removal once a
+      claim names the member); the Change Log and File List; `pnpm ci:local`.
+- [ ] **Task 8 — `peer_mesh.v4` (AC16).** The version, the `keys.ts` allow-list entry, the registry, the copy key (en + hi + `$comment`
+      naming `-331`), the module header's version list, the moved v3 pins, the tests; the 6.27c annotation already names v4 (6.36a's
+      Task 0 follow-up).
 
 ## Dev Notes
 
-### Current state of the code this part changes (read at `2581c514`)
+### Current state of the code this part changes (re-read at `51382898` — unmoved since `2581c514`)
 - **The SELECT worker** (`apps/jobs/src/claim-peer-mesh.ts:153-367`, ONE `withPariwarScope` transaction): idempotency probe (`:181-194`)
-  → `getClaimCase` → `getPeerMeshDeceasedAttributes` → `getPeerMeshCandidateSnapshot` (excluding the claimant) →
-  `resolvePeerMeshMetric()` (⚠ NO argument — the default) + `selectPeerMesh` → `persistPeerMeshSelection` (the WINNING row is
-  authoritative) → zero ⇒ `skipPeerMesh` and return → `documents_pending` ⇒ `claim.peer_mesh_pinged` under a SAVEPOINT +
-  `persistPeerMeshPingIntents` → after COMMIT the 72-hour window job and the shepherd job. ⭐ Preserve: the idempotency probe and its
-  self-heal; the winning-row rule; the SAVEPOINT handling of `ClaimStreamConcurrencyError`; the after-COMMIT enqueues.
-- **The engine** (`packages/domain/src/claim/peer-mesh.ts:65-82`) and **the registry** (`peer-mesh-metric-registry.ts:65-136`) — SF6.
-- **The selection table** (`packages/domain/src/schema/claim_peer_mesh_selections.ts`; 0054:45-62): the snapshot and output IMMUTABLE;
-  `outcome` / `response_window_expires_at` mutable; ≤ 5 selected (CHECK); *"NO PII"* — ⭐ keep it so: the new columns hold workplace ids
-  (Tier 3), booleans and member ids — ⛔ never a date of death.
-- **The ping table** (`claim_peer_mesh_pings.ts:57-116`; 0054 + 0156): UPDATE narrowed to the delivery columns (`0156:64-65`); INSERT is
-  table-wide ⇒ `source` written at insert is immutable by grant.
+  → `getClaimCase` (⛔ lock) → `getPeerMeshDeceasedAttributes` → `getPeerMeshCandidateSnapshot` (excluding the claimant) →
+  `resolvePeerMeshMetric()` (⚠ NO argument — the default, `:221`) + `selectPeerMesh` → `persistPeerMeshSelection` (the WINNING row is
+  authoritative) → zero ⇒ `skipPeerMesh` and return `pinged: false` (`:255-266`) → `documents_pending` ⇒ `claim.peer_mesh_pinged` under a
+  SAVEPOINT that swallows `ClaimStreamConcurrencyError` (`:277-306` — ⚠ replaced by AC8) + `persistPeerMeshPingIntents` → after COMMIT
+  the 72-hour window job (only for `pending`, `:335`) and the shepherd job (`:350-360`).
+- **The engine** (`packages/domain/src/claim/peer-mesh.ts:61-84`) and **the registry** (`peer-mesh-metric-registry.ts:65-136`) — SF6.
+- **The selection table** (`packages/domain/src/schema/claim_peer_mesh_selections.ts`; `0054:45-62`; one row per claim — `claim_case_id`
+  UNIQUE): the snapshot and output IMMUTABLE; `outcome` / `response_window_expires_at` / `skip_reason` mutable; ≤ 5 selected (CHECK,
+  `:61`); `candidate_snapshot` is uncapped jsonb; *"NO PII"* — ⭐ keep it so: the new columns hold workplace ids (Tier 3), booleans and
+  member ids — ⛔ never a date of death.
+- **The ping table** (`claim_peer_mesh_pings.ts:57-116`; 0054 + 0156; FK to `selection_id`): UPDATE narrowed to the delivery columns
+  (`0156:64-65`); INSERT is table-wide ⇒ `source` written at insert is immutable by grant.
 - **`recordPeerMeshResponse`** (`peer-mesh-persist.ts:220-275`) — the 6.6 response event; it checks the responder is in
   `selected_member_ids` (`:235-237`). ⛔ Not changed here (6.27c's — SF11).
 - **The views:** `PeerMeshView` props `{ transcript, now? }` (`PeerMeshView.tsx:29`), per-ping loop `:51-90`, rendered by
   `SignalsPanel.tsx:276-284` and by `NeighboursAnswersPanel.tsx:176` on four hosts (`cycle-freeze/PendingCaseCard.tsx:500`,
   `correction-closure/PariwarClosureStrip.tsx:267`, `correction-closure/EscalationPanel.tsx:437`, `r9-voting/R9CasePanel.tsx:194`); the
-  code note `PeerMeshView.tsx:2-4` already names this row (*"so row 6-36's source line (`-326` BD1 A) lands on both by construction"*).
-  ⚠ The "How do you know [member]?" question is `relationship` (`claim.json:184`), ⛔ not `how_known` (*"How do you know they died?"*).
+  code note `PeerMeshView.tsx:2-4` already names this row (*"so row 6-36's source line (`-326` BD1 A) lands on both by construction"*). The
+  console renders `skipped` as *"No neighbour could be chosen"* (`i18n-en.ts:109`). ⚠ The "How do you know [member]?" question is
+  `relationship` (`claim.json:184`), ⛔ `how_known` (*"How do you know they died?"*).
+- **Downstream of a zero-ping claim in `verification_in_progress`** (checked at `51382898`): ground inspection can be scheduled
+  (`CLAIM_REVIEW_WINDOW_STATES`, `review-window.ts:15-21`); approval warnings key on reply answers only (`approval-warnings.ts:530-538`)
+  ⇒ zero answers, ⛔ wait; ⛔ approval / freeze code reads `outcome` or `response_window_expires_at`. ⛔ No gate stalls it.
+
+### Shipped substrate this part reads (6.36a / 6.36b, at `51382898`)
+- **`member_postings`** (`schema/member_postings.ts`; `0031`, `0161:298-305`): `posting_id`, `member_id`, `pariwar_id`, `district`,
+  `pariwar_ref`, `is_retirement`, `workplace_id`, `workplace_request_id`, `started_on` (`'YYYY-MM-DD'` or NULL), `created_at`. APPEND-ONLY
+  (GRANT SELECT, INSERT — `0031:36`); ⛔ `ended_at`, ⛔ superseded rows. Writer: `insertMemberPosting` (`member/posting.ts:54`, takes
+  `exceptRequestId`). ⛔ No helper computes a current / previous workplace or a run — this part writes them.
+- **`member_known_people`** (`schema/member_known_people.ts`; `0162:22-62`): `link_id`, `namer_member_id`, `named_member_id`, `found_by`,
+  `state` (`asked|accepted|declined|lapsed|removed|withdrawn|erased` — `KNOWN_PEOPLE_LINK_STATES`), `asked_at`, `responded_at`,
+  `ended_at`. Forward-only (guard `0162:86-108`: `asked → accepted|declined|lapsed|removed|erased`, `accepted → removed|withdrawn|erased`);
+  `responded_at` / `ended_at` written once. Removal = the namer, from `asked` or `accepted`; withdrawal = the named, from `accepted`, per
+  link. A death report leaves ACCEPTED links `accepted` (`-333` call 1 (b)); open asks are hidden and lapse. Index
+  `member_known_people_namer_idx (pariwar_id, namer_member_id)`.
+- **Predicates** (`member/known-people.ts`): `knownPersonEligibleSql` (`:94` — `active` + `active-in-grace`; ⛔ SW23), `knownPeopleCallerSql`
+  (`:107` — `active`, ⛔ a claim naming them), `namedByClaimSql` (`:81`, private).
+- **IST:** `istDateOf`, `addCalendarDays`, `istMidnightAt` (`cycle-calendar/holiday-resolver.ts:178`, `:201`, `:220`).
+- **Claim + scope:** `claim.getClaimCase` / `claim.lockClaimCase` → `ClaimRow.createdAt`, `.claimantActorId` (nullable);
+  `withPariwarScope` sets `app.pariwar_id` — every table above has a Pariwar-wide `FOR SELECT TO twt_app` policy (reachable).
+- **Renewal grace** is `members.state = 'active-in-grace'` (`schema/members.ts:56`).
+
+### Recorded, ⛔ built here
+- ⚠ **CF4 A (3)'s letter from the head of the school or office** is row `6-32-inspector-questionnaire-at-the-ground-inspection`'s
+  (`backlog`). ⛔ No go-live row fences it at `51382898` (`docs/launch-gate-inventory/inventory-roster.md` names ⛔ 6-32) ⇒ after this
+  part, a claim with nobody to ask is inspected and approvable WITHOUT the letter until 6-32 is `done`. ⛔ Not in production (merge ≠
+  go-live). ⭐ A launch-gate row making 6-32 a go-live predecessor was PROPOSED to BigDev on 2026-10-15 (BigDev adds it).
+- ⚠ **The OCR job swallows a `ClaimStreamConcurrencyError` the same way** (`apps/jobs/src/claim-ocr-parity.ts:457-485`) — alarmed as
+  *"benign"*, the claim left `intake_converged`, and the select job still enqueued. ⚠ Reachability UNPROVEN: on a first upload the
+  job's `claim_documents` insert (its FK to `claims`) takes FOR KEY SHARE on the claim row before the head read, which serializes it
+  against every FOR UPDATE appender, and a tracked death-certificate upload already takes FOR UPDATE on the claim
+  (`claim-ocr-parity.ts:318-322`); only an UNTRACKED document's re-upload upsert (the DO UPDATE path, ⛔ FK check) could race. If it happens, the claim
+  stays `intake_converged` until a later upload's OCR run emits `documents_received` (after AC8 the select job persists ⛔ selection for
+  it meanwhile). ⛔ Out of this part's scope (the OCR job is 6.4's / 6.6's trigger seam); Task 7 records it as a NEW deferred-work item
+  — reachability unproven, owner unassigned.
+- ⏳ **RF1** — a death filed again moves the cut (each claim has its own `created_at`; postings are ⛔ frozen after the first filing;
+  the deceased's account can ⛔ change named people — `-333` call 1 — though a named person's own withdrawal still counts). Routed to
+  the Panel (non-blocking); built as written behind AC4's one function. Option A carries its own cost (a false death report, refused,
+  would anchor a later real death) and option C narrows it — the note says so.
+- A living member once wrongly reported dead stays outside every later five, permanently: SW23's *"⛔ a claim naming them as the
+  deceased (any state)"* (6.36b's `namedByClaimSql`, `-333` D1 A's recorded cost) — a consequence of the shared rule, ⛔ a change made
+  here. The key that would lift it is `-238`'s innocence finding (`claim_nominee_findings.kind = 'member_found_innocent'`, producer row
+  6-22, unbuilt) — `nominee-lock.ts` already reads it; SW23 / `namedByClaimSql` do ⛔ not read it (recorded for 6-22).
+- If the select job's three attempts all fail (pg-boss v12 defaults: retry limit 2, ⛔ backoff, ⛔ dead letter), the transaction rolls
+  back: ⛔ selection, the claim stays `documents_pending`, ⛔ alarm on the final failure; only another upload re-triggers it. With the
+  lock nothing is known to fail persistently — recorded, ⛔ changed here.
+- Until a Pariwar imports its workplace list, every claim there goes to named people or nobody (district-only rows name no workplace).
+- A deceased with ⛔ posting at all still gets a shepherd enqueue that DLQs (`claim-shepherd-assign.ts:92-99`) — pre-existing, unchanged.
 
 ### Traps
 1. ⚠ **The default moves** — every caller of `resolvePeerMeshMetric()` without an id now gets the grouped metric: the select job
    (`claim-peer-mesh.ts:221`) and the domain test `packages/domain/tests/claim/peer-mesh.test.ts:25` (asserted at `:73`, `:193-199`); the
-   jobs test's replay legs already pass the stored id (`:307`, `:350`). ⚠ And v1's `metricId` IS the constant (`:102`) — give it a literal
-   id FIRST (AC3).
+   jobs test's replay legs already pass the stored id (`:307`, `:350`) but feed `selectPeerMesh` directly (AC3). ⚠ And v1's `metricId` IS
+   the constant (`:102`) — give it a literal id FIRST (AC3).
 2. ⚠ **⛔ no KMS in this job** — the anchor is the filing date (SF17); a later OCR-date anchor is a NEW metric id with its own story.
-3. ⚠ **A new edge has readers** — the certificate reminder's day 0 and its sweep, the shepherd enqueue (SF4); re-grep at build.
-4. ⚠ **`.strict()` everywhere** — the event payload, the wire DTO; a new required wire field breaks fixtures silently (contracts tests
-   sit outside `tsc`).
-5. ⚠ **Never leak "who" to the inspector** — the source is a category of who (CF2). The inspector's wire has ⛔ no per-ping rows; keep it so.
-6. ⚠ **Determinism** — ⛔ no `Date.now()`, ⛔ no `Math.random()`, ⛔ no locale-dependent compares in the engine; the hash is over ASCII ids
-   (branded ids are lower-case — memory).
-7. ⚠ **Same-tx clocks** — the as-of cut uses `created_at` / `responded_at` / `ended_at` (server times) against a computed IST day start; a live test
-   needs rows written in SEPARATE transactions (memory: one BEGIN ⇒ every `now()` equal).
+3. ⚠ **`settled` reads `created_at`; the 90-day previous-workplace test reads `started_on`** — two different clocks for two different
+   questions (SW22 vs SW21). Swapping them lets a typed date buy rank.
+4. ⚠ **A "benign" append race is ⛔ benign** — never swallow `ClaimStreamConcurrencyError` in this job (AC8).
+5. ⚠ **`declined` writes `responded_at`** — "accepted before the cut" is a STATE test, ⛔ a timestamp test (AC5).
+6. ⚠ **Two eligibility predicates, ⛔ one** — 6.36b's admits renewal grace; SW23 does ⛔ (`-333` call 2 (d)).
+7. ⚠ **`.strict()` everywhere** — the event payload, the wire DTO; a new required wire field breaks fixtures silently (contracts tests sit
+   outside `tsc`); response schemas are PARSED.
+8. ⚠ **Never leak "who" to the inspector** — the source is a category of who (CF2). The inspector's wire has ⛔ per-ping rows; keep it so.
+9. ⚠ **Determinism** — ⛔ `Date.now()`, ⛔ `Math.random()`, ⛔ locale-dependent compares in the engine; the hash is over branded
+   (lower-case) ASCII ids.
+10. ⚠ **Same-tx clocks** — the as-of cut compares `created_at` / `responded_at` / `ended_at` (server times) with a computed IST day start;
+    a live test needs rows written in SEPARATE transactions (one BEGIN ⇒ every `now()` equal).
+11. ⚠ **`v4` is ALREADY a fixture id** — `questionnaires.test.ts:109-114` uses `'peer_mesh.v4'` for a Pariwar-scoped fixture; rebuild it as
+    `v5` from V4 (AC16).
 
 ### Testing standards
-As 6.36a. The pure engine: `packages/domain/tests/claim/peer-mesh.test.ts`'s style (byte-identical replay, input-order independence).
-The job: `apps/jobs/tests/claim-peer-mesh.test.ts` (live). The event registry coverage test is SET EQUALITY (⛔ not a count).
+As 6.36a. The pure engine: `packages/domain/tests/claim/peer-mesh.test.ts`'s style (byte-identical replay, input-order independence). The
+job: `apps/jobs/tests/claim-peer-mesh.test.ts` (live; AC8's race leg uses two connections). The event registry coverage test is SET
+EQUALITY (⛔ a count). The snapshot: live legs in `packages/domain/tests/integration/claim/` (separate transactions; one leg under
+`twt_app`).
 
 ### References
-6.36a (SW18–SW27, SF4–SF6, SF10, SF11); 6.6's story file (AC1, AC2, AC5, D3; its review Decision 1); 6.27a (PM1, Invariant 4, Trap 8,
-Trap 9, F3); 6.27b (BD1 A — the shared view); 6.27d (R5 — staff see neighbour-derived content only inside the section); `-310` CF4 A /
-CF2; `-308`; `-325` S1 A; `-326` BD1 A.
+6.36a (SW17–SW27, SW30, SF4–SF6, SF10, SF11, SF16, SF17, I3, I7–I11); 6.36b (`-333`; W5); 6.36c AC4 (the confirm writes a posting); 6.6's
+story file (AC1, AC2, AC5, D3; its review item *"Zero-candidate selection has no defined disposition"*); 6.27a (PM1, Invariant 4, Trap 8,
+Trap 9, F3); 6.27b (BD1 A — the shared view; PM25 (c); the v3 recipe); 6.27d (R5 — staff see neighbour-derived content only inside the
+section); `-310` CF4 A / CF2 / CF3 (a); `-331` SC1 A / SC4 A; `-330`; `-333` calls 1 and 2 (d); `-308`; `-325` S1 A; `-326` BD1 A; `-327`
+BD4; `-259` detail 3; `-263` FQ10; the RF1 routing note.
 
 ## Dev Agent Record
 ### Agent Model Used
 ### Completion Notes List
 - 2026-10-14 — cut by `bmad-create-story 6.36` (SW1). ⛔ No code.
+- 2026-10-15 — re-validated against `main` `51382898` (v2.0–v2.5) ⇒ `ready-for-dev`. ⛔ No code.
 ### File List
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 2.5 | Round-6 narrow re-validate (the note + its story lines): ⛔ finding at HIGH or above — the rounds have converged. 2 MEDIUM, 5 LOW applied: option C's effect holds only when an investigation found the member innocent (a refusal without one still anchors as in A); two negative staff-line legs (an ask, a lapse); the note names C beside A where it should, "the same filter" ⛔ "exact shape", the table exists but nothing writes it, SW19 cited as 6.36a's record; a glyph fix in §Recorded. |
+| 2026-10-15 | 2.4 | Round-5 narrow re-validate of v2.3: 1 HIGH (the routing note), 3 MEDIUM, 2 LOW, all applied. HIGH: option C was written as a new staff step and a new reason — false: `-238` (Trustee-ratified) already rules the innocence finding and `claim_nominee_findings.kind = 'member_found_innocent'` exists, read with C's exact shape by `nominee-lock.ts` (producer row 6-22, unbuilt) ⇒ C keyed on it (behaves as A until 6-22), our reading C; §Recorded names it as the key that would lift the falsely-reported-member exclusion. MEDIUM: two staff-line legs seed acceptance MORE than 90 days back (exactly 90 is inside the window); a positive acceptance leg; the staff-line rule restated as SW20's two plus changes out of the accepted set. LOW: the note's suspicion-refusal sentence; "Our reading" is one option. |
+| 2026-10-15 | 2.3 | Round-4 fresh-context re-validate of v2.2: 1 HIGH (the routing note only), 4 MEDIUM, 3 LOW, all applied. HIGH: the note's "Our reading" recommended a variant that was in ⛔ option row ("the first filing since the last refusal") — undefined ("refusal" is ⛔ a single recorded state) and, read as `denied`, it reopened option B for the commonest re-file ⇒ the narrow version is now option C ("…unless refused because the member was found alive" — a new staff step); our reading: A, or C. MEDIUM: the two-select-jobs race is LATENT (one `jobs` service, `boss.work` with ⛔ options) — the lock is kept as defence; the race test's zero-branch leg cannot be RED before Task 5; the staff line's rule restated (acts by the account, or changes to the accepted set); two staff-line legs seed their acceptance ≥ 90 days back. LOW: the `skipped` zero selection in `documents_pending` is REACHABLE (SF4) — ⛔ unproven; the OCR item names the tracked upload's FOR UPDATE; a living member once falsely reported stays outside every later five (recorded). |
+| 2026-10-15 | 2.2 | Round-3 fresh-context re-validate of v2.1: 2 HIGH, 3 MEDIUM, 6 LOW, all applied. ⚠ v2.0's HIGH premise for AC8 was FALSE and is withdrawn (rows 2.0 / 2.1 kept as written): a bank save, DPDPA consent or a closure can ⛔ win the select job's append — the selection insert's FK to `claims` takes FOR KEY SHARE on the claim row before the head read, serializing it against their FOR UPDATE. The REACHABLE defect is two select jobs at once (one per upload; `singletonKey` inert): the loser appends a duplicate edge from its stale, unlocked read. AC8's lock stays (now taken FIRST, before the probe); the race test is rebuilt on two select transactions; the probe heal is DROPPED (it served only an unproven pre-commit state, and could still ping after a lost window job); the OCR item is recorded as reachability-unproven. HIGH: RF1 option A's cost was missing — a member once wrongly reported dead, claim refused, would anchor a later real death at that false filing (the note, AC4, §Recorded). MEDIUM: the staff line counts an `erased` link only when it had been accepted (an unanswered ask was never a named person) + its test legs. LOW: the NULL-`started_on` reasoning; the district-only refusal cited at the route; a death-certificate replacement in the review window enqueues ⛔ select job; Task 4 tags AC9; `claim-peer-mesh.ts:217`, `:299-306`. |
+| 2026-10-15 | 2.1 | Fresh-context re-validate of v2.0 (two verifiers — cites / consistency, adversarial design): 2 HIGH, 9 MEDIUM, ~10 LOW, all applied. HIGH: AC8's heal would have pinged people after their window was gone (a select job run while the claim was still `intake_converged` persisted a `pending` selection and its window job) ⇒ a selection is now persisted ONLY together with its edge, and the heal is scoped to selections persisted before this commit (a resolved non-zero one ⇒ alarm, ⛔ edge); the RF1 note over-stated the freeze on named people (only the dead member's account is refused — a named person can still withdraw), and the story said it in three places. MEDIUM: the staff line counts every REMOVED link (SW20 word for word — v2.0 had narrowed it to accepted-then-removed) and now also withdrawn / erased links (our reading of `-331` SC1 A's *"the people they named changed"* — MATCHES the ratified sentence; flagged to BigDev); the ping trigger's NOT FOUND ⇒ `RETURN NEW`; the prefix trigger also on UPDATE; `deceased_district` is nullable; a glyph inversion in Task 1; AC14's legacy carve-out vs the heal; the race test rebuilt around a held transaction; `pg-boss`'s standard policy makes `singletonKey` inert (one select job per upload). LOW: off-by-one cites (`known-people.ts:91`, `claim-peer-mesh.ts:266`, `peer-mesh-persist.ts:328-329` / `:360-361`, `questionnaires.test.ts:107-108` / `:109-114`, `claim-peer-mesh.test.ts:340-344`, `claim-shepherd-assign.ts:92-99`); the RLS cites name the tables read; RF1's answer is a small change, ⛔ one line; the retries-exhausted residual; the settled-after-first-import consequence; AC↔Task tags. |
+| 2026-10-15 | 2.0 | Validate against `main` `51382898` (6.36a AND 6.36b shipped; four parallel verifiers — code cites, shipped substrate, governance, premise / reachability): 0 BLOCKER, 5 HIGH, 11 MEDIUM, 7 LOW, all applied (BigDev: *"All"*). HIGH: AC8 — the job's swallowed `ClaimStreamConcurrencyError` loses the edge when ANOTHER event (a bank save) wins the append ⇒ the claim read under `lockClaimCase`, the error rethrown, the probe heals a missing edge (6.6's pinged branch too); AC5 — a `declined` link also writes `responded_at` ⇒ the named-people predicate is a STATE test; AC2 — `settled` reads the run's earliest `created_at`, ⛔ `started_on` (SW22, `-331` SC1 A); AC16 — v4 needs `-331` in `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS` or the registry fails at module load, plus the moved v3 pins and the colliding `peer_mesh.v4` fixture; SW30 — two items closed, one NARROWED, one left open (the header, the rulings list, Task 3 and AC14 had called them closed). MEDIUM: SW23 is `active` only (`-333` call 2 (d)) with grace tests; the posting row kinds incl. district-only, and "unconfirmed" as the latest row; the `member_postings` workplace index; the shipped IST helpers; a removal after filing is refused (`-333` call 1); the staff line's "removed"; the registry / snapshot union's callers; the NOT NULL legacy columns; both triggers scoped (the FK's 23503 kept); the transcript fixture twin and its assembler mapping; the rulings listed by instrument kind, 6.6's item named. LOW: ten fixture inserts (⛔ seven); the zero branch's skip constant and shepherd flag; the reducer's `closed` invariant; the duplicate-id throw and branded hash input; erasure / `twt_app` / NULL-claimant legs; cite precision (`peer-mesh.ts:61-84`, `peer-request.ts:93-99`, `certificate-reminder.ts:131-152`); the Policy-meaning note's certificate-reminder consequence. DECIDED by BigDev: RF1 (a re-filed claim's cut) ROUTED to the Panel — note written, ⛔ sent, non-blocking, built as written behind one function; the head's-letter gap recorded here and a launch-gate row PROPOSED. Row `backlog` → `ready-for-dev`. |
 | 2026-10-15 | — | `2026-10-15-338` (`08932f43`): wave 2 built one after the other — this row FIRST, 6.36c only after it is `done`; re-validated against `main` (`51382898`) before `ready-for-dev`. ⛔ No AC changed. |
 | 2026-10-14 | — | `2026-10-14-332` (`33902d82`): wave 2 — starts when 6.36a AND 6.36b are done (⛔ not 6.36c), in parallel with 6.36c; migration `0163` / `…007`; merges third. |
-| 2026-10-14 | — | ⭐ The Panel RULED SC1 A and SC4 A (`2026-10-14-331`, `0019b301`): SC1 A ratifies the filing-day cut (AC5); SC4 A adds AC16 / Task 8 — this story mints `peer_mesh.v4` with *"A colleague at the same school or office"* (our reading of who builds it). |
+| 2026-10-14 | — | ⭐ The Panel RULED SC1 A and SC4 A (`2026-10-14-331`, `0019b301`): SC1 A ratifies the filing-day cut (AC5), the settled-first ranking (AC2) and the staff line (AC10); SC4 A adds AC16 / Task 8 — this story mints `peer_mesh.v4` with *"A colleague at the same school or office"* (our reading of who builds it). |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.5 | Validate round 5: AC5 quotes SW21's run word for word, defines "unconfirmed" as of the cut, and its first test now has a previous workplace to miss. |
 | 2026-10-14 | 1.4 | Validate round 4: the Story's promise names I8's two exceptions; `settled` measured from the run's recorded start and false for named people; AC5's run definition and its three tests. |

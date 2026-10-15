@@ -86,6 +86,10 @@ import { nomineeDeterminationItems, nomineeDeterminations } from '../schema/nomi
 import { memberPostings } from '../schema/member_postings.js';
 import { workplaceRequests } from '../schema/workplace_requests.js';
 import { workplaces } from '../schema/workplaces.js';
+import { resolvePublicNamePresentationMode } from '../kyc/presentation-policy.js';
+import { ANONYMIZED_SENTINEL } from '../member/anonymize.js';
+import { getKnownPeopleForExport, type KnownPeopleExportRow } from '../member/known-people.js';
+import { resolveMemberFacingDeceasedName } from '../notifications/pool-identity.js';
 import { members } from '../schema/members.js';
 import { vyawasthaShulkReceipts } from '../schema/vyawastha_shulk_receipts.js';
 
@@ -347,6 +351,42 @@ export async function assembleMemberExport(
     })),
   );
 
+  // Story 6.36b (SW17, AC12) — PEOPLE WHO KNOW ME: the people the member NAMED and the members who named THEM, every link,
+  // each with ONLY the name the member already saw, in the member-to-member form the app shows (the Pariwar's presentation
+  // mode): a named person's once they had ACCEPTED (an `asked` or declined link showed only the name the member saved on
+  // their phone — ⛔ kept by the Trust); a namer's always (the request showed it). ⛔ No member id, ⛔ no number.
+  const knownPeopleLinks = await getKnownPeopleForExport(client, { pariwarId, memberId });
+  const presentationMode =
+    knownPeopleLinks.named.length + knownPeopleLinks.namedBy.length === 0 ? null : await resolvePublicNamePresentationMode(client, pariwarId);
+  const seenName = async (otherId: string): Promise<string | null> => {
+    if (presentationMode === null) return null;
+    const [other] = await client.select().from(memberKycProfiles).where(eq(memberKycProfiles.memberId, otherId as MemberId)).limit(1);
+    if (other === undefined || other.nameCiphertext === null) return null;
+    let stored: string;
+    try {
+      stored = await decryptField(other.nameCiphertext, pariwarId, FIELD_CLASS_KYC, enc);
+    } catch {
+      return null; // ⛔ another member's unreadable name never fails THIS member's export
+    }
+    if (stored === ANONYMIZED_SENTINEL) return null;
+    const shown = resolveMemberFacingDeceasedName(presentationMode, stored).trim();
+    return shown === '' ? null : shown;
+  };
+  const exportLink = async (l: KnownPeopleExportRow, nameSeen: boolean) => ({
+    name: nameSeen ? await seenName(l.otherMemberId) : null,
+    state: l.state,
+    foundBy: l.foundBy,
+    askedAt: l.askedAt.toISOString(),
+    respondedAt: l.respondedAt?.toISOString() ?? null,
+    endedAt: l.endedAt?.toISOString() ?? null,
+  });
+  const knownPeople = {
+    named: await Promise.all(
+      knownPeopleLinks.named.map((l) => exportLink(l, l.respondedAt !== null && l.state !== 'declined')),
+    ),
+    namedBy: await Promise.all(knownPeopleLinks.namedBy.map((l) => exportLink(l, true))),
+  };
+
   const profile = {
     memberId,
     pariwarId,
@@ -381,6 +421,7 @@ export async function assembleMemberExport(
       attributionSource: a.attributionSource,
       capturedAt: a.capturedAt.toISOString(),
     })),
+    knownPeople,
   };
 
   // ── consent_records.json ── full history (grants + revocations); no cap — this is a data-export,

@@ -92,6 +92,21 @@ function productionIdentity(env: Env): AppIdentity {
   };
 }
 
+/**
+ * The Trust's display name — from config ONLY (`EXPO_PUBLIC_TRUST_NAME`; the legal name is under registration, so ⛔ never
+ * hard-coded). The SAME variable the in-app copy reads (`lib/trust-name.ts`). Absent ⇒ the wording without a name.
+ */
+export const TRUST_NAME_ENV = 'EXPO_PUBLIC_TRUST_NAME';
+
+/**
+ * iOS `NSContactsUsageDescription` (Story 6.36b, AC11 — `expo-contacts`' `contactsPermission`): why the app reads the
+ * contacts, in the words of the in-app note (`-309`) — matched, then ⛔ kept for a non-member. English (the system string).
+ */
+export function contactsPermissionText(trustName: string | undefined): string {
+  const who = trustName === undefined ? 'This app' : trustName;
+  return `${who} checks the numbers in your contacts against the member list, so you can find members you know. Numbers of people who aren't members are not kept.`;
+}
+
 /** A bare host name (`example.org`) — ⛔ no scheme, port, path or trailing dot. */
 function resolveLinksHost(env: Env): string | undefined {
   const host = nonBlank(env.APP_LINKS_HOST);
@@ -148,6 +163,8 @@ export function resolveAppConfig(env: Env): ExpoConfig {
     },
     android: {
       package: identity.androidPackage,
+      // Story 6.36b (6.36a SF3): the `expo-contacts` plugin adds READ_ AND WRITE_CONTACTS; the app only READS.
+      blockedPermissions: ['android.permission.WRITE_CONTACTS'],
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff',
@@ -180,6 +197,8 @@ export function resolveAppConfig(env: Env): ExpoConfig {
       ],
       'expo-secure-store',
       'expo-sharing',
+      // Story 6.36b — "Find members in my contacts" (AC11). The text names the Trust only from config.
+      ['expo-contacts', { contactsPermission: contactsPermissionText(nonBlank(env[TRUST_NAME_ENV])) }],
     ],
     experiments: {
       typedRoutes: true,

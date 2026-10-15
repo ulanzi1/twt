@@ -59,6 +59,7 @@ import { claimPeerMeshReplyAnswers } from '../schema/claim_peer_mesh_replies.js'
 import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 import { workplaceRequests } from '../schema/workplace_requests.js';
+import { eraseKnownPeopleLinks } from './known-people.js';
 
 /** The KMS material the sentinel-encrypt uses. The caller (the RTBF handler) threads its `{ kms, kekRef }`
  *  here — the SAME `ExportEncryption` shape assemble.ts uses for the inverse decrypt. */
@@ -588,6 +589,11 @@ export async function anonymizeMember(
         isNotNull(memberModerationAppeals.reasonedOutcomeCiphertext),
       ),
     );
+
+  // ── member_known_people (Story 6.36b, SW17, AC12) ── ⛔ PII (ids, states, dates), but every LIVE link where the member is
+  // namer OR named ENDS (`erased`; a stale ask recorded `lapsed`) — ⛔ deleted: 6.36 must ⛔ never ask an erased person,
+  // and the namer's row vanishes (6.36a SW14 (3)). ONE statement.
+  await eraseKnownPeopleLinks(client, { pariwarId, memberId });
 
   await client
     .update(dataExports)

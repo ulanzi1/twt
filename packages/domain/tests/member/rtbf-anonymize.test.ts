@@ -41,6 +41,7 @@ import {
   claimPeerMeshReplyAnswers,
   claimGroundInspectionDiscrepancyNotes,
   claims,
+  memberKnownPeople,
   nomineeDeterminations,
   workplaceRequests,
 } from '../../src/schema/index.js';
@@ -121,7 +122,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the TWENTY-ONE member-PII tables (twenty-four statements), once each except the three documented doubles', async () => {
+  it('updates exactly the TWENTY-THREE member tables (twenty-six statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -206,8 +207,13 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // member's TYPED workplace name and place (*"my workplace isn't listed"* — member-authored free text, plaintext) and
     // takes ONE statement: the text → NULL in every state, an open request → `closed`, together (0161's guard's erasure
     // arm). The postings are kept (non-PII Tier 3). Raised, never weakened.
+    //
+    // ⭐ MOVED AGAIN by Story 6.36b (SW17, AC12): TWENTY-THREE tables, TWENTY-SIX statements (with 6.36a's). `member_known_people` holds ⛔
+    // PII (member ids, states, dates) but its LIVE links must END on either member's erasure (`erased`, ⛔ deleted — the
+    // history is kept, the ids opaque), so 6.36 never asks an erased person and a namer's row vanishes. ONE statement: a
+    // stale `asked` row is recorded `lapsed` (dated `asked_at + 30 days`), every other live row `erased`.
     const { captured } = await run();
-    expect(captured).toHaveLength(25);
+    expect(captured).toHaveLength(26);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -232,6 +238,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       claimPeerMeshReplyAnswers,
       claimGroundInspectionDiscrepancyNotes,
       workplaceRequests,
+      memberKnownPeople,
     ]) {
       expect(tables).toContain(t);
     }
@@ -244,7 +251,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(22); // Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(23); // Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -277,7 +284,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
-    expect(captured).toHaveLength(22); // Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
+    expect(captured).toHaveLength(23); // Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
   });
 
   it('⭐ Story 6.36a (AC9): the typed workplace → NULL and an open request → closed, in ONE statement, ONLY the member\'s rows', async () => {
@@ -297,6 +304,19 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // ⚠ A final row whose text is already gone is SKIPPED (the guard refuses a write that changes nothing).
     expect(text).toMatch(/"workplace_requests"\."typed_name" IS NOT NULL OR "workplace_requests"\."typed_place" IS NOT NULL OR "workplace_requests"\."state" IN \('pending', 'suggested'\)/);
     expect(params).toContain(pariwar);
+  });
+
+  it('⭐ Story 6.36b (SW17): the known-people links END — ONE statement, a stale ask lapsed, every other live link erased', async () => {
+    const { captured } = await run([]);
+    const found = captured.filter((c) => c.table === memberKnownPeople);
+    expect(found).toHaveLength(1);
+    expect(Object.keys(found[0]!.set).sort()).toEqual(['endedAt', 'state']);
+    const dialect = new PgDialect();
+    const render = (v: unknown) => dialect.sqlToQuery(v as SQL).sql;
+    expect(render(found[0]!.set.state)).toMatch(/CASE WHEN .*'asked'.* THEN 'lapsed' ELSE 'erased' END/s);
+    expect(render(found[0]!.set.endedAt)).toMatch(/THEN "member_known_people"\."asked_at" \+ make_interval\(days => \$\d+::int\) ELSE clock_timestamp\(\) END/s);
+    // namer OR named, LIVE only, in the member's Pariwar
+    expect(render(found[0]!.where)).toMatch(/"pariwar_id" = \$1 and \(.*"namer_member_id" = \$2 or .*"named_member_id" = \$3\) and .*"state" in \(\$4, \$5\)/s);
   });
 
   it('⭐ Story 6.27d (PM17 d): the re-ask notes → the inspection block\'s sentinel, ONLY on the deceased\'s claims, ONLY rows with a note', async () => {

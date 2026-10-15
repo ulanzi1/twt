@@ -45,6 +45,14 @@ export default function LifeEventsIndexScreen() {
       to: '/(life-events)/posting',
     },
     {
+      // Story 6.36b — PEOPLE WHO KNOW ME (6.36a SW10–SW14). Its status line reads from its own screen, ⛔ the summary.
+      key: 'known-people',
+      label: t('life_events_label', undefined, { namespace: 'known_people' }),
+      desc: t('life_events_desc', undefined, { namespace: 'known_people' }),
+      recorded: undefined,
+      to: '/(life-events)/known-people',
+    },
+    {
       key: 'medical',
       label: t('lifeEvents.medical_label'),
       desc: t('lifeEvents.medical_desc'),
@@ -77,9 +85,11 @@ export default function LifeEventsIndexScreen() {
               <Text color="$colorPress" fontSize="$2">
                 {c.desc}
               </Text>
-              <Text color="$colorPress" fontSize="$2" accessibilityLiveRegion="polite">
-                {status(c.recorded)}
-              </Text>
+              {c.key === 'known-people' ? null : (
+                <Text color="$colorPress" fontSize="$2" accessibilityLiveRegion="polite">
+                  {status(c.recorded)}
+                </Text>
+              )}
             </YStack>
           </Button>
         ))}

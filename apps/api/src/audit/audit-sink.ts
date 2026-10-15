@@ -172,6 +172,15 @@ export type AuthAuditEventType =
   //   posting.updated — a new append-only member_postings row was written + member.posting_updated emitted.
   | 'member_life_events.address_updated'
   | 'member_life_events.posting_updated'
+  // ── People who know me (Story 6.36b, 6.36a SW10–SW14) ──────────────────────────────────────
+  // Resource `member:<id>` (the OTHER member of the link; the caller for a match). Context carries COUNTS and how a person
+  // was found ONLY — ⛔ a number, ⛔ a name (I4). A match's KMS line is separate (`kms.compute_hmac`, `contact_match:n=…`).
+  | 'member_known_people.contacts_matched'
+  | 'member_known_people.asked'
+  | 'member_known_people.accepted'
+  | 'member_known_people.declined'
+  | 'member_known_people.removed'
+  | 'member_known_people.withdrawn'
   // ── Member voluntary-withdrawal surface (Story 3.10, FR-6) ───────────────────
   // The withdrawal confirm (member.withdrawal_completed emitted → state withdrawn) + the signup
   // rejoin-lock block. Context is NON-PII: reason_code (bounded enum) + rejoin_permitted_at only —

@@ -16,7 +16,7 @@
 export type { PiiTier } from './tiers.js';
 export { PII_TIER_1, PII_TIER_2, PII_TIER_3 } from './tiers.js';
 
-export type { EncryptionContext, KmsKeyRef, KmsProvider } from './kms-provider.js';
+export type { EncryptionContext, KmsAuditContext, KmsKeyRef, KmsProvider } from './kms-provider.js';
 
 export {
   encryptTier1,
@@ -26,7 +26,14 @@ export {
   type Tier1Ciphertext,
 } from './envelope.js';
 
-export { blindIndex } from './blind-index.js';
+export {
+  BATCH_HMAC_MAX_IN_FLIGHT,
+  blindIndex,
+  blindIndexMany,
+  createConcurrencyLimiter,
+  type BatchHmacAudit,
+  type ConcurrencyLimiter,
+} from './blind-index.js';
 
 export { passThroughTier3, TIER_3_MARKER } from './pass-through.js';
 
@@ -67,6 +74,7 @@ export {
   normalizeMobile,
   maskMobile,
   mobileBlindIndex,
+  mobileBlindIndexMany,
   encryptMobile,
   decryptMobile,
   encryptKycField,

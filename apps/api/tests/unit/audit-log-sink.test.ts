@@ -112,6 +112,24 @@ describe('kmsEventToAuditInput', () => {
     expect(input.resourceLocator).not.toContain('undefined');
     expect(input.resourceLocator).not.toContain('null');
   });
+
+  // Story 6.36b (6.36a SW12): a BATCH of HMACs writes ONE line; an audit row has ⛔ no context column, so the purpose and
+  // the count ride the row key (and the payload hash).
+  it('a batch line carries `<purpose>:n=<count>` in its row key — and the hash differs by count', () => {
+    const batch = { pariwarId: A_UUID, fieldClass: 'member_mobile', purpose: 'contact_match', count: 1000 };
+    const input = kmsEventToAuditInput('computeHmac', kekRef, batch);
+    expect(input.resourceLocator).toBe('kms:fake:admin-kek/member_mobile/contact_match:n=1000');
+    expect(input.pariwarId).toBe(A_UUID);
+    expect(kmsEventToAuditInput('computeHmac', kekRef, { ...batch, count: 999 }).requestPayloadHash).not.toBe(input.requestPayloadHash);
+  });
+
+  it('a batch line refuses a malformed purpose or count rather than writing a misleading locator', () => {
+    const batch = { pariwarId: A_UUID, fieldClass: 'member_mobile', purpose: 'contact_match', count: 3 };
+    expect(() => kmsEventToAuditInput('computeHmac', kekRef, { ...batch, purpose: 'x/y' })).toThrow(/purpose/);
+    expect(() => kmsEventToAuditInput('computeHmac', kekRef, { ...batch, count: -1 })).toThrow(/count/);
+    expect(() => kmsEventToAuditInput('computeHmac', kekRef, { ...batch, count: 1.5 })).toThrow(/count/);
+    expect(() => kmsEventToAuditInput('computeHmac', kekRef, { pariwarId: A_UUID, fieldClass: 'member_mobile', count: 3 })).toThrow(/purpose/);
+  });
 });
 
 describe('createAuditLogSink / createKmsAuditHook (never throw into the request path)', () => {

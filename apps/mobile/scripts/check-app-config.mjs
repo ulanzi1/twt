@@ -37,7 +37,7 @@ const FIXTURE_HOST = 'links.example.org';
 function cleanEnv(extra) {
   const env = { ...process.env };
   for (const key of Object.keys(env)) {
-    if (key === 'APP_VARIANT' || key.startsWith('APP_IDENTITY_') || key === 'APP_LINKS_HOST') delete env[key];
+    if (key === 'APP_VARIANT' || key.startsWith('APP_IDENTITY_') || key === 'APP_LINKS_HOST' || key === 'EXPO_PUBLIC_TRUST_NAME') delete env[key];
   }
   // Expo CLI loads `apps/mobile/.env*` on top of the process env — a local dotenv file could re-inject the very
   // variables stripped above (code review 2026-10-10). The check states its own env, so dotenv is OFF.

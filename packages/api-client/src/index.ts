@@ -175,6 +175,12 @@ import {
   PeerRequestListResponse,
   PeerRequestSaveAnswerResponse,
   PeerRequestSubmitResponse,
+  KnownPeopleContactMatchResponse,
+  KnownPersonAskResponse,
+  MyKnownPeopleResponse,
+  KnownPeopleWriteResponse,
+  KnownPeopleRequestsResponse,
+  type KnownPeopleFoundByWire,
   type PeerRequestAnswerValue,
 } from '@twt/contracts';
 import type { z } from 'zod';
@@ -1602,4 +1608,41 @@ export function createMemberPeerRequestClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberPeerRequestClient = ReturnType<typeof createMemberPeerRequestClient>;
+
+/**
+ * PEOPLE WHO KNOW ME — the member client (Story 6.36b, Task 4; `/api/v1/member/known-people`). Every call carries the
+ * member bearer. The writes take an `Idempotency-Key` HEADER (a retry of the SAME save reuses its key). ⛔ The numbers
+ * sent for matching are ⛔ kept or logged here — the response is the matched POSITIONS only.
+ */
+export function createMemberKnownPeopleClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+  const base = '/api/v1/member/known-people';
+  const key = (idempotencyKey: string) => ({ 'idempotency-key': idempotencyKey });
+
+  return {
+    contactMatches(numbers: readonly string[]): Promise<KnownPeopleContactMatchResponse> {
+      return call(`${base}/contact-matches`, KnownPeopleContactMatchResponse, { numbers }, true, 'POST');
+    },
+    ask(mobile: string, foundBy: KnownPeopleFoundByWire, idempotencyKey: string): Promise<KnownPersonAskResponse> {
+      return call(base, KnownPersonAskResponse, { mobile, foundBy }, true, 'POST', undefined, key(idempotencyKey));
+    },
+    list(limit = 50): Promise<MyKnownPeopleResponse> {
+      return call(`${base}?limit=${limit}`, MyKnownPeopleResponse, undefined, true, 'GET');
+    },
+    remove(linkId: string, idempotencyKey: string): Promise<KnownPeopleWriteResponse> {
+      return call(`${base}/${encodeURIComponent(linkId)}/remove`, KnownPeopleWriteResponse, {}, true, 'POST', undefined, key(idempotencyKey));
+    },
+    requests(limit = 50): Promise<KnownPeopleRequestsResponse> {
+      return call(`${base}/requests?limit=${limit}`, KnownPeopleRequestsResponse, undefined, true, 'GET');
+    },
+    answer(linkId: string, answer: 'accept' | 'decline', idempotencyKey: string): Promise<KnownPeopleWriteResponse> {
+      return call(`${base}/requests/${encodeURIComponent(linkId)}/answer`, KnownPeopleWriteResponse, { answer }, true, 'POST', undefined, key(idempotencyKey));
+    },
+    withdraw(linkId: string, idempotencyKey: string): Promise<KnownPeopleWriteResponse> {
+      return call(`${base}/requests/${encodeURIComponent(linkId)}/withdraw`, KnownPeopleWriteResponse, {}, true, 'POST', undefined, key(idempotencyKey));
+    },
+  };
+}
+
+export type MemberKnownPeopleClient = ReturnType<typeof createMemberKnownPeopleClient>;
 export { PeerAnswerEditor, type PeerAnswerEditorSnapshot } from './peer-answer-editor';

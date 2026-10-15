@@ -1,0 +1,30 @@
+// People who know me — the query keys and cache policy (Story 6.36b, Task 4).
+//
+// Keys are namespaced by (pariwarId, memberId) under ['known-people', …]. ⭐ `gcTime: 0` on every query and mutation: the
+// lists carry other members' REGISTERED names, and the provider's dehydration filter treats `gcTime: 0` as "⛔ persist to
+// MMKV" (the peer-request precedent, `peer-request-cache.ts`). The contact list itself is ⛔ a query at all — the find
+// screen holds it in memory. Cleared with the other member caches on sign-in, sign-out and a terminated / rejected refresh.
+
+import type { QueryClient } from '@tanstack/react-query'
+
+export const knownPeopleListKey = (pariwarId: string | undefined, memberId: string | undefined) =>
+  ['known-people', 'v1', pariwarId, memberId, 'list'] as const
+
+export const knownPeopleRequestsKey = (pariwarId: string | undefined, memberId: string | undefined) =>
+  ['known-people', 'v1', pariwarId, memberId, 'requests'] as const
+
+export const KNOWN_PEOPLE_CACHE_OPTIONS = { gcTime: 0, staleTime: 0 } as const
+export const KNOWN_PEOPLE_MUTATION_OPTIONS = {
+  mutationKey: ['known-people'],
+  gcTime: 0,
+  networkMode: 'always',
+  meta: { persist: false },
+} as const
+
+/** Remove every people-who-know-me query and mutation (an account change). */
+export function clearKnownPeopleCache(client: QueryClient): void {
+  client.removeQueries({ queryKey: ['known-people'] })
+  for (const mutation of client.getMutationCache().getAll()) {
+    if (mutation.options.mutationKey?.[0] === 'known-people') client.getMutationCache().remove(mutation)
+  }
+}

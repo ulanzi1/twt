@@ -1,0 +1,33 @@
+{
+  "$comment": "Story 6.36b (Task 4) — the SHARED mobile-normalisation cases. `server` is what `normalizeMobile` (packages/domain/src/encryption/member-fields.ts) returns; `phone` is what the app's copy (apps/mobile/lib/phone-normalize.ts) returns. Proven by packages/domain/tests/encryption/mobile-normalize-parity.test.ts (server) and apps/mobile/tests/unit/phone-normalize.test.ts (phone). RULE: wherever `server` is not null, `phone` equals it; the phone-only cases (`0091…`, `+91 (0)…`, `+910…`, non-ASCII digits) have `server: null`.",
+  "cases": [
+    { "input": "9876543210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "+919876543210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "+91 98765 43210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "+91-98765-43210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "(+91) 98765 43210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "919876543210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "09876543210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "098765 43210", "server": "+919876543210", "phone": "+919876543210" },
+    { "input": "6000000001", "server": "+916000000001", "phone": "+916000000001" },
+    { "input": "7012345678", "server": "+917012345678", "phone": "+917012345678" },
+    { "input": "00919876543210", "server": null, "phone": "+919876543210" },
+    { "input": "0091 98765 43210", "server": null, "phone": "+919876543210" },
+    { "input": "+91 (0) 98765 43210", "server": null, "phone": "+919876543210" },
+    { "input": "+91(0)9876543210", "server": null, "phone": "+919876543210" },
+    { "input": "+910 9876543210", "server": null, "phone": "+919876543210" },
+    { "input": "+९१ ९८७६५ ४३२१०", "server": null, "phone": "+919876543210" },
+    { "input": "९८७६५४३२१०", "server": null, "phone": "+919876543210" },
+    { "input": "০৯৮৭৬৫৪৩২১০", "server": null, "phone": "+919876543210" },
+    { "input": "９８７６５４３２１０", "server": null, "phone": "+919876543210" },
+    { "input": "5876543210", "server": null, "phone": null },
+    { "input": "12345", "server": null, "phone": null },
+    { "input": "+1 555 010 0199", "server": null, "phone": null },
+    { "input": "080 2345 6789", "server": "+918023456789", "phone": "+918023456789" },
+    { "input": "+44 7700 900123", "server": null, "phone": null },
+    { "input": "", "server": null, "phone": null },
+    { "input": "abc", "server": null, "phone": null },
+    { "input": "98765432101", "server": null, "phone": null },
+    { "input": "919876543210 ext 2", "server": null, "phone": null }
+  ]
+}

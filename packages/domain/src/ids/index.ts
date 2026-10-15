@@ -825,3 +825,9 @@ export const workplaceRequestId = uuidBrand('WorkplaceRequestId');
 export type WorkplaceImportBatchId = Brand<'WorkplaceImportBatchId'>;
 /** Smart constructor: validates UUID shape, returns a branded `WorkplaceImportBatchId`. */
 export const workplaceImportBatchId = uuidBrand('WorkplaceImportBatchId');
+
+// ── People who know me (Story 6.36b, migration 0162) ─────────────────────────────────────────
+/** Per-row address of a named-person link (`member_known_people.link_id`). */
+export type KnownPersonLinkId = Brand<'KnownPersonLinkId'>;
+/** Smart constructor: validates UUID shape, returns a branded `KnownPersonLinkId`. */
+export const knownPersonLinkId = uuidBrand('KnownPersonLinkId');

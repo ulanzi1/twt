@@ -19,6 +19,7 @@ import { RenewalStatusWidget } from 'components/renewal/RenewalStatusWidget'
 import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
 import { YogdaanBahiEntry } from 'components/yogdaan-bahi/YogdaanBahiEntry'
 import { PeerRequestEntry } from 'components/peer-request/PeerRequestEntry'
+import { KnownPeopleRequestEntry } from 'components/known-people/KnownPeopleRequestEntry'
 
 // Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
 // for an `active` member assigned to a pool whose cycle alert is `live` it renders the contribution
@@ -66,6 +67,9 @@ export default function YogdaanTab() {
             `body.home_screen`) — a bare `/peer-request` after login lands here. ⭐ BELOW the My Pool card and its
             lock-step siblings (second-pass review S31): Story 8.2's AC keeps that card the TOPMOST element. */}
         <PeerRequestEntry />
+        {/* Story 6.36b (AC6) — "Someone has named you": renders NOTHING unless a request naming the member is open, and
+            only for an `active` member (the server's ONE 403 leaves it empty). In the app only — ⛔ SMS, push, WhatsApp. */}
+        <KnownPeopleRequestEntry />
         <LockInClockWidget />
         <RenewalStatusWidget />
         <LifeEventsEntry />

@@ -14,7 +14,7 @@
 // NEVER log a decrypted value (Tier-1 PII). The audit hash over a token/mobile is its blind index,
 // never the raw value or `sha256(rawPII)` (AI-4-3(c)).
 
-import { blindIndex } from './blind-index.js';
+import { blindIndex, blindIndexMany } from './blind-index.js';
 import { decryptTier1, encryptTier1, parseEnvelope, serializeEnvelope } from './envelope.js';
 import {
   MEMBER_DEVICE_TOKEN_FIELD_CLASS,
@@ -119,6 +119,27 @@ export async function mobileBlindIndex(raw: string, enc: FieldCryptoDeps): Promi
     { pariwarId: MEMBER_IDENTITY_NAMESPACE },
     enc.kms,
     enc.hmacKeyRef,
+  );
+}
+
+/**
+ * The blind indexes of many ALREADY-CANONICAL mobiles (`+91XXXXXXXXXX` — `normalizeMobile`'s output), in order — the
+ * contact-matching batch path (Story 6.36b; 6.36a SW12): bounded KMS concurrency and ONE audit line for the request,
+ * attributed to the CALLER's Pariwar with `purpose`. Each index equals `mobileBlindIndex` of the same number (the ONE
+ * global namespace — SF9). ⛔ Never call it inside a transaction. ⛔ Never log its input.
+ */
+export async function mobileBlindIndexMany(
+  canonicals: readonly string[],
+  enc: FieldCryptoDeps,
+  audit: { readonly pariwarId: string; readonly purpose: string },
+): Promise<string[]> {
+  return blindIndexMany(
+    MEMBER_MOBILE_FIELD_CLASS,
+    canonicals,
+    { pariwarId: MEMBER_IDENTITY_NAMESPACE },
+    enc.kms,
+    enc.hmacKeyRef,
+    audit,
   );
 }
 

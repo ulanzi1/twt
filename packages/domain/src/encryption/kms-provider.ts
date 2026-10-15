@@ -17,6 +17,16 @@ export interface EncryptionContext {
   readonly rowKey?: string;
 }
 
+/**
+ * The audit hook's context: the encryption context, plus — for the ONE line a BATCH of HMACs writes (Story 6.36b;
+ * 6.36a SW12) — how many values the batch computed and what for. An audit row has ⛔ no context column (only a payload
+ * hash), so the sink carries `purpose` and `count` in the line's row key.
+ */
+export interface KmsAuditContext extends EncryptionContext {
+  readonly count?: number;
+  readonly purpose?: string;
+}
+
 export interface KmsProvider {
   encryptDek(dek: Uint8Array, kekRef: KmsKeyRef, aad: Uint8Array): Promise<Uint8Array>;
   decryptDek(encryptedDek: Uint8Array, kekRef: KmsKeyRef, aad: Uint8Array): Promise<Uint8Array>;
@@ -38,7 +48,7 @@ export interface KmsProvider {
   auditHook?: (
     op: 'encryptDek' | 'decryptDek' | 'computeHmac',
     kekRef: KmsKeyRef,
-    ctx: EncryptionContext,
+    ctx: KmsAuditContext,
   ) => void;
 }
 

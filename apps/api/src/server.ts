@@ -25,6 +25,7 @@ import { registerAuditLogModule } from './modules/audit-log/index.js';
 import { registerAdminAuthModule } from './modules/auth/admin/index.js';
 import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
+import { registerKnownPeopleModule } from './modules/known-people/index.js';
 import { registerLifeEventsModule } from './modules/life-events/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
@@ -291,6 +292,9 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // step-up gate ('nominee_change' / 'medical_change'); address + posting are NEW append-only writes
   // (NO step-up) emitting the two non-transition markers member.address_updated / member.posting_updated.
   registerLifeEventsModule(app, deps);
+  // Story 6.36b — PEOPLE WHO KNOW ME (6.36a SW10–SW14): contact matching (positions only), asking up to three members,
+  // the member's list, the requests naming the member, answering and withdrawing. `active` members only.
+  registerKnownPeopleModule(app, deps);
   // Story 3.10 — member voluntary-withdrawal surface (FR-6): step-up-gated confirm ('withdrawal'
   // context) → member.withdrawal_completed transition to `withdrawn` (₹110 forfeited; 12-month rejoin
   // lock written; history retained until Story 3.12 anonymizes). Signup rejoin-lock enforcement lives

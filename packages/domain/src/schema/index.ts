@@ -106,6 +106,10 @@ export * from './workplace_requests.js';
 // rejoin lock). reason_text Tier-1 envelope, reason_code + aadhaar_hmac seam non-PII; GRANTs UPDATE
 // (NOT append-only) for the aadhaar_hmac backfill + RTBF. FK cascade to members for RTBF (Story 3.12).
 export * from './member_withdrawals.js';
+// Story 6.36b (0162) — PEOPLE WHO KNOW ME: the up-to-three named members (forward-only links, ≤ 3 live per namer — the
+// writer under the namer's lock + a BEFORE INSERT backstop) and the IST-day counters that bound contact matching.
+export * from './member_known_people.js';
+export * from './member_daily_counters.js';
 // Story 3.11 — data_exports (tenant-isolated; one row per DPDPA data-portability export request). The
 // whole ZIP artifact Tier-1 envelope-encrypted at rest (artifact_ciphertext); status/failed_reason
 // non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum zeroing). FK cascade to

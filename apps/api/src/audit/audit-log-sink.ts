@@ -151,7 +151,7 @@ export function createAuditLogSink(servicePool: pg.Pool): AuthAuditSink {
 
 type KmsOp = 'encryptDek' | 'decryptDek' | 'computeHmac';
 type KmsKeyRef = import('@twt/domain').encryption.KmsKeyRef;
-type EncryptionContext = import('@twt/domain').encryption.EncryptionContext;
+type KmsAuditContext = import('@twt/domain').encryption.KmsAuditContext;
 
 const KMS_OP_ACTION: Record<KmsOp, string> = {
   encryptDek: 'kms.encrypt_dek',
@@ -159,16 +159,35 @@ const KMS_OP_ACTION: Record<KmsOp, string> = {
   computeHmac: 'kms.compute_hmac',
 };
 
+const BATCH_PURPOSE = /^[a-z][a-z0-9_]{0,63}$/;
+
+/**
+ * The row key a line carries. A BATCH of HMACs (Story 6.36b — `blindIndexMany`, 6.36a SW12) writes ONE line whose
+ * purpose and count ride the row key (`contact_match:n=1000`): an audit row has ⛔ no context column — the context only
+ * feeds the payload hash. A malformed batch context THROWS (the hook logs and drops it) rather than write a misleading line.
+ */
+function kmsRowKey(ctx: KmsAuditContext): string | undefined {
+  if (ctx.count === undefined && ctx.purpose === undefined) return ctx.rowKey;
+  if (ctx.purpose === undefined || !BATCH_PURPOSE.test(ctx.purpose)) {
+    throw new Error('kmsEventToAuditInput: a batch line needs a plain lower-case purpose');
+  }
+  if (ctx.count === undefined || !Number.isInteger(ctx.count) || ctx.count < 0) {
+    throw new Error('kmsEventToAuditInput: a batch line needs a non-negative integer count');
+  }
+  return `${ctx.purpose}:n=${String(ctx.count)}`;
+}
+
 /** Map a KMS operation onto the canonical audit-row input (system actor). */
 export function kmsEventToAuditInput(
   op: KmsOp,
   kekRef: KmsKeyRef,
-  ctx: EncryptionContext,
+  ctx: KmsAuditContext,
 ): AuditEntryInput {
+  const rowKey = kmsRowKey(ctx);
   // Throw early on over-length locators (consistent with runAsCrossTenant P5 invariant):
   // silent truncation would corrupt the hash-chain record of which key was used.
   const resourceLocator = `kms:${kekRef.resourceName}/${ctx.fieldClass}${
-    ctx.rowKey ? `/${ctx.rowKey}` : ''
+    rowKey ? `/${rowKey}` : ''
   }`;
   if (resourceLocator.length > 1024) {
     throw new Error(
@@ -184,7 +203,7 @@ export function kmsEventToAuditInput(
     requestPayloadHash: hashContext({
       op,
       fieldClass: ctx.fieldClass,
-      rowKey: ctx.rowKey ?? null,
+      rowKey: rowKey ?? null,
     }),
     responseStatus: 200, // hook fires only on the success path
     traceId: null,

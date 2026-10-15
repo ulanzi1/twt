@@ -233,6 +233,53 @@ describe.skipIf(!hasDatabase)('data_exports store + assemble — RLS + cascade +
     ]);
   });
 
+  it('⭐ Story 6.36b (SW17, AC12) — the export lists the people I named and who named me, with ONLY the names I already saw', async () => {
+    const { tx, client } = getTx();
+    const { kms, kekRef } = fakeKms();
+    const pid = randomUUID(); // a fresh Pariwar — the default presentation mode applies
+    const encName = async (v: string) =>
+      serializeEnvelope(await encryptTier1(Buffer.from(v, 'utf-8'), { pariwarId: pid, fieldClass: 'member_kyc' }, kms, kekRef));
+    const withName = async (name: string) => {
+      const id = await seedMember(tx, pid, { state: 'active' });
+      await tx.insert(schema.memberKycProfiles).values({
+        memberId: toMemberId(id),
+        pariwarId: pid as never,
+        nameCiphertext: await encName(name),
+        dobCiphertext: await encName('1980-01-01'),
+        verificationStrength: 'aadhaar_kyc',
+        source: 'digilocker',
+      });
+      return id;
+    };
+    const me = await withName('Asha Devi');
+    const accepted = await withName('Meena Kumari');
+    const asked = await withName('Sunita Rao');
+    const declined = await withName('Rekha Singh');
+    const namer = await withName('Ramesh Prasad');
+    const ago = (d: number) => new Date(Date.now() - d * 86_400_000);
+    const link = `INSERT INTO member_known_people (pariwar_id, namer_member_id, named_member_id, found_by, state, asked_at, responded_at, ended_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+    await client.query(link, [pid, me, accepted, 'contacts', 'accepted', ago(3), ago(2), null]);
+    await client.query(link, [pid, me, asked, 'typed', 'asked', ago(1), null, null]);
+    await client.query(link, [pid, me, declined, 'picker', 'declined', ago(2.9), ago(2), ago(2)]); // ordered by asked_at
+    await client.query(link, [pid, namer, me, 'contacts', 'asked', ago(1), null, null]);
+
+    await enterAppScope(client, pid);
+    const sections = await assembleMemberExport(tx, { kms, kekRef }, { exportId: randomUUID(), memberId: toMemberId(me), pariwarId: pid as never, now: NOW });
+    const kp = (sections['profile.json'] as { knownPeople: { named: { name: string | null; state: string; foundBy: string }[]; namedBy: { name: string | null; state: string }[] } }).knownPeople;
+    const shown = await import('../../../src/notifications/pool-identity.js');
+    const mode = await (await import('../../../src/kyc/presentation-policy.js')).resolvePublicNamePresentationMode(tx, pid as never);
+    expect(kp.named).toEqual([
+      expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Meena Kumari'), state: 'accepted', foundBy: 'contacts' }),
+      expect.objectContaining({ name: null, state: 'declined', foundBy: 'picker' }), // ⛔ seen — the member saw only their saved name
+      expect.objectContaining({ name: null, state: 'asked', foundBy: 'typed' }),
+    ]);
+    expect(kp.namedBy).toEqual([expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Ramesh Prasad'), state: 'asked' })]);
+    // ⛔ a member id or a number of anyone else
+    const json = JSON.stringify(kp);
+    for (const id of [accepted, asked, declined, namer]) expect(json).not.toContain(id);
+  });
+
   it('assemble: a WITHDRAWN member still produces a valid payload (export up to withdrawal point)', async () => {
     const { tx, client } = getTx();
     const { kms, kekRef } = fakeKms();

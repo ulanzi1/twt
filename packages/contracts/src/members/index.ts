@@ -15,3 +15,5 @@ export * from './lock-in.js';
 export * from './validity.js';
 // Story 6.36a — where each member works: the posting choice (the life-events posting body) and the workplace reads.
 export * from './workplace.js';
+// Story 6.36b — PEOPLE WHO KNOW ME: contact matching (positions only), the named people, the requests naming the member.
+export * from './known-people.js';

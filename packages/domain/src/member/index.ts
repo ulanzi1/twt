@@ -38,6 +38,9 @@ export * from './personal-event.js';
 // Story 3.10 — voluntary-withdrawal record write + in-scope read (the rejoin-lock read is folded into
 // the signup repo's cross-tenant resolveMembersByMobile, NOT here).
 export * from './withdrawal.js';
+// Story 6.36b — PEOPLE WHO KNOW ME: contact matching (positions only), the named-people writers and lists, the counters,
+// the ONE matching / asking eligibility predicate, the erasure arm and the export reads.
+export * from './known-people.js';
 // Story 3.12 — RTBF field-level anonymization core (the inverse of data-export/assemble.ts) + the
 // display-time member-name resolver seam that renders "an anonymous member" for anonymized members.
 export * from './anonymize.js';

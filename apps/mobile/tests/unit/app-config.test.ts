@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { APP_IDENTITY_ENV, APP_VARIANTS, resolveAppConfig } from '../../app.config'
+import { APP_IDENTITY_ENV, APP_VARIANTS, contactsPermissionText, resolveAppConfig, TRUST_NAME_ENV } from '../../app.config'
 
 const MOBILE = join(__dirname, '..', '..')
 const FIXTURE = JSON.parse(readFileSync(join(MOBILE, 'tests/fixtures/app-config-prototype.json'), 'utf8'))
@@ -65,9 +65,34 @@ describe('app.config — non-production variants keep the prototype', () => {
       if (Object.keys(config.extra.eas).length === 0) delete config.extra.eas
       if (Object.keys(config.extra).length === 0) delete config.extra
     }
-    const fixtureStatic = { ...FIXTURE }
+    const fixtureStatic = structuredClone(FIXTURE)
     for (const added of ['sdkVersion', 'platforms', 'extra']) delete fixtureStatic[added]
+    // Story 6.36b — `android.permissions` is written by the `expo-contacts` PLUGIN when Expo loads the config (READ_ and
+    // WRITE_CONTACTS); `blockedPermissions` (static, below) drops WRITE at prebuild. ⛔ A field of the pure function.
+    delete fixtureStatic.android.permissions
     expect(config).toEqual(fixtureStatic)
+  })
+})
+
+describe('app.config — the contacts permission (Story 6.36b, AC11)', () => {
+  it('the expo-contacts plugin is configured; Android blocks WRITE_CONTACTS (the plugin adds it — 6.36a SF3)', () => {
+    const config = resolveAppConfig({})
+    expect(config.plugins).toContainEqual(['expo-contacts', { contactsPermission: contactsPermissionText(undefined) }])
+    expect(config.android?.blockedPermissions).toEqual(['android.permission.WRITE_CONTACTS'])
+    // the loader's output (the fixture) carries the plugin's permissions — READ survives, WRITE is blocked
+    expect(FIXTURE.android.permissions).toContain('android.permission.READ_CONTACTS')
+  })
+
+  it('the Trust\'s name comes ONLY from config — ⛔ hard-coded; absent ⇒ the wording without a name', () => {
+    expect(TRUST_NAME_ENV).toBe('EXPO_PUBLIC_TRUST_NAME')
+    const named = resolveAppConfig({ [TRUST_NAME_ENV]: '  Example Trust  ' })
+    expect(named.plugins).toContainEqual(['expo-contacts', { contactsPermission: contactsPermissionText('Example Trust') }])
+    expect(contactsPermissionText('Example Trust')).toMatch(/^Example Trust checks the numbers in your contacts/)
+    expect(contactsPermissionText(undefined)).toMatch(/^This app checks/)
+    for (const text of [contactsPermissionText(undefined), contactsPermissionText('X')]) {
+      expect(text).toMatch(/Numbers of people who aren't members are not kept\.$/)
+    }
+    expect(JSON.stringify(resolveAppConfig({}))).not.toMatch(/Welfare Trust|Shikshak/i)
   })
 })
 

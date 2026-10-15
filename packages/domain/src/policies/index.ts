@@ -50,6 +50,10 @@ export * from './member-postings-rls.js';
 export * from './workplaces-rls.js';
 // Story 3.10 — member_withdrawals tenant-isolation (mirror member-addresses-rls; GRANTs UPDATE too).
 export * from './member-withdrawals-rls.js';
+// Story 6.36b (0162) — the named-people links and the daily counters. Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`;
+// UPDATE narrowed by the migration's column grants.
+export * from './member-known-people-rls.js';
+export * from './member-daily-counters-rls.js';
 // Story 3.11 — data_exports tenant-isolation (mirror member-withdrawals-rls; GRANTs UPDATE too).
 export * from './data-exports-rls.js';
 // Story 10.7 — report_exports tenant-isolation (mirror data-exports-rls; GRANTs UPDATE too). The admin

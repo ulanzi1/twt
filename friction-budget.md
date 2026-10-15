@@ -53,6 +53,7 @@ deliberately accepted.
 | family of a member whose claim was refused on suspicion of a post-death nominee change (the app's filing code now goes ONLY to the nominee the District Admin found in place at the death — ⛔ to the latest nominee — so the person who made the change files through the helpline; and every step behind that code — filing, a document, the bank details, a bank statement — needs it while the refusal stands) | ⭐ `-262` FQ6 B (Trustee-ratified; `2026-10-07-292` RF9, Story 6.24b): the person who changed the nominee after the death can ⛔ no longer file again in the app on the latest nominee's code. ⚠ The code is requested from the member's OWN account (Ravi mode), so the true nominee files in the app only if she has access to that account — otherwise through the helpline (F14; a non-blocking confirm owed to the Panel, `-295` RB17). A standing refusal whose determination is ⛔ effective, or whose rank-1 number is unusable, sends ⛔ code at all — the family is sent to the helpline (existence-defended, ⛔ never the latest nominee) | forced |
 | member chosen as one of the five the Trust asks about a reported death (answering a few short questions — "has the member died?", then, only if they know, the date, how they know, how they knew the member, the cause and illness (once counsel's basis is recorded) and whether the District Admin may phone them — in the app, saved as they go, or by phoning the helpline; then Submit, after which the answers are locked) | The check with neighbours the Panel made a SIGNAL, ⛔ a gate (`2026-09-28-263` FQ10 A; `-262` FQ8 E; `2026-10-10-304` Q3–Q6 A): it lets the Trust hear from people who knew the member before it pays a family. ⭐ Every question but the first is OPTIONAL, every answer is saved the moment it is chosen (a lost connection RETRIES; the member leaves with an answer unsaved only by choosing "Leave without saving" — second-pass review S32), and the closing note says who sees the answers ("never the family") BEFORE Submit. ⚠ Neither the closing note nor the screen yet says the answers LOCK at Submit (that wording is copy under Row 28's review — RECORDED here, ⛔ claimed; second-pass review S40). ⛔ Never a step for anyone the Trust has ⛔ not texted: the screens and the home card are DARK until 6.27c sends a text (Story 6.27a) | optional |
 | member (picking their school or office and the date they started, at signup and at each transfer) | who is asked about a member's death — colleagues, ⛔ never strangers (`-310` CF4 A; `-330` SW2–SW9) | forced |
+| member (allowing the app to check their contacts, or typing a number, to name people who know them) — Story 6.36b: a note in the app BEFORE the system prompt, then the phone's contacts checked against the member list (the matches shown under the names the member saved; a non-member's number ⛔ kept), up to three people ticked and asked, each of whom answers *"Yes, I know them"* / *"No"* in the app; ⛔ any of it without the member choosing to start it | who is asked when no colleague can be (`-310` CF4 A (2) — up to three members the member named, each of whom agreed; CF5 A — the contacts matched, then discarded) | optional |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -2710,3 +2711,28 @@ and their tests (`tests/unit/workplace.test.ts`, `tests/unit/workplace-copy.test
 (the mobile app has ⛔ no screen-render harness for these screens — their logic is unit-tested in `lib/workplace.ts`).
 `apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted
 ([[project_friction_budget_baseline_ratchet]]).
+
+**Story 6.36b — people who know me (the new row above).** Member-facing changes: `app.config.ts` (the `expo-contacts`
+plugin and `blockedPermissions`; the prototype fixture), `app/(life-events)/known-people.tsx` and `known-people-find.tsx`
+(new), the Life Events hub card, `components/known-people/` (new — the home card and the notice-strip item beside
+`<PollsEntry />`), `lib/known-people*.ts`, `lib/phone-normalize.ts`, `lib/trust-name.ts`, `lib/session-context.tsx` (the
+caches cleared) and their tests.
+
+1. ⭐ **The new row.** Payer: a member who CHOOSES to name people who know them. Protects: who is asked about the member's
+   death when no colleague can be (CF4 A (2)). **`optional`** — ⛔ nothing in signup or the member loop requires it (SW16
+   (1): ⛔ a signup step); the member opens it from Life Events. The design pays the LEAST friction the rulings allow: ONE note
+   in the app (BigDev's words — `-309`), the system prompt once, the matches already found (⛔ typing numbers), a search box,
+   ticks up to the free slots, and ONE tap per invite. Without the permission: iOS's system picker (⛔ permission) or, on
+   Android, a typed number (SW13).
+2. ⭐ **The named member's side** — *"[Name] has named you as someone who knows them. Do you know him/her?"* with *"[Name]
+   will see your answer."* ABOVE the two answers; a request ⛔ answered simply lapses after 30 days. ⛔ No SMS, push or
+   WhatsApp — the home card and notice-strip item appear ONLY while a request naming the member is open. Answering is
+   `optional`: ⛔ nothing forces an answer.
+3. ⚠ **Only an `active` member** may use any of it (one plain message otherwise — AC10); the caps (3 matching requests a
+   day, 2,000 numbers in 30 days, 10 asks a day) are refusals a normal member ⛔ meets.
+4. ⚠ **Go-live waits for Row 31** (counsel's basis for sending contacts to the Trust — (a); the Play Console contacts
+   declaration and Apple's usage string — (d)) — ⛔ a merge blocker.
+
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); ⛔ not demonstrated on a device
+(the mobile app has ⛔ no screen-render harness for these screens — typecheck both ways and the pure-logic / mocked-contacts
+unit tests only).

@@ -10,6 +10,7 @@ import { useSession } from '../../lib/session-context'
 import { bannerDismissalKey } from '../banners/copy'
 import { useDismissBannerMutation, useMemberBannersQuery } from '../banners/useMemberBannersQuery'
 import { PeerRequestEntry } from '../peer-request/PeerRequestEntry'
+import { KnownPeopleRequestEntry } from '../known-people/KnownPeopleRequestEntry'
 import { PollsEntry } from '../polls/PollsEntry'
 import { PinnedItem } from './PinnedItem'
 import { toNoticeboardBannerNotice } from './banner-notice'
@@ -208,10 +209,14 @@ function Section({
       // noticeboard, never a restructuring of it.
       // ⭐ Story 6.27a (PM2) — the neighbours' request item: a SIBLING delegated addition beside `<PollsEntry>` (⛔ a banner
       // row — the banner lane stays ONE source), rendering nothing unless a texted request is open.
+      // ⭐ Story 6.36b (AC6) — "Someone has named you": a second SIBLING delegated addition, the same rule (⛔ a banner row),
+      // rendering nothing unless a request naming the member is open. AFTER `<PollsEntry />` — the neighbours' request
+      // (a death) stays first, and its pinned adjacency to `<PollsEntry />` (6.27a PM2) is kept.
       return (
         <>
           <PeerRequestEntry />
           <PollsEntry />
+          <KnownPeopleRequestEntry />
         </>
       )
 

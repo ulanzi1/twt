@@ -17,7 +17,7 @@ GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 
 # Story 6.36b: People Who Know Me — Up to Three Members a Member Names, Found From Their Phone's Contacts, Each of Whom Accepts `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS PART IS.** When ⛔ no colleague can be asked about a member's death, the Trust asks up to three members that member
 > named while alive and who agreed (`-310` CF4 A (2)). This part lets a member name them: *"Find members in my contacts"* checks the
@@ -125,8 +125,8 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — the migration (AC1, AC2).**
-  - [ ] 1.1 `member_known_people`: `link_id uuid pk`, `pariwar_id`, `namer_member_id`, `named_member_id` (each FK → `members(member_id)`,
+- [x] **Task 1 — the migration (AC1, AC2).**
+  - [x] 1.1 `member_known_people`: `link_id uuid pk`, `pariwar_id`, `namer_member_id`, `named_member_id` (each FK → `members(member_id)`,
         SINGLE-COLUMN — 6.36a SF14), `found_by text CHECK IN ('contacts','picker',
         'typed')`, `state text CHECK IN ('asked','accepted','declined','lapsed','removed','withdrawn','erased')`, `asked_at timestamptz
         default clock_timestamp()`, `responded_at`, `ended_at`; CHECK `namer_member_id <> named_member_id`; CHECK `state IN ('accepted',
@@ -137,7 +137,7 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
         INSERT only — ⛔ never on `asked → accepted`, which is live → live): `pg_advisory_xact_lock` on the namer, then refuse when
         `count(state IN ('asked','accepted')) >= 3` (the writer lapses stale `asked` rows first, so the backstop's count is exact); GRANT
         SELECT, INSERT, UPDATE (`state`, `responded_at`, `ended_at`); ⛔ no DELETE.
-  - [ ] 1.2 `member_daily_counters`: `(pariwar_id, member_id, counter text CHECK IN ('contact_match_requests','contact_match_numbers',
+  - [x] 1.2 `member_daily_counters`: `(pariwar_id, member_id, counter text CHECK IN ('contact_match_requests','contact_match_numbers',
         'known_people_ask'), day date, count int CHECK (count >= 0))` PK on all four but `count`; and `pariwar_daily_counters` (`pariwar_id,
         counter text CHECK IN ('contact_match_numbers'), day date, count int`); the atomic `INSERT … ON CONFLICT … DO UPDATE SET count =
         count + $n WHERE count + $n <= $cap RETURNING count` (⛔ no row returned ⇒ refused — the `sms_rate_buckets` shape, 0049); the rolling
@@ -145,7 +145,7 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
         and the backstop trigger take — ⛔ never a `FOR UPDATE` on `members`: two members naming each other would deadlock against the
         insert's FK check, 40P01); every counter is charged in a short transaction BEFORE any HMAC is computed (a refused request costs ⛔
         no KMS call).
-- [ ] **Task 2 — the domain (AC2–AC8, AC12).** A batch blind-index path in `packages/domain/src/encryption/blind-index.ts`
+- [x] **Task 2 — the domain (AC2–AC8, AC12).** A batch blind-index path in `packages/domain/src/encryption/blind-index.ts`
       (`blindIndexMany` — the name is the developer's): `kms.computeHmac` per value with bounded concurrency and ONE `auditHook('computeHmac',
       …)` call carrying `{ count, purpose }` (extend the hook's context type and the sink's `kmsEventToAuditInput`,
       `apps/api/src/audit/audit-log-sink.ts:152-217`, to carry them); a test that a 1,000-number match writes ONE audit line. New
@@ -162,7 +162,7 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
       as deceased · ⛔ not the caller), ⛔ not the selection's (6.36 SW23 adds the identity row and the claimant) — keep them two named functions
       so neither drifts into the other. Names are resolved and decrypted in the HANDLER after the read transaction commits (⛔ no KMS under a
       lock). The anonymizer arm + the rtbf pin; the data-export entries.
-- [ ] **Task 3 — contracts + API (AC3–AC8, AC10).** Contracts `packages/contracts/src/members/known-people.ts` (`.strict()`); a new module
+- [x] **Task 3 — contracts + API (AC3–AC8, AC10).** Contracts `packages/contracts/src/members/known-people.ts` (`.strict()`); a new module
       `apps/api/src/modules/known-people/` (routes + handlers + registration in the app's module list — ⚠ confirm it is MOUNTED, ⛔ not only
       imported), every route `memberSession` + `perMemberKey`; the writes take `requireIdempotencyKey`; the daily counters (3 matches, 10
       asks); audit lines `member_known_people.contacts_matched` (context: `submitted`, `matched` counts — ⛔ not numbers), `.asked`,
@@ -170,7 +170,7 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
       and count carried in its row key (6.36a SW12 — an audit row has ⛔ no context column); the schema's 400 for an over-long list checked
       to carry ⛔ no submitted value (the error envelope's `details.issues`); route tests for every AC incl. AC10's single 403; AC4's
       behaviour test.
-- [ ] **Task 4 — the member app (AC9, AC11).** `npx expo install expo-contacts`; the plugin entry + `blockedPermissions` in
+- [x] **Task 4 — the member app (AC9, AC11).** `npx expo install expo-contacts`; the plugin entry + `blockedPermissions` in
       `apps/mobile/app.config.ts` (plugins at `:162-183`) + the fixture `apps/mobile/tests/fixtures/app-config-prototype.json`;
       `apps/mobile/lib/phone-normalize.ts` (a copy of `normalizeMobile` — `packages/domain/src/encryption/member-fields.ts:92-100` — plus
       `0091…`, `+91 (0)…`, `+910…` and NFKD digit folding; a shared fixture list proves the copy and the server agree on every case the
@@ -185,7 +185,7 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
       offers ONLY contacts that were actually checked and did ⛔ not match (⛔ never one beyond the first 1,000). Tests: the pure logic (normaliser
       parity, slot arithmetic, the permission-state machine) in vitest; `vi.mock('expo-contacts', …)` in the `vi.hoisted` shape of
       `tests/unit/peer-questionnaire-render.test.ts`.
-- [ ] **Task 5 — copy (AC13).** The note (*"We need access to find your colleagues already at {trust_name}."* + *"Numbers of people who
+- [x] **Task 5 — copy (AC13).** The note (*"We need access to find your colleagues already at {trust_name}."* + *"Numbers of people who
       aren't members are not kept."*), the request (*"{name} has named you as someone who knows them. Do you know him/her?"*), the answers,
       *"{name} will see your answer."*, *"{name} will see that you withdrew."*, the list states, the limits' messages — en + hi + `$comment`; the Trust's name a PARAM from config (memory: the legal name is pending).
 - [ ] **Task 6 — close (AC14).** Row 31's (a) / (d) evidence lines name this part's flows; `friction-budget.md` (*"member (allowing the
@@ -235,13 +235,107 @@ affirmative consent).
 
 ## Dev Agent Record
 ### Agent Model Used
+Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude/worktrees/6-36b`, branch `story/6-36b-people-who-know-me`
+(⛔ committed — the dev-story workflow does ⛔ commit; BigDev commits).
+
+### Debug Log References
+- The test DB is `twt-test-pg-b` `:5434` ONLY (AC1) — 0162 applied there by `db:migrate`; ⛔ `:5432` / `:5433` touched. 0162 also
+  migrated FROM ZERO on a scratch database on `:5434` (`twt_zero_636b`, 161 entries) and the policy spec run there (19/19), then
+  dropped.
+- Fixture clock skew (host vs container) made two policy-spec legs flaky — the default `asked_at` is now a minute in the past.
+- `kmsEventToAuditInput`'s single-HMAC lines are UNCHANGED (the same row key and hash input when ⛔ `purpose` / `count`).
+
 ### Completion Notes List
 - 2026-10-14 — cut by `bmad-create-story 6.36` (SW1). ⛔ No code.
+- 2026-10-14 — ⭐ `bmad-dev-story` (Tasks 1–5 done; Task 6 PARTIAL — see the last note):
+  - **Task 1 (AC1, AC2):** migration `0162` (journal idx 162, `when` `1794195600006`) — `member_known_people` (single-column member
+    FKs; the CHECKs incl. the lapse date and the answer window; a partial UNIQUE of ONE live link per pair; the forward-only GUARD
+    trigger — every identity column frozen, the two dates written once, a lapse only after 30 days; the BEFORE INSERT BACKSTOP under
+    `member_known_people_lock_namer(namer)` — ONE SQL function the writer calls too, so the key cannot drift); `member_daily_counters`
+    / `pariwar_daily_counters` (the 0049 atomic capped upsert). Per-command RLS, FORCE, ⛔ DELETE, column grants. Policy spec 19/19;
+    the two-connection race (backstop alone, the writer, mutual naming ⛔ 40P01) 3/3.
+  - **Task 2:** `blindIndexMany` (≤ 8 HMACs in flight PER PROCESS — one shared limiter; ONE `auditHook` line with `{ count, purpose }`;
+    the hook's context type `KmsAuditContext`; the API sink carries `<purpose>:n=<count>` in the row key) — a 1,000-number batch writes
+    ONE line (unit). `member/known-people.ts`: `matchContactNumbers` (charge in its own short tx → HMACs outside any tx → ONE scoped
+    query → positions; a refused charge THROWS inside the scope so ⛔ counter moves), `askKnownPerson`, the lists with the derived labels
+    and `freeSlots`, answer / remove / withdraw, ONE eligibility predicate `knownPersonEligibleSql` (⛔ the selection's), the erasure arm
+    (ONE `.update(memberKnownPeople)` — a stale ask recorded `lapsed`, every other live link `erased`; the rtbf pin 24 → 25 statements,
+    21 → 22 tables) and the export (`profile.json` → `knownPeople.named` / `namedBy`, with ONLY the names the member already saw; ⚠ the
+    STRICT `contracts.ProfileSection` gained the field — without it every export build would have failed the jobs' parse). Domain spec
+    22/22.
+  - **Task 3:** contracts `members/known-people.ts`; module `apps/api/src/modules/known-people/` MOUNTED in `server.ts` (the route tests
+    hit it); seven routes, `memberSession` + `perMemberKey` on each; the writes take `Idempotency-Key` (a replay returns the original
+    status + body); ONE 403 `known_people.not_available` for every non-`active` caller on every route (AC10); the six audit lines
+    (ids and counts only); the KMS line's row key. Route spec 6/6 incl. AC4's behaviour leg (planted numbers in a match and an ask —
+    ⛔ their digits in the request / error logs, the console, the audit lines, the KMS line, any row or any error body); the number
+    fence (AC4 + AC6's ⛔ messaging path, exact sink allow-list, positive control) — it CAUGHT `body.foundBy` passed into an audit call
+    (fixed: `body` never reaches a sink); login-wall + forced-pagination guards green.
+  - **Task 4:** `expo-contacts ~55.0.18` (`npx expo install`; ⚠ it also re-sorted the devDependencies block — reverted by hand, only the
+    one line added; `pnpm install --frozen-lockfile --offline` green); the plugin entry (the permission text names the Trust ONLY from
+    `EXPO_PUBLIC_TRUST_NAME` — absent ⇒ *"This app …"*) + `blockedPermissions: [WRITE_CONTACTS]`; the prototype fixture regenerated FROM
+    THE REAL LOADER (only `android` and `plugins` changed); `check-app-config.mjs` green. `lib/phone-normalize.ts` + the shared fixture
+    (`packages/contracts/tests/fixtures/mobile-normalize-cases.json`, proven by BOTH halves). The two screens, the hub card, the home card
+    + the notice-strip item (AFTER `<PollsEntry />` — 6.27a's pinned adjacency kept), the saved names in MMKV (⛔ a number is ever saved
+    as a name), the caches cleared on sign-in / sign-out / a terminated or rejected refresh. `tsc` green BOTH ways (with and without
+    `.expo/types`). Mobile vitest 868/868 (58 files).
+  - **Task 5:** `known_people` namespace (en + hi + `$comment`s), registered in the catalog; member-facing BY DEFAULT (⛔ an explicit
+    entry — `classification.json`'s `namespaces` holds overrides only); parity green; the real-`t()` test (every key, both locales, the
+    ruled sentences verbatim, ⛔ the Trust's name in the copy).
+  - ⚠ **NOT demonstrated on a device or emulator** — the screens are typechecked and their logic unit-tested; ⛔ rendered
+    ([[feedback_record_unattested_no_backfill]]).
+  - **`pnpm ci:local` (2026-10-14, `DATABASE_URL` = `:5434` — ⛔ `:5432` / `:5433`): RED — 1 job of 36.** `test (unit)` failed ONLY on
+    `@twt/channels` `tests/determinism.test.ts` (the P0 100×-threaded render gate) — a 96 s run against its 90 s budget, the CPU-
+    contention class [[project_ci_local_concurrency_oversubscription]] describes; this story touches ⛔ `packages/channels`. turbo then
+    CANCELLED the rest of that job (admin, mobile, domain, api, jobs, validity-service never finished in it). Every other job green:
+    lint, typecheck, build, the 26 gates, `expo-config`, `friction-budget` (its AC-4 leg dormant — uncommitted), `determinism-replay`,
+    **`channels-determinism` (the same gate, isolated — green)**, and **`integration-tests` green** (domain 5235, API 1755, jobs 797,
+    channels 231, validity-service 284, events 36, niyamavali-engine 144, queue 4). Then the unit job's own command re-run ALONE
+    (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`): **37/37 tasks green** (mobile 868, admin 1170, channels 227 + 4
+    skipped). ⛔ Reported as a red first run, ⛔ as "green".
+  - ⚠ **Task 6 — PARTIAL.** Done: `friction-budget.md` (the `optional` row + a disposition paragraph). ⚠ The gate's AC-4
+    attribution leg is DORMANT while the work is uncommitted (it diffs committed history) — re-run `pnpm friction:check` after the
+    commit. ⛔ **NOT done — Row 31's (a) / (d) evidence lines:** Row 31 does ⛔ not exist in this tree — 6.36a appends it (its Task 7),
+    and 6.36a has ⛔ committed yet. Owed AT THE REBASE onto `main` after 6.36a merges (`-332`: 6.36b merges second), with 0162 then
+    applied to `:5432` AND `:5433` (AC1). The lines to add then, in Row 31's `closure_evidence_link` / notes:
+    **(a)** *"6.36b: the phone's numbers reach the Trust ONLY through `POST /api/v1/member/known-people/contact-matches` (≤ 1,000 per
+    request, HMAC'd, matched, then discarded — the response is positions) and `POST /api/v1/member/known-people` (one number, HMAC'd,
+    dropped); stored: the links `member_known_people` (member ids, states, dates, how found) and the counters (counts) — ⛔ any number."*
+    **(d)** *"6.36b: Android `READ_CONTACTS` (the `expo-contacts` plugin; `WRITE_CONTACTS` blocked); the in-app note BEFORE the system
+    prompt (`app/(life-events)/known-people-find.tsx`); iOS `NSContactsUsageDescription` = `contactsPermissionText()` (`apps/mobile/
+    app.config.ts`) — the Trust's name from `EXPO_PUBLIC_TRUST_NAME`."*
+
 ### File List
+- `packages/domain/migrations/0162_member-known-people.sql` (new); `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/member_known_people.ts`, `member_daily_counters.ts` (new); `packages/domain/src/schema/index.ts`
+- `packages/domain/src/policies/member-known-people-rls.ts`, `member-daily-counters-rls.ts` (new); `packages/domain/src/policies/index.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/encryption/blind-index.ts`, `kms-provider.ts`, `member-fields.ts`, `index.ts`
+- `packages/domain/src/member/known-people.ts` (new); `packages/domain/src/member/index.ts`, `anonymize.ts`
+- `packages/domain/src/data-export/assemble.ts`
+- `packages/domain/tests/encryption/blind-index-many.test.ts`, `mobile-normalize-parity.test.ts` (new)
+- `packages/domain/tests/integration/rls/member-known-people-policy-regression.spec.ts` (new)
+- `packages/domain/tests/integration/member/known-people.spec.ts`, `known-people-concurrency.spec.ts` (new)
+- `packages/domain/tests/integration/data-export/data-export.spec.ts`; `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/contracts/src/members/known-people.ts` (new); `packages/contracts/src/members/index.ts`; `packages/contracts/src/data-export/data-export.ts`
+- `packages/contracts/tests/members-known-people.test.ts`, `packages/contracts/tests/fixtures/mobile-normalize-cases.json` (new)
+- `packages/api-client/src/index.ts`; `packages/api-client/tests/known-people-client.test.ts` (new)
+- `apps/api/src/modules/known-people/index.ts`, `routes.ts`, `handlers.ts`, `names.ts` (new); `apps/api/src/server.ts`
+- `apps/api/src/audit/audit-sink.ts`, `audit-log-sink.ts`; `apps/api/tests/unit/audit-log-sink.test.ts`
+- `apps/api/tests/integration/known-people/known-people.spec.ts`, `apps/api/tests/unit/known-people-number-fence.test.ts`, `known-people-lockstep.test.ts` (new)
+- `packages/i18n/locales/en/known_people.json`, `packages/i18n/locales/hi/known_people.json` (new); `packages/i18n/src/catalog.ts`; `packages/i18n/tests/known-people-copy.test.ts` (new)
+- `apps/mobile/package.json`, `pnpm-lock.yaml` (`expo-contacts ~55.0.18`)
+- `apps/mobile/app.config.ts`, `apps/mobile/scripts/check-app-config.mjs`, `apps/mobile/tests/fixtures/app-config-prototype.json`, `apps/mobile/tests/unit/app-config.test.ts`
+- `apps/mobile/app/(life-events)/known-people.tsx`, `known-people-find.tsx` (new); `apps/mobile/app/(life-events)/index.tsx`; `apps/mobile/app/(tabs)/index.tsx`
+- `apps/mobile/components/known-people/KnownPeopleRequestEntry.tsx`, `known-people-cache.ts`, `useKnownPeopleQueries.ts` (new); `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx`
+- `apps/mobile/lib/known-people.ts`, `known-people-api.ts`, `known-people-contacts.ts`, `known-people-i18n.ts`, `known-people-saved-names.ts`, `phone-normalize.ts`, `trust-name.ts` (new); `apps/mobile/lib/session-context.tsx`
+- `apps/mobile/tests/unit/known-people-logic.test.ts`, `known-people-contacts.test.ts`, `known-people-copy-keys.test.ts`, `known-people-session.test.ts`, `phone-normalize.test.ts` (new)
+- `friction-budget.md`
+- `_bmad-output/implementation-artifacts/6-36b-people-who-know-me.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-14 | 1.7 | `bmad-dev-story`: Tasks 1–5 built and tested (migration 0162 on `:5434` only; the domain, contracts, API module, member app, `known_people` copy); Task 6 PARTIAL — the friction-budget row done; Row 31's (a) / (d) evidence lines owed at the rebase onto 6.36a (Row 31 is ⛔ in this tree yet). Status stays `in-progress`. |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.6 | Validate round 6: AC7 / Trap 4 / AC6 record what each side can tell (6.36a SW14's four); the accepted request leaves the card but stays in the list; the two notices in the copy. |
 | 2026-10-14 | 1.6 | `2026-10-14-332` (`33902d82`): `ready-for-dev` NOW — built in parallel with 6.36a; migration `0162` / `…006`; its own database `:5434` and worktree; merges second; its copy in a new `known_people` namespace. |

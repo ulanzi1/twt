@@ -87,6 +87,18 @@ export const ClaimHistorySection = EmptyExportSection.extend({
 });
 export type ClaimHistorySection = z.output<typeof ClaimHistorySection>;
 
+/** Story 6.36b — one link in the export's `knownPeople` lists (⛔ an id of the other member, ⛔ a number). */
+const KnownPeopleExportLink = z
+  .object({
+    name: z.string().nullable(),
+    state: z.enum(['asked', 'accepted', 'declined', 'lapsed', 'removed', 'withdrawn', 'erased']),
+    foundBy: z.enum(['contacts', 'picker', 'typed']),
+    askedAt: Iso8601Datetime,
+    respondedAt: Iso8601Datetime.nullable(),
+    endedAt: Iso8601Datetime.nullable(),
+  })
+  .strict();
+
 /** `profile.json` — the member's decrypted identity + declared data (member is the legitimate audience). */
 export const ProfileSection = z
   .object({
@@ -190,6 +202,17 @@ export const ProfileSection = z
     attribution: z.array(
       z.object({ attributionSource: z.string(), capturedAt: Iso8601Datetime }).strict(),
     ),
+    /**
+     * Story 6.36b (6.36a SW17, AC12) — PEOPLE WHO KNOW ME: the people the member NAMED and the members who named THEM,
+     * every link, each with ONLY the name the member already saw (the member-to-member form; `null` where they saw none —
+     * an `asked` or declined link showed only the name they saved on their phone). ⛔ A member id, ⛔ a number.
+     */
+    knownPeople: z
+      .object({
+        named: z.array(KnownPeopleExportLink),
+        namedBy: z.array(KnownPeopleExportLink),
+      })
+      .strict(),
   })
   .strict();
 export type ProfileSection = z.output<typeof ProfileSection>;

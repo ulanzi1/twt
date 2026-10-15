@@ -23,6 +23,8 @@ import {
 } from './session'
 import { clearAllMemberDrafts } from '../components/life-events/draft-store'
 import { clearPeerRequestsCache } from '../components/peer-request/peer-request-cache'
+import { clearKnownPeopleCache } from '../components/known-people/known-people-cache'
+import { clearSavedNames } from './known-people-saved-names'
 import { queryClient } from './query-client'
 
 interface SessionContextValue {
@@ -65,6 +67,9 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // The SecureStore side is already cleared by `refreshAccessToken`; this is what makes that
       // clear REACTIVE — without it `session` stays stale in context and the root guard never fires.
       setSession(null)
+      // Story 6.36b — the people-who-know-me lists (other members' names) and the names the member SAVED on this phone.
+      clearKnownPeopleCache(queryClient)
+      clearSavedNames()
       setTerminationNotice(notice)
       // Story 6.30 AL6 (iv) — the termination redirect WINS over any link target.
       clearLinkTarget()
@@ -74,6 +79,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     setRefreshRejectedHandler(() => {
       clearPeerRequestsCache(queryClient)
       setSession(null)
+      clearKnownPeopleCache(queryClient)
+      clearSavedNames()
     })
     return () => {
       setTerminatedDuringRefreshHandler(null)
@@ -83,6 +90,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
 
   async function signIn(full: MemberFullSession): Promise<void> {
     clearPeerRequestsCache(queryClient)
+    clearKnownPeopleCache(queryClient)
     const s: StoredSession = {
       accessToken: full.accessToken,
       accessTokenExpiresAt: full.accessTokenExpiresAt,
@@ -96,6 +104,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
 
   async function signOut(): Promise<void> {
     clearPeerRequestsCache(queryClient)
+    clearKnownPeopleCache(queryClient)
+    clearSavedNames()
     // Purge member-scoped drafts before clearing the session so the memberId is still available.
     if (session?.memberId) clearAllMemberDrafts(session.memberId)
     try {

@@ -1,3 +1,10 @@
+# last_updated: 2026-10-15c (STORY 6.36a — the FINAL-DELTA PASS + the gate (BigDev: "go ahead"): row stays `done`. One Edge Case Hunter
+# over the last unreviewed delta (`b77d30a5..eb6d2769`): 1 MEDIUM + 2 LOW applied (`80e51643` — a false page-1 error flash on a refetch
+# after an earlier page-2 failure, gated on `!isFetching`; "Show more" disabled while in error; three READ-ONLY scope txs — cycle-freeze's
+# recheck, nominee-bank's guard, the helpline hook tx — now swallow their own COMMIT failure, so a write that landed on another tx is
+# never answered 500 by the round-2 rethrow), 1 LOW deferred (`workplaces.name` ⛔ stored trimmed — 6.36c's seam). ⚠ `pnpm ci:local`
+# (:5433) was started on the final tree; a run that had been started earlier on the same worktree was stopped to re-run on the final
+# tree — the stop used `pkill -f "turbo run"`, which may also have stopped a PEER session's run if one was live. ⛔ No other row moves.)
 # last_updated: 2026-10-15b (STORY 6.36a — CODE REVIEW ROUND 2 (`bmad-code-review 6.36a` re-run on the whole branch, fixes `eb6d2769`; worktree
 # `.claude/worktrees/6-36a`): row `6-36a-member-workplace-and-posting-history` STAYS `done`. Three fresh layers on `5b3a2512..b77d30a5`
 # (7,633 lines) in parallel, then a fix-diff review of the round-2 patch. 0 CRITICAL / 0 HIGH. 1 decision (BigDev: "1" — FIX `closeScopeTx`

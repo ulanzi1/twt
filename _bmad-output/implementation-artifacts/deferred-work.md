@@ -6,6 +6,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Deferred from: code review of story-6.36a, ROUND 2 — the whole branch (2026-10-15)
 
+- **`workplaces.name` is ⛔ stored trimmed — a padded staff-added name can mint a search cursor over the contract's bound**
+  [`packages/domain/migrations/0161_member-workplaces.sql:155` — `CHECK (char_length(btrim("name")) BETWEEN 1 AND 200)`, ⛔ `"name" =
+  btrim("name")` as `workplace_districts` has; `packages/domain/src/member/workplace.ts` `encodeCursor([last.name, …])`]. The import
+  trims every name, so ⛔ a row today. ⭐ Trigger: 6.36c's staff add — it trims, or its 0164 adds the `btrim` equality CHECK (0161 is
+  applied, ⛔ regenerated).
+
 - **Two sibling handlers now SURFACE a failed COMMIT without an audit line; the survey submit still records its replay BEFORE the commit**
   [`apps/api/src/modules/surveys/member-handlers.ts:250-260`; `reconciliation-review/handlers.ts:328-331`; `vyawastha-shulk/handlers.ts:199-207`].
   Since `closeScopeTx` rethrows a failed COMMIT (6.36a round 2): the survey submit (`recordResult` before `closeScopeTx`, claim kept on

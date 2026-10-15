@@ -11225,3 +11225,26 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   ⭐ Trigger: a house-wide trigger-function hardening pass (`SET search_path = pg_catalog, public, pg_temp` — `pg_temp` LAST — or
   schema-qualified reads, in a new migration); 6.27d's temp-shadow fixtures (`_inspection-discrepancy-fixtures.ts`) would then need
   another way to seed a pre-0147 row.
+
+
+## Deferred from: code review of 6-36b-people-who-know-me — the fix-diff review rounds 1–9 (2026-10-15)
+
+- **FD-1 — The member app's access-token REFRESH has ⛔ timeout, app-wide** [`apps/mobile/lib/session.ts:131-136`, `:157`
+  (`refreshAccessToken` — a raw `fetch`, ⛔ signal; the shared `refreshInFlight` is cleared only in `.finally`);
+  `packages/api-client/src/index.ts` `call` awaits `getAccessToken()` BEFORE the request's own signal applies] — a refresh that
+  stalls (React Native's Android HTTP client sets ⛔ timeouts) leaves `refreshInFlight` pending, so EVERY authenticated call joins
+  it and never completes. 6.36b bounds its own two list reads at 15 s (`withReadTimeout` — raced, so the read fails *"could not
+  load"* with a Retry), but each Retry re-joins the same hung refresh until the app restarts. Pre-existing, app-wide; ⛔ in
+  6.36b's diff (round-9 Edge Case Hunter, MEDIUM). ⭐ Trigger: a client transport-timeout pass — bound the refresh fetch (an
+  AbortSignal + timeout, so `refreshInFlight` clears) and consider a default per-call timeout in `call`.
+- **FD-2 — Member WRITES have ⛔ time limit** [`apps/mobile/app/(life-events)/known-people.tsx` `run` → `busyLink`; every app
+  write through `call`] — a stalled write (or its refresh, FD-1) keeps `busyLink` set, so every row action and *"Show more"*
+  stays disabled until the member leaves the screen (leaving recovers). Pre-existing class (round-9 Auditor, LOW). ⭐ Trigger:
+  FD-1's pass.
+- **FD-3 — Refetching N loaded request pages may take up to N × 15 s** [`useKnownPeopleRequestsQuery` — the read bound is per
+  page; TanStack re-walks loaded pages one after another] — LOW (round-9 Edge Case Hunter). ⭐ Trigger: only if members are seen
+  holding several pages of requests naming them.
+- **FD-4 — Recorded, accepted limitations (⛔ defects)** — a write started while a *"Show more"* page loads cancels that page
+  (the button returns; the member taps again) — blocking every write behind a page fetch could lock them all (G2); and an
+  answer landing at exactly the 15 s bound is reported as a timeout. ⛔ Demonstrated on a device: native layout and a real
+  screen reader (the announcements are proven in jsdom with the `announceForAccessibility` call and the live-region prop).

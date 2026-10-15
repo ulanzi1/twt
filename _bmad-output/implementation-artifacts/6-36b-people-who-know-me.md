@@ -17,7 +17,7 @@ GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 
 # Story 6.36b: People Who Know Me — Up to Three Members a Member Names, Found From Their Phone's Contacts, Each of Whom Accepts `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS PART IS.** When ⛔ no colleague can be asked about a member's death, the Trust asks up to three members that member
 > named while alive and who agreed (`-310` CF4 A (2)). This part lets a member name them: *"Find members in my contacts"* checks the
@@ -201,39 +201,39 @@ All six findings are **MEDIUM / P2** engineering fixes; no Trustee Panel ruling 
 **Disposition (2026-10-15):** BigDev selected **2 — Leave as action items**. R1–R6 remain unchecked;
 0 patches applied. Story and sprint status return to `in-progress` while these findings remain unresolved.
 
-- [ ] [Review][Patch] **R1 — Reserve the limiter slot when waking a queued task (AC3 / SW12).**
+- [x] [Review][Patch] **R1 — Reserve the limiter slot when waking a queued task (AC3 / SW12).**
   [`packages/domain/src/encryption/blind-index.ts:64`]
   `release()` decrements `active` before the queued waiter resumes; a new task can take that same slot in between.
   Actual-source probes reached two concurrent tasks with a maximum of one, and nine with a maximum of eight.
   Transfer the occupied slot directly to its waiter and add a handoff-interleaving regression test.
   Sources: blind + edge.
-- [ ] [Review][Patch] **R2 — Keep every live outgoing link visible and count slots independently of displayed history (AC7).**
+- [x] [Review][Patch] **R2 — Keep every live outgoing link visible and count slots independently of displayed history (AC7).**
   [`packages/domain/src/member/known-people.ts:443`]
   `LIMIT 50` applies to live links and recent negative history together; `freeSlots` then counts only returned rows.
   A live-DB, RLS-enforced reproduction with one older accepted link and 50 newer declines returned 50 negative rows,
   omitted the accepted link and its remove control, and reported three free slots instead of two. This is reachable
   under the ten-asks-per-day cap. Preserve live rows and calculate the aggregate over the full live set.
   Sources: blind + edge + auditor.
-- [ ] [Review][Patch] **R3 — Make all incoming links reachable through pagination (AC6 / AC8).**
+- [x] [Review][Patch] **R3 — Make all incoming links reachable through pagination (AC6 / AC8).**
   [`apps/api/src/modules/known-people/handlers.ts:241`]
   The handler returns only the newest 50 links; the contract has only `limit`, no cursor, and the domain additionally
   truncates at 100. Incoming acceptances have no per-recipient cap. An actual-handler, rollback-only DB reproduction
   with 51 accepted links returned 50, omitted the oldest, and exposed no next-page field. The member cannot reach
   that link's withdrawal control through the app. Add pagination across domain, contract, client and screen.
   Sources: blind + edge + auditor.
-- [ ] [Review][Patch] **R4 — Hide the home card and notice item when eligibility refetch is denied (AC6 / AC10).**
+- [x] [Review][Patch] **R4 — Hide the home card and notice item when eligibility refetch is denied (AC6 / AC10).**
   [`apps/mobile/components/known-people/KnownPeopleRequestEntry.tsx:18`]
   The entry reads only `data`. TanStack retains previous successful data when a refetch fails, so after
   `403 known_people.not_available` the old asked request still renders the entry for a now non-active member.
   Verified with the installed QueryClient: an error state retains the original request data. Check the denial/error
   state before rendering cached requests. Source: auditor.
-- [ ] [Review][Patch] **R5 — Announce successful request actions (checklist 13(d), AC6 / AC8).**
+- [x] [Review][Patch] **R5 — Announce successful request actions (checklist 13(d), AC6 / AC8).**
   [`apps/mobile/app/(life-events)/known-people.tsx:48`]
   The action wrapper sets an accessible status only on failure. Acceptance swaps the controls for ordinary text;
   decline, removal and withdrawal delete rows without a success announcement. Add action-specific accessible success
   feedback so a screen-reader member can tell that the action completed. This is a source finding; device or emulator
   screen-reader behavior was not demonstrated. Source: auditor.
-- [ ] [Review][Patch] **R6 — Enforce current caller eligibility before delivering an idempotent replay (AC10).**
+- [x] [Review][Patch] **R6 — Enforce current caller eligibility before delivering an idempotent replay (AC10).**
   [`apps/api/src/modules/known-people/handlers.ts:115`]
   The stored-result branch precedes every active-member check, which currently lives inside `run()`. With a valid
   access JWT and an unexpired completed key, a now non-active caller receives the old success instead of the uniform
@@ -394,6 +394,43 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
     three tables' schema dumps equal `:5434`'s from-zero dump (only `pg_dump`'s random `\restrict` nonce differs), the three functions'
     bodies hash equal, and the recorded migration hash = the file's SHA-256 on all three; the 0162 policy / domain / concurrency specs
     44 / 44 on `:5432` AND on `:5433`.
+  - 2026-10-15 — ⭐ **`bmad-dev-story` (review continuation): R1–R6 RESOLVED, then the fix diff reviewed to convergence.** Code
+    commit `aadaf411`. Each fix test-first — the new test RED on the old code, GREEN on the new (each checked by stashing the source):
+    - ✅ Resolved review finding [MEDIUM]: **R1** — `createConcurrencyLimiter` hands a freed slot STRAIGHT to the oldest waiter
+      (`active` unchanged); a handoff probe at 0–6 microtask offsets reached max+1 on the old code (1 ⇒ 2, 8 ⇒ 9), ⛔ now.
+    - ✅ Resolved review finding [MEDIUM]: **R2** — `listMyKnownPeople` returns EVERY live link (the DB holds ≤ 3) and counts
+      `freeSlots` over them; `historyLimit` (the route's `limit`, `clampLimit`ed) bounds ONLY the `not_accepted` rows. Domain +
+      API specs: one older accepted + one asked link under 50 newer declines.
+    - ✅ Resolved review finding [MEDIUM]: **R3** — the requests naming a member page by an opaque keyset cursor over
+      `(open, asked_at µs, link_id)` DESC — open asks first (the home card reads page 1), then accepted; a forged cursor ⇒ 400
+      `known_people.cursor_invalid` (after the ONE 403); contract `KnownPeopleRequestsQuery` / `{ items, nextCursor, hasMore }`;
+      client `requests({ limit, cursor }, { signal })`; the app an infinite query + *"Show more"*. API spec: 51 accepted links all
+      reachable, the oldest withdrawable.
+    - ✅ Resolved review finding [MEDIUM]: **R4** — the home card / notice-strip item hides on the server's denial though
+      TanStack keeps the old pages (a real `QueryClient` test).
+    - ✅ Resolved review finding [MEDIUM]: **R5** — every completed accept / decline / remove / withdraw is shown AND spoken
+      (`AnnouncedText`; new `done.*` keys, en + hi, under the Row 31 (f) not-yet-human-reviewed marker).
+    - ✅ Resolved review finding [MEDIUM]: **R6** — the `active` check runs BEFORE the idempotency claim / replay (and before the
+      key check); API spec: a completed remove's replay by an `active-in-grace` member ⇒ the ONE 403.
+    - ⭐ **The fix diff, reviewed before commit ([[feedback_review_the_fix_diff_before_commit]]) — NINE rounds** of Blind / Edge /
+      Auditor on each successive delta, every finding fixed test-first and mutation-checked. What they caught, among others:
+      *"Show more"* cancelling a write's refetch (and the converse — kept as an accepted limitation, G2); the stale duplicate kept
+      across pages; the server's denial forgotten after a later non-denial failure ⇒ BOTH list queries keep the denial AS DATA
+      (`denialAsData`); ⚠ a **HIGH** regression of mine (round 4): the saved-name prune ran against the denial's empty list and
+      erased every name the member saved, unrecoverably ⇒ the prune runs only against a complete list (⛔ a denial, ⛔ a history
+      at its bound); the not-available Retry locking behind a fetch with ⛔ timeout, re-joining a hung FIRST fetch, over- and
+      under-speaking ⇒ a `resetQueries` restart, *"Loading…"* / *"Loaded."* spoken, and EVERY list read bounded at 15 s
+      (`withReadTimeout` — raced, the request aborted, ⛔ retried; the client's `list` / `requests` take a signal); the
+      `KNOWN_PEOPLE_LIST_LIMIT_MAX` lockstep (contract ↔ domain caps ↔ app). Round 9: ⛔ above LOW in the code; its two test gaps
+      closed (a staggered-refusal *"spoken exactly once"* test; a wider fake-timer margin), a test-only delta ⛔ re-reviewed.
+      Out of the diff ⇒ `deferred-work.md` FD-1..FD-4 (⚠ FD-1: the app-wide token refresh has ⛔ timeout).
+    - **Tests added:** domain (limiter handoff, R2, R3 paging + forged cursors), API (R2, R3, R6), contracts, client (paging,
+      signals), mobile (`known-people-requests-pages`, `-hooks` (real `QueryClient`), `-screen-render` (React DOM), `-screen-live`
+      (the real screen + real hooks)). ⚠ ⛔ Demonstrated on a device or with a real screen reader
+      ([[feedback_record_unattested_no_backfill]]).
+    - **`pnpm ci:local` on `aadaf411` (`DATABASE_URL` = `:5434`): PASSED — 36 / 36 jobs green.** Integration: domain 5313 (+1
+      skipped), API 1775 (+1), jobs 797, channels 231, validity-service 284, niyamavali-engine 144, events 36, queue 4; unit:
+      mobile 943, admin 1170. Status → `review`.
 
 ### File List
 - `packages/domain/migrations/0162_member-known-people.sql` (new); `packages/domain/migrations/meta/_journal.json`
@@ -420,12 +457,14 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
 - `apps/mobile/components/known-people/KnownPeopleRequestEntry.tsx`, `known-people-cache.ts`, `useKnownPeopleQueries.ts` (new); `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx`
 - `apps/mobile/lib/known-people.ts`, `known-people-api.ts`, `known-people-contacts.ts`, `known-people-i18n.ts`, `known-people-saved-names.ts`, `phone-normalize.ts`, `trust-name.ts` (new); `apps/mobile/lib/session-context.tsx`
 - `apps/mobile/tests/unit/known-people-logic.test.ts`, `known-people-contacts.test.ts`, `known-people-copy-keys.test.ts`, `known-people-session.test.ts`, `phone-normalize.test.ts` (new)
+- Review fixes (2026-10-15): `apps/mobile/tests/unit/known-people-requests-pages.test.ts`, `known-people-hooks.test.ts`, `known-people-screen-render.test.ts`, `known-people-screen-live.test.ts` (new); the domain, contracts, api-client, API module, mobile screen / hooks / entry / lib, i18n files above (changed); `_bmad-output/implementation-artifacts/deferred-work.md`
 - `friction-budget.md`; `docs/launch-gate-inventory/inventory-roster.md` (Row 31 notes (5)–(8))
 - `_bmad-output/implementation-artifacts/6-36b-people-who-know-me.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 1.11 | `bmad-dev-story` (review continuation): R1–R6 resolved test-first (`aadaf411`); the fix diff reviewed to convergence in 9 three-layer rounds (one HIGH regression of mine caught and fixed: the saved-name wipe on a denial); every list read bounded at 15 s; FD-1..FD-4 deferred (FD-1: the app-wide token refresh has ⛔ timeout). `ci:local` 36 / 36 green on `:5434`. ⛔ Device / screen-reader demonstration. Status → `review`. |
 | 2026-10-15 | 1.10 | `bmad-code-review`: three review layers completed on `b6cbf9db...185da74a`; 6 MEDIUM / P2 patch findings, 0 decisions, 0 deferrals, 1 dismissed; 159 focused tests passed. BigDev selected **2 — Leave as action items**: R1–R6 recorded unchecked, 0 patches applied; story and sprint status → `in-progress`. |
 | 2026-10-15 | 1.9 | 6.36a confirmed on `main` (`origin/main` = `b6cbf9db`); AC1's last step done — 0162 applied on `:5432` AND `:5433`, schema and hashes equal to the from-zero `:5434`, the 0162 specs 44 / 44 on both. ⛔ No code changed. |
 | 2026-10-15 | 1.8 | `bmad-dev-story` (continued): committed, REBASED onto 6.36a's tip `b6cbf9db` (nine shared files resolved, both stories kept); Task 6 finished — Row 31 notes (5)–(8); `ci:local` 36 / 36 green on a fresh `:5434` from zero. Status → `review`. ⚠ Owed after 6.36a lands on `main`: 0162 on `:5432` AND `:5433` (AC1). |

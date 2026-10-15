@@ -1,5 +1,5 @@
 {
-  "$comment": "Story 6.36b — PEOPLE WHO KNOW ME (6.36a SW10–SW14; `-309`, `-310` CF5 A, `-307` §2 item 3 (iii)). Member-facing, Hindi parity. ⛔ `{trust_name}` is the Trust's name FROM CONFIG (`EXPO_PUBLIC_TRUST_NAME` — the legal name is under registration, ⛔ never written here); when it is not configured the `*_no_name` key is used instead. `{name}` is the OTHER member's registered name in the member-to-member form the app already shows. `t()` THROWS on an unsupplied token — supply every one. Row 31 (f) owes a Hindi human review of every key.",
+  "$comment": "Story 6.36b — PEOPLE WHO KNOW ME (6.36a SW10–SW14; `-309`, `-310` CF5 A, `-307` §2 item 3 (iii)). Member-facing, Hindi parity. ⛔ `{trust_name}` is the Trust's name FROM CONFIG (`EXPO_PUBLIC_TRUST_NAME` — the legal name is under registration, ⛔ never written here); when it is not configured the `*_no_name` key is used instead. `{name}` is the OTHER member's registered name in the member-to-member form the app already shows. `t()` THROWS on an unsupplied token — supply every one. The Hindi is agent-authored and NOT YET HUMAN-REVIEWED — go-live Row 31 (f).",
   "title": "मुझे जानने वाले लोग",
   "life_events_label": "मुझे जानने वाले लोग",
   "life_events_desc": "तीन तक ऐसे सदस्य जो आपको अच्छी तरह जानते हैं",

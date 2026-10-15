@@ -324,7 +324,11 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
     its `when` being older) was RENAMED `twt_dev_6_36b_pre_rebase` (⛔ dropped — BigDev may drop it) and a fresh `twt_dev` migrated
     FROM ZERO (162 migrations: 0161's and 0162's tables both present). Mobile `tsc` green with freshly regenerated `.expo/types` AND
     without them. ⚠ **STILL OWED (AC1):** apply 0162 to `:5432` AND `:5433` once 6.36a has actually landed on `main` (`-332` — ⛔ until
-    then).
+    then). ✅ **DONE 2026-10-15** — BigDev: *"6.36a is on main"*; verified after `git fetch`: `origin/main` = `b6cbf9db` exactly (6.36b sits
+    three commits on it — ⛔ second rebase). `db:migrate` applied 0162 on `:5432` and `:5433` (each was at 0161; now 162 entries); the
+    three tables' schema dumps equal `:5434`'s from-zero dump (only `pg_dump`'s random `\restrict` nonce differs), the three functions'
+    bodies hash equal, and the recorded migration hash = the file's SHA-256 on all three; the 0162 policy / domain / concurrency specs
+    44 / 44 on `:5432` AND on `:5433`.
 
 ### File List
 - `packages/domain/migrations/0162_member-known-people.sql` (new); `packages/domain/migrations/meta/_journal.json`
@@ -357,6 +361,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 1.9 | 6.36a confirmed on `main` (`origin/main` = `b6cbf9db`); AC1's last step done — 0162 applied on `:5432` AND `:5433`, schema and hashes equal to the from-zero `:5434`, the 0162 specs 44 / 44 on both. ⛔ No code changed. |
 | 2026-10-15 | 1.8 | `bmad-dev-story` (continued): committed, REBASED onto 6.36a's tip `b6cbf9db` (nine shared files resolved, both stories kept); Task 6 finished — Row 31 notes (5)–(8); `ci:local` 36 / 36 green on a fresh `:5434` from zero. Status → `review`. ⚠ Owed after 6.36a lands on `main`: 0162 on `:5432` AND `:5433` (AC1). |
 | 2026-10-14 | 1.7 | `bmad-dev-story`: Tasks 1–5 built and tested (migration 0162 on `:5434` only; the domain, contracts, API module, member app, `known_people` copy); Task 6 PARTIAL — the friction-budget row done; Row 31's (a) / (d) evidence lines owed at the rebase onto 6.36a (Row 31 is ⛔ in this tree yet). Status stays `in-progress`. |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |

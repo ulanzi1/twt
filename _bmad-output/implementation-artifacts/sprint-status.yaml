@@ -1,3 +1,7 @@
+# last_updated: 2026-10-15e (STORY 6.36b — AC1's last step (BigDev: "6.36a is on main"): verified after `git fetch` — `origin/main` =
+# `b6cbf9db`, 6.36a's tip, and 6.36b sits three commits on it (⛔ second rebase). 0162 applied on :5432 AND :5433 (both were at 0161);
+# schema dumps, function bodies and the recorded migration hash equal to :5434's from-zero chain; the 0162 specs 44 / 44 on both. Row
+# stays `review`; ⛔ no other row moves.)
 # last_updated: 2026-10-15d (STORY 6.36b — PEOPLE WHO KNOW ME via `bmad-dev-story` (BigDev: "continue"): row `in-progress` → `review`.
 # Built in its own worktree (`.claude/worktrees/6-36b`) and tested on its own container `twt-test-pg-b` (:5434) ONLY (`-332`); then
 # COMMITTED and REBASED onto 6.36a's tip `b6cbf9db` (6.36a `done`, ⛔ yet on `origin/main` — `main` = that tip when it fast-forwards),

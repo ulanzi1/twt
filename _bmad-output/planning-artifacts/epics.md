@@ -3472,6 +3472,8 @@ withdrawable; erasure and export.
 > `_bmad-output/implementation-artifacts/6-36c-workplace-list-curation-and-prompts.md`.
 >
 > ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** It starts when 6.36a AND 6.36b are `done` (⛔ not 6.36b alone), in parallel with 6.36; migration 0164; merges last.
+>
+> ⚠ **ANNOTATION 2026-10-15 ([`-338`](../../.decision-log.md#decision-2026-10-15-338)) — ⛔ not rewritten.** It starts only when row 6-36 is `done` — ⛔ not in parallel with it; re-validated against `main` first; migration 0164; merges last.
 
 As the Super Admin I want to keep the office list and add missing schools; as a Pariwar Admin I want to suggest the right entry for a
 member's unlisted workplace and run a short campaign; as a member I want to confirm my workplace and be reminded to invite colleagues.
@@ -3490,6 +3492,8 @@ members work somewhere); a campaign of up to 30 days; ⛔ no message to any phon
 > (`trustee-panel-routing-note-2026-10-14-6-36-confirms.md`).
 >
 > ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** It starts when 6.36a AND 6.36b are `done` — ⛔ not 6.36c — in parallel with 6.36c; migration 0163; merges third.
+>
+> ⚠ **ANNOTATION 2026-10-15 ([`-338`](../../.decision-log.md#decision-2026-10-15-338)) — ⛔ not rewritten.** It is built FIRST and alone — 6.36c starts only when this row is `done`; re-validated against `main` first; migration 0163; merges third.
 
 As the Trust, I want the people asked about a member's death to be that member's own colleagues, otherwise the people the member named,
 chosen the same way every time and ⛔ never steered by anything changed after the claim is filed, so that the answers come from people who

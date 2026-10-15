@@ -11,6 +11,9 @@ This file BUILDS **SW9's staff half** (the Super Admin's list; the Pariwar Admin
 STATUS: `backlog` — flips to `ready-for-dev` when 6.36a AND 6.36b are `done` (⭐ `2026-10-14-332`: wave 2, in parallel with 6.36). Migration `0164`
 (`when` `1794195600008`); test database `twt-test-pg-b` (`:5434`), re-migrated from `main` first; worktree `.claude/worktrees/6-36c`;
 merges to `main` LAST (after 6.36).
+⭐ 2026-10-15 (`2026-10-15-338`, `08932f43` — the lines above are kept as written): starts only when row 6-36 is `done` (AC0) — ⛔ not in
+parallel with it; this file is re-validated against `main` then and flips to `ready-for-dev` only after that; the SHARED test databases
+(`twt-test-pg`, `:5433`, and `:5432`) — ⛔ no longer `twt-test-pg-b`; the migration number and the worktree are unchanged.
 GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 -->
 
@@ -50,7 +53,7 @@ governs it.
 
 ## Acceptance Criteria
 
-1. **AC0 — ⛔ no code before 6.36a AND 6.36b are `done`** (`2026-10-14-332`); migration `0164` / `when` `1794195600008`.
+1. **AC0 — ⛔ no code before row 6-36 is `done`** (`2026-10-15-338` — was *"6.36a AND 6.36b"* under `2026-10-14-332`); migration `0164` / `when` `1794195600008`.
 2. **AC1 — RBAC** (the catalog version bumped ONCE for this story — `51 → 52` at `2581c514`; re-read `PERMISSION_CATALOG_VERSION` at
    build): three keys, each pariwar-dimension — `workplace.manage` (`super_admin` ONLY — it derives every key, so ⛔ no `roles.ts` const;
    the `approval_warning_reason.manage` precedent), `workplace.review` (`pariwar_admin` + derived `super_admin`), `known_people.run_campaign`
@@ -164,6 +167,7 @@ governs it.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 1.7 | `2026-10-15-338` (`08932f43`): AC0 — starts when row 6-36 is `done`, ⛔ not in parallel with it; the shared test databases, ⛔ not `:5434`; re-validated against `main` before `ready-for-dev`. |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |
 | 2026-10-14 | 1.6 | `2026-10-14-332` (`33902d82`): wave 2 — starts when 6.36a AND 6.36b are done, in parallel with 6.36; migration `0164` / `…008`; `:5434`; merges last. |
 | 2026-10-14 | 1.5 | Validate round 5: `replaceNeeded` = at least one `unavailable` row (the word "erased" dropped — an erased link has ended); the withholding note points to 6.36a SW14. |

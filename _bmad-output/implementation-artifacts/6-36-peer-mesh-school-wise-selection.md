@@ -13,6 +13,9 @@ have moved `member_postings`, the life-events module and the mobile wizard).
 STATUS: `backlog` — flips to `ready-for-dev` when 6.36a AND 6.36b are `done` (⭐ `2026-10-14-332`: wave 2, in parallel with 6.36c — it does ⛔ not need
 6.36c). Migration `0163` (`when` `1794195600007`); the shared test databases; worktree `.claude/worktrees/6-36`; merges to `main` THIRD
 (before 6.36c). 6.27c waits for this row AND row 6-36c.
+⭐ 2026-10-15 (`2026-10-15-338`, `08932f43` — the lines above are kept as written): built FIRST and ALONE — ⛔ not in parallel with 6.36c,
+which starts only when this row is `done`. The start condition is met (6.36a and 6.36b are on `main`, `51382898`); this file is
+re-validated against `main` first and flips to `ready-for-dev` only then. Migration, test databases and worktree as above.
 GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 -->
 
@@ -266,6 +269,7 @@ CF2; `-308`; `-325` S1 A; `-326` BD1 A.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | — | `2026-10-15-338` (`08932f43`): wave 2 built one after the other — this row FIRST, 6.36c only after it is `done`; re-validated against `main` (`51382898`) before `ready-for-dev`. ⛔ No AC changed. |
 | 2026-10-14 | — | `2026-10-14-332` (`33902d82`): wave 2 — starts when 6.36a AND 6.36b are done (⛔ not 6.36c), in parallel with 6.36c; migration `0163` / `…007`; merges third. |
 | 2026-10-14 | — | ⭐ The Panel RULED SC1 A and SC4 A (`2026-10-14-331`, `0019b301`): SC1 A ratifies the filing-day cut (AC5); SC4 A adds AC16 / Task 8 — this story mints `peer_mesh.v4` with *"A colleague at the same school or office"* (our reading of who builds it). |
 | 2026-10-14 | — | `2026-10-14-330` committed (`d44708e8`) — BigDev: *"all A, SC4 yes"*; every AC and Task here was written to the recommended answers ⇒ ⛔ none changed. |

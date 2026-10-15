@@ -1,3 +1,9 @@
+# last_updated: 2026-10-15j (STORY 6.36 — WAVE 2 IS BUILT ONE AFTER THE OTHER (`2026-10-15-338`, `08932f43`; BigDev: *"I will be building
+# sequentially this time first 6.36 then 6.36c"* → *"yes, write -338"*): supersedes `-332` calls 1 and 3 for wave 2 only. Row 6-36 is built,
+# reviewed and merged FIRST; 6.36c starts only when row 6-36 is `done` (its AC0 amended); each file is re-validated against `main` before
+# `ready-for-dev` (row 6-36 now, on `51382898`; 6.36c after row 6-36 lands); 6.36c uses the shared test databases, ⛔ not `twt-test-pg-b`.
+# Kept: migrations 0163 → 0164, one worktree per story (`.claude/worktrees/6-36` created on `story/6-36-peer-mesh-school-wise-selection`).
+# Both story files and both `epics.md` entries annotated. 6.27c still waits for both rows. ⛔ No row moves.)
 # last_updated: 2026-10-15i (STORY 6.36b — the gate after code review round 2 (BigDev: "1" — run `pnpm ci:local`): on the final tree
 # `079d2876`, `DATABASE_URL` = `:5434`: PASSED — 36 / 36 jobs green (integration: domain 5324 (+1 skipped), API 1779 (+1), jobs 797,
 # channels 231, validity-service 284, niyamavali-engine 144, events 36, queue 4; unit: mobile 1009, admin 1170, contracts 1374). Row

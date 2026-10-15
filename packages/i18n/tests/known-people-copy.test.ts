@@ -23,6 +23,10 @@ const PARAMS: Record<string, Record<string, string | number>> = {
   'request.will_see': { name: 'Asha D.' },
   'request.accepted': { name: 'Asha D.' },
   'request.withdraw_notice': { name: 'Asha D.' },
+  'done.accepted': { name: 'Asha D.' },
+  'done.declined': { name: 'Asha D.' },
+  'done.removed': { name: 'Asha D.' },
+  'done.withdrawn': { name: 'Asha D.' },
 };
 
 describe('known_people copy (real t())', () => {

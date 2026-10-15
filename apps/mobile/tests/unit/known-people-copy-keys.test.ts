@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 
-import { labelCopyKey, refusalCopyKey } from '../../lib/known-people'
+import { labelCopyKey, refusalCopyKey, successCopyKey } from '../../lib/known-people'
 
 const MOBILE = join(__dirname, '..', '..')
 const FILES = [
@@ -43,6 +43,12 @@ describe('the known_people keys the app uses', () => {
     ]
     for (const key of built) {
       for (const locale of ['en', 'hi'] as const) expect(t(key, undefined, { locale, namespace: 'known_people' }).length).toBeGreaterThan(0)
+    }
+    // the spoken confirmations (review 2026-10-15 R5) — each names the person, in both locales
+    for (const action of ['accept', 'decline', 'remove', 'withdraw'] as const) {
+      for (const locale of ['en', 'hi'] as const) {
+        expect(t(successCopyKey(action), { name: 'Asha D.' }, { locale, namespace: 'known_people' }), `${locale}:${action}`).toContain('Asha D.')
+      }
     }
   })
 })

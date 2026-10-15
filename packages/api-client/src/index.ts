@@ -180,6 +180,7 @@ import {
   MyKnownPeopleResponse,
   KnownPeopleWriteResponse,
   KnownPeopleRequestsResponse,
+  KNOWN_PEOPLE_LIST_LIMIT_MAX,
   type KnownPeopleFoundByWire,
   type PeerRequestAnswerValue,
 } from '@twt/contracts';
@@ -1626,14 +1627,18 @@ export function createMemberKnownPeopleClient(opts: MemberAuthClientOptions) {
     ask(mobile: string, foundBy: KnownPeopleFoundByWire, idempotencyKey: string): Promise<KnownPersonAskResponse> {
       return call(base, KnownPersonAskResponse, { mobile, foundBy }, true, 'POST', undefined, key(idempotencyKey));
     },
-    list(limit = 50): Promise<MyKnownPeopleResponse> {
-      return call(`${base}?limit=${limit}`, MyKnownPeopleResponse, undefined, true, 'GET');
+    /** `opts.signal` aborts the request (TanStack's cancel, or the app's read timeout — 6.36b fix-diff review round 7). */
+    list(limit = KNOWN_PEOPLE_LIST_LIMIT_MAX, opts: { signal?: AbortSignal } = {}): Promise<MyKnownPeopleResponse> {
+      return call(`${base}?limit=${limit}`, MyKnownPeopleResponse, undefined, true, 'GET', undefined, undefined, opts.signal);
     },
     remove(linkId: string, idempotencyKey: string): Promise<KnownPeopleWriteResponse> {
       return call(`${base}/${encodeURIComponent(linkId)}/remove`, KnownPeopleWriteResponse, {}, true, 'POST', undefined, key(idempotencyKey));
     },
-    requests(limit = 50): Promise<KnownPeopleRequestsResponse> {
-      return call(`${base}/requests?limit=${limit}`, KnownPeopleRequestsResponse, undefined, true, 'GET');
+    /** One page of the requests naming the member; pass the previous page's `nextCursor` for the next (review R3). */
+    requests(params: { limit?: number; cursor?: string } = {}, opts: { signal?: AbortSignal } = {}): Promise<KnownPeopleRequestsResponse> {
+      const search = new URLSearchParams({ limit: String(params.limit ?? KNOWN_PEOPLE_LIST_LIMIT_MAX) });
+      if (params.cursor !== undefined) search.set('cursor', params.cursor);
+      return call(`${base}/requests?${search.toString()}`, KnownPeopleRequestsResponse, undefined, true, 'GET', undefined, undefined, opts.signal);
     },
     answer(linkId: string, answer: 'accept' | 'decline', idempotencyKey: string): Promise<KnownPeopleWriteResponse> {
       return call(`${base}/requests/${encodeURIComponent(linkId)}/answer`, KnownPeopleWriteResponse, { answer }, true, 'POST', undefined, key(idempotencyKey));

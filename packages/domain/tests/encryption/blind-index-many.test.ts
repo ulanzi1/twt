@@ -134,4 +134,41 @@ describe('createConcurrencyLimiter', () => {
     await expect(limit.run(() => Promise.reject(new Error('x')))).rejects.toThrow('x');
     expect(await limit.run(() => Promise.resolve(7))).toBe(7);
   });
+
+  // Review 2026-10-15 R1: a slot freed by a settled task must pass STRAIGHT to the oldest waiter. Decrementing first let a
+  // caller arriving before that waiter resumed take the same slot — two tasks in one slot (max 1 ⇒ 2; max 8 ⇒ 9). The
+  // newcomer is started after `hops` microtasks; one of the offsets lands between the release and the waiter's wake-up.
+  async function handoffProbe(max: number, hops: number): Promise<number> {
+    const limit = createConcurrencyLimiter(max);
+    let inFlight = 0;
+    let peak = 0;
+    const task = (gate: Promise<void>) => async () => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      try {
+        await gate;
+      } finally {
+        inFlight -= 1;
+      }
+    };
+    const opens: (() => void)[] = [];
+    const holders = Array.from({ length: max }, () => limit.run(task(new Promise<void>((r) => opens.push(r)))));
+    const waiter = limit.run(task(Promise.resolve())); // queued behind the full limiter
+    opens[0]!(); // one holder settles — its slot is released
+    const newcomer = new Promise<void>((resolve) => {
+      const start = (n: number): void => {
+        if (n === 0) resolve(limit.run(task(Promise.resolve())));
+        else queueMicrotask(() => start(n - 1));
+      };
+      start(hops);
+    });
+    await Promise.all([holders[0], waiter, newcomer]);
+    for (const open of opens.slice(1)) open();
+    await Promise.all(holders);
+    return peak;
+  }
+
+  it.each([1, 8])('max %i: a newcomer arriving while a freed slot passes to its waiter queues — ⛔ max + 1 in flight', async (max) => {
+    for (let hops = 0; hops <= 6; hops += 1) expect(await handoffProbe(max, hops), `hops=${hops}`).toBe(max);
+  });
 });

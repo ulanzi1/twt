@@ -56,20 +56,24 @@ export interface ConcurrencyLimiter {
   run<T>(task: () => Promise<T>): Promise<T>;
 }
 
-/** A FIFO limiter: at most `max` tasks run at once; a settled task (either way) frees its slot. */
+/**
+ * A FIFO limiter: at most `max` tasks run at once; a settled task (either way) frees its slot. ⭐ A freed slot passes
+ * STRAIGHT to the oldest waiter (`active` unchanged) — decrementing first let a caller arriving before that waiter
+ * resumed take the same slot, two tasks in one (review 2026-10-15 R1).
+ */
 export function createConcurrencyLimiter(max: number): ConcurrencyLimiter {
   if (!Number.isInteger(max) || max < 1) throw new Error('createConcurrencyLimiter: max must be a positive integer');
   let active = 0;
   const waiting: (() => void)[] = [];
   const release = () => {
-    active -= 1;
     const next = waiting.shift();
     if (next) next();
+    else active -= 1;
   };
   return {
     async run<T>(task: () => Promise<T>): Promise<T> {
-      if (active >= max) await new Promise<void>((resolve) => waiting.push(resolve));
-      active += 1;
+      if (active < max) active += 1;
+      else await new Promise<void>((resolve) => waiting.push(resolve)); // woken HOLDING the released slot
       try {
         return await task();
       } finally {

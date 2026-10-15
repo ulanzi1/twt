@@ -62,6 +62,12 @@
   "request.unknown_name": "A member",
   "request.card_title": "Someone has named you",
   "request.card_body": "Please tell us whether you know them.",
+  "requests.show_more": "Show more",
+  "$comment.done": "The confirmation SHOWN AND SPOKEN after an action completes (checklist 13 (d); review 2026-10-15 R5). `{name}` as in the row the member acted on.",
+  "done.accepted": "Done. You said you know {name}.",
+  "done.declined": "Done. You said you don't know {name}.",
+  "done.removed": "Done. {name} is no longer on your list.",
+  "done.withdrawn": "Done. You withdrew — {name} will see that you withdrew.",
   "error.daily_limit": "You have reached today's limit. Please try again tomorrow.",
   "error.monthly_limit": "You have checked many contacts this month. Please try again later.",
   "error.busy": "Too many members are checking right now. Please try again later.",
@@ -74,5 +80,6 @@
   "error.generic": "Something went wrong. Please try again.",
   "error.load": "Could not load. Please try again.",
   "loading": "Loading…",
+  "loaded": "Loaded.",
   "retry": "Try again"
 }

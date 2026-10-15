@@ -6,6 +6,8 @@
 // pre-scope lookup (it crosses Pariwars — SF9 / I5).
 //
 // ── The order of a write ─────────────────────────────────────────────────────────────────────────────────────────────
+//   0. the caller is `active` — checked BEFORE the claim, so a replay is delivered ONLY to a caller who still is (⛔ an
+//      old success to a member who has since left `active` — review 2026-10-15 R6); ONE 403 otherwise;
 //   1. the `Idempotency-Key` claim (a replay returns the ORIGINAL status + body);
 //   2. the COUNTERS in a short transaction — BEFORE any HMAC (a refused request costs ⛔ no KMS call); a non-`active`
 //      caller is refused here with ONE 403 (`known_people.not_available` — ⛔ which state);
@@ -25,13 +27,14 @@ import {
   type KnownPeopleContactMatchRequest,
   type KnownPeopleContactMatchResponse,
   type KnownPeopleListQuery,
+  type KnownPeopleRequestsQuery,
   type KnownPeopleRequestsResponse,
   type KnownPeopleWriteResponse,
   type KnownPersonAskRequest,
   type KnownPersonAskResponse,
   type MyKnownPeopleResponse,
 } from '@twt/contracts';
-import { clampLimit, encryption, idempotency, ids, member as memberDomain, type Db } from '@twt/domain';
+import { encryption, idempotency, ids, member as memberDomain, type Db } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -100,8 +103,11 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
   }
 
   /**
-   * The idempotent-write envelope: claim → `run` → record `{ status, body }`; a replay returns the original. A failure
-   * (a refusal included) releases the claim so a retry reaches the domain again and gets the same honest answer.
+   * The idempotent-write envelope: the caller is `active` → claim → `run` → record `{ status, body }`; a replay returns the
+   * original. A failure (a refusal included) releases the claim so a retry reaches the domain again and gets the same
+   * honest answer. ⭐ The `active` check comes FIRST: the stored result is delivered ONLY to a caller who is still
+   * `active` — with it inside `run` alone, a member who had left `active` got the old success back for an unexpired key
+   * instead of the ONE 403 (review 2026-10-15 R6).
    */
   async function idempotent<B>(
     request: FastifyRequest,
@@ -110,6 +116,7 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
     run: () => Promise<StoredResult<B>>,
   ): Promise<B> {
     const { memberId, pariwarId } = memberCtx(request);
+    if (!(await inScope(pariwarId, (tx) => memberDomain.isActiveMember(tx, pariwarId, memberId)))) throw refusal('not_available');
     const key = `known_people.${route}:${pariwarId}:${memberId}:${requireIdempotencyKey(request)}`;
     const claim = await idempotencyStore.claim(key, IDEMPOTENCY_TTL_SECONDS);
     if (claim === 'already_claimed') {
@@ -197,19 +204,22 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
       });
     },
 
-    /** GET /api/v1/member/known-people — the namer's list (labels derived; names only for `accepted`) + `freeSlots`. */
+    /**
+     * GET /api/v1/member/known-people — the namer's list (labels derived; names only for `accepted`) + `freeSlots`. `limit`
+     * bounds the ENDED links shown; every live one is listed (review 2026-10-15 R2 — the domain clamps it).
+     */
     async list(request: FastifyRequest): Promise<MyKnownPeopleResponse> {
       const { memberId, pariwarId } = memberCtx(request);
-      const limit = clampLimit((request.query as KnownPeopleListQuery).limit, { default: 50, cap: 50 });
+      const historyLimit = (request.query as KnownPeopleListQuery).limit;
       const { mine, read } = await inScope(pariwarId, async (tx) => {
         if (!(await memberDomain.isActiveMember(tx, pariwarId, memberId))) throw refusal('not_available');
-        const mine = await memberDomain.listMyKnownPeople(tx, { pariwarId, namerMemberId: memberId });
+        const mine = await memberDomain.listMyKnownPeople(tx, { pariwarId, namerMemberId: memberId, historyLimit });
         const named = mine.items.flatMap((i) => (i.namedMemberId === null ? [] : [i.namedMemberId]));
         return { mine, read: await readNameCiphertexts(tx, pariwarId, named) };
       });
       const names = await decryptNames(read, pariwarId, enc, request.log);
       return {
-        items: mine.items.slice(0, limit).map((i) => ({
+        items: mine.items.map((i) => ({
           linkId: i.linkId,
           label: i.label,
           name: i.namedMemberId === null ? null : (names.get(i.namedMemberId) ?? null),
@@ -232,23 +242,37 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
       });
     },
 
-    /** GET /api/v1/member/known-people/requests — the requests naming the member (open asks + accepted ones). */
+    /**
+     * GET /api/v1/member/known-people/requests — the requests naming the member, PAGE BY PAGE (open asks first, then
+     * accepted ones — review 2026-10-15 R3). A well-formed cursor this server did not issue ⇒ 400
+     * `known_people.cursor_invalid`, decided AFTER the `active` check (a non-active caller gets the ONE 403). ⚠ A cursor the
+     * SCHEMA refuses (blank, over 200 characters) is a 400 before any handler, for every caller alike — as `limit=51` is.
+     */
     async requests(request: FastifyRequest): Promise<KnownPeopleRequestsResponse> {
       const { memberId, pariwarId } = memberCtx(request);
-      const limit = clampLimit((request.query as KnownPeopleListQuery).limit, { default: 50, cap: 50 });
-      const { reqs, read } = await inScope(pariwarId, async (tx) => {
-        if (!(await memberDomain.isActiveMember(tx, pariwarId, memberId))) throw refusal('not_available');
-        const reqs = (await memberDomain.listRequestsNamingMe(tx, { pariwarId, namedMemberId: memberId })).slice(0, limit);
-        return { reqs, read: await readNameCiphertexts(tx, pariwarId, reqs.map((r) => r.namerMemberId)) };
-      });
+      const q = request.query as KnownPeopleRequestsQuery;
+      let fetched: { page: memberDomain.RequestsNamingMePage; read: Awaited<ReturnType<typeof readNameCiphertexts>> };
+      try {
+        fetched = await inScope(pariwarId, async (tx) => {
+          if (!(await memberDomain.isActiveMember(tx, pariwarId, memberId))) throw refusal('not_available');
+          const page = await memberDomain.listRequestsNamingMe(tx, { pariwarId, namedMemberId: memberId, limit: q.limit, cursor: q.cursor });
+          return { page, read: await readNameCiphertexts(tx, pariwarId, page.items.map((r) => r.namerMemberId)) };
+        });
+      } catch (err) {
+        if (err instanceof memberDomain.KnownPeopleCursorInvalidError) throw new BadRequestError('The page cursor is not valid', CODES.cursorInvalid);
+        throw err;
+      }
+      const { page, read } = fetched;
       const names = await decryptNames(read, pariwarId, enc, request.log);
       return {
-        items: reqs.map((r) => ({
+        items: page.items.map((r) => ({
           linkId: r.linkId,
           state: r.state,
           name: names.get(r.namerMemberId) ?? null,
           askedAt: r.askedAt.toISOString(),
         })),
+        nextCursor: page.nextCursor,
+        hasMore: page.hasMore,
       };
     },
 

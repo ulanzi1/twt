@@ -267,7 +267,7 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
     expect(before.body).toEqual({ items: [expect.objectContaining({ linkId, label: 'asked', name: null })], freeSlots: 2 });
     // the named member's request: the namer's registered name, in the member-to-member form
     const reqs = await call('GET', `${BASE}/requests`, { tok: dt });
-    expect(reqs.body).toEqual({ items: [expect.objectContaining({ linkId, state: 'asked', name: await shown(p, 'Asha Devi') })] });
+    expect(reqs.body).toEqual({ items: [expect.objectContaining({ linkId, state: 'asked', name: await shown(p, 'Asha Devi') })], nextCursor: null, hasMore: false });
     const accepted = await call('POST', `${BASE}/requests/${linkId}/answer`, { tok: dt, payload: { answer: 'accept' } });
     expect(accepted.status).toBe(200);
     expect(accepted.body).toEqual({ linkId, state: 'accepted' });
@@ -289,11 +289,113 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
     const thirdId = await seed(p, { mobile: third, name: 'Kavita Jha' });
     const l2 = ((await call('POST', BASE, { tok: nt, payload: { mobile: third, foundBy: 'typed' } })).body['link'] as { linkId: string }).linkId;
     expect((await call('POST', `${BASE}/${l2}/remove`, { tok: nt })).body).toEqual({ linkId: l2, state: 'removed' });
-    expect((await call('GET', `${BASE}/requests`, { tok: token(thirdId, p) })).body).toEqual({ items: [] });
+    expect((await call('GET', `${BASE}/requests`, { tok: token(thirdId, p) })).body).toEqual({ items: [], nextCursor: null, hasMore: false });
     // ⛔ another member's link
     const notMine = await call('POST', `${BASE}/${linkId}/remove`, { tok: dt });
     expect(notMine.status).toBe(404);
     expect(code(notMine)).toBe(CODES.notFound);
+  });
+
+  /** Flip a member's lifecycle state as the projector would (the guard admits only its writer flag) — a fixture. */
+  async function setState(memberId: string, state: string): Promise<void> {
+    const c = await t.pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query(`SET LOCAL app.member_state_writer = 'on'`);
+      await c.query(`UPDATE members SET state = $2 WHERE member_id = $1`, [memberId, state]);
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+  }
+
+  it('review R6 — a completed write\'s replay reaches ONLY a caller who is still active; otherwise the ONE 403', async () => {
+    const p = randomUUID();
+    const namer = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });
+    const named = nextMobile();
+    await seed(p, { mobile: named, name: 'Meena Kumari' });
+    const tok = token(namer, p);
+    const linkId = ((await call('POST', BASE, { tok, payload: { mobile: named, foundBy: 'typed' } })).body['link'] as { linkId: string }).linkId;
+    const key = randomUUID();
+    expect((await call('POST', `${BASE}/${linkId}/remove`, { tok, key })).status).toBe(200);
+    expect((await call('POST', `${BASE}/${linkId}/remove`, { tok, key })).body).toEqual({ linkId, state: 'removed' }); // the replay, while active
+    await setState(namer, 'active-in-grace');
+    const replay = await call('POST', `${BASE}/${linkId}/remove`, { tok, key });
+    expect(replay.status).toBe(403);
+    expect(code(replay)).toBe(CODES.notAvailable);
+    // ⛔ a key at all: still the ONE 403 (the state is checked before the key)
+    const noKey = await call('POST', `${BASE}/${linkId}/remove`, { tok, key: null });
+    expect(noKey.status).toBe(403);
+    expect(code(noKey)).toBe(CODES.notAvailable);
+  });
+
+  it('review R2 — the namer\'s list: every live link listed and counted, whatever `limit` and the ended history', async () => {
+    const p = randomUUID();
+    const namer = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });
+    const friend = await seed(p, { mobile: nextMobile(), name: 'Meena Kumari' });
+    const decliner = await seed(p, { mobile: nextMobile(), name: 'Rekha Singh' });
+    await t.pool.query(
+      `INSERT INTO member_known_people (pariwar_id, namer_member_id, named_member_id, found_by, state, asked_at, responded_at)
+       VALUES ($1, $2, $3, 'contacts', 'accepted', now() - interval '20 days', now() - interval '19 days')`,
+      [p, namer, friend],
+    );
+    await t.pool.query(
+      `INSERT INTO member_known_people (pariwar_id, namer_member_id, named_member_id, found_by, state, asked_at, responded_at, ended_at)
+       SELECT $1, $2, $3, 'typed', 'declined', now() - make_interval(hours => 100 - i), now() - interval '1 hour', now() - interval '1 hour'
+         FROM generate_series(1, 50) AS i`,
+      [p, namer, decliner],
+    );
+    const tok = token(namer, p);
+    for (const q of ['', '?limit=1']) {
+      const r = await call('GET', `${BASE}${q}`, { tok });
+      const items = r.body['items'] as { label: string; name: string | null }[];
+      expect(items.filter((i) => i.label === 'accepted'), q).toEqual([expect.objectContaining({ label: 'accepted', name: await shown(p, 'Meena Kumari') })]);
+      expect(items.filter((i) => i.label === 'not_accepted'), q).toHaveLength(q === '' ? 50 : 1);
+      expect(r.body['freeSlots'], q).toBe(2);
+    }
+  });
+
+  it('review R3 — the requests naming a member page by cursor: 51 accepted links, all reachable; a forged cursor ⇒ 400', async () => {
+    const p = randomUUID();
+    const me = await seed(p, { mobile: nextMobile(), name: 'Meena Kumari' });
+    const namers = (
+      await t.pool.query<{ member_id: string }>(
+        `INSERT INTO members (member_id, pariwar_id, state, state_event_version)
+         SELECT gen_random_uuid(), $1, 'active', 1 FROM generate_series(1, 51) RETURNING member_id`,
+        [p],
+      )
+    ).rows.map((r) => r.member_id);
+    await t.pool.query(
+      `INSERT INTO member_known_people (pariwar_id, namer_member_id, named_member_id, found_by, state, asked_at, responded_at)
+       SELECT $1, n, $2, 'contacts', 'accepted', now() - make_interval(hours => o::int), now() - make_interval(hours => o::int) + interval '1 minute'
+         FROM unnest($3::uuid[]) WITH ORDINALITY AS t(n, o)`,
+      [p, me, namers],
+    );
+    const tok = token(me, p);
+    const first = await call('GET', `${BASE}/requests`, { tok });
+    expect(first.status).toBe(200);
+    expect(first.body['items']).toHaveLength(50);
+    expect(first.body['hasMore']).toBe(true);
+    const cursor = first.body['nextCursor'] as string;
+    expect(typeof cursor).toBe('string');
+    const second = await call('GET', `${BASE}/requests?cursor=${encodeURIComponent(cursor)}`, { tok });
+    expect(second.status).toBe(200); // the server's own cursor passes its own contract
+    expect(second.body).toMatchObject({ hasMore: false, nextCursor: null });
+    const ids = [...(first.body['items'] as { linkId: string }[]), ...(second.body['items'] as { linkId: string }[])].map((i) => i.linkId);
+    const all = (await t.pool.query<{ link_id: string }>(`SELECT link_id FROM member_known_people WHERE named_member_id = $1 ORDER BY asked_at DESC`, [me])).rows;
+    expect(ids).toEqual(all.map((r) => r.link_id)); // every one, newest first, ⛔ a duplicate
+    // the oldest — absent from the first page — can be withdrawn
+    const oldest = all.at(-1)!.link_id;
+    expect((await call('POST', `${BASE}/requests/${oldest}/withdraw`, { tok })).body).toEqual({ linkId: oldest, state: 'withdrawn' });
+    // a cursor this server did not issue ⇒ 400 (⛔ a 500 from the cast); a non-active caller still gets the ONE 403
+    const forged = Buffer.from(JSON.stringify(['open', '2026-02-30T10:00:00.000000Z', randomUUID()]), 'utf8').toString('base64url');
+    const bad = await call('GET', `${BASE}/requests?cursor=${forged}`, { tok });
+    expect(bad.status).toBe(400);
+    expect(code(bad)).toBe(CODES.cursorInvalid);
+    await setState(me, 'withdrawn');
+    const denied = await call('GET', `${BASE}/requests?cursor=${forged}`, { tok });
+    expect(denied.status).toBe(403);
+    expect(code(denied)).toBe(CODES.notAvailable);
   });
 
   it('AC4 — planted numbers in a match and an ask: ⛔ their digits in any log, console line, audit line, KMS line, row or error body', async () => {

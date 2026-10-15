@@ -18,6 +18,7 @@ import type { KnownPersonLinkId, MemberId, PariwarId } from '../../../src/ids/in
 import { createFakeKmsProvider, mobileBlindIndex } from '../../../src/encryption/index.js';
 import {
   askKnownPerson,
+  KnownPeopleCursorInvalidError,
   matchContactNumbers,
   answerKnownPersonRequest,
   chargeContactMatch,
@@ -51,13 +52,14 @@ async function memberWithIndex(pariwarId: string, index: string, state: MemberLi
 
 const idx = () => `idx-${randomUUID()}`;
 
-/** Seed a link directly (superuser), with explicit dates. */
+/** Seed a link directly (superuser), with explicit dates (`now` pins the clock, so two seeds can share an instant). */
 async function seedLink(
   client: Client,
-  l: { pariwarId: string; namer: string; named: string; state?: string; askedAgoDays?: number; respondedAgoDays?: number | null; endedAgoDays?: number | null },
+  l: { pariwarId: string; namer: string; named: string; state?: string; askedAgoDays?: number; respondedAgoDays?: number | null; endedAgoDays?: number | null; now?: number },
 ): Promise<KnownPersonLinkId> {
   const id = randomUUID();
-  const ago = (d: number | null | undefined) => (d === null || d === undefined ? null : new Date(Date.now() - d * DAY));
+  const now = l.now ?? Date.now();
+  const ago = (d: number | null | undefined) => (d === null || d === undefined ? null : new Date(now - d * DAY));
   await client.query(
     `INSERT INTO member_known_people (link_id, pariwar_id, namer_member_id, named_member_id, found_by, state, asked_at, responded_at, ended_at)
      VALUES ($1, $2, $3, $4, 'contacts', $5, $6, $7, $8)`,
@@ -360,6 +362,30 @@ describe.skipIf(!hasDatabase)('Story 6.36b — known people (domain)', { timeout
       await enterAppScope(client, p);
       expect((await listMyKnownPeople(tx, { pariwarId: p, namerMemberId: namer })).freeSlots).toBe(2);
     });
+
+    it('every LIVE link is listed and counted however much newer history there is — only not_accepted is bounded (review R2)', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const namer = await memberWithIndex(p, idx());
+      // two OLDER live links, then 50 NEWER declines (reachable: ten asks a day, a decline frees its slot at once)
+      const accepted = await seedLink(client, { pariwarId: p, namer, named: await memberWithIndex(p, idx()), state: 'accepted', askedAgoDays: 20, respondedAgoDays: 19 });
+      const asked = await seedLink(client, { pariwarId: p, namer, named: await memberWithIndex(p, idx()), askedAgoDays: 15 });
+      const decliner = await memberWithIndex(p, idx());
+      const declines: KnownPersonLinkId[] = [];
+      for (let i = 0; i < 50; i += 1) {
+        declines.push(await seedLink(client, { pariwarId: p, namer, named: decliner, state: 'declined', askedAgoDays: 10 - i * 0.1, respondedAgoDays: 0.5, endedAgoDays: 0.5 }));
+      }
+      await enterAppScope(client, p);
+      const list = await listMyKnownPeople(tx, { pariwarId: p, namerMemberId: namer });
+      expect(list.items.find((i) => i.linkId === accepted)?.label).toBe('accepted');
+      expect(list.items.find((i) => i.linkId === asked)?.label).toBe('asked');
+      expect(list.items.filter((i) => i.label === 'not_accepted')).toHaveLength(50);
+      expect(list.freeSlots).toBe(1);
+      // a tighter history bound trims ONLY the ended rows — the newest first; the live ones stay, newest-first overall
+      const small = await listMyKnownPeople(tx, { pariwarId: p, namerMemberId: namer, historyLimit: 3 });
+      expect(small.items.map((i) => i.linkId)).toEqual([declines[49], declines[48], declines[47], asked, accepted]);
+      expect(small.freeSlots).toBe(1);
+    });
   });
 
   describe('the named member (AC6, AC8)', () => {
@@ -376,7 +402,65 @@ describe.skipIf(!hasDatabase)('Story 6.36b — known people (domain)', { timeout
       await seedLink(client, { pariwarId: p, namer: await n(), named: me, state: 'withdrawn', askedAgoDays: 4, respondedAgoDays: 3, endedAgoDays: 1 });
       await enterAppScope(client, p);
       const reqs = await listRequestsNamingMe(tx, { pariwarId: p, namedMemberId: me });
-      expect(new Map(reqs.map((r) => [r.linkId, r.state]))).toEqual(new Map([[open, 'asked'], [accepted, 'accepted']]));
+      expect(new Map(reqs.items.map((r) => [r.linkId, r.state]))).toEqual(new Map([[open, 'asked'], [accepted, 'accepted']]));
+      expect(reqs).toMatchObject({ hasMore: false, nextCursor: null });
+    });
+
+    it('page by page: OPEN asks first, then accepted, each newest first — EVERY link reachable, ties split across pages (review R3)', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const me = await memberWithIndex(p, idx());
+      const n = async () => memberWithIndex(p, idx());
+      const now = Date.now();
+      // accepted ones asked 1..7 days ago — two of them at the SAME instant (the link_id tie-break must page through them)
+      const accepted: KnownPersonLinkId[] = [];
+      for (const ago of [1, 2, 2, 4, 5, 6, 7]) {
+        accepted.push(await seedLink(client, { pariwarId: p, namer: await n(), named: me, state: 'accepted', askedAgoDays: ago, respondedAgoDays: ago - 0.5, now }));
+      }
+      // open asks — one OLDER than every accepted link (it must still lead, on page 1)
+      const openNew = await seedLink(client, { pariwarId: p, namer: await n(), named: me, askedAgoDays: 2.5, now });
+      const openOld = await seedLink(client, { pariwarId: p, namer: await n(), named: me, askedAgoDays: 25, now });
+      await enterAppScope(client, p);
+      const seen: string[] = [];
+      let cursor: string | undefined;
+      let pages = 0;
+      do {
+        const page = await listRequestsNamingMe(tx, { pariwarId: p, namedMemberId: me, limit: 2, cursor });
+        seen.push(...page.items.map((r) => r.linkId));
+        expect(page.hasMore).toBe(page.nextCursor !== null);
+        cursor = page.nextCursor ?? undefined;
+        pages += 1;
+      } while (cursor !== undefined && pages < 10);
+      expect(pages).toBe(5);
+      expect(seen.slice(0, 2)).toEqual([openNew, openOld]);
+      const tied = [accepted[1]!, accepted[2]!].sort().reverse(); // link_id DESC within the shared instant — split over pages 2 and 3
+      expect(seen.slice(2)).toEqual([accepted[0], ...tied, accepted[3], accepted[4], accepted[5], accepted[6]]);
+      expect(new Set(seen).size).toBe(9);
+    });
+
+    it('a cursor this server did not issue ⇒ KnownPeopleCursorInvalidError (⛔ a 22008 from the cast)', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const me = await memberWithIndex(p, idx());
+      await enterAppScope(client, p);
+      const enc = (v: unknown) => Buffer.from(JSON.stringify(v), 'utf8').toString('base64url');
+      const id = randomUUID();
+      const forged = [
+        'not-a-cursor',
+        enc(['open', '2026-10-15T10:00:00.123456Z']),
+        enc(['maybe', '2026-10-15T10:00:00.123456Z', id]),
+        enc(['open', '2026-02-30T10:00:00.123456Z', id]),
+        enc(['open', '2026-10-15T24:00:00.000000Z', id]),
+        enc(['open', '0000-01-01T00:00:00.000000Z', id]),
+        enc(['open', '2026-10-15T10:00:00.123Z', id]),
+        enc(['accepted', '2026-10-15T10:00:00.123456Z', 'x']),
+        enc(['accepted', '2026-10-15T10:00:00.123456Z', 7]),
+      ];
+      for (const cursor of forged) {
+        await expect(listRequestsNamingMe(tx, { pariwarId: p, namedMemberId: me, cursor }), cursor).rejects.toBeInstanceOf(KnownPeopleCursorInvalidError);
+      }
+      // a well-formed one is accepted (a positive control)
+      expect((await listRequestsNamingMe(tx, { pariwarId: p, namedMemberId: me, cursor: enc(['accepted', '2026-10-15T10:00:00.123456Z', id]) })).items).toEqual([]);
     });
 
     it('answer: accept / decline; a stale or answered request ⇒ request_closed (the stale one recorded lapsed); ⛔ mine ⇒ not_found', async () => {
@@ -438,7 +522,7 @@ describe.skipIf(!hasDatabase)('Story 6.36b — known people (domain)', { timeout
       await enterAppScope(client, p);
       expect((await removeKnownPerson(tx, { pariwarId: p, namerMemberId: namer, linkId: acc })).kind).toBe('done');
       expect((await linkRow(client, acc))?.state).toBe('removed');
-      expect(await listRequestsNamingMe(tx, { pariwarId: p, namedMemberId: named })).toEqual([]);
+      expect((await listRequestsNamingMe(tx, { pariwarId: p, namedMemberId: named })).items).toEqual([]);
       expect(await removeKnownPerson(tx, { pariwarId: p, namerMemberId: namer, linkId: ended })).toEqual({ kind: 'refused', reason: 'not_found' });
       expect(await removeKnownPerson(tx, { pariwarId: p, namerMemberId: namer, linkId: others })).toEqual({ kind: 'refused', reason: 'not_found' });
     });

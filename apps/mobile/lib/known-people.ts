@@ -5,7 +5,8 @@
 //     (the invite list — ⛔ ever a contact beyond the first 1,000);
 //   · the search over saved names; the slot arithmetic (tick up to `freeSlots`);
 //   · the permission-state machine (granted / limited / denied → read, read + "only shared", or the fallback);
-//   · the server's refusal codes and the list labels → copy keys.
+//   · the server's refusal codes and the list labels → copy keys; a completed action → its spoken confirmation;
+//   · the requests naming the member, page by page → one list; whether the home card / notice-strip item shows.
 
 import { normalizeMobileOnPhone } from './phone-normalize'
 
@@ -140,4 +141,102 @@ export function rowName(
   if (item.label === 'unavailable') return fallbacks.unavailable
   if (item.label === 'accepted' && item.name) return item.name
   return savedNames[item.linkId] ?? fallbacks.saved
+}
+
+/** A completed request action → its confirmation copy key (shown AND spoken — checklist 13 (d); review 2026-10-15 R5). */
+export type KnownPeopleAction = 'accept' | 'decline' | 'remove' | 'withdraw'
+export function successCopyKey(action: KnownPeopleAction): string {
+  switch (action) {
+    case 'accept':
+      return 'done.accepted'
+    case 'decline':
+      return 'done.declined'
+    case 'remove':
+      return 'done.removed'
+    case 'withdraw':
+      return 'done.withdrawn'
+  }
+}
+
+/**
+ * The loaded pages of the requests naming the member → ONE list, each link once (review 2026-10-15 R3). A link whose
+ * state changed between two page fetches (an open ask accepted elsewhere) can sit on both pages; the LATER copy — the
+ * fresher fetch, in its new place — stays (fix-diff review F2). Any write refetches from page 1.
+ */
+export function flattenRequestPages<T extends { readonly linkId: string }>(pages: readonly { readonly items: readonly T[] }[] | undefined): T[] {
+  const all = (pages ?? []).flatMap((page) => page.items)
+  const seen = new Set<string>()
+  const out: T[] = []
+  for (let i = all.length - 1; i >= 0; i -= 1) {
+    const item = all[i]!
+    if (seen.has(item.linkId)) continue
+    seen.add(item.linkId)
+    out.push(item)
+  }
+  return out.reverse()
+}
+
+/**
+ * The requests query's answer when the server REFUSES the member (`known_people.not_available` — no longer `active`): kept
+ * AS DATA, so the denial stands until the next SUCCESSFUL fetch. As an error it lasted only until the next failure of any
+ * other kind (offline, a 5xx) replaced it — while TanStack still held the pre-denial pages, whose open request then
+ * showed again (fix-diff review E1, the R4 symptom back).
+ */
+export interface DeniedRequestsPage {
+  readonly items: readonly never[]
+  readonly nextCursor: null
+  readonly hasMore: false
+  readonly denied: true
+}
+export const DENIED_REQUESTS_PAGE: DeniedRequestsPage = Object.freeze({ items: [], nextCursor: null, hasMore: false, denied: true })
+
+/** How many ENDED links (`not_accepted`) the app asks the namer's list for — the server's own bound (review R2). */
+export const KNOWN_PEOPLE_LIST_HISTORY_LIMIT = 50
+
+/**
+ * The link ids whose SAVED names the namer's list still needs — or `null` when it cannot say: a denial's empty list says
+ * nothing about the links (pruning against it erased every saved name — round-4 review H1), and a history AT its bound
+ * may have left out an older `not_accepted` row that comes back into view as newer ones age out (round-5 review). A live
+ * link is always listed (R2), so pruning against a complete list drops only links that are gone for good.
+ */
+export function savedNameLinkIdsToKeep(
+  data: { readonly items: readonly { readonly linkId: string; readonly label: string }[] } | undefined,
+  historyLimit = KNOWN_PEOPLE_LIST_HISTORY_LIMIT,
+): string[] | null {
+  if (data === undefined || isDenied(data)) return null
+  if (data.items.filter((i) => i.label === 'not_accepted').length >= historyLimit) return null
+  return data.items.map((i) => i.linkId)
+}
+
+/** The namer's-list query's answer for a REFUSED member — the same sticky denial (fix-diff review G3). */
+export interface DeniedMyKnownPeople {
+  readonly items: readonly never[]
+  readonly freeSlots: 0
+  readonly denied: true
+}
+export const DENIED_MY_KNOWN_PEOPLE: DeniedMyKnownPeople = Object.freeze({ items: [], freeSlots: 0, denied: true })
+
+/** Whether a query's data is (or, for the paged list, holds) the server's denial. */
+export function isDenied(data: object | undefined): boolean {
+  return data !== undefined && 'denied' in data && data.denied === true
+}
+
+/** Whether the loaded pages hold the server's denial. */
+export function requestsDenied(pages: readonly object[] | undefined): boolean {
+  return (pages ?? []).some(isDenied)
+}
+
+/**
+ * Whether the home card and the notice-strip item show (AC6, AC10): ⛔ once the server REFUSES the member — TanStack
+ * KEEPS the previous `data` when a refetch fails, so reading `data` alone showed a member who had left `active` their old
+ * open request (review 2026-10-15 R4); the denial is read from the pages (`DENIED_REQUESTS_PAGE` — sticky, E1) and from
+ * the error — and otherwise only while a loaded request is OPEN. ⭐ Only the DENIAL hides it: a network blip or a failed
+ * *"Show more"* says nothing about the member (it flickered the card off; fix-diff review F3).
+ */
+export function requestEntryVisible(q: {
+  readonly pages: readonly { readonly items: readonly { readonly linkId: string; readonly state: string }[]; readonly denied?: boolean }[] | undefined
+  readonly errorCode: string | undefined
+}): boolean {
+  if (q.errorCode === 'known_people.not_available' || requestsDenied(q.pages)) return false
+  return flattenRequestPages(q.pages).some((r) => r.state === 'asked')
 }

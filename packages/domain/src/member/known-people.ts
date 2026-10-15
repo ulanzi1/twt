@@ -22,6 +22,7 @@
 import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
+import { clampLimit } from '../pagination.js';
 import { mobileBlindIndexMany, normalizeMobile } from '../encryption/member-fields.js';
 import type { FieldCryptoDeps } from '../encryption/field-classes.js';
 import { knownPersonLinkId, memberId as toMemberId, type KnownPersonLinkId, type MemberId, type PariwarId } from '../ids/index.js';
@@ -50,6 +51,10 @@ export const CONTACT_MATCH_NUMBERS_PER_30_DAYS = 2000;
 export const CONTACT_MATCH_PARIWAR_NUMBERS_PER_DAY = 100_000;
 /** Asks (name requests) per member per IST day. */
 export const KNOWN_PEOPLE_ASKS_PER_DAY = 10;
+/** The namer's list: how many ENDED links (`not_accepted`) it shows — ⛔ a bound on the live ones (review 2026-10-15 R2). */
+export const KNOWN_PEOPLE_HISTORY_LIMIT = { default: 50, cap: 50 } as const;
+/** The requests naming the member: one page (review 2026-10-15 R3 — every link reachable by its cursor). */
+export const KNOWN_PEOPLE_REQUESTS_LIMIT = { default: 50, cap: 50 } as const;
 /** The batch HMAC line's purpose (rides the KMS audit line's row key). */
 export const CONTACT_MATCH_AUDIT_PURPOSE = 'contact_match';
 /** A single ask's HMAC is one number — audited through the SAME batch path, so it carries a purpose too. */
@@ -412,9 +417,17 @@ export interface MyKnownPeople {
  *     after a lapse (an unrecorded stale `asked` row reads as lapsed) — then ⛔ not at all;
  *   · `removed` / `erased` — ⛔ shown (an erased person's row vanishes: they left the Trust — ⛔ never that they died).
  * `freeSlots` = 3 − (live `asked` + `accepted`, `unavailable` included). A read — ⛔ writes nothing.
+ * ⭐ EVERY live link is listed and counted; `historyLimit` bounds ONLY the `not_accepted` rows (newest first). One
+ * `LIMIT` over both once let ⛔ 50 newer declines push an older accepted link — and its Remove control — off the list and
+ * miscount `freeSlots` (review 2026-10-15 R2). The live set needs ⛔ bound: the DB holds at most three per namer (0162's
+ * backstop on INSERT; the guard lets ⛔ ended row return to `asked` / `accepted`).
  */
-export async function listMyKnownPeople(db: Db, input: { pariwarId: PariwarId; namerMemberId: MemberId }): Promise<MyKnownPeople> {
+export async function listMyKnownPeople(
+  db: Db,
+  input: { pariwarId: PariwarId; namerMemberId: MemberId; historyLimit?: number | undefined },
+): Promise<MyKnownPeople> {
   const { pariwarId, namerMemberId } = input;
+  const historyLimit = clampLimit(input.historyLimit, KNOWN_PEOPLE_HISTORY_LIMIT);
   const window = sql`make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int)`;
   const shown = sql`make_interval(days => ${KNOWN_PEOPLE_NOT_ACCEPTED_SHOWN_DAYS}::int)`;
   const r = await db.execute<{
@@ -423,32 +436,36 @@ export async function listMyKnownPeople(db: Db, input: { pariwarId: PariwarId; n
     asked_at: Date | string;
     label: KnownPersonLabel;
   }>(sql`
-    SELECT k.link_id, k.named_member_id, k.asked_at,
-      CASE
-        WHEN k.state = 'asked' AND k.asked_at + ${window} > clock_timestamp() THEN 'asked'
-        WHEN k.state = 'accepted' AND (m.state = 'withdrawn'
-              OR EXISTS (SELECT 1 FROM claims c WHERE c.pariwar_id = k.pariwar_id AND c.deceased_member_id = k.named_member_id))
-          THEN 'unavailable'
-        WHEN k.state = 'accepted' THEN 'accepted'
-        ELSE 'not_accepted'
-      END AS label
-      FROM member_known_people k
-      JOIN members m ON m.member_id = k.named_member_id AND m.pariwar_id = k.pariwar_id
-     WHERE k.pariwar_id = ${pariwarId} AND k.namer_member_id = ${namerMemberId}
-       AND (
-         k.state = 'accepted'
-         OR (k.state = 'asked' AND k.asked_at + ${window} + ${shown} > clock_timestamp())
-         OR (k.state IN ('declined', 'lapsed', 'withdrawn') AND k.ended_at + ${shown} > clock_timestamp())
-       )
-     ORDER BY k.asked_at DESC, k.link_id
-     LIMIT 50`);
+    WITH shown AS (
+      SELECT k.link_id, k.named_member_id, k.asked_at,
+        CASE
+          WHEN k.state = 'asked' AND k.asked_at + ${window} > clock_timestamp() THEN 'asked'
+          WHEN k.state = 'accepted' AND (m.state = 'withdrawn'
+                OR EXISTS (SELECT 1 FROM claims c WHERE c.pariwar_id = k.pariwar_id AND c.deceased_member_id = k.named_member_id))
+            THEN 'unavailable'
+          WHEN k.state = 'accepted' THEN 'accepted'
+          ELSE 'not_accepted'
+        END AS label
+        FROM member_known_people k
+        JOIN members m ON m.member_id = k.named_member_id AND m.pariwar_id = k.pariwar_id
+       WHERE k.pariwar_id = ${pariwarId} AND k.namer_member_id = ${namerMemberId}
+         AND (
+           k.state = 'accepted'
+           OR (k.state = 'asked' AND k.asked_at + ${window} + ${shown} > clock_timestamp())
+           OR (k.state IN ('declined', 'lapsed', 'withdrawn') AND k.ended_at + ${shown} > clock_timestamp())
+         )
+    )
+    SELECT * FROM shown WHERE label <> 'not_accepted'
+    UNION ALL
+    (SELECT * FROM shown WHERE label = 'not_accepted' ORDER BY asked_at DESC, link_id LIMIT ${historyLimit})
+    ORDER BY asked_at DESC, link_id`);
   const items: MyKnownPerson[] = r.rows.map((row) => ({
     linkId: knownPersonLinkId(row.link_id),
     label: row.label,
     namedMemberId: row.label === 'accepted' ? toMemberId(row.named_member_id) : null,
     askedAt: asDate(row.asked_at),
   }));
-  const live = items.filter((i) => i.label === 'asked' || i.label === 'accepted' || i.label === 'unavailable').length;
+  const live = items.filter((i) => i.label !== 'not_accepted').length;
   return { items, freeSlots: Math.max(0, KNOWN_PEOPLE_MAX_LIVE - live) };
 }
 
@@ -463,24 +480,102 @@ export interface RequestNamingMe {
   readonly askedAt: Date;
 }
 
+export interface RequestsNamingMePage {
+  readonly items: readonly RequestNamingMe[];
+  readonly hasMore: boolean;
+  /** Opaque — the next page's `cursor`; `null` on the last page. */
+  readonly nextCursor: string | null;
+}
+
+/** A malformed page cursor (a client bug or tampering — the route answers 400). Carries ⛔ the value. */
+export class KnownPeopleCursorInvalidError extends Error {
+  public constructor() {
+    super('[known-people] the page cursor is not one this server issued');
+    this.name = 'KnownPeopleCursorInvalidError';
+  }
+}
+
+/** A cursor's `asked_at` — UTC, ALWAYS six fractional digits (µs — compared in SQL, exactly). */
+const CURSOR_AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
+const CURSOR_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * The requests naming the member: open `asked` ones (within 30 days of `asked_at`) and ACCEPTED ones. A declined or
- * lapsed request (an `asked` row past 30 days counts as lapsed), a removed, withdrawn or erased one ⛔ shown. A read.
+ * `true` for a REAL instant on or after 1970: the shape, then the millisecond part must survive a round trip through
+ * `Date` (⛔ 30 February, ⛔ `T24:00` — `Date.parse` rolls both over) — a forged value that reached the `::timestamptz`
+ * cast would die as a 22008, a 500 instead of the route's 400 (6.36a's posting cursor, review 2026-10-15 R2-4).
  */
-export async function listRequestsNamingMe(db: Db, input: { pariwarId: PariwarId; namedMemberId: MemberId }): Promise<RequestNamingMe[]> {
-  const r = await db.execute<{ link_id: string; state: 'asked' | 'accepted'; namer_member_id: string; asked_at: Date | string }>(sql`
-    SELECT link_id, state, namer_member_id, asked_at FROM member_known_people
+function isCursorInstant(value: string): boolean {
+  if (!CURSOR_AT_RE.test(value) || Number(value.slice(0, 4)) < 1970) return false;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) && new Date(ms).toISOString() === `${value.slice(0, 23)}Z`;
+}
+
+function encodeRequestsCursor(open: boolean, askedAtUs: string, linkId: string): string {
+  return Buffer.from(JSON.stringify([open ? 'open' : 'accepted', askedAtUs, linkId]), 'utf8').toString('base64url');
+}
+
+function decodeRequestsCursor(cursor: string): { open: boolean; askedAt: string; linkId: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+  } catch {
+    throw new KnownPeopleCursorInvalidError();
+  }
+  if (!Array.isArray(parsed) || parsed.length !== 3 || !parsed.every((p) => typeof p === 'string')) throw new KnownPeopleCursorInvalidError();
+  const [kind, askedAt, linkId] = parsed as [string, string, string];
+  if ((kind !== 'open' && kind !== 'accepted') || !isCursorInstant(askedAt) || !CURSOR_ID_RE.test(linkId)) {
+    throw new KnownPeopleCursorInvalidError();
+  }
+  return { open: kind === 'open', askedAt, linkId };
+}
+
+/**
+ * The requests naming the member, PAGE BY PAGE: open `asked` ones (within 30 days of `asked_at`) and ACCEPTED ones. A
+ * declined or lapsed request (an `asked` row past 30 days counts as lapsed), a removed, withdrawn or erased one ⛔ shown.
+ * Order: OPEN asks first (answerable — the home card reads the first page), then accepted ones (the withdraw entry), each
+ * newest first — a keyset over `(open, asked_at, link_id)` DESC, `clampLimit`ed. ⭐ Every link is reachable: accepted
+ * links have ⛔ per-member cap, and a fixed first page hid the oldest ones' withdraw control (review 2026-10-15 R3).
+ * A malformed `cursor` ⇒ `KnownPeopleCursorInvalidError`. A read.
+ */
+export async function listRequestsNamingMe(
+  db: Db,
+  input: { pariwarId: PariwarId; namedMemberId: MemberId; limit?: number | undefined; cursor?: string | undefined },
+): Promise<RequestsNamingMePage> {
+  const limit = clampLimit(input.limit, KNOWN_PEOPLE_REQUESTS_LIMIT);
+  let after = sql``;
+  if (input.cursor !== undefined) {
+    const c = decodeRequestsCursor(input.cursor);
+    after = sql`AND (state = 'asked', asked_at, link_id) < (${c.open}::boolean, ${c.askedAt}::timestamptz, ${c.linkId}::uuid)`;
+  }
+  const r = await db.execute<{
+    link_id: string;
+    state: 'asked' | 'accepted';
+    namer_member_id: string;
+    asked_at: Date | string;
+    asked_at_us: string;
+  }>(sql`
+    SELECT link_id, state, namer_member_id, asked_at,
+           to_char(asked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS asked_at_us
+      FROM member_known_people
      WHERE pariwar_id = ${input.pariwarId} AND named_member_id = ${input.namedMemberId}
        AND (state = 'accepted'
          OR (state = 'asked' AND asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > clock_timestamp()))
-     ORDER BY asked_at DESC, link_id
-     LIMIT 100`);
-  return r.rows.map((row) => ({
-    linkId: knownPersonLinkId(row.link_id),
-    state: row.state,
-    namerMemberId: toMemberId(row.namer_member_id),
-    askedAt: asDate(row.asked_at),
-  }));
+       ${after}
+     ORDER BY (state = 'asked') DESC, asked_at DESC, link_id DESC
+     LIMIT ${limit + 1}`);
+  const hasMore = r.rows.length > limit;
+  const rows = r.rows.slice(0, limit);
+  const last = rows[rows.length - 1];
+  return {
+    items: rows.map((row) => ({
+      linkId: knownPersonLinkId(row.link_id),
+      state: row.state,
+      namerMemberId: toMemberId(row.namer_member_id),
+      askedAt: asDate(row.asked_at),
+    })),
+    hasMore,
+    nextCursor: hasMore && last ? encodeRequestsCursor(last.state === 'asked', last.asked_at_us, last.link_id) : null,
+  };
 }
 
 // ── Answer, remove, withdraw ────────────────────────────────────────────────────────────────────────────────────────

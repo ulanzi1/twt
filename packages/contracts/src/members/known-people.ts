@@ -18,6 +18,8 @@
 
 import { z } from 'zod';
 
+import { Cursor } from '../_common/pagination.js';
+
 /** At most this many numbers in ONE matching request (6.36a SW12). ⚠ By-value twin: `CONTACT_MATCH_MAX_NUMBERS`. */
 export const KNOWN_PEOPLE_MATCH_MAX_NUMBERS = 1000;
 /** Each submitted entry ≤ 32 characters. ⚠ By-value twin: `CONTACT_MATCH_MAX_ENTRY_LENGTH`. */
@@ -76,8 +78,19 @@ export type KnownPersonView = z.output<typeof KnownPersonView>;
 export const KnownPersonAskResponse = z.object({ link: KnownPersonView }).strict();
 export type KnownPersonAskResponse = z.output<typeof KnownPersonAskResponse>;
 
-/** The bounded `limit` every list declares (the forced-pagination invariant). */
-export const KnownPeopleListQuery = z.object({ limit: z.coerce.number().int().positive().max(50).optional() }).strict();
+/**
+ * The two lists' page-size bound. ⚠ By-value twins (held equal by `apps/api/tests/unit/known-people-lockstep.test.ts` and
+ * the app's `known-people-requests-pages.test.ts`): the domain's `KNOWN_PEOPLE_HISTORY_LIMIT.cap` /
+ * `KNOWN_PEOPLE_REQUESTS_LIMIT.cap`, and the app's `KNOWN_PEOPLE_LIST_HISTORY_LIMIT` (its saved-name prune relies on it).
+ */
+export const KNOWN_PEOPLE_LIST_LIMIT_MAX = 50;
+
+/**
+ * `GET /api/v1/member/known-people?limit=` — the bounded `limit` every list declares (the forced-pagination invariant). On
+ * the namer's list it bounds the ENDED links shown (`not_accepted`, newest first); every LIVE link is always listed — at
+ * most three — and counted in `freeSlots` (review 2026-10-15 R2).
+ */
+export const KnownPeopleListQuery = z.object({ limit: z.coerce.number().int().positive().max(KNOWN_PEOPLE_LIST_LIMIT_MAX).optional() }).strict();
 export type KnownPeopleListQuery = z.output<typeof KnownPeopleListQuery>;
 
 /** `GET /api/v1/member/known-people` — the namer's list and the free slots (0–3). */
@@ -103,8 +116,28 @@ export const KnownPeopleRequestView = z
   .strict();
 export type KnownPeopleRequestView = z.output<typeof KnownPeopleRequestView>;
 
-/** `GET /api/v1/member/known-people/requests`. */
-export const KnownPeopleRequestsResponse = z.object({ items: z.array(KnownPeopleRequestView) }).strict();
+/**
+ * The requests cursor's bound. It carries `[open | accepted, asked_at (µs), link_id]` base64url-encoded — ~110 characters;
+ * a contracts test pins a real one under this bound.
+ */
+export const KNOWN_PEOPLE_REQUESTS_CURSOR_MAX = 200;
+
+/**
+ * `GET /api/v1/member/known-people/requests?limit=&cursor=` — page by page (review 2026-10-15 R3: accepted links have ⛔
+ * per-member cap, so every one must be reachable for its withdraw control). `cursor` is the previous page's `nextCursor`.
+ */
+export const KnownPeopleRequestsQuery = z
+  .object({
+    limit: z.coerce.number().int().positive().max(KNOWN_PEOPLE_LIST_LIMIT_MAX).optional(),
+    cursor: Cursor.max(KNOWN_PEOPLE_REQUESTS_CURSOR_MAX).optional(),
+  })
+  .strict();
+export type KnownPeopleRequestsQuery = z.output<typeof KnownPeopleRequestsQuery>;
+
+/** `GET /api/v1/member/known-people/requests` — OPEN asks first (answerable), then accepted ones, each newest first. */
+export const KnownPeopleRequestsResponse = z
+  .object({ items: z.array(KnownPeopleRequestView), nextCursor: Cursor.nullable(), hasMore: z.boolean() })
+  .strict();
 export type KnownPeopleRequestsResponse = z.output<typeof KnownPeopleRequestsResponse>;
 
 /** `POST …/requests/:linkId/answer` — "Yes, I know them" ⇒ `accept`; "No" ⇒ `decline`. */
@@ -139,6 +172,7 @@ export const KNOWN_PEOPLE_ERROR_CODES = {
   dailyLimit: 'known_people.daily_limit',
   monthlyLimit: 'known_people.monthly_limit',
   busy: 'known_people.busy',
+  cursorInvalid: 'known_people.cursor_invalid',
   idempotencyKeyRequired: 'known_people.idempotency_key_required',
   idempotencyInProgress: 'known_people.idempotency_in_progress',
 } as const;

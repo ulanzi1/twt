@@ -62,6 +62,12 @@
   "request.unknown_name": "एक सदस्य",
   "request.card_title": "किसी ने आपका नाम दिया है",
   "request.card_body": "कृपया बताएँ कि क्या आप उन्हें जानते हैं।",
+  "requests.show_more": "और दिखाएँ",
+  "$comment.done": "The confirmation SHOWN AND SPOKEN after an action completes (checklist 13 (d); review 2026-10-15 R5). `{name}` as in the row the member acted on.",
+  "done.accepted": "हो गया। आपने बताया कि आप {name} को जानते हैं।",
+  "done.declined": "हो गया। आपने बताया कि आप {name} को नहीं जानते।",
+  "done.removed": "हो गया। {name} अब आपकी सूची में नहीं हैं।",
+  "done.withdrawn": "हो गया। आपने अपनी सहमति वापस ले ली — {name} यह देख सकेंगे।",
   "error.daily_limit": "आज की सीमा पूरी हो गई है। कृपया कल फिर कोशिश करें।",
   "error.monthly_limit": "इस महीने आपने बहुत सारे संपर्क जाँच लिए हैं। कृपया बाद में कोशिश करें।",
   "error.busy": "अभी बहुत से सदस्य जाँच कर रहे हैं। कृपया बाद में कोशिश करें।",
@@ -74,5 +80,6 @@
   "error.generic": "कुछ गड़बड़ हो गई। कृपया फिर से कोशिश करें।",
   "error.load": "लोड नहीं हो सका। कृपया फिर से कोशिश करें।",
   "loading": "लोड हो रहा है…",
+  "loaded": "लोड हो गया।",
   "retry": "फिर से कोशिश करें"
 }

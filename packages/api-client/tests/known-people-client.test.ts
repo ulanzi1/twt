@@ -27,7 +27,8 @@ describe('createMemberKnownPeopleClient', () => {
       { status: 201, body: { link } },
       { status: 200, body: { items: [link], freeSlots: 2 } },
       { status: 200, body: { linkId: LINK, state: 'removed' } },
-      { status: 200, body: { items: [] } },
+      { status: 200, body: { items: [], nextCursor: 'c-2', hasMore: true } },
+      { status: 200, body: { items: [], nextCursor: null, hasMore: false } },
       { status: 200, body: { linkId: LINK, state: 'accepted' } },
       { status: 200, body: { linkId: LINK, state: 'withdrawn' } },
     ]);
@@ -36,7 +37,8 @@ describe('createMemberKnownPeopleClient', () => {
     expect(await c.ask('9876543210', 'contacts', 'k-ask')).toEqual({ link });
     expect((await c.list()).freeSlots).toBe(2);
     await c.remove(LINK, 'k-remove');
-    await c.requests();
+    expect((await c.requests()).nextCursor).toBe('c-2');
+    await c.requests({ cursor: 'c-2/+=' });
     await c.answer(LINK, 'accept', 'k-answer');
     await c.withdraw(LINK, 'k-withdraw');
     expect(calls.map((x) => `${x.method} ${x.url}`)).toEqual([
@@ -45,13 +47,28 @@ describe('createMemberKnownPeopleClient', () => {
       'GET https://api.test/api/v1/member/known-people?limit=50',
       `POST https://api.test/api/v1/member/known-people/${LINK}/remove`,
       'GET https://api.test/api/v1/member/known-people/requests?limit=50',
+      'GET https://api.test/api/v1/member/known-people/requests?limit=50&cursor=c-2%2F%2B%3D',
       `POST https://api.test/api/v1/member/known-people/requests/${LINK}/answer`,
       `POST https://api.test/api/v1/member/known-people/requests/${LINK}/withdraw`,
     ]);
     for (const call of calls) expect(call.headers['authorization']).toBe('Bearer tok');
-    expect(calls.map((x) => x.headers['idempotency-key'])).toEqual([undefined, 'k-ask', undefined, 'k-remove', undefined, 'k-answer', 'k-withdraw']);
+    expect(calls.map((x) => x.headers['idempotency-key'])).toEqual([undefined, 'k-ask', undefined, 'k-remove', undefined, undefined, 'k-answer', 'k-withdraw']);
     expect(calls[0]!.body).toEqual({ numbers: ['+919876543210', 'x', '+919876543211'] });
-    expect(calls[5]!.body).toEqual({ answer: 'accept' });
+    expect(calls[6]!.body).toEqual({ answer: 'accept' });
+  });
+
+  it('the two reads take an AbortSignal through to fetch (the app\'s read timeout aborts the request — 6.36b review round 7)', async () => {
+    const seen: (AbortSignal | undefined)[] = [];
+    const impl = (async (_url: string, init: RequestInit) => {
+      seen.push(init.signal ?? undefined);
+      return new Response(JSON.stringify({ items: [], freeSlots: 3, nextCursor: null, hasMore: false }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    const c = createMemberKnownPeopleClient({ baseUrl: 'https://api.test', getAccessToken: () => 'tok', fetchImpl: impl });
+    const a = new AbortController();
+    const b = new AbortController();
+    await c.list(50, { signal: a.signal }).catch(() => undefined);
+    await c.requests({}, { signal: b.signal }).catch(() => undefined);
+    expect(seen).toEqual([a.signal, b.signal]);
   });
 
   it('a refusal surfaces as ApiError with the server code', async () => {

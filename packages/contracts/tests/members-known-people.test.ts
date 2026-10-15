@@ -10,8 +10,11 @@ import {
   KnownPeopleAnswerRequest,
   KnownPeopleContactMatchRequest,
   KnownPeopleContactMatchResponse,
+  KNOWN_PEOPLE_REQUESTS_CURSOR_MAX,
   KnownPeopleListQuery,
   KnownPeopleRequestView,
+  KnownPeopleRequestsQuery,
+  KnownPeopleRequestsResponse,
   KnownPeopleWriteResponse,
   KnownPersonAskRequest,
   KnownPersonLabelWire,
@@ -79,6 +82,20 @@ describe('asking and the lists', () => {
     expect(MyKnownPeopleResponse.safeParse({ items: [], freeSlots: 4 }).success).toBe(false);
     expect(KnownPeopleListQuery.safeParse({ limit: '51' }).success).toBe(false);
     expect(KnownPeopleListQuery.parse({ limit: '20' })).toEqual({ limit: 20 });
+  });
+
+  it('the requests list pages by an opaque cursor (review 2026-10-15 R3); a real worst-case cursor fits its bound', () => {
+    const page = { items: [{ linkId: LINK, state: 'accepted', name: null, askedAt: AT }], nextCursor: 'abc', hasMore: true };
+    expect(KnownPeopleRequestsResponse.safeParse(page).success).toBe(true);
+    expect(KnownPeopleRequestsResponse.safeParse({ items: [] }).success).toBe(false); // the page fields are required
+    expect(KnownPeopleRequestsQuery.parse({ limit: '20', cursor: 'abc' })).toEqual({ limit: 20, cursor: 'abc' });
+    expect(KnownPeopleRequestsQuery.safeParse({ limit: '51' }).success).toBe(false);
+    expect(KnownPeopleRequestsQuery.safeParse({ cursor: ' ' }).success).toBe(false);
+    // the domain's encoding — `[kind, asked_at µs, link_id]` base64url — at its longest kind
+    const worst = Buffer.from(JSON.stringify(['accepted', '2026-10-15T10:00:00.123456Z', LINK]), 'utf8').toString('base64url');
+    expect(worst.length).toBeLessThan(KNOWN_PEOPLE_REQUESTS_CURSOR_MAX);
+    expect(KnownPeopleRequestsQuery.safeParse({ cursor: worst }).success).toBe(true);
+    expect(KnownPeopleRequestsQuery.safeParse({ cursor: 'x'.repeat(KNOWN_PEOPLE_REQUESTS_CURSOR_MAX + 1) }).success).toBe(false);
   });
 
   it('answer and write results', () => {

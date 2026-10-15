@@ -372,20 +372,43 @@ export async function assembleMemberExport(
     const shown = resolveMemberFacingDeceasedName(presentationMode, stored).trim();
     return shown === '' ? null : shown;
   };
+  // ⭐ `2026-10-15-333` call 3 — the export says ⛔ more about the OTHER member than the app showed: (a) a link the other
+  // member's erasure ended reads `ended` on BOTH lists (⛔ `erased` — the app's row simply vanishes, SW14 (3)); (b) the
+  // members-who-named-me list carries ⛔ `foundBy` (it describes the NAMER's phone).
+  // ⭐ `2026-10-15-334` call 1 narrows (a)'s "the rest as built" on the members-who-named-me list: there a REMOVAL, an
+  // ERASURE and an OPEN request whose namer a claim names (hidden from the list — `-333` call 1) each simply LEAVE the list
+  // in the app, so each reads the SAME — `ended`, ⛔ name, ⛔ end date; the member's own facts (asked, answered) stay. ⛔ A
+  // missing name or end date marking an erasure or a reported death. The member's OWN ends and an `accepted` link (kept,
+  // withdrawable) are untouched.
   const exportLink = async (l: KnownPeopleExportRow, nameSeen: boolean) => ({
     name: nameSeen ? await seenName(l.otherMemberId) : null,
-    state: l.state,
-    foundBy: l.foundBy,
+    state: l.state === 'erased' ? ('ended' as const) : l.state,
     askedAt: l.askedAt.toISOString(),
     respondedAt: l.respondedAt?.toISOString() ?? null,
     endedAt: l.endedAt?.toISOString() ?? null,
   });
-  const knownPeople = {
-    named: await Promise.all(
-      knownPeopleLinks.named.map((l) => exportLink(l, l.respondedAt !== null && l.state !== 'declined')),
-    ),
-    namedBy: await Promise.all(knownPeopleLinks.namedBy.map((l) => exportLink(l, true))),
-  };
+  // `2026-10-15-335` call 1: a request the member did ⛔ answer whose namer's claim was FILED while it was still open (before
+  // `asked_at` + 30 days) was hidden then (`-333` call 1) — it reads `ended` for good, recorded `lapsed` or ⛔; one that
+  // had lapsed before any claim stays `lapsed`, like any lapse. ⛔ Decided by the export's date: a day-30 switch from
+  // `ended` to `lapsed` told a reported death apart from a removal across two exports (fix-diff review round 3).
+  const hiddenWhileOpen = (l: KnownPeopleExportRow) =>
+    (l.state === 'asked' || l.state === 'lapsed') && l.respondedAt === null && l.otherClaimFiledWhileOpen;
+  const leftMyListNotByMe = (l: KnownPeopleExportRow) => l.state === 'removed' || l.state === 'erased' || hiddenWhileOpen(l);
+  // ⚠ ONE row at a time: each name is a `client.select` on the export's ONE scoped client, and concurrent queries on one
+  // pg client are deprecated (pg@9 removes them) — `Promise.all` here issued them together (fix-diff review round 2).
+  const named = [];
+  for (const l of knownPeopleLinks.named) {
+    named.push({ ...(await exportLink(l, l.respondedAt !== null && l.state !== 'declined')), foundBy: l.foundBy });
+  }
+  const namedBy = [];
+  for (const l of knownPeopleLinks.namedBy) {
+    namedBy.push(
+      leftMyListNotByMe(l)
+        ? { name: null, state: 'ended' as const, askedAt: l.askedAt.toISOString(), respondedAt: l.respondedAt?.toISOString() ?? null, endedAt: null }
+        : await exportLink(l, true),
+    );
+  }
+  const knownPeople = { named, namedBy };
 
   const profile = {
     memberId,

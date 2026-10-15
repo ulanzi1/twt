@@ -17,7 +17,7 @@ GLYPH REGISTER, ADDRESSING RULE, LETTERS: as 6.36a.
 
 # Story 6.36b: People Who Know Me — Up to Three Members a Member Names, Found From Their Phone's Contacts, Each of Whom Accepts `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS PART IS.** When ⛔ no colleague can be asked about a member's death, the Trust asks up to three members that member
 > named while alive and who agreed (`-310` CF4 A (2)). This part lets a member name them: *"Find members in my contacts"* checks the
@@ -38,6 +38,13 @@ who are not members.**
 **This part introduces ⛔ no predicate that gates a member's access to a benefit.** It records who a member named and who accepted; ⛔ no
 claim, contribution, pool or payment reads it. 6.36 reads the accepted people to choose who is ASKED about a death (a signal, ⛔ no gate —
 `-263` FQ10). Checked against the Niyamavali: ⛔ no clause governs it.
+
+⭐ *Annotated 2026-10-15 (code review round 2; ⛔ a rewrite):* the feature's OWN gate changed, so its meaning is stated —
+*"A member whose death has been reported to the Trust can no longer use People who know me — even if the report later proves
+wrong."* (`2026-10-15-333` call 1 — the caller is `active` AND ⛔ named by any claim as the deceased); and *"A member who is a few
+days late with a renewal can still be found and named by others, though they see the request only once they have renewed."*
+(call 2 — the TARGET predicate, ⛔ a gate on the member's own access). Still ⛔ a benefit gate: ⛔ claim, contribution, pool or
+payment reads either. Checked against the Niyamavali: ⛔ no clause governs it.
 
 ## The rulings and decisions this part builds (6.36a is the record)
 
@@ -71,6 +78,8 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
    `known_people.daily_limit` / `known_people.monthly_limit` / `known_people.busy` (atomic upserts — the `sms_rate_buckets` precedent,
    migration 0049); a list over 1,000 fails the schema ⇒ 400 `request.validation` (`apps/api/src/middleware/error-mapping/index.ts:158-167`)
    whose body carries ⛔ no submitted value (a test).
+   ⭐ *Annotated 2026-10-15 (code review round 2; ⛔ a rewrite):* SUPERSEDED IN PART by `2026-10-15-333` call 2 — a member who is
+   `active` OR `active-in-grace` is matched (the directory shows both as *"Active"*).
 5. **AC4 — ⛔ no number anywhere** (I4): a behaviour test plants a run of known numbers in a match request and in an ask, then asserts
    none of their digits (10-digit or `+91` form) appear in the captured request logs, error logs, audit lines, alarms, any row of
    `member_known_people` / `member_daily_counters`, or any error body; a source fence over the known-people handler + domain files
@@ -82,6 +91,9 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
    reported-dead and another Pariwar's — indistinguishable); oneself ⇒ 422 (a HANDLER refusal — a schema failure is 400); the 11th ask in
    an IST day ⇒ 429; a re-ask of a person whose last link with this namer ENDED without acceptance (declined, lapsed) or was withdrawn,
    before that link's `ended_at` + 60 days ⇒ 409 `known_people.cannot_ask_now` (6.36a SW10 — one rule); the number is ⛔ never stored.
+   ⭐ *Annotated 2026-10-15 (code review round 2; ⛔ a rewrite):* `2026-10-15-333` call 2 (b) — a re-ask of a person the namer
+   ALREADY has a live link to answers that link (200) BEFORE eligibility, with the list's own label (`unavailable` ⛔ named); the
+   ONE 404 stands for everyone else. Grace members can be asked (call 2 (a)).
 7. **AC6 — the named member's request** appears in the app only, and only to an `active` member (a home card + a notice-strip item,
    `PeerRequestEntry`'s shape):
    *"[Name] has named you as someone who knows them. Do you know him/her?"* with the namer's registered name (the member-to-member name
@@ -90,6 +102,8 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
    past `asked_at` + 30 days (lapsed, whether or not the writer has recorded it yet) or already answered ⇒ 409 `known_people.request_closed`;
    a DECLINED or LAPSED request leaves the named member's list and card — an ACCEPTED one leaves the home CARD but stays in their list (the
    withdraw entry, AC8; it leaves the list too when the namer removes it); ⛔ no SMS, push or WhatsApp is sent (a test asserts ⛔ no dispatcher call).
+   ⭐ *Annotated 2026-10-15 (code review round 2; ⛔ a rewrite):* `2026-10-15-333` call 1 (b) — an OPEN request whose NAMER a
+   claim names leaves the named member's list and card, and answering it ⇒ 409 `known_people.request_closed`; an ACCEPTED one stays.
 8. **AC7 — the member's list** (`GET /api/v1/member/known-people`): each live link as `asked` (⛔ no name — the app shows the name the member
    saved, kept only on the phone) or `accepted` (the registered name); `not_accepted` — at once after a decline or a withdrawal, at
    `asked_at` + 30 days after a lapse — for 30 days, then ⛔ not at all (6.36a SW14 — a decline is visible at once, accepted and recorded);
@@ -109,6 +123,9 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
 11. **AC10 — ONLY an `active` member may use it** (SW10): matching, asking and answering are refused for any other caller with ONE
     code (403 `known_people.not_available` — ⛔ never a signal of which state); ⛔ no signup step (SW16 (1)) — the wizard is unchanged by
     this part; the people screen is reached from Life Events and from 6.36c's home cards.
+    ⭐ *Annotated 2026-10-15 (code review round 2; ⛔ a rewrite):* `2026-10-15-333` call 1 (a) — the caller must ALSO be named by
+    ⛔ claim as the deceased (every route's ONE 403); the 403's words now read true for every caller (*"People who know me is not
+    available for this account."*).
 12. **AC11 — the permission set:** `expo-contacts` installed at the SDK-55 version (`npx expo install expo-contacts`); the config plugin
     `['expo-contacts', { contactsPermission: '<copy>' }]` (iOS `NSContactsUsageDescription` — the Trust's name ⛔ not hard-coded); Android
     `blockedPermissions` drops `WRITE_CONTACTS` (the plugin adds it — SF3); `apps/mobile/tests/fixtures/app-config-prototype.json` updated
@@ -116,6 +133,8 @@ claim, contribution, pool or payment reads it. 6.36 reads the accepted people to
 13. **AC12 — erasure and export** (SW17): `anonymizeMember` ERASES every live link where the member is namer or named (`state = 'erased'`,
     `ended_at` set, ⛔ not deleted); the rtbf pin enrols the new `.update(memberKnownPeople)`; the data export lists the member's named people and the members
     who named them.
+    ⭐ *Annotated 2026-10-15 (code review round 2; ⛔ a rewrite):* the export per `-333` call 3, `-334` call 1, `-335`, `-336` (see
+    Round 2's resolution).
 14. **AC13 — copy:** keys in a NEW `known_people` namespace (`2026-10-14-332` call 5 — ⛔ never 6.36a's `workplace` files; registered, member-facing,
     parity green);
     BigDev's note words (`-309`) with the Trust's name from config; the request text (`-307`), *"[Name] will see your answer."* and *"[Name]
@@ -256,6 +275,212 @@ its explicit no-benefit-gate meaning. Other families introduce no additional app
 stored locally after a successful member ask. It does not demonstrate retention of a non-member number or a server
 number leak, so it is not treated as an AC4 violation. SW17 permits exports of names previously seen; historical
 accepted-name export is not a finding.
+
+#### Round 2 — 2026-10-15, the whole branch `b6cbf9db...a34a8739` (78 code files, ~8,400 diff lines)
+
+Review: `bmad-code-review 6.36b` re-run after R1–R6 (`aadaf411`). Three fresh layers in parallel, read-only, at the fixed SHA
+`a34a8739`: Blind Hunter (19), Edge Case Hunter (18), Acceptance Auditor (13) — 50 raw, 32 after de-duplication. Triage:
+**3 decision-needed, 16 patch, 8 defer, 5 dismissed** (D1–D3 then resolved by BigDev — all A — into P17–P19: 19 patch). ⭐ The Auditor re-verified R1–R6 in the code: **all six hold** (R5 for its
+own screen only — the find screen is P2). ⛔ No test or `ci:local` run in this review; every finding below was traced in source at
+`a34a8739`, and the coordinator re-read the code for P1, P4, P5, P13 and the three decisions before classifying.
+
+**Panel-routing gate (§0), applied before each decision:** all three are BigDev's — each recommended option REMOVES a signal
+rather than adding one, and changes only BigDev's own author text (6.36a SW10 / SW11 / SW17, recorded in `-330`). ⚠ Each keep-as-built
+option (C / B / B) leaves a disclosure the record does ⛔ not already accept, so choosing it routes that half to the Panel (SC3's shape).
+
+- [x] [Review][Decision] **D1 — A member whose death has been reported keeps the whole feature, and living members keep their open
+  request.** `isActiveMember` (`packages/domain/src/member/known-people.ts:81`) reads `members.state` only, and death is an overlay —
+  ⛔ never a state — so the family holding the dead member's phone can match contacts, ask, remove, answer and withdraw AS that member;
+  `listRequestsNamingMe` (`:556`) never looks at the namer, so a living member still sees *"[Name] has named you … [Name] will see your
+  answer."* from a member whose death was reported, and new requests can be sent in that member's name. The target side already
+  excludes anyone a claim names (`knownPersonEligibleSql`, `:74`). ⭐ SW20 makes every change on or after the filing day inert for who is
+  asked, so this is about what 6.36b's own screens show and do. Options: **(A, recommended)** the caller gate = `active` AND ⛔ no claim
+  naming them (every route's ONE 403), and the named member's list drops OPEN requests whose namer a claim names — ACCEPTED ones stay
+  (the named member's withdrawal counts whenever it happens — SW17 / SW20); cost: a living member wrongly reported dead, whose claim
+  is rejected, loses the feature for good (the "a claim in ANY state" rule the target side and SW23 already apply — Auditor F6), and a
+  vanished open request reads as the namer's removal (SW14 (4) — already accepted). **(B)** hide the dead namer's open requests only;
+  cost: the family can still send new requests in the dead member's name. **(C)** keep as built and record it; cost: the false
+  *"[Name] will see your answer."* and new requests in a dead member's name. Sources: blind + edge + auditor.
+  ⭐ **Resolved 2026-10-15 — BigDev: A** ([`2026-10-15-333`](../../.decision-log.md) call 1) ⇒ **P17**.
+- [x] [Review][Decision] **D2 — Another member can tell that a person is late with a renewal.** The contacts check and the ask match
+  only `members.state = 'active'` (`known-people.ts:74`, `:358`), so a member in renewal grace (`active-in-grace`) is NOT matched and an
+  ask of them answers 404 `not_a_member` — even when the asker already has an ACCEPTED link to them, which still reads *"Accepted"*
+  with the name (`:367` runs after eligibility, so AC5's *"the same link (200)"* never comes back). ⭐ The deciding fact: the public
+  directory shows `active-in-grace` as *"Active"* (`apps/public/src/lib/members-render.ts:112`), so this is a signal `member_status`
+  does ⛔ not already show — outside SW14's carve-out, and the very thing SW16 (4) and AC7 (*"⛔ never a late renewal"*) set out to
+  avoid. (`lapsed-unpaid` is omitted from the directory, so excluding it tells nothing new.) Options: **(A, recommended)** match and
+  ask `active` + `active-in-grace` (the directory's "Active"), and answer an ask of an already-linked person with that link (200,
+  the list's own label — `accepted` / `unavailable`, ⛔ a name for `unavailable`) BEFORE eligibility; the CALLER stays `active` only
+  (that tells only themselves); cost: a member a few days late can be found and named — 6.36 still asks only `active` members (SW23),
+  so they are ⛔ asked about a death while late; supersedes SW10 / SW11's `active` (BigDev's author text). **(B)** keep `active`, add a
+  fifth recorded signal to SW14 and the Panel confirm note (SC3); cost: the payment signal stays until ruled. **(C)** fix only the
+  ask's ordering; cost: the contacts check still lets anyone holding the number tell grace from active. Sources: auditor + blind.
+  ⭐ **Resolved 2026-10-15 — BigDev: A** (`-333` call 2) ⇒ **P18**.
+- [x] [Review][Decision] **D3 — The data export tells each member more about the OTHER member than the app ever showed.**
+  `packages/domain/src/data-export/assemble.ts:383-387` exports every link's RAW state and `foundBy` on both lists: the namer's
+  `named` list says `erased` where the app's row simply vanished (SW14 (3): *"⛔ never that they died"* — and an erasure tells more
+  than "left the Trust"), and the named member's `namedBy` list carries `foundBy` — how the namer found them (e.g. their number was
+  in the namer's contacts). ⭐ Every other state is one the app already lets that member tell (SW14 (1)–(4)). SW17 says only *"the
+  people they named and the members who named them (names they already saw)"*. Options: **(A, recommended)** `named`: `erased` reads
+  `ended`; `namedBy`: ⛔ `foundBy` (it describes the namer's phone); the rest as built; cost: a contract change (the enum gains
+  `ended`, `namedBy` loses a field), and counsel may later read the right of access as owing the raw record (Row 31). **(B)** keep as
+  built and record the two extra signals; cost: an erasure and the other member's phonebook are disclosed — the Panel's (SC3) and
+  counsel's. **(C)** export the member's own side only; cost: less than SW17 promises. Sources: blind + auditor.
+  ⭐ **Resolved 2026-10-15 — BigDev: A, and *"Yes, both lists"*** (an erased NAMER in `namedBy` too — `-333` call 3) ⇒ **P19**.
+- [x] [Review][Patch] **P1 (MEDIUM) — A failed batch leaves its HMACs unaudited and the queued ones still calling KMS** (SW12 *"ONE
+  line per request"*). `Promise.all` rejects on the first failure, the audit line is written only on full success, and the tasks
+  still queued in the process-wide limiter keep running for nobody. Abort the queued tasks once one fails, and write the ONE line in a
+  `finally` with the count actually computed (when > 0); supersede the test that pins "audits nothing".
+  [`packages/domain/src/encryption/blind-index.ts:119`] Sources: blind + edge + auditor.
+- [x] [Review][Patch] **P2 (MEDIUM) — The find screen's outcomes are ⛔ reliably spoken, and its success is never shown** (checklist
+  13(d) — REAL GAP; AC9). Every message is a bare `accessibilityRole="alert"` (`:179`, `:254`) — the repo's own `announce.tsx` says
+  that does ⛔ not announce on mount on iOS; *"We checked 1,000"* / *"Only the contacts you shared"* / the fallback / the matches phase
+  are silent there; and `setMessage(t('find.sent'))` is followed at once by `router.back()` (`:104-106`), so the main action's success
+  is never seen or heard — the list screen says nothing either. Use `AnnouncedText`, carry the success to the list screen's notice,
+  and add a render test for this screen (FD-4's jsdom claim does ⛔ reach it).
+  [`apps/mobile/app/(life-events)/known-people-find.tsx:104`] Sources: auditor + blind.
+- [x] [Review][Patch] **P3 (MEDIUM) — A refused write leaves the stale row and its controls; two codes fall to "Something went
+  wrong"** (AC9). The writes refresh only `onSuccess`, so after `request_closed` / `not_found` (the link changed elsewhere — or the
+  member's own first tap landed and its response was lost) the row keeps its Yes / No / Remove / withdraw controls, and every retap
+  fails until the screen remounts; `known_people.not_found` (404) and `known_people.idempotency_in_progress` (409) have ⛔ copy key.
+  Refresh both lists after a refusal (in the screen's `catch` — ⛔ `onSettled`, memory: TanStack onSettled runs before success) and
+  give both codes a plain message (en + hi, real-`t()` leg). [`apps/mobile/app/(life-events)/known-people.tsx:105`;
+  `apps/mobile/lib/known-people.ts:102`] Sources: blind + edge.
+- [x] [Review][Patch] **P4 (MEDIUM / LOW) — The idempotency store keeps another member's decrypted registered name.** An ask that
+  meets an existing `accepted` link puts the decrypted name in `out.link.name`, and `recordResult` writes the whole body to
+  `idempotency_keys.result` in plaintext. The peer-request handler's precedent is *"⛔ the store never holds an answer"*. Record the
+  body with `name: null` and re-resolve the name on a replay. [`apps/api/src/modules/known-people/handlers.ts:134`, `:198`]
+  Source: blind.
+- [x] [Review][Patch] **P5 (LOW) — iOS "Share more contacts" re-checks even when nothing was added.** `shareMoreContacts` resolves
+  `true` whatever `presentAccessPickerAsync()` returns (the ids NEWLY shared), so a cancelled picker re-sends every number and spends
+  one of the three daily checks. Re-check only when ids came back. [`apps/mobile/lib/known-people-contacts.ts:36`] Source: edge.
+- [x] [Review][Patch] **P6 (LOW) — One request, two clocks.** The answer's WHERE (`asked_at + 30 days > clock_timestamp()`) and its
+  SET (`responded_at = clock_timestamp()`) read the clock separately, so an answer at the boundary trips `answer_window_check`
+  (23514 — a 500, ⛔ `request_closed`); a decline also writes two instants; the erasure's two `CASE`s read it twice. Take ONE instant
+  per statement. [`packages/domain/src/member/known-people.ts:602`, `:661`] Sources: blind + edge.
+- [x] [Review][Patch] **P7 (LOW) — Withdraw has ⛔ test that another member's link is refused** (checklist 12(a) — REAL GAP: remove
+  and answer have one; withdraw is covered by construction only). [`packages/domain/src/member/known-people.ts:640`] Source: auditor.
+- [x] [Review][Patch] **P8 (LOW) — The find screen's slots.** `freeSlots = mine.data?.freeSlots ?? 0` shows *"You have named three
+  people"* while the list is loading, failed or denied; after a partial failure the entries already asked stay ticked, so sending
+  again spends asks. Wait for the list (or show its error / the denial), and untick what was asked.
+  [`apps/mobile/app/(life-events)/known-people-find.tsx:55`] Sources: edge + auditor.
+- [x] [Review][Patch] **P9 (LOW) — A failed refetch of the namer's list hides every row and its Remove control** behind *"Could not
+  load"* (`mine.isError` alone) — keep the rows and report beside them, as the requests section already does.
+  [`apps/mobile/app/(life-events)/known-people.tsx:152`] Source: edge.
+- [x] [Review][Patch] **P10 (LOW) — Two silent outcomes on the find screen:** a picked contact with ⛔ Indian mobile returns with ⛔
+  message (`:117`), and a search that matches nobody shows an empty list with ⛔ text (`:198` — the empty state belongs OUTSIDE the
+  list). (⛔ The Fabric crash the layer named: that class needs a FlatList's `stickyHeaderIndices`; this is a FlashList without them.)
+  [`apps/mobile/app/(life-events)/known-people-find.tsx:117`] Source: edge.
+- [x] [Review][Patch] **P11 (LOW) — Accessible names.** *"Yes, I know them"* / *"No"* / *"I don't know them"* do ⛔ name the person
+  (Remove does — `action.remove_a11y`), so N requests read N identical buttons; the find screen's *"Ask them"*, *"Choose a contact"*
+  and *"Ask"* swap their text for a bare `<Spinner />` and lose their name while busy. [`apps/mobile/app/(life-events)/known-people.tsx:242`;
+  `apps/mobile/app/(life-events)/known-people-find.tsx:227`] Sources: blind + auditor.
+- [x] [Review][Patch] **P12 (LOW) — A saved name is written back after sign-out:** an ask in flight at sign-out (or a rejected refresh)
+  resolves after `clearSavedNames()` and `saveSavedName(memberId, …)` re-writes the contact's name under the captured id. Save only
+  when the session is still that member's. [`apps/mobile/app/(life-events)/known-people-find.tsx:66`] Sources: blind + edge.
+- [x] [Review][Patch] **P13 (LOW) — The session-cache test cannot fail where it should.** `block()` takes 700 characters, which (traced
+  at `a34a8739`) reach the NEXT handler: deleting the terminated handler's two clears, the rejected handler's
+  `clearKnownPeopleCache`, or sign-in's, still passes. Bound each body by its own braces.
+  [`apps/mobile/tests/unit/known-people-session.test.ts:14`] Source: blind.
+- [x] [Review][Patch] **P14 (LOW) — The number fence is narrower than AC4's claim:** its identifier list misses `raw`, `entries`,
+  `canonical(s)`, `plaintexts`; a thrown `Error`'s message is ⛔ checked; `encryption/blind-index.ts` and `member-fields.ts`
+  (`mobileBlindIndexMany`) are outside `FILES`. [`apps/api/tests/unit/known-people-number-fence.test.ts:23`] Sources: blind + auditor.
+- [x] [Review][Patch] **P15 (LOW) — The rolling 30-day numbers window borrows `KNOWN_PEOPLE_ANSWER_WINDOW_DAYS`** — changing the
+  answer window would silently change SW12's limit. Its own constant. [`packages/domain/src/member/known-people.ts:146`] Source: blind.
+- [x] [Review][Patch] **P16 (LOW) — `friction-budget.md`'s 6.36b disposition still says the app has ⛔ screen-render harness for these
+  screens** — R3 / R5 added jsdom render tests (it understates; checklist 10). [`friction-budget.md`] Source: auditor.
+- [x] [Review][Patch] **P17 (MEDIUM) — D1 A: a member whose death has been reported ⛔ uses the feature** (`-333` call 1). The
+  caller gate on every route = `active` AND ⛔ claim (in any state) naming them (ONE 403); `listRequestsNamingMe` drops an `asked`
+  request whose NAMER a claim names (accepted ones stay), and `answerKnownPersonRequest` refuses one as `request_closed`; the home card
+  and notice item follow page 1. Tests: a claim-named caller ⇒ 403 on all seven routes; a claim-named namer's open request ⛔ listed and
+  ⛔ answerable, their accepted one still withdrawable. [`packages/domain/src/member/known-people.ts:81`, `:556`, `:602`]
+- [x] [Review][Patch] **P18 (MEDIUM) — D2 A: a member in renewal grace is found and named like an `active` one** (`-333` call 2).
+  `knownPersonEligibleSql` admits `active` OR `active-in-grace` (the CALLER stays `active`; 6.36's SW23 untouched); `askKnownPerson`
+  looks up a LIVE link to the resolved member BEFORE eligibility and answers it (200) with the list's own label — `unavailable` with ⛔
+  name. Tests: an `active-in-grace` contact matches and can be asked; a re-ask of an accepted in-grace / withdrawn / claim-named
+  person ⇒ 200 `accepted` (name) / `unavailable` (⛔ name); `lapsed-unpaid` still ⛔ matched. [`packages/domain/src/member/known-people.ts:74`, `:358`]
+- [x] [Review][Patch] **P19 (LOW) — D3 A: the export ⛔ says another member was erased, or how the namer found you** (`-333` call 3).
+  On both lists an `erased` link exports as `ended`; `namedBy` drops `foundBy`; the contract's link schema follows (`ended` in the
+  enum, `foundBy` only on `named`) — and every export fixture with it (memory: data-export sections are strict-parsed).
+  [`packages/domain/src/data-export/assemble.ts:378`; `packages/contracts/src/data-export/data-export.ts:91`]
+- [x] [Review][Defer] **W1 — N+1 name decrypts per requests page** (one KMS decrypt + audit line per namer; the home card loads page 1
+  with names on every mount) [`apps/api/src/modules/known-people/names.ts:29`] — deferred: realistic counts are 0–3 a member; ⭐
+  trigger: a member named by many. Sources: blind + edge.
+- [x] [Review][Defer] **W2 — The process-wide HMAC limiter has ⛔ queue bound or deadline**; an ask's one HMAC waits behind queued
+  batches [`packages/domain/src/encryption/blind-index.ts:64`] — deferred: SW12 bounds in-flight only; ⭐ trigger: Row 31 (e)'s KMS
+  quota / a load test. Sources: blind + edge.
+- [x] [Review][Defer] **W3 — A KMS / DB failure after the charge spends the member's daily check with ⛔ result**
+  [`packages/domain/src/member/known-people.ts:267`] — deferred: charged-before-HMAC is SW12's rule; a refund is a compensating
+  write. Source: edge.
+- [x] [Review][Defer] **W4 — A landline saved with its STD code (`080 2345 6789`, `0612 …`) normalises to a valid-looking mobile**
+  [`packages/domain/src/encryption/member-fields.ts:96`; `apps/mobile/lib/phone-normalize.ts:45`] — deferred, PRE-EXISTING
+  (`normalizeMobile` peels any leading `0`); a false match only sends a request the other member can decline. Source: edge.
+- [x] [Review][Defer] **W5 — Remove and withdraw are refused for a non-`active` member** (SW10's *"at any time"* against AC10's ONE 403
+  and SW16 (4)) [`packages/domain/src/member/known-people.ts:624`, `:640`] — deferred: 6.36 asks only `active` members (SW23), so a
+  link nobody can act on while non-active asks nobody; ⭐ trigger: SW23 widening, or counsel reading an acceptance as consent (Row 31).
+  Source: auditor.
+- [x] [Review][Defer] **W6 — AC7's *"Not accepted … for 30 days"* is cut at the 50 newest, ⛔ next page**
+  [`packages/domain/src/member/known-people.ts:460`] — deferred: R2's bound by choice; the rows carry ⛔ control; ⭐ trigger: a member
+  past 50 ended links in 30 days. Source: auditor.
+- [x] [Review][Defer] **W7 — Two integration legs assume one IST day** (a run across 18:30 UTC splits the counters)
+  [`apps/api/tests/integration/known-people/known-people.spec.ts:155`] — deferred: a milliseconds-wide window; ⭐ trigger: it flakes
+  once. Source: blind.
+- [x] [Review][Defer] **W8 — The matches phase is a non-scrolling column** (two FlashLists, a 56 px button) — may clip on a small phone
+  or large text [`apps/mobile/app/(life-events)/known-people-find.tsx:163`] — deferred: joins FD-4's device demonstration. Source: blind.
+
+**Dismissed (5):** the 300 s idempotency TTL and a key ⛔ tied to its request (the app mints a fresh key per tap — the TTL rule in
+memory holds; the header's bound is 6.36a's house-wide deferral); writes and the contact-match POST with ⛔ timeout (FD-1 / FD-2); the
+home card ⛔ refetching on app resume (the house pattern — `PeerRequestEntry`; a tap opens the screen, which refetches, and a closed
+request answers its own 409); an `asked` link to a person who has since left holding a slot ≤ 30 days (AC7 defines `unavailable` for
+ACCEPTED links only; it lapses); the hard-coded `#C0392B` (the house error colour, ten screens).
+
+**Invariant lens (Auditor, verdicts at `a34a8739`):** families 1, 2, 3, 5, 6, 7 covered by test (named in the layer's report:
+the policy spec's 7×7 transitions, `known-people-concurrency.spec.ts`, AC10's 4 states × 7 routes, the exact contract key sets, the R2
+tests); 8 and 9 by construction; 10 covered, residuals P16 and P2; 11 by construction (⛔ reader of `member_known_people` in claims,
+pools, contributions or jobs — re-examine at 6.36); **12 — REAL GAP (P7)**; **13 — REAL GAP on the find screen (P2)**, list screen and
+entry card ok. Family 4 untouched (⛔ events).
+
+**Resolution (2026-10-15):** BigDev chose **1 — Apply every patch**. P1–P19 applied test-first (D1–D3 via `-333`), then the
+FIX DIFF reviewed to convergence in **seven** three-layer rounds (rounds 6–7 scoped to the find screen — the only file still
+changing), each round's findings triaged and applied before the next ([[feedback_review_the_fix_diff_before_commit]]):
+- **Four more decisions, each committed ALONE before its code** — `2026-10-15-334` (the export's members-who-named-me list:
+  a removal, an erasure and an OPEN request whose namer's death was reported read the SAME — `ended`, ⛔ name, ⛔ end date;
+  the withdraw line kept for every row — a recorded residual), `-335` (a request hidden while open reads `ended` for good —
+  decided by the claim's FILING date, ⛔ the export's; a missing name once the other member is erased — a residual), `-336`
+  (that residual covers EVERY ended row whose other member is erased), `-337` (the ask's success line reworded for everyone:
+  *"Asked. Your request is waiting for them in the app."* — ⛔ *"They will see your request"*, false for a grace member).
+  `-333` annotated here, ⛔ edited: its headline (*"the export ⛔ no longer says another member was erased"*) holds for
+  links the erasure ENDED; `-336`'s residual is ⛔ one of them.
+- **Regressions caught by the fix review, and fixed before commit:** the erasure's single `kp_now` instant reused under
+  EvalPlanQual against a concurrent accept (⇒ `GREATEST(…, responded_at)`); the P12 guard dropping a saved name on an
+  ordinary Back (⇒ a saved-names GENERATION); the find screen navigating / handing a notice after unmount; four iOS
+  announcements interrupting one another (⇒ ONE phase announcement); a 200 `accepted` re-ask reported as *"Asked."*; the
+  export's stale `asked` and the day-30 `ended`→`lapsed` switch that told a reported death apart (⇒ `-335`); the Retry
+  unmounting into a spinner on a list that never loaded (TanStack v5 resets it to `pending` — ⇒ a local `retrying` flag);
+  the export's name reads issued concurrently on one pg client (⇒ sequential).
+- **Engineering accuracy, ⛔ a ruling:** an unrecorded stale `asked` (past 30 days) exports as `lapsed`, dated `asked_at` + 30
+  — on both lists; the export's `namedBy` contract has its own enum (⛔ `removed`) and a refine (`ended` ⇒ ⛔ name, ⛔ date).
+- **Recorded residuals (⛔ fixed — each by design or ⛔ demonstrable here):** (1) `-334` call 2 — the withdraw line is ⛔
+  true once the namer has died; (2) `-336` — a missing name on an ended row once the other member is erased; (3) a member
+  in renewal grace who is asked sees the request only once they renew, and an unanswered one LAPSES at 30 days — starting
+  the asker's 60-day re-ask wait (`-333` call 2's cost); (4) the find screen speaks the slots' state ONCE (as the matches
+  appeared, or as the list first settles) — a LATER change is shown, ⛔ spoken, unless the member's Retry brought it; (5) the
+  over-selection reason is ⛔ spoken while an outcome line shows (it would cut it off); (6) whether the people screen's
+  handed *"Asked."* (taken on focus, after the running interactions) survives VoiceOver's screen-change announcement on a
+  native-stack pop, and every announcement ORDER on a real device — ⛔ demonstrated (FD-4); (7) the iOS access picker's
+  REVOKED contacts stay in the in-memory list until the next check; (8) a Retry on a PAUSED network (offline) stays busy
+  until the network returns.
+- **Dismissed after verification:** a stale tick surviving a re-check (`check()` resets the ticks); an account change on a
+  still-mounted screen (the route guard unmounts it); "the export leaks the anonymizer sentinel" (`seenName` returns
+  `null` first); an `enum` CASE failing (`state` is `text`); the audit hook swallowing an error (the API's hook never
+  throws); a time-zone DST test (sessions run UTC / IST); a contrived fence bypass (a backtick inside a quoted string).
+- **Mutation-checked:** the round-7 guards each killed by a test (7 / 7 mutants — the Retry's outcome / send / tick
+  guards, its busy reset, the picker's no-mobile guard, the late-settle words, the refusal spoken alone); the Auditor's
+  round-6/7 mutants of the slots / Retry fixes killed.
+- **Verified (the touched packages, :5434):** domain — the known-people / export / rtbf / encryption / policy /
+  concurrency set 446 (1 skipped) and the unit suite; API — known-people integration + every unit 453; contracts 1,374;
+  i18n 116; mobile 1,009; `tsc` and eslint clean in all five; the friction-budget gate green. ⚠ `pnpm ci:local` ⛔ re-run on
+  the final tree; ⛔ demonstrated on a device or a real screen reader.
 
 ## Dev Notes
 
@@ -458,12 +683,27 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
 - `apps/mobile/lib/known-people.ts`, `known-people-api.ts`, `known-people-contacts.ts`, `known-people-i18n.ts`, `known-people-saved-names.ts`, `phone-normalize.ts`, `trust-name.ts` (new); `apps/mobile/lib/session-context.tsx`
 - `apps/mobile/tests/unit/known-people-logic.test.ts`, `known-people-contacts.test.ts`, `known-people-copy-keys.test.ts`, `known-people-session.test.ts`, `phone-normalize.test.ts` (new)
 - Review fixes (2026-10-15): `apps/mobile/tests/unit/known-people-requests-pages.test.ts`, `known-people-hooks.test.ts`, `known-people-screen-render.test.ts`, `known-people-screen-live.test.ts` (new); the domain, contracts, api-client, API module, mobile screen / hooks / entry / lib, i18n files above (changed); `_bmad-output/implementation-artifacts/deferred-work.md`
+- Code review round 2 (2026-10-15): `apps/mobile/lib/known-people-notice.ts`, `apps/mobile/tests/unit/known-people-find-render.test.ts`
+  (new); `apps/api/src/modules/known-people/handlers.ts`, `routes.ts`; `apps/api/tests/integration/known-people/known-people.spec.ts`,
+  `apps/api/tests/unit/known-people-number-fence.test.ts`; `apps/mobile/app/(life-events)/known-people.tsx`, `known-people-find.tsx`;
+  `apps/mobile/components/known-people/known-people-cache.ts`; `apps/mobile/lib/known-people.ts`, `known-people-contacts.ts`,
+  `known-people-saved-names.ts`; `apps/mobile/tests/unit/known-people-contacts.test.ts`, `known-people-copy-keys.test.ts`,
+  `known-people-logic.test.ts`, `known-people-screen-live.test.ts`, `known-people-screen-render.test.ts`, `known-people-session.test.ts`;
+  `packages/contracts/src/data-export/data-export.ts`, `packages/contracts/src/members/known-people.ts`,
+  `packages/contracts/tests/members-known-people.test.ts`; `packages/domain/src/data-export/assemble.ts`,
+  `packages/domain/src/encryption/blind-index.ts`, `packages/domain/src/member/known-people.ts`;
+  `packages/domain/tests/encryption/blind-index-many.test.ts`, `packages/domain/tests/integration/data-export/data-export.spec.ts`,
+  `packages/domain/tests/integration/member/known-people.spec.ts`, `packages/domain/tests/member/rtbf-anonymize.test.ts`;
+  `packages/i18n/locales/en/known_people.json`, `packages/i18n/locales/hi/known_people.json`, `packages/i18n/tests/known-people-copy.test.ts`;
+  `.decision-log.md` (`-333` … `-337`, each committed alone); `_bmad-output/implementation-artifacts/6-36a-member-workplace-and-posting-history.md`
+  (SW10 / SW11 / SW14 / SW17 annotations)
 - `friction-budget.md`; `docs/launch-gate-inventory/inventory-roster.md` (Row 31 notes (5)–(8))
 - `_bmad-output/implementation-artifacts/6-36b-people-who-know-me.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 1.12 | `bmad-code-review 6.36b` round 2 (the whole branch `b6cbf9db...a34a8739`, three layers): 3 decisions (D1–D3 — BigDev all A → `-333`), 16 patch, 8 defer (W1–W8), 5 dismissed. BigDev **1 — apply every patch**: P1–P19 applied test-first; the fix diff reviewed to convergence in seven three-layer rounds, four more decisions (`-334` … `-337`) committed alone before their code; regressions caught and fixed before commit (the erasure's EvalPlanQual instant, the saved-name guard on Back, iOS announcement collisions, the export's day-30 death signal, the Retry unmounting on a never-loaded list). Touched packages green (domain 446 + unit, API 453, contracts 1,374, i18n 116, mobile 1,009; tsc + eslint). ⚠ `ci:local` ⛔ re-run on the final tree; ⛔ device / screen-reader demonstration. Status → `done`. |
 | 2026-10-15 | 1.11 | `bmad-dev-story` (review continuation): R1–R6 resolved test-first (`aadaf411`); the fix diff reviewed to convergence in 9 three-layer rounds (one HIGH regression of mine caught and fixed: the saved-name wipe on a denial); every list read bounded at 15 s; FD-1..FD-4 deferred (FD-1: the app-wide token refresh has ⛔ timeout). `ci:local` 36 / 36 green on `:5434`. ⛔ Device / screen-reader demonstration. Status → `review`. |
 | 2026-10-15 | 1.10 | `bmad-code-review`: three review layers completed on `b6cbf9db...185da74a`; 6 MEDIUM / P2 patch findings, 0 decisions, 0 deferrals, 1 dismissed; 159 focused tests passed. BigDev selected **2 — Leave as action items**: R1–R6 recorded unchecked, 0 patches applied; story and sprint status → `in-progress`. |
 | 2026-10-15 | 1.9 | 6.36a confirmed on `main` (`origin/main` = `b6cbf9db`); AC1's last step done — 0162 applied on `:5432` AND `:5433`, schema and hashes equal to the from-zero `:5434`, the 0162 specs 44 / 44 on both. ⛔ No code changed. |

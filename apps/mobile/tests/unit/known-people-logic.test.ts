@@ -21,7 +21,17 @@ import {
   toggleSelection,
   type PhoneContact,
 } from '../../lib/known-people'
-import { clearSavedNames, loadSavedNames, pruneSavedNames, SAVED_NAMES_KEY, saveSavedName, type SyncStorage } from '../../lib/known-people-saved-names'
+import {
+  clearSavedNames,
+  loadSavedNames,
+  pruneSavedNames,
+  SAVED_NAMES_KEY,
+  saveSavedName,
+  saveSavedNameIfCurrent,
+  savedNamesGeneration,
+  type SyncStorage,
+} from '../../lib/known-people-saved-names'
+import { clearKnownPeopleNotices, handKnownPeopleNotice, NOTICE_TTL_MS, takeKnownPeopleNotice } from '../../lib/known-people-notice'
 
 const contact = (name: string, ...numbers: string[]): PhoneContact => ({ name, phoneNumbers: numbers.map((number) => ({ number })) })
 
@@ -136,5 +146,45 @@ describe('the saved names (MMKV — ⛔ ever sent)', () => {
     const broken: SyncStorage = { getItem: () => { throw new Error('x') }, setItem: () => { throw new Error('x') }, removeItem: () => { throw new Error('x') } }
     expect(() => saveSavedName('m1', 'l1', 'A', broken)).not.toThrow()
     expect(() => clearSavedNames(broken)).not.toThrow()
+  })
+})
+
+describe('review round 2 — the saved-names generation (P12) and the handed notice (P2)', () => {
+  const memory = (): SyncStorage & { map: Map<string, string> } => {
+    const map = new Map<string, string>()
+    return { map, getItem: (k) => map.get(k) ?? null, setItem: (k, v) => void map.set(k, v), removeItem: (k) => void map.delete(k) }
+  }
+
+  it('a name is saved only if ⛔ clear ran since the ask was sent (a sign-out mid-ask writes ⛔ name back)', () => {
+    const s = memory()
+    const before = savedNamesGeneration()
+    saveSavedNameIfCurrent(before, 'm1', 'l1', 'Meena', s)
+    expect(loadSavedNames('m1', s)).toEqual({ l1: 'Meena' }) // nothing cleared in between — saved
+    const sent = savedNamesGeneration()
+    clearSavedNames(s) // the sign-out, while the ask was in flight
+    saveSavedNameIfCurrent(sent, 'm1', 'l2', 'Ravi', s)
+    expect(loadSavedNames('m1', s)).toEqual({})
+    expect(savedNamesGeneration()).toBe(sent + 1)
+  })
+
+  it('a notice is taken ONCE, ⛔ after it has gone stale, and ⛔ after an account change', () => {
+    handKnownPeopleNotice('find.sent', 1_000)
+    expect(takeKnownPeopleNotice(1_500)).toBe('find.sent')
+    expect(takeKnownPeopleNotice(1_600)).toBeNull() // once
+    handKnownPeopleNotice('find.sent', 1_000)
+    expect(takeKnownPeopleNotice(1_000 + NOTICE_TTL_MS + 1)).toBeNull() // stale
+    handKnownPeopleNotice('find.sent', 1_000)
+    clearKnownPeopleNotices() // sign-out / sign-in / a terminated or rejected refresh
+    expect(takeKnownPeopleNotice(1_100)).toBeNull()
+  })
+})
+
+describe('fix-diff review round 2 — an account change drops a parked notice', () => {
+  it('clearKnownPeopleCache (sign-in, sign-out, a terminated / rejected refresh) clears it', async () => {
+    const { QueryClient } = await import('@tanstack/react-query')
+    const { clearKnownPeopleCache } = await import('../../components/known-people/known-people-cache')
+    handKnownPeopleNotice('find.sent')
+    clearKnownPeopleCache(new QueryClient())
+    expect(takeKnownPeopleNotice()).toBeNull()
   })
 })

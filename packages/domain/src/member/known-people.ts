@@ -1,10 +1,11 @@
 // PEOPLE WHO KNOW ME — the domain (Story 6.36b, Task 2; 6.36a SW10–SW14, SW17, I4–I6; `-310` CF4 A (2), CF5 A; `-309`).
 //
-// A member names up to THREE other `active` members of their Pariwar — found from the phone's contacts (or the iOS picker,
-// or a typed number) — and each named member says yes or no in the app. Only ACCEPTED ones count (6.36 reads them to
-// choose who is asked when no colleague can be). This module holds:
+// A member names up to THREE other members of their Pariwar (`active`, or `active-in-grace` — `2026-10-15-333` call 2) —
+// found from the phone's contacts (or the iOS picker, or a typed number) — and each named member says yes or no in the app.
+// Only ACCEPTED ones count (6.36 reads them to choose who is asked when no colleague can be). This module holds:
 //   · the ONE eligibility predicate for matching AND asking (`knownPersonEligibleSql`) — ⛔ the selection's (6.36 SW23
-//     adds the identity row and the claimant): two named functions so neither drifts into the other;
+//     adds the identity row and the claimant): two named functions so neither drifts into the other; and the ONE caller
+//     predicate (`knownPeopleCallerSql` — `active`, ⛔ named by a claim as the deceased; `-333` call 1);
 //   · the counters (IST days; charged in a short transaction BEFORE any HMAC — a refused request costs ⛔ no KMS call);
 //   · matching: the positions of the caller's numbers that are an eligible member of the CALLER'S Pariwar — ⛔ an id, ⛔ a
 //     name, ⛔ a count beyond the positions; ⛔ nothing written but the counters;
@@ -45,8 +46,10 @@ export const CONTACT_MATCH_MAX_NUMBERS = 1000;
 export const CONTACT_MATCH_MAX_ENTRY_LENGTH = 32;
 /** Matching requests per member per IST day. */
 export const CONTACT_MATCH_REQUESTS_PER_DAY = 3;
-/** Numbers matched per member per rolling 30 IST days. */
+/** Numbers matched per member per rolling {@link CONTACT_MATCH_NUMBERS_WINDOW_DAYS} IST days. */
 export const CONTACT_MATCH_NUMBERS_PER_30_DAYS = 2000;
+/** The rolling window of {@link CONTACT_MATCH_NUMBERS_PER_30_DAYS} — ⛔ the answer window's constant (review round 2, P15). */
+export const CONTACT_MATCH_NUMBERS_WINDOW_DAYS = 30;
 /** Numbers matched per Pariwar per IST day. */
 export const CONTACT_MATCH_PARIWAR_NUMBERS_PER_DAY = 100_000;
 /** Asks (name requests) per member per IST day. */
@@ -63,26 +66,62 @@ export const KNOWN_PEOPLE_ASK_AUDIT_PURPOSE = 'known_people_ask';
 /** The IST day, by the DB's clock. ⛔ Never the UTC date. */
 const IST_TODAY = sql`(clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date`;
 
+/**
+ * ONE instant for a statement: `… FROM ${ONE_INSTANT}` (an UPDATE) or `CROSS JOIN ${ONE_INSTANT}` (a SELECT) joins
+ * `clock_timestamp()` as `kp_now.at`, so a row's WHERE and every SET / CASE expression read the SAME value (review round
+ * 2, P6 — two `clock_timestamp()` calls could straddle a boundary). ⛔
+ * `now()` (the whole scope transaction's start) and ⛔ `statement_timestamp()` (taken BEFORE the statement's snapshot, so a
+ * row committed in between could carry a later date than the one written over it).
+ */
+const ONE_INSTANT = sql`(SELECT clock_timestamp() AS at) AS kp_now`;
+
 // ── The ONE eligibility predicate for matching and asking ───────────────────────────────────────────────────────────
 
-/**
- * ONE predicate for who may be MATCHED or ASKED (I5): an `active` member (`m` — a `members` row in the caller's scope) ·
- * ⛔ a claim (in any state) naming them as the deceased · ⛔ the caller. An erased (`anonymized`), withdrawn or
- * pending member is ⛔ never `active`; erasure RETAINS the blind index, so this join is what keeps an erased member out
- * (SF9). ⚠ ⛔ NOT the selection's predicate (6.36 SW23 adds the identity row and the claimant) — keep them two.
- */
-export function knownPersonEligibleSql(m: SQL, callerMemberId: MemberId): SQL {
-  return sql`(${m}.state = 'active'
-    AND ${m}.member_id <> ${callerMemberId}
-    AND NOT EXISTS (SELECT 1 FROM claims kp_c WHERE kp_c.pariwar_id = ${m}.pariwar_id AND kp_c.deceased_member_id = ${m}.member_id))`;
+/** `true` when a claim (in ANY state) names member `memberId` (a SQL column) of Pariwar `pariwarId` as the deceased. */
+function namedByClaimSql(pariwarId: SQL, memberId: SQL): SQL {
+  return sql`EXISTS (SELECT 1 FROM claims kp_c WHERE kp_c.pariwar_id = ${pariwarId} AND kp_c.deceased_member_id = ${memberId})`;
 }
 
-/** Only an `active` member may match, ask, answer or read (6.36a SW10; AC10). */
-export async function isActiveMember(db: Db, pariwarId: PariwarId, memberId: MemberId): Promise<boolean> {
+/**
+ * ONE predicate for who may be MATCHED or ASKED (I5): a member (`m` — a `members` row in the caller's scope) who is
+ * `active` OR `active-in-grace` · ⛔ a claim (in any state) naming them as the deceased · ⛔ the caller. ⭐ The grace
+ * half is `2026-10-15-333` call 2 (supersedes SW10 / SW11's `active` IN PART): the public directory shows both as
+ * *"Active"*, so matching `active` alone let any member holding a number tell a late renewal apart. `lapsed-unpaid`,
+ * withdrawn, pending and erased (`anonymized`) members stay out — the directory omits each, so its absence tells nothing
+ * new; erasure RETAINS the blind index, so this join is what keeps an erased member out (SF9). ⚠ ⛔ NOT the selection's
+ * predicate (6.36 SW23 — `active` only, plus the identity row and the claimant) — keep them two.
+ */
+export function knownPersonEligibleSql(m: SQL, callerMemberId: MemberId): SQL {
+  return sql`(${m}.state IN ('active', 'active-in-grace')
+    AND ${m}.member_id <> ${callerMemberId}
+    AND NOT ${namedByClaimSql(sql`${m}.pariwar_id`, sql`${m}.member_id`)})`;
+}
+
+/**
+ * ONE predicate for who may USE the feature — match, ask, answer, remove, withdraw, read either list (6.36a SW10 / SW12;
+ * AC10): an `active` member (`m`) whom ⛔ claim (in any state) names as the deceased. ⭐ The claim half is
+ * `2026-10-15-333` call 1: death is an overlay, ⛔ never a `members.state`, so `active` alone let the family holding a
+ * dead member's phone act AS them. ⚠ A living member wrongly reported dead stays out after the claim is rejected — the
+ * same "any state" rule the target side applies (recorded cost).
+ */
+export function knownPeopleCallerSql(m: SQL): SQL {
+  return sql`(${m}.state = 'active' AND NOT ${namedByClaimSql(sql`${m}.pariwar_id`, sql`${m}.member_id`)})`;
+}
+
+/** {@link knownPeopleCallerSql} for one member — every route's ONE gate (ONE 403 for anyone else). */
+export async function isKnownPeopleCaller(db: Db, pariwarId: PariwarId, memberId: MemberId): Promise<boolean> {
   const r = await db.execute<{ ok: boolean }>(
-    sql`SELECT true AS ok FROM members WHERE pariwar_id = ${pariwarId} AND member_id = ${memberId} AND state = 'active'`,
+    sql`SELECT true AS ok FROM members m WHERE m.pariwar_id = ${pariwarId} AND m.member_id = ${memberId} AND ${knownPeopleCallerSql(sql`m`)}`,
   );
   return r.rows.length === 1;
+}
+
+/**
+ * The ONE `unavailable` condition (6.36a SW14; AC7): an ACCEPTED link whose named person (`m`, the link `k`) has withdrawn
+ * from the Trust or had a claim filed for their death — the two read the SAME. ⛔ Never a late renewal.
+ */
+function namedUnavailableSql(k: SQL, m: SQL): SQL {
+  return sql`(${m}.state = 'withdrawn' OR ${namedByClaimSql(sql`${k}.pariwar_id`, sql`${k}.named_member_id`)})`;
 }
 
 // ── Counters ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -125,8 +164,8 @@ export type KnownPeopleRefusal = 'not_available' | 'daily_limit' | 'monthly_limi
 
 /**
  * Charge a matching request — run it in a SHORT scoped transaction BEFORE any HMAC; a refusal leaves EVERY counter as it
- * was (the caller rolls the transaction back). Order: the caller must be `active` (⛔ a counter is charged for a
- * non-active caller) → the request counter (3 a day) → the namer's lock, then the rolling 30-day numbers sum (2,000) →
+ * was (the caller rolls the transaction back). Order: the caller may use the feature (`isKnownPeopleCaller` — `active`, ⛔
+ * named by a claim; ⛔ a counter is charged for anyone else) → the request counter (3 a day) → the namer's lock, then the rolling 30-day numbers sum (2,000) →
  * the Pariwar's numbers (100,000 a day). `numbers` is the count of DISTINCT normalised numbers (each costs one HMAC).
  */
 export async function chargeContactMatch(
@@ -134,7 +173,7 @@ export async function chargeContactMatch(
   input: { pariwarId: PariwarId; memberId: MemberId; numbers: number },
 ): Promise<{ ok: true } | { ok: false; reason: KnownPeopleRefusal }> {
   const { pariwarId, memberId, numbers } = input;
-  if (!(await isActiveMember(db, pariwarId, memberId))) return { ok: false, reason: 'not_available' };
+  if (!(await isKnownPeopleCaller(db, pariwarId, memberId))) return { ok: false, reason: 'not_available' };
   if (!(await chargeMemberCounter(db, pariwarId, memberId, 'contact_match_requests', 1, CONTACT_MATCH_REQUESTS_PER_DAY))) {
     return { ok: false, reason: 'daily_limit' };
   }
@@ -143,19 +182,19 @@ export async function chargeContactMatch(
   const sum = await db.execute<{ total: string | number }>(sql`
     SELECT coalesce(sum(count), 0) AS total FROM member_daily_counters
      WHERE pariwar_id = ${pariwarId} AND member_id = ${memberId} AND counter = 'contact_match_numbers'
-       AND day > ${IST_TODAY} - ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int`);
+       AND day > ${IST_TODAY} - ${CONTACT_MATCH_NUMBERS_WINDOW_DAYS}::int`);
   if (Number(sum.rows[0]?.total ?? 0) + numbers > CONTACT_MATCH_NUMBERS_PER_30_DAYS) return { ok: false, reason: 'monthly_limit' };
   await chargeMemberCounter(db, pariwarId, memberId, 'contact_match_numbers', numbers, CONTACT_MATCH_NUMBERS_PER_30_DAYS);
   if (!(await chargePariwarNumbers(db, pariwarId, numbers))) return { ok: false, reason: 'busy' };
   return { ok: true };
 }
 
-/** Charge an ask (10 a day) — a short scoped transaction BEFORE the HMAC. The caller must be `active`. */
+/** Charge an ask (10 a day) — a short scoped transaction BEFORE the HMAC. The caller may use the feature (`isKnownPeopleCaller`). */
 export async function chargeKnownPersonAsk(
   db: Db,
   input: { pariwarId: PariwarId; memberId: MemberId },
 ): Promise<{ ok: true } | { ok: false; reason: 'not_available' | 'daily_limit' }> {
-  if (!(await isActiveMember(db, input.pariwarId, input.memberId))) return { ok: false, reason: 'not_available' };
+  if (!(await isKnownPeopleCaller(db, input.pariwarId, input.memberId))) return { ok: false, reason: 'not_available' };
   if (!(await chargeMemberCounter(db, input.pariwarId, input.memberId, 'known_people_ask', 1, KNOWN_PEOPLE_ASKS_PER_DAY))) {
     return { ok: false, reason: 'daily_limit' };
   }
@@ -289,7 +328,8 @@ export interface KnownPersonLink {
 
 export type AskKnownPersonResult =
   | { readonly kind: 'created'; readonly link: KnownPersonLink }
-  | { readonly kind: 'existing'; readonly link: KnownPersonLink }
+  /** `label` — what the namer's list shows for this live link (`unavailable` carries ⛔ name — `-333` call 2 (b)). */
+  | { readonly kind: 'existing'; readonly link: KnownPersonLink; readonly label: Exclude<KnownPersonLabel, 'not_accepted'> }
   | { readonly kind: 'refused'; readonly reason: 'not_available' | 'not_a_member' | 'self' | 'cannot_ask_now' | 'limit_reached' };
 
 type LinkRow = {
@@ -336,39 +376,46 @@ export async function lapseStaleKnownPeopleRequests(
 
 /**
  * Ask the member behind `namedIndex` (a mobile blind index, computed OUTSIDE the transaction) to accept. Run INSIDE the
- * namer's scoped transaction, AFTER `chargeKnownPersonAsk` committed. Steps: the caller is `active` → the namer's lock →
- * lapse the namer's stale asks → resolve the number (oneself ⇒ `self`; ⛔ an eligible member of THIS Pariwar ⇒
- * `not_a_member` — ONE answer for not-a-member, erased, withdrawn, reported-dead and another Pariwar's) → a LIVE link to
- * them ⇒ `existing` → the re-ask rule (the last DECLINED, LAPSED or WITHDRAWN link's `ended_at` + 60 days — ⛔ a removed
- * one) → the three-live cap → insert. ⛔ The number is never stored.
+ * namer's scoped transaction, AFTER `chargeKnownPersonAsk` committed. Steps: the caller may use the feature → the namer's
+ * lock → lapse the namer's stale asks → resolve the number to THIS Pariwar's member (oneself ⇒ `self`) → a LIVE link to
+ * them ⇒ `existing`, with the label the namer's list shows — BEFORE eligibility, so a re-ask answers AC5's *"the same link
+ * (200)"* whatever has happened to that person since (`2026-10-15-333` call 2 (b): a 404 there once told the namer an
+ * accepted person was late with a renewal) → ⛔ an eligible member ⇒ `not_a_member` (ONE answer for not-a-member,
+ * erased, withdrawn, reported-dead and another Pariwar's) → the re-ask rule (the last DECLINED, LAPSED or WITHDRAWN
+ * link's `ended_at` + 60 days — ⛔ a removed one) → the three-live cap → insert. ⛔ The number is never stored.
  */
 export async function askKnownPerson(
   db: Db,
   input: { pariwarId: PariwarId; namerMemberId: MemberId; namedIndex: string | null; foundBy: KnownPeopleFoundBy },
 ): Promise<AskKnownPersonResult> {
   const { pariwarId, namerMemberId, namedIndex, foundBy } = input;
-  if (!(await isActiveMember(db, pariwarId, namerMemberId))) return { kind: 'refused', reason: 'not_available' };
+  if (!(await isKnownPeopleCaller(db, pariwarId, namerMemberId))) return { kind: 'refused', reason: 'not_available' };
   await lockKnownPeopleNamer(db, namerMemberId);
   await lapseStaleKnownPeopleRequests(db, { pariwarId, memberId: namerMemberId, as: 'namer' });
 
   if (namedIndex === null) return { kind: 'refused', reason: 'not_a_member' };
-  const self = await db.execute(sql`
-    SELECT 1 FROM member_identities WHERE pariwar_id = ${pariwarId} AND member_id = ${namerMemberId} AND mobile_blind_index = ${namedIndex}`);
-  if (self.rows.length > 0) return { kind: 'refused', reason: 'self' };
-  const found = await db.execute<{ member_id: string }>(sql`
-    SELECT m.member_id FROM member_identities mi
-      JOIN members m ON m.member_id = mi.member_id AND m.pariwar_id = mi.pariwar_id
-     WHERE mi.pariwar_id = ${pariwarId} AND mi.mobile_blind_index = ${namedIndex}
-       AND ${knownPersonEligibleSql(sql`m`, namerMemberId)}`);
-  const namedId = found.rows[0]?.member_id;
-  if (namedId === undefined) return { kind: 'refused', reason: 'not_a_member' };
-  const named = toMemberId(namedId);
+  // `member_identities` is UNIQUE (pariwar_id, mobile_blind_index) ⇒ at most ONE member of this Pariwar, in ANY state
+  // (erasure retains the index — eligibility below keeps an erased member out).
+  const resolved = await db.execute<{ member_id: string }>(sql`
+    SELECT mi.member_id FROM member_identities mi WHERE mi.pariwar_id = ${pariwarId} AND mi.mobile_blind_index = ${namedIndex}`);
+  const resolvedId = resolved.rows[0]?.member_id;
+  if (resolvedId === undefined) return { kind: 'refused', reason: 'not_a_member' };
+  const named = toMemberId(resolvedId);
+  if (named === namerMemberId) return { kind: 'refused', reason: 'self' };
 
-  const live = await db.execute<LinkRow>(sql`
-    SELECT * FROM member_known_people
-     WHERE pariwar_id = ${pariwarId} AND namer_member_id = ${namerMemberId} AND named_member_id = ${named}
-       AND state IN ('asked', 'accepted')`);
-  if (live.rows[0]) return { kind: 'existing', link: toLink(live.rows[0]) };
+  const live = await db.execute<LinkRow & { label: 'asked' | 'accepted' | 'unavailable' }>(sql`
+    SELECT k.*,
+           CASE WHEN k.state = 'accepted' AND ${namedUnavailableSql(sql`k`, sql`m`)} THEN 'unavailable' ELSE k.state END AS label
+      FROM member_known_people k
+      JOIN members m ON m.member_id = k.named_member_id AND m.pariwar_id = k.pariwar_id
+     WHERE k.pariwar_id = ${pariwarId} AND k.namer_member_id = ${namerMemberId} AND k.named_member_id = ${named}
+       AND k.state IN ('asked', 'accepted')`);
+  const liveRow = live.rows[0];
+  if (liveRow) return { kind: 'existing', link: toLink(liveRow), label: liveRow.label };
+
+  const eligible = await db.execute(sql`
+    SELECT 1 FROM members m WHERE m.pariwar_id = ${pariwarId} AND m.member_id = ${named} AND ${knownPersonEligibleSql(sql`m`, namerMemberId)}`);
+  if (eligible.rows.length === 0) return { kind: 'refused', reason: 'not_a_member' };
 
   const cooldown = await db.execute(sql`
     SELECT 1 FROM member_known_people
@@ -387,6 +434,25 @@ export async function askKnownPerson(
     VALUES (${pariwarId}, ${namerMemberId}, ${named}, ${foundBy})
     RETURNING *`);
   return { kind: 'created', link: toLink(ins.rows[0]!) };
+}
+
+/**
+ * The label the namer's list shows NOW for one of their LIVE links (`asked`, `accepted`, `unavailable`), or `null` when
+ * it is ⛔ live (ended — an unrecorded stale `asked` included, which the list shows `not_accepted` — or ⛔ theirs). The ask route's replay reads it, so a replay never pairs a stored `accepted` with a
+ * name the list has since withheld (fix-diff review round 1). A read.
+ */
+export async function knownPersonLiveLabel(
+  db: Db,
+  input: { pariwarId: PariwarId; namerMemberId: MemberId; linkId: KnownPersonLinkId },
+): Promise<'asked' | 'accepted' | 'unavailable' | null> {
+  const r = await db.execute<{ label: 'asked' | 'accepted' | 'unavailable' }>(sql`
+    SELECT CASE WHEN k.state = 'accepted' AND ${namedUnavailableSql(sql`k`, sql`m`)} THEN 'unavailable' ELSE k.state END AS label
+      FROM member_known_people k
+      JOIN members m ON m.member_id = k.named_member_id AND m.pariwar_id = k.pariwar_id
+     WHERE k.pariwar_id = ${input.pariwarId} AND k.namer_member_id = ${input.namerMemberId} AND k.link_id = ${input.linkId}
+       AND (k.state = 'accepted'
+         OR (k.state = 'asked' AND k.asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > clock_timestamp()))`);
+  return r.rows[0]?.label ?? null;
 }
 
 // ── The namer's list (AC7) ──────────────────────────────────────────────────────────────────────────────────────────
@@ -440,9 +506,7 @@ export async function listMyKnownPeople(
       SELECT k.link_id, k.named_member_id, k.asked_at,
         CASE
           WHEN k.state = 'asked' AND k.asked_at + ${window} > clock_timestamp() THEN 'asked'
-          WHEN k.state = 'accepted' AND (m.state = 'withdrawn'
-                OR EXISTS (SELECT 1 FROM claims c WHERE c.pariwar_id = k.pariwar_id AND c.deceased_member_id = k.named_member_id))
-            THEN 'unavailable'
+          WHEN k.state = 'accepted' AND ${namedUnavailableSql(sql`k`, sql`m`)} THEN 'unavailable'
           WHEN k.state = 'accepted' THEN 'accepted'
           ELSE 'not_accepted'
         END AS label
@@ -535,6 +599,9 @@ function decodeRequestsCursor(cursor: string): { open: boolean; askedAt: string;
  * Order: OPEN asks first (answerable — the home card reads the first page), then accepted ones (the withdraw entry), each
  * newest first — a keyset over `(open, asked_at, link_id)` DESC, `clampLimit`ed. ⭐ Every link is reachable: accepted
  * links have ⛔ per-member cap, and a fixed first page hid the oldest ones' withdraw control (review 2026-10-15 R3).
+ * ⭐ An OPEN request whose NAMER a claim names (their death has been reported) is ⛔ shown — it would tell the member
+ * *"[Name] will see your answer."* — while an ACCEPTED one stays, so the member can still withdraw it (a withdrawal counts
+ * whenever it happens — SW17 / SW20; `2026-10-15-333` call 1). It leaves the list as a removal would (SW14 (4)).
  * A malformed `cursor` ⇒ `KnownPeopleCursorInvalidError`. A read.
  */
 export async function listRequestsNamingMe(
@@ -559,7 +626,8 @@ export async function listRequestsNamingMe(
       FROM member_known_people
      WHERE pariwar_id = ${input.pariwarId} AND named_member_id = ${input.namedMemberId}
        AND (state = 'accepted'
-         OR (state = 'asked' AND asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > clock_timestamp()))
+         OR (state = 'asked' AND asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > clock_timestamp()
+             AND NOT ${namedByClaimSql(sql`member_known_people.pariwar_id`, sql`member_known_people.namer_member_id`)}))
        ${after}
      ORDER BY (state = 'asked') DESC, asked_at DESC, link_id DESC
      LIMIT ${limit + 1}`);
@@ -590,24 +658,30 @@ function done(row: LinkRow): KnownPersonWriteResult {
 
 /**
  * The named member answers: `accept` ⇒ `accepted`, `decline` ⇒ `declined` (both dated by the DB clock). A request past
- * `asked_at` + 30 days (lapsed, recorded or ⛔ not) or already answered ⇒ `request_closed`; ⛔ the member's ⇒ `not_found`.
- * An accept is live → live and is ⛔ never refused by the cap.
+ * `asked_at` + 30 days (lapsed, recorded or ⛔ not), already answered, or whose NAMER a claim names (it is ⛔ listed —
+ * `2026-10-15-333` call 1) ⇒ `request_closed`; ⛔ the member's ⇒ `not_found`. An accept is live → live and is ⛔ never
+ * refused by the cap. ⭐ ONE instant (`kp_now.at` — {@link ONE_INSTANT}): the
+ * WHERE's window test and the SET's dates read the SAME value, so an answer at the boundary can ⛔ pass the WHERE and
+ * then trip 0162's `answer_window_check` (a 23514 — a 500, ⛔ `request_closed`), and a decline's `responded_at` and
+ * `ended_at` are one instant (review round 2, P6).
  */
 export async function answerKnownPersonRequest(
   db: Db,
   input: { pariwarId: PariwarId; namedMemberId: MemberId; linkId: KnownPersonLinkId; answer: 'accept' | 'decline' },
 ): Promise<KnownPersonWriteResult> {
   const { pariwarId, namedMemberId, linkId, answer } = input;
-  if (!(await isActiveMember(db, pariwarId, namedMemberId))) return { kind: 'refused', reason: 'not_available' };
+  if (!(await isKnownPeopleCaller(db, pariwarId, namedMemberId))) return { kind: 'refused', reason: 'not_available' };
   const set =
     answer === 'accept'
-      ? sql`state = 'accepted', responded_at = clock_timestamp()`
-      : sql`state = 'declined', responded_at = clock_timestamp(), ended_at = clock_timestamp()`;
+      ? sql`state = 'accepted', responded_at = kp_now.at`
+      : sql`state = 'declined', responded_at = kp_now.at, ended_at = kp_now.at`;
   const r = await db.execute<LinkRow>(sql`
     UPDATE member_known_people SET ${set}
+      FROM ${ONE_INSTANT}
      WHERE pariwar_id = ${pariwarId} AND link_id = ${linkId} AND named_member_id = ${namedMemberId}
-       AND state = 'asked' AND asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > clock_timestamp()
-    RETURNING *`);
+       AND state = 'asked' AND asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > kp_now.at
+       AND NOT ${namedByClaimSql(sql`member_known_people.pariwar_id`, sql`member_known_people.namer_member_id`)}
+    RETURNING member_known_people.*`);
   if (r.rows[0]) return done(r.rows[0]);
   const exists = await db.execute(sql`
     SELECT 1 FROM member_known_people WHERE pariwar_id = ${pariwarId} AND link_id = ${linkId} AND named_member_id = ${namedMemberId}`);
@@ -626,7 +700,7 @@ export async function removeKnownPerson(
   input: { pariwarId: PariwarId; namerMemberId: MemberId; linkId: KnownPersonLinkId },
 ): Promise<KnownPersonWriteResult> {
   const { pariwarId, namerMemberId, linkId } = input;
-  if (!(await isActiveMember(db, pariwarId, namerMemberId))) return { kind: 'refused', reason: 'not_available' };
+  if (!(await isKnownPeopleCaller(db, pariwarId, namerMemberId))) return { kind: 'refused', reason: 'not_available' };
   await lockKnownPeopleNamer(db, namerMemberId);
   await lapseStaleKnownPeopleRequests(db, { pariwarId, memberId: namerMemberId, as: 'namer' });
   const r = await db.execute<LinkRow>(sql`
@@ -642,7 +716,7 @@ export async function withdrawKnownPerson(
   input: { pariwarId: PariwarId; namedMemberId: MemberId; linkId: KnownPersonLinkId },
 ): Promise<KnownPersonWriteResult> {
   const { pariwarId, namedMemberId, linkId } = input;
-  if (!(await isActiveMember(db, pariwarId, namedMemberId))) return { kind: 'refused', reason: 'not_available' };
+  if (!(await isKnownPeopleCaller(db, pariwarId, namedMemberId))) return { kind: 'refused', reason: 'not_available' };
   const r = await db.execute<LinkRow>(sql`
     UPDATE member_known_people SET state = 'withdrawn', ended_at = clock_timestamp()
      WHERE pariwar_id = ${pariwarId} AND link_id = ${linkId} AND named_member_id = ${namedMemberId} AND state = 'accepted'
@@ -657,15 +731,21 @@ export async function withdrawKnownPerson(
  * kept, the ids opaque). ONE statement (the rtbf pin counts it): a stale `asked` row (past `asked_at` + 30 days) is recorded
  * `lapsed`, dated `asked_at + 30 days` — so 6.36's as-of reads never see an erasure where a lapse happened — and every other
  * live row becomes `erased`, dated now. The named person's row then vanishes from the namer's list (6.36a SW14 (3)).
+ * ⭐ The two `CASE`s read ONE instant ({@link ONE_INSTANT} — review round 2, P6): a row can ⛔ be judged stale by one and
+ * fresh by the other. 0162's guard still holds — it reads `clock_timestamp()` later, which is never earlier.
  */
 export async function eraseKnownPeopleLinks(db: Db, input: { pariwarId: PariwarId; memberId: MemberId }): Promise<void> {
-  const stale = sql`(${memberKnownPeople.state} = 'asked' AND ${memberKnownPeople.askedAt} + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) <= clock_timestamp())`;
+  const stale = sql`(${memberKnownPeople.state} = 'asked' AND ${memberKnownPeople.askedAt} + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) <= kp_now.at)`;
   await db
     .update(memberKnownPeople)
     .set({
       state: sql`CASE WHEN ${stale} THEN 'lapsed' ELSE 'erased' END`,
-      endedAt: sql`CASE WHEN ${stale} THEN ${memberKnownPeople.askedAt} + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) ELSE clock_timestamp() END`,
+      // ⚠ GREATEST: an accept that commits while this UPDATE waits on the row lock is re-checked (EvalPlanQual) against
+      // the SAME `kp_now` row, read before it — `kp_now.at` alone could then fall BEFORE that accept's `responded_at` and
+      // trip `ended_after_check` (a 23514 failing the whole erasure — fix-diff review round 2).
+      endedAt: sql`CASE WHEN ${stale} THEN ${memberKnownPeople.askedAt} + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) ELSE GREATEST(kp_now.at, coalesce(${memberKnownPeople.respondedAt}, kp_now.at)) END`,
     })
+    .from(ONE_INSTANT)
     .where(
       and(
         eq(memberKnownPeople.pariwarId, input.pariwarId),
@@ -679,6 +759,12 @@ export interface KnownPeopleExportRow {
   readonly linkId: KnownPersonLinkId;
   /** The OTHER member of the link. */
   readonly otherMemberId: MemberId;
+  /**
+   * A claim (in any state) naming the OTHER member as the deceased was FILED while this request was still open (the
+   * earliest claim's `created_at` before `asked_at` + 30 days — the app hid it then; `2026-10-15-334` call 1, `-335` call
+   * 1). Computed in SQL with the SAME interval as every other window test (⛔ a millisecond JS reimplementation).
+   */
+  readonly otherClaimFiledWhileOpen: boolean;
   readonly state: KnownPeopleLinkState;
   readonly foundBy: KnownPeopleFoundBy;
   readonly askedAt: Date;
@@ -691,10 +777,23 @@ export async function getKnownPeopleForExport(
   db: Db,
   input: { pariwarId: PariwarId; memberId: MemberId },
 ): Promise<{ named: KnownPeopleExportRow[]; namedBy: KnownPeopleExportRow[] }> {
-  const r = await db.execute<LinkRow & { found_by: KnownPeopleFoundBy }>(sql`
-    SELECT * FROM member_known_people
-     WHERE pariwar_id = ${input.pariwarId} AND (namer_member_id = ${input.memberId} OR named_member_id = ${input.memberId})
-     ORDER BY asked_at, link_id`);
+  // ⭐ An `asked` row past `asked_at` + 30 days is exported as what it IS — `lapsed`, dated `asked_at` + 30 days (the lapse
+  // is recorded lazily, so the table may still say `asked`): its raw state made a lapsed request read as OPEN (fix-diff
+  // review round 2 — engineering accuracy, ⛔ a ruling). ONE instant per row (`kp_now` — the P6 class: two clock reads
+  // could straddle day 30). The other member's earliest claim filing date rides along: whether a request was hidden while
+  // OPEN is decided by it (`2026-10-15-335` call 1), ⛔ by the export's date.
+  const window = sql`make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int)`;
+  const stale = sql`(k.state = 'asked' AND k.asked_at + ${window} <= kp_now.at)`;
+  const other = sql`CASE WHEN k.namer_member_id = ${input.memberId} THEN k.named_member_id ELSE k.namer_member_id END`;
+  const r = await db.execute<LinkRow & { found_by: KnownPeopleFoundBy; other_claim_filed_while_open: boolean | null }>(sql`
+    SELECT k.link_id, k.namer_member_id, k.named_member_id, k.found_by, k.asked_at, k.responded_at,
+           CASE WHEN ${stale} THEN 'lapsed' ELSE k.state END AS state,
+           CASE WHEN ${stale} THEN k.asked_at + ${window} ELSE k.ended_at END AS ended_at,
+           (SELECT min(kp_c.created_at) FROM claims kp_c WHERE kp_c.pariwar_id = k.pariwar_id AND kp_c.deceased_member_id = ${other})
+             < k.asked_at + ${window} AS other_claim_filed_while_open
+      FROM member_known_people k CROSS JOIN ${ONE_INSTANT}
+     WHERE k.pariwar_id = ${input.pariwarId} AND (k.namer_member_id = ${input.memberId} OR k.named_member_id = ${input.memberId})
+     ORDER BY k.asked_at, k.link_id`);
   const named: KnownPeopleExportRow[] = [];
   const namedBy: KnownPeopleExportRow[] = [];
   for (const row of r.rows) {
@@ -702,6 +801,7 @@ export async function getKnownPeopleForExport(
     const out: KnownPeopleExportRow = {
       linkId: knownPersonLinkId(row.link_id),
       otherMemberId: toMemberId(asNamer ? row.named_member_id : row.namer_member_id),
+      otherClaimFiledWhileOpen: row.other_claim_filed_while_open === true,
       state: row.state,
       foundBy: row.found_by,
       askedAt: asDate(row.asked_at),

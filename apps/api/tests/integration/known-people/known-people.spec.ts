@@ -309,6 +309,123 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
     }
   }
 
+  /** File a claim naming `memberId` as the deceased (the claim writer's flag), committed — a fixture. */
+  async function fileClaim(pariwarId: string, memberId: string): Promise<void> {
+    const c = await t.pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query(`SET LOCAL app.claim_state_writer = 'on'`);
+      await c.query(
+        `INSERT INTO claims (claim_case_id, pariwar_id, deceased_member_id, intake_channels, current_state, state_event_version)
+         VALUES ($1, $2, $3, ARRAY['member_app']::claim_intake_channel[], 'intake_pending', 1)`,
+        [randomUUID(), pariwarId, memberId],
+      );
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+  }
+
+  it('review round 2, D1 (`2026-10-15-333` call 1) — an ACTIVE member a claim names gets the ONE 403 on all seven routes', async () => {
+    const p = randomUUID();
+    const me = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });
+    const other = nextMobile();
+    await seed(p, { mobile: other, name: 'Meena Kumari' });
+    const tok = token(me, p);
+    // a positive control: before the claim, the same caller is served
+    expect((await call('GET', BASE, { tok })).status).toBe(200);
+    await fileClaim(p, me);
+    const link = randomUUID();
+    const results = [
+      await call('POST', `${BASE}/contact-matches`, { tok, payload: { numbers: [`+91${other}`] } }),
+      await call('POST', BASE, { tok, payload: { mobile: other, foundBy: 'typed' } }),
+      await call('GET', BASE, { tok }),
+      await call('POST', `${BASE}/${link}/remove`, { tok }),
+      await call('GET', `${BASE}/requests`, { tok }),
+      await call('POST', `${BASE}/requests/${link}/answer`, { tok, payload: { answer: 'accept' } }),
+      await call('POST', `${BASE}/requests/${link}/withdraw`, { tok }),
+    ];
+    for (const r of results) {
+      expect(r.status).toBe(403);
+      expect(code(r)).toBe(CODES.notAvailable);
+    }
+  });
+
+  it('review round 2, D2 (b) + P4 — a re-ask answers the live link with the list\'s label; the stored replay holds ⛔ name', async () => {
+    const p = randomUUID();
+    const namer = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });
+    const namedMobile = nextMobile();
+    const named = await seed(p, { mobile: namedMobile, name: 'Meena Kumari' });
+    const tok = token(namer, p);
+    const linkId = ((await call('POST', BASE, { tok, payload: { mobile: namedMobile, foundBy: 'typed' } })).body['link'] as { linkId: string }).linkId;
+    expect((await call('POST', `${BASE}/requests/${linkId}/answer`, { tok: token(named, p), payload: { answer: 'accept' } })).status).toBe(200);
+    const meena = await shown(p, 'Meena Kumari');
+    // accepted ⇒ 200, the registered name — and the idempotency row stores ⛔ the name; the SAME key's replay resolves it again
+    const key = randomUUID();
+    const accepted = await call('POST', BASE, { tok, key, payload: { mobile: namedMobile, foundBy: 'typed' } });
+    expect(accepted.status).toBe(200);
+    expect(accepted.body['link']).toMatchObject({ linkId, label: 'accepted', name: meena });
+    const stored = await t.pool.query<{ result: unknown }>(`SELECT result FROM idempotency_keys WHERE key = $1`, [`known_people.ask:${p}:${namer}:${key}`]);
+    expect(stored.rows).toHaveLength(1);
+    expect(JSON.stringify(stored.rows[0]!.result)).not.toContain(meena); // the SHOWN form (⛔ a raw-name check that initials pass)
+    expect(JSON.stringify(stored.rows[0]!.result)).not.toContain('Meena');
+    const replay = await call('POST', BASE, { tok, key, payload: { mobile: namedMobile, foundBy: 'typed' } });
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual(accepted.body);
+    // late with a renewal ⇒ STILL "accepted" with the name (⛔ a 404 that told the namer — `-333` call 2)
+    await setState(named, 'active-in-grace');
+    const grace = await call('POST', BASE, { tok, payload: { mobile: namedMobile, foundBy: 'typed' } });
+    expect(grace.status).toBe(200);
+    expect(grace.body['link']).toMatchObject({ linkId, label: 'accepted', name: meena });
+    // withdrawn from the Trust ⇒ "unavailable", ⛔ name — what the list shows
+    await setState(named, 'withdrawn');
+    const gone = await call('POST', BASE, { tok, payload: { mobile: namedMobile, foundBy: 'typed' } });
+    expect(gone.status).toBe(200);
+    expect(gone.body['link']).toMatchObject({ linkId, label: 'unavailable', name: null });
+    // … and the EARLIER key's replay re-reads the label: ⛔ a stored "accepted" paired with a name the list now withholds
+    const lateReplay = await call('POST', BASE, { tok, key, payload: { mobile: namedMobile, foundBy: 'typed' } });
+    expect(lateReplay.status).toBe(200);
+    expect(lateReplay.body['link']).toMatchObject({ linkId, label: 'unavailable', name: null });
+    const listed = ((await call('GET', BASE, { tok })).body['items'] as { linkId: string; label: string; name: string | null }[]).find((i) => i.linkId === linkId);
+    expect(listed).toMatchObject({ label: 'unavailable', name: null });
+    expect((await t.pool.query(`SELECT count(*)::int AS n FROM member_known_people WHERE namer_member_id = $1`, [namer])).rows[0].n).toBe(1);
+  });
+
+  it('review round 2 (fix review) — EVERY delivery answers the label NOW: a 201 "asked" replayed after the person accepted names them; after a removal ⇒ not_accepted', async () => {
+    const p = randomUUID();
+    const namer = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });
+    const namedMobile = nextMobile();
+    const named = await seed(p, { mobile: namedMobile, name: 'Meena Kumari' });
+    const tok = token(namer, p);
+    const key = randomUUID();
+    const first = await call('POST', BASE, { tok, key, payload: { mobile: namedMobile, foundBy: 'typed' } });
+    expect(first.status).toBe(201);
+    const linkId = (first.body['link'] as { linkId: string }).linkId;
+    expect(first.body['link']).toMatchObject({ label: 'asked', name: null });
+    expect((await call('POST', `${BASE}/requests/${linkId}/answer`, { tok: token(named, p), payload: { answer: 'accept' } })).status).toBe(200);
+    const afterAccept = await call('POST', BASE, { tok, key, payload: { mobile: namedMobile, foundBy: 'typed' } }); // the SAME key
+    expect(afterAccept.status).toBe(201); // the original status …
+    expect(afterAccept.body['link']).toMatchObject({ linkId, label: 'accepted', name: await shown(p, 'Meena Kumari') }); // … the label NOW
+    expect((await call('POST', `${BASE}/${linkId}/remove`, { tok })).status).toBe(200);
+    const afterRemove = await call('POST', BASE, { tok, key, payload: { mobile: namedMobile, foundBy: 'typed' } });
+    expect(afterRemove.body['link']).toMatchObject({ linkId, label: 'not_accepted', name: null }); // ⛔ a stale "accepted"
+  });
+
+  it('review round 2, D2 — a member in renewal GRACE is matched and can be asked; a lapsed-unpaid one is ⛔', async () => {
+    const p = randomUUID();
+    const me = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });
+    const grace = nextMobile();
+    const unpaid = nextMobile();
+    await seed(p, { state: 'active-in-grace', mobile: grace, name: 'Meena Kumari' });
+    await seed(p, { state: 'lapsed-unpaid', mobile: unpaid, name: 'Rekha Singh' });
+    const tok = token(me, p);
+    expect((await call('POST', `${BASE}/contact-matches`, { tok, payload: { numbers: [grace, unpaid] } })).body).toEqual({ matched: [0] });
+    expect((await call('POST', BASE, { tok, payload: { mobile: grace, foundBy: 'contacts' } })).status).toBe(201);
+    const r = await call('POST', BASE, { tok, payload: { mobile: unpaid, foundBy: 'contacts' } });
+    expect(r.status).toBe(404);
+    expect(code(r)).toBe(CODES.notAMember);
+  });
+
   it('review R6 — a completed write\'s replay reaches ONLY a caller who is still active; otherwise the ONE 403', async () => {
     const p = randomUUID();
     const namer = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });

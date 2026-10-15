@@ -34,9 +34,15 @@ describe('the known_people keys the app uses', () => {
     expect(literalKeys("t('no.such_key')")).toEqual(['no.such_key'])
   })
 
+  it('review round 2, P3 — a 404 not_found and a 409 in-progress each have their OWN message (⛔ the generic one)', () => {
+    expect(refusalCopyKey('known_people.not_found')).toBe('error.changed')
+    expect(refusalCopyKey('known_people.idempotency_in_progress')).toBe('error.in_progress')
+    expect(refusalCopyKey('known_people.somethingelse')).toBe('error.generic') // a positive control
+  })
+
   it('every runtime-built key exists and resolves in en AND hi', () => {
     const built = [
-      ...['daily_limit', 'monthly_limit', 'busy', 'not_a_member', 'self', 'cannot_ask_now', 'limit_reached', 'request_closed', 'not_available', 'x'].map((c) =>
+      ...['daily_limit', 'monthly_limit', 'busy', 'not_a_member', 'self', 'cannot_ask_now', 'limit_reached', 'request_closed', 'not_available', 'not_found', 'idempotency_in_progress', 'x'].map((c) =>
         refusalCopyKey(`known_people.${c}`),
       ),
       ...(['asked', 'accepted', 'not_accepted', 'unavailable'] as const).map(labelCopyKey),

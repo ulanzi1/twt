@@ -2736,3 +2736,8 @@ caches cleared) and their tests.
 ⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); ⛔ not demonstrated on a device
 (the mobile app has ⛔ no screen-render harness for these screens — typecheck both ways and the pure-logic / mocked-contacts
 unit tests only).
+⭐ *Annotated 2026-10-15 (6.36b code review round 2; ⛔ a rewrite):* the harness sentence above is STALE — both screens now have
+jsdom render tests (`known-people-screen-render`, `known-people-screen-live`, `known-people-find-render`: review R3 / R5 and round
+2's P2); what is still ⛔ demonstrated is a DEVICE — native layout and a real screen reader. And (3)'s *"only an `active` member"*
+now also leaves out a member whose death has been reported (`2026-10-15-333` call 1) — ⛔ friction for a living member, EXCEPT
+one wrongly reported dead: a claim in ANY state keeps them out, even after it is rejected (`-333` call 1's recorded cost).

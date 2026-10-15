@@ -7,6 +7,8 @@
 
 import type { QueryClient } from '@tanstack/react-query'
 
+import { clearKnownPeopleNotices } from '../../lib/known-people-notice'
+
 export const knownPeopleListKey = (pariwarId: string | undefined, memberId: string | undefined) =>
   ['known-people', 'v1', pariwarId, memberId, 'list'] as const
 
@@ -21,8 +23,9 @@ export const KNOWN_PEOPLE_MUTATION_OPTIONS = {
   meta: { persist: false },
 } as const
 
-/** Remove every people-who-know-me query and mutation (an account change). */
+/** Remove every people-who-know-me query and mutation (an account change) — and any parked success notice (round 2, P2). */
 export function clearKnownPeopleCache(client: QueryClient): void {
+  clearKnownPeopleNotices()
   client.removeQueries({ queryKey: ['known-people'] })
   for (const mutation of client.getMutationCache().getAll()) {
     if (mutation.options.mutationKey?.[0] === 'known-people') client.getMutationCache().remove(mutation)

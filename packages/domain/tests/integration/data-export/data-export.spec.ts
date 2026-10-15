@@ -41,6 +41,7 @@ import {
   seedNomineeDetermination,
 } from '../_helpers.js';
 import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
+import { ANONYMIZED_SENTINEL } from '../../../src/member/anonymize.js';
 
 const NOW = new Date('2026-07-02T10:00:00Z');
 
@@ -263,6 +264,55 @@ describe.skipIf(!hasDatabase)('data_exports store + assemble — RLS + cascade +
     await client.query(link, [pid, me, asked, 'typed', 'asked', ago(1), null, null]);
     await client.query(link, [pid, me, declined, 'picker', 'declined', ago(2.9), ago(2), ago(2)]); // ordered by asked_at
     await client.query(link, [pid, namer, me, 'contacts', 'asked', ago(1), null, null]);
+    // `2026-10-15-333` call 3: a link the OTHER member's erasure ended — on both lists — reads `ended`, ⛔ `erased`. The
+    // erased members carry the anonymizer's name sentinel, as a real erasure leaves them.
+    const erasedNamed = await withName(ANONYMIZED_SENTINEL);
+    const erasedNamer = await withName(ANONYMIZED_SENTINEL);
+    await client.query(link, [pid, me, erasedNamed, 'contacts', 'erased', ago(5), null, ago(4)]);
+    await client.query(link, [pid, erasedNamer, me, 'typed', 'erased', ago(6), ago(5.5), ago(4)]);
+    // `2026-10-15-334` call 1: on the members-who-named-me list a REMOVAL and an OPEN request whose namer a claim names
+    // read EXACTLY like that erasure (the app shows each as simply leaving the list); an ACCEPTED one from a namer a claim
+    // names stays (withdrawable — `-333` call 1), with its name.
+    const remover = await withName('Suresh Pal');
+    const deadOpen = await withName('Gita Rani');
+    const deadAccepted = await withName('Hari Om');
+    await client.query(link, [pid, remover, me, 'contacts', 'removed', ago(7), null, ago(6.5)]);
+    await client.query(link, [pid, deadOpen, me, 'contacts', 'asked', ago(0.5), null, null]);
+    await client.query(link, [pid, deadAccepted, me, 'picker', 'accepted', ago(8), ago(7.5), null]);
+    // An unrecorded STALE `asked` (past 30 days) exports as what it is — `lapsed`, dated asked + 30 days, with the name
+    // (engineering accuracy, fix-diff review round 2): a living namer's, and one whose namer's claim came only AFTER it
+    // had lapsed (`2026-10-15-335` call 1 — a lapse the member let happen). The member's OWN ends from a namer reported
+    // dead stay as they are (`-334` call 1).
+    const deadStale = await withName('Lata Bai');
+    const livingStale = await withName('Ram Lal');
+    const deadDeclined = await withName('Uma Devi');
+    await client.query(link, [pid, deadStale, me, 'typed', 'asked', ago(45), null, null]);
+    await client.query(link, [pid, livingStale, me, 'typed', 'asked', ago(40), null, null]);
+    await client.query(link, [pid, deadDeclined, me, 'typed', 'declined', ago(9), ago(8.8), ago(8.8)]);
+    // and the member's OWN removal on THEIR list stays `removed`
+    const iRemoved = await withName('Babu Rao');
+    await client.query(link, [pid, me, iRemoved, 'picker', 'removed', ago(10), null, ago(9.5)]);
+    // `2026-10-15-335` call 1: a request whose namer's claim was FILED while it was still OPEN was hidden then — it reads
+    // `ended` for GOOD, past day 30, unrecorded or recorded `lapsed` (⛔ a day-30 switch telling the death apart).
+    const hiddenStale = await withName('Kamla Devi');
+    const hiddenRecorded = await withName('Shyam Lal');
+    await client.query(link, [pid, hiddenStale, me, 'contacts', 'asked', ago(42), null, null]);
+    await client.query(link, [pid, hiddenRecorded, me, 'contacts', 'lapsed', ago(50), null, ago(20)]);
+    // an ACCEPTED link on MY list whose person was later erased: ⛔ a name built from the anonymizer's sentinel
+    const erasedAfterAccept = await withName(ANONYMIZED_SENTINEL);
+    await client.query(link, [pid, me, erasedAfterAccept, 'picker', 'erased', ago(11), ago(10.5), ago(3)]);
+    const fileClaim = async (dead: string, filedAgoDays: number) => {
+      await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
+      await client.query(
+        `INSERT INTO claims (claim_case_id, pariwar_id, deceased_member_id, intake_channels, current_state, state_event_version, created_at)
+         VALUES ($1, $2, $3, ARRAY['member_app']::claim_intake_channel[], 'intake_pending', 1, $4)`,
+        [randomUUID(), pid, dead, ago(filedAgoDays)],
+      );
+      await client.query(`SET LOCAL app.claim_state_writer = 'off'`);
+    };
+    for (const dead of [deadOpen, deadAccepted, deadStale, deadDeclined]) await fileClaim(dead, 0.1); // filed now
+    await fileClaim(hiddenStale, 37); // asked 42 days ago ⇒ filed on day 5, while it was open
+    await fileClaim(hiddenRecorded, 45); // asked 50 days ago ⇒ filed on day 5, while it was open
 
     await enterAppScope(client, pid);
     const sections = await assembleMemberExport(tx, { kms, kekRef }, { exportId: randomUUID(), memberId: toMemberId(me), pariwarId: pid as never, now: NOW });
@@ -270,14 +320,106 @@ describe.skipIf(!hasDatabase)('data_exports store + assemble — RLS + cascade +
     const shown = await import('../../../src/notifications/pool-identity.js');
     const mode = await (await import('../../../src/kyc/presentation-policy.js')).resolvePublicNamePresentationMode(tx, pid as never);
     expect(kp.named).toEqual([
+      expect.objectContaining({ name: null, state: 'ended', foundBy: 'picker' }), // accepted, then ERASED (11 days) — ⛔ a name
+      expect.objectContaining({ name: null, state: 'removed', foundBy: 'picker' }), // the member's OWN removal (10 days)
+      expect.objectContaining({ name: null, state: 'ended', foundBy: 'contacts' }), // ⛔ `erased` (asked 5 days ago)
       expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Meena Kumari'), state: 'accepted', foundBy: 'contacts' }),
       expect.objectContaining({ name: null, state: 'declined', foundBy: 'picker' }), // ⛔ seen — the member saw only their saved name
       expect.objectContaining({ name: null, state: 'asked', foundBy: 'typed' }),
     ]);
-    expect(kp.namedBy).toEqual([expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Ramesh Prasad'), state: 'asked' })]);
+    // namedBy, by asked_at: hidden while open, recorded lapsed (50 days) · the dead namer's stale ask whose claim came after
+    // it lapsed (45) · hidden while open, unrecorded (42) · the living namer's stale ask (40) · the dead namer's decline (9)
+    // · the dead namer's accepted (8) · the removal (7) · the erasure (6) · Ramesh (1) · the dead namer's open request (0.5).
+    // The removal, the erasure and every request hidden while open read the SAME (`-334` call 1, `-335` call 1).
+    const left = { name: null, state: 'ended', endedAt: null };
+    const day = 86_400_000;
+    // the two requests hidden while open (50 and 42 days) read `ended` for good — ⛔ `lapsed`, ⛔ a name, ⛔ a date
+    expect(kp.namedBy.slice(0, 1)).toEqual([expect.objectContaining({ ...left, respondedAt: null })]); // 50 days (recorded lapse)
+    expect(kp.namedBy.slice(1, 2)).toEqual([expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Lata Bai'), state: 'lapsed' })]);
+    expect(kp.namedBy.slice(2, 3)).toEqual([expect.objectContaining({ ...left, respondedAt: null })]); // 42 days (unrecorded)
+    const staleRows = [kp.namedBy[1], kp.namedBy[3]] as { name: string | null; state: string; askedAt: string; endedAt: string | null }[];
+    for (const [row, who] of [[staleRows[0]!, 'Lata Bai'], [staleRows[1]!, 'Ram Lal']] as const) {
+      expect(row).toMatchObject({ state: 'lapsed', name: shown.resolveMemberFacingDeceasedName(mode, who) });
+      expect(Date.parse(row.endedAt!) - Date.parse(row.askedAt)).toBe(30 * day); // dated asked + 30 days
+    }
+    expect(kp.namedBy.slice(4)).toEqual([
+      expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Uma Devi'), state: 'declined' }), // ⛔ touched
+      expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Hari Om'), state: 'accepted' }),
+      expect.objectContaining({ ...left, respondedAt: null }),
+      expect.objectContaining({ ...left, respondedAt: expect.any(String) }), // the member's OWN answer stays
+      expect.objectContaining({ name: shown.resolveMemberFacingDeceasedName(mode, 'Ramesh Prasad'), state: 'asked' }),
+      expect.objectContaining({ ...left, respondedAt: null }),
+    ]);
+    for (const l of kp.namedBy) expect(l).not.toHaveProperty('foundBy'); // ⛔ how the NAMER found me
+    expect(JSON.stringify(kp)).not.toContain('erased');
+    expect(JSON.stringify(kp.namedBy)).not.toContain('removed'); // on THIS list a removal reads `ended` (the member's own stays on `named`)
+    expect(JSON.stringify(kp)).not.toContain(ANONYMIZED_SENTINEL);
     // ⛔ a member id or a number of anyone else
     const json = JSON.stringify(kp);
-    for (const id of [accepted, asked, declined, namer]) expect(json).not.toContain(id);
+    for (const id of [accepted, asked, declined, namer, erasedNamed, erasedNamer, remover, deadOpen, deadAccepted, deadStale, livingStale, deadDeclined, iRemoved, hiddenStale, hiddenRecorded, erasedAfterAccept]) {
+      expect(json).not.toContain(id);
+    }
+  });
+
+  it('⭐ `2026-10-15-335` call 1 at its edge — the EARLIEST claim decides, just before vs just after day 30 (in SQL, one interval)', async () => {
+    const { tx, client } = getTx();
+    const { kms, kekRef } = fakeKms();
+    const pid = randomUUID();
+    const encName = async (v: string) =>
+      serializeEnvelope(await encryptTier1(Buffer.from(v, 'utf-8'), { pariwarId: pid, fieldClass: 'member_kyc' }, kms, kekRef));
+    const withName = async (name: string) => {
+      const id = await seedMember(tx, pid, { state: 'active' });
+      await tx.insert(schema.memberKycProfiles).values({
+        memberId: toMemberId(id),
+        pariwarId: pid as never,
+        nameCiphertext: await encName(name),
+        dobCiphertext: await encName('1980-01-01'),
+        verificationStrength: 'aadhaar_kyc',
+        source: 'digilocker',
+      });
+      return id;
+    };
+    const day = 86_400_000;
+    const hour = 3_600_000;
+    const now = Date.now();
+    const me = await withName('Asha Devi');
+    const cases: { name: string; askedAgo: number; claimsAt: number[]; hidden: boolean }[] = [
+      { name: 'Just Before', askedAgo: 40 * day, claimsAt: [40 * day - 30 * day + hour], hidden: true }, // filed 1 h before day 30
+      { name: 'Just After', askedAgo: 41 * day, claimsAt: [41 * day - 30 * day - hour], hidden: false }, // filed 1 h after day 30
+      // ONE claim inside the window (filed on day 4) and one AFTER it (day 39): only `min()` reads hidden — a `max()` would
+      // read the later one and call it lapsed (fix-diff review round 5: both used to fall inside, so ⛔ discrimination)
+      { name: 'Two Claims', askedAgo: 44 * day, claimsAt: [40 * day, 5 * day], hidden: true },
+    ];
+    const asked = new Map<string, string>();
+    for (const c of cases) {
+      const namer = await withName(c.name);
+      const askedAt = new Date(now - c.askedAgo);
+      asked.set(askedAt.toISOString(), c.name);
+      await client.query(
+        `INSERT INTO member_known_people (pariwar_id, namer_member_id, named_member_id, found_by, state, asked_at) VALUES ($1, $2, $3, 'typed', 'asked', $4)`,
+        [pid, namer, me, askedAt],
+      );
+      for (const ago of c.claimsAt) {
+        await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
+        await client.query(
+          `INSERT INTO claims (claim_case_id, pariwar_id, deceased_member_id, intake_channels, current_state, state_event_version, created_at)
+           VALUES ($1, $2, $3, ARRAY['member_app']::claim_intake_channel[], 'intake_pending', 1, $4)`,
+          [randomUUID(), pid, namer, new Date(now - ago)],
+        );
+        await client.query(`SET LOCAL app.claim_state_writer = 'off'`);
+      }
+    }
+    await enterAppScope(client, pid);
+    const sections = await assembleMemberExport(tx, { kms, kekRef }, { exportId: randomUUID(), memberId: toMemberId(me), pariwarId: pid as never, now: NOW });
+    const kp = (sections['profile.json'] as { knownPeople: { namedBy: { name: string | null; state: string; askedAt: string; endedAt: string | null }[] } }).knownPeople;
+    const shown = await import('../../../src/notifications/pool-identity.js');
+    const mode = await (await import('../../../src/kyc/presentation-policy.js')).resolvePublicNamePresentationMode(tx, pid as never);
+    expect(kp.namedBy).toHaveLength(cases.length);
+    for (const row of kp.namedBy) {
+      const c = cases.find((x) => x.name === asked.get(row.askedAt))!;
+      if (c.hidden) expect(row, c.name).toMatchObject({ state: 'ended', name: null, endedAt: null });
+      else expect(row, c.name).toMatchObject({ state: 'lapsed', name: shown.resolveMemberFacingDeceasedName(mode, c.name) });
+    }
   });
 
   it('assemble: a WITHDRAWN member still produces a valid payload (export up to withdrawal point)', async () => {

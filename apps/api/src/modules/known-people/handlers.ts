@@ -6,11 +6,12 @@
 // pre-scope lookup (it crosses Pariwars — SF9 / I5).
 //
 // ── The order of a write ─────────────────────────────────────────────────────────────────────────────────────────────
-//   0. the caller is `active` — checked BEFORE the claim, so a replay is delivered ONLY to a caller who still is (⛔ an
+//   0. the caller may use the feature (`isKnownPeopleCaller` — `active`, ⛔ named by a claim as the deceased:
+//      `2026-10-15-333` call 1) — checked BEFORE the claim, so a replay is delivered ONLY to a caller who still may (⛔ an
 //      old success to a member who has since left `active` — review 2026-10-15 R6); ONE 403 otherwise;
 //   1. the `Idempotency-Key` claim (a replay returns the ORIGINAL status + body);
-//   2. the COUNTERS in a short transaction — BEFORE any HMAC (a refused request costs ⛔ no KMS call); a non-`active`
-//      caller is refused here with ONE 403 (`known_people.not_available` — ⛔ which state);
+//   2. the COUNTERS in a short transaction — BEFORE any HMAC (a refused request costs ⛔ no KMS call); a caller who may ⛔
+//      use it is refused here with ONE 403 (`known_people.not_available` — ⛔ which state, ⛔ why);
 //   3. the HMACs OUTSIDE any transaction (the batch path: ≤ 8 in flight per process, ONE audit line);
 //   4. the domain write in its own scoped transaction (the namer's advisory lock lives there);
 //   5. names (if any) decrypted AFTER the read transaction commits (⛔ KMS under a lock);
@@ -46,10 +47,17 @@ import { decryptNames, readNameCiphertexts } from './names.js';
 /** How long a write's idempotency claim is held — headroom over one HMAC + a short write (the 10.2 / 10.15 300 s). */
 const IDEMPOTENCY_TTL_SECONDS = 300;
 
-/** A replayable result: the status AND the body (an ask answers 201 OR 200). */
+/**
+ * A replayable result: the status AND the body (an ask answers 201 OR 200). ⛔ A decrypted name is EVER stored here — the
+ * store is a plain table (`idempotency_keys.result`), and the peer-request precedent holds *"⛔ the store never holds an
+ * answer"* (review round 2, P4): a reply that names someone records only WHOSE name it carries (`nameOf`, a member id),
+ * and the name is resolved on each delivery, the first and every replay alike.
+ */
 interface StoredResult<B> {
   readonly status: number;
   readonly body: B;
+  /** The member whose registered name the reply carries — resolved per delivery by the route's `present`. */
+  readonly nameOf?: string | null;
 }
 
 const REFUSAL: Record<string, () => ApiError> = {
@@ -103,27 +111,29 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
   }
 
   /**
-   * The idempotent-write envelope: the caller is `active` → claim → `run` → record `{ status, body }`; a replay returns the
-   * original. A failure (a refusal included) releases the claim so a retry reaches the domain again and gets the same
-   * honest answer. ⭐ The `active` check comes FIRST: the stored result is delivered ONLY to a caller who is still
-   * `active` — with it inside `run` alone, a member who had left `active` got the old success back for an unexpired key
-   * instead of the ONE 403 (review 2026-10-15 R6).
+   * The idempotent-write envelope: the caller may use the feature → claim → `run` → record `{ status, body }`; a replay
+   * returns the original. A failure (a refusal included) releases the claim so a retry reaches the domain again and gets
+   * the same honest answer. ⭐ The caller check comes FIRST: the stored result is delivered ONLY to a caller who still may
+   * — with it inside `run` alone, a member who had left `active` got the old success back for an unexpired key instead of
+   * the ONE 403 (review 2026-10-15 R6). `present` turns what was stored into the reply (a name resolved now — P4).
    */
   async function idempotent<B>(
     request: FastifyRequest,
     reply: FastifyReply,
     route: string,
     run: () => Promise<StoredResult<B>>,
+    present: (stored: StoredResult<B>) => Promise<B> = async (stored) => stored.body,
   ): Promise<B> {
     const { memberId, pariwarId } = memberCtx(request);
-    if (!(await inScope(pariwarId, (tx) => memberDomain.isActiveMember(tx, pariwarId, memberId)))) throw refusal('not_available');
+    if (!(await inScope(pariwarId, (tx) => memberDomain.isKnownPeopleCaller(tx, pariwarId, memberId)))) throw refusal('not_available');
     const key = `known_people.${route}:${pariwarId}:${memberId}:${requireIdempotencyKey(request)}`;
     const claim = await idempotencyStore.claim(key, IDEMPOTENCY_TTL_SECONDS);
     if (claim === 'already_claimed') {
       const stored = (await idempotencyStore.getResult(key)) as StoredResult<B> | null;
       if (stored && typeof stored.status === 'number') {
+        const body = await present(stored);
         void reply.status(stored.status);
-        return stored.body;
+        return body;
       }
       throw new ConflictError('A request with this Idempotency-Key is already in progress — please wait and retry', CODES.idempotencyInProgress);
     }
@@ -134,8 +144,9 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
       await idempotencyStore.recordResult(key, result).catch((err: unknown) => {
         request.log.error({ errName: (err as Error).name }, '[known-people-idempotency] the result was not recorded');
       });
+      const body = await present(result);
       void reply.status(result.status);
-      return result.body;
+      return body;
     } finally {
       if (!settled) await idempotencyStore.release(key).catch(() => undefined);
     }
@@ -191,16 +202,29 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
             resourceLocator: `member:${result.link.namedMemberId.toLowerCase()}`,
           });
         }
+        // A live link already there answers with the label the namer's list shows (`2026-10-15-333` call 2 (b)) — and an
+        // `accepted` one with the registered name (the member has seen it), resolved in `present`, ⛔ stored (P4).
+        const label = result.kind === 'existing' ? result.label : 'asked';
         const out: KnownPersonAskResponse = {
-          link: { linkId: result.link.linkId, label: 'asked', name: null, askedAt: result.link.askedAt.toISOString() },
+          link: { linkId: result.link.linkId, label, name: null, askedAt: result.link.askedAt.toISOString() },
         };
-        // A live `accepted` link already there: the name is the registered one (the member has seen it).
-        if (result.link.state === 'accepted') {
-          const read = await inScope(pariwarId, (tx) => readNameCiphertexts(tx, pariwarId, [result.link.namedMemberId]));
+        // `nameOf` for EVERY link (an id — ⛔ a name): a replay after the person accepted can then name them.
+        return { status: result.kind === 'created' ? 201 : 200, body: out, nameOf: result.link.namedMemberId };
+      }, async (stored) => {
+        // EVERY delivery — the first and each replay — answers the label the namer's list shows NOW (fix-diff reviews
+        // rounds 1–2): a replay may come after the person answered, withdrew from the Trust, had a claim filed for their
+        // death, or after the link ended (⇒ `not_accepted` — ⛔ a stale `accepted` or `asked`); the registered name rides
+        // ONLY on a link the list shows `accepted`.
+        const linkId = ids.knownPersonLinkId(stored.body.link.linkId);
+        const { label, read } = await inScope(pariwarId, async (tx) => {
+          const now = await memberDomain.knownPersonLiveLabel(tx, { pariwarId, namerMemberId: memberId, linkId });
+          return { label: now, read: now === 'accepted' && stored.nameOf ? await readNameCiphertexts(tx, pariwarId, [ids.memberId(stored.nameOf)]) : null };
+        });
+        if (label === 'accepted' && read !== null && stored.nameOf) {
           const names = await decryptNames(read, pariwarId, enc, request.log);
-          out.link = { ...out.link, label: 'accepted', name: names.get(result.link.namedMemberId) ?? null };
+          return { link: { ...stored.body.link, label, name: names.get(ids.memberId(stored.nameOf)) ?? null } };
         }
-        return { status: result.kind === 'created' ? 201 : 200, body: out };
+        return { link: { ...stored.body.link, label: label ?? 'not_accepted', name: null } };
       });
     },
 
@@ -212,7 +236,7 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
       const { memberId, pariwarId } = memberCtx(request);
       const historyLimit = (request.query as KnownPeopleListQuery).limit;
       const { mine, read } = await inScope(pariwarId, async (tx) => {
-        if (!(await memberDomain.isActiveMember(tx, pariwarId, memberId))) throw refusal('not_available');
+        if (!(await memberDomain.isKnownPeopleCaller(tx, pariwarId, memberId))) throw refusal('not_available');
         const mine = await memberDomain.listMyKnownPeople(tx, { pariwarId, namerMemberId: memberId, historyLimit });
         const named = mine.items.flatMap((i) => (i.namedMemberId === null ? [] : [i.namedMemberId]));
         return { mine, read: await readNameCiphertexts(tx, pariwarId, named) };
@@ -254,7 +278,7 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
       let fetched: { page: memberDomain.RequestsNamingMePage; read: Awaited<ReturnType<typeof readNameCiphertexts>> };
       try {
         fetched = await inScope(pariwarId, async (tx) => {
-          if (!(await memberDomain.isActiveMember(tx, pariwarId, memberId))) throw refusal('not_available');
+          if (!(await memberDomain.isKnownPeopleCaller(tx, pariwarId, memberId))) throw refusal('not_available');
           const page = await memberDomain.listRequestsNamingMe(tx, { pariwarId, namedMemberId: memberId, limit: q.limit, cursor: q.cursor });
           return { page, read: await readNameCiphertexts(tx, pariwarId, page.items.map((r) => r.namerMemberId)) };
         });

@@ -63,8 +63,28 @@ export function pruneSavedNames(memberId: string, liveLinkIds: readonly string[]
   }
 }
 
+/**
+ * Bumped by every `clearSavedNames()`. An ask captures it BEFORE it is sent and saves its name only if it is unchanged
+ * (`saveSavedNameIfCurrent`): an ask that lands after a sign-out (or a rejected refresh) cleared the names wrote one back
+ * — and a "still mounted" guard dropped the name of an ask that landed after an ordinary Back (review round 2, P12; the
+ * fix-diff review's regression). ⛔ Persisted — a cleared store and a fresh process both start a new generation.
+ */
+let generation = 0
+
+/** The current saved-names generation (capture it before an ask). */
+export function savedNamesGeneration(): number {
+  return generation
+}
+
+/** {@link saveSavedName}, only if ⛔ `clearSavedNames()` has run since `since` was captured. */
+export function saveSavedNameIfCurrent(since: number, memberId: string, linkId: string, name: string, storage: SyncStorage = mmkvStorage): void {
+  if (since !== generation) return
+  saveSavedName(memberId, linkId, name, storage)
+}
+
 /** Forget every saved name (sign-out, a terminated or rejected refresh). */
 export function clearSavedNames(storage: SyncStorage = mmkvStorage): void {
+  generation += 1
   try {
     storage.removeItem(SAVED_NAMES_KEY)
   } catch {

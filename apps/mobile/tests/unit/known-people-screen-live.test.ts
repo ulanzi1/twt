@@ -21,7 +21,11 @@ vi.mock('../../lib/mmkv', () => ({
     removeItem: (k: string) => void mock.store.delete(k),
   },
 }))
-vi.mock('expo-router', () => ({ Stack: { Screen: () => null }, useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('expo-router', async () => {
+  const { useEffect } = await import('react')
+  // `useFocusEffect` runs its callback whenever the (memoised) callback changes — here, on mount: the screen is focused.
+  return { Stack: { Screen: () => null }, useRouter: () => ({ push: vi.fn() }), useFocusEffect: (cb: () => void) => useEffect(() => cb(), [cb]) }
+})
 vi.mock('../../lib/known-people-i18n', () => ({ useKnownPeopleT: () => (key: string) => key }))
 vi.mock('../../lib/idempotency-key', () => ({ newIdempotencyKey: () => 'k' }))
 vi.mock('react-native', async () => {
@@ -30,6 +34,8 @@ vi.mock('react-native', async () => {
     ScrollView: ({ children }: { children: React.ReactNode }) => createElement('div', null, children),
     Platform: { OS: 'ios' },
     AccessibilityInfo: { announceForAccessibility: mock.announce },
+    // Interactions settle at once in jsdom (a device check — FD-4 — is what proves the timing).
+    InteractionManager: { runAfterInteractions: (cb: () => void) => (cb(), { cancel: () => undefined }) },
   }
 })
 vi.mock('tamagui', async () => {
@@ -109,7 +115,7 @@ describe('the not-available Retry, through the real hooks', () => {
       await waitFor(() => expect(screen.getByText('loaded')).toBeInTheDocument())
       expect(spoken('loaded')).toBe(1)
       expect(screen.queryByText('error.not_available')).toBeNull()
-      expect(screen.getByRole('button', { name: 'request.yes' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'request.yes_a11y' })).toBeInTheDocument()
     } finally {
       client.clear()
     }

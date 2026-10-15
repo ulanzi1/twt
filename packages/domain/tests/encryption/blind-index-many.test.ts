@@ -84,7 +84,9 @@ describe('blindIndexMany', () => {
     expect(peak()).toBeGreaterThan(1); // positive control — it does run concurrently
   });
 
-  it('a failed HMAC fails the batch and audits nothing (the hook fires on the success path only)', async () => {
+  // ⭐ Supersedes the round-1 pin "a failed HMAC … audits nothing" — that left up to N − 1 REAL HMACs unaudited and the
+  // queued tasks calling KMS for nobody (review round 2, P1).
+  it('a failed HMAC fails the batch, the queued tasks never call KMS, and the ONE line counts the HMACs that ran', async () => {
     const { kms, audits } = instrumented(0);
     let calls = 0;
     const failing: KmsProvider = {
@@ -95,8 +97,65 @@ describe('blindIndexMany', () => {
         return kms.computeHmac(ref, input, ctx);
       },
     };
-    await expect(blindIndexMany('member_mobile', numbers(10), { pariwarId: NS }, failing, HMAC_REF, { pariwarId: 'p-1', purpose: 'contact_match' })).rejects.toThrow('kms down');
+    // A max-1 limiter makes the order exact: four succeed, the fifth fails, the other 15 are still queued.
+    const one = createConcurrencyLimiter(1);
+    await expect(
+      blindIndexMany('member_mobile', numbers(20), { pariwarId: NS }, failing, HMAC_REF, { pariwarId: 'p-1', purpose: 'contact_match' }, one),
+    ).rejects.toThrow('kms down');
+    expect(calls).toBe(5); // ⛔ a sixth KMS call
+    expect(audits).toEqual([{ op: 'computeHmac', ctx: { pariwarId: 'p-1', fieldClass: 'member_mobile', count: 4, purpose: 'contact_match' } }]);
+  });
+
+  it('a THROWING audit hook never hides the KMS failure that ended the batch; on a good batch its error is the error', async () => {
+    const { kms } = instrumented(0);
+    let calls = 0;
+    const failing: KmsProvider = {
+      ...kms,
+      async computeHmac(ref, input, ctx) {
+        calls += 1;
+        if (calls === 2) throw new Error('kms down');
+        return kms.computeHmac(ref, input, ctx);
+      },
+      auditHook: () => {
+        throw new Error('audit down');
+      },
+    };
+    const audit = { pariwarId: 'p-1', purpose: 'contact_match' };
+    await expect(blindIndexMany('member_mobile', numbers(4), { pariwarId: NS }, failing, HMAC_REF, audit, createConcurrencyLimiter(1))).rejects.toThrow('kms down');
+    const good: KmsProvider = { ...kms, auditHook: failing.auditHook };
+    await expect(blindIndexMany('member_mobile', numbers(2), { pariwarId: NS }, good, HMAC_REF, audit)).rejects.toThrow('audit down');
+  });
+
+  it('a batch whose FIRST HMAC fails audits nothing (⛔ HMAC ran) and still rethrows the real failure', async () => {
+    const { kms, audits } = instrumented(0);
+    const failing: KmsProvider = {
+      ...kms,
+      async computeHmac() {
+        throw new Error('kms down');
+      },
+    };
+    await expect(
+      blindIndexMany('member_mobile', numbers(3), { pariwarId: NS }, failing, HMAC_REF, { pariwarId: 'p-1', purpose: 'contact_match' }, createConcurrencyLimiter(1)),
+    ).rejects.toThrow('kms down');
     expect(audits).toHaveLength(0);
+  });
+
+  it('a failure with HMACs still IN FLIGHT waits for them, and counts the ones that land', async () => {
+    const { kms, audits } = instrumented(5);
+    let calls = 0;
+    const failing: KmsProvider = {
+      ...kms,
+      async computeHmac(ref, input, ctx) {
+        calls += 1;
+        if (calls === 1) throw new Error('kms down'); // fails at once, while 2 and 3 are already at KMS
+        return kms.computeHmac(ref, input, ctx);
+      },
+    };
+    await expect(
+      blindIndexMany('member_mobile', numbers(10), { pariwarId: NS }, failing, HMAC_REF, { pariwarId: 'p-1', purpose: 'contact_match' }, createConcurrencyLimiter(3)),
+    ).rejects.toThrow('kms down');
+    expect(calls).toBe(3);
+    expect(audits).toEqual([{ op: 'computeHmac', ctx: { pariwarId: 'p-1', fieldClass: 'member_mobile', count: 2, purpose: 'contact_match' } }]);
   });
 
   it('refuses the inputs blindIndex refuses, and a purpose that is not a plain key', async () => {

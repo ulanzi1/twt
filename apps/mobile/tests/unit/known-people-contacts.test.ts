@@ -70,4 +70,9 @@ describe('the iOS pickers', () => {
     mock.presentAccessPickerAsync.mockResolvedValueOnce(['c1'])
     expect(await shareMoreContacts()).toBe(true)
   })
+
+  it('shareMoreContacts: a picker that shared NOTHING new (cancelled) resolves false — ⛔ a re-check (review round 2, P5)', async () => {
+    mock.presentAccessPickerAsync.mockResolvedValueOnce([])
+    expect(await shareMoreContacts()).toBe(false)
+  })
 })

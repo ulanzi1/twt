@@ -63,6 +63,8 @@ interface Captured {
   set: Record<string, unknown>;
   /** The `.where(cond)` argument (Story 6.26a — the inspection scrub's filter is asserted in SQL). */
   where?: unknown;
+  /** The `.from(source)` argument, when the statement joins one (Story 6.36b review round 2, P6). */
+  from?: unknown;
 }
 
 /** A mock Drizzle client that records every `update(table).set(obj).where(cond)` chain (DB-free).
@@ -83,12 +85,19 @@ function mockClient(captured: Captured[], claimIds: readonly string[] = [randomU
         set(obj: Record<string, unknown>) {
           const entry: Captured = { table, set: obj };
           captured.push(entry);
-          return {
+          const chain = {
+            // Story 6.36b review round 2 (P6): the people-who-know-me erasure joins ONE instant (`… FROM (SELECT
+            // clock_timestamp())`) before its WHERE — still ONE statement.
+            from: (source: unknown) => {
+              entry.from = source;
+              return chain;
+            },
             where: (cond: unknown) => {
               entry.where = cond;
               return Promise.resolve();
             },
           };
+          return chain;
         },
       };
     },
@@ -314,7 +323,12 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     const dialect = new PgDialect();
     const render = (v: unknown) => dialect.sqlToQuery(v as SQL).sql;
     expect(render(found[0]!.set.state)).toMatch(/CASE WHEN .*'asked'.* THEN 'lapsed' ELSE 'erased' END/s);
-    expect(render(found[0]!.set.endedAt)).toMatch(/THEN "member_known_people"\."asked_at" \+ make_interval\(days => \$\d+::int\) ELSE clock_timestamp\(\) END/s);
+    // ⭐ review round 2 (P6): both CASEs read ONE instant — `kp_now.at`, joined ONCE (⛔ two `clock_timestamp()` calls)
+    expect(render(found[0]!.set.state)).toMatch(/<= kp_now\.at\)/);
+    // … and ⛔ before a concurrent accept's `responded_at` (EvalPlanQual re-reads the row but REUSES kp_now — round 2)
+    expect(render(found[0]!.set.endedAt)).toMatch(/ELSE GREATEST\(kp_now\.at, coalesce\("member_known_people"\."responded_at", kp_now\.at\)\) END/s);
+    expect(render(found[0]!.set.endedAt)).not.toMatch(/clock_timestamp/);
+    expect(render(found[0]!.from)).toBe('(SELECT clock_timestamp() AS at) AS kp_now');
     // namer OR named, LIVE only, in the member's Pariwar
     expect(render(found[0]!.where)).toMatch(/"pariwar_id" = \$1 and \(.*"namer_member_id" = \$2 or .*"named_member_id" = \$3\) and .*"state" in \(\$4, \$5\)/s);
   });

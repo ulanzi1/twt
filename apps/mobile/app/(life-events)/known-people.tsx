@@ -14,11 +14,14 @@
 // a success says what was done (an accept swaps the controls for text; a decline, removal or withdrawal removes the row —
 // silent before, review 2026-10-15 R5), a refusal its own plain message. The requests naming the member load PAGE BY PAGE
 // (*"Show more"* — R3); a failed *"Show more"* keeps the rows and reports beside the button (6.36a's posting precedent).
+// ⭐ Review round 2: the find screen's success is SHOWN AND SPOKEN here (it goes back at once — `handKnownPeopleNotice`,
+// P2); a REFUSED action refreshes both lists, so a row that changed elsewhere loses its stale controls (P3); a failed
+// refetch of the named list keeps its rows and says so beside them (P9); each answer button names the person (P11).
 
-import { useEffect, useRef, useState } from 'react'
-import { ScrollView } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { InteractionManager, ScrollView } from 'react-native'
 
-import { Stack, useRouter } from 'expo-router'
+import { Stack, useFocusEffect, useRouter } from 'expo-router'
 import { Button, H2, H3, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import {
@@ -41,6 +44,7 @@ import {
   type KnownPeopleAction,
 } from '../../lib/known-people'
 import { useKnownPeopleT } from '../../lib/known-people-i18n'
+import { takeKnownPeopleNotice } from '../../lib/known-people-notice'
 import { loadSavedNames, pruneSavedNames } from '../../lib/known-people-saved-names'
 import { newIdempotencyKey } from '../../lib/idempotency-key'
 import { useSession } from '../../lib/session-context'
@@ -51,12 +55,26 @@ export default function KnownPeopleScreen() {
   const { session } = useSession()
   const mine = useMyKnownPeopleQuery()
   const requests = useKnownPeopleRequestsQuery()
-  const { remove, answer, withdraw } = useKnownPeopleWrites()
+  const { remove, answer, withdraw, refresh } = useKnownPeopleWrites()
   const [busyLink, setBusyLink] = useState<string | null>(null)
   // `seq` (a counter — ⛔ derived from the previous notice, which `run` has just cleared: fix-diff review F6) remounts the
   // line, so the SAME words twice in a row are spoken twice.
   const [notice, setNotice] = useState<{ kind: 'status' | 'error'; text: string; seq: number } | null>(null)
   const noticeSeq = useRef(0)
+
+  // The find screen's success, parked as it went back (P2) — taken when this screen is FOCUSED again, after the running
+  // interactions settle (`runAfterInteractions` — `PoolOnboardingTutorial`'s precedent), then shown and spoken. ⚠ Focus
+  // fires as the pop BEGINS; whether VoiceOver's screen-change announcement still cuts "Asked." off on a native-stack
+  // pop is ⛔ demonstrated — FD-4's device check (fix-diff reviews rounds 1–2; recorded, ⛔ claimed solved).
+  useFocusEffect(
+    useCallback(() => {
+      const task = InteractionManager.runAfterInteractions(() => {
+        const text = takeKnownPeopleNotice()
+        if (text !== null) setNotice({ kind: 'status', text, seq: (noticeSeq.current += 1) })
+      })
+      return () => task.cancel()
+    }, []),
+  )
 
   const memberId = session?.memberId
   const savedNames = memberId ? loadSavedNames(memberId) : {}
@@ -110,6 +128,10 @@ export default function KnownPeopleScreen() {
       setNotice({ kind: 'status', text: t(successCopyKey(action), { name }), seq: (noticeSeq.current += 1) })
     } catch (err) {
       setNotice({ kind: 'error', text: t(refusalCopyKey(errorCodeOf(err))), seq: (noticeSeq.current += 1) })
+      // A refusal means the row is out of date (closed, removed or withdrawn elsewhere — or this member's own earlier tap
+      // landed and its answer was lost): both lists reload, so its stale controls go (review round 2, P3). ⛔ Awaited — the
+      // refusal is spoken at once; a failed reload reports in its own place.
+      void refresh().catch(() => undefined)
     } finally {
       setBusyLink(null)
     }
@@ -151,7 +173,7 @@ export default function KnownPeopleScreen() {
               <H3 accessibilityRole="header">{t('list.heading')}</H3>
               {mine.isLoading ? (
                 <Spinner accessibilityLabel={t('loading')} />
-              ) : mine.isError ? (
+              ) : mine.isError && !mine.data ? (
                 <YStack gap="$2">
                   <AnnouncedText key={mine.errorUpdatedAt} text={t('error.load')} kind="error" color="#C0392B" />
                   <Button onPress={() => void mine.refetch()} accessibilityRole="button">
@@ -189,6 +211,17 @@ export default function KnownPeopleScreen() {
                   )
                 })
               )}
+
+              {/* A failed REFETCH keeps the rows (and their Remove controls) and says so beside them — ⛔ every row behind
+                  "Could not load" (review round 2, P9; the requests section's rule). */}
+              {mine.data && mine.isError && !mine.isFetching ? (
+                <YStack gap="$2">
+                  <AnnouncedText key={mine.errorUpdatedAt} text={t('error.load')} kind="error" color="#C0392B" />
+                  <Button accessibilityRole="button" onPress={() => void mine.refetch()}>
+                    {t('retry')}
+                  </Button>
+                </YStack>
+              ) : null}
 
               {mine.data ? (
                 mine.data.freeSlots > 0 ? (
@@ -239,7 +272,7 @@ export default function KnownPeopleScreen() {
                               flex={1}
                               disabled={writeInFlight}
                               accessibilityRole="button"
-                              accessibilityLabel={t('request.yes')}
+                              accessibilityLabel={t('request.yes_a11y', { name })}
                               onPress={() =>
                                 void run(r.linkId, 'accept', name, () =>
                                   answer.mutateAsync({ linkId: r.linkId, answer: 'accept', idempotencyKey: newIdempotencyKey() }),
@@ -252,7 +285,7 @@ export default function KnownPeopleScreen() {
                               flex={1}
                               disabled={writeInFlight}
                               accessibilityRole="button"
-                              accessibilityLabel={t('request.no')}
+                              accessibilityLabel={t('request.no_a11y', { name })}
                               onPress={() =>
                                 void run(r.linkId, 'decline', name, () =>
                                   answer.mutateAsync({ linkId: r.linkId, answer: 'decline', idempotencyKey: newIdempotencyKey() }),
@@ -273,7 +306,7 @@ export default function KnownPeopleScreen() {
                             size="$3"
                             disabled={writeInFlight}
                             accessibilityRole="button"
-                            accessibilityLabel={t('request.withdraw')}
+                            accessibilityLabel={t('request.withdraw_a11y', { name })}
                             onPress={() =>
                               void run(r.linkId, 'withdraw', name, () => withdraw.mutateAsync({ linkId: r.linkId, idempotencyKey: newIdempotencyKey() }))
                             }

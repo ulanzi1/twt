@@ -87,17 +87,38 @@ export const ClaimHistorySection = EmptyExportSection.extend({
 });
 export type ClaimHistorySection = z.output<typeof ClaimHistorySection>;
 
-/** Story 6.36b — one link in the export's `knownPeople` lists (⛔ an id of the other member, ⛔ a number). */
-const KnownPeopleExportLink = z
+/**
+ * Story 6.36b — one link in the export's `knownPeople` lists (⛔ an id of the other member, ⛔ a number). ⭐ `state` is the
+ * table's, EXCEPT: an unrecorded stale `asked` reads `lapsed` (it IS one — dated `asked_at` + 30 days); and `ended` —
+ * ⛔ `erased` — on the people-I-named list is a link the other member's erasure ended (the app's row simply vanishes,
+ * 6.36a SW14 (3); `2026-10-15-333` call 3 (a)).
+ */
+const KnownPeopleExportLinkFields = {
+  name: z.string().nullable(),
+  askedAt: Iso8601Datetime,
+  respondedAt: Iso8601Datetime.nullable(),
+  endedAt: Iso8601Datetime.nullable(),
+};
+/** A link the member NAMED — with how they found the person (their own choice). */
+const KnownPeopleNamedExportLink = z
   .object({
-    name: z.string().nullable(),
-    state: z.enum(['asked', 'accepted', 'declined', 'lapsed', 'removed', 'withdrawn', 'erased']),
+    ...KnownPeopleExportLinkFields,
+    state: z.enum(['asked', 'accepted', 'declined', 'lapsed', 'removed', 'withdrawn', 'ended']),
     foundBy: z.enum(['contacts', 'picker', 'typed']),
-    askedAt: Iso8601Datetime,
-    respondedAt: Iso8601Datetime.nullable(),
-    endedAt: Iso8601Datetime.nullable(),
   })
   .strict();
+/**
+ * A link naming the member — ⛔ `foundBy`: it describes the NAMER's phone (`-333` call 3 (b)). ⭐ `ended` here is ANY
+ * request that left the member's list for a reason that is ⛔ their own act — the namer removed it, was erased, or (while
+ * it was open) had their death reported — and it carries ⛔ name and ⛔ end date (`2026-10-15-334` call 1: the app shows
+ * each as simply leaving). ⛔ `removed` therefore never appears on this list.
+ */
+const KnownPeopleNamedByExportLink = z
+  .object({ ...KnownPeopleExportLinkFields, state: z.enum(['asked', 'accepted', 'declined', 'lapsed', 'withdrawn', 'ended']) })
+  .strict()
+  .refine((l) => l.state !== 'ended' || (l.name === null && l.endedAt === null), {
+    message: 'an `ended` request naming the member carries no name and no end date (2026-10-15-334)',
+  });
 
 /** `profile.json` — the member's decrypted identity + declared data (member is the legitimate audience). */
 export const ProfileSection = z
@@ -205,12 +226,13 @@ export const ProfileSection = z
     /**
      * Story 6.36b (6.36a SW17, AC12) — PEOPLE WHO KNOW ME: the people the member NAMED and the members who named THEM,
      * every link, each with ONLY the name the member already saw (the member-to-member form; `null` where they saw none —
-     * an `asked` or declined link showed only the name they saved on their phone). ⛔ A member id, ⛔ a number.
+     * an `asked` or declined link showed only the name they saved on their phone — and on the members-who-named-me list
+     * an `ended` request, whose name the export withholds: `2026-10-15-334` call 1). ⛔ A member id, ⛔ a number.
      */
     knownPeople: z
       .object({
-        named: z.array(KnownPeopleExportLink),
-        namedBy: z.array(KnownPeopleExportLink),
+        named: z.array(KnownPeopleNamedExportLink),
+        namedBy: z.array(KnownPeopleNamedByExportLink),
       })
       .strict(),
   })

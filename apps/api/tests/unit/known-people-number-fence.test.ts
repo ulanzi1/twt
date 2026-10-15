@@ -8,7 +8,12 @@
 //       `writeAuditEntry(`, `*alarm*(`) is on an EXACT allow-list of (file, callee) counts, and ⛔ one's arguments name a
 //       number-bearing identifier;
 //   (2) ⛔ a messaging path — `@twt/channels`, `dispatch(`, a notifier, an SMS / push / WhatsApp sender (AC6: the request
-//       is shown in the app ONLY).
+//       is shown in the app ONLY);
+//   (3) ⛔ a thrown error's MESSAGE names a number-bearing identifier (`new …Error(` / `super(` — its CODE, string
+//       literals dropped: a message is text, its `${…}` is what reaches a log).
+// ⭐ Review round 2 (P14) widened it: the batch blind-index path and the member-field helpers that HOLD the plaintext
+// numbers are fenced too, the identifier list names `raw`, `entries`, `plaintext(s)`, `canonicals` and `digits`, and
+// rule (3) is new.
 // ⭐ POSITIVE CONTROL: a planted violation of each rule IS caught; a COMMENTED plant is ⛔.
 
 import { readFileSync } from 'node:fs';
@@ -26,12 +31,16 @@ const FILES = [
   'apps/api/src/modules/known-people/names.ts',
   'apps/api/src/modules/known-people/routes.ts',
   'packages/domain/src/member/known-people.ts',
+  'packages/domain/src/encryption/blind-index.ts',
+  'packages/domain/src/encryption/member-fields.ts',
 ] as const;
 
 /** The callees that write a log line, an audit line or an alarm. */
 const SINK_CALL = /\b((?:request\.)?log(?:ger)?\.(?:trace|debug|info|warn|error|fatal)|console\.(?:log|info|warn|error|debug)|emitAuthAudit|auditHook\??\.?|writeAuditEntry|\w*[aA]larm\w*)\s*\(/g;
 /** Identifiers that carry a number (or its HMAC) in these files. */
-const NUMBER_BEARING = /\b(numbers|mobile|canonical|normalised|distinct|namedIndex|indexes|body)\b/;
+const NUMBER_BEARING = /\b(numbers|mobile|canonicals?|normalised|distinct|namedIndex|indexes|body|raw|entries|plaintexts?|digits)\b/;
+/** A thrown error's construction (rule 3). */
+const ERROR_CALL = /\b(?:new\s+)?(?:[\w$]+\.)*[\w$]*(?:Error|Refused)\s*\(|\bsuper\s*\(/g;
 /** A messaging path (AC6). */
 const MESSAGING = /@twt\/channels|\bdispatch\s*\(|[nN]otifier\b|\bsendSms\b|\bstepUpDelivery\b|\bwhatsapp\b|\bpushNotification|\bexpo-server-sdk\b/i;
 
@@ -40,7 +49,16 @@ const SINK_ALLOWLIST: Record<string, number> = {
   'apps/api/src/modules/known-people/handlers.ts:emitAuthAudit': 5,
   'apps/api/src/modules/known-people/handlers.ts:request.log.error': 1,
   'apps/api/src/modules/known-people/names.ts:log.warn': 1,
+  'packages/domain/src/encryption/blind-index.ts:auditHook': 2,
 };
+
+/** The CODE of an argument list — string literals dropped, a template literal reduced to its `${…}` expressions. */
+function codeOnly(args: string): string {
+  // Template literals FIRST (an apostrophe inside one — `don't ${raw}` — must ⛔ swallow its `${…}`), then quoted strings.
+  return args
+    .replace(/`((?:[^`\\]|\\.)*)`/g, (_m, body: string) => (body.match(/\$\{[^}]*\}/g) ?? []).join(' '))
+    .replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, "''");
+}
 
 /** The argument text of the call whose `(` is at `open` (balanced parentheses). */
 function argsAt(code: string, open: number): string {
@@ -71,6 +89,10 @@ function check(files: ReadonlyMap<string, string>): { violations: string[]; sink
     }
     const msg = MESSAGING.exec(code);
     if (msg) violations.push(`messaging:${file}:${msg[0]}`);
+    for (const m of code.matchAll(ERROR_CALL)) {
+      const hit = NUMBER_BEARING.exec(codeOnly(argsAt(code, m.index! + m[0].length - 1)));
+      if (hit) violations.push(`number-in-error:${file}:${hit[1]!}`);
+    }
   }
   for (const [key, n] of Object.entries(sinks)) if (SINK_ALLOWLIST[key] !== n) violations.push(`unlisted-sink:${key}=${String(n)}`);
   for (const key of Object.keys(SINK_ALLOWLIST)) if (!(key in sinks)) violations.push(`stale-allowlist:${key}`);
@@ -107,6 +129,15 @@ describe('⛔ Story 6.36b — no number in a log / audit / alarm; no message sen
     expect(plant(H, "request.log.info('a new line');")).toContain('unlisted-sink:apps/api/src/modules/known-people/handlers.ts:request.log.info=1');
     expect(plant(H, "import { dispatch } from '@twt/channels';")).toEqual(expect.arrayContaining([expect.stringMatching(/^messaging:/)]));
     expect(plant(H, 'await deps.helpdeskReplyNotifier.notify(x);')).toEqual(expect.arrayContaining([expect.stringMatching(/^messaging:/)]));
+    // review round 2 (P14): a number in a thrown error's message; the newly fenced batch path; the widened identifiers
+    expect(plant(D, 'throw new Error(`bad entry ${raw}`);')).toEqual(expect.arrayContaining(['number-in-error:packages/domain/src/member/known-people.ts:raw']));
+    expect(plant(D, 'throw new KnownPeopleChargeRefused(canonical);')).toEqual(expect.arrayContaining([expect.stringMatching(/number-in-error:.*:canonical$/)]));
+    expect(plant('packages/domain/src/encryption/blind-index.ts', "kms.auditHook?.('computeHmac', ref, { plaintexts });")).toEqual(
+      expect.arrayContaining(['number-in-sink:packages/domain/src/encryption/blind-index.ts:auditHook:plaintexts']),
+    );
+    expect(plant(D, "throw new Error('one index per distinct number');")).toEqual([]); // words in a message are ⛔ identifiers
+    expect(plant(D, 'throw Error(`bad ${mobile}`);')).toEqual(expect.arrayContaining([expect.stringMatching(/number-in-error:.*:mobile$/)])); // ⛔ `new` needed
+    expect(plant(D, "throw new Error(`don't ${raw} won't`);")).toEqual(expect.arrayContaining([expect.stringMatching(/number-in-error:.*:raw$/)]));
     expect(plant(H, '// request.log.error({ mobile });')).toEqual([]);
     expect(plant(H, '/* emitAuthAudit(deps, request, x, { context: { numbers } }) */')).toEqual([]);
   });

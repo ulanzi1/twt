@@ -94,10 +94,23 @@ export interface BatchHmacAudit {
 
 const AUDIT_PURPOSE = /^[a-z][a-z0-9_]{0,63}$/;
 
+/** A queued batch task that never called KMS because an earlier one in its batch had failed. Carries ⛔ value. */
+class BatchHmacAbortedError extends Error {
+  constructor() {
+    super('blindIndexMany: the batch was abandoned after an HMAC failed');
+    this.name = 'BatchHmacAbortedError';
+  }
+}
+
 /**
  * `blindIndex` over many values — the same HMAC input per value, in order — with bounded KMS concurrency and ONE audit
- * line (`computeHmac`, `{ pariwarId: audit.pariwarId, fieldClass, count, purpose }`) once EVERY value has succeeded. An
- * empty batch calls ⛔ nothing. ⛔ Never call it inside a transaction or under a lock.
+ * line (`computeHmac`, `{ pariwarId: audit.pariwarId, fieldClass, count, purpose }`). An empty batch calls ⛔ nothing.
+ * ⛔ Never call it inside a transaction or under a lock.
+ * ⭐ A FAILED batch (review round 2, P1): once one HMAC fails, every task of THIS batch still queued in the process
+ * limiter returns WITHOUT calling KMS (they would otherwise run for nobody, holding slots login shares), and the ONE line
+ * is still written once every task has SETTLED (the ones already at KMS included), with `count` = the HMACs that actually
+ * ran (when any did). Before, a failure wrote ⛔ line at all, so up to N − 1 real HMACs went unaudited. The first real
+ * failure is rethrown.
  */
 export async function blindIndexMany(
   fieldClass: string,
@@ -116,19 +129,45 @@ export async function blindIndexMany(
     throw new Error('blindIndex: plaintext must be non-empty');
   }
   if (plaintexts.length === 0) return [];
-  const out = await Promise.all(
+  let computed = 0;
+  let failed = false;
+  const settled = await Promise.allSettled(
     plaintexts.map((plaintext) =>
       limiter.run(async () => {
-        const mac = await kms.computeHmac(hmacKeyRef, Buffer.from(`${fieldClass}:${plaintext}`, 'utf-8'), context);
-        return Buffer.from(mac).toString('hex');
+        if (failed) throw new BatchHmacAbortedError();
+        try {
+          const mac = await kms.computeHmac(hmacKeyRef, Buffer.from(`${fieldClass}:${plaintext}`, 'utf-8'), context);
+          computed += 1;
+          return Buffer.from(mac).toString('hex');
+        } catch (err) {
+          failed = true;
+          throw err;
+        }
       }),
     ),
   );
-  kms.auditHook?.('computeHmac', hmacKeyRef, {
-    pariwarId: audit.pariwarId,
-    fieldClass,
-    count: plaintexts.length,
-    purpose: audit.purpose,
-  });
-  return out;
+  // The FIRST real failure (⛔ an abandoned task's), in submission order.
+  const firstFailure = settled.find(
+    (s): s is PromiseRejectedResult => s.status === 'rejected' && !(s.reason instanceof BatchHmacAbortedError),
+  );
+  // ⭐ A throwing audit hook never hides the KMS failure that ended the batch (fix-diff review round 1); on a batch that
+  // succeeded, the hook's error is the error.
+  let auditFailed = false;
+  let auditError: unknown;
+  if (computed > 0) {
+    try {
+      kms.auditHook?.('computeHmac', hmacKeyRef, {
+        pariwarId: audit.pariwarId,
+        fieldClass,
+        count: computed,
+        purpose: audit.purpose,
+      });
+    } catch (err) {
+      auditFailed = true;
+      auditError = err;
+    }
+  }
+  if (firstFailure) throw firstFailure.reason;
+  if (auditFailed) throw auditError;
+  return settled.map((s) => (s as PromiseFulfilledResult<string>).value);
 }

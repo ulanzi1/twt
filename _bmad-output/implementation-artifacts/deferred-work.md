@@ -11248,3 +11248,41 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   (the button returns; the member taps again) — blocking every write behind a page fetch could lock them all (G2); and an
   answer landing at exactly the 15 s bound is reported as a timeout. ⛔ Demonstrated on a device: native layout and a real
   screen reader (the announcements are proven in jsdom with the `announceForAccessibility` call and the live-region prop).
+
+
+## Deferred from: code review of 6-36b-people-who-know-me — round 2, the whole branch (2026-10-15)
+
+- **W1 — N+1 name decrypts per requests page** [`apps/api/src/modules/known-people/names.ts:29`; the home card's page-1 read] — one
+  KMS decrypt and one audit line per namer, on every home mount and every post-write refetch. Realistic counts are 0–3 a member.
+  ⭐ Trigger: a member named by many (a batched decrypt line in the `blindIndexMany` shape, or refetch page 1 only after a write).
+- **W2 — The process-wide HMAC limiter has ⛔ queue bound or deadline** [`packages/domain/src/encryption/blind-index.ts:64`] — an
+  ask's one HMAC waits behind every queued 1,000-number batch; SW12 bounds in-flight only. ⭐ Trigger: Row 31 (e)'s KMS quota check
+  or a load test.
+- **W3 — A KMS / DB failure after the charge spends the member's daily check with ⛔ result**
+  [`packages/domain/src/member/known-people.ts:267`] — charged-before-HMAC is SW12's rule; a refund would be a compensating write.
+  ⭐ Trigger: members seen losing checks to an outage.
+- **W4 — PRE-EXISTING: a landline saved with its STD code normalises to a valid-looking mobile**
+  [`packages/domain/src/encryption/member-fields.ts:96`; `apps/mobile/lib/phone-normalize.ts:45`] — `normalizeMobile` peels any
+  leading `0` from 11 digits, so `080 2345 6789` → `+918023456789`; the contacts flow now feeds every saved number through it. A false
+  match only sends a request the other member can decline. ⭐ Trigger: a numbering-plan rule for the trunk prefix (contact labels
+  are too fragile to filter on).
+- **W5 — Remove and withdraw are refused for a non-`active` member** [`packages/domain/src/member/known-people.ts:624`, `:640`] —
+  SW10 says *"removes one at any time … may also withdraw later"*; AC10's ONE 403 and SW16 (4) gate the whole feature. 6.36 asks
+  only `active` members (SW23), so a link nobody can act on while non-active asks nobody. ⭐ Trigger: SW23 widening, or counsel
+  reading an acceptance as a consent that must be withdrawable at any time (Row 31).
+- **W6 — AC7's *"Not accepted … for 30 days"* is cut at the 50 newest** [`packages/domain/src/member/known-people.ts:460`] — R2's
+  bound by choice; the rows carry ⛔ control. ⭐ Trigger: a member past 50 ended links in 30 days.
+- **W7 — Two integration legs assume one IST day** [`apps/api/tests/integration/known-people/known-people.spec.ts:155`, `:246`] — a
+  run that crosses 18:30 UTC splits the counters across two rows; a milliseconds-wide window. ⭐ Trigger: it flakes once.
+- **W8 — The find screen's matches phase is a non-scrolling column** [`apps/mobile/app/(life-events)/known-people-find.tsx:163`] —
+  two FlashLists and a 56 px button may clip on a small phone or with large text. ⭐ Trigger: FD-4's device demonstration.
+- **W9 — APP-WIDE: a tamagui `<Spinner accessibilityLabel=…>` never announces its label on iOS** [13 uses across `apps/mobile`,
+  e.g. `known-people.tsx`, `known-people-find.tsx`] — Tamagui 2.1.0's `Spinner` spreads the props onto a `YStack` that is ⛔
+  `accessible={true}` (checklist 13 (a)); the inner `ActivityIndicator` speaks its platform default instead. Found by the 6.36b
+  fix review (rounds 6–7); ⛔ this story's to fix in one screen. ⭐ Trigger: a shared accessible `LoadingIndicator` (or 11b.8's
+  accessibility audit).
+- **W10 — The 6.36b fix review's recorded residuals** (the story's Round 2 resolution lists all eight): ⭐ the device-only ones
+  join FD-4 — whether the people screen's handed *"Asked."* (taken on focus, after the running interactions) survives VoiceOver's
+  screen-change announcement on a native-stack pop, and the ORDER of every announcement on a real device (the jsdom tests prove
+  only that the calls are made, and in what order); the iOS access picker's REVOKED contacts stay in the in-memory match list until
+  the next check; a slots Retry on a PAUSED (offline) network stays busy until the network returns.

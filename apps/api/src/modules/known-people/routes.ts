@@ -4,7 +4,8 @@
 // 1.14 login-wall gate covers them through the MEMBER_SESSION_GUARD tag) and rate-limited PER MEMBER (`perMemberKey`,
 // `hook: 'preHandler'` so the member id is set first — ⛔ the per-session key, which falls back to the shared IP for
 // token-bearer members). The writes (ask, remove, answer, withdraw) take an `Idempotency-Key` in the handler. Only an
-// `active` member may use any of them — ONE 403 `known_people.not_available` otherwise (AC10). The two lists declare a
+// `active` member whom ⛔ claim names as the deceased may use any of them (`2026-10-15-333` call 1) — ONE 403
+// `known_people.not_available` otherwise (AC10). The two lists declare a
 // bounded `limit` (the forced-pagination invariant); the requests list pages by a `cursor` (review 2026-10-15 R3). ⛔ A Turnstile gate: an `active` member is KYC'd and paid, and the
 // matching path carries its own DB-backed caps (6.36a SW12).
 

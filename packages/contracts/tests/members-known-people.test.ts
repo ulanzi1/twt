@@ -106,11 +106,28 @@ describe('asking and the lists', () => {
   });
 
   it('the data export\'s knownPeople lists: the seen name or null, ⛔ a member id (strict)', () => {
-    const shape = (ProfileSection.shape.knownPeople as unknown as { shape: { named: { element: { safeParse: (v: unknown) => { success: boolean } } } } }).shape.named.element;
+    type Parser = { safeParse: (v: unknown) => { success: boolean } };
+    const lists = (ProfileSection.shape.knownPeople as unknown as { shape: { named: { element: Parser }; namedBy: { element: Parser } } }).shape;
+    const named = lists.named.element;
+    const namedBy = lists.namedBy.element;
     const link = { name: null, state: 'declined', foundBy: 'picker', askedAt: AT, respondedAt: AT, endedAt: AT };
-    expect(shape.safeParse(link).success).toBe(true);
-    expect(shape.safeParse({ ...link, otherMemberId: LINK }).success).toBe(false);
-    expect(shape.safeParse({ ...link, state: 'ended' }).success).toBe(false);
+    expect(named.safeParse(link).success).toBe(true);
+    expect(named.safeParse({ ...link, otherMemberId: LINK }).success).toBe(false);
+    // ⭐ `2026-10-15-333` call 3 (supersedes the round-1 pin that refused `ended`): an erasure reads `ended`, ⛔ `erased` …
+    expect(named.safeParse({ ...link, state: 'ended' }).success).toBe(true);
+    expect(named.safeParse({ ...link, state: 'erased' }).success).toBe(false);
+    // … and the members-who-named-me list carries ⛔ `foundBy` (it describes the namer's phone).
+    const withoutFoundBy = { name: link.name, state: link.state, askedAt: link.askedAt, respondedAt: link.respondedAt, endedAt: link.endedAt };
+    expect(namedBy.safeParse(withoutFoundBy).success).toBe(true);
+    expect(namedBy.safeParse(link).success).toBe(false);
+    expect(namedBy.safeParse({ ...withoutFoundBy, state: 'erased' }).success).toBe(false);
+    // `2026-10-15-334` call 1: on this list `ended` is ANY request that left it by ⛔ the member's own act — ⛔ `removed`
+    // (it reads `ended`), and an `ended` row carries ⛔ name and ⛔ end date
+    expect(namedBy.safeParse({ ...withoutFoundBy, state: 'removed' }).success).toBe(false);
+    expect(namedBy.safeParse({ ...withoutFoundBy, state: 'ended', name: null, endedAt: null }).success).toBe(true);
+    expect(namedBy.safeParse({ ...withoutFoundBy, state: 'ended', name: 'Asha D.', endedAt: null }).success).toBe(false);
+    expect(namedBy.safeParse({ ...withoutFoundBy, state: 'ended', name: null, endedAt: AT }).success).toBe(false);
+    expect(named.safeParse({ ...link, state: 'removed' }).success).toBe(true); // the member's OWN removal, on their own list
   });
 
   it('every error code is in the known_people namespace', () => {

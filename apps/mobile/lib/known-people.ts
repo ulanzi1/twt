@@ -119,6 +119,12 @@ export function refusalCopyKey(code: string | undefined): string {
       return 'error.request_closed'
     case 'known_people.not_available':
       return 'error.not_available'
+    // review round 2, P3 — a link that changed elsewhere (or the member's own earlier tap that landed) — and a tap still
+    // being handled: each its own plain message (AC9), ⛔ "Something went wrong".
+    case 'known_people.not_found':
+      return 'error.changed'
+    case 'known_people.idempotency_in_progress':
+      return 'error.in_progress'
     default:
       return 'error.generic'
   }

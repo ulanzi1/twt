@@ -27,6 +27,12 @@ const PARAMS: Record<string, Record<string, string | number>> = {
   'done.declined': { name: 'Asha D.' },
   'done.removed': { name: 'Asha D.' },
   'done.withdrawn': { name: 'Asha D.' },
+  // review round 2 (P2, P11) — the found-count line and the answer buttons that name the person
+  'find.matches_count': { count: 2 },
+  'find.too_many': { count: 1 },
+  'request.yes_a11y': { name: 'Asha D.' },
+  'request.no_a11y': { name: 'Asha D.' },
+  'request.withdraw_a11y': { name: 'Asha D.' },
 };
 
 describe('known_people copy (real t())', () => {
@@ -64,6 +70,17 @@ describe('known_people copy (real t())', () => {
     expect(en('find.limited_access')).toBe('Only the contacts you shared are checked.');
     expect(en('invite.heading')).toBe('Not members yet — invite');
     expect(en('request.yes')).toBe('Yes, I know them');
+  });
+
+  it('WCAG 2.5.3 — each answer button\'s accessible name BEGINS with its visible text (en + hi), then names the person', () => {
+    for (const locale of ['en', 'hi'] as const) {
+      const tt = (key: string, params?: Record<string, string>) => t(key, params, { locale, namespace: NS });
+      for (const [visible, a11y] of [['request.yes', 'request.yes_a11y'], ['request.no', 'request.no_a11y'], ['request.withdraw', 'request.withdraw_a11y']] as const) {
+        const named = tt(a11y, { name: 'Asha D.' });
+        expect(named.startsWith(tt(visible)), `${locale}:${a11y}`).toBe(true);
+        expect(named).toContain('Asha D.');
+      }
+    }
   });
 
   it('⛔ the Trust\'s name is written in the copy — it is a parameter', () => {

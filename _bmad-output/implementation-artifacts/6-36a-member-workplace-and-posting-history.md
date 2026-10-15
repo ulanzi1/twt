@@ -300,6 +300,9 @@ my family picks.**
   recorded lazily by the writer — ⛔ no job; ⛔ no answer is taken after it) and frees the slot; a request that ENDED without acceptance
   (declined, lapsed) or a link that was withdrawn lets the namer ask the same person again only from its `ended_at` + 60 days. *Alt:* (B) ⛔ no lapse — an ignored
   request holds a slot for ever.
+  ⭐ *Annotated 2026-10-15 (6.36b code review round 2; ⛔ a rewrite):* SUPERSEDED IN PART by `2026-10-15-333` — who may be FOUND
+  or NAMED is `active` OR `active-in-grace` (the directory shows both as *"Active"*; call 2), and the CALLER must be `active` AND ⛔ named
+  by any claim as the deceased (call 1). The text above stays as it was committed.
 - **SW11 — finding them by contacts (CF5 A).** *"Find members in my contacts"* → a note in BigDev's words with the Trust's name FROM
   CONFIG (`-309`; the legal name is under registration — ⛔ never hard-coded): *"We need access to find your colleagues already at [the
   Trust's name]."* + *"Numbers of people who aren't members are not kept."* → the phone's permission prompt → the app reads the phone
@@ -310,6 +313,8 @@ my family picks.**
   matched contacts under the names saved in the phone, with a search box; the member ticks up to their free slots and sends. ⛔ No number
   in any DB row, log, audit line, alarm or error body (a fence + behaviour tests). The registered name is shown only after acceptance
   (`-309` item 3).
+  ⭐ *Annotated 2026-10-15 (6.36b code review round 2; ⛔ a rewrite):* SUPERSEDED IN PART by `2026-10-15-333` call 2 — the server
+  matches members who are `active` OR `active-in-grace`, ⛔ only `active` (`lapsed-unpaid` stays out — the directory omits it).
 - **SW12 — the limits, and the audit.** ≤ 1,000 numbers per request; ≤ 3 matching requests per member per IST day; ≤ 2,000 numbers per
   member per rolling 30 days; ≤ 100,000 numbers per Pariwar per IST day; ≤ 10 name-requests per member per day (DB-backed counters — the
   `sms_rate_buckets` precedent, SF9). *Reading:* CF5 A's *"limits stop anyone using it to test numbers in bulk"* — one account can test
@@ -342,6 +347,10 @@ my family picks.**
   the directory), with a death ⛔ never told apart from leaving ⇒ the author's on our reading; if BigDev reads (3)–(4) as a disclosure
   *"to whom"*, they join **SC3**. *Alt:* (B) make a decline look like a lapse in every channel (the list, `freeSlots`,
   a re-ask's answer, a removal) until day 30 — four places that must stay consistent, each a test.
+  ⭐ *Annotated 2026-10-15 (6.36b code review round 2; ⛔ a rewrite):* `2026-10-15-334` call 2 — the withdraw line *"[Name] will see
+  that you withdrew."* stays the SAME on every accepted request, including one whose namer's death has been reported (kept by
+  `-333` call 1): changing it for those rows alone would tell the member of the death; once the namer has died the line is ⛔
+  true (a recorded residual — ⛔ SW14 reopened).
 - **SW15 — workplace SUGGESTIONS are DROPPED for v1** (supersedes `-307` §2 item 3 (ii)). (1) A member's present-workplace colleagues are
   already asked FIRST (group A) — naming them adds ⛔ nothing while they share the workplace. (2) Showing a past workplace's members to
   anyone who DECLARES that workplace (the posting is self-declared) tells a stranger where members worked — *"what the Trust DISCLOSES about
@@ -371,6 +380,14 @@ my family picks.**
   WITHDRAWAL of THAT link excludes them whenever it happened (they said they do ⛔ not know the member) — a later, separately accepted link
   between the same two members counts on its own; a member's data export lists the people they named and the members who named them (names they already
   saw).
+  ⭐ *Annotated 2026-10-15 (6.36b code review round 2; ⛔ a rewrite):* `2026-10-15-333` call 3 — on both export lists a link the
+  other member's erasure ended reads `ended` (⛔ `erased`), and the members-who-named-me list carries ⛔ `foundBy`.
+  ⭐ *Annotated 2026-10-15 (6.36b code review round 2, fix review; ⛔ a rewrite):* `2026-10-15-334` call 1 narrows that — on the
+  members-who-named-me list a REMOVAL, an ERASURE and an OPEN request whose namer's death was reported each read the SAME:
+  `ended`, ⛔ name, ⛔ end date (each simply leaves the list in the app).
+  ⭐ *Annotated 2026-10-15 (6.36b code review round 2, fix review; ⛔ a rewrite):* `2026-10-15-335` call 1 — a request hidden while
+  OPEN reads `ended` for good, decided by when the claim was FILED; `-335` call 2 + `-336` — a missing name on an ENDED row once the
+  other member is erased is a recorded residual (erasure removes the name).
 
 ### The selection (6.36 builds SW18–SW27)
 - **SW18 — a NEW metric `workplace_named_v1`, a GROUPED engine.** A new registry id (SF6) — ⛔ not *"a NEW metric version"* (`-306` §2

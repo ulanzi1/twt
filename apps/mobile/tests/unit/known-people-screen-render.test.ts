@@ -19,6 +19,9 @@ const mock = vi.hoisted(() => ({
   remove: vi.fn(),
   fetchNextPage: vi.fn(),
   restart: vi.fn(),
+  refresh: vi.fn(),
+  interactions: [] as (() => void)[],
+  cancelled: 0,
   mine: null as unknown,
   requests: null as unknown,
 }))
@@ -36,11 +39,16 @@ vi.mock('../../components/known-people/useKnownPeopleQueries', () => ({
     answer: { mutateAsync: mock.answer },
     withdraw: { mutateAsync: mock.withdraw },
     remove: { mutateAsync: mock.remove },
+    refresh: mock.refresh,
   }),
   errorCodeOf: (e: unknown) => (e instanceof FakeApiError ? e.code : undefined),
   useRestartKnownPeopleLists: () => mock.restart,
 }))
-vi.mock('expo-router', () => ({ Stack: { Screen: () => null }, useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('expo-router', async () => {
+  const { useEffect } = await import('react')
+  // `useFocusEffect` runs its callback whenever the (memoised) callback changes — here, on mount: the screen is focused.
+  return { Stack: { Screen: () => null }, useRouter: () => ({ push: vi.fn() }), useFocusEffect: (cb: () => void) => useEffect(() => cb(), [cb]) }
+})
 vi.mock('../../lib/known-people-i18n', () => ({
   useKnownPeopleT: () => (key: string, params?: Record<string, unknown>) => (params?.['name'] ? `${key}:${String(params['name'])}` : key),
 }))
@@ -60,6 +68,19 @@ vi.mock('react-native', async () => {
     ScrollView: ({ children }: { children: React.ReactNode }) => createElement('div', null, children),
     Platform: { OS: 'ios' },
     AccessibilityInfo: { announceForAccessibility: mock.announce },
+    // DEFERRED, so a test proves the notice waits for the interactions and that a blur cancels it (the timing itself is
+    // a device check — FD-4).
+    InteractionManager: {
+      runAfterInteractions: (cb: () => void) => {
+        mock.interactions.push(cb)
+        return {
+          cancel: () => {
+            mock.cancelled += 1
+            mock.interactions = mock.interactions.filter((q) => q !== cb)
+          },
+        }
+      },
+    },
   }
 })
 vi.mock('tamagui', async () => {
@@ -77,6 +98,7 @@ vi.mock('tamagui', async () => {
 import KnownPeopleScreen from '../../app/(life-events)/known-people'
 import { KnownPeopleRequestEntry } from '../../components/known-people/KnownPeopleRequestEntry'
 import { DENIED_MY_KNOWN_PEOPLE, DENIED_REQUESTS_PAGE } from '../../lib/known-people'
+import { clearKnownPeopleNotices, handKnownPeopleNotice, NOTICE_TTL_MS, takeKnownPeopleNotice } from '../../lib/known-people-notice'
 import { loadSavedNames, saveSavedName } from '../../lib/known-people-saved-names'
 
 type Req = { linkId: string; state: 'asked' | 'accepted'; name: string | null; askedAt: string }
@@ -104,7 +126,20 @@ beforeEach(() => {
   ]])
   for (const f of [mock.answer, mock.withdraw, mock.remove]) f.mockResolvedValue({})
   mock.restart.mockResolvedValue({ restored: false })
+  mock.refresh.mockResolvedValue(undefined)
+  mock.interactions = []
+  mock.cancelled = 0
+  clearKnownPeopleNotices()
 })
+
+/** Settle the running interactions (what `runAfterInteractions` waits for). */
+function flushInteractions(): void {
+  act(() => {
+    const queued = mock.interactions
+    mock.interactions = []
+    for (const cb of queued) cb()
+  })
+}
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
@@ -112,9 +147,9 @@ afterEach(() => {
 
 describe('R5 — every completed action is shown AND spoken', () => {
   it.each([
-    ['request.yes', 'done.accepted:Asha D.', () => mock.answer],
-    ['request.no', 'done.declined:Asha D.', () => mock.answer],
-    ['request.withdraw', 'done.withdrawn:Ravi K.', () => mock.withdraw],
+    ['request.yes_a11y:Asha D.', 'done.accepted:Asha D.', () => mock.answer],
+    ['request.no_a11y:Asha D.', 'done.declined:Asha D.', () => mock.answer],
+    ['request.withdraw_a11y:Ravi K.', 'done.withdrawn:Ravi K.', () => mock.withdraw],
     ['action.remove_a11y:Meena (school)', 'done.removed:Meena (school)', () => mock.remove],
   ])('%s ⇒ "%s"', async (label, spoken, write) => {
     render(createElement(KnownPeopleScreen))
@@ -126,11 +161,11 @@ describe('R5 — every completed action is shown AND spoken', () => {
 
   it('the SAME words twice are spoken twice; a refusal is spoken as an alert', async () => {
     render(createElement(KnownPeopleScreen))
-    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw' }))
-    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw' }))
+    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw_a11y:Ravi K.' }))
+    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw_a11y:Ravi K.' }))
     expect(mock.announce.mock.calls.filter(([text]) => text === 'done.withdrawn:Ravi K.')).toHaveLength(2)
     mock.answer.mockRejectedValueOnce(new FakeApiError(409, 'known_people.request_closed'))
-    await userEvent.click(screen.getByRole('button', { name: 'request.yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'request.yes_a11y:Asha D.' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('error.request_closed')
     expect(mock.announce).toHaveBeenLastCalledWith('error.request_closed')
   })
@@ -164,7 +199,7 @@ describe('R3 — the requests list, page by page', () => {
     mock.answer.mockReturnValueOnce(new Promise<void>((resolve) => (finish = resolve)))
     render(createElement(KnownPeopleScreen))
     expect(screen.getByRole('button', { name: 'requests.show_more' })).toBeEnabled()
-    await userEvent.click(screen.getByRole('button', { name: 'request.yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'request.yes_a11y:Asha D.' }))
     expect(screen.getByRole('button', { name: 'requests.show_more' })).toBeDisabled()
     await act(async () => finish())
     expect(screen.getByRole('button', { name: 'requests.show_more' })).toBeEnabled()
@@ -178,7 +213,7 @@ describe('R3 — the requests list, page by page', () => {
     mock.answer.mockReturnValueOnce(new Promise<void>((resolve) => (finish = resolve)))
     render(createElement(KnownPeopleScreen))
     expect(screen.getByRole('button', { name: 'retry' })).toBeEnabled()
-    await userEvent.click(screen.getByRole('button', { name: 'request.yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'request.yes_a11y:Asha D.' }))
     expect(screen.getByRole('button', { name: 'retry' })).toBeDisabled()
     await act(async () => finish())
     expect(screen.getByRole('button', { name: 'retry' })).toBeEnabled()
@@ -190,7 +225,7 @@ describe('R3 — the requests list, page by page', () => {
       { hasNextPage: true, isFetching: true, isFetchingNextPage: true },
     )
     render(createElement(KnownPeopleScreen))
-    for (const name of ['request.yes', 'request.no', 'request.withdraw', 'action.remove_a11y:Meena (school)']) {
+    for (const name of ['request.yes_a11y:Asha D.', 'request.no_a11y:Asha D.', 'request.withdraw_a11y:Ravi K.', 'action.remove_a11y:Meena (school)']) {
       expect(screen.getByRole('button', { name })).toBeEnabled()
     }
   })
@@ -247,7 +282,7 @@ describe('the not-available state and the saved names (fix-diff reviews E1, G3, 
     mock.requests = { ...requestsQuery([]), data: { pages }, isError: true, error: new TypeError('Network request failed'), refetch: vi.fn(async () => ({ data: { pages }, isError: false })) }
     render(createElement(KnownPeopleScreen))
     expect(screen.getByText('error.not_available')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'request.yes' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'request.yes_a11y:Asha D.' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'retry' }))
     expect(mock.restart).toHaveBeenCalledTimes(1) // BOTH lists reloaded from nothing (the hook's own test: a hung first fetch too)
   })
@@ -256,7 +291,7 @@ describe('the not-available state and the saved names (fix-diff reviews E1, G3, 
     mock.mine = mineQuery(DENIED_MY_KNOWN_PEOPLE, { isError: true, error: new TypeError('Network request failed') })
     render(createElement(KnownPeopleScreen))
     expect(screen.getByText('error.not_available')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'request.yes' })).toBeNull() // the default requests mock holds an OPEN one
+    expect(screen.queryByRole('button', { name: 'request.yes_a11y:Asha D.' })).toBeNull() // the default requests mock holds an OPEN one
   })
 
   it('a denial keeps every SAVED name — ⛔ pruned against its empty list (H1); a real empty list prunes', () => {
@@ -315,7 +350,7 @@ describe('the not-available state and the saved names (fix-diff reviews E1, G3, 
 
   it('a notice from BEFORE a denial is not spoken again when the lists come back', async () => {
     const { rerender } = render(createElement(KnownPeopleScreen))
-    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw' }))
+    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw_a11y:Ravi K.' }))
     expect(spoken('done.withdrawn:Ravi K.')).toBe(1)
     const normal = { mine: mock.mine, requests: mock.requests }
     mock.mine = mineQuery(DENIED_MY_KNOWN_PEOPLE)
@@ -338,7 +373,7 @@ describe('the not-available state and the saved names (fix-diff reviews E1, G3, 
     mock.mine = mineQuery({ items: [], freeSlots: 3 })
     mock.requests = requestsQuery([[{ linkId: 'r2', state: 'accepted', name: 'Ravi K.', askedAt: AT }]])
     rerender(createElement(KnownPeopleScreen))
-    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw' }))
+    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw_a11y:Ravi K.' }))
     await act(async () => settle({ restored: true }))
     expect(screen.getByText('done.withdrawn:Ravi K.')).toBeInTheDocument()
     expect(spoken('loaded')).toBe(0)
@@ -382,5 +417,81 @@ describe('the not-available state and the saved names (fix-diff reviews E1, G3, 
     render(createElement(KnownPeopleScreen))
     expect(spoken('error.load')).toBe(2)
     expect(screen.queryByText('error.not_available')).toBeNull()
+  })
+})
+
+describe('review round 2', () => {
+  it('P11 — each answer button NAMES the person it answers (⛔ N identical "Yes" buttons)', () => {
+    mock.requests = requestsQuery([[
+      { linkId: 'r1', state: 'asked', name: 'Asha D.', askedAt: AT },
+      { linkId: 'r3', state: 'asked', name: 'Kiran L.', askedAt: AT },
+    ]])
+    render(createElement(KnownPeopleScreen))
+    for (const label of ['request.yes_a11y:Asha D.', 'request.yes_a11y:Kiran L.', 'request.no_a11y:Asha D.', 'request.no_a11y:Kiran L.']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+    }
+  })
+
+  it('P3 — a REFUSED action refreshes both lists and speaks its own message (a 404 not_found ⇒ "changed", ⛔ the generic one)', async () => {
+    mock.withdraw.mockRejectedValueOnce(new FakeApiError(404, 'known_people.not_found'))
+    render(createElement(KnownPeopleScreen))
+    await userEvent.click(screen.getByRole('button', { name: 'request.withdraw_a11y:Ravi K.' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('error.changed')
+    expect(mock.announce).toHaveBeenLastCalledWith('error.changed')
+    expect(mock.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('P3 — a completed action does ⛔ refresh from the screen (the write\'s own onSuccess does)', async () => {
+    render(createElement(KnownPeopleScreen))
+    await userEvent.click(screen.getByRole('button', { name: 'request.yes_a11y:Asha D.' }))
+    expect(await screen.findByText('done.accepted:Asha D.')).toBeInTheDocument()
+    expect(mock.refresh).not.toHaveBeenCalled()
+  })
+
+  it('P9 — a failed REFETCH of the named list keeps the rows and their Remove control, and says so beside them', () => {
+    mock.mine = mineQuery({ items: [{ linkId: 'l1', label: 'asked', name: null, askedAt: AT }], freeSlots: 2 }, { isError: true, errorUpdatedAt: 7 })
+    render(createElement(KnownPeopleScreen))
+    expect(screen.getByRole('button', { name: 'action.remove_a11y:Meena (school)' })).toBeInTheDocument()
+    expect(screen.getByText('error.load')).toBeInTheDocument()
+    expect(mock.announce).toHaveBeenCalledWith('error.load')
+  })
+
+  it('P9 — with ⛔ data yet, a failure still shows the error block alone (a positive control)', () => {
+    mock.mine = mineQuery(undefined, { isError: true, errorUpdatedAt: 7 })
+    render(createElement(KnownPeopleScreen))
+    expect(screen.queryByRole('button', { name: 'action.remove_a11y:Meena (school)' })).toBeNull()
+    expect(screen.getByText('error.load')).toBeInTheDocument()
+  })
+
+  it('P2 — the find screen\'s success, parked as it goes back, is SHOWN and SPOKEN once this screen is focused AND the interactions settle', async () => {
+    handKnownPeopleNotice('find.sent') // the find screen, going back
+    render(createElement(KnownPeopleScreen)) // focused (the mock runs the focus callback on mount)
+    expect(screen.queryByText('find.sent')).toBeNull() // ⛔ before the interactions settle (round 3)
+    expect(mock.announce).not.toHaveBeenCalledWith('find.sent')
+    flushInteractions()
+    expect(await screen.findByText('find.sent')).toBeInTheDocument()
+    expect(mock.announce).toHaveBeenCalledWith('find.sent')
+  })
+
+  it('P2 — a blur BEFORE the interactions settle cancels the take, and the notice stays parked for the next focus', () => {
+    handKnownPeopleNotice('find.sent')
+    render(createElement(KnownPeopleScreen))
+    cleanup() // blurred / unmounted before the interactions settled
+    expect(mock.cancelled).toBe(1)
+    expect(takeKnownPeopleNotice()).toBe('find.sent') // ⛔ taken by the cancelled one
+  })
+
+  it('P2 — a STALE parked notice, or one dropped by an account change, is ⛔ shown', () => {
+    handKnownPeopleNotice('find.sent', Date.now() - NOTICE_TTL_MS - 1)
+    render(createElement(KnownPeopleScreen))
+    flushInteractions()
+    expect(screen.queryByText('find.sent')).toBeNull()
+    cleanup()
+    handKnownPeopleNotice('find.sent')
+    clearKnownPeopleNotices() // sign-out
+    render(createElement(KnownPeopleScreen))
+    flushInteractions()
+    expect(screen.queryByText('find.sent')).toBeNull()
+    expect(mock.announce).not.toHaveBeenCalledWith('find.sent')
   })
 })

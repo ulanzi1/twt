@@ -159,7 +159,8 @@ export type KnownPeopleWriteResponse = z.output<typeof KnownPeopleWriteResponse>
 
 /**
  * The ONE error code per refusal family (AC3–AC10). ⚠ `not_a_member` is ONE code for not-a-member, erased, withdrawn,
- * reported-dead and another Pariwar's (indistinguishable); `not_available` is ONE code for every non-`active` caller.
+ * reported-dead and another Pariwar's (indistinguishable); `not_available` is ONE code for every caller who may ⛔ use it —
+ * non-`active`, or named by a claim as the deceased (`2026-10-15-333` call 1) — ⛔ which, ⛔ why.
  */
 export const KNOWN_PEOPLE_ERROR_CODES = {
   notAvailable: 'known_people.not_available',

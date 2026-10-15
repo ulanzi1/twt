@@ -10,11 +10,25 @@ import { describe, expect, it } from 'vitest'
 const MOBILE = join(__dirname, '..', '..')
 const read = (f: string) => readFileSync(join(MOBILE, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
-/** The body of `name(` … up to its first closing at the opening indent — enough for a source scan. */
+/**
+ * The body of the block the opener starts — from its FIRST `{` to the brace that closes it (brace-matched). ⭐ A fixed
+ * 700-character window reached into the NEXT handler, so deleting a handler's own clears still passed on its neighbour's
+ * calls (review round 2, P13).
+ */
 function block(src: string, opener: RegExp): string {
   const m = opener.exec(src)
   if (!m) return ''
-  return src.slice(m.index, m.index + 700)
+  const open = src.indexOf('{', m.index + m[0].length - 1)
+  if (open < 0) return ''
+  let depth = 0
+  for (let i = open; i < src.length; i += 1) {
+    if (src[i] === '{') depth += 1
+    else if (src[i] === '}') {
+      depth -= 1
+      if (depth === 0) return src.slice(open, i + 1)
+    }
+  }
+  return ''
 }
 
 describe('session-context clears the people-who-know-me caches', () => {
@@ -29,6 +43,13 @@ describe('session-context clears the people-who-know-me caches', () => {
     const body = block(src, opener)
     expect(body).toContain('clearKnownPeopleCache(queryClient)')
     if (savedNamesToo) expect(body).toContain('clearSavedNames()')
+    else expect(body).not.toContain('clearSavedNames()')
+  })
+
+  it('the block reader stops at its own closing brace (a positive control — ⛔ the next handler)', () => {
+    const two = 'a(() => {\n  one()\n})\nb(() => {\n  two()\n})'
+    expect(block(two, /a\(\(\) => \{/)).toBe('{\n  one()\n}')
+    expect(block(two, /a\(\(\) => \{/)).not.toContain('two()')
   })
 })
 

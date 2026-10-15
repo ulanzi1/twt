@@ -1,9 +1,11 @@
 // Story 6.36b — PEOPLE WHO KNOW ME, the domain (Task 2; AC2–AC8, AC10, AC12). Live DB; per-test ROLLBACK; every call
 // runs as `twt_app` IN SCOPE (RLS on), the seeds as the superuser. Blind indexes are opaque strings here (⛔ KMS — the
 // batch path is unit-tested in `tests/encryption/blind-index-many.test.ts`).
-//   · matching: positions only; ONE predicate (active · ⛔ a claim naming them · ⛔ the caller); ⛔ another Pariwar's
+//   · matching: positions only; ONE predicate (active or in renewal grace — `2026-10-15-333` call 2 · ⛔ a claim naming
+//     them · ⛔ the caller); ⛔ another Pariwar's
 //     member with the same index; an erased member (index RETAINED) ⛔ matched; duplicates; ⛔ a write but the counters;
-//   · the counters: ⛔ charged for a non-active caller; 3 a day; 2,000 / rolling 30 IST days; 100,000 / Pariwar / day;
+//   · the counters: ⛔ charged for a caller who may ⛔ use it (non-active, or named by a claim — `-333` call 1); 3 a day;
+//     2,000 / rolling 30 IST days; 100,000 / Pariwar / day;
 //     10 asks a day;
 //   · asking: created / existing / self / ONE not_a_member / the re-ask rule (declined, lapsed, withdrawn — ⛔ removed) /
 //     the cap; a stale ask lapsed first, dated asked_at + 30 days;
@@ -25,6 +27,8 @@ import {
   chargeKnownPersonAsk,
   eraseKnownPeopleLinks,
   getKnownPeopleForExport,
+  isKnownPeopleCaller,
+  knownPersonLiveLabel,
   listMyKnownPeople,
   listRequestsNamingMe,
   matchedContactPositions,
@@ -99,12 +103,14 @@ describe.skipIf(!hasDatabase)('Story 6.36b — known people (domain)', { timeout
       await memberWithIndex(other, iForeign!); // ⛔ another Pariwar's member, even one whose number is submitted
       await memberWithIndex(p, iGrace!, 'active-in-grace');
       await enterAppScope(client, p);
-      // Positions 0..8: the caller, a match, five non-eligible, an unknown, a DUPLICATE of the match.
+      // Positions 0..9: the caller, a match, four non-eligible, another Pariwar's, a member in renewal GRACE (a match —
+      // `2026-10-15-333` call 2: the directory shows grace as "Active"; this pin read [1, 9] before), an unknown, a
+      // DUPLICATE of the first match.
       const submitted = [iCaller!, iActive!, iPending!, iWithdrawn!, iErased!, iDead!, iForeign!, iGrace!, idx(), iActive!];
       const normalised = { distinct: [...new Set(submitted)], positions: [] as number[][] };
       normalised.positions = normalised.distinct.map((d) => submitted.flatMap((s, i) => (s === d ? [i] : [])));
       const positions = await matchedContactPositions(tx, { pariwarId: p, callerMemberId: caller, normalised, indexes: normalised.distinct });
-      expect(positions).toEqual([1, 9]);
+      expect(positions).toEqual([1, 7, 9]);
       // ⛔ nothing written
       expect((await client.query(`SELECT 1 FROM member_known_people WHERE pariwar_id = $1`, [p])).rows).toHaveLength(0);
     });
@@ -223,7 +229,7 @@ describe.skipIf(!hasDatabase)('Story 6.36b — known people (domain)', { timeout
       const first = await askKnownPerson(tx, { pariwarId: p, namerMemberId: namer, namedIndex: iB, foundBy: 'contacts' });
       expect(first.kind).toBe('created');
       const again = await askKnownPerson(tx, { pariwarId: p, namerMemberId: namer, namedIndex: iB, foundBy: 'typed' });
-      expect(again).toEqual({ kind: 'existing', link: (first as { link: unknown }).link });
+      expect(again).toEqual({ kind: 'existing', link: (first as { link: unknown }).link, label: 'asked' });
       expect((first as { link: { namedMemberId: string } }).link.namedMemberId).toBe(b);
       expect(await askKnownPerson(tx, { pariwarId: p, namerMemberId: namer, namedIndex: iNamer, foundBy: 'typed' })).toEqual({ kind: 'refused', reason: 'self' });
       expect((await client.query(`SELECT 1 FROM member_known_people WHERE namer_member_id = $1`, [namer])).rows).toHaveLength(1);
@@ -559,6 +565,144 @@ describe.skipIf(!hasDatabase)('Story 6.36b — known people (domain)', { timeout
       const out = await getKnownPeopleForExport(tx, { pariwarId: p, memberId: me });
       expect(out.named.map((l) => [l.otherMemberId, l.state])).toEqual([[b, 'declined']]);
       expect(out.namedBy.map((l) => [l.otherMemberId, l.state])).toEqual([[c, 'asked']]);
+    });
+  });
+
+  describe('review round 2 — `2026-10-15-333` (D1, D2) and P6 / P7', () => {
+    it('D1: a member a claim names (in ANY state) may ⛔ use the feature — both charges and every writer refuse, ⛔ counter moves', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const iMe = idx();
+      const me = await memberWithIndex(p, iMe);
+      await seedClaim(tx, p, { deceasedMemberId: me, currentState: 'closed' }); // a CLOSED claim still counts (the recorded cost)
+      const iOther = idx();
+      const other = await memberWithIndex(p, iOther);
+      const asNamer = await seedLink(client, { pariwarId: p, namer: me, named: other, state: 'accepted', askedAgoDays: 3, respondedAgoDays: 2 });
+      const openToMe = await seedLink(client, { pariwarId: p, namer: await memberWithIndex(p, idx()), named: me });
+      const acceptedByMe = await seedLink(client, { pariwarId: p, namer: await memberWithIndex(p, idx()), named: me, state: 'accepted', askedAgoDays: 3, respondedAgoDays: 2 });
+      await enterAppScope(client, p);
+      expect(await isKnownPeopleCaller(tx, p, me)).toBe(false);
+      expect(await isKnownPeopleCaller(tx, p, other)).toBe(true); // a positive control
+      const refused = { ok: false, reason: 'not_available' };
+      expect(await chargeContactMatch(tx, { pariwarId: p, memberId: me, numbers: 5 })).toEqual(refused);
+      expect(await chargeKnownPersonAsk(tx, { pariwarId: p, memberId: me })).toEqual(refused);
+      const notAvailable = { kind: 'refused', reason: 'not_available' };
+      expect(await askKnownPerson(tx, { pariwarId: p, namerMemberId: me, namedIndex: iOther, foundBy: 'contacts' })).toEqual(notAvailable);
+      expect(await answerKnownPersonRequest(tx, { pariwarId: p, namedMemberId: me, linkId: openToMe, answer: 'accept' })).toEqual(notAvailable);
+      expect(await removeKnownPerson(tx, { pariwarId: p, namerMemberId: me, linkId: asNamer })).toEqual(notAvailable);
+      expect(await withdrawKnownPerson(tx, { pariwarId: p, namedMemberId: me, linkId: acceptedByMe })).toEqual(notAvailable);
+      expect((await client.query(`SELECT 1 FROM member_daily_counters WHERE member_id = $1`, [me])).rows).toHaveLength(0);
+      for (const l of [asNamer, acceptedByMe]) expect((await linkRow(client, l))?.state).toBe('accepted');
+      expect((await linkRow(client, openToMe))?.state).toBe('asked');
+    });
+
+    it('D1: an OPEN request whose NAMER a claim names leaves my list and is ⛔ answerable; an ACCEPTED one stays and can be withdrawn', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const me = await memberWithIndex(p, idx());
+      const deadA = await memberWithIndex(p, idx());
+      const deadB = await memberWithIndex(p, idx());
+      await seedClaim(tx, p, { deceasedMemberId: deadA });
+      await seedClaim(tx, p, { deceasedMemberId: deadB });
+      const openFromDead = await seedLink(client, { pariwarId: p, namer: deadA, named: me });
+      const acceptedFromDead = await seedLink(client, { pariwarId: p, namer: deadB, named: me, state: 'accepted', askedAgoDays: 3, respondedAgoDays: 2 });
+      const openFromLiving = await seedLink(client, { pariwarId: p, namer: await memberWithIndex(p, idx()), named: me });
+      await enterAppScope(client, p);
+      const reqs = await listRequestsNamingMe(tx, { pariwarId: p, namedMemberId: me });
+      expect(new Map(reqs.items.map((r) => [r.linkId, r.state]))).toEqual(new Map([[openFromLiving, 'asked'], [acceptedFromDead, 'accepted']]));
+      expect(await answerKnownPersonRequest(tx, { pariwarId: p, namedMemberId: me, linkId: openFromDead, answer: 'accept' })).toEqual({ kind: 'refused', reason: 'request_closed' });
+      expect((await linkRow(client, openFromDead))?.state).toBe('asked'); // ⛔ written
+      expect((await answerKnownPersonRequest(tx, { pariwarId: p, namedMemberId: me, linkId: openFromLiving, answer: 'accept' })).kind).toBe('done'); // a positive control
+      expect((await withdrawKnownPerson(tx, { pariwarId: p, namedMemberId: me, linkId: acceptedFromDead })).kind).toBe('done');
+    });
+
+    it('D2: a member in renewal GRACE can be asked (the directory shows them "Active"); a lapsed-unpaid one is ⛔', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const namer = await memberWithIndex(p, idx());
+      const iGrace = idx();
+      const iUnpaid = idx();
+      await memberWithIndex(p, iGrace, 'active-in-grace');
+      await memberWithIndex(p, iUnpaid, 'lapsed-unpaid');
+      await enterAppScope(client, p);
+      expect((await askKnownPerson(tx, { pariwarId: p, namerMemberId: namer, namedIndex: iGrace, foundBy: 'contacts' })).kind).toBe('created');
+      expect(await askKnownPerson(tx, { pariwarId: p, namerMemberId: namer, namedIndex: iUnpaid, foundBy: 'contacts' })).toEqual({ kind: 'refused', reason: 'not_a_member' });
+    });
+
+    it('D2 (b): a re-ask of a person ALREADY linked answers that link with the list\'s own label — whatever happened to them since', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const accepted = { state: 'accepted', askedAgoDays: 3, respondedAgoDays: 2 } as const;
+      // Two namers — the backstop allows three live links each.
+      const namer1 = await memberWithIndex(p, idx());
+      const namer2 = await memberWithIndex(p, idx());
+      const cases: { namer: MemberId; state: MemberLifecycleState; claim?: boolean; link: Partial<Parameters<typeof seedLink>[1]>; label: string }[] = [
+        { namer: namer1, state: 'active-in-grace', link: accepted, label: 'accepted' }, // ⛔ never a late renewal
+        { namer: namer1, state: 'withdrawn', link: accepted, label: 'unavailable' },
+        { namer: namer1, state: 'active', claim: true, link: accepted, label: 'unavailable' }, // the SAME label — ⛔ why
+        { namer: namer2, state: 'lapsed-unpaid', link: accepted, label: 'accepted' }, // ⛔ never a late renewal
+        { namer: namer2, state: 'active', link: {}, label: 'asked' },
+      ];
+      const seeded: { namer: MemberId; index: string; linkId: KnownPersonLinkId; label: string }[] = [];
+      for (const c of cases) {
+        const index = idx();
+        const named = await memberWithIndex(p, index, c.state);
+        if (c.claim) await seedClaim(tx, p, { deceasedMemberId: named });
+        seeded.push({ namer: c.namer, index, linkId: await seedLink(client, { pariwarId: p, namer: c.namer, named, ...c.link }), label: c.label });
+      }
+      await enterAppScope(client, p);
+      const listed = new Map(
+        [...(await listMyKnownPeople(tx, { pariwarId: p, namerMemberId: namer1 })).items, ...(await listMyKnownPeople(tx, { pariwarId: p, namerMemberId: namer2 })).items].map((i) => [i.linkId, i.label]),
+      );
+      for (const s of seeded) {
+        const r = await askKnownPerson(tx, { pariwarId: p, namerMemberId: s.namer, namedIndex: s.index, foundBy: 'typed' });
+        expect(r.kind === 'existing' ? [r.link.linkId, r.label] : r, s.label).toEqual([s.linkId, s.label]);
+        expect(listed.get(s.linkId)).toBe(s.label); // the ask and the list say the SAME thing
+      }
+      expect((await client.query(`SELECT 1 FROM member_known_people WHERE pariwar_id = $1`, [p])).rows).toHaveLength(seeded.length); // ⛔ a new row
+    });
+
+    it('knownPersonLiveLabel: the list\'s label NOW — a STALE ask (its lapse unrecorded) and an ended or another namer\'s link ⇒ null', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const namer = await memberWithIndex(p, idx());
+      const fresh = await seedLink(client, { pariwarId: p, namer, named: await memberWithIndex(p, idx()) });
+      const stale = await seedLink(client, { pariwarId: p, namer, named: await memberWithIndex(p, idx()), askedAgoDays: 31 });
+      const gone = await seedLink(client, { pariwarId: p, namer, named: await memberWithIndex(p, idx()), state: 'removed', askedAgoDays: 2, endedAgoDays: 1 });
+      const other = await seedLink(client, { pariwarId: p, namer: await memberWithIndex(p, idx()), named: await memberWithIndex(p, idx()) });
+      await enterAppScope(client, p);
+      const label = (linkId: KnownPersonLinkId) => knownPersonLiveLabel(tx, { pariwarId: p, namerMemberId: namer, linkId });
+      expect(await label(fresh)).toBe('asked');
+      expect(await label(stale)).toBeNull(); // the list shows it `not_accepted`
+      expect(await label(gone)).toBeNull();
+      expect(await label(other)).toBeNull();
+    });
+
+    it('P7: withdrawing ANOTHER member\'s accepted link ⇒ not_found, and it stays accepted', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const me = await memberWithIndex(p, idx());
+      const stranger = await memberWithIndex(p, idx());
+      const theirs = await seedLink(client, { pariwarId: p, namer: await memberWithIndex(p, idx()), named: stranger, state: 'accepted', askedAgoDays: 3, respondedAgoDays: 2 });
+      await enterAppScope(client, p);
+      expect(await withdrawKnownPerson(tx, { pariwarId: p, namedMemberId: me, linkId: theirs })).toEqual({ kind: 'refused', reason: 'not_found' });
+      expect((await linkRow(client, theirs))?.state).toBe('accepted');
+      expect((await withdrawKnownPerson(tx, { pariwarId: p, namedMemberId: stranger, linkId: theirs })).kind).toBe('done'); // a positive control
+    });
+
+    it('P6: a decline is ONE instant — responded_at = ended_at, after asked_at', async () => {
+      const { tx, client } = getTx();
+      const p = freshPariwar();
+      const me = await memberWithIndex(p, idx());
+      const d = await seedLink(client, { pariwarId: p, namer: await memberWithIndex(p, idx()), named: me });
+      await enterAppScope(client, p);
+      expect((await answerKnownPersonRequest(tx, { pariwarId: p, namedMemberId: me, linkId: d, answer: 'decline' })).kind).toBe('done');
+      // compared IN SQL — a JS Date keeps milliseconds, so two instants microseconds apart would still read equal
+      const { rows } = await client.query<{ same: boolean; after: boolean; state: string }>(
+        `SELECT state, responded_at = ended_at AS same, responded_at > asked_at AS after FROM member_known_people WHERE link_id = $1`,
+        [d],
+      );
+      expect(rows[0]).toEqual({ state: 'declined', same: true, after: true });
     });
   });
 });

@@ -32,11 +32,15 @@ export async function pickOneContact(): Promise<PreparedContacts | null> {
   return prepareContacts([contact as PhoneContact])
 }
 
-/** iOS 18 limited access: let the member share more contacts. Resolves false where unsupported. */
+/**
+ * iOS 18 limited access: let the member share more contacts. `true` ONLY when the picker NEWLY shared some (it resolves
+ * with their ids) — a cancelled or empty picker re-sent every number and spent one of the three daily checks (review
+ * round 2, P5). `false` where unsupported.
+ */
 export async function shareMoreContacts(): Promise<boolean> {
   try {
-    await Contacts.presentAccessPickerAsync()
-    return true
+    const added = await Contacts.presentAccessPickerAsync()
+    return Array.isArray(added) && added.length > 0
   } catch {
     return false
   }

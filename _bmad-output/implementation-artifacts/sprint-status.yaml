@@ -1,3 +1,16 @@
+# last_updated: 2026-10-15h (STORY 6.36b — CODE REVIEW ROUND 2 CLOSED (`bmad-code-review 6.36b`, the whole branch `b6cbf9db...a34a8739`,
+# three layers in parallel): row `6-36b-people-who-know-me` `review` → `done`. 3 decisions (D1–D3 — BigDev all A → `2026-10-15-333`: a
+# member whose death was reported can ⛔ use the feature and their open request leaves living members' lists; a member in renewal grace
+# is found and named like an `active` one; the export ⛔ says another member was erased or how the namer found you), 16 patch, 8 defer
+# (W1–W8), 5 dismissed. BigDev "1 — apply every patch": P1–P19 applied test-first; the FIX DIFF reviewed to convergence in SEVEN
+# three-layer rounds (6–7 scoped to the find screen); four more author-commits, each committed ALONE before its code — `-334` (the
+# export's members-who-named-me list reads a removal / erasure / hidden open request the SAME; the withdraw line kept), `-335`
+# (decided by the claim's FILING date; the erased-name residual), `-336` (that residual for EVERY ended row), `-337` (the ask's
+# success line true for everyone). Regressions caught by the fix review and fixed before commit (the erasure's EvalPlanQual instant,
+# the saved-name guard on Back, iOS announcement collisions, the export's day-30 death signal, the Retry unmounting on a never-loaded
+# list). Touched packages green on :5434 (domain 446 + unit, API 453, contracts 1,374, i18n 116, mobile 1,009; tsc + eslint; the
+# friction gate). W9 (app-wide Spinner label) and W10 (the fix review's residuals) → deferred-work. ⚠ `pnpm ci:local` ⛔ re-run on the
+# final tree; ⛔ demonstrated on a device. ⛔ No migration. ⛔ No other row moves.)
 # last_updated: 2026-10-15g (STORY 6.36b — review continuation (`bmad-dev-story`): R1–R6 resolved test-first (`aadaf411`); the fix
 # diff reviewed to convergence in 9 three-layer rounds (one HIGH regression caught and fixed — the saved-name wipe on a denial);
 # every list read bounded at 15 s; FD-1..FD-4 → deferred-work.md (FD-1: the app-wide token refresh has no timeout). ci:local
@@ -20173,7 +20186,7 @@ development_status:
   # 6-36b on its own test DB `twt-test-pg-b` :5434); then 6-36c ∥ row 6-36 once 6-36a AND 6-36b are done. Migrations fixed 0161 / 0162 /
   # 0163 (row 6-36) / 0164 (6-36c), merged to main in that order. 6-27c waits for row 6-36 AND 6-36c.
   6-36a-member-workplace-and-posting-history: done
-  6-36b-people-who-know-me: review
+  6-36b-people-who-know-me: done
   6-36c-workplace-list-curation-and-prompts: backlog
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted

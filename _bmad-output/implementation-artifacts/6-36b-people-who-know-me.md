@@ -481,6 +481,9 @@ changing), each round's findings triaged and applied before the next ([[feedback
   concurrency set 446 (1 skipped) and the unit suite; API — known-people integration + every unit 453; contracts 1,374;
   i18n 116; mobile 1,009; `tsc` and eslint clean in all five; the friction-budget gate green. ⚠ `pnpm ci:local` ⛔ re-run on
   the final tree; ⛔ demonstrated on a device or a real screen reader.
+- ⭐ **Then (BigDev: *"1"* — run it): `pnpm ci:local` on the final tree `079d2876` (`DATABASE_URL` = `:5434`): PASSED — 36 / 36 jobs
+  green.** Integration: domain 5324 (+1 skipped), API 1779 (+1), jobs 797, channels 231, validity-service 284, niyamavali-engine
+  144, events 36, queue 4; unit: mobile 1009, admin 1170, contracts 1374. ⚠ Still ⛔ demonstrated on a device or a real screen reader.
 
 ## Dev Notes
 
@@ -703,6 +706,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-14, worktree `.claude
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-15 | 1.13 | `pnpm ci:local` on the final tree `079d2876` (`:5434`): PASSED — 36 / 36 jobs green (integration: domain 5324, API 1779, jobs 797; unit: mobile 1009). ⛔ Code changed. |
 | 2026-10-15 | 1.12 | `bmad-code-review 6.36b` round 2 (the whole branch `b6cbf9db...a34a8739`, three layers): 3 decisions (D1–D3 — BigDev all A → `-333`), 16 patch, 8 defer (W1–W8), 5 dismissed. BigDev **1 — apply every patch**: P1–P19 applied test-first; the fix diff reviewed to convergence in seven three-layer rounds, four more decisions (`-334` … `-337`) committed alone before their code; regressions caught and fixed before commit (the erasure's EvalPlanQual instant, the saved-name guard on Back, iOS announcement collisions, the export's day-30 death signal, the Retry unmounting on a never-loaded list). Touched packages green (domain 446 + unit, API 453, contracts 1,374, i18n 116, mobile 1,009; tsc + eslint). ⚠ `ci:local` ⛔ re-run on the final tree; ⛔ device / screen-reader demonstration. Status → `done`. |
 | 2026-10-15 | 1.11 | `bmad-dev-story` (review continuation): R1–R6 resolved test-first (`aadaf411`); the fix diff reviewed to convergence in 9 three-layer rounds (one HIGH regression of mine caught and fixed: the saved-name wipe on a denial); every list read bounded at 15 s; FD-1..FD-4 deferred (FD-1: the app-wide token refresh has ⛔ timeout). `ci:local` 36 / 36 green on `:5434`. ⛔ Device / screen-reader demonstration. Status → `review`. |
 | 2026-10-15 | 1.10 | `bmad-code-review`: three review layers completed on `b6cbf9db...185da74a`; 6 MEDIUM / P2 patch findings, 0 decisions, 0 deferrals, 1 dismissed; 159 focused tests passed. BigDev selected **2 — Leave as action items**: R1–R6 recorded unchecked, 0 patches applied; story and sprint status → `in-progress`. |

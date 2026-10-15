@@ -1,3 +1,7 @@
+# last_updated: 2026-10-15i (STORY 6.36b — the gate after code review round 2 (BigDev: "1" — run `pnpm ci:local`): on the final tree
+# `079d2876`, `DATABASE_URL` = `:5434`: PASSED — 36 / 36 jobs green (integration: domain 5324 (+1 skipped), API 1779 (+1), jobs 797,
+# channels 231, validity-service 284, niyamavali-engine 144, events 36, queue 4; unit: mobile 1009, admin 1170, contracts 1374). Row
+# `6-36b-people-who-know-me` stays `done`. Ready to fast-forward to `main` — BigDev's call. ⛔ Demonstrated on a device. ⛔ No other row moves.)
 # last_updated: 2026-10-15h (STORY 6.36b — CODE REVIEW ROUND 2 CLOSED (`bmad-code-review 6.36b`, the whole branch `b6cbf9db...a34a8739`,
 # three layers in parallel): row `6-36b-people-who-know-me` `review` → `done`. 3 decisions (D1–D3 — BigDev all A → `2026-10-15-333`: a
 # member whose death was reported can ⛔ use the feature and their open request leaves living members' lists; a member in renewal grace

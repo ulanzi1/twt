@@ -1,10 +1,10 @@
 // Story 6.27c (Task 4.5; AC2, R12) — the neighbours' text, the PURE parts: the send hours (09:00–20:00 IST — tests at 08:59 /
 // 09:00 / 19:59 / 20:00 IST and across midnight) and the app-link origin check (`resolveAppLinksOrigin` — `resolveHttpsOrigin`
-// AND ⛔ a port written in the raw value AND ⛔ a trailing-dot host).
+// AND ⛔ a port written in the raw value AND ⛔ a trailing-dot host) and the link it makes fitting the `{link}` slot (review F6).
 
 import { describe, expect, it } from 'vitest';
 
-import { isInPeerRequestSendWindow, nextPeerRequestSendWindowStart } from '../src/scheduler/claim-peer-mesh-requests.js';
+import { appLinksConfigGap, isInPeerRequestSendWindow, nextPeerRequestSendWindowStart } from '../src/scheduler/claim-peer-mesh-requests.js';
 import { resolveAppLinksOrigin, resolveHttpsOrigin } from '../src/scheduler/staff-email-config.js';
 
 /** An IST wall-clock time on 2026-10-16 as an instant (IST = UTC + 05:30). */
@@ -62,5 +62,27 @@ describe('resolveAppLinksOrigin — R12 (closes "`APP_LINKS_BASE_URL` can disagr
   it('the shared validator itself is UNCHANGED — it still admits the port and the dot (the staff email\'s origin)', () => {
     expect(resolveHttpsOrigin('https://links.example.org:8443')).toBe('https://links.example.org:8443');
     expect(resolveHttpsOrigin('https://links.example.org:443')).toBe('https://links.example.org');
+  });
+});
+
+describe('appLinksConfigGap — the base must make a link that FITS the `{link}` slot (6.27c review F6)', () => {
+  // `<origin>/peer-request?c=<12>` — 28 characters after the origin ⇒ an origin of ≤ 92 (a host of ≤ 84) fits the 120 slot.
+  const host = (n: number): string => `${'a'.repeat(n - 4)}.org`;
+
+  it('an origin whose link is EXACTLY 120 characters ⇒ ready', () => {
+    expect(appLinksConfigGap(`https://${host(84)}`)).toBeNull();
+  });
+
+  it.each([
+    ['one character more (121)', `https://${host(85)}`],
+    ['the review\'s case — valid 60- and 40-character DNS labels (141)', `https://${'a'.repeat(60)}.${'b'.repeat(40)}.org`],
+  ])('⛔ %s ⇒ `config:app_link_too_long` (an accepted origin, a link that cannot fit)', (_label, raw) => {
+    expect(resolveAppLinksOrigin(raw)).not.toBeNull();
+    expect(appLinksConfigGap(raw)).toBe('config:app_link_too_long');
+  });
+
+  it('an origin R12 refuses is still `config:app_links_base_url_invalid`', () => {
+    expect(appLinksConfigGap('https://links.example.org:8443')).toBe('config:app_links_base_url_invalid');
+    expect(appLinksConfigGap(undefined)).toBe('config:app_links_base_url_invalid');
   });
 });

@@ -18,6 +18,7 @@ import {
   PEER_MESH_REQUEST_SMS_LOCALES,
   PEER_MESH_REQUEST_SMS_TEMPLATES,
   fitsDltAlphanumeric,
+  fitsDltUrl,
   peerMeshRequestDltConfigKey,
   renderPeerMeshRequest,
 } from '../src/scheduler/peer-mesh-sms-templates.js';
@@ -188,5 +189,14 @@ describe('fitsDltAlphanumeric — R9: the `{member}` slot counts CODE POINTS, �
     expect(astral.length).toBe(2);
     expect(fitsDltAlphanumeric(astral.repeat(40))).toBe(true);
     expect(fitsDltAlphanumeric(astral.repeat(41))).toBe(false);
+  });
+});
+
+describe('fitsDltUrl — 6.27c review F6: the `{link}` slot\'s url ceiling, ≤ 120', () => {
+  it.each([
+    ['120 characters', `https://${'a'.repeat(112)}`, true],
+    ['121 characters', `https://${'a'.repeat(113)}`, false],
+  ])('%s ⇒ %s', (_label, value, fits) => {
+    expect(fitsDltUrl(value)).toBe(fits);
   });
 });

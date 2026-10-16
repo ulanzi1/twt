@@ -4,6 +4,23 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-27c-peer-mesh-sending-texts-and-links (2026-10-17) — residuals of the F2 / F5 fixes
+
+- **The send hours are re-checked just BEFORE the send core, ⛔ inside it** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+  (the `sendAt` check) → `apps/jobs/src/scheduler/claim-dlt-sms-send.ts` `sendClaimDltSms`] — after the child's last 09:00–20:00 IST check,
+  the shared core still awaits two Secret Manager reads (the template id, the helpline) before `provider.send`; a slow read at 19:59:59 can
+  put the hand-off seconds past 20:00. ⛔ Fixed in 6.27c: the core is shared with the correction and suspicion senders. ⭐ Trigger: the
+  next change to `sendClaimDltSms` — give it an optional `beforeSend` guard checked immediately before `provider.send`.
+- **A ping begun but ⛔ handed off when 20:00 IST passes is re-claimed as attempt 2** [`claim-peer-mesh-requests.ts` (the `sendAt`
+  deferral); `packages/domain/src/claim/peer-mesh-request.ts` `beginPeerMeshRequest`] — it takes the transient's path: at 09:00 a failed
+  re-check reads `-297` §2 / `-298` "may have sent" and is ⛔ replaced (R1 / R5), although ⛔ text went. The window is the unsealing +
+  hashing (milliseconds). ⭐ Trigger: a recorded "may have sent" alarm on a row whose `first_detail` is NULL and `provider_message_id` NULL —
+  then release an un-handed-off row back to un-begun (a domain CAS; 0166's trigger forbids a return to NULL today).
+- **The sweep's cursor restarts every run** [`claim-peer-mesh-requests.ts` `runPeerMeshRequestSweep`] — F5 stopped HELD claims from
+  counting against the bound (except under a global gap, where every claim is held); more than `maxClaims` (20,000) READY claims that
+  STAY due (e.g. `attempting` rows on transients for up to three days) would still starve the claims after them. Unrealistic at the
+  supported scale. ⭐ Trigger: a "hit the hard bound" alarm from this sweep — then persist the cursor between runs.
+
 ## Deferred from: dev-story 6.27c (2026-10-16)
 
 - **The console shows a skipped ping's `no_target:*` code verbatim and ⛔ links it to its replacement** [`apps/api/src/modules/claims/peer-answers-assembler.ts`

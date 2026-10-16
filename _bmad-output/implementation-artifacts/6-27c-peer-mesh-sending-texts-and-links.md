@@ -12,7 +12,7 @@ the author. The v2.x text is replaced, ⛔ not annotated — its history is the 
 ⚠ Before Task 1: `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory` — re-read any cited file
 that moved.
 
-STATUS: `in-progress` — code review left six patch findings as action items (2026-10-17).
+STATUS: `review` — the code review's six patch findings F1–F6 resolved (2026-10-17, `bmad-dev-story` review continuation).
 ⭐ SENDING IS LAST on purpose: once a real text goes out, real answers arrive — the warnings and the wait (6.27b), the approvers' view
 (6.27b), the inspector's independence (6.27d) and the workplace selection (row 6-36) all exist now.
 ⭐ THE RECORD is 6.27a's file (`6-27-peer-mesh-sending-replies-and-date-of-death.md` — rulings, Invariants, F1–F41, PM1–PM25, Traps 1–21).
@@ -25,7 +25,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 # Story 6.27c: Each of the Five Is Texted Once — Naming the Member, With a Link to the Questions and the Helpline, in the Pariwar's Language, While an Answer Can Still Be Taken `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
@@ -513,39 +513,39 @@ Review date: 2026-10-17. Full branch review, without chunks: `cdc39004..668e545f
 5,084 additions / 188 deletions. Blind Hunter, Edge Case Hunter and Acceptance Auditor completed;
 6 patch findings, 0 decisions, 0 deferred, 2 dismissed. Application code unchanged; patch disposition awaits BigDev.
 
-- [ ] [Review][Patch] **F1 / P1 — Query failures log the by-link code.**
+- [x] [Review][Patch] **F1 / P1 — Query failures log the by-link code.**
   [packages/domain/src/claim/peer-mesh-request.ts:641]
   AC5b / AC6 / R13: Drizzle wraps a failed resolver query in an error whose message and parameters contain the code.
   The member transaction rethrows it to the error mapper, which logs the raw error at `error`; the route's `warn` level
   permits that line. The existing PII test fails the connection before the query and misses this path. Sanitize the error
   before logging while retaining a safe diagnostic. **Verified:** inject a failure at the resolver's `client.query`;
   the API returns 500 and its captured log contains the planted code. Source: auditor.
-- [ ] [Review][Patch] **F2 / P2 — A daytime child can send after the 20:00 IST cutoff.**
+- [x] [Review][Patch] **F2 / P2 — A daytime child can send after the 20:00 IST cutoff.**
   [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:415]
   AC2: the window is checked only at job entry, before awaited config, name, lock, decrypt and send work.
   Recheck the current clock at each begin and provider handoff, and defer remaining work when the window closes.
   **Verified:** start at 19:59:59, advance the injected clock to 20:00:01 during config resolution;
   both selected neighbours are still texted. Sources: blind + edge + auditor.
-- [ ] [Review][Patch] **F3 / P2 — A newly begun ping can already have an expired lease.**
+- [x] [Review][Patch] **F3 / P2 — A newly begun ping can already have an expired lease.**
   [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:452]
   AC2 / concurrency invariant: every begin receives the job-entry `now`, which is stored as `claimed_at`.
   Slow configuration or earlier processing can backdate a fresh lease by more than ten minutes, permitting another
   live child to reclaim and send the same ping. Timestamp the lease at the locked begin, using current time rather
   than the run-start snapshot. **Verified:** advance the clock eleven minutes during config, then start another child
   while the first is handing off its send; the single neighbour receives two provider calls. Sources: blind + edge.
-- [ ] [Review][Patch] **F4 / P2 — Back from one link suppresses later links on the mounted route.**
+- [x] [Review][Patch] **F4 / P2 — Back from one link suppresses later links on the mounted route.**
   [apps/mobile/components/peer-request/PeerRequestSlot.tsx:38]
   AC6: `linkDismissed` remains true when a new `code` prop arrives, so the resolver receives null and the list stays open.
   Scope dismissal to the incoming link and reset request navigation when the code changes.
   **Verified:** render the real slot with code A, invoke its questionnaire Back, rerender with code B;
   the mocked resolver hook receives null instead of B. Sources: blind + edge + auditor.
-- [ ] [Review][Patch] **F5 / P2 — Held prefixes can starve ready claims on every bounded sweep.**
+- [x] [Review][Patch] **F5 / P2 — Held prefixes can starve ready claims on every bounded sweep.**
   [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:284]
   AC4 / R16 recovery: each run resets the cursor to null and held claims consume the claim bound. If the same held
   low-id claims fill that bound (default 20,000), later ready claims are never visited by the recovery sweep.
   Preserve fair continuation across bounded runs. **Verified:** two claims, lower id held, higher id ready,
   `maxRuns = 1`; three successive sweeps enqueue neither claim. Sources: blind + edge.
-- [ ] [Review][Patch] **F6 / P2 — Valid origins can produce links longer than the registered DLT slot.**
+- [x] [Review][Patch] **F6 / P2 — Valid origins can produce links longer than the registered DLT slot.**
   [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:530]
   The registry declares a 120-character URL ceiling, but the config guard validates only the origin's shape.
   An oversized rendered link reaches the provider after a once-ever slot is begun; a permanent DLT rejection would
@@ -553,7 +553,17 @@ Review date: 2026-10-17. Full branch review, without chunks: `cdc39004..668e545f
   and hold the scope if it cannot fit. **Verified:** an accepted HTTPS origin with valid 60- and 40-character DNS labels
   produces a 141-character request link. Sources: blind + edge.
 
-**Validation:** 195 existing focused tests passed: jobs/SMS 69, domain/detail/decrypt-fence/concurrency/policy 106,
+**Resolution (2026-10-17, `bmad-dev-story` review continuation):** all six fixed, each with a test that FAILS on the unfixed code and
+passes on the fix (red run, then green): F1 — `resolvePeerRequestByLinkCode` rethrows a sanitised `PeerRequestByLinkReadError` (the
+SQLSTATE only, ⛔ `cause`); F2 — the clock re-read at each begin and before each hand-off, a closed window ⇒ re-enqueued for 09:00 IST
+(with the run's counts); F3 — the begin's lease stamped with that fresh clock; F4 — a new `code` on the mounted slot resets the dismissal
+and the open request; F5 — a held claim ⛔ counts against the hard bound (except under a GLOBAL gap); F6 — `appLinksConfigGap` holds an
+origin whose link exceeds the `{link}` slot (`config:app_link_too_long`, via `fitsDltUrl`). The fix diff was adversarially reviewed
+(fresh context): ⛔ HIGH; five LOW — three fixed (the global-gap bound, the deferral's counts + docs, the F1 spec's pooled clients); three
+residuals recorded in `deferred-work.md`, ⛔ fixed here (the send core's own config reads after the check; a begun-⛔-sent row re-claimed
+as attempt 2; the sweep cursor restarting).
+
+**Validation (the review):** 195 existing focused tests passed: jobs/SMS 69, domain/detail/decrypt-fence/concurrency/policy 106,
 mobile link/route-map 20. Six additional isolated reproductions failed their expected-correct-behavior assertions,
 one for each finding. They live outside the repository at `/private/tmp/twt-6-27c-review-tests/` and
 `/private/tmp/twt-6-27c-mobile-review/`. No full `ci:local` rerun was performed for this review.
@@ -680,6 +690,15 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
     `dlt-typed-variables`, `domain-invariants`, `access-wrapper` green); the one red job was `friction-budget` (AC-4: the mobile slot
     changed with ⛔ declaration) — fixed by the Story 6.27c disposition block in `friction-budget.md`, committed, and the gate re-run
     alone: ✓ passed. 0166 is applied to :5432 and :5433 at the file's hash.
+  - **2026-10-17 — review continuation (F1–F6).** ✅ Resolved review finding [P1]: F1 — the by-link code in a query-failure log. ✅ Resolved
+    review finding [P2]: F2 — the 20:00 IST cutoff checked only at job entry. ✅ Resolved review finding [P2]: F3 — a fresh lease stamped with
+    the run-start clock. ✅ Resolved review finding [P2]: F4 — a dismissed link suppressing the next on the mounted route. ✅ Resolved review
+    finding [P2]: F5 — held claims starving the bounded sweep. ✅ Resolved review finding [P2]: F6 — an origin whose link exceeds the url
+    slot. Tests: 1 API leg (F1), 5 live jobs legs + 1 hold case (F2 ×2, F3, F5 ×2, F6), 4 pure jobs legs + 2 registry legs (F6), a new
+    jsdom render test of the REAL slot (F4, 3 legs); each new leg red on the unfixed code. The fix diff adversarially reviewed: 3 LOW
+    fixed, 3 residuals recorded in `deferred-work.md` (⛔ closed). ⚠ Recorded: a ping begun but ⛔ handed off when 20:00 passes is re-claimed
+    at 09:00 as attempt 2 — truthfully ⛔ sent, but on that re-claim a failed re-check reads "may have sent" and is ⛔ replaced.
+    `DATABASE_URL=:5433 pnpm ci:local` on the final tree: **36/36 green in one run** (⛔ migration in this continuation).
   - ⚠ **Go-live, ⛔ merge** ([[project_not_in_production_merge_is_not_golive]]): as built the sweep HOLDS every Pariwar today — the live
     `peer_mesh.v4` carries two `'pending'` questions (Row 27 (f)) and the template ids are unset (Row 27 closes on all eight). Nothing is texted
     until then.
@@ -701,6 +720,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 - `apps/api/tests/integration/claims/peer-request-by-link.spec.ts`
 - `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`
 - `apps/mobile/tests/unit/peer-request-link.test.ts`
+- `apps/mobile/tests/unit/peer-request-slot-render.test.ts` (review F4)
 
 **Modified**
 - `packages/domain/migrations/meta/_journal.json` (idx 166)
@@ -722,6 +742,9 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 - `apps/jobs/src/claim-peer-mesh.ts` (R8)
 - `apps/jobs/src/scheduler/staff-email-config.ts` (`resolveAppLinksOrigin`)
 - `apps/jobs/tests/claim-peer-mesh.test.ts`
+- `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`, `claim-peer-mesh-requests.ts`, their three tests and
+  `apps/api/tests/integration/claims/peer-request-by-link.spec.ts`, `packages/domain/src/claim/peer-mesh-request.ts`,
+  `apps/mobile/components/peer-request/PeerRequestSlot.tsx` — modified AGAIN by the review continuation (F1–F6)
 - `apps/api/src/modules/claims/claims.peer-request.member.routes.ts`
 - `apps/api/src/modules/claims/claims.peer-request.handlers.ts`
 - `apps/mobile/components/peer-request/PeerRequestSlot.tsx`
@@ -740,6 +763,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-17 | 3.5 | Addressed code review findings — 6 items resolved (F1 P1; F2–F6 P2): the sanitised by-link read error, the send hours and the lease re-read per ping, the slot's per-link dismissal, held claims off the sweep's bound, the link-length hold; fix diff adversarially reviewed (3 LOW fixed, 3 residuals to `deferred-work.md`). Status → review. |
 | 2026-10-17 | 3.4 | `bmad-dev-story`: Tasks 0.3–5.5 implemented — the registry + copy + sheet rows 13–14 (Task 1); 0166 (the grammar, the replacement link and trigger, R15) applied to :5432 and :5433 (Task 2); the domain send record + R7 (Task 3); the jobs child + 10:30 IST sweep + R8's hook + R12 (Task 4); the by-link route + mobile slot + AC7 + the records (Task 5). Status → review. |
 | 2026-10-16 | 3.3 | Task 0.1 / 0.2 DONE: BigDev accepted R5 (⛔ replace a re-claimed `no_target`); recorded as `2026-10-16-343`, committed alone (`ccca9f5f`); AC1 met. Task 0.3 (the drift check) stays the dev's first step. |
 | 2026-10-16 | 3.2 | Fresh-context validate round 2 (⛔ HIGH; the regex proven in node AND a Postgres ARE, every stored value covered, every fixture passes, R15 keeps every existing leg green): M1 — a re-claimed NAME fault keeps `no_target:name_<reason>` + the `-298` alarm (`-298` A), `recheck_name_unavailable` dropped; L1 — the replacement trigger also requires `attempt_count = 1` (R5's backstop); L2 — R6's finalise in the ORDER sentence; L3 — the deferred item closes with `claimed_*` rewritable by design; L4 — join the regex's wrapped lines; L5 — two stale AC labels. |

@@ -9,7 +9,10 @@
 //   · AC2 / AC2c — each neighbour texted ONCE with EXACTLY the registered words, the mode-resolved name and the link
 //     `<origin>/peer-request?c=<the row's code>`; the accepted write; a re-run sends ⛔ again; ⛔ at night (re-enqueued at 09:00 IST);
 //   · AC5 / AC5b — a skipped neighbour replaced and the replacement texted; R6 (an erased number) replaced; a decrypt THROW is a
-//     transient (⛔ replaced); `name_too_long` texts ⛔ one; ⛔ new event; ⛔ alarm carries a name, a number or a link code.
+//     transient (⛔ replaced); `name_too_long` texts ⛔ one; ⛔ new event; ⛔ alarm carries a name, a number or a link code;
+//   · the code review's F2 / F3 / F5 / F6 — 20:00 IST crossed mid-run (before a begin; between a begin and the handoff) ⇒ ⛔ sent,
+//     deferred to 09:00; a lease stamped at its begin (⛔ the run's start) ⇒ a second child ⛔ re-claims it; a held claim ⛔ counts
+//     against the sweep's bound; a base whose link cannot fit the `{link}` slot HOLDS.
 
 import { randomUUID } from 'node:crypto';
 
@@ -293,6 +296,11 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     ['a non-443 port', { registry: [CLEARED], appLinksBaseUrl: 'https://links.example.org:8443' }, 'config:app_links_base_url_invalid'],
     ['an explicit :443', { registry: [CLEARED], appLinksBaseUrl: 'https://links.example.org:443' }, 'config:app_links_base_url_invalid'],
     ['a trailing-dot host', { registry: [CLEARED], appLinksBaseUrl: 'https://links.example.org.' }, 'config:app_links_base_url_invalid'],
+    [
+      'a base whose link cannot fit the `{link}` slot (review F6 — 141 characters)',
+      { registry: [CLEARED], appLinksBaseUrl: `https://${'a'.repeat(60)}.${'b'.repeat(40)}.org` },
+      'config:app_link_too_long',
+    ],
     ['⛔ template id', { registry: [CLEARED], config: { 'sms.dlt.template_id.peer_mesh.request.hi': null } }, 'config:dlt_template_id_missing:hi'],
   ] as const)('AC4 — %s HOLDS (⛔ ping begun)', async (_label, opts, reason) => {
     const w = await world();
@@ -430,5 +438,132 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(after.every((r) => r.send_outcome === 'no_target' && r.detail === 'no_target:name_too_long')).toBe(true);
     expect(h.sent).toHaveLength(0);
     expect(h.alarms).toEqual([]);
+  });
+
+  // ── the code review's F2 / F3 / F5 ──────────────────────────────────────────────────────────────────────────
+
+  /** 19:59:59 and 20:00:01 IST on 2026-10-16; the next 09:00 IST. */
+  const BEFORE_CUTOFF = new Date('2026-10-16T14:29:59.000Z');
+  const AFTER_CUTOFF = new Date('2026-10-16T14:30:01.000Z');
+  const NEXT_MORNING = new Date('2026-10-17T03:30:00.000Z');
+
+  it('⭐ F2 — 20:00 IST crossed BEFORE a begin (during the config check) ⇒ ⛔ ping begun, ⛔ sent; the child comes back at 09:00', async () => {
+    const w = await world({ selected: 2 });
+    const h = harness(w, { registry: [CLEARED] });
+    h.setNow(BEFORE_CUTOFF);
+    const resolve = h.deps.resolveConfig;
+    const deps: ClaimPeerMeshRequestDeps = {
+      ...h.deps,
+      resolveConfig: async (key) => {
+        const v = await resolve(key);
+        h.setNow(AFTER_CUTOFF);
+        return v;
+      },
+    };
+    expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).toEqual({
+      status: 'deferred_quiet_hours',
+      startAfter: NEXT_MORNING,
+      counts: { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0 },
+    });
+    expect(h.sent).toHaveLength(0);
+    expect((await rows(w)).every((r) => r.send_outcome === null)).toBe(true);
+    expect(h.enqueued).toEqual([expect.objectContaining({ queue: SMS_QUEUE, options: expect.objectContaining({ startAfter: NEXT_MORNING }) })]);
+  });
+
+  it('⭐ F2 — 20:00 IST crossed BETWEEN a begin and the handoff ⇒ ⛔ sent (the row stays `attempting`); 09:00 re-claims it and texts once', async () => {
+    const w = await world({ selected: 2 });
+    const h = harness(w, { registry: [CLEARED] });
+    h.setNow(BEFORE_CUTOFF);
+    // the clock passes 20:00 while the first neighbour's number is hashed — after its begin committed, before the handoff
+    const kms = new Proxy(enc.kms, {
+      get(target, prop, receiver) {
+        const v = Reflect.get(target, prop, receiver) as unknown;
+        if (typeof v !== 'function') return v;
+        const fn = v as (...a: unknown[]) => unknown;
+        if (prop === 'computeHmac') {
+          return (...a: unknown[]) => {
+            h.setNow(AFTER_CUTOFF);
+            return fn.apply(target, a);
+          };
+        }
+        return fn.bind(target);
+      },
+    });
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms } };
+    expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), 'job-night')).toMatchObject({ status: 'deferred_quiet_hours', startAfter: NEXT_MORNING });
+    expect(h.sent).toHaveLength(0);
+    const night = await rows(w);
+    const first = night.find((r) => r.ping_id === w.pings.map((p) => p.pingId).sort()[0]);
+    expect(first).toMatchObject({ send_outcome: 'attempting', attempt_count: 1, claimed_by_job: 'job-night' });
+    expect(night.filter((r) => r.send_outcome === null)).toHaveLength(1);
+    // the morning's child: the un-sent row re-claimed past its lease (the SAME code), the other begun — each texted ONCE
+    h.setNow(new Date(NEXT_MORNING.getTime() + 60_000));
+    await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-morning');
+    const morning = await rows(w);
+    expect(morning.every((r) => r.send_outcome === 'accepted')).toBe(true);
+    expect(morning.find((r) => r.ping_id === first!.ping_id)).toMatchObject({ attempt_count: 2, link_code: first!.link_code });
+    expect(h.sent).toHaveLength(2);
+    await expectIdsOnly(h, w);
+  });
+
+  it('⭐ F3 — the lease is stamped at the BEGIN (⛔ the run\'s start): a second child during the handoff ⛔ re-claims it — ONE text', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED] });
+    const second = harness(w, { registry: [CLEARED] });
+    const later = new Date(DAYTIME.getTime() + 11 * 60_000); // past the 10-minute lease from the FIRST child's start
+    second.setNow(later);
+    const resolve = h.deps.resolveConfig;
+    const gateway = h.deps.smsAppClient;
+    let secondResult: Awaited<ReturnType<typeof runPeerMeshRequestChild>> | undefined;
+    const deps: ClaimPeerMeshRequestDeps = {
+      ...h.deps,
+      resolveConfig: async (key) => {
+        const v = await resolve(key);
+        h.setNow(later); // the config check was slow
+        return v;
+      },
+      smsAppClient: {
+        isConfigured: () => true,
+        messaging: () => ({
+          send: async (m: SmsGatewayMessage) => {
+            secondResult = await runPeerMeshRequestChild(second.deps, boss(second), envelopeOf(w), 'second-job');
+            return gateway.messaging().send(m);
+          },
+        }),
+      },
+    };
+    await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), 'first-job');
+    expect(h.sent.length + second.sent.length).toBe(1);
+    expect(secondResult).toMatchObject({ status: 'done', counts: expect.objectContaining({ skipped: 1, accepted: 0 }) });
+    expect(await rows(w)).toEqual([expect.objectContaining({ send_outcome: 'accepted', attempt_count: 1, claimed_by_job: 'first-job' })]);
+  });
+
+  it('⭐ F5 — a HELD claim ⛔ counts against the sweep\'s bound: a ready claim after a held one is enqueued at `maxRuns = 1`', async () => {
+    const [low, high] = [await world({ selected: 1 }), await world({ selected: 1 })].sort((a, b) => a.claimCaseId.localeCompare(b.claimCaseId));
+    const h = harness(low!, { registry: [CLEARED] });
+    const deps: ClaimPeerMeshRequestDeps = {
+      ...h.deps,
+      maxRuns: 1,
+      pariwarAllowlist: [low!.pid, high!.pid],
+      resolveConfig: async (key) => {
+        if (key === `sms.claim_correction.helpline_number.${low!.pid}`) return null; // the LOW claim's Pariwar is held
+        if (key.startsWith('sms.dlt.template_id.peer_mesh.request.')) return 'TPL-PEER';
+        if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
+        return null;
+      },
+    };
+    const swept = await runPeerMeshRequestSweep(deps, boss(h));
+    expect(swept).toMatchObject({ heldForConfig: 1, enqueued: 1, scannedClaims: 2 });
+    expect(h.enqueued.map((e) => e.data.payload.claimCaseId)).toEqual([high!.claimCaseId]);
+    expect(h.alarms.some((a) => a.includes('hard bound'))).toBe(false);
+  });
+
+  it('F5 — under a GLOBAL gap every claim is held, so the held ones DO count against the bound (⛔ a walk of every due claim)', async () => {
+    const [low, high] = [await world({ selected: 1 }), await world({ selected: 1 })].sort((a, b) => a.claimCaseId.localeCompare(b.claimCaseId));
+    const h = harness(low!, { registry: [CLEARED], appLinksBaseUrl: 'https://links.example.org:8443' });
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, maxRuns: 1, pariwarAllowlist: [low!.pid, high!.pid] };
+    expect(await runPeerMeshRequestSweep(deps, boss(h))).toMatchObject({ heldForConfig: 1, enqueued: 0, scannedClaims: 1 });
+    expect(h.enqueued).toHaveLength(0);
+    expect(h.alarms.some((a) => a.includes('hit the hard bound of 1 claims'))).toBe(true);
   });
 });

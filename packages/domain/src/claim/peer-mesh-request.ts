@@ -632,18 +632,43 @@ export async function resolvePeerRequestLocale(db: Db, pariwarId: PariwarId): Pr
  * ⭐ R14 — the by-link answer: the ping whose `link_code` is `code` iff the code has the link form AND the ping is `memberId`'s own
  * in `pariwarId` AND it was TEXTED (`send_outcome = 'accepted'`) — submitted or closed included (the detail read then answers
  * 409). Everything else ⇒ `null` (the route's ONE 404). ⛔ The code is never logged or echoed.
+ * @throws PeerRequestByLinkReadError  the read failed — a SANITISED error (the SQLSTATE only; 6.27c review F1)
  */
 export async function resolvePeerRequestByLinkCode(
   db: Db,
   input: { readonly pariwarId: PariwarId; readonly memberId: MemberId; readonly code: string },
 ): Promise<PeerMeshPingId | null> {
   if (!LINK_CODE_PATTERN.test(input.code)) return null;
-  const { rows } = await db.execute<{ ping_id: string }>(sql`
-    SELECT ping_id FROM claim_peer_mesh_pings
-     WHERE pariwar_id = ${input.pariwarId} AND member_id = ${input.memberId} AND link_code = ${input.code} AND send_outcome = 'accepted'
-     LIMIT 1`);
+  let rows: { ping_id: string }[];
+  try {
+    ({ rows } = await db.execute<{ ping_id: string }>(sql`
+      SELECT ping_id FROM claim_peer_mesh_pings
+       WHERE pariwar_id = ${input.pariwarId} AND member_id = ${input.memberId} AND link_code = ${input.code} AND send_outcome = 'accepted'
+       LIMIT 1`));
+  } catch (err) {
+    // ⚠ Drizzle's wrapper carries the statement's PARAMETERS (the code) in its message, and its `cause` is the driver's error —
+    // both reach a logger's `err` serializer. ⛔ Rethrown: a fresh error with the SQLSTATE only, ⛔ `cause`.
+    throw new PeerRequestByLinkReadError(sqlStateOf(err));
+  }
   const r = rows[0];
   return r ? (r.ping_id as PeerMeshPingId) : null;
+}
+
+/** The by-link read failed. Its message, its fields and its stack carry ⛔ the code — the SQLSTATE only (PM21 (e); R13). */
+export class PeerRequestByLinkReadError extends Error {
+  public readonly name = 'PeerRequestByLinkReadError';
+  public constructor(public readonly sqlState: string | null) {
+    super(`[peer-mesh-request] the by-link read failed (sqlstate ${sqlState ?? 'none'})`);
+  }
+}
+
+/** A pg error's five-character SQLSTATE — on the error itself or on Drizzle's `cause` — or `null` (⛔ a message is read). */
+function sqlStateOf(err: unknown): string | null {
+  for (const e of [err, (err as { cause?: unknown } | null)?.cause]) {
+    const code = (e as { code?: unknown } | null)?.code;
+    if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) return code;
+  }
+  return null;
 }
 
 // ── The sweep's reads and writes (RN2 / RN3; R16) — cross-tenant, BYPASSRLS pool ──────────────────────────────────────

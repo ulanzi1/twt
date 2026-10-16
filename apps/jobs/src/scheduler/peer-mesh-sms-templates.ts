@@ -62,6 +62,15 @@ export function fitsDltAlphanumeric(value: string): boolean {
   return [...value].length <= MEMBER.maxLength;
 }
 
+/**
+ * The ONE predicate for whether a rendered link fits the `{link}` slot (the url ceiling) — 6.27c review F6: the config check
+ * holds an `APP_LINKS_BASE_URL` whose link cannot fit, BEFORE a once-ever slot is begun. Code points, as `fitsDltAlphanumeric`
+ * (a link is ASCII, so = UTF-16 units).
+ */
+export function fitsDltUrl(value: string): boolean {
+  return [...value].length <= LINK.maxLength;
+}
+
 /** The Secret Manager name of the request's DLT template id (RB4) — for the Pariwar's locale (PM22). */
 export function peerMeshRequestDltConfigKey(locale: PeerMeshRequestSmsLocale): string {
   return `sms.dlt.template_id.peer_mesh.request.${locale}`;

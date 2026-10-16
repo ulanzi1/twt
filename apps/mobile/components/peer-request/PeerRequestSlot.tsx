@@ -8,8 +8,8 @@
 // ⭐ Story 6.27c (AC6; R14) wires `code`: once the session has loaded and a code is present, ONE by-link call — `{ pingId }`
 // opens that request's questionnaire (its 409s show the existing "no longer open"); a 404 or a failed call shows
 // `PeerRequestNotOpenable` (`not_openable`) with the helpline CTA — ⛔ a hard error. Back from the link's request shows the
-// list (the code is dismissed — ⛔ a second call). ⛔ A code (missing / malformed / repeated) ⇒ the list. The decision is
-// `peerRequestSlotView` (pure, `lib/peer-request.ts`).
+// list (the code is dismissed — ⛔ a second call); a NEW code on the mounted route is resolved afresh. ⛔ A code (missing /
+// malformed / repeated) ⇒ the list. The decision is `peerRequestSlotView` (pure, `lib/peer-request.ts`).
 // ⭐ THE HEADER: the group's inner `<Stack />` would show a default header titled with the raw route name, so the slot
 // HIDES it and the in-screen pages carry their own Back (a cold-start link has ⛔ nothing behind it).
 // ⛔ Never log the code (PM21 (e)).
@@ -36,6 +36,14 @@ export function PeerRequestSlot({ code }: PeerRequestSlotProps): React.ReactElem
   const { session, isLoading } = useSession()
   const [openPingId, setOpenPingId] = useState<string | null>(null)
   const [linkDismissed, setLinkDismissed] = useState(false)
+  // ⭐ The dismissal and the open request belong to the link that was SHOWN (6.27c review F4): a NEW code arriving on the
+  // mounted route (a second texted link tapped) resets both, so its own by-link call decides — ⛔ a stale Back suppresses it.
+  const [shownCode, setShownCode] = useState(code)
+  if (code !== shownCode) {
+    setShownCode(code)
+    setLinkDismissed(false)
+    setOpenPingId(null)
+  }
   const pariwarId = isLoading ? undefined : session?.pariwarId
   const linkCode = linkDismissed ? null : code
   // ⛔ No call before the session has loaded (the hook is `enabled` only once `pariwarId` is the session's) or without a code.

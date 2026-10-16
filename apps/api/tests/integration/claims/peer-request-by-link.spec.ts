@@ -4,7 +4,8 @@
 //     an UNTEXTED ping's code (begun, ⛔ accepted) and a malformed code — identical status, code and message (the envelope's
 //     `request_id` differs per request — the 6.27a precedent); ⛔ session ⇒ 401; the per-member READ budget ⇒ 429;
 //   · R13 — a code planted in the URL reaches ⛔ log line on a 200, a 404 AND an injected 500 (`logStream`; the route runs at
-//     `logLevel: 'warn'`, and the error mapper logs `{ err, traceId }` only).
+//     `logLevel: 'warn'`, and the error mapper logs `{ err, traceId }` only);
+//   · review F1 — a failure of the resolver's OWN query (Drizzle's wrapper carries the parameters) logs the SANITISED error.
 
 import { randomUUID } from 'node:crypto';
 import { Writable } from 'node:stream';
@@ -214,5 +215,41 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the by-link resolver (:5433)', { 
     logLines.length = 0;
     await call(t, 'GET', `${base(p)}?limit=5&probe=${planted}`, tok);
     expect(logLines.some((l) => l.includes(planted))).toBe(true);
+  });
+
+  it('⭐ review F1 — a failure of the resolver\'s QUERY (⛔ the connection) logs ⛔ the code — the sanitised error, its SQLSTATE', async () => {
+    const p = randomUUID();
+    const m = await seedMember(t, p);
+    const r = await seedRequest(t, p, m);
+    const tok = token(t, m, p);
+    // The route's own client fails ONLY the resolver's statement — Drizzle wraps it with the statement's parameters (the code).
+    const connect = t.deps.pool.connect.bind(t.deps.pool);
+    const patched: { client: object; query: unknown }[] = [];
+    (t.deps.pool as { connect: unknown }).connect = async () => {
+      const client = await connect();
+      patched.push({ client, query: client.query });
+      const query = client.query.bind(client) as (...args: unknown[]) => unknown;
+      (client as { query: unknown }).query = (...args: unknown[]) => {
+        const text = typeof args[0] === 'string' ? args[0] : (args[0] as { text?: string } | undefined)?.text;
+        if (text?.includes('link_code =')) {
+          return Promise.reject(Object.assign(new Error(`injected query failure ${r.pingCode}`), { code: '57014' }));
+        }
+        return query(...args);
+      };
+      return client;
+    };
+    logLines.length = 0;
+    let status: number;
+    try {
+      status = (await byLink(t, p, r.pingCode, tok)).status;
+    } finally {
+      (t.deps.pool as { connect: unknown }).connect = connect;
+      // ⛔ a failing client left in the pool for a later test — each pooled client gets its own `query` back
+      for (const { client, query } of patched) (client as { query: unknown }).query = query;
+    }
+    expect(status).toBe(500);
+    // the logger DID write the 500 (⛔ a vacuous pass) — the sanitised error with its SQLSTATE — and ⛔ line carries the code
+    expect(logLines.some((l) => l.includes('PeerRequestByLinkReadError') && l.includes('57014'))).toBe(true);
+    for (const line of logLines) expect(line).not.toContain(r.pingCode);
   });
 });

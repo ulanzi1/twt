@@ -5,7 +5,8 @@
 // ⛔ Never `dispatch()` — a DIRECT DLT SMS through the shared core (`sendClaimDltSms`), the sibling registry's words.
 //
 // ── The child (one claim) ───────────────────────────────────────────────────────────────────────────────────────────────
-//   (1) QUIET HOURS — outside 09:00–20:00 IST ⇒ ⛔ ping begun; the child re-enqueued with `startAfter` = the next 09:00 IST;
+//   (1) QUIET HOURS — outside 09:00–20:00 IST ⇒ ⛔ ping begun; the child re-enqueued with `startAfter` = the next 09:00 IST
+//       (checked at the start, AND again at each begin and each provider handoff — the clock read afresh each time);
 //   (2) R11's RACE GUARD — the sweep's checks again (the gateway, `APP_LINKS_BASE_URL` for an app link, the LIVE questionnaire
 //       and ⛔ question of it `'pending'` (AC2b), the template id of the Pariwar's language, the helpline, ANY Secret Manager
 //       fault) BEFORE a ping is begun ⇒ `held_config` + ONE ids-only alarm, ⛔ slot used up;
@@ -17,7 +18,11 @@
 //       `normalizeMobile` → its keyed hash → the send → the compare-and-set. An UNUSABLE number is R6 (a second transaction
 //       finishes the row `no_sendable_number` and replaces it — unless R5); a decrypt / hash THROW is a transient (⛔ R6 — a KMS
 //       outage ⛔ drops a neighbour and texts another). A transient ⇒ the note + the NEXT ping; the child throws at the END
-//       (pg-boss retries the SAME job, which re-claims its own rows at once; finished pings are skipped).
+//       (pg-boss retries the SAME job, which re-claims its own rows at once; finished pings are skipped) — UNLESS 20:00 IST
+//       passes first: then the child RETURNS deferred (with its counts) and the 09:00 child re-claims those rows past their lease.
+//       ⚠ A row begun but ⛔ handed off when 20:00 passes is re-claimed as attempt 2 — the transient's path: a failed re-check
+//       then reads "may have sent" and ⛔ replaces (R1 / R5), although ⛔ text went. Recorded, ⛔ narrowed (the window is the
+//       unsealing + hashing); the send core's own config reads after that check are outside it (review residual).
 // ── The sweep, daily 10:30 IST (inside the send hours; after the suspicion sweep's 10:00) ─────────────────────────────────
 //   (1) config per Pariwar FIRST (memoised) → (2) the stalled scopes → the HELD ones' in-flight pings PARKED + ONE alarm →
 //   (3) the give-up (three IST days of UN-parked time) over the UN-held ones → (4) the paged due claims (R16 — `answerWindowSql`),
@@ -60,6 +65,7 @@ import { helplineNotCallbackNumberWarning, sendClaimDltSms } from './claim-dlt-s
 import {
   PEER_MESH_REQUEST_SMS_TEMPLATES,
   fitsDltAlphanumeric,
+  fitsDltUrl,
   peerMeshRequestDltConfigKey,
   renderPeerMeshRequest,
   type PeerMeshRequestSmsLocale,
@@ -127,11 +133,22 @@ async function configSet(deps: ClaimPeerMeshRequestDeps, key: string): Promise<'
   }
 }
 
+/**
+ * The app-link base's gap (R12), or `null`: ⛔ an app-link origin ⇒ `config:app_links_base_url_invalid`; an origin whose link
+ * cannot fit the registered `{link}` slot ⇒ `config:app_link_too_long` (6.27c review F6 — every code has the SAME length, so
+ * the link a real code makes is the link every text carries; ⛔ found only after a once-ever slot is begun).
+ */
+export function appLinksConfigGap(appLinksBaseUrl: string | undefined): string | null {
+  const origin = resolveAppLinksOrigin(appLinksBaseUrl);
+  if (origin === null) return 'config:app_links_base_url_invalid';
+  if (!fitsDltUrl(buildAppLinkUrl(origin, 'peerRequest', claimDomain.generatePeerRequestLinkCode()))) return 'config:app_link_too_long';
+  return null;
+}
+
 /** The GLOBAL gaps — the gateway and the app-link base (R12). `null` when ready, else the gap (an ALARM code — ⛔ stored). */
 function globalConfigGap(deps: ClaimPeerMeshRequestDeps): string | null {
   if (!deps.smsAppClient.isConfigured()) return 'config:sms_gateway_unconfigured';
-  if (resolveAppLinksOrigin(deps.appLinksBaseUrl) === null) return 'config:app_links_base_url_invalid';
-  return null;
+  return appLinksConfigGap(deps.appLinksBaseUrl);
 }
 
 /** What a ready Pariwar sends in. */
@@ -277,7 +294,12 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   }
 
   // (4) R16 — the due claims, paged (the DELIBERATE block at `listDuePeerMeshRequestClaims`); ONE child per claim.
+  // ⭐ The hard bound counts the claims a child is ENQUEUED for — a HELD claim costs ⛔ child and counts ⛔ (6.27c review F5):
+  // the cursor restarts every run and a held claim stays due until its gap closes, so a held prefix that filled the bound
+  // would starve every ready claim after it, every day. The time budget still bounds the scan. ⚠ Under a GLOBAL gap every
+  // claim is held (⛔ one can be starved), so there the held ones DO count — ⛔ a daily walk of every due claim to the budget.
   let scannedClaims = 0;
+  let attempted = 0;
   let enqueued = 0;
   let bounded = false;
   const heldClaims: string[] = [];
@@ -285,19 +307,25 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   sweep: while (!budgetExhausted) {
     const page = await claimDomain.listDuePeerMeshRequestClaims(deps.pool, { now, after, limit, allow });
     for (const due of page.due) {
-      if (scannedClaims >= maxClaims) {
-        bounded = true;
-        break sweep;
-      }
       if (clockMs() - startedMs > budgetMs) {
         budgetExhausted = true;
         break sweep;
       }
-      scannedClaims += 1;
       if ((await gapOf(due.pariwarId)) !== null) {
+        if (globalGap !== null && scannedClaims >= maxClaims) {
+          bounded = true;
+          break sweep;
+        }
+        scannedClaims += 1;
         heldClaims.push(due.claimCaseId);
         continue;
       }
+      if (attempted >= maxClaims) {
+        bounded = true;
+        break sweep;
+      }
+      scannedClaims += 1;
+      attempted += 1;
       try {
         await enqueuePeerMeshRequestChild(boss, { pariwarId: due.pariwarId, claimCaseId: due.claimCaseId });
         enqueued += 1;
@@ -344,7 +372,7 @@ export interface PeerMeshRequestChildCounts {
 
 export type PeerMeshRequestChildResult =
   | { readonly status: 'done'; readonly counts: PeerMeshRequestChildCounts }
-  | { readonly status: 'deferred_quiet_hours'; readonly startAfter: Date }
+  | { readonly status: 'deferred_quiet_hours'; readonly startAfter: Date; readonly counts?: PeerMeshRequestChildCounts }
   | { readonly status: 'held_config'; readonly reason: string }
   | { readonly status: 'noop'; readonly reason: string };
 
@@ -391,7 +419,8 @@ async function readDeceasedName(
 /**
  * ⭐ ONE claim's neighbour texts. See the module header. Every ping's outcome is recorded on its row; a transient on one ping
  * never costs the others theirs.
- * @throws ClaimCorrectionTransientError  a transient failure (pg-boss retries the SAME job)
+ * @throws ClaimCorrectionTransientError  a transient failure (pg-boss retries the SAME job) — ⛔ when 20:00 IST passed mid-run
+ *   (the result is then `deferred_quiet_hours` with the run's `counts`; the 09:00 child re-claims the transient rows)
  */
 export async function runPeerMeshRequestChild(
   deps: ClaimPeerMeshRequestDeps,
@@ -400,7 +429,10 @@ export async function runPeerMeshRequestChild(
   jobId: string,
 ): Promise<PeerMeshRequestChildResult> {
   const alarm = alarmOf(deps);
-  const now = deps.now?.() ?? new Date();
+  // ⭐ The clock is read AGAIN at each begin and at each provider handoff (6.27c review F2 / F3) — the config, the name and the
+  // pings before take time: ⛔ a text after 20:00 IST, ⛔ a lease stamped with the run's start (another child could re-claim it).
+  const clock = (): Date => deps.now?.() ?? new Date();
+  const now = clock();
   const p = envelope.payload;
   const pid = envelope.pariwarId;
   if (pid === null || pid === '') {
@@ -411,12 +443,13 @@ export async function runPeerMeshRequestChild(
   const claimCaseId = ids.claimId(p.claimCaseId);
   const tag = `claim ${p.claimCaseId}`;
 
-  // (1) AC2 — ⛔ never at night: ⛔ ping begun; the child comes back at the next 09:00 IST.
-  if (!isInPeerRequestSendWindow(now)) {
-    const startAfter = nextPeerRequestSendWindowStart(now);
+  // (1) AC2 — ⛔ never at night: ⛔ ping begun; the child comes back at the next 09:00 IST. Checked again per ping (F2).
+  const deferToMorning = async (at: Date, counts?: PeerMeshRequestChildCounts): Promise<PeerMeshRequestChildResult> => {
+    const startAfter = nextPeerRequestSendWindowStart(at);
     await enqueuePeerMeshRequestChild(boss, { pariwarId: pid, claimCaseId: p.claimCaseId, startAfter });
-    return { status: 'deferred_quiet_hours', startAfter };
-  }
+    return counts === undefined ? { status: 'deferred_quiet_hours', startAfter } : { status: 'deferred_quiet_hours', startAfter, counts: { ...counts } };
+  };
+  if (!isInPeerRequestSendWindow(now)) return deferToMorning(now);
 
   // (2) R11's RACE GUARD — BEFORE any ping is begun (config may have vanished since the sweep / the hook).
   const globalGap = globalConfigGap(deps);
@@ -448,8 +481,12 @@ export async function runPeerMeshRequestChild(
   for (let i = 0; i < queue.length; i += 1) {
     const pingId = queue[i]!;
     const ptag = `ping ${pingId} of ${tag}`;
+    // F2 — the window closed during the run ⇒ ⛔ this ping (or any after it) begun; the rest come back at 09:00 IST (a ping
+    // left `attempting` by a transient above is re-claimed then, past its lease). F3 — the lease is stamped NOW.
+    const beginAt = clock();
+    if (!isInPeerRequestSendWindow(beginAt)) return deferToMorning(beginAt, counts);
     const begun = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
-      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now, nameFault }),
+      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now: beginAt, nameFault }),
     );
     if (begun.kind === 'already_final' || begun.kind === 'held_by_other') {
       counts.skipped += 1;
@@ -524,6 +561,11 @@ export async function runPeerMeshRequestChild(
       await transient(claimDomain.peerMeshRequestDetail({ kind: 'pre_send', fault: 'hash_failed:tier1' }));
       continue;
     }
+
+    // F2 — the window closed between the begin and the handoff (the unsealing / hashing) ⇒ ⛔ sent. The row stays
+    // `attempting` under this job, truthfully un-sent; the 09:00 IST child re-claims it past its lease (attempt 2).
+    const sendAt = clock();
+    if (!isInPeerRequestSendWindow(sendAt)) return deferToMorning(sendAt, counts);
 
     // ── The send — the registered words, the mode-resolved name, the link (R12 origin), the Pariwar's helpline ──
     const member = (nameRead as { name: string }).name;

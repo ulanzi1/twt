@@ -1,3 +1,16 @@
+# last_updated: 2026-10-16 (STORY 6.36 — IMPLEMENTED by `bmad-dev-story 6.36` (worktree `.claude/worktrees/6-36`, branch
+# `story/6-36-peer-mesh-school-wise-selection`, code commit `3fa2ff0c`): row `6-36-peer-mesh-school-wise-selection` `ready-for-dev` →
+# `in-progress` → `review`. All eight Tasks. Migration 0163 (`…007`) applied on :5432 AND :5433: the selection's `workplace_named_v1`
+# record (source, ranking ≤ 500, the staff line, the deceased's workplace ids) with CHECKs and a prefix trigger SCOPED to the new id, the
+# ping's source trigger, the postings workplace index, the selection's UPDATE narrowed. The grouped engine + ONE dispatch + replay; the
+# filing-day cut (RF1 option B behind `peerMeshFilingCut`); SW23 `active` only; the select job locks FIRST, persists a selection only with
+# its edge, ⛔ swallows; nobody to ask ⇒ `claim.peer_mesh_none_to_ask` (the 37th event) → verification_in_progress + a shepherd; the
+# reminder reads either edge; the source + staff line on both staff surfaces (⛔ inspector / helpline / member — tests); `peer_mesh.v4`
+# live. Records: 6.27c annotated (AC13), 6.6 D3 + review item and 6.36a SW17 annotated, deferred-work (two Closed, one NARROWED, one
+# OPEN, one NEW — the OCR job's swallowed race). Gate: ci:local on `3fa2ff0c` (:5433) all static jobs green; integration RED only on Story
+# 9.8's `review-queue-read.spec.ts` (575 live alerts under PARIWAR_A > its 500 scan — the recorded shared-DB class); the integration job
+# re-run ALONE on a fresh scratch DB: all green (the 10.23 spec with its override). ⏳ RF1 note still ⛔ SENT. 6.36c may now be cut
+# against this row once it is `done`. ⛔ No other row moves.)
 # last_updated: 2026-10-15k (STORY 6.36 — VALIDATED against `main` `51382898` (`bmad-create-story validate 6.36`, worktree
 # `.claude/worktrees/6-36`, commit `17e44db7`): row `6-36-peer-mesh-school-wise-selection` `backlog` → `ready-for-dev` (v2.5). Four
 # parallel verifiers, then five fresh-context re-validate rounds until ⛔ finding at HIGH (5 → 2 → 2 → 1 → 1 → 0), all applied (BigDev:
@@ -20226,7 +20239,7 @@ development_status:
   # staff surfaces, `claim.peer_mesh_none_to_ask`); it stays `backlog` until 6-36a, 6-36b AND 6-36c are `done`. ⭐ AMENDED 2026-10-14
   # (`-332`): until 6-36a AND 6-36b are `done` — ⛔ not 6-36c. Story file
   # `6-36-peer-mesh-school-wise-selection.md`; the record is 6.36a's.
-  6-36-peer-mesh-school-wise-selection: ready-for-dev
+  6-36-peer-mesh-school-wise-selection: review
   # ⭐ 2026-10-10 ADDED by `2026-10-10-314` (BigDev: *"msg91 for now"* → *"New story row"*): the SMS gateway is MSG91, whose Flow / OTP v5
   # APIs take an `authkey` header, MSG91's OWN template id and NAMED variable values — ⛔ the generic `sms-app.ts` contract. 6-37 builds the
   # MSG91 adapter behind the SMS seam (texts + the two OTPs), a MSG91 template id per template, `91…` numbers, `type`-based errors, delivery

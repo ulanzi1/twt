@@ -26,7 +26,7 @@ item heading, row key. LETTERS: as 6.36a.
 
 # Story 6.36: The Five Are Chosen From the Member's Own Workplace — Otherwise the People They Named, Otherwise Nobody, and Then the Claim Goes On; Staff See Where Each Person Came From `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS PART IS.** The Panel ruled who is asked about a death (`-310` CF4 A, Trustee-ratified): the members at the member's
 > workplace (and the previous one after a recent transfer); otherwise up to three people the member named who agreed; otherwise
@@ -387,7 +387,7 @@ person asked.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — the migration (AC0 checked, AC1, AC9).** Columns, the scoped CHECKs, the scoped prefix trigger, the ping `source`
+- [x] **Task 1 — the migration (AC0 checked, AC1, AC9).** Columns, the scoped CHECKs, the scoped prefix trigger, the ping `source`
       trigger (⛔ raises on a missing selection), the `member_postings` workplace index, the REVOKE UPDATE + column GRANT on the selection table; the Drizzle
       schema (`claim_peer_mesh_selections.ts`: the snapshot row type becomes a union — the legacy `{ memberId, district, createdAt }` and
       the grouped `{ memberId, group, settled }` (the ranking reads `settled` — I7: a replay rebuilds the ranking from the PERSISTED
@@ -395,13 +395,13 @@ person asked.
       (AC1). ⚠ The legacy `deceased_created_at` is NOT NULL (`0054_claim-peer-mesh.sql:51`; `deceased_district`, `:50`, is nullable): for
       `workplace_named_v1` both are still written from `getPeerMeshDeceasedAttributes` (unchanged) and are read by nothing in the grouped
       metric or its replay — the schema comment says so. Apply on :5432 and :5433.
-- [ ] **Task 2 — the engine and the registry (AC2, AC3).** FIRST the v1 entry's literal id (AC3). `packages/domain/src/claim/peer-mesh.ts`:
+- [x] **Task 2 — the engine and the registry (AC2, AC3).** FIRST the v1 entry's literal id (AC3). `packages/domain/src/claim/peer-mesh.ts`:
       keep `selectPeerMesh` (`:61-84`); add `selectPeerMeshGrouped` (the 500 truncation, the duplicate-id throw) and `runPeerMeshMetric`;
       rewrite the header's *"DO NOT add … school-proximity … inputs here"* to name SW18 (it supersedes 6.6 D3 — `-330`; AC3).
       `peer-mesh-metric-registry.ts`: the union type, the new entry, the new default, the header comment. The hash — `node:crypto`
       `createHash('sha256')` (pure, deterministic; the domain package runs on Node). Narrow every `resolvePeerMeshMetric(…)` →
       `selectPeerMesh` caller (AC3).
-- [ ] **Task 3 — the cut and the snapshot reads (AC4, AC5, AC6).** The ONE cut function (AC4 — the shipped IST helpers). In
+- [x] **Task 3 — the cut and the snapshot reads (AC4, AC5, AC6).** The ONE cut function (AC4 — the shipped IST helpers). In
       `packages/domain/src/claim/peer-mesh-read.ts`: `getPeerMeshWorkplaceSnapshot(db, { pariwarId, deceasedMemberId, claimantActorId,
       cut, filingDate })` — the deceased's postings as of the cut (the row kinds; current, previous, the 90-day test against the filing
       date), the candidates driven from the workplace index (each with its `settled` flag from the run's EARLIEST `created_at`) whose latest
@@ -410,7 +410,7 @@ person asked.
       them. ⚠ Every correlated subquery over `member_postings` uses the LITERAL `"members"."member_id"` qualifier (the CORRELATION FIX
       note, `peer-mesh-read.ts:60-71`; the qualifier itself at `:84`, `:126`). ⚠ The snapshot read is BOUNDED by the two workplaces and ≤
       3 named people — ⛔ the whole roster (NARROWS the 6.6 uncapped-snapshot item for this metric — ⛔ closed).
-- [ ] **Task 4 — the job (AC4–AC9, AC12).** `apps/jobs/src/claim-peer-mesh.ts` `runClaimPeerMeshSelect`: FIRST `lockClaimCase`, THEN
+- [x] **Task 4 — the job (AC4–AC9, AC12).** `apps/jobs/src/claim-peer-mesh.ts` `runClaimPeerMeshSelect`: FIRST `lockClaimCase`, THEN
       the idempotency probe (unchanged — a no-op plus its shepherd self-heal), THEN the state guard (⛔ `documents_pending` ⇒ return before
       the snapshot, ⛔ selection); the cut from the claim's `created_at`;
       the snapshot; `runPeerMeshMetric`; the persist (new columns); the pinged branch with `source` on the ping intents; the zero branch
@@ -418,17 +418,17 @@ person asked.
       of `ClaimStreamConcurrencyError` with the lock + rethrow on BOTH branches (AC8). `persistPeerMeshSelection` /
       `persistPeerMeshPingIntents` (`peer-mesh-persist.ts:58-95`, `:102-123`) take the new fields. ⭐ Preserve: the winning-row rule, the
       after-COMMIT enqueues, the window job only for `pending`.
-- [ ] **Task 5 — the event (AC8).** `events.ts` (the type tuple, the payload schema, the map), `state.ts` (reducer + table),
+- [x] **Task 5 — the event (AC8).** `events.ts` (the type tuple, the payload schema, the map), `state.ts` (reducer + table),
       `packages/events/src/registry.ts`, the three vocabulary pins, the certificate-reminder reader (+ its doc-blocks) and its sweep's
       alarm text. Re-grep `peer_mesh_pinged` in `apps/*/src packages/*/src scripts` at build for any reader added since `51382898`.
-- [ ] **Task 6 — the wire and the screen (AC10, AC11).** Contracts, the two assembler mappings, `PeerMeshView`, the copy, the six fixture
+- [x] **Task 6 — the wire and the screen (AC10, AC11).** Contracts, the two assembler mappings, `PeerMeshView`, the copy, the six fixture
       files, the tests on both surfaces, the negative schema tests.
-- [ ] **Task 7 — records and close (AC13–AC15).** CHECK 6.36a Task 0.4's annotations (AC13); the deferred-work appended lines (AC14 — by
+- [x] **Task 7 — records and close (AC13–AC15).** CHECK 6.36a Task 0.4's annotations (AC13); the deferred-work appended lines (AC14 — by
       item heading) and ONE new item for the OCR job's swallowed race (§Recorded — reachability unproven); the 6.6 story file gains a dated annotation (⛔ a
       rewrite) that D3 and its review item *"Zero-candidate selection has no defined disposition"* are superseded by `2026-10-14-330`
       (SW18, SW25 — author-commit); 6.36a's SW17 *"perhaps by the family"* gains a dated annotation naming `-333` call 1 (⛔ removal once a
       claim names the member); the Change Log and File List; `pnpm ci:local`.
-- [ ] **Task 8 — `peer_mesh.v4` (AC16).** The version, the `keys.ts` allow-list entry, the registry, the copy key (en + hi + `$comment`
+- [x] **Task 8 — `peer_mesh.v4` (AC16).** The version, the `keys.ts` allow-list entry, the registry, the copy key (en + hi + `$comment`
       naming `-331`), the module header's version list, the moved v3 pins, the tests; the 6.27c annotation already names v4 (6.36a's
       Task 0 follow-up).
 
@@ -541,14 +541,148 @@ BD4; `-259` detail 3; `-263` FQ10; the RF1 routing note.
 
 ## Dev Agent Record
 ### Agent Model Used
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36`, worktree `.claude/worktrees/6-36`, branch `story/6-36-peer-mesh-school-wise-selection`.
+
+### Debug Log References
+- Before Task 1: `git diff --name-only 51382898..HEAD -- packages apps scripts infra` ⇒ ⛔ nothing moved (HEAD `0695874e` carried records only).
+- 0163 dry-run inside `BEGIN … ROLLBACK` on :5433, then `db:migrate` on :5433 AND :5432 (both at journal 0162 / `…006` before; 0163 / `…007` after).
+- Red phases: the 0163 spec 9/9 red before the migration; the race legs run against 6.6's job body (its metric pinned to
+  `district_cohort_v1` so it runs on the new domain) — both RED (A returned `created: true` on the conflict path), then restored.
+- Mutation checks on the snapshot spec — seven, each caught: an "isn't listed" row BREAKING the run; a decline counted as an
+  acceptance; a link ended before the cut still counted; everyone `settled`; the candidates' postings ⛔ cut; the claimant ⛔ excluded;
+  renewal grace admitted (2 legs).
+
 ### Completion Notes List
 - 2026-10-14 — cut by `bmad-create-story 6.36` (SW1). ⛔ No code.
 - 2026-10-15 — re-validated against `main` `51382898` (v2.0–v2.5) ⇒ `ready-for-dev`. ⛔ No code.
+- 2026-10-16 — IMPLEMENTED (code commit `3fa2ff0c`), all eight Tasks:
+  - **Task 1 / AC1, AC9** — migration `0163_peer-mesh-workplace-selection` (idx 163, `when` `1794195600007`): the six selection columns,
+    the source vocabulary and the 500 cap, the TWO CHECKs scoped to `workplace_named_v1`, the selected-is-a-prefix trigger (INSERT and
+    UPDATE OF the three columns, scoped), the ping `source` + its SECURITY INVOKER BEFORE INSERT trigger (NOT FOUND ⇒ `RETURN NEW`, the
+    composite FK's 23503 holds), `member_postings_pariwar_workplace_idx`, REVOKE UPDATE + GRANT UPDATE (`outcome`,
+    `response_window_expires_at`, `skip_reason`). Drizzle: the snapshot row is a union (`PeerMeshDistrictSnapshotRow` |
+    `PeerMeshGroupedSnapshotRow`), `PEER_MESH_SOURCES`, `PEER_MESH_RANKED_MAX`. Spec `claim-peer-mesh-workplace-selection-policy-regression`
+    (9 legs).
+  - **Task 2 / AC2, AC3** — v1's literal id FIRST, then the default moved; the registry is `PeerMeshRankedMetricConfig |
+    PeerMeshGroupedMetricConfig`; `selectPeerMeshGrouped` (previous first, settled first, sha256 over branded ids via `node:crypto`; the
+    first non-empty group; 5 / 3; 500; a duplicate throws `PeerMeshDuplicateCandidateError`); `runPeerMeshMetric` (ONE dispatch; a
+    mismatched candidate shape throws); `replayPeerMeshSelection` (from the persisted row alone). 6.6's unit test pins `district_cohort_v1`.
+  - **Task 3 / AC4–AC6** — `peerMeshFilingCut` (the ONE anchor — RF1 option B; the shipped IST helpers), `derivePeerMeshPostingRun` +
+    `peerMeshPreviousWorkplaceCounts` (SW21 word for word, pure), `peerMeshEligibleMemberSql` (SW23 — `active` only; 6.36b's
+    `namedByClaimSql` EXPORTED and reused, ⛔ copied), `getPeerMeshWorkplaceSnapshot` / `getPeerMeshNamedSnapshot` /
+    `getPeerMeshNamedChangeBeforeFiling` / `getPeerMeshGroupedSnapshot`. Raw SQL with explicit aliases (⛔ interpolated Column objects —
+    the CORRELATION FIX trap does not arise).
+  - **Task 4 / AC4–AC9, AC12** — the select job: `lockClaimCase` FIRST → the probe → the state guard → the cut → the grouped snapshot →
+    `runPeerMeshMetric` → the persist (the workplace record) → `claim.peer_mesh_pinged` + pings carrying `source`, or
+    `claim.peer_mesh_none_to_ask` + `skipped` (`no_workplace_colleague_or_named_person`); the SAVEPOINT swallow is GONE (rethrown);
+    the shepherd keys on `advanced` (true on both edges). The jobs test rewritten (24 legs, see below).
+  - **Task 5 / AC8** — the 37th claim event (schema, tuple, map, reducer + table, `EVENT_TYPE_REGISTRY`), all three vocabulary pins
+    moved (a FIFTH frozen literal in `nominee-name-check-events.test.ts`); `readCertificateWindowEnteredAt` reads
+    `CERTIFICATE_WINDOW_ENTRY_EVENTS` (both edges) + its doc-blocks + the sweep's alarm text. Re-grep of `peer_mesh_pinged` readers in
+    `apps/*/src packages/*/src scripts`: ⛔ new functional reader since `51382898` (comment-only hits as listed in AC8).
+  - **Task 6 / AC10, AC11** — `PeerMeshPingView.source` and `PeerMeshTranscript.recentChangeBeforeFiling` (REQUIRED, nullable), mapped
+    from the rows already read (⛔ new read — `VERIFIER_CONSOLE_MAX_READS` stays 29); `PeerMeshView` shows the source line beside the
+    `relationship` answer or in the ping header, and the staff line once at the top; the six fixture files amended; tests on BOTH surfaces
+    + the API spec that drives both; absence tests on the inspector's client wire (keys injected — stripped), the inspection tables and
+    `PeerRequestDetailResponse` / `PeerRequestListResponse` (a zod shape walk).
+  - **Task 7 / AC13–AC15** — AC13: 6.27a's annotations (PM1 at its `-311` / `ranked_member_ids` / SW23 lines) and 6.27c's (AC5,
+    the SF11 Dev Note, the v4 line) re-read — consistent with the build; ONE dated annotation added to 6.27c naming what was built
+    (the predicate's name and signature, the winning-group ranking, the immutable-by-grant selection, the ping-source trigger — a
+    replacement is a NEW ping row passing `selection.source`). 6.6's D3 and its zero-candidate review item annotated (superseded by
+    `-330`); 6.36a SW17's *"perhaps by the family"* annotated (`-333` call 1). AC14: the four deferred items appended by heading
+    (two Closed, one NARROWED, one left OPEN) + ONE new item (the OCR job's swallowed race, reachability unproven). AC15: see the gate
+    line below.
+  - **Task 8 / AC16** — `PEER_MESH_QUESTIONNAIRE_V4` (live; v3 historical): the `relationship` option `school_colleague` takes
+    `…relationship.school_or_office_colleague` (en *"A colleague at the same school or office"*; hi agent-authored, ⛔ reviewed — Row 28;
+    a `$comment` names `-331`), `-331` in the question's and the version's `approvedBy`, `'2026-10-14-331'` in
+    `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS`, the registry; the v3-live pins moved (the Pariwar fixture rebuilt from V4 as
+    `peer_mesh.v5`); a v3 reply keeps v3's words on the member's view AND the console (tests).
+- **Readings the code had to make (recorded, ⛔ silent):**
+  - `deceased_previous_workplace_id` is stored whenever a previous workplace EXISTS as of the cut (row 6-32's head-of-school letter may
+    need it); `previous_workplace_counted` says whether its people were asked. AC1 names the column, ⛔ when it is NULL.
+  - A named person who is ALSO a colleague is kept ONCE, in the workplace group (the snapshot composer dedupes) — the named group is read
+    only when the workplace group is empty, so the replay is unchanged; the engine's duplicate throw stays reserved for a real join defect
+    (⛔ a stall re-created by a member who is both).
+  - The job asserts the default metric is `grouped` (it reads the grouped snapshot) — a ranked default would throw, ⛔ select nobody.
+  - A claim ⛔ `documents_pending` returns `{ created: false, selectedCount: 0 }` (⛔ selection, ⛔ window, ⛔ shepherd).
+- **Tests and how they hold the same-tx trap.** The domain snapshot spec (19 legs) places EVERY recorded time explicitly relative to the
+  cut (postings' and the claim's `created_at`, the links' `asked_at` / `responded_at` / `ended_at`), so ⛔ comparison reads a
+  transaction-start clock; the one writer that stamps its own clock (`removeKnownPerson`, `clock_timestamp()`) is followed by a claim
+  filed at that instant, read back. AC5 asks for "rows written in SEPARATE transactions" — this meets its purpose (the ordering under test
+  is the ordering written) ⛔ its letter; the jobs test (own-committing, one transaction per step) drives the job end to end.
+- **⛔ Not tested, recorded:** the rethrow of a `ClaimStreamConcurrencyError` in the select job — with the claim lock held ⛔ known
+  appender can race, so the error cannot be provoked without a fault injector (AC8 calls it defensive).
+- **Gate (AC15) on `3fa2ff0c`:** `DATABASE_URL=…:5433/twt_dev pnpm ci:local` — every static job green (lint, typecheck, build,
+  test (unit), db-check and every gate); `integration-tests` RED on ONE file only — `packages/domain/tests/integration/reconciliation/
+  review-queue-read.spec.ts` (Story 9.8, 7 legs), the recorded shared-DB class: 575 `live` alerts under the fixed `PARIWAR_A` on :5433, past
+  `listOpenReconciliationCases`' 500-cycle scan (memory *ci:local double-run pollution*, 2026-10-13 note) — ⛔ a file this story touches.
+  Because domain failed first, turbo ran ⛔ api / jobs live-DB suites in that phase, so the integration job was re-run ALONE on a fresh
+  scratch database (`CREATE DATABASE twt_ci_636` on :5433, `db:migrate` from zero, the job's exact filter with `--continue`): domain 375 / 375
+  files (5385 passed, 1 skipped — the reconciliation spec green), api 167 / 167 (1782 passed), jobs 56 / 57 — the one red is Story 10.23's
+  `restoration-discipline-production-path-live` REFUSING a database not named `twt_dev` (by design), then run directly with
+  `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS=1` on the same scratch DB: 3 / 3; events, queue, niyamavali-engine, validity-service, channels all green.
+  Scratch DB dropped. ⇒ green, with the shared-:5433 pollution left as it is (recreating the container is BigDev's call, ⛔ a side effect).
+
 ### File List
+- `apps/admin/src/modules/claim-verification/PeerMeshView.tsx` — modified
+- `apps/admin/src/modules/claim-verification/i18n-en.ts` — modified
+- `apps/admin/tests/neighbours-answers-panel.test.tsx` — modified
+- `apps/admin/tests/peer-mesh-inspection-discrepancy.test.tsx` — modified
+- `apps/admin/tests/peer-mesh-source-not-on-inspector-wire.test.ts` — NEW
+- `apps/admin/tests/verifier-console.test.tsx` — modified
+- `apps/api/src/modules/claims/peer-answers-assembler.ts` — modified
+- `apps/api/tests/integration/_peer-reply-fixture.ts` — modified
+- `apps/api/tests/integration/claims/peer-answers-approvers.spec.ts` — modified
+- `apps/api/tests/integration/claims/peer-request-member.spec.ts` — modified
+- `apps/api/tests/unit/peer-answers-stitch.test.ts` — modified
+- `apps/jobs/src/claim-peer-mesh.ts` — modified
+- `apps/jobs/src/scheduler/claim-certificate-reminders.ts` — modified
+- `apps/jobs/tests/claim-peer-mesh.test.ts` — modified
+- `packages/contracts/src/claims/verifier-console.ts` — modified
+- `packages/contracts/tests/claims-peer-answers.test.ts` — modified
+- `packages/contracts/tests/claims-peer-request-no-source.test.ts` — NEW
+- `packages/contracts/tests/claims-verifier-console.test.ts` — modified
+- `packages/domain/migrations/0163_peer-mesh-workplace-selection.sql` — NEW
+- `packages/domain/migrations/meta/_journal.json` — modified
+- `packages/domain/src/claim/certificate-reminder.ts` — modified
+- `packages/domain/src/claim/events.ts` — modified
+- `packages/domain/src/claim/peer-mesh-metric-registry.ts` — modified
+- `packages/domain/src/claim/peer-mesh-persist.ts` — modified
+- `packages/domain/src/claim/peer-mesh-read.ts` — modified
+- `packages/domain/src/claim/peer-mesh.ts` — modified
+- `packages/domain/src/claim/state.ts` — modified
+- `packages/domain/src/member/known-people.ts` — modified
+- `packages/domain/src/questionnaires/keys.ts` — modified
+- `packages/domain/src/questionnaires/peer-mesh.ts` — modified
+- `packages/domain/src/questionnaires/registry.ts` — modified
+- `packages/domain/src/schema/claim_peer_mesh_pings.ts` — modified
+- `packages/domain/src/schema/claim_peer_mesh_selections.ts` — modified
+- `packages/domain/src/schema/member_postings.ts` — modified
+- `packages/domain/tests/claim/dpdpa-consent-events.test.ts` — modified
+- `packages/domain/tests/claim/nominee-name-check-events.test.ts` — modified
+- `packages/domain/tests/claim/peer-mesh-cut.test.ts` — NEW
+- `packages/domain/tests/claim/peer-mesh-grouped.test.ts` — NEW
+- `packages/domain/tests/claim/peer-mesh-source-audience.test.ts` — NEW
+- `packages/domain/tests/claim/peer-mesh.test.ts` — modified
+- `packages/domain/tests/integration/claim/certificate-reminder.spec.ts` — modified
+- `packages/domain/tests/integration/claim/peer-mesh-reply.spec.ts` — modified
+- `packages/domain/tests/integration/claim/peer-mesh-workplace-snapshot.spec.ts` — NEW
+- `packages/domain/tests/integration/rls/claim-peer-mesh-workplace-selection-policy-regression.spec.ts` — NEW
+- `packages/domain/tests/questionnaires/questionnaires.test.ts` — modified
+- `packages/events/src/registry.ts` — modified
+- `packages/i18n/locales/en/claim.json` — modified
+- `packages/i18n/locales/hi/claim.json` — modified
+- `_bmad-output/implementation-artifacts/6-36-peer-mesh-school-wise-selection.md` — modified
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified
+- `_bmad-output/implementation-artifacts/deferred-work.md` — modified
+- `_bmad-output/implementation-artifacts/6-6-peer-mesh-deterministic-5-nearest-selection-ping.md` — modified
+- `_bmad-output/implementation-artifacts/6-36a-member-workplace-and-posting-history.md` — modified
+- `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md` — modified
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-16 | 3.0 | IMPLEMENTED by `bmad-dev-story 6.36` (code commit `3fa2ff0c`): migration 0163 (applied on :5432 AND :5433); the grouped engine, the ONE dispatch and replay; the filing-day cut, the SW21 run, the SW23 predicate and the snapshot reads; the select job locked FIRST, a selection only with its edge, ⛔ swallow, `claim.peer_mesh_none_to_ask` (the 37th event) and the reminder reading either edge; the source and the staff line on both staff surfaces (⛔ on the inspector's / helpline's / a member's wire — tests); `peer_mesh.v4` live. Records: 6.27c annotated (AC13), 6.6 D3 + its review item and 6.36a SW17 annotated, deferred-work appended (two Closed, one NARROWED, one OPEN, one NEW). |
 | 2026-10-15 | 2.5 | Round-6 narrow re-validate (the note + its story lines): ⛔ finding at HIGH or above — the rounds have converged. 2 MEDIUM, 5 LOW applied: option C's effect holds only when an investigation found the member innocent (a refusal without one still anchors as in A); two negative staff-line legs (an ask, a lapse); the note names C beside A where it should, "the same filter" ⛔ "exact shape", the table exists but nothing writes it, SW19 cited as 6.36a's record; a glyph fix in §Recorded. |
 | 2026-10-15 | 2.4 | Round-5 narrow re-validate of v2.3: 1 HIGH (the routing note), 3 MEDIUM, 2 LOW, all applied. HIGH: option C was written as a new staff step and a new reason — false: `-238` (Trustee-ratified) already rules the innocence finding and `claim_nominee_findings.kind = 'member_found_innocent'` exists, read with C's exact shape by `nominee-lock.ts` (producer row 6-22, unbuilt) ⇒ C keyed on it (behaves as A until 6-22), our reading C; §Recorded names it as the key that would lift the falsely-reported-member exclusion. MEDIUM: two staff-line legs seed acceptance MORE than 90 days back (exactly 90 is inside the window); a positive acceptance leg; the staff-line rule restated as SW20's two plus changes out of the accepted set. LOW: the note's suspicion-refusal sentence; "Our reading" is one option. |
 | 2026-10-15 | 2.3 | Round-4 fresh-context re-validate of v2.2: 1 HIGH (the routing note only), 4 MEDIUM, 3 LOW, all applied. HIGH: the note's "Our reading" recommended a variant that was in ⛔ option row ("the first filing since the last refusal") — undefined ("refusal" is ⛔ a single recorded state) and, read as `denied`, it reopened option B for the commonest re-file ⇒ the narrow version is now option C ("…unless refused because the member was found alive" — a new staff step); our reading: A, or C. MEDIUM: the two-select-jobs race is LATENT (one `jobs` service, `boss.work` with ⛔ options) — the lock is kept as defence; the race test's zero-branch leg cannot be RED before Task 5; the staff line's rule restated (acts by the account, or changes to the accepted set); two staff-line legs seed their acceptance ≥ 90 days back. LOW: the `skipped` zero selection in `documents_pending` is REACHABLE (SF4) — ⛔ unproven; the OCR item names the tracked upload's FOR UPDATE; a living member once falsely reported stays outside every later five (recorded). |

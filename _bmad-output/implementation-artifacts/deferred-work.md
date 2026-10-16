@@ -4,6 +4,18 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story 6.36 (2026-10-16)
+
+- **The OCR job swallows a `ClaimStreamConcurrencyError` as "benign" — the same shape 6.36 removed from the select job**
+  [`apps/jobs/src/claim-ocr-parity.ts` (the `claim.documents_received` append's SAVEPOINT; alarmed *"benign"*)] — on that error the claim is
+  left `intake_converged` and the select job is still enqueued; after 6.36 (code commit `3fa2ff0c`) the select job persists ⛔ selection for a
+  claim that is not `documents_pending`, so the claim waits for a later upload's OCR run to emit `documents_received`. ⚠ Reachability
+  UNPROVEN: on a first upload the job's `claim_documents` insert (its FK to `claims`) takes FOR KEY SHARE on the claim row before the
+  stream-head read, which serializes it against every FOR UPDATE appender, and a tracked death-certificate upload already takes FOR UPDATE
+  on the claim; only an UNTRACKED document's re-upload upsert (the DO UPDATE path — ⛔ FK check) could race. ⛔ Out of 6.36's scope (the
+  OCR job is 6.4's / 6.6's trigger seam). Owner unassigned. ⭐ Trigger: that race proven, or the next story touching the OCR job — the fix
+  shape is 6.36's: `lockClaimCase` first, rethrow.
+
 ## Deferred from: code review of story-6.36a, ROUND 2 — the whole branch (2026-10-15)
 
 - **`workplaces.name` is ⛔ stored trimmed — a padded staff-added name can mint a search cursor over the contract's bound**
@@ -69,6 +81,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   [`packages/domain/src/claim/peer-mesh-read.ts`; row 6-36]. The Trust holds ⛔ family-link data, so a relative of the deceased can be one of
   the neighbours asked (6.27c texts them) — and their answer is shown to staff like any other. ⭐ Trigger: a family-link substrate (⛔ owned
   by any story), or row 6-36's selection rule if it gains one.
+  - *Appended 2026-10-16 (Story 6.36):* ⛔ **not taken by 6.36** — no family-link data (SW23); stays OPEN.
 - **A live SENSITIVE answer that cannot be DECRYPTED blocks further saves on that reply** [`apps/api/src/modules/claims/peer-request-core.ts`
   `decryptLiveSensitive` → `claim.savePeerAnswer` `PeerRequestStaleError`]. The handler leaves an undecryptable live answer OUT of the map it
   hands the writer, and the writer refuses the save as STALE (409 `peer_request.stale`) rather than act on an unknown (fail-closed — ⛔ a
@@ -736,6 +749,11 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
   - *Appended 2026-10-12 (Story 6.27a, PM20):* ⛔ **NOT TAKEN** by 6.27a — the stall stays. The console now SAYS it: a `skipped` selection
     reads *"No neighbour could be chosen"* on the District Admin's 72-hour line (`SignalsPanel.tsx`, `t.peerMesh.window.skipped`). ⭐ Trigger
     unchanged (the story that gives the peer mesh a zero-candidate fallback; row 6-36 changes WHO is chosen, ⛔ this stall).
+  - *Appended 2026-10-16 (Story 6.36, SW25):* ⭐ **Closed by 6.36 (code commit `3fa2ff0c`)** — for selections made after that commit: a
+    `workplace_named_v1` selection with nobody to ask is `skipped` (`no_workplace_colleague_or_named_person`) AND emits
+    `claim.peer_mesh_none_to_ask` (`documents_pending → verification_in_progress`), so the ground inspection carries the claim, a shepherd
+    is assigned and the certificate reminder's day 0 reads that event. A `district_cohort_v1` selection already `skipped` stays where it
+    is — ⛔ none exist in production.
 - **A T12 legacy certificate row (sent before 6.21a, ⛔ no upload row) reads as `missing`, and the OCR job's tolerance path could make a claim `missing` AGAIN (Trap 6).** A legacy row is chased as `missing`; a second `missing` wait on one claim is impossible (UNIQUE — the planner reads the existing run as "exists", the opener's 23505 is "exists", ⛔ never a crash), so a claim that became `missing` again after a certificate is ⛔ not re-chased. ⛔ Neither is reachable in production (⛔ no production data exists); ⚠ a dev/staging DB may hold a legacy row. ⭐ Trigger: any migration of pre-6.21a certificates into production.
 - **⛔ No staff push in 6.19d — so the found-dead + 13 escalation reaches ⛔ no Pariwar Admin (CR10, a departure from shared-spec D11).** The escalation is a RECORD on the District Admin's list (*"the Pariwar Admin is not notified in this version"*); ⛔ no Pariwar-Admin surface shows it. ⭐ Trigger: an admin client that registers a device token, or a Pariwar-Admin view of the certificate reminders.
 - **⛔ No staff prompt to CALL a dead-phone family whose second certificate is rejected after their one letter (CR10; `-275` "does NOT cover").** Such a person gets ⛔ no SMS (the delivered-letter stop), ⛔ no second letter (`-275` Q1) and ⛔ no chase; the list shows *"Letter delivered — no further texts"*. ⭐ Trigger: a staff call-task seam.
@@ -6938,6 +6956,9 @@ Blind Hunter + Edge Case Hunter + Acceptance Auditor, diff `1d62ed4`..HEAD. Thre
 
 - No FK from `deceased_member_id`/`member_id` to `members` on either new table — verified consistent with existing convention (`claims.deceasedMemberId` itself has no FK to `members` either); not a 6.6-specific regression. [packages/domain/src/schema/claim_peer_mesh_selections.ts:82, claim_peer_mesh_pings.ts]
 - `getPeerMeshCandidateSnapshot` has no cap on active-roster size — explicit story design (Task 2: "prefer no user-controlled limit here," the whole active roster is the candidate pool). For a Pariwar with a large active membership this pulls the full roster (plus a correlated latest-posting subquery per row) into memory and into the persisted `candidate_snapshot` jsonb on every claim's selection, with no volume/performance data recorded. Re-trigger: whichever story first needs to scale peer-mesh selection past a small/medium Pariwar roster. [packages/domain/src/claim/peer-mesh-read.ts]
+  - *Appended 2026-10-16 (Story 6.36):* ⭐ **NARROWED by 6.36 (code commit `3fa2ff0c`)** for `workplace_named_v1` — the snapshot reads only
+    the deceased's two workplaces (by 0163's `member_postings_pariwar_workplace_idx`) and ≤ 3 named people; a very large office is still
+    unbounded (the 500 cap limits only the STORED ranking); the `district_cohort_v1` read is unchanged. ⛔ Not closed.
 - Live-DB RLS test for `claim_peer_mesh_selections`/`claim_peer_mesh_pings` runs under a role that structurally bypasses RLS (dev-login superuser) — a disclosed RECORDED VARIANCE, consistent with the Story 6.5 precedent; the FORCE RLS DDL + policies are the acknowledged structural backstop. Fixing this requires a non-superuser test role across the test infrastructure. Re-trigger: whichever story first builds that non-bypassing test-role infrastructure — retrofit all prior RLS live-DB tests (6.5, 6.6, ...) to use it. [apps/jobs/tests/claim-peer-mesh.test.ts]
 
 ## Deferred from: code review of 6-8-claim-time-nominee-bank-detail-collection-dual-account (2026-07-11)
@@ -11166,6 +11187,13 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **Ping delivery columns unconstrained while `attempting`** [`packages/domain/migrations/0156_claim-peer-mesh-replies.sql:78`] — the finished-row trigger lets `attempt_count` decrease and `first_detail` / `claimed_*` be rewritten while `send_outcome = 'attempting'` (RN7's lease re-claim window). ⭐ Owner: 6.27c's writer and its `detail` grammar (PM4).
 - **`-308`'s 6.27a share — each answer's SOURCE on the reply and the console — HANDED OFF to row 6-36** [`packages/domain/migrations/0156_claim-peer-mesh-replies.sql:105` — ⛔ no source column; `apps/api/src/modules/claims/peer-answers-assembler.ts` — ⛔ no source line] — `2026-10-10-308`'s Consequences name 6.27a PM7 (the reply) and PM13 (the console); 6.27a built ⛔ neither, and the first pass recorded ⛔ nothing. BigDev (2026-10-13, review S1, option 1; recorded as `2026-10-13-325` S1 A): record the hand-off, ⛔ no nullable column now — the value cannot exist until 6-36 stores it on the selection. ⭐ Owner: row `6-36-peer-mesh-school-wise-selection` (its sprint-status comment carries the obligation); 6.27b PM24 also shows it.
   - ⭐ **2026-10-13 (Story 6.27b, `2026-10-13-326` Consequence 1):** 6-36 also renders the source on 6.27b's later-approver panel (the shared `PeerMeshView`); a test on both surfaces.
+    - *Appended 2026-10-16 (Story 6.36):* ⭐ **Closed by 6.36 (code commit `3fa2ff0c`)** — the ONE `PeerMeshView` renders it on the District
+      Admin's console AND the later-approver panel; tests on both (`verifier-console.test.tsx`, `neighbours-answers-panel.test.tsx`) and the
+      API spec that drives both (`peer-answers-approvers.spec.ts`).
+  - *Appended 2026-10-16 (Story 6.36, SW24):* ⭐ **Closed by 6.36 (code commit `3fa2ff0c`)** — `source` is stored on the selection AND on
+    every ping (0163 — a BEFORE INSERT trigger keeps it equal; ⛔ updatable), reaches the reply through its ping (ONE copy — SW24 supersedes
+    IN PART `-308` call 1's "stored on the reply"), and `PeerMeshView` shows *"Chosen from the workplace"* / *"Named by the member"* beside
+    the "How do you know [member]?" answer (else in the ping's header).
 
 ## Deferred from: code review of 6-27-peer-mesh-sending-replies-and-date-of-death (6.27a second pass, group 3 — UI) (2026-10-13)
 

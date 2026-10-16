@@ -382,6 +382,11 @@ my family picks.**
   saw).
   ⭐ *Annotated 2026-10-15 (6.36b code review round 2; ⛔ a rewrite):* `2026-10-15-333` call 3 — on both export lists a link the
   other member's erasure ended reads `ended` (⛔ `erased`), and the members-who-named-me list carries ⛔ `foundBy`.
+  ⭐ *Annotated 2026-10-16 (Story 6.36 build, Task 7; ⛔ a rewrite):* *"a removal after the cut — perhaps by the family"* cannot happen once a
+  claim names the member — `2026-10-15-333` call 1: 6.36b refuses EVERY action by the deceased's account (a removal included) once any
+  claim names them as the deceased (`knownPeopleCallerSql`). The only removal on or after the cut is one on the FILING DAY before the claim
+  row exists (the family holding the phone — SF10); it does ⛔ not count (6.36 reads the link as of the cut — a test). A named person's own
+  withdrawal still counts whenever it happened (call 1 (b)).
   ⭐ *Annotated 2026-10-15 (6.36b code review round 2, fix review; ⛔ a rewrite):* `2026-10-15-334` call 1 narrows that — on the
   members-who-named-me list a REMOVAL, an ERASURE and an OPEN request whose namer's death was reported each read the SAME:
   `ended`, ⛔ name, ⛔ end date (each simply leaves the list in the app).

@@ -96,6 +96,14 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
    STALE — a send-time skip IS replaced by the next person in the SAME group's `ranked_member_ids` (PM1 (ii)), the replacement ping
    inheriting the selection's `source`; the re-check reuses row 6-36's ONE eligibility predicate PLUS PM1's decrypt-time
    `no_sendable_number`.)
+   ⭐ (2026-10-16 annotation — Story 6.36 build, AC13 — what was built, for the replacement: the predicate is
+   `peerMeshEligibleMemberSql(m, { deceasedMemberId, claimantActorId })` (`packages/domain/src/claim/peer-mesh-read.ts`; `active` ONLY —
+   ⛔ `knownPersonEligibleSql`, which admits renewal grace); `ranked_member_ids` holds the WINNING group's ranking only (≤ 500), so
+   "the next in the SAME group" is the next id in it not already pinged; the selection's identity columns (`selected_member_ids`,
+   `ranked_member_ids`, `source`, the snapshot) are IMMUTABLE by grant (0163 narrows `twt_app`'s UPDATE to `outcome` /
+   `response_window_expires_at` / `skip_reason`) ⇒ a replacement is a NEW ping row ONLY, and 0163's BEFORE INSERT trigger refuses a ping
+   whose `source` differs from its selection's (pass `selection.source` — `persistPeerMeshPingIntents`' fifth argument). A selection
+   that chose nobody has an empty ranking and its claim moved on with `claim.peer_mesh_none_to_ask` — ⛔ nothing to send.)
 5b. **AC5b — PM14 / PM15:** ⛔ no new event is emitted by any send path (a test counts `claim.peer_mesh_*` events before / after); a
    re-claimed `attempting` row that fails its re-check finishes `error` with an ids-only alarm (`-297` §2), and a `no_target` on a re-claimed
    row alarms *"may have sent"* (`-298`) — each a test.

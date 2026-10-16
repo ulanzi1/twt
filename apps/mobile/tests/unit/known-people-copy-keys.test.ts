@@ -16,7 +16,14 @@ const FILES = [
   'app/(life-events)/known-people.tsx',
   'app/(life-events)/known-people-find.tsx',
   'components/known-people/KnownPeopleRequestEntry.tsx',
+  // Story 6.36c — the home cards (d), (e), (f) and the ONE invite helper.
+  'components/known-people/TransferReviewCard.tsx',
+  'components/known-people/ReplaceNamedCard.tsx',
+  'components/known-people/CampaignCard.tsx',
+  'lib/invite-share.ts',
 ]
+/** Keys the `workplace` files call through the `known_people` t under another name (`kt('…')` — card (b)). */
+const VIA_KT = { file: 'components/workplace/InviteColleaguesCard.tsx', keys: ['card.add_people'] }
 
 /** The literal keys passed to `t('…')` in a source file. */
 function literalKeys(src: string): string[] {
@@ -32,6 +39,10 @@ describe('the known_people keys the app uses', () => {
     expect(keys).toContain('request.question')
     for (const key of keys) expect(en[key], key).toBeDefined()
     expect(literalKeys("t('no.such_key')")).toEqual(['no.such_key'])
+    // Story 6.36c — the card (b) keys, read from the source (⛔ a stale list), in BOTH locales.
+    const kt = [...readFileSync(join(MOBILE, VIA_KT.file), 'utf8').matchAll(/\bkt\(\s*'([a-z_]+(?:\.[a-z_]+)*)'/g)].map((m) => m[1]!)
+    expect(kt).toEqual(VIA_KT.keys)
+    for (const key of kt) for (const locale of ['en', 'hi'] as const) expect(t(key, undefined, { locale, namespace: 'known_people' }).length, key).toBeGreaterThan(0)
   })
 
   it('review round 2, P3 — a 404 not_found and a 409 in-progress each have their OWN message (⛔ the generic one)', () => {

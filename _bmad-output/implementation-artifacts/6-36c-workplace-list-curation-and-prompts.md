@@ -383,9 +383,9 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — migration `0164_workplace-curation-and-campaigns.sql` (AC2–AC4, AC7)** + journal idx 164 `when` `1794195600008`
+- [x] **Task 1 — migration `0164_workplace-curation-and-campaigns.sql` (AC2–AC4, AC7)** + journal idx 164 `when` `1794195600008`
       (⛔ snapshot files past 0020 — journal + SQL only, as 0163); applied on `:5433` AND `:5432`.
-  - [ ] 1.1 `known_people_campaigns`: `campaign_id uuid pk default gen_random_uuid()`, `pariwar_id uuid not null` (⛔ FK — there is ⛔
+  - [x] 1.1 `known_people_campaigns`: `campaign_id uuid pk default gen_random_uuid()`, `pariwar_id uuid not null` (⛔ FK — there is ⛔
         `pariwars` table, `0073_pool-naming.sql:20`; tenancy is RLS + the writer's explicit `pariwar_id`, as in 0161 / 0162),
         `started_by_actor_id uuid not null`, `starts_on date not null`, `ends_on date not null`, `ended_at timestamptz null`,
         `ended_by_actor_id uuid null`, `created_at timestamptz not null default now()`; CHECK `ends_on >= starts_on AND ends_on - starts_on
@@ -393,9 +393,9 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
         ends_on DESC)`; RLS ENABLE + FORCE with per-command tenant policies (the `workplaces-rls.ts` shape) + the policy spec; GRANT SELECT,
         INSERT, UPDATE (`ended_at`, `ended_by_actor_id`); ⛔ DELETE. Drizzle `packages/domain/src/schema/known_people_campaigns.ts` +
         schema barrel.
-  - [ ] 1.2 `workplaces`: ADD CHECK `name = btrim(name)` (closes the deferred *"`workplaces.name` ⛔ stored trimmed"*; the import already
+  - [x] 1.2 `workplaces`: ADD CHECK `name = btrim(name)` (closes the deferred *"`workplaces.name` ⛔ stored trimmed"*; the import already
         `.trim()`s — `workplace-import.ts:321` — so existing rows pass; if the ADD fails on a live DB, find the row — ⛔ `NOT VALID`).
-  - [ ] 1.3 `workplace_requests`: `CREATE OR REPLACE` the guard function so a move INTO `pending` REQUIRES the three suggestion columns
+  - [x] 1.3 `workplace_requests`: `CREATE OR REPLACE` the guard function so a move INTO `pending` REQUIRES the three suggestion columns
         NULL, and a move INTO `suggested` REQUIRES `suggested_by_actor_id` NOT NULL (closes *"`suggested → pending` may keep stale suggestion
         columns"*); keep every other arm byte-identical (erasure, rename); a spec leg per new refusal. ⚠ EXISTING FIXTURES suggest WITHOUT
         an actor and must set `suggested_by_actor_id`: `packages/domain/tests/integration/rls/workplaces-policy-regression.spec.ts:93`
@@ -404,14 +404,14 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
         `packages apps` for any other). `workplaces-policy-regression.spec.ts:365` (`move(b, 'suggested')` ⇒ `'23514'`) becomes the GUARD
         code (a BEFORE trigger fires before the CHECK) — keep a leg proving `suggested_check` still fires (actor present, `suggested_at`
         NULL ⇒ `'23514'`).
-  - [ ] 1.4 ⛔ `workplace_import_batches` actor column (RV9, `-342` call 3) — rewrite `workplace-import.ts:35-37`'s
+  - [x] 1.4 ⛔ `workplace_import_batches` actor column (RV9, `-342` call 3) — rewrite `workplace-import.ts:35-37`'s
         RE-EXAMINATION sentence AND `packages/domain/scripts/README-import-workplaces.md:66-69` to record exactly RV9 (i)–(iii): ⛔ batch
         column (⛔ HTTP caller writes a batch row); the actor in-row on add / suggest; the audit line POST-commit and ⛔ event (the
         "audit pair in the SAME transaction" ⛔ met); the CLI's bypass stays as written.
-- [ ] **Task 2 — RBAC (AC1).** `permissions.ts` (three keys + note + version), `roles.ts` (two consts + two `pariwar_admin` entries),
+- [x] **Task 2 — RBAC (AC1).** `permissions.ts` (three keys + note + version), `roles.ts` (two consts + two `pariwar_admin` entries),
       `permissions.test.ts` pins (52 / 68), `roles.test.ts` holders legs.
-- [ ] **Task 3 — the domain (AC2–AC5, AC7).**
-  - [ ] 3.1 `packages/domain/src/member/workplace-admin.ts`: `listWorkplacesForAdmin` (clampLimit, SQL filters, keyset cursor),
+- [x] **Task 3 — the domain (AC2–AC5, AC7).**
+  - [x] 3.1 `packages/domain/src/member/workplace-admin.ts`: `listWorkplacesForAdmin` (clampLimit, SQL filters, keyset cursor),
         `addStaffWorkplace`, `renameStaffWorkplace`, `setStaffWorkplaceListed` (delist / relist), `listWorkplaceRequestsForReview` (the
         same-name count as a correlated count over the open index, ⛔ an N+1), `suggestWorkplaceForRequest`, `closeWorkplaceRequest`,
         `answerWorkplaceSuggestion` (AC4's order — it takes the caller's tx, calls `insertMemberPosting`, RETURNS its kind). ⚠ Refusal
@@ -424,7 +424,7 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
         contracts with a lockstep assertion; the HTTP status is mapped PER ROUTE, ⛔ per code (`workplace.not_found` is 404 on AC2's
         `/:workplaceId/*` routes and 422 on AC3's body field); mobile's `refusalCopyKey` (`apps/mobile/lib/workplace.ts`) extended for the
         answer route's codes with member copy.
-  - [ ] 3.2 `packages/domain/src/member/known-people-prompts.ts`: `readKnownPeoplePrompts(db, pariwarId, memberId, now)` — AC5 in ONE
+  - [x] 3.2 `packages/domain/src/member/known-people-prompts.ts`: `readKnownPeoplePrompts(db, pariwarId, memberId, now)` — AC5 in ONE
         round of SQL; IMPORTS `knownPeopleCallerSql` and the newly EXPORTED `namedUnavailableSql` (⛔ `namedByClaimSql` on its own — the workplace flags carry ⛔ claim check, RV1 (i))
         (`known-people.ts:127`) — ⛔ a copy. `freeSlots` is computed in JS today (`known-people.ts:536-537`). Extract ONE exported
         `liveKnownPersonSql(k)` = `(k.state = 'accepted' OR (k.state = 'asked' AND k.asked_at + make_interval(days =>
@@ -434,69 +434,69 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
         count (`:431-434`, after the lapse sweep — called at `:398` in `askKnownPerson`) — a 6.36b `listMyKnownPeople` spec stays green UNCHANGED. ONE clock per question:
         the DB's `IST_TODAY` (`known-people.ts:67` — export it) inside `liveCampaignSql` and this read; `istToday(deps.clock())`
         (`workplace.ts:164`) ONLY for AC4's start-date check (⚠ host / container clock skew — memory: DB-clock ordering).
-  - [ ] 3.3 `packages/domain/src/member/known-people-campaigns.ts`: `startCampaign` (advisory lock FIRST, then the overlap read),
+  - [x] 3.3 `packages/domain/src/member/known-people-campaigns.ts`: `startCampaign` (advisory lock FIRST, then the overlap read),
         `endCampaign`, `listCampaigns`, `liveCampaignSql` (ONE definition, used by 3.2), `KNOWN_PEOPLE_CAMPAIGN_REFUSAL_CODES` (AC7).
-  - [ ] 3.3b Every new path param (`:workplaceId`, `:requestId`, `:campaignId`) is `z.string().uuid()` in its params schema (⛔ a 22P02
+  - [x] 3.3b Every new path param (`:workplaceId`, `:requestId`, `:campaignId`) is `z.string().uuid()` in its params schema (⛔ a 22P02
         500); `MEMBER_POSTING_TERMINAL_STATES` exported from `@twt/domain` and used by `life-events/handlers.ts:51` and 3.2 (RV1 (i)).
-  - [ ] 3.4 Barrel exports (`packages/domain/src/member/index.ts`); domain integration specs on the shared DBs: every refusal; the
+  - [x] 3.4 Barrel exports (`packages/domain/src/member/index.ts`); domain integration specs on the shared DBs: every refusal; the
         confirm's order (a concurrent posting that withdraws the request ⇒ 409, ⛔ a posting); RV11; "No" NULLs; the campaign window /
         overlap / end; each AC5 flag with a leg seeded so ONLY that clause can fire (footgun #47 (d)); RV1 legs (a claim-named active
         member ⇒ people flags false, workplace flags as for anyone; an `active-in-grace` member ⇒ workplace flags only; a `withdrawn`
         member ⇒ all false); the "other members" non-disclosure leg; TWO-CONNECTION legs (i) answer-Yes holding the workplace lock vs
         `renameWorkplaceDistrict` of its district — both finish, ⛔ `40P01`, the answer ends `confirmed` with the NEW spelling or `stale`;
         (ii) suggest vs the same rename. ⚠ Ordering tests in ONE tx tie on `now()` — separate txns (memory: DB-clock ordering).
-- [ ] **Task 4 — the API (AC2–AC5, AC7).**
-  - [ ] 4.1 `apps/api/src/modules/workplaces/` (`index.ts` `registerWorkplacesModule`, `routes.ts`, `handlers.ts`) — the
+- [x] **Task 4 — the API (AC2–AC5, AC7).**
+  - [x] 4.1 `apps/api/src/modules/workplaces/` (`index.ts` `registerWorkplacesModule`, `routes.ts`, `handlers.ts`) — the
         approval-warning-reasons shape: `chain` / `writeChain` consts, the either-of-two GET gate, step-up AFTER the permission hook,
         `openScopeTx`, audit after commit with `resourceLocator`; register in `server.ts` beside `:269`.
-  - [ ] 4.2 The campaign routes (module `apps/api/src/modules/known-people-campaigns/` or inside 4.1 — ⛔ inside the member
+  - [x] 4.2 The campaign routes (module `apps/api/src/modules/known-people-campaigns/` or inside 4.1 — ⛔ inside the member
         known-people module, which is member-session-gated).
-  - [ ] 4.3 The answer route in `apps/api/src/modules/life-events/` (`routes.ts` + a handler INSIDE `createLifeEventsHandlers` reusing
+  - [x] 4.3 The answer route in `apps/api/src/modules/life-events/` (`routes.ts` + a handler INSIDE `createLifeEventsHandlers` reusing
         its closure-local `requireIdempotencyKey`, the keyed store, the 24 h TTL and `releaseClaimWithRetry`).
-  - [ ] 4.4 The prompts route in `apps/api/src/modules/known-people/routes.ts` (`GET ${KNOWN_PEOPLE_BASE}/prompts`, the `read` limit; RV2
+  - [x] 4.4 The prompts route in `apps/api/src/modules/known-people/routes.ts` (`GET ${KNOWN_PEOPLE_BASE}/prompts`, the `read` limit; RV2
         — update the header and the "seven routes" specs; the number fence `known-people-number-fence.test.ts` re-pinned only if a sink is
         added — a read adds ⛔ audit).
-  - [ ] 4.5 Audit types in `AuthAuditEventType` beside `:488-490`: `admin_workplace.added|renamed|delisted|relisted|request_suggested|
+  - [x] 4.5 Audit types in `AuthAuditEventType` beside `:488-490`: `admin_workplace.added|renamed|delisted|relisted|request_suggested|
         request_closed`, `admin_known_people.campaign_started|campaign_ended`, `member_life_events.workplace_suggestion_declined`.
-  - [ ] 4.6 Contracts: `packages/contracts/src/members/workplace.ts` (admin list item, add / rename bodies, queue item, suggest body, answer
+  - [x] 4.6 Contracts: `packages/contracts/src/members/workplace.ts` (admin list item, add / rename bodies, queue item, suggest body, answer
         body + response, the new codes) and `packages/contracts/src/members/known-people.ts` (`KnownPeoplePromptsResponse`, the campaign
         DTOs); the step-up contexts `WORKPLACE_MANAGE_STEP_UP_CONTEXT` / `WORKPLACE_REVIEW_STEP_UP_CONTEXT` exported (the
         `DATA_RIGHTS_STEP_UP_CONTEXT` precedent); every response `.strict()`; contracts vitest (`pnpm --filter @twt/contracts test` — the
         tests are outside `tsc`).
-  - [ ] 4.7 API integration specs: each route's 401 / 403 / step-up; AC3's `workplace.review`-only 403 on every AC2 write; the queue's key
+  - [x] 4.7 API integration specs: each route's 401 / 403 / step-up; AC3's `workplace.review`-only 403 on every AC2 write; the queue's key
         set; AC4's one transaction and its 404-for-another-member; RV2's 200 for a non-caller; the forced-pagination guard green.
-- [ ] **Task 5 — the admin app (AC8).** `apps/admin/src/modules/workplaces/` (`WorkplacesPage.tsx`, `WorkplaceRequestsPage.tsx`,
+- [x] **Task 5 — the admin app (AC8).** `apps/admin/src/modules/workplaces/` (`WorkplacesPage.tsx`, `WorkplaceRequestsPage.tsx`,
       `CampaignControl.tsx`, `i18n-en.ts`, `index.ts`); route wrappers in `apps/admin/src/routes/`; `router.tsx`; `RootLayout.tsx`;
       `client.ts` + `hooks.ts` (invalidate on success); page tests in `apps/admin/tests/`.
-- [ ] **Task 6 — the member app (AC4, AC6).**
-  - [ ] 6.1 `packages/api-client/src/index.ts`: `prompts()` on `createMemberKnownPeopleClient`; `answerWorkplaceSuggestion(requestId,
+- [x] **Task 6 — the member app (AC4, AC6).**
+  - [x] 6.1 `packages/api-client/src/index.ts`: `prompts()` on `createMemberKnownPeopleClient`; `answerWorkplaceSuggestion(requestId,
         answer, idempotencyKey)` on `createMemberAuthClient` (beside `postingHistory`).
-  - [ ] 6.2 `apps/mobile/components/home/HomePromptCards.tsx` (RV7 — the container) + the six cards in
+  - [x] 6.2 `apps/mobile/components/home/HomePromptCards.tsx` (RV7 — the container) + the six cards in
         `apps/mobile/components/workplace/` ((a), (b), (c)) and `apps/mobile/components/known-people/` ((d), (e), (f)); the query
         `['known-people','v1',pariwarId,memberId,'prompts']`, `gcTime: 0`, `withReadTimeout`; invalidated after a posting, an answer, an
         ask, a remove. Render nothing on load / error (⛔ a FlatList — memory: Fabric empty→populated).
-  - [ ] 6.3 `apps/mobile/lib/home-card-dismissals.ts` (MMKV key `home-cards.dismissed.v1`, a JSON map `cardKey → ISO time`, 30 days;
+  - [x] 6.3 `apps/mobile/lib/home-card-dismissals.ts` (MMKV key `home-cards.dismissed.v1`, a JSON map `cardKey → ISO time`, 30 days;
         `clearHomeCardDismissals()`) wired into FOUR places in `session-context.tsx`: beside the three `clearSavedNames()` calls (terminated
         refresh :72, rejected refresh :83, `signOut` :108) AND in `signIn` (:91-93, beside `clearKnownPeopleCache`).
-  - [ ] 6.4 `apps/mobile/lib/invite-share.ts` (RV5): ONE `shareInvite(knownPeopleT, trustName)` — the caller passes `useKnownPeopleT()`'s
+  - [x] 6.4 `apps/mobile/lib/invite-share.ts` (RV5): ONE `shareInvite(knownPeopleT, trustName)` — the caller passes `useKnownPeopleT()`'s
         `t` explicitly (card (b) lives in `components/workplace/` with `workplace` copy, but the MESSAGE is `known_people.invite.*`);
         `known-people-find.tsx:357-364` switched to it (⛔ its behaviour changed — its test still green).
-  - [ ] 6.5 `posting.tsx`: the question block (c) above the history (RV10); the header note (:6) updated; `apps/mobile/lib/workplace.ts`
+  - [x] 6.5 `posting.tsx`: the question block (c) above the history (RV10); the header note (:6) updated; `apps/mobile/lib/workplace.ts`
         history row for `closed` (AC4's line). ⚠ Depend on `locale`, ⛔ `t`, in memos (memory: `useT()` fresh closure).
-  - [ ] 6.5b The answer's `Idempotency-Key`: a FRESH UUID when the question is SHOWN, reused ONLY for retries of that press (the OTHER answer, or a new press after a 200, mints a new key), dropped when
+  - [x] 6.5b The answer's `Idempotency-Key`: a FRESH UUID when the question is SHOWN, reused ONLY for retries of that press (the OTHER answer, or a new press after a 200, mints a new key), dropped when
         the prompts refetch shows a different `suggestedWorkplace` or none (⛔ a stable key per `(requestId, answer)` — a "No" after a
         re-suggestion would replay the old `{ answer: 'no' }` for 24 h and act on nothing).
-  - [ ] 6.6 Mobile unit tests (vitest; mock `lib/mmkv`; RTL `cleanup` under `globals: false`): each card's condition, dismissal expiry,
+  - [x] 6.6 Mobile unit tests (vitest; mock `lib/mmkv`; RTL `cleanup` under `globals: false`): each card's condition, dismissal expiry,
         the one-card order, the sign-out clear, the share helper, the answer flow (Yes / No / 409 stale / 409 closed).
 - [ ] **Task 7 — copy + records (AC9).**
-  - [ ] 7.1 Copy (RV12): `packages/i18n/locales/{en,hi}/workplace.json` — cards (a), (b)'s heading + invite, (c) / the question + Yes / No,
+  - [x] 7.1 Copy (RV12): `packages/i18n/locales/{en,hi}/workplace.json` — cards (a), (b)'s heading + invite, (c) / the question + Yes / No,
         `request_suggested` → *"Suggested: {name}"*, the `closed` row, the stale / closed errors; `known_people.json` — (b)'s *"Add people
         who know you"*, (d), (e), (f); Hindi marked NOT YET HUMAN-REVIEWED as the files already say; i18n parity test green;
         `apps/mobile/tests/unit/workplace-copy.test.ts`'s `producedKeys()` (:44-54 — today only the posting route's 422 codes) gains legs
         for the answer route's 404 / 409 codes and every new card / question key (memory: stubs call, never transcribe).
-  - [ ] 7.2 `friction-budget.md` — two `optional` rows (AC9).
-  - [ ] 7.3 Row 31 — a per-story note (8) naming the keys above for (f).
-  - [ ] 7.4 `deferred-work.md` — **Closed by 6.36c:** *"`workplaces.name` ⛔ stored trimmed"* (Task 1.2 + the trim on add / rename);
+  - [x] 7.2 `friction-budget.md` — two `optional` rows (AC9).
+  - [x] 7.3 Row 31 — a per-story note (8) naming the keys above for (f).
+  - [x] 7.4 `deferred-work.md` — **Closed by 6.36c:** *"`workplaces.name` ⛔ stored trimmed"* (Task 1.2 + the trim on add / rename);
         *"`suggested → pending` may keep stale suggestion columns"* (Task 1.3 + AC4). **⛔ Addressed (stays open):** the start-date
         correction path (⛔ a 6.36c staff screen edits a posting — I2); the rename-race live spec — its trigger is ⛔ met (this part renames a
         WORKPLACE, ⛔ a district; ⛔ calls `renameWorkplaceDistrict`). **⛔ Triggered:** the `Idempotency-Key` length bound (⛔ an eighth copy
@@ -546,20 +546,122 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36c`, 2026-10-16, worktree `.claude/worktrees/6-36c` on
+`story/6-36c-workplace-list-curation-and-prompts` (baseline `301d96d8`; ⛔ cited file moved since — `git diff --name-only
+301d96d8..HEAD -- packages apps scripts infra` was empty at start).
+
 ### Debug Log References
+
+- Migration `0164` applied on BOTH shared databases (`:5433` `twt-test-pg` and `:5432` native) with `pnpm db:migrate` — 164 rows in
+  `drizzle.__drizzle_migrations` on each; `known_people_campaigns` and `workplaces_name_trimmed_check` present on each. ⛔ Hand delta, ⛔
+  regenerate.
+- Domain (live `:5433`): `rls/known-people-campaigns-policy-regression` 5, `rls/workplaces-policy-regression` 22, `member/workplace` 13,
+  `member/import-workplaces` 14, `member/workplace-admin` 18, `member/known-people-campaigns` 6, `member/known-people-prompts` 15,
+  `member/workplace-admin-concurrency` 5 (two connections, own-committing), `member/known-people` + `known-people-concurrency` 35 — all
+  green; `tests/rbac` 174. A 4-mutation check on `readKnownPeoplePrompts` (`freeSlots > 0`, the different-workplace test, `has_list`,
+  `state = 'accepted'`) — each mutation FAILED a leg (the legs bite); the source was restored.
+- API (live `:5433`): `workplaces/workplaces.spec` 16, `known-people/known-people.spec` + `life-events/*` 45, forced-pagination,
+  login-wall, security-headers, approval-warning-reasons and `tests/unit` 464 (1 skipped, pre-existing) — green.
+- Contracts 1387, api-client 34, admin 74 files / 1186, mobile 67 files / 1030, i18n 116 + the parity gate — green. `pnpm typecheck`
+  (20 tasks), `pnpm lint` (20 tasks), `schema:check`, `microcopy:check`, `domain-invariants:check`, `pii:check`,
+  `claim-adjudication-human-actor:check`, `access-wrapper:check`, `member-state:check`, `governance-boundary:check` — green. Mobile `tsc`
+  run BOTH ways (with the main checkout's `.expo/types` copied in, then removed — ⛔ committed): green.
 
 ### Completion Notes List
 
 - 2026-10-14 — cut by `bmad-create-story 6.36` (SW1). ⛔ No code.
 - 2026-10-16 — re-validated against `main` `301d96d8` by `bmad-create-story 6.36c` (v2.0; four parallel verifiers). Ultimate context
   engine analysis completed - comprehensive developer guide created. ⛔ No code.
+- 2026-10-16 — IMPLEMENTED by `bmad-dev-story 6.36c` (Tasks 1–7), built to the RV rulings and `-342`:
+  - **0164** — `known_people_campaigns` (the 30-day-inclusive window CHECK, the end's dated-AND-attributed CHECK, per-command RLS, FORCE,
+    ⛔ DELETE, UPDATE granted on the end's two columns only, ⛔ FK — there is ⛔ `pariwars` table); `workplaces_name_trimmed_check`; the
+    `workplace_requests` guard REPLACED (byte-identical but the marked block: into `pending` ⇒ the three suggestion columns NULL; into
+    `suggested` ⇒ the actor). Five fixtures that suggested without an actor now set one; `:365`'s leg is the GUARD code and a new leg
+    proves `suggested_check` still fires with the actor present. RV9 recorded in `workplace-import.ts` and its README (⛔ batch column;
+    the actor in-row on add / suggest; the audit post-commit, ⛔ event).
+  - **RBAC** 51 → 52, 65 → 68 keys: `workplace.manage` (super_admin ONLY, derived — ⛔ `roles.ts` const), `workplace.review` and
+    `known_people.run_campaign` (pariwar_admin + derived super_admin); per-key holder legs incl. ⛔ district_admin / state_trustee /
+    block_admin / district_verifier.
+  - **Domain** — `member/workplace-admin.ts` (the staff list filtered IN SQL, add / rename / delist / relist on STAFF rows only, the queue
+    with a correlated folded same-name count, suggest / close in the district → workplace → request order, and the member's
+    `answerWorkplaceSuggestion` — `lockMemberPostingWrites` first, a plain read of the CALLER's request, `confirmed` FIRST then ONE posting
+    through `insertMemberPosting` with `exceptRequestId`, a stale suggestion RETURNED, ⛔ thrown), `member/known-people-campaigns.ts`
+    (the Pariwar advisory lock FIRST, OPEN vs LIVE on the DB's IST day), `member/known-people-prompts.ts` (AC5 in ONE SQL round; RV1's
+    two gates; RV4; RV8). Shared, ⛔ copied: `MEMBER_POSTING_TERMINAL_STATES` (used by the life-events handler too), `IST_TODAY`,
+    `namedUnavailableSql`, the extracted `liveKnownPersonSql` (now behind `knownPersonLiveLabel`), the workplace cursor helpers.
+  - **API** — `modules/workplaces/` (the either-of-two GET gate, step-up AFTER the permission hook, statuses PER ROUTE, post-commit audit
+    with `resourceLocator`), `modules/known-people-campaigns/` (⛔ step-up, ⛔ messaging import — a source scan), the answer route in
+    life-events (the closure's `requireIdempotencyKey`, its OWN key prefix, ONE discriminated response, the stale path released
+    explicitly), the prompts route in known-people (RV2 — the 6.36b header and both "seven routes" legs now name the eighth and assert
+    its 200 with every people flag false), nine audit types.
+  - **Admin** — `modules/workplaces/` (`WorkplacesPage`, `WorkplaceRequestsPage`, `CampaignControl`, a shared `StepUpPanel` taking the
+    contracts' contexts), two route wrappers, `router.tsx`, the nav (Workplaces on the national grant; Requests ungated inside a Pariwar).
+  - **Mobile** — `HomePromptCards` (ONE card, RV7's order and its (a)-while-(c) rule) and the six cards; `WorkplaceSuggestionQuestion` on
+    the home and at the top of Life Events → Workplace (driven by the PROMPTS); `lib/home-card-dismissals.ts` (cleared in the FOUR
+    session sites); `lib/invite-share.ts` (the find screen switched to it); the answer's key per showing (`answerKeyFor`); the closed
+    request's row. The prompts are invalidated after a posting, an answer and every 6.36b write's `refresh`.
+  - ⚠ **Two expectation changes, both this story's own ACs (⛔ a regression):** 6.36a's `workplace.test.ts` leg that pinned a CLOSED
+    request to ⛔ status line now expects `request_closed` / `request_closed_no_name` (AC4); `request_suggested` reads *"Suggested:
+    {name}"* (RV10) — the question moved to its own block.
+  - ⚠ **Recorded, ⛔ claimed:** Row 31's per-story note is **(9)** — 6.36b had already used (8) (the Task said "note (8)"). The AC2 add
+    form takes a district as typed (the server refuses one ⛔ LISTED — 422); ⛔ district picker on the admin page. Native layout, a screen
+    reader and the share sheet on a device are ⛔ attested ([[feedback_record_unattested_no_backfill]]) — the render tests run the real
+    components under jsdom with mocked primitives.
 
 ### File List
+
+**New**
+- `packages/domain/migrations/0164_workplace-curation-and-campaigns.sql`
+- `packages/domain/src/schema/known_people_campaigns.ts`
+- `packages/domain/src/policies/known-people-campaigns-rls.ts`
+- `packages/domain/src/member/workplace-admin.ts`
+- `packages/domain/src/member/known-people-campaigns.ts`
+- `packages/domain/src/member/known-people-prompts.ts`
+- `packages/domain/tests/integration/rls/known-people-campaigns-policy-regression.spec.ts`
+- `packages/domain/tests/integration/member/workplace-admin.spec.ts`
+- `packages/domain/tests/integration/member/workplace-admin-concurrency.spec.ts`
+- `packages/domain/tests/integration/member/known-people-campaigns.spec.ts`
+- `packages/domain/tests/integration/member/known-people-prompts.spec.ts`
+- `packages/contracts/tests/members-workplace-curation.test.ts`
+- `packages/api-client/tests/workplace-curation-client.test.ts`
+- `apps/api/src/modules/workplaces/{index,routes,handlers}.ts`
+- `apps/api/src/modules/known-people-campaigns/{index,routes,handlers}.ts`
+- `apps/api/tests/integration/workplaces/workplaces.spec.ts`
+- `apps/admin/src/modules/workplaces/{WorkplacesPage,WorkplaceRequestsPage,CampaignControl,StepUpPanel}.tsx`, `i18n-en.ts`, `index.ts`
+- `apps/admin/src/routes/WorkplacesRoute.tsx`, `apps/admin/src/routes/WorkplaceRequestsRoute.tsx`
+- `apps/admin/tests/workplaces-page.test.tsx`, `apps/admin/tests/workplace-requests-page.test.tsx`
+- `apps/mobile/components/home/{HomePromptCards,HomeReminderCard}.tsx`
+- `apps/mobile/components/workplace/{AddWorkplaceCard,InviteColleaguesCard,WorkplaceSuggestionCard,WorkplaceSuggestionQuestion}.tsx`
+- `apps/mobile/components/known-people/{TransferReviewCard,ReplaceNamedCard,CampaignCard}.tsx`
+- `apps/mobile/lib/{home-card-dismissals,home-cards,invite-share}.ts`
+- `apps/mobile/tests/unit/home-cards.test.ts`, `apps/mobile/tests/unit/home-prompt-cards-render.test.ts`
+
+**Modified**
+- `packages/domain/migrations/meta/_journal.json` (idx 164, `when` `1794195600008`)
+- `packages/domain/src/{ids/index,schema/index,policies/index,member/index}.ts`
+- `packages/domain/src/member/{known-people,posting,workplace,workplace-import}.ts`; `packages/domain/scripts/README-import-workplaces.md`
+- `packages/domain/src/rbac/{permissions,roles}.ts`; `packages/domain/tests/rbac/{permissions,roles}.test.ts`
+- `packages/domain/tests/integration/rls/workplaces-policy-regression.spec.ts`; `packages/domain/tests/integration/member/{workplace,import-workplaces}.spec.ts`
+- `packages/contracts/src/members/{workplace,known-people}.ts`
+- `packages/api-client/src/index.ts`
+- `packages/i18n/locales/{en,hi}/{workplace,known_people}.json`
+- `apps/api/src/audit/audit-sink.ts`; `apps/api/src/server.ts`
+- `apps/api/src/modules/life-events/{handlers,routes}.ts`; `apps/api/src/modules/known-people/{handlers,routes}.ts`
+- `apps/api/tests/integration/known-people/known-people.spec.ts`
+- `apps/admin/src/api/{client,hooks}.ts`; `apps/admin/src/router.tsx`; `apps/admin/src/routes/RootLayout.tsx`
+- `apps/mobile/app/(tabs)/index.tsx`; `apps/mobile/app/(life-events)/{posting,known-people-find}.tsx`
+- `apps/mobile/components/known-people/{known-people-cache,useKnownPeopleQueries}.ts`; `apps/mobile/components/workplace/WorkplacePicker.tsx`
+- `apps/mobile/lib/{session-context.tsx,workplace.ts}`
+- `apps/mobile/tests/unit/{known-people-copy-keys,known-people-session,workplace-copy,workplace}.test.ts`
+- `friction-budget.md`; `docs/launch-gate-inventory/inventory-roster.md` (Row 31 note (9))
+- `_bmad-output/implementation-artifacts/deferred-work.md`; `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/6-36c-workplace-list-curation-and-prompts.md` (this file)
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-16 | 2.4 | IMPLEMENTED by `bmad-dev-story 6.36c` — Tasks 1–7: 0164 (campaigns, the trimmed-name CHECK, the guard's suggestion rules) on `:5433` and `:5432`; RBAC 52 / 68 keys; the domain (staff list, queue, suggest / close, the member's answer, campaigns, prompts); the API (two admin modules, the answer route, the prompts route — 6.36b's eighth, RV2); the admin pages; the home cards and the confirm question; copy en + hi; two friction rows; Row 31 note (9); the 6.36a deferrals dispositioned + one new (RV3). Every touched suite green on the shared DBs; `pnpm ci:local` pending at this entry. |
 | 2026-10-16 | 2.3 | Round-3 fresh validate: 0 BLOCKER / 0 HIGH / 1 MEDIUM / 8 LOW — CONVERGED; all applied (the leftover `namedByClaimSql` import dropped; the terminal gate classified as MATCHING SW16 (2); `suggestedWorkplace` carries `workplaceId` and card (c) is dismissed per `(requestId, workplaceId)`; the other answer mints a new key; `input.now` + `WorkplaceAnswerRefusedError`; `not_live` noted as historical; `askKnownPerson`'s sweep call `:398`; close joins RV9 (iii)). Sprint row `backlog` → `ready-for-dev`. |
 | 2026-10-16 | 2.2 | `2026-10-16-342` (`61332dae`, committed ALONE) records BigDev's answers to §For BigDev — RV4 = call 1, RV8 = call 2, RV9 = call 3, RV3 = call 4 (each the recommended option); RV4 / RV8 cite `-342`, ⛔ SW16; the precedence clause names `-342`. Round-2 fresh validate (0 BLOCKER / 1 HIGH / 9 MEDIUM / 6 LOW, all applied): the HIGH — `liveKnownPersonSql` was pointed at `listMyKnownPeople`'s WIDER shown filter (a 6.36b regression); now `:457-458` / the label CASE, ⛔ the shown filter. Also: RV1 (i)'s claim half DROPPED (it would have been a fifth, unrecorded narrowing of SW16 (2)) and the terminal-state set exported (⛔ "reused" a private helper); AC4 splits handler / domain steps, one discriminated-union response, the stale path releases explicitly; the mobile key per showing; campaign refusal codes + 404; uuid params; one clock per question; two-connection rename legs; the copy test's produced keys; the picker's loaded district. |
 | 2026-10-16 | 2.1 | Fresh-context validate of v2.0 (0 BLOCKER / 4 HIGH / 8 MEDIUM / 8 LOW, all applied): ⛔ FK to a `pariwars` table that does not exist (`0073:20`); Task 1.3 names the seven fixtures that suggest without an actor and `:365`'s code becoming the GUARD; `WORKPLACE_REFUSAL_CODES` left as the posting route's 422s — two new code lists, status per ROUTE; RV9 quotes the record verbatim and says the "audit pair in the SAME transaction" is ⛔ met — §For BigDev added (RV3, RV4, RV8, RV9 — each a narrowing / departure, built as written unless answered); `lockListedWorkplace(db, pariwarId, workplaceId)`; AC4's idempotency per kind (its own key prefix; `declined` recorded, `stale` released) and ONE lock order district → workplace → request (AC3 too — suggest / close lock the request, 409 ⛔ a guard 500); the Workplace screen's question reads the prompts, ⛔ the history; the sign-out clear sites corrected (three + `signIn`); RV6 OPEN vs LIVE — `/end` cancels a scheduled campaign; `freeSlots` counted in SQL through one extracted `liveKnownPersonSql`; `\\s+`; `sameNameCount` excludes itself; `shareInvite` takes the `known_people` `t`; RV2 quotes `-333` call 1 (a); RV7's (a)-while-(c) rule; the actor / IST / lock-key / trigger names. |

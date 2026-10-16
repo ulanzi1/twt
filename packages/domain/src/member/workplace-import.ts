@@ -32,9 +32,16 @@
 // licence, the attribution text, the state code and every count; a rename writes a `source_name = 'rename'` row. The
 // only attribution is the database login the operator used. RATIONALE: Story 6.36a Task 3 specified the CLI and Task 1.2
 // defined the batch row WITHOUT an actor column; 0161 is applied on both shared databases, so ⛔ no column is added here.
-// RE-EXAMINATION TRIGGER: Story 6.36c's staff list / suggestion route — the FIRST HTTP caller of a list mutation — MUST
-// carry the actor and the audit pair in the SAME transaction, and an actor column on the batch row lands with 6.36c's
-// migration (0164). ⛔ An HTTP caller of `writeWorkplaceImport` / `renameWorkplaceDistrict` must never reuse this bypass.
+// RE-EXAMINED by Story 6.36c (`2026-10-16-342` call 3 — RV9; it DEPARTS from the trigger first written here, which said
+// 6.36c's route *"MUST carry the actor and the audit pair in the SAME transaction, and an actor column on the batch row
+// lands with 6.36c's migration (0164)"*): (i) ⛔ batch-row actor column — 6.36c's routes ⛔ never call
+// `writeWorkplaceImport` / `renameWorkplaceDistrict` and ⛔ never write a batch row, and this CLI still has ⛔ HTTP actor,
+// so the column would be NULL for ever; (ii) the staff ACTOR is carried in the SAME transaction, IN THE ROW
+// (`workplaces.created_by_actor_id` on a staff add, `workplace_requests.suggested_by_actor_id` on a suggestion); (iii) the
+// *"audit pair in the SAME transaction"* is ⛔ met — 6.36c's audit line is a POST-COMMIT log (`emitAuthAudit`, every admin
+// writer's shape) and ⛔ event is written; a rename / delist / relist / close carries its actor ONLY in that post-commit
+// line (`workplaces` has ⛔ `updated_by` column). This CLI's bypass stays as written above.
+// ⛔ An HTTP caller of `writeWorkplaceImport` / `renameWorkplaceDistrict` must never reuse this bypass.
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
 

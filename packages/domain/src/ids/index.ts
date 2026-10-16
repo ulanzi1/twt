@@ -831,3 +831,8 @@ export const workplaceImportBatchId = uuidBrand('WorkplaceImportBatchId');
 export type KnownPersonLinkId = Brand<'KnownPersonLinkId'>;
 /** Smart constructor: validates UUID shape, returns a branded `KnownPersonLinkId`. */
 export const knownPersonLinkId = uuidBrand('KnownPersonLinkId');
+
+/** Per-row address of a Pariwar Admin's people-who-know-me campaign (`known_people_campaigns.campaign_id`, Story 6.36c). */
+export type KnownPeopleCampaignId = Brand<'KnownPeopleCampaignId'>;
+/** Smart constructor: validates UUID shape, returns a branded `KnownPeopleCampaignId`. */
+export const knownPeopleCampaignId = uuidBrand('KnownPeopleCampaignId');

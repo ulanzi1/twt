@@ -90,7 +90,7 @@ async function seedRequest(client: Client, l: Listed, memberId?: string): Promis
 
 /** Move a seeded request into `state` through the guard's own moves. */
 async function moveTo(client: Client, l: Listed, requestId: string, state: string): Promise<void> {
-  const suggest = `UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_at = now() WHERE request_id = $1`;
+  const suggest = `UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_by_actor_id = gen_random_uuid(), suggested_at = now() WHERE request_id = $1`;
   if (state === 'pending') return;
   if (state === 'suggested' || state === 'confirmed') await client.query(suggest, [requestId, l.schoolId]);
   if (state === 'confirmed') await client.query(`UPDATE workplace_requests SET state = 'confirmed', resolved_at = now() WHERE request_id = $1`, [requestId]);
@@ -344,12 +344,12 @@ describe.skipIf(!hasDatabase)('0161 — the workplace tables', { timeout: 20000 
       const move = (id: string, state: string, extra = '') =>
         attempt(client, `UPDATE workplace_requests SET state = $2${extra} WHERE request_id = $1`, [id, state]);
       const resolved = `, resolved_at = now()`;
-      const suggested = `, suggested_workplace_id = '${l.schoolId}', suggested_at = now()`;
+      const suggested = `, suggested_workplace_id = '${l.schoolId}', suggested_by_actor_id = gen_random_uuid(), suggested_at = now()`;
       // pending → confirmed is ⛔ a move.
       const a = await seedRequest(client, l);
       expect((await move(a.requestId, 'confirmed', resolved)).code).toBe(GUARD);
       expect((await move(a.requestId, 'suggested', suggested)).code).toBeNull();
-      expect((await move(a.requestId, 'pending', `, suggested_workplace_id = NULL, suggested_at = NULL`)).code).toBeNull();
+      expect((await move(a.requestId, 'pending', `, suggested_workplace_id = NULL, suggested_by_actor_id = NULL, suggested_at = NULL`)).code).toBeNull();
       expect((await move(a.requestId, 'suggested', suggested)).code).toBeNull();
       expect((await move(a.requestId, 'confirmed', resolved)).code).toBeNull();
       for (const s of ['pending', 'suggested', 'withdrawn', 'closed']) {
@@ -361,11 +361,50 @@ describe.skipIf(!hasDatabase)('0161 — the workplace tables', { timeout: 20000 
         expect((await move(r.requestId, 'pending', `, resolved_at = NULL`)).code, `${final} → pending`).toBe(GUARD);
       }
       // A suggested request needs its workplace and its time (the CHECK); a final one needs resolved_at (⇔).
+      // 0164: a suggestion with ⛔ actor is the GUARD's refusal (a BEFORE trigger fires before the CHECK); with the actor,
+      // the CHECK still fires on a missing workplace or time.
       const b = await seedRequest(client, l);
-      expect((await move(b.requestId, 'suggested')).code).toBe('23514');
+      expect((await move(b.requestId, 'suggested')).code).toBe(GUARD);
+      expect((await move(b.requestId, 'suggested', `, suggested_by_actor_id = gen_random_uuid()`)).code).toBe('23514');
+      expect((await move(b.requestId, 'suggested', `, suggested_by_actor_id = gen_random_uuid(), suggested_workplace_id = '${l.schoolId}'`)).code).toBe('23514');
       expect((await move(b.requestId, 'withdrawn')).code).toBe('23514');
       // The suggestion changes only on a move into `suggested` (or back to `pending`).
       expect((await move(b.requestId, 'withdrawn', `${resolved}, suggested_workplace_id = '${l.officeId}'`)).code).toBe(GUARD);
+    });
+
+    it('0164: a request returned to `pending` carries ⛔ suggestion; a suggestion names its actor', async () => {
+      const { client } = getTx();
+      const l = await seedList(client);
+      const move = (id: string, state: string, extra = '') =>
+        attempt(client, `UPDATE workplace_requests SET state = $2${extra} WHERE request_id = $1`, [id, state]);
+      const suggested = `, suggested_workplace_id = '${l.schoolId}', suggested_by_actor_id = gen_random_uuid(), suggested_at = now()`;
+      const r = await seedRequest(client, l);
+      expect((await move(r.requestId, 'suggested', suggested)).code).toBeNull();
+      // Each of the three columns left behind is refused on its own.
+      for (const keep of ['suggested_workplace_id', 'suggested_by_actor_id', 'suggested_at']) {
+        const nulls = ['suggested_workplace_id', 'suggested_by_actor_id', 'suggested_at'].filter((c) => c !== keep).map((c) => `, ${c} = NULL`).join('');
+        expect((await move(r.requestId, 'pending', nulls)).code, `keeps ${keep}`).toBe(GUARD);
+      }
+      expect((await move(r.requestId, 'pending')).code).toBe(GUARD);
+      expect((await move(r.requestId, 'pending', `, suggested_workplace_id = NULL, suggested_by_actor_id = NULL, suggested_at = NULL`)).code).toBeNull();
+      // ⛔ A suggestion without the staff member who made it.
+      expect((await move(r.requestId, 'suggested', `, suggested_workplace_id = '${l.schoolId}', suggested_at = now()`)).code).toBe(GUARD);
+      expect((await move(r.requestId, 'suggested', suggested)).code).toBeNull();
+      // A close keeps the suggestion as it was (the 0161 rule — unchanged).
+      expect((await move(r.requestId, 'closed', `, resolved_at = now()`)).code).toBeNull();
+      const { rows } = await client.query(`SELECT suggested_by_actor_id IS NOT NULL AS has FROM workplace_requests WHERE request_id = $1`, [r.requestId]);
+      expect(rows[0]).toEqual({ has: true });
+    });
+
+    it('0164: a workplace name is STORED trimmed', async () => {
+      const { client } = getTx();
+      const l = await seedList(client);
+      const ins = (name: string) =>
+        attempt(client, `INSERT INTO workplaces (pariwar_id, kind, name, district, source) VALUES ($1, 'office', $2, 'Patna', 'staff')`, [l.pariwarId, name]);
+      expect((await ins(' DEO Office')).code).toBe('23514');
+      expect((await ins('DEO Office ')).code).toBe('23514');
+      expect((await ins('DEO Office')).code).toBeNull();
+      expect((await attempt(client, `UPDATE workplaces SET name = 'Renamed  ' WHERE workplace_id = $1`, [l.officeId])).code).toBe('23514');
     });
 
     it('the identity columns never change (member, started_on, created_at, pariwar)', async () => {

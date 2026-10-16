@@ -41,6 +41,8 @@ import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
 import { registerDirectoryPublicationModule } from './modules/directory-publication/index.js';
 import { registerDriveTargetModule } from './modules/drive-target/index.js';
 import { registerApprovalWarningReasonsModule } from './modules/approval-warning-reasons/index.js';
+import { registerKnownPeopleCampaignsModule } from './modules/known-people-campaigns/index.js';
+import { registerWorkplacesModule } from './modules/workplaces/index.js';
 import { registerNomineeBankMaskingModule } from './modules/nominee-bank-masking/index.js';
 import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
 import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
@@ -267,6 +269,11 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   registerDriveTargetModule(app, deps);
   // Story 6.23a (NW17) — the Super Admin's warning-reason list (add / replace; ⛔ never edit or delete).
   registerApprovalWarningReasonsModule(app, deps);
+  // Story 6.36c (`-330` SW9 A) — the Super Admin's workplace list (add / rename / delist / relist a STAFF row) and the
+  // Pariwar Admin's *"isn't listed"* queue (suggest / close). ⛔ No staff route writes a posting — only the member's "Yes".
+  registerWorkplacesModule(app, deps);
+  // Story 6.36c (SW16 (5), `-342` call 1) — a Pariwar Admin's people-who-know-me campaign: an in-app card, ⛔ a message.
+  registerKnownPeopleCampaignsModule(app, deps);
   // Story 5.4 — WhatsApp inbound-webhook ingress primitive (§3.11): per-Pariwar Meta webhook receiver
   // (GET subscription challenge + POST verify-persist-ack-within-5s). Public (Meta is unauthenticated — the
   // verify-token / X-Hub-Signature-256 IS the auth; login-wall-allowlisted). Encapsulated so its raw-body

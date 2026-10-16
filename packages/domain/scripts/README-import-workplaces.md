@@ -62,12 +62,22 @@ text and every count.
 
 This tool runs as a command under the operator's database login. There is no HTTP actor and no audit line: **the batch
 row is the record** of every run — the source, its URL, the retrieval date, the licence, the attribution text, the state
-code and the counts; a rename writes a `source_name = 'rename'` row. Until Story 6.36c, the login the operator used is the
-only attribution of a run (the batch row has no actor column — Task 1.2 did not define one, and migration 0161 is applied,
-so none is added here). Story 6.36c's staff list / suggestion route is the first HTTP caller of a list change: it must
-carry the staff actor and the audit line in the same transaction, and an actor column on the batch row lands with its
-migration (0164). The rationale and the re-examination trigger are recorded in the module header of
-`src/member/workplace-import.ts`.
+code and the counts; a rename writes a `source_name = 'rename'` row. The login the operator used is the only attribution
+of a run (the batch row has no actor column — Task 1.2 did not define one).
+
+Story 6.36c re-examined this (Decision `2026-10-16-342` call 3), and it departs from what was first written here (that its
+route must carry the actor and the audit line in the same transaction, and that an actor column on the batch row would
+land with migration 0164):
+
+1. **No actor column on the batch row.** The staff screens never run the import or the rename and never write a batch row,
+   and this tool still has no HTTP actor — the column would always be empty.
+2. **The staff actor is stored in the row it changes** — the staff member who adds an office or school
+   (`workplaces.created_by_actor_id`) and the one who suggests a workplace for a request
+   (`workplace_requests.suggested_by_actor_id`), in the same transaction as the change.
+3. **The audit line is written after the commit, not in the same transaction**, and no event is written — the same as
+   every other admin screen. A rename, delist, relist or close by staff records who did it only in that audit line.
+
+This tool's own attribution is unchanged. The full record is in the module header of `src/member/workplace-import.ts`.
 
 ## Rename a district spelling
 

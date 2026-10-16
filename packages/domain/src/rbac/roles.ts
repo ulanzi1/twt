@@ -301,6 +301,13 @@ const PARIWAR_MANAGE_CUSTOM_FIELDS = permissionKey('pariwar.manage_custom_fields
 // ([[project_rbac_geo_scope_containment]]): a `district` ceiling can never satisfy a
 // pariwar-dimension check, and a `state` ceiling is broader than the gate's dimension.
 const PARIWAR_MANAGE_DRIVE_TARGET = permissionKey('pariwar.manage_drive_target');
+// Story 6.36c (`2026-10-14-330` SW9 A / SW16) — the workplace QUEUE key and the CAMPAIGN key (pariwar-dimension),
+// granted to pariwar_admin (+ super_admin auto). ⭐ Their sibling `workplace.manage` (ADD to the list) is super_admin
+// ONLY and is DELIBERATELY ABSENT from this file — the `approval_warning_reason.manage` / drive-target-visibility
+// precedent: ⛔ do not "complete the pair". ⛔ NOT district_admin / state_trustee / block_admin — inert in both directions
+// ([[project_rbac_geo_scope_containment]]).
+const WORKPLACE_REVIEW = permissionKey('workplace.review');
+const KNOWN_PEOPLE_RUN_CAMPAIGN = permissionKey('known_people.run_campaign');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -465,6 +472,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // (cl.7(c)), not by omission. ⛔ Adding it here would collapse an authority split the catalog
       // exists to make visible.
       PARIWAR_MANAGE_DRIVE_TARGET,
+      // Story 6.36c (SW9 A) — the *"isn't listed"* queue: SUGGEST a listed entry (the member confirms) or close. ⛔ Never
+      // ADD — `workplace.manage` is the Super Admin's.
+      WORKPLACE_REVIEW,
+      // Story 6.36c (SW16 (5), `-342` call 1) — start / end a people-who-know-me campaign (an in-app card; ⛔ a message).
+      KNOWN_PEOPLE_RUN_CAMPAIGN,
     ],
     scopeCeiling: 'pariwar',
   },

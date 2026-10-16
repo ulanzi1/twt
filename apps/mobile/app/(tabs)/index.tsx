@@ -20,6 +20,7 @@ import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
 import { YogdaanBahiEntry } from 'components/yogdaan-bahi/YogdaanBahiEntry'
 import { PeerRequestEntry } from 'components/peer-request/PeerRequestEntry'
 import { KnownPeopleRequestEntry } from 'components/known-people/KnownPeopleRequestEntry'
+import { HomePromptCards } from 'components/home/HomePromptCards'
 
 // Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
 // for an `active` member assigned to a pool whose cycle alert is `live` it renders the contribution
@@ -70,6 +71,10 @@ export default function YogdaanTab() {
         {/* Story 6.36b (AC6) — "Someone has named you": renders NOTHING unless a request naming the member is open, and
             only for an `active` member (the server's ONE 403 leaves it empty). In the app only — ⛔ SMS, push, WhatsApp. */}
         <KnownPeopleRequestEntry />
+        {/* Story 6.36c (AC6; RV7) — the reminder cards: ONE at a time (a suggested workplace, add your workplace, someone can
+            no longer be asked, a new workplace, a campaign, invite your colleagues). Self-suppresses on load / error / no
+            card; BELOW the My Pool card (Story 8.2 keeps it topmost). In the app only — ⛔ SMS, push, WhatsApp. */}
+        <HomePromptCards />
         <LockInClockWidget />
         <RenewalStatusWidget />
         <LifeEventsEntry />

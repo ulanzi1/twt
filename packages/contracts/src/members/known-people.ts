@@ -178,3 +178,73 @@ export const KNOWN_PEOPLE_ERROR_CODES = {
   idempotencyInProgress: 'known_people.idempotency_in_progress',
 } as const;
 export type KnownPeopleErrorCode = (typeof KNOWN_PEOPLE_ERROR_CODES)[keyof typeof KNOWN_PEOPLE_ERROR_CODES];
+
+// ── Story 6.36c — the home prompts and the campaigns (AC5, AC7; `-330` SW16, `-342` calls 1–2) ─────────────────────────
+
+/**
+ * `GET /api/v1/member/known-people/prompts` — which reminder cards the home can show. ⭐ The ONE route of this module that
+ * answers 200 to ANY member session (RV2): a member who may ⛔ name people gets every people flag `false`. ⛔ A name, ⛔ a
+ * count of people, ⛔ why someone can no longer be asked; ⛔ a flag about other members at a workplace.
+ */
+export const KnownPeoplePromptsResponse = z
+  .object({
+    noWorkplace: z.boolean(),
+    hasWorkplace: z.boolean(),
+    suggestedWorkplace: z
+      .object({ requestId: z.string().uuid(), workplaceId: z.string().uuid(), name: z.string(), district: z.string() })
+      .strict()
+      .nullable(),
+    transferReview: z.boolean(),
+    replaceNeeded: z.boolean(),
+    canNamePeople: z.boolean(),
+    campaign: z.object({ campaignId: z.string().uuid() }).strict().nullable(),
+  })
+  .strict();
+export type KnownPeoplePromptsResponse = z.output<typeof KnownPeoplePromptsResponse>;
+
+/**
+ * The campaign writes' refusals (`window_invalid` 422, `overlap` 409, `not_live` 409 — ⚠ historical: it means ⛔ OPEN,
+ * `not_found` 404). ⚠ LOCKSTEP with `KNOWN_PEOPLE_CAMPAIGN_REFUSAL_CODES` (@twt/domain).
+ */
+export const KNOWN_PEOPLE_CAMPAIGN_REFUSAL_CODES = [
+  'known_people_campaign.window_invalid',
+  'known_people_campaign.overlap',
+  'known_people_campaign.not_live',
+  'known_people_campaign.not_found',
+] as const;
+export type KnownPeopleCampaignRefusalCode = (typeof KNOWN_PEOPLE_CAMPAIGN_REFUSAL_CODES)[number];
+
+const IsoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a date as YYYY-MM-DD');
+
+/** `POST /api/v1/p/:pariwarId/admin/known-people-campaigns` — IST dates, at most 30 days inclusive (the handler's 422). */
+export const KnownPeopleCampaignStartRequest = z.object({ startsOn: IsoDay, endsOn: IsoDay }).strict();
+export type KnownPeopleCampaignStartRequest = z.output<typeof KnownPeopleCampaignStartRequest>;
+
+export const KnownPeopleCampaignWire = z
+  .object({
+    campaignId: z.string().uuid(),
+    startsOn: z.string(),
+    endsOn: z.string(),
+    status: z.enum(['scheduled', 'live', 'finished', 'ended']),
+    endedAt: z.string().nullable(),
+    createdAt: z.string(),
+  })
+  .strict();
+export type KnownPeopleCampaignWire = z.output<typeof KnownPeopleCampaignWire>;
+
+export const KnownPeopleCampaignWriteResponse = z.object({ campaign: KnownPeopleCampaignWire }).strict();
+export type KnownPeopleCampaignWriteResponse = z.output<typeof KnownPeopleCampaignWriteResponse>;
+
+export const KNOWN_PEOPLE_CAMPAIGNS_PAGE_CAP = 50;
+export const KnownPeopleCampaignListQuery = z
+  .object({
+    limit: z.coerce.number().int().positive().max(KNOWN_PEOPLE_CAMPAIGNS_PAGE_CAP).optional(),
+    cursor: Cursor.max(200).optional(),
+  })
+  .strict();
+export type KnownPeopleCampaignListQuery = z.output<typeof KnownPeopleCampaignListQuery>;
+
+export const KnownPeopleCampaignListResponse = z
+  .object({ items: z.array(KnownPeopleCampaignWire), nextCursor: Cursor.nullable(), hasMore: z.boolean() })
+  .strict();
+export type KnownPeopleCampaignListResponse = z.output<typeof KnownPeopleCampaignListResponse>;

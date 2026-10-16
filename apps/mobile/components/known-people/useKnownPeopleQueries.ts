@@ -20,7 +20,7 @@ import {
 } from '../../lib/known-people'
 import { knownPeopleApi } from '../../lib/known-people-api'
 import { useSession } from '../../lib/session-context'
-import { KNOWN_PEOPLE_CACHE_OPTIONS, KNOWN_PEOPLE_MUTATION_OPTIONS, knownPeopleListKey, knownPeopleRequestsKey } from './known-people-cache'
+import { KNOWN_PEOPLE_CACHE_OPTIONS, KNOWN_PEOPLE_MUTATION_OPTIONS, knownPeopleListKey, knownPeoplePromptsKey, knownPeopleRequestsKey } from './known-people-cache'
 
 /**
  * A list read gives up after this long. The API client sets ⛔ timeout of its own (nor does React Native's Android HTTP
@@ -166,7 +166,29 @@ export function useRestartKnownPeopleLists(): () => Promise<{ readonly restored:
   }
 }
 
-/** The writes. Each invalidates both lists on success (the other side's view changes too). */
+/**
+ * Story 6.36c (AC5, AC6) — the home prompts: which ONE reminder card to show. `gcTime: 0` (⛔ persisted), the read timeout,
+ * ⛔ a call before the session has loaded. 200 for ANY member session (RV2) — a failure simply shows ⛔ card.
+ */
+export function useKnownPeoplePromptsQuery() {
+  const { pariwarId, memberId, ready } = useIds()
+  return useQuery({
+    ...KNOWN_PEOPLE_CACHE_OPTIONS,
+    queryKey: knownPeoplePromptsKey(pariwarId, memberId),
+    queryFn: ({ signal }) => withReadTimeout(signal, (s) => knownPeopleApi.prompts({ signal: s })),
+    enabled: ready,
+    retry: retryKnownPeople,
+  })
+}
+
+/** Story 6.36c — refetch the home prompts (after a posting, an answer, an ask, a remove). */
+export function useRefreshKnownPeoplePrompts(): () => Promise<void> {
+  const qc = useQueryClient()
+  const { pariwarId, memberId } = useIds()
+  return () => qc.invalidateQueries({ queryKey: knownPeoplePromptsKey(pariwarId, memberId) })
+}
+
+/** The writes. Each invalidates both lists on success (the other side's view changes too) — and the home prompts (6.36c). */
 export function useKnownPeopleWrites() {
   const qc = useQueryClient()
   const { pariwarId, memberId } = useIds()
@@ -174,6 +196,7 @@ export function useKnownPeopleWrites() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: knownPeopleListKey(pariwarId, memberId) }),
       qc.invalidateQueries({ queryKey: knownPeopleRequestsKey(pariwarId, memberId) }),
+      qc.invalidateQueries({ queryKey: knownPeoplePromptsKey(pariwarId, memberId) }),
     ])
   }
   const ask = useMutation({

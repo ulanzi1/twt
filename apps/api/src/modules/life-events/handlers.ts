@@ -25,6 +25,9 @@ import {
   type PostingHistoryQuery,
   type PostingHistoryResponse,
   type PostingUpdateRequest,
+  type WorkplaceAnswerRequest,
+  WorkplaceAnswerResponse,
+  type WorkplaceAnswerRefusalCode,
   type WorkplaceDistrictsQuery,
   type WorkplaceDistrictsResponse,
   type WorkplaceSearchQuery,
@@ -46,8 +49,11 @@ import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
 import { encryptAddressLine } from './address-crypto.js';
 
-/** Lifecycle states in which a Life Events update is rejected (terminal — mirror nominee/medical). */
-const TERMINAL_STATES = new Set(['withdrawn', 'anonymized']);
+/**
+ * Lifecycle states in which a Life Events update is rejected (terminal — mirror nominee/medical). ⭐ Story 6.36c (RV1 (i)):
+ * the ONE set `@twt/domain` exports — the home prompts' workplace flags read the same one (⛔ a copy).
+ */
+const TERMINAL_STATES: ReadonlySet<string> = new Set(memberDomain.MEMBER_POSTING_TERMINAL_STATES);
 
 /**
  * How long a posting write's idempotency claim — and its recorded result — is held. ⚠ [Review][Patch] 2026-10-15: was 300 s. The
@@ -70,6 +76,19 @@ const WORKPLACE_REFUSAL_MESSAGES: Record<memberDomain.WorkplaceRefusalCode, stri
 /** A domain refusal → the handler's 422 (AC4). */
 function refuse(code: memberDomain.WorkplaceRefusalCode): never {
   throw new ApiError(422, code, WORKPLACE_REFUSAL_MESSAGES[code]);
+}
+
+/** Story 6.36c (AC4) — the answer route's refusals, each with its status. ⛔ The member's input in a message. */
+const WORKPLACE_ANSWER_REFUSALS: Record<WorkplaceAnswerRefusalCode, { status: 404 | 409 | 422; message: string }> = {
+  'workplace.request_not_found': { status: 404, message: 'No such workplace request' },
+  'workplace.request_closed': { status: 409, message: 'That suggestion is no longer open' },
+  'workplace.suggestion_stale': { status: 409, message: 'That suggestion can no longer be used — it has gone back for review' },
+  'workplace.start_date_invalid': { status: 422, message: 'That start date cannot be used' },
+};
+
+function refuseAnswer(code: WorkplaceAnswerRefusalCode): never {
+  const { status, message } = WORKPLACE_ANSWER_REFUSALS[code];
+  throw new ApiError(status, code, message);
 }
 
 export function createLifeEventsHandlers(deps: AppDeps) {
@@ -417,6 +436,119 @@ export function createLifeEventsHandlers(deps: AppDeps) {
         // is held 24 h, so a release that ALSO fails (the pool is what broke) would lock this exact answer for a day — the
         // release is retried with a short back-off. A process kill between the claim and here is the accepted residual (the
         // peer-request precedent's trade-off); the member recovers by changing the answer (a new key).
+        if (!claimSettled && !committed) await releaseClaimWithRetry(idemKey);
+      }
+    },
+
+    /**
+     * POST /api/v1/member/life-events/workplace-requests/:requestId/answer — the MEMBER answers a Pariwar Admin's suggestion
+     * (Story 6.36c, AC4; `-330` SW9 A). ⭐ The ONE write near who is asked about a death — and the member's own act: *"Yes"*
+     * writes a posting through the ONE writer (6.36 reads it like any other, as of the cut — SW20, `-339`); a Pariwar Admin's
+     * suggestion alone changes nothing. Gate = the posting route's (`assertMemberExistsAndNotTerminal`, ⛔ a claim check —
+     * recorded). The SAME closure-local `requireIdempotencyKey`, keyed store, 24 h TTL and `releaseClaimWithRetry` as
+     * `updatePosting`, under its OWN key prefix (one key ⛔ replays across routes). ONE transaction: the domain serialises the
+     * member's posting writes, re-reads the request, and takes district → workplace → request.
+     *   · `confirmed` ⇒ the `member.posting_updated` marker (the posting route's payload shape), the summary, recorded, 200
+     *     `{ answer: 'yes', summary }`, audited as `member_life_events.posting_updated`;
+     *   · `declined` ⇒ recorded, 200 `{ answer: 'no' }`, audited `member_life_events.workplace_suggestion_declined`;
+     *   · `stale` (RV11) ⇒ the request back to `pending` is COMMITTED, the claim RELEASED explicitly (a retry then sees
+     *     `pending` ⇒ 409 `request_closed`), and 409 `workplace.suggestion_stale`.
+     */
+    async answerWorkplaceSuggestion(request: FastifyRequest): Promise<WorkplaceAnswerResponse> {
+      const body = request.body as WorkplaceAnswerRequest;
+      const { requestId } = request.params as { requestId: string };
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+
+      const idempotencyKey = requireIdempotencyKey(request);
+      const idemKey = `life_events.workplace_answer:${pariwarIdStr}:${memberIdStr}:${idempotencyKey}`;
+      const claimOutcome = await idempotencyStore.claim(idemKey, POSTING_IDEMPOTENCY_TTL_SECONDS);
+      if (claimOutcome === 'already_claimed') {
+        const stored = await idempotencyStore.getResult(idemKey);
+        const replay = stored === null ? null : WorkplaceAnswerResponse.safeParse(stored);
+        if (replay?.success) return replay.data;
+        throw new ConflictError(
+          'A request with this Idempotency-Key is already in progress — please wait and retry',
+          'life_events.idempotency_in_progress',
+        );
+      }
+
+      // The claim is HELD from here — the `updatePosting` shape: a failure before the COMMIT releases it; a committed write
+      // keeps it (a retry replays).
+      let committed = false;
+      let claimSettled = false;
+      try {
+        const memberId = ids.memberId(memberIdStr);
+        const pariwarId = ids.pariwarId(pariwarIdStr);
+        let outcome: memberDomain.WorkplaceAnswerResult;
+        let result: WorkplaceAnswerResponse | null = null;
+
+        const scopeTx = await openScopeTx(deps, pariwarIdStr);
+        let ok = false;
+        try {
+          const state = await assertMemberExistsAndNotTerminal(scopeTx, pariwarId, memberId);
+          outcome = await memberDomain.answerWorkplaceSuggestion(scopeTx.tx, { pariwarId, memberId, requestId, answer: body.answer, now: deps.clock() });
+          if (outcome.kind === 'confirmed') {
+            const p = outcome.posting;
+            // Non-transition marker — the posting route's payload shape. NON-PII: the district, ids, a kind, a date, flags.
+            await memberDomain.projectMemberState(scopeTx.client, {
+              memberId,
+              pariwarId,
+              eventType: 'member.posting_updated',
+              payload: {
+                from_state: state,
+                to_state: state,
+                trigger: 'life_events_workplace_confirm',
+                actor: 'member',
+                district: p.district,
+                is_retirement: false,
+                workplace_id: p.workplaceId,
+                workplace_kind: p.workplaceKind,
+                started_on: p.startedOn,
+                not_listed: false,
+              },
+              actorId: memberIdStr,
+            });
+            result = { answer: 'yes', summary: await buildSummary(scopeTx, pariwarId, memberId) };
+          } else if (outcome.kind === 'declined') {
+            result = { answer: 'no' };
+          }
+          ok = true;
+        } catch (err) {
+          if (err instanceof memberDomain.WorkplaceAnswerRefusedError) refuseAnswer(err.code);
+          throw err;
+        } finally {
+          await closeScopeTx(scopeTx, ok);
+        }
+
+        // COMMITTED.
+        committed = true;
+        if (outcome.kind === 'stale' || result === null) {
+          // The return to `pending` is durable; this answer acted on nothing — release the key (a retry sees `pending`).
+          await releaseClaimWithRetry(idemKey);
+          claimSettled = true;
+          refuseAnswer('workplace.suggestion_stale');
+        }
+        try {
+          await idempotencyStore.recordResult(idemKey, result);
+        } catch (err) {
+          request.log.warn({ err, idemKey }, 'workplace answer committed but its idempotency result could not be recorded');
+        }
+        claimSettled = true;
+        if (outcome.kind === 'confirmed') {
+          emitAuthAudit(deps, request, 'member_life_events.posting_updated', {
+            actorId: memberIdStr,
+            pariwarId: pariwarIdStr,
+            context: { district: outcome.posting.district, choice: 'workplace', is_retirement: false },
+          });
+        } else {
+          emitAuthAudit(deps, request, 'member_life_events.workplace_suggestion_declined', {
+            actorId: memberIdStr,
+            pariwarId: pariwarIdStr,
+            resourceLocator: `workplace_request:${requestId.toLowerCase()}`,
+          });
+        }
+        return result;
+      } finally {
         if (!claimSettled && !committed) await releaseClaimWithRetry(idemKey);
       }
     },

@@ -63,8 +63,11 @@ export const CONTACT_MATCH_AUDIT_PURPOSE = 'contact_match';
 /** A single ask's HMAC is one number — audited through the SAME batch path, so it carries a purpose too. */
 export const KNOWN_PEOPLE_ASK_AUDIT_PURPOSE = 'known_people_ask';
 
-/** The IST day, by the DB's clock. ⛔ Never the UTC date. */
-const IST_TODAY = sql`(clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date`;
+/**
+ * The IST day, by the DB's clock. ⛔ Never the UTC date. ⭐ EXPORTED by Story 6.36c — the campaign's window and the home
+ * prompts read the SAME day (one clock per question).
+ */
+export const IST_TODAY = sql`(clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date`;
 
 /**
  * ONE instant for a statement: `… FROM ${ONE_INSTANT}` (an UPDATE) or `CROSS JOIN ${ONE_INSTANT}` (a SELECT) joins
@@ -122,10 +125,23 @@ export async function isKnownPeopleCaller(db: Db, pariwarId: PariwarId, memberId
 
 /**
  * The ONE `unavailable` condition (6.36a SW14; AC7): an ACCEPTED link whose named person (`m`, the link `k`) has withdrawn
- * from the Trust or had a claim filed for their death — the two read the SAME. ⛔ Never a late renewal.
+ * from the Trust or had a claim filed for their death — the two read the SAME. ⛔ Never a late renewal. ⭐ EXPORTED by
+ * Story 6.36c — the home prompts' `replaceNeeded` reads it (ONE definition).
  */
-function namedUnavailableSql(k: SQL, m: SQL): SQL {
+export function namedUnavailableSql(k: SQL, m: SQL): SQL {
   return sql`(${m}.state = 'withdrawn' OR ${namedByClaimSql(sql`${k}.pariwar_id`, sql`${k}.named_member_id`)})`;
+}
+
+/**
+ * A LIVE link (`k`): `accepted`, or `asked` within the 30-day answer window — what holds one of the three slots
+ * (`unavailable` included: it is an accepted link). ⭐ Story 6.36c extracted it (ONE definition): {@link knownPersonLiveLabel}
+ * and the home prompts' free-slot count read it; equivalent to {@link listMyKnownPeople}'s label CASE (label ≠
+ * `not_accepted`). ⛔ The list's SHOWN filter (wider — it keeps lapsed asks as `not_accepted`) and ⛔ the ask's count (run
+ * after the lapse sweep).
+ */
+export function liveKnownPersonSql(k: SQL): SQL {
+  return sql`(${k}.state = 'accepted'
+    OR (${k}.state = 'asked' AND ${k}.asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > clock_timestamp()))`;
 }
 
 // ── Counters ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -454,8 +470,7 @@ export async function knownPersonLiveLabel(
       FROM member_known_people k
       JOIN members m ON m.member_id = k.named_member_id AND m.pariwar_id = k.pariwar_id
      WHERE k.pariwar_id = ${input.pariwarId} AND k.namer_member_id = ${input.namerMemberId} AND k.link_id = ${input.linkId}
-       AND (k.state = 'accepted'
-         OR (k.state = 'asked' AND k.asked_at + make_interval(days => ${KNOWN_PEOPLE_ANSWER_WINDOW_DAYS}::int) > clock_timestamp()))`);
+       AND ${liveKnownPersonSql(sql`k`)}`);
   return r.rows[0]?.label ?? null;
 }
 

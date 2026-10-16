@@ -46,6 +46,15 @@ describe('session-context clears the people-who-know-me caches', () => {
     else expect(body).not.toContain('clearSavedNames()')
   })
 
+  it.each([
+    ['a terminated refresh', /setTerminatedDuringRefreshHandler\(\(notice\) => \{/],
+    ['a rejected refresh', /setRefreshRejectedHandler\(\(\) => \{/],
+    ['sign-out', /async function signOut\(\)/],
+    ['sign-in', /async function signIn\(/],
+  ])('Story 6.36c — %s also clears the home cards’ dismissals', (_label, opener) => {
+    expect(block(src, opener)).toContain('clearHomeCardDismissals()')
+  })
+
   it('the block reader stops at its own closing brace (a positive control — ⛔ the next handler)', () => {
     const two = 'a(() => {\n  one()\n})\nb(() => {\n  two()\n})'
     expect(block(two, /a\(\(\) => \{/)).toBe('{\n  one()\n}')

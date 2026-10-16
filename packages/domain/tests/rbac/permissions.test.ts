@@ -227,9 +227,11 @@ describe('PERMISSION_CATALOG', () => {
     // at 6.12, 13 at 6.10, 12 at 6.9, 11 at 6.8, 9 at 6.7, 7 at 6.3, 6 at 5.8, 5 at 5.3, 4 at 4.8, 3 at 4.6, 2 at 2.6, 1
     // at 1.8)
     // 51 at Story 6.23a +1 (approval_warning_reason.manage — the Super Admin's warning-reason list; 64 -> 65 keys).
-    expect(PERMISSION_CATALOG_VERSION).toBe(51);
+    // 52 at Story 6.36c +3 (workplace.manage / workplace.review / known_people.run_campaign — `2026-10-14-330` SW9 A,
+    // SW16; ONE bump for the three; 65 -> 68 keys).
+    expect(PERMISSION_CATALOG_VERSION).toBe(52);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(65);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(68);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

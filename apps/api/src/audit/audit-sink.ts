@@ -172,6 +172,9 @@ export type AuthAuditEventType =
   //   posting.updated — a new append-only member_postings row was written + member.posting_updated emitted.
   | 'member_life_events.address_updated'
   | 'member_life_events.posting_updated'
+  // Story 6.36c (AC4) — the member said *"No"* to a Pariwar Admin's suggested workplace (the request returns to the queue).
+  // A *"Yes"* is audited as `member_life_events.posting_updated` (it writes a posting).
+  | 'member_life_events.workplace_suggestion_declined'
   // ── People who know me (Story 6.36b, 6.36a SW10–SW14) ──────────────────────────────────────
   // Resource `member:<id>` (the OTHER member of the link; the caller for a match). Context carries COUNTS and how a person
   // was found ONLY — ⛔ a number, ⛔ a name (I4). A match's KMS line is separate (`kms.compute_hmac`, `contact_match:n=…`).
@@ -488,6 +491,21 @@ export type AuthAuditEventType =
   | 'admin_approval_warning_reason.added'
   | 'admin_approval_warning_reason.replaced'
   | 'admin_approval_warning_reason.rejected'
+  // ── Story 6.36c (`-330` SW9 A / SW16) — keeping the workplace list full, and the people-who-know-me campaigns. POST-COMMIT
+  // log lines (RV9 (iii) — ⛔ in the write's transaction, ⛔ an event). The readable "what" is the `resourceLocator`
+  // (`workplace:<id>`, `workplace_request:<id>`, `known_people_campaign:<id>`); `context` (hashed) carries the kind and the
+  // district — ⛔ a workplace's name, ⛔ a member's typed text, ⛔ a member id.
+  //   admin_workplace.added / .renamed / .delisted / .relisted — the Super Admin's acts on the list (STAFF rows only).
+  //   admin_workplace.request_suggested / .request_closed — the Pariwar Admin's acts on an *"isn't listed"* request.
+  //   admin_known_people.campaign_started / .campaign_ended — a campaign (it sends ⛔ nothing).
+  | 'admin_workplace.added'
+  | 'admin_workplace.renamed'
+  | 'admin_workplace.delisted'
+  | 'admin_workplace.relisted'
+  | 'admin_workplace.request_suggested'
+  | 'admin_workplace.request_closed'
+  | 'admin_known_people.campaign_started'
+  | 'admin_known_people.campaign_ended'
   // ── Nominee name-check surface (Story 6.18, `2026-09-19-226` cl.3/cl.5 / Epic 6) ──
   // The two names read + the District Admin's recorded verdict on them. The read is AUDITED on the
   // `admin_verifier_console.read` precedent, and for a sharper reason than that surface has: this

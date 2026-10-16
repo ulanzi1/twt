@@ -3,7 +3,11 @@
 // kind, or *"Not listed yet"* / *"Retired"*, its district and start date; an open *"isn't listed"* request shows where the
 // Pariwar Admin's search stands), and *"I have been transferred"* — the SAME picker as the signup step — which writes a NEW
 // posting (the history is kept, `-306` §2 item 2). A successful save shows the new row at the top.
-// ⛔ No confirm question here — the member's answer to a Pariwar Admin's suggestion is Story 6.36c's, with its route.
+// ⭐ Story 6.36c (AC4, AC6; RV10) — the ONE confirm question for a Pariwar Admin's suggested workplace sits ABOVE the
+// history: *"We think your workplace is {name}, {district}. Is that right?"* with Yes / No (the answer route). It is driven
+// by the home PROMPTS' `suggestedWorkplace` (RV1 (i) — gated by the posting route's own rule), ⛔ by the history's ungated
+// `request.suggested`; the history row itself now reads *"Suggested: {name}"* and, after a close, asks the member to choose
+// again.
 //
 // ── ⚠⛔ the history list starts empty and fills: loading · error · empty render as SIBLINGS, ⛔ in place. It is a short
 //   list (a few transfers in a career) inside a ScrollView — a plain map, ⛔ a virtualised list nested in a scroll view.
@@ -22,7 +26,9 @@ import { Stack } from 'expo-router'
 import { Button, H2, H4, Spinner, Text, YStack } from 'tamagui'
 
 import { AnnouncedText } from '../../components/peer-request/announce'
+import { useKnownPeoplePromptsQuery } from '../../components/known-people/useKnownPeopleQueries'
 import { usePostingHistoryQuery } from '../../components/workplace/useWorkplaceQueries'
+import { WorkplaceSuggestionQuestion } from '../../components/workplace/WorkplaceSuggestionQuestion'
 import { WorkplacePicker } from '../../components/workplace/WorkplacePicker'
 import { historyRowView, type HistoryRowView } from '../../lib/workplace'
 import { useWorkplaceT } from '../../lib/workplace-i18n'
@@ -30,6 +36,8 @@ import { useWorkplaceT } from '../../lib/workplace-i18n'
 export default function WorkplaceScreen() {
   const t = useWorkplaceT()
   const history = usePostingHistoryQuery()
+  const prompts = useKnownPeoplePromptsQuery()
+  const suggestion = prompts.data?.suggestedWorkplace ?? null
   const [transferring, setTransferring] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -60,6 +68,11 @@ export default function WorkplaceScreen() {
         <YStack gap="$4" px="$6" py="$6" bg="$background">
           <H2 accessibilityRole="header">{t('screen_title')}</H2>
           {saved ? <AnnouncedText text={t('saved')} /> : null}
+
+          {/* Story 6.36c — the suggestion to answer (a new suggestion remounts it: a fresh Idempotency-Key — Task 6.5b). */}
+          {suggestion !== null ? (
+            <WorkplaceSuggestionQuestion key={`${suggestion.requestId}:${suggestion.workplaceId}`} suggestion={suggestion} />
+          ) : null}
 
           <H4 accessibilityRole="header">{t('current_label')}</H4>
           {history.isPending ? (

@@ -21,6 +21,7 @@
 import { z } from 'zod';
 
 import { Cursor } from '../_common/pagination.js';
+import { LifeEventsSummaryResponse } from '../life-events/summary.js';
 
 /** ⚠ LOCKSTEP with `WORKPLACE_KINDS` (`@twt/domain` schema/workplaces.ts) and 0161's CHECK. */
 export const WorkplaceKindWire = z.enum(['school', 'office']);
@@ -205,3 +206,169 @@ export const PostingHistoryResponse = z
   .object({ items: z.array(PostingHistoryItemWire), nextCursor: Cursor.nullable(), hasMore: z.boolean() })
   .strict();
 export type PostingHistoryResponse = z.output<typeof PostingHistoryResponse>;
+
+// ── Story 6.36c — keeping the list full (AC2–AC4; `-330` SW9 A, `-342`) ─────────────────────────────────────────────
+//
+//   GET  /api/v1/p/:pariwarId/admin/workplaces                                    — the list (`workplace.manage` OR `.review`)
+//   POST /api/v1/p/:pariwarId/admin/workplaces                                    — ADD (the Super Admin; step-up)
+//   POST /api/v1/p/:pariwarId/admin/workplaces/:workplaceId/rename | /delist | /relist — a STAFF row only (step-up)
+//   GET  /api/v1/p/:pariwarId/admin/workplace-requests                            — the queue (`workplace.review`)
+//   POST /api/v1/p/:pariwarId/admin/workplace-requests/:requestId/suggest | /close — (step-up)
+//   POST /api/v1/member/life-events/workplace-requests/:requestId/answer          — the MEMBER's "Yes" / "No"
+// A suggestion decides ⛔ nothing — only the member's "Yes" writes a posting. The queue carries ⛔ member data.
+
+/** The staff writes' refusals (the HTTP status is per ROUTE). ⚠ LOCKSTEP with `WORKPLACE_ADMIN_REFUSAL_CODES` (@twt/domain). */
+export const WORKPLACE_ADMIN_REFUSAL_CODES = [
+  'workplace.not_found',
+  'workplace.district_not_found',
+  'workplace.district_mismatch',
+  'workplace.import_managed',
+  'workplace.state_unchanged',
+  'workplace.code_taken',
+  'workplace.request_not_found',
+  'workplace.request_closed',
+] as const;
+export type WorkplaceAdminRefusalCode = (typeof WORKPLACE_ADMIN_REFUSAL_CODES)[number];
+
+/** The member's answer route's refusals. ⚠ LOCKSTEP with `WORKPLACE_ANSWER_REFUSAL_CODES` (@twt/domain). */
+export const WORKPLACE_ANSWER_REFUSAL_CODES = [
+  'workplace.request_not_found',
+  'workplace.request_closed',
+  'workplace.suggestion_stale',
+  'workplace.start_date_invalid',
+] as const;
+export type WorkplaceAnswerRefusalCode = (typeof WORKPLACE_ANSWER_REFUSAL_CODES)[number];
+
+/** The step-up action context of the Super Admin's list writes. */
+export const WORKPLACE_MANAGE_STEP_UP_CONTEXT = 'workplace_manage';
+/** The step-up action context of the Pariwar Admin's suggest / close. */
+export const WORKPLACE_REVIEW_STEP_UP_CONTEXT = 'workplace_review';
+
+const NO_CONTROL = /^[^\p{Cc}]*$/u;
+/** A staff-entered name: trimmed, 1–200 code points, ⛔ a control character (the search cursor's bound depends on it). */
+const StaffWorkplaceName = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((s) => [...s].length <= 200, 'at most 200 characters')
+  .refine((s) => NO_CONTROL.test(s), 'no control characters');
+const StaffVillage = z
+  .string()
+  .trim()
+  .refine((s) => [...s].length <= 120, 'at most 120 characters')
+  .refine((s) => NO_CONTROL.test(s), 'no control characters');
+
+export const WorkplaceSourceWire = z.enum(['import', 'staff']);
+export const WorkplaceStatusWire = z.enum(['listed', 'delisted']);
+
+export const ADMIN_WORKPLACES_PAGE_CAP = 100;
+/** `GET …/admin/workplaces` — every filter applied IN SQL. */
+export const AdminWorkplacesQuery = z
+  .object({
+    district: District.optional(),
+    kind: WorkplaceKindWire.optional(),
+    status: WorkplaceStatusWire.optional(),
+    q: z.string().max(WORKPLACE_SEARCH_TEXT_MAX_WIRE).optional(),
+    limit: z.coerce.number().int().positive().max(ADMIN_WORKPLACES_PAGE_CAP).optional(),
+    cursor: Cursor.max(WORKPLACE_SEARCH_CURSOR_MAX).optional(),
+  })
+  .strict();
+export type AdminWorkplacesQuery = z.output<typeof AdminWorkplacesQuery>;
+
+export const AdminWorkplaceWire = z
+  .object({
+    workplaceId: z.string().uuid(),
+    kind: WorkplaceKindWire,
+    name: z.string(),
+    district: z.string(),
+    villageName: z.string().nullable(),
+    blockCode: z.string().nullable(),
+    udiseSchoolCode: z.string().nullable(),
+    source: WorkplaceSourceWire,
+    status: WorkplaceStatusWire,
+  })
+  .strict();
+export type AdminWorkplaceWire = z.output<typeof AdminWorkplaceWire>;
+
+export const AdminWorkplacesResponse = z
+  .object({ items: z.array(AdminWorkplaceWire), nextCursor: Cursor.nullable(), hasMore: z.boolean() })
+  .strict();
+export type AdminWorkplacesResponse = z.output<typeof AdminWorkplacesResponse>;
+
+/** `POST …/admin/workplaces` — ADD an office, or a school the import missed (its UDISE code only for a school). */
+export const AdminWorkplaceAddRequest = z
+  .object({
+    kind: WorkplaceKindWire,
+    name: StaffWorkplaceName,
+    district: District,
+    villageName: StaffVillage.optional(),
+    blockCode: z.string().regex(/^[0-9]{6}$/, 'six digits').optional(),
+    udiseSchoolCode: z.string().regex(/^[0-9]{11}$/, 'eleven digits').optional(),
+  })
+  .strict()
+  .refine((b) => b.kind === 'school' || b.udiseSchoolCode === undefined, { message: 'only a school has a UDISE code', path: ['udiseSchoolCode'] });
+export type AdminWorkplaceAddRequest = z.output<typeof AdminWorkplaceAddRequest>;
+
+/** `POST …/admin/workplaces/:workplaceId/rename`. */
+export const AdminWorkplaceRenameRequest = z.object({ name: StaffWorkplaceName }).strict();
+export type AdminWorkplaceRenameRequest = z.output<typeof AdminWorkplaceRenameRequest>;
+
+export const AdminWorkplaceWriteResponse = z.object({ workplace: AdminWorkplaceWire }).strict();
+export type AdminWorkplaceWriteResponse = z.output<typeof AdminWorkplaceWriteResponse>;
+
+export const WORKPLACE_REQUESTS_PAGE_CAP = 100;
+/** `GET …/admin/workplace-requests` — ONE state (`pending` by default), optionally ONE district. */
+export const WorkplaceRequestQueueQuery = z
+  .object({
+    state: z.enum(['pending', 'suggested']).optional(),
+    district: District.optional(),
+    limit: z.coerce.number().int().positive().max(WORKPLACE_REQUESTS_PAGE_CAP).optional(),
+    cursor: Cursor.max(200).optional(),
+  })
+  .strict();
+export type WorkplaceRequestQueueQuery = z.output<typeof WorkplaceRequestQueueQuery>;
+
+/** One request in the queue — ⛔ the member's name, mobile, id or any other member data (a test pins the key set). */
+export const WorkplaceRequestQueueItemWire = z
+  .object({
+    requestId: z.string().uuid(),
+    typedName: z.string().nullable(),
+    typedPlace: z.string().nullable(),
+    district: z.string(),
+    startedOn: z.string(),
+    createdAt: z.string(),
+    state: z.enum(['pending', 'suggested']),
+    /** The Pariwar's OTHER pending requests with the same typed name (case- and space-folded). */
+    sameNameCount: z.number().int().nonnegative(),
+    suggested: z.object({ workplaceId: z.string().uuid(), name: z.string(), district: z.string() }).strict().nullable(),
+  })
+  .strict();
+export type WorkplaceRequestQueueItemWire = z.output<typeof WorkplaceRequestQueueItemWire>;
+
+export const WorkplaceRequestQueueResponse = z
+  .object({ items: z.array(WorkplaceRequestQueueItemWire), nextCursor: Cursor.nullable(), hasMore: z.boolean() })
+  .strict();
+export type WorkplaceRequestQueueResponse = z.output<typeof WorkplaceRequestQueueResponse>;
+
+/** `POST …/admin/workplace-requests/:requestId/suggest`. */
+export const WorkplaceSuggestRequest = z.object({ workplaceId: z.string().uuid() }).strict();
+export type WorkplaceSuggestRequest = z.output<typeof WorkplaceSuggestRequest>;
+
+export const WorkplaceRequestWriteResponse = z
+  .object({ requestId: z.string().uuid(), state: z.enum(['suggested', 'closed']) })
+  .strict();
+export type WorkplaceRequestWriteResponse = z.output<typeof WorkplaceRequestWriteResponse>;
+
+/** `POST /api/v1/member/life-events/workplace-requests/:requestId/answer` — requires an `Idempotency-Key` header. */
+export const WorkplaceAnswerRequest = z.object({ answer: z.enum(['yes', 'no']) }).strict();
+export type WorkplaceAnswerRequest = z.output<typeof WorkplaceAnswerRequest>;
+
+/**
+ * The answer's ONE response — the route's 200, what the idempotency store records for BOTH kinds, and what a replay parses.
+ * *"Yes"* carries the Life Events summary (the posting route's shape); *"No"* carries nothing more.
+ */
+export const WorkplaceAnswerResponse = z.discriminatedUnion('answer', [
+  z.object({ answer: z.literal('yes'), summary: LifeEventsSummaryResponse }).strict(),
+  z.object({ answer: z.literal('no') }).strict(),
+]);
+export type WorkplaceAnswerResponse = z.output<typeof WorkplaceAnswerResponse>;

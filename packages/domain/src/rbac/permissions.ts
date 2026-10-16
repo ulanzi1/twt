@@ -752,7 +752,22 @@ export function permissionKey(value: string): PermissionKey {
 // one — ⛔ never edits, ⛔ never deletes. REUSE CHECK — ⛔ no existing key fits: `niyamavali.*` is the MEMBER-VISIBLE
 // rulebook's review workflow, `pariwar.amend_rule` amends rule clauses; the reason list is staff tooling with its own
 // append-only shape. `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 51 as const;
+//
+// ⭐ Story 6.36c (author-commit `2026-10-14-330` SW9 A / SW16; built to `2026-10-16-342`) — 51 → 52, THREE keys (65 → 68),
+// ONE bump (the 6.18 two-key precedent). 51 / 65 READ LIVE at `301d96d8` (⛔ transcribed). All pariwar-dimension:
+//   · `workplace.manage` — `super_admin` ONLY (derived — ⛔ no `roles.ts` const; the `approval_warning_reason.manage`
+//     precedent): the Super Admin ADDS an office or a school the import missed, and renames / delists / relists a STAFF row.
+//     ONLY the Super Admin adds (SW9 A; `-133` cl.2's posture applied by analogy — ⛔ a ruling on this list).
+//   · `workplace.review` — `pariwar_admin` (+ derived super_admin): the *"isn't listed"* queue — SUGGEST a listed entry
+//     in the request's district, or close an entry that names ⛔ real workplace. A suggestion decides ⛔ nothing: only
+//     the MEMBER's *"Yes"* writes a posting (I2).
+//   · `known_people.run_campaign` — `pariwar_admin` (+ derived super_admin): start / end a short campaign that shows an
+//     in-app card; it sends ⛔ nothing to any phone (`-307` §2 item 4).
+// REUSE CHECK — ⛔ no existing key fits: `approval_warning_reason.manage` is a claim-approval list; `pariwar.manage_*` are
+// presentation / rule keys; `banner.manage` is a two-person-published text banner (⛔ the campaign's carrier).
+// ⛔ NOT `district_admin`, `state_trustee`, `block_admin` on any (inert in both directions —
+// [[project_rbac_geo_scope_containment]]). `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 52 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1316,6 +1331,19 @@ export const SEED_PERMISSION_KEYS = [
   // `roles.ts` const). ⛔ There is ⛔ no edit and ⛔ no delete route: a reason is ⛔ never edited or deleted, and
   // every past approval keeps the words it chose (`-278` NW16; BigDev 2026-10-04).
   'approval_warning_reason.manage',
+  // Story 6.36c (`2026-10-14-330` SW9 A) — the Pariwar's WORKPLACE LIST: GET (the list — also open to `workplace.review`,
+  // the suggest picker searches it), ADD an office or a missing school, RENAME / DELIST / RELIST a STAFF row (an imported
+  // row is the import's — `-342` call 4). Every write step-up-gated. pariwar-dimension; `super_admin` ONLY (derived —
+  // ⛔ no `roles.ts` const). ⛔ Never a delete: a delisted entry stays on every posting that names it (6.36a I3).
+  'workplace.manage',
+  // Story 6.36c (SW9 A) — the *"my workplace isn't listed"* QUEUE: GET the open requests, SUGGEST a listed entry in the
+  // request's district (the MEMBER confirms — ⛔ a staff act never sets or creates a workplace), CLOSE an entry that names
+  // ⛔ real workplace. Writes step-up-gated. pariwar-dimension; `pariwar_admin` (+ derived super_admin).
+  'workplace.review',
+  // Story 6.36c (SW16 (5) as narrowed by `-342` call 1) — a people-who-know-me CAMPAIGN: start (an IST window of ≤ 30
+  // days, ⛔ overlapping an open one), end, list. It shows a card in the app and sends ⛔ nothing — ⛔ step-up (recorded).
+  // pariwar-dimension; `pariwar_admin` (+ derived super_admin).
+  'known_people.run_campaign',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

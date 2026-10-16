@@ -54,6 +54,8 @@ export * from './member-withdrawals-rls.js';
 // UPDATE narrowed by the migration's column grants.
 export * from './member-known-people-rls.js';
 export * from './member-daily-counters-rls.js';
+// Story 6.36c (0164) — the campaigns. Per command; ⛔ no DELETE leg; UPDATE narrowed to the end's two columns.
+export * from './known-people-campaigns-rls.js';
 // Story 3.11 — data_exports tenant-isolation (mirror member-withdrawals-rls; GRANTs UPDATE too).
 export * from './data-exports-rls.js';
 // Story 10.7 — report_exports tenant-isolation (mirror data-exports-rls; GRANTs UPDATE too). The admin

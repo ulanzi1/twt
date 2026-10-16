@@ -15,6 +15,15 @@ export const knownPeopleListKey = (pariwarId: string | undefined, memberId: stri
 export const knownPeopleRequestsKey = (pariwarId: string | undefined, memberId: string | undefined) =>
   ['known-people', 'v1', pariwarId, memberId, 'requests'] as const
 
+/** Story 6.36c — the home prompts (which reminder cards to show). Under ['known-people', …] so the account-change clear covers it. */
+export const knownPeoplePromptsKey = (pariwarId: string | undefined, memberId: string | undefined) =>
+  ['known-people', 'v1', pariwarId, memberId, 'prompts'] as const
+
+/** Refetch the home prompts of whichever account is signed in (a posting saved on the Workplace screen — Story 6.36c). */
+export function invalidateKnownPeoplePrompts(client: QueryClient): Promise<void> {
+  return client.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'known-people' && q.queryKey[4] === 'prompts' })
+}
+
 export const KNOWN_PEOPLE_CACHE_OPTIONS = { gcTime: 0, staleTime: 0 } as const
 export const KNOWN_PEOPLE_MUTATION_OPTIONS = {
   mutationKey: ['known-people'],

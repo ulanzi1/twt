@@ -32,6 +32,8 @@ import {
 } from './routes/CorrectionClosureRoutes.js';
 import { CertificateRemindersRoute } from './routes/CertificateReminderRoutes.js';
 import { ApprovalWarningReasonsRoute } from './routes/ApprovalWarningReasonsRoute.js';
+import { WorkplaceRequestsRoute } from './routes/WorkplaceRequestsRoute.js';
+import { WorkplacesRoute } from './routes/WorkplacesRoute.js';
 import { NomineeRefusalsRoute } from './routes/NomineeRefusalsRoute.js';
 import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
@@ -300,6 +302,18 @@ const approvalWarningReasonsRoute = createRoute({
   path: '/p/$pariwarId/approval-warning-reasons',
   component: ApprovalWarningReasonsRoute,
 });
+// Story 6.36c (SW9 A) — the Super Admin's workplace list (add / rename / delist / relist a STAFF row; ⛔ delete).
+const workplacesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/workplaces',
+  component: WorkplacesRoute,
+});
+// Story 6.36c (SW9 A / SW16 (5)) — the Pariwar Admin's "isn't listed" queue (suggest / close) + the campaign control.
+const workplaceRequestsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/workplace-requests',
+  component: WorkplaceRequestsRoute,
+});
 const escalationsPickerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/correction/escalations',
@@ -397,6 +411,8 @@ const routeTree = rootRoute.addChildren([
   closureLettersRoute,
   certificateRemindersRoute,
   approvalWarningReasonsRoute,
+  workplacesRoute,
+  workplaceRequestsRoute,
   escalationsPickerRoute,
   nomineeRefusalsRoute,
   nomineeCorrectionsRoute,

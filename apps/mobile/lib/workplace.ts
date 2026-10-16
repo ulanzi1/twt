@@ -10,6 +10,7 @@
 // ⚠ The app ⛔ cannot import `@twt/domain` (the Metro bundle boundary) — the wire types come from `@twt/contracts`.
 
 import {
+  WORKPLACE_ANSWER_REFUSAL_CODES,
   WORKPLACE_REFUSAL_CODES,
   type PostingHistoryItemWire,
   type PostingUpdateRequest,
@@ -110,6 +111,10 @@ export function refusalCopyKey(err: unknown): string {
   }
   // A retry re-sends the same key and meets the same 409 — so: wait, then check the history (R2-6). Any OTHER 409 is generic.
   if (e?.status === 409 && e.code === IN_PROGRESS_CODE) return 'refusal.in_progress'
+  // Story 6.36c (AC4) — the answer route's refusals (404 / 409 / 422), each with its own words.
+  if (typeof e?.code === 'string' && (WORKPLACE_ANSWER_REFUSAL_CODES as readonly string[]).includes(e.code)) {
+    return `refusal.${e.code.slice('workplace.'.length)}`
+  }
   return 'error_generic'
 }
 
@@ -151,12 +156,17 @@ export function historyRowView(item: PostingHistoryItemWire): HistoryRowView {
   }
   if (item.request !== null) {
     const r = item.request
+    // Story 6.36c (AC4) — a CLOSED request (the Pariwar Admin found ⛔ such workplace) asks the member to choose again.
     const status =
       r.state === 'pending'
         ? { statusKey: 'request_pending', statusParams: undefined }
         : r.state === 'suggested' && r.suggested !== null
           ? { statusKey: 'request_suggested', statusParams: { name: r.suggested.name } }
-          : { statusKey: null, statusParams: undefined }
+          : r.state === 'closed'
+            ? r.typedName !== null
+              ? { statusKey: 'request_closed', statusParams: { name: r.typedName } }
+              : { statusKey: 'request_closed_no_name', statusParams: undefined }
+            : { statusKey: null, statusParams: undefined }
     // The line is chosen by the request's STATE (⛔ by whether the name was erased): *"Not listed yet — a Pariwar Admin
     // will look for it"* only while someone will (R2-1). It is the TITLE when the typed text is erased.
     const line = r.state === 'pending' || r.state === 'suggested' ? 'row_not_listed' : 'row_typed'
@@ -170,4 +180,38 @@ export function historyRowView(item: PostingHistoryItemWire): HistoryRowView {
     }
   }
   return { ...base, titleText: null, titleKey: 'row_district_only', kindKey: null, dateKey: date !== null ? 'row_since' : null }
+}
+
+// ── Story 6.36c (Task 6.5b) — the answer's Idempotency-Key ──────────────────────────────────────────────────────────────
+
+/** What the confirm question remembers about its key: the one minted when it was SHOWN, and the last press. */
+export interface AnswerKeyState {
+  /** Minted when the question was shown; used by the FIRST press. `null` once used. */
+  readonly shownKey: string | null
+  /** The last press — its answer, its key, and whether it was answered 200. */
+  readonly last: { readonly answer: 'yes' | 'no'; readonly key: string; readonly ok: boolean } | null
+}
+
+/** A fresh state for a question just SHOWN (a new suggestion — a remount — starts here). */
+export function freshAnswerKeyState(mint: () => string): AnswerKeyState {
+  return { shownKey: mint(), last: null }
+}
+
+/**
+ * The key for a press of `answer`: a RETRY of the same answer after a failure reuses its key (a lost response replays the
+ * result — ⛔ a second posting); the OTHER answer, or a new press after a 200, mints a new one (⛔ a stable key per
+ * `(requestId, answer)` — a "No" after a re-suggestion would replay the old `{ answer: 'no' }` for 24 h and act on
+ * nothing). The first press takes the key minted when the question was shown.
+ */
+export function answerKeyFor(state: AnswerKeyState, answer: 'yes' | 'no', mint: () => string): { key: string; state: AnswerKeyState } {
+  let key: string
+  if (state.last !== null && !state.last.ok && state.last.answer === answer) key = state.last.key
+  else if (state.last === null && state.shownKey !== null) key = state.shownKey
+  else key = mint()
+  return { key, state: { shownKey: null, last: { answer, key, ok: false } } }
+}
+
+/** Record that the last press was answered 200 (its key is then ⛔ reused). */
+export function answerKeySettled(state: AnswerKeyState, ok: boolean): AnswerKeyState {
+  return state.last === null ? state : { ...state, last: { ...state.last, ok } }
 }

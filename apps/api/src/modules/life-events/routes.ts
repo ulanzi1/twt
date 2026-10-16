@@ -13,6 +13,8 @@
 //   · GET  /         — NO step-up; the panel-index summary.
 //   · GET  /workplaces/districts, GET /workplaces, GET /postings — Story 6.36a's reads (the picker's districts and search,
 //     the member's own history); each a bounded `limit` (the forced-pagination guard).
+//   · POST /workplace-requests/:requestId/answer — Story 6.36c: the member's "Yes" / "No" to a Pariwar Admin's suggested
+//     workplace (NO step-up; an `Idempotency-Key`; the per-member write limit).
 //
 // Step-up on nominee + medical ONLY (AC4): address + posting are lower-sensitivity self-service
 // updates. The two step-up routes use DISTINCT action contexts so an elevation for one does not
@@ -29,6 +31,8 @@ import {
   PostingHistoryQuery,
   PostingHistoryResponse,
   PostingUpdateRequest,
+  WorkplaceAnswerRequest,
+  WorkplaceAnswerResponse,
   WorkplaceDistrictsQuery,
   WorkplaceDistrictsResponse,
   WorkplaceSearchQuery,
@@ -36,6 +40,7 @@ import {
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 
 import type { AppDeps } from '../../context.js';
 import { perMemberKey, type RouteRateLimit } from '../../plugins/rate-limit/index.js';
@@ -120,6 +125,23 @@ export function registerLifeEventsRoutes(app: FastifyInstance, deps: AppDeps): v
       preHandler: [memberSession],
     },
     h.updatePosting,
+  );
+
+  // Story 6.36c (AC4) — the MEMBER answers a Pariwar Admin's suggested workplace ("Yes" writes a posting; "No" re-queues it).
+  // NO step-up (the posting route's posture); the same per-member rate limit; a REQUIRED `Idempotency-Key` (the handler).
+  r.post(
+    `${LIFE_EVENTS_BASE}/workplace-requests/:requestId/answer`,
+    {
+      schema: {
+        params: z.object({ requestId: z.string().uuid() }).strict(),
+        body: WorkplaceAnswerRequest,
+        response: { 200: WorkplaceAnswerResponse },
+        tags: [LIFE_EVENTS_TAG],
+      },
+      config: { rateLimit: memberWrite },
+      preHandler: [memberSession],
+    },
+    h.answerWorkplaceSuggestion,
   );
 
   // Story 6.36a — the picker's LISTED districts (+ whether the Pariwar has a list at all).

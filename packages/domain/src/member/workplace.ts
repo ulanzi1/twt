@@ -196,6 +196,15 @@ function decodeCursor(cursor: string, arity: number): string[] {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Story 6.36c — the SAME opaque cursor for the staff list and the request queue (`workplace-admin.ts`). */
+export const encodeWorkplaceCursor = encodeCursor;
+/** Story 6.36c — decode {@link encodeWorkplaceCursor}'s cursor of `arity` parts, else `WorkplaceCursorInvalidError`. */
+export const decodeWorkplaceCursor = decodeCursor;
+/** Story 6.36c — a UUID-shaped string (a cursor part, a path id before the cast). */
+export function isWorkplaceUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 // ── The list ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**

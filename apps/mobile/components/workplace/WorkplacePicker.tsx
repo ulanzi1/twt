@@ -43,6 +43,7 @@ import {
   type WorkplaceAnswerKind,
 } from '../../lib/workplace'
 import { useWorkplaceT } from '../../lib/workplace-i18n'
+import { invalidateKnownPeoplePrompts } from '../known-people/known-people-cache'
 import { AnnouncedText, useAnnounceOnChange } from '../peer-request/announce'
 import { useWorkplaceDistrictsQuery, useWorkplaceSearchQuery, workplaceKeys } from './useWorkplaceQueries'
 
@@ -104,6 +105,8 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: workplaceKeys.all }),
         queryClient.invalidateQueries({ queryKey: ['member', 'life-events'] }),
+        // Story 6.36c — the home reminder cards read the latest posting (add your workplace, invite, a new workplace).
+        invalidateKnownPeoplePrompts(queryClient),
       ])
       onSaved()
     } catch (e) {

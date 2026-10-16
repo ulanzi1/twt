@@ -29,6 +29,7 @@ import {
   KycStatusResponse,
   LifeEventsSummaryResponse,
   PostingHistoryResponse,
+  WorkplaceAnswerResponse,
   type PostingHistoryResponse as PostingHistoryResult,
   WorkplaceDistrictsResponse,
   type WorkplaceDistrictsResponse as WorkplaceDistrictsResult,
@@ -180,6 +181,7 @@ import {
   MyKnownPeopleResponse,
   KnownPeopleWriteResponse,
   KnownPeopleRequestsResponse,
+  KnownPeoplePromptsResponse,
   KNOWN_PEOPLE_LIST_LIMIT_MAX,
   type KnownPeopleFoundByWire,
   type PeerRequestAnswerValue,
@@ -909,6 +911,19 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       if (params?.cursor !== undefined) search.set('cursor', params.cursor);
       const qs = search.toString();
       return call(`${LIFE_EVENTS_BASE}/postings${qs === '' ? '' : `?${qs}`}`, PostingHistoryResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Story 6.36c (AC4) — the member's "Yes" / "No" to a Pariwar Admin's suggested workplace (auth). `idempotencyKey` rides
+     * the `Idempotency-Key` HEADER (required): a FRESH key per showing of the question, reused ONLY for a retry of that press.
+     * "Yes" ⇒ `{ answer: 'yes', summary }` (a posting is written); "No" ⇒ `{ answer: 'no' }`. Refusals: 404
+     * `workplace.request_not_found`, 409 `workplace.request_closed` / `workplace.suggestion_stale`, 422
+     * `workplace.start_date_invalid`.
+     */
+    answerWorkplaceSuggestion(requestId: string, answer: 'yes' | 'no', idempotencyKey: string): Promise<WorkplaceAnswerResponse> {
+      return call(`${LIFE_EVENTS_BASE}/workplace-requests/${encodeURIComponent(requestId)}/answer`, WorkplaceAnswerResponse, { answer }, true, 'POST', undefined, {
+        'idempotency-key': idempotencyKey,
+      });
     },
 
     /** Read the Life Events panel summary (presence flags + counts across all four sub-types; auth). */
@@ -1645,6 +1660,10 @@ export function createMemberKnownPeopleClient(opts: MemberAuthClientOptions) {
     },
     withdraw(linkId: string, idempotencyKey: string): Promise<KnownPeopleWriteResponse> {
       return call(`${base}/requests/${encodeURIComponent(linkId)}/withdraw`, KnownPeopleWriteResponse, {}, true, 'POST', undefined, key(idempotencyKey));
+    },
+    /** Story 6.36c (AC5) — the home prompts: which reminder cards to show (200 to ANY member session — RV2). */
+    prompts(opts: { signal?: AbortSignal } = {}): Promise<KnownPeoplePromptsResponse> {
+      return call(`${base}/prompts`, KnownPeoplePromptsResponse, undefined, true, 'GET', undefined, undefined, opts.signal);
     },
   };
 }

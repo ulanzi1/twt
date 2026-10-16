@@ -14,7 +14,15 @@ import { asc, desc, and, eq, lte } from 'drizzle-orm';
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId, WorkplaceId, WorkplaceRequestId } from '../ids/index.js';
 import { type MemberPostingRow, memberPostings } from '../schema/member_postings.js';
+import type { MemberLifecycleState } from '../schema/members.js';
 import { withdrawOlderOpenRequests } from './workplace.js';
+
+/**
+ * The lifecycle states in which a member may ⛔ record a posting — the Life Events route's 409 `life_events.member_terminal`
+ * (`apps/api/src/modules/life-events/handlers.ts`). ⭐ EXPORTED by Story 6.36c (RV1 (i)): the home prompts' WORKPLACE flags
+ * are for exactly the members that route serves — ONE set, ⛔ a copy.
+ */
+export const MEMBER_POSTING_TERMINAL_STATES = ['withdrawn', 'anonymized'] as const satisfies readonly MemberLifecycleState[];
 
 /** One posting row to append. All fields are server-validated non-PII (district plaintext). */
 export interface InsertMemberPostingInput {

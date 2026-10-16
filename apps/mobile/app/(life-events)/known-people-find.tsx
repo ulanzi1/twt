@@ -19,7 +19,7 @@
 // (`handKnownPeopleNotice`), which shows and speaks it.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AccessibilityInfo, Platform, ScrollView, Share } from 'react-native'
+import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
 
 import { FlashList } from '@shopify/flash-list'
 import { Stack, useRouter } from 'expo-router'
@@ -34,6 +34,7 @@ import { useKnownPeopleT } from '../../lib/known-people-i18n'
 import { handKnownPeopleNotice } from '../../lib/known-people-notice'
 import { saveSavedNameIfCurrent, savedNamesGeneration } from '../../lib/known-people-saved-names'
 import { newIdempotencyKey } from '../../lib/idempotency-key'
+import { shareInvite } from '../../lib/invite-share'
 import { normalizeMobileOnPhone } from '../../lib/phone-normalize'
 import { useSession } from '../../lib/session-context'
 import { configuredTrustName } from '../../lib/trust-name'
@@ -353,14 +354,10 @@ export default function KnownPeopleFindScreen() {
     }
   }
 
-  /** ONE share sheet per tap, the member's own (editable) message — ⛔ the Trust sends anything (Apple 5.1.2(v)). */
+  /** ONE share sheet per tap, the member's own (editable) message — ⛔ the Trust sends anything (Apple 5.1.2(v)). ⭐ The
+   *  ONE invite helper (Story 6.36c RV5 — the home card shares it). */
   async function invite(): Promise<void> {
-    const text = trustName === null ? t('invite.message_no_name') : t('invite.message', { trust_name: trustName })
-    try {
-      await Share.share({ message: text })
-    } catch {
-      // the member closed the share sheet
-    }
+    await shareInvite(t, trustName)
   }
 
   const shownMatches = phase.kind === 'matches' ? filterBySavedName(phase.matched, query) : []

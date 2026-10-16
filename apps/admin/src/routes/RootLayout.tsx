@@ -15,6 +15,7 @@ import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
 import { certificateRemindersEn } from '../modules/certificate-reminders/i18n-en.js';
 import { approvalWarningReasonsEn } from '../modules/approval-warning-reasons/i18n-en.js';
+import { workplaceRequestsEn, workplacesEn } from '../modules/workplaces/i18n-en.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -30,6 +31,10 @@ function TopBar(): ReactElement {
   // context (10.11's `useParams`) AND the national grant (6.19c's line above — `super_admin` is a global-scope bundle,
   // so its keys reach `nationalGrants`). Advisory — the server's key check is the boundary.
   const canManageWarningReasons = session.data?.nationalGrants.includes('approval_warning_reason.manage') ?? false;
+  // Story 6.36c — the workplace LIST is Super-Admin-only (the national grant, as above); the REQUESTS queue is a Pariwar
+  // Admin's — a Pariwar grant is ⛔ in `nationalGrants`, so its link is UNGATED inside a Pariwar context (the
+  // closure-decisions precedent; the server's 403 is the gate).
+  const canManageWorkplaces = session.data?.nationalGrants.includes('workplace.manage') ?? false;
   // Story 10.11 — the Trustee-Lite nav entry. The two entries above are gated on NATIONAL grants and
   // link to un-scoped routes; the worklist is per-Pariwar, so it can only be linked from inside a
   // Pariwar context. `strict: false` reads the CURRENT match's params without pinning this shared
@@ -119,6 +124,16 @@ function TopBar(): ReactElement {
           {pariwarId && canManageWarningReasons && (
             <Link to="/p/$pariwarId/approval-warning-reasons" params={{ pariwarId }} className="text-sm underline" data-testid="nav-approval-warning-reasons">
               {approvalWarningReasonsEn.nav}
+            </Link>
+          )}
+          {pariwarId && canManageWorkplaces && (
+            <Link to="/p/$pariwarId/workplaces" params={{ pariwarId }} className="text-sm underline" data-testid="nav-workplaces">
+              {workplacesEn.nav}
+            </Link>
+          )}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/workplace-requests" params={{ pariwarId }} className="text-sm underline" data-testid="nav-workplace-requests">
+              {workplaceRequestsEn.nav}
             </Link>
           )}
           {pariwarId && canReviewEscalations && (

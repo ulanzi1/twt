@@ -196,7 +196,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace module (live DB)', 
       const req = (memberId = m) => insertWorkplaceRequest(tx, { pariwarId: p, memberId, district: 'Patna', typedName: 'Some School', startedOn: '2018-01-01' });
       const older = await req();
       const suggested = await req();
-      await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_at = now() WHERE request_id = $1`, [
+      await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_by_actor_id = gen_random_uuid(), suggested_at = now() WHERE request_id = $1`, [
         suggested.requestId,
         list.ids['GMS RAMPUR'],
       ]);
@@ -246,7 +246,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace module (live DB)', 
         `INSERT INTO workplace_requests (request_id, pariwar_id, member_id, district, typed_name, typed_place, started_on) VALUES ($1, $2, $3, 'Patna', 'Village School', 'Rampur', '2021-07-01')`,
         [reqId, list.pariwarId, m],
       );
-      await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_at = now() WHERE request_id = $1`, [
+      await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_by_actor_id = gen_random_uuid(), suggested_at = now() WHERE request_id = $1`, [
         reqId,
         list.ids['UPS RAMPUR TOLA'],
       ]);
@@ -334,7 +334,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace module (live DB)', 
           [id, list.pariwarId, m],
         );
         if (state === 'suggested' || state === 'confirmed') {
-          await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_at = now() WHERE request_id = $1`, [id, list.ids['GMS RAMPUR']]);
+          await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_by_actor_id = gen_random_uuid(), suggested_at = now() WHERE request_id = $1`, [id, list.ids['GMS RAMPUR']]);
         }
         if (state !== 'pending' && state !== 'suggested') {
           await client.query(`UPDATE workplace_requests SET state = $2, resolved_at = now() WHERE request_id = $1`, [id, state]);

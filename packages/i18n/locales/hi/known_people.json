@@ -92,5 +92,13 @@
   "error.load": "लोड नहीं हो सका। कृपया फिर से कोशिश करें।",
   "loading": "लोड हो रहा है…",
   "loaded": "लोड हो गया।",
-  "retry": "फिर से कोशिश करें"
+  "retry": "फिर से कोशिश करें",
+  "$comment.6_36c": "Story 6.36c — the home reminder cards for people who know me: a new workplace (check them), someone who can no longer be asked (⛔ never who, ⛔ never why — one line for a person who left the Trust and a person reported dead), and a Pariwar Admin's campaign. Shown in the app ONLY — ⛔ SMS, push, WhatsApp. The Hindi is agent-authored and NOT YET HUMAN-REVIEWED — go-live Row 31 (f).",
+  "card.add_people": "जो आपको जानते हैं, उन्हें जोड़ें",
+  "card.campaign_title": "जो आपको जानते हैं, उन्हें जोड़ें",
+  "card.campaign_body": "ऐसे तीन तक सदस्यों के नाम दें जो आपको जानते हैं।",
+  "card.transfer_title": "आपका नया कार्यस्थल है — देखें कि आपको जानने वाले लोग कौन हैं।",
+  "card.replace_title": "आपको जानने वाले किसी व्यक्ति से अब पूछा नहीं जा सकता — किसी और को जोड़ें।",
+  "card.open": "खोलें",
+  "card.dismiss": "अभी नहीं"
 }

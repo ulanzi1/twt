@@ -20260,7 +20260,7 @@ development_status:
   # 0163 (row 6-36) / 0164 (6-36c), merged to main in that order. 6-27c waits for row 6-36 AND 6-36c.
   6-36a-member-workplace-and-posting-history: done
   6-36b-people-who-know-me: done
-  6-36c-workplace-list-curation-and-prompts: ready-for-dev
+  6-36c-workplace-list-curation-and-prompts: in-progress
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted
   # at the deceased member's school, plus the previous school when the current posting began within 90 days; ⛔ never the district; fewer

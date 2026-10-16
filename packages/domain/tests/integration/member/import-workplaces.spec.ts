@@ -312,7 +312,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
       const id = randomUUID();
       await client.query(`INSERT INTO workplace_requests (request_id, pariwar_id, member_id, district, typed_name, started_on) VALUES ($1, $2, $3, 'Patna', 'A School', '2020-01-01')`, [id, p, m]);
       if (state === 'suggested' || state === 'confirmed') {
-        await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_at = now() WHERE request_id = $1`, [id, school.workplace_id]);
+        await client.query(`UPDATE workplace_requests SET state = 'suggested', suggested_workplace_id = $2, suggested_by_actor_id = gen_random_uuid(), suggested_at = now() WHERE request_id = $1`, [id, school.workplace_id]);
       }
       if (state === 'confirmed' || state === 'closed') {
         await client.query(`UPDATE workplace_requests SET state = $2, resolved_at = now() WHERE request_id = $1`, [id, state]);

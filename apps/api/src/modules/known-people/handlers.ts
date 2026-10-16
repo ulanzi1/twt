@@ -28,6 +28,7 @@ import {
   type KnownPeopleContactMatchRequest,
   type KnownPeopleContactMatchResponse,
   type KnownPeopleListQuery,
+  type KnownPeoplePromptsResponse,
   type KnownPeopleRequestsQuery,
   type KnownPeopleRequestsResponse,
   type KnownPeopleWriteResponse,
@@ -250,6 +251,26 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
           askedAt: i.askedAt.toISOString(),
         })),
         freeSlots: mine.freeSlots,
+      };
+    },
+
+    /**
+     * GET /api/v1/member/known-people/prompts — Story 6.36c (AC5): which reminder cards the home can show, in ONE read. ⭐ RV2 —
+     * the ONE route here that answers 200 to ANY member session: the workplace flags are for whoever the posting route serves,
+     * and every people flag is gated INSIDE the read by `knownPeopleCallerSql` (false for anyone else — ⛔ a 403). A read —
+     * ⛔ an audit line, ⛔ a name, ⛔ a count of people.
+     */
+    async prompts(request: FastifyRequest): Promise<KnownPeoplePromptsResponse> {
+      const { memberId, pariwarId } = memberCtx(request);
+      const p = await inScope(pariwarId, (tx) => memberDomain.readKnownPeoplePrompts(tx, pariwarId, memberId));
+      return {
+        noWorkplace: p.noWorkplace,
+        hasWorkplace: p.hasWorkplace,
+        suggestedWorkplace: p.suggestedWorkplace,
+        transferReview: p.transferReview,
+        replaceNeeded: p.replaceNeeded,
+        canNamePeople: p.canNamePeople,
+        campaign: p.campaign,
       };
     },
 

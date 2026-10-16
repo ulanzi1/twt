@@ -92,5 +92,13 @@
   "error.load": "Could not load. Please try again.",
   "loading": "Loading…",
   "loaded": "Loaded.",
-  "retry": "Try again"
+  "retry": "Try again",
+  "$comment.6_36c": "Story 6.36c — the home reminder cards for people who know me: a new workplace (check them), someone who can no longer be asked (⛔ never who, ⛔ never why — one line for a person who left the Trust and a person reported dead), and a Pariwar Admin's campaign. Shown in the app ONLY — ⛔ SMS, push, WhatsApp. The Hindi is agent-authored and NOT YET HUMAN-REVIEWED — go-live Row 31 (f).",
+  "card.add_people": "Add people who know you",
+  "card.campaign_title": "Add people who know you",
+  "card.campaign_body": "Name up to three members who know you.",
+  "card.transfer_title": "You have a new workplace — check the people who know you.",
+  "card.replace_title": "Someone who knows you can no longer be asked — add someone else.",
+  "card.open": "Open",
+  "card.dismiss": "Not now"
 }

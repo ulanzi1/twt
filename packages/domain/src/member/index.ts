@@ -41,6 +41,11 @@ export * from './withdrawal.js';
 // Story 6.36b — PEOPLE WHO KNOW ME: contact matching (positions only), the named-people writers and lists, the counters,
 // the ONE matching / asking eligibility predicate, the erasure arm and the export reads.
 export * from './known-people.js';
+// Story 6.36c — keeping the lists full: the Super Admin's list, the Pariwar Admin's queue and suggestion, the member's
+// answer (through the ONE posting writer), the people-who-know-me campaigns, and the home prompts (ONE read).
+export * from './workplace-admin.js';
+export * from './known-people-campaigns.js';
+export * from './known-people-prompts.js';
 // Story 3.12 — RTBF field-level anonymization core (the inverse of data-export/assemble.ts) + the
 // display-time member-name resolver seam that renders "an anonymous member" for anonymized members.
 export * from './anonymize.js';

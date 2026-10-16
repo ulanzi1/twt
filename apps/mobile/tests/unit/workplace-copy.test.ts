@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { WORKPLACE_REFUSAL_CODES } from '@twt/contracts'
+import { WORKPLACE_ANSWER_REFUSAL_CODES, WORKPLACE_REFUSAL_CODES } from '@twt/contracts'
 import { t } from '@twt/i18n'
 import { describe, expect, it } from 'vitest'
 
@@ -18,7 +18,16 @@ import { historyRowView, refusalCopyKey } from '../../lib/workplace'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const APP = path.resolve(here, '../..')
 /** The files whose `t` IS the workplace `t` (`useWorkplaceT`) — every literal key is a `workplace` key. */
-const SOURCES = ['components/workplace/WorkplacePicker.tsx', 'app/(life-events)/posting.tsx', 'app/(signup)/workplace.tsx']
+const SOURCES = [
+  'components/workplace/WorkplacePicker.tsx',
+  'app/(life-events)/posting.tsx',
+  'app/(signup)/workplace.tsx',
+  // Story 6.36c — the confirm question and the home cards (a), (b), (c).
+  'components/workplace/WorkplaceSuggestionQuestion.tsx',
+  'components/workplace/AddWorkplaceCard.tsx',
+  'components/workplace/InviteColleaguesCard.tsx',
+  'components/workplace/WorkplaceSuggestionCard.tsx',
+]
 /** Files on the COMMON `useT()` that reach into the namespace explicitly — `t('key', …, { namespace: 'workplace' })` —
  *  only those calls are scanned (the Life Events hub's card; review 2026-10-15). */
 const NAMESPACED_SOURCES = ['app/(life-events)/index.tsx']
@@ -49,6 +58,21 @@ function producedKeys(): string[] {
   for (const code of WORKPLACE_REFUSAL_CODES) keys.add(refusalCopyKey({ status: 422, code }))
   // The 409 *"already in progress"* line (review R2-6) — produced, ⛔ listed, so a renamed key fails here.
   keys.add(refusalCopyKey({ status: 409, code: 'life_events.idempotency_in_progress' }))
+  // Story 6.36c — the answer route's 404 / 409 / 422 codes, PRODUCED (⛔ listed).
+  for (const code of WORKPLACE_ANSWER_REFUSAL_CODES) keys.add(refusalCopyKey({ status: code === 'workplace.request_not_found' ? 404 : 409, code }))
+  // …and the closed request's row, both forms.
+  for (const typedName of ['Rampur School', null]) {
+    const closed = historyRowView({
+      postingId: '9b2e7c1a-1111-4111-8111-111111111112',
+      recordedAt: '2026-01-01T00:00:00.000000Z',
+      district: 'Patna',
+      startedOn: '2019-06-01',
+      isRetirement: false,
+      workplace: null,
+      request: { requestId: '9b2e7c1a-1111-4111-8111-111111111113', state: 'closed', typedName, typedPlace: null, suggested: null },
+    })
+    if (closed.statusKey) keys.add(closed.statusKey)
+  }
   const v = historyRowView({
     postingId: '9b2e7c1a-1111-4111-8111-111111111111',
     recordedAt: '2026-01-01T00:00:00.000000Z',

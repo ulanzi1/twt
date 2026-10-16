@@ -2368,6 +2368,82 @@ export function useReplaceApprovalWarningReason(pariwarId: string) {
   });
 }
 
+// ── Story 6.36c — the workplace list, the queue and the campaigns ────────────────────────────────────────────────────
+export const adminWorkplacesKey = (pariwarId: string) => ['admin-workplaces', pariwarId] as const;
+export const workplaceRequestsKey = (pariwarId: string) => ['workplace-requests', pariwarId] as const;
+export const knownPeopleCampaignsKey = (pariwarId: string) => ['known-people-campaigns', pariwarId] as const;
+
+/** One page of the list (the filters and the cursor are part of the key). `enabled: false` holds a picker until it has a district. */
+export function useAdminWorkplaces(pariwarId: string, q: Parameters<typeof api.getAdminWorkplaces>[1] = {}, opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: [...adminWorkplacesKey(pariwarId), q] as const,
+    queryFn: () => api.getAdminWorkplaces(pariwarId, q),
+    enabled: opts.enabled ?? true,
+  });
+}
+
+function useWorkplaceWrite<V>(pariwarId: string, fn: (v: V) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    // A refusal can mean the list moved under the page (another staff member delisted the row) — refetch on EVERY outcome.
+    onSettled: () => qc.invalidateQueries({ queryKey: adminWorkplacesKey(pariwarId) }),
+  });
+}
+
+export function useAddAdminWorkplace(pariwarId: string) {
+  return useWorkplaceWrite(pariwarId, (body: Parameters<typeof api.addAdminWorkplace>[1]) => api.addAdminWorkplace(pariwarId, body));
+}
+
+export function useRenameAdminWorkplace(pariwarId: string) {
+  return useWorkplaceWrite(pariwarId, (v: { workplaceId: string; name: string }) => api.renameAdminWorkplace(pariwarId, v.workplaceId, v.name));
+}
+
+export function useSetAdminWorkplaceListed(pariwarId: string) {
+  return useWorkplaceWrite(pariwarId, (v: { workplaceId: string; action: 'delist' | 'relist' }) => api.setAdminWorkplaceListed(pariwarId, v.workplaceId, v.action));
+}
+
+export function useWorkplaceRequests(pariwarId: string, q: { state: 'pending' | 'suggested'; cursor?: string }) {
+  return useQuery({ queryKey: [...workplaceRequestsKey(pariwarId), q] as const, queryFn: () => api.getWorkplaceRequests(pariwarId, q) });
+}
+
+function useRequestWrite<V>(pariwarId: string, fn: (v: V) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    // A 409 means the queue is stale (the member posted again, or another admin acted) — refetch on EVERY outcome.
+    onSettled: () => qc.invalidateQueries({ queryKey: workplaceRequestsKey(pariwarId) }),
+  });
+}
+
+export function useSuggestWorkplace(pariwarId: string) {
+  return useRequestWrite(pariwarId, (v: { requestId: string; workplaceId: string }) => api.suggestWorkplaceForRequest(pariwarId, v.requestId, v.workplaceId));
+}
+
+export function useCloseWorkplaceRequest(pariwarId: string) {
+  return useRequestWrite(pariwarId, (requestId: string) => api.closeWorkplaceRequest(pariwarId, requestId));
+}
+
+export function useKnownPeopleCampaigns(pariwarId: string) {
+  return useQuery({ queryKey: knownPeopleCampaignsKey(pariwarId), queryFn: () => api.getKnownPeopleCampaigns(pariwarId) });
+}
+
+export function useStartKnownPeopleCampaign(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { startsOn: string; endsOn: string }) => api.startKnownPeopleCampaign(pariwarId, body),
+    onSettled: () => qc.invalidateQueries({ queryKey: knownPeopleCampaignsKey(pariwarId) }),
+  });
+}
+
+export function useEndKnownPeopleCampaign(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (campaignId: string) => api.endKnownPeopleCampaign(pariwarId, campaignId),
+    onSettled: () => qc.invalidateQueries({ queryKey: knownPeopleCampaignsKey(pariwarId) }),
+  });
+}
+
 // ── Story 6.27a (PM12) — the helpline's "Requests to confirm a death" panel ──────────────────────────────────────────
 
 export const helplinePeerRequestsKey = (pariwarId: string, memberId: string) => ['helpline-peer-requests', pariwarId, memberId] as const;

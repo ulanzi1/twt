@@ -1,6 +1,8 @@
 // Story 6.36b — PEOPLE WHO KNOW ME, the member routes (Task 3; AC3–AC8, AC10, AC4's behaviour leg). Live DB, own-committing:
 // every request runs on its own scoped connection, so the seeds COMMIT — each test mints a FRESH Pariwar.
-//   · AC10: ONE 403 `known_people.not_available` on all seven routes for a non-`active` caller; ⛔ a token ⇒ 401;
+//   · AC10: ONE 403 `known_people.not_available` on all seven people-who-know-me routes for a non-`active` caller; ⛔ a
+//     token ⇒ 401. ⭐ The EIGHTH route (Story 6.36c's `GET /prompts`, RV2) is the ONE exception — 200 to any member session,
+//     every people flag false for a non-caller (asserted beside the seven);
 //   · AC3: positions only; the caller, another Pariwar's member, ⛔ matched; the 4th request in a day ⇒ 429; a list
 //     over 1,000 ⇒ 400 `request.validation` carrying ⛔ submitted value; one KMS audit line per request;
 //   · AC5: 201 a new link / 200 the live one / the replay; ONE 404 `not_a_member`; 422 oneself; 400 ⛔ Idempotency-Key;
@@ -125,7 +127,12 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
         expect(r.status, state).toBe(403);
         expect(code(r), state).toBe(CODES.notAvailable);
       }
+      // ⭐ Story 6.36c RV2 — the eighth route answers 200, every people flag false.
+      const prompts = await call('GET', `${BASE}/prompts`, { tok });
+      expect(prompts.status, state).toBe(200);
+      expect(prompts.body, state).toMatchObject({ canNamePeople: false, transferReview: false, replaceNeeded: false, campaign: null });
     }
+    expect((await call('GET', `${BASE}/prompts`)).status).toBe(401);
     expect((await call('GET', BASE)).status).toBe(401);
     expect((await call('POST', `${BASE}/contact-matches`, { payload: { numbers: ['1'] } })).status).toBe(401);
   });
@@ -326,7 +333,7 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
     }
   }
 
-  it('review round 2, D1 (`2026-10-15-333` call 1) — an ACTIVE member a claim names gets the ONE 403 on all seven routes', async () => {
+  it('review round 2, D1 (`2026-10-15-333` call 1) — an ACTIVE member a claim names gets the ONE 403 on all seven routes (the eighth: 200, people flags false)', async () => {
     const p = randomUUID();
     const me = await seed(p, { mobile: nextMobile(), name: 'Asha Devi' });
     const other = nextMobile();
@@ -349,6 +356,10 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
       expect(r.status).toBe(403);
       expect(code(r)).toBe(CODES.notAvailable);
     }
+    // ⭐ Story 6.36c RV2 — the eighth route answers 200; the people flags are false for a claim-named caller.
+    const prompts = await call('GET', `${BASE}/prompts`, { tok });
+    expect(prompts.status).toBe(200);
+    expect(prompts.body).toMatchObject({ canNamePeople: false, transferReview: false, replaceNeeded: false, campaign: null });
   });
 
   it('review round 2, D2 (b) + P4 — a re-ask answers the live link with the list\'s label; the stored replay holds ⛔ name', async () => {

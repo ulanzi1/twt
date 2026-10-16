@@ -4,6 +4,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story 6.36c (2026-10-16)
+
+- **An imported school's name or listing can be corrected only by the import** [`packages/domain/src/member/workplace-admin.ts`
+  (`lockStaffWorkplace` — an imported row ⇒ 422 `workplace.import_managed`); `packages/domain/src/member/workplace-import.ts` (the upsert
+  re-sets `name` / `district` / `status = 'listed'` on every changed or delisted IMPORT row)]. `2026-10-16-342` call 4 (RV3): rename /
+  delist / relist apply to STAFF rows only, because the next import would silently undo a staff edit to an imported school. A wrongly
+  named, closed or duplicated imported school stays as the source says until the source changes (the Super Admin can ADD a correct staff
+  row beside it; a member can pick that one). ⭐ Trigger: a report of an imported school that is wrong in the source, or a story that gives
+  the import a per-row staff override.
+
 ## Deferred from: dev-story 6.36 (2026-10-16)
 
 - **The OCR job swallows a `ClaimStreamConcurrencyError` as "benign" — the same shape 6.36 removed from the select job**
@@ -18,7 +28,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Deferred from: code review of story-6.36a, ROUND 2 — the whole branch (2026-10-15)
 
-- **`workplaces.name` is ⛔ stored trimmed — a padded staff-added name can mint a search cursor over the contract's bound**
+- **`workplaces.name` is ⛔ stored trimmed — a padded staff-added name can mint a search cursor over the contract's bound** — ⭐ CLOSED BY Story 6.36c (dev-story 2026-10-16): migration 0164 adds `workplaces_name_trimmed_check` (`"name" = btrim("name")`), and the staff add / rename trims (contract `.trim()` + `normalizeStaffWorkplaceText`); a policy-spec leg proves the CHECK.
   [`packages/domain/migrations/0161_member-workplaces.sql:155` — `CHECK (char_length(btrim("name")) BETWEEN 1 AND 200)`, ⛔ `"name" =
   btrim("name")` as `workplace_districts` has; `packages/domain/src/member/workplace.ts` `encodeCursor([last.name, …])`]. The import
   trims every name, so ⛔ a row today. ⭐ Trigger: 6.36c's staff add — it trims, or its 0164 adds the `btrim` equality CHECK (0161 is
@@ -33,7 +43,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   fix shape is 6.36a's `updatePosting` (commit in an inner `finally`, then record, then audit) and `member-data-rights`' five sites (the key
   released when the close throws).
 
-- **`suggested → pending` may keep stale suggestion columns; `suggested → suggested` is impossible** [`packages/domain/migrations/0161_member-workplaces.sql`,
+- **`suggested → pending` may keep stale suggestion columns; `suggested → suggested` is impossible** — ⭐ CLOSED BY Story 6.36c (dev-story 2026-10-16): 0164 replaces the guard — a move INTO `pending` requires the three suggestion columns NULL, a move INTO `suggested` requires the actor; the member's *"No"* and a stale *"Yes"* NULL them (`returnToPending`), and a re-suggestion goes back through `pending` (the suggest route refuses a `suggested` request — 409 `workplace.request_closed`). [`packages/domain/migrations/0161_member-workplaces.sql`,
   the `workplace_requests` guard trigger]. The same-state branch admits only the erasure arm, and the "suggestion columns change only on a
   move INTO suggested or back to pending" check lets a `pending` row keep `suggested_workplace_id` / `suggested_by_actor_id` / `suggested_at`.
   ⭐ Trigger: 6.36c's answer route — *"No"* must NULL the three columns on the way back to `pending`, a re-suggestion must bounce through
@@ -50,10 +60,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   the step from the segment. ⭐ Trigger: a signup-resume story, or a report of a doubled first row.
 - **A mistyped start date (2021 for 2012) locks every earlier real date out — SW6's monotonic rule has ⛔ correction path**
   [`packages/domain/src/member/workplace.ts:147`]. SW6 as ratified (`-330`); a correction path (a member's own fix, or a staff one) is product
-  scope. ⭐ Trigger: 6.36c's staff screens, or a helpdesk ticket class *"wrong start date"*.
+  scope. ⭐ Trigger: 6.36c's staff screens, or a helpdesk ticket class *"wrong start date"*. ⚠ NOT ADDRESSED by Story 6.36c (2026-10-16) — stays
+  open: 6.36c's staff screens ⛔ edit a posting (I2 — only the member's own act writes one), so the trigger fired without a fix; the
+  remaining trigger is the helpdesk ticket class.
 - **`Idempotency-Key` has ⛔ length bound — an oversized header reaches the keyed store and becomes a 500, ⛔ a 400**
   [`apps/api/src/modules/life-events/handlers.ts` `requireIdempotencyKey`]. Identical in the seven existing module-local copies — a cross-cutting
-  fix (one shared helper with a ≤ 128-character printable-ASCII bound). ⭐ Trigger: the eighth copy, or a 54000 in the logs.
+  fix (one shared helper with a ≤ 128-character printable-ASCII bound). ⭐ Trigger: the eighth copy, or a 54000 in the logs. ⚠ NOT
+  TRIGGERED by Story 6.36c (2026-10-16) — stays open: its answer route REUSES the life-events closure's `requireIdempotencyKey` (⛔ an
+  eighth copy).
 - **The required signup step has ⛔ honest answer for a member whose district is ⛔ among the LISTED spellings (a partial district map)**
   [`apps/mobile/components/workplace/WorkplacePicker.tsx:191-222`; AC4 `workplace.district_not_found`]. Spec-consistent — AC4 refuses by
   design; SW7's *"⛔ never blocks"* holds only when every district of the Pariwar is in the map. Carried by Row 31 (h) (the map checked against
@@ -62,7 +76,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   [`packages/domain/src/member/workplace-import.ts:447`]. The staff add is 6.36c's route — ⛔ a writer exists yet. ⭐ Trigger: 6.36c's staff add.
 - **The rename-vs-posting race (`FOR SHARE` district → workplace order) is covered by construction only — ⛔ a two-connection live test**
   [`packages/domain/src/member/workplace.ts` `lockListedWorkplace`; `workplace-import.ts` `renameWorkplaceDistrict`]. Checklist family 2
-  PARTIAL; the construction is the repo's ratified pattern. ⭐ Trigger: 6.36c's rename gaining a staff caller (then a live race spec).
+  PARTIAL; the construction is the repo's ratified pattern. ⭐ Trigger: 6.36c's rename gaining a staff caller (then a live race spec). ⚠
+  NOT TRIGGERED by Story 6.36c (2026-10-16) — stays open: 6.36c renames a WORKPLACE, ⛔ a district, and ⛔ calls
+  `renameWorkplaceDistrict`. Recorded, ⛔ claimed as closure: 6.36c's two-connection spec
+  (`packages/domain/tests/integration/member/workplace-admin-concurrency.spec.ts`) races the member's *"Yes"* — which takes
+  `lockListedWorkplace` and then writes through `insertMemberPosting`, like the posting route — and the suggestion against the rename,
+  both orders, ⛔ 40P01; the posting ROUTE itself is still covered by construction only.
 - **⚠ `closeScopeTx` SWALLOWS a failed COMMIT — ⛔ a handler can tell a committed write from one that never landed (SYSTEMIC)** — ⭐ DISCHARGED 2026-10-15 by the same review's round 2 (BigDev: fix now): `closeScopeTx` rethrows a failed COMMIT, ROLLBACK stays non-fatal, a second close is a no-op; the full `apps/api` integration suite run on the final tree.
   [`apps/api/src/modules/multi-tenant/scope-tx.ts:57-66`]. `COMMIT` errors are caught as *"a broken connection on close"* and dropped, so
   EVERY scope-tx handler answers 200 on a commit failure; an idempotent route then records a replay for a row that is ⛔ there (found while

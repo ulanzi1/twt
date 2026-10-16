@@ -397,6 +397,33 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     expect(defaultRoleBundles).toHaveLength(13); // ⛔ no new role
   });
 
+  describe('Story 6.36c (`2026-10-14-330` SW9 A / SW16) — the workplace list and the campaign keys', () => {
+    const holdersOfKey = (key: string) =>
+      defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(key))
+        .map((b) => b.role)
+        .sort();
+
+    it('workplace.manage is super_admin ONLY, derived (⛔ no roles.ts const) — ONLY the Super Admin adds to the list', () => {
+      expect(holdersOfKey('workplace.manage')).toEqual(['super_admin']);
+    });
+
+    it('workplace.review and known_people.run_campaign are pariwar_admin + derived super_admin', () => {
+      expect(holdersOfKey('workplace.review')).toEqual(['pariwar_admin', 'super_admin']);
+      expect(holdersOfKey('known_people.run_campaign')).toEqual(['pariwar_admin', 'super_admin']);
+    });
+
+    it('⛔ district_admin, state_trustee, block_admin or district_verifier on any of the three', () => {
+      for (const key of ['workplace.manage', 'workplace.review', 'known_people.run_campaign']) {
+        const holders = holdersOfKey(key);
+        for (const role of ['district_admin', 'state_trustee', 'block_admin', 'district_verifier']) {
+          expect(holders, `${role} holds ${key}`).not.toContain(role);
+        }
+      }
+      expect(defaultRoleBundles).toHaveLength(13); // ⛔ no new role
+    });
+  });
+
   it('Story 11b.13 — pariwar.manage_drive_target_visibility is super_admin ONLY, and pariwar_admin does NOT hold it', () => {
     const VISIBILITY_KEY = 'pariwar.manage_drive_target_visibility';
     const holders = defaultRoleBundles

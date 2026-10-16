@@ -110,6 +110,9 @@ export * from './member_withdrawals.js';
 // writer under the namer's lock + a BEFORE INSERT backstop) and the IST-day counters that bound contact matching.
 export * from './member_known_people.js';
 export * from './member_daily_counters.js';
+// Story 6.36c (0164) — a Pariwar Admin's people-who-know-me campaign: an IST window of ≤ 30 days; ⛔ two open ones overlap
+// (the writer's Pariwar lock). Shows a card in the app; sends ⛔ nothing.
+export * from './known_people_campaigns.js';
 // Story 3.11 — data_exports (tenant-isolated; one row per DPDPA data-portability export request). The
 // whole ZIP artifact Tier-1 envelope-encrypted at rest (artifact_ciphertext); status/failed_reason
 // non-PII. GRANTs UPDATE (status transitions + artifact write + TTL-vacuum zeroing). FK cascade to

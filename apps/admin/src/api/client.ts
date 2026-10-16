@@ -34,6 +34,14 @@ import {
   VerifierDecisionResponse,
   LateWarningReasonResponse,
   ApprovalWarningReasonListResponse,
+  AdminWorkplacesResponse,
+  AdminWorkplaceWriteResponse,
+  KnownPeopleCampaignListResponse,
+  KnownPeopleCampaignWriteResponse,
+  WorkplaceRequestQueueResponse,
+  WorkplaceRequestWriteResponse,
+  type AdminWorkplaceAddRequest,
+  type AdminWorkplacesQuery,
   ApprovalWarningReasonWriteResponse,
   type VerifierDecisionResponse as VerifierDecision,
   type VerifierDecisionRequest as VerifierDecisionPayload,
@@ -3025,6 +3033,70 @@ export function replaceApprovalWarningReason(pariwarId: string, reasonId: string
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+// ── Story 6.36c — the workplace LIST, the *"isn't listed"* QUEUE and the people-who-know-me CAMPAIGNS ──────────────────
+// The list: GET `workplace.manage` OR `workplace.review`; every write `workplace.manage` + step-up ('workplace_manage').
+// The queue: `workplace.review`; suggest / close + step-up ('workplace_review'). A suggestion decides ⛔ nothing — only
+// the MEMBER's "Yes" writes a posting. The campaigns: `known_people.run_campaign`, ⛔ step-up (they send nothing).
+
+const workplacesBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/workplaces`;
+const workplaceRequestsBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/workplace-requests`;
+const campaignsBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/known-people-campaigns`;
+
+/** Only the set fields reach the query string (an empty filter is ⛔ a filter). */
+function queryOf(q: Record<string, string | number | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== '') params.set(k, String(v));
+  const s = params.toString();
+  return s === '' ? '' : `?${s}`;
+}
+
+export function getAdminWorkplaces(pariwarId: string, q: AdminWorkplacesQuery = {}) {
+  return apiFetch(`${workplacesBase(pariwarId)}${queryOf({ ...q })}`, AdminWorkplacesResponse);
+}
+
+export function addAdminWorkplace(pariwarId: string, body: AdminWorkplaceAddRequest) {
+  return apiFetch(workplacesBase(pariwarId), AdminWorkplaceWriteResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function renameAdminWorkplace(pariwarId: string, workplaceId: string, name: string) {
+  return apiFetch(`${workplacesBase(pariwarId)}/${encodeURIComponent(workplaceId)}/rename`, AdminWorkplaceWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+/** Delist or relist a STAFF row (an imported row is the import's — 422 `workplace.import_managed`). */
+export function setAdminWorkplaceListed(pariwarId: string, workplaceId: string, action: 'delist' | 'relist') {
+  return apiFetch(`${workplacesBase(pariwarId)}/${encodeURIComponent(workplaceId)}/${action}`, AdminWorkplaceWriteResponse, { method: 'POST' });
+}
+
+export function getWorkplaceRequests(pariwarId: string, q: { state?: 'pending' | 'suggested'; cursor?: string } = {}) {
+  return apiFetch(`${workplaceRequestsBase(pariwarId)}${queryOf(q)}`, WorkplaceRequestQueueResponse);
+}
+
+export function suggestWorkplaceForRequest(pariwarId: string, requestId: string, workplaceId: string) {
+  return apiFetch(`${workplaceRequestsBase(pariwarId)}/${encodeURIComponent(requestId)}/suggest`, WorkplaceRequestWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify({ workplaceId }),
+  });
+}
+
+export function closeWorkplaceRequest(pariwarId: string, requestId: string) {
+  return apiFetch(`${workplaceRequestsBase(pariwarId)}/${encodeURIComponent(requestId)}/close`, WorkplaceRequestWriteResponse, { method: 'POST' });
+}
+
+export function getKnownPeopleCampaigns(pariwarId: string) {
+  return apiFetch(campaignsBase(pariwarId), KnownPeopleCampaignListResponse);
+}
+
+export function startKnownPeopleCampaign(pariwarId: string, body: { startsOn: string; endsOn: string }) {
+  return apiFetch(campaignsBase(pariwarId), KnownPeopleCampaignWriteResponse, { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function endKnownPeopleCampaign(pariwarId: string, campaignId: string) {
+  return apiFetch(`${campaignsBase(pariwarId)}/${encodeURIComponent(campaignId)}/end`, KnownPeopleCampaignWriteResponse, { method: 'POST' });
 }
 
 // ── Story 6.27a (PM12) — the helpline records the answers of a neighbour who phones ───────────────────────────────────

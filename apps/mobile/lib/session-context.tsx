@@ -25,6 +25,7 @@ import { clearAllMemberDrafts } from '../components/life-events/draft-store'
 import { clearPeerRequestsCache } from '../components/peer-request/peer-request-cache'
 import { clearKnownPeopleCache } from '../components/known-people/known-people-cache'
 import { clearSavedNames } from './known-people-saved-names'
+import { clearHomeCardDismissals } from './home-card-dismissals'
 import { queryClient } from './query-client'
 
 interface SessionContextValue {
@@ -70,6 +71,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // Story 6.36b — the people-who-know-me lists (other members' names) and the names the member SAVED on this phone.
       clearKnownPeopleCache(queryClient)
       clearSavedNames()
+      // Story 6.36c — the home cards' dismissals are this member's.
+      clearHomeCardDismissals()
       setTerminationNotice(notice)
       // Story 6.30 AL6 (iv) — the termination redirect WINS over any link target.
       clearLinkTarget()
@@ -81,6 +84,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       setSession(null)
       clearKnownPeopleCache(queryClient)
       clearSavedNames()
+      clearHomeCardDismissals()
     })
     return () => {
       setTerminatedDuringRefreshHandler(null)
@@ -91,6 +95,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   async function signIn(full: MemberFullSession): Promise<void> {
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
+    // Story 6.36c — another account's dismissals must ⛔ hide this one's cards.
+    clearHomeCardDismissals()
     const s: StoredSession = {
       accessToken: full.accessToken,
       accessTokenExpiresAt: full.accessTokenExpiresAt,
@@ -106,6 +112,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
     clearSavedNames()
+    clearHomeCardDismissals()
     // Purge member-scoped drafts before clearing the session so the memberId is still available.
     if (session?.memberId) clearAllMemberDrafts(session.memberId)
     try {

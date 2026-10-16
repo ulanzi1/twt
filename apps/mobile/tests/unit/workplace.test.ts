@@ -209,8 +209,20 @@ describe('the history rows (AC3b)', () => {
     // After a transfer the writer sets the request `withdrawn`: the typed name stays the title, ⛔ a status line, ⛔ anyone looking.
     expect(historyRowView({ ...base, request: { ...req, state: 'withdrawn' } })).toMatchObject({ titleText: 'Village School', kindKey: 'row_typed', statusKey: null })
     expect(historyRowView({ ...base, request: { ...req, state: 'confirmed' } })).toMatchObject({ kindKey: 'row_typed', statusKey: null })
-    // Erased AND closed: the neutral line is the TITLE.
-    expect(historyRowView({ ...base, request: { ...req, typedName: null, state: 'closed' } })).toMatchObject({ titleText: null, titleKey: 'row_typed', kindKey: null, statusKey: null })
+    // Erased AND closed: the neutral line is the TITLE. ⭐ Story 6.36c (AC4) — a CLOSED request (the Pariwar Admin found ⛔ such
+    // workplace) now asks the member to choose again, with their typed name while it is kept (was `statusKey: null`).
+    expect(historyRowView({ ...base, request: { ...req, typedName: null, state: 'closed' } })).toMatchObject({
+      titleText: null,
+      titleKey: 'row_typed',
+      kindKey: null,
+      statusKey: 'request_closed_no_name',
+    })
+    expect(historyRowView({ ...base, request: { ...req, state: 'closed' } })).toMatchObject({
+      titleText: 'Village School',
+      kindKey: 'row_typed',
+      statusKey: 'request_closed',
+      statusParams: { name: 'Village School' },
+    })
   })
 
   it('a retirement: "Retired", "On <date>"; a legacy district-only row: "District recorded", ⛔ date', () => {

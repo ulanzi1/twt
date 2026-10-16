@@ -1,3 +1,16 @@
+# last_updated: 2026-10-16g (STORY 6.36c — RE-VALIDATED against `main` `301d96d8` (`bmad-create-story 6.36c`, worktree
+# `.claude/worktrees/6-36c`, branch `story/6-36c-workplace-list-curation-and-prompts`): row `6-36c-workplace-list-curation-and-prompts`
+# `backlog` → `ready-for-dev` (v2.3; `-338` call 3 — row 6-36 `done` and on `main`, AC0 MET). Four parallel verifiers, then three
+# fresh-context validate rounds until ⛔ finding at HIGH (4 → 1 → 0), all applied. Every pointer re-read at `301d96d8` (186 files moved
+# since `2581c514`). Key changes: the people-who-know-me prompts gate on 6.36b's `knownPeopleCallerSql` (`-333` call 1), ⛔ a bare
+# `active`; the prompts route is 6.36b's module's ONE documented exception to its one-403 rule; the answer route mirrors `updatePosting`
+# (its own key prefix, one discriminated-union response, lock order district → workplace → request, a stale suggestion returns to the
+# queue); 0164 = `known_people_campaigns` + the `workplaces.name` btrim CHECK + the `suggested → pending` NULLing guard (two 6.36a
+# deferrals Closed; seven fixtures named); ONE home card at a time. ⭐ `2026-10-16-342` (author-commit, committed ALONE `61332dae` BEFORE
+# any 6.36c code; BigDev: the recommended option on all four): the campaign card needs a free slot; "Add your workplace" needs the
+# Pariwar's list (both supersede `-330` SW16 (5) / (2) IN PART); rename / delist / relist on STAFF rows only; ⛔ actor column on the import
+# batch row (6.36a's review patch departed from, said out loud). ⛔ No Panel question open (SC2 ⛔ owed — `-330` §0). ⛔ No code. Migration
+# `0164` / `…008`; shared test DBs (:5433 AND :5432). 6.27c still waits for this row. ⛔ No other row moves.)
 # last_updated: 2026-10-16f (STORY 6.36 — CODE REVIEW ROUND 2 CLOSED: P1–P9 + the fix-diff review's F1–F14 applied; fix-review
 # Edge #1 → `2026-10-16-341` (author-commit, alone `5511a2e2`: ⛔ a filer of ANY intake attempt for the death is asked either); a
 # convergence round (3 LOW, applied). `twt-test-pg` (:5433) recreated fresh (BigDev) and migrated from zero; `pnpm ci:local` on the
@@ -20247,7 +20260,7 @@ development_status:
   # 0163 (row 6-36) / 0164 (6-36c), merged to main in that order. 6-27c waits for row 6-36 AND 6-36c.
   6-36a-member-workplace-and-posting-history: done
   6-36b-people-who-know-me: done
-  6-36c-workplace-list-curation-and-prompts: backlog
+  6-36c-workplace-list-curation-and-prompts: ready-for-dev
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted
   # at the deceased member's school, plus the previous school when the current posting began within 90 days; ⛔ never the district; fewer

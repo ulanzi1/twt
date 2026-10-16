@@ -8,12 +8,26 @@ import { ApiError } from '../../api/client.js';
 import { useRequestStepUp, useVerifyStepUp } from '../../api/hooks.js';
 import { stepUpEn as t } from './i18n-en.js';
 
-/** A held write, re-run after the step-up verifies. `null` ⇒ nothing is waiting. */
-export type PendingWrite = (() => void) | null;
+/**
+ * A held write, re-run after the step-up verifies. `owner` names which control's retry this is (e.g. `'add'` |
+ * `'rename'` | `'toggle'`), so a DIFFERENT control's edit can clear its OWN pending retry without discarding this
+ * one (code review — a cross-control edit used to clear ANY held retry). `null` ⇒ nothing is waiting.
+ */
+export interface PendingStepUp<Owner extends string = string> {
+  owner: Owner;
+  retry: () => void;
+}
+export type PendingWrite<Owner extends string = string> = PendingStepUp<Owner> | null;
 
 /** `true` when `err` asks for a step-up — the signal to hold the write, ⛔ an error to show. */
 export const needsStepUp = (err: unknown): boolean => err instanceof ApiError && err.code === 'auth.step_up_required';
 
+/**
+ * The caller renders this ONLY while `pending` is non-null (code review — the panel used to stay mounted and
+ * return `null` internally, which let its OTP text and its `requestStepUp`/`verifyStepUp` mutation state survive a
+ * `pending` reset: the NEXT held retry reopened the panel already showing a stale code or a stale send/verify
+ * outcome from the PREVIOUS one). Unmounting it between retries resets all of that for free.
+ */
 export function StepUpPanel({ context, pending, onDone, testId }: { context: string; pending: PendingWrite; onDone: () => void; testId: string }): ReactElement | null {
   const requestStepUp = useRequestStepUp();
   const verifyStepUp = useVerifyStepUp();
@@ -49,7 +63,7 @@ export function StepUpPanel({ context, pending, onDone, testId }: { context: str
                   setOtp('');
                   requestStepUp.reset();
                   onDone();
-                  pending();
+                  pending.retry();
                 },
               })
             }

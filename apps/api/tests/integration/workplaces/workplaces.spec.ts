@@ -216,7 +216,9 @@ describe.skipIf(!hasDatabase)('Story 6.36c — workplaces, the queue, the answer
       const { client: pa } = await pariwarAdmin(p);
       expect((await pa.inject({ method: 'GET', url: wp(p) })).statusCode).toBe(200);
       expect((await pa.inject({ method: 'GET', url: rq(p) })).statusCode).toBe(200);
-      await elevate(pa, 'workplace_manage');
+      // ⭐ Review — NO `elevate()` here: the permission hook (`workplace.manage`) runs BEFORE the step-up hook, so a
+      // plain `pariwar_admin` session (`workplace.review` only) already 403s on these writes without reaching step-up.
+      // Elevating first was misleading — it implied the 403 holds even step-up'd, but the write chain never got there.
       const office = ids['DEO OFFICE PATNA']!;
       for (const [url, payload] of [
         [wp(p), { kind: 'office', name: 'BEO', district: 'Patna' }],

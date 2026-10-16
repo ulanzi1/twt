@@ -17,7 +17,7 @@ vi.mock('react-native', () => ({
 
 import type { KnownPeoplePromptsResponse } from '@twt/contracts'
 
-import { clearHomeCardDismissals, dismissCard, HOME_CARD_DISMISSALS_KEY, isCardDismissed, type SyncStorage } from '../../lib/home-card-dismissals'
+import { clearHomeCardDismissals, dismissCard, homeCardDismissalsKey, isCardDismissed, type SyncStorage } from '../../lib/home-card-dismissals'
 import { applicableCards, chooseHomeCard } from '../../lib/home-cards'
 import { inviteMessage, shareInvite } from '../../lib/invite-share'
 import { answerKeyFor, answerKeySettled, freshAnswerKeyState, historyRowView, refusalCopyKey } from '../../lib/workplace'
@@ -90,22 +90,31 @@ describe('the ONE card (RV7)', () => {
   })
 })
 
-describe('the dismissals (30 days, on this phone)', () => {
-  it('hidden for 30 days, then shown again; a corrupt store reads as nothing dismissed; clear forgets all', () => {
+describe('the dismissals (30 days, on this phone, namespaced per account)', () => {
+  it('hidden for 30 days, then shown again; a corrupt store reads as nothing dismissed; clear forgets all; another account reads nothing', () => {
     const s = memoryStorage()
     const t0 = new Date('2026-10-16T00:00:00.000Z')
-    dismissCard('invite', t0, s)
-    expect(isCardDismissed('invite', new Date(t0.getTime() + 29 * 86_400_000), s)).toBe(true)
-    expect(isCardDismissed('invite', new Date(t0.getTime() + 30 * 86_400_000), s)).toBe(false)
-    expect(isCardDismissed('replace', t0, s)).toBe(false)
+    dismissCard('invite', 'm1', t0, s)
+    expect(isCardDismissed('invite', 'm1', new Date(t0.getTime() + 29 * 86_400_000), s)).toBe(true)
+    expect(isCardDismissed('invite', 'm1', new Date(t0.getTime() + 30 * 86_400_000), s)).toBe(false)
+    expect(isCardDismissed('replace', 'm1', t0, s)).toBe(false)
+    // A different account's own key is untouched — ⛔ sees `m1`'s dismissal (fix-review — the namespaced key).
+    expect(isCardDismissed('invite', 'm2', t0, s)).toBe(false)
     // An expired entry is dropped on the next write.
-    dismissCard('replace', new Date(t0.getTime() + 31 * 86_400_000), s)
-    expect(Object.keys(JSON.parse(s.map.get(HOME_CARD_DISMISSALS_KEY)!) as object)).toEqual(['replace'])
-    s.map.set(HOME_CARD_DISMISSALS_KEY, '{not json')
-    expect(isCardDismissed('replace', t0, s)).toBe(false)
-    dismissCard('invite', t0, s)
-    clearHomeCardDismissals(s)
-    expect(s.map.has(HOME_CARD_DISMISSALS_KEY)).toBe(false)
+    dismissCard('replace', 'm1', new Date(t0.getTime() + 31 * 86_400_000), s)
+    expect(Object.keys(JSON.parse(s.map.get(homeCardDismissalsKey('m1'))!) as object)).toEqual(['replace'])
+    s.map.set(homeCardDismissalsKey('m1'), '{not json')
+    expect(isCardDismissed('replace', 'm1', t0, s)).toBe(false)
+    dismissCard('invite', 'm1', t0, s)
+    clearHomeCardDismissals('m1', s)
+    expect(s.map.has(homeCardDismissalsKey('m1'))).toBe(false)
+  })
+
+  it('`undefined` (no known account) is a no-op — ⛔ throw, ⛔ clear anything', () => {
+    const s = memoryStorage()
+    dismissCard('invite', 'm1', new Date('2026-10-16T00:00:00.000Z'), s)
+    clearHomeCardDismissals(undefined, s)
+    expect(s.map.has(homeCardDismissalsKey('m1'))).toBe(true)
   })
 })
 

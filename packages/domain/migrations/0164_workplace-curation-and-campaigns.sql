@@ -42,10 +42,16 @@ CREATE POLICY "known_people_campaigns_tenant_isolation_select" ON "known_people_
 CREATE POLICY "known_people_campaigns_tenant_isolation_insert" ON "known_people_campaigns" AS PERMISSIVE FOR INSERT TO "twt_app" WITH CHECK (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid);--> statement-breakpoint
 -- ⚠ Load-bearing: `/end` UPDATEs; without it the end silently updates 0 rows under FORCE (`-279` A12).
 CREATE POLICY "known_people_campaigns_tenant_isolation_update" ON "known_people_campaigns" AS PERMISSIVE FOR UPDATE TO "twt_app" USING (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid) WITH CHECK (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid);--> statement-breakpoint
--- The list (newest first) and the overlap / live reads.
-CREATE INDEX "known_people_campaigns_pariwar_ends_on_idx" ON "known_people_campaigns" USING btree ("pariwar_id", "ends_on" DESC);--> statement-breakpoint
+-- The list, newest first (`listCampaigns`' actual sort — `created_at DESC, campaign_id DESC`; the leading `pariwar_id`
+-- also covers the overlap / live reads' equality filter). `DROP … IF EXISTS` first — this replaces a same-named index
+-- that was created on the WRONG columns (`ends_on DESC`, a mismatch with the list's sort) before the fix.
+DROP INDEX IF EXISTS "known_people_campaigns_pariwar_ends_on_idx";--> statement-breakpoint
+CREATE INDEX "known_people_campaigns_pariwar_created_idx" ON "known_people_campaigns" USING btree ("pariwar_id", "created_at" DESC, "campaign_id" DESC);--> statement-breakpoint
 
 -- ── (2) workplaces — the name is stored trimmed ──────────────────────────────────────────────────────────────────────
+-- A one-time defensive backfill: on a fresh / staging database carrying legacy untrimmed rows, this runs FIRST so the
+-- ADD below never fails on dirty data, and never holds its lock against rows it would otherwise have to reject.
+UPDATE "workplaces" SET "name" = btrim("name") WHERE "name" <> btrim("name");--> statement-breakpoint
 -- ⚠ If this ADD fails on a live database, FIND the row — ⛔ `NOT VALID`.
 ALTER TABLE "workplaces" ADD CONSTRAINT "workplaces_name_trimmed_check" CHECK ("name" = btrim("name"));--> statement-breakpoint
 
@@ -138,3 +144,9 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+--> statement-breakpoint
+
+-- ── (4) workplace_requests — the same-name count's supporting index (Task 1.4) ──────────────────────────────────────
+-- `listWorkplaceRequestsForReview`'s `sameNameCount` (workplace-admin.ts) is a correlated count on this EXACT folded
+-- expression, scoped to the open (`pending`) requests that carry a typed name (the subquery's own filter).
+CREATE INDEX "workplace_requests_pariwar_folded_name_idx" ON "workplace_requests" USING btree ("pariwar_id", (lower(regexp_replace(btrim("typed_name"), '\s+', ' ', 'g')))) WHERE "state" = 'pending' AND "typed_name" IS NOT NULL;

@@ -19,6 +19,7 @@
 import { z } from 'zod';
 
 import { Cursor } from '../_common/pagination.js';
+import { isRealCalendarDate } from '../claims/correction-chase.js';
 
 /** At most this many numbers in ONE matching request (6.36a SW12). ⚠ By-value twin: `CONTACT_MATCH_MAX_NUMBERS`. */
 export const KNOWN_PEOPLE_MATCH_MAX_NUMBERS = 1000;
@@ -214,7 +215,10 @@ export const KNOWN_PEOPLE_CAMPAIGN_REFUSAL_CODES = [
 ] as const;
 export type KnownPeopleCampaignRefusalCode = (typeof KNOWN_PEOPLE_CAMPAIGN_REFUSAL_CODES)[number];
 
-const IsoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a date as YYYY-MM-DD');
+const IsoDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'a date as YYYY-MM-DD')
+  .refine(isRealCalendarDate, 'not a real calendar date');
 
 /** `POST /api/v1/p/:pariwarId/admin/known-people-campaigns` — IST dates, at most 30 days inclusive (the handler's 422). */
 export const KnownPeopleCampaignStartRequest = z.object({ startsOn: IsoDay, endsOn: IsoDay }).strict();

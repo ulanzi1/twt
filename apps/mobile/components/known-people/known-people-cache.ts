@@ -19,9 +19,22 @@ export const knownPeopleRequestsKey = (pariwarId: string | undefined, memberId: 
 export const knownPeoplePromptsKey = (pariwarId: string | undefined, memberId: string | undefined) =>
   ['known-people', 'v1', pariwarId, memberId, 'prompts'] as const
 
-/** Refetch the home prompts of whichever account is signed in (a posting saved on the Workplace screen — Story 6.36c). */
+/**
+ * Refetch the home prompts of whichever account is signed in (a posting saved on the Workplace screen — Story 6.36c).
+ * ⭐ The ONE path every caller uses for this (fix-review) — `WorkplaceSuggestionQuestion.tsx`, `WorkplacePicker.tsx`, and
+ * `useKnownPeopleWrites`' own `refresh` all call THIS, instead of each re-deriving its own match.
+ * Matches by rebuilding the EXACT key `knownPeoplePromptsKey` would produce for a query's own (pariwarId, memberId) —
+ * ⛔ a hardcoded positional index (`queryKey[4] === 'prompts'`): if that builder's shape ever changes, this match
+ * changes with it, from the ONE place that shape is written.
+ */
 export function invalidateKnownPeoplePrompts(client: QueryClient): Promise<void> {
-  return client.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'known-people' && q.queryKey[4] === 'prompts' })
+  return client.invalidateQueries({
+    predicate: (q) => {
+      const [, , pariwarId, memberId] = q.queryKey as readonly unknown[]
+      const expected = knownPeoplePromptsKey(pariwarId as string | undefined, memberId as string | undefined)
+      return q.queryKey.length === expected.length && expected.every((segment, i) => q.queryKey[i] === segment)
+    },
+  })
 }
 
 export const KNOWN_PEOPLE_CACHE_OPTIONS = { gcTime: 0, staleTime: 0 } as const

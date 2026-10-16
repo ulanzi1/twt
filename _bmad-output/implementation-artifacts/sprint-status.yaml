@@ -1,3 +1,16 @@
+# last_updated: 2026-10-16i (STORY 6.36c — CODE REVIEWED (`bmad-code-review 6.36c`, worktree `.claude/worktrees/6-36c`, branch
+# `story/6-36c-workplace-list-curation-and-prompts`): row `6-36c-workplace-list-curation-and-prompts` `review` → `done`. 5 parallel
+# chunks by layer (domain+contracts+migration / API / admin / mobile / i18n+docs+governance), 3 layers each (Blind Hunter, Edge Case
+# Hunter, Acceptance Auditor): 85 raw findings → 9 decision-needed (resolved: 4 patch, 4 dismiss, 1 defer) + 49 patch + 3 defer + 28
+# dismissed. 47/49 patches applied; 2 investigated and left unchanged as correct-as-designed (`workplace_request_id` blocked by
+# `member_postings_one_workplace_check`; the Requests nav link's ungating is deliberate — `workplace.review` is pariwar-scoped, ⛔ in
+# `nationalGrants`). Fix diff adversarially re-reviewed per chunk: 3 real regressions found + fixed (a new filter missing a banner
+# reset; a 500 leaking an internal code to the client; a log-field collision). Mobile's concurrency fixes gained 8 new tests. D3's
+# residual (shared-key fix dedupes same-answer races across two mounts, ⛔ an opposite-answer race) documented in `deferred-work.md`
+# (W7) — confirmed ⛔ corrupting, the domain's own state check refuses the loser cleanly. `twt-test-pg` recreated (an edited,
+# already-applied migration is a silent no-op on a stale DB); `pnpm ci:local` on the final tree 35/36 in one run (`test (unit)` — the
+# known admin-jsdom-under-load flake, `tests/ground-inspection-discrepancy.test.tsx`, ⛔ touched; re-run alone 37/37, `@twt/admin`
+# alone 74/74 green).
 # last_updated: 2026-10-16h (STORY 6.36c — IMPLEMENTED by `bmad-dev-story 6.36c` (worktree `.claude/worktrees/6-36c`, branch
 # `story/6-36c-workplace-list-curation-and-prompts`, code commit `95e36161`): row `6-36c-workplace-list-curation-and-prompts`
 # `ready-for-dev` → `in-progress` → `review`. Built to RV1–RV12 and `2026-10-16-342`: migration 0164 (`known_people_campaigns`; the
@@ -20271,7 +20284,7 @@ development_status:
   # 0163 (row 6-36) / 0164 (6-36c), merged to main in that order. 6-27c waits for row 6-36 AND 6-36c.
   6-36a-member-workplace-and-posting-history: done
   6-36b-people-who-know-me: done
-  6-36c-workplace-list-curation-and-prompts: review
+  6-36c-workplace-list-curation-and-prompts: done
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted
   # at the deceased member's school, plus the previous school when the current posting began within 90 days; ⛔ never the district; fewer

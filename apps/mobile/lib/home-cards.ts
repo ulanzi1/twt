@@ -12,16 +12,26 @@ import type { KnownPeoplePromptsResponse } from '@twt/contracts'
 
 export type HomeCardKind = 'suggestion' | 'add_workplace' | 'replace' | 'transfer' | 'campaign' | 'invite'
 
-export interface HomeCard {
-  readonly kind: HomeCardKind
-  /** The dismissal key — what the card is ABOUT (a new campaign or suggestion shows at once). */
-  readonly key: string
-}
+/**
+ * A proper discriminated union keyed on `kind` (fix-review): `applicableCards` only ever builds a `'suggestion'` card
+ * FROM a non-null `suggestedWorkplace`, so a consumer switching on `kind` gets it back carrying that suggestion
+ * NON-NULLABLE — ⛔ a redundant runtime `!== null` recheck at the call site. Every other kind carries only its
+ * dismissal key (what the card is ABOUT — a new campaign or suggestion shows at once).
+ */
+export type HomeCard =
+  | { readonly kind: 'suggestion'; readonly key: string; readonly suggestedWorkplace: NonNullable<KnownPeoplePromptsResponse['suggestedWorkplace']> }
+  | { readonly kind: Exclude<HomeCardKind, 'suggestion'>; readonly key: string }
 
 /** Every card the prompts allow, in the display order. */
 export function applicableCards(p: KnownPeoplePromptsResponse): HomeCard[] {
   const out: HomeCard[] = []
-  if (p.suggestedWorkplace !== null) out.push({ kind: 'suggestion', key: `suggestion:${p.suggestedWorkplace.requestId}:${p.suggestedWorkplace.workplaceId}` })
+  if (p.suggestedWorkplace !== null) {
+    out.push({
+      kind: 'suggestion',
+      key: `suggestion:${p.suggestedWorkplace.requestId}:${p.suggestedWorkplace.workplaceId}`,
+      suggestedWorkplace: p.suggestedWorkplace,
+    })
+  }
   if (p.noWorkplace && p.suggestedWorkplace === null) out.push({ kind: 'add_workplace', key: 'add_workplace' })
   if (p.replaceNeeded) out.push({ kind: 'replace', key: 'replace' })
   if (p.transferReview) out.push({ kind: 'transfer', key: 'transfer' })

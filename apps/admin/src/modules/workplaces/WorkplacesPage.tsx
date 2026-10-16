@@ -6,21 +6,17 @@
 // The server's key check (`workplace.manage`, super_admin ONLY) is the boundary; a step-up-required 403 holds the write and
 // runs it after the code verifies (the `ApprovalWarningReasonsPage` pattern).
 
-import { WORKPLACE_MANAGE_STEP_UP_CONTEXT, type AdminWorkplaceAddRequest, type AdminWorkplaceWire, type WorkplaceAdminRefusalCode } from '@twt/contracts';
-import { useState, type ReactElement } from 'react';
+import { WORKPLACE_MANAGE_STEP_UP_CONTEXT, type AdminWorkplaceAddRequest, type AdminWorkplaceWire } from '@twt/contracts';
+import { useEffect, useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { useAddAdminWorkplace, useAdminWorkplaces, useRenameAdminWorkplace, useSetAdminWorkplaceListed } from '../../api/hooks.js';
+import { errorText } from './error-text.js';
 import { workplacesEn as t } from './i18n-en.js';
 import { needsStepUp, StepUpPanel, type PendingWrite } from './StepUpPanel.js';
 
-function errorText(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.code in t.errors) return t.errors[err.code as WorkplaceAdminRefusalCode];
-    if (err.isForbidden) return t.forbidden;
-  }
-  return t.generic;
-}
+/** The control that currently owns the held step-up retry (fix: a DIFFERENT control's edit must not clear it). */
+type WorkplaceControl = 'add' | 'rename' | 'toggle';
 
 interface Filters {
   district: string;
@@ -107,6 +103,12 @@ function Row({
 }): ReactElement {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(w.name);
+  // A background refetch (e.g. after another admin's write) brings a NEW `w.name` — sync the local field from it, but
+  // ONLY while the row is not mid-edit, or a refetch landing while the admin is typing would stomp their in-progress
+  // rename (code review).
+  useEffect(() => {
+    if (!renaming) setName(w.name);
+  }, [w.name, renaming]);
   const staff = w.source === 'staff';
   return (
     <tr data-testid={`workplace-row-${w.workplaceId}`} className="border-t align-top">
@@ -172,33 +174,37 @@ export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactEleme
   const add = useAddAdminWorkplace(pariwarId);
   const rename = useRenameAdminWorkplace(pariwarId);
   const toggle = useSetAdminWorkplaceListed(pariwarId);
-  const [pending, setPending] = useState<PendingWrite>(null);
+  const [pending, setPending] = useState<PendingWrite<WorkplaceControl>>(null);
   const [addFormKey, setAddFormKey] = useState(0);
 
-  const setFilter = <K extends keyof Filters>(k: K, v: Filters[K]): void => {
-    setFilters((f) => ({ ...f, [k]: v }));
-    setCursor(undefined);
-  };
-  const hold = (retry: () => void) => (err: unknown) => {
-    if (needsStepUp(err)) setPending(() => retry);
-  };
   const resetAll = (): void => {
     add.reset();
     rename.reset();
     toggle.reset();
   };
+  const setFilter = <K extends keyof Filters>(k: K, v: Filters[K]): void => {
+    setFilters((f) => ({ ...f, [k]: v }));
+    setCursor(undefined);
+    // A previous write's "Saved."/error banner must not survive under a freshly filtered list (code review).
+    resetAll();
+  };
+  const hold = (owner: WorkplaceControl, retry: () => void) => (err: unknown) => {
+    if (needsStepUp(err)) setPending({ owner, retry });
+  };
   const runAdd = (body: AdminWorkplaceAddRequest): void => {
     resetAll();
-    add.mutate(body, { onSuccess: () => setAddFormKey((k) => k + 1), onError: hold(() => runAdd(body)) });
+    add.mutate(body, { onSuccess: () => setAddFormKey((k) => k + 1), onError: hold('add', () => runAdd(body)) });
   };
   const runRename = (workplaceId: string, name: string): void => {
     resetAll();
-    rename.mutate({ workplaceId, name }, { onError: hold(() => runRename(workplaceId, name)) });
+    rename.mutate({ workplaceId, name }, { onError: hold('rename', () => runRename(workplaceId, name)) });
   };
-  const runToggle = (w: AdminWorkplaceWire): void => {
+  // `action` is CAPTURED at the moment the toggle was originally triggered (the call site below), not re-derived
+  // from the row's status here — a retry must re-send the ORIGINALLY intended direction even if the list has since
+  // refetched a different status for this row (code review).
+  const runToggle = (workplaceId: string, action: 'delist' | 'relist'): void => {
     resetAll();
-    const action = w.status === 'listed' ? 'delist' : 'relist';
-    toggle.mutate({ workplaceId: w.workplaceId, action }, { onError: hold(() => runToggle(w)) });
+    toggle.mutate({ workplaceId, action }, { onError: hold('toggle', () => runToggle(workplaceId, action)) });
   };
 
   const writeError = [add.error, rename.error, toggle.error].find((e) => e && !needsStepUp(e));
@@ -259,7 +265,13 @@ export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactEleme
             </thead>
             <tbody>
               {list.data.items.map((w) => (
-                <Row key={w.workplaceId} w={w} busy={rename.isPending || toggle.isPending} onRename={(name) => runRename(w.workplaceId, name)} onToggle={() => runToggle(w)} />
+                <Row
+                  key={w.workplaceId}
+                  w={w}
+                  busy={rename.isPending || toggle.isPending}
+                  onRename={(name) => runRename(w.workplaceId, name)}
+                  onToggle={() => runToggle(w.workplaceId, w.status === 'listed' ? 'delist' : 'relist')}
+                />
               ))}
             </tbody>
           </table>
@@ -278,12 +290,16 @@ export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactEleme
         ) : null}
       </div>
 
-      <AddForm key={addFormKey} processing={add.isPending} onSubmit={runAdd} onEdit={() => setPending(null)} />
+      {/* `onEdit` clears a pending step-up ONLY when this control (the add form) is the one holding it — editing a
+          field here must not silently drop an unrelated held rename/toggle retry (code review). */}
+      <AddForm key={addFormKey} processing={add.isPending} onSubmit={runAdd} onEdit={() => setPending((p) => (p?.owner === 'add' ? null : p))} />
 
-      <StepUpPanel context={WORKPLACE_MANAGE_STEP_UP_CONTEXT} pending={pending} onDone={() => setPending(null)} testId="workplaces-step-up" />
+      {/* Rendered ONLY while a retry is held — unmounting it between retries resets its internal OTP + mutation
+          state instead of carrying it stale into the next one (code review). */}
+      {pending ? <StepUpPanel context={WORKPLACE_MANAGE_STEP_UP_CONTEXT} pending={pending} onDone={() => setPending(null)} testId="workplaces-step-up" /> : null}
       {writeError ? (
         <p role="alert" className="text-sm text-status-fail-fg" data-testid="workplaces-write-error">
-          {errorText(writeError)}
+          {errorText(writeError, t.errors, t)}
         </p>
       ) : null}
       <p role="status" className="text-sm" data-testid="workplaces-saved">

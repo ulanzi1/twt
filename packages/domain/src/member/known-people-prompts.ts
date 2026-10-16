@@ -105,9 +105,14 @@ export async function readKnownPeoplePrompts(db: Db, pariwarId: PariwarId, membe
        ORDER BY p.created_at DESC, p.posting_id DESC LIMIT 1
     ),
     suggestion AS (
+      -- Same staleness condition as answerWorkplaceSuggestion's "Yes" path (workplace-admin.ts): the workplace must be
+      -- listed, in the request's own district, and that district itself still listed — otherwise the member's "Yes"
+      -- would refuse it as stale, so the card must not be shown for it either.
       SELECT r.request_id, w.workplace_id, w.name, w.district
         FROM workplace_requests r
         JOIN workplaces w ON w.pariwar_id = r.pariwar_id AND w.workplace_id = r.suggested_workplace_id
+          AND w.status = 'listed' AND w.district = r.district
+        JOIN workplace_districts d ON d.pariwar_id = r.pariwar_id AND d.district = w.district AND d.status = 'listed'
        WHERE r.pariwar_id = ${pariwarId} AND r.member_id = ${memberId} AND r.state = 'suggested'
        ORDER BY r.created_at DESC, r.request_id DESC LIMIT 1
     ),

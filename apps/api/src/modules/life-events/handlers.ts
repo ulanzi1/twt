@@ -43,7 +43,7 @@ import {
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { ApiError, BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
+import { ApiError, BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
@@ -78,17 +78,30 @@ function refuse(code: memberDomain.WorkplaceRefusalCode): never {
   throw new ApiError(422, code, WORKPLACE_REFUSAL_MESSAGES[code]);
 }
 
-/** Story 6.36c (AC4) — the answer route's refusals, each with its status. ⛔ The member's input in a message. */
-const WORKPLACE_ANSWER_REFUSALS: Record<WorkplaceAnswerRefusalCode, { status: 404 | 409 | 422; message: string }> = {
-  'workplace.request_not_found': { status: 404, message: 'No such workplace request' },
-  'workplace.request_closed': { status: 409, message: 'That suggestion is no longer open' },
-  'workplace.suggestion_stale': { status: 409, message: 'That suggestion can no longer be used — it has gone back for review' },
-  'workplace.start_date_invalid': { status: 422, message: 'That start date cannot be used' },
+/** Story 6.36c (AC4) — the answer route's refusals' messages. ⛔ The member's input in a message. */
+const WORKPLACE_ANSWER_MESSAGES: Record<WorkplaceAnswerRefusalCode, string> = {
+  'workplace.request_not_found': 'No such workplace request',
+  'workplace.request_closed': 'That suggestion is no longer open',
+  'workplace.suggestion_stale': 'That suggestion can no longer be used — it has gone back for review',
+  'workplace.start_date_invalid': 'That start date cannot be used',
 };
 
+/** The status of each answer refusal. */
+const WORKPLACE_ANSWER_STATUS: Record<WorkplaceAnswerRefusalCode, 404 | 409 | 422> = {
+  'workplace.request_not_found': 404,
+  'workplace.request_closed': 409,
+  'workplace.suggestion_stale': 409,
+  'workplace.start_date_invalid': 422,
+};
+
+/** ⭐ Review — the SAME typed-subclass dispatch as `workplaces/handlers.ts`'s `refuse()`, so `instanceof NotFoundError` /
+ * `ConflictError` checks behave consistently for both modules' errors (⛔ a bare `ApiError` for every status). */
 function refuseAnswer(code: WorkplaceAnswerRefusalCode): never {
-  const { status, message } = WORKPLACE_ANSWER_REFUSALS[code];
-  throw new ApiError(status, code, message);
+  const status = WORKPLACE_ANSWER_STATUS[code];
+  const message = WORKPLACE_ANSWER_MESSAGES[code];
+  if (status === 404) throw new NotFoundError(message, code);
+  if (status === 409) throw new ConflictError(message, code);
+  throw new ApiError(422, code, message);
 }
 
 export function createLifeEventsHandlers(deps: AppDeps) {
@@ -421,8 +434,14 @@ export function createLifeEventsHandlers(deps: AppDeps) {
           await idempotencyStore.recordResult(idemKey, result);
         } catch (err) {
           // The row is committed: the member gets the honest 200. A retry with this key answers 409 until the claim expires
-          // (⛔ a duplicate — the claim is held), which is the lesser harm; the store failure is logged, ⛔ hidden.
-          request.log.warn({ err, idemKey }, 'posting write committed but its idempotency result could not be recorded');
+          // (⛔ a duplicate — the claim is held), which is the lesser harm; the store failure is logged at `error` (⛔ `warn`
+          // — unlike the audit sink, `recordResult` has no "never throws" guarantee, so this failure must be alertable), ⛔
+          // hidden, with enough detail (the idempotency key + the request's trace id) to find it — the
+          // `known-people-idempotency` precedent.
+          request.log.error(
+            { err, idemKey, traceId: request.requestContext.traceId },
+            '[life-events-idempotency] posting write committed but its idempotency result could not be recorded',
+          );
         }
         claimSettled = true;
         emitAuthAudit(deps, request, 'member_life_events.posting_updated', {
@@ -522,16 +541,27 @@ export function createLifeEventsHandlers(deps: AppDeps) {
 
         // COMMITTED.
         committed = true;
-        if (outcome.kind === 'stale' || result === null) {
+        if (outcome.kind === 'stale') {
           // The return to `pending` is durable; this answer acted on nothing — release the key (a retry sees `pending`).
           await releaseClaimWithRetry(idemKey);
           claimSettled = true;
           refuseAnswer('workplace.suggestion_stale');
         }
+        if (result === null) {
+          // ⭐ Review — `outcome.kind` is none of 'confirmed' / 'declined' / 'stale': an internal invariant broke (a new
+          // `WorkplaceAnswerResult` kind added above without a matching branch). ⛔ NEVER fold this into the `stale` 409 —
+          // that would silently hand the client a routine-looking refusal for what is actually a server bug.
+          throw new ApiError(500, 'life_events.unexpected_answer_outcome', 'An unexpected error occurred');
+        }
         try {
           await idempotencyStore.recordResult(idemKey, result);
         } catch (err) {
-          request.log.warn({ err, idemKey }, 'workplace answer committed but its idempotency result could not be recorded');
+          // ⛔ `requestId` here for the trace id — this function already has a `requestId` meaning the workplace
+          // request's own id (used below for the audit `resourceLocator`); keep the two distinct (code review).
+          request.log.error(
+            { err, idemKey, traceId: request.requestContext.traceId, workplaceRequestId: requestId },
+            '[life-events-idempotency] workplace answer committed but its idempotency result could not be recorded',
+          );
         }
         claimSettled = true;
         if (outcome.kind === 'confirmed') {
@@ -539,11 +569,13 @@ export function createLifeEventsHandlers(deps: AppDeps) {
             actorId: memberIdStr,
             pariwarId: pariwarIdStr,
             context: { district: outcome.posting.district, choice: 'workplace', is_retirement: false },
+            resourceLocator: `workplace_request:${requestId.toLowerCase()}`,
           });
         } else {
           emitAuthAudit(deps, request, 'member_life_events.workplace_suggestion_declined', {
             actorId: memberIdStr,
             pariwarId: pariwarIdStr,
+            context: { choice: 'workplace' },
             resourceLocator: `workplace_request:${requestId.toLowerCase()}`,
           });
         }

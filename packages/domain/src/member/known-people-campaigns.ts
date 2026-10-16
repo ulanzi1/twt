@@ -20,10 +20,17 @@ import type { Db } from '../db.js';
 import { knownPeopleCampaignId, type KnownPeopleCampaignId, type PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { IST_TODAY } from './known-people.js';
-import { decodeWorkplaceCursor, encodeWorkplaceCursor, isCalendarDate, isWorkplaceUuid, WorkplaceCursorInvalidError } from './workplace.js';
+import {
+  decodeWorkplaceCursor as decodeCursor,
+  encodeWorkplaceCursor as encodeCursor,
+  isCalendarDate,
+  isTimestampCursor,
+  isWorkplaceUuid as isUuid,
+  WorkplaceCursorInvalidError,
+} from './workplace.js';
 
-/** The longest campaign: 30 calendar days INCLUSIVE ⇒ `ends_on - starts_on <= 29` (0164's CHECK). */
-export const KNOWN_PEOPLE_CAMPAIGN_MAX_DAYS = 30;
+/** The longest campaign's SPAN: 29 days ⇒ 30 calendar days INCLUSIVE (`ends_on - starts_on <= 29` — 0164's CHECK). */
+export const KNOWN_PEOPLE_CAMPAIGN_MAX_SPAN_DAYS = 29;
 /** One page of the Pariwar Admin's campaign list. */
 export const KNOWN_PEOPLE_CAMPAIGN_LIST_LIMIT = { default: 20, cap: 50 } as const;
 
@@ -115,7 +122,7 @@ export async function startCampaign(
   const { pariwarId, startsOn, endsOn } = input;
   if (!isCalendarDate(startsOn) || !isCalendarDate(endsOn)) throw new KnownPeopleCampaignRefusedError('known_people_campaign.window_invalid');
   const span = daysBetween(startsOn, endsOn);
-  if (span < 0 || span > KNOWN_PEOPLE_CAMPAIGN_MAX_DAYS - 1) throw new KnownPeopleCampaignRefusedError('known_people_campaign.window_invalid');
+  if (span < 0 || span > KNOWN_PEOPLE_CAMPAIGN_MAX_SPAN_DAYS) throw new KnownPeopleCampaignRefusedError('known_people_campaign.window_invalid');
 
   await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`known_people_campaign:${pariwarId}`}))`);
   const today = await db.execute<{ today: string }>(sql`SELECT to_char(${IST_TODAY}, 'YYYY-MM-DD') AS today`);
@@ -146,7 +153,7 @@ export async function endCampaign(
   db: Db,
   input: { pariwarId: PariwarId; campaignId: string; actorId: string },
 ): Promise<KnownPeopleCampaign> {
-  if (!isWorkplaceUuid(input.campaignId)) throw new KnownPeopleCampaignRefusedError('known_people_campaign.not_found');
+  if (!isUuid(input.campaignId)) throw new KnownPeopleCampaignRefusedError('known_people_campaign.not_found');
   const locked = await db.execute<{ open: boolean }>(sql`
     SELECT ${openCampaignSql(sql`c`)} AS open FROM known_people_campaigns c
      WHERE c.pariwar_id = ${input.pariwarId} AND c.campaign_id = ${input.campaignId}::uuid
@@ -174,8 +181,8 @@ export async function listCampaigns(
   const limit = clampLimit(input.limit, KNOWN_PEOPLE_CAMPAIGN_LIST_LIMIT);
   let after = sql``;
   if (input.cursor !== undefined) {
-    const [createdAt, id] = decodeWorkplaceCursor(input.cursor, 2) as [string, string];
-    if (!isWorkplaceUuid(id) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(createdAt) || !Number.isFinite(Date.parse(createdAt))) {
+    const [createdAt, id] = decodeCursor(input.cursor, 2) as [string, string];
+    if (!isUuid(id) || !isTimestampCursor(createdAt)) {
       throw new WorkplaceCursorInvalidError();
     }
     after = sql`AND (c.created_at, c.campaign_id) < (${createdAt}::timestamptz, ${id}::uuid)`;
@@ -188,5 +195,5 @@ export async function listCampaigns(
   const hasMore = rows.rows.length > limit;
   const items = rows.rows.slice(0, limit).map(toCampaign);
   const last = items[items.length - 1];
-  return { items, hasMore, nextCursor: hasMore && last ? encodeWorkplaceCursor([last.createdAt, last.campaignId]) : null };
+  return { items, hasMore, nextCursor: hasMore && last ? encodeCursor([last.createdAt, last.campaignId]) : null };
 }

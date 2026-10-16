@@ -482,17 +482,19 @@ export interface MemberPostingHistoryItem {
 
 const suggestedWorkplaces = alias(workplaces, 'suggested_workplace');
 
-/** The history's `recordedAt` — UTC, ALWAYS six fractional digits (µs — the cursor compares it in SQL, exactly). */
-const RECORDED_AT_RE = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})\.\d{6}Z$/;
+/** A `createdAt` / `recordedAt` cursor part — UTC, ALWAYS six fractional digits (µs — the cursor compares it in SQL, exactly). */
+const TIMESTAMP_CURSOR_RE = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})\.\d{6}Z$/;
 
 /**
- * `true` when a cursor's `recordedAt` is a REAL instant: the shape, a calendar date (`isCalendarDate` — ⛔ month 13, ⛔
- * 30 February), hour 00–23, minute and second 00–59 (checked by number — Node's `Date.parse` lets `T24:00:00` through),
- * and `Date.parse` finite. A forged cursor that passes the shape alone would reach the `::timestamptz` cast and die as a
- * 22008 — a 500, ⛔ the 400 the route owes (review 2026-10-15 R2-4).
+ * `true` when a cursor's timestamp part (`createdAt`, `recordedAt` — same shape everywhere it is used) is a REAL
+ * instant: the shape, a calendar date (`isCalendarDate` — ⛔ month 13, ⛔ 30 February), hour 00–23, minute and second
+ * 00–59 (checked by number — Node's `Date.parse` lets `T24:00:00` through), and `Date.parse` finite. A forged cursor
+ * that passes the shape alone would reach the `::timestamptz` cast and die as a 22008 — a 500, ⛔ the 400 the route owes
+ * (review 2026-10-15 R2-4). Shared by every keyset list of this cursor shape (`known-people-campaigns.ts`'s campaign
+ * list, `workplace-admin.ts`'s request queue, and this file's own posting history).
  */
-function isRecordedAtCursor(value: string): boolean {
-  const m = RECORDED_AT_RE.exec(value);
+export function isTimestampCursor(value: string): boolean {
+  const m = TIMESTAMP_CURSOR_RE.exec(value);
   if (!m) return false;
   const [hh, mm, ss] = [Number(m[2]), Number(m[3]), Number(m[4])];
   if (hh > 23 || mm > 59 || ss > 59) return false;
@@ -516,7 +518,7 @@ export async function listMemberPostingHistory(
   const conditions: SQL[] = [eq(memberPostings.pariwarId, pariwarId), eq(memberPostings.memberId, memberId)];
   if (opts.cursor !== undefined) {
     const [recordedAt, id] = decodeCursor(opts.cursor, 2) as [string, string];
-    if (!UUID_RE.test(id) || !isRecordedAtCursor(recordedAt)) throw new WorkplaceCursorInvalidError();
+    if (!UUID_RE.test(id) || !isTimestampCursor(recordedAt)) throw new WorkplaceCursorInvalidError();
     conditions.push(sql`(${memberPostings.createdAt}, ${memberPostings.postingId}) < (${recordedAt}::timestamptz, ${id}::uuid)`);
   }
   const rows = await db

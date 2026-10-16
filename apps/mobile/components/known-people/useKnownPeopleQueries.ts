@@ -20,7 +20,14 @@ import {
 } from '../../lib/known-people'
 import { knownPeopleApi } from '../../lib/known-people-api'
 import { useSession } from '../../lib/session-context'
-import { KNOWN_PEOPLE_CACHE_OPTIONS, KNOWN_PEOPLE_MUTATION_OPTIONS, knownPeopleListKey, knownPeoplePromptsKey, knownPeopleRequestsKey } from './known-people-cache'
+import {
+  invalidateKnownPeoplePrompts,
+  KNOWN_PEOPLE_CACHE_OPTIONS,
+  KNOWN_PEOPLE_MUTATION_OPTIONS,
+  knownPeopleListKey,
+  knownPeoplePromptsKey,
+  knownPeopleRequestsKey,
+} from './known-people-cache'
 
 /**
  * A list read gives up after this long. The API client sets ⛔ timeout of its own (nor does React Native's Android HTTP
@@ -181,13 +188,6 @@ export function useKnownPeoplePromptsQuery() {
   })
 }
 
-/** Story 6.36c — refetch the home prompts (after a posting, an answer, an ask, a remove). */
-export function useRefreshKnownPeoplePrompts(): () => Promise<void> {
-  const qc = useQueryClient()
-  const { pariwarId, memberId } = useIds()
-  return () => qc.invalidateQueries({ queryKey: knownPeoplePromptsKey(pariwarId, memberId) })
-}
-
 /** The writes. Each invalidates both lists on success (the other side's view changes too) — and the home prompts (6.36c). */
 export function useKnownPeopleWrites() {
   const qc = useQueryClient()
@@ -196,7 +196,8 @@ export function useKnownPeopleWrites() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: knownPeopleListKey(pariwarId, memberId) }),
       qc.invalidateQueries({ queryKey: knownPeopleRequestsKey(pariwarId, memberId) }),
-      qc.invalidateQueries({ queryKey: knownPeoplePromptsKey(pariwarId, memberId) }),
+      // The ONE prompts-invalidation path (fix-review) — `known-people-cache.ts`'s `invalidateKnownPeoplePrompts`.
+      invalidateKnownPeoplePrompts(qc),
     ])
   }
   const ask = useMutation({

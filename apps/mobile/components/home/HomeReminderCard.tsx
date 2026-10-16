@@ -29,7 +29,16 @@ export function HomeReminderCard({
         </Text>
       ) : null}
       {children}
-      <Button unstyled accessibilityRole="button" onPress={onDismiss} py={8}>
+      {/* Fix-review — an explicit accessibilityLabel (⛔ relying on the child Text alone) and a larger touch target
+          (8px → 16px padding, plus hitSlop) for an action that suppresses a reminder for 30 days. */}
+      <Button
+        unstyled
+        accessibilityRole="button"
+        accessibilityLabel={dismissLabel}
+        onPress={onDismiss}
+        py={16}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
         <Text fontFamily="$body" fontSize="$2" color="$colorPress">
           {dismissLabel}
         </Text>

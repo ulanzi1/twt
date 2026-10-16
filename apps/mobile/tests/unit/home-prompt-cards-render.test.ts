@@ -59,7 +59,7 @@ vi.mock('tamagui', async () => {
 })
 
 import { HomePromptCards } from '../../components/home/HomePromptCards'
-import { HOME_CARD_DISMISSALS_KEY } from '../../lib/home-card-dismissals'
+import { homeCardDismissalsKey } from '../../lib/home-card-dismissals'
 
 const NONE = { noWorkplace: false, hasWorkplace: false, suggestedWorkplace: null, transferReview: false, replaceNeeded: false, canNamePeople: false, campaign: null }
 const SUGGESTION = { requestId: 'r-1', workplaceId: 'w-1', name: 'GMS RAMPUR', district: 'Patna' }
@@ -89,7 +89,7 @@ describe('<HomePromptCards> (AC6; RV7)', () => {
     expect(screen.getByText('card.replace_title')).toBeInTheDocument()
     expect(screen.queryByText('card.transfer_title')).toBeNull()
     await userEvent.click(screen.getByText('card.dismiss'))
-    expect(JSON.parse(mock.store.get(HOME_CARD_DISMISSALS_KEY)!)).toHaveProperty('replace')
+    expect(JSON.parse(mock.store.get(homeCardDismissalsKey('m'))!)).toHaveProperty('replace')
     expect(screen.getByText('card.transfer_title')).toBeInTheDocument()
     await userEvent.click(screen.getByText('card.dismiss'))
     expect(screen.getByText('card.invite_title')).toBeInTheDocument()

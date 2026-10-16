@@ -71,8 +71,9 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // Story 6.36b — the people-who-know-me lists (other members' names) and the names the member SAVED on this phone.
       clearKnownPeopleCache(queryClient)
       clearSavedNames()
-      // Story 6.36c — the home cards' dismissals are this member's.
-      clearHomeCardDismissals()
+      // Story 6.36c (fix-review) — the home cards' dismissals are now namespaced per account (`lib/home-card-dismissals`),
+      // so they no longer need clearing here: this handler (registered once, at mount) cannot reliably name the OLD
+      // account to target anyway, and a DIFFERENT account signing in next is already isolated by its own key.
       setTerminationNotice(notice)
       // Story 6.30 AL6 (iv) — the termination redirect WINS over any link target.
       clearLinkTarget()
@@ -84,7 +85,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       setSession(null)
       clearKnownPeopleCache(queryClient)
       clearSavedNames()
-      clearHomeCardDismissals()
+      // Story 6.36c (fix-review) — see the comment above: the namespaced dismissal key makes this clear unnecessary.
     })
     return () => {
       setTerminatedDuringRefreshHandler(null)
@@ -95,8 +96,9 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   async function signIn(full: MemberFullSession): Promise<void> {
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
-    // Story 6.36c — another account's dismissals must ⛔ hide this one's cards.
-    clearHomeCardDismissals()
+    // Story 6.36c (fix-review) — the dismissal key is namespaced per account (`lib/home-card-dismissals`), so a
+    // DIFFERENT account's dismissals are already isolated from this one; clearing here would ALSO lose a same-account
+    // sign-out/sign-in's own dismissals, which is exactly the bug this fixed.
     const s: StoredSession = {
       accessToken: full.accessToken,
       accessTokenExpiresAt: full.accessTokenExpiresAt,
@@ -112,7 +114,9 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
     clearSavedNames()
-    clearHomeCardDismissals()
+    // Story 6.36c (fix-review) — sign-out IS a reliable point to name the account (`session` is still in scope, below),
+    // so its dismissals are cleared here for privacy/cleanup on a shared device.
+    clearHomeCardDismissals(session?.memberId)
     // Purge member-scoped drafts before clearing the session so the memberId is still available.
     if (session?.memberId) clearAllMemberDrafts(session.memberId)
     try {

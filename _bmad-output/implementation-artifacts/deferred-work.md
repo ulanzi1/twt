@@ -11350,3 +11350,55 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **W3 — Someone already asked who LATER files for the same death keeps their live ask** [`peer-mesh-read.ts`
   `peerMeshEligibleMemberSql`] — `-340` call 2 is applied at selection only; ⛔ re-check on a sent ping or a reply.
   ⭐ Trigger: 6.27c's send-time re-check (it reuses the predicate).
+
+## Deferred from: code review of 6-36c-workplace-list-curation-and-prompts.md (2026-10-16)
+
+- **W1 — `addStaffWorkplace`'s UDISE uniqueness guarantee lives in a hardcoded constraint-name string**
+  [`packages/domain/src/member/workplace-admin.ts`] — the real correctness check is a catch on `isUniqueViolation` keyed to the
+  literal `'workplaces_pariwar_udise_uq'`; a non-locking pre-SELECT only shortcuts the common case. This is the project's existing
+  `isUniqueViolation` convention applied again, not a defect introduced by this story. ⭐ Trigger: that constraint is ever renamed
+  or dropped without updating the string literal — a clean refusal would silently become an unhandled 500.
+- **W2 — `requireWorkplaceListRead`'s defensive branch throws a plain `Error`, not a structured API-error type**
+  [`apps/api/src/modules/workplaces/routes.ts`] — copies the pre-existing `requireNiyamavaliReadAccess` precedent
+  (`apps/api/src/modules/rules/index.ts:105`) verbatim, which does the identical thing. ⭐ Trigger: the "ran without
+  session + scope-resolution" branch is ever actually reached in production (currently believed unreachable).
+- **W3 — The either-of-two RBAC read-gate shape is reimplemented locally instead of reused**
+  [`apps/api/src/modules/workplaces/routes.ts`; `apps/api/src/modules/rules/index.ts:105-134`] — `requireWorkplaceListRead`
+  duplicates `requireNiyamavaliReadAccess`'s `hasPermission(A) || hasPermission(B)`, else-audited-403-on-A shape, because the
+  cited precedent is hardcoded to its own permission keys (`AMEND_KEY`/`REVIEW_KEY`) and was never exported or generalized for
+  reuse. ⭐ Trigger: a third call site needs the same shape — worth generalizing `requireNiyamavaliReadAccess` into a
+  parameterized helper at that point, not before (memory: no premature package).
+- **W4 — No admin-side withdraw-and-re-suggest for a mistaken workplace suggestion** [`apps/admin/src/modules/workplaces/WorkplaceRequestsPage.tsx`,
+  `RequestCard`] — once a Pariwar Admin suggests a workplace, `RequestCard` offers only "wait" (for the member's own No) or "close"
+  (discards the request, sends "could not find your workplace" even though a match WAS found — just the wrong one). An admin who
+  fat-fingers the wrong (but still valid) workplace has no self-service correction path. Resolved as accepted-scope-for-now during
+  the 2026-10-16 code review: fixing it means adding a NEW staff power (admin unilaterally undoes a suggestion without the
+  member's say), whose shape — step-up requirement, abuse limits (repeated re-suggestion as harassment) — is a product/governance
+  decision, not something to decide ad hoc in a patch round. ⭐ Trigger: a dedicated follow-up story scoping an admin withdraw
+  action, run through the same BigDev/Panel sign-off this story's other staff-power narrowings (RV3/4/8/9) got.
+- **W5 — The campaign card's exit condition can never be satisfied by re-asking an existing contact**
+  [`packages/domain/src/member/known-people-prompts.ts` (the `campaign` flag); `packages/domain/src/member/known-people.ts`
+  (`askKnownPerson`)] — the card tells a member to "Add people who know you"; a re-ask of a person with a live link writes ⛔ no
+  row (6.36b's `askKnownPerson` returns the existing row unchanged), so the flag's own condition never sees a fresh ask and the
+  card can ⛔ be ended by acting on an existing contact. Disclosed, ⛔ fixed, per RV4's own ruling (*"A re-ask of a person with a
+  live link writes ⛔ no row … so it does ⛔ end the card; recorded, ⛔ fixed."*). ⭐ Trigger: a member acts on the campaign card
+  by re-asking an existing live contact rather than a brand-new one — the card stays shown with ⛔ path off it besides the 30-day
+  MMKV dismissal.
+- **W6 — AC8's admin suggest-picker district race is a self-acknowledged, unfixed defect, never carried into this file**
+  [`apps/admin/src/modules/workplaces/WorkplaceRequestsPage.tsx`; story AC8] — the suggest picker searches listed entries of
+  the district AS LOADED when the queue page opened; a `--rename-district` (or the equivalent admin move) between that load and
+  the Pariwar Admin picking shows an empty picker until the queue itself refetches. Recorded in AC8's own prose as "recorded";
+  never dispositioned here. ⭐ Trigger: an admin opens the suggest picker before the first district-scoped queue fetch for that
+  request completes, or a district move lands on the SAME request mid-session.
+- **W7 — The fix for D3's two-mount Idempotency-Key race closes only the same-answer half**
+  [`apps/mobile/components/workplace/suggestion-answer-key-cache.ts`; `apps/mobile/lib/workplace.ts`'s `answerKeyFor`] — the
+  same suggestion can stay mounted concurrently on the Home card and the Workplace screen (confirmed reachable — `(tabs)` and
+  `(life-events)` are sibling stack screens, so Home keeps `HomePromptCards` mounted under `(life-events)/posting`). The
+  2026-10-16 fix-review round added a cache shared by `requestId` so both mounts reuse ONE key when they submit the SAME
+  answer — but `answerKeyFor` still mints a brand-new key whenever the OTHER answer is pressed on an in-flight state, so a
+  "Yes" from one mount racing a "No" from the other (before either resolves) still sends two concurrent requests with two
+  different keys. ⛔ A data-corruption or deadlock risk — the domain's own request-state check refuses the losing write
+  cleanly (the request is no longer `suggested` by the time it lands), and every button/`busy`/`inFlight` state resets in a
+  `finally` regardless of outcome — but the member on the losing screen sees a confusing, unexplained refusal instead of a
+  clear "someone already answered this" message. ⭐ Trigger: a member presses Yes on Home, then navigates to the Workplace
+  screen and presses No on the SAME suggestion before the first request's response lands (or the reverse).

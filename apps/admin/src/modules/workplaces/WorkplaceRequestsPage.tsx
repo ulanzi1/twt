@@ -8,23 +8,19 @@
 // ⛔ An ADD control: ONLY the Super Admin adds (SW9 A). Below, the people-who-know-me campaign control (AC7).
 // The server's key checks are the boundary; a step-up-required 403 holds the write (the `StepUpPanel`).
 
-import { WORKPLACE_REVIEW_STEP_UP_CONTEXT, type WorkplaceAdminRefusalCode, type WorkplaceRequestQueueItemWire } from '@twt/contracts';
+import { WORKPLACE_REVIEW_STEP_UP_CONTEXT, type WorkplaceRequestQueueItemWire } from '@twt/contracts';
 import { useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { useAdminWorkplaces, useCloseWorkplaceRequest, useSuggestWorkplace, useWorkplaceRequests } from '../../api/hooks.js';
 import { formatIst } from '../claim-verification/NomineeDeclarationPanel.js';
 import { CampaignControl } from './CampaignControl.js';
+import { errorText } from './error-text.js';
 import { workplaceRequestsEn as t, workplacesEn } from './i18n-en.js';
 import { needsStepUp, StepUpPanel, type PendingWrite } from './StepUpPanel.js';
 
-function errorText(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.code in workplacesEn.errors) return workplacesEn.errors[err.code as WorkplaceAdminRefusalCode];
-    if (err.isForbidden) return t.forbidden;
-  }
-  return t.generic;
-}
+/** The control that currently owns the held step-up retry (fix: a DIFFERENT control's edit must not clear it). */
+type RequestControl = 'suggest' | 'close';
 
 function Picker({ pariwarId, district, onPick, onCancel, busy }: { pariwarId: string; district: string; onPick: (workplaceId: string) => void; onCancel: () => void; busy: boolean }): ReactElement {
   const [q, setQ] = useState('');
@@ -36,6 +32,12 @@ function Picker({ pariwarId, district, onPick, onCancel, busy }: { pariwarId: st
         <input className="rounded border px-2 py-1 text-sm" value={q} onChange={(e) => setQ(e.target.value)} data-testid="suggest-picker-q" />
       </label>
       <p className="text-xs opacity-70">{t.pickerNote}</p>
+      {results.isLoading ? <p className="text-xs" role="status">{t.pickerLoading}</p> : null}
+      {results.isError ? (
+        <p className="text-xs" role="alert">
+          {errorText(results.error, workplacesEn.errors, { forbidden: t.forbidden, generic: t.pickerLoadError })}
+        </p>
+      ) : null}
       {results.data ? (
         results.data.items.length === 0 ? (
           <p className="text-xs">{t.pickerEmpty}</p>
@@ -55,6 +57,7 @@ function Picker({ pariwarId, district, onPick, onCancel, busy }: { pariwarId: st
           </ul>
         )
       ) : null}
+      {results.data?.hasMore ? <p className="text-xs opacity-70">{t.pickerMore}</p> : null}
       <button type="button" className="w-fit text-xs underline" onClick={onCancel}>
         {t.cancel}
       </button>
@@ -84,7 +87,7 @@ function RequestCard({
   return (
     <li className="flex flex-col gap-1 rounded border p-2 text-sm" data-testid={`request-${item.requestId}`}>
       <span className="font-medium">{item.typedName !== null ? t.typed(item.typedName) : t.typedErased}</span>
-      {item.typedPlace !== null ? <span className="text-xs">{t.place(item.typedPlace)}</span> : null}
+      <span className="text-xs">{item.typedPlace !== null ? t.place(item.typedPlace) : t.typedPlaceErased}</span>
       <span className="text-xs">{t.district(item.district)}</span>
       <span className="text-xs">{t.started(item.startedOn)}</span>
       <span className="text-xs opacity-70">{t.received(formatIst(item.createdAt))}</span>
@@ -107,31 +110,46 @@ function RequestCard({
 
 export function WorkplaceRequestsPage({ pariwarId }: { pariwarId: string }): ReactElement {
   const [state, setState] = useState<'pending' | 'suggested'>('pending');
+  const [district, setDistrict] = useState('');
   const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const queue = useWorkplaceRequests(pariwarId, { state, ...(cursor !== undefined ? { cursor } : {}) });
+  const queue = useWorkplaceRequests(pariwarId, {
+    state,
+    ...(district.trim() !== '' ? { district: district.trim() } : {}),
+    ...(cursor !== undefined ? { cursor } : {}),
+  });
   const suggest = useSuggestWorkplace(pariwarId);
   const close = useCloseWorkplaceRequest(pariwarId);
   const [picking, setPicking] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingWrite>(null);
+  const [pending, setPending] = useState<PendingWrite<RequestControl>>(null);
 
-  const hold = (retry: () => void) => (err: unknown) => {
-    if (needsStepUp(err)) setPending(() => retry);
+  const resetWrites = (): void => {
+    suggest.reset();
+    close.reset();
+  };
+  const hold = (owner: RequestControl, retry: () => void) => (err: unknown) => {
+    if (needsStepUp(err)) setPending({ owner, retry });
   };
   const runSuggest = (requestId: string, workplaceId: string): void => {
-    suggest.reset();
-    close.reset();
-    suggest.mutate({ requestId, workplaceId }, { onSuccess: () => setPicking(null), onError: hold(() => runSuggest(requestId, workplaceId)) });
+    resetWrites();
+    suggest.mutate({ requestId, workplaceId }, { onSuccess: () => setPicking(null), onError: hold('suggest', () => runSuggest(requestId, workplaceId)) });
   };
   const runClose = (requestId: string): void => {
-    suggest.reset();
-    close.reset();
-    close.mutate(requestId, { onSuccess: () => setPicking(null), onError: hold(() => runClose(requestId)) });
+    resetWrites();
+    close.mutate(requestId, { onSuccess: () => setPicking(null), onError: hold('close', () => runClose(requestId)) });
   };
   const switchTab = (next: 'pending' | 'suggested'): void => {
     setState(next);
     setCursor(undefined);
     setPicking(null);
     setPending(null);
+    // A previous write's "Saved."/error banner must not survive under a freshly switched tab (code review).
+    resetWrites();
+  };
+  const setDistrictFilter = (v: string): void => {
+    setDistrict(v);
+    setCursor(undefined);
+    // A previous write's "Saved."/error banner must not survive under a freshly filtered queue (code review).
+    resetWrites();
   };
   const writeError = [suggest.error, close.error].find((e) => e && !needsStepUp(e));
   const saved = !writeError && (suggest.isSuccess || close.isSuccess);
@@ -158,6 +176,18 @@ export function WorkplaceRequestsPage({ pariwarId }: { pariwarId: string }): Rea
             {t.tabs[s]}
           </button>
         ))}
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3" data-testid="requests-filters">
+        <label className="flex flex-col text-xs">
+          {t.filters.district}
+          <input
+            className="rounded border px-2 py-1 text-sm"
+            value={district}
+            onChange={(e) => setDistrictFilter(e.target.value)}
+            data-testid="requests-filter-district"
+          />
+        </label>
       </div>
 
       {queue.isLoading ? <p role="status">{t.loading}</p> : null}
@@ -202,10 +232,10 @@ export function WorkplaceRequestsPage({ pariwarId }: { pariwarId: string }): Rea
         ) : null}
       </div>
 
-      <StepUpPanel context={WORKPLACE_REVIEW_STEP_UP_CONTEXT} pending={pending} onDone={() => setPending(null)} testId="requests-step-up" />
+      {pending ? <StepUpPanel context={WORKPLACE_REVIEW_STEP_UP_CONTEXT} pending={pending} onDone={() => setPending(null)} testId="requests-step-up" /> : null}
       {writeError ? (
         <p role="alert" className="text-sm text-status-fail-fg" data-testid="requests-write-error">
-          {errorText(writeError)}
+          {errorText(writeError, workplacesEn.errors, t)}
         </p>
       ) : null}
       <p role="status" className="text-sm" data-testid="requests-saved">

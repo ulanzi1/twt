@@ -2373,12 +2373,11 @@ export const adminWorkplacesKey = (pariwarId: string) => ['admin-workplaces', pa
 export const workplaceRequestsKey = (pariwarId: string) => ['workplace-requests', pariwarId] as const;
 export const knownPeopleCampaignsKey = (pariwarId: string) => ['known-people-campaigns', pariwarId] as const;
 
-/** One page of the list (the filters and the cursor are part of the key). `enabled: false` holds a picker until it has a district. */
-export function useAdminWorkplaces(pariwarId: string, q: Parameters<typeof api.getAdminWorkplaces>[1] = {}, opts: { enabled?: boolean } = {}) {
+/** One page of the list (the filters and the cursor are part of the key). */
+export function useAdminWorkplaces(pariwarId: string, q: Parameters<typeof api.getAdminWorkplaces>[1] = {}) {
   return useQuery({
     queryKey: [...adminWorkplacesKey(pariwarId), q] as const,
     queryFn: () => api.getAdminWorkplaces(pariwarId, q),
-    enabled: opts.enabled ?? true,
   });
 }
 
@@ -2403,7 +2402,7 @@ export function useSetAdminWorkplaceListed(pariwarId: string) {
   return useWorkplaceWrite(pariwarId, (v: { workplaceId: string; action: 'delist' | 'relist' }) => api.setAdminWorkplaceListed(pariwarId, v.workplaceId, v.action));
 }
 
-export function useWorkplaceRequests(pariwarId: string, q: { state: 'pending' | 'suggested'; cursor?: string }) {
+export function useWorkplaceRequests(pariwarId: string, q: { state: 'pending' | 'suggested'; district?: string; cursor?: string }) {
   return useQuery({ queryKey: [...workplaceRequestsKey(pariwarId), q] as const, queryFn: () => api.getWorkplaceRequests(pariwarId, q) });
 }
 
@@ -2424,8 +2423,11 @@ export function useCloseWorkplaceRequest(pariwarId: string) {
   return useRequestWrite(pariwarId, (requestId: string) => api.closeWorkplaceRequest(pariwarId, requestId));
 }
 
-export function useKnownPeopleCampaigns(pariwarId: string) {
-  return useQuery({ queryKey: knownPeopleCampaignsKey(pariwarId), queryFn: () => api.getKnownPeopleCampaigns(pariwarId) });
+export function useKnownPeopleCampaigns(pariwarId: string, q: Parameters<typeof api.getKnownPeopleCampaigns>[1] = {}) {
+  return useQuery({
+    queryKey: [...knownPeopleCampaignsKey(pariwarId), q] as const,
+    queryFn: () => api.getKnownPeopleCampaigns(pariwarId, q),
+  });
 }
 
 export function useStartKnownPeopleCampaign(pariwarId: string) {

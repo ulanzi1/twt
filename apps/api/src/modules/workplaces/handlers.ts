@@ -20,7 +20,6 @@ import type {
   AdminWorkplacesResponse,
   AdminWorkplaceWire,
   AdminWorkplaceWriteResponse,
-  WorkplaceAdminRefusalCode,
   WorkplaceRequestQueueQuery,
   WorkplaceRequestQueueResponse,
   WorkplaceRequestWriteResponse,
@@ -40,6 +39,11 @@ export const WORKPLACE_MANAGE_KEY = 'workplace.manage';
 /** SW9 A — the Pariwar Admin's queue key (pariwar dimension; `pariwar_admin` + derived `super_admin`). */
 export const WORKPLACE_REVIEW_KEY = 'workplace.review';
 
+/** ⭐ Review — the domain's OWN refusal-code union (⛔ the `@twt/contracts` mirror): ties every status map below to the
+ * SAME type `WorkplaceAdminRefusedError.code` actually carries, so a map short of a key fails TYPE-CHECKING (the
+ * `Record`s below), ⛔ a silent runtime 500 for a code nobody mapped. */
+type WorkplaceAdminRefusalCode = memberDomain.WorkplaceAdminRefusalCode;
+
 const MESSAGES: Record<WorkplaceAdminRefusalCode, string> = {
   'workplace.not_found': 'That workplace is not on this Pariwar’s list',
   'workplace.district_not_found': 'That district is not on this Pariwar’s list',
@@ -51,34 +55,75 @@ const MESSAGES: Record<WorkplaceAdminRefusalCode, string> = {
   'workplace.request_closed': 'That request is no longer open for this',
 };
 
-/** The status of each refusal, per route family. ⛔ A message carries the input (it reaches logs). */
-function refuse(code: WorkplaceAdminRefusalCode, status: 404 | 409 | 422): never {
+/**
+ * The status of each refusal, per route family. ⛔ A message carries the input (it reaches logs).
+ *
+ * ⭐ Review — `500` is ⛔ a real outcome a route is EXPECTED to reach: every per-route STATUS map below is now a FULL
+ * `Record` (⛔ `Partial`), so a code the route's own domain function cannot throw (read
+ * `packages/domain/src/member/workplace-admin.ts`'s throw sites) is mapped to `500` with a comment, rather than left OUT
+ * of the map — the pre-fix `Partial` shape let an unmapped code fall through `translate()` untranslated (a bare
+ * `WorkplaceAdminRefusedError`, which Fastify's default handler turns into an undifferentiated 500 at RUNTIME, on the
+ * first request that hits it). A future throw site added to a domain function without a matching map entry now fails
+ * TYPE-CHECKING instead.
+ */
+function refuse(code: WorkplaceAdminRefusalCode, status: 404 | 409 | 422 | 500): never {
   if (status === 404) throw new NotFoundError(MESSAGES[code], code);
   if (status === 409) throw new ConflictError(MESSAGES[code], code);
-  throw new ApiError(422, code, MESSAGES[code]);
+  if (status === 422) throw new ApiError(422, code, MESSAGES[code]);
+  // Structurally unreachable for the calling route (see the per-route STATUS map below) — a deliberate 500, ⛔ the
+  // member-facing MESSAGES copy, so a route reaching this is loud rather than silently mistranslated. ⛔ `code` in the
+  // thrown message — `ApiError`'s message reaches the client verbatim on a 500 (code review).
+  throw new ApiError(500, 'workplace.unexpected_refusal', 'An unexpected error occurred');
 }
 
-const ADD_STATUS: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422>> = {
+/** ADD (`addStaffWorkplace`) can throw ONLY these two (read the function). Every other code is structurally unreachable. */
+const ADD_STATUS: Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500> = {
   'workplace.district_not_found': 422,
   'workplace.code_taken': 409,
+  'workplace.not_found': 500,
+  'workplace.district_mismatch': 500,
+  'workplace.import_managed': 500,
+  'workplace.state_unchanged': 500,
+  'workplace.request_not_found': 500,
+  'workplace.request_closed': 500,
 };
-const ROW_STATUS: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422>> = {
+/** rename / delist / relist (`renameStaffWorkplace` / `setStaffWorkplaceListed`, both via `lockStaffWorkplace`) — the
+ * UNION of what either can throw. Every other code is structurally unreachable on a `/:workplaceId/*` row write. */
+const ROW_STATUS: Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500> = {
   'workplace.not_found': 404,
   'workplace.import_managed': 422,
   'workplace.state_unchanged': 409,
+  'workplace.district_not_found': 500,
+  'workplace.district_mismatch': 500,
+  'workplace.code_taken': 500,
+  'workplace.request_not_found': 500,
+  'workplace.request_closed': 500,
 };
-const SUGGEST_STATUS: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422>> = {
+/** SUGGEST (`suggestWorkplaceForRequest`) — `workplace.not_found` is a 422 HERE (the suggest body's `workplaceId`, ⛔ a
+ * `/:workplaceId/*` path param — hence 404 in `ROW_STATUS` but 422 here, per this file's header note). */
+const SUGGEST_STATUS: Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500> = {
   'workplace.not_found': 422,
   'workplace.district_mismatch': 422,
   'workplace.request_not_found': 404,
   'workplace.request_closed': 409,
+  'workplace.district_not_found': 500,
+  'workplace.import_managed': 500,
+  'workplace.state_unchanged': 500,
+  'workplace.code_taken': 500,
 };
-const CLOSE_STATUS: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422>> = {
+/** CLOSE (`closeWorkplaceRequest`) can throw ONLY these two (read the function). */
+const CLOSE_STATUS: Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500> = {
   'workplace.request_not_found': 404,
   'workplace.request_closed': 409,
+  'workplace.not_found': 500,
+  'workplace.district_not_found': 500,
+  'workplace.district_mismatch': 500,
+  'workplace.import_managed': 500,
+  'workplace.state_unchanged': 500,
+  'workplace.code_taken': 500,
 };
 
-function translate(err: unknown, statuses: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422>>): never {
+function translate(err: unknown, statuses: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500>>): never {
   if (err instanceof memberDomain.WorkplaceAdminRefusedError) {
     const status = statuses[err.code];
     if (status !== undefined) refuse(err.code, status);
@@ -112,7 +157,7 @@ export function createWorkplaceAdminHandlers(deps: AppDeps) {
   /** Run ONE write in its own scope tx; the caller audits after it commits. */
   async function write<T>(
     request: FastifyRequest,
-    statuses: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422>>,
+    statuses: Partial<Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500>>,
     run: (tx: Awaited<ReturnType<typeof openScopeTx>>['tx'], ctx: ReturnType<typeof ctxOf>) => Promise<T>,
   ): Promise<{ out: T; ctx: ReturnType<typeof ctxOf> }> {
     const ctx = ctxOf(request);
@@ -145,9 +190,12 @@ export function createWorkplaceAdminHandlers(deps: AppDeps) {
   }
 
   return {
-    /** GET …/admin/workplaces — `workplace.manage` OR `workplace.review` (the suggest picker searches it). */
+    /** GET …/admin/workplaces — `workplace.manage` OR `workplace.review` (the suggest picker searches it). ⭐ Review —
+     * AUDITED on the `admin_verifier_console.read` precedent (a decision-support/console read leaves a trail of who
+     * read it, when) — emitted AFTER a successful read, ⛔ in the `catch`. */
     async list(request: FastifyRequest): Promise<AdminWorkplacesResponse> {
-      const { scopeTx, pariwarId } = ctxOf(request);
+      const ctx = ctxOf(request);
+      const { scopeTx, pariwarId } = ctx;
       const q = request.query as AdminWorkplacesQuery;
       try {
         const page = await memberDomain.listWorkplacesForAdmin(scopeTx.tx, {
@@ -159,6 +207,7 @@ export function createWorkplaceAdminHandlers(deps: AppDeps) {
           limit: q.limit,
           cursor: q.cursor,
         });
+        audit(request, 'admin_workplace.list_read', ctx, `pariwar:${pariwarId}`, { count: page.items.length });
         return { items: page.items.map(workplaceDto), nextCursor: page.nextCursor, hasMore: page.hasMore };
       } catch (err) {
         return translate(err, {});
@@ -204,9 +253,11 @@ export function createWorkplaceAdminHandlers(deps: AppDeps) {
       );
     },
 
-    /** GET …/admin/workplace-requests — the queue (`workplace.review`). ⛔ Member data on the wire. */
+    /** GET …/admin/workplace-requests — the queue (`workplace.review`). ⛔ Member data on the wire. ⭐ Review — AUDITED
+     * on the `admin_verifier_console.read` precedent, emitted AFTER a successful read, ⛔ in the `catch`. */
     async queue(request: FastifyRequest): Promise<WorkplaceRequestQueueResponse> {
-      const { scopeTx, pariwarId } = ctxOf(request);
+      const ctx = ctxOf(request);
+      const { scopeTx, pariwarId } = ctx;
       const q = request.query as WorkplaceRequestQueueQuery;
       try {
         const page = await memberDomain.listWorkplaceRequestsForReview(scopeTx.tx, {
@@ -216,6 +267,7 @@ export function createWorkplaceAdminHandlers(deps: AppDeps) {
           limit: q.limit,
           cursor: q.cursor,
         });
+        audit(request, 'admin_workplace.queue_read', ctx, `pariwar:${pariwarId}`, { count: page.items.length });
         return {
           items: page.items.map((i) => ({
             requestId: i.requestId,

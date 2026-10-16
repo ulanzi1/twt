@@ -255,6 +255,7 @@ const StaffWorkplaceName = z
 const StaffVillage = z
   .string()
   .trim()
+  .min(1)
   .refine((s) => [...s].length <= 120, 'at most 120 characters')
   .refine((s) => NO_CONTROL.test(s), 'no control characters');
 

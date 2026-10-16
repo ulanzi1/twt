@@ -493,10 +493,13 @@ export type AuthAuditEventType =
   | 'admin_approval_warning_reason.rejected'
   // ── Story 6.36c (`-330` SW9 A / SW16) — keeping the workplace list full, and the people-who-know-me campaigns. POST-COMMIT
   // log lines (RV9 (iii) — ⛔ in the write's transaction, ⛔ an event). The readable "what" is the `resourceLocator`
-  // (`workplace:<id>`, `workplace_request:<id>`, `known_people_campaign:<id>`); `context` (hashed) carries the kind and the
-  // district — ⛔ a workplace's name, ⛔ a member's typed text, ⛔ a member id.
+  // (`workplace:<id>`, `workplace_request:<id>`, `known_people_campaign:<id>`, or `pariwar:<id>` for a LIST/QUEUE read);
+  // `context` (hashed) carries the kind and the district — ⛔ a workplace's name, ⛔ a member's typed text, ⛔ a member id.
   //   admin_workplace.added / .renamed / .delisted / .relisted — the Super Admin's acts on the list (STAFF rows only).
   //   admin_workplace.request_suggested / .request_closed — the Pariwar Admin's acts on an *"isn't listed"* request.
+  //   admin_workplace.list_read / .queue_read — a READ of the Super Admin's list / the Pariwar Admin's queue (the
+  //     `admin_verifier_console.read` precedent — a console read leaves a trail of who read it, and when). Context is
+  //     NON-PII: a COUNT only (the queue carries ⛔ member data per this module's own header note).
   //   admin_known_people.campaign_started / .campaign_ended — a campaign (it sends ⛔ nothing).
   | 'admin_workplace.added'
   | 'admin_workplace.renamed'
@@ -504,6 +507,8 @@ export type AuthAuditEventType =
   | 'admin_workplace.relisted'
   | 'admin_workplace.request_suggested'
   | 'admin_workplace.request_closed'
+  | 'admin_workplace.list_read'
+  | 'admin_workplace.queue_read'
   | 'admin_known_people.campaign_started'
   | 'admin_known_people.campaign_ended'
   // ── Nominee name-check surface (Story 6.18, `2026-09-19-226` cl.3/cl.5 / Epic 6) ──

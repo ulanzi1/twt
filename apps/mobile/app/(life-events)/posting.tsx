@@ -40,6 +40,9 @@ export default function WorkplaceScreen() {
   const suggestion = prompts.data?.suggestedWorkplace ?? null
   const [transferring, setTransferring] = useState(false)
   const [saved, setSaved] = useState(false)
+  // Fix-review — the suggestion question's own answer() is in flight; "I have been transferred" must ⛔ unmount it
+  // while a second, concurrent posting write is also on its way to the server.
+  const [answering, setAnswering] = useState(false)
 
   if (transferring) {
     return (
@@ -69,9 +72,14 @@ export default function WorkplaceScreen() {
           <H2 accessibilityRole="header">{t('screen_title')}</H2>
           {saved ? <AnnouncedText text={t('saved')} /> : null}
 
-          {/* Story 6.36c — the suggestion to answer (a new suggestion remounts it: a fresh Idempotency-Key — Task 6.5b). */}
+          {/* Story 6.36c — the suggestion to answer (a new suggestion remounts it: its Idempotency-Key is shared by
+              `requestId`, not per-mount — Task 6.5b). `onBusyChange` guards "I have been transferred" below. */}
           {suggestion !== null ? (
-            <WorkplaceSuggestionQuestion key={`${suggestion.requestId}:${suggestion.workplaceId}`} suggestion={suggestion} />
+            <WorkplaceSuggestionQuestion
+              key={`${suggestion.requestId}:${suggestion.workplaceId}`}
+              suggestion={suggestion}
+              onBusyChange={setAnswering}
+            />
           ) : null}
 
           <H4 accessibilityRole="header">{t('current_label')}</H4>
@@ -111,7 +119,11 @@ export default function WorkplaceScreen() {
             height={56}
             accessibilityRole="button"
             accessibilityLabel={t('transferred')}
+            disabled={answering}
+            accessibilityState={{ disabled: answering }}
             onPress={() => {
+              // Fix-review — a no-op while the suggestion question's answer() is in flight (see `answering` above).
+              if (answering) return
               setSaved(false)
               setTransferring(true)
             }}

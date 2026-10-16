@@ -3072,7 +3072,7 @@ export function setAdminWorkplaceListed(pariwarId: string, workplaceId: string, 
   return apiFetch(`${workplacesBase(pariwarId)}/${encodeURIComponent(workplaceId)}/${action}`, AdminWorkplaceWriteResponse, { method: 'POST' });
 }
 
-export function getWorkplaceRequests(pariwarId: string, q: { state?: 'pending' | 'suggested'; cursor?: string } = {}) {
+export function getWorkplaceRequests(pariwarId: string, q: { state?: 'pending' | 'suggested'; district?: string; cursor?: string } = {}) {
   return apiFetch(`${workplaceRequestsBase(pariwarId)}${queryOf(q)}`, WorkplaceRequestQueueResponse);
 }
 
@@ -3087,8 +3087,8 @@ export function closeWorkplaceRequest(pariwarId: string, requestId: string) {
   return apiFetch(`${workplaceRequestsBase(pariwarId)}/${encodeURIComponent(requestId)}/close`, WorkplaceRequestWriteResponse, { method: 'POST' });
 }
 
-export function getKnownPeopleCampaigns(pariwarId: string) {
-  return apiFetch(campaignsBase(pariwarId), KnownPeopleCampaignListResponse);
+export function getKnownPeopleCampaigns(pariwarId: string, q: { cursor?: string } = {}) {
+  return apiFetch(`${campaignsBase(pariwarId)}${queryOf(q)}`, KnownPeopleCampaignListResponse);
 }
 
 export function startKnownPeopleCampaign(pariwarId: string, body: { startsOn: string; endsOn: string }) {

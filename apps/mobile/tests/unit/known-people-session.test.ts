@@ -46,13 +46,20 @@ describe('session-context clears the people-who-know-me caches', () => {
     else expect(body).not.toContain('clearSavedNames()')
   })
 
+  // Fix-review (Story 6.36c) — the dismissal store is now namespaced per account (`lib/home-card-dismissals.ts`), so a
+  // real account SWITCH is already isolated without an explicit clear. Only sign-out (where the account is reliably
+  // known) still clears it, for privacy/cleanup on a shared device; the two refresh handlers register once at mount
+  // and cannot reliably name the account that just got signed out, so they no longer call it at all.
+  it('Story 6.36c — sign-out still clears the home cards’ dismissals', () => {
+    expect(block(src, /async function signOut\(\)/)).toContain('clearHomeCardDismissals(')
+  })
+
   it.each([
     ['a terminated refresh', /setTerminatedDuringRefreshHandler\(\(notice\) => \{/],
     ['a rejected refresh', /setRefreshRejectedHandler\(\(\) => \{/],
-    ['sign-out', /async function signOut\(\)/],
     ['sign-in', /async function signIn\(/],
-  ])('Story 6.36c — %s also clears the home cards’ dismissals', (_label, opener) => {
-    expect(block(src, opener)).toContain('clearHomeCardDismissals()')
+  ])('Story 6.36c fix-review — %s no longer clears the home cards’ dismissals', (_label, opener) => {
+    expect(block(src, opener)).not.toContain('clearHomeCardDismissals(')
   })
 
   it('the block reader stops at its own closing brace (a positive control — ⛔ the next handler)', () => {

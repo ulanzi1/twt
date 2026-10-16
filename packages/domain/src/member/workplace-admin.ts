@@ -30,6 +30,7 @@ import {
   decodeWorkplaceCursor,
   encodeWorkplaceCursor,
   escapeLikePattern,
+  isTimestampCursor,
   isValidStartDate,
   isWorkplaceUuid,
   latestPostingStartedOn,
@@ -78,7 +79,11 @@ export class WorkplaceAdminRefusedError extends Error {
   }
 }
 
-/** The member's answer route's refusals (AC4). ⚠ LOCKSTEP with the contracts' mirror. */
+/**
+ * The member's answer route's refusals (AC4). ⚠ LOCKSTEP with the contracts' mirror.
+ * Note: `workplace.suggestion_stale` is never thrown as a `WorkplaceAnswerRefusedError` — `answerWorkplaceSuggestion`
+ * only ever returns it, as `{ kind: 'stale' }` (the caller commits that result; a throw would roll it back too).
+ */
 export const WORKPLACE_ANSWER_REFUSAL_CODES = [
   'workplace.request_not_found',
   'workplace.request_closed',
@@ -115,6 +120,23 @@ function requireStaffText(text: string, max: number): string {
   // Unreachable through the route (the contract refuses it first) — a programming error, ⛔ a member-facing refusal.
   if (ok === null) throw new TypeError('[workplace-admin] a staff workplace text failed the contract rules');
   return ok;
+}
+
+const BLOCK_CODE_RE = /^[0-9]{6}$/;
+const UDISE_SCHOOL_CODE_RE = /^[0-9]{11}$/;
+
+/** A staff-entered block code — six digits, 0161's `workplaces_block_code_check`. Same convention as `requireStaffText`. */
+function requireBlockCode(blockCode: string): string {
+  // Unreachable through the route (the contract refuses it first) — a programming error, ⛔ a member-facing refusal.
+  if (!BLOCK_CODE_RE.test(blockCode)) throw new TypeError('[workplace-admin] a staff block code failed the contract rules');
+  return blockCode;
+}
+
+/** A staff-entered UDISE school code — eleven digits, 0161's `workplaces_udise_school_code_check`. */
+function requireUdiseSchoolCode(code: string): string {
+  // Unreachable through the route (the contract refuses it first) — a programming error, ⛔ a member-facing refusal.
+  if (!UDISE_SCHOOL_CODE_RE.test(code)) throw new TypeError('[workplace-admin] a staff UDISE school code failed the contract rules');
+  return code;
 }
 
 function isUniqueViolation(err: unknown, constraint: string): boolean {
@@ -214,7 +236,8 @@ export interface AddStaffWorkplaceInput {
 export async function addStaffWorkplace(db: Db, input: AddStaffWorkplaceInput): Promise<AdminWorkplace> {
   const name = requireStaffText(input.name, STAFF_WORKPLACE_NAME_MAX);
   const villageName = input.villageName == null || input.villageName.trim() === '' ? null : requireStaffText(input.villageName, STAFF_WORKPLACE_VILLAGE_MAX);
-  const code = input.kind === 'school' ? (input.udiseSchoolCode ?? null) : null;
+  const blockCode = input.blockCode == null ? null : requireBlockCode(input.blockCode);
+  const code = input.kind === 'school' ? (input.udiseSchoolCode == null ? null : requireUdiseSchoolCode(input.udiseSchoolCode)) : null;
   if (!(await lockListedDistrict(db, input.pariwarId, input.district))) throw new WorkplaceAdminRefusedError('workplace.district_not_found');
   if (code !== null) {
     const taken = await db
@@ -233,7 +256,7 @@ export async function addStaffWorkplace(db: Db, input: AddStaffWorkplaceInput): 
         name,
         district: input.district,
         villageName,
-        blockCode: input.blockCode ?? null,
+        blockCode,
         udiseSchoolCode: code,
         source: 'staff',
         status: 'listed',
@@ -317,8 +340,6 @@ function foldedName(col: SQL): SQL {
   return sql`lower(regexp_replace(btrim(${col}), '\\s+', ' ', 'g'))`;
 }
 
-const CREATED_AT_CURSOR_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
-
 /**
  * The Pariwar's open requests of ONE state (`pending` by default, or `suggested`), optionally ONE district, newest first
  * (`created_at DESC, request_id DESC`), keyset-paginated, filtered IN SQL (the open index). The same-name count is a
@@ -340,7 +361,7 @@ export async function listWorkplaceRequestsForReview(
   let after = sql``;
   if (input.cursor !== undefined) {
     const [createdAt, id] = decodeWorkplaceCursor(input.cursor, 2) as [string, string];
-    if (!isWorkplaceUuid(id) || !CREATED_AT_CURSOR_RE.test(createdAt) || !Number.isFinite(Date.parse(createdAt))) {
+    if (!isWorkplaceUuid(id) || !isTimestampCursor(createdAt)) {
       throw new WorkplaceCursorInvalidError();
     }
     after = sql`AND (r.created_at, r.request_id) < (${createdAt}::timestamptz, ${id}::uuid)`;

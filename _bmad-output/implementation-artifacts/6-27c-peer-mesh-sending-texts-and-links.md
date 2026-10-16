@@ -25,7 +25,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 # Story 6.27c: Each of the Five Is Texted Once — Naming the Member, With a Link to the Questions and the Helpline, in the Pariwar's Language, While an Answer Can Still Be Taken `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
@@ -489,7 +489,7 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
   - [x] 4.5 Unit tests (stubs that CALL the real registry / builder) + a live test `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
         (the `claim-suspicion-notices-live.test.ts` template): hold → park → resume; once-ever; quiet hours; a full run with a replacement;
         ⛔ new events; ids-only alarms.
-- [ ] **Task 5 — the link, the screen, the records (AC6–AC8).**
+- [x] **Task 5 — the link, the screen, the records (AC6–AC8).**
   - [x] 5.1 Contracts `PeerRequestByLinkResponse` (`packages/contracts/src/claims/peer-request.ts`; run vitest — [[project_contracts_tests_outside_tsc]]);
         the route in `claims.peer-request.member.routes.ts` with `logLevel: 'warn'` and the read budget (R13 / R14); the handler + core
         mapping; api-client `byLink(code)`; route tests (404 ×5 identical status / code / message; 200; the read budget's 429) + the `logStream` PII spec.
@@ -504,7 +504,7 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
         stays open"* ([[feedback_closure_language_precision]]); a NEW item: *"the console shows a skipped ping's `no_target:*` code verbatim and
         ⛔ links it to its replacement"* (BF29) — trigger: the next touch of `PeerMeshView`; and, under its *"owed to the Trustee Panel"* heading, BF24's FYI line (the English text is
         ≈ 3 UCS-2 segments too — trigger: the next `trustee-panel-routing-note-*` written for ANY story).
-  - [ ] 5.5 Change Log + File List; `pnpm ci:local` green with `DATABASE_URL` at :5433 ([[project_prepush_hook_inherits_5432]]); the
+  - [x] 5.5 Change Log + File List; `pnpm ci:local` green with `DATABASE_URL` at :5433 ([[project_prepush_hook_inherits_5432]]); the
         migration applied to BOTH DBs.
 
 ## Dev Notes
@@ -615,6 +615,10 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
     API test on the real writers (invisible before and while `attempting`, listed with "asked on" = the send date after). Records: Row 27
     (f) annotated (dated); BF33's two records CHECKED (both exist — ⛔ written); deferred-work — two items Closed, W3 NARROWED, a new console
     item, the BF24 Panel FYI under its own "owed to the Trustee Panel" heading.
+  - **Validation:** `DATABASE_URL=:5433 pnpm ci:local` — 35/36 in one run (every static gate, `test (unit)`, `integration-tests`,
+    `dlt-typed-variables`, `domain-invariants`, `access-wrapper` green); the one red job was `friction-budget` (AC-4: the mobile slot
+    changed with ⛔ declaration) — fixed by the Story 6.27c disposition block in `friction-budget.md`, committed, and the gate re-run
+    alone: ✓ passed. 0166 is applied to :5432 and :5433 at the file's hash.
   - ⚠ **Go-live, ⛔ merge** ([[project_not_in_production_merge_is_not_golive]]): as built the sweep HOLDS every Pariwar today — the live
     `peer_mesh.v4` carries two `'pending'` questions (Row 27 (f)) and the template ids are unset (Row 27 closes on all eight). Nothing is texted
     until then.
@@ -669,6 +673,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 - `docs/launch-gate-inventory/inventory-roster.md` (Row 27 (f) annotation)
 - `_bmad-output/implementation-artifacts/deferred-work.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `friction-budget.md` (the Story 6.27c disposition)
 - `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md`
 
 ## Change Log

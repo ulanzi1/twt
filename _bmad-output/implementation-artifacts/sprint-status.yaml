@@ -1,3 +1,12 @@
+# last_updated: 2026-10-17 (STORY 6.27c — ready-for-dev → in-progress → review via `bmad-dev-story`: each of the five texted ONCE.
+# The registry `peer-mesh-sms-templates.ts` + `peer_mesh_sms.request` (en the ruled words; hi afresh, NOT YET HUMAN-REVIEWED — Row 28) +
+# DLT sheet rows 13 / 14 (both locales Unicode — the BF24 cost FYI owed to the Panel); migration 0166 (the ping `detail` grammar,
+# `replaces_ping_id` + UNIQUE + the replacement trigger, R15's attempting-row backstops) applied to :5432 AND :5433; the domain send
+# record `claim/peer-mesh-request.ts` (R1 under claim → ping locks, R4's label over the ONE predicate, R2's replacement from the stored
+# ranking, R5 / R6); R7 (a replacement's answer counts); the jobs child + 10:30 IST sweep (quiet hours, R11's holds incl.
+# `counsel_basis_pending` — so EVERY Pariwar is HELD today, Row 27 (f)), R8's post-commit hook, R12's `resolveAppLinksOrigin`; the by-link
+# route (`logLevel: 'warn'`, read budget, PII log spec) + the mobile slot. ci:local 35/36 → friction-budget disposition added → 36/36.
+# Row `6-27c-peer-mesh-sending-texts-and-links` → `review`. ⛔ No other row moves.)
 # last_updated: 2026-10-16l (STORY 6.27c — TASK 0 DONE: BigDev accepted R5 (*"Yout recommendation is accepted for Task 0.1"*) — a
 # re-claimed send that ends `no_target` is ⛔ replaced (it may already have reached that neighbour; ⛔ a sixth text). Recorded as
 # author-commit `2026-10-16-343` (narrows `-311` PM1 (ii) at one edge), committed ALONE (`ccca9f5f`) before any code; story v3.3, AC1
@@ -20254,7 +20263,7 @@ development_status:
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
   # ⭐ 2026-10-14 ANNOTATION (`2026-10-14-332` call 6): 6.27c's start condition gains *"AND row 6-36c is done"* (row 6-36 no longer
   # waits for 6-36c).
-  6-27c-peer-mesh-sending-texts-and-links: in-progress
+  6-27c-peer-mesh-sending-texts-and-links: review
   # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
   # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.

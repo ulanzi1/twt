@@ -12,7 +12,7 @@ the author. The v2.x text is replaced, ⛔ not annotated — its history is the 
 ⚠ Before Task 1: `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory` — re-read any cited file
 that moved.
 
-STATUS: `ready-for-dev` — every condition is met: 6.27b, 6.27d, rows 6-30, 6-34, 6-36a, 6-36b, 6-36c and 6-36 are `done` and on `main`.
+STATUS: `in-progress` — code review left six patch findings as action items (2026-10-17).
 ⭐ SENDING IS LAST on purpose: once a real text goes out, real answers arrive — the warnings and the wait (6.27b), the approvers' view
 (6.27b), the inspector's independence (6.27d) and the workplace selection (row 6-36) all exist now.
 ⭐ THE RECORD is 6.27a's file (`6-27-peer-mesh-sending-replies-and-date-of-death.md` — rulings, Invariants, F1–F41, PM1–PM25, Traps 1–21).
@@ -25,7 +25,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 # Story 6.27c: Each of the Five Is Texted Once — Naming the Member, With a Link to the Questions and the Helpline, in the Pariwar's Language, While an Answer Can Still Be Taken `[SURFACE]`
 
-Status: review
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
@@ -506,6 +506,67 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
         ≈ 3 UCS-2 segments too — trigger: the next `trustee-panel-routing-note-*` written for ANY story).
   - [x] 5.5 Change Log + File List; `pnpm ci:local` green with `DATABASE_URL` at :5433 ([[project_prepush_hook_inherits_5432]]); the
         migration applied to BOTH DBs.
+
+### Review Findings
+
+Review date: 2026-10-17. Full branch review, without chunks: `cdc39004..668e545f`, 48 files,
+5,084 additions / 188 deletions. Blind Hunter, Edge Case Hunter and Acceptance Auditor completed;
+6 patch findings, 0 decisions, 0 deferred, 2 dismissed. Application code unchanged; patch disposition awaits BigDev.
+
+- [ ] [Review][Patch] **F1 / P1 — Query failures log the by-link code.**
+  [packages/domain/src/claim/peer-mesh-request.ts:641]
+  AC5b / AC6 / R13: Drizzle wraps a failed resolver query in an error whose message and parameters contain the code.
+  The member transaction rethrows it to the error mapper, which logs the raw error at `error`; the route's `warn` level
+  permits that line. The existing PII test fails the connection before the query and misses this path. Sanitize the error
+  before logging while retaining a safe diagnostic. **Verified:** inject a failure at the resolver's `client.query`;
+  the API returns 500 and its captured log contains the planted code. Source: auditor.
+- [ ] [Review][Patch] **F2 / P2 — A daytime child can send after the 20:00 IST cutoff.**
+  [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:415]
+  AC2: the window is checked only at job entry, before awaited config, name, lock, decrypt and send work.
+  Recheck the current clock at each begin and provider handoff, and defer remaining work when the window closes.
+  **Verified:** start at 19:59:59, advance the injected clock to 20:00:01 during config resolution;
+  both selected neighbours are still texted. Sources: blind + edge + auditor.
+- [ ] [Review][Patch] **F3 / P2 — A newly begun ping can already have an expired lease.**
+  [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:452]
+  AC2 / concurrency invariant: every begin receives the job-entry `now`, which is stored as `claimed_at`.
+  Slow configuration or earlier processing can backdate a fresh lease by more than ten minutes, permitting another
+  live child to reclaim and send the same ping. Timestamp the lease at the locked begin, using current time rather
+  than the run-start snapshot. **Verified:** advance the clock eleven minutes during config, then start another child
+  while the first is handing off its send; the single neighbour receives two provider calls. Sources: blind + edge.
+- [ ] [Review][Patch] **F4 / P2 — Back from one link suppresses later links on the mounted route.**
+  [apps/mobile/components/peer-request/PeerRequestSlot.tsx:38]
+  AC6: `linkDismissed` remains true when a new `code` prop arrives, so the resolver receives null and the list stays open.
+  Scope dismissal to the incoming link and reset request navigation when the code changes.
+  **Verified:** render the real slot with code A, invoke its questionnaire Back, rerender with code B;
+  the mocked resolver hook receives null instead of B. Sources: blind + edge + auditor.
+- [ ] [Review][Patch] **F5 / P2 — Held prefixes can starve ready claims on every bounded sweep.**
+  [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:284]
+  AC4 / R16 recovery: each run resets the cursor to null and held claims consume the claim bound. If the same held
+  low-id claims fill that bound (default 20,000), later ready claims are never visited by the recovery sweep.
+  Preserve fair continuation across bounded runs. **Verified:** two claims, lower id held, higher id ready,
+  `maxRuns = 1`; three successive sweeps enqueue neither claim. Sources: blind + edge.
+- [ ] [Review][Patch] **F6 / P2 — Valid origins can produce links longer than the registered DLT slot.**
+  [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:530]
+  The registry declares a 120-character URL ceiling, but the config guard validates only the origin's shape.
+  An oversized rendered link reaches the provider after a once-ever slot is begun; a permanent DLT rejection would
+  consume that slot. Check the complete fixed-length-code link against the registry ceiling during config validation
+  and hold the scope if it cannot fit. **Verified:** an accepted HTTPS origin with valid 60- and 40-character DNS labels
+  produces a 141-character request link. Sources: blind + edge.
+
+**Validation:** 195 existing focused tests passed: jobs/SMS 69, domain/detail/decrypt-fence/concurrency/policy 106,
+mobile link/route-map 20. Six additional isolated reproductions failed their expected-correct-behavior assertions,
+one for each finding. They live outside the repository at `/private/tmp/twt-6-27c-review-tests/` and
+`/private/tmp/twt-6-27c-mobile-review/`. No full `ci:local` rerun was performed for this review.
+
+**Invariant lens:** state/window guards, tenant/member ownership, replacement constraints and cascades have dedicated
+tests; replacement cardinality follows the one-to-one replacement link plus the original selection cap; sweep bypasses
+carry DELIBERATE blocks. Concurrency has a REAL GAP (F3), and minimal exposure has a REAL GAP (F1).
+The new failure view reuses the announced not-openable state and real helpline handler. Device HTTPS opening,
+provider approval and counsel basis remain explicitly assigned to launch gates; this review claims no device proof.
+
+**Dismissed:** comparing the actual deployed app-link host is outside R12's expressly specified port/dot validation
+and remains a deployment check; the unpaged distinct stalled-scope read had no demonstrated failure at the supported
+scale, so the speculative performance finding was not retained. No Panel routing is required for these engineering fixes.
 
 ## Dev Notes
 

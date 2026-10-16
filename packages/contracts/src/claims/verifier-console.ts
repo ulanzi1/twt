@@ -313,7 +313,8 @@ export const PeerMeshTranscript = z
     inspectionDiscrepancies: z.array(InspectionDiscrepancyStaffView),
     /**
      * ⭐ Story 6.36 (SW20; `-331` SC1 A) — the staff line: the member's workplace or the people they named changed in the
-     * 90 days before this claim was filed. REQUIRED; `null` for a `district_cohort_v1` selection.
+     * 90 days before the filing used for selection (`-339` RF1 C: the first filing not lifted by an innocence finding).
+     * REQUIRED; `null` for a `district_cohort_v1` selection.
      */
     recentChangeBeforeFiling: z.boolean().nullable(),
   })

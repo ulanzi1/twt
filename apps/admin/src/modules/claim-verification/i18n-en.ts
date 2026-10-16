@@ -128,8 +128,8 @@ export const verifierConsoleEn = {
     noName: 'No name on record',
     // ⭐ Story 6.36 (SW24; `-308`, `-326` BD1 A) — where each person came from (⛔ shown for a 6.6 selection — `null`).
     source: { workplace: 'Chosen from the workplace', named_by_member: 'Named by the member' },
-    // ⭐ Story 6.36 (SW20; `-331` SC1 A) — the staff line, 6.36a SW20's words.
-    recentChangeBeforeFiling: "The member's workplace or the people they named changed in the 90 days before this claim was filed.",
+    // ⭐ Story 6.36 (SW20; `-331` SC1 A; `-339` RF1 C) — a refile can use an earlier filing, excluding lifted claims.
+    recentChangeBeforeFiling: "The member's workplace or the people they named changed in the 90 days before the filing used to choose whom to ask.",
     callbackMobile: 'May be phoned on',
     // Story 6.27b (`-328` read with `-329`) — the Super Admin sees a texted neighbour's number whatever they answered:
     // ⛔ "may be phoned" beside a "No".

@@ -212,7 +212,10 @@ describe('<NeighboursAnswersPanel> — on demand (a PII control)', () => {
     expect(second).toHaveLength(1);
     expect(second[0]!.closest('dd')).toBeNull();
     expect(screen.getAllByTestId('peer-mesh-recent-change')).toHaveLength(1);
-    expect(screen.getByTestId('peer-mesh-recent-change')).toHaveTextContent(t.peerMesh.recentChangeBeforeFiling);
+    // R1: use the same accurate chronology on later approvers' panels, including when RF1 uses an earlier filing.
+    expect(screen.getByTestId('peer-mesh-recent-change')).toHaveTextContent(
+      "The member's workplace or the people they named changed in the 90 days before the filing used to choose whom to ask.",
+    );
   });
 
   it('a 404 ⇒ "Nothing to show at this step" (⛔ the transient-fault words)', async () => {

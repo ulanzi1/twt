@@ -27,7 +27,7 @@ item heading, row key. LETTERS: as 6.36a.
 
 # Story 6.36: The Five Are Chosen From the Member's Own Workplace — Otherwise the People They Named, Otherwise Nobody, and Then the Claim Goes On; Staff See Where Each Person Came From `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS PART IS.** The Panel ruled who is asked about a death (`-310` CF4 A, Trustee-ratified): the members at the member's
 > workplace (and the previous one after a recent transfer); otherwise up to three people the member named who agreed; otherwise
@@ -332,6 +332,7 @@ person asked.
       the reply has one (`PeerAnswerRow`, `PeerMeshView.tsx:72-74`, `:173-193`), otherwise in the ping header (`:53-65`) — so an
       unanswered ping shows it too — and nothing for `null`; and renders `recentChangeBeforeFiling` once at the top of the section as
       *"The member's workplace or the people they named changed in the 90 days before this claim was filed."* (6.36a SW20).
+    - 2026-10-16 review R1 annotation: RF1 C (`-339`) can use an earlier filing. The staff line now says *"The member's workplace or the people they named changed in the 90 days before the filing used to choose whom to ask."* The original copy above is retained as the pre-RF1 wording; the corrected copy is tested on both staff surfaces.
     - Tests on BOTH surfaces — the District Admin's console (`verifier-console.test.tsx`) AND the approvers' panel
       (`neighbours-answers-panel.test.tsx`), plus the API spec that drives both in one file (`apps/api/tests/integration/claims/
       peer-answers-approvers.spec.ts` — `consolePings` vs `read`).
@@ -437,6 +438,20 @@ person asked.
 - [x] **Task 8 — `peer_mesh.v4` (AC16).** The version, the `keys.ts` allow-list entry, the registry, the copy key (en + hi + `$comment`
       naming `-331`), the module header's version list, the moved v3 pins, the tests; the 6.27c annotation already names v4 (6.36a's
       Task 0 follow-up).
+
+### Review Findings
+
+2026-10-16 — `bmad-code-review 6.36`, full review of `51382898..0d4c23af` (58 files, +4,425 / −717 lines), three independent layers: Blind Hunter (diff only), Edge Case Hunter, Acceptance Auditor. **0 decision-needed, 1 patch (MEDIUM / P2), 0 defer, 3 dismissed candidates.** BigDev chose option 1 (apply the patch). R1 is resolved; story and sprint status are `done`.
+
+- [x] [Review][Patch] **R1 — MEDIUM / P2: date the staff warning against the filing used for selection.** [`apps/admin/src/modules/claim-verification/i18n-en.ts:132`] — RF1 C (`2026-10-16-339`; AC4's later annotation) now computes `recentChangeBeforeFiling` relative to the death's FIRST filing without a `member_found_innocent` finding (`resolvePeerMeshFilingCut`, `packages/domain/src/claim/peer-mesh-read.ts:293-303`). AC10's original copy still says "in the 90 days before this claim was filed." Example: first filing on 1 April, a workplace change on 20 March, then a second filing on 1 October; the second claim retains a true warning but its screen falsely dates March's change to the 90 days before October. Correct the wording to identify the filing used for selection, preserving RF1's innocence exception, and cover a later refiling on both shared staff surfaces. This is an engineering correction to make the disclosure accurately describe the existing selection rule; no new Panel ruling is required. Source: Blind Hunter; verified against the anchor, snapshot composition, assembler and shared view.
+
+**R1 resolution (2026-10-16):** the shared staff copy now says "The member's workplace or the people they named changed in the 90 days before the filing used to choose whom to ask." This describes the resolved anchor without implying that it is always this claim's own filing or ignoring the innocence exception. The existing console and later-approver tests both assert the corrected words directly; the contract field comment documents RF1 C. Post-fix verification: **105 tests passed in four files** (81 admin, 24 contracts); `git diff --check` passed. No selection logic or wire shape changed. No unresolved review findings remain.
+
+**Verification in this review:** 369 tests passed across 22 files: domain unit/questionnaires 138; admin 85; contracts 26; live domain snapshot / 0163 policy regression / certificate reminders 49; live select/window worker 25 (including both two-connection races and real pg-boss delivery); API 43 (including both staff audiences and member questionnaire pinning); event-registry coverage 3. Live tests used the existing test database on :5433; the initial sandbox connection denial was resolved by rerunning with approved database access. `git diff --check` passed. The full `pnpm ci:local` gate was not rerun during review; its recorded green run on `e4316ffb` remains the implementation evidence for AC15.
+
+**Invariant lens:** families 1, 2, 3, 5 and 6 covered by the named state/idempotency/race, RLS, direct constraint/grant, replay and audience tests above; families 4, 7, 8, 10, 11 and 12 covered by construction (projector and selection share a transaction; `min` / `NOT EXISTS` and distinct/grouped candidate reads avoid fan-out; system attribution; explicit narrow closures; the member-facing policy sentence; tenant/member predicates and a server-loaded deceased id through the enqueue chain). Family 13 covered by readable DOM text with no new interactive or measurable roles. Family 9 is untouched. R1 identified the correctness gap between the later anchor rule and the original staff copy; the resolution above closes it.
+
+**Dismissed candidates:** legacy empty/skipped selections are expressly excluded from healing by AC8 and AC14 (no production rows, no backfill); storing the previous workplace id even when it does not count is required by AC5 for row 6-32 (the schema comment is stale, selection filtering is correct); the worker's payload deceased-id trust predates this diff and current producers obtain it from the loaded claim, so queue tampering alone supplies no constructible new user path.
 
 ## Dev Notes
 
@@ -703,6 +718,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36`, worktree `.claude/worktr
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-16 | 3.3 | Three-layer code review of `51382898..0d4c23af`: 1 MEDIUM / P2 patch (R1), 0 decision-needed / defer, 3 dismissed candidates; 369 review tests passed. BigDev option 1: corrected the staff warning's chronology for RF1, aligned the contract comment and both existing staff-surface assertions; 105 post-fix tests passed. R1 checked off; story and sprint row `review` → `done`. Full CI not rerun for the copy/comment/assertion patch. |
 | 2026-10-16 | 3.2 | RF1 RULED — `2026-10-16-339` (Trustee-ratified, option C): the anchor is the death's FIRST filing unless an innocence finding lifts a claim (`resolvePeerMeshFilingCut`); the RF1 pin flipped, an innocence leg and five domain anchor legs added; AC4, the header, the rulings list and §Recorded annotated (⛔ rewritten). |
 | 2026-10-16 | 3.1 | AC15 closed GREEN: `twt-test-pg` recreated fresh (BigDev), migrated from zero, `pnpm ci:local` on `3fa2ff0c` — 36 / 36 jobs. |
 | 2026-10-16 | 3.0 | IMPLEMENTED by `bmad-dev-story 6.36` (code commit `3fa2ff0c`): migration 0163 (applied on :5432 AND :5433); the grouped engine, the ONE dispatch and replay; the filing-day cut, the SW21 run, the SW23 predicate and the snapshot reads; the select job locked FIRST, a selection only with its edge, ⛔ swallow, `claim.peer_mesh_none_to_ask` (the 37th event) and the reminder reading either edge; the source and the staff line on both staff surfaces (⛔ on the inspector's / helpline's / a member's wire — tests); `peer_mesh.v4` live. Records: 6.27c annotated (AC13), 6.6 D3 + its review item and 6.36a SW17 annotated, deferred-work appended (two Closed, one NARROWED, one OPEN, one NEW). |

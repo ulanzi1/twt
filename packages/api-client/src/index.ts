@@ -172,6 +172,7 @@ import {
   MemberDeathCertificateStatusResponse,
   type MemberDeathCertificateStatusResponse as MemberDeathCertificateStatusResult,
   type OcrDocumentType,
+  PeerRequestByLinkResponse,
   PeerRequestDetailResponse,
   PeerRequestListResponse,
   PeerRequestSaveAnswerResponse,
@@ -1599,6 +1600,10 @@ export function createMemberPeerRequestClient(opts: MemberAuthClientOptions) {
     },
     get(pariwarId: string, pingId: string): Promise<PeerRequestDetailResponse> {
       return call(`${base(pariwarId)}/${encodeURIComponent(pingId)}`, PeerRequestDetailResponse, undefined, true, 'GET');
+    },
+    /** Story 6.27c (R14) — the texted link's code → the ping it opens (a 404 for anything else). ⛔ The code is never logged here. */
+    byLink(pariwarId: string, code: string): Promise<PeerRequestByLinkResponse> {
+      return call(`${base(pariwarId)}/by-link/${encodeURIComponent(code)}`, PeerRequestByLinkResponse, undefined, true, 'GET');
     },
     saveAnswer(
       pariwarId: string,

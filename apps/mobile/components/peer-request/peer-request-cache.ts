@@ -7,6 +7,10 @@ export const peerRequestListKey = (pariwarId: string | undefined, memberId: stri
 export const peerRequestDetailKey = (pariwarId: string | undefined, memberId: string | undefined, pingId: string | null) =>
   ['peer-requests', 'v2', pariwarId, memberId, 'detail', pingId] as const
 
+/** Story 6.27c (R14) — the texted link's code → its ping. In memory only (`gcTime: 0` below — ⛔ the code reaches the disk cache). */
+export const peerRequestByLinkKey = (pariwarId: string | undefined, memberId: string | undefined, code: string | null) =>
+  ['peer-requests', 'v2', pariwarId, memberId, 'by-link', code] as const
+
 // Provider's dehydration filter treats gcTime:0 as an explicit no-persistence marker.
 export const PEER_REQUEST_CACHE_OPTIONS = { gcTime: 0, staleTime: 0 } as const
 export const PEER_REQUEST_MUTATION_OPTIONS = {

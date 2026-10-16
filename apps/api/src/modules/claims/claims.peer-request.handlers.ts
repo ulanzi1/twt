@@ -30,6 +30,7 @@
 
 import type {
   HelplinePeerRequestListResponse,
+  PeerRequestByLinkResponse,
   PeerRequestDetailResponse,
   PeerRequestListResponse,
   PeerRequestSaveAnswerRequest,
@@ -306,6 +307,25 @@ export function createPeerRequestHandlers(deps: AppDeps) {
           });
         }
         return { items };
+      });
+    },
+
+    /**
+     * ⭐ Story 6.27c (R14) — GET …/member/peer-requests/by-link/:code: `{ pingId }` iff the code has the link form AND its ping is
+     * the SESSION member's in this Pariwar AND it was TEXTED — submitted or closed included (the detail read then answers 409);
+     * everything else the SAME 404 (`peer_request.not_found`). ⛔ The code is never logged, echoed or put in an error.
+     */
+    async memberByLink(request: FastifyRequest): Promise<PeerRequestByLinkResponse> {
+      const ctx = memberCtx(request);
+      const { code } = request.params as { code: string };
+      return onMemberTx(ctx, async (_client, tx) => {
+        const pingId = await claim.resolvePeerRequestByLinkCode(tx, {
+          pariwarId: ids.pariwarId(ctx.pariwarId),
+          memberId: ids.memberId(ctx.memberId),
+          code,
+        });
+        if (pingId === null) throw new NotFoundError('Not found', PEER_REQUEST_NOT_FOUND_CODE);
+        return { pingId };
       });
     },
 

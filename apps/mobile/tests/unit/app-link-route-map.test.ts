@@ -94,12 +94,15 @@ describe('the shell is thin and the root Stack declares its group', () => {
   it('Story 6.27a — the slot makes ⛔ no call before the session has loaded (it gates on useSession itself)', () => {
     expect(slot).toContain('const { session, isLoading } = useSession()')
     expect(slot).toContain('const pariwarId = isLoading ? undefined : session?.pariwarId')
-    expect(slot).toMatch(/pariwarId === undefined \?/)
-    // the slot itself calls nothing — its children's queries are `enabled` only once a pariwarId is a string
+    // ⭐ Story 6.27c — the loading branch is the pure `peerRequestSlotView` (an undefined pariwarId ⇒ `loading`, pinned in
+    // `peer-request.test.ts`), rendered first.
+    expect(slot).toMatch(/view\.kind === 'loading' \?/)
+    // the slot itself calls nothing — its hooks' queries are `enabled` only once a pariwarId is a string
     expect(slot).not.toMatch(/member-api|api-client|useQuery|useMutation|fetch\(|console\./)
     const queries = strip(readFileSync(path.join(APP, '../components/peer-request/usePeerRequestQueries.ts'), 'utf8'))
-    expect(queries.match(/useQuery\(/g)).toHaveLength(2)
-    expect(queries.match(/enabled: typeof pariwarId === 'string'/g)).toHaveLength(2)
+    // Story 6.27c — 2 → 3: the by-link resolver joins the list and the detail, gated the same way.
+    expect(queries.match(/useQuery\(/g)).toHaveLength(3)
+    expect(queries.match(/enabled: typeof pariwarId === 'string'/g)).toHaveLength(3)
   })
 
   it('Story 6.27a — the header: the slot HIDES the inner Stack\'s header (the in-screen pages carry their own Back)', () => {

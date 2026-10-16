@@ -44,6 +44,22 @@ describe('createMemberPeerRequestClient', () => {
     for (const call of calls) expect(call.headers['x-turnstile-token']).toBeUndefined();
   });
 
+  it('⭐ Story 6.27c (R14) — byLink: GET …/by-link/<code>, the code path-encoded, ⛔ a Turnstile header; a 404 is typed', async () => {
+    const { calls, impl } = fakeFetch([
+      { status: 200, body: { pingId: PING } },
+      { status: 404, body: { error: { code: 'peer_request.not_found', message: 'Not found', request_id: 'r' } } },
+    ]);
+    const c = createMemberPeerRequestClient({ baseUrl: 'https://api.test', getAccessToken: () => 'tok', fetchImpl: impl });
+    expect(await c.byLink(P, 'Ab3dE5gH9kLm')).toEqual({ pingId: PING });
+    const err = await c.byLink(P, 'a/b').catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 404, code: 'peer_request.not_found' });
+    expect(calls.map((x) => `${x.method} ${x.url}`)).toEqual([
+      `GET https://api.test/api/v1/p/${P}/member/peer-requests/by-link/Ab3dE5gH9kLm`,
+      `GET https://api.test/api/v1/p/${P}/member/peer-requests/by-link/a%2Fb`,
+    ]);
+    for (const call of calls) expect(call.headers['x-turnstile-token']).toBeUndefined();
+  });
+
   it('a 404 is a typed ApiError carrying the code', async () => {
     const { impl } = fakeFetch([{ status: 404, body: { error: { code: 'peer_request.not_found', message: 'Not found', request_id: 'r' } } }]);
     const c = createMemberPeerRequestClient({ baseUrl: 'https://api.test', getAccessToken: () => 'tok', fetchImpl: impl });

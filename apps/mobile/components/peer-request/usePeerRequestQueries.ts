@@ -11,7 +11,13 @@ import type { PeerRequestAnswerValue } from '@twt/contracts'
 
 import { peerRequestApi } from '../../lib/peer-request-api'
 import { useSession } from '../../lib/session-context'
-import { PEER_REQUEST_CACHE_OPTIONS, PEER_REQUEST_MUTATION_OPTIONS, peerRequestDetailKey, peerRequestListKey } from './peer-request-cache'
+import {
+  PEER_REQUEST_CACHE_OPTIONS,
+  PEER_REQUEST_MUTATION_OPTIONS,
+  peerRequestByLinkKey,
+  peerRequestDetailKey,
+  peerRequestListKey,
+} from './peer-request-cache'
 
 export function usePeerRequestsQuery(pariwarId: string | undefined) {
   const { session, isLoading } = useSession()
@@ -32,6 +38,24 @@ export function usePeerRequestQuery(pariwarId: string | undefined, pingId: strin
     queryKey: peerRequestDetailKey(pariwarId, memberId, pingId),
     queryFn: () => peerRequestApi.get(pariwarId as string, pingId as string),
     enabled: typeof pariwarId === 'string' && typeof memberId === 'string' && session?.pariwarId === pariwarId && pingId !== null,
+    retry: false,
+  })
+}
+
+/**
+ * ⭐ Story 6.27c (AC6; R14) — the texted link's code → `{ pingId }`: ONE call, once the session has loaded and a code is present
+ * (⛔ a retry, ⛔ a refetch on focus / remount — `staleTime: Infinity`; a 404 or a network failure is the not-openable state).
+ * In memory only (`gcTime: 0`). ⛔ The code is never logged.
+ */
+export function usePeerRequestByLinkQuery(pariwarId: string | undefined, code: string | null) {
+  const { session, isLoading } = useSession()
+  const memberId = isLoading ? undefined : session?.memberId
+  return useQuery({
+    ...PEER_REQUEST_CACHE_OPTIONS,
+    staleTime: Infinity,
+    queryKey: peerRequestByLinkKey(pariwarId, memberId, code),
+    queryFn: () => peerRequestApi.byLink(pariwarId as string, code as string),
+    enabled: typeof pariwarId === 'string' && typeof memberId === 'string' && session?.pariwarId === pariwarId && code !== null,
     retry: false,
   })
 }

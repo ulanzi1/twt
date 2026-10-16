@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import {
   PEER_REQUEST_QUESTION_KINDS,
   PeerRequestAnswerValue,
+  PeerRequestByLinkPathParams,
+  PeerRequestByLinkResponse,
   PeerRequestListQuery,
   PeerRequestLiveAnswer,
   PeerRequestQuestionnaire,
@@ -67,5 +69,21 @@ describe('the wire shapes', () => {
     expect(PeerRequestListQuery.parse({})).toEqual({ limit: 5 });
     expect(PeerRequestListQuery.safeParse({ limit: '6' }).success).toBe(false);
     expect(PeerRequestListQuery.safeParse({ limit: '0' }).success).toBe(false);
+  });
+});
+
+describe('Story 6.27c (R14) — the by-link shapes', () => {
+  it('the `:code` param is a PLAIN string — a malformed code parses (the handler answers the route\'s ONE 404, ⛔ a 400)', () => {
+    const pariwarId = '11111111-1111-4111-8111-111111111111';
+    for (const code of ['Ab3dE5gH9kLm', 'short', 'Ab3dE5gH9kL-', '']) {
+      expect(PeerRequestByLinkPathParams.safeParse({ pariwarId, code }).success).toBe(true);
+    }
+    expect(PeerRequestByLinkPathParams.safeParse({ pariwarId: 'nope', code: 'Ab3dE5gH9kLm' }).success).toBe(false);
+  });
+
+  it('the answer is `{ pingId }` (a uuid) and nothing else of the ping', () => {
+    expect(PeerRequestByLinkResponse.parse({ pingId: '22222222-2222-4222-8222-222222222222' })).toEqual({ pingId: '22222222-2222-4222-8222-222222222222' });
+    expect(PeerRequestByLinkResponse.safeParse({ pingId: 'x' }).success).toBe(false);
+    expect(Object.keys(PeerRequestByLinkResponse.shape)).toEqual(['pingId']);
   });
 });

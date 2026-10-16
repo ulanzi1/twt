@@ -121,6 +121,35 @@ export function retryDelayMs(attempt: number): number {
   return Math.min(30_000, 1_000 * 2 ** Math.max(0, attempt - 1))
 }
 
+// ── the link (Story 6.27c, AC6) ────────────────────────────────────────────────────────────────────────────────────
+
+/** What the `/peer-request` slot shows. */
+export type PeerRequestSlotView =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'list' }
+  | { readonly kind: 'questionnaire'; readonly pingId: string }
+  | { readonly kind: 'not_openable' }
+
+/**
+ * The slot's ONE decision (AC6): ⛔ anything before the session has loaded; an open questionnaire wins; ⛔ code (missing,
+ * malformed, or the member came Back from the link's request) ⇒ the list; the by-link call pending ⇒ loading, resolved ⇒ that
+ * ping's questionnaire (its own 409s show "no longer open"), failed — a 404 OR a network fault — ⇒ the dignified not-openable
+ * state (⛔ a hard error).
+ */
+export function peerRequestSlotView(input: {
+  readonly pariwarId: string | undefined
+  readonly openPingId: string | null
+  readonly code: string | null
+  readonly byLink: { readonly status: 'pending' | 'error' | 'success'; readonly pingId: string | null }
+}): PeerRequestSlotView {
+  if (input.pariwarId === undefined) return { kind: 'loading' }
+  if (input.openPingId !== null) return { kind: 'questionnaire', pingId: input.openPingId }
+  if (input.code === null) return { kind: 'list' }
+  if (input.byLink.status === 'pending') return { kind: 'loading' }
+  if (input.byLink.status === 'success' && input.byLink.pingId !== null) return { kind: 'questionnaire', pingId: input.byLink.pingId }
+  return { kind: 'not_openable' }
+}
+
 // Story 6.36a — `newIdempotencyKey` MOVED to `lib/idempotency-key.ts` (a second caller — the workplace save — needs it);
 // re-exported here so the neighbours' screens and their tests keep their import.
 export { newIdempotencyKey } from './idempotency-key'

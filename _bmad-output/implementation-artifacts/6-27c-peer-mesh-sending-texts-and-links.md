@@ -490,10 +490,10 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
         (the `claim-suspicion-notices-live.test.ts` template): hold → park → resume; once-ever; quiet hours; a full run with a replacement;
         ⛔ new events; ids-only alarms.
 - [ ] **Task 5 — the link, the screen, the records (AC6–AC8).**
-  - [ ] 5.1 Contracts `PeerRequestByLinkResponse` (`packages/contracts/src/claims/peer-request.ts`; run vitest — [[project_contracts_tests_outside_tsc]]);
+  - [x] 5.1 Contracts `PeerRequestByLinkResponse` (`packages/contracts/src/claims/peer-request.ts`; run vitest — [[project_contracts_tests_outside_tsc]]);
         the route in `claims.peer-request.member.routes.ts` with `logLevel: 'warn'` and the read budget (R13 / R14); the handler + core
         mapping; api-client `byLink(code)`; route tests (404 ×5 identical status / code / message; 200; the read budget's 429) + the `logStream` PII spec.
-  - [ ] 5.2 Mobile `PeerRequestSlot` per AC6 (⛔ a new route file — 6.30 AL16; depend on `locale`, ⛔ `t` — [[project_uset_fresh_closure_memo_trap]];
+  - [x] 5.2 Mobile `PeerRequestSlot` per AC6 (⛔ a new route file — 6.30 AL16; depend on `locale`, ⛔ `t` — [[project_uset_fresh_closure_memo_trap]];
         empty / loading / error OUTSIDE any list — [[project_fabric_flatlist_empty_populated_crash]]); source-scan + pure-logic tests
         (`apps/mobile/vitest.config.ts` renders ⛔ no screen); run tsc with and without `.expo/types` ([[project_mobile_typed_routes_worktree]]).
   - [ ] 5.3 AC7's live API test (send → list → detail).

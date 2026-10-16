@@ -109,6 +109,15 @@ export const PeerRequestSubmitResponse = z.object({ submitted: z.literal(true) }
 export type PeerRequestSubmitResponse = z.infer<typeof PeerRequestSubmitResponse>;
 
 export const PeerRequestPathParams = z.object({ pariwarId: z.string().uuid(), pingId: z.string().uuid() });
+
+/**
+ * ⭐ Story 6.27c (R14; `2026-10-10-311` PM21 (d)) — the BY-LINK resolver: the code in the texted link → the ping it opens. The
+ * `:code` is a PLAIN string (⛔ a pattern here — it would turn a malformed code into a 400; the handler answers it with the
+ * route's ONE 404). ⛔ The code is never echoed in a response, a log or an error.
+ */
+export const PeerRequestByLinkPathParams = z.object({ pariwarId: z.string().uuid(), code: z.string() });
+export const PeerRequestByLinkResponse = z.object({ pingId: z.string().uuid() });
+export type PeerRequestByLinkResponse = z.infer<typeof PeerRequestByLinkResponse>;
 export const PeerRequestAnswerPathParams = PeerRequestPathParams.extend({ questionKey: z.string().regex(KEY).max(64) });
 
 /**

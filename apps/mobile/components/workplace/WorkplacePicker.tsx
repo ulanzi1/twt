@@ -106,6 +106,9 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
         queryClient.invalidateQueries({ queryKey: workplaceKeys.all }),
         queryClient.invalidateQueries({ queryKey: ['member', 'life-events'] }),
         // Story 6.36c — the home reminder cards read the latest posting (add your workplace, invite, a new workplace).
+        // ⚠ AWAITED (code review round 2 tried firing it and the fix-diff review reverted that): a new posting withdraws
+        // an open suggestion, and until the prompts refetch lands the Workplace screen would show that withdrawn
+        // suggestion's question — enabled — under "Saved". The read is bounded (`withReadTimeout`).
         invalidateKnownPeoplePrompts(queryClient),
       ])
       onSaved()

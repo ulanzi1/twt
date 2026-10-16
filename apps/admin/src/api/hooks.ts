@@ -6,7 +6,7 @@
 // + acknowledge are pessimistic/server-confirmed mutations (§4.2) that invalidate
 // the history so the banner + table re-derive from fresh server state.
 
-import { QueryClient, useMutation, useQuery, useQueryClient, type Query } from '@tanstack/react-query';
+import { keepPreviousData, QueryClient, useIsMutating, useMutation, useQuery, useQueryClient, type Query } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import type {
   DecideModerationAppealRequest,
@@ -2372,18 +2372,34 @@ export function useReplaceApprovalWarningReason(pariwarId: string) {
 export const adminWorkplacesKey = (pariwarId: string) => ['admin-workplaces', pariwarId] as const;
 export const workplaceRequestsKey = (pariwarId: string) => ['workplace-requests', pariwarId] as const;
 export const knownPeopleCampaignsKey = (pariwarId: string) => ['known-people-campaigns', pariwarId] as const;
+/**
+ * ONE mutation key for every 6.36c write (add / rename / delist / relist, suggest / close, campaign start / end) — code
+ * review round 2: a page disables EVERY write control while ANY of its writes is in flight (`useWorkplaceWriting`),
+ * including a write owned by a child component (the campaign control under the queue). ⛔ The step-up send / verify.
+ */
+export const workplaceWritesKey = (pariwarId: string) => ['workplace-writes', pariwarId] as const;
 
-/** One page of the list (the filters and the cursor are part of the key). */
+/** `true` while ANY 6.36c write of this Pariwar is in flight (code review round 2). */
+export function useWorkplaceWriting(pariwarId: string): boolean {
+  return useIsMutating({ mutationKey: workplaceWritesKey(pariwarId) }) > 0;
+}
+
+/**
+ * One page of the list (the filters and the cursor are part of the key). `keepPreviousData` (code review round 2) — a
+ * new filter keeps the rows on screen until its answer lands, ⛔ a "Loading…" flash on every (debounced) keystroke.
+ */
 export function useAdminWorkplaces(pariwarId: string, q: Parameters<typeof api.getAdminWorkplaces>[1] = {}) {
   return useQuery({
     queryKey: [...adminWorkplacesKey(pariwarId), q] as const,
     queryFn: () => api.getAdminWorkplaces(pariwarId, q),
+    placeholderData: keepPreviousData,
   });
 }
 
 function useWorkplaceWrite<V>(pariwarId: string, fn: (v: V) => Promise<unknown>) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: workplaceWritesKey(pariwarId),
     mutationFn: fn,
     // A refusal can mean the list moved under the page (another staff member delisted the row) — refetch on EVERY outcome.
     onSettled: () => qc.invalidateQueries({ queryKey: adminWorkplacesKey(pariwarId) }),
@@ -2402,13 +2418,22 @@ export function useSetAdminWorkplaceListed(pariwarId: string) {
   return useWorkplaceWrite(pariwarId, (v: { workplaceId: string; action: 'delist' | 'relist' }) => api.setAdminWorkplaceListed(pariwarId, v.workplaceId, v.action));
 }
 
+/**
+ * One page of the queue. The previous page stays on screen while a new DISTRICT filter or cursor loads (code review
+ * round 2), but ⛔ across a TAB switch: the other tab's requests shown under this tab's heading would be wrong.
+ */
 export function useWorkplaceRequests(pariwarId: string, q: { state: 'pending' | 'suggested'; district?: string; cursor?: string }) {
-  return useQuery({ queryKey: [...workplaceRequestsKey(pariwarId), q] as const, queryFn: () => api.getWorkplaceRequests(pariwarId, q) });
+  return useQuery({
+    queryKey: [...workplaceRequestsKey(pariwarId), q] as const,
+    queryFn: () => api.getWorkplaceRequests(pariwarId, q),
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[2].state === q.state ? previous : undefined),
+  });
 }
 
 function useRequestWrite<V>(pariwarId: string, fn: (v: V) => Promise<unknown>) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: workplaceWritesKey(pariwarId),
     mutationFn: fn,
     // A 409 means the queue is stale (the member posted again, or another admin acted) — refetch on EVERY outcome.
     onSettled: () => qc.invalidateQueries({ queryKey: workplaceRequestsKey(pariwarId) }),
@@ -2433,6 +2458,7 @@ export function useKnownPeopleCampaigns(pariwarId: string, q: Parameters<typeof 
 export function useStartKnownPeopleCampaign(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: workplaceWritesKey(pariwarId),
     mutationFn: (body: { startsOn: string; endsOn: string }) => api.startKnownPeopleCampaign(pariwarId, body),
     onSettled: () => qc.invalidateQueries({ queryKey: knownPeopleCampaignsKey(pariwarId) }),
   });
@@ -2441,6 +2467,7 @@ export function useStartKnownPeopleCampaign(pariwarId: string) {
 export function useEndKnownPeopleCampaign(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: workplaceWritesKey(pariwarId),
     mutationFn: (campaignId: string) => api.endKnownPeopleCampaign(pariwarId, campaignId),
     onSettled: () => qc.invalidateQueries({ queryKey: knownPeopleCampaignsKey(pariwarId) }),
   });

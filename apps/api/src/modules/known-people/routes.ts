@@ -7,8 +7,9 @@
 // `active` member whom ⛔ claim names as the deceased may use any of the SEVEN people-who-know-me routes (`2026-10-15-333`
 // call 1) — ONE 403 `known_people.not_available` otherwise (AC10). ⭐ THE ONE EXCEPTION is Story 6.36c's eighth,
 // `GET /prompts` (RV2): it answers 200 to ANY member session — the home cards' WORKPLACE flags are for a wider set (the
-// posting route's) — and every people flag on it is gated by that SAME caller predicate (false for anyone else). The two
-// lists declare a
+// posting route's) — and every people flag on it is gated by that SAME caller predicate (false for anyone else). ⚠
+// Re-examination trigger (code review round 2): this exception holds ONLY while EVERY people flag on the prompts is gated by
+// `knownPeopleCallerSql` — re-examine it if a people flag is ever added without `knownPeopleCallerSql`. The two lists declare a
 // bounded `limit` (the forced-pagination invariant); the requests list pages by a `cursor` (review 2026-10-15 R3). ⛔ A Turnstile gate: an `active` member is KYC'd and paid, and the
 // matching path carries its own DB-backed caps (6.36a SW12).
 

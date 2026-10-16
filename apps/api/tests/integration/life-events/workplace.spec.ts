@@ -77,10 +77,24 @@ async function seedList(t: TestApp, pariwarId = randomUUID()): Promise<Listed> {
     out[name] = id;
     code += 1;
     const school = kind === 'school';
+    // A STAFF row carries its actor (0165's `source <> 'staff' OR created_by_actor_id IS NOT NULL` — code review round 2).
     await t.pool.query(
-      `INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, village_name, udise_school_code, block_code, source, import_batch_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, pariwarId, kind, name, district, village, school ? String(code) : null, school ? String(code).slice(0, 6) : null, school ? 'import' : 'staff', school ? batchId : null, status],
+      `INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, village_name, udise_school_code, block_code, source, import_batch_id, status, created_by_actor_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        id,
+        pariwarId,
+        kind,
+        name,
+        district,
+        village,
+        school ? String(code) : null,
+        school ? String(code).slice(0, 6) : null,
+        school ? 'import' : 'staff',
+        school ? batchId : null,
+        status,
+        school ? null : randomUUID(),
+      ],
     );
   }
   return { pariwarId, ids: out };

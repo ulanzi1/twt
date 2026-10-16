@@ -62,7 +62,7 @@ describe('the staff add / rename (AC2)', () => {
 describe('the queue (AC3)', () => {
   it('an item carries ⛔ member data — the exact key set', () => {
     expect(Object.keys(WorkplaceRequestQueueItemWire.shape).sort()).toEqual(
-      ['createdAt', 'district', 'requestId', 'sameNameCount', 'startedOn', 'state', 'suggested', 'typedName', 'typedPlace'].sort(),
+      ['createdAt', 'district', 'requestId', 'sameNameCount', 'staleSuggestion', 'startedOn', 'state', 'suggested', 'typedName', 'typedPlace'].sort(),
     );
     expect(Object.keys(WorkplaceRequestQueueItemWire.shape).some((k) => /member|mobile|phone|name$/i.test(k) && k !== 'typedName')).toBe(false);
   });
@@ -74,15 +74,25 @@ describe('the queue (AC3)', () => {
 
   it('the codes and the step-up contexts', () => {
     expect(WORKPLACE_ADMIN_REFUSAL_CODES).toContain('workplace.import_managed');
-    expect(WORKPLACE_ANSWER_REFUSAL_CODES).toEqual(['workplace.request_not_found', 'workplace.request_closed', 'workplace.suggestion_stale', 'workplace.start_date_invalid']);
+    expect(WORKPLACE_ANSWER_REFUSAL_CODES).toEqual([
+      'workplace.request_not_found',
+      'workplace.request_closed',
+      'workplace.suggestion_stale',
+      'workplace.start_date_invalid',
+      'workplace.suggestion_changed',
+    ]);
     expect(WORKPLACE_MANAGE_STEP_UP_CONTEXT).not.toBe(WORKPLACE_REVIEW_STEP_UP_CONTEXT);
   });
 });
 
 describe('the answer (AC4)', () => {
-  it('`yes | no` only', () => {
-    expect(WorkplaceAnswerRequest.safeParse({ answer: 'yes' }).success).toBe(true);
-    expect(WorkplaceAnswerRequest.safeParse({ answer: 'maybe' }).success).toBe(false);
+  it('`yes | no` only, naming the workplace the member was SHOWN (a uuid, required — code review round 2)', () => {
+    expect(WorkplaceAnswerRequest.safeParse({ answer: 'yes', workplaceId: ID }).success).toBe(true);
+    expect(WorkplaceAnswerRequest.safeParse({ answer: 'no', workplaceId: ID }).success).toBe(true);
+    expect(WorkplaceAnswerRequest.safeParse({ answer: 'maybe', workplaceId: ID }).success).toBe(false);
+    expect(WorkplaceAnswerRequest.safeParse({ answer: 'yes' }).success).toBe(false);
+    expect(WorkplaceAnswerRequest.safeParse({ answer: 'yes', workplaceId: 'x' }).success).toBe(false);
+    expect(WorkplaceAnswerRequest.safeParse({ answer: 'yes', workplaceId: ID, extra: 1 }).success).toBe(false);
   });
 
   it('ONE response: "Yes" carries the summary, "No" nothing more', () => {

@@ -70,6 +70,11 @@ export const workplaceRequests = pgTable(
     }),
     index('workplace_requests_pariwar_member_idx').on(t.pariwarId, t.memberId),
     index('workplace_requests_open_idx').on(t.pariwarId, t.district).where(sql`state IN ('pending', 'suggested')`),
+    // Migration 0165 (Story 6.36c, code review round 2) — the queue's same-name count: its EXACT folded expression
+    // (`workplace-admin.ts` `foldedName`), over the pending requests that carry a typed name. ⚠ `\\s+` here is `\s+` in SQL.
+    index('workplace_requests_pariwar_folded_name_idx')
+      .on(t.pariwarId, sql`(lower(regexp_replace(btrim(${t.typedName}), '\\s+', ' ', 'g')))`)
+      .where(sql`state = 'pending' AND typed_name IS NOT NULL`),
   ],
 );
 

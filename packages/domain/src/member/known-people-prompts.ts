@@ -22,6 +22,7 @@ import type { KnownPeopleCampaignId, MemberId, PariwarId, WorkplaceId, Workplace
 import { liveCampaignSql } from './known-people-campaigns.js';
 import { KNOWN_PEOPLE_MAX_LIVE, knownPeopleCallerSql, liveKnownPersonSql, namedUnavailableSql } from './known-people.js';
 import { MEMBER_POSTING_TERMINAL_STATES } from './posting.js';
+import { staleSuggestionSql } from './workplace.js';
 
 /** How long after a transfer the *"check the people who know you"* card shows. */
 export const TRANSFER_REVIEW_DAYS = 30;
@@ -57,7 +58,8 @@ const NONE: KnownPeoplePrompts = {
  *     posting, or the latest names ⛔ workplace and is ⛔ a retirement — a district-only posting, an unconfirmed *"isn't
  *     listed"*);
  *   · `hasWorkplace` — the latest posting names a workplace (listed or since delisted);
- *   · `suggestedWorkplace` — the member's request in state `suggested` (at most one is open), with the workplace;
+ *   · `suggestedWorkplace` — the member's request in state `suggested` (at most one is open), with the workplace — ⛔ when
+ *     the suggestion is STALE (`staleSuggestionSql`; code review round 2);
  *   · `canNamePeople` — the caller predicate itself;
  *   · `transferReview` — the latest posting names workplace W, the most recent EARLIER posting that names a workplace
  *     names a DIFFERENT one, and the latest was recorded within 30 days (⛔ after a retirement — it names ⛔ workplace; ⛔
@@ -105,15 +107,13 @@ export async function readKnownPeoplePrompts(db: Db, pariwarId: PariwarId, membe
        ORDER BY p.created_at DESC, p.posting_id DESC LIMIT 1
     ),
     suggestion AS (
-      -- Same staleness condition as answerWorkplaceSuggestion's "Yes" path (workplace-admin.ts): the workplace must be
-      -- listed, in the request's own district, and that district itself still listed — otherwise the member's "Yes"
-      -- would refuse it as stale, so the card must not be shown for it either.
+      -- ⛔ A STALE suggestion (staleSuggestionSql — the ONE fragment the queue, suggest and the history also read; code
+      -- review round 2): the member's "Yes" would answer stale, and the request reads as pending everywhere else.
       SELECT r.request_id, w.workplace_id, w.name, w.district
         FROM workplace_requests r
         JOIN workplaces w ON w.pariwar_id = r.pariwar_id AND w.workplace_id = r.suggested_workplace_id
-          AND w.status = 'listed' AND w.district = r.district
-        JOIN workplace_districts d ON d.pariwar_id = r.pariwar_id AND d.district = w.district AND d.status = 'listed'
        WHERE r.pariwar_id = ${pariwarId} AND r.member_id = ${memberId} AND r.state = 'suggested'
+         AND NOT ${staleSuggestionSql(sql`r`)}
        ORDER BY r.created_at DESC, r.request_id DESC LIMIT 1
     ),
     campaign AS (

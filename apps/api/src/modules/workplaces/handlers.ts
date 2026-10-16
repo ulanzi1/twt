@@ -88,12 +88,14 @@ const ADD_STATUS: Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500> = {
   'workplace.request_closed': 500,
 };
 /** rename / delist / relist (`renameStaffWorkplace` / `setStaffWorkplaceListed`, both via `lockStaffWorkplace`) — the
- * UNION of what either can throw. Every other code is structurally unreachable on a `/:workplaceId/*` row write. */
+ * UNION of what either can throw: `not_found`, `import_managed`, `state_unchanged`, and (code review round 2) a RELIST's
+ * `district_not_found` — a relist requires the row's district to be LISTED, as an add does (422, the add's status). Every
+ * other code is structurally unreachable on a `/:workplaceId/*` row write. */
 const ROW_STATUS: Record<WorkplaceAdminRefusalCode, 404 | 409 | 422 | 500> = {
   'workplace.not_found': 404,
   'workplace.import_managed': 422,
   'workplace.state_unchanged': 409,
-  'workplace.district_not_found': 500,
+  'workplace.district_not_found': 422,
   'workplace.district_mismatch': 500,
   'workplace.code_taken': 500,
   'workplace.request_not_found': 500,
@@ -279,6 +281,9 @@ export function createWorkplaceAdminHandlers(deps: AppDeps) {
             state: i.state,
             sameNameCount: i.sameNameCount,
             suggested: i.suggested,
+            // Code review round 2 (RV11 as read-time staleness) — a `suggested` request whose suggestion is stale reads as
+            // `pending` with `suggested: null`; this flag says so (the admin's "earlier suggestion can no longer be used").
+            staleSuggestion: i.staleSuggestion,
           })),
           nextCursor: page.nextCursor,
           hasMore: page.hasMore,

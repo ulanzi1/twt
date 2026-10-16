@@ -5,6 +5,9 @@
 
 import type { KnownPeopleCampaignRefusalCode, WorkplaceAdminRefusalCode } from '@twt/contracts';
 
+/** A 400 `request.validation` (the API's zod refusal) — ONE line for all three surfaces (code review round 2). */
+const VALIDATION = 'Please check the fields and try again.';
+
 export const workplacesEn = {
   nav: 'Workplaces',
   heading: 'Workplaces — schools and offices',
@@ -42,6 +45,7 @@ export const workplacesEn = {
   saving: 'Saving…',
   saved: 'Saved.',
   generic: 'That could not be saved.',
+  validation: VALIDATION,
   errors: {
     'workplace.not_found': 'That workplace is no longer on this Pariwar’s list.',
     'workplace.district_not_found': 'That district is not on this Pariwar’s list — use a district exactly as the list spells it.',
@@ -52,6 +56,8 @@ export const workplacesEn = {
     'workplace.request_not_found': 'That request is no longer in this Pariwar’s queue.',
     'workplace.request_closed': 'That request has changed — the member may have answered or posted again. The queue has been reloaded.',
   } satisfies Record<WorkplaceAdminRefusalCode, string>,
+  // A RELIST refused because the row's district left the list (code review round 2) — there is ⛔ district to retype.
+  relistDistrictGone: 'This workplace’s district is no longer on the list, so it can’t be listed again.',
 };
 
 export const workplaceRequestsEn = {
@@ -62,6 +68,7 @@ export const workplaceRequestsEn = {
   noMemberShown: 'The member is not named here — only what they typed, to help you find the place.',
   onlySuperAdminAdds: 'If the workplace is not on the list at all, ask the Super Admin to add it, then suggest it.',
   tabs: { pending: 'Waiting for a suggestion', suggested: 'Waiting for the member' } as const,
+  tabsLabel: 'Which requests',
   filters: { district: 'District' },
   loading: 'Loading the requests…',
   loadError: 'The requests could not be loaded.',
@@ -76,11 +83,13 @@ export const workplaceRequestsEn = {
   received: (date: string) => `Received: ${date}`,
   sameName: (n: number) => (n === 1 ? 'One other request typed the same name.' : `${n} other requests typed the same name.`),
   suggestedAs: (name: string) => `Suggested: ${name} — waiting for the member to confirm.`,
+  staleSuggestion: 'An earlier suggestion can no longer be used (it was taken off the list). Please suggest again.',
   suggest: 'Suggest a workplace',
   pickerSearch: 'Search the listed workplaces of this district',
   pickerLoading: 'Searching…',
   pickerLoadError: 'The search could not be completed.',
   pickerEmpty: 'Nothing listed in this district matches.',
+  pickerResults: (n: number) => (n === 1 ? 'One listed workplace matches.' : `${n} listed workplaces match.`),
   pickerMore: 'More results — refine your search.',
   pickerNote: 'Only this district’s listed workplaces are shown. If the request’s district was just renamed, reload the queue.',
   suggestThis: 'Suggest this one',
@@ -90,12 +99,14 @@ export const workplaceRequestsEn = {
   first: 'Back to the first page',
   saved: 'Saved.',
   generic: 'That could not be saved.',
+  validation: VALIDATION,
 };
 
 export const campaignEn = {
   heading: 'Ask members to name the people who know them',
+  // `-342` call 1's audience (code review round 2 — ⛔ the superseded `-330` SW16 (5) "fewer than three accepted").
   intro:
-    'For the days you choose, members who have not named three people see a card in the app asking them to. Nothing is sent to anyone’s phone.',
+    'For the days you choose, a card in the app asks members to name the people who know them. It is shown to a member who can use this feature, who has room for one more person (fewer than three asked or accepted), and who has asked nobody since the campaign began. Nothing is sent to anyone’s phone.',
   startsOn: 'From (IST)',
   endsOn: 'Until (IST, at most 30 days)',
   start: 'Start the campaign',
@@ -112,6 +123,7 @@ export const campaignEn = {
   required: 'Choose both dates.',
   saved: 'Saved.',
   generic: 'That could not be saved.',
+  validation: VALIDATION,
   errors: {
     'known_people_campaign.window_invalid': 'A campaign runs from today or later, for at most 30 days.',
     'known_people_campaign.overlap': 'Another campaign is already planned for some of those days.',
@@ -128,5 +140,18 @@ export const stepUpEn = {
   code: 'Code',
   verify: 'Verify and save',
   verifyError: 'That code was not accepted.',
+  // A 429 on VERIFY is ⛔ a judgement of the code (code review round 2) — its own line, in the send line's register.
+  verifyRateLimited: 'Too many attempts — wait a few minutes and try again.',
   verifyUnavailable: 'The code could not be checked — try again.',
+  cancel: 'Cancel — don’t make this change',
+  // The held write, named (code review round 2).
+  waiting: (what: string) => `Waiting to save: ${what}`,
+  held: {
+    add: (name: string) => `add “${name}”`,
+    rename: (name: string) => `rename to “${name}”`,
+    delist: (name: string) => `delist “${name}”`,
+    relist: (name: string) => `list “${name}” again`,
+    suggest: (name: string) => `suggest “${name}”`,
+    close: (typed: string | null) => (typed !== null ? `close the request for “${typed}”` : 'close this request'),
+  },
 };

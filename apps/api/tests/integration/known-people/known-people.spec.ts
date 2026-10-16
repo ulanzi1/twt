@@ -2,7 +2,9 @@
 // every request runs on its own scoped connection, so the seeds COMMIT — each test mints a FRESH Pariwar.
 //   · AC10: ONE 403 `known_people.not_available` on all seven people-who-know-me routes for a non-`active` caller; ⛔ a
 //     token ⇒ 401. ⭐ The EIGHTH route (Story 6.36c's `GET /prompts`, RV2) is the ONE exception — 200 to any member session,
-//     every people flag false for a non-caller (asserted beside the seven);
+//     every people flag false for a non-caller (asserted beside the seven) — ⭐ code review round 2: WITH the Pariwar's
+//     campaign LIVE and the caller's transfer / replace states BUILT (an active control shows all three), so the false
+//     flags are the GATE's doing, ⛔ an empty fixture's;
 //   · AC3: positions only; the caller, another Pariwar's member, ⛔ matched; the 4th request in a day ⇒ 429; a list
 //     over 1,000 ⇒ 400 `request.validation` carrying ⛔ submitted value; one KMS audit line per request;
 //   · AC5: 201 a new link / 200 the live one / the replay; ONE 404 `not_a_member`; 422 oneself; 400 ⛔ Idempotency-Key;
@@ -98,6 +100,58 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
 
   const code = (r: { body: Json }) => (r.body['error'] as { code?: string } | undefined)?.code;
 
+  /**
+   * ⭐ Code review round 2 — the THREE gated card states BUILT for `memberId` (committed), so a non-caller's
+   * `campaign: null` / `transferReview: false` / `replaceNeeded: false` proves the gate (`knownPeopleCallerSql`), ⛔ an
+   * empty fixture: the Pariwar's LIVE campaign (once per Pariwar), a W1 → W2 transfer recorded 5 days ago, and an
+   * ACCEPTED link (asked 2 days ago — before the campaign began, so the campaign card still shows) to a withdrawn member.
+   */
+  const cardPariwars = new Map<string, { w1: string; w2: string }>();
+  async function seedCardStates(pariwarId: string, memberId: string): Promise<void> {
+    let wps = cardPariwars.get(pariwarId);
+    if (!wps) {
+      const batchId = randomUUID();
+      await t.pool.query(
+        `INSERT INTO workplace_import_batches (batch_id, pariwar_id, source_name, source_url, retrieved_on, licence, attribution, state_code)
+         VALUES ($1, $2, 'fixture', 'https://example.test', '2026-10-14', 'ODC-BY-1.0', 'fixture', '10')`,
+        [batchId, pariwarId],
+      );
+      await t.pool.query(`INSERT INTO workplace_districts (pariwar_id, district, source_batch_id) VALUES ($1, 'Patna', $2)`, [pariwarId, batchId]);
+      wps = { w1: randomUUID(), w2: randomUUID() };
+      for (const [i, id] of [wps.w1, wps.w2].entries()) {
+        await t.pool.query(
+          `INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, udise_school_code, block_code, source, import_batch_id)
+           VALUES ($1, $2, 'school', $3, 'Patna', $4, '102899', 'import', $5)`,
+          [id, pariwarId, `GMS CARD ${i + 1}`, String(10289900201 + i), batchId],
+        );
+      }
+      await t.pool.query(
+        `INSERT INTO known_people_campaigns (pariwar_id, started_by_actor_id, starts_on, ends_on)
+         VALUES ($1, gen_random_uuid(), (clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date, (clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date + 6)`,
+        [pariwarId],
+      );
+      cardPariwars.set(pariwarId, wps);
+    }
+    for (const [workplaceId, agoDays] of [
+      [wps.w1, 400],
+      [wps.w2, 5],
+    ] as const) {
+      await t.pool.query(
+        `INSERT INTO member_postings (pariwar_id, member_id, district, workplace_id, created_at) VALUES ($1, $2, 'Patna', $3, now() - make_interval(days => $4::int))`,
+        [pariwarId, memberId, workplaceId, agoDays],
+      );
+    }
+    const gone = randomUUID();
+    await t.pool.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'withdrawn', 1)`, [gone, pariwarId]);
+    await t.pool.query(
+      `INSERT INTO member_known_people (pariwar_id, namer_member_id, named_member_id, found_by, state, asked_at, responded_at)
+       VALUES ($1, $2, $3, 'typed', 'accepted', now() - interval '2 days', now() - interval '2 days' + interval '1 minute')`,
+      [pariwarId, memberId, gone],
+    );
+  }
+  /** What an ELIGIBLE caller with {@link seedCardStates} sees — the positive control. */
+  const ALL_THREE = { canNamePeople: true, transferReview: true, replaceNeeded: true, campaign: { campaignId: expect.any(String) } };
+
   /** The member-to-member form for `name` in `pariwarId` (the REAL producer — ⛔ a transcribed form). */
   async function shown(pariwarId: string, name: string): Promise<string> {
     const mode = await withPariwarScope(t.pool, pariwarId, (db) => kycDomain.resolvePublicNamePresentationMode(db, ids.pariwarId(pariwarId)));
@@ -110,8 +164,13 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
 
   it('AC10 — ONE 403 known_people.not_available on EVERY route for a non-active caller; ⛔ a token ⇒ 401', async () => {
     const p = randomUUID();
+    // ⭐ Code review round 2 — the positive control: an ACTIVE caller with the same built states sees all three cards.
+    const control = await seed(p, { mobile: nextMobile(), name: 'Control Member' });
+    await seedCardStates(p, control);
+    expect((await call('GET', `${BASE}/prompts`, { tok: token(control, p) })).body).toMatchObject(ALL_THREE);
     for (const state of ['pending-fee', 'lock-in', 'active-in-grace', 'withdrawn']) {
       const me = await seed(p, { state, mobile: nextMobile(), name: 'Asha Devi' });
+      await seedCardStates(p, me);
       const tok = token(me, p);
       const link = randomUUID();
       const results = [
@@ -341,6 +400,9 @@ describe.skipIf(!hasDatabase)('Story 6.36b — people who know me (member routes
     const tok = token(me, p);
     // a positive control: before the claim, the same caller is served
     expect((await call('GET', BASE, { tok })).status).toBe(200);
+    // ⭐ Code review round 2 — …and, with the campaign LIVE and the transfer / replace states built, sees all three cards.
+    await seedCardStates(p, me);
+    expect((await call('GET', `${BASE}/prompts`, { tok })).body).toMatchObject(ALL_THREE);
     await fileClaim(p, me);
     const link = randomUUID();
     const results = [

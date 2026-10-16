@@ -5,15 +5,20 @@
 // labelled by its source — the next import corrects it (RV3). ⛔ No delete control: there is ⛔ no such route.
 // The server's key check (`workplace.manage`, super_admin ONLY) is the boundary; a step-up-required 403 holds the write and
 // runs it after the code verifies (the `ApprovalWarningReasonsPage` pattern).
+// Code review round 2: the write controls show ONLY on the session's national `workplace.manage` (the nav's source — a
+// Pariwar Admin reading the list through `workplace.review` sees ⛔ controls that can only 403); a pending write is ⛔ ever
+// reset, and EVERY write control is disabled while any write is in flight or a step-up retry is held.
 
-import { WORKPLACE_MANAGE_STEP_UP_CONTEXT, type AdminWorkplaceAddRequest, type AdminWorkplaceWire } from '@twt/contracts';
-import { useEffect, useState, type ReactElement } from 'react';
+import { WORKPLACE_MANAGE_STEP_UP_CONTEXT, WORKPLACE_SEARCH_TEXT_MAX_WIRE, type AdminWorkplaceAddRequest, type AdminWorkplaceWire } from '@twt/contracts';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { useAddAdminWorkplace, useAdminWorkplaces, useRenameAdminWorkplace, useSetAdminWorkplaceListed } from '../../api/hooks.js';
+import { useAddAdminWorkplace, useAdminWorkplaces, useRenameAdminWorkplace, useSession, useSetAdminWorkplaceListed, useWorkplaceWriting } from '../../api/hooks.js';
 import { errorText } from './error-text.js';
-import { workplacesEn as t } from './i18n-en.js';
-import { needsStepUp, StepUpPanel, type PendingWrite } from './StepUpPanel.js';
+import { stepUpEn, workplacesEn as t } from './i18n-en.js';
+import { WORKPLACE_BLOCK_CODE_INPUT_MAX, WORKPLACE_DISTRICT_INPUT_MAX, WORKPLACE_UDISE_INPUT_MAX } from './input-bounds.js';
+import { holdKey, holdOnce, needsStepUp, StepUpPanel, useHoldGenerations, type HoldSnapshot, type PendingWrite } from './StepUpPanel.js';
+import { useDebouncedValue } from './use-debounced-value.js';
 
 /** The control that currently owns the held step-up retry (fix: a DIFFERENT control's edit must not clear it). */
 type WorkplaceControl = 'add' | 'rename' | 'toggle';
@@ -25,7 +30,18 @@ interface Filters {
   q: string;
 }
 
-function AddForm({ processing, onSubmit, onEdit }: { processing: boolean; onSubmit: (body: AdminWorkplaceAddRequest) => void; onEdit: () => void }): ReactElement {
+function AddForm({
+  processing,
+  locked,
+  onSubmit,
+  onEdit,
+}: {
+  processing: boolean;
+  /** Any write in flight or a step-up retry held (code review round 2). */
+  locked: boolean;
+  onSubmit: (body: AdminWorkplaceAddRequest) => void;
+  onEdit: () => void;
+}): ReactElement {
   const [kind, setKind] = useState<'office' | 'school'>('office');
   const [name, setName] = useState('');
   const [district, setDistrict] = useState('');
@@ -33,12 +49,13 @@ function AddForm({ processing, onSubmit, onEdit }: { processing: boolean; onSubm
   const [blockCode, setBlockCode] = useState('');
   const [udise, setUdise] = useState('');
   const [missing, setMissing] = useState(false);
-  const field = (label: string, value: string, set: (v: string) => void, testId: string) => (
+  const field = (label: string, value: string, set: (v: string) => void, testId: string, maxLength?: number) => (
     <label className="flex flex-col text-xs">
       {label}
       <input
         className="rounded border px-2 py-1 text-sm"
         value={value}
+        {...(maxLength !== undefined ? { maxLength } : {})}
         onChange={(e) => {
           set(e.target.value);
           setMissing(false);
@@ -68,22 +85,32 @@ function AddForm({ processing, onSubmit, onEdit }: { processing: boolean; onSubm
       <h3 className="text-sm font-semibold">{t.addHeading}</h3>
       <label className="flex flex-col text-xs">
         {t.addFields.kind}
-        <select className="rounded border px-2 py-1 text-sm" value={kind} onChange={(e) => setKind(e.target.value as 'office' | 'school')} data-testid="workplace-add-kind">
+        {/* The Kind decides whether a UDISE code is sent — a change is an EDIT, so it clears a held add (code review round 2). */}
+        <select
+          className="rounded border px-2 py-1 text-sm"
+          value={kind}
+          onChange={(e) => {
+            setKind(e.target.value as 'office' | 'school');
+            setMissing(false);
+            onEdit();
+          }}
+          data-testid="workplace-add-kind"
+        >
           <option value="office">{t.kind.office}</option>
           <option value="school">{t.kind.school}</option>
         </select>
       </label>
       {field(t.addFields.name, name, setName, 'workplace-add-name')}
-      {field(t.addFields.district, district, setDistrict, 'workplace-add-district')}
+      {field(t.addFields.district, district, setDistrict, 'workplace-add-district', WORKPLACE_DISTRICT_INPUT_MAX)}
       {field(t.addFields.village, village, setVillage, 'workplace-add-village')}
-      {field(t.addFields.blockCode, blockCode, setBlockCode, 'workplace-add-block')}
-      {kind === 'school' ? field(t.addFields.udise, udise, setUdise, 'workplace-add-udise') : null}
+      {field(t.addFields.blockCode, blockCode, setBlockCode, 'workplace-add-block', WORKPLACE_BLOCK_CODE_INPUT_MAX)}
+      {kind === 'school' ? field(t.addFields.udise, udise, setUdise, 'workplace-add-udise', WORKPLACE_UDISE_INPUT_MAX) : null}
       {missing ? (
         <p role="alert" className="text-xs text-status-fail-fg">
           {t.required}
         </p>
       ) : null}
-      <button type="submit" className="w-fit rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50" disabled={processing} data-testid="workplace-add-submit">
+      <button type="submit" className="w-fit rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50" disabled={locked} data-testid="workplace-add-submit">
         {processing ? t.saving : t.addSubmit}
       </button>
     </form>
@@ -92,14 +119,22 @@ function AddForm({ processing, onSubmit, onEdit }: { processing: boolean; onSubm
 
 function Row({
   w,
+  canManage,
   onRename,
   onToggle,
-  busy,
+  onAbandonRename,
+  locked,
 }: {
   w: AdminWorkplaceWire;
-  onRename: (name: string) => void;
+  /** The session's national `workplace.manage` — ⛔ it, ⛔ a control (code review round 2). */
+  canManage: boolean;
+  /** `onSaved` runs on SUCCESS only — a refused rename keeps the typed text and stays open (code review round 2). */
+  onRename: (name: string, onSaved: () => void) => void;
   onToggle: () => void;
-  busy: boolean;
+  /** An edit or a Cancel of THIS row's rename — drops a step-up retry still holding the old text (code review round 2). */
+  onAbandonRename: () => void;
+  /** Any write in flight or a step-up retry held (code review round 2). */
+  locked: boolean;
 }): ReactElement {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(w.name);
@@ -119,15 +154,34 @@ function Row({
             onSubmit={(e) => {
               e.preventDefault();
               if (name.trim() === '') return;
-              onRename(name.trim());
-              setRenaming(false);
+              // ⛔ `setRenaming(false)` here (code review round 2): it ran BEFORE the answer, so a refused name lost the
+              // text the admin typed. Edit mode ends on SUCCESS only (a held step-up retry carries `onSaved` too).
+              onRename(name.trim(), () => setRenaming(false));
             }}
           >
-            <input className="rounded border px-2 py-1 text-sm" value={name} onChange={(e) => setName(e.target.value)} aria-label={t.columns.name} data-testid={`workplace-rename-input-${w.workplaceId}`} />
-            <button type="submit" className="text-xs underline" disabled={busy}>
+            <input
+              className="rounded border px-2 py-1 text-sm"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                onAbandonRename();
+              }}
+              aria-label={t.columns.name}
+              data-testid={`workplace-rename-input-${w.workplaceId}`}
+            />
+            <button type="submit" className="text-xs underline disabled:opacity-50" disabled={locked} data-testid={`workplace-rename-save-${w.workplaceId}`}>
               {t.renameSave}
             </button>
-            <button type="button" className="text-xs underline" onClick={() => setRenaming(false)}>
+            <button
+              type="button"
+              className="text-xs underline"
+              onClick={() => {
+                setRenaming(false);
+                setName(w.name);
+                onAbandonRename();
+              }}
+              data-testid={`workplace-rename-cancel-${w.workplaceId}`}
+            >
               {t.cancel}
             </button>
           </form>
@@ -141,16 +195,18 @@ function Row({
       <td className="p-2">{t.status[w.status]}</td>
       <td className="p-2">
         {staff ? (
-          <div className="flex gap-2">
-            {!renaming ? (
-              <button type="button" className="text-xs underline" onClick={() => setRenaming(true)} data-testid={`workplace-rename-${w.workplaceId}`}>
-                {t.rename}
+          canManage ? (
+            <div className="flex gap-2">
+              {!renaming ? (
+                <button type="button" className="text-xs underline disabled:opacity-50" disabled={locked} onClick={() => setRenaming(true)} data-testid={`workplace-rename-${w.workplaceId}`}>
+                  {t.rename}
+                </button>
+              ) : null}
+              <button type="button" className="text-xs underline disabled:opacity-50" disabled={locked} onClick={onToggle} data-testid={`workplace-toggle-${w.workplaceId}`}>
+                {w.status === 'listed' ? t.delist : t.relist}
               </button>
-            ) : null}
-            <button type="button" className="text-xs underline" disabled={busy} onClick={onToggle} data-testid={`workplace-toggle-${w.workplaceId}`}>
-              {w.status === 'listed' ? t.delist : t.relist}
-            </button>
-          </div>
+            </div>
+          ) : null
         ) : (
           <span className="text-xs opacity-70" data-testid={`workplace-readonly-${w.workplaceId}`}>
             {t.importNote}
@@ -162,49 +218,110 @@ function Row({
 }
 
 export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactElement {
+  const session = useSession();
+  // The nav's source (RootLayout): the national grant. Advisory — the server's key check is the boundary.
+  const canManage = session.data?.nationalGrants.includes('workplace.manage') ?? false;
   const [filters, setFilters] = useState<Filters>({ district: '', kind: '', status: 'listed', q: '' });
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  // The two TYPED filters settle before they reach the server (code review round 2 — one GET, one audit line, per pause).
+  const district = useDebouncedValue(filters.district);
+  const q = useDebouncedValue(filters.q);
+  // The cursor belongs to the SETTLED filter it was paged under (code review round 2): a filter change — once the typed
+  // text has settled — reads as page 1 in the SAME render, ⛔ a reset on the raw keystroke (an extra GET and audit
+  // line, and a stale "Next" for the old filter).
+  const filterKey = JSON.stringify([filters.status, filters.kind, district.trim(), q.trim()]);
+  const [page, setPage] = useState<{ filterKey: string; cursor: string | undefined }>({ filterKey, cursor: undefined });
+  const cursor = page.filterKey === filterKey ? page.cursor : undefined;
+  // FORGET the page once the settled filter moves (code review round 2): `page` was written only by paging, so going
+  // back to an earlier filter or tab brought its old page back. The read above still says page 1 in the SAME render
+  // (⛔ an extra GET); this drops the stale cursor for good.
+  useEffect(() => setPage((p) => (p.filterKey === filterKey ? p : { filterKey, cursor: undefined })), [filterKey]);
   const list = useAdminWorkplaces(pariwarId, {
     status: filters.status,
-    ...(filters.district.trim() !== '' ? { district: filters.district.trim() } : {}),
+    ...(district.trim() !== '' ? { district: district.trim() } : {}),
     ...(filters.kind !== '' ? { kind: filters.kind } : {}),
-    ...(filters.q.trim() !== '' ? { q: filters.q.trim() } : {}),
+    ...(q.trim() !== '' ? { q: q.trim() } : {}),
     ...(cursor !== undefined ? { cursor } : {}),
   });
   const add = useAddAdminWorkplace(pariwarId);
   const rename = useRenameAdminWorkplace(pariwarId);
   const toggle = useSetAdminWorkplaceListed(pariwarId);
+  const writing = useWorkplaceWriting(pariwarId) || add.isPending || rename.isPending || toggle.isPending;
   const [pending, setPending] = useState<PendingWrite<WorkplaceControl>>(null);
+  const holdSeq = useRef(0);
+  const gens = useHoldGenerations();
   const [addFormKey, setAddFormKey] = useState(0);
+  // Every write control, while a write is in flight OR a step-up retry is held (code review round 2): a second Add
+  // under an in-flight one was a duplicate staff row, and a write under a held retry was a second hold.
+  const locked = writing || pending !== null;
 
-  const resetAll = (): void => {
-    add.reset();
-    rename.reset();
-    toggle.reset();
+  /**
+   * ⛔ Never reset a PENDING mutation (code review round 2): `reset()` detaches its per-call `onSuccess` / `onError`
+   * (a step-up `hold` was lost, "Saved." never showed) and turns `isPending` false (which let a second Add through).
+   * Only a SETTLED write's leftover banner is cleared.
+   */
+  const resetSettled = (): void => {
+    for (const m of [add, rename, toggle]) if (!m.isPending) m.reset();
+  };
+  /** Drop a held step-up retry (the `ApprovalWarningReasonsPage` `clearStepUp`; the panel unmounts, so its code goes too). */
+  const clearStepUp = (): void => setPending(null);
+  /**
+   * An edit or a back-out of ONE control (and row): its held retry is dropped, and its generation moves so a write of it
+   * still IN FLIGHT raises ⛔ panel when its 403 lands (code review round 2). Another control's hold is left alone.
+   */
+  const abandon = (owner: WorkplaceControl, target?: string): void => {
+    gens.bump(owner, target);
+    setPending((p) => (p !== null && p.owner === owner && p.target === target ? null : p));
   };
   const setFilter = <K extends keyof Filters>(k: K, v: Filters[K]): void => {
     setFilters((f) => ({ ...f, [k]: v }));
-    setCursor(undefined);
-    // A previous write's "Saved."/error banner must not survive under a freshly filtered list (code review).
-    resetAll();
+    // A previous write's "Saved." / error banner must not survive under a freshly filtered list (code review). ⛔ The
+    // held retry is KEPT (code review round 2): a filter changes ⛔ what it would send, and the code already sent stays
+    // usable — the panel names the write it holds.
+    resetSettled();
   };
-  const hold = (owner: WorkplaceControl, retry: () => void) => (err: unknown) => {
-    if (needsStepUp(err)) setPending({ owner, retry });
+  /** Paging keeps a held retry too (code review round 2 — it changes ⛔ what the retry would send). */
+  const goToPage = (next: string | undefined): void => setPage({ filterKey, cursor: next });
+  /**
+   * Hold a step-up-refused write — ONLY if nothing changed its payload or backed out of it since the click (`snap`, code
+   * review round 2): a 403 that lands after an edit holds ⛔ the OLD body, and the refused write wrote nothing.
+   */
+  const hold = (owner: WorkplaceControl, label: string, retry: () => void, snap: HoldSnapshot, target?: string) => (err: unknown) => {
+    if (!needsStepUp(err) || !gens.isCurrent(snap)) return;
+    setPending(holdOnce({ owner, ...(target !== undefined ? { target } : {}), id: ++holdSeq.current, label, retry }));
   };
   const runAdd = (body: AdminWorkplaceAddRequest): void => {
-    resetAll();
-    add.mutate(body, { onSuccess: () => setAddFormKey((k) => k + 1), onError: hold('add', () => runAdd(body)) });
+    resetSettled();
+    const snap = gens.snapshot('add');
+    add.mutate(body, {
+      // Remount the form EMPTY only when the admin has ⛔ typed into it since the click (code review round 2) — an edit
+      // made while the add was in flight is the next entry, ⛔ to be wiped.
+      onSuccess: () => {
+        if (gens.isCurrent(snap)) setAddFormKey((k) => k + 1);
+      },
+      onError: hold('add', stepUpEn.held.add(body.name), () => runAdd(body), snap),
+    });
   };
-  const runRename = (workplaceId: string, name: string): void => {
-    resetAll();
-    rename.mutate({ workplaceId, name }, { onError: hold('rename', () => runRename(workplaceId, name)) });
+  const runRename = (workplaceId: string, name: string, onSaved: () => void): void => {
+    resetSettled();
+    const snap = gens.snapshot('rename', workplaceId);
+    rename.mutate(
+      { workplaceId, name },
+      {
+        // Edit mode ends only if the text was ⛔ changed while the rename was in flight (code review round 2).
+        onSuccess: () => {
+          if (gens.isCurrent(snap)) onSaved();
+        },
+        onError: hold('rename', stepUpEn.held.rename(name), () => runRename(workplaceId, name, onSaved), snap, workplaceId),
+      },
+    );
   };
   // `action` is CAPTURED at the moment the toggle was originally triggered (the call site below), not re-derived
   // from the row's status here — a retry must re-send the ORIGINALLY intended direction even if the list has since
   // refetched a different status for this row (code review).
-  const runToggle = (workplaceId: string, action: 'delist' | 'relist'): void => {
-    resetAll();
-    toggle.mutate({ workplaceId, action }, { onError: hold('toggle', () => runToggle(workplaceId, action)) });
+  const runToggle = (workplaceId: string, action: 'delist' | 'relist', name: string): void => {
+    resetSettled();
+    const snap = gens.snapshot('toggle', workplaceId);
+    toggle.mutate({ workplaceId, action }, { onError: hold('toggle', stepUpEn.held[action](name), () => runToggle(workplaceId, action, name), snap, workplaceId) });
   };
 
   const writeError = [add.error, rename.error, toggle.error].find((e) => e && !needsStepUp(e));
@@ -219,7 +336,13 @@ export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactEleme
       <div className="flex flex-wrap items-end gap-3" data-testid="workplaces-filters">
         <label className="flex flex-col text-xs">
           {t.filters.district}
-          <input className="rounded border px-2 py-1 text-sm" value={filters.district} onChange={(e) => setFilter('district', e.target.value)} data-testid="filter-district" />
+          <input
+            className="rounded border px-2 py-1 text-sm"
+            value={filters.district}
+            maxLength={WORKPLACE_DISTRICT_INPUT_MAX}
+            onChange={(e) => setFilter('district', e.target.value)}
+            data-testid="filter-district"
+          />
         </label>
         <label className="flex flex-col text-xs">
           {t.filters.kind}
@@ -238,7 +361,13 @@ export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactEleme
         </label>
         <label className="flex flex-col text-xs">
           {t.filters.search}
-          <input className="rounded border px-2 py-1 text-sm" value={filters.q} onChange={(e) => setFilter('q', e.target.value)} data-testid="filter-q" />
+          <input
+            className="rounded border px-2 py-1 text-sm"
+            value={filters.q}
+            maxLength={WORKPLACE_SEARCH_TEXT_MAX_WIRE}
+            onChange={(e) => setFilter('q', e.target.value)}
+            data-testid="filter-q"
+          />
         </label>
       </div>
 
@@ -268,9 +397,11 @@ export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactEleme
                 <Row
                   key={w.workplaceId}
                   w={w}
-                  busy={rename.isPending || toggle.isPending}
-                  onRename={(name) => runRename(w.workplaceId, name)}
-                  onToggle={() => runToggle(w.workplaceId, w.status === 'listed' ? 'delist' : 'relist')}
+                  canManage={canManage}
+                  locked={locked}
+                  onRename={(name, onSaved) => runRename(w.workplaceId, name, onSaved)}
+                  onToggle={() => runToggle(w.workplaceId, w.status === 'listed' ? 'delist' : 'relist', w.name)}
+                  onAbandonRename={() => abandon('rename', w.workplaceId)}
                 />
               ))}
             </tbody>
@@ -279,27 +410,35 @@ export function WorkplacesPage({ pariwarId }: { pariwarId: string }): ReactEleme
       ) : null}
       <div className="flex gap-3">
         {cursor !== undefined ? (
-          <button type="button" className="text-sm underline" onClick={() => setCursor(undefined)}>
+          <button type="button" className="text-sm underline" onClick={() => goToPage(undefined)}>
             {t.first}
           </button>
         ) : null}
-        {list.data?.hasMore && list.data.nextCursor ? (
-          <button type="button" className="text-sm underline" onClick={() => setCursor(list.data!.nextCursor!)} data-testid="workplaces-next">
+        {/* ⛔ While the PREVIOUS filter's rows are on screen (`keepPreviousData`): their cursor belongs to that filter. */}
+        {list.data?.hasMore && list.data.nextCursor && !list.isPlaceholderData ? (
+          <button type="button" className="text-sm underline" onClick={() => goToPage(list.data!.nextCursor!)} data-testid="workplaces-next">
             {t.next}
           </button>
         ) : null}
       </div>
 
       {/* `onEdit` clears a pending step-up ONLY when this control (the add form) is the one holding it — editing a
-          field here must not silently drop an unrelated held rename/toggle retry (code review). */}
-      <AddForm key={addFormKey} processing={add.isPending} onSubmit={runAdd} onEdit={() => setPending((p) => (p?.owner === 'add' ? null : p))} />
+          field here must not silently drop an unrelated held rename/toggle retry (code review). ⛔ Without the national
+          grant (code review round 2). */}
+      {canManage ? <AddForm key={addFormKey} processing={add.isPending} locked={locked} onSubmit={runAdd} onEdit={() => abandon('add')} /> : null}
 
       {/* Rendered ONLY while a retry is held — unmounting it between retries resets its internal OTP + mutation
-          state instead of carrying it stale into the next one (code review). */}
-      {pending ? <StepUpPanel context={WORKPLACE_MANAGE_STEP_UP_CONTEXT} pending={pending} onDone={() => setPending(null)} testId="workplaces-step-up" /> : null}
+          state instead of carrying it stale into the next one (code review). Keyed by the hold (code review round 2). */}
+      {pending ? (
+        <StepUpPanel key={holdKey(pending)} context={WORKPLACE_MANAGE_STEP_UP_CONTEXT} pending={pending} onDone={clearStepUp} onCancel={clearStepUp} testId="workplaces-step-up" />
+      ) : null}
       {writeError ? (
         <p role="alert" className="text-sm text-status-fail-fg" data-testid="workplaces-write-error">
-          {errorText(writeError, t.errors, t)}
+          {/* A refused RELIST whose district left the list has ⛔ district field to fix (code review round 2) — its own
+              line, ⛔ the add form's "use a district exactly as the list spells it". */}
+          {writeError === toggle.error && toggle.variables?.action === 'relist' && writeError instanceof ApiError && writeError.code === 'workplace.district_not_found'
+            ? t.relistDistrictGone
+            : errorText(writeError, t.errors, t)}
         </p>
       ) : null}
       <p role="status" className="text-sm" data-testid="workplaces-saved">

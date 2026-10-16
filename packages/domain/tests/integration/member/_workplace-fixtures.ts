@@ -21,6 +21,9 @@ export interface FixtureWorkplace {
   readonly status?: 'listed' | 'delisted';
 }
 
+/** The Super Admin a fixture STAFF row names (0165's `workplaces_staff_actor_check`). */
+export const STAFF_FIXTURE_ACTOR = '0a0a0a0a-0000-4000-8000-0000000000ff';
+
 /** ONE batch, the given district spellings (listed unless named in `retired`), and the given workplaces. */
 export async function seedWorkplaceList(
   client: pg.PoolClient,
@@ -55,8 +58,8 @@ export async function seedWorkplaceList(
     code += 1;
     await client.query(
       `INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, village_name, cluster_name, udise_school_code, block_code,
-         source, import_batch_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+         source, import_batch_id, status, created_by_actor_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         id,
         pariwarId,
@@ -70,6 +73,8 @@ export async function seedWorkplaceList(
         kind === 'school' ? 'import' : 'staff',
         kind === 'school' ? batchId : null,
         w.status ?? 'listed',
+        // A staff row names its actor — 0165's `workplaces_staff_actor_check` (code review round 2).
+        kind === 'school' ? null : STAFF_FIXTURE_ACTOR,
       ],
     );
   }

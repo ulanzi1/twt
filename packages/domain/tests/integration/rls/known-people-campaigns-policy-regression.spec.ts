@@ -3,7 +3,8 @@
 //   · the CHECKs: the window (at most 30 days INCLUSIVE — `ends_on - starts_on <= 29`, RV6; ⛔ an end before the start);
 //     an end is dated AND attributed, or neither;
 //   · the column grant: `twt_app` may change only the end's two columns; ⛔ DELETE;
-//   · RLS: per-command policies, FORCE, a cross-tenant reader sees nothing, the fail-closed probe, WITH CHECK.
+//   · RLS: per-command policies, FORCE, a cross-tenant reader sees nothing, the fail-closed probe, WITH CHECK;
+//   · the indexes (code review round 2): the `UNIQUE (pariwar_id, campaign_id)` and 0165's list index.
 // The writer's overlap rule (the Pariwar advisory lock) is `tests/integration/member/known-people-campaigns.spec.ts`.
 
 import { randomUUID } from 'node:crypto';
@@ -86,6 +87,25 @@ describe.skipIf(!hasDatabase)('0164 — known_people_campaigns', { timeout: 2000
     ]);
     const fks = await client.query(`SELECT 1 FROM pg_constraint WHERE contype = 'f' AND conrelid = 'known_people_campaigns'::regclass`);
     expect(fks.rows).toHaveLength(0);
+  });
+
+  it('the indexes (family 5 — code review round 2): `UNIQUE (pariwar_id, campaign_id)`; the list index on its sort (0165); ⛔ 0164\'s `ends_on` index', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ indexname: string; indexdef: string }>(
+      `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'known_people_campaigns' ORDER BY indexname`,
+    );
+    expect(rows.map((r) => r.indexname)).toEqual([
+      'known_people_campaigns_pariwar_campaign_uq',
+      'known_people_campaigns_pariwar_created_idx',
+      'known_people_campaigns_pkey',
+    ]);
+    const def = (n: string) => rows.find((r) => r.indexname === n)!.indexdef;
+    expect(def('known_people_campaigns_pariwar_created_idx')).toMatch(/USING btree \(pariwar_id, created_at DESC, campaign_id DESC\)$/);
+    expect(def('known_people_campaigns_pariwar_campaign_uq')).toMatch(/^CREATE UNIQUE INDEX .* USING btree \(pariwar_id, campaign_id\)$/);
+    const uq = await client.query<{ def: string }>(
+      `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conrelid = 'known_people_campaigns'::regclass AND contype = 'u'`,
+    );
+    expect(uq.rows.map((r) => r.def)).toEqual(['UNIQUE (pariwar_id, campaign_id)']);
   });
 
   it('a cross-tenant reader sees nothing; the unscoped probe sees nothing; WITH CHECK refuses another Pariwar', async () => {

@@ -916,12 +916,14 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /**
      * Story 6.36c (AC4) — the member's "Yes" / "No" to a Pariwar Admin's suggested workplace (auth). `idempotencyKey` rides
      * the `Idempotency-Key` HEADER (required): a FRESH key per showing of the question, reused ONLY for a retry of that press.
-     * "Yes" ⇒ `{ answer: 'yes', summary }` (a posting is written); "No" ⇒ `{ answer: 'no' }`. Refusals: 404
-     * `workplace.request_not_found`, 409 `workplace.request_closed` / `workplace.suggestion_stale`, 422
+     * "Yes" ⇒ `{ answer: 'yes', summary }` (a posting is written); "No" ⇒ `{ answer: 'no' }`. `workplaceId` is the
+     * workplace the member was SHOWN (code review round 2) — a different stored suggestion ⇒ 409
+     * `workplace.suggestion_changed`, nothing changed. Refusals: 404 `workplace.request_not_found`, 409
+     * `workplace.request_closed` / `workplace.suggestion_stale` / `workplace.suggestion_changed`, 422
      * `workplace.start_date_invalid`.
      */
-    answerWorkplaceSuggestion(requestId: string, answer: 'yes' | 'no', idempotencyKey: string): Promise<WorkplaceAnswerResponse> {
-      return call(`${LIFE_EVENTS_BASE}/workplace-requests/${encodeURIComponent(requestId)}/answer`, WorkplaceAnswerResponse, { answer }, true, 'POST', undefined, {
+    answerWorkplaceSuggestion(requestId: string, answer: 'yes' | 'no', workplaceId: string, idempotencyKey: string): Promise<WorkplaceAnswerResponse> {
+      return call(`${LIFE_EVENTS_BASE}/workplace-requests/${encodeURIComponent(requestId)}/answer`, WorkplaceAnswerResponse, { answer, workplaceId }, true, 'POST', undefined, {
         'idempotency-key': idempotencyKey,
       });
     },

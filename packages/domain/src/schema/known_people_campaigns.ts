@@ -27,8 +27,8 @@ export const knownPeopleCampaigns = pgTable(
   },
   (t) => [
     unique('known_people_campaigns_pariwar_campaign_uq').on(t.pariwarId, t.campaignId),
-    // The list's actual sort (`listCampaigns`: `created_at DESC, campaign_id DESC` — migration 0164, corrected from an
-    // earlier `ends_on`-keyed definition that did not match it).
+    // The list's actual sort (`listCampaigns`: `created_at DESC, campaign_id DESC`). Migration 0165 (code review round 2)
+    // drops 0164's `known_people_campaigns_pariwar_ends_on_idx` (`ends_on DESC`, which did not match it) and creates this.
     index('known_people_campaigns_pariwar_created_idx').on(t.pariwarId, t.createdAt.desc(), t.campaignId.desc()),
   ],
 );

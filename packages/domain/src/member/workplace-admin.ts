@@ -25,7 +25,7 @@ import type { MemberId, PariwarId, WorkplaceId, WorkplaceRequestId } from '../id
 import { workplaceId as toWorkplaceId, workplaceRequestId as toWorkplaceRequestId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { type WorkplaceKind, type WorkplaceSource, type WorkplaceStatus, workplaces } from '../schema/workplaces.js';
-import { insertMemberPosting } from './posting.js';
+import { insertMemberPosting, MEMBER_POSTING_TERMINAL_STATES } from './posting.js';
 import {
   decodeWorkplaceCursor,
   encodeWorkplaceCursor,
@@ -37,6 +37,7 @@ import {
   lockListedDistrict,
   lockListedWorkplace,
   lockMemberPostingWrites,
+  staleSuggestionSql,
   WORKPLACE_SEARCH_TEXT_MAX,
   WorkplaceCursorInvalidError,
 } from './workplace.js';
@@ -89,6 +90,9 @@ export const WORKPLACE_ANSWER_REFUSAL_CODES = [
   'workplace.request_closed',
   'workplace.suggestion_stale',
   'workplace.start_date_invalid',
+  // Code review round 2: the answer names the workplace the member was SHOWN; a different stored suggestion ⇒ a 409 and ⛔
+  // state change (the stored suggestion is valid — the member has simply not seen it yet).
+  'workplace.suggestion_changed',
 ] as const;
 export type WorkplaceAnswerRefusalCode = (typeof WORKPLACE_ANSWER_REFUSAL_CODES)[number];
 
@@ -273,19 +277,22 @@ export async function addStaffWorkplace(db: Db, input: AddStaffWorkplaceInput): 
   }
 }
 
-/** Lock one workplace `FOR UPDATE`; unknown / another Pariwar's ⇒ `not_found`; an imported one ⇒ `import_managed` (RV3). */
-async function lockStaffWorkplace(db: Db, pariwarId: PariwarId, workplaceId: string): Promise<AdminWorkplace> {
+/** One workplace — locked `FOR UPDATE` (`lock`) or a PLAIN read; unknown / another Pariwar's ⇒ `not_found`; an imported one ⇒ `import_managed` (RV3). */
+async function staffWorkplace(db: Db, pariwarId: PariwarId, workplaceId: string, lock: boolean): Promise<AdminWorkplace> {
   if (!isWorkplaceUuid(workplaceId)) throw new WorkplaceAdminRefusedError('workplace.not_found');
-  const rows = await db
+  const query = db
     .select(adminColumns)
     .from(workplaces)
-    .where(and(eq(workplaces.pariwarId, pariwarId), eq(workplaces.workplaceId, workplaceId as WorkplaceId)))
-    .for('update');
+    .where(and(eq(workplaces.pariwarId, pariwarId), eq(workplaces.workplaceId, workplaceId as WorkplaceId)));
+  const rows = lock ? await query.for('update') : await query;
   const w = rows[0];
   if (!w) throw new WorkplaceAdminRefusedError('workplace.not_found');
   if (w.source !== 'staff') throw new WorkplaceAdminRefusedError('workplace.import_managed');
   return w;
 }
+
+const lockStaffWorkplace = (db: Db, pariwarId: PariwarId, workplaceId: string) => staffWorkplace(db, pariwarId, workplaceId, true);
+const readStaffWorkplace = (db: Db, pariwarId: PariwarId, workplaceId: string) => staffWorkplace(db, pariwarId, workplaceId, false);
 
 /** Rename a STAFF row (the name rules of an add). ⛔ An imported row (RV3). */
 export async function renameStaffWorkplace(db: Db, input: { pariwarId: PariwarId; workplaceId: string; name: string }): Promise<AdminWorkplace> {
@@ -302,13 +309,49 @@ export async function renameStaffWorkplace(db: Db, input: { pariwarId: PariwarId
 /**
  * Delist (`listed: false`) or relist a STAFF row. ⛔ An imported row (RV3); a row already in that state ⇒ `state_unchanged`.
  * ⛔ Never a delete — a delisted entry stays on every posting (I3).
+ * ⭐ A RELIST requires the row's district to be LISTED, as an add does (code review round 2): ⛔ ⇒ `district_not_found` —
+ * a relisted entry on a retired spelling could be suggested and chosen onto a district being retired. The district is
+ * locked `FOR SHARE` BEFORE the workplace (district → workplace — the rename CLI's order): a PLAIN read finds the
+ * district, then the district lock, then the workplace `FOR UPDATE` on THAT district only, inside a SAVEPOINT. A row a
+ * concurrent rename moved in between fails the re-checked predicate — but Postgres takes the row lock BEFORE that
+ * re-check, so a plain retry would request the next district while still holding the workplace (workplace → district, a
+ * 40P01 against a back-to-back `--rename-district`; code review round 2, fix review). `ROLLBACK TO SAVEPOINT` releases a
+ * row lock taken inside the subtransaction (verified on :5433: `FOR UPDATE NOWAIT` from a second session fails inside the
+ * savepoint and succeeds after the rollback), so the retry starts again from the district holding ⛔ workplace lock. A
+ * delist locks only the workplace (as before).
  */
 export async function setStaffWorkplaceListed(
   db: Db,
   input: { pariwarId: PariwarId; workplaceId: string; listed: boolean },
 ): Promise<AdminWorkplace> {
-  const w = await lockStaffWorkplace(db, input.pariwarId, input.workplaceId);
   const status: WorkplaceStatus = input.listed ? 'listed' : 'delisted';
+  let w: AdminWorkplace | null = null;
+  if (!input.listed) {
+    w = await lockStaffWorkplace(db, input.pariwarId, input.workplaceId);
+  } else {
+    for (let attempt = 0; attempt < 2 && w === null; attempt += 1) {
+      const plain = await readStaffWorkplace(db, input.pariwarId, input.workplaceId);
+      const districtListed = await lockListedDistrict(db, input.pariwarId, plain.district);
+      await db.execute(sql`SAVEPOINT relist_workplace_lock`);
+      const rows = await db
+        .select(adminColumns)
+        .from(workplaces)
+        .where(and(eq(workplaces.pariwarId, input.pariwarId), eq(workplaces.workplaceId, plain.workplaceId), eq(workplaces.district, plain.district)))
+        .for('update');
+      const locked = rows[0];
+      if (!locked) {
+        // Moved by a concurrent rename — release the row lock the re-check left behind, then re-read from the district.
+        await db.execute(sql`ROLLBACK TO SAVEPOINT relist_workplace_lock`);
+        continue;
+      }
+      await db.execute(sql`RELEASE SAVEPOINT relist_workplace_lock`);
+      if (locked.status === status) throw new WorkplaceAdminRefusedError('workplace.state_unchanged');
+      if (!districtListed) throw new WorkplaceAdminRefusedError('workplace.district_not_found');
+      w = locked;
+    }
+    // Moved twice under us — the spelling it was read under is gone.
+    if (w === null) throw new WorkplaceAdminRefusedError('workplace.district_not_found');
+  }
   if (w.status === status) throw new WorkplaceAdminRefusedError('workplace.state_unchanged');
   const updated = await db
     .update(workplaces)
@@ -329,10 +372,20 @@ export interface WorkplaceRequestForReview {
   readonly startedOn: string;
   /** UTC ISO with µs (a cursor part). */
   readonly createdAt: string;
+  /** ⚠ A STALE suggestion reads as `pending` (code review round 2 — RV11 at read time). */
   readonly state: 'pending' | 'suggested';
-  /** The Pariwar's OTHER `pending` requests with the same typed name, case- and space-folded (an erased name ⇒ 0). */
+  /**
+   * The Pariwar's OTHER `pending` requests with the same typed name, case- and space-folded (an erased name ⇒ 0). A
+   * stale-suggested request counts as pending; a request of a withdrawn or anonymized member ⛔ counts (code review
+   * round 2).
+   */
   readonly sameNameCount: number;
   readonly suggested: { readonly workplaceId: WorkplaceId; readonly name: string; readonly district: string } | null;
+  /**
+   * `true` ONLY for a request stored as `suggested` whose suggestion is STALE (`staleSuggestionSql`) — it is listed under
+   * `pending` with `suggested: null`, and a new suggestion replaces the old one (code review round 2 — RV11 at read time).
+   */
+  readonly staleSuggestion: boolean;
 }
 
 /** The typed name, case- and space-folded. ⚠ `\\s+` in this source is `\s+` in the SQL. */
@@ -341,9 +394,30 @@ function foldedName(col: SQL): SQL {
 }
 
 /**
- * The Pariwar's open requests of ONE state (`pending` by default, or `suggested`), optionally ONE district, newest first
+ * The request `r`'s member is ⛔ withdrawn or anonymized (`MEMBER_POSTING_TERMINAL_STATES` — the answer route refuses such a
+ * member, so their request could be suggested but never answered; code review round 2). ⚠ It reads `members.state` (the
+ * projection), as the home prompts do. ⛔ Any member column reaches the output.
+ */
+function requestOfLiveMemberSql(r: SQL): SQL {
+  const terminal = sql.join(MEMBER_POSTING_TERMINAL_STATES.map((s) => sql`${s}`), sql`, `);
+  return sql`EXISTS (SELECT 1 FROM members qm WHERE qm.pariwar_id = ${r}.pariwar_id AND qm.member_id = ${r}.member_id AND qm.state NOT IN (${terminal}))`;
+}
+
+/** The other requests (`o`) the same-name count reads: one state arm, ⛔ `r` itself, the same folded name, a live member. */
+function sameNameCountSql(stateArm: SQL): SQL {
+  return sql`(SELECT count(*) FROM workplace_requests o
+     WHERE o.pariwar_id = r.pariwar_id AND ${stateArm} AND o.request_id <> r.request_id
+       AND o.typed_name IS NOT NULL AND ${foldedName(sql`o.typed_name`)} = ${foldedName(sql`r.typed_name`)}
+       AND ${requestOfLiveMemberSql(sql`o`)})`;
+}
+
+/**
+ * The Pariwar's open requests of ONE tab (`pending` by default, or `suggested`), optionally ONE district, newest first
  * (`created_at DESC, request_id DESC`), keyset-paginated, filtered IN SQL (the open index). The same-name count is a
  * correlated count, ⛔ an N+1.
+ * ⭐ Code review round 2: a request stored as `suggested` whose suggestion is STALE is listed under `pending` (`state:
+ * 'pending'`, `suggested: null`, `staleSuggestion: true`) and ⛔ under `suggested`; a request of a withdrawn or anonymized
+ * member is ⛔ listed and ⛔ counted.
  */
 export async function listWorkplaceRequestsForReview(
   db: Db,
@@ -356,7 +430,8 @@ export async function listWorkplaceRequestsForReview(
   },
 ): Promise<AdminPage<WorkplaceRequestForReview>> {
   const limit = clampLimit(input.limit, WORKPLACE_REQUEST_QUEUE_LIMIT);
-  const state = input.state ?? 'pending';
+  const stale = staleSuggestionSql(sql`r`);
+  const tab = (input.state ?? 'pending') === 'pending' ? sql`(r.state = 'pending' OR ${stale})` : sql`(r.state = 'suggested' AND NOT ${stale})`;
   const district = input.district === undefined ? sql`` : sql`AND r.district = ${input.district}`;
   let after = sql``;
   if (input.cursor !== undefined) {
@@ -374,24 +449,29 @@ export async function listWorkplaceRequestsForReview(
     started_on: string;
     created_at: string;
     state: 'pending' | 'suggested';
+    stale_suggestion: boolean;
     same_name_count: string | number;
     suggested_id: string | null;
     suggested_name: string | null;
     suggested_district: string | null;
   }>(sql`
-    SELECT r.request_id, r.typed_name, r.typed_place, r.district, to_char(r.started_on, 'YYYY-MM-DD') AS started_on,
-           to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at, r.state,
-           CASE WHEN r.typed_name IS NULL THEN 0 ELSE (
-             SELECT count(*) FROM workplace_requests o
-              WHERE o.pariwar_id = r.pariwar_id AND o.state = 'pending' AND o.request_id <> r.request_id
-                AND o.typed_name IS NOT NULL AND ${foldedName(sql`o.typed_name`)} = ${foldedName(sql`r.typed_name`)}
-           ) END AS same_name_count,
-           w.workplace_id AS suggested_id, w.name AS suggested_name, w.district AS suggested_district
-      FROM workplace_requests r
-      LEFT JOIN workplaces w ON r.state = 'suggested' AND w.pariwar_id = r.pariwar_id AND w.workplace_id = r.suggested_workplace_id
-     WHERE r.pariwar_id = ${input.pariwarId} AND r.state = ${state} ${district} ${after}
-     ORDER BY r.created_at DESC, r.request_id DESC
-     LIMIT ${clampLimit(limit + 1, { default: WORKPLACE_REQUEST_QUEUE_LIMIT.default + 1, cap: WORKPLACE_REQUEST_QUEUE_LIMIT.cap + 1 })}`);
+    SELECT q.*, w.workplace_id AS suggested_id, w.name AS suggested_name, w.district AS suggested_district
+      FROM (
+        SELECT r.request_id, r.pariwar_id, r.suggested_workplace_id, r.typed_name, r.typed_place, r.district,
+               to_char(r.started_on, 'YYYY-MM-DD') AS started_on,
+               to_char(r.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at, r.created_at AS created_ts,
+               r.state, ${stale} AS stale_suggestion,
+               CASE WHEN r.typed_name IS NULL THEN 0 ELSE
+                 -- Two arms (the pending one on the folded-name index): a stale-suggested request counts as pending.
+                 ${sameNameCountSql(sql`o.state = 'pending'`)} + ${sameNameCountSql(sql`o.state = 'suggested' AND ${staleSuggestionSql(sql`o`)}`)}
+               END AS same_name_count
+          FROM workplace_requests r
+         WHERE r.pariwar_id = ${input.pariwarId} AND ${tab} ${district} ${after} AND ${requestOfLiveMemberSql(sql`r`)}
+         ORDER BY r.created_at DESC, r.request_id DESC
+         LIMIT ${clampLimit(limit + 1, { default: WORKPLACE_REQUEST_QUEUE_LIMIT.default + 1, cap: WORKPLACE_REQUEST_QUEUE_LIMIT.cap + 1 })}
+      ) q
+      LEFT JOIN workplaces w ON q.state = 'suggested' AND NOT q.stale_suggestion AND w.pariwar_id = q.pariwar_id AND w.workplace_id = q.suggested_workplace_id
+     ORDER BY q.created_ts DESC, q.request_id DESC`);
   const hasMore = rows.rows.length > limit;
   const items: WorkplaceRequestForReview[] = rows.rows.slice(0, limit).map((r) => ({
     requestId: toWorkplaceRequestId(r.request_id),
@@ -400,12 +480,13 @@ export async function listWorkplaceRequestsForReview(
     district: r.district,
     startedOn: r.started_on,
     createdAt: r.created_at,
-    state: r.state,
+    state: r.stale_suggestion === true ? 'pending' : r.state,
     sameNameCount: Number(r.same_name_count),
     suggested:
-      r.suggested_id !== null && r.suggested_name !== null && r.suggested_district !== null
+      r.stale_suggestion !== true && r.suggested_id !== null && r.suggested_name !== null && r.suggested_district !== null
         ? { workplaceId: toWorkplaceId(r.suggested_id), name: r.suggested_name, district: r.suggested_district }
         : null,
+    staleSuggestion: r.stale_suggestion === true,
   }));
   const last = items[items.length - 1];
   return { items, hasMore, nextCursor: hasMore && last ? encodeWorkplaceCursor([last.createdAt, last.requestId]) : null };
@@ -432,11 +513,28 @@ async function lockRequest(db: Db, pariwarId: PariwarId, requestId: string, memb
 }
 
 /**
- * The Pariwar Admin SUGGESTS a listed workplace for a `pending` request. Order (district → workplace → request): the
- * workplace LISTED in this Pariwar (`lockListedWorkplace`; ⛔ ⇒ `not_found`); the request `FOR UPDATE` (⛔ ⇒
- * `request_not_found`; ⛔ `pending` ⇒ `request_closed` — a re-suggestion goes back through `pending`, which only the
- * member's *"No"* or a stale answer does); the workplace's district = the request's (⛔ ⇒ `district_mismatch` — a same-named
- * school elsewhere would move the member's district, SW5). ⇒ `suggested`, the actor and the time recorded.
+ * A request's stored suggestion is STALE (`staleSuggestionSql` — the ONE fragment): a PLAIN read under the caller's request
+ * lock (⛔ the suggestion's own rows are locked — see `suggestWorkplaceForRequest`).
+ */
+async function storedSuggestionIsStale(db: Db, pariwarId: PariwarId, requestId: string): Promise<boolean> {
+  const r = await db.execute<{ stale: boolean }>(sql`
+    SELECT ${staleSuggestionSql(sql`r`)} AS stale FROM workplace_requests r WHERE r.pariwar_id = ${pariwarId} AND r.request_id = ${requestId}::uuid`);
+  return r.rows[0]?.stale === true;
+}
+
+/**
+ * The Pariwar Admin SUGGESTS a listed workplace for an open request. Order (district → workplace → request): the workplace
+ * LISTED in this Pariwar (`lockListedWorkplace`; ⛔ ⇒ `not_found`); the request `FOR UPDATE` (⛔ ⇒ `request_not_found`); its
+ * state: `pending` ⇒ suggest; `suggested` ⇒ ONLY when that suggestion is STALE (`staleSuggestionSql`, a PLAIN read under
+ * the request lock — RV11 at read time, code review round 2): it goes back to `pending` (NULLed) and the new suggestion is
+ * written, in this ONE transaction; a still-VALID suggestion ⇒ `request_closed` (a mistaken but valid suggestion is ⛔
+ * replaced — W4's boundary; a re-suggestion goes back through `pending`, which only the member's *"No"* or a stale answer
+ * does); any other state ⇒ `request_closed`. The workplace's district = the request's (⛔ ⇒ `district_mismatch` — a
+ * same-named school elsewhere would move the member's district, SW5). ⇒ `suggested`, the actor and the time recorded.
+ * ⚠ The STORED suggestion's workplace and district are ⛔ locked (code review round 2, fix review): taken before the new
+ * pair, they formed lock cycles with the import (row locks in file order, ⛔ district first) and with a merging district
+ * rename. So a delist of it that is still UNCOMMITTED reads as valid ⇒ `request_closed` — a conservative refusal; the
+ * queue lists the request as pending once the delist commits, and the next suggestion succeeds.
  */
 export async function suggestWorkplaceForRequest(
   db: Db,
@@ -446,8 +544,16 @@ export async function suggestWorkplaceForRequest(
   if (!w) throw new WorkplaceAdminRefusedError('workplace.not_found');
   const req = await lockRequest(db, input.pariwarId, input.requestId);
   if (!req) throw new WorkplaceAdminRefusedError('workplace.request_not_found');
-  if (req.state !== 'pending') throw new WorkplaceAdminRefusedError('workplace.request_closed');
+  let replacesStale = false;
+  if (req.state === 'suggested') {
+    if (!(await storedSuggestionIsStale(db, input.pariwarId, req.request_id))) throw new WorkplaceAdminRefusedError('workplace.request_closed');
+    replacesStale = true;
+  } else if (req.state !== 'pending') {
+    throw new WorkplaceAdminRefusedError('workplace.request_closed');
+  }
   if (w.district !== req.district) throw new WorkplaceAdminRefusedError('workplace.district_mismatch');
+  // The 0164 guard: `suggested → suggested` is ⛔ a move — back through `pending` (NULLed), then the new suggestion.
+  if (replacesStale) await returnToPending(db, input.pariwarId, req.request_id);
   await db.execute(sql`
     UPDATE workplace_requests
        SET state = 'suggested', suggested_workplace_id = ${w.workplaceId}, suggested_by_actor_id = ${input.actorId}, suggested_at = now()
@@ -492,19 +598,24 @@ async function returnToPending(db: Db, pariwarId: PariwarId, requestId: string):
  * it emits the event and the audit line). Steps:
  *   1. the member's posting writes serialised (`lockMemberPostingWrites` — a concurrent posting would withdraw the request);
  *   2. a PLAIN read of the CALLER's request (another member's or an unknown id ⇒ the SAME `request_not_found`); ⛔
- *      `suggested` ⇒ `request_closed`;
- *   3. *"No"* ⇒ the request `FOR UPDATE`, re-checked, back to `pending` (NULLed) ⇒ `declined` — it reappears in the queue;
- *   4. *"Yes"* ⇒ the workplace (`lockListedWorkplace` — district → workplace), THEN the request `FOR UPDATE`, its state AND
- *      district re-checked (a concurrent rename moves an open request's district); a workplace ⛔ listed or ⛔ in the
- *      request's district ⇒ back to `pending` ⇒ `stale` (RV11 — ⛔ a throw: the caller COMMITS it); the start date against the
+ *      `suggested` ⇒ `request_closed`; a stored suggestion ⛔ the `workplaceId` the member was SHOWN ⇒
+ *      `suggestion_changed`, ⛔ state change (code review round 2 — the stored one is valid; the member looks again);
+ *   3. *"No"* ⇒ the request `FOR UPDATE`, re-checked (state ⇒ `request_closed`; the shown workplace ⇒
+ *      `suggestion_changed`), back to `pending` (NULLed) ⇒ `declined` — it reappears in the queue;
+ *   4. *"Yes"* ⇒ the workplace (`lockListedWorkplace` — district → workplace), THEN the request `FOR UPDATE`, its state, the
+ *      shown workplace AND the district re-checked (a concurrent rename moves an open request's district); a workplace ⛔
+ *      listed or ⛔ in the request's district — `staleSuggestionSql`'s condition, read through the locks — ⇒ back to
+ *      `pending` ⇒ `stale` (RV11 — ⛔ a throw: the caller COMMITS it); the start date against the
  *      member's latest (⛔ ⇒ `start_date_invalid`); the request `confirmed` FIRST; then ONE posting through the ONE writer
  *      naming the WORKPLACE (⛔ the request — the one-of-two CHECK), `exceptRequestId` = this request ⇒ `confirmed`.
  */
 export async function answerWorkplaceSuggestion(
   db: Db,
-  input: { pariwarId: PariwarId; memberId: MemberId; requestId: string; answer: 'yes' | 'no'; now: Date },
+  input: { pariwarId: PariwarId; memberId: MemberId; requestId: string; answer: 'yes' | 'no'; workplaceId: string; now: Date },
 ): Promise<WorkplaceAnswerResult> {
   const { pariwarId, memberId } = input;
+  // The DB returns lower-case uuids; the wire's `z.string().uuid()` accepts either case.
+  const shown = input.workplaceId.toLowerCase();
   await lockMemberPostingWrites(db, memberId);
   if (!isWorkplaceUuid(input.requestId)) throw new WorkplaceAnswerRefusedError('workplace.request_not_found');
   const plain = await db.execute<{ state: string; suggested_workplace_id: string | null }>(sql`
@@ -513,11 +624,13 @@ export async function answerWorkplaceSuggestion(
   const seen = plain.rows[0];
   if (!seen) throw new WorkplaceAnswerRefusedError('workplace.request_not_found');
   if (seen.state !== 'suggested' || seen.suggested_workplace_id === null) throw new WorkplaceAnswerRefusedError('workplace.request_closed');
+  if (seen.suggested_workplace_id !== shown) throw new WorkplaceAnswerRefusedError('workplace.suggestion_changed');
 
   if (input.answer === 'no') {
     const req = await lockRequest(db, pariwarId, input.requestId, memberId);
     if (!req) throw new WorkplaceAnswerRefusedError('workplace.request_not_found');
     if (req.state !== 'suggested') throw new WorkplaceAnswerRefusedError('workplace.request_closed');
+    if (req.suggested_workplace_id !== shown) throw new WorkplaceAnswerRefusedError('workplace.suggestion_changed');
     await returnToPending(db, pariwarId, req.request_id);
     return { kind: 'declined' };
   }
@@ -525,9 +638,9 @@ export async function answerWorkplaceSuggestion(
   const w = await lockListedWorkplace(db, pariwarId, seen.suggested_workplace_id);
   const req = await lockRequest(db, pariwarId, input.requestId, memberId);
   if (!req) throw new WorkplaceAnswerRefusedError('workplace.request_not_found');
-  if (req.state !== 'suggested' || req.suggested_workplace_id !== seen.suggested_workplace_id) {
-    throw new WorkplaceAnswerRefusedError('workplace.request_closed');
-  }
+  if (req.state !== 'suggested') throw new WorkplaceAnswerRefusedError('workplace.request_closed');
+  // A concurrent stale re-suggestion replaced it after the plain read (code review round 2).
+  if (req.suggested_workplace_id !== shown) throw new WorkplaceAnswerRefusedError('workplace.suggestion_changed');
   if (w === null || w.district !== req.district) {
     await returnToPending(db, pariwarId, req.request_id);
     return { kind: 'stale' };

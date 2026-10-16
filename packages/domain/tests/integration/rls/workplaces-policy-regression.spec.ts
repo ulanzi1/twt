@@ -11,6 +11,8 @@
 //     state (alone, and with an open request's move to `closed`); the RENAME ARM (open rows only, `district` alone);
 //   · `member_postings`: at most one of the two workplace columns; a retirement names ⛔ neither; `started_on` ≥ 1950;
 //     another Pariwar's workplace refused by the composite FK;
+//   · 0165 (Story 6.36c, code review round 2): the same-name count's partial folded-name index, and a STAFF row names its
+//     actor (`workplaces_staff_actor_check`);
 //   · RLS: ENABLED + FORCED, per-command policies (⛔ DELETE, ⛔ FOR ALL), cross-tenant reads see nothing, a cross-tenant
 //     insert is refused, the unscoped probe sees nothing; in scope, `twt_app` runs the erasure scrub and the rename.
 
@@ -69,7 +71,7 @@ async function seedList(client: Client, pariwarId: string = randomUUID()): Promi
   );
   const officeId = randomUUID();
   await client.query(
-    `INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, source) VALUES ($1, $2, 'office', 'DEO Office Gaya', 'Gaya', 'staff')`,
+    `INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, source, created_by_actor_id) VALUES ($1, $2, 'office', 'DEO Office Gaya', 'Gaya', 'staff', gen_random_uuid())`,
     [officeId, pariwarId],
   );
   return { pariwarId, batchId, schoolId, officeId };
@@ -204,6 +206,36 @@ describe.skipIf(!hasDatabase)('0161 — the workplace tables', { timeout: 20000 
       expect(open).not.toContain("'withdrawn'");
     });
 
+    it('0165 (code review round 2): the same-name count\'s PARTIAL folded-name index, on the count\'s exact expression', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ indexdef: string }>(
+        `SELECT indexdef FROM pg_indexes WHERE tablename = 'workplace_requests' AND indexname = 'workplace_requests_pariwar_folded_name_idx'`,
+      );
+      expect(rows).toHaveLength(1);
+      const def = rows[0]!.indexdef;
+      expect(def).toContain("USING btree (pariwar_id, lower(regexp_replace(btrim(typed_name), '\\s+'::text, ' '::text, 'g'::text)))");
+      expect(def).toMatch(/WHERE \(\(state = 'pending'::text\) AND \(typed_name IS NOT NULL\)\)$/);
+    });
+
+    it('0165 (code review round 2): a STAFF row names its actor — an unattributed staff INSERT / UPDATE is refused (23514); an import row is ⛔ constrained', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ def: string }>(
+        `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'workplaces_staff_actor_check' AND conrelid = 'workplaces'::regclass`,
+      );
+      expect(rows.map((r) => r.def)).toEqual(["CHECK (((source <> 'staff'::text) OR (created_by_actor_id IS NOT NULL)))"]);
+      const l = await seedList(client);
+      const ins = (actor: string) =>
+        attempt(client, `INSERT INTO workplaces (pariwar_id, kind, name, district, source, created_by_actor_id) VALUES ($1, 'office', 'BEO Office', 'Patna', 'staff', ${actor})`, [l.pariwarId]);
+      const refused = await ins('NULL');
+      expect(refused.code).toBe('23514');
+      expect(refused.message).toMatch(/workplaces_staff_actor_check/);
+      expect((await ins('gen_random_uuid()')).code).toBeNull();
+      expect((await attempt(client, `UPDATE workplaces SET created_by_actor_id = NULL WHERE workplace_id = $1`, [l.officeId])).code).toBe('23514');
+      // An imported row carries ⛔ actor and is ⛔ refused.
+      const { rows: school } = await client.query(`SELECT created_by_actor_id FROM workplaces WHERE workplace_id = $1`, [l.schoolId]);
+      expect(school[0]).toEqual({ created_by_actor_id: null });
+    });
+
     it('the triggers: the batch guard and the request guard (BEFORE INSERT OR UPDATE, ROW, enabled)', async () => {
       const { client } = getTx();
       const { rows } = await client.query<{ tgname: string; fn: string; tgtype: number; tgenabled: string }>(
@@ -264,13 +296,13 @@ describe.skipIf(!hasDatabase)('0161 — the workplace tables', { timeout: 20000 
       const l = await seedList(client);
       const ins = (cols: string, vals: string, params: unknown[]) =>
         attempt(client, `INSERT INTO workplaces (pariwar_id, ${cols}) VALUES ($1, ${vals})`, [l.pariwarId, ...params]);
-      expect((await ins('kind, name, district, source, udise_school_code', `'office', 'X', 'Patna', 'staff', '10280100102'`, [])).code).toBe('23514');
+      expect((await ins('kind, name, district, source, udise_school_code, created_by_actor_id', `'office', 'X', 'Patna', 'staff', '10280100102', gen_random_uuid()`, [])).code).toBe('23514');
       expect((await ins('kind, name, district, source, udise_school_code, import_batch_id', `'office', 'X', 'Patna', 'import', NULL, $2`, [l.batchId])).code).toBe('23514');
       expect((await ins('kind, name, district, source, udise_school_code', `'school', 'X', 'Patna', 'import', '10280100103'`, [])).code).toBe('23514');
-      expect((await ins('kind, name, district, source', `'school', 'X', 'Patna', 'staff'`, [])).code).toBeNull();
-      expect((await ins('kind, name, district, source', `'school', 'X', 'Muzaffarpur', 'staff'`, [])).code).toBe('23503');
-      expect((await ins('kind, name, district, source', `'school', '   ', 'Patna', 'staff'`, [])).code).toBe('23514');
-      expect((await ins('kind, name, district, source, pincode', `'school', 'X', 'Patna', 'staff', '8000'`, [])).code).toBe('23514');
+      expect((await ins('kind, name, district, source, created_by_actor_id', `'school', 'X', 'Patna', 'staff', gen_random_uuid()`, [])).code).toBeNull();
+      expect((await ins('kind, name, district, source, created_by_actor_id', `'school', 'X', 'Muzaffarpur', 'staff', gen_random_uuid()`, [])).code).toBe('23503');
+      expect((await ins('kind, name, district, source, created_by_actor_id', `'school', '   ', 'Patna', 'staff', gen_random_uuid()`, [])).code).toBe('23514');
+      expect((await ins('kind, name, district, source, pincode, created_by_actor_id', `'school', 'X', 'Patna', 'staff', '8000', gen_random_uuid()`, [])).code).toBe('23514');
       // The code is unique per Pariwar.
       expect((await ins('kind, name, district, source, udise_school_code, import_batch_id', `'school', 'Y', 'Gaya', 'import', '10280100101', $2`, [l.batchId])).code).toBe('23505');
       // Another Pariwar MAY hold the same code.
@@ -400,7 +432,7 @@ describe.skipIf(!hasDatabase)('0161 — the workplace tables', { timeout: 20000 
       const { client } = getTx();
       const l = await seedList(client);
       const ins = (name: string) =>
-        attempt(client, `INSERT INTO workplaces (pariwar_id, kind, name, district, source) VALUES ($1, 'office', $2, 'Patna', 'staff')`, [l.pariwarId, name]);
+        attempt(client, `INSERT INTO workplaces (pariwar_id, kind, name, district, source, created_by_actor_id) VALUES ($1, 'office', $2, 'Patna', 'staff', gen_random_uuid())`, [l.pariwarId, name]);
       expect((await ins(' DEO Office')).code).toBe('23514');
       expect((await ins('DEO Office ')).code).toBe('23514');
       expect((await ins('DEO Office')).code).toBeNull();
@@ -536,7 +568,7 @@ describe.skipIf(!hasDatabase)('0161 — the workplace tables', { timeout: 20000 
       expect((await client.query(`SELECT 1 FROM workplace_requests WHERE request_id = $1`, [ra.requestId])).rowCount).toBe(0);
       const cross = await attempt(client, `INSERT INTO workplace_districts (pariwar_id, district) VALUES ($1, 'Nalanda')`, [a.pariwarId]);
       expect(cross.code).toBe('42501');
-      const crossWp = await attempt(client, `INSERT INTO workplaces (pariwar_id, kind, name, district, source) VALUES ($1, 'office', 'X', 'Patna', 'staff')`, [a.pariwarId]);
+      const crossWp = await attempt(client, `INSERT INTO workplaces (pariwar_id, kind, name, district, source, created_by_actor_id) VALUES ($1, 'office', 'X', 'Patna', 'staff', gen_random_uuid())`, [a.pariwarId]);
       expect(crossWp.code).toBe('42501');
       // The UPDATE leg matches 0 rows of another tenant.
       expect((await attempt(client, `UPDATE workplaces SET status = 'delisted' WHERE workplace_id = $1`, [a.schoolId])).rowCount).toBe(0);

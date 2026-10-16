@@ -60,6 +60,9 @@ function producedKeys(): string[] {
   keys.add(refusalCopyKey({ status: 409, code: 'life_events.idempotency_in_progress' }))
   // Story 6.36c — the answer route's 404 / 409 / 422 codes, PRODUCED (⛔ listed).
   for (const code of WORKPLACE_ANSWER_REFUSAL_CODES) keys.add(refusalCopyKey({ status: code === 'workplace.request_not_found' ? 404 : 409, code }))
+  // Code review round 2 — the 409 `suggestion_changed` (a stale screen's answer), PRODUCED by name too, so the key is
+  // scanned even if the contract list it lives in were ever narrowed.
+  keys.add(refusalCopyKey({ status: 409, code: 'workplace.suggestion_changed' }))
   // …and the closed request's row, both forms.
   for (const typedName of ['Rampur School', null]) {
     const closed = historyRowView({
@@ -90,6 +93,11 @@ function producedKeys(): string[] {
 const PARAMS = { district: 'Patna', date: '01-06-2019', name: 'GMS RAMPUR' }
 
 describe('AC10 — the workplace copy resolves through the REAL t()', () => {
+  it('code review round 2 — the answer refusals include `suggestion_changed`, and it maps to its own key (⛔ error_generic)', () => {
+    expect(WORKPLACE_ANSWER_REFUSAL_CODES).toContain('workplace.suggestion_changed')
+    expect(producedKeys()).toContain('refusal.suggestion_changed')
+  })
+
   it('the source scan is NON-VACUOUS (it finds the screens\' keys)', () => {
     const keys = literalKeys()
     expect(keys.length).toBeGreaterThan(25)

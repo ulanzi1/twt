@@ -15,11 +15,42 @@ export function inviteMessage(t: KnownPeopleT, trustName: string | null): string
   return trustName === null ? t('invite.message_no_name') : t('invite.message', { trust_name: trustName })
 }
 
-/** Open ONE share sheet with the invite. Closing the sheet is ⛔ an error. */
-export async function shareInvite(t: KnownPeopleT, trustName: string | null): Promise<void> {
+/** The share sheet this helper has open, if any — the in-flight guard below (code review round 2). */
+let open: Promise<void> | null = null
+
+async function openSheet(t: KnownPeopleT, trustName: string | null): Promise<void> {
   try {
     await Share.share({ message: inviteMessage(t, trustName) })
   } catch {
     // the member closed the share sheet
   }
+}
+
+/**
+ * How long the in-flight guard may hold at most (fix-diff review): `Share.share` that never settles (a sheet the OS
+ * dropped without telling us) would otherwise leave the invite dead for the whole app process.
+ */
+export const INVITE_SHARE_GUARD_MS = 30_000
+
+/**
+ * Open ONE share sheet with the invite. Closing the sheet is ⛔ an error.
+ * ⚠ Code review round 2 — ONE sheet per tap: a second tap (or the other caller) while a sheet is still opening / open
+ * gets the SAME promise back, ⛔ a second `Share.share` — a double tap used to stack two sheets. Module-level, so it
+ * guards both callers (the find screen and home card (b)) with ONE rule. The guard is released when the sheet settles
+ * or, at the latest, after `INVITE_SHARE_GUARD_MS` (fix-diff review — the returned promise resolves then too, so ⛔ a
+ * caller hangs), and only by the call that set it; release is always a later tick, so ⛔ before it is set.
+ */
+export function shareInvite(t: KnownPeopleT, trustName: string | null): Promise<void> {
+  if (open !== null) return open
+  const guarded: Promise<void> = new Promise<void>((resolve) => {
+    const release = () => {
+      clearTimeout(bound)
+      if (open === guarded) open = null
+      resolve()
+    }
+    const bound = setTimeout(release, INVITE_SHARE_GUARD_MS)
+    void openSheet(t, trustName).then(release)
+  })
+  open = guarded
+  return guarded
 }

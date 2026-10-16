@@ -83,6 +83,7 @@ const WORKPLACE_ANSWER_MESSAGES: Record<WorkplaceAnswerRefusalCode, string> = {
   'workplace.request_not_found': 'No such workplace request',
   'workplace.request_closed': 'That suggestion is no longer open',
   'workplace.suggestion_stale': 'That suggestion can no longer be used — it has gone back for review',
+  'workplace.suggestion_changed': 'That suggestion has changed — please look at it again',
   'workplace.start_date_invalid': 'That start date cannot be used',
 };
 
@@ -91,6 +92,8 @@ const WORKPLACE_ANSWER_STATUS: Record<WorkplaceAnswerRefusalCode, 404 | 409 | 42
   'workplace.request_not_found': 404,
   'workplace.request_closed': 409,
   'workplace.suggestion_stale': 409,
+  // Code review round 2 — the body's `workplaceId` is ⛔ the request's current suggestion (a stale screen): ⛔ state change.
+  'workplace.suggestion_changed': 409,
   'workplace.start_date_invalid': 422,
 };
 
@@ -471,7 +474,9 @@ export function createLifeEventsHandlers(deps: AppDeps) {
      *     `{ answer: 'yes', summary }`, audited as `member_life_events.posting_updated`;
      *   · `declined` ⇒ recorded, 200 `{ answer: 'no' }`, audited `member_life_events.workplace_suggestion_declined`;
      *   · `stale` (RV11) ⇒ the request back to `pending` is COMMITTED, the claim RELEASED explicitly (a retry then sees
-     *     `pending` ⇒ 409 `request_closed`), and 409 `workplace.suggestion_stale`.
+     *     `pending` ⇒ 409 `request_closed`), and 409 `workplace.suggestion_stale`;
+     *   · the body's `workplaceId` ⛔ the current suggestion (code review round 2) ⇒ 409 `workplace.suggestion_changed`,
+     *     ⛔ state change (the stored suggestion is valid), the claim released like any pre-COMMIT failure.
      */
     async answerWorkplaceSuggestion(request: FastifyRequest): Promise<WorkplaceAnswerResponse> {
       const body = request.body as WorkplaceAnswerRequest;
@@ -479,7 +484,9 @@ export function createLifeEventsHandlers(deps: AppDeps) {
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
 
       const idempotencyKey = requireIdempotencyKey(request);
-      const idemKey = `life_events.workplace_answer:${pariwarIdStr}:${memberIdStr}:${idempotencyKey}`;
+      // ⭐ Code review round 2 — the key carries the REQUEST id, so a key reused on another request can ⛔ replay this one's
+      // result (lower-cased: the param is a UUID in either case, the branded-id convention).
+      const idemKey = `life_events.workplace_answer:${pariwarIdStr}:${memberIdStr}:${requestId.toLowerCase()}:${idempotencyKey}`;
       const claimOutcome = await idempotencyStore.claim(idemKey, POSTING_IDEMPOTENCY_TTL_SECONDS);
       if (claimOutcome === 'already_claimed') {
         const stored = await idempotencyStore.getResult(idemKey);
@@ -505,7 +512,16 @@ export function createLifeEventsHandlers(deps: AppDeps) {
         let ok = false;
         try {
           const state = await assertMemberExistsAndNotTerminal(scopeTx, pariwarId, memberId);
-          outcome = await memberDomain.answerWorkplaceSuggestion(scopeTx.tx, { pariwarId, memberId, requestId, answer: body.answer, now: deps.clock() });
+          // ⭐ Code review round 2 — the body's `workplaceId` is the workplace the member was SHOWN; the domain refuses a
+          // mismatch with `workplace.suggestion_changed` (409, ⛔ state change), for "yes" and "no" alike.
+          outcome = await memberDomain.answerWorkplaceSuggestion(scopeTx.tx, {
+            pariwarId,
+            memberId,
+            requestId,
+            workplaceId: body.workplaceId,
+            answer: body.answer,
+            now: deps.clock(),
+          });
           if (outcome.kind === 'confirmed') {
             const p = outcome.posting;
             // Non-transition marker — the posting route's payload shape. NON-PII: the district, ids, a kind, a date, flags.

@@ -2,7 +2,7 @@
 // in scope (the seeds as the superuser, postings RAW with explicit `created_at` — one transaction's `now()` ties).
 // Each flag has a leg seeded so ONLY that clause can fire, and a leg for each of its exclusions:
 //   · noWorkplace (⛔ posting / a district-only one / an unconfirmed "isn't listed" — ⛔ a retirement, ⛔ a workplace, ⛔ in a
-//     Pariwar with ⛔ list — RV8); hasWorkplace (listed or delisted); suggestedWorkplace;
+//     Pariwar with ⛔ list — RV8); hasWorkplace (listed or delisted); suggestedWorkplace (⛔ a stale one — code review round 2);
 //   · transferReview (W1 → W2 within 30 days — ⛔ the same W, ⛔ older, ⛔ a retirement, ⛔ a first confirmed "isn't listed");
 //   · replaceNeeded (an ACCEPTED link to a withdrawn or claim-named person — ⛔ a late renewal, ⛔ an `asked` link);
 //   · campaign (LIVE + a free slot + ⛔ ask since its start — RV4);
@@ -154,6 +154,29 @@ describe.skipIf(!hasDatabase)('Story 6.36c — the home prompts (live DB)', { ti
         ACTOR,
       ]);
       expect((await prompts(list, m)).suggestedWorkplace).toEqual({ requestId: pending, workplaceId: list.ids['W2'], name: 'W2', district: 'Patna' });
+    });
+
+    it('⛔ a STALE suggestion (code review round 2 — `staleSuggestionSql`): the workplace delisted, moved to another district, or its district delisted', async () => {
+      const { client } = getTx();
+      const list = await seedWorkplaceList(client, LIST);
+      const m = await member(list.pariwarId);
+      const r = await request(client, list.pariwarId, m, 'suggested', list.ids['W2']);
+      const shown = { requestId: r, workplaceId: list.ids['W2'], name: 'W2', district: 'Patna' };
+      expect((await prompts(list, m)).suggestedWorkplace).toEqual(shown);
+      for (const [label, spoil, restore] of [
+        ['delisted', `UPDATE workplaces SET status = 'delisted' WHERE workplace_id = $1`, `UPDATE workplaces SET status = 'listed' WHERE workplace_id = $1`],
+        ['moved', `UPDATE workplaces SET district = 'Gaya' WHERE workplace_id = $1`, `UPDATE workplaces SET district = 'Patna' WHERE workplace_id = $1`],
+        [
+          'district delisted',
+          `UPDATE workplace_districts SET status = 'retired' WHERE district = 'Patna' AND pariwar_id = (SELECT pariwar_id FROM workplaces WHERE workplace_id = $1)`,
+          `UPDATE workplace_districts SET status = 'listed' WHERE district = 'Patna' AND pariwar_id = (SELECT pariwar_id FROM workplaces WHERE workplace_id = $1)`,
+        ],
+      ] as const) {
+        await client.query(spoil, [list.ids['W2']]);
+        expect((await prompts(list, m)).suggestedWorkplace, label).toBeNull();
+        await client.query(restore, [list.ids['W2']]);
+        expect((await prompts(list, m)).suggestedWorkplace, `${label} — restored`).toEqual(shown);
+      }
     });
   });
 

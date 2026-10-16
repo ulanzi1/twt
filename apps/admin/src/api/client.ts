@@ -3044,6 +3044,15 @@ const workplacesBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComp
 const workplaceRequestsBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/workplace-requests`;
 const campaignsBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/known-people-campaigns`;
 
+/**
+ * Every 6.36c WRITE is bounded (code review round 2): the pages lock every write control while ANY of their writes is in
+ * flight (`useWorkplaceWriting`), and `fetch` has ⛔ timeout of its own — a write that never settled locked the Pariwar's
+ * controls until a reload. The abort rejects the mutation (a `TimeoutError`, ⛔ an `ApiError` ⇒ "could not be saved"),
+ * which releases the lock. A timed-out write MAY still have landed: the page's `onSettled` refetch shows what did.
+ */
+export const WORKPLACE_WRITE_TIMEOUT_MS = 30_000;
+const boundedWrite = (init: RequestInit): RequestInit => ({ ...init, signal: AbortSignal.timeout(WORKPLACE_WRITE_TIMEOUT_MS) });
+
 /** Only the set fields reach the query string (an empty filter is ⛔ a filter). */
 function queryOf(q: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams();
@@ -3057,19 +3066,29 @@ export function getAdminWorkplaces(pariwarId: string, q: AdminWorkplacesQuery = 
 }
 
 export function addAdminWorkplace(pariwarId: string, body: AdminWorkplaceAddRequest) {
-  return apiFetch(workplacesBase(pariwarId), AdminWorkplaceWriteResponse, { method: 'POST', body: JSON.stringify(body) });
+  return apiFetch(workplacesBase(pariwarId), AdminWorkplaceWriteResponse, boundedWrite({ method: 'POST', body: JSON.stringify(body) }));
 }
 
 export function renameAdminWorkplace(pariwarId: string, workplaceId: string, name: string) {
-  return apiFetch(`${workplacesBase(pariwarId)}/${encodeURIComponent(workplaceId)}/rename`, AdminWorkplaceWriteResponse, {
-    method: 'POST',
-    body: JSON.stringify({ name }),
-  });
+  return apiFetch(
+    `${workplacesBase(pariwarId)}/${encodeURIComponent(workplaceId)}/rename`,
+    AdminWorkplaceWriteResponse,
+    boundedWrite({ method: 'POST', body: JSON.stringify({ name }) }),
+  );
 }
 
-/** Delist or relist a STAFF row (an imported row is the import's — 422 `workplace.import_managed`). */
+/**
+ * Delist or relist a STAFF row (an imported row is the import's — 422 `workplace.import_managed`).
+ * ⛔ Never a bodyless POST (code review round 2, HIGH): `apiFetch` always sends `content-type: application/json`, and
+ * Fastify's JSON parser refuses an EMPTY body with that header (`FST_ERR_CTP_EMPTY_JSON_BODY`, a 400) before any hook
+ * runs — so this, close and end sent a 400 on every click. `'{}'`, as every other bodyless admin POST in this file.
+ */
 export function setAdminWorkplaceListed(pariwarId: string, workplaceId: string, action: 'delist' | 'relist') {
-  return apiFetch(`${workplacesBase(pariwarId)}/${encodeURIComponent(workplaceId)}/${action}`, AdminWorkplaceWriteResponse, { method: 'POST' });
+  return apiFetch(
+    `${workplacesBase(pariwarId)}/${encodeURIComponent(workplaceId)}/${action}`,
+    AdminWorkplaceWriteResponse,
+    boundedWrite({ method: 'POST', body: JSON.stringify({}) }),
+  );
 }
 
 export function getWorkplaceRequests(pariwarId: string, q: { state?: 'pending' | 'suggested'; district?: string; cursor?: string } = {}) {
@@ -3077,14 +3096,20 @@ export function getWorkplaceRequests(pariwarId: string, q: { state?: 'pending' |
 }
 
 export function suggestWorkplaceForRequest(pariwarId: string, requestId: string, workplaceId: string) {
-  return apiFetch(`${workplaceRequestsBase(pariwarId)}/${encodeURIComponent(requestId)}/suggest`, WorkplaceRequestWriteResponse, {
-    method: 'POST',
-    body: JSON.stringify({ workplaceId }),
-  });
+  return apiFetch(
+    `${workplaceRequestsBase(pariwarId)}/${encodeURIComponent(requestId)}/suggest`,
+    WorkplaceRequestWriteResponse,
+    boundedWrite({ method: 'POST', body: JSON.stringify({ workplaceId }) }),
+  );
 }
 
+/** ⛔ Never bodyless — `'{}'` (code review round 2; see `setAdminWorkplaceListed`). */
 export function closeWorkplaceRequest(pariwarId: string, requestId: string) {
-  return apiFetch(`${workplaceRequestsBase(pariwarId)}/${encodeURIComponent(requestId)}/close`, WorkplaceRequestWriteResponse, { method: 'POST' });
+  return apiFetch(
+    `${workplaceRequestsBase(pariwarId)}/${encodeURIComponent(requestId)}/close`,
+    WorkplaceRequestWriteResponse,
+    boundedWrite({ method: 'POST', body: JSON.stringify({}) }),
+  );
 }
 
 export function getKnownPeopleCampaigns(pariwarId: string, q: { cursor?: string } = {}) {
@@ -3092,11 +3117,16 @@ export function getKnownPeopleCampaigns(pariwarId: string, q: { cursor?: string 
 }
 
 export function startKnownPeopleCampaign(pariwarId: string, body: { startsOn: string; endsOn: string }) {
-  return apiFetch(campaignsBase(pariwarId), KnownPeopleCampaignWriteResponse, { method: 'POST', body: JSON.stringify(body) });
+  return apiFetch(campaignsBase(pariwarId), KnownPeopleCampaignWriteResponse, boundedWrite({ method: 'POST', body: JSON.stringify(body) }));
 }
 
+/** ⛔ Never bodyless — `'{}'` (code review round 2; see `setAdminWorkplaceListed`). */
 export function endKnownPeopleCampaign(pariwarId: string, campaignId: string) {
-  return apiFetch(`${campaignsBase(pariwarId)}/${encodeURIComponent(campaignId)}/end`, KnownPeopleCampaignWriteResponse, { method: 'POST' });
+  return apiFetch(
+    `${campaignsBase(pariwarId)}/${encodeURIComponent(campaignId)}/end`,
+    KnownPeopleCampaignWriteResponse,
+    boundedWrite({ method: 'POST', body: JSON.stringify({}) }),
+  );
 }
 
 // ── Story 6.27a (PM12) — the helpline records the answers of a neighbour who phones ───────────────────────────────────

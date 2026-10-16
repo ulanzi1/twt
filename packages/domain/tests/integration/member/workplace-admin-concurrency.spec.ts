@@ -5,7 +5,10 @@
 //     ⇒ the answer confirms with the NEW spelling; the answer first ⇒ it confirms with the old one (a posting keeps the
 //     spelling it was written under — I2) and the rename then moves only OPEN requests;
 //   · a suggestion vs the same rename, both orders — both finish, ⛔ 40P01;
-//   · two campaign starts with overlapping windows at once — the second waits on the Pariwar's lock, then `overlap`.
+//   · two campaign starts with overlapping windows at once — the second waits on the Pariwar's lock, then `overlap`;
+//   · code review round 2 (RV11 at read time): a staff DELIST of the suggested workplace vs a re-suggestion, both orders
+//     (⛔ a wait either way — the stored suggestion is ⛔ locked); a re-suggestion of a STALE suggestion vs the member's
+//     "Yes", both orders, and vs the member's "No" — ⛔ 40P01, ⛔ a posting; a relist vs the district rename (the retry).
 //
 // ⚠ WHY OWN-COMMITTING: a race needs REAL concurrent transactions on SEPARATE pool clients. A FRESH random Pariwar per test;
 // the waiter is proven to WAIT on a lock (`pg_stat_activity`, ⛔ a fixed sleep); cleanup in replica mode, bounded by
@@ -21,7 +24,7 @@ import { memberId as toMemberId, pariwarId as toPariwarId } from '../../../src/i
 import type { PariwarId } from '../../../src/ids/index.js';
 import { startCampaign } from '../../../src/member/known-people-campaigns.js';
 import { insertMemberPosting } from '../../../src/member/posting.js';
-import { answerWorkplaceSuggestion, suggestWorkplaceForRequest } from '../../../src/member/workplace-admin.js';
+import { answerWorkplaceSuggestion, setStaffWorkplaceListed, suggestWorkplaceForRequest } from '../../../src/member/workplace-admin.js';
 import { renameWorkplaceDistrict } from '../../../src/member/workplace-import.js';
 import { lockMemberPostingWrites } from '../../../src/member/workplace.js';
 import { seedWorkplaceList } from './_workplace-fixtures.js';
@@ -94,6 +97,7 @@ describe.skipIf(!hasDatabase)('Story 6.36c — races (two connections, own-commi
         workplaces: [
           { name: 'GMS RAMPUR', district: 'Patna' },
           { name: 'UPS TOLA', district: 'Patna' },
+          { name: 'DEO OFFICE', district: 'Patna', kind: 'office' },
         ],
       });
       return { ...list, p: toPariwarId(pid) };
@@ -184,7 +188,9 @@ describe.skipIf(!hasDatabase)('Story 6.36c — races (two connections, own-commi
     const t2 = await openTx(l.p);
     await lockMemberPostingWrites(t1.db, toMemberId(m));
     await insertMemberPosting(t1.db, { memberId: toMemberId(m), pariwarId: l.p, district: 'Patna', workplaceId: l.ids['UPS TOLA'] as never, startedOn: '2021-01-01' });
-    const answer = track(answerWorkplaceSuggestion(t2.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', now: new Date() }));
+    const answer = track(
+      answerWorkplaceSuggestion(t2.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', workplaceId: l.ids['GMS RAMPUR']!, now: new Date() }),
+    );
     expect(await waitingOn(t2.backendPid)).toMatch(/pg_advisory_xact_lock/);
     await t1.commit();
     const out = await answer;
@@ -202,7 +208,9 @@ describe.skipIf(!hasDatabase)('Story 6.36c — races (two connections, own-commi
     const t1 = await openTx(l.p);
     const t2 = await openTx(l.p);
     await renameWorkplaceDistrict(t1.db, { pariwarId: l.p, from: 'Patna', to: 'Patna City' });
-    const answer = track(answerWorkplaceSuggestion(t2.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', now: new Date() }));
+    const answer = track(
+      answerWorkplaceSuggestion(t2.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', workplaceId: l.ids['GMS RAMPUR']!, now: new Date() }),
+    );
     await waitingOn(t2.backendPid);
     await t1.commit();
     const out = await answer;
@@ -221,7 +229,7 @@ describe.skipIf(!hasDatabase)('Story 6.36c — races (two connections, own-commi
     const r = await seedRequest(l.pariwarId, m, l.ids['GMS RAMPUR']);
     const t1 = await openTx(l.p);
     const t2 = await openTx(l.p);
-    const out = await answerWorkplaceSuggestion(t1.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', now: new Date() });
+    const out = await answerWorkplaceSuggestion(t1.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', workplaceId: l.ids['GMS RAMPUR']!, now: new Date() });
     expect(out.kind).toBe('confirmed');
     const rename = track(renameWorkplaceDistrict(t2.db, { pariwarId: l.p, from: 'Patna', to: 'Patna City' }));
     await waitingOn(t2.backendPid);
@@ -263,6 +271,127 @@ describe.skipIf(!hasDatabase)('Story 6.36c — races (two connections, own-commi
       const w = await pool.query<{ district: string }>(`SELECT district FROM workplaces WHERE workplace_id = $1`, [l.ids['GMS RAMPUR']]);
       expect(w.rows[0]!.district).toBe('Patna City');
     }
+  });
+
+  const suggestion = async (requestId: string) =>
+    (await pool.query<{ state: string; suggested_workplace_id: string | null }>(`SELECT state, suggested_workplace_id FROM workplace_requests WHERE request_id = $1`, [requestId]))
+      .rows[0]!;
+
+  it('a DELIST of the suggested workplace, still UNCOMMITTED, vs a re-suggestion: ⛔ a wait (the stored suggestion is ⛔ locked — fix review), a conservative request_closed; after the delist commits, the re-suggestion replaces it', async () => {
+    const l = await freshList();
+    const m = await seedMemberRow(l.pariwarId);
+    const r = await seedRequest(l.pariwarId, m, l.ids['DEO OFFICE']);
+    const t1 = await openTx(l.p);
+    const t2 = await openTx(l.p);
+    await setStaffWorkplaceListed(t1.db, { pariwarId: l.p, workplaceId: l.ids['DEO OFFICE']!, listed: false });
+    // Returns WITHOUT waiting on t1 (a wait would hang here until the 20 s lock_timeout): the plain read sees it valid.
+    const early = await track(suggestWorkplaceForRequest(t2.db, { pariwarId: l.p, requestId: r, workplaceId: l.ids['GMS RAMPUR']!, actorId: ACTOR }));
+    expect(early.ok).toBe(false);
+    if (!early.ok) expect(early.error.code).toBe('workplace.request_closed');
+    await t2.rollback();
+    await t1.commit();
+    const t3 = await openTx(l.p);
+    expect(await suggestWorkplaceForRequest(t3.db, { pariwarId: l.p, requestId: r, workplaceId: l.ids['GMS RAMPUR']!, actorId: ACTOR })).toEqual({
+      requestId: r,
+      workplaceId: l.ids['GMS RAMPUR'],
+      district: 'Patna',
+    });
+    await t3.commit();
+    expect(await suggestion(r)).toEqual({ state: 'suggested', suggested_workplace_id: l.ids['GMS RAMPUR'] });
+  });
+
+  it('a re-suggestion FIRST (refused — still valid) vs the delist: the delist does ⛔ wait on it (⛔ lock on the stored suggestion)', async () => {
+    const l = await freshList();
+    const m = await seedMemberRow(l.pariwarId);
+    const r = await seedRequest(l.pariwarId, m, l.ids['DEO OFFICE']);
+    const t1 = await openTx(l.p);
+    const t2 = await openTx(l.p);
+    const first = await track(suggestWorkplaceForRequest(t1.db, { pariwarId: l.p, requestId: r, workplaceId: l.ids['GMS RAMPUR']!, actorId: ACTOR }));
+    expect(first.ok).toBe(false);
+    if (!first.ok) expect(first.error.code).toBe('workplace.request_closed');
+    // t1 is still OPEN — the delist completes anyway.
+    expect((await setStaffWorkplaceListed(t2.db, { pariwarId: l.p, workplaceId: l.ids['DEO OFFICE']!, listed: false })).status).toBe('delisted');
+    await t2.commit();
+    await t1.rollback();
+    expect(await suggestion(r)).toEqual({ state: 'suggested', suggested_workplace_id: l.ids['DEO OFFICE'] });
+  });
+
+  it('a STALE suggestion: the member’s "Yes" FIRST ⇒ stale (back to pending); the re-suggestion waits, then suggests from pending (⛔ 40P01, ⛔ a posting)', async () => {
+    const l = await freshList();
+    const m = await seedMemberRow(l.pariwarId);
+    const r = await seedRequest(l.pariwarId, m, l.ids['DEO OFFICE']);
+    await pool.query(`UPDATE workplaces SET status = 'delisted' WHERE workplace_id = $1`, [l.ids['DEO OFFICE']]);
+    const t1 = await openTx(l.p);
+    const t2 = await openTx(l.p);
+    const yes = await answerWorkplaceSuggestion(t1.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', workplaceId: l.ids['DEO OFFICE']!, now: new Date() });
+    expect(yes).toEqual({ kind: 'stale' });
+    const resuggest = track(suggestWorkplaceForRequest(t2.db, { pariwarId: l.p, requestId: r, workplaceId: l.ids['GMS RAMPUR']!, actorId: ACTOR }));
+    expect(await waitingOn(t2.backendPid)).toMatch(/workplace_requests/);
+    await t1.commit();
+    const out = await resuggest;
+    expect(out.ok && out.value).toMatchObject({ requestId: r, workplaceId: l.ids['GMS RAMPUR'] });
+    await t2.commit();
+    expect(await suggestion(r)).toEqual({ state: 'suggested', suggested_workplace_id: l.ids['GMS RAMPUR'] });
+    expect(await postings(m)).toEqual([]);
+  });
+
+  it('a STALE suggestion: the re-suggestion FIRST; the member’s "Yes" (on the OLD one) waits, then suggestion_changed — ⛔ state change, ⛔ a posting (⛔ 40P01)', async () => {
+    const l = await freshList();
+    const m = await seedMemberRow(l.pariwarId);
+    const r = await seedRequest(l.pariwarId, m, l.ids['DEO OFFICE']);
+    await pool.query(`UPDATE workplaces SET status = 'delisted' WHERE workplace_id = $1`, [l.ids['DEO OFFICE']]);
+    const t1 = await openTx(l.p);
+    const t2 = await openTx(l.p);
+    expect(await suggestWorkplaceForRequest(t1.db, { pariwarId: l.p, requestId: r, workplaceId: l.ids['GMS RAMPUR']!, actorId: ACTOR })).toMatchObject({ requestId: r });
+    const yes = track(
+      answerWorkplaceSuggestion(t2.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'yes', workplaceId: l.ids['DEO OFFICE']!, now: new Date() }),
+    );
+    expect(await waitingOn(t2.backendPid)).toMatch(/workplace_requests/);
+    await t1.commit();
+    const out = await yes;
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.error.code).toBe('workplace.suggestion_changed');
+    await t2.rollback();
+    expect(await suggestion(r)).toEqual({ state: 'suggested', suggested_workplace_id: l.ids['GMS RAMPUR'] });
+    expect(await postings(m)).toEqual([]);
+  });
+
+  it('a STALE suggestion: the re-suggestion FIRST; the member’s "No" (on the OLD one) waits, then suggestion_changed — ⛔ back to pending (the after-lock check)', async () => {
+    const l = await freshList();
+    const m = await seedMemberRow(l.pariwarId);
+    const r = await seedRequest(l.pariwarId, m, l.ids['DEO OFFICE']);
+    await pool.query(`UPDATE workplaces SET status = 'delisted' WHERE workplace_id = $1`, [l.ids['DEO OFFICE']]);
+    const t1 = await openTx(l.p);
+    const t2 = await openTx(l.p);
+    expect(await suggestWorkplaceForRequest(t1.db, { pariwarId: l.p, requestId: r, workplaceId: l.ids['GMS RAMPUR']!, actorId: ACTOR })).toMatchObject({ requestId: r });
+    const no = track(
+      answerWorkplaceSuggestion(t2.db, { pariwarId: l.p, memberId: toMemberId(m), requestId: r, answer: 'no', workplaceId: l.ids['DEO OFFICE']!, now: new Date() }),
+    );
+    expect(await waitingOn(t2.backendPid)).toMatch(/workplace_requests/);
+    await t1.commit();
+    const out = await no;
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.error.code).toBe('workplace.suggestion_changed');
+    await t2.rollback();
+    // The NEW suggestion stands — the member's "No" to the old one did ⛔ decline it.
+    expect(await suggestion(r)).toEqual({ state: 'suggested', suggested_workplace_id: l.ids['GMS RAMPUR'] });
+  });
+
+  it('a RELIST vs the district rename (the rename FIRST): the relist waits on the district, finds the row MOVED, retries from the new district and relists it (⛔ 40P01)', async () => {
+    const l = await freshList();
+    await pool.query(`UPDATE workplaces SET status = 'delisted' WHERE workplace_id = $1`, [l.ids['DEO OFFICE']]);
+    const t1 = await openTx(l.p);
+    const t2 = await openTx(l.p);
+    await renameWorkplaceDistrict(t1.db, { pariwarId: l.p, from: 'Patna', to: 'Patna City' });
+    const relist = track(setStaffWorkplaceListed(t2.db, { pariwarId: l.p, workplaceId: l.ids['DEO OFFICE']!, listed: true }));
+    // It waits on the OLD spelling's district row (FOR SHARE), which the rename is retiring.
+    expect(await waitingOn(t2.backendPid)).toMatch(/from "workplace_districts" .*for share/i);
+    await t1.commit();
+    const out = await relist;
+    expect(out.ok && out.value).toMatchObject({ workplaceId: l.ids['DEO OFFICE'], district: 'Patna City', status: 'listed' });
+    await t2.commit();
+    const w = await pool.query<{ district: string; status: string }>(`SELECT district, status FROM workplaces WHERE workplace_id = $1`, [l.ids['DEO OFFICE']]);
+    expect(w.rows[0]).toEqual({ district: 'Patna City', status: 'listed' });
   });
 
   it('two campaign starts with overlapping windows at once — the second waits on the Pariwar lock, then overlap', async () => {

@@ -24,8 +24,9 @@ import {
 import { clearAllMemberDrafts } from '../components/life-events/draft-store'
 import { clearPeerRequestsCache } from '../components/peer-request/peer-request-cache'
 import { clearKnownPeopleCache } from '../components/known-people/known-people-cache'
+import { clearAnswerKeys } from '../components/workplace/suggestion-answer-key-cache'
 import { clearSavedNames } from './known-people-saved-names'
-import { clearHomeCardDismissals } from './home-card-dismissals'
+import { clearHomeCardDismissals, clearSessionSuggestionDismissals } from './home-card-dismissals'
 import { queryClient } from './query-client'
 
 interface SessionContextValue {
@@ -117,6 +118,11 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     // Story 6.36c (fix-review) — sign-out IS a reliable point to name the account (`session` is still in scope, below),
     // so its dismissals are cleared here for privacy/cleanup on a shared device.
     clearHomeCardDismissals(session?.memberId)
+    // Code review round 2 — and the two IN-MEMORY 6.36c stores, which outlived a sign-out for the rest of the app
+    // process: the suggestion card's session-only "Not now" (`lib/home-card-dismissals`) and the confirm question's
+    // shared Idempotency-Keys (`components/workplace/suggestion-answer-key-cache`).
+    clearSessionSuggestionDismissals()
+    clearAnswerKeys()
     // Purge member-scoped drafts before clearing the session so the memberId is still available.
     if (session?.memberId) clearAllMemberDrafts(session.memberId)
     try {

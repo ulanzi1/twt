@@ -1,11 +1,11 @@
 // Story 6.36c (Task 3.3, 3.4; AC7) — a Pariwar Admin's people-who-know-me campaigns, live DB, per-test ROLLBACK, as
 // `twt_app` in scope. Dates are relative to the DB's IST day (the ONE clock the writer and the prompts read).
 //   · the window: real dates, ⛔ an end before the start, at most 30 days INCLUSIVE, ⛔ a start before today;
-//   · ⛔ an overlap with an OPEN campaign (live or scheduled) — a finished or ended one ⛔ blocks;
+//   · ⛔ an overlap with an OPEN campaign (live or scheduled) — an ended one whose dates overlap ⛔ blocks;
 //   · end: any OPEN campaign (a scheduled one is cancelled); already ended / past ⇒ not_live; unknown / another Pariwar's ⇒
 //     not_found; the actor recorded;
 //   · the list: newest first, the status, keyset pages;
-//   · ⛔ a message: the module imports ⛔ `@twt/channels` (a source scan).
+//   · ⛔ a message: the module imports ⛔ `@twt/channels` (a source scan over every import form).
 
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
@@ -48,11 +48,43 @@ async function scoped(): Promise<PariwarId> {
   return p;
 }
 
+/**
+ * Every module specifier `src` names — a static `import … from` / `export … from` (on ONE line or MANY), a side-effect
+ * `import '…'`, a dynamic `import('…')` and a `require('…')` (code review round 2: the old scan matched single-line
+ * `import … from` only).
+ */
+function moduleSpecifiers(src: string): string[] {
+  const patterns = [
+    /\b(?:import|export)\b[^'"`;]*?\bfrom\s*['"]([^'"]+)['"]/g,
+    /\bimport\s*['"]([^'"]+)['"]/g,
+    /\bimport\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g,
+    /\brequire\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g,
+  ];
+  return patterns.flatMap((re) => [...src.matchAll(re)].map((m) => m[1]!));
+}
+
+const MESSAGING = /channels|dispatch|sms|push|whatsapp|notif/i;
+
 describe('the campaign module sends ⛔ message', () => {
+  it('the scan itself sees every import form (multi-line, `export … from`, dynamic, side-effect, require)', () => {
+    const sample = [
+      `import {\n  dispatch,\n  type Channel,\n} from '@twt/channels';`,
+      `export { x } from './a.js';`,
+      `export * from './b.js';`,
+      `import './c.js';`,
+      `const m = await import('./d.js');`,
+      `const n = require("./e.js");`,
+      `import type {\n  T\n} from "./f.js";`,
+    ].join('\n');
+    expect(moduleSpecifiers(sample).sort()).toEqual(['./a.js', './b.js', './c.js', './d.js', './e.js', './f.js', '@twt/channels'].sort());
+  });
+
   it('imports ⛔ @twt/channels, ⛔ a dispatcher, ⛔ an SMS / push / WhatsApp sender', () => {
     const src = fs.readFileSync(path.resolve(here, '../../../src/member/known-people-campaigns.ts'), 'utf8');
-    const imports = [...src.matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
-    expect(imports.some((i) => /channels|dispatch|sms|push|whatsapp|notif/i.test(i!))).toBe(false);
+    const specifiers = moduleSpecifiers(src);
+    // The scan read the module's real imports (⛔ a vacuous pass on an empty list).
+    expect(specifiers).toContain('drizzle-orm');
+    expect(specifiers.filter((i) => MESSAGING.test(i))).toEqual([]);
   });
 });
 
@@ -90,16 +122,31 @@ describe.skipIf(!hasDatabase)('Story 6.36c — the campaigns (live DB)', { timeo
     expect((await startCampaign(tx, { pariwarId: q, actorId: ACTOR, startsOn: await day(0), endsOn: await day(5) })).status).toBe('live');
   });
 
-  it('a FINISHED campaign (its window passed) ⛔ blocks, and cannot be ended', async () => {
+  it('a FINISHED campaign cannot be ended; an ENDED campaign whose dates OVERLAP the new window ⛔ blocks it', async () => {
     const { tx, client } = getTx();
     const p = await scoped();
-    const id = randomUUID();
+    const finished = randomUUID();
     await client.query(
       `INSERT INTO known_people_campaigns (campaign_id, pariwar_id, started_by_actor_id, starts_on, ends_on) VALUES ($1, $2, $3, $4::date, $5::date)`,
-      [id, p, ACTOR, await day(-10), await day(-1)],
+      [finished, p, ACTOR, await day(-10), await day(-1)],
     );
-    expect(await refusal(endCampaign(tx, { pariwarId: p, campaignId: id, actorId: ACTOR }))).toBe('known_people_campaign.not_live');
+    expect(await refusal(endCampaign(tx, { pariwarId: p, campaignId: finished, actorId: ACTOR }))).toBe('known_people_campaign.not_live');
+    // Code review round 2: a finished window can ⛔ overlap a new one (a start is never before today), so the "does not
+    // block" leg needs an ENDED campaign whose window genuinely covers the new one's days (day −3 … day 6 ⊇ day 0 … day 3).
+    const ended = randomUUID();
+    await client.query(
+      `INSERT INTO known_people_campaigns (campaign_id, pariwar_id, started_by_actor_id, starts_on, ends_on, ended_at, ended_by_actor_id)
+       VALUES ($1, $2, $3, $4::date, $5::date, now(), $3)`,
+      [ended, p, ACTOR, await day(-3), await day(6)],
+    );
     expect((await startCampaign(tx, { pariwarId: p, actorId: ACTOR, startsOn: await day(0), endsOn: await day(3) })).status).toBe('live');
+    // The control: the SAME dates while that campaign is still OPEN ⇒ overlap (the leg above is not vacuous).
+    const q = await scoped();
+    await client.query(
+      `INSERT INTO known_people_campaigns (campaign_id, pariwar_id, started_by_actor_id, starts_on, ends_on) VALUES ($1, $2, $3, $4::date, $5::date)`,
+      [randomUUID(), q, ACTOR, await day(-3), await day(6)],
+    );
+    expect(await refusal(startCampaign(tx, { pariwarId: q, actorId: ACTOR, startsOn: await day(0), endsOn: await day(3) }))).toBe('known_people_campaign.overlap');
   });
 
   it('end: a scheduled one is cancelled; twice ⇒ not_live; unknown / another Pariwar’s ⇒ not_found; the actor recorded', async () => {

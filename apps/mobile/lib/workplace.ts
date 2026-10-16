@@ -215,3 +215,54 @@ export function answerKeyFor(state: AnswerKeyState, answer: 'yes' | 'no', mint: 
 export function answerKeySettled(state: AnswerKeyState, ok: boolean): AnswerKeyState {
   return state.last === null ? state : { ...state, last: { ...state.last, ok } }
 }
+
+// ── Story 6.36c (code review round 2) — the answer POST's bound ───────────────────────────────────────────────────────
+
+/**
+ * How long the confirm question waits for its answer POST — the SAME bound as the people-who-know-me reads
+ * (`KNOWN_PEOPLE_READ_TIMEOUT_MS`, `components/known-people/useKnownPeopleQueries.ts`; restated here because this file is
+ * React-free and ⛔ imports that hook module). The transport has ⛔ timeout of its own.
+ */
+export const ANSWER_TIMEOUT_MS = 15_000
+
+/** The answer POST took longer than `ANSWER_TIMEOUT_MS` — read as the generic "could not save" line (`refusalCopyKey`). */
+export class AnswerTimeout extends Error {
+  constructor() {
+    super('workplace: the answer timed out')
+    this.name = 'AnswerTimeout'
+  }
+}
+
+/**
+ * RACE `write` against `ms` (the `withReadTimeout` house pattern; code review round 2): at `ms` this REJECTS with
+ * `AnswerTimeout` whether or not the request ever settles — a hung POST used to hold *"Saving…"*, *"Not now"* and
+ * *"I have been transferred"* until the screen closed (on Home, for the whole app session). ⚠ The request itself is
+ * only ABANDONED (the api-client takes ⛔ signal here): it may still land. That is safe for a retry of the SAME
+ * answer only: the caller keeps the key (`ok: false`), so it re-sends the SAME Idempotency-Key and the server replays
+ * whatever it did. The OTHER answer would mint a fresh key, so the caller keeps it disabled until the abandoned write
+ * settles (`WorkplaceSuggestionQuestion`, fix-diff review).
+ */
+export function withAnswerTimeout<T>(write: Promise<T>, ms: number = ANSWER_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      reject(new AnswerTimeout())
+    }, ms)
+    write.then(
+      (value) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err: unknown) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
+}

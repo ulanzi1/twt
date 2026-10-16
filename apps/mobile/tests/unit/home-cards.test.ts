@@ -1,14 +1,15 @@
 // Story 6.36c (Task 6.6; AC6; RV7) — which ONE reminder card the home shows, the 30-day dismissals, the answer's
 // Idempotency-Key, the invite message, and the new copy keys the pure helpers produce.
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
-const share = vi.hoisted(() => ({ calls: [] as { message: string }[], fail: false }))
+const share = vi.hoisted(() => ({ calls: [] as { message: string }[], fail: false, gate: null as Promise<void> | null }))
 vi.mock('react-native', () => ({
   Share: {
     share: async (c: { message: string }) => {
       share.calls.push(c)
+      if (share.gate !== null) await share.gate
       if (share.fail) throw new Error('dismissed')
       return {}
     },
@@ -19,8 +20,17 @@ import type { KnownPeoplePromptsResponse } from '@twt/contracts'
 
 import { clearHomeCardDismissals, dismissCard, homeCardDismissalsKey, isCardDismissed, type SyncStorage } from '../../lib/home-card-dismissals'
 import { applicableCards, chooseHomeCard } from '../../lib/home-cards'
-import { inviteMessage, shareInvite } from '../../lib/invite-share'
-import { answerKeyFor, answerKeySettled, freshAnswerKeyState, historyRowView, refusalCopyKey } from '../../lib/workplace'
+import { INVITE_SHARE_GUARD_MS, inviteMessage, shareInvite } from '../../lib/invite-share'
+import {
+  ANSWER_TIMEOUT_MS,
+  AnswerTimeout,
+  answerKeyFor,
+  answerKeySettled,
+  freshAnswerKeyState,
+  historyRowView,
+  refusalCopyKey,
+  withAnswerTimeout,
+} from '../../lib/workplace'
 
 const NONE: KnownPeoplePromptsResponse = {
   noWorkplace: false,
@@ -110,6 +120,18 @@ describe('the dismissals (30 days, on this phone, namespaced per account)', () =
     expect(s.map.has(homeCardDismissalsKey('m1'))).toBe(false)
   })
 
+  it('code review round 2 — a dismissal stamped in the FUTURE counts as expired and is pruned on the next write', () => {
+    const s = memoryStorage()
+    const now = new Date('2026-10-16T00:00:00.000Z')
+    // Written while the phone's clock ran a day ahead, then corrected.
+    dismissCard('invite', 'm1', new Date(now.getTime() + 86_400_000), s)
+    expect(isCardDismissed('invite', 'm1', now, s)).toBe(false) // ⛔ hidden for "−1 day ago" (i.e. 31 days)
+    dismissCard('replace', 'm1', now, s)
+    expect(Object.keys(JSON.parse(s.map.get(homeCardDismissalsKey('m1'))!) as object)).toEqual(['replace']) // pruned
+    // The boundary: a dismissal stamped exactly NOW still hides.
+    expect(isCardDismissed('replace', 'm1', now, s)).toBe(true)
+  })
+
   it('`undefined` (no known account) is a no-op — ⛔ throw, ⛔ clear anything', () => {
     const s = memoryStorage()
     dismissCard('invite', 'm1', new Date('2026-10-16T00:00:00.000Z'), s)
@@ -149,6 +171,79 @@ describe('the invite (RV5)', () => {
     await expect(shareInvite(t, 'X')).resolves.toBeUndefined()
     expect(share.calls).toEqual([{ message: 'invite.message_no_name' }, { message: 'invite.message:X' }])
   })
+
+  it('code review round 2 — a DOUBLE tap opens ONE sheet (the in-flight guard); the next tap after it closes opens another', async () => {
+    share.calls = []
+    share.fail = false
+    let close: () => void = () => undefined
+    share.gate = new Promise<void>((resolve) => (close = resolve))
+    const t = (key: string) => key
+    const first = shareInvite(t, null)
+    const second = shareInvite(t, null) // the second tap, while the sheet is still open
+    expect(second).toBe(first) // the SAME sheet
+    await Promise.resolve()
+    expect(share.calls).toHaveLength(1)
+    close()
+    await first
+    share.gate = null
+    await shareInvite(t, null) // a NEW tap after the sheet closed
+    expect(share.calls).toHaveLength(2)
+  })
+})
+
+describe('the invite guard is BOUNDED (fix-diff review)', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    share.gate = null
+  })
+
+  it('a share sheet that NEVER settles releases the guard after INVITE_SHARE_GUARD_MS (⛔ before); the caller is not left hanging', async () => {
+    vi.useFakeTimers()
+    share.calls = []
+    share.fail = false
+    share.gate = new Promise<void>(() => undefined) // the OS never answers
+    const t = (key: string) => key
+    let done = false
+    const first = shareInvite(t, null)
+    void first.then(() => (done = true))
+    await vi.advanceTimersByTimeAsync(INVITE_SHARE_GUARD_MS - 1)
+    expect(shareInvite(t, null)).toBe(first) // still guarded
+    expect(share.calls).toHaveLength(1)
+    expect(done).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(done).toBe(true)
+    void shareInvite(t, null) // the guard is free: a NEW tap opens a sheet
+    expect(share.calls).toHaveLength(2)
+  })
+})
+
+describe('the answer POST is bounded (code review round 2)', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('a hung write REJECTS with AnswerTimeout at ANSWER_TIMEOUT_MS (⛔ before) — read as the generic "could not save" line', async () => {
+    vi.useFakeTimers()
+    const hung = withAnswerTimeout(new Promise<never>(() => undefined))
+    let outcome: unknown = 'pending'
+    hung.then(
+      () => (outcome = 'resolved'),
+      (e: unknown) => (outcome = e),
+    )
+    await vi.advanceTimersByTimeAsync(ANSWER_TIMEOUT_MS - 1)
+    expect(outcome).toBe('pending')
+    await vi.advanceTimersByTimeAsync(1)
+    expect(outcome).toBeInstanceOf(AnswerTimeout)
+    expect(refusalCopyKey(outcome)).toBe('error_generic')
+  })
+
+  it('a write that settles in time passes its value / error through, and the late timer is inert', async () => {
+    vi.useFakeTimers()
+    await expect(withAnswerTimeout(Promise.resolve('ok'))).resolves.toBe('ok')
+    const err = { status: 409, code: 'workplace.suggestion_changed' }
+    await expect(withAnswerTimeout(Promise.reject(err))).rejects.toBe(err)
+    await vi.advanceTimersByTimeAsync(ANSWER_TIMEOUT_MS)
+  })
 })
 
 describe('the answer’s refusals and the closed request row (AC4)', () => {
@@ -156,6 +251,8 @@ describe('the answer’s refusals and the closed request row (AC4)', () => {
     expect(refusalCopyKey({ status: 404, code: 'workplace.request_not_found' })).toBe('refusal.request_not_found')
     expect(refusalCopyKey({ status: 409, code: 'workplace.request_closed' })).toBe('refusal.request_closed')
     expect(refusalCopyKey({ status: 409, code: 'workplace.suggestion_stale' })).toBe('refusal.suggestion_stale')
+    // Code review round 2 — the answer named a workplace that is no longer the suggested one.
+    expect(refusalCopyKey({ status: 409, code: 'workplace.suggestion_changed' })).toBe('refusal.suggestion_changed')
     expect(refusalCopyKey({ status: 422, code: 'workplace.start_date_invalid' })).toBe('refusal.start_date_invalid')
     expect(refusalCopyKey({ status: 409, code: 'workplace.something' })).toBe('error_generic')
   })

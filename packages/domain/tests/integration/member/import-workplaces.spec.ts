@@ -206,7 +206,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
     await enterAppScope(client, p);
     await importAs(tx, p);
     const officeId = randomUUID();
-    await client.query(`INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, source) VALUES ($1, $2, 'office', 'DEO OFFICE PATNA', 'Patna', 'staff')`, [officeId, p]);
+    await client.query(`INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, source, created_by_actor_id) VALUES ($1, $2, 'office', 'DEO OFFICE PATNA', 'Patna', 'staff', '0a0a0a0a-0000-4000-8000-0000000000ff')`, [officeId, p]);
     const gone = new Set(['10280000101', '10280000102']);
     const c = await importAs(tx, p, { edit: (rows) => rows.filter((r) => !gone.has(r['udise_school_code']!)) });
     expect(c).toMatchObject({ rowsDelisted: 2, rowsInserted: 0, rowsUpdated: 0 });
@@ -225,7 +225,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
     const p = randomUUID();
     await client.query(`INSERT INTO workplace_districts (pariwar_id, district) VALUES ($1, 'Patna')`, [p]);
     await client.query(
-      `INSERT INTO workplaces (pariwar_id, kind, name, district, source, udise_school_code) VALUES ($1, 'school', 'Rampur School (added by the Super Admin)', 'Patna', 'staff', '10280000101')`,
+      `INSERT INTO workplaces (pariwar_id, kind, name, district, source, udise_school_code, created_by_actor_id) VALUES ($1, 'school', 'Rampur School (added by the Super Admin)', 'Patna', 'staff', '10280000101', '0a0a0a0a-0000-4000-8000-0000000000ff')`,
       [p],
     );
     await enterAppScope(client, p);
@@ -249,7 +249,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
     let fired = false;
     const staffAdd = () =>
       client.query(
-        `INSERT INTO workplaces (pariwar_id, kind, name, district, source, udise_school_code) VALUES ($1, 'school', 'Rampur School (added meanwhile)', 'Patna', 'staff', '10280000101')`,
+        `INSERT INTO workplaces (pariwar_id, kind, name, district, source, udise_school_code, created_by_actor_id) VALUES ($1, 'school', 'Rampur School (added meanwhile)', 'Patna', 'staff', '10280000101', '0a0a0a0a-0000-4000-8000-0000000000ff')`,
         [p],
       );
     const racing = new Proxy(tx as object, {
@@ -306,7 +306,7 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace import and the dist
     await enterAppScope(client, p);
     await importAs(tx, p);
     const officeId = randomUUID();
-    await client.query(`INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, source) VALUES ($1, $2, 'office', 'DEO OFFICE PATNA', 'Patna', 'staff')`, [officeId, p]);
+    await client.query(`INSERT INTO workplaces (workplace_id, pariwar_id, kind, name, district, source, created_by_actor_id) VALUES ($1, $2, 'office', 'DEO OFFICE PATNA', 'Patna', 'staff', '0a0a0a0a-0000-4000-8000-0000000000ff')`, [officeId, p]);
     const school = byCode(await workplacesOf(p), '10280000101')!;
     const req = async (state: string): Promise<string> => {
       const id = randomUUID();

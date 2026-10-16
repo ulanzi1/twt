@@ -4,6 +4,8 @@
 //   POST /api/v1/p/:pariwarId/admin/known-people-campaigns                     → START  (IST dates, ≤ 30 days, ⛔ overlap)
 //   POST /api/v1/p/:pariwarId/admin/known-people-campaigns/:campaignId/end     → END    (live, or a scheduled one — cancelled)
 // `known_people.run_campaign` (pariwar dimension). ⛔ Step-up — a campaign shows a card and sends nothing (recorded).
+// ⚠ Re-examination trigger (code review round 2): the ⛔ step-up holds ONLY while a campaign shows a card — re-examine it if a
+// campaign ever sends or writes anything beyond showing a card (a message, a member-facing write, a list change).
 // ⛔ Inside the member known-people module (member-session-gated) — this is an ADMIN surface.
 
 import {

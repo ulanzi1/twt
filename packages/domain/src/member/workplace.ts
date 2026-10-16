@@ -373,6 +373,28 @@ export async function lockListedWorkplace(db: Db, pariwarId: PariwarId, workplac
   return null;
 }
 
+// ── A stale suggestion (RV11 at READ time) ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ⭐ RV11 AT READ TIME (Story 6.36c, code review round 2 — BigDev's option A): `true` when the `workplace_requests` row
+ * `r` is stored as `suggested` but its suggestion can ⛔ no longer be used — the suggested workplace is ⛔ `listed`, OR ⛔
+ * in the request's own district, OR that district's `workplace_districts` row is ⛔ `listed`. The exact condition under
+ * which the member's *"Yes"* answers `stale` (`lockListedWorkplace` returns `null`, or the district differs —
+ * `answerWorkplaceSuggestion`). ⚠ ONE fragment, ⛔ a copy — the home prompts hide such a suggestion, the queue lists the
+ * request under `pending` (`staleSuggestion: true`), `suggestWorkplaceForRequest` accepts it, and the member's history reads
+ * it as `pending` with ⛔ suggestion. A delist, a move, a district delist or a district rename all make a suggestion stale
+ * with ⛔ writer having to touch the request.
+ * `r` is the request row's alias (`sql\`r\``) or the table itself (`sql\`${workplaceRequests}\``). A NULL row (an outer
+ * join that matched nothing) yields NULL — wrap it in `coalesce(…, false)` there.
+ */
+export function staleSuggestionSql(r: SQL): SQL {
+  return sql`(${r}.state = 'suggested' AND NOT EXISTS (
+    SELECT 1 FROM workplaces sw
+      JOIN workplace_districts sd ON sd.pariwar_id = sw.pariwar_id AND sd.district = sw.district AND sd.status = 'listed'
+     WHERE sw.pariwar_id = ${r}.pariwar_id AND sw.workplace_id = ${r}.suggested_workplace_id
+       AND sw.status = 'listed' AND sw.district = ${r}.district))`;
+}
+
 // ── The posting write's helpers ────────────────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -475,7 +497,10 @@ export interface MemberPostingHistoryItem {
     readonly state: WorkplaceRequestState;
     readonly typedName: string | null;
     readonly typedPlace: string | null;
-    /** The Pariwar Admin's suggestion while the request is `suggested` (6.36c writes it). */
+    /**
+     * The Pariwar Admin's suggestion while the request is `suggested` (6.36c writes it). ⚠ A STALE suggestion
+     * (`staleSuggestionSql`) reads as `state: 'pending'` with `suggested: null` — code review round 2 (RV11 at read time).
+     */
     readonly suggested: { readonly workplaceId: WorkplaceId; readonly name: string; readonly district: string } | null;
   } | null;
 }
@@ -506,7 +531,9 @@ export function isTimestampCursor(value: string): boolean {
 
 /**
  * The member's postings, newest first (`created_at DESC, posting_id DESC` — the peer-mesh reads' tie-break), each with its
- * workplace and its request, keyset-paginated (`clampLimit`). Tenant-scoped; the member's OWN rows only.
+ * workplace and its request, keyset-paginated (`clampLimit`). Tenant-scoped; the member's OWN rows only. A request whose
+ * stored suggestion is STALE (`staleSuggestionSql`) reads as `pending` with ⛔ suggestion — the queue lists it as pending
+ * too, and the home prompts never ask about it (code review round 2, RV11 at read time).
  */
 export async function listMemberPostingHistory(
   db: Db,
@@ -538,6 +565,7 @@ export async function listMemberPostingHistory(
       suggestedId: suggestedWorkplaces.workplaceId,
       suggestedName: suggestedWorkplaces.name,
       suggestedDistrict: suggestedWorkplaces.district,
+      staleSuggestion: sql<boolean | null>`coalesce(${staleSuggestionSql(sql`${workplaceRequests}`)}, false)`,
     })
     .from(memberPostings)
     .leftJoin(workplaces, and(eq(workplaces.pariwarId, memberPostings.pariwarId), eq(workplaces.workplaceId, memberPostings.workplaceId)))
@@ -571,11 +599,12 @@ export async function listMemberPostingHistory(
       r.requestId !== null && r.requestState !== null
         ? {
             requestId: r.requestId,
-            state: r.requestState,
+            // ⚠ A stale suggestion reads as `pending`, ⛔ suggestion (code review round 2 — RV11 at read time).
+            state: r.staleSuggestion === true ? 'pending' : r.requestState,
             typedName: r.typedName,
             typedPlace: r.typedPlace,
             suggested:
-              r.suggestedId !== null && r.suggestedName !== null && r.suggestedDistrict !== null
+              r.staleSuggestion !== true && r.suggestedId !== null && r.suggestedName !== null && r.suggestedDistrict !== null
                 ? { workplaceId: r.suggestedId, name: r.suggestedName, district: r.suggestedDistrict }
                 : null,
           }

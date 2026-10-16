@@ -8,6 +8,12 @@
 // by the home PROMPTS' `suggestedWorkplace` (RV1 (i) — gated by the posting route's own rule), ⛔ by the history's ungated
 // `request.suggested`; the history row itself now reads *"Suggested: {name}"* and, after a close, asks the member to choose
 // again.
+// ⚠ Code review round 2 — the answer's OUTCOME line (saved yes / thank-you no / every refusal) is THIS screen's
+//   (`outcome`, rendered in the question's slot by `<SuggestionOutcomeLine>`), ⛔ the question's: the prompts refetch the
+//   answer triggers drops the suggestion and unmounts the question, which took its line with it after one round trip.
+//   It stays (announced once, ⛔ cut off) until the member moves on — presses the question again, presses *"I have been
+//   transferred"*, or leaves the screen. The shared answer-key cache follows the prompts here too
+//   (`useEvictStaleAnswerKeys`).
 //
 // ── ⚠⛔ the history list starts empty and fills: loading · error · empty render as SIBLINGS, ⛔ in place. It is a short
 //   list (a few transfers in a career) inside a ScrollView — a plain map, ⛔ a virtualised list nested in a scroll view.
@@ -28,7 +34,12 @@ import { Button, H2, H4, Spinner, Text, YStack } from 'tamagui'
 import { AnnouncedText } from '../../components/peer-request/announce'
 import { useKnownPeoplePromptsQuery } from '../../components/known-people/useKnownPeopleQueries'
 import { usePostingHistoryQuery } from '../../components/workplace/useWorkplaceQueries'
-import { WorkplaceSuggestionQuestion } from '../../components/workplace/WorkplaceSuggestionQuestion'
+import {
+  SuggestionOutcomeLine,
+  useEvictStaleAnswerKeys,
+  WorkplaceSuggestionQuestion,
+  type SuggestionOutcome,
+} from '../../components/workplace/WorkplaceSuggestionQuestion'
 import { WorkplacePicker } from '../../components/workplace/WorkplacePicker'
 import { historyRowView, type HistoryRowView } from '../../lib/workplace'
 import { useWorkplaceT } from '../../lib/workplace-i18n'
@@ -43,6 +54,9 @@ export default function WorkplaceScreen() {
   // Fix-review — the suggestion question's own answer() is in flight; "I have been transferred" must ⛔ unmount it
   // while a second, concurrent posting write is also on its way to the server.
   const [answering, setAnswering] = useState(false)
+  // Code review round 2 — the answer's outcome line, kept HERE so the prompts refetch can ⛔ unmount it (header).
+  const [outcome, setOutcome] = useState<SuggestionOutcome | null>(null)
+  useEvictStaleAnswerKeys(prompts.data)
 
   if (transferring) {
     return (
@@ -79,8 +93,10 @@ export default function WorkplaceScreen() {
               key={`${suggestion.requestId}:${suggestion.workplaceId}`}
               suggestion={suggestion}
               onBusyChange={setAnswering}
+              onOutcome={setOutcome}
             />
           ) : null}
+          {outcome !== null ? <SuggestionOutcomeLine outcome={outcome} /> : null}
 
           <H4 accessibilityRole="header">{t('current_label')}</H4>
           {history.isPending ? (
@@ -125,6 +141,7 @@ export default function WorkplaceScreen() {
               // Fix-review — a no-op while the suggestion question's answer() is in flight (see `answering` above).
               if (answering) return
               setSaved(false)
+              setOutcome(null)
               setTransferring(true)
             }}
           >

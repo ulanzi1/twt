@@ -236,6 +236,9 @@ export const WORKPLACE_ANSWER_REFUSAL_CODES = [
   'workplace.request_closed',
   'workplace.suggestion_stale',
   'workplace.start_date_invalid',
+  // Code review round 2 — a 409: the body's `workplaceId` is ⛔ the stored suggestion (the member saw an older one); ⛔ state
+  // change.
+  'workplace.suggestion_changed',
 ] as const;
 export type WorkplaceAnswerRefusalCode = (typeof WORKPLACE_ANSWER_REFUSAL_CODES)[number];
 
@@ -338,10 +341,16 @@ export const WorkplaceRequestQueueItemWire = z
     district: z.string(),
     startedOn: z.string(),
     createdAt: z.string(),
+    /** ⚠ A request whose stored suggestion is STALE reads as `pending` (code review round 2 — RV11 at read time). */
     state: z.enum(['pending', 'suggested']),
     /** The Pariwar's OTHER pending requests with the same typed name (case- and space-folded). */
     sameNameCount: z.number().int().nonnegative(),
     suggested: z.object({ workplaceId: z.string().uuid(), name: z.string(), district: z.string() }).strict().nullable(),
+    /**
+     * `true` ONLY for a request whose earlier suggestion can ⛔ no longer be used (its workplace delisted or moved, or its
+     * district delisted) — listed under `pending` with `suggested: null`; a new suggestion replaces it (code review round 2).
+     */
+    staleSuggestion: z.boolean(),
   })
   .strict();
 export type WorkplaceRequestQueueItemWire = z.output<typeof WorkplaceRequestQueueItemWire>;
@@ -360,8 +369,12 @@ export const WorkplaceRequestWriteResponse = z
   .strict();
 export type WorkplaceRequestWriteResponse = z.output<typeof WorkplaceRequestWriteResponse>;
 
-/** `POST /api/v1/member/life-events/workplace-requests/:requestId/answer` — requires an `Idempotency-Key` header. */
-export const WorkplaceAnswerRequest = z.object({ answer: z.enum(['yes', 'no']) }).strict();
+/**
+ * `POST /api/v1/member/life-events/workplace-requests/:requestId/answer` — requires an `Idempotency-Key` header.
+ * `workplaceId` is the workplace the member was SHOWN (code review round 2): a different stored suggestion ⇒ 409
+ * `workplace.suggestion_changed`, ⛔ state change — a stale screen can ⛔ confirm or decline a suggestion the member never saw.
+ */
+export const WorkplaceAnswerRequest = z.object({ answer: z.enum(['yes', 'no']), workplaceId: z.string().uuid() }).strict();
 export type WorkplaceAnswerRequest = z.output<typeof WorkplaceAnswerRequest>;
 
 /**

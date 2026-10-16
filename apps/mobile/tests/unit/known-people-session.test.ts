@@ -54,6 +54,15 @@ describe('session-context clears the people-who-know-me caches', () => {
     expect(block(src, /async function signOut\(\)/)).toContain('clearHomeCardDismissals(')
   })
 
+  // Code review round 2 — the two IN-MEMORY 6.36c stores (module-level, so they outlived a sign-out for the rest of the
+  // app process): the suggestion card's session-only "Not now" and the confirm question's shared Idempotency-Keys.
+  // What each clear DOES is executed in `home-prompt-cards-render.test.ts` / `suggestion-answer-key-cache.test.ts`.
+  it('code review round 2 — sign-out also clears the session-only suggestion dismissals and the answer-key cache', () => {
+    const signOut = block(src, /async function signOut\(\)/)
+    expect(signOut).toContain('clearSessionSuggestionDismissals()')
+    expect(signOut).toContain('clearAnswerKeys()')
+  })
+
   it.each([
     ['a terminated refresh', /setTerminatedDuringRefreshHandler\(\(notice\) => \{/],
     ['a rejected refresh', /setRefreshRejectedHandler\(\(\) => \{/],

@@ -52,7 +52,11 @@ export const workplaces = pgTable(
     /** The batch that last wrote an IMPORTED row (required for `source = 'import'`). */
     importBatchId: uuid('import_batch_id').$type<WorkplaceImportBatchId>(),
     status: text('status').notNull().default('listed').$type<WorkplaceStatus>(),
-    /** The Super Admin who added a staff row (6.36c). */
+    /**
+     * The Super Admin who added a staff row (6.36c). ⚠ REQUIRED on a staff row — 0165's `workplaces_staff_actor_check`
+     * (`source <> 'staff' OR created_by_actor_id IS NOT NULL`; code review round 2). Like 0161's CHECKs, it lives in the
+     * migration only.
+     */
     createdByActorId: uuid('created_by_actor_id'),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

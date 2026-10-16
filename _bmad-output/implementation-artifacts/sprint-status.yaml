@@ -5,7 +5,7 @@
 # record `claim/peer-mesh-request.ts` (R1 under claim → ping locks, R4's label over the ONE predicate, R2's replacement from the stored
 # ranking, R5 / R6); R7 (a replacement's answer counts); the jobs child + 10:30 IST sweep (quiet hours, R11's holds incl.
 # `counsel_basis_pending` — so EVERY Pariwar is HELD today, Row 27 (f)), R8's post-commit hook, R12's `resolveAppLinksOrigin`; the by-link
-# route (`logLevel: 'warn'`, read budget, PII log spec) + the mobile slot. ci:local 35/36 → friction-budget disposition added → 36/36.
+# route (`logLevel: 'warn'`, read budget, PII log spec) + the mobile slot. ci:local 35/36 (friction-budget only) → disposition added, that gate re-run ALONE green (⛔ a second full run).
 # Row `6-27c-peer-mesh-sending-texts-and-links` → `review`. ⛔ No other row moves.)
 # last_updated: 2026-10-16l (STORY 6.27c — TASK 0 DONE: BigDev accepted R5 (*"Yout recommendation is accepted for Task 0.1"*) — a
 # re-claimed send that ends `no_target` is ⛔ replaced (it may already have reached that neighbour; ⛔ a sixth text). Recorded as

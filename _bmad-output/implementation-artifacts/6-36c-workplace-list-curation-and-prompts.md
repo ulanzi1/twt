@@ -23,7 +23,7 @@ heading, row key. LETTERS: as 6.36a; this file's own re-validation rulings are *
 
 # Story 6.36c: Keeping the Lists Full — the Super Admin's Office List, a Pariwar Admin Suggests a Workplace the Member Confirms, and the Prompts That Ask Members to Fill Theirs In `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐⭐ **WHAT THIS PART IS.** The school list comes from an import (6.36a); offices are ⛔ not in it, and ~11k Bihar schools are missing
 > from the only bulk copy found (6.36a SF1). So: the SUPER ADMIN keeps an office list and adds any missing school; a PARIWAR ADMIN suggests
@@ -488,7 +488,7 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
         re-suggestion would replay the old `{ answer: 'no' }` for 24 h and act on nothing).
   - [x] 6.6 Mobile unit tests (vitest; mock `lib/mmkv`; RTL `cleanup` under `globals: false`): each card's condition, dismissal expiry,
         the one-card order, the sign-out clear, the share helper, the answer flow (Yes / No / 409 stale / 409 closed).
-- [ ] **Task 7 — copy + records (AC9).**
+- [x] **Task 7 — copy + records (AC9).**
   - [x] 7.1 Copy (RV12): `packages/i18n/locales/{en,hi}/workplace.json` — cards (a), (b)'s heading + invite, (c) / the question + Yes / No,
         `request_suggested` → *"Suggested: {name}"*, the `closed` row, the stale / closed errors; `known_people.json` — (b)'s *"Add people
         who know you"*, (d), (e), (f); Hindi marked NOT YET HUMAN-REVIEWED as the files already say; i18n parity test green;
@@ -501,7 +501,7 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
         correction path (⛔ a 6.36c staff screen edits a posting — I2); the rename-race live spec — its trigger is ⛔ met (this part renames a
         WORKPLACE, ⛔ a district; ⛔ calls `renameWorkplaceDistrict`). **⛔ Triggered:** the `Idempotency-Key` length bound (⛔ an eighth copy
         — AC4 reuses the life-events closure). **NEW:** *"an imported school's name / listing can be corrected only by the import"* (RV3).
-  - [ ] 7.5 The Change Log, the File List; `pnpm ci:local` on the shared DBs (⚠ a peer worktree's `ci:local` ⇒ live-DB timeouts — memory).
+  - [x] 7.5 The Change Log, the File List; `pnpm ci:local` on the shared DBs (⚠ a peer worktree's `ci:local` ⇒ live-DB timeouts — memory).
 
 ## Dev Notes
 
@@ -607,6 +607,14 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36c`, 2026-10-16, worktree `.
     form takes a district as typed (the server refuses one ⛔ LISTED — 422); ⛔ district picker on the admin page. Native layout, a screen
     reader and the share sheet on a device are ⛔ attested ([[feedback_record_unattested_no_backfill]]) — the render tests run the real
     components under jsdom with mocked primitives.
+  - **`pnpm ci:local`** on the code commit `95e36161` (`DATABASE_URL` = `:5433`): **35 / 36 jobs green** — incl. `integration-tests`
+    (every live-DB suite: domain, API, jobs, validity-service, channels, niyamavali-engine, events, queue), `friction-budget` (AC-4: 2
+    rows added), `schema-diff`, `microcopy`, every invariant gate. ✗ `test (unit)`: 7 admin jsdom tests in files this story did ⛔ touch
+    (`drive-target-page`, `fixed-amount-page`, `ground-inspection-*`, `helpline-claim-page`) — 6 × *"Test timed out in 5000ms"* and one
+    `userEvent.type` whose typed text arrived SCRAMBLED (*"eMresm baerres…"*) — CPU starvation under the parallel run (memory:
+    ci:local concurrency oversubscription); turbo then cancelled the sibling unit tasks. The job's own command re-run alone
+    (`env -u DATABASE_URL pnpm turbo run test --concurrency=4 --force`): **37 / 37 tasks green**. ⇒ ⛔ a clean 36 / 36 in ONE run —
+    recorded as such, ⛔ claimed.
 
 ### File List
 
@@ -661,7 +669,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36c`, 2026-10-16, worktree `.
 
 | Date | Version | Change |
 |---|---|---|
-| 2026-10-16 | 2.4 | IMPLEMENTED by `bmad-dev-story 6.36c` — Tasks 1–7: 0164 (campaigns, the trimmed-name CHECK, the guard's suggestion rules) on `:5433` and `:5432`; RBAC 52 / 68 keys; the domain (staff list, queue, suggest / close, the member's answer, campaigns, prompts); the API (two admin modules, the answer route, the prompts route — 6.36b's eighth, RV2); the admin pages; the home cards and the confirm question; copy en + hi; two friction rows; Row 31 note (9); the 6.36a deferrals dispositioned + one new (RV3). Every touched suite green on the shared DBs; `pnpm ci:local` pending at this entry. |
+| 2026-10-16 | 2.4 | IMPLEMENTED by `bmad-dev-story 6.36c` — Tasks 1–7: 0164 (campaigns, the trimmed-name CHECK, the guard's suggestion rules) on `:5433` and `:5432`; RBAC 52 / 68 keys; the domain (staff list, queue, suggest / close, the member's answer, campaigns, prompts); the API (two admin modules, the answer route, the prompts route — 6.36b's eighth, RV2); the admin pages; the home cards and the confirm question; copy en + hi; two friction rows; Row 31 note (9); the 6.36a deferrals dispositioned + one new (RV3). Every touched suite green on the shared DBs; `pnpm ci:local` 35 / 36 (`test (unit)` — 7 admin timeouts under load in untouched files; the job re-run alone 37 / 37 green). Status → `review`. |
 | 2026-10-16 | 2.3 | Round-3 fresh validate: 0 BLOCKER / 0 HIGH / 1 MEDIUM / 8 LOW — CONVERGED; all applied (the leftover `namedByClaimSql` import dropped; the terminal gate classified as MATCHING SW16 (2); `suggestedWorkplace` carries `workplaceId` and card (c) is dismissed per `(requestId, workplaceId)`; the other answer mints a new key; `input.now` + `WorkplaceAnswerRefusedError`; `not_live` noted as historical; `askKnownPerson`'s sweep call `:398`; close joins RV9 (iii)). Sprint row `backlog` → `ready-for-dev`. |
 | 2026-10-16 | 2.2 | `2026-10-16-342` (`61332dae`, committed ALONE) records BigDev's answers to §For BigDev — RV4 = call 1, RV8 = call 2, RV9 = call 3, RV3 = call 4 (each the recommended option); RV4 / RV8 cite `-342`, ⛔ SW16; the precedence clause names `-342`. Round-2 fresh validate (0 BLOCKER / 1 HIGH / 9 MEDIUM / 6 LOW, all applied): the HIGH — `liveKnownPersonSql` was pointed at `listMyKnownPeople`'s WIDER shown filter (a 6.36b regression); now `:457-458` / the label CASE, ⛔ the shown filter. Also: RV1 (i)'s claim half DROPPED (it would have been a fifth, unrecorded narrowing of SW16 (2)) and the terminal-state set exported (⛔ "reused" a private helper); AC4 splits handler / domain steps, one discriminated-union response, the stale path releases explicitly; the mobile key per showing; campaign refusal codes + 404; uuid params; one clock per question; two-connection rename legs; the copy test's produced keys; the picker's loaded district. |
 | 2026-10-16 | 2.1 | Fresh-context validate of v2.0 (0 BLOCKER / 4 HIGH / 8 MEDIUM / 8 LOW, all applied): ⛔ FK to a `pariwars` table that does not exist (`0073:20`); Task 1.3 names the seven fixtures that suggest without an actor and `:365`'s code becoming the GUARD; `WORKPLACE_REFUSAL_CODES` left as the posting route's 422s — two new code lists, status per ROUTE; RV9 quotes the record verbatim and says the "audit pair in the SAME transaction" is ⛔ met — §For BigDev added (RV3, RV4, RV8, RV9 — each a narrowing / departure, built as written unless answered); `lockListedWorkplace(db, pariwarId, workplaceId)`; AC4's idempotency per kind (its own key prefix; `declined` recorded, `stale` released) and ONE lock order district → workplace → request (AC3 too — suggest / close lock the request, 409 ⛔ a guard 500); the Workplace screen's question reads the prompts, ⛔ the history; the sign-out clear sites corrected (three + `signIn`); RV6 OPEN vs LIVE — `/end` cancels a scheduled campaign; `freeSlots` counted in SQL through one extracted `liveKnownPersonSql`; `\\s+`; `sameNameCount` excludes itself; `shareInvite` takes the `known_people` `t`; RV2 quotes `-333` call 1 (a); RV7's (a)-while-(c) rule; the actor / IST / lock-key / trigger names. |

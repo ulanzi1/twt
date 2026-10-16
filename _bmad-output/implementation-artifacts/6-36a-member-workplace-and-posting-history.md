@@ -400,7 +400,10 @@ my family picks.**
   under a LITERAL id. The engine gains a grouped form: groups in order — `workplace` (cap 5) then `named_by_member` (cap 3); the FIRST
   group with ≥ 1 eligible person is the selection's SOURCE; ⛔ never a second group to fill up (CF4's option C was rejected); none ⇒ nobody
   (SW25). Supersedes 6.6's D3 (*"without touching the engine"*) — an author decision, BigDev's.
-- **SW19 — the ANCHOR is the FILING date.** The claim's filing date (`claims.created_at`, IST) — the only date of the death known when
+- **SW19 — the ANCHOR is the FILING date.** ⭐ *Annotated 2026-10-16 (⛔ a rewrite):* SUPERSEDED IN PART by `2026-10-16-339` (Trustee-ratified,
+  RF1 C) — when one death has more than one claim, the filing date is the death's FIRST claim's, unless an investigation found the member
+  innocent of that claim (`-238`); built in 6.36's `resolvePeerMeshFilingCut`.
+  The claim's filing date (`claims.created_at`, IST) — the only date of the death known when
   the five are chosen (SF5): ⛔ no family-entered date exists, and in v1 ⛔ no OCR vendor is wired, so the certificate's OCR'd date is
   ALWAYS empty (SF17). ⛔ No decrypt, ⛔ no KMS call in the select job. ⚠ When a real OCR vendor (or a family-entered date) lands, using
   the certificate's date is a NEW metric id with its own story — recorded, ⛔ not built. *Alt:* (B) decrypt the OCR date when present —

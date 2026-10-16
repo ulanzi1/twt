@@ -19,6 +19,7 @@ databases; worktree `.claude/worktrees/6-36`; merges to `main` before 6.36c. 6.2
 ⏳ ONE Panel question OPEN, ⛔ non-blocking: RF1 (which filing day counts when a death is filed again) —
 `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-15-6-36-refiled-claim.md`, written, ⛔ NOT yet sent. AC4 builds the
 rule as written (each claim's own filing day) behind ONE function.
+⭐ (2026-10-16 annotation — RF1 RULED: `2026-10-16-339`, Trustee-ratified, option C — the death's FIRST filing counts, unless an innocence finding (`-238`) lifts a claim; built behind `resolvePeerMeshFilingCut`.)
 GLYPH REGISTER: `⛔` NEGATES the phrase it prefixes · `⭐` = action / emphasis · `⚠` = hazard · doubling is volume only.
 ADDRESSING RULE: ⛔ no `file:NNN` into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` — cite decision id + clause,
 item heading, row key. LETTERS: as 6.36a.
@@ -75,7 +76,7 @@ person asked.
     withdrawal still counts — call 1 (b)) and call 2 (d)
   (SW23 unchanged — `active` only) · `-327` BD4 / 6.27b PM25 (c) (an inspector's view of the console).
 - ⏳ **OPEN, ⛔ non-blocking:** RF1 — which filing day counts when one death has more than one claim (the routing note named in the
-  header; BigDev: *"Route to the Panel"*).
+  header; BigDev: *"Route to the Panel"*). ⭐ (2026-10-16 annotation — RF1 RULED: `2026-10-16-339`, Trustee-ratified, option C — the death's FIRST filing counts, unless an innocence finding (`-238`) lifts a claim; built behind `resolvePeerMeshFilingCut`.)
 - **SW18** the new metric and grouped engine · **SW19** the anchor (the filing date) · **SW20** as recorded before the filing day ·
   **SW21** who is AT a workplace · **SW22** the ranking, recorded · **SW23** the ONE eligibility predicate · **SW24** the source, stored
   and shown · **SW25** nobody to ask ⇒ the claim goes on · **SW26** old selections · **SW27** what 6.27c inherits · **SW30** two
@@ -162,6 +163,11 @@ person asked.
    6.36a SF17); ⛔ no encryption dependency is added to the job. Tests: a selection made with a certificate row present still cuts at the
    filing day; a claim created at 23:59 IST cuts at that day's 00:00 IST; a second claim for the same death cuts at ITS OWN filing day
    (the RF1 pin — the leg that flips if the Panel answers A).
+   ⭐ (2026-10-16 annotation — `2026-10-16-339` (Trustee-ratified) RULED RF1 **C**: the anchor is the EARLIEST `claims.created_at` among the
+   claims (any state) naming this deceased in the Pariwar, EXCLUDING a claim carrying a `member_found_innocent` finding (our reading of
+   "the first filing" — ⛔ ratified), computed in `resolvePeerMeshFilingCut` (`peerMeshFilingCut` stays the pure day → cut step). The RF1
+   pin FLIPPED: a second claim cuts at the death's FIRST filing; a NEW leg — an innocence finding on the first claim ⇒ the second claim's
+   own filing counts.)
 6. **AC5 — the snapshot, as recorded before the cut** (SW20, SW21; I8). Rows count only if recorded (server time) before the cut.
    - **Posting row kinds** (as shipped — `0161_member-workplaces.sql:298-305`, `apps/api/src/modules/life-events/handlers.ts:291-301`):
      *workplace* (`workplace_id` set); *"isn't listed"* (`workplace_request_id` set); *retirement* (`is_retirement`, both ids NULL —
@@ -494,7 +500,7 @@ person asked.
 - ⏳ **RF1** — a death filed again moves the cut (each claim has its own `created_at`; postings are ⛔ frozen after the first filing;
   the deceased's account can ⛔ change named people — `-333` call 1 — though a named person's own withdrawal still counts). Routed to
   the Panel (non-blocking); built as written behind AC4's one function. Option A carries its own cost (a false death report, refused,
-  would anchor a later real death) and option C narrows it — the note says so.
+  would anchor a later real death) and option C narrows it — the note says so. ⭐ (2026-10-16 annotation — RF1 RULED: `2026-10-16-339`, Trustee-ratified, option C — the death's FIRST filing counts, unless an innocence finding (`-238`) lifts a claim; built behind `resolvePeerMeshFilingCut`.)
 - A living member once wrongly reported dead stays outside every later five, permanently: SW23's *"⛔ a claim naming them as the
   deceased (any state)"* (6.36b's `namedByClaimSql`, `-333` D1 A's recorded cost) — a consequence of the shared rule, ⛔ a change made
   here. The key that would lift it is `-238`'s innocence finding (`claim_nominee_findings.kind = 'member_found_innocent'`, producer row
@@ -612,6 +618,17 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36`, worktree `.claude/worktr
   is the ordering written) ⛔ its letter; the jobs test (own-committing, one transaction per step) drives the job end to end.
 - **⛔ Not tested, recorded:** the rethrow of a `ClaimStreamConcurrencyError` in the select job — with the claim lock held ⛔ known
   appender can race, so the error cannot be provoked without a fault injector (AC8 calls it defensive).
+- 2026-10-16 — **RF1 RULED (`2026-10-16-339`, option C; governance `6c9ebed3`, committed alone first)** and built: `resolvePeerMeshFilingCut`
+  (`packages/domain/src/claim/peer-mesh-read.ts`) reads the earliest `claims.created_at` naming the deceased, ⛔ a claim with a
+  `member_found_innocent` finding (the `nominee-lock.ts` filter), defaulting to the claim's own when every one is lifted; the select job
+  calls it after the lock. Tests: five domain anchor legs (one claim; an earlier refused / closed claim anchors; an innocence finding lifts
+  that claim — the next counts, then the claim's own; `nominee_disqualified` ⛔ lifts, another member's / Pariwar's claims ⛔ count; the
+  snapshot moves with the anchor) and the jobs RF1 pin flipped + an innocence leg (25 / 25). The routing note's ⏳ block replaced by the
+  ruling; 6.36a SW19 annotated. Code commit `e4316ffb`. **Gate on `e4316ffb` (fresh :5433):** the FIRST `pnpm ci:local` failed ONE job —
+  `test (unit)`, ONE admin leg (`ground-inspection-discrepancy.test.tsx`, Story 6.27d's completion-seeds leg): *"Test timed out in
+  5000ms"* under the job's `--concurrency=4` load (the file ran 41.7 s there); ⛔ admin code changed by `e4316ffb`; the file alone, three
+  times: 37 / 37 each (~7.7 s). `apps/admin` has ⛔ global `testTimeout` (api / jobs have 20 s). The SECOND run: **PASSED — 36 / 36**
+  (integration: domain 5390 passed, api 1782, jobs 805).
 - **Gate (AC15) on `3fa2ff0c`:** `DATABASE_URL=…:5433/twt_dev pnpm ci:local` — every static job green (lint, typecheck, build,
   test (unit), db-check and every gate); `integration-tests` RED on ONE file only — `packages/domain/tests/integration/reconciliation/
   review-queue-read.spec.ts` (Story 9.8, 7 legs), the recorded shared-DB class: 575 `live` alerts under the fixed `PARIWAR_A` on :5433, past
@@ -686,6 +703,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36`, worktree `.claude/worktr
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-16 | 3.2 | RF1 RULED — `2026-10-16-339` (Trustee-ratified, option C): the anchor is the death's FIRST filing unless an innocence finding lifts a claim (`resolvePeerMeshFilingCut`); the RF1 pin flipped, an innocence leg and five domain anchor legs added; AC4, the header, the rulings list and §Recorded annotated (⛔ rewritten). |
 | 2026-10-16 | 3.1 | AC15 closed GREEN: `twt-test-pg` recreated fresh (BigDev), migrated from zero, `pnpm ci:local` on `3fa2ff0c` — 36 / 36 jobs. |
 | 2026-10-16 | 3.0 | IMPLEMENTED by `bmad-dev-story 6.36` (code commit `3fa2ff0c`): migration 0163 (applied on :5432 AND :5433); the grouped engine, the ONE dispatch and replay; the filing-day cut, the SW21 run, the SW23 predicate and the snapshot reads; the select job locked FIRST, a selection only with its edge, ⛔ swallow, `claim.peer_mesh_none_to_ask` (the 37th event) and the reminder reading either edge; the source and the staff line on both staff surfaces (⛔ on the inspector's / helpline's / a member's wire — tests); `peer_mesh.v4` live. Records: 6.27c annotated (AC13), 6.6 D3 + its review item and 6.36a SW17 annotated, deferred-work appended (two Closed, one NARROWED, one OPEN, one NEW). |
 | 2026-10-15 | 2.5 | Round-6 narrow re-validate (the note + its story lines): ⛔ finding at HIGH or above — the rounds have converged. 2 MEDIUM, 5 LOW applied: option C's effect holds only when an investigation found the member innocent (a refusal without one still anchors as in A); two negative staff-line legs (an ask, a lapse); the note names C beside A where it should, "the same filter" ⛔ "exact shape", the table exists but nothing writes it, SW19 cited as 6.36a's record; a glyph fix in §Recorded. |

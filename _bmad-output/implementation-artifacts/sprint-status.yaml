@@ -1,3 +1,8 @@
+# last_updated: 2026-10-16c (STORY 6.36 — RF1 RULED AND BUILT: the Panel (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and
+# KB / option C"*) — `2026-10-16-339` (Trustee-ratified, governance `6c9ebed3` committed alone first): a death filed more than once is
+# anchored at its FIRST filing, unless an innocence finding (`-238`) lifts a claim. Built in `e4316ffb` (`resolvePeerMeshFilingCut`; the
+# RF1 pin flipped, an innocence leg, five domain anchor legs). Gate on `e4316ffb`: run 1 — `test (unit)` red on ONE admin leg timing out
+# at 5 s under load (a 6.27d file, ⛔ touched; 37 / 37 three times alone); run 2 — PASSED, 36 / 36. Row stays `review`. ⛔ No other row moves.)
 # last_updated: 2026-10-16b (STORY 6.36 — THE GATE, GREEN: BigDev *"recreate the container and get it done"* — `twt-test-pg` (:5433)
 # removed with its volume, recreated (`postgres:16`), migrated from zero through 0163; `pnpm ci:local` on `3fa2ff0c` PASSED, 36 / 36 jobs
 # (the shared-DB reconciliation failure gone with the 575 accumulated alerts). Row `6-36-peer-mesh-school-wise-selection` stays `review`.

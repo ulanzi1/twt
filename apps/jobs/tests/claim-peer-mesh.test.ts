@@ -507,6 +507,39 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
     }
   });
 
+  it('⭐ Story 6.27c R8 — the neighbour-text hook fires after COMMIT whenever a selection WITH PINGS exists: the fresh run AND the no-op re-run; ⛔ for nobody-to-ask, ⛔ before a selection', async () => {
+    const calls: { pariwarId: string; claimCaseId: string }[] = [];
+    const hook = { enqueuePeerMeshRequestSend: async (input: { pariwarId: string; claimCaseId: string }) => void calls.push({ ...input }) };
+    const { boss } = fakeBoss();
+    const pinged = await seedClaim();
+    const nobody = await seedClaim({ colleagues: 0 });
+    const early = await seedClaim({ target: 'intake_converged' });
+    try {
+      await runClaimPeerMeshSelect(boss, deps(hook), selectEnvelope(pinged));
+      expect(calls).toEqual([{ pariwarId: pinged.pariwarId, claimCaseId: pinged.claimCaseId }]);
+      // the no-op re-run (a lost enqueue self-heals) — keyed on the selection's pings, ⛔ `advanced`
+      await runClaimPeerMeshSelect(boss, deps(hook), selectEnvelope(pinged));
+      expect(calls).toHaveLength(2);
+      // the zero branch and the state guard ⛔ fire it
+      await runClaimPeerMeshSelect(boss, deps(hook), selectEnvelope(nobody));
+      await runClaimPeerMeshSelect(boss, deps(hook), selectEnvelope(nobody));
+      await runClaimPeerMeshSelect(boss, deps(hook), selectEnvelope(early));
+      expect(calls).toHaveLength(2);
+      // ⛔ a second edge event from the re-run
+      expect(await eventCount(pinged.claimCaseId, 'claim.peer_mesh_pinged')).toBe(1);
+      // a failing hook alarms and never fails the select
+      const alarms: string[] = [];
+      await expect(
+        runClaimPeerMeshSelect(boss, deps({ onAlarm: (m) => alarms.push(m), enqueuePeerMeshRequestSend: () => Promise.reject(new Error('queue down')) }), selectEnvelope(pinged)),
+      ).resolves.toMatchObject({ created: false });
+      expect(alarms.some((a) => a.includes('neighbour texts') && a.includes(pinged.claimCaseId))).toBe(true);
+    } finally {
+      await cleanup(pinged);
+      await cleanup(nobody);
+      await cleanup(early);
+    }
+  });
+
   it('the state guard (AC8): a select job while the claim is intake_converged ⇒ ⛔ selection, ⛔ window, ⛔ shepherd; after documents_received it selects normally', async () => {
     const seed = await seedClaim({ colleagues: 3, target: 'intake_converged' });
     const { boss, sends } = fakeBoss();

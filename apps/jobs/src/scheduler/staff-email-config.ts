@@ -126,5 +126,21 @@ export function resolveHttpsOrigin(raw: string | undefined | null): string | nul
   return url.origin;
 }
 
+/**
+ * ⭐ Story 6.27c (R12 — closes deferred-work *"`APP_LINKS_BASE_URL` can disagree with `APP_LINKS_HOST`"*) — the APP-LINK base:
+ * `resolveHttpsOrigin` AND ⛔ any port written in the RAW value (an explicit `:443` included — `resolveHttpsOrigin` normalises it
+ * away, so the raw string is tested) AND ⛔ a trailing-dot host. A link the operating system cannot match against the app's
+ * verified domain (`APP_LINKS_HOST` carries neither) would open a browser, ⛔ the app. Else `null` ⇒ the 6.27c sweep and child
+ * HOLD (`config:app_links_base_url_invalid`).
+ */
+export function resolveAppLinksOrigin(raw: string | undefined | null): string | null {
+  const origin = resolveHttpsOrigin(raw);
+  if (origin === null) return null;
+  const authority = (raw as string).trim().replace(/^https:\/\//i, '').replace(/\/$/, '');
+  if (authority.includes(':')) return null;
+  if (new URL(origin).hostname.endsWith('.')) return null;
+  return origin;
+}
+
 /** 6.25's name for {@link resolveHttpsOrigin} — kept so its callers and tests read unchanged (Story 6.30 AL5, N18). */
 export const resolveAdminAppOrigin = resolveHttpsOrigin;

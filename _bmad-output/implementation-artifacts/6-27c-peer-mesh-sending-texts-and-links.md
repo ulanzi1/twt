@@ -470,23 +470,23 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
         comment line for the ping table.
   - [x] 3.10 Live tests (`{ timeout: 20000 }`, membership ⛔ counts — [[project_live_db_test_gotchas]]): once-ever on two connections; the
         replacement chain; R5; the window per state; a save racing a send (claim → ping order, ⛔ deadlock).
-- [ ] **Task 4 — the jobs child + sweep (AC2–AC5b).** NEW `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`:
-  - [ ] 4.1 Queues `CLAIM_PEER_MESH_REQUEST_SMS: 'claim.peer_mesh_request.sms'` (child per claim; a `singletonKey` = claim id is a LABEL
+- [x] **Task 4 — the jobs child + sweep (AC2–AC5b).** NEW `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`:
+  - [x] 4.1 Queues `CLAIM_PEER_MESH_REQUEST_SMS: 'claim.peer_mesh_request.sms'` (child per claim; a `singletonKey` = claim id is a LABEL
         only — inert on pg-boss's standard policy, `claim-peer-mesh.ts:15-21`, `packages/queue/src/index.ts:375` — so hook, sweep and
         quiet-hours re-enqueues CAN run two children for one claim at once: the claim lock + the per-ping CAS are the dedup; a ping
         another live job holds is skipped (`held_by_other`) and the run continues) and
         `CLAIM_PEER_MESH_REQUEST_SWEEP: 'claim.peer_mesh_request.sweep'` in `packages/queue/src/index.ts` (doc comments ⛔ containing
         `sms.dlt.template_id.` / `{#var#}` — Trap 21).
-  - [ ] 4.2 The child: quiet hours (AC2) → config race guard (R11) → name read (R9, BF13) → per due ping: begin → COMMIT → mobile (BF12) →
+  - [x] 4.2 The child: quiet hours (AC2) → config race guard (R11) → name read (R9, BF13) → per due ping: begin → COMMIT → mobile (BF12) →
         send → finalise; R6 on an UNUSABLE number only (a decrypt / hash THROW ⇒ the transient note `decrypt_failed:tier1` / `hash_failed:tier1`,
         ⛔ R6); transient ⇒ note + rethrow at the END (pg-boss retries; finished pings are skipped);
         `-298` / `-297` alarms; the helpline warning; replacements processed in the same run.
-  - [ ] 4.3 The sweep `'30 10 * * *'` tz `CLAIM_CORRECTION_TZ` (10:30 IST — inside quiet hours, after the suspicion sweep's 10:00): config per
+  - [x] 4.3 The sweep `'30 10 * * *'` tz `CLAIM_CORRECTION_TZ` (10:30 IST — inside quiet hours, after the suspicion sweep's 10:00): config per
         Pariwar FIRST → stalled scopes → park held + alarm → give-up over unheld → paged enqueue (R16) → one end-of-run held alarm (`sampleIds`).
-  - [ ] 4.4 Wiring: `enqueuePeerMeshRequestSend` dep in `claim-peer-mesh.ts` (R8) + its boot injection beside the shepherd hook
+  - [x] 4.4 Wiring: `enqueuePeerMeshRequestSend` dep in `claim-peer-mesh.ts` (R8) + its boot injection beside the shepherd hook
         (`boot.ts:492-504`, enqueue only); the child + sweep registered after `claimCorrectionDeps` (`boot.ts:622`) with `appLinksBaseUrl:
         process.env['APP_LINKS_BASE_URL']` (BF17) and `resolveAppLinksOrigin` (R12) beside `resolveHttpsOrigin`.
-  - [ ] 4.5 Unit tests (stubs that CALL the real registry / builder) + a live test `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
+  - [x] 4.5 Unit tests (stubs that CALL the real registry / builder) + a live test `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
         (the `claim-suspicion-notices-live.test.ts` template): hold → park → resume; once-ever; quiet hours; a full run with a replacement;
         ⛔ new events; ids-only alarms.
 - [ ] **Task 5 — the link, the screen, the records (AC6–AC8).**

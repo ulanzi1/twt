@@ -437,6 +437,25 @@ export const QUEUE_NAMES = {
    */
   CLAIM_SUSPICION_NOTICE_SMS: 'claim.suspicion.notice.sms',
   /**
+   * The NEIGHBOURS' TEXT sweep (Story 6.27c, AC2–AC5b; `2026-10-10-311` PM1–PM5, PM16) — daily 10:30 IST, its OWN queue. It checks
+   * the config per Pariwar FIRST (the gateway, the app-link base, the LIVE questionnaire with ⛔ question awaiting counsel, the
+   * template id of the Pariwar's language, the helpline — a gap enqueues and begins ⛔ nothing: one end-of-run alarm), parks a
+   * held Pariwar's in-flight pings, gives up pings still `attempting` after three IST days of un-parked time, and enqueues one
+   * CLAIM_PEER_MESH_REQUEST_SMS child per claim with a ping ⛔ yet begun whose claim can still take an answer (or a stalled one).
+   * ⛔ Never `dispatch()`; ⛔ it never refuses, closes or approves a claim. Job class C.
+   */
+  CLAIM_PEER_MESH_REQUEST_SWEEP: 'claim.peer_mesh_request.sweep',
+  /**
+   * ONE claim's neighbour texts (Story 6.27c, AC2). Enqueued by the peer-mesh SELECT worker after it commits (a selection with
+   * pings exists), by the sweep, and by itself at the next 09:00 IST when it fires at night. It re-checks the config (a race
+   * guard), reads the deceased's name ONCE, then for each due ping — under the CLAIM-ROW lock, then the ping's — re-checks the
+   * answer window and the neighbour's eligibility (a skipped neighbour is replaced from the same group's stored ranking), begins
+   * the ping ONCE EVER, commits, THEN decrypts the neighbour's number and sends through the shared DLT core. It throws ONLY on a
+   * transient failure. Its `singletonKey` is a LABEL (the `standard` policy enforces ⛔ uniqueness) — the claim lock and the
+   * per-ping compare-and-set are the dedup. The payload carries ids only, ⛔ never a number, a name or a link code. Job class B.
+   */
+  CLAIM_PEER_MESH_REQUEST_SMS: 'claim.peer_mesh_request.sms',
+  /**
    * The STAFF EMAIL sweep (Story 6.25, `2026-10-09-299` RE10 / RE11) — every 15 minutes IST: every Pariwar Admin appointed before a
    * `-239` refusal that STANDS (RF1), active and with a login, with ⛔ FINISHED row for (claim, recipient) — or the claim-level
    * NULL pair when ⛔ admin is eligible (RE4). It gives up `attempting` rows three IST days old AND past the 30-minute lease,

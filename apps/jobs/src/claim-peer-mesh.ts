@@ -76,6 +76,15 @@ export interface ClaimPeerMeshDeps {
     claimCaseId: string,
     deceasedMemberId: string,
   ) => Promise<void>;
+  /**
+   * ⭐ Story 6.27c (R8; `-311` PM5 (i)) — enqueue the claim's neighbour-text child AFTER this worker commits, whenever a selection
+   * WITH PINGS exists: the fresh branch that wrote ≥ 1 ping AND the no-op branch that found one (a lost enqueue self-heals) —
+   * keyed on that, ⛔ on `advanced` (a no-op run on a claim already past `verification_in_progress` — `verifier_approved`, a live
+   * R9 routing — can still take an answer); ⛔ for `none_to_ask`; ⛔ ever a second `claim.peer_mesh_pinged`. The child judges the
+   * answer window itself, under the claim lock. Injected (the shepherd hook's form); optional — omitted, nothing is enqueued
+   * (6.6's own tests do not wire it; the daily sweep still finds the claim). Best-effort: a failure alarms, never fails the select.
+   */
+  readonly enqueuePeerMeshRequestSend?: (input: { readonly pariwarId: string; readonly claimCaseId: string }) => Promise<void>;
 }
 
 /** CLAIM_PEER_MESH_SELECT payload (wrapped in a JobEnvelope). All fields NON-PII. */
@@ -204,13 +213,14 @@ export async function runClaimPeerMeshSelect(
         outcome: existing.outcome as schema.PeerMeshOutcome | null,
         responseWindowExpiresAt: existing.responseWindowExpiresAt,
         advanced: claimRow.currentState === 'verification_in_progress',
+        hasPings: existing.selectedMemberIds.length > 0,
       };
     }
 
     // (3) The state guard — BEFORE the snapshot. ⛔ `documents_pending` (still `intake_converged`, or already past
     //     it) ⇒ ⛔ selection, ⛔ window, ⛔ shepherd; the next upload's OCR run enqueues a fresh select job.
     if (claimRow.currentState !== 'documents_pending') {
-      return { created: false, selectedCount: 0, outcome: null, responseWindowExpiresAt: null, advanced: false };
+      return { created: false, selectedCount: 0, outcome: null, responseWindowExpiresAt: null, advanced: false, hasPings: false };
     }
 
     // (4) The 6.6 reference point — still written (`deceased_created_at` is NOT NULL); read by nothing in the grouped
@@ -303,6 +313,7 @@ export async function runClaimPeerMeshSelect(
         outcome: 'skipped' as schema.PeerMeshOutcome | null,
         responseWindowExpiresAt,
         advanced: true,
+        hasPings: false,
       };
     }
 
@@ -341,6 +352,7 @@ export async function runClaimPeerMeshSelect(
       outcome: selectionRow.outcome as schema.PeerMeshOutcome | null,
       responseWindowExpiresAt: selectionRow.responseWindowExpiresAt,
       advanced: true,
+      hasPings: true,
     };
   });
 
@@ -370,6 +382,19 @@ export async function runClaimPeerMeshSelect(
       const e = err as Error & { code?: string };
       alarm(
         `[jobs] claim-peer-mesh: failed to enqueue shepherd-assign for claim ${p.claimCaseId} — ` +
+          `${e?.code ?? 'NO_CODE'} ${e?.message ?? String(err)}`,
+      );
+    }
+  }
+
+  // (11) Story 6.27c (R8) — the neighbour texts, AFTER commit, whenever a selection with pings exists (see the dep's doc).
+  if (outcome.hasPings && deps.enqueuePeerMeshRequestSend) {
+    try {
+      await deps.enqueuePeerMeshRequestSend({ pariwarId, claimCaseId: p.claimCaseId });
+    } catch (err) {
+      const e = err as Error & { code?: string };
+      alarm(
+        `[jobs] claim-peer-mesh: failed to enqueue the neighbour texts for claim ${p.claimCaseId} — ` +
           `${e?.code ?? 'NO_CODE'} ${e?.message ?? String(err)}`,
       );
     }

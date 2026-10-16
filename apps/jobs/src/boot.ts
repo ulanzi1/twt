@@ -112,6 +112,7 @@ import { buildContributionProviderResolver, resolveSmsDltConfig } from './schedu
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
+import { enqueuePeerMeshRequestChild, registerClaimPeerMeshRequestWorkers } from './scheduler/claim-peer-mesh-requests.js';
 import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
 import { registerClaimSuspicionStaffEmailWorkers } from './scheduler/claim-suspicion-staff-emails.js';
 import { buildStaffEmailClient } from './scheduler/staff-email-config.js';
@@ -482,6 +483,10 @@ async function main(): Promise<void> {
     // ── Peer-mesh deterministic selection + AR-61 window fallback (Story 6.6) ──────
     // Register BEFORE the OCR worker so the SELECT queue exists when OCR enqueues onto it.
     // The window's default (72h) is a named config value (CLAIM_PEER_MESH_WINDOW_SECONDS).
+    // ⭐ Story 6.27c (R8) — the neighbour-text CHILD's queue is created HERE (its worker registers later, beside the suspicion
+    // notices — it needs `claimCorrectionDeps`), so the SELECT worker's post-commit hook can ENQUEUE onto it from the first job.
+    // `createQueue` is idempotent (the registration repeats it).
+    await boss.createQueue(QUEUE_NAMES.CLAIM_PEER_MESH_REQUEST_SMS);
     await registerClaimPeerMeshWorkers(boss, {
       pool,
       windowSeconds: PEER_MESH_WINDOW_SECONDS,
@@ -502,6 +507,8 @@ async function main(): Promise<void> {
           { singletonKey: claimCaseId },
         );
       },
+      // Story 6.27c (R8) — ENQUEUE only (the child runs later, on its own worker): ids, a LABEL singletonKey.
+      enqueuePeerMeshRequestSend: (input) => enqueuePeerMeshRequestChild(boss, input),
     });
 
     await registerClaimOcrParityWorker(boss, {
@@ -620,6 +627,12 @@ async function main(): Promise<void> {
     // the separate Hindi human-review gate) — the sweep HOLDS every notice and alarms (RB12). ⛔ Neither ever refuses,
     // closes or approves a claim.
     await registerClaimSuspicionNoticeWorkers(boss, claimCorrectionDeps);
+    // Story 6.27c (AC2–AC5b) — the NEIGHBOURS' TEXT: each of the five chosen for a reported death is texted ONCE, through the SAME
+    // shared DLT core (its sibling registry `peer-mesh-sms-templates.ts`), ⛔ never at night, while the claim can still take an answer.
+    // The SAME deps + the app-link base, read here and validated every run (`resolveAppLinksOrigin` — R12). Its DLT template ids
+    // stay UNSET until roster Row 27 closes (ALL EIGHT conditions) — and the LIVE questionnaire carries questions awaiting counsel —
+    // so the sweep HOLDS every Pariwar and alarms (R11 / AC2b). ⛔ Neither ever refuses, closes or approves a claim.
+    await registerClaimPeerMeshRequestWorkers(boss, { ...claimCorrectionDeps, appLinksBaseUrl: process.env['APP_LINKS_BASE_URL'] });
     // Story 6.25 (`2026-10-09-299`) — the STAFF EMAIL: every Pariwar Admin appointed before a `-239` refusal, active and with a
     // login, is emailed ONCE per standing refusal (`-262` FQ3 A — "open the list", ⛔ no names, ⛔ no note). Its OWN 15-minute IST
     // sweep and email child; the jobs KMS deps decrypt the admin email AFTER the claiming commit (ADR-0040 Q2). The client is

@@ -262,11 +262,9 @@ export interface PeerMeshFilingCut {
 }
 
 /**
- * ⭐ THE ONE place the anchor is computed (AC4; SW19, SF17): the cut is the START of the claim's FILING day (IST) —
- * `istMidnightAt(istDateOf(claimCreatedAt))` — ⛔ the date of death (in v1 the certificate's OCR'd date is always
- * empty). ⏳ RF1 (routed to the Panel, non-blocking): when one death has more than one claim, THIS claim's own
- * `created_at` is used (the rule as written — option B). Option A ("the earliest claim naming the same deceased") is a
- * small change BEHIND this function: the caller passes that claim's `created_at` instead (one more read).
+ * The cut for a filing instant (AC4; SW19, SF17): the START of its FILING day (IST) — `istMidnightAt(istDateOf(at))` —
+ * ⛔ the date of death (in v1 the certificate's OCR'd date is always empty). PURE. WHICH filing is
+ * {@link resolvePeerMeshFilingCut}'s question (RF1 — `2026-10-16-339`).
  */
 export function peerMeshFilingCut(claimCreatedAt: Date): PeerMeshFilingCut {
   const filingDate = istDateOf(claimCreatedAt);
@@ -275,6 +273,34 @@ export function peerMeshFilingCut(claimCreatedAt: Date): PeerMeshFilingCut {
     cut: istMidnightAt(filingDate),
     recentFrom: istMidnightAt(addCalendarDays(filingDate, -PEER_MESH_RECENT_DAYS)),
   };
+}
+
+/**
+ * ⭐ THE ONE place the anchor is chosen (AC4; RF1 — `2026-10-16-339`, Trustee-ratified, option C): *"The first filing
+ * counts, unless an investigation found the member innocent of a claim filed while they were alive."* The anchor is the
+ * EARLIEST `claims.created_at` among the claims — in ANY state — naming this deceased in the Pariwar, EXCLUDING every
+ * claim that carries a `member_found_innocent` finding (`-238`; the SAME filter `nominee-lock.ts` applies). Our reading
+ * (⛔ ratified): a refused, closed or appealed claim still anchors; only the innocence finding lifts one. Until the fraud
+ * register (row 6-22) writes that finding, this behaves exactly as option A. When every such claim carries the finding,
+ * the claim being selected for counts from its own filing (defensive — unreachable today). A read of `claims` and
+ * `claim_nominee_findings` only (⛔ decrypt, ⛔ KMS); both have Pariwar-wide `FOR SELECT TO twt_app` policies.
+ */
+export async function resolvePeerMeshFilingCut(
+  db: Db,
+  input: { readonly pariwarId: PariwarId; readonly deceasedMemberId: MemberId; readonly claimCreatedAt: Date },
+): Promise<PeerMeshFilingCut> {
+  const r = await db.execute<{ first: Date | string | null }>(sql`
+    SELECT min(c.created_at) AS first
+      FROM claims c
+     WHERE c.pariwar_id = ${input.pariwarId}
+       AND c.deceased_member_id = ${input.deceasedMemberId}
+       AND NOT EXISTS (
+             SELECT 1 FROM claim_nominee_findings f
+              WHERE f.pariwar_id = c.pariwar_id
+                AND f.claim_case_id = c.claim_case_id
+                AND f.kind = 'member_found_innocent')`);
+  const first = r.rows[0]?.first ?? null;
+  return peerMeshFilingCut(first === null ? input.claimCreatedAt : first instanceof Date ? first : new Date(first));
 }
 
 /** One `member_postings` row, as the run derivation needs it (newest first). */

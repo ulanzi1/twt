@@ -12,7 +12,7 @@
 //   · fewer than five / named / nobody (AC7, AC8): 2 colleagues ⇒ 2; ⛔ colleague + 2 named ⇒ 2 `named_by_member`;
 //     neither ⇒ `skipped` + `claim.peer_mesh_none_to_ask` → verification_in_progress + a shepherd; a re-run ⛔ a 2nd event;
 //   · the anchor (AC4): a certificate row present still cuts at the filing day; a second claim for the same death cuts
-//     at ITS OWN filing day (the RF1 pin — flips if the Panel answers A);
+//     at the death's FIRST filing (RF1, `2026-10-16-339` option C), unless an innocence finding lifts the first claim;
 //   · the state guard: a select job while `intake_converged` ⇒ ⛔ selection, ⛔ window; after `documents_received` it selects;
 //   · the race (two connections), each branch: B holds the job's own transaction up to its edge; A waits on the claim
 //     lock; COMMIT B ⇒ exactly ONE edge event;
@@ -580,9 +580,12 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
     }
   });
 
-  it('the anchor (AC4 — the RF1 pin): a SECOND claim for the same death cuts at ITS OWN filing day (flips if the Panel answers A)', async () => {
-    // The deceased's FIRST claim was filed 200 days ago; they were posted to the school 100 days ago (between the two
-    // filings). Under the rule as written (option B) the second claim's own filing day is the cut ⇒ the school counts.
+  /**
+   * The anchor (AC4 — RF1, `2026-10-16-339`, option C): the deceased's FIRST claim was filed 200 days ago (refused); they were
+   * posted to the school 100 days ago (BETWEEN the two filings). The death's first filing is the cut ⇒ the school does ⛔ count
+   * — nobody to ask; unless an innocence finding lifts that first claim, when the second claim's own filing counts.
+   */
+  async function refiled(innocent: boolean) {
     const seed = await seedClaim({ colleagues: 2, deceasedPostedAt: new Date(Date.now() - 100 * DAY) });
     const { boss } = fakeBoss();
     const firstClaim = randomUUID();
@@ -594,14 +597,33 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
            VALUES ($1, $2, $3, ARRAY['member_app']::claim_intake_channel[], 'denied', 1, $4)`,
           [firstClaim, seed.pariwarId, seed.deceasedMemberId, new Date(Date.now() - 200 * DAY)],
         );
+        if (innocent) {
+          await client.query(
+            `INSERT INTO claim_nominee_findings (finding_id, claim_case_id, pariwar_id, kind, recorded_by_actor_id, recorded_by_display)
+             VALUES (gen_random_uuid(), $1, $2, 'member_found_innocent', 'seed', 'Seed Investigator')`,
+            [firstClaim, seed.pariwarId],
+          );
+        }
       });
       const r = await runClaimPeerMeshSelect(boss, deps(), selectEnvelope(seed));
-      expect(r.selectedCount).toBe(2);
-      expect((await selectionOf(seed))!.source).toBe('workplace');
+      return { r, selection: await selectionOf(seed), state: await claimState(seed.claimCaseId) };
     } finally {
       await pool.query(`DELETE FROM claims WHERE claim_case_id = $1`, [firstClaim]);
       await cleanup(seed);
     }
+  }
+
+  it('the anchor (AC4 — the RF1 pin, `-339` C): a SECOND claim for the same death cuts at the death\'s FIRST filing — a transfer recorded between the two ⛔ counts', async () => {
+    const { r, selection, state } = await refiled(false);
+    expect(r.selectedCount).toBe(0);
+    expect(selection!).toMatchObject({ source: null, deceasedWorkplaceId: null, outcome: 'skipped' });
+    expect(state).toBe('verification_in_progress');
+  });
+
+  it('the anchor (`-339` C): an innocence finding on the first claim lifts it — the second claim\'s own filing counts, the school\'s colleagues are asked', async () => {
+    const { r, selection } = await refiled(true);
+    expect(r.selectedCount).toBe(2);
+    expect(selection!.source).toBe('workplace');
   });
 
   /**

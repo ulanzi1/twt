@@ -6,7 +6,7 @@
 //     after it advances the claim to `documents_pending`. In ONE scope-tx it: LOCKS the claim, probes
 //     idempotency (a selection row already exists → a no-op + the window / shepherd self-heal), returns
 //     unless the claim is `documents_pending`, then reads — ⭐ Story 6.36 (`workplace_named_v1`, SW18–SW23) —
-//     who worked with the deceased, or else whom they named, AS RECORDED BEFORE THE FILING DAY, chooses
+//     who worked with the deceased, or else whom they named, AS RECORDED BEFORE THE (FIRST — `-339`) FILING DAY, chooses
 //     deterministically, PERSISTS the immutable selection (snapshot + ranking + source + the workplace
 //     record), and either emits `claim.peer_mesh_pinged` (→ verification_in_progress) with ONE
 //     delivery-neutral ping intent per selected member (Decision D1 — no live fan-out here; ⭐ Story 6.27c
@@ -151,7 +151,8 @@ async function enqueuePeerMeshWindow(
  *   (2) the idempotency probe — a selection exists ⇒ a no-op (+ the window / shepherd self-heal after COMMIT);
  *   (3) the state guard — a claim ⛔ in `documents_pending` returns BEFORE the snapshot: ⛔ selection, ⛔ window job,
  *       ⛔ shepherd. ⭐ A selection is persisted ONLY together with its edge;
- *   (4) the cut (the filing day — `peerMeshFilingCut`), the grouped snapshot, `runPeerMeshMetric`, the persist;
+ *   (4) the cut (the death's FIRST filing day — `resolvePeerMeshFilingCut`, `-339` option C), the grouped snapshot,
+ *       `runPeerMeshMetric`, the persist;
  *   (5) somebody to ask ⇒ `claim.peer_mesh_pinged` + one ping intent each, carrying the selection's `source`;
  *       nobody ⇒ `claim.peer_mesh_none_to_ask` + `skipped` — the claim goes on to the ground inspection (SF4).
  * ⚠ A `ClaimStreamConcurrencyError` is ⛔ never swallowed (6.6's "benign append race" SAVEPOINT is GONE): with the lock
@@ -221,7 +222,12 @@ export async function runClaimPeerMeshSelect(
     if (metric.kind !== 'grouped') {
       throw new Error(`[jobs] claim-peer-mesh-select: the default metric ${metric.metricId} is not a grouped metric`);
     }
-    const cut = claim.peerMeshFilingCut(claimRow.createdAt);
+    // RF1 (`2026-10-16-339`, option C): the death's FIRST filing, unless an innocence finding lifts a claim.
+    const cut = await claim.resolvePeerMeshFilingCut(db, {
+      pariwarId: brandedPariwarId,
+      deceasedMemberId,
+      claimCreatedAt: claimRow.createdAt,
+    });
     const snapshot = await claim.getPeerMeshGroupedSnapshot(db, {
       pariwarId: brandedPariwarId,
       deceasedMemberId,

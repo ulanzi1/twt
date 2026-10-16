@@ -3,7 +3,8 @@
 //   · the selection: the new columns; the two CHECKs SCOPED to `workplace_named_v1` (a legacy-id insert with NULL new
 //     columns — `'m'` and `'district_cohort_v1'` — is accepted); the source vocabulary; the 500 cap; the prefix trigger on
 //     INSERT and on an owner UPDATE (an empty selection is a valid prefix); the narrowed UPDATE grant (`twt_app` may
-//     update the disposition, ⛔ `source` / `ranked_member_ids` / any 6.6 snapshot column — 42501);
+//     update the disposition, ⛔ `source` / `ranked_member_ids` / `anchor_claim_case_id` / any 6.6 snapshot column — 42501);
+//     `anchor_claim_case_id` (`2026-10-16-340` call 1) is REQUIRED for `workplace_named_v1` and NULL on a legacy row;
 //   · the ping: `source` must equal its selection's (a mismatch refused, NULL against a NULL-source selection accepted);
 //     another Pariwar's selection still fails on the composite FK (23503), ⛔ the trigger; `source` is ⛔ in the column
 //     grant (42501);
@@ -33,8 +34,8 @@ async function attempt(client: Client, text: string, params: unknown[] = []): Pr
 
 const INSERT_SELECTION = `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id,
     deceased_created_at, metric_id, metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at,
-    source, previous_workplace_counted, recent_change_before_filing, ranked_member_ids)
-  VALUES ($1, $2, $3, gen_random_uuid(), now(), $4, 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', $6, $7, $8, $9::uuid[])`;
+    source, previous_workplace_counted, recent_change_before_filing, ranked_member_ids, anchor_claim_case_id)
+  VALUES ($1, $2, $3, gen_random_uuid(), now(), $4, 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', $6, $7, $8, $9::uuid[], $10)`;
 
 interface SelectionOpts {
   metricId?: string;
@@ -43,6 +44,8 @@ interface SelectionOpts {
   previousCounted?: boolean | null;
   recentChange?: boolean | null;
   ranked?: string[] | null;
+  /** `undefined` ⇒ the row's own claim (`-340` call 1); `null` ⇒ NULL. */
+  anchor?: string | null;
 }
 
 /** As the superuser: a claim and ONE selection row. */
@@ -60,6 +63,7 @@ async function insertSelection(client: Client, pariwarId: string, o: SelectionOp
     o.previousCounted === undefined ? false : o.previousCounted,
     o.recentChange === undefined ? false : o.recentChange,
     o.ranked === undefined ? [] : o.ranked,
+    o.anchor === undefined ? claimCaseId : o.anchor,
   ]);
   return { ...r, selectionId, claimCaseId };
 }
@@ -80,14 +84,16 @@ describe.skipIf(!hasDatabase)('0163 — the workplace_named_v1 selection and the
           previousCounted: null,
           recentChange: null,
           ranked: null,
+          anchor: null,
         });
         expect(r.code, `${metricId}: ${r.message}`).toBeNull();
       }
     });
 
-    it('a workplace_named_v1 row must carry the ranking and both booleans (23514)', async () => {
+    it('a workplace_named_v1 row must carry the ranking, both booleans and the anchor claim (23514)', async () => {
       const { client } = getTx();
       const sel = ids(2);
+      expect((await insertSelection(client, PARIWAR_A, { selected: sel, source: 'workplace', ranked: sel, anchor: null })).code).toBe('23514');
       expect((await insertSelection(client, PARIWAR_A, { selected: sel, source: 'workplace', ranked: null })).code).toBe('23514');
       expect((await insertSelection(client, PARIWAR_A, { selected: sel, source: 'workplace', ranked: sel, previousCounted: null })).code).toBe('23514');
       expect((await insertSelection(client, PARIWAR_A, { selected: sel, source: 'workplace', ranked: sel, recentChange: null })).code).toBe('23514');
@@ -121,7 +127,7 @@ describe.skipIf(!hasDatabase)('0163 — the workplace_named_v1 selection and the
       // an empty selection is a valid prefix (of an empty or a non-empty ranking)
       expect((await insertSelection(client, PARIWAR_A, { selected: [], source: null, ranked: r })).code).toBeNull();
       // a legacy row is ⛔ checked (its selection is non-empty and its ranking NULL)
-      expect((await insertSelection(client, PARIWAR_A, { metricId: 'district_cohort_v1', selected: r.slice(0, 2), ranked: null, source: null, previousCounted: null, recentChange: null })).code).toBeNull();
+      expect((await insertSelection(client, PARIWAR_A, { metricId: 'district_cohort_v1', selected: r.slice(0, 2), ranked: null, source: null, previousCounted: null, recentChange: null, anchor: null })).code).toBeNull();
       // on UPDATE too (the owner / superuser can UPDATE; twt_app cannot — below)
       expect((await attempt(client, `UPDATE claim_peer_mesh_selections SET selected_member_ids = ARRAY[$1]::uuid[] WHERE selection_id = $2`, [r[6], ok.selectionId])).code).toBe('23000');
       expect((await attempt(client, `UPDATE claim_peer_mesh_selections SET ranked_member_ids = ARRAY[$1]::uuid[] WHERE selection_id = $2`, [r[6], ok.selectionId])).code).toBe('23000');
@@ -140,6 +146,7 @@ describe.skipIf(!hasDatabase)('0163 — the workplace_named_v1 selection and the
         `recent_change_before_filing = true`,
         `deceased_workplace_id = gen_random_uuid()`,
         `deceased_previous_workplace_id = gen_random_uuid()`,
+        `anchor_claim_case_id = gen_random_uuid()`,
         `selected_member_ids = selected_member_ids`,
         `candidate_snapshot = '[]'::jsonb`,
         `metric_id = 'district_cohort_v1'`,
@@ -175,7 +182,7 @@ describe.skipIf(!hasDatabase)('0163 — the workplace_named_v1 selection and the
     it('a legacy selection\'s pings carry NULL (the shipped inserters pass); a source against it is refused', async () => {
       const { client } = getTx();
       const r = ids(2);
-      const s = await insertSelection(client, PARIWAR_A, { metricId: 'district_cohort_v1', selected: r, ranked: null, source: null, previousCounted: null, recentChange: null });
+      const s = await insertSelection(client, PARIWAR_A, { metricId: 'district_cohort_v1', selected: r, ranked: null, source: null, previousCounted: null, recentChange: null, anchor: null });
       expect(s.code).toBeNull();
       await enterAppScope(client, PARIWAR_A);
       expect((await attempt(client, `INSERT INTO claim_peer_mesh_pings (selection_id, pariwar_id, member_id) VALUES ($1, $2, $3)`, [s.selectionId, PARIWAR_A, r[0]])).code).toBeNull();

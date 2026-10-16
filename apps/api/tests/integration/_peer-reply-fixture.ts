@@ -66,8 +66,8 @@ export async function attachPings(
     await env.pool.query(
       `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
          metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at, source, previous_workplace_counted,
-         recent_change_before_filing, ranked_member_ids)
-       VALUES ($1, $2, $3, $4, now(), 'workplace_named_v1', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', $6, false, $7, $5::uuid[])`,
+         recent_change_before_filing, ranked_member_ids, anchor_claim_case_id)
+       VALUES ($1, $2, $3, $4, now(), 'workplace_named_v1', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', $6, false, $7, $5::uuid[], $2)`,
       [selectionId, claimCaseId, pariwarId, deceasedMemberId, neighbours, workplace.source, workplace.recentChangeBeforeFiling],
     );
   } else {

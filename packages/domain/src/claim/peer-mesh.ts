@@ -103,8 +103,12 @@ export function selectPeerMesh(input: PeerMeshSelectionInput): PeerMeshSelection
 
 /** Input to {@link selectPeerMeshGrouped}. `candidates` is the FROZEN snapshot (persisted for replay). */
 export interface PeerMeshGroupedSelectionInput {
-  /** The BRANDED (lower-case) claim id — the job passes its branded `claimCaseId`, ⛔ the raw payload string. */
-  readonly claimCaseId: string;
+  /**
+   * The BRANDED (lower-case) id of the ANCHOR claim — the claim whose filing the cut is (`2026-10-16-340` call 1;
+   * `resolvePeerMeshFilingCut`). It salts the rank key, so every claim anchored on the same filing ranks the same pool
+   * the same way: a refile asks the same people. ⛔ The raw payload string.
+   */
+  readonly anchorClaimCaseId: string;
   readonly candidates: readonly PeerMeshGroupedCandidate[];
   readonly metric: PeerMeshGroupedMetricConfig;
 }
@@ -128,23 +132,26 @@ export class PeerMeshDuplicateCandidateError extends Error {
   }
 }
 
-/** The ranking key: sha256(claimCaseId + ':' + memberId) as lower-case hex — pure, deterministic, salted per claim. */
-function rankKey(claimCaseId: string, memberId: string): string {
-  return createHash('sha256').update(`${claimCaseId}:${memberId}`).digest('hex');
+/** The ranking key: sha256(anchorClaimCaseId + ':' + memberId) as lower-case hex — pure, deterministic, salted per ANCHOR. */
+function rankKey(anchorClaimCaseId: string, memberId: string): string {
+  return createHash('sha256').update(`${anchorClaimCaseId}:${memberId}`).digest('hex');
 }
 
 /** Order `part` by ascending rank key (ASCII compare — ⛔ locale-dependent `localeCompare`); member id breaks a tie. */
-function orderByKey(claimCaseId: string, part: readonly PeerMeshGroupedCandidate[]): MemberId[] {
+function orderByKey(anchorClaimCaseId: string, part: readonly PeerMeshGroupedCandidate[]): MemberId[] {
   return part
-    .map((c) => ({ id: c.memberId, key: rankKey(claimCaseId, c.memberId) }))
+    .map((c) => ({ id: c.memberId, key: rankKey(anchorClaimCaseId, c.memberId) }))
     .sort((a, b) => (a.key !== b.key ? (a.key < b.key ? -1 : 1) : a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     .map((x) => x.id);
 }
 
 /** A workplace split: its SETTLED colleagues first, then the rest — each by the rank key. */
-function orderSplit(claimCaseId: string, all: readonly PeerMeshGroupedCandidate[], group: PeerMeshCandidateGroup): MemberId[] {
+function orderSplit(anchorClaimCaseId: string, all: readonly PeerMeshGroupedCandidate[], group: PeerMeshCandidateGroup): MemberId[] {
   const split = all.filter((c) => c.group === group);
-  return [...orderByKey(claimCaseId, split.filter((c) => c.settled)), ...orderByKey(claimCaseId, split.filter((c) => !c.settled))];
+  return [
+    ...orderByKey(anchorClaimCaseId, split.filter((c) => c.settled)),
+    ...orderByKey(anchorClaimCaseId, split.filter((c) => !c.settled)),
+  ];
 }
 
 /**
@@ -157,7 +164,7 @@ function orderSplit(claimCaseId: string, all: readonly PeerMeshGroupedCandidate[
  * Throws {@link PeerMeshDuplicateCandidateError} on a duplicate member id. The input is ⛔ mutated.
  */
 export function selectPeerMeshGrouped(input: PeerMeshGroupedSelectionInput): PeerMeshGroupedSelectionResult {
-  const { claimCaseId, candidates, metric } = input;
+  const { anchorClaimCaseId, candidates, metric } = input;
   const seen = new Set<string>();
   for (const c of candidates) {
     if (seen.has(c.memberId)) throw new PeerMeshDuplicateCandidateError(c.memberId);
@@ -165,10 +172,10 @@ export function selectPeerMeshGrouped(input: PeerMeshGroupedSelectionInput): Pee
   }
 
   const workplace = [
-    ...orderSplit(claimCaseId, candidates, 'workplace_previous'),
-    ...orderSplit(claimCaseId, candidates, 'workplace_current'),
+    ...orderSplit(anchorClaimCaseId, candidates, 'workplace_previous'),
+    ...orderSplit(anchorClaimCaseId, candidates, 'workplace_current'),
   ];
-  const named = orderByKey(claimCaseId, candidates.filter((c) => c.group === 'named'));
+  const named = orderByKey(anchorClaimCaseId, candidates.filter((c) => c.group === 'named'));
 
   const [source, ranking, count]: [PeerMeshSource | null, MemberId[], number] =
     workplace.length > 0
@@ -194,8 +201,10 @@ export type PeerMeshSnapshotCandidate = PeerMeshCandidate | PeerMeshGroupedCandi
 
 export interface PeerMeshRunInput {
   readonly metric: PeerMeshMetricConfig;
-  /** The BRANDED claim id (the grouped rank key's salt). */
+  /** The BRANDED claim id (the ranked metric's input). */
   readonly claimCaseId: string;
+  /** The BRANDED ANCHOR claim id — the grouped rank key's salt (`2026-10-16-340` call 1); unread by the ranked metric. */
+  readonly anchorClaimCaseId: string;
   readonly deceasedMemberId: MemberId;
   /** The 6.6 reference point — read by the ranked metric only. */
   readonly deceased: PeerMeshDeceased;
@@ -234,7 +243,7 @@ export function runPeerMeshMetric(input: PeerMeshRunInput): PeerMeshRunResult {
       if (!isGroupedCandidate(c)) throw new PeerMeshCandidateShapeError(metric.metricId);
       return c;
     });
-    return selectPeerMeshGrouped({ claimCaseId: input.claimCaseId, candidates, metric });
+    return selectPeerMeshGrouped({ anchorClaimCaseId: input.anchorClaimCaseId, candidates, metric });
   }
   const candidates = input.candidates.map((c) => {
     if (isGroupedCandidate(c)) throw new PeerMeshCandidateShapeError(metric.metricId);
@@ -264,12 +273,20 @@ export function peerMeshCandidateFromSnapshot(row: PeerMeshDistrictSnapshotRow |
 
 /**
  * Re-run a STORED selection from its persisted row ALONE (I7 — ⛔ a live re-read): the stored `metric_id` (⛔ the
- * default), the stored snapshot, the stored 6.6 reference point. Byte-identical to what the job computed.
+ * default), the stored snapshot, the stored 6.6 reference point, the stored ANCHOR claim (`-340` call 1 — ⛔ re-derived
+ * from live claims, which a later innocence finding could move). Byte-identical to what the job computed. A ranked (6.6)
+ * row has ⛔ anchor and never reads one ⇒ its own claim id; a GROUPED row with ⛔ anchor THROWS (0163's "filled" CHECK
+ * forbids it — ⛔ silently re-salted by its own claim, which would rank a refile differently).
  */
 export function replayPeerMeshSelection(row: ClaimPeerMeshSelectionRow): PeerMeshRunResult {
+  const metric = resolvePeerMeshMetric(row.metricId);
+  if (metric.kind === 'grouped' && row.anchorClaimCaseId == null) {
+    throw new Error(`[peer-mesh] selection ${row.selectionId} (${row.metricId}) has no anchor claim — it cannot be replayed`);
+  }
   return runPeerMeshMetric({
-    metric: resolvePeerMeshMetric(row.metricId),
+    metric,
     claimCaseId: row.claimCaseId,
+    anchorClaimCaseId: row.anchorClaimCaseId ?? row.claimCaseId,
     deceasedMemberId: row.deceasedMemberId,
     deceased: { district: row.deceasedDistrict, createdAt: row.deceasedCreatedAt },
     candidates: row.candidateSnapshot.map(peerMeshCandidateFromSnapshot),

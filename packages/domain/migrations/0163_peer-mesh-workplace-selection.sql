@@ -3,7 +3,11 @@
 --
 --   · claim_peer_mesh_selections gains the `workplace_named_v1` record: where the five came from (`source`), whether the
 --     previous workplace counted, the staff line (`recent_change_before_filing`), the deceased's two workplace ids (row
---     6-32 reads them), and the winning group's RANKING (≤ 500 — 6.27c replaces a skipped person from the SAME group).
+--     6-32 reads them), the winning group's RANKING (≤ 500 — 6.27c replaces a skipped person from the SAME group), and
+--     the ANCHOR claim whose id salts that ranking (`anchor_claim_case_id` — `2026-10-16-340` call 1: a refile ranks the
+--     same pool the same way). ⚠ AMENDED IN PLACE by code-review round 2 (unmerged; `-340`): a database that already ran
+--     the earlier 0163 needs the delta (the column, the widened "filled" CHECK, the journal hash) applied by hand — the
+--     migrator skips by `when`, ⛔ by content. Story 6.36's Review Findings record where it was applied.
 --     ⚠ The two "must be filled" CHECKs and the prefix trigger are SCOPED to `metric_id = 'workplace_named_v1'` — the shipped
 --     `district_cohort_v1` rows (and ten test inserts with other ids) carry NULLs and stay valid. ⛔ No backfill.
 --   · claim_peer_mesh_pings gains `source` — set at INSERT, equal to its selection's (a trigger), immutable by grant
@@ -21,11 +25,12 @@ ALTER TABLE "claim_peer_mesh_selections" ADD COLUMN "recent_change_before_filing
 ALTER TABLE "claim_peer_mesh_selections" ADD COLUMN "deceased_workplace_id" uuid;--> statement-breakpoint
 ALTER TABLE "claim_peer_mesh_selections" ADD COLUMN "deceased_previous_workplace_id" uuid;--> statement-breakpoint
 ALTER TABLE "claim_peer_mesh_selections" ADD COLUMN "ranked_member_ids" uuid[];--> statement-breakpoint
+ALTER TABLE "claim_peer_mesh_selections" ADD COLUMN "anchor_claim_case_id" uuid;--> statement-breakpoint
 -- ⚠ LOCKSTEP with `PEER_MESH_SOURCES` (`schema/claim_peer_mesh_selections.ts`).
 ALTER TABLE "claim_peer_mesh_selections" ADD CONSTRAINT "claim_peer_mesh_selections_source_check" CHECK ("source" IS NULL OR "source" IN ('workplace', 'named_by_member'));--> statement-breakpoint
 -- The stored ranking is the winning group's FIRST 500 (`PEER_MESH_RANKED_MAX`) — an office of 600 never fails the job.
 ALTER TABLE "claim_peer_mesh_selections" ADD CONSTRAINT "claim_peer_mesh_selections_ranked_max500" CHECK ("ranked_member_ids" IS NULL OR cardinality("ranked_member_ids") <= 500);--> statement-breakpoint
-ALTER TABLE "claim_peer_mesh_selections" ADD CONSTRAINT "claim_peer_mesh_selections_workplace_named_filled" CHECK ("metric_id" <> 'workplace_named_v1' OR ("ranked_member_ids" IS NOT NULL AND "previous_workplace_counted" IS NOT NULL AND "recent_change_before_filing" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "claim_peer_mesh_selections" ADD CONSTRAINT "claim_peer_mesh_selections_workplace_named_filled" CHECK ("metric_id" <> 'workplace_named_v1' OR ("ranked_member_ids" IS NOT NULL AND "previous_workplace_counted" IS NOT NULL AND "recent_change_before_filing" IS NOT NULL AND "anchor_claim_case_id" IS NOT NULL));--> statement-breakpoint
 -- A source ⇔ somebody was chosen (the zero branch writes `'{}'` and ⛔ source).
 ALTER TABLE "claim_peer_mesh_selections" ADD CONSTRAINT "claim_peer_mesh_selections_workplace_named_source" CHECK ("metric_id" <> 'workplace_named_v1' OR (("source" IS NULL) = (cardinality("selected_member_ids") = 0)));--> statement-breakpoint
 -- ⚠ Narrow the 0054 table-wide UPDATE to the disposition columns (the ping table's precedent, 0156).

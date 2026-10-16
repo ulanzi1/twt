@@ -122,12 +122,15 @@ export const QUEUE_NAMES = {
    */
   CLAIM_OCR_PARITY: 'claim.ocr_parity',
   /**
-   * Peer-mesh deterministic 5-nearest selection + ping (Story 6.6, Task 5). Enqueued by the
+   * Peer-mesh deterministic selection + ping (Story 6.6, Task 5; Story 6.36). Enqueued by the
    * OCR-parity worker AFTER it advances the claim to `documents_pending` (singletonKey =
-   * claim_case_id, so a re-run does not double-select). The worker deterministically selects
-   * the 5 nearest active members, persists the immutable selection snapshot, emits
-   * `claim.peer_mesh_pinged` (→ verification_in_progress), records ONE delivery-neutral ping
-   * intent per selected member (Decision D1 — no live fan-out), and enqueues the window job.
+   * claim_case_id — ⚠ INERT on this queue's standard policy (Story 6.36 AC8); a double select is
+   * prevented by the claim lock the worker takes first, then its one-selection-per-claim probe).
+   * The worker selects up to five members from the deceased's workplace, otherwise the people they
+   * named, otherwise nobody (`workplace_named_v1`), persists the immutable selection snapshot, emits
+   * `claim.peer_mesh_pinged` — or `claim.peer_mesh_none_to_ask` when nobody can be asked — (→
+   * verification_in_progress), records ONE delivery-neutral ping intent per selected member
+   * (Decision D1 — no live fan-out), and enqueues the window job only while someone is asked.
    * Idempotent (one selection per claim). Job class B (request-triggered).
    */
   CLAIM_PEER_MESH_SELECT: 'claim.peer_mesh_select',
@@ -144,7 +147,8 @@ export const QUEUE_NAMES = {
   CLAIM_PEER_MESH_WINDOW: 'claim.peer_mesh_window',
   /**
    * Human shepherd assignment (Story 6.12, Task 4). Enqueued by the peer-mesh SELECT worker AFTER it
-   * commits `claim.peer_mesh_pinged` (→ verification_in_progress) — via an injected enqueue callback wired
+   * commits `claim.peer_mesh_pinged` or (Story 6.36) `claim.peer_mesh_none_to_ask` (→
+   * verification_in_progress) — via an injected enqueue callback wired
    * in boot.ts (the OCR→SELECT cross-file precedent), NEVER a direct `boss.send` inside the frozen 6.6
    * file, so assignment failure gets its OWN retry/DLQ envelope and never couples into the selection tx.
    * The worker resolves the deceased's posting district, picks the least-loaded CONTACTABLE in-scope

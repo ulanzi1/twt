@@ -2,7 +2,8 @@
 //
 // `workplace_named_v1`: the workplace group (the previous workplace's people first, when it counts, then the current
 // one's; within each, the SETTLED first) ⇒ otherwise the people the member named ⇒ otherwise nobody. Each part is ordered
-// by ascending sha256(claimCaseId + ':' + memberId) hex. ⛔ Never two groups mixed. The stored ranking is the winning
+// by ascending sha256(anchorClaimCaseId + ':' + memberId) hex — the ANCHOR claim (`2026-10-16-340` call 1), so every claim
+// anchored on the same filing ranks the same pool the same way. ⛔ Never two groups mixed. The stored ranking is the winning
 // group's first 500. A duplicate member id throws. Plus the registry (a NEW id — the v1 entry keeps its literal id) and
 // the ONE dispatch (`runPeerMeshMetric`) the job AND replay use.
 
@@ -10,7 +11,7 @@ import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { memberId, type MemberId } from '../../src/ids/index.js';
+import { claimId, memberId, type MemberId } from '../../src/ids/index.js';
 import {
   replayPeerMeshSelection,
   runPeerMeshMetric,
@@ -45,7 +46,7 @@ function c(n: number, group: PeerMeshCandidateGroup, settled = false): PeerMeshG
 }
 
 function input(candidates: readonly PeerMeshGroupedCandidate[]): PeerMeshGroupedSelectionInput {
-  return { claimCaseId: CLAIM, candidates, metric: grouped() };
+  return { anchorClaimCaseId: CLAIM, candidates, metric: grouped() };
 }
 
 describe('the registry (AC3)', () => {
@@ -162,11 +163,29 @@ describe('selectPeerMeshGrouped — determinism (AC2; I7)', () => {
     expect(r.rankedMemberIds).toEqual(byHash([memberId(upper.toLowerCase()), mid(1)]));
   });
 
-  it('a different claim ranks the same people differently (the hash is salted by the claim)', () => {
+  it('a different ANCHOR ranks the same people differently (the hash is salted by the anchor claim — `-340` call 1)', () => {
     const many = Array.from({ length: 20 }, (_, i) => c(i + 1, 'workplace_current'));
     const a = selectPeerMeshGrouped(input(many)).rankedMemberIds;
-    const b = selectPeerMeshGrouped({ ...input(many), claimCaseId: '22222222-2222-2222-2222-22222222bbbb' }).rankedMemberIds;
+    const b = selectPeerMeshGrouped({ ...input(many), anchorClaimCaseId: '22222222-2222-2222-2222-22222222bbbb' }).rankedMemberIds;
     expect(b).not.toEqual(a);
+  });
+
+  it('`-340` call 1: given the same ANCHOR, two claims rank the same pool identically — the claim\'s own id is ⛔ read (the anchor itself is resolved by `resolvePeerMeshFilingCut`, tested live)', () => {
+    const many = Array.from({ length: 12 }, (_, i) => c(i + 1, 'workplace_current', i % 2 === 0));
+    const run = (claimCaseId: string) =>
+      runPeerMeshMetric({
+        metric: resolvePeerMeshMetric('workplace_named_v1'),
+        claimCaseId,
+        anchorClaimCaseId: CLAIM,
+        deceasedMemberId: DECEASED,
+        deceased: { district: null, createdAt: new Date(0) },
+        candidates: many,
+      });
+    const first = run(CLAIM);
+    const refile = run('22222222-2222-2222-2222-22222222bbbb');
+    expect(refile.selectedMemberIds).toEqual(first.selectedMemberIds);
+    expect(refile.rankedMemberIds).toEqual(first.rankedMemberIds);
+    expect(first.selectedMemberIds).toHaveLength(5);
   });
 });
 
@@ -175,6 +194,7 @@ describe('runPeerMeshMetric — the ONE dispatch (AC3)', () => {
     const g = runPeerMeshMetric({
       metric: resolvePeerMeshMetric('workplace_named_v1'),
       claimCaseId: CLAIM,
+      anchorClaimCaseId: CLAIM,
       deceasedMemberId: DECEASED,
       deceased: { district: 'Pune', createdAt: new Date('2020-01-01T00:00:00Z') },
       candidates: [c(1, 'workplace_current'), c(2, 'named')],
@@ -183,6 +203,7 @@ describe('runPeerMeshMetric — the ONE dispatch (AC3)', () => {
     const d = runPeerMeshMetric({
       metric: resolvePeerMeshMetric('district_cohort_v1'),
       claimCaseId: CLAIM,
+      anchorClaimCaseId: CLAIM,
       deceasedMemberId: DECEASED,
       deceased: { district: 'Pune', createdAt: new Date('2020-01-01T00:00:00Z') },
       candidates: [
@@ -194,7 +215,7 @@ describe('runPeerMeshMetric — the ONE dispatch (AC3)', () => {
   });
 
   it('a candidate of the other metric\'s shape throws (⛔ silently ranked)', () => {
-    const base = { claimCaseId: CLAIM, deceasedMemberId: DECEASED, deceased: { district: null, createdAt: new Date(0) } };
+    const base = { claimCaseId: CLAIM, anchorClaimCaseId: CLAIM, deceasedMemberId: DECEASED, deceased: { district: null, createdAt: new Date(0) } };
     expect(() =>
       runPeerMeshMetric({ ...base, metric: resolvePeerMeshMetric('workplace_named_v1'), candidates: [{ memberId: mid(1), district: null, createdAt: new Date(0) }] }),
     ).toThrow(/shape/);
@@ -225,6 +246,7 @@ describe('replayPeerMeshSelection — from the PERSISTED row alone (I7)', () => 
       deceasedWorkplaceId: null,
       deceasedPreviousWorkplaceId: null,
       rankedMemberIds: [],
+      anchorClaimCaseId: CLAIM,
       ...over,
     } as ClaimPeerMeshSelectionRow;
   }
@@ -239,6 +261,32 @@ describe('replayPeerMeshSelection — from the PERSISTED row alone (I7)', () => 
     expect(replay.source).toBe('workplace');
   });
 
+  it('a refile\'s row replays by its STORED anchor (⛔ its own claim id, ⛔ a live re-derivation — `-340` call 1)', () => {
+    const many = Array.from({ length: 12 }, (_, i) => c(i + 1, 'workplace_current'));
+    const ANCHOR = '33333333-3333-3333-3333-33333333cccc';
+    const first = selectPeerMeshGrouped({ ...input(many), anchorClaimCaseId: ANCHOR });
+    const r = row({
+      anchorClaimCaseId: claimId(ANCHOR),
+      candidateSnapshot: JSON.parse(JSON.stringify(many)),
+      selectedMemberIds: [...first.selectedMemberIds],
+      rankedMemberIds: [...first.rankedMemberIds],
+      source: first.source,
+    });
+    const replay = replayPeerMeshSelection(r);
+    expect(replay.rankedMemberIds).toEqual(first.rankedMemberIds);
+    expect(replay.selectedMemberIds).toEqual(first.selectedMemberIds);
+    // salted by the row's OWN claim id it would differ — the stored anchor is load-bearing
+    expect(selectPeerMeshGrouped(input(many)).rankedMemberIds).not.toEqual(first.rankedMemberIds);
+  });
+
+  it('a GROUPED row with ⛔ anchor THROWS (⛔ silently re-salted by its own claim) — 0163\'s CHECK forbids it', () => {
+    const snap = [c(3, 'workplace_current', true), c(4, 'workplace_current')];
+    expect(() => replayPeerMeshSelection(row({ candidateSnapshot: JSON.parse(JSON.stringify(snap)), anchorClaimCaseId: null }))).toThrow(/no anchor claim/);
+    const partial = row({ candidateSnapshot: JSON.parse(JSON.stringify(snap)) }) as { anchorClaimCaseId?: unknown };
+    delete partial.anchorClaimCaseId;
+    expect(() => replayPeerMeshSelection(partial as ClaimPeerMeshSelectionRow)).toThrow(/no anchor claim/);
+  });
+
   it('a district_cohort_v1 row replays through the old comparator', () => {
     const r = row({
       metricId: 'district_cohort_v1',
@@ -249,6 +297,7 @@ describe('replayPeerMeshSelection — from the PERSISTED row alone (I7)', () => 
       rankedMemberIds: null,
       previousWorkplaceCounted: null,
       recentChangeBeforeFiling: null,
+      anchorClaimCaseId: null,
     });
     expect(replayPeerMeshSelection(r).selectedMemberIds).toEqual([mid(1), mid(2)]);
   });

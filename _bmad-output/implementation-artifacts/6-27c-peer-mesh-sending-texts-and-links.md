@@ -104,6 +104,11 @@ RB4 / RB5 / RB11 / RB12 / RB16 · `-302` RN2–RN8 · `-255` F7 (the cost line).
    `response_window_expires_at` / `skip_reason`) ⇒ a replacement is a NEW ping row ONLY, and 0163's BEFORE INSERT trigger refuses a ping
    whose `source` differs from its selection's (pass `selection.source` — `persistPeerMeshPingIntents`' fifth argument). A selection
    that chose nobody has an empty ranking and its claim moved on with `claim.peer_mesh_none_to_ask` — ⛔ nothing to send.)
+   ⭐ (2026-10-16 annotation — Story 6.36 review round 2, `2026-10-16-340`: the predicate's signature is now
+   `peerMeshEligibleMemberSql(m, { deceasedMemberId })` — it excludes the claimant of ANY claim naming the deceased (call 2) and, by
+   `2026-10-16-341`, the filer of ANY intake attempt for the death, so the
+   send-time re-check passes ⛔ claimant; the ranking is salted by the selection's stored `anchor_claim_case_id` (call 1) — a replacement
+   reads the stored `ranked_member_ids` and ⛔ re-ranks; `persistPeerMeshPingIntents`' `source` is now a REQUIRED argument.)
 5b. **AC5b — PM14 / PM15:** ⛔ no new event is emitted by any send path (a test counts `claim.peer_mesh_*` events before / after); a
    re-claimed `attempting` row that fails its re-check finishes `error` with an ids-only alarm (`-297` §2), and a `no_target` on a re-claimed
    row alarms *"may have sent"* (`-298`) — each a test.

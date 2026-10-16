@@ -270,8 +270,9 @@ export async function runRestorationDiscipline(
         // would abort the WHOLE transaction and roll back every OTHER member's already-decided,
         // legitimate imposition in this run. A `SAVEPOINT` per candidate isolates that failure to
         // the ONE row it belongs to, matching this codebase's established 23505-savepoint-recovery
-        // convention (`claim-peer-mesh.ts`'s `peer_mesh_pinged` savepoint;
-        // [[project_domain_limit_clamp_and_savepoint_retry]]).
+        // convention ([[project_domain_limit_clamp_and_savepoint_retry]]; `claim-peer-mesh.ts`'s
+        // `peer_mesh_pinged` savepoint, the convention's first use, was removed by Story 6.36 AC8 — the
+        // select job now takes the claim lock first and rethrows).
         await client.query('SAVEPOINT restoration_discipline_impose');
         try {
           const result = await member.restorationDiscipline.imposeRestorationLockIn(

@@ -15,7 +15,12 @@
 //     asked-then-removed ⇒ ⛔; erased after the cut ⇒ ⛔ selected (SW23);
 //   · the staff line: five ways in, four ways ⛔;
 //   · SW23 (AC6): each exclusion; renewal grace ⛔ asked (colleague and named); a NULL claimant; a suspension stays eligible;
-//   · ONE leg under `twt_app` (RLS on) still sees the colleagues and the named people.
+//     the filer of ANY claim for the death ⛔ asked (`2026-10-16-340` call 2) — another death's filer still is;
+//   · the anchor (RF1 C): the cut AND the anchor claim whose id salts the ranking (`-340` call 1) — the anchor id only;
+//     the ranking by it is the engine's test (`peer-mesh-grouped.test.ts`) and the job's refile leg;
+//   · ONE leg under `twt_app` (RLS on) still sees the colleagues and the named people, and resolves the anchor THROUGH
+//     both policies it depends on (`claims`, `claim_nominee_findings` — an innocence finding visible only through the
+//     latter moves the anchor).
 
 import { randomUUID } from 'node:crypto';
 
@@ -32,6 +37,7 @@ import {
   type PeerMeshGroupedSnapshot,
 } from '../../../src/claim/peer-mesh-read.js';
 import {
+  claimId as toClaimId,
   knownPersonLinkId,
   memberId as toMemberId,
   pariwarId as toPariwarId,
@@ -126,17 +132,31 @@ async function colleague(p: string, w: string, o: { state?: MemberLifecycleState
 }
 
 /** A claim naming `deceased`, filed at `createdAt`, as the superuser (the state-writer guard on for the one INSERT). */
-async function fileClaim(p: string, deceased: string, o: { claimant?: string | null; createdAt?: Date; state?: string } = {}): Promise<string> {
+async function fileClaim(
+  p: string,
+  deceased: string,
+  o: { claimant?: string | null; createdAt?: Date; state?: string; id?: string; channel?: 'member_app' | 'helpline' | 'trustee_initiated' } = {},
+): Promise<string> {
   const { client } = getTx();
-  const id = randomUUID();
+  const id = o.id ?? randomUUID();
   await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
   await client.query(
     `INSERT INTO claims (claim_case_id, pariwar_id, deceased_member_id, claimant_actor_id, intake_channels, current_state, state_event_version, created_at)
-     VALUES ($1, $2, $3, $4, ARRAY['member_app']::claim_intake_channel[], $5, 1, $6)`,
-    [id, p, deceased, o.claimant ?? null, o.state ?? 'documents_pending', o.createdAt ?? FILED_AT],
+     VALUES ($1, $2, $3, $4, ARRAY[$7]::claim_intake_channel[], $5, 1, $6)`,
+    [id, p, deceased, o.claimant ?? null, o.state ?? 'documents_pending', o.createdAt ?? FILED_AT, o.channel ?? 'member_app'],
   );
   await client.query(`SET LOCAL app.claim_state_writer = 'off'`);
   return id;
+}
+
+/** An intake attempt for `deceased`'s death filed by `claimant` (`2026-10-16-341`) — as the superuser. */
+async function attempt(p: string, deceased: string, claimant: string | null, status: 'pending' | 'converged' | 'overridden_separate', channel = 'member_app'): Promise<void> {
+  const { client } = getTx();
+  await client.query(
+    `INSERT INTO intake_attempts (intake_attempt_id, pariwar_id, deceased_member_id, intake_channel, claimant_actor_id, attempt_status)
+     VALUES (gen_random_uuid(), $1, $2, $3::claim_intake_channel, $4, $5::intake_attempt_status)`,
+    [p, deceased, channel, claimant, status],
+  );
 }
 
 /** A link with explicit dates (days before the cut; `null` ⇒ NULL). */
@@ -158,28 +178,19 @@ async function link(
   return id;
 }
 
-async function snapshot(
-  p: string,
-  deceased: MemberId,
-  o: { claimant?: string | null; cut?: PeerMeshFilingCut } = {},
-): Promise<PeerMeshGroupedSnapshot> {
+async function snapshot(p: string, deceased: MemberId, o: { cut?: PeerMeshFilingCut } = {}): Promise<PeerMeshGroupedSnapshot> {
   const { tx } = getTx();
-  return getPeerMeshGroupedSnapshot(tx, {
-    pariwarId: toPariwarId(p),
-    deceasedMemberId: deceased,
-    claimantActorId: o.claimant ?? null,
-    cut: o.cut ?? CUT,
-  });
+  return getPeerMeshGroupedSnapshot(tx, { pariwarId: toPariwarId(p), deceasedMemberId: deceased, cut: o.cut ?? CUT });
 }
 
 const ids = (s: PeerMeshGroupedSnapshot, group?: string) =>
   s.candidates.filter((c) => group === undefined || c.group === group).map((c) => c.memberId).sort();
 const sorted = (...ms: string[]) => [...ms].sort();
 
-function rank(claimCaseId: string, s: PeerMeshGroupedSnapshot) {
+function rank(anchorClaimCaseId: string, s: PeerMeshGroupedSnapshot) {
   const metric = resolvePeerMeshMetric('workplace_named_v1');
   if (metric.kind !== 'grouped') throw new Error('grouped');
-  return selectPeerMeshGrouped({ claimCaseId, candidates: s.candidates, metric });
+  return selectPeerMeshGrouped({ anchorClaimCaseId, candidates: s.candidates, metric });
 }
 
 describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (AC5, AC6)', { timeout: 20000 }, () => {
@@ -524,7 +535,7 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       const claimant = await colleague(w.p, w.A);
       excluded.push(claimant);
       await fileClaim(w.p, dead, { claimant });
-      const s = await snapshot(w.p, dead, { claimant });
+      const s = await snapshot(w.p, dead);
       expect(ids(s)).toEqual(sorted(ok, suspended));
       for (const x of excluded) expect(ids(s)).not.toContain(x);
       expect(ids(s)).not.toContain(dead);
@@ -538,8 +549,52 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       await link(w.p, dead, graceNamed, 'accepted', { asked: 100, responded: 99 });
       await link(w.p, dead, activeNamed, 'accepted', { asked: 100, responded: 99 });
       await fileClaim(w.p, dead, { claimant: null });
-      const s = await snapshot(w.p, dead, { claimant: null });
+      const s = await snapshot(w.p, dead);
       expect(ids(s)).toEqual([activeNamed]);
+    });
+
+    it('`-340` call 2: the filer of ANY claim for this death — an earlier refused one, an innocence-lifted one — is ⛔ asked; another death\'s filer still is', async () => {
+      const w = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      const ok = await colleague(w.p, w.A);
+      const earlierFiler = await colleague(w.p, w.A);
+      const otherDeathFiler = await colleague(w.p, w.A);
+      const liftedFiler = await colleague(w.p, w.A);
+      const lifted = await fileClaim(w.p, dead, { claimant: liftedFiler, createdAt: new Date('2025-06-01T06:00:00.000Z'), state: 'denied' });
+      await getTx().client.query(
+        `INSERT INTO claim_nominee_findings (finding_id, claim_case_id, pariwar_id, kind, recorded_by_actor_id, recorded_by_display)
+         VALUES (gen_random_uuid(), $1, $2, 'member_found_innocent', 'seed', 'Seed Investigator')`,
+        [lifted, w.p],
+      ); // a false report the member was found innocent of: it lifts the CUT, but its filer asserted a death ⇒ still ⛔ asked
+      await fileClaim(w.p, dead, { claimant: earlierFiler, createdAt: new Date('2026-03-01T06:00:00.000Z'), state: 'denied' });
+      await fileClaim(w.p, await member(w.p), { claimant: otherDeathFiler }); // they filed for SOMEONE ELSE's death
+      await fileClaim(w.p, dead, { claimant: null }); // the refile — by the helpline, ⛔ claimant
+      const s = await snapshot(w.p, dead);
+      expect(ids(s)).toEqual(sorted(ok, otherDeathFiler));
+      expect(ids(s)).not.toContain(earlierFiler);
+      expect(ids(s)).not.toContain(liftedFiler);
+    });
+
+    it('`-341`: the filer of ANY intake attempt for this death — pending, merged (converged) or overridden — is ⛔ asked; an attempt for another death, or with ⛔ filer, excludes nobody', async () => {
+      const w = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      const ok = await colleague(w.p, w.A);
+      const pending = await colleague(w.p, w.A);
+      const merged = await colleague(w.p, w.A);
+      const overridden = await colleague(w.p, w.A);
+      const otherDeath = await colleague(w.p, w.A);
+      await fileClaim(w.p, dead, { claimant: null, channel: 'helpline' }); // the helpline's claim — ⛔ claimant
+      // each as the ICP would leave it beside a helpline claim: a member's app filing still pending; a trustee filing
+      // merged; a member's filing an operator split off (its own claim aside — the attempt row is what is read here)
+      await attempt(w.p, dead, pending, 'pending', 'member_app');
+      await attempt(w.p, dead, merged, 'converged', 'trustee_initiated');
+      await attempt(w.p, dead, overridden, 'overridden_separate', 'member_app');
+      await attempt(w.p, dead, null, 'converged', 'trustee_initiated');
+      await attempt(w.p, await member(w.p), otherDeath, 'pending');
+      const s = await snapshot(w.p, dead);
+      expect(ids(s)).toEqual(sorted(ok, otherDeath));
     });
   });
 
@@ -553,28 +608,42 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
         [claimCaseId, p],
       );
     }
-    const anchor = async (p: string, dead: MemberId, claimCreatedAt = FILED_AT) => {
+    const anchor = async (p: string, dead: MemberId, claimCaseId: string, claimCreatedAt = FILED_AT) => {
       const { tx } = getTx();
-      return resolvePeerMeshFilingCut(tx, { pariwarId: toPariwarId(p), deceasedMemberId: dead, claimCreatedAt });
+      return resolvePeerMeshFilingCut(tx, { pariwarId: toPariwarId(p), deceasedMemberId: dead, claimCaseId: toClaimId(claimCaseId), claimCreatedAt });
     };
     const EARLIER = new Date('2026-03-01T06:00:00.000Z'); // 2026-03-01 IST
     const EARLIEST = new Date('2025-06-01T06:00:00.000Z'); // 2025-06-01 IST
 
-    it('ONE claim ⇒ its own filing day', async () => {
+    it('ONE claim ⇒ its own filing day, and it is the anchor claim', async () => {
       const w = await world();
       const dead = await member(w.p);
-      await fileClaim(w.p, dead);
-      expect((await anchor(w.p, dead)).filingDate).toBe(FILING_DATE);
+      const only = await fileClaim(w.p, dead);
+      const a = await anchor(w.p, dead, only);
+      expect(a.filingDate).toBe(FILING_DATE);
+      expect(a.anchorClaimCaseId).toBe(only);
     });
 
     it('an earlier claim for the same death — in ANY state (refused, closed) — anchors every later one', async () => {
       for (const state of ['denied', 'closed']) {
         const w = await world();
         const dead = await member(w.p);
-        await fileClaim(w.p, dead, { createdAt: EARLIER, state });
-        await fileClaim(w.p, dead);
-        expect((await anchor(w.p, dead)).filingDate, state).toBe('2026-03-01');
+        const first = await fileClaim(w.p, dead, { createdAt: EARLIER, state });
+        const refile = await fileClaim(w.p, dead);
+        const a = await anchor(w.p, dead, refile);
+        expect(a.filingDate, state).toBe('2026-03-01');
+        expect(a.anchorClaimCaseId, state).toBe(first); // `-340` call 1 — the refile ranks by the first claim
       }
+    });
+
+    it('two claims filed at the SAME instant: the anchor is the lower claim id (deterministic)', async () => {
+      const w = await world();
+      const dead = await member(w.p);
+      // inserted FIRST with the HIGHER id, so heap order and the tie-break disagree — only `ORDER BY …, claim_case_id` picks y
+      await fileClaim(w.p, dead, { createdAt: EARLIER, state: 'denied', id: 'ffffffff-ffff-4fff-bfff-ffffffffffff' });
+      const y = await fileClaim(w.p, dead, { createdAt: EARLIER, state: 'closed', id: '00000000-0000-4000-8000-000000000001' });
+      const refile = await fileClaim(w.p, dead);
+      expect((await anchor(w.p, dead, refile)).anchorClaimCaseId).toBe(y);
     });
 
     it('an innocence finding lifts THAT claim: the next filing counts (and with every earlier one lifted, the claim\'s own)', async () => {
@@ -583,10 +652,24 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       const falseReport = await fileClaim(w.p, dead, { createdAt: EARLIEST, state: 'denied' });
       await foundInnocent(w.p, falseReport);
       const second = await fileClaim(w.p, dead, { createdAt: EARLIER, state: 'closed' });
-      await fileClaim(w.p, dead);
-      expect((await anchor(w.p, dead)).filingDate).toBe('2026-03-01');
+      const third = await fileClaim(w.p, dead);
+      let a = await anchor(w.p, dead, third);
+      expect(a.filingDate).toBe('2026-03-01');
+      expect(a.anchorClaimCaseId).toBe(second);
       await foundInnocent(w.p, second);
-      expect((await anchor(w.p, dead)).filingDate).toBe(FILING_DATE);
+      a = await anchor(w.p, dead, third);
+      expect(a.filingDate).toBe(FILING_DATE);
+      expect(a.anchorClaimCaseId).toBe(third);
+    });
+
+    it('the claim being selected for is ITSELF lifted (every claim lifted — defensive): its own filing and its own id', async () => {
+      const w = await world();
+      const dead = await member(w.p);
+      const only = await fileClaim(w.p, dead);
+      await foundInnocent(w.p, only);
+      const a = await anchor(w.p, dead, only);
+      expect(a.filingDate).toBe(FILING_DATE);
+      expect(a.anchorClaimCaseId).toBe(only);
     });
 
     it('a `nominee_disqualified` finding ⛔ lifts a claim; another member\'s or another Pariwar\'s claims ⛔ count', async () => {
@@ -599,15 +682,17 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
          VALUES (gen_random_uuid(), $1, $2, 'nominee_disqualified', 1, 'seed', 'Seed Investigator')`,
         [earlier, w.p],
       );
-      await fileClaim(w.p, dead);
-      expect((await anchor(w.p, dead)).filingDate).toBe('2026-03-01');
+      const now = await fileClaim(w.p, dead);
+      expect((await anchor(w.p, dead, now)).filingDate).toBe('2026-03-01');
 
       const w2 = await world();
       const dead2 = await member(w2.p);
       await fileClaim(w2.p, await member(w2.p), { createdAt: EARLIEST }); // another member's death
       await fileClaim(w.p, dead2, { createdAt: EARLIEST }); // the same member id filed under ANOTHER Pariwar (a stray row)
-      await fileClaim(w2.p, dead2);
-      expect((await anchor(w2.p, dead2)).filingDate).toBe(FILING_DATE);
+      const own = await fileClaim(w2.p, dead2);
+      const a2 = await anchor(w2.p, dead2, own);
+      expect(a2.filingDate).toBe(FILING_DATE);
+      expect(a2.anchorClaimCaseId).toBe(own);
     });
 
     it('the snapshot moves with the anchor: a transfer recorded BETWEEN the two filings ⛔ counts', async () => {
@@ -618,28 +703,45 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       const atA = await colleague(w.p, w.A);
       await colleague(w.p, w.B);
       await fileClaim(w.p, dead, { createdAt: EARLIER, state: 'denied' });
-      await fileClaim(w.p, dead);
-      const cut = await anchor(w.p, dead);
+      const refile = await fileClaim(w.p, dead);
+      const cut = await anchor(w.p, dead, refile);
       const s = await snapshot(w.p, dead, { cut });
       expect(s.workplace.currentWorkplaceId).toBe(w.A);
       expect(ids(s)).toEqual([atA]);
     });
   });
 
-  it('under twt_app (RLS on) the snapshot still sees the colleagues and the named people (the policies are Pariwar-wide)', async () => {
-    const { client } = getTx();
+  it('under twt_app (RLS on) the anchor resolves and the snapshot still sees the colleagues and the named people (the policies are Pariwar-wide)', async () => {
+    const { client, tx } = getTx();
     const w = await world();
     const dead = await member(w.p);
     await post(w.p, dead, { workplace: w.A, at: before(900) });
     const c1 = await colleague(w.p, w.A);
     const n1 = await member(w.p);
     await link(w.p, dead, n1, 'accepted', { asked: 100, responded: 99 });
-    // another Pariwar's colleague-shaped rows are ⛔ visible
-    const other = await world();
-    const foreign = await member(other.p);
-    await post(other.p, foreign, { workplace: other.A, at: before(400) });
-    await fileClaim(w.p, dead);
+    // the anchor reads `claims` AND `claim_nominee_findings`: the EARLIEST claim is lifted by an innocence finding, so the
+    // anchor is the next one. A lost `claims` grant throws; a lost / fail-closed `claims` policy hides both ⇒ the refile
+    // anchors itself; a lost / fail-closed findings policy hides the finding ⇒ the lifted claim anchors — each assertion
+    // below fails on one of them.
+    const lifted = await fileClaim(w.p, dead, { createdAt: new Date('2025-06-01T06:00:00.000Z'), state: 'denied' });
+    await client.query(
+      `INSERT INTO claim_nominee_findings (finding_id, claim_case_id, pariwar_id, kind, recorded_by_actor_id, recorded_by_display)
+       VALUES (gen_random_uuid(), $1, $2, 'member_found_innocent', 'seed', 'Seed Investigator')`,
+      [lifted, w.p],
+    );
+    const first = await fileClaim(w.p, dead, { createdAt: new Date('2026-03-01T06:00:00.000Z'), state: 'denied' });
+    const refile = await fileClaim(w.p, dead);
+    // a colleague whose filing was merged (`-341`): a lost / fail-closed `intake_attempts` policy would let them be asked
+    await attempt(w.p, dead, await colleague(w.p, w.A), 'converged');
     await enterAppScope(client, w.p);
+    const a = await resolvePeerMeshFilingCut(tx, {
+      pariwarId: toPariwarId(w.p),
+      deceasedMemberId: dead,
+      claimCaseId: toClaimId(refile),
+      claimCreatedAt: FILED_AT,
+    });
+    expect(a.anchorClaimCaseId).toBe(first);
+    expect(a.filingDate).toBe('2026-03-01');
     const s = await snapshot(w.p, dead);
     expect(s.candidates).toEqual([
       { memberId: c1, group: 'workplace_current', settled: true },

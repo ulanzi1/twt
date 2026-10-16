@@ -144,13 +144,18 @@ const districtCohortV1: PeerMeshRankedMetricConfig = {
   compare: districtCohortV1Compare,
 };
 
-/** Story 6.36 (SW18) — the workplace, otherwise the named people, otherwise nobody. */
+/**
+ * Story 6.36 (SW18) — the workplace, otherwise the named people, otherwise nobody.
+ * ⚠ Its salt changed IN PLACE (the claim → the ANCHOR claim, `2026-10-16-340` call 1) WITHOUT a new id — an exception to
+ * this file's rule, taken because ⛔ selection under this id had ever run outside a test database when it changed (the
+ * branch was unmerged). Every later change is a NEW id.
+ */
 const workplaceNamedV1: PeerMeshGroupedMetricConfig = {
   kind: 'grouped',
   metricId: 'workplace_named_v1',
   metricVersion: 1,
   describe:
-    "The deceased's workplace (the previous one's people first when it counts, then the current one's; settled colleagues first in each), otherwise the people they named who agreed, otherwise nobody — each part by ascending sha256(claimCaseId:memberId).",
+    "The deceased's workplace (the previous one's people first when it counts, then the current one's; settled colleagues first in each), otherwise the people they named who agreed, otherwise nobody — each part by ascending sha256(anchorClaimCaseId:memberId), the anchor being the claim whose filing is the cut (2026-10-16-340).",
   workplaceCount: 5,
   namedCount: 3,
   rankedMax: 500,

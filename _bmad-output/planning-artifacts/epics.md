@@ -3496,6 +3496,8 @@ members work somewhere); a campaign of up to 30 days; ⛔ no message to any phon
 > ⚠ **ANNOTATION 2026-10-15 ([`-338`](../../.decision-log.md#decision-2026-10-15-338)) — ⛔ not rewritten.** It is built FIRST and alone — 6.36c starts only when this row is `done`; re-validated against `main` first; migration 0163; merges third.
 >
 > ⚠ **ANNOTATION 2026-10-15 (validate v2.0–v2.2 against `main` `51382898`) — ⛔ not rewritten.** The line above calling this row "Minted by Trustee ruling" is imprecise: the row was minted by `-306` Consequence 1 (author-commit) under the Trustee-ratified `-310` CF4 A. SC1 / SC4 are ⛔ no longer owed — RULED A / A by [`-331`](../../.decision-log.md#decision-2026-10-14-331); this row also mints `peer_mesh.v4` (SC4 A — our reading). One Panel question is OPEN and non-blocking: RF1 (which filing day counts when a death is filed again — `trustee-panel-routing-note-2026-10-15-6-36-refiled-claim.md`, ⛔ yet sent). The story file is the authority.
+>
+> ⚠ **ANNOTATION 2026-10-16 ([`-339`](../../.decision-log.md#decision-2026-10-16-339), [`-340`](../../.decision-log.md#decision-2026-10-16-340)) — ⛔ not rewritten.** RF1 is ⛔ no longer open: RULED C by `-339` (Trustee-ratified) — a death filed more than once is cut at its FIRST filing, unless an innocence finding lifts a claim. Code review round 2 (`-340`, author-commit): that first filing's claim also salts the ranking (a refile asks the same people), and the filer of ANY claim for the death is ⛔ asked.
 
 As the Trust, I want the people asked about a member's death to be that member's own colleagues, otherwise the people the member named,
 chosen the same way every time and ⛔ never steered by anything changed after the claim is filed, so that the answers come from people who

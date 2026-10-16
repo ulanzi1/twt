@@ -49,6 +49,8 @@ export interface PeerMeshWorkplaceRecord {
   deceasedPreviousWorkplaceId: WorkplaceId | null;
   /** The winning group's ranking (≤ 500); `selectedMemberIds` is its prefix (0163's trigger). */
   rankedMemberIds: readonly MemberId[];
+  /** The ANCHOR claim whose id salted the ranking (`2026-10-16-340` call 1) — stored so a replay ⛔ re-derives it. */
+  anchorClaimCaseId: ClaimId;
 }
 
 /** Input to {@link persistPeerMeshSelection}. `candidates` is the frozen snapshot. */
@@ -109,6 +111,7 @@ export async function persistPeerMeshSelection(
             deceasedWorkplaceId: w.deceasedWorkplaceId,
             deceasedPreviousWorkplaceId: w.deceasedPreviousWorkplaceId,
             rankedMemberIds: [...w.rankedMemberIds],
+            anchorClaimCaseId: w.anchorClaimCaseId,
           }
         : {}),
     })
@@ -132,14 +135,16 @@ export async function persistPeerMeshSelection(
  * IDEMPOTENT on `(selection_id, member_id)` — a re-run inserts nothing new (still exactly
  * N rows, never 2N). Returns the number of rows newly inserted. Tenant-scoped.
  * ⭐ Story 6.36 (SW24, AC9): each ping carries its selection's `source` (0163's trigger refuses any other value; `null`
- * for a `district_cohort_v1` selection — the default).
+ * for a `district_cohort_v1` selection). REQUIRED, ⛔ defaulted (review round 2, P6): a defaulted `null` compiles for a
+ * new inserter (6.27c's replacement pings) and then fails 0163's trigger on every `workplace_named_v1` claim — pass the
+ * selection row's own `source`.
  */
 export async function persistPeerMeshPingIntents(
   db: Db,
   selectionId: PeerMeshSelectionId,
   pariwarId: PariwarId,
   memberIds: readonly MemberId[],
-  source: PeerMeshSource | null = null,
+  source: PeerMeshSource | null,
 ): Promise<number> {
   if (memberIds.length === 0) return 0;
   const inserted = await db

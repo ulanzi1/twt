@@ -292,6 +292,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         recentChangeBeforeFiling: false,
         deceasedWorkplaceId: seed.workplaceId,
         deceasedPreviousWorkplaceId: null,
+        anchorClaimCaseId: seed.claimCaseId, // ONE claim ⇒ it anchors itself (`-340` call 1)
         outcome: 'pending',
       });
 
@@ -384,6 +385,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
       const first = claim.runPeerMeshMetric({
         metric,
         claimCaseId: ids.claimId(seed.claimCaseId),
+        anchorClaimCaseId: ids.claimId(seed.claimCaseId), // unread by the ranked metric
         deceasedMemberId: ids.memberId(seed.deceasedMemberId),
         deceased,
         candidates: district,
@@ -531,6 +533,21 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
     }
   });
 
+  it('a payload whose deceased is ⛔ the claim\'s own is refused right after the claim lock — before the probe or any snapshot read (it would choose the anchor and the exclusions — `-340`)', async () => {
+    const seed = await seedClaim({ colleagues: 2 });
+    const { boss, sends } = fakeBoss();
+    try {
+      await expect(
+        runClaimPeerMeshSelect(boss, deps(), selectEnvelope({ ...seed, deceasedMemberId: seed.colleagueIds[0]! })),
+      ).rejects.toThrow(/does not match claim/);
+      expect(await selectionOf(seed)).toBeUndefined();
+      expect(sends).toHaveLength(0);
+      expect(await claimState(seed.claimCaseId)).toBe('documents_pending');
+    } finally {
+      await cleanup(seed);
+    }
+  });
+
   it('the anchor (AC4): a certificate row present still cuts at the FILING day — a transfer recorded 10 days before the filing counts', async () => {
     // The deceased moved to the school 10 days ago (recorded); a certificate was uploaded 20 days ago. The job reads ⛔
     // certificate (in v1 its OCR'd date is always empty — SF17), so the cut is today's start: the transfer counts.
@@ -624,6 +641,36 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
     const { r, selection } = await refiled(true);
     expect(r.selectedCount).toBe(2);
     expect(selection!.source).toBe('workplace');
+    expect(selection!.anchorClaimCaseId).toBe(selection!.claimCaseId); // the lifted first claim does not salt the ranking either
+  });
+
+  it('a refile (`2026-10-16-340` call 1): the second claim for the same death asks the SAME five of twelve as the first — ranked by the first claim', async () => {
+    const seed = await seedClaim({ colleagues: 12 });
+    const { boss } = fakeBoss();
+    const refile = { ...seed, claimCaseId: randomUUID() };
+    try {
+      await runClaimPeerMeshSelect(boss, deps(), selectEnvelope(seed));
+      const first = await selectionOf(seed);
+      expect(first!.selectedMemberIds).toHaveLength(5);
+      // the first claim is refused; the family files again (the projector stamps it AFTER the first)
+      await withPariwarScope(pool, seed.pariwarId, async (_db, client) => {
+        await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
+        await client.query(`UPDATE claims SET current_state = 'denied' WHERE claim_case_id = $1`, [seed.claimCaseId]);
+        await client.query(`SET LOCAL app.claim_state_writer = 'off'`);
+        await projectTo(client, { ...refile, claimantActorId: null }, 'documents_pending');
+      });
+      const r = await runClaimPeerMeshSelect(boss, deps(), selectEnvelope(refile));
+      expect(r.created).toBe(true);
+      const second = await selectionOf(refile);
+      expect(second!.claimCaseId).toBe(refile.claimCaseId);
+      expect(second!.anchorClaimCaseId).toBe(seed.claimCaseId);
+      expect(second!.selectedMemberIds).toEqual(first!.selectedMemberIds);
+      expect(second!.rankedMemberIds).toEqual(first!.rankedMemberIds);
+      // and the stored row replays by its stored anchor (I7)
+      expect(claim.replayPeerMeshSelection(second!).selectedMemberIds).toEqual(second!.selectedMemberIds);
+    } finally {
+      await cleanup(seed);
+    }
   });
 
   /**
@@ -633,7 +680,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
    */
   async function race(o: { colleagues: number }, edge: 'claim.peer_mesh_pinged' | 'claim.peer_mesh_none_to_ask') {
     const seed = await seedClaim({ colleagues: o.colleagues });
-    const { boss } = fakeBoss();
+    const { boss, sends } = fakeBoss();
     const b = await pool.connect();
     try {
       await b.query('BEGIN');
@@ -657,6 +704,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
           deceasedWorkplaceId: ids.workplaceId(seed.workplaceId),
           deceasedPreviousWorkplaceId: null,
           rankedMemberIds: selected,
+          anchorClaimCaseId: ids.claimId(seed.claimCaseId),
         },
         responseWindowExpiresAt: new Date(NOW.getTime() + DAY),
       });
@@ -672,6 +720,11 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
           ? { eventType: edge, payload: { ...base, trigger: 'peer_mesh_selected', selected_member_ids: [...selected] } }
           : { eventType: edge, payload: { ...base, trigger: 'peer_mesh_none_to_ask' } }),
       });
+      // the job's own zero branch disposes the selection in the SAME transaction (review round 2, P3) — so A meets a
+      // `skipped` selection, exactly as it would behind a real job
+      if (edge === 'claim.peer_mesh_none_to_ask') {
+        await claim.skipPeerMesh(db, ids.pariwarId(seed.pariwarId), ids.claimId(seed.claimCaseId), claim.PEER_MESH_SKIP_REASON_NO_WORKPLACE_COLLEAGUE_OR_NAMED_PERSON);
+      }
       const bPid = (await b.query<{ pid: number }>(`SELECT pg_backend_pid() AS pid`)).rows[0]!.pid;
 
       const a = runClaimPeerMeshSelect(boss, deps(), selectEnvelope(seed));
@@ -691,6 +744,10 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         (await eventCount(seed.claimCaseId, 'claim.peer_mesh_pinged')) + (await eventCount(seed.claimCaseId, 'claim.peer_mesh_none_to_ask'));
       expect(edges).toBe(1);
       expect(await eventCount(seed.claimCaseId, edge)).toBe(1);
+      // A's no-op re-enqueues a window only while the winner's selection is `pending`: once for the pinged branch, never
+      // for the zero branch (already `skipped`)
+      const windows = sends.filter((x) => x.name === QUEUE_NAMES.CLAIM_PEER_MESH_WINDOW);
+      expect(windows).toHaveLength(edge === 'claim.peer_mesh_pinged' ? 1 : 0);
     } finally {
       await b.query('ROLLBACK').catch(() => undefined);
       b.release();

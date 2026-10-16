@@ -11314,3 +11314,20 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   screen-change announcement on a native-stack pop, and the ORDER of every announcement on a real device (the jsdom tests prove
   only that the calls are made, and in what order); the iOS access picker's REVOKED contacts stay in the in-memory match list until
   the next check; a slots Retry on a PAUSED (offline) network stays busy until the network returns.
+
+## Deferred from: code review of 6-36-peer-mesh-school-wise-selection.md, round 2 (2026-10-16)
+
+- **W1 — No DB backstop for the selection's two workplace-id columns** [`packages/domain/migrations/0163_peer-mesh-workplace-selection.sql`] —
+  `deceased_workplace_id` / `deceased_previous_workplace_id` are plain `uuid null` (as AC1 specified): there is ⛔ no composite FK to the
+  Pariwar's `workplaces`, and ⛔ no CHECK that `previous_workplace_counted = true` implies `deceased_previous_workplace_id IS NOT NULL`.
+  Unreachable today, because the select job reads both ids from the Pariwar's own postings (FK-scoped). 0163 is already applied on
+  :5432 / :5433. ⭐ Trigger: row 6-32 (the columns' reader) or any second writer.
+  Widened by the fix-diff review: `anchor_claim_case_id` (`2026-10-16-340` call 1) likewise has ⛔ FK or check that it names
+  a claim of this Pariwar and this death. Its one writer, the select job, sets it from `resolvePeerMeshFilingCut`.
+- **W2 — An anchor LATER than the claim being selected for** [`packages/domain/src/claim/peer-mesh-read.ts`
+  `resolvePeerMeshFilingCut`] — when the claim being selected for is itself innocence-lifted while a later claim for the same
+  death exists, it anchors at the later filing and reads past its own filing day. Unreachable: nothing writes
+  `member_found_innocent` before row 6-22, and neither `-339` nor `-340` covers the case. ⭐ Trigger: row 6-22.
+- **W3 — Someone already asked who LATER files for the same death keeps their live ask** [`peer-mesh-read.ts`
+  `peerMeshEligibleMemberSql`] — `-340` call 2 is applied at selection only; ⛔ re-check on a sent ping or a reply.
+  ⭐ Trigger: 6.27c's send-time re-check (it reuses the predicate).

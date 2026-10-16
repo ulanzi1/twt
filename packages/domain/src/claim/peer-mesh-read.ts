@@ -30,6 +30,7 @@ import {
 } from '../cycle-calendar/holiday-resolver.js';
 import type { Db } from '../db.js';
 import {
+  claimId as toClaimId,
   memberId as toMemberId,
   workplaceId as toWorkplaceId,
   type ClaimId,
@@ -275,22 +276,35 @@ export function peerMeshFilingCut(claimCreatedAt: Date): PeerMeshFilingCut {
   };
 }
 
+/** The cut AND the claim it was taken from (`2026-10-16-340` call 1 — that claim's id salts the ranking). */
+export interface PeerMeshFilingAnchor extends PeerMeshFilingCut {
+  /** The ANCHOR claim: the one whose filing the cut is. The claim being selected for when it is the first. */
+  readonly anchorClaimCaseId: ClaimId;
+}
+
 /**
  * ⭐ THE ONE place the anchor is chosen (AC4; RF1 — `2026-10-16-339`, Trustee-ratified, option C): *"The first filing
  * counts, unless an investigation found the member innocent of a claim filed while they were alive."* The anchor is the
  * EARLIEST `claims.created_at` among the claims — in ANY state — naming this deceased in the Pariwar, EXCLUDING every
- * claim that carries a `member_found_innocent` finding (`-238`; the SAME filter `nominee-lock.ts` applies). Our reading
- * (⛔ ratified): a refused, closed or appealed claim still anchors; only the innocence finding lifts one. Until the fraud
- * register (row 6-22) writes that finding, this behaves exactly as option A. When every such claim carries the finding,
- * the claim being selected for counts from its own filing (defensive — unreachable today). A read of `claims` and
+ * claim that carries a `member_found_innocent` finding (`-238`; the SAME filter `nominee-lock.ts` applies); two claims
+ * filed at the same instant break by `claim_case_id`. Our reading (⛔ ratified): a refused, closed or appealed claim
+ * still anchors; only the innocence finding lifts one. Until the fraud register (row 6-22) writes that finding, this
+ * behaves exactly as option A. When every such claim carries the finding, the claim being selected for counts from its
+ * own filing and is its own anchor (defensive — unreachable today). ⭐ `2026-10-16-340` call 1: the anchor claim's id is
+ * returned beside the cut — it salts the ranking, so a refile asks the same people. A read of `claims` and
  * `claim_nominee_findings` only (⛔ decrypt, ⛔ KMS); both have Pariwar-wide `FOR SELECT TO twt_app` policies.
  */
 export async function resolvePeerMeshFilingCut(
   db: Db,
-  input: { readonly pariwarId: PariwarId; readonly deceasedMemberId: MemberId; readonly claimCreatedAt: Date },
-): Promise<PeerMeshFilingCut> {
-  const r = await db.execute<{ first: Date | string | null }>(sql`
-    SELECT min(c.created_at) AS first
+  input: {
+    readonly pariwarId: PariwarId;
+    readonly deceasedMemberId: MemberId;
+    readonly claimCaseId: ClaimId;
+    readonly claimCreatedAt: Date;
+  },
+): Promise<PeerMeshFilingAnchor> {
+  const r = await db.execute<{ claim_case_id: string; created_at: Date | string }>(sql`
+    SELECT c.claim_case_id, c.created_at
       FROM claims c
      WHERE c.pariwar_id = ${input.pariwarId}
        AND c.deceased_member_id = ${input.deceasedMemberId}
@@ -298,9 +312,13 @@ export async function resolvePeerMeshFilingCut(
              SELECT 1 FROM claim_nominee_findings f
               WHERE f.pariwar_id = c.pariwar_id
                 AND f.claim_case_id = c.claim_case_id
-                AND f.kind = 'member_found_innocent')`);
-  const first = r.rows[0]?.first ?? null;
-  return peerMeshFilingCut(first === null ? input.claimCreatedAt : first instanceof Date ? first : new Date(first));
+                AND f.kind = 'member_found_innocent')
+     ORDER BY c.created_at, c.claim_case_id
+     LIMIT 1`);
+  const first = r.rows[0];
+  if (!first) return { ...peerMeshFilingCut(input.claimCreatedAt), anchorClaimCaseId: input.claimCaseId };
+  const at = first.created_at instanceof Date ? first.created_at : new Date(first.created_at);
+  return { ...peerMeshFilingCut(at), anchorClaimCaseId: toClaimId(first.claim_case_id) };
 }
 
 /** One `member_postings` row, as the run derivation needs it (newest first). */
@@ -402,11 +420,9 @@ export function peerMeshPreviousWorkplaceCounts(run: PeerMeshPostingRun, filingD
 
 // ── SW23 — the ONE eligibility predicate (AC6) ─────────────────────────────────────────────────────────────────────────
 
-/** Who must ⛔ be asked, beyond the state / claim / identity rules. */
+/** Who must ⛔ be asked, beyond the state / claim / identity rules — keyed on the DEATH (`2026-10-16-340` call 2, `-341`). */
 export interface PeerMeshEligibilityExclusions {
   readonly deceasedMemberId: MemberId;
-  /** NULLABLE — a NULL claimant excludes NOBODY (⛔ everybody). */
-  readonly claimantActorId: string | null;
 }
 
 /**
@@ -418,7 +434,15 @@ export interface PeerMeshEligibilityExclusions {
  *     member is kept out HERE (`anonymized`) — ⛔ by the identity row (erasure RETAINS the blind index);
  *   · ⛔ a claim (in ANY state) naming them as the deceased (6.36b's `namedByClaimSql` — the same meaning);
  *   · an identity row exists (an `active` member always has a normalised mobile; ⛔ KMS);
- *   · ⛔ the deceased, ⛔ the claimant.
+ *   · ⛔ the deceased; ⛔ anyone who REPORTED this death in the Pariwar, through any channel — the claimant of ANY claim,
+ *     in any state (`2026-10-16-340` call 2: SW23's *"the claimant"* widened from the claim being selected for to the
+ *     death — an earlier filer, even of a refused or innocence-lifted claim, asserted it), AND the filer of ANY
+ *     `intake_attempts` row, in any status (`2026-10-16-341`: a merged second-channel filing never puts its filer on a
+ *     claim row — `-340`'s *"until it converges"* was wrong). A NULL filer excludes NOBODY (⛔ everybody). ⚠ Recorded: a
+ *     filing the ICP absorbs WITHOUT a row leaves its filer ⛔ excludable — a filing on a channel the claim already
+ *     carries (ICP (3b), a no-op), AND a filing on a channel that already has a PENDING attempt for this death (ICP (3c)
+ *     reuses the first filer's row; the one-pending-per-channel index forbids a second). `-341`'s residual named only
+ *     the first; the second is recorded in Story 6.36's fix-diff review.
  * ⚠ Recorded, ⛔ changed: a member under a moderation SUSPENSION stays eligible (6.27a F3); a relative is ⛔ excluded
  * (no family-link data — the deferred item stays open).
  */
@@ -427,7 +451,16 @@ export function peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusio
     AND NOT ${namedByClaimSql(sql`${m}.pariwar_id`, sql`${m}.member_id`)}
     AND EXISTS (SELECT 1 FROM member_identities pm_i WHERE pm_i.pariwar_id = ${m}.pariwar_id AND pm_i.member_id = ${m}.member_id)
     AND ${m}.member_id <> ${x.deceasedMemberId}
-    ${x.claimantActorId === null ? sql`` : sql`AND ${m}.member_id <> ${x.claimantActorId}`})`;
+    AND NOT EXISTS (
+          SELECT 1 FROM claims pm_c
+           WHERE pm_c.pariwar_id = ${m}.pariwar_id
+             AND pm_c.deceased_member_id = ${x.deceasedMemberId}
+             AND pm_c.claimant_actor_id = ${m}.member_id)
+    AND NOT EXISTS (
+          SELECT 1 FROM intake_attempts pm_ia
+           WHERE pm_ia.pariwar_id = ${m}.pariwar_id
+             AND pm_ia.deceased_member_id = ${x.deceasedMemberId}
+             AND pm_ia.claimant_actor_id = ${m}.member_id))`;
 }
 
 // ── The snapshot reads (AC5) ───────────────────────────────────────────────────────────────────────────────────────────
@@ -435,8 +468,6 @@ export function peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusio
 export interface PeerMeshSnapshotInput {
   readonly pariwarId: PariwarId;
   readonly deceasedMemberId: MemberId;
-  /** NULLABLE (`claims.claimant_actor_id`). */
-  readonly claimantActorId: string | null;
   readonly cut: PeerMeshFilingCut;
 }
 
@@ -510,7 +541,7 @@ export async function getPeerMeshWorkplaceSnapshot(db: Db, input: PeerMeshSnapsh
               WHERE w.pariwar_id = ${pariwarId}
                 AND w.workplace_id IN (${sql.join(workplaces.map((w) => sql`${w}::uuid`), sql`, `)})
                 AND w.created_at < ${cut.cut})
-       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId, claimantActorId: input.claimantActorId })}
+       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId })}
      ORDER BY p.member_id, p.created_at DESC, p.posting_id DESC`);
 
   const byMember = new Map<string, PeerMeshPostingRow[]>();
@@ -555,7 +586,7 @@ export async function getPeerMeshNamedSnapshot(db: Db, input: PeerMeshSnapshotIn
        AND k.responded_at < ${input.cut.cut}
        AND k.state IN ('accepted', 'removed', 'erased')
        AND (k.state = 'accepted' OR k.ended_at >= ${input.cut.cut})
-       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId: input.deceasedMemberId, claimantActorId: input.claimantActorId })}
+       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId: input.deceasedMemberId })}
      ORDER BY k.named_member_id`);
   return r.rows.map((x) => toMemberId(x.named_member_id));
 }

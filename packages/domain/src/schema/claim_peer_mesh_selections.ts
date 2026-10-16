@@ -165,10 +165,22 @@ export const claimPeerMeshSelections = pgTable(
     recentChangeBeforeFiling: boolean('recent_change_before_filing'),
     /** The deceased's current workplace as of the cut (row 6-32 reads it). */
     deceasedWorkplaceId: uuid('deceased_workplace_id').$type<WorkplaceId>(),
-    /** The deceased's previous workplace as of the cut — set only when it COUNTED. */
+    /**
+     * The deceased's previous workplace as of the cut — stored whenever one exists, WHETHER OR NOT it counted (row 6-32
+     * reads it); `previous_workplace_counted` says whether its people were in the group.
+     */
     deceasedPreviousWorkplaceId: uuid('deceased_previous_workplace_id').$type<WorkplaceId>(),
     /** The winning group's ranking, truncated to {@link PEER_MESH_RANKED_MAX}; `selectedMemberIds` is its prefix (a trigger). */
     rankedMemberIds: uuid('ranked_member_ids').array().$type<MemberId[]>(),
+    /**
+     * `2026-10-16-340` call 1 — the ANCHOR claim: the claim whose filing `-339`'s cut is (the death's first filing not
+     * lifted by an innocence finding; this claim itself when it is the first). Its id SALTS the ranking, so a refile ranks
+     * the same pool the same way; stored so a replay ⛔ re-derives it from live claims (I7). Required for
+     * `workplace_named_v1` (the "filled" CHECK); NULL on a legacy row. ⛔ FK and ⛔ check that it names this death — one
+     * writer (the select job) sets it from `resolvePeerMeshFilingCut`, a READ COMMITTED read of the death's claims (⛔
+     * locked: only the claim being selected for is); the stored value, ⛔ a re-derivation, is what replay uses.
+     */
+    anchorClaimCaseId: uuid('anchor_claim_case_id').$type<ClaimId>(),
   },
   (t) => [
     // One selection per claim — the idempotency anchor (a re-run finds the existing row).
@@ -186,7 +198,7 @@ export const claimPeerMeshSelections = pgTable(
     check('claim_peer_mesh_selections_ranked_max500', sql`${t.rankedMemberIds} IS NULL OR cardinality(${t.rankedMemberIds}) <= 500`),
     check(
       'claim_peer_mesh_selections_workplace_named_filled',
-      sql`${t.metricId} <> 'workplace_named_v1' OR (${t.rankedMemberIds} IS NOT NULL AND ${t.previousWorkplaceCounted} IS NOT NULL AND ${t.recentChangeBeforeFiling} IS NOT NULL)`,
+      sql`${t.metricId} <> 'workplace_named_v1' OR (${t.rankedMemberIds} IS NOT NULL AND ${t.previousWorkplaceCounted} IS NOT NULL AND ${t.recentChangeBeforeFiling} IS NOT NULL AND ${t.anchorClaimCaseId} IS NOT NULL)`,
     ),
     check(
       'claim_peer_mesh_selections_workplace_named_source',

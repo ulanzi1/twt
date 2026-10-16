@@ -415,7 +415,10 @@ my family picks.**
   colleagues first (SW22's definition — their current run at that workplace began, as recorded, 90 days or more before the cut); (ii) staff see ONE line in the neighbours' section when,
   in the 90 days before the cut, the dead member's latest posting was recorded, or any of their named people was ACCEPTED or REMOVED:
   *"The member's workplace or the people they named changed in the 90 days before this claim was filed."* (the District Admin, the district's verifiers and the
-  later approvers only — CF2's list; ⛔ never the inspector). Eligibility (SW23) is read at selection time, and a named person's own withdrawal counts whenever it happened
+  later approvers only — CF2's list; ⛔ never the inspector). ⭐ *Annotated 2026-10-16 (⛔ a rewrite):* since `2026-10-16-339` the cut can
+  be an EARLIER filing of the same death, so Story 6.36's review (round 1, R1 — an engineering correction, the words now true of the
+  rule) ships the line as *"The member's workplace or the people they named changed in the 90 days before the filing used to choose
+  whom to ask."* — matching `-331` SC1 A's ratified *"… in the 90 days before the claim"* read with `-339`. Eligibility (SW23) is read at selection time, and a named person's own withdrawal counts whenever it happened
   (SW17). *Reading:* **NARROWS** CF4 A's
   *"the family ⛔ never chooses"* — a family that holds the phone CAN still change who is asked before filing; staff are told and the
   inspection always runs ⇒ **SC1** — ✅ RATIFIED, `2026-10-14-331` SC1 A.
@@ -435,13 +438,16 @@ my family picks.**
 - **SW22 — the ranking, recorded.** Inside `workplace`: when the previous workplace counts, its people FIRST (they worked with the member
   longer — why `-306` added them), then the current one's; inside each, SETTLED people first (their current run at that workplace — SW21's
   definition — began, as RECORDED, 90 days or more before the cut: the earliest row's `created_at`), then the rest; inside each tier, ascending `sha256(claim_case_id ‖ ':' ‖ member_id)` (deterministic,
-  replayable, and ⛔ not movable by anything a member types). Inside `named_by_member`: the same hash (⛔ no settled tier — `settled` is
+  replayable, and ⛔ not movable by anything a member types). ⭐ *Annotated 2026-10-16 (⛔ a rewrite):* the salt is SUPERSEDED IN PART by
+  `2026-10-16-340` call 1 (author-commit) — it is the ANCHOR claim's id (the claim whose filing `-339`'s cut is), stored on the selection
+  as `anchor_claim_case_id`, so a refile ranks the same pool the same way and asks the same people. Inside `named_by_member`: the same hash (⛔ no settled tier — `settled` is
   false for every named candidate). The ranked group is stored, capped deterministically at its first 500 (`ranked_member_ids`, immutable) — the first ≤ cap are asked;
   6.27c replaces a send-time skip with the next in the SAME list (PM1 (ii)). *Alt:* (B) longest time together — start dates are
   self-declared ⇒ the ranking could be bought with a typed date.
 - **SW23 — the filter (PM1 (i)), ONE predicate.** Eligible = `members.state = 'active'` · ⛔ no claim (in any state) naming them as the
   deceased · an identity row exists (`EXISTS member_identities` — an `active` member always has a normalised mobile: memory *Member always
-  has a mobile*; ⛔ no KMS) · ⛔ not the deceased · ⛔ not the claimant. Exported as ONE domain predicate that 6.27c's send-time re-check MUST
+  has a mobile*; ⛔ no KMS) · ⛔ not the deceased · ⛔ not the claimant (⭐ *annotated 2026-10-16, ⛔ a rewrite:* SUPERSEDED IN PART by `2026-10-16-340` call 2 —
+  ⛔ the claimant of ANY claim, in any state, naming this deceased; and by `2026-10-16-341` — ⛔ the filer of ANY intake attempt for it). Exported as ONE domain predicate that 6.27c's send-time re-check MUST
   reuse, KEEPING PM1's decrypt-time `no_sendable_number` check beside it. ⚠ Recorded, ⛔ not changed: a member under a moderation
   SUSPENSION stays eligible (6.27a F3); a relative of the deceased is ⛔ not excluded (⛔ no family-link data — the deferred item stays
   open; the *"How do you know [member]?"* answer shows staff *"A relative"*).

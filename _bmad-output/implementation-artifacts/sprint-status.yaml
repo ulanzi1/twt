@@ -1,3 +1,14 @@
+# last_updated: 2026-10-16f (STORY 6.36 — CODE REVIEW ROUND 2 CLOSED: P1–P9 + the fix-diff review's F1–F14 applied; fix-review
+# Edge #1 → `2026-10-16-341` (author-commit, alone `5511a2e2`: ⛔ a filer of ANY intake attempt for the death is asked either); a
+# convergence round (3 LOW, applied). `twt-test-pg` (:5433) recreated fresh (BigDev) and migrated from zero; `pnpm ci:local` on the
+# final tree (:5433) PASSED — 36 / 36 (integration: domain 5397, API 1782, jobs 807, validity-service 284, channels 231,
+# niyamavali-engine 144, events 36, queue 4). ⚠ :5432 still carries the earlier 0163 — its hand delta was blocked, ⛔ applied.
+# Row `6-36-peer-mesh-school-wise-selection` `in-progress` → `done`. Ready to fast-forward to `main` — BigDev's call.)
+# last_updated: 2026-10-16e (STORY 6.36 — CODE REVIEW ROUND 2 (`bmad-code-review 6.36`, whole branch `51382898` → the tree, three
+# layers): 2 decisions → `2026-10-16-340` (author-commit, committed alone `4c74c5b6`: a refile ranks by the anchor claim; ⛔ a filer of
+# ANY claim for the death is asked), 7 patch, 1 defer, 12 dismissed; BigDev "1": P1–P9 applied (round-1 R1 committed `a3c142fd`);
+# the fix diff reviewed by three layers (F1–F14 applied, W2–W3 deferred, one decision open). Row `6-36-peer-mesh-school-wise-selection`
+# `done` → `in-progress`: the 0163 live-DB delta (:5432 / :5433), the DB-backed tests and `pnpm ci:local` are still owed.)
 # last_updated: 2026-10-16d (STORY 6.36 — CODE REVIEW CLOSED: three layers on 51382898..0d4c23af;
 # 1 MEDIUM / P2 patch, 0 decision-needed / defer, 3 dismissed candidates. BigDev option 1: R1 fixed — the staff warning
 # refers to the filing used to choose whom to ask, matching RF1 C even on a refile. Contract comment aligned; both staff

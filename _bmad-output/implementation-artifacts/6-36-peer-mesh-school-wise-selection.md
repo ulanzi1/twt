@@ -94,7 +94,9 @@ person asked.
    - CHECK `metric_id <> 'workplace_named_v1' OR (ranked_member_ids IS NOT NULL AND previous_workplace_counted IS NOT NULL AND
      recent_change_before_filing IS NOT NULL)` and CHECK `metric_id <> 'workplace_named_v1' OR ((source IS NULL) =
      (cardinality(selected_member_ids) = 0))` (`selected_member_ids` is `uuid[] NOT NULL` and the zero branch writes `'{}'`, so the
-     second CHECK is ⛔ vacuous). ⚠ Both are scoped to the NEW id so the TEN shipped inserts with other ids stay valid — seven with
+     second CHECK is ⛔ vacuous). ⭐ (2026-10-16 annotation — review round 2, `2026-10-16-340` call 1: 0163 also gains
+     `anchor_claim_case_id uuid null`, and the first CHECK also requires `anchor_claim_case_id IS NOT NULL`; immutable by the
+     same narrowed grant.) ⚠ Both are scoped to the NEW id so the TEN shipped inserts with other ids stay valid — seven with
      `'m'` (`apps/api/tests/integration/_peer-reply-fixture.ts:63`, `packages/domain/tests/integration/claim/_peer-reply-fixtures.ts:48`,
      `packages/domain/tests/integration/rls/claim-peer-mesh-replies-policy-regression.spec.ts:58`,
      `apps/api/tests/integration/claims/peer-request-helpline.spec.ts:115`, `apps/api/tests/integration/claims/peer-request-member.spec.ts:69`,
@@ -128,6 +130,9 @@ person asked.
    - The `workplace` group = `workplace_previous` first (when present), then `workplace_current`; each split SETTLED first, then the
      rest; each part ordered by ascending `sha256(claimCaseId + ':' + memberId)` hex over the BRANDED (lower-case) ids — the job passes
      its branded `claimCaseId` (`claim-peer-mesh.ts:171`), ⛔ the raw payload string.
+     ⭐ (2026-10-16 annotation — review round 2, `2026-10-16-340` call 1: the salt is the ANCHOR claim's id — the claim whose filing the
+     cut is, returned by `resolvePeerMeshFilingCut` and stored as `anchor_claim_case_id` (required for `workplace_named_v1`, immutable by
+     grant); replay reads the stored id. A refile asks the same people.)
    - ⭐ **`settled`** = the EARLIEST row of the candidate's current run at that workplace (SW21's run, read as of the cut) has
      `created_at` 90 days or more before the cut — the RECORDED time, ⛔ never the self-declared `started_on` (6.36a SW22 — its rejected
      Alt B: *"start dates are self-declared ⇒ the ranking could be bought with a typed date"*; `-331` SC1 A: *"colleagues recorded at
@@ -242,6 +247,9 @@ person asked.
    AND exported for 6.27c's send-time re-check: `members.state = 'active'` ONLY, ⛔ no claim naming them as the deceased (any state), an
    `EXISTS member_identities` row, ⛔ not the deceased, ⛔ not the claimant (`claimRow.claimantActorId` is NULLABLE —
    `claim-peer-mesh.ts:217` — a NULL claimant excludes nobody, ⛔ never everybody).
+   ⭐ (2026-10-16 annotation — review round 2, `2026-10-16-340` call 2: ⛔ the claimant of ANY claim, in any state, naming this deceased
+   in the Pariwar — a death-level `NOT EXISTS` over `claims`; the predicate takes `{ deceasedMemberId }` only. `2026-10-16-341`: and ⛔
+   the filer of ANY `intake_attempts` row for the death, in any status — a merged second-channel filing never reaches a claim row.)
    - ⚠ `active-in-grace` is ⛔ asked (`-333` call 2 (d): *"6.36's selection predicate (SW23) is ⛔ changed — it still asks only `active`
      members"*), unlike 6.36b's `knownPersonEligibleSql` (`known-people.ts:94`, which admits it — its doc-block at `:91-92`: *"⛔ NOT the
      selection's predicate … keep them two"*). Keep the two functions separate; 6.36b's deferred W5 rests on this.
@@ -452,6 +460,96 @@ person asked.
 **Invariant lens:** families 1, 2, 3, 5 and 6 covered by the named state/idempotency/race, RLS, direct constraint/grant, replay and audience tests above; families 4, 7, 8, 10, 11 and 12 covered by construction (projector and selection share a transaction; `min` / `NOT EXISTS` and distinct/grouped candidate reads avoid fan-out; system attribution; explicit narrow closures; the member-facing policy sentence; tenant/member predicates and a server-loaded deceased id through the enqueue chain). Family 13 covered by readable DOM text with no new interactive or measurable roles. Family 9 is untouched. R1 identified the correctness gap between the later anchor rule and the original staff copy; the resolution above closes it.
 
 **Dismissed candidates:** legacy empty/skipped selections are expressly excluded from healing by AC8 and AC14 (no production rows, no backfill); storing the previous workplace id even when it does not count is required by AC5 for row 6-32 (the schema comment is stale, selection filtering is correct); the worker's payload deceased-id trust predates this diff and current producers obtain it from the loaded claim, so queue tampering alone supplies no constructible new user path.
+
+#### Round 2 (2026-10-16)
+
+`bmad-code-review 6.36` round 2: the whole branch `51382898` → the working tree (the R1 patch included; 48 code files, +3,479 / −517, plus records). Three layers ran in parallel: Blind Hunter (14 candidates), Edge Case Hunter (5), Acceptance Auditor (5, with checklist verdicts). Result: **2 decision-needed (both resolved ⇒ P8, P9), 7 patch, 1 defer, 12 dismissed.** No HIGH. The Auditor checked AC0–AC16 against the code and against `-339`, `-331`, `-330` and 6.36a SW17–SW27 read verbatim, and found no AC violation. It also found R1's copy correct: it matches `-331` SC1 A's *"…changed in the 90 days before the claim"* as read with `-339`.
+
+- [x] [Review][Decision] ~~D1~~ **RESOLVED 2026-10-16 (BigDev: "Salt by the anchor claim") ⇒ P8.** **D1 — MEDIUM: a refiled death draws a different five from the same frozen pool.** [`packages/domain/src/claim/peer-mesh.ts:132`] — the rank key is `sha256(claimCaseId ':' memberId)` (SW22 as written). Since `-339` C, a second claim for the same death gets the FIRST filing's cut, so the candidate pool is identical, but the salt is the new claim's id, so a different five are asked. Example: 12 settled colleagues; claim 1 asks five and is refused; the family refiles; claim 2 asks a different five. The pool cannot be changed, but a refile re-draws who is asked. `-339`'s option as put (*"A change made to the dead member's account after the first filing ⛔ never decides who is asked, on any later claim"*) speaks to account changes, ⛔ not the draw. Pinned by `peer-mesh-grouped.test.ts:165` ("salted by the claim"); no refile leg with more than five candidates. Source: Edge Case Hunter.
+- [x] [Review][Decision] ~~D2~~ **RESOLVED 2026-10-16 (BigDev: "Exclude every claimant") ⇒ P9.** **D2 — MEDIUM: only THIS claim's claimant is excluded; an earlier claimant of the same death can be asked.** [`packages/domain/src/claim/peer-mesh-read.ts:430`] — `peerMeshEligibleMemberSql` excludes `member_id <> claimRow.claimantActorId` only (SW23: *"⛔ not the claimant"*, singular). Example: member X (a colleague and the nominee) files claim 1; it is refused or closed; a helpline or operator files claim 2 (claimant NULL, or someone else); X is eligible and can be one of the five asked about the death X filed. The cut became death-level with `-339`; the claimant exclusion stayed claim-level. Source: Edge Case Hunter.
+- [x] [Review][Patch] **P1 — LOW: the schema comment says `deceased_previous_workplace_id` is "set only when it COUNTED"; the code stores it whenever a previous workplace exists (AC5, for row 6-32).** [`packages/domain/src/schema/claim_peer_mesh_selections.ts:168`] — round 1 dismissed the behaviour as correct and the comment as stale; the stale comment is on the column row 6-32 will read. Fix the comment. Source: Blind + Edge.
+- [x] [Review][Patch] **P2 — LOW: R1 and `-339` are not carried into the record documents.** [`_bmad-output/implementation-artifacts/6-36a-member-workplace-and-posting-history.md` SW20; `_bmad-output/planning-artifacts/epics.md` (Story 6.36 entry, the 2026-10-15 validate annotation)] — 6.36a is the record and SW20 still quotes the pre-R1 copy with no dated annotation (SW19 has its `-339` one). The epics.md annotation still calls RF1 open and not sent. Add dated annotations; ⛔ no rewrite. Source: Auditor.
+- [x] [Review][Patch] **P3 — LOW: the zero-branch race test's connection B skips `skipPeerMesh`, so its selection commits `pending` rather than the real job's `skipped`.** [`apps/jobs/tests/claim-peer-mesh.test.ts:705`] — A's no-op then enqueues a window job for a zero selection, which the real job never does, and `sends` is not asserted. Add `skipPeerMesh` to B and assert no window send. Source: Auditor + Blind.
+- [x] [Review][Patch] **P4 — LOW: the anchor read is never exercised under `twt_app`, and the snapshot spec's cross-Pariwar check is vacuous.** [`packages/domain/tests/integration/claim/peer-mesh-workplace-snapshot.spec.ts:629`, `:637`] — `resolvePeerMeshFilingCut` reads `claims` and `claim_nominee_findings`; a lost grant or policy would make every select job throw and stall claims in `documents_pending` (the grant exists today: `0119`). Call it in the `twt_app` leg. The foreign posting at `:637` names a different workplace id, so the `workplace_id IN (…)` filter excludes it with or without RLS. Make the check meaningful, or say plainly what it does prove. Source: Auditor.
+- [x] [Review][Patch] **P5 — LOW: comments elsewhere describe the removed SAVEPOINT and the pinged-only flow.** [`apps/jobs/src/restoration-discipline.ts:273`; `packages/queue/src/index.ts:124-131`, `:146-148`; `apps/jobs/src/boot.ts:489`] — they cite the `peer_mesh_pinged` savepoint as the convention, the "5 nearest" selection with `singletonKey` preventing a double select (inert on this queue — AC8), and a shepherd enqueued only after `pinged`. Source: Auditor.
+- [x] [Review][Patch] **P6 — LOW: `persistPeerMeshPingIntents`'s `source` defaults to `null`, which 0163's trigger refuses for a `workplace_named_v1` selection.** [`packages/domain/src/claim/peer-mesh-persist.ts:142`] — the one live caller passes it, but a future inserter (6.27c's replacement pings) would compile and then fail at runtime on every new claim. Make it required. Source: Blind.
+- [x] [Review][Patch] **P7 — LOW: AC15 is not attested on the tree being marked `done`.** The last `pnpm ci:local` pass was on `e4316ffb`; R1 (uncommitted) and this round's patches are not in it. Run the gate on the final tree before the row closes. Source: Auditor.
+- [x] [Review][Patch] **P8 — MEDIUM (from D1): salt the ranking by the ANCHOR claim, the claim whose filing `-339` C anchors on.** [`packages/domain/src/claim/peer-mesh.ts:132`; `peer-mesh-read.ts` `resolvePeerMeshFilingCut`; `0163`] — Governance first: an author-commit superseding `-330` SW22's salt (*"`claim_case_id`"*) IN PART, committed ALONE before code. Then:
+  - `resolvePeerMeshFilingCut` returns the anchoring claim's id beside the cut. It is the selected claim itself when it is the first, or when every earlier claim is innocence-lifted.
+  - The engine salts by that id.
+  - The selection stores it in a new `anchor_claim_case_id uuid null` column, NOT NULL for `workplace_named_v1` by the scoped CHECK, and immutable by grant.
+  - Replay reads the stored id, so I7 holds and is never re-derived from live claims. A legacy selection salts by its own claim.
+  - **0163 is amended in place**, because it is unmerged. The same `ALTER` is applied by hand on :5432 AND :5433. ⛔ Not a new `0165`: it would merge before 6.36c's `0164`, and the migrator silently skips an out-of-order migration (`-332` call 2).
+  - Tests: a refile with more than five colleagues asks the SAME five; an innocence-lifted first claim gives the refile its own draw; replay of a stored refile selection; the policy spec covers the new column. The "salted by the claim" leg is re-pinned.
+- [x] [Review][Patch] **P9 — MEDIUM (from D2): exclude every claimant of ANY claim naming this deceased.** [`packages/domain/src/claim/peer-mesh-read.ts:430`] — Governance first: the same author-commit supersedes `-330` SW23's singular *"⛔ not the claimant"* IN PART.
+  - `peerMeshEligibleMemberSql` replaces `member_id <> claimantActorId` with a death-level `NOT EXISTS (claims c WHERE c.pariwar_id = m.pariwar_id AND c.deceased_member_id = <deceased> AND c.claimant_actor_id = m.member_id)`. This covers any state, innocence-lifted claims included, and keeps today's NULL-claimant behaviour.
+  - The exported signature and 6.27c's inheritance note are updated.
+  - Recorded residual: a pending second-channel `intake_attempts` filer, which has no claim row.
+  - Tests: an earlier claimant of a refused claim ⛔ asked on the refile; another death's claimant still asked.
+- [x] [Review][Defer] **W1 — LOW: no DB backstop that `deceased_workplace_id` / `deceased_previous_workplace_id` are this Pariwar's workplaces, and no CHECK for `previous_workplace_counted = true ⇒ deceased_previous_workplace_id IS NOT NULL`.** [`packages/domain/migrations/0163_peer-mesh-workplace-selection.sql`] — deferred. AC1 specified plain `uuid null`; the job reads both ids from the Pariwar's own postings (FK-scoped), so it is unreachable today; 0163 is already applied on :5432 / :5433. ⭐ Trigger: row 6-32 (the columns' reader) or any second writer.
+
+**Fix-diff review (2026-10-16, user: "run adversarial review on patches applied").** Three layers ran in parallel on the patch diff over `4c74c5b6` (1,066 code lines plus records): Blind Hunter (15 candidates), Edge Case Hunter (6), Acceptance Auditor (10; P1–P9 verified as specified, P4 partial).
+
+Applied (F1–F14):
+- F1: the same-instant tie-break leg is deterministic. The later-inserted claim has the lower id, so heap order and the tie-break disagree.
+- F2: replay THROWS on a grouped row with no anchor (⛔ silently re-salted).
+- F3: the schema comment's "read under the claim lock" is corrected.
+- F4: the engine's refile leg is titled honestly.
+- F5: three garbled comments are fixed.
+- F6: the 0163 header no longer claims the hand delta was applied.
+- F7: story and sprint row are `in-progress` until the gate.
+- F8: AC1 is annotated.
+- F9: the registry records the in-place salt change as a one-time exception.
+- F10: the `twt_app` leg now resolves the anchor THROUGH an innocence finding, so a lost findings policy fails it. This completes P4. The stray-row `twt_app` leg proved nothing beyond the superuser leg and is removed.
+- F11: the snapshot spec's header no longer claims a ranking test.
+- F12: P9's leg covers an innocence-lifted claim's filer.
+- F13: the job refuses a payload whose deceased is ⛔ the claim's own, now that that id chooses the anchor and the exclusions (family 12 (a)); there is a jobs leg for it.
+- F14: File List and Change Log are updated.
+
+Deferred:
+- [x] [Review][Defer] **W2 — LOW: an anchor LATER than the claim being selected for.** [`packages/domain/src/claim/peer-mesh-read.ts` `resolvePeerMeshFilingCut`] — Example: claim A, then claim B for the same death; A is innocence-lifted while still `documents_pending`; A's select job anchors at B and reads past A's own filing day. Unreachable until row 6-22 writes the finding, and neither `-339` nor `-340` covers the case. ⭐ Trigger: row 6-22.
+- [x] [Review][Defer] **W3 — LOW: someone already asked who LATER files a claim for the same death keeps their live ask.** [`peer-mesh-read.ts` `peerMeshEligibleMemberSql`] — `-340` call 2 is read at selection; nothing re-applies it to a sent ping or a reply. ⭐ Trigger: 6.27c's send-time re-check, which reuses the predicate.
+- W1 is widened: there is also ⛔ FK or check that `anchor_claim_case_id` names a claim of this Pariwar and this death (one writer).
+
+**Edge #1 resolved by `2026-10-16-341`** (BigDev: *"Exclude attempt filers"*, committed alone as `5511a2e2`): the predicate also excludes the filer of ANY `intake_attempts` row for the death, in any status, with legs on the superuser read AND under `twt_app`.
+
+**Convergence round** (one combined adversarial + edge layer, on the interdiff since the fix-diff review): 3 LOW, all applied, no defect in the new SQL.
+- The replay throw has its own leg and uses `== null`.
+- The `-341` leg's claim is filed on the helpline channel, as its comment says.
+- **Recorded residual, more precise than `-341`'s own sentence (`-341` ⛔ edited):** a filing the ICP absorbs WITHOUT a row leaves its filer ⛔ excludable. There are two such paths, not one: a filing on a channel the claim already carries (ICP (3b), a no-op), AND a filing on a channel that already has a PENDING attempt for the death (ICP (3c) reuses the first filer's row; the one-pending-per-channel index forbids a second). ⛔ No read can exclude a person the system never recorded.
+
+**Round 2 closed (2026-10-16).**
+- P1–P9 and F1–F14 are applied, and the convergence round's three LOW items are applied.
+- **Decisions:** `-340` (`4c74c5b6`) and `-341` (`5511a2e2`), each committed alone before its code.
+- **Live databases:** `twt-test-pg` (:5433) was RECREATED fresh (BigDev's choice) and migrated from zero (163 migrations; the amended 0163's CHECK verified). ⚠ The native :5432 still carries the EARLIER 0163 (⛔ `anchor_claim_case_id`): the hand delta (the column, the widened CHECK, the journal hash) was blocked by the auto-mode classifier and is ⛔ applied. Until it is, a `workplace_named_v1` selection insert on :5432 fails. `ci:local` does not use it.
+- **Targeted runs on :5433:** domain 37 (snapshot 28, policy 9) + 752 in `tests/claim` and the reply / certificate specs; jobs 27; API 79.
+- **P7, the gate:** `pnpm ci:local` on the final tree, `DATABASE_URL` = :5433: **PASSED — 36 / 36 jobs green.**
+  - Integration: domain 5,397 (+1 skipped), API 1,782 (+1), jobs 807, validity-service 284, channels 231, niyamavali-engine 144, events 36, queue 4.
+  - Unit: contracts 1,377, admin 1,174, mobile 1,009, public 748.
+
+Dismissed:
+- `claimant_actor_id` type: it is `uuid` (checked live).
+- The in-place migration on other databases: :5434 stops at 0162, and snapshots end at 0020.
+- Refile cleanup: `cleanup` deletes by deceased.
+- Metric version not bumped: F9 records the exception.
+- Race leg B's connection: it is `bindScopedDb(b)`.
+- Ping-intent callers: there is one, and it passes `source`.
+- `deceasedPreviousWorkplaceId`: verified in code.
+- Per-candidate `NOT EXISTS`: indexed on `claims.deceased_member_id`.
+
+**Dismissed (12):**
+- The staff line fires on any latest posting in the window, including a re-declaration of the same workplace, and on a removed unanswered ask. That is SW20 word for word (*"the dead member's latest posting was recorded, or any of their named people was ACCEPTED or REMOVED"*).
+- Legacy parked `skipped` selections are not healed (AC8 / AC14; round 1).
+- `claimantActorId` is bound un-branded, but `claims.claimant_actor_id` is a `uuid` column.
+- Only the certificate reminder learned the new edge. Re-grepped: ⛔ no other functional reader of `claim.peer_mesh_pinged`, and `computeStageSlaStatus` does not read it.
+- The narrowed UPDATE grant: AC1's writers are enumerated and the policy spec covers them.
+- The inspector-wire test is client-side, as AC11 places it. The server's inspection handler builds typed DTOs and never reads the peer-mesh tables, so it is covered by construction.
+- The schema-key walker's unwalked Zod kinds: the schemas are plain objects.
+- Previous-workplace people rank first: that is AC2 / SW22.
+- The `source` vocabulary is in three places, backed by the DB CHECK.
+- `Date` parsing of timestamps.
+- No drizzle snapshot: snapshots end at `0020`; migrations are hand-written.
+- R1's copy against the ratified sentence: it matches `-331` as read with `-339` (Auditor).
 
 ## Dev Notes
 
@@ -714,10 +812,18 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36`, worktree `.claude/worktr
 - `_bmad-output/implementation-artifacts/6-6-peer-mesh-deterministic-5-nearest-selection-ping.md` — modified
 - `_bmad-output/implementation-artifacts/6-36a-member-workplace-and-posting-history.md` — modified
 - `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md` — modified
+- Review round 2 (`2026-10-16-340`) — modified: `packages/domain/migrations/0163_peer-mesh-workplace-selection.sql` (amended in
+  place), `packages/domain/src/schema/claim_peer_mesh_selections.ts`, `packages/domain/src/claim/peer-mesh.ts`,
+  `peer-mesh-read.ts`, `peer-mesh-persist.ts`, `peer-mesh-metric-registry.ts`, `apps/jobs/src/claim-peer-mesh.ts`,
+  `apps/jobs/src/boot.ts`, `apps/jobs/src/restoration-discipline.ts`, `packages/queue/src/index.ts` (comments), the tests
+  `peer-mesh-grouped.test.ts`, `peer-mesh-workplace-snapshot.spec.ts`, the 0163 policy spec, `apps/jobs/tests/claim-peer-mesh.test.ts`,
+  `apps/api/tests/integration/_peer-reply-fixture.ts`; records `.decision-log.md` (`-340`), `_bmad-output/planning-artifacts/epics.md`.
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-16 | 3.5 | Round 2 CLOSED: fix-review Edge #1 → `2026-10-16-341` (attempt filers excluded); convergence round (3 LOW) applied; `twt-test-pg` recreated fresh; `pnpm ci:local` on the final tree PASSED 36 / 36; P1–P9 checked off; status `in-progress` → `done`. ⚠ :5432's 0163 delta ⛔ applied (blocked) — recorded. |
+| 2026-10-16 | 3.4 | Code review ROUND 2 (whole branch, three layers): 2 decision-needed → BigDev D1 *"Salt by the anchor claim"*, D2 *"Exclude every claimant"* (`2026-10-16-340`, committed alone `4c74c5b6`), 7 patch, 1 defer, 12 dismissed; BigDev "1": P1–P9 applied; the fix diff reviewed by three layers (F1–F14 applied, W2–W3 deferred, one decision open). Status `done` → `in-progress` until the live-DB delta, the DB-backed tests and the gate (P7). |
 | 2026-10-16 | 3.3 | Three-layer code review of `51382898..0d4c23af`: 1 MEDIUM / P2 patch (R1), 0 decision-needed / defer, 3 dismissed candidates; 369 review tests passed. BigDev option 1: corrected the staff warning's chronology for RF1, aligned the contract comment and both existing staff-surface assertions; 105 post-fix tests passed. R1 checked off; story and sprint row `review` → `done`. Full CI not rerun for the copy/comment/assertion patch. |
 | 2026-10-16 | 3.2 | RF1 RULED — `2026-10-16-339` (Trustee-ratified, option C): the anchor is the death's FIRST filing unless an innocence finding lifts a claim (`resolvePeerMeshFilingCut`); the RF1 pin flipped, an innocence leg and five domain anchor legs added; AC4, the header, the rulings list and §Recorded annotated (⛔ rewritten). |
 | 2026-10-16 | 3.1 | AC15 closed GREEN: `twt-test-pg` recreated fresh (BigDev), migrated from zero, `pnpm ci:local` on `3fa2ff0c` — 36 / 36 jobs. |

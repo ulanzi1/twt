@@ -486,7 +486,8 @@ async function main(): Promise<void> {
       pool,
       windowSeconds: PEER_MESH_WINDOW_SECONDS,
       // Story 6.12 (R2) — enqueue the shepherd-assign job after the SELECT worker commits
-      // claim.peer_mesh_pinged (→ verification_in_progress). singletonKey = claim_case_id so a re-run
+      // claim.peer_mesh_pinged or (Story 6.36) claim.peer_mesh_none_to_ask (→ verification_in_progress).
+      // singletonKey = claim_case_id so a re-run
       // does not double-enqueue (the worker is idempotent regardless).
       enqueueShepherdAssign: async (envelope, claimCaseId, deceasedMemberId) => {
         await boss.send(

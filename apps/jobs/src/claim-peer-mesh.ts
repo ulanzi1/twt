@@ -188,6 +188,10 @@ export async function runClaimPeerMeshSelect(
     if (!claimRow) {
       throw new Error(`[jobs] claim-peer-mesh-select: claim ${claimCaseId} not found in scope`);
     }
+    // The payload's deceased id now chooses the anchor and the death-wide exclusions (`-340`) — it must be the claim's own.
+    if (claimRow.deceasedMemberId !== deceasedMemberId) {
+      throw new Error(`[jobs] claim-peer-mesh-select: the payload's deceased member does not match claim ${claimCaseId}`);
+    }
 
     // (2) Idempotency probe — a selection already exists for this claim → no-op the selection/event/ping work (the
     //     immutable record is never rewritten). The window (Decision 2) and the shepherd (Story 6.12) are self-healed
@@ -222,21 +226,21 @@ export async function runClaimPeerMeshSelect(
     if (metric.kind !== 'grouped') {
       throw new Error(`[jobs] claim-peer-mesh-select: the default metric ${metric.metricId} is not a grouped metric`);
     }
-    // RF1 (`2026-10-16-339`, option C): the death's FIRST filing, unless an innocence finding lifts a claim.
+    // RF1 (`2026-10-16-339`, option C): the death's FIRST filing, unless an innocence finding lifts a claim — and that
+    // filing's claim, whose id salts the ranking (`2026-10-16-340` call 1: a refile asks the same people).
     const cut = await claim.resolvePeerMeshFilingCut(db, {
       pariwarId: brandedPariwarId,
       deceasedMemberId,
+      claimCaseId,
       claimCreatedAt: claimRow.createdAt,
     });
-    const snapshot = await claim.getPeerMeshGroupedSnapshot(db, {
-      pariwarId: brandedPariwarId,
-      deceasedMemberId,
-      claimantActorId: claimRow.claimantActorId,
-      cut,
-    });
+    // No claimant is passed: the predicate itself excludes anyone who reported this death — any claim's claimant, any
+    // intake attempt's filer (`-340` call 2, `-341`).
+    const snapshot = await claim.getPeerMeshGroupedSnapshot(db, { pariwarId: brandedPariwarId, deceasedMemberId, cut });
     const selection = claim.runPeerMeshMetric({
       metric,
       claimCaseId,
+      anchorClaimCaseId: cut.anchorClaimCaseId,
       deceasedMemberId,
       deceased,
       candidates: snapshot.candidates,
@@ -262,6 +266,7 @@ export async function runClaimPeerMeshSelect(
         deceasedWorkplaceId: snapshot.workplace.currentWorkplaceId,
         deceasedPreviousWorkplaceId: snapshot.workplace.previousWorkplaceId,
         rankedMemberIds: selection.rankedMemberIds ?? [],
+        anchorClaimCaseId: cut.anchorClaimCaseId,
       },
       responseWindowExpiresAt,
     });

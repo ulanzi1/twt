@@ -25,6 +25,7 @@
 // TENANT-ISOLATED (mirrors member_addresses / members). RLS in policies/member-postings-rls.ts.
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
+import { sql } from 'drizzle-orm';
 import { boolean, date, foreignKey, index, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { pgTable } from 'drizzle-orm/pg-core';
 
@@ -74,6 +75,8 @@ export const memberPostings = pgTable(
   (t) => [
     // The history-read lookup key (walk a member's postings within a Pariwar, newest first).
     index('member_postings_pariwar_member_idx').on(t.pariwarId, t.memberId),
+    // Story 6.36 (0163) — "who is at workplace W" (the peer mesh's colleague read).
+    index('member_postings_pariwar_workplace_idx').on(t.pariwarId, t.workplaceId).where(sql`${t.workplaceId} IS NOT NULL`),
     foreignKey({
       name: 'member_postings_workplace_fk',
       columns: [t.pariwarId, t.workplaceId],

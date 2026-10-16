@@ -111,8 +111,12 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
             },
             callbackMobile: { status: 'none' as const },
             callbackBasis: null,
+            // Story 6.36 (SW24) — REQUIRED on the wire.
+            source: 'workplace' as const,
           },
         ],
+        // Story 6.36 (SW20) — REQUIRED; `null` for `district_cohort_v1`.
+        recentChangeBeforeFiling: false,
         // Story 6.27d (R5) — REQUIRED: the claim's recorded inspector discrepancies, with their notes.
         inspectionDiscrepancies: [
           {

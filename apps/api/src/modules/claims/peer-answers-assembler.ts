@@ -268,6 +268,8 @@ export async function assemblePeerSection(
       reply: replyView,
       callbackMobile,
       callbackBasis,
+      // Story 6.36 (SW24) — the ping row's own column (⛔ a new read); `null` for a `district_cohort_v1` selection.
+      source: ping.source ?? null,
     });
   }
 
@@ -347,6 +349,8 @@ export async function assemblePeerMeshSection(
         pings: section.pings,
         // Story 6.27d (R5) — REQUIRED, possibly empty.
         inspectionDiscrepancies: section.inspectionDiscrepancies,
+        // Story 6.36 (SW20) — the staff line, from the selection row in hand; `null` for `district_cohort_v1`.
+        recentChangeBeforeFiling: selection.recentChangeBeforeFiling ?? null,
       },
     };
   } catch (err) {

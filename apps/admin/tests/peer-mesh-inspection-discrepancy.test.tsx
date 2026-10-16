@@ -19,6 +19,8 @@ const transcript = (inspectionDiscrepancies: PeerMeshTranscript['inspectionDiscr
   windowExpiresAt: '2026-10-15T00:00:00.000Z',
   pings: [],
   inspectionDiscrepancies,
+  // Story 6.36 (SW20) — REQUIRED; `null` for a `district_cohort_v1` selection.
+  recentChangeBeforeFiling: null,
 });
 
 describe('<PeerMeshView> — Story 6.27d, the inspector\'s discrepancy block', () => {

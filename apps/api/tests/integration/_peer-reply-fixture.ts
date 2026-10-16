@@ -47,7 +47,11 @@ export async function seedNeighbour(env: PeerFixtureEnv, pariwarId: string, name
   return memberId;
 }
 
-/** The ONE selection of an EXISTING claim and a ping per neighbour — TEXTED where `texted[i]` (`send_outcome = 'accepted'`). */
+/**
+ * The ONE selection of an EXISTING claim and a ping per neighbour — TEXTED where `texted[i]` (`send_outcome = 'accepted'`).
+ * ⭐ Story 6.36 — `workplace` given ⇒ a `workplace_named_v1` selection with that `source` (on the selection AND every ping)
+ * and the staff line; omitted ⇒ the legacy metric id `'m'` with NULLs (as before).
+ */
 export async function attachPings(
   env: PeerFixtureEnv,
   pariwarId: string,
@@ -55,23 +59,35 @@ export async function attachPings(
   deceasedMemberId: string,
   neighbours: readonly string[],
   texted: readonly boolean[],
+  workplace?: { source: 'workplace' | 'named_by_member'; recentChangeBeforeFiling: boolean },
 ): Promise<string[]> {
   const selectionId = randomUUID();
-  await env.pool.query(
-    `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
-       metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at)
-     VALUES ($1, $2, $3, $4, now(), 'm', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours')`,
-    [selectionId, claimCaseId, pariwarId, deceasedMemberId, neighbours],
-  );
+  if (workplace) {
+    await env.pool.query(
+      `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
+         metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at, source, previous_workplace_counted,
+         recent_change_before_filing, ranked_member_ids)
+       VALUES ($1, $2, $3, $4, now(), 'workplace_named_v1', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', $6, false, $7, $5::uuid[])`,
+      [selectionId, claimCaseId, pariwarId, deceasedMemberId, neighbours, workplace.source, workplace.recentChangeBeforeFiling],
+    );
+  } else {
+    await env.pool.query(
+      `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
+         metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at)
+       VALUES ($1, $2, $3, $4, now(), 'm', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours')`,
+      [selectionId, claimCaseId, pariwarId, deceasedMemberId, neighbours],
+    );
+  }
   const pingIds: string[] = [];
   for (const [i, m] of neighbours.entries()) {
     const pingId = randomUUID();
     pingIds.push(pingId);
-    await env.pool.query(`INSERT INTO claim_peer_mesh_pings (ping_id, selection_id, pariwar_id, member_id) VALUES ($1, $2, $3, $4)`, [
+    await env.pool.query(`INSERT INTO claim_peer_mesh_pings (ping_id, selection_id, pariwar_id, member_id, source) VALUES ($1, $2, $3, $4, $5)`, [
       pingId,
       selectionId,
       pariwarId,
       m,
+      workplace?.source ?? null,
     ]);
     if (texted[i]) {
       await env.pool.query(

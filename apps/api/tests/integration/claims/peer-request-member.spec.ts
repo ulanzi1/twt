@@ -108,6 +108,12 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
   }
 
   const base = (p: string) => `/api/v1/p/${p}/member/peer-requests`;
+  /** Story 6.36 (AC16) — the words of the `relationship` option `school_colleague` in a detail body. */
+  const schoolOption = (body: Json) =>
+    (body['questionnaire'] as { pages: { questions: { key: string; options: { code: string; words: { en: string; hi: string } }[] }[] }[] }).pages
+      .flatMap((pg) => pg.questions)
+      .find((x) => x.key === 'relationship')!
+      .options.find((o) => o.code === 'school_colleague')!.words;
   const put = (p: string, tok: string, ping: string, key: string, value: Json, idem = randomUUID()) =>
     call('PUT', `${base(p)}/${ping}/answers/${key}`, tok, { value }, { 'idempotency-key': idem });
   const submit = (p: string, tok: string, ping: string, idem = randomUUID()) => call('POST', `${base(p)}/${ping}/submit`, tok, undefined, { 'idempotency-key': idem });
@@ -147,8 +153,8 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort()).toEqual(['answers', 'memberName', 'pingId', 'questionnaire', 'submitted']);
     const q = res.body['questionnaire'] as { versionId: string; pages: { questions: { key: string; words: { en: string; hi: string } }[] }[]; closingNote: { en: string } };
-    // Story 6.27b (`-329`) — v3 is LIVE (RED BY DESIGN: this leg named v2 — amended by NAMING v3).
-    expect(q.versionId).toBe('peer_mesh.v3');
+    // Story 6.27b (`-329`) — v3 was LIVE; ⭐ Story 6.36 (AC16, `-331` SC4 A) — v4 is LIVE (RED BY DESIGN: amended by NAMING v4).
+    expect(q.versionId).toBe('peer_mesh.v4');
     expect(q.pages.flatMap((pg) => pg.questions.map((x) => x.key))).toEqual(['has_died', 'death_date', 'how_known', 'relationship', 'callback_consent']);
     expect(q.pages[0]!.questions[0]!.words.en).toMatch(/died\?$/);
     expect(q.pages[0]!.questions[0]!.words.hi).toMatch(/निधन/);
@@ -157,7 +163,9 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
   });
 
   // ⭐ Story 6.27b (Task 3c.6; AC11; `-328` read with `-329`) — the call-back question's words follow the reply's PINNED version.
-  it('v3 — a NEW reply pins `peer_mesh.v3` and asks "May the Admin phone you about this?" in en AND hi', async () => {
+  // ⭐ Story 6.36 (AC16; `-331` SC4 A) — v4 is LIVE: a new reply pins v4, keeps v3's call-back words, and its relationship
+  // option reads "school or office" — through the REAL `t()` in en AND hi.
+  it('v4 — a NEW reply pins `peer_mesh.v4`, asks "May the Admin phone you about this?" and offers "A colleague at the same school or office" in en AND hi', async () => {
     const p = randomUUID();
     const m = await seedMember(p);
     const r = await seedRequest(p, m);
@@ -168,7 +176,28 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
         .flatMap((pg) => pg.questions)
         .find((x) => x.key === 'callback_consent')!.words;
     expect(words(before.body)).toEqual({ en: 'May the Admin phone you about this?', hi: 'क्या एडमिन इस बारे में आपको फ़ोन कर सकते हैं?' });
+    expect(schoolOption(before.body)).toEqual({ en: 'A colleague at the same school or office', hi: 'एक ही स्कूल या दफ़्तर में सहकर्मी' });
     expect((await put(p, tok, r.pingId, 'has_died', { codes: ['died'] })).status).toBe(200);
+    const { rows } = await t.pool.query(`SELECT questionnaire_version_id FROM claim_peer_mesh_replies WHERE ping_id = $1`, [r.pingId]);
+    expect(rows).toEqual([{ questionnaire_version_id: 'peer_mesh.v4' }]);
+  });
+
+  it('v3 is HISTORICAL (Story 6.36) — a reply STARTED on v3 keeps v3 and its words ("A colleague at the same school"); a save keeps the pin', async () => {
+    const p = randomUUID();
+    const m = await seedMember(p);
+    const r = await seedRequest(p, m);
+    const tok = token(m, p);
+    const { rows: [sel] } = await t.pool.query<{ selection_id: string }>(`SELECT selection_id FROM claim_peer_mesh_pings WHERE ping_id = $1`, [r.pingId]);
+    await t.pool.query(
+      `INSERT INTO claim_peer_mesh_replies (reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'peer_mesh.v3')`,
+      [randomUUID(), p, r.cid, sel!.selection_id, r.pingId, m],
+    );
+    const res = await call('GET', `${base(p)}/${r.pingId}`, tok);
+    expect(res.status).toBe(200);
+    expect((res.body['questionnaire'] as { versionId: string }).versionId).toBe('peer_mesh.v3');
+    expect(schoolOption(res.body)).toEqual({ en: 'A colleague at the same school', hi: 'एक ही स्कूल में सहकर्मी' });
+    expect((await put(p, tok, r.pingId, 'relationship', { codes: ['school_colleague'] })).status).toBe(200);
     const { rows } = await t.pool.query(`SELECT questionnaire_version_id FROM claim_peer_mesh_replies WHERE ping_id = $1`, [r.pingId]);
     expect(rows).toEqual([{ questionnaire_version_id: 'peer_mesh.v3' }]);
   });

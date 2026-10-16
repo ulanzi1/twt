@@ -7,7 +7,10 @@
 //   · the call-back number labelled by WHY it is shown (`-328` read with `-329`): "May be phoned on" for a neighbour's
 //     "Yes" (`consented`), "Mobile" for the Super Admin's reading (`super_admin`) and for EVERY other case (an unavailable
 //     number, a `null` basis — review S9) — ⛔ never "may be phoned" beside a "No";
-//   · ⭐ Story 6.27d (R5) — the inspector's discrepancy block (which questions differed, the re-ask notes with author).
+//   · ⭐ Story 6.27d (R5) — the inspector's discrepancy block (which questions differed, the re-ask notes with author);
+//   · ⭐ Story 6.36 (SW24, SW20) — where each person came from (*"Chosen from the workplace"* / *"Named by the member"*)
+//     BESIDE the "How do you know [member]?" (`relationship`) answer when the reply has one, otherwise in the ping's header
+//     (an unanswered ping shows it too), nothing for `null` (a 6.6 selection); and the staff line once at the top.
 
 import type { PeerMeshTranscript } from '@twt/contracts';
 import type { ReactElement } from 'react';
@@ -42,53 +45,64 @@ export function PeerMeshView({ transcript, now = Date.now() }: { transcript: Pee
       <p className="font-medium" data-testid="peer-mesh-window">
         {windowLine}
       </p>
+      {/* ⭐ Story 6.36 (SW20) — the staff line, once, only when true. */}
+      {transcript.recentChangeBeforeFiling === true && (
+        <p className="font-medium text-amber-800" data-testid="peer-mesh-recent-change">
+          {t.peerMesh.recentChangeBeforeFiling}
+        </p>
+      )}
       <p>
         {t.peerMesh.responders}: <strong>{transcript.distinctResponderCount}</strong> · {t.peerMesh.pinged}:{' '}
         <strong>{transcript.pingedMemberIds.length}</strong>
       </p>
       {/* ⭐ Story 6.27a (PM13) — per neighbour: the name, the send status, every live answer, the call-back mobile. */}
       <ul className="flex flex-col gap-3" data-testid="peer-mesh-pings">
-        {transcript.pings.map((ping) => (
-          <li key={ping.pingId} className="rounded border p-2" data-testid="peer-mesh-ping">
-            <div className="flex items-center justify-between gap-2">
-              <strong>
-                {ping.responderName.status === 'shown'
-                  ? ping.responderName.text
-                  : ping.responderName.status === 'unavailable'
-                    ? t.peerMesh.couldNotShow
-                    : t.peerMesh.noName}
-              </strong>
-              <span className="text-xs" data-testid="peer-mesh-send-status">
-                {t.peerMesh.sendStatus[ping.sendStatus]}
-                {ping.sendStatus === 'no_target' && ping.noTargetReason !== null ? ` — ${ping.noTargetReason}` : ''}
-              </span>
-            </div>
-            {ping.reply === null ? (
-              <p className="text-xs opacity-70">{t.peerMesh.noAnswerYet}</p>
-            ) : (
-              <>
-                <p className="text-xs">{ping.reply.submitted ? t.peerMesh.submitted : t.peerMesh.notSubmitted}</p>
-                <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                  {ping.reply.answers.map((a) => (
-                    <PeerAnswerRow key={a.questionKey} answer={a} />
-                  ))}
-                </dl>
-              </>
-            )}
-            {ping.callbackMobile.status !== 'none' && (
-              <p className="mt-1 text-xs" data-testid="peer-mesh-callback">
-                {/* Story 6.27b (`-329`) — the label says WHY the number is shown. The consent words ONLY for a number
-                    shown on a "Yes"; every other case (the Super Admin's basis, an unavailable number, a `null` basis)
-                    takes the neutral "Mobile" — fail CLOSED, ⛔ never "may be phoned" without a recorded consent (review S9). */}
-                {ping.callbackMobile.status === 'shown' && ping.callbackBasis === 'consented'
-                  ? t.peerMesh.callbackMobile
-                  : t.peerMesh.callbackMobileSuperAdmin}
-                :{' '}
-                {ping.callbackMobile.status === 'shown' ? <span className="font-mono">{ping.callbackMobile.text}</span> : t.peerMesh.couldNotShow}
-              </p>
-            )}
-          </li>
-        ))}
+        {transcript.pings.map((ping) => {
+          // Story 6.36 (SW24) — beside the `relationship` answer when there is one, otherwise in the header.
+          const besideAnswer = ping.reply?.answers.some((a) => a.questionKey === 'relationship') === true;
+          return (
+            <li key={ping.pingId} className="rounded border p-2" data-testid="peer-mesh-ping">
+              <div className="flex items-center justify-between gap-2">
+                <strong>
+                  {ping.responderName.status === 'shown'
+                    ? ping.responderName.text
+                    : ping.responderName.status === 'unavailable'
+                      ? t.peerMesh.couldNotShow
+                      : t.peerMesh.noName}
+                </strong>
+                {!besideAnswer && <SourceLine source={ping.source} />}
+                <span className="text-xs" data-testid="peer-mesh-send-status">
+                  {t.peerMesh.sendStatus[ping.sendStatus]}
+                  {ping.sendStatus === 'no_target' && ping.noTargetReason !== null ? ` — ${ping.noTargetReason}` : ''}
+                </span>
+              </div>
+              {ping.reply === null ? (
+                <p className="text-xs opacity-70">{t.peerMesh.noAnswerYet}</p>
+              ) : (
+                <>
+                  <p className="text-xs">{ping.reply.submitted ? t.peerMesh.submitted : t.peerMesh.notSubmitted}</p>
+                  <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                    {ping.reply.answers.map((a) => (
+                      <PeerAnswerRow key={a.questionKey} answer={a} source={a.questionKey === 'relationship' ? ping.source : null} />
+                    ))}
+                  </dl>
+                </>
+              )}
+              {ping.callbackMobile.status !== 'none' && (
+                <p className="mt-1 text-xs" data-testid="peer-mesh-callback">
+                  {/* Story 6.27b (`-329`) — the label says WHY the number is shown. The consent words ONLY for a number
+                      shown on a "Yes"; every other case (the Super Admin's basis, an unavailable number, a `null` basis)
+                      takes the neutral "Mobile" — fail CLOSED, ⛔ never "may be phoned" without a recorded consent (review S9). */}
+                  {ping.callbackMobile.status === 'shown' && ping.callbackBasis === 'consented'
+                    ? t.peerMesh.callbackMobile
+                    : t.peerMesh.callbackMobileSuperAdmin}
+                  :{' '}
+                  {ping.callbackMobile.status === 'shown' ? <span className="font-mono">{ping.callbackMobile.text}</span> : t.peerMesh.couldNotShow}
+                </p>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {/* ⭐ Story 6.27d (R5) — the inspector's discrepancy, ONLY here (inside the section a hidden reader never receives). */}
       {transcript.inspectionDiscrepancies.length > 0 && <InspectionDiscrepancies items={transcript.inspectionDiscrepancies} />}
@@ -170,7 +184,19 @@ function WarningFlagLine({ answer }: { answer: PeerAnswer }): ReactElement | nul
   );
 }
 
-function PeerAnswerRow({ answer }: { answer: PeerAnswer }): ReactElement {
+type PeerSource = PeerMeshTranscript['pings'][number]['source'];
+
+/** Story 6.36 (SW24) — *"Chosen from the workplace"* / *"Named by the member"*; ⛔ anything for `null`. */
+function SourceLine({ source }: { source: PeerSource }): ReactElement | null {
+  if (source === null) return null;
+  return (
+    <span className="text-xs font-medium" data-testid="peer-mesh-source" data-source={source}>
+      {t.peerMesh.source[source]}
+    </span>
+  );
+}
+
+function PeerAnswerRow({ answer, source }: { answer: PeerAnswer; source: PeerSource }): ReactElement {
   const value =
     answer.value.kind === 'codes'
       ? answer.value.labels.join(', ')
@@ -187,6 +213,11 @@ function PeerAnswerRow({ answer }: { answer: PeerAnswer }): ReactElement {
           {answer.changeCount > 0 ? `, ${t.peerMesh.changed(answer.changeCount)}` : ''})
         </span>
         <WarningFlagLine answer={answer} />
+        {source !== null && (
+          <span className="block">
+            <SourceLine source={source} />
+          </span>
+        )}
       </dd>
     </>
   );

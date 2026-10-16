@@ -113,11 +113,15 @@ const PRESENT_PACKET: VerifierConsolePacket = {
           },
           callbackMobile: { status: 'shown', text: '+919876543210' },
           callbackBasis: 'consented',
+          // Story 6.36 (SW24) — where this person came from.
+          source: 'workplace',
         },
-        { pingId: 'py', memberId: 'y', responderName: { status: 'unavailable' }, sendStatus: 'no_target', noTargetReason: 'no_target:peer_not_active', reply: null, callbackMobile: { status: 'none' }, callbackBasis: null },
+        { pingId: 'py', memberId: 'y', responderName: { status: 'unavailable' }, sendStatus: 'no_target', noTargetReason: 'no_target:peer_not_active', reply: null, callbackMobile: { status: 'none' }, callbackBasis: null, source: 'workplace' },
       ],
       // Story 6.27d (R5) — REQUIRED, possibly empty.
       inspectionDiscrepancies: [],
+      // Story 6.36 (SW20) — the staff line.
+      recentChangeBeforeFiling: true,
     },
   },
   groundInspection: { status: 'empty' },
@@ -482,6 +486,32 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     expect(pings[1]).toHaveTextContent('Not texted — no_target:peer_not_active');
     expect(pings[1]).toHaveTextContent('No answer yet');
     expect(within(pings[1]!).queryByTestId('peer-mesh-callback')).toBeNull();
+  });
+
+  it('⭐ Story 6.36 (SW24, SW20) — each ping shows where the person came from (in the header — ⛔ relationship answer here), the staff line once; `null` ⇒ ⛔ either', () => {
+    const { unmount } = render(<SignalsPanel packet={PRESENT_PACKET} />);
+    const pings = screen.getAllByTestId('peer-mesh-ping');
+    for (const p of pings) {
+      const line = within(p).getByTestId('peer-mesh-source');
+      expect(line).toHaveTextContent('Chosen from the workplace');
+      expect(line.closest('dd')).toBeNull();
+    }
+    expect(screen.getByTestId('peer-mesh-recent-change')).toHaveTextContent(
+      "The member's workplace or the people they named changed in the 90 days before this claim was filed.",
+    );
+    unmount();
+    // A 6.6 (`district_cohort_v1`) selection: `source` and the line are `null` ⇒ nothing; `false` ⇒ nothing.
+    const transcript = PRESENT_PACKET.peerMesh!.status === 'present' ? PRESENT_PACKET.peerMesh!.transcript : null;
+    for (const line of [null, false]) {
+      const legacy = {
+        ...PRESENT_PACKET,
+        peerMesh: { status: 'present' as const, transcript: { ...transcript!, recentChangeBeforeFiling: line, pings: transcript!.pings.map((p) => ({ ...p, source: null })) } },
+      };
+      const r = render(<SignalsPanel packet={legacy} />);
+      expect(screen.queryAllByTestId('peer-mesh-source')).toHaveLength(0);
+      expect(screen.queryByTestId('peer-mesh-recent-change')).toBeNull();
+      r.unmount();
+    }
   });
 
   it('6.27a — every send status has words', async () => {

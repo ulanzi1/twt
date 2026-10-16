@@ -19,15 +19,30 @@
 //     function on the persisted snapshot. This module only owns the pure ranking — it is
 //     the caller's job (the select job / `persistPeerMeshSelection`) to freeze the input.
 //
-// DO NOT add geo / lat-lng / school-proximity / contribution-time inputs here — those
-// substrate fields do not exist (Decision D3). Richer ranking lands as a NEW metric
-// registry entry, never as a new branch in this engine.
+// ⭐ Story 6.36 (SW18 — `2026-10-14-330` supersedes 6.6's Decision D3 for new selections): the WORKPLACE is now an
+// input — through a NEW registry entry (`workplace_named_v1`, `kind: 'grouped'`) and its own pure function
+// (`selectPeerMeshGrouped`), ⛔ a branch inside `selectPeerMesh`. The ONE dispatch on the metric's `kind` is
+// `runPeerMeshMetric`, used by the job AND by replay (`replayPeerMeshSelection`). DO NOT add geo / lat-lng /
+// contribution-time inputs here — those substrate fields do not exist; a richer ranking lands as a NEW metric id.
 
-import type { MemberId } from '../ids/index.js';
+import { createHash } from 'node:crypto';
+
+import { memberId as toMemberId, type MemberId } from '../ids/index.js';
 import type {
-  PeerMeshCandidate,
-  PeerMeshDeceased,
-  PeerMeshMetricConfig,
+  ClaimPeerMeshSelectionRow,
+  PeerMeshDistrictSnapshotRow,
+  PeerMeshGroupedSnapshotRow,
+  PeerMeshSource,
+} from '../schema/claim_peer_mesh_selections.js';
+import {
+  resolvePeerMeshMetric,
+  type PeerMeshCandidate,
+  type PeerMeshCandidateGroup,
+  type PeerMeshDeceased,
+  type PeerMeshGroupedCandidate,
+  type PeerMeshGroupedMetricConfig,
+  type PeerMeshMetricConfig,
+  type PeerMeshRankedMetricConfig,
 } from './peer-mesh-metric-registry.js';
 
 // NOTE: PeerMeshCandidate / PeerMeshDeceased / PeerMeshMetricConfig are re-exported from
@@ -43,7 +58,8 @@ export interface PeerMeshSelectionInput {
   readonly claimCaseId: string;
   readonly deceased: PeerMeshDeceased;
   readonly candidates: readonly PeerMeshCandidate[];
-  readonly metric: PeerMeshMetricConfig;
+  /** A RANKED metric (Story 6.36 AC3 — a caller holding a resolved union narrows first, or uses `runPeerMeshMetric`). */
+  readonly metric: PeerMeshRankedMetricConfig;
   /** How many to select (default {@link DEFAULT_PEER_MESH_COUNT}). */
   readonly count?: number;
 }
@@ -81,4 +97,181 @@ export function selectPeerMesh(input: PeerMeshSelectionInput): PeerMeshSelection
     metricId: metric.metricId,
     metricVersion: metric.metricVersion,
   };
+}
+
+// ── Story 6.36 — the grouped engine (`workplace_named_v1`; AC2; I7) ─────────────────────────────────────────────────
+
+/** Input to {@link selectPeerMeshGrouped}. `candidates` is the FROZEN snapshot (persisted for replay). */
+export interface PeerMeshGroupedSelectionInput {
+  /** The BRANDED (lower-case) claim id — the job passes its branded `claimCaseId`, ⛔ the raw payload string. */
+  readonly claimCaseId: string;
+  readonly candidates: readonly PeerMeshGroupedCandidate[];
+  readonly metric: PeerMeshGroupedMetricConfig;
+}
+
+/** Output of {@link selectPeerMeshGrouped}. `selectedMemberIds` is a PREFIX of `rankedMemberIds` (0163's trigger). */
+export interface PeerMeshGroupedSelectionResult {
+  /** Which group won; `null` when nobody can be asked. */
+  readonly source: PeerMeshSource | null;
+  readonly selectedMemberIds: readonly MemberId[];
+  /** The winning group's ranking, truncated to `metric.rankedMax` (6.27c replaces a skipped person from it). */
+  readonly rankedMemberIds: readonly MemberId[];
+  readonly metricId: string;
+  readonly metricVersion: number;
+}
+
+/** Thrown when a member id appears twice in a grouped input (a join duplicate would select one person twice). */
+export class PeerMeshDuplicateCandidateError extends Error {
+  constructor(public readonly memberId: string) {
+    super(`[peer-mesh] duplicate candidate ${memberId} in the grouped input`);
+    this.name = 'PeerMeshDuplicateCandidateError';
+  }
+}
+
+/** The ranking key: sha256(claimCaseId + ':' + memberId) as lower-case hex — pure, deterministic, salted per claim. */
+function rankKey(claimCaseId: string, memberId: string): string {
+  return createHash('sha256').update(`${claimCaseId}:${memberId}`).digest('hex');
+}
+
+/** Order `part` by ascending rank key (ASCII compare — ⛔ locale-dependent `localeCompare`); member id breaks a tie. */
+function orderByKey(claimCaseId: string, part: readonly PeerMeshGroupedCandidate[]): MemberId[] {
+  return part
+    .map((c) => ({ id: c.memberId, key: rankKey(claimCaseId, c.memberId) }))
+    .sort((a, b) => (a.key !== b.key ? (a.key < b.key ? -1 : 1) : a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((x) => x.id);
+}
+
+/** A workplace split: its SETTLED colleagues first, then the rest — each by the rank key. */
+function orderSplit(claimCaseId: string, all: readonly PeerMeshGroupedCandidate[], group: PeerMeshCandidateGroup): MemberId[] {
+  const split = all.filter((c) => c.group === group);
+  return [...orderByKey(claimCaseId, split.filter((c) => c.settled)), ...orderByKey(claimCaseId, split.filter((c) => !c.settled))];
+}
+
+/**
+ * Choose who is asked (`-310` CF4 A; `-331` SC1 A; 6.36a SW18 / SW22). Pure — ⛔ clock, ⛔ randomness, ⛔ I/O.
+ *   · the WORKPLACE group = `workplace_previous` (present only when the previous workplace COUNTED) then
+ *     `workplace_current`; within each, the settled first, then the rest; each part by the rank key;
+ *   · the NAMED group = by the rank key alone (`settled` is ⛔ read for it);
+ *   · the first non-empty group wins — ⛔ never two mixed, ⛔ a fill-up — capped at `workplaceCount` / `namedCount`;
+ *     the ranking is the winning group's first `rankedMax` (an office of 600 never fails the job).
+ * Throws {@link PeerMeshDuplicateCandidateError} on a duplicate member id. The input is ⛔ mutated.
+ */
+export function selectPeerMeshGrouped(input: PeerMeshGroupedSelectionInput): PeerMeshGroupedSelectionResult {
+  const { claimCaseId, candidates, metric } = input;
+  const seen = new Set<string>();
+  for (const c of candidates) {
+    if (seen.has(c.memberId)) throw new PeerMeshDuplicateCandidateError(c.memberId);
+    seen.add(c.memberId);
+  }
+
+  const workplace = [
+    ...orderSplit(claimCaseId, candidates, 'workplace_previous'),
+    ...orderSplit(claimCaseId, candidates, 'workplace_current'),
+  ];
+  const named = orderByKey(claimCaseId, candidates.filter((c) => c.group === 'named'));
+
+  const [source, ranking, count]: [PeerMeshSource | null, MemberId[], number] =
+    workplace.length > 0
+      ? ['workplace', workplace, metric.workplaceCount]
+      : named.length > 0
+        ? ['named_by_member', named, metric.namedCount]
+        : [null, [], 0];
+
+  const rankedMemberIds = ranking.slice(0, metric.rankedMax);
+  return {
+    source,
+    selectedMemberIds: rankedMemberIds.slice(0, Math.min(count, rankedMemberIds.length)),
+    rankedMemberIds,
+    metricId: metric.metricId,
+    metricVersion: metric.metricVersion,
+  };
+}
+
+// ── Story 6.36 — the ONE dispatch (AC3) ───────────────────────────────────────────────────────────────────────────────
+
+/** A frozen candidate of EITHER metric — its shape must match the metric's `kind` ({@link runPeerMeshMetric} checks). */
+export type PeerMeshSnapshotCandidate = PeerMeshCandidate | PeerMeshGroupedCandidate;
+
+export interface PeerMeshRunInput {
+  readonly metric: PeerMeshMetricConfig;
+  /** The BRANDED claim id (the grouped rank key's salt). */
+  readonly claimCaseId: string;
+  readonly deceasedMemberId: MemberId;
+  /** The 6.6 reference point — read by the ranked metric only. */
+  readonly deceased: PeerMeshDeceased;
+  readonly candidates: readonly PeerMeshSnapshotCandidate[];
+}
+
+/** The common result of either metric. `rankedMemberIds` / `source` are `null` for a ranked (6.6) metric. */
+export interface PeerMeshRunResult {
+  readonly metricId: string;
+  readonly metricVersion: number;
+  readonly source: PeerMeshSource | null;
+  readonly selectedMemberIds: readonly MemberId[];
+  readonly rankedMemberIds: readonly MemberId[] | null;
+}
+
+/** Thrown when a candidate's shape is not the metric's (a grouped row under a ranked metric, or the reverse). */
+export class PeerMeshCandidateShapeError extends Error {
+  constructor(public readonly metricId: string) {
+    super(`[peer-mesh] a candidate's shape does not match metric ${metricId}`);
+    this.name = 'PeerMeshCandidateShapeError';
+  }
+}
+
+function isGroupedCandidate(c: PeerMeshSnapshotCandidate): c is PeerMeshGroupedCandidate {
+  return 'group' in c;
+}
+
+/**
+ * The ONE dispatch on the metric's `kind` — the select job AND replay call THIS (Story 6.36 AC3), so the two can never
+ * run different code for the same stored id. Throws {@link PeerMeshCandidateShapeError} on a mismatched candidate.
+ */
+export function runPeerMeshMetric(input: PeerMeshRunInput): PeerMeshRunResult {
+  const { metric } = input;
+  if (metric.kind === 'grouped') {
+    const candidates = input.candidates.map((c) => {
+      if (!isGroupedCandidate(c)) throw new PeerMeshCandidateShapeError(metric.metricId);
+      return c;
+    });
+    return selectPeerMeshGrouped({ claimCaseId: input.claimCaseId, candidates, metric });
+  }
+  const candidates = input.candidates.map((c) => {
+    if (isGroupedCandidate(c)) throw new PeerMeshCandidateShapeError(metric.metricId);
+    return c;
+  });
+  const r = selectPeerMesh({
+    deceasedMemberId: input.deceasedMemberId,
+    claimCaseId: input.claimCaseId,
+    deceased: input.deceased,
+    candidates,
+    metric,
+  });
+  return {
+    metricId: r.metricId,
+    metricVersion: r.metricVersion,
+    source: null,
+    selectedMemberIds: r.selectedMemberIds,
+    rankedMemberIds: null,
+  };
+}
+
+/** A persisted snapshot row → the engine's candidate (ISO → `Date`, the id branded). */
+export function peerMeshCandidateFromSnapshot(row: PeerMeshDistrictSnapshotRow | PeerMeshGroupedSnapshotRow): PeerMeshSnapshotCandidate {
+  if ('group' in row) return { memberId: toMemberId(row.memberId), group: row.group, settled: row.settled };
+  return { memberId: toMemberId(row.memberId), district: row.district, createdAt: new Date(row.createdAt) };
+}
+
+/**
+ * Re-run a STORED selection from its persisted row ALONE (I7 — ⛔ a live re-read): the stored `metric_id` (⛔ the
+ * default), the stored snapshot, the stored 6.6 reference point. Byte-identical to what the job computed.
+ */
+export function replayPeerMeshSelection(row: ClaimPeerMeshSelectionRow): PeerMeshRunResult {
+  return runPeerMeshMetric({
+    metric: resolvePeerMeshMetric(row.metricId),
+    claimCaseId: row.claimCaseId,
+    deceasedMemberId: row.deceasedMemberId,
+    deceased: { district: row.deceasedDistrict, createdAt: row.deceasedCreatedAt },
+    candidates: row.candidateSnapshot.map(peerMeshCandidateFromSnapshot),
+  });
 }

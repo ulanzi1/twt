@@ -209,6 +209,12 @@ export const EVENT_TYPE_REGISTRY = {
       'Peer-mesh verification pinged → verification_in_progress; payload carries the deterministic selection (selected_member_ids + metric_id/version) (Story 6.6).',
     schema: claim.ClaimPeerMeshPingedPayloadSchema,
   },
+  'claim.peer_mesh_none_to_ask': {
+    type: 'claim.peer_mesh_none_to_ask',
+    description:
+      'Nobody could be asked about the death (⛔ workplace colleague, ⛔ named person) → verification_in_progress, so the ground inspection carries the claim; payload carries the metric id/version, ⛔ member ids (Story 6.36, SW25).',
+    schema: claim.ClaimPeerMeshNoneToAskPayloadSchema,
+  },
   'claim.peer_mesh_responded': {
     type: 'claim.peer_mesh_responded',
     description:

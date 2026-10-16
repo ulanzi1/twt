@@ -185,6 +185,8 @@
   "peer_request_questions.relationship.relative": "A relative",
   "peer_request_questions.relationship.neighbour": "A neighbour",
   "peer_request_questions.relationship.school_colleague": "A colleague at the same school",
+  "$comment.peer_request_questions_v4": "Story 6.36 (`2026-10-14-331` SC4 A — \"school or office\", in the next version; answers already given keep their words): peer_request_questions.relationship.school_or_office_colleague is peer_mesh.v4's words for the relationship option school_colleague (the CODE is unchanged, so stored answers keep their meaning; a v3 reply still shows school_colleague's words). The Hindi was agent-authored and is NOT YET HUMAN-REVIEWED — go-live gate Row 28 (peer-mesh-request-hindi-human-review).",
+  "peer_request_questions.relationship.school_or_office_colleague": "A colleague at the same school or office",
   "peer_request_questions.relationship.other": "Other",
   "peer_request_questions.death_cause.question": "How did they die?",
   "peer_request_questions.death_cause.illness_long": "Illness over a long time",

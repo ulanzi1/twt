@@ -30,7 +30,7 @@
 import { foreignKey, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import type { MemberId, PariwarId, PeerMeshPingId, PeerMeshSelectionId } from '../ids/index.js';
-import { claimPeerMeshSelections } from './claim_peer_mesh_selections.js';
+import { claimPeerMeshSelections, type PeerMeshSource } from './claim_peer_mesh_selections.js';
 
 /** The default versioned copy-template key for a peer-mesh verification-request ping. */
 export const PEER_MESH_MESSAGE_KEY = 'peer_mesh_verification_request_v1';
@@ -103,6 +103,10 @@ export const claimPeerMeshPings = pgTable(
     localeSource: text('locale_source').$type<PeerMeshLocaleSource>(),
     /** The 12-character base62 code in the text's link (PM21 (a)) — written ONCE; ⛔ never logged. */
     linkCode: text('link_code').unique('claim_peer_mesh_pings_link_code_uq'),
+
+    // ── Story 6.36 (migration 0163; SW24, I9) ──
+    /** Where this person came from — EQUAL to its selection's `source` (0163's BEFORE INSERT trigger); immutable by grant. */
+    source: text('source').$type<PeerMeshSource>(),
   },
   (t) => [
     // One intent per member per selection — the idempotency anchor (a re-run of the select

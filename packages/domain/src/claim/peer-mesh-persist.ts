@@ -14,14 +14,17 @@ import { and, eq } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
-import type { ClaimId, MemberId, PariwarId, PeerMeshSelectionId } from '../ids/index.js';
+import type { ClaimId, MemberId, PariwarId, PeerMeshSelectionId, WorkplaceId } from '../ids/index.js';
 import {
   type ClaimPeerMeshSelectionRow,
+  type PeerMeshCandidateSnapshotRow,
   type PeerMeshOutcome,
+  type PeerMeshSource,
   claimPeerMeshSelections,
 } from '../schema/claim_peer_mesh_selections.js';
 import { claimPeerMeshPings } from '../schema/claim_peer_mesh_pings.js';
-import type { PeerMeshCandidate, PeerMeshDeceased } from './peer-mesh-metric-registry.js';
+import type { PeerMeshSnapshotCandidate } from './peer-mesh.js';
+import type { PeerMeshDeceased } from './peer-mesh-metric-registry.js';
 import { isClaimInAnswerWindow } from './answer-window.js';
 import { lockClaimCase } from './read.js';
 import { getPeerMeshResponses, getPeerMeshSelectionByClaim } from './peer-mesh-read.js';
@@ -30,6 +33,23 @@ import { projectClaimState } from './project.js';
 /** Bounded, machine-readable skip reason for the zero-eligible-candidates disposition
  *  (review decision — never free-text system copy for this case). */
 export const PEER_MESH_SKIP_REASON_NO_ELIGIBLE_CANDIDATES = 'no_eligible_candidates';
+
+/**
+ * Story 6.36 (SW25; AC7) — the `workplace_named_v1` zero branch: ⛔ colleague at the member's workplace, ⛔ person they
+ * named. `skip_reason` is plain `text` (⛔ CHECK) — nothing to widen. The claim GOES ON (`claim.peer_mesh_none_to_ask`).
+ */
+export const PEER_MESH_SKIP_REASON_NO_WORKPLACE_COLLEAGUE_OR_NAMED_PERSON = 'no_workplace_colleague_or_named_person';
+
+/** Story 6.36 (AC1) — the `workplace_named_v1` record (0163's columns). ⛔ Supplied for a `district_cohort_v1` selection. */
+export interface PeerMeshWorkplaceRecord {
+  source: PeerMeshSource | null;
+  previousWorkplaceCounted: boolean;
+  recentChangeBeforeFiling: boolean;
+  deceasedWorkplaceId: WorkplaceId | null;
+  deceasedPreviousWorkplaceId: WorkplaceId | null;
+  /** The winning group's ranking (≤ 500); `selectedMemberIds` is its prefix (0163's trigger). */
+  rankedMemberIds: readonly MemberId[];
+}
 
 /** Input to {@link persistPeerMeshSelection}. `candidates` is the frozen snapshot. */
 export interface PersistPeerMeshSelectionInput {
@@ -44,8 +64,10 @@ export interface PersistPeerMeshSelectionInput {
   metricVersion: number;
   /** The ordered selected member ids (≤5) — order is load-bearing. */
   selectedMemberIds: readonly MemberId[];
-  /** The candidate set captured at selection time (persisted for byte-identical replay). */
-  candidates: readonly PeerMeshCandidate[];
+  /** The candidate set captured at selection time (persisted for byte-identical replay) — either metric's shape. */
+  candidates: readonly PeerMeshSnapshotCandidate[];
+  /** Story 6.36 — the `workplace_named_v1` record; omitted (⇒ NULLs) for a `district_cohort_v1` selection. */
+  workplace?: PeerMeshWorkplaceRecord;
   /** When the response window closes (AR-61). */
   responseWindowExpiresAt: Date;
 }
@@ -59,11 +81,12 @@ export async function persistPeerMeshSelection(
   db: Db,
   input: PersistPeerMeshSelectionInput,
 ): Promise<ClaimPeerMeshSelectionRow> {
-  const candidateSnapshot = input.candidates.map((c) => ({
-    memberId: c.memberId,
-    district: c.district,
-    createdAt: c.createdAt.toISOString(),
-  }));
+  const candidateSnapshot: PeerMeshCandidateSnapshotRow[] = input.candidates.map((c) =>
+    'group' in c
+      ? { memberId: c.memberId, group: c.group, settled: c.settled }
+      : { memberId: c.memberId, district: c.district, createdAt: c.createdAt.toISOString() },
+  );
+  const w = input.workplace;
 
   const inserted = await db
     .insert(claimPeerMeshSelections)
@@ -78,6 +101,16 @@ export async function persistPeerMeshSelection(
       selectedMemberIds: [...input.selectedMemberIds],
       candidateSnapshot,
       responseWindowExpiresAt: input.responseWindowExpiresAt,
+      ...(w
+        ? {
+            source: w.source,
+            previousWorkplaceCounted: w.previousWorkplaceCounted,
+            recentChangeBeforeFiling: w.recentChangeBeforeFiling,
+            deceasedWorkplaceId: w.deceasedWorkplaceId,
+            deceasedPreviousWorkplaceId: w.deceasedPreviousWorkplaceId,
+            rankedMemberIds: [...w.rankedMemberIds],
+          }
+        : {}),
     })
     .onConflictDoNothing({ target: claimPeerMeshSelections.claimCaseId })
     .returning();
@@ -98,12 +131,15 @@ export async function persistPeerMeshSelection(
  * Persist ONE delivery-neutral ping intent per selected member (AC3, Decision D1).
  * IDEMPOTENT on `(selection_id, member_id)` — a re-run inserts nothing new (still exactly
  * N rows, never 2N). Returns the number of rows newly inserted. Tenant-scoped.
+ * ⭐ Story 6.36 (SW24, AC9): each ping carries its selection's `source` (0163's trigger refuses any other value; `null`
+ * for a `district_cohort_v1` selection — the default).
  */
 export async function persistPeerMeshPingIntents(
   db: Db,
   selectionId: PeerMeshSelectionId,
   pariwarId: PariwarId,
   memberIds: readonly MemberId[],
+  source: PeerMeshSource | null = null,
 ): Promise<number> {
   if (memberIds.length === 0) return 0;
   const inserted = await db
@@ -113,6 +149,7 @@ export async function persistPeerMeshPingIntents(
         selectionId,
         pariwarId,
         memberId,
+        source,
       })),
     )
     .onConflictDoNothing({

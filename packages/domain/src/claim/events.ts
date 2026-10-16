@@ -148,6 +148,21 @@ export const ClaimPeerMeshPingedPayloadSchema = z
   .strict();
 
 /**
+ * ⭐ Story 6.36 (SW25; `2026-10-14-330`) — NOBODY could be asked about the death (⛔ colleague at the member's workplace,
+ * ⛔ person they named) → `verification_in_progress`, so the claim goes on to the ground inspection that then carries it
+ * (⛔ waits for ever — SF4). A LIFECYCLE TRANSITION (`documents_pending → verification_in_progress`), the same edge as
+ * `claim.peer_mesh_pinged`; ⛔ selected ids (there are none). The certificate reminder's day 0 reads the earliest of the
+ * two (`readCertificateWindowEnteredAt`). Owner: Story 6.36.
+ */
+export const ClaimPeerMeshNoneToAskPayloadSchema = z
+  .object({
+    ...auditShape,
+    metric_id: z.string().min(1),
+    metric_version: z.number().int().positive(),
+  })
+  .strict();
+
+/**
  * Peer-mesh response recorded. ANNOTATION event (NEW in Story 6.6 — NOT in the 6.1
  * vocabulary) — an identity transition (`from_state === to_state === 'verification_in_progress'`;
  * the reducer treats it as identity, it does NOT advance the primary state). Carries the
@@ -761,13 +776,16 @@ export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransit
 // approval gates read the review ROW, ⛔ not the event; a rejection is ⛔ not a denial (invariant 2).
 // Story 6.24a adds the 36th — `claim.closed` (`2026-10-07-292` RF4), a LIFECYCLE TRANSITION (⛔ not an annotation) from
 // every CLOSABLE state to the new terminal `closed`, emitted when another claim of the death wins its suspicion appeal.
-// It unfreezes its stream (the overlay); it is ⛔ never a denial.)
+// It unfreezes its stream (the overlay); it is ⛔ never a denial.
+// Story 6.36 adds the 37th — `claim.peer_mesh_none_to_ask` (SW25), a LIFECYCLE TRANSITION (`documents_pending →
+// verification_in_progress`, the pinged edge) emitted when nobody can be asked, so the claim goes on to the inspection.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
   'claim.intake_converged',
   'claim.documents_received',
   'claim.peer_mesh_pinged',
+  'claim.peer_mesh_none_to_ask',
   'claim.peer_mesh_responded',
   'claim.ground_inspection_scheduled',
   'claim.ground_inspection_completed',
@@ -802,11 +820,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.closed',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 36 claim events). */
+/** The dotted `claim.*` event-type literal union (the 37 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 36 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 37 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -816,6 +834,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.intake_converged': ClaimIntakeConvergedPayloadSchema,
   'claim.documents_received': ClaimDocumentsReceivedPayloadSchema,
   'claim.peer_mesh_pinged': ClaimPeerMeshPingedPayloadSchema,
+  'claim.peer_mesh_none_to_ask': ClaimPeerMeshNoneToAskPayloadSchema,
   'claim.peer_mesh_responded': ClaimPeerMeshRespondedPayloadSchema,
   'claim.ground_inspection_scheduled': ClaimGroundInspectionScheduledPayloadSchema,
   'claim.ground_inspection_completed': ClaimGroundInspectionCompletedPayloadSchema,

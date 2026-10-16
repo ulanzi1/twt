@@ -300,7 +300,7 @@ export async function runCertificateReminderSweep(
   if (noWindowEntry.length > 0) {
     alarm(
       `[jobs] claim-certificate-sweep: ${String(noWindowEntry.length)} claim(s) in the review window with ⛔ no certificate have ⛔ no ` +
-        `'claim.peer_mesh_pinged' event — ⛔ no run opened, ⛔ no day 0 guessed (claims: ${sampleIds(noWindowEntry)})`,
+        `'claim.peer_mesh_pinged' or 'claim.peer_mesh_none_to_ask' event — ⛔ no run opened, ⛔ no day 0 guessed (claims: ${sampleIds(noWindowEntry)})`,
     );
   }
   if (movedClaims.length > 0) {

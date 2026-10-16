@@ -12,7 +12,7 @@
 //   WAITS for it and checks `forget` itself ran (`expectForgotten`) — a synchronous read raced the cleanup under load.
 
 import { focusManager, onlineManager, QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApprovalWarningsSummary, ClaimPeerAnswersResponse, PeerMeshTranscript } from '@twt/contracts';
@@ -50,6 +50,8 @@ const transcript = (pings: PeerMeshTranscript['pings']): PeerMeshTranscript => (
   pings,
   // Story 6.27d (R5) — REQUIRED, possibly empty.
   inspectionDiscrepancies: [],
+  // Story 6.36 (SW20) — the staff line.
+  recentChangeBeforeFiling: true,
 });
 const PRESENT: ClaimPeerAnswersResponse = {
   peerMesh: {
@@ -66,10 +68,14 @@ const PRESENT: ClaimPeerAnswersResponse = {
           answers: [
             { questionKey: 'has_died', question: 'Has Ram K. died?', value: { kind: 'codes', codes: ['not_died'], labels: ['No, they have not died'] }, savedVia: 'member_app', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 0, warningFlag: true },
             { questionKey: 'how_known', question: 'How do you know?', value: { kind: 'codes', codes: ['family_told'], labels: ['The family told me'] }, savedVia: 'member_app', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 0, warningFlag: false },
+            // Story 6.36 (SW24) — the "How do you know [member]?" answer the source line sits BESIDE.
+            { questionKey: 'relationship', question: 'How do you know Ram K.?', value: { kind: 'codes', codes: ['school_colleague'], labels: ['A colleague at the same school'] }, savedVia: 'member_app', savedAt: '2026-10-12T05:00:00.000Z', changeCount: 0, warningFlag: false },
           ],
         },
         callbackMobile: { status: 'shown', text: '+919876543210' },
         callbackBasis: 'consented',
+        // Story 6.36 (SW24) — where this person came from.
+        source: 'named_by_member',
       },
       {
         pingId: 'p2',
@@ -86,6 +92,7 @@ const PRESENT: ClaimPeerAnswersResponse = {
         },
         callbackMobile: { status: 'shown', text: '+919812345678' },
         callbackBasis: 'super_admin',
+        source: 'named_by_member',
       },
     ]),
   },
@@ -186,6 +193,26 @@ describe('<NeighboursAnswersPanel> — on demand (a PII control)', () => {
     expect(callbacks[1]).toBe(`${t.peerMesh.callbackMobileSuperAdmin}: +919812345678`);
     const DATE = /\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4}/;
     for (const words of Object.values(t.peerMesh.warningFlag)) expect(words).not.toMatch(DATE);
+  });
+
+  it('⭐ Story 6.36 (SW24, SW20; `-326` BD1 A) — the source line BESIDE the relationship answer, else in the ping header; the staff line once at the top', async () => {
+    getClaimPeerAnswers.mockResolvedValue(PRESENT);
+    renderPanel();
+    fireEvent.click(toggle());
+    await screen.findByTestId('peer-mesh-transcript');
+    const pings = screen.getAllByTestId('peer-mesh-ping');
+    // p1 answered "How do you know …?" ⇒ the line is in that answer's row (⛔ the header)
+    const first = within(pings[0]!).getAllByTestId('peer-mesh-source');
+    expect(first).toHaveLength(1);
+    expect(first[0]).toHaveTextContent('Named by the member');
+    expect(first[0]!.closest('dd')).not.toBeNull();
+    expect(first[0]!.closest('dd')).toHaveTextContent('A colleague at the same school');
+    // p2 did not ⇒ the header
+    const second = within(pings[1]!).getAllByTestId('peer-mesh-source');
+    expect(second).toHaveLength(1);
+    expect(second[0]!.closest('dd')).toBeNull();
+    expect(screen.getAllByTestId('peer-mesh-recent-change')).toHaveLength(1);
+    expect(screen.getByTestId('peer-mesh-recent-change')).toHaveTextContent(t.peerMesh.recentChangeBeforeFiling);
   });
 
   it('a 404 ⇒ "Nothing to show at this step" (⛔ the transient-fault words)', async () => {

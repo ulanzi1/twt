@@ -223,10 +223,14 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
   }
 
   /** `texted.length` neighbours on `w` (the claim's ONE selection). */
-  async function neighbours(w: World, texted: boolean[]): Promise<{ member: string; ping: string }[]> {
+  async function neighbours(
+    w: World,
+    texted: boolean[],
+    workplace?: { source: 'workplace' | 'named_by_member'; recentChangeBeforeFiling: boolean },
+  ): Promise<{ member: string; ping: string }[]> {
     const members: string[] = [];
     for (const [i] of texted.entries()) members.push(await peerFx.seedNeighbour(env(), w.pariwarId, `Neighbour ${i}`, MOBILE));
-    const pings = await peerFx.attachPings(env(), w.pariwarId, w.claimCaseId, w.deceased, members, texted);
+    const pings = await peerFx.attachPings(env(), w.pariwarId, w.claimCaseId, w.deceased, members, texted, workplace);
     return members.map((member, i) => ({ member, ping: pings[i]! }));
   }
   const put = (w: World, n: { member: string; ping: string }, key: string, value: Json) => peerFx.put(env(), w.pariwarId, n.member, n.ping, key, value);
@@ -242,8 +246,8 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
 
   const url = (p: string, c: string) => `/api/v1/p/${p}/admin/claims/${c}/peer-answers`;
   const consoleUrl = (p: string, c: string) => `/api/v1/p/${p}/admin/claims/${c}/verifier-console`;
-  type Ping = { pingId: string; callbackMobile: Json; callbackBasis: string | null; reply: { answers: { questionKey: string; question: string; value: Json; warningFlag: boolean | null }[] } | null };
-  async function read(who: { client: Client }, w: World): Promise<{ status: number; body: { peerMesh?: { status: string; transcript?: { pings: Ping[] } } } }> {
+  type Ping = { pingId: string; callbackMobile: Json; callbackBasis: string | null; source: string | null; reply: { answers: { questionKey: string; question: string; value: Json; warningFlag: boolean | null }[] } | null };
+  async function read(who: { client: Client }, w: World): Promise<{ status: number; body: { peerMesh?: { status: string; transcript?: { pings: Ping[]; recentChangeBeforeFiling?: boolean | null } } } }> {
     const res = await who.client.inject({ method: 'GET', url: url(w.pariwarId, w.claimCaseId) });
     return { status: res.statusCode, body: res.json() };
   }
@@ -252,6 +256,11 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     const res = await who.client.inject({ method: 'GET', url: consoleUrl(w.pariwarId, w.claimCaseId) });
     expect(res.statusCode, res.body).toBe(200);
     return ((res.json() as { packet: { peerMesh?: { transcript?: { pings: Ping[] } } } }).packet.peerMesh?.transcript?.pings ?? []);
+  }
+  async function consoleTranscript(who: { client: Client }, w: World): Promise<{ pings: Ping[]; recentChangeBeforeFiling?: boolean | null }> {
+    const res = await who.client.inject({ method: 'GET', url: consoleUrl(w.pariwarId, w.claimCaseId) });
+    expect(res.statusCode, res.body).toBe(200);
+    return (res.json() as { packet: { peerMesh: { transcript: { pings: Ping[]; recentChangeBeforeFiling?: boolean | null } } } }).packet.peerMesh.transcript;
   }
   const readLines = (claimCaseId: string) => td.auditSink.ofType('admin_claim.peer_answers_read').filter((e) => e.resourceLocator === `claim:${claimCaseId}`);
   const shownLines = (claimCaseId: string) =>
@@ -543,6 +552,50 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
       const consent = byPing.get(yes!.ping)!.reply!.answers.find((a) => a.questionKey === 'callback_consent')!;
       expect(consent.question).toBe('May the Admin phone you about this?');
     });
+  });
+
+  // ── Story 6.36 (SW24, SW20; `-326` BD1 A) — the source and the staff line on BOTH surfaces ──────────────────────
+
+  it('⭐ Story 6.36 — `source` on every ping and `recentChangeBeforeFiling` reach the District Admin\'s console AND the approvers\' read; a legacy selection carries `null` on both', async () => {
+    const w = await claimAt('verifier_approved');
+    await neighbours(w, [true, false], { source: 'named_by_member', recentChangeBeforeFiling: true });
+    const da = await staff(w.pariwarId, 'district_admin');
+    const onConsole = await consoleTranscript(da, w);
+    expect(onConsole.pings.map((p) => p.source)).toEqual(['named_by_member', 'named_by_member']);
+    expect(onConsole.recentChangeBeforeFiling).toBe(true);
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const { status, body } = await read(pa, w);
+    expect(status).toBe(200);
+    expect(pingsOf(body).map((p) => p.source)).toEqual(['named_by_member', 'named_by_member']);
+    expect(body.peerMesh?.transcript?.recentChangeBeforeFiling).toBe(true);
+
+    const legacy = await claimAt('verifier_approved');
+    await neighbours(legacy, [true]);
+    const legacyConsole = await consoleTranscript(await staff(legacy.pariwarId, 'district_admin'), legacy);
+    expect(legacyConsole.pings.map((p) => p.source)).toEqual([null]);
+    expect(legacyConsole.recentChangeBeforeFiling).toBeNull();
+    const legacyRead = await read(await staff(legacy.pariwarId, 'pariwar_admin'), legacy);
+    expect(pingsOf(legacyRead.body).map((p) => p.source)).toEqual([null]);
+    expect(legacyRead.body.peerMesh?.transcript?.recentChangeBeforeFiling).toBeNull();
+  });
+
+  it('⭐ Story 6.36 (AC16; `-331` SC4 A) — each reply keeps its version\'s words: a v3 reply reads "A colleague at the same school", a v4 reply "…school or office" (the SAME stored code)', async () => {
+    const w = await claimAt('verifier_review');
+    const [v3, v4] = await neighbours(w, [true, true]);
+    const { rows } = await td.pool.query<{ selection_id: string }>(`SELECT selection_id FROM claim_peer_mesh_pings WHERE ping_id = $1`, [v3!.ping]);
+    await td.pool.query(
+      `INSERT INTO claim_peer_mesh_replies (reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'peer_mesh.v3')`,
+      [randomUUID(), w.pariwarId, w.claimCaseId, rows[0]!.selection_id, v3!.ping, v3!.member],
+    );
+    for (const n of [v3!, v4!]) {
+      await put(w, n, 'has_died', { codes: ['died'] });
+      await put(w, n, 'relationship', { codes: ['school_colleague'] });
+    }
+    const byPing = new Map((await consolePings(await staff(w.pariwarId, 'district_admin'), w)).map((p) => [p.pingId, p]));
+    const label = (ping: string) => byPing.get(ping)!.reply!.answers.find((a) => a.questionKey === 'relationship')!.value;
+    expect(label(v3!.ping)).toEqual({ kind: 'codes', codes: ['school_colleague'], labels: ['A colleague at the same school'] });
+    expect(label(v4!.ping)).toEqual({ kind: 'codes', codes: ['school_colleague'], labels: ['A colleague at the same school or office'] });
   });
 
   // ── Hidden, broken, flags ──────────────────────────────────────────────────────────────────────────────────────

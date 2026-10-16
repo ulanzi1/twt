@@ -6,7 +6,8 @@
 // A run is ONE wait for a certificate, in its OWN table (⛔ never a kind on `claim_correction_runs` — `-276` CR1):
 // `rejected` (the CURRENT certificate's live review rejected it — anchored on that upload + review; day 0 = the review's
 // IST date) or `missing` (⛔ no certificate once the claim is being checked — day 0 = the IST date of the claim's
-// EARLIEST `claim.peer_mesh_pinged`, the only edge into checking). ⭐ ONE open run per claim; ONE run per rejected
+// EARLIEST `claim.peer_mesh_pinged` OR `claim.peer_mesh_none_to_ask` — the two edges into checking; Story 6.36 SW25
+// supersedes IN PART `-276` CR3's "earliest `claim.peer_mesh_pinged`"). ⭐ ONE open run per claim; ONE run per rejected
 // upload (a re-review of the same upload ⛔ never restarts — Trap 4); ONE `missing` run per claim, ever.
 // ⭐ DISCOVERY IS THE SWEEP'S (CR2): ⛔ no edit to the review writer, the upload handlers or the OCR job.
 //
@@ -128,9 +129,13 @@ export async function readCertificateRun(db: Db, pariwarId: PariwarId, runId: st
   return row ? runView(row) : null;
 }
 
+/** The events that move a claim `documents_pending → verification_in_progress` (Story 6.36 SW25 added the second). */
+export const CERTIFICATE_WINDOW_ENTRY_EVENTS = ['claim.peer_mesh_pinged', 'claim.peer_mesh_none_to_ask'] as const;
+
 /**
- * CR3 — the claim's EARLIEST `claim.peer_mesh_pinged` (the only edge `documents_pending → verification_in_progress`),
- * or `null`. `claims` has ⛔ no state-entry column; this follows `computeStageSlaStatus`'s events_log read.
+ * CR3 — the claim's EARLIEST entry into checking: `claim.peer_mesh_pinged` OR (⭐ Story 6.36 SW25)
+ * `claim.peer_mesh_none_to_ask` — the TWO edges `documents_pending → verification_in_progress` — or `null`. `claims`
+ * has ⛔ no state-entry column; this follows `computeStageSlaStatus`'s events_log read.
  */
 export async function readCertificateWindowEnteredAt(
   db: Db,
@@ -144,7 +149,7 @@ export async function readCertificateWindowEnteredAt(
       and(
         eq(eventsLog.pariwarId, pariwarId),
         eq(eventsLog.streamId, claimCaseId),
-        eq(eventsLog.eventType, 'claim.peer_mesh_pinged'),
+        inArray(eventsLog.eventType, CERTIFICATE_WINDOW_ENTRY_EVENTS),
       ),
     )
     .orderBy(asc(eventsLog.occurredAt))
@@ -166,7 +171,7 @@ export interface CertificatePlanFacts {
   /** A run (open OR ended) is anchored on the CURRENT upload. */
   readonly runForCurrentUpload: boolean;
   readonly missingRunExists: boolean;
-  /** The claim's earliest `claim.peer_mesh_pinged` (CR3), or `null`. */
+  /** The claim's earliest entry into checking — `claim.peer_mesh_pinged` or `claim.peer_mesh_none_to_ask` (CR3, SW25) — or `null`. */
   readonly windowEnteredAt: Date | null;
 }
 

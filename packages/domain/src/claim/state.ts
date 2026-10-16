@@ -132,6 +132,12 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
       if (state === 'documents_pending') return 'verification_in_progress';
       return state;
 
+    // ⭐ Story 6.36 (SW25) — nobody could be asked → verification begins anyway (the ground inspection carries the
+    // claim). The SAME edge as `peer_mesh_pinged`; from any other state, identity (a `closed` claim stays `closed`).
+    case 'claim.peer_mesh_none_to_ask':
+      if (state === 'documents_pending') return 'verification_in_progress';
+      return state;
+
     // ANNOTATION: peer-mesh response recorded (Story 6.6) — peer-mesh AND ground-inspection
     // signals BOTH gather during verification (PRD §4.6 "both, not either"), so a response
     // does NOT advance the primary state. Identity, exactly like ground_inspection_scheduled.
@@ -384,6 +390,7 @@ export const claimStateMachine: StateMachine<ClaimLifecycleState, ClaimEventInpu
       { from: 'intake_pending', event: 'claim.intake_converged', to: 'intake_converged' },
       { from: 'intake_converged', event: 'claim.documents_received', to: 'documents_pending' },
       { from: 'documents_pending', event: 'claim.peer_mesh_pinged', to: 'verification_in_progress' },
+      { from: 'documents_pending', event: 'claim.peer_mesh_none_to_ask', to: 'verification_in_progress' },
       { from: 'verification_in_progress', event: 'claim.verifier_reviewing', to: 'verifier_review' },
       { from: 'verifier_review', event: 'claim.verifier_approved', to: 'verifier_approved' },
       { from: 'verifier_review', event: 'claim.verifier_denied', to: 'denied' },

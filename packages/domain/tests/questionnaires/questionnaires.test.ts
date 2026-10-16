@@ -16,6 +16,7 @@ import {
   PEER_MESH_QUESTIONNAIRE_V1,
   PEER_MESH_QUESTIONNAIRE_V2,
   PEER_MESH_QUESTIONNAIRE_V3,
+  PEER_MESH_QUESTIONNAIRE_V4,
   PEER_MESH_HEALTH_QUESTION_KEYS,
   PEER_MESH_RULED_QUESTION_KEYS,
   PEER_MESH_SENSITIVE_QUESTION_KEYS,
@@ -75,17 +76,20 @@ describe('the registry (PM23 (a) / (b))', () => {
   it('QUESTIONNAIRE_KINDS is peer_mesh + ground_inspection', () => {
     expect([...QUESTIONNAIRE_KINDS]).toEqual(['peer_mesh', 'ground_inspection']);
   });
-  // ⭐ Story 6.27b (Task 3c; `-328` read with `-329`) — v3 is LIVE; v2 is historical, exactly as v1 (RED BY DESIGN: this
-  // leg named v2 as live — amended by NAMING v3, ⛔ loosened).
-  it('v1, v2 and v3 are registered and valid; v3 is LIVE; v1 and v2 are historical and ⛔ never returned by resolveLiveVersion', () => {
-    expect(QUESTIONNAIRE_REGISTRY.map((d) => d.versionId)).toEqual(['peer_mesh.v1', 'peer_mesh.v2', 'peer_mesh.v3']);
+  // ⭐ Story 6.27b (Task 3c; `-328` read with `-329`) — v3 was LIVE; ⭐ Story 6.36 (AC16; `-331` SC4 A) — v4 is LIVE and v3
+  // historical, exactly as v1 and v2 (RED BY DESIGN: this leg named v3 as live — amended by NAMING v4, ⛔ loosened).
+  it('v1, v2, v3 and v4 are registered and valid; v4 is LIVE; v1, v2 and v3 are historical and ⛔ never returned by resolveLiveVersion', () => {
+    expect(QUESTIONNAIRE_REGISTRY.map((d) => d.versionId)).toEqual(['peer_mesh.v1', 'peer_mesh.v2', 'peer_mesh.v3', 'peer_mesh.v4']);
     for (const d of QUESTIONNAIRE_REGISTRY) expect(questionnaireDefinitionProblems(d)).toEqual([]);
     expect(getQuestionnaireVersion('peer_mesh.v1')).toBe(PEER_MESH_QUESTIONNAIRE_V1);
     expect(getQuestionnaireVersion('peer_mesh.v2')).toBe(PEER_MESH_QUESTIONNAIRE_V2);
+    expect(getQuestionnaireVersion('peer_mesh.v3')).toBe(PEER_MESH_QUESTIONNAIRE_V3);
+    expect(getQuestionnaireVersion('peer_mesh.v4')).toBe(PEER_MESH_QUESTIONNAIRE_V4);
     expect(PEER_MESH_QUESTIONNAIRE_V1.status).toBe('historical');
     expect(PEER_MESH_QUESTIONNAIRE_V2.status).toBe('historical');
-    expect(PEER_MESH_QUESTIONNAIRE_V3.status).toBe('live');
-    expect(resolveLiveVersion('peer_mesh', PARIWAR)).toBe(PEER_MESH_QUESTIONNAIRE_V3);
+    expect(PEER_MESH_QUESTIONNAIRE_V3.status).toBe('historical');
+    expect(PEER_MESH_QUESTIONNAIRE_V4.status).toBe('live');
+    expect(resolveLiveVersion('peer_mesh', PARIWAR)).toBe(PEER_MESH_QUESTIONNAIRE_V4);
     expect(getQuestionnaireVersion('peer_mesh.v9')).toBeNull();
     expect(resolveLiveVersion('ground_inspection', PARIWAR)).toBeNull();
   });
@@ -104,14 +108,42 @@ describe('the registry (PM23 (a) / (b))', () => {
     expect(questionsOf(PEER_MESH_QUESTIONNAIRE_V2).filter((q) => q.warning).map((q) => q.key)).toEqual([...PEER_MESH_WARNING_QUESTION_KEYS]);
     expect(questionsOf(PEER_MESH_QUESTIONNAIRE_V2).filter((q) => q.sensitive).map((q) => q.key)).toEqual(['death_date', 'death_cause', 'death_illness']);
   });
-  // ⚠ Story 6.27b (Task 3c.4 trap): rebuilt from the LIVE v3 — a spread of the now-historical v2 inherits
-  // `status: 'historical'` and every leg below would go vacuous. A non-colliding `peer_mesh.v4` keeps `<kind>.v<version>`.
+  // ⚠ Story 6.27b (Task 3c.4 trap): rebuilt from the LIVE version — a spread of a historical one inherits
+  // `status: 'historical'` and every leg below would go vacuous. ⭐ Story 6.36 (Trap 11): v4 is now REAL and live ⇒
+  // rebuilt from V4 as a non-colliding `peer_mesh.v5` (keeps `<kind>.v<version>`).
   it('resolveLiveVersion prefers a Pariwar version over the all-Pariwar one', () => {
-    const own: QuestionnaireDefinition = { ...PEER_MESH_QUESTIONNAIRE_V3, version: 4, versionId: 'peer_mesh.v4', scope: { kind: 'pariwar', pariwarId: PARIWAR } };
-    const registry = [PEER_MESH_QUESTIONNAIRE_V1, PEER_MESH_QUESTIONNAIRE_V2, PEER_MESH_QUESTIONNAIRE_V3, own];
+    const own: QuestionnaireDefinition = { ...PEER_MESH_QUESTIONNAIRE_V4, version: 5, versionId: 'peer_mesh.v5', scope: { kind: 'pariwar', pariwarId: PARIWAR } };
+    const registry = [PEER_MESH_QUESTIONNAIRE_V1, PEER_MESH_QUESTIONNAIRE_V2, PEER_MESH_QUESTIONNAIRE_V3, PEER_MESH_QUESTIONNAIRE_V4, own];
+    expect(own.status).toBe('live'); // ⛔ vacuous
     expect(resolveLiveVersion('peer_mesh', PARIWAR, registry)).toBe(own);
-    expect(resolveLiveVersion('peer_mesh', '22222222-2222-4222-8222-222222222222', registry)).toBe(PEER_MESH_QUESTIONNAIRE_V3);
-    expect(() => resolveLiveVersion('peer_mesh', 'x', [PEER_MESH_QUESTIONNAIRE_V3, { ...PEER_MESH_QUESTIONNAIRE_V3, versionId: 'peer_mesh.v4', version: 4 }])).toThrow(/more than one live/);
+    expect(resolveLiveVersion('peer_mesh', '22222222-2222-4222-8222-222222222222', registry)).toBe(PEER_MESH_QUESTIONNAIRE_V4);
+    expect(() => resolveLiveVersion('peer_mesh', 'x', [PEER_MESH_QUESTIONNAIRE_V4, { ...PEER_MESH_QUESTIONNAIRE_V4, versionId: 'peer_mesh.v5', version: 5 }])).toThrow(/more than one live/);
+  });
+
+  // ⭐ Story 6.36 (AC16; `2026-10-14-331` SC4 A — "school or office", in the next version; answers keep their words).
+  it('v4 is v3 with ONE change — the `relationship` option `school_colleague` (code UNCHANGED) reads "school or office" under a NEW copy key, approved by `-331`', () => {
+    const v3 = questionsOf(PEER_MESH_QUESTIONNAIRE_V3);
+    const v4 = questionsOf(PEER_MESH_QUESTIONNAIRE_V4);
+    expect(PEER_MESH_QUESTIONNAIRE_V4).toMatchObject({ kind: 'peer_mesh', versionId: 'peer_mesh.v4', version: 4, scope: { kind: 'all' } });
+    expect(PEER_MESH_QUESTIONNAIRE_V4.approvedBy).toEqual(['2026-09-28-262', '2026-09-28-263', '2026-10-10-304', '2026-10-13-328', '2026-10-14-331']);
+    expect(PEER_MESH_QUESTIONNAIRE_V4.pages.map((p) => p.questions.map((q) => q.key))).toEqual(
+      PEER_MESH_QUESTIONNAIRE_V3.pages.map((p) => p.questions.map((q) => q.key)),
+    );
+    for (const [i, q] of v4.entries()) {
+      if (q.key === 'relationship') continue;
+      expect(q, q.key).toEqual(v3[i]); // every other question keeps v3's words, provenance and counsel basis
+    }
+    const r3 = v3.find((q) => q.key === 'relationship')!;
+    const r4 = v4.find((q) => q.key === 'relationship')!;
+    expect(r4.options.map((o) => o.code)).toEqual(r3.options.map((o) => o.code)); // stored answers keep their meaning
+    expect(r3.options.find((o) => o.code === 'school_colleague')!.copyKey).toBe('peer_request_questions.relationship.school_colleague');
+    expect(r4.options.find((o) => o.code === 'school_colleague')!.copyKey).toBe('peer_request_questions.relationship.school_or_office_colleague');
+    for (const code of ['relative', 'neighbour', 'other']) {
+      expect(r4.options.find((o) => o.code === code)).toEqual(r3.options.find((o) => o.code === code));
+    }
+    expect(r4.approvedBy).toEqual(['2026-10-10-304', '2026-10-14-331']);
+    expect({ ...r4, options: r3.options, approvedBy: r3.approvedBy }).toEqual(r3);
+    expect(pendingCounselBasisKeys(PEER_MESH_QUESTIONNAIRE_V4)).toEqual(['death_cause', 'death_illness']); // 6.27c AC2b holds for v4
   });
 
   // ⭐ Story 6.27b (Task 3c; `-328` decision 2 read with `-329` decisions 1–3).

@@ -24,6 +24,8 @@ const ping = {
   reply: { submitted: true, answers: [answer] },
   callbackMobile: { status: 'shown', text: '+919876543210' },
   callbackBasis: 'consented',
+  // Story 6.36 (SW24) — REQUIRED on the wire.
+  source: 'workplace',
 };
 const present = {
   peerMesh: {
@@ -39,6 +41,8 @@ const present = {
       pings: [ping],
       // Story 6.27d (R5) — REQUIRED, possibly empty.
       inspectionDiscrepancies: [],
+      // Story 6.36 (SW20) — REQUIRED; `null` for `district_cohort_v1`.
+      recentChangeBeforeFiling: true,
     },
   },
 };
@@ -74,6 +78,21 @@ describe('ClaimPeerAnswersResponse (Story 6.27b, PM24)', () => {
     expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, questionKeys: ['death_cause'] }])).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, notes: [{ ...item.notes[0], note: null }] }])).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, notes: [{ ...item.notes[0], authorActorId: 'x' }] }])).success).toBe(false);
+  });
+
+  it('Story 6.36 (SW24, SW20) — `source` on each ping and `recentChangeBeforeFiling` on the transcript are REQUIRED (nullable); ⛔ another value', () => {
+    const withPing = (p: object) => ({ peerMesh: { ...present.peerMesh, transcript: { ...present.peerMesh.transcript, pings: [p] } } });
+    const withLine = (v: unknown) => ({ peerMesh: { ...present.peerMesh, transcript: { ...present.peerMesh.transcript, recentChangeBeforeFiling: v } } });
+    for (const source of ['workplace', 'named_by_member', null]) expect(ClaimPeerAnswersResponse.safeParse(withPing({ ...ping, source })).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withPing({ ...ping, source: 'district' })).success).toBe(false);
+    const noSource: Record<string, unknown> = { ...ping };
+    delete noSource['source'];
+    expect(ClaimPeerAnswersResponse.safeParse(withPing(noSource)).success).toBe(false);
+    for (const v of [true, false, null]) expect(ClaimPeerAnswersResponse.safeParse(withLine(v)).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withLine('yes')).success).toBe(false);
+    const noLine: Record<string, unknown> = { ...present.peerMesh.transcript };
+    delete noLine['recentChangeBeforeFiling'];
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { ...present.peerMesh, transcript: noLine } }).success).toBe(false);
   });
 
   it('STRICT — ⛔ a `hidden` variant, ⛔ an extra field', () => {

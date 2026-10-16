@@ -45,10 +45,14 @@ const section = (...answers: UnstitchedPeerMeshAnswerView[]): UnstitchedPeerMesh
         reply: { submitted: false, answers },
         callbackMobile: { status: 'none' },
         callbackBasis: null,
+        // Story 6.36 (SW24) — passed through by spread.
+        source: 'named_by_member',
       },
     ],
     // Story 6.27d (R5) — REQUIRED, possibly empty; the stitch passes it through by spread.
     inspectionDiscrepancies: [],
+    // Story 6.36 (SW20) — passed through by spread.
+    recentChangeBeforeFiling: false,
   },
 });
 const flags = (s: ReturnType<typeof stitchPeerAnswerFlags>) =>

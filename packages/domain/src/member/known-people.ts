@@ -77,8 +77,12 @@ const ONE_INSTANT = sql`(SELECT clock_timestamp() AS at) AS kp_now`;
 
 // ── The ONE eligibility predicate for matching and asking ───────────────────────────────────────────────────────────
 
-/** `true` when a claim (in ANY state) names member `memberId` (a SQL column) of Pariwar `pariwarId` as the deceased. */
-function namedByClaimSql(pariwarId: SQL, memberId: SQL): SQL {
+/**
+ * `true` when a claim (in ANY state) names member `memberId` (a SQL column) of Pariwar `pariwarId` as the deceased.
+ * ⭐ EXPORTED by Story 6.36 (AC6) — the selection's predicate (`peerMeshEligibleMemberSql`) reuses it, so "named by a
+ * claim" means ONE thing in both.
+ */
+export function namedByClaimSql(pariwarId: SQL, memberId: SQL): SQL {
   return sql`EXISTS (SELECT 1 FROM claims kp_c WHERE kp_c.pariwar_id = ${pariwarId} AND kp_c.deceased_member_id = ${memberId})`;
 }
 

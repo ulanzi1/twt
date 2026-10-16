@@ -195,6 +195,18 @@ describe.skipIf(!hasDatabase)('the certificate reminder — runs and recipients 
     expect((await openUnderLock(client, cid, plan)).status).toBe('opened');
   });
 
+  it('⭐ Story 6.36 (SW25) — `claim.peer_mesh_none_to_ask` is an entry into checking too: day 0 = the EARLIEST of the two events', async () => {
+    const { client, tx } = getTx();
+    const { cid } = await seedRawCheckedClaim(client);
+    await seedEvent(tx, PARIWAR_A, { streamId: cid, eventType: 'claim.peer_mesh_none_to_ask', eventVersion: 3, occurredAt: new Date('2026-10-02T04:30:00Z') });
+    expect(await planNow(client, cid)).toMatchObject({ kind: 'open', cause: 'missing', day0: '2026-10-02' });
+    // an earlier `claim.peer_mesh_pinged` (two edges in one stream cannot happen; the reader takes the earliest of either)
+    const { cid: both } = await seedRawCheckedClaim(client);
+    await seedEvent(tx, PARIWAR_A, { streamId: both, eventType: 'claim.peer_mesh_none_to_ask', eventVersion: 9, occurredAt: new Date('2026-10-05T04:30:00Z') });
+    await seedEvent(tx, PARIWAR_A, { streamId: both, eventType: 'claim.peer_mesh_pinged', eventVersion: 3, occurredAt: new Date('2026-09-30T19:00:00Z') });
+    expect(await planNow(client, both)).toMatchObject({ kind: 'open', cause: 'missing', day0: '2026-10-01' });
+  });
+
   it('⭐ `-275` Q2 — a run whose day 0 is more than 180 days back is opened AND ended `completed` in ONE transaction (⛔ no send)', async () => {
     const { client, tx } = getTx();
     const { cid } = await seedRawCheckedClaim(client);

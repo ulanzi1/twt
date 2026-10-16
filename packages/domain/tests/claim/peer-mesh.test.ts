@@ -22,7 +22,10 @@ import {
   type PeerMeshCandidate,
 } from '../../src/claim/peer-mesh-metric-registry.js';
 
-const metric = resolvePeerMeshMetric(); // district_cohort_v1
+// ⭐ Story 6.36 (AC3): the default moved to `workplace_named_v1` — pin 6.6's id explicitly and narrow to the ranked config.
+const resolved = resolvePeerMeshMetric('district_cohort_v1');
+if (resolved.kind !== 'ranked') throw new Error('district_cohort_v1 is a ranked metric');
+const metric = resolved;
 
 /** Build a branded MemberId from a short numeric suffix (control member_id ordering). */
 const mid = (n: number): MemberId =>
@@ -70,7 +73,7 @@ describe('selectPeerMesh — determinism (AC1)', () => {
     const b = selectPeerMesh(input(candidates, DECEASED_ATTRS));
     expect(a.selectedMemberIds).toEqual(b.selectedMemberIds);
     expect(a.selectedMemberIds).toHaveLength(5);
-    expect(a.metricId).toBe(DEFAULT_PEER_MESH_METRIC_ID);
+    expect(a.metricId).toBe('district_cohort_v1');
     expect(a.metricVersion).toBe(1);
   });
 
@@ -189,14 +192,15 @@ describe('selectPeerMesh — byte-identical replay (AC5)', () => {
 });
 
 describe('resolvePeerMeshMetric — registry (AC1, Decision D3)', () => {
-  it('defaults to district_cohort_v1 (v1)', () => {
-    const m = resolvePeerMeshMetric();
-    expect(m.metricId).toBe(DEFAULT_PEER_MESH_METRIC_ID);
+  it('district_cohort_v1 (v1) still resolves by its id — the default moved to workplace_named_v1 (Story 6.36 AC3)', () => {
+    const m = resolvePeerMeshMetric('district_cohort_v1');
+    expect(m.metricId).toBe('district_cohort_v1');
     expect(m.metricVersion).toBe(1);
+    expect(DEFAULT_PEER_MESH_METRIC_ID).toBe('workplace_named_v1');
   });
 
   it('resolves an explicit known id', () => {
-    expect(resolvePeerMeshMetric(DEFAULT_PEER_MESH_METRIC_ID).metricId).toBe(DEFAULT_PEER_MESH_METRIC_ID);
+    expect(resolvePeerMeshMetric('district_cohort_v1').metricId).toBe('district_cohort_v1');
   });
 
   it('throws on an unknown id (a typo must fail loudly, never silently default)', () => {

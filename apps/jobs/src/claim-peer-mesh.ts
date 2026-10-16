@@ -1,17 +1,18 @@
-// Peer-mesh deterministic selection + ping + AR-61 window fallback — Story 6.6 (Task 5/6).
+// Peer-mesh deterministic selection + ping + AR-61 window fallback — Story 6.6 (Task 5/6); Story 6.36 (Task 4).
 //
 // TWO Class-B/C pg-boss workers, both registered here (mirror registerClaimOcrParityWorker):
 //
 //   · CLAIM_PEER_MESH_SELECT (runClaimPeerMeshSelect) — enqueued by the OCR-parity worker
-//     after it advances the claim to `documents_pending`. In ONE scope-tx it: probes
-//     idempotency (a selection row already exists → self-heals the window enqueue, no-op
-//     otherwise), reads the deceased's district + created_at, snapshots the active candidate
-//     roster (excluding the claimant), deterministically selects the 5 nearest, PERSISTS the
-//     immutable selection (snapshot + deceased reference point + ordered ids + metric), emits
-//     `claim.peer_mesh_pinged` (→ verification_in_progress) via the projector, and records ONE
-//     delivery-neutral ping intent per selected member (Decision D1 — no live fan-out here; ⭐ Story 6.27c texts each
-//     ping ONCE through the claim send core, recorded on the ping row — 6.27a's 0156 columns). After
-//     commit it enqueues the window job DELAYED (startAfter = the response window).
+//     after it advances the claim to `documents_pending`. In ONE scope-tx it: LOCKS the claim, probes
+//     idempotency (a selection row already exists → a no-op + the window / shepherd self-heal), returns
+//     unless the claim is `documents_pending`, then reads — ⭐ Story 6.36 (`workplace_named_v1`, SW18–SW23) —
+//     who worked with the deceased, or else whom they named, AS RECORDED BEFORE THE FILING DAY, chooses
+//     deterministically, PERSISTS the immutable selection (snapshot + ranking + source + the workplace
+//     record), and either emits `claim.peer_mesh_pinged` (→ verification_in_progress) with ONE
+//     delivery-neutral ping intent per selected member (Decision D1 — no live fan-out here; ⭐ Story 6.27c
+//     texts each ping ONCE through the claim send core, recorded on the ping row — 6.27a's 0156 columns), or —
+//     nobody to ask — `claim.peer_mesh_none_to_ask` (→ verification_in_progress; SW25). After commit it
+//     enqueues the window job DELAYED (startAfter = the response window) and the shepherd-assign job.
 //
 //   · CLAIM_PEER_MESH_WINDOW (runClaimPeerMeshWindow) — enqueued delayed by the select worker
 //     (queue policy 'short' — review fix: the ONLY policy in this pg-boss version whose
@@ -27,11 +28,9 @@
 //     taken while an approval is still to come (`claim/answer-window.ts`), so one can arrive AFTER this worker resolved;
 //     the label is ⛔ NOT recounted (monotonic), and it gates ⛔ nothing (FQ9 needs the inspection anyway).
 //
-// DETERMINISM (AC1/AC5): selection runs against the SNAPSHOT captured + persisted in the same
-// tx (candidates AND the deceased's own district/createdAt reference point — review fix: the
-// deceased side was previously re-derived live at replay time, contradicting the persisted-
-// snapshot discipline); replay re-runs `selectPeerMesh` on the persisted snapshot (never a live
-// re-query). The engine is pure — this job owns only the I/O + orchestration.
+// DETERMINISM (AC1/AC5; 6.36 I7): selection runs against the SNAPSHOT captured + persisted in the same
+// tx; replay re-runs the ONE dispatch (`runPeerMeshMetric`, via `replayPeerMeshSelection`) on the persisted
+// row alone (never a live re-query). The engine is pure — this job owns only the I/O + orchestration.
 
 import {
   claim,
@@ -66,8 +65,8 @@ export interface ClaimPeerMeshDeps {
   /** Failure alarm sink — a console stub by default. */
   readonly onAlarm?: (message: string) => void;
   /**
-   * Story 6.12 (R2) — enqueue the shepherd-assign job AFTER this worker commits `claim.peer_mesh_pinged`
-   * (→ verification_in_progress). Injected (the OCR→SELECT cross-file precedent) so this frozen 6.6 file
+   * Story 6.12 (R2) — enqueue the shepherd-assign job AFTER this worker commits `claim.peer_mesh_pinged` or (Story 6.36)
+   * `claim.peer_mesh_none_to_ask` (→ verification_in_progress). Injected (the OCR→SELECT cross-file precedent) so this frozen 6.6 file
    * never imports the shepherd queue name nor calls `boss.send` for it directly; the assignment gets its
    * OWN retry/DLQ envelope and never couples into the selection tx. Optional — omitted, no shepherd is
    * enqueued (Story 6.6's own tests do not wire it). Best-effort: a failure alarms, never fails the select.
@@ -144,11 +143,20 @@ async function enqueuePeerMeshWindow(
 
 /**
  * The select+ping worker body. Drive it in isolation with a fake pool + a controlled clock.
- * Idempotent: a second run finds the existing selection and no-ops on the selection/event/ping
- * work — but still self-heals the window-job enqueue when the existing selection's outcome is
- * still `pending` (review fix — a previously lost enqueue no longer strands the claim forever).
- * Throws on an unrecoverable infrastructure error (missing pariwarId / missing claim) so
- * pg-boss retries/DLQs.
+ *
+ * ⭐ Story 6.36 (AC8; SW18–SW25) — ONE scope transaction, in THIS order:
+ *   (1) `lockClaimCase` (FOR UPDATE) — FIRST, the order every other appender uses. Two select jobs at once (a second
+ *       `jobs` process, a deploy overlap, `localConcurrency` > 1 — one is enqueued per upload and the queue's standard
+ *       policy makes `singletonKey` inert) serialize HERE: the loser waits, then its probe finds the winner's selection.
+ *   (2) the idempotency probe — a selection exists ⇒ a no-op (+ the window / shepherd self-heal after COMMIT);
+ *   (3) the state guard — a claim ⛔ in `documents_pending` returns BEFORE the snapshot: ⛔ selection, ⛔ window job,
+ *       ⛔ shepherd. ⭐ A selection is persisted ONLY together with its edge;
+ *   (4) the cut (the filing day — `peerMeshFilingCut`), the grouped snapshot, `runPeerMeshMetric`, the persist;
+ *   (5) somebody to ask ⇒ `claim.peer_mesh_pinged` + one ping intent each, carrying the selection's `source`;
+ *       nobody ⇒ `claim.peer_mesh_none_to_ask` + `skipped` — the claim goes on to the ground inspection (SF4).
+ * ⚠ A `ClaimStreamConcurrencyError` is ⛔ never swallowed (6.6's "benign append race" SAVEPOINT is GONE): with the lock
+ * held ⛔ known appender can race, so one is a real defect — rethrown, and pg-boss retries the whole transaction.
+ * Throws on an unrecoverable infrastructure error (missing pariwarId / claim / deceased) so pg-boss retries/DLQs.
  */
 export async function runClaimPeerMeshSelect(
   boss: QueueClient,
@@ -174,66 +182,64 @@ export async function runClaimPeerMeshSelect(
   const windowSeconds = resolveWindowSeconds(deps);
 
   const outcome = await withPariwarScope(deps.pool, pariwarId, async (db, client) => {
-    // (1) Idempotency probe — a selection already exists for this claim → no-op the
-    //     selection/event/ping work (the immutable record is never rewritten). Still
-    //     self-heal the window-job enqueue below when the outcome is still pending
-    //     (Decision 2 — a previously lost `boss.send` no longer strands the claim).
-    const existing = await claim.getPeerMeshSelectionByClaim(db, brandedPariwarId, claimCaseId);
-    if (existing) {
-      // Story 6.12: self-heal a lost shepherd-assign enqueue on redelivery — a claim already advanced to
-      // verification_in_progress by a prior run still needs its shepherd enqueued if that post-commit
-      // enqueue was lost. Precise read of the claim state (the shepherd worker is itself idempotent).
-      const claimNow = await claim.getClaimCase(db, brandedPariwarId, claimCaseId);
-      return {
-        created: false,
-        selectedCount: existing.selectedMemberIds.length,
-        outcome: existing.outcome,
-        responseWindowExpiresAt: existing.responseWindowExpiresAt,
-        pinged: claimNow?.currentState === 'verification_in_progress',
-      };
-    }
-
-    // (2) The claim row — fetched BEFORE the candidate snapshot (review fix) so
-    //     `claimantActorId` is available to exclude the claimant from their own mesh
-    //     (non-manipulability — Task 2's `excludeActorId`, previously never passed).
-    const claimRow = await claim.getClaimCase(db, brandedPariwarId, claimCaseId);
+    // (1) The claim row, LOCKED — the first statement (AC8).
+    const claimRow = await claim.lockClaimCase(db, brandedPariwarId, claimCaseId);
     if (!claimRow) {
       throw new Error(`[jobs] claim-peer-mesh-select: claim ${claimCaseId} not found in scope`);
     }
 
-    // (3) The deceased's district + created_at (the comparator reference point) — persisted
-    //     alongside the selection (review fix) so replay never re-derives it live.
+    // (2) Idempotency probe — a selection already exists for this claim → no-op the selection/event/ping work (the
+    //     immutable record is never rewritten). The window (Decision 2) and the shepherd (Story 6.12) are self-healed
+    //     after COMMIT: a previously lost `boss.send` no longer strands the claim.
+    const existing = await claim.getPeerMeshSelectionByClaim(db, brandedPariwarId, claimCaseId);
+    if (existing) {
+      return {
+        created: false,
+        selectedCount: existing.selectedMemberIds.length,
+        outcome: existing.outcome as schema.PeerMeshOutcome | null,
+        responseWindowExpiresAt: existing.responseWindowExpiresAt,
+        advanced: claimRow.currentState === 'verification_in_progress',
+      };
+    }
+
+    // (3) The state guard — BEFORE the snapshot. ⛔ `documents_pending` (still `intake_converged`, or already past
+    //     it) ⇒ ⛔ selection, ⛔ window, ⛔ shepherd; the next upload's OCR run enqueues a fresh select job.
+    if (claimRow.currentState !== 'documents_pending') {
+      return { created: false, selectedCount: 0, outcome: null, responseWindowExpiresAt: null, advanced: false };
+    }
+
+    // (4) The 6.6 reference point — still written (`deceased_created_at` is NOT NULL); read by nothing in the grouped
+    //     metric or its replay.
     const deceased = await claim.getPeerMeshDeceasedAttributes(db, brandedPariwarId, deceasedMemberId);
     if (!deceased) {
       throw new Error(`[jobs] claim-peer-mesh-select: deceased member ${deceasedMemberId} not found in scope`);
     }
 
-    // (4) Snapshot the active candidate roster (the frozen input for replay), excluding both
-    //     the deceased AND the claimant (if distinct — a claimant cannot vote in their own
-    //     mesh).
-    const candidates = await claim.getPeerMeshCandidateSnapshot(db, {
+    // (5) The default metric (`workplace_named_v1`), its anchor (the FILING day — ⛔ decrypt, ⛔ KMS) and its
+    //     snapshot as recorded before the cut; then the ONE dispatch (the same function replay uses).
+    const metric = claim.resolvePeerMeshMetric();
+    if (metric.kind !== 'grouped') {
+      throw new Error(`[jobs] claim-peer-mesh-select: the default metric ${metric.metricId} is not a grouped metric`);
+    }
+    const cut = claim.peerMeshFilingCut(claimRow.createdAt);
+    const snapshot = await claim.getPeerMeshGroupedSnapshot(db, {
       pariwarId: brandedPariwarId,
       deceasedMemberId,
-      excludeActorId: claimRow.claimantActorId ? ids.memberId(claimRow.claimantActorId) : undefined,
+      claimantActorId: claimRow.claimantActorId,
+      cut,
     });
-
-    // (5) Resolve the metric + run the PURE deterministic selection.
-    const metric = claim.resolvePeerMeshMetric();
-    const selection = claim.selectPeerMesh({
-      deceasedMemberId,
-      claimCaseId: p.claimCaseId,
-      deceased,
-      candidates,
+    const selection = claim.runPeerMeshMetric({
       metric,
+      claimCaseId,
+      deceasedMemberId,
+      deceased,
+      candidates: snapshot.candidates,
     });
 
     const responseWindowExpiresAt = new Date(now.getTime() + windowSeconds * 1000);
 
-    // (6) Persist the immutable selection (snapshot + deceased reference + ordered ids +
-    //     metric + window). Idempotent. `selectionRow` — NOT the locally-computed `selection`
-    //     — is the authoritative source for every downstream use (review fix: a concurrent
-    //     racing select-job resolves the conflict branch to the WINNING transaction's row,
-    //     which can differ from this transaction's own locally-computed result).
+    // (6) Persist the immutable selection. `selectionRow` — NOT the locally-computed `selection` — is the
+    //     authoritative source for every downstream use (the winning-row rule).
     const selectionRow = await claim.persistPeerMeshSelection(db, {
       claimCaseId,
       pariwarId: brandedPariwarId,
@@ -242,97 +248,96 @@ export async function runClaimPeerMeshSelect(
       metricId: selection.metricId,
       metricVersion: selection.metricVersion,
       selectedMemberIds: selection.selectedMemberIds,
-      candidates,
+      candidates: snapshot.candidates,
+      workplace: {
+        source: selection.source,
+        previousWorkplaceCounted: snapshot.workplace.previousWorkplaceCounted,
+        recentChangeBeforeFiling: snapshot.recentChangeBeforeFiling,
+        deceasedWorkplaceId: snapshot.workplace.currentWorkplaceId,
+        deceasedPreviousWorkplaceId: snapshot.workplace.previousWorkplaceId,
+        rankedMemberIds: selection.rankedMemberIds ?? [],
+      },
       responseWindowExpiresAt,
     });
 
-    // (7) Zero-eligible-candidates disposition (review decision — Decision 1): resolve
-    //     immediately to `skipped` with a bounded machine-readable reason, bypass the window
-    //     job entirely (there is nothing to wait for), and emit NO `claim.peer_mesh_pinged` —
-    //     the claim stays `documents_pending`; the operator resolves via ground-inspection.
+    // (7) Nobody to ask (SW25; AC7, AC8) — `skipped` with a bounded reason, ⛔ window job, ⛔ ping; the claim GOES ON
+    //     to `verification_in_progress` (the ground inspection carries it) and a shepherd is assigned after COMMIT.
     if (selectionRow.selectedMemberIds.length === 0) {
+      await claim.projectClaimState(client, {
+        claimCaseId,
+        pariwarId: brandedPariwarId,
+        deceasedMemberId,
+        intakeChannels: claimRow.intakeChannels,
+        claimantActorId: claimRow.claimantActorId,
+        eventType: 'claim.peer_mesh_none_to_ask',
+        payload: {
+          from_state: 'documents_pending',
+          to_state: 'verification_in_progress',
+          trigger: 'peer_mesh_none_to_ask',
+          actor: 'system',
+          metric_id: selectionRow.metricId,
+          metric_version: selectionRow.metricVersion,
+        },
+        actorId: null,
+      });
       await claim.skipPeerMesh(
         db,
         brandedPariwarId,
         claimCaseId,
-        claim.PEER_MESH_SKIP_REASON_NO_ELIGIBLE_CANDIDATES,
+        claim.PEER_MESH_SKIP_REASON_NO_WORKPLACE_COLLEAGUE_OR_NAMED_PERSON,
       );
       return {
         created: true,
         selectedCount: 0,
-        outcome: 'skipped' as schema.PeerMeshOutcome,
+        outcome: 'skipped' as schema.PeerMeshOutcome | null,
         responseWindowExpiresAt,
-        // No ping emitted (the claim stays documents_pending) → no shepherd (Story 6.12).
-        pinged: false,
+        advanced: true,
       };
     }
 
-    // (8) Emit `claim.peer_mesh_pinged` (documents_pending → verification_in_progress) via the
-    //     projector — the ONLY legal writer to claims.current_state. Skip when the claim is not
-    //     `documents_pending` (a retry / a sibling already advanced) → no second event. A benign
-    //     append race is rolled back to a SAVEPOINT so the ping-intent inserts still commit.
-    //     Ping-intent persistence (review fix) lives INSIDE this guard — previously it ran
-    //     unconditionally, so a claim that never actually reached verification_in_progress
-    //     could still accumulate durable "pinged" records with no corresponding audit event.
-    if (claimRow.currentState === 'documents_pending') {
-      await client.query('SAVEPOINT peer_mesh_pinged');
-      try {
-        await claim.projectClaimState(client, {
-          claimCaseId,
-          pariwarId: brandedPariwarId,
-          deceasedMemberId,
-          intakeChannels: claimRow.intakeChannels,
-          claimantActorId: claimRow.claimantActorId,
-          eventType: 'claim.peer_mesh_pinged',
-          payload: {
-            from_state: 'documents_pending',
-            to_state: 'verification_in_progress',
-            trigger: 'peer_mesh_selected',
-            actor: 'system',
-            selected_member_ids: [...selectionRow.selectedMemberIds],
-            metric_id: selectionRow.metricId,
-            metric_version: selectionRow.metricVersion,
-          },
-          actorId: null,
-        });
-        await client.query('RELEASE SAVEPOINT peer_mesh_pinged');
-      } catch (err) {
-        if (err instanceof claim.ClaimStreamConcurrencyError) {
-          await client.query('ROLLBACK TO SAVEPOINT peer_mesh_pinged');
-          alarm(`[jobs] claim-peer-mesh-select: benign append race on claim ${claimCaseId} — pinged already emitted`);
-        } else {
-          throw err;
-        }
-      }
-
-      // (9) Record ONE delivery-neutral ping intent per selected member (Decision D1 —
-      //     recorded, not dispatched). Idempotent on (selection_id, member_id).
-      await claim.persistPeerMeshPingIntents(
-        db,
-        selectionRow.selectionId,
-        brandedPariwarId,
-        selectionRow.selectedMemberIds,
-      );
-    }
+    // (8) Somebody to ask — `claim.peer_mesh_pinged` (documents_pending → verification_in_progress) via the projector
+    //     (the ONLY legal writer to claims.current_state), then ONE delivery-neutral ping intent per selected member,
+    //     each carrying the selection's source (SW24; 0163's trigger checks it). Idempotent on (selection_id, member_id).
+    await claim.projectClaimState(client, {
+      claimCaseId,
+      pariwarId: brandedPariwarId,
+      deceasedMemberId,
+      intakeChannels: claimRow.intakeChannels,
+      claimantActorId: claimRow.claimantActorId,
+      eventType: 'claim.peer_mesh_pinged',
+      payload: {
+        from_state: 'documents_pending',
+        to_state: 'verification_in_progress',
+        trigger: 'peer_mesh_selected',
+        actor: 'system',
+        selected_member_ids: [...selectionRow.selectedMemberIds],
+        metric_id: selectionRow.metricId,
+        metric_version: selectionRow.metricVersion,
+      },
+      actorId: null,
+    });
+    await claim.persistPeerMeshPingIntents(
+      db,
+      selectionRow.selectionId,
+      brandedPariwarId,
+      selectionRow.selectedMemberIds,
+      selectionRow.source,
+    );
 
     return {
       created: true,
       selectedCount: selectionRow.selectedMemberIds.length,
-      outcome: selectionRow.outcome,
+      outcome: selectionRow.outcome as schema.PeerMeshOutcome | null,
       responseWindowExpiresAt: selectionRow.responseWindowExpiresAt,
-      // Story 6.12: the claim reached verification_in_progress this run (ping emitted) or was already there
-      // (a sibling advanced it) → enqueue the shepherd assignment after commit.
-      pinged:
-        claimRow.currentState === 'documents_pending' ||
-        claimRow.currentState === 'verification_in_progress',
+      advanced: true,
     };
   });
 
-  // (10) Enqueue the window-expiry job DELAYED (after commit) — ONLY while the outcome is
-  //      still `pending` (the zero-candidate skip disposition already resolved; nothing to
-  //      wait for). Self-healing: this ALSO fires on the idempotent no-op branch when the
-  //      existing selection is still pending (Decision 2), timed off the PERSISTED deadline.
-  if (outcome.outcome === 'pending') {
+  // (9) Enqueue the window-expiry job DELAYED (after commit) — ONLY while the outcome is
+  //     still `pending` (the zero-candidate skip disposition already resolved; nothing to
+  //     wait for). Self-healing: this ALSO fires on the idempotent no-op branch when the
+  //     existing selection is still pending (Decision 2), timed off the PERSISTED deadline.
+  if (outcome.outcome === 'pending' && outcome.responseWindowExpiresAt) {
     await enqueuePeerMeshWindow(
       boss,
       envelope,
@@ -343,11 +348,11 @@ export async function runClaimPeerMeshSelect(
     );
   }
 
-  // (11) Story 6.12 (R2) — enqueue the shepherd-assign job AFTER commit, ONLY when the claim reached
-  //      verification_in_progress (the ping committed). Best-effort + self-healing (fires on the idempotent
-  //      no-op branch too when a prior enqueue was lost); a failure alarms, never fails the select job. The
-  //      shepherd worker is idempotent, so a duplicate enqueue is a safe no-op.
-  if (outcome.pinged && deps.enqueueShepherdAssign) {
+  // (10) Story 6.12 (R2) — enqueue the shepherd-assign job AFTER commit, ONLY when the claim reached
+  //      verification_in_progress (either edge — Story 6.36 SW25 adds `none_to_ask`). Best-effort + self-healing (fires
+  //      on the idempotent no-op branch too when a prior enqueue was lost); a failure alarms, never fails the select job.
+  //      The shepherd worker is idempotent, so a duplicate enqueue is a safe no-op.
+  if (outcome.advanced && deps.enqueueShepherdAssign) {
     try {
       await deps.enqueueShepherdAssign(envelope, p.claimCaseId, p.deceasedMemberId);
     } catch (err) {

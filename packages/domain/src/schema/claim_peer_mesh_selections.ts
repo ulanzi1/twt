@@ -17,12 +17,14 @@
 //
 // TENANT-ISOLATED (mirrors `claims` / `claim_documents`). RLS in
 // policies/claim-peer-mesh-selections-rls.ts. NO PII: opaque member ids + plaintext
-// district + created_at only (Dev Notes "PII posture").
+// district + created_at only (Dev Notes "PII posture"); Story 6.36 adds workplace ids (Tier 3) and booleans —
+// ⛔ never a date of death.
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   check,
   index,
   integer,
@@ -35,7 +37,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import type { ClaimId, MemberId, PariwarId, PeerMeshSelectionId } from '../ids/index.js';
+import type { ClaimId, MemberId, PariwarId, PeerMeshSelectionId, WorkplaceId } from '../ids/index.js';
 import { claims } from './claims.js';
 
 /**
@@ -58,15 +60,45 @@ export const peerMeshOutcomeEnum = pgEnum('peer_mesh_outcome', PEER_MESH_OUTCOME
 export type PeerMeshOutcome = (typeof PEER_MESH_OUTCOMES)[number];
 
 /**
- * One persisted candidate-snapshot row (the audit-replay input). Non-PII: opaque member
+ * One persisted `district_cohort_v1` candidate-snapshot row (the audit-replay input). Non-PII: opaque member
  * id + plaintext district + `created_at` as an ISO-8601 string (jsonb has no Date type —
  * the accessor reconstructs a `Date` for the pure engine on replay).
  */
-export interface PeerMeshCandidateSnapshotRow {
+export interface PeerMeshDistrictSnapshotRow {
   readonly memberId: string;
   readonly district: string | null;
   readonly createdAt: string;
 }
+
+/**
+ * Story 6.36 (AC2; I7) — where a `workplace_named_v1` candidate came from. ⚠ LOCKSTEP with
+ * `PeerMeshCandidateGroup` (`claim/peer-mesh-metric-registry.ts`).
+ */
+export type PeerMeshSnapshotGroup = 'workplace_previous' | 'workplace_current' | 'named';
+
+/**
+ * Story 6.36 (AC2; I7) — one persisted `workplace_named_v1` candidate-snapshot row. `settled` is FROZEN here (the
+ * run's earliest `created_at` was 90 days or more before the cut) so a replay rebuilds the ranking from the PERSISTED
+ * snapshot alone — ⛔ a live re-read of the postings.
+ */
+export interface PeerMeshGroupedSnapshotRow {
+  readonly memberId: string;
+  readonly group: PeerMeshSnapshotGroup;
+  readonly settled: boolean;
+}
+
+/** One persisted candidate-snapshot row — its shape is the selection's `metric_id`'s (6.6's or 6.36's). */
+export type PeerMeshCandidateSnapshotRow = PeerMeshDistrictSnapshotRow | PeerMeshGroupedSnapshotRow;
+
+/**
+ * Story 6.36 (SW24) — where the selected people came from. ⚠ LOCKSTEP with 0163's `…_source_check` on BOTH tables.
+ * NULL for a `district_cohort_v1` selection and for a `workplace_named_v1` selection that chose nobody.
+ */
+export const PEER_MESH_SOURCES = ['workplace', 'named_by_member'] as const;
+export type PeerMeshSource = (typeof PEER_MESH_SOURCES)[number];
+
+/** Story 6.36 (AC1) — the stored ranking is the winning group's FIRST this-many (0163's `…_ranked_max500`). */
+export const PEER_MESH_RANKED_MAX = 500;
 
 export const claimPeerMeshSelections = pgTable(
   'claim_peer_mesh_selections',
@@ -119,6 +151,24 @@ export const claimPeerMeshSelections = pgTable(
     skipReason: text('skip_reason'),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+
+    // ── Story 6.36 (0163; `2026-10-14-330` SW20–SW24, `-331` SC1 A) — the `workplace_named_v1` record ──────────────
+    // ⚠ For `workplace_named_v1` the 6.6 columns `deceased_district` / `deceased_created_at` are still written (the
+    // latter is NOT NULL) from `getPeerMeshDeceasedAttributes`, and are read by NOTHING in the grouped metric or its
+    // replay. Filled for `workplace_named_v1` (0163's scoped CHECKs); NULL on every `district_cohort_v1` row (⛔ backfill).
+    // IMMUTABLE by grant (0163 narrows `twt_app`'s UPDATE to `outcome` / `response_window_expires_at` / `skip_reason`).
+    /** Where the selected came from; NULL when nobody was chosen (a CHECK). */
+    source: text('source').$type<PeerMeshSource>(),
+    /** Whether the previous workplace counted (the current run began < 90 days before the filing date — SW21). */
+    previousWorkplaceCounted: boolean('previous_workplace_counted'),
+    /** The staff line (SW20, `-331` SC1 A): the workplace or the named people changed in the 90 days before the filing. */
+    recentChangeBeforeFiling: boolean('recent_change_before_filing'),
+    /** The deceased's current workplace as of the cut (row 6-32 reads it). */
+    deceasedWorkplaceId: uuid('deceased_workplace_id').$type<WorkplaceId>(),
+    /** The deceased's previous workplace as of the cut — set only when it COUNTED. */
+    deceasedPreviousWorkplaceId: uuid('deceased_previous_workplace_id').$type<WorkplaceId>(),
+    /** The winning group's ranking, truncated to {@link PEER_MESH_RANKED_MAX}; `selectedMemberIds` is its prefix (a trigger). */
+    rankedMemberIds: uuid('ranked_member_ids').array().$type<MemberId[]>(),
   },
   (t) => [
     // One selection per claim — the idempotency anchor (a re-run finds the existing row).
@@ -131,6 +181,17 @@ export const claimPeerMeshSelections = pgTable(
     // the event-payload Zod schema. 0 is legal (the zero-candidate `skipped` disposition
     // persists an empty selection — see peer-mesh-persist.ts).
     check('claim_peer_mesh_selections_selected_member_ids_max5', sql`cardinality(${t.selectedMemberIds}) <= 5`),
+    // Story 6.36 (0163) — ⚠ the two `workplace_named_v1` CHECKs are SCOPED to the new id (legacy rows stay valid).
+    check('claim_peer_mesh_selections_source_check', sql`${t.source} IS NULL OR ${t.source} IN ('workplace', 'named_by_member')`),
+    check('claim_peer_mesh_selections_ranked_max500', sql`${t.rankedMemberIds} IS NULL OR cardinality(${t.rankedMemberIds}) <= 500`),
+    check(
+      'claim_peer_mesh_selections_workplace_named_filled',
+      sql`${t.metricId} <> 'workplace_named_v1' OR (${t.rankedMemberIds} IS NOT NULL AND ${t.previousWorkplaceCounted} IS NOT NULL AND ${t.recentChangeBeforeFiling} IS NOT NULL)`,
+    ),
+    check(
+      'claim_peer_mesh_selections_workplace_named_source',
+      sql`${t.metricId} <> 'workplace_named_v1' OR ((${t.source} IS NULL) = (cardinality(${t.selectedMemberIds}) = 0))`,
+    ),
   ],
 );
 

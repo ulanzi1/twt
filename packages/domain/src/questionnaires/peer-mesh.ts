@@ -20,6 +20,11 @@
 //   hold applies to v3 unchanged. ⚠ RECORDED: a reply pins whatever is LIVE at its first save — a client that loaded
 //   before a version flip shows the old words but pins the new (unreachable at 6.27b's deploy: ⛔ no production reply
 //   exists before 6.27c sends; accepted for later flips).
+// · v4 — Story 6.36, `2026-10-14-331` SC4 A (*"school or office", in the next version (answers already given keep their
+//   words)*) — LIVE for every Pariwar; v3 is HISTORICAL. v3's pages with ONE change: the `relationship` option
+//   `school_colleague` (code UNCHANGED, so a stored answer keeps its meaning) takes a NEW copy key
+//   `…relationship.school_or_office_colleague` (*"A colleague at the same school or office"* — ⛔ an in-place edit of
+//   v2 / v3's words). Every other question keeps v3's provenance and `counselBasis` (6.27c AC2b's health hold unchanged).
 // ⛔ PURE.
 
 import type { QuestionDefinition, QuestionnaireDefinition, QuestionOption } from './types.js';
@@ -39,6 +44,7 @@ const FQ8E = '2026-09-28-262';
 const Q1 = '2026-10-10-303';
 const R304 = '2026-10-10-304';
 const R328 = '2026-10-13-328';
+const R331 = '2026-10-14-331';
 
 const HAS_DIED: QuestionDefinition = {
   key: 'has_died',
@@ -188,20 +194,46 @@ export const PEER_MESH_QUESTIONNAIRE_V2: QuestionnaireDefinition = {
 };
 
 /**
- * v3 — Story 6.27b (`2026-10-13-328` decision 2 read with `-329` decisions 1–3); LIVE (all Pariwars). v2's pages with
- * ONE change: the call-back question names "the Admin" (a NEW copy key) and its audience is `admin`.
+ * v3 — Story 6.27b (`2026-10-13-328` decision 2 read with `-329` decisions 1–3); HISTORICAL since Story 6.36 (v4 is
+ * live). v2's pages with ONE change: the call-back question names "the Admin" (a NEW copy key) and its audience is `admin`.
  */
 export const PEER_MESH_QUESTIONNAIRE_V3: QuestionnaireDefinition = {
   ...PEER_MESH_QUESTIONNAIRE_V2,
   versionId: 'peer_mesh.v3',
   version: 3,
   scope: { kind: 'all' },
-  status: 'live',
+  status: 'historical',
   approvedBy: [FQ8E, FQ10, R304, R328],
   pages: PEER_MESH_QUESTIONNAIRE_V2.pages.map((page) => ({
     questions: page.questions.map((q) =>
       q.key === 'callback_consent'
         ? { ...q, copyKey: `${NS}.callback_consent.question_admin`, approvedBy: [R304, R328], callbackAudience: 'admin' as const }
+        : q,
+    ),
+  })),
+};
+
+/**
+ * v4 — Story 6.36 (`2026-10-14-331` SC4 A); LIVE (all Pariwars). v3's pages with ONE change: the `relationship` option
+ * `school_colleague` reads *"A colleague at the same school or office"* (a NEW copy key; the code UNCHANGED).
+ */
+export const PEER_MESH_QUESTIONNAIRE_V4: QuestionnaireDefinition = {
+  ...PEER_MESH_QUESTIONNAIRE_V3,
+  versionId: 'peer_mesh.v4',
+  version: 4,
+  scope: { kind: 'all' },
+  status: 'live',
+  approvedBy: [FQ8E, FQ10, R304, R328, R331],
+  pages: PEER_MESH_QUESTIONNAIRE_V3.pages.map((page) => ({
+    questions: page.questions.map((q) =>
+      q.key === 'relationship'
+        ? {
+            ...q,
+            options: q.options.map((o) =>
+              o.code === 'school_colleague' ? { ...o, copyKey: `${NS}.relationship.school_or_office_colleague` } : o,
+            ),
+            approvedBy: [R304, R331],
+          }
         : q,
     ),
   })),

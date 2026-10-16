@@ -222,6 +222,9 @@ export type PeerMeshAnswerView = z.output<typeof PeerMeshAnswerView>;
 /** Story 6.27b (`-328` read with `-329`) — why a call-back number is shown: the neighbour's "Yes", or the Super Admin. */
 export const PEER_CALLBACK_BASES = ['consented', 'super_admin'] as const;
 
+/** Story 6.36 (SW24) — where a neighbour came from. ⚠ LOCKSTEP with the domain's `PEER_MESH_SOURCES` (0163's CHECK). */
+export const PEER_MESH_SOURCES = ['workplace', 'named_by_member'] as const;
+
 export const PeerMeshPingView = z
   .object({
     pingId: z.string(),
@@ -240,6 +243,12 @@ export const PeerMeshPingView = z
     callbackMobile: DecryptedText,
     /** Why the number is shown (`consented` / `super_admin`) — `null` unless `callbackMobile` is `shown`. */
     callbackBasis: z.enum(PEER_CALLBACK_BASES).nullable(),
+    /**
+     * ⭐ Story 6.36 (SW24; `-308`, `-326` BD1 A) — where this person came from: *"Chosen from the workplace"* /
+     * *"Named by the member"*. `null` ONLY for a `district_cohort_v1` selection (shown as nothing). REQUIRED on the wire
+     * (⛔ optional — an absent key would hide a defect). ⛔ Never on the inspector's, the helpline's or a member's wire (CF2).
+     */
+    source: z.enum(PEER_MESH_SOURCES).nullable(),
   })
   .strict()
   // ⭐ Story 6.27b code review round 2 (S9) — the basis is PAIRED with the status: `shown` ⇔ a basis. A shown number with
@@ -302,6 +311,11 @@ export const PeerMeshTranscript = z
     pings: z.array(PeerMeshPingView),
     /** ⭐ Story 6.27d (R5) — REQUIRED, possibly empty: the claim's recorded inspector discrepancies (see above). */
     inspectionDiscrepancies: z.array(InspectionDiscrepancyStaffView),
+    /**
+     * ⭐ Story 6.36 (SW20; `-331` SC1 A) — the staff line: the member's workplace or the people they named changed in the
+     * 90 days before this claim was filed. REQUIRED; `null` for a `district_cohort_v1` selection.
+     */
+    recentChangeBeforeFiling: z.boolean().nullable(),
   })
   .strict();
 export type PeerMeshTranscript = z.output<typeof PeerMeshTranscript>;

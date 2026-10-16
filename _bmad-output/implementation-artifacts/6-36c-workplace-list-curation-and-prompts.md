@@ -132,6 +132,10 @@ writer (I2), and 6.36 reads it like any other posting, ONLY if recorded before t
   district is ⛔ no longer the request's (an import can move an imported school's district — `workplace-import.ts:481-494` — moving the
   workplace but ⛔ the request), the route moves the request `suggested → pending` (the three suggestion columns NULLed), COMMITS that,
   and answers 409 `workplace.suggestion_stale`; the request reappears in the queue.
+  ⭐ 2026-10-16 AMENDED by code review round 2 (the text above is kept as written): RV11 also works at READ time (BigDev, option A).
+  A request stored `suggested` whose suggestion is stale (the workplace is ⛔ listed, has moved district, or its district is ⛔ listed;
+  `staleSuggestionSql`) reads as `pending` in the queue (`staleSuggestion: true`) and in the member's history, the prompts hide it,
+  and suggest accepts it.
 - **RV12 — copy namespaces.** Workplace cards and the confirm question in `workplace`; the people-who-know-me cards ((d), (e), (f), and
   (b)'s *"Add people who know you"*) in `known_people` (`-332` call 5's namespace; its reason — two parallel branches — no longer
   applies, so this is a choice, recorded).
@@ -268,6 +272,8 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
      + step-up; STAFF rows only (RV3 — an imported row ⇒ 422 `workplace.import_managed`); a delist / relist of a row already in that state ⇒
      409 `workplace.state_unchanged`; `updated_at` set; ⛔ a delete (I3 — a delisted entry stays on every posting); an unknown id or
      another Pariwar's ⇒ 404 `workplace.not_found`.
+     ⭐ 2026-10-16 AMENDED by code review round 2 (the text above is kept as written): a RELIST also needs the row's district to be listed
+     (⛔ ⇒ 422 `workplace.district_not_found`, with its own admin line).
    - **Audit** (after commit, each with `resourceLocator: 'workplace:<id>'`): `admin_workplace.added` / `.renamed` / `.delisted` /
      `.relisted` (context: kind, district — hashed; ⛔ the name text).
 4. **AC3 — the Pariwar Admin's queue** (`/api/v1/p/:pariwarId/admin/workplace-requests`):
@@ -284,6 +290,10 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
      does); `w.district` ≠ the request's district ⇒ 422 `workplace.district_mismatch` (a same-named school elsewhere would move the
      member's district, SW5); ⇒ `suggested` with `suggested_workplace_id`, `suggested_by_actor_id` = the actor, `suggested_at = now()`;
      audit `admin_workplace.request_suggested` (`resourceLocator: 'workplace_request:<id>'`).
+     ⭐ 2026-10-16 AMENDED by code review round 2 (the text above is kept as written): a request stored `suggested` whose suggestion is
+     STALE is accepted: `returnToPending`, then the suggest, in one tx (RV11 at read time). A still-valid suggestion stays 409
+     `request_closed`. The queue item gains `staleSuggestion`, and the queue and `sameNameCount` leave out requests of withdrawn or
+     anonymized members.
    - **POST `/:requestId/close`** — `workplace.review` + step-up; the request `FOR UPDATE`; `pending` or `suggested` ⇒ `closed` +
      `resolved_at`, the suggestion columns LEFT as they are (the guard refuses a change to them on a move to `closed`); any other state ⇒
      409 `workplace.request_closed` (⛔ a guard error surfacing as a 500); audited `admin_workplace.request_closed`. (An entry that names
@@ -294,7 +304,11 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
 5. **AC4 — the member answers** (`POST /api/v1/member/life-events/workplace-requests/:requestId/answer` `{ answer: 'yes' | 'no' }`, in
    6.36a's life-events module, through the SAME closure-local `requireIdempotencyKey`, keyed store, 24 h TTL and `releaseClaimWithRetry`
    as `updatePosting` — ⛔ an eighth copy of the key helper; its OWN key prefix `life_events.workplace_answer:${pariwar}:${member}:${key}`
-   (⛔ `posting_update:` — one key must ⛔ replay across routes); the `memberWrite` rate limit). Gate = the posting route's
+   (⛔ `posting_update:` — one key must ⛔ replay across routes); the `memberWrite` rate limit).
+   ⭐ 2026-10-16 AMENDED by code review round 2 (the text above is kept as written): the body is `{ answer, workplaceId }` (the shown
+   suggestion's workplace). A mismatch ⇒ 409 `workplace.suggestion_changed` with ⛔ state change, checked before and after the locks on
+   both answers. The key prefix is `life_events.workplace_answer:${pariwar}:${member}:${requestId}:${key}`.
+   Gate = the posting route's
    (`assertMemberExistsAndNotTerminal`, ⛔ claim check — a confirm after the cut ⛔ steers who is asked, SW20 / `-339`; recorded). Params
    `z.object({ requestId: z.string().uuid() }).strict()` (⛔ a 22P02 500). The HANDLER runs step 1 and the projection; the domain
    `answerWorkplaceSuggestion(scopeTx.tx, …)` runs steps 2–4 minus the projection and RETURNS `{ kind: 'confirmed', posting: {
@@ -470,7 +484,8 @@ RV9, call 4 = RV3. RV4 and RV8 SUPERSEDE `-330` SW16 (5) / (2) IN PART — cite 
         ⭐ 2026-10-16 AMENDED by code review round 2 (the tick above overstated the coverage; the text is kept as written): the step-up
         refusal was tested on add / suggest only, a non-holder's 403 on the GETs and campaign start only, and cross-Pariwar denial on rename
         only. Round 2 added: step-up refusal on rename / delist / relist / close; a non-holder's 403 on suggest / close / end; cross-Pariwar
-        legs on every write and on `/p/<B>/admin/…`; the actor id asserted in each audit line; the read audits; the terminal-member
+        legs on every write that takes an id (suggest / close / delist / relist / end; rename was already covered) and on `/p/<B>/admin/…`
+        (the GETs, relist, close, end; ⛔ add or campaign start); the actor id asserted in each audit line; the read audits; the terminal-member
         answer; and the empty-JSON-body trap (`workplaces.spec.ts`).
 - [x] **Task 5 — the admin app (AC8).** `apps/admin/src/modules/workplaces/` (`WorkplacesPage.tsx`, `WorkplaceRequestsPage.tsx`,
       `CampaignControl.tsx`, `i18n-en.ts`, `index.ts`); route wrappers in `apps/admin/src/routes/`; `router.tsx`; `RootLayout.tsx`;
@@ -657,9 +672,9 @@ _Round-2 fix outcome (2026-10-16)._
   - a timed-out answer left a false "could not save" line, and let the opposite answer race from one mount;
   - the new stored-suggestion lock deadlocked with the import and a merging rename, so it was dropped;
   - the relist retry reversed the lock order, so it now uses a SAVEPOINT.
-- **Convergence review:** nothing above Low. Two admin Lows were fixed: a relist-specific refusal line, and going back to a filter opens page 1. The residuals are recorded as W16–W19.
+- **Convergence review:** nothing above Low. Two admin Lows were fixed: a relist-specific refusal line, and going back to a filter opens page 1. W16–W19 are the residuals of the fix-diff review (W16) and the convergence review (W17–W19).
 - **Mutation-checked:** every fix-review fix, by reverting it and seeing a named leg fail.
-- **0164** is restored byte-for-byte to its as-applied `95e36161`. The deltas live in **0165**, which is idempotent and adds the staff-actor CHECK.
+- **0164** is restored byte-for-byte to its as-applied `95e36161`. The deltas live in **0165**, whose index statements are idempotent (`DROP / CREATE … IF [NOT] EXISTS`), plus the staff-actor CHECK (a plain `ADD CONSTRAINT`).
 - **Verification:** `twt-test-pg` recreated fresh and migrated to 165. `pnpm ci:local` on the final code tree: 35/36. The one failure was `test (unit)`, all admin-jsdom timeouts under load across 7 files, including 3 WorkplacesPage legs that take 33–349 ms solo. Re-run alone, `@twt/admin` passed 75 files / 1229 tests, and the whole unit job passed 37/37 tasks. Integration: domain 380, api 168, jobs 57 files green.
 - **`:5432`:** ⛔ not migrated (it is at 164, with 0 unattributed staff rows); BigDev's call.
 - ⚠ Until this branch reaches `main`, `main`'s `apps/api/tests/integration/life-events/workplace.spec.ts` inserts actor-less staff rows, which fail against a database that has 0165.
@@ -758,7 +773,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36c`, 2026-10-16, worktree `.
     contracts' contexts), two route wrappers, `router.tsx`, the nav (Workplaces on the national grant; Requests ungated inside a Pariwar).
   - **Mobile** — `HomePromptCards` (ONE card, RV7's order and its (a)-while-(c) rule) and the six cards; `WorkplaceSuggestionQuestion` on
     the home and at the top of Life Events → Workplace (driven by the PROMPTS); `lib/home-card-dismissals.ts` (cleared in the FOUR
-    session sites; ⭐ AMENDED 2026-10-16 by code review round 1: namespaced per account, cleared in `signOut` ONLY); `lib/invite-share.ts` (the find screen switched to it); the answer's key per showing (`answerKeyFor`); the closed
+    session sites; ⭐ AMENDED 2026-10-16 by code review round 1 (recorded in round 2): namespaced per account, cleared in `signOut` ONLY); `lib/invite-share.ts` (the find screen switched to it); the answer's key per showing (`answerKeyFor`); the closed
     request's row. The prompts are invalidated after a posting, an answer and every 6.36b write's `refresh`.
   - ⚠ **Two expectation changes, both this story's own ACs (⛔ a regression):** 6.36a's `workplace.test.ts` leg that pinned a CLOSED
     request to ⛔ status line now expects `request_closed` / `request_closed_no_name` (AC4); `request_suggested` reads *"Suggested:
@@ -804,9 +819,14 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36c`, 2026-10-16, worktree `.
 - `apps/mobile/components/known-people/{TransferReviewCard,ReplaceNamedCard,CampaignCard}.tsx`
 - `apps/mobile/lib/{home-card-dismissals,home-cards,invite-share}.ts`
 - `apps/mobile/tests/unit/home-cards.test.ts`, `apps/mobile/tests/unit/home-prompt-cards-render.test.ts`
+- ⭐ Added by code review round 1 (listed in round 2): `apps/mobile/components/workplace/suggestion-answer-key-cache.ts`,
+  `apps/mobile/tests/unit/suggestion-answer-key-cache.test.ts`, `apps/mobile/tests/unit/workplace-suggestion-question.test.ts`
+- ⭐ Added by code review round 2: `packages/domain/migrations/0165_workplace-curation-indexes-and-staff-actor.sql`,
+  `apps/admin/src/modules/workplaces/{input-bounds,use-debounced-value}.ts`, `apps/admin/tests/workplaces-client.test.ts`,
+  `apps/mobile/tests/unit/workplace-screen-render.test.ts`
 
 **Modified**
-- `packages/domain/migrations/meta/_journal.json` (idx 164, `when` `1794195600008`)
+- `packages/domain/migrations/meta/_journal.json` (idx 164, `when` `1794195600008`; + idx 165, `when` `1794195600009`, code review round 2)
 - `packages/domain/src/{ids/index,schema/index,policies/index,member/index}.ts`
 - `packages/domain/src/member/{known-people,posting,workplace,workplace-import}.ts`; `packages/domain/scripts/README-import-workplaces.md`
 - `packages/domain/src/rbac/{permissions,roles}.ts`; `packages/domain/tests/rbac/{permissions,roles}.test.ts`

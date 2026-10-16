@@ -5,7 +5,7 @@
 # the list reads as pending in the queue and the member's history, and can be re-suggested) + 36 patch + 8 defer + 5 dismissed. ⭐ HIGH:
 # delist / relist / close / end sent an EMPTY body with a JSON content-type ⇒ Fastify 400 on every click (now `'{}'`, with tests on both
 # sides). 0164 had been edited after it was applied (`:5432` drifted) ⇒ restored byte-for-byte to `95e36161`; the deltas live in an
-# idempotent `0165` (+ the staff-actor CHECK). The answer is tied to the shown `workplaceId` (409 `workplace.suggestion_changed`, new en +
+# `0165` (idempotent index statements + the staff-actor CHECK). The answer is tied to the shown `workplaceId` (409 `workplace.suggestion_changed`, new en +
 # hi copy). Round-1 regressions fixed: the admin `reset()` of in-flight writes; the mobile answer-key cache. All 37 applied; the fix diff
 # was adversarially reviewed (16 regressions fixed, incl. two new deadlock paths and a 500 for a relist refusal) + a convergence round (2
 # Lows fixed). W8–W19 in `deferred-work.md`. `twt-test-pg` recreated fresh (165 migrations); `pnpm ci:local` 35/36 (`test (unit)` — admin

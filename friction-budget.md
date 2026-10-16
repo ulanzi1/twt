@@ -2743,3 +2743,24 @@ jsdom render tests (`known-people-screen-render`, `known-people-screen-live`, `k
 2's P2); what is still ⛔ demonstrated is a DEVICE — native layout and a real screen reader. And (3)'s *"only an `active` member"*
 now also leaves out a member whose death has been reported (`2026-10-15-333` call 1) — ⛔ friction for a living member, EXCEPT
 one wrongly reported dead: a claim in ANY state keeps them out, even after it is rejected (`-333` call 1's recorded cost).
+
+---
+
+**Story 6.27c disposition (⛔ no new row — the link opens 6.27a's declared request directly; the TEXT itself is the request 6.27a's row already declares; ⛔ no row retired):**
+the story's member-facing changes are `apps/mobile/components/peer-request/PeerRequestSlot.tsx` (the `?c=` code wired to the by-link
+resolver), `components/peer-request/usePeerRequestQueries.ts` (`usePeerRequestByLinkQuery`), `components/peer-request/peer-request-cache.ts`
+(its in-memory key), `lib/peer-request.ts` (`peerRequestSlotView`) and their tests (`tests/unit/peer-request-link.test.ts` new;
+`app-link-route-map.test.ts` amended, ⛔ deleted).
+
+1. ⭐ **REMOVES friction (⛔ no row).** A neighbour who taps the texted link now lands ON that request's questions — before this the
+   slot ignored the code and showed the list, so the member had to find and tap the request. ⛔ No new step, field, confirm or wait.
+2. ⭐ **The friction being SENT is 6.27a's row, ⛔ a new one.** The text asks *"a few short questions"* (`-303` Q1 A / `-304` Q6 A) —
+   the payer (a member the Trust chose and texted), what it protects (the Panel's check with neighbours) and its optionality are
+   6.27a's row above; 6.27c only delivers the request, once ever, ⛔ never at night (AC2), and ⛔ never after the claim can take no
+   answer (AC3). ⛔ No row is amended: the declared flow is unchanged.
+3. ⛔ **Not friction:** a link the app cannot resolve (unknown, another member's, untexted, or a failed call) shows 6.27a's existing
+   "could not be opened" state with the helpline and "Done" — ⛔ a new screen, ⛔ a hard error; ⛔ a call is made before the session
+   has loaded.
+
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]) — they add ⛔ asset and one query hook.
+⭐ Written for changes UNCOMMITTED at the time of writing; AC-4 reads it once committed ([[project_friction_budget_baseline_ratchet]]).

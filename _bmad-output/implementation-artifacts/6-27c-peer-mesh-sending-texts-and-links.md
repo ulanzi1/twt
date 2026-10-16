@@ -496,8 +496,8 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
   - [x] 5.2 Mobile `PeerRequestSlot` per AC6 (⛔ a new route file — 6.30 AL16; depend on `locale`, ⛔ `t` — [[project_uset_fresh_closure_memo_trap]];
         empty / loading / error OUTSIDE any list — [[project_fabric_flatlist_empty_populated_crash]]); source-scan + pure-logic tests
         (`apps/mobile/vitest.config.ts` renders ⛔ no screen); run tsc with and without `.expo/types` ([[project_mobile_typed_routes_worktree]]).
-  - [ ] 5.3 AC7's live API test (send → list → detail).
-  - [ ] 5.4 Records: Row 27 (f) annotation (AC8); BF33's CHECKs; deferred-work — Close *"`APP_LINKS_BASE_URL` can disagree …"* (R12) and
+  - [x] 5.3 AC7's live API test (send → list → detail).
+  - [x] 5.4 Records: Row 27 (f) annotation (AC8); BF33's CHECKs; deferred-work — Close *"`APP_LINKS_BASE_URL` can disagree …"* (R12) and
         *"Ping delivery columns unconstrained while `attempting`"* (R15) with *"Closed by Story 6.27c (…) — `attempt_count`, `first_detail`
         and `aging_since` constrained; `claimed_*` stays rewritable BY DESIGN (the RN7 re-claim needs it)"*; NARROW W3 (§6-36 round 2):
         *"unsent pings are re-checked at send time by the ONE predicate (6.27c); a TEXTED ping and the reply path still do ⛔ not re-check —
@@ -550,18 +550,131 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.claude/worktrees/6-27c` on `story/6-27c-peer-mesh-sending-texts-and-links`.
+
 ### Debug Log References
+
+- Task 0.3 drift check: `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory` — empty; `git fetch` then
+  `git log cdc39004..origin/main -- .decision-log.md` — empty (⛔ ruling after `-342`).
+- 0166 pre-apply check (recorded in the file's header): :5432 0 ping rows; :5433 382 rows (344 begun) — 0 fail the grammar on `detail` /
+  `first_detail`, 0 `attempting` without `aging_since`. Applied to :5433 (Task 2) and :5432 (Task 5.5); both DBs' journal hash for idx 166 =
+  `shasum -a 256` of the file (`8999dfe2…`).
+- Fixture faults found and fixed while writing the tests (⛔ code faults): a policy-leg helper passed no `pariwarId` (the trigger's "own
+  selection" refusal fired); a parked-row fixture moved `aging_since` BACKWARD on a begun row (0156's forward-only arm, correctly refused) —
+  rewritten to plant the row from ⛔ begun; a chained-replacement fixture excluded the second neighbour BEFORE the first replacement was picked
+  (the inserter correctly skipped them); a concurrency seed inserted the claim row directly (the projector replays the stream, so the next
+  event replayed to ⛔ window) — now `driveClaimTo`; a submitted-reply fixture wrote `submitted_at` in the INSERT (the order CHECK).
+- A first run of the policy spec went to :5432 (the shell's `DATABASE_URL`; the worktree has ⛔ `apps/api/.env`) — per-test ROLLBACK, ⛔ rows
+  left; every later run exported :5433 explicitly.
 
 ### Completion Notes List
 - 2026-10-10 — cut from Story 6.27 v2.0 (`-305`). ⛔ No code.
 - 2026-10-16 — v3.0 re-derived at `cdc39004` (`bmad-create-story 6.27c`): BF1–BF34, R1–R16; two fresh-context validate rounds (v3.1, v3.2 — ⛔ HIGH open). Ultimate context engine analysis completed —
   comprehensive developer guide created. ⛔ No code.
+- 2026-10-17 — **implemented (`bmad-dev-story`)**, Tasks 0.3–5.5, one commit per task on the story branch:
+  - **Task 1** — `peer_mesh_sms.request` (en = the ruled words byte for byte, ⛔ "TWT:"; hi afresh — *"कुछ छोटे प्रश्नों"*, ⛔ the routing
+    block's *"दो"*), `$comment.peer_mesh_sms` with **NOT YET HUMAN-REVIEWED** + Row 28 in both; the registry
+    `peer-mesh-sms-templates.ts` (slots member alphanumeric 40 / link url 120 / helpline cbn 14; `peerMeshRequestDltConfigKey(locale)`;
+    `renderPeerMeshRequest` through the real `t()`; `fitsDltAlphanumeric` — code points, ONE constant), in `REGISTRY_FILES`; the lockstep
+    test leg for leg (29 legs, incl. the deny-list and 40 / 41 code points in Devanagari and an astral case); the sheet: rows 13 (hi) / 14
+    (en) in the seven-cell form, *"The wording of templates 13–14"*, their own three-variable justification, the *"lowest"* line
+    (14 at 39.6 %, 13 at 43.7 %), the MSG91 last-word warning gains 14, a cost line for BOTH locales (UCS-2 — en ≈ 198 ⇒ 3 segments,
+    hi ≈ 219 ⇒ 4, stated with its assumptions), a Record row.
+  - **Task 2 — 0166** (hand-authored, idx 166): the two grammar CHECKs (= `PEER_MESH_REQUEST_DETAIL_PATTERN`, pinned by a
+    `pg_get_constraintdef` leg); `replaces_ping_id` + `ON DELETE CASCADE` FK + `UNIQUE` + the BEFORE INSERT `replacement_guard` (same
+    selection AND Pariwar — another Pariwar's ping is NOT FOUND under RLS; finished `no_target` with a peer detail — the list is
+    `PEER_MESH_REQUEST_REPLACEABLE_REASONS`, iterated by a leg; `attempt_count = 1`); R15's CHECK + the guard function replaced in place
+    (every 0156 message kept). `PEER_MESH_LINK_CODE_PATTERN` added beside the CHECK and pinned to `APP_LINK_CODE_PATTERN` over boundary
+    samples in a contracts test (the domain cannot import the contracts). 11 new policy legs.
+  - **Task 3 — `claim/peer-mesh-request.ts`**: the builder + vocab (the send families parsed by the suspicion notices' ONE parser, the
+    gateway classes the SAME array — pinned), `generatePeerRequestLinkCode` (CSPRNG, rejection sampling, asserts its form),
+    `beginPeerMeshRequest` (R1 ①–④ under claim → ping locks; the re-claimed row's `-297` §2 / `-298` A forms; the SAVEPOINT retry on a
+    `link_code` 23505), `readPeerMeshRequestEligibility` (R4 — the gate IS `peerMeshEligibleMemberSql`, the labels only after it fails),
+    `insertPeerMeshReplacementPing` (R2 — the STORED ranking in order, RETURNING `ping_id`), `finalisePeerMeshRequest` (AC2c),
+    `notePeerMeshRequestTransient`, `finalisePeerMeshNoSendableNumber` (R6 + R5 read from the LOCKED row), the due pings, the locale (R10),
+    the by-link read (R14), the sweep's due claims (R16 — `answerWindowSql`), stalled scopes, park and give-up. R7: `recordPeerMeshResponse`
+    refuses a member with ⛔ PING in the selection (the 6.6 leg kept for a non-pinged member; a new leg: a replacement's response counts
+    once). The decrypt fence 52 → 53 + its arm; `anonymize.ts`' comment line. Tests: 16 pure, 24 live, 3 two-connection.
+  - **Task 4 — `scheduler/claim-peer-mesh-requests.ts`**: the child (quiet hours with `startAfter` = the next 09:00 IST; R11's race guard —
+    the gateway, `resolveAppLinksOrigin` (R12, new beside `resolveHttpsOrigin`), the live version and `config:counsel_basis_pending` /
+    `config:questionnaire_unavailable`, the locale's template id, the helpline, any Secret Manager fault; R9's name read before any begin;
+    per ping begin → COMMIT → number → hash → send → CAS, R6 on an unusable number, a decrypt / hash THROW a transient, replacements processed
+    in the same run, one throw at the end) and the 10:30 IST sweep (config first, park, give-up over un-held, paged enqueue, one end-of-run
+    alarm). Queues `claim.peer_mesh_request.sms` / `.sweep`; R8's `enqueuePeerMeshRequestSend` hook in the SELECT worker (keyed on "a
+    selection with pings exists" — fresh AND no-op; ⛔ `none_to_ask`), the child queue created before the SELECT worker registers, the
+    workers registered beside the suspicion notices with `APP_LINKS_BASE_URL`. Tests: 49 pure (incl. 08:59 / 09:00 / 19:59 / 20:00 IST,
+    midnight and year boundaries; the origin cases), 15 live (the shipped registry HOLDS; ⛔ live version, a port, an explicit `:443`, a
+    trailing dot, ⛔ template id each HOLD; park → held five days → un-held ⇒ ⛔ given up, re-claimed and sent with the SAME code; the
+    registered words + the row's own link; ⛔ a second text; quiet hours; a replacement texted in the same run; R6 on the erased sentinel;
+    a decrypt throw ⇒ transient ⛔ replaced; `name_too_long`; ⛔ new event; ids-only alarms), and the R8 leg.
+  - **Task 5** — the by-link route (`logLevel: 'warn'`, `readRateMax` per member, the `:code` a plain string) + handler + contract +
+    `byLink(code)`; 5 route legs (200 incl. submitted, the 404 × 6 identical, 401, 429, the `logStream` proof on 200 / 404 / an injected 500
+    — with a TEETH leg showing the same capture DOES log the URL on a route without the override); mobile `PeerRequestSlot` (one by-link
+    call gated on the session AND a code, `retry: false`, `staleTime: Infinity`, in memory only; the pure `peerRequestSlotView`; a failure ⇒
+    `PeerRequestNotOpenable`; Back dismisses the code; the eslint-disable gone; the 6.27a route-map scan updated 2 → 3 queries); AC7's live
+    API test on the real writers (invisible before and while `attempting`, listed with "asked on" = the send date after). Records: Row 27
+    (f) annotated (dated); BF33's two records CHECKED (both exist — ⛔ written); deferred-work — two items Closed, W3 NARROWED, a new console
+    item, the BF24 Panel FYI under its own "owed to the Trustee Panel" heading.
+  - ⚠ **Go-live, ⛔ merge** ([[project_not_in_production_merge_is_not_golive]]): as built the sweep HOLDS every Pariwar today — the live
+    `peer_mesh.v4` carries two `'pending'` questions (Row 27 (f)) and the template ids are unset (Row 27 closes on all eight). Nothing is texted
+    until then.
 
 ### File List
+
+**New**
+- `packages/domain/migrations/0166_peer-mesh-request-sending.sql`
+- `packages/domain/src/claim/peer-mesh-request.ts`
+- `packages/domain/tests/claim/_peer-mesh-request-details.ts`
+- `packages/domain/tests/claim/peer-mesh-request-detail.test.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-request.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-request-concurrency.spec.ts`
+- `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`
+- `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+- `apps/jobs/tests/peer-mesh-sms-templates.test.ts`
+- `apps/jobs/tests/claim-peer-mesh-requests.test.ts`
+- `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
+- `apps/api/tests/integration/claims/peer-request-by-link.spec.ts`
+- `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`
+- `apps/mobile/tests/unit/peer-request-link.test.ts`
+
+**Modified**
+- `packages/domain/migrations/meta/_journal.json` (idx 166)
+- `packages/domain/src/schema/claim_peer_mesh_pings.ts`
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/claim/peer-mesh-persist.ts` (R7)
+- `packages/domain/src/member/anonymize.ts` (comment)
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+- `packages/domain/tests/integration/rls/claim-peer-mesh-replies-policy-regression.spec.ts`
+- `packages/contracts/src/claims/peer-request.ts`
+- `packages/contracts/tests/app-links.test.ts`
+- `packages/contracts/tests/claims-peer-request.test.ts`
+- `packages/api-client/src/index.ts`
+- `packages/api-client/tests/peer-request-client.test.ts`
+- `packages/queue/src/index.ts`
+- `packages/i18n/locales/en/claim.json`
+- `packages/i18n/locales/hi/claim.json`
+- `apps/jobs/src/boot.ts`
+- `apps/jobs/src/claim-peer-mesh.ts` (R8)
+- `apps/jobs/src/scheduler/staff-email-config.ts` (`resolveAppLinksOrigin`)
+- `apps/jobs/tests/claim-peer-mesh.test.ts`
+- `apps/api/src/modules/claims/claims.peer-request.member.routes.ts`
+- `apps/api/src/modules/claims/claims.peer-request.handlers.ts`
+- `apps/mobile/components/peer-request/PeerRequestSlot.tsx`
+- `apps/mobile/components/peer-request/peer-request-cache.ts`
+- `apps/mobile/components/peer-request/usePeerRequestQueries.ts`
+- `apps/mobile/lib/peer-request.ts`
+- `apps/mobile/tests/unit/app-link-route-map.test.ts`
+- `scripts/dlt-typed-variables/lib.ts` (`REGISTRY_FILES`)
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`
+- `docs/launch-gate-inventory/inventory-roster.md` (Row 27 (f) annotation)
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-17 | 3.4 | `bmad-dev-story`: Tasks 0.3–5.5 implemented — the registry + copy + sheet rows 13–14 (Task 1); 0166 (the grammar, the replacement link and trigger, R15) applied to :5432 and :5433 (Task 2); the domain send record + R7 (Task 3); the jobs child + 10:30 IST sweep + R8's hook + R12 (Task 4); the by-link route + mobile slot + AC7 + the records (Task 5). Status → review. |
 | 2026-10-16 | 3.3 | Task 0.1 / 0.2 DONE: BigDev accepted R5 (⛔ replace a re-claimed `no_target`); recorded as `2026-10-16-343`, committed alone (`ccca9f5f`); AC1 met. Task 0.3 (the drift check) stays the dev's first step. |
 | 2026-10-16 | 3.2 | Fresh-context validate round 2 (⛔ HIGH; the regex proven in node AND a Postgres ARE, every stored value covered, every fixture passes, R15 keeps every existing leg green): M1 — a re-claimed NAME fault keeps `no_target:name_<reason>` + the `-298` alarm (`-298` A), `recheck_name_unavailable` dropped; L1 — the replacement trigger also requires `attempt_count = 1` (R5's backstop); L2 — R6's finalise in the ORDER sentence; L3 — the deferred item closes with `claimed_*` rewritable by design; L4 — join the regex's wrapped lines; L5 — two stale AC labels. |
 | 2026-10-16 | 3.1 | Fresh-context validate round 1 (≈ 70 cites spot-checked; ⛔ reading widens a ratified ruling): H1 — a decrypt / hash THROW is a transient, ⛔ `no_sendable_number` (a KMS outage would have dropped a neighbour and texted another — R6, Task 4.2); M1 — R15's `aging_since` arm applies only to an `attempting` OLD row (a literal 0155 clone refuses every begin); M2 — the stored grammar ENUMERATED in Task 3.1, the re-claimed-row failures stated (R1), the HOLD codes are alarm-only; M3 — R4's invented quote replaced by SW23 / `-340` / `-341`; M4 — `singletonKey` is a label, the CAS is the dedup; M5 — AC2b keeps its label (the pending-question hold every pointer cites), the accepted write is AC2c; L1–L7 — sheet cites by heading, 404s compared by status / code / message, the skip-then-insert order, `ON DELETE CASCADE`, the CHECK pre-check, the quiet-hours helper's home, the raw `:443`, BF24's Panel FYI. |

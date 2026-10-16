@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story 6.27c (2026-10-16)
+
+- **The console shows a skipped ping's `no_target:*` code verbatim and ⛔ links it to its replacement** [`apps/api/src/modules/claims/peer-answers-assembler.ts`
+  (`noTargetReason = ping.detail`); `apps/admin/src/modules/claim-verification/PeerMeshView.tsx`] — since 6.27c, a neighbour skipped at send
+  time (R3 / R4 — `peer_not_active`, `peer_reported_deceased`, `peer_filed_for_this_death`, `peer_not_eligible`, `no_sendable_number`) is
+  REPLACED by a NEW ping naming it (`replaces_ping_id`); the District Admin sees the raw code on the skipped row and the replacement as an
+  unrelated sixth row (`pingedMemberIds` may now exceed five — fine, ⛔ a contract cap). ⛔ A name, number or id is in any code (R4). ⭐ Trigger:
+  the next touch of `PeerMeshView` — render the codes through a label table and show "replaced by" on the pair.
+
+## Recorded during Story 6.27c dev — owed to the Trustee Panel (2026-10-16)
+
+- **A NON-blocking Panel FYI (⛔ a ruling question) owed in the NEXT routing note — the texts' cost was understated** (BF24). The ruled
+  English (`-303` Q1 A / `-304` Q6 A) contains an em dash (U+2014), outside GSM-7, so the English text is Unicode too: ≈ 198 characters
+  rendered ⇒ **3 segments**; the Hindi ≈ 219 ⇒ **4** (`docs/launch-gate-inventory/dlt-template-requests-6-19.md`, § The cost per message —
+  6.27a PM3 told the Panel only that the HINDI is *"likely THREE segments"*). ⛔ The words are ruled — recorded, ⛔ "fixed" by editing the
+  text. ⛔ Recorded as shown until the note goes out ([[feedback_shown_to_panel_means_sent]]). ⭐ Trigger: the next
+  `trustee-panel-routing-note-*` written for ANY story — add this line to it.
+
 ## Deferred from: dev-story 6.36c (2026-10-16)
 
 - **An imported school's name or listing can be corrected only by the import** [`packages/domain/src/member/workplace-admin.ts`
@@ -11146,6 +11164,10 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **The AASA lists every `APP_LINK_PATHS` entry for every installed iOS build** [`packages/contracts/src/app-links/verification.ts`] — Android's intent filters are baked per build, the AASA is served live; when a second path is added, an older iOS build without its route lands in `(helpdesk)/[ticketId]` / `(polls)/[surveyId]` instead of the not-found screen. Latent while the list has one path — decide the rollout rule (a path enters the AASA only once the oldest supported build routes it) when the second path is added.
 - **A link arriving mid-OTP discards the OTP step** [`apps/mobile/app/_layout.tsx:136-137`] — pre-existing guard behaviour (leaving `(auth)` without a session ⇒ replace to login); 6.30 only adds the target recording. The member must request a new code.
 - **`APP_LINKS_BASE_URL` can disagree with `APP_LINKS_HOST` in ways neither validator catches** [`apps/jobs/src/scheduler/staff-email-config.ts:112`] — `resolveHttpsOrigin` keeps a trailing-dot host and a non-443 port (right for `ADMIN_APP_ORIGIN`); the app's host check refuses both, so every texted link would open the browser fallback, silently. Owner: Story 6.27c (the reader, `config:app_links_base_url_invalid`) — add an app-link-specific check there.
+  - ✅ **Closed by Story 6.27c (2026-10-16, R12)** — `resolveAppLinksOrigin` (`apps/jobs/src/scheduler/staff-email-config.ts`, beside
+    `resolveHttpsOrigin`, which is unchanged) = `resolveHttpsOrigin` AND ⛔ any port written in the RAW value (an explicit `:443` included)
+    AND ⛔ a trailing-dot host; else the 6.27c sweep and child HOLD (`config:app_links_base_url_invalid`) — ⛔ a link texted.
+    `apps/jobs/tests/claim-peer-mesh-requests.test.ts` + the live holds in `claim-peer-mesh-requests-live.test.ts`.
 - **`APP_IDENTITY_*` values are checked only for non-blank** [`apps/mobile/app.config.ts` — `productionIdentity`] — `verification.ts` regex-validates the same identities (`IosAppId`, `AndroidPackage`); a malformed package fails the native build loudly, but a package that differs from `APP_LINKS_ANDROID_APPS` fails Android verification SILENTLY. Validate the format and cross-check the two once the identity is decided (Row 29 (a), D-13). (Missed in round 2's first tally; added after the patches.)
 
 ## Deferred from: code review of 6-28-one-payment-per-death-second-approval-guard, domain-core chunk (2026-10-11)
@@ -11204,6 +11226,11 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **"Changed N times" counts dependant removals and same-value re-entries** [`packages/domain/src/claim/peer-mesh-reply.ts:548`] — `versions` counts every row for the question; a date cleared by `has_died → not_sure` and re-entered unchanged reads "changed 1 time". PM13 does not define whether removal + re-entry is a change. ⭐ Trigger: 6.27b PM24 reusing the assembler's count.
   - ⭐ **2026-10-13 (Story 6.27b, `2026-10-13-326` Consequence 2):** decided — kept as built (`-326` BD3 A). The meaning (every earlier saved version, including one removed when an earlier answer changed) is recorded in the assembler's doc-block and on `PeerMeshAnswerView.changeCount`. ⛔ Closed as a change — decided, ⛔ not changed.
 - **Ping delivery columns unconstrained while `attempting`** [`packages/domain/migrations/0156_claim-peer-mesh-replies.sql:78`] — the finished-row trigger lets `attempt_count` decrease and `first_detail` / `claimed_*` be rewritten while `send_outcome = 'attempting'` (RN7's lease re-claim window). ⭐ Owner: 6.27c's writer and its `detail` grammar (PM4).
+  - ✅ **Closed by Story 6.27c (2026-10-16, R15; migration 0166)** — `attempt_count`, `first_detail` and `aging_since` constrained: while
+    `attempting`, `attempt_count` ⛔ decreases, `first_detail` is written once, `aging_since` moves ONLY on the re-claim of a parked row
+    (0155's rule adapted), and a CHECK requires `aging_since` on an `attempting` row; `claimed_*` stays rewritable BY DESIGN (the RN7
+    re-claim needs it). The `detail` / `first_detail` grammar CHECKs landed in the same file. Policy legs in
+    `claim-peer-mesh-replies-policy-regression.spec.ts` (0166).
 - **`-308`'s 6.27a share — each answer's SOURCE on the reply and the console — HANDED OFF to row 6-36** [`packages/domain/migrations/0156_claim-peer-mesh-replies.sql:105` — ⛔ no source column; `apps/api/src/modules/claims/peer-answers-assembler.ts` — ⛔ no source line] — `2026-10-10-308`'s Consequences name 6.27a PM7 (the reply) and PM13 (the console); 6.27a built ⛔ neither, and the first pass recorded ⛔ nothing. BigDev (2026-10-13, review S1, option 1; recorded as `2026-10-13-325` S1 A): record the hand-off, ⛔ no nullable column now — the value cannot exist until 6-36 stores it on the selection. ⭐ Owner: row `6-36-peer-mesh-school-wise-selection` (its sprint-status comment carries the obligation); 6.27b PM24 also shows it.
   - ⭐ **2026-10-13 (Story 6.27b, `2026-10-13-326` Consequence 1):** 6-36 also renders the source on 6.27b's later-approver panel (the shared `PeerMeshView`); a test on both surfaces.
     - *Appended 2026-10-16 (Story 6.36):* ⭐ **Closed by 6.36 (code commit `3fa2ff0c`)** — the ONE `PeerMeshView` renders it on the District
@@ -11350,6 +11377,10 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **W3 — Someone already asked who LATER files for the same death keeps their live ask** [`peer-mesh-read.ts`
   `peerMeshEligibleMemberSql`] — `-340` call 2 is applied at selection only; ⛔ re-check on a sent ping or a reply.
   ⭐ Trigger: 6.27c's send-time re-check (it reuses the predicate).
+  - ⭐ **NARROWED 2026-10-16 by Story 6.27c** — unsent pings are re-checked at send time by the ONE predicate (6.27c — `beginPeerMeshRequest`
+    under the claim lock; a fresh ping that fails is `no_target:peer_filed_for_this_death` and replaced); a TEXTED ping and the reply
+    path still do ⛔ not re-check — **stays open** (⭐ Trigger unchanged in kind: the next story that touches the reply writer or the
+    answer window's consumers).
 
 ## Deferred from: code review of 6-36c-workplace-list-curation-and-prompts.md (2026-10-16)
 

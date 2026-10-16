@@ -14,8 +14,11 @@ whose closure must ⛔ never be read as clearing 7–12. ⛔ **Do not provision 
 
 ⭐ **Templates 15–16** (the login and step-up OTP — Story 5.9's, typed by Story 6.34) gate EVERY login: an OTP template the operator
 refuses means ⛔ nobody can log in. They are tracked by **`inventory-roster.md` Row 30** (`sms-dlt-templates-typed-and-registered`),
-which also waits for row `6-37-msg91-sms-gateway-adapter` (`2026-10-10-314`). **Templates 13–14** are reserved for Story 6.27c's text to
-the five neighbours (6.27c writes its own rows here — ⛔ not this sheet's author).
+which also waits for row `6-37-msg91-sms-gateway-adapter` (`2026-10-10-314`).
+⭐ **Templates 13–14** (Story 6.27c — the once-ever text to each of the five neighbours chosen for a reported death, `2026-10-10-303` Q1 A
+as amended by `2026-10-10-304` Q6 A) gate the **real** sends of Story 6.27c, and are gated on **`inventory-roster.md` Row 27** (ALL EIGHT
+conditions, incl. counsel's basis and Row 31) **and Row 28** (the Hindi human review). ⛔ **Do not provision the ids of 13–14 until Row 27
+closes** — unset, the 6.27c sweep HOLDS every Pariwar and ⛔ no neighbour's slot is used up.
 
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a
 shorter per-segment length.
@@ -52,13 +55,15 @@ shorter per-segment length.
 ## Shape rules (TCCCPR 2nd Amendment, 12 Feb 2025; the Feb 2023 and Nov 2025 Directions)
 
 - **At most three variables**; a third only *"in case of exigency"* — with a justification line. **Templates 11–12** carry three: *"the
-  last date to appeal is the substance of the notice — `2026-10-08-293` item 1 B"*. (6.27c's templates 13–14 carry their OWN line.)
+  last date to appeal is the substance of the notice — `2026-10-08-293` item 1 B"*. **Templates 13–14** carry three: *"the link IS the
+  request — without it the neighbour cannot reach the questions; the helpline is the ruled alternative for one who cannot open it —
+  `2026-10-10-303` Q1 A"*.
 - **⛔ Two variables side by side** — separated only by a space, a comma or other punctuation — unless both are alphanumeric.
 - **≥ 30 % of the template fixed**, counted against every variable at its ceiling — formally a condition of the more-than-three-variables
-  clause, applied here to EVERY template (the conservative reading). Every template 1–12, 15, 16 passes (lowest: 7–12 at 52–62 %).
+  clause, applied here to EVERY template (the conservative reading). Every template 1–16 passes (lowest: 13–14 — 14 (en) at 39.6 %, 13 (hi) at 43.7 %, Story 6.27c; then 7–12 at 52–62 %).
 - **⛔ Another type for `{member}` / `{date}`** — the claim texts' words are ratified; a type that needs a different text (a date type, a
   shorter name) is a text change and goes back through the §0 gate.
-- ⚠ *"A variable cannot be the last word"* (MSG91's FAQ — secondary, undated): templates 8, 10 and 12 end `… helpline <variable>.` (a
+- ⚠ *"A variable cannot be the last word"* (MSG91's FAQ — secondary, undated): templates 8, 10, 12 and 14 end `… helpline <variable>.` (a
   final full stop) — asked at Row 30 (d).
 - Each registry's unit test runs `checkDltTemplateShape` over every entry; the CI gate `dlt-typed-variables` keeps every variable typed.
 
@@ -69,7 +74,7 @@ shorter per-segment length.
 listed and DARK. ⚠ **Provisioning their ids (`sms.dlt.template_id.<category>`) does NOTHING** — the per-member SMS fallback stays off until
 a later story writes fixed wording (en + hi) for each, with its own §0.
 
-## The templates owed (1–6: Story 6.19; 7–12: Story 6.24b; 15–16: the OTP, Story 5.9 — typed by Story 6.34; 13–14 reserved for Story 6.27c)
+## The templates owed (1–6: Story 6.19; 7–12: Story 6.24b; 13–14: Story 6.27c; 15–16: the OTP, Story 5.9 — typed by Story 6.34)
 
 | # | Message | Locale | Owning story | Config key (D7) | Variable types — select in SmartPing's tagging section, in order | MSG91 template (`##name##` per variable — TV13) |
 |---|---|---|---|---|---|---|
@@ -85,12 +90,14 @@ a later story writes fixed wording (en + hi) for each, with its own §0.
 | 10 | Closure after an allowed appeal (`-291` Q2 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | Your claim for ##member## has been closed. Please call the helpline ##helpline##. |
 | 11 | The refused person's appeal date (`-293` item 1 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) · 3 cbn (helpline number, ≤ 14) | ##member## के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध ##date## तक अपील की जा सकती है। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
 | 12 | The refused person's appeal date (`-293` item 1 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) · 3 cbn (helpline number, ≤ 14) | The claim for ##member## could not go ahead. It can be appealed until ##date##. Please call the helpline ##helpline##. |
+| 13 | Request to each of the five neighbours (`-303` Q1 A, `-304` Q6 A) | hi | 6.27c | `sms.dlt.template_id.peer_mesh.request.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 url (app link to the questions, ≤ 120) · 3 cbn (helpline number, ≤ 14) | हमें बताया गया है कि ##member## का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ छोटे प्रश्नों के उत्तर दें: ##link## — या हेल्पलाइन ##helpline## पर कॉल करें। |
+| 14 | Request to each of the five neighbours (`-303` Q1 A, `-304` Q6 A) | en | 6.27c | `sms.dlt.template_id.peer_mesh.request.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 url (app link to the questions, ≤ 120) · 3 cbn (helpline number, ≤ 14) | We have been told that ##member## has died. If you knew them, please answer a few short questions: ##link## — or call the helpline ##helpline##. |
 | 15 | OTP — login (5 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_login` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT login code. Valid 5 min. Do not share. |
 | 16 | OTP — step-up (3 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_step_up` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT verification code. Valid 3 min. Do not share. |
 
 ⚠ A template registered before the wording is final must be re-registered if a word changes: the send must match the registered text
 exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them;
-⭐ **and 7–12's (Story 6.24b, 2026-10-08)** — below those.
+⭐ **and 7–12's (Story 6.24b, 2026-10-08)** — below those; ⭐ **and 13–14's (Story 6.27c, 2026-10-16)** — below those.
 
 ## The wording of templates 1–4 (Story 6.19b — the text to register)
 
@@ -151,6 +158,28 @@ reviewed change means re-registering.
 | 11 | {#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
 | 12 | The claim for {#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline {#var#}. |
 
+## The wording of templates 13–14 (Story 6.27c — the text to register)
+
+⛔ **Do not provision the ids of 13–14 until Row 27 closes** (`inventory-roster.md`, `peer-mesh-request-counsel-basis` — ALL EIGHT
+conditions). ⭐ **Set each id only after the operator confirms that template's approval** — a provider-side template fault after the
+child's config check is a FINAL `error`, and for a once-ever request that uses up that neighbour's only slot (`2026-10-10-311` PM16).
+
+The en words are the Trustee Panel's, verbatim (`-303` Q1 A, *"two"* amended to *"a few"* by `-304` Q6 A); the routing note's *"TWT:"*
+prefix is dropped — the DLT header names the sender (`-311` PM3's author reading). The variables, in order: **(1) the member's name** in
+the Pariwar's mode-resolved form (`-181`) — a name longer than 40 characters is ⛔ texted (`no_target:name_too_long`), ⛔ never truncated;
+**(2) the app link** `https://<domain>/peer-request?c=<code>` (Story 6.30 — the URL-whitelisting section below); **(3) the helpline
+number**. ⭐ The **D33** carve-out applies as for 7–12 (the ruled text names the member); ⛔ no deadline word, ⛔ no claim, money, family,
+nominee, claimant or reporter. The copy is `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json`; the registry is
+`apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`, and `apps/jobs/tests/peer-mesh-sms-templates.test.ts` proves the real `t()` renders
+EXACTLY the text below and that this sheet carries it. The LANGUAGE is the Pariwar's default until row 6-35 lets members choose
+(`-310` CF1 A). ⚠ The **Hindi** is agent-authored afresh (⛔ the routing block's draft, which says "two") and ⛔ not yet human-reviewed —
+go-live gate **Row 28** (`peer-mesh-request-hindi-human-review`); a reviewed change means re-registering.
+
+| # | Registered text |
+|---|---|
+| 13 | हमें बताया गया है कि {#var#} का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ छोटे प्रश्नों के उत्तर दें: {#var#} — या हेल्पलाइन {#var#} पर कॉल करें। |
+| 14 | We have been told that {#var#} has died. If you knew them, please answer a few short questions: {#var#} — or call the helpline {#var#}. |
+
 ## The wording of templates 15–16 (Story 5.9 — the OTP; typed by Story 6.34)
 
 Category **Transactional** (the 2025 regulation: *"OTP from … apps login"*). ONE variable: the 6-digit code, typed numeric, named `otp`.
@@ -202,6 +231,15 @@ rare. ⚠ Delivery is at-least-once (a timeout or crash after a gateway accept m
 a 19-character name, a 10-digit helpline number and a 10-character date: 8 and 10 are 88 characters (**1 GSM segment**), 12 is 127
 (**1**); 7 is 101 and 9 is 96 characters of Unicode (**2 segments** each), 11 is 145 (**3**). A longer name can add a segment.
 
+⭐ **The request to the five neighbours (templates 13–14, Story 6.27c):** ONE transactional DLT SMS per neighbour, **EVER** (a ping's
+send is begun once — the CAS from ⛔ begun), at most five per reported death (a neighbour skipped at send time is replaced by ONE other,
+so the count never grows past the original selection). Rendered with a 19-character name, a 10-digit helpline number and a 55-character
+link (`https://` + a 19-character domain + `/peer-request?c=` + the 12-character code): ⚠ **BOTH are Unicode** — the ruled English
+contains an em dash (U+2014), outside GSM-7 — so 14 (en) is 198 characters (**3 segments** at 67 per part) and 13 (hi) 219 (**4
+segments**). ⚠ The cost the Panel saw (`-311` PM3: the Hindi *"likely THREE segments"*) was understated for both; the words are ruled, so
+it is recorded here, ⛔ never "fixed" by editing the text (an FYI owed to the Panel — `deferred-work.md`). A shorter domain or name can
+drop a segment.
+
 ## URL whitelisting (Story 6.30, -312 AL3)
 
 ⭐ Since 1 Oct 2024 (TRAI) an SMS carrying a URL that is ⛔ not whitelisted against the sender's header is REJECTED. Only the FIXED part of
@@ -231,3 +269,4 @@ a URL is whitelisted; a dynamic part is allowed only AFTER the `?` (*"dynamic pa
 | 2026-10-08 | 7–12 | ⭐ Wording, `{#var#}` slots and config keys written (Story 6.24b, `2026-10-08-295` RB1, RB4, RB11); its cost line added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 7–12 until Row 22 closes**; set each id only after the operator confirms that template's approval | Story 6.24b | `suspicion-notice-sms-templates.ts` |
 | 2026-10-10 | URL `https://<domain>/peer-request?` | ⭐ The URL-whitelisting section written (Story 6.30, `2026-10-10-312` AL3). ⛔ Not submitted — the domain is ⛔ not yet set (Row 29 (b)); the DLT category to be confirmed with the provider | Story 6.30 | § URL whitelisting |
 | 2026-10-12 | 1–12, 15, 16 | ⭐ Variable TYPES declared for every template (the column to select in SmartPing's tagging section) and the MSG91 `##name##` form (Story 6.34, `2026-10-10-313` TV8, `-314` TV13, `-322` C1 / C3); OTP templates 15–16 added (Transactional, numeric `otp`); where-and-how, types, shape-rules and helpline sections; the five alert categories listed as ⛔ registrable; the cost lines re-derived for a digits-only helpline; the URL bullet answered. ⛔ Still not submitted — Row 30 | Story 6.34 | `dlt-variables.ts`; the three registries |
+| 2026-10-16 | 13–14 | ⭐ Wording, typed `{#var#}` slots (alphanumeric · url · cbn), config keys and the MSG91 form written (Story 6.27c, `2026-10-10-303` Q1 A, `-304` Q6 A, `-311` PM3 / PM16); their three-variable justification, the *"lowest"* line and a cost line (BOTH locales Unicode) added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 13–14 until Row 27 closes**; set each id only after the operator confirms that template's approval | Story 6.27c | `peer-mesh-sms-templates.ts` |

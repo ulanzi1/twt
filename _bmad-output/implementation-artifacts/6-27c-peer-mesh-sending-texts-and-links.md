@@ -25,7 +25,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 # Story 6.27c: Each of the Five Is Texted Once — Naming the Member, With a Link to the Questions and the Helpline, in the Pariwar's Language, While an Answer Can Still Be Taken `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
@@ -415,25 +415,25 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance (AC1).**
+- [x] **Task 0 — governance (AC1).**
   - [x] 0.1 R5 asked. BigDev, 2026-10-16: *"Yout recommendation is accepted for Task 0.1"* — ⛔ replace a re-claimed `no_target`.
   - [x] 0.2 R5 (the only reading that narrows committed text) recorded as `2026-10-16-343` (author-commit), committed ALONE (`ccca9f5f`).
         R1–R16's other readings MATCH their sources (validate rounds 1–2) — implementation readings of `-311`, ⛔ entry.
-  - [ ] 0.3 `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory`; re-read any cited file that moved;
+  - [x] 0.3 `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory`; re-read any cited file that moved;
         `git log --oneline cdc39004..origin/main -- .decision-log.md` — a ruling after `-342` touching peer mesh is read before Task 1.
-- [ ] **Task 1 — copy and registry (AC2, AC8).**
-  - [ ] 1.1 `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json`, params `{member}`, `{link}`, `{helpline}` (single brace);
+- [x] **Task 1 — copy and registry (AC2, AC8).**
+  - [x] 1.1 `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json`, params `{member}`, `{link}`, `{helpline}` (single brace);
         en = the ruled words EXACTLY (⛔ "TWT:"); hi agent-authored afresh for *"a few"* (⛔ copied from the `-303` routing block — Trap 19);
         `$comment.peer_mesh_sms` in BOTH with **"NOT YET HUMAN-REVIEWED"** (spaces — BF22), Row 28, and *"must match the registered DLT
         content byte for byte"*.
-  - [ ] 1.2 NEW `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts` cloned from the suspicion registry (BF20): slots `member`
+  - [x] 1.2 NEW `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts` cloned from the suspicion registry (BF20): slots `member`
         alphanumeric 40 / `link` url 120 / `helpline` cbn 14 (names = the i18n params); `peerMeshRequestDltConfigKey(locale)` =
         `sms.dlt.template_id.peer_mesh.request.<locale>` (the ONLY place that prefix appears — Trap 21); the registered texts with `{#var#}`;
         `renderPeerMeshRequest(locale, { member, link, helpline })` through the real `t()`; `fitsDltAlphanumeric` (R9). `git add` it, then add
         it to `REGISTRY_FILES` (BF19).
-  - [ ] 1.3 `apps/jobs/tests/peer-mesh-sms-templates.test.ts` cloned leg for leg from BF20's test (incl. the deadline deny-list and the
+  - [x] 1.3 `apps/jobs/tests/peer-mesh-sms-templates.test.ts` cloned leg for leg from BF20's test (incl. the deadline deny-list and the
         `$comment` marker); ⛔ transcribe the copy.
-  - [ ] 1.4 The sheet (BF21) — every edit AC8 lists.
+  - [x] 1.4 The sheet (BF21) — every edit AC8 lists.
 - [ ] **Task 2 — migration 0166 (AC1b).** As AC1b; the pattern constant `PEER_MESH_REQUEST_DETAIL_PATTERN` + vocab arrays in
       `schema/claim_peer_mesh_pings.ts` (the suspicion schema-file precedent, BF9); `replacesPingId` declared in the Drizzle file; a test
       that the SQL CHECK text equals the constant (the 0155 leg `claim-suspicion-notice-policy-regression.spec.ts:356-364`); a test that

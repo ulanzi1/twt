@@ -51,7 +51,7 @@ const MD_ESCAPE = /\\([{}#])/g;
 /**
  * The registry modules whose unit tests run `checkDltTemplateShape` over every entry (the alert registry's test,
  * whose five entries are dark since TV6, asserts `null` + `unregistrableReason` + empty `slots` instead). A new
- * registry joins this list in the same change that adds it (Story 6.27c adds its file — TV11).
+ * registry joins this list in the same change that adds it (Story 6.27c added its file — TV11).
  */
 export const REGISTRY_FILES: readonly string[] = [
   'packages/channels/src/dlt-variables.ts',
@@ -59,6 +59,7 @@ export const REGISTRY_FILES: readonly string[] = [
   'packages/channels/src/sms-dlt-registry.ts',
   'apps/jobs/src/scheduler/claim-correction-sms-templates.ts',
   'apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts',
+  'apps/jobs/src/scheduler/peer-mesh-sms-templates.ts',
 ];
 
 /** Rule (iii) only — files that may hold the template-id prefix without being a registry. */

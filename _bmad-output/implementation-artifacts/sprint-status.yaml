@@ -1,3 +1,16 @@
+# last_updated: 2026-10-16j (STORY 6.36c — CODE REVIEW ROUND 2 (`bmad-code-review 6.36c`, worktree `.claude/worktrees/6-36c`, branch
+# `story/6-36c-workplace-list-curation-and-prompts`, commit `70f2aa00`): row `6-36c-workplace-list-curation-and-prompts` STAYS `done`. The
+# whole branch `main...story/6-36c`, 4 layer chunks (domain+contracts+migration / API / admin / mobile+i18n) × 3 layers (12/12 returned):
+# about 95 raw findings → 1 decision (BigDev: option A — RV11 restored as READ-TIME staleness: a suggestion whose workplace or district left
+# the list reads as pending in the queue and the member's history, and can be re-suggested) + 36 patch + 8 defer + 5 dismissed. ⭐ HIGH:
+# delist / relist / close / end sent an EMPTY body with a JSON content-type ⇒ Fastify 400 on every click (now `'{}'`, with tests on both
+# sides). 0164 had been edited after it was applied (`:5432` drifted) ⇒ restored byte-for-byte to `95e36161`; the deltas live in an
+# idempotent `0165` (+ the staff-actor CHECK). The answer is tied to the shown `workplaceId` (409 `workplace.suggestion_changed`, new en +
+# hi copy). Round-1 regressions fixed: the admin `reset()` of in-flight writes; the mobile answer-key cache. All 37 applied; the fix diff
+# was adversarially reviewed (16 regressions fixed, incl. two new deadlock paths and a 500 for a relist refusal) + a convergence round (2
+# Lows fixed). W8–W19 in `deferred-work.md`. `twt-test-pg` recreated fresh (165 migrations); `pnpm ci:local` 35/36 (`test (unit)` — admin
+# jsdom timeouts under load across 7 files; re-run alone 37/37 tasks, `@twt/admin` 75/75 files / 1229 tests). ⛔ `:5432` NOT migrated
+# (at 164, 0 unattributed staff rows) — BigDev's call. Ready to fast-forward to `main` — BigDev's call.)
 # last_updated: 2026-10-16i (STORY 6.36c — CODE REVIEWED (`bmad-code-review 6.36c`, worktree `.claude/worktrees/6-36c`, branch
 # `story/6-36c-workplace-list-curation-and-prompts`): row `6-36c-workplace-list-curation-and-prompts` `review` → `done`. 5 parallel
 # chunks by layer (domain+contracts+migration / API / admin / mobile / i18n+docs+governance), 3 layers each (Blind Hunter, Edge Case

@@ -763,7 +763,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
     await race({ colleagues: 0 }, 'claim.peer_mesh_none_to_ask');
   });
 
-  it('response (AC4): a selected member responds (identity, state stable); a non-selected member is rejected', async () => {
+  it('response (AC4): a selected member responds (identity, state stable); a member with ⛔ ping is rejected (Story 6.27c R7)', async () => {
     const seed = await seedClaim();
     const { boss } = fakeBoss();
     try {
@@ -787,7 +787,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
       // Annotation event — state stays verification_in_progress (identity).
       expect(await claimState(seed.claimCaseId)).toBe('verification_in_progress');
 
-      // A non-selected member cannot vote (non-manipulability).
+      // A member with ⛔ ping in the selection cannot vote (non-manipulability — Story 6.27c R7 reads the PING ROWS).
       await expect(
         withPariwarScope(pool, seed.pariwarId, (_db, client) =>
           claim.recordPeerMeshResponse(client, {
@@ -799,6 +799,51 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         ),
       ).rejects.toBeInstanceOf(claim.PeerMeshResponderNotSelectedError);
       // Still exactly one response event (the rejected one appended nothing).
+      expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(1);
+    } finally {
+      await cleanup(seed);
+    }
+  });
+
+  it('⭐ Story 6.27c R7 — a REPLACEMENT neighbour (⛔ in `selected_member_ids`) responds: the save succeeds and counts ONCE', async () => {
+    const seed = await seedClaim();
+    const { boss } = fakeBoss();
+    try {
+      await runClaimPeerMeshSelect(boss, deps(), selectEnvelope(seed));
+      const pid = ids.pariwarId(seed.pariwarId);
+      const cid = ids.claimId(seed.claimCaseId);
+      const selection = (await withPariwarScope(pool, seed.pariwarId, (db) => claim.getPeerMeshSelectionByClaim(db, pid, cid)))!;
+      // Skip the first ping at send time for a PEER reason, then replace it from the stored ranking (R2) — one transaction.
+      const replacementPingId = await withPariwarScope(pool, seed.pariwarId, async (db, client) => {
+        const first = await client.query<{ ping_id: string }>(
+          `SELECT ping_id FROM claim_peer_mesh_pings WHERE selection_id = $1 AND member_id = $2`,
+          [selection.selectionId, selection.selectedMemberIds[0]],
+        );
+        await client.query(
+          `UPDATE claim_peer_mesh_pings SET send_outcome = 'no_target', attempt_count = 1, detail = 'no_target:peer_not_active' WHERE ping_id = $1`,
+          [first.rows[0]!.ping_id],
+        );
+        return claim.insertPeerMeshReplacementPing(db, {
+          pariwarId: pid,
+          selectionId: selection.selectionId,
+          replacesPingId: ids.peerMeshPingId(first.rows[0]!.ping_id),
+          deceasedMemberId: ids.memberId(seed.deceasedMemberId),
+        });
+      });
+      expect(replacementPingId).not.toBeNull();
+      const replacement = await withPariwarScope(pool, seed.pariwarId, async (_db, client) =>
+        (await client.query<{ member_id: string }>(`SELECT member_id FROM claim_peer_mesh_pings WHERE ping_id = $1`, [replacementPingId])).rows[0]!,
+      );
+      // The ranking's NEXT member (⛔ re-ranked) — and ⛔ one of the immutable selected five.
+      expect(replacement.member_id).toBe(selection.rankedMemberIds![5]);
+      expect(selection.selectedMemberIds).not.toContain(replacement.member_id);
+      const respond = () =>
+        withPariwarScope(pool, seed.pariwarId, (_db, client) =>
+          claim.recordPeerMeshResponse(client, { claimCaseId: cid, pariwarId: pid, responderMemberId: ids.memberId(replacement.member_id), response: 'confirmed' }),
+        );
+      await respond();
+      expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(1);
+      await expect(respond()).rejects.toBeInstanceOf(claim.PeerMeshResponderAlreadyRespondedError);
       expect(await eventCount(seed.claimCaseId, 'claim.peer_mesh_responded')).toBe(1);
     } finally {
       await cleanup(seed);

@@ -164,7 +164,7 @@ export async function persistPeerMeshPingIntents(
   return inserted.length;
 }
 
-/** Thrown when a responder is not one of the selection's chosen 5 (non-manipulability). */
+/** Thrown when a responder has ⛔ ping in the claim's selection (non-manipulability — Story 6.27c R7: the PING ROWS, a replacement included). */
 export class PeerMeshResponderNotSelectedError extends Error {
   constructor(
     public readonly claimCaseId: string,
@@ -244,7 +244,8 @@ export interface RecordPeerMeshResponseInput {
 
 /**
  * Record a peer's response as a `claim.peer_mesh_responded` ANNOTATION event (6.6 AC4) — an identity transition that does
- * NOT advance the primary state. Rejects a responder not in `selected_member_ids` (non-manipulability) and a SECOND
+ * NOT advance the primary state. Rejects a responder with ⛔ ping in the selection (non-manipulability — ⭐ Story 6.27c R7: the
+ * ping rows, ⛔ `selected_member_ids`, so a replacement neighbour is admitted) and a SECOND
  * response from an already-responded member (one per selected member).
  *
  * ⭐ Story 6.27a (PM8, PM7 (e)) WIDENED it:
@@ -274,21 +275,23 @@ export async function recordPeerMeshResponse(
 
   const selection = await getPeerMeshSelectionByClaim(db, input.pariwarId, input.claimCaseId);
   if (!selection) throw new PeerMeshSelectionNotFoundError(input.claimCaseId);
-  if (!selection.selectedMemberIds.includes(input.responderMemberId)) {
-    throw new PeerMeshResponderNotSelectedError(input.claimCaseId, input.responderMemberId);
-  }
 
-  // (2) Then this member's ping row — serializes concurrent duplicate submissions.
-  await db
-    .select()
+  // (2) Then this member's ping row — serializes concurrent duplicate submissions. ⭐ Story 6.27c (R7; `-330` SW27, 6.36a SF11):
+  // the non-manipulability check reads the PING ROWS, ⛔ `selected_member_ids` — a REPLACEMENT neighbour (a new ping of the same
+  // selection, `replaces_ping_id`) is ⛔ in the immutable selected list, and refusing them was an unmapped 500 that rolled their
+  // first save back. A member with ⛔ ping in this selection is still refused.
+  const ping = await db
+    .select({ pingId: claimPeerMeshPings.pingId })
     .from(claimPeerMeshPings)
     .where(
       and(
+        eq(claimPeerMeshPings.pariwarId, input.pariwarId),
         eq(claimPeerMeshPings.selectionId, selection.selectionId),
         eq(claimPeerMeshPings.memberId, input.responderMemberId),
       ),
     )
     .for('update');
+  if (ping.length === 0) throw new PeerMeshResponderNotSelectedError(input.claimCaseId, input.responderMemberId);
 
   // Re-check (post-lock, post-commit-of-any-racing-writer) for an existing response.
   const priorResponses = await getPeerMeshResponses(db, input.claimCaseId);

@@ -116,6 +116,8 @@ export * from './suspicion-refusal-persist.js';
 // its re-check, the recipients (`readRefusedFilerRecipient`) and the notice-row claim / finalise / expire helpers. A WRITE
 // module (⛔ an NW1 entry); ⛔ nothing here decrypts.
 export * from './suspicion-notice.js';
+// Story 6.27c — the neighbours' text: the detail grammar, the locked begin, the replacement, the sweep's reads (`-311` PM1 / PM4 / PM5).
+export * from './peer-mesh-request.js';
 // Story 6.25 (`2026-10-09-299` RE1–RE5, RE8, RE11) — the STAFF EMAIL of a `-239` refusal: the sweep's domain half (selector,
 // give-up, claiming transaction, compare-and-set) and ADR-0040's two identity-data reads (Q1 recipients, Q2 the address ciphertext).
 export * from './suspicion-staff-email.js';

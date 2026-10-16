@@ -439,8 +439,8 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
       that the SQL CHECK text equals the constant (the 0155 leg `claim-suspicion-notice-policy-regression.spec.ts:356-364`); a test that
       0156's `link_code` regex and `APP_LINK_CODE_PATTERN` accept / refuse the same samples (BF25); policy legs in
       `claim-peer-mesh-replies-policy-regression.spec.ts`.
-- [ ] **Task 3 — the domain send record (AC2–AC5b).** NEW `packages/domain/src/claim/peer-mesh-request.ts` (SHAPE of `suspicion-notice.ts`, BF9):
-  - [ ] 3.1 The ONE builder `peerMeshRequestDetail(d)` + `isPeerMeshRequestDetail` + `assertDetail` + LOCKSTEP vocab arrays (the
+- [x] **Task 3 — the domain send record (AC2–AC5b).** NEW `packages/domain/src/claim/peer-mesh-request.ts` (SHAPE of `suspicion-notice.ts`, BF9):
+  - [x] 3.1 The ONE builder `peerMeshRequestDetail(d)` + `isPeerMeshRequestDetail` + `assertDetail` + LOCKSTEP vocab arrays (the
         `SUSPICION_NOTICE_*` arrays' form, `suspicion-notice.ts:103-140`). The STORED grammar, in full (0155's form, ⛔ backslashes):
         `^(?!.*[0-9]{7})(no_target:(peer_not_active|peer_reported_deceased|peer_filed_for_this_death|peer_not_eligible|no_sendable_number|
         name_too_long|name_none|name_erased|name_unresolvable)|superseded:claim_decided|exhausted:(attempting_three_days|recheck_(claim_decided|
@@ -452,23 +452,23 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
         ALARM codes — a held scope writes ⛔ row, so they are ⛔ stored. The gateway classes are the SAME array as
         `SUSPICION_NOTICE_SMS_ERROR_CLASSES` (pin it; `sanitizeSmsGatewayCode`). A name-decrypt THROW happens before any begin (R9) ⇒ a
         retry, ⛔ stored. Each value pinned to the CHECK by a test (every builder output passes; a raw code is refused).
-  - [ ] 3.2 `generatePeerRequestLinkCode()` (CSPRNG, rejection sampling — the telegram-opt-in precedent; asserts `APP_LINK_CODE_PATTERN`).
-  - [ ] 3.3 `beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now, nameFault })` — R1; begin sets `attempting`,
+  - [x] 3.2 `generatePeerRequestLinkCode()` (CSPRNG, rejection sampling — the telegram-opt-in precedent; asserts `APP_LINK_CODE_PATTERN`).
+  - [x] 3.3 `beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now, nameFault })` — R1; begin sets `attempting`,
         `attempt_count = 1`, `claimed_at`, `claimed_by_job`, `aging_since = clock_timestamp()`, `locale_source`, `link_code`; RN7 re-claim
         of a stale / own / parked row (the suspicion `:806-830` form; `-297` §2 on a failed re-check); returns `{ kind, recipientMemberId,
         mobileCiphertext (as stored — ⛔ decrypt), linkCode, attemptCount, replacementPingId? }`.
-  - [ ] 3.4 `finalisePeerMeshRequest` (CAS on `attempting` + own job; writes AC2c's columns on accept), `notePeerMeshRequestTransient`
+  - [x] 3.4 `finalisePeerMeshRequest` (CAS on `attempting` + own job; writes AC2c's columns on accept), `notePeerMeshRequestTransient`
         (`detail` + `send_updated_at` only), `finaliseNoSendableNumber` (R6: second tx, claim → ping locks, R5 respected, R2's insert).
-  - [ ] 3.5 The replacement inserter (R2) — RETURNING `ping_id`; reads the STORED ranking; ⛔ re-rank; the labelling read (R4) beside the
+  - [x] 3.5 The replacement inserter (R2) — RETURNING `ping_id`; reads the STORED ranking; ⛔ re-rank; the labelling read (R4) beside the
         ONE predicate.
-  - [ ] 3.6 Sweep reads: `listDuePeerMeshRequestClaims` (R16 — `answerWindowSql`, `clampLimit`, paged), `listStalledPeerMeshRequestScopes`,
+  - [x] 3.6 Sweep reads: `listDuePeerMeshRequestClaims` (R16 — `answerWindowSql`, `clampLimit`, paged), `listStalledPeerMeshRequestScopes`,
         `parkHeldPeerMeshRequests`, `expireExhaustedPeerMeshRequests` (BF9's anchors).
-  - [ ] 3.7 `resolvePeerRequestLocale` (R10) and `resolvePeerRequestByLinkCode(db, { pariwarId, memberId, code })` (R14) — every list read
+  - [x] 3.7 `resolvePeerRequestLocale` (R10) and `resolvePeerRequestByLinkCode(db, { pariwarId, memberId, code })` (R14) — every list read
         `clampLimit`ed.
-  - [ ] 3.8 R7 in `recordPeerMeshResponse`; rewrite `claim-peer-mesh.test.ts:800`'s leg; the replacement-responder leg.
-  - [ ] 3.9 The decrypt fence (BF16): `peer-mesh-request.ts` in `FENCED_FILES`, floor 52 → 53, an `it` arm; `anonymize.ts` gains BF32's
+  - [x] 3.8 R7 in `recordPeerMeshResponse`; rewrite `claim-peer-mesh.test.ts:800`'s leg; the replacement-responder leg.
+  - [x] 3.9 The decrypt fence (BF16): `peer-mesh-request.ts` in `FENCED_FILES`, floor 52 → 53, an `it` arm; `anonymize.ts` gains BF32's
         comment line for the ping table.
-  - [ ] 3.10 Live tests (`{ timeout: 20000 }`, membership ⛔ counts — [[project_live_db_test_gotchas]]): once-ever on two connections; the
+  - [x] 3.10 Live tests (`{ timeout: 20000 }`, membership ⛔ counts — [[project_live_db_test_gotchas]]): once-ever on two connections; the
         replacement chain; R5; the window per state; a save racing a send (claim → ping order, ⛔ deadlock).
 - [ ] **Task 4 — the jobs child + sweep (AC2–AC5b).** NEW `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`:
   - [ ] 4.1 Queues `CLAIM_PEER_MESH_REQUEST_SMS: 'claim.peer_mesh_request.sms'` (child per claim; a `singletonKey` = claim id is a LABEL

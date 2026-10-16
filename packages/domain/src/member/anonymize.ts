@@ -338,6 +338,8 @@ export async function anonymizeMember(
   // Story 6.24b (RF11, 0151) — `claim_suspicion_notices` holds ⛔ no plaintext (ids + a KEYED number hash) ⇒ nothing to scrub.
   // Story 6.25 (`-299` RE5, 0152) — `claim_suspicion_staff_emails` holds ⛔ member PII (a STAFF `user_id`, a fixed-vocabulary
   // `detail`; ⛔ address, ⛔ name) ⇒ nothing to scrub.
+  // Story 6.27c (BF32, 0156 / 0166) — `claim_peer_mesh_pings`' delivery record holds ⛔ plaintext (ids, a KEYED number hash, a
+  // fixed-vocabulary `detail`, the link code — ⛔ a name, ⛔ a number) ⇒ nothing to scrub.
 
   // ── member_medical_disclosures ── ALL rows: conditions → sentinel (NOT NULL); context → NULL. ──────
   await client

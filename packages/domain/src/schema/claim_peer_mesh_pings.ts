@@ -27,7 +27,7 @@
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase.
 
-import { foreignKey, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, foreignKey, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import type { MemberId, PariwarId, PeerMeshPingId, PeerMeshSelectionId } from '../ids/index.js';
 import { claimPeerMeshSelections, type PeerMeshSource } from './claim_peer_mesh_selections.js';
@@ -53,6 +53,42 @@ export type PeerMeshSendOutcome = (typeof PEER_MESH_SEND_OUTCOMES)[number];
 /** Story 6.27a (PM22) — why the text's language was chosen. ⚠ LOCKSTEP with 0156's `locale_source` CHECK. */
 export const PEER_MESH_LOCALE_SOURCES = ['pariwar_default'] as const;
 export type PeerMeshLocaleSource = (typeof PEER_MESH_LOCALE_SOURCES)[number];
+
+/**
+ * Story 6.27c (R3 / R4) — why a NEIGHBOUR could ⛔ be texted (the `no_target:<reason>` a skipped ping records). These — and ONLY
+ * these — are REPLACED by the next eligible person of the same group (`-311` PM1 (ii)). ⚠ LOCKSTEP with 0166's
+ * `claim_peer_mesh_pings_replacement_guard` and its grammar CHECKs (a spec iterates this array). ⚠ The District Admin sees the
+ * code verbatim (the console's `noTargetReason`) — ⛔ a name, number or id in one.
+ */
+export const PEER_MESH_REQUEST_REPLACEABLE_REASONS = [
+  'peer_not_active',
+  'peer_reported_deceased',
+  'peer_filed_for_this_death',
+  'peer_not_eligible',
+  'no_sendable_number',
+] as const;
+export type PeerMeshRequestReplaceableReason = (typeof PEER_MESH_REQUEST_REPLACEABLE_REASONS)[number];
+
+/**
+ * Story 6.27c (BF25) — the form of a ping's `link_code` (12 base62). ⚠ LOCKSTEP with 0156's `claim_peer_mesh_pings_link_code_check`
+ * (a policy spec reads the CHECK) AND with `@twt/contracts`' `APP_LINK_CODE_PATTERN` (a contracts test runs both over the same
+ * samples — the domain ⛔ imports the contracts, so the two cannot share one constant).
+ */
+export const PEER_MESH_LINK_CODE_PATTERN = '^[0-9A-Za-z]{12}$';
+
+/** Story 6.27c (R9) — the DECEASED's name could ⛔ be used: claim-wide, so ⛔ replaced (R3). ⚠ LOCKSTEP with 0166's grammar. */
+export const PEER_MESH_REQUEST_NAME_REASONS = ['name_too_long', 'name_none', 'name_erased', 'name_unresolvable'] as const;
+export type PeerMeshRequestNameReason = (typeof PEER_MESH_REQUEST_NAME_REASONS)[number];
+
+/**
+ * ⭐ Story 6.27c (PM4 [c]) — the GRAMMAR of `detail` / `first_detail`: every value `peerMeshRequestDetail` builds, ⛔ anything else
+ * (⛔ a space, ⛔ `+`, ⛔ a run of 7+ digits anywhere — a bare phone number). A gateway `<code>` is `[A-Za-z0-9_.-]{1,64}` (sanitised
+ * by the builder). ⚠ LOCKSTEP with 0166's two `*_vocabulary_check` CHECKs (a spec pins the catalog's pattern to this string) and
+ * asserted by the writers (`claim/peer-mesh-request.ts`). ⛔ Backslashes — the same string reads the same in a JS `RegExp` and a PG
+ * ARE.
+ */
+export const PEER_MESH_REQUEST_DETAIL_PATTERN =
+  '^(?!.*[0-9]{7})(no_target:(peer_not_active|peer_reported_deceased|peer_filed_for_this_death|peer_not_eligible|no_sendable_number|name_too_long|name_none|name_erased|name_unresolvable)|superseded:claim_decided|exhausted:(attempting_three_days|recheck_(claim_decided|peer_ineligible))|decrypt_failed:tier1|hash_failed:tier1|config_unavailable:secret_manager|config:(dlt_template_id_missing|helpline_number_missing|sms_gateway_unconfigured|sms_messaging_unavailable|secret_manager_[A-Za-z0-9_]{1,64})|(invalid_number|carrier_reject|rate_limited|api_unavailable|dlt_template_not_approved|auth|unknown):[A-Za-z0-9_.-]{1,64})$';
 
 export const claimPeerMeshPings = pgTable(
   'claim_peer_mesh_pings',
@@ -92,7 +128,7 @@ export const claimPeerMeshPings = pgTable(
     /** The give-up's anchor — moves only forward (0156's trigger). */
     agingSince: timestamp('aging_since', { withTimezone: true, mode: 'date' }),
     parkedAt: timestamp('parked_at', { withTimezone: true, mode: 'date' }),
-    /** ≤ 200 characters; the grammar is 6.27c's. ⛔ Never PII, ⛔ never the link code. */
+    /** ≤ 200 characters; the grammar is 6.27c's (0166 — `PEER_MESH_REQUEST_DETAIL_PATTERN`). ⛔ Never PII, ⛔ never the link code. */
     detail: text('detail'),
     firstDetail: text('first_detail'),
     providerMessageId: text('provider_message_id'),
@@ -107,6 +143,17 @@ export const claimPeerMeshPings = pgTable(
     // ── Story 6.36 (migration 0163; SW24, I9) ──
     /** Where this person came from — EQUAL to its selection's `source` (0163's BEFORE INSERT trigger); immutable by grant. */
     source: text('source').$type<PeerMeshSource>(),
+
+    // ── Story 6.27c (migration 0166; `-311` PM1 (ii), R2 / R3 / R5) ──
+    /**
+     * The ping this one REPLACES — one skipped at send time for a peer reason (`PEER_MESH_REQUEST_REPLACEABLE_REASONS`), of the SAME
+     * selection, at `attempt_count = 1` (0166's BEFORE INSERT trigger). UNIQUE ⇒ a ping is replaced at most once ⇒ live pings ≤
+     * the original count. Immutable by grant (⛔ in 0156's UPDATE column list). NULL for an original ping.
+     */
+    replacesPingId: uuid('replaces_ping_id')
+      .$type<PeerMeshPingId>()
+      .references((): AnyPgColumn => claimPeerMeshPings.pingId, { onDelete: 'cascade' })
+      .unique('claim_peer_mesh_pings_replaces_ping_uq'),
   },
   (t) => [
     // One intent per member per selection — the idempotency anchor (a re-run of the select

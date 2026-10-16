@@ -434,7 +434,7 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
   - [x] 1.3 `apps/jobs/tests/peer-mesh-sms-templates.test.ts` cloned leg for leg from BF20's test (incl. the deadline deny-list and the
         `$comment` marker); ⛔ transcribe the copy.
   - [x] 1.4 The sheet (BF21) — every edit AC8 lists.
-- [ ] **Task 2 — migration 0166 (AC1b).** As AC1b; the pattern constant `PEER_MESH_REQUEST_DETAIL_PATTERN` + vocab arrays in
+- [x] **Task 2 — migration 0166 (AC1b).** As AC1b; the pattern constant `PEER_MESH_REQUEST_DETAIL_PATTERN` + vocab arrays in
       `schema/claim_peer_mesh_pings.ts` (the suspicion schema-file precedent, BF9); `replacesPingId` declared in the Drizzle file; a test
       that the SQL CHECK text equals the constant (the 0155 leg `claim-suspicion-notice-policy-regression.spec.ts:356-364`); a test that
       0156's `link_code` regex and `APP_LINK_CODE_PATTERN` accept / refuse the same samples (BF25); policy legs in

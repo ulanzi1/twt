@@ -1,4 +1,7 @@
 // Migration 0156 — the neighbours' replies and answers, and the ping's delivery-record columns (Story 6.27a, Task 2; AC3).
+// ⭐ Migration 0166 (Story 6.27c, Task 2; AC1b) — the ping's `detail` grammar (lockstep with the constant), the replacement link
+// (`replaces_ping_id`: UNIQUE, the BEFORE INSERT trigger's three refusals, RLS, ⛔ in the UPDATE grant, ON DELETE CASCADE) and the
+// attempting-row backstops (R15).
 // Live DB; per-test ROLLBACK. Every refusal runs under a SAVEPOINT so one test can assert several.
 //   · the ping: the delivery columns, the structural CHECKs (`recorded` refused; `attempt_count` 0 ⇔ not begun; claimed /
 //     parked; `locale_source`; the link code's form + uniqueness), the REVOKE + column GRANT (`UPDATE … SET message_key`
@@ -26,6 +29,11 @@ import { answerWindowSql, isClaimInAnswerWindow, isStateInAnswerWindow } from '.
 import { bindScopedDb } from '../../../src/db.js';
 import { claimId as toClaimId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import { PEER_MESH_SENSITIVE_QUESTION_KEYS } from '../../../src/questionnaires/keys.js';
+import {
+  PEER_MESH_LINK_CODE_PATTERN,
+  PEER_MESH_REQUEST_DETAIL_PATTERN,
+  PEER_MESH_REQUEST_REPLACEABLE_REASONS,
+} from '../../../src/schema/claim_peer_mesh_pings.js';
 import { CLAIM_LIFECYCLE_STATES } from '../../../src/schema/claims.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppRoleNoScope, enterAppScope, PARIWAR_A, PARIWAR_B, seedClaim } from '../_helpers.js';
@@ -202,6 +210,181 @@ describe.skipIf(!hasDatabase)('0156 — the ping delivery record, the replies, t
       const { client } = getTx();
       const { rows } = await client.query(`SELECT indexdef FROM pg_indexes WHERE indexname = 'claim_peer_mesh_pings_attempting_idx'`);
       expect(rows[0]?.indexdef).toMatch(/\(aging_since, claimed_at\) WHERE \(send_outcome = 'attempting'::text\)/);
+    });
+  });
+
+  describe('0166 — the detail grammar, the replacement, the attempting-row backstops (Story 6.27c AC1b)', () => {
+    /** Begin `pingId` as `attempting` (job `job`), with the anchor and a link code. */
+    const begin = (client: Client, pingId: string, job = 'job-1', code = 'Ab3dEf7hIj9K') =>
+      attempt(
+        client,
+        `UPDATE claim_peer_mesh_pings SET send_outcome = 'attempting', attempt_count = 1, claimed_at = clock_timestamp(),
+           claimed_by_job = $2, aging_since = clock_timestamp(), locale_source = 'pariwar_default', link_code = $3 WHERE ping_id = $1`,
+        [pingId, job, code],
+      );
+    /** One more ping in `p`'s selection (optionally a replacement) — `seedPing` rows are PARIWAR_A's unless `pariwarId` says. */
+    const addPing = (client: Client, p: { selectionId: string; pariwarId?: string }, replaces: string | null = null) =>
+      attempt(
+        client,
+        `INSERT INTO claim_peer_mesh_pings (ping_id, selection_id, pariwar_id, member_id, replaces_ping_id) VALUES (gen_random_uuid(), $1, $2, gen_random_uuid(), $3)`,
+        [p.selectionId, p.pariwarId ?? PARIWAR_A, replaces],
+      );
+    const skip = (client: Client, pingId: string, detail: string | null, attempts = 1) =>
+      attempt(client, `UPDATE claim_peer_mesh_pings SET send_outcome = 'no_target', attempt_count = $2, detail = $3 WHERE ping_id = $1`, [
+        pingId,
+        attempts,
+        detail,
+      ]);
+
+    it('(a) ⭐ LOCKSTEP — both vocabulary CHECKs carry EXACTLY `PEER_MESH_REQUEST_DETAIL_PATTERN`; the link-code CHECK carries `PEER_MESH_LINK_CODE_PATTERN`', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ conname: string; def: string }>(
+        `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint
+          WHERE conname IN ('claim_peer_mesh_pings_detail_vocabulary_check', 'claim_peer_mesh_pings_first_detail_vocabulary_check')`,
+      );
+      expect(rows).toHaveLength(2);
+      for (const r of rows) expect(r.def.match(/~ '(.*)'::text/)?.[1], r.conname).toBe(PEER_MESH_REQUEST_DETAIL_PATTERN);
+      const code = await client.query<{ def: string }>(
+        `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_peer_mesh_pings_link_code_check'`,
+      );
+      expect(code.rows[0]?.def.match(/~ '(.*)'::text/)?.[1]).toBe(PEER_MESH_LINK_CODE_PATTERN);
+    });
+
+    it.each([
+      ['no_target (peer)', 'no_target:peer_filed_for_this_death'],
+      ['no_target (name)', 'no_target:name_too_long'],
+      ['superseded', 'superseded:claim_decided'],
+      ['exhausted (three days)', 'exhausted:attempting_three_days'],
+      ['exhausted (re-check)', 'exhausted:recheck_peer_ineligible'],
+      ['pre-send fault', 'decrypt_failed:tier1'],
+      ['send config (fixed)', 'config:helpline_number_missing'],
+      ['send config (Secret Manager)', 'config:secret_manager_PERMISSION_DENIED'],
+      ['gateway class', `api_unavailable:http_503`],
+    ])('(a) the grammar ADMITS a %s detail (%s) — on `detail` AND `first_detail`', async (_family, value) => {
+      const { client } = getTx();
+      const p = await seedPing(client, PARIWAR_A);
+      expect((await attempt(client, `UPDATE claim_peer_mesh_pings SET send_outcome = 'error', attempt_count = 1, detail = $2, first_detail = $2 WHERE ping_id = $1`, [p.pingId, value])).code).toBeNull();
+    });
+
+    it('(a) the grammar REFUSES free text, a raw gateway code, a phone number and every HOLD code (alarm-only — ⛔ stored)', async () => {
+      const { client } = getTx();
+      const p = await seedPing(client, PARIWAR_A);
+      const bad = [
+        'x',
+        'Message rejected',
+        'unknown:a b',
+        'invalid_number:+919876543210',
+        'invalid_number:9876543210',
+        'carrier_reject:E003 at 9876543210',
+        `auth:${'A'.repeat(65)}`,
+        'no_target:not_effective',
+        'name:none',
+        'decrypt_failed:kyc',
+        'config:app_links_base_url_invalid',
+        'config:questionnaire_unavailable',
+        'config:counsel_basis_pending',
+        'config:secret_manager',
+        'held:config',
+      ];
+      for (const value of bad) {
+        const r = await attempt(client, `UPDATE claim_peer_mesh_pings SET send_outcome = 'error', attempt_count = 1, detail = $2 WHERE ping_id = $1`, [p.pingId, value]);
+        expect(r.message, value).toMatch(/claim_peer_mesh_pings_detail_vocabulary_check/);
+        const f = await attempt(client, `UPDATE claim_peer_mesh_pings SET send_outcome = 'error', attempt_count = 1, first_detail = $2 WHERE ping_id = $1`, [p.pingId, value]);
+        expect(f.message, value).toMatch(/claim_peer_mesh_pings_first_detail_vocabulary_check/);
+      }
+    });
+
+    it.each(PEER_MESH_REQUEST_REPLACEABLE_REASONS)('(b) a ping skipped `no_target:%s` at its FIRST attempt is replaced — ONCE', async (reason) => {
+      const { client } = getTx();
+      const p = await seedPing(client, PARIWAR_A);
+      expect((await skip(client, p.pingId, `no_target:${reason}`)).code).toBeNull();
+      expect((await addPing(client, p, p.pingId)).code).toBeNull();
+      // UNIQUE (replaces_ping_id) — a second replacement of the same ping is refused.
+      expect((await addPing(client, p, p.pingId)).code).toBe('23505');
+    });
+
+    it('(b) the replacement trigger refuses: another selection\'s ping, an unfinished / sent / name / superseded skip, a re-claimed skip (R5)', async () => {
+      const { client } = getTx();
+      const p = await seedPing(client, PARIWAR_A);
+      const other = await seedPing(client, PARIWAR_A);
+      expect((await skip(client, other.pingId, 'no_target:peer_not_active')).code).toBeNull();
+      expect((await addPing(client, p, other.pingId)).message).toMatch(/replaces a ping of its own selection/);
+      // ⛔ begun / ⛔ finished: the ping itself is not yet skipped.
+      expect((await addPing(client, p, p.pingId)).message).toMatch(/only a ping skipped for a peer reason/);
+      const named = await seedPing(client, PARIWAR_A);
+      expect((await skip(client, named.pingId, 'no_target:name_too_long')).code).toBeNull();
+      expect((await addPing(client, named, named.pingId)).message).toMatch(/only a ping skipped for a peer reason/);
+      const nodetail = await seedPing(client, PARIWAR_A);
+      expect((await skip(client, nodetail.pingId, null)).code).toBeNull();
+      expect((await addPing(client, nodetail, nodetail.pingId)).message).toMatch(/only a ping skipped for a peer reason/);
+      const decided = await seedPing(client, PARIWAR_A);
+      expect((await attempt(client, `UPDATE claim_peer_mesh_pings SET send_outcome = 'skipped_superseded', attempt_count = 1, detail = 'superseded:claim_decided' WHERE ping_id = $1`, [decided.pingId])).code).toBeNull();
+      expect((await addPing(client, decided, decided.pingId)).message).toMatch(/only a ping skipped for a peer reason/);
+      const sent = await seedPing(client, PARIWAR_A);
+      expect((await begin(client, sent.pingId, 'j', 'Sent0000000A')).code).toBeNull();
+      expect((await attempt(client, `UPDATE claim_peer_mesh_pings SET send_outcome = 'accepted', provider_message_id = 'pm' WHERE ping_id = $1`, [sent.pingId])).code).toBeNull();
+      expect((await addPing(client, sent, sent.pingId)).message).toMatch(/only a ping skipped for a peer reason/);
+      const reclaimed = await seedPing(client, PARIWAR_A);
+      expect((await skip(client, reclaimed.pingId, 'no_target:no_sendable_number', 2)).code).toBeNull();
+      expect((await addPing(client, reclaimed, reclaimed.pingId)).message).toMatch(/a re-claimed send is never replaced/);
+    });
+
+    it('(b) under RLS another Pariwar\'s ping is NOT FOUND ⇒ refused; `replaces_ping_id` is ⛔ in the UPDATE grant', async () => {
+      const { client } = getTx();
+      const foreign = await seedPing(client, PARIWAR_B);
+      expect((await skip(client, foreign.pingId, 'no_target:peer_not_active')).code).toBeNull();
+      const own = await seedPing(client, PARIWAR_A);
+      expect((await skip(client, own.pingId, 'no_target:peer_not_active')).code).toBeNull();
+      await enterAppScope(client, PARIWAR_A);
+      // The foreign ping's own selection, claimed under PARIWAR_A: the trigger cannot see it.
+      const cross = await attempt(
+        client,
+        `INSERT INTO claim_peer_mesh_pings (selection_id, pariwar_id, member_id, replaces_ping_id) VALUES ($1, $2, gen_random_uuid(), $3)`,
+        [own.selectionId, PARIWAR_A, foreign.pingId],
+      );
+      expect(cross.message).toMatch(/replaces a ping of its own selection/);
+      expect((await addPing(client, { pariwarId: PARIWAR_A, selectionId: own.selectionId }, own.pingId)).code).toBeNull();
+      expect((await attempt(client, `UPDATE claim_peer_mesh_pings SET replaces_ping_id = NULL WHERE replaces_ping_id = $1`, [own.pingId])).code).toBe('42501');
+    });
+
+    it('(b) ON DELETE CASCADE — deleting a replaced ping by id does ⛔ fail on the FK (its replacement goes with it)', async () => {
+      const { client } = getTx();
+      const p = await seedPing(client, PARIWAR_A);
+      expect((await skip(client, p.pingId, 'no_target:peer_reported_deceased')).code).toBeNull();
+      expect((await addPing(client, p, p.pingId)).code).toBeNull();
+      expect((await attempt(client, `DELETE FROM claim_peer_mesh_pings WHERE ping_id = $1`, [p.pingId])).code).toBeNull();
+      const { rows } = await client.query(`SELECT 1 FROM claim_peer_mesh_pings WHERE replaces_ping_id = $1`, [p.pingId]);
+      expect(rows).toHaveLength(0);
+    });
+
+    it('(c) R15 — an `attempting` row carries `aging_since` (CHECK)', async () => {
+      const { client } = getTx();
+      const p = await seedPing(client, PARIWAR_A);
+      const r = await attempt(client, `UPDATE claim_peer_mesh_pings SET send_outcome = 'attempting', attempt_count = 1, claimed_at = now(), claimed_by_job = 'j' WHERE ping_id = $1`, [p.pingId]);
+      expect(r.message).toMatch(/claim_peer_mesh_pings_attempting_aging_check/);
+    });
+
+    it('(c) R15 — while `attempting`: attempt_count ⛔ decreases; first_detail is written once; aging_since moves ONLY on a parked re-claim', async () => {
+      const { client } = getTx();
+      const p = await seedPing(client, PARIWAR_A);
+      const upd = (set: string) => attempt(client, `UPDATE claim_peer_mesh_pings SET ${set} WHERE ping_id = $1`, [p.pingId]);
+      expect((await begin(client, p.pingId)).code).toBeNull();
+      expect((await upd(`attempt_count = 2`)).code).toBeNull();
+      expect((await upd(`attempt_count = 1`)).message).toMatch(/attempt_count never decreases/);
+      expect((await upd(`first_detail = 'rate_limited:x'`)).code).toBeNull();
+      expect((await upd(`first_detail = 'api_unavailable:y'`)).message).toMatch(/first_detail is written once/);
+      expect((await upd(`first_detail = COALESCE(first_detail, detail)`)).code).toBeNull(); // the re-claim's own form
+      // ⛔ an unparked forward move; the 0156 backward rule keeps its message.
+      expect((await upd(`aging_since = aging_since + interval '1 hour'`)).message).toMatch(/only on the re-claim of a parked row/);
+      expect((await upd(`aging_since = aging_since - interval '1 hour'`)).message).toMatch(/aging_since moves only forward/);
+      // park, then re-claim: the anchor moves forward in the SAME statement that clears `parked_at`.
+      expect((await upd(`claimed_by_job = 'sweep:held', parked_at = clock_timestamp()`)).code).toBeNull();
+      expect((await upd(`aging_since = aging_since + interval '1 hour'`)).message).toMatch(/only on the re-claim of a parked row/);
+      expect((await upd(`aging_since = aging_since + interval '1 hour', claimed_by_job = 'job-2', parked_at = NULL, send_outcome = 'error'`)).message).toMatch(/only on the re-claim of a parked row/);
+      expect((await upd(`aging_since = aging_since + interval '1 hour', claimed_by_job = 'job-2', parked_at = NULL, attempt_count = attempt_count + 1`)).code).toBeNull();
+      // the begin (from NULL) still sets the anchor — R15's arms apply only to an `attempting` OLD row.
+      const q = await seedPing(client, PARIWAR_A);
+      expect((await begin(client, q.pingId, 'job-1', 'Zz3dEf7hIj9K')).code).toBeNull();
     });
   });
 

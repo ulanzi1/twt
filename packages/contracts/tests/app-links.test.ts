@@ -2,6 +2,8 @@
 // URL builder and code parser, the env schemas, and the two verification-file bodies.
 
 import { readFileSync } from 'node:fs';
+
+import { schema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -198,5 +200,26 @@ describe('the two verification-file bodies', () => {
   it('refuses an empty identity list (⛔ never a body that verifies nothing)', () => {
     expect(() => buildAppleAppSiteAssociation([])).toThrow();
     expect(() => buildAssetLinks([])).toThrow();
+  });
+});
+
+describe('Story 6.27c (BF25) — the code a text carries: 0156\'s CHECK and APP_LINK_CODE_PATTERN agree', () => {
+  // The domain writes the code (`generatePeerRequestLinkCode`, 0156's CHECK `PEER_MESH_LINK_CODE_PATTERN`); the contracts build
+  // the link and parse it back. Two copies — this pins them to the SAME language over boundary samples.
+  const domain = new RegExp(schema.PEER_MESH_LINK_CODE_PATTERN);
+  it.each([
+    'Ab3dE5gH9kLm',
+    '000000000000',
+    'zzzzzzzzzzzz',
+    'ABCDEFGHIJKL',
+    'Ab3dE5gH9kL',
+    'Ab3dE5gH9kLmN',
+    'Ab3dE5gH9kL-',
+    'Ab3dE5gH9kL_',
+    'Ab3dE5gH9kL ',
+    'Ab3dE5gH9kLé',
+    '',
+  ])('%j — accepted by both or refused by both', (sample) => {
+    expect(domain.test(sample)).toBe(APP_LINK_CODE_PATTERN.test(sample));
   });
 });

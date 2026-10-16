@@ -622,6 +622,10 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36`, worktree `.claude/worktr
   `restoration-discipline-production-path-live` REFUSING a database not named `twt_dev` (by design), then run directly with
   `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS=1` on the same scratch DB: 3 / 3; events, queue, niyamavali-engine, validity-service, channels all green.
   Scratch DB dropped. ⇒ green, with the shared-:5433 pollution left as it is (recreating the container is BigDev's call, ⛔ a side effect).
+  ⭐ **2026-10-16, BigDev: *"recreate the container and get it done"*** — `twt-test-pg` (:5433) removed with its volume and recreated
+  (`postgres:16`, the same user / db / port), migrated from zero (163 journal entries = 163 applied, the last `…007` = 0163); then
+  `DATABASE_URL=…:5433/twt_dev pnpm ci:local` on `3fa2ff0c`: **PASSED — 36 / 36 jobs green** (integration: domain 375 / 375 files —
+  5385 passed, 1 skipped; api 167 / 167 — 1782 passed, 1 skipped; jobs 57 / 57 — 804 passed, the 10.23 gate included on `twt_dev`).
 
 ### File List
 - `apps/admin/src/modules/claim-verification/PeerMeshView.tsx` — modified
@@ -682,6 +686,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.36`, worktree `.claude/worktr
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-16 | 3.1 | AC15 closed GREEN: `twt-test-pg` recreated fresh (BigDev), migrated from zero, `pnpm ci:local` on `3fa2ff0c` — 36 / 36 jobs. |
 | 2026-10-16 | 3.0 | IMPLEMENTED by `bmad-dev-story 6.36` (code commit `3fa2ff0c`): migration 0163 (applied on :5432 AND :5433); the grouped engine, the ONE dispatch and replay; the filing-day cut, the SW21 run, the SW23 predicate and the snapshot reads; the select job locked FIRST, a selection only with its edge, ⛔ swallow, `claim.peer_mesh_none_to_ask` (the 37th event) and the reminder reading either edge; the source and the staff line on both staff surfaces (⛔ on the inspector's / helpline's / a member's wire — tests); `peer_mesh.v4` live. Records: 6.27c annotated (AC13), 6.6 D3 + its review item and 6.36a SW17 annotated, deferred-work appended (two Closed, one NARROWED, one OPEN, one NEW). |
 | 2026-10-15 | 2.5 | Round-6 narrow re-validate (the note + its story lines): ⛔ finding at HIGH or above — the rounds have converged. 2 MEDIUM, 5 LOW applied: option C's effect holds only when an investigation found the member innocent (a refusal without one still anchors as in A); two negative staff-line legs (an ask, a lapse); the note names C beside A where it should, "the same filter" ⛔ "exact shape", the table exists but nothing writes it, SW19 cited as 6.36a's record; a glyph fix in §Recorded. |
 | 2026-10-15 | 2.4 | Round-5 narrow re-validate of v2.3: 1 HIGH (the routing note), 3 MEDIUM, 2 LOW, all applied. HIGH: option C was written as a new staff step and a new reason — false: `-238` (Trustee-ratified) already rules the innocence finding and `claim_nominee_findings.kind = 'member_found_innocent'` exists, read with C's exact shape by `nominee-lock.ts` (producer row 6-22, unbuilt) ⇒ C keyed on it (behaves as A until 6-22), our reading C; §Recorded names it as the key that would lift the falsely-reported-member exclusion. MEDIUM: two staff-line legs seed acceptance MORE than 90 days back (exactly 90 is inside the window); a positive acceptance leg; the staff-line rule restated as SW20's two plus changes out of the accepted set. LOW: the note's suspicion-refusal sentence; "Our reading" is one option. |

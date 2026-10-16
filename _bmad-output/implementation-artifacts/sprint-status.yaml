@@ -1,3 +1,7 @@
+# last_updated: 2026-10-16b (STORY 6.36 — THE GATE, GREEN: BigDev *"recreate the container and get it done"* — `twt-test-pg` (:5433)
+# removed with its volume, recreated (`postgres:16`), migrated from zero through 0163; `pnpm ci:local` on `3fa2ff0c` PASSED, 36 / 36 jobs
+# (the shared-DB reconciliation failure gone with the 575 accumulated alerts). Row `6-36-peer-mesh-school-wise-selection` stays `review`.
+# ⛔ No other row moves.)
 # last_updated: 2026-10-16 (STORY 6.36 — IMPLEMENTED by `bmad-dev-story 6.36` (worktree `.claude/worktrees/6-36`, branch
 # `story/6-36-peer-mesh-school-wise-selection`, code commit `3fa2ff0c`): row `6-36-peer-mesh-school-wise-selection` `ready-for-dev` →
 # `in-progress` → `review`. All eight Tasks. Migration 0163 (`…007`) applied on :5432 AND :5433: the selection's `workplace_named_v1`

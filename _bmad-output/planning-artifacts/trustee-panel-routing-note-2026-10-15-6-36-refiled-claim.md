@@ -9,10 +9,13 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — 2026-10-16 — [`2026-10-16-339`](../../.decision-log.md#decision-2026-10-16-339) (Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet, and the note has ⛔ not been sent.** When the Panel rules, transcribe the answer into this block
-> **and** into `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question as put.
+> **Ratifying trustees:** Dhiraj Rahul + Kalpana Bharti — relayed by BigDev in session, verbatim: *"by DR and KB / option C"*.
+>
+> **RF1 — C. "The first filing counts, unless an investigation found the member innocent of a claim filed while they were alive."**
+> Our suggestion taken. Until the innocence finding can be recorded (the fraud register, row 6-22), C behaves exactly as A.
+> ⭐ Everything below is kept **unedited** as the question as put.
 
 ---
 

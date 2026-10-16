@@ -250,7 +250,7 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
   `meta/_journal.json` entry, applied by `pnpm db:migrate` once with `DATABASE_URL` at :5432 and once at :5433
   ([[project_live_db_test_gotchas]] — ⛔ regen an applied migration; ⛔ DROP SCHEMA).
 
-## ⚖️ Author readings R1–R16 (v3.0 — each is the AUTHOR's under the routing template's §0: an implementation of committed or ratified text; each names the sentence it implements and says MATCHES / NARROWS / WIDENS. ⛔ None widens a Trustee-ratified ruling; R5 narrows an author-commit and is ⛔ built until BigDev confirms it — Task 0)
+## ⚖️ Author readings R1–R16 (v3.0 — each is the AUTHOR's under the routing template's §0: an implementation of committed or ratified text; each names the sentence it implements and says MATCHES / NARROWS / WIDENS. ⛔ None widens a Trustee-ratified ruling; R5 narrows an author-commit — ✅ confirmed, `-343`)
 
 - **R1 — the send-time order (MATCHES `-311` PM5 (iv) + PM1).** Under the claim lock, then the ping lock: ① the answer window (PM8's ONE
   predicate) — out ⇒ `skipped_superseded` / `superseded:claim_decided`; ② the CLAIM-WIDE name fault (read before the tx — R9) ⇒
@@ -282,7 +282,8 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
   this death (`-340` / `-341`) ⇒ **`peer_filed_for_this_death`** (NEW); none matched ⇒ **`peer_not_eligible`** (NEW — a fallback so a future
   predicate conjunct ⛔ never crashes the send; a test pins that the four labels cover today's predicate). ⚠ The District Admin SEES these
   codes verbatim (BF29) — ⛔ never a name, number or id in one.
-- **R5 — ⚠ a `no_target` on a RE-CLAIMED row is ⛔ replaced (NARROWS `-311` PM1 (ii) at one edge — BigDev confirms at Task 0).** A re-claimed
+- **R5 — a `no_target` on a RE-CLAIMED row is ⛔ replaced (NARROWS `-311` PM1 (ii) at one edge — ✅ CONFIRMED by BigDev 2026-10-16,
+  recorded as [`2026-10-16-343`](../../.decision-log.md#decision-2026-10-16-343)).** A re-claimed
   `attempting` row (`attempt_count > 1`) may already have been texted (`-298`: it alarms *"may have sent"*). Replacing it could text a SIXTH
   person while the first did receive a text. ⇒ such a row finishes `no_target` + the `-298` alarm, ⛔ no replacement. (Only R6's
   `no_sendable_number` is a REPLACEABLE `no_target` on a re-claim — a window or peer failure there is `-297` §2's `error`; a `name_*`
@@ -344,8 +345,8 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
 
 ## Acceptance Criteria
 
-1. **AC1 — governance first.** ⛔ No code before Task 0: R5 confirmed by BigDev (or replaced by his call) and, if he asks for it, an
-   author-commit entry recording R1–R16 committed ALONE on this branch ([[feedback_governance_commits_precede_implementation]]).
+1. **AC1 — governance first.** ✅ MET 2026-10-16: R5 confirmed by BigDev and recorded as author-commit `2026-10-16-343`, committed ALONE on
+   this branch (`ccca9f5f`) before any code ([[feedback_governance_commits_precede_implementation]]).
 1b. **AC1b — migration `0166_peer-mesh-request-sending.sql`** (hand-authored, journal idx 166), applied on :5432 AND :5433, proven from
    zero: (a) the `detail` / `first_detail` GRAMMAR CHECK mirroring `PEER_MESH_REQUEST_DETAIL_PATTERN` (an ENUMERATED alternation in 0155's
    form, with the `(?!.*[0-9]{7})` lookahead) — every builder output passes it and a RAW gateway code is refused (6.29 Trap 4); ⚠ grep
@@ -415,10 +416,9 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — governance (AC1).**
-  - [ ] 0.1 Ask BigDev R5 (one question; recommend A = ⛔ replace a re-claimed `no_target`). Record his answer here.
-  - [ ] 0.2 If BigDev wants R1–R16 on the decision log: stage an author-commit in the scratchpad, try the insert above the newest
-        `### Decision` ([[project_decision_log_writes_user_inserted]]), verify additive-only, commit ALONE. Otherwise record *"R1–R16 are
-        implementation readings of `-311`; ⛔ entry"* in the Completion Notes.
+  - [x] 0.1 R5 asked. BigDev, 2026-10-16: *"Yout recommendation is accepted for Task 0.1"* — ⛔ replace a re-claimed `no_target`.
+  - [x] 0.2 R5 (the only reading that narrows committed text) recorded as `2026-10-16-343` (author-commit), committed ALONE (`ccca9f5f`).
+        R1–R16's other readings MATCH their sources (validate rounds 1–2) — implementation readings of `-311`, ⛔ entry.
   - [ ] 0.3 `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory`; re-read any cited file that moved;
         `git log --oneline cdc39004..origin/main -- .decision-log.md` — a ruling after `-342` touching peer mesh is read before Task 1.
 - [ ] **Task 1 — copy and registry (AC2, AC8).**
@@ -562,6 +562,7 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-16 | 3.3 | Task 0.1 / 0.2 DONE: BigDev accepted R5 (⛔ replace a re-claimed `no_target`); recorded as `2026-10-16-343`, committed alone (`ccca9f5f`); AC1 met. Task 0.3 (the drift check) stays the dev's first step. |
 | 2026-10-16 | 3.2 | Fresh-context validate round 2 (⛔ HIGH; the regex proven in node AND a Postgres ARE, every stored value covered, every fixture passes, R15 keeps every existing leg green): M1 — a re-claimed NAME fault keeps `no_target:name_<reason>` + the `-298` alarm (`-298` A), `recheck_name_unavailable` dropped; L1 — the replacement trigger also requires `attempt_count = 1` (R5's backstop); L2 — R6's finalise in the ORDER sentence; L3 — the deferred item closes with `claimed_*` rewritable by design; L4 — join the regex's wrapped lines; L5 — two stale AC labels. |
 | 2026-10-16 | 3.1 | Fresh-context validate round 1 (≈ 70 cites spot-checked; ⛔ reading widens a ratified ruling): H1 — a decrypt / hash THROW is a transient, ⛔ `no_sendable_number` (a KMS outage would have dropped a neighbour and texted another — R6, Task 4.2); M1 — R15's `aging_since` arm applies only to an `attempting` OLD row (a literal 0155 clone refuses every begin); M2 — the stored grammar ENUMERATED in Task 3.1, the re-claimed-row failures stated (R1), the HOLD codes are alarm-only; M3 — R4's invented quote replaced by SW23 / `-340` / `-341`; M4 — `singletonKey` is a label, the CAS is the dedup; M5 — AC2b keeps its label (the pending-question hold every pointer cites), the accepted write is AC2c; L1–L7 — sheet cites by heading, 404s compared by status / code / message, the skip-then-insert order, `ON DELETE CASCADE`, the CHECK pre-check, the quiet-hours helper's home, the raw `:443`, BF24's Panel FYI. |
 | 2026-10-16 | 3.0 | `bmad-create-story 6.27c` (asked as "6.26c"; BigDev chose 6.27c): RE-PINNED `fa2687ce` (⛔ an ancestor of `main`) → `cdc39004`; every predecessor `done`; status `backlog` → `ready-for-dev`. Four read-only checkers re-derived every pointer: BF1–BF34. Key changes: the replacement is BUILT here — `replaces_ping_id` + `UNIQUE` + a trigger in 0166 (⛔ existed; `-311` PM1), the responder check moves to the ping rows (a replacement's first answer is a 500 today — BF7), R5 (⛔ replace a re-claimed `no_target` — BigDev confirms); new detail labels `peer_filed_for_this_death` / `peer_not_eligible` over the ONE predicate (R4); `config:questionnaire_unavailable` (`resolveLiveVersion` can return null); the hook keys on "a selection with pings exists", ⛔ `outcome.advanced` (R8); the API logger writes the URL ⇒ the by-link route at `logLevel: 'warn'` + a PII spec (R13); the app-link origin check and the attempting-row backstops CLOSE two deferred items (R12, R15); W3 narrowed; Row 27 closes on EIGHT incl. (h) Row 31, and its two evidence lines already exist; the English text is UCS-2 too (BF24); the `$comment` marker is "NOT YET HUMAN-REVIEWED" (BF22); 0166 is the migration. The v2.x text is replaced (its history below). |

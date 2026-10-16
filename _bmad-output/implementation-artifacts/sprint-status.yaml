@@ -1,3 +1,15 @@
+# last_updated: 2026-10-16k (STORY 6.27c — CREATED FOR DEV (`bmad-create-story 6.27c`; asked as "6.26c" — no such story; BigDev chose
+# 6.27c), worktree `.claude/worktrees/6-27c`, branch `story/6-27c-peer-mesh-sending-texts-and-links` from `main` `cdc39004`): row
+# `6-27c-peer-mesh-sending-texts-and-links` `backlog` → `ready-for-dev` — every condition met (6.27b, 6.27d, rows 6-30, 6-34, 6-36a,
+# 6-36b, 6-36c, 6-36 `done` and on `main`). File v3.2: re-pinned `fa2687ce` (⛔ an ancestor of `main`; 547 code files moved) →
+# `cdc39004`; four read-only checkers ⇒ BF1–BF34; author readings R1–R16; two fresh-context validate rounds (1 HIGH → 0, all applied).
+# Key findings: ⛔ `replaces_ping_id` column (`-311` PM1 commits one) — 0166 adds it + UNIQUE + a trigger (≤ 5 live by construction);
+# a replacement neighbour's first answer is a 500 today (`recordPeerMeshResponse` checks `selected_member_ids`) — moved to the ping rows
+# (SW27); ⛔ link-code generator, quiet-hours helper, locale reader or `APP_LINKS_BASE_URL` reader exist; the API logger writes the URL ⇒
+# the by-link route at `logLevel: 'warn'` + a PII spec; a decrypt THROW is transient, ⛔ `no_sendable_number`; Row 27 closes on EIGHT
+# (incl. (h) Row 31) and its two evidence lines already exist; the English text is UCS-2 too (≈ 3 segments — an FYI owed to the next
+# Panel note). Two deferred items to Close (app-link origin; attempting-row columns), W3 to narrow. ⛔ Panel question. Task 0.1: BigDev
+# confirms R5 (a re-claimed `no_target` is ⛔ replaced — it may already have been texted). Migration `0166`. ⛔ No code. ⛔ No other row moves.)
 # last_updated: 2026-10-16j (STORY 6.36c — CODE REVIEW ROUND 2 (`bmad-code-review 6.36c`, worktree `.claude/worktrees/6-36c`, branch
 # `story/6-36c-workplace-list-curation-and-prompts`, commit `70f2aa00`): row `6-36c-workplace-list-curation-and-prompts` STAYS `done`. The
 # whole branch `main...story/6-36c`, 4 layer chunks (domain+contracts+migration / API / admin / mobile+i18n) × 3 layers (12/12 returned):
@@ -20238,7 +20250,7 @@ development_status:
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
   # ⭐ 2026-10-14 ANNOTATION (`2026-10-14-332` call 6): 6.27c's start condition gains *"AND row 6-36c is done"* (row 6-36 no longer
   # waits for 6-36c).
-  6-27c-peer-mesh-sending-texts-and-links: backlog
+  6-27c-peer-mesh-sending-texts-and-links: ready-for-dev
   # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
   # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.

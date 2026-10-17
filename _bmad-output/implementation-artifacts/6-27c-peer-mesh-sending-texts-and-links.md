@@ -708,7 +708,9 @@ from a crash after an accept); P13's cross-Pariwar leg rebuilt (a ping of the SA
 was failing on the member predicate); the new stalled-row fixtures take a fresh link code (`link_code` is UNIQUE across Pariwars); the
 records — D3, the raw counts, W9 ACCEPTED (⛔ deferred), P2 / P9 / P18 as applied, the Change Log order. **Validation:** `ci:local` on
 `7f98fbfb` (:5433) 35/36 — `test (unit)`: 7 admin jsdom timeouts under load in two files this branch ⛔ touches; `@twt/admin` re-run alone
-75/75 files, 1229 tests; then the follow-ups' focused suites green (jobs live 36, API by-link 7, domain spec 26).
+75/75 files, 1229 tests; then the follow-ups' focused suites green (jobs live 36, API by-link 7, domain spec 26). **Final:** `ci:local` on
+`e762a1af` (:5433) 35/36 — `test (unit)`: ONE admin jsdom timeout under load (`helpline-claim-page.test.tsx`, ⛔ touched); `@twt/admin`
+re-run alone 75/75 files, 1229 tests.
 
 **Dismissed (34), the notable ones:** R7 admitting a skipped ping's member (the ONE caller gates on `visible()` ⇒ `'accepted'`, and the
 pre-6.27c gate `selected_member_ids` already admitted them); the code in proxy / Cloud Run access logs (R13's recorded residual); an

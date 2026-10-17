@@ -3563,6 +3563,28 @@ roster Row 33; no call to MSG91 in any test.
 > the Trustee Panel rules …"* clause and the last AC's *"only after PQ1's ruling"* are now 6-37c's. No claim-text template id (1–14)
 > is provisioned until roster Row 33 has closed AND 6-37c is `done` (`-353` decision 3).
 
+### Story 6.37c: A Reminder the Network Reports Undelivered Is Followed Up — the Same Reminder Twice More, Then a Call or a Letter — and Only Then Stops Counting as Reaching the Family `[PRIMITIVE]`
+
+> **Added 2026-10-17 (`bmad-create-story 6.37c`)** — the row `6-37c-undelivered-reminder-ladder` was split from Story 6.37b's Task 7 by
+> [`-353`](../../.decision-log.md#decision-2026-10-17-353), whose decision 1 says this entry is *"owed at its create-story"*. It builds
+> the Trustee Panel's rulings [`-350`](../../.decision-log.md#decision-2026-10-17-350), [`-351`](../../.decision-log.md#decision-2026-10-17-351)
+> and [`-352`](../../.decision-log.md#decision-2026-10-17-352) for the correction and certificate reminders. Its build decisions (LD1–LD14,
+> incl. moving the WhatsApp step and the filing agreement's new wording to a new row 6-37d) are PROPOSED for BigDev at its Task 0 — not yet
+> decided; three edge questions may go to the Panel. No claim-text template id is provisioned until roster Row 33 has closed and this row
+> is `done` (Row 32 note (9)). Full ACs: `_bmad-output/implementation-artifacts/6-37c-undelivered-reminder-ladder.md`. Not a merge fence.
+
+As a family whose claim is being chased for a correction or a death certificate, I want a reminder the phone network reports it could not
+deliver to me to be sent again, and — if nothing gets through — the District Admin to phone me or post me a letter, a phone call that reaches
+us counting as reaching us, so that my family's claim is never closed for our silence on the strength of a text that never arrived.
+
+**Acceptance Criteria (in brief):** a delivery ladder per person and chase, started only by a reported failure, kept inside the reminders'
+ratified rhythm (one message a day at 10:00, nothing past day 90 / day 180 or in a pause): the same approved reminder on day 2 and day 4
+after the failure (a scheduled day is the step), then a four-day wait; any delivered text or a recorded call that reaches the family ends
+it; otherwise the reminder is concluded not delivered — it no longer counts as reaching the person, who becomes letter-eligible on that
+date, and the District Admin is asked to call or post a letter; a claim cannot be closed for silence while a correction ladder runs; a
+PII-free call record (date, who answered, outcome) — proposed under the letter key — with a step-up number reveal; the staff views show the follow-up
+and the reason; no WhatsApp, no new family-facing text, no new DLT template; no call to MSG91 in any test.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

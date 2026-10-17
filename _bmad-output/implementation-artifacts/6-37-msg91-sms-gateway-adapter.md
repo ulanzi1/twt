@@ -7,7 +7,7 @@ PINNED: `466e9b0e` (2026-10-17 — `main` == `origin/main` after a fresh `git fe
 re-checks what moved. Built in its OWN worktree `.claude/worktrees/6-37`, branch `story/6-37-msg91-sms-gateway-adapter`
 ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]]).
 
-STATUS: `ready-for-dev` — ⚠ BUILDABLE ONLY AFTER TASK 0: MG1–MG16 below are the author's build decisions, PROPOSED with a
+STATUS: `ready-for-dev` — ⚠ BUILDABLE ONLY AFTER TASK 0: MG1–MG17 below are the author's build decisions, PROPOSED with a
 recommendation each; BigDev answers them and they are committed ALONE as one author-commit (the next free id — `2026-10-17-345` if
 written today) BEFORE any code ([[feedback_governance_commits_precede_implementation]]). ⛔ No code before AC0 is met.
 Start condition met: row 6-34 is `done` and on `main` (`-314` decision 2 — "6.34 builds FIRST"; 6.34 Sequencing: "if 6-37 is started
@@ -15,17 +15,29 @@ first it STOPS and asks").
 
 §0 GATE (the routing template's): every MG below is the AUTHOR's — which vendor API carries the texts, how a template id is stored, how a
 response is classified, when a misconfigured account holds a run (`-314` §0: "which vendor carries the texts and how a template is
-configured with it. ⛔ No word of any text, ⛔ who is texted, ⛔ when"). ⚠ TWO places it would become the Panel's, both kept OUT:
+configured with it. ⛔ No word of any text, ⛔ who is texted, ⛔ when"). ⚠ FOUR places it would become the Panel's, all kept OUT:
 (1) a delivery report that changes what counts as "reached" — `-252` cl.1 (Trustee-ratified) — ⇒ MG1 moves delivery reports to a NEW
 row 6-37b, whose create-story owns that question; (2) a provider's refusal of Devanagari or spaces in a name — already Row 30 (d) /
-`-322` C7. MG15 reads `-252` cl.1 VERBATIM and says MATCHES — but ONLY with MG5's pre-flight; if MG5 is declined, MG15 WIDENS and the
-question is the Panel's ([[feedback_panel_gate_read_ratified_verbatim]]).
+`-322` C7; (3) a HOLD — or a fail-CLOSED refusal of a deliverable text — on the correction / closure / certificate paths (`-322` §0:
+that *"would have changed WHO is texted or WHEN on the correction, closure and certificate paths … and so would have been the
+Panel's"*) ⇒ MG5 adds ⛔ hold there and FAILS OPEN on a transient AND on every reason it cannot prove stops delivery (only a malformed id, or the
+send key's own refusal under MG17 (a), ends a row) — whether a PROVEN content mismatch should refuse there is left the Panel's, ⛔ routed; (4) MG15 reads `-252` cl.1 VERBATIM and says MATCHES for every PROVEN
+fault (on 6.19b/c/d — D22's input — only those; on the holding sweeps every fault the pre-flight sees); its residual (send-side account faults — WIDER than `-323` R2's DLT causes) stays the author's ONLY while Row 32 (i)
+keeps claim-text template ids unprovisioned until 6-37b — if that leg is declined, or MG5 is, the question is the Panel's
+([[feedback_panel_gate_read_ratified_verbatim]]).
 
 GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `⚠` a hazard. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md` or `sprint-status.yaml` (newest-first files) — cite the decision id, the item's phrase, or the row key.
 
-LETTERS: F = found facts (F1–F24); MG = build decisions (MG1–MG16, PROPOSED); I = invariants; T = traps. Decision-entry letters stay the
-entry's own (`-322` C1–C9, `-323` R1–R2, `-252` cl.1–cl.3).
+LETTERS: F = found facts (F1–F25); MG = build decisions (MG1–MG17, PROPOSED); I = invariants; T = traps (T1–T14); S = Task 0.1 STOP
+conditions (S1–S4). Decision-entry letters stay the entry's own (`-322` C1–C9, `-323` R1–R2, `-252` cl.1–cl.3).
+
+VALIDATED v1.1 (2026-10-17, `bmad-create-story validate 6.37`, at `466e9b0e` == `origin/main` — ⛔ code moved since the pin). Four
+fresh-context verifiers (code claims; governance + records + id allocation; end-to-end design; MSG91's docs — docs pages ONLY, ⛔ API
+call). Applied: MG5 rebuilt (the memo cannot be "per run" — every send is a pg-boss CHILD; `sms_type` from the TEXT, ⛔ the locale —
+template 14 (en) is Unicode; 6.19b/c/d fail OPEN on a transient; `beforeSend` closes MG16 (i)); I4 and the Policy meaning corrected
+(false on three paths); MG15 split; the RN4 / RB12 / `-314` supersessions named; MG17 + S1–S4 added (the authkey's scope; the 40-char
+value cap vs the 55-char link); the tests every edit turns red named. ⚠ Every MG is still PROPOSED — ⛔ answered.
 -->
 
 # Story 6.37: The texts and login codes are actually sent — a MSG91 adapter behind the SMS seam, sending each template's NAMED values, with a pre-flight that proves the account and every template before a single text is spent `[PRIMITIVE]`
@@ -38,21 +50,25 @@ Status: ready-for-dev
 > values — ⛔ the finished text. This story replaces the client with a MSG91 client behind the SAME `SmsMessagingHandle` seam, carries each
 > template's named slot values (6.34 TV13) from the five callers down to it, sends the two OTPs through the same Flow call, and — because
 > ⭐ MSG91 answers HTTP 200 `"type":"success"` even for a FAKE authkey (F9) — adds a **pre-flight** that reads every template the process
-> will use from MSG91 (auth, existence, content, unicode) at api boot and at each jobs sweep, so a misconfigured account HOLDS the run
-> instead of recording every family as reached. It also lands the owed SMS-provider ADR (ADR-0041, `drafted`), the owed `epics.md` entry,
+> will use from MSG91 (auth, existence, content, unicode) at api boot and, in jobs, through ONE process-level memo with a TTL, so a
+> misconfigured template HOLDS the run where a hold exists and, where none does, ends the row only on a fault it can PROVE (MG5). ⚠ It reads TEMPLATES: a
+> send-side account fault (zero balance, SMS not enabled for the key, an unwhitelisted IP) is ⛔ visible to it (MG15). It also lands the owed SMS-provider ADR (ADR-0041, `drafted`), the owed `epics.md` entry,
 > a provisioning row on the go-live roster, and a NEW row `6-37b` for delivery reports. ⛔ No text's wording changes; ⛔ no template is
 > registered; ⛔ no id is provisioned; ⛔ no migration.
 
 > **What already ships and this story READS — rebuild ⛔ none of it:**
 > - `packages/channels/src/dlt-variables.ts` — `DLT_VAR`, `DltSlot {name,type,maxLength,label}` (`:69-78`), `SLOT_NAME` (`:59-60` — "the
 >   MSG91 `##name##` variable (TV13)"), `checkDltTemplateShape` (`:102-173`), `isDltCallbackNumber`.
-> - The SIX registry files (`scripts/dlt-typed-variables/lib.ts:56-63` `REGISTRY_FILES`): `otp-sms-template.ts` (templates 15/16),
+> - The SIX registry files (`scripts/dlt-typed-variables/lib.ts:56-63` `REGISTRY_FILES`): `dlt-variables.ts` itself, `otp-sms-template.ts` (templates 15/16),
 >   `sms-dlt-registry.ts` (the five DARK alert categories — TV6), `claim-correction-sms-templates.ts` (1–6),
 >   `suspicion-notice-sms-templates.ts` (7–12), `peer-mesh-sms-templates.ts` (13/14).
 > - The DLT sheet `docs/launch-gate-inventory/dlt-template-requests-6-19.md` — its *"MSG91 template"* column IS the MSG91 template text;
 >   pinned by `apps/jobs/tests/_dlt-template-sheet.ts` `msg91Form` (`:34`).
 > - The send core `apps/jobs/src/scheduler/claim-dlt-sms-send.ts` `sendClaimDltSms` (`:100-167`) and its class → outcome mapping.
 > - 6.27c's P1 `isScopeWideSendFault` (`claim-peer-mesh-requests.ts:228-231`) — `config:` / `auth:` / `dlt_template_not_approved:` STOP the child.
+> - ADR-0040's staff-email pre-flight — run ONCE in the SWEEP, children never re-check (`claim-suspicion-staff-emails.ts:137-146`,
+>   `staffEmail.preflight`) — the house shape for a provider pre-flight (MG5).
+> - `sanitizeSmsGatewayCode` (`packages/domain/src/claim/suspicion-notice.ts:159`) — the existing scrub for a gateway-supplied code.
 > - The OTP adapter `apps/api/src/modules/auth/shared/sms-step-up-delivery.ts` and the prod boot check `apps/api/src/deps.ts:209-251`.
 > - `normalizeMobile` (`packages/domain/src/encryption/member-fields.ts:92-100`; `@twt/channels` already depends on `@twt/domain`).
 
@@ -61,7 +77,7 @@ Status: ready-for-dev
 As **the Trust**,
 I want **every SMS the platform already composes — the login and step-up codes, the correction / closure / certificate texts, the
 suspicion notices and the neighbours' request — to be sent through MSG91 with each template's named values, and a misconfigured MSG91
-account or template to stop the send before anyone is recorded as reached**,
+template to hold the send where a hold exists — and a provably broken one to stop it — before anyone is recorded as reached**,
 so that **a member actually receives their login code and a family's texts reach them, and the record never says "sent" for a text MSG91
 silently refused**.
 
@@ -74,8 +90,9 @@ silently refused**.
 | `2026-10-12-322` | C1: a malformed helpline is SENT and ALARMED. C2 (iii): `DLT_VAR` / `sms.dlt.template_id.` only in `REGISTRY_FILES` (+ `apps/api/src/deps.ts`). C7: a refusal of Devanagari / spaces goes back to the Panel. *"Recorded: row 6-37's create-story owes an SMS-provider ADR (ADR-0027 / -0028 / -0040 precedent)."* | author-commit |
 | `2026-10-12-323` | R2: *"if it arrives only in an asynchronous delivery report (this repo consumes ⛔ delivery report), the send is recorded `accepted` and 6.19c's D22 `reachedBySms` counts the family REACHED … PRE-EXISTING for EVERY DLT rejection cause."* | author-commit (accepted cost) |
 | **`2026-09-27-252`** | cl.1 *"A closure may be **requested** only when, for **each** person who must be reached, ≥ 1 reminder was **accepted** by the network (or shown **delivered**, where a report exists) — **or** a posted letter has a **recorded delivery date**."* cl.3 *"PROVEN DELIVERY (option B) MAY BE BUILT IN A FUTURE VERSION. ⛔ Not now."* Consequence 3: a DLR integration *"would need its own row"*. | ⭐ **TRUSTEE-RATIFIED** |
-| `2026-10-10-302` RN4 | *"Provider-side config faults (`dlt_template_not_approved`, `auth`, `unknown`) stay FINAL `error` + alarm … the SMS gateway gives ⛔ pre-flight to tell a paused account from a bad request."* ⚠ MG5 GIVES a pre-flight — read MG5's note. | author-commit |
-| `2026-10-08-295` RB12 | a missing config never uses up a slot; the sweep checks before enqueueing. | author-commit |
+| `2026-10-10-302` RN4 | (in full) *"Provider-side config faults (`dlt_template_not_approved`, `auth`, `unknown`) stay FINAL `error` + alarm (RB12 edge (ii)) — ⛔ a held class like 6.25's RE6; the SMS gateway gives ⛔ pre-flight to tell a paused account from a bad request. Recorded as a known difference from 6.25."* Also `-302` FOUND (c): *"⛔ provider pre-flight exists"*. ⚠ MG5 makes a pre-flight-seen template fault a HELD class on the suspicion sweep ⇒ the author-commit SUPERSEDES that clause (Task 0.3). | author-commit |
+| `2026-10-08-295` RB12 | a missing config never uses up a slot; the sweep checks before enqueueing (ruled for 6.24b's suspicion sweep; 6.27c R11 MATCHES it). Accepted edge: *"a provider-side config fault (`dlt_template_not_approved`, `auth`, `unknown`) ⇒ `error`, that one slot used"* — MG5 NARROWS it. | author-commit |
+| `2026-10-09-299` RE7 / `-301` FOUND (a) (6.25) | the staff-email precedent: RE7 HOLDS a run on *"a gap, a failing pre-flight …"*; `-301` FOUND (a) restates it — *"ANY failing provider pre-flight HOLDS a run (a timed-out or throttled `GetAccount` included)"*, and a parked row's give-up credits only parked time. ⇒ a pre-flight hold on the suspicion / peer-mesh sweeps interacts with their park / give-up exactly as 6.29 RN2's park and 6.27c F5 already cover — ⛔ new mechanism. | author-commit |
 | `2026-10-16-343` / `2026-10-17-344` | 6.27c's re-claim "may have sent" residual; the Hindi lineage (Row 28 the control). | author-commit |
 | Roster Row 30 | (b) *"a real login OTP AND a step-up OTP received on a device — ⚠ ALSO waits for row 6-37's MSG91 adapter"*; (d) the providers' written answers; note (3) *"row 6-37's create-story owes an SMS-provider ADR"*. | go-live gate — ⛔ a merge fence |
 | deferred-work | *"⛔ DLT send consumes a delivery report — a rejection seen only there is recorded `accepted` …"* — *"Likely closer: row `6-37-msg91-sms-gateway-adapter`"*. | open — MG1 hands it to 6-37b |
@@ -86,28 +103,42 @@ silently refused**.
    byte-for-byte the body the caller renders through the real i18n `t()` today. The existing lockstep tests stay green UNCHANGED;
    ⛔ a `claim.json` / `common.json` / registry text edit ([[feedback_stub_must_call_not_transcribe]]).
 2. **I2 — One seam.** Every SMS still leaves through `SmsMessagingHandle.send` (`sms-app.ts:30-37`); `ChannelProvider`, `RenderedMessage`,
-   `dispatch`, `cascade`, `render` are ⛔ edited (frozen — `channels-determinism`).
+   `dispatch`, `cascade`, `render` are ⛔ edited — proven by an EMPTY `git diff --stat main -- packages/channels/src/{provider,dispatch,
+   cascade,render}.ts` (⚠ `channels-determinism` hashes RENDER output only — `determinism.test.ts:8-9` "the gate never calls `send`" — so
+   it can ⛔ see an edit to the port; it is run, but it is ⛔ the proof).
 3. **I3 — `accepted` needs `"type":"success"` AND a request id.** HTTP 200 alone is ⛔ an acceptance (F9). ⛔ Never a fabricated id.
-4. **I4 — An account / template fault never spends a once-ever slot.** It is caught by the pre-flight (a HOLD, RB12) or, if it surfaces
-   at send, classified `auth` / `dlt_template_not_approved` so 6.27c's P1 stops the child.
+4. **I4 — A template fault the pre-flight sees never spends a slot ON THE SWEEPS THAT HOLD** (suspicion, peer mesh — a HOLD, RB12 /
+   6.27c R11). A fault first seen AT SEND spends at most one slot per child there (P1 stops the peer-mesh child; a suspicion notice is
+   once per claim, ⛔ P1). ⚠ **On the correction / closure / certificate sweeps there is ⛔ hold** (T6): a PROVEN pre-flight fault
+   (MG5 — `template_id_malformed`; `auth` / `auth_or_not_found` under MG17 (a)) ends the row `error` exactly as a missing template id does
+   today ⇒ it SPENDS that day's reminder / certificate slot (a recorded day is never caught up — `claim-correction-reminders.ts:1155-1176`,
+   CR8 `claim-certificate-reminders.ts:590-591`) and LOSES that closure notice for good (`claim-correction-closure.ts:389` calls `complete()` ⇒ `completeClosureNoticeIfDone`, `packages/domain/src/claim/correction-closure-jobs.ts:317`). That is ⛔ new behaviour (a missing id does
+   it today) and it is TRUE: under F9 the same text would otherwise be recorded `accepted` and never arrive. ⭐ A transient pre-flight
+   or an UNPROVEN reason there fails OPEN (MG5) — a text that might be delivered is never refused there. BigDev accepts the closure-notice cost at 0.2.
 5. **I5 — The stored detail grammar is untouched.** Every new detail fits the existing classes and `[A-Za-z0-9_.-]{1,64}` without a run of
    7 digits (0155 / 0166 CHECKs, `SUSPICION_NOTICE_SMS_ERROR_CLASSES`, `PEER_MESH_REQUEST_DETAIL_PATTERN`) ⇒ ⛔ migration. Pre-flight
    codes are ALARM codes only, ⛔ stored (the 6.27c R11 precedent).
 6. **I6 — No secret, number or text in a log, alarm, detail or error message** (the authkey, the recipient, a value, the body). Alarms
-   name the template's config key and the class only.
+   name the template's config key and the class only. ⚠ The 6.19b/c/d paths store `result.detail` RAW into unchecked `text` columns
+   (`claim-correction-reminders.ts:428-432`, `claim-correction-closure.ts:384-389`, `claim-certificate-reminders.ts:675-683`) ⇒ the
+   client passes any gateway-supplied `code` through `sanitizeSmsGatewayCode` before it enters a detail.
 7. **I7 — Tests never touch MSG91.** Every test injects `fetch`; ⛔ a network call, ⛔ a "smoke test" against `control.msg91.com` (T1).
 
 ## 📜 Policy meaning (AI-10-1)
 
-**This story introduces ⛔ no predicate and changes ⛔ none that gates a member's access to a benefit.** It changes which vendor API
-carries texts the platform already composes, and adds a configuration check that HOLDS a send while the SMS account or a template is
-broken. In the member's terms: *"the login codes and texts the Trust sends you say exactly what they said before; they now actually reach
-your phone through MSG91; and if the Trust's SMS account is broken, your text waits for the next run instead of being marked as sent."*
-⚠ Where a sweep already holds (the suspicion notices, the neighbours' request), the hold delays a text; it ⛔ changes who is texted or
-which text — RB12's existing hold, applied to one more config fault. On the correction, closure and certificate paths ⛔ hold is added:
-a broken template ends that reminder exactly as a missing template id does today (MG5 ⚠⚠).
-Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendors) — and it is ⛔ not ratified
-([[feedback_niyamavali_rulebook_not_spec]]).
+**This story introduces ⛔ predicate and changes ⛔ predicate's DEFINITION — but it changes the TRUTH of one INPUT of a predicate that
+gates a family's benefit**: 6.19c D22's `reachedBySms`, the input of the Trustee-ratified `-252` closure-for-silence, counts `accepted`
+sends. Under F9 a text through a broken MSG91 template would be recorded `accepted` and never arrive; with MG5 a PROVEN fault (a malformed
+template id; the send key refused, MG17 (a)) is recorded `error`.
+In the family's terms: ⭐ *"a text the Trust's SMS account could not have delivered is no longer counted as having reached you — so your
+claim can ⛔ be closed for your silence on the strength of a text you never got."* That MATCHES `-252` cl.1 (*"accepted by the network"*)
+— it removes false positives, it adds none (MG15 states the residual it does NOT remove). ⚠ It is ⛔ "your text waits" on every path:
+on the suspicion and neighbours' sweeps a broken template HOLDS the run (the text waits for a later run); on the correction, closure and
+certificate sweeps there is ⛔ hold, so a PROVEN broken template id or key ends that day's reminder — or the closure notice, for good —
+as ⛔ sent (I4). Anything the Trust cannot prove undeliverable there (a template-API outage, a content or DLT-id doubt) refuses ⛔ text:
+it is alarmed and sent (fails open). The login and texts' WORDS are unchanged (I1).
+Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendors or to how a reminder is proven sent) — and it is
+⛔ ratified ([[feedback_niyamavali_rulebook_not_spec]]).
 
 ## ⭐ FOUND FACTS (at `466e9b0e`; MSG91's docs fetched 2026-10-17 — re-check at Task 0.1)
 
@@ -116,7 +147,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
   (`:136-145`); `Authorization: Bearer` (`:201-208`); `extractMessageId` wants `messageId` (`:166-180`). ⇒ against MSG91 every success
   would throw "no messageId" and be classified `unknown`. ⛔ No timeout anywhere in `packages/channels/src` (no `AbortSignal`).
 - **F2** — `sms-errors.ts:27-46` code sets are placeholders: *"⚠ CODES ARE INDICATIVE, VERIFY AT IMPLEMENT TIME"* (`:9-13`).
-- **F3** — `createSmsDltProvider({messaging, dltTemplateId})` (`sms-dlt.ts:53`) maps `rendered.body` into the message (`:46-53`); the frozen
+- **F3** — `createSmsDltProvider({messaging, dltTemplateId})` (`sms-dlt.ts:53`) maps `rendered.body` into the message (`buildGatewayMessage`, `:41-49`); the frozen
   `RenderedMessage` carries only title / body / deepLink (`provider.ts:31-48`) ⇒ ⛔ room for variables in the port.
 - **F4** — `sendClaimDltSms` takes `render: (helpline) => string` (`claim-dlt-sms-send.ts:100-110`) — the values are closed over at the
   callers and ⛔ reach the transport. It builds the provider PER SEND (`:142`) ⇒ values can be bound in `SmsProviderDeps` per send without
@@ -145,9 +176,18 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
   of the account or the template.
 - **F10** — Flow v5: `POST https://control.msg91.com/api/v5/flow`; headers `authkey`, `content-type: application/json`,
   `accept: application/json`; body `{template_id, short_url, short_url_expiry?, realTimeResponse?, recipients:[{mobiles:"91XXXXXXXXXX",
-  <name>: value}]}`. The id field is `template_id` (the legacy doc / SDK say `flow_id` — 6.34 Debug Log (c) ANSWERED: `template_id`).
+  <name>: value}]}`. The id field is `template_id` (the legacy doc / SDK say `flow_id`; 6.34 Debug Log (c) only RAISED it — this story's docs read,
+  2026-10-17, answers `template_id`). `short_url` is a STRING (`"0"` / `"1"`); `mobiles` *"with country code"*, ⛔ `+`. Success body
+  (module.json): `{"message":"5e1e93cad6fc054d8e759a5b","type":"success"}`; every documented request id is 24 lower-case hex, ⛔ stated
+  as a rule ⇒ I3's ≤ 64 `[A-Za-z0-9]` cap stays (⛔ tighten it to 24).
 - **F11** — Variable names are case-sensitive and equal the `##name##` in the MSG91 template; values are limited to 40 characters by DLT
-  ("for English and Unicode both"). Unicode is a property of the TEMPLATE (`smsType` NORMAL / UNICODE at creation), ⛔ a Flow field.
+  ("for English and Unicode both" — the DLT FAQ, stated for variables generally). ⚠ The peer-mesh `link` slot is `url`, ceiling 120
+  (`DLT_TYPE_MAX_LENGTH.url`), and the sheet's typical link is **55** characters (`https://` + domain + `/peer-request?c=` + 12) — whether
+  MSG91 / DLT caps a `#url#` value at 40 is ⛔ documented (S2). Every other slot fits 40 (member ≤ 40, date 10, reference 8, helpline ≤ 14,
+  otp 6). Unicode is a property of the TEMPLATE (`smsType` NORMAL / UNICODE at creation), ⛔ a Flow field — and of the TEXT, ⛔ the
+  locale: template 14 (en) holds an em dash (U+2014, `peer-mesh-sms-templates.ts:96`) and the sheet already records *"⚠ BOTH are
+  Unicode"* (`dlt-template-requests-6-19.md:240-241`). ⚠ The same DLT FAQ says *"1-2 variables are allowed in one Content Template"* —
+  templates 11–14 carry three; probably stale and ⛔ ours to rule — a Row 30 (d) annotation (Task 0.4).
 - **F12** — Sender id and DLT TE id live ON the MSG91 template (`addTemplate` takes `sender_id`, `dlt_template_id`); ⛔ in the request.
 - **F13** — `short_url: "1"` makes MSG91 rewrite URLs in the text to its own short domain ⇒ 6.30's whitelisted
   `https://<domain>/peer-request?` would ⛔ be what the operator sees (Row 29 (f)) and the app link would ⛔ open the app.
@@ -158,18 +198,27 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
   within 10 s (*"The first SMS will be delivered and the second will be rejected"*) · 400 template id missing / incorrect / archived · 401
   flow not approved · 402 hard-block keywords · 403 flow disabled · 418 IP not whitelisted · 421 service terminated · 506 / 601 internal ·
   603 sender blacklisted · 604 no valid number. Other shapes: HTTP 401 `{"message":"Auth Key missing","type":"error"}`; HTTP 200
-  `{"message":"The provided flow ID or template ID is invalid.","type":"error"}`.
+  `{"message":"The provided flow ID or template ID is invalid.","type":"error"}` — ⚠ both are documented as **SendOTP** samples
+  (`otp/module.json`); for Flow they rest on this story's T1 probe. Sibling v5 endpoints carry `code` as a **STRING** (`"code":"201"`);
+  whether a Flow send EVER returns a `code` synchronously is ⛔ documented (F9: only with `realTimeResponse`, on a second call). Codes the
+  first pass omitted: 101 (missing mobile), 209 / 210 (route ⛔ found / ⛔ determined), 407 (international blocked), 602 (route
+  disabled); 429 is documented (panel-only today — *"API integrations remain unaffected"*).
 - **F16** — ⭐ A read-only template endpoint EXISTS: `POST https://control.msg91.com/api/v5/sms/getTemplateVersions` `{template_id}` →
-  `data.data[]` of versions with `template_data`, `DLT_ID`, `sender_id`, `status`, `active_status`, `sms_type`, `dlt_verified`,
+  the body's `data[]` of versions with `template_data`, `DLT_ID`, `sender_id`, `status`, `active_status`, `sms_type`, `dlt_verified`,
   `dlt_reason`, `reject_reason`; HTTP 401 `{"status":"fail","hasError":true,"errors":"Unauthorized","code":"401"}` with no authkey; HTTP
   200 `{"status":"error","hasError":true,"errors":"Template content type could not be fetched"}` for *"Authkey invalid/template ID
-  invalid"* (⛔ distinguishable). ⚠ The MEANING of `status` / `active_status` / `dlt_verified` values and which version is the default
+  invalid"* (⛔ distinguishable ⇒ ONE reason, `auth_or_not_found`). The sample version reads `"status":"1"`, `"active_status":"1"`,
+  `"sms_type":"NORMAL"`, `"dlt_verified":"10"` — STRINGS, while `addTemplateVersion` returns `dlt_verified: 0` (a number) ⇒ compare
+  type-tolerantly. `sender_id` / `DLT_ID` can differ PER VERSION. The panel's *"mark the latest version active by the Mark default
+  option"* + a `markActive` endpoint ⇒ `active_status` very likely marks the default (INFERENCE). *"Failed by DLT and Approved by MSG91 …
+  sent on international numbers and not on Indian numbers"* ⇒ `dlt_verified` is the likely DLT signal. ⛔ Documented: whether an authkey
+  whose rule allows SMS only may call this endpoint, and whether IP security applies to it (S3). ⚠ The MEANING of `status` / `active_status` / `dlt_verified` values and which version is the default
   is ⛔ documented (UNVERIFIED — Task 0.1).
 - **F17** — SendOTP v5 (`/api/v5/otp?template_id=&mobile=&otp=`) accepts our own code; the template must hold `##OTP##` (upper case);
   MSG91 recommends it (voice backup, "processed … in less than half a second"); its retry endpoint defaults to VOICE. ⚠ It too answered
   `type:"success"` to a fake authkey (F9).
 - **F18** — Delivery reports: a panel-configured webhook only (⛔ a per-request callback), JSON, one payload per recipient, keyed by
-  `requestId` (= Flow's `message`) + `telNum`; ⛔ signature — static custom headers only; retries 4 or 5 (the docs disagree); DLT
+  `requestId` (= Flow's `message`) + `telNum`; ⛔ signature — static custom headers only; up to 5 retries (30 s … 30 min — the auto-pause page); DLT
   scrubbing failures arrive ONLY here (`failureReason` "DLT Scrubbing Failed", "Template not matched on DLT", …). ⇒ 6-37b's territory.
 - **F19** — ⛔ idempotency key (`CRQID` / `UUID` are echo-back metadata); the only dedupe is 311's 10 s window. ⛔ sandbox (a DEMO account
   REPLACES the content). Authkeys can be multiple, each with a service RULE and IP security (ON by default; 418 when the IP is not
@@ -183,232 +232,423 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
 - **F22** — The stored detail CHECKs (0155 suspicion, 0166 peer mesh) allow the gateway arm
   `(invalid_number|carrier_reject|rate_limited|api_unavailable|dlt_template_not_approved|auth|unknown):[A-Za-z0-9_.-]{1,64}` and an
   ENUMERATED `config:` arm (`dlt_template_id_missing|helpline_number_missing|sms_gateway_unconfigured|sms_messaging_unavailable|
-  secret_manager_…`). A new class or `config:` word ⇒ a migration + two TS mirrors. 0128 / 0138 / 0151 have ⛔ such CHECK.
+  secret_manager_…`). A new class or `config:` word ⇒ a migration + two TS mirrors. 0128 (reminders + closure notices) / 0138
+  (certificates) have ⛔ such CHECK — their details are stored RAW (I6); 0151's table carries 0155's.
 - **F23** — ⛔ ADR covers SMS; next free number ADR-0041. `docs/knowledge-transfer/adr-index.md` holds reserved slots
   `ADR-NNNN-otp-channel-primary` (`:169`) and `ADR-NNNN-channel-provider-selection` (`:170`); the push / WA slots were never flipped when
   ADR-0027 / -0028 landed. ADR-0040 (staff email, `drafted`) is the closest shape; the index's breakdown is reconciled in the SAME commit.
 - **F24** — epics.md: Epic 6 ends at the `---` before `## Epic 7` (`:3511`); the last entry is 6.36 (`:3485`). Roster: next free row 32;
-  Row 24 `staff-email-transport` is the transport-row precedent.
+  Row 24 `staff-email-transport` is the transport-row precedent — owner *"Trustee Panel (gate — (a), (f))"*; its (c) counsel leg and (e)
+  *"an alarm of the sweep reaches a NAMED person through a real transport"* (MG14).
+- **F25 — the deployment.** Dokploy compose (`infra/dokploy/compose.yaml`), ⛔ Cloud Run: `restart: unless-stopped` on every service (`:15`,
+  `:35`, `:41`, `:55`) ⇒ an api that refuses to start is a RESTART LOOP (each restart re-runs the boot pre-flight against MSG91). The same
+  file is imported into BOTH the staging and prod projects with `NODE_ENV: production` for api and jobs (`:17`, `:45`) ⇒ staging runs the
+  production SMS path. It carries ⛔ `SMS_GATEWAY_*` line at all (6.30's `APP_LINKS_BASE_URL: ${APP_LINKS_BASE_URL}` `:51` is the
+  dev-wires / operator-applies precedent). Jobs wires ⛔ `onAlarm` to a person (deferred: *"The helpline warning reaches the logs only"*)
+  ⇒ a HELD run is silent but for the logs.
 
-## ⚖️ Build decisions MG1–MG16 (⏳ PROPOSED — BigDev answers at Task 0.2; committed ALONE at Task 0.3)
+## ⚖️ Build decisions MG1–MG17 (⏳ PROPOSED — BigDev answers at Task 0.2; committed ALONE at Task 0.3)
 
 - **MG1 — Split delivery reports into a NEW row `6-37b-msg91-delivery-reports`.** (a) ⭐ **Recommended:** 6.37 = the adapter, the named
   values, the pre-flight, the boot checks, the ADR; 6-37b = MSG91's webhook (persist-then-ack, static-header auth — F18 has ⛔ signature),
   an inbound table, correlation by request id + recipient, delivery state on the five send tables (⚠ 0166's finished-row trigger freezes
   peer-mesh delivery columns; `delivered_at` exists on 0128 / 0138 but is ⛔ granted), the OTP's gateway id in its audit, and the
   `-252` question (does a reported FAILURE stop a send counting as reached? — the Panel's). Cost: `-314` decision 2's "delivery-report
-  correlation" moves to another row; the deferred delivery-report item's trigger ("before any claim-text template id is provisioned")
-  now names 6-37b. (b) All in 6.37 — a webhook route, a migration and a Panel question inside the adapter; the OTP device proof
-  (Row 30 (b)) would wait on all of it.
+  correlation" moves to another row — a PARTIAL SUPERSESSION of `-314` decision 2, named as such in the author-commit (Task 0.3); the
+  deferred delivery-report item's trigger ("before any claim-text template id is provisioned") now names 6-37b, and so do the two
+  at-least-once items whose trigger is *"a gateway idempotency key or a delivery-receipt (DLR) seam"* (*"At-least-once SMS (inherited
+  from 6.19b)"*, *"⚠ At-least-once family SMS"*) — ⛔ closed. (b) All in 6.37 — a webhook route, a migration and a Panel question inside
+  the adapter; the OTP device proof (Row 30 (b)) would wait on all of it.
 - **MG2 — The OTPs go through Flow, ⛔ SendOTP.** (a) ⭐ **Recommended:** Flow v5 with templates 15 / 16 and the variable `otp` — one code
   path, one classifier, TV13's lower-case name kept, our code generated and verified by us (architecture §2.2's security floor unchanged),
   ⛔ voice retry (voice OTP is its own ADR — architecture §2.2). Cost: MSG91's OTP-route speed claim forgone (UNVERIFIED for Flow — the
-  Row 30 (b) device proof measures it). (b) SendOTP v5 with `otp=<ours>` — a second client and response shape; the template must say
-  `##OTP##`, breaking TV13's `^[a-z]…` and the sheet's `##otp##`; F17's false positive is the same.
+  Row 30 (b) device proof measures it). (b) SendOTP v5 with `otp=<ours>` — a second client and response shape (its success field is
+  `request_id`, ⛔ `message`); the template must say `##OTP##`, breaking TV13's `^[a-z]…` and the sheet's `##otp##`; F17's false positive
+  is the same, and SendOTP recognises only templates made in its own OTP section.
 - **MG3 — Named values travel down the seam; the body stays as the oracle.** `SmsGatewayMessage` becomes `{to, templateId, values, body}`
   — `values: ReadonlyArray<{name, value}>` in slot order, `body` the caller's rendered text (⛔ sent, ⛔ logged — kept so every existing
   fake and live assertion keeps its oracle). `SmsProviderDeps` gains `values` (bound per send — F4). `sendClaimDltSms` gains
-  `template: {text, slots}` and `values: (helpline) => Record<name, string>` beside `render`, and BEFORE the network checks (i) the value
-  names equal the slot names exactly and (ii) `substituteDltValues(text, slots, values) === render(helpline)` — a failure is final
-  `error` `dlt_template_not_approved:values_mismatch` + alarm (scope-wide ⇒ P1 stops; I1 as a runtime guard, because F9 means a mismatch
-  would otherwise be recorded `accepted`). `substituteDltValues` and `toGatewayTemplate(text, slots, (n) => '##'+n+'##')` live in
+  `template: {text, slots}` and `values: (helpline) => Record<name, string>` beside `render`; each caller's builder closes over the SAME
+  locals its `render` uses (`member`, `link`, `date` = `formatAppealUntil(...)`, `reference` — all computed before `render` today; ⛔ a
+  second formatting). BEFORE the network the core checks, synchronously: (i) the value names equal the slot names exactly; (ii) every
+  value's length ≤ its slot's `maxLength` AND ≤ the vendor's per-variable cap once S2 settles it; (iii) `substituteDltValues(text, slots,
+  values) === render(helpline)`. A failure is final `error` `dlt_template_not_approved:values_mismatch` (or `:value_too_long`) + alarm
+  (scope-wide ⇒ P1 stops the peer-mesh child; on the other four paths a per-row final). I1 as a runtime guard, because F9 means a mismatch
+  would otherwise be recorded `accepted`. `substituteDltValues` (FUNCTION-form replacement, left-to-right, never re-scanned — a value
+  holding `$&` / `$'` / `{#var#}` / `##x##` is inserted literally) and `toGatewayTemplate(text, slots, (n) => '##'+n+'##')` live in
   `dlt-variables.ts` (a registry file — F21). ⭐ Recommended. Alternative: drop `body` — touches every fake for ⛔ gain.
 - **MG4 — Template ids: the EXISTING keys hold MSG91's id.** (a) ⭐ **Recommended:** `sms.dlt.template_id.<…>` (all 16) holds MSG91's 24-hex
   template id; the DLT TE id lives on MSG91's template (F12) and is recorded in the panel and on Row 32. ⛔ key, registry, gate or Row 30
-  wording changes. Cost: the key's name says "dlt" for a gateway id — stated in each registry header and the ADR. (b) A sibling
-  `sms.msg91.template_id.<…>` per template — 16 new keys, a gate extension, the DLT keys unused by code.
+  wording changes (Row 30 gains dated annotations only — Task 0.4). Cost: the key's name says "dlt" for a gateway id — stated in each
+  registry header and the ADR; and ⚠ EVERY test fixture id changes (`'TPL-1'`, `'TPL-123'`, `'TPL-CERT'`, `'TPL-SUSPICION'`, `'TPL-PEER'`,
+  the api's `'TRAI::sms.dlt.template_id.otp_login'` echo) to a 24-hex string — the api tests keep their NAME→value proof through a per-key
+  map of distinct hex ids (Tasks 4 / 5). (b) A sibling `sms.msg91.template_id.<…>` per template — 16 new keys, a gate extension, the DLT
+  keys unused by code.
   A value that is ⛔ `^[0-9a-fA-F]{24}$` (e.g. a 19-digit DLT TE id pasted by mistake) is caught by the pre-flight / boot check, and at send
   is final `dlt_template_not_approved:template_id_malformed` (I5 — ⛔ a new `config:` word).
-- **MG5 — ⭐⭐ The pre-flight (the answer to F9).** `checkMsg91Template(client, {text, slots, locale}, templateId)` calls
-  `getTemplateVersions` and requires: an authorised response; a version whose `template_data` equals `toGatewayTemplate(text, slots)`
-  (byte-for-byte after CRLF → LF; ⚠ which version is the DEFAULT is UNVERIFIED — Task 0.1 settles it; until then ANY version matching
-  and ⛔ one marked inactive); `sms_type` = `UNICODE` for `hi`, `NORMAL` for `en`; `DLT_ID` non-empty. `status` / `active_status` /
-  `dlt_verified` / `dlt_reason` / `reject_reason` are LOGGED (⛔ values gating) until their meaning is confirmed (Row 32 (d)).
-  Where: **api** — at prod boot for templates 15 / 16 (with `buildMemberStepUpDelivery`). **jobs** — ONE memo per run
-  (`ClaimDltSmsDeps.preflight(templateId, entry)`, built by each sweep, one MSG91 call per template per run), consulted in TWO places:
-  (1) **inside the send core** after the id resolves, for EVERY caller — a fault is the SAME kind of final today's missing id is
-  (`error` + alarm): `auth:preflight` or `dlt_template_not_approved:preflight_<reason>`; a transport fault is transient
-  `api_unavailable:preflight` (I5 — existing classes, ⛔ `config:` word); (2) **in the sweeps that ALREADY hold** — 6.29's
-  `purposeConfigGap` (`claim-suspicion-notices.ts:123`) and 6.27c's `globalConfigGap` / `pariwarConfig` (`claim-peer-mesh-requests.ts:168`;
-  ⚠ `globalConfigGap` is synchronous today — it becomes async) — a fault HOLDS the run before any row is claimed (⛔ slot used, RB12) with
-  an alarm `config:sms_preflight_<reason>:<configKey>` (alarm-only, ⛔ stored — the R11 precedent).
-  ⚠⚠ The 6.19b / 6.19c / 6.19d sweeps (correction reminder, closure notice, certificate reminder) have ⛔ hold path — a config fault there
-  is a per-row final `error` + alarm TODAY (`config:dlt_template_id_missing`). Giving them a hold would change WHEN those families are
-  texted — the input of D22 / the Trustee-ratified `-252` — which `-322` §0 calls the Panel's. ⇒ they get (1) ONLY: a broken template
-  ends each row exactly as a missing template id does today (⛔ new behaviour, only a new cause). ⭐ Recommended.
-  api outcome: an auth / not-found / content / unicode / malformed-id fault ⇒ REFUSES TO START (the same class as a blank id today); a
-  transport failure / 5xx / timeout ⇒ starts with an error log (⛔ couple login availability to MSG91's template API).
-  Cost: one extra MSG91 call per template per run; a broken template stops EVERY text of that template until fixed — the point. ⚠ RN4 (`-302`) said "the SMS gateway gives ⛔ pre-flight" — this ADDS one;
-  RN4's finals are ⛔ changed (a fault at send is still final + alarm); the decision entry says so ([[feedback_supersede_never_reinterpret]]).
-  Residual (MG15): a fault arising AFTER the pre-flight (a key disabled, balance exhausted mid-run) ⇒ `success` ⇒ `accepted` — 6-37b's.
+- **MG5 — ⭐⭐ The pre-flight (the answer to F9).** **What it checks.** `checkMsg91Template(client, {text, slots}, templateId)` calls
+  `getTemplateVersions` and passes iff: an authorised response; the version with `active_status` `"1"` (type-tolerant; UNVERIFIED meaning —
+  S1) has `template_data` equal to `toGatewayTemplate(text, slots)` after canonicalisation (NFC, CRLF → LF, trailing whitespace trimmed);
+  its `sms_type` is `UNICODE` iff the TEXT holds any character outside GSM-7 (⛔ the locale — template 14 (en) is Unicode, F11), else
+  `NORMAL`; its `DLT_ID` is non-empty. Other versions, `sender_id`, `status`, `dlt_verified`, `dlt_reason`, `reject_reason` are LOGGED, ⛔
+  gating, until Row 32 (d) records their meaning (⚠ if S1 finds ⛔ active marker, fall back to "ANY version matching" and say so in the
+  ADR). Reasons: `auth_or_not_found` (the indistinguishable 200 `status:error` shape — F16), `auth` (HTTP 401), `content_mismatch`,
+  `sms_type_needs_unicode` (the text needs UNICODE, the template is NORMAL — a fault), `dlt_id_missing`, `template_id_malformed` (⛔ call
+  made); a 5xx / network / timeout (MG9's bound) ⇒ `transient`. `sms_type_unicode_for_gsm7` (a GSM-7 text on a UNICODE template — it
+  still delivers) is a LOGGED observation on a PASS, ⛔ a fault on any path.
+  **Where it is held (the memo).** ⚠ Every jobs send runs in a pg-boss CHILD (the five `boss.send` enqueues) with the boot-time
+  `claimCorrectionDeps` (`boot.ts:602-612`) ⇒ a "per-sweep-run" memo cannot reach the core. ⇒ ONE process-level `Msg91PreflightMemo`,
+  built in `apps/jobs/src/boot.ts` and placed on `ClaimDltSmsDeps` (OPTIONAL — every existing fake stays valid): keyed by template id;
+  concurrent misses share ONE in-flight call; a PASS is cached for a TTL (⭐ recommended 1 h — BigDev at 0.2); a definite FAULT for a
+  short TTL (⭐ 5 min — so a fixed template is seen by the next run; on the daily suspicion / peer-mesh sweeps that is the next day's run, so the
+  fault TTL matters within one run and on 6.19b/c/d); a TRANSIENT is ⛔ cached — on the re-check of an
+  EXPIRED pass it returns that stale PASS for at most ONE more TTL (then it is a transient: held / fail-open as below). The api builds its own memo for 15 / 16.
+  **jobs — the sweeps that ALREADY hold (suspicion, peer mesh).** The pre-flight joins the EXISTING gap checks as ONE more config fault
+  (RB12 / 6.27c R11): 6.29's `purposeConfigGap` (`claim-suspicion-notices.ts:123`, each locale `LOCALES_OF[purpose]` lists — one or two, `:93-97`; its `configSet` `:111-120` likewise returns only set / missing / fault today ⇒ it too gains the resolved id) and 6.27c's
+  `pariwarConfig` (`claim-peer-mesh-requests.ts:198-216` — AFTER the template id resolves; `configSet` returns only set / missing / fault
+  today ⇒ it gains the resolved id; ⛔ `globalConfigGap`, which would make a broken `en` template hold Hindi Pariwars). A fault HOLDS the run
+  before any row is claimed (⛔ slot used) with an alarm `config:sms_preflight_<reason>:<configKey>` (alarm-only, ⛔ stored — the R11
+  precedent); the child repeats it as its race guard (a memo hit). A TRANSIENT with ⛔ cached pass also HOLDS here (the held class, as
+  6.25's `-299` RE7 holds a timed-out `GetAccount` — restated in `-301` FOUND (a)) — the park / give-up covers it unchanged (6.29 RN2, 6.27c F5).
+  ⚠ These sweeps also HOLD on the UNPROVEN reasons (`content_mismatch`, `dlt_id_missing`, `sms_type_needs_unicode`) — the safe direction
+  (it delays, never records reached), and the author's: `-322` §0's Panel reservation names only the correction, closure and
+  certificate paths. Accepted cost (BigDev at 0.2): a false positive delays a once-ever suspicion notice while its appeal date runs;
+  Row 32 (h) is the control. Suspicion's two-locale purpose (`refusal_appeal_notice`) inherits RB12's existing shape — a broken `en`
+  template holds Hindi appeal notices too, as a missing `en` id already does.
+  **jobs — inside the core, for EVERY caller.** MG4's local malformed-id check runs FIRST (before the memo) ⇒
+  `dlt_template_not_approved:template_id_malformed` (⛔ `preflight_`). Then, after the id resolves, the core reads the memo: a PROVEN fault
+  (`auth` / `auth_or_not_found` under MG17 (a)) is the same kind of final today's missing id is (`error` + alarm) on EVERY caller —
+  `auth:preflight`; an UNPROVEN one (`content_mismatch`, `dlt_id_missing`, `sms_type_needs_unicode` ⇒
+  `dlt_template_not_approved:preflight_<reason>`) is a final on the suspicion / peer-mesh children (their race guard already held — this
+  is the in-flight race) and ALARMED-and-sent on 6.19b/c/d. Under MG17 (b), `auth` / `auth_or_not_found` (from the read key) join the
+  UNPROVEN list (detail `dlt_template_not_approved:preflight_<reason>`). A TRANSIENT with ⛔ usable pass in the core: sent with a warning
+  ONLY when `preflightFailOpen`; on the holding children it returns `{kind:'transient', detail:'api_unavailable:preflight'}` (pg-boss
+  retries — the in-flight race, mirroring the sweep's hold). ⚠ The core never alarms or logs (`claim-dlt-sms-send.ts:9`) ⇒ a fail-open send returns
+  `accepted` with an optional `preflightWarning: '<class>:<reason>'` (the `helplineNotCallbackNumber` precedent) and each 6.19b/c/d
+  caller alarms it through its existing sink beside its `helplineNotCallbackNumberWarning` line — ⛔ an `onAlarm` in the core. The core
+  takes `preflightFailOpen: boolean`; `sendClaimCorrectionSms`
+  (`claim-correction-reminders.ts:210-231`, the wrapper the three 6.19b/c/d paths call) sets it `true` and its deps `Pick<…>` gains the
+  memo field (I5 — existing classes, ⛔ `config:` word). ⚠⚠ On the 6.19b / 6.19c / 6.19d paths (correction reminder, closure notice,
+  certificate reminder) there is ⛔ hold (T6): a PROVEN fault ends the row — that day's slot, or the closure notice for good (I4). Giving them a hold would change WHEN those families are texted —
+  the input of D22 / the Trustee-ratified `-252` — which `-322` §0 calls the Panel's ⇒ ⛔ hold is added. ⭐ And a TRANSIENT there FAILS
+  OPEN: the send proceeds (the caller alarms `preflightWarning` `api_unavailable:preflight`, ⛔ an outcome change) — refusing a deliverable text for a
+  template-API blip would be exactly the "fail closed" `-322` §0 (option (a)) says is the Panel's. ⭐ The same test governs every REASON
+  there: **only a reason MG5 can PROVE stops delivery ends a row** — `template_id_malformed` always; `auth` / `auth_or_not_found` only
+  under MG17 (a) (the pre-flight used the SEND key itself; under MG17 (b) a read-key refusal proves nothing about the send key). Every
+  other reason (`content_mismatch`, `dlt_id_missing`, `sms_type_needs_unicode`) is ALARMED and the send PROCEEDS there — its meaning rests
+  on S1 (MSG91's stored `template_data` form, the status fields) and on Row 32 (e)'s first real response, both unsettled; and even a REAL
+  content mismatch means MSG91 would deliver OTHER words (an I1 breach), ⛔ that nothing is delivered. Whether a PROVEN content mismatch
+  should then refuse on these paths is `-322` §0's option (a) ⇒ the Panel's: recorded as a residual (MG15), ⛔ routed by this story. `sms_type_unicode_for_gsm7` (a GSM-7 text on a UNICODE template — it still delivers) is LOGGED on EVERY
+  path, ⛔ a fault and ⛔ a hold anywhere.
+  **api.** At prod boot for templates 15 / 16 (with `buildMemberStepUpDelivery`, async and awaited in `createDeps` — `deps.ts:309`):
+  `auth` / `auth_or_not_found` (under MG17 (a) — from the send key; under MG17 (b) a read-key refusal STARTS with an error log and only
+  a blank read-key secret name refuses) / `template_id_malformed` ⇒ REFUSES TO START (the same class as a blank id today — ⚠ under F25 a restart
+  loop, and ⛔ only login: every api route); `content_mismatch` / `sms_type_needs_unicode` / `dlt_id_missing` ⇒ STARTS with an error log — alarm-only IN
+  THIS STORY (the canonicalisation is UNVERIFIED against MSG91's stored `template_data` — S1); Task 7's deferred item makes it blocking
+  in a LATER change once Row 32 (e) AND S1 are settled, re-weighing T13 (⛔ code reads a roster row); a transport
+  failure / 5xx / timeout ⇒ starts with an error log (⛔ couple login availability to MSG91's template API). ⭐ At RUNTIME the api memo
+  is ADVISORY: a fault or transient on an expired / re-checked entry is logged (alarm) and the code is STILL sent — ⛔ a login is ever
+  refused by the pre-flight after boot; the re-check runs OFF the request path (fire-and-forget, ⛔ awaited by `deliver`), so it adds
+  ⛔ latency to the 10 s bound. `buildMemberStepUpDelivery` takes an injectable fetch / client so ⛔ test reaches MSG91 (AC11).
+  Cost: one MSG91 call per template per TTL per process (two processes in a deploy overlap ⇒ two); a broken template stops EVERY text
+  of that template until fixed — the point. Supersessions (Task 0.3, ⛔ edits — [[feedback_supersede_never_reinterpret]]): it SUPERSEDES
+  `-302` RN4's *"⛔ a held class like 6.25's RE6; the SMS gateway gives ⛔ pre-flight"* and `-302` FOUND (c)'s *"⛔ provider pre-flight
+  exists"* for faults the pre-flight sees (RN4's at-send finals stand); it NARROWS `-295` RB12's accepted edge *"a provider-side config
+  fault ⇒ `error`, that one slot used"* on the sweeps that hold. ⚠ It reads TEMPLATES, ⛔ the account's ability to SEND (MG15, S3).
 - **MG6 — Classify on `type`, ⛔ HTTP status alone.** `accepted` ⇔ HTTP 2xx AND `type === "success"` AND `message` a non-empty string ≤ 64
-  of `[A-Za-z0-9]` (I3). `type === "error"` ⇒ by `code` (MG7) when present; else by HTTP status (401 / 403 → `auth`, 429 →
-  `rate_limited`, 5xx → `api_unavailable`); else by the two documented sync messages (F15: "Auth Key missing" → `auth:authkey_missing`;
-  "flow ID or template ID is invalid" → `dlt_template_not_approved:template_invalid`); else `unknown:msg91_error`. A 2xx with neither
-  type ⇒ `unknown:no_type`. ⛔ `realTimeResponse` (F9 — the error only on a second identical send). ⭐ Recommended.
-- **MG7 — The code table (data-driven, replaces F2's placeholders).** `auth`: 201, 204, 207, 208, 301, 302, 303, 418, 421 (⚠ `auth` now
-  means "the gateway ACCOUNT refuses" — balance and IP included, so P1 stops on them — stated in `sms-errors.ts` and the ADR);
-  `dlt_template_not_approved`: 203, 211, 310, 400, 401, 402, 403, 603; `invalid_number`: 202, 604; `api_unavailable`: 306, 506, 601;
-  `unknown`: 311 (⚠ "the first SMS will be delivered" — a may-have-sent final + alarm) and every unlisted code. Detail = `<class>:<code>`
-  (I5). ⭐ Recommended.
+  of `[A-Za-z0-9]` (I3). `type === "error"` ⇒ by `code` (MG7) when present — a STRING or a number, compared as a string; else by HTTP
+  status (401 / 403 → `auth`, 429 → `rate_limited`, 5xx → `api_unavailable`); else by the two documented sync messages (F15 — SendOTP
+  samples, observed for Flow in T1: "Auth Key missing" → `auth:authkey_missing`; "flow ID or template ID is invalid" →
+  `dlt_template_not_approved:template_invalid`); else `unknown:msg91_error`. A 2xx with neither type ⇒ `unknown:no_type`. Every code that
+  enters a detail passes `sanitizeSmsGatewayCode` (I6). ⛔ `realTimeResponse` (F9 — the error only on a second identical send).
+  ⭐ Recommended.
+- **MG7 — The code table (data-driven, replaces F2's placeholders).** `auth`: 201, 204, 207, 208, 209, 210, 301, 302, 303, 418, 421, 602
+  (⚠ `auth` now means "the gateway ACCOUNT refuses" — balance, IP and route included, so P1 stops on them — stated in `sms-errors.ts` and
+  the ADR); `dlt_template_not_approved`: 203, 211, 310, 400, 401, 402, 403, 603; `invalid_number`: 101, 202, 604; `api_unavailable`: 306,
+  506, 601; `unknown`: 311 (⚠ "the first SMS will be delivered" — a may-have-sent final + alarm), 407 and every unlisted code. Detail =
+  `<class>:<code>` (I5). ⚠ `carrier_reject` gets ⛔ code: DND / operator blocks arrive only in a delivery report (6-37b) ⇒ the core's
+  `carrier_reject → rejected_unreachable` arm is unreachable through MSG91 (kept — ⛔ a class removed, I5). ⚠ Under F9 / F15 the table is
+  MOSTLY UNREACHABLE at send (a synchronous `code` on a Flow send is ⛔ documented) — it is the defensive mapping for when one arrives;
+  its test rows are SYNTHETIC fixtures, labelled so (Testing standards). On 6.19b/c/d an `auth` final is per row (⛔ sweep-level stop
+  there — I4). ⭐ Recommended.
 - **MG8 — The number: strip the `+`, validate by CALLING `normalizeMobile`.** The client sends `normalizeMobile(to).slice(1)`
   (`91XXXXXXXXXX`); a `to` that `normalizeMobile` rejects, or that it changes (⛔ already canonical), is a local `invalid_number:format`
-  with ⛔ request ([[feedback_stub_must_call_not_transcribe]] — ⛔ a second regex). ⭐ Recommended. Partly closes deferred-work
-  *"`resolveSmsTarget` trusts `decryptMobile`'s output uncritically"* for the SMS path (record "Closed by 6.37 for SMS; push / WA ⛔
-  addressed").
+  with ⛔ request ([[feedback_stub_must_call_not_transcribe]] — ⛔ a second regex). Effectively unreachable today: every jobs caller
+  passes `normalizeMobile` output (`packages/domain/src/claim/correction-crypto.ts:54`, peer mesh `claim-peer-mesh-requests.ts:628`) and the only member-mobile
+  writer normalises before storing (`signup.handlers.ts:71`); the step-up path passes `decryptMobile` output un-normalised (`sms-step-up-delivery.ts:148`) — a
+  non-canonical stored mobile there would now be refused (accepted consequence; ⛔ reachable through the one writer). ⭐ Recommended.
+  Deferred *"`resolveSmsTarget` trusts `decryptMobile`'s output uncritically"* ⇒ **partly addressed** (the SMS client refuses a
+  non-canonical number); the decrypt try/catch and push / WA are ⛔ addressed and `resolveSmsTarget` sits on the dark dispatch path
+  (MG12) ⇒ the item stays OPEN ([[feedback_closure_language_precision]] — ⛔ "Closed by").
 - **MG9 — The request.** One recipient per call; `short_url: "0"` ALWAYS (F13); ⛔ `realTimeResponse`; ⛔ `CRQID` (6-37b decides
-  correlation); `AbortSignal.timeout(10_000)` in the client (abort ⇒ `api_unavailable:timeout`); the callers' own bounds unchanged.
-  Retries: unchanged (transient ⇒ pg-boss) — ⚠ MSG91 has ⛔ idempotency key (F19), so the deferred *"At-least-once SMS"* items stay
-  open with this finding added (⛔ closed). ⭐ Recommended.
+  correlation); a 9 s abort signal in the client (abort ⇒ `api_unavailable:timeout`), created SYNCHRONOUSLY at `send` entry (before any `await`)
+  from an injectable `timeoutSignal(ms)` (default `AbortSignal.timeout`; tests pass a controllable one) — 9 s, ⛔ 10, so it fires before
+  the OTP path's own 10 s `withSendTimeout` (started just after `send` is called — `sms-step-up-delivery.ts:78, :170-173`) and the OTP
+  class is deterministic (`StepUpDeliveryError('api_unavailable')`); the callers' own bounds unchanged;
+  the same signal bounds `readTemplateVersions`. Retries: unchanged (transient ⇒ pg-boss) — ⚠ MSG91 has ⛔ idempotency key (F19), so the
+  deferred *"At-least-once SMS"* items stay open with this finding added and their closer named 6-37b (MG1) (⛔ closed). ⭐ Recommended.
 - **MG10 — Config: one gateway, ⛔ provider switch.** `createSmsAppClient` builds the MSG91 client; the generic Bearer contract is REMOVED
   (it matches ⛔ gateway — keeping it selectable is a footgun; a later vendor is another adapter, `-314` decision 1). `SMS_GATEWAY_API_URL`
   becomes the API ORIGIN, default `https://control.msg91.com` in BOTH apps (F7's divergence closed; the placeholder constant and its boot
-  arm retire); `SMS_GATEWAY_API_KEY_SECRET_NAME` holds the MSG91 authkey; `SMS_GATEWAY_SENDER_ID*` RETIRE from the required set (the
-  sender is on the template — F12; the pre-flight LOGS each template's `sender_id`). `isConfigured()` = a non-blank authkey and origin.
+  arm retire) and is VALIDATED as a bare origin (`new URL(v).origin === v` after a trailing-`/` trim — an old-style send URL would
+  otherwise yield `…/send/api/v5/flow`); `SMS_GATEWAY_API_KEY_SECRET_NAME` holds the MSG91 authkey; `SMS_GATEWAY_SENDER_ID*` RETIRE from
+  the required set (the sender is on the template — F12; the pre-flight LOGS each template's `sender_id`) — grep-clean: ⛔ terraform /
+  compose / docs consumer is orphaned. `isConfigured()` = a non-blank authkey and origin. The compose file gains the
+  `SMS_GATEWAY_API_KEY_SECRET_NAME` line on api AND jobs (F25 — the 6.30 `APP_LINKS_BASE_URL` precedent: dev wires, operator applies).
   ⭐ Recommended. Alternative: keep `SMS_GATEWAY_SENDER_ID` as an EXPECTED value the pre-flight compares — one more secret for a check
   Row 32 (d) already makes by eye.
-- **MG11 — jobs boot.** ⛔ fail-fast (jobs runs many non-SMS duties; the sweeps HOLD per run — MG5); in production, one boot log line
-  when the gateway is unconfigured. ⭐ Recommended.
+- **MG11 — jobs boot.** ⛔ fail-fast (jobs runs many non-SMS duties; the sweeps HOLD — MG5); in production, one boot log line when the
+  gateway is unconfigured (AC8 (c) pins it). ⭐ Recommended.
 - **MG12 — The dispatch path stays dark.** A message with ⛔ `values` (the alert composition — `resolveSmsProviderDeps` has none) is
-  refused locally `dlt_template_not_approved:no_named_values`; every alert category stays DARK (TV6); ⛔ composition change. ⭐ Recommended.
+  refused locally `dlt_template_not_approved:no_named_values`; every alert category stays DARK (TV6); ⛔ composition change. ⚠ This
+  INVERTS two existing legs that accept a value-less real provider — `packages/channels/tests/sms.test.ts:51-70` and
+  `apps/api/tests/unit/sms-composition.test.ts:96-104` (`providerMessageId 'gw-id'`) — to the `no_named_values` refusal (Tasks 2 / 5).
+  ⭐ Recommended.
 - **MG13 — ADR-0041 `sms-gateway-msg91`, `drafted`, a NEW index row.** Context (F1, F9, `-314`); Decision (MSG91 Flow v5 behind
   `SmsMessagingHandle`, native fetch); Alternatives (SendOTP, legacy `sendhttp` + `DLT_TE_ID`, the npm SDK, a second gateway now);
-  Consequences (async errors and the pre-flight; `accepted` is ⛔ delivery; ⛔ idempotency; static-header webhooks for 6-37b; IP
-  whitelisting vs the production egress; restart-required-on-rotation kept; the processor's data handling — member names and mobiles
-  pass through MSG91, "an India-region processor" is OUR reading, ⛔ a ratified constraint — the ADR-0040 precedent); the pivot path.
-  The index row + breakdown reconciliation in the SAME commit; slot `:170` gains a one-line annotation naming 0027 / 0028 / 0041 as
-  partial fills (⛔ flipped). ⭐ Recommended.
-- **MG14 — Roster Row 32 `sms-gateway-msg91-provisioned`.** Closure (ALL): (a) ADR-0041 ratified; (b) an authkey whose rule allows SMS
-  only, IP security ON with the production egress IP(s) whitelisted; (c) MSG91's TM id bound in the PE-TM chain on SmartPing and the
-  sender id mapped to the PE id; (d) each template created in MSG91 from the sheet's MSG91 column with its DLT TE id, `smsType` per
-  locale, marked default; the meaning of `status` / `active_status` / `dlt_verified` recorded from MSG91 in writing; (e) the pre-flight
-  green on the deployed api AND jobs; (f) MSG91's data-processing terms on record. Row 30 (b) gains an annotation pointing here.
-  ⛔ A merge fence. ⭐ Recommended.
-- **MG15 — The reading on `-252` cl.1 and `-323` R2 (record it).** After this story, `accepted` means *"MSG91 answered success for a
-  request whose authkey and template passed this run's pre-flight"*. `-252` cl.1 asks that a reminder was *"accepted by the network"*:
-  ⭐ **MATCHES** with MG5 (the Panel chose option A knowing "accepted is not received" — `-252`'s own reading). ⚠ Without MG5 it WIDENS
-  (a request MSG91 refused for its key would count as reached) — and THAT would be the Panel's. The residual (a fault arising between
-  the pre-flight and the send; a DLT scrubbing failure) is the class `-323` R2 accepted, now WIDENED to account faults arising mid-run;
-  its closer is 6-37b. ⭐ Recommended: record as part of the author-commit.
+  Consequences (async errors and the pre-flight — and what it cannot see (MG15); `accepted` is ⛔ delivery; ⛔ idempotency; static-header
+  webhooks for 6-37b; IP whitelisting vs the production AND staging egress; restart-required-on-rotation kept; the processor's data
+  handling — member names and mobiles pass through MSG91, "an India-region processor" is OUR reading, ⛔ a ratified constraint — the
+  ADR-0040 precedent); the pivot path. The provider choice in production is the Panel's to ratify (as ADR-0027 / -0028 / -0040). The
+  index row + breakdown reconciliation in the SAME commit; slots `:169` (`otp-channel-primary` — MG2 settles the OTP route) and `:170`
+  (`channel-provider-selection`) each gain a one-line annotation naming the partial fills (0041; 0027 / 0028 / 0041) — ⛔ flipped.
+  ⭐ Recommended.
+- **MG14 — Roster Row 32 `sms-gateway-msg91-provisioned`.** Owners, in Row 24's shape: Trustee Panel (gate — (a)); BigDev (provisioning — (b)–(f), (i)); counsel (Story 0.13) — (g); for
+  (h), the alarm owner is ⛔ yet NAMED (Row 24 (e)'s same gap). Closure (ALL): (a) ADR-0041
+  ratified; (b) an authkey whose rule allows what the jobs AND api need (S3 / MG17), IP security ON with the production egress IP(s) —
+  and staging's, or a separate staging key (F25) — whitelisted; (c) MSG91's TM id bound in the PE-TM chain on SmartPing and the sender id
+  mapped to the PE id; (d) each template created in MSG91 from the sheet's MSG91 column with its DLT TE id, `smsType` from the TEXT
+  (UNICODE for every Hindi template AND template 14), marked default; the meaning of `status` / `active_status` / `dlt_verified` recorded
+  from MSG91 in writing; the panel's URL shortener OFF and the app-link domain on its "Skip URL" list (a second guard behind MG9's
+  `short_url: "0"` — F13); (e) the pre-flight green on the deployed api AND jobs, and ONE real response recorded (one of the two
+  triggers of Task 7's deferred item — ⛔ an automatic switch); (f) MSG91's data-processing terms on record; (g) counsel (Story 0.13) clears MSG91 as a processor of
+  member names and mobiles, or the row names the clearance that already covers it (Row 24 (c)'s leg); (h) a pre-flight HOLD alarm
+  reaches a NAMED person through a real transport (Row 24 (e)'s bar — F25: today jobs alarms reach the logs only); (i) ⭐ row 6-37b is
+  `done` before ANY claim-text template id (1–14) is provisioned (the deferred delivery-report item's own trigger, made a roster
+  condition — this is what fences MG15's residual from a real family). Row 30 (b) gains an annotation pointing here. ⛔ A merge fence.
+  ⭐ Recommended.
+- **MG15 — The reading on `-252` cl.1 and `-323` R2 (record it; the split is the reading).** After this story, `accepted` means *"MSG91
+  answered success for a request whose template passed a pre-flight within its TTL (or, after a transient re-check, its one-TTL stale extension) — or, on 6.19b/c/d, whose pre-flight was transient
+  or gave an unproven reason (fail open, MG5)"*. `-252` cl.1 asks that a reminder was *"accepted by
+  the network"*: ⭐ **MATCHES for every fault the pre-flight SEES on the sweeps that hold** (template missing / archived / wrong text /
+  wrong type / no DLT id; an unauthorised key); **on 6.19b/c/d — D22's own input — only for the PROVEN ones** (a malformed id; the send
+  key's refusal under MG17 (a)), which are no longer recorded `accepted`; wrong text / type / DLT id there stay in the residual below
+  (fail open) (the Panel chose option A knowing "accepted is not received" — `-252`'s own
+  reading). ⚠ It does ⛔ see send-side ACCOUNT faults — zero balance (301), SMS not enabled for the key (204), an unwhitelisted IP for
+  sends (418), a blacklisted sender (603) — whether present BEFORE the run or arising mid-run, nor a DLT scrubbing failure, nor — on 6.19b/c/d —
+  a template fault behind a transient pre-flight or an unproven reason (fail open), nor a template that breaks INSIDE a cached PASS's
+  TTL or its stale extension: each still answers `success` ⇒ `accepted` ⇒ D22 counts the family reached. (And the Panel's open question MG5 records: whether
+  a PROVEN content mismatch should refuse on 6.19b/c/d.) That residual is the class `-323` R2 accepted (*"PRE-EXISTING for EVERY
+  DLT rejection cause"*), here WIDENED from DLT causes to account causes. ⭐ Recommended reading: it stays the author's because Row 32 (i)
+  keeps every claim-text template id UNPROVISIONED until 6-37b reports delivery — so the residual can reach ⛔ real family before its
+  closer exists; BigDev accepts it as R2 was. ⚠ If BigDev declines Row 32 (i), the widened residual reaches families under a
+  Trustee-ratified rule ⇒ THAT is the Panel's ([[feedback_panel_gate_read_ratified_verbatim]]). Without MG5 at all it WIDENS for
+  template faults too — likewise the Panel's.
 - **MG16 — Dispositions of the items this story's change re-triggers** ([[feedback_closure_language_precision]]): (i) 6.27c's
-  *"send hours are re-checked just BEFORE the send core, ⛔ inside it"* — its trigger ("the next change to `sendClaimDltSms`") FIRES:
-  ⭐ **Recommended NOT ADDRESSED**, re-armed: 6.37 adds ⛔ await between the caller's check and the network call except the existing
-  config resolution (MG3's checks are synchronous); new trigger "a change that adds an await before the network call inside the core".
-  (ii) *"Dotted Secret Manager names (UNVERIFIED)"* — ⛔ addressed; the api boot already surfaces it (an `INVALID_ARGUMENT` throws at
-  boot). (iii) *"`resolveSmsProviderDeps` doesn't trim"* — ⛔ addressed (the path is dark, MG12). (iv) the delivery-report item — handed
-  to 6-37b (MG1). (v) MG8's partial close.
+  *"send hours are re-checked just BEFORE the send core, ⛔ inside it"* — its trigger ("the next change to `sendClaimDltSms`") FIRES, and
+  MG5 puts a memo read (a network call on a miss) inside the core after peer mesh's window / lease checks (`claim-peer-mesh-requests.ts:
+  659-668`) ⇒ ⭐ **Recommended ADDRESSED as the item prescribes**: the core gains `beforeSend?: () => 'go' | 'defer_window' | 'defer_lease'`,
+  called synchronously IMMEDIATELY before `provider.send`; peer mesh passes its window + lease-margin check; a defer returns a new
+  `{kind:'deferred', reason}` result the child routes to `deferToMorning` (window) or its counted lease branch (lease — alarm, `counts.transient += 1`, ⛔ the note-writing `transient()` helper). ⚠ The result
+  union is `final | transient` today (`claim-dlt-sms-send.ts:43-58`) and the other four callers (three via `sendClaimCorrectionSms`, whose return type stays `ClaimCorrectionSmsResult`) narrow on `kind === 'transient'` then read
+  `outcome` (`claim-correction-reminders.ts:423`, `claim-correction-closure.ts:377`, `claim-certificate-reminders.ts:664`,
+  `claim-suspicion-notices.ts:445`) ⇒ type the core so the result EXCLUDES `deferred` when `beforeSend` is absent (an overload), ⛔ a
+  third member leaking into callers that can never receive it. P6's margin comment
+  (`:116-121`, `PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS`) is re-derived to name the pre-flight. (ii) *"Dotted Secret Manager names
+  (UNVERIFIED)"* — ⛔ addressed; the api boot already surfaces it (an `INVALID_ARGUMENT` throws at boot). (iii) *"`resolveSmsProviderDeps`
+  doesn't trim"* — ⛔ addressed (the path is dark, MG12). (iv) the delivery-report item and the two at-least-once items — handed to 6-37b
+  (MG1). (v) MG8's partial address. (vi) 6.27c **W10** (the sweep can't see `auth` / template faults ⇒ each child spends ONE slot) —
+  **narrowed** by MG5 (template faults seen before enqueue); residual = a send-side account fault (MG15) ⇒ ⛔ closed.
+- **MG17 — Which key the pre-flight uses (settled by S3).** (a) ⭐ **Recommended, IF S3 finds an SMS-scoped authkey may read templates:**
+  ONE authkey for send + pre-flight. (b) If it may ⛔: a SECOND, template-read-only authkey under a new `SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME`
+  (api + jobs), Row 32 (b) naming both — ⛔ widening the send key's rule to make the pre-flight pass. Cost (b): one more secret and its
+  rotation. Neither may leave MG14 (b) and MG5 both unmeetable.
 
 ## Acceptance Criteria
 
-1. **AC0 — Governance before code (Task 0).** MG1–MG16 answered by BigDev and committed ALONE as one author-commit; ADR-0041 (`drafted`)
-   + its index row; the `epics.md` `### Story 6.37` entry; roster Row 32 + the Row 30 (b) annotation; the 6-37b sprint row (if MG1 (a));
-   the sprint ledger line — all committed BEFORE any code.
+1. **AC0 — Governance before code (Task 0).** S1–S4 settled or their STOP raised; MG1–MG17 answered by BigDev and committed ALONE as one
+   author-commit naming every supersession (MG5: `-302` RN4 / FOUND (c), `-295` RB12's edge; MG1: `-314` decision 2 in part); ADR-0041
+   (`drafted`) + its index row; the `epics.md` `### Story 6.37` entry; roster Row 32 + the Row 30 annotations; the 6-37b sprint row
+   (if MG1 (a)); the sprint ledger line — all committed BEFORE any code.
 2. **AC1 — The Flow request (MG9, MG10, F10).** **Given** a message `{to:'+919876543210', templateId:<24-hex>, values:[{name:'otp',
    value:'048213'}]}` **then** the client POSTs `<origin>/api/v5/flow` with headers `authkey: <key>` (⛔ `Authorization`),
    `content-type: application/json`, `accept: application/json`, a `signal`, and a body whose PARSED JSON deep-equals
    `{"template_id":"<id>","short_url":"0","recipients":[{"mobiles":"919876543210","otp":"048213"}]}` — ⛔ `sender`, ⛔ `message`,
-   ⛔ `realTimeResponse`, ⛔ `CRQID`, ⛔ the body text.
+   ⛔ `realTimeResponse`, ⛔ `CRQID`, ⛔ the body text. An origin that is ⛔ bare (`https://control.msg91.com/send`) is refused at
+   config time (MG10).
 3. **AC2 — Acceptance needs `type` (MG6, I3).** `{"type":"success","message":"5e1e93cad6fc054d8e759a5b"}` ⇒ accepted with that id;
    HTTP 200 `{"type":"error","message":"…"}` ⇒ rejected; HTTP 200 with ⛔ `type`, or `success` with a blank / non-string / 65-char /
    non-alphanumeric `message` ⇒ rejected `unknown:…`; ⛔ a fabricated id in any case.
-4. **AC3 — The code table (MG7).** One test row per code in MG7 → its class and detail `<class>:<code>`; the two sync messages → their
-   tokens; HTTP 401 / 429 / 503 with ⛔ code → `auth` / `rate_limited` / `api_unavailable`; a network throw → `api_unavailable`; an abort →
-   `api_unavailable:timeout`. Every detail matches the 0166 gateway-arm regex (assert it against `PEER_MESH_REQUEST_DETAIL_PATTERN` —
-   imported, ⛔ copied).
+4. **AC3 — The code table (MG7).** One test row per code in MG7 → its class and detail `<class>:<code>` — each fixture labelled
+   SYNTHETIC (a Flow sync `code` is ⛔ documented), with `code` given once as a string and once as a number; the two documented sync
+   messages → their tokens (fixtures cite the SendOTP doc URL); HTTP 401 / 429 / 503 with ⛔ code → `auth` / `rate_limited` /
+   `api_unavailable`; a network throw → `api_unavailable`; an abort → `api_unavailable:timeout`; a `code` carrying a 10-digit run →
+   `<class>:unknown` (`sanitizeSmsGatewayCode`). Every detail matches the 0166 gateway-arm regex (assert it against
+   `schema.PEER_MESH_REQUEST_DETAIL_PATTERN` from `@twt/domain` — imported, ⛔ copied).
 5. **AC4 — The number (MG8).** `+91…` → `91…`; a `to` that `normalizeMobile` rejects or rewrites ⇒ `invalid_number:format` and
    `fetch` ⛔ called.
-6. **AC5 — Named values from every caller (MG3, I1).** For EACH of templates 1–16, a test drives the REAL caller (the five sweeps' send
+6. **AC5 — Named values from every caller (MG3, I1).** For EACH of templates 1–16, a test drives the REAL caller (the five children's send
    paths and `createSmsDltStepUpDelivery`) with a fake handle and asserts (i) `values` names = the registry's slot names, in order,
    (ii) `substituteDltValues(text, slots, values) === body`, (iii) `body` is byte-identical to today's render (the existing lockstep
-   expectations, ⛔ edited). A caller whose `values` disagree with `render` ⇒ `dlt_template_not_approved:values_mismatch`, ⛔ `fetch`, an
-   alarm — and on the peer-mesh child P1 STOPS the run.
+   expectations, ⛔ edited). A caller whose `values` disagree with `render`, or a value longer than its slot's `maxLength`, ⇒
+   `dlt_template_not_approved:values_mismatch` / `:value_too_long`, ⛔ `fetch`, an alarm — and on the peer-mesh child P1 STOPS the run.
+   `substituteDltValues` inserts `$&`, `$'`, `{#var#}` and `##x##` literally (unit legs).
 7. **AC6 — The gateway form equals the sheet.** `toGatewayTemplate(text, slots)` equals the sheet's MSG91 column for every row 1–16
    (via the existing `sheetRowByConfigKey` — the sheet test's `msg91Form` stays an independent oracle and the two are asserted equal).
-8. **AC7 — The pre-flight (MG5).** With a fake `getTemplateVersions`: matching content + right `sms_type` + `DLT_ID` ⇒ pass; each of
-   {HTTP 401; HTTP 200 `status:"error"`; ⛔ version matching; `sms_type` wrong for the locale; blank `DLT_ID`; a malformed id (⛔ call
-   made)} ⇒ its reason; a 5xx / network / timeout ⇒ `transient`. ⛔ `status` / `active_status` / `dlt_verified` value changes the result
-   (logged only — a test pins that).
-9. **AC8 — api boot (MG5, MG10).** In production `buildMemberStepUpDelivery` throws on a blank authkey, a blank or malformed OTP id, or a
-   pre-flight fault on either template; it STARTS (error log, ⛔ throw) on a pre-flight transport failure; ⛔ longer requires the sender id
-   or a non-placeholder URL. Dev / CI unchanged (the reveal stub). `member-step-up-delivery-wiring.test.ts` updated, each arm covered.
-10. **AC9 — jobs: the pre-flight in the core, the hold where a hold exists (MG5, I4).** (a) The suspicion and peer-mesh sweeps: a
-    pre-flight fault on a template the run needs ⇒ the run HOLDS, ⛔ row claimed, ⛔ slot used, one alarm naming the config key and reason
-    (⛔ id, ⛔ number); a transient pre-flight ⇒ held, retried next run. (b) The correction / closure / certificate sweeps: each row ends
-    `error` + alarm with `auth:preflight` / `dlt_template_not_approved:preflight_<reason>` — the SAME outcome a missing template id gives
-    today (assert both side by side), ⛔ a hold; a transient ⇒ the row's existing transient path. (c) A pass ⇒ the run proceeds. (d) The
-    pre-flight runs ONCE per template per run, whatever the row count (counted).
+8. **AC7 — The pre-flight (MG5).** With a fake `getTemplateVersions` (the body's `data[]`): the ACTIVE version matching content (after
+   canonicalisation — a CRLF / trailing-space / NFD variant still passes) + the text-derived `sms_type` + `DLT_ID` ⇒ pass; template 14
+   (en) expects `UNICODE` and a GSM-7 English text expects `NORMAL` (pinned); each of {HTTP 401 ⇒ `auth`; HTTP 200 `status:"error"` ⇒
+   `auth_or_not_found`; ⛔ ACTIVE version matching (a matching INACTIVE one included) ⇒ `content_mismatch`; a Unicode text on a NORMAL
+   template ⇒ `sms_type_needs_unicode`; blank `DLT_ID`; a malformed id (⛔ call made)} ⇒ its reason; a 5xx / network / timeout ⇒ `transient`. `status` / `dlt_verified` /
+   `dlt_reason` values ⛔ change the result (logged only — a test pins that, with `dlt_verified` as `"10"` AND `0`). The MEMO: a PASS is
+   reused within its TTL, a FAULT within its short TTL, a TRANSIENT is ⛔ cached and, on an expired PASS's re-check, returns that stale PASS for one more TTL only (then transient); N concurrent misses ⇒
+   ONE call (counted). A GSM-7 text on a UNICODE template ⇒ PASS with `sms_type_unicode_for_gsm7` logged (pinned).
+9. **AC8 — api boot (MG5, MG10, MG11).** (a) In production `buildMemberStepUpDelivery` throws on a blank authkey, a blank or malformed OTP
+   id, or an `auth` / `auth_or_not_found` pre-flight on either template (under MG17 (b): from the read key ⇒ STARTS with an error log;
+   only a blank read-key secret name refuses); it STARTS with an error log (⛔ throw) on `content_mismatch` /
+   `sms_type_needs_unicode` / `dlt_id_missing` and on a transport failure. At runtime the memo is advisory: an expired entry's re-check
+   runs off the request path and a fault / transient there is logged while the code is STILL sent (pinned: `deliver` resolves without
+   awaiting the re-check); ⛔ longer requires the sender id or a non-placeholder URL. If MG17 (b): the read key's secret name is required
+   in production too. Dev / CI unchanged (the reveal stub).
+   `member-step-up-delivery-wiring.test.ts` updated, each arm covered. (b) The OTP client creates its abort signal SYNCHRONOUSLY at `send`
+   entry from an injectable `timeoutSignal(ms)` (9 s) — a test drives it with a controllable signal (`vi.useFakeTimers()` does ⛔ drive
+   `AbortSignal.timeout`) and gets `StepUpDeliveryError('api_unavailable')`, ⛔ the outer bound's class. (c) jobs in production logs ONE line at boot when the gateway is unconfigured (MG11).
+10. **AC9 — jobs: one memo, the hold where a hold exists, fail-open where none does (MG5, I4).** (a) The suspicion and peer-mesh sweeps:
+    a pre-flight fault (⛔ `sms_type_unicode_for_gsm7`) — or a transient with ⛔ cached pass — on a template the run needs ⇒ the run HOLDS, ⛔ row claimed, ⛔ slot used,
+    one alarm naming the config key and reason (⛔ id, ⛔ number); the peer-mesh check sits in `pariwarConfig` (a broken `en` template
+    holds ⛔ Hindi Pariwar — pinned); the child's race guard is a memo hit (counted). (b) The correction / closure / certificate children:
+    a PROVEN fault (`template_id_malformed`; `auth` / `auth_or_not_found` under MG17 (a)) ⇒ the row ends `error` + alarm with
+    `dlt_template_not_approved:template_id_malformed` / `auth:preflight` — the SAME outcome a missing template id gives today (assert both
+    side by side), ⛔ a hold; a TRANSIENT, `content_mismatch`, `dlt_id_missing` or `sms_type_needs_unicode` ⇒ ALARMED and the send PROCEEDS
+    (fail open — one leg per reason); under MG17 (b) `auth` / `auth_or_not_found` from the read key ⇒ proceeds too; a GSM-7 text on a UNICODE template ⇒ proceeds. (a2) A memo fault first seen in the CORE on a holding child (the in-flight race) ⇒ final
+    `dlt_template_not_approved:preflight_<reason>` (peer mesh: P1 stops); a transient with ⛔ usable pass there ⇒ `transient`
+    (⛔ sent). (b2) A fail-open send returns `accepted` + `preflightWarning` and the caller alarms it (pinned). (c) A pass ⇒ the run proceeds. (d) Across one jobs
+    process, at most ONE MSG91 pre-flight call per template per TTL window, whatever the row or child count, concurrent misses shared
+    (counted). (e) Peer mesh: a `beforeSend` that answers `defer_window` / `defer_lease` (the window closed, or the lease margin gone, after
+    the pre-flight) ⇒ ⛔ `fetch`, the row deferred to the morning / left for the re-claim exactly as today's pre-core branches leave it
+    (one leg each; MG16 (i)).
 11. **AC10 — Nothing else moves.** ⛔ migration; ⛔ i18n / registry text / sheet table edits (the sheet's *"Where and how we register"*
-    MSG91 bullet gains the setup steps — prose only); ⛔ `ChannelProvider` / `RenderedMessage` / dispatch / cascade / render change
-    (`channels-determinism` green); the alert categories stay dark (MG12 test); gate `dlt-typed-variables` green.
+    MSG91 bullet gains the setup steps — prose only); ⛔ `ChannelProvider` / `RenderedMessage` / dispatch / cascade / render change —
+    proven by an EMPTY `git diff --stat main -- packages/channels/src/{provider,dispatch,cascade,render}.ts` (`channels-determinism` also
+    green, but it hashes render output only — I2); the alert categories stay dark (MG12 test); gate `dlt-typed-variables` green.
 12. **AC11 — The proof.** `pnpm ci:local` green (or each red explained — the known 35/36 jsdom-under-load case re-run alone), every live
-    suite run with `DATABASE_URL` at :5433 explicitly; ⛔ network call in any test (I7 — a test stubs global `fetch` to throw and the suites
-    stay green).
+    suite run with `DATABASE_URL` at :5433 explicitly; ⛔ network call in any test (I7 — a test stubs global `fetch` with a RECORDER and asserts
+    ZERO calls; ⚠ a throwing stub would be swallowed — a transport failure STARTS the api and fails OPEN on 6.19b/c/d — so it proves
+    nothing; `member-step-up-delivery-wiring.test.ts` passes a counting fake through `buildMemberStepUpDelivery`'s injectable fetch).
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; `git diff --name-only 466e9b0e..origin/main -- packages/channels apps/jobs/src/scheduler apps/api/src/deps.ts
-        apps/api/src/config.ts apps/api/src/modules/auth scripts/dlt-typed-variables docs/launch-gate-inventory`; re-read any cited file that
-        moved. Re-fetch F9–F19 from `docs.msg91.com/sms/send-sms.md`, `sms/module.json`, `otp/module.json` and the help articles (record the
-        date). ⭐ Settle F16's UNVERIFIED points if the docs now say (which version is the default; what `status` / `active_status` /
-        `dlt_verified` mean) — if they still don't, MG5's "any version matching, ⛔ inactive" stands. ⛔ Probe MSG91 (T1).
-  - [ ] 0.2 Put MG1–MG16 to BigDev, each with its recommendation and cost. Record the answers verbatim.
+  - [ ] 0.1 `git fetch origin`; `git diff --name-only 466e9b0e..origin/main -- packages/channels apps/jobs/src apps/api/src/deps.ts
+        apps/api/src/config.ts apps/api/src/modules/auth scripts/dlt-typed-variables docs/launch-gate-inventory infra/dokploy`; re-read any
+        cited file that moved. Re-fetch F9–F19 from `docs.msg91.com/sms/send-sms.md`, `sms/module.json`, `otp/module.json` and the help
+        articles (record the date) — docs pages ONLY (T1). Then settle S1–S4 from the docs or from MSG91 support IN WRITING:
+        - **S1** — which `getTemplateVersions` field marks the DEFAULT version (MG5 assumes `active_status` `"1"`), what `status` /
+          `dlt_verified` mean, and the exact form MSG91 stores `template_data` in (`##name##`; quotes / whitespace / entity-encoding).
+          Settled or not, MG5's api content check stays alarm-only IN THIS STORY (blocking only via Task 7's deferred item); if
+          unsettled, the ADR says so — ⛔ a STOP.
+        - **S2** — MSG91's per-variable value cap for a `#url#` variable. ⭐ STOP if it is < the sheet's 55-character link: templates
+          13 / 14 cannot be sent as registered — put the remedy to BigDev (a shorter link domain — Row 29, provisioning; or a slot change —
+          its own author-commit over PM3 / `-311`, ⛔ a word of the text changed) before 0.2.
+        - **S3** — whether an authkey whose RULE allows SMS only may call `getTemplateVersions`, and whether IP security (418) applies to
+          it. Feeds MG17; ⭐ STOP if neither MG17 (a) nor (b) is possible.
+        - **S4** — whether MSG91 offers a READ-ONLY balance / key-status endpoint. If yes, propose adding it to the pre-flight (it would
+          close part of MG15's residual) as an MG at 0.2; if no, MG15 stands.
+  - [ ] 0.2 Put MG1–MG17 to BigDev, each with its recommendation and cost — incl. MG5's TTLs, I4's closure-notice cost and MG15's
+        reading (which stands only with MG14 (i)). Record the answers verbatim.
   - [ ] 0.3 Write the author-commit (`.decision-log.md`, prepended; the -344 entry's shape: Decision type / Status / Author / Ratifying
-        trustees ⛔ None / §0 gate / Occasion / FOUND / The decisions / Consequences / References). It ADDS to `-314` and to `-302` RN4
-        (MG5) and records MG15's reading — ⛔ edits either. Stage in scratchpad, try the insert ([[project_decision_log_writes_user_inserted]]).
-        Commit ALONE on the story branch.
+        trustees: None / §0 gate / Occasion / FOUND / The decisions / Consequences / References). It ADDS to `-314`, SUPERSEDES by a new
+        entry `-302` RN4's *"⛔ a held class like 6.25's RE6; the SMS gateway gives ⛔ pre-flight"* clause and FOUND (c)'s *"⛔ provider
+        pre-flight exists"* for faults the pre-flight sees, NARROWS `-295` RB12's accepted edge, moves `-314` decision 2's *"delivery-report
+        correlation"* to row 6-37b (MG1), and records MG15's split reading — ⛔ edits any of them
+        ([[feedback_supersede_never_reinterpret]]). Id: re-grep every branch's `.decision-log.md` for the next free number right before
+        inserting (`-345` was free at validate). Stage in scratchpad, try the insert ([[project_decision_log_writes_user_inserted]]).
+        Commit ALONE on the story branch; write its SHA after the commit, ⛔ before.
   - [ ] 0.4 The records (one commit, after 0.3): `docs/adr/ADR-0041-sms-gateway-msg91.md` from `_adr-template.md` (MG13) +
-        `docs/knowledge-transfer/adr-index.md` row + breakdown reconciliation + the `:170` annotation; `epics.md` `### Story 6.37: …
-        \`[PRIMITIVE]\`` before the `---` that precedes `## Epic 7` (the 6.34 entry's blockquote shape); roster Row 32 (MG14 — the Row 29–31
-        block format, eleven fields) + the Row 30 (b) annotation (⛔ a word of Row 30 rewritten); if MG1 (a): the sprint row
-        `6-37b-msg91-delivery-reports: backlog` under 6-37 with its comment, and the deferred delivery-report item annotated
-        "closer: row 6-37b"; the sprint ledger line ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML). Row
+        `docs/knowledge-transfer/adr-index.md` row + breakdown reconciliation + the `:169` and `:170` annotations; `epics.md` `### Story
+        6.37: … \`[PRIMITIVE]\`` before the `---` that precedes `## Epic 7` (the 6.34 entry's blockquote shape); roster Row 32 (MG14 — the
+        Row 29–31 block format, eleven fields, legs (a)–(i)) + dated annotations on Row 30 (a) (`apiUrl` → `apiOrigin`), (b) (the id keys
+        now hold MSG91's id; ⚠ also waits for Row 32), (d) (F18: DLT scrubbing failures arrive only in a delivery report; the DLT FAQ's
+        "1-2 variables" line vs templates 11–14) — ⛔ a word of Row 30 rewritten; if MG1 (a): the sprint row `6-37b-msg91-delivery-reports:
+        backlog` under 6-37 with its comment, and the deferred delivery-report item AND the two at-least-once items annotated "closer: row
+        6-37b"; the sprint ledger line ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML). Row
         `6-37-msg91-sms-gateway-adapter` → `in-progress`.
 
 - [ ] **Task 1 — the vocabulary helpers (AC5, AC6).** In `packages/channels/src/dlt-variables.ts`: `substituteDltValues(text, slots,
-      values)` (throws on a name / count mismatch) and `toGatewayTemplate(text, slots, wrap)`; unit tests incl. a value containing
-      `{#var#}` or `##x##` (substituted ONCE, left-to-right, never re-scanned). The jobs sheet test asserts `toGatewayTemplate` ===
-      `msg91Form` for rows 1–16.
+      values)` (throws on a name / count mismatch; FUNCTION-form replacement) and `toGatewayTemplate(text, slots, wrap)`; a
+      `needsUnicode(text)` (any character outside the GSM-7 default + extension tables) for MG5; unit tests incl. values containing
+      `{#var#}`, `##x##`, `$&`, `$'` (substituted ONCE, left-to-right, never re-scanned, inserted literally). The jobs sheet test asserts
+      `toGatewayTemplate` === `msg91Form` for rows 1–16, and `needsUnicode` agrees with the sheet's Unicode notes (14 en and every hi).
 
 - [ ] **Task 2 — the MSG91 client (AC1–AC4).** Rewrite `packages/channels/src/providers/sms-app.ts` (keep the file, `SmsAppClient`,
-      `SmsMessagingHandle`, `SmsSendError`, `SmsFetchLike` names — 23 files reference them at the pin): `SmsClientConfig {apiOrigin, authkey}`;
-      `SmsGatewayMessage {to, templateId, values, body}`; `send` per MG6 / MG8 / MG9; add `readTemplateVersions(templateId)` for MG5.
-      `SmsFetchInit` gains `signal`. Rewrite `sms-errors.ts`'s sets per MG7 (keep `SmsErrorClass` EXACTLY — I5; update the header's
-      "INDICATIVE" warning to cite the MSG91 source + date). `sms-dlt.ts`: `SmsProviderDeps.values?` bound per send; ⛔ values ⇒ MG12.
-      `getStatus` stays `unknown` (comment: delivery reports are row 6-37b). Tests in `packages/channels/tests/sms.test.ts` (the client
-      block `:167-250` rewritten).
+      `SmsMessagingHandle`, `SmsSendError`, `SmsFetchLike` names — 23 files reference them at the pin, incl. `fixture-sms.ts`):
+      `SmsClientConfig {apiOrigin, authkey}`; `SmsGatewayMessage {to, templateId, values, body}`; `send` per MG6 / MG8 / MG9;
+      `readTemplateVersions(templateId)` for MG5 (same 9 s signal). `SmsFetchInit` gains `signal`. Rewrite `sms-errors.ts`'s sets per MG7
+      (keep `SmsErrorClass` EXACTLY — I5; update the header's "INDICATIVE" warning to cite the MSG91 source + date; state that
+      `carrier_reject` has ⛔ synchronous MSG91 code). `sms-dlt.ts`: `SmsProviderDeps.values?` bound per send; ⛔ values ⇒ MG12.
+      `getStatus` stays `unknown` (comment: delivery reports are row 6-37b). Tests that turn red and are rewritten here:
+      `packages/channels/tests/sms.test.ts` — the client block `:167-250`, the placeholder-code legs `:81-135`, the value-less provider leg
+      `:51-70` (inverts to `no_named_values` — MG12); `packages/channels/tests/provider-composition.test.ts` and
+      `contribution-provider-resolver.test.ts` (`dltTemplateId` / `isConfigured`).
 
 - [ ] **Task 3 — the pre-flight (AC7).** `packages/channels/src/providers/sms-preflight.ts`: `checkMsg91Template(client, entry, id)` →
-      `{ok:true} | {ok:false, transient:boolean, reason}` (reasons: `auth`, `not_found`, `content_mismatch`, `sms_type`, `dlt_id_missing`,
-      `template_id_malformed`); logs the informational fields (⛔ the authkey, ⛔ `template_data`). ⚠ This file must ⛔ name the
-      `sms.dlt.template_id.` prefix or `DLT_VAR`, even in a comment (F21) — it takes `{text, slots, locale}` and an id. Export via
-      `packages/channels/src/index.ts`.
+      `{ok:true} | {ok:false, transient:boolean, reason}` (reasons: `auth`, `auth_or_not_found`, `content_mismatch`, `sms_type_needs_unicode`,
+      `dlt_id_missing`, `template_id_malformed`; a PASS may carry the logged `sms_type_unicode_for_gsm7` note), plus `createMsg91PreflightMemo({check, clock, passTtlMs, faultTtlMs})` (MG5's memo —
+      shared in-flight, ⛔ transient cached); logs the informational fields (⛔ the authkey, ⛔ `template_data`). ⚠ This file must ⛔ name
+      the `sms.dlt.template_id.` prefix, `DLT_VAR` or the `{#var#}` literal, even in a comment (F21, T4) — it takes `{text, slots}` and an
+      id. Export via `packages/channels/src/index.ts`.
 
-- [ ] **Task 4 — the send core and the five callers (AC5, AC9).** `claim-dlt-sms-send.ts`: the `template` + `values` inputs and MG3's
-      synchronous checks (before `smsAppClient.messaging()`); the malformed-id final (MG4). Each caller passes its registry entry and a
-      `values` builder that uses the SAME inputs as its `render` (⛔ a second formatting of a date / name — call the existing formatter,
-      e.g. `formatAppealUntil`). `ClaimDltSmsDeps.preflight` (a per-run memo each sweep builds) is consulted in the core for EVERY
-      caller (MG5 (1)); the peer-mesh `globalConfigGap` / `pariwarConfig` and the suspicion `purposeConfigGap` also call it and HOLD
-      (MG5 (2)); the correction / closure / certificate sweeps get ⛔ hold (MG5 ⚠⚠; T6). jobs config: `SMS_GATEWAY_API_URL` default
-      `https://control.msg91.com`; drop the sender resolution; MG11's boot line. Update the fakes in `apps/jobs/tests/claim-correction-send
-      .test.ts` and the `claim-*-live.test.ts` suites to record `values` and assert AC5 (ii).
+- [ ] **Task 4 — the send core and the five callers (AC5, AC8 (c), AC9).** `claim-dlt-sms-send.ts`: the `template` + `values` inputs and MG3's
+      synchronous checks (before `smsAppClient.messaging()`); the malformed-id final (MG4, before the memo); the memo read after the id
+      resolves (MG5): a PROVEN fault (`auth` / `auth_or_not_found` under MG17 (a)) ⇒ final on every caller; `content_mismatch` /
+      `dlt_id_missing` / `sms_type_needs_unicode` ⇒ final on the suspicion / peer-mesh children, ALARMED and sent on 6.19b/c/d — the core
+      takes `preflightFailOpen: boolean`, which `sendClaimCorrectionSms` sets `true` (its deps `Pick<…>` gains the memo field; its return
+      type stays `ClaimCorrectionSmsResult`); TRANSIENT with ⛔ usable pass ⇒ proceed with `preflightWarning` ONLY when
+      `preflightFailOpen`, else `{kind:'transient', detail:'api_unavailable:preflight'}`; under MG17 (b) `auth*` is unproven; the
+      `accepted` arm gains optional `preflightWarning`, alarmed by each 6.19b/c/d caller beside its helpline warning; `beforeSend?` called synchronously immediately before `provider.send`, `defer_window` /
+      `defer_lease` ⇒ `{kind:'deferred'}` (MG16 (i) — the overload keeps it out of the other four callers' result type). Each caller passes its registry entry and a `values` builder closing over the SAME locals its `render`
+      uses (⛔ a second formatting). `apps/jobs/src/boot.ts`: build ONE `Msg91PreflightMemo` and put it on `claimCorrectionDeps` (MG5) — the OPTIONAL field
+      declared on `ClaimDltSmsDeps` AND `ClaimCorrectionReminderDeps` (the wrapper's `Pick` selects from the latter).
+      Suspicion: `purposeConfigGap` (sweep + child race guard) consults the memo and HOLDS. Peer mesh: `configSet` returns the resolved
+      value; `pariwarConfig` consults the memo after the template id resolves and HOLDS (⛔ `globalConfigGap`); the child passes
+      `beforeSend` = its window + lease-margin check; re-derive `PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS`'s comment. The correction / closure /
+      certificate sweeps get ⛔ hold (MG5 ⚠⚠; T6). jobs config: `SMS_GATEWAY_API_URL` default `https://control.msg91.com`, bare-origin
+      check; drop the sender resolution; MG11's boot line; suspicion's `configSet` returns the resolved value too. `infra/dokploy/compose.yaml`:
+      `SMS_GATEWAY_API_KEY_SECRET_NAME` on jobs (MG10 — operator applies); if MG17 (b), `SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME` beside it and
+      the memo built with the read key. Tests that turn red and are updated here: every fixture template id → 24-hex (`'TPL-1'`
+      `claim-correction-reminders-live.test.ts:127`, `claim-correction-closure-live.test.ts:81`; `'TPL-123'`
+      `claim-correction-send.test.ts:43`; `'TPL-CERT'` `claim-certificate-reminders-live.test.ts:235, :317`; `'TPL-SUSPICION'`
+      `claim-suspicion-notices-live.test.ts:290, :843`; `'TPL-PEER'` `claim-peer-mesh-requests-live.test.ts:229, :569`); the
+      placeholder-code pins (`claim-correction-send.test.ts:159-217`, `claim-correction-reminders-live` ×5, `claim-suspicion-notices-live`
+      ×6, `claim-certificate-reminders-live` ×2 — ⚠ the `CARRIER_REJECT → rejected_unreachable` rows become a synthetic-code row, MG7);
+      `apps/jobs/tests/contribution-providers.test.ts:46-47, :148-191` (`{apiUrl, apiKey, senderId}`, the sender secret, the `''` URL
+      default); the `SmsAppClient` fakes `claim-certificate-reminders.test.ts:22`, `claim-correction-control-paths.test.ts:141` (stay valid
+      while `preflight` is optional). Every fake records `values` and asserts AC5 (ii).
 
 - [ ] **Task 5 — the OTP path (AC5, AC8).** `sms-step-up-delivery.ts`: send `values: [{name:'otp', value: code}]` + `body:
       renderOtpBody(...)` + `templateId`. `deps.ts` `buildMemberStepUpDelivery`: MG10's config, the malformed-id check, the boot pre-flight
-      for 15 / 16 (MG5 outcomes); keep the error string's literal keys (the `TEMPLATE_ID_ALLOWLIST` entry is for it). `config.ts`: the
-      origin default; retire `SMS_GATEWAY_API_URL_PLACEHOLDER` and the sender fields (grep every use). Tests:
-      `tests/unit/sms-step-up-delivery.test.ts`, `tests/integration/sms-step-up-delivery.spec.ts`,
-      `tests/unit/member-step-up-delivery-wiring.test.ts`, `tests/unit/sms-composition.test.ts`.
+      for 15 / 16 with MG5's api outcomes and the advisory runtime re-check (off the request path); an injectable fetch / client (AC11); if
+      MG17 (b), the read key's secret name (required in production); keep the error string's literal keys (the
+      `TEMPLATE_ID_ALLOWLIST` entry is for it). `config.ts`: the origin default + bare-origin check; retire `SMS_GATEWAY_API_URL_PLACEHOLDER`
+      and the sender fields (grep every use). `infra/dokploy/compose.yaml`: the same secret-name line on api. Tests:
+      `tests/unit/sms-step-up-delivery.test.ts` (incl. the code pins `:186-207`; the `'TRAI::sms.dlt.template_id.otp_login'` echo
+      `:102, :130, :163` → a per-key hex map), `tests/integration/sms-step-up-delivery.spec.ts` (`:132, :168` and its code pin),
+      `tests/unit/member-step-up-delivery-wiring.test.ts`, `tests/unit/sms-composition.test.ts` (`:96-104` inverts — MG12).
 
 - [ ] **Task 6 — the dark path and the gates (AC10).** MG12's test (a dark category's provider, if forced, refuses with
-      `no_named_values` and ⛔ `fetch`); `pnpm --filter @twt/channels test:determinism`; `pnpm dlt-typed-variables:test &&
-      pnpm dlt-typed-variables:check` (⚠ a new file must be `git add`-ed first); the sheet's *"Where and how we register"* MSG91 bullet
-      gains the setup steps (create from the MSG91 column; DLT TE id; sender; `smsType` UNICODE for Hindi; mark default; ⛔ short URLs) —
-      PROSE, ⛔ a table cell (rule (i) scans table rows; the 7-cell parse).
+      `no_named_values` and ⛔ `fetch`); `git diff --stat main -- packages/channels/src/{provider,dispatch,cascade,render}.ts` EMPTY;
+      `pnpm --filter @twt/channels test:determinism`; `pnpm dlt-typed-variables:test && pnpm dlt-typed-variables:check` (⚠ a new file
+      must be `git add`-ed first); the sheet's *"Where and how we register"* MSG91 bullet gains the setup steps (create from the MSG91
+      column; DLT TE id; sender; `smsType` UNICODE for every Hindi template AND template 14; mark default; ⛔ short URLs — panel shortener
+      off, app-link domain on "Skip URL") — PROSE, ⛔ a table cell (rule (i) scans table rows; the 7-cell parse).
 
-- [ ] **Task 7 — records and close (AC11).** `pnpm ci:local` with `DATABASE_URL` at :5433; the deferred-work dispositions (MG16, MG8,
-      MG9 — each "Closed by" / "⛔ addressed" / "handed to", ⛔ collapsed); the Change Log; the File List; the sprint row → `review`; the
-      ledger line. ⛔ Fast-forward to `main` — BigDev's call ([[feedback_land_prs_by_fast_forward]]).
+- [ ] **Task 7 — records and close (AC11).** Write AC11's recorder test (the jobs core, a 6.19b/c/d fail-open leg, and
+      `buildMemberStepUpDelivery` with ⛔ injected fetch); `pnpm ci:local` with `DATABASE_URL` at :5433; a NEW deferred-work item *"MG5's content /
+      DLT-id / `sms_type_needs_unicode` checks are alarm-only on the api and fail-open on 6.19b/c/d"* — trigger: Row 32 (e) records a real
+      green response and S1 is settled (then a later change may make the api check blocking, re-weighing T13; the 6.19b/c/d question is the Panel's, MG5); the deferred-work
+      dispositions (MG16 (i)–(vi), MG8, MG9, MG1's three hand-offs — each "Closed by" / "partly addressed" / "⛔ addressed" / "handed to", ⛔ collapsed); the Change
+      Log; the File List; the sprint row → `review`; the ledger line. ⛔ Fast-forward to `main` — BigDev's call
+      ([[feedback_land_prs_by_fast_forward]]).
 
 ## Dev Notes
 
@@ -416,11 +656,13 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
 
 1. **T1 — ⛔ Never call MSG91 from a test, a script or dev.** This story's research sent three Flow / OTP requests to
    `control.msg91.com` with a FAKE authkey (2026-10-17) to establish F9 — a one-off, recorded here so it is ⛔ repeated. ⛔ sandbox exists
-   (F19); a real key sends a real, billed text to a real number. I7's global-fetch-throws test enforces it.
+   (F19); a real key sends a real, billed text to a real number. AC11's zero-call global-fetch RECORDER enforces it.
 2. **T2 — HTTP 200 is ⛔ success** (F9, F15, F16). Every branch reads `type` (Flow / OTP) or `status` / `hasError` (template API).
 3. **T3 — `short_url` must be `"0"`** (F13) — MSG91 would otherwise rewrite 6.30's whitelisted link.
-4. **T4 — Gate rule (iii) reads comments** (F21). `sms-preflight.ts`, `sms-app.ts` and every test-adjacent `src` file must ⛔ spell the
-   template-id prefix or `DLT_VAR`. Put the substitution helpers in `dlt-variables.ts` (a registry file).
+4. **T4 — Gate rules (ii) and (iii) read comments** (F21; `scripts/dlt-typed-variables/lib.ts:117-124`). `sms-preflight.ts`, `sms-app.ts`
+   and every non-registry `src` file must ⛔ spell the template-id prefix, `DLT_VAR`, or the `{#var#}` marker literal itself. Put the
+   substitution helpers in `dlt-variables.ts` (a registry file). (The gate scans `apps/*/src/**` and `packages/*/src/**` only — tests are
+   ⛔ scanned.)
 5. **T5 — The detail CHECKs** (F22). Use ONLY the existing classes; MG's tokens (`values_mismatch`, `template_id_malformed`,
    `no_named_values`, `format`, `timeout`, `msg91_error`, `no_type`, `authkey_missing`, `template_invalid`, 3-digit codes) all fit
    `[A-Za-z0-9_.-]{1,64}`. ⛔ A `config:` word (enumerated). The pre-flight's `config:sms_preflight_*` codes are ALARM codes, ⛔ stored.
@@ -434,10 +676,19 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
    ([[project_prepush_hook_inherits_5432]]). ⛔ migration is expected — if one seems needed, STOP: it means I5 broke.
 9. **T9 — Contracts / jobs tests sit partly outside tsc** — run vitest per package ([[project_contracts_tests_outside_tsc]]).
 10. **T10 — Prettier is ⛔ enforced** — hand-format; ⛔ `--write` ([[project_prettier_not_enforced]]).
-11. **T11 — A Hindi template's MSG91 `smsType` is UNICODE** (F11) — the pre-flight checks it; a NORMAL Hindi template would be sent as
-    garbage or refused.
+11. **T11 — `smsType` follows the TEXT, ⛔ the locale** (F11) — every Hindi template AND template 14 (en, the em dash) is UNICODE; the
+    pre-flight derives the expected type with `needsUnicode(text)`. A locale rule would HOLD every English peer-mesh run for ever (a
+    correct UNICODE template 14 fails it) — or garble the dash (a NORMAL one passes it).
 12. **T12 — `311` is a may-have-sent** (F15) — ⛔ map it to `accepted` (no id) or to a transient (a retry inside 10 s is refused; after
-    10 s it double-sends).
+    10 s it double-sends). ⚠ 311 is ⛔ on F9's real-time list ⇒ it is very likely unreachable at send; the mapping is defensive.
+13. **T13 — A boot refusal is a RESTART LOOP, and staging is production** (F25). `restart: unless-stopped` re-runs the api's boot
+    pre-flight on every restart, and a refusal takes down EVERY api route (⛔ only login) ⇒ only a blank authkey, a blank or
+    malformed OTP id, or `auth` / `auth_or_not_found` from the SEND key (MG17 (a)) refuse — under MG17 (b) a read-key refusal starts (MG5). Staging boots with `NODE_ENV: production` ⇒ it needs its own authkey / whitelisted egress (MG14 (b)) or it
+    will not start once the authkey is set.
+14. **T14 — Every fixture template id must become 24-hex** (MG4) — `'TPL-…'` and the api's NAME-echo ids fail the malformed-id check;
+    keep the api's NAME→value proof with a per-key map of distinct hex ids. And the placeholder gateway codes (`'INVALID_NUMBER'`,
+    `'CARRIER_REJECT'`, `'AUTH_FAILED'`, `'DLT_TEMPLATE_NOT_APPROVED'`, `'RATE_LIMIT'`) are pinned in 38 legs outside `src` (channels 11, jobs 22, api 5)
+    (Tasks 2 / 4 / 5 list them) — `git grep` them before declaring the rewrite done ([[feedback_story_validate_footguns]] #31).
 
 ### Reuse map
 
@@ -446,16 +697,20 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
 | Slot names / types | `DltSlot`, the six registries | a second slot list |
 | MSG91 template text | `toGatewayTemplate` (new, in `dlt-variables.ts`) checked against the sheet's column | a hand-written template |
 | Number | `normalizeMobile` (`@twt/domain`) | a regex |
-| Value formatting | each registry's existing formatter (`formatAppealUntil`, the peer-mesh name rule) | a second formatter |
+| Value formatting | the SAME locals each caller's `render` closes over (`member`, `link`, `date` = `formatAppealUntil(...)` — `suspicion-notice-sms-templates.ts:132`, `reference`) | a second formatter |
 | Holds | each sweep's existing gap check + RB12 | a new hold mechanism |
 | Scope-wide stop | 6.27c's `isScopeWideSendFault` (unchanged — MG7's classes feed it) | a new stop rule |
 | Timeout shape | ADR-0040's `AbortSignal.timeout(STAFF_EMAIL_SEND_TIMEOUT_MS)` (`apps/jobs/src/scheduler/staff-email-client.ts:33, :198`) | a custom timer |
+| Provider pre-flight shape | ADR-0040's staff-email pre-flight, once in the sweep (`claim-suspicion-staff-emails.ts:137-146`) — here a process memo, because every send runs in a child and three callers have ⛔ sweep-level hold | a per-row network check |
+| Gateway-code scrub | `sanitizeSmsGatewayCode` (`packages/domain/src/claim/suspicion-notice.ts:159`) | a new regex |
+| Detail-grammar oracle | `schema.PEER_MESH_REQUEST_DETAIL_PATTERN` (`packages/domain/src/schema/claim_peer_mesh_pings.ts:90`) | a copied regex |
 | ADR shape | ADR-0040 + `_adr-template.md` | a new shape |
 
 ### Testing standards
 
 Vitest; inject `fetch` (`vi.fn<SmsFetchLike>()`) — ⛔ msw / MockAgent (house pattern, `packages/channels/tests/sms.test.ts:167-250`).
-Response fixtures are the DOCUMENTED shapes (cite the URL in a comment). Lockstep tests call the real `t()` and the real registry —
+Response fixtures are the DOCUMENTED shapes (cite the URL in a comment); where ⛔ documented shape exists (MG7's numeric codes on a Flow
+send), the fixture is labelled SYNTHETIC in a comment. Lockstep tests call the real `t()` and the real registry —
 ⛔ transcribe a text. Live suites: :5433.
 
 ### Project structure notes
@@ -464,7 +719,7 @@ Response fixtures are the DOCUMENTED shapes (cite the URL in a comment). Lockste
 - **UPDATE:** `packages/channels/src/providers/sms-app.ts`, `sms-errors.ts`, `sms-dlt.ts`, `packages/channels/src/dlt-variables.ts`,
   `packages/channels/src/index.ts`; `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`, `claim-correction-reminders.ts`,
   `claim-correction-closure.ts`, `claim-certificate-reminders.ts`, `claim-suspicion-notices.ts`, `claim-peer-mesh-requests.ts`,
-  `contribution-providers.ts`, `apps/jobs/src/boot.ts` (MG11 line); `apps/api/src/deps.ts`, `apps/api/src/config.ts`,
+  `contribution-providers.ts`, `apps/jobs/src/boot.ts` (the memo + MG11 line); `infra/dokploy/compose.yaml` (MG10's secret-name lines); `apps/api/src/deps.ts`, `apps/api/src/config.ts`,
   `apps/api/src/modules/auth/shared/sms-step-up-delivery.ts`; their tests; the sheet's prose; the records (Task 0.4).
 - **⛔ Touched:** `provider.ts`, `dispatch.ts`, `cascade.ts`, `render.ts`, `composition/provider-composition.ts` (MG12), any i18n file, any
   registry TEXT, any migration, `apps/mobile`, `apps/admin`.
@@ -472,15 +727,15 @@ Response fixtures are the DOCUMENTED shapes (cite the URL in a comment). Lockste
 ### Sequencing
 
 6.34 (done) → **6.37** → 6-37b (if MG1 (a)) before any CLAIM-text template id is provisioned (the deferred delivery-report item's
-trigger). Row 30 (b)'s OTP device proof needs 6.37 + Row 32 — ⛔ 6-37b (OTPs feed ⛔ D22). 6-31 (WhatsApp reminder) is independent.
+trigger — made roster Row 32 (i), which is what keeps MG15's residual from a real family). Row 30 (b)'s OTP device proof needs 6.37 + Row 32 — ⛔ 6-37b (OTPs feed ⛔ D22). 6-31 (WhatsApp reminder) is independent.
 
 ### Previous story intelligence (6.34, 6.27c)
 
 - 6.34 gave every slot its MSG91 name (TV13) and the sheet its MSG91 column — this story CONSUMES them; ⛔ re-derive.
 - 6.34's gate went red at birth twice (rule (i) on a sheet line, rule (ii) via `${DLT_VAR}`) — run the gate early (T4).
 - 6.27c: P1 stops the child on `config:` / `auth:` / `dlt_template_not_approved:` — MG7 decides whether MSG91's faults land there.
-  Its W10 (the sweep can't see `auth` / template faults ⇒ each child spends ONE slot) is NARROWED by MG5 — record "W10: narrowed by 6.37's
-  pre-flight (auth / template / content seen before enqueue); the residual = a fault arising mid-run".
+  Its W10 (the sweep can't see `auth` / template faults ⇒ each child spends ONE slot) is NARROWED by MG5 — MG16 (vi) records it
+  (residual = a send-side account fault, MG15).
 - 6.27c ci:local ended 35/36 on an admin jsdom timeout under load (alone 75/75) — re-run alone, record both.
 - 6.27c's first live run hit :5432 because the worktree had no `.env` (T8).
 
@@ -505,15 +760,23 @@ The last five commits are 6.27c's review rounds and records (`f3c19b62` → `466
   `https://msg91.com/help/text-sms/custom-metadata-parameters-for-tracking-api-requests`.
 - PE-TM chain: `https://msg91.com/help/dlt-registration-in-india/pe-tm-chain-binding-on-dlt` (MSG91's TM id 1302157225275643280).
 - SDK: npm `msg91` 2.2.8 (2025-06-13), legacy endpoint + `flow_id`, repo 404 ⇒ ⛔ used (F20).
-- **UNVERIFIED:** Flow's unicode auto-detection; max recipients per call; per-code HTTP statuses; webhook signing / source IPs; numeric
-  DLR codes for DLT failures; Devanagari / spaces in `#alphanumeric#` (Row 30 (d)); any rate limit / timeout guidance; which template
-  version is the default and what `status` / `active_status` / `dlt_verified` mean (MG5, Row 32 (d)); the current webhook retry count.
+- Validate pass (2026-10-17) re-read the same pages: F10 / F11 / F12 / F13 / F17 / F19 / F20 CONFIRMED; F15 / F16 / F18 corrected in
+  place. Also: template creation `https://msg91.com/help/template/how-to-create-flow-id-to-send-sms-via-api` ("Mark default"; the DLT /
+  MSG91 status pairs); 429 `https://msg91.com/help/all-about-the-429-rate-limit-error`; short URL
+  `https://msg91.com/help/url-shortener/how-to-use-and-check-report-of-short-url`.
+- **UNVERIFIED:** Flow's unicode auto-detection; max recipients per call; per-code HTTP statuses; whether a Flow send EVER returns a
+  synchronous `code`; webhook signing / source IPs; numeric DLR codes for DLT failures; Devanagari / spaces in `#alphanumeric#` (Row 30
+  (d)); the DLT FAQ's "1-2 variables" line; any rate limit / timeout guidance; S1 (the default-version marker, the status fields'
+  meaning, `template_data`'s stored form); S2 (the `#url#` value cap); S3 (an SMS-only key's template-API access; IP security on it);
+  S4 (a read-only balance / key endpoint); whether the panel's shortener toggle overrides `short_url:"0"`.
 
 ### References
 
 - `.decision-log.md` — `2026-10-10-314`, `-313`, `2026-10-12-322`, `-323`, `2026-09-27-252`, `2026-10-10-302` RN4, `2026-10-08-295` RB12.
 - `_bmad-output/implementation-artifacts/6-34-sms-templates-typed-variables.md` (TV13, F21, TV10, Sequencing);
   `6-27c-peer-mesh-sending-texts-and-links.md` (P1, W10, BF20–BF23); `6-30-app-links-open-the-app-from-a-text.md` (AL15).
+- `.decision-log.md` (also) — `2026-10-09-299` RE7, `-301` FOUND (a) (the 6.25 pre-flight hold precedent).
+- `infra/dokploy/compose.yaml` (F25); `apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts` (the pre-flight precedent).
 - `docs/launch-gate-inventory/inventory-roster.md` Rows 24, 29, 30; `docs/launch-gate-inventory/dlt-template-requests-6-19.md`.
 - `docs/adr/ADR-0027…`, `ADR-0028…`, `ADR-0040-staff-email-transport.md`, `_adr-template.md`; `docs/knowledge-transfer/adr-index.md`.
 - architecture.md §2.2 (OTP), §3.4 (channels), §3.11 (webhooks — 6-37b), §3.12 (timeouts), §5.9 (secrets).
@@ -536,3 +799,7 @@ The last five commits are 6.27c's review rounds and records (`f3c19b62` → `466
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-17 | 1.0 | Created by `bmad-create-story 6.37` at `466e9b0e` (worktree `.claude/worktrees/6-37`). F1–F24 found; MG1–MG16 PROPOSED (⏳ Task 0.2); ⭐ F9 — MSG91 answers `success` to a fake authkey — drives MG5's pre-flight and MG15's reading of `-252` cl.1. Status `ready-for-dev`, buildable after Task 0. |
+| 2026-10-17 | 1.1 | `bmad-create-story validate 6.37` at `466e9b0e` (== `origin/main`; ⛔ code moved since the pin). Four fresh-context read-only verifiers (code claims; governance / records / ids; end-to-end design; MSG91 docs — docs pages ONLY). ⭐ Applied: **MG5 rebuilt** — the "per-run memo" could ⛔ reach the core (every send is a pg-boss child; AC9 (d) was unsatisfiable) ⇒ one process memo with pass / fault TTLs, ⛔ transient cached; `sms_type` from the TEXT (template 14 en is Unicode — a locale rule held every English peer-mesh run for ever); the peer-mesh check moved to `pariwarConfig`; 6.19b/c/d FAIL OPEN on a transient (a fail-closed refusal is `-322` §0's Panel option); the api refuses to start only on auth / malformed (F25: a refusal is a restart loop of EVERY route). **I4 and the Policy meaning were false** on three paths (a pre-flight fault spends that day's slot / the closure notice for good) — rewritten; the Policy meaning now names the D22 input it makes truthful. **MG16 (i) was false** (the pre-flight is an await inside the core after peer mesh's window / lease checks) ⇒ ADDRESSED by the item's own prescription, `beforeSend`. **MG15 split** — MATCHES for faults the pre-flight sees; the pre-flight reads TEMPLATES, ⛔ the account's ability to send ⇒ residual WIDER than `-323` R2, fenced by the new Row 32 (i) (6-37b before any claim-text id). **Supersessions named** (`-302` RN4 + FOUND (c), `-295` RB12's edge, `-314` decision 2 in part) — Task 0.3 had called them additions. **New:** MG17 (which key the pre-flight uses); S1–S4 Task 0.1 STOPs (default-version marker / `template_data` form; the `#url#` value cap vs the 55-char link; an SMS-only key's template access; a balance endpoint); F25 (Dokploy restart loop, staging = production, ⛔ SMS lines in compose, alarms reach logs only); Row 32 legs (g) counsel, (h) alarm to a named person, (i), owner = Panel; T13 / T14; every test the edits turn red named in Tasks 2 / 4 / 5 (24-hex fixture ids; 38 placeholder-code pins; two inverted value-less legs; `contribution-providers.test.ts`). **Corrected:** MG8 "Closed by" → partly addressed (item stays open); F10 (6.34 Debug Log (c) only RAISED `template_id`); F15 (the sync messages are SendOTP samples; `code` is a string; 101 / 209 / 210 / 407 / 602 / 429 added to MG7); F16 (the body's `data[]`; type-tolerant fields; per-version sender / DLT id); F18 (5 retries); F22 (0151); F3's cite; I2's proof (`channels-determinism` hashes render only ⇒ an empty `git diff`); T4 (rule (ii)); MG9 9 s client bound (deterministic under the OTP's 10 s); `$&` substitution legs; `sanitizeSmsGatewayCode` on the raw-detail tables; the reuse map's non-existent "peer-mesh name rule" formatter. Every MG still PROPOSED. |
+| 2026-10-17 | 1.1 (round 2) | Fresh-context re-validate of the v1.1 edits — 1 HIGH, all the pass's own: v1.1 ended 6.19b/c/d rows on reasons it called "proof of non-delivery" while its own api section called them UNVERIFIED (S1) — `-322` §0's fail-closed option (a) ⇒ now only a malformed id, or the send key's own refusal under MG17 (a), ends a row there; `content_mismatch` / `dlt_id_missing` / `sms_type_needs_unicode` are alarmed and sent until S1 + Row 32 (e) (a new deferred item), and whether a PROVEN content mismatch should refuse there is recorded as the Panel's, ⛔ routed. Also: MG15's `accepted` definition + residual cover fail-open and within-TTL faults; `sms_type` split into a fault (`_needs_unicode`) and a logged note (`_unicode_for_gsm7`); `beforeSend` → `defer_window` / `defer_lease` + an overload keeping `deferred` out of the four other callers (the union is `final \| transient`); AC11's no-network proof is a zero-call RECORDER (a throwing stub is swallowed by the fail-open / start-on-transport rules) and the api builder takes an injectable fetch; the api memo is advisory at runtime, off the request path; the 9 s signal created synchronously from an injectable `timeoutSignal`; three new STOP / MG17 lines that `⛔` had inverted, and one this pass caught in I4 (`⛔ PERMANENTLY loses` ⇒ "loses for good"); cites — `sanitizeSmsGatewayCode` `:159`, CR8 `:590-591`, the closure `complete()` call `:389` / `correction-closure-jobs.ts:317`, the hold precedent `-299` RE7 / `-301` FOUND (a) (⛔ `-300`); `LOCALES_OF` (one or two locales) and suspicion's `configSet`; Task 4's AC8 (c) tag; MG17 (b)'s secret wired in Tasks 4 / 5 / AC8; T14's count 38; Row 32's owners in Row 24's shape. |
+| 2026-10-17 | 1.1 (round 3) | Fresh-context re-validate of round 2 — 2 HIGH, both round 2's own (an edit applied to the ACs but ⛔ swept to Task 4 / MG5's core paragraph / MG15): Task 4 still said every pre-flight FAULT ends the row (AC9 (b) said fail open) ⇒ the core takes `preflightFailOpen`, set by `sendClaimCorrectionSms`, and the summary line follows; MG15 claimed MATCH on 6.19b/c/d for faults that now fail open there ⇒ split by path (D22's input: PROVEN faults only), mirrored in the §0 header and the Policy meaning. Also: an MG17 (b) read-key refusal STARTS the api (AC8 (a), AC9 (b)); "becomes blocking" is a LATER change via Task 7's deferred item, ⛔ an automatic switch; the memo's transient fallback was unreachable (a call happens only on a miss) ⇒ a stale PASS for one more TTL on an expired re-check; the holding sweeps' hold on UNPROVEN reasons stated with its cost (`-322` §0 reserves only 6.19b/c/d); T1 cites AC11's recorder; Task 7 writes the recorder test; detail codes disambiguated (malformed ⇒ `template_id_malformed`, `auth*` ⇒ `auth:preflight`); `beforeSend`'s lease defer uses the counted branch; Row 32 (f) is BigDev's. Glyph scan: 140 added `⛔`, ⛔ inversion. |
+| 2026-10-17 | 1.1 (round 4) | Fresh-context consistency sweep — ⛔ HIGH (4 MED, 7 LOW), all applied: the fail-open warning had ⛔ sink (the core never alarms — `claim-dlt-sms-send.ts:9`) ⇒ `preflightWarning` on `accepted`, alarmed by each 6.19b/c/d caller; Task 4's unscoped "TRANSIENT ⇒ proceed" would send on the holding children ⇒ proceed only when `preflightFailOpen`, else `transient`; MG15's `accepted` definition + residual name the stale-pass extension; T13 carries MG17 (a) and the blank-secret arms; MG17 (b) `auth*` is unproven in the core; S1 no longer implies settling it makes the api check blocking; "BigDev may route it" removed (⛔ routed, everywhere); the Story statement no longer claims an ACCOUNT fault is stopped; the Policy meaning's MG17 (a) qualifier; AC9 (a2) / (b2) legs; the memo field declared on `ClaimCorrectionReminderDeps` too. Rounds: 1 HIGH → 2 HIGH → 0 HIGH (all HIGHs the pass's own). |

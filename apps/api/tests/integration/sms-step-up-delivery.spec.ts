@@ -44,6 +44,12 @@ class FakeGateway implements SmsMessagingHandle {
   }
 }
 
+/** One distinct MSG91 template id per OTP config key (Story 6.37 MG4 / T14). */
+const OTP_TEMPLATE_IDS: Readonly<Record<string, string>> = {
+  'sms.dlt.template_id.otp_login': '64b0c0ffee0123456789a015',
+  'sms.dlt.template_id.otp_step_up': '64b0c0ffee0123456789a016',
+};
+
 /** A crypto-random 10-digit Indian mobile core (mirrors `randomUUID()`'s collision safety — Story 5.9 review). */
 function randomMobile(): string {
   return `${randomInt(6, 10)}${randomInt(0, 1_000_000_000).toString().padStart(9, '0')}`;
@@ -60,7 +66,8 @@ function buildRealAdapterDeps(gateway: SmsMessagingHandle): {
     messaging: gateway,
     db: td.deps.serviceDb,
     encryption: td.deps.encryption,
-    resolveConfig: async (k: string) => `TRAI::${k}`,
+    // Story 6.37 (T14): a DISTINCT MSG91 id (24 hex) per OTP key — the NAME → value proof.
+    resolveConfig: async (k: string) => OTP_TEMPLATE_IDS[k] ?? null,
   });
   return { deps: { ...td.deps, stepUpDelivery: realAdapter }, audit: td.auditSink, pool: td.pool };
 }
@@ -129,7 +136,8 @@ describe.skipIf(!hasDatabase)('SMS-DLT OTP delivery (Story 5.9, DB)', () => {
 
       // Gateway received the login OTP send to the canonical E.164, with the code in the body.
       expect(gw.last?.to).toBe(canonical);
-      expect(gw.last?.dltTemplateId).toBe('TRAI::sms.dlt.template_id.otp_login');
+      expect(gw.last?.templateId).toBe('64b0c0ffee0123456789a015');
+      expect(gw.last?.values).toEqual([{ name: 'otp', value: codeFromBody(gw.last) }]);
       expect(gw.last?.body).toContain('login code');
 
       // The send audit records HOW it was delivered (Task 3) + the HMAC tag (never the code).
@@ -165,7 +173,8 @@ describe.skipIf(!hasDatabase)('SMS-DLT OTP delivery (Story 5.9, DB)', () => {
       const sreq = await post(app, `${BASE}/step-up/request`, { actionContext: 'member.demo' }, access);
       expect(sreq.status).toBe(200);
       expect(gw.last?.to).toBe(canonical);
-      expect(gw.last?.dltTemplateId).toBe('TRAI::sms.dlt.template_id.otp_step_up');
+      expect(gw.last?.templateId).toBe('64b0c0ffee0123456789a016');
+      expect(gw.last?.values).toEqual([{ name: 'otp', value: codeFromBody(gw.last) }]);
 
       const send = audit.ofType('member_step_up.send').at(-1);
       expect(send?.context?.['delivery_channel']).toBe('sms');
@@ -199,7 +208,7 @@ describe.skipIf(!hasDatabase)('SMS-DLT OTP delivery (Story 5.9, DB)', () => {
       const access = login.body.accessToken as string;
 
       // Prime the gateway to reject the next send.
-      gw.failWith = new SmsSendError('carrier said no', 'CARRIER_REJECT', 400);
+      gw.failWith = new SmsSendError('carrier said no', null, 400, { errorClass: 'carrier_reject', code: 'synthetic' });
       const sreq = await post(app, `${BASE}/step-up/request`, { actionContext: 'member.demo' }, access);
       // Retriable error — NOT a { sent: true } success.
       expect(sreq.status).toBeGreaterThanOrEqual(500);

@@ -3,7 +3,9 @@
 // DB-FREE: the gateway is a FAKE `SmsMessagingHandle` (no network); the `step_up` member-mobile read is
 // mocked; decryption uses real fake-KMS material (buildEncryptionDeps + encryptMobile round-trip). Asserts
 // the NEGATIVE security properties explicitly: a reject NEVER resolves `{sent:true}`; the code + mobile
-// NEVER appear in a thrown error.
+// NEVER appear in a thrown error. ⭐ Story 6.37 (MSG91): each OTP key resolves a DISTINCT 24-hex MSG91 id (the NAME →
+// value proof, T14); the code travels as the ONE named value `otp` (MG3); the gateway codes are MSG91's (SYNTHETIC — a
+// synchronous Flow `code` is ⛔ documented); AC8 (b) drives the REAL client's 9 s abort with a controllable signal.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,11 +16,11 @@ vi.mock('@twt/domain', async (importActual) => {
   return { ...actual, waOptIn: { ...actual.waOptIn, getMemberMobileCiphertext } };
 });
 
-import type { SmsGatewayMessage, SmsMessagingHandle } from '@twt/channels';
+import type { SmsFetchLike, SmsGatewayMessage, SmsMessagingHandle } from '@twt/channels';
 
 // Dynamic value import — a STATIC `@twt/channels` value import pulls in `@twt/domain` before the mock var is
 // initialized (vi.mock is hoisted above it), so load it after the mock is registered.
-const { SmsSendError } = await import('@twt/channels');
+const { createSmsAppClient, SmsSendError } = await import('@twt/channels');
 const { createSmsDltStepUpDelivery } = await import('../../src/modules/auth/shared/sms-step-up-delivery.js');
 const { StepUpDeliveryError } = await import('../../src/modules/auth/shared/step-up-delivery.js');
 const { buildEncryptionDeps } = await import('../../src/deps.js');
@@ -30,6 +32,11 @@ const enc = buildEncryptionDeps(PEPPER);
 const LOGIN_MOBILE = '+919812345678';
 const STEP_UP_MOBILE = '+919887654321';
 const CODE = '048213';
+/** One distinct MSG91 id per OTP config key (T14). */
+const TEMPLATE_IDS: Readonly<Record<string, string>> = {
+  'sms.dlt.template_id.otp_login': '64b0c0ffee0123456789a015',
+  'sms.dlt.template_id.otp_step_up': '64b0c0ffee0123456789a016',
+};
 
 /** A fake gateway handle: records every send; can be primed to throw a specific error. */
 function fakeMessaging(): {
@@ -59,7 +66,7 @@ function makeAdapter(messaging: SmsMessagingHandle) {
     messaging,
     db: {} as never, // never touched for login; the step_up read is mocked
     encryption: enc,
-    resolveConfig: async (key: string) => `TRAI::${key}`,
+    resolveConfig: async (key: string) => TEMPLATE_IDS[key] ?? null,
   });
 }
 
@@ -99,7 +106,9 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
       // `body` against its OWN registered copy, so a substring check alone would miss a wording drift.
       expect(gw.sent[0]?.body).toBe(`${CODE} is your TWT login code. Valid 5 min. Do not share.`);
       // The template id is the RESOLVED value of the login NAME pointer (never hardcoded).
-      expect(gw.sent[0]?.dltTemplateId).toBe('TRAI::sms.dlt.template_id.otp_login');
+      expect(gw.sent[0]?.templateId).toBe('64b0c0ffee0123456789a015');
+      // ⭐ 6.37 MG3 — the code is the ONE named value MSG91 substitutes (TV13's `otp`).
+      expect(gw.sent[0]?.values).toEqual([{ name: 'otp', value: CODE }]);
     });
 
     it('never calls the member-mobile decrypt read for login', async () => {
@@ -127,7 +136,8 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
       expect(gw.sent).toHaveLength(1);
       expect(gw.sent[0]?.to).toBe(LOGIN_MOBILE);
       expect(gw.sent[0]?.body).toBe(`${CODE} is your TWT verification code. Valid 3 min. Do not share.`);
-      expect(gw.sent[0]?.dltTemplateId).toBe('TRAI::sms.dlt.template_id.otp_step_up');
+      expect(gw.sent[0]?.templateId).toBe('64b0c0ffee0123456789a016');
+      expect(gw.sent[0]?.values).toEqual([{ name: 'otp', value: CODE }]);
       expect(getMemberMobileCiphertext).not.toHaveBeenCalled();
     });
 
@@ -160,7 +170,8 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
       expect(gw.sent[0]?.to).toBe(STEP_UP_MOBILE);
       // Exact byte-match against the registered template (Story 5.9 review).
       expect(gw.sent[0]?.body).toBe(`${CODE} is your TWT verification code. Valid 3 min. Do not share.`);
-      expect(gw.sent[0]?.dltTemplateId).toBe('TRAI::sms.dlt.template_id.otp_step_up');
+      expect(gw.sent[0]?.templateId).toBe('64b0c0ffee0123456789a016');
+      expect(gw.sent[0]?.values).toEqual([{ name: 'otp', value: CODE }]);
     });
 
     it('no member identity row ⇒ throws no_delivery_target (never resolves)', async () => {
@@ -183,13 +194,19 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
 
   describe('gateway rejections classify + NEVER resolve (AC1 #2)', () => {
     const cases: Array<{ name: string; err: unknown; cls: string }> = [
-      { name: 'invalid number', err: new SmsSendError('bad number', 'INVALID_NUMBER', 400), cls: 'invalid_number' },
+      // SYNTHETIC MSG91 codes (MG7): 202 invalid mobile, 400 template; a carrier reject has ⛔ MSG91 code (pre-classified).
+      { name: 'invalid number', err: new SmsSendError('bad number', '202', 200), cls: 'invalid_number' },
       {
         name: 'DLT template not approved',
-        err: new SmsSendError('content mismatch', 'DLT_TEMPLATE_NOT_APPROVED', 400),
+        err: new SmsSendError('content mismatch', '400', 200),
         cls: 'dlt_template_not_approved',
       },
-      { name: 'carrier reject', err: new SmsSendError('dnd', 'CARRIER_REJECT', 400), cls: 'carrier_reject' },
+      { name: 'auth', err: new SmsSendError('bad key', '201', 200), cls: 'auth' },
+      {
+        name: 'carrier reject',
+        err: new SmsSendError('dnd', null, 400, { errorClass: 'carrier_reject', code: 'synthetic' }),
+        cls: 'carrier_reject',
+      },
       { name: 'network', err: new SmsSendError('transport failure', null, 0), cls: 'api_unavailable' },
     ];
     for (const c of cases) {
@@ -204,7 +221,7 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
 
     it('the thrown error carries NEITHER the code NOR the mobile (no PII leak)', async () => {
       const gw = fakeMessaging();
-      gw.fail(new SmsSendError('carrier said no', 'CARRIER_REJECT', 400));
+      gw.fail(new SmsSendError('carrier said no', null, 400, { errorClass: 'carrier_reject', code: 'synthetic' }));
       let thrown: unknown;
       try {
         await makeAdapter(gw.messaging).deliver(loginPayload());
@@ -229,6 +246,43 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
       const gw = fakeMessaging();
       const bad = stepUpPayload({ resolvedMobile: LOGIN_MOBILE } as Partial<StepUpOtpDelivery>);
       await expect(makeAdapter(gw.messaging).deliver(bad)).rejects.toMatchObject({ errorClass: 'invalid_payload' });
+    });
+  });
+
+  describe('⭐ Story 6.37 AC8 (b) — the REAL MSG91 client\'s own 9 s abort fires FIRST: a deterministic `api_unavailable`', () => {
+    it('the signal is created synchronously at `send` (9 s); aborting it ⇒ StepUpDeliveryError(api_unavailable), ⛔ the outer bound\'s `unknown`', async () => {
+      const controller = new AbortController();
+      const timeoutSignal = vi.fn<(ms: number) => AbortSignal>(() => controller.signal);
+      // MSG91 never answers — the fetch settles only when ITS signal aborts.
+      const fetchImpl = vi.fn<SmsFetchLike>(
+        (_url, init) => new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted')))),
+      );
+      const client = createSmsAppClient({ apiOrigin: 'https://control.msg91.com', authkey: 'k' }, fetchImpl, { timeoutSignal });
+      const p = makeAdapter(client.messaging()).deliver(loginPayload());
+      await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(1));
+      expect(timeoutSignal).toHaveBeenCalledWith(9_000);
+      controller.abort();
+      await expect(p).rejects.toBeInstanceOf(StepUpDeliveryError);
+      await expect(p).rejects.toMatchObject({ errorClass: 'api_unavailable' });
+    });
+
+    it('a `+91…` E.164 goes out as MSG91\'s `91…`, the code as `otp`, the body ⛔ sent', async () => {
+      const fetchImpl = vi.fn<SmsFetchLike>().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ type: 'success', message: '5e1e93cad6fc054d8e759a5b' }),
+      });
+      const client = createSmsAppClient({ apiOrigin: 'https://control.msg91.com', authkey: 'k' }, fetchImpl);
+      expect(await makeAdapter(client.messaging()).deliver(loginPayload())).toEqual({
+        channel: 'sms',
+        status: 'accepted',
+        gatewayMessageId: '5e1e93cad6fc054d8e759a5b',
+      });
+      expect(JSON.parse(fetchImpl.mock.calls[0]![1].body)).toEqual({
+        template_id: '64b0c0ffee0123456789a015',
+        short_url: '0',
+        recipients: [{ mobiles: '919812345678', otp: CODE }],
+      });
     });
   });
 

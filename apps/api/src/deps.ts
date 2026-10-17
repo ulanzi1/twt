@@ -12,12 +12,23 @@ import { createHash } from 'node:crypto';
 
 import { createDb, resolveConnectionString, resolveSecretValue, type Db } from '@twt/domain';
 import { encryption } from '@twt/domain';
-import { createSmsAppClient, resolveOtpTemplate } from '@twt/channels';
+import {
+  checkMsg91Template,
+  createMsg91PreflightMemo,
+  createSmsAppClient,
+  isMsg91TemplateId,
+  MSG91_PREFLIGHT_FAULT_TTL_MS,
+  MSG91_PREFLIGHT_PASS_TTL_MS,
+  resolveOtpTemplate,
+  type Msg91PreflightObservation,
+  type Msg91PreflightResult,
+  type SmsFetchLike,
+} from '@twt/channels';
 import { consoleHelpdeskReplyNotifier } from '@twt/jobs';
 import { createCloudflareTurnstileVerifier } from '@twt/edge';
 
 import { createAuditLogSink, createKmsAuditHook } from './audit/audit-log-sink.js';
-import { SMS_GATEWAY_API_URL_PLACEHOLDER, type ApiConfig } from './config.js';
+import type { ApiConfig } from './config.js';
 import type { AppDeps, EncryptionDeps } from './context.js';
 import { resolveMemberJwtKeys } from './modules/auth/member/jwt-keys.js';
 import { createSmsDltStepUpDelivery } from './modules/auth/shared/sms-step-up-delivery.js';
@@ -198,54 +209,119 @@ async function buildKycProviderRegistry(config: ApiConfig): Promise<KycProviderR
   });
 }
 
+/** What `buildMemberStepUpDelivery` lets a test inject — so ⛔ test ever reaches MSG91 (Story 6.37 AC11, I7). */
+export interface MemberStepUpDeliveryOptions {
+  /** The MSG91 client's fetch (default: the global `fetch`). */
+  readonly fetchImpl?: SmsFetchLike;
+  /** Epoch milliseconds for the pre-flight memo (default `Date.now`). */
+  readonly clock?: () => number;
+  /** Where a boot / runtime pre-flight line goes (default `console.error` / `console.info`) — ⛔ the id, key or code. */
+  readonly log?: { readonly error: (line: string) => void; readonly info: (line: string) => void };
+}
+
 /**
  * Build the MEMBER step-up / login OTP delivery port (Story 5.9, Task 5). Env-gated: the reveal/log stub in
  * dev/CI (local + tests complete the OTP flow without SMS — mirror the WA/push fixture-in-dev seam); the REAL
- * SMS-DLT adapter in prod. Prod FAILS STARTUP (BigDev 2026-07-07) when the global gateway credential, either
- * OTP DLT template-id NAME, OR the gateway URL resolves blank/unset — a prod system that cannot deliver OTPs
- * must not boot and pretend it can (do NOT reuse `SmsAppClient.isConfigured()`, whose silent-fallback is the
- * wrong posture here).
+ * SMS adapter in prod. Prod FAILS STARTUP (BigDev 2026-07-07) when the MSG91 authkey or either OTP template id
+ * resolves blank — a prod system that cannot deliver OTPs must not boot and pretend it can (do NOT reuse
+ * `SmsAppClient.isConfigured()`, whose silent-fallback is the wrong posture here).
+ * ⭐ Story 6.37 (MSG91 — `2026-10-17-345` MG4 / MG5 / MG10 / MG17; ADR-0041): the client is MSG91's (the sender id
+ * and the old URL placeholder retired — the sender lives ON each template); a template id that is ⛔ MSG91's 24 hex
+ * also REFUSES; and the BOOT PRE-FLIGHT reads both templates from MSG91 — `auth` / `auth_or_not_found` from the SEND
+ * key (MG17 (a)) REFUSES TO START (⚠ under `restart: unless-stopped` a restart loop of EVERY route — T13 — so only a
+ * fault that proves ⛔ code can be sent refuses); everything else (`content_mismatch`, `sms_type_needs_unicode`,
+ * `dlt_id_missing`, a read-key refusal under MG17 (b), a transport failure) STARTS with an error log — alarm-only IN
+ * THIS STORY (S1 — the canonicalisation is UNVERIFIED against MSG91's stored text; a later change may make it blocking
+ * once roster Row 32 (e) records a real response). At runtime the memo is ADVISORY (the adapter re-checks off the
+ * request path and only reports). `options` lets a test inject the fetch (⛔ MSG91 from a test — I7).
  */
 export async function buildMemberStepUpDelivery(
   config: ApiConfig,
   encryptionDeps: EncryptionDeps,
   serviceDb: Db,
   resolveChannelSecret: (secretName: string) => Promise<string>,
+  options: MemberStepUpDeliveryOptions = {},
 ): Promise<StepUpOtpDeliveryPort> {
   const isProd = config.nodeEnv === 'production';
   if (!isProd) {
     // Dev/CI: no gateway credential required; reveal the code so local/tests complete the flow.
     return createLogStepUpDelivery({ revealForDev: true });
   }
+  const log = options.log ?? { error: (line: string) => console.error(line), info: (line: string) => console.info(line) };
 
-  // Prod: resolve the gateway credential + PE/OE sender header + both OTP DLT template ids, then FAIL-FAST if
-  // any is blank (never a silent reveal-stub fallback in prod).
-  const apiKey = config.sms.apiKeySecretName
+  // Prod: resolve the MSG91 authkey + both OTP template ids, then FAIL-FAST if any is blank or malformed (never a
+  // silent reveal-stub fallback in prod).
+  const authkey = config.sms.apiKeySecretName
     ? await resolveSecretValue(config.sms.apiKeySecretName, { envFallback: config.sms.apiKeyEnvFallback })
     : '';
-  const senderId = config.sms.senderIdSecretName
-    ? await resolveSecretValue(config.sms.senderIdSecretName, { envFallback: config.sms.senderIdEnvFallback })
-    : '';
-  const loginTemplateId = await resolveChannelSecret(resolveOtpTemplate('login').dltTemplateIdConfigKey);
-  const stepUpTemplateId = await resolveChannelSecret(resolveOtpTemplate('step_up').dltTemplateIdConfigKey);
-  const apiUrlUnset = !config.sms.apiUrl.trim() || config.sms.apiUrl === SMS_GATEWAY_API_URL_PLACEHOLDER;
-  if (!apiKey.trim() || !senderId.trim() || !loginTemplateId.trim() || !stepUpTemplateId.trim() || apiUrlUnset) {
+  const loginTemplateId = (await resolveChannelSecret(resolveOtpTemplate('login').dltTemplateIdConfigKey)).trim();
+  const stepUpTemplateId = (await resolveChannelSecret(resolveOtpTemplate('step_up').dltTemplateIdConfigKey)).trim();
+  if (!authkey.trim() || !loginTemplateId || !stepUpTemplateId) {
     throw new Error(
-      '[deps] production SMS-DLT OTP delivery requires a gateway API key (SMS_GATEWAY_API_KEY_SECRET_NAME), ' +
-        'a PE/OE sender header (SMS_GATEWAY_SENDER_ID_SECRET_NAME), both OTP DLT template ids ' +
-        '(sms.dlt.template_id.otp_login / .otp_step_up), and a real gateway URL (SMS_GATEWAY_API_URL) — ' +
-        'one or more resolved to an empty value or the unset placeholder',
+      '[deps] production SMS OTP delivery requires the MSG91 authkey (SMS_GATEWAY_API_KEY_SECRET_NAME) and both OTP ' +
+        'template ids (sms.dlt.template_id.otp_login / .otp_step_up) — one or more resolved to an empty value',
+    );
+  }
+  if (!isMsg91TemplateId(loginTemplateId) || !isMsg91TemplateId(stepUpTemplateId)) {
+    throw new Error(
+      '[deps] production SMS OTP delivery: an OTP template id (sms.dlt.template_id.otp_login / .otp_step_up) is not a ' +
+        "MSG91 template id (24 hex characters) — a DLT TE id pasted by mistake? (roster Row 32 (d))",
+    );
+  }
+  // MG17 — an OPTIONAL template-read-only key; when its NAME is set it must resolve (a blank one REFUSES).
+  const readKey = config.sms.preflightKeySecretName
+    ? await resolveSecretValue(config.sms.preflightKeySecretName, { envFallback: config.sms.preflightKeyEnvFallback })
+    : null;
+  if (readKey !== null && !readKey.trim()) {
+    throw new Error('[deps] SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME is set but resolved to an empty value');
+  }
+  const readsWithSendKey = readKey === null;
+
+  const client = createSmsAppClient({ apiOrigin: config.sms.apiOrigin, authkey }, options.fetchImpl);
+  const reader = readsWithSendKey ? client : createSmsAppClient({ apiOrigin: config.sms.apiOrigin, authkey: readKey }, options.fetchImpl);
+  const memo = createMsg91PreflightMemo({
+    check: (entry, templateId) =>
+      checkMsg91Template(reader, entry, templateId, {
+        log: (o: Msg91PreflightObservation) => log.info(`[deps] msg91-preflight ${JSON.stringify(o)}`),
+      }),
+    clock: options.clock ?? (() => Date.now()),
+    passTtlMs: MSG91_PREFLIGHT_PASS_TTL_MS,
+    faultTtlMs: MSG91_PREFLIGHT_FAULT_TTL_MS,
+  });
+
+  // The BOOT pre-flight (MG5) — both templates, awaited.
+  const describe = (verdict: Exclude<Msg91PreflightResult, { ok: true }>): string => verdict.reason;
+  for (const intent of ['login', 'step_up'] as const) {
+    const template = resolveOtpTemplate(intent);
+    const id = intent === 'login' ? loginTemplateId : stepUpTemplateId;
+    const verdict = await memo.get({ text: template.contentTemplate, slots: template.slots }, id);
+    if (verdict.ok) continue;
+    const key = template.dltTemplateIdConfigKey;
+    if (!verdict.transient && (verdict.reason === 'auth' || verdict.reason === 'auth_or_not_found') && readsWithSendKey) {
+      throw new Error(
+        `[deps] production SMS OTP delivery: MSG91 refused the authkey or the template ${key} (${verdict.reason}) — ` +
+          'no OTP could be sent (roster Row 32 (b) / (d))',
+      );
+    }
+    log.error(
+      `[deps] msg91-preflight: ${key} did not pass at boot (${describe(verdict)}) — STARTING anyway (alarm-only: ` +
+        'the code is still sent; check the template in MSG91 — roster Row 32 (d) / (e))',
     );
   }
 
-  const client = createSmsAppClient({ apiUrl: config.sms.apiUrl, apiKey, senderId });
   return createSmsDltStepUpDelivery({
     messaging: client.messaging(),
     // serviceDb (BYPASSRLS) — the step_up decrypt read is keyed by (pariwarId, memberId), the R2 pre-scope pattern.
     db: serviceDb,
     encryption: encryptionDeps,
-    // Resolve the per-intent OTP DLT template id NAME → value (send-time indirection; never hardcoded/logged).
+    // Resolve the per-intent OTP template id NAME → value (send-time indirection; never hardcoded/logged).
     resolveConfig: (configKey: string) => resolveChannelSecret(configKey),
+    // MG5 — ADVISORY at runtime: a non-pass on an expired entry's re-check is logged; the code is still sent.
+    preflight: {
+      memo,
+      report: (configKey, verdict) =>
+        log.error(`[deps] msg91-preflight: ${configKey} did not pass a runtime re-check (${describe(verdict)}) — the code was still sent`),
+    },
   });
 }
 

@@ -52,7 +52,8 @@ const TARGET_ENCRYPTION = { marker: 'enc' } as never;
 const TARGET_DEPS = { db: TARGET_DB, encryption: TARGET_ENCRYPTION };
 
 /** A fake global SMS gateway client — its messaging handle is never actually driven in these tests. */
-const fakeAppClient = { isConfigured: () => true, messaging: () => ({ send: () => Promise.resolve('gw-id') }) };
+const gatewaySend = vi.fn(() => Promise.resolve('gw-id'));
+const fakeAppClient = { isConfigured: () => true, messaging: () => ({ send: gatewaySend }) };
 
 // ── The TARGET read moved to @twt/domain (Story 8.8, Task 1; D4) ─────────────────────────────────────
 // The no-opt-in-gate behavioural assertions (resolves from the KYC mobile; null with no decryption
@@ -97,12 +98,16 @@ describe('resolveSmsProvider — real-vs-fixture selection (AC1, AC2)', () => {
     const provider = await resolveSmsProvider(deps, 'deadline_reminder');
     expect(provider.id).toBe('sms-dlt');
     expect(provider.scope).toBe('global');
-    // ⚠ The fixture ALSO has `id: 'sms-dlt'` — prove the REAL provider by what it sends (⛔ 'fixture-sms').
+    // ⚠ The fixture ALSO has `id: 'sms-dlt'` — prove the REAL provider by what it answers (⛔ 'fixture-sms').
+    // ⭐ Story 6.37 MG12: the alert composition binds ⛔ named values ⇒ even a forced registrable entry is refused locally
+    // `no_named_values` and the gateway is ⛔ called — every alert category stays dark (TV6).
+    gatewaySend.mockClear();
     const result = await provider.send({ channel: 'sms', title: null, body: 'x', deepLink: null }, {
       channel: 'sms',
       address: '+910000000000',
     });
-    expect(result.providerMessageId).toBe('gw-id');
+    expect(result).toMatchObject({ status: 'rejected', providerMessageId: null, detail: 'dlt_template_not_approved:no_named_values' });
+    expect(gatewaySend).not.toHaveBeenCalled();
   });
 
 

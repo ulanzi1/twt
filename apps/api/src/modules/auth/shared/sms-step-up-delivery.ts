@@ -32,8 +32,23 @@
 // (AI-4-3(c)). No thrown `StepUpDeliveryError` message carries the code or the mobile.
 //
 // ── KNOWN v1 gap (same as 5.6/WA): no client-cache eviction on credential rotation → restart-required. ────
+//
+// ── Story 6.37 (MSG91 — `2026-10-17-345` MG2 / MG3 / MG5; ADR-0041) ─────────────────────────────────────────
+// The code goes through MSG91's Flow API like every other text (MG2 — ⛔ SendOTP): the message carries MSG91's template
+// id and the ONE named value `otp` (TV13); the rendered body stays the oracle, ⛔ sent. ⭐ The pre-flight is ADVISORY here
+// at runtime: `deliver` reads the process memo FIRE-AND-FORGET (⛔ awaited — ⛔ latency added to the bound) and a fault or
+// a transient is only REPORTED; the code is STILL sent — ⛔ a login is ever refused by the pre-flight after boot (the
+// boot check in `deps.ts` is the gate).
 
-import { classifySmsError, resolveOtpTemplate, renderOtpBody, type SmsMessagingHandle } from '@twt/channels';
+import {
+  classifySmsError,
+  resolveOtpTemplate,
+  renderOtpBody,
+  substituteDltValues,
+  type Msg91PreflightMemo,
+  type Msg91PreflightResult,
+  type SmsMessagingHandle,
+} from '@twt/channels';
 import { ids, waOptIn, type Db } from '@twt/domain';
 
 import type { EncryptionDeps } from '../../../context.js';
@@ -62,6 +77,14 @@ export interface SmsDltStepUpDeliveryDeps {
    * hardcoded / logged / audited (AI-4-3(c)). Returns null/blank when unresolvable ⇒ `no_delivery_target`.
    */
   readonly resolveConfig: (configKey: string) => Promise<string | null>;
+  /**
+   * Story 6.37 (MG5) — the ADVISORY runtime pre-flight: the api's process memo and where a non-pass is reported (the
+   * template's config key and the verdict — ⛔ the id, ⛔ the code, ⛔ the number). Absent ⇒ ⛔ re-check.
+   */
+  readonly preflight?: {
+    readonly memo: Msg91PreflightMemo;
+    readonly report: (configKey: string, verdict: Exclude<Msg91PreflightResult, { ok: true }>) => void;
+  };
 }
 
 /**
@@ -70,11 +93,11 @@ export interface SmsDltStepUpDeliveryDeps {
  * for the intent (or both, or neither) with a PII-free `invalid_payload`.
  */
 // ── Send timeout (Story 5.9 review) — an AUTH-policy budget, not a provider concern ────────────────────────
-// `SmsMessagingHandle.send` has no timeout/abort signal (Story 5.6 keeps the generic provider timeout-agnostic
-// — other future consumers may legitimately need a different budget). A member's login/step-up HTTP request
-// must not hang forever on a stalled gateway, so THIS caller bounds the wait. On expiry the wait is abandoned
-// (not cancelled — there is no abort signal to cancel with) and classified as an `unknown` StepUpDeliveryError,
-// same failure path as any other rejection: no retry, no fallback channel, existing audit/failure flow intact.
+// A member's login/step-up HTTP request must not hang forever on a stalled gateway, so THIS caller bounds the wait.
+// On expiry the wait is abandoned (not cancelled) and classified as an `unknown` StepUpDeliveryError, same failure
+// path as any other rejection: no retry, no fallback channel, existing audit/failure flow intact. ⭐ Story 6.37
+// (MG9): the MSG91 client now carries its OWN 9 s abort, started synchronously at `send` — so it fires FIRST and the
+// class is deterministic (`api_unavailable`); this 10 s bound is the backstop for a non-MSG91 handle.
 const SEND_TIMEOUT_MS = 10_000;
 
 function withSendTimeout<T>(pending: Promise<T>, timeoutMs: number): Promise<T> {
@@ -158,17 +181,34 @@ export function createSmsDltStepUpDelivery(deps: SmsDltStepUpDeliveryDeps): Step
         // Story 6.34 TV9: a `login` payload may select the step-up TEXT (the claim handover's 3-minute code); the
         // recipient above still followed `intent`.
         const template = resolveOtpTemplate(payload.template ?? payload.intent);
-        const dltTemplateId = await deps.resolveConfig(template.dltTemplateIdConfigKey);
-        if (!dltTemplateId || dltTemplateId.trim() === '') {
+        const resolvedId = await deps.resolveConfig(template.dltTemplateIdConfigKey);
+        if (!resolvedId || resolvedId.trim() === '') {
           throw new StepUpDeliveryError('no_delivery_target', 'OTP DLT template id NAME resolved to blank');
         }
+        const templateId = resolvedId.trim();
 
-        // Build the gateway message with the SECRET code in the single variable slot (never logged/audited).
+        // MG5 — the ADVISORY re-check, OFF the request path: ⛔ awaited, a non-pass is only reported.
+        if (deps.preflight !== undefined) {
+          const { memo, report } = deps.preflight;
+          void memo
+            .get({ text: template.contentTemplate, slots: template.slots }, templateId)
+            .then((verdict) => {
+              if (!verdict.ok) report(template.dltTemplateIdConfigKey, verdict);
+            })
+            .catch(() => undefined);
+        }
+
+        // Build the gateway message with the SECRET code as the template's ONE named value (TV13's `otp`; never
+        // logged/audited) — MG3: the value must rebuild the rendered body through the registered text, ⛔ sent.
         const body = renderOtpBody(template, payload.code);
+        const values = template.slots.map((slot) => ({ name: slot.name, value: payload.code }));
+        if (values.length !== 1 || substituteDltValues(template.contentTemplate, template.slots, values) !== body) {
+          throw new StepUpDeliveryError('dlt_template_not_approved', 'sms otp send refused: values_mismatch');
+        }
         let gatewayMessageId: string;
         try {
           gatewayMessageId = await withSendTimeout(
-            deps.messaging.send({ to, dltTemplateId, body }),
+            deps.messaging.send({ to, templateId, values, body }),
             SEND_TIMEOUT_MS,
           );
         } catch (err) {

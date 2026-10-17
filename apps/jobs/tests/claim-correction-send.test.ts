@@ -456,6 +456,40 @@ describe('⭐ Story 6.37 — MG3: the named values are proved against the body B
   });
 });
 
+describe('⭐ Story 6.37 — a helpline over 14 characters is SENT with the warning, ⛔ refused (BigDev 2026-10-17; `-322` C1 holds)', () => {
+  const HELPLINE_KEY = `sms.claim_correction.helpline_number.${PARIWAR}`;
+
+  it.each(['+91 1800 123 456', '18001234567890123'])('`%s` ⇒ accepted, the SAME body, the named value as set, flag set (⛔ value_too_long)', async (helpline) => {
+    const c = client(() => Promise.resolve('gw-long'));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config({ [HELPLINE_KEY]: helpline }) }, input);
+    expect(r).toEqual({ kind: 'final', outcome: 'accepted', providerMessageId: 'gw-long', detail: null, helplineNotCallbackNumber: true });
+    expect(c.sent).toEqual([renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E', helpline })]);
+    expect(c.messages[0]!.values).toEqual([
+      { name: 'reference', value: '3F2A9C1E' },
+      { name: 'helpline', value: helpline },
+    ]);
+  });
+
+  it('the warning names the 14-character limit (⛔ the number itself)', async () => {
+    const { helplineNotCallbackNumberWarning } = await import('../src/scheduler/claim-dlt-sms-send.js');
+    const w = helplineNotCallbackNumberWarning(PARIWAR, 'correction reminder');
+    expect(w).toContain('at most 14 characters');
+    expect(w).toContain('not a callback number');
+  });
+
+  it('every OTHER slot keeps its length check (the reference, 8)', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimDltSms(
+      { smsAppClient: c, resolveConfig: config() },
+      coreInput({
+        render: (h: string) => renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E0', helpline: h }),
+        values: (h: string) => ({ reference: '3F2A9C1E0', helpline: h }),
+      }),
+    );
+    expect(r).toMatchObject({ outcome: 'error', detail: 'dlt_template_not_approved:value_too_long' });
+  });
+});
+
 describe('⭐ Story 6.37 — MG4: a template id that is ⛔ MSG91\'s 24 hex', () => {
   it.each(['TPL-123', '1107161234567890123', '64b0c0ffee0123456789abc'])('`%s` ⇒ final `template_id_malformed` + alarm, ⛔ memo, ⛔ fetch', async (id) => {
     const c = client(() => Promise.resolve('gw'));

@@ -160,6 +160,9 @@ export async function smsPreflightGap(
   return verdict.ok ? null : `config:sms_preflight_${verdict.reason}:${configKey}`;
 }
 
+/** The slot every claim text carries the per-Pariwar helpline in (the three registries' `helpline`). */
+const HELPLINE_SLOT = 'helpline';
+
 /** MG3 — the values as the gateway sends them, or the reason they cannot be: names = the slots', ≤ maxLength, = the body. */
 function checkedValues(
   template: Msg91PreflightEntry,
@@ -173,8 +176,10 @@ function checkedValues(
   const ordered = template.slots.map((slot) => ({ name: slot.name, value: values[slot.name] as string }));
   if (ordered.some((v) => typeof v.value !== 'string')) return { ok: false, code: 'values_mismatch' };
   // Code points, as the slot predicates count (`fitsDltAlphanumeric`). ⚠ MSG91's own per-variable cap (S2) is ⛔ settled —
-  // Row 32 (d) confirms it in writing before templates 13 / 14 are provisioned.
-  if (template.slots.some((slot, i) => [...(ordered[i] as SmsGatewayValue).value].length > slot.maxLength)) {
+  // Row 32 (d) confirms it in writing before templates 13 / 14 are provisioned. ⭐ The per-Pariwar HELPLINE is EXEMPT (BigDev,
+  // 2026-10-17 — `-322` C1 holds): one over its 14 characters is ⛔ a callback number, so it is SENT as set and the caller's
+  // `helplineNotCallbackNumber` warning (which names the 14-character limit) fires — ⛔ refused.
+  if (template.slots.some((slot, i) => slot.name !== HELPLINE_SLOT && [...(ordered[i] as SmsGatewayValue).value].length > slot.maxLength)) {
     return { ok: false, code: 'value_too_long' };
   }
   if (substituteDltValues(template.text, template.slots, ordered) !== body) return { ok: false, code: 'values_mismatch' };
@@ -188,7 +193,7 @@ function checkedValues(
 export function helplineNotCallbackNumberWarning(pariwarId: string, purpose: string): string {
   return (
     `[jobs] claim-dlt-sms: pariwar ${pariwarId} ${purpose} — SENT, but the helpline set for this Pariwar is not a callback ` +
-    `number: digits only, 3–14 — no '+' or spaces. Fix the secret; once operators enforce tags they reject these texts ` +
+    `number: digits only, at least 3 and at most 14 characters — no '+' or spaces. Fix the secret; once operators enforce tags they reject these texts ` +
     `(roster Row 30 (c))`
   );
 }

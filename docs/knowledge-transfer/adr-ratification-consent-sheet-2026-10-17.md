@@ -1,0 +1,130 @@
+# ADR Ratification — Trustee Consent Sheet (2026-10-17)
+
+**Purpose:** collect Trustee Panel consent for the **three `drafted` Section A ADRs** — **ADR-0040** (staff email transport),
+**ADR-0041** (the SMS gateway, MSG91) and **ADR-0042** (MSG91's delivery reports). Mark **Ratify / Defer / Reject** and initial.
+
+**Trustee Panel (≥2-trustee quorum required to ratify):** Dhiraj Rahul (Trustee 1) · Kalpana Bharti (Trustee 2)
+**Prepared by:** BigDev (Solo Builder)
+**Authority for the flip:** `docs/adr/README.md` lifecycle (`drafted → under-trustee-review → ratified`); `docs/knowledge-transfer/adr-index.md` is the authoritative status ledger.
+
+> **Status as of 2026-10-17.** Section A breakdown (the index summary): `slot-reserved-pre-write` 112 · `drafted` **3** ·
+> `under-trustee-review` 0 · `ratified` 37 · `superseded` 1 · **Total 153**. The three `drafted` rows are all on this sheet; if all three
+> ratify, **`drafted` reaches 0**. ⚠ A pre-existing drift is recorded in the index (a tally of the rows gives 111 / 39, not the summary's
+> 112 / 37); it is not corrected by this sheet.
+>
+> **None of these ratifications is a merge gate** — each is a go-live gate (roster Rows 24 (a), 32 (a), 33 (a)). Nothing is in
+> production.
+
+---
+
+## Read-first priority
+
+**Three things the Panel should read before signing.**
+
+### 1. ADR-0042 departs from architecture §3.11 step 1 — ratifying it accepts the departure
+
+Architecture §3.11 (ratified) says every inbound webhook *"**Verify** provider signature at handler entry"*. MSG91 offers **no
+signature at all** — only custom static headers — so ADR-0042 authenticates its delivery reports with a **static secret header**
+compared in constant time. Ratifying ADR-0042 accepts that; so that §3.11 does not silently contradict a ratified ADR, the following
+one-line pointer is applied to §3.11 **on ratification** (approve it with ADR-0042):
+
+```diff
+ 1. **Verify** provider signature at handler entry (per §3.5, §2.8 patterns).
++   A provider that offers no request signature (MSG91's SMS delivery reports) is authenticated by a
++   static secret header compared in constant time, as recorded in ADR-0042; the signature step is
++   restored if the provider adds signing.
+```
+
+### 2. ADR-0042's "a report can only subtract reach" holds under the Panel's ruling
+
+ADR-0042 bounds what a forged report can do: it can never ADD reach, so it can never cause a claim to be closed. That bound fails only
+under the "proven delivery only" option (C) of the 2026-10-17 question — which the Panel did **not** choose (Decision `2026-10-17-350`,
+option B1). Under B1 a forged "not delivered" report can at worst delay one person's closure and start the letter route for them.
+
+### 3. ADR-0041's main accepted risk is now being closed by the delivery-report work
+
+ADR-0041 accepted that MSG91 says "accepted" even for texts that never arrive. Rows 6-37b (receiving reports, ADR-0042) and 6-37c (the
+Panel's delivery ladder) close that gap; until both are done, no claim-text template is switched on (roster Row 32 note (9)).
+
+---
+
+## 1 · ADR-0040 — Staff email transport
+
+**File:** `docs/adr/ADR-0040-staff-email-transport.md` · **Authored:** 2026-10-09, Story 6.25 · **Status:** `drafted` · **Never
+presented to the Panel.** · **Go-live gate:** roster Row 24 (a).
+
+**What it commits:** staff email (the email to every Pariwar Admin for a standing suspicion refusal — *"open the list"*, no names, no
+note) is sent through a provider-agnostic port in `apps/jobs` with two real adapters — **AWS SES v2 in Mumbai (`ap-south-1`)** and
+**Zoho ZeptoMail** — one chosen per environment by config. It **amends ADR-0009 §5's "sole query path"** for identity data to admit
+exactly two further read paths, both fenced by a source test: an eligibility check that reads no identity column, and a read of ONE
+admin's encrypted email, decrypted only in the sending job's memory.
+
+**Accepted risks:** "accepted" is not delivery; a timeout or provider error may produce a second email (recorded and alarmed); every
+alarm reaches the logs only until alerting is wired to a named person (Row 24).
+
+| | Ratify | Defer | Reject | Initials | Notes / conditions |
+|---|---|---|---|---|---|
+| **Dhiraj Rahul** | ☐ | ☐ | ☐ | | |
+| **Kalpana Bharti** | ☐ | ☐ | ☐ | | |
+
+---
+
+## 2 · ADR-0041 — The SMS gateway: MSG91
+
+**File:** `docs/adr/ADR-0041-sms-gateway-msg91.md` · **Authored:** 2026-10-17, Story 6.37 · **Status:** `drafted` (amended twice the same
+day — Story 6.37's review; Story 6.37b's CRQID) · **Never presented to the Panel.** · **Go-live gate:** roster Row 32 (a).
+
+**What it commits:** every SMS — the correction, closure and certificate texts, the suspicion notices, the neighbours' request, and both
+login codes — is sent through **MSG91's Flow API** behind the existing SMS seam, with each template's named values; a **template
+pre-flight** reads each template from MSG91 before a text is spent, because MSG91's own answer cannot be trusted (it says "success" even
+to a fake key). Where a run can hold (suspicion notices, the neighbours' request) a broken template holds it; on the correction, closure
+and certificate paths only a proven fault stops a text. Every send now carries an id MSG91 echoes back in its delivery report.
+
+**Accepted risks:** "accepted" is not delivery (being closed — Read-first 3); no idempotency key, so a retried timeout can text a person
+twice (recorded, not hidden); a false template mismatch can hold a run until MSG91's response format is confirmed in writing.
+
+| | Ratify | Defer | Reject | Initials | Notes / conditions |
+|---|---|---|---|---|---|
+| **Dhiraj Rahul** | ☐ | ☐ | ☐ | | |
+| **Kalpana Bharti** | ☐ | ☐ | ☐ | | |
+
+---
+
+## 3 · ADR-0042 — MSG91's delivery reports
+
+**File:** `docs/adr/ADR-0042-msg91-delivery-report-ingress.md` · **Authored:** 2026-10-17, Story 6.37b · **Status:** `drafted` · **Never
+presented to the Panel.** · **Go-live gate:** roster Row 33 (a).
+
+**What it commits:** MSG91's delivery reports are received at one public route authenticated by a **static secret header** (Read-first 1),
+stored as a seven-field record that **never includes the phone number**, acknowledged only after the record is saved, and matched by a
+background job to the exact text through our own id. The api always starts, whatever the state of the secret; the results go into one
+new table; the existing send records are never changed. Cloudflare is told not to challenge this one route.
+
+**Accepted risks:** a secret header is weaker than a signature — anyone holding it could post a report (bounded — Read-first 2); a
+Secret Manager outage when the api starts disables the webhook until a restart; the route's rate limit (1,200 a minute, provisional) is
+counted per caller-supplied address; a report that never comes leaves a text counted as accepted, caught by a daily silence alarm.
+
+**Approving this row also approves the §3.11 pointer in Read-first 1.**
+
+| | Ratify | Defer | Reject | Initials | Notes / conditions |
+|---|---|---|---|---|---|
+| **Dhiraj Rahul** | ☐ | ☐ | ☐ | | |
+| **Kalpana Bharti** | ☐ | ☐ | ☐ | | |
+
+---
+
+## On ratification — what changes
+
+| Artifact | Change |
+|---|---|
+| `docs/adr/ADR-0040-*.md`, `ADR-0041-*.md`, `ADR-0042-*.md` | `Status:` → `ratified`; ratifying trustees + date; changelog row |
+| `docs/knowledge-transfer/adr-index.md` | The three Section A rows flip; summary `drafted` 3→**0**, `ratified` 37→**40**; **Total unchanged at 153**. Row **and** reconciliation in the **same commit**, per `README.md` §7 |
+| `_bmad-output/planning-artifacts/architecture.md` §3.11 | The one-line pointer in Read-first 1 (with ADR-0042 only) |
+| `docs/launch-gate-inventory/inventory-roster.md` | Rows 24 (a), 32 (a), 33 (a) — evidence link to the ratifying decision |
+| `.decision-log.md` | One entry, numbered from the head **at ruling time** (`2026-10-17-353` is the current head; re-verify) |
+| This sheet | Filed alongside the prior sheets |
+
+**Nothing else.** No code, no migration, no story status. Ratifying ADR-0042 does **not** approve the architecture §3.4 amendment for
+WhatsApp contact about a claim — that is its own item in the same pack.
+
+**Quorum:** ≥2 trustees. **Prepared:** 2026-10-17, BigDev (Solo Builder).

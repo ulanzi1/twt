@@ -42,7 +42,7 @@ value cap vs the 55-char link); the tests every edit turns red named. ⚠ Every 
 
 # Story 6.37: The texts and login codes are actually sent — a MSG91 adapter behind the SMS seam, sending each template's NAMED values, with a pre-flight that proves the account and every template before a single text is spent `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today ⛔ no SMS can reach a real gateway: `sms-app.ts` posts a generic
 > `{sender, to, template_id, message}` with `Authorization: Bearer` and expects `messageId` — a contract that matches ⛔ MSG91, the gateway
@@ -674,7 +674,7 @@ duplicate-id/text memo: intentional defensive checking over the fixed registry, 
 **Disposition (BigDev, 2026-10-17): option 2 — leave as action items.** F1–F4 remain unchecked; W1 remains explicitly deferred.
 No application code changed during the review. Story and sprint row return to `in-progress` while the four patches remain unresolved.
 
-- [ ] [Review][Patch][HIGH] **F1 — Preserve the client's timeout classification during response-body consumption**
+- [x] [Review][Patch][HIGH] **F1 — Preserve the client's timeout classification during response-body consumption**
   [`packages/channels/src/providers/sms-app.ts:327`]. A response can deliver HTTP 200 headers before the 9-second bound, then stall
   in `res.json()`. Its abort is swallowed by the JSON catch; `payload = null` becomes `unknown:no_type`. The jobs core finalises
   `unknown` as `error`, consuming that reminder/certificate slot or losing the once-ever closure notice; OTP delivery also reports
@@ -683,8 +683,14 @@ No application code changed during the review. Story and sprint row return to `i
   `{kind:'final', outcome:'error', detail:'unknown:no_type'}`. Preserve `api_unavailable:timeout` when the signal aborts while
   consuming the body; distinguish a body transport failure from invalid JSON. Add the missing after-headers timeout regression
   through the real client and caller. Sources: blind + edge + auditor.
+  ✅ **Resolved 2026-10-17 (`b90a319c`):** `readBody` in `sms-app.ts` — an abort while the body streams ⇒ `api_unavailable:timeout`
+  (any status); a 2xx body that breaks otherwise ⇒ `api_unavailable:body_read` (a non-2xx keeps its status); a `SyntaxError` (invalid
+  JSON) ⇒ `null`, unchanged (`unknown:no_type` on a 2xx). The template read's body abort ⇒ `unavailable` (`timeout`). Regressions
+  through the real client: `sms.test.ts` (4), `sms-preflight.test.ts` (1), `msg91-real-client-caller.test.ts` (the real
+  `sendClaimCorrectionSms` ⇒ `transient` — 2), `sms-step-up-delivery.test.ts` (OTP ⇒ `StepUpDeliveryError('api_unavailable')`) — each
+  red on the unfixed client.
 
-- [ ] [Review][Patch][HIGH] **F2 — Do not promote an unexplained template-read HTTP error to a proven send refusal**
+- [x] [Review][Patch][HIGH] **F2 — Do not promote an unexplained template-read HTTP error to a proven send refusal**
   [`packages/channels/src/providers/sms-app.ts:386`]. Every remaining non-2xx response, including HTTP 404 / 405 / 408 from the
   template endpoint or a proxy, becomes `refused` → `auth_or_not_found`. With the default send-key reader, this prevents API startup
   and ends correction/closure/certificate rows as `auth:preflight`, even though it proves nothing about Flow delivery. **AC8 (a),
@@ -694,16 +700,25 @@ No application code changed during the review. Story and sprint row return to `i
   refusal to the documented auth/template refusal evidence; treat unexplained read-endpoint failures as unavailable (fail open on
   6.19b/c/d and advisory at API boot; still hold the holding sweeps). Add caller and boot regressions; correct Debug Log (g) after
   the patch without rewriting the governance decision. Sources: blind + auditor.
+  ✅ **Resolved 2026-10-17 (`b90a319c`):** `readTemplateVersions` keeps exactly MSG91's documented refusals — HTTP 401 ⇒ `unauthorised`
+  (`auth`); HTTP 200 `status:"error"` / `hasError` ⇒ `refused` (`auth_or_not_found`) — and returns `unavailable`
+  (`unexpected_status`) for EVERY other non-2xx, **HTTP 403 included** (Debug Log (m)). Caller regressions (the real correction wrapper
+  FAILS OPEN — sent with `api_unavailable:preflight`; a holding child is `transient`, ⛔ sent; HTTP 401 still ends the row `auth:preflight`
+  — the positive control) and boot regressions (404 / 405 / 403 ⇒ STARTS with an error log), all red on the unfixed client; the
+  table's HTTP-404 row flipped (with 403 / 405 / 408 / 400 rows added). Debug Log (g) corrected below; `-345` ⛔ edited.
 
-- [ ] [Review][Patch][MEDIUM] **F3 — Retain retryable HTTP status precedence when matching a code-less error message**
+- [x] [Review][Patch][MEDIUM] **F3 — Retain retryable HTTP status precedence when matching a code-less error message**
   [`packages/channels/src/providers/sms-app.ts:349`]. `tokenForMessage` runs before the HTTP fallback. An HTTP 429 or 503 with the
   recognised invalid-template message becomes final `dlt_template_not_approved:template_invalid`, rather than `rate_limited` or
   `api_unavailable`; the jobs caller consumes its slot instead of retrying. **MG6, ADR-0041's acceptance order.** Both statuses
   reproduced with injected fetch. Debug Log (b)'s intended `auth:authkey_missing` token on HTTP 401 does not require overriding
   throttling/server statuses. Keep that 401 token and the listed-code mappings while ensuring code-less 429 / 5xx remain transient;
   add table-driven mixed-status/message cases. Source: edge.
+  ✅ **Resolved 2026-10-17 (`b90a319c`):** a code-less 429 / 5xx now classifies by its status BEFORE the message tokens; the 401
+  `"Auth Key missing"` ⇒ `auth:authkey_missing` and the 200 / 400 `template_invalid` tokens are kept; listed codes keep their class on a
+  429 / 5xx (Debug Log (a)). Table-driven legs in `sms.test.ts` (7 + 1) and the real caller (429 / 503 ⇒ `transient`), red before.
 
-- [ ] [Review][Patch][MEDIUM] **F4 — Supply an OTP-only way to prove the deployed jobs pre-flight before OTP go-live**
+- [x] [Review][Patch][MEDIUM] **F4 — Supply an OTP-only way to prove the deployed jobs pre-flight before OTP go-live**
   [`docs/launch-gate-inventory/inventory-roster.md:576`]. Row 32 (e) requires a green pre-flight on deployed API AND jobs before OTP
   go-live, but jobs only creates a lazy memo (`apps/jobs/src/boot.ts:612`) used by claim-text callers. With templates 1–14 deliberately
   unprovisioned under Row 32 (i), the shipped jobs paths cannot produce that green result. This leaves the evidence dependent on
@@ -711,12 +726,21 @@ No application code changed during the review. Story and sprint row return to `i
   read-only deployment procedure or command using OTP templates 15/16 and the jobs process's configured reader/key/egress; record
   that as the initial jobs proof, and retain claim-text verification when its own provisioning becomes permitted. Do not weaken
   Row 32 (i) or provision claim ids to obtain the proof. Source: blind; parent verified the lazy wiring and both gate deadlines.
+  ✅ **Resolved 2026-10-17 (`b90a319c`):** `apps/jobs/src/sms-otp-preflight.ts` (`runSmsOtpPreflight`) + the CLI
+  `sms-otp-preflight-cli.ts` (`pnpm --filter @twt/jobs sms:preflight`; in the image `node apps/jobs/dist/src/sms-otp-preflight-cli.js`):
+  reads templates 15 / 16 through the jobs process's OWN reader — `buildSmsGatewayClients`, extracted from
+  `buildContributionProviderResolver` so boot and the command share one builder — and the same `checkMsg91Template` the memo wraps;
+  ⛔ Flow; one JSON line (⛔ the key, ⛔ an id, ⛔ a text); exit 0 only when both pass. Recorded as the INITIAL jobs proof on roster Row 32
+  note (5) (dated; ⛔ a word rewritten; (i) ⛔ weakened) and the sheet's MSG91 step (7) (prose). `sms-otp-preflight.test.ts` (7 legs,
+  a global-fetch recorder at ZERO calls).
 
 - [x] [Review][Defer][MEDIUM] **W1 — A configured HTTP gateway origin can transmit the authkey, mobile and OTP without TLS**
   [`packages/channels/src/providers/sms-app.ts:183`] — deferred, pre-existing. `parseSmsGatewayOrigin('http://control.msg91.com')`
   succeeds; both send and read then use it. The baseline client also accepted arbitrary HTTP `apiUrl`, so this is not a new
   transport regression. The default remains HTTPS. Follow-up: require HTTPS for production gateway configuration and add a
   negative config test; re-trigger before provisioning production SMS credentials. Also recorded in `deferred-work.md`. Source: blind.
+
+**Disposition after the fixes (2026-10-17):** F1–F4 resolved in `b90a319c`; W1 stays deferred. Story and sprint row → `review`.
 
 **Verification in this review:** 415/415 focused unit tests (channels 213, jobs 153, API 49); five jobs live suites 165/165 on
 `DATABASE_URL` at `:5433` (initial sandbox connections were denied; the approved rerun passed). All reproductions inject fetch;
@@ -893,6 +917,10 @@ Where the build took a reading the MGs did not spell out, or departed from their
   mismatch throws `StepUpDeliveryError('dlt_template_not_approved')`, ⛔ a send.
 - **(g) `readTemplateVersions`** maps HTTP 401 / 403 ⇒ `auth`; any other 4xx (⛔ documented) ⇒ `refused` (⇒ `auth_or_not_found`, a
   definite fault); 429 / 5xx / network / timeout / an unparseable or `data`-less 200 ⇒ `transient`.
+  ⚠ **CORRECTED 2026-10-17 by review F2 (`b90a319c`) — the reading above was overbroad:** an undocumented 4xx proves nothing about a
+  Flow send, yet it refused api boot and ended 6.19b/c/d rows `auth:preflight`. Now: HTTP 401 ⇒ `auth`; MSG91's 200 `status:"error"` ⇒
+  `auth_or_not_found`; every OTHER non-2xx (403 included — (m)) ⇒ `transient` (`unexpected_status`). `-345` MG5's reasons are
+  unchanged — it named `auth` for HTTP 401 only; this corrects the build's reading, ⛔ the decision.
 - **(h) `SmsLocalRefusal`** (a client-classified failure on `SmsSendError`) also admits `carrier_reject`, so tests can build the SYNTHETIC
   `carrier_reject` MSG91 never answers synchronously (MG7) — the `CARRIER_REJECT → rejected_unreachable` rows became such fixtures.
 - **(i) MG17 (b) on the api** — a read-key NAME that resolves blank refuses to start; `resolveSecretValue` already throws on a blank env
@@ -910,6 +938,14 @@ Where the build took a reading the MGs did not spell out, or departed from their
   keeps it), so a 15+-character helpline is SENT as set and the existing `helplineNotCallbackNumber` warning fires — its text now says
   *"digits only, at least 3 and at most 14 characters — no '+' or spaces"*. `-322` C1 holds unchanged (`claim-dlt-sms-send.ts`
   `checkedValues`; three legs in `claim-correction-send.test.ts`, red before the fix).
+- **(m) Review F2 — HTTP 403 on the template read is ⛔ a definite refusal either.** F2 named 404 / 405 / 408; its rule (*"restrict
+  definitive refusal to the documented auth/template refusal evidence"*) also covers 403, which MSG91 does ⛔ document for
+  `getTemplateVersions` (F16 documents 401) — and S3 is unsettled: an SMS-only key REFUSED template reads (a plausible 403) proves
+  nothing about its sends. So 403 ⇒ `transient` too: the api STARTS with an error log, 6.19b/c/d fail open, the holding sweeps hold.
+  The SEND path's 401 / 403 ⇒ `auth` (MG6) is unchanged.
+- **(n) Review F1 — a timeout after the headers is a may-have-sent retry.** MSG91 may have taken a request whose body never arrived;
+  `api_unavailable:timeout` is a transient, so pg-boss retries — the same may-have-sent class an abort BEFORE the headers already was
+  (MG9), carried by the open *"At-least-once SMS"* items (closer: row 6-37b). ⛔ A new risk; ⛔ closed.
 - **(k)** `@twt/channels` imports `claim.sanitizeSmsGatewayCode` and `encryption.normalizeMobile` from `@twt/domain` (already a dependency;
   `audit.ts` imports the same namespaces) — ⛔ a second regex (MG8, I6).
 
@@ -949,6 +985,15 @@ Where the build took a reading the MGs did not spell out, or departed from their
   W10 NARROWED; the three 6-37b hand-offs annotated at Task 0.4) and the NEW alarm-only / fail-open item.
 - **The proof (AC11):** `pnpm ci:local` with `DATABASE_URL` at :5433 — **36/36 green** (2026-10-17, on the Task 7 tree); every live
   suite also run alone on :5433 during the build (jobs five SMS suites 144 → with the new legs; api SMS 49 unit + 3 integration).
+- ✅ Resolved review finding [HIGH]: **F1** — an abort while the response body is read keeps `api_unavailable:timeout` (jobs ⇒ a
+  transient retry, ⛔ a spent slot; OTP ⇒ `api_unavailable`); a broken 2xx body ⇒ `api_unavailable:body_read`; invalid JSON unchanged.
+- ✅ Resolved review finding [HIGH]: **F2** — an unexplained template-read non-2xx (404 / 405 / 408 / 403 …) is a transient, ⛔
+  `auth_or_not_found`: 6.19b/c/d fail open, the holding sweeps hold, the api starts; only HTTP 401 and MSG91's 200 `status:"error"` are
+  definite. Debug Log (g) corrected, (m) added.
+- ✅ Resolved review finding [MEDIUM]: **F3** — a code-less 429 / 5xx keeps its transient status over a recognised message; the 401
+  `"Auth Key missing"` token kept.
+- ✅ Resolved review finding [MEDIUM]: **F4** — the read-only jobs OTP pre-flight proof (`sms:preflight` over `buildSmsGatewayClients`),
+  recorded as Row 32 (e)'s initial jobs evidence (Row 32 note (5); the sheet's MSG91 step (7)); Row 32 (i) untouched.
 - ⚠ Owed outside the code (⛔ a merge fence): roster Row 32 (a)–(i) — ADR-0041's ratification, the authkey / IP whitelisting (staging
   too — T13), each template in MSG91 per the sheet's new steps, S1 / S2 in writing, counsel, an alarm to a named person, and 6-37b before
   any claim-text id. Row 30 (b)'s device proof now also waits on Row 32.
@@ -967,6 +1012,7 @@ Where the build took a reading the MGs did not spell out, or departed from their
 - `apps/api/tests/unit/member-step-up-delivery-wiring.test.ts`
 - `apps/api/tests/unit/sms-composition.test.ts`
 - `apps/api/tests/unit/sms-step-up-delivery.test.ts`
+- `apps/jobs/package.json` (review F4 — the `sms:preflight` script)
 - `apps/jobs/src/boot.ts`
 - `apps/jobs/src/scheduler/claim-certificate-reminders.ts`
 - `apps/jobs/src/scheduler/claim-correction-closure.ts`
@@ -975,6 +1021,8 @@ Where the build took a reading the MGs did not spell out, or departed from their
 - `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
 - `apps/jobs/src/scheduler/claim-suspicion-notices.ts`
 - `apps/jobs/src/scheduler/contribution-providers.ts`
+- `apps/jobs/src/sms-otp-preflight.ts` (NEW — review F4)
+- `apps/jobs/src/sms-otp-preflight-cli.ts` (NEW — review F4)
 - `apps/jobs/tests/claim-certificate-reminders-live.test.ts`
 - `apps/jobs/tests/claim-correction-closure-live.test.ts`
 - `apps/jobs/tests/claim-correction-reminders-live.test.ts`
@@ -984,6 +1032,8 @@ Where the build took a reading the MGs did not spell out, or departed from their
 - `apps/jobs/tests/contribution-providers.test.ts`
 - `apps/jobs/tests/dlt-template-sheet.test.ts`
 - `apps/jobs/tests/msg91-no-network.test.ts` (NEW)
+- `apps/jobs/tests/msg91-real-client-caller.test.ts` (NEW — review F1–F3)
+- `apps/jobs/tests/sms-otp-preflight.test.ts` (NEW — review F4)
 - `docs/adr/ADR-0041-sms-gateway-msg91.md` (NEW — Task 0.4)
 - `docs/knowledge-transfer/adr-index.md`
 - `docs/launch-gate-inventory/dlt-template-requests-6-19.md`
@@ -1014,3 +1064,4 @@ Where the build took a reading the MGs did not spell out, or departed from their
 | 2026-10-17 | 1.4 | `bmad-dev-story 6.37` — Tasks 1–7 built on the story branch (commits `c7591218` → Task 7): the vocabulary helpers, the MSG91 Flow client + MG7 code table, the pre-flight + process memo, the send core's named values / malformed id / memo / `beforeSend` and the holds (suspicion, peer mesh) vs fail-open (6.19b/c/d), the OTP path and api boot pre-flight, the sheet's MSG91 steps, the AC11 recorder test, the deferred-work dispositions + one new item. Debug Log (a)–(l) records the readings; (l) — MG3's `value_too_long` vs `-322` C1 on a 15+-character helpline — was put to BigDev. `ci:local` 36/36 on :5433. Status `review`. |
 | 2026-10-17 | 1.5 | Debug Log (l) resolved by BigDev (*"14 characters fine … just display the warning"*): the helpline is exempt from MG3's `value_too_long` refusal — a 15+-character one is SENT with the helpline warning, which now names the 14-character limit; `-322` C1 holds. Tests red → green; jobs unit 674 + the five SMS live suites 165 on :5433; gate green. Status stays `review`. |
 | 2026-10-17 | 1.6 | Full `bmad-code-review` of `466e9b0e..4c03aed1`, all three layers returned: F1–F4 (2 HIGH, 2 MEDIUM) recorded as unchecked patches; W1 pre-existing HTTP-origin risk deferred; 2 additional candidates dismissed. BigDev chose option 2 — leave as action items. No application code changed. Review verification: 415 focused unit tests and 165 live jobs tests on :5433 passed; injected-fetch reproductions; full `ci:local` not re-run. Story and sprint row → `in-progress`. |
+| 2026-10-17 | 1.7 | Addressed code review findings — 4 items resolved (F1, F2 HIGH; F3, F4 MEDIUM) in `b90a319c`: F1 a body-read abort ⇒ `api_unavailable:timeout` (a broken 2xx body ⇒ `body_read`); F2 only MSG91's documented template-read refusals are definite — every other non-2xx, 403 included, is a transient (Debug Log (g) corrected, (m)); F3 a code-less 429 / 5xx keeps its status over a recognised message; F4 the read-only jobs OTP pre-flight proof `sms:preflight` (Row 32 note (5), the sheet's MSG91 step (7)). Each new leg red on the unfixed client. W1 stays deferred. `ci:local` 36/36 on :5433. Status `review`. |

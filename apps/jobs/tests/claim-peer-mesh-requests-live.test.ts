@@ -588,8 +588,11 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
 
   // ── the code review's ROUND 2 (P1, P2, P5–P8, P18) ───────────────────────────────────────────────────────────
 
-  /** As the superuser: leave `pingId` `attempting` under a dead job, past its lease (a crash-left row). */
-  async function stall(pingId: string, code: string): Promise<void> {
+  /**
+   * As the superuser: leave `pingId` `attempting` under a dead job, past its lease (a crash-left row). The link code is FRESH —
+   * `link_code` is UNIQUE across every Pariwar, and this file own-commits on a shared DB.
+   */
+  async function stall(pingId: string, code: string = claim.generatePeerRequestLinkCode()): Promise<void> {
     await pool.query(
       `UPDATE claim_peer_mesh_pings SET send_outcome = 'attempting', attempt_count = 1, claimed_at = $2, claimed_by_job = 'dead-job',
          aging_since = $2, locale_source = 'pariwar_default', link_code = $3 WHERE ping_id = $1`,
@@ -642,7 +645,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
   it('AC5b — a re-claimed row whose claim LEFT the window ⇒ `error` + the ids-only "a text may have gone" alarm', async () => {
     const w = await world({ selected: 1 });
     const p = w.pings[0]!;
-    await stall(p.pingId, 'Dec1dedCode1');
+    await stall(p.pingId);
     await onOwnTx(pool, w.pid, async (client) => {
       await client.query('RESET ROLE');
       await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
@@ -659,7 +662,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
   it('AC5b — a re-claimed row with a NAME fault ⇒ `no_target:name_*` (⛔ replaced) + the "a prior attempt may have sent" alarm', async () => {
     const w = await world({ selected: 1, name: 'A'.repeat(20) + ' ' + 'B'.repeat(20) });
     const p = w.pings[0]!;
-    await stall(p.pingId, 'N4meFaultCd1');
+    await stall(p.pingId);
     const h = harness(w, { registry: [CLEARED] });
     await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID());
     const after = await rows(w);
@@ -754,7 +757,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
                   return (q: unknown, ...rest: unknown[]) => {
                     const text = typeof q === 'string' ? q : (q as { text?: string } | null)?.text;
                     if (typeof text === 'string' && text.includes('FROM pariwar_passport')) {
-                      return mode === 'fail' ? Promise.reject(new Error('db blip')) : Promise.resolve({ rows: [], rowCount: 0, fields: [], command: 'SELECT' });
+                      return mode === 'fail'
+                        ? Promise.reject(Object.assign(new Error('db blip'), { code: '57014' }))
+                        : Promise.resolve({ rows: [], rowCount: 0, fields: [], command: 'SELECT' });
                     }
                     return (c.query as (...a: unknown[]) => unknown).call(c, q, ...rest);
                   };
@@ -771,16 +776,21 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     });
   }
 
-  it('⭐ P7 — a DB fault on the locale read is a RETRY in the child and a SKIP in the sweep (⛔ a hold, ⛔ a park)', async () => {
-    const w = await world({ selected: 1 });
+  it('⭐ P7 — a DB fault on the locale read is a RETRY in the child and a SKIP in the sweep (⛔ enqueued, ⛔ counted held) that PARKS its in-flight texts', async () => {
+    const w = await world({ selected: 2 });
+    const stalled = w.pings[0]!;
+    await stall(stalled.pingId);
     const h = harness(w, { registry: [CLEARED] });
     const deps: ClaimPeerMeshRequestDeps = { ...h.deps, pool: passportPool('fail') };
     await expect(runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
-    expect(h.alarms.some((a) => a.includes('the locale read failed') && a.includes(w.claimCaseId))).toBe(true);
+    expect(h.alarms.some((a) => a.includes('the locale read failed') && a.includes(w.claimCaseId) && a.includes('57014'))).toBe(true);
     const swept = await runPeerMeshRequestSweep(deps, boss(h));
-    expect(swept).toMatchObject({ enqueued: 0, heldForConfig: 0, parkedForConfig: 0 });
-    expect(h.alarms.some((a) => a.includes(`Pariwar ${w.pid} could ⛔ be read`))).toBe(true);
-    expect((await rows(w))[0]?.send_outcome).toBeNull();
+    // the stalled row is PARKED (its give-up clock paused — the fix-diff review's P7 follow-up); ⛔ child enqueued, ⛔ claim held
+    expect(swept).toMatchObject({ enqueued: 0, heldForConfig: 0, parkedForConfig: 1, finalisedStuck: 0 });
+    expect(h.alarms.some((a) => a.includes(`Pariwar ${w.pid} could ⛔ be read`) && a.includes('57014'))).toBe(true);
+    const after = await rows(w);
+    expect(after.find((r) => r.ping_id === stalled.pingId)).toMatchObject({ send_outcome: 'attempting', claimed_by_job: 'sweep:held' });
+    expect(after.find((r) => r.ping_id !== stalled.pingId)?.send_outcome).toBeNull();
   });
 
   it('P7 — a MISSING passport (⛔ default language) is a config HOLD, ⛔ a retry (`config:locale_unavailable`)', async () => {

@@ -621,11 +621,6 @@ export interface PeerRequestLocale {
 }
 
 /**
- * ⭐ R10 / PM22 — THE ONE read row 6-35 will change (to *"the member's choice, else the Pariwar's default"*): today the Pariwar's
- * default language (`pariwar_passport.locale_default`, NOT NULL), recorded on begin as `locale_source = 'pariwar_default'`.
- * Throws when the Pariwar has ⛔ passport (a data fault — the child retries).
- */
-/**
  * The Pariwar has ⛔ default language (⛔ passport row — `claims.pariwar_id` carries ⛔ FK to it): a DATA fault that a retry ⛔ fixes —
  * the jobs child HOLDS on it (`config:locale_unavailable`), unlike a failed read (a transient — 6.27c review round 2 P7).
  */
@@ -636,6 +631,12 @@ export class PeerRequestLocaleMissingError extends Error {
   }
 }
 
+/**
+ * ⭐ R10 / PM22 — THE ONE read row 6-35 will change (to *"the member's choice, else the Pariwar's default"*): today the Pariwar's
+ * default language (`pariwar_passport.locale_default`, NOT NULL), recorded on begin as `locale_source = 'pariwar_default'`.
+ * @throws PeerRequestLocaleMissingError  the Pariwar has ⛔ passport — a data gap (the jobs child HOLDS); any other throw is a
+ *   failed read (the jobs child retries)
+ */
 export async function resolvePeerRequestLocale(db: Db, pariwarId: PariwarId): Promise<PeerRequestLocale> {
   const { rows } = await db.execute<{ locale_default: string }>(sql`
     SELECT locale_default::text AS locale_default FROM pariwar_passport WHERE pariwar_id = ${pariwarId} LIMIT 1`);
@@ -664,7 +665,7 @@ export async function resolvePeerRequestByLinkCode(
   } catch (err) {
     // ⚠ Drizzle's wrapper carries the statement's PARAMETERS (the code) in its message, and its `cause` is the driver's error —
     // both reach a logger's `err` serializer. ⛔ Rethrown: a fresh error with the SQLSTATE only, ⛔ `cause`.
-    throw new PeerRequestByLinkReadError(sqlStateOf(err));
+    throw new PeerRequestByLinkReadError(peerMeshSqlStateOf(err));
   }
   const r = rows[0];
   return r ? (r.ping_id as PeerMeshPingId) : null;
@@ -679,7 +680,8 @@ export class PeerRequestByLinkReadError extends Error {
 }
 
 /** A pg error's five-character SQLSTATE — on the error itself or on Drizzle's `cause` — or `null` (⛔ a message is read). */
-function sqlStateOf(err: unknown): string | null {
+/** The SQLSTATE of a failed query — on the error itself or on Drizzle's wrapper's `cause` — or `null` (ids-free; ⛔ the message). */
+export function peerMeshSqlStateOf(err: unknown): string | null {
   for (const e of [err, (err as { cause?: unknown } | null)?.cause]) {
     const code = (e as { code?: unknown } | null)?.code;
     if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) return code;

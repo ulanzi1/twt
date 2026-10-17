@@ -2761,7 +2761,7 @@ resolver), `components/peer-request/usePeerRequestQueries.ts` (`usePeerRequestBy
 3. ⛔ **Not friction:** a link the app cannot resolve (unknown, another member's, untexted, or a failed call) shows 6.27a's existing
    "could not be opened" state with the helpline and "Done" — ⛔ a new screen, ⛔ a hard error; ⛔ a call is made before the session
    has loaded.
-4. ⭐ **Review F4 / round 2 (2026-10-17) — ⛔ new friction.** A SECOND texted link tapped while the request screen is open now opens
+4. ⭐ **Review F4 / round 2 (2026-10-17) — REMOVES friction, with ONE recorded cost (⛔ a new row).** A SECOND texted link tapped while the request screen is open now opens
    THAT link's request (before, a Back on the first suppressed every later link until the screen was left); a by-link call that
    hangs now ends, after the app's read timeout, in the same "could not be opened" state (before, "Loading…" with ⛔ way out). ⚠
    RECORDED (round 2 W9, accepted by BigDev): the second link replaces an OPEN questionnaire WITHOUT its "leave without saving?"

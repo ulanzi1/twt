@@ -12,7 +12,8 @@ the author. The v2.x text is replaced, ⛔ not annotated — its history is the 
 ⚠ Before Task 1: `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory` — re-read any cited file
 that moved.
 
-STATUS: `done` — code review round 2 (2026-10-17): 2 decisions resolved by BigDev, 18 patches applied, 10 deferred (W1–W10); before it,
+STATUS: `done` — code review round 2 (2026-10-17): 3 decisions resolved by BigDev (D3 ⇒ `2026-10-17-344`), 18 patches applied and
+adversarially re-reviewed, W1–W8 + W10 deferred, W9 accepted; before it,
 round 1's six patch findings F1–F6 resolved (2026-10-17, `bmad-dev-story` review continuation).
 ⭐ SENDING IS LAST on purpose: once a real text goes out, real answers arrive — the warnings and the wait (6.27b), the approvers' view
 (6.27b), the inspector's independence (6.27d) and the workplace selection (row 6-36) all exist now.
@@ -425,6 +426,8 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
 - [x] **Task 1 — copy and registry (AC2, AC8).**
   - [x] 1.1 `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json`, params `{member}`, `{link}`, `{helpline}` (single brace);
         en = the ruled words EXACTLY (⛔ "TWT:"); hi agent-authored afresh for *"a few"* (⛔ copied from the `-303` routing block — Trap 19);
+        ⚠ (2026-10-17 annotation, review round 2 D3 — ⛔ rewritten) as built the Hindi IS that block's draft with दो → कुछ; the "never
+        copied" clause is SUPERSEDED by `2026-10-17-344`;
         `$comment.peer_mesh_sms` in BOTH with **"NOT YET HUMAN-REVIEWED"** (spaces — BF22), Row 28, and *"must match the registered DLT
         content byte for byte"*.
   - [x] 1.2 NEW `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts` cloned from the suspicion registry (BF20): slots `member`
@@ -584,8 +587,10 @@ scale, so the speculative performance finding was not retained. No Panel routing
 
 Review date: 2026-10-17. Whole branch `main...f3c19b62` (49 files, +5,551 / −188), 4 chunks (domain + migration + queue / jobs + scripts
 / API + contracts + api-client / mobile + i18n + docs + governance) × 3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) — 12
-layers, ⛔ failed. Every MED claim re-verified against the code before classification. **2 decision-needed (both resolved: D1 ⇒ P18, D2 ⇒ W9), 18 patch, 10 defer
-(`deferred-work.md` § ROUND 2, W1–W10 — W10 from the fix-diff review), 34 dismissed.** ⛔ HIGH. Panel gate (§0): ⛔ finding is the Panel's — who is texted and when
+layers, ⛔ failed. Every MED claim re-verified against the code before classification. **The review itself: 2 decision-needed, 17 patch, 8 defer
+(W1–W8), 34 dismissed.** Resolved: D1 ⇒ P18 (a patch), D2 ⇒ W9 (ACCEPTED by BigDev — recorded with a trigger, ⛔ deferred work); the
+fix-diff review added W10 (deferred); the adversarial review of the applied patches added D3 (BigDev ⇒ Decision `2026-10-17-344`) and
+the follow-ups below. **Totals as recorded: 3 decisions, 18 patches, W1–W8 + W10 deferred, W9 accepted, 34 dismissed** (`deferred-work.md` § ROUND 2). ⛔ HIGH. Panel gate (§0): ⛔ finding is the Panel's — who is texted and when
 changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev's author-commit `-343`, ⛔ a ratified ruling.
 
 - [x] [Review][Decision] **D1 — R5 treats a provably UN-sent re-claim as "may have sent"** — ✅ RESOLVED (BigDev, 2026-10-17): option (a) ⇒ P18 — R5 / 0166's replacement trigger key on
@@ -614,7 +619,8 @@ changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev'
   — ⛔ test reaches `:501` (re-check fails ⇒ `error`), `:508` (re-claimed `no_target`), `:548` (R6 on attempt > 1), `:588` (the helpline
   warning — the fixture helpline is a valid callback number), `:590` (a final `error` with `alarm`). Add a leg per alarm (fired, ids-only).
   Also: a re-claimed NAME fault returns the PRE-re-claim `attemptCount` (`peer-mesh-request.ts:397`) ⇒ the alarm reads "on attempt 1 — a prior
-  attempt was claimed"; report the re-claim's count. Sources: auditor (jobs) + blind (domain).
+  attempt was claimed"; report the re-claim's count. Sources: auditor (jobs) + blind (domain). ⚠ As applied: the domain still returns
+  the PRE-re-claim count (pinned by the domain spec); the ALARM was reworded to "on a re-claim after N claimed attempt(s)" instead.
 - [x] [Review][Patch] **P3 (MED) — The `link_code` 23505 SAVEPOINT retry has ⛔ test** [packages/domain/src/claim/peer-mesh-request.ts:687]
   — AC2 / checklist family 2 (REAL GAP): plant a ping holding the code the generator will return first (stub the generator's bytes), begin
   another ⇒ the retry takes a fresh code inside the SAVEPOINT and the begin succeeds. Source: auditor (domain).
@@ -637,7 +643,8 @@ changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev'
   sees 08:59:5x and re-enqueues for today's 09:00 (already past for pg-boss). Floor the deferral (`max(next, now + 60 s)`). Sources: blind +
   edge (jobs).
 - [x] [Review][Patch] **P9 — `expectIdsOnly` flakes on UUIDs** [apps/jobs/tests/claim-peer-mesh-requests-live.test.ts:270] —
-  `/\d{10}/` matches ten decimal digits inside a UUID's hex groups (≈ 2–3 % per UUID); strip UUIDs before asserting. Sources: blind +
+  `/\d{10}/` matches ten decimal digits inside a UUID's hex groups (≈ 1.6 % per UUID — only the 12-hex group can hold ten in a row;
+  first recorded as "≈ 2–3 %"); strip UUIDs before asserting. Sources: blind +
   auditor (jobs).
 - [x] [Review][Patch] **P10 — Three of R11's hold codes are untested** [apps/jobs/tests/claim-peer-mesh-requests-live.test.ts] —
   `config:sms_gateway_unconfigured`, `config:secret_manager`, `config:helpline_number_missing`: a hold leg each (⛔ ping begun). Source:
@@ -664,6 +671,7 @@ changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev'
   [packages/i18n/locales/hi/claim.json:168] — word for word (`trustee-panel-routing-note-2026-10-10-6-27-asking-the-neighbours.md:53`).
   Trap 19's purpose (⛔ "two") is met; the RECORD is not — fix `$comment.peer_mesh_sms` (both locales), the sheet's 13–14 wording note and
   the Completion Notes to say what happened, so Row 28's reviewer reads the truth (the words unchanged). Source: auditor (mobile/docs).
+  ⚠ The "purpose is met" wording RE-READ PM3 — corrected by D3: the clause is SUPERSEDED by `2026-10-17-344` (BigDev), ⛔ re-read.
 - [x] [Review][Patch] **P16 — Story / gate records lag** [this file; friction-budget.md] — the File List omits `.decision-log.md` (`-343`);
   round 1's header still reads "patch disposition awaits BigDev" and its invariant lens "REAL GAP (F3) / (F1)" with ⛔ resolved note; the
   Change Log has ⛔ entry for `a1256ead` (→ in-progress); the friction-budget disposition omits `peer-request-slot-render.test.ts` and
@@ -673,7 +681,7 @@ changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev'
   count never grows past the original selection" (say TEXTS ≤ the original count; ROWS may exceed five); the cost line gives the best case
   only — a 40-char name ⇒ en 219 (4 segments), a 120-char link ⇒ hi ≈ 284 (5) — and the owed Panel FYI (`deferred-work.md`) repeats "3 / 4":
   state the range. Sources: blind + edge (mobile/docs).
-- [x] [Review][Patch] **P18 (from D1 (a)) — Widen R5's recorded residual to every pre-send re-claim, and pin it** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:21] — the module header, the Completion Notes and `deferred-work.md` name the 20:00 case only; state all three (a `decrypt_failed:tier1` / `hash_failed:tier1` transient, the F2 deferral): on that re-claim a failed re-check or an unusable number finishes ⛔ replaced and alarms "may have sent" although ⛔ text went (R5 / `-343` as built); ⭐ trigger: such an alarm on a row with `provider_message_id` NULL. A live leg pins it (a decrypt throw, then an unusable number on attempt 2 ⇒ `no_target`, ⛔ replacement, the alarm).
+- [x] [Review][Patch] **P18 (from D1 (a)) — Widen R5's recorded residual to every pre-send re-claim, and pin it** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:21] — the module header, the Completion Notes and `deferred-work.md` name the 20:00 case only; state every path (a `decrypt_failed:tier1` / `hash_failed:tier1` transient, the F2 deferral, and — added by the patch review — P6's lease lapse before the handoff): on that re-claim a failed re-check or an unusable number finishes ⛔ replaced and alarms "may have sent" although ⛔ text went (R5 / `-343` as built); ⭐ trigger: such an alarm on a row whose `first_detail` is a pre-send fault (⚠ `provider_message_id` NULL alone cannot tell these from a crash after an accept). A live leg pins it (a decrypt throw, then an unusable number on attempt 2 ⇒ `no_target`, ⛔ replacement, the alarm).
 - [x] [Review][Defer] **W1 — A permanently undecryptable deceased name loops daily** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:406] — deferred, pre-existing shape (R9's read-before-begin)
 - [x] [Review][Defer] **W2 — The child queue's default 900 s expiry + own-retry lease skip** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:626] — deferred, inside the recorded at-least-once residual
 - [x] [Review][Defer] **W3 — A transient by-link failure reads as the final not-openable** [apps/mobile/components/peer-request/usePeerRequestQueries.ts:60] — deferred, AC6 as written
@@ -682,8 +690,25 @@ changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev'
 - [x] [Review][Defer] **W6 — ⛔ CHECK requires `link_code` on an `attempting` row** [packages/domain/migrations/0166_peer-mesh-request-sending.sql] — deferred, by construction today
 - [x] [Review][Defer] **W7 — A parked ping stops ageing if ⛔ child re-claims it** [packages/domain/src/claim/peer-mesh-request.ts:819] — deferred, pre-existing (the suspicion twin)
 - [x] [Review][Defer] **W8 — `locale_source` is a literal in the begin** [packages/domain/src/claim/peer-mesh-request.ts:696] — deferred, row 6-35
+- [x] [Review][Accepted] **W9 (from D2 (a)) — F4's reset drops an open questionnaire's unsaved work on a second link** [apps/mobile/components/peer-request/PeerRequestSlot.tsx:43] — ACCEPTED by BigDev (⛔ deferred work — recorded with a trigger): rare (two open requests, the second link tapped mid-answer); saved answers are kept
 - [x] [Review][Defer] **W10 (from the fix-diff review of P1) — A scope-wide send fault the sweep cannot see costs ONE slot per child run** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts] — deferred, needs a persisted per-Pariwar send hold
-- [x] [Review][Defer] **W9 (from D2 (a)) — F4's reset drops an open questionnaire's unsaved work on a second link** [apps/mobile/components/peer-request/PeerRequestSlot.tsx:43] — deferred, accepted trade-off (BigDev): rare (two open requests, the second link tapped mid-answer); saved answers are kept
+
+- [x] [Review][Decision] **D3 (from the adversarial review of the applied patches) — the Hindi breaks the LETTER of `-311` PM3** — PM3
+  (adopted AS WRITTEN by `-311` §3): *"hi: agent-authored afresh … ⛔ NEVER copied from the `-303` routing block's draft"*; the shipped
+  Hindi IS that draft with `दो` → `कुछ`, and P15's "purpose is met" re-read the clause. ✅ RESOLVED (BigDev, 2026-10-17): option (b) —
+  the clause SUPERSEDED by author-commit [`2026-10-17-344`](../../.decision-log.md#decision-2026-10-17-344), committed alone (`c7d2f9ca`);
+  Row 28's human review stays the control. (Option (a), a fresh Hindi, declined.)
+
+**Applied-patch review follow-ups (2026-10-17; two fresh-context adversarial passes over `7f98fbfb` — code, then tests + records; ⛔ HIGH):**
+the domain `resolvePeerRequestLocale` JSDoc re-attached (it sat orphaned above the new error class and still said "the child retries");
+an UNREADABLE Pariwar's stalled rows are now PARKED (the give-up clock paused) and its alarms carry the read's SQLSTATE
+(`peerMeshSqlStateOf`, now exported — F1's helper); P8's rationale corrected (one extra hop, ⛔ a loop); the child's `@throws` and the
+sweep header name the P1 stop and the unreadable skip; the R5 trigger stated honestly (the stored row cannot tell a pre-send re-claim
+from a crash after an accept); P13's cross-Pariwar leg rebuilt (a ping of the SAME member in another Pariwar + a positive control — it
+was failing on the member predicate); the new stalled-row fixtures take a fresh link code (`link_code` is UNIQUE across Pariwars); the
+records — D3, the raw counts, W9 ACCEPTED (⛔ deferred), P2 / P9 / P18 as applied, the Change Log order. **Validation:** `ci:local` on
+`7f98fbfb` (:5433) 35/36 — `test (unit)`: 7 admin jsdom timeouts under load in two files this branch ⛔ touches; `@twt/admin` re-run alone
+75/75 files, 1229 tests; then the follow-ups' focused suites green (jobs live 36, API by-link 7, domain spec 26).
 
 **Dismissed (34), the notable ones:** R7 admitting a skipped ping's member (the ONE caller gates on `visible()` ⇒ `'accepted'`, and the
 pre-6.27c gate `selected_member_ids` already admitted them); the code in proxy / Cloud Run access logs (R13's recorded residual); an
@@ -759,7 +784,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 - 2026-10-17 — **implemented (`bmad-dev-story`)**, Tasks 0.3–5.5, one commit per task on the story branch:
   - **Task 1** — `peer_mesh_sms.request` (en = the ruled words byte for byte, ⛔ "TWT:"; hi — *"कुछ छोटे प्रश्नों"*, ⛔ the routing
     block's *"दो"*; ⚠ CORRECTED by review round 2 P15: the Hindi IS the routing block's draft with that one word changed — word for word
-    otherwise, ⛔ "afresh" as first recorded; Row 28's review covers it), `$comment.peer_mesh_sms` with **NOT YET HUMAN-REVIEWED** + Row 28 in both; the registry
+    otherwise, ⛔ "afresh" as first recorded; PM3's "never copied" clause SUPERSEDED by `2026-10-17-344` (D3); Row 28's review covers it), `$comment.peer_mesh_sms` with **NOT YET HUMAN-REVIEWED** + Row 28 in both; the registry
     `peer-mesh-sms-templates.ts` (slots member alphanumeric 40 / link url 120 / helpline cbn 14; `peerMeshRequestDltConfigKey(locale)`;
     `renderPeerMeshRequest` through the real `t()`; `fitsDltAlphanumeric` — code points, ONE constant), in `REGISTRY_FILES`; the lockstep
     test leg for leg (29 legs, incl. the deny-list and 40 / 41 code points in Devanagari and an astral case); the sheet: rows 13 (hi) / 14
@@ -813,7 +838,8 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
     jsdom render test of the REAL slot (F4, 3 legs); each new leg red on the unfixed code. The fix diff adversarially reviewed: 3 LOW
     fixed, 3 residuals recorded in `deferred-work.md` (⛔ closed). ⚠ Recorded: a ping begun but ⛔ handed off when 20:00 passes is re-claimed
     at 09:00 as attempt 2 — truthfully ⛔ sent, but on that re-claim a failed re-check reads "may have sent" and is ⛔ replaced.
-    ⭐ WIDENED by review round 2 (D1 (a), P18): the same for a re-claim after a `decrypt_failed:tier1` / `hash_failed:tier1` transient.
+    ⭐ WIDENED by review round 2 (D1 (a), P18): the same for a re-claim after a `decrypt_failed:tier1` / `hash_failed:tier1` transient,
+    and after P6's lease lapse before the handoff.
     `DATABASE_URL=:5433 pnpm ci:local` on the final tree: **36/36 green in one run** (⛔ migration in this continuation).
   - ⚠ **Go-live, ⛔ merge** ([[project_not_in_production_merge_is_not_golive]]): as built the sweep HOLDS every Pariwar today — the live
     `peer_mesh.v4` carries two `'pending'` questions (Row 27 (f)) and the template ids are unset (Row 27 closes on all eight). Nothing is texted
@@ -886,9 +912,10 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-17 | 3.7 | Adversarial review of the applied round-2 patches (code; tests + records): ⛔ HIGH; D3 (BigDev ⇒ `2026-10-17-344`, committed alone `c7d2f9ca` — the Hindi's lineage, PM3's clause superseded); follow-ups applied (the locale JSDoc, an unreadable Pariwar's rows parked + the SQLSTATE, P8's rationale, `@throws` / header, the R5 trigger's honesty, P13's cross-Pariwar leg rebuilt, fresh fixture link codes, the records); `ci:local` on `7f98fbfb` 35/36 (admin jsdom under load; alone 75/75). |
 | 2026-10-17 | 3.6 | Code review ROUND 2 — the whole branch, 4 chunks × 3 layers (12): 2 decisions (BigDev: D1 (a) — R5 kept, its residual widened + pinned ⇒ P18; D2 (a) — F4's reset accepted ⇒ W9), 18 patches applied (P1 a scope-wide final stops the run; P4 the by-link read bounded; P5–P8, P11; tests P2 / P3 / P9 / P10 / P12–P14; records P15–P18); the fix diff adversarially reviewed (⛔ HIGH; 1 MED — P1's hold is not seen by the sweep for three classes ⇒ W10; LOWs fixed: P6's margin for the core's reads + send, P7's missing passport a hold again, the P6 path in the widened residual, the segment range, the partial-provisioning sentence, the test's forced-bytes cleanup), 10 deferred (W1–W10), 34 dismissed. |
-| 2026-10-17 | 3.4a | Code review round 1 recorded (`a1256ead`): F1–F6 as action items; status → in-progress. |
 | 2026-10-17 | 3.5 | Addressed code review findings — 6 items resolved (F1 P1; F2–F6 P2): the sanitised by-link read error, the send hours and the lease re-read per ping, the slot's per-link dismissal, held claims off the sweep's bound, the link-length hold; fix diff adversarially reviewed (3 LOW fixed, 3 residuals to `deferred-work.md`). Status → review. |
+| 2026-10-17 | 3.4a | Code review round 1 recorded (`a1256ead`): F1–F6 as action items; status → in-progress. |
 | 2026-10-17 | 3.4 | `bmad-dev-story`: Tasks 0.3–5.5 implemented — the registry + copy + sheet rows 13–14 (Task 1); 0166 (the grammar, the replacement link and trigger, R15) applied to :5432 and :5433 (Task 2); the domain send record + R7 (Task 3); the jobs child + 10:30 IST sweep + R8's hook + R12 (Task 4); the by-link route + mobile slot + AC7 + the records (Task 5). Status → review. |
 | 2026-10-16 | 3.3 | Task 0.1 / 0.2 DONE: BigDev accepted R5 (⛔ replace a re-claimed `no_target`); recorded as `2026-10-16-343`, committed alone (`ccca9f5f`); AC1 met. Task 0.3 (the drift check) stays the dev's first step. |
 | 2026-10-16 | 3.2 | Fresh-context validate round 2 (⛔ HIGH; the regex proven in node AND a Postgres ARE, every stored value covered, every fixture passes, R15 keeps every existing leg green): M1 — a re-claimed NAME fault keeps `no_target:name_<reason>` + the `-298` alarm (`-298` A), `recheck_name_unavailable` dropped; L1 — the replacement trigger also requires `attempt_count = 1` (R5's backstop); L2 — R6's finalise in the ORDER sentence; L3 — the deferred item closes with `claimed_*` rewritable by design; L4 — join the regex's wrapped lines; L5 — two stale AC labels. |

@@ -163,13 +163,16 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the by-link resolver (:5433)', { 
     const texted = await seedRequest(t, p, m);
     const untexted = await seedRequest(t, p, m, { texted: false });
     const tok = token(t, m, p);
-    // a member of ANOTHER Pariwar, on their OWN path, with a code of this Pariwar's ping (the resolver's own scope, ⛔ the path check)
+    // the RESOLVER'S SCOPE (⛔ the member predicate, ⛔ the path check): member `n` of Pariwar `q`, on `q`'s own path, with the
+    // code of a ping that names `n` but lives in Pariwar `p` (the ping's `member_id` carries ⛔ FK to `members`) — only the
+    // resolver's `pariwar_id` predicate / RLS refuse it; the positive control below shows the member match alone would pass
     const q = randomUUID();
     const n = await seedMember(t, q);
     const tokQ = token(t, n, q);
+    const crossed = await seedRequest(t, p, n);
     const bodies: Json[] = [];
     for (const res of [
-      await byLink(t, q, texted.pingCode, tokQ), // another Pariwar's ping, on the member's own path
+      await byLink(t, q, crossed.pingCode, tokQ), // a ping of `n`'s, but in ANOTHER Pariwar, on `n`'s own path
       await byLink(t, p, code(), tok), // unknown
       await byLink(t, p, texted.otherCode, tok), // another member's ping
       await byLink(t, randomUUID(), texted.pingCode, tok), // a path Pariwar ⛔ the session's
@@ -181,6 +184,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the by-link resolver (:5433)', { 
       bodies.push(res.body['error'] as Json);
     }
     for (const b of bodies) expect({ code: b['code'], message: b['message'] }).toEqual({ code: 'peer_request.not_found', message: 'Not found' });
+    // POSITIVE CONTROL: the same code, on the ping's OWN Pariwar's path with a session there for `n`, resolves
+    expect(await byLink(t, p, crossed.pingCode, token(t, n, p))).toEqual({ status: 200, body: { pingId: crossed.pingId } });
   });
 
   it('the per-member READ budget ⇒ 429', async () => {

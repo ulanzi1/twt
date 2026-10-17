@@ -29,11 +29,14 @@
 //       including one whose first attempt provably ⛔ reached the send core — a `decrypt_failed:tier1` / `hash_failed:tier1`
 //       transient, a row begun but ⛔ handed off when 20:00 passed, or one whose lease lapsed before the handoff (P6). On that
 //       re-claim a failed re-check finishes `error` (`-297` §2), and an unusable number or a name fault finishes `no_target` — ⛔ replaced — with the "may have sent" alarm,
-//       although ⛔ text went (one fewer neighbour asked; the ground inspection carries it — `-310` CF4). ⭐ Trigger: such an
-//       alarm on a row whose `provider_message_id` is NULL — then a "handed to the send core" marker (`deferred-work.md`). The
-//       send core's own config reads after the 20:00 check are outside it (review residual).
+//       although ⛔ text went (one fewer neighbour asked; the ground inspection carries it — `-310` CF4). ⚠ The stored row
+//       CANNOT tell these from a crash after a gateway accept (both leave `provider_message_id` NULL; only a transient's
+//       `first_detail` differs) — that is what a "handed to the send core" marker would add. ⭐ Trigger: a "may have sent" alarm on
+//       a row whose `first_detail` is `decrypt_failed:tier1` / `hash_failed:tier1` (`deferred-work.md`). The send core's own
+//       config reads after the 20:00 check are outside it (review residual).
 // ── The sweep, daily 10:30 IST (inside the send hours; after the suspicion sweep's 10:00) ─────────────────────────────────
-//   (1) config per Pariwar FIRST (memoised) → (2) the stalled scopes → the HELD ones' in-flight pings PARKED + ONE alarm →
+//   (1) config per Pariwar FIRST (memoised; a Pariwar whose config cannot be READ this run — a locale-read DB fault — is ⛔
+//   enqueued and its in-flight pings are parked, ONE alarm) → (2) the stalled scopes → the HELD ones' in-flight pings PARKED + ONE alarm →
 //   (3) the give-up (three IST days of UN-parked time) over the UN-held ones → (4) the paged due claims (R16 — `answerWindowSql`),
 //   ONE child per claim in an un-held Pariwar → (5) ONE end-of-run alarm for the held claims (ids only).
 // ⚠ AT-LEAST-ONCE (6.19b's): a timeout or crash after a gateway accept may produce a second text — `attempt_count` /
@@ -116,7 +119,7 @@ const HOUR_MS = 60 * 60 * 1000;
  * (`CORRECTION_SEND_TIMEOUT_MS`, 10 s) still follow, and another child may re-claim the row once the lease lapses.
  */
 export const PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS = 2 * 60 * 1000;
-/** The least a quiet-hours deferral waits (P8 — host-vs-DB clock skew at 09:00 ⛔ re-enqueues in a tight loop). */
+/** The least a quiet-hours deferral waits (P8 — host-vs-DB clock skew at 09:00 costs one short extra hop; the floor bounds it). */
 export const PEER_REQUEST_DEFER_FLOOR_MS = 60 * 1000;
 
 /** 00:00 IST opening the IST day `days` after `now`'s — the domain's IST primitives (⛔ a seventh copy of the offset, BF11). */
@@ -177,9 +180,13 @@ interface PariwarSendConfig {
  * sweep SKIPS the Pariwar this run (⛔ held, ⛔ parked, ⛔ enqueued — the next tick reads it again).
  */
 class PeerRequestLocaleReadError extends Error {
-  constructor() {
-    super('[jobs] claim-peer-mesh-request: the Pariwar locale read failed');
+  /** The failed read's SQLSTATE (on the error or Drizzle's wrapper's `cause` — the F1 by-link error's form), else `unknown`. */
+  readonly sqlState: string;
+  constructor(cause: unknown) {
+    const sqlState = claimDomain.peerMeshSqlStateOf(cause) ?? 'unknown';
+    super(`[jobs] claim-peer-mesh-request: the Pariwar locale read failed (${sqlState})`);
     this.name = 'PeerRequestLocaleReadError';
+    this.sqlState = sqlState;
   }
 }
 
@@ -202,7 +209,7 @@ async function pariwarConfig(
   } catch (err) {
     // ⛔ passport row — a DATA gap a retry ⛔ fixes ⇒ HELD; anything else is a failed READ ⇒ a transient (P7)
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return { gap: 'config:locale_unavailable' };
-    throw new PeerRequestLocaleReadError();
+    throw new PeerRequestLocaleReadError(err);
   }
   const template = await configSet(deps, peerMeshRequestDltConfigKey(locale));
   if (template === 'fault') return { gap: 'config:secret_manager' };
@@ -304,7 +311,10 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
       } catch (err) {
         if (!(err instanceof PeerRequestLocaleReadError)) throw err;
         unreadable.add(pariwarId);
-        alarm(`[jobs] claim-peer-mesh-request-sweep: the config of Pariwar ${pariwarId} could ⛔ be read (the locale read failed) — skipped this run (⛔ held, ⛔ parked)`);
+        alarm(
+          `[jobs] claim-peer-mesh-request-sweep: the config of Pariwar ${pariwarId} could ⛔ be read (the locale read failed, ${err.sqlState}) — ` +
+            `⛔ enqueued this run; its in-flight texts are PARKED (⛔ given up while unreadable)`,
+        );
         return CONFIG_UNREADABLE;
       }
     }
@@ -317,6 +327,9 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   let budgetExhaustedDuringScopeScan = false;
   const held: string[] = [];
   const unheld: string[] = [];
+  // P7 follow-up — an UNREADABLE Pariwar's stalled rows are PARKED like a held one's (the give-up credits parked time), so a
+  // multi-day read fault ⛔ gives up a text its first readable sweep would have re-tried; ⛔ counted as held, ⛔ enqueued.
+  const parkUnreadable: string[] = [];
   for (const pariwarId of await claimDomain.listStalledPeerMeshRequestScopes(deps.pool, { now, allow })) {
     if (clockMs() - startedMs > budgetMs) {
       budgetExhausted = true;
@@ -324,14 +337,17 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
       break;
     }
     const gap = await gapOf(pariwarId);
-    if (gap === CONFIG_UNREADABLE) continue;
+    if (gap === CONFIG_UNREADABLE) {
+      parkUnreadable.push(pariwarId);
+      continue;
+    }
     (gap === null ? unheld : held).push(pariwarId);
   }
-  const parked = await claimDomain.parkHeldPeerMeshRequests(deps.pool, { now, allow, held });
+  const parked = await claimDomain.parkHeldPeerMeshRequests(deps.pool, { now, allow, held: [...held, ...parkUnreadable] });
   if (parked.length > 0) {
     alarm(
       `[jobs] claim-peer-mesh-request-sweep: ${String(parked.length)} in-flight neighbour text(s) newly PARKED — their Pariwar is held ` +
-        `by a config gap; ⛔ given up while held, re-tried once it is fixed (claims: ${sampleIds([...new Set(parked.map((p) => p.claimCaseId as string))])})`,
+        `by a config gap (or its config could ⛔ be read); ⛔ given up while held, re-tried once it is fixed (claims: ${sampleIds([...new Set(parked.map((p) => p.claimCaseId as string))])})`,
     );
   }
 
@@ -479,7 +495,8 @@ async function readDeceasedName(
  * ⭐ ONE claim's neighbour texts. See the module header. Every ping's outcome is recorded on its row; a transient on one ping
  * never costs the others theirs.
  * @throws ClaimCorrectionTransientError  a transient failure (pg-boss retries the SAME job) — ⛔ when 20:00 IST passed mid-run
- *   (the result is then `deferred_quiet_hours` with the run's `counts`; the 09:00 child re-claims the transient rows)
+ *   (the result is then `deferred_quiet_hours` with the run's `counts`; the 09:00 child re-claims the transient rows), and ⛔
+ *   when a scope-wide final STOPPED the run (`held_config` — the next sweep re-claims any transient row past its lease, W10)
  */
 export async function runPeerMeshRequestChild(
   deps: ClaimPeerMeshRequestDeps,
@@ -504,8 +521,9 @@ export async function runPeerMeshRequestChild(
 
   // (1) AC2 — ⛔ never at night: ⛔ ping begun; the child comes back at the next 09:00 IST. Checked again per ping (F2).
   const deferToMorning = async (at: Date, counts?: PeerMeshRequestChildCounts): Promise<PeerMeshRequestChildResult> => {
-    // P8 — FLOORED: pg-boss fires `startAfter` on the DB clock; a host a few seconds behind it would see 08:59:5x at 09:00 and
-    // re-enqueue for a 09:00 already past for pg-boss — a tight loop until the host clock catches up.
+    // P8 — FLOORED: pg-boss fires `startAfter` on the DB clock; a host a few seconds behind it sees 08:59:5x at the DB's 09:00 and
+    // defers again — to the HOST's 09:00, still ahead for pg-boss, so it is ONE extra hop (⛔ a loop). The floor makes that hop a
+    // minute rather than seconds; it can never put a text in the night (max(next 09:00, now + 60 s) ≤ 09:01).
     const next = nextPeerRequestSendWindowStart(at);
     const startAfter = new Date(Math.max(next.getTime(), at.getTime() + PEER_REQUEST_DEFER_FLOOR_MS));
     await enqueuePeerMeshRequestChild(boss, { pariwarId: pid, claimCaseId: p.claimCaseId, startAfter });
@@ -521,7 +539,7 @@ export async function runPeerMeshRequestChild(
   } catch (err) {
     if (!(err instanceof PeerRequestLocaleReadError)) throw err;
     // P7 — a DB fault, ⛔ a config gap: pg-boss retries the SAME job (⛔ ping begun).
-    alarm(`[jobs] claim-peer-mesh-request: the locale read failed for ${tag} — retrying (⛔ ping begun)`);
+    alarm(`[jobs] claim-peer-mesh-request: the locale read failed for ${tag} (${err.sqlState}) — retrying (⛔ ping begun)`);
     throw new ClaimCorrectionTransientError(`[jobs] claim-peer-mesh-request: transient locale_read_failed for ${tag}`);
   }
   if (pariwarCheck.gap !== null) {

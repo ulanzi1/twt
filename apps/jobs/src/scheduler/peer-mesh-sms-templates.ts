@@ -84,7 +84,8 @@ const entry = (locale: PeerMeshRequestSmsLocale, registeredText: string): PeerMe
 });
 
 // ⚠ The Hindi is the `-303` routing block's Hindi draft with "दो" (two) replaced by "कुछ" (a few) — `-304` Q6 A; Trap 19's "two" is
-// gone, but it is ⛔ an independent translation (6.27c review round 2 P15) — ⛔ not yet human-reviewed (go-live gate Row 28).
+// gone, but it is ⛔ an independent translation (6.27c review round 2 P15; PM3's "never copied" clause superseded by
+// `2026-10-17-344`) — ⛔ not yet human-reviewed (go-live gate Row 28).
 export const PEER_MESH_REQUEST_SMS_TEMPLATES: Readonly<Record<PeerMeshRequestSmsLocale, PeerMeshRequestSmsTemplate>> = {
   hi: entry(
     'hi',

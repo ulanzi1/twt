@@ -1,3 +1,10 @@
+# last_updated: 2026-10-17b (STORY 6.27c — the APPLIED round-2 patches adversarially reviewed (two fresh-context passes over `7f98fbfb`:
+# the code; the tests + records): ⛔ HIGH. D3 — the Hindi text is the `-303` routing draft with दो → कुछ, breaking the LETTER of `-311` PM3
+# ("never copied"); BigDev chose (b): PM3's clause SUPERSEDED by author-commit `2026-10-17-344`, committed ALONE (`c7d2f9ca`), Row 28 the
+# control. Follow-ups applied (the locale JSDoc re-attached; an unreadable Pariwar's rows PARKED + its SQLSTATE in the alarm; P8's
+# rationale; `@throws` / header; the R5 trigger stated honestly; P13's cross-Pariwar leg rebuilt; fresh fixture link codes; the records —
+# raw counts, W9 ACCEPTED ⛔ deferred). ci:local on `7f98fbfb` 35/36 (admin jsdom under load; `@twt/admin` alone 75/75). Row
+# `6-27c-peer-mesh-sending-texts-and-links` stays `done`. ⛔ No other row moves.)
 # last_updated: 2026-10-17 (STORY 6.27c — CODE REVIEW ROUND 2 via `bmad-code-review` (asked as "2.27c"; BigDev confirmed 6.27c): the WHOLE
 # branch `main...f3c19b62`, 4 chunks × 3 layers (12 layers, ⛔ failed). 2 decisions (BigDev): D1 (a) — R5 / `-343` kept as built, its
 # "may have sent" residual WIDENED to every pre-send re-claim and pinned by a live leg (P18); D2 (a) — F4's reset dropping an open

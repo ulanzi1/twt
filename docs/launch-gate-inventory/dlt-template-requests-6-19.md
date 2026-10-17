@@ -174,7 +174,8 @@ nominee, claimant or reporter. The copy is `peer_mesh_sms.request` in `packages/
 `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`, and `apps/jobs/tests/peer-mesh-sms-templates.test.ts` proves the real `t()` renders
 EXACTLY the text below and that this sheet carries it. The LANGUAGE is the Pariwar's default until row 6-35 lets members choose
 (`-310` CF1 A). ⚠ The **Hindi** is the `-303` routing block's Hindi draft with "दो" (two) replaced by "कुछ" (a few) — word for word otherwise, ⛔ an
-independent translation (corrected 2026-10-17, 6.27c review round 2) — and ⛔ not yet human-reviewed —
+independent translation (corrected 2026-10-17, 6.27c review round 2; PM3's "never copied" clause superseded by `2026-10-17-344`) — and ⛔
+not yet human-reviewed —
 go-live gate **Row 28** (`peer-mesh-request-hindi-human-review`); a reviewed change means re-registering.
 
 | # | Registered text |

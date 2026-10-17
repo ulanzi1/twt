@@ -37,6 +37,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   `expireExhaustedPeerMeshRequests` (the `aging_since + (now − parked_at)` anchor)] — only a re-claim clears `parked_at`; a child that keeps
   returning before the begin (e.g. `claim_missing`) leaves the row `attempting` forever. Inherited from the suspicion twin (0155's shape).
   ⭐ Trigger: an `attempting` row with `parked_at` older than five days in a Pariwar that is no longer held.
+- **W8 — `locale_source` is a literal in the begin, ⛔ threaded from `resolvePeerRequestLocale().source`** [`peer-mesh-request.ts` `beginFresh`;
+  `claim-peer-mesh-requests.ts` (`.source` dropped)] — today correct (0156's CHECK admits only `'pariwar_default'`). ⭐ Trigger: row 6-35 —
+  thread the source into the begin AND widen 0156's `locale_source` CHECK in the same change.
+- **W9 (ACCEPTED, ⛔ deferred) — F4's reset drops an open questionnaire's unsaved work when a second link arrives** [`apps/mobile/components/peer-request/PeerRequestSlot.tsx`
+  (the render-time reset on a new `code`)] — the unmount bypasses `PeerQuestionnaire`'s `leaveQuestions` warning and `usePreventRemove`
+  ⇒ queued saves and typed-but-unsaved dates are dropped (an in-flight Submit lands; its Thank-you is ⛔ shown). ✅ Accepted by BigDev
+  (2026-10-17, review round 2 D2 (a)): rare — a member with two open requests tapping the second link mid-answer; autosave keeps every
+  saved answer. ⭐ Trigger: a helpline report of a lost answer after a second link, or the next touch of the slot — route a code change
+  while the questionnaire is busy / dirty through the same leave warning.
 - **W10 — A scope-wide send fault the sweep cannot see costs ONE slot per child run** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
   (`isScopeWideSendFault` — review round 2 P1)] — P1 stops the run on an `auth`, `dlt_template_not_approved` or
   `config:sms_messaging_unavailable` final (before: every remaining slot in one run), but the sweep's R11 check sees ⛔ any of the three
@@ -45,15 +54,6 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   stopped run is ⛔ retried by pg-boss; the next sweep re-claims it past its lease. Controls today: the provisioning rule ("set each id only
   after the operator confirms that template's approval", PM16) and the fail-closed alarm per stop. ⭐ Trigger: a "STOPPED after
   auth: / dlt_template_not_approved:" alarm — then persist a per-Pariwar send hold the sweep reads.
-- **W8 — `locale_source` is a literal in the begin, ⛔ threaded from `resolvePeerRequestLocale().source`** [`peer-mesh-request.ts` `beginFresh`;
-  `claim-peer-mesh-requests.ts` (`.source` dropped)] — today correct (0156's CHECK admits only `'pariwar_default'`). ⭐ Trigger: row 6-35 —
-  thread the source into the begin AND widen 0156's `locale_source` CHECK in the same change.
-- **W9 — F4's reset drops an open questionnaire's unsaved work when a second link arrives** [`apps/mobile/components/peer-request/PeerRequestSlot.tsx`
-  (the render-time reset on a new `code`)] — the unmount bypasses `PeerQuestionnaire`'s `leaveQuestions` warning and `usePreventRemove`
-  ⇒ queued saves and typed-but-unsaved dates are dropped (an in-flight Submit lands; its Thank-you is ⛔ shown). ✅ Accepted by BigDev
-  (2026-10-17, review round 2 D2 (a)): rare — a member with two open requests tapping the second link mid-answer; autosave keeps every
-  saved answer. ⭐ Trigger: a helpline report of a lost answer after a second link, or the next touch of the slot — route a code change
-  while the questionnaire is busy / dirty through the same leave warning.
 
 ## Deferred from: code review of 6-27c-peer-mesh-sending-texts-and-links (2026-10-17) — residuals of the F2 / F5 fixes
 
@@ -69,8 +69,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   a `decrypt_failed:tier1` / `hash_failed:tier1` transient, and a lease that lapsed before the handoff (round 2 P6) too: on the re-claim a failed re-check finishes `error`, and an unusable
   number or a name fault finishes `no_target`, ⛔ replaced, with the "may have sent" alarm (one fewer neighbour asked — the ground
   inspection carries it, `-310` CF4). Pinned: `claim-peer-mesh-requests-live.test.ts` ("D1 (a) / P18"). The 20:00 window is the unsealing +
-  hashing (milliseconds). ⭐ Trigger: a recorded "may have sent" alarm on a row whose `provider_message_id` is NULL (on the 20:00 path
-  `first_detail` is NULL too; on a transient's it holds `decrypt_failed:tier1` / `hash_failed:tier1`) — then stamp a "handed to the send
+  hashing (milliseconds). ⚠ The stored row CANNOT tell a pre-send re-claim from a crash after a gateway accept on the 20:00 / P6 paths
+  (both leave `provider_message_id` and `first_detail` NULL); only a transient's `first_detail` (`decrypt_failed:tier1` /
+  `hash_failed:tier1`) marks it. ⭐ Trigger: a recorded "may have sent" alarm on a row whose `first_detail` is such a pre-send fault — then stamp a "handed to the send
   core" marker and key R5 / 0166's trigger on it (a new migration), or release an un-handed-off row back to un-begun (a domain CAS; 0166's
   trigger forbids a return to NULL today).
 - **The sweep's cursor restarts every run** [`claim-peer-mesh-requests.ts` `runPeerMeshRequestSweep`] — F5 stopped HELD claims from

@@ -13,7 +13,8 @@
 - **Change scope classification:** **Minor edit, Major gate** — one new bullet in §3.4 and a dated note on ADR-0029; landing it needs
   Trustee Panel sign-off because it changes ratified architecture text and a ratified ADR.
 - **Mode:** Incremental
-- **Status:** **DRAFTED 2026-10-17 — not yet presented to the Panel.**
+- **Status:** **DRAFTED 2026-10-17 — not yet presented to the Panel.** Revised the same day (BigDev): the claimant's WhatsApp consent
+  already meets §3.4; the amendment is needed for the nominee; the *"any other means"* clause is counsel's wording call, not a gate.
 
 ---
 
@@ -34,8 +35,11 @@ The Panel has ruled (`-351` answer 2, `-352` Q1 and Q2) that:
 - the **nominee** is contacted by WhatsApp and calls although they never opted in — the claimant's agreement does not cover them; the
   Panel's stated basis is that the DPDP Act permits contacting a nominee where it is necessary for the claim.
 
-Neither fits §3.4 as written: the nominee has no opt-in at all, and an agreement that covers future, unnamed channels is close to the
-*"bundled consent"* §3.4 excludes.
+The **claimant** already fits §3.4's second origin: the filing agreement is an explicit affirmative capture that names WhatsApp, recorded
+per claim and never pre-ticked. The words *"or any other means of communication that may appear in future"* are a wording detail for
+counsel — if counsel advises against them, the production wording names the listed channels only, and the claimant's WhatsApp consent
+is unaffected. The **nominee** does not fit §3.4 at all: they never opted in, and the claimant's agreement does not cover them. The
+amendment is therefore needed for the nominee — and is written to cover contact about a claim as a whole, so §3.4 states the full rule.
 
 ### 1.2 Why this is not a re-litigation
 
@@ -76,8 +80,11 @@ Amend §3.4 with a **claim-contact exception** that is narrow by design:
 
 1. **Who and what.** Only the claimant and the nominee of a claim, and only messages about that claim: the correction and certificate
    reminders' delivery ladder (`-350`, `-351`) and calls about the claim.
-2. **The claimant's basis.** The filing agreement in `-352` Q1's wording — an explicit affirmative capture, recorded per claim with
-   timestamp and the UI context, never pre-ticked. Withdrawing the agreement, or sending STOP, ends WhatsApp contact for that claim.
+2. **The claimant's basis.** The filing agreement in `-352` Q1's wording — an explicit affirmative capture that names WhatsApp,
+   recorded per claim with timestamp and the UI context, never pre-ticked. If counsel advises removing *"or any other means of
+   communication that may appear in future"*, the production wording omits it (the agreement then names the listed channels only) and
+   the Panel is told; no further ruling is needed for that narrowing. Withdrawing the agreement, or sending STOP, ends WhatsApp contact
+   for that claim.
 3. **The nominee's basis.** The processing the DPDP Act permits for contacting a nominee about a claim — the Panel's ruling — once
    counsel has confirmed in writing which provision applies.
 4. **Unchanged safeguards.** The Pariwar's WhatsApp toggle and number are still required; STOP is honoured and audit-logged; every
@@ -88,8 +95,9 @@ Amend §3.4 with a **claim-contact exception** that is narrow by design:
    - **G2** — a check of Meta's WhatsApp Business policy for messaging a nominee who never opted in is recorded before the nominee's
      WhatsApp step goes live; if Meta does not allow it, the nominee's WhatsApp step is skipped (the ladder goes on to the next SMS) and
      the Panel is told;
-   - **G3** — the claimant's new agreement wording is live (English and reviewed Hindi) before any WhatsApp message reaches a claimant
-     on it; a claim filed under the old wording keeps SMS, calls and post only.
+   - **G3** — the claimant's new agreement wording is live (English and reviewed Hindi, as counsel settles its last clause) before any
+     WhatsApp message reaches a claimant on it; a claim filed under the old wording keeps SMS, calls and post only.
+   G1 and G2 gate the NOMINEE's WhatsApp step only; the claimant's WhatsApp step needs G3 alone.
 
 ---
 
@@ -104,11 +112,10 @@ Amend §3.4 with a **claim-contact exception** that is narrow by design:
 +- **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
 +  Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
 +  correction and certificate reminders' delivery ladder — to two people only:
-+  - the **claimant**, on the claim's filing agreement (text message, WhatsApp, phone
-+    call, post or any other means of communication that may appear in future, about
-+    this claim) — an explicit affirmative capture recorded per claim with timestamp +
-+    the UI context, never pre-ticked; withdrawing it, or STOP, ends WhatsApp contact
-+    for that claim;
++  - the **claimant**, on the claim's filing agreement, which names WhatsApp among the
++    channels the Trust may use about this claim — an explicit affirmative capture
++    recorded per claim with timestamp + the UI context, never pre-ticked; withdrawing
++    it, or STOP, ends WhatsApp contact for that claim;
 +  - the **nominee**, on the processing the DPDP Act permits for contacting a nominee
 +    about a claim, as confirmed in writing by counsel before it goes live.
 +  The exception does not change any member's opt-in state and opens WhatsApp to no
@@ -141,6 +148,6 @@ intact for every member notification.
 - **On approval:** a Trustee-ratified decision entry records the approval (and any conditions); §4.1 and §4.2 are applied in one commit;
   row 6-37c's create-story picks up the exception and G1–G3.
 - **Before G1:** BigDev asks counsel (Adv. Mohit Agrawal) for a written view on the nominee's basis — which provision of the DPDP Act,
-  and any conditions — and on the claimant agreement's *"any other means … in future"* clause.
-- **If not approved:** §3.4 stands; row 6-37c builds the claimant's WhatsApp step only where it meets §3.4 as written, and the
-  nominee's WhatsApp step is not built; the Panel is told the difference from `-352`.
+  and any conditions — and, in the same request, whether the claimant agreement should keep *"any other means … in future"*.
+- **If not approved:** §3.4 stands. The claimant's WhatsApp step is unaffected (it already meets §3.4's explicit-capture origin); the
+  nominee's WhatsApp step is not built, and the Panel is told the difference from `-352`.

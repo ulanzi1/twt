@@ -15,10 +15,20 @@
 
 ---
 
-> ## AWAITING PANEL RULING
+> ## PANEL RULING — 2026-10-17 (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev) — Decision `2026-10-17-350`
 >
-> **Nothing is recorded here yet.** When the Panel rules, the ruling is written into this block **and** into `.decision-log.md` as a
-> new decision id. Everything below is then kept **unedited**, as the question was put.
+> *"Option B1, but before system conclude message as never delivered, take the following steps*
+> *1. After SMS has been sent and not been delivered for 4 hours, send message over WhatsApp.*
+> *2. If still not deliverd after 48 hours by either channel, try again with SMS one more time.*
+> *3. If still not delivered after second attempt over SMS, send 1 more SMS over after 48 hours and wait for 96 hours. If still failed
+> then escalate reminder for call/letter.*
+> *Any followup question, let the panel know."*
+>
+> **Recorded as:** B1, applied only after the delivery ladder above. **Not covered, and put back to the Panel as follow-up questions**
+> (`-350`, "What this ruling does NOT cover"): (a) whether a text with no report at all counts as "not delivered"; (b) WhatsApp for a
+> person who has not opted in; (c) which texts the ladder applies to; (d) one ladder per person or per reminder; (e) the call — who,
+> how recorded, whether it counts as reached; (f) a ladder still running at day 90. Everything below is kept **unedited**, as the
+> question was put.
 
 ---
 

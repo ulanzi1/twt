@@ -676,6 +676,10 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
 
 ## 🏛️ The Panel's questions (routed by Task 0.3 — ⛔ answered here)
 
+- ⭐ **RULED 2026-10-17 — `-350` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti): option B1, applied only after a DELIVERY LADDER**
+  (WhatsApp when the SMS is not delivered after 4 hours; a second SMS after 48 hours if not delivered by either channel; a third SMS
+  48 hours later and a 96-hour wait; then escalation for a call or letter). Six follow-up questions are open (`-350`, "What this ruling
+  does NOT cover" (a)–(f)) and go back to the Panel. The text below is kept as it was put.
 - **PQ1 — "Reached" when the network REPORTS a reminder undelivered** (one routing note, the TEMPLATE's order; the clause each option
   touches goes in the note's EVIDENCE section, ⛔ in the options). §0: passes — *"what the Trust OWES a family"* and a ratified clause
   that is matched or *"narrowed"* (`-252` cl.1 read verbatim: *"accepted by the network (or shown delivered, where a report
@@ -819,8 +823,10 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
 - **AC10 — Retention and grants (DR5-G, DR7).** A daily prune deletes inbox rows whose `settled_at` (stamped on every non-`pending` settle) is more than
   30 days ago (the `device-token-cleanup.ts` shape); `pending` rows are ⛔ pruned; `sms_send_deliveries` is ⛔ pruned (it is the record). Both
   tables' policy-regression specs pin EXACTLY the grants and policies DR5-G chose (⛔ a policy for an ungranted command).
-- **AC11 — D22 and letter-eligibility, AS THE PANEL RULES (Task 7; I1, I7).** ⏳ Written against PQ1 option B1; re-written to the
-  ruling before Task 7 starts. Under B1: ONE mapping inside `readReturnFamilyRows` (it gains `reminder_id`; a LEFT JOIN on `('cr',
+- **AC11 — D22 and letter-eligibility, AS THE PANEL RULES (Task 7; I1, I7).** ⭐ RULED: `-350` — B1 plus the delivery ladder. ⏳ The
+  legs below are B1's and still hold for the CONCLUSION; the ladder's legs (WhatsApp at 4 h, SMS at 48 h and 96 h, the 96-hour wait,
+  the call / letter escalation) are written only after the Panel answers `-350`'s follow-up questions (a)–(f), because each changes
+  what is built. Under B1: ONE mapping inside `readReturnFamilyRows` (it gains `reminder_id`; a LEFT JOIN on `('cr',
   reminder_id)`) — a `family_sms` row whose `sms_send_deliveries` state is `undelivered` reads with EFFECTIVE outcome
   `rejected_unreachable` (⛔ a stored outcome changes — I2). Legs: accepted + ⛔ report ⇒ reached (UNCHANGED); accepted +
   `delivered` ⇒ reached; accepted + `undelivered` ⇒ ⛔ reached; ANY undelivered row in the current-number epoch ⇒ `foundDeadOn` set,
@@ -951,7 +957,8 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       `UPDATE` of a send table); `pnpm --filter @twt/channels test:determinism`; `pnpm dlt-typed-variables:test && pnpm
       dlt-typed-variables:check` (`git add` new files first); the access-wrapper invariants + AC2's `lib.test.ts` leg + a REVERT-SANITY
       run (swap one compare to `===` locally ⇒ the gate goes RED ⇒ revert; record it in the Debug Log); the AC13 fetch recorder.
-- [ ] **Task 7 — D22, AS THE PANEL RULES (AC11). Do not start Task 7 until** the ruling is TRANSCRIBED into the routing note's block
+- [ ] **Task 7 — D22, AS THE PANEL RULES (AC11).** ⭐ Ruled (`-350`): B1 + the delivery ladder. ⏳ Still blocked: the ladder's
+      follow-up questions (a)–(f) are open, and the ladder's story shape (here, or a new row) is BigDev's decision. **Do not start Task 7 until** the ruling is TRANSCRIBED into the routing note's block
       and a Trustee-ratified decision entry, and AC11 is re-written to it. Under B1: ONE effective-outcome mapping inside
       `readReturnFamilyRows` (it gains `reminder_id`; an `undelivered` `family_sms` row reads as `rejected_unreachable`) — every
       reader F15 lists inherits it (`readReturnPersonStates` ⇒ `correction-letter.ts`, `correction-chase-read.ts`,
@@ -1205,6 +1212,13 @@ them at Task 0.1.
   template does today. A standing delegation for 7–14 is raised only at the first DLT rejection. BigDev also asked whether PQ1 is
   withdrawn: it is not — a reminder accepted and then not delivered is a real case under DLT, and which reading of `-252` cl.1 applies
   is the Panel's; the PQ1 note stands, ready to send.
+- **(g) PQ1 RULED (2026-10-17).** BigDev relayed the Panel's answer (*"by DR and KB"*), verbatim in `-350` (`b731b0df`, Trustee-ratified,
+  committed alone) and in the PQ1 note's ruling block: B1, but only after a delivery ladder (WhatsApp at 4 h; SMS again at 48 h; one
+  more SMS 48 h later and a 96 h wait; then a call / letter escalation); *"Any followup question, let the panel know."* Our reading of
+  the timing is recorded as NOT ratified; six follow-ups (a)–(f) are recorded as not covered. The ladder adds sends the platform does
+  not make today (a WhatsApp correction-reminder template in English and Hindi, needing Meta approval and the person's opt-in; up to
+  two extra SMS per undelivered reminder) and a call / letter escalation — Task 7 grows from a one-mapping change into a send engine.
+  The Policy meaning is re-checked when Task 7's AC is written to the answered follow-ups.
 
 ### Completion Notes List
 
@@ -1236,3 +1250,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.6 | Task 0 done: `-347` committed alone (`bf1d57f7`); the PQ1 and PQ2 routing notes written (not sent); ADR-0042, the adr-index row (Total 153), ADR-0041's Changelog row, roster Row 33 with Row 32 / Row 30 dated notes, the `epics.md` entry; story and sprint row → `in-progress` (ledger `2026-10-17m`). PQ2's reading under PQ1 = A is now B. No code. |
 | 2026-10-17 | 1.7 | PQ2 WITHDRAWN before it was sent (`-348`, `a9b0112c`): under DLT a gateway cannot deliver words that were not approved, so the question had no case (BigDev). The PQ2 section is marked withdrawn (kept as written); Task 8 no longer waits for a PQ2 note; Debug Log (e). The replacement question — DLT refusing a Panel-approved template — is being traced. |
 | 2026-10-17 | 1.8 | Debug Log (f): the DLT-rejection trace recorded as `-349` (`b878d25a`) — a Row 30 go-live condition, the DLT sheet's rejection procedure, a deferred-work risk item; no Panel question; PQ1 confirmed as still the Panel's. No change to this story's build scope. |
+| 2026-10-17 | 1.9 | PQ1 RULED — `-350` (Trustee-ratified): B1 after a delivery ladder (WhatsApp 4 h → SMS 48 h → SMS 96 h + 96 h wait → call / letter). The PQ1 note's ruling block filled; PQ1 section marked ruled; AC11 and Task 7 annotated — the ladder's legs wait for the six follow-up questions; Debug Log (g). |

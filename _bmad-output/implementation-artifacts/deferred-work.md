@@ -4,6 +4,25 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 6.37b Task 0 — the DLT-rejection trace (2026-10-17, `2026-10-17-349`)
+
+- **A template DLT has not approved — what the code does today** [`apps/jobs/src/scheduler/claim-dlt-sms-send.ts` `sendClaimDltSms`
+  (`config:dlt_template_id_missing`); the five claim-text sweeps; `apps/api/src/deps.ts` (the OTP boot check)] — recorded as a RISK,
+  not a handled case. With a template id unset: the login and step-up codes stop the production api from starting; every correction
+  reminder ends `error` and spends its slot — an `error` is neither "reached" nor a dead number, so the family is never texted, never
+  offered a letter, and the claim can never be closed for silence (it stays open) while the District Admin is still reminded of closure
+  from day 90; the closure notice is recorded as done and the family is never told; the certificate reminder spends each slot and offers
+  no letter; the suspicion notices are held and sent late, and the appeal-deadline text stops being due after 90 days and is lost
+  silently; the neighbours' request is held and never sent. Every alarm reaches the logs only (roster Row 32 (h)). Ratified promises
+  unmet in that state: `-230` cl.1 (reminders to the family), `-252` cl.2 (the letter route), `-293` item 1 B (the one appeal text).
+  ⭐ The control is the go-live condition on roster Row 30 (note (8)): no such flow runs in production while its template is
+  unapproved. ⚠ Two code changes are NAMED and NOT made, because each is the Panel's: holding the correction / closure / certificate
+  sends instead of spending their slots (it changes WHEN a text goes — `-322` §0), and treating a missing template as "no working
+  route" so a letter is offered (it changes who is offered a letter — `-252` cl.2). **Trigger:** a claim flow is proposed for production
+  before its template is approved, or Row 30 note (8) cannot be met at go-live.
+
+---
+
 ## Deferred from: code review of 6-37-msg91-sms-gateway-adapter (2026-10-17)
 
 - **W1 — The SMS gateway accepts a plaintext HTTP origin** [`packages/channels/src/providers/sms-app.ts:183`

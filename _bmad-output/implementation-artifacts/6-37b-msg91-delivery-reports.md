@@ -1198,6 +1198,13 @@ them at Task 0.1.
   note (8); `deferred-work.md`'s MG5 item annotated (it stays open as engineering); Task 8's "PQ2 sent before `done`" removed. The
   question BigDev named — DLT not approving (or changing) a Panel-approved template — is being traced per text family before any
   routing; if it passes §0, its own note is shown to BigDev before it is sent.
+- **(f) The DLT-rejection trace (2026-10-17; provenance only — outside this story's build).** BigDev's question (Debug Log (e)) traced
+  per kind of text; no Panel question routed. `-349` committed alone (`b878d25a`): a go-live condition on roster Row 30 (note (8) — no
+  claim flow live in production with its template unapproved); the DLT sheet's rejection procedure (Panel wording of 7–14 back to the
+  Panel before its id is set; author wording re-worded, reviewed, re-registered); a `deferred-work.md` risk item for what an unapproved
+  template does today. A standing delegation for 7–14 is raised only at the first DLT rejection. BigDev also asked whether PQ1 is
+  withdrawn: it is not — a reminder accepted and then not delivered is a real case under DLT, and which reading of `-252` cl.1 applies
+  is the Panel's; the PQ1 note stands, ready to send.
 
 ### Completion Notes List
 
@@ -1228,3 +1235,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.5 | Before approving `-347`, BigDev asked for (1) the claim that reports are only recorded to be narrowed — the Policy meaning now names the three ways Tasks 1–6 read reports (the correlator's write, alarms including DR12's silence alarm, DR11's daily login-code count — information until Row 33 (e0), then citable evidence), none an input to a send, a closure, reach or letter-eligibility; and (2) the dedupe and counting definitions to agree — DR7 now states the rule: duplicates are defined by the three key values (request id, CRQID, status code), the first stored is kept, a later one with a different failure reason / event name / delivery time is discarded uncounted, chosen because MSG91 retries by resending the same event and every DR6 outcome depends only on those three values; `report_count` counts inbox rows under that key, not distinct payloads; AC4 and AC6 (8f) gained the different-payload-same-key, different-status and blank-key legs; Task 2 names the exact index. Status stays `ready-for-dev`. |
 | 2026-10-17 | 1.6 | Task 0 done: `-347` committed alone (`bf1d57f7`); the PQ1 and PQ2 routing notes written (not sent); ADR-0042, the adr-index row (Total 153), ADR-0041's Changelog row, roster Row 33 with Row 32 / Row 30 dated notes, the `epics.md` entry; story and sprint row → `in-progress` (ledger `2026-10-17m`). PQ2's reading under PQ1 = A is now B. No code. |
 | 2026-10-17 | 1.7 | PQ2 WITHDRAWN before it was sent (`-348`, `a9b0112c`): under DLT a gateway cannot deliver words that were not approved, so the question had no case (BigDev). The PQ2 section is marked withdrawn (kept as written); Task 8 no longer waits for a PQ2 note; Debug Log (e). The replacement question — DLT refusing a Panel-approved template — is being traced. |
+| 2026-10-17 | 1.8 | Debug Log (f): the DLT-rejection trace recorded as `-349` (`b878d25a`) — a Row 30 go-live condition, the DLT sheet's rejection procedure, a deferred-work risk item; no Panel question; PQ1 confirmed as still the Panel's. No change to this story's build scope. |

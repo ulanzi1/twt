@@ -281,6 +281,24 @@ a URL is whitelisted; a dynamic part is allowed only AFTER the `?` (*"dynamic pa
   author-commit.)
 - Closing this is Row 29 (f).
 
+## If DLT rejects a template, or approves it only with different words (`2026-10-17-349`)
+
+**Until a template is approved, its id stays unset — and no claim flow that sends it runs in production** (roster Row 30 note (8)).
+An unset id is not a safe idle state: on the correction, closure and certificate paths every send then ends as an error and spends its
+slot, the family is neither reached nor offered a letter, and a suspicion appeal text can be lost after 90 days (`deferred-work.md`,
+*"A template DLT has not approved"*).
+
+When STPL / SmartPing rejects a template or asks for different words:
+
+| Template | Whose words | What happens |
+|---|---|---|
+| 7–14, English | the Trustee Panel's, verbatim | The proposed new words go back to the Panel through a routing note BEFORE the template's id is set. Nothing is sent with words the Panel has not seen. (A standing delegation — registering the nearest accepted wording and reporting afterwards — is not in place; it is raised with the first such case, `-349` decision 4.) |
+| 1–6, 15–16, English | the author's | The author re-words it to DLT's requirement and re-registers it. |
+| every Hindi text | the author's, under a review row | The author re-words it; the new Hindi goes back through its review row (Rows 20, 21, 23, 28) before it is re-registered. |
+
+In every case: record the rejection, the new words and the approval in the Record below, update the wording section above and the
+copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id only after the operator confirms the approval.
+
 ## Record
 
 | Date | Template(s) | Action | By | Reference |
@@ -292,3 +310,4 @@ a URL is whitelisted; a dynamic part is allowed only AFTER the `?` (*"dynamic pa
 | 2026-10-10 | URL `https://<domain>/peer-request?` | ⭐ The URL-whitelisting section written (Story 6.30, `2026-10-10-312` AL3). ⛔ Not submitted — the domain is ⛔ not yet set (Row 29 (b)); the DLT category to be confirmed with the provider | Story 6.30 | § URL whitelisting |
 | 2026-10-12 | 1–12, 15, 16 | ⭐ Variable TYPES declared for every template (the column to select in SmartPing's tagging section) and the MSG91 `##name##` form (Story 6.34, `2026-10-10-313` TV8, `-314` TV13, `-322` C1 / C3); OTP templates 15–16 added (Transactional, numeric `otp`); where-and-how, types, shape-rules and helpline sections; the five alert categories listed as ⛔ registrable; the cost lines re-derived for a digits-only helpline; the URL bullet answered. ⛔ Still not submitted — Row 30 | Story 6.34 | `dlt-variables.ts`; the three registries |
 | 2026-10-16 | 13–14 | ⭐ Wording, typed `{#var#}` slots (alphanumeric · url · cbn), config keys and the MSG91 form written (Story 6.27c, `2026-10-10-303` Q1 A, `-304` Q6 A, `-311` PM3 / PM16); their three-variable justification, the *"lowest"* line and a cost line (BOTH locales Unicode) added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 13–14 until Row 27 closes**; set each id only after the operator confirms that template's approval | Story 6.27c | `peer-mesh-sms-templates.ts` |
+| 2026-10-17 | 1–16 | ⭐ The rejection procedure written (*"If DLT rejects a template …"*, `2026-10-17-349`): ids stay unset until approved; no claim flow live in production with its template unapproved (Row 30 note (8)); Panel wording (7–14 English) back to the Panel before its id is set. ⛔ Still nothing submitted | BigDev | `2026-10-17-349` |

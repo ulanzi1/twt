@@ -42,7 +42,7 @@ value cap vs the 55-char link); the tests every edit turns red named. ⚠ Every 
 
 # Story 6.37: The texts and login codes are actually sent — a MSG91 adapter behind the SMS seam, sending each template's NAMED values, with a pre-flight that proves the account and every template before a single text is spent `[PRIMITIVE]`
 
-Status: review
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today ⛔ no SMS can reach a real gateway: `sms-app.ts` posts a generic
 > `{sender, to, template_id, message}` with `Authorization: Bearer` and expects `messageId` — a contract that matches ⛔ MSG91, the gateway
@@ -664,6 +664,75 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
       Log; the File List; the sprint row → `review`; the ledger line. ⛔ Fast-forward to `main` — BigDev's call
       ([[feedback_land_prs_by_fast_forward]]).
 
+### Review Findings
+
+Full `bmad-code-review`, 2026-10-17: `466e9b0e..4c03aed1` (44 files, +4,460 / −579), against this story, MG1–MG17,
+I1–I7 and the load-bearing-invariant checklist. Blind Hunter, Edge Case Hunter and Acceptance Auditor ALL returned.
+The helpline exception in `4c03aed1` / Debug Log (l) is included. **0 decision-needed, 4 patch, 1 defer; 2 additional
+candidates dismissed** (raw provider-reason logging: no demonstrated recipient/secret-bearing input from the template API;
+duplicate-id/text memo: intentional defensive checking over the fixed registry, already pinned by a test).
+**Disposition (BigDev, 2026-10-17): option 2 — leave as action items.** F1–F4 remain unchecked; W1 remains explicitly deferred.
+No application code changed during the review. Story and sprint row return to `in-progress` while the four patches remain unresolved.
+
+- [ ] [Review][Patch][HIGH] **F1 — Preserve the client's timeout classification during response-body consumption**
+  [`packages/channels/src/providers/sms-app.ts:327`]. A response can deliver HTTP 200 headers before the 9-second bound, then stall
+  in `res.json()`. Its abort is swallowed by the JSON catch; `payload = null` becomes `unknown:no_type`. The jobs core finalises
+  `unknown` as `error`, consuming that reminder/certificate slot or losing the once-ever closure notice; OTP delivery also reports
+  `unknown` instead of the promised `api_unavailable`. **AC3 / AC8 (b), MG9; invariant family 2.** Injected-fetch reproduction:
+  an aborted JSON read yielded `{code:'no_type', errorClass:'unknown'}` and a real `sendClaimCorrectionSms` call returned
+  `{kind:'final', outcome:'error', detail:'unknown:no_type'}`. Preserve `api_unavailable:timeout` when the signal aborts while
+  consuming the body; distinguish a body transport failure from invalid JSON. Add the missing after-headers timeout regression
+  through the real client and caller. Sources: blind + edge + auditor.
+
+- [ ] [Review][Patch][HIGH] **F2 — Do not promote an unexplained template-read HTTP error to a proven send refusal**
+  [`packages/channels/src/providers/sms-app.ts:386`]. Every remaining non-2xx response, including HTTP 404 / 405 / 408 from the
+  template endpoint or a proxy, becomes `refused` → `auth_or_not_found`. With the default send-key reader, this prevents API startup
+  and ends correction/closure/certificate rows as `auth:preflight`, even though it proves nothing about Flow delivery. **AC8 (a),
+  AC9 (b), MG5 / I4; invariant families 9 and 11.** The existing HTTP-404 test and Debug Log (g) pin the overbroad classification;
+  recording it does not establish the required proof. Injected-fetch reproduction: template read HTTP 404 produced a definite
+  `auth_or_not_found`, the real correction wrapper returned final `auth:preflight`, and Flow was never called. Restrict definitive
+  refusal to the documented auth/template refusal evidence; treat unexplained read-endpoint failures as unavailable (fail open on
+  6.19b/c/d and advisory at API boot; still hold the holding sweeps). Add caller and boot regressions; correct Debug Log (g) after
+  the patch without rewriting the governance decision. Sources: blind + auditor.
+
+- [ ] [Review][Patch][MEDIUM] **F3 — Retain retryable HTTP status precedence when matching a code-less error message**
+  [`packages/channels/src/providers/sms-app.ts:349`]. `tokenForMessage` runs before the HTTP fallback. An HTTP 429 or 503 with the
+  recognised invalid-template message becomes final `dlt_template_not_approved:template_invalid`, rather than `rate_limited` or
+  `api_unavailable`; the jobs caller consumes its slot instead of retrying. **MG6, ADR-0041's acceptance order.** Both statuses
+  reproduced with injected fetch. Debug Log (b)'s intended `auth:authkey_missing` token on HTTP 401 does not require overriding
+  throttling/server statuses. Keep that 401 token and the listed-code mappings while ensuring code-less 429 / 5xx remain transient;
+  add table-driven mixed-status/message cases. Source: edge.
+
+- [ ] [Review][Patch][MEDIUM] **F4 — Supply an OTP-only way to prove the deployed jobs pre-flight before OTP go-live**
+  [`docs/launch-gate-inventory/inventory-roster.md:576`]. Row 32 (e) requires a green pre-flight on deployed API AND jobs before OTP
+  go-live, but jobs only creates a lazy memo (`apps/jobs/src/boot.ts:612`) used by claim-text callers. With templates 1–14 deliberately
+  unprovisioned under Row 32 (i), the shipped jobs paths cannot produce that green result. This leaves the evidence dependent on
+  6-37b despite Row 32 note (1) / MG1 explicitly keeping OTPs independent. **AC0 / MG14, MG1's rollout intent.** Provide a documented,
+  read-only deployment procedure or command using OTP templates 15/16 and the jobs process's configured reader/key/egress; record
+  that as the initial jobs proof, and retain claim-text verification when its own provisioning becomes permitted. Do not weaken
+  Row 32 (i) or provision claim ids to obtain the proof. Source: blind; parent verified the lazy wiring and both gate deadlines.
+
+- [x] [Review][Defer][MEDIUM] **W1 — A configured HTTP gateway origin can transmit the authkey, mobile and OTP without TLS**
+  [`packages/channels/src/providers/sms-app.ts:183`] — deferred, pre-existing. `parseSmsGatewayOrigin('http://control.msg91.com')`
+  succeeds; both send and read then use it. The baseline client also accepted arbitrary HTTP `apiUrl`, so this is not a new
+  transport regression. The default remains HTTPS. Follow-up: require HTTPS for production gateway configuration and add a
+  negative config test; re-trigger before provisioning production SMS credentials. Also recorded in `deferred-work.md`. Source: blind.
+
+**Verification in this review:** 415/415 focused unit tests (channels 213, jobs 153, API 49); five jobs live suites 165/165 on
+`DATABASE_URL` at `:5433` (initial sandbox connections were denied; the approved rerun passed). All reproductions inject fetch;
+no MSG91 API call was made. `git diff --check` passed. AC10's diff over the channel port/dispatch/cascade/render, i18n and domain
+schema/migrations is empty. The build's recorded 36/36 `ci:local` was not re-run during this review.
+
+**Touched invariant families:** (1) covered by construction — overloads exclude `deferred` from callers without a hook; peer mesh
+handles both reasons. (2) REAL GAP F1; memo sharing is otherwise pinned by “N concurrent misses ⇒ ONE call” and both live AC9 (e)
+window/lease cases. (5) covered by construction/tests — no schema/class change; the code-table test imports the domain's 0166 grammar
+and live tests persist the new details. (6) covered by construction — explicit observation field picks exclude template text; error
+messages omit transport text and gateway codes are scrubbed (raw reason fields are the dismissed, conditional concern above).
+(9) REAL GAP F2 — the documented exception exceeds proven refusal. (10) covered by construction — deferred delivery reports and
+other residuals remain open; governance precedes code; the helpline override is recorded. Real-caller English coverage of Hindi-only
+refusal/closed suspicion purposes is not constructible through current routing; no such proof is claimed. (11) REAL GAP F2 — a read
+endpoint failure can refuse a text the policy explanation promises to send. Untouched families skipped.
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -944,3 +1013,4 @@ Where the build took a reading the MGs did not spell out, or departed from their
 | 2026-10-17 | 1.3 | Task 0.4 — the records: ADR-0041 (`drafted`) + adr-index; `epics.md` Story 6.37; roster Row 32 + Row 30 note (6); deferred-work annotations (three items → row 6-37b); sprint row 6-37b `backlog`; row 6-37 → `in-progress`. AC0 met. Status `in-progress`. |
 | 2026-10-17 | 1.4 | `bmad-dev-story 6.37` — Tasks 1–7 built on the story branch (commits `c7591218` → Task 7): the vocabulary helpers, the MSG91 Flow client + MG7 code table, the pre-flight + process memo, the send core's named values / malformed id / memo / `beforeSend` and the holds (suspicion, peer mesh) vs fail-open (6.19b/c/d), the OTP path and api boot pre-flight, the sheet's MSG91 steps, the AC11 recorder test, the deferred-work dispositions + one new item. Debug Log (a)–(l) records the readings; (l) — MG3's `value_too_long` vs `-322` C1 on a 15+-character helpline — was put to BigDev. `ci:local` 36/36 on :5433. Status `review`. |
 | 2026-10-17 | 1.5 | Debug Log (l) resolved by BigDev (*"14 characters fine … just display the warning"*): the helpline is exempt from MG3's `value_too_long` refusal — a 15+-character one is SENT with the helpline warning, which now names the 14-character limit; `-322` C1 holds. Tests red → green; jobs unit 674 + the five SMS live suites 165 on :5433; gate green. Status stays `review`. |
+| 2026-10-17 | 1.6 | Full `bmad-code-review` of `466e9b0e..4c03aed1`, all three layers returned: F1–F4 (2 HIGH, 2 MEDIUM) recorded as unchecked patches; W1 pre-existing HTTP-origin risk deferred; 2 additional candidates dismissed. BigDev chose option 2 — leave as action items. No application code changed. Review verification: 415 focused unit tests and 165 live jobs tests on :5433 passed; injected-fetch reproductions; full `ci:local` not re-run. Story and sprint row → `in-progress`. |

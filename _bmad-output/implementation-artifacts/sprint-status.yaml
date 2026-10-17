@@ -1,3 +1,8 @@
+# last_updated: 2026-10-17g (STORY 6.37 — FULL CODE REVIEW of `466e9b0e..4c03aed1`, all three layers returned. F1 body-read timeout
+# becomes final; F2 unexplained template-read 4xx becomes proven auth refusal (both HIGH); F3 message matching overrides retryable
+# HTTP status; F4 deployed jobs lacks OTP-only pre-flight proof (both MEDIUM). BigDev chose option 2: leave F1–F4 as action items.
+# W1 pre-existing HTTP-origin risk deferred; 2 additional candidates dismissed. Review verification: 415 focused unit + 165 live jobs
+# tests on :5433 passed; injected fetch only; full ci:local not re-run. No application code changed. Row 6-37 → in-progress.)
 # last_updated: 2026-10-17f (STORY 6.37 — DEV DONE on `story/6-37-msg91-sms-gateway-adapter`: the MSG91 Flow client behind the SMS
 # seam (named values, MG7 code table, 9 s bound), the template pre-flight + ONE process memo (holds on suspicion / peer mesh; fail open
 # with an alarmed warning on 6.19b/c/d; api boot refuses only on auth* / malformed), beforeSend (MG16 (i)), the OTP path; ci:local 36/36
@@ -20400,7 +20405,7 @@ development_status:
   # reports, the prod boot check. ⭐ AFTER 6.34 (it consumes 6.34's named, typed slots — TV13). ⛔ No story file; ⛔ no epics.md entry yet.
   # ⭐ 2026-10-17 (`bmad-create-story 6.37`): story file `6-37-msg91-sms-gateway-adapter.md`; buildable after Task 0 (MG1–MG16).
   # ⭐ 2026-10-17 (Task 0, `-345` — MG1–MG17 answered, "accept all recommended"): Task 0.4's records committed; → in-progress (the code next).
-  6-37-msg91-sms-gateway-adapter: review
+  6-37-msg91-sms-gateway-adapter: in-progress
   # ⭐ 2026-10-17 ADDED by `2026-10-17-345` MG1 (BigDev: "accept all recommended"): MSG91's DELIVERY REPORTS, moved out of 6-37 — the panel
   # webhook (JSON, one payload per recipient, keyed by `requestId` + `telNum`; ⛔ signature — static headers only; persist-then-ack), an
   # inbound table, correlation onto the five send tables (⚠ 0166's finished-row trigger freezes peer-mesh delivery columns; `delivered_at`

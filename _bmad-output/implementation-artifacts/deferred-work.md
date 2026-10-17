@@ -4,6 +4,17 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-37-msg91-sms-gateway-adapter (2026-10-17)
+
+- **W1 — The SMS gateway accepts a plaintext HTTP origin** [`packages/channels/src/providers/sms-app.ts:183`
+  `parseSmsGatewayOrigin`] — `http://control.msg91.com` passes the bare-origin check, and a configured client would send its authkey,
+  recipient mobile and OTP over HTTP. **Pre-existing:** the baseline generic client likewise accepted an arbitrary HTTP `apiUrl`;
+  this review did not change the transport policy. The default is HTTPS. **Trigger:** before production SMS credentials are
+  provisioned; require HTTPS for production configuration and pin rejection of an HTTP origin in both app configuration paths.
+  Found by the Blind Hunter and verified locally with no network. No patch applied during review.
+
+---
+
 ## Deferred from: dev-story of 6-37-msg91-sms-gateway-adapter (2026-10-17)
 
 - **MG5's content / DLT-id / `sms_type_needs_unicode` checks are alarm-only on the api and fail-open on 6.19b/c/d**

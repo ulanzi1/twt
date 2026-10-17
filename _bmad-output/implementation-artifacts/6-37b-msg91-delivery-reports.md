@@ -684,6 +684,9 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   consent — but as built it names texts and post only, so the WhatsApp step stays off until the wording, the opt-in rule and nominees'
   consent are settled with counsel); 3 B (correction AND certificate reminders); 4 A (one ladder per person); 5 A (a recorded call that
   reaches the family counts; tracking / recording / transcription in phase 2); 6 A (no closure while a ladder runs).
+  ⭐ **CONSENT RULED 2026-10-17 — `-352`:** the claimant's agreement names text, WhatsApp, phone call, post and any later means (Q1 B);
+  WhatsApp and calls reach the claimant AND the nominee — the nominee's basis is the Panel's stated DPDP Act ground, not the claimant's
+  agreement (Q2). Counsel's written confirmation, a Meta opt-in check and an architecture §3.4 / ADR-0029 amendment are recorded as owed.
 - **PQ1 — "Reached" when the network REPORTS a reminder undelivered** (one routing note, the TEMPLATE's order; the clause each option
   touches goes in the note's EVIDENCE section, ⛔ in the options). §0: passes — *"what the Trust OWES a family"* and a ratified clause
   that is matched or *"narrowed"* (`-252` cl.1 read verbatim: *"accepted by the network (or shown delivered, where a report
@@ -1229,6 +1232,11 @@ them at Task 0.1.
   explicit, not bundled, in-app consent — so the gap is put back to the Panel with counsel (a second follow-up note), together with
   nominees' consent; no WhatsApp message is sent meanwhile (our reading). Task 7 now covers BOTH chases (correction and certificate),
   a hand-recorded call, and closure waiting for a running ladder; its AC is written once the story shape is decided.
+- **(i) Consent RULED (2026-10-17).** `-352` (`6e54afe7`, Trustee-ratified, committed alone) records Q1 B and Q2 verbatim, with the
+  Panel's pasted legal text. Recorded as not covered, for counsel before WhatsApp or calls to a nominee go live: the quoted basis
+  against the DPDP Act's text (our understanding — no general legitimate-interest ground; Section 7's listed uses; Section 17(1)(a) for
+  legal claims — not legal advice), Meta's own opt-in rule, and an architecture §3.4 / ADR-0029 amendment. Our reading of the new
+  English wording is recorded (not ratified); the Hindi follows through its review.
 
 ### Completion Notes List
 
@@ -1262,3 +1270,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.8 | Debug Log (f): the DLT-rejection trace recorded as `-349` (`b878d25a`) — a Row 30 go-live condition, the DLT sheet's rejection procedure, a deferred-work risk item; no Panel question; PQ1 confirmed as still the Panel's. No change to this story's build scope. |
 | 2026-10-17 | 1.9 | PQ1 RULED — `-350` (Trustee-ratified): B1 after a delivery ladder (WhatsApp 4 h → SMS 48 h → SMS 96 h + 96 h wait → call / letter). The PQ1 note's ruling block filled; PQ1 section marked ruled; AC11 and Task 7 annotated — the ladder's legs wait for the six follow-up questions; Debug Log (g). |
 | 2026-10-17 | 1.10 | The ladder's six follow-ups RULED — `-351`: 1 A, 2 (the filing agreement as consent — its wording gap put back with counsel), 3 B, 4 A, 5 A (call recorded by hand; phase 2 automation), 6 A. Debug Log (h). |
+| 2026-10-17 | 1.11 | Consent RULED — `-352`: Q1 B (the agreement names text, WhatsApp, call, post and any later means), Q2 (WhatsApp and calls to claimant and nominee; the nominee's basis the Panel's stated DPDP ground). Counsel / Meta / architecture-amendment items recorded. Debug Log (i). |

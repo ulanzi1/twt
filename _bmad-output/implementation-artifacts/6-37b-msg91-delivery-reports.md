@@ -389,7 +389,7 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   | `crqid` | `CRQID` | DR3's grammar; `""` / `"0"` ⇒ NULL (T7); any other non-matching value ⇒ NULL |
   | `status_code` | `status` | `^[0-9]{1,3}$`, else NULL |
   | `event_name` | `eventName` | `^[A-Za-z_]{1,32}$`, else NULL |
-  | `failure_reason` | `failureReason` | trimmed, ≤ 200, control chars stripped, every run of ≥ 7 digits ⇒ `#` (the 0155 / 0166 digit-run rule's spirit) |
+  | `failure_reason` | `failureReason` | trimmed, ≤ 200, control chars stripped, every run of ≥ 7 digits ⇒ `#` (the 0155 / 0166 digit-run rule's spirit; as built after review F1, 2026-10-18: any script's numerals, contiguous OR with 1–3 non-letter characters between each pair — a formatted phone number is masked too) |
   | `reported_delivery_time` | `deliveryTime` | the raw string ≤ 40, ⛔ parsed for logic (T8) |
   | `received_at` | — | `now()` (ours — the correlator's clock) |
 
@@ -996,6 +996,84 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       is WITHDRAWN — `-348` — so the row no longer waits for it.) The Change Log; the File
       List; the sprint row → `review`; the ledger line. ⛔ Fast-forward to `main` — BigDev's call.
 
+### Review Findings
+
+#### Round 1
+
+Full-branch review, 2026-10-18: `dae96d9b..f7e695b7` (74 files, +7,175 / -36), all three layers returned
+(Blind Hunter, Edge Case Hunter, Acceptance Auditor). Task 7 / AC11 excluded under `-353`.
+Triage: **0 decision-needed, 4 patch, 0 defer, 2 dismissed**. Application code unchanged by the review.
+
+- [x] [Review][Patch] **F1 — MEDIUM: redact formatted phone numbers in failure reasons.**
+  [`apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts:84`]
+  I3 / AC3 and checklist family 6: the scrubber only replaces contiguous runs of seven or more digits.
+  `failureReason: "Failed for +91 98123 45678"` survives unchanged and passes the inbox CHECK; the matching-report
+  upsert also copies this field into the retained delivery record. Reproduced through `projectSmsReport` and
+  `persistSmsDeliveryReports` against :5433: the formatted number was stored unchanged. Mask phone-like sequences
+  containing common separators as well as contiguous digit runs, and add projection / persistence regression cases.
+  This closes the stated no-phone-number invariant; it does not change a delivery classification or what a person receives.
+
+- [x] [Review][Patch] **F2 — MEDIUM: give overlapping report batches a consistent dedupe-lock order.**
+  [`packages/domain/src/sms-delivery/reports.ts:50`]
+  AC4 / checklist family 2: the multi-row INSERT follows each incoming array's order. Two concurrent transactions
+  inserting the same fresh keys in opposite orders can deadlock on the dedupe index. Reproduced using the real
+  accessor, two PostgreSQL clients and reversed 100-report arrays on :5433: one statement failed with `40P01`.
+  The handler propagates this as a 5xx, adding avoidable webhook failures toward MSG91's auto-pause threshold.
+  Stably order rows by the exact dedupe tuple before inserting (preserving the first input occurrence for equal keys),
+  or retry the whole transaction on deadlock. Add a live overlapping-batch regression; all reproduction rows were removed.
+
+- [x] [Review][Patch] **F3 — LOW: document the global transaction exception's re-examination trigger.**
+  [`apps/api/src/modules/multi-tenant/scope-tx.ts:82`]
+  Mandatory checklist family 9: `runGlobalAppTx` explains why it omits `setPariwarScope`, but has no explicit
+  DELIBERATE block with a re-examination trigger. State the boundary (the authenticated provider's global,
+  minimised inbox, still using `twt_app`) and require review before reuse for another table, introduction of member
+  data, or tenant-specific provider accounts. This is a documentation acceptance gap, not evidence of an existing
+  tenant-table RLS bypass.
+
+- [x] [Review][Patch] **F4 — LOW: complete AC6's scoped reads for the counting-contract cases.**
+  [`packages/domain/tests/integration/sms-delivery/reports.spec.ts:190`]
+  AC6 explicitly requires the counting-contract legs to read the resulting row under its own Pariwar scope and
+  prove it invisible under another. Legs (8a)–(8e) and (8h) use `deliveryRow` on the owner connection instead.
+  The separate first-match and RLS suites establish tenant isolation, but do not perform those assertions after
+  the contract's conflict-update / out-of-order cases. Add the scoped reads to these cases; no production behavior
+  change is required.
+
+**Verification.** 599 tests passed: API unit 103; jobs unit 153; domain correlation unit 19; channels SMS 154;
+access-wrapper 34; live jobs 32; live domain / policy-regression 68; live API webhook / login-wall 36.
+The access-wrapper gate passed. Live tests used the local :5433 database after sandbox escalation.
+The temporary reproduction `/private/tmp/twt-6-37b-review-repro.mts` confirmed F1 and F2 and cleaned up its rows.
+No MSG91 request was made. Full `ci:local` was not re-run for this read-only code review.
+
+**Triage notes.** Two edge candidates dismissed: replay after the specified 30-day inbox retention is outside the
+retained dedupe window and creates a new inbox row under DR6's counting definition; crash-proof delivery of log-only
+alarms would require a durable outbox beyond DR8's chosen alarm mechanism. The trailing-newline regex suspicion was
+disproved in Node and withdrawn before final triage. The concurrent-drain test does not force overlap with a barrier;
+its existing CAS rollback and live tests remain useful, but F2's ingress race was not covered by them.
+
+**Load-bearing checklist.** Families 1, 3 and 5: covered by the status/decision tests, token tests and dedicated
+RLS / grant / CHECK suites. Family 2: lease recovery, atomic settle and stale-CAS rollback covered by live tests;
+F2 is a REAL GAP at ingress. Family 6: explicit projection / immutable send tests cover the main paths; F1 is a
+REAL GAP in free-text minimisation. Family 7: count subqueries and `NOT EXISTS` avoid join fan-out, with live window
+tests. Family 9: F3 is a REAL GAP. Family 10: the records preserve the rollout gates and unresolved dispositions;
+provider proofs are not fabricated. Other families are untouched. Human-actor checks are not constructible for a
+provider-token route with no actor identity. F4 is the remaining explicit AC6 test requirement.
+
+**Resolution (2026-10-18, applied by the round-1 reviewer; finished in the next session).** F1: `cleanFailureReason` masks every
+≥ 7-numeral sequence of any script (`\p{N}`), contiguous or with 1–3 non-letter characters between each pair, BEFORE the 200-character
+cut — a ⚠ DELIBERATE over-mask (a ≥ 7-digit timestamp becomes `#`; the status code is the classification). F2: `persistSmsDeliveryReports`
+inserts a stably sorted COPY by the exact dedupe tuple (blank-coalesced), so equal keys keep the first input's metadata; a live
+advisory-gated two-connection test forces the old-order deadlock (proven red on the unsorted code: `40P01`). F3: the `DELIBERATE` block
+on `runGlobalAppTx`. F4: `deliveryRow` reads under Pariwar A's scope and proves the row invisible under Pariwar B (savepoint-restored).
+**The fix diff was adversarially reviewed (fresh context): 0 HIGH / 0 MEDIUM / 5 LOW**, applied before commit: (a) F1's separator was a
+fixed list (`98123,45678`, `[98123] [45678]`, superscript / circled digits passed) ⇒ ANY 1–3 non-letter, non-numeral characters; (b)
+the over-mask stated and tested; (c) the inbox schema comment and DR2's projection table re-worded; (d) the concurrency test's gate moved
+to its own pool client with every acquisition inside the `try` — ⚠ my first version ran the cleanup `DELETE` through `pool.query` at
+`max` connections (a pool timeout; 8 test rows leaked into :5433, identified by request id and deleted) ⇒ the DELETE runs on the gate's
+client; (e) `reportedDeliveryTime` kept unmasked is DR2's own pre-existing choice, carried into round 2. Verified on :5433: api unit +
+webhook integration 102 / 102; domain `sms-delivery` 23 / 23 × 8 consecutive runs, inbox empty after each; `tsc --noEmit` and eslint
+clean (api, domain). ⚠ Seen while verifying and carried into round 2, ⛔ caused by this patch: the claim test *"the limit is CLAMPED"*
+failed in 5 of 24 full-file runs (3 of them beside the leaking cleanup above; 2 with an empty inbox) — `claimDueSmsDeliveryReports(limit: 1)` returned TWO rows.
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -1373,3 +1451,4 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37b`, Tasks 1–6 and 8 (2026
 | 2026-10-17 | 1.11 | Consent RULED — `-352`: Q1 B (the agreement names text, WhatsApp, call, post and any later means), Q2 (WhatsApp and calls to claimant and nominee; the nominee's basis the Panel's stated DPDP ground). Counsel / Meta / architecture-amendment items recorded. Debug Log (i). |
 | 2026-10-17 | 1.12 | SPLIT (`-353`): Task 7 and AC11 moved to row `6-37c-undelivered-reminder-ladder` (kept as written, marked MOVED); DR14 now (b); Task 8's ladder-dependent dispositions move to 6-37c; the claim-text gate waits for 6-37c too; the §3.4 amendment proposal drafted. Debug Log (j). |
 | 2026-10-17 | 1.13 | DEV (`bmad-dev-story 6.37b`): Tasks 1–6 and 8 done — the CRQID on every SMS (AC1), MSG91's delivery-report webhook (AC2–AC4), migration 0167's inbox and per-send delivery record with their policy-regression specs (AC8, AC10), the domain accessors, the jobs correlator / prune / silence check (AC5–AC7, AC9), the gates (AC12, AC13); deferred-work dispositions per `-353`. Debug Log (k): `first_reported_at` joins G-a's UPDATE grant (DR6's contract — put to BigDev), the core refuses `ot`, the cleaner's superset of the CHECKs, the content type never decides, `runGlobalAppTx`, the revert-sanity and mutation runs. ci:local green on :5433 (lint fixed and the admin jsdom timeouts re-run alone). Status `review`. |
+| 2026-10-18 | 1.14 | Code review round 1 (`dae96d9b..f7e695b7`, 3 layers): 0 decision / 4 patch / 0 defer / 2 dismissed. F1–F4 applied — F1 a formatted phone number masked in the failure reason (any 1–3 non-letter separator), F2 the inbox INSERT in dedupe-key order (no `40P01` between overlapping batches), F3 `runGlobalAppTx`'s DELIBERATE block, F4 AC6's scoped reads; the fix diff adversarially reviewed (0 H / 0 M / 5 L, applied). Status stays `review` — round 2 (whole branch) follows. |

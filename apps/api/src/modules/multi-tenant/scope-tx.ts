@@ -84,6 +84,10 @@ export async function closeScopeTx(scopeTx: ScopeTx, commit: boolean): Promise<v
  * as `twt_app` — `openScopeTx`'s shape WITHOUT `setPariwarScope` (a Pariwar-less write cannot use it). BEGIN → `SET LOCAL
  * ROLE twt_app` → `fn` → COMMIT; a FAILED COMMIT is RETHROWN as `closeScopeTx` does (⛔ a 2xx for a write that never
  * landed); any throw rolls back. The client is always released.
+ *
+ * DELIBERATE: no tenant scope is set for the authenticated provider's global, minimised report inbox. The callback
+ * still runs as `twt_app`, so tenant-table RLS remains enforced. Re-examine this exception before using this helper
+ * for another table, retaining member data in the inbox, or introducing tenant-specific provider accounts.
  */
 export async function runGlobalAppTx<T>(pool: AppDeps['pool'], fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();

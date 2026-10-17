@@ -22,7 +22,7 @@ export const smsDeliveryReportInbox = pgTable(
     crqid: text('crqid'),
     statusCode: text('status_code'),
     eventName: text('event_name'),
-    /** Trimmed, ≤ 200, control characters stripped, every run of ≥ 7 digits ⇒ `#` (DR2). */
+    /** Trimmed, ≤ 200, control characters stripped, every ≥ 7-digit sequence (contiguous or separated) ⇒ `#` (DR2, I3). */
     failureReason: text('failure_reason'),
     /** MSG91's `deliveryTime` as received, ≤ 40 — ⛔ parsed for logic (T8). */
     reportedDeliveryTime: text('reported_delivery_time'),

@@ -125,6 +125,42 @@ describe('cleanFailureReason (DR2)', () => {
     expect(cleanFailureReason('नंबर ९८१२३४५६७८')).toBe('नंबर #');
   });
 
+  it.each([
+    '+91 98123 45678', '98123-45678', '+91 (98123) 45678', '98123.45678', '98123/45678',
+    '98123\u00a045678', '98123\u201145678', '९८१२३ ४५६७८', '+९१ 98123 ४५६७८',
+  ])('a formatted phone number (%s) is masked in the reason and projection', (number) => {
+    expect(cleanFailureReason(`Failed for ${number}`)).toBe('Failed for #');
+    expect(projectSmsReport({ ...FULL, failureReason: `Failed for ${number}` })!.failureReason).toBe('Failed for #');
+  });
+
+  it.each([
+    '98123,45678', '98123_45678', '98123:45678', "98'123'45678", '98123\u00b745678', '98123• 45678', '98123 + 45678',
+    '98123 #45678', '98123;45678', '98123|45678', '[98123] [45678]', '\uff0898123\uff0945678', '98123\uff0e45678',
+    '⁹⁸¹²³⁴⁵⁶⁷⁸', '①②③④⑤⑥⑦', '9 8 1 2 3 4 5 6 7 8', '+91-98123-45678', '0091 98123 45678',
+  ])('a number behind ANY short non-letter separator (%s) is masked — the separator set is not a list', (number) => {
+    // A bracket BEFORE the first digit stays (`[#]`); ⛔ numeral survives.
+    const cleaned = cleanFailureReason(`Failed for ${number}`)!;
+    expect(cleaned).toMatch(/^Failed for \P{N}*#\P{N}*$/u);
+    expect(cleaned).not.toMatch(/\p{N}/u);
+  });
+
+  it('⚠ DELIBERATE over-masking: a ≥ 7-digit timestamp is masked; letters between digit groups stop the mask', () => {
+    expect(cleanFailureReason('error 500 at 2026-10-17 12:34:56')).toBe('error 500 at #');
+    expect(cleanFailureReason('code 123 then 4567 x 89')).toBe('code 123 then 4567 x 89');
+  });
+
+  it('a 1 MB adversarial reason is scanned in linear time (⛔ backtracking)', () => {
+    const t0 = performance.now();
+    cleanFailureReason(`1${'()-'.repeat(350_000)}`);
+    cleanFailureReason('123456 '.repeat(150_000));
+    expect(performance.now() - t0).toBeLessThan(2000);
+  });
+
+  it('masks before truncating and preserves separate short diagnostics and ordinary reason text', () => {
+    expect(cleanFailureReason(`${'x'.repeat(190)} +91 98123 45678`)).toBe(`${'x'.repeat(190)} #`);
+    expect(cleanFailureReason('op 123456 error 25')).toBe('op 123456 error 25');
+  });
+
   it('trimmed, ≤ 200; blank ⇒ null; a non-string ⇒ null', () => {
     expect(cleanFailureReason(`  ${'x'.repeat(250)}  `)).toHaveLength(200);
     expect(cleanFailureReason('   ')).toBeNull();

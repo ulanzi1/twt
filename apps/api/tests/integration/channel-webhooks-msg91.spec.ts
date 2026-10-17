@@ -153,6 +153,17 @@ describe.skipIf(!hasDatabase)('MSG91 SMS delivery-report webhook (Story 6.37b)',
   });
 
   describe('AC3 — only the projection is kept (DR2, DR10, I3)', () => {
+    it.each(['+91 98123 45678', '98123-45678', '+91 (98123) 45678', '९८१२३ ४५६७८'])(
+      'a formatted number in the failure reason (%s) reaches neither storage nor logs', async (number) => {
+        const r = report({ failureReason: `Failed for ${number}`, status: '2' });
+        expect((await post(r)).statusCode).toBe(200);
+        const [row] = await rowsFor(r.requestId as string);
+        expect(row!.failure_reason).toBe('Failed for #');
+        expect(String(row!.j)).not.toContain(number);
+        expect(logLines.join('\n')).not.toContain(number);
+      },
+    );
+
     it('⭐ every F3 field ⇒ the row holds EXACTLY DR2\'s columns; the number, sender, credit, user and DLT id in ⛔ column and ⛔ log line', async () => {
       const r = report({ failureReason: 'Failed for 9812345678 today' });
       expect((await post(r)).statusCode).toBe(200);

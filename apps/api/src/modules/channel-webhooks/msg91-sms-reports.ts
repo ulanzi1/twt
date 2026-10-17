@@ -5,7 +5,9 @@
 // ── ⛔ The phone number (I3, DR2) ───────────────────────────────────────────────────────────────────────────────
 // A report is reduced to EXACTLY six values — the request id, the CRQID, the status code, the event name, the failure
 // reason and the delivery time — read from those six keys only. `telNum`, `senderId`, `credit`, `userId`, `DLT_TE_ID`
-// and every other key are ⛔ read. The failure reason is MSG91's free text, so every run of ≥ 7 digits in it becomes `#`.
+// and every other key are ⛔ read. The failure reason is MSG91's free text, so every sequence of ≥ 7 digits — any
+// script's, contiguous or with up to three non-letter characters between each pair (`+91 98123-45678`, `98123,45678`,
+// `[98123] [45678]`) — becomes `#`.
 // ⚠ Node's `JSON.parse` error message QUOTES the body (the number included): the parse error is CAUGHT here and its
 // message is ⛔ kept, returned or logged (T20).
 //
@@ -80,14 +82,19 @@ const EVENT_NAME = /^[A-Za-z_]{1,32}$/;
 // CHECK refuses, so a cleaned value can ⛔ fail the INSERT (a 5xx counts toward MSG91's auto-pause).
 const CONTROL = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
 const HAS_CONTROL = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
-// Any script's decimal digits (the CHECK's `[0-9]{7}` is the ASCII subset).
-const DIGIT_RUN = /\p{Nd}{7,}/gu;
+// ≥ 7 numeric characters of any script (`\p{N}` — superscript and circled digits included), each pair separated by
+// ⛔ separator or by 1–3 characters that are neither letters nor numerals: ANY punctuation, symbol or space, so a number
+// formatted with a separator nobody listed is still masked. Mask before truncating so a long formatted number cannot
+// leave an identifying prefix. ⚠ DELIBERATE over-masking: a timestamp or version string with ≥ 7 digits becomes `#` too
+// — the status code is the classification, and preserving a number is never needed to correlate a report. The
+// separator class and `\p{N}` are disjoint and the separator is bounded, so the scan is linear (⛔ backtracking).
+const PHONE_DIGITS = /\+?\p{N}(?:[^\p{L}\p{N}]{0,3}\p{N}){6,}/gu;
 
-/** DR2 — the failure reason: control characters stripped, every ≥ 7-digit run ⇒ `#`, trimmed, ≤ 200; blank ⇒ null. */
+/** DR2 / I3 — controls stripped, ≥ 7 digits (contiguous or separated) ⇒ `#`, trimmed, ≤ 200; blank ⇒ null. */
 export function cleanFailureReason(v: unknown): string | null {
   const s = text(v);
   if (s === null) return null;
-  const cleaned = s.replace(CONTROL, '').replace(DIGIT_RUN, '#').trim().slice(0, 200).trim();
+  const cleaned = s.replace(CONTROL, '').replace(PHONE_DIGITS, '#').trim().slice(0, 200).trim();
   return cleaned === '' ? null : cleaned;
 }
 

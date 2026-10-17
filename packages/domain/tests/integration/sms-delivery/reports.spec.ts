@@ -4,6 +4,7 @@
 
 import { randomUUID } from 'node:crypto';
 
+import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -16,7 +17,7 @@ import {
   type SmsDeliveryReportProjection,
   type SmsSendDeliveryReport,
 } from '../../../src/sms-delivery/index.js';
-import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
+import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
 
 type Client = ReturnType<typeof getTx>['client'];
@@ -67,8 +68,20 @@ const report = (over: Partial<SmsSendDeliveryReport> = {}): SmsSendDeliveryRepor
 });
 
 async function deliveryRow(client: Client, kind = 'cr', rowId = report().rowId) {
-  const { rows } = await client.query(`SELECT * FROM sms_send_deliveries WHERE send_kind = $1 AND send_row_id = $2`, [kind, rowId]);
-  return rows;
+  // AC6: every counting-contract read runs as the send's tenant, and proves cross-tenant invisibility, including
+  // after conflict updates and out-of-order reports. Restore role and GUCs before the next owner-side test write.
+  await client.query('SAVEPOINT delivery_scope_read');
+  try {
+    await enterAppScope(client, PARIWAR_A);
+    const { rows } = await client.query(`SELECT * FROM sms_send_deliveries WHERE send_kind = $1 AND send_row_id = $2`, [kind, rowId]);
+    await enterAppScope(client, PARIWAR_B);
+    const other = await client.query(`SELECT * FROM sms_send_deliveries WHERE send_kind = $1 AND send_row_id = $2`, [kind, rowId]);
+    expect(other.rows).toEqual([]);
+    return rows;
+  } finally {
+    await client.query('ROLLBACK TO SAVEPOINT delivery_scope_read');
+    await client.query('RELEASE SAVEPOINT delivery_scope_read');
+  }
 }
 
 describe.skipIf(!hasDatabase)('Story 6.37b — the delivery-report accessors (live)', { timeout: 20000 }, () => {
@@ -97,6 +110,92 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the delivery-report accessors (li
       const { client } = getTx();
       const a = projection();
       expect(await persistSmsDeliveryReports(client, [a, projection(), a])).toBe(2);
+    });
+
+    it('equal keys keep the FIRST input metadata, including blank-coalesced keys; the input is unchanged', async () => {
+      const { client } = getTx();
+      const first = projection({ crqid: null, statusCode: null, failureReason: 'first' });
+      const rows = [projection(), first, { ...first, failureReason: 'second' }];
+      const original = [...rows];
+      expect(await persistSmsDeliveryReports(client, rows)).toBe(2);
+      expect(rows).toEqual(original);
+      expect((await client.query('SELECT failure_reason FROM sms_delivery_report_inbox WHERE request_id = $1', [first.requestId])).rows)
+        .toEqual([{ failure_reason: 'first' }]);
+    });
+
+    it('reversed overlapping batches both commit under forced two-connection contention', async () => {
+      // The gate is held on its OWN pool client (⛔ the shared fixture transaction — an aborted fixture tx would fail the
+      // unlock and skip the cleanup). Every acquisition happens inside the `try`, so the `finally` always ends the pool.
+      const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 3, connectionTimeoutMillis: 5000 });
+      const gate = String(BigInt(`0x${randomUUID().replace(/-/g, '').slice(0, 12)}`));
+      const rows = [projection(), projection()];
+      const ids = rows.map((r) => r.requestId);
+      const clients: pg.PoolClient[] = [];
+      let control: pg.PoolClient | undefined;
+      let locked = false;
+      let pending: Promise<PromiseSettledResult<number>[]> | undefined;
+
+      const write = async (c: pg.PoolClient, batch: SmsDeliveryReportProjection[]) => {
+        await c.query('BEGIN');
+        try {
+          await c.query('SET LOCAL ROLE twt_app');
+          await c.query(`SET LOCAL statement_timeout = '10s'`);
+          // Pause the second tuple AFTER this transaction has inserted its first key. With opposite lock orders,
+          // each transaction owns a different key and this schedule deterministically produces a deadlock. With
+          // consistent ordering, the second writer waits on the first key and both safely finish after release.
+          const gated = {
+            query: (statement: string, values: unknown[]) => {
+              const replacement = `(SELECT $7::text FROM pg_advisory_xact_lock($${values.length + 1}::bigint)),`;
+              const sql = statement.replace('$7,', replacement);
+              expect(sql).not.toBe(statement);
+              return c.query(sql, [...values, gate]);
+            },
+          } as unknown as pg.PoolClient;
+          const n = await persistSmsDeliveryReports(gated, batch);
+          await c.query('COMMIT');
+          return n;
+        } catch (err) {
+          await c.query('ROLLBACK');
+          throw err;
+        }
+      };
+      try {
+        control = await pool.connect();
+        clients.push(await pool.connect(), await pool.connect());
+        const pids = await Promise.all(clients.map(async (c) => (await c.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid));
+        await control.query('SELECT pg_advisory_lock($1::bigint)', [gate]);
+        locked = true;
+        pending = Promise.allSettled([write(clients[0]!, rows), write(clients[1]!, [...rows].reverse())]);
+        const deadline = Date.now() + 5000;
+        let blocked = 0;
+        while (blocked !== 2 && Date.now() < deadline) {
+          const r = await control.query<{ n: number }>(
+            `SELECT count(DISTINCT pid)::int AS n FROM pg_locks WHERE pid = ANY($1::int[]) AND NOT granted`, [pids],
+          );
+          blocked = r.rows[0]!.n;
+          if (blocked !== 2) await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        expect(blocked).toBe(2);
+        await control.query('SELECT pg_advisory_unlock($1::bigint)', [gate]);
+        locked = false;
+        const results = await pending;
+        expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+        expect(results.reduce((n, r) => n + (r.status === 'fulfilled' ? r.value : 0), 0)).toBe(2);
+        expect((await control.query('SELECT request_id FROM sms_delivery_report_inbox WHERE request_id = ANY($1)', [ids])).rows).toHaveLength(2);
+      } finally {
+        try {
+          if (locked) await control!.query('SELECT pg_advisory_unlock($1::bigint)', [gate]);
+          await pending;
+          // These two writers commit independently of the test fixture, so cleanup must commit independently too —
+          // on the gate's client (the pool is at `max`: a `pool.query` here would wait for a fourth connection).
+          if (control) await control.query('DELETE FROM sms_delivery_report_inbox WHERE request_id = ANY($1)', [ids]);
+        } finally {
+          // Releasing / ending closes the gate's session too, so the advisory lock can never outlive the test.
+          control?.release();
+          clients.forEach((c) => c.release());
+          await pool.end();
+        }
+      }
     });
 
     it('the blank-key case: ⛔ CRQID and ⛔ status, the same request id ⇒ ONE row', async () => {

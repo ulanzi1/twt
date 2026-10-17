@@ -46,8 +46,16 @@ export const SMS_REPORTS_PER_REQUEST_MAX = 100;
 export async function persistSmsDeliveryReports(q: Queryable, rows: readonly SmsDeliveryReportProjection[]): Promise<number> {
   if (rows.length === 0) return 0;
   if (rows.length > SMS_REPORTS_PER_REQUEST_MAX) throw new Error('persistSmsDeliveryReports: too many reports in one request');
+  // All concurrent batches take unique-index locks in the same order, including blank-coalesced keys (DR7).
+  // Sort a copy with a stable comparator: equal keys retain the first input's metadata; callers keep their order.
+  const key = (r: SmsDeliveryReportProjection): string => `${r.requestId}\0${r.crqid ?? ''}\0${r.statusCode ?? ''}`;
+  const ordered = [...rows].sort((a, b) => {
+    const ak = key(a);
+    const bk = key(b);
+    return ak < bk ? -1 : ak > bk ? 1 : 0;
+  });
   const values: unknown[] = [];
-  const tuples = rows.map((r, i) => {
+  const tuples = ordered.map((r, i) => {
     values.push(r.requestId, r.crqid, r.statusCode, r.eventName, r.failureReason, r.reportedDeliveryTime);
     const b = i * 6;
     return `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6})`;

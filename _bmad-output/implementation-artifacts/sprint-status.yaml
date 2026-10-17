@@ -140,6 +140,17 @@
 # (SELECT-only breaks Row 26 (a)); under PQ1 B1 letter-eligibility is `foundDeadOn` (sticky) and a forged report changes who is
 # contacted — I1 / Policy meaning / PQ1 / AC11 / Task 7 rewritten; the `requestId` match is observable only AFTER Row 33 (g) (a dated
 # note, ⛔ a leg). Row stays `ready-for-dev`. ⛔ No other row moves.)
+# last_updated: 2026-10-17k (⭐ **STORY 6.31 — CREATED via `bmad-create-story 6.31` ⇒ `backlog → ready-for-dev`.** Pinned `dae96d9b`
+# (worktree `6-31`, branch `story/6-31-peer-mesh-whatsapp-reminder-at-48-hours`); four read-only research passes. FOUND: (1) ledger entry 2026-10-10f's
+# *"no reminder once the District Admin has decided"* (2026-10-10f) is STALE — WITHDRAWN by `-305` §2 item 4; the gate is the ANSWER
+# WINDOW; (2) as built a WhatsApp opt-in counts for 24 h only (`isOptInActive`; ADR-0029, Trustee-ratified `-065`) and an expired one
+# cannot be withdrawn ⇒ the reminder would reach almost nobody ⇒ a Panel note WRITTEN, ⛔ not yet sent:
+# `trustee-panel-routing-note-2026-10-17-6-31-how-long-a-whatsapp-yes-lasts.md` (A until withdrawn — our reading / B the reminder only
+# / C as built); it blocks ⛔ nothing — 6.31 builds the ratified 24 h read; (3) the WA client sends ONE body value and the WA template
+# table is keyed by the frozen AlertCategory ⇒ an additive three-value send + a per-Pariwar config key for the template name;
+# (4) ⛔ no WA sender exists outside `dispatch()`. WR1–WR16 PROPOSED (author-commit owed at Task 0.3 — `-347` if still free);
+# roster Row 33 owed at Task 0.4 (0167 / `-347` / Row 33 PROVISIONAL — branch `story/6-37b-…` has committed a story planning
+# the same numbers and ledger `2026-10-17j`, hence this line's `k`); ⛔ no epics.md entry yet (owed at Task 0.4). ⛔ No other row moves.)
 # last_updated: 2026-10-17j (STORY 6.37b — CREATED by `bmad-create-story 6.37b` (worktree `.claude/worktrees/6-37b`, branch
 # `story/6-37b-msg91-delivery-reports`, pinned `dae96d9b`): row `6-37b-msg91-delivery-reports` `backlog` → `ready-for-dev` (v1.1 — four
 # research passes + one fresh-context verifier, 2 HIGH applied). DR1–DR14 PROPOSED (⏳ BigDev, Task 0.2; author-commit `-347` ALONE before
@@ -20155,6 +20166,7 @@ last_updated: >-
   recorded (notes not yet sent); row 6-37b in-progress.)
   2026-10-17 (Story 6.37b validated v1.2: CRQID inside the recipient, the AI-5-1 header shape, DR5-G grants put to BigDev, B1's
   foundDeadOn letter-eligibility; four review rounds over the pass's own diff; status ready-for-dev.)
+  2026-10-17 (Story 6.31 created: ready-for-dev; WR1–WR16 proposed; Panel note on how long a WhatsApp opt-in lasts written, not yet sent.)
   2026-10-17 (Story 6.37b created: MSG91 delivery-report story, DR1–DR14 proposed for BigDev at Task 0, PQ1 / PQ2 to be routed;
   status ready-for-dev.)
   2026-10-17 (Story 6.37 code review round 2: -346 committed (D1 a, D2 b); P1–P18 applied, fix diff reviewed twice; P2 routed to
@@ -20534,7 +20546,10 @@ development_status:
   6-30-app-links-open-the-app-from-a-text: done
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"48 hours, separate story 6-31"*): ONE WhatsApp reminder at 48 h to the five who have ⛔ not
   # answered and opted in to WhatsApp — after 6.27's sending half; Panel-routed inside 6.27's Q1. ⛔ No story file; ⛔ no epics.md entry yet.
-  6-31-peer-mesh-whatsapp-reminder-at-48-hours: backlog
+  # ⭐ 2026-10-17 ANNOTATION (`bmad-create-story 6.31` — the comment above is kept as written, ⛔ never rewritten): ⚠ ledger entry 2026-10-10f's *"⛔ no
+  # reminder once the District Admin has decided"* (⛔ in this comment block) was WITHDRAWN by `-305` §2 item 4 — the reminder goes ONLY
+  # while the claim is in the answer window. The story file exists; the Panel note on the 24 h opt-in is written, ⛔ not sent.
+  6-31-peer-mesh-whatsapp-reminder-at-48-hours: ready-for-dev
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"Yes, do it"*): the inspector's questionnaire for the family at the ground inspection (a
   # versioned, conditional form beside 6.26a's fixed checks; the family's comparable answers under shared keys; offline saving), and the
   # staff editor for questionnaire versions with a second approver (both questionnaires). Panel Q8 (unsent note) governs who may author.

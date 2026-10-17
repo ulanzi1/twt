@@ -42,7 +42,7 @@ value cap vs the 55-char link); the tests every edit turns red named. ⚠ Every 
 
 # Story 6.37: The texts and login codes are actually sent — a MSG91 adapter behind the SMS seam, sending each template's NAMED values, with a pre-flight that proves the account and every template before a single text is spent `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today ⛔ no SMS can reach a real gateway: `sms-app.ts` posts a generic
 > `{sender, to, template_id, message}` with `Authorization: Bearer` and expects `messageId` — a contract that matches ⛔ MSG91, the gateway
@@ -538,7 +538,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
+- [x] **Task 0 — governance FIRST (AC0). ⛔ No code.**
   - [x] 0.1 `git fetch origin`; `git diff --name-only 466e9b0e..origin/main -- packages/channels apps/jobs/src apps/api/src/deps.ts
         apps/api/src/config.ts apps/api/src/modules/auth scripts/dlt-typed-variables docs/launch-gate-inventory infra/dokploy`; re-read any
         cited file that moved. Re-fetch F9–F19 from `docs.msg91.com/sms/send-sms.md`, `sms/module.json`, `otp/module.json` and the help
@@ -588,13 +588,13 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
         word rewritten); the deferred delivery-report item and both at-least-once items annotated "closer: row 6-37b" (⛔ closed); sprint
         row `6-37b-msg91-delivery-reports: backlog`; row 6-37 → `in-progress`; the ledger line.
 
-- [ ] **Task 1 — the vocabulary helpers (AC5, AC6).** In `packages/channels/src/dlt-variables.ts`: `substituteDltValues(text, slots,
+- [x] **Task 1 — the vocabulary helpers (AC5, AC6).** In `packages/channels/src/dlt-variables.ts`: `substituteDltValues(text, slots,
       values)` (throws on a name / count mismatch; FUNCTION-form replacement) and `toGatewayTemplate(text, slots, wrap)`; a
       `needsUnicode(text)` (any character outside the GSM-7 default + extension tables) for MG5; unit tests incl. values containing
       `{#var#}`, `##x##`, `$&`, `$'` (substituted ONCE, left-to-right, never re-scanned, inserted literally). The jobs sheet test asserts
       `toGatewayTemplate` === `msg91Form` for rows 1–16, and `needsUnicode` agrees with the sheet's Unicode notes (14 en and every hi).
 
-- [ ] **Task 2 — the MSG91 client (AC1–AC4).** Rewrite `packages/channels/src/providers/sms-app.ts` (keep the file, `SmsAppClient`,
+- [x] **Task 2 — the MSG91 client (AC1–AC4).** Rewrite `packages/channels/src/providers/sms-app.ts` (keep the file, `SmsAppClient`,
       `SmsMessagingHandle`, `SmsSendError`, `SmsFetchLike` names — 23 files reference them at the pin, incl. `fixture-sms.ts`):
       `SmsClientConfig {apiOrigin, authkey}`; `SmsGatewayMessage {to, templateId, values, body}`; `send` per MG6 / MG8 / MG9;
       `readTemplateVersions(templateId)` for MG5 (same 9 s signal). `SmsFetchInit` gains `signal`. Rewrite `sms-errors.ts`'s sets per MG7
@@ -605,14 +605,14 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
       `:51-70` (inverts to `no_named_values` — MG12); `packages/channels/tests/provider-composition.test.ts` and
       `contribution-provider-resolver.test.ts` (`dltTemplateId` / `isConfigured`).
 
-- [ ] **Task 3 — the pre-flight (AC7).** `packages/channels/src/providers/sms-preflight.ts`: `checkMsg91Template(client, entry, id)` →
+- [x] **Task 3 — the pre-flight (AC7).** `packages/channels/src/providers/sms-preflight.ts`: `checkMsg91Template(client, entry, id)` →
       `{ok:true} | {ok:false, transient:boolean, reason}` (reasons: `auth`, `auth_or_not_found`, `content_mismatch`, `sms_type_needs_unicode`,
       `dlt_id_missing`, `template_id_malformed`; a PASS may carry the logged `sms_type_unicode_for_gsm7` note), plus `createMsg91PreflightMemo({check, clock, passTtlMs, faultTtlMs})` (MG5's memo —
       shared in-flight, ⛔ transient cached); logs the informational fields (⛔ the authkey, ⛔ `template_data`). ⚠ This file must ⛔ name
       the `sms.dlt.template_id.` prefix, `DLT_VAR` or the `{#var#}` literal, even in a comment (F21, T4) — it takes `{text, slots}` and an
       id. Export via `packages/channels/src/index.ts`.
 
-- [ ] **Task 4 — the send core and the five callers (AC5, AC8 (c), AC9).** `claim-dlt-sms-send.ts`: the `template` + `values` inputs and MG3's
+- [x] **Task 4 — the send core and the five callers (AC5, AC8 (c), AC9).** `claim-dlt-sms-send.ts`: the `template` + `values` inputs and MG3's
       synchronous checks (before `smsAppClient.messaging()`); the malformed-id final (MG4, before the memo); the memo read after the id
       resolves (MG5): a PROVEN fault (`auth` / `auth_or_not_found` under MG17 (a)) ⇒ final on every caller; `content_mismatch` /
       `dlt_id_missing` / `sms_type_needs_unicode` ⇒ final on the suspicion / peer-mesh children, ALARMED and sent on 6.19b/c/d — the core
@@ -639,7 +639,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
       default); the `SmsAppClient` fakes `claim-certificate-reminders.test.ts:22`, `claim-correction-control-paths.test.ts:141` (stay valid
       while `preflight` is optional). Every fake records `values` and asserts AC5 (ii).
 
-- [ ] **Task 5 — the OTP path (AC5, AC8).** `sms-step-up-delivery.ts`: send `values: [{name:'otp', value: code}]` + `body:
+- [x] **Task 5 — the OTP path (AC5, AC8).** `sms-step-up-delivery.ts`: send `values: [{name:'otp', value: code}]` + `body:
       renderOtpBody(...)` + `templateId`. `deps.ts` `buildMemberStepUpDelivery`: MG10's config, the malformed-id check, the boot pre-flight
       for 15 / 16 with MG5's api outcomes and the advisory runtime re-check (off the request path); an injectable fetch / client (AC11); if
       MG17 (b), the read key's secret name (required in production); keep the error string's literal keys (the
@@ -649,14 +649,14 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
       `:102, :130, :163` → a per-key hex map), `tests/integration/sms-step-up-delivery.spec.ts` (`:132, :168` and its code pin),
       `tests/unit/member-step-up-delivery-wiring.test.ts`, `tests/unit/sms-composition.test.ts` (`:96-104` inverts — MG12).
 
-- [ ] **Task 6 — the dark path and the gates (AC10).** MG12's test (a dark category's provider, if forced, refuses with
+- [x] **Task 6 — the dark path and the gates (AC10).** MG12's test (a dark category's provider, if forced, refuses with
       `no_named_values` and ⛔ `fetch`); `git diff --stat main -- packages/channels/src/{provider,dispatch,cascade,render}.ts` EMPTY;
       `pnpm --filter @twt/channels test:determinism`; `pnpm dlt-typed-variables:test && pnpm dlt-typed-variables:check` (⚠ a new file
       must be `git add`-ed first); the sheet's *"Where and how we register"* MSG91 bullet gains the setup steps (create from the MSG91
       column; DLT TE id; sender; `smsType` UNICODE for every Hindi template AND template 14; mark default; ⛔ short URLs — panel shortener
       off, app-link domain on "Skip URL") — PROSE, ⛔ a table cell (rule (i) scans table rows; the 7-cell parse).
 
-- [ ] **Task 7 — records and close (AC11).** Write AC11's recorder test (the jobs core, a 6.19b/c/d fail-open leg, and
+- [x] **Task 7 — records and close (AC11).** Write AC11's recorder test (the jobs core, a 6.19b/c/d fail-open leg, and
       `buildMemberStepUpDelivery` with ⛔ injected fetch); `pnpm ci:local` with `DATABASE_URL` at :5433; a NEW deferred-work item *"MG5's content /
       DLT-id / `sms_type_needs_unicode` checks are alarm-only on the api and fail-open on 6.19b/c/d"* — trigger: Row 32 (e) records a real
       green response and S1 is settled (then a later change may make the api check blocking, re-weighing T13; the 6.19b/c/d question is the Panel's, MG5); the deferred-work
@@ -799,14 +799,132 @@ The last five commits are 6.27c's review rounds and records (`f3c19b62` → `466
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37`, 2026-10-17, in the worktree `.claude/worktrees/6-37` (branch
+`story/6-37-msg91-sms-gateway-adapter`).
+
 ### Debug Log References
+
+Where the build took a reading the MGs did not spell out, or departed from their letter (each tested; none moves an MG's purpose):
+
+- **(a) MG7 — an UNLISTED code falls back to the HTTP status.** MG7 reads *"`unknown`: 311, 407 and every unlisted code"*; taken
+  literally, an unknown code on a 429 / 5xx would be a FINAL `unknown` (a spent slot on 6.19b/c/d) where today it is a transient. Built:
+  the LISTED codes keep their class whatever the status, 311 / 407 are `unknown` always (`UNKNOWN_CODES`), and an unlisted code is
+  `unknown` on a 2xx / other 4xx but `auth` / `rate_limited` / `api_unavailable` on a 401·403 / 429 / 5xx (`sms-errors.ts`; `sms.test.ts`
+  "an UNLISTED code …"). The suspicion live RN5 legs that pinned a code-bearing 429 / 503 as transient stay green unchanged.
+- **(b) MG6 — the two documented sync messages are read BEFORE the status fallback**, so MSG91's documented HTTP 401 `"Auth Key missing"`
+  sample yields `auth:authkey_missing` (AC3), ⛔ `auth:http_401` (same class either way).
+- **(c) MG10 in jobs — a non-bare `SMS_GATEWAY_API_URL` is REFUSED by logging it and leaving the client unconfigured**, ⛔ by failing jobs
+  boot (MG11: jobs runs many non-SMS duties; every claim sweep then HOLDS on `config:sms_gateway_unconfigured`). The api refuses at config
+  load (`parseSmsGatewayOrigin` in `config.ts`) — its prod boot fails loud, as the old placeholder arm did.
+- **(d) `preflightWarning` rides EVERY provider-handed final of a fail-open send** (as the helpline flag does), ⛔ only `accepted` — so a
+  fail-open send that MSG91 then rejects still alarms the template doubt. ⛔ An outcome change.
+- **(e) The memo is keyed by template id AND registered text** — one MSG91 id wrongly held under two keys is judged against each text
+  (⛔ a pass for one masking a mismatch for the other). Still at most one read per template per TTL (AC9 (d) counted).
+- **(f) The OTP adapter runs MG3's check too** (the `otp` value, from the registry slot's name, must rebuild the rendered body) — a
+  mismatch throws `StepUpDeliveryError('dlt_template_not_approved')`, ⛔ a send.
+- **(g) `readTemplateVersions`** maps HTTP 401 / 403 ⇒ `auth`; any other 4xx (⛔ documented) ⇒ `refused` (⇒ `auth_or_not_found`, a
+  definite fault); 429 / 5xx / network / timeout / an unparseable or `data`-less 200 ⇒ `transient`.
+- **(h) `SmsLocalRefusal`** (a client-classified failure on `SmsSendError`) also admits `carrier_reject`, so tests can build the SYNTHETIC
+  `carrier_reject` MSG91 never answers synchronously (MG7) — the `CARRIER_REJECT → rejected_unreachable` rows became such fixtures.
+- **(i) MG17 (b) on the api** — a read-key NAME that resolves blank refuses to start; `resolveSecretValue` already throws on a blank env
+  fallback, so the builder's own message is the backstop.
+- **(j) The suspicion sweep alarms each pre-flight-held purpose ONCE** (`… notices are HELD this run — config:sms_preflight_<reason>:<key>`)
+  beside RB12's end-of-run held alarm, so the reason and key are named (AC9 (a)); peer mesh's held alarm already carries the gap.
+- **(l) ⚠ FOUND in self-review — MG3's `value_too_long` meets `-322` C1 on the helpline.** The helpline is a `cbn` slot (maxLength
+  14). C1 rules a set-but-malformed helpline SENT and ALARMED; MG3 (as accepted) makes ANY value over its slot's `maxLength` a final
+  `dlt_template_not_approved:value_too_long`. A malformed helpline of ≤ 14 characters (`+911800123456`, `1800 123456` — every existing
+  leg) is still sent and flagged, unchanged; one of 15+ characters (e.g. `+91 1800 123 456`) is now REFUSED — on 6.19b/c/d that spends
+  the day's slot / loses the closure notice, which MG5's own test calls a fail-closed refusal of a possibly deliverable text. Built as
+  MG3 says; ⛔ silently narrowed. **Put to BigDev at the review** (keep, or exempt the helpline from the length check so C1 holds).
+- **(k)** `@twt/channels` imports `claim.sanitizeSmsGatewayCode` and `encryption.normalizeMobile` from `@twt/domain` (already a dependency;
+  `audit.ts` imports the same namespaces) — ⛔ a second regex (MG8, I6).
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6.37`, 2026-10-17; four
   parallel research passes: the SMS seam, the governance records, MSG91's live docs, the house format + 6.34 / 6.27c learnings).
+- **Task 1** — `substituteDltValues` (function-form `replaceAll`, ⛔ re-scan; throws on a name / count mismatch), `toGatewayTemplate`
+  (`##name##` by default) and `needsUnicode` (GSM 03.38 default + extension) in `dlt-variables.ts`; the sheet test proves
+  `toGatewayTemplate` = the sheet's MSG91 column = `msg91Form` for all sixteen rows, and `needsUnicode` = the sheet's notes (every `hi`
+  and 14 `en`).
+- **Task 2** — `sms-app.ts` is the MSG91 Flow client: `{apiOrigin, authkey}`, `POST /api/v5/flow` with `authkey`, ONE recipient
+  `{mobiles: 91…, <name>: value}`, `short_url: "0"`, ⛔ text / sender / `realTimeResponse` / `CRQID`; acceptance needs `type:"success"` and a
+  ≤ 64-alphanumeric request id; local refusals (`template_id_malformed`, `no_named_values`, `values_mismatch`, `invalid_number:format`
+  via `normalizeMobile`); a 9 s abort created synchronously from an injectable `timeoutSignal`; `readTemplateVersions`. `sms-errors.ts`
+  carries MG7's table (classes frozen — I5) and scrubs every code with `sanitizeSmsGatewayCode`. A value-less provider refuses
+  `no_named_values` (MG12; two legs inverted).
+- **Task 3** — `sms-preflight.ts`: `checkMsg91Template` (the active version; canonical content; the TEXT's `sms_type`; `DLT_ID`;
+  `auth` / `auth_or_not_found` / malformed / transient; `sms_type_unicode_for_gsm7` a logged note) and `createMsg91PreflightMemo` (pass
+  1 h, fault 5 min, transient uncached, a stale pass for ONE more TTL on an expired re-check, concurrent misses share one read).
+- **Task 4** — the jobs core sends NAMED values after MG3's synchronous check, refuses a malformed id before the memo, and reads ONE
+  process memo built in `boot.ts`: proven (`auth*` from the send key) ⇒ `auth:preflight` final on every caller; unproven / transient ⇒
+  final / transient on the holding children, SENT with an alarmed `preflightWarning` on 6.19b/c/d; `beforeSend` (MG16 (i)) with
+  overloads. Suspicion's `purposeConfigGap` and peer mesh's `pariwarConfig` HOLD on any pre-flight non-pass (⛔ `globalConfigGap`).
+  Jobs config: MSG91 origin default, authkey, optional read key (MG17), the MG11 boot line. `compose.yaml` gains the two secret-name
+  lines on api and jobs. Every fixture id is 24 hex; the placeholder codes are MSG91's (SYNTHETIC); new live legs for AC9 (a) / (a2) /
+  (b) / (b2) / (c) / (d) / (e) — the peer-mesh ones mutation-checked red without the hold / `beforeSend`.
+- **Task 5** — the OTP adapter sends the code as the named value `otp` (MG3 check), `templateId`; the api config is MSG91's (origin
+  validated; `SMS_GATEWAY_API_URL_PLACEHOLDER` and the sender settings retired); `buildMemberStepUpDelivery` refuses on a blank / malformed
+  id or authkey and on `auth*` from the send key, STARTS with an error log on everything else, re-checks advisorily off the request path,
+  and takes an injectable fetch.
+- **Task 6** — the I2 diff is EMPTY (`provider` / `dispatch` / `cascade` / `render` / `provider-composition`); `channels-determinism`
+  3/3; `dlt-typed-variables` test 25/25 and check green; the sheet gains the MSG91 setup steps (prose).
+- **Task 7** — the AC11 recorder test (`apps/jobs/tests/msg91-no-network.test.ts`: the real client + memo through the core, and a 6.19b
+  fail-open leg whose pre-flight transport fails — the global fetch saw ZERO calls; the api wiring test runs every arm under the same
+  recorder); the deferred-work dispositions (MG16 (i) ✅ Closed by — as prescribed; (ii) / (iii) ⛔ addressed; MG8 PARTLY addressed;
+  W10 NARROWED; the three 6-37b hand-offs annotated at Task 0.4) and the NEW alarm-only / fail-open item.
+- **The proof (AC11):** `pnpm ci:local` with `DATABASE_URL` at :5433 — **36/36 green** (2026-10-17, on the Task 7 tree); every live
+  suite also run alone on :5433 during the build (jobs five SMS suites 144 → with the new legs; api SMS 49 unit + 3 integration).
+- ⚠ Owed outside the code (⛔ a merge fence): roster Row 32 (a)–(i) — ADR-0041's ratification, the authkey / IP whitelisting (staging
+  too — T13), each template in MSG91 per the sheet's new steps, S1 / S2 in writing, counsel, an alarm to a named person, and 6-37b before
+  any claim-text id. Row 30 (b)'s device proof now also waits on Row 32.
 
 ### File List
+
+- `.decision-log.md` (Task 0.3 — `2026-10-17-345`)
+- `_bmad-output/implementation-artifacts/6-37-msg91-sms-gateway-adapter.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/planning-artifacts/epics.md`
+- `apps/api/src/config.ts`
+- `apps/api/src/deps.ts`
+- `apps/api/src/modules/auth/shared/sms-step-up-delivery.ts`
+- `apps/api/tests/integration/sms-step-up-delivery.spec.ts`
+- `apps/api/tests/unit/member-step-up-delivery-wiring.test.ts`
+- `apps/api/tests/unit/sms-composition.test.ts`
+- `apps/api/tests/unit/sms-step-up-delivery.test.ts`
+- `apps/jobs/src/boot.ts`
+- `apps/jobs/src/scheduler/claim-certificate-reminders.ts`
+- `apps/jobs/src/scheduler/claim-correction-closure.ts`
+- `apps/jobs/src/scheduler/claim-correction-reminders.ts`
+- `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`
+- `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+- `apps/jobs/src/scheduler/claim-suspicion-notices.ts`
+- `apps/jobs/src/scheduler/contribution-providers.ts`
+- `apps/jobs/tests/claim-certificate-reminders-live.test.ts`
+- `apps/jobs/tests/claim-correction-closure-live.test.ts`
+- `apps/jobs/tests/claim-correction-reminders-live.test.ts`
+- `apps/jobs/tests/claim-correction-send.test.ts`
+- `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
+- `apps/jobs/tests/claim-suspicion-notices-live.test.ts`
+- `apps/jobs/tests/contribution-providers.test.ts`
+- `apps/jobs/tests/dlt-template-sheet.test.ts`
+- `apps/jobs/tests/msg91-no-network.test.ts` (NEW)
+- `docs/adr/ADR-0041-sms-gateway-msg91.md` (NEW — Task 0.4)
+- `docs/knowledge-transfer/adr-index.md`
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `infra/dokploy/compose.yaml`
+- `packages/channels/src/dlt-variables.ts`
+- `packages/channels/src/index.ts`
+- `packages/channels/src/providers/sms-app.ts`
+- `packages/channels/src/providers/sms-dlt.ts`
+- `packages/channels/src/providers/sms-errors.ts`
+- `packages/channels/src/providers/sms-preflight.ts` (NEW)
+- `packages/channels/tests/dlt-variables.test.ts`
+- `packages/channels/tests/provider-composition.test.ts`
+- `packages/channels/tests/sms-preflight.test.ts` (NEW)
+- `packages/channels/tests/sms.test.ts`
 
 ## Change Log
 
@@ -819,3 +937,4 @@ The last five commits are 6.27c's review rounds and records (`f3c19b62` → `466
 | 2026-10-17 | 1.1 (round 4) | Fresh-context consistency sweep — ⛔ HIGH (4 MED, 7 LOW), all applied: the fail-open warning had ⛔ sink (the core never alarms — `claim-dlt-sms-send.ts:9`) ⇒ `preflightWarning` on `accepted`, alarmed by each 6.19b/c/d caller; Task 4's unscoped "TRANSIENT ⇒ proceed" would send on the holding children ⇒ proceed only when `preflightFailOpen`, else `transient`; MG15's `accepted` definition + residual name the stale-pass extension; T13 carries MG17 (a) and the blank-secret arms; MG17 (b) `auth*` is unproven in the core; S1 no longer implies settling it makes the api check blocking; "BigDev may route it" removed (⛔ routed, everywhere); the Story statement no longer claims an ACCOUNT fault is stopped; the Policy meaning's MG17 (a) qualifier; AC9 (a2) / (b2) legs; the memo field declared on `ClaimCorrectionReminderDeps` too. Rounds: 1 HIGH → 2 HIGH → 0 HIGH (all HIGHs the pass's own). |
 | 2026-10-17 | 1.2 | Task 0.1–0.3: BigDev answered MG1–MG17 *"accept all recommended"* (incl. MG5's TTLs 1 h / 5 min, X1, X2); S1–S4 dispositions recorded (the author's — ⛔ settled by the docs: S1 alarm-only api content check, S2 a Row 32 (d) leg ⛔ a STOP, S3 both MG17 arms built with an OPTIONAL read key, S4 MG15 stands); author-commit `2026-10-17-345` committed ALONE as `48017867`. Next: Task 0.4 (the records), then code. |
 | 2026-10-17 | 1.3 | Task 0.4 — the records: ADR-0041 (`drafted`) + adr-index; `epics.md` Story 6.37; roster Row 32 + Row 30 note (6); deferred-work annotations (three items → row 6-37b); sprint row 6-37b `backlog`; row 6-37 → `in-progress`. AC0 met. Status `in-progress`. |
+| 2026-10-17 | 1.4 | `bmad-dev-story 6.37` — Tasks 1–7 built on the story branch (commits `c7591218` → Task 7): the vocabulary helpers, the MSG91 Flow client + MG7 code table, the pre-flight + process memo, the send core's named values / malformed id / memo / `beforeSend` and the holds (suspicion, peer mesh) vs fail-open (6.19b/c/d), the OTP path and api boot pre-flight, the sheet's MSG91 steps, the AC11 recorder test, the deferred-work dispositions + one new item. Debug Log (a)–(l) records the readings; ⚠ (l) — MG3's `value_too_long` vs `-322` C1 on a 15+-character helpline — is put to BigDev. `ci:local` 36/36 on :5433. Status `review`. |

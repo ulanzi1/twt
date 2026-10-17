@@ -4,6 +4,22 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story of 6-37-msg91-sms-gateway-adapter (2026-10-17)
+
+- **MG5's content / DLT-id / `sms_type_needs_unicode` checks are alarm-only on the api and fail-open on 6.19b/c/d**
+  [`apps/api/src/deps.ts` `buildMemberStepUpDelivery` (the boot pre-flight); `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`
+  (`preflightFailOpen`); `packages/channels/src/providers/sms-preflight.ts` `checkMsg91Template`] — the comparison (NFC, CRLF → LF, trailing
+  whitespace trimmed against `##name##`) and the meaning of `active_status` / `sms_type` / `DLT_ID` rest on MSG91's documented SAMPLES only
+  (S1 — ⛔ settled in writing), so a template whose stored text differs in a way we did not foresee would read `content_mismatch` against a
+  correct template. Until then the api STARTS with an error log on those reasons (only `auth*` from the send key or a malformed id refuses),
+  and the correction / closure / certificate texts are SENT with an alarmed `preflightWarning` (⛔ hold there — T6). ⚠ Under F9 a REAL
+  mismatch there is recorded `accepted` and delivers OTHER words (MG15's residual). ⭐ Trigger: roster Row 32 (e) records ONE real green
+  response from the deployed api AND jobs, and S1 is answered in writing (Row 32 (d)) — then a later change may make the api check blocking
+  (re-weighing T13's restart loop; ⛔ code reads a roster row). Whether a PROVEN content mismatch should refuse on 6.19b/c/d is `-322` §0's
+  option (a) — the Panel's, ⛔ routed by this story.
+
+---
+
 ## Deferred from: code review of 6-27c-peer-mesh-sending-texts-and-links, ROUND 2 — the whole branch (2026-10-17)
 
 - **W1 — A permanently undecryptable deceased-name ciphertext loops daily, with no terminal state** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
@@ -53,7 +69,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   next child (the sweep's, or R8's hook) begins — and uses up — ONE more neighbour's once-ever slot. A transient noted earlier in a
   stopped run is ⛔ retried by pg-boss; the next sweep re-claims it past its lease. Controls today: the provisioning rule ("set each id only
   after the operator confirms that template's approval", PM16) and the fail-closed alarm per stop. ⭐ Trigger: a "STOPPED after
-  auth: / dlt_template_not_approved:" alarm — then persist a per-Pariwar send hold the sweep reads.
+  auth: / dlt_template_not_approved:" alarm — then persist a per-Pariwar send hold the sweep reads. ⚠ **2026-10-17 (Story 6.37, `-345` MG16 (vi)) — NARROWED, ⛔ closed:** the MSG91 pre-flight now runs in the sweep's `pariwarConfig` (and the child's race guard) through ONE process memo, so a TEMPLATE fault or an `auth` refusal of the template read is HELD before any ping is begun; the residual is a send-side ACCOUNT fault (zero balance, SMS not enabled for the key, an unwhitelisted IP — MG15), which the pre-flight cannot see and which still costs one slot per child.
 
 ## Deferred from: code review of 6-27c-peer-mesh-sending-texts-and-links (2026-10-17) — residuals of the F2 / F5 fixes
 
@@ -61,7 +77,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   (the `sendAt` check) → `apps/jobs/src/scheduler/claim-dlt-sms-send.ts` `sendClaimDltSms`] — after the child's last 09:00–20:00 IST check,
   the shared core still awaits two Secret Manager reads (the template id, the helpline) before `provider.send`; a slow read at 19:59:59 can
   put the hand-off seconds past 20:00. ⛔ Fixed in 6.27c: the core is shared with the correction and suspicion senders. ⭐ Trigger: the
-  next change to `sendClaimDltSms` — give it an optional `beforeSend` guard checked immediately before `provider.send`.
+  next change to `sendClaimDltSms` — give it an optional `beforeSend` guard checked immediately before `provider.send`. ✅ **Closed by Story 6.37 (2026-10-17, `-345` MG16 (i)) — as prescribed:** `sendClaimDltSms` takes `beforeSend`, called synchronously immediately before `provider.send` (after the new pre-flight memo read); peer mesh passes its window + lease-margin check; a `defer_window` / `defer_lease` returns `{kind:'deferred'}` (overloads keep it out of the other callers) and is routed to the 09:00 deferral / the counted lease branch (tests: `claim-correction-send.test.ts`, `claim-peer-mesh-requests-live.test.ts` AC9 (e)).
 - **A ping begun but ⛔ handed off when 20:00 IST passes is re-claimed as attempt 2** [`claim-peer-mesh-requests.ts` (the `sendAt`
   deferral); `packages/domain/src/claim/peer-mesh-request.ts` `beginPeerMeshRequest`] — it takes the transient's path: at 09:00 a failed
   re-check reads `-297` §2 / `-298` "may have sent" and is ⛔ replaced (R1 / R5), although ⛔ text went. ⭐ **WIDENED 2026-10-17 (review round 2
@@ -961,7 +977,7 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 ## Deferred from: code review of 6-19b-correction-reminders-and-posted-letters — third pass, the committed branch (2026-09-30)
 
 - **Two pool connections per correction-chase write; the delivery route holds the first across the upload.** The pre-handler's scope tx stays open while each writer opens its own `openScopeTx`; `recordDelivery` also keeps it open while buffering a screenshot of up to 10 MiB. Pre-existing: the established own-`openScopeTx` route pattern. ⭐ Trigger: pool-exhaustion alarms, or a route-plumbing pass that lets a writer reuse `request.scopeTx`. (`apps/api/src/modules/claims/claims.correction-chase.handlers.ts`)
-- **Dotted Secret Manager names (UNVERIFIED).** The new keys `sms.dlt.template_id.claim_correction.*` and `sms.claim_correction.helpline_number.<pariwarId>` contain dots, which GCP secret ids do not allow (`[A-Za-z0-9_-]`); `INVALID_ARGUMENT` is ⛔ not `NOT_FOUND`, so every send would retry to exhaustion. Pre-existing: `sms-dlt-registry.ts` uses the same convention. ⭐ Trigger: before the DLT templates are provisioned (go-live), confirm deployment maps the names. ⭐ (2026-10-12, Story 6.34 TV12 — ⛔ fixed there) the OTP keys `sms.dlt.template_id.otp_login` / `…otp_step_up` share the convention (prod REFUSES TO START with either blank); roster Row 30 (b)'s device proof is where their resolution is proved.
+- **Dotted Secret Manager names (UNVERIFIED).** The new keys `sms.dlt.template_id.claim_correction.*` and `sms.claim_correction.helpline_number.<pariwarId>` contain dots, which GCP secret ids do not allow (`[A-Za-z0-9_-]`); `INVALID_ARGUMENT` is ⛔ not `NOT_FOUND`, so every send would retry to exhaustion. Pre-existing: `sms-dlt-registry.ts` uses the same convention. ⭐ Trigger: before the DLT templates are provisioned (go-live), confirm deployment maps the names. ⭐ (2026-10-12, Story 6.34 TV12 — ⛔ fixed there) the OTP keys `sms.dlt.template_id.otp_login` / `…otp_step_up` share the convention (prod REFUSES TO START with either blank); roster Row 30 (b)'s device proof is where their resolution is proved. ⚠ **2026-10-17 (Story 6.37, `-345` MG16 (ii)) — ⛔ addressed:** MG4 keeps the SAME keys (they now hold MSG91's 24-hex id); the api boot still surfaces an `INVALID_ARGUMENT` (it throws at boot). The item stays OPEN.
 - **No DB-level tie between `claim_case_id` / `pariwar_id` / `return_decision_id`, and no DB-level immutability of a recorded delivery or an ended run.** The column-narrowed UPDATE grants still let `twt_app` overwrite `delivered_on` / the screenshot key or set `ended_at` back to NULL. Pre-existing: the writers plus RLS are the project-wide enforcement layer. ⭐ Trigger: a project-wide composite-FK / immutability-trigger pass. (migrations 0126–0129)
 - **The staff push deep-links into the MEMBER app.** It dispatches as `alert_published`, whose deep link is `twt://p/<pid>/announcements/<alert_id>` (`packages/contracts/src/deep-links/deep-link.ts`) — a member-app route the admin app has ⛔ no handler for, and the alert id is ⛔ not a stored announcement. Inert today (⛔ no admin client registers a token). ⭐ Trigger: the admin client that registers a device token — it needs a staff alert category / deep link (a `packages/channels` + contracts change). (`apps/jobs/src/scheduler/claim-correction-reminders.ts`)
   - ⚠ **Story 6.19c (2026-10-01): its staff reminders INHERIT this** — the closure purposes (`closure_due`, `closure_escalation`, `staff_case_escalation`, `review_reminder`, `direction_reminder`, `closure_letter_chase`, `closure_letter_escalation`) ride the same push. Recorded, ⛔ not fixed.
@@ -5096,8 +5112,8 @@ _Not code-review findings — forward seams Story 9.7 deliberately RESERVES for 
 
 ## Deferred from: code review of story-5-6-sms-transactional-fallback-3-retry-exp-backoff (2026-07-07)
 
-- **`resolveSmsProviderDeps` doesn't trim the resolved `dltTemplateId` before use.** It blank-checks the resolved value via `.trim() === ''` but then stores/passes the untrimmed string on to the gateway request body. Identical pattern already present in the mirrored `resolveWhatsappProviderDeps`'s `accessTokenSecretName` handling — not a regression introduced by this story. **Re-trigger:** if a whitespace-polluted config value is ever observed causing a DLT template mismatch in production.
-- **`resolveSmsTarget` trusts `decryptMobile`'s output uncritically** — no try/catch around a decrypt failure, no E.164 format validation on the successful output before it's forwarded to the gateway. Mirrors the identical unguarded pattern in `resolveWaTarget`, which this function was built to copy — not new. **Re-trigger:** if a corrupted ciphertext or malformed decrypted mobile number is ever observed reaching the SMS gateway.
+- **`resolveSmsProviderDeps` doesn't trim the resolved `dltTemplateId` before use.** It blank-checks the resolved value via `.trim() === ''` but then stores/passes the untrimmed string on to the gateway request body. Identical pattern already present in the mirrored `resolveWhatsappProviderDeps`'s `accessTokenSecretName` handling — not a regression introduced by this story. **Re-trigger:** if a whitespace-polluted config value is ever observed causing a DLT template mismatch in production. ⚠ **2026-10-17 (Story 6.37, `-345` MG16 (iii)) — ⛔ addressed:** the alert path stays DARK (TV6); since 6.37 a value-less provider refuses `no_named_values` before the network (MG12), so the untrimmed id cannot reach MSG91 from it. (The claim-text core and the OTP adapter DO trim.) The item stays OPEN.
+- **`resolveSmsTarget` trusts `decryptMobile`'s output uncritically** — no try/catch around a decrypt failure, no E.164 format validation on the successful output before it's forwarded to the gateway. Mirrors the identical unguarded pattern in `resolveWaTarget`, which this function was built to copy — not new. **Re-trigger:** if a corrupted ciphertext or malformed decrypted mobile number is ever observed reaching the SMS gateway. ⚠ **2026-10-17 (Story 6.37, `-345` MG8) — PARTLY addressed:** the MSG91 client now validates every `to` by CALLING `normalizeMobile` and refuses a number it rejects or would rewrite (`invalid_number:format`, ⛔ request); the decrypt try/catch and push / WA are ⛔ addressed and `resolveSmsTarget` sits on the dark dispatch path (MG12). The item stays OPEN.
 
 ---
 

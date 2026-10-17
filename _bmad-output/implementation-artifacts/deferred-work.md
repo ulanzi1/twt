@@ -39,6 +39,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   option (a) — the Panel's, ⛔ routed by this story.
   ⚠ **Dated annotation, 2026-10-17 (code review round 2):** that Panel question has a SECOND carrier, roster Row 32 note (6.4) — advisory:
   ask it with row 6-37b's create-story, before Row 32 (i) closes (this item's own trigger is unchanged); this item and that note carry the SAME question (⛔ two).
+  ⚠ **Dated annotation, 2026-10-17 ([`-348`](../../.decision-log.md#decision-2026-10-17-348)) — no word above is rewritten:** the Panel question this item carries is WITHDRAWN, not routed — under DLT an operator delivers only DLT-approved text, so a "real mismatch" cannot deliver OTHER words: a copy that differs from the DLT registration is BLOCKED by the operator (and, from Story 6.37b, reported as failed). This item stays OPEN as an ENGINEERING item (making the api check blocking; the trigger above is unchanged); any later change that would stop a text which could still be delivered still meets `-322` §0. The question that remains — DLT refusing or changing a template the Panel approved — is traced by Story 6.37b before any routing.
   The api's boot list above is unchanged by round 2 (one MSG91 id under both OTP keys is an error log, ⛔ a refusal — P10).
 
 ---

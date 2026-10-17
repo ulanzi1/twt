@@ -10,8 +10,9 @@ OF that sha; Task 0.1 re-checks what moved. Built in its OWN worktree `.claude/w
 0167, decision id `-347`, roster Row 33 and ledger suffix `2026-10-17k` (T9). Whichever lands on a branch first keeps the number.
 
 STATUS: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G answered by BigDev and recorded as `-347` (`bf1d57f7`,
-committed alone); the PQ1 / PQ2 routing notes written (not yet sent); the records committed after it. Tasks 1–6 may now be built.
-Task 7 (the D22 change) waits for the Panel's ruling on PQ1 (DR14); the row is `done` only after the PQ2 note is SENT (Task 8).
+committed alone); the PQ1 routing note written (not yet sent); the records committed after it. Tasks 1–6 may now be built.
+Task 7 (the D22 change) waits for the Panel's ruling on PQ1 (DR14). PQ2 was WITHDRAWN before it was sent (`-348`, `a9b0112c`) —
+its premise cannot occur under DLT; the question BigDev named instead (DLT refusing a Panel-approved template) is being traced.
 
 §0 GATE (the routing template's): every DR below is the AUTHOR's — how a provider callback is authenticated, what is kept of it, how
 it is matched to a send, where the result is stored, how long the inbox lives (`-314` §0: *"which vendor carries the texts … ⛔ who
@@ -705,6 +706,9 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   burst alarm, day 90 and after) — Task 0.1 RE-CONFIRMS it at the then-HEAD and cites it. E3 also states DR4's mapping and DR6's
   absorbing rule (the mixed part — §0 above), and that the CERTIFICATE chase's letter-eligibility is unchanged under every option.
   Blocks: Task 7 only.
+- ⛔ **WITHDRAWN 2026-10-17 (`-348`) — not sent.** Under DLT an operator delivers only DLT-approved text, so MSG91 cannot deliver words
+  that were not approved: case (i) below is blocked by the operator; case (ii) can arise only if DLT approved different words from the
+  Panel's — the question BigDev named instead, traced in Debug Log (e). The text below is kept as it was written.
 - **PQ2 — Refuse a correction / closure / certificate text when MSG91's stored template provably differs** (its own note — *"a mixed
   question is two questions"*). §0: passes — refusing a text changes WHO is texted (`-322` §0 option (a)). The one fact: **MSG91 can
   hold a template whose words differ from the ones we render — and the delivery report catches only HALF of that**: (i) MSG91's
@@ -964,9 +968,9 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       family SMS"* — each lists *"a delivery-receipt (DLR) seam"* as a TRIGGER and this story ships it ⇒ **trigger FIRED** (say so) and
       **partly addressed**: a second request for one send is now DETECTED and alarmed (DR6 row 7), ⛔ prevented (MSG91 has ⛔
       idempotency key) ⇒ OPEN, residual re-triggered on *"a gateway idempotency key"* (a dated annotation — ⛔ a silent trigger
-      rewrite); *"MG5's content / DLT-id …"* — PQ2's carrier: annotate *"routed (note …)"*, ⛔ closed. NEW items: DR4's API-failed
-      mapping (trigger Row 33 (e)); DR5's unused `delivered_at`; DR12 (b)'s pull; DR13's certificate / peer-mesh views. ⭐ The PQ2
-      note SENT by BigDev before the row is `done` (Row 32 note (6.4) — record the date; ⛔ "shown" before). The Change Log; the File
+      rewrite); *"MG5's content / DLT-id …"* — its Panel question WITHDRAWN (`-348`; already annotated), the item stays OPEN as engineering. NEW items: DR4's API-failed
+      mapping (trigger Row 33 (e)); DR5's unused `delivered_at`; DR12 (b)'s pull; DR13's certificate / peer-mesh views. (The PQ2 note
+      is WITHDRAWN — `-348` — so the row no longer waits for it.) The Change Log; the File
       List; the sprint row → `review`; the ledger line. ⛔ Fast-forward to `main` — BigDev's call.
 
 ## Dev Notes
@@ -1186,6 +1190,14 @@ them at Task 0.1.
   zero-balance claim qualified as legacy documentation, PQ2's "only recorded" wording removed, option C's forgery cost (I1 and
   ADR-0042 fail under C), the §5.9 line cite, cl.1 readings (A widens under (ii); B1 / B2 narrow on failed-then-delivered), identifiers
   out of the plain sections, the decided-DR headings, and the adr-index tally drift recorded (pre-existing, ⛔ corrected).
+- **(e) PQ2 withdrawn (2026-10-17).** BigDev, on reading the PQ2 note before sending it: *"DLT approved template cannot be refused
+  and operator cannot send any template. I feel like if question would exist for panel, then it should be what happens if DLT
+  deosn't approve the template approved by Panel."* The premise (*"MSG91 would deliver OTHER words"*, from `-345` §0) cannot occur
+  under DLT — it had been carried into a Panel note without a reachability trace ([[feedback_trace_reachability_before_escalating]]).
+  `-348` committed alone (`a9b0112c`): PQ2 withdrawn, not sent; the note marked WITHDRAWN (unedited below the marker); roster Row 32
+  note (8); `deferred-work.md`'s MG5 item annotated (it stays open as engineering); Task 8's "PQ2 sent before `done`" removed. The
+  question BigDev named — DLT not approving (or changing) a Panel-approved template — is being traced per text family before any
+  routing; if it passes §0, its own note is shown to BigDev before it is sent.
 
 ### Completion Notes List
 
@@ -1215,3 +1227,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.4 | Before approving `-347`, BigDev asked for the OTP gates to be unambiguous, the shorthand to be explicit prose, and AC6 to match the counting contract. DR1's secret-failure block, DR6's counting contract, DR11's OTP gates (Gate 0 / 1 / 2, with (b0) and (e0) defined in full) and AC6's counting legs are rewritten in plain prose. AC6 checked line by line against the contract: added (8a) the first report's INSERT values, (8c)/(8d) `failure_reason` kept, (8e) `request_id` unchanged, (8h) which report is received vs settled first, an unknown-status leg in (9), and a no-write assertion on legs (1)–(7) and (9). Status stays `ready-for-dev`. |
 | 2026-10-17 | 1.5 | Before approving `-347`, BigDev asked for (1) the claim that reports are only recorded to be narrowed — the Policy meaning now names the three ways Tasks 1–6 read reports (the correlator's write, alarms including DR12's silence alarm, DR11's daily login-code count — information until Row 33 (e0), then citable evidence), none an input to a send, a closure, reach or letter-eligibility; and (2) the dedupe and counting definitions to agree — DR7 now states the rule: duplicates are defined by the three key values (request id, CRQID, status code), the first stored is kept, a later one with a different failure reason / event name / delivery time is discarded uncounted, chosen because MSG91 retries by resending the same event and every DR6 outcome depends only on those three values; `report_count` counts inbox rows under that key, not distinct payloads; AC4 and AC6 (8f) gained the different-payload-same-key, different-status and blank-key legs; Task 2 names the exact index. Status stays `ready-for-dev`. |
 | 2026-10-17 | 1.6 | Task 0 done: `-347` committed alone (`bf1d57f7`); the PQ1 and PQ2 routing notes written (not sent); ADR-0042, the adr-index row (Total 153), ADR-0041's Changelog row, roster Row 33 with Row 32 / Row 30 dated notes, the `epics.md` entry; story and sprint row → `in-progress` (ledger `2026-10-17m`). PQ2's reading under PQ1 = A is now B. No code. |
+| 2026-10-17 | 1.7 | PQ2 WITHDRAWN before it was sent (`-348`, `a9b0112c`): under DLT a gateway cannot deliver words that were not approved, so the question had no case (BigDev). The PQ2 section is marked withdrawn (kept as written); Task 8 no longer waits for a PQ2 note; Debug Log (e). The replacement question — DLT refusing a Panel-approved template — is being traced. |

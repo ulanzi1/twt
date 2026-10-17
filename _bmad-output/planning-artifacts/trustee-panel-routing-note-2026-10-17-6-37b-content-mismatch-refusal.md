@@ -1,5 +1,15 @@
 # Trustee Panel routing note — when the SMS company's stored copy of a text provably has different words, should the Trust still send it?
 
+> ## WITHDRAWN 2026-10-17 — NOT SENT, AND NOT TO BE SENT
+>
+> Withdrawn by Decision `2026-10-17-348` before it reached the Panel. Its premise cannot occur: under DLT an operator delivers only text
+> that matches a DLT-approved template, so the SMS company cannot deliver words that were not approved. A copy that differs from the DLT
+> registration is blocked by the operator (and reported as failed); a copy that matches the DLT registration can differ from the
+> Trust's text only if DLT approved different words from the ones the Panel approved — a different question, which is being traced
+> separately. BigDev, on reading this note: *"DLT approved template cannot be refused and operator cannot send any template."*
+> Everything below this block is kept unedited, as written; its "§0 gate — passed" was wrong.
+
+
 > **§0 gate — passed (2026-10-17).** Every text the Trust sends is held twice: our own copy, with the words you approved, and a copy
 > registered with the SMS company (MSG91) that is what the phone actually receives. The system already checks the two against each
 > other. On the paths that remind a family about a claim correction, tell them the claim was closed, or remind them about a

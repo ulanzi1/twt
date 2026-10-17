@@ -9,10 +9,10 @@ OF that sha; Task 0.1 re-checks what moved. Built in its OWN worktree `.claude/w
 `.claude/worktrees/6-31` (row 6-31, also at `dae96d9b`) has ALREADY WRITTEN — uncommitted, 2026-10-17 — its own claims on migration
 0167, decision id `-347`, roster Row 33 and ledger suffix `2026-10-17k` (T9). Whichever lands on a branch first keeps the number.
 
-STATUS: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G answered by BigDev and recorded as `-347` (`bf1d57f7`,
-committed alone); the PQ1 routing note written (not yet sent); the records committed after it. Tasks 1–6 may now be built.
-Task 7 (the D22 change) waits for the Panel's ruling on PQ1 (DR14). PQ2 was WITHDRAWN before it was sent (`-348`, `a9b0112c`) —
-its premise cannot occur under DLT; the question BigDev named instead (DLT refusing a Panel-approved template) is being traced.
+STATUS: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G recorded as `-347` (`bf1d57f7`); the Panel ruled PQ1 and its
+follow-ups (`-350`, `-351`, `-352`); PQ2 was withdrawn (`-348`). ⭐ SPLIT (`-353`): Task 7 — the Panel's delivery ladder and the "not
+delivered" conclusion — is now row `6-37c-undelivered-reminder-ladder`. THIS story builds Tasks 1–6 (receiving and recording reports,
+changing nothing a person receives) and closes with Task 8. No claim-text template id until Row 33 has closed AND 6-37c is `done`.
 
 §0 GATE (the routing template's): every DR below is the AUTHOR's — how a provider callback is authenticated, what is kept of it, how
 it is matched to a send, where the result is stored, how long the inbox lives (`-314` §0: *"which vendor carries the texts … ⛔ who
@@ -630,6 +630,8 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   the network reported undelivered as sent; ⛔ view labels a send 'reported undelivered'"*), trigger: PQ1's ruling. Peer mesh /
   suspicion / certificate reports are RECORDED, ⛔ act on (a neighbour reported unreached is ⛔ replaced — that would change WHO is
   texted). ⭐ Recommended (scope; ⛔ a UI story inside a webhook story).
+- ⭐ **2026-10-17 — DR14 is now option (b) (`-353`, superseding `-347` decision 15):** Task 7 moved to row
+  `6-37c-undelivered-reminder-ladder`; this story builds Tasks 1–6 and closes with Task 8. The text below is kept as it was decided.
 - **DR14 — Story shape and records.** (a) ⭐ ONE story: Tasks 1–6 build; **Task 7 (D22) waits for PQ1's ruling** and the row stays
   `in-progress` until then (Row 32 (i) is unchanged and keeps its meaning — 6-37b `done` ⇒ reports are consumed AS the Panel ruled).
   Landing Tasks 1–6 on `main` before the ruling is BigDev's call ([[feedback_land_prs_by_fast_forward]]) — it changes ⛔ who is
@@ -830,6 +832,8 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
 - **AC10 — Retention and grants (DR5-G, DR7).** A daily prune deletes inbox rows whose `settled_at` (stamped on every non-`pending` settle) is more than
   30 days ago (the `device-token-cleanup.ts` shape); `pending` rows are ⛔ pruned; `sms_send_deliveries` is ⛔ pruned (it is the record). Both
   tables' policy-regression specs pin EXACTLY the grants and policies DR5-G chose (⛔ a policy for an ungranted command).
+- ⭐ **MOVED 2026-10-17 to row `6-37c-undelivered-reminder-ladder` (`-353`)** — AC11 is that row's starting point and is NOT built
+  by this story. Kept as written below.
 - **AC11 — D22 and letter-eligibility, AS THE PANEL RULES (Task 7; I1, I7).** ⭐ RULED: `-350` — B1 plus the delivery ladder. ⏳ The
   legs below are B1's and still hold for the CONCLUSION; the ladder's legs (WhatsApp at 4 h, SMS at 48 h and 96 h, the 96-hour wait,
   the call / letter escalation) are written only after the Panel answers `-350`'s follow-up questions (a)–(f), because each changes
@@ -964,6 +968,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       `UPDATE` of a send table); `pnpm --filter @twt/channels test:determinism`; `pnpm dlt-typed-variables:test && pnpm
       dlt-typed-variables:check` (`git add` new files first); the access-wrapper invariants + AC2's `lib.test.ts` leg + a REVERT-SANITY
       run (swap one compare to `===` locally ⇒ the gate goes RED ⇒ revert; record it in the Debug Log); the AC13 fetch recorder.
+- ⭐ **MOVED 2026-10-17 to row `6-37c-undelivered-reminder-ladder` (`-353`)** — not built by this story; kept as written below.
 - [ ] **Task 7 — D22, AS THE PANEL RULES (AC11).** ⭐ Ruled (`-350`): B1 + the delivery ladder. ⏳ Still blocked: the ladder's
       follow-up questions (a)–(f) are open, and the ladder's story shape (here, or a new row) is BigDev's decision. **Do not start Task 7 until** the ruling is TRANSCRIBED into the routing note's block
       and a Trustee-ratified decision entry, and AC11 is re-written to it. Under B1: ONE effective-outcome mapping inside
@@ -975,7 +980,8 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       eligibility, the jobs letter-chase / escalation legs, and `foundDeadOn`'s stickiness; the Policy meaning re-checked. ⚠ The
       domain type change ripples into `correction-chase-read.ts` fixtures ([[feedback_story_validate_footguns]] #1 — domain vs
       contracts shape; ⛔ a contracts change is expected).
-- [ ] **Task 8 — records and close (AC13).** `pnpm ci:local` at :5433; the deferred-work dispositions ([[feedback_closure_language_precision]]
+- [ ] **Task 8 — records and close (AC13).** ⭐ (`-353`) every disposition below that depends on Task 7 or on the Panel's ruling is
+      made by row 6-37c when it closes; this story records only that the reports are received and recorded. `pnpm ci:local` at :5433; the deferred-work dispositions ([[feedback_closure_language_precision]]
       — ⛔ collapsed): *"⛔ DLT send consumes a delivery report …"* — under B, **Closed by** Task 7 for the CORRECTION CHASE's D22,
       **⛔ addressed** for the certificate / peer-mesh staff views (→ DR13's new item) and **narrowed** to silence (DR12); under A,
       **⛔ addressed — the Panel kept the gap** (cite the ruling); *"At-least-once SMS (inherited from 6.19b)"* and *"⚠ At-least-once
@@ -1100,6 +1106,9 @@ Live suites `describe.skipIf(!hasDatabase)` at :5433. A controllable clock for D
   registry TEXT; `apps/mobile`, `apps/admin`; `packages/contracts` (⛔ expected — if Task 7 seems to need it, STOP and re-check DR13).
 
 ### Sequencing
+
+⭐ 2026-10-17 (`-353`): 6.37b (Tasks 1–6) → row 6-37c (the delivery ladder) → Row 33 closed AND 6-37c `done` → the claim-text
+template ids. The paragraph below is kept as written before the split.
 
 6.37 (done) → **6.37b** (Tasks 0–6; Task 7 after PQ1's ruling) → roster Row 33 provisioned → Row 32 (i) / Row 33 (g) open the
 claim-text template ids → Row 33's dated `requestId` note observed on the first claim-text reports. OTPs (templates 15 / 16, Row 30
@@ -1237,6 +1246,11 @@ them at Task 0.1.
   against the DPDP Act's text (our understanding — no general legitimate-interest ground; Section 7's listed uses; Section 17(1)(a) for
   legal claims — not legal advice), Meta's own opt-in rule, and an architecture §3.4 / ADR-0029 amendment. Our reading of the new
   English wording is recorded (not ratified); the Hindi follows through its review.
+- **(j) The split (2026-10-17).** BigDev: *"alright do it 6.37c, and draft it for the Panel"*. `-353` (`08e368f4`, committed alone):
+  Task 7 and AC11 move to the new row `6-37c-undelivered-reminder-ladder` (kept here as written, marked MOVED); this story keeps Tasks
+  1–6 and 8; the claim-text gate now also waits for 6-37c (roster Row 32 note (9)). The architecture §3.4 amendment for WhatsApp contact
+  about a claim (the claimant on the filing agreement, the nominee on the DPDP basis, go-live conditions G1–G3) is drafted for the Panel:
+  `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` — not yet presented.
 
 ### Completion Notes List
 
@@ -1271,3 +1285,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.9 | PQ1 RULED — `-350` (Trustee-ratified): B1 after a delivery ladder (WhatsApp 4 h → SMS 48 h → SMS 96 h + 96 h wait → call / letter). The PQ1 note's ruling block filled; PQ1 section marked ruled; AC11 and Task 7 annotated — the ladder's legs wait for the six follow-up questions; Debug Log (g). |
 | 2026-10-17 | 1.10 | The ladder's six follow-ups RULED — `-351`: 1 A, 2 (the filing agreement as consent — its wording gap put back with counsel), 3 B, 4 A, 5 A (call recorded by hand; phase 2 automation), 6 A. Debug Log (h). |
 | 2026-10-17 | 1.11 | Consent RULED — `-352`: Q1 B (the agreement names text, WhatsApp, call, post and any later means), Q2 (WhatsApp and calls to claimant and nominee; the nominee's basis the Panel's stated DPDP ground). Counsel / Meta / architecture-amendment items recorded. Debug Log (i). |
+| 2026-10-17 | 1.12 | SPLIT (`-353`): Task 7 and AC11 moved to row `6-37c-undelivered-reminder-ladder` (kept as written, marked MOVED); DR14 now (b); Task 8's ladder-dependent dispositions move to 6-37c; the claim-text gate waits for 6-37c too; the §3.4 amendment proposal drafted. Debug Log (j). |

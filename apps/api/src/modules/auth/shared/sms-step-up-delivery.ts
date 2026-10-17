@@ -39,6 +39,14 @@
 // at runtime: `deliver` reads the process memo FIRE-AND-FORGET (⛔ awaited — ⛔ latency added to the bound) and a fault or
 // a transient is only REPORTED; the code is STILL sent — ⛔ a login is ever refused by the pre-flight after boot (the
 // boot check in `deps.ts` is the gate).
+//
+// ── Story 6.37b (DR11; `2026-10-17-347`) ─────────────────────────────────────────────────────────────────────
+// Every code carries a correlation id `ot` + 32 random hex, sent as MSG91's `CRQID` so its delivery report can be
+// COUNTED (⛔ stored per member, ⛔ read by any login path — the jobs correlator settles `ot` reports as `otp:*` rows and a
+// daily line counts them). The source is the injectable `correlationHex` (default 16 random bytes). ⚠ Whether Flow
+// accepts it is UNVERIFIED until the operator's staging device proof (roster Row 33 (b0)) — the OTP production gates.
+
+import { randomBytes } from 'node:crypto';
 
 import {
   classifySmsError,
@@ -84,6 +92,11 @@ export interface SmsDltStepUpDeliveryDeps {
   readonly preflight?: {
     readonly memo: Msg91PreflightMemo;
   };
+  /**
+   * 6.37b DR11 — the 32 lower-case hex after the `ot` of each code's `CRQID`. Default: 16 random bytes, fresh per send.
+   * Tests inject it.
+   */
+  readonly correlationHex?: () => string;
 }
 
 /**
@@ -150,6 +163,7 @@ function assertPayloadShape(payload: StepUpOtpDelivery): void {
  * resolving on accept, throwing a classified `StepUpDeliveryError` (no PII) on any non-accept.
  */
 export function createSmsDltStepUpDelivery(deps: SmsDltStepUpDeliveryDeps): StepUpOtpDeliveryPort {
+  const correlationHex = deps.correlationHex ?? ((): string => randomBytes(16).toString('hex'));
   /** Resolve the E.164 recipient per intent (login: caller-supplied; step_up: decrypt). Throws on no target. */
   async function resolveRecipient(payload: StepUpOtpDelivery): Promise<string> {
     if (payload.intent === 'login') {
@@ -203,7 +217,7 @@ export function createSmsDltStepUpDelivery(deps: SmsDltStepUpDeliveryDeps): Step
         let gatewayMessageId: string;
         try {
           gatewayMessageId = await withSendTimeout(
-            deps.messaging.send({ to, templateId, values, body }),
+            deps.messaging.send({ to, templateId, values, body, correlationId: `ot${correlationHex()}` }),
             SEND_TIMEOUT_MS,
           );
         } catch (err) {

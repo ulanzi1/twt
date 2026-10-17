@@ -324,6 +324,23 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     expect(new Set(family.map((r) => r.recipient_number_hash)).size).toBe(2);
   });
 
+  it('⭐ 6.37b DR3 / AC1 — each family SMS carries CRQID `cr` + its OWN reminder row id (lower-case, ⛔ dashes)', async () => {
+    const s = await seed({ nomineeMobiles: ['9812345678', '9812345679'] });
+    const { day0 } = await runOf(s.runId!);
+    const h = harness();
+    h.setNow(tenAmIst(cycleCalendar.addCalendarDays(day0, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    const jobs = smsFor(h, s.claimCaseId);
+    expect(jobs).toHaveLength(2);
+    for (const j of jobs) expect(await child(h, j)).toEqual({ status: 'sent', outcome: 'accepted' });
+    const { rows } = await pool.query<{ reminder_id: string }>(
+      "SELECT reminder_id FROM claim_correction_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms'",
+      [s.claimCaseId],
+    );
+    expect(rows).toHaveLength(2);
+    expect(h.sent.map((m) => m.correlationId).sort()).toEqual(rows.map((r) => `cr${r.reminder_id.replace(/-/g, '')}`).sort());
+  });
+
   it('⭐ a second sweep the same day enqueues ⛔ nothing new for a recorded slot; a second delivery of the child is a no-op', async () => {
     const s = await seed();
     const { day0 } = await runOf(s.runId!);

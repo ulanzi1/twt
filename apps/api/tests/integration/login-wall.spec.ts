@@ -296,6 +296,11 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // so it cannot carry a member/admin session. Its auth is the per-Pariwar X-Telegram-Bot-Api-Secret-Token
   // header (constant-time compare) — verified in the handler, fail-closed (403). Telegram is POST-only.
   'POST /api/v1/webhooks/telegram/:pariwarId',
+  // Story 6.37b (`2026-10-17-347` DR1; ADR-0042) — MSG91's SMS delivery-report webhook is PUBLIC by design: MSG91 POSTs
+  // from its own servers with no member/admin session, and it offers ⛔ request signature (static headers only). Its auth
+  // is the boot-resolved `x-twt-msg91-secret-token` header (constant-time compare, current OR next token) — verified in
+  // the handler, fail-closed (403, persist nothing). ONE global URL (MSG91 is one account), its own per-IP limit.
+  'POST /api/v1/webhooks/msg91/sms-reports',
   // Honeypot traps are public by design (bot-bait); added programmatically below.
   ...HONEYPOT_PATHS.map((p) => `GET ${p}`),
 ]);

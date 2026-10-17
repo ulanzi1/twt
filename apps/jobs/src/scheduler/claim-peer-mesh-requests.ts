@@ -696,6 +696,8 @@ export async function runPeerMeshRequestChild(
       values: (helpline) => ({ member, link, helpline }),
       // ⛔ fail open: this sweep HOLDS (its race guard read the memo) — a fault here is the in-flight race; P1 stops below.
       preflightFailOpen: false,
+      // 6.37b DR3 — the ping row's own id rides as MSG91's `CRQID`.
+      correlation: { kind: 'pm', rowId: pingId },
       // MG16 (i) — F2's window and P6's lease margin AGAIN, synchronously, immediately before the send (after the pre-flight).
       beforeSend: () => {
         const at = clock();

@@ -31,6 +31,7 @@ import type { ApiConfig } from './config.js';
 import type { StepUpOtpDeliveryPort } from './modules/auth/shared/step-up-delivery.js';
 import type { TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import type { WebAuthnProvider } from './modules/auth/shared/webauthn.js';
+import type { SmsReportWebhookAuth } from './modules/channel-webhooks/msg91-sms-reports.js';
 import type { KycProviderRegistry } from './modules/kyc/index.js';
 import type { DeployTrigger } from './modules/pariwar-provisioning/deploy-trigger.js';
 import type { NiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
@@ -707,6 +708,11 @@ export interface AppDeps {
    * without Secret Manager. Same injectable-seam pattern as `deployTrigger` / `turnstile`.
    */
   readonly resolveChannelSecret: (secretName: string) => Promise<string>;
+  /**
+   * Story 6.37b (DR1; ADR-0042) — MSG91's SMS delivery-report webhook tokens, resolved ONCE at boot
+   * (`buildSmsReportWebhookAuth`); `current` null ⇒ the webhook answers 403 to every request. ⛔ Resolved per request.
+   */
+  readonly smsReportWebhook: SmsReportWebhookAuth;
   /** Injectable clock — tests freeze it to assert TTL / lockout / window expiry. */
   readonly clock: () => Date;
 }

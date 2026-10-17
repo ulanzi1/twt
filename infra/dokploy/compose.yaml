@@ -31,6 +31,12 @@ services:
       # The OPTIONAL template-read-only key (MG17 (b)) — unset ⇒ the send key reads the templates. Values: roster Row 32 (b).
       SMS_GATEWAY_API_KEY_SECRET_NAME: ${SMS_GATEWAY_API_KEY_SECRET_NAME}
       SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME: ${SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME}
+      # Story 6.37b (`2026-10-17-347` DR1, DR9; ADR-0042) — MSG91's delivery-report webhook token Secret Manager NAMEs (⛔ the
+      # token). Unset ⇒ the webhook answers 403 to everything (the api still starts). The NEXT name is set only during a
+      # rotation (each step is an api restart). The per-route limit defaults to 1,200 / min (PROVISIONAL — roster Row 33 (c2)).
+      # Values: roster Row 33 (b) — the operator applies.
+      SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME: ${SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME}
+      SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME: ${SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME}
     labels:
       # Dokploy/Traefik path routing — the API surface.
       - "traefik.http.routers.twt-api.rule=PathPrefix(`/api/v1`)"

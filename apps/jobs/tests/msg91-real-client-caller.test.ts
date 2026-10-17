@@ -56,7 +56,8 @@ function realStack(answer: (path: string) => Promise<SmsFetchResponse>, signal: 
   return { deps: { smsAppClient: client, resolveConfig: config, smsPreflight: { memo, readsWithSendKey: true } }, paths };
 }
 
-const reminder = { message: 'reminder', locale: 'en', pariwarId: PARIWAR, claimCaseId: CLAIM, e164: '+919812345678' } as const;
+const ROW = '7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
+const reminder = { message: 'reminder', locale: 'en', pariwarId: PARIWAR, claimCaseId: CLAIM, e164: '+919812345678', rowId: ROW } as const;
 
 /** The same reminder as a HOLDING child would send it (⛔ fail open). */
 const heldInput = {
@@ -67,6 +68,8 @@ const heldInput = {
   render: (h: string) => renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E', helpline: h }),
   values: (h: string) => ({ reference: '3F2A9C1E', helpline: h }),
   preflightFailOpen: false,
+  // 6.37b DR3 — a uuid-shaped row id: this suite drives the REAL client, which refuses an id outside the grammar.
+  correlation: { kind: 'cr' as const, rowId: ROW },
 };
 
 describe('Story 6.37 review F1 — the bound aborts while the Flow body is read', () => {

@@ -15,13 +15,14 @@
 // ── ⚠ `"type":"success"` is ⛔ delivery, and ⛔ even proof the account works (F9) ──────────────────────
 // MSG91 reports most errors ASYNCHRONOUSLY: a Flow call with a FAKE authkey answered HTTP 200 `"type":"success"`. So
 // an acceptance here means only "MSG91 took the request" — the pre-flight (`sms-preflight.ts`) reads each template
-// before it is used, and delivery reports are row 6-37b. HTTP 200 alone is ⛔ an acceptance (I3).
+// before it is used, and delivery reports arrive later by webhook (row 6-37b — every send carries a `CRQID` MSG91
+// echoes back). HTTP 200 alone is ⛔ an acceptance (I3).
 //
 // ── Credential = a GLOBAL Secret-Manager NAME resolved by the composition layer, never logged ──────────
 // The authkey VALUE is captured in the closure and used on every call; it is NEVER logged or audited (AI-4-3(c)).
 // KNOWN v1 gap (unchanged): ⛔ rebuild on rotation — RESTART-REQUIRED-ON-ROTATION (the whatsapp-app.ts call).
 
-import { encryption } from '@twt/domain';
+import { encryption, smsDelivery } from '@twt/domain';
 
 /** The narrow send seam every SMS sender depends on — the ONLY gateway surface it touches. */
 export interface SmsMessagingHandle {
@@ -52,6 +53,12 @@ export interface SmsGatewayMessage {
    * ⛔ logged (it may carry a name or a code).
    */
   readonly body: string;
+  /**
+   * The send's correlation id (6.37b DR3 — `<kind><row uuid hex>`, or `ot<random hex>` for a login code), sent as
+   * MSG91's `CRQID` INSIDE the one recipient and echoed back in the delivery report. Absent ⇒ ⛔ `CRQID`. The core and
+   * the OTP adapter always set it; one outside the grammar is refused locally (`bad_correlation_id` — defence only).
+   */
+  readonly correlationId?: string;
 }
 
 /** The global gateway client config the composition layer resolves (authkey = the resolved Secret VALUE). */
@@ -300,12 +307,25 @@ function msg91Mobile(to: string): string | null {
   return canonical.slice(1);
 }
 
-/** The Flow body (F10, MG9): one recipient, `short_url` "0" ALWAYS, ⛔ `realTimeResponse`, ⛔ `CRQID`, ⛔ the text. */
-function buildFlowBody(templateId: string, mobiles: string, values: readonly SmsGatewayValue[]): string {
+/**
+ * The Flow body (F10, MG9): one recipient, `short_url` "0" ALWAYS, ⛔ `realTimeResponse`, ⛔ the text. The `CRQID`
+ * (6.37b DR3) goes INSIDE the recipient — Flow's only documented sample (`recipients:[{mobiles, var, CRQID}]`); the
+ * top-level form is the Text-SMS page's, ⛔ Flow's. UNVERIFIED until a real report echoes it (roster Row 33 (e0)).
+ */
+function buildFlowBody(
+  templateId: string,
+  mobiles: string,
+  values: readonly SmsGatewayValue[],
+  correlationId: string | undefined,
+): string {
   const recipient: Record<string, string> = { mobiles };
   for (const { name, value } of values) recipient[name] = value;
+  if (correlationId !== undefined) recipient.CRQID = correlationId;
   return JSON.stringify({ template_id: templateId, short_url: '0', recipients: [recipient] });
 }
+
+/** The recipient keys a template value may ⛔ take — the number, and the correlation id (6.37b DR3). */
+const RESERVED_RECIPIENT_KEYS: ReadonlySet<string> = new Set(['mobiles', 'CRQID']);
 
 /** Refuse a message before the network when it cannot be what MSG91 should send (MG4, MG8, MG12). */
 function localRefusal(message: SmsGatewayMessage): SmsLocalRefusal | null {
@@ -315,9 +335,17 @@ function localRefusal(message: SmsGatewayMessage): SmsLocalRefusal | null {
   if (message.values.length === 0) return { errorClass: 'dlt_template_not_approved', code: 'no_named_values' };
   const names = new Set<string>();
   for (const { name } of message.values) {
-    // `mobiles` is the recipient's own field — a value of that name would overwrite the number.
-    if (name === 'mobiles' || names.has(name)) return { errorClass: 'dlt_template_not_approved', code: 'values_mismatch' };
+    // `mobiles` and `CRQID` are the recipient's own fields — a value of either name would overwrite the number or the
+    // correlation id.
+    if (RESERVED_RECIPIENT_KEYS.has(name) || names.has(name)) {
+      return { errorClass: 'dlt_template_not_approved', code: 'values_mismatch' };
+    }
     names.add(name);
+  }
+  // Defence only (6.37b DR3): the claim-text core validates the id BEFORE the send and crashes on a bad one; this keeps a
+  // malformed id ⛔ the wire whatever the caller.
+  if (message.correlationId !== undefined && !smsDelivery.isSmsCorrelationId(message.correlationId)) {
+    return { errorClass: 'dlt_template_not_approved', code: 'bad_correlation_id' };
   }
   return null;
 }
@@ -370,7 +398,7 @@ export function createSmsAppClient(
             res = await fetchImpl(url, {
               method: 'POST',
               headers: headers(),
-              body: buildFlowBody(message.templateId, mobiles, message.values),
+              body: buildFlowBody(message.templateId, mobiles, message.values, message.correlationId),
               signal,
               redirect: 'error',
             });

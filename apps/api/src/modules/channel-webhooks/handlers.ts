@@ -10,12 +10,13 @@
 // resolved app-secret / verify-token VALUES never leave this handler (AI-4-3(c)); only the NAME pointers are
 // stored on the config row.
 
-import { channelConfig, ids, telegramOptIn, waOptIn, type Db } from '@twt/domain';
+import { channelConfig, ids, smsDelivery, telegramOptIn, waOptIn, type Db } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { ForbiddenError } from '../../http-errors.js';
-import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { closeScopeTx, openScopeTx, runGlobalAppTx } from '../multi-tenant/scope-tx.js';
+import { parseSmsReportBody, projectSmsReports } from './msg91-sms-reports.js';
 import { META_SIGNATURE_HEADER, timingSafeEqualString, verifyMetaSignature } from './signature.js';
 
 /** The header Telegram signs inbound webhook updates with (the per-Pariwar secret token; constant-time compare). */
@@ -175,6 +176,49 @@ export function createChannelWebhookHandlers(deps: AppDeps) {
       }
 
       // Minimal ACK (Telegram retries on a non-2xx; a fast 200 clears the update).
+      await reply.status(200).send({ received: true });
+    },
+
+    /**
+     * POST /api/v1/webhooks/msg91/sms-reports — Story 6.37b (DR1, DR2, DR10; I3–I5; ADR-0042). MSG91's delivery
+     * reports: verify the static header token → persist DR2's projection → ACK 200 (§3.11's persist-then-ack). ⛔
+     * correlation, ⛔ KMS, ⛔ Secret Manager (the tokens were resolved at boot — `deps.smsReportWebhook`), ⛔ an outbound
+     * call. MSG91 has ⛔ signature (F4) — the header token IS the auth (ADR-0042's deviation from step 1).
+     * ⚠ I5 / T13 — the header is read as an INLINE literal and compared by two DIRECT `timingSafeEqualString` calls, the
+     * shape the AI-5-1 gate recognises as a verification context (a boot-resolved token under any other name, or a compare
+     * inside an arrow, would leave a `===` regression un-flagged). An array-valued header (`app.inject` only — Node joins
+     * repeats with ", ") is refused.
+     * Once authenticated, EVERY body answers 200 (a 4xx counts toward MSG91's auto-pause — F6): an unusable one with ⛔
+     * row and ONE `sms_report.unusable_body` line; reports with ⛔ usable request id are dropped with ONE
+     * `sms_report.bad_request_id` line (the count). ⛔ The body, ⛔ a parse error, ⛔ a number in any line (I3).
+     */
+    async receiveMsg91SmsReports(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+      const auth = deps.smsReportWebhook;
+      const provided = request.headers['x-twt-msg91-secret-token'];
+      let verified = false;
+      if (typeof provided === 'string' && auth.current !== null) {
+        if (timingSafeEqualString(provided, auth.current)) verified = true;
+        else if (auth.next !== null && timingSafeEqualString(provided, auth.next)) verified = true;
+      }
+      if (!verified) {
+        // A disabled webhook, an absent / wrong / repeated token ⇒ fail closed, persist NOTHING.
+        throw new ForbiddenError('secret-token verification failed', 'webhook.signature_rejected');
+      }
+
+      const body = parseSmsReportBody(request.body);
+      if (body.kind === 'unusable') {
+        request.log.error({ alarm: 'sms_report.unusable_body' }, 'sms report webhook: an unusable body (⛔ stored)');
+        await reply.status(200).send({ received: true });
+        return;
+      }
+      const { rows, badRequestIds } = projectSmsReports(body.items);
+      if (badRequestIds > 0) {
+        request.log.error({ alarm: 'sms_report.bad_request_id', count: badRequestIds }, 'sms report webhook: reports without a usable request id (⛔ stored)');
+      }
+      if (rows.length > 0) {
+        // ONE global transaction as twt_app; a failed COMMIT is RETHROWN ⇒ 5xx (MSG91 retries) — ⛔ a 200 for a lost write.
+        await runGlobalAppTx(deps.pool, (client) => smsDelivery.persistSmsDeliveryReports(client, rows));
+      }
       await reply.status(200).send({ received: true });
     },
   };

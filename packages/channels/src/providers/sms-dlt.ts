@@ -16,6 +16,8 @@
 // frozen `RenderedMessage` carries ⛔ values, so they are bound in `SmsProviderDeps` per send (the claim-text core
 // builds a provider per send). A provider built WITHOUT values — the dark alert composition (TV6) — refuses locally
 // `dlt_template_not_approved:no_named_values` and ⛔ calls the gateway. The provider NEVER mutates the render output.
+// The send's correlation id (6.37b DR3 — MSG91's `CRQID`) is bound the same way and only COPIED: the claim-text core
+// validates it before it builds the provider (a bad id is a crash there, ⛔ a final here).
 
 // ── Provider NEVER rejects (mirror whatsapp-business.ts) ───────────────────────────────────────────────
 // `send` resolves a `rejected` SendResult on ANY error, `detail` = the classified failure (no PII); it
@@ -38,6 +40,8 @@ export interface SmsProviderDeps {
   readonly dltTemplateId: string;
   /** The template's named values for THIS send, in slot order (MG3). Absent ⇒ ⛔ sendable (MG12). */
   readonly values?: readonly SmsGatewayValue[];
+  /** THIS send's correlation id (6.37b DR3), already formatted by the caller — copied into the message as-is. */
+  readonly correlationId?: string;
 }
 
 /** Build the gateway message from the rendered SMS output + the resolved template id + the values + the target. */
@@ -54,6 +58,7 @@ function buildGatewayMessage(
     values,
     // The rendered body — the oracle the values were checked against; ⛔ sent.
     body: rendered.body,
+    ...(deps.correlationId !== undefined ? { correlationId: deps.correlationId } : {}),
   };
 }
 
@@ -97,8 +102,8 @@ export function createSmsDltProvider(deps: SmsProviderDeps): ChannelProvider {
       }
     },
     getStatus(messageId): Promise<SendStatus> {
-      // MSG91 gives NO synchronous delivery receipt — its delivery reports are row 6-37b. Honest `unknown` here;
-      // never fabricate `delivered`.
+      // MSG91 gives NO synchronous delivery receipt — its delivery reports arrive by webhook and are matched by the
+      // send's `CRQID` (row 6-37b), ⛔ polled here. Honest `unknown`; never fabricate `delivered`.
       return Promise.resolve({ providerMessageId: messageId, state: 'unknown' });
     },
   };

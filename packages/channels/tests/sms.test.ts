@@ -74,6 +74,18 @@ describe('createSmsDltProvider — send mapping (AC1; 6.37 MG3 / MG12)', () => {
     expect(sent[0]).toEqual({ to: '+919999999999', templateId: TEMPLATE_ID, values: VALUES, body: rendered.body });
   });
 
+  it('6.37b DR3 — a correlation id bound per send is copied into the message as-is; unbound ⇒ ⛔ key at all', async () => {
+    const { handle, sent } = fakeHandle('gw-msg-ABC');
+    const correlationId = `cr${'0f1e2d3c4b5a49788695a4b3c2d1e0f9'}`;
+    const bound = createSmsDltProvider({ messaging: handle, dltTemplateId: TEMPLATE_ID, values: VALUES, correlationId });
+    const rendered = render(claimStatusChange(), 'sms');
+    await bound.send(rendered, TARGET);
+    expect(sent[0]).toEqual({ to: '+919999999999', templateId: TEMPLATE_ID, values: VALUES, body: rendered.body, correlationId });
+
+    await createSmsDltProvider({ messaging: handle, dltTemplateId: TEMPLATE_ID, values: VALUES }).send(rendered, TARGET);
+    expect(Object.keys(sent[1]!)).not.toContain('correlationId');
+  });
+
   it('⭐ MG12 — a provider built WITHOUT named values (the dark alert path) refuses `no_named_values` and ⛔ calls the gateway', async () => {
     for (const values of [undefined, []]) {
       const send = vi.fn<SmsMessagingHandle['send']>();
@@ -90,7 +102,7 @@ describe('createSmsDltProvider — send mapping (AC1; 6.37 MG3 / MG12)', () => {
     }
   });
 
-  it('declares scope global (DLT is platform-level) + getStatus is an honest unknown (delivery reports are row 6-37b)', async () => {
+  it('declares scope global (DLT is platform-level) + getStatus is an honest unknown (reports arrive by webhook — 6.37b, ⛔ a poll)', async () => {
     const { handle } = fakeHandle();
     const provider = createSmsDltProvider({ messaging: handle, dltTemplateId: TEMPLATE_ID, values: VALUES });
     expect(provider.scope).toBe('global');
@@ -214,6 +226,8 @@ describe('createSmsProvider — real-vs-fixture selection (AC1)', () => {
 // ── The MSG91 Flow client (6.37 AC1–AC4) ─────────────────────────────────────────────────────────────────
 
 const config = { apiOrigin: 'https://control.msg91.com', authkey: 'msg91-authkey-secret' };
+/** A correlation id in DR3's grammar (6.37b) — kind `cr` + a row uuid's 32 hex. */
+const CRQID = 'cr0f1e2d3c4b5a49788695a4b3c2d1e0f9';
 const message: SmsGatewayMessage = {
   to: '+919876543210',
   templateId: TEMPLATE_ID,
@@ -237,7 +251,7 @@ describe('createSmsAppClient — the MSG91 Flow request (6.37 AC1; MG9, MG10, F1
 
   it('⭐ POSTs <origin>/api/v5/flow with the authkey header and ONLY template_id / short_url "0" / one recipient', async () => {
     const fetchImpl = answering(200, SUCCESS);
-    const id = await createSmsAppClient(config, fetchImpl).messaging().send(message);
+    const id = await createSmsAppClient(config, fetchImpl).messaging().send({ ...message, correlationId: CRQID });
     expect(id).toBe('5e1e93cad6fc054d8e759a5b');
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -254,10 +268,21 @@ describe('createSmsAppClient — the MSG91 Flow request (6.37 AC1; MG9, MG10, F1
     expect(JSON.parse(init.body)).toEqual({
       template_id: TEMPLATE_ID,
       short_url: '0',
+      recipients: [{ mobiles: '919876543210', otp: '048213', CRQID }],
+    });
+    // ⛔ the finished text, ⛔ sender, ⛔ realTimeResponse; the CRQID rides INSIDE the one recipient (6.37b DR3 —
+    // Flow's own sample, F7), ⛔ at the top level.
+    expect(init.body).not.toContain('login code');
+  });
+
+  it('6.37b DR3 — a message with ⛔ correlation id sends ⛔ CRQID key at all', async () => {
+    const fetchImpl = answering(200, SUCCESS);
+    await createSmsAppClient(config, fetchImpl).messaging().send(message);
+    expect(JSON.parse(fetchImpl.mock.calls[0]![1].body)).toEqual({
+      template_id: TEMPLATE_ID,
+      short_url: '0',
       recipients: [{ mobiles: '919876543210', otp: '048213' }],
     });
-    // ⛔ the finished text, ⛔ sender, ⛔ realTimeResponse, ⛔ CRQID.
-    expect(init.body).not.toContain('login code');
   });
 
   it('sends every named value of a multi-slot template, in the recipient object', async () => {
@@ -540,6 +565,35 @@ describe('createSmsAppClient — local refusals, ⛔ request (6.37 AC4; MG4, MG8
       }),
     ).toBe('dlt_template_not_approved:values_mismatch');
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('6.37b DR3 — a value named `CRQID` ⇒ values_mismatch (it would overwrite the correlation id) — ⛔ request', async () => {
+    const fetchImpl = vi.fn<SmsFetchLike>();
+    expect(
+      await outcome(fetchImpl, { ...message, correlationId: CRQID, values: [{ name: 'CRQID', value: 'cr0' }] }),
+    ).toBe('dlt_template_not_approved:values_mismatch');
+    expect(await outcome(fetchImpl, { ...message, values: [{ name: 'CRQID', value: 'x' }] })).toBe(
+      'dlt_template_not_approved:values_mismatch',
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it.each(['', '0', 'Beta1', `CR${CRQID.slice(2)}`, `xx${CRQID.slice(2)}`, `${CRQID}0`, 'cr0f1e2d3c-4b5a-4978-8695-a4b3c2d1e0f9'])(
+    '6.37b DR3 — a correlation id outside the grammar (%s) ⇒ dlt_template_not_approved:bad_correlation_id (defence only), ⛔ request',
+    async (correlationId) => {
+      const fetchImpl = vi.fn<SmsFetchLike>();
+      expect(await outcome(fetchImpl, { ...message, correlationId })).toBe('dlt_template_not_approved:bad_correlation_id');
+      expect(fetchImpl).not.toHaveBeenCalled();
+    },
+  );
+
+  it('6.37b DR3 / DR11 — every kind in the grammar is sent, an OTP `ot…` included', async () => {
+    for (const kind of ['cr', 'ce', 'sn', 'pm', 'ot']) {
+      const fetchImpl = answering(200, { type: 'success', message: 'abc' });
+      const correlationId = `${kind}${CRQID.slice(2)}`;
+      await createSmsAppClient(config, fetchImpl).messaging().send({ ...message, correlationId });
+      expect(JSON.parse(fetchImpl.mock.calls[0]![1].body).recipients[0].CRQID).toBe(correlationId);
+    }
   });
 });
 

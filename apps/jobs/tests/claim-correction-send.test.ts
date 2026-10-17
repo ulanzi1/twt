@@ -78,7 +78,9 @@ const config = (overrides: Record<string, string | null> = {}) => async (key: st
   return null;
 };
 
-const input = { message: 'reminder' as const, locale: 'en' as const, pariwarId: PARIWAR, claimCaseId: CLAIM, e164: '+919812345678' };
+/** 6.37b DR3 — the send row's own uuid (the wrapper derives the CRQID kind from `message`). */
+const ROW = '7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
+const input = { message: 'reminder' as const, locale: 'en' as const, pariwarId: PARIWAR, claimCaseId: CLAIM, e164: '+919812345678', rowId: ROW };
 
 describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
   it('⛔ a missing DLT template id ⇒ error + alarm, ⛔ no send', async () => {
@@ -425,6 +427,7 @@ function coreInput<T extends Partial<ClaimDltSmsInput>>(over: T = {} as T) {
     render: (helpline: string) => renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E', helpline }),
     values: (helpline: string) => ({ reference: '3F2A9C1E', helpline }),
     preflightFailOpen: false,
+    correlation: { kind: 'cr' as const, rowId: ROW },
     ...over,
   };
 }
@@ -625,5 +628,59 @@ describe('⭐ Story 6.37 — MG16 (i): `beforeSend`, synchronously, immediately 
     const c = client(() => Promise.resolve('gw'));
     const r = await sendClaimDltSms({ smsAppClient: c, resolveConfig: config() }, coreInput({ beforeSend: () => 'go' as const }));
     expect(r).toMatchObject({ kind: 'final', outcome: 'accepted' });
+  });
+});
+
+describe('⭐ Story 6.37b — DR3 / T22: the CRQID is the send row\'s own id, validated FIRST (AC1)', () => {
+  const HEX = ROW.replace(/-/g, '');
+
+  it('the core puts `<kind><row hex>` on the message the provider sends — every row kind', async () => {
+    for (const kind of ['cr', 'ce', 'sn', 'pm'] as const) {
+      const c = client(() => Promise.resolve('gw'));
+      expect(await sendClaimDltSms({ smsAppClient: c, resolveConfig: config() }, coreInput({ correlation: { kind, rowId: ROW } }))).toMatchObject({
+        outcome: 'accepted',
+      });
+      expect(c.messages.map((m) => m.correlationId)).toEqual([`${kind}${HEX}`]);
+    }
+  });
+
+  it('the wrapper DERIVES the kind from the message — the certificate reminder ⇒ `ce`, the reminder and the closure notice ⇒ `cr`', async () => {
+    for (const [message, kind] of [
+      ['reminder', 'cr'],
+      ['closure_notice', 'cr'],
+      ['certificate_reminder', 'ce'],
+    ] as const) {
+      // A bare capture (the shared `client` checks the oracle against the REMINDER's registry text only).
+      const messages: SmsGatewayMessage[] = [];
+      const c: SmsAppClient = { isConfigured: () => true, messaging: () => ({ send: (m) => (messages.push(m), Promise.resolve('gw')) }) };
+      expect(await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config() }, { ...input, message })).toMatchObject({ outcome: 'accepted' });
+      expect(messages.map((m) => m.correlationId)).toEqual([`${kind}${HEX}`]);
+    }
+  });
+
+  it.each([
+    ['not a uuid', { kind: 'cr', rowId: 'not-a-uuid' }, 'cr'],
+    ['an empty row id', { kind: 'sn', rowId: '' }, 'sn'],
+    ['a kind outside the grammar', { kind: 'ot', rowId: ROW }, 'ot'],
+    ['a junk kind', { kind: 'Q!', rowId: ROW }, 'unknown'],
+  ])('a correlation that is %s ⇒ ONE `[jobs] sms.bad_correlation:<kind>` line (⛔ the id) and a THROW — before config, the provider or `fetch`', async (_label, correlation, kind) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const send = vi.fn(() => Promise.resolve('gw'));
+      const c = client(send);
+      const messaging = vi.spyOn(c, 'messaging');
+      const resolveConfig = vi.fn(config());
+      await expect(
+        sendClaimDltSms({ smsAppClient: c, resolveConfig }, coreInput({ correlation: correlation as ClaimDltSmsInput['correlation'] })),
+      ).rejects.toThrow(/sms correlation/);
+      expect(errors.mock.calls).toEqual([[`[jobs] sms.bad_correlation:${kind}`]]);
+      expect(JSON.stringify(errors.mock.calls)).not.toContain(correlation.rowId === '' ? '\u0000' : correlation.rowId);
+      // ⛔ a final — nothing ran that could record one: ⛔ config read, ⛔ provider built, ⛔ send.
+      expect(resolveConfig).not.toHaveBeenCalled();
+      expect(messaging).not.toHaveBeenCalled();
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      errors.mockRestore();
+    }
   });
 });

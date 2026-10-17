@@ -374,6 +374,7 @@ export async function runClosureNoticeChild(
     pariwarId: pid,
     claimCaseId: p.claimCaseId,
     e164,
+    rowId: begun.reminderId,
   });
   if (result.kind === 'transient') return transient(result.detail);
   // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.

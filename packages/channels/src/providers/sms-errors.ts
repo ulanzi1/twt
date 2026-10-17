@@ -12,7 +12,8 @@
 // DEFENSIVE mapping for when one arrives, and MOSTLY UNREACHABLE at send today.
 // ⚠ `auth` means "the gateway ACCOUNT refuses" — a bad key, but also balance (301), an IP (208 / 418), a route
 // (209 / 210 / 602) — so 6.27c's P1 stops a peer-mesh child on each. ⚠ `carrier_reject` has ⛔ synchronous MSG91 code:
-// DND / operator blocks arrive only in a delivery report (row 6-37b); the class is kept (I5).
+// DND / operator blocks arrive only in a delivery report (received and recorded by row 6-37b's webhook — ⛔ a send-time
+// class); the class is kept (I5).
 
 import { claim } from '@twt/domain';
 

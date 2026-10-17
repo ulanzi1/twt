@@ -80,6 +80,8 @@ describe('⭐ Story 6.37 AC11 — ⛔ network from the jobs send core (a global-
       render: (h: string) => renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E', helpline: h }),
       values: (h: string) => ({ reference: '3F2A9C1E', helpline: h }),
       preflightFailOpen: false,
+      // 6.37b DR3 — a uuid-shaped row id (the REAL client refuses one outside the grammar).
+      correlation: { kind: 'cr' as const, rowId: '7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d' },
     };
     expect(await sendClaimDltSms(deps, input)).toMatchObject({ kind: 'final', outcome: 'accepted', providerMessageId: '5e1e93cad6fc054d8e759a5b' });
     expect(await sendClaimDltSms(deps, input)).toMatchObject({ outcome: 'accepted' });
@@ -93,7 +95,7 @@ describe('⭐ Story 6.37 AC11 — ⛔ network from the jobs send core (a global-
 
   it('⭐ a 6.19b/c/d FAIL-OPEN leg — the pre-flight TRANSPORT fails, the text is still sent (a swallowed throw would look like this) — and the global fetch saw ZERO calls', async () => {
     const { deps, urls } = realStack(() => Promise.reject(new Error('ECONNRESET')));
-    const r = await sendClaimCorrectionSms(deps, { message: 'reminder', locale: 'en', pariwarId: PARIWAR, claimCaseId: CLAIM, e164: '+919812345678' });
+    const r = await sendClaimCorrectionSms(deps, { message: 'reminder', locale: 'en', pariwarId: PARIWAR, claimCaseId: CLAIM, e164: '+919812345678', rowId: '7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d' });
     expect(r).toMatchObject({ kind: 'final', outcome: 'accepted', preflightWarning: 'api_unavailable:preflight' });
     expect(urls).toEqual(['https://control.msg91.com/api/v5/sms/getTemplateVersions', 'https://control.msg91.com/api/v5/flow']);
     expect(globalCalls).toEqual([]);

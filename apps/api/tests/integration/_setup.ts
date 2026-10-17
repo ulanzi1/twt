@@ -65,6 +65,10 @@ import type {
 } from '../../src/modules/auth/shared/step-up-delivery.js';
 import { noopTurnstileVerifier, type TurnstileVerifier } from '../../src/modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider, type WebAuthnProvider } from '../../src/modules/auth/shared/webauthn.js';
+import {
+  SMS_REPORT_WEBHOOK_DISABLED,
+  type SmsReportWebhookAuth,
+} from '../../src/modules/channel-webhooks/msg91-sms-reports.js';
 import { createFakeDeployTrigger, type DeployTrigger } from '../../src/modules/pariwar-provisioning/deploy-trigger.js';
 import {
   createKycProviderRegistry,
@@ -288,6 +292,8 @@ export interface TestDepsOverrides {
   newsPublishQueue?: NewsPublishEnqueuer;
   bankIfscLookup?: BankIfscLookup;
   resolveChannelSecret?: (secretName: string) => Promise<string>;
+  /** Story 6.37b (DR1) — MSG91's delivery-report webhook tokens (default: disabled — 403 to everything). */
+  smsReportWebhook?: SmsReportWebhookAuth;
   clock?: () => Date;
   env?: NodeJS.ProcessEnv;
   /** Capture the Fastify request logger's output (`createTestApp` only) — e.g. a PII spec's "no log line" leg. */
@@ -460,6 +466,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // signs a webhook computes its HMAC over this same value.
     resolveChannelSecret:
       overrides.resolveChannelSecret ?? (async (name: string): Promise<string> => `test-secret::${name}`),
+    smsReportWebhook: overrides.smsReportWebhook ?? SMS_REPORT_WEBHOOK_DISABLED,
     clock: overrides.clock ?? ((): Date => new Date()),
   };
   return {

@@ -211,7 +211,12 @@ describe('buildMemberStepUpDelivery (Story 5.9, Task 5; Story 6.37 AC8)', () => 
       expect(calls.read).toBe(2);
       await port.deliver(login);
       expect(calls.bodies).toEqual([
-        { template_id: '64b0c0ffee0123456789a015', short_url: '0', recipients: [{ mobiles: '919876543210', otp: '048213' }] },
+        {
+          template_id: '64b0c0ffee0123456789a015',
+          short_url: '0',
+          // 6.37b DR11 — the default random `ot…` CRQID, inside the recipient.
+          recipients: [{ mobiles: '919876543210', otp: '048213', CRQID: expect.stringMatching(/^ot[0-9a-f]{32}$/) }],
+        },
       ]);
       // the claim handover's step-up TEXT (`template: 'step_up'`) resolves the step-up key's id
       await port.deliver({ ...login, template: 'step_up' });

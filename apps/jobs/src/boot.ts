@@ -77,6 +77,17 @@ import {
   TELEGRAM_WEBHOOK_PROCESSOR_TZ,
   registerTelegramWebhookProcessorCron,
 } from './tg-webhook-processor.js';
+import {
+  DEFAULT_SMS_DELIVERY_CORRELATOR_CRON,
+  SMS_DELIVERY_CORRELATOR_TZ,
+  registerSmsDeliveryCorrelatorCron,
+} from './sms-delivery-correlator.js';
+import { DEFAULT_SMS_DELIVERY_PRUNE_CRON, SMS_DELIVERY_PRUNE_TZ, registerSmsDeliveryPruneCron } from './sms-delivery-prune.js';
+import {
+  DEFAULT_SMS_DELIVERY_SILENCE_CRON,
+  SMS_DELIVERY_SILENCE_TZ,
+  registerSmsDeliverySilenceCron,
+} from './sms-delivery-silence.js';
 import { registerClaimOcrParityWorker } from './claim-ocr-parity.js';
 import {
   DEFAULT_PEER_MESH_WINDOW_SECONDS,
@@ -162,6 +173,10 @@ const WA_WEBHOOK_PROCESSOR_CRON =
   process.env['WA_WEBHOOK_PROCESSOR_CRON'] ?? DEFAULT_WA_WEBHOOK_PROCESSOR_CRON;
 const TELEGRAM_WEBHOOK_PROCESSOR_CRON =
   process.env['TELEGRAM_WEBHOOK_PROCESSOR_CRON'] ?? DEFAULT_TELEGRAM_WEBHOOK_PROCESSOR_CRON;
+// MSG91's SMS delivery reports (Story 6.37b): the correlator every minute, the inbox prune and the silence check daily (IST).
+const SMS_DELIVERY_CORRELATOR_CRON = process.env['SMS_DELIVERY_CORRELATOR_CRON'] ?? DEFAULT_SMS_DELIVERY_CORRELATOR_CRON;
+const SMS_DELIVERY_PRUNE_CRON = process.env['SMS_DELIVERY_PRUNE_CRON'] ?? DEFAULT_SMS_DELIVERY_PRUNE_CRON;
+const SMS_DELIVERY_SILENCE_CRON = process.env['SMS_DELIVERY_SILENCE_CRON'] ?? DEFAULT_SMS_DELIVERY_SILENCE_CRON;
 // Validity-cache GC sweep (Story 4.8, Task 4). Every 15 min by default (IST). Storage hygiene ONLY.
 const VALIDITY_CACHE_GC_CRON = process.env['VALIDITY_CACHE_GC_CRON'] ?? '*/15 * * * *';
 // Reconciliation UTR matcher recovery sweep (Story 9.4, AC1/D7) — the contracted "cron 6×/day" (every 4h,
@@ -456,6 +471,15 @@ async function main(): Promise<void> {
       { pool, db },
       { cron: TELEGRAM_WEBHOOK_PROCESSOR_CRON, tz: TELEGRAM_WEBHOOK_PROCESSOR_TZ },
     );
+
+    // ── MSG91's SMS delivery reports (Story 6.37b — `2026-10-17-347` DR6, DR7, DR8, DR11, DR12; ADR-0042) ──
+    // The correlator drains the api-written global report inbox under a LEASE and records `delivered` / `undelivered`
+    // per send in `sms_send_deliveries` (⛔ a send table written); the prune keeps settled reports 30 days; the silence
+    // check alarms accepted texts with ⛔ report and logs the daily login-code count. Cross-tenant on the service `pool`
+    // (roster Row 26 decides jobs' production role). `onAlarm` is ⛔ wired — logs only until roster Row 32 (h).
+    await registerSmsDeliveryCorrelatorCron(boss, { pool }, { cron: SMS_DELIVERY_CORRELATOR_CRON, tz: SMS_DELIVERY_CORRELATOR_TZ });
+    await registerSmsDeliveryPruneCron(boss, { pool }, { cron: SMS_DELIVERY_PRUNE_CRON, tz: SMS_DELIVERY_PRUNE_TZ });
+    await registerSmsDeliverySilenceCron(boss, { pool }, { cron: SMS_DELIVERY_SILENCE_CRON, tz: SMS_DELIVERY_SILENCE_TZ });
 
     // ── Death-cert OCR + parity worker (Story 6.5, Task 4) — Class B (request-triggered) ──
     // The API enqueues CLAIM_OCR_PARITY on upload; this worker fetches the bytes by key,

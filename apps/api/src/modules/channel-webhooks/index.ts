@@ -6,9 +6,9 @@
 import type { FastifyInstance } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { registerChannelWebhookRoutes } from './routes.js';
+import { registerChannelWebhookRoutes, registerMsg91SmsReportRoute } from './routes.js';
 
-export { registerChannelWebhookRoutes } from './routes.js';
+export { registerChannelWebhookRoutes, registerMsg91SmsReportRoute } from './routes.js';
 export { verifyMetaSignature, META_SIGNATURE_HEADER } from './signature.js';
 export { createChannelWebhookHandlers, TELEGRAM_SECRET_TOKEN_HEADER } from './handlers.js';
 
@@ -18,5 +18,9 @@ export function registerChannelWebhooksModule(app: FastifyInstance, deps: AppDep
   // request-context + origin hooks are inherited.
   void app.register(async (instance) => {
     registerChannelWebhookRoutes(instance, deps);
+  });
+  // Story 6.37b — MSG91's delivery reports in a SEPARATE scope: its `'*'` buffer parser replaces every inherited parser.
+  void app.register(async (instance) => {
+    registerMsg91SmsReportRoute(instance, deps);
   });
 }

@@ -661,6 +661,7 @@ export async function runCertificateFamilySmsChild(
     pariwarId: pid,
     claimCaseId: p.claimCaseId,
     e164,
+    rowId: begun.reminderId,
   });
   if (result.kind === 'transient') {
     await withPariwarScope(deps.pool, pid, (db: Db) =>

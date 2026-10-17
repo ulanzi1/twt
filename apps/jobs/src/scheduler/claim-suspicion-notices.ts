@@ -464,6 +464,8 @@ export async function runSuspicionNoticeChild(
     values: (helpline) => ({ member, ...(date !== undefined ? { date } : {}), helpline }),
     // ⛔ fail open: this sweep HOLDS (its race guard read the memo just above) — a fault here is the in-flight race.
     preflightFailOpen: false,
+    // 6.37b DR3 — the notice row's own id rides as MSG91's `CRQID`.
+    correlation: { kind: 'sn', rowId: begun.noticeId },
   });
   // The core's detail is RAW (a gateway `<code>` can be any string — a phone number included): ⛔ stored, alarmed or thrown as is.
   const detail = result.detail === null ? null : claimDomain.suspicionNoticeDetail({ kind: 'send', detail: result.detail });

@@ -61,14 +61,18 @@ function fakeMessaging(): {
   };
 }
 
-function makeAdapter(messaging: SmsMessagingHandle) {
+function makeAdapter(messaging: SmsMessagingHandle, correlationHex?: () => string) {
   return createSmsDltStepUpDelivery({
     messaging,
     db: {} as never, // never touched for login; the step_up read is mocked
     encryption: enc,
     resolveConfig: async (key: string) => TEMPLATE_IDS[key] ?? null,
+    ...(correlationHex !== undefined ? { correlationHex } : {}),
   });
 }
+
+/** 6.37b DR11 — an injected correlation source (32 lower-case hex). */
+const OTP_HEX = '00112233445566778899aabbccddeeff';
 
 const loginPayload = (over: Partial<StepUpOtpDelivery> = {}): StepUpOtpDelivery =>
   ({
@@ -295,7 +299,7 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
         json: () => Promise.resolve({ type: 'success', message: '5e1e93cad6fc054d8e759a5b' }),
       });
       const client = createSmsAppClient({ apiOrigin: 'https://control.msg91.com', authkey: 'k' }, fetchImpl);
-      expect(await makeAdapter(client.messaging()).deliver(loginPayload())).toEqual({
+      expect(await makeAdapter(client.messaging(), () => OTP_HEX).deliver(loginPayload())).toEqual({
         channel: 'sms',
         status: 'accepted',
         gatewayMessageId: '5e1e93cad6fc054d8e759a5b',
@@ -303,8 +307,21 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
       expect(JSON.parse(fetchImpl.mock.calls[0]![1].body)).toEqual({
         template_id: '64b0c0ffee0123456789a015',
         short_url: '0',
-        recipients: [{ mobiles: '919812345678', otp: CODE }],
+        recipients: [{ mobiles: '919812345678', otp: CODE, CRQID: `ot${OTP_HEX}` }],
       });
+    });
+
+    it('6.37b DR11 — every code carries `ot` + 32 hex: an injected source ⇒ its value; the default ⇒ a fresh value per send', async () => {
+      const sent: SmsGatewayMessage[] = [];
+      const messaging: SmsMessagingHandle = { send: (m) => (sent.push(m), Promise.resolve('gw')) };
+      await makeAdapter(messaging, () => OTP_HEX).deliver(loginPayload());
+      expect(sent[0]!.correlationId).toBe(`ot${OTP_HEX}`);
+
+      await makeAdapter(messaging).deliver(loginPayload());
+      await makeAdapter(messaging).deliver(loginPayload());
+      expect(sent[1]!.correlationId).toMatch(/^ot[0-9a-f]{32}$/);
+      expect(sent[2]!.correlationId).toMatch(/^ot[0-9a-f]{32}$/);
+      expect(sent[1]!.correlationId).not.toBe(sent[2]!.correlationId);
     });
   });
 

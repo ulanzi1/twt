@@ -293,6 +293,9 @@ export * as telegramOptIn from './telegram-opt-in/index.js';
 // check-and-consume (checkAndConsumeSmsBudget) + the expiry vacuum (deleteExpiredSmsRateBuckets). A
 // dedicated budget SEPARATE from the OTP send buckets so an alert-SMS flood can't drain the OTP budget.
 export * as smsRateLimit from './sms-rate-limit/index.js';
+// Story 6.37b — MSG91 delivery reports: the correlation id every SMS carries (`CRQID` = kind + the send row's uuid —
+// DR3), the report inbox and the per-send delivery record.
+export * as smsDelivery from './sms-delivery/index.js';
 // Story 5.8 — the per-Pariwar degraded-mode declaration accessors: declareDegradedMode (advisory-locked,
 // auto-revoke-then-insert — enforces single-active-per-Pariwar), revokeDegradedMode (idempotent manual
 // revocation), and getActiveDegradedMode (the computed-active read: revoked_at IS NULL AND

@@ -3,7 +3,8 @@
 //
 // ⭐ Why it exists: Row 32 (e) asks for the pre-flight GREEN on the deployed api AND jobs before OTP go-live. The api proves
 // it at boot (templates 15 / 16). The jobs process builds its memo LAZILY and reads only claim-text templates (1–14) —
-// which Row 32 (i) keeps UNPROVISIONED until row 6-37b — so without this the jobs proof would wait on 6-37b, although
+// which Row 32 (i) keeps UNPROVISIONED until row 6-37b is done (and, since `-353`, until Row 33 has closed AND row 6-37c
+// is done — Row 32 note (9)) — so without this the jobs proof would wait on those, although
 // MG1 / Row 32 note (1) keep the OTPs independent of it. This reads the two OTP templates through the jobs process's OWN
 // configured reader (the same `buildSmsGatewayClients` boot uses — the same key, origin and, run inside the jobs
 // container, the same egress) and the same `checkMsg91Template` the memo wraps. It is the INITIAL jobs proof; the

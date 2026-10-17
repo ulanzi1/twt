@@ -406,6 +406,18 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     await expectIdsOnly(h, w);
   });
 
+  it('⭐ 6.37b DR3 / AC1 — each ping carries CRQID `pm` + its OWN ping row id', async () => {
+    const w = await world({ locale: 'en' });
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    const after = await rows(w);
+    expect(after).toHaveLength(5);
+    for (const r of after) {
+      const msg = h.sent.find((m) => m.to === w.mobiles.get(r.member_id));
+      expect(msg?.correlationId).toBe(`pm${r.ping_id.replace(/-/g, '')}`);
+    }
+  });
+
   it('the Hindi Pariwar is texted in Hindi (R10 — the Pariwar\'s default)', async () => {
     const w = await world({ locale: 'hi', selected: 1 });
     const h = harness(w, { registry: [CLEARED] });

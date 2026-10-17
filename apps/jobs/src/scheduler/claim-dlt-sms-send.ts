@@ -28,6 +28,11 @@
 // deliverable text would be `-322` §0's Panel option). The core still never alarms: the caller alarms the warning.
 // (MG16 (i)) `beforeSend`, when given, is called synchronously IMMEDIATELY before the provider's send — a `defer_*` ⇒
 // `{kind:'deferred'}` and ⛔ text (the overloads keep `deferred` out of every caller that passes none).
+// ⭐ Story 6.37b (DR3, T22; `2026-10-17-347`): every send carries a `correlation` — its kind and the send row's own id —
+// which goes on the wire as MSG91's `CRQID` and comes back in the delivery report. It is FORMATTED and VALIDATED at the
+// TOP, before anything else and OUTSIDE every `try` (the config, provider-build and send `try`s each turn a throw into a
+// FINAL that spends the text): a malformed one is a code bug ⇒ ONE `console.error` line naming the kind (⛔ the id —
+// pg-boss 12 logs ⛔ handler throw) and a THROW (a crash, ⛔ a final — this file's rule). The provider only copies it.
 
 import {
   createSmsDltProvider,
@@ -39,6 +44,7 @@ import {
   type SmsAppClient,
   type SmsGatewayValue,
 } from '@twt/channels';
+import { smsDelivery } from '@twt/domain';
 
 import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templates.js';
 import { classifySecretManagerFault } from './contribution-providers.js';
@@ -130,6 +136,31 @@ export interface ClaimDltSmsInput {
   readonly preflightFailOpen: boolean;
   /** MG16 (i) — the caller's last synchronous check (peer mesh: the send window and the lease margin). */
   readonly beforeSend?: ClaimDltSmsBeforeSend;
+  /**
+   * 6.37b DR3 — which send this is: its kind and the send ROW's own uuid (`cr` a correction reminder or closure notice,
+   * `ce` a certificate reminder, `sn` a suspicion notice, `pm` a peer-mesh ping). Sent as MSG91's `CRQID`. A value
+   * outside the grammar is a crash, ⛔ a final.
+   */
+  readonly correlation: { readonly kind: smsDelivery.SmsSendRowKind; readonly rowId: string };
+}
+
+/** The send-row kinds a claim text may carry (6.37b DR3) — every correlation kind but the OTP's `ot`. */
+const CLAIM_SEND_ROW_KINDS = ['cr', 'ce', 'sn', 'pm'] as const satisfies readonly smsDelivery.SmsSendRowKind[];
+
+/**
+ * 6.37b DR3 — the send's `CRQID`, or a CRASH: ONE line naming the kind (⛔ the id), then the throw. Called first in
+ * `sendClaimDltSms`, outside every `try`.
+ */
+function correlationIdOrCrash(correlation: ClaimDltSmsInput['correlation']): string {
+  try {
+    // A claim text names a send ROW — `ot` (a login code's random id) is ⛔ one, even though it is in the grammar.
+    if (!(CLAIM_SEND_ROW_KINDS as readonly string[]).includes(correlation.kind)) throw new Error('sms correlation: not a send-row kind');
+    return smsDelivery.formatSmsCorrelationId(correlation);
+  } catch (err) {
+    const kind = /^[a-z]{2}$/.test(String(correlation.kind)) ? String(correlation.kind) : 'unknown';
+    console.error(`[jobs] sms.bad_correlation:${kind}`);
+    throw err;
+  }
 }
 
 /**
@@ -239,6 +270,8 @@ export async function sendClaimDltSms(
   deps: ClaimDltSmsDeps,
   input: ClaimDltSmsInput,
 ): Promise<ClaimCorrectionSmsResult | ClaimDltSmsDeferred> {
+  // 6.37b DR3 / T22 — FIRST, outside every `try`: a bad id is a crash (the row stays `attempting`), ⛔ a final.
+  const correlationId = correlationIdOrCrash(input.correlation);
   let dltTemplateId: string | null;
   let helpline: string | null;
   try {
@@ -305,7 +338,12 @@ export async function sendClaimDltSms(
   let provider: ReturnType<typeof createSmsDltProvider>;
   try {
     // ⚠ `messaging()` INSIDE a try: a half-configured client throws here, and that is a config fault, ⛔ a crash.
-    provider = createSmsDltProvider({ messaging: deps.smsAppClient.messaging(), dltTemplateId: templateId, values: checked.values });
+    provider = createSmsDltProvider({
+      messaging: deps.smsAppClient.messaging(),
+      dltTemplateId: templateId,
+      values: checked.values,
+      correlationId,
+    });
   } catch {
     return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:sms_messaging_unavailable', alarm: true };
   }

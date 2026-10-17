@@ -65,6 +65,7 @@ import {
   encryption,
   ids,
   notifications,
+  smsDelivery,
   withPariwarScope,
   type Db,
 } from '@twt/domain';
@@ -220,6 +221,9 @@ function alarmOf(deps: ClaimCorrectionReminderDeps): (m: string) => void {
  * ⭐ Story 6.37 (MG3, MG5): it passes the registry entry and the named values (the SAME `reference` the render uses) and
  * sets `preflightFailOpen` — these three paths have ⛔ hold (T6), so only a PROVEN pre-flight fault ends a row (as a
  * missing template id does); anything else is SENT with a `preflightWarning` each caller alarms.
+ * ⭐ Story 6.37b (DR3, T22): the caller passes its send ROW's id and the wrapper DERIVES the correlation kind from the
+ * message — `certificate_reminder` ⇒ `ce` (a `claim_certificate_reminders` row), the reminder and the closure notice ⇒ `cr`
+ * (`claim_correction_reminders` rows) — so ⛔ caller can name the wrong table.
  */
 export async function sendClaimCorrectionSms(
   deps: Pick<ClaimCorrectionReminderDeps, 'smsAppClient' | 'resolveConfig' | 'sendTimeoutMs' | 'smsPreflight'>,
@@ -230,9 +234,12 @@ export async function sendClaimCorrectionSms(
     readonly claimCaseId: string;
     /** The E.164 recipient — decrypted by the caller, ⛔ never logged. */
     readonly e164: string;
+    /** 6.37b DR3 — the send row's own uuid (`begun.reminderId`); the kind is derived from `message`. */
+    readonly rowId: string;
   },
 ): Promise<ClaimCorrectionSmsResult> {
   const template = CLAIM_CORRECTION_SMS_TEMPLATES[input.message][input.locale];
+  const kind: smsDelivery.SmsSendRowKind = input.message === 'certificate_reminder' ? 'ce' : 'cr';
   const reference = claimDomain.claimShortReference(input.claimCaseId);
   return sendClaimDltSms(deps, {
     dltTemplateIdConfigKey: template.dltTemplateIdConfigKey,
@@ -242,6 +249,7 @@ export async function sendClaimCorrectionSms(
     render: (helpline) => renderClaimCorrectionSms(input.message, input.locale, { reference, helpline }),
     values: (helpline) => ({ reference, helpline }),
     preflightFailOpen: true,
+    correlation: { kind, rowId: input.rowId },
   });
 }
 
@@ -433,6 +441,7 @@ export async function runCorrectionFamilySmsChild(
     pariwarId: pid,
     claimCaseId: p.claimCaseId,
     e164,
+    rowId: begun.reminderId,
   });
   if (result.kind === 'transient') return transient(result.detail);
   // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.

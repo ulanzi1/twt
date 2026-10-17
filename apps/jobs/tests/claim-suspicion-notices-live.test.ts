@@ -392,6 +392,21 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     expect(h.sent.length).toBe(before);
   });
 
+  it('⭐ 6.37b DR3 / AC1 — the suspicion notice carries CRQID `sn` + its OWN notice row id', async () => {
+    const d = await seedDeath();
+    const s = await refusedS(d);
+    const h = harness();
+    await tick(h, [s]);
+    const { rows } = await pool.query<{ notice_id: string; outcome: string }>(
+      'SELECT notice_id, outcome FROM claim_suspicion_notices WHERE claim_case_id = $1',
+      [s],
+    );
+    // Every text sent is one ACCEPTED row (a `no_target` row sends nothing).
+    const sentRows = rows.filter((r) => r.outcome === 'accepted');
+    expect(sentRows.length).toBeGreaterThan(0);
+    expect(h.sent.map((m) => m.correlationId).sort()).toEqual(sentRows.map((r) => `sn${r.notice_id.replace(/-/g, '')}`).sort());
+  });
+
   it('⭐ (a) the SHIELDED name mode (`-181`) — "Ramesh S."', async () => {
     const d = await seedDeath({ pariwarId: SHIELDED });
     const s = await refusedS(d);

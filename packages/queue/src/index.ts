@@ -471,6 +471,20 @@ export const QUEUE_NAMES = {
    * ids only, ⛔ never an address. Job class B.
    */
   CLAIM_SUSPICION_STAFF_EMAIL_SEND: 'claim.suspicion.staff_email.send',
+  /**
+   * MSG91's SMS delivery-report CORRELATOR (Story 6.37b, DR6 / DR8). Every minute (IST) it claims due `pending` rows of the
+   * global `sms_delivery_report_inbox` under a LEASE (⛔ a `processed_at` in the claim — at-least-once), matches each to
+   * its send by the CRQID (kind + the send row's id) and records `delivered` / `undelivered` in `sms_send_deliveries` —
+   * ⛔ a send table written. Cross-tenant on the service pool. Job class C (background).
+   */
+  SMS_DELIVERY_CORRELATOR: 'sms.delivery_report.correlator',
+  /** The daily prune of report-inbox rows settled more than 30 days ago (Story 6.37b, DR7). Job class C. */
+  SMS_DELIVERY_PRUNE: 'sms.delivery_report.prune',
+  /**
+   * The daily SILENCE alarm (accepted SMS sends 48 h–7 days old with ⛔ report — a paused webhook) and the login-code
+   * delivery count line (Story 6.37b, DR11 / DR12). Job class C.
+   */
+  SMS_DELIVERY_SILENCE: 'sms.delivery_report.silence',
 } as const;
 
 /** Union of the registered queue names. */

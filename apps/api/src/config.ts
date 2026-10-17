@@ -248,6 +248,20 @@ export interface ApiConfig {
     readonly preflightKeySecretName?: string;
     readonly preflightKeyEnvFallback: string;
   };
+  /**
+   * Story 6.37b (DR1, DR9; `2026-10-17-347`; ADR-0042) — MSG91's SMS delivery-report webhook. The static header token is
+   * a Secret-Manager NAME (never the value), resolved ONCE at boot (`buildSmsReportWebhookAuth`); an OPTIONAL `next`
+   * token is accepted beside it for a rotation (§5.9's dual-secret window — each step is an api restart). Unset ⇒ the
+   * webhook answers 403 to everything (the api still starts). `rateMax` is the route's own per-IP limit (PROVISIONAL —
+   * roster Row 33 (c2)).
+   */
+  readonly smsReportWebhook: {
+    readonly tokenSecretName?: string;
+    readonly tokenEnvFallback: string;
+    readonly nextTokenSecretName?: string;
+    readonly nextTokenEnvFallback: string;
+    readonly rateMax: number;
+  };
 }
 
 const HOUR = 60 * 60 * 1000;
@@ -432,6 +446,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         ? { preflightKeySecretName: env['SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME'] }
         : {}),
       preflightKeyEnvFallback: env['SMS_GATEWAY_PREFLIGHT_KEY_ENV_FALLBACK'] ?? 'SMS_GATEWAY_PREFLIGHT_KEY',
+    },
+    // Story 6.37b (DR1, DR9) — MSG91's delivery-report webhook token NAMEs (optional) and its per-route limit.
+    smsReportWebhook: {
+      ...(env['SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME'] && env['SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME'].trim() !== ''
+        ? { tokenSecretName: env['SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME'] }
+        : {}),
+      tokenEnvFallback: env['SMS_REPORT_WEBHOOK_TOKEN_ENV_FALLBACK'] ?? 'SMS_REPORT_WEBHOOK_TOKEN',
+      ...(env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME'] && env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME'].trim() !== ''
+        ? { nextTokenSecretName: env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME'] }
+        : {}),
+      nextTokenEnvFallback: env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_ENV_FALLBACK'] ?? 'SMS_REPORT_WEBHOOK_TOKEN_NEXT',
+      rateMax: intEnv(env, 'SMS_REPORT_WEBHOOK_RATE_MAX', 1200),
     },
   };
 }

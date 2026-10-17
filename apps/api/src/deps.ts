@@ -40,6 +40,10 @@ import {
 import { noopTurnstileVerifier, type TurnstileVerifier } from './modules/auth/shared/turnstile.js';
 import { createSimpleWebAuthnProvider } from './modules/auth/shared/webauthn.js';
 import {
+  SMS_REPORT_WEBHOOK_DISABLED,
+  type SmsReportWebhookAuth,
+} from './modules/channel-webhooks/msg91-sms-reports.js';
+import {
   createDigiLockerProvider,
   createHttpDigiLockerTransport,
   createKycProviderRegistry,
@@ -140,6 +144,70 @@ async function buildTurnstileVerifier(config: ApiConfig): Promise<TurnstileVerif
     );
   }
   return createCloudflareTurnstileVerifier({ secret, failOpen: config.turnstile.failOpen });
+}
+
+/** The boot-log seam of {@link buildSmsReportWebhookAuth} (a test records it; default `console`). */
+export interface SmsReportWebhookBootLog {
+  warn(line: string): void;
+  error(line: string): void;
+}
+
+/** A webhook token is usable when, trimmed, it is at least this long (DR1 — a 32-byte random token). */
+export const SMS_REPORT_WEBHOOK_TOKEN_MIN_LENGTH = 32;
+
+/**
+ * Story 6.37b (DR1; `2026-10-17-347`; ADR-0042) — resolve MSG91's delivery-report webhook token(s) ONCE at boot. ⭐ The api
+ * ALWAYS starts (refusing would restart-loop every route — 6.37 T13); only the webhook's state changes, per DR1's table:
+ * - the current NAME unset ⇒ disabled (403 to everything); in production ONE warning (+ `next ignored` when a next NAME
+ *   is set), elsewhere ⛔ line;
+ * - the current NAME set but unreadable / blank / under 32 characters ⇒ disabled; ONE error naming the secret and the
+ *   class (`unavailable` / `empty` / `too_short`), in every environment;
+ * - the current usable ⇒ enabled on it; a next NAME set and usable ⇒ enabled on both; a next that fails as above ⇒
+ *   the current only (a broken rotation half ⛔ disables a working token) + ONE error naming the next secret.
+ * Lines carry secret NAMES only, ⛔ a value. Each state holds until the next restart (⛔ re-read at runtime).
+ */
+export async function buildSmsReportWebhookAuth(input: {
+  readonly config: Pick<ApiConfig, 'nodeEnv' | 'smsReportWebhook'>;
+  readonly resolveSecret: (secretName: string, opts: { envFallback: string }) => Promise<string>;
+  readonly log?: SmsReportWebhookBootLog;
+}): Promise<SmsReportWebhookAuth> {
+  const { config, resolveSecret } = input;
+  const log = input.log ?? { warn: (l: string) => console.warn(l), error: (l: string) => console.error(l) };
+  const c = config.smsReportWebhook;
+  const read = async (name: string, envFallback: string): Promise<{ token: string } | { failure: 'unavailable' | 'empty' | 'too_short' }> => {
+    let value: string;
+    try {
+      value = await resolveSecret(name, { envFallback });
+    } catch {
+      return { failure: 'unavailable' };
+    }
+    const token = typeof value === 'string' ? value.trim() : '';
+    if (token === '') return { failure: 'empty' };
+    if (token.length < SMS_REPORT_WEBHOOK_TOKEN_MIN_LENGTH) return { failure: 'too_short' };
+    return { token };
+  };
+
+  if (c.tokenSecretName === undefined) {
+    if (config.nodeEnv === 'production') {
+      log.warn(
+        `[deps] sms report webhook disabled: SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME unset` +
+          (c.nextTokenSecretName !== undefined ? ' (next ignored)' : ''),
+      );
+    }
+    return SMS_REPORT_WEBHOOK_DISABLED;
+  }
+  const current = await read(c.tokenSecretName, c.tokenEnvFallback);
+  if ('failure' in current) {
+    log.error(`[deps] sms report webhook disabled: secret '${c.tokenSecretName}' ${current.failure}`);
+    return SMS_REPORT_WEBHOOK_DISABLED;
+  }
+  if (c.nextTokenSecretName === undefined) return { current: current.token, next: null };
+  const next = await read(c.nextTokenSecretName, c.nextTokenEnvFallback);
+  if ('failure' in next) {
+    log.error(`[deps] sms report webhook next token ignored: secret '${c.nextTokenSecretName}' ${next.failure}`);
+    return { current: current.token, next: null };
+  }
+  return { current: current.token, next: next.token };
 }
 
 /**
@@ -423,6 +491,8 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // Secret Manager in prod; an ephemeral ES256 keypair in dev/CI.
     memberJwt: await resolveMemberJwtKeys(config),
     turnstile: await buildTurnstileVerifier(config),
+    // Story 6.37b (DR1) — MSG91's delivery-report webhook token(s), boot-resolved; the api starts in every case.
+    smsReportWebhook: await buildSmsReportWebhookAuth({ config, resolveSecret: resolveSecretValue }),
     webauthn: createSimpleWebAuthnProvider({
       rpId: config.webauthn.rpId,
       rpName: config.webauthn.rpName,

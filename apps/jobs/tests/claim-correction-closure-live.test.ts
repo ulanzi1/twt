@@ -340,6 +340,24 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
     expect(await rowsOf(s.claimCaseId, ['closure_notice'])).toEqual([expect.objectContaining({ outcome: 'accepted' })]);
   });
 
+  it('⭐ 6.37b DR3 / AC1 — the closure notice carries CRQID `cr` + its OWN closure_notice row id', async () => {
+    const s = await seed({ contactLocale: 'en' });
+    await reach(s);
+    await request(s);
+    await approve(s);
+    const h = harness();
+    await sweepOn(h, day(s.day0, 97));
+    const notices = h.enqueued.filter((e) => e.queue === 'claim.correction.closure_notice');
+    expect(notices).toHaveLength(1);
+    expect(await runClosureNoticeChild(h.deps, notices[0]!.data as JobEnvelope<ClosureNoticePayload>, 'job-c1')).toEqual({ status: 'sent', outcome: 'accepted' });
+    const { rows } = await pool.query<{ reminder_id: string }>(
+      "SELECT reminder_id FROM claim_correction_reminders WHERE claim_case_id = $1 AND purpose = 'closure_notice'",
+      [s.claimCaseId],
+    );
+    expect(rows).toHaveLength(1);
+    expect(h.sent.map((m) => m.correlationId)).toEqual([`cr${rows[0]!.reminder_id.replace(/-/g, '')}`]);
+  });
+
   it('⭐ `-274` 2 — ⛔ a text to a known-dead number: a closure LETTER is owed and CHASED from the closure date (day 7, daily to 12, the Pariwar Admin on day 13)', async () => {
     const s = await seed();
     const da = await shepherd(s.claimCaseId);

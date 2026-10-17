@@ -9,7 +9,7 @@ OF that sha; Task 0.1 re-checks what moved. Built in its OWN worktree `.claude/w
 `.claude/worktrees/6-31` (row 6-31, also at `dae96d9b`) has ALREADY WRITTEN — uncommitted, 2026-10-17 — its own claims on migration
 0167, decision id `-347`, roster Row 33 and ledger suffix `2026-10-17k` (T9). Whichever lands on a branch first keeps the number.
 
-STATUS: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G recorded as `-347` (`bf1d57f7`); the Panel ruled PQ1 and its
+STATUS: `review` (2026-10-17 — Tasks 1–6 and 8 built; ci:local green on :5433). Before: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G recorded as `-347` (`bf1d57f7`); the Panel ruled PQ1 and its
 follow-ups (`-350`, `-351`, `-352`); PQ2 was withdrawn (`-348`). ⭐ SPLIT (`-353`): Task 7 — the Panel's delivery ladder and the "not
 delivered" conclusion — is now row `6-37c-undelivered-reminder-ladder`. THIS story builds Tasks 1–6 (receiving and recording reports,
 changing nothing a person receives) and closes with Task 8. No claim-text template id until Row 33 has closed AND 6-37c is `done`.
@@ -40,7 +40,7 @@ routed, ⛔ answered); I = invariants (I1–I9); T = traps (T1–T22). Decision-
 
 # Story 6.37b: The Trust learns whether each text actually arrived — MSG91's delivery reports, received, kept without the phone number, matched to the exact send, and (once the Panel rules) a text the network reports undelivered no longer counts as "reached" `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37 sends every SMS through MSG91, but MSG91's answer at send time is only
 > *"request received"* — HTTP 200 `type:"success"` even for a fake key (6.37 F9). Whether the operator delivered the text arrives
@@ -475,6 +475,9 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   migration comment states that the correlator's UPSERT, lease / settle UPDATE and the prune's DELETE depend on Row 26 choosing
   BYPASSRLS + `twt_service` grants. Cost: under Row 26 (a) every correlator / prune write is a `42501` in production — the story ships
   a write path that its own roster's leading option breaks. Either way both policy-regression specs pin the chosen grants.
+  ⚠ **2026-10-18 correction (dev, BigDev approved):** G-a's `sms_send_deliveries` column list above is NARROWER than `-347` as committed —
+  decision 7 (DR6) makes `first_reported_at` the earliest receive time, which needs UPDATE on it. Migration 0167 grants `first_reported_at`
+  too (six columns); `-347` decision 6 names ⛔ column list, so ⛔ new decision entry (Debug Log (k)(1)). The list above is kept as written.
 - **DR6 — The matching rule (I6): one ordered table, first match wins.** Run on each claimed `pending` inbox row; lookups on the
   service pool (F21). AC notation `a:b` means `match_state = a`, `match_detail = b`; `match_state` ∈
   `pending|matched|other_attempt|unmatched|ignored|otp` (DR7's CHECK), `match_detail` ≤ 64 `[a-z_:]`. "Retry" = stay `pending`,
@@ -861,7 +864,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
+- [x] **Task 0 — governance FIRST (AC0). ⛔ No code.**
   - [x] 0.1 `git fetch origin`; `git diff --name-only dae96d9b..origin/main -- packages/channels apps/jobs/src apps/api/src
         packages/domain/migrations packages/domain/src/claim infra docs/launch-gate-inventory docs/adr`; re-read any cited file that
         moved. Check the 6-31 worktree / branch for its claims on 0167, `-347`, ADR-0042, Row 33 and the ledger letter (T9 — already
@@ -900,17 +903,17 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
         last_updated: 2026-10-17<next free letter after k> (…)` and the `last_updated: >-` list)
         ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML parses).
 
-- [ ] **Task 1 — the CRQID (AC1).**
-  - [ ] 1.1 `packages/domain/src/sms-delivery/correlation.ts` (+ index export): the grammar `^(cr|ce|sn|pm|ot)[0-9a-f]{32}$`,
+- [x] **Task 1 — the CRQID (AC1).**
+  - [x] 1.1 `packages/domain/src/sms-delivery/correlation.ts` (+ index export): the grammar `^(cr|ce|sn|pm|ot)[0-9a-f]{32}$`,
         `formatSmsCorrelationId({kind, rowId})` (lower-case, ⛔ dashes; throws on a non-uuid) and `parseSmsCorrelationId(s)` — the ONE
         TS copy (DR3); unit legs.
-  - [ ] 1.2 `packages/channels/src/providers/sms-app.ts`: `SmsGatewayMessage.correlationId?`; `buildFlowBody` puts `CRQID` INSIDE the
+  - [x] 1.2 `packages/channels/src/providers/sms-app.ts`: `SmsGatewayMessage.correlationId?`; `buildFlowBody` puts `CRQID` INSIDE the
         single recipient object when present (update its doc comment — `:303` says ⛔); `CRQID` added to `localRefusal`'s reserved
         recipient keys (`:316-320`); the defence-only local refusal `dlt_template_not_approved:bad_correlation_id` (grammar from
         `@twt/domain`). `sms-dlt.ts`: `SmsProviderDeps.correlationId?` copied into the message by `buildGatewayMessage`; the stale
         6-37b comments (F11 — `sms-app.ts:18`, `sms-dlt.ts:100`, `sms-errors.ts:15`, `sms.test.ts:93`, `sms-otp-preflight.ts:6`);
         `getStatus` stays `unknown`.
-  - [ ] 1.3 `claim-dlt-sms-send.ts`: `ClaimDltSmsInput.correlation: {kind: 'cr'|'ce'|'sn'|'pm'; rowId: string}`, validated by
+  - [x] 1.3 `claim-dlt-sms-send.ts`: `ClaimDltSmsInput.correlation: {kind: 'cr'|'ce'|'sn'|'pm'; rowId: string}`, validated by
         `formatSmsCorrelationId` at the TOP of `sendClaimDltSms`, OUTSIDE every try (config `:244-256`, provider-build
         `:306-311`, send `:318-342`) — ONE `console.error` line `[jobs] sms.bad_correlation:<kind>` (⛔ the id) then a THROW
         (`:119-124`'s rule), ⛔ a final (T22; pg-boss logs ⛔ handler throw — DR3); the provider only copies the formatted string. The wrapper
@@ -918,14 +921,14 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
         (`certificate_reminder` ⇒ `ce`, else `cr`). Callers: reminder `:430`, closure `claim-correction-closure.ts:371`, certificate
         `claim-certificate-reminders.ts:658` (via the wrapper, `begun.reminderId`); suspicion `claim-suspicion-notices.ts:457`
         (`{kind:'sn', rowId: begun.noticeId}`); peer mesh `claim-peer-mesh-requests.ts:689` (`{kind:'pm', rowId: pingId}`).
-  - [ ] 1.4 `apps/api/src/modules/auth/shared/sms-step-up-delivery.ts`: `SmsDltStepUpDeliveryDeps.correlationHex?: () => string`
+  - [x] 1.4 `apps/api/src/modules/auth/shared/sms-step-up-delivery.ts`: `SmsDltStepUpDeliveryDeps.correlationHex?: () => string`
         (default `() => randomBytes(16).toString('hex')`); the message passed to `messaging.send` (`:206`) carries `correlationId:
         'ot' + correlationHex()`.
-  - [ ] 1.5 Tests: `sms.test.ts:254-258` updated (inside the recipient) + `:74` gains a `correlationId` leg; the T15 list (51 calls
+  - [x] 1.5 Tests: `sms.test.ts:254-258` updated (inside the recipient) + `:74` gains a `correlationId` leg; the T15 list (51 calls
         — a typecheck break first; uuid-shaped fixture row ids in the two `msg91-*` suites); the two api whole-body checks (AC1); a
         per-caller leg; a core leg (bad correlation ⇒ throw, ⛔ `fetch`, row stays `attempting`). `git grep -n "CRQID\|short_url" --
         packages apps` before declaring Task 1 done.
-- [ ] **Task 2 — the migration 0167 (DR5, DR5-G, DR7; AC8, AC10).** `packages/domain/migrations/0167_sms-delivery-reports.sql`
+- [x] **Task 2 — the migration 0167 (DR5, DR5-G, DR7; AC8, AC10).** `packages/domain/migrations/0167_sms-delivery-reports.sql`
       (hand-authored; the journal entry idx 167, `when` 1794195600011 — re-check T9): `sms_delivery_report_inbox` (global RLS — ENABLE +
       FORCE, a per-command policy for each granted command — DR7's clause forms) and `sms_send_deliveries` (tenant RLS — the 0128 `:69-73` per-command shape; PK); CHECKs on `send_kind`,
       `delivery_state`, `match_state`, `match_detail`, the `request_id` / `crqid` grammars (the SQL mirror of 1.1); the dedupe as an
@@ -933,7 +936,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       as DR5-G was answered (+ a comment naming roster Row 26 for jobs' production role — F21). Drizzle schema files in
       `packages/domain/src/schema/` (`uniqueIndex().on(sql\`…\`)`) + their index export. Policy-regression specs for BOTH tables
       (`packages/domain/tests/integration/rls/`). ⛔ Touch any send table (I2).
-- [ ] **Task 3 — the domain accessors (AC6, AC7, AC10).** `packages/domain/src/sms-delivery/` (with 1.1):
+- [x] **Task 3 — the domain accessors (AC6, AC7, AC10).** `packages/domain/src/sms-delivery/` (with 1.1):
       `persistSmsDeliveryReports(tx, rows)` (`ON CONFLICT DO NOTHING`, returns inserted count), `claimDueSmsDeliveryReports(db, {limit,
       leaseMs, now})` (the lease — T2; `clampLimit` default 200 / cap 500 APPLIED BY HAND if the claim is raw SQL — DR8),
       `settleSmsDeliveryReport(...)` (the CAS; a retry clears `lease_until`), `upsertSmsSendDelivery(...)` (DR6's contract table IN SQL
@@ -941,7 +944,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       columns: `pariwar_id`, `outcome` / pings `send_outcome`, `provider_message_id`, `updated_at` / pings `send_updated_at`, and
       `purpose` on `claim_correction_reminders`), `pruneSettledSmsDeliveryReports(db, {olderThanDays})`, `readSmsSendDeliveries(tx,
       kind, rowIds)`. Unit + live legs.
-- [ ] **Task 4 — the route (AC2–AC4, AC13).** `apps/api/src/modules/channel-webhooks/`: `msg91-sms-reports.ts` (the projection —
+- [x] **Task 4 — the route (AC2–AC4, AC13).** `apps/api/src/modules/channel-webhooks/`: `msg91-sms-reports.ts` (the projection —
       DR2; the JSON parse in a try / catch; pure, unit-tested exhaustively) + the handler (header `x-twt-msg91-secret-token` as an
       INLINE literal; TWO DIRECT `timingSafeEqualString` calls) + the route registered in its OWN encapsulated scope with
       `removeAllContentTypeParsers()` + a `'*'` buffer parser (DR10), `schema: { hide: true }`, DR9's `rateLimit`. Global write: a
@@ -957,13 +960,13 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       `validate` before and after. `login-wall.spec.ts` allowlist entry. Tests: `apps/api/tests/integration/channel-webhooks-msg91.spec.ts`
       (the header read, 403, `{received:true}` legs from `channel-webhooks-telegram.spec.ts`'s harness — ⛔ its per-request secret or
       scope tx) + unit + the 429 leg (DR9) + the `logStream` recorder legs (AC3).
-- [ ] **Task 5 — the correlator, prune, silence and OTP line (AC5–AC7, AC9, AC10).** `apps/jobs/src/sms-delivery-correlator.ts` (DR4,
+- [x] **Task 5 — the correlator, prune, silence and OTP line (AC5–AC7, AC9, AC10).** `apps/jobs/src/sms-delivery-correlator.ts` (DR4,
       DR6's TABLE row by row, DR8 — the status table data-driven), `sms-delivery-prune.ts` (daily `'25 3 * * *'` IST),
       `sms-delivery-silence.ts` (DR12's per-table queries + DR11's OTP line, daily `'40 3 * * *'` IST); queue constants in
       `QUEUE_NAMES` (`packages/queue/src/index.ts:41`); registered in `apps/jobs/src/boot.ts` with the service pool (the
       `tg-webhook-processor` / `device-token-cleanup` wiring). Alarms through each module's `onAlarm?` dep (default `console.warn`,
       unwired in boot — DR8; ⛔ an id, ⛔ a number, ⛔ a request id in an alarm — the kind and counts only). Live tests :5433.
-- [ ] **Task 6 — the gates and the untouched (AC2, AC8, AC12, AC13).** I2's diff + grep and I8's diff EMPTY; AC8's live leg (every
+- [x] **Task 6 — the gates and the untouched (AC2, AC8, AC12, AC13).** I2's diff + grep and I8's diff EMPTY; AC8's live leg (every
       AC6 send-table row byte-identical before / after; `delivered_at` NULL) and the statement recorder on the correlator's client (⛔
       `UPDATE` of a send table); `pnpm --filter @twt/channels test:determinism`; `pnpm dlt-typed-variables:test && pnpm
       dlt-typed-variables:check` (`git add` new files first); the access-wrapper invariants + AC2's `lib.test.ts` leg + a REVERT-SANITY
@@ -980,7 +983,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       eligibility, the jobs letter-chase / escalation legs, and `foundDeadOn`'s stickiness; the Policy meaning re-checked. ⚠ The
       domain type change ripples into `correction-chase-read.ts` fixtures ([[feedback_story_validate_footguns]] #1 — domain vs
       contracts shape; ⛔ a contracts change is expected).
-- [ ] **Task 8 — records and close (AC13).** ⭐ (`-353`) every disposition below that depends on Task 7 or on the Panel's ruling is
+- [x] **Task 8 — records and close (AC13).** ⭐ (`-353`) every disposition below that depends on Task 7 or on the Panel's ruling is
       made by row 6-37c when it closes; this story records only that the reports are received and recorded. `pnpm ci:local` at :5433; the deferred-work dispositions ([[feedback_closure_language_precision]]
       — ⛔ collapsed): *"⛔ DLT send consumes a delivery report …"* — under B, **Closed by** Task 7 for the CORRECTION CHASE's D22,
       **⛔ addressed** for the certificate / peer-mesh staff views (→ DR13's new item) and **narrowed** to silence (DR12); under A,
@@ -1176,6 +1179,8 @@ them at Task 0.1.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37b`, Tasks 1–6 and 8 (2026-10-17).
+
 ### Debug Log References
 
 - **(a) Task 0.1 (2026-10-17).** `git fetch origin`: `origin/main` == `dae96d9b` (⛔ cited file moved). `-347` free on every ref
@@ -1251,11 +1256,70 @@ them at Task 0.1.
   1–6 and 8; the claim-text gate now also waits for 6-37c (roster Row 32 note (9)). The architecture §3.4 amendment for WhatsApp contact
   about a claim (the claimant on the filing agreement, the nominee on the DPDP basis, go-live conditions G1–G3) is drafted for the Panel:
   `_bmad-output/planning-artifacts/sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` — not yet presented.
+- **(k) Dev — Tasks 1–6 (2026-10-17).** `git fetch origin`: `origin/main` == `dae96d9b` (⛔ moved). 0167 free on every ref and in the 6-31
+  worktree (6-31 still has ⛔ code; its story keeps 0167 PROVISIONAL — T9: this branch takes 0167, 6-31 renumbers). `pnpm install
+  --frozen-lockfile` in the worktree (⛔ new dependency). 0167 applied to :5433 ONLY (⛔ :5432 — the pre-push hook will migrate it there;
+  push with :5433 explicitly). Found and decided while building — each the author's, ⛔ a DR changed:
+  (1) ⚠ **`first_reported_at` is in `sms_send_deliveries`' UPDATE grant** although DR5-G (G-a)'s column list omits it: DR6's counting
+  contract (written after G-a, at BigDev's 4th pre-approval requirement) moves it to the earlier of two out-of-order reports, which an
+  UPDATE without that column cannot do. Recorded in 0167's header; both policy-regression specs pin the six columns. Put to BigDev.
+  (2) The core refuses `ot` as a claim-text kind (it is in the grammar, but names ⛔ send row): `correlationIdOrCrash` checks the four row
+  kinds before formatting — the same crash, one line, ⛔ a final.
+  (3) The failure-reason cleaner strips every Unicode control / format / line-separator character and masks a ≥ 7-run of ANY script's
+  digits — a superset of 0167's `[[:cntrl:]]` / `[0-9]{7}` CHECKs, so a cleaned value can ⛔ fail the INSERT (a 5xx counts toward
+  auto-pause).
+  (4) DR10 as built: the content type never decides — a valid JSON report sent as `text/plain` or with ⛔ content type is parsed and
+  stored; an unparseable / non-report body is `unusable_body` (200). AC3's "⛔ content type" leg is the ⛔-body case plus a non-JSON body
+  (one wrong first expectation of mine, corrected — the row it stored was deleted).
+  (5) The webhook's single global write is `runGlobalAppTx` (`multi-tenant/scope-tx.ts`) — `openScopeTx`'s BEGIN / `SET LOCAL ROLE twt_app`
+  without `setPariwarScope`; a failed COMMIT rethrows (AC4's leg drives a pool whose COMMIT fails ⇒ 5xx, ⛔ row).
+  (6) The plan-expectations note (`infra/cloudflare/.terraform-plan-expectations.md`) said the default ruleset holds ONLY the app-link
+  skip — updated (resource count unchanged). `terraform fmt -check` / `validate` green on HEAD BEFORE the edit and after; the init's
+  `.terraform/` and lock file were removed (⛔ on HEAD).
+  (7) Revert-sanity (Task 6): `if (timingSafeEqualString(provided, auth.current))` swapped to `provided === auth.current` in the real
+  handler ⇒ `pnpm access-wrapper:check` RED (exit 1, finding (2) "timing side-channel"); reverted ⇒ green.
+  (8) Mutation checks, each reverted: the counting upsert made latest-wins / ⛔ `LEAST` and the settle's CAS without `attempts` ⇒ 4 domain
+  legs red; DR6 row 7 without the request-id comparison ⇒ the unit and live (7) legs red; the login-wall entry removed ⇒ the hermetic
+  guard red.
+  (9) AC12: the branch's diff against `main` includes `dlt-template-requests-6-19.md` — the `-349` records commit (`03021c30`, a new
+  section, before any code); Tasks 1–6 edit ⛔ i18n, registry text or sheet table.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6.37b`, 2026-10-17; four
   parallel research passes: the send tables + D22, the governance records, MSG91's live help / docs pages, the webhook house patterns).
+- **Task 1 — the CRQID (AC1).** `@twt/domain` `smsDelivery` namespace: the grammar `^(cr|ce|sn|pm|ot)[0-9a-f]{32}$`,
+  `formatSmsCorrelationId` / `parseSmsCorrelationId` (the one TS copy). The Flow body carries `CRQID` INSIDE the one recipient;
+  `CRQID` is a reserved recipient key; an id outside the grammar is refused locally (`dlt_template_not_approved:bad_correlation_id`,
+  defence only). `ClaimDltSmsInput.correlation` is REQUIRED and validated FIRST in `sendClaimDltSms`, outside every `try` — a bad one logs
+  `[jobs] sms.bad_correlation:<kind>` and throws (⛔ config read, ⛔ provider, ⛔ fetch). The wrapper derives `ce` / `cr` from the message;
+  suspicion passes `sn` + `noticeId`, peer mesh `pm` + `pingId`. The OTP adapter sends `ot` + 32 hex from `correlationHex` (default 16
+  random bytes). Tests: domain 19; channels +12 legs (419 green); core +7 legs; one live leg per caller (5 suites, 172 green); the two api
+  whole-body checks and the 6.37 fixtures updated (uuid-shaped row ids), ⛔ deleted.
+- **Task 2 — migration 0167 (AC8, AC10).** `sms_delivery_report_inbox` (GLOBAL, FORCE RLS, one `true` policy per granted command; the
+  dedupe EXPRESSION index on exactly (request id, CRQID, status code), blank-coalesced) and `sms_send_deliveries` (tenant RLS, PK (kind,
+  row)); grants G-a (+ `first_reported_at` — Debug Log (k)(1)); ⛔ send table named (I2's diff and grep EMPTY). Two policy-regression specs
+  (47 legs).
+- **Task 3 — the domain accessors.** persist (`ON CONFLICT DO NOTHING`, ≤ 100), the leased claim (raw SQL, `clampLimit` by hand, `SKIP
+  LOCKED`), the CAS settle (a retry clears the lease), DR6's counting upsert in ONE statement (⛔ `WHERE`), the per-kind lookup, the prune,
+  the scoped read, the silence and OTP counts. 21 live legs (+ mutation checks).
+- **Task 4 — the route (AC2–AC4).** `POST /api/v1/webhooks/msg91/sms-reports` in its own scope (`'*'` buffer parser — ⛔ 415 / 400 before
+  auth), header `x-twt-msg91-secret-token` read inline, two direct `timingSafeEqualString` compares (current, next), boot-resolved tokens
+  (`buildSmsReportWebhookAuth` — DR1's table, the api always starts), DR2's projection, `runGlobalAppTx`, one alarm line per request,
+  per-route limit (DR9). `PUBLIC_ALLOWLIST`, compose secret names, the Cloudflare skip rule. Tests: projection 37, boot builder 14, route 31
+  (incl. the 429, the failed COMMIT, ⛔ KMS / Secret Manager / fetch / `console.*`, the number in ⛔ log line).
+- **Task 5 — the jobs (AC5–AC7, AC9, AC10).** `sms-delivery-correlator.ts` (DR4's table as data, DR6 row by row, one transaction per row,
+  alarms by kind and count), `sms-delivery-prune.ts` (30 days by `settled_at`), `sms-delivery-silence.ts` (DR12 + DR11's line); three
+  queue names; registered in boot on the service pool (`onAlarm` ⛔ wired — Row 32 (h)). Tests: 40 unit, 32 live (every DR6 row, every
+  kind matched under its own Pariwar, AC6 (8f) (8g) (8i), AC7 crash / atomicity / concurrency / limit, AC8 byte-identical + a statement
+  recorder, AC9, AC10).
+- **Task 6 — the gates.** I2 diff + grep and I8 diff EMPTY; `test:determinism`, `dlt-typed-variables`, `access-wrapper-invariants` green;
+  the AI-5-1 gate-bites legs in `lib.test.ts` + the revert-sanity run (Debug Log (k)(7)); global-fetch recorders at zero in the new api,
+  jobs and domain live suites.
+- **Task 8 — records.** `deferred-work.md`: the DLR item annotated (reports received and recorded; ⛔ closed — D22 and the views are row
+  6-37c's); both at-least-once items annotated (the DLR trigger FIRED; a second request is DETECTED and alarmed, ⛔ prevented — OPEN on an
+  idempotency key); a new section of five items (the API-failed mapping, the unused `delivered_at`, the pull fallback, the staff views,
+  the boot-time token read). Per `-353`, every Panel-dependent disposition is row 6-37c's.
 
 ### File List
 
@@ -1268,6 +1332,28 @@ them at Task 0.1.
 - `docs/launch-gate-inventory/inventory-roster.md` (Row 33; Row 32 note (7); Row 30 note (7))
 - `_bmad-output/planning-artifacts/epics.md` (Story 6.37b entry)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/deferred-work.md` (Task 8 dispositions)
+- `packages/domain/src/sms-delivery/correlation.ts` (new), `reports.ts` (new), `index.ts` (new)
+- `packages/domain/src/index.ts` (the `smsDelivery` namespace)
+- `packages/domain/src/schema/sms_delivery_report_inbox.ts` (new), `sms_send_deliveries.ts` (new), `index.ts`
+- `packages/domain/migrations/0167_sms-delivery-reports.sql` (new), `meta/_journal.json`
+- `packages/domain/tests/sms-delivery/correlation.test.ts` (new)
+- `packages/domain/tests/integration/sms-delivery/reports.spec.ts` (new)
+- `packages/domain/tests/integration/rls/sms-delivery-report-inbox-policy-regression.spec.ts` (new), `sms-send-deliveries-policy-regression.spec.ts` (new)
+- `packages/channels/src/providers/sms-app.ts`, `sms-dlt.ts`, `sms-errors.ts` (comment); `packages/channels/tests/sms.test.ts`
+- `packages/queue/src/index.ts` (three queue names)
+- `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`, `claim-correction-reminders.ts`, `claim-correction-closure.ts`, `claim-certificate-reminders.ts`, `claim-suspicion-notices.ts`, `claim-peer-mesh-requests.ts`
+- `apps/jobs/src/sms-delivery-correlator.ts` (new), `sms-delivery-prune.ts` (new), `sms-delivery-silence.ts` (new), `boot.ts`, `sms-otp-preflight.ts` (comment)
+- `apps/jobs/tests/claim-correction-send.test.ts`, `msg91-real-client-caller.test.ts`, `msg91-no-network.test.ts`, `claim-correction-reminders-live.test.ts`, `claim-correction-closure-live.test.ts`, `claim-certificate-reminders-live.test.ts`, `claim-suspicion-notices-live.test.ts`, `claim-peer-mesh-requests-live.test.ts`
+- `apps/jobs/tests/sms-delivery-correlator.test.ts` (new), `sms-delivery-correlator-live.test.ts` (new)
+- `apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts` (new), `handlers.ts`, `routes.ts`, `index.ts`
+- `apps/api/src/modules/multi-tenant/scope-tx.ts` (`runGlobalAppTx`)
+- `apps/api/src/modules/auth/shared/sms-step-up-delivery.ts`
+- `apps/api/src/config.ts`, `deps.ts`, `context.ts`
+- `apps/api/tests/integration/_setup.ts`, `login-wall.spec.ts`, `channel-webhooks-msg91.spec.ts` (new)
+- `apps/api/tests/unit/msg91-sms-reports.test.ts` (new), `sms-report-webhook-auth.test.ts` (new), `sms-step-up-delivery.test.ts`, `member-step-up-delivery-wiring.test.ts`
+- `scripts/access-wrapper-invariants/lib.test.ts`
+- `infra/cloudflare/waf.tf`, `infra/cloudflare/.terraform-plan-expectations.md`, `infra/dokploy/compose.yaml`
 
 ## Change Log
 
@@ -1286,3 +1372,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.10 | The ladder's six follow-ups RULED — `-351`: 1 A, 2 (the filing agreement as consent — its wording gap put back with counsel), 3 B, 4 A, 5 A (call recorded by hand; phase 2 automation), 6 A. Debug Log (h). |
 | 2026-10-17 | 1.11 | Consent RULED — `-352`: Q1 B (the agreement names text, WhatsApp, call, post and any later means), Q2 (WhatsApp and calls to claimant and nominee; the nominee's basis the Panel's stated DPDP ground). Counsel / Meta / architecture-amendment items recorded. Debug Log (i). |
 | 2026-10-17 | 1.12 | SPLIT (`-353`): Task 7 and AC11 moved to row `6-37c-undelivered-reminder-ladder` (kept as written, marked MOVED); DR14 now (b); Task 8's ladder-dependent dispositions move to 6-37c; the claim-text gate waits for 6-37c too; the §3.4 amendment proposal drafted. Debug Log (j). |
+| 2026-10-17 | 1.13 | DEV (`bmad-dev-story 6.37b`): Tasks 1–6 and 8 done — the CRQID on every SMS (AC1), MSG91's delivery-report webhook (AC2–AC4), migration 0167's inbox and per-send delivery record with their policy-regression specs (AC8, AC10), the domain accessors, the jobs correlator / prune / silence check (AC5–AC7, AC9), the gates (AC12, AC13); deferred-work dispositions per `-353`. Debug Log (k): `first_reported_at` joins G-a's UPDATE grant (DR6's contract — put to BigDev), the core refuses `ot`, the cleaner's superset of the CHECKs, the content type never decides, `runGlobalAppTx`, the revert-sanity and mutation runs. ci:local green on :5433 (lint fixed and the admin jsdom timeouts re-run alone). Status `review`. |

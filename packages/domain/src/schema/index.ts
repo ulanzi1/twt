@@ -59,6 +59,9 @@ export * from './otp_rate_buckets.js';
 // Story 5.6 — Postgres-backed per-MEMBER transactional-SMS send rate-bucket table. Mirrors otp_rate_buckets
 // but keyed per member and DELIBERATELY SEPARATE — an alert-SMS flood must never drain the OTP send budget.
 export * from './sms_rate_buckets.js';
+// Story 6.37b — MSG91's delivery reports: the global report inbox + the per-send delivery record (migration 0167).
+export * from './sms_delivery_report_inbox.js';
+export * from './sms_send_deliveries.js';
 // Story 3.3a — DigiLocker KYC provider substrate. `digilocker_public_certs` is a GLOBAL
 // issuer-cert cache (no tenant dimension; member-auth carve-out posture);
 // `kyc_transactions` is tenant-isolated provider OAuth/PKCE state (stores NO eAadhaar PII).

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -380,5 +382,33 @@ describe('AI-6-1 — claim-surface scope extension (compensating-audit invariant
     expect(
       scanCompensatingAuditInvariant('apps/api/src/modules/claims/claims.ground-inspection.handlers.ts', src),
     ).toHaveLength(0);
+  });
+});
+
+// ⭐ Story 6.37b (AC2, I5, T13) — the gate BITES on MSG91's delivery-report handler: its token is BOOT-resolved (⛔ a
+// `resolve*Secret` call in the handler), so the handler is a verification context ONLY because it reads the inline
+// `'x-twt-msg91-secret-token'` literal and calls `timingSafeEqualString` directly. A copy with either compare regressed to
+// `===` must be FLAGGED; the real handler must pass. (Story 6.37b validation found a boot-resolved token under any
+// other header name leaves the gate vacuous — this leg keeps the shape honest.)
+describe('scanSecretCompareInvariant — MSG91 delivery-report handler (Story 6.37b, AC2)', () => {
+  const FILE = 'apps/api/src/modules/channel-webhooks/handlers.ts';
+  const real = readFileSync(new URL('../../apps/api/src/modules/channel-webhooks/handlers.ts', import.meta.url), 'utf8');
+
+  it('the real handler passes, and it does compare the token with `timingSafeEqualString` (the leg is ⛔ vacuous)', () => {
+    expect(real).toContain("request.headers['x-twt-msg91-secret-token']");
+    expect(real).toContain('timingSafeEqualString(provided, auth.current)');
+    expect(real).toContain('timingSafeEqualString(provided, auth.next)');
+    expect(scanSecretCompareInvariant(FILE, real)).toHaveLength(0);
+  });
+
+  it.each([
+    ['the current token', 'timingSafeEqualString(provided, auth.current)', 'provided === auth.current'],
+    ['the next token', 'timingSafeEqualString(provided, auth.next)', 'provided === auth.next'],
+  ])('a copy comparing %s with `===` is FLAGGED in receiveMsg91SmsReports', (_l, from, to) => {
+    const regressed = real.replace(from, to);
+    expect(regressed).not.toBe(real);
+    const f = scanSecretCompareInvariant(FILE, regressed);
+    expect(f).toHaveLength(1);
+    expect(f[0].fn).toBe('receiveMsg91SmsReports');
   });
 });

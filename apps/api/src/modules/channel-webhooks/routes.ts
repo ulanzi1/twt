@@ -61,3 +61,27 @@ export function registerChannelWebhookRoutes(instance: FastifyInstance, deps: Ap
     h.receiveTelegram,
   );
 }
+
+/**
+ * Story 6.37b (DR1, DR9, DR10; ADR-0042) — MSG91's SMS delivery-report webhook, in its OWN encapsulated scope (index.ts):
+ * every inherited content-type parser is removed and ONE `'*'` parser hands the handler the raw Buffer for ANY content
+ * type (or `undefined` with ⛔ body), so ⛔ request is a 415 / 400 BEFORE the token check — a 4xx counts toward MSG91's
+ * auto-pause (F6). The handler parses JSON itself (I3 — the parse error quotes the body). Its own per-IP limit REPLACES
+ * the global 300 / min for this route (DR9 — PROVISIONAL; the key is the spoofable `request.ip`, ADR-0042's residual).
+ * Public (the header token is the auth) — on the login-wall PUBLIC allowlist; hidden from OpenAPI.
+ */
+export function registerMsg91SmsReportRoute(instance: FastifyInstance, deps: AppDeps): void {
+  const h = createChannelWebhookHandlers(deps);
+  instance.removeAllContentTypeParsers();
+  instance.addContentTypeParser('*', { parseAs: 'buffer' }, (_req, body, done) => {
+    done(null, body);
+  });
+  instance.post(
+    '/api/v1/webhooks/msg91/sms-reports',
+    {
+      schema: { hide: true, tags: [WEBHOOK_TAG] },
+      config: { rateLimit: { max: deps.config.smsReportWebhook.rateMax, timeWindow: '1 minute' } },
+    },
+    h.receiveMsg91SmsReports,
+  );
+}

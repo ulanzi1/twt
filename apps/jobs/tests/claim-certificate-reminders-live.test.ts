@@ -297,6 +297,23 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
     expect((await rowsOf(s.cid)).filter((r) => r.purpose === 'family_sms').map((r) => [r.outcome, r.detail])).toEqual([['accepted', null]]);
   });
 
+  it('⭐ 6.37b DR3 / AC1 — the certificate reminder carries CRQID `ce` (the wrapper derives it) + its OWN row id', async () => {
+    const s = await seedWait({ mobiles: ['9812345678'], locale: 'en' });
+    const d0 = todayIst();
+    const h = harness();
+    h.setNow(tenAmIst(day(d0, 1)));
+    await runCertificateReminderSweep(h.deps, boss(h));
+    const jobs = smsFor(h, s.cid);
+    expect(jobs).toHaveLength(1);
+    expect(await child(h, jobs[0]!)).toEqual({ status: 'sent', outcome: 'accepted' });
+    const { rows } = await pool.query<{ reminder_id: string }>(
+      "SELECT reminder_id FROM claim_certificate_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms'",
+      [s.cid],
+    );
+    expect(rows).toHaveLength(1);
+    expect(h.sent.map((m) => m.correlationId)).toEqual([`ce${rows[0]!.reminder_id.replace(/-/g, '')}`]);
+  });
+
   it('⭐ Story 6.37 (MG5, AC9 (b) / (b2)) — a pre-flight TRANSIENT: the certificate reminder FAILS OPEN — SENT, `accepted`, ONE warning', async () => {
     const s = await seedWait({ mobiles: ['9812345678'], locale: 'en' });
     const d0 = todayIst();

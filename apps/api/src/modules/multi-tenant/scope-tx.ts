@@ -10,6 +10,7 @@
 // otherwise) and always releases the client.
 
 import { assertPariwarScopeSet, bindScopedDb, setPariwarScope } from '@twt/domain';
+import type pg from 'pg';
 
 import type { AppDeps } from '../../context.js';
 import type { ScopeTx } from '../../types.js';
@@ -75,5 +76,27 @@ export async function closeScopeTx(scopeTx: ScopeTx, commit: boolean): Promise<v
     // A ROLLBACK that fails on a broken connection is non-fatal — the client is destroyed on release.
   } finally {
     scopeTx.client.release();
+  }
+}
+
+/**
+ * Story 6.37b (DR7, I4; `2026-10-17-347`) — ONE transaction on a GLOBAL table (⛔ Pariwar: MSG91's delivery-report inbox)
+ * as `twt_app` — `openScopeTx`'s shape WITHOUT `setPariwarScope` (a Pariwar-less write cannot use it). BEGIN → `SET LOCAL
+ * ROLE twt_app` → `fn` → COMMIT; a FAILED COMMIT is RETHROWN as `closeScopeTx` does (⛔ a 2xx for a write that never
+ * landed); any throw rolls back. The client is always released.
+ */
+export async function runGlobalAppTx<T>(pool: AppDeps['pool'], fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`SET LOCAL ROLE ${REQUEST_ROLE}`);
+    const out = await fn(client);
+    await client.query('COMMIT');
+    return out;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw err;
+  } finally {
+    client.release();
   }
 }

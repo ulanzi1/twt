@@ -64,6 +64,29 @@ resource "cloudflare_ruleset" "waf_custom" {
     enabled = true
   }
 
+  # Rule 0b — Story 6.37b (`2026-10-17-347` DR9; ADR-0042): MSG91's SMS delivery-report webhook. MSG91's servers are a
+  # bot by design; a challenge is ⛔ a clean 2xx, so MSG91 RETRIES it and then AUTO-PAUSES the webhook (> 2% final
+  # failures over ≥ 10 requests) — and a paused webhook goes SILENT (the api's silence alarm is the only detector).
+  # Skips, for EXACTLY this one POST path, the same edge checks Rule 0 skips (BIC, security level, SBFM and Rules 1–3).
+  # ⚠ A skip is ⛔ trust: the api still refuses (403) any request without the boot-resolved header token. A SEPARATE rule
+  # (⛔ the path added to Rule 0's expression — those files are GETs with their own reason). Free-plan Bot Fight Mode
+  # cannot be skipped — whether it is on is recorded at roster Row 33 (c). OPERATOR-applied (Row 33 (c)).
+  rules {
+    ref         = "msg91_sms_reports_skip"
+    description = "Skip BIC, security level, SBFM and the custom rules for MSG91's SMS delivery-report webhook (Story 6.37b)"
+    expression  = "http.request.uri.path eq \"/api/v1/webhooks/msg91/sms-reports\" and http.request.method eq \"POST\""
+    action      = "skip"
+    action_parameters {
+      ruleset  = "current"
+      products = ["bic", "securityLevel"]
+      phases   = ["http_request_sbfm"]
+    }
+    logging {
+      enabled = true
+    }
+    enabled = true
+  }
+
   # Rules 1–3 — only when bot management is on (a `for` filter, so the list type never changes with the flag).
   # Rule 1 — FR-88 high-sensitivity surfaces: challenge below the STRICTER score.
   # Rule 2 — everything else: challenge only clearly-automated traffic.

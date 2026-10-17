@@ -91,12 +91,18 @@ export interface Msg91TemplateVersion {
 export type Msg91TemplateRead =
   /** An authorised answer — the template's versions (possibly none). */
   | { readonly kind: 'versions'; readonly versions: readonly Msg91TemplateVersion[] }
-  /** HTTP 401 / 403 — the key was refused. */
+  /** HTTP 401 — the key was refused (MSG91's documented sample, F16). */
   | { readonly kind: 'unauthorised' }
-  /** An answered refusal (HTTP 200 `status:"error"`, or another 4xx) — a bad key OR an unknown id; ⛔ distinguishable. */
+  /** MSG91's documented HTTP 200 `status:"error"` refusal — a bad key OR an unknown id; ⛔ distinguishable. */
   | { readonly kind: 'refused' }
-  /** No answer to rely on — network, timeout, 429, 5xx, an unparseable body. */
-  | { readonly kind: 'unavailable'; readonly cause: 'network' | 'timeout' | 'throttled' | 'server' | 'unparseable' };
+  /**
+   * No answer to rely on — network, timeout, 429, 5xx, an unparseable body, or any OTHER non-2xx (a proxy's 404, a
+   * 405, an undocumented 403): ⛔ documented refusal, so it proves nothing about a send (review F2).
+   */
+  | {
+      readonly kind: 'unavailable';
+      readonly cause: 'network' | 'timeout' | 'throttled' | 'server' | 'unparseable' | 'unexpected_status';
+    };
 
 /** The template reader the pre-flight depends on — the real client implements it (⛔ a fake needs it). */
 export interface Msg91TemplateReader {
@@ -223,6 +229,26 @@ function prop(payload: unknown, key: string): unknown {
   return undefined;
 }
 
+/** Whether an HTTP status itself says "try again" — a throttle or a server fault (MG6's status fallback). */
+function isTransientStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+/**
+ * Read a response body (review F1). An abort of the client's bound while the body streams is a TIMEOUT — the same
+ * class as an abort before the headers; a body that breaks for another reason is `body_read`; ⛔ JSON (a
+ * `SyntaxError`) is `null`, as an empty body. The transport's text is ⛔ kept (it may echo the request).
+ */
+async function readBody(res: SmsFetchResponse, signal: AbortSignal): Promise<{ payload: unknown } | { failed: 'timeout' | 'body_read' }> {
+  try {
+    return { payload: await res.json() };
+  } catch (err) {
+    if (signal.aborted) return { failed: 'timeout' };
+    if (err instanceof SyntaxError) return { payload: null };
+    return { failed: 'body_read' };
+  }
+}
+
 /** The two synchronous error messages MSG91 documents (SendOTP samples — `otp/module.json`; seen for Flow in T1). */
 function tokenForMessage(message: unknown): SmsLocalRefusal | null {
   if (typeof message !== 'string') return null;
@@ -324,12 +350,17 @@ export function createSmsAppClient(
             throw new SmsSendError('sms send transport failure', null, 0);
           }
 
-          let payload: unknown = null;
-          try {
-            payload = await res.json();
-          } catch {
-            payload = null;
+          const body = await readBody(res, signal);
+          if ('failed' in body) {
+            if (body.failed === 'timeout') {
+              throw new SmsSendError('sms send timed out', null, 0, { errorClass: 'api_unavailable', code: 'timeout' });
+            }
+            // A 2xx whose body broke may have been taken ⇒ ⛔ final; a non-2xx keeps its status (the unparseable rule).
+            if (res.ok) {
+              throw new SmsSendError('sms send body unreadable', null, res.status, { errorClass: 'api_unavailable', code: 'body_read' });
+            }
           }
+          const payload = 'payload' in body ? body.payload : null;
 
           const type = prop(payload, 'type');
           const gatewayCode = stringOrNull(prop(payload, 'code'));
@@ -345,6 +376,11 @@ export function createSmsAppClient(
           if (type === 'error' || !res.ok) {
             if (gatewayCode !== null) {
               throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, gatewayCode, res.status);
+            }
+            // A code-less 429 / 5xx stays transient whatever its message says (review F3) — the message tokens below
+            // only refine a non-transient answer (the documented 401 "Auth Key missing" keeps its token).
+            if (isTransientStatus(res.status)) {
+              throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, null, res.status);
             }
             const byMessage = tokenForMessage(prop(payload, 'message'));
             if (byMessage) throw new SmsSendError('sms send rejected by gateway', null, res.status, byMessage);
@@ -380,16 +416,17 @@ export function createSmsAppClient(
       } catch {
         return { kind: 'unavailable', cause: signal.aborted ? 'timeout' : 'network' };
       }
-      if (res.status === 401 || res.status === 403) return { kind: 'unauthorised' };
+      // Only MSG91's DOCUMENTED refusals are definite (F16): HTTP 401, and the 200 `status:"error"` below. Any other
+      // non-2xx — a proxy's 404, a 405 / 408, an undocumented 403 — proves nothing about a SEND (review F2), so the
+      // callers treat it as a transient: the holding sweeps hold, 6.19b/c/d fail open, the api starts.
+      if (res.status === 401) return { kind: 'unauthorised' };
       if (res.status === 429) return { kind: 'unavailable', cause: 'throttled' };
       if (res.status >= 500) return { kind: 'unavailable', cause: 'server' };
-      if (!res.ok) return { kind: 'refused' };
-      let payload: unknown;
-      try {
-        payload = await res.json();
-      } catch {
-        return { kind: 'unavailable', cause: 'unparseable' };
-      }
+      if (!res.ok) return { kind: 'unavailable', cause: 'unexpected_status' };
+      const body = await readBody(res, signal);
+      if ('failed' in body) return { kind: 'unavailable', cause: body.failed === 'timeout' ? 'timeout' : 'network' };
+      const payload = body.payload;
+      if (payload === null) return { kind: 'unavailable', cause: 'unparseable' };
       const hasError = prop(payload, 'hasError');
       const status = prop(payload, 'status');
       if (hasError === true || hasError === 'true' || status === 'error' || status === 'fail') return { kind: 'refused' };

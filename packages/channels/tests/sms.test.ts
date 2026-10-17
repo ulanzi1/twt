@@ -403,6 +403,65 @@ describe('createSmsAppClient — the error shapes (6.37 AC3; MG6 / MG7)', () => 
   it('a code carrying a 10-digit run ⇒ <class>:unknown (sanitizeSmsGatewayCode)', async () => {
     expect(await outcome(answering(200, { type: 'error', code: '9876543210', message: 'x' }))).toBe('unknown:unknown');
   });
+
+  // Review F3 — a code-less 429 / 5xx stays transient whatever its message; the documented 401 token is kept.
+  it.each<[number, string, string]>([
+    [429, 'The provided flow ID or template ID is invalid.', 'rate_limited:http_429'],
+    [503, 'The provided flow ID or template ID is invalid.', 'api_unavailable:http_503'],
+    [500, 'Auth Key missing', 'api_unavailable:http_500'],
+    [429, 'Auth Key missing', 'rate_limited:http_429'],
+    [401, 'Auth Key missing', 'auth:authkey_missing'],
+    [400, 'The provided flow ID or template ID is invalid.', 'dlt_template_not_approved:template_invalid'],
+    [200, 'The provided flow ID or template ID is invalid.', 'dlt_template_not_approved:template_invalid'],
+  ])('F3 — HTTP %i, ⛔ code, message %j ⇒ %s', async (status, msg, expected) => {
+    expect(await outcome(answering(status, { message: msg, type: 'error' }))).toBe(expected);
+  });
+
+  it('F3 — a LISTED code keeps its class on a 429 / 5xx (Debug Log (a)); only a code-less answer falls to the status', async () => {
+    expect(await outcome(answering(429, { type: 'error', code: '400', message: 'x' }))).toBe('dlt_template_not_approved:400');
+    expect(await outcome(answering(503, { type: 'error', code: '201', message: 'x' }))).toBe('auth:201');
+  });
+});
+
+describe('createSmsAppClient — the body read after the headers (review F1; MG9)', () => {
+  /** Headers arrive (status `status`), then `json()` fails the way `fail` says. */
+  function headersThen(status: number, fail: (controller: AbortController) => unknown) {
+    const controller = new AbortController();
+    const fetchImpl = vi.fn<SmsFetchLike>().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      json: () => Promise.reject(fail(controller)),
+    });
+    return { fetchImpl, timeoutSignal: () => controller.signal };
+  }
+
+  it('⭐ HTTP 200 headers, then the bound aborts while the body is read ⇒ api_unavailable:timeout (⛔ unknown:no_type)', async () => {
+    const { fetchImpl, timeoutSignal } = headersThen(200, (c) => {
+      c.abort();
+      return c.signal.reason;
+    });
+    expect(await outcome(fetchImpl, message, timeoutSignal)).toBe('api_unavailable:timeout');
+  });
+
+  it('an abort while reading a non-2xx body is a timeout too', async () => {
+    const { fetchImpl, timeoutSignal } = headersThen(401, (c) => {
+      c.abort();
+      return c.signal.reason;
+    });
+    expect(await outcome(fetchImpl, message, timeoutSignal)).toBe('api_unavailable:timeout');
+  });
+
+  it('HTTP 200 headers, then the body stream breaks (⛔ abort) ⇒ api_unavailable:body_read — ⛔ the transport\'s text', async () => {
+    const { fetchImpl, timeoutSignal } = headersThen(200, () => new TypeError('terminated 919876543210'));
+    expect(await outcome(fetchImpl, message, timeoutSignal)).toBe('api_unavailable:body_read');
+    const err = await createSmsAppClient(config, fetchImpl, { timeoutSignal }).messaging().send(message).catch((e: unknown) => e);
+    expect((err as Error).message).not.toContain('919876543210');
+  });
+
+  it('HTTP 200 with INVALID JSON is still ⛔ an acceptance — unknown:no_type (unchanged)', async () => {
+    const { fetchImpl, timeoutSignal } = headersThen(200, () => new SyntaxError('Unexpected token <'));
+    expect(await outcome(fetchImpl, message, timeoutSignal)).toBe('unknown:no_type');
+  });
 });
 
 describe('createSmsAppClient — local refusals, ⛔ request (6.37 AC4; MG4, MG8)', () => {

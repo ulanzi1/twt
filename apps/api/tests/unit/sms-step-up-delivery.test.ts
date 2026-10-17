@@ -266,6 +266,28 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
       await expect(p).rejects.toMatchObject({ errorClass: 'api_unavailable' });
     });
 
+    it('review F1 — HTTP 200 headers arrive, then the 9 s abort fires while the BODY is read ⇒ StepUpDeliveryError(api_unavailable), ⛔ `unknown`', async () => {
+      const controller = new AbortController();
+      // The headers come back at once; the body settles only when the client's signal aborts.
+      let bodyRead: AbortSignal | null = null;
+      const fetchImpl = vi.fn<SmsFetchLike>((_url, init) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => {
+            bodyRead = init.signal;
+            return new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted'))));
+          },
+        }),
+      );
+      const client = createSmsAppClient({ apiOrigin: 'https://control.msg91.com', authkey: 'k' }, fetchImpl, { timeoutSignal: () => controller.signal });
+      const p = makeAdapter(client.messaging()).deliver(loginPayload());
+      await vi.waitFor(() => expect(bodyRead).not.toBeNull());
+      controller.abort();
+      await expect(p).rejects.toBeInstanceOf(StepUpDeliveryError);
+      await expect(p).rejects.toMatchObject({ errorClass: 'api_unavailable' });
+    });
+
     it('a `+91…` E.164 goes out as MSG91\'s `91…`, the code as `otp`, the body ⛔ sent', async () => {
       const fetchImpl = vi.fn<SmsFetchLike>().mockResolvedValue({
         ok: true,

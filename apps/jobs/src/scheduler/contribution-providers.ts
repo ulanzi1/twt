@@ -212,20 +212,19 @@ export function withGlobalSecretCache(
   };
 }
 
-/**
- * Build the contribution-loop `resolveProviders`. Constructs the per-process app caches + the global SMS
- * gateway client (resolving its credential ONCE at boot) + the per-(Pariwar,category) provider resolver, all
- * env-gated so an unprovisioned channel degrades to its log-only fixture. Async because it resolves the SMS
- * gateway secrets at boot (mirrors apps/api buildMemberStepUpDelivery).
- */
-export async function buildContributionProviderResolver(
-  deps: ContributionProviderWiringDeps,
-): Promise<ContributionProviderWiring> {
-  const firebaseAppCache: FirebaseAppCache = createFirebaseAppCache();
-  const whatsappAppCache = createWhatsappAppCache();
-  const telegramAppCache = createTelegramAppCache();
+/** The jobs process's MSG91 clients (MG10, MG17) — what boot wires, and what the `sms:preflight` command reads with. */
+export interface SmsGatewayClients {
+  readonly smsAppClient: SmsAppClient;
+  readonly smsTemplateReader: Msg91TemplateReader;
+  readonly smsPreflightReadsWithSendKey: boolean;
+}
 
-  // ── The GLOBAL SMS gateway client (resolved ONCE at boot; restart-required-on-rotation) ──────────────────
+/**
+ * ── The GLOBAL SMS gateway client (resolved ONCE at boot; restart-required-on-rotation) ──────────────────
+ * Extracted (Story 6.37 review F4) so the read-only `sms:preflight` command builds the SAME clients from the SAME
+ * environment as the jobs process — ⛔ a second reading of the config.
+ */
+export async function buildSmsGatewayClients(): Promise<SmsGatewayClients> {
   // ⭐ Story 6.37 (MG10; ADR-0041) — MSG91, mirroring apps/api's contract: `SMS_GATEWAY_API_URL` is MSG91's API ORIGIN
   // (default `https://control.msg91.com` in BOTH apps — the old `''` default retired) and `SMS_GATEWAY_API_KEY_SECRET_NAME`
   // (+ `_ENV_FALLBACK`) the authkey; the sender id lives ON each MSG91 template (F12) ⇒ `SMS_GATEWAY_SENDER_ID*` retired.
@@ -264,6 +263,25 @@ export async function buildContributionProviderResolver(
         'every claim text is HELD (suspicion, peer mesh) or fails closed (correction, closure, certificate) until it is (roster Row 32)',
     );
   }
+
+  return { smsAppClient, smsTemplateReader, smsPreflightReadsWithSendKey: readsWithSendKey };
+}
+
+/**
+ * Build the contribution-loop `resolveProviders`. Constructs the per-process app caches + the global SMS
+ * gateway client (resolving its credential ONCE at boot) + the per-(Pariwar,category) provider resolver, all
+ * env-gated so an unprovisioned channel degrades to its log-only fixture. Async because it resolves the SMS
+ * gateway secrets at boot (mirrors apps/api buildMemberStepUpDelivery).
+ */
+export async function buildContributionProviderResolver(
+  deps: ContributionProviderWiringDeps,
+): Promise<ContributionProviderWiring> {
+  const firebaseAppCache: FirebaseAppCache = createFirebaseAppCache();
+  const whatsappAppCache = createWhatsappAppCache();
+  const telegramAppCache = createTelegramAppCache();
+
+  // ── The GLOBAL SMS gateway client (resolved ONCE at boot; restart-required-on-rotation) — buildSmsGatewayClients ──
+  const { smsAppClient, smsTemplateReader, smsPreflightReadsWithSendKey: readsWithSendKey } = await buildSmsGatewayClients();
 
   // The GLOBAL Firebase service-account secret NAME (D1). Unset ⇒ fixture push everywhere.
   const firebaseServiceAccountSecretName = process.env['PUSH_FIREBASE_SA_SECRET_NAME'];

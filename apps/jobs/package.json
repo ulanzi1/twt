@@ -12,7 +12,8 @@
     "dev": "tsc --watch --preserveWatchOutput",
     "audit:mirror": "tsx src/audit/cli.ts",
     "audit:verify-integrity": "tsx src/audit/integrity-cli.ts",
-    "contribution:backfill": "tsx src/contribution-projection-backfill.ts"
+    "contribution:backfill": "tsx src/contribution-projection-backfill.ts",
+    "sms:preflight": "tsx src/sms-otp-preflight-cli.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",

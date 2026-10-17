@@ -45,6 +45,11 @@ shorter per-segment length.
   **default**; (5) leave MSG91's URL shortener OFF and put the app-link domain on its *"Skip URL"* list (the adapter also sends
   `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key. The platform reads
   every template back from MSG91 before using it (the pre-flight) — a template whose text, type or DLT id differs is held or alarmed.
+  (7) Once the two OTP templates (15, 16) are set, prove the pre-flight from the DEPLOYED jobs process (roster Row 32 (e)): inside the
+  jobs container run `node apps/jobs/dist/src/sms-otp-preflight-cli.js` (from a checkout with the jobs environment:
+  `pnpm --filter @twt/jobs sms:preflight`). It only READS the two templates from MSG91 with the jobs process's own key and egress —
+  ⛔ a text is sent — prints one line per template (⛔ the key, ⛔ an id) and exits 0 only when both pass; keep that line as Row 32
+  (e)'s jobs evidence. The api proves the same two templates at boot. ⛔ Set a claim-text id (1–14) to get a jobs proof — Row 32 (i).
 
 ## The variable types (TRAI Direction of 18 Nov 2025, Annexure-I)
 

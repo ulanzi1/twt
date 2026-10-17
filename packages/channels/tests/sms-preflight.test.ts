@@ -206,7 +206,13 @@ describe('readTemplateVersions — the MSG91 template read (6.37 MG5; F16)', () 
       () => Promise.resolve(respond(200, { status: 'error', hasError: true, errors: 'Template content type could not be fetched' })),
       'refused',
     ],
-    ['HTTP 404', () => Promise.resolve(respond(404, {})), 'refused'],
+    // Review F2 — only the DOCUMENTED refusals (HTTP 401; HTTP 200 status:"error") are definite; any other non-2xx — a
+    // proxy's 404, a 405, a 408, an undocumented 403 — proves nothing about the send ⇒ unavailable.
+    ['HTTP 404', () => Promise.resolve(respond(404, {})), 'unavailable'],
+    ['HTTP 403', () => Promise.resolve(respond(403, {})), 'unavailable'],
+    ['HTTP 405', () => Promise.resolve(respond(405, {})), 'unavailable'],
+    ['HTTP 408', () => Promise.resolve(respond(408, {})), 'unavailable'],
+    ['HTTP 400 {status:"error"}', () => Promise.resolve(respond(400, { status: 'error', hasError: true })), 'unavailable'],
     ['HTTP 429', () => Promise.resolve(respond(429, {})), 'unavailable'],
     ['HTTP 503', () => Promise.resolve(respond(503, {})), 'unavailable'],
     ['a network throw', () => Promise.reject(new Error('ECONNRESET')), 'unavailable'],
@@ -221,6 +227,26 @@ describe('readTemplateVersions — the MSG91 template read (6.37 MG5; F16)', () 
     const fetchImpl = vi.fn<SmsFetchLike>(() => {
       controller.abort();
       return Promise.reject(new Error('aborted'));
+    });
+    const read = await createSmsAppClient(config, fetchImpl, { timeoutSignal: () => controller.signal }).readTemplateVersions(ID);
+    expect(read).toEqual({ kind: 'unavailable', cause: 'timeout' });
+  });
+
+  it('F2 — an unexplained non-2xx is unavailable (`unexpected_status`), and the pre-flight calls it a TRANSIENT, ⛔ auth_or_not_found', async () => {
+    const client = createSmsAppClient(config, vi.fn<SmsFetchLike>().mockResolvedValue(respond(404, {})));
+    expect(await client.readTemplateVersions(ID)).toEqual({ kind: 'unavailable', cause: 'unexpected_status' });
+    expect(await checkMsg91Template(client, GSM, ID)).toEqual({ ok: false, transient: true, reason: 'transient' });
+  });
+
+  it('F1 — headers arrive, then the bound aborts while the body is read ⇒ unavailable (timeout), ⛔ unparseable', async () => {
+    const controller = new AbortController();
+    const fetchImpl = vi.fn<SmsFetchLike>().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => {
+        controller.abort();
+        return Promise.reject(controller.signal.reason);
+      },
     });
     const read = await createSmsAppClient(config, fetchImpl, { timeoutSignal: () => controller.signal }).readTemplateVersions(ID);
     expect(read).toEqual({ kind: 'unavailable', cause: 'timeout' });

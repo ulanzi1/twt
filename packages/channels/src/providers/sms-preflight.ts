@@ -13,8 +13,8 @@
 //     text on a UNICODE template still delivers ⇒ a PASS carrying the logged note `sms_type_unicode_for_gsm7`;
 //   · its `DLT_ID` is non-blank — else `dlt_id_missing`.
 // An HTTP 401 ⇒ `auth`; MSG91's 200 `status:"error"` (a bad key and an unknown id look the same — F16) ⇒
-// `auth_or_not_found`; a malformed id ⇒ `template_id_malformed` (⛔ call made); a network / timeout / 429 / 5xx ⇒ a
-// TRANSIENT. `status` / `dlt_verified` / `dlt_reason` / `reject_reason` / `sender_id` are LOGGED, ⛔ gating.
+// `auth_or_not_found`; a malformed id ⇒ `template_id_malformed` (⛔ call made); a network / timeout / 429 / 5xx — or any
+// OTHER non-2xx (⛔ a documented refusal, so ⛔ proof about a send — review F2) ⇒ a TRANSIENT. `status` / `dlt_verified` / `dlt_reason` / `reject_reason` / `sender_id` are LOGGED, ⛔ gating.
 // ⚠ It reads TEMPLATES: a send-side ACCOUNT fault (zero balance, SMS not enabled for the key, an unwhitelisted IP) is
 // ⛔ visible to it (MG15).
 //

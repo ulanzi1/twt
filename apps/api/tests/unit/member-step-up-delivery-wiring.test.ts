@@ -172,6 +172,10 @@ describe('buildMemberStepUpDelivery (Story 5.9, Task 5; Story 6.37 AC8)', () => 
     ['dlt_id_missing', (id: string) => Promise.resolve(respond(200, { status: 'success', data: [versionFor(id, { DLT_ID: '' })] }))],
     ['transient', () => Promise.reject(new Error('ECONNRESET'))],
     ['transient', () => Promise.resolve(respond(503, {}))],
+    // Review F2 — an unexplained template-read status (a proxy's 404, a 405, an undocumented 403) is ⛔ a proven refusal.
+    ['transient', () => Promise.resolve(respond(404, {}))],
+    ['transient', () => Promise.resolve(respond(405, {}))],
+    ['transient', () => Promise.resolve(respond(403, {}))],
   ] as const)('⭐ MG5 — a %s at boot ⇒ STARTS with an error log (alarm-only — S1); the code is still sent', async (reason, answer) => {
     await withEnv({ SMS_GATEWAY_API_KEY: 'live-key' }, async () => {
       const { fetchImpl, calls } = msg91(answer);

@@ -4,6 +4,57 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-27c-peer-mesh-sending-texts-and-links, ROUND 2 — the whole branch (2026-10-17)
+
+- **W1 — A permanently undecryptable deceased-name ciphertext loops daily, with no terminal state** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+  `readDeceasedName`] — R9 deliberately reads the name BEFORE any begin, so a decrypt THROW is a retry with ⛔ ping begun; the give-up
+  (`expireExhaustedPeerMeshRequests`) covers only `attempting` rows ⇒ every sweep re-enqueues the claim and each child alarms per retry until the
+  answer window lapses. ⛔ Text goes and ⛔ slot is used (fail-closed), so it is noise, ⛔ harm. ⭐ Trigger: a repeated "the name decrypt failed"
+  alarm for one claim across two days — then give the name fault a terminal form (`no_target:name_unresolvable` after N days).
+- **W2 — The child queue runs on pg-boss's default 900 s expiry, and an own-retry skips the lease** [`claim-peer-mesh-requests.ts`
+  `registerClaimPeerMeshRequestWorkers` (`createQueue` with ⛔ `expireInSeconds`); `packages/domain/src/claim/peer-mesh-request.ts` begin
+  (`ownRetry`)] — a per-CLAIM child that overruns its expiry is retried under the SAME job id while the first run still sends; `ownRetry`
+  re-claims at once and both CASes pass (same job id) ⇒ a second text with ⛔ alarm. The shape is the suspicion twin's (per-notice jobs,
+  short); here up to `PEER_MESH_REQUEST_CLAIM_PING_CAP` pings per job. Inside the recorded AT-LEAST-ONCE residual (module header). ⭐ Trigger:
+  a child run longer than 5 min in the job logs — then set an explicit `expireInSeconds` and have the child honour `job.signal`.
+- **W3 — A transient by-link failure is shown as the FINAL "could not be opened"** [`apps/mobile/components/peer-request/usePeerRequestQueries.ts`
+  (`retry: false`); `apps/mobile/lib/peer-request.ts` `peerRequestSlotView`] — AC6 as written maps ANY failed call to `PeerRequestNotOpenable`
+  + the helpline; a 401 after a failed token refresh, a 5xx, a 429 or a network fault therefore reads as a broken link until the member
+  leaves the screen and taps again (the same file's `classifyFailure` treats those as `'retry'`). ⭐ Trigger: the next touch of the slot or
+  a helpline report of "the link does not open" — then a Retry on non-404 failures (and a 401 routed to login, `c` kept — AL6).
+- **W4 — A member of several Pariwars whose phone is signed into another Pariwar gets the ONE 404** [`apps/api/src/modules/claims/claims.peer-request.handlers.ts`
+  (the by-link handler); `packages/contracts/src/app-links/paths.ts` `buildAppLinkUrl`] — the texted link carries only `?c=`; the resolver
+  is scoped to the session's Pariwar ⇒ the neighbour lands on that Pariwar's list with ⛔ hint to switch. 6.30's link shape (⛔ a Pariwar in
+  the link) is unchanged here. ⭐ Trigger: a multi-Pariwar member reported by the helpline, or the next change to the app-link shape.
+- **W5 — A CHECK violation on a ping write would carry the row (incl. `link_code`, `recipient_number_hash`) in Postgres' error detail**
+  [`peer-mesh-request.ts` the begin / finalise / R6 UPDATEs] — `"Failing row contains (…)"` on a 23514 reaches the job's error output
+  unsanitised (F1 sanitised only the by-link READ). Reachable only through a code bug (every value is pre-built by the ONE builder). ⭐ Trigger:
+  any 23514 from `claim_peer_mesh_pings` in a log — then wrap the writers' errors as F1 did.
+- **W6 — ⛔ DB CHECK requires `link_code` on an `attempting` row** [`0166_peer-mesh-request-sending.sql`] — the code assumes one
+  (`linkCode: string`; `buildAppLinkUrl` would throw on a NULL). By construction every begin writes it. ⭐ Trigger: the next migration
+  touching `claim_peer_mesh_pings` — add `send_outcome IS DISTINCT FROM 'attempting' OR link_code IS NOT NULL` beside R15's CHECK.
+- **W7 — A parked ping stops ageing for good if ⛔ child re-claims it after the hold lifts** [`peer-mesh-request.ts`
+  `expireExhaustedPeerMeshRequests` (the `aging_since + (now − parked_at)` anchor)] — only a re-claim clears `parked_at`; a child that keeps
+  returning before the begin (e.g. `claim_missing`) leaves the row `attempting` forever. Inherited from the suspicion twin (0155's shape).
+  ⭐ Trigger: an `attempting` row with `parked_at` older than five days in a Pariwar that is no longer held.
+- **W10 — A scope-wide send fault the sweep cannot see costs ONE slot per child run** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+  (`isScopeWideSendFault` — review round 2 P1)] — P1 stops the run on an `auth`, `dlt_template_not_approved` or
+  `config:sms_messaging_unavailable` final (before: every remaining slot in one run), but the sweep's R11 check sees ⛔ any of the three
+  (only the template id, the helpline, a Secret Manager config fault and the gateway's `isConfigured`), so the claim stays due and the
+  next child (the sweep's, or R8's hook) begins — and uses up — ONE more neighbour's once-ever slot. A transient noted earlier in a
+  stopped run is ⛔ retried by pg-boss; the next sweep re-claims it past its lease. Controls today: the provisioning rule ("set each id only
+  after the operator confirms that template's approval", PM16) and the fail-closed alarm per stop. ⭐ Trigger: a "STOPPED after
+  auth: / dlt_template_not_approved:" alarm — then persist a per-Pariwar send hold the sweep reads.
+- **W8 — `locale_source` is a literal in the begin, ⛔ threaded from `resolvePeerRequestLocale().source`** [`peer-mesh-request.ts` `beginFresh`;
+  `claim-peer-mesh-requests.ts` (`.source` dropped)] — today correct (0156's CHECK admits only `'pariwar_default'`). ⭐ Trigger: row 6-35 —
+  thread the source into the begin AND widen 0156's `locale_source` CHECK in the same change.
+- **W9 — F4's reset drops an open questionnaire's unsaved work when a second link arrives** [`apps/mobile/components/peer-request/PeerRequestSlot.tsx`
+  (the render-time reset on a new `code`)] — the unmount bypasses `PeerQuestionnaire`'s `leaveQuestions` warning and `usePreventRemove`
+  ⇒ queued saves and typed-but-unsaved dates are dropped (an in-flight Submit lands; its Thank-you is ⛔ shown). ✅ Accepted by BigDev
+  (2026-10-17, review round 2 D2 (a)): rare — a member with two open requests tapping the second link mid-answer; autosave keeps every
+  saved answer. ⭐ Trigger: a helpline report of a lost answer after a second link, or the next touch of the slot — route a code change
+  while the questionnaire is busy / dirty through the same leave warning.
+
 ## Deferred from: code review of 6-27c-peer-mesh-sending-texts-and-links (2026-10-17) — residuals of the F2 / F5 fixes
 
 - **The send hours are re-checked just BEFORE the send core, ⛔ inside it** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
@@ -13,9 +64,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   next change to `sendClaimDltSms` — give it an optional `beforeSend` guard checked immediately before `provider.send`.
 - **A ping begun but ⛔ handed off when 20:00 IST passes is re-claimed as attempt 2** [`claim-peer-mesh-requests.ts` (the `sendAt`
   deferral); `packages/domain/src/claim/peer-mesh-request.ts` `beginPeerMeshRequest`] — it takes the transient's path: at 09:00 a failed
-  re-check reads `-297` §2 / `-298` "may have sent" and is ⛔ replaced (R1 / R5), although ⛔ text went. The window is the unsealing +
-  hashing (milliseconds). ⭐ Trigger: a recorded "may have sent" alarm on a row whose `first_detail` is NULL and `provider_message_id` NULL —
-  then release an un-handed-off row back to un-begun (a domain CAS; 0166's trigger forbids a return to NULL today).
+  re-check reads `-297` §2 / `-298` "may have sent" and is ⛔ replaced (R1 / R5), although ⛔ text went. ⭐ **WIDENED 2026-10-17 (review round 2
+  D1 (a), BigDev — R5 / `-343` kept as built):** the SAME holds for every re-claim whose first attempt provably ⛔ reached the send core —
+  a `decrypt_failed:tier1` / `hash_failed:tier1` transient, and a lease that lapsed before the handoff (round 2 P6) too: on the re-claim a failed re-check finishes `error`, and an unusable
+  number or a name fault finishes `no_target`, ⛔ replaced, with the "may have sent" alarm (one fewer neighbour asked — the ground
+  inspection carries it, `-310` CF4). Pinned: `claim-peer-mesh-requests-live.test.ts` ("D1 (a) / P18"). The 20:00 window is the unsealing +
+  hashing (milliseconds). ⭐ Trigger: a recorded "may have sent" alarm on a row whose `provider_message_id` is NULL (on the 20:00 path
+  `first_detail` is NULL too; on a transient's it holds `decrypt_failed:tier1` / `hash_failed:tier1`) — then stamp a "handed to the send
+  core" marker and key R5 / 0166's trigger on it (a new migration), or release an un-handed-off row back to un-begun (a domain CAS; 0166's
+  trigger forbids a return to NULL today).
 - **The sweep's cursor restarts every run** [`claim-peer-mesh-requests.ts` `runPeerMeshRequestSweep`] — F5 stopped HELD claims from
   counting against the bound (except under a global gap, where every claim is held); more than `maxClaims` (20,000) READY claims that
   STAY due (e.g. `attempting` rows on transients for up to three days) would still starve the claims after them. Unrealistic at the
@@ -34,7 +91,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 - **A NON-blocking Panel FYI (⛔ a ruling question) owed in the NEXT routing note — the texts' cost was understated** (BF24). The ruled
   English (`-303` Q1 A / `-304` Q6 A) contains an em dash (U+2014), outside GSM-7, so the English text is Unicode too: ≈ 198 characters
-  rendered ⇒ **3 segments**; the Hindi ≈ 219 ⇒ **4** (`docs/launch-gate-inventory/dlt-template-requests-6-19.md`, § The cost per message —
+  rendered ⇒ **3 segments**; the Hindi ≈ 219 ⇒ **4** — typical; at the registered ceilings (a 40-character name, a 120-character link)
+  **5 segments** each — so per text **en 3–5, hi 3–5** (corrected 2026-10-17, review round 2) (`docs/launch-gate-inventory/dlt-template-requests-6-19.md`, § The cost per message —
   6.27a PM3 told the Panel only that the HINDI is *"likely THREE segments"*). ⛔ The words are ruled — recorded, ⛔ "fixed" by editing the
   text. ⛔ Recorded as shown until the note goes out ([[feedback_shown_to_panel_means_sent]]). ⭐ Trigger: the next
   `trustee-panel-routing-note-*` written for ANY story — add this line to it.

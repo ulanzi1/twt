@@ -102,6 +102,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the member surface after a send (
     if (begun.kind !== 'begun') return;
     // `attempting` is ⛔ yet texted — still invisible
     expect((await call('GET', `${base}?limit=5`, tok)).body).toEqual({ items: [] });
+    // …and its link resolves to ⛔ ping yet — the ONE 404 (review round 2 P13: on the REAL writers' row, ⛔ a hand-built one)
+    expect((await call('GET', `${base}/by-link/${begun.linkCode}`, tok)).status).toBe(404);
     expect(
       await onScope(p, (s) =>
         claim.finalisePeerMeshRequest(s.tx, {

@@ -24,6 +24,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
+import { helplineNotCallbackNumberWarning } from '../src/scheduler/claim-dlt-sms-send.js';
 import {
   runPeerMeshRequestChild,
   runPeerMeshRequestSweep,
@@ -43,6 +44,7 @@ const enc = buildJobsEncryptionDeps('claim-peer-mesh-request-live-pepper');
 const DAYTIME = new Date('2026-10-16T06:00:00.000Z');
 const DAY = 86_400_000;
 const SMS_QUEUE = 'claim.peer_mesh_request.sms';
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 /** The LIVE version with every `'pending'` question given a (test) basis — the gap closed. */
 const V4 = questionnaires.resolveLiveVersion('peer_mesh', randomUUID())!;
@@ -189,20 +191,31 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     setNow: (d: Date) => void;
   }
 
-  function harness(
-    w: { pid: string },
-    o: { registry?: readonly questionnaires.QuestionnaireDefinition[]; appLinksBaseUrl?: string; config?: Record<string, string | null> } = {},
-  ): Harness {
+  interface HarnessOpts {
+    registry?: readonly questionnaires.QuestionnaireDefinition[];
+    appLinksBaseUrl?: string;
+    config?: Record<string, string | null>;
+    /** The Pariwar's helpline (default `HELPLINE`); `null` ⇒ unset. */
+    helpline?: string | null;
+    /** A config key PREFIX whose read THROWS (a Secret Manager fault). */
+    throwOn?: string;
+    /** The gateway's `isConfigured()` (default `true`). */
+    gatewayConfigured?: boolean;
+    /** The gateway's send (default: accepted with a fresh id). */
+    send?: (m: SmsGatewayMessage) => Promise<string>;
+  }
+
+  function harness(w: { pid: string }, o: HarnessOpts = {}): Harness {
     const enqueued: Harness['enqueued'] = [];
     const sent: SmsGatewayMessage[] = [];
     const alarms: string[] = [];
     let now = DAYTIME;
     const smsAppClient: SmsAppClient = {
-      isConfigured: () => true,
+      isConfigured: () => o.gatewayConfigured ?? true,
       messaging: () => ({
         send: (m) => {
           sent.push(m);
-          return Promise.resolve(`gw-${randomUUID()}`);
+          return o.send ? o.send(m) : Promise.resolve(`gw-${randomUUID()}`);
         },
       }),
     };
@@ -211,9 +224,10 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       encryption: enc,
       smsAppClient,
       resolveConfig: async (key) => {
+        if (o.throwOn !== undefined && key.startsWith(o.throwOn)) throw Object.assign(new Error('secret manager down'), { code: 14 });
         if (o.config && key in o.config) return o.config[key]!;
         if (key.startsWith('sms.dlt.template_id.peer_mesh.request.')) return 'TPL-PEER';
-        if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
+        if (key.startsWith('sms.claim_correction.helpline_number.')) return o.helpline === undefined ? HELPLINE : o.helpline;
         return null;
       },
       now: () => now,
@@ -271,7 +285,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     const codes = (await rows(w)).map((r) => r.link_code).filter((c): c is string => c !== null);
     for (const a of h.alarms) {
       expect(a).not.toContain('Ramesh');
-      expect(a).not.toMatch(/\+?91\d{10}|\d{10}/);
+      // ids are ALLOWED — strip them first: a UUID's hex groups can hold ten decimal digits in a row (review round 2 P9)
+      expect(a.replace(UUID_RE, '<id>')).not.toMatch(/\+?91\d{10}|\d{10}/);
       for (const c of codes) expect(a).not.toContain(c);
     }
   }
@@ -302,6 +317,10 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       'config:app_link_too_long',
     ],
     ['⛔ template id', { registry: [CLEARED], config: { 'sms.dlt.template_id.peer_mesh.request.hi': null } }, 'config:dlt_template_id_missing:hi'],
+    // review round 2 P10 — the rest of R11's list
+    ['the gateway unconfigured', { registry: [CLEARED], gatewayConfigured: false }, 'config:sms_gateway_unconfigured'],
+    ['a Secret Manager fault', { registry: [CLEARED], throwOn: 'sms.dlt.template_id.' }, 'config:secret_manager'],
+    ['⛔ helpline', { registry: [CLEARED], helpline: null }, 'config:helpline_number_missing'],
   ] as const)('AC4 — %s HOLDS (⛔ ping begun)', async (_label, opts, reason) => {
     const w = await world();
     const h = harness(w, opts as Parameters<typeof harness>[1]);
@@ -565,5 +584,221 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(await runPeerMeshRequestSweep(deps, boss(h))).toMatchObject({ heldForConfig: 1, enqueued: 0, scannedClaims: 1 });
     expect(h.enqueued).toHaveLength(0);
     expect(h.alarms.some((a) => a.includes('hit the hard bound of 1 claims'))).toBe(true);
+  });
+
+  // ── the code review's ROUND 2 (P1, P2, P5–P8, P18) ───────────────────────────────────────────────────────────
+
+  /** As the superuser: leave `pingId` `attempting` under a dead job, past its lease (a crash-left row). */
+  async function stall(pingId: string, code: string): Promise<void> {
+    await pool.query(
+      `UPDATE claim_peer_mesh_pings SET send_outcome = 'attempting', attempt_count = 1, claimed_at = $2, claimed_by_job = 'dead-job',
+         aging_since = $2, locale_source = 'pariwar_default', link_code = $3 WHERE ping_id = $1`,
+      [pingId, new Date(DAYTIME.getTime() - 60 * 60_000), code],
+    );
+  }
+  /** A KMS whose calls are counted, and `onHmac` run once on the FIRST `computeHmac` (the F2 test's Proxy). */
+  function countingKms(onHmac?: () => void): { kms: typeof enc.kms; calls: () => number } {
+    let calls = 0;
+    let fired = false;
+    const kms = new Proxy(enc.kms, {
+      get(target, prop, receiver) {
+        const v = Reflect.get(target, prop, receiver) as unknown;
+        if (typeof v !== 'function') return v;
+        const fn = v as (...a: unknown[]) => unknown;
+        return (...a: unknown[]) => {
+          calls += 1;
+          if (prop === 'computeHmac' && onHmac && !fired) {
+            fired = true;
+            onHmac();
+          }
+          return fn.apply(target, a);
+        };
+      },
+    });
+    return { kms, calls: () => calls };
+  }
+
+  it('⭐ D1 (a) / P18 — a decrypt THROW, then an UNUSABLE number on the own retry (attempt 2) ⇒ `no_target`, ⛔ replaced, the "may have sent" alarm — although ⛔ text went (R5 / `-343` as built)', async () => {
+    const w = await world({ selected: 1 });
+    const p = w.pings[0]!;
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query(`UPDATE member_identities SET mobile_ciphertext = 'enc:v1:not-an-envelope' WHERE member_id = $1`, [p.memberId]);
+    });
+    const h = harness(w, { registry: [CLEARED] });
+    await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-r')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', attempt_count: 1, detail: 'decrypt_failed:tier1' });
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query(`UPDATE member_identities SET mobile_ciphertext = $2 WHERE member_id = $1`, [p.memberId, await encryption.encryptMobile(memberDomain.ANONYMIZED_SENTINEL, enc)]);
+    });
+    expect(await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-r')).toMatchObject({ status: 'done' }); // pg-boss's retry: the SAME job
+    const after = await rows(w);
+    expect(after).toHaveLength(1); // ⛔ replacement, though the ranking holds six more
+    expect(after[0]).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:no_sendable_number', attempt_count: 2, provider_message_id: null });
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms.some((a) => a.includes(p.pingId) && a.includes('on attempt 2') && a.includes('may have sent'))).toBe(true);
+    await expectIdsOnly(h, w);
+  });
+
+  it('AC5b — a re-claimed row whose claim LEFT the window ⇒ `error` + the ids-only "a text may have gone" alarm', async () => {
+    const w = await world({ selected: 1 });
+    const p = w.pings[0]!;
+    await stall(p.pingId, 'Dec1dedCode1');
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query('RESET ROLE');
+      await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
+      await client.query(`UPDATE claims SET current_state = 'denied' WHERE claim_case_id = $1`, [w.claimCaseId]);
+    });
+    const h = harness(w, { registry: [CLEARED] });
+    expect(await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID())).toMatchObject({ status: 'done', counts: expect.objectContaining({ expired: 1 }) });
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'error', detail: 'exhausted:recheck_claim_decided' });
+    expect(h.alarms.filter((a) => a.includes(p.pingId) && a.includes('a text may have gone'))).toHaveLength(1);
+    expect(h.sent).toHaveLength(0);
+    await expectIdsOnly(h, w);
+  });
+
+  it('AC5b — a re-claimed row with a NAME fault ⇒ `no_target:name_*` (⛔ replaced) + the "a prior attempt may have sent" alarm', async () => {
+    const w = await world({ selected: 1, name: 'A'.repeat(20) + ' ' + 'B'.repeat(20) });
+    const p = w.pings[0]!;
+    await stall(p.pingId, 'N4meFaultCd1');
+    const h = harness(w, { registry: [CLEARED] });
+    await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID());
+    const after = await rows(w);
+    expect(after).toHaveLength(1);
+    expect(after[0]).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:name_too_long' });
+    expect(h.alarms.filter((a) => a.includes(p.pingId) && a.includes('on a re-claim after 1 claimed attempt(s)') && a.includes('may have sent'))).toHaveLength(1);
+    await expectIdsOnly(h, w);
+  });
+
+  it('AC5b — a helpline that is ⛔ a callback number: SENT, and ONE warning per child (`-322` C1)', async () => {
+    const w = await world({ selected: 2 });
+    const h = harness(w, { registry: [CLEARED], helpline: '+91 1800 123' });
+    await tick(h, w);
+    expect(h.sent).toHaveLength(2);
+    expect(h.alarms.filter((a) => a === helplineNotCallbackNumberWarning(w.pid, 'peer mesh request'))).toHaveLength(1);
+    expect((await rows(w)).every((r) => r.send_outcome === 'accepted')).toBe(true);
+  });
+
+  it('AC5b — a recipient-level final `error` (an unclassified gateway failure) is recorded fail-closed and alarmed per ping; the run goes on', async () => {
+    const w = await world({ selected: 2 });
+    const h = harness(w, { registry: [CLEARED], send: () => Promise.reject(new Error('boom')) });
+    await tick(h, w);
+    const after = await rows(w);
+    expect(after.every((r) => r.send_outcome === 'error' && r.detail === 'unknown:unknown')).toBe(true);
+    expect(h.alarms.filter((a) => a.includes('recorded error (fail-closed)'))).toHaveLength(2);
+    await expectIdsOnly(h, w);
+  });
+
+  it.each([
+    ['the gateway refuses the ACCOUNT (`auth`)', 'auth'],
+    ['the template id vanished after the race guard (the core\'s `config:*` final)', 'config'],
+  ] as const)('⭐ P1 — %s ⇒ that ping `error`, the run STOPS `held_config` — ⛔ every remaining slot used up', async (_label, kind) => {
+    const w = await world({ selected: 3 });
+    const h = harness(w, { registry: [CLEARED], ...(kind === 'auth' ? { send: () => Promise.reject(Object.assign(new Error('401'), { httpStatus: 401 })) } : {}) });
+    let templateReads = 0;
+    const resolve = h.deps.resolveConfig;
+    const deps: ClaimPeerMeshRequestDeps = {
+      ...h.deps,
+      resolveConfig: async (key) => {
+        if (kind === 'config' && key.startsWith('sms.dlt.template_id.peer_mesh.request.')) {
+          templateReads += 1;
+          if (templateReads > 1) return null; // the race guard saw it; the core's own read does ⛔
+        }
+        return resolve(key);
+      },
+    };
+    const r = await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID());
+    const reason = kind === 'auth' ? 'auth:http_401' : 'config:dlt_template_id_missing';
+    expect(r).toEqual({ status: 'held_config', reason });
+    const after = await rows(w);
+    expect(after.filter((x) => x.send_outcome === 'error' && x.detail === reason)).toHaveLength(1);
+    expect(after.filter((x) => x.send_outcome === null)).toHaveLength(2);
+    await expectIdsOnly(h, w);
+  });
+
+  it('⭐ P5 — a child with ⛔ ping due returns `noop` BEFORE any KMS call (⛔ the deceased\'s name decrypted for nothing)', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    expect((await rows(w))[0]?.send_outcome).toBe('accepted');
+    const k = countingKms();
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms: k.kms } };
+    expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).toEqual({ status: 'noop', reason: 'nothing_due' });
+    expect(k.calls()).toBe(0);
+  });
+
+  it('⭐ P6 — the LEASE lapsed between the begin and the handoff ⇒ ⛔ sent (left to the re-claim); the own retry sends ONCE', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED] });
+    const k = countingKms(() => h.setNow(new Date(DAYTIME.getTime() + 11 * 60_000)));
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms: k.kms } };
+    await expect(runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), 'job-slow')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(h.sent).toHaveLength(0);
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', attempt_count: 1, claimed_by_job: 'job-slow' });
+    expect(h.alarms.some((a) => a.includes('its lease lapsed (or nearly) before the handoff'))).toBe(true);
+    // pg-boss's retry of the SAME job: re-claimed at once, ⛔ slow this time ⇒ texted once
+    expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), 'job-slow')).toMatchObject({ status: 'done', counts: expect.objectContaining({ accepted: 1 }) });
+    expect(h.sent).toHaveLength(1);
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'accepted', attempt_count: 2 });
+  });
+
+  /** The pool, with every `pariwar_passport` read REJECTED (`'fail'`) or answered with ⛔ row (`'empty'`). */
+  function passportPool(mode: 'fail' | 'empty'): pg.Pool {
+    return new Proxy(pool, {
+      get(target, prop, receiver) {
+        if (prop === 'connect') {
+          return async () => {
+            const client = await target.connect();
+            return new Proxy(client, {
+              get(c, cp, cr) {
+                if (cp === 'query') {
+                  return (q: unknown, ...rest: unknown[]) => {
+                    const text = typeof q === 'string' ? q : (q as { text?: string } | null)?.text;
+                    if (typeof text === 'string' && text.includes('FROM pariwar_passport')) {
+                      return mode === 'fail' ? Promise.reject(new Error('db blip')) : Promise.resolve({ rows: [], rowCount: 0, fields: [], command: 'SELECT' });
+                    }
+                    return (c.query as (...a: unknown[]) => unknown).call(c, q, ...rest);
+                  };
+                }
+                const v = Reflect.get(c, cp, cr) as unknown;
+                return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(c) : v;
+              },
+            });
+          };
+        }
+        const v = Reflect.get(target, prop, receiver) as unknown;
+        return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
+      },
+    });
+  }
+
+  it('⭐ P7 — a DB fault on the locale read is a RETRY in the child and a SKIP in the sweep (⛔ a hold, ⛔ a park)', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED] });
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, pool: passportPool('fail') };
+    await expect(runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(h.alarms.some((a) => a.includes('the locale read failed') && a.includes(w.claimCaseId))).toBe(true);
+    const swept = await runPeerMeshRequestSweep(deps, boss(h));
+    expect(swept).toMatchObject({ enqueued: 0, heldForConfig: 0, parkedForConfig: 0 });
+    expect(h.alarms.some((a) => a.includes(`Pariwar ${w.pid} could ⛔ be read`))).toBe(true);
+    expect((await rows(w))[0]?.send_outcome).toBeNull();
+  });
+
+  it('P7 — a MISSING passport (⛔ default language) is a config HOLD, ⛔ a retry (`config:locale_unavailable`)', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED] });
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, pool: passportPool('empty') };
+    expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).toEqual({ status: 'held_config', reason: 'config:locale_unavailable' });
+    expect(await runPeerMeshRequestSweep(deps, boss(h))).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    expect((await rows(w))[0]?.send_outcome).toBeNull();
+  });
+
+  it('P8 — a deferral waits at least a minute (host-vs-DB clock skew at 09:00 ⛔ loops)', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED] });
+    h.setNow(new Date('2026-10-16T03:29:30.000Z')); // 08:59:30 IST
+    expect(await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID())).toEqual({
+      status: 'deferred_quiet_hours',
+      startAfter: new Date('2026-10-16T03:30:30.000Z'),
+    });
   });
 });

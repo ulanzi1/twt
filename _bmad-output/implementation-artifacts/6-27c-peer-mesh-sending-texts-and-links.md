@@ -12,7 +12,8 @@ the author. The v2.x text is replaced, ⛔ not annotated — its history is the 
 ⚠ Before Task 1: `git diff --name-only cdc39004..HEAD -- packages apps scripts infra docs/launch-gate-inventory` — re-read any cited file
 that moved.
 
-STATUS: `review` — the code review's six patch findings F1–F6 resolved (2026-10-17, `bmad-dev-story` review continuation).
+STATUS: `done` — code review round 2 (2026-10-17): 2 decisions resolved by BigDev, 18 patches applied, 10 deferred (W1–W10); before it,
+round 1's six patch findings F1–F6 resolved (2026-10-17, `bmad-dev-story` review continuation).
 ⭐ SENDING IS LAST on purpose: once a real text goes out, real answers arrive — the warnings and the wait (6.27b), the approvers' view
 (6.27b), the inspector's independence (6.27d) and the workplace selection (row 6-36) all exist now.
 ⭐ THE RECORD is 6.27a's file (`6-27-peer-mesh-sending-replies-and-date-of-death.md` — rulings, Invariants, F1–F41, PM1–PM25, Traps 1–21).
@@ -25,7 +26,7 @@ GLYPH REGISTER, ADDRESSING RULE: as 6.27a.
 
 # Story 6.27c: Each of the Five Is Texted Once — Naming the Member, With a Link to the Questions and the Helpline, in the Pariwar's Language, While an Answer Can Still Be Taken `[SURFACE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS.** The Panel ruled that each of the five neighbours is texted (`-303` Q1 A): *"We have been told that [member]
 > has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* (`-304` Q6 A). This story
@@ -511,7 +512,8 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
 
 Review date: 2026-10-17. Full branch review, without chunks: `cdc39004..668e545f`, 48 files,
 5,084 additions / 188 deletions. Blind Hunter, Edge Case Hunter and Acceptance Auditor completed;
-6 patch findings, 0 decisions, 0 deferred, 2 dismissed. Application code unchanged; patch disposition awaits BigDev.
+6 patch findings, 0 decisions, 0 deferred, 2 dismissed. Application code unchanged; patch disposition awaits BigDev. ⭐ (annotated
+2026-10-17, round 2: BigDev chose to fix all six — commit `a1256ead` recorded them, `f3c19b62` fixed them; see the Resolution below.)
 
 - [x] [Review][Patch] **F1 / P1 — Query failures log the by-link code.**
   [packages/domain/src/claim/peer-mesh-request.ts:641]
@@ -570,13 +572,125 @@ one for each finding. They live outside the repository at `/private/tmp/twt-6-27
 
 **Invariant lens:** state/window guards, tenant/member ownership, replacement constraints and cascades have dedicated
 tests; replacement cardinality follows the one-to-one replacement link plus the original selection cap; sweep bypasses
-carry DELIBERATE blocks. Concurrency has a REAL GAP (F3), and minimal exposure has a REAL GAP (F1).
+carry DELIBERATE blocks. Concurrency has a REAL GAP (F3), and minimal exposure has a REAL GAP (F1) — ✅ both closed by the F1 / F3 fixes (`f3c19b62`).
 The new failure view reuses the announced not-openable state and real helpline handler. Device HTTPS opening,
 provider approval and counsel basis remain explicitly assigned to launch gates; this review claims no device proof.
 
 **Dismissed:** comparing the actual deployed app-link host is outside R12's expressly specified port/dot validation
 and remains a deployment check; the unpaged distinct stalled-scope read had no demonstrated failure at the supported
 scale, so the speculative performance finding was not retained. No Panel routing is required for these engineering fixes.
+
+#### Round 2 — the whole branch (2026-10-17)
+
+Review date: 2026-10-17. Whole branch `main...f3c19b62` (49 files, +5,551 / −188), 4 chunks (domain + migration + queue / jobs + scripts
+/ API + contracts + api-client / mobile + i18n + docs + governance) × 3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) — 12
+layers, ⛔ failed. Every MED claim re-verified against the code before classification. **2 decision-needed (both resolved: D1 ⇒ P18, D2 ⇒ W9), 18 patch, 10 defer
+(`deferred-work.md` § ROUND 2, W1–W10 — W10 from the fix-diff review), 34 dismissed.** ⛔ HIGH. Panel gate (§0): ⛔ finding is the Panel's — who is texted and when
+changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev's author-commit `-343`, ⛔ a ratified ruling.
+
+- [x] [Review][Decision] **D1 — R5 treats a provably UN-sent re-claim as "may have sent"** — ✅ RESOLVED (BigDev, 2026-10-17): option (a) ⇒ P18 — R5 / 0166's replacement trigger key on
+  `attempt_count > 1`, but three designed paths re-claim a ping that ⛔ reached the send core: a `decrypt_failed:tier1` / `hash_failed:tier1`
+  transient (R6 — ⛔ R6 by design) and F2's 20:00 deferral after the begin. On that re-claim an unusable number, a window exit or a peer
+  failure finishes the row WITHOUT a replacement (`peer-mesh-request.ts:580`, 0166 `IF replaced.attempt_count <> 1`) and alarms "a prior
+  attempt was claimed and may have sent" — a neighbour who was ⛔ texted is lost (fewer asked) and staff get a false alarm. The recorded
+  residual (module header, Completion Notes) names only the 20:00 case. Options: **(a)** keep R5 as built and widen the recorded residual to
+  every pre-send path (header + `deferred-work.md` + a test pinning the behaviour) — ⛔ code, ⛔ migration; cost: the rare loss stays.
+  **(b)** stamp a "handed to the send core" marker just before `sendClaimDltSms` (a new column + 0167, the trigger and R5 read it); cost: a
+  new migration on both DBs, the trigger replaced again, another review round. Sources: edge (domain) + auditor (jobs).
+- [x] [Review][Decision] **D2 — F4's reset discards an open questionnaire's unsaved work when a second link arrives** — ✅ RESOLVED (BigDev, 2026-10-17): option (a) ⇒ W9 — the render-time reset
+  (`PeerRequestSlot.tsx:43-47`) unmounts `PeerQuestionnaire` on any new `code`, bypassing its `leaveQuestions` warning and
+  `usePreventRemove` guard ⇒ queued saves and typed-but-unsaved dates are dropped silently (an in-flight Submit lands, its Thank-you is
+  never shown). Introduced by round 1's F4. Options: **(a)** accept as a recorded trade-off (a member with two open requests tapping the
+  second link mid-answer; autosave keeps saved answers) — a `deferred-work.md` line; **(b)** route a code change while the questionnaire is
+  busy / dirty through the same leave warning. Source: edge (mobile).
+- [x] [Review][Patch] **P1 (MED) — A config final from the send core mid-run uses up EVERY remaining slot of the claim**
+  [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:590] — after the race guard, a `config:*` final (`dlt_template_id_missing`,
+  `helpline_number_missing`, `sms_gateway_unconfigured`, `secret_manager_<CODE>`, `sms_messaging_unavailable` — `claim-dlt-sms-send.ts:125-135,165`)
+  is finalised `error` and the loop begins the NEXT ping, which hits the same final. Stop on a `config:` final: record that one ping as today,
+  return `held_config` with ⛔ further ping begun (the next sweep re-checks the scope). Source: edge (jobs). ⚠ As applied (fix-diff review):
+  the stop also covers `auth` / `dlt_template_not_approved`; for those and `config:sms_messaging_unavailable` the sweep cannot see the
+  fault, so the next child uses ONE more slot — recorded as W10.
+- [x] [Review][Patch] **P2 (MED) — AC5b's alarms are ⛔ exercised at the jobs layer** [apps/jobs/tests/claim-peer-mesh-requests-live.test.ts]
+  — ⛔ test reaches `:501` (re-check fails ⇒ `error`), `:508` (re-claimed `no_target`), `:548` (R6 on attempt > 1), `:588` (the helpline
+  warning — the fixture helpline is a valid callback number), `:590` (a final `error` with `alarm`). Add a leg per alarm (fired, ids-only).
+  Also: a re-claimed NAME fault returns the PRE-re-claim `attemptCount` (`peer-mesh-request.ts:397`) ⇒ the alarm reads "on attempt 1 — a prior
+  attempt was claimed"; report the re-claim's count. Sources: auditor (jobs) + blind (domain).
+- [x] [Review][Patch] **P3 (MED) — The `link_code` 23505 SAVEPOINT retry has ⛔ test** [packages/domain/src/claim/peer-mesh-request.ts:687]
+  — AC2 / checklist family 2 (REAL GAP): plant a ping holding the code the generator will return first (stub the generator's bytes), begin
+  another ⇒ the retry takes a fresh code inside the SAVEPOINT and the begin succeeds. Source: auditor (domain).
+- [x] [Review][Patch] **P4 (MED) — A hung by-link call leaves the member on "Loading…" with ⛔ exit** [apps/mobile/components/peer-request/usePeerRequestQueries.ts:50]
+  — the transport has ⛔ timeout and `byLink` takes ⛔ signal; a stalled cold start never becomes AC6's "failed call ⇒ not-openable + helpline"
+  (header hidden ⇒ ⛔ Back on iOS), and a re-tap re-joins the hung fetch ([[project_tanstack_refetch_rejoins_hung_fetch]]). Give `byLink` an
+  `opts.signal` and race the app's read timeout (6.36b's `withReadTimeout` precedent). Sources: edge + auditor (mobile).
+- [x] [Review][Patch] **P5 — The deceased's name is decrypted before the child knows any ping is due** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:470]
+  — R8's hook enqueues on every no-op SELECT re-run ⇒ a KMS decrypt + audit line (and, on a fault, alarms + retries) for children with
+  nothing to send. List the due pings first; `noop` when empty; then R9's read (still ONCE, before any begin). Source: blind (jobs).
+- [x] [Review][Patch] **P6 — The lease is ⛔ re-checked before the hand-off** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:567]
+  — a begin → send gap past `CORRECTION_SEND_LEASE_MS` (untimed decrypt / HMAC / the core's two Secret Manager reads) lets another child
+  re-claim and send the same ping. If `sendAt − beginAt ≥` the lease ⇒ the transient's path, ⛔ sent. Source: edge (jobs).
+- [x] [Review][Patch] **P7 — A DB fault on the locale read is reported as a config HOLD** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:173]
+  — `config:locale_unavailable` (⛔ in R11's list) returns `held_config` with ⛔ retry and, in the sweep, PARKS the Pariwar's pings; the domain
+  doc (`peer-mesh-request.ts:621`) says the child retries. Child: a throw ⇒ `ClaimCorrectionTransientError`; sweep: that Pariwar ⛔ held /
+  ⛔ parked, ⛔ enqueued this run. Sources: auditor + blind (jobs).
+- [x] [Review][Patch] **P8 — Host-vs-DB clock skew at 09:00 can re-enqueue the morning child in a tight loop**
+  [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:448] — `startAfter` = 09:00:00 IST fires on the DB clock; a host a few seconds behind
+  sees 08:59:5x and re-enqueues for today's 09:00 (already past for pg-boss). Floor the deferral (`max(next, now + 60 s)`). Sources: blind +
+  edge (jobs).
+- [x] [Review][Patch] **P9 — `expectIdsOnly` flakes on UUIDs** [apps/jobs/tests/claim-peer-mesh-requests-live.test.ts:270] —
+  `/\d{10}/` matches ten decimal digits inside a UUID's hex groups (≈ 2–3 % per UUID); strip UUIDs before asserting. Sources: blind +
+  auditor (jobs).
+- [x] [Review][Patch] **P10 — Three of R11's hold codes are untested** [apps/jobs/tests/claim-peer-mesh-requests-live.test.ts] —
+  `config:sms_gateway_unconfigured`, `config:secret_manager`, `config:helpline_number_missing`: a hold leg each (⛔ ping begun). Source:
+  auditor (jobs).
+- [x] [Review][Patch] **P11 — R6's second transaction inserts a replacement without re-checking the answer window**
+  [packages/domain/src/claim/peer-mesh-request.ts:784] — a claim decided between the begin's commit and R6 gains an un-texted replacement
+  (the console's extra `'not_sent'` row). Under the claim lock: out of the window ⇒ finish `no_target` with ⛔ replacement. Source:
+  auditor (domain).
+- [x] [Review][Patch] **P12 — Domain test teeth** [packages/domain/tests/integration/claim/peer-mesh-request.spec.ts;
+  …/rls/claim-peer-mesh-replies-policy-regression.spec.ts] — the "every builder output passes 0166's CHECK" leg asserts ⛔ `rowCount`;
+  R4's comments misstate coverage ("the deceased themself ⇒ the fallback" is `peer_reported_deceased`; the `peer_not_eligible` exclude is a
+  no-op) and the `member_id <> deceased` conjunct has ⛔ leg; the "another Pariwar's ping is NOT FOUND" leg cannot fail for RLS (rename to
+  what it proves); the live-cap assertion is `≤ s.pings.length` with unbegun originals; the trigger's SQL reason list is checked one way
+  only (pin it equal to `PEER_MESH_REQUEST_REPLACEABLE_REASONS`). Sources: blind + auditor (domain).
+- [x] [Review][Patch] **P13 — API test teeth** [apps/api/tests/integration/claims/peer-request-by-link.spec.ts;
+  peer-request-after-send.spec.ts] — the read budget is proven only for one member from one IP (add a second member: still 200); `other`
+  is ⛔ a seeded member (seed a real active member); ⛔ leg for a code of ANOTHER Pariwar's ping on the member's OWN path; ⛔ leg for a
+  texted ping of a CLOSED claim (200 then the detail's 409 `no_longer_open`); the after-send spec never asserts by-link 404 while
+  `attempting`. Sources: blind + auditor (API).
+- [x] [Review][Patch] **P14 — Mobile test / comment drift** [apps/mobile/tests/unit/app-link-route-map.test.ts:310;
+  peer-request-link.test.ts:370] — the kept comment "the slot itself calls nothing" is false since the by-link hook; the
+  `openPingId + code + error` view case is unreachable in the slot (pin a reachable one). Source: blind (mobile).
+- [x] [Review][Patch] **P15 — The Hindi is recorded as "agent-authored afresh", but it is the `-303` routing block's draft with `दो` → `कुछ`**
+  [packages/i18n/locales/hi/claim.json:168] — word for word (`trustee-panel-routing-note-2026-10-10-6-27-asking-the-neighbours.md:53`).
+  Trap 19's purpose (⛔ "two") is met; the RECORD is not — fix `$comment.peer_mesh_sms` (both locales), the sheet's 13–14 wording note and
+  the Completion Notes to say what happened, so Row 28's reviewer reads the truth (the words unchanged). Source: auditor (mobile/docs).
+- [x] [Review][Patch] **P16 — Story / gate records lag** [this file; friction-budget.md] — the File List omits `.decision-log.md` (`-343`);
+  round 1's header still reads "patch disposition awaits BigDev" and its invariant lens "REAL GAP (F3) / (F1)" with ⛔ resolved note; the
+  Change Log has ⛔ entry for `a1256ead` (→ in-progress); the friction-budget disposition omits `peer-request-slot-render.test.ts` and
+  F4's member-visible change. Sources: auditor + blind (mobile/docs).
+- [x] [Review][Patch] **P17 — The DLT sheet's own lines disagree** [docs/launch-gate-inventory/dlt-template-requests-6-19.md] — the header
+  gates 13–14 on Row 27 AND Row 28, both "Do not provision … until Row 27 closes" lines name Row 27 only; "replaced by ONE other, so the
+  count never grows past the original selection" (say TEXTS ≤ the original count; ROWS may exceed five); the cost line gives the best case
+  only — a 40-char name ⇒ en 219 (4 segments), a 120-char link ⇒ hi ≈ 284 (5) — and the owed Panel FYI (`deferred-work.md`) repeats "3 / 4":
+  state the range. Sources: blind + edge (mobile/docs).
+- [x] [Review][Patch] **P18 (from D1 (a)) — Widen R5's recorded residual to every pre-send re-claim, and pin it** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:21] — the module header, the Completion Notes and `deferred-work.md` name the 20:00 case only; state all three (a `decrypt_failed:tier1` / `hash_failed:tier1` transient, the F2 deferral): on that re-claim a failed re-check or an unusable number finishes ⛔ replaced and alarms "may have sent" although ⛔ text went (R5 / `-343` as built); ⭐ trigger: such an alarm on a row with `provider_message_id` NULL. A live leg pins it (a decrypt throw, then an unusable number on attempt 2 ⇒ `no_target`, ⛔ replacement, the alarm).
+- [x] [Review][Defer] **W1 — A permanently undecryptable deceased name loops daily** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:406] — deferred, pre-existing shape (R9's read-before-begin)
+- [x] [Review][Defer] **W2 — The child queue's default 900 s expiry + own-retry lease skip** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:626] — deferred, inside the recorded at-least-once residual
+- [x] [Review][Defer] **W3 — A transient by-link failure reads as the final not-openable** [apps/mobile/components/peer-request/usePeerRequestQueries.ts:60] — deferred, AC6 as written
+- [x] [Review][Defer] **W4 — A multi-Pariwar member signed into another Pariwar gets the ONE 404** [apps/api/src/modules/claims/claims.peer-request.handlers.ts] — deferred, 6.30's link shape
+- [x] [Review][Defer] **W5 — A 23514 on a ping write carries the row in Postgres' error detail** [packages/domain/src/claim/peer-mesh-request.ts] — deferred, reachable only through a bug
+- [x] [Review][Defer] **W6 — ⛔ CHECK requires `link_code` on an `attempting` row** [packages/domain/migrations/0166_peer-mesh-request-sending.sql] — deferred, by construction today
+- [x] [Review][Defer] **W7 — A parked ping stops ageing if ⛔ child re-claims it** [packages/domain/src/claim/peer-mesh-request.ts:819] — deferred, pre-existing (the suspicion twin)
+- [x] [Review][Defer] **W8 — `locale_source` is a literal in the begin** [packages/domain/src/claim/peer-mesh-request.ts:696] — deferred, row 6-35
+- [x] [Review][Defer] **W10 (from the fix-diff review of P1) — A scope-wide send fault the sweep cannot see costs ONE slot per child run** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts] — deferred, needs a persisted per-Pariwar send hold
+- [x] [Review][Defer] **W9 (from D2 (a)) — F4's reset drops an open questionnaire's unsaved work on a second link** [apps/mobile/components/peer-request/PeerRequestSlot.tsx:43] — deferred, accepted trade-off (BigDev): rare (two open requests, the second link tapped mid-answer); saved answers are kept
+
+**Dismissed (34), the notable ones:** R7 admitting a skipped ping's member (the ONE caller gates on `visible()` ⇒ `'accepted'`, and the
+pre-6.27c gate `selected_member_ids` already admitted them); the code in proxy / Cloud Run access logs (R13's recorded residual); an
+empty `scopes` give-up (`expireExhaustedPeerMeshRequests` returns `[]`); `CREATE OR REPLACE` dropping function attributes (0156 declares
+none); `detail!` (typed `string` on every non-accepted branch); a finalise throw after an accept (the recorded at-least-once residual);
+the helpline / name character sets (6.34 C1 "sent as today"; Row 30 (d)); Row 27 (f)'s annotation (AC8 prescribes it, dated, ⛔ rewritten);
+`-343`'s commit order (`ccca9f5f` alone, before any code — verified); the contracts test importing `@twt/domain` (precedent).
 
 ## Dev Notes
 
@@ -643,8 +757,9 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 - 2026-10-16 — v3.0 re-derived at `cdc39004` (`bmad-create-story 6.27c`): BF1–BF34, R1–R16; two fresh-context validate rounds (v3.1, v3.2 — ⛔ HIGH open). Ultimate context engine analysis completed —
   comprehensive developer guide created. ⛔ No code.
 - 2026-10-17 — **implemented (`bmad-dev-story`)**, Tasks 0.3–5.5, one commit per task on the story branch:
-  - **Task 1** — `peer_mesh_sms.request` (en = the ruled words byte for byte, ⛔ "TWT:"; hi afresh — *"कुछ छोटे प्रश्नों"*, ⛔ the routing
-    block's *"दो"*), `$comment.peer_mesh_sms` with **NOT YET HUMAN-REVIEWED** + Row 28 in both; the registry
+  - **Task 1** — `peer_mesh_sms.request` (en = the ruled words byte for byte, ⛔ "TWT:"; hi — *"कुछ छोटे प्रश्नों"*, ⛔ the routing
+    block's *"दो"*; ⚠ CORRECTED by review round 2 P15: the Hindi IS the routing block's draft with that one word changed — word for word
+    otherwise, ⛔ "afresh" as first recorded; Row 28's review covers it), `$comment.peer_mesh_sms` with **NOT YET HUMAN-REVIEWED** + Row 28 in both; the registry
     `peer-mesh-sms-templates.ts` (slots member alphanumeric 40 / link url 120 / helpline cbn 14; `peerMeshRequestDltConfigKey(locale)`;
     `renderPeerMeshRequest` through the real `t()`; `fitsDltAlphanumeric` — code points, ONE constant), in `REGISTRY_FILES`; the lockstep
     test leg for leg (29 legs, incl. the deny-list and 40 / 41 code points in Devanagari and an astral case); the sheet: rows 13 (hi) / 14
@@ -698,6 +813,7 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
     jsdom render test of the REAL slot (F4, 3 legs); each new leg red on the unfixed code. The fix diff adversarially reviewed: 3 LOW
     fixed, 3 residuals recorded in `deferred-work.md` (⛔ closed). ⚠ Recorded: a ping begun but ⛔ handed off when 20:00 passes is re-claimed
     at 09:00 as attempt 2 — truthfully ⛔ sent, but on that re-claim a failed re-check reads "may have sent" and is ⛔ replaced.
+    ⭐ WIDENED by review round 2 (D1 (a), P18): the same for a re-claim after a `decrypt_failed:tier1` / `hash_failed:tier1` transient.
     `DATABASE_URL=:5433 pnpm ci:local` on the final tree: **36/36 green in one run** (⛔ migration in this continuation).
   - ⚠ **Go-live, ⛔ merge** ([[project_not_in_production_merge_is_not_golive]]): as built the sweep HOLDS every Pariwar today — the live
     `peer_mesh.v4` carries two `'pending'` questions (Row 27 (f)) and the template ids are unset (Row 27 closes on all eight). Nothing is texted
@@ -759,10 +875,19 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `friction-budget.md` (the Story 6.27c disposition)
 - `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md`
+- `.decision-log.md` (`2026-10-16-343` — R5; Task 0.2, committed alone in `ccca9f5f`)
+- review round 2 (2026-10-17) modified AGAIN: `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`, `peer-mesh-sms-templates.ts` (a
+  comment), their live and pure tests; `packages/domain/src/claim/peer-mesh-request.ts` (P11), its live spec and the policy spec;
+  `packages/api-client/src/index.ts` (`byLink`'s `opts.signal`); `apps/api/tests/integration/claims/peer-request-by-link.spec.ts`,
+  `peer-request-after-send.spec.ts`; `apps/mobile/components/peer-request/usePeerRequestQueries.ts`, `tests/unit/peer-request-link.test.ts`,
+  `app-link-route-map.test.ts`; `packages/i18n/locales/{en,hi}/claim.json` (the `$comment` only); the DLT sheet; `friction-budget.md`;
+  `deferred-work.md`
 
 ## Change Log
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-17 | 3.6 | Code review ROUND 2 — the whole branch, 4 chunks × 3 layers (12): 2 decisions (BigDev: D1 (a) — R5 kept, its residual widened + pinned ⇒ P18; D2 (a) — F4's reset accepted ⇒ W9), 18 patches applied (P1 a scope-wide final stops the run; P4 the by-link read bounded; P5–P8, P11; tests P2 / P3 / P9 / P10 / P12–P14; records P15–P18); the fix diff adversarially reviewed (⛔ HIGH; 1 MED — P1's hold is not seen by the sweep for three classes ⇒ W10; LOWs fixed: P6's margin for the core's reads + send, P7's missing passport a hold again, the P6 path in the widened residual, the segment range, the partial-provisioning sentence, the test's forced-bytes cleanup), 10 deferred (W1–W10), 34 dismissed. |
+| 2026-10-17 | 3.4a | Code review round 1 recorded (`a1256ead`): F1–F6 as action items; status → in-progress. |
 | 2026-10-17 | 3.5 | Addressed code review findings — 6 items resolved (F1 P1; F2–F6 P2): the sanitised by-link read error, the send hours and the lease re-read per ping, the slot's per-link dismissal, held claims off the sweep's bound, the link-length hold; fix diff adversarially reviewed (3 LOW fixed, 3 residuals to `deferred-work.md`). Status → review. |
 | 2026-10-17 | 3.4 | `bmad-dev-story`: Tasks 0.3–5.5 implemented — the registry + copy + sheet rows 13–14 (Task 1); 0166 (the grammar, the replacement link and trigger, R15) applied to :5432 and :5433 (Task 2); the domain send record + R7 (Task 3); the jobs child + 10:30 IST sweep + R8's hook + R12 (Task 4); the by-link route + mobile slot + AC7 + the records (Task 5). Status → review. |
 | 2026-10-16 | 3.3 | Task 0.1 / 0.2 DONE: BigDev accepted R5 (⛔ replace a re-claimed `no_target`); recorded as `2026-10-16-343`, committed alone (`ccca9f5f`); AC1 met. Task 0.3 (the drift check) stays the dev's first step. |

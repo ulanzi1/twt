@@ -2,7 +2,8 @@
 //   · 200 `{ pingId }` for the session member's TEXTED ping — a submitted one included (its detail then answers 409);
 //   · ONE 404 (`peer_request.not_found`, the same message) for an unknown code, another member's code, another Pariwar's path,
 //     an UNTEXTED ping's code (begun, ⛔ accepted) and a malformed code — identical status, code and message (the envelope's
-//     `request_id` differs per request — the 6.27a precedent); ⛔ session ⇒ 401; the per-member READ budget ⇒ 429;
+//     `request_id` differs per request — the 6.27a precedent) — and another Pariwar's ping on the member's OWN path; ⛔ session ⇒
+//     401; the per-member READ budget ⇒ 429 (and a second member from the same address still 200); a CLOSED claim's ping resolves;
 //   · R13 — a code planted in the URL reaches ⛔ log line on a 200, a 404 AND an injected 500 (`logStream`; the route runs at
 //     `logLevel: 'warn'`, and the error mapper logs `{ err, traceId }` only);
 //   · review F1 — a failure of the resolver's OWN query (Drizzle's wrapper carries the parameters) logs the SANITISED error.
@@ -75,7 +76,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the by-link resolver (:5433)', { 
       await closeScopeTx(scopeTx, false);
       throw err;
     }
-    const other = randomUUID();
+    // a REAL active member of the same Pariwar (review round 2 P13 — a resolver that dropped the member predicate but joined
+    // `members` would still 404 a ping of a member who does not exist)
+    const other = await seedMember(app, pariwarId);
     const selectionId = randomUUID();
     await app.pool.query(
       `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
@@ -160,8 +163,13 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the by-link resolver (:5433)', { 
     const texted = await seedRequest(t, p, m);
     const untexted = await seedRequest(t, p, m, { texted: false });
     const tok = token(t, m, p);
+    // a member of ANOTHER Pariwar, on their OWN path, with a code of this Pariwar's ping (the resolver's own scope, ⛔ the path check)
+    const q = randomUUID();
+    const n = await seedMember(t, q);
+    const tokQ = token(t, n, q);
     const bodies: Json[] = [];
     for (const res of [
+      await byLink(t, q, texted.pingCode, tokQ), // another Pariwar's ping, on the member's own path
       await byLink(t, p, code(), tok), // unknown
       await byLink(t, p, texted.otherCode, tok), // another member's ping
       await byLink(t, randomUUID(), texted.pingCode, tok), // a path Pariwar ⛔ the session's
@@ -184,6 +192,33 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the by-link resolver (:5433)', { 
     for (let i = 0; i < 5; i += 1) statuses.push((await byLink(budget, p, r.pingCode, tok)).status);
     expect(statuses.slice(0, 3)).toEqual([200, 200, 200]);
     expect(statuses.slice(3)).toEqual([429, 429]);
+    // PER MEMBER (review round 2 P13): another member, from the SAME address, still has a budget — ⛔ an IP or route-wide counter
+    const m2 = await seedMember(budget, p);
+    const r2 = await seedRequest(budget, p, m2);
+    expect((await byLink(budget, p, r2.pingCode, token(budget, m2, p))).status).toBe(200);
+  });
+
+  it('a texted ping of a CLOSED claim still resolves (R14) — its detail then answers 409 `peer_request.no_longer_open`', async () => {
+    const p = randomUUID();
+    const m = await seedMember(t, p);
+    const r = await seedRequest(t, p, m);
+    const tok = token(t, m, p);
+    const c = await t.pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query(`SET LOCAL app.claim_state_writer = 'on'`);
+      await c.query(`UPDATE claims SET current_state = 'denied' WHERE claim_case_id = $1`, [r.cid]);
+      await c.query('COMMIT');
+    } catch (err) {
+      await c.query('ROLLBACK');
+      throw err;
+    } finally {
+      c.release();
+    }
+    expect(await byLink(t, p, r.pingCode, tok)).toEqual({ status: 200, body: { pingId: r.pingId } });
+    const detail = await call(t, 'GET', `${base(p)}/${r.pingId}`, tok);
+    expect(detail.status).toBe(409);
+    expect((detail.body['error'] as Json)['code']).toBe('peer_request.no_longer_open');
   });
 
   it('⭐ R13 — a planted code reaches ⛔ log line on a 200, a 404 AND an injected 500', async () => {

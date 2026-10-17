@@ -18,7 +18,8 @@ which also waits for row `6-37-msg91-sms-gateway-adapter` (`2026-10-10-314`).
 ⭐ **Templates 13–14** (Story 6.27c — the once-ever text to each of the five neighbours chosen for a reported death, `2026-10-10-303` Q1 A
 as amended by `2026-10-10-304` Q6 A) gate the **real** sends of Story 6.27c, and are gated on **`inventory-roster.md` Row 27** (ALL EIGHT
 conditions, incl. counsel's basis and Row 31) **and Row 28** (the Hindi human review). ⛔ **Do not provision the ids of 13–14 until Row 27
-closes** — unset, the 6.27c sweep HOLDS every Pariwar and ⛔ no neighbour's slot is used up.
+closes — and ⛔ the Hindi 13 until Row 28 does too** (a reviewed change re-registers it) — unset, the 6.27c sweep HOLDS every Pariwar
+whose language's id is unset (`config:dlt_template_id_missing:<locale>`) and ⛔ no neighbour's slot is used up.
 
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a
 shorter per-segment length.
@@ -161,7 +162,7 @@ reviewed change means re-registering.
 ## The wording of templates 13–14 (Story 6.27c — the text to register)
 
 ⛔ **Do not provision the ids of 13–14 until Row 27 closes** (`inventory-roster.md`, `peer-mesh-request-counsel-basis` — ALL EIGHT
-conditions). ⭐ **Set each id only after the operator confirms that template's approval** — a provider-side template fault after the
+conditions) **— and ⛔ the Hindi 13 until Row 28 closes too** (`peer-mesh-request-hindi-human-review`). ⭐ **Set each id only after the operator confirms that template's approval** — a provider-side template fault after the
 child's config check is a FINAL `error`, and for a once-ever request that uses up that neighbour's only slot (`2026-10-10-311` PM16).
 
 The en words are the Trustee Panel's, verbatim (`-303` Q1 A, *"two"* amended to *"a few"* by `-304` Q6 A); the routing note's *"TWT:"*
@@ -172,7 +173,8 @@ number**. ⭐ The **D33** carve-out applies as for 7–12 (the ruled text names 
 nominee, claimant or reporter. The copy is `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json`; the registry is
 `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`, and `apps/jobs/tests/peer-mesh-sms-templates.test.ts` proves the real `t()` renders
 EXACTLY the text below and that this sheet carries it. The LANGUAGE is the Pariwar's default until row 6-35 lets members choose
-(`-310` CF1 A). ⚠ The **Hindi** is agent-authored afresh (⛔ the routing block's draft, which says "two") and ⛔ not yet human-reviewed —
+(`-310` CF1 A). ⚠ The **Hindi** is the `-303` routing block's Hindi draft with "दो" (two) replaced by "कुछ" (a few) — word for word otherwise, ⛔ an
+independent translation (corrected 2026-10-17, 6.27c review round 2) — and ⛔ not yet human-reviewed —
 go-live gate **Row 28** (`peer-mesh-request-hindi-human-review`); a reviewed change means re-registering.
 
 | # | Registered text |
@@ -232,13 +234,15 @@ a 19-character name, a 10-digit helpline number and a 10-character date: 8 and 1
 (**1**); 7 is 101 and 9 is 96 characters of Unicode (**2 segments** each), 11 is 145 (**3**). A longer name can add a segment.
 
 ⭐ **The request to the five neighbours (templates 13–14, Story 6.27c):** ONE transactional DLT SMS per neighbour, **EVER** (a ping's
-send is begun once — the CAS from ⛔ begun), at most five per reported death (a neighbour skipped at send time is replaced by ONE other,
-so the count never grows past the original selection). Rendered with a 19-character name, a 10-digit helpline number and a 55-character
+send is begun once — the CAS from ⛔ begun), at most five TEXTS per reported death (a neighbour skipped at send time is replaced by the next eligible one — a
+replacement skipped in turn is replaced again — so the TEXTS never exceed the original selection; the ping ROWS may exceed five). Rendered with a 19-character name, a 10-digit helpline number and a 55-character
 link (`https://` + a 19-character domain + `/peer-request?c=` + the 12-character code): ⚠ **BOTH are Unicode** — the ruled English
 contains an em dash (U+2014), outside GSM-7 — so 14 (en) is 198 characters (**3 segments** at 67 per part) and 13 (hi) 219 (**4
 segments**). ⚠ The cost the Panel saw (`-311` PM3: the Hindi *"likely THREE segments"*) was understated for both; the words are ruled, so
-it is recorded here, ⛔ never "fixed" by editing the text (an FYI owed to the Panel — `deferred-work.md`). A shorter domain or name can
-drop a segment.
+it is recorded here, ⛔ never "fixed" by editing the text (an FYI owed to the Panel — `deferred-work.md`). ⚠ That is the TYPICAL case:
+at the registered ceilings (a 40-character name, a 120-character link) 14 (en) reaches 284 characters (**5 segments**) and 13 (hi) 305
+(**5**); a 40-character name alone makes en 219 (**4**); a short name and domain can bring the Hindi to 3 — so per text **en 3–5,
+hi 3–5 segments** (corrected 2026-10-17, 6.27c review round 2). A shorter domain or name can drop a segment.
 
 ## URL whitelisting (Story 6.30, -312 AL3)
 

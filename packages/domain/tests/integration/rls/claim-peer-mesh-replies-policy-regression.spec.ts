@@ -329,14 +329,23 @@ describe.skipIf(!hasDatabase)('0156 — the ping delivery record, the replies, t
       expect((await addPing(client, reclaimed, reclaimed.pingId)).message).toMatch(/a re-claimed send is never replaced/);
     });
 
-    it('(b) under RLS another Pariwar\'s ping is NOT FOUND ⇒ refused; `replaces_ping_id` is ⛔ in the UPDATE grant', async () => {
+    it('(b) the trigger\'s replaceable-reason list EQUALS `PEER_MESH_REQUEST_REPLACEABLE_REASONS` — both ways (review round 2 P12)', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ def: string }>(`SELECT pg_get_functiondef('claim_peer_mesh_pings_replacement_guard'::regproc) AS def`);
+      const listed = [...rows[0]!.def.matchAll(/'no_target:([a-z_]+)'/g)].map((m) => m[1]).sort();
+      expect(listed).toEqual([...PEER_MESH_REQUEST_REPLACEABLE_REASONS].sort());
+    });
+
+    it('(b) another Pariwar\'s ping is refused as a replaced ping — RLS hides it from the (SECURITY INVOKER) trigger; `replaces_ping_id` is ⛔ in the UPDATE grant', async () => {
       const { client } = getTx();
       const foreign = await seedPing(client, PARIWAR_B);
       expect((await skip(client, foreign.pingId, 'no_target:peer_not_active')).code).toBeNull();
       const own = await seedPing(client, PARIWAR_A);
       expect((await skip(client, own.pingId, 'no_target:peer_not_active')).code).toBeNull();
       await enterAppScope(client, PARIWAR_A);
-      // The foreign ping's own selection, claimed under PARIWAR_A: the trigger cannot see it.
+      // RLS: under PARIWAR_A the foreign ping is ⛔ visible — so the trigger's lookup (an invoker read) finds ⛔ row. (The refusal
+      // message below is the "own selection" arm either way — this SELECT is what proves the RLS half.)
+      expect((await client.query(`SELECT 1 FROM claim_peer_mesh_pings WHERE ping_id = $1`, [foreign.pingId])).rows).toHaveLength(0);
       const cross = await attempt(
         client,
         `INSERT INTO claim_peer_mesh_pings (selection_id, pariwar_id, member_id, replaces_ping_id) VALUES ($1, $2, gen_random_uuid(), $3)`,

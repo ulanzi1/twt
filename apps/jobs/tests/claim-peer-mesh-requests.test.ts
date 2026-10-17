@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { appLinksConfigGap, isInPeerRequestSendWindow, nextPeerRequestSendWindowStart } from '../src/scheduler/claim-peer-mesh-requests.js';
+import { appLinksConfigGap, isInPeerRequestSendWindow, isScopeWideSendFault, nextPeerRequestSendWindowStart } from '../src/scheduler/claim-peer-mesh-requests.js';
 import { resolveAppLinksOrigin, resolveHttpsOrigin } from '../src/scheduler/staff-email-config.js';
 
 /** An IST wall-clock time on 2026-10-16 as an instant (IST = UTC + 05:30). */
@@ -85,4 +85,15 @@ describe('appLinksConfigGap — the base must make a link that FITS the `{link}`
     expect(appLinksConfigGap('https://links.example.org:8443')).toBe('config:app_links_base_url_invalid');
     expect(appLinksConfigGap(undefined)).toBe('config:app_links_base_url_invalid');
   });
+});
+
+describe('isScopeWideSendFault — a final that would end EVERY remaining ping the same way stops the run (review round 2 P1)', () => {
+  it.each(['config:dlt_template_id_missing', 'config:helpline_number_missing', 'config:secret_manager_PERMISSION_DENIED', 'config:sms_messaging_unavailable', 'auth:http_401', 'dlt_template_not_approved:X1'])(
+    '`%s` ⇒ scope-wide',
+    (d) => expect(isScopeWideSendFault(d)).toBe(true),
+  );
+  it.each(['invalid_number:21211', 'carrier_reject:x', 'unknown:unknown', 'unknown:http_500'])('`%s` ⇒ about the recipient (the run goes on)', (d) =>
+    expect(isScopeWideSendFault(d)).toBe(false),
+  );
+  it('`null` (an accepted send) ⇒ ⛔', () => expect(isScopeWideSendFault(null)).toBe(false));
 });

@@ -1601,9 +1601,12 @@ export function createMemberPeerRequestClient(opts: MemberAuthClientOptions) {
     get(pariwarId: string, pingId: string): Promise<PeerRequestDetailResponse> {
       return call(`${base(pariwarId)}/${encodeURIComponent(pingId)}`, PeerRequestDetailResponse, undefined, true, 'GET');
     },
-    /** Story 6.27c (R14) — the texted link's code → the ping it opens (a 404 for anything else). ⛔ The code is never logged here. */
-    byLink(pariwarId: string, code: string): Promise<PeerRequestByLinkResponse> {
-      return call(`${base(pariwarId)}/by-link/${encodeURIComponent(code)}`, PeerRequestByLinkResponse, undefined, true, 'GET');
+    /**
+     * Story 6.27c (R14) — the texted link's code → the ping it opens (a 404 for anything else). ⛔ The code is never logged here.
+     * `opts.signal` aborts the request (the app's read timeout — 6.27c review round 2 P4).
+     */
+    byLink(pariwarId: string, code: string, opts: { signal?: AbortSignal } = {}): Promise<PeerRequestByLinkResponse> {
+      return call(`${base(pariwarId)}/by-link/${encodeURIComponent(code)}`, PeerRequestByLinkResponse, undefined, true, 'GET', undefined, undefined, opts.signal);
     },
     saveAnswer(
       pariwarId: string,

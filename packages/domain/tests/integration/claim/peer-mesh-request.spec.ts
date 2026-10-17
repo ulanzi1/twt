@@ -15,11 +15,20 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// 6.27c review round 2 P3 — the link-code COLLISION leg forces the generator's bytes; every other call passes through to the
+// real CSPRNG (an empty queue ⇒ `randomBytes` unchanged).
+const forcedBytes = vi.hoisted(() => [] as Buffer[]);
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+  return { ...actual, randomBytes: (n: number) => forcedBytes.shift() ?? actual.randomBytes(n) };
+});
 
 import {
   CORRECTION_SEND_LEASE_MS,
   PEER_MESH_REQUEST_PARKED_BY,
+  PeerRequestLocaleMissingError,
   beginPeerMeshRequest,
   expireExhaustedPeerMeshRequests,
   finalisePeerMeshNoSendableNumber,
@@ -178,10 +187,12 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
     const { client } = getTx();
     for (const d of everyBuiltPeerMeshRequestDetail()) {
       await client.query('SAVEPOINT d');
-      await client.query(`UPDATE claim_peer_mesh_pings SET send_outcome = 'error', attempt_count = 1, detail = $2, first_detail = $2 WHERE ping_id = $1`, [
+      const r = await client.query(`UPDATE claim_peer_mesh_pings SET send_outcome = 'error', attempt_count = 1, detail = $2, first_detail = $2 WHERE ping_id = $1`, [
         s.pings[0]!.pingId,
         d,
       ]);
+      // ⛔ vacuous — the row was really written, so the CHECK really ran (6.27c review round 2 P12)
+      expect(r.rowCount, d).toBe(1);
       await client.query('ROLLBACK TO SAVEPOINT d');
     }
   });
@@ -289,6 +300,35 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
     });
   });
 
+  it('⭐ AC2 — a `link_code` collision (23505) is retried with a NEW code inside the SAVEPOINT; the begin succeeds', async () => {
+    try {
+      await linkCodeCollisionLeg();
+    } finally {
+      forcedBytes.length = 0; // ⛔ a leftover forced draw reaching a later `randomBytes` caller in this file
+    }
+  });
+
+  async function linkCodeCollisionLeg(): Promise<void> {
+    const s = await seedRequestClaim();
+    // 24 bytes of one value < 62 ⇒ a 12-character code of one letter (the generator's rejection limit is 248).
+    const bytesOf = (v: number): Buffer => Buffer.alloc(24, v);
+    forcedBytes.push(bytesOf(7));
+    const first = await begin(s, s.pings[0]!.pingId);
+    expect(first.kind).toBe('begun');
+    if (first.kind !== 'begun') return;
+    // the SECOND ping's first draw is the SAME code ⇒ `claim_peer_mesh_pings_link_code_uq`; the retry draws again
+    forcedBytes.push(bytesOf(7), bytesOf(8));
+    const second = await begin(s, s.pings[1]!.pingId);
+    expect(forcedBytes).toHaveLength(0); // both draws were taken — the collision really happened and was retried
+    expect(second.kind).toBe('begun');
+    if (second.kind !== 'begun') return;
+    expect(second.linkCode).not.toBe(first.linkCode);
+    expect(second.linkCode).toMatch(new RegExp(PEER_MESH_LINK_CODE_PATTERN));
+    expect(await pingRow(s.pings[1]!.pingId)).toMatchObject({ send_outcome: 'attempting', attempt_count: 1, link_code: second.linkCode });
+    // the transaction is still usable after the rolled-back savepoint
+    expect((await pingRow(s.pings[0]!.pingId)).link_code).toBe(first.linkCode);
+  }
+
   describe('R3 / R4 / R2 — the exclusions and the replacement', () => {
     /** As the superuser: make the selected member `m` fail the gate for `reason`. */
     async function exclude(s: Seeded, m: MemberId, reason: (typeof PEER_MESH_REQUEST_REPLACEABLE_REASONS)[number]): Promise<void> {
@@ -310,7 +350,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
           await seedClaim(tx, s.pid, { deceasedMemberId: s.deceased, claimantActorId: m });
           break;
         case 'peer_not_eligible':
-          // ⛔ reachable through today's predicate (the four labels cover it — asserted below); planted as the deceased itself.
+          // ⛔ plantable: the four specific labels cover every conjunct of today's predicate (asserted below) — this arm is a
+          // no-op, and the `it.each` below filters it out.
           break;
       }
       await enterAppScope(client, s.pid);
@@ -347,8 +388,10 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       const third = await pingRow((r2 as { replacementPingId: PeerMeshPingId }).replacementPingId);
       expect(third.member_id).toBe(s.ranked[6]);
       const all = await pingsOf(s.selectionId);
+      expect(all).toHaveLength(s.pings.length + 2); // the five originals + two replacements
       const live = all.filter((p) => p.send_outcome !== 'no_target' && p.send_outcome !== 'skipped_superseded');
-      expect(live.length).toBeLessThanOrEqual(s.pings.length);
+      // EXACTLY the original count: four originals still due + the second replacement (6.27c review round 2 P12 — ⛔ `<=`)
+      expect(live).toHaveLength(s.pings.length);
     });
 
     it('⛔ one left in the ranking ⇒ ⛔ replacement; a NULL ranking (`district_cohort_v1`) ⇒ ⛔ replacement', async () => {
@@ -402,10 +445,15 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
         expect(await readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId: m, deceasedMemberId: s.deceased }), reason).toEqual({ eligible: false, reason });
       }
       expect(await readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId: s.ranked[5]!, deceasedMemberId: s.deceased })).toEqual({ eligible: true });
-      // ⛔ member row, and the deceased themself, ⇒ the fallback label
+      // ⛔ member row ⇒ the fallback label (the only way to reach it today)
       expect(await readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId: toMemberId(randomUUID()), deceasedMemberId: s.deceased })).toEqual({
         eligible: false,
         reason: 'peer_not_eligible',
+      });
+      // the deceased themself fails the gate (`member_id <> deceased`) and is labelled by the claim naming them — ⛔ the fallback
+      expect(await readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId: s.deceased, deceasedMemberId: s.deceased })).toEqual({
+        eligible: false,
+        reason: 'peer_reported_deceased',
       });
     });
   });
@@ -468,6 +516,25 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       await begin(s, c.pingId);
       expect(await finalisePeerMeshNoSendableNumber(getTx().client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: c.pingId, jobId: 'job-z' })).toMatchObject({ moved: false });
     });
+
+    it('R6 after the claim LEFT the window (decided since the begin) ⇒ `no_sendable_number` kept, ⛔ replacement (review round 2 P11)', async () => {
+      const s = await seedRequestClaim();
+      const p = s.pings[0]!;
+      expect((await begin(s, p.pingId)).kind).toBe('begun');
+      const { client } = getTx();
+      await client.query('RESET ROLE');
+      await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
+      await client.query(`UPDATE claims SET current_state = 'denied' WHERE claim_case_id = $1`, [s.claimCaseId]);
+      await client.query(`SET LOCAL app.claim_state_writer = 'off'`);
+      await enterAppScope(client, s.pid);
+      expect(await finalisePeerMeshNoSendableNumber(client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: p.pingId, jobId: JOB })).toEqual({
+        moved: true,
+        attemptCount: 1,
+        replacementPingId: null,
+      });
+      expect(await pingRow(p.pingId)).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:no_sendable_number' });
+      expect(await pingsOf(s.selectionId)).toHaveLength(s.pings.length);
+    });
   });
 
   describe('the reads', () => {
@@ -489,7 +556,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       await enterAppScope(client, pid);
       const db = bindScopedDb(client);
       expect(await resolvePeerRequestLocale(db, toPariwarId(pid))).toEqual({ locale: 'hi', source: 'pariwar_default' });
-      await expect(resolvePeerRequestLocale(db, toPariwarId(randomUUID()))).rejects.toThrow(/no default language/);
+      await expect(resolvePeerRequestLocale(db, toPariwarId(randomUUID()))).rejects.toBeInstanceOf(PeerRequestLocaleMissingError);
     });
 
     it('R14 — the by-link answer: the session member\'s TEXTED ping only; everything else ⇒ null', async () => {

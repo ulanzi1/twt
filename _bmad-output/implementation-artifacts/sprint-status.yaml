@@ -1,3 +1,13 @@
+# last_updated: 2026-10-17 (STORY 6.27c — CODE REVIEW ROUND 2 via `bmad-code-review` (asked as "2.27c"; BigDev confirmed 6.27c): the WHOLE
+# branch `main...f3c19b62`, 4 chunks × 3 layers (12 layers, ⛔ failed). 2 decisions (BigDev): D1 (a) — R5 / `-343` kept as built, its
+# "may have sent" residual WIDENED to every pre-send re-claim and pinned by a live leg (P18); D2 (a) — F4's reset dropping an open
+# questionnaire's unsaved work on a second link ACCEPTED (W9). 18 patches applied: P1 a scope-wide final (`config:*` / `auth` /
+# `dlt_template_not_approved`) STOPS the child (⛔ every slot used up); P4 the mobile by-link read bounded by the read timeout; P5 the
+# due pings read before the name decrypt; P6 the lease re-checked (with a margin) before the handoff; P7 a locale-read DB fault a retry /
+# a sweep skip (a missing passport still a hold); P8 the deferral floored at +60 s; P11 R6 re-judges the window before a replacement;
+# tests P2 / P3 / P9 / P10 / P12–P14; records P15 (the Hindi is the routing draft with दो → कुछ, ⛔ "afresh") – P18. Fix diff
+# adversarially reviewed: ⛔ HIGH, 1 MED (P1's stop is ⛔ a hold the sweep sees for auth / template / messaging ⇒ W10), LOWs fixed.
+# 10 deferred (W1–W10), 34 dismissed. Row `6-27c-peer-mesh-sending-texts-and-links` → `done`. ⛔ No other row moves.)
 # last_updated: 2026-10-17 (STORY 6.27c — ready-for-dev → in-progress → review via `bmad-dev-story`: each of the five texted ONCE.
 # The registry `peer-mesh-sms-templates.ts` + `peer_mesh_sms.request` (en the ruled words; hi afresh, NOT YET HUMAN-REVIEWED — Row 28) +
 # DLT sheet rows 13 / 14 (both locales Unicode — the BF24 cost FYI owed to the Panel); migration 0166 (the ping `detail` grammar,
@@ -20266,7 +20276,7 @@ development_status:
   # gains *"AND row 6-34 is done"* — it uses 6.34's typed-variable vocabulary (`{#var#}` + `slots`) and joins its gate's `REGISTRY_FILES`.
   # ⭐ 2026-10-14 ANNOTATION (`2026-10-14-332` call 6): 6.27c's start condition gains *"AND row 6-36c is done"* (row 6-36 no longer
   # waits for 6-36c).
-  6-27c-peer-mesh-sending-texts-and-links: review
+  6-27c-peer-mesh-sending-texts-and-links: done
   # ⭐ 2026-10-08 ADDED by `2026-10-08-294` §3 (6.24a code review round 2): ⛔ nothing per-death stops a second approval (`-292` FOUND it);
   # 6.24a's RF6 closure is the only control and three paths pass it (`-294` §2 (a)–(c)). ⭐ BEFORE any code: the Panel question — which
   # family is paid when two claims for one death both qualify, and what the other is owed — then the guard. ⛔ No story file yet.

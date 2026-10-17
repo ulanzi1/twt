@@ -97,7 +97,8 @@ describe('the shell is thin and the root Stack declares its group', () => {
     // ⭐ Story 6.27c — the loading branch is the pure `peerRequestSlotView` (an undefined pariwarId ⇒ `loading`, pinned in
     // `peer-request.test.ts`), rendered first.
     expect(slot).toMatch(/view\.kind === 'loading' \?/)
-    // the slot itself calls nothing — its hooks' queries are `enabled` only once a pariwarId is a string
+    // the slot calls the API ONLY through its hooks (Story 6.27c — the by-link hook among them) — never directly; the hooks'
+    // queries are `enabled` only once a pariwarId is a string (the by-link one also needs a code — `peer-request-link.test.ts`)
     expect(slot).not.toMatch(/member-api|api-client|useQuery|useMutation|fetch\(|console\./)
     const queries = strip(readFileSync(path.join(APP, '../components/peer-request/usePeerRequestQueries.ts'), 'utf8'))
     // Story 6.27c — 2 → 3: the by-link resolver joins the list and the detail, gated the same way.

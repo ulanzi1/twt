@@ -10,19 +10,28 @@
 //   (2) R11's RACE GUARD — the sweep's checks again (the gateway, `APP_LINKS_BASE_URL` for an app link, the LIVE questionnaire
 //       and ⛔ question of it `'pending'` (AC2b), the template id of the Pariwar's language, the helpline, ANY Secret Manager
 //       fault) BEFORE a ping is begun ⇒ `held_config` + ONE ids-only alarm, ⛔ slot used up;
-//   (3) R9 — the deceased's NAME, ONCE, outside any claiming transaction: the mode (`-181`), the KYC name, the erased sentinel,
+//   (3) the due pings — ⛔ any ⇒ `noop` (⛔ name decrypted for nothing — R8's hook enqueues on every no-op SELECT re-run);
+//       a locale-read DB fault in (2) is a RETRY (the sweep skips the Pariwar that run), ⛔ a hold — a MISSING passport is a hold;
+//   (4) R9 — the deceased's NAME, ONCE, outside any claiming transaction: the mode (`-181`), the KYC name, the erased sentinel,
 //       the mode-resolved form and its length (`fitsDltAlphanumeric`) — a fault is CLAIM-WIDE (`no_target:name_<reason>`, ⛔
 //       replaced); a decrypt THROW is a retry (⛔ stored — ⛔ ping begun yet);
-//   (4) per due ping, in `ping_id` order (and every replacement the run creates): the CLAIMING transaction
+//   (5) per due ping, in `ping_id` order (and every replacement the run creates): the CLAIMING transaction
 //       (`beginPeerMeshRequest` — claim → ping locks, R1) → COMMIT → (⛔ KMS under a lock) the neighbour's number →
 //       `normalizeMobile` → its keyed hash → the send → the compare-and-set. An UNUSABLE number is R6 (a second transaction
 //       finishes the row `no_sendable_number` and replaces it — unless R5); a decrypt / hash THROW is a transient (⛔ R6 — a KMS
 //       outage ⛔ drops a neighbour and texts another). A transient ⇒ the note + the NEXT ping; the child throws at the END
 //       (pg-boss retries the SAME job, which re-claims its own rows at once; finished pings are skipped) — UNLESS 20:00 IST
 //       passes first: then the child RETURNS deferred (with its counts) and the 09:00 child re-claims those rows past their lease.
-//       ⚠ A row begun but ⛔ handed off when 20:00 passes is re-claimed as attempt 2 — the transient's path: a failed re-check
-//       then reads "may have sent" and ⛔ replaces (R1 / R5), although ⛔ text went. Recorded, ⛔ narrowed (the window is the
-//       unsealing + hashing); the send core's own config reads after that check are outside it (review residual).
+//       A lease that lapsed (or nearly) before the handoff ⇒ ⛔ sent (another child may hold the row). A final about the SCOPE
+//       (`config:*`, `auth`, `dlt_template_not_approved` — `isScopeWideSendFault`) ⇒ the run STOPS, `held_config` (⛔ every slot
+//       used up in one run; ⚠ a fault the sweep cannot see costs one slot per child run — recorded, W10).
+//       ⚠ RECORDED (review round 2 D1 (a) — R5 / `-343` as built): EVERY re-claim counts as "a prior attempt may have sent",
+//       including one whose first attempt provably ⛔ reached the send core — a `decrypt_failed:tier1` / `hash_failed:tier1`
+//       transient, a row begun but ⛔ handed off when 20:00 passed, or one whose lease lapsed before the handoff (P6). On that
+//       re-claim a failed re-check finishes `error` (`-297` §2), and an unusable number or a name fault finishes `no_target` — ⛔ replaced — with the "may have sent" alarm,
+//       although ⛔ text went (one fewer neighbour asked; the ground inspection carries it — `-310` CF4). ⭐ Trigger: such an
+//       alarm on a row whose `provider_message_id` is NULL — then a "handed to the send core" marker (`deferred-work.md`). The
+//       send core's own config reads after the 20:00 check are outside it (review residual).
 // ── The sweep, daily 10:30 IST (inside the send hours; after the suspicion sweep's 10:00) ─────────────────────────────────
 //   (1) config per Pariwar FIRST (memoised) → (2) the stalled scopes → the HELD ones' in-flight pings PARKED + ONE alarm →
 //   (3) the give-up (three IST days of UN-parked time) over the UN-held ones → (4) the paged due claims (R16 — `answerWindowSql`),
@@ -102,6 +111,13 @@ export const PEER_REQUEST_SEND_START_HOUR_IST = 9;
 /** The IST hour from which ⛔ text is sent (exclusive end). */
 export const PEER_REQUEST_SEND_END_HOUR_IST = 20;
 const HOUR_MS = 60 * 60 * 1000;
+/**
+ * P6 — how much of the send lease must REMAIN at the handoff: the core's two untimed Secret Manager reads plus its send
+ * (`CORRECTION_SEND_TIMEOUT_MS`, 10 s) still follow, and another child may re-claim the row once the lease lapses.
+ */
+export const PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS = 2 * 60 * 1000;
+/** The least a quiet-hours deferral waits (P8 — host-vs-DB clock skew at 09:00 ⛔ re-enqueues in a tight loop). */
+export const PEER_REQUEST_DEFER_FLOOR_MS = 60 * 1000;
 
 /** 00:00 IST opening the IST day `days` after `now`'s — the domain's IST primitives (⛔ a seventh copy of the offset, BF11). */
 function istMidnight(now: Date, days = 0): Date {
@@ -157,8 +173,20 @@ interface PariwarSendConfig {
 }
 
 /**
+ * The Pariwar's language could ⛔ be read (a DB fault — 6.27c review round 2 P7). ⛔ A config gap: the child RETRIES (pg-boss), the
+ * sweep SKIPS the Pariwar this run (⛔ held, ⛔ parked, ⛔ enqueued — the next tick reads it again).
+ */
+class PeerRequestLocaleReadError extends Error {
+  constructor() {
+    super('[jobs] claim-peer-mesh-request: the Pariwar locale read failed');
+    this.name = 'PeerRequestLocaleReadError';
+  }
+}
+
+/**
  * The PER-PARIWAR gaps: the LIVE questionnaire (⛔ none ⇒ `questionnaire_unavailable`; a `'pending'` question ⇒
  * `counsel_basis_pending` — AC2b), the Pariwar's language (R10), its template id, its helpline. ⛔ Stored — alarm codes only.
+ * @throws PeerRequestLocaleReadError  the locale read failed — a transient, ⛔ a gap
  */
 async function pariwarConfig(
   deps: ClaimPeerMeshRequestDeps,
@@ -171,8 +199,10 @@ async function pariwarConfig(
   try {
     const pid = ids.pariwarId(pariwarId);
     locale = (await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePeerRequestLocale(db, pid))).locale;
-  } catch {
-    return { gap: 'config:locale_unavailable' };
+  } catch (err) {
+    // ⛔ passport row — a DATA gap a retry ⛔ fixes ⇒ HELD; anything else is a failed READ ⇒ a transient (P7)
+    if (err instanceof claimDomain.PeerRequestLocaleMissingError) return { gap: 'config:locale_unavailable' };
+    throw new PeerRequestLocaleReadError();
   }
   const template = await configSet(deps, peerMeshRequestDltConfigKey(locale));
   if (template === 'fault') return { gap: 'config:secret_manager' };
@@ -181,6 +211,16 @@ async function pariwarConfig(
   if (helpline === 'fault') return { gap: 'config:secret_manager' };
   if (helpline === 'missing') return { gap: 'config:helpline_number_missing' };
   return { gap: null, config: { locale } };
+}
+
+/**
+ * P1 — is a FINAL `error` from the send core about the SCOPE (its config, the gateway account, the template), ⛔ the recipient?
+ * The core's own config finals (`config:*` — a fault after the race guard, BF8) and the gateway's `auth` / `dlt_template_not_approved`
+ * classes: the next ping of the claim would end the same way. ⛔ `unknown` (it may be the number).
+ */
+export function isScopeWideSendFault(rawDetail: string | null): boolean {
+  if (rawDetail === null) return false;
+  return rawDetail.startsWith('config:') || rawDetail.startsWith('auth:') || rawDetail.startsWith('dlt_template_not_approved:');
 }
 
 // ── The SWEEP ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -197,6 +237,9 @@ export interface PeerMeshRequestSweepResult {
 }
 
 type EnqueueBoss = Pick<QueueClient, 'send'>;
+
+/** The sweep's marker for a Pariwar whose config could ⛔ be read this run (P7) — ⛔ a gap string. */
+const CONFIG_UNREADABLE: unique symbol = Symbol('peer-request-config-unreadable');
 
 /** ONE child per claim — ids only; `singletonKey` is a LABEL (the claim lock + the per-ping CAS are the dedup). */
 export async function enqueuePeerMeshRequestChild(
@@ -250,9 +293,21 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   // both parks and enqueues a Pariwar).
   const globalGap = globalConfigGap(deps);
   const gapByPariwar = new Map<string, string | null>();
-  const gapOf = async (pariwarId: string): Promise<string | null> => {
+  // P7 — a Pariwar whose config could ⛔ be READ this run (the locale read failed): ⛔ held, ⛔ parked, ⛔ enqueued; ONE alarm.
+  const unreadable = new Set<string>();
+  const gapOf = async (pariwarId: string): Promise<string | null | typeof CONFIG_UNREADABLE> => {
     if (globalGap !== null) return globalGap;
-    if (!gapByPariwar.has(pariwarId)) gapByPariwar.set(pariwarId, (await pariwarConfig(deps, pariwarId)).gap);
+    if (unreadable.has(pariwarId)) return CONFIG_UNREADABLE;
+    if (!gapByPariwar.has(pariwarId)) {
+      try {
+        gapByPariwar.set(pariwarId, (await pariwarConfig(deps, pariwarId)).gap);
+      } catch (err) {
+        if (!(err instanceof PeerRequestLocaleReadError)) throw err;
+        unreadable.add(pariwarId);
+        alarm(`[jobs] claim-peer-mesh-request-sweep: the config of Pariwar ${pariwarId} could ⛔ be read (the locale read failed) — skipped this run (⛔ held, ⛔ parked)`);
+        return CONFIG_UNREADABLE;
+      }
+    }
     return gapByPariwar.get(pariwarId) ?? null;
   };
 
@@ -268,7 +323,9 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
       budgetExhaustedDuringScopeScan = true;
       break;
     }
-    ((await gapOf(pariwarId)) === null ? unheld : held).push(pariwarId);
+    const gap = await gapOf(pariwarId);
+    if (gap === CONFIG_UNREADABLE) continue;
+    (gap === null ? unheld : held).push(pariwarId);
   }
   const parked = await claimDomain.parkHeldPeerMeshRequests(deps.pool, { now, allow, held });
   if (parked.length > 0) {
@@ -311,7 +368,9 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
         budgetExhausted = true;
         break sweep;
       }
-      if ((await gapOf(due.pariwarId)) !== null) {
+      const gap = await gapOf(due.pariwarId);
+      if (gap === CONFIG_UNREADABLE) continue;
+      if (gap !== null) {
         if (globalGap !== null && scannedClaims >= maxClaims) {
           bounded = true;
           break sweep;
@@ -445,7 +504,10 @@ export async function runPeerMeshRequestChild(
 
   // (1) AC2 — ⛔ never at night: ⛔ ping begun; the child comes back at the next 09:00 IST. Checked again per ping (F2).
   const deferToMorning = async (at: Date, counts?: PeerMeshRequestChildCounts): Promise<PeerMeshRequestChildResult> => {
-    const startAfter = nextPeerRequestSendWindowStart(at);
+    // P8 — FLOORED: pg-boss fires `startAfter` on the DB clock; a host a few seconds behind it would see 08:59:5x at 09:00 and
+    // re-enqueue for a 09:00 already past for pg-boss — a tight loop until the host clock catches up.
+    const next = nextPeerRequestSendWindowStart(at);
+    const startAfter = new Date(Math.max(next.getTime(), at.getTime() + PEER_REQUEST_DEFER_FLOOR_MS));
     await enqueuePeerMeshRequestChild(boss, { pariwarId: pid, claimCaseId: p.claimCaseId, startAfter });
     return counts === undefined ? { status: 'deferred_quiet_hours', startAfter } : { status: 'deferred_quiet_hours', startAfter, counts: { ...counts } };
   };
@@ -453,7 +515,15 @@ export async function runPeerMeshRequestChild(
 
   // (2) R11's RACE GUARD — BEFORE any ping is begun (config may have vanished since the sweep / the hook).
   const globalGap = globalConfigGap(deps);
-  const pariwarCheck = globalGap === null ? await pariwarConfig(deps, pid) : { gap: globalGap };
+  let pariwarCheck: Awaited<ReturnType<typeof pariwarConfig>>;
+  try {
+    pariwarCheck = globalGap === null ? await pariwarConfig(deps, pid) : { gap: globalGap };
+  } catch (err) {
+    if (!(err instanceof PeerRequestLocaleReadError)) throw err;
+    // P7 — a DB fault, ⛔ a config gap: pg-boss retries the SAME job (⛔ ping begun).
+    alarm(`[jobs] claim-peer-mesh-request: the locale read failed for ${tag} — retrying (⛔ ping begun)`);
+    throw new ClaimCorrectionTransientError(`[jobs] claim-peer-mesh-request: transient locale_read_failed for ${tag}`);
+  }
   if (pariwarCheck.gap !== null) {
     alarm(`[jobs] claim-peer-mesh-request: the neighbour texts of ${tag} are HELD — ${pariwarCheck.gap}; ⛔ ping begun (the next sweep re-selects it)`);
     return { status: 'held_config', reason: pariwarCheck.gap };
@@ -461,19 +531,22 @@ export async function runPeerMeshRequestChild(
   const { locale } = (pariwarCheck as { config: PariwarSendConfig }).config;
   const origin = resolveAppLinksOrigin(deps.appLinksBaseUrl)!;
 
-  // (3) R9 — the name, ONCE, before any claiming transaction.
   const claimRow = await withPariwarScope(deps.pool, pariwarId, (db: Db) => claimDomain.getClaimCase(db, pariwarId, claimCaseId));
   if (!claimRow) {
     alarm(`[jobs] claim-peer-mesh-request: ${tag} is not found in its Pariwar`);
     return { status: 'noop', reason: 'claim_missing' };
   }
-  const nameRead = await readDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag);
-  const nameFault = 'fault' in nameRead ? nameRead.fault : null;
 
-  // (4) the due pings, in order — a replacement the run creates joins the queue.
+  // (3) the due pings, in order — a replacement the run creates joins the queue. Read BEFORE the name (6.27c review round 2
+  // P5): R8's hook enqueues on every no-op SELECT re-run, and a child with nothing due must ⛔ decrypt the deceased's name.
   const queue = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
     claimDomain.listDuePeerMeshRequestPings(db, { pariwarId, claimCaseId }),
   );
+  if (queue.length === 0) return { status: 'noop', reason: 'nothing_due' };
+
+  // (4) R9 — the name, ONCE, before any claiming transaction.
+  const nameRead = await readDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag);
+  const nameFault = 'fault' in nameRead ? nameRead.fault : null;
   const counts = { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0 };
   let helplineWarned = false;
   const scoped = <T>(fn: (d: Db) => Promise<T>) => withPariwarScope(deps.pool, pariwarId, fn);
@@ -506,7 +579,8 @@ export async function runPeerMeshRequestChild(
       counts.noTarget += 1;
       // `-298` A — a re-claimed row's prior attempt MAY have sent. A FIRST attempt's peer / name skip is ⛔ alarmed (AC5b).
       if (begun.reclaimed) {
-        alarm(`[jobs] claim-peer-mesh-request: ${ptag} finished 'no_target' (${begun.detail}) on attempt ${String(begun.attemptCount)} — a prior attempt was claimed and may have sent`);
+        // ⚠ `attemptCount` is the count of CLAIMED attempts before this re-claim (this one finished the row ⛔ claiming it).
+        alarm(`[jobs] claim-peer-mesh-request: ${ptag} finished 'no_target' (${begun.detail}) on a re-claim after ${String(begun.attemptCount)} claimed attempt(s) — a prior attempt may have sent`);
       }
       if (begun.replacementPingId !== null) {
         counts.replaced += 1;
@@ -566,6 +640,14 @@ export async function runPeerMeshRequestChild(
     // `attempting` under this job, truthfully un-sent; the 09:00 IST child re-claims it past its lease (attempt 2).
     const sendAt = clock();
     if (!isInPeerRequestSendWindow(sendAt)) return deferToMorning(sendAt, counts);
+    // P6 — the LEASE lapsed (or is about to — the core's two Secret Manager reads and its 10 s send still follow: the MARGIN)
+    // between the begin and the handoff (an untimed unseal / HMAC): another child may re-claim this row and send ⇒ ⛔ sent here. The row is left as it is (⛔ note — the re-claimer owns it now, or the
+    // retry re-claims it past the lease); counted as a transient so the SAME job retries.
+    if (sendAt.getTime() - beginAt.getTime() >= claimDomain.CORRECTION_SEND_LEASE_MS - PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS) {
+      alarm(`[jobs] claim-peer-mesh-request: ${ptag} — its lease lapsed (or nearly) before the handoff; ⛔ sent (left to the re-claim)`);
+      counts.transient += 1;
+      continue;
+    }
 
     // ── The send — the registered words, the mode-resolved name, the link (R12 origin), the Pariwar's helpline ──
     const member = (nameRead as { name: string }).name;
@@ -604,6 +686,15 @@ export async function runPeerMeshRequestChild(
     if (!moved) alarm(`[jobs] claim-peer-mesh-request: the row of ${ptag} moved on before its finalise (the outcome was ${result.outcome})`);
     if (result.outcome === 'accepted') counts.accepted += 1;
     else counts.finalOther += 1;
+    // P1 — a final that is about the CONFIG, the account or the template (⛔ this recipient) would end every remaining ping the
+    // same way, using up each once-ever slot: STOP — ⛔ further ping begun this run. ⚠ The sweep's R11 check sees the template id,
+    // the helpline, a Secret Manager config fault and the gateway — those are then HELD; it does ⛔ see `auth`,
+    // `dlt_template_not_approved` or `config:sms_messaging_unavailable`, so the next child uses ONE more slot (⛔ all of them) —
+    // recorded (review round 2 W10). A transient noted earlier in this run is ⛔ retried by pg-boss now — the next sweep re-claims it.
+    if (result.outcome === 'error' && isScopeWideSendFault(result.detail)) {
+      alarm(`[jobs] claim-peer-mesh-request: the neighbour texts of ${tag} STOPPED after ${detail ?? ''} — ⛔ further ping begun this run; fix it before the next sweep (a config gap the sweep can see is held there; an account / template / messaging fault is ⛔ seen — the next child would use one more slot)`);
+      return { status: 'held_config', reason: detail ?? 'config' };
+    }
   }
 
   if (counts.transient > 0) {

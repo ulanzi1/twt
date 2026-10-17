@@ -41,11 +41,9 @@ describe('peerRequestSlotView — the slot\'s ONE decision (AC6)', () => {
   it('a 404 OR a failed call ⇒ the dignified not-openable state (⛔ a hard error)', () => {
     expect(peerRequestSlotView({ pariwarId: P, openPingId: null, code: CODE, byLink: { status: 'error', pingId: null } })).toEqual({ kind: 'not_openable' })
   })
-  it('a questionnaire opened from the list wins over the link', () => {
-    expect(peerRequestSlotView({ pariwarId: P, openPingId: PING, code: CODE, byLink: { status: 'error', pingId: null } })).toEqual({
-      kind: 'questionnaire',
-      pingId: PING,
-    })
+  it('a dismissed link (⛔ code) then a request opened from the list ⇒ that questionnaire', () => {
+    // the reachable form (review round 2 P14): the list — the only caller of `setOpenPingId` — renders only when the code is null
+    expect(peerRequestSlotView({ pariwarId: P, openPingId: PING, code: null, byLink: pending })).toEqual({ kind: 'questionnaire', pingId: PING })
   })
 })
 
@@ -68,7 +66,8 @@ describe('the wiring (source scans)', () => {
     expect(hook).toContain('retry: false')
     expect(hook).toContain('staleTime: Infinity')
     expect(hook).toContain('...PEER_REQUEST_CACHE_OPTIONS')
-    expect(hook).toContain('peerRequestApi.byLink(pariwarId as string, code as string)')
+    // ⭐ BOUNDED (review round 2 P4): the read races the app's read timeout, and passes the signal to the client
+    expect(hook).toContain('withReadTimeout(signal, (s) => peerRequestApi.byLink(pariwarId as string, code as string, { signal: s }))')
     expect(PEER_REQUEST_CACHE_OPTIONS.gcTime).toBe(0) // ⛔ dehydrated to disk
     expect(peerRequestByLinkKey(P, 'm', CODE)[0]).toBe('peer-requests') // ⭐ cleared with every other peer entry on sign-out
   })

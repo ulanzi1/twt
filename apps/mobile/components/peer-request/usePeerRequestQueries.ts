@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PeerRequestAnswerValue } from '@twt/contracts'
 
 import { peerRequestApi } from '../../lib/peer-request-api'
+import { withReadTimeout } from '../known-people/useKnownPeopleQueries'
 import { useSession } from '../../lib/session-context'
 import {
   PEER_REQUEST_CACHE_OPTIONS,
@@ -45,7 +46,9 @@ export function usePeerRequestQuery(pariwarId: string | undefined, pingId: strin
 /**
  * ⭐ Story 6.27c (AC6; R14) — the texted link's code → `{ pingId }`: ONE call, once the session has loaded and a code is present
  * (⛔ a retry, ⛔ a refetch on focus / remount — `staleTime: Infinity`; a 404 or a network failure is the not-openable state).
- * In memory only (`gcTime: 0`). ⛔ The code is never logged.
+ * In memory only (`gcTime: 0`). ⛔ The code is never logged. ⭐ BOUNDED (6.27c review round 2 P4): the transport has ⛔ timeout, so
+ * a stalled cold start would sit on "Loading…" with ⛔ exit — the read is RACED against the app's read timeout (6.36b's
+ * `withReadTimeout`), and a timed-out read is a failed call (⇒ not-openable + the helpline).
  */
 export function usePeerRequestByLinkQuery(pariwarId: string | undefined, code: string | null) {
   const { session, isLoading } = useSession()
@@ -54,7 +57,7 @@ export function usePeerRequestByLinkQuery(pariwarId: string | undefined, code: s
     ...PEER_REQUEST_CACHE_OPTIONS,
     staleTime: Infinity,
     queryKey: peerRequestByLinkKey(pariwarId, memberId, code),
-    queryFn: () => peerRequestApi.byLink(pariwarId as string, code as string),
+    queryFn: ({ signal }) => withReadTimeout(signal, (s) => peerRequestApi.byLink(pariwarId as string, code as string, { signal: s })),
     enabled: typeof pariwarId === 'string' && typeof memberId === 'string' && session?.pariwarId === pariwarId && code !== null,
     retry: false,
   })

@@ -2750,7 +2750,7 @@ one wrongly reported dead: a claim in ANY state keeps them out, even after it is
 the story's member-facing changes are `apps/mobile/components/peer-request/PeerRequestSlot.tsx` (the `?c=` code wired to the by-link
 resolver), `components/peer-request/usePeerRequestQueries.ts` (`usePeerRequestByLinkQuery`), `components/peer-request/peer-request-cache.ts`
 (its in-memory key), `lib/peer-request.ts` (`peerRequestSlotView`) and their tests (`tests/unit/peer-request-link.test.ts` new;
-`app-link-route-map.test.ts` amended, ⛔ deleted).
+`tests/unit/peer-request-slot-render.test.ts` new (review F4); `app-link-route-map.test.ts` amended, ⛔ deleted).
 
 1. ⭐ **REMOVES friction (⛔ no row).** A neighbour who taps the texted link now lands ON that request's questions — before this the
    slot ignored the code and showed the list, so the member had to find and tap the request. ⛔ No new step, field, confirm or wait.
@@ -2761,6 +2761,11 @@ resolver), `components/peer-request/usePeerRequestQueries.ts` (`usePeerRequestBy
 3. ⛔ **Not friction:** a link the app cannot resolve (unknown, another member's, untexted, or a failed call) shows 6.27a's existing
    "could not be opened" state with the helpline and "Done" — ⛔ a new screen, ⛔ a hard error; ⛔ a call is made before the session
    has loaded.
+4. ⭐ **Review F4 / round 2 (2026-10-17) — ⛔ new friction.** A SECOND texted link tapped while the request screen is open now opens
+   THAT link's request (before, a Back on the first suppressed every later link until the screen was left); a by-link call that
+   hangs now ends, after the app's read timeout, in the same "could not be opened" state (before, "Loading…" with ⛔ way out). ⚠
+   RECORDED (round 2 W9, accepted by BigDev): the second link replaces an OPEN questionnaire WITHOUT its "leave without saving?"
+   warning — answers already saved are kept; an unsaved date or a queued save is lost.
 
 ⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]) — they add ⛔ asset and one query hook.
 ⭐ Written for changes UNCOMMITTED at the time of writing; AC-4 reads it once committed ([[project_friction_budget_baseline_ratchet]]).

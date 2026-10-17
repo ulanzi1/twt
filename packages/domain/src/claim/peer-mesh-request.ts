@@ -547,7 +547,7 @@ export interface PeerMeshNoSendableNumberResult {
   readonly moved: boolean;
   /** The attempt the row was finished on (`> 1` ⇒ the caller alarms "may have sent", `-298`). */
   readonly attemptCount: number;
-  /** The replacement (R2), or `null` — ⛔ one left, a NULL ranking, or a re-claimed row (R5). */
+  /** The replacement (R2), or `null` — ⛔ one left, a NULL ranking, a re-claimed row (R5), or the claim left the window (P11). */
   readonly replacementPingId: PeerMeshPingId | null;
 }
 
@@ -578,6 +578,11 @@ export async function finalisePeerMeshNoSendableNumber(
   );
   if ((r.rowCount ?? 0) === 0) return { moved: false, attemptCount: ping.attempt_count, replacementPingId: null };
   if (ping.attempt_count !== 1) return { moved: true, attemptCount: ping.attempt_count, replacementPingId: null };
+  // 6.27c review round 2 P11 — the claim may have been DECIDED since the begin's commit: ⛔ a replacement it could never text
+  // (the window is re-judged on the LOCKED state, PM8's ONE predicate). The row keeps its true reason.
+  if (!(await isClaimInAnswerWindow(db, pariwarId, claimCaseId, claim.currentState))) {
+    return { moved: true, attemptCount: 1, replacementPingId: null };
+  }
   const replacementPingId = await insertPeerMeshReplacementPing(db, {
     pariwarId,
     selectionId: ping.selection_id as PeerMeshSelectionId,
@@ -620,11 +625,22 @@ export interface PeerRequestLocale {
  * default language (`pariwar_passport.locale_default`, NOT NULL), recorded on begin as `locale_source = 'pariwar_default'`.
  * Throws when the Pariwar has ⛔ passport (a data fault — the child retries).
  */
+/**
+ * The Pariwar has ⛔ default language (⛔ passport row — `claims.pariwar_id` carries ⛔ FK to it): a DATA fault that a retry ⛔ fixes —
+ * the jobs child HOLDS on it (`config:locale_unavailable`), unlike a failed read (a transient — 6.27c review round 2 P7).
+ */
+export class PeerRequestLocaleMissingError extends Error {
+  constructor(pariwarId: PariwarId) {
+    super(`[peer-mesh-request] Pariwar ${pariwarId} has no default language`);
+    this.name = 'PeerRequestLocaleMissingError';
+  }
+}
+
 export async function resolvePeerRequestLocale(db: Db, pariwarId: PariwarId): Promise<PeerRequestLocale> {
   const { rows } = await db.execute<{ locale_default: string }>(sql`
     SELECT locale_default::text AS locale_default FROM pariwar_passport WHERE pariwar_id = ${pariwarId} LIMIT 1`);
   const locale = rows[0]?.locale_default;
-  if (locale !== 'hi' && locale !== 'en') throw new Error(`[peer-mesh-request] Pariwar ${pariwarId} has no default language`);
+  if (locale !== 'hi' && locale !== 'en') throw new PeerRequestLocaleMissingError(pariwarId);
   return { locale, source: 'pariwar_default' };
 }
 

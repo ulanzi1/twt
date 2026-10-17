@@ -3532,6 +3532,30 @@ from the TEXT, DLT id) in ONE memo per jobs process: the suspicion / peer-mesh s
 certificate paths end a row only on a PROVEN fault and otherwise fail open, the api refuses to start only on a missing / malformed key
 or id or the send key's refusal; the alert dispatch path stays dark; ADR-0041; roster Row 32; ⛔ network call in any test.
 
+### Story 6.37b: The Trust Learns Whether Each Text Actually Arrived — MSG91's Delivery Reports, Received, Kept Without the Phone Number, and Matched to the Exact Send `[PRIMITIVE]`
+
+> **Added 2026-10-17 (Story 6.37b, Task 0.4)** — the row `6-37b-msg91-delivery-reports` was chartered by
+> [`-345`](../../.decision-log.md#decision-2026-10-17-345) MG1 (a), with no `epics.md` entry until now. The author's build decisions are
+> [`-347`](../../.decision-log.md#decision-2026-10-17-347) (DR1–DR14 and DR5-G; BigDev: all as recommended, DR5-G = G-a, the route
+> limit provisional). Whether a reminder the network reports as undelivered still counts as reaching a family — and whether that person
+> is offered a posted letter — is the Trustee Panel's question PQ1 (routing note `…-2026-10-17-6-37b-reported-undelivered.md`); the
+> story's Task 7 waits for that ruling. Its ingress ADR is ADR-0042 (`drafted`); its go-live record is roster Row 33
+> (`sms-delivery-reports-provisioned`), which must close before any claim-text template id is provisioned. Full ACs:
+> `_bmad-output/implementation-artifacts/6-37b-msg91-delivery-reports.md`. Not a merge fence.
+
+As the Trust, I want every SMS the platform sends to carry an id MSG91 echoes back, and MSG91's delivery reports received, kept without
+the phone number and matched to the exact send — and, once the Trustee Panel rules, a reminder the network reports it could not deliver
+to no longer count as having reached the family — so that a family's claim is never closed for their silence on the strength of a text
+that never arrived, and the Trust can see when its texts are not getting through.
+
+**Acceptance Criteria (in brief):** every send carries `CRQID` = a kind prefix + the send row's uuid inside the recipient object (login
+codes `ot` + random hex); a public webhook in `apps/api` authenticated by a static secret header (MSG91 signs nothing — ADR-0042), the
+api always starting whatever the secret's state; an allowlisted seven-column projection kept per report with no phone number, persisted
+before the 200; a leased jobs correlator writing one new `sms_send_deliveries` table (the four send tables never written) under an exact
+counting and deduplication contract; a daily silence alarm and a daily login-code count; the login-code production gates (a staging
+proof before production, the echo proof before reliance); and — only after PQ1's ruling — the D22 / letter-eligibility change; ADR-0042;
+roster Row 33; no call to MSG91 in any test.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

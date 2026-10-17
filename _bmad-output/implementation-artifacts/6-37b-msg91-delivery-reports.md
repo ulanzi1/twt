@@ -9,9 +9,9 @@ OF that sha; Task 0.1 re-checks what moved. Built in its OWN worktree `.claude/w
 `.claude/worktrees/6-31` (row 6-31, also at `dae96d9b`) has ALREADY WRITTEN — uncommitted, 2026-10-17 — its own claims on migration
 0167, decision id `-347`, roster Row 33 and ledger suffix `2026-10-17k` (T9). Whichever lands on a branch first keeps the number.
 
-STATUS: `ready-for-dev` — buildable AFTER Task 0 (DR1–DR14 answered by BigDev, ONE author-commit ALONE; the two routing notes
-written). ⛔ No code before that ([[feedback_governance_commits_precede_implementation]]). ⭐ Task 7 (the D22 change) waits for the
-Panel's ruling on PQ1 — Tasks 1–6 do ⛔ (DR14).
+STATUS: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G answered by BigDev and recorded as `-347` (`bf1d57f7`,
+committed alone); the PQ1 / PQ2 routing notes written (not yet sent); the records committed after it. Tasks 1–6 may now be built.
+Task 7 (the D22 change) waits for the Panel's ruling on PQ1 (DR14); the row is `done` only after the PQ2 note is SENT (Task 8).
 
 §0 GATE (the routing template's): every DR below is the AUTHOR's — how a provider callback is authenticated, what is kept of it, how
 it is matched to a send, where the result is stored, how long the inbox lives (`-314` §0: *"which vendor carries the texts … ⛔ who
@@ -32,14 +32,14 @@ B1 they decide who becomes letter-eligible — PQ1's E3 states both and B1's cos
 GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `⚠` a hazard. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md` or `sprint-status.yaml` (newest-first files) — cite the decision id, the item's phrase, or the row key.
 
-LETTERS: F = found facts (F1–F24); DR = build decisions (DR1–DR14 + DR5-G — PROPOSED, ⏳ BigDev at Task 0.2); PQ = Panel questions (PQ1–PQ2 —
+LETTERS: F = found facts (F1–F24); DR = build decisions (DR1–DR14 + DR5-G — DECIDED by BigDev at Task 0.2, recorded as `-347`); PQ = Panel questions (PQ1–PQ2 —
 routed, ⛔ answered); I = invariants (I1–I9); T = traps (T1–T22). Decision-entry letters stay the entry's own (`-345` MG1–MG17,
 `-252` cl.1–cl.3, `-323` R2).
 -->
 
 # Story 6.37b: The Trust learns whether each text actually arrived — MSG91's delivery reports, received, kept without the phone number, matched to the exact send, and (once the Panel rules) a text the network reports undelivered no longer counts as "reached" `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37 sends every SMS through MSG91, but MSG91's answer at send time is only
 > *"request received"* — HTTP 200 `type:"success"` even for a fake key (6.37 F9). Whether the operator delivered the text arrives
@@ -108,7 +108,8 @@ when its texts are not getting through**.
 
 ## ⭐ THE INVARIANTS
 
-1. **I1 — A report can only SUBTRACT reach, never add it.** Every effect of a report on any predicate excludes a send from "reached";
+1. **I1 — A report can only SUBTRACT reach, never add it** (true under PQ1 A, B1 and B2; under C a `delivered` report ADDS reach, so
+   I1 fails and C needs an ADR-0042 amendment before Task 7 builds it). Every effect of a report on any predicate excludes a send from "reached";
    ⛔ a report ever makes a send count that did not count before (`accepted` already counts — a `delivered` report adds nothing to
    D22). ⇒ a forged report (anyone holding the header token) can ⛔ cause a closure (`assertClosureGround` closes only on
    `reach.allReached` — `correction-closure.ts:478-479` — and a report never ADDS an `accepted` row, the only thing `reachedBySms` counts). ⚠ Under PQ1 B1 it CAN, for one person:
@@ -285,9 +286,10 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   at Task 0.1): the sweep touches OPEN runs only (`claim-correction-reminders.ts:818`, `r.ended_at IS NULL`) ⇒ after day 90 ⛔
   reminder, ⛔ letter chase, ⛔ +13 escalation fires; letters stay recordable after the run ends (`correction-letter.ts:10-11`,
   `-250` #4); `closure_due` (days 90–96) and `closure_escalation` (day 97) fire whether or not anyone was reached
-  (`correction-closure-jobs.ts:258-288`); there is ⛔ end-of-chase state — a never-reached person keeps closure refused
-  `not_reached` until a letter's delivery is recorded. ⇒ a LATE undelivered report on a day-88 / 89 reminder makes the person
-  letter-eligible but the District Admin is ⛔ letter-chased for them.
+  (`packages/domain/src/claim/correction-closure-jobs.ts:259-288`; constants `:74-75`); there is ⛔ end-of-chase state — a never-reached person keeps closure refused
+  `not_reached` until a letter's delivery is recorded. ⇒ a failure reported on the LAST reminder (day 84 — `CORRECTION_REMINDER_DAYS`, `correction-schedule.ts:24`), or any report
+  arriving after day 89, makes the person letter-eligible but the District Admin is ⛔ letter-chased for them — as already happens
+  today for a number refused at send on day 84.
 - **F16 — Other `accepted` readers (⛔ D22):** the staff chase view `remindersAccepted` (`correction-chase-read.ts:229`), the certificate
   view's "reminded" (`certificate-reminder-read.ts:201`), the peer-mesh link (`send_outcome = 'accepted'`, `peer-mesh-request.ts:663`,
   `peer-mesh-reply.ts:179`, `:231`).
@@ -342,7 +344,7 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
 - **F24 — The PRD** has ⛔ FR / NFR on SMS delivery receipts (grep "delivery report" / "DLR" / "receipt" — FR-33's "never 'receipt'"
   only).
 
-## ⚖️ Build decisions DR1–DR14 (PROPOSED — ⏳ BigDev at Task 0.2; one author-commit `-347` records them)
+## ⚖️ Build decisions DR1–DR14 (DECIDED — BigDev at Task 0.2, 2026-10-17: all as recommended, DR5-G = G-a, DR9 provisional, DR11 (c), DR14 (a); recorded as `-347`, `bf1d57f7`)
 
 - **DR1 — The route and its auth.** `POST /api/v1/webhooks/msg91/sms-reports` in `apps/api/src/modules/channel-webhooks` (inside the
   AI-5-1 gate — F18), `schema: { hide: true }`, a `PUBLIC_ALLOWLIST` entry with its justification. Auth: header
@@ -687,8 +689,8 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   letter-eligible and `unreachable` for that number for good — a later reminder reported DELIVERED does ⛔ undo it (eligibility keys on
   the FIRST dead outcome); a report that FAILED and then DELIVERED for the same text still reads undelivered (DR6's absorbing rule);
   the closure notice goes by letter instead of SMS when the last reminder was reported undelivered, and the District Admin is chased
-  to post the letter (+7 … +12, escalated at +13); a report arriving after the last reminders (day 88 / 89) makes the person
-  letter-eligible but the District Admin is ⛔ chased for them; silence still counts, so a paused webhook or an account fault MSG91
+  to post the letter (+7 … +12, escalated at +13); a failure reported on the last reminder (day 84), or any report arriving after
+  day 89, makes the person letter-eligible but the District Admin is ⛔ chased for them (as today for a number refused on day 84); silence still counts, so a paused webhook or an account fault MSG91
   never reports leaves the old gap for those texts (DR12 alarms it). Which status codes count as "undelivered" (DR4 — incl. NDNC,
   blocked number, country blocked) is the author's choice, stated in E3.
   **B2** — un-count only, ⛔ letter-eligibility (cost: a person whose reminders are all reported undelivered is never reached and
@@ -696,7 +698,9 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   *"the claim waits forever again"*). Put so the Panel sees why B1 carries the letter half.
   **C** — only a DELIVERED report counts (cl.3's "proven delivery", now — cost: when MSG91 sends ⛔ report — a paused webhook, an
   account fault — the family can never be reached by SMS, and without a letter half they are never letter-eligible either ⇒ the same
-  *"waits forever"* cost as B2, for every family MSG91 goes silent on).
+  *"waits forever"* cost as B2, for every family MSG91 goes silent on; and C is the only option in which a report ADDS reach — a
+  forged or mistaken `delivered` report could let a closure be requested, so I1 and ADR-0042's forgery bound fail under C and C
+  would need an ADR-0042 amendment first).
   The trace for the note's E3 is F15's (letter-eligibility `foundDeadOn`, `numberKnownDead`, the queue status, the jobs sweep, the
   burst alarm, day 90 and after) — Task 0.1 RE-CONFIRMS it at the then-HEAD and cites it. E3 also states DR4's mapping and DR6's
   absorbing rule (the mixed part — §0 above), and that the CERTIFICATE chase's letter-eligibility is unchanged under every option.
@@ -708,10 +712,11 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   an INFERENCE from MSG91's DLT failure reasons — F5 — ⛔ stated by MSG91 as a guarantee; the note says so); (ii) MSG91's template
   MATCHES the DLT registration but differs from OUR render (`-345`: *"MSG91 would deliver OTHER words"*) ⇒ it passes scrubbing, is
   DELIVERED, and the report says `delivered` — ⛔ report ever catches it. Options:
-  **A** — ⛔ refusal (6.37 as built — the text is sent and alarmed). Cost: in case (ii) the family receives OTHER words than the
-  Trust approved and it counts as reached; in case (i), under PQ1 A or C, or when ⛔ report arrives, ⛔ thing un-counts it either. ⭐
-  Our reading under PQ1 B1 or B2 (case (i) is then un-counted by the report; case (ii) stays the cost); under PQ1 A or C ⛔ reading
-  is offered — the Panel weighs A's cost unaided.
+  **A** — no refusal (6.37 as built — the text is sent and alarmed). Cost: in case (ii) the family receives other words than the
+  Trust approved and it counts as reached; in case (i), under PQ1 A, or when no report arrives, nothing un-counts it either.
+  Our reading: **A** if PQ1 is B1, B2 or C (case (i) is then un-counted by its report, or never counted; case (ii) stays the cost);
+  **B** if PQ1 is A (nothing else would stop a blocked text from counting as reached). Written in the note as
+  `trustee-panel-routing-note-2026-10-17-6-37b-content-mismatch-refusal.md`.
   **B** — refuse on a PROVEN mismatch (cost: that day's reminder slot, or the closure notice for good — `-345` X1's cost, extended);
   the note says PROOF still waits on `-345` S1 / Row 32 (e) (`-345` Consequence 3's trigger — ⛔ changed).
   Blocks: ⛔ code in this story — but Row 32 note (6.4) asks it *"before leg (i) closes"* ⇒ Task 8 requires the PQ2 note SENT (⛔
@@ -845,7 +850,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   - [x] 0.2 Put DR1–DR14 to BigDev, each with its recommendation and cost — incl. DR6's 72 h, DR7's 30-day prune (AC10), DR9's 1200 / min,
         DR11 (c) vs (c′), DR14 (a) vs (b), the Row 30 note (6) (b) reading (Sequencing) — and **DR5-G WITHOUT a recommendation** (both options and costs as written). Record the
         answers verbatim.
-  - [ ] 0.3 Write the author-commit `-347` (`.decision-log.md`, prepended; the `-345` entry's shape: Decision type / Status / Author /
+  - [x] 0.3 Write the author-commit `-347` (`.decision-log.md`, prepended; the `-345` entry's shape: Decision type / Status / Author /
         Ratifying trustees: None / §0 gate / Occasion / FOUND / The decisions / Consequences / References). ⭐ THE supersession list
         (the ONE copy — AC0 and DR14 (c) point here; each attributed to the entry OR the story file, as it is):
         - DR3 supersedes the 6.37 story file's MG9 *"⛔ `CRQID` (6-37b decides correlation)"*;
@@ -865,7 +870,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
         `…-6-37b-content-mismatch-refusal.md` (PQ2) from the TEMPLATE (referenced, ⛔ copied); PQ1's E3 states DR4's mapping and DR6's
         absorbing rule (the §0 mixed-question disclosure); clause cites in EVIDENCE, ⛔ in the options; run each E4; ⛔ "sent" until
         BigDev sends them.
-  - [ ] 0.4 The records (one commit, after 0.3): ADR-0042 from `docs/adr/_adr-template.md` (DR14 (c)'s contents) +
+  - [x] 0.4 The records (one commit, after 0.3): ADR-0042 from `docs/adr/_adr-template.md` (DR14 (c)'s contents) +
         `docs/knowledge-transfer/adr-index.md` row and reconciliation (Total 152 → 153; `drafted` 2 → 3; arithmetic re-checked);
         ADR-0041 Changelog row (CRQID, inside the recipient; ⛔ a word above rewritten); roster Row 33 (DR14 (c) closure legs (a), (b0),
         (b), (c), (c2), (d), (e0), (e)–(g) + the dated `requestId` observation note) + Row 32 dated note (points to Row 33; note (2) stays in force; ⛔ a
@@ -1167,6 +1172,20 @@ them at Task 0.1.
 - **(c) Task 0.3 — `2026-10-17-347` committed ALONE as `bf1d57f7`** (2026-10-17, on this branch on top of `5dfa5775`; ⛔ yet on
   `main`), after BigDev approved the draft (*"approved."*). `-347` was re-checked free on every ref and in the 6-31 worktree right
   before the insert. Still owed by Task 0.3: the PQ1 and PQ2 routing notes (written, ⛔ sent); then Task 0.4's records commit.
+- **(d) Task 0.3 / 0.4 — the routing notes and the records (2026-10-17, one commit after `-347`).** PQ1:
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37b-reported-undelivered.md` (options A / B1 / B2 / C, our
+  reading B1; E4 run — commands 1–18 returned lines, 19 empty as expected; a first run caught command 4 failing on the log's bold
+  markup, corrected). PQ2: `…-2026-10-17-6-37b-content-mismatch-refusal.md` (options A / B; our reading A unless PQ1 = A, then B; E4
+  run — 1–10 returned lines, 11 empty as expected). Both WRITTEN, not sent ([[feedback_shown_to_panel_means_sent]]). ADR-0042
+  `msg91-delivery-report-ingress` (`drafted`) + its adr-index row and note (`drafted` 2→3, Total 152→153, `112+3+0+37+1`); ADR-0041's
+  dated Changelog row; roster Row 33 `sms-delivery-reports-provisioned` (closure legs (a), (b0), (b), (c), (c2), (d), (e0), (e)–(g); the
+  `requestId` observation as note (1)); Row 32 note (7) and Row 30 note (7), no word above rewritten; the `epics.md` `### Story 6.37b`
+  entry before `## Epic 7`; the sprint row → `in-progress` with ledger `2026-10-17m` (`l` was this story's validate; `k` is 6-31's).
+  The PQ2 reading for PQ1 = A changed from "no reading" to B (the template asks every note to recommend). A fresh-context review of
+  these records (0 HIGH / 5 MED / 9 LOW, all applied): the day-84 last reminder (⛔ "days 88–89"), the closure-jobs path, the
+  zero-balance claim qualified as legacy documentation, PQ2's "only recorded" wording removed, option C's forgery cost (I1 and
+  ADR-0042 fail under C), the §5.9 line cite, cl.1 readings (A widens under (ii); B1 / B2 narrow on failed-then-delivered), identifiers
+  out of the plain sections, the decided-DR headings, and the adr-index tally drift recorded (pre-existing, ⛔ corrected).
 
 ### Completion Notes List
 
@@ -1174,6 +1193,16 @@ them at Task 0.1.
   parallel research passes: the send tables + D22, the governance records, MSG91's live help / docs pages, the webhook house patterns).
 
 ### File List
+
+- `.decision-log.md` (Decision `2026-10-17-347` — `bf1d57f7`)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37b-reported-undelivered.md` (new)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37b-content-mismatch-refusal.md` (new)
+- `docs/adr/ADR-0042-msg91-delivery-report-ingress.md` (new)
+- `docs/knowledge-transfer/adr-index.md`
+- `docs/adr/ADR-0041-sms-gateway-msg91.md` (Changelog row)
+- `docs/launch-gate-inventory/inventory-roster.md` (Row 33; Row 32 note (7); Row 30 note (7))
+- `_bmad-output/planning-artifacts/epics.md` (Story 6.37b entry)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
@@ -1185,3 +1214,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.3 | Task 0.1 / 0.2 done — BigDev's answers recorded verbatim (Debug Log (b)): all as recommended, DR5-G = G-a, DR9's 1,200 / min PROVISIONAL with MSG91's retry / auto-pause verified before production (new Row 33 leg (c2)), DR11 (c), DR14 (a), Row 30 = Row 32's setup legs. BigDev's four pre-approval requirements for `-347` resolved in the story: DR1's secret-failure table (the api always starts; a broken NEXT token never disables a working current one; a boot-time outage is a residual) + AC2's per-row legs; DR11's S0 / S1 / S2 table of allowed OTP production use; DR6's `sms_send_deliveries` contract table (one upsert, ⛔ `WHERE`; every row-8 report counts; the state-setting report's code kept; min / max timestamps) + AC6's legs; ADR-0042's residual list. Status stays `ready-for-dev`. |
 | 2026-10-17 | 1.4 | Before approving `-347`, BigDev asked for the OTP gates to be unambiguous, the shorthand to be explicit prose, and AC6 to match the counting contract. DR1's secret-failure block, DR6's counting contract, DR11's OTP gates (Gate 0 / 1 / 2, with (b0) and (e0) defined in full) and AC6's counting legs are rewritten in plain prose. AC6 checked line by line against the contract: added (8a) the first report's INSERT values, (8c)/(8d) `failure_reason` kept, (8e) `request_id` unchanged, (8h) which report is received vs settled first, an unknown-status leg in (9), and a no-write assertion on legs (1)–(7) and (9). Status stays `ready-for-dev`. |
 | 2026-10-17 | 1.5 | Before approving `-347`, BigDev asked for (1) the claim that reports are only recorded to be narrowed — the Policy meaning now names the three ways Tasks 1–6 read reports (the correlator's write, alarms including DR12's silence alarm, DR11's daily login-code count — information until Row 33 (e0), then citable evidence), none an input to a send, a closure, reach or letter-eligibility; and (2) the dedupe and counting definitions to agree — DR7 now states the rule: duplicates are defined by the three key values (request id, CRQID, status code), the first stored is kept, a later one with a different failure reason / event name / delivery time is discarded uncounted, chosen because MSG91 retries by resending the same event and every DR6 outcome depends only on those three values; `report_count` counts inbox rows under that key, not distinct payloads; AC4 and AC6 (8f) gained the different-payload-same-key, different-status and blank-key legs; Task 2 names the exact index. Status stays `ready-for-dev`. |
+| 2026-10-17 | 1.6 | Task 0 done: `-347` committed alone (`bf1d57f7`); the PQ1 and PQ2 routing notes written (not sent); ADR-0042, the adr-index row (Total 153), ADR-0041's Changelog row, roster Row 33 with Row 32 / Row 30 dated notes, the `epics.md` entry; story and sprint row → `in-progress` (ledger `2026-10-17m`). PQ2's reading under PQ1 = A is now B. No code. |

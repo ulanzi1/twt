@@ -1,3 +1,11 @@
+# last_updated: 2026-10-17m (STORY 6.37b — TASK 0 DONE (governance before code) on `story/6-37b-msg91-delivery-reports`: BigDev's Task 0.2
+# answers recorded verbatim (all as recommended; DR5-G = G-a; DR9 1,200 / min provisional; DR11 (c); DR14 (a)); story v1.3–v1.5 met
+# BigDev's pre-approval requirements; Decision `2026-10-17-347` committed ALONE (`bf1d57f7`). Records: the PQ1 routing note (a reminder
+# reported undelivered vs `-252` cl.1 / cl.2 — our reading B1) and the PQ2 routing note (refusing a text on a proven content mismatch —
+# our reading A unless PQ1 = A), both WRITTEN, not yet sent; ADR-0042 `msg91-delivery-report-ingress` (`drafted`; index Total 152→153);
+# ADR-0041 Changelog row (CRQID inside the recipient); roster Row 33 `sms-delivery-reports-provisioned` (closure legs (a), (b0), (b),
+# (c), (c2), (d), (e0), (e)–(g)) + dated notes on Row 32 (7) and Row 30 (7); the `epics.md` entry. Row 6-37b `ready-for-dev` →
+# `in-progress`. No 6.37b code yet; Task 7 waits for the Panel's PQ1 ruling.)
 # last_updated: 2026-10-17l (STORY 6.37b — VALIDATED v1.2 by `bmad-create-story validate 6.37b` (worktree `.claude/worktrees/6-37b`, at
 # `dae96d9b` == `origin/main`; ⛔ code moved; `k` is held by the 6-31 worktree's uncommitted ledger). Five fresh-context verifiers + four
 # adversarial rounds over the pass's OWN diff. ⭐ CRQID goes INSIDE the recipient (Flow's only sample) — Row 33 (e0) proves the echo on
@@ -19998,6 +20006,8 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-17 (Story 6.37b Task 0 done: -347 committed alone; ADR-0042, roster Row 33, the epics entry and the PQ1 / PQ2 routing notes
+  recorded (notes not yet sent); row 6-37b in-progress.)
   2026-10-17 (Story 6.37b validated v1.2: CRQID inside the recipient, the AI-5-1 header shape, DR5-G grants put to BigDev, B1's
   foundDeadOn letter-eligibility; four review rounds over the pass's own diff; status ready-for-dev.)
   2026-10-17 (Story 6.37b created: MSG91 delivery-report story, DR1–DR14 proposed for BigDev at Task 0, PQ1 / PQ2 to be routed;
@@ -20452,7 +20462,9 @@ development_status:
   # recorded question — whether a PROVEN content mismatch should REFUSE a correction / closure / certificate text — before Row 32 (i) closes.
   # ⭐ 2026-10-17 (`bmad-create-story 6.37b`): story file `6-37b-msg91-delivery-reports.md`; buildable after Task 0 (DR1–DR14; PQ1 / PQ2
   # routed). ⚠ Task 7 (D22 + letter-eligibility) waits for the Panel's PQ1 ruling. Migration 0167 / `-347` / ADR-0042 / Row 33 race row 6-31.
-  6-37b-msg91-delivery-reports: ready-for-dev
+  # 2026-10-17 (Task 0): Decision `2026-10-17-347` committed alone (`bf1d57f7`); ADR-0042, roster Row 33 (+ Row 32 / Row 30 dated notes),
+  # the epics entry and the PQ1 / PQ2 routing notes (written, not yet sent) recorded. Task 7 waits for PQ1; row `done` needs PQ2 SENT.
+  6-37b-msg91-delivery-reports: in-progress
   epic-6-retrospective: done
 
   # ==========================================================================

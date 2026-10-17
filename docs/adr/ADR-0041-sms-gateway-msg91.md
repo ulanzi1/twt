@@ -152,3 +152,4 @@ Load-bearing details:
 |---|---|---|---|
 | 2026-10-17 | (initial draft) | BigDev (Solo Builder) | Authored under Story 6.37 Task 0.4 (Decision `2026-10-17-345` MG13) |
 | 2026-10-17 | (draft — amended) | BigDev (Solo Builder) | Story 6.37 code review round 2 (P16; Decision `2026-10-17-346`): the classification order as built, the active-version inference (S1) stated, documented refusals only, the transient TTL, the api's full refusal list, both compose lines, the S3 dependency of the send-key arm |
+| 2026-10-17 | (draft — amended) | BigDev (Solo Builder) | Story 6.37b Task 0.4 (Decision `2026-10-17-347` decisions 3 and 12): every send now carries `CRQID` = a kind prefix + the send row's uuid (login codes: `ot` + 32 random hex), placed INSIDE the single recipient object; `CRQID` joins `mobiles` as a reserved recipient key. The *"⛔ `CRQID`"* in the request bullet and the delivery-report bullet above are kept as written; delivery-report ingress is ADR-0042 |

@@ -352,10 +352,23 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   precedent). Resolved ONCE at boot (I4, I5) by an EXPORTED builder `buildSmsReportWebhookAuth({config, resolveSecret})` (the
   `buildTurnstileVerifier` `deps.ts:129-143` / `buildMemberStepUpDelivery` `:240-245` shape — so a test can count the resolver
   without `createDeps`); ⛔ Telegram's per-request `resolveChannelSecret` (`handlers.ts:145`). Bad / missing token ⇒ `403
-  webhook.signature_rejected`, persist nothing (the Telegram shape). Name UNSET ⇒ the route answers 403 to everything and prod boot
-  logs ONE line. Name SET but UNRESOLVABLE (`resolveSecretValue` THROWS in prod on NOT_FOUND / empty — `packages/domain/src/secrets.ts:101-118`)
-  ⇒ the builder CATCHES it: 403 to everything + ONE boot error line (the `deps.ts:342` shape) naming the secret NAME (⛔ the value) —
-  ⛔ refuses (6.37 T13: a refusal is a restart loop of every route). ⭐ Recommended. Alternatives: (b) a secret path segment —
+  webhook.signature_rejected`, persist nothing (the Telegram shape). ⭐ **Secret-failure behaviour — the api ALWAYS starts (6.37 T13:
+  a refusal is a restart loop of every route); only the webhook's state changes.** The house convention (`config.ts:427-434`,
+  `resolveSecretValue` `packages/domain/src/secrets.ts:101-131`): a secret NAME unset ⇒ the feature is OFF; a name set ⇒ Secret
+  Manager in production (it THROWS on NOT_FOUND, ⛔ payload or ⛔ access), the `…_ENV_FALLBACK` variable in local dev (it THROWS when
+  that variable is unset); a whitespace-only value is RETURNED, ⛔ thrown. A token is USABLE when, trimmed, it is ≥ 32 characters.
+
+  | Current token name | Its resolution | Next token | Webhook state at boot | Boot line (names only, ⛔ a value) |
+  |---|---|---|---|---|
+  | unset | — | any | DISABLED — 403 `webhook.signature_rejected` to every request | production: ONE `warn` *"sms report webhook disabled: SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME unset"* (+ *"next ignored"* if a next name is set); elsewhere ⛔ line |
+  | set | throws, blank or < 32 chars | any | DISABLED — 403 to every request | ONE `error` naming the secret NAME and the class (`unavailable` / `empty` / `too_short`), every environment |
+  | set | usable | unset | ENABLED on the current token | ⛔ line |
+  | set | usable | set, usable | ENABLED on BOTH | ⛔ line |
+  | set | usable | set, fails as row 2 | ENABLED on the CURRENT token only — a broken rotation half ⛔ disables a working token | ONE `error` naming the NEXT secret NAME and the class |
+
+  Each state holds until the next api restart (⛔ re-resolution at runtime). ⚠ Residual (ADR-0042): a Secret Manager outage AT BOOT
+  disables the webhook until a restart — every report is then a 403, which counts toward MSG91's auto-pause (F6); DR12's silence
+  alarm is the detector and Row 33 (b) checks the boot line ABSENT. ⭐ Recommended. Alternatives: (b) a secret path segment —
   refused (Traefik logs the URL, I5); (c) an IP allowlist — refused (F4 ⛔ list; F20 spoofable); (d) refuse boot on an
   unresolvable name, as Turnstile does — refused (the whole api goes down for one webhook).
 - **DR2 — Keep only an allowlisted projection; ⛔ the phone number.** One recipient per Flow call (6.37 MG9) ⇒ `requestId` + `CRQID`
@@ -472,9 +485,21 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   | 8 | finished, `accepted`, `provider_message_id = request_id`, DR4 = `delivered` / `undelivered` | `matched:delivered` / `matched:undelivered` + the `sms_send_deliveries` UPSERT (below) | — | ⛔ |
   | 9 | as 8, DR4 = `intermediate` / `unknown_status` | `ignored:intermediate` / `ignored:unknown_status` — ⛔ state | — | `unknown_status` only: `sms_report.unknown_status:<code ≤ 3 digits or 'none'>` (`"x"` ⇒ NULL by DR2 ⇒ `none`) |
 
-  The UPSERT (row 8) is ABSORBING, in SQL (`ON CONFLICT (send_kind, send_row_id) DO UPDATE … WHERE`): a `delivered` never overwrites
-  an `undelivered`; an `undelivered` overwrites a `delivered`; every applied report sets `report_count += 1`, `reported_at` = this
-  report's `received_at`; ⛔ latest-wins (F19's WA trap — T3). ⭐ Recommended. Costs (accepted, and DISCLOSED in PQ1's E3 / B1 cost):
+  ⭐ **The `sms_send_deliveries` contract (row 8 only)** — ONE `INSERT … ON CONFLICT (send_kind, send_row_id) DO UPDATE SET …` with
+  ⛔ `WHERE` clause (a `WHERE` that skipped the absorbed case would also skip its count), ⛔ read-then-write:
+
+  | Column | On INSERT (first row-8 report) | On CONFLICT (each later row-8 report) |
+  |---|---|---|
+  | `delivery_state` | the report's | `undelivered` if EITHER the stored or the report's is `undelivered`, else `delivered` — ABSORBING; ⛔ latest-wins (F19's WA trap — T3) |
+  | `status_code`, `failure_reason` | the report's | the report's ONLY when this report moves the state `delivered` → `undelivered`; otherwise KEPT (the stored values always belong to the report that set the current state) |
+  | `request_id` | the report's | unchanged (row 8 requires it equal) |
+  | `report_count` | `1` | `+ 1` — EVERY row-8 report counts, including one absorbed without a state change |
+  | `first_reported_at` | the report's `received_at` | `LEAST(stored, report's received_at)` |
+  | `reported_at` | the report's `received_at` | `GREATEST(stored, report's received_at)` — the drain may settle out of `received_at` order |
+
+  ⇒ `report_count` = the number of DISTINCT inbox rows (after DR7's dedupe index) that reached row 8 for that send. ⛔ Counted: a
+  duplicate POST (one inbox row — AC4), rows 1–7 and row 9 (⛔ `sms_send_deliveries` write at all), a re-settle after a lapsed lease
+  (DR8's compare-and-set rolls the upsert back). ⭐ Recommended. Costs (accepted, and DISCLOSED in PQ1's E3 / B1 cost):
   a genuine "failed then delivered" sequence for ONE request reads `undelivered` (under B1: letter-eligible though the text did
   arrive); a row parked `attempting` past 72 h (a `sweep:held` row — 0155, 0166) loses its report to `unmatched:still_attempting`
   (⛔ `other_attempt`); the 72 h window matches the pull API's 3-day reach (F9).
@@ -504,7 +529,8 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   => void` dep defaulting to `console.warn` (the house shape — `cycle-spawn.ts:75,118`, `claim-peer-mesh.ts:66,176`; `boot.ts:668`
   *"`onAlarm` is ⛔ wired"* ⇒ logs only until Row 32 (h)). ⭐ Recommended.
 - **DR9 — Rate limit and the edge.** The route gets an explicit `config: { rateLimit: { max: SMS_REPORT_WEBHOOK_RATE_MAX (default 1200),
-  timeWindow: '1 minute' } }` (⛔ the 300 global — F20; ⛔ `rateLimit: false`) — it REPLACES the global for this route; a 429 test
+  timeWindow: '1 minute' } }` (⛔ the 300 global — F20; ⛔ `rateLimit: false`) — PROVISIONAL (BigDev, Task 0.2), re-checked against
+  Row 33 (c2)'s answer; it REPLACES the global for this route; a 429 test
   pins it (assert the 429, ⛔ the hook order — [[project_rate_limit_prehandler_hook_order]]). Cloudflare: a SEPARATE rule
   `msg91_sms_reports_skip` in `infra/cloudflare/waf.tf`, placed directly AFTER 6.30's "Rule 0 (FIRST)" and BEFORE Rules 1–3 (⛔ the
   path added to 6.30's expression), expression `http.request.uri.path eq "/api/v1/webhooks/msg91/sms-reports" and
@@ -541,7 +567,21 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   a DATED note to roster Row 30 (⛔ a word above rewritten): *"once row 6-37b's OTP CRQID is merged, a login code AND a step-up code
   are RECEIVED on the operator's phone from a build carrying it, on staging (with the key staging uses under Row 32 (b)), BEFORE that build is deployed
   to production — an added check on (b)'s device proof (note (6) (b): ⛔ for row 6-37b), whether (b) closed before or after."*
-  (A NARROWING of Row 30 (b) — the author's: a check added, ⛔ who is texted; Task 0.3's list.) Row 33 (e0) then proves the echo. ⭐ Recommended (a)–(c).
+  (A NARROWING of Row 30 (b) — the author's: a check added, ⛔ who is texted; Task 0.3's list.) Row 33 (e0) then proves the echo.
+  ⭐ **What OTP production use is allowed, stage by stage** (BigDev, Task 0.2: OTP delivery does ⛔ wait for Row 32 closed or 6-37b
+  `done`; the staging proof precedes production reliance on the CRQID; (e0) is the echo proof). The OTP path NEVER reads a report in
+  any stage — the stages bound what may be DEPLOYED and what may be RELIED ON:
+
+  | Stage | Entered when | Allowed in production | ⛔ Allowed |
+  |---|---|---|---|
+  | S0 | — (today) | login / step-up codes from a build WITHOUT the OTP CRQID (6.37 as built), once Row 30's and Row 32's required setup legs are done | deploying the CRQID build to any production environment that serves login codes |
+  | S1 | Row 33 (b0) recorded | the CRQID build serves production login and step-up codes — every member's code carries `ot…` | relying on ANY report-derived OTP fact: DR11's daily OTP line is INFORMATIONAL (⛔ evidence of delivery, ⛔ an alarm input), ⛔ code reads `otp:*` rows, and the claim-text correlation is unproven (claim texts are ⛔ sent anyway — Row 33 (g)) |
+  | S2 | Row 33 (e0) recorded | as S1, and the daily OTP line may be cited as delivery evidence | — (claim texts still wait for Row 33 (g)) |
+
+  If (b0) FAILS (a code is ⛔ received from the CRQID build on staging) ⇒ the build is ⛔ deployed to production; the fix (drop the
+  OTP's CRQID — (c′)'s switch or a code change) is a NEW decision for BigDev. If (e0) FAILS (the report's `crqid` is NULL) ⇒ S1
+  continues (delivery was proven by (b0)); the placement is fixed by a code change + decision, and Row 33 can ⛔ close, so ⛔
+  claim-text id is provisioned. ⭐ Recommended (a)–(c).
   Alternatives:
   (a′) a global `sms_otp_sends(request_id, intent, sent_at)` the api writes best-effort — a write on the login path for a metric;
   (c′) a config switch `SMS_OTP_CORRELATION_ENABLED`, default OFF, turned on only after Row 33 (e0) — the OTP then carries ⛔ CRQID
@@ -572,29 +612,34 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   supersessions and the `-346` corrections exactly as Task 0.3 lists them (⛔ `-346` edited); ADR-0042 `msg91-delivery-report-ingress`
   (`drafted` — the static-header deviation from §3.11 step 1 (and the edge bar, if F20's reading holds), the header name and why
   (the AI-5-1 shape match), the global inbox, ⛔ phone number kept, I1's forgery bound incl. its three B1 effects, rotation by restart,
-  auto-pause, the Cloudflare skip, the spoofable rate-limit key, the residual) + its index row (Total 152 → 153, `drafted` 2 → 3,
+  auto-pause, the Cloudflare skip, the spoofable rate-limit key, the boot-time secret outage that disables the webhook until a
+  restart (DR1), the provisional rate limit (DR9), the residual) + its index row (Total 152 → 153, `drafted` 2 → 3,
   reconciled in the SAME commit); ADR-0041 a dated Changelog row (CRQID now sent, inside the recipient); roster **Row 33
   `sms-delivery-reports-provisioned`** (Row 32's block shape), legs IN THIS ORDER (a report that meets a missing token or a challenge
   is a 403 that counts toward auto-pause — F6):
   (a) ADR-0042 ratified;
   (b0) Row 30's dated-note proof RECORDED here too — a login code AND a step-up code received from the CRQID build, on staging,
       BEFORE that build is deployed to production (and so before (b), which needs it deployed) — a note on Row 30 may sit on a CLOSED
-      row nobody re-reads; this leg is where it is owned (the operator's, recorded with its date);
+      row nobody re-reads; this leg is where it is owned (the operator's, recorded with its date) — it moves OTPs from S0 to S1 (DR11);
   (b) the token secret(s) set in the deployed api (DR1) and the boot line checked ABSENT;
   (c) the Cloudflare skip applied (DR9) AND whether free-plan Bot Fight Mode is on recorded (it ⛔ can be skipped — `waf.tf:47-48`;
       the Row 29 precedent) — if on, a test POST from outside the origin's network proves the path is ⛔ challenged BEFORE (d);
+  (c2) MSG91's retry schedule, response timeout and auto-pause rule — incl. whether a 403 / 429 counts, how a paused webhook is
+      resumed and whether paused events are replayed — confirmed in writing by MSG91 or observed and recorded, BEFORE production relies
+      on reports (BigDev, DR9: the 1,200 / min limit is PROVISIONAL and ⛔ proof that MSG91 will never pause the webhook — ADR-0042
+      keeps that residual);
   (d) THEN the SMS webhook created in MSG91's panel — "On Report Received" AND "API Failed Events" (two webhooks, F1) — to the
       production URL (HTTPS), the `x-twt-msg91-secret-token` header, and the payload template of exactly DR2's fields (+ `{{
       deliveryTime | datetime:… }}`), recorded with a panel screenshot; the content type of the first report recorded (DR10);
   (e0) ⭐ the CRQID ECHO: an OPERATOR-TRIGGERED login code after (d) (templates 15 / 16 — the ONLY templates live before (g)),
       received on the operator's phone AND its report stored with a non-NULL `ot…` `crqid`, `match_state = 'otp'`, ⛔ number in any
-      column — the proof of DR3's placement (F7);
+      column — the proof of DR3's placement (F7); it moves OTPs to S2 (DR11);
   (e) every report kind that ARRIVES within 14 days of (d) recorded — delivered, failed, API-failed (from the `bad_request_id` log
       line if it carries ⛔ usable `requestId` — DR4) — each stored row checked to hold ⛔ number;
   (f) the silence alarm reaching a NAMED person (Row 32 (h)'s bar);
   **(g) Row 33 is closed before ANY claim-text template id (1–14) is provisioned** — Row 32 (i) is ⛔ edited, Row 33 (g) ADDS the
       provisioning half (6-37b `done` is code; reports need the webhook LIVE) — a narrowing, the author's;
-  The row's CLOSURE legs are (a), (b0), (b)–(d), (e0), (e)–(g) — ALL of them, each recorded as a Decision (the house shape). ⚠ ⛔ a closure leg,
+  The row's CLOSURE legs are (a), (b0), (b), (c), (c2), (d), (e0), (e)–(g) — ALL of them, each recorded as a Decision (the house shape). ⚠ ⛔ a closure leg,
   a DATED NOTE on the row instead: *"after (g), the first claim-text reports reach `matched:*` — the proof that Flow's `message` IS
   the webhook's `requestId` (F7, ⛔ stated by MSG91); recorded with its date when seen."* It CANNOT come before (g) — ⛔ claim text
   can be sent before then — so as a leg the row could never close; its failure is LOUD and SAFE: every claim report lands
@@ -675,8 +720,10 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   `toEqual` gains a `correlationId` leg. Every OTHER 6.37 assertion stays green UNCHANGED.
 - **AC2 — The route authenticates (DR1, I5).** A valid `x-twt-msg91-secret-token` (current OR next token) ⇒ `200 {received:true}` and
   one inbox row; a wrong / missing header ⇒ `403 webhook.signature_rejected`, ZERO rows (an array-valued header — `app.inject` only;
-  Node joins repeats with `", "` — ⇒ 403); the token name UNSET ⇒ 403 to everything + ONE prod boot line (⛔ throw); a name SET but
-  UNRESOLVABLE (the resolver throws) ⇒ 403 to everything + ONE boot error line naming the secret NAME (⛔ throw, ⛔ the value); the
+  Node joins repeats with `", "` — ⇒ 403); one leg per ROW of
+  DR1's secret-failure table (a fake resolver: throws / blank / 31 chars / usable, for the current and the next name) asserting the
+  webhook state, the 403s, and EXACTLY the boot line(s) the table names (a log recorder; ⛔ a value in any line; ⛔ throw from the
+  builder — the api starts in every row); the
   token is read ONCE (a counting resolver passed to `buildSmsReportWebhookAuth` — ⛔ per request); the route is in `PUBLIC_ALLOWLIST`
   with its justification. ⭐ The AI-5-1 gate BITES: a `lib.test.ts` leg runs `scanSecretCompareInvariant` on a copy of the handler
   with `===` and asserts it IS flagged, and the real handler passes.
@@ -702,8 +749,13 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   retried, then `matched:*` once it is finalised `accepted` — and `unmatched:still_attempting` if still `attempting` at 72 h; (7) a
   different request id for the row, and a report for a row whose outcome is `error` ⇒ `other_attempt:<kind>` + ONE alarm, ⛔
   `sms_send_deliveries` change; (8) matching request id ⇒ one `sms_send_deliveries` row in the ROW's Pariwar (RLS-read back under
-  that scope, ⛔ visible under another); `delivered` then `undelivered` ⇒ `undelivered`, `report_count 2`; `undelivered` then
-  `delivered` ⇒ stays `undelivered`, `report_count 2`; (9) status `0` on a matching row ⇒ `ignored:intermediate`, ⛔ state. Each kind
+  that scope, ⛔ visible under another) — and one leg per line of DR6's contract table: `delivered` then `undelivered` ⇒
+  `undelivered`, `report_count 2`, the UNDELIVERED report's `status_code` / `failure_reason`; `undelivered` (`2`) then `delivered` ⇒
+  stays `undelivered`, `report_count 2`, `status_code` still `2`, `reported_at` = the later report's; `undelivered` (`2`) then
+  `undelivered` (`16`) ⇒ `report_count 2`, `status_code` still `2`; the same report POSTed twice ⇒ `report_count 1`; status `0` then
+  `1` ⇒ `report_count 1`; two reports settled out of `received_at` order ⇒ `first_reported_at` / `reported_at` = the min / max; a
+  settle replayed after a lapsed lease ⇒ `report_count` unchanged (AC7); (9) status `0` on a matching row ⇒ `ignored:intermediate`, ⛔
+  state, ⛔ `sms_send_deliveries` write. Each kind
   (cr reminder, cr closure notice, ce, sn, pm) matched at least once.
 - **AC7 — The drain is at-least-once (DR8, T2).** A worker that throws mid-row leaves it re-claimable after the lease (pinned); a
   retry settle clears `lease_until` (the next attempt is due at the backoff, ⛔ the lease); a new row's `next_attempt_at` defaults to
@@ -745,13 +797,13 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; `git diff --name-only dae96d9b..origin/main -- packages/channels apps/jobs/src apps/api/src
+  - [x] 0.1 `git fetch origin`; `git diff --name-only dae96d9b..origin/main -- packages/channels apps/jobs/src apps/api/src
         packages/domain/migrations packages/domain/src/claim infra docs/launch-gate-inventory docs/adr`; re-read any cited file that
         moved. Check the 6-31 worktree / branch for its claims on 0167, `-347`, ADR-0042, Row 33 and the ledger letter (T9 — already
         written there, uncommitted, 2026-10-17). Re-read F1–F10's pages (docs ONLY — T1; record the date). ⭐ RE-CONFIRM F15's PQ1
         trace at the then-HEAD (letter-eligibility `foundDeadOn`, `numberKnownDead`, the queue status, the jobs sweep `:1123-1290`,
         the burst alarm `:751-756`, day 90 and after) — cites for the PQ1 note's E3.
-  - [ ] 0.2 Put DR1–DR14 to BigDev, each with its recommendation and cost — incl. DR6's 72 h, DR7's 30-day prune (AC10), DR9's 1200 / min,
+  - [x] 0.2 Put DR1–DR14 to BigDev, each with its recommendation and cost — incl. DR6's 72 h, DR7's 30-day prune (AC10), DR9's 1200 / min,
         DR11 (c) vs (c′), DR14 (a) vs (b), the Row 30 note (6) (b) reading (Sequencing) — and **DR5-G WITHOUT a recommendation** (both options and costs as written). Record the
         answers verbatim.
   - [ ] 0.3 Write the author-commit `-347` (`.decision-log.md`, prepended; the `-345` entry's shape: Decision type / Status / Author /
@@ -777,7 +829,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   - [ ] 0.4 The records (one commit, after 0.3): ADR-0042 from `docs/adr/_adr-template.md` (DR14 (c)'s contents) +
         `docs/knowledge-transfer/adr-index.md` row and reconciliation (Total 152 → 153; `drafted` 2 → 3; arithmetic re-checked);
         ADR-0041 Changelog row (CRQID, inside the recipient; ⛔ a word above rewritten); roster Row 33 (DR14 (c) closure legs (a), (b0),
-        (b)–(d), (e0), (e)–(g) + the dated `requestId` observation note) + Row 32 dated note (points to Row 33; note (2) stays in force; ⛔ a
+        (b), (c), (c2), (d), (e0), (e)–(g) + the dated `requestId` observation note) + Row 32 dated note (points to Row 33; note (2) stays in force; ⛔ a
         word rewritten) + Row 30 dated note (DR11 (c)'s device proof from the CRQID build); `epics.md` `### Story 6.37b: … \`[PRIMITIVE]\``
         before `:3535`; the sprint row comment + `6-37b-msg91-delivery-reports: in-progress`; both ledgers (the top-of-file `#
         last_updated: 2026-10-17<next free letter after k> (…)` and the `last_updated: >-` list)
@@ -819,8 +871,8 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
 - [ ] **Task 3 — the domain accessors (AC6, AC7, AC10).** `packages/domain/src/sms-delivery/` (with 1.1):
       `persistSmsDeliveryReports(tx, rows)` (`ON CONFLICT DO NOTHING`, returns inserted count), `claimDueSmsDeliveryReports(db, {limit,
       leaseMs, now})` (the lease — T2; `clampLimit` default 200 / cap 500 APPLIED BY HAND if the claim is raw SQL — DR8),
-      `settleSmsDeliveryReport(...)` (the CAS; a retry clears `lease_until`), `upsertSmsSendDelivery(...)` (DR6's absorbing rule IN SQL
-      — `ON CONFLICT … DO UPDATE … WHERE` — ⛔ read-then-write), `lookupSendForCorrelation(db, kind, rowId)` (per-kind SELECT of F12's
+      `settleSmsDeliveryReport(...)` (the CAS; a retry clears `lease_until`), `upsertSmsSendDelivery(...)` (DR6's contract table IN SQL
+      — ONE `ON CONFLICT … DO UPDATE SET …` with ⛔ `WHERE`; ⛔ read-then-write), `lookupSendForCorrelation(db, kind, rowId)` (per-kind SELECT of F12's
       columns: `pariwar_id`, `outcome` / pings `send_outcome`, `provider_message_id`, `updated_at` / pings `send_updated_at`, and
       `purpose` on `claim_correction_reminders`), `pruneSettledSmsDeliveryReports(db, {olderThanDays})`, `readSmsSendDeliveries(tx,
       kind, rowIds)`. Unit + live legs.
@@ -881,7 +933,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
    the pull API (F9). I9's recorder enforces the send side; the webhook side is ours (`app.inject` only).
 2. **T2 — ⛔ Copy the Telegram / WA drain's CLAIM.** It stamps `processed_at` in the claim ⇒ at-most-once (F19); copy only the cron
    registration and the per-row try / catch. The lease is the at-least-once mechanism (DR8).
-3. **T3 — ⛔ Latest-wins.** `upsertWaSendStatus` regresses a status on a retried / out-of-order report (F19). DR6's UPSERT (row 8) is absorbing, in SQL.
+3. **T3 — ⛔ Latest-wins.** `upsertWaSendStatus` regresses a status on a retried / out-of-order report (F19). DR6's UPSERT (row 8) is absorbing, in SQL, and still COUNTS the absorbed report (⛔ a `WHERE`).
 4. **T4 — A Cloudflare challenge pauses the webhook SILENTLY** (F6, F20) — DR9's skip and Row 33 (c); the silence alarm (DR12) is the
    only in-app detector.
 5. **T5 — The global rate limit (300 / min per IP) would 429 a burst** ⇒ retries ⇒ auto-pause; set the per-route limit (DR9). ⚠
@@ -1055,6 +1107,25 @@ them at Task 0.1.
 
 ### Debug Log References
 
+- **(a) Task 0.1 (2026-10-17).** `git fetch origin`: `origin/main` == `dae96d9b` (⛔ cited file moved). `-347` free on every ref
+  and in the 6-31 worktree; 6-31 committed its story (`29320851`, ledger `2026-10-17k`) and keeps 0167 / `-347` / Row 33
+  PROVISIONAL. MSG91's pages and F15's PQ1 trace were re-read the same day by the validate pass's verifiers (v1.2) — ⛔ re-read again.
+- **(b) Task 0.2 — BigDev's answers, verbatim (2026-10-17):** *"DR1–DR4 — Accept as proposed. DR5 — Accept the dedicated
+  sms_send_deliveries table. DR5-G — Choose G-a. DR6–DR8 — Accept as proposed. DR9 — Accept 1,200 requests per minute
+  provisionally. Verify MSG91's retry and auto-pause behavior before production. Preserve the residual risk in ADR-0042; the limit
+  is not proof that the provider will never pause the webhook. DR10 — Accept as proposed. DR11 — Choose option (c). Add the dated
+  Row 30 note and Row 33 (b0) staging proof. Require Row 33 (e0)'s CRQID-echo evidence before relying on the new correlation
+  behavior in production. DR12–DR13 — Accept as proposed. DR14 — Choose option (a)."* And: *"Row 30 sequencing interpretation —
+  "OTPs wait for Row 32" means the required Row 32 setup legs are complete; it does not mean that Row 32 must be fully closed or
+  that Story 6.37b must reach done before OTP delivery can proceed. OTP delivery may proceed once the required setup is complete and
+  the staging evidence is satisfactory. The dated Row 30 note and Row 33 (b0) staging proof must be in place before production
+  reliance on the new CRQID behavior. Row 33 (e0) remains the required CRQID-echo proof."* Then, before approving `-347`'s draft:
+  *"1. DR1 to match the stated secret-failure behaviour. 2. (b0) versus (e0) to state exactly what OTP production use is allowed
+  before correlation is proven. 3. The committed status to match the actual repository state. 4. The DR6/AC6 report-count contract
+  to be explicitly resolved in the story."* ⇒ v1.3: DR1's secret-failure table (+ AC2's legs); DR11's S0 / S1 / S2 stage table;
+  DR6's `sms_send_deliveries` contract table (+ AC6's legs, Task 3 — ⛔ `WHERE`); Row 33 (c2) for DR9's verification; `-347`'s Status
+  written to the repository state at its commit.
+
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6.37b`, 2026-10-17; four
@@ -1069,3 +1140,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.0 | Created by `bmad-create-story 6.37b` at `dae96d9b` (worktree `.claude/worktrees/6-37b`). F1–F24 found; DR1–DR14 PROPOSED (⏳ Task 0.2); PQ1 (reported-undelivered vs `-252` cl.1) and PQ2 (content-mismatch refusal — Row 32 note (6.4)) to be ROUTED at Task 0.3. ⭐ DR3 — correlate by our own row id in `CRQID` (supersedes `-345` MG9's "⛔ CRQID"); I1 — a report only subtracts reach. Status `ready-for-dev`, buildable after Task 0; Task 7 waits for the Panel. |
 | 2026-10-17 | 1.1 | Create-story's own validation (one fresh-context read-only verifier, `checklist.md`): 2 HIGH / 8 MED / 9 LOW, all applied. ⭐ HIGH 1 — under PQ1 B with letter-eligibility unchanged, a person reported undelivered was never reached AND never letter-eligible (D20 / D31 need a SEND-time dead outcome) ⇒ the claim could never close (the 2026-09 rejected cost, against cl.2) ⇒ PQ1 split into B1 (an undelivered report reads as `rejected_unreachable` everywhere — our reading) / B2; the Policy meaning, AC11 and Task 7 rewritten. HIGH 2 — DR12's silence alarm counted 0128 `staff_push` rows (FCM, ⛔ CRQID) ⇒ fired daily ⇒ SMS purposes only, `send_outcome` for pings, 48 h. Also: DR6 ordered (finished non-accepted ⇒ `other_attempt`; a staff-push CRQID ⇒ `unmatched:not_sms`); the supersession list (MG1's "delivery state on the five send tables" and "correlation by request id + recipient"; the OTP quote attributed to the story file); cl.1's two readings (match / narrow); the 6.37 tests that turn red (2 api whole-body checks, 51 core calls; an injectable OTP random); I2's diff command (quoted full paths + 0054); Bot Fight Mode and leg ORDER on Row 33 (token → edge → webhook); Row 33 (e) proves the `requestId` match; PQ2 SENT before `done` and its fact marked inference; a bad `request_id` ⇒ ⛔ row (200 + alarm); the settle compare-and-set; DR11's reason; F19 (latest-wins IS tested); cites (README `:79-82`, `handlers.ts:146`, `sms.test.ts:254-258`, 0049 `:40`). |
 | 2026-10-17 | 1.2 | `bmad-create-story validate 6.37b` (five parallel fresh-context read-only verifiers — send path, webhook / api, DB / jobs / D22, governance, the footgun catalogue; the CRQID placement, the AI-5-1 gate, the grants and `foundDeadOn` re-checked by hand): 8 critical / 12 should / 10 nice, all applied (BigDev: "all"). ⭐ CRQID goes INSIDE the recipient (Flow's only sample; the top-level text is the Text-SMS page's) + reserved key + Row 33 (e0) echo proof via the first login code; the webhook header is `x-twt-msg91-secret-token` with direct compares (the AI-5-1 gate was VACUOUS for a boot-resolved token) + a gate-bites leg; DR5-G — the two tables' grants put to BigDev WITHOUT a recommendation (SELECT-only breaks Row 26 (a)); B1's letter-eligibility is `foundDeadOn` (first dead outcome, sticky) ⛔ `numberKnownDead`, and a forged report changes who is contacted (closure letter, letter chase) — I1, Policy meaning, PQ1, AC11, Task 7 (+ the jobs sweep and the burst alarm) rewritten; the secret resolved at boot by a `buildTurnstileVerifier`-shape builder (Telegram resolves per request), an unresolvable name ⇒ 403 + a line; a malformed body's `JSON.parse` message can carry the number ⇒ caught, ⛔ logged; a bad correlation id is a crash in the core, ⛔ a final (it keeps the id off the wire; the row's give-up still records `error` — a code bug only); the grammar lives in `@twt/domain`. Also: DR6 as one ordered table with `(match_state, match_detail)` pairs; DR10 rewritten from Fastify 5.8.5's source (a `'*'` parser in its own scope — ⛔ a 415 before auth); the api / jobs alarm mechanisms named; DR13 / AC12 scoped to Tasks 1–6; PQ2's option A costed, its fact split in two; `-252`'s B was DEFERRED, ⛔ rejected; the §0 mixed-part disclosure (DR4 / DR6 under B1); ledger letter after `k`, 6-31's written claims; Tasks gained AC8's / AC1's / DR9's legs; Row 32 note (2) stays in force; both `-346` corrections; the at-least-once triggers FIRED; Row 33's `requestId` equality can only be observed AFTER (g) (a circularity found while applying) ⇒ a dated observation note, ⛔ a closure leg; I2's diff by exclusion; cites corrected. The pass's OWN diff then adversarially reviewed in three fresh-context rounds, each applied. Round 1 (2 HIGH / 3 MED / 6 LOW): `closeScopeTx` RETHROWS a failed COMMIT (the global write is a new shape because `openScopeTx` needs a Pariwar, ⛔ because of COMMIT); the OTP device proof made real (a dated Row 30 note — from the CRQID build, on staging before production; a refusal may be a silent 200); Row 33's closure legs listed; where a throw becomes a final (T22 — validate at the top of `sendClaimDltSms`); DR4 ↔ DR6 rows; MG9 attributed to the 6.37 story file; DR7's prune and per-command policies; the 415-on-an-invalid-header residual. Round 2 (0 HIGH / 4 MED / 4 LOW): the crash still loses the once-only text at give-up (said so), the Row 30 note's wording + its place in Task 0.3's list, 6.37 F9 vs this file's F9, per-command policy clause forms, `settled_at` as the prune's clock, the OTP-before-Row-32 reading. Round 3 (1 HIGH / 2 MED / 3 LOW): pg-boss 12.19.1 never logs a handler's throw ⇒ the core logs ONE line before a bad-correlation throw; the give-up names corrected (`attempting_past_day` for correction / closure / certificate); Row 33 (b0) owns the staging OTP proof, before the production deploy and so before (b) (closure legs (a), (b0), (b)–(d), (e0), (e)–(g)); a fourth round (0 HIGH / 1 MED / 2 LOW) fixed (b0)'s place, a timeout's exception and the `[jobs] ` prefix; `buildGatewayMessage`'s throw is caught in `provider.send`; Task 2's wording. Status stays `ready-for-dev`. |
+| 2026-10-17 | 1.3 | Task 0.1 / 0.2 done — BigDev's answers recorded verbatim (Debug Log (b)): all as recommended, DR5-G = G-a, DR9's 1,200 / min PROVISIONAL with MSG91's retry / auto-pause verified before production (new Row 33 leg (c2)), DR11 (c), DR14 (a), Row 30 = Row 32's setup legs. BigDev's four pre-approval requirements for `-347` resolved in the story: DR1's secret-failure table (the api always starts; a broken NEXT token never disables a working current one; a boot-time outage is a residual) + AC2's per-row legs; DR11's S0 / S1 / S2 table of allowed OTP production use; DR6's `sms_send_deliveries` contract table (one upsert, ⛔ `WHERE`; every row-8 report counts; the state-setting report's code kept; min / max timestamps) + AC6's legs; ADR-0042's residual list. Status stays `ready-for-dev`. |

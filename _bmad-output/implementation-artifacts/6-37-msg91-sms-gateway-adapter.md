@@ -7,9 +7,9 @@ PINNED: `466e9b0e` (2026-10-17 — `main` == `origin/main` after a fresh `git fe
 re-checks what moved. Built in its OWN worktree `.claude/worktrees/6-37`, branch `story/6-37-msg91-sms-gateway-adapter`
 ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]]).
 
-STATUS: `ready-for-dev` — ⭐ MG1–MG17 ANSWERED (BigDev, 2026-10-17: *"accept all recommended"*) and committed ALONE as author-commit
-`2026-10-17-345` (`48017867`). ⚠ Task 0.4's records still precede any code ([[feedback_governance_commits_precede_implementation]]).
-⛔ No code before AC0 is met.
+STATUS: `in-progress` — ⭐ TASK 0 DONE, AC0 MET: MG1–MG17 ANSWERED (BigDev, 2026-10-17: *"accept all recommended"*), author-commit
+`2026-10-17-345` committed ALONE (`48017867`), and Task 0.4's records committed in one commit after it
+([[feedback_governance_commits_precede_implementation]]). Next: Task 1 (the code).
 Start condition met: row 6-34 is `done` and on `main` (`-314` decision 2 — "6.34 builds FIRST"; 6.34 Sequencing: "if 6-37 is started
 first it STOPS and asks").
 
@@ -42,7 +42,7 @@ value cap vs the 55-char link); the tests every edit turns red named. ⚠ Every 
 
 # Story 6.37: The texts and login codes are actually sent — a MSG91 adapter behind the SMS seam, sending each template's NAMED values, with a pre-flight that proves the account and every template before a single text is spent `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today ⛔ no SMS can reach a real gateway: `sms-app.ts` posts a generic
 > `{sender, to, template_id, message}` with `Authorization: Bearer` and expects `messageId` — a contract that matches ⛔ MSG91, the gateway
@@ -574,7 +574,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
         inserting (`-345` was free at validate). Stage in scratchpad, try the insert ([[project_decision_log_writes_user_inserted]]).
         Commit ALONE on the story branch; write its SHA after the commit, ⛔ before. ⭐ **Done:** `2026-10-17-345`, committed ALONE as
         `48017867` (the insert was accepted; additive only — 54 lines).
-  - [ ] 0.4 The records (one commit, after 0.3): `docs/adr/ADR-0041-sms-gateway-msg91.md` from `_adr-template.md` (MG13) +
+  - [x] 0.4 The records (one commit, after 0.3): `docs/adr/ADR-0041-sms-gateway-msg91.md` from `_adr-template.md` (MG13) +
         `docs/knowledge-transfer/adr-index.md` row + breakdown reconciliation + the `:169` and `:170` annotations; `epics.md` `### Story
         6.37: … \`[PRIMITIVE]\`` before the `---` that precedes `## Epic 7` (the 6.34 entry's blockquote shape); roster Row 32 (MG14 — the
         Row 29–31 block format, eleven fields, legs (a)–(i)) + dated annotations on Row 30 (a) (`apiUrl` → `apiOrigin`), (b) (the id keys
@@ -582,7 +582,11 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
         "1-2 variables" line vs templates 11–14) — ⛔ a word of Row 30 rewritten; if MG1 (a): the sprint row `6-37b-msg91-delivery-reports:
         backlog` under 6-37 with its comment, and the deferred delivery-report item AND the two at-least-once items annotated "closer: row
         6-37b"; the sprint ledger line ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML). Row
-        `6-37-msg91-sms-gateway-adapter` → `in-progress`.
+        `6-37-msg91-sms-gateway-adapter` → `in-progress`. ⭐ **Done 2026-10-17:** `docs/adr/ADR-0041-sms-gateway-msg91.md` (`drafted`);
+        adr-index row + reconciliation note (`drafted` 1→2, Total 151→152) + the two slot annotations (⛔ flipped); `epics.md`
+        `### Story 6.37` before Epic 7; roster Row 32 (legs (a)–(i), S1 / S2 / S3 folded into (b) / (d)) + Row 30 note (6) (dated, ⛔ a
+        word rewritten); the deferred delivery-report item and both at-least-once items annotated "closer: row 6-37b" (⛔ closed); sprint
+        row `6-37b-msg91-delivery-reports: backlog`; row 6-37 → `in-progress`; the ledger line.
 
 - [ ] **Task 1 — the vocabulary helpers (AC5, AC6).** In `packages/channels/src/dlt-variables.ts`: `substituteDltValues(text, slots,
       values)` (throws on a name / count mismatch; FUNCTION-form replacement) and `toGatewayTemplate(text, slots, wrap)`; a
@@ -814,3 +818,4 @@ The last five commits are 6.27c's review rounds and records (`f3c19b62` → `466
 | 2026-10-17 | 1.1 (round 3) | Fresh-context re-validate of round 2 — 2 HIGH, both round 2's own (an edit applied to the ACs but ⛔ swept to Task 4 / MG5's core paragraph / MG15): Task 4 still said every pre-flight FAULT ends the row (AC9 (b) said fail open) ⇒ the core takes `preflightFailOpen`, set by `sendClaimCorrectionSms`, and the summary line follows; MG15 claimed MATCH on 6.19b/c/d for faults that now fail open there ⇒ split by path (D22's input: PROVEN faults only), mirrored in the §0 header and the Policy meaning. Also: an MG17 (b) read-key refusal STARTS the api (AC8 (a), AC9 (b)); "becomes blocking" is a LATER change via Task 7's deferred item, ⛔ an automatic switch; the memo's transient fallback was unreachable (a call happens only on a miss) ⇒ a stale PASS for one more TTL on an expired re-check; the holding sweeps' hold on UNPROVEN reasons stated with its cost (`-322` §0 reserves only 6.19b/c/d); T1 cites AC11's recorder; Task 7 writes the recorder test; detail codes disambiguated (malformed ⇒ `template_id_malformed`, `auth*` ⇒ `auth:preflight`); `beforeSend`'s lease defer uses the counted branch; Row 32 (f) is BigDev's. Glyph scan: 140 added `⛔`, ⛔ inversion. |
 | 2026-10-17 | 1.1 (round 4) | Fresh-context consistency sweep — ⛔ HIGH (4 MED, 7 LOW), all applied: the fail-open warning had ⛔ sink (the core never alarms — `claim-dlt-sms-send.ts:9`) ⇒ `preflightWarning` on `accepted`, alarmed by each 6.19b/c/d caller; Task 4's unscoped "TRANSIENT ⇒ proceed" would send on the holding children ⇒ proceed only when `preflightFailOpen`, else `transient`; MG15's `accepted` definition + residual name the stale-pass extension; T13 carries MG17 (a) and the blank-secret arms; MG17 (b) `auth*` is unproven in the core; S1 no longer implies settling it makes the api check blocking; "BigDev may route it" removed (⛔ routed, everywhere); the Story statement no longer claims an ACCOUNT fault is stopped; the Policy meaning's MG17 (a) qualifier; AC9 (a2) / (b2) legs; the memo field declared on `ClaimCorrectionReminderDeps` too. Rounds: 1 HIGH → 2 HIGH → 0 HIGH (all HIGHs the pass's own). |
 | 2026-10-17 | 1.2 | Task 0.1–0.3: BigDev answered MG1–MG17 *"accept all recommended"* (incl. MG5's TTLs 1 h / 5 min, X1, X2); S1–S4 dispositions recorded (the author's — ⛔ settled by the docs: S1 alarm-only api content check, S2 a Row 32 (d) leg ⛔ a STOP, S3 both MG17 arms built with an OPTIONAL read key, S4 MG15 stands); author-commit `2026-10-17-345` committed ALONE as `48017867`. Next: Task 0.4 (the records), then code. |
+| 2026-10-17 | 1.3 | Task 0.4 — the records: ADR-0041 (`drafted`) + adr-index; `epics.md` Story 6.37; roster Row 32 + Row 30 note (6); deferred-work annotations (three items → row 6-37b); sprint row 6-37b `backlog`; row 6-37 → `in-progress`. AC0 met. Status `in-progress`. |

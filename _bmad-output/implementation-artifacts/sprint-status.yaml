@@ -1,3 +1,10 @@
+# last_updated: 2026-10-17e (STORY 6.37 — TASK 0 DONE: BigDev answered MG1–MG17 *"accept all recommended"* (incl. MG5's TTLs 1 h / 5 min,
+# X1 the closure-notice cost, X2 roster Row 32 (i)); author-commit `2026-10-17-345` committed ALONE (`48017867`). Task 0.4's records (one
+# commit): ADR-0041 `sms-gateway-msg91` (`drafted`) + its adr-index row (Total 151→152; slots `otp-channel-primary` /
+# `channel-provider-selection` annotated as PARTLY filled, ⛔ flipped); `epics.md` `### Story 6.37`; roster Row 32
+# `sms-gateway-msg91-provisioned` (nine legs, (i) = row 6-37b before any claim-text template id) + Row 30 note (6) (⛔ a word rewritten);
+# deferred-work's delivery-report item and both at-least-once items annotated "closer: row 6-37b" (⛔ closed). ⭐ NEW ROW
+# `6-37b-msg91-delivery-reports: backlog` (`-345` MG1). Row `6-37-msg91-sms-gateway-adapter` `ready-for-dev` → `in-progress`. ⛔ No code yet.)
 # last_updated: 2026-10-17d (STORY 6.37 — VALIDATED v1.1 by `bmad-create-story validate 6.37` (worktree `.claude/worktrees/6-37`, at
 # `466e9b0e` == `origin/main`; ⛔ code moved). Four fresh-context verifiers + fresh re-validate rounds over the pass's OWN edits. ⭐ MG5 (the
 # pre-flight) rebuilt: every jobs send is a pg-boss CHILD ⇒ the "per-run memo" could ⛔ reach the core ⇒ ONE process memo with TTLs;
@@ -19956,6 +19963,8 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-17 (Story 6.37 Task 0 done: MG1–MG17 answered, -345 committed, records written (ADR-0041,
+  Row 32, epics entry); new row 6-37b-msg91-delivery-reports backlog; 6-37 in-progress.)
   2026-10-17 (Story 6.37 validated v1.1: MG5 pre-flight rebuilt (process memo; fail open on 6.19b/c/d
   except proven faults), I4 / Policy meaning / MG15 corrected, MG17 + S1–S4 added; status stays ready-for-dev.)
   2026-10-17 (Story 6.37 created: MSG91 adapter story, MG1–MG16 proposed for BigDev at Task 0; status ready-for-dev.
@@ -20385,7 +20394,15 @@ development_status:
   # MSG91 adapter behind the SMS seam (texts + the two OTPs), a MSG91 template id per template, `91…` numbers, `type`-based errors, delivery
   # reports, the prod boot check. ⭐ AFTER 6.34 (it consumes 6.34's named, typed slots — TV13). ⛔ No story file; ⛔ no epics.md entry yet.
   # ⭐ 2026-10-17 (`bmad-create-story 6.37`): story file `6-37-msg91-sms-gateway-adapter.md`; buildable after Task 0 (MG1–MG16).
-  6-37-msg91-sms-gateway-adapter: ready-for-dev
+  # ⭐ 2026-10-17 (Task 0, `-345` — MG1–MG17 answered, "accept all recommended"): Task 0.4's records committed; → in-progress (the code next).
+  6-37-msg91-sms-gateway-adapter: in-progress
+  # ⭐ 2026-10-17 ADDED by `2026-10-17-345` MG1 (BigDev: "accept all recommended"): MSG91's DELIVERY REPORTS, moved out of 6-37 — the panel
+  # webhook (JSON, one payload per recipient, keyed by `requestId` + `telNum`; ⛔ signature — static headers only; persist-then-ack), an
+  # inbound table, correlation onto the five send tables (⚠ 0166's finished-row trigger freezes peer-mesh delivery columns; `delivered_at`
+  # on 0128 / 0138 is ⛔ granted), the OTP's gateway id in its audit, and the `-252` question (does a REPORTED failure stop a send counting
+  # as reached? — the Panel's). Closer of deferred-work's delivery-report item and both at-least-once SMS items. ⭐ Roster Row 32 (i): ⛔
+  # claim-text template id (1–14) is provisioned until this row is `done`. AFTER 6-37. ⛔ No story file; ⛔ no epics.md entry yet.
+  6-37b-msg91-delivery-reports: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

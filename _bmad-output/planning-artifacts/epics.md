@@ -3508,6 +3508,30 @@ to 3, otherwise nobody — ⛔ never the district, ⛔ never a fill-up); everyth
 colleagues first, ONE staff line about recent changes; ONE eligibility predicate shared with 6.27c; each person's source on every ping and
 shown to the District Admin and later approvers (⛔ never the inspector); a claim with nobody to ask goes on (`claim.peer_mesh_none_to_ask`).
 
+### Story 6.37: The Texts and Login Codes Are Actually Sent — a MSG91 Adapter Behind the SMS Seam, Sending Each Template's Named Values, With a Pre-flight That Proves Every Template Before a Text Is Spent `[PRIMITIVE]`
+
+> ⚠ **Added 2026-10-17 (Story 6.37, Task 0.4)** — the row `6-37-msg91-sms-gateway-adapter` was added by
+> [`-314`](../../.decision-log.md#decision-2026-10-10-314) decision 2 (BigDev: MSG91 *"for now"*), with ⛔ no `epics.md` entry (*"owed at
+> its create-story"*). The author's build decisions are [`-345`](../../.decision-log.md#decision-2026-10-17-345) MG1–MG17 (BigDev:
+> *"accept all recommended"*) — which supersede `-302` RN4's *"⛔ a held class"* clause, narrow `-295` RB12's accepted edge, and move
+> `-314`'s *"delivery-report correlation"* to a new row `6-37b-msg91-delivery-reports`. Its SMS-provider ADR is ADR-0041 (`drafted`);
+> its go-live record is roster Row 32 (`sms-gateway-msg91-provisioned`), whose leg (i) keeps every claim-text template id unprovisioned
+> until row 6-37b is `done`. Full ACs: `_bmad-output/implementation-artifacts/6-37-msg91-sms-gateway-adapter.md`. ⛔ Never a merge fence.
+
+As the Trust, I want every SMS the platform already composes — the login and step-up codes, the correction / closure / certificate
+texts, the suspicion notices and the neighbours' request — to be sent through MSG91 with each template's named values, and a broken
+MSG91 template to hold the send where a hold exists (and a provably broken one to stop it) before anyone is recorded as reached, so that
+a member actually receives their login code and a family's texts reach them, and the record never says "sent" for a text MSG91 silently
+refused.
+
+**Acceptance Criteria (in brief):** a MSG91 Flow v5 client behind the existing `SmsMessagingHandle` (`authkey`; MSG91's 24-hex template id
+in the existing keys; NAMED values; `91…` numbers; `short_url: "0"`; acceptance needs `type: "success"` AND a request id; MSG91's codes on
+the EXISTING error classes — ⛔ migration); every caller passes its template's named values, checked against its own render before the
+network (⛔ a word of any text changed); both login codes through Flow; a template pre-flight (`getTemplateVersions` — text, Unicode type
+from the TEXT, DLT id) in ONE memo per jobs process: the suspicion / peer-mesh sweeps HOLD on a fault, the correction / closure /
+certificate paths end a row only on a PROVEN fault and otherwise fail open, the api refuses to start only on a missing / malformed key
+or id or the send key's refusal; the alert dispatch path stays dark; ADR-0041; roster Row 32; ⛔ network call in any test.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

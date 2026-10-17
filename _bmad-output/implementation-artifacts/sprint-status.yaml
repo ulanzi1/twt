@@ -1,3 +1,10 @@
+# last_updated: 2026-10-17j (STORY 6.37b — CREATED by `bmad-create-story 6.37b` (worktree `.claude/worktrees/6-37b`, branch
+# `story/6-37b-msg91-delivery-reports`, pinned `dae96d9b`): row `6-37b-msg91-delivery-reports` `backlog` → `ready-for-dev` (v1.1 — four
+# research passes + one fresh-context verifier, 2 HIGH applied). DR1–DR14 PROPOSED (⏳ BigDev, Task 0.2; author-commit `-347` ALONE before
+# code): a static-header webhook in channel-webhooks, ⛔ phone number kept, every send tagged CRQID = kind + row id, ONE new table (⛔ a
+# write to the frozen send tables), a leased correlator, a silence alarm. PQ1 (a reported-undelivered reminder vs `-252` cl.1 / cl.2 —
+# B1 our reading: reads as `rejected_unreachable`, so ⛔ reached AND letter-eligible) and PQ2 (Row 32 note (6.4)) to be ROUTED at Task
+# 0.3; Task 7 (D22) waits for PQ1. ⛔ No code. ⛔ No other row moves.)
 # last_updated: 2026-10-17i (STORY 6.37 — CODE REVIEW ROUND 2 (whole branch 466e9b0e..171e2040, 4 chunks × 3 layers): D1 (a) / D2 (b)
 # ⇒ `2026-10-17-346` committed alone (`da27b82d` — narrows -345 MG3 helpline / MG7 unlisted code / MG5 transient 60 s); P1–P18 applied
 # (only MSG91's documented 200 status:"error" refuses; every active version; redirects refused; an equal read key is the send key; the
@@ -19983,6 +19990,8 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-17 (Story 6.37b created: MSG91 delivery-report story, DR1–DR14 proposed for BigDev at Task 0, PQ1 / PQ2 to be routed;
+  status ready-for-dev.)
   2026-10-17 (Story 6.37 code review round 2: -346 committed (D1 a, D2 b); P1–P18 applied, fix diff reviewed twice; P2 routed to
   the Panel (note written, not yet sent); ci:local 36/36 on :5433; 6-37 done.)
   2026-10-17 (Story 6.37 review round 1: F1–F4 recorded (6-37 in-progress), then resolved in b90a319c; 6-37 review.)
@@ -20431,7 +20440,9 @@ development_status:
   # claim-text template id (1–14) is provisioned until this row is `done`. AFTER 6-37. ⛔ No story file; ⛔ no epics.md entry yet.
   # ⭐ 2026-10-17 (6.37 code review round 2, roster Row 32 note (6.4) — advisory): this row's create-story also puts to the Panel `-345`'s
   # recorded question — whether a PROVEN content mismatch should REFUSE a correction / closure / certificate text — before Row 32 (i) closes.
-  6-37b-msg91-delivery-reports: backlog
+  # ⭐ 2026-10-17 (`bmad-create-story 6.37b`): story file `6-37b-msg91-delivery-reports.md`; buildable after Task 0 (DR1–DR14; PQ1 / PQ2
+  # routed). ⚠ Task 7 (D22 + letter-eligibility) waits for the Panel's PQ1 ruling. Migration 0167 / `-347` / ADR-0042 / Row 33 race row 6-31.
+  6-37b-msg91-delivery-reports: ready-for-dev
   epic-6-retrospective: done
 
   # ==========================================================================

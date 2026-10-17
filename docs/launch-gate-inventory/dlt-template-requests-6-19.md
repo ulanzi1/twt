@@ -43,13 +43,18 @@ shorter per-segment length.
   19-digit TE id SmartPing issued) and the sender id mapped to the PE; (3) choose the SMS type from the TEXT, ⛔ the locale — **Unicode
   for every Hindi template AND for template 14** (its English holds an em dash), Normal for the other English ones; (4) mark the version
   **default**; (5) leave MSG91's URL shortener OFF and put the app-link domain on its *"Skip URL"* list (the adapter also sends
-  `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key. The platform reads
+  `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key — ⚠ for the
+  two OTP templates (15, 16) only, until row 6-37b (delivery reports) is `done`: ⛔ a claim-text id (1–14) is set before then, even
+  with its MSG91 template created (roster Row 32 (i)). The platform reads
   every template back from MSG91 before using it (the pre-flight) — a template whose text, type or DLT id differs is held or alarmed.
+  ⚠ Before (7): choose the pre-flight key per roster Row 32 note (6.1) — a SEPARATE template-read key (a different value, its
+  secret name in `SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME`) until MSG91 confirms in writing that an SMS-only key may read templates (S3).
   (7) Once the two OTP templates (15, 16) are set, prove the pre-flight from the DEPLOYED jobs process (roster Row 32 (e)): inside the
-  jobs container run `node apps/jobs/dist/src/sms-otp-preflight-cli.js` (from a checkout with the jobs environment:
-  `pnpm --filter @twt/jobs sms:preflight`). It only READS the two templates from MSG91 with the jobs process's own key and egress —
-  ⛔ a text is sent — prints one line per template (⛔ the key, ⛔ an id) and exits 0 only when both pass; keep that line as Row 32
-  (e)'s jobs evidence. The api proves the same two templates at boot. ⛔ Set a claim-text id (1–14) to get a jobs proof — Row 32 (i).
+  jobs container run `node apps/jobs/dist/src/sms-otp-preflight-cli.js`. ⚠ Only that run is the evidence — a run from a checkout
+  (`pnpm --filter @twt/jobs sms:preflight`) leaves from another IP (IP security is on) and, off production, reads a local key, so it
+  proves neither the jobs key nor its egress (roster Row 32 note (6.3)). It only READS the two templates from MSG91 — ⛔ a text is sent —
+  prints ONE JSON line for both (⛔ the key, ⛔ a template id, ⛔ a text; it carries each version's sender id) and exits 0 only when both
+  pass; keep that line as Row 32 (e)'s jobs evidence. The api proves the same two templates at boot. ⛔ Set a claim-text id (1–14) to get a jobs proof — Row 32 (i).
 
 ## The variable types (TRAI Direction of 18 Nov 2025, Annexure-I)
 

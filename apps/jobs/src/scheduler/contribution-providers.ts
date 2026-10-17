@@ -245,17 +245,24 @@ export async function buildSmsGatewayClients(): Promise<SmsGatewayClients> {
       })
     : '';
   const smsAppClient = createSmsAppClient({ apiOrigin, authkey });
-  // MG17 — an OPTIONAL template-read-only authkey for the pre-flight (unset ⇒ the send key reads — MG17 (a)).
+  // MG17 — an OPTIONAL template-read-only authkey for the pre-flight (unset ⇒ the send key reads — MG17 (a)). Resolved ONLY
+  // when the gateway is configured — the send key AND an accepted origin (round 2 P5): with SMS unconfigured ⛔ memo is built, so an unresolvable read-key name must ⛔ fail
+  // jobs boot (MG11). A read key EQUAL to the send key IS the send key (round 2 P10) — its refusal is then a proof.
   const preflightKeySecretName = process.env['SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME'];
-  const readsWithSendKey = !preflightKeySecretName || preflightKeySecretName.trim() === '';
-  const smsTemplateReader = readsWithSendKey
-    ? smsAppClient
-    : createSmsAppClient({
-        apiOrigin,
-        authkey: await resolveSecretValue(preflightKeySecretName, {
+  const readKey =
+    preflightKeySecretName && preflightKeySecretName.trim() !== '' && smsAppClient.isConfigured()
+      ? await resolveSecretValue(preflightKeySecretName, {
           envFallback: process.env['SMS_GATEWAY_PREFLIGHT_KEY_ENV_FALLBACK'] ?? 'SMS_GATEWAY_PREFLIGHT_KEY',
-        }),
-      });
+        })
+      : null;
+  // A read-key NAME that is set but ⛔ resolved (the gateway unconfigured) still means arm (b) — the CLI reports the arm (Row 32 (b)).
+  const readKeyNameSet = Boolean(preflightKeySecretName && preflightKeySecretName.trim() !== '');
+  const readsWithSendKey = !readKeyNameSet || (readKey !== null && readKey.trim() === authkey.trim());
+  if (readKey !== null && readKey.trim() === '') {
+    // ⛔ a boot failure (MG11): the reader is left unconfigured, so every read is a TRANSIENT whose cause (`config`) is logged.
+    console.error('[jobs] boot: SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME is set but resolved to an empty value — every MSG91 pre-flight read is a transient (config) until it is fixed (roster Row 32 (b))');
+  }
+  const smsTemplateReader = readsWithSendKey || readKey === null ? smsAppClient : createSmsAppClient({ apiOrigin, authkey: readKey });
   // MG11 — ONE boot line in production when the gateway is unconfigured (⛔ fail-fast: the sweeps HOLD).
   if (process.env['NODE_ENV'] === 'production' && !smsAppClient.isConfigured()) {
     console.error(

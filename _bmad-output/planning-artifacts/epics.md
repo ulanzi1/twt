@@ -3516,7 +3516,7 @@ shown to the District Admin and later approvers (⛔ never the inspector); a cla
 > *"accept all recommended"*) — which supersede `-302` RN4's *"⛔ a held class"* clause, narrow `-295` RB12's accepted edge, and move
 > `-314`'s *"delivery-report correlation"* to a new row `6-37b-msg91-delivery-reports`. Its SMS-provider ADR is ADR-0041 (`drafted`);
 > its go-live record is roster Row 32 (`sms-gateway-msg91-provisioned`), whose leg (i) keeps every claim-text template id unprovisioned
-> until row 6-37b is `done`. Full ACs: `_bmad-output/implementation-artifacts/6-37-msg91-sms-gateway-adapter.md`. ⛔ Never a merge fence.
+> until row 6-37b is `done`. Full ACs: `_bmad-output/implementation-artifacts/6-37-msg91-sms-gateway-adapter.md`. ⛔ A merge fence.
 
 As the Trust, I want every SMS the platform already composes — the login and step-up codes, the correction / closure / certificate
 texts, the suspicion notices and the neighbours' request — to be sent through MSG91 with each template's named values, and a broken

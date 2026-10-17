@@ -132,6 +132,7 @@ import {
   createMsg91PreflightMemo,
   createRenderedMessageHash,
   MSG91_PREFLIGHT_FAULT_TTL_MS,
+  MSG91_PREFLIGHT_TRANSIENT_TTL_MS,
   MSG91_PREFLIGHT_PASS_TTL_MS,
 } from '@twt/channels';
 
@@ -608,7 +609,7 @@ async function main(): Promise<void> {
     // is INERT on day one (⛔ no admin client registers a device token).
     // ⭐ Story 6.37 (MG5) — the ONE process MSG91 pre-flight memo every claim text reads (the send core, and the suspicion /
     // peer-mesh holds): every send runs in a pg-boss CHILD, so ⛔ a per-run memo could reach it. A pass is reused 1 h, a fault
-    // 5 min, a transient ⛔ (`2026-10-17-345`). ⛔ Built while the gateway is unconfigured (the sweeps already hold on that).
+    // 5 min (`2026-10-17-345`), a transient 60 s (`-346`). ⛔ Built while the gateway is unconfigured (the sweeps already hold on that).
     const smsPreflight = contributionProviders.smsAppClient.isConfigured()
       ? {
           memo: createMsg91PreflightMemo({
@@ -620,6 +621,7 @@ async function main(): Promise<void> {
             clock: () => Date.now(),
             passTtlMs: MSG91_PREFLIGHT_PASS_TTL_MS,
             faultTtlMs: MSG91_PREFLIGHT_FAULT_TTL_MS,
+            transientTtlMs: MSG91_PREFLIGHT_TRANSIENT_TTL_MS,
           }),
           readsWithSendKey: contributionProviders.smsPreflightReadsWithSendKey,
         }

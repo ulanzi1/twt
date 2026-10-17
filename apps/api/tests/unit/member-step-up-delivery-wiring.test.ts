@@ -170,12 +170,16 @@ describe('buildMemberStepUpDelivery (Story 5.9, Task 5; Story 6.37 AC8)', () => 
   it.each([
     ['content_mismatch', (id: string) => Promise.resolve(respond(200, { status: 'success', data: [versionFor(id, { template_data: 'another text ##otp##' })] }))],
     ['dlt_id_missing', (id: string) => Promise.resolve(respond(200, { status: 'success', data: [versionFor(id, { DLT_ID: '' })] }))],
-    ['transient', () => Promise.reject(new Error('ECONNRESET'))],
-    ['transient', () => Promise.resolve(respond(503, {}))],
+    // The transient's CAUSE is named in the line (round 2 P5) — a wrong host (404 on both) is ⛔ indistinguishable from a blip.
+    ['transient: network', () => Promise.reject(new Error('ECONNRESET'))],
+    ['transient: server', () => Promise.resolve(respond(503, {}))],
     // Review F2 — an unexplained template-read status (a proxy's 404, a 405, an undocumented 403) is ⛔ a proven refusal.
-    ['transient', () => Promise.resolve(respond(404, {}))],
-    ['transient', () => Promise.resolve(respond(405, {}))],
-    ['transient', () => Promise.resolve(respond(403, {}))],
+    ['transient: unexpected_status', () => Promise.resolve(respond(404, {}))],
+    ['transient: unexpected_status', () => Promise.resolve(respond(405, {}))],
+    ['transient: unexpected_status', () => Promise.resolve(respond(403, {}))],
+    // Round 2 P1 — an undocumented 200 error body (`status:"fail"`, a bare `hasError`) is ⛔ a proven refusal either.
+    ['transient: unexpected_body', () => Promise.resolve(respond(200, { status: 'fail', hasError: true, errors: 'Unauthorized' }))],
+    ['transient: unexpected_body', () => Promise.resolve(respond(200, { hasError: true }))],
   ] as const)('⭐ MG5 — a %s at boot ⇒ STARTS with an error log (alarm-only — S1); the code is still sent', async (reason, answer) => {
     await withEnv({ SMS_GATEWAY_API_KEY: 'live-key' }, async () => {
       const { fetchImpl, calls } = msg91(answer);
@@ -239,8 +243,62 @@ describe('buildMemberStepUpDelivery (Story 5.9, Task 5; Story 6.37 AC8)', () => 
       now += 10 * 60 * 1000; // past the 5-minute fault TTL
       expect(await port.deliver(login)).toMatchObject({ status: 'accepted' });
       await new Promise((r) => setTimeout(r, 0));
-      expect(l.error.some((e) => e.includes('(content_mismatch)') && e.includes('the code was still sent'))).toBe(true);
+      expect(l.error.some((e) => e.includes('(content_mismatch)') && e.includes('OTP codes keep being sent'))).toBe(true);
       expect(calls.flow).toBe(2);
+    });
+  });
+
+  it('⭐ round 2 P11 — a runtime non-pass is reported ONCE per read: a cached fault is ⛔ re-reported on every OTP; a transient that falls back to the stale pass IS reported', async () => {
+    await withEnv({ SMS_GATEWAY_API_KEY: 'live-key' }, async () => {
+      let now = 1_000_000;
+      let phase: 'boot' | 'outage' | 'fault' = 'boot';
+      const { fetchImpl, calls } = msg91((id) => {
+        if (phase === 'boot') return Promise.resolve(respond(200, { status: 'success', data: [versionFor(id)] }));
+        if (phase === 'outage') return Promise.resolve(respond(503, {}));
+        return Promise.resolve(respond(200, { status: 'success', data: [versionFor(id, { template_data: 'x' })] }));
+      });
+      const l = lines();
+      const port = await buildMemberStepUpDelivery(cfg(), enc, db, ids, { fetchImpl, clock: () => now, log: l.log });
+      const settle = () => new Promise((r) => setTimeout(r, 0));
+      now += 60 * 60 * 1000; // the boot PASS expired
+      phase = 'outage';
+      await port.deliver(login);
+      await settle();
+      // the re-check met an outage ⇒ the memo answers the STALE pass — but the transient is reported (MG5: logged)
+      expect(l.error.filter((e) => e.includes('runtime re-check (transient: server)'))).toHaveLength(1);
+      phase = 'fault';
+      now += 60 * 1000; // past the 60 s transient TTL (`-346`)
+      await port.deliver(login);
+      await settle();
+      expect(l.error.filter((e) => e.includes('runtime re-check (content_mismatch)'))).toHaveLength(1);
+      const reads = calls.read;
+      for (let i = 0; i < 3; i += 1) await port.deliver(login);
+      await settle();
+      // the fault is cached 5 min: ⛔ a read, ⛔ a line per OTP — the codes still go out
+      expect(calls.read).toBe(reads);
+      expect(l.error.filter((e) => e.includes('runtime re-check (content_mismatch)'))).toHaveLength(1);
+      expect(calls.flow).toBe(5);
+    });
+  });
+
+  it('round 2 P10 — the SAME MSG91 id under both OTP keys ⇒ STARTS with an error log naming it (alarm-only — `-345` MG5\'s refusal list does ⛔ name it)', async () => {
+    await withEnv({ SMS_GATEWAY_API_KEY: 'live-key' }, async () => {
+      const { fetchImpl } = msg91();
+      const l = lines();
+      const sameId = async (k: string) => (k.endsWith('otp_step_up') ? IDS['sms.dlt.template_id.otp_login']! : (IDS[k] ?? ''));
+      const port = await buildMemberStepUpDelivery(cfg(), enc, db, sameId, { fetchImpl, log: l.log });
+      expect(l.error.filter((e) => e.includes('hold the SAME MSG91 template id') && e.includes('STARTING anyway'))).toHaveLength(1);
+      expect(JSON.stringify(l)).not.toMatch(/64b0c0ffee0123456789a01[56]|live-key/);
+      expect(await port.deliver(login)).toMatchObject({ status: 'accepted' });
+    });
+  });
+
+  it('round 2 P10 — a read key EQUAL to the send key IS the send key: its 401 at boot ⇒ REFUSES TO START (MG17 (a))', async () => {
+    await withEnv({ SMS_GATEWAY_API_KEY: 'live-key', SMS_GATEWAY_PREFLIGHT_KEY: 'live-key' }, async () => {
+      const { fetchImpl } = msg91(() => Promise.resolve(respond(401, {})));
+      await expect(
+        buildMemberStepUpDelivery(cfg({ preflightKeySecretName: 'sms-read-key' }), enc, db, ids, { fetchImpl, log: lines().log }),
+      ).rejects.toThrow(/MSG91 refused the authkey or the template/);
     });
   });
 

@@ -717,6 +717,12 @@ export async function runPeerMeshRequestChild(
     const detail = result.detail === null ? null : claimDomain.peerMeshRequestDetail({ kind: 'send', detail: result.detail });
     if (result.kind === 'transient') {
       await transient(detail!);
+      // Round 2 P13 — a pre-flight transient is SCOPE-WIDE (the template, ⛔ this recipient): every remaining ping would begin
+      // (an attempt counted) only to re-read MSG91 — STOP; pg-boss retries the child (the transient count throws below).
+      if (result.detail === 'api_unavailable:preflight') {
+        alarm(`[jobs] claim-peer-mesh-request: the neighbour texts of ${tag} PAUSED — the MSG91 template could ⛔ be read (a transient); ⛔ further ping begun this attempt`);
+        break;
+      }
       continue;
     }
     // Story 6.34 (`-322` C1): sent as today; ONE warning per child, ⛔ an outcome change.
@@ -743,11 +749,15 @@ export async function runPeerMeshRequestChild(
     else counts.finalOther += 1;
     // P1 — a final that is about the CONFIG, the account or the template (⛔ this recipient) would end every remaining ping the
     // same way, using up each once-ever slot: STOP — ⛔ further ping begun this run. ⚠ The sweep's R11 check sees the template id,
-    // the helpline, a Secret Manager config fault and the gateway — those are then HELD; it does ⛔ see `auth`,
-    // `dlt_template_not_approved` or `config:sms_messaging_unavailable`, so the next child uses ONE more slot (⛔ all of them) —
-    // recorded (review round 2 W10). A transient noted earlier in this run is ⛔ retried by pg-boss now — the next sweep re-claims it.
+    // the helpline, a Secret Manager config fault, the gateway AND (6.37 MG5) every template fault the MSG91 pre-flight reads —
+    // those are then HELD; it does ⛔ see a send-side ACCOUNT fault (balance, an unwhitelisted IP — MG15), a send-time
+    // `auth` while a separate read key reads the templates (MG17 (b) — the read key passing proves ⛔ the send key), a send-time
+    // `dlt_template_not_approved:<code>` the pre-flight passed (`status` / `dlt_verified` are logged, ⛔ gating — MG15's DLT
+    // scrubbing) or `config:sms_messaging_unavailable`, so on those the next child uses ONE more slot (⛔ all of them) — W10,
+    // NARROWED by MG5.
+    // A transient noted earlier in this run is ⛔ retried by pg-boss now — the next sweep re-claims it.
     if (result.outcome === 'error' && isScopeWideSendFault(result.detail)) {
-      alarm(`[jobs] claim-peer-mesh-request: the neighbour texts of ${tag} STOPPED after ${detail ?? ''} — ⛔ further ping begun this run; fix it before the next sweep (a config gap the sweep can see is held there; an account / template / messaging fault is ⛔ seen — the next child would use one more slot)`);
+      alarm(`[jobs] claim-peer-mesh-request: the neighbour texts of ${tag} STOPPED after ${detail ?? ''} — ⛔ further ping begun this run; fix it before the next sweep (a config gap or a template fault the sweep can see is held there; a send-side account / messaging fault is ⛔ seen — the next child would use one more slot)`);
       return { status: 'held_config', reason: detail ?? 'config' };
     }
   }

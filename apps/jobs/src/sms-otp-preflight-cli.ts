@@ -1,8 +1,10 @@
 // CLI for the jobs process's OTP-template pre-flight proof — Story 6.37 code review F4 (roster Row 32 (e)).
 //
-// Run INSIDE the deployed jobs container (the jobs env, Secret Manager access and egress IP):
+// Run INSIDE the deployed jobs container (the jobs env, Secret Manager access and egress IP) — ONLY that run is Row 32 (e)'s
+// evidence:
 //   node apps/jobs/dist/src/sms-otp-preflight-cli.js
-// or from a checkout with the jobs env: `pnpm --filter @twt/jobs sms:preflight` (tsx src/sms-otp-preflight-cli.ts).
+// `pnpm --filter @twt/jobs sms:preflight` (tsx src/sms-otp-preflight-cli.ts) runs it from a checkout — another egress IP and,
+// off production, a local key, so ⛔ evidence (roster Row 32 note (6.3)).
 // READ-ONLY: MSG91's `getTemplateVersions` for templates 15 / 16 — ⛔ a text is sent. Prints ONE JSON line (⛔ the authkey,
 // ⛔ a template id, ⛔ a text) and exits 0 only when both pass. ⛔ DATABASE_URL needed. Steps: the DLT sheet's MSG91 setup.
 

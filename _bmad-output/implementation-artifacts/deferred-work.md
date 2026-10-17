@@ -15,6 +15,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review round 2 of 6-37-msg91-sms-gateway-adapter (2026-10-17)
+
+- **A suspicion text whose deceased name exceeds the 40 code-point `member` slot is ⛔ sent** [`apps/jobs/src/scheduler/claim-dlt-sms-send.ts`
+  `checkedValues`; `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts` `MEMBER`] — MG3 (`-345`) refuses the value after the row
+  is claimed (final `dlt_template_not_approved:value_too_long` + an alarm that reaches the logs only), which NARROWS the Trustee-ratified
+  `-262` FQ7 B, `-293` item 1 B (the appeal date) and `-291` Q2 B texts at the edge. ⭐ ROUTED to the Panel: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37-name-too-long-for-the-text.md` (written 2026-10-17,
+  ⛔ yet sent). ⭐ Trigger: the Panel's ruling — B (the shielded form when the full name does ⛔ fit) or C / D is a small change in the
+  suspicion sweep with its own legs; A closes this item as built. Also rides `-322` C7 (d) / Row 30 (d)'s answer (the unit DLT's 40 counts).
+
 ## Deferred from: dev-story of 6-37-msg91-sms-gateway-adapter (2026-10-17)
 
 - **MG5's content / DLT-id / `sms_type_needs_unicode` checks are alarm-only on the api and fail-open on 6.19b/c/d**
@@ -28,6 +37,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   response from the deployed api AND jobs, and S1 is answered in writing (Row 32 (d)) — then a later change may make the api check blocking
   (re-weighing T13's restart loop; ⛔ code reads a roster row). Whether a PROVEN content mismatch should refuse on 6.19b/c/d is `-322` §0's
   option (a) — the Panel's, ⛔ routed by this story.
+  ⚠ **Dated annotation, 2026-10-17 (code review round 2):** that Panel question has a SECOND carrier, roster Row 32 note (6.4) — advisory:
+  ask it with row 6-37b's create-story, before Row 32 (i) closes (this item's own trigger is unchanged); this item and that note carry the SAME question (⛔ two).
+  The api's boot list above is unchanged by round 2 (one MSG91 id under both OTP keys is an error log, ⛔ a refusal — P10).
 
 ---
 

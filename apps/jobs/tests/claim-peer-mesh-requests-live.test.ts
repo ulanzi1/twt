@@ -27,7 +27,7 @@ import {
 import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaires, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
@@ -62,6 +62,16 @@ const CLEARED: questionnaires.QuestionnaireDefinition = {
     questions: pg.questions.map((q) => (q.counselBasis === 'pending' ? { ...q, counselBasis: '2099-01-01-001' } : q)),
   })),
 };
+
+/**
+ * ⭐ AC5 (ii) — the "values rebuild the body" oracle runs INSIDE the fake `send`, where the core would catch an assertion's throw
+ * as an ordinary provider error (review round 2 P14) — so a miss is RECORDED there and asserted after every test, ⛔ thrown.
+ */
+const oracleMisses: string[] = [];
+afterEach(() => {
+  const misses = oracleMisses.splice(0);
+  expect(misses, 'the named values rebuild the body').toEqual([]);
+});
 
 describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, own-committing)', { timeout: 60000 }, () => {
   let pool: pg.Pool;
@@ -226,7 +236,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
           sent.push(m);
           // ⭐ Story 6.37 AC5 (ii) — every send's named values rebuild its body through its locale's registered text.
           const entry = Object.values(PEER_MESH_REQUEST_SMS_TEMPLATES).find((e) => m.body === substituteDltValues(e.registeredText, e.slots, m.values));
-          expect(entry, 'the named values rebuild the body').toBeDefined();
+          if (entry === undefined) oracleMisses.push(m.body); // recorded, ⛔ thrown into the core's catch (P14)
           return o.send ? o.send(m) : Promise.resolve(`gw-${randomUUID()}`);
         },
       }),
@@ -887,6 +897,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       clock: () => Date.now(),
       passTtlMs: 60 * 60 * 1000,
       faultTtlMs: 5 * 60 * 1000,
+      transientTtlMs: 60_000,
     });
     const h = harness(w, { registry: [CLEARED], preflight: { memo, readsWithSendKey: true } });
     await tick(h, w);
@@ -913,6 +924,17 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-t')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
     expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', detail: 'api_unavailable:preflight' });
     expect(h.sent).toHaveLength(0);
+  });
+
+  it('⭐ 6.37 review round 2 P13 — a pre-flight transient IN THE CORE is scope-wide: the child STOPS (⛔ further ping begun) and throws for a retry', async () => {
+    const w = await world({ selected: 2 });
+    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n === 1 ? PASS : TRANSIENT)) });
+    await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-p13')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    const after = await rows(w);
+    expect(after.filter((x) => x.send_outcome === 'attempting' && x.detail === 'api_unavailable:preflight')).toHaveLength(1);
+    expect(after.filter((x) => x.send_outcome === null)).toHaveLength(1); // ⛔ second ping begun
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms.some((x) => x.includes('PAUSED') && x.includes('could ⛔ be read'))).toBe(true);
   });
 
   it('⭐ 6.37 AC9 (e) / MG16 (i) — 20:00 IST crossed DURING the core\'s pre-flight ⇒ `beforeSend` defers: ⛔ sent, the child comes back at 09:00', async () => {

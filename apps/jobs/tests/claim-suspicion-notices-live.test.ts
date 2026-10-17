@@ -28,7 +28,7 @@ import {
 import { bindScopedDb, claim, encryption, ids, nominee, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
@@ -60,6 +60,16 @@ const SMS_QUEUE = 'claim.suspicion.notice.sms';
 const DA = 'd2d2d2d2-0000-4000-8000-0000000000da';
 
 type Purpose = SuspicionNoticePayload['purpose'];
+
+/**
+ * ⭐ AC5 (ii) — the "values rebuild the body" oracle runs INSIDE the fake `send`, where the core would catch an assertion's throw
+ * as an ordinary provider error (review round 2 P14) — so a miss is RECORDED there and asserted after every test, ⛔ thrown.
+ */
+const oracleMisses: string[] = [];
+afterEach(() => {
+  const misses = oracleMisses.splice(0);
+  expect(misses, 'the named values rebuild the body').toEqual([]);
+});
 
 describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, own-committing)', { timeout: 60000 }, () => {
   let pool: pg.Pool;
@@ -289,7 +299,7 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
           const rebuilt = Object.values(SUSPICION_NOTICE_SMS_TEMPLATES)
             .flatMap((byLocale) => Object.values(byLocale))
             .some((e) => e.slots.length === m.values.length && m.body === substituteDltValues(e.registeredText, e.slots, m.values));
-          expect(rebuilt, 'the named values rebuild the body').toBe(true);
+          if (!rebuilt) oracleMisses.push(m.body); // recorded, ⛔ thrown into the core's catch (P14)
           return (o.gateway ?? (() => Promise.resolve(`gw-${randomUUID()}`)))(m);
         },
       }),
@@ -764,6 +774,25 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     expect(h.alarms.some((a) => a.includes('dlt_template_not_approved:preflight_sms_type_needs_unicode') && a.includes(s))).toBe(true);
   });
 
+  it('⭐ 6.37 review round 2 P2 — a FULL name over the member slot\'s 40 code points ⇒ final `value_too_long` (MG3) STORED + alarm, ⛔ sent', async () => {
+    // Before 6.37 this text was sent as is; F11's DLT cap (40 per variable) means it could ⛔ be delivered either way. Recorded
+    // as Debug Log (o) — the once-ever notice ends `error`, ⛔ a false `accepted`.
+    const own = isolated();
+    const longName = 'Ramesh Kumar Venkatanarayana Subramaniam Iyer';
+    expect([...longName].length).toBeGreaterThan(40);
+    const d = await seedDeath({ pariwarId: own, kycName: longName });
+    const s = await refusedS(d);
+    const h = harness({ allow: [own] });
+    await tick(h, [s]);
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({
+      outcome: 'error',
+      detail: 'dlt_template_not_approved:value_too_long',
+    });
+    expect(h.sent).toEqual([]);
+    expect(h.alarms.some((a) => a.includes('dlt_template_not_approved:value_too_long') && a.includes(s))).toBe(true);
+    expect(JSON.stringify(h.alarms)).not.toContain('Venkatanarayana');
+  });
+
   it('⭐ 6.37 AC9 (c) / (d) — a PASS proceeds; ONE process memo ⇒ ONE MSG91 read per template however many claims and children (counted)', async () => {
     const own = isolated();
     const claims = [];
@@ -774,6 +803,7 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
       clock: () => Date.now(),
       passTtlMs: 60 * 60 * 1000,
       faultTtlMs: 5 * 60 * 1000,
+      transientTtlMs: 60_000,
     });
     const h = harness({ allow: [own], preflight: { memo, readsWithSendKey: true } });
     await tick(h, claims);

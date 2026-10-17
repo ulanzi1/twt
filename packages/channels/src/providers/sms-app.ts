@@ -96,13 +96,22 @@ export type Msg91TemplateRead =
   /** MSG91's documented HTTP 200 `status:"error"` refusal — a bad key OR an unknown id; ⛔ distinguishable. */
   | { readonly kind: 'refused' }
   /**
-   * No answer to rely on — network, timeout, 429, 5xx, an unparseable body, or any OTHER non-2xx (a proxy's 404, a
-   * 405, an undocumented 403): ⛔ documented refusal, so it proves nothing about a send (review F2).
+   * No answer to rely on — network, timeout, 429, 5xx, an unparseable body, any OTHER non-2xx (a proxy's 404, a
+   * 405, an undocumented 403), a 2xx error body MSG91 does ⛔ document (`status:"fail"`, a bare `hasError`), or a
+   * reader with ⛔ usable config: ⛔ documented refusal, so it proves nothing about a send (review F2; round 2 P1 / P5).
    */
-  | {
-      readonly kind: 'unavailable';
-      readonly cause: 'network' | 'timeout' | 'throttled' | 'server' | 'unparseable' | 'unexpected_status';
-    };
+  | { readonly kind: 'unavailable'; readonly cause: Msg91ReadCause };
+
+/** Why a template read gave ⛔ answer to rely on — carried into the pre-flight's log (round 2 P5). */
+export type Msg91ReadCause =
+  | 'network'
+  | 'timeout'
+  | 'throttled'
+  | 'server'
+  | 'unparseable'
+  | 'unexpected_status'
+  | 'unexpected_body'
+  | 'config';
 
 /** The template reader the pre-flight depends on — the real client implements it (⛔ a fake needs it). */
 export interface Msg91TemplateReader {
@@ -121,6 +130,11 @@ export interface SmsFetchInit {
   body: string;
   /** The client's own bound (MG9) — an abort is `api_unavailable:timeout`. */
   signal: AbortSignal;
+  /**
+   * ⛔ Follow a redirect (round 2 P6): the `authkey` header — unlike `Authorization` — is ⛔ stripped by fetch on a
+   * cross-origin redirect, so following one could hand the key to another host. A redirect rejects ⇒ transport failure.
+   */
+  redirect: 'error';
 }
 export interface SmsFetchResponse {
   ok: boolean;
@@ -182,22 +196,33 @@ export function isMsg91TemplateId(value: string): boolean {
 }
 
 /**
- * The configured gateway ORIGIN, or a thrown error (MG10): a trailing `/` is trimmed, and the rest must be exactly
- * an origin — an old-style send URL (`…/send`) would otherwise yield `…/send/api/v5/flow`. Throws a message naming
- * the env var, ⛔ its value.
+ * The configured gateway ORIGIN, or a thrown error (MG10): the value must be exactly an origin — an old-style send URL
+ * (`…/send`) would otherwise yield `…/send/api/v5/flow`. Judged STRUCTURALLY (round 2 P9): trailing `/`s, a default
+ * port (`:443`) and an upper-case host are the same origin and return its normalised form; a BLANK value is unset (the
+ * MSG91 default — a compose `${VAR}` passthrough yields `''`). Throws a message naming the env var, ⛔ its value.
  */
 export function parseSmsGatewayOrigin(raw: string): string {
-  const value = raw.trim().replace(/\/+$/, '');
-  let origin: string | null = null;
+  const value = raw.trim();
+  if (value === '') return MSG91_DEFAULT_API_ORIGIN;
+  let url: URL | null = null;
   try {
-    origin = new URL(value).origin;
+    url = new URL(value);
   } catch {
-    origin = null;
+    url = null;
   }
-  if (origin === null || origin === 'null' || origin !== value) {
+  const bare =
+    url !== null &&
+    (url.protocol === 'https:' || url.protocol === 'http:') &&
+    url.username === '' &&
+    url.password === '' &&
+    /^\/+$/.test(url.pathname) &&
+    url.search === '' &&
+    url.hash === '' &&
+    !/[?#]/.test(value);
+  if (url === null || !bare) {
     throw new Error('sms-app: SMS_GATEWAY_API_URL must be a bare origin (e.g. https://control.msg91.com), ⛔ a path');
   }
-  return value;
+  return url.origin;
 }
 
 /** Whether every required client-config field is present — the pure "not configured" predicate. */
@@ -217,6 +242,12 @@ function stringOrNull(v: unknown): string | null {
   if (typeof v === 'string') return v;
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   return null;
+}
+
+/** MSG91's error `code`, or null when there is none — a blank / whitespace code is NONE (round 2 P3; the pre-6.37 rule). */
+function gatewayCodeOf(v: unknown): string | null {
+  const code = stringOrNull(v);
+  return code === null || code.trim() === '' ? null : code;
 }
 
 /** Read a property defensively (a hostile getter must never escape). */
@@ -341,6 +372,7 @@ export function createSmsAppClient(
               headers: headers(),
               body: buildFlowBody(message.templateId, mobiles, message.values),
               signal,
+              redirect: 'error',
             });
           } catch {
             // ⛔ the error's message in ours — a transport error may echo the request.
@@ -363,7 +395,7 @@ export function createSmsAppClient(
           const payload = 'payload' in body ? body.payload : null;
 
           const type = prop(payload, 'type');
-          const gatewayCode = stringOrNull(prop(payload, 'code'));
+          const gatewayCode = gatewayCodeOf(prop(payload, 'code'));
           if (res.ok && type === 'success') {
             const id = prop(payload, 'message');
             if (typeof id === 'string' && MSG91_REQUEST_ID.test(id)) return id;
@@ -377,12 +409,17 @@ export function createSmsAppClient(
             if (gatewayCode !== null) {
               throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, gatewayCode, res.status);
             }
-            // A code-less 429 / 5xx stays transient whatever its message says (review F3) — the message tokens below
-            // only refine a non-transient answer (the documented 401 "Auth Key missing" keeps its token).
+            // MG6's order for a code-less answer: the HTTP status, then the two documented messages. A 429 / 5xx stays
+            // transient whatever its message says (review F3); a 401 / 403 is `auth` whatever its message says (round 2
+            // P3) — the documented 401 "Auth Key missing" only names its code (Debug Log (b)).
             if (isTransientStatus(res.status)) {
               throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, null, res.status);
             }
             const byMessage = tokenForMessage(prop(payload, 'message'));
+            if (res.status === 401 || res.status === 403) {
+              const local = byMessage?.errorClass === 'auth' ? byMessage : null;
+              throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, null, res.status, local);
+            }
             if (byMessage) throw new SmsSendError('sms send rejected by gateway', null, res.status, byMessage);
             if (!res.ok) throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, null, res.status);
             throw new SmsSendError('sms send rejected by gateway', null, res.status, {
@@ -403,7 +440,8 @@ export function createSmsAppClient(
       try {
         origin = assertClientConfig(config);
       } catch {
-        return { kind: 'unauthorised' };
+        // ⛔ usable config is ⛔ MSG91's refusal — ⛔ call is made, so it proves nothing (round 2 P5).
+        return { kind: 'unavailable', cause: 'config' };
       }
       let res: SmsFetchResponse;
       try {
@@ -412,6 +450,7 @@ export function createSmsAppClient(
           headers: headers(),
           body: JSON.stringify({ template_id: templateId }),
           signal,
+          redirect: 'error',
         });
       } catch {
         return { kind: 'unavailable', cause: signal.aborted ? 'timeout' : 'network' };
@@ -427,9 +466,12 @@ export function createSmsAppClient(
       if ('failed' in body) return { kind: 'unavailable', cause: body.failed === 'timeout' ? 'timeout' : 'network' };
       const payload = body.payload;
       if (payload === null) return { kind: 'unavailable', cause: 'unparseable' };
+      // Only the DOCUMENTED 200 `status:"error"` is a refusal (F16, MG5's `auth_or_not_found`). Any other error-looking
+      // 2xx — `status:"fail"` (documented only on the 401), a bare `hasError` — proves nothing (round 2 P1).
       const hasError = prop(payload, 'hasError');
       const status = prop(payload, 'status');
-      if (hasError === true || hasError === 'true' || status === 'error' || status === 'fail') return { kind: 'refused' };
+      if (status === 'error') return { kind: 'refused' };
+      if (hasError === true || hasError === 'true' || status === 'fail') return { kind: 'unavailable', cause: 'unexpected_body' };
       const data = prop(payload, 'data');
       if (!Array.isArray(data)) return { kind: 'unavailable', cause: 'unparseable' };
       return {

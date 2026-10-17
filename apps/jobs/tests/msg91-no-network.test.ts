@@ -45,6 +45,7 @@ function realStack(read: () => Promise<SmsFetchResponse>) {
     clock: () => Date.now(),
     passTtlMs: 60_000,
     faultTtlMs: 5_000,
+    transientTtlMs: 60_000,
   });
   return { deps: { smsAppClient: client, resolveConfig: config, smsPreflight: { memo, readsWithSendKey: true } }, urls };
 }

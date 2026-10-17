@@ -7,7 +7,9 @@ PINNED: `466e9b0e` (2026-10-17 — `main` == `origin/main` after a fresh `git fe
 re-checks what moved. Built in its OWN worktree `.claude/worktrees/6-37`, branch `story/6-37-msg91-sms-gateway-adapter`
 ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]]).
 
-STATUS: `in-progress` — ⭐ TASK 0 DONE, AC0 MET: MG1–MG17 ANSWERED (BigDev, 2026-10-17: *"accept all recommended"*), author-commit
+STATUS (2026-10-17, after code review round 2): Tasks 0–7 built; review rounds 1 (F1–F4) and 2 (D1 / D2, P1–P18) resolved; `-346`
+narrows `-345` MG3 / MG5 / MG7 (committed ALONE, `da27b82d`). ⚠ The line below is the Task 0 status as first written, kept:
+(was) STATUS: `in-progress` — ⭐ TASK 0 DONE, AC0 MET: MG1–MG17 ANSWERED (BigDev, 2026-10-17: *"accept all recommended"*), author-commit
 `2026-10-17-345` committed ALONE (`48017867`), and Task 0.4's records committed in one commit after it
 ([[feedback_governance_commits_precede_implementation]]). Next: Task 1 (the code).
 Start condition met: row 6-34 is `done` and on `main` (`-314` decision 2 — "6.34 builds FIRST"; 6.34 Sequencing: "if 6-37 is started
@@ -29,7 +31,7 @@ keeps claim-text template ids unprovisioned until 6-37b — if that leg is decli
 GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `⚠` a hazard. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md` or `sprint-status.yaml` (newest-first files) — cite the decision id, the item's phrase, or the row key.
 
-LETTERS: F = found facts (F1–F25); MG = build decisions (MG1–MG17, PROPOSED); I = invariants; T = traps (T1–T14); S = Task 0.1 STOP
+LETTERS: F = found facts (F1–F25); MG = build decisions (MG1–MG17 — PROPOSED at v1.1, ANSWERED at 1.2; MG3 / MG5 / MG7 narrowed by `-346` — this clause amended at review round 2, (was) "MG1–MG17, PROPOSED"); I = invariants; T = traps (T1–T14); S = Task 0.1 STOP
 conditions (S1–S4). Decision-entry letters stay the entry's own (`-322` C1–C9, `-323` R1–R2, `-252` cl.1–cl.3).
 
 VALIDATED v1.1 (2026-10-17, `bmad-create-story validate 6.37`, at `466e9b0e` == `origin/main` — ⛔ code moved since the pin). Four
@@ -37,12 +39,13 @@ fresh-context verifiers (code claims; governance + records + id allocation; end-
 call). Applied: MG5 rebuilt (the memo cannot be "per run" — every send is a pg-boss CHILD; `sms_type` from the TEXT, ⛔ the locale —
 template 14 (en) is Unicode; 6.19b/c/d fail OPEN on a transient; `beforeSend` closes MG16 (i)); I4 and the Policy meaning corrected
 (false on three paths); MG15 split; the RN4 / RB12 / `-314` supersessions named; MG17 + S1–S4 added (the authkey's scope; the 40-char
-value cap vs the 55-char link); the tests every edit turns red named. ⚠ Every MG is still PROPOSED — ⛔ answered.
+value cap vs the 55-char link); the tests every edit turns red named. ⚠ (At v1.1) every MG was still PROPOSED — answered at 1.2 (this
+sentence amended at review round 2; (was) "⚠ Every MG is still PROPOSED — ⛔ answered.").
 -->
 
 # Story 6.37: The texts and login codes are actually sent — a MSG91 adapter behind the SMS seam, sending each template's NAMED values, with a pre-flight that proves the account and every template before a single text is spent `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today ⛔ no SMS can reach a real gateway: `sms-app.ts` posts a generic
 > `{sender, to, template_id, message}` with `Authorization: Bearer` and expects `messageId` — a contract that matches ⛔ MSG91, the gateway
@@ -184,7 +187,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
   ("for English and Unicode both" — the DLT FAQ, stated for variables generally). ⚠ The peer-mesh `link` slot is `url`, ceiling 120
   (`DLT_TYPE_MAX_LENGTH.url`), and the sheet's typical link is **55** characters (`https://` + domain + `/peer-request?c=` + 12) — whether
   MSG91 / DLT caps a `#url#` value at 40 is ⛔ documented (S2). Every other slot fits 40 (member ≤ 40, date 10, reference 8, helpline ≤ 14,
-  otp 6). Unicode is a property of the TEMPLATE (`smsType` NORMAL / UNICODE at creation), ⛔ a Flow field — and of the TEXT, ⛔ the
+  otp 6). ⚠ Review round 2 (Debug Log (o)): "member ≤ 40" is the SLOT's ceiling, ⛔ a property of every name — a `full_name` can exceed it. Unicode is a property of the TEMPLATE (`smsType` NORMAL / UNICODE at creation), ⛔ a Flow field — and of the TEXT, ⛔ the
   locale: template 14 (en) holds an em dash (U+2014, `peer-mesh-sms-templates.ts:96`) and the sheet already records *"⚠ BOTH are
   Unicode"* (`dlt-template-requests-6-19.md:240-241`). ⚠ The same DLT FAQ says *"1-2 variables are allowed in one Content Template"* —
   templates 11–14 carry three; probably stale and ⛔ ours to rule — a Row 30 (d) annotation (Task 0.4).
@@ -301,7 +304,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
   built in `apps/jobs/src/boot.ts` and placed on `ClaimDltSmsDeps` (OPTIONAL — every existing fake stays valid): keyed by template id;
   concurrent misses share ONE in-flight call; a PASS is cached for a TTL (⭐ recommended 1 h — BigDev at 0.2); a definite FAULT for a
   short TTL (⭐ 5 min — so a fixed template is seen by the next run; on the daily suspicion / peer-mesh sweeps that is the next day's run, so the
-  fault TTL matters within one run and on 6.19b/c/d); a TRANSIENT is ⛔ cached — on the re-check of an
+  fault TTL matters within one run and on 6.19b/c/d); a TRANSIENT is ⛔ cached (⚠ read with `-346` decision 3: cached 60 s) — on the re-check of an
   EXPIRED pass it returns that stale PASS for at most ONE more TTL (then it is a transient: held / fail-open as below). The api builds its own memo for 15 / 16.
   **jobs — the sweeps that ALREADY hold (suspicion, peer mesh).** The pre-flight joins the EXISTING gap checks as ONE more config fault
   (RB12 / 6.27c R11): 6.29's `purposeConfigGap` (`claim-suspicion-notices.ts:123`, each locale `LOCALES_OF[purpose]` lists — one or two, `:93-97`; its `configSet` `:111-120` likewise returns only set / missing / fault today ⇒ it too gains the resolved id) and 6.27c's
@@ -492,6 +495,8 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
    (ii) `substituteDltValues(text, slots, values) === body`, (iii) `body` is byte-identical to today's render (the existing lockstep
    expectations, ⛔ edited). A caller whose `values` disagree with `render`, or a value longer than its slot's `maxLength`, ⇒
    `dlt_template_not_approved:values_mismatch` / `:value_too_long`, ⛔ `fetch`, an alarm — and on the peer-mesh child P1 STOPS the run.
+   ⚠ Read with `2026-10-17-346` decision 1 (⛔ an edit of this AC): the HELPLINE slot is exempt from `:value_too_long` — a helpline over
+   14 characters is SENT with the `helplineNotCallbackNumber` warning (`-322` C1; Debug Log (l)).
    `substituteDltValues` inserts `$&`, `$'`, `{#var#}` and `##x##` literally (unit legs).
 7. **AC6 — The gateway form equals the sheet.** `toGatewayTemplate(text, slots)` equals the sheet's MSG91 column for every row 1–16
    (via the existing `sheetRowByConfigKey` — the sheet test's `msg91Form` stays an independent oracle and the two are asserted equal).
@@ -501,9 +506,10 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
    `auth_or_not_found`; ⛔ ACTIVE version matching (a matching INACTIVE one included) ⇒ `content_mismatch`; a Unicode text on a NORMAL
    template ⇒ `sms_type_needs_unicode`; blank `DLT_ID`; a malformed id (⛔ call made)} ⇒ its reason; a 5xx / network / timeout ⇒ `transient`. `status` / `dlt_verified` /
    `dlt_reason` values ⛔ change the result (logged only — a test pins that, with `dlt_verified` as `"10"` AND `0`). The MEMO: a PASS is
-   reused within its TTL, a FAULT within its short TTL, a TRANSIENT is ⛔ cached and, on an expired PASS's re-check, returns that stale PASS for one more TTL only (then transient); N concurrent misses ⇒
+   reused within its TTL, a FAULT within its short TTL, a TRANSIENT is ⛔ cached (⚠ read with `-346` decision 3: cached 60 s) and, on an expired PASS's re-check, returns that stale PASS for one more TTL only (then transient); N concurrent misses ⇒
    ONE call (counted). A GSM-7 text on a UNICODE template ⇒ PASS with `sms_type_unicode_for_gsm7` logged (pinned).
-9. **AC8 — api boot (MG5, MG10, MG11).** (a) In production `buildMemberStepUpDelivery` throws on a blank authkey, a blank or malformed OTP
+9. **AC8 — api boot (MG5, MG10, MG11).** ⚠ Review round 2 P10 (⛔ an edit of this AC): a read key whose VALUE equals the send key IS the send
+   key (its refusal then refuses — MG17 (a)); one MSG91 id under both OTP keys STARTS with an error log. (a) In production `buildMemberStepUpDelivery` throws on a blank authkey, a blank or malformed OTP
    id, or an `auth` / `auth_or_not_found` pre-flight on either template (under MG17 (b): from the read key ⇒ STARTS with an error log;
    only a blank read-key secret name refuses); it STARTS with an error log (⛔ throw) on `content_mismatch` /
    `sms_type_needs_unicode` / `dlt_id_missing` and on a transport failure. At runtime the memo is advisory: an expired entry's re-check
@@ -603,12 +609,13 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
       `getStatus` stays `unknown` (comment: delivery reports are row 6-37b). Tests that turn red and are rewritten here:
       `packages/channels/tests/sms.test.ts` — the client block `:167-250`, the placeholder-code legs `:81-135`, the value-less provider leg
       `:51-70` (inverts to `no_named_values` — MG12); `packages/channels/tests/provider-composition.test.ts` and
-      `contribution-provider-resolver.test.ts` (`dltTemplateId` / `isConfigured`).
+      `contribution-provider-resolver.test.ts` (`dltTemplateId` / `isConfigured`) — ⚠ review round 2: that one stayed GREEN
+      unchanged (its fakes never touched a removed field), so it is ⛔ in the File List.
 
 - [x] **Task 3 — the pre-flight (AC7).** `packages/channels/src/providers/sms-preflight.ts`: `checkMsg91Template(client, entry, id)` →
       `{ok:true} | {ok:false, transient:boolean, reason}` (reasons: `auth`, `auth_or_not_found`, `content_mismatch`, `sms_type_needs_unicode`,
       `dlt_id_missing`, `template_id_malformed`; a PASS may carry the logged `sms_type_unicode_for_gsm7` note), plus `createMsg91PreflightMemo({check, clock, passTtlMs, faultTtlMs})` (MG5's memo —
-      shared in-flight, ⛔ transient cached); logs the informational fields (⛔ the authkey, ⛔ `template_data`). ⚠ This file must ⛔ name
+      shared in-flight, ⛔ transient cached — ⚠ `-346` decision 3: 60 s, the memo's `transientTtlMs`); logs the informational fields (⛔ the authkey, ⛔ `template_data`). ⚠ This file must ⛔ name
       the `sms.dlt.template_id.` prefix, `DLT_VAR` or the `{#var#}` literal, even in a comment (F21, T4) — it takes `{text, slots}` and an
       id. Export via `packages/channels/src/index.ts`.
 
@@ -672,6 +679,7 @@ The helpline exception in `4c03aed1` / Debug Log (l) is included. **0 decision-n
 candidates dismissed** (raw provider-reason logging: no demonstrated recipient/secret-bearing input from the template API;
 duplicate-id/text memo: intentional defensive checking over the fixed registry, already pinned by a test).
 **Disposition (BigDev, 2026-10-17): option 2 — leave as action items.** F1–F4 remain unchecked; W1 remains explicitly deferred.
+⚠ (As of that review — F1–F4 were resolved in `b90a319c`; see the disposition after W1.)
 No application code changed during the review. Story and sprint row return to `in-progress` while the four patches remain unresolved.
 
 - [x] [Review][Patch][HIGH] **F1 — Preserve the client's timeout classification during response-body consumption**
@@ -731,7 +739,7 @@ No application code changed during the review. Story and sprint row return to `i
   reads templates 15 / 16 through the jobs process's OWN reader — `buildSmsGatewayClients`, extracted from
   `buildContributionProviderResolver` so boot and the command share one builder — and the same `checkMsg91Template` the memo wraps;
   ⛔ Flow; one JSON line (⛔ the key, ⛔ an id, ⛔ a text); exit 0 only when both pass. Recorded as the INITIAL jobs proof on roster Row 32
-  note (5) (dated; ⛔ a word rewritten; (i) ⛔ weakened) and the sheet's MSG91 step (7) (prose). `sms-otp-preflight.test.ts` (7 legs,
+  note (5) (dated; ⛔ a word rewritten; (i) ⛔ weakened) and the sheet's MSG91 step (7) (prose). `sms-otp-preflight.test.ts` (9 legs — five `it` + a four-row `it.each`; review round 2 corrected "7",
   a global-fetch recorder at ZERO calls).
 
 - [x] [Review][Defer][MEDIUM] **W1 — A configured HTTP gateway origin can transmit the authkey, mobile and OTP without TLS**
@@ -756,6 +764,166 @@ messages omit transport text and gateway codes are scrubbed (raw reason fields a
 other residuals remain open; governance precedes code; the helpline override is recorded. Real-caller English coverage of Hindi-only
 refusal/closed suspicion purposes is not constructible through current routing; no such proof is claimed. (11) REAL GAP F2 — a read
 endpoint failure can refuse a text the policy explanation promises to send. Untouched families skipped.
+
+### Review Findings — round 2
+
+Full `bmad-code-review`, 2026-10-17: the whole branch `466e9b0e..171e2040` (49 files, +5,164 / −589), in four chunks — (a) `packages/channels`,
+(b) `apps/jobs`, (c) `apps/api`, (d) the records — × Blind Hunter, Edge Case Hunter and Acceptance Auditor (12 layers, ALL returned), against this
+story, MG1–MG17, `-345` / `-322` / `-252` verbatim and the load-bearing-invariant checklist. **2 decision-needed (both resolved ⇒ patches), 18 patch, 0 defer; 29 candidates
+dismissed** (among them: the 2xx body-abort retry — F1's prescribed resolution, carried by the at-least-once items (Debug Log (n)); the holding
+child's in-flight final — MG5 *"is a final on the suspicion / peer-mesh children … this is the in-flight race"*; Unicode in a VALUE — Row 30 (d);
+a listed code echoing its HTTP status — MG7's letter, same scope-wide final; the raw provider reasons — dismissed in round 1). Round 1's F1, F3 and
+F4 are MET on every path traced; F2 is MET for every non-2xx and NOT for 2xx error bodies (P1). Panel gate (§0): every finding below is the
+author's EXCEPT one question P2 surfaced and does ⛔ settle (Debug Log (o) — ROUTED to the Panel by BigDev's *"b"*, ⛔ blocking) — none other changes what
+the Trust discloses or owes, or a basis; P1 is fixed precisely so it does ⛔ reach `-322` §0's Panel-reserved
+fail-closed option. No application code changed during the review.
+
+- [x] [Review][Decision] **D1 — Record the build's two departures from `-345`'s letter, and choose whether MG7's unlisted-code fallback stays** —
+  Debug Log (l) (BigDev's helpline exemption from MG3's `value_too_long`, built in `4c03aed1`) and Debug Log (a) (an UNLISTED code on a 401·403 /
+  429 / 5xx classifies by status — MG7 reads *"`unknown`: … every unlisted code"*) both change behaviour `-345` decided, and neither has a decision
+  entry; AC5 still reads *"a value longer than its slot's `maxLength` ⇒ … `:value_too_long`"*. ([[feedback_supersede_never_reinterpret]];
+  [[feedback_governance_commits_precede_implementation]].) Options: **(a)** keep both and record them in ONE author-commit narrowing `-345` MG3 (the
+  helpline slot, restoring `-322` C1) and MG7 (unlisted code ⇒ status class on 401·403 / 429 / 5xx), with an AC5 annotation — it may also note that
+  `-345`'s evidence line says *"docs pages only — ⛔ API call"* while F9 rests on T1's three live probes; **(b)** record (l) only and revert (a) to
+  MG7's letter (an unlisted code on a 429 / 5xx becomes a FINAL `unknown` — a spent slot on 6.19b/c/d). Sources: auditor (d) + edge (d).
+  ✅ **Resolved 2026-10-17 — BigDev: (a)** ⇒ a patch: ONE author-commit `2026-10-17-346` (decisions 1–2, Consequence 2), committed ALONE
+  (`da27b82d`) before the round-2 changes; then AC5 annotated and Debug Log (a) / (l) cite it.
+  ⚠ **Correction (dated, review round 2's fix-diff review — `-346` is ⛔ edited):** `-346`'s Status reads *"decisions 2 and 3 precede
+  their code"* and attaches `fe3dc2c4` / `88e1ec97` to decision 1 — both wrong. Decisions 1 AND 2 record what was ALREADY built
+  (decision 1: `4c03aed1`; decision 2: `88e1ec97` — `fe3dc2c4` still followed MG7's letter); only decision 3 precedes its code. The next
+  decision entry that touches this story carries the same correction (as `-346` Consequence 2 corrected `-345`) — together with the two
+  dated corrections to `-346` §0 at Debug Log (a) and (p).
+
+- [x] [Review][Decision] **D2 — A pre-flight TRANSIENT is never cached (`-345` MG5) — keep, or add a short back-off** — with no usable pass, every
+  check re-reads MSG91 (≤ 9 s each): every jobs send during a template-API outage waits on its own read before the send; every api OTP fires a
+  fresh read and writes an error line; a 429 throttle is re-hit; a permanent misconfiguration (wrong host ⇒ 404) is re-read forever. Outcomes are
+  unchanged either way (holding paths hold, 6.19b/c/d fail open, OTP is sent). Options: **(a)** keep MG5 as decided; **(b)** cache a transient for a
+  short TTL (e.g. 60 s), recorded as an author-commit narrowing MG5's *"a TRANSIENT is ⛔ cached"*. [`packages/channels/src/providers/sms-preflight.ts:211`]
+  Sources: edge (a, b, c).
+  ✅ **Resolved 2026-10-17 — BigDev: (b)** ⇒ a patch: a transient cached for **60 s** in both memos (`-346` decision 3 — the same entry
+  as D1, committed first); an expired pass's stale fallback is ⛔ shadowed by it; legs for the cached transient and its expiry.
+
+- [x] [Review][Patch][MEDIUM] **P1 — Only MSG91's DOCUMENTED 200 `status:"error"` body is a definite refusal** [`packages/channels/src/providers/sms-app.ts:432`]
+  — `hasError === true || hasError === 'true' || status === 'error' || status === 'fail'` ⇒ `refused` ⇒ `auth_or_not_found`. F16 documents
+  `status:"fail"` only on the HTTP 401 body; a 200 `status:"fail"` or a `hasError`-only body is undocumented, yet under MG17 (a) it refuses api boot
+  and ends 6.19b/c/d rows `auth:preflight` (the closure notice for good) — the F2 class moved into the 2xx path; Debug Log (g)'s correction claims
+  the narrower rule. Fix: `refused` only on `status === 'error'`; any other error-looking 2xx ⇒ `unavailable`; legs for 200 `status:"fail"` and
+  `hasError`-only (client, the real correction wrapper, api boot). Families 9 / 10 / 11 — REAL GAP. Sources: auditor (a, b) + edge (b) + blind (b, c).
+  ✅ **Resolved 2026-10-17:** `readTemplateVersions` refuses only on `status === 'error'`; `status:"fail"` / a bare `hasError` ⇒ `unavailable` (`unexpected_body`). Legs: `sms-preflight.test.ts` (4 table rows + the pre-flight leg), `msg91-real-client-caller.test.ts` (the real 6.19b wrapper FAILS OPEN on both; the documented body still ends the row), the api wiring test (both START).
+- [x] [Review][Patch][MEDIUM] **P2 — A suspicion notice whose deceased name exceeds 40 code points now ends `value_too_long` — unrecorded, untested**
+  [`apps/jobs/src/scheduler/claim-suspicion-notices.ts:430`] — `resolveMemberFacingDeceasedName` in `full_name` mode has no length guard; the core
+  (`claim-dlt-sms-send.ts:182`) refuses after the slot is claimed, spending the once-ever notice (sent before 6.37; peer mesh guards the same slot
+  pre-claim, `claim-peer-mesh-requests.ts:505`). MG3 prescribes the final and F11's 40-character cap means it could not be delivered either way —
+  record it (Debug Log entry) and pin it with a live leg. Family 10. Sources: edge (b) + auditor (b).
+  ✅ **Resolved 2026-10-17 (the record and the pin; the POLICY question is OPEN):** Debug Log (o) records it — and that it narrows the
+  Trustee-ratified `-293` item 1 B / `-262` FQ7 B / `-291` Q2 B texts for a name over 40 code points, ROUTED to the Panel (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37-name-too-long-for-the-text.md`,
+  written, ⛔ yet sent);
+  `claim-suspicion-notices-live.test.ts` "round 2 P2" pins today's behaviour (final `value_too_long` + alarm, ⛔ sent, ⛔ the name in an alarm).
+- [x] [Review][Patch][LOW] **P3 — Classification: a blank `code` counts as a code; a code-less 401 / 403 is read by message before status**
+  [`packages/channels/src/providers/sms-app.ts:216`, `:366`, `:382-388`] — `stringOrNull('')` is non-null (the baseline's `extractGatewayCode`
+  trimmed), so `code:""` skips the message tokens; and a code-less 401 / 403 carrying *"flow ID or template ID is invalid"* becomes
+  `dlt_template_not_approved:template_invalid` where MG6's order gives `auth`. Fix: a blank / whitespace code is null; a code-less 401 / 403 is
+  `auth` (detail `authkey_missing` when that message is present, keeping Debug Log (b)); legs. Sources: blind (a) + edge (a) + auditor (a) + edge (d).
+  ✅ **Resolved 2026-10-17:** `gatewayCodeOf` (a blank code is ⛔ code); a code-less 401 / 403 ⇒ `auth` (`authkey_missing` named when that message is present). Seven table legs in `sms.test.ts`; Debug Log (b) annotated.
+- [x] [Review][Patch][LOW] **P4 — The pre-flight passes when ANY active version matches, and logs only the matched one** [`packages/channels/src/providers/sms-preflight.ts:126-127`, `:146`]
+  — MG5 checks *"the version with `active_status` `"1"`"* and LOGS the other versions; `active.filter(isOne).find(match)` passes on a matching
+  non-default active version, and `report(…, [match])` makes `versions` read 1. Fix: more than one active version with any mismatch ⇒
+  `content_mismatch`; the observation carries every version (field-picked) and the true count. Sources: edge (a) + auditor (a).
+  ✅ **Resolved 2026-10-17:** EVERY active version must pass (the build's reading of MG5's singular *"the version with `active_status`
+  `"1"`"* for a case MG5 does ⛔ name — stricter, so it can only HOLD / alarm more); every version is logged with the true count. One leg (two active, one mismatching ⇒ `content_mismatch`; one missing a DLT id ⇒ `dlt_id_missing`; both matching ⇒ pass; the pass log carries the inactive version).
+- [x] [Review][Patch][LOW] **P5 — Diagnostics name the wrong cause** [`packages/channels/src/providers/sms-preflight.ts:115-117`; `sms-app.ts:403-407`; `apps/jobs/src/scheduler/contribution-providers.ts:249-257`]
+  — (i) `unavailable.cause` is dropped, so a wrong host (404 on both reads) logs only `(transient)`, indistinguishable from a blip; (ii) an
+  unconfigured reader returns `unauthorised` ⇒ `auth` with ⛔ call made (the CLI then reports `auth`); (iii) jobs resolves the read-key secret even
+  when the send key is unset, so an unresolvable read-key name fails jobs boot with SMS off (MG11). Fix: carry the cause into the transient
+  result and its log; a config fault ⇒ `unavailable` (`config`); resolve the read key only when the send key is configured. Sources: edge (a, b, c) + auditor (a) + blind (a, b).
+  ✅ **Resolved 2026-10-17:** (i) a transient carries `cause` (result and log; the api line reads `transient: <cause>`); (ii) an unusable reader config ⇒ `unavailable` (`config`); (iii) jobs resolves the read key only when the gateway is configured (the send key AND an accepted origin), and a blank one is logged once. Legs in `sms-preflight.test.ts`, `contribution-providers.test.ts`, the api wiring table.
+- [x] [Review][Patch][LOW] **P6 — The `authkey` header follows a cross-origin redirect** [`packages/channels/src/providers/sms-app.ts:339`, `:410`] — the
+  baseline's `Authorization: Bearer` is stripped by fetch on a cross-origin redirect; a custom `authkey` header is ⛔. Fix: `redirect: 'error'` on
+  both requests (a redirect ⇒ the transport-failure / `unavailable` path); a leg. Source: edge (a).
+  ✅ **Resolved 2026-10-17:** `redirect: 'error'` on both requests (`SmsFetchInit.redirect`); legs on send and read.
+- [x] [Review][Patch][LOW] **P7 — The memo key omits the slot names** [`packages/channels/src/providers/sms-preflight.ts:186`] — the verdict depends on
+  `toGatewayTemplate(text, slots)`; two entries with the same id and text but different slot names share one verdict. Fix: key on the gateway
+  form. Sources: blind (a) + edge (a).
+  ✅ **Resolved 2026-10-17:** the memo key carries the slot names; one leg.
+- [x] [Review][Patch][LOW] **P8 — The NFC leg proves nothing** [`packages/channels/tests/sms-preflight.test.ts` "passes an NFD variant of a Hindi text"]
+  — no code point in the fixture decomposes, so `.normalize('NFD')` returns the same string; deleting `canonical()`'s NFC stays green. Fix: a
+  decomposable input (e.g. U+0958 vs U+0915 U+093C). Source: blind (a).
+  ✅ **Resolved 2026-10-17:** the leg uses क़ (U+0958) against क + ़ and asserts the raw strings differ.
+- [x] [Review][Patch][LOW] **P9 — `parseSmsGatewayOrigin` refuses equivalent origins; a blank value is ⛔ unset** [`packages/channels/src/providers/sms-app.ts:189-200`; `apps/api/src/config.ts:426`; `apps/jobs/src/scheduler/contribution-providers.ts:237`]
+  — `https://control.msg91.com:443` and an upper-case host fail the string equality; `SMS_GATEWAY_API_URL=` reaches the parser (`??`) and throws
+  — in the api in EVERY environment. Fix: compare structurally (path `/`, no query / hash) and return the normalised origin; blank ⇒ the default.
+  (W1's `http:` stays deferred.) Sources: blind (a, c) + edge (c) + auditor (c).
+  ✅ **Resolved 2026-10-17:** `parseSmsGatewayOrigin` judges structurally and returns `url.origin`; blank ⇒ the default. Legs (`:443`, upper case, blank, `?`, `#`, userinfo, `ftp:`). ⚠ One tightening beyond the finding: a double trailing slash (`…//`) is now refused (a path of `//`).
+- [x] [Review][Patch][LOW] **P10 — Locally provable OTP misconfigurations are ⛔ refused** [`apps/api/src/deps.ts:253-278`] — the same 24-hex id under
+  both OTP keys only logs `content_mismatch` and sends the login text for a step-up code; a read-key secret equal to the send key is treated as a
+  separate key, so its 401 STARTS instead of refusing. Fix: refuse identical OTP ids at boot (zero reads); `readsWithSendKey` when the values are
+  equal (api and jobs). Sources: blind (c) + edge (c).
+  ✅ **Resolved 2026-10-17 — the read-key half as prescribed; the identical-id half NARROWED to an error log:** a read key equal to the send key is the send key (api + jobs — its refusal then refuses, MG17 (a)); one id
+  under both OTP keys is an error log at boot (STARTS — `-345` MG5's refusal list does ⛔ name it, so a refusal would need its own entry;
+  the fix-diff review caught the first draft refusing). Legs in both apps.
+- [x] [Review][Patch][LOW] **P11 — The api's runtime re-check reports inaccurately** [`apps/api/src/modules/auth/shared/sms-step-up-delivery.ts:191-199`; `apps/api/src/deps.ts:319-323`]
+  — a cached boot fault is reported on EVERY OTP (MG5: on an expired / re-checked entry); a transient on an expired pass returns the stale pass and
+  is never alarmed (MG5: *"a fault or transient … is logged"*); the line says *"the code was still sent"* before the send; `.catch(() => undefined)`
+  drops a rejection silently. Fix: report only a freshly computed verdict (including a stale-pass fallback); reword; log the catch by class. Sources: auditor (c) + edge (c) + blind (c).
+  ✅ **Resolved 2026-10-17:** the report moved into the memo's `check` (after boot): once per read, a stale-pass transient included, a
+  throwing check reported as `transient: check_threw` (the memo never rejects, so the adapter's catch is defensive only); the line names
+  the template by its entry, ⛔ by the boot-time id. A leg pins once-per-read and the cached fault's silence.
+- [x] [Review][Patch][LOW] **P12 — Alarm and comment text misdirect the operator** [`apps/jobs/src/scheduler/claim-suspicion-notices.ts:~651`; `claim-peer-mesh-requests.ts:744-750`]
+  — the suspicion hold alarm says *"the MSG91 template failed its pre-flight"* for `config:sms_preflight_transient` too; peer mesh's P1 comment and
+  alarm still say the sweep does ⛔ see template faults (MG5 now lets it). Fix the texts. Sources: blind (b) + auditor (b).
+  ✅ **Resolved 2026-10-17:** the suspicion hold alarm names a transient as one (⛔ a leg pins the new wording); peer mesh's P1 comment / alarm say what the sweep now sees and what it still does ⛔ (send-side account faults, a send-time `auth` under a separate read key, a send-time DLT code the pre-flight passed — W10 NARROWED by MG5).
+- [x] [Review][Patch][LOW] **P13 — A peer-mesh child keeps pinging after a scope-wide pre-flight transient** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts:712-716`]
+  — P1 stops only on finals; after `api_unavailable:preflight` every remaining due ping is begun (attempt counted) and re-reads MSG91. Fix: stop
+  the loop on it as on a scope-wide final; a leg. Source: edge (b).
+  ✅ **Resolved 2026-10-17:** a pre-flight transient in the core STOPS the child's loop (an alarm; the transient count throws for the retry). Live leg "round 2 P13".
+- [x] [Review][Patch][LOW] **P14 — AC5 (ii)'s "values rebuild the body" oracle sits inside the fake `send`** [`apps/jobs/tests/claim-correction-send.test.ts:57`, `:452`;
+  the peer-mesh / suspicion harnesses] — the core catches a throw from `provider.send`, so on every leg expecting an error a mismatch is swallowed as
+  an ordinary provider error. Fix: record mismatches and assert after the call. Source: blind (b).
+  ✅ **Resolved 2026-10-17:** the oracle RECORDS a miss inside the fake `send`; an `afterEach` asserts none — in `claim-correction-send.test.ts` and both live harnesses.
+- [x] [Review][Patch][MEDIUM] **P15 — Roster Row 32 (b): the PROVEN refusal under MG17 (a) rests on S3, which is unsettled** [`docs/launch-gate-inventory/inventory-roster.md:576`]
+  — Debug Log (m)'s own reasoning (an SMS-only key refused a template read proves nothing about its sends) covers a 401 / 200 `status:"error"` too,
+  which still refuse api boot and end 6.19b/c/d rows under arm (a); Row 32 (b) also says *"both secret names set"* against an OPTIONAL read key, and
+  does ⛔ name W1 (HTTPS) though W1's trigger is credential provisioning. Fix (records): (b) states that arm (a) is used only once S3 is answered in
+  writing (else arm (b)), names the secret(s) per arm, and carries W1. Sources: auditor (d) + blind (d).
+  ✅ **Resolved 2026-10-17:** roster Row 32 note (6) — (6.1)–(6.3) — dated, ⛔ a word above rewritten (the author's records, ⛔ a decision entry).
+- [x] [Review][Patch][MEDIUM] **P16 — ADR-0041 says less than `-345` claims and the code does** [`docs/adr/ADR-0041-sms-gateway-msg91.md:50-65`]
+  — `-345` S1 says the default-version marker is *"marked INFERENCE in the ADR"* — the ADR states *"the ACTIVE version's text must equal ours"* as
+  fact (AC0 "MET" leans on it); the classification order it states is not the code's (Debug Log (a) / (b), F3); its api "refuses ONLY on" list omits
+  the origin refusal and the blank read-key name; its compose line is singular; 6.19b/c/d's fail-open is ⛔ stated. Fix the ADR (proposed, ⛔
+  ratified). Families 10. Sources: auditor (d) + edge (d) + blind (d).
+  ✅ **Resolved 2026-10-17:** ADR-0041 amended (still `drafted`) with a Changelog row.
+- [x] [Review][Patch][MEDIUM] **P17 — The sheet's MSG91 steps would provision what Row 32 (i) forbids, and offer evidence that is ⛔ evidence**
+  [`docs/launch-gate-inventory/dlt-template-requests-6-19.md:44-51`; roster Row 32 note (5)] — step (6) reads as every template (Row 32 (i): ⛔
+  claim-text id 1–14 until 6-37b is `done`); step (7) offers a CHECKOUT run as Row 32 (e)'s jobs proof — another egress (IP security is on) and,
+  off production, the env-fallback key, against T1; *"prints one line per template"* — the CLI prints ONE JSON line, carrying `senderId`. Fix the
+  prose. Sources: blind (d) + edge (d) + auditor (d).
+  ✅ **Resolved 2026-10-17:** the sheet's steps (6) / (7) (+ the key-arm line before (7)) and Row 32 note (6.3).
+- [x] [Review][Patch][LOW] **P18 — Stale or inaccurate records** [this story; `sprint-status.yaml`; `epics.md`] — the story's pinned header still
+  reads `in-progress … Next: Task 1` and *"MG1–MG17, PROPOSED"*; round 1's preamble still says *"F1–F4 remain unchecked"*; Debug Log (b) is ⛔
+  annotated after F3; Debug Log (c) says *"every claim sweep then HOLDS"* — 6.19b/c/d fail closed per row (T6); F4's *"7 legs"* (9); the AC11 proof
+  line's tree; Debug Log (f)'s OTP `values_mismatch` leg is not constructible through the registry — say so; Task 2 names
+  `contribution-provider-resolver.test.ts`, unchanged; the 6-37 sprint row comment and the `last_updated` scalar lack the review round trip;
+  `epics.md`'s *"⛔ Never a merge fence"* double negation; the routed-nowhere Panel question (*does a PROVEN content mismatch refuse on 6.19b/c/d*)
+  gets a carrier on the 6-37b row / Row 32 (i). Sources: blind (d) + edge (d) + auditor (d, c).
+  ✅ **Resolved 2026-10-17:** each item corrected in place with a dated / marked note (header, round 1's preamble, Debug Log (b) / (c) / (f), F4's count, AC11's line, Task 2's resolver test) the 6-37 / 6-37b sprint row comments and both ledgers, written with the final status after round 2's ci:local (36/36). `epics.md`'s 6.37 entry now reads *"⛔ A merge fence."* (the roster's form; under the glyph register *"⛔ Never"* is a double negation — the 6.28 / 6.29 / 6.30 / 6.34 entries carry the same phrase and are ⛔ this story's to edit). The Panel question's second carrier is Row 32 note (6.4) — advisory, ⛔ a closure condition.
+
+**Disposition (BigDev, 2026-10-17):** D1 (a), D2 (b) ⇒ `2026-10-17-346` committed ALONE (`da27b82d`); then *"apply every patch"* — P1–P18
+applied; the fix diff adversarially reviewed TWICE (fresh context, code + records each): pass 1 — code 5 LOW, records 2 HIGH / 3 MED / 9 LOW;
+pass 2 (on BigDev's *"adversarially review the patches applied"*) — code 5 LOW, records 2 HIGH / 5 MED / 5 LOW; every one applied except the
+redirect diagnostic (W1's, deferred). The pass-1 HIGH that changed code: P10's identical-OTP-id REFUSAL was a boot refusal `-345` MG5 does ⛔
+list ⇒ narrowed to an error log. The pass-2 HIGH that changed scope: P2 narrows three Trustee-ratified texts ⇒ ROUTED to the Panel
+(BigDev *"b"*; the note written, ⛔ yet sent; ⛔ blocking — A ships as built). ⭐ **Verification:** channels 408 (the two SMS files 199), jobs
+DB-free SMS 139, jobs five live SMS suites 167/167 on `:5433`, api SMS unit 51 (wiring + adapter); `pnpm ci:local` on `:5433` — **36/36 green** on the
+final code (twice; the second after pass 2's code fixes). ⛔ Red-on-unfixed was ⛔ re-run for every leg — pass 1's reviewer reasoned it per
+leg (P2 / P12 are pins, green on the old code by design). Story and sprint row → `done`.
+
+**Touched invariant families:** (1) covered by construction/test — overloads keep `deferred` from callers without a hook; peer mesh handles both
+reasons. (2) covered by test — the memo's shared in-flight read ("N concurrent misses ⇒ ONE call"; AC9 (d) counted live), window / lease
+`beforeSend` (AC9 (e)); redelivery idempotency is not constructible (MSG91 has ⛔ idempotency key, F19 — the open at-least-once items). (3) covered
+by test — the memo carries ⛔ Pariwar data; a broken `en` template holds ⛔ Hindi Pariwar. (5) covered — no schema change; details persist through the
+0155 / 0166 checks; `config:sms_preflight_*` never stored. (6) covered by construction/test — explicit field picks, I6 legs. (9) REAL GAP — P1;
+D1's undocumented departures. (10) REAL GAP — P1, P2, P16, P18. (11) REAL GAP — P1 (an undocumented 2xx body refuses a text the policy meaning
+promises to send on 6.19b/c/d); every other path matches the one-sentence meaning. (4), (7), (8), (12), (13) untouched.
 
 ## Dev Notes
 
@@ -904,17 +1072,29 @@ Where the build took a reading the MGs did not spell out, or departed from their
   the LISTED codes keep their class whatever the status, 311 / 407 are `unknown` always (`UNKNOWN_CODES`), and an unlisted code is
   `unknown` on a 2xx / other 4xx but `auth` / `rate_limited` / `api_unavailable` on a 401·403 / 429 / 5xx (`sms-errors.ts`; `sms.test.ts`
   "an UNLISTED code …"). The suspicion live RN5 legs that pinned a code-bearing 429 / 503 as transient stay green unchanged.
+  ⭐ **Recorded as `2026-10-17-346` decision 2** (review round 2 D1 (a)) — it narrows `-345` MG7, ⛔ an edit of it. ⚠ **Correction
+  (dated) to `-346` §0 — `-346` ⛔ edited; the next entry carries it (D1's list):** its effect is TWO-way, ⛔ only "a final becomes a retry": on a 429 / 5xx an unlisted code becomes a transient; on a 401 / 403 it becomes a final
+  `auth` (⛔ `unknown`) — which `isScopeWideSendFault` counts, so peer mesh's P1 STOPS the child there (fewer pings — the safe direction).
 - **(b) MG6 — the two documented sync messages are read BEFORE the status fallback**, so MSG91's documented HTTP 401 `"Auth Key missing"`
   sample yields `auth:authkey_missing` (AC3), ⛔ `auth:http_401` (same class either way).
+  ⚠ **NARROWED by review F3 (`b90a319c`) and round 2 P3:** a code-less 429 / 5xx is classified by its STATUS before the messages (F3),
+  and a code-less 401 / 403 is `auth` whatever its message — "Auth Key missing" only names the code (`auth:authkey_missing`), a
+  "flow ID … invalid" message on a 401 / 403 is `auth:http_40x` (P3). The messages decide only a 2xx `type:"error"` / other 4xx.
 - **(c) MG10 in jobs — a non-bare `SMS_GATEWAY_API_URL` is REFUSED by logging it and leaving the client unconfigured**, ⛔ by failing jobs
   boot (MG11: jobs runs many non-SMS duties; every claim sweep then HOLDS on `config:sms_gateway_unconfigured`). The api refuses at config
   load (`parseSmsGatewayOrigin` in `config.ts`) — its prod boot fails loud, as the old placeholder arm did.
+  ⚠ **CORRECTED by review round 2 (P18):** only the suspicion and peer-mesh sweeps HOLD on it; the 6.19b/c/d paths have ⛔ pre-enqueue
+  config check (T6), so each of their rows ends `error` (fail closed — the day's slot, or the closure notice for good), as the boot line
+  itself says. Round 2 P9 also accepts the same origin written differently (`:443`, an upper-case host) and treats a BLANK value as unset.
 - **(d) `preflightWarning` rides EVERY provider-handed final of a fail-open send** (as the helpline flag does), ⛔ only `accepted` — so a
   fail-open send that MSG91 then rejects still alarms the template doubt. ⛔ An outcome change.
 - **(e) The memo is keyed by template id AND registered text** — one MSG91 id wrongly held under two keys is judged against each text
-  (⛔ a pass for one masking a mismatch for the other). Still at most one read per template per TTL (AC9 (d) counted).
+  (⛔ a pass for one masking a mismatch for the other). Still at most one read per template per TTL (AC9 (d) counted). ⚠ Review round 2
+  P7: the key now also carries the slot NAMES (the `##name##` form depends on them).
 - **(f) The OTP adapter runs MG3's check too** (the `otp` value, from the registry slot's name, must rebuild the rendered body) — a
-  mismatch throws `StepUpDeliveryError('dlt_template_not_approved')`, ⛔ a send.
+  mismatch throws `StepUpDeliveryError('dlt_template_not_approved')`, ⛔ a send. ⚠ Review round 2: that refusal leg is ⛔ constructible
+  through the real registry — the value and the body come from the SAME code and the same registry text, so it can fail only if the
+  registry disagreed with itself (which the 6.34 lockstep tests pin) — ⛔ claimed as tested.
 - **(g) `readTemplateVersions`** maps HTTP 401 / 403 ⇒ `auth`; any other 4xx (⛔ documented) ⇒ `refused` (⇒ `auth_or_not_found`, a
   definite fault); 429 / 5xx / network / timeout / an unparseable or `data`-less 200 ⇒ `transient`.
   ⚠ **CORRECTED 2026-10-17 by review F2 (`b90a319c`) — the reading above was overbroad:** an undocumented 4xx proves nothing about a
@@ -937,7 +1117,8 @@ Where the build took a reading the MGs did not spell out, or departed from their
   14 characters"*.** The 14-character ceiling stays; the HELPLINE slot is exempt from the `value_too_long` refusal (every other slot
   keeps it), so a 15+-character helpline is SENT as set and the existing `helplineNotCallbackNumber` warning fires — its text now says
   *"digits only, at least 3 and at most 14 characters — no '+' or spaces"*. `-322` C1 holds unchanged (`claim-dlt-sms-send.ts`
-  `checkedValues`; three legs in `claim-correction-send.test.ts`, red before the fix).
+  `checkedValues`; three legs in `claim-correction-send.test.ts`, red before the fix). ⭐ **Recorded as `2026-10-17-346` decision 1**
+  (review round 2 D1 (a)) — it narrows `-345` MG3, ⛔ an edit of it; AC5 is annotated.
 - **(m) Review F2 — HTTP 403 on the template read is ⛔ a definite refusal either.** F2 named 404 / 405 / 408; its rule (*"restrict
   definitive refusal to the documented auth/template refusal evidence"*) also covers 403, which MSG91 does ⛔ document for
   `getTemplateVersions` (F16 documents 401) — and S3 is unsettled: an SMS-only key REFUSED template reads (a plausible 403) proves
@@ -946,6 +1127,30 @@ Where the build took a reading the MGs did not spell out, or departed from their
 - **(n) Review F1 — a timeout after the headers is a may-have-sent retry.** MSG91 may have taken a request whose body never arrived;
   `api_unavailable:timeout` is a transient, so pg-boss retries — the same may-have-sent class an abort BEFORE the headers already was
   (MG9), carried by the open *"At-least-once SMS"* items (closer: row 6-37b). ⛔ A new risk; ⛔ closed.
+- **(o) Review round 2 P2 — a suspicion notice whose deceased name exceeds 40 code points ends `value_too_long`.** In `full_name` mode
+  `resolveMemberFacingDeceasedName` returns the whole stored name with ⛔ length guard, and MG3 refuses a `member` value over its slot's 40
+  after the row is claimed: the once-ever notice is a final `error` `dlt_template_not_approved:value_too_long` + alarm, ⛔ sent. Before
+  6.37 the text went out as is — but per F11 (MSG91's docs — ⛔ observed; it counts characters, MG3 counts code points) the DLT cap is
+  40 per variable, so it most likely could ⛔ have been delivered either way: this turns a likely-false `accepted` into a true `error`. Built as MG3 says; peer mesh guards the same
+  slot BEFORE claiming (`no_target:name_too_long`). Pinned: `claim-suspicion-notices-live.test.ts` "round 2 P2".
+  ⚠⚠ **⛔ settled by this story — the Panel gate, read verbatim (review round 2's records review):** the suspicion texts are
+  Trustee-ratified promises — `-293` item 1 B, *"ONE TEXT TO THE REFUSED PERSON … 'The claim for [member] could not go ahead. It can be
+  appealed until [date]. Please call the helpline.'"*, and `-262` FQ7 B, *"THE SYSTEM TEXTS THE NOMINEE ON RECORD AT THE DEATH … 'A claim
+  for [member] could not go ahead. Please call the helpline.'"*. A refusal for a long name NARROWS both (the person is ⛔ texted) — this
+  entry's first draft used the wrong test (*"suspicion is ⛔ one of `-322` §0's reserved paths"* — `-322` is an author-commit). Whether
+  the refusal changes anything in fact turns on the OPEN question `-322` C7 (d) / Row 30 (d) already asks (the unit DLT's 40 counts — a
+  Devanagari name of 41+ code points may be ≤ 40 characters), and a fallback (e.g. the shielded form, `-181`) would change what is
+  DISCLOSED. ⇒ recorded and carried, ⛔ decided here. ⭐ **ROUTED (BigDev, 2026-10-17: *"b"*):** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37-name-too-long-for-the-text.md` — options A (no text, as
+  built) / B (the shielded form only when the full name does ⛔ fit — our reading) / C (cut) / D (staff phone); its E4 commands run, ⛔
+  empty. ⚠ WRITTEN, ⛔ yet SENT — ⛔ "shown to the Panel" until it goes out. Blocks ⛔ nothing: A ships as built.
+- **(p) Review round 2 D2 — the 60 s transient cache can mask a recovery for up to 60 s.** ⚠ **Correction (dated) to `-346` §0 — `-346`
+  ⛔ edited; the next entry carries it (D1's list):** `-346`'s §0 says decision 3 *"changes ⛔ outcome on any path"*; strictly, inside the
+  window it can: an outage ends and MSG91 now answers a PROVEN `auth*` with the send key ⇒ for up to
+  60 s 6.19b/c/d still SEND with `api_unavailable:preflight` (recorded `accepted` under F9) where the row would have ended `auth:preflight`;
+  and a holding sweep may hold on a transient cached up to 60 s after MSG91 recovered. The 6.19b/c/d case sits inside MG15's accepted
+  residual (*"a fault behind a fail-open send"*) — the same masking the 1 h pass cache already does; the holding case is a DELAY of up
+  to 60 s (the safe direction MG5 already accepts for holds) — so ⛔ a code change; recorded, ⛔ hidden.
+  (pg-boss's first child retry lands at 60–120 s, so a retried child does ⛔ meet its own cached transient, clock skew aside.)
 - **(k)** `@twt/channels` imports `claim.sanitizeSmsGatewayCode` and `encryption.normalizeMobile` from `@twt/domain` (already a dependency;
   `audit.ts` imports the same namespaces) — ⛔ a second regex (MG8, I6).
 
@@ -965,7 +1170,7 @@ Where the build took a reading the MGs did not spell out, or departed from their
   `no_named_values` (MG12; two legs inverted).
 - **Task 3** — `sms-preflight.ts`: `checkMsg91Template` (the active version; canonical content; the TEXT's `sms_type`; `DLT_ID`;
   `auth` / `auth_or_not_found` / malformed / transient; `sms_type_unicode_for_gsm7` a logged note) and `createMsg91PreflightMemo` (pass
-  1 h, fault 5 min, transient uncached, a stale pass for ONE more TTL on an expired re-check, concurrent misses share one read).
+  1 h, fault 5 min, transient uncached (⚠ since review round 2 / `-346`: 60 s), a stale pass for ONE more TTL on an expired re-check, concurrent misses share one read).
 - **Task 4** — the jobs core sends NAMED values after MG3's synchronous check, refuses a malformed id before the memo, and reads ONE
   process memo built in `boot.ts`: proven (`auth*` from the send key) ⇒ `auth:preflight` final on every caller; unproven / transient ⇒
   final / transient on the holding children, SENT with an alarmed `preflightWarning` on 6.19b/c/d; `beforeSend` (MG16 (i)) with
@@ -983,7 +1188,8 @@ Where the build took a reading the MGs did not spell out, or departed from their
   fail-open leg whose pre-flight transport fails — the global fetch saw ZERO calls; the api wiring test runs every arm under the same
   recorder); the deferred-work dispositions (MG16 (i) ✅ Closed by — as prescribed; (ii) / (iii) ⛔ addressed; MG8 PARTLY addressed;
   W10 NARROWED; the three 6-37b hand-offs annotated at Task 0.4) and the NEW alarm-only / fail-open item.
-- **The proof (AC11):** `pnpm ci:local` with `DATABASE_URL` at :5433 — **36/36 green** (2026-10-17, on the Task 7 tree); every live
+- **The proof (AC11):** `pnpm ci:local` with `DATABASE_URL` at :5433 — **36/36 green** (2026-10-17, on the Task 7 tree; 1.7's run is in
+  its row; review round 1 (1.6) ran none; round 2's run is in 1.8's row); every live
   suite also run alone on :5433 during the build (jobs five SMS suites 144 → with the new legs; api SMS 49 unit + 3 integration).
 - ✅ Resolved review finding [HIGH]: **F1** — an abort while the response body is read keeps `api_unavailable:timeout` (jobs ⇒ a
   transient retry, ⛔ a spent slot; OTP ⇒ `api_unavailable`); a broken 2xx body ⇒ `api_unavailable:body_read`; invalid JSON unchanged.
@@ -1000,7 +1206,8 @@ Where the build took a reading the MGs did not spell out, or departed from their
 
 ### File List
 
-- `.decision-log.md` (Task 0.3 — `2026-10-17-345`)
+- `.decision-log.md` (Task 0.3 — `2026-10-17-345`; code review round 2 — `2026-10-17-346`, `da27b82d`)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37-name-too-long-for-the-text.md` (NEW — code review round 2, P2)
 - `_bmad-output/implementation-artifacts/6-37-msg91-sms-gateway-adapter.md`
 - `_bmad-output/implementation-artifacts/deferred-work.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
@@ -1065,3 +1272,4 @@ Where the build took a reading the MGs did not spell out, or departed from their
 | 2026-10-17 | 1.5 | Debug Log (l) resolved by BigDev (*"14 characters fine … just display the warning"*): the helpline is exempt from MG3's `value_too_long` refusal — a 15+-character one is SENT with the helpline warning, which now names the 14-character limit; `-322` C1 holds. Tests red → green; jobs unit 674 + the five SMS live suites 165 on :5433; gate green. Status stays `review`. |
 | 2026-10-17 | 1.6 | Full `bmad-code-review` of `466e9b0e..4c03aed1`, all three layers returned: F1–F4 (2 HIGH, 2 MEDIUM) recorded as unchecked patches; W1 pre-existing HTTP-origin risk deferred; 2 additional candidates dismissed. BigDev chose option 2 — leave as action items. No application code changed. Review verification: 415 focused unit tests and 165 live jobs tests on :5433 passed; injected-fetch reproductions; full `ci:local` not re-run. Story and sprint row → `in-progress`. |
 | 2026-10-17 | 1.7 | Addressed code review findings — 4 items resolved (F1, F2 HIGH; F3, F4 MEDIUM) in `b90a319c`: F1 a body-read abort ⇒ `api_unavailable:timeout` (a broken 2xx body ⇒ `body_read`); F2 only MSG91's documented template-read refusals are definite — every other non-2xx, 403 included, is a transient (Debug Log (g) corrected, (m)); F3 a code-less 429 / 5xx keeps its status over a recognised message; F4 the read-only jobs OTP pre-flight proof `sms:preflight` (Row 32 note (5), the sheet's MSG91 step (7)). Each new leg red on the unfixed client. W1 stays deferred. `ci:local` 36/36 on :5433. Status `review`. |
+| 2026-10-17 | 1.8 | Code review ROUND 2 — the whole branch (`466e9b0e..171e2040`), 4 chunks × 3 layers (12 reviewers, all returned): 2 decisions + 18 patches, 29 dismissed. BigDev: D1 (a), D2 (b) ⇒ `2026-10-17-346` (alone, `da27b82d`; narrows `-345` MG3 / MG5 / MG7; its Status's "decisions 2 and 3 precede their code" corrected in the story, ⛔ edited); *"apply every patch"*: P1 only MSG91's documented 200 `status:"error"` refuses; P2 the long-name suspicion refusal recorded (Debug Log (o)) and — after the second fix-diff pass found it narrows Trustee-ratified texts — ROUTED (BigDev *"b"*; the routing note written, ⛔ yet sent); P3 blank code / 401·403 before messages; P4 every active version; P5 the transient's cause, a config fault ⛔ `auth`, the jobs read key gated on a configured gateway; P6 ⛔ redirects; P7 the memo key's slot names; P8 a real NFC leg; P9 structural origin (blank ⇒ default); P10 an equal read key is the send key, one id under both OTP keys an error log (⛔ a refusal — MG5's list); P11 the api reports once per read; P12 alarm / comment text; P13 peer mesh stops on a pre-flight transient; P14 the oracle recorded + asserted; P15–P18 records (Row 32 note (6.1)–(6.4), ADR-0041 amended, the sheet, stale records; Debug Log (o), (p) added); a 60 s transient TTL (`-346` decision 3). Fix diff adversarially reviewed twice (fresh context). `ci:local` 36/36 on `:5433` (on the final code). Story and sprint row → done (ledger 2026-10-17i). |

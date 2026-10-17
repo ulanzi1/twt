@@ -46,7 +46,6 @@ import {
   renderOtpBody,
   substituteDltValues,
   type Msg91PreflightMemo,
-  type Msg91PreflightResult,
   type SmsMessagingHandle,
 } from '@twt/channels';
 import { ids, waOptIn, type Db } from '@twt/domain';
@@ -78,12 +77,12 @@ export interface SmsDltStepUpDeliveryDeps {
    */
   readonly resolveConfig: (configKey: string) => Promise<string | null>;
   /**
-   * Story 6.37 (MG5) — the ADVISORY runtime pre-flight: the api's process memo and where a non-pass is reported (the
-   * template's config key and the verdict — ⛔ the id, ⛔ the code, ⛔ the number). Absent ⇒ ⛔ re-check.
+   * Story 6.37 (MG5) — the ADVISORY runtime pre-flight: the api's process memo, read to TRIGGER a re-check of an expired
+   * entry. A non-pass is reported where it is computed — the memo's `check` (round 2 P11: once per read, ⛔ on every
+   * cached hit; ⛔ the id, ⛔ the code, ⛔ the number). Absent ⇒ ⛔ re-check.
    */
   readonly preflight?: {
     readonly memo: Msg91PreflightMemo;
-    readonly report: (configKey: string, verdict: Exclude<Msg91PreflightResult, { ok: true }>) => void;
   };
 }
 
@@ -187,15 +186,11 @@ export function createSmsDltStepUpDelivery(deps: SmsDltStepUpDeliveryDeps): Step
         }
         const templateId = resolvedId.trim();
 
-        // MG5 — the ADVISORY re-check, OFF the request path: ⛔ awaited, a non-pass is only reported.
+        // MG5 — the ADVISORY re-check, OFF the request path: ⛔ awaited; the memo's `check` reports a non-pass (P11).
         if (deps.preflight !== undefined) {
-          const { memo, report } = deps.preflight;
-          void memo
-            .get({ text: template.contentTemplate, slots: template.slots }, templateId)
-            .then((verdict) => {
-              if (!verdict.ok) report(template.dltTemplateIdConfigKey, verdict);
-            })
-            .catch(() => undefined);
+          // The memo never rejects (a throwing check is a `check_threw` transient, reported by the check) — the catch only keeps
+          // a future regression from becoming an unhandled rejection.
+          void deps.preflight.memo.get({ text: template.contentTemplate, slots: template.slots }, templateId).catch(() => undefined);
         }
 
         // Build the gateway message with the SECRET code as the template's ONE named value (TV13's `otp`; never

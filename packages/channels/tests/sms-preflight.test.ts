@@ -73,9 +73,31 @@ describe('checkMsg91Template (6.37 AC7; MG5)', () => {
     }
   });
 
-  it('passes an NFD variant of a Hindi text (NFC on both sides)', async () => {
-    const r = reader(versions(version({ templateData: HINDI_FORM.normalize('NFD'), smsType: 'UNICODE' })));
-    expect(await checkMsg91Template(r, HINDI, ID)).toEqual({ ok: true, notes: [] });
+  it('passes a decomposed variant of a Hindi text (NFC on both sides)', async () => {
+    // Round 2 P8 — a code point that DOES decompose: क़ (U+0958) vs क + ़ (U+0915 U+093C). The raw strings differ, so
+    // the leg is red if `canonical()` drops its NFC.
+    const nukta: Msg91PreflightEntry = { text: `\u0958लेम ${DLT_VAR}: हेल्पलाइन ${DLT_VAR} पर कॉल करें।`, slots: [ref, cbn] };
+    const stored = '\u0915\u093Cलेम ##reference##: हेल्पलाइन ##helpline## पर कॉल करें।';
+    expect(stored).not.toBe(nukta.text.replace(DLT_VAR, '##reference##').replace(DLT_VAR, '##helpline##'));
+    const r = reader(versions(version({ templateData: stored, smsType: 'UNICODE' })));
+    expect(await checkMsg91Template(r, nukta, ID)).toEqual({ ok: true, notes: [] });
+    expect(await checkMsg91Template(reader(versions(version({ templateData: HINDI_FORM, smsType: 'UNICODE' }))), HINDI, ID)).toEqual({
+      ok: true,
+      notes: [],
+    });
+  });
+
+  it('⭐ round 2 P4 — MORE than one active version: EVERY one must pass (⛔ "any one matches"); the log carries every version', async () => {
+    const log = vi.fn<(o: Msg91PreflightObservation) => void>();
+    const twoActive = versions(version(), version({ templateData: 'Claim ##reference##: other words ##helpline##.' }));
+    expect(await checkMsg91Template(reader(twoActive), GSM, ID, { log })).toEqual({ ok: false, transient: false, reason: 'content_mismatch' });
+    expect(await checkMsg91Template(reader(versions(version(), version({ dltId: '' }))), GSM, ID)).toMatchObject({ reason: 'dlt_id_missing' });
+    expect(await checkMsg91Template(reader(versions(version(), version())), GSM, ID)).toEqual({ ok: true, notes: [] });
+    // a PASS logs EVERY version MSG91 returned (MG5 — other versions are LOGGED), with the true count
+    const passLog = vi.fn<(o: Msg91PreflightObservation) => void>();
+    await checkMsg91Template(reader(versions(version({ activeStatus: '0', rejectReason: 'old' }), version())), GSM, ID, { log: passLog });
+    expect(passLog.mock.calls[0]![0]).toMatchObject({ result: 'pass', versions: 2 });
+    expect(passLog.mock.calls[0]![0].checked.map((c) => c.rejectReason)).toEqual(['old', null]);
   });
 
   it('⭐ T11 — template 14\'s shape (English + an em dash) expects UNICODE; a GSM-7 English text expects NORMAL', async () => {
@@ -121,13 +143,19 @@ describe('checkMsg91Template (6.37 AC7; MG5)', () => {
     expect(r.calls).toBe(0);
   });
 
-  it.each(['network', 'timeout', 'throttled', 'server', 'unparseable'] as const)('an unavailable read (%s) ⇒ transient', async (cause) => {
-    expect(await checkMsg91Template(reader({ kind: 'unavailable', cause }), GSM, ID)).toEqual({
-      ok: false,
-      transient: true,
-      reason: 'transient',
-    });
-  });
+  it.each(['network', 'timeout', 'throttled', 'server', 'unparseable', 'unexpected_status', 'unexpected_body', 'config'] as const)(
+    'an unavailable read (%s) ⇒ transient, the cause carried to the result AND the log (round 2 P5)',
+    async (cause) => {
+      const log = vi.fn<(o: Msg91PreflightObservation) => void>();
+      expect(await checkMsg91Template(reader({ kind: 'unavailable', cause }), GSM, ID, { log })).toEqual({
+        ok: false,
+        transient: true,
+        reason: 'transient',
+        cause,
+      });
+      expect(log.mock.calls[0]![0]).toMatchObject({ result: 'transient', cause });
+    },
+  );
 
   it('`status` / `dlt_verified` / `dlt_reason` / `reject_reason` ⛔ change the result — logged only (dlt_verified "10" AND 0)', async () => {
     for (const over of [
@@ -217,6 +245,12 @@ describe('readTemplateVersions — the MSG91 template read (6.37 MG5; F16)', () 
     ['HTTP 503', () => Promise.resolve(respond(503, {})), 'unavailable'],
     ['a network throw', () => Promise.reject(new Error('ECONNRESET')), 'unavailable'],
     ['a 200 with ⛔ data[]', () => Promise.resolve(respond(200, { status: 'success' })), 'unavailable'],
+    // Round 2 P1 — only the DOCUMENTED 200 body is a refusal: `status:"fail"` is documented on the 401 only, and a bare
+    // `hasError` is ⛔ documented at all ⇒ unavailable (⛔ auth_or_not_found — which refuses api boot and ends 6.19b/c/d rows).
+    ['HTTP 200 {status:"fail"}', () => Promise.resolve(respond(200, { status: 'fail', hasError: true, errors: 'Unauthorized' })), 'unavailable'],
+    ['HTTP 200 {hasError:true} only', () => Promise.resolve(respond(200, { hasError: true, data: [] })), 'unavailable'],
+    ['HTTP 200 {hasError:"true"} only', () => Promise.resolve(respond(200, { hasError: 'true' })), 'unavailable'],
+    ['HTTP 200 {status:"error"} with ⛔ errors text', () => Promise.resolve(respond(200, { status: 'error' })), 'refused'],
   ])('%s ⇒ %s', async (_l, answer, kind) => {
     const read = await createSmsAppClient(config, vi.fn<SmsFetchLike>(answer)).readTemplateVersions(ID);
     expect(read.kind).toBe(kind);
@@ -235,7 +269,27 @@ describe('readTemplateVersions — the MSG91 template read (6.37 MG5; F16)', () 
   it('F2 — an unexplained non-2xx is unavailable (`unexpected_status`), and the pre-flight calls it a TRANSIENT, ⛔ auth_or_not_found', async () => {
     const client = createSmsAppClient(config, vi.fn<SmsFetchLike>().mockResolvedValue(respond(404, {})));
     expect(await client.readTemplateVersions(ID)).toEqual({ kind: 'unavailable', cause: 'unexpected_status' });
-    expect(await checkMsg91Template(client, GSM, ID)).toEqual({ ok: false, transient: true, reason: 'transient' });
+    expect(await checkMsg91Template(client, GSM, ID)).toEqual({ ok: false, transient: true, reason: 'transient', cause: 'unexpected_status' });
+  });
+
+  it('round 2 P1 — a 200 `status:"fail"` body is `unexpected_body`, and the pre-flight calls it a TRANSIENT, ⛔ auth_or_not_found', async () => {
+    const client = createSmsAppClient(config, vi.fn<SmsFetchLike>().mockResolvedValue(respond(200, { status: 'fail', hasError: true })));
+    expect(await client.readTemplateVersions(ID)).toEqual({ kind: 'unavailable', cause: 'unexpected_body' });
+    expect(await checkMsg91Template(client, GSM, ID)).toEqual({ ok: false, transient: true, reason: 'transient', cause: 'unexpected_body' });
+  });
+
+  it('round 2 P5 — a reader with ⛔ usable config is `unavailable` (config), ⛔ a 401: ⛔ call made', async () => {
+    const fetchImpl = vi.fn<SmsFetchLike>();
+    for (const bad of [{ ...config, authkey: ' ' }, { ...config, apiOrigin: 'https://control.msg91.com/send' }]) {
+      expect(await createSmsAppClient(bad, fetchImpl).readTemplateVersions(ID)).toEqual({ kind: 'unavailable', cause: 'config' });
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('round 2 P6 — the read ⛔ follows a redirect (the authkey header would follow it to another host)', async () => {
+    const fetchImpl = vi.fn<SmsFetchLike>().mockRejectedValue(new TypeError('fetch failed: redirect mode is set to error'));
+    expect(await createSmsAppClient(config, fetchImpl).readTemplateVersions(ID)).toEqual({ kind: 'unavailable', cause: 'network' });
+    expect(fetchImpl.mock.calls[0]![1].redirect).toBe('error');
   });
 
   it('F1 — headers arrive, then the bound aborts while the body is read ⇒ unavailable (timeout), ⛔ unparseable', async () => {
@@ -261,7 +315,7 @@ describe('createMsg91PreflightMemo (6.37 AC7; MG5)', () => {
   function memoWith(answers: Msg91PreflightResult[]) {
     let now = 1_000_000;
     const check = vi.fn(() => Promise.resolve(answers.shift() ?? TRANSIENT));
-    const memo = createMsg91PreflightMemo({ check, clock: () => now, passTtlMs: 3_600_000, faultTtlMs: 300_000 });
+    const memo = createMsg91PreflightMemo({ check, clock: () => now, passTtlMs: 3_600_000, faultTtlMs: 300_000, transientTtlMs: 60_000 });
     return { memo, check, advance: (ms: number) => (now += ms) };
   }
 
@@ -287,22 +341,29 @@ describe('createMsg91PreflightMemo (6.37 AC7; MG5)', () => {
     expect(check).toHaveBeenCalledTimes(2);
   });
 
-  it('a TRANSIENT is ⛔ cached', async () => {
-    const { memo, check } = memoWith([TRANSIENT, TRANSIENT, PASS]);
+  it('⭐ `-346` decision 3 — a TRANSIENT is reused for 60 s, then re-read', async () => {
+    const { memo, check, advance } = memoWith([TRANSIENT, PASS]);
     expect(await memo.get(GSM, ID)).toEqual(TRANSIENT);
+    advance(59_999);
     expect(await memo.get(GSM, ID)).toEqual(TRANSIENT);
+    expect(check).toHaveBeenCalledTimes(1);
+    advance(1);
     expect(await memo.get(GSM, ID)).toEqual(PASS);
-    expect(check).toHaveBeenCalledTimes(3);
+    expect(check).toHaveBeenCalledTimes(2);
   });
 
   it('⭐ on an EXPIRED pass\'s re-check, a transient answers the stale PASS for ONE more TTL only — then the transient', async () => {
-    const { memo, advance } = memoWith([PASS, TRANSIENT, TRANSIENT, TRANSIENT]);
+    const { memo, check, advance } = memoWith([PASS, TRANSIENT, TRANSIENT, TRANSIENT]);
     await memo.get(GSM, ID);
     advance(3_600_000); // expired
     expect(await memo.get(GSM, ID)).toEqual({ ok: true, notes: [], stale: true });
-    advance(3_599_999); // still inside one more TTL past expiry
+    advance(59_999); // the stale answer is itself kept for the transient TTL (`-346`) — ⛔ a re-read per send
     expect(await memo.get(GSM, ID)).toEqual({ ok: true, notes: [], stale: true });
-    advance(1); // past it
+    expect(check).toHaveBeenCalledTimes(2);
+    advance(3_540_000); // still inside one more TTL past expiry — re-read, still stale
+    expect(await memo.get(GSM, ID)).toEqual({ ok: true, notes: [], stale: true });
+    expect(check).toHaveBeenCalledTimes(3);
+    advance(1); // past it — the stale answer's own expiry never outlives the window
     expect(await memo.get(GSM, ID)).toEqual(TRANSIENT);
   });
 
@@ -315,10 +376,18 @@ describe('createMsg91PreflightMemo (6.37 AC7; MG5)', () => {
     expect(await memo.get(GSM, ID)).toEqual(TRANSIENT);
   });
 
+  it('round 2 P7 — keys by the slot NAMES too: one id and text under two slot namings is judged for each', async () => {
+    const { memo, check } = memoWith([PASS, FAULT]);
+    const renamed: Msg91PreflightEntry = { ...GSM, slots: [{ ...ref, name: 'ref' }, cbn] };
+    expect(await memo.get(GSM, ID)).toEqual(PASS);
+    expect(await memo.get(renamed, ID)).toEqual(FAULT);
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
   it('⭐ N concurrent misses ⇒ ONE call (counted), every caller the same verdict', async () => {
     let release: (r: Msg91PreflightResult) => void = () => undefined;
     const check = vi.fn(() => new Promise<Msg91PreflightResult>((resolve) => (release = resolve)));
-    const memo = createMsg91PreflightMemo({ check, clock: () => 0, passTtlMs: 10, faultTtlMs: 5 });
+    const memo = createMsg91PreflightMemo({ check, clock: () => 0, passTtlMs: 10, faultTtlMs: 5, transientTtlMs: 1 });
     const all = Promise.all(Array.from({ length: 25 }, () => memo.get(GSM, ID)));
     release(PASS);
     expect(await all).toEqual(Array.from({ length: 25 }, () => PASS));
@@ -332,10 +401,12 @@ describe('createMsg91PreflightMemo (6.37 AC7; MG5)', () => {
     expect(check).toHaveBeenCalledTimes(2);
   });
 
-  it('a check that throws is a transient (⛔ cached, ⛔ an escape)', async () => {
+  it('a check that throws is a transient (⛔ an escape), kept for the transient TTL only', async () => {
+    let now = 0;
     const check = vi.fn().mockRejectedValueOnce(new Error('bug')).mockResolvedValueOnce(PASS);
-    const memo = createMsg91PreflightMemo({ check, clock: () => 0, passTtlMs: 10, faultTtlMs: 5 });
-    expect(await memo.get(GSM, ID)).toEqual(TRANSIENT);
+    const memo = createMsg91PreflightMemo({ check, clock: () => now, passTtlMs: 10, faultTtlMs: 5, transientTtlMs: 1 });
+    expect(await memo.get(GSM, ID)).toEqual({ ...TRANSIENT, cause: 'check_threw' });
+    now += 1;
     expect(await memo.get(GSM, ID)).toEqual(PASS);
   });
 });

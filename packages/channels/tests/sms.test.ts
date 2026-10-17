@@ -283,7 +283,22 @@ describe('createSmsAppClient — the MSG91 Flow request (6.37 AC1; MG9, MG10, F1
 
     expect(parseSmsGatewayOrigin('https://control.msg91.com')).toBe('https://control.msg91.com');
     expect(parseSmsGatewayOrigin(' https://control.msg91.com/ ')).toBe('https://control.msg91.com');
-    for (const bad of ['https://control.msg91.com/send', 'https://sms-gateway.invalid/send', 'control.msg91.com', '', 'https://x.y/?a=1']) {
+    // Round 2 P9 — the same origin written differently is accepted and NORMALISED; a blank value is UNSET (the default).
+    expect(parseSmsGatewayOrigin('https://control.msg91.com:443')).toBe('https://control.msg91.com');
+    expect(parseSmsGatewayOrigin('https://Control.MSG91.com/')).toBe('https://control.msg91.com');
+    expect(parseSmsGatewayOrigin('https://control.msg91.com//')).toBe('https://control.msg91.com'); // as before P9 (⛔ a new refusal)
+    expect(parseSmsGatewayOrigin('')).toBe('https://control.msg91.com');
+    expect(parseSmsGatewayOrigin('   ')).toBe('https://control.msg91.com');
+    for (const bad of [
+      'https://control.msg91.com/send',
+      'https://sms-gateway.invalid/send',
+      'control.msg91.com',
+      'https://x.y/?a=1',
+      'https://x.y/?',
+      'https://x.y/#f',
+      'https://user:pw@control.msg91.com',
+      'ftp://control.msg91.com',
+    ]) {
       expect(() => parseSmsGatewayOrigin(bad), bad).toThrow(/bare origin/);
     }
     const client = createSmsAppClient({ ...config, apiOrigin: 'https://control.msg91.com/send' }, fetchImpl);
@@ -420,6 +435,26 @@ describe('createSmsAppClient — the error shapes (6.37 AC3; MG6 / MG7)', () => 
   it('F3 — a LISTED code keeps its class on a 429 / 5xx (Debug Log (a)); only a code-less answer falls to the status', async () => {
     expect(await outcome(answering(429, { type: 'error', code: '400', message: 'x' }))).toBe('dlt_template_not_approved:400');
     expect(await outcome(answering(503, { type: 'error', code: '201', message: 'x' }))).toBe('auth:201');
+  });
+
+  // Round 2 P3 — MG6's order for a code-less answer is the HTTP status, THEN the messages: a 401 / 403 is `auth` whatever
+  // its message says (the "Auth Key missing" token only names its code); a BLANK code is ⛔ code (the pre-6.37 rule).
+  it.each<[number, unknown, string]>([
+    [401, { message: 'The provided flow ID or template ID is invalid.', type: 'error' }, 'auth:http_401'],
+    [403, { message: 'The provided flow ID or template ID is invalid.', type: 'error' }, 'auth:http_403'],
+    [403, { message: 'Auth Key missing', type: 'error' }, 'auth:authkey_missing'],
+    [200, { type: 'error', code: '', message: 'The provided flow ID or template ID is invalid.' }, 'dlt_template_not_approved:template_invalid'],
+    [401, { type: 'error', code: '  ', message: 'Auth Key missing' }, 'auth:authkey_missing'],
+    [429, { type: 'error', code: ' ' }, 'rate_limited:http_429'],
+    [200, { type: 'error', code: '' }, 'unknown:msg91_error'],
+  ])('round 2 P3 — HTTP %i %j ⇒ %s', async (status, body, expected) => {
+    expect(await outcome(answering(status, body))).toBe(expected);
+  });
+
+  it('round 2 P6 — the send ⛔ follows a redirect (the authkey header would follow it to another host): ⇒ a transport failure', async () => {
+    const fetchImpl = vi.fn<SmsFetchLike>().mockRejectedValue(new TypeError('fetch failed: unexpected redirect'));
+    expect(await outcome(fetchImpl)).toBe('api_unavailable:unknown');
+    expect(fetchImpl.mock.calls[0]![1].redirect).toBe('error');
   });
 });
 

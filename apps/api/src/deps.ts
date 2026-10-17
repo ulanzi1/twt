@@ -18,6 +18,7 @@ import {
   createSmsAppClient,
   isMsg91TemplateId,
   MSG91_PREFLIGHT_FAULT_TTL_MS,
+  MSG91_PREFLIGHT_TRANSIENT_TTL_MS,
   MSG91_PREFLIGHT_PASS_TTL_MS,
   resolveOtpTemplate,
   type Msg91PreflightObservation,
@@ -232,8 +233,8 @@ export interface MemberStepUpDeliveryOptions {
  * fault that proves ⛔ code can be sent refuses); everything else (`content_mismatch`, `sms_type_needs_unicode`,
  * `dlt_id_missing`, a read-key refusal under MG17 (b), a transport failure) STARTS with an error log — alarm-only IN
  * THIS STORY (S1 — the canonicalisation is UNVERIFIED against MSG91's stored text; a later change may make it blocking
- * once roster Row 32 (e) records a real response). At runtime the memo is ADVISORY (the adapter re-checks off the
- * request path and only reports). `options` lets a test inject the fetch (⛔ MSG91 from a test — I7).
+ * once roster Row 32 (e) records a real response). At runtime the memo is ADVISORY (the adapter triggers the re-check
+ * off the request path; the memo's `check` reports a non-pass once per read — review round 2 P11). `options` lets a test inject the fetch (⛔ MSG91 from a test — I7).
  */
 export async function buildMemberStepUpDelivery(
   config: ApiConfig,
@@ -268,6 +269,15 @@ export async function buildMemberStepUpDelivery(
         "MSG91 template id (24 hex characters) — a DLT TE id pasted by mistake? (roster Row 32 (d))",
     );
   }
+  // Round 2 P10 — one id under BOTH keys is provable here, with ⛔ read: one of the two texts is then wrong (the login text,
+  // "Valid 5 min", for a 3-minute step-up code, or the reverse). `-345` MG5's refusal list does ⛔ name it ⇒ it STARTS with an
+  // error log, as every other unproven template fault does (making it a refusal would need its own decision entry).
+  if (loginTemplateId.toLowerCase() === stepUpTemplateId.toLowerCase()) {
+    log.error(
+      '[deps] msg91-preflight: sms.dlt.template_id.otp_login and .otp_step_up hold the SAME MSG91 template id — STARTING anyway ' +
+        '(alarm-only: one of the two OTP texts is wrong; each has its own template — roster Row 32 (d))',
+    );
+  }
   // MG17 — an OPTIONAL template-read-only key; when its NAME is set it must resolve (a blank one REFUSES).
   const readKey = config.sms.preflightKeySecretName
     ? await resolveSecretValue(config.sms.preflightKeySecretName, { envFallback: config.sms.preflightKeyEnvFallback })
@@ -275,22 +285,47 @@ export async function buildMemberStepUpDelivery(
   if (readKey !== null && !readKey.trim()) {
     throw new Error('[deps] SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME is set but resolved to an empty value');
   }
-  const readsWithSendKey = readKey === null;
+  // A read key EQUAL to the send key IS the send key (round 2 P10) — its refusal then proves ⛔ code can be sent.
+  const readsWithSendKey = readKey === null || readKey.trim() === authkey.trim();
 
   const client = createSmsAppClient({ apiOrigin: config.sms.apiOrigin, authkey }, options.fetchImpl);
-  const reader = readsWithSendKey ? client : createSmsAppClient({ apiOrigin: config.sms.apiOrigin, authkey: readKey }, options.fetchImpl);
+  const reader = readsWithSendKey || readKey === null ? client : createSmsAppClient({ apiOrigin: config.sms.apiOrigin, authkey: readKey }, options.fetchImpl);
+  const describe = (verdict: Exclude<Msg91PreflightResult, { ok: true }>): string =>
+    verdict.transient && verdict.cause !== undefined ? `${verdict.reason}: ${verdict.cause}` : verdict.reason;
+  // Named by the TEMPLATE the entry is (⛔ by the boot-time id — the adapter re-resolves the id at every send, so a rotated id
+  // would be mis-named).
+  const configKeyOf = (entry: { readonly text: string }): string =>
+    resolveOtpTemplate(entry.text === resolveOtpTemplate('login').contentTemplate ? 'login' : 'step_up').dltTemplateIdConfigKey;
+  // MG5 — at RUNTIME a non-pass is reported where it is COMPUTED (round 2 P11): once per fresh read — ⛔ on every OTP served
+  // from the cache — and a transient that falls back to a stale pass is reported too (the memo then answers that pass).
+  let booted = false;
   const memo = createMsg91PreflightMemo({
-    check: (entry, templateId) =>
-      checkMsg91Template(reader, entry, templateId, {
-        log: (o: Msg91PreflightObservation) => log.info(`[deps] msg91-preflight ${JSON.stringify(o)}`),
-      }),
+    check: async (entry, templateId) => {
+      const runtimeReport = (what: string): void =>
+        log.error(
+          `[deps] msg91-preflight: ${configKeyOf(entry)} did not pass a runtime re-check (${what}) — ` +
+            'advisory: OTP codes keep being sent (roster Row 32 (d) / (e))',
+        );
+      let verdict: Msg91PreflightResult;
+      try {
+        verdict = await checkMsg91Template(reader, entry, templateId, {
+          log: (o: Msg91PreflightObservation) => log.info(`[deps] msg91-preflight ${JSON.stringify(o)}`),
+        });
+      } catch (err) {
+        // The memo turns a throw into a `check_threw` transient — report it here, where it is still seen (⛔ silent).
+        if (booted) runtimeReport('transient: check_threw');
+        throw err;
+      }
+      if (booted && !verdict.ok) runtimeReport(describe(verdict));
+      return verdict;
+    },
     clock: options.clock ?? (() => Date.now()),
     passTtlMs: MSG91_PREFLIGHT_PASS_TTL_MS,
     faultTtlMs: MSG91_PREFLIGHT_FAULT_TTL_MS,
+    transientTtlMs: MSG91_PREFLIGHT_TRANSIENT_TTL_MS,
   });
 
   // The BOOT pre-flight (MG5) — both templates, awaited.
-  const describe = (verdict: Exclude<Msg91PreflightResult, { ok: true }>): string => verdict.reason;
   for (const intent of ['login', 'step_up'] as const) {
     const template = resolveOtpTemplate(intent);
     const id = intent === 'login' ? loginTemplateId : stepUpTemplateId;
@@ -308,6 +343,7 @@ export async function buildMemberStepUpDelivery(
         'the code is still sent; check the template in MSG91 — roster Row 32 (d) / (e))',
     );
   }
+  booted = true;
 
   return createSmsDltStepUpDelivery({
     messaging: client.messaging(),
@@ -316,12 +352,9 @@ export async function buildMemberStepUpDelivery(
     encryption: encryptionDeps,
     // Resolve the per-intent OTP template id NAME → value (send-time indirection; never hardcoded/logged).
     resolveConfig: (configKey: string) => resolveChannelSecret(configKey),
-    // MG5 — ADVISORY at runtime: a non-pass on an expired entry's re-check is logged; the code is still sent.
-    preflight: {
-      memo,
-      report: (configKey, verdict) =>
-        log.error(`[deps] msg91-preflight: ${configKey} did not pass a runtime re-check (${describe(verdict)}) — the code was still sent`),
-    },
+    // MG5 — ADVISORY at runtime: the adapter only triggers the re-check (off the request path); the memo's `check` above
+    // reports a non-pass when it is computed; the code is still sent.
+    preflight: { memo },
   });
 }
 

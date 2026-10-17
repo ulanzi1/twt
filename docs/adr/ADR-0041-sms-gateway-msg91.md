@@ -48,22 +48,32 @@ Load-bearing details:
   recipient per call; ⛔ `realTimeResponse`; ⛔ `CRQID`; a 9 s client timeout. `short_url` is ALWAYS `"0"` (MSG91 would otherwise
   rewrite the app link). The number is `normalizeMobile(to)` without the `+`.
 - **Acceptance.** `accepted` ⇔ HTTP 2xx AND `type: "success"` AND a request id (`message`). Errors are classified by MSG91's `code`
-  (string or number) onto the EXISTING error classes — `auth` now means *"the gateway ACCOUNT refuses"* (key, balance, IP, route) — then
-  by HTTP status, then by the two documented messages; anything else `unknown`. ⛔ New class, ⛔ migration.
+  (string or number; a blank code is ⛔ code) onto the EXISTING error classes — `auth` now means *"the gateway ACCOUNT refuses"* (key,
+  balance, IP, route); a LISTED code keeps its class whatever the status, an UNLISTED one takes its HTTP status's class on a 401·403 /
+  429 / 5xx (`-346`) — then, with ⛔ code, by HTTP status (401 / 403 `auth`, 429 `rate_limited`, 5xx `api_unavailable`), then by the two
+  documented messages (MSG91's 401 *"Auth Key missing"* names its code `auth:authkey_missing`); anything else `unknown`. ⛔ New class,
+  ⛔ migration. ⛔ A redirect is followed (the `authkey` header would follow it).
 - **Template ids.** The existing `sms.dlt.template_id.*` secret keys hold MSG91's 24-hex template id; the DLT template id, the sender id
   and the Unicode type live ON MSG91's template. A value that is not 24-hex is refused locally.
 - **Login codes.** Through Flow (templates 15 / 16, variable `otp`) — ⛔ SendOTP, ⛔ voice retry. The code is generated and verified by
   us, as today.
-- **The pre-flight.** MSG91's `getTemplateVersions` is read for each template: the ACTIVE version's text must equal ours (after NFC /
-  line-ending / trailing-space canonicalisation), its `sms_type` must be UNICODE exactly when the text needs it (template 14 (en)
-  carries an em dash), and a DLT id must be present. In `apps/jobs` the results are held in ONE memo per process (a pass 1 h, a fault
-  5 min, a transient ⛔ cached).
+- **The pre-flight.** MSG91's `getTemplateVersions` is read for each template: the version MSG91 marks ACTIVE (`active_status` `"1"` —
+  ⚠ an INFERENCE from the panel's *"Mark default"*: MSG91 returns the field but does ⛔ document its meaning; Row 32 (d) records its meaning in writing,
+  `-345` S1; if more than one version is active, EVERY one must pass) must have a text equal to ours (after NFC / line-ending /
+  trailing-space canonicalisation), its `sms_type` must be UNICODE exactly when the text needs it (template 14 (en) carries an em dash),
+  and a DLT id must be present. Only MSG91's DOCUMENTED refusals are definite — HTTP 401, and the 200 `status:"error"` body (a bad key
+  and an unknown id look the same); any other non-2xx or error-looking body is a TRANSIENT. In `apps/jobs` and `apps/api` the results
+  are held in ONE memo per process (a pass 1 h, a fault 5 min, a transient 60 s — `-346`).
   - The sweeps that already HOLD (suspicion notices, the neighbours' request) hold the run on any fault — ⛔ slot used.
   - The correction / closure / certificate sweeps have ⛔ hold (adding one is the Panel's — `-322` §0): there ONLY a PROVEN fault (a
     malformed template id; the SEND key's own refusal) ends a row; every other reason, and every transient, is alarmed and the text is
     SENT.
-  - The api refuses to start only on a blank authkey, a blank or malformed OTP id, or the send key's refusal; anything else starts
-    with an error log; after boot the check is advisory and runs off the login request.
+  - The api refuses to start only on: a blank authkey; a blank or malformed OTP id; or the send key's refusal (`-345` MG5's list). Three
+    CONFIG-LOAD faults outside that pre-flight list also stop it, each on its own basis: a read-key secret name that resolves blank
+    (MG17 (b) — Story 6.37 Debug Log (i)); a `SMS_GATEWAY_API_URL` that is ⛔ a bare origin, at config load in every environment (MG10 —
+    Debug Log (c); a blank value is the default); a secret NAME that is set but cannot be resolved (the pre-6.37 secret precedent).
+    Anything else — one MSG91 id under both OTP keys included — starts with an error log; after boot the check is advisory, runs off
+    the login request, and a non-pass is logged once per read.
   - The pre-flight uses the send authkey; if an SMS-only key may ⛔ read templates, an OPTIONAL read-only key
     (`SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME`) is used instead (`-345` MG17).
 - **One gateway, ⛔ provider switch.** The generic Bearer contract is REMOVED. `SMS_GATEWAY_API_URL` is the API origin;
@@ -91,7 +101,8 @@ Load-bearing details:
   production — and staging — egress whitelisted, or a separate staging key); the PE-TM chain bound on SmartPing and the sender id mapped;
   each template created in MSG91 from the DLT sheet's MSG91 column with its DLT id, `smsType` from the TEXT, marked default, the panel's
   URL shortener off; the pre-flight green on the deployed api and jobs. Rotating the authkey needs a process restart (resolved once at
-  boot — the existing SMS precedent). The compose file carries the key's secret-name line for api and jobs.
+  boot — the existing SMS precedent). The compose file carries the secret-name lines — the send key and the optional read key — for
+  api and jobs.
 - **Security.** A vendor-trust dependency for member mobiles and the claim texts' names. MSG91 has ⛔ request signature on its delivery
   webhooks (static headers only) — row 6-37b's concern. ⛔ Secret, number or text is logged, alarmed or stored by the adapter.
 - **Residency.** MSG91 processes member names and mobiles; counsel clears it as a processor (Row 32 (g)); its data-processing terms are on
@@ -109,6 +120,9 @@ Load-bearing details:
     will be delivered and the second will be rejected"*) is a may-have-sent final.
   - A false content mismatch (MSG91's stored text form is undocumented) holds the suspicion / peer-mesh runs and is alarm-only on the
     api — until Row 32 (e) records a real response.
+  - Under the send-key arm (MG17 (a)), a template-read refusal is taken as PROOF the key cannot send — it refuses api boot and ends a
+    correction / closure / certificate row. That rests on S3 (an SMS-only key MAY read templates), which MSG91's docs do ⛔ settle ⇒
+    production uses that arm only once MSG91 confirms S3 in writing (Row 32 note (6.1)); until then, the separate read key.
   - Every alarm reaches the logs only until `onAlarm` is wired (Row 32 (h)).
 - **Migration / pivot.** A new gateway is a new adapter behind `SmsMessagingHandle`, a new ADR superseding this one, and its own
   roster row; the registries, the typed slots and the send core are unchanged.
@@ -137,3 +151,4 @@ Load-bearing details:
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-10-17 | (initial draft) | BigDev (Solo Builder) | Authored under Story 6.37 Task 0.4 (Decision `2026-10-17-345` MG13) |
+| 2026-10-17 | (draft — amended) | BigDev (Solo Builder) | Story 6.37 code review round 2 (P16; Decision `2026-10-17-346`): the classification order as built, the active-version inference (S1) stated, documented refusals only, the transient TTL, the api's full refusal list, both compose lines, the S3 dependency of the send-key arm |

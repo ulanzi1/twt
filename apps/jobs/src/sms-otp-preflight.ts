@@ -26,7 +26,7 @@ export interface SmsOtpPreflightLine {
   readonly configKey: string;
   /** `pass`, a pre-flight reason, or why it was ⛔ read (the id unset, or its config read failed). */
   readonly result: Msg91PreflightObservation['result'] | 'template_id_missing' | 'config_unavailable';
-  /** The checked version's informational fields (Row 32 (d) / (e) record them) — ⛔ its text. */
+  /** The informational fields of EVERY version MSG91 returned (review round 2 P4; Row 32 (d) / (e) record them) — ⛔ a text. */
   readonly observation: Msg91PreflightObservation | null;
 }
 

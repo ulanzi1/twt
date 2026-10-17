@@ -51,6 +51,7 @@ function realStack(answer: (path: string) => Promise<SmsFetchResponse>, signal: 
     clock: () => Date.now(),
     passTtlMs: 60_000,
     faultTtlMs: 5_000,
+    transientTtlMs: 60_000,
   });
   return { deps: { smsAppClient: client, resolveConfig: config, smsPreflight: { memo, readsWithSendKey: true } }, paths };
 }
@@ -119,6 +120,39 @@ describe('Story 6.37 review F2 — an unexplained template-read HTTP 404 is ⛔ 
     const { deps, paths } = realStack((path) => Promise.resolve(path === READ ? respond(401, { status: 'fail', hasError: true, code: '401' }) : SUCCESS));
     expect(await sendClaimCorrectionSms(deps, reminder)).toMatchObject({ kind: 'final', outcome: 'error', detail: 'auth:preflight' });
     expect(paths).toEqual([READ]);
+  });
+});
+
+describe('Story 6.37 review round 2 P1 — only the DOCUMENTED 200 status:"error" body is a proven refusal', () => {
+  it.each<[string, unknown]>([
+    ['200 {status:"fail"}', { status: 'fail', hasError: true, errors: 'Unauthorized' }],
+    ['200 {hasError:true} only', { hasError: true }],
+  ])('⭐ a template read answering %s ⇒ the 6.19b reminder FAILS OPEN (sent, warned) — ⛔ a final auth:preflight', async (_l, body) => {
+    const { deps, paths } = realStack((path) => Promise.resolve(path === READ ? respond(200, body) : SUCCESS));
+    expect(await sendClaimCorrectionSms(deps, reminder)).toMatchObject({
+      kind: 'final',
+      outcome: 'accepted',
+      preflightWarning: 'api_unavailable:preflight',
+    });
+    expect(paths).toEqual([READ, FLOW]);
+  });
+
+  it('the documented 200 {status:"error"} still ends the row auth:preflight (the positive control)', async () => {
+    const { deps, paths } = realStack((path) =>
+      Promise.resolve(path === READ ? respond(200, { status: 'error', hasError: true, errors: 'Template content type could not be fetched' }) : SUCCESS),
+    );
+    expect(await sendClaimCorrectionSms(deps, reminder)).toMatchObject({ kind: 'final', outcome: 'error', detail: 'auth:preflight' });
+    expect(paths).toEqual([READ]);
+  });
+});
+
+describe('Story 6.37 review round 2 D2 (`-346` decision 3) — a pre-flight transient is cached 60 s', () => {
+  it('⭐ two sends through an outage read MSG91 ONCE (⛔ a read per send) — both fail open', async () => {
+    const { deps, paths } = realStack((path) => Promise.resolve(path === READ ? respond(503, {}) : SUCCESS));
+    for (let i = 0; i < 2; i += 1) {
+      expect(await sendClaimCorrectionSms(deps, reminder)).toMatchObject({ outcome: 'accepted', preflightWarning: 'api_unavailable:preflight' });
+    }
+    expect(paths).toEqual([READ, FLOW, FLOW]);
   });
 });
 

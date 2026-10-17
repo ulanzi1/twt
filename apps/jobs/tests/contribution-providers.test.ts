@@ -225,6 +225,45 @@ describe('buildContributionProviderResolver — the boot-time wiring (review fin
     expect(wiring.smsPreflightReadsWithSendKey).toBe(false);
   });
 
+  it('round 2 P5 — the read-key NAME is ⛔ resolved while the SEND key is unset (⛔ memo is built — MG11: ⛔ a boot failure)', async () => {
+    process.env['SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME'] = 'sms-read-key';
+    resolveSecretValue.mockRejectedValue(new Error('secret manager outage'));
+
+    const wiring = await buildContributionProviderResolver({ pool });
+
+    expect(resolveSecretValue).not.toHaveBeenCalled();
+    expect(wiring.smsAppClient.isConfigured()).toBe(false);
+    expect(wiring.smsTemplateReader).toBe(wiring.smsAppClient);
+    expect(wiring.smsPreflightReadsWithSendKey).toBe(false); // the name says arm (b) — reported as such (Row 32 (b))
+  });
+
+  it('round 2 P10 — a read key EQUAL to the send key IS the send key (its refusal is then a proof: readsWithSendKey)', async () => {
+    process.env['SMS_GATEWAY_API_KEY_SECRET_NAME'] = 'sms-api-key';
+    process.env['SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME'] = 'sms-read-key';
+    resolveSecretValue.mockResolvedValue('same-key');
+
+    const wiring = await buildContributionProviderResolver({ pool });
+
+    expect(createSmsAppClient).toHaveBeenCalledTimes(1);
+    expect(wiring.smsTemplateReader).toBe(wiring.smsAppClient);
+    expect(wiring.smsPreflightReadsWithSendKey).toBe(true);
+  });
+
+  it('round 2 P5 — a read key that resolves BLANK is logged once at boot (⛔ a boot failure); its reader is unconfigured', async () => {
+    process.env['SMS_GATEWAY_API_KEY_SECRET_NAME'] = 'sms-api-key';
+    process.env['SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME'] = 'sms-read-key';
+    resolveSecretValue.mockImplementation(async (name: string) => (name === 'sms-read-key' ? '   ' : 'send-key'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const wiring = await buildContributionProviderResolver({ pool });
+      expect(error.mock.calls.filter((c) => /PREFLIGHT_KEY_SECRET_NAME is set but resolved to an empty value/.test(String(c[0])))).toHaveLength(1);
+      expect(wiring.smsPreflightReadsWithSendKey).toBe(false);
+      expect((wiring.smsTemplateReader as unknown as { isConfigured(): boolean }).isConfigured()).toBe(false);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it('⭐ 6.37 MG11 — in production, ONE boot line when the gateway is unconfigured (⛔ fail-fast); ⛔ line when configured', async () => {
     const before = process.env['NODE_ENV'];
     process.env['NODE_ENV'] = 'production';

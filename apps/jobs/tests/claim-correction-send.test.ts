@@ -28,7 +28,7 @@ import {
   type SmsGatewayMessage,
   type SmsMessagingHandle,
 } from '@twt/channels';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { correctionStaffPushAlert, sendClaimCorrectionSms } from '../src/scheduler/claim-correction-reminders.js';
 import { CLAIM_CORRECTION_SMS_TEMPLATES, renderClaimCorrectionSms } from '../src/scheduler/claim-correction-sms-templates.js';
@@ -42,6 +42,16 @@ const CLAIM = '3f2a9c1e-0b4d-4e6f-8a1b-2c3d4e5f6a7b';
 const TEMPLATE_ID = '64b0c0ffee0123456789abcd';
 const REMINDER_EN = CLAIM_CORRECTION_SMS_TEMPLATES.reminder.en;
 
+/**
+ * ⭐ AC5 (ii) — the "values rebuild the body" oracle runs INSIDE the fake `send`, where the core would catch an assertion's throw
+ * as an ordinary provider error (review round 2 P14) — so a miss is RECORDED there and asserted after every test, ⛔ thrown.
+ */
+const oracleMisses: string[] = [];
+afterEach(() => {
+  const misses = oracleMisses.splice(0);
+  expect(misses, 'the named values rebuild the body').toEqual([]);
+});
+
 function client(send: SmsMessagingHandle['send'], configured = true): SmsAppClient & { sent: string[]; messages: SmsGatewayMessage[] } {
   const sent: string[] = [];
   const messages: SmsGatewayMessage[] = [];
@@ -53,8 +63,8 @@ function client(send: SmsMessagingHandle['send'], configured = true): SmsAppClie
       send: (m) => {
         sent.push(m.body);
         messages.push(m);
-        // ⭐ AC5 (ii) — every send's named values rebuild its body through the registered text.
-        expect(substituteDltValues(REMINDER_EN.registeredText, REMINDER_EN.slots, m.values)).toBe(m.body);
+        // ⭐ AC5 (ii) — every send's named values rebuild its body through the registered text (recorded — P14).
+        if (substituteDltValues(REMINDER_EN.registeredText, REMINDER_EN.slots, m.values) !== m.body) oracleMisses.push(m.body);
         return send(m);
       },
     }),

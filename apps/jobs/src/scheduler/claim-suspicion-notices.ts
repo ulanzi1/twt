@@ -192,7 +192,11 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
     purposeGaps.set(purpose, gap);
     // Story 6.37 (MG5): ONE alarm per purpose a pre-flight holds — the config key and the reason (⛔ the id, ⛔ a number).
     if (gap !== null && gap.startsWith('config:sms_preflight_')) {
-      alarm(`[jobs] claim-suspicion-notice-sweep: the ${purpose} notices are HELD this run — ${gap} (the MSG91 template failed its pre-flight; roster Row 32)`);
+      // Round 2 P12 — a transient is ⛔ a template fault: say which, so the operator is ⛔ sent to fix a template that is fine.
+      const why = gap.startsWith('config:sms_preflight_transient')
+        ? 'the MSG91 template could ⛔ be read — retried next run; the CAUSE is in the msg91-preflight log line (a `config` cause is a misconfiguration, ⛔ a blip)'
+        : 'the MSG91 template failed its pre-flight';
+      alarm(`[jobs] claim-suspicion-notice-sweep: the ${purpose} notices are HELD this run — ${gap} (${why}; roster Row 32)`);
     }
   }
   const helplineByPariwar = new Map<string, string | null>();

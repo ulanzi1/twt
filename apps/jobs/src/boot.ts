@@ -126,7 +126,14 @@ import {
   createLocalFsClaimDocumentStorage,
 } from '@twt/platform-adapters';
 // Story 8.8 — the audit sink + the PII-safe rendered-message HMAC the live fan-out dispatches through.
-import { createAuditPort, createRenderedMessageHash } from '@twt/channels';
+import {
+  checkMsg91Template,
+  createAuditPort,
+  createMsg91PreflightMemo,
+  createRenderedMessageHash,
+  MSG91_PREFLIGHT_FAULT_TTL_MS,
+  MSG91_PREFLIGHT_PASS_TTL_MS,
+} from '@twt/channels';
 
 // Health endpoint + drain knobs. Ports/timeouts are operations policy; these are
 // sane placeholders overridable via env.
@@ -599,11 +606,30 @@ async function main(): Promise<void> {
     // push. ⚠ The family SMS is a DIRECT DLT send that FAILS CLOSED on a missing template id, an unset per-Pariwar
     // helpline number or an unconfigured gateway (T13) — ⛔ never the fixture that reports `accepted`. ⚠ The admin push
     // is INERT on day one (⛔ no admin client registers a device token).
+    // ⭐ Story 6.37 (MG5) — the ONE process MSG91 pre-flight memo every claim text reads (the send core, and the suspicion /
+    // peer-mesh holds): every send runs in a pg-boss CHILD, so ⛔ a per-run memo could reach it. A pass is reused 1 h, a fault
+    // 5 min, a transient ⛔ (`2026-10-17-345`). ⛔ Built while the gateway is unconfigured (the sweeps already hold on that).
+    const smsPreflight = contributionProviders.smsAppClient.isConfigured()
+      ? {
+          memo: createMsg91PreflightMemo({
+            check: (entry, templateId) =>
+              checkMsg91Template(contributionProviders.smsTemplateReader, entry, templateId, {
+                // ⛔ the authkey, ⛔ the text, ⛔ the id (I6) — the verdict and the informational fields only.
+                log: (o) => console.info('[jobs] msg91-preflight', JSON.stringify(o)),
+              }),
+            clock: () => Date.now(),
+            passTtlMs: MSG91_PREFLIGHT_PASS_TTL_MS,
+            faultTtlMs: MSG91_PREFLIGHT_FAULT_TTL_MS,
+          }),
+          readsWithSendKey: contributionProviders.smsPreflightReadsWithSendKey,
+        }
+      : undefined;
     const claimCorrectionDeps = {
       pool,
       encryption: jobsEncryption,
       smsAppClient: contributionProviders.smsAppClient,
       resolveConfig: resolveSmsDltConfig,
+      ...(smsPreflight !== undefined ? { smsPreflight } : {}),
       push: {
         audit: contributionNotifyDeps.audit,
         hashRendered: contributionNotifyDeps.hashRendered,

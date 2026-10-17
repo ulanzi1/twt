@@ -16,7 +16,15 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { SmsSendError, type SmsAppClient, type SmsGatewayMessage } from '@twt/channels';
+import {
+  createMsg91PreflightMemo,
+  SmsSendError,
+  substituteDltValues,
+  type Msg91PreflightEntry,
+  type Msg91PreflightResult,
+  type SmsAppClient,
+  type SmsGatewayMessage,
+} from '@twt/channels';
 import { bindScopedDb, claim, encryption, ids, nominee, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
@@ -24,12 +32,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
+import type { ClaimDltSmsPreflight } from '../src/scheduler/claim-dlt-sms-send.js';
 import {
   runSuspicionNoticeChild,
   runSuspicionNoticeSweep,
   type ClaimSuspicionNoticeDeps,
   type SuspicionNoticePayload,
 } from '../src/scheduler/claim-suspicion-notices.js';
+import { SUSPICION_NOTICE_SMS_TEMPLATES } from '../src/scheduler/suspicion-notice-sms-templates.js';
 import { cleanupClaims, encryptField, onOwnTx } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -263,7 +273,7 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
   /** A fresh Pariwar of the test's OWN — its sweeps see ⛔ other test's held claims. */
   const isolated = (): string => randomUUID();
 
-  function harness(o: { gateway?: (m: SmsGatewayMessage) => Promise<string>; config?: Record<string, string | null>; resolveConfig?: (key: string) => Promise<string | null>; allow?: readonly string[] } = {}): Harness {
+  function harness(o: { gateway?: (m: SmsGatewayMessage) => Promise<string>; config?: Record<string, string | null>; resolveConfig?: (key: string) => Promise<string | null>; allow?: readonly string[]; preflight?: ClaimDltSmsPreflight } = {}): Harness {
     const enqueued: Harness['enqueued'] = [];
     const sent: SmsGatewayMessage[] = [];
     const alarms: string[] = [];
@@ -275,6 +285,11 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
       messaging: () => ({
         send: (m) => {
           sent.push(m);
+          // ⭐ Story 6.37 AC5 (ii) — every send's named values rebuild its body through one of the six registered texts.
+          const rebuilt = Object.values(SUSPICION_NOTICE_SMS_TEMPLATES)
+            .flatMap((byLocale) => Object.values(byLocale))
+            .some((e) => e.slots.length === m.values.length && m.body === substituteDltValues(e.registeredText, e.slots, m.values));
+          expect(rebuilt, 'the named values rebuild the body').toBe(true);
           return (o.gateway ?? (() => Promise.resolve(`gw-${randomUUID()}`)))(m);
         },
       }),
@@ -287,13 +302,14 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
         o.resolveConfig ??
         (async (key) => {
           if (key in config) return config[key]!;
-          if (key.startsWith('sms.dlt.template_id.suspicion_notice.')) return 'TPL-SUSPICION';
+          if (key.startsWith('sms.dlt.template_id.suspicion_notice.')) return '64b0c0ffee0123456789a051';
           if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
           return null;
         }),
       now: () => now,
       onAlarm: (m) => alarms.push(m),
       pariwarAllowlist: [...(o.allow ?? [PARIWAR, SHIELDED])],
+      ...(o.preflight !== undefined ? { smsPreflight: o.preflight } : {}),
     };
     return { deps, enqueued, sent, alarms, config, configured, setNow: (d) => (now = d) };
   }
@@ -672,6 +688,102 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     expect(h.alarms.some((a) => a.includes('HELD') && a.includes(s))).toBe(true);
   });
 
+  // ── Story 6.37 (MG5) — the MSG91 pre-flight joins RB12's hold ─────────────────────────────────────────────────
+  const PASS: Msg91PreflightResult = { ok: true, notes: [] };
+  /** A memo answering `answer(call, entry)` — counting every read (1-based). */
+  function scripted(answer: (call: number, entry: Msg91PreflightEntry) => Msg91PreflightResult): ClaimDltSmsPreflight & { calls: () => number } {
+    let n = 0;
+    return {
+      memo: {
+        get: (entry) => {
+          n += 1;
+          return Promise.resolve(answer(n, entry));
+        },
+      },
+      readsWithSendKey: true,
+      calls: () => n,
+    };
+  }
+
+  it.each([
+    ['a template fault (content_mismatch)', { ok: false, transient: false, reason: 'content_mismatch' } as const, 'config:sms_preflight_content_mismatch'],
+    ['a transient with ⛔ usable pass', { ok: false, transient: true, reason: 'transient' } as const, 'config:sms_preflight_transient'],
+  ])('⭐ 6.37 AC9 (a) — %s HOLDS: ⛔ child, ⛔ row (⛔ slot used); ONE alarm per purpose naming the key + reason, ⛔ the id', async (_l, verdict, code) => {
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
+    const s = await refusedS(d);
+    const h = harness({ allow: [own], preflight: scripted(() => verdict) });
+    await tick(h, [s]);
+    expect(childrenFor(h, s)).toEqual([]);
+    expect(await rowsOf(s)).toEqual([]);
+    expect(h.sent).toEqual([]);
+    const key = 'sms.dlt.template_id.suspicion_notice.refusal_notice.hi';
+    expect(h.alarms.filter((a) => a.includes(`${code}:${key}`) && a.includes('suspicion_refusal notices are HELD'))).toHaveLength(1);
+    expect(JSON.stringify(h.alarms)).not.toContain('64b0c0ffee0123456789a051');
+    expect(JSON.stringify(h.alarms)).not.toMatch(/9876501111|9876503333/);
+  });
+
+  it('⭐ 6.37 AC9 (a) — the child\'s race guard reads the memo too: a template that broke after the sweep ⇒ `held_config`, ⛔ row', async () => {
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
+    const s = await refusedS(d);
+    let broken = false;
+    const h = harness({ allow: [own], preflight: scripted(() => (broken ? { ok: false, transient: false, reason: 'dlt_id_missing' } : PASS)) });
+    await runSuspicionNoticeSweep(h.deps, boss(h));
+    const [child] = childrenFor(h, s, 'suspicion_refusal');
+    broken = true;
+    expect(await runSuspicionNoticeChild(h.deps, child!.data, randomUUID())).toEqual({
+      status: 'held_config',
+      reason: 'config:sms_preflight_dlt_id_missing:sms.dlt.template_id.suspicion_notice.refusal_notice.hi',
+    });
+    expect(await rowsOf(s)).toEqual([]);
+  });
+
+  it('⭐ 6.37 AC9 (a2) — a fault first seen IN THE CORE (after the race guard) ⇒ final `preflight_<reason>` STORED (the 0155 grammar) + alarm, ⛔ sent', async () => {
+    const own = isolated();
+    const d = await seedDeath({ pariwarId: own });
+    const s = await refusedS(d);
+    let calls = 0;
+    let armed = false;
+    const h = harness({
+      allow: [own],
+      preflight: {
+        memo: { get: () => Promise.resolve(armed && ++calls === 2 ? { ok: false, transient: false, reason: 'sms_type_needs_unicode' } : PASS) },
+        readsWithSendKey: true,
+      },
+    });
+    await runSuspicionNoticeSweep(h.deps, boss(h));
+    const [child] = childrenFor(h, s, 'suspicion_refusal');
+    armed = true; // call 1 = the child's race guard (passes), call 2 = the core
+    expect(await runSuspicionNoticeChild(h.deps, child!.data, randomUUID())).toMatchObject({ status: 'sent', outcome: 'error' });
+    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({
+      outcome: 'error',
+      detail: 'dlt_template_not_approved:preflight_sms_type_needs_unicode',
+    });
+    expect(h.sent).toEqual([]);
+    expect(h.alarms.some((a) => a.includes('dlt_template_not_approved:preflight_sms_type_needs_unicode') && a.includes(s))).toBe(true);
+  });
+
+  it('⭐ 6.37 AC9 (c) / (d) — a PASS proceeds; ONE process memo ⇒ ONE MSG91 read per template however many claims and children (counted)', async () => {
+    const own = isolated();
+    const claims = [];
+    for (let i = 0; i < 3; i += 1) claims.push(await refusedS(await seedDeath({ pariwarId: own })));
+    const read = new Map<string, number>();
+    const memo = createMsg91PreflightMemo({
+      check: (entry) => (read.set(entry.text, (read.get(entry.text) ?? 0) + 1), Promise.resolve(PASS)),
+      clock: () => Date.now(),
+      passTtlMs: 60 * 60 * 1000,
+      faultTtlMs: 5 * 60 * 1000,
+    });
+    const h = harness({ allow: [own], preflight: { memo, readsWithSendKey: true } });
+    await tick(h, claims);
+    for (const cid of claims) expect((await rowsOf(cid)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'accepted' });
+    // the sweep reads each purpose's templates (refusal hi, closed hi, appeal hi + en) ONCE; the children's guards and sends are hits
+    expect([...read.values()]).toEqual([1, 1, 1, 1]);
+    await tick(h, claims);
+    expect([...read.values()]).toEqual([1, 1, 1, 1]);
+  });
+
   it('⚠ edge (i) — config vanishing between the child\'s check and the SEND ⇒ `error` + alarm (the shared core\'s fail-closed)', async () => {
     const d = await seedDeath();
     const s = await refusedS(d);
@@ -692,13 +804,20 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
 
   // ── the provider classification, the reclaim and the give-up ──────────────────────────────────────────────────
 
+  // SYNTHETIC MSG91 codes (Story 6.37 MG7): 202 = invalid mobile; a `carrier_reject` has ⛔ synchronous MSG91 code, so it is
+  // a pre-classified synthetic error.
+  const gatewayError = (code: string, status: number): SmsSendError =>
+    code === 'CARRIER_REJECT'
+      ? new SmsSendError('x', null, status, { errorClass: 'carrier_reject', code: 'synthetic' })
+      : new SmsSendError('x', code, status);
+
   it.each([
-    ['INVALID_NUMBER', 400, 'rejected_invalid_number'],
+    ['202', 200, 'rejected_invalid_number'],
     ['CARRIER_REJECT', 400, 'rejected_unreachable'],
   ])('%s ⇒ %s (final)', async (code, status, outcome) => {
     const d = await seedDeath();
     const s = await refusedS(d);
-    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', code, status)) });
+    const h = harness({ gateway: () => Promise.reject(gatewayError(code, status)) });
     await tick(h, [s]);
     expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome });
   });
@@ -840,7 +959,7 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
         if (failTemplate && key === templateKey) throw Object.assign(new Error('unavailable'), { code: 14 });
         if (failHelplineOf !== null && key === `sms.claim_correction.helpline_number.${failHelplineOf}`) throw Object.assign(new Error('denied'), { code: 7 });
         if (key in h.config) return h.config[key]!;
-        if (key.startsWith('sms.dlt.template_id.suspicion_notice.')) return 'TPL-SUSPICION';
+        if (key.startsWith('sms.dlt.template_id.suspicion_notice.')) return '64b0c0ffee0123456789a051';
         if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
         return null;
       },
@@ -904,17 +1023,17 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
   });
 
   it.each([
-    ['INVALID_NUMBER', 400, 'rejected_invalid_number', 'invalid_number:INVALID_NUMBER', false],
-    ['CARRIER_REJECT', 400, 'rejected_unreachable', 'carrier_reject:CARRIER_REJECT', false],
-    ['E002', 400, 'error', 'dlt_template_not_approved:E002', true],
-    ['AUTH_FAILED', 401, 'error', 'auth:AUTH_FAILED', true],
+    ['202', 200, 'rejected_invalid_number', 'invalid_number:202', false],
+    ['CARRIER_REJECT', 400, 'rejected_unreachable', 'carrier_reject:synthetic', false],
+    ['400', 200, 'error', 'dlt_template_not_approved:400', true],
+    ['201', 200, 'error', 'auth:201', true],
     ['9876543210', 400, 'error', 'unknown:unknown', true],
     [' +91 98765 43210', 418, 'error', 'unknown:unknown', true],
     ['E999', 400, 'error', 'unknown:E999', true],
   ] as const)('⭐ RN4 / RN5 — gateway %s (%i) ⇒ %s with the BUILT detail %s — the finalise lands (⛔ a CHECK failure after a send)', async (code, status, outcome, detail, alarmed) => {
     const d = await seedDeath();
     const s = await refusedS(d);
-    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', code, status)) });
+    const h = harness({ gateway: () => Promise.reject(gatewayError(code, status)) });
     await tick(h, [s]);
     expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome, detail });
     const mine = h.alarms.filter((a) => a.includes(s));
@@ -939,7 +1058,7 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
   });
 
   it.each([
-    ['RATE_LIMIT', 429, 'rate_limited:RATE_LIMIT'],
+    ['306', 200, 'api_unavailable:306'],
     ['9876543210', 429, 'rate_limited:unknown'],
     ['+91 98765 43210', 503, 'api_unavailable:unknown'],
   ] as const)('⭐ RN5 — a TRANSIENT %s (%i) ⇒ the note stores %s; the thrown error and the alarms carry the BUILT detail', async (code, status, detail) => {

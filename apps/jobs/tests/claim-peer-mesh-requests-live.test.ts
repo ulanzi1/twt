@@ -16,7 +16,14 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { type SmsAppClient, type SmsGatewayMessage } from '@twt/channels';
+import {
+  createMsg91PreflightMemo,
+  substituteDltValues,
+  type Msg91PreflightEntry,
+  type Msg91PreflightResult,
+  type SmsAppClient,
+  type SmsGatewayMessage,
+} from '@twt/channels';
 import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaires, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
@@ -24,14 +31,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
-import { helplineNotCallbackNumberWarning } from '../src/scheduler/claim-dlt-sms-send.js';
+import { helplineNotCallbackNumberWarning, type ClaimDltSmsPreflight } from '../src/scheduler/claim-dlt-sms-send.js';
 import {
   runPeerMeshRequestChild,
   runPeerMeshRequestSweep,
   type ClaimPeerMeshRequestDeps,
   type PeerMeshRequestPayload,
 } from '../src/scheduler/claim-peer-mesh-requests.js';
-import { renderPeerMeshRequest } from '../src/scheduler/peer-mesh-sms-templates.js';
+import { PEER_MESH_REQUEST_SMS_TEMPLATES, renderPeerMeshRequest } from '../src/scheduler/peer-mesh-sms-templates.js';
 import { onOwnTx } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -203,6 +210,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     gatewayConfigured?: boolean;
     /** The gateway's send (default: accepted with a fresh id). */
     send?: (m: SmsGatewayMessage) => Promise<string>;
+    /** Story 6.37 (MG5) — the process pre-flight memo (default: ⛔ pre-flight). */
+    preflight?: ClaimDltSmsPreflight;
   }
 
   function harness(w: { pid: string }, o: HarnessOpts = {}): Harness {
@@ -215,6 +224,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       messaging: () => ({
         send: (m) => {
           sent.push(m);
+          // ⭐ Story 6.37 AC5 (ii) — every send's named values rebuild its body through its locale's registered text.
+          const entry = Object.values(PEER_MESH_REQUEST_SMS_TEMPLATES).find((e) => m.body === substituteDltValues(e.registeredText, e.slots, m.values));
+          expect(entry, 'the named values rebuild the body').toBeDefined();
           return o.send ? o.send(m) : Promise.resolve(`gw-${randomUUID()}`);
         },
       }),
@@ -226,7 +238,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       resolveConfig: async (key) => {
         if (o.throwOn !== undefined && key.startsWith(o.throwOn)) throw Object.assign(new Error('secret manager down'), { code: 14 });
         if (o.config && key in o.config) return o.config[key]!;
-        if (key.startsWith('sms.dlt.template_id.peer_mesh.request.')) return 'TPL-PEER';
+        if (key.startsWith('sms.dlt.template_id.peer_mesh.request.')) return '64b0c0ffee0123456789a0e1';
         if (key.startsWith('sms.claim_correction.helpline_number.')) return o.helpline === undefined ? HELPLINE : o.helpline;
         return null;
       },
@@ -235,6 +247,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       pariwarAllowlist: [w.pid],
       appLinksBaseUrl: o.appLinksBaseUrl ?? ORIGIN,
       ...(o.registry !== undefined ? { questionnaireRegistry: o.registry } : {}),
+      ...(o.preflight !== undefined ? { smsPreflight: o.preflight } : {}),
     };
     return { deps, enqueued, sent, alarms, setNow: (d) => (now = d) };
   }
@@ -566,7 +579,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       pariwarAllowlist: [low!.pid, high!.pid],
       resolveConfig: async (key) => {
         if (key === `sms.claim_correction.helpline_number.${low!.pid}`) return null; // the LOW claim's Pariwar is held
-        if (key.startsWith('sms.dlt.template_id.peer_mesh.request.')) return 'TPL-PEER';
+        if (key.startsWith('sms.dlt.template_id.peer_mesh.request.')) return '64b0c0ffee0123456789a0e1';
         if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
         return null;
       },
@@ -810,5 +823,126 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       status: 'deferred_quiet_hours',
       startAfter: new Date('2026-10-16T03:30:30.000Z'),
     });
+  });
+  // ── Story 6.37 (MG5, MG16 (i)) — the MSG91 pre-flight hold, the in-flight race, `beforeSend` ─────────────────────
+
+  const PASS: Msg91PreflightResult = { ok: true, notes: [] };
+  const FAULT: Msg91PreflightResult = { ok: false, transient: false, reason: 'content_mismatch' };
+  const TRANSIENT: Msg91PreflightResult = { ok: false, transient: true, reason: 'transient' };
+  const TEMPLATE_ID = '64b0c0ffee0123456789a0e1';
+  /** A memo answering `answer(call, entry)` — counting every read (1-based). */
+  function scripted(answer: (call: number, entry: Msg91PreflightEntry) => Msg91PreflightResult): ClaimDltSmsPreflight & { calls: () => number } {
+    let n = 0;
+    return {
+      memo: {
+        get: (entry) => {
+          n += 1;
+          return Promise.resolve(answer(n, entry));
+        },
+      },
+      readsWithSendKey: true,
+      calls: () => n,
+    };
+  }
+
+  it.each([
+    ['a template fault (content_mismatch)', FAULT, 'config:sms_preflight_content_mismatch:sms.dlt.template_id.peer_mesh.request.hi'],
+    ['a transient with ⛔ usable pass', TRANSIENT, 'config:sms_preflight_transient:sms.dlt.template_id.peer_mesh.request.hi'],
+  ] as const)('⭐ 6.37 AC9 (a) — %s HOLDS the sweep AND the child: ⛔ ping begun, ⛔ slot used; the alarm names the key + reason, ⛔ the id', async (_l, verdict, reason) => {
+    const w = await world();
+    const h = harness(w, { registry: [CLEARED], preflight: scripted(() => verdict) });
+    expect(await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID())).toEqual({ status: 'held_config', reason });
+    expect((await tick(h, w)).swept).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    expect((await rows(w)).every((r) => r.send_outcome === null && r.attempt_count === 0)).toBe(true);
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms.some((a) => a.includes(reason) && a.includes(w.claimCaseId))).toBe(true);
+    expect(JSON.stringify(h.alarms)).not.toContain(TEMPLATE_ID);
+    await expectIdsOnly(h, w);
+  });
+
+  it('⭐ 6.37 AC9 (a) — the check sits in `pariwarConfig`: a broken `en` template holds ⛔ Hindi Pariwar (and holds the English one)', async () => {
+    const enBroken = scripted((_n, entry) => (entry.text === PEER_MESH_REQUEST_SMS_TEMPLATES.en.registeredText ? FAULT : PASS));
+    const hi = await world({ locale: 'hi', selected: 1 });
+    const hHi = harness(hi, { registry: [CLEARED], preflight: enBroken });
+    await tick(hHi, hi);
+    expect((await rows(hi))[0]).toMatchObject({ send_outcome: 'accepted' });
+    const en = await world({ locale: 'en', selected: 1 });
+    const hEn = harness(en, { registry: [CLEARED], preflight: enBroken });
+    expect((await tick(hEn, en)).swept).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    expect((await rows(en))[0]?.send_outcome).toBeNull();
+  });
+
+  it('6.37 — a PASS carrying the `sms_type_unicode_for_gsm7` note proceeds (⛔ a fault)', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED], preflight: scripted(() => ({ ok: true, notes: ['sms_type_unicode_for_gsm7'] })) });
+    await tick(h, w);
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'accepted' });
+  });
+
+  it('⭐ 6.37 AC9 (d) — ONE process memo: ONE MSG91 read for the template across the sweep, the child\'s race guard and every send (counted)', async () => {
+    const w = await world({ selected: 3 });
+    let reads = 0;
+    const memo = createMsg91PreflightMemo({
+      check: () => ((reads += 1), Promise.resolve(PASS)),
+      clock: () => Date.now(),
+      passTtlMs: 60 * 60 * 1000,
+      faultTtlMs: 5 * 60 * 1000,
+    });
+    const h = harness(w, { registry: [CLEARED], preflight: { memo, readsWithSendKey: true } });
+    await tick(h, w);
+    expect((await rows(w)).filter((r) => r.send_outcome === 'accepted')).toHaveLength(3);
+    expect(h.sent).toHaveLength(3);
+    expect(reads).toBe(1);
+  });
+
+  it('⭐ 6.37 AC9 (a2) — a fault first seen IN THE CORE (the in-flight race) ⇒ the final `preflight_<reason>` is stored and P1 STOPS the child', async () => {
+    const w = await world({ selected: 2 });
+    // call 1 = the child's race guard (passes); call 2 = the core, for the first ping (the template broke in between)
+    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n === 1 ? PASS : FAULT)) });
+    const r = await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID());
+    expect(r).toEqual({ status: 'held_config', reason: 'dlt_template_not_approved:preflight_content_mismatch' });
+    const after = await rows(w);
+    expect(after.filter((x) => x.send_outcome === 'error' && x.detail === 'dlt_template_not_approved:preflight_content_mismatch')).toHaveLength(1);
+    expect(after.filter((x) => x.send_outcome === null)).toHaveLength(1); // ⛔ further ping begun
+    expect(h.sent).toHaveLength(0);
+  });
+
+  it('6.37 AC9 (a2) — a transient with ⛔ usable pass IN THE CORE ⇒ a transient (pg-boss retries), ⛔ sent', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n === 1 ? PASS : TRANSIENT)) });
+    await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-t')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', detail: 'api_unavailable:preflight' });
+    expect(h.sent).toHaveLength(0);
+  });
+
+  it('⭐ 6.37 AC9 (e) / MG16 (i) — 20:00 IST crossed DURING the core\'s pre-flight ⇒ `beforeSend` defers: ⛔ sent, the child comes back at 09:00', async () => {
+    const w = await world({ selected: 1 });
+    const holder: { h?: Harness } = {};
+    const preflight = scripted((n) => {
+      if (n === 2) holder.h!.setNow(AFTER_CUTOFF); // the core's read is slow — the window closes
+      return PASS;
+    });
+    const h = harness(w, { registry: [CLEARED], preflight });
+    holder.h = h;
+    h.setNow(BEFORE_CUTOFF);
+    expect(await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-night')).toMatchObject({ status: 'deferred_quiet_hours', startAfter: NEXT_MORNING });
+    expect(h.sent).toHaveLength(0);
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', claimed_by_job: 'job-night' });
+    expect(h.enqueued).toEqual([expect.objectContaining({ queue: SMS_QUEUE, options: expect.objectContaining({ startAfter: NEXT_MORNING }) })]);
+  });
+
+  it('⭐ 6.37 AC9 (e) / MG16 (i) — the lease margin gone DURING the core\'s pre-flight ⇒ `beforeSend` defers: ⛔ sent (left to the re-claim), a counted transient', async () => {
+    const w = await world({ selected: 1 });
+    const holder: { h?: Harness } = {};
+    const preflight = scripted((n) => {
+      if (n === 2) holder.h!.setNow(new Date(DAYTIME.getTime() + 11 * 60_000));
+      return PASS;
+    });
+    const h = harness(w, { registry: [CLEARED], preflight });
+    holder.h = h;
+    await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-slow')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(h.sent).toHaveLength(0);
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', attempt_count: 1, claimed_by_job: 'job-slow' });
+    expect(h.alarms.some((a) => a.includes('its lease lapsed (or nearly) before the send (after the pre-flight)'))).toBe(true);
   });
 });

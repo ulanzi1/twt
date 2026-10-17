@@ -21,6 +21,7 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
+import type { ClaimDltSmsPreflight } from '../src/scheduler/claim-dlt-sms-send.js';
 import { runClosureNoticeChild, runCorrectionClosureSweep, type ClosureNoticePayload } from '../src/scheduler/claim-correction-closure.js';
 import type { ClaimCorrectionReminderDeps } from '../src/scheduler/claim-correction-reminders.js';
 import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim, type SeedReturnedClaimOptions } from './_claim-correction-seed.js';
@@ -58,7 +59,7 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
     alarms: string[];
     setNow: (d: Date) => void;
   }
-  function harness(helpline: string = HELPLINE): Harness {
+  function harness(helpline: string = HELPLINE, preflight?: ClaimDltSmsPreflight): Harness {
     const enqueued: Harness['enqueued'] = [];
     const sent: SmsGatewayMessage[] = [];
     const alarms: string[] = [];
@@ -78,12 +79,13 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
       smsAppClient,
       resolveConfig: (key) =>
         Promise.resolve(
-          key.startsWith('sms.dlt.template_id.claim_correction.') ? 'TPL-1' : key === `sms.claim_correction.helpline_number.${PARIWAR}` ? helpline : null,
+          key.startsWith('sms.dlt.template_id.claim_correction.') ? '64b0c0ffee0123456789a001' : key === `sms.claim_correction.helpline_number.${PARIWAR}` ? helpline : null,
         ),
       push: { audit: () => Promise.resolve(), hashRendered: () => Promise.resolve('a'.repeat(64)) },
       now: () => now,
       onAlarm: (m) => alarms.push(m),
       pariwarAllowlist: [PARIWAR],
+      ...(preflight !== undefined ? { smsPreflight: preflight } : {}),
     };
     return { deps, enqueued, sent, alarms, setNow: (d) => (now = d) };
   }
@@ -293,6 +295,24 @@ describe.skipIf(!hasDatabase)('Story 6.19c — the claim-correction closure swee
     expect(warnings[0]).toContain(PARIWAR);
     expect(warnings[0]).toContain('closure notice');
     expect(warnings[0]).not.toContain('+911800123456'); // ⛔ the number itself
+    expect(await rowsOf(s.claimCaseId, ['closure_notice'])).toEqual([expect.objectContaining({ outcome: 'accepted' })]);
+  });
+
+  it('⭐ Story 6.37 (MG5, AC9 (b) / (b2)) — an UNPROVEN pre-flight fault: the closure notice FAILS OPEN — SENT, `accepted`, ONE warning (⛔ a hold, ⛔ lost)', async () => {
+    const s = await seed({ contactLocale: 'en' });
+    await reach(s);
+    await request(s);
+    await approve(s);
+    const h = harness(HELPLINE, { memo: { get: () => Promise.resolve({ ok: false, transient: false, reason: 'content_mismatch' }) }, readsWithSendKey: true });
+    await sweepOn(h, day(s.day0, 97));
+    const notices = h.enqueued.filter((e) => e.queue === 'claim.correction.closure_notice');
+    expect(notices).toHaveLength(1);
+    expect(await runClosureNoticeChild(h.deps, notices[0]!.data as JobEnvelope<ClosureNoticePayload>, 'job-p1')).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(h.sent).toHaveLength(1);
+    const warnings = h.alarms.filter((a) => a.includes('dlt_template_not_approved:preflight_content_mismatch'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('closure notice');
+    expect(warnings[0]).toContain('sms.dlt.template_id.claim_correction.closure_notice.en');
     expect(await rowsOf(s.claimCaseId, ['closure_notice'])).toEqual([expect.objectContaining({ outcome: 'accepted' })]);
   });
 

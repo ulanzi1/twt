@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import {
   SmsSendError,
   type AuditPort,
+  type Msg91PreflightResult,
   type ChannelProvider,
   type ProviderRegistry,
   type RenderedMessage,
@@ -35,6 +36,7 @@ import {
   type CorrectionFamilySmsPayload,
   type CorrectionStaffPushPayload,
 } from '../src/scheduler/claim-correction-reminders.js';
+import type { ClaimDltSmsPreflight } from '../src/scheduler/claim-dlt-sms-send.js';
 import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim, type SeedReturnedClaimOptions } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -98,6 +100,8 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
       encryption?: encryption.FieldCryptoDeps;
       runLimit?: number;
       maxRuns?: number;
+      /** Story 6.37 (MG5) — the process pre-flight memo (default: ⛔ pre-flight). */
+      preflight?: ClaimDltSmsPreflight;
       /** The sweep's Pariwars (default: this suite's three) — a test with far-future clocks takes its OWN Pariwar. */
       allowlist?: readonly string[];
     } = {},
@@ -124,7 +128,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
       smsAppClient,
       resolveConfig: async (key) => {
         if (opts.config && key in opts.config) return opts.config[key]!;
-        if (key.startsWith('sms.dlt.template_id.claim_correction.')) return 'TPL-1';
+        if (key.startsWith('sms.dlt.template_id.claim_correction.')) return '64b0c0ffee0123456789a001';
         if (key === `sms.claim_correction.helpline_number.${PARIWAR}`) return HELPLINE;
         return null;
       },
@@ -140,6 +144,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
       now: () => now,
       onAlarm: (m) => alarms.push(m),
       pariwarAllowlist: opts.allowlist ?? [PARIWAR, OTHER_PARIWAR, STAFF_PARIWAR],
+      ...(opts.preflight !== undefined ? { smsPreflight: opts.preflight } : {}),
     };
     return { deps, enqueued, sent, alarms, audits, setNow: (d) => (now = d) };
   }
@@ -412,7 +417,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     const s = await seed({ nomineeMobiles: ['9812345678', '9812345679'] });
     const { day0 } = await runOf(s.runId!);
     const h = harness({
-      gateway: (m) => Promise.reject(new SmsSendError('x', m.to.endsWith('78') ? 'CARRIER_REJECT' : 'INVALID_NUMBER', 400)),
+      gateway: (m) => Promise.reject(m.to.endsWith('78') ? new SmsSendError('x', null, 400, { errorClass: 'carrier_reject', code: 'synthetic' }) : new SmsSendError('x', '202', 200)),
     });
     h.setNow(tenAmIst(cycleCalendar.addCalendarDays(day0, 1)));
     await runCorrectionReminderSweep(h.deps, boss(h));
@@ -602,7 +607,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
   it('⭐ `-271` §1 / the reset — a new number behind a key is detected by version, then hash; the SAME number resets ⛔ nothing', async () => {
     const s = await seed({ nomineeMobiles: ['9812345678'] });
     const { day0 } = await runOf(s.runId!);
-    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', 'INVALID_NUMBER', 400)) });
+    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', '202', 200)) });
     h.setNow(tenAmIst(cycleCalendar.addCalendarDays(day0, 1)));
     await runCorrectionReminderSweep(h.deps, boss(h));
     await child(h, smsFor(h, s.claimCaseId)[0]!);
@@ -628,7 +633,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     const ADDRESS = 'SENTINEL-ADDRESS-6-19b';
     const s = await seed({ nomineeMobiles: [MOBILE], address: ADDRESS, contactLocale: 'en' });
     const { day0 } = await runOf(s.runId!);
-    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', 'AUTH_FAILED', 401)) });
+    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', '201', 200)) });
     h.setNow(tenAmIst(cycleCalendar.addCalendarDays(day0, 1)));
     await runCorrectionReminderSweep(h.deps, boss(h));
     await child(h, smsFor(h, s.claimCaseId)[0]!);
@@ -637,6 +642,48 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     expect(surfaces).not.toContain(ADDRESS);
     expect(h.sent[0]!.body.startsWith('Claim ')).toBe(true); // `en` per contact_locale
   });
+  // ── Story 6.37 (MG5) — ⛔ hold on 6.19b: a PROVEN pre-flight fault ends the row as a missing id does; the rest FAIL OPEN ──
+  const fixed = (verdict: Msg91PreflightResult): ClaimDltSmsPreflight => ({ memo: { get: () => Promise.resolve(verdict) }, readsWithSendKey: true });
+
+  it('⭐ 6.37 AC9 (b) — a PROVEN fault (`auth` from the send key) ends the row `error` + alarm — the SAME kind of outcome a missing id gives today (side by side)', async () => {
+    const proven = await seed({ nomineeMobiles: ['9812300001'] });
+    const missing = await seed({ nomineeMobiles: ['9812300002'] });
+    const outcomeOf = async (s: Awaited<ReturnType<typeof seed>>, h: Harness) => {
+      const { day0 } = await runOf(s.runId!);
+      h.setNow(tenAmIst(day(day0, 1)));
+      await runCorrectionReminderSweep(h.deps, boss(h));
+      await child(h, smsFor(h, s.claimCaseId)[0]!);
+      return (await rowsOf(s.claimCaseId)).find((r) => r.purpose === 'family_sms')!;
+    };
+    const hProven = harness({ preflight: fixed({ ok: false, transient: false, reason: 'auth' }) });
+    const hMissing = harness({ config: { 'sms.dlt.template_id.claim_correction.reminder.hi': null, 'sms.dlt.template_id.claim_correction.reminder.en': null } });
+    const a = await outcomeOf(proven, hProven);
+    const b = await outcomeOf(missing, hMissing);
+    expect(a).toMatchObject({ outcome: 'error', detail: 'auth:preflight' });
+    expect(b).toMatchObject({ outcome: 'error', detail: 'config:dlt_template_id_missing' });
+    expect(hProven.sent).toEqual([]);
+    expect(hProven.alarms.some((m) => m.includes('auth:preflight') && m.includes(proven.claimCaseId))).toBe(true);
+  });
+
+  it.each([
+    ['content_mismatch', { ok: false, transient: false, reason: 'content_mismatch' } as const, 'dlt_template_not_approved:preflight_content_mismatch'],
+    ['dlt_id_missing', { ok: false, transient: false, reason: 'dlt_id_missing' } as const, 'dlt_template_not_approved:preflight_dlt_id_missing'],
+    ['sms_type_needs_unicode', { ok: false, transient: false, reason: 'sms_type_needs_unicode' } as const, 'dlt_template_not_approved:preflight_sms_type_needs_unicode'],
+    ['a transient', { ok: false, transient: true, reason: 'transient' } as const, 'api_unavailable:preflight'],
+  ])('⭐ 6.37 AC9 (b) / (b2) — %s ⇒ FAIL OPEN: SENT, recorded `accepted`, and the caller alarms the warning (key + class, ⛔ the id)', async (_l, verdict, warning) => {
+    const s = await seed({ nomineeMobiles: ['9812300003'] });
+    const { day0 } = await runOf(s.runId!);
+    const h = harness({ preflight: fixed(verdict) });
+    h.setNow(tenAmIst(day(day0, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    await child(h, smsFor(h, s.claimCaseId)[0]!);
+    expect((await rowsOf(s.claimCaseId)).find((r) => r.purpose === 'family_sms')).toMatchObject({ outcome: 'accepted' });
+    expect(h.sent).toHaveLength(1);
+    const line = h.alarms.find((m) => m.includes(warning));
+    expect(line).toMatch(/correction reminder — SENT, but the MSG91 pre-flight of sms\.dlt\.template_id\.claim_correction\.reminder\.(hi|en) did not pass/);
+    expect(line).not.toContain('64b0c0ffee0123456789a001');
+  });
+
   // ── Third-pass review (2026-10-01) ─────────────────────────────────────────────────────────────────────────────
 
   it('⭐ a back-to-back DOUBLE sweep before any child runs enqueues the slot twice — and the table still makes it ONE send', async () => {
@@ -679,7 +726,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     const s = await seed({ nomineeMobiles: ['9812345678'], claimantMobile: A });
     const { day0 } = await runOf(s.runId!);
     const h = harness({
-      gateway: (m) => (m.to === `+91${A}` ? Promise.reject(new SmsSendError('x', 'INVALID_NUMBER', 400)) : Promise.resolve('gw-ok')),
+      gateway: (m) => (m.to === `+91${A}` ? Promise.reject(new SmsSendError('x', '202', 200)) : Promise.resolve('gw-ok')),
     });
     h.setNow(tenAmIst(day(day0, 1)));
     await runCorrectionReminderSweep(h.deps, boss(h));
@@ -948,7 +995,7 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     const s = await seed({ nomineeMobiles: ['9812345678'], claimantMobile: A });
     const { day0 } = await runOf(s.runId!);
     const h = harness({
-      gateway: (m) => (m.to === `+91${A}` ? Promise.reject(new SmsSendError('x', 'INVALID_NUMBER', 400)) : Promise.resolve('gw-ok')),
+      gateway: (m) => (m.to === `+91${A}` ? Promise.reject(new SmsSendError('x', '202', 200)) : Promise.resolve('gw-ok')),
     });
     h.setNow(tenAmIst(day(day0, 1)));
     await runCorrectionReminderSweep(h.deps, boss(h));

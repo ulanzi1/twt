@@ -20,6 +20,7 @@ import {
   type ClaimCertificateReminderDeps,
 } from '../src/scheduler/claim-certificate-reminders.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
+import type { ClaimDltSmsPreflight } from '../src/scheduler/claim-dlt-sms-send.js';
 import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -212,7 +213,7 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
     alarms: string[];
     setNow: (d: Date) => void;
   }
-  function harness(o: { gateway?: (m: SmsGatewayMessage) => Promise<string>; config?: Record<string, string | null>; encryption?: encryption.FieldCryptoDeps } = {}): Harness {
+  function harness(o: { gateway?: (m: SmsGatewayMessage) => Promise<string>; config?: Record<string, string | null>; encryption?: encryption.FieldCryptoDeps; preflight?: ClaimDltSmsPreflight } = {}): Harness {
     const enqueued: Harness['enqueued'] = [];
     const sent: SmsGatewayMessage[] = [];
     const alarms: string[] = [];
@@ -232,13 +233,14 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
       smsAppClient,
       resolveConfig: async (key) => {
         if (o.config && key in o.config) return o.config[key]!;
-        if (key.startsWith('sms.dlt.template_id.claim_correction.')) return 'TPL-CERT';
+        if (key.startsWith('sms.dlt.template_id.claim_correction.')) return '64b0c0ffee0123456789a0c1';
         if (key === `sms.claim_correction.helpline_number.${PARIWAR}`) return HELPLINE;
         return null;
       },
       now: () => now,
       onAlarm: (m) => alarms.push(m),
       pariwarAllowlist: [PARIWAR],
+      ...(o.preflight !== undefined ? { smsPreflight: o.preflight } : {}),
     };
     return { deps, enqueued, sent, alarms, setNow: (d) => (now = d) };
   }
@@ -295,6 +297,23 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
     expect((await rowsOf(s.cid)).filter((r) => r.purpose === 'family_sms').map((r) => [r.outcome, r.detail])).toEqual([['accepted', null]]);
   });
 
+  it('⭐ Story 6.37 (MG5, AC9 (b) / (b2)) — a pre-flight TRANSIENT: the certificate reminder FAILS OPEN — SENT, `accepted`, ONE warning', async () => {
+    const s = await seedWait({ mobiles: ['9812345678'], locale: 'en' });
+    const d0 = todayIst();
+    const h = harness({ preflight: { memo: { get: () => Promise.resolve({ ok: false, transient: true, reason: 'transient' }) }, readsWithSendKey: true } });
+    h.setNow(tenAmIst(day(d0, 1)));
+    await runCertificateReminderSweep(h.deps, boss(h));
+    const jobs = smsFor(h, s.cid);
+    expect(jobs).toHaveLength(1);
+    expect(await child(h, jobs[0]!)).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(h.sent).toHaveLength(1);
+    const warnings = h.alarms.filter((a) => a.includes('api_unavailable:preflight'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('certificate reminder');
+    expect(warnings[0]).toContain('sms.dlt.template_id.claim_correction.certificate_reminder.en');
+    expect(warnings[0]).not.toContain('64b0c0ffee0123456789a0c1');
+  });
+
   it('⭐ a rejected certificate: the sweep OPENS the run and enqueues day 1 the NEXT MORNING to each person on the contact record; the child sends the certificate text (ids-only payload, ⛔ no name)', async () => {
     const s = await seedWait({ mobiles: ['9812345678', '9898989898'], locale: 'en' });
     const d0 = todayIst();
@@ -314,7 +333,7 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
     expect(h.sent).toHaveLength(2);
     const ref = claim.claimShortReference(s.cid);
     for (const m of h.sent) {
-      expect(m.dltTemplateId).toBe('TPL-CERT');
+      expect(m.templateId).toBe('64b0c0ffee0123456789a0c1');
       expect(m.body).toBe(
         `Claim ${ref}: your family's claim still needs a death certificate that clearly shows the date of death. Please send it in the app, or call the helpline on ${HELPLINE}. Your claim is still open.`,
       );
@@ -376,7 +395,7 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
   it('⭐ a dead number ⇒ `rejected_invalid_number`; at found-dead + 7 the District Admin\'s chase is RECORDED (⛔ no push); on + 13 the escalation RECORD', async () => {
     const s = await seedWait();
     const d0 = todayIst();
-    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', 'INVALID_NUMBER', 400)) });
+    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', '202', 200)) });
     h.setNow(tenAmIst(day(d0, 1)));
     await runCertificateReminderSweep(h.deps, boss(h));
     for (const j of smsFor(h, s.cid)) expect(await child(h, j)).toEqual({ status: 'sent', outcome: 'rejected_invalid_number' });
@@ -395,7 +414,7 @@ describe.skipIf(!hasDatabase)('Story 6.19d — the certificate reminder (live DB
   it('⭐ a delivered letter stops the SMS to that number — the sweep plans ⛔ no further text', async () => {
     const s = await seedWait();
     const d0 = todayIst();
-    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', 'INVALID_NUMBER', 400)) });
+    const h = harness({ gateway: () => Promise.reject(new SmsSendError('x', '202', 200)) });
     h.setNow(tenAmIst(day(d0, 1)));
     await runCertificateReminderSweep(h.deps, boss(h));
     const [first] = smsFor(h, s.cid);

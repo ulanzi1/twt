@@ -43,8 +43,9 @@ const ENV_KEYS = [
   'SMS_GATEWAY_API_URL',
   'SMS_GATEWAY_API_KEY_SECRET_NAME',
   'SMS_GATEWAY_API_KEY_ENV_FALLBACK',
+  'SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME',
+  'SMS_GATEWAY_PREFLIGHT_KEY_ENV_FALLBACK',
   'SMS_GATEWAY_SENDER_ID_SECRET_NAME',
-  'SMS_GATEWAY_SENDER_ID_ENV_FALLBACK',
   'PUSH_FIREBASE_SA_SECRET_NAME',
 ] as const;
 
@@ -145,19 +146,25 @@ describe('buildContributionProviderResolver — the boot-time wiring (review fin
     });
     createWhatsappAppCache.mockReturnValue({ messagingFor: vi.fn() });
     createTelegramAppCache.mockReturnValue({ messagingFor: vi.fn() });
-    createSmsAppClient.mockImplementation((config: { apiUrl: string; apiKey: string; senderId: string }) => ({
-      isConfigured: () => Boolean(config.apiUrl.trim() && config.apiKey.trim() && config.senderId.trim()),
+    createSmsAppClient.mockImplementation((config: { apiOrigin: string; authkey: string }) => ({
+      isConfigured: () => Boolean(config.apiOrigin.trim() && config.authkey.trim()),
       messaging: vi.fn(),
+      readTemplateVersions: vi.fn(),
     }));
     createContributionProviderResolver.mockReturnValue(vi.fn());
   });
 
   const pool = {} as never;
 
-  it('boots with ZERO channel config: SMS client unconfigured, no firebaseServiceAccountSecretName passed', async () => {
-    await buildContributionProviderResolver({ pool });
+  it('boots with ZERO channel config: SMS client unconfigured (MSG91\'s origin by default — 6.37 MG10), no firebaseServiceAccountSecretName passed', async () => {
+    const wiring = await buildContributionProviderResolver({ pool });
 
-    expect(createSmsAppClient).toHaveBeenCalledWith({ apiUrl: '', apiKey: '', senderId: '' });
+    expect(createSmsAppClient).toHaveBeenCalledTimes(1);
+    expect(createSmsAppClient).toHaveBeenCalledWith({ apiOrigin: 'https://control.msg91.com', authkey: '' });
+    expect(wiring.smsAppClient.isConfigured()).toBe(false);
+    // MG17 (a) — ⛔ read key: the send client is the template reader.
+    expect(wiring.smsTemplateReader).toBe(wiring.smsAppClient);
+    expect(wiring.smsPreflightReadsWithSendKey).toBe(true);
     const depsPassed = createContributionProviderResolver.mock.calls[0]![0] as {
       firebaseServiceAccountSecretName?: string;
     };
@@ -176,19 +183,65 @@ describe('buildContributionProviderResolver — the boot-time wiring (review fin
     expect(depsPassed.firebaseServiceAccountSecretName).toBe('fb-sa-name');
   });
 
-  it('resolves the SMS gateway secrets ONCE at boot when the NAME env vars are set', async () => {
-    process.env['SMS_GATEWAY_API_URL'] = 'https://gw.example';
+  it('resolves the MSG91 authkey ONCE at boot when the NAME env var is set — ⛔ a sender id (6.37 MG10: it lives on the template)', async () => {
+    process.env['SMS_GATEWAY_API_URL'] = 'https://gw.example/';
     process.env['SMS_GATEWAY_API_KEY_SECRET_NAME'] = 'sms-api-key';
     process.env['SMS_GATEWAY_SENDER_ID_SECRET_NAME'] = 'sms-sender-id';
     resolveSecretValue.mockImplementation(async (name: string) => `resolved:${name}`);
 
-    await buildContributionProviderResolver({ pool });
+    const wiring = await buildContributionProviderResolver({ pool });
 
-    expect(createSmsAppClient).toHaveBeenCalledWith({
-      apiUrl: 'https://gw.example',
-      apiKey: 'resolved:sms-api-key',
-      senderId: 'resolved:sms-sender-id',
-    });
+    expect(createSmsAppClient).toHaveBeenCalledWith({ apiOrigin: 'https://gw.example', authkey: 'resolved:sms-api-key' });
+    expect(resolveSecretValue).toHaveBeenCalledTimes(1);
+    expect(resolveSecretValue).not.toHaveBeenCalledWith('sms-sender-id', expect.anything());
+    expect(wiring.smsAppClient.isConfigured()).toBe(true);
+  });
+
+  it('⭐ 6.37 MG10 — an origin that is ⛔ bare (an old-style send URL) is REFUSED: logged, the client left unconfigured, ⛔ a boot failure', async () => {
+    process.env['SMS_GATEWAY_API_URL'] = 'https://sms-gateway.invalid/send';
+    process.env['SMS_GATEWAY_API_KEY_SECRET_NAME'] = 'sms-api-key';
+    resolveSecretValue.mockResolvedValue('k');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const wiring = await buildContributionProviderResolver({ pool });
+
+    expect(createSmsAppClient).toHaveBeenCalledWith({ apiOrigin: '', authkey: 'k' });
+    expect(wiring.smsAppClient.isConfigured()).toBe(false);
+    expect(error.mock.calls.map((c) => String(c[0])).join('\n')).toMatch(/bare origin/);
+    expect(error.mock.calls.map((c) => String(c[0])).join('\n')).not.toContain('sms-gateway.invalid');
+    error.mockRestore();
+  });
+
+  it('⭐ 6.37 MG17 (b) — SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME set ⇒ a SECOND client with the read key is the template reader', async () => {
+    process.env['SMS_GATEWAY_API_KEY_SECRET_NAME'] = 'sms-api-key';
+    process.env['SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME'] = 'sms-read-key';
+    resolveSecretValue.mockImplementation(async (name: string) => `resolved:${name}`);
+
+    const wiring = await buildContributionProviderResolver({ pool });
+
+    expect(createSmsAppClient).toHaveBeenCalledTimes(2);
+    expect(createSmsAppClient).toHaveBeenNthCalledWith(2, { apiOrigin: 'https://control.msg91.com', authkey: 'resolved:sms-read-key' });
+    expect(wiring.smsTemplateReader).not.toBe(wiring.smsAppClient);
+    expect(wiring.smsPreflightReadsWithSendKey).toBe(false);
+  });
+
+  it('⭐ 6.37 MG11 — in production, ONE boot line when the gateway is unconfigured (⛔ fail-fast); ⛔ line when configured', async () => {
+    const before = process.env['NODE_ENV'];
+    process.env['NODE_ENV'] = 'production';
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await buildContributionProviderResolver({ pool });
+      expect(error.mock.calls.filter((c) => /SMS gateway \(MSG91\) is NOT configured/.test(String(c[0])))).toHaveLength(1);
+      error.mockClear();
+      process.env['SMS_GATEWAY_API_KEY_SECRET_NAME'] = 'sms-api-key';
+      resolveSecretValue.mockResolvedValue('k');
+      await buildContributionProviderResolver({ pool });
+      expect(error).not.toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+      if (before === undefined) delete process.env['NODE_ENV'];
+      else process.env['NODE_ENV'] = before;
+    }
   });
 
   it('boot FAILS FAST when an SMS secret NAME is set but cannot resolve — never a silent half-configured client', async () => {

@@ -13,25 +13,48 @@
 //     exactly as today — same body, same outcome — and the FINAL result of a provider-handed send carries
 //     `helplineNotCallbackNumber: true`; ⛔ on transient, ⛔ on the config finals that send nothing. The default
 //     fixture is digits-only (`1800123456`), so every whole-result `toEqual` below stays exact (the flag is absent).
+//   · ⭐ Story 6.37 (MSG91): the fixture template id is MSG91's 24 hex (MG4 — `'TPL-123'` is now malformed); the provider
+//     legs use MSG91's codes (SYNTHETIC — a synchronous Flow `code` is ⛔ documented; a `carrier_reject` has ⛔ MSG91 code
+//     at all, so its leg is a pre-classified synthetic error); every send records its named values and proves they
+//     rebuild the body (AC5 (ii)); and the new core legs — the values check, the malformed id, the pre-flight memo, and
+//     `beforeSend` — follow.
 
-import { SmsSendError, type SmsAppClient, type SmsMessagingHandle } from '@twt/channels';
-import { describe, expect, it } from 'vitest';
+import {
+  SmsSendError,
+  substituteDltValues,
+  type Msg91PreflightMemo,
+  type Msg91PreflightResult,
+  type SmsAppClient,
+  type SmsGatewayMessage,
+  type SmsMessagingHandle,
+} from '@twt/channels';
+import { describe, expect, it, vi } from 'vitest';
 
 import { correctionStaffPushAlert, sendClaimCorrectionSms } from '../src/scheduler/claim-correction-reminders.js';
-import { renderClaimCorrectionSms } from '../src/scheduler/claim-correction-sms-templates.js';
+import { CLAIM_CORRECTION_SMS_TEMPLATES, renderClaimCorrectionSms } from '../src/scheduler/claim-correction-sms-templates.js';
+import { sendClaimDltSms, type ClaimDltSmsInput, type ClaimDltSmsPreflight } from '../src/scheduler/claim-dlt-sms-send.js';
 import { classifySecretManagerFault } from '../src/scheduler/contribution-providers.js';
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
 const CLAIM = '3f2a9c1e-0b4d-4e6f-8a1b-2c3d4e5f6a7b';
 
-function client(send: SmsMessagingHandle['send'], configured = true): SmsAppClient & { sent: string[] } {
+/** MSG91's template id form (24 hex — MG4). */
+const TEMPLATE_ID = '64b0c0ffee0123456789abcd';
+const REMINDER_EN = CLAIM_CORRECTION_SMS_TEMPLATES.reminder.en;
+
+function client(send: SmsMessagingHandle['send'], configured = true): SmsAppClient & { sent: string[]; messages: SmsGatewayMessage[] } {
   const sent: string[] = [];
+  const messages: SmsGatewayMessage[] = [];
   return {
     sent,
+    messages,
     isConfigured: () => configured,
     messaging: () => ({
       send: (m) => {
         sent.push(m.body);
+        messages.push(m);
+        // ⭐ AC5 (ii) — every send's named values rebuild its body through the registered text.
+        expect(substituteDltValues(REMINDER_EN.registeredText, REMINDER_EN.slots, m.values)).toBe(m.body);
         return send(m);
       },
     }),
@@ -40,7 +63,7 @@ function client(send: SmsMessagingHandle['send'], configured = true): SmsAppClie
 
 const config = (overrides: Record<string, string | null> = {}) => async (key: string): Promise<string | null> => {
   if (key in overrides) return overrides[key]!;
-  if (key.startsWith('sms.dlt.template_id.')) return 'TPL-123';
+  if (key.startsWith('sms.dlt.template_id.')) return TEMPLATE_ID;
   if (key === `sms.claim_correction.helpline_number.${PARIWAR}`) return '1800123456';
   return null;
 };
@@ -140,8 +163,14 @@ describe('sendClaimCorrectionSms — fail CLOSED (T13)', () => {
   });
 });
 
+/** A SYNTHETIC gateway rejection: a MSG91 code, or — for `carrier_reject`, which MSG91 never answers synchronously — pre-classified. */
+const gatewayError = (code: string, status: number): SmsSendError =>
+  code === 'CARRIER_REJECT'
+    ? new SmsSendError('x', null, status, { errorClass: 'carrier_reject', code: 'synthetic' })
+    : new SmsSendError('x', code, status);
+
 describe('sendClaimCorrectionSms — the provider result mapping (AC3)', () => {
-  const rejecting = (code: string, status = 400) => client(() => Promise.reject(new SmsSendError('x', code, status)));
+  const rejecting = (code: string, status = 400) => client(() => Promise.reject(gatewayError(code, status)));
 
   it('⭐ accepted ⇒ accepted with the provider message id; the body is the name-free reminder', async () => {
     const c = client(() => Promise.resolve('gw-42'));
@@ -153,14 +182,24 @@ describe('sendClaimCorrectionSms — the provider result mapping (AC3)', () => {
     });
     expect(c.sent[0]).toContain('Claim 3F2A9C1E:');
     expect(c.sent[0]).toContain('1800123456');
+    // ⭐ 6.37 MG3 — MSG91's id and the NAMED values, in slot order (the body stays the oracle, ⛔ sent).
+    expect(c.messages[0]).toMatchObject({
+      to: '+919812345678',
+      templateId: TEMPLATE_ID,
+      values: [
+        { name: 'reference', value: '3F2A9C1E' },
+        { name: 'helpline', value: '1800123456' },
+      ],
+    });
   });
 
+  // SYNTHETIC MSG91 codes (MG7): 202 invalid mobile, 400 template, 201 auth, 311 a may-have-sent `unknown`.
   it.each([
-    ['INVALID_NUMBER', 'rejected_invalid_number', false],
+    ['202', 'rejected_invalid_number', false],
     ['CARRIER_REJECT', 'rejected_unreachable', false],
-    ['DND_REJECT', 'rejected_unreachable', false],
-    ['DLT_TEMPLATE_NOT_APPROVED', 'error', true],
-    ['AUTH_FAILED', 'error', true],
+    ['400', 'error', true],
+    ['201', 'error', true],
+    ['311', 'error', true],
     ['SOMETHING_ODD', 'error', true],
   ])('%s ⇒ %s (final, alarm=%s)', async (code, outcome, alarm) => {
     expect(await sendClaimCorrectionSms({ smsAppClient: rejecting(code), resolveConfig: config() }, input)).toMatchObject({
@@ -171,18 +210,25 @@ describe('sendClaimCorrectionSms — the provider result mapping (AC3)', () => {
   });
 
   it.each([
-    ['RATE_LIMIT', 400],
-    ['X', 503],
+    ['306', 200],
+    ['601', 200],
   ])('%s (HTTP %s) ⇒ transient', async (code, status) => {
     expect(await sendClaimCorrectionSms({ smsAppClient: rejecting(code, status), resolveConfig: config() }, input)).toMatchObject({
       kind: 'transient',
     });
   });
+
+  it('HTTP 429 / 503 with ⛔ code ⇒ transient', async () => {
+    for (const status of [429, 503]) {
+      const c = client(() => Promise.reject(new SmsSendError('x', null, status)));
+      expect(await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config() }, input)).toMatchObject({ kind: 'transient' });
+    }
+  });
 });
 
 describe('⭐ Story 6.34 — a helpline that is ⛔ a callback number is SENT and FLAGGED, ⛔ held, ⛔ refused (AC4; `-322` C1)', () => {
   const HELPLINE_KEY = `sms.claim_correction.helpline_number.${PARIWAR}`;
-  const rejecting = (code: string, status = 400) => client(() => Promise.reject(new SmsSendError('x', code, status)));
+  const rejecting = (code: string, status = 400) => client(() => Promise.reject(gatewayError(code, status)));
   const malformed = (helpline = '+911800123456') => config({ [HELPLINE_KEY]: helpline });
 
   it.each(['+911800123456', '1800 123456'])('`%s` ⇒ accepted, the SAME body, flag set', async (helpline) => {
@@ -199,9 +245,9 @@ describe('⭐ Story 6.34 — a helpline that is ⛔ a callback number is SENT an
   });
 
   it.each([
-    ['INVALID_NUMBER', 'rejected_invalid_number', false],
+    ['202', 'rejected_invalid_number', false],
     ['CARRIER_REJECT', 'rejected_unreachable', false],
-    ['DLT_TEMPLATE_NOT_APPROVED', 'error', true],
+    ['400', 'error', true],
   ])('a provider reject %s ⇒ %s, unchanged, flag set', async (code, outcome, alarm) => {
     const r = await sendClaimCorrectionSms({ smsAppClient: rejecting(code), resolveConfig: malformed() }, input);
     expect(r).toMatchObject({ kind: 'final', outcome, alarm, helplineNotCallbackNumber: true });
@@ -214,7 +260,8 @@ describe('⭐ Story 6.34 — a helpline that is ⛔ a callback number is SENT an
   });
 
   it('a rate limit ⇒ transient, ⛔ flag', async () => {
-    const r = await sendClaimCorrectionSms({ smsAppClient: rejecting('RATE_LIMIT'), resolveConfig: malformed() }, input);
+    const c = client(() => Promise.reject(new SmsSendError('x', null, 429)));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: malformed() }, input);
     expect(r.kind).toBe('transient');
     expect(r).not.toHaveProperty('helplineNotCallbackNumber');
   });
@@ -334,5 +381,205 @@ describe('the staff push Alert (AC4, D11) — pure', () => {
     expect(correctionStaffPushAlert({ ...base, sentOn: '2026-10-02' }).alert_id).not.toBe(id);
     expect(correctionStaffPushAlert({ ...base, userId: '66666666-6666-4666-8666-666666666666' }).alert_id).not.toBe(id);
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  });
+});
+
+// ── Story 6.37 — the core's new legs (MG3, MG4, MG5, MG16 (i)) ─────────────────────────────────────────────────────
+
+/** A memo answering one fixed verdict, counting its reads. */
+function memoAnswering(verdict: Msg91PreflightResult): Msg91PreflightMemo & { calls: number } {
+  const m = {
+    calls: 0,
+    get() {
+      m.calls += 1;
+      return Promise.resolve(verdict);
+    },
+  };
+  return m;
+}
+const preflight = (verdict: Msg91PreflightResult, readsWithSendKey = true): ClaimDltSmsPreflight & { memo: { calls: number } } => ({
+  memo: memoAnswering(verdict),
+  readsWithSendKey,
+});
+const PASS: Msg91PreflightResult = { ok: true, notes: [] };
+const fault = (reason: Exclude<Msg91PreflightResult, { ok: true }>['reason']): Msg91PreflightResult =>
+  reason === 'transient' ? { ok: false, transient: true, reason } : { ok: false, transient: false, reason };
+
+/** The reminder's core input, built the way the wrapper builds it — overridable per leg. */
+function coreInput<T extends Partial<ClaimDltSmsInput>>(over: T = {} as T) {
+  return {
+    dltTemplateIdConfigKey: REMINDER_EN.dltTemplateIdConfigKey,
+    template: { text: REMINDER_EN.registeredText, slots: REMINDER_EN.slots },
+    pariwarId: PARIWAR,
+    e164: '+919812345678',
+    render: (helpline: string) => renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E', helpline }),
+    values: (helpline: string) => ({ reference: '3F2A9C1E', helpline }),
+    preflightFailOpen: false,
+    ...over,
+  };
+}
+
+describe('⭐ Story 6.37 — MG3: the named values are proved against the body BEFORE the network (AC5)', () => {
+  it.each<[string, (h: string) => Record<string, string>, string]>([
+    ['a value that disagrees with the render', (h) => ({ reference: 'FFFFFFFF', helpline: h }), 'dlt_template_not_approved:values_mismatch'],
+    ['a missing name', (h) => ({ helpline: h }), 'dlt_template_not_approved:values_mismatch'],
+    ['an extra name', (h) => ({ reference: '3F2A9C1E', helpline: h, x: '1' }), 'dlt_template_not_approved:values_mismatch'],
+    ['a misnamed slot', (h) => ({ ref: '3F2A9C1E', helpline: h }), 'dlt_template_not_approved:values_mismatch'],
+    ['a value longer than its slot (8)', (h) => ({ reference: '3F2A9C1E0', helpline: h }), 'dlt_template_not_approved:value_too_long'],
+  ])('%s ⇒ final error + alarm, ⛔ fetch', async (_l, values, detail) => {
+    const c = client(() => Promise.resolve('gw'));
+    const render = _l.includes('longer')
+      ? (helpline: string) => renderClaimCorrectionSms('reminder', 'en', { reference: '3F2A9C1E0', helpline })
+      : coreInput().render;
+    const r = await sendClaimDltSms({ smsAppClient: c, resolveConfig: config() }, coreInput({ values, render }));
+    expect(r).toEqual({ kind: 'final', outcome: 'error', providerMessageId: null, detail, alarm: true });
+    expect(c.messages).toEqual([]);
+  });
+
+  it('the wrapper\'s values ARE the render\'s — sent in slot order (the reminder, closure and certificate, both locales)', async () => {
+    for (const message of ['reminder', 'closure_notice', 'certificate_reminder'] as const) {
+      for (const locale of ['hi', 'en'] as const) {
+        const entry = CLAIM_CORRECTION_SMS_TEMPLATES[message][locale];
+        const messages: SmsGatewayMessage[] = [];
+        const c: SmsAppClient = {
+          isConfigured: () => true,
+          messaging: () => ({ send: (m) => (messages.push(m), Promise.resolve('gw')) }),
+        };
+        const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config() }, { ...input, message, locale });
+        expect(r).toMatchObject({ outcome: 'accepted' });
+        const m = messages[0]!;
+        expect(m.values.map((v) => v.name)).toEqual(entry.slots.map((s) => s.name));
+        expect(substituteDltValues(entry.registeredText, entry.slots, m.values)).toBe(m.body);
+        expect(m.body).toBe(renderClaimCorrectionSms(message, locale, { reference: '3F2A9C1E', helpline: '1800123456' }));
+      }
+    }
+  });
+});
+
+describe('⭐ Story 6.37 — MG4: a template id that is ⛔ MSG91\'s 24 hex', () => {
+  it.each(['TPL-123', '1107161234567890123', '64b0c0ffee0123456789abc'])('`%s` ⇒ final `template_id_malformed` + alarm, ⛔ memo, ⛔ fetch', async (id) => {
+    const c = client(() => Promise.resolve('gw'));
+    const p = preflight(PASS);
+    const r = await sendClaimCorrectionSms(
+      { smsAppClient: c, resolveConfig: config({ [REMINDER_EN.dltTemplateIdConfigKey]: id }), smsPreflight: p },
+      input,
+    );
+    expect(r).toEqual({ kind: 'final', outcome: 'error', providerMessageId: null, detail: 'dlt_template_not_approved:template_id_malformed', alarm: true });
+    expect(p.memo.calls).toBe(0);
+    expect(c.messages).toEqual([]);
+  });
+
+  it('⭐ the SAME kind of final a missing template id gives today (side by side — AC9 (b))', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    const missing = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config({ [REMINDER_EN.dltTemplateIdConfigKey]: null }) }, input);
+    const malformed = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config({ [REMINDER_EN.dltTemplateIdConfigKey]: 'TPL-1' }) }, input);
+    expect({ ...missing, detail: 'x' }).toEqual({ ...malformed, detail: 'x' });
+  });
+});
+
+describe('⭐ Story 6.37 — MG5: the pre-flight memo inside the core (AC9)', () => {
+  it('a PASS (or a stale pass) ⇒ sent; ⛔ warning', async () => {
+    for (const verdict of [PASS, { ok: true, notes: [], stale: true } as const]) {
+      const c = client(() => Promise.resolve('gw'));
+      const p = preflight(verdict);
+      const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: p }, input);
+      expect(r).toEqual({ kind: 'final', outcome: 'accepted', providerMessageId: 'gw', detail: null });
+      expect(p.memo.calls).toBe(1);
+    }
+  });
+
+  it.each(['auth', 'auth_or_not_found'] as const)('a PROVEN fault (%s from the SEND key — MG17 (a)) ⇒ final `auth:preflight` + alarm on 6.19b/c/d too, ⛔ fetch', async (reason) => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: preflight(fault(reason)) }, input);
+    expect(r).toEqual({ kind: 'final', outcome: 'error', providerMessageId: null, detail: 'auth:preflight', alarm: true });
+    expect(c.messages).toEqual([]);
+  });
+
+  it.each(['content_mismatch', 'dlt_id_missing', 'sms_type_needs_unicode'] as const)(
+    '⭐ 6.19b/c/d FAIL OPEN on an UNPROVEN fault (%s) — SENT, accepted + `preflightWarning`',
+    async (reason) => {
+      const c = client(() => Promise.resolve('gw'));
+      const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: preflight(fault(reason)) }, input);
+      expect(r).toEqual({
+        kind: 'final',
+        outcome: 'accepted',
+        providerMessageId: 'gw',
+        detail: null,
+        preflightWarning: `dlt_template_not_approved:preflight_${reason}`,
+      });
+      expect(c.messages).toHaveLength(1);
+    },
+  );
+
+  it.each(['auth', 'auth_or_not_found'] as const)('MG17 (b) — %s read with a SEPARATE key is unproven ⇒ 6.19b/c/d SEND with a warning', async (reason) => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: preflight(fault(reason), false) }, input);
+    expect(r).toMatchObject({ outcome: 'accepted', preflightWarning: `dlt_template_not_approved:preflight_${reason}` });
+  });
+
+  it('⭐ 6.19b/c/d FAIL OPEN on a TRANSIENT with ⛔ usable pass — SENT with `api_unavailable:preflight`', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimCorrectionSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: preflight(fault('transient')) }, input);
+    expect(r).toMatchObject({ kind: 'final', outcome: 'accepted', preflightWarning: 'api_unavailable:preflight' });
+  });
+
+  it('the warning rides a fail-open REJECTION too (beside the helpline flag), ⛔ an outcome change', async () => {
+    const c = client(() => Promise.reject(new SmsSendError('x', '202', 200)));
+    const r = await sendClaimCorrectionSms(
+      { smsAppClient: c, resolveConfig: config({ [`sms.claim_correction.helpline_number.${PARIWAR}`]: '+911800123456' }), smsPreflight: preflight(fault('content_mismatch')) },
+      input,
+    );
+    expect(r).toMatchObject({
+      outcome: 'rejected_invalid_number',
+      helplineNotCallbackNumber: true,
+      preflightWarning: 'dlt_template_not_approved:preflight_content_mismatch',
+    });
+  });
+
+  it.each(['content_mismatch', 'dlt_id_missing', 'sms_type_needs_unicode'] as const)(
+    'a HOLDING child (⛔ fail open) — an unproven fault (%s) first seen in the CORE ⇒ final `preflight_<reason>` + alarm, ⛔ fetch (AC9 (a2))',
+    async (reason) => {
+      const c = client(() => Promise.resolve('gw'));
+      const r = await sendClaimDltSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: preflight(fault(reason)) }, coreInput());
+      expect(r).toEqual({ kind: 'final', outcome: 'error', providerMessageId: null, detail: `dlt_template_not_approved:preflight_${reason}`, alarm: true });
+      expect(c.messages).toEqual([]);
+    },
+  );
+
+  it('a HOLDING child — a transient with ⛔ usable pass ⇒ `transient api_unavailable:preflight` (pg-boss retries), ⛔ sent', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimDltSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: preflight(fault('transient')) }, coreInput());
+    expect(r).toEqual({ kind: 'transient', detail: 'api_unavailable:preflight' });
+    expect(c.messages).toEqual([]);
+  });
+
+  it('⛔ memo (dev, every existing fake) ⇒ ⛔ pre-flight — the send proceeds as before', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    expect(await sendClaimDltSms({ smsAppClient: c, resolveConfig: config() }, coreInput())).toMatchObject({ outcome: 'accepted' });
+  });
+});
+
+describe('⭐ Story 6.37 — MG16 (i): `beforeSend`, synchronously, immediately before the send (AC9 (e))', () => {
+  it.each([
+    ['defer_window', 'window'],
+    ['defer_lease', 'lease'],
+  ] as const)('%s ⇒ `{kind:"deferred", reason:"%s"}` and ⛔ send — AFTER the pre-flight read', async (answer, reason) => {
+    const c = client(() => Promise.resolve('gw'));
+    const order: string[] = [];
+    const p: ClaimDltSmsPreflight = {
+      memo: { get: () => (order.push('preflight'), Promise.resolve(PASS)) },
+      readsWithSendKey: true,
+    };
+    const beforeSend = vi.fn((): 'go' | 'defer_window' | 'defer_lease' => (order.push('beforeSend'), answer));
+    const r = await sendClaimDltSms({ smsAppClient: c, resolveConfig: config(), smsPreflight: p }, coreInput({ beforeSend }));
+    expect(r).toEqual({ kind: 'deferred', reason });
+    expect(order).toEqual(['preflight', 'beforeSend']);
+    expect(c.messages).toEqual([]);
+  });
+
+  it('`go` ⇒ sent', async () => {
+    const c = client(() => Promise.resolve('gw'));
+    const r = await sendClaimDltSms({ smsAppClient: c, resolveConfig: config() }, coreInput({ beforeSend: () => 'go' as const }));
+    expect(r).toMatchObject({ kind: 'final', outcome: 'accepted' });
   });
 });

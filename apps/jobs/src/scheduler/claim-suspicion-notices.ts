@@ -58,7 +58,7 @@ import {
   type ClaimCorrectionReminderDeps,
 } from './claim-correction-reminders.js';
 import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templates.js';
-import { helplineNotCallbackNumberWarning, sendClaimDltSms } from './claim-dlt-sms-send.js';
+import { helplineNotCallbackNumberWarning, sendClaimDltSms, smsPreflightGap } from './claim-dlt-sms-send.js';
 import {
   SUSPICION_NOTICE_SMS_TEMPLATES,
   formatAppealUntil,
@@ -108,31 +108,39 @@ function sampleIds(list: readonly string[]): string {
 
 // ── RB12 — the config check (the sweep's, and the child's race guard) ────────────────────────────────────────────
 
-/** A config value that is SET (⛔ null, ⛔ blank). ANY Secret Manager fault — known or transient — is a gap. */
-async function configSet(deps: ClaimSuspicionNoticeDeps, key: string): Promise<'set' | 'missing' | 'fault'> {
+/** A config value that is SET (⛔ null, ⛔ blank) — with the value (6.37: the pre-flight reads the id). ANY Secret Manager fault — known or transient — is a gap. */
+async function configSet(
+  deps: ClaimSuspicionNoticeDeps,
+  key: string,
+): Promise<{ readonly state: 'set'; readonly value: string } | { readonly state: 'missing' } | { readonly state: 'fault' }> {
   try {
     const v = await deps.resolveConfig(key);
-    return v === null || v.trim() === '' ? 'missing' : 'set';
+    return v === null || v.trim() === '' ? { state: 'missing' } : { state: 'set', value: v.trim() };
   } catch {
     // ⭐ RB12 — known OR transient (`classifySecretManagerFault` would split them), a fault HOLDS: ⛔ a slot spent on it.
-    return 'fault';
+    return { state: 'fault' };
   }
 }
 
-/** The gateway + the purpose's template ids — `null` when ready, else the gap (ids-only wording). */
+/** The gateway + the purpose's template ids (+ their pre-flight) — `null` when ready, else the gap (ids-only wording). */
 async function purposeConfigGap(deps: ClaimSuspicionNoticeDeps, purpose: Purpose): Promise<string | null> {
   if (!deps.smsAppClient.isConfigured()) return 'config:sms_gateway_unconfigured';
   for (const locale of LOCALES_OF[purpose]) {
-    const state = await configSet(deps, suspicionNoticeDltConfigKey(MESSAGE_OF[purpose], locale));
-    if (state === 'fault') return 'config:secret_manager';
-    if (state === 'missing') return `config:dlt_template_id_missing:${locale}`;
+    const key = suspicionNoticeDltConfigKey(MESSAGE_OF[purpose], locale);
+    const id = await configSet(deps, key);
+    if (id.state === 'fault') return 'config:secret_manager';
+    if (id.state === 'missing') return `config:dlt_template_id_missing:${locale}`;
+    const entry = SUSPICION_NOTICE_SMS_TEMPLATES[MESSAGE_OF[purpose]][locale];
+    // ⚠ A purpose with two locales (RB12's shape): a broken `en` template holds the Hindi notices too, as a missing `en` id does.
+    const gap = await smsPreflightGap(deps.smsPreflight, { text: entry.registeredText, slots: entry.slots }, key, id.value);
+    if (gap !== null) return gap;
   }
   return null;
 }
 
 /** The Pariwar's helpline number (6.19's per-Pariwar key, RF11) — `null` when set, else the gap. */
 async function helplineGap(deps: ClaimSuspicionNoticeDeps, pariwarId: string): Promise<string | null> {
-  const state = await configSet(deps, claimCorrectionHelplineConfigKey(pariwarId));
+  const { state } = await configSet(deps, claimCorrectionHelplineConfigKey(pariwarId));
   if (state === 'fault') return 'config:secret_manager';
   if (state === 'missing') return 'config:helpline_number_missing';
   return null;
@@ -179,7 +187,14 @@ export async function runSuspicionNoticeSweep(deps: ClaimSuspicionNoticeDeps, bo
   // (1) RB12 — the gateway + each purpose's template ids, ONCE per run; the helpline per Pariwar, memoised (the SAME memo the
   // main loop reads — one run never both parks and enqueues a Pariwar).
   const purposeGaps = new Map<Purpose, string | null>();
-  for (const purpose of SUSPICION_NOTICE_SWEEP_PURPOSES) purposeGaps.set(purpose, await purposeConfigGap(deps, purpose));
+  for (const purpose of SUSPICION_NOTICE_SWEEP_PURPOSES) {
+    const gap = await purposeConfigGap(deps, purpose);
+    purposeGaps.set(purpose, gap);
+    // Story 6.37 (MG5): ONE alarm per purpose a pre-flight holds — the config key and the reason (⛔ the id, ⛔ a number).
+    if (gap !== null && gap.startsWith('config:sms_preflight_')) {
+      alarm(`[jobs] claim-suspicion-notice-sweep: the ${purpose} notices are HELD this run — ${gap} (the MSG91 template failed its pre-flight; roster Row 32)`);
+    }
+  }
   const helplineByPariwar = new Map<string, string | null>();
   const gapOf = async (purpose: Purpose, pariwarId: string): Promise<string | null> => {
     const purposeGap = purposeGaps.get(purpose) ?? null;
@@ -434,11 +449,17 @@ export async function runSuspicionNoticeChild(
   const message = MESSAGE_OF[p.purpose];
   const locale = begun.locale;
   const date = message === 'appeal_notice' && begun.appealUntil !== null ? formatAppealUntil(begun.appealUntil) : undefined;
+  const entry = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
   const result = await sendClaimDltSms(deps, {
-    dltTemplateIdConfigKey: SUSPICION_NOTICE_SMS_TEMPLATES[message][locale].dltTemplateIdConfigKey,
+    dltTemplateIdConfigKey: entry.dltTemplateIdConfigKey,
+    template: { text: entry.registeredText, slots: entry.slots },
     pariwarId: pid,
     e164,
     render: (helpline) => renderSuspicionNoticeSms(message, locale, { member, helpline, ...(date !== undefined ? { date } : {}) }),
+    // MG3 — the SAME locals the render uses (`date` = `formatAppealUntil(...)`, computed once above).
+    values: (helpline) => ({ member, ...(date !== undefined ? { date } : {}), helpline }),
+    // ⛔ fail open: this sweep HOLDS (its race guard read the memo just above) — a fault here is the in-flight race.
+    preflightFailOpen: false,
   });
   // The core's detail is RAW (a gateway `<code>` can be any string — a phone number included): ⛔ stored, alarmed or thrown as is.
   const detail = result.detail === null ? null : claimDomain.suspicionNoticeDetail({ kind: 'send', detail: result.detail });

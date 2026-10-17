@@ -41,7 +41,8 @@ import {
   type ClaimCorrectionReminderDeps,
   type CorrectionStaffPushPayload,
 } from './claim-correction-reminders.js';
-import { helplineNotCallbackNumberWarning } from './claim-dlt-sms-send.js';
+import { CLAIM_CORRECTION_SMS_TEMPLATES } from './claim-correction-sms-templates.js';
+import { helplineNotCallbackNumberWarning, preflightWarningMessage } from './claim-dlt-sms-send.js';
 
 /** Each scan's bound — hitting it is ALARMED (the next tick starts again from the oldest). */
 export const DEFAULT_CLOSURE_SWEEP_LIMIT = 2000;
@@ -377,6 +378,11 @@ export async function runClosureNoticeChild(
   if (result.kind === 'transient') return transient(result.detail);
   // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.
   if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, 'closure notice'));
+  // Story 6.37 (MG5): sent DESPITE a pre-flight fault / transient (fail open — ⛔ hold here); ONE warning, ⛔ an outcome change.
+  if (result.preflightWarning !== undefined) {
+    const key = CLAIM_CORRECTION_SMS_TEMPLATES.closure_notice[begun.contactLocale].dltTemplateIdConfigKey;
+    alarm(preflightWarningMessage(pid, 'closure notice', key, result.preflightWarning));
+  }
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-correction-closure-notice: ${result.detail} for claim ${p.claimCaseId} closure ${p.closureId} — recorded error (fail-closed)`);
   }

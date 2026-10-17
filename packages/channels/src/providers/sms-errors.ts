@@ -40,8 +40,11 @@ const TEMPLATE_NOT_APPROVED_CODES: ReadonlySet<string> = new Set(['203', '211', 
 const INVALID_NUMBER_CODES: ReadonlySet<string> = new Set(['101', '202', '604']);
 // 306 route unavailable · 506 / 601 internal.
 const API_UNAVAILABLE_CODES: ReadonlySet<string> = new Set(['306', '506', '601']);
-// ⚠ Everything else is `unknown` — incl. 311 ("the first SMS will be delivered and the second rejected": a MAY-HAVE-
-// SENT, ⛔ an acceptance and ⛔ a retry — T12) and 407 (international blocked).
+// 311 ("the first SMS will be delivered and the second rejected": a MAY-HAVE-SENT, ⛔ an acceptance and ⛔ a retry — T12)
+// · 407 international blocked — `unknown` whatever the HTTP status.
+const UNKNOWN_CODES: ReadonlySet<string> = new Set(['311', '407']);
+// ⚠ An UNLISTED code is `unknown` too — unless the HTTP status itself says auth (401 / 403), throttled (429) or unavailable
+// (5xx): an unknown code on a 503 is ⛔ proof the request was refused, so it stays a transient (⛔ a spent slot).
 
 /** Classify a gateway code (+ HTTP status) into its stable SMS failure class. */
 function classForCode(gatewayCode: string | null, httpStatus: number): SmsErrorClass {
@@ -51,8 +54,8 @@ function classForCode(gatewayCode: string | null, httpStatus: number): SmsErrorC
     if (TEMPLATE_NOT_APPROVED_CODES.has(code)) return 'dlt_template_not_approved';
     if (INVALID_NUMBER_CODES.has(code)) return 'invalid_number';
     if (API_UNAVAILABLE_CODES.has(code)) return 'api_unavailable';
-    // An answered code we do not list is ⛔ guessed from the HTTP status (it may be a 200).
-    return 'unknown';
+    if (UNKNOWN_CODES.has(code)) return 'unknown';
+    // An unlisted code: the status fallbacks below, else `unknown` (a 2xx / other 4xx).
   }
   // Status-driven fallbacks when the gateway gave no (recognized) code.
   if (httpStatus === 401 || httpStatus === 403) return 'auth';
@@ -60,7 +63,7 @@ function classForCode(gatewayCode: string | null, httpStatus: number): SmsErrorC
   // An explicit transport failure (httpStatus 0 = network, no response) or a 5xx → the gateway is
   // unavailable (transient). A httpStatus < 0 means "no information at all" (a non-error throw / hostile
   // object) → honest `unknown`, NOT a fabricated transient class.
-  if (httpStatus === 0 || httpStatus >= 500) return 'api_unavailable';
+  if ((httpStatus === 0 && gatewayCode === null) || httpStatus >= 500) return 'api_unavailable';
   return 'unknown';
 }
 

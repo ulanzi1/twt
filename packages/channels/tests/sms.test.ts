@@ -140,8 +140,16 @@ describe('classifySmsError — MSG91\'s code table (6.37 AC3, MG7)', () => {
     expect(classifySmsError(new SmsSendError('x', '311', 200)).errorClass).toBe('unknown');
   });
 
-  it('an unlisted code is ⛔ guessed from the HTTP status', () => {
-    expect(classifySmsError(new SmsSendError('x', '777', 503))).toEqual({ errorClass: 'unknown', code: '777' });
+  it('an UNLISTED code is `unknown` on a 2xx / 4xx, but a 401 / 429 / 5xx status still classifies it; 311 / 407 never move', () => {
+    expect(classifySmsError(new SmsSendError('x', '777', 200))).toEqual({ errorClass: 'unknown', code: '777' });
+    expect(classifySmsError(new SmsSendError('x', '777', 400))).toEqual({ errorClass: 'unknown', code: '777' });
+    expect(classifySmsError(new SmsSendError('x', '777', 401))).toEqual({ errorClass: 'auth', code: '777' });
+    expect(classifySmsError(new SmsSendError('x', '777', 429))).toEqual({ errorClass: 'rate_limited', code: '777' });
+    expect(classifySmsError(new SmsSendError('x', '777', 503))).toEqual({ errorClass: 'api_unavailable', code: '777' });
+    expect(classifySmsError(new SmsSendError('x', '311', 503))).toEqual({ errorClass: 'unknown', code: '311' });
+    expect(classifySmsError(new SmsSendError('x', '407', 429))).toEqual({ errorClass: 'unknown', code: '407' });
+    // A LISTED code keeps its class whatever the status.
+    expect(classifySmsError(new SmsSendError('x', '201', 503))).toEqual({ errorClass: 'auth', code: '201' });
   });
 
   it('status-driven fallbacks when MSG91 gave ⛔ code', () => {

@@ -77,7 +77,13 @@ import {
   type ClaimCorrectionSmsLocale,
   type ClaimCorrectionSmsMessage,
 } from './claim-correction-sms-templates.js';
-import { helplineNotCallbackNumberWarning, sendClaimDltSms, type ClaimCorrectionSmsResult } from './claim-dlt-sms-send.js';
+import {
+  helplineNotCallbackNumberWarning,
+  preflightWarningMessage,
+  sendClaimDltSms,
+  type ClaimCorrectionSmsResult,
+  type ClaimDltSmsPreflight,
+} from './claim-dlt-sms-send.js';
 
 // ── Operational knobs ────────────────────────────────────────────────────────────────────────────────────────
 
@@ -161,6 +167,11 @@ export interface ClaimCorrectionReminderDeps {
   readonly smsAppClient: SmsAppClient;
   /** Config NAME → value, `null` = "not provisioned"; THROWS on a Secret Manager outage (`resolveSmsDltConfig`). */
   readonly resolveConfig: (configKey: string) => Promise<string | null>;
+  /**
+   * Story 6.37 (MG5) — the ONE process MSG91 pre-flight memo (`boot.ts`), read by the send core for every claim text and by
+   * the suspicion / peer-mesh holds. OPTIONAL: absent ⇒ ⛔ pre-flight (dev, and every existing fake).
+   */
+  readonly smsPreflight?: ClaimDltSmsPreflight;
   /** The staff push's `dispatch()` seams. */
   readonly push: {
     readonly audit: AuditPort;
@@ -206,9 +217,12 @@ function alarmOf(deps: ClaimCorrectionReminderDeps): (m: string) => void {
  * `claim-correction-send.test.ts`, UNEDITED by 6.24b). ⭐ Story 6.34 (`-322` C1) EDITED that test: its default helpline
  * fixture is digits-only, and new legs prove a malformed helpline is sent unchanged with `helplineNotCallbackNumber` on the
  * result (each caller warns). This wrapper keeps the 6.19 registry lookup and the `{ reference, helpline }` render.
+ * ⭐ Story 6.37 (MG3, MG5): it passes the registry entry and the named values (the SAME `reference` the render uses) and
+ * sets `preflightFailOpen` — these three paths have ⛔ hold (T6), so only a PROVEN pre-flight fault ends a row (as a
+ * missing template id does); anything else is SENT with a `preflightWarning` each caller alarms.
  */
 export async function sendClaimCorrectionSms(
-  deps: Pick<ClaimCorrectionReminderDeps, 'smsAppClient' | 'resolveConfig' | 'sendTimeoutMs'>,
+  deps: Pick<ClaimCorrectionReminderDeps, 'smsAppClient' | 'resolveConfig' | 'sendTimeoutMs' | 'smsPreflight'>,
   input: {
     readonly message: ClaimCorrectionSmsMessage;
     readonly locale: ClaimCorrectionSmsLocale;
@@ -219,15 +233,15 @@ export async function sendClaimCorrectionSms(
   },
 ): Promise<ClaimCorrectionSmsResult> {
   const template = CLAIM_CORRECTION_SMS_TEMPLATES[input.message][input.locale];
+  const reference = claimDomain.claimShortReference(input.claimCaseId);
   return sendClaimDltSms(deps, {
     dltTemplateIdConfigKey: template.dltTemplateIdConfigKey,
+    template: { text: template.registeredText, slots: template.slots },
     pariwarId: input.pariwarId,
     e164: input.e164,
-    render: (helpline) =>
-      renderClaimCorrectionSms(input.message, input.locale, {
-        reference: claimDomain.claimShortReference(input.claimCaseId),
-        helpline,
-      }),
+    render: (helpline) => renderClaimCorrectionSms(input.message, input.locale, { reference, helpline }),
+    values: (helpline) => ({ reference, helpline }),
+    preflightFailOpen: true,
   });
 }
 
@@ -423,6 +437,11 @@ export async function runCorrectionFamilySmsChild(
   if (result.kind === 'transient') return transient(result.detail);
   // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.
   if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, 'correction reminder'));
+  // Story 6.37 (MG5): sent DESPITE a pre-flight fault / transient (fail open — ⛔ hold here); ONE warning, ⛔ an outcome change.
+  if (result.preflightWarning !== undefined) {
+    const key = CLAIM_CORRECTION_SMS_TEMPLATES.reminder[begun.contactLocale].dltTemplateIdConfigKey;
+    alarm(preflightWarningMessage(pid, 'correction reminder', key, result.preflightWarning));
+  }
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-correction-sms: ${result.detail} for claim ${p.claimCaseId} run ${p.runId} — recorded error (fail-closed)`);
   }

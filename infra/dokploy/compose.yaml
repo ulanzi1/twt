@@ -26,6 +26,11 @@ services:
       DOKPLOY_API_TOKEN: ${DOKPLOY_API_TOKEN}
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID}
       WEBAUTHN_EXPECTED_ORIGIN: ${WEBAUTHN_EXPECTED_ORIGIN}
+      # Story 6.37 (`2026-10-17-345` MG10 / MG17; ADR-0041) — the MSG91 authkey's Secret Manager NAME (⛔ the key). The origin
+      # defaults to https://control.msg91.com in code (SMS_GATEWAY_API_URL unset); the sender id lives ON each MSG91 template.
+      # The OPTIONAL template-read-only key (MG17 (b)) — unset ⇒ the send key reads the templates. Values: roster Row 32 (b).
+      SMS_GATEWAY_API_KEY_SECRET_NAME: ${SMS_GATEWAY_API_KEY_SECRET_NAME}
+      SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME: ${SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME}
     labels:
       # Dokploy/Traefik path routing — the API surface.
       - "traefik.http.routers.twt-api.rule=PathPrefix(`/api/v1`)"
@@ -49,6 +54,11 @@ services:
       # https ORIGIN (roster Row 29 (b)). Validated by `resolveHttpsOrigin`; READ by Story 6.27c's sweep (until
       # then nothing reads it). ⛔ No code default.
       APP_LINKS_BASE_URL: ${APP_LINKS_BASE_URL}
+      # Story 6.37 (`2026-10-17-345` MG10 / MG17; ADR-0041) — the MSG91 authkey's Secret Manager NAME (⛔ the key). The origin
+      # defaults to https://control.msg91.com in code (SMS_GATEWAY_API_URL unset); the sender id lives ON each MSG91 template.
+      # The OPTIONAL template-read-only key (MG17 (b)) — unset ⇒ the send key reads the templates. Values: roster Row 32 (b).
+      SMS_GATEWAY_API_KEY_SECRET_NAME: ${SMS_GATEWAY_API_KEY_SECRET_NAME}
+      SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME: ${SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME}
 
   public:
     image: ${AR_BASE}/public:${IMAGE_TAG}

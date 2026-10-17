@@ -122,9 +122,20 @@ export interface SmsFetchResponse {
   json(): Promise<unknown>;
 }
 
-/** A failure the client decided itself, before or instead of MSG91's answer — classified as-is (sms-errors.ts). */
+/**
+ * A failure already classified — by the client itself, before or instead of MSG91's answer (a bad number, a timeout, a
+ * success with ⛔ request id), or by a test's SYNTHETIC fixture (e.g. a `carrier_reject`, which MSG91 never answers
+ * synchronously — MG7). Classified as-is (sms-errors.ts).
+ */
 export interface SmsLocalRefusal {
-  readonly errorClass: 'invalid_number' | 'dlt_template_not_approved' | 'auth' | 'rate_limited' | 'api_unavailable' | 'unknown';
+  readonly errorClass:
+    | 'invalid_number'
+    | 'dlt_template_not_approved'
+    | 'carrier_reject'
+    | 'rate_limited'
+    | 'api_unavailable'
+    | 'auth'
+    | 'unknown';
   readonly code: string;
 }
 

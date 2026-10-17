@@ -73,7 +73,7 @@ import {
   type ClaimCorrectionReminderDeps,
 } from './claim-correction-reminders.js';
 import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templates.js';
-import { helplineNotCallbackNumberWarning, sendClaimDltSms } from './claim-dlt-sms-send.js';
+import { helplineNotCallbackNumberWarning, sendClaimDltSms, smsPreflightGap } from './claim-dlt-sms-send.js';
 import {
   PEER_MESH_REQUEST_SMS_TEMPLATES,
   fitsDltAlphanumeric,
@@ -115,8 +115,11 @@ export const PEER_REQUEST_SEND_START_HOUR_IST = 9;
 export const PEER_REQUEST_SEND_END_HOUR_IST = 20;
 const HOUR_MS = 60 * 60 * 1000;
 /**
- * P6 — how much of the send lease must REMAIN at the handoff: the core's two untimed Secret Manager reads plus its send
- * (`CORRECTION_SEND_TIMEOUT_MS`, 10 s) still follow, and another child may re-claim the row once the lease lapses.
+ * P6 — how much of the send lease must REMAIN at the handoff: the core's two untimed Secret Manager reads, its MSG91
+ * pre-flight memo read (a hit, or ONE `getTemplateVersions` call on a miss — bounded by the client's 9 s) and its send
+ * (`CORRECTION_SEND_TIMEOUT_MS`, 10 s) still follow, and another child may re-claim the row once the lease lapses. ⭐ Story
+ * 6.37 (MG16 (i)): the SAME margin is re-checked by `beforeSend` inside the core, immediately before the send — so the
+ * pre-flight's await can ⛔ carry a send past the lease or out of the window.
  */
 export const PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS = 2 * 60 * 1000;
 /** The least a quiet-hours deferral waits (P8 — host-vs-DB clock skew at 09:00 costs one short extra hop; the floor bounds it). */
@@ -142,13 +145,19 @@ export function nextPeerRequestSendWindowStart(now: Date): Date {
 
 // ── R11 — the config check (the sweep's, and the child's race guard) ────────────────────────────────────────────────
 
-/** A config value that is SET (⛔ null, ⛔ blank). ANY Secret Manager fault — known or transient — is a gap (RB12). */
-async function configSet(deps: ClaimPeerMeshRequestDeps, key: string): Promise<'set' | 'missing' | 'fault'> {
+/**
+ * A config value that is SET (⛔ null, ⛔ blank) — with the value (6.37: the pre-flight reads the template id). ANY Secret
+ * Manager fault — known or transient — is a gap (RB12).
+ */
+async function configSet(
+  deps: ClaimPeerMeshRequestDeps,
+  key: string,
+): Promise<{ readonly state: 'set'; readonly value: string } | { readonly state: 'missing' } | { readonly state: 'fault' }> {
   try {
     const v = await deps.resolveConfig(key);
-    return v === null || v.trim() === '' ? 'missing' : 'set';
+    return v === null || v.trim() === '' ? { state: 'missing' } : { state: 'set', value: v.trim() };
   } catch {
-    return 'fault';
+    return { state: 'fault' };
   }
 }
 
@@ -211,12 +220,18 @@ async function pariwarConfig(
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return { gap: 'config:locale_unavailable' };
     throw new PeerRequestLocaleReadError(err);
   }
-  const template = await configSet(deps, peerMeshRequestDltConfigKey(locale));
-  if (template === 'fault') return { gap: 'config:secret_manager' };
-  if (template === 'missing') return { gap: `config:dlt_template_id_missing:${locale}` };
+  const key = peerMeshRequestDltConfigKey(locale);
+  const template = await configSet(deps, key);
+  if (template.state === 'fault') return { gap: 'config:secret_manager' };
+  if (template.state === 'missing') return { gap: `config:dlt_template_id_missing:${locale}` };
+  // Story 6.37 (MG5) — the Pariwar's OWN locale's template through the process pre-flight memo, ⛔ in `globalConfigGap` (a
+  // broken `en` template would otherwise hold every Hindi Pariwar). A fault — or a transient with ⛔ usable pass — HOLDS.
+  const entry = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
+  const preflight = await smsPreflightGap(deps.smsPreflight, { text: entry.registeredText, slots: entry.slots }, key, template.value);
+  if (preflight !== null) return { gap: preflight };
   const helpline = await configSet(deps, claimCorrectionHelplineConfigKey(pariwarId));
-  if (helpline === 'fault') return { gap: 'config:secret_manager' };
-  if (helpline === 'missing') return { gap: 'config:helpline_number_missing' };
+  if (helpline.state === 'fault') return { gap: 'config:secret_manager' };
+  if (helpline.state === 'missing') return { gap: 'config:helpline_number_missing' };
   return { gap: null, config: { locale } };
 }
 
@@ -670,12 +685,34 @@ export async function runPeerMeshRequestChild(
     // ── The send — the registered words, the mode-resolved name, the link (R12 origin), the Pariwar's helpline ──
     const member = (nameRead as { name: string }).name;
     const link = buildAppLinkUrl(origin, 'peerRequest', begun.linkCode);
+    const entry = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
     const result = await sendClaimDltSms(deps, {
-      dltTemplateIdConfigKey: PEER_MESH_REQUEST_SMS_TEMPLATES[locale].dltTemplateIdConfigKey,
+      dltTemplateIdConfigKey: entry.dltTemplateIdConfigKey,
+      template: { text: entry.registeredText, slots: entry.slots },
       pariwarId: pid,
       e164,
       render: (helpline) => renderPeerMeshRequest(locale, { member, link, helpline }),
+      // MG3 — the SAME locals the render uses.
+      values: (helpline) => ({ member, link, helpline }),
+      // ⛔ fail open: this sweep HOLDS (its race guard read the memo) — a fault here is the in-flight race; P1 stops below.
+      preflightFailOpen: false,
+      // MG16 (i) — F2's window and P6's lease margin AGAIN, synchronously, immediately before the send (after the pre-flight).
+      beforeSend: () => {
+        const at = clock();
+        if (!isInPeerRequestSendWindow(at)) return 'defer_window';
+        if (at.getTime() - beginAt.getTime() >= claimDomain.CORRECTION_SEND_LEASE_MS - PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS) {
+          return 'defer_lease';
+        }
+        return 'go';
+      },
     });
+    if (result.kind === 'deferred') {
+      // ⛔ Sent — exactly as the two pre-core branches above leave the row (F2 / P6).
+      if (result.reason === 'window') return deferToMorning(clock(), counts);
+      alarm(`[jobs] claim-peer-mesh-request: ${ptag} — its lease lapsed (or nearly) before the send (after the pre-flight); ⛔ sent (left to the re-claim)`);
+      counts.transient += 1;
+      continue;
+    }
     // The core's detail is RAW (a gateway `<code>` can be any string): ⛔ stored, alarmed or thrown as is.
     const detail = result.detail === null ? null : claimDomain.peerMeshRequestDetail({ kind: 'send', detail: result.detail });
     if (result.kind === 'transient') {

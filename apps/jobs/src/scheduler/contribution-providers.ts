@@ -18,7 +18,7 @@
 // silent fixture fallback. This module only supplies the boot-time clients + the secret/config resolvers.
 //
 // ── Env-gated, opt-in-real (boots with ZERO channel config in dev/CI) ────────────────────────────────────────
-// The SMS gateway credential is resolved ONCE at boot; when its NAME env is unset the resolved value is blank
+// The SMS gateway (MSG91) credential is resolved ONCE at boot; when its NAME env is unset the resolved value is blank
 // ⇒ SmsAppClient.isConfigured() is false ⇒ fixture SMS. The WA/Telegram configs are per-Pariwar DB rows (absent
 // ⇒ fixture). The global Firebase SA name unset ⇒ fixture push. So the stack boots and runs with no config,
 // exactly as Epic 5 committed — and delivers real bytes the moment the secrets/config are provisioned.
@@ -29,7 +29,10 @@ import {
   createSmsAppClient,
   createTelegramAppCache,
   createWhatsappAppCache,
+  MSG91_DEFAULT_API_ORIGIN,
+  parseSmsGatewayOrigin,
   type FirebaseAppCache,
+  type Msg91TemplateReader,
   type SmsAppClient,
 } from '@twt/channels';
 import { resolveSecretValue, withPariwarScope, type Db } from '@twt/domain';
@@ -51,6 +54,14 @@ export interface ContributionProviderWiring {
    * ⚠ Its `isConfigured()` false must fail the correction send CLOSED — ⛔ never the fixture that reports `accepted`.
    */
   readonly smsAppClient: SmsAppClient;
+  /**
+   * ⭐ Story 6.37 (MG5, MG17) — the MSG91 template reader the process pre-flight memo is built over (`boot.ts`): the send
+   * client itself (MG17 (a)), or — when `SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME` is set — a client holding that read-only
+   * key (MG17 (b); ⛔ sends).
+   */
+  readonly smsTemplateReader: Msg91TemplateReader;
+  /** MG17 — `true` iff the reader uses the SEND key, so its `auth*` refusal PROVES the send would fail. */
+  readonly smsPreflightReadsWithSendKey: boolean;
   /** Tear down the per-Pariwar Firebase Apps (SIGTERM drain). The fetch-based WA/TG/SMS clients hold nothing. */
   readonly teardown: () => Promise<void>;
 }
@@ -215,24 +226,44 @@ export async function buildContributionProviderResolver(
   const telegramAppCache = createTelegramAppCache();
 
   // ── The GLOBAL SMS gateway client (resolved ONCE at boot; restart-required-on-rotation) ──────────────────
-  // Mirror apps/api's SMS env-var contract EXACTLY (SMS_GATEWAY_API_URL / _API_KEY_SECRET_NAME (+_ENV_FALLBACK)
-  // / _SENDER_ID_SECRET_NAME (+_ENV_FALLBACK)). Unset NAME ⇒ blank value ⇒ isConfigured() false ⇒ fixture SMS
-  // (never a boot failure for the un-provisioned case — that is the opt-in-real posture). A NAME that IS set but
-  // whose secret cannot resolve throws here → boot fails, which is correct: a half-configured SMS must not pretend.
-  const apiUrl = process.env['SMS_GATEWAY_API_URL'] ?? '';
+  // ⭐ Story 6.37 (MG10; ADR-0041) — MSG91, mirroring apps/api's contract: `SMS_GATEWAY_API_URL` is MSG91's API ORIGIN
+  // (default `https://control.msg91.com` in BOTH apps — the old `''` default retired) and `SMS_GATEWAY_API_KEY_SECRET_NAME`
+  // (+ `_ENV_FALLBACK`) the authkey; the sender id lives ON each MSG91 template (F12) ⇒ `SMS_GATEWAY_SENDER_ID*` retired.
+  // Unset authkey NAME ⇒ blank ⇒ isConfigured() false ⇒ the claim sweeps HOLD (`config:sms_gateway_unconfigured`) and
+  // dispatch stays on the fixture — ⛔ a boot failure (MG11: jobs runs many non-SMS duties). A NAME that IS set but whose
+  // secret cannot resolve throws here → boot fails (a half-configured SMS must not pretend). An origin that is ⛔ bare is
+  // REFUSED: logged at boot and the client left unconfigured (the sweeps hold) — ⛔ a send to `…/send/api/v5/flow`.
+  let apiOrigin = '';
+  try {
+    apiOrigin = parseSmsGatewayOrigin(process.env['SMS_GATEWAY_API_URL'] ?? MSG91_DEFAULT_API_ORIGIN);
+  } catch (err) {
+    console.error(`[jobs] boot: ${(err as Error).message} — SMS left UNCONFIGURED (every claim text is HELD or fails closed)`);
+  }
   const apiKeySecretName = process.env['SMS_GATEWAY_API_KEY_SECRET_NAME'];
-  const senderIdSecretName = process.env['SMS_GATEWAY_SENDER_ID_SECRET_NAME'];
-  const apiKey = apiKeySecretName && apiKeySecretName.trim() !== ''
+  const authkey = apiKeySecretName && apiKeySecretName.trim() !== ''
     ? await resolveSecretValue(apiKeySecretName, {
         envFallback: process.env['SMS_GATEWAY_API_KEY_ENV_FALLBACK'] ?? 'SMS_GATEWAY_API_KEY',
       })
     : '';
-  const senderId = senderIdSecretName && senderIdSecretName.trim() !== ''
-    ? await resolveSecretValue(senderIdSecretName, {
-        envFallback: process.env['SMS_GATEWAY_SENDER_ID_ENV_FALLBACK'] ?? 'SMS_GATEWAY_SENDER_ID',
-      })
-    : '';
-  const smsAppClient = createSmsAppClient({ apiUrl, apiKey, senderId });
+  const smsAppClient = createSmsAppClient({ apiOrigin, authkey });
+  // MG17 — an OPTIONAL template-read-only authkey for the pre-flight (unset ⇒ the send key reads — MG17 (a)).
+  const preflightKeySecretName = process.env['SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME'];
+  const readsWithSendKey = !preflightKeySecretName || preflightKeySecretName.trim() === '';
+  const smsTemplateReader = readsWithSendKey
+    ? smsAppClient
+    : createSmsAppClient({
+        apiOrigin,
+        authkey: await resolveSecretValue(preflightKeySecretName, {
+          envFallback: process.env['SMS_GATEWAY_PREFLIGHT_KEY_ENV_FALLBACK'] ?? 'SMS_GATEWAY_PREFLIGHT_KEY',
+        }),
+      });
+  // MG11 — ONE boot line in production when the gateway is unconfigured (⛔ fail-fast: the sweeps HOLD).
+  if (process.env['NODE_ENV'] === 'production' && !smsAppClient.isConfigured()) {
+    console.error(
+      '[jobs] boot: the SMS gateway (MSG91) is NOT configured — SMS_GATEWAY_API_KEY_SECRET_NAME unset or blank, or the origin refused; ' +
+        'every claim text is HELD (suspicion, peer mesh) or fails closed (correction, closure, certificate) until it is (roster Row 32)',
+    );
+  }
 
   // The GLOBAL Firebase service-account secret NAME (D1). Unset ⇒ fixture push everywhere.
   const firebaseServiceAccountSecretName = process.env['PUSH_FIREBASE_SA_SECRET_NAME'];
@@ -264,6 +295,8 @@ export async function buildContributionProviderResolver(
   return {
     resolveProviders,
     smsAppClient,
+    smsTemplateReader,
+    smsPreflightReadsWithSendKey: readsWithSendKey,
     teardown: () => firebaseAppCache.close(),
   };
 }

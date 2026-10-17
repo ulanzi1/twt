@@ -51,7 +51,8 @@ import {
   type ClaimCorrectionReminderDeps,
   type CorrectionChildAttempt,
 } from './claim-correction-reminders.js';
-import { helplineNotCallbackNumberWarning } from './claim-dlt-sms-send.js';
+import { CLAIM_CORRECTION_SMS_TEMPLATES } from './claim-correction-sms-templates.js';
+import { helplineNotCallbackNumberWarning, preflightWarningMessage } from './claim-dlt-sms-send.js';
 
 /** The certificate machine's deps — 6.19b's, minus the staff push (CR10: ⛔ no staff push in 6.19d). */
 export type ClaimCertificateReminderDeps = Omit<ClaimCorrectionReminderDeps, 'push'>;
@@ -669,6 +670,11 @@ export async function runCertificateFamilySmsChild(
   }
   // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change.
   if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, 'certificate reminder'));
+  // Story 6.37 (MG5): sent DESPITE a pre-flight fault / transient (fail open — ⛔ hold here); ONE warning, ⛔ an outcome change.
+  if (result.preflightWarning !== undefined) {
+    const key = CLAIM_CORRECTION_SMS_TEMPLATES.certificate_reminder[begun.contactLocale].dltTemplateIdConfigKey;
+    alarm(preflightWarningMessage(pid, 'certificate reminder', key, result.preflightWarning));
+  }
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-certificate-sms: ${result.detail} for claim ${p.claimCaseId} run ${p.runId} — recorded error (fail-closed)`);
   }

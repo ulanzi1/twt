@@ -680,6 +680,10 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   (WhatsApp when the SMS is not delivered after 4 hours; a second SMS after 48 hours if not delivered by either channel; a third SMS
   48 hours later and a 96-hour wait; then escalation for a call or letter). Six follow-up questions are open (`-350`, "What this ruling
   does NOT cover" (a)–(f)) and go back to the Panel. The text below is kept as it was put.
+  ⭐ **FOLLOW-UPS RULED 2026-10-17 — `-351`:** 1 A (only a reported failure starts the ladder); 2 (the claimant's filing agreement is the
+  consent — but as built it names texts and post only, so the WhatsApp step stays off until the wording, the opt-in rule and nominees'
+  consent are settled with counsel); 3 B (correction AND certificate reminders); 4 A (one ladder per person); 5 A (a recorded call that
+  reaches the family counts; tracking / recording / transcription in phase 2); 6 A (no closure while a ladder runs).
 - **PQ1 — "Reached" when the network REPORTS a reminder undelivered** (one routing note, the TEMPLATE's order; the clause each option
   touches goes in the note's EVIDENCE section, ⛔ in the options). §0: passes — *"what the Trust OWES a family"* and a ratified clause
   that is matched or *"narrowed"* (`-252` cl.1 read verbatim: *"accepted by the network (or shown delivered, where a report
@@ -1219,6 +1223,12 @@ them at Task 0.1.
   not make today (a WhatsApp correction-reminder template in English and Hindi, needing Meta approval and the person's opt-in; up to
   two extra SMS per undelivered reminder) and a call / letter escalation — Task 7 grows from a one-mapping change into a send engine.
   The Policy meaning is re-checked when Task 7's AC is written to the answered follow-ups.
+- **(h) The ladder's follow-ups RULED (2026-10-17).** `-351` (`984bc546`, Trustee-ratified, committed alone) records the six answers
+  verbatim. Answer 2 rests on the claimant's filing agreement naming WhatsApp and calls; the agreement as built (`claim.json`
+  `contact.agreement`, en + hi) says *"by text message and by post"* only, and architecture §3.4's ratified opt-in rule accepts only an
+  explicit, not bundled, in-app consent — so the gap is put back to the Panel with counsel (a second follow-up note), together with
+  nominees' consent; no WhatsApp message is sent meanwhile (our reading). Task 7 now covers BOTH chases (correction and certificate),
+  a hand-recorded call, and closure waiting for a running ladder; its AC is written once the story shape is decided.
 
 ### Completion Notes List
 
@@ -1251,3 +1261,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.7 | PQ2 WITHDRAWN before it was sent (`-348`, `a9b0112c`): under DLT a gateway cannot deliver words that were not approved, so the question had no case (BigDev). The PQ2 section is marked withdrawn (kept as written); Task 8 no longer waits for a PQ2 note; Debug Log (e). The replacement question — DLT refusing a Panel-approved template — is being traced. |
 | 2026-10-17 | 1.8 | Debug Log (f): the DLT-rejection trace recorded as `-349` (`b878d25a`) — a Row 30 go-live condition, the DLT sheet's rejection procedure, a deferred-work risk item; no Panel question; PQ1 confirmed as still the Panel's. No change to this story's build scope. |
 | 2026-10-17 | 1.9 | PQ1 RULED — `-350` (Trustee-ratified): B1 after a delivery ladder (WhatsApp 4 h → SMS 48 h → SMS 96 h + 96 h wait → call / letter). The PQ1 note's ruling block filled; PQ1 section marked ruled; AC11 and Task 7 annotated — the ladder's legs wait for the six follow-up questions; Debug Log (g). |
+| 2026-10-17 | 1.10 | The ladder's six follow-ups RULED — `-351`: 1 A, 2 (the filing agreement as consent — its wording gap put back with counsel), 3 B, 4 A, 5 A (call recorded by hand; phase 2 automation), 6 A. Debug Log (h). |

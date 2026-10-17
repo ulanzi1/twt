@@ -21,7 +21,24 @@ import {
 import { bindScopedDb, claim, cycleCalendar, deviceToken, encryption, ids, withPariwarScope } from '@twt/domain';
 import { createQueueClient, QUEUE_NAMES, stopQueueClient, type JobEnvelope, type QueueClient } from '@twt/queue';
 import pg from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// 6.37b AC1 (code review round 2) — ONE leg breaks the CRQID formatter to prove, through a REAL caller, that a bad
+// correlation id is a crash that leaves the row `attempting` (⛔ a final). Every other leg uses the real formatter.
+const correlationFault = vi.hoisted(() => ({ on: false }));
+vi.mock('@twt/domain', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@twt/domain')>();
+  return {
+    ...actual,
+    smsDelivery: {
+      ...actual.smsDelivery,
+      formatSmsCorrelationId: (c: Parameters<typeof actual.smsDelivery.formatSmsCorrelationId>[0]) => {
+        if (correlationFault.on) throw new Error('sms correlation: forced fault');
+        return actual.smsDelivery.formatSmsCorrelationId(c);
+      },
+    },
+  };
+});
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import {
@@ -339,6 +356,27 @@ describe.skipIf(!hasDatabase)('Story 6.19b — the claim-correction reminders (l
     );
     expect(rows).toHaveLength(2);
     expect(h.sent.map((m) => m.correlationId).sort()).toEqual(rows.map((r) => `cr${r.reminder_id.replace(/-/g, '')}`).sort());
+  });
+
+  it('⭐ 6.37b AC1 — a bad correlation id CRASHES the child through the real caller: ⛔ send, the row stays `attempting`', async () => {
+    const s = await seed();
+    const { day0 } = await runOf(s.runId!);
+    const h = harness();
+    h.setNow(tenAmIst(cycleCalendar.addCalendarDays(day0, 1)));
+    await runCorrectionReminderSweep(h.deps, boss(h));
+    const [job] = smsFor(h, s.claimCaseId);
+    correlationFault.on = true;
+    try {
+      await expect(child(h, job!)).rejects.toThrow('forced fault');
+    } finally {
+      correlationFault.on = false;
+    }
+    expect(h.sent).toEqual([]);
+    const { rows } = await pool.query<{ outcome: string }>(
+      "SELECT outcome FROM claim_correction_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms'",
+      [s.claimCaseId],
+    );
+    expect(rows).toEqual([{ outcome: 'attempting' }]);
   });
 
   it('⭐ a second sweep the same day enqueues ⛔ nothing new for a recorded slot; a second delivery of the child is a no-op', async () => {

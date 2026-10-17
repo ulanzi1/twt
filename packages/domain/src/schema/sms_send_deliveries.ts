@@ -44,7 +44,7 @@ export const smsSendDeliveries = pgTable(
     check('sms_send_deliveries_status_code_check', sql`${t.statusCode} ~ '^[0-9]{1,3}$'`),
     check(
       'sms_send_deliveries_failure_reason_check',
-      sql`${t.failureReason} IS NULL OR (length(${t.failureReason}) <= 200 AND ${t.failureReason} !~ '[[:cntrl:]]' AND ${t.failureReason} !~ '[0-9]{7}')`,
+      sql`${t.failureReason} IS NULL OR (length(${t.failureReason}) <= 200 AND ${t.failureReason} !~ '[[:cntrl:]]' AND ${t.failureReason} !~ '[0-9]([ ()+./,:;#_*-]{0,3}[0-9]){6}')`, // 0168
     ),
     check('sms_send_deliveries_report_count_check', sql`${t.reportCount} >= 1`),
     check('sms_send_deliveries_reported_order_check', sql`${t.firstReportedAt} <= ${t.reportedAt}`),

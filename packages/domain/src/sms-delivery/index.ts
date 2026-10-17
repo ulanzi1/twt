@@ -19,6 +19,7 @@ export {
   claimDueSmsDeliveryReports,
   countOtpDeliveryReports,
   countSilentSmsSends,
+  canReadAcrossPariwars,
   lookupSendForCorrelation,
   persistSmsDeliveryReports,
   pruneSettledSmsDeliveryReports,

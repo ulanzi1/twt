@@ -9,6 +9,8 @@ import { smsDelivery } from '@twt/domain';
 import { QUEUE_NAMES, type Job, type QueueClient } from '@twt/queue';
 import type pg from 'pg';
 
+import { errorClass } from './sms-delivery-correlator.js';
+
 /** DR7 — how long a settled report is kept. */
 export const SMS_DELIVERY_REPORT_RETENTION_DAYS = 30;
 
@@ -40,7 +42,7 @@ export async function registerSmsDeliveryPruneCron(
       console.info('[jobs] sms-delivery-prune', JSON.stringify({ jobs: jobs.length, deleted }));
       return { deleted };
     } catch (err) {
-      console.error('[jobs] sms-delivery-prune failed', err);
+      console.error('[jobs] sms-delivery-prune failed', errorClass(err)); // ⛔ the message (it can quote a value)
       throw err;
     }
   });

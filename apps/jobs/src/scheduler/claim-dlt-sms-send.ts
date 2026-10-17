@@ -157,7 +157,9 @@ function correlationIdOrCrash(correlation: ClaimDltSmsInput['correlation']): str
     if (!(CLAIM_SEND_ROW_KINDS as readonly string[]).includes(correlation.kind)) throw new Error('sms correlation: not a send-row kind');
     return smsDelivery.formatSmsCorrelationId(correlation);
   } catch (err) {
-    const kind = /^[a-z]{2}$/.test(String(correlation.kind)) ? String(correlation.kind) : 'unknown';
+    // `correlation?.` — an untyped caller passing ⛔ correlation must still get its ONE line (code review round 2).
+    const raw = String((correlation as { kind?: unknown } | undefined)?.kind);
+    const kind = /^[a-z]{2}$/.test(raw) ? raw : 'unknown';
     console.error(`[jobs] sms.bad_correlation:${kind}`);
     throw err;
   }

@@ -24,7 +24,7 @@ export const smsDeliveryReportInbox = pgTable(
     eventName: text('event_name'),
     /** Trimmed, ≤ 200, control characters stripped, every ≥ 7-digit sequence (contiguous or separated) ⇒ `#` (DR2, I3). */
     failureReason: text('failure_reason'),
-    /** MSG91's `deliveryTime` as received, ≤ 40 — ⛔ parsed for logic (T8). */
+    /** MSG91's `deliveryTime` as received, ONLY in a timestamp shape (0168's CHECK; else NULL — I3) — ⛔ parsed for logic (T8). */
     reportedDeliveryTime: text('reported_delivery_time'),
     /** OUR clock — the correlator's (T8). */
     receivedAt: timestamp('received_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
@@ -49,9 +49,12 @@ export const smsDeliveryReportInbox = pgTable(
     check('sms_delivery_report_inbox_event_name_check', sql`${t.eventName} IS NULL OR ${t.eventName} ~ '^[A-Za-z_]{1,32}$'`),
     check(
       'sms_delivery_report_inbox_failure_reason_check',
-      sql`${t.failureReason} IS NULL OR (length(${t.failureReason}) <= 200 AND ${t.failureReason} !~ '[[:cntrl:]]' AND ${t.failureReason} !~ '[0-9]{7}')`,
+      sql`${t.failureReason} IS NULL OR (length(${t.failureReason}) <= 200 AND ${t.failureReason} !~ '[[:cntrl:]]' AND ${t.failureReason} !~ '[0-9]([ ()+./,:;#_*-]{0,3}[0-9]){6}')`, // 0168
     ),
-    check('sms_delivery_report_inbox_reported_delivery_time_check', sql`${t.reportedDeliveryTime} IS NULL OR length(${t.reportedDeliveryTime}) <= 40`),
+    check(
+      'sms_delivery_report_inbox_reported_delivery_time_check', // 0168 — LOCKSTEP with the api's DELIVERY_TIME
+      sql`${t.reportedDeliveryTime} IS NULL OR ${t.reportedDeliveryTime} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]{1,6})?)?(Z|[+-][0-9]{2}:?[0-9]{2})?$'`,
+    ),
     check(
       'sms_delivery_report_inbox_match_state_check',
       sql`${t.matchState} IN ('pending', 'matched', 'other_attempt', 'unmatched', 'ignored', 'otp')`,

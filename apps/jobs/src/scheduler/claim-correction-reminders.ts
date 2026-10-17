@@ -212,6 +212,16 @@ function alarmOf(deps: ClaimCorrectionReminderDeps): (m: string) => void {
 // ── The exported SEND (6.19c calls it for the closure notice — D32) ─────────────────────────────────────────
 
 /**
+ * 6.37b DR3 — the send table a message's row lives in, EXHAUSTIVE over the message union (code review round 2: a ternary
+ * sent every non-certificate message to `cr`, so a new message type would ship a CRQID naming the wrong table).
+ */
+const CLAIM_CORRECTION_SMS_KIND: Readonly<Record<ClaimCorrectionSmsMessage, smsDelivery.SmsSendRowKind>> = {
+  reminder: 'cr',
+  closure_notice: 'cr',
+  certificate_reminder: 'ce',
+};
+
+/**
  * ⭐ SEND ONE CLAIM-CORRECTION SMS (D7 — a DIRECT DLT SMS to an explicit E.164 number; ⛔ not `dispatch()`, ⛔ not an
  * Alert). Since Story 6.24b (RB4) a WRAPPER over the shared core `sendClaimDltSms` (`claim-dlt-sms-send.ts`), which holds
  * the fail-closed rules and the provider-result classification ONCE — behaviour byte-identical (proved by
@@ -239,7 +249,7 @@ export async function sendClaimCorrectionSms(
   },
 ): Promise<ClaimCorrectionSmsResult> {
   const template = CLAIM_CORRECTION_SMS_TEMPLATES[input.message][input.locale];
-  const kind: smsDelivery.SmsSendRowKind = input.message === 'certificate_reminder' ? 'ce' : 'cr';
+  const kind = CLAIM_CORRECTION_SMS_KIND[input.message];
   const reference = claimDomain.claimShortReference(input.claimCaseId);
   return sendClaimDltSms(deps, {
     dltTemplateIdConfigKey: template.dltTemplateIdConfigKey,

@@ -1,3 +1,10 @@
+# last_updated: 2026-10-18a (STORY 6.37b — CODE REVIEW rounds 1 + 2 on `story/6-37b-msg91-delivery-reports`: round 1's F1–F4 finished and
+# committed (`b5044a2d` — a separated phone number masked, the inbox INSERT in dedupe-key order, `runGlobalAppTx`'s DELIBERATE block, AC6's
+# scoped reads; the fix diff reviewed, 0 H / 0 M / 5 L applied). Round 2 — the whole branch, 4 chunks × 3 layers (12 parallel reviewers):
+# 5 decision-needed (D1–D5, for BigDev), 24 patches APPLIED, 5 deferred, 28 dismissed. ⭐ HIGH: the lease claim's `UPDATE … IN (SELECT …
+# LIMIT … SKIP LOCKED)` leased 40 of 40 due rows at LIMIT 2 under a Nested Loop Semi Join ⇒ a MATERIALIZED CTE + a forced-plan leg.
+# Migration 0168 (the DB backstops: separated-number and delivery-time CHECKs, the inbox INSERT narrowed to the projection) applied to :5433
+# ONLY. ADR-0042's forgery bound re-opened for row 6-37c (under `-351` 4 A a report ADDS reach). Row → in-progress pending D1–D5.)
 # last_updated: 2026-10-17t (STORY 6.37b — DEV DONE (Tasks 1–6, 8) on `story/6-37b-msg91-delivery-reports`: every SMS carries a CRQID
 # (kind + the send row's own id; `ot` + random hex for a login code) INSIDE the Flow recipient; MSG91's delivery-report webhook (static
 # header token, boot-resolved, two direct constant-time compares; DR2's projection — ⛔ the phone number) persists into the GLOBAL inbox
@@ -20508,11 +20515,22 @@ development_status:
   # 2026-10-17: PQ2 WITHDRAWN before it was sent (`-348`) — the row no longer waits for a PQ2 note; the DLT-refusal question is being traced.
   # 2026-10-17: PQ1 RULED (`-350`, Trustee-ratified) — B1 after a delivery ladder; Task 7 waits for six follow-up questions to the Panel.
   # 2026-10-17 (dev, ledger `t`): Tasks 1–6 and 8 built — CRQID, webhook, migration 0167, correlator / prune / silence; ⛔ D22 changed (6-37c).
-  6-37b-msg91-delivery-reports: review
+  # ⚠ 2026-10-17's "row `done` needs PQ2 SENT" above is SUPERSEDED by `-348` (PQ2 withdrawn) — ⛔ a condition of this row.
+  # 2026-10-18 (code review, ledger `2026-10-18a`): round 1 F1–F4 (`b5044a2d`); round 2 whole branch, 12 reviewers — 24 patches applied
+  # (the claim's LIMIT over-claim fixed by a MATERIALIZED CTE; migration 0168's backstops; ADR-0042's forgery bound re-opened FOR 6-37c);
+  # → in-progress: five questions (D1–D5) wait for BigDev — the story's Review Findings, round 2.
+  6-37b-msg91-delivery-reports: in-progress
   # ⭐ 2026-10-17 (`2026-10-17-353`, split from 6.37b's Task 7): the Panel's delivery ladder and the "not delivered" conclusion (B1) for the
   # correction AND certificate chases (`-350` / `-351` / `-352`): reported-failure trigger, one ladder per person, WhatsApp at 4 h (claimant on
   # the new filing agreement; nominee on the DPDP basis, behind G1–G3 and the §3.4 amendment), SMS at 48 h and 96 h, a 96 h wait, the call /
   # letter escalation (a recorded call counts), closure waiting for a running ladder. ⛔ No claim-text template id until this row is `done`.
+  # ⚠ 2026-10-18 (6.37b code review round 2): the DURATIONS above (WhatsApp after 4 hours, a second SMS after 48, a third 48 hours later,
+  # a 96-hour wait) are `-350` ruling 2's ratified text; only their anchoring to absolute hours from the first SMS (hour 4, 48, 96, the
+  # wait ending at hour 192) is our reading — `-350`'s marker: "Our reading of the ladder's timing — NOT RATIFIED". ⭐ Owed by this row's
+  # Task 0 (its create-story ran on its own branch, `1e0c6f2e`): ADR-0042's forgery bound RESTATED (a forged `delivered` can end a ladder
+  # a genuine failure started; a forged `undelivered` starts the fan-out) and the prepared ADR consent sheet's §1–§2 revised, BEFORE the
+  # ladder is built or the sheet presented; AC11's "STILL so after a later reminder is reported `delivered`" leg reconciled with `-351`
+  # 4 A; the nominee CALL gate (`-352` Consequence 3 — pending 6.37b review D5).
   # ⛔ No story file; ⛔ no epics.md entry yet (owed at its create-story). AFTER 6-37b's Tasks 1–6.
   6-37c-undelivered-reminder-ladder: backlog
   epic-6-retrospective: done

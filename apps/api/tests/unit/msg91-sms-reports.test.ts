@@ -99,10 +99,23 @@ describe('projectSmsReport — EXACTLY DR2\'s six values (I3)', () => {
     expect(projectSmsReport({ ...FULL, eventName: 'a'.repeat(33) })!.eventName).toBeNull();
   });
 
-  it('a delivery time over 40 characters, or with a control character ⇒ NULL (T8 — ⛔ parsed)', () => {
-    expect(projectSmsReport({ ...FULL, deliveryTime: 'x'.repeat(41) })!.reportedDeliveryTime).toBeNull();
-    expect(projectSmsReport({ ...FULL, deliveryTime: '2025\n07' })!.reportedDeliveryTime).toBeNull();
-    expect(projectSmsReport({ ...FULL, deliveryTime: '2025-07-09T11:29:46+05:30' })!.reportedDeliveryTime).toBe('2025-07-09T11:29:46+05:30');
+  it('a delivery time outside the timestamp grammar ⇒ NULL — a bare or formatted number is ⛔ kept (T8 — ⛔ parsed; I3)', () => {
+    for (const bad of ['x'.repeat(41), '2025\n07', '919812345678', '+91 98123 45678', 'later', '1697545000000', '2025-07-09 11:29:46\n']) {
+      expect(projectSmsReport({ ...FULL, deliveryTime: bad })!.reportedDeliveryTime).toBeNull();
+    }
+    for (const ok of ['2025-07-09 11:29:46', '2025-07-09T11:29:46+05:30', '2025-07-09T11:29:46.123Z', '2025-07-09 11:29', '2025-07-09T11:29:46+0530']) {
+      expect(projectSmsReport({ ...FULL, deliveryTime: ok })!.reportedDeliveryTime).toBe(ok);
+    }
+  });
+
+  it('a request id is a STRING only — a JSON number (precision past 2^53) is ⛔ a request id', () => {
+    expect(projectSmsReport({ ...FULL, requestId: 2 ** 64 })).toBeNull(); // past 2^53 — the precision a JSON number loses
+    expect(projectSmsReport({ ...FULL, requestId: 123 })).toBeNull();
+  });
+
+  it('a body with a UTF-8 byte-order mark is parsed (⛔ ACKed and lost)', () => {
+    const body = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify(FULL))]);
+    expect(parseSmsReportBody(body)).toEqual({ kind: 'reports', items: [FULL] });
   });
 
   it('⛔ a prototype key is read', () => {

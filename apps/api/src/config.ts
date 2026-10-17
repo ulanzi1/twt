@@ -278,6 +278,17 @@ function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
   return v;
 }
 
+/**
+ * Story 6.37b (code review round 2) — a limit that must be a POSITIVE INTEGER: `intEnv` admits 0 and fractions, and
+ * @fastify/rate-limit truncates its `max` (a 0 — or 0.5 — would 429 EVERY report, a silent webhook outage that counts
+ * toward MSG91's auto-pause). Boot fails loudly instead.
+ */
+function positiveIntEnv(env: NodeJS.ProcessEnv, key: string, fallback: number): number {
+  const n = intEnv(env, key, fallback);
+  if (!Number.isInteger(n) || n < 1) throw new Error(`[config] env var ${key} must be a positive integer, got ${JSON.stringify(env[key])}`);
+  return n;
+}
+
 function intEnv(env: NodeJS.ProcessEnv, key: string, fallback: number): number {
   const v = env[key];
   if (v === undefined || v.trim() === '') return fallback;
@@ -449,15 +460,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     },
     // Story 6.37b (DR1, DR9) — MSG91's delivery-report webhook token NAMEs (optional) and its per-route limit.
     smsReportWebhook: {
+      // The NAME is stored trimmed — a stray space would make every lookup fail as `unavailable` (code review round 2).
       ...(env['SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME'] && env['SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME'].trim() !== ''
-        ? { tokenSecretName: env['SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME'] }
+        ? { tokenSecretName: env['SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME'].trim() }
         : {}),
       tokenEnvFallback: env['SMS_REPORT_WEBHOOK_TOKEN_ENV_FALLBACK'] ?? 'SMS_REPORT_WEBHOOK_TOKEN',
       ...(env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME'] && env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME'].trim() !== ''
-        ? { nextTokenSecretName: env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME'] }
+        ? { nextTokenSecretName: env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME'].trim() }
         : {}),
       nextTokenEnvFallback: env['SMS_REPORT_WEBHOOK_TOKEN_NEXT_ENV_FALLBACK'] ?? 'SMS_REPORT_WEBHOOK_TOKEN_NEXT',
-      rateMax: intEnv(env, 'SMS_REPORT_WEBHOOK_RATE_MAX', 1200),
+      rateMax: positiveIntEnv(env, 'SMS_REPORT_WEBHOOK_RATE_MAX', 1200),
     },
   };
 }

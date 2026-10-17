@@ -1,4 +1,4 @@
-// sms_delivery_report_inbox — migration 0167 + RLS policy regression (Story 6.37b, Task 2; AC4, AC10; DR2, DR5-G
+// sms_delivery_report_inbox — migrations 0167 / 0168 + RLS policy regression (Story 6.37b, Task 2; code review round 2; AC4, AC10; DR2, DR5-G
 // (G-a), DR6, DR7). The inbox is GLOBAL (⛔ `pariwar_id`): FORCE RLS, EXACTLY one `USING (true)` policy per GRANTED
 // command (SELECT / INSERT / UPDATE / DELETE — ⛔ FOR ALL), EXACTLY the grants (SELECT, INSERT, DELETE, and UPDATE on the
 // drain's lease / settle columns — ⛔ the projection), DR7's dedupe index on EXACTLY (request id, CRQID, status code),
@@ -94,18 +94,31 @@ describe.skipIf(!hasDatabase)('sms_delivery_report_inbox — migration 0167 + RL
     expect(rows.every((r) => r.roles === '{twt_app}')).toBe(true);
   });
 
-  it('⭐ DR5-G (G-a) — the grants are EXACTLY SELECT, INSERT, DELETE, and UPDATE on the lease / settle columns only', async () => {
+  it('⭐ DR5-G (G-a) — the grants are EXACTLY SELECT, DELETE, INSERT on the SIX projection columns (0168) and UPDATE on the lease / settle columns', async () => {
     const { client } = getTx();
     const table = await client.query<{ privilege_type: string }>(
       `SELECT privilege_type FROM information_schema.role_table_grants WHERE grantee = 'twt_app' AND table_name = $1 ORDER BY 1`,
       [T],
     );
-    expect(table.rows.map((r) => r.privilege_type)).toEqual(['DELETE', 'INSERT', 'SELECT']);
-    const cols = await client.query<{ column_name: string }>(
-      `SELECT column_name FROM information_schema.column_privileges WHERE grantee = 'twt_app' AND table_name = $1 AND privilege_type = 'UPDATE' ORDER BY 1`,
-      [T],
-    );
-    expect(cols.rows.map((r) => r.column_name)).toEqual(['attempts', 'lease_until', 'match_detail', 'match_state', 'next_attempt_at', 'settled_at']);
+    expect(table.rows.map((r) => r.privilege_type)).toEqual(['DELETE', 'SELECT']);
+    const cols = async (privilege: string) =>
+      (await client.query<{ column_name: string }>(
+        `SELECT column_name FROM information_schema.column_privileges WHERE grantee = 'twt_app' AND table_name = $1 AND privilege_type = $2 ORDER BY 1`,
+        [T, privilege],
+      )).rows.map((r) => r.column_name);
+    expect(await cols('UPDATE')).toEqual(['attempts', 'lease_until', 'match_detail', 'match_state', 'next_attempt_at', 'settled_at']);
+    expect(await cols('INSERT')).toEqual(['crqid', 'event_name', 'failure_reason', 'reported_delivery_time', 'request_id', 'status_code']);
+  });
+
+  it('as twt_app: ⛔ an INSERT may set a drain or clock column — a row is ⛔ born settled, leased or back-dated (0168)', async () => {
+    const { client } = getTx();
+    await enterAppRoleNoScope(client);
+    for (const [col, val] of [
+      ['match_state', 'matched'], ['match_detail', 'delivered'], ['settled_at', '2000-01-01'], ['lease_until', '2000-01-01'],
+      ['attempts', '9'], ['next_attempt_at', '2999-01-01'], ['received_at', '2000-01-01'], ['report_id', '00000000-0000-4000-8000-000000000000'],
+    ] as const) {
+      await expectPgError(client, () => client.query(`INSERT INTO ${T} (request_id, ${col}) VALUES ('denied', $1)`, [val]), DENIED);
+    }
   });
 
   it('as twt_app: INSERT, a settle UPDATE and DELETE are accepted; ⛔ a projection column is ever rewritten', async () => {
@@ -113,7 +126,10 @@ describe.skipIf(!hasDatabase)('sms_delivery_report_inbox — migration 0167 + RL
     await enterAppRoleNoScope(client);
     const { rows } = await insertRow(client, validRow());
     const id = rows[0]!.report_id;
-    for (const set of [`request_id = 'x'`, `crqid = NULL`, `status_code = '2'`, `failure_reason = 'x'`, `received_at = now()`, `event_name = 'x'`]) {
+    for (const set of [
+      `request_id = 'x'`, `crqid = NULL`, `status_code = '2'`, `failure_reason = 'x'`, `received_at = now()`, `event_name = 'x'`,
+      `reported_delivery_time = NULL`, `report_id = gen_random_uuid()`,
+    ]) {
       await expectPgError(client, () => client.query(`UPDATE ${T} SET ${set} WHERE report_id = $1`, [id]), DENIED);
     }
     await expectAccepted(client, () =>
@@ -151,7 +167,7 @@ describe.skipIf(!hasDatabase)('sms_delivery_report_inbox — migration 0167 + RL
       await insertRow(client, validRow());
       await expectPgError(
         client,
-        () => insertRow(client, validRow({ failure_reason: 'other', event_name: 'other', reported_delivery_time: 'later' })),
+        () => insertRow(client, validRow({ failure_reason: 'other', event_name: 'other', reported_delivery_time: '2025-07-09T11:30:00+05:30' })),
         DEDUPE,
       );
     });
@@ -196,7 +212,14 @@ describe.skipIf(!hasDatabase)('sms_delivery_report_inbox — migration 0167 + RL
     ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: 'x'.repeat(201) }, { failure_reason: 'x'.repeat(200) }],
     ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: 'to 919812345678' }, { failure_reason: 'to #' }],
     ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: 'a\tb' }, { failure_reason: 'Template not matched on DLT' }],
-    ['sms_delivery_report_inbox_reported_delivery_time_check', { reported_delivery_time: 'x'.repeat(41) }, { reported_delivery_time: 'x'.repeat(40) }],
+    // 0168 (code review round 2): the separated-number backstop — an ASCII separator class NARROWER than the handler's mask.
+    ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: 'Failed for +91 98123 45678' }, { failure_reason: 'Failed for #' }],
+    ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: '98-1234-5678' }, { failure_reason: 'error 500 at #' }],
+    ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: '(98123) 45678' }, { failure_reason: 'op 123456 error 25' }],
+    // 0168: a timestamp shape (F3's two forms) or NULL — ⛔ a bare number (I3).
+    ['sms_delivery_report_inbox_reported_delivery_time_check', { reported_delivery_time: '919812345678' }, { reported_delivery_time: '2025-07-09 11:29:46' }],
+    ['sms_delivery_report_inbox_reported_delivery_time_check', { reported_delivery_time: '+91 98123 45678' }, { reported_delivery_time: '2025-07-09T11:29:46+05:30' }],
+    ['sms_delivery_report_inbox_reported_delivery_time_check', { reported_delivery_time: 'later' }, { reported_delivery_time: '2025-07-09T11:29:46.123Z' }],
     ['sms_delivery_report_inbox_match_state_check', { ...SETTLED, match_state: 'delivered' }, SETTLED],
     ['sms_delivery_report_inbox_match_detail_check', { ...SETTLED, match_detail: 'Delivered' }, { ...SETTLED, match_detail: 'unknown_status' }],
     ['sms_delivery_report_inbox_match_detail_check', { ...SETTLED, match_detail: 'a'.repeat(65) }, { ...SETTLED, match_detail: 'other_attempt:cr' }],

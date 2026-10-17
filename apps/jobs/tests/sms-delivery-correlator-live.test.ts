@@ -177,6 +177,20 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
     return (await pool.query(`SELECT * FROM sms_send_deliveries WHERE send_kind = $1 AND send_row_id = $2`, [kind, id])).rows;
   }
 
+  /** AC6 — a delivery record read back under a Pariwar's OWN scope as `twt_app` (RLS), as the send's tenant would see it. */
+  async function scopedDeliveries(kind: Kind, id: string, scope: string) {
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query('SET LOCAL ROLE twt_app');
+      await c.query(`SELECT set_config('app.pariwar_id', $1, true)`, [scope]);
+      return (await c.query(`SELECT * FROM sms_send_deliveries WHERE send_kind = $1 AND send_row_id = $2`, [kind, id])).rows;
+    } finally {
+      await c.query('ROLLBACK');
+      c.release();
+    }
+  }
+
   async function allDeliveries() {
     const ids = sendRows.map((r) => r.id);
     return (await pool.query(`SELECT * FROM sms_send_deliveries WHERE send_row_id = ANY($1) ORDER BY send_kind, send_row_id`, [ids])).rows;
@@ -279,20 +293,24 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
     it('(4) a CRQID naming a `staff_push` row ⇒ unmatched:not_sms; ⛔ delivery row', async () => {
       const id = await sendRow('cr', { purpose: 'staff_push', providerMessageId: 'projects/x/messages/fcm-1' });
       const r = await inbox({ crqid: `cr${hex(id)}` });
+      const before = await allDeliveries();
       const { alarms } = await tick(at(1));
       expect(await inboxRow(r)).toMatchObject({ match_state: 'unmatched', match_detail: 'not_sms' });
       expect(alarms).toEqual(['[jobs] sms-delivery-correlator: sms_report.not_sms (count 1)']);
       expect(await deliveries('cr', id)).toEqual([]);
+      expect(await allDeliveries()).toEqual(before);
     });
 
     it('(5) a ping never begun ⇒ retried, then unmatched:not_begun', async () => {
       const id = await sendRow('pm', { outcome: null });
       const r = await inbox({ crqid: `pm${hex(id)}` });
+      const before = await allDeliveries();
       await tick(at(1));
       expect(await inboxRow(r)).toMatchObject({ match_state: 'pending' });
       await tick(at(H72));
       expect(await inboxRow(r)).toMatchObject({ match_state: 'unmatched', match_detail: 'not_begun' });
       expect(await deliveries('pm', id)).toEqual([]);
+      expect(await allDeliveries()).toEqual(before);
     });
 
     it('(6) an `attempting` row ⇒ retried, then matched once it is finalised `accepted`', async () => {
@@ -311,11 +329,13 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
     it('(6b) still `attempting` at 72 h ⇒ unmatched:still_attempting (⛔ other_attempt)', async () => {
       const id = await sendRow('sn', { outcome: 'attempting' });
       const r = await inbox({ crqid: `sn${hex(id)}` });
+      const before = await allDeliveries();
       await tick(at(1));
       const { alarms } = await tick(at(H72));
       expect(await inboxRow(r)).toMatchObject({ match_state: 'unmatched', match_detail: 'still_attempting' });
       expect(alarms).toEqual(['[jobs] sms-delivery-correlator: sms_report.unmatched:sn (count 1)']);
       expect(await deliveries('sn', id)).toEqual([]);
+      expect(await allDeliveries()).toEqual(before);
     });
 
     it('(7) a DIFFERENT request id for the row, and a report for an `error` row ⇒ other_attempt:<kind> + ONE alarm each tick; ⛔ delivery change', async () => {
@@ -371,11 +391,13 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       const req = (await pmidOf('cr', id))!;
       const r0 = await inbox({ crqid: `cr${hex(id)}`, requestId: req, status: '0' });
       const r7 = await inbox({ crqid: `cr${hex(id)}`, requestId: req, status: '7' });
+      const before = await allDeliveries();
       const { alarms } = await tick(at(1));
       expect(await inboxRow(r0)).toMatchObject({ match_state: 'ignored', match_detail: 'intermediate' });
       expect(await inboxRow(r7)).toMatchObject({ match_state: 'ignored', match_detail: 'unknown_status' });
       expect(alarms).toEqual(['[jobs] sms-delivery-correlator: sms_report.unknown_status:7 (count 1)']);
       expect(await deliveries('cr', id)).toEqual([]);
+      expect(await allDeliveries()).toEqual(before);
     });
   });
 
@@ -413,7 +435,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         { requestId: req, crqid: `cr${hex(id)}`, statusCode: '2', eventName: 'failed', failureReason: 'first', reportedDeliveryTime: null },
       ]);
       const again = await smsDelivery.persistSmsDeliveryReports(pool, [
-        { requestId: req, crqid: `cr${hex(id)}`, statusCode: '2', eventName: 'other', failureReason: 'second', reportedDeliveryTime: 'x' },
+        { requestId: req, crqid: `cr${hex(id)}`, statusCode: '2', eventName: 'other', failureReason: 'second', reportedDeliveryTime: '2025-07-09T11:30:00Z' },
       ]);
       requestIds.push(req);
       expect([persisted, again]).toEqual([1, 0]);
@@ -421,6 +443,8 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       await pool.query(`UPDATE sms_delivery_report_inbox SET received_at = $2, next_attempt_at = $2 WHERE request_id = $1`, [req, T0]);
       await tick(at(1));
       expect(await deliveries('cr', id)).toEqual([expect.objectContaining({ report_count: 1, failure_reason: 'first', delivery_state: 'undelivered' })]);
+      expect(await scopedDeliveries('cr', id, PARIWAR)).toEqual([expect.objectContaining({ report_count: 1, failure_reason: 'first' })]);
+      expect(await scopedDeliveries('cr', id, OTHER_PARIWAR)).toEqual([]);
     });
 
     it('(8g) status 0 then status 1 for the same send ⇒ report_count 1', async () => {
@@ -431,6 +455,8 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       await inbox({ crqid: `pm${hex(id)}`, requestId: req, status: '1', receivedAt: at(2) });
       await tick(at(3));
       expect(await deliveries('pm', id)).toEqual([expect.objectContaining({ report_count: 1, delivery_state: 'delivered' })]);
+      expect(await scopedDeliveries('pm', id, PARIWAR)).toEqual([expect.objectContaining({ report_count: 1, delivery_state: 'delivered' })]);
+      expect(await scopedDeliveries('pm', id, OTHER_PARIWAR)).toEqual([]);
     });
 
     it('(8i) ⭐ a settle replayed after its lease lapsed ⇒ ⛔ counted twice (the CAS rolls the upsert back)', async () => {
@@ -468,6 +494,8 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       }
       expect(await deliveries('sn', id)).toEqual(after);
       expect(after).toEqual([expect.objectContaining({ report_count: 1 })]);
+      expect(await scopedDeliveries('sn', id, PARIWAR)).toEqual([expect.objectContaining({ report_count: 1 })]);
+      expect(await scopedDeliveries('sn', id, OTHER_PARIWAR)).toEqual([]);
     });
   });
 
@@ -501,6 +529,28 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       expect(await inboxRow(r)).toMatchObject({ match_state: 'pending' });
     });
 
+    it('a row that fails EVERY time is settled unmatched:row_failed after 5 attempts AND 72 h (⛔ re-claimed forever; ⛔ on its first failure late)', async () => {
+      const id = await sendRow('cr');
+      const r = await inbox({ crqid: `cr${hex(id)}`, requestId: (await pmidOf('cr', id))! });
+      const failing = recordingPool((s) => s.includes('INSERT INTO sms_send_deliveries'));
+      const first = await tick(at(1), { pool: failing.pool });
+      expect(first.summary.failed).toBe(1);
+      expect(first.alarms).toEqual(['[jobs] sms-delivery-correlator: sms_report.row_failed (count 1; Error×1) — left to the lease']);
+      // ⭐ Past 72 h but only its 2nd attempt (an outage backlog's first try): ⛔ given up — left to the lease.
+      await tick(at(H72), { pool: failing.pool });
+      expect(await inboxRow(r)).toMatchObject({ match_state: 'pending', attempts: 2 });
+      // Attempts 3, 4 (each after the 5-minute lease), then the 5th gives up.
+      await tick(at(H72 + 6), { pool: failing.pool });
+      await tick(at(H72 + 12), { pool: failing.pool });
+      expect(await inboxRow(r)).toMatchObject({ match_state: 'pending', attempts: 4 });
+      const last = await tick(at(H72 + 18), { pool: failing.pool });
+      expect(await inboxRow(r)).toMatchObject({ match_state: 'unmatched', match_detail: 'row_failed', attempts: 5 });
+      expect(last.summary.settled['unmatched:row_failed']).toBeGreaterThanOrEqual(1);
+      // ⚠ An earlier leg's still-pending row can come due at these late ticks (the suite shares one clock) — counts ≥ 1, ⛔ exact.
+      expect(last.alarms.some((a) => /^\[jobs\] sms-delivery-correlator: sms_report\.row_failed_final:Error \(count [1-9]\d*\)$/.test(a))).toBe(true);
+      expect(await deliveries('cr', id)).toEqual([]);
+    });
+
     it('two CONCURRENT drains settle each row ONCE (SKIP LOCKED) — every report counted once', async () => {
       const ids: string[] = [];
       for (let i = 0; i < 8; i += 1) {
@@ -508,10 +558,11 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         ids.push(id);
         await inbox({ crqid: `cr${hex(id)}`, requestId: (await pmidOf('cr', id))! });
       }
-      const [a, b] = await Promise.all([tick(at(1)), tick(at(1))]);
-      expect(a.summary.lostRace + b.summary.lostRace).toBe(0);
-      expect(a.summary.claimed).toBeGreaterThan(0);
-      expect(b.summary.claimed).toBeGreaterThanOrEqual(0);
+      // A limit of 4 each: BOTH drains must claim, and together exactly the 8 (code review round 2 — `>= 0` was vacuous).
+      const drain = () => runSmsDeliveryCorrelatorTick({ pool, now: () => at(1), limit: 4, onAlarm: () => undefined });
+      const [a, b] = await Promise.all([drain(), drain()]);
+      expect(a.lostRace + b.lostRace).toBe(0);
+      expect([a.claimed, b.claimed]).toEqual([4, 4]);
       for (const id of ids) expect(await deliveries('cr', id)).toEqual([expect.objectContaining({ report_count: 1 })]);
       const { rows } = await pool.query<{ attempts: number; match_state: string }>(
         `SELECT attempts, match_state FROM sms_delivery_report_inbox WHERE crqid = ANY($1)`,
@@ -519,6 +570,22 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       );
       // each row claimed by exactly ONE of the two drains (attempts 1), and settled
       expect(rows.map((r) => [r.attempts, r.match_state])).toEqual(ids.map(() => [1, 'matched']));
+    });
+
+    it('the tick STOPS before the claim\'s lease lapses — a later row is left to the next tick (code review round 2)', async () => {
+      const a = await sendRow('cr');
+      const b = await sendRow('cr');
+      const ra = await inbox({ crqid: `cr${hex(a)}`, requestId: (await pmidOf('cr', a))!, receivedAt: at(-2) });
+      const rb = await inbox({ crqid: `cr${hex(b)}`, requestId: (await pmidOf('cr', b))!, receivedAt: at(-1) });
+      // The clock: the claim at 1 min, the first row at 1 min, the second row 5 min later (the lease's end).
+      const clocks = [at(1), at(1), at(6)];
+      const summary = await runSmsDeliveryCorrelatorTick({ pool, now: () => clocks.shift() ?? at(6), onAlarm: () => undefined });
+      expect(summary.claimed).toBeGreaterThanOrEqual(2);
+      expect(summary.leftToLease).toBe(summary.claimed - 1);
+      expect(await inboxRow(ra)).toMatchObject({ match_state: 'matched' });
+      expect(await inboxRow(rb)).toMatchObject({ match_state: 'pending', attempts: 1 });
+      await tick(at(7));
+      expect(await inboxRow(rb)).toMatchObject({ match_state: 'matched', attempts: 2 });
     });
 
     it('the claim\'s limit is honoured (a tick of limit 1 takes ONE row)', async () => {

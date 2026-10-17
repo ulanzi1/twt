@@ -36,7 +36,7 @@ resource "cloudflare_ruleset" "waf_custom" {
   # which would challenge or block every request to the sensitive paths).
   zone_id     = var.zone_id
   name        = "${local.name_prefix}-waf-custom"
-  description = "App-link verification files skip the edge challenges (Story 6.30); per-surface bot sensitivity (Story 1.13, §5.8a) when bot management is on."
+  description = "App-link verification files skip the edge challenges (Story 6.30); MSG91's SMS delivery-report webhook skips them too (Story 6.37b); per-surface bot sensitivity (Story 1.13, §5.8a) when bot management is on."
   kind        = "zone"
   phase       = "http_request_firewall_custom"
 
@@ -66,7 +66,8 @@ resource "cloudflare_ruleset" "waf_custom" {
 
   # Rule 0b — Story 6.37b (`2026-10-17-347` DR9; ADR-0042): MSG91's SMS delivery-report webhook. MSG91's servers are a
   # bot by design; a challenge is ⛔ a clean 2xx, so MSG91 RETRIES it and then AUTO-PAUSES the webhook (> 2% final
-  # failures over ≥ 10 requests) — and a paused webhook goes SILENT (the api's silence alarm is the only detector).
+  # failures over ≥ 10 requests) — and a paused webhook goes SILENT (the jobs service's silence alarm is the only
+  # detector, and it counts claim-text sends only — ADR-0042).
   # Skips, for EXACTLY this one POST path, the same edge checks Rule 0 skips (BIC, security level, SBFM and Rules 1–3).
   # ⚠ A skip is ⛔ trust: the api still refuses (403) any request without the boot-resolved header token. A SEPARATE rule
   # (⛔ the path added to Rule 0's expression — those files are GETs with their own reason). Free-plan Bot Fight Mode

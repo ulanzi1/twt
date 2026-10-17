@@ -92,12 +92,19 @@ export const SMS_REPORT_LEASE_MS = 5 * 60_000;
  * `lease_until` = `now + leaseMs` and `attempts` + 1, oldest `received_at` first, `FOR UPDATE SKIP LOCKED` so two drains
  * never take one row. A row whose lease lapsed (a crashed worker) is due again. At-least-once: the settle is the
  * compare-and-set ({@link settleSmsDeliveryReport}).
+ *
+ * ⚠ The due set is a `MATERIALIZED` CTE, evaluated ONCE (code review round 2, 2026-10-18). DR8's first shape — `UPDATE …
+ * WHERE id IN (SELECT … LIMIT n FOR UPDATE SKIP LOCKED)` — is NOT bounded by its LIMIT: under a Nested Loop Semi Join the
+ * subquery is re-run per outer row, LockRows skips every row this statement has already updated (self-modified) and the
+ * LIMIT yields the next one — LIMIT 2 leased 40 of 40 due rows on :5433. ⛔ Inline the CTE back into an `IN`.
  */
 export async function claimDueSmsDeliveryReports(
   q: Queryable,
   opts: { readonly limit?: number; readonly leaseMs?: number; readonly now: Date },
 ): Promise<ClaimedSmsDeliveryReport[]> {
-  const limit = clampLimit(opts.limit, SMS_REPORT_CLAIM_LIMIT);
+  // `clampLimit(NaN)` is NaN and `clampLimit(2.5)` is 2.5 (both SQL errors) — a non-finite limit takes the default, a fraction
+  // its floor.
+  const limit = clampLimit(Number.isFinite(opts.limit) ? Math.floor(opts.limit!) : undefined, SMS_REPORT_CLAIM_LIMIT);
   const leaseMs = opts.leaseMs ?? SMS_REPORT_LEASE_MS;
   if (!(leaseMs > 0)) throw new Error('claimDueSmsDeliveryReports: leaseMs must be positive');
   const { rows } = await q.query<{
@@ -109,15 +116,17 @@ export async function claimDueSmsDeliveryReports(
     received_at: Date | string;
     attempts: number;
   }>(
-    `UPDATE sms_delivery_report_inbox i
+    `WITH due AS MATERIALIZED (
+       SELECT report_id FROM sms_delivery_report_inbox
+        WHERE match_state = 'pending' AND next_attempt_at <= $1::timestamptz
+          AND (lease_until IS NULL OR lease_until < $1::timestamptz)
+        ORDER BY received_at, report_id
+        LIMIT $3
+        FOR UPDATE SKIP LOCKED)
+     UPDATE sms_delivery_report_inbox i
         SET lease_until = $1::timestamptz + ($2::double precision * interval '1 millisecond'), attempts = i.attempts + 1
-      WHERE i.report_id IN (
-              SELECT report_id FROM sms_delivery_report_inbox
-               WHERE match_state = 'pending' AND next_attempt_at <= $1::timestamptz
-                 AND (lease_until IS NULL OR lease_until < $1::timestamptz)
-               ORDER BY received_at, report_id
-               LIMIT $3
-               FOR UPDATE SKIP LOCKED)
+       FROM due
+      WHERE i.report_id = due.report_id
       RETURNING i.report_id, i.request_id, i.crqid, i.status_code, i.failure_reason, i.received_at, i.attempts`,
     [opts.now, leaseMs, limit],
   );
@@ -143,7 +152,8 @@ export type SmsReportSettlement =
  * DR8 — end a claimed row's attempt as a COMPARE-AND-SET on `(match_state = 'pending', attempts = <claimed>)`: a settle
  * stamps `settled_at = now` (the prune's clock); a retry stays `pending` with the next due time and CLEARS the lease
  * (else the backoff would really be the lease). `false` ⇒ the row moved on (a lapsed lease re-claimed it) — the caller
- * ROLLS BACK whatever it wrote with it, so a report is ⛔ counted twice (AC7).
+ * ROLLS BACK whatever it wrote with it, so a report is ⛔ counted twice (AC7). ⚠ `q` MUST be the SAME transaction as the
+ * {@link upsertSmsSendDelivery} it guards — on a bare pool the upsert autocommits and a lost compare-and-set cannot undo it.
  */
 export async function settleSmsDeliveryReport(
   q: Queryable,
@@ -189,18 +199,30 @@ export interface SmsSendRowFacts {
   /** `outcome` (pings: `send_outcome`, NULL ⇒ ⛔ begun). */
   readonly outcome: string | null;
   readonly providerMessageId: string | null;
-  /** `claim_correction_reminders.purpose`; null for the other kinds (all of their rows are SMS). */
+  /**
+   * `purpose` of a correction (`cr`) or certificate (`ce`) row — both tables hold staff rows beside their SMS rows; null for
+   * suspicion notices and pings (all of their rows are SMS). ⚠ `ce` read its real purpose since code review round 2 (it was
+   * `NULL::text`, so a report naming a certificate STAFF row reached DR6 row 7 instead of row 4).
+   */
   readonly purpose: string | null;
 }
 
 const LOOKUP: Record<SmsSendRowKind, string> = {
   cr: `SELECT pariwar_id, outcome, provider_message_id, purpose FROM claim_correction_reminders WHERE reminder_id = $1`,
-  ce: `SELECT pariwar_id, outcome, provider_message_id, NULL::text AS purpose FROM claim_certificate_reminders WHERE reminder_id = $1`,
+  ce: `SELECT pariwar_id, outcome, provider_message_id, purpose FROM claim_certificate_reminders WHERE reminder_id = $1`,
   sn: `SELECT pariwar_id, outcome, provider_message_id, NULL::text AS purpose FROM claim_suspicion_notices WHERE notice_id = $1`,
   pm: `SELECT pariwar_id, send_outcome AS outcome, provider_message_id, NULL::text AS purpose FROM claim_peer_mesh_pings WHERE ping_id = $1`,
 };
 
-/** DR6 — one PRIMARY-KEY lookup of the send a CRQID names; null when ⛔ such row (yet). Reads ONLY (I2). */
+/**
+ * DR6 — one PRIMARY-KEY lookup of the send a CRQID names; null when ⛔ such row (yet). Reads ONLY (I2).
+ *
+ * DELIBERATE (code review round 2): a CROSS-TENANT read with ⛔ Pariwar scope — the report names a send, and the send row is
+ * where its Pariwar is learned. It needs a role that bypasses RLS (jobs' service pool today — F21). Under an RLS-bound role
+ * (roster Row 26's leading option: `SET LOCAL ROLE twt_app`) the four send tables return ⛔ row and this returns null
+ * EXACTLY as for a missing send — every report would retry 72 h and settle `unmatched:no_row` with ⛔ error. The jobs
+ * correlator therefore checks {@link canReadAcrossPariwars} first and refuses to run. Re-examine when Row 26 closes.
+ */
 export async function lookupSendForCorrelation(q: Queryable, kind: SmsSendRowKind, rowId: string): Promise<SmsSendRowFacts | null> {
   const statement = LOOKUP[kind];
   if (statement === undefined) throw new Error('lookupSendForCorrelation: unknown kind');
@@ -211,6 +233,17 @@ export async function lookupSendForCorrelation(q: Queryable, kind: SmsSendRowKin
   const r = rows[0];
   if (r === undefined) return null;
   return { pariwarId: r.pariwar_id, outcome: r.outcome, providerMessageId: r.provider_message_id, purpose: r.purpose };
+}
+
+/**
+ * Code review round 2 — whether the CURRENT role can read across Pariwars (a superuser or a BYPASSRLS role): the
+ * precondition of {@link lookupSendForCorrelation} and {@link countSilentSmsSends}. ⛔ A guess from the pool's name.
+ */
+export async function canReadAcrossPariwars(q: Queryable): Promise<boolean> {
+  const { rows } = await q.query<{ ok: boolean }>(
+    `SELECT (rolsuper OR rolbypassrls) AS ok FROM pg_roles WHERE rolname = current_user`,
+  );
+  return rows[0]?.ok === true;
 }
 
 // ── The per-send delivery record (DR5, DR6 row 8) ───────────────────────────────────────────────────────────────
@@ -238,6 +271,8 @@ export interface SmsSendDeliveryReport {
  * - `request_id` — the first report's, unchanged;
  * - `report_count` — + 1 for EVERY matching report, one that changes nothing included;
  * - `first_reported_at` / `reported_at` — the earlier / the later `received_at` (reports can settle out of order).
+ * ⚠ Run it INSIDE the transaction of the {@link settleSmsDeliveryReport} compare-and-set — ⛔ on a bare pool (an autocommitted
+ * upsert whose settle then loses the race is a report counted twice; the type cannot say "a transaction").
  */
 export async function upsertSmsSendDelivery(q: Queryable, r: SmsSendDeliveryReport): Promise<void> {
   await q.query(
@@ -279,6 +314,8 @@ export const SMS_SILENCE_WINDOW = { olderThanHours: 48, newerThanDays: 7 } as co
  * id and ⛔ CRQID); pings by `send_outcome` / `send_updated_at`. Reads ONLY (I2).
  */
 export async function countSilentSmsSends(q: Queryable, opts: { readonly now: Date }): Promise<Record<SmsSendRowKind, number>> {
+  // DELIBERATE — cross-tenant, as {@link lookupSendForCorrelation}: under an RLS-bound role every count is a silent 0 (DR12's
+  // only paused-webhook detector gone quiet). The jobs check runs {@link canReadAcrossPariwars} first.
   const window = `BETWEEN $1::timestamptz - interval '${SMS_SILENCE_WINDOW.newerThanDays} days'
                       AND $1::timestamptz - interval '${SMS_SILENCE_WINDOW.olderThanHours} hours'`;
   const silent = (kind: SmsSendRowKind, idCol: string) => `
@@ -290,7 +327,7 @@ export async function countSilentSmsSends(q: Queryable, opts: { readonly now: Da
          WHERE s.purpose IN ('family_sms', 'closure_notice') AND s.outcome = 'accepted' AND s.updated_at ${window}
            AND ${silent('cr', 'reminder_id')}) AS cr,
        (SELECT count(*) FROM claim_certificate_reminders s
-         WHERE s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('ce', 'reminder_id')}) AS ce,
+         WHERE s.purpose = 'family_sms' AND s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('ce', 'reminder_id')}) AS ce,
        (SELECT count(*) FROM claim_suspicion_notices s
          WHERE s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('sn', 'notice_id')}) AS sn,
        (SELECT count(*) FROM claim_peer_mesh_pings s

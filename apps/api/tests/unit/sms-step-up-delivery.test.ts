@@ -317,8 +317,11 @@ describe('createSmsDltStepUpDelivery (Story 5.9)', () => {
       await makeAdapter(messaging, () => OTP_HEX).deliver(loginPayload());
       expect(sent[0]!.correlationId).toBe(`ot${OTP_HEX}`);
 
-      await makeAdapter(messaging).deliver(loginPayload());
-      await makeAdapter(messaging).deliver(loginPayload());
+      // ONE adapter, two sends — production builds the adapter ONCE at boot (code review round 2: two adapters could not
+      // catch a hex computed at construction).
+      const once = makeAdapter(messaging);
+      await once.deliver(loginPayload());
+      await once.deliver(loginPayload());
       expect(sent[1]!.correlationId).toMatch(/^ot[0-9a-f]{32}$/);
       expect(sent[2]!.correlationId).toMatch(/^ot[0-9a-f]{32}$/);
       expect(sent[1]!.correlationId).not.toBe(sent[2]!.correlationId);

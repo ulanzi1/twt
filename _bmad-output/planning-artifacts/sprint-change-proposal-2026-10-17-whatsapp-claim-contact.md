@@ -97,7 +97,11 @@ Amend §3.4 with a **claim-contact exception** that is narrow by design:
      the Panel is told;
    - **G3** — the claimant's new agreement wording is live (English and reviewed Hindi, as counsel settles its last clause) before any
      WhatsApp message reaches a claimant on it; a claim filed under the old wording keeps SMS, calls and post only.
-   G1 and G2 gate the NOMINEE's WhatsApp step only; the claimant's WhatsApp step needs G3 alone.
+   G1 gates the NOMINEE's WhatsApp step and calls to the nominee; G2 gates the nominee's WhatsApp step; the claimant's WhatsApp step
+   needs G3 alone. *(corrected 2026-10-18, code review round 2 — internal consistency with G1 above; ⛔ a change of substance. It
+   read: "G1 and G2 gate the NOMINEE's WhatsApp step only". ⚠ `-352` Consequence 3 gates nominee CALLS on the Meta check (b) too —
+   *"WhatsApp and calls to a nominee do not go live until counsel confirms the legal basis in writing (a) and the Meta policy check
+   (b) is recorded"* — which G2 as written does not: pending Story 6.37b review D5, ⛔ decided here.)*
 
 ---
 
@@ -122,10 +126,14 @@ Amend §3.4 with a **claim-contact exception** that is narrow by design:
 +  other surface; the Pariwar's WA toggle and number, Meta-approved templates, and STOP
 +  handling apply unchanged. Go-live conditions G1–G3 (counsel's written basis for the
 +  nominee; the Meta-policy check; the claimant's new agreement live) are recorded in
-+  roster row `6-37c-undelivered-reminder-ladder`'s gate.
++  sprint row `6-37c-undelivered-reminder-ladder`'s comment (⛔ a roster row yet — that comment NAMES them; their text is §3 of this
+  proposal).
  - **Fallback driven by WA-Cloud-API undelivered status,** not pre-send presence
    detection.
 ```
+
+*(corrected 2026-10-18, code review round 2 — the last line of the new bullet read "roster row `6-37c-undelivered-reminder-ladder`'s
+gate": the roster has no such row — `6-37c-undelivered-reminder-ladder` is a sprint-status row; ⛔ a change of substance.)*
 
 **Rationale:** states the Panel's rulings in the architecture, limits them to contact about a claim, and keeps §3.4's origination rule
 intact for every member notification.

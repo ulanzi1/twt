@@ -4,7 +4,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiConfig } from '../../src/config.js';
+import { loadConfig, type ApiConfig } from '../../src/config.js';
 import { buildSmsReportWebhookAuth } from '../../src/deps.js';
 
 const GOOD = 'g'.repeat(32);
@@ -60,6 +60,7 @@ describe('DR1 row 1 — the current token NAME unset ⇒ disabled', () => {
     const h = harness({ next: 'next-name', values: { 'next-name': GOOD_NEXT } });
     expect(await h.build()).toEqual({ current: null, next: null });
     expect(h.warn).toEqual(['[deps] sms report webhook disabled: SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME unset (next ignored)']);
+    expect(h.error).toEqual([]);
     expect(h.resolveSecret).not.toHaveBeenCalled();
   });
 
@@ -113,6 +114,56 @@ describe('DR1 rows 3–5 — the current token usable', () => {
     const h = harness({ current: 'cur-name', next: 'next-name', values: { 'cur-name': GOOD, 'next-name': value } });
     expect(await h.build()).toEqual({ current: GOOD, next: null });
     expect(h.error).toEqual([`[deps] sms report webhook next token ignored: secret 'next-name' ${cls}`]);
+    expect(h.warn).toEqual([]);
     expectNoValue(h.error);
+  });
+});
+
+describe('DR1 — a token that is ⛔ printable ASCII (code review round 2)', () => {
+  it.each([`${'g'.repeat(32)}é`, `${'g'.repeat(16)}\u00a0${'g'.repeat(16)}`, `${'g'.repeat(16)}\t${'g'.repeat(16)}`])(
+    'the current token %j ⇒ disabled, ONE `not_header_safe` error naming the secret',
+    async (value) => {
+      const h = harness({ current: 'cur', values: { cur: value } });
+      expect(await h.build()).toEqual({ current: null, next: null });
+      expect(h.error).toEqual(["[deps] sms report webhook disabled: secret 'cur' not_header_safe"]);
+      expect(h.warn).toEqual([]);
+    },
+  );
+
+  it('the NEXT token ⛔ printable ASCII ⇒ the current only, ONE error naming the next', async () => {
+    const h = harness({ current: 'cur', next: 'nxt', values: { cur: GOOD, nxt: `${'n'.repeat(32)}é` } });
+    expect(await h.build()).toEqual({ current: GOOD, next: null });
+    expect(h.error).toEqual(["[deps] sms report webhook next token ignored: secret 'nxt' not_header_safe"]);
+    expect(h.warn).toEqual([]);
+  });
+});
+
+it('an inner SPACE is delivered intact on the wire ⇒ the token is usable (only controls / non-ASCII are refused)', async () => {
+  const h = harness({ current: 'cur', values: { cur: `${'g'.repeat(16)} ${'g'.repeat(16)}` } });
+  expect(await h.build()).toEqual({ current: `${'g'.repeat(16)} ${'g'.repeat(16)}`, next: null });
+  expect([...h.warn, ...h.error]).toEqual([]);
+});
+
+describe('config — the webhook\'s env (code review round 2)', () => {
+  const base = {
+    NODE_ENV: 'test',
+    SESSION_SECRET: 's'.repeat(64),
+    WEBAUTHN_EXPECTED_ORIGIN: 'http://localhost:3000',
+    WEBAUTHN_RP_ID: 'localhost',
+    ARGON2_PEPPER_SECRET_NAME: 'pepper',
+  } as NodeJS.ProcessEnv;
+  it.each(['0', '0.5', '-1', '12.5'])('SMS_REPORT_WEBHOOK_RATE_MAX=%s ⇒ boot fails loudly (⛔ a limit that 429s every report)', (v) => {
+    expect(() => loadConfig({ ...base, SMS_REPORT_WEBHOOK_RATE_MAX: v })).toThrow(/SMS_REPORT_WEBHOOK_RATE_MAX/);
+  });
+
+  it('unset ⇒ 1,200; a positive integer is kept; the secret NAMES are stored trimmed', () => {
+    expect(loadConfig(base).smsReportWebhook.rateMax).toBe(1200);
+    const c = loadConfig({
+      ...base,
+      SMS_REPORT_WEBHOOK_RATE_MAX: '2400',
+      SMS_REPORT_WEBHOOK_TOKEN_SECRET_NAME: ' twt-msg91 ',
+      SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME: '\ttwt-msg91-next ',
+    }).smsReportWebhook;
+    expect(c).toMatchObject({ rateMax: 2400, tokenSecretName: 'twt-msg91', nextTokenSecretName: 'twt-msg91-next' });
   });
 });

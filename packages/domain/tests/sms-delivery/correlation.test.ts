@@ -9,6 +9,7 @@ import {
   isSmsCorrelationId,
   parseSmsCorrelationId,
 } from '../../src/sms-delivery/correlation.js';
+import { SMS_SEND_KINDS } from '../../src/schema/sms_send_deliveries.js';
 
 const ROW = '0F1E2D3C-4B5A-4978-8695-a4b3c2d1e0f9';
 const HEX = '0f1e2d3c4b5a49788695a4b3c2d1e0f9';
@@ -77,5 +78,11 @@ describe('parseSmsCorrelationId', () => {
   it('accepts exactly the grammar ^(cr|ce|sn|pm|ot)[0-9a-f]{32}$', () => {
     expect(SMS_CORRELATION_ID_PATTERN.source).toBe('^(cr|ce|sn|pm|ot)[0-9a-f]{32}$');
     expect(isSmsCorrelationId(`ot${HEX}`)).toBe(true);
+  });
+});
+
+describe('LOCKSTEP — the send kinds (code review round 2)', () => {
+  it('the delivery table\'s kinds are EXACTLY the correlation kinds but the login code\'s `ot` (a new kind must reach both)', () => {
+    expect([...SMS_SEND_KINDS].sort()).toEqual(SMS_CORRELATION_KINDS.filter((k) => k !== 'ot').sort());
   });
 });

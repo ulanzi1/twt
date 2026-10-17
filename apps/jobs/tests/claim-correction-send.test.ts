@@ -683,4 +683,17 @@ describe('⭐ Story 6.37b — DR3 / T22: the CRQID is the send row\'s own id, va
       errors.mockRestore();
     }
   });
+
+  it('⛔ correlation at all (an untyped caller) ⇒ STILL its ONE `sms.bad_correlation:unknown` line, then the throw (code review round 2)', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const send = vi.fn(() => Promise.resolve('gw'));
+      const input = { ...coreInput(), correlation: undefined } as unknown as ClaimDltSmsInput & { readonly beforeSend?: undefined };
+      await expect(sendClaimDltSms({ smsAppClient: client(send), resolveConfig: vi.fn(config()) }, input)).rejects.toThrow(TypeError);
+      expect(errors.mock.calls).toEqual([['[jobs] sms.bad_correlation:unknown']]);
+      expect(send).not.toHaveBeenCalled();
+    } finally {
+      errors.mockRestore();
+    }
+  });
 });

@@ -4,6 +4,50 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review round 2 of 6-37b-msg91-delivery-reports (2026-10-18)
+
+- ⭐ **For row `6-37c-undelivered-reminder-ladder` (the carrier): ADR-0042's forgery bound must be RESTATED for the ladder as ruled**
+  [`docs/adr/ADR-0042-msg91-delivery-report-ingress.md`, Consequences — Security] — it holds for 6.37b AS BUILT (*"recording reports
+  changes nothing a person receives"* — `-353` decision 2). Relative to today (no report), a forged report still never makes a person
+  count as reached who would not count today (`-351` ruling 4 A returns a person to `accepted`'s state — 6-37c's own I1 says
+  *"⛔ worse than today"*). But relative to a GENUINE failure report: a forged `delivered` can END a ladder the network's real failure
+  started (our reading: their closure for silence is then no longer held by `-351` ruling 6 A), and a forged `undelivered` STARTS the
+  fan-out — WhatsApp, further SMS and a call or letter to the claimant and the nominee (`-350` ruling 2, `-352` Q2); and B1's three
+  effects return (a delayed closure, letter-eligibility for the rest of that number's life in the chase, a closure notice by letter).
+  The webhook's static header lets anyone holding the token post either. ⚠ Row 6-37c's create-story has ALREADY run on its own branch
+  (`1e0c6f2e`, `story/6-37c-undelivered-reminder-ladder`) — its I1 plans the ADR note at its Task 0.4; and its parent commit
+  (`f8102c02`) prepared `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-10-17.md`, whose §1 lists only the §3.11 step-1
+  departure (⛔ the edge-bar departure ADR-0042 now records — DR14 (c)) and whose §2 says the bound *"holds under the Panel's ruling"*
+  without the two effects above, and a Panel pack item putting ADR-0042 up "the sitting before row 6-37c starts". ⭐ Trigger: 6-37c's
+  Task 0 — ADR-0042 restated (or stronger ingress authentication / a cross-check adopted) BEFORE the ladder is built; the consent sheet
+  §1–§2 revised (or ADR-0042 pulled from the pack) BEFORE it is presented; both before roster Row 33 (a). **Not addressed** — recorded
+  open, ⛔ closed by the round-2 records.
+- **The `UPDATE … WHERE id IN (SELECT … LIMIT … FOR UPDATE SKIP LOCKED)` over-claim shape exists in two older drains**
+  [`packages/domain/src/telegram-opt-in/webhook-events.ts`, `packages/domain/src/wa-opt-in/webhook-events.ts` — Drizzle `inArray`
+  over `.limit(…).for('update', { skipLocked: true })`] — 6.37b's own claim leased 40 of 40 due rows under `LIMIT 2` on :5433 (a
+  Nested Loop Semi Join re-runs the subquery per outer row) and was fixed in round 2 by a `MATERIALIZED` CTE (`WITH due AS
+  MATERIALIZED (…) UPDATE … FROM due`). The two drains are pre-existing and outside 6.37b; ⛔ measured whether their plans over-claim.
+  ⭐ Trigger: the next change to either drain, or a batch-size-sensitive incident on the Telegram / WhatsApp inbox. **Deferred.**
+- **A paused webhook is ⛔ detected while only login codes flow** [`apps/jobs/src/sms-delivery-silence.ts`] — the silence alarm counts
+  claim-text sends only (the four claim send tables); the login-code line is information only and feeds ⛔ alarm (`-347` decision 12).
+  Before Row 33 (g) and any claim-text template id, a paused webhook or a boot-time token outage has ⛔ detector beyond the
+  disabled-webhook boot line — and every alarm reaches the logs only until Row 32 (h). A residual recorded in ADR-0042 (failure modes).
+  ⭐ Trigger: Row 33 (e0) proves the CRQID echo (an OTP-based silence count becomes meaningful), or a decision supersedes `-347`
+  decision 12's information-only line. **Deferred.**
+- **`correlationId` is optional on the DLT SMS provider** [`packages/channels/src/providers/sms-dlt.ts`] — a send that omits it carries
+  ⛔ CRQID, and its report lands unmatched (alarmed — `-347` DR6). The alert-SMS path (provider composition) is DARK — ⛔ named
+  values today, so ⛔ sendable (MG12) — and could send without a CRQID if it ever binds values. ⭐ Trigger: the story that lights the
+  alert-SMS path (Row 30 note (1)) — make the id required there, or record why not. **Deferred.**
+- **Reports in one POST share `received_at`** [`apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts`; the inbox claim's
+  `ORDER BY received_at, report_id`] — the tie is broken by the random `report_id`, so which of two same-POST reports for one send
+  counts as "first" is arbitrary. MSG91 gives ⛔ order within one POST, so none exists to keep. ⭐ Trigger: a real POST carrying two
+  final statuses for one request (Row 33 (e)), or 6-37c reading report order. **Deferred.**
+- **`readSmsSendDeliveries` takes an unbounded id list, and a non-uuid id raises `22P02`** [`packages/domain/src/sms-delivery/reports.ts`]
+  — ⛔ production caller today (only its export and the domain integration tests; checked 2026-10-18). ⭐ Trigger: its first caller —
+  row 6-37c — bounds the list (or batches it) and validates ids at its edge. **Deferred to 6-37c.**
+
+---
+
 ## Deferred from: Story 6.37b dev — MSG91's delivery reports (2026-10-17, `2026-10-17-347`)
 
 - **An "API Failed" report's shape is ⛔ documented** [`apps/jobs/src/sms-delivery-correlator.ts` `SMS_REPORT_STATUS_TABLE`;

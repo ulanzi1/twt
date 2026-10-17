@@ -160,8 +160,9 @@ export const SMS_REPORT_WEBHOOK_TOKEN_MIN_LENGTH = 32;
  * ALWAYS starts (refusing would restart-loop every route — 6.37 T13); only the webhook's state changes, per DR1's table:
  * - the current NAME unset ⇒ disabled (403 to everything); in production ONE warning (+ `next ignored` when a next NAME
  *   is set), elsewhere ⛔ line;
- * - the current NAME set but unreadable / blank / under 32 characters ⇒ disabled; ONE error naming the secret and the
- *   class (`unavailable` / `empty` / `too_short`), in every environment;
+ * - the current NAME set but unreadable / blank / under 32 characters / ⛔ printable ASCII (space included) ⇒ disabled; ONE error naming
+ *   the secret and the class (`unavailable` / `empty` / `too_short` / `not_header_safe` — the last added by code review
+ *   round 2, 2026-10-18), in every environment;
  * - the current usable ⇒ enabled on it; a next NAME set and usable ⇒ enabled on both; a next that fails as above ⇒
  *   the current only (a broken rotation half ⛔ disables a working token) + ONE error naming the next secret.
  * Lines carry secret NAMES only, ⛔ a value. Each state holds until the next restart (⛔ re-read at runtime).
@@ -174,7 +175,10 @@ export async function buildSmsReportWebhookAuth(input: {
   const { config, resolveSecret } = input;
   const log = input.log ?? { warn: (l: string) => console.warn(l), error: (l: string) => console.error(l) };
   const c = config.smsReportWebhook;
-  const read = async (name: string, envFallback: string): Promise<{ token: string } | { failure: 'unavailable' | 'empty' | 'too_short' }> => {
+  const read = async (
+    name: string,
+    envFallback: string,
+  ): Promise<{ token: string } | { failure: 'unavailable' | 'empty' | 'too_short' | 'not_header_safe' }> => {
     let value: string;
     try {
       value = await resolveSecret(name, { envFallback });
@@ -184,6 +188,10 @@ export async function buildSmsReportWebhookAuth(input: {
     const token = typeof value === 'string' ? value.trim() : '';
     if (token === '') return { failure: 'empty' };
     if (token.length < SMS_REPORT_WEBHOOK_TOKEN_MIN_LENGTH) return { failure: 'too_short' };
+    // Code review round 2 — a header value arrives as latin1 bytes and is compared as UTF-8: a token with a control or a
+    // non-ASCII character could ⛔ match on the wire, so the webhook would 403 every report with ⛔ boot line. (An inner space
+    // is delivered intact — admitted; the ends are trimmed above.)
+    if (!/^[\x20-\x7e]+$/.test(token)) return { failure: 'not_header_safe' };
     return { token };
   };
 

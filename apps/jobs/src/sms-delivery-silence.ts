@@ -17,6 +17,8 @@ import { smsDelivery } from '@twt/domain';
 import { QUEUE_NAMES, type Job, type QueueClient } from '@twt/queue';
 import type pg from 'pg';
 
+import { errorClass } from './sms-delivery-correlator.js';
+
 export const DEFAULT_SMS_DELIVERY_SILENCE_CRON = '40 3 * * *'; // 03:40 IST daily
 export const SMS_DELIVERY_SILENCE_TZ = 'Asia/Kolkata';
 
@@ -42,8 +44,15 @@ export async function runSmsDeliverySilenceCheck(deps: SmsDeliverySilenceDeps): 
   const now = (deps.now ?? (() => new Date()))();
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
   const log = deps.log ?? ((m: string): void => console.info(m));
-  const silent = await smsDelivery.countSilentSmsSends(deps.pool, { now });
+  // Code review round 2 — under an RLS-bound role (roster Row 26) every silence count is a silent 0: refuse it loudly instead.
+  // (The login-code count reads only the GLOBAL inbox, so it is still read under such a role.)
+  const crossTenant = await smsDelivery.canReadAcrossPariwars(deps.pool);
+  // BOTH counts before any line (code review round 2): a failed second query after the alarm would make pg-boss's retry
+  // raise the same alarm twice.
+  const silent = crossTenant ? await smsDelivery.countSilentSmsSends(deps.pool, { now }) : { cr: 0, ce: 0, sn: 0, pm: 0 };
+  const otp = await smsDelivery.countOtpDeliveryReports(deps.pool, { from: new Date(now.getTime() - DAY_MS), to: now });
   const silentTotal = silent.cr + silent.ce + silent.sn + silent.pm;
+  if (!crossTenant) alarm('[jobs] sms-delivery-silence: sms_report.rls_bound_role — ⛔ silence counted');
   if (silentTotal > 0) {
     alarm(
       `[jobs] sms-delivery-silence: sms_report.silence:${silentTotal} — accepted texts 48 h–7 days old with ⛔ delivery report ` +
@@ -51,7 +60,6 @@ export async function runSmsDeliverySilenceCheck(deps: SmsDeliverySilenceDeps): 
         `balance and the CRQID (roster Row 33)`,
     );
   }
-  const otp = await smsDelivery.countOtpDeliveryReports(deps.pool, { from: new Date(now.getTime() - DAY_MS), to: now });
   log(
     `[jobs] sms-delivery: otp delivery: delivered ${otp.delivered}, undelivered ${otp.undelivered}, ` +
       `intermediate ${otp.intermediate}, unknown ${otp.unknown}`,
@@ -70,7 +78,7 @@ export async function registerSmsDeliverySilenceCron(
       const summary = await runSmsDeliverySilenceCheck(deps);
       return { jobs: jobs.length, silentTotal: summary.silentTotal };
     } catch (err) {
-      console.error('[jobs] sms-delivery-silence failed', err);
+      console.error('[jobs] sms-delivery-silence failed', errorClass(err)); // ⛔ the message (it can quote a value)
       throw err;
     }
   });

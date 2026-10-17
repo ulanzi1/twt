@@ -184,6 +184,9 @@ describe.skipIf(!hasDatabase)('sms_send_deliveries — migration 0167 + RLS poli
     ['sms_send_deliveries_failure_reason_check', { failure_reason: 'x'.repeat(201) }, { failure_reason: 'x'.repeat(200) }],
     ['sms_send_deliveries_failure_reason_check', { failure_reason: 'to 9812345678' }, { failure_reason: 'to #' }],
     ['sms_send_deliveries_failure_reason_check', { failure_reason: 'a\nb' }, { failure_reason: 'DLT Scrubbing Failed' }],
+    // 0168 (code review round 2): the separated-number backstop, as on the inbox.
+    ['sms_send_deliveries_failure_reason_check', { failure_reason: 'Failed for +91 98123 45678' }, { failure_reason: 'Failed for #' }],
+    ['sms_send_deliveries_failure_reason_check', { failure_reason: '981 234 5678' }, { failure_reason: 'op 123456 error 25' }],
     ['sms_send_deliveries_report_count_check', { report_count: 0 }, { report_count: 3 }],
     [
       'sms_send_deliveries_reported_order_check',

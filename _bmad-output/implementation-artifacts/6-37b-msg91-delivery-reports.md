@@ -9,7 +9,7 @@ OF that sha; Task 0.1 re-checks what moved. Built in its OWN worktree `.claude/w
 `.claude/worktrees/6-31` (row 6-31, also at `dae96d9b`) has ALREADY WRITTEN — uncommitted, 2026-10-17 — its own claims on migration
 0167, decision id `-347`, roster Row 33 and ledger suffix `2026-10-17k` (T9). Whichever lands on a branch first keeps the number.
 
-STATUS: `review` (2026-10-17 — Tasks 1–6 and 8 built; ci:local green on :5433). Before: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G recorded as `-347` (`bf1d57f7`); the Panel ruled PQ1 and its
+STATUS: `in-progress` (2026-10-18 — code review round 2: 24 patches applied, five questions D1–D5 for BigDev). Before that: `review` (2026-10-17 — Tasks 1–6 and 8 built; ci:local green on :5433). Before: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G recorded as `-347` (`bf1d57f7`); the Panel ruled PQ1 and its
 follow-ups (`-350`, `-351`, `-352`); PQ2 was withdrawn (`-348`). ⭐ SPLIT (`-353`): Task 7 — the Panel's delivery ladder and the "not
 delivered" conclusion — is now row `6-37c-undelivered-reminder-ladder`. THIS story builds Tasks 1–6 (receiving and recording reports,
 changing nothing a person receives) and closes with Task 8. No claim-text template id until Row 33 has closed AND 6-37c is `done`.
@@ -40,7 +40,13 @@ routed, ⛔ answered); I = invariants (I1–I9); T = traps (T1–T22). Decision-
 
 # Story 6.37b: The Trust learns whether each text actually arrived — MSG91's delivery reports, received, kept without the phone number, matched to the exact send, and (once the Panel rules) a text the network reports undelivered no longer counts as "reached" `[PRIMITIVE]`
 
-Status: review
+Status: in-progress
+
+> ⚠ **2026-10-18 — code review round 2: the title, the paragraph below (its item (5)), I7, the Policy meaning and AC11 still
+> describe the pre-split story.** `-353` moved Task 7 / AC11 — the D22 / letter-eligibility change and the Panel's delivery
+> ladder — to row `6-37c-undelivered-reminder-ladder`; PQ1 was RULED (`-350`, its follow-ups `-351`; the consent wording `-352`). THIS story receives and records
+> reports only and changes ⛔ who is texted, when, or what counts as reached. Kept as written (⛔ rewritten), annotated here.
+> Status `in-progress`: five questions from round 2 wait for BigDev (Review Findings, round 2, D1–D5).
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37 sends every SMS through MSG91, but MSG91's answer at send time is only
 > *"request received"* — HTTP 200 `type:"success"` even for a fake key (6.37 F9). Whether the operator delivered the text arrives
@@ -146,6 +152,7 @@ when its texts are not getting through**.
 6. **I6 — `undelivered` is absorbing per send, and follows the send's RECORDED request id only** (DR6). A report for another attempt
    of the same row (the may-have-sent retry) is recorded as such and ⛔ moves the row's state.
 7. **I7 — D22 is ⛔ changed until the Panel rules on PQ1** (Task 7 gated). Tasks 1–6 change ⛔ who is texted, when, or what counts.
+   ⚠ 2026-10-18 (code review round 2): PQ1 is ruled and Task 7 is row 6-37c's (`-353`) — in THIS story D22 is ⛔ changed, full stop.
 8. **I8 — One seam.** `ChannelProvider`, `RenderedMessage`, `dispatch`, `cascade`, `render` ⛔ edited — EMPTY `git diff --stat main --
    packages/channels/src/{provider,dispatch,cascade,render}.ts` (6.37 I2's proof). The correlation id is bound per send in
    `SmsProviderDeps` exactly as 6.37's `values` are (`sms-dlt.ts`).
@@ -153,6 +160,9 @@ when its texts are not getting through**.
    configured from dev or CI.
 
 ## 📜 Policy meaning (AI-10-1)
+
+⚠ 2026-10-18 (code review round 2): after `-353` this story changes ⛔ predicate — Task 7 is row 6-37c's; the paragraph below
+is kept as written and describes the plan from BEFORE the rulings (`-350`–`-352`); row 6-37c's create-story states its own.
 
 **This story CHANGES predicates that gate a family's benefit — in Task 7 only, and only as the Panel rules on PQ1**: D22
 `reachedBySms` (`correction-closure.ts:373-375`) — the input of the Trustee-ratified `-252` closure-for-silence — AND, under our
@@ -390,7 +400,7 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   | `status_code` | `status` | `^[0-9]{1,3}$`, else NULL |
   | `event_name` | `eventName` | `^[A-Za-z_]{1,32}$`, else NULL |
   | `failure_reason` | `failureReason` | trimmed, ≤ 200, control chars stripped, every run of ≥ 7 digits ⇒ `#` (the 0155 / 0166 digit-run rule's spirit; as built after review F1, 2026-10-18: any script's numerals, contiguous OR with 1–3 non-letter characters between each pair — a formatted phone number is masked too) |
-  | `reported_delivery_time` | `deliveryTime` | the raw string ≤ 40, ⛔ parsed for logic (T8) |
+  | `reported_delivery_time` | `deliveryTime` | the raw string ≤ 40, ⛔ parsed for logic (T8) — as built after review round 2 (2026-10-18): kept ONLY in a timestamp shape (`YYYY-MM-DD[ T]HH:MM[:SS[.f]][Z\|±HH[:]MM]`), else NULL; migration 0168's CHECK mirrors it (I3 — a bare number is ⛔ stored) |
   | `received_at` | — | `now()` (ours — the correlator's clock) |
 
   The panel template (Row 33 (d)) OMITS `telNum`, `senderId`, `credit`, `userId`, `DLT_TE_ID` (data minimisation at the source), and
@@ -541,7 +551,9 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   registration; a queue-name constant in `QUEUE_NAMES`, `packages/queue/src/index.ts:41`) that claims ≤ 200 due rows with a LEASE
   (`UPDATE … SET lease_until = now() + 5 min, attempts = attempts + 1 WHERE report_id IN (SELECT … WHERE match_state = 'pending' AND
   next_attempt_at <= now() AND (lease_until IS NULL OR lease_until < now()) ORDER BY received_at LIMIT $n FOR UPDATE SKIP LOCKED)
-  RETURNING …`) — ⛔ `processed_at` on claim (T2). ⚠ The domain limit-clamp gate sees Drizzle `.limit()` only
+  RETURNING …`) — ⛔ `processed_at` on claim (T2). ⚠ 2026-10-18 (code review round 2) — AS BUILT the due set is a `WITH due AS
+  MATERIALIZED (SELECT … LIMIT $n FOR UPDATE SKIP LOCKED) UPDATE … FROM due`: the `IN (SELECT … LIMIT …)` shape above is ⛔ bounded
+  by its LIMIT under a Nested Loop Semi Join (LIMIT 2 leased 40 of 40 due rows on :5433 — Debug Log (l)). ⚠ The domain limit-clamp gate sees Drizzle `.limit()` only
   (`scripts/domain-accessor-invariants/lib.ts:4-12`) ⇒ a raw-SQL `LIMIT $n` is UNGATED: apply `clampLimit(limit, {default: 200, cap:
   500})` (`packages/domain/src/pagination.ts:34`) by hand, or write the claim in Drizzle (the Telegram claim is the precedent). Each
   row settles in its own try / catch (a crash ⇒ the lease lapses ⇒ re-claimed). The `sms_send_deliveries` write and the inbox row's
@@ -775,7 +787,11 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   token is read ONCE (a counting resolver passed to `buildSmsReportWebhookAuth` — ⛔ per request); the route is in `PUBLIC_ALLOWLIST`
   with its justification. ⭐ The AI-5-1 gate BITES: a `lib.test.ts` leg runs `scanSecretCompareInvariant` on a copy of the handler
   with `===` and asserts it IS flagged, and the real handler passes.
-- **AC3 — Only the projection is kept (DR2, DR10, I3).** A body holding every F3 field ⇒ the row holds exactly DR2's columns;
+- **AC3 — Only the projection is kept (DR2, DR10, I3).** ⚠ 2026-10-18 (code review round 2) — AS BUILT, per DR10: a VALID JSON
+  report sent as `text/plain` or with ⛔ content type IS parsed and stored (the content type never decides — Debug Log (k)(4));
+  the "⛔ content type / `text/plain` / form ⇒ ⛔ row" leg below holds for a NON-JSON body only. Also as built: `deliveryTime` is kept
+  only in a timestamp shape (a bare number ⇒ NULL — migration 0168), a request id is a STRING only, a byte-order mark is stripped.
+  A body holding every F3 field ⇒ the row holds exactly DR2's columns;
   `telNum`, `senderId`, `credit`, `userId`, `DLT_TE_ID` appear in ⛔ column, ⛔ log line, ⛔ alarm (the `buildServer` `logStream`
   recorder; a `SELECT row_to_json` scan for the number's digits); a MALFORMED body carrying `telNum`'s digits ⇒ `200`, ⛔ row, and
   ⛔ log line holds the digits (the parse error is caught, ⛔ logged); `"CRQID":"0"` / `""` ⇒ NULL; a `failure_reason` with a 10-digit
@@ -837,7 +853,12 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   tables' policy-regression specs pin EXACTLY the grants and policies DR5-G chose (⛔ a policy for an ungranted command).
 - ⭐ **MOVED 2026-10-17 to row `6-37c-undelivered-reminder-ladder` (`-353`)** — AC11 is that row's starting point and is NOT built
   by this story. Kept as written below.
-- **AC11 — D22 and letter-eligibility, AS THE PANEL RULES (Task 7; I1, I7).** ⭐ RULED: `-350` — B1 plus the delivery ladder. ⏳ The
+- **AC11 — D22 and letter-eligibility, AS THE PANEL RULES (Task 7; I1, I7).** ⚠ 2026-10-18 (code review round 2, for row
+  6-37c): the leg *"STILL so after a later reminder is reported `delivered`"* CONFLICTS with `-351` ruling 4 A (*"any message to
+  that person that IS delivered … ends it, and the person counts as reached"*), and *"the certificate chase's letter-eligibility is
+  unchanged"* with `-351` ruling 3 B (*"The certificate chase's own letter rule takes the same B1 change"*) — row 6-37c's Task 0
+  reconciles both (its create-story ran on its own branch, `1e0c6f2e`); ⛔ built here.
+  ⭐ RULED: `-350` — B1 plus the delivery ladder. ⏳ The
   legs below are B1's and still hold for the CONCLUSION; the ladder's legs (WhatsApp at 4 h, SMS at 48 h and 96 h, the 96-hour wait,
   the call / letter escalation) are written only after the Panel answers `-350`'s follow-up questions (a)–(f), because each changes
   what is built. Under B1: ONE mapping inside `readReturnFamilyRows` (it gains `reminder_id`; a LEFT JOIN on `('cr',
@@ -865,7 +886,8 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
 ## Tasks / Subtasks
 
 - [x] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [x] 0.1 `git fetch origin`; `git diff --name-only dae96d9b..origin/main -- packages/channels apps/jobs/src apps/api/src
+  - [x] 0.1 (⚠ partly: MSG91's pages and F15's trace were ⛔ re-read here — the validate pass's read was relied on; Debug Log (a))
+        `git fetch origin`; `git diff --name-only dae96d9b..origin/main -- packages/channels apps/jobs/src apps/api/src
         packages/domain/migrations packages/domain/src/claim infra docs/launch-gate-inventory docs/adr`; re-read any cited file that
         moved. Check the 6-31 worktree / branch for its claims on 0167, `-347`, ADR-0042, Row 33 and the ledger letter (T9 — already
         written there, uncommitted, 2026-10-17). Re-read F1–F10's pages (docs ONLY — T1; record the date). ⭐ RE-CONFIRM F15's PQ1
@@ -1073,6 +1095,146 @@ client; (e) `reportedDeliveryTime` kept unmasked is DR2's own pre-existing choic
 webhook integration 102 / 102; domain `sms-delivery` 23 / 23 × 8 consecutive runs, inbox empty after each; `tsc --noEmit` and eslint
 clean (api, domain). ⚠ Seen while verifying and carried into round 2, ⛔ caused by this patch: the claim test *"the limit is CLAMPED"*
 failed in 5 of 24 full-file runs (3 of them beside the leaking cleanup above; 2 with an empty inbox) — `claimDueSmsDeliveryReports(limit: 1)` returned TWO rows.
+
+#### Round 2
+
+Whole-branch review, 2026-10-18: `dae96d9b..b5044a2d` (round 1 included), 4 chunks (api / domain / jobs + channels / records +
+infra) × 3 layers = 12 parallel reviewers, all returned. Task 7 / AC11 excluded under `-353`. Triage: **5 decision-needed, 24 patch
+(all applied), 5 defer, 28 dismissed**. The applied patches were adversarially reviewed before commit (Debug Log (l)).
+
+**Decision-needed — for BigDev (⛔ applied; each is a governance record, ⛔ code):**
+
+- [ ] [Review][Decision] **D1 — HIGH: the §3.4 proposal settles the claimant's consent question by an author reading.**
+  `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` (as revised by BigDev, `c46402cd`) reads the claimant's filing
+  agreement as already meeting §3.4's explicit-capture origin, so *"the claimant's WhatsApp step is unaffected"* if the amendment
+  fails. Against it: `-351` not-covered (b) — *"Whether a single agreement covering SMS, WhatsApp, calls and 'any other means …' is
+  explicit rather than bundled consent … is for counsel"*; `-352` (c) — §3.4 *"is departed from for the nominee, and arguably for a
+  claimant"*; `-352` Q1 B accepted that the agreement *"may not count as explicit consent"*; and the agreement is captured
+  staff-assisted (read aloud by helpline staff). For it: `-352` answered the note that carried `-351` (b)–(c), its "for counsel"
+  list is headed *"for counsel before WhatsApp or calls to a nominee go live"*, and its Consequence 3 reads in full: *"A go-live
+  condition is proposed (BigDev's decision, recorded separately): WhatsApp and calls to a nominee do not go live until counsel
+  confirms the legal basis in writing (a) and the Meta policy check (b) is recorded; the claimant's WhatsApp step goes live on the
+  new agreement."* Options: (a) the claimant's WhatsApp step also waits for counsel's answer — a new author-commit entry superseding
+  Consequence 3's last clause (our reading — the bundling question is recorded open and the capture is staff-assisted); (b) keep the
+  reading, and say verbatim in the proposal that it rests on Consequence 3's last clause and narrows `-351` (b)'s open item, the
+  Panel told when presented.
+- [ ] [Review][Decision] **D2 — MEDIUM: `-347` (author-commit) is narrowed in five places with ⛔ new decision entry.** (i) DR5-G
+  (G-a, `-347` decision 6): `first_reported_at` added to `sms_send_deliveries`' UPDATE grant (dev, 2026-10-17 — the story's DR5-G
+  block says *"2026-10-18 correction (dev, BigDev approved)"* and commit `f7e695b7` *"BigDev approved"*, but Debug Log (k)(1) says
+  *"Put to BigDev"* and ⛔ answer is quoted); (ii) G-a's inbox INSERT narrowed to the six projection columns (round 2 P11, migration
+  0168); (iii) DR1: a token must be printable ASCII (`not_header_safe` — P18); (iv) DR2: the delivery time kept only in a timestamp
+  shape (P2; `-347` DR2 says *"the delivery time as MSG91's raw text"*); (v) DR6: a new terminal outcome, `unmatched:row_failed` after 5 attempts and 72 h
+  (P4). Each is built and tested; each narrows (⛔ widens) what a report or a role may do, and changes ⛔ who is texted or what counts.
+  Options: (a) ONE new author-commit decision recording BigDev's words, superseding `-347` decisions 1, 2, 6 and 7 in these five
+  points (our reading — supersede, ⛔ reinterpret; ⚠ id race: row 6-37c's create-story already claims `-354` on its branch); (b) (i)
+  recorded as un-attested and carried as a risk, (ii)–(v) reverted to `-347`'s letter.
+- [ ] [Review][Decision] **D3 — MEDIUM: `-349`'s Row 30 "recorded as not live" branch narrows ratified texts without saying so.**
+  A flow closed out "not live in production" means that flow's ratified text is ⛔ sent (`-293` item 1 B, `-230` cl.1, `-252` cl.2);
+  `-349` §0 says it changes *"nothing a person receives or is owed"* and never quotes those clauses with match / narrow. Options:
+  (a) a new author-commit entry: Row 30 note (8) quotes them, says NARROWS, and using that branch needs a Panel note first (our
+  reading — consistent with `-349`'s own "raised at the first DLT rejection"); (b) leave `-349` as written.
+- [ ] [Review][Decision] **D4 — MEDIUM: the Panel ruled `-351` 1 A on a stated cost that is not yet true.** The follow-up note's
+  option text says *"An alarm tells staff when texts go unreported for 2 days"*; alarms reach the LOGS only until roster Row 32 (h)
+  wires `onAlarm`. Options: (a) a dated correction recorded under the note's ruling block (⛔ editing above it), Row 32 (h) made a
+  6-37c go-live condition, the Panel told at its next sitting (our reading); (b) a correction note sent now.
+- [ ] [Review][Decision] **D5 — MEDIUM: the nominee-contact gates are not recorded where they bind.** `-352` Consequence 3, in full:
+  *"A go-live condition is proposed (BigDev's decision, recorded separately): WhatsApp and calls to a nominee do not go live until
+  counsel confirms the legal basis in writing (a) and the Meta policy check (b) is recorded; the claimant's WhatsApp step goes live on
+  the new agreement."* — ⛔ separate record exists (and the proposal's G2 gates the nominee's WhatsApp on (b), ⛔ the calls); `-353` decision 4 and the 6-37c sprint comment gate only the nominee's
+  WHATSAPP (⛔ calls); and `-352`'s reading removes nominees from the claimant's agreement, which is today's stated basis for the SMS /
+  post nominees already receive. Options: (a) record it now as an author-commit decision — nominee WhatsApp and calls wait for G1
+  (and WhatsApp for G2); the nominee SMS / post basis under the new wording put to counsel with 6-37c's create-story (our reading);
+  (b) leave all of it to 6-37c's create-story.
+
+**Patch — all applied (`[x]`):**
+
+- [x] [Review][Patch] **P1 — HIGH: the lease claim over-claimed past its LIMIT** [`packages/domain/src/sms-delivery/reports.ts`] —
+  `UPDATE … WHERE id IN (SELECT … LIMIT n FOR UPDATE SKIP LOCKED)` under a Nested Loop Semi Join: LIMIT 2 leased 40 of 40 due rows
+  (root-caused on :5433). ⇒ a `MATERIALIZED` CTE; a forced-plan regression leg (RED 40 ≠ 2 on the old shape, green after); the 5 of
+  24 "CLAMPED" failures carried from round 1 are this. DR8 annotated.
+- [x] [Review][Patch] **P2 — MEDIUM: a phone number could be stored in `reported_delivery_time` / `request_id` (I3)**
+  [`apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts`] — delivery time kept only in a timestamp shape (`DELIVERY_TIME`,
+  LOCKSTEP with 0168's CHECK — a spec pins them equal); a request id is a STRING only (a JSON number past 2^53 changed the id);
+  `request_id`'s all-digit residual recorded in ADR-0042.
+- [x] [Review][Patch] **P3 — MEDIUM: the DB backstop was weaker than the handler's mask** [`packages/domain/migrations/0168_sms-delivery-report-backstops.sql`]
+  — both `failure_reason` CHECKs refuse 7 ASCII digits with 0–3 explicit ASCII separators (a class NARROWER than the handler's, so a
+  cleaned value can ⛔ fail the INSERT); the delivery-time CHECK; refuse / accept pairs in both policy-regression specs.
+- [x] [Review][Patch] **P4 — MEDIUM: a row failing the same way every time was re-claimed forever** [`apps/jobs/src/sms-delivery-correlator.ts`]
+  — after 5 attempts AND 72 h from receipt it is settled `unmatched:row_failed` (+ `sms_report.row_failed_final:<class>`; it counts
+  in `settled`, ⛔ in the "left to the lease" line); ⛔ on its first failure after an outage (the fix review's MEDIUM — a transient
+  must ⛔ lose a real report). The failure alarm carries error CLASSES (⛔ a message). Live leg (attempt 2 past 72 h kept; attempt 5
+  given up). A `-347` DR6 narrowing — D2 (v).
+- [x] [Review][Patch] **P5 — MEDIUM: ADR-0042's forgery bound and PQ1 framing predated `-350` / `-351`** [`docs/adr/ADR-0042-msg91-delivery-report-ingress.md`]
+  — the bound holds for 6.37b as built; under the ladder it must be RESTATED: never worse than today (no report), but a forged
+  `delivered` can end a ladder a GENUINE failure started and a forged `undelivered` starts the fan-out; B1's three effects restored ⇒
+  6-37c's Task 0 restates it (its own I1 plans the note) and revises the prepared ADR consent sheet before presentation — an OPEN
+  item, carried in deferred-work.
+- [x] [Review][Patch] **P6 — MEDIUM: "a lost request id still finds its row"** [ADR-0042] — re-worded: DETECTED (`other_attempt` +
+  alarm), ⛔ matched or recorded.
+- [x] [Review][Patch] **P7 — MEDIUM: adr-index tallies** [`docs/knowledge-transfer/adr-index.md`] — recounted: 154 rows (111 / 3 /
+  0 / 39 / 1); the summary said 153 and the drift note's "(152 rows)" was wrong. Reconciliation note dated.
+- [x] [Review][Patch] **P8 — MEDIUM: roster Row 33** [`docs/launch-gate-inventory/inventory-roster.md`] — note (6): `-353` decision
+  3's gate (6-37c `done` too); leg (c)'s Bot Fight Mode else-branch (MSG91 challenged ⇒ (d) halts, the remedy BigDev's recorded
+  decision); SIX MSG91 fields (⛔ seven); the login-code-only period has ⛔ paused-webhook detector. ⛔ Evidence slot changed.
+- [x] [Review][Patch] **P9 — MEDIUM: records still described the pre-split story** [this story, `epics.md`] — dated annotations
+  (Status block, I7, Policy meaning, AC11 — its *"STILL so after a later reminder is reported `delivered`"* leg conflicts with `-351`
+  4 A and its certificate letter-eligibility leg with `-351` 3 B, for 6-37c).
+- [x] [Review][Patch] **P10 — MEDIUM: AC7's clamp was tested at the floor only and its failure untracked** [`reports.spec.ts`] —
+  default 200, cap 500, NaN ⇒ default (a guard: `clampLimit(NaN)` is NaN); P1 closes the 2-row result.
+- [x] [Review][Patch] **P11 — LOW: `twt_app` INSERT on the whole inbox** [0168] — narrowed to the six projection columns; a leg proves
+  a row is ⛔ born settled, leased or back-dated.
+- [x] [Review][Patch] **P12 — LOW: under an RLS-bound role the lookup and the silence count fail SILENTLY** — DELIBERATE blocks;
+  `canReadAcrossPariwars` (`rolsuper OR rolbypassrls`) checked first by the correlator and the silence check ⇒ ONE
+  `sms_report.rls_bound_role` alarm, ⛔ claimed / counted (re-examine at Row 26).
+- [x] [Review][Patch] **P13 — LOW: a certificate STAFF row reached DR6 row 7** — `ce` reads its real `purpose`; row 4 covers `ce`
+  (`family_sms` only); the silence count takes `family_sms` `ce` rows only.
+- [x] [Review][Patch] **P14 — LOW: row 7's request-id compare was case-sensitive** — case-insensitive (the echo's case is ⛔ verified).
+- [x] [Review][Patch] **P15 — LOW: a zero-padded status code (`01`) was `unknown_status`** — normalised in `mapSmsReportStatus`.
+- [x] [Review][Patch] **P16 — LOW: a byte-order-marked body was ACKed and lost** — stripped before `JSON.parse`.
+- [x] [Review][Patch] **P17 — LOW: `SMS_REPORT_WEBHOOK_RATE_MAX=0` would 429 every report; secret names stored untrimmed**
+  [`apps/api/src/config.ts`] — a positive integer or boot fails; names trimmed. Compose passes the limit (`:-1200`).
+- [x] [Review][Patch] **P18 — LOW: a token with a control or non-ASCII character could never match on the wire** (an inner space is delivered intact — admitted after the fix review) [`apps/api/src/deps.ts`]
+  — a fifth DR1 class, `not_header_safe` (current ⇒ disabled; next ⇒ ignored), each with ONE boot error.
+- [x] [Review][Patch] **P19 — LOW: the silence alarm fired before the second count** — both counts first (a retry ⛔ alarms twice).
+- [x] [Review][Patch] **P20 — LOW: one clock per tick** — each row reads the clock; the tick stops before the claim's lease lapses.
+- [x] [Review][Patch] **P21 — LOW: the three jobs' tick-level catches logged the whole pg error** — the error's CLASS only (a
+  SQLSTATE, a Node system code or the error's name — a detail can quote a request id / CRQID). ⚠ Residual: the error a worker
+  rethrows is serialised by pg-boss into the job's `output` row.
+- [x] [Review][Patch] **P22 — LOW: the wrapper's message → kind ternary; a missing correlation lost its crash line** — an
+  exhaustive map; `correlation?.kind`.
+- [x] [Review][Patch] **P23 — LOW: test proof** — AC1 freshness through ONE adapter; AC1 "the row stays `attempting`" through a REAL
+  caller (a toggled formatter fault); AC2 row 5's route leg + both log streams; AC6 `request_id` in (8b) (8c) (8d) (8h); AC6 (8f)
+  (8g) (8i) scoped reads + invisibility; legs (4) (5) (6b) (9) whole-table unchanged; the concurrent drain proves 4 + 4; the prune's
+  30-day boundary; the projection-column grant legs; the send-kind lockstep; the domain spec moved to a 1990 clock (the jobs suite
+  commits 2000-01-01 rows).
+- [x] [Review][Patch] **P24 — LOW: records** — AC3's as-built content-type note; Task 0.1's partial tick; Debug Log (k)(9)'s
+  disclosure; the File List; ADR-0042 (masking, Bot Fight Mode, DR14 (c)'s edge-bar conclusion, the silence residual, logs-only
+  alarms); `waf.tf` (ruleset description, "the jobs service's" alarm) + plan-expectations; the proposal's G1 / G2 consistency and
+  "sprint row" (⛔ substance — D1 / D5 untouched); the accessors' "one transaction" docs; the 6-37c sprint comment (the ratified
+  durations vs our absolute-hour anchoring; what its Task 0 owes); roster Row 26's dated note (the RLS-bound refusal).
+
+**Defer (`[x]`, pre-existing or not this story's — in deferred-work):**
+
+- [x] [Review][Defer] The same over-claiming claim shape in `telegram-opt-in` / `wa-opt-in` `webhook-events.ts` — deferred, pre-existing.
+- [x] [Review][Defer] Paused-webhook detection while only login codes flow (`-347` decision 12 keeps the OTP line information-only) — deferred.
+- [x] [Review][Defer] `sms-dlt.ts`'s optional `correlationId` on the dark alert-SMS path — deferred.
+- [x] [Review][Defer] Same-POST reports share `received_at`; which is "first" is arbitrary — deferred.
+- [x] [Review][Defer] `readSmsSendDeliveries` unbounded / unchecked ids — ⛔ production caller; deferred to 6-37c.
+
+**Dismissed (28):** the body buffered before the token (every JSON route parses before auth); the spoofable rate-limit key (DR9
+provisional, Row 33 (c2)); one CHECK-violating row 5xx-looping a batch (the cleaner is a superset — `\p{Cc}` holds C1); > 100 reports
+⇒ 200 (DR10's rule); ⛔ CRQID kill switch (`-347` DR11's gates, Row 33 (b0) / (e0)); `correlationHex` unchecked (the client refuses
+locally); the header constant vs its inline literal (I5 — the gate pins the literal); the linear-time test's wall clock; the boot
+secret read's timeout (DR1's residual); the raw-SQL accessors "untested" (the jobs live suite runs them); `request_id` = the first
+SETTLED report (the contract — now asserted in (8h)); silence vs a CRQID-less report (unlinkable by design); the OTP count's other
+details (unreachable); host vs DB clock (seconds against minutes / 72 h); (8f)'s present-day rows (⛔ present-day tick on :5433);
+order-dependent legs (the house norm — one leg now tolerates it); `bad_correlation_id`'s error class (AC1's own words);
+`SmsSendRowKind` admitting `ot` (false — it is `Exclude<…, 'ot'>`); a bad id leaving a row `attempting` (by design — a crash); `no_crqid`
+lumping absent and malformed (DR2 / T7); the crons registered unconditionally (a silence alarm before Row 33 is the true signal);
+`runGlobalAppTx` releasing after a failed ROLLBACK (pg-pool drops an un-queryable client — the house pattern); the CSRF Origin hook
+(MSG91 is server-to-server; the house webhooks share it); `-348`'s (d) (BigDev's ruling — ⛔ re-litigated); Row 30 note (8) vs its
+discharge path (closure vs licensing); compose's empty next NAME (blank = unset); the proposal's `2026-10-??` (a ratification date
+placeholder); the withdrawn PQ2 note's E4 (kept unedited below its marker).
 
 ## Dev Notes
 
@@ -1360,7 +1522,70 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37b`, Tasks 1–6 and 8 (2026
   legs red; DR6 row 7 without the request-id comparison ⇒ the unit and live (7) legs red; the login-wall entry removed ⇒ the hermetic
   guard red.
   (9) AC12: the branch's diff against `main` includes `dlt-template-requests-6-19.md` — the `-349` records commit (`03021c30`, a new
-  section, before any code); Tasks 1–6 edit ⛔ i18n, registry text or sheet table.
+  section, before any code); Tasks 1–6 edit ⛔ i18n, registry text or sheet table. ⚠ Corrected 2026-10-18 (code review round 2):
+  `03021c30` added a new section WITH a new table (the rejection procedure) AND a Record-table row (`2026-10-17 | 1–16`) — a records
+  commit under `-349`, ⛔ a Task 1–6 edit; AC12's "⛔ sheet table edit" holds for the code tasks only.
+- **(l) Code review rounds 1 and 2 (2026-10-18).** Round 1's patch had been written by the reviewer and left uncommitted; it was
+  finished, its fix diff reviewed by a fresh-context agent (0 H / 0 M / 5 L, all applied) and committed (`b5044a2d`). ⚠ While doing
+  so my first version of the concurrency leg's cleanup ran `pool.query` at the pool's `max` (a 5 s connection timeout) and leaked
+  8 test rows into :5433 — identified by request id and deleted; the cleanup now runs on the gate's own client.
+  (1) The claim over-claim (round 2 P1). The "the limit is CLAMPED" leg failed in 5 of 24 full-file runs (limit 1 ⇒ 2 rows). Root
+  cause, reproduced deterministically by the chunk-B reviewer and again in the new leg: with the inbox's stats saying "tiny"
+  (other suites keep filling and emptying the GLOBAL inbox — 19 autovacuums / 14 autoanalyzes on :5433), the planner picks a
+  Nested Loop Semi Join with the `LIMIT … FOR UPDATE SKIP LOCKED` subquery as its un-materialised inner side; each rescan's
+  LockRows skips the rows this statement already updated (self-modified) and LIMIT yields the next — LIMIT 2 leased 40 of 40.
+  The forced-plan leg sets `pg_class.reltuples / relpages` inside the fixture transaction (rolled back with it; :5433's
+  `twt_dev_app` is a superuser) — RED on the old shape (40 ≠ 2), green on the `MATERIALIZED` CTE. Each over-claimed row still got
+  ONE attempt increment and the CAS kept counts exact — the cost was lease-blocking a backlog and re-claim churn.
+  (2) Migration 0168 is hand-authored (journal `when` 1794195600012) and applied to **:5433 ONLY** (`tsx scripts/migrate.ts` with
+  `DATABASE_URL` at :5433) — ⛔ :5432; the pre-push hook would migrate :5432 on a push ([[project_prepush_hook_inherits_5432]]).
+  ⚠ T9: row 6-31's worktree claimed migration numbers too, and row 6-37c's create-story (its branch, `1e0c6f2e`, F18) claims 0168
+  with the SAME journal `when` (`1794195600012`) and decision id `-354` — whichever lands second renumbers (D2's entry included).
+  (3) The CHECK's separator class is deliberately NARROWER than the handler's mask (an explicit ASCII class, ⛔ `[[:alpha:]]` —
+  locale-dependent): anything the CHECK refuses the handler has already masked, so a cleaned value can ⛔ fail the INSERT.
+  (4) `runGlobalAppTx` releasing a client after a failed ROLLBACK (round 2, dismissed): pg-pool drops a client whose connection is
+  not queryable on `release()`, and a ROLLBACK fails only on a dead connection — the house pattern (`openScopeTx`, `closeScopeTx`).
+  (5) The PQ1 note's E4 run record says *"commands 1–18 … command 19 returned nothing"*; the block now holds 21 commands and the
+  expected-empty one is #21 — an erratum recorded HERE (the note is ⛔ edited below its ruling block).
+  (6) The records half of round 2 was applied by one subagent on disjoint files (ADR-0042, adr-index, roster Row 33, epics, the
+  proposal's two mechanical fixes, waf / compose, deferred-work) while the code half was applied here; its notes: ADR-0042's DR14 (c)
+  conclusion — the edge-auth header (`origin-ingress.tf`) still applies to this route (the skip leaves `http_request_late_transform`),
+  but ⛔ origin verification of the PROVIDER is possible (⛔ signature, ⛔ IP list) ⇒ the deviation is recorded; the plan-expectations
+  "in-place update" line is ⛔ plan-verified (⛔ provider installed locally); its ADR line that a forged delivered report could let
+  closure for silence proceed is OUR inference from `-351` 6 A, ⛔ ruling text; `-352` Consequence 3 gates nominee CALLS on the Meta
+  check too, which the proposal's G2 does not — left for BigDev (D5).
+- **(m) The round-2 patch, reviewed before commit (2026-10-18).** Two fresh-context adversarial reviews, one per half.
+  CODE (`patch-code.diff`): 0 H / 1 M / 9 L, all applied — the MEDIUM: the 72 h give-up fired on a backlog row's FIRST failure after
+  an outage (a transient could lose a real report) ⇒ 5 attempts AND 72 h; the LOWs: the "left to the lease" line counted given-up rows;
+  `sqlState` lost every non-pg class ⇒ `errorClass` (+ the pg-boss `output` residual); the Drizzle copy of the delivery-time CHECK
+  rendered `\.` as `.` (a template-literal escape); 0168 validated existing rows with ⛔ cleanup ⇒ three idempotent UPDATEs first;
+  the forced-plan leg needs a superuser ⇒ `ctx.skip()` (CI's `twt_dev_app` is one); a fractional limit reached SQL ⇒ its floor;
+  rows left at the lease deadline were silent ⇒ `leftToLease`; the silence refusal also dropped the login-code line ⇒ it still logs;
+  `not_header_safe` refused an inner space (delivered intact) ⇒ `\x20–\x7e`. Checked sound by that review: the CTE claims 2 of 40
+  under the forced plan (40 on the old shape); 299,214 fuzzed strings through `cleanFailureReason` ⇒ 0 CHECK refusals; 200,000
+  timestamps ⇒ 0 JS / PG disagreements; the six-column INSERT has one writer; FORCE RLS on all six tables makes the role guard
+  accurate. RECORDS (`patch-records.diff`): 2 H / 9 M / 5 L, applied — H1: row 6-37c's create-story had ALREADY run on its branch
+  (`1e0c6f2e`), with an I1 reading of the bound ("⛔ worse than today") that is the PRECISE form — ADR-0042, deferred-work, the story
+  and the 6-37c comment restated accordingly (never worse than today; a forged `delivered` can end a ladder a genuine failure started;
+  a forged `undelivered` starts the fan-out; B1's three effects restored), triggers moved to 6-37c's Task 0, and its prepared ADR
+  consent sheet (`f8102c02`) carried for revision; H2: `-347` was narrowed in FIVE places, not one ⇒ D2 widened; the MEDIUMs: the
+  6-37c timing annotation over-claimed (`-350` ruling 2's durations ARE ratified — only the absolute-hour anchoring is ours); our
+  inferences marked as ours and `-353` decision 2 quoted exactly; Row 33 (6.2) made (d) circular ⇒ rewritten (MSG91's path proven by
+  (e0) / (e)); the proposal's "consistent with Consequence 3" over-claimed (G2 vs nominee calls) ⇒ corrected, left for D5; D1 / D5
+  quote Consequence 3 in full (its last clause cuts against D1 (a) — said); the header STATUS; T9 now names 6-37c's 0168 / `when` /
+  `-354`; Row 26 and ADR-0042 carry the RLS-bound refusal. ⛔ Applied: L3 (Task 0.1's tick — the partial is disclosed in place).
+  ⚠ A third, delta-only review of the fixes above: Debug Log (n) (the first attempt was cut off by a usage limit).
+  (1) Verification: `ci:local` on :5433 — 35 / 36 jobs green; `test (unit)` red on 9 `@twt/admin` tests, every one `Test timed out in
+  5000ms` (jsdom under load; ⛔ admin file touched by this branch) — re-run alone 1229 / 1229 green (the 6.37 precedent). An earlier
+  `ci:local` (mid-edit) failed 4 jobs legs that were being rewritten while it ran — re-run in their final form, green. The domain
+  `sms-delivery` + both policy specs: 81 / 81 × 5 consecutive runs after the last change; the "CLAMPED" leg green in every full-file run
+  since the CTE (the forced-plan leg is the deterministic proof — RED 40 ≠ 2 before).
+- **(n) The delta-only review of (m)'s fixes (2026-10-18; fresh context, re-run after a usage limit cut the first attempt):** 0 H /
+  0 M / 6 L, all applied — 0168's cleanup works only for a migrating login that bypasses RLS (a loud failure otherwise — the header
+  says so now); ADR-0042 and Row 26 said the silence check "refuses to run" (it skips only its silence count); P18's title still named
+  a space; D2 (iv) quoted the story's DR2 table as `-347` (now `-347`'s own words); the `leftToLease` comments said "next tick" (once
+  the lease lapses); the inbox schema's delivery-time comment. Its runs on :5433: jobs correlator 81 / 81; domain `sms-delivery` 26 /
+  26 × 3; both policy specs + units 75 / 75; api 93 / 93; `tsc` clean ×3; the old claim shape re-proved at 40 of 40.
 
 ### Completion Notes List
 
@@ -1398,6 +1623,11 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37b`, Tasks 1–6 and 8 (2026
   6-37c's); both at-least-once items annotated (the DLR trigger FIRED; a second request is DETECTED and alarmed, ⛔ prevented — OPEN on an
   idempotency key); a new section of five items (the API-failed mapping, the unused `delivered_at`, the pull fallback, the staff views,
   the boot-time token read). Per `-353`, every Panel-dependent disposition is row 6-37c's.
+- **Code review (2026-10-18).** Round 1 finished and committed (`b5044a2d`). Round 2 — whole branch, 12 parallel reviewers: 24
+  patches applied (the claim's over-claim fixed by a `MATERIALIZED` CTE; migration 0168's backstops — separated-number and delivery-time
+  CHECKs, the inbox INSERT narrowed; I3 closed for `reported_delivery_time`; the 72 h give-up; the RLS-bound refusal; AC1 / AC2 / AC6 /
+  AC7 / AC10 proof legs; ADR-0042, roster Rows 26 / 33, adr-index, epics, deferred-work), each half adversarially reviewed and its
+  findings applied. AC7's clamp is now proven at the floor, default, cap, NaN and a fraction. ⏳ Five questions (D1–D5) for BigDev.
 
 ### File List
 
@@ -1432,6 +1662,24 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37b`, Tasks 1–6 and 8 (2026
 - `apps/api/tests/unit/msg91-sms-reports.test.ts` (new), `sms-report-webhook-auth.test.ts` (new), `sms-step-up-delivery.test.ts`, `member-step-up-delivery-wiring.test.ts`
 - `scripts/access-wrapper-invariants/lib.test.ts`
 - `infra/cloudflare/waf.tf`, `infra/cloudflare/.terraform-plan-expectations.md`, `infra/dokploy/compose.yaml`
+- ⚠ Added 2026-10-18 (code review — the list was missing records committed under Task 0): `.decision-log.md` also carries `-348`–`-353`;
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37b-delivery-ladder-follow-ups.md` (new),
+  `…-6-37b-whatsapp-consent-wording.md` (new), `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` (new);
+  `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (`-349`'s section); roster Row 32 notes (8) / (9), Row 30 note (8); this
+  story file.
+- Code review round 2: `packages/domain/migrations/0168_sms-delivery-report-backstops.sql` (new), `meta/_journal.json`;
+  `packages/domain/src/sms-delivery/reports.ts`, `index.ts`; `packages/domain/src/schema/sms_delivery_report_inbox.ts`,
+  `sms_send_deliveries.ts`; `packages/domain/tests/integration/sms-delivery/reports.spec.ts`, both policy-regression specs,
+  `tests/sms-delivery/correlation.test.ts`; `apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts`, `apps/api/src/config.ts`,
+  `deps.ts`, `modules/multi-tenant/scope-tx.ts`; `apps/api/tests/unit/msg91-sms-reports.test.ts`, `sms-report-webhook-auth.test.ts`,
+  `sms-step-up-delivery.test.ts`, `tests/integration/channel-webhooks-msg91.spec.ts`; `apps/jobs/src/sms-delivery-correlator.ts`,
+  `sms-delivery-silence.ts`, `sms-delivery-prune.ts`, `scheduler/claim-dlt-sms-send.ts`, `scheduler/claim-correction-reminders.ts`;
+  `apps/jobs/tests/sms-delivery-correlator.test.ts`, `sms-delivery-correlator-live.test.ts`, `claim-correction-send.test.ts`,
+  `claim-correction-reminders-live.test.ts`; `docs/adr/ADR-0042-msg91-delivery-report-ingress.md`,
+  `docs/knowledge-transfer/adr-index.md`, `docs/launch-gate-inventory/inventory-roster.md` (Rows 26, 33);
+  `_bmad-output/planning-artifacts/epics.md`, `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md`;
+  `_bmad-output/implementation-artifacts/deferred-work.md`, `sprint-status.yaml`; `infra/cloudflare/waf.tf`,
+  `.terraform-plan-expectations.md`, `infra/dokploy/compose.yaml`.
 
 ## Change Log
 
@@ -1452,3 +1700,4 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37b`, Tasks 1–6 and 8 (2026
 | 2026-10-17 | 1.12 | SPLIT (`-353`): Task 7 and AC11 moved to row `6-37c-undelivered-reminder-ladder` (kept as written, marked MOVED); DR14 now (b); Task 8's ladder-dependent dispositions move to 6-37c; the claim-text gate waits for 6-37c too; the §3.4 amendment proposal drafted. Debug Log (j). |
 | 2026-10-17 | 1.13 | DEV (`bmad-dev-story 6.37b`): Tasks 1–6 and 8 done — the CRQID on every SMS (AC1), MSG91's delivery-report webhook (AC2–AC4), migration 0167's inbox and per-send delivery record with their policy-regression specs (AC8, AC10), the domain accessors, the jobs correlator / prune / silence check (AC5–AC7, AC9), the gates (AC12, AC13); deferred-work dispositions per `-353`. Debug Log (k): `first_reported_at` joins G-a's UPDATE grant (DR6's contract — put to BigDev), the core refuses `ot`, the cleaner's superset of the CHECKs, the content type never decides, `runGlobalAppTx`, the revert-sanity and mutation runs. ci:local green on :5433 (lint fixed and the admin jsdom timeouts re-run alone). Status `review`. |
 | 2026-10-18 | 1.14 | Code review round 1 (`dae96d9b..f7e695b7`, 3 layers): 0 decision / 4 patch / 0 defer / 2 dismissed. F1–F4 applied — F1 a formatted phone number masked in the failure reason (any 1–3 non-letter separator), F2 the inbox INSERT in dedupe-key order (no `40P01` between overlapping batches), F3 `runGlobalAppTx`'s DELIBERATE block, F4 AC6's scoped reads; the fix diff adversarially reviewed (0 H / 0 M / 5 L, applied). Status stays `review` — round 2 (whole branch) follows. |
+| 2026-10-18 | 1.15 | Code review round 2 (`dae96d9b..b5044a2d`, 4 chunks × 3 layers, 12 parallel reviewers): 5 decision / 24 patch / 5 defer / 28 dismissed. All 24 patches applied — ⭐ HIGH P1 the lease claim over-claimed past its LIMIT under a Nested Loop Semi Join (LIMIT 2 ⇒ 40 of 40) ⇒ a `MATERIALIZED` CTE + a forced-plan leg; migration 0168 (separated-number and delivery-time CHECKs, the inbox INSERT narrowed, idempotent cleanup first; :5433 only); I3 closed for `reported_delivery_time`; the 72 h give-up (5 attempts); the RLS-bound refusal; ADR-0042's forgery bound restated for 6-37c. Both halves of the patch adversarially reviewed (code 0 H / 1 M / 9 L; records 2 H / 9 M / 5 L — applied). `ci:local` 35 / 36 + admin re-run alone 1229 / 1229. Status → `in-progress`: D1–D5 wait for BigDev. |

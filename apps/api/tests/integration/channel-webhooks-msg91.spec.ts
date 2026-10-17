@@ -12,6 +12,7 @@ import type pg from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppDeps } from '../../src/context.js';
+import { DELIVERY_TIME } from '../../src/modules/channel-webhooks/msg91-sms-reports.js';
 import { buildServer } from '../../src/server.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from './_setup.js';
 
@@ -144,6 +145,19 @@ describe.skipIf(!hasDatabase)('MSG91 SMS delivery-report webhook (Story 6.37b)',
       }
     });
 
+    it('DR1 row 5 — a broken NEXT ({current, next: null}) ⇒ the old next token is 403, the current still 200 (code review round 2)', async () => {
+      const half = await buildServer({ ...t.deps, smsReportWebhook: { current: TOKEN, next: null } } as AppDeps);
+      try {
+        const r = report();
+        expect((await post(r, { 'x-twt-msg91-secret-token': NEXT, 'content-type': 'application/json' }, half)).statusCode).toBe(403);
+        expect(await rowsFor(r.requestId as string)).toHaveLength(0);
+        expect((await post(r, { 'x-twt-msg91-secret-token': TOKEN, 'content-type': 'application/json' }, half)).statusCode).toBe(200);
+        expect(await rowsFor(r.requestId as string)).toHaveLength(1);
+      } finally {
+        await half.close();
+      }
+    });
+
     it('⛔ the token in any log line', async () => {
       await post(report());
       await post(report(), { 'x-twt-msg91-secret-token': 'wrong-token-value', 'content-type': 'application/json' });
@@ -163,6 +177,21 @@ describe.skipIf(!hasDatabase)('MSG91 SMS delivery-report webhook (Story 6.37b)',
         expect(logLines.join('\n')).not.toContain(number);
       },
     );
+
+    it('LOCKSTEP — the handler\'s DELIVERY_TIME grammar is migration 0168\'s CHECK, character for character', async () => {
+      const { rows } = await t.pool.query<{ def: string }>(
+        `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'sms_delivery_report_inbox_reported_delivery_time_check'`,
+      );
+      expect(rows[0]!.def).toContain(`'${DELIVERY_TIME.source}'`);
+    });
+
+    it('a bare number in deliveryTime is ⛔ stored (I3 — the timestamp grammar; code review round 2)', async () => {
+      const r = report({ deliveryTime: '919812345678' });
+      expect((await post(r)).statusCode).toBe(200);
+      const [row] = await rowsFor(r.requestId as string);
+      expect(row!.reported_delivery_time).toBeNull();
+      expect(String(row!.j)).not.toContain('919812345678');
+    });
 
     it('⭐ every F3 field ⇒ the row holds EXACTLY DR2\'s columns; the number, sender, credit, user and DLT id in ⛔ column and ⛔ log line', async () => {
       const r = report({ failureReason: 'Failed for 9812345678 today' });
@@ -270,14 +299,14 @@ describe.skipIf(!hasDatabase)('MSG91 SMS delivery-report webhook (Story 6.37b)',
     });
 
     it('⭐ same request id, CRQID and status but a different reason / event / time ⇒ ONE row holding the FIRST, ⛔ log line for the second', async () => {
-      const r = report({ failureReason: 'first', eventName: 'delivered', deliveryTime: 'one' });
+      const r = report({ failureReason: 'first', eventName: 'delivered', deliveryTime: '2025-07-09 11:29:46' });
       await post(r);
       const lines = logLines.length;
-      expect((await post({ ...r, failureReason: 'second', eventName: 'other', deliveryTime: 'two' })).statusCode).toBe(200);
+      expect((await post({ ...r, failureReason: 'second', eventName: 'other', deliveryTime: '2025-07-09 11:31:00' })).statusCode).toBe(200);
       expect(logLines.slice(lines).filter((l) => l.includes('"alarm"'))).toEqual([]);
       const rows = await rowsFor(r.requestId as string);
       expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({ failure_reason: 'first', event_name: 'delivered', reported_delivery_time: 'one' });
+      expect(rows[0]).toMatchObject({ failure_reason: 'first', event_name: 'delivered', reported_delivery_time: '2025-07-09 11:29:46' });
     });
 
     it('two POSTs that differ only in status ⇒ TWO rows; two with ⛔ CRQID and ⛔ status, same request id ⇒ ONE', async () => {

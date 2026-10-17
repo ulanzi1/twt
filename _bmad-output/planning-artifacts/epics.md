@@ -3556,6 +3556,13 @@ counting and deduplication contract; a daily silence alarm and a daily login-cod
 proof before production, the echo proof before reliance); and — only after PQ1's ruling — the D22 / letter-eligibility change; ADR-0042;
 roster Row 33; no call to MSG91 in any test.
 
+> **Dated note, 2026-10-18 (code review round 2) — the text above is kept as written:** PQ1 was ruled — B1, after a delivery ladder
+> ([`-350`](../../.decision-log.md#decision-2026-10-17-350); its follow-ups [`-351`](../../.decision-log.md#decision-2026-10-17-351)).
+> [`-353`](../../.decision-log.md#decision-2026-10-17-353) moved Task 7 / AC11 — the D22 / letter-eligibility change and the delivery
+> ladder — to sprint row `6-37c-undelivered-reminder-ladder`. This story receives and records reports only; the user story's *"once
+> the Trustee Panel rules …"* clause and the last AC's *"only after PQ1's ruling"* are now 6-37c's. No claim-text template id (1–14)
+> is provisioned until roster Row 33 has closed AND 6-37c is `done` (`-353` decision 3).
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

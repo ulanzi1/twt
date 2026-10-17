@@ -38,6 +38,13 @@ shorter per-segment length.
   record a screenshot and match this sheet's type words to them before the first submission (`inventory-roster.md` Row 30 (a)).
 - **The MSG91 template** is the same text with `##<name>##` in place of each variable, in order (the *"MSG91 template"* column in *The templates owed* below); MSG91's template must
   equal the DLT-approved content, and row 6-37's adapter sends `{ <name>: value }` from these names.
+- **Setting up each template in MSG91** (Story 6.37, `2026-10-17-345`; ADR-0041; roster Row 32 (d)) — only AFTER the operator approved
+  it on SmartPing: (1) create the template in MSG91 from its *"MSG91 template"* cell, copied exactly; (2) enter its DLT template id (the
+  19-digit TE id SmartPing issued) and the sender id mapped to the PE; (3) choose the SMS type from the TEXT, ⛔ the locale — **Unicode
+  for every Hindi template AND for template 14** (its English holds an em dash), Normal for the other English ones; (4) mark the version
+  **default**; (5) leave MSG91's URL shortener OFF and put the app-link domain on its *"Skip URL"* list (the adapter also sends
+  `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key. The platform reads
+  every template back from MSG91 before using it (the pre-flight) — a template whose text, type or DLT id differs is held or alarmed.
 
 ## The variable types (TRAI Direction of 18 Nov 2025, Annexure-I)
 

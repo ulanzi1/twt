@@ -171,8 +171,11 @@ reached AND ⛔ letter-eligible (letter-eligibility needs a SEND-time dead outco
 — by ANALOGY the cost the 6.19 note gave its option B (proven delivery only: *"the claim waits forever again"*; `-252` chose A *"for
 now"* and kept B as intent only — cl.3 — ⛔ rejected it), and against cl.2 (*"A FAMILY NO CHANNEL CAN REACH IS OFFERED THE LETTER
 ROUTE"*). ⚠ Neither means *"a text with no report is not reached"* — silence (a paused webhook, a report
-that never comes) still counts as `accepted` (DR12 alarms it; the residual PQ1 names). Tasks 1–6 introduce ⛔ predicate and change ⛔
-predicate: they record. ⚠ They DO change what goes on the wire — a `CRQID` inside the recipient of every claim text AND every login
+that never comes) still counts as `accepted` (DR12 alarms it; the residual PQ1 names). Tasks 1–6 introduce no predicate that decides a
+send, a closure, reach or letter-eligibility, and change none. They READ reports in exactly three ways, none of which changes what a
+person receives or is owed: the correlator writes `sms_send_deliveries` (DR6); alarms are raised from reports and from their absence
+(DR4, DR6, DR12's silence alarm — an alarm is a pointer for a person, never an input to a send); and login-code reports are counted
+in DR11's daily line (information only until Row 33 (e0), then citable as delivery evidence — still never an input to a send). ⚠ They DO change what goes on the wire — a `CRQID` inside the recipient of every claim text AND every login
 code — ⛔ who is texted, when, or the words; the one person-facing risk (MSG91 refusing a request that carries it with ⛔ error
 reaching our system — 6.37 F9; F8 — so a member's login code never arrives) is checked by DR11 (c)'s operator device proof from
 the CRQID build on staging BEFORE production (a dated Row 30 note — Task 0.4). A malformed id — reachable only through a code bug
@@ -500,7 +503,9 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   | `first_reported_at` | that report's `received_at` | the earlier of the stored value and this report's `received_at` |
   | `reported_at` | that report's `received_at` | the later of the stored value and this report's `received_at` (the drain can settle reports out of `received_at` order) |
 
-  So `report_count` is the number of distinct inbox rows, after DR7's dedupe index, that reached DR6 row 8 for that send. These are
+  So `report_count` is the number of distinct INBOX ROWS that reached DR6 row 8 for that send — one per distinct (request id, CRQID,
+  status code) under DR7's dedupe rule — and NOT the number of distinct provider payloads: two POSTs with the same three values but a
+  different failure reason, event name or delivery time are one inbox row and count once. These are
   NOT counted and cause no `sms_send_deliveries` write at all: a duplicate POST (it is one inbox row — AC4); every report settled by
   DR6 rows 1–7 or row 9; and a settle that is replayed after its lease lapsed (DR8's compare-and-set rolls the upsert back). ⭐ Recommended. Costs (accepted, and DISCLOSED in PQ1's E3 / B1 cost):
   a genuine "failed then delivered" sequence for ONE request reads `undelivered` (under B1: letter-eligible though the text did
@@ -515,7 +520,15 @@ cl.2 (*"as for an invalid number"*) — MATCHES under either reading.
   NULL DEFAULT now()` (⛔ NULL — a NULL never matches `next_attempt_at <= now()`), `lease_until`, `settled_at` (stamped by EVERY settle to a non-`pending` state — DR8 — the prune's clock). Dedupe: an EXPRESSION
   unique index — `CREATE UNIQUE INDEX … ON sms_delivery_report_inbox (request_id, coalesce(crqid,''), coalesce(status_code,''))`
   (Drizzle `uniqueIndex().on(sql\`…\`)`; ⛔ a table `UNIQUE` constraint, which cannot hold an expression) ⇒ a bare `INSERT … ON
-  CONFLICT DO NOTHING` (a retry or a duplicate is one row — F6). Index (`match_state`, `next_attempt_at`) for the drain. Retention: a
+  CONFLICT DO NOTHING` (a retry or a duplicate is one row — F6). ⭐ **The dedupe rule.** Two reports are DUPLICATES by definition
+  when they agree on the three key values — the request id, the CRQID (blank when absent) and the status code (blank when absent) —
+  whatever else differs (`failure_reason`, `event_name`, `reported_delivery_time`, or any dropped field). The FIRST one stored is kept;
+  a later duplicate is discarded by `ON CONFLICT DO NOTHING` (answered `200`, ⛔ logged, ⛔ counted), so its other values are lost.
+  Why this key: MSG91 retries by resending the same event (F6 — *"you may receive multiple callbacks"*), and everything a report
+  decides — which send, and which delivery state through DR4 — depends only on the request, the send and the status code; a second
+  report that agrees on all three carries no new fact for DR6. Accepted cost: if MSG91 ever sends the same status twice for one
+  request with a DIFFERENT failure reason or delivery time, only the first is kept. Migration 0167's unique index is EXACTLY this
+  key (Task 2), and AC4 / AC6 (8f) pin it. Index (`match_state`, `next_attempt_at`) for the drain. Retention: a
   daily prune deletes rows whose `settled_at` is more than **30 days** ago (every `match_state` ≠ `pending`); `pending` rows and `sms_send_deliveries`
   are ⛔ pruned (AC10). ⭐ Recommended.
 - **DR8 — The correlator (jobs).** A pg-boss cron (`'* * * * *'`, `tz: 'Asia/Kolkata'`, the `tg-webhook-processor.ts:413-431`
@@ -745,7 +758,10 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   `bad_request_id` line; a non-object / non-JSON / empty body, ⛔ content type, `text/plain`, or `application/x-www-form-urlencoded`,
   each with a valid token ⇒ `200` (⛔ 415, ⛔ 400), ⛔ row, ONE `{alarm:'sms_report.unusable_body'}` line per request (⛔ `console.*`);
   `application/json; charset=utf-8` accepted.
-- **AC4 — Persist-then-ack and dedupe (I4, DR7).** The same report posted twice ⇒ ONE row, both `200`; the handler makes ⛔ KMS,
+- **AC4 — Persist-then-ack and dedupe (I4, DR7).** The same report posted twice ⇒ ONE row, both `200`; two POSTs with the same
+  request id, CRQID and status code but a different `failureReason`, `eventName` and `deliveryTime` ⇒ ONE row holding the FIRST
+  POST's values, both `200`, and no log line for the second; two POSTs that differ only in status code ⇒ TWO rows; two with no
+  CRQID and no status but the same request id ⇒ ONE row (the blank-key case); the handler makes ⛔ KMS,
   Secret Manager or outbound call (counting fakes); a failed COMMIT is RETHROWN ⇒ 5xx (MSG91 retries) — ⛔ a 200 for a lost write
   (the `closeScopeTx` `:67-78` behaviour, kept in the global write — F18).
 - **AC5 — Status mapping (DR4).** One leg per code: `1` ⇒ `delivered`; `2` / `9` / `16` / `17` / `20` / `25` ⇒ `undelivered`; `0` ⇒
@@ -769,7 +785,9 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
   (8d) `undelivered` (status `2`) then `undelivered` (status `16`) ⇒ `report_count = 2`, `status_code` still `2`, `failure_reason`
   still the first report's;
   (8e) in every later-report leg, `request_id` is unchanged;
-  (8f) the same report POSTed twice ⇒ one inbox row and `report_count = 1`;
+  (8f) the same report POSTed twice ⇒ one inbox row and `report_count = 1`; and two POSTs with the same request id, CRQID and status
+  code but a different failure reason, event name and delivery time ⇒ one inbox row and `report_count = 1`, with
+  `sms_send_deliveries`' `failure_reason` being the FIRST POST's (DR7's dedupe rule: duplicates by key, not by payload);
   (8g) status `0` then status `1` for the same send ⇒ `report_count = 1` (the status-`0` report is DR6 row 9 and is not counted);
   (8h) two reports where the one received LATER is settled FIRST ⇒ `first_reported_at` = the earlier `received_at` and
   `reported_at` = the later one;
@@ -885,7 +903,7 @@ Notation: `a:b` = inbox `match_state = a`, `match_detail = b` (DR6).
       (hand-authored; the journal entry idx 167, `when` 1794195600011 — re-check T9): `sms_delivery_report_inbox` (global RLS — ENABLE +
       FORCE, a per-command policy for each granted command — DR7's clause forms) and `sms_send_deliveries` (tenant RLS — the 0128 `:69-73` per-command shape; PK); CHECKs on `send_kind`,
       `delivery_state`, `match_state`, `match_detail`, the `request_id` / `crqid` grammars (the SQL mirror of 1.1); the dedupe as an
-      EXPRESSION unique index (DR7); `attempts` / `next_attempt_at` / `match_state` NOT NULL with defaults; grants AND policies EXACTLY
+      EXPRESSION unique index on EXACTLY (request id, CRQID blank-coalesced, status code blank-coalesced) — DR7's dedupe rule; `attempts` / `next_attempt_at` / `match_state` NOT NULL with defaults; grants AND policies EXACTLY
       as DR5-G was answered (+ a comment naming roster Row 26 for jobs' production role — F21). Drizzle schema files in
       `packages/domain/src/schema/` (`uniqueIndex().on(sql\`…\`)`) + their index export. Policy-regression specs for BOTH tables
       (`packages/domain/tests/integration/rls/`). ⛔ Touch any send table (I2).
@@ -1163,3 +1181,4 @@ them at Task 0.1.
 | 2026-10-17 | 1.2 | `bmad-create-story validate 6.37b` (five parallel fresh-context read-only verifiers — send path, webhook / api, DB / jobs / D22, governance, the footgun catalogue; the CRQID placement, the AI-5-1 gate, the grants and `foundDeadOn` re-checked by hand): 8 critical / 12 should / 10 nice, all applied (BigDev: "all"). ⭐ CRQID goes INSIDE the recipient (Flow's only sample; the top-level text is the Text-SMS page's) + reserved key + Row 33 (e0) echo proof via the first login code; the webhook header is `x-twt-msg91-secret-token` with direct compares (the AI-5-1 gate was VACUOUS for a boot-resolved token) + a gate-bites leg; DR5-G — the two tables' grants put to BigDev WITHOUT a recommendation (SELECT-only breaks Row 26 (a)); B1's letter-eligibility is `foundDeadOn` (first dead outcome, sticky) ⛔ `numberKnownDead`, and a forged report changes who is contacted (closure letter, letter chase) — I1, Policy meaning, PQ1, AC11, Task 7 (+ the jobs sweep and the burst alarm) rewritten; the secret resolved at boot by a `buildTurnstileVerifier`-shape builder (Telegram resolves per request), an unresolvable name ⇒ 403 + a line; a malformed body's `JSON.parse` message can carry the number ⇒ caught, ⛔ logged; a bad correlation id is a crash in the core, ⛔ a final (it keeps the id off the wire; the row's give-up still records `error` — a code bug only); the grammar lives in `@twt/domain`. Also: DR6 as one ordered table with `(match_state, match_detail)` pairs; DR10 rewritten from Fastify 5.8.5's source (a `'*'` parser in its own scope — ⛔ a 415 before auth); the api / jobs alarm mechanisms named; DR13 / AC12 scoped to Tasks 1–6; PQ2's option A costed, its fact split in two; `-252`'s B was DEFERRED, ⛔ rejected; the §0 mixed-part disclosure (DR4 / DR6 under B1); ledger letter after `k`, 6-31's written claims; Tasks gained AC8's / AC1's / DR9's legs; Row 32 note (2) stays in force; both `-346` corrections; the at-least-once triggers FIRED; Row 33's `requestId` equality can only be observed AFTER (g) (a circularity found while applying) ⇒ a dated observation note, ⛔ a closure leg; I2's diff by exclusion; cites corrected. The pass's OWN diff then adversarially reviewed in three fresh-context rounds, each applied. Round 1 (2 HIGH / 3 MED / 6 LOW): `closeScopeTx` RETHROWS a failed COMMIT (the global write is a new shape because `openScopeTx` needs a Pariwar, ⛔ because of COMMIT); the OTP device proof made real (a dated Row 30 note — from the CRQID build, on staging before production; a refusal may be a silent 200); Row 33's closure legs listed; where a throw becomes a final (T22 — validate at the top of `sendClaimDltSms`); DR4 ↔ DR6 rows; MG9 attributed to the 6.37 story file; DR7's prune and per-command policies; the 415-on-an-invalid-header residual. Round 2 (0 HIGH / 4 MED / 4 LOW): the crash still loses the once-only text at give-up (said so), the Row 30 note's wording + its place in Task 0.3's list, 6.37 F9 vs this file's F9, per-command policy clause forms, `settled_at` as the prune's clock, the OTP-before-Row-32 reading. Round 3 (1 HIGH / 2 MED / 3 LOW): pg-boss 12.19.1 never logs a handler's throw ⇒ the core logs ONE line before a bad-correlation throw; the give-up names corrected (`attempting_past_day` for correction / closure / certificate); Row 33 (b0) owns the staging OTP proof, before the production deploy and so before (b) (closure legs (a), (b0), (b)–(d), (e0), (e)–(g)); a fourth round (0 HIGH / 1 MED / 2 LOW) fixed (b0)'s place, a timeout's exception and the `[jobs] ` prefix; `buildGatewayMessage`'s throw is caught in `provider.send`; Task 2's wording. Status stays `ready-for-dev`. |
 | 2026-10-17 | 1.3 | Task 0.1 / 0.2 done — BigDev's answers recorded verbatim (Debug Log (b)): all as recommended, DR5-G = G-a, DR9's 1,200 / min PROVISIONAL with MSG91's retry / auto-pause verified before production (new Row 33 leg (c2)), DR11 (c), DR14 (a), Row 30 = Row 32's setup legs. BigDev's four pre-approval requirements for `-347` resolved in the story: DR1's secret-failure table (the api always starts; a broken NEXT token never disables a working current one; a boot-time outage is a residual) + AC2's per-row legs; DR11's S0 / S1 / S2 table of allowed OTP production use; DR6's `sms_send_deliveries` contract table (one upsert, ⛔ `WHERE`; every row-8 report counts; the state-setting report's code kept; min / max timestamps) + AC6's legs; ADR-0042's residual list. Status stays `ready-for-dev`. |
 | 2026-10-17 | 1.4 | Before approving `-347`, BigDev asked for the OTP gates to be unambiguous, the shorthand to be explicit prose, and AC6 to match the counting contract. DR1's secret-failure block, DR6's counting contract, DR11's OTP gates (Gate 0 / 1 / 2, with (b0) and (e0) defined in full) and AC6's counting legs are rewritten in plain prose. AC6 checked line by line against the contract: added (8a) the first report's INSERT values, (8c)/(8d) `failure_reason` kept, (8e) `request_id` unchanged, (8h) which report is received vs settled first, an unknown-status leg in (9), and a no-write assertion on legs (1)–(7) and (9). Status stays `ready-for-dev`. |
+| 2026-10-17 | 1.5 | Before approving `-347`, BigDev asked for (1) the claim that reports are only recorded to be narrowed — the Policy meaning now names the three ways Tasks 1–6 read reports (the correlator's write, alarms including DR12's silence alarm, DR11's daily login-code count — information until Row 33 (e0), then citable evidence), none an input to a send, a closure, reach or letter-eligibility; and (2) the dedupe and counting definitions to agree — DR7 now states the rule: duplicates are defined by the three key values (request id, CRQID, status code), the first stored is kept, a later one with a different failure reason / event name / delivery time is discarded uncounted, chosen because MSG91 retries by resending the same event and every DR6 outcome depends only on those three values; `report_count` counts inbox rows under that key, not distinct payloads; AC4 and AC6 (8f) gained the different-payload-same-key, different-status and blank-key legs; Task 2 names the exact index. Status stays `ready-for-dev`. |

@@ -10,6 +10,9 @@ import {
   DLT_VARIABLE_TYPES,
   isDltCallbackNumber,
   isDltNumeric,
+  needsUnicode,
+  substituteDltValues,
+  toGatewayTemplate,
   type DltShapeRule,
   type DltSlot,
 } from '../src/index.js';
@@ -130,5 +133,73 @@ describe('the value predicates (TV1 / TV5)', () => {
     expect(isDltNumeric('')).toBe(false);
     expect(isDltNumeric('1'.repeat(40))).toBe(true);
     expect(isDltNumeric('1'.repeat(41))).toBe(false);
+  });
+});
+
+// Story 6.37 (MG3, MG5; AC5, AC6) — the named values sent to the gateway, the gateway's template form, the text's type.
+describe('substituteDltValues (6.37 MG3)', () => {
+  const text = `Claim ${V}: please call the helpline on ${V}. Your claim is still open.`;
+  const slots = [alnum('reference', 8), cbn('helpline')];
+
+  it('substitutes each value into its marker, in slot order', () => {
+    const values = [
+      { name: 'reference', value: 'AB12CD34' },
+      { name: 'helpline', value: '1800123456' },
+    ];
+    expect(substituteDltValues(text, slots, values)).toBe(
+      'Claim AB12CD34: please call the helpline on 1800123456. Your claim is still open.',
+    );
+  });
+
+  it.each(['$&', "$'", '$`', '$1', V, '##helpline##', `${V}${V}`])(
+    'inserts a value holding %s literally — substituted ONCE, left-to-right, never re-scanned',
+    (hostile) => {
+      const values = [
+        { name: 'reference', value: hostile },
+        { name: 'helpline', value: '1800123456' },
+      ];
+      expect(substituteDltValues(text, slots, values)).toBe(
+        `Claim ${hostile}: please call the helpline on 1800123456. Your claim is still open.`,
+      );
+    },
+  );
+
+  it('throws on a value count that differs from the slots, on a name out of order, and on a marker / slot mismatch', () => {
+    expect(() => substituteDltValues(text, slots, [{ name: 'reference', value: 'X' }])).toThrow(/2 slot/);
+    expect(() =>
+      substituteDltValues(text, slots, [
+        { name: 'helpline', value: '1800123456' },
+        { name: 'reference', value: 'AB12CD34' },
+      ]),
+    ).toThrow(/"helpline".*"reference"/);
+    expect(() => substituteDltValues(`No marker here.`, [alnum('a')], [{ name: 'a', value: 'x' }])).toThrow(/0 variable marker/);
+  });
+});
+
+describe('toGatewayTemplate (6.37 MG3, AC6)', () => {
+  it('writes each marker as the wrapped slot name, in order — the MSG91 form by default', () => {
+    const text = `${V} is your code. Call ${V}.`;
+    expect(toGatewayTemplate(text, [alnum('otp', 6), cbn('helpline')])).toBe('##otp## is your code. Call ##helpline##.');
+    expect(toGatewayTemplate(text, [alnum('otp', 6), cbn('helpline')], (n) => `<${n}>`)).toBe('<otp> is your code. Call <helpline>.');
+  });
+
+  it('throws when the marker count differs from the slots', () => {
+    expect(() => toGatewayTemplate(`${V} and ${V}.`, [alnum('a')])).toThrow(/2 variable marker/);
+  });
+});
+
+describe('needsUnicode (6.37 MG5, T11)', () => {
+  it('is false for a text inside the GSM-7 default and extension tables', () => {
+    expect(needsUnicode("Claim AB12: your family's claim is open. Call 1800123456.")).toBe(false);
+    expect(needsUnicode('@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./:;<=>?¡ÄÖÑÜ§¿äöñüà')).toBe(false);
+    expect(needsUnicode('^{}\\[~]|€\f')).toBe(false);
+  });
+
+  it('is true for Devanagari, an em dash, a curly quote, and a character outside the BMP', () => {
+    expect(needsUnicode('दावा')).toBe(true);
+    expect(needsUnicode('questions: x — or call')).toBe(true);
+    expect(needsUnicode('family\u2019s')).toBe(true);
+    expect(needsUnicode('a 😀')).toBe(true);
+    expect(needsUnicode('ç')).toBe(true);
   });
 });

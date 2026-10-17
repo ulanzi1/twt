@@ -186,3 +186,77 @@ export function isDltCallbackNumber(value: string): boolean {
     /^\d+$/.test(value) && value.length >= DLT_CBN_MIN_LENGTH && value.length <= DLT_TYPE_MAX_LENGTH.cbn
   );
 }
+
+// ── Story 6.37 (MG3, MG5) — the gateway sends NAMED values into ITS copy of the template ─────────────────
+// MSG91's Flow API takes the template's variable values by name (`##name##` in its template — TV13), ⛔ the finished
+// text. These helpers keep the registered text the ONE source: the gateway form is derived from it, and the values a
+// caller sends are proved, before the network, to rebuild the very body the real `t()` rendered (I1).
+
+/** One named value of a send, in slot order — the slot's `name` and the text it fills. */
+export interface DltValue {
+  readonly name: string;
+  readonly value: string;
+}
+
+function assertMarkerCount(text: string, slots: readonly DltSlot[]): void {
+  const markers = text.split(DLT_VAR).length - 1;
+  if (markers !== slots.length) {
+    throw new Error(`[dlt-variables] the text has ${markers} variable marker(s) but ${slots.length} slot(s) are declared`);
+  }
+}
+
+/**
+ * The registered text with each marker replaced, left to right, by its value — the body the gateway delivers. Each
+ * value is inserted LITERALLY (a function-form replacement: ⛔ `$&` / `$'` patterns) and the result is ⛔ re-scanned,
+ * so a value holding a marker or a `##name##` stays as written. Throws when the values are not the slots' names, in
+ * order, one each — a caller bug, ⛔ a recipient's fault.
+ */
+export function substituteDltValues(text: string, slots: readonly DltSlot[], values: readonly DltValue[]): string {
+  assertMarkerCount(text, slots);
+  if (values.length !== slots.length) {
+    throw new Error(`[dlt-variables] ${values.length} value(s) for ${slots.length} slot(s)`);
+  }
+  slots.forEach((slot, i) => {
+    const name = values[i]?.name;
+    if (name !== slot.name) {
+      throw new Error(`[dlt-variables] value ${i + 1} is named "${String(name)}" but slot ${i + 1} is "${slot.name}"`);
+    }
+  });
+  let i = 0;
+  return text.replaceAll(DLT_VAR, () => (values[i++] as DltValue).value);
+}
+
+/**
+ * The gateway's form of a registered text: each marker, in order, written `wrap(slot name)` — by default MSG91's
+ * `##name##` (TV13; the registration sheet's "MSG91 template" column). Throws on a marker / slot count mismatch.
+ */
+export function toGatewayTemplate(
+  text: string,
+  slots: readonly DltSlot[],
+  wrap: (name: string) => string = (name) => `##${name}##`,
+): string {
+  assertMarkerCount(text, slots);
+  let i = 0;
+  return text.replaceAll(DLT_VAR, () => wrap((slots[i++] as DltSlot).name));
+}
+
+/**
+ * The GSM 03.38 default alphabet and its extension table (the extension characters cost two septets but stay GSM-7).
+ * The escape character itself is ⛔ listed — it is the extension's mechanism, ⛔ a character of a text.
+ */
+const GSM7_CHARACTERS = new Set(
+  '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿' +
+    'abcdefghijklmnopqrstuvwxyzäöñüà' +
+    '^{}\\[~]|€\f',
+);
+
+/**
+ * Whether a text needs a UNICODE template — any character outside GSM-7. The TEXT decides, ⛔ the locale (T11):
+ * template 14 is English yet holds an em dash. Iterates code points, so a character outside the BMP counts once.
+ */
+export function needsUnicode(text: string): boolean {
+  for (const ch of text) {
+    if (!GSM7_CHARACTERS.has(ch)) return true;
+  }
+  return false;
+}

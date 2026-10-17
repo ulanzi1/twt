@@ -7,9 +7,9 @@ PINNED: `466e9b0e` (2026-10-17 — `main` == `origin/main` after a fresh `git fe
 re-checks what moved. Built in its OWN worktree `.claude/worktrees/6-37`, branch `story/6-37-msg91-sms-gateway-adapter`
 ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]]).
 
-STATUS: `ready-for-dev` — ⚠ BUILDABLE ONLY AFTER TASK 0: MG1–MG17 below are the author's build decisions, PROPOSED with a
-recommendation each; BigDev answers them and they are committed ALONE as one author-commit (the next free id — `2026-10-17-345` if
-written today) BEFORE any code ([[feedback_governance_commits_precede_implementation]]). ⛔ No code before AC0 is met.
+STATUS: `ready-for-dev` — ⭐ MG1–MG17 ANSWERED (BigDev, 2026-10-17: *"accept all recommended"*) and committed ALONE as author-commit
+`2026-10-17-345` (`48017867`). ⚠ Task 0.4's records still precede any code ([[feedback_governance_commits_precede_implementation]]).
+⛔ No code before AC0 is met.
 Start condition met: row 6-34 is `done` and on `main` (`-314` decision 2 — "6.34 builds FIRST"; 6.34 Sequencing: "if 6-37 is started
 first it STOPS and asks").
 
@@ -247,7 +247,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
   dev-wires / operator-applies precedent). Jobs wires ⛔ `onAlarm` to a person (deferred: *"The helpline warning reaches the logs only"*)
   ⇒ a HELD run is silent but for the logs.
 
-## ⚖️ Build decisions MG1–MG17 (⏳ PROPOSED — BigDev answers at Task 0.2; committed ALONE at Task 0.3)
+## ⚖️ Build decisions MG1–MG17 (✅ ANSWERED 2026-10-17 — *"accept all recommended"*: every ⭐ option, MG5's TTLs 1 h / 5 min, X1 and X2 accepted; recorded as `2026-10-17-345`)
 
 - **MG1 — Split delivery reports into a NEW row `6-37b-msg91-delivery-reports`.** (a) ⭐ **Recommended:** 6.37 = the adapter, the named
   values, the pre-flight, the boot checks, the ADR; 6-37b = MSG91's webhook (persist-then-ack, static-header auth — F18 has ⛔ signature),
@@ -539,7 +539,7 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; `git diff --name-only 466e9b0e..origin/main -- packages/channels apps/jobs/src apps/api/src/deps.ts
+  - [x] 0.1 `git fetch origin`; `git diff --name-only 466e9b0e..origin/main -- packages/channels apps/jobs/src apps/api/src/deps.ts
         apps/api/src/config.ts apps/api/src/modules/auth scripts/dlt-typed-variables docs/launch-gate-inventory infra/dokploy`; re-read any
         cited file that moved. Re-fetch F9–F19 from `docs.msg91.com/sms/send-sms.md`, `sms/module.json`, `otp/module.json` and the help
         articles (record the date) — docs pages ONLY (T1). Then settle S1–S4 from the docs or from MSG91 support IN WRITING:
@@ -554,16 +554,26 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
           it. Feeds MG17; ⭐ STOP if neither MG17 (a) nor (b) is possible.
         - **S4** — whether MSG91 offers a READ-ONLY balance / key-status endpoint. If yes, propose adding it to the pre-flight (it would
           close part of MG15's residual) as an MG at 0.2; if no, MG15 stands.
-  - [ ] 0.2 Put MG1–MG17 to BigDev, each with its recommendation and cost — incl. MG5's TTLs, I4's closure-notice cost and MG15's
-        reading (which stands only with MG14 (i)). Record the answers verbatim.
-  - [ ] 0.3 Write the author-commit (`.decision-log.md`, prepended; the -344 entry's shape: Decision type / Status / Author / Ratifying
+  - [x] 0.2 Put MG1–MG17 to BigDev, each with its recommendation and cost — incl. MG5's TTLs, I4's closure-notice cost and MG15's
+        reading (which stands only with MG14 (i)). Record the answers verbatim. ⭐ **Answered 2026-10-17: *"accept all recommended"*** —
+        MG1 (a), MG2 (a), MG3, MG4 (a), MG5 (pass TTL 1 h, fault TTL 5 min), MG6–MG16 as recommended, MG17 (a) per S3, **X1** (the
+        closure-notice cost, I4) ACCEPTED, **X2** (Row 32 (i)) ACCEPTED.
+        ⭐ **0.1 record (2026-10-17):** `origin/main` == `466e9b0e` (⛔ moved); MSG91's docs read the same day by the validate pass (docs
+        pages only). S1–S4 are ⛔ settled by the docs ⇒ the author's dispositions (in `-345`, ⛔ put to BigDev): **S1** — the api content
+        check stays alarm-only; `active_status` `"1"` = default (INFERENCE, in the ADR); Row 32 (d) records the meanings. **S2** — ⛔ a
+        STOP (it fires only on a cap KNOWN below the link); Row 32 (d) gains *"MSG91's URL-variable cap confirmed in writing ≥ the
+        provisioned link length, before templates 13 / 14 are provisioned"*; the code enforces the slot's `maxLength`. **S3** — both
+        MG17 arms built: `SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME` is OPTIONAL (unset ⇒ the send key, MG17 (a)); Row 32 (b) records which
+        arm production uses. **S4** — ⛔ endpoint documented ⇒ MG15 stands.
+  - [x] 0.3 Write the author-commit (`.decision-log.md`, prepended; the -344 entry's shape: Decision type / Status / Author / Ratifying
         trustees: None / §0 gate / Occasion / FOUND / The decisions / Consequences / References). It ADDS to `-314`, SUPERSEDES by a new
         entry `-302` RN4's *"⛔ a held class like 6.25's RE6; the SMS gateway gives ⛔ pre-flight"* clause and FOUND (c)'s *"⛔ provider
         pre-flight exists"* for faults the pre-flight sees, NARROWS `-295` RB12's accepted edge, moves `-314` decision 2's *"delivery-report
         correlation"* to row 6-37b (MG1), and records MG15's split reading — ⛔ edits any of them
         ([[feedback_supersede_never_reinterpret]]). Id: re-grep every branch's `.decision-log.md` for the next free number right before
         inserting (`-345` was free at validate). Stage in scratchpad, try the insert ([[project_decision_log_writes_user_inserted]]).
-        Commit ALONE on the story branch; write its SHA after the commit, ⛔ before.
+        Commit ALONE on the story branch; write its SHA after the commit, ⛔ before. ⭐ **Done:** `2026-10-17-345`, committed ALONE as
+        `48017867` (the insert was accepted; additive only — 54 lines).
   - [ ] 0.4 The records (one commit, after 0.3): `docs/adr/ADR-0041-sms-gateway-msg91.md` from `_adr-template.md` (MG13) +
         `docs/knowledge-transfer/adr-index.md` row + breakdown reconciliation + the `:169` and `:170` annotations; `epics.md` `### Story
         6.37: … \`[PRIMITIVE]\`` before the `---` that precedes `## Epic 7` (the 6.34 entry's blockquote shape); roster Row 32 (MG14 — the
@@ -803,3 +813,4 @@ The last five commits are 6.27c's review rounds and records (`f3c19b62` → `466
 | 2026-10-17 | 1.1 (round 2) | Fresh-context re-validate of the v1.1 edits — 1 HIGH, all the pass's own: v1.1 ended 6.19b/c/d rows on reasons it called "proof of non-delivery" while its own api section called them UNVERIFIED (S1) — `-322` §0's fail-closed option (a) ⇒ now only a malformed id, or the send key's own refusal under MG17 (a), ends a row there; `content_mismatch` / `dlt_id_missing` / `sms_type_needs_unicode` are alarmed and sent until S1 + Row 32 (e) (a new deferred item), and whether a PROVEN content mismatch should refuse there is recorded as the Panel's, ⛔ routed. Also: MG15's `accepted` definition + residual cover fail-open and within-TTL faults; `sms_type` split into a fault (`_needs_unicode`) and a logged note (`_unicode_for_gsm7`); `beforeSend` → `defer_window` / `defer_lease` + an overload keeping `deferred` out of the four other callers (the union is `final \| transient`); AC11's no-network proof is a zero-call RECORDER (a throwing stub is swallowed by the fail-open / start-on-transport rules) and the api builder takes an injectable fetch; the api memo is advisory at runtime, off the request path; the 9 s signal created synchronously from an injectable `timeoutSignal`; three new STOP / MG17 lines that `⛔` had inverted, and one this pass caught in I4 (`⛔ PERMANENTLY loses` ⇒ "loses for good"); cites — `sanitizeSmsGatewayCode` `:159`, CR8 `:590-591`, the closure `complete()` call `:389` / `correction-closure-jobs.ts:317`, the hold precedent `-299` RE7 / `-301` FOUND (a) (⛔ `-300`); `LOCALES_OF` (one or two locales) and suspicion's `configSet`; Task 4's AC8 (c) tag; MG17 (b)'s secret wired in Tasks 4 / 5 / AC8; T14's count 38; Row 32's owners in Row 24's shape. |
 | 2026-10-17 | 1.1 (round 3) | Fresh-context re-validate of round 2 — 2 HIGH, both round 2's own (an edit applied to the ACs but ⛔ swept to Task 4 / MG5's core paragraph / MG15): Task 4 still said every pre-flight FAULT ends the row (AC9 (b) said fail open) ⇒ the core takes `preflightFailOpen`, set by `sendClaimCorrectionSms`, and the summary line follows; MG15 claimed MATCH on 6.19b/c/d for faults that now fail open there ⇒ split by path (D22's input: PROVEN faults only), mirrored in the §0 header and the Policy meaning. Also: an MG17 (b) read-key refusal STARTS the api (AC8 (a), AC9 (b)); "becomes blocking" is a LATER change via Task 7's deferred item, ⛔ an automatic switch; the memo's transient fallback was unreachable (a call happens only on a miss) ⇒ a stale PASS for one more TTL on an expired re-check; the holding sweeps' hold on UNPROVEN reasons stated with its cost (`-322` §0 reserves only 6.19b/c/d); T1 cites AC11's recorder; Task 7 writes the recorder test; detail codes disambiguated (malformed ⇒ `template_id_malformed`, `auth*` ⇒ `auth:preflight`); `beforeSend`'s lease defer uses the counted branch; Row 32 (f) is BigDev's. Glyph scan: 140 added `⛔`, ⛔ inversion. |
 | 2026-10-17 | 1.1 (round 4) | Fresh-context consistency sweep — ⛔ HIGH (4 MED, 7 LOW), all applied: the fail-open warning had ⛔ sink (the core never alarms — `claim-dlt-sms-send.ts:9`) ⇒ `preflightWarning` on `accepted`, alarmed by each 6.19b/c/d caller; Task 4's unscoped "TRANSIENT ⇒ proceed" would send on the holding children ⇒ proceed only when `preflightFailOpen`, else `transient`; MG15's `accepted` definition + residual name the stale-pass extension; T13 carries MG17 (a) and the blank-secret arms; MG17 (b) `auth*` is unproven in the core; S1 no longer implies settling it makes the api check blocking; "BigDev may route it" removed (⛔ routed, everywhere); the Story statement no longer claims an ACCOUNT fault is stopped; the Policy meaning's MG17 (a) qualifier; AC9 (a2) / (b2) legs; the memo field declared on `ClaimCorrectionReminderDeps` too. Rounds: 1 HIGH → 2 HIGH → 0 HIGH (all HIGHs the pass's own). |
+| 2026-10-17 | 1.2 | Task 0.1–0.3: BigDev answered MG1–MG17 *"accept all recommended"* (incl. MG5's TTLs 1 h / 5 min, X1, X2); S1–S4 dispositions recorded (the author's — ⛔ settled by the docs: S1 alarm-only api content check, S2 a Row 32 (d) leg ⛔ a STOP, S3 both MG17 arms built with an OPTIONAL read key, S4 MG15 stands); author-commit `2026-10-17-345` committed ALONE as `48017867`. Next: Task 0.4 (the records), then code. |

@@ -1,59 +1,65 @@
-// Global SMS-DLT telephony-gateway client — Story 5.6 (AC1, AC2; Task 1).
+// Global SMS gateway client — Story 5.6 (AC1, AC2; Task 1), rebuilt for MSG91 by Story 6.37 (MG3, MG6, MG8–MG10;
+// `2026-10-10-314`, `2026-10-17-345`; ADR-0041).
 //
-// The `sms` channel sends through India's DLT-transactional telephony gateway — a plain REST endpoint. Per
-// AR-53 + the WhatsApp precedent we use a THIN `fetch` client (no heavy SDK — one endpoint, a long-lived
-// API key, no auth-refresh SDK needed), so the AR-53 single-module-swap surface stays small and the bundle
-// lean. UNLIKE WhatsApp (per-Pariwar WA number/token, AR-17), DLT PE/OE registration is PLATFORM-GLOBAL:
-// there is ONE gateway credential + ONE PE/OE-registered sender header for the whole platform. So this is a
-// SINGLE global client (`scope: 'global'`), NOT a per-Pariwar cache — mirrors whatsapp-app.ts in SHAPE but
-// drops the per-`pariwar_id` dimension (a per-Pariwar sender-header is an explicit NON-GOAL for v1).
+// The `sms` channel sends through ONE platform-global gateway: MSG91 "for now" (`-314` decision 1). Its Flow v5 API
+// takes an `authkey` header, MSG91's OWN template id and the template's NAMED variable values — ⛔ the finished text.
+// A THIN `fetch` client (no SDK — the official npm package calls the legacy endpoint; ADR-0041), so a later vendor is
+// another adapter behind the SAME `SmsMessagingHandle` seam, ⛔ a rewrite. The generic Bearer contract this file held
+// before 6.37 matched ⛔ gateway and is REMOVED (MG10).
 //
 // ── The `SmsMessagingHandle` seam (mirrors WhatsappMessagingHandle) ────────────────────────────────────
-// The sms-dlt provider depends on this narrow interface (just `send`), NOT on `fetch`/the gateway directly,
-// so its unit tests inject a fake handle with NO network (Task 7). All gateway-specific facts (the URL
-// shape, the DLT request body, the DLT param encoding, the error extraction) live HERE + in sms-errors.ts,
-// never leaking into the provider / dispatch / render (AR-53).
+// The sms-dlt provider, the claim-text send core and the OTP adapter depend on this narrow interface (just `send`),
+// ⛔ on `fetch` / MSG91 directly, so their tests inject a fake handle with NO network. Every MSG91 fact (the URL, the
+// Flow body, the number format, the response shape) lives HERE + in sms-errors.ts (AR-53).
 //
-// ── Credential = a GLOBAL Secret-Manager NAME resolved at send time, never logged ──────────────────────
-// The gateway API key + the PE/OE sender header are resolved from global config / Secret-Manager NAME
-// pointers (the composition layer resolves NAME → value and builds this client once). The resolved key is
-// captured in the closure and used on every send; it is NEVER logged or audited (AI-4-3(c); mirror
-// `pariwar_wa_config.access_token_secret_name` discipline).
+// ── ⚠ `"type":"success"` is ⛔ delivery, and ⛔ even proof the account works (F9) ──────────────────────
+// MSG91 reports most errors ASYNCHRONOUSLY: a Flow call with a FAKE authkey answered HTTP 200 `"type":"success"`. So
+// an acceptance here means only "MSG91 took the request" — the pre-flight (`sms-preflight.ts`) reads each template
+// before it is used, and delivery reports are row 6-37b. HTTP 200 alone is ⛔ an acceptance (I3).
 //
-// ── KNOWN v1 gap: no client rebuild on credential rotation (same call WA/Telegram made) ─────────────────
-// The client captures the resolved API key at build time and has NO TTL / eviction. If the gateway key is
-// ROTATED, this in-process client keeps sending with the OLD key until the process restarts. This is
-// RESTART-REQUIRED-ON-ROTATION — documented, not silently unhandled (mirrors whatsapp-app.ts's identical
-// call). We deliberately do NOT build TTL/eviction.
+// ── Credential = a GLOBAL Secret-Manager NAME resolved by the composition layer, never logged ──────────
+// The authkey VALUE is captured in the closure and used on every call; it is NEVER logged or audited (AI-4-3(c)).
+// KNOWN v1 gap (unchanged): ⛔ rebuild on rotation — RESTART-REQUIRED-ON-ROTATION (the whatsapp-app.ts call).
 
-/** The narrow send seam the sms-dlt provider depends on — the ONLY gateway surface it touches. */
+import { encryption } from '@twt/domain';
+
+/** The narrow send seam every SMS sender depends on — the ONLY gateway surface it touches. */
 export interface SmsMessagingHandle {
   /**
-   * Send one DLT-transactional SMS. Resolves to the gateway message id on acceptance, and REJECTS (throws
-   * an `SmsSendError`) on a gateway error / non-2xx / network failure so the provider's catch can classify
-   * it (sms-errors.ts). Never returns a fabricated id on failure.
+   * Send one SMS. Resolves to MSG91's request id on acceptance, and REJECTS (throws an `SmsSendError`) on a gateway
+   * error / non-2xx / network failure / a local refusal so the caller's catch can classify it (sms-errors.ts). Never
+   * returns a fabricated id.
    */
   send(message: SmsGatewayMessage): Promise<string>;
 }
 
-/** The provider-built gateway message (gateway-agnostic shape; the client turns it into the REST body). */
+/** One named value of the template (the slot's `name` — MSG91's `##name##` — and its text), in slot order. */
+export interface SmsGatewayValue {
+  readonly name: string;
+  readonly value: string;
+}
+
+/** The gateway message a sender builds (MG3). */
 export interface SmsGatewayMessage {
-  /** Recipient in E.164 (the composition layer decrypted the member's Tier-1 mobile → this address). */
+  /** Recipient in E.164 `+91…` — the client sends MSG91's `91…` form (MG8). */
   readonly to: string;
-  /** The TRAI-assigned DLT template id resolved for this alert's category (composition resolves the NAME). */
-  readonly dltTemplateId: string;
-  /** The single DLT-template variable slot — the whitespace-normalized render body (mirror WA's bodyParam). */
+  /** MSG91's template id (24 hex) — held under the template's existing config key (MG4). */
+  readonly templateId: string;
+  /** The template's named values, in slot order — what MSG91 actually substitutes. ⛔ Empty (MG12). */
+  readonly values: readonly SmsGatewayValue[];
+  /**
+   * The text the caller rendered through the real `t()` — the ORACLE the values were checked against. ⛔ Sent,
+   * ⛔ logged (it may carry a name or a code).
+   */
   readonly body: string;
 }
 
-/** The global gateway client config the composition layer resolves (apiKey = resolved Secret VALUE). */
+/** The global gateway client config the composition layer resolves (authkey = the resolved Secret VALUE). */
 export interface SmsClientConfig {
-  /** The telephony-gateway send endpoint (admin/platform config, not a compile-time constant). */
-  readonly apiUrl: string;
-  /** The resolved API-key VALUE (the composition layer resolved the NAME → value). Never logged. */
-  readonly apiKey: string;
-  /** The PE/OE-registered sender header (TRAI DLT sender id). Resolved from a global NAME pointer. */
-  readonly senderId: string;
+  /** MSG91's API ORIGIN (`https://control.msg91.com`) — a bare origin, ⛔ a send URL (MG10). */
+  readonly apiOrigin: string;
+  /** The resolved authkey VALUE. Never logged. */
+  readonly authkey: string;
 }
 
 /** The single global SMS client — builds + caches ONE messaging handle (no per-Pariwar dimension). */
@@ -61,15 +67,45 @@ export interface SmsAppClient {
   /** Return the one global messaging handle, building + caching it on first use (restart-required-on-rotation). */
   messaging(): SmsMessagingHandle;
   /**
-   * Whether the global gateway credential (apiUrl/apiKey/senderId) is present — the SAME "not configured"
-   * check `resolveWhatsappProviderDeps` runs on its own per-Pariwar config row (AC1; mirrors WA exactly).
-   * The composition seam calls this BEFORE `messaging()` so a blank/missing credential degrades to the
-   * fixture like an unconfigured WA provider does, rather than surfacing as a thrown error. A TRUE runtime
-   * failure (gateway unreachable, auth rejected, timeout) still only ever surfaces via a classified
-   * `rejected` `SendResult` from `send()` — this method never touches the network.
+   * Whether the global gateway credential (a non-blank authkey and origin) is present. The composition seam calls
+   * this BEFORE `messaging()` so a missing credential degrades to the fixture rather than a thrown error. Never
+   * touches the network.
    */
   isConfigured(): boolean;
 }
+
+/** One version of a MSG91 template, as `getTemplateVersions` returns it — every field type-tolerant (F16). */
+export interface Msg91TemplateVersion {
+  readonly templateData: string | null;
+  readonly dltId: string | null;
+  readonly senderId: string | null;
+  readonly status: string | null;
+  readonly activeStatus: string | null;
+  readonly smsType: string | null;
+  readonly dltVerified: string | null;
+  readonly dltReason: string | null;
+  readonly rejectReason: string | null;
+}
+
+/** What a template read found (MG5). */
+export type Msg91TemplateRead =
+  /** An authorised answer — the template's versions (possibly none). */
+  | { readonly kind: 'versions'; readonly versions: readonly Msg91TemplateVersion[] }
+  /** HTTP 401 / 403 — the key was refused. */
+  | { readonly kind: 'unauthorised' }
+  /** An answered refusal (HTTP 200 `status:"error"`, or another 4xx) — a bad key OR an unknown id; ⛔ distinguishable. */
+  | { readonly kind: 'refused' }
+  /** No answer to rely on — network, timeout, 429, 5xx, an unparseable body. */
+  | { readonly kind: 'unavailable'; readonly cause: 'network' | 'timeout' | 'throttled' | 'server' | 'unparseable' };
+
+/** The template reader the pre-flight depends on — the real client implements it (⛔ a fake needs it). */
+export interface Msg91TemplateReader {
+  /** Read every version of one MSG91 template (`/api/v5/sms/getTemplateVersions`). Never throws. */
+  readTemplateVersions(templateId: string): Promise<Msg91TemplateRead>;
+}
+
+/** The real MSG91 client: the send seam AND the template reader. */
+export type Msg91Client = SmsAppClient & Msg91TemplateReader;
 
 /** The minimal `fetch` shape the client depends on (injectable in tests; defaults to global `fetch`). */
 export type SmsFetchLike = (url: string, init: SmsFetchInit) => Promise<SmsFetchResponse>;
@@ -77,6 +113,8 @@ export interface SmsFetchInit {
   method: string;
   headers: Record<string, string>;
   body: string;
+  /** The client's own bound (MG9) — an abort is `api_unavailable:timeout`. */
+  signal: AbortSignal;
 }
 export interface SmsFetchResponse {
   ok: boolean;
@@ -84,168 +122,285 @@ export interface SmsFetchResponse {
   json(): Promise<unknown>;
 }
 
+/** A failure the client decided itself, before or instead of MSG91's answer — classified as-is (sms-errors.ts). */
+export interface SmsLocalRefusal {
+  readonly errorClass: 'invalid_number' | 'dlt_template_not_approved' | 'auth' | 'rate_limited' | 'api_unavailable' | 'unknown';
+  readonly code: string;
+}
+
 /**
- * A gateway send failure — carries the gateway error code (string; DLT gateways return string codes) + the
- * HTTP status so sms-errors.ts can classify without re-parsing. Thrown by the client on a non-2xx /
- * gateway-error / network failure so the provider resolves to a well-formed `rejected` SendResult (never a
- * thrown promise into dispatch).
+ * A gateway send failure — carries MSG91's `code` (a string; MSG91 writes `"201"`, a number is stringified) + the HTTP
+ * status so sms-errors.ts can classify without re-parsing, or a `local` refusal the client already classified.
  */
 export class SmsSendError extends Error {
   public readonly name = 'SmsSendError';
   public constructor(
     message: string,
-    /** The gateway error `code` (string) when the response carried one; null for a transport/parse failure. */
+    /** MSG91's error `code` when the response carried one; null otherwise. */
     public readonly gatewayCode: string | null,
     /** The HTTP status (0 for a network failure with no response). */
     public readonly httpStatus: number,
+    /** A refusal the client classified itself (a bad number, a timeout, a success with ⛔ request id …). */
+    public readonly local: SmsLocalRefusal | null = null,
   ) {
     super(message);
   }
 }
 
+/** The client's own per-call bound (MG9) — 9 s, so it fires BEFORE the OTP path's 10 s outer bound. */
+export const SMS_GATEWAY_TIMEOUT_MS = 9_000;
+
+/** MSG91's API origin — the default in both apps (MG10). */
+export const MSG91_DEFAULT_API_ORIGIN = 'https://control.msg91.com';
+
+/** MSG91's template id: 24 hex characters (MG4) — a pasted 19-digit DLT TE id is caught by this. */
+const MSG91_TEMPLATE_ID = /^[0-9a-fA-F]{24}$/;
+
+/** A request id we accept from a `success`: non-empty, ≤ 64 alphanumerics (I3 — MSG91's are 24 lower-case hex). */
+const MSG91_REQUEST_ID = /^[A-Za-z0-9]{1,64}$/;
+
+/** Whether a value is a well-formed MSG91 template id (MG4). */
+export function isMsg91TemplateId(value: string): boolean {
+  return MSG91_TEMPLATE_ID.test(value);
+}
+
+/**
+ * The configured gateway ORIGIN, or a thrown error (MG10): a trailing `/` is trimmed, and the rest must be exactly
+ * an origin — an old-style send URL (`…/send`) would otherwise yield `…/send/api/v5/flow`. Throws a message naming
+ * the env var, ⛔ its value.
+ */
+export function parseSmsGatewayOrigin(raw: string): string {
+  const value = raw.trim().replace(/\/+$/, '');
+  let origin: string | null = null;
+  try {
+    origin = new URL(value).origin;
+  } catch {
+    origin = null;
+  }
+  if (origin === null || origin === 'null' || origin !== value) {
+    throw new Error('sms-app: SMS_GATEWAY_API_URL must be a bare origin (e.g. https://control.msg91.com), ⛔ a path');
+  }
+  return value;
+}
+
 /** Whether every required client-config field is present — the pure "not configured" predicate. */
 function isClientConfigValid(config: SmsClientConfig): boolean {
-  return (
-    Boolean(config.apiUrl) &&
-    config.apiUrl.trim() !== '' &&
-    Boolean(config.apiKey) &&
-    config.apiKey.trim() !== '' &&
-    Boolean(config.senderId) &&
-    config.senderId.trim() !== ''
-  );
+  return Boolean(config.apiOrigin) && config.apiOrigin.trim() !== '' && Boolean(config.authkey) && config.authkey.trim() !== '';
 }
 
-/**
- * Validate the client config BEFORE building — defense-in-depth for a direct `messaging()` call that skips
- * the composition seam's `isConfigured()` guard. A missing credential fails clear, not as an opaque gateway
- * 400.
- */
-function assertClientConfig(config: SmsClientConfig): void {
-  if (!config.apiUrl || config.apiUrl.trim() === '') {
-    throw new Error('sms-app: gateway apiUrl is missing/blank');
-  }
-  if (!config.apiKey || config.apiKey.trim() === '') {
-    throw new Error('sms-app: gateway apiKey is missing/blank');
-  }
-  if (!config.senderId || config.senderId.trim() === '') {
-    throw new Error('sms-app: DLT senderId (PE/OE header) is missing/blank');
-  }
+/** Validate the client config BEFORE building — a missing credential fails clear, ⛔ as an opaque gateway error. */
+function assertClientConfig(config: SmsClientConfig): string {
+  if (!config.apiOrigin || config.apiOrigin.trim() === '') throw new Error('sms-app: gateway apiOrigin is missing/blank');
+  if (!config.authkey || config.authkey.trim() === '') throw new Error('sms-app: gateway authkey is missing/blank');
+  return parseSmsGatewayOrigin(config.apiOrigin);
 }
 
-/** Build the gateway REST request body for a DLT-transactional send (the single-variable shape). */
-function buildRequestBody(config: SmsClientConfig, message: SmsGatewayMessage): string {
-  return JSON.stringify({
-    sender: config.senderId,
-    to: message.to,
-    // The TRAI-registered DLT template id — the gateway byte-matches `body` against this template's content.
-    template_id: message.dltTemplateId,
-    // The single DLT-template variable slot (mirror WA's single `{{1}}` body parameter).
-    message: message.body,
-  });
-}
-
-/** Pull the gateway error `code` off a parsed error response, defensively (never throws). */
-function extractGatewayCode(payload: unknown): string | null {
-  try {
-    if (payload && typeof payload === 'object') {
-      // Common gateway shapes: { error: { code } } or a top-level { code }.
-      const container = 'error' in payload ? (payload as { error: unknown }).error : payload;
-      if (container && typeof container === 'object' && 'code' in container) {
-        const code = (container as { code: unknown }).code;
-        if (typeof code === 'string' && code.trim() !== '') return code;
-        if (typeof code === 'number' && Number.isFinite(code)) return String(code);
-      }
-    }
-  } catch {
-    // A hostile getter must never escape — the client's contract is to throw a well-formed SmsSendError.
-  }
+/** A string, or a finite number stringified — MSG91 writes some fields as strings, others as numbers (F16). */
+function stringOrNull(v: unknown): string | null {
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   return null;
 }
 
-/** Pull the gateway `messageId` off a success response, defensively (never throws). */
-function extractMessageId(payload: unknown): string | null {
+/** Read a property defensively (a hostile getter must never escape). */
+function prop(payload: unknown, key: string): unknown {
   try {
-    if (payload && typeof payload === 'object') {
-      // Common gateway shapes: { messageId } or { data: { messageId } }.
-      const container = 'data' in payload ? (payload as { data: unknown }).data : payload;
-      if (container && typeof container === 'object' && 'messageId' in container) {
-        const id = (container as { messageId: unknown }).messageId;
-        if (typeof id === 'string' && id.length > 0) return id;
-      }
-    }
+    if (payload && typeof payload === 'object' && key in payload) return (payload as Record<string, unknown>)[key];
   } catch {
-    // Defensive — a malformed success body resolves to null (the caller throws a clear SmsSendError).
+    // fall through
+  }
+  return undefined;
+}
+
+/** The two synchronous error messages MSG91 documents (SendOTP samples — `otp/module.json`; seen for Flow in T1). */
+function tokenForMessage(message: unknown): SmsLocalRefusal | null {
+  if (typeof message !== 'string') return null;
+  if (/auth\s*key\s*missing/i.test(message)) return { errorClass: 'auth', code: 'authkey_missing' };
+  if (/flow id or template id is invalid/i.test(message)) {
+    return { errorClass: 'dlt_template_not_approved', code: 'template_invalid' };
   }
   return null;
 }
 
 /**
- * Build a fresh global SMS client. One per process (the composition layer holds it). `fetchImpl` defaults to
- * the global `fetch` (Node 18+/undici); tests inject a fake so NO network is touched. The config (incl. the
- * resolved API key) is captured ONCE — a later rotation is not picked up until restart (see header).
+ * MSG91's `91XXXXXXXXXX` form of a recipient (MG8): the caller's E.164 `+91…`, validated by CALLING `normalizeMobile`
+ * (⛔ a second regex) — a `to` it rejects, or that it would rewrite (⛔ already canonical), is ⛔ sent.
  */
-export function createSmsAppClient(config: SmsClientConfig, fetchImpl: SmsFetchLike = globalFetch): SmsAppClient {
+function msg91Mobile(to: string): string | null {
+  const canonical = encryption.normalizeMobile(to);
+  if (canonical === null || canonical !== to) return null;
+  return canonical.slice(1);
+}
+
+/** The Flow body (F10, MG9): one recipient, `short_url` "0" ALWAYS, ⛔ `realTimeResponse`, ⛔ `CRQID`, ⛔ the text. */
+function buildFlowBody(templateId: string, mobiles: string, values: readonly SmsGatewayValue[]): string {
+  const recipient: Record<string, string> = { mobiles };
+  for (const { name, value } of values) recipient[name] = value;
+  return JSON.stringify({ template_id: templateId, short_url: '0', recipients: [recipient] });
+}
+
+/** Refuse a message before the network when it cannot be what MSG91 should send (MG4, MG8, MG12). */
+function localRefusal(message: SmsGatewayMessage): SmsLocalRefusal | null {
+  if (!isMsg91TemplateId(message.templateId)) {
+    return { errorClass: 'dlt_template_not_approved', code: 'template_id_malformed' };
+  }
+  if (message.values.length === 0) return { errorClass: 'dlt_template_not_approved', code: 'no_named_values' };
+  const names = new Set<string>();
+  for (const { name } of message.values) {
+    // `mobiles` is the recipient's own field — a value of that name would overwrite the number.
+    if (name === 'mobiles' || names.has(name)) return { errorClass: 'dlt_template_not_approved', code: 'values_mismatch' };
+    names.add(name);
+  }
+  return null;
+}
+
+/** Options the tests drive: the per-call bound's signal factory (MG9 — `AbortSignal.timeout` by default). */
+export interface SmsClientOptions {
+  readonly timeoutSignal?: (ms: number) => AbortSignal;
+}
+
+/**
+ * Build a fresh global MSG91 client. One per process (the composition layer holds it). `fetchImpl` defaults to the
+ * global `fetch`; tests inject a fake so NO network is touched (I7). The config (incl. the authkey) is captured ONCE.
+ */
+export function createSmsAppClient(
+  config: SmsClientConfig,
+  fetchImpl: SmsFetchLike = globalFetch,
+  options: SmsClientOptions = {},
+): Msg91Client {
+  const timeoutSignal = options.timeoutSignal ?? ((ms: number) => AbortSignal.timeout(ms));
   let cached: SmsMessagingHandle | null = null;
+
+  const headers = (): Record<string, string> => ({
+    authkey: config.authkey,
+    'content-type': 'application/json',
+    accept: 'application/json',
+  });
+
   return {
     isConfigured() {
       return isClientConfigValid(config);
     },
+
     messaging() {
       if (cached) return cached;
-      assertClientConfig(config);
-      const url = config.apiUrl;
+      const origin = assertClientConfig(config);
+      const url = `${origin}/api/v5/flow`;
       cached = {
         async send(message): Promise<string> {
+          // The bound starts NOW, synchronously, before any await (MG9) — so it is deterministic under the OTP's 10 s.
+          const signal = timeoutSignal(SMS_GATEWAY_TIMEOUT_MS);
+          const refused = localRefusal(message);
+          if (refused) throw new SmsSendError('sms send refused locally', null, -1, refused);
+          const mobiles = msg91Mobile(message.to);
+          if (mobiles === null) {
+            throw new SmsSendError('sms send refused locally', null, -1, { errorClass: 'invalid_number', code: 'format' });
+          }
+
           let res: SmsFetchResponse;
           try {
             res = await fetchImpl(url, {
               method: 'POST',
-              headers: {
-                Authorization: `Bearer ${config.apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: buildRequestBody(config, message),
+              headers: headers(),
+              body: buildFlowBody(message.templateId, mobiles, message.values),
+              signal,
             });
-          } catch (err) {
-            // Network / transport failure — no HTTP response. Classified as api_unavailable downstream.
-            const detail = err instanceof Error ? err.message : 'network error';
-            throw new SmsSendError(`sms send transport failure: ${detail}`, null, 0);
+          } catch {
+            // ⛔ the error's message in ours — a transport error may echo the request.
+            if (signal.aborted) {
+              throw new SmsSendError('sms send timed out', null, 0, { errorClass: 'api_unavailable', code: 'timeout' });
+            }
+            throw new SmsSendError('sms send transport failure', null, 0);
           }
 
           let payload: unknown = null;
           try {
             payload = await res.json();
           } catch {
-            // A 2xx with an unparseable body is anomalous; a non-2xx with no JSON still classifies by status.
             payload = null;
           }
 
-          if (!res.ok) {
-            throw new SmsSendError(
-              `sms send rejected by gateway (HTTP ${res.status})`,
-              extractGatewayCode(payload),
-              res.status,
-            );
+          const type = prop(payload, 'type');
+          const gatewayCode = stringOrNull(prop(payload, 'code'));
+          if (res.ok && type === 'success') {
+            const id = prop(payload, 'message');
+            if (typeof id === 'string' && MSG91_REQUEST_ID.test(id)) return id;
+            // A success with ⛔ usable request id is ⛔ an acceptance we can honour (I3) — ⛔ a fabricated id.
+            throw new SmsSendError('sms send success without a request id', null, res.status, {
+              errorClass: 'unknown',
+              code: 'no_request_id',
+            });
           }
-
-          const messageId = extractMessageId(payload);
-          if (messageId === null) {
-            // A 2xx that carries no messageId is not an acceptance we can honor — treat as a failure so the
-            // outcome never fabricates a success; classify by any embedded gateway code.
-            throw new SmsSendError(
-              'sms send accepted by gateway but returned no messageId',
-              extractGatewayCode(payload),
-              res.status,
-            );
+          if (type === 'error' || !res.ok) {
+            if (gatewayCode !== null) {
+              throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, gatewayCode, res.status);
+            }
+            const byMessage = tokenForMessage(prop(payload, 'message'));
+            if (byMessage) throw new SmsSendError('sms send rejected by gateway', null, res.status, byMessage);
+            if (!res.ok) throw new SmsSendError(`sms send rejected by gateway (HTTP ${res.status})`, null, res.status);
+            throw new SmsSendError('sms send rejected by gateway', null, res.status, {
+              errorClass: 'unknown',
+              code: 'msg91_error',
+            });
           }
-          return messageId;
+          // A 2xx with neither `success` nor `error` — ⛔ an acceptance.
+          throw new SmsSendError('sms send answered without a type', null, res.status, { errorClass: 'unknown', code: 'no_type' });
         },
       };
       return cached;
+    },
+
+    async readTemplateVersions(templateId): Promise<Msg91TemplateRead> {
+      const signal = timeoutSignal(SMS_GATEWAY_TIMEOUT_MS);
+      let origin: string;
+      try {
+        origin = assertClientConfig(config);
+      } catch {
+        return { kind: 'unauthorised' };
+      }
+      let res: SmsFetchResponse;
+      try {
+        res = await fetchImpl(`${origin}/api/v5/sms/getTemplateVersions`, {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ template_id: templateId }),
+          signal,
+        });
+      } catch {
+        return { kind: 'unavailable', cause: signal.aborted ? 'timeout' : 'network' };
+      }
+      if (res.status === 401 || res.status === 403) return { kind: 'unauthorised' };
+      if (res.status === 429) return { kind: 'unavailable', cause: 'throttled' };
+      if (res.status >= 500) return { kind: 'unavailable', cause: 'server' };
+      if (!res.ok) return { kind: 'refused' };
+      let payload: unknown;
+      try {
+        payload = await res.json();
+      } catch {
+        return { kind: 'unavailable', cause: 'unparseable' };
+      }
+      const hasError = prop(payload, 'hasError');
+      const status = prop(payload, 'status');
+      if (hasError === true || hasError === 'true' || status === 'error' || status === 'fail') return { kind: 'refused' };
+      const data = prop(payload, 'data');
+      if (!Array.isArray(data)) return { kind: 'unavailable', cause: 'unparseable' };
+      return {
+        kind: 'versions',
+        versions: data.map((v: unknown) => ({
+          templateData: stringOrNull(prop(v, 'template_data')),
+          dltId: stringOrNull(prop(v, 'DLT_ID')),
+          senderId: stringOrNull(prop(v, 'sender_id')),
+          status: stringOrNull(prop(v, 'status')),
+          activeStatus: stringOrNull(prop(v, 'active_status')),
+          smsType: stringOrNull(prop(v, 'sms_type')),
+          dltVerified: stringOrNull(prop(v, 'dlt_verified')),
+          dltReason: stringOrNull(prop(v, 'dlt_reason')),
+          rejectReason: stringOrNull(prop(v, 'reject_reason')),
+        })),
+      };
     },
   };
 }
 
 /** The global fetch, adapted to `SmsFetchLike`. Isolated so the default is trivially swappable in tests. */
-const globalFetch: SmsFetchLike = (url, init) =>
-  fetch(url, init as RequestInit) as unknown as Promise<SmsFetchResponse>;
+const globalFetch: SmsFetchLike = (url, init) => fetch(url, init as RequestInit) as unknown as Promise<SmsFetchResponse>;

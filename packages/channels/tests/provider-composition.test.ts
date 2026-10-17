@@ -205,7 +205,8 @@ describe('resolveTelegramProvider — real-vs-fixture composition (NEW; Story 5.
 
 // ── SMS (relocated from apps/api Story 5.6 provider-selection half) ─────────────────────────────────────────
 
-const fakeSmsAppClient = { isConfigured: () => true, messaging: () => ({ send: () => Promise.resolve('gw-id') }) };
+const gatewaySend = vi.fn(() => Promise.resolve('gw-id'));
+const fakeSmsAppClient = { isConfigured: () => true, messaging: () => ({ send: gatewaySend }) };
 
 describe('resolveSmsProvider — real-vs-fixture selection (relocated from apps/api Story 5.6)', () => {
   it('SMS-eligible category + provisioned template id → the REAL sms-dlt provider deps', async () => {
@@ -217,13 +218,21 @@ describe('resolveSmsProvider — real-vs-fixture selection (relocated from apps/
     expect(providerDeps!.dltTemplateId).toBe('DLT_REAL_ID');
     expect(resolveConfig).toHaveBeenCalledWith(REGISTRABLE.dltTemplateIdConfigKey);
 
-    // ⚠ The fixture ALSO has `id: 'sms-dlt'` — prove the REAL provider by what it sends (⛔ 'fixture-sms').
+    // ⚠ The fixture ALSO has `id: 'sms-dlt'` — prove the REAL provider by what it answers (⛔ 'fixture-sms').
+    // ⭐ Story 6.37 MG12: the alert composition binds ⛔ named values, so even a forced registrable entry is refused
+    // locally `no_named_values` and the gateway is ⛔ called (every alert category stays dark).
+    gatewaySend.mockClear();
     const provider = await resolveSmsProvider(deps, 'deadline_reminder');
     const result = await provider.send({ channel: 'sms', title: null, body: 'x', deepLink: null }, {
       channel: 'sms',
       address: '+910000000000',
     });
-    expect(result.providerMessageId).toBe('gw-id');
+    expect(result).toMatchObject({
+      status: 'rejected',
+      providerMessageId: null,
+      detail: 'dlt_template_not_approved:no_named_values',
+    });
+    expect(gatewaySend).not.toHaveBeenCalled();
   });
 
   it('a NON-eligible category → null deps → the fixture (resolveConfig never consulted)', async () => {

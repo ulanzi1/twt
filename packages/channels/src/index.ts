@@ -81,16 +81,28 @@ export {
 // Story 5.6 — real SMS-DLT transport: the GLOBAL DLT-transactional telephony-gateway client + the narrow
 // messaging seam, the gateway send-error classifier (the honest failure classes read off SendResult.detail),
 // and the static per-category DLT template registry (SMS-eligibility = category present in the registry).
+// Story 6.37 — the client is MSG91's (Flow v5 + the template read the pre-flight uses; ADR-0041).
 export {
   createSmsAppClient,
+  isMsg91TemplateId,
+  MSG91_DEFAULT_API_ORIGIN,
+  parseSmsGatewayOrigin,
+  SMS_GATEWAY_TIMEOUT_MS,
   SmsSendError,
+  type Msg91Client,
+  type Msg91TemplateRead,
+  type Msg91TemplateReader,
+  type Msg91TemplateVersion,
   type SmsAppClient,
+  type SmsClientOptions,
   type SmsMessagingHandle,
   type SmsGatewayMessage,
+  type SmsGatewayValue,
   type SmsClientConfig,
   type SmsFetchLike,
   type SmsFetchInit,
   type SmsFetchResponse,
+  type SmsLocalRefusal,
 } from './providers/sms-app.js';
 export {
   classifySmsError,

@@ -1,16 +1,20 @@
-// SMS-DLT send-error classification — Story 5.6 (AC1; Task 1).
+// SMS send-error classification — Story 5.6 (AC1; Task 1); MSG91's code table by Story 6.37 (MG6, MG7; ADR-0041).
 //
-// India's DLT-transactional telephony gateway returns a string `code` (+ an HTTP status). This classifier
-// maps a failure into a STABLE, PII-free class the (future) cascade ladder + observability can read back
-// off `SendResult.detail` — WITHOUT any SendResult shape change (mirrors whatsapp-errors.ts / telegram-
-// errors.ts: the provider stays pure of policy, the detail carries `<class>:<code>`). SMS is the TERMINAL
-// ladder rung — there is no fallback below it, so a classified SMS rejection is the honest end of the line.
+// MSG91 returns a string `code` (+ an HTTP status). This classifier maps a failure into a STABLE, PII-free class the
+// callers read back off `SendResult.detail` — WITHOUT any SendResult shape change (mirrors whatsapp-errors.ts /
+// telegram-errors.ts: the detail carries `<class>:<code>`). The classes are FROZEN (I5 — the 0155 / 0166 detail
+// CHECKs enumerate them); a new MSG91 code joins a set below, ⛔ a new class.
 //
-// ⚠ CODES ARE INDICATIVE, VERIFY AT IMPLEMENT TIME. Telephony gateways differ and their error-code
-// references change. The class↔code mapping below is a representative DLT-gateway shape and MUST be
-// re-verified against the CHOSEN gateway's reference (the AR-53 single-module swap). The mapping is
-// deliberately DATA-DRIVEN (a set/prefix check, not scattered conditionals) so a correction is a one-line
-// edit — the gateway-specific string codes live HERE, never leaking into the provider/dispatch/render.
+// ── Source (read 2026-10-17) ────────────────────────────────────────────────────────────────────────────
+// MSG91 help, "What are the reasons for error codes received under API failed"
+// (https://msg91.com/help/api/what-are-the-reason-for-error-codes-received-under-the-api-failed). ⚠ MSG91 reports
+// most errors ASYNCHRONOUSLY (F9) — a synchronous `code` on a Flow send is ⛔ documented — so this table is the
+// DEFENSIVE mapping for when one arrives, and MOSTLY UNREACHABLE at send today.
+// ⚠ `auth` means "the gateway ACCOUNT refuses" — a bad key, but also balance (301), an IP (208 / 418), a route
+// (209 / 210 / 602) — so 6.27c's P1 stops a peer-mesh child on each. ⚠ `carrier_reject` has ⛔ synchronous MSG91 code:
+// DND / operator blocks arrive only in a delivery report (row 6-37b); the class is kept (I5).
+
+import { claim } from '@twt/domain';
 
 import { SmsSendError } from './sms-app.js';
 
@@ -24,35 +28,31 @@ export type SmsErrorClass =
   | 'auth'
   | 'unknown';
 
-// ── Gateway error codes by class (INDICATIVE — verify against the chosen gateway's reference) ──────────
-// A bad / non-routable recipient msisdn.
-const INVALID_NUMBER_CODES: ReadonlySet<string> = new Set(['INVALID_NUMBER', 'INVALID_MOBILE', 'E001']);
-// The #1 DLT reject cause: the content does not byte-match a registered template, or the template id /
-// header is not approved / is paused. Content-mismatch is folded into this class (both are "fix the
-// template registration", not "retry the recipient").
-const TEMPLATE_NOT_APPROVED_CODES: ReadonlySet<string> = new Set([
-  'DLT_TEMPLATE_NOT_APPROVED',
-  'TEMPLATE_MISMATCH',
-  'CONTENT_TEMPLATE_MISMATCH',
-  'TEMPLATE_NOT_FOUND',
-  'INVALID_TEMPLATE',
-  'E002',
-]);
-// Carrier / operator refused the message (DND, spam filter, operator block) — recipient-side reject.
-const CARRIER_REJECT_CODES: ReadonlySet<string> = new Set(['CARRIER_REJECT', 'DND_REJECT', 'BLOCKED', 'E003']);
-// Throughput / capacity throttle — transient, retryable by the cascade's backoff.
-const RATE_LIMIT_CODES: ReadonlySet<string> = new Set(['RATE_LIMIT', 'THROTTLED', 'TOO_MANY_REQUESTS', 'E004']);
-// Gateway credential invalid / lacking permission.
-const AUTH_CODES: ReadonlySet<string> = new Set(['AUTH_FAILED', 'UNAUTHORIZED', 'INVALID_API_KEY', 'E005']);
+// ── MSG91 error codes by class (MG7) ────────────────────────────────────────────────────────────────────
+// 201 bad credentials · 204 SMS not enabled for the key · 207 invalid authkey · 208 IP blacklisted · 209 / 210 route
+// not found / not determined · 301 insufficient balance · 302 / 303 expired / banned · 418 IP not whitelisted ·
+// 421 service terminated · 602 route disabled.
+const AUTH_CODES: ReadonlySet<string> = new Set(['201', '204', '207', '208', '209', '210', '301', '302', '303', '418', '421', '602']);
+// 203 invalid sender / DLT entity · 211 DLT template id missing · 310 too long · 400 template id missing / incorrect /
+// archived · 401 flow not approved · 402 hard-block keywords · 403 flow disabled · 603 sender blacklisted.
+const TEMPLATE_NOT_APPROVED_CODES: ReadonlySet<string> = new Set(['203', '211', '310', '400', '401', '402', '403', '603']);
+// 101 missing mobile · 202 invalid mobile · 604 no valid number.
+const INVALID_NUMBER_CODES: ReadonlySet<string> = new Set(['101', '202', '604']);
+// 306 route unavailable · 506 / 601 internal.
+const API_UNAVAILABLE_CODES: ReadonlySet<string> = new Set(['306', '506', '601']);
+// ⚠ Everything else is `unknown` — incl. 311 ("the first SMS will be delivered and the second rejected": a MAY-HAVE-
+// SENT, ⛔ an acceptance and ⛔ a retry — T12) and 407 (international blocked).
 
 /** Classify a gateway code (+ HTTP status) into its stable SMS failure class. */
 function classForCode(gatewayCode: string | null, httpStatus: number): SmsErrorClass {
   if (gatewayCode !== null) {
-    if (INVALID_NUMBER_CODES.has(gatewayCode)) return 'invalid_number';
-    if (TEMPLATE_NOT_APPROVED_CODES.has(gatewayCode)) return 'dlt_template_not_approved';
-    if (CARRIER_REJECT_CODES.has(gatewayCode)) return 'carrier_reject';
-    if (RATE_LIMIT_CODES.has(gatewayCode)) return 'rate_limited';
-    if (AUTH_CODES.has(gatewayCode)) return 'auth';
+    const code = gatewayCode.trim();
+    if (AUTH_CODES.has(code)) return 'auth';
+    if (TEMPLATE_NOT_APPROVED_CODES.has(code)) return 'dlt_template_not_approved';
+    if (INVALID_NUMBER_CODES.has(code)) return 'invalid_number';
+    if (API_UNAVAILABLE_CODES.has(code)) return 'api_unavailable';
+    // An answered code we do not list is ⛔ guessed from the HTTP status (it may be a 200).
+    return 'unknown';
   }
   // Status-driven fallbacks when the gateway gave no (recognized) code.
   if (httpStatus === 401 || httpStatus === 403) return 'auth';
@@ -72,6 +72,7 @@ function classForCode(gatewayCode: string | null, httpStatus: number): SmsErrorC
  */
 export function classifySmsError(err: unknown): { code: string; errorClass: SmsErrorClass } {
   let gatewayCode: string | null = null;
+  let local: { errorClass: SmsErrorClass; code: string } | null = null;
   // -1 = "no HTTP information at all" (distinct from a real SmsSendError network failure, which carries
   // httpStatus 0). Keeps a hostile / non-error throw classifying as `unknown` rather than a fake transient.
   let httpStatus = -1;
@@ -79,6 +80,7 @@ export function classifySmsError(err: unknown): { code: string; errorClass: SmsE
     if (err instanceof SmsSendError) {
       gatewayCode = err.gatewayCode;
       httpStatus = err.httpStatus;
+      local = err.local;
     } else if (err && typeof err === 'object') {
       const maybeCode = (err as { gatewayCode?: unknown }).gatewayCode;
       if (typeof maybeCode === 'string') gatewayCode = maybeCode;
@@ -88,8 +90,12 @@ export function classifySmsError(err: unknown): { code: string; errorClass: SmsE
   } catch {
     // A hostile `in`/getter access must never escape (breaks the "never reject into dispatch" invariant).
   }
+  if (local !== null) return { code: claim.sanitizeSmsGatewayCode(local.code), errorClass: local.errorClass };
   const errorClass = classForCode(gatewayCode, httpStatus);
-  const code = gatewayCode !== null ? gatewayCode : httpStatus > 0 ? `http_${httpStatus}` : 'unknown';
+  // Every gateway-supplied code passes the stored-detail scrub (I6 — 6.19b/c/d store a detail RAW): a code that is
+  // ⛔ `[A-Za-z0-9_.-]{1,64}`, or carries a run of 7 digits, becomes `unknown`.
+  const code =
+    gatewayCode !== null ? claim.sanitizeSmsGatewayCode(gatewayCode.trim()) : httpStatus > 0 ? `http_${httpStatus}` : 'unknown';
   return { code, errorClass };
 }
 

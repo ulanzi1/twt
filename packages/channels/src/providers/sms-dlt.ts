@@ -11,19 +11,19 @@
 // one PE/OE sender) — a per-Pariwar sender header is an explicit NON-GOAL for v1. The provider stays pure
 // of DB access — it CLASSIFIES a gateway error (sms-errors.ts) and never touches Postgres.
 //
-// ── The single-variable DLT template shape (mirror WA Q1=A) ────────────────────────────────────────────
-// DLT-transactional gateways REJECT any content that does not byte-match a registered content template. So
-// — exactly like WA's single-`{{1}}`-body-param shape — the frozen render.ts `sms` output is mapped into
-// the registered DLT template's single variable slot; the fixed template wrapper (header/body scaffolding +
-// PE/OE sender) is the gateway's, not the renderer's. The provider NEVER mutates the frozen render output.
-//
+// ── Named values, bound per send (Story 6.37 MG3, MG12) ───────────────────────────────────────────────
+// MSG91 substitutes the template's NAMED values into its own copy of the registered text — ⛔ the finished body. The
+// frozen `RenderedMessage` carries ⛔ values, so they are bound in `SmsProviderDeps` per send (the claim-text core
+// builds a provider per send). A provider built WITHOUT values — the dark alert composition (TV6) — refuses locally
+// `dlt_template_not_approved:no_named_values` and ⛔ calls the gateway. The provider NEVER mutates the render output.
+
 // ── Provider NEVER rejects (mirror whatsapp-business.ts) ───────────────────────────────────────────────
 // `send` resolves a `rejected` SendResult on ANY error, `detail` = the classified failure (no PII); it
 // never throws into dispatch. `getStatus` is an honest `unknown` — the gateway gives NO synchronous
 // delivery receipt at accept time.
 
 import type { ChannelProvider, RenderedMessage, SendResult, SendStatus, SendTarget } from '../provider.js';
-import type { SmsMessagingHandle } from './sms-app.js';
+import type { SmsGatewayMessage, SmsGatewayValue, SmsMessagingHandle } from './sms-app.js';
 import { classifySmsError, rejectionDetail } from './sms-errors.js';
 
 /**
@@ -34,17 +34,25 @@ import { classifySmsError, rejectionDetail } from './sms-errors.js';
  */
 export interface SmsProviderDeps {
   readonly messaging: SmsMessagingHandle;
-  /** The resolved TRAI-assigned DLT template id (composition resolved the global NAME → value). */
+  /** The resolved gateway template id (MSG91's — held under the template's config key, MG4). */
   readonly dltTemplateId: string;
+  /** The template's named values for THIS send, in slot order (MG3). Absent ⇒ ⛔ sendable (MG12). */
+  readonly values?: readonly SmsGatewayValue[];
 }
 
-/** Build the gateway message from the rendered SMS output + the resolved template id + the target. */
-function buildGatewayMessage(deps: SmsProviderDeps, rendered: RenderedMessage, target: SendTarget) {
+/** Build the gateway message from the rendered SMS output + the resolved template id + the values + the target. */
+function buildGatewayMessage(
+  deps: SmsProviderDeps,
+  values: readonly SmsGatewayValue[],
+  rendered: RenderedMessage,
+  target: SendTarget,
+): SmsGatewayMessage {
   return {
-    // The composition layer decrypted the member's Tier-1 mobile → E.164 on `target.address`.
+    // The caller resolved the recipient's E.164 on `target.address`.
     to: target.address,
-    dltTemplateId: deps.dltTemplateId,
-    // The whitespace-normalized render body IS the single DLT-template variable (mirror WA's bodyParam).
+    templateId: deps.dltTemplateId,
+    values,
+    // The rendered body — the oracle the values were checked against; ⛔ sent.
     body: rendered.body,
   };
 }
@@ -56,8 +64,18 @@ export function createSmsDltProvider(deps: SmsProviderDeps): ChannelProvider {
     channel: 'sms',
     scope: 'global',
     async send(rendered, target): Promise<SendResult> {
+      if (deps.values === undefined || deps.values.length === 0) {
+        // MG12 — ⛔ named values (the dark alert composition) ⇒ ⛔ sendable through MSG91; refused before the network.
+        return {
+          channel: 'sms',
+          provider: 'sms-dlt',
+          status: 'rejected',
+          providerMessageId: null,
+          detail: rejectionDetail('dlt_template_not_approved', 'no_named_values'),
+        };
+      }
       try {
-        const messageId = await deps.messaging.send(buildGatewayMessage(deps, rendered, target));
+        const messageId = await deps.messaging.send(buildGatewayMessage(deps, deps.values, rendered, target));
         return {
           channel: 'sms',
           provider: 'sms-dlt',
@@ -79,8 +97,8 @@ export function createSmsDltProvider(deps: SmsProviderDeps): ChannelProvider {
       }
     },
     getStatus(messageId): Promise<SendStatus> {
-      // The gateway gives NO synchronous delivery receipt at accept time (no DLR seam in v1). Honest
-      // `unknown` here; never fabricate `delivered`.
+      // MSG91 gives NO synchronous delivery receipt — its delivery reports are row 6-37b. Honest `unknown` here;
+      // never fabricate `delivered`.
       return Promise.resolve({ providerMessageId: messageId, state: 'unknown' });
     },
   };

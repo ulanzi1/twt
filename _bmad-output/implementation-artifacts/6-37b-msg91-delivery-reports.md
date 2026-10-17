@@ -1164,6 +1164,9 @@ them at Task 0.1.
   to be explicitly resolved in the story."* ⇒ v1.3: DR1's secret-failure table (+ AC2's legs); DR11's S0 / S1 / S2 stage table;
   DR6's `sms_send_deliveries` contract table (+ AC6's legs, Task 3 — ⛔ `WHERE`); Row 33 (c2) for DR9's verification; `-347`'s Status
   written to the repository state at its commit.
+- **(c) Task 0.3 — `2026-10-17-347` committed ALONE as `bf1d57f7`** (2026-10-17, on this branch on top of `5dfa5775`; ⛔ yet on
+  `main`), after BigDev approved the draft (*"approved."*). `-347` was re-checked free on every ref and in the 6-31 worktree right
+  before the insert. Still owed by Task 0.3: the PQ1 and PQ2 routing notes (written, ⛔ sent); then Task 0.4's records commit.
 
 ### Completion Notes List
 

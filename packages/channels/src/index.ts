@@ -104,6 +104,21 @@ export {
   type SmsFetchResponse,
   type SmsLocalRefusal,
 } from './providers/sms-app.js';
+// Story 6.37 (MG5) — the MSG91 template pre-flight and the ONE process memo it is read through.
+export {
+  checkMsg91Template,
+  createMsg91PreflightMemo,
+  MSG91_PREFLIGHT_FAULT_TTL_MS,
+  MSG91_PREFLIGHT_PASS_TTL_MS,
+  type Msg91PreflightEntry,
+  type Msg91PreflightFault,
+  type Msg91PreflightMemo,
+  type Msg91PreflightMemoOptions,
+  type Msg91PreflightNote,
+  type Msg91PreflightObservation,
+  type Msg91PreflightOptions,
+  type Msg91PreflightResult,
+} from './providers/sms-preflight.js';
 export {
   classifySmsError,
   rejectionDetail as smsRejectionDetail,

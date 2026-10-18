@@ -164,6 +164,19 @@ Load-bearing details:
   note — its Task 0.4 plans one) and decides whether the static token is still enough, BEFORE it builds the ladder and before Row 33
   (a) ratifies this text. ⛔ Closed — an OPEN item, carried in `deferred-work.md` (code review round 2 of 6-37b). A leaked token is
   rotated as above.
+  ⚠ **Dated note, 2026-10-18 ([Decision 2026-10-18-355](../../.decision-log.md#decision-2026-10-18-355) decision 15 — no word above
+  rewritten):** **the bound RESTATED for the ladder, and the token decided.** Relative to TODAY (no report at all), a forged report still
+  never makes a person count as reached who would not count today. Relative to a GENUINE failure report: (i) a forged `delivered` ends
+  that person's ladder and its closure hold (`-351` ruling 6 A); (ii) a forged `undelivered` starts up to two more copies of an approved
+  reminder (no WhatsApp — row 6-37c skips that step), an about-eight-day closure hold and a call-or-letter ask to the District Admin,
+  and, on conclusion, un-counts that reminder (closure `not_reached` until a letter's delivery or a reached call is recorded), makes the
+  person letter-eligible for that number for good and sends their closure notice by letter. Both are bounded PER PERSON: one ladder at a
+  time, no new ladder after a conclusion on that number, and a start-burst alarm (≥ 3 ladders in one Pariwar on one day) — which
+  reaches the logs only until roster Row 32 (h). **The static header token is KEPT** (option (a)): MSG91 signs no report and publishes
+  no source IPs (the deciding fact above), so no stronger ingress authentication is available from it; a status-pull cross-check is
+  unverified and not adopted. Cost, accepted: a leaked token lets its holder end a real failure's protection for the persons they target
+  until the token is rotated. The deferred item's ADR half is addressed by this note; the consent sheet §1–§2 is revised in the same
+  commit.
 - **Performance / cost.** One insert per report on the api; one primary-key lookup and one upsert per report in jobs. No per-request
   secret read.
 - **Failure modes accepted.**

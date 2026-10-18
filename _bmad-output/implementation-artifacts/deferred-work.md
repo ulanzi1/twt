@@ -27,7 +27,11 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   without the two effects above, and a Panel pack item putting ADR-0042 up "the sitting before row 6-37c starts". ⭐ Trigger: 6-37c's
   Task 0 — ADR-0042 restated (or stronger ingress authentication / a cross-check adopted) BEFORE the ladder is built; the consent sheet
   §1–§2 revised (or ADR-0042 pulled from the pack) BEFORE it is presented; both before roster Row 33 (a). **Not addressed** — recorded
-  open, ⛔ closed by the round-2 records.
+  open, ⛔ closed by the round-2 records. ⚠ **Dated 2026-10-18 (Story 6.37c Task 0.4):** the SHAs above were rewritten when row 6-37c's
+  branch was rebased onto `main` — `1e0c6f2e` is now `c19e6534`, `f8102c02` is now `1534293b`. Trigger actions taken by [Decision
+  2026-10-18-355](../../.decision-log.md#decision-2026-10-18-355) decision 15 (the static token kept), ADR-0042's dated note (the bound
+  restated) and the consent sheet's §1–§2 revised, all before the ladder is built; it stays open until row 6-37c's Task 10
+  closes it (once the pack goes out with the revised sheet).
 - **The `UPDATE … WHERE id IN (SELECT … LIMIT … FOR UPDATE SKIP LOCKED)` over-claim shape exists in two older drains**
   [`packages/domain/src/telegram-opt-in/webhook-events.ts`, `packages/domain/src/wa-opt-in/webhook-events.ts` — Drizzle `inArray`
   over `.limit(…).for('update', { skipLocked: true })`] — 6.37b's own claim leased 40 of 40 due rows under `LIMIT 2` on :5433 (a
@@ -62,7 +66,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   `sms_report.bad_request_id` log line. ⭐ Trigger: roster Row 33 (e) records a real API-failed report — then a change maps it.
 - **`delivered_at` on `claim_correction_reminders` / `claim_certificate_reminders` stays NULL — an unused seam** (0128 / 0138, with its
   CHECK and its omitted grant) — DR5 records delivery in `sms_send_deliveries` instead (⛔ a send table written — I2). ⭐ Trigger: the next
-  migration that touches either table — adopt the column or drop it, decided and recorded, ⛔ silently left.
+  migration that touches either table — adopt the column or drop it, decided and recorded, ⛔ silently left. ⭐ **Resolved via explicit deferral 2026-10-18 by
+  [Decision 2026-10-18-355](../../.decision-log.md#decision-2026-10-18-355) decision 13** (row 6-37c's migration fires the trigger): neither
+  adopted nor dropped — KEPT unused and recorded; delivery lives in `sms_send_deliveries`. The seam remains. ⭐ Revisit trigger: any story
+  that wants a delivery time on the send row itself.
 - **A paused webhook's reports are ⛔ recovered** — DR12 (b): the reconciliation pull of MSG91's report logs (`report/logs/p/sms`, a
   3-day range) is OUT; the daily silence alarm is the only detector. ⭐ Trigger: Row 33 (e) observes a pause, or the silence alarm fires
   in production.

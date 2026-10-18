@@ -3,7 +3,8 @@
 - **Date:** 2026-10-17
 - **Author:** BigDev (Solo Builder), from Story 6.37b
 - **Input artifacts:** Decisions `2026-10-17-350`, `2026-10-17-351` and `2026-10-17-352` (Trustee-ratified — the delivery ladder and its
-  consent rulings); `2026-10-17-353` (the row that builds it, `6-37c-undelivered-reminder-ladder`); architecture §3.4 *"Member WA
+  consent rulings); `2026-10-17-353` (the row that builds it, `6-37c-undelivered-reminder-ladder`; its WhatsApp step and the agreement's new wording now row
+  `6-37d-claim-contact-whatsapp-step` — `2026-10-18-355` decision 1); architecture §3.4 *"Member WA
   opt-in flow"* (`architecture.md:2218-2245`); `docs/adr/ADR-0029-whatsapp-webhook-ingress-and-opt-in-lifecycle.md` (`ratified`,
   2026-07-08)
 - **Trigger:** the Panel ruled that a correction or certificate reminder that is not delivered is followed up over WhatsApp, and that
@@ -59,7 +60,7 @@ by a later ruling silently overriding it ([[feedback_supersede_never_reinterpret
 - `-352`, verbatim: *"WhatsApp and calls go to the claimant and nominee both but The claimant's agreement doesn't cover the nominees.
   Instead it's permissible under DPDPA."*
 - The filing agreement as built (`packages/i18n/locales/en/claim.json`, `contact.agreement`): *"I agree that the Trust may contact the
-  nominees and the claimant named here, by text message and by post, about this claim."* — row 6-37c changes it to `-352` Q1's wording.
+  nominees and the claimant named here, by text message and by post, about this claim."* — row 6-37d changes it to `-352` Q1's wording.
 - `-352` records three items as not covered: the quoted legal basis against the Act's text (our understanding: the DPDP Act 2023 has no
   general "legitimate interest" ground; Section 7 lists specific legitimate uses; Section 17(1)(a) exempts processing necessary for
   enforcing a legal right or claim — to be confirmed by counsel; not legal advice); Meta's own requirement that a person opt in before
@@ -72,7 +73,7 @@ by a later ruling silently overriding it ([[feedback_supersede_never_reinterpret
 - **Architecture §3.4.** One new bullet after *"Opt-in origination requirement"*: a narrow exception for contact about a claim. The
   member opt-in flow, its origination rule and its STOP handling are unchanged for member notifications.
 - **ADR-0029** (`ratified`). A dated amendment note pointing to the new §3.4 bullet; its decisions are unchanged.
-- **Row 6-37c** builds the exception: the claimant's new agreement wording, the WhatsApp templates for the two reminders (Meta approval,
+- **Row 6-37d** builds the exception: the claimant's new agreement wording, the WhatsApp templates for the two reminders (Meta approval,
   English and Hindi), the nominee's WhatsApp step behind the go-live conditions in §3, the STOP handling for claim contact.
 - **No other surface** gains WhatsApp by this amendment: member notifications still need the member's own opt-in.
 - **Risk if not amended:** the built behaviour contradicts ratified architecture; a later change could cite §3.4 to remove it, or cite
@@ -133,8 +134,8 @@ Amend §3.4 with a **claim-contact exception** that is narrow by design:
 +  other surface; the Pariwar's WA toggle and number, Meta-approved templates, and STOP
 +  handling apply unchanged. Go-live conditions G1–G3 (counsel's written basis for the
 +  nominee; the Meta-policy check; the claimant's new agreement live) are recorded in
-+  sprint row `6-37c-undelivered-reminder-ladder`'s comment (⛔ a roster row yet — that comment NAMES them; their text is §3 of this
-  proposal).
++  §3 of this proposal; carried by sprint row `6-37d-claim-contact-whatsapp-step` (G1's WhatsApp half, G2, G3) and roster Row 34 (G1's
++  call half).
  - **Fallback driven by WA-Cloud-API undelivered status,** not pre-send presence
    detection.
 ```
@@ -153,7 +154,7 @@ intact for every member notification.
 
 ### 4.3 Downstream pointers (applied only after 4.1 and 4.2 land)
 
-- Roster: row 6-37c's gate carries G1–G3.
+- Roster: row 6-37d's roster row carries G1 (its WhatsApp half), G2 and G3; G1's CALL half is roster Row 34 (row 6-37c).
 - `deferred-work.md`: none.
 
 ---
@@ -161,8 +162,13 @@ intact for every member notification.
 ## Section 5 — Implementation Handoff
 
 - **On approval:** a Trustee-ratified decision entry records the approval (and any conditions); §4.1 and §4.2 are applied in one commit;
-  row 6-37c's create-story picks up the exception and G1–G3.
+  row 6-37d's create-story picks up the exception and G1 (WhatsApp half), G2 and G3.
 - **Before G1:** BigDev asks counsel (Adv. Mohit Agrawal) for a written view on the nominee's basis — which provision of the DPDP Act,
   and any conditions — and, in the same request, whether the claimant agreement should keep *"any other means … in future"*.
 - **If not approved:** §3.4 stands. The claimant's WhatsApp step is unaffected (it already meets §3.4's explicit-capture origin); the
   nominee's WhatsApp step is not built, and the Panel is told the difference from `-352`.
+
+*(corrected 2026-10-18, Story 6.37c Task 0.4, before presentation — [Decision 2026-10-18-355](../../.decision-log.md#decision-2026-10-18-355) decision 1 moved the WhatsApp step and the agreement's new wording from row 6-37c to row `6-37d-claim-contact-whatsapp-step`; five sentences that named row 6-37c for that work now name 6-37d (the input-artifacts line, the agreement line, "Row 6-37d builds the exception", the roster line, the on-approval line). ⛔ A change of what the Panel is asked to approve.)*
+*(corrected 2026-10-18, Story 6.37c Task 0.4, before presentation — the §4.1 new bullet's last line pointed at sprint row
+`6-37c-undelivered-reminder-ladder`'s comment; after `2026-10-18-355` G1's WhatsApp half, G2 and G3 belong to row 6-37d and G1's call half
+to roster Row 34, so the line now names those. ⛔ A change of what the Panel is asked to approve.)*

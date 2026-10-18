@@ -1,3 +1,13 @@
+# last_updated: 2026-10-18d (STORY 6.37c — TASK 0 DONE (governance before code) on `story/6-37c-undelivered-reminder-ladder`: BigDev's
+# answers *"LD1 a, LD2 a, LD3 ok, LD4 a, LD5 a, LD6 ok, LD7 ok, LD8 ok, LD9 ok, LD10 a, LD11 a, LD12 ok, LD13 ok, LD14 keep, LD15 a, LD16 a,
+# LD17 a, PQ1–3 route"* recorded as Decision `2026-10-18-355` (author-commit, committed ALONE `d93b7c75`; its review-added disclosures put
+# to BigDev and confirmed before insertion). Records: ⭐ NEW ROW `6-37d-claim-contact-whatsapp-step: backlog` (the WhatsApp step + the
+# agreement's new wording); roster Row 34 `claim-contact-nominee-call-basis` (G1's call half) + dated notes on Rows 18, 26, 32 (9.1), 33
+# (7); ADR-0042's dated note (the bound restated; the static token KEPT); the consent sheet §1–§2, the §3.4 proposal and the Panel pack
+# revised in place before presentation (pack items 4 — the PQ1–PQ3 routing note — and 5 — the alarm correction `-354` d4 (c) owes);
+# the routing note `trustee-panel-routing-note-2026-10-18-6-37c-ladder-edges.md` and the counsel question
+# `counsel-question-2026-10-18-nominee-contact-basis.md` WRITTEN, ⛔ sent; deferred-work (`delivered_at` resolved by `-355` d13; the
+# pre-rebase SHAs `1e0c6f2e` ⇒ `c19e6534`, `f8102c02` ⇒ `1534293b` annotated); `epics.md` dated note. Row 6-37c → in-progress.)
 # last_updated: 2026-10-18c (STORY 6.37c — VALIDATED (`bmad-create-story validate 6.37c`, story v1.2) after 6.37b reached `main`: branch
 # `story/6-37c-undelivered-reminder-ladder` REBASED onto `main` @ `ed862339` (two ledger conflicts resolved, both entries kept); re-pinned
 # `c19e6534`. Four parallel read-only verifiers + two fresh-context re-validate rounds of the rewrite (2 H / 3 M / 8 L, then 0 H / 4 M / 5 L —
@@ -20073,6 +20083,7 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-18 (Story 6.37c Task 0: -355; new row 6-37d backlog; Row 34; pack + PQ note + counsel question written; 6-37c in-progress.)
   2026-10-18 (Story 6.37c validated, v1.2: rebased on main; ce filter, numbers, -354's carriers, LD15–LD17; ready-for-dev.)
   2026-10-17 (Story 6.37c created: the delivery ladder, both chases; LD1–LD14 proposed for BigDev at Task 0; PQ1–PQ3 candidate; ready-for-dev.)
   2026-10-17 (Story 6.37b dev done: CRQID on every SMS, the MSG91 report webhook, the correlator, prune and silence alarm; ci:local green on :5433; 6-37b review.)
@@ -20573,7 +20584,17 @@ development_status:
   # ⭐ 2026-10-18 (validate, story v1.2): branch rebased onto `main` (6.37b on it — Task 0.1's "bring f7e695b7" DISCHARGED); the
   # `-354` carriers above are IN the story (LD11 mechanism-only, LD13 go-live, LD16 counsel, Task 0.4 Panel telling), plus LD15 (token)
   # and LD17 (the "STILL so" leg); the 6.37c entry is the next free id; migration 0169. Buildable after Task 0 (LD1–LD17).
-  6-37c-undelivered-reminder-ladder: ready-for-dev
+  # ⭐ 2026-10-18 (Task 0, `-355` `d93b7c75`): LD1–LD17 DECIDED; PQ1–PQ3 routed (note written, ⛔ sent); the counsel question written
+  # (⛔ sent). Code may start. Not `done` until PQ1–PQ3 are ruled. GO-LIVE: Row 32 (h); nominee calls after Row 34. (SHAs in the notes above:
+  # `1e0c6f2e` is now `c19e6534`, `f8102c02` is now `1534293b` — the rebase.)
+  6-37c-undelivered-reminder-ladder: in-progress
+  # ⭐ 2026-10-18 NEW ROW (`-355` decision 1 — row 6-37c's LD1 (a)): the delivery ladder's WhatsApp step and the filing agreement's
+  # `-352` Q1 wording (en + reviewed hi, a bumped copy version, a version-aware reader — G3), the nominees' removal from it (the rewording
+  # only), Meta-approved claim-contact templates, a direct non-member sender (on 6.31's client), a sub-daily step, claim-contact STOP, an
+  # absorbing "ever delivered" read, the member-opt-in side-effect isolation, the nominee's WhatsApp step behind the §3.4 amendment + G1 +
+  # G2, and the roster row for G1's WhatsApp half / G2 / G3. AFTER 6.31 and 6-37c. ⛔ Story file; its `epics.md` entry is owed at its
+  # create-story. Row 6-37c `done` does ⛔ wait for this row (Row 32 (9.1), Row 33 (7)).
+  6-37d-claim-contact-whatsapp-step: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

@@ -35,11 +35,23 @@ one-line pointer is applied to §3.11 **on ratification** (approve it with ADR-0
 +   restored if the provider adds signing.
 ```
 
-### 2. ADR-0042's "a report can only subtract reach" holds under the Panel's ruling
+Ratifying ADR-0042 also accepts a second, matching departure: the architecture's edge capability *"Ingress signature verification —
+verifies inbound traffic origin before passing to backend"* cannot be met for this route either (there is no signature to verify), so
+the route is protected by the same static header instead (ADR-0042, *"The edge bar, too"*).
 
-ADR-0042 bounds what a forged report can do: it can never ADD reach, so it can never cause a claim to be closed. That bound fails only
-under the "proven delivery only" option (C) of the 2026-10-17 question — which the Panel did **not** choose (Decision `2026-10-17-350`,
-option B1). Under B1 a forged "not delivered" report can at worst delay one person's closure and start the letter route for them.
+### 2. What a forged delivery report could do, under the follow-up you ruled
+
+The reports are protected by a secret header (Read-first 1). If that secret leaked, could a forged report harm a family? Compared with
+today (reports change nothing yet), no: a forged report can never make a person count as reached who would not count today. But compared
+with genuine reports, two things become possible under the follow-up you ruled on 2026-10-17 (Decisions `2026-10-17-350`, `-351`): a
+forged "delivered" report could end a real failure's follow-up early — and with it the hold on closing their claim for silence, so the
+claim could then be closed for silence as though the family had been reached; and a forged "not delivered" report could start a
+follow-up for a person who was in fact reached — up to two more copies of a reminder, about
+eight days' hold on closure, a request to the District Admin to call or post a letter, and, at the end, that person treated as not
+reached on that number (letter-eligible for good; closure notice by letter). Both are limited to the persons targeted, one follow-up
+at a time. The secret is KEPT (Decision `2026-10-18-355`): MSG91 offers no signature and publishes no source addresses, so there is
+nothing stronger to use; the cost — a leaked secret can end a real follow-up's protection until it is changed — is recorded in
+ADR-0042's dated note.
 
 ### 3. ADR-0041's main accepted risk is now being closed by the delivery-report work
 
@@ -96,7 +108,7 @@ twice (recorded, not hidden); a false template mismatch can hold a run until MSG
 presented to the Panel.** · **Go-live gate:** roster Row 33 (a).
 
 **What it commits:** MSG91's delivery reports are received at one public route authenticated by a **static secret header** (Read-first 1),
-stored as a seven-field record that **never includes the phone number**, acknowledged only after the record is saved, and matched by a
+stored as a six-field record (plus our own receive time) that **never includes the phone number**, acknowledged only after the record is saved, and matched by a
 background job to the exact text through our own id. The api always starts, whatever the state of the secret; the results go into one
 new table; the existing send records are never changed. Cloudflare is told not to challenge this one route.
 
@@ -128,3 +140,8 @@ counted per caller-supplied address; a report that never comes leaves a text cou
 WhatsApp contact about a claim — that is its own item in the same pack.
 
 **Quorum:** ≥2 trustees. **Prepared:** 2026-10-17, BigDev (Solo Builder).
+
+*Revised 2026-10-18, before presentation (Story 6.37c Task 0.4, Decision `2026-10-18-355` decision 15): Read-first 1 gains the edge-bar
+departure ADR-0042 records; Read-first 2 rewritten — it said the bound "holds under the Panel's ruling", true of Story 6.37b as built
+but not under the follow-up ladder; this sheet's own "seven-field record" corrected to six of MSG91's fields plus our receive time (ADR-0042: "seven columns — six of MSG91's
+fields").*

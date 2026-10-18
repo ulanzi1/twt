@@ -13,8 +13,9 @@ is `1534293b`; the trees differ — the base moved). Every cite into 6.37b's fil
 Re-locate by FUNCTION, ⛔ by number ([[feedback_story_validate_footguns]] #19, #21, #24). Built in its OWN worktree
 `.claude/worktrees/6-37c` ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]]).
 
-STATUS: `ready-for-dev` — buildable after Task 0 (LD1–LD17 answered by BigDev and committed; PQ1–PQ3 put through the §0 gate and, if
-they pass it, routed). GO-LIVE (⛔ merge or `done` fences — [[project_not_in_production_merge_is_not_golive]]): roster Row 32 (h) closed is a
+STATUS: `in-progress` — Task 0 DONE (2026-10-18): LD1–LD17 answered by BigDev and committed as `2026-10-18-355` (`d93b7c75`); PQ1–PQ3
+routed (the note WRITTEN, ⛔ sent); the counsel question WRITTEN (⛔ sent); the records commit applied. Code (Tasks 1–9) may start; the row
+is ⛔ `done` until PQ1–PQ3 are ruled and transcribed. GO-LIVE (⛔ merge or `done` fences — [[project_not_in_production_merge_is_not_golive]]): roster Row 32 (h) closed is a
 go-live condition of this row's ladder (`-354` decision 4 (b)); a call to a nominee waits for G1 (`-354` decision 5).
 
 §0 GATE (the routing template's, applied FIRST — `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`): the
@@ -33,13 +34,13 @@ GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `�
 LETTERS: F = found facts (F1–F21); LD = build decisions (LD1–LD17 — PROPOSED, ⏳ BigDev at Task 0.2); PQ = candidate Panel questions
 (PQ1–PQ3); I = invariants (I1–I9); T = traps (T1–T24). Decision-entry letters stay the entry's own (`-351` rulings 1–6, `-252`
 cl.1–cl.3, `-250` #1–#6, `-347` DR1–DR14, `-354` decisions 1–5); G1–G3 are the §3.4 proposal's go-live conditions. This story's OWN
-decision entry is called **"the 6.37c entry"** below — its id is the next free one at Task 0.3 (`-355` at this pin; ⛔ written as a number
+decision entry is called **"the 6.37c entry"** below — its id is the next free one at Task 0.3 (`-355` at this pin — now committed as `2026-10-18-355`, `d93b7c75`; ⛔ written as a number
 anywhere but here and F18, so it cannot go stale twice).
 -->
 
 # Story 6.37c: A reminder the network reports undelivered is followed up — the same reminder twice more over four days, then a call or a letter — and only then stops counting as reaching the family; a claim is never closed for silence while that follow-up runs `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37b receives MSG91's delivery reports and records, per send, whether the network
 > said `delivered` or `undelivered` (`sms_send_deliveries`, absorbing `undelivered` — `-347` DR6) — and changes ⛔ nothing a family
@@ -375,7 +376,7 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   `-351`'s reading (*"The call half of the escalation is not held"* — the correction text promises *"the District Admin will contact you"*),
   ⛔ on the agreement (disclosed in LD11).
 
-## ⚖️ Build decisions LD1–LD17 (PROPOSED — ⏳ BigDev at Task 0.2; each with its recommendation and its cost)
+## ⚖️ Build decisions LD1–LD17 (DECIDED 2026-10-18 — `2026-10-18-355`: every ⭐ option taken, LD3 / LD5–LD9 / LD12 / LD13 accepted as written, LD14 (d) "keep"; each kept below as proposed, with its recommendation and its cost)
 
 - **LD1 — Story shape: the WhatsApp step and the agreement's new wording move to a NEW row `6-37d-claim-contact-whatsapp-step`.**
   ⭐ **(a) Recommended.** 6.37c builds the ladder with step 1 RECORDED `skipped:whatsapp_not_built` and goes on to the 48-hour SMS —
@@ -692,7 +693,7 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   6.37b story cite this row's pre-rebase SHAs (`1e0c6f2e` ⇒ `c19e6534`, `f8102c02` ⇒ `1534293b`). (c) ⛔ new ADR (the ladder is domain
   logic on existing transports). (d) The deferred *"`delivered_at` … an unused seam"* item's trigger FIRES (this migration touches both
   tables): ⭐ recommended — keep it unused (delivery lives in `sms_send_deliveries`, `-347` DR5) and record that in the 6.37c entry, the
-  item **Closed by** that entry.
+  item **Resolved via explicit deferral** by that entry (the seam remains).
 - **LD15 — The report token, BEFORE the ladder is built (ADR-0042 Security: this row *"decides whether the static token is still enough,
   BEFORE it builds the ladder and before Row 33 (a) ratifies this text"*).** Under the ladder a forged report has two new effects relative
   to a genuine failure (I1; ADR-0042 (i) and (ii)): a forged `delivered` cancels a person's closure hold; a forged `undelivered` starts up to
@@ -747,14 +748,15 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   both ways (cost: a certificate ladder delays a correction closure by up to ≈ 8 days, more when a report is late).
 - **PQ3 — When the follow-up would fall after the reminders end.** `-250` #5 *"stop at day 90"* and `-259` (*"the reminders stop after"*
   180 days) meet `-350` ruling 2 (*"sent the SMS once more … sent one more SMS"*) and `-351` 6 A (*"at most about a week past day 90"*). A
-  ladder started by a late reminder (correction day 84, certificate day 180), or running through a certificate pause, would text the family
+  ladder started by a late reminder (certificate day 180; a correction reminder near day 84 only when its report arrives days late — a
+  day-84 failure reported on time sends its texts on days 86 and 88), or running through a certificate pause, would text the family
   after the reminders' ratified end or while they are paused. §0: passes — WHEN a family is texted, and two ratified clauses conflict. **Our reading (built unless ruled
   otherwise): the end wins for texts** — ⛔ ladder SMS past day 90 / day 180 / while paused; the ladder's clock still runs and it CONCLUDES on
   its date (so the closure still waits — 6 A — and the letter route still opens). Options: **A** the end wins (our reading — cost: a family
   whose last reminder failed gets one or two fewer tries before the call / letter); **B** the ladder's texts go past the end (cost: texts
   after *"stop at day 90"* / 180 days, against those rulings as written); **C** a late ladder concludes at once at the end (cost: no retry at
   all for a last-day failure).
-- **All three:** ONE routing note `trustee-panel-routing-note-2026-10-17-6-37c-ladder-edges.md` (independent questions, the `-351` note's
+- **All three:** ONE routing note `trustee-panel-routing-note-2026-10-18-6-37c-ladder-edges.md` (WRITTEN 2026-10-18, ⛔ sent — Panel pack item 4) (independent questions, the `-351` note's
   shape), written from the TEMPLATE (referenced, ⛔ copied), E3 stating LD3's slippage (a late report stretches the closure hold), E4's
   commands run (an empty result is a finding), ⛔ "shown to the Panel" until BigDev SENDS it ([[feedback_shown_to_panel_means_sent]]).
   **Blocks:** ⛔ any code task (Tasks 1–9); the end / horizon rules are written to our readings behind ONE pure function `ladderEndReason(…)` and ONE
@@ -897,26 +899,26 @@ Notation: "the chase" = correction or certificate; every AC holds for BOTH unles
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; 6.37b is ALREADY on this branch (rebased onto `main` @ `ed862339` at the pin); `git log c19e6534..origin/main`
+- [x] **Task 0 — governance FIRST (AC0). ⛔ No code.**
+  - [x] 0.1 `git fetch origin`; 6.37b is ALREADY on this branch (rebased onto `main` @ `ed862339` at the pin); `git log c19e6534..origin/main`
         — if `main` moved, rebase again (BigDev's call; local branch); `git diff --name-only c19e6534..HEAD -- apps packages scripts
         docs/launch-gate-inventory docs/adr .decision-log.md _bmad-output/implementation-artifacts/deferred-work.md` and re-read any cited
         file that moved — re-locate by FUNCTION. Re-check the 6-31 worktree / branch for its claims (migration, decision id, roster row, the
         `epics.md` slot) — F18. 6.37b's recorded proof: `ci:local` 35/36 on :5433 + `@twt/admin` re-run alone 1229/1229 (`ac123e19`).
-  - [ ] 0.2 Put LD1–LD17 to BigDev, each with its recommendation and cost (incl. LD4's, LD5's no-restart, LD9's and LD17's §0 flags, LD10's
+  - [x] 0.2 Put LD1–LD17 to BigDev, each with its recommendation and cost (incl. LD4's, LD5's no-restart, LD9's and LD17's §0 flags, LD10's
         key, LD11's MECHANISM, LD14 (d), LD15's token, LD16's counsel question); then PQ1–PQ3 (+ LD17 if judged the Panel's) — BigDev's §0
         check FIRST (*"STRIP THE CITATIONS AND READ WHAT IS LEFT"*): route, or record as the author's in the 6.37c entry. Record every answer
         verbatim (Debug Log).
-  - [ ] 0.3 Write the 6.37c entry (`.decision-log.md`, prepended; the `-353` / `-354` shape; the next free id re-grepped on EVERY branch and
+  - [x] 0.3 Write the 6.37c entry (`.decision-log.md`, prepended; the `-353` / `-354` shape; the next free id re-grepped on EVERY branch and
         worktree right before — F18) with LD14 (a)'s supersession list. ⛔ Edits any entry ([[feedback_supersede_never_reinterpret]]). Stage in
         scratchpad; try the insert ([[project_decision_log_writes_user_inserted]]). Commit ALONE; write its SHA after, ⛔ before. Then, if
         routed, WRITE the PQ note (⛔ sent).
-  - [ ] 0.4 The records commit (LD14 (b)) — every item listed there, incl. ADR-0042's dated note (LD15), the consent sheet §1–§2 (or ADR-0042
+  - [x] 0.4 The records commit (LD14 (b)) — every item listed there, incl. ADR-0042's dated note (LD15), the consent sheet §1–§2 (or ADR-0042
         pulled from the pack), the Panel pack's disclosures (a pointer to `-354` decision 2's in the proposal; decision 4 (c)'s in full — alarms reach logs only),
         and the pre-rebase SHA annotations; ⛔ a word above a dated note rewritten, EXCEPT the unpresented §3.4 proposal's and Panel pack's
         phrases F19 lists (corrected in place, each with a revision line); both ledgers ([[project_sprint_status_safe_prepend]] — guard the
         size, verify the YAML parses).
-  - [ ] 0.5 The counsel question (LD16 (a) — `-354` decision 5): the basis for the texts and letters nominees receive TODAY, once the
+  - [x] 0.5 The counsel question (LD16 (a) — `-354` decision 5): the basis for the texts and letters nominees receive TODAY, once the
         claimant's new agreement no longer names them — written, handed to BigDev for counsel (⛔ "asked" until it is sent), named in the
         Row 18 dated note; nothing a nominee receives changes until counsel answers.
 
@@ -1003,7 +1005,7 @@ Notation: "the chase" = correction or certificate; every AC holds for BOTH unles
       consumes a delivery report …"* — **Closed by** this story for a REPORTED failure on the correction AND certificate chases, **narrowed** to
       silence (a text with ⛔ report still counts — `-351` 1 A; DR12 alarms it), **⛔ addressed** for peer mesh / suspicion (recorded, ⛔ acted on);
       *"⛔ Staff view labels a send 'reported undelivered'"* — **Closed by** this story for the correction and certificate views, the peer-mesh
-      part stays; *"`delivered_at` … an unused seam"* — **Closed by** the 6.37c entry (LD14 (d)); *"⛔ No staff prompt to CALL a dead-phone
+      part stays; *"`delivered_at` … an unused seam"* — **Resolved via explicit deferral** by the 6.37c entry (LD14 (d) — done at Task 0.4); *"⛔ No staff prompt to CALL a dead-phone
       family whose second certificate is rejected after their one letter"* — the seam exists (the call record) ⇒ **trigger FIRED, partly
       addressed** (a call can be recorded and counts; ⛔ prompt for that family unless a ladder concludes for them); both *"At-least-once
       SMS"* items — a dated annotation: a ladder adds up to two SMS per undelivered reminder under the same residual; *"`readSmsSendDeliveries`
@@ -1172,6 +1174,15 @@ Postgres partial UNIQUE + `ON CONFLICT DO NOTHING` for the start race; `clock_ti
 
 ### Debug Log References
 
+- **(a) Task 0, 2026-10-18.** 0.1: `git fetch origin` — `main` unmoved at `ed862339`; next free ids `-355` (every ref; 6-31 at `-346`),
+  migration 0169, roster Row 34 (6-31 has committed none). 0.2: BigDev, verbatim — *"LD1 a, LD2 a, LD3 ok, LD4 a, LD5 a, LD6 ok, LD7 ok,
+  LD8 ok, LD9 ok, LD10 a, LD11 a, LD12 ok, LD13 ok, LD14 keep, LD15 a, LD16 a, LD17 a, PQ1–3 route."* 0.3: the entry staged, reviewed by a
+  fresh-context reviewer (1 HIGH — the draft said "no Trustee-ratified clause moves" while this story discloses three build narrowings of
+  `-350`; 8 MEDIUM / 5 LOW — dropped conditions, the forgery bound, the nominee "neither" case, status words), all applied; the additions put
+  to BigDev, who answered *"Insert as is"*; inserted and committed ALONE as `d93b7c75`. The PQ note written from the template; its E4
+  commands run (two empty results were search defects — one phrase lives in the `-351` routing note, not the log — fixed). 0.4: the records
+  commit (this story's Change Log v1.3). 0.5: the counsel question written (`counsel-question-2026-10-18-nominee-contact-basis.md`), ⛔ sent.
+
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6.37c`, 2026-10-17; six parallel
@@ -1182,7 +1193,15 @@ Postgres partial UNIQUE + `ON CONFLICT DO NOTHING` for the start race; `clock_ti
 
 - `_bmad-output/implementation-artifacts/6-37c-undelivered-reminder-ladder.md` (new)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
-- `_bmad-output/planning-artifacts/epics.md` (`### Story 6.37c` entry — `-353`'s *"owed at its create-story"*)
+- `_bmad-output/planning-artifacts/epics.md` (`### Story 6.37c` entry — `-353`'s *"owed at its create-story"*; the Task 0 dated note)
+- `.decision-log.md` (`2026-10-18-355`)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-18-6-37c-ladder-edges.md` (new)
+- `_bmad-output/planning-artifacts/counsel-question-2026-10-18-nominee-contact-basis.md` (new)
+- `_bmad-output/planning-artifacts/panel-pack-2026-10-17-6-37c.md`, `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` (revised before presentation)
+- `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-10-17.md` (§1–§2 revised)
+- `docs/adr/ADR-0042-msg91-delivery-report-ingress.md` (dated note)
+- `docs/launch-gate-inventory/inventory-roster.md` (Rows 18, 26, 32, 33 notes; Row 34 new)
+- `_bmad-output/implementation-artifacts/deferred-work.md`, `6-37b-msg91-delivery-reports.md` (annotations)
 
 ## Change Log
 
@@ -1191,3 +1210,4 @@ Postgres partial UNIQUE + `ON CONFLICT DO NOTHING` for the start race; `clock_ti
 | 2026-10-17 | 1.0 | Created by `bmad-create-story 6.37c` at `f8102c02` (worktree `.claude/worktrees/6-37c`). F1–F20 found; LD1–LD14 PROPOSED (⏳ Task 0.2); PQ1 / PQ2 candidate. Status `ready-for-dev`. |
 | 2026-10-17 | 1.1 | Create-story's own validation (one fresh-context read-only verifier, `checklist.md` + the footgun catalogue): 7 CRITICAL / 17 SHOULD / 10 NICE, all applied. ⭐ The ladder now keeps the reminders' RATIFIED rhythm — `-250` #5 (*"One message a day, at 10:00"*, *"stop at day 90"*), `-259` (180 days), `-275` Q4 (pause) — steps are IST dates sent by the 10:00 sweep, a scheduled day IS the step, ⛔ text past the end or in a pause (new PQ3: may the ladder conclude without that text?); the stop predicates read the run's END REASON and gain `closure_closed` (a late report after a decided closure could otherwise text a closed claim); every start / state move under the chase lock; the no-restart rule after a conclusion (else nine ladders to day 84); LD3's per-outcome step table; the call routes on the real path grammar (else the human-actor gate is vacuous) + a gate-bites leg; the reached call stops the staff asks ONLY for concluded persons (send-time dead numbers keep `-230` / `-231` C's letter track) — Task 4.3 added; `foundDeadOn` = the MIN dead date; PQ2 states that it narrows `-351` 4 A / 6 A and that a call already crosses chases; the `-354` supersession list completed (`-353` decision 2, `-351` Consequence 2, `-352` C3 → LD11); the unpresented §3.4 bullet corrected in place (F19); LD11 gains option (d) and a roster row; the ask is letter-cap-aware; the call takes both locks in order; F4's `ce` premise corrected (Task 5 is correction-only); I1's forgery bound completed; `ladder_running` after `claim_corrected` + `blockerDto` and the closure admin copy named; a partial UNIQUE per ladder step / escalation; 6.37b is COMMITTED (`f7e695b7`) — the header's cite shifts; the Policy meaning rewritten match / narrow per line; cites corrected (`sameNumberHash` `:324-327`, `readCorrectionRecipients` `:601`, the certificate one-letter check `:233`, the spec paths, `correction-closure-jobs.ts`'s package); the `epics.md` entry written now (`-353`). F21 added (the agreement as built). A second fresh-context review of the v1.1 rewrite (3 HIGH / 11 MED / 12 LOW, all applied): a certificate pause SKIPS a step and the clock runs on (⛔ a hold) everywhere; the certificate stop predicate reads the ORIGIN run (open or ended) and checks received / pause BEFORE the horizon; AC4's diff pin matches Task 7 and the `concluded` marker; the transient row matches the code's minute-scale backoff; the old anchor wording removed; LD4's early-week counts and the Policy meaning's wording corrected; the one-a-day check covers every person on the number; the mapping and no-restart rule are epoch-scoped (A→B→A); a send-time refusal of a ladder SMS waits for the conclusion (disclosed); the push "that day or next morning"; `staffWriter` exported, `correction-closure-jobs.ts` behaviour unchanged; three more disclosed narrowings in the Policy meaning; PQs block every code task; cites corrected. |
 | 2026-10-18 | 1.2 | `bmad-create-story validate 6.37c` after 6.37b reached `main`: the branch REBASED onto `main` @ `ed862339` (two ledger conflicts resolved, both entries kept); re-pinned `c19e6534` (the v1.0 / v1.1 pin `f8102c02` is ⛔ an ancestor any more). Four parallel read-only verifiers (governance; 6.37b's final code; the correction chase; the certificate chase + call record + staff views), each headline finding re-checked by hand: 14 critical / 16 should / ≈ 15 small — all applied. ⭐ F4 was FALSE after 6.37b's round 2 — the correlator and the silence check filter `ce` by purpose too (`CERTIFICATE_SMS_PURPOSES`), so Task 5 / AC10 / T8 widen BOTH chases (the v1.1 row's *"F4's `ce` premise corrected (Task 5 is correction-only)"* is SUPERSEDED here, kept as written); the numbers moved — `-354` and migration 0168 are 6.37b's ⇒ the 6.37c entry is the next free (F18; v1.1's "`-354`" everywhere meant what is now "the 6.37c entry"), the migration 0169; `-354` decision 5 already DECIDES the nominee gates ⇒ LD11 picks only the MECHANISM ((b) foreclosed; the invented "api boolean config registry" replaced by ONE env var read by both apps — a 10.8 feature flag is barred under `packages/domain/src/claim` by `governance_boundary.yaml`); `-354` decision 4 (b) makes Row 32 (h) a GO-LIVE condition and (c) owes the Panel a telling (PQ1's alarm sentence corrected); `-354` decision 5 routes the nominee text / letter basis to counsel with Task 0 (new LD16, Task 0.5 — LD1 (a)'s contrary line corrected); ADR-0042 obliges a token decision before the ladder (new LD15) and the consent sheet's revision; 6.37b's AC11 annotation's conflict put to BigDev (new LD17). Design: a stopped ladder RELEASES its origin and the mapping reaches every undelivered row of a concluded epoch (else a mark-switch round trip left a reported failure counting as reached); the mapping is applied in TS (⛔ a row-multiplying JOIN, ⛔ `=` on a hash); the push carries a late `ladder_escalation` through an un-pushed item query ("the next morning's push" could never list it); the certificate stop composes extracted sub-predicates over the ORIGIN run (`planCertificateRun` judges only the open run) and gains `not_a_recipient` / `letter_delivered`; the keyed store's "mismatch refusal" (⛔ such thing) replaced by its real replay semantics; T24 — the `canReadAcrossPariwars` guard; the one-a-day check counts in-flight rows; a failed hash and a scheduled day that never sent are specified; the certificate escalation `no_target` and written while paused; the certificate list shows a running ladder after its run ends; the microcopy `report` term (T18); LD7's tie-break; RLS policy files, the no-decision fences, the certificate lockstep legs, the audit prefix, the 68 → 69 key count. Cites re-derived at the pin (the header's old shift table removed — it was wrong past line ≈ 436). The deferred items routed to this row (the `readSmsSendDeliveries` bound, the shared `received_at`, the `-354` carrier, the ADR-0042 restatement) are now in the rulings table and Task 10. A fresh-context re-validate of this rewrite (footgun #22) found 2 HIGH / 3 MEDIUM / 8 LOW in the pass's OWN edits — all applied: the feature-flag mechanism it first recommended is barred (prohibited root + Trustee attestation) ⇒ an env var; "a stopped ladder releases its origin" would re-send a stopped ladder's steps after a lifted stop (four extra texts) and was unneeded (LD6 maps the earlier row) ⇒ the origin is kept, the UNIQUE unconditional; I4 / AC4 / the Policy meaning narrowed to an epoch with ⛔ concluded ladder; Task 10's nominee-gate closure split (call half here, WhatsApp half 6-37d); LD9's push query keyed on the latest PREVIOUS-day `staff_push`; one alarm name; `-354` decision 2's disclosure already stands in the proposal; AC3's LD17 qualifier; two cites; the header's (6.37b) marker; LD7's "only consumer TODAY"; AC14 added for Task 10. A second round (0 HIGH / 4 MEDIUM / 5 LOW, all applied): jobs has ⛔ config module — the env var is read in `apps/jobs/src/boot.ts` and passed through deps; the staff-view `ask` gets the same boolean through the api DTO handlers; "COVERED" defined (origin `created_at` … `ended_at`) so a lifted stop starts ⛔ ladder from a covered row and "the NEXT failure" holds; LD9 (iii) carried into Task 4.2 / 4.3 (an open run's push rides the chase's own `todays` query); the stopped-ladder gap disclosed; the pack pointer is OWED (⛔ already there); status words. |
+| 2026-10-18 | 1.3 | Task 0 DONE. BigDev's answers recorded as `2026-10-18-355` (author-commit, committed alone `d93b7c75`; the review-added disclosures confirmed by BigDev before insertion). Records: new sprint row `6-37d-claim-contact-whatsapp-step: backlog`; roster Row 34 `claim-contact-nominee-call-basis` and dated notes on Rows 18, 26, 32 (9.1), 33 (7); ADR-0042's dated note (the bound restated, the static token kept); the consent sheet §1–§2, the §3.4 proposal (five phrases → row 6-37d) and the Panel pack (items 4 — the PQ1–PQ3 routing note — and 5 — `-354` d4 (c)'s alarm correction; the `-354` d2 pointer; the head line) revised before presentation; the routing note and the counsel question written, ⛔ sent; deferred-work (`delivered_at` resolved by `-355` d13; the ADR item addressed; pre-rebase SHAs annotated); `epics.md` dated note. Status → `in-progress` (ledger 2026-10-18d). |

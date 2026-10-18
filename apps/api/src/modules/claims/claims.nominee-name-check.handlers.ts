@@ -59,6 +59,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { geoTreeResolverForRequest, loadActorGrants } from '../rbac/index.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { toContactCallDto, toContactLadderFollowUpDto } from './contact-ladder-dto.js';
 import { closureStateDto } from './correction-closure-dto.js';
 import { decryptNomineeBankField } from './nominee-bank-crypto.js';
 import { decryptTrusteeRationale } from './state-trustee-decision-crypto.js';
@@ -508,8 +509,12 @@ export function createNomineeNameCheckHandlers(deps: AppDeps) {
         claimCaseId: string,
         withCrypto: boolean,
       ): Promise<claimDomain.CorrectionChaseSummary> => {
+        // Story 6.37c (LD11) — the nominee-call switch (the api config's ONE env var) reaches the ask — ⛔ read in the domain.
         const read = (opts: { readonly crypto?: typeof deps.encryption }) =>
-          claimDomain.readCorrectionChaseSummary(scopeTx.tx, pariwarId, ids.claimId(claimCaseId), today, opts);
+          claimDomain.readCorrectionChaseSummary(scopeTx.tx, pariwarId, ids.claimId(claimCaseId), today, {
+            ...opts,
+            nomineeCallsCleared: deps.config.claimNomineeCallsCleared,
+          });
         if (!withCrypto) return read({});
         let summary: claimDomain.CorrectionChaseSummary;
         try {
@@ -821,6 +826,12 @@ function correctionChaseDto(s: claimDomain.CorrectionChaseSummary): CorrectionCh
       status: p.status,
       found_dead_on: p.foundDeadOn,
       reminders_accepted: p.remindersAccepted,
+      // Story 6.37c (LD12) — the delivery ladder.
+      follow_up: toContactLadderFollowUpDto(p.followUp),
+      unreachable_reason: p.unreachableReason,
+      reported_undelivered: p.reportedUndelivered,
+      ask: p.ask,
+      calls: p.calls.map(toContactCallDto),
       letters: p.letters.map((l) => ({
         letter_id: l.letterId,
         person_key: p.personKey,

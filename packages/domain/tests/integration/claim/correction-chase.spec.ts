@@ -1531,7 +1531,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     const s1 = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: ENC });
     expect(s1.run).toMatchObject({ runId: run3.runId, kind: 'family', open: true });
     expect(s1.people).toEqual([
-      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter1] },
+      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, followUp: null, unreachableReason: 'refused', reportedUndelivered: 0, ask: null, calls: [], letters: [letter1] },
     ]);
     // The reader itself: every family run's letters of the return, each carrying its own run.
     expect((await readReturnFamilyLetters(tx, PARIWAR_A, c.cid, c.returnId)).map((l) => [l.letterId, l.runId])).toEqual([[l1.letterId, c.runId]]);
@@ -1555,7 +1555,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     const letter3 = { letterId: l3.letterId, sequence: 2, postedOn: posted3, deliveredOn: null, overdue: false, hasScreenshot: false, countsTowardLimit: true };
     const s3 = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: ENC });
     expect(s3.people).toEqual([
-      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter1Delivered, letter3] },
+      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, followUp: null, unreachableReason: 'refused', reportedUndelivered: 0, ask: null, calls: [], letters: [letter1Delivered, letter3] },
     ]);
 
     // ⭐ D30 (the agreement withdrawn): the record-derived line keeps BOTH runs' letters, the rank and run 1's fact.
@@ -1564,7 +1564,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     const d30 = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today, { crypto: ENC });
     expect(d30.cannotRemind).toBe('agreement_not_live');
     expect(d30.people).toEqual([
-      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter1Delivered, letter3] },
+      { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, followUp: null, unreachableReason: 'refused', reportedUndelivered: 0, ask: null, calls: [], letters: [letter1Delivered, letter3] },
     ]);
   });
 
@@ -1645,7 +1645,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     const s = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, addCalendarDays(c.day0!, 3), { crypto: ENC });
     expect(s.people.map((p) => p.personKey)).toEqual([nominee.personKey, 'claimant']);
     expect(s.people[1]).toEqual({
-      personKey: 'claimant', role: 'claimant', rank: null, status: 'dead', foundDeadOn: deadOn, remindersAccepted: 0, letters: [letter],
+      personKey: 'claimant', role: 'claimant', rank: null, status: 'dead', foundDeadOn: deadOn, remindersAccepted: 0, followUp: null, unreachableReason: 'refused', reportedUndelivered: 0, ask: null, calls: [], letters: [letter],
     });
     const deliveredOn = addCalendarDays(c.day0!, 3);
     expect((await deliver(client, c.cid, l.letterId, deliveredOn)).deliveredOn).toBe(deliveredOn);
@@ -1726,7 +1726,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
       const before = await readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, today);
       expect(before.cannotRemind).toBeNull();
       expect(before.people).toEqual([
-        { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter] },
+        { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, followUp: null, unreachableReason: 'refused', reportedUndelivered: 0, ask: null, calls: [], letters: [letter] },
       ]);
 
       if (reason === 'agreement_not_live') {
@@ -1740,7 +1740,7 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
       // ⭐ The person and their letter survive D30 — role off the key's format; the rank from the EFFECTIVE declaration
       // (it is `effective` here — only D30 `undetermined` leaves it unknown), through the recipients' own mapping.
       expect(s.people).toEqual([
-        { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, letters: [letter] },
+        { personKey: key, role: 'nominee', rank: c.person.rank, status: 'dead', foundDeadOn: c.deadOn, remindersAccepted: 0, followUp: null, unreachableReason: 'refused', reportedUndelivered: 0, ask: null, calls: [], letters: [letter] },
       ]);
       expect(c.person.rank).toBe(1); // ⛔ a vacuous match on two nulls
       expect(s.numberUnverified).toBe(false);

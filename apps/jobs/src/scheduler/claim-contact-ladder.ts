@@ -39,7 +39,6 @@ import {
   ClaimCorrectionTransientError,
   sendClaimCorrectionSms,
   type ClaimCorrectionReminderDeps,
-  type CorrectionChildAttempt,
   type CorrectionStaffPushPayload,
 } from './claim-correction-reminders.js';
 import { CLAIM_CORRECTION_SMS_TEMPLATES } from './claim-correction-sms-templates.js';
@@ -849,7 +848,6 @@ export async function runCorrectionLadderSmsChild(
   deps: ContactLadderDeps,
   envelope: JobEnvelope<LadderSmsPayload>,
   jobId: string,
-  _attempt?: CorrectionChildAttempt,
 ): Promise<LadderSmsChildResult> {
   const alarm = alarmOf(deps);
   const now = deps.now?.() ?? new Date();
@@ -978,7 +976,6 @@ export async function runCertificateLadderSmsChild(
   deps: ContactLadderDeps,
   envelope: JobEnvelope<LadderSmsPayload>,
   jobId: string,
-  _attempt?: CorrectionChildAttempt,
 ): Promise<LadderSmsChildResult> {
   const alarm = alarmOf(deps);
   const now = deps.now?.() ?? new Date();
@@ -1115,22 +1112,16 @@ export async function registerContactLadderWorkers(
   deps: ContactLadderDeps,
   opts: { readonly sweepCron?: string; readonly tz?: string } = {},
 ): Promise<void> {
+  // A transient throw fails THIS job (pg-boss retries it with the same id — it re-claims its own row); ⛔ a sibling's.
   const child = (run: typeof runCorrectionLadderSmsChild) => async (jobs: Job[]) => {
     const results = [];
-    for (const job of jobs) {
-      const meta = job as Job & { readonly retryCount?: unknown; readonly retryLimit?: unknown };
-      const attempt =
-        typeof meta.retryCount === 'number' && typeof meta.retryLimit === 'number'
-          ? { retryCount: meta.retryCount, retryLimit: meta.retryLimit }
-          : undefined;
-      results.push(await run(deps, job.data as JobEnvelope<LadderSmsPayload>, job.id, attempt));
-    }
+    for (const job of jobs) results.push(await run(deps, job.data as JobEnvelope<LadderSmsPayload>, job.id));
     return { processed: results.length, results };
   };
   await boss.createQueue(QUEUE_NAMES.CLAIM_CORRECTION_LADDER_SMS);
-  await boss.work(QUEUE_NAMES.CLAIM_CORRECTION_LADDER_SMS, { includeMetadata: true }, child(runCorrectionLadderSmsChild));
+  await boss.work(QUEUE_NAMES.CLAIM_CORRECTION_LADDER_SMS, child(runCorrectionLadderSmsChild));
   await boss.createQueue(QUEUE_NAMES.CLAIM_CERTIFICATE_LADDER_SMS);
-  await boss.work(QUEUE_NAMES.CLAIM_CERTIFICATE_LADDER_SMS, { includeMetadata: true }, child(runCertificateLadderSmsChild));
+  await boss.work(QUEUE_NAMES.CLAIM_CERTIFICATE_LADDER_SMS, child(runCertificateLadderSmsChild));
   // ⚠ The expiry set TWICE on purpose (6.19b's lesson): `createQueue` keeps an existing queue's default, `schedule` upserts.
   await boss.createQueue(QUEUE_NAMES.CLAIM_CONTACT_LADDER_SWEEP, { expireInSeconds: CORRECTION_SWEEP_EXPIRE_SECONDS });
   await boss.work(QUEUE_NAMES.CLAIM_CONTACT_LADDER_SWEEP, async (jobs: Job[]) => {

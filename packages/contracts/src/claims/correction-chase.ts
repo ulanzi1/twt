@@ -14,37 +14,34 @@
 
 import { z } from 'zod';
 
+import {
+  ContactCallDto,
+  ContactLadderAsk,
+  ContactLadderFollowUpDto,
+  CorrectionPersonKey,
+  UnreachableReason,
+  isRealCalendarDate,
+} from './contact-ladder.js';
+
+// Story 6.37c — moved to the leaf `contact-ladder.ts` (re-exported: every existing import keeps working).
+export { CorrectionPersonKey, isRealCalendarDate } from './contact-ladder.js';
+
 
 /**
  * Story 6.19b (AC16; `2026-09-27-258`, D25) — who must put a returned claim's bank details right. ⚠ LOCKSTEP with the
  * domain's `CORRECTION_MUST_ACT` and migration 0126's CHECK — re-declared, ⛔ not imported (contracts never import
- * `@twt/domain`). ⚠ This module imports ⛔ nothing from its sibling contract modules: `cycle-freeze.ts` and
- * `nominee-name-check.ts` both import IT, and a back-edge makes a runtime init cycle typecheck cannot see.
+ * `@twt/domain`). ⚠ This module imports ⛔ nothing from its sibling contract modules — except the LEAF `contact-ladder.ts`
+ * (Story 6.37c), which imports ⛔ sibling: `cycle-freeze.ts` and `nominee-name-check.ts` both import IT, and a back-edge
+ * makes a runtime init cycle typecheck cannot see.
  */
 export const CorrectionMustAct = z.enum(['family', 'staff']);
 export type CorrectionMustAct = z.infer<typeof CorrectionMustAct>;
-
-/** True only for a real calendar date — rejects a digit-shaped but impossible one (`2026-13-99`, `2026-02-30`).
- * Exported so the route layer can apply the SAME check to the multipart `delivered_on` field, which bypasses
- * this module's Zod schema entirely (it rides a raw multipart part, not the JSON body). */
-export function isRealCalendarDate(value: string): boolean {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!m) return false;
-  const [, y, mo, d] = m.map(Number) as [never, number, number, number];
-  const asUtc = new Date(Date.UTC(y, mo - 1, d));
-  return asUtc.getUTCFullYear() === y && asUtc.getUTCMonth() === mo - 1 && asUtc.getUTCDate() === d;
-}
 
 const IsoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'a calendar date, YYYY-MM-DD')
   .refine(isRealCalendarDate, 'not a real calendar date');
 
-/** A chased person's stable key — `nominee:<uuid>` (the correction-chain root) or `claimant`. ⛔ Never a name. */
-export const CorrectionPersonKey = z
-  .string()
-  .regex(/^(claimant|nominee:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/, 'a person key');
-export type CorrectionPersonKey = z.infer<typeof CorrectionPersonKey>;
 
 /** Notes cap — the trustee-rationale cap. */
 export const CORRECTION_MUST_ACT_NOTE_MAX_CHARS = 500;
@@ -159,6 +156,17 @@ export const CorrectionChasePersonDto = z
     found_dead_on: IsoDate.nullable(),
     reminders_accepted: z.number().int().nonnegative(),
     letters: z.array(CorrectionLetterDto),
+    // ── Story 6.37c (LD12) — the delivery ladder ──
+    /** The person's LATEST follow-up in the return, or `null`. */
+    follow_up: ContactLadderFollowUpDto.nullable(),
+    /** Why `status` reads `unreachable` / `dead`: a number refused at send, or texts NOT DELIVERED (a concluded follow-up). */
+    unreachable_reason: UnreachableReason.nullable(),
+    /** The epoch's accepted reminders the network REPORTED as not delivered. */
+    reported_undelivered: z.number().int().nonnegative(),
+    /** A concluded follow-up's call-or-letter ask still open (cap-aware), or `null`. */
+    ask: ContactLadderAsk.nullable(),
+    /** The calls recorded for the person (either surface). */
+    calls: z.array(ContactCallDto),
   })
   .strict();
 export type CorrectionChasePersonDto = z.output<typeof CorrectionChasePersonDto>;

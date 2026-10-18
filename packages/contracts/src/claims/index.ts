@@ -78,6 +78,8 @@ export * from './correction-closure.js';
 export * from './certificate-reminder.js';
 // Story 6.37c — the District Admin's CALL RECORD (both chases) and the gated number reveal.
 export * from './contact-call.js';
+// Story 6.37c — the LEAF the chase views and the call record share (the ladder's follow-up / ask, the call DTO).
+export * from './contact-ladder.js';
 // Story 6.14 — the R9 special-case voting DTOs (the R9 panel surface + the FIRST claim-flow read of the
 // niyamavali clause registry): the queue + per-claim panel model (clause snapshot + immutable panel roster +
 // live votes + tally), the open (clause-id superRefine + non-empty roster) / vote (rationale required ≤500) /

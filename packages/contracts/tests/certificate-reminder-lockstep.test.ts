@@ -17,7 +17,10 @@ import {
   CertificateLetterAddressResponse,
   CertificateLetterScreenshotResponse,
   CertificateRemindersResponse,
+  CONTACT_LADDER_ASKS,
+  CONTACT_LADDER_FOLLOW_UP_STATES,
   RecordCertificateLetterRequest,
+  UNREACHABLE_REASONS,
 } from '../src/index.js';
 
 describe('the certificate reminder vocabularies (Story 6.19d)', () => {
@@ -28,6 +31,13 @@ describe('the certificate reminder vocabularies (Story 6.19d)', () => {
     expect([...CERTIFICATE_REMINDER_PAUSE_REASONS]).toEqual([...claim.CERTIFICATE_PAUSE_REASONS]);
     expect([...CERTIFICATE_REMINDER_CANNOT_REMIND]).toEqual([...claim.CERTIFICATE_CANNOT_REMIND_REASONS]);
     expect([...CERTIFICATE_REMINDER_SMS_STATES]).toEqual([...claim.CERTIFICATE_PERSON_SMS_STATES]);
+  });
+
+  it('⭐ Story 6.37c (LD12) — the follow-up state, the ask and the unreachable reason EQUAL the domain\'s', () => {
+    expect([...CONTACT_LADDER_FOLLOW_UP_STATES]).toEqual([...claim.CONTACT_LADDER_FOLLOW_UP_STATES]);
+    expect([...CONTACT_LADDER_ASKS]).toEqual([...claim.CONTACT_LADDER_ASKS]);
+    const reasons = new Set((['dead', 'unreachable', 'not_delivered', null] as const).map((k) => claim.unreachableReasonOf(k)).filter((r) => r !== null));
+    expect([...UNREACHABLE_REASONS].sort()).toEqual([...reasons].sort());
   });
 
   it('the letter request refuses a bad person key, an unreal date and a blank tracking number; TRIMS a padded one', () => {
@@ -74,6 +84,10 @@ describe('the certificate reminder vocabularies (Story 6.19d)', () => {
               letter_eligible: false,
               letter: null,
               escalation_recorded_on: null,
+              follow_up: { state: 'running', started_on: '2026-10-04', next_step_on: '2026-10-06', concluded_on: null },
+              unreachable_reason: null,
+              ask: null,
+              calls: [],
             },
           ],
         },

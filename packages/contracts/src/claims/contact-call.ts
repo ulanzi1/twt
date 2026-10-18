@@ -9,22 +9,15 @@
 
 import { z } from 'zod';
 
-import { CorrectionPersonKey, isRealCalendarDate } from './correction-chase.js';
+import {
+  ContactCallAnsweredBy,
+  ContactCallOutcome,
+  CorrectionPersonKey,
+  isRealCalendarDate,
+} from './contact-ladder.js';
 
-/** Who answered the call. ⚠ LOCKSTEP (see the header). */
-export const CONTACT_CALL_ANSWERED_BY = ['the_person', 'family_member', 'someone_else', 'nobody'] as const;
-export const ContactCallAnsweredBy = z.enum(CONTACT_CALL_ANSWERED_BY);
-export type ContactCallAnsweredBy = z.infer<typeof ContactCallAnsweredBy>;
-
-/** Did the call reach the family. ⚠ LOCKSTEP (see the header). */
-export const CONTACT_CALL_OUTCOMES = ['reached', 'not_reached'] as const;
-export const ContactCallOutcome = z.enum(CONTACT_CALL_OUTCOMES);
-export type ContactCallOutcome = z.infer<typeof ContactCallOutcome>;
-
-/** The surface a call was recorded from. ⚠ LOCKSTEP (see the header). */
-export const CONTACT_CALL_CHASES = ['correction', 'certificate'] as const;
-export const ContactCallChase = z.enum(CONTACT_CALL_CHASES);
-export type ContactCallChase = z.infer<typeof ContactCallChase>;
+// The call DTO and its vocabularies live in the LEAF `contact-ladder.ts` (the chase views embed them — ⛔ a cycle).
+export { CONTACT_CALL_ANSWERED_BY, CONTACT_CALL_CHASES, CONTACT_CALL_OUTCOMES, ContactCallAnsweredBy, ContactCallChase, ContactCallDto, ContactCallOutcome } from './contact-ladder.js';
 
 const IsoDate = z
   .string()
@@ -50,21 +43,6 @@ export const RecordContactCallRequest = z
   });
 export type RecordContactCallRequest = z.output<typeof RecordContactCallRequest>;
 
-/** One recorded call as the panels show it. ⛔ A number, ⛔ a name of who answered (a role only). */
-export const ContactCallDto = z
-  .object({
-    call_id: z.string().uuid(),
-    person_key: CorrectionPersonKey,
-    chase: ContactCallChase,
-    called_on: IsoDate,
-    answered_by: ContactCallAnsweredBy,
-    outcome: ContactCallOutcome,
-    /** The recording admin's display name at the time (⛔ email-derived). */
-    recorded_by: z.string(),
-    recorded_at: z.string().datetime({ offset: true }),
-  })
-  .strict();
-export type ContactCallDto = z.output<typeof ContactCallDto>;
 
 /** GET …/calls/number?person_key= — the query. */
 export const ContactCallNumberQuery = z.object({ person_key: CorrectionPersonKey }).strict();

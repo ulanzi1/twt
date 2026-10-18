@@ -35,6 +35,9 @@ import {
   readClaimCertificateStaffRows,
   NEVER_REENTERS,
 } from './certificate-reminder.js';
+import type { ClaimContactCallRow } from '../schema/claim_contact_calls.js';
+import { type ContactLadderAsk, type ContactLadderFollowUp, ladderFollowUpOf, pendingLadderAsk, unreachableReasonOf } from './contact-ladder.js';
+import { readClaimContactCalls, readClaimLadders } from './contact-ladder-read.js';
 import { claimShortReference, isEvidentialReminderRow, compareReminderRowsByTime } from './correction-chase.js';
 import { closureLetterOverdue } from './correction-closure-read.js';
 import type { CalendarDateString } from '../cycle-calendar/holiday-resolver.js';
@@ -77,6 +80,17 @@ export interface CertificateListPerson {
   } | null;
   /** The day-13 escalation's RECORD date (⚠ delivered to ⛔ no Pariwar Admin in v1), or `null`. */
   readonly escalationRecordedOn: string | null;
+  /** Story 6.37c (LD12) — the person's LATEST certificate delivery ladder (claim-wide — runs have ⛔ return), or `null`. */
+  readonly followUp: ContactLadderFollowUp | null;
+  /**
+   * Story 6.37c (LD12, LD7) — why the person reads unreachable (from the found-dead row — ⛔ `smsState`, which shows the
+   * LAST row: a later accepted text reads `reminded` while the person stays letter-eligible).
+   */
+  readonly unreachableReason: 'refused' | 'not_delivered' | null;
+  /** Story 6.37c (LD9, LD12) — a concluded ladder's call-or-letter ask still open (cap-aware), or `null`. */
+  readonly ask: ContactLadderAsk | null;
+  /** Story 6.37c (LD10) — the calls recorded for the person (either surface). ⛔ PII. */
+  readonly calls: readonly ClaimContactCallRow[];
 }
 
 /** The run's state on the list. ⚠ LOCKSTEP with the contract's `CERTIFICATE_REMINDER_RUN_STATES` (code review, 2026-10-03). */
@@ -110,7 +124,7 @@ export async function listCertificateReminderClaims(
   db: Db,
   pariwarId: PariwarId,
   today: CalendarDateString,
-  opts: { readonly limit?: number } = {},
+  opts: { readonly limit?: number; readonly nomineeCallsCleared?: boolean } = {},
 ): Promise<CertificateListScanResult> {
   const limit = clampLimit(opts.limit, { default: CERTIFICATE_LIST_SCAN_CAP, cap: CERTIFICATE_LIST_SCAN_CAP });
   const claimRows = await db
@@ -124,7 +138,9 @@ export async function listCertificateReminderClaims(
     .limit(clampLimit(limit + 1, { default: CERTIFICATE_LIST_SCAN_CAP + 1, cap: CERTIFICATE_LIST_SCAN_CAP + 1 }));
   const out: CertificateListItem[] = [];
   for (const { claimCaseId } of claimRows.slice(0, limit)) {
-    const item = await readCertificateListItem(db, pariwarId, claimCaseId as ClaimId, today);
+    const item = await readCertificateListItem(db, pariwarId, claimCaseId as ClaimId, today, {
+      nomineeCallsCleared: opts.nomineeCallsCleared ?? false,
+    });
     if (item !== null) out.push(item);
   }
   return { items: out, truncated: claimRows.length > limit };
@@ -136,6 +152,8 @@ export async function readCertificateListItem(
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
   today: CalendarDateString,
+  /** Story 6.37c (LD11) — the api config's nominee-call switch (the ask reads it) — ⛔ read here. */
+  opts: { readonly nomineeCallsCleared?: boolean } = {},
 ): Promise<CertificateListItem | null> {
   const [claimRow] = await db
     .select({ deceasedMemberId: claims.deceasedMemberId, currentState: claims.currentState })
@@ -186,6 +204,9 @@ export async function readCertificateListItem(
   }
 
   const staff = await readClaimCertificateStaffRows(db, pariwarId, claimCaseId);
+  // Story 6.37c (LD12) — the claim's certificate ladders and calls, read ONCE.
+  const ladders = await readClaimLadders(db, pariwarId, claimCaseId, 'certificate');
+  const calls = await readClaimContactCalls(db, pariwarId, claimCaseId);
   const people: CertificateListPerson[] = recipients.people.map((p) => {
     const s = states.find((x) => x.personKey === p.personKey)!;
     const last = rows
@@ -227,6 +248,17 @@ export async function readCertificateListItem(
               hasScreenshot: s.letter.hasScreenshot,
             },
       escalationRecordedOn: escalation?.sentOn ?? null,
+      followUp: ladderFollowUpOf(ladders.filter((l) => l.personKey === p.personKey)),
+      unreachableReason: unreachableReasonOf(s.track.deadKind),
+      ask: pendingLadderAsk({
+        ladders: ladders.filter((l) => l.personKey === p.personKey),
+        calls: calls.filter((c) => c.personKey === p.personKey),
+        letterRecordedAt: s.letter === null ? [] : [s.letter.createdAt],
+        role: p.role,
+        letterCapReached: s.letter !== null, // `-275` Q1 — ONE letter per person per claim, ever
+        nomineeCallsCleared: opts.nomineeCallsCleared ?? false,
+      }),
+      calls: calls.filter((c) => c.personKey === p.personKey),
     };
   });
 
@@ -234,7 +266,10 @@ export async function readCertificateListItem(
     (p) => (p.letterEligible && p.letter === null) || (p.letter !== null && p.letter.deliveredOn === null),
   );
   const listedForRun = runState === 'open' || (runState === 'paused' && !NEVER_REENTERS.has(claimRow.currentState as string));
-  if (!listedForRun && !letterOwedOrUndelivered) return null;
+  // ⭐ Story 6.37c (LD12) — a claim whose run has ENDED stays listed while a ladder RUNS, or a concluded ladder's ask is
+  // still open (a day-180 origin; a "call"-only ask after day 180 — else invisible).
+  const ladderOpen = people.some((p) => p.followUp?.state === 'running' || p.ask !== null);
+  if (!listedForRun && !letterOwedOrUndelivered && !ladderOpen) return null;
 
   return {
     claimCaseId: claimCaseId as string,

@@ -16,7 +16,7 @@
 // Every audit line: `resourceLocator: 'claim:<lower-case uuid>'`, ⛔ a number, ⛔ a name (who answered is a ROLE).
 
 import type { ContactCallDto, ContactCallNumberResponse, RecordContactCallRequest } from '@twt/contracts';
-import { claim, idempotency, type schema } from '@twt/domain';
+import { claim, idempotency } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AuthAuditEventType } from '../../audit/audit-sink.js';
@@ -24,6 +24,10 @@ import type { AppDeps } from '../../context.js';
 import { BadRequestError, ConflictError, NotFoundError, ServiceUnavailableError } from '../../http-errors.js';
 import { contextOf } from './claims.correction-chase.handlers.js';
 import { actorDisplayOf, auditClaim, inWriteTx } from './claims.correction-closure.handlers.js';
+import { toContactCallDto } from './contact-ladder-dto.js';
+
+// Re-exported for the callers that imported it from here (its home is the leaf `contact-ladder-dto.ts`).
+export { toContactCallDto } from './contact-ladder-dto.js';
 
 /** The FRESH step-up the number reveal requires (a free string — ⛔ registry; the admin's `client.ts` has the same). */
 export const CONTACT_CALL_NUMBER_STEP_UP_CONTEXT = 'contact_call_number';
@@ -67,19 +71,6 @@ export function contactCallRefusalError(refusal: claim.ContactCallRefusal): Erro
 function translateContactCallError(err: unknown): never {
   if (err instanceof claim.ContactCallRefusedError) throw contactCallRefusalError(err.refusal);
   throw err;
-}
-
-export function toContactCallDto(row: schema.ClaimContactCallRow): ContactCallDto {
-  return {
-    call_id: row.callId,
-    person_key: row.personKey,
-    chase: row.chase,
-    called_on: row.calledOn,
-    answered_by: row.answeredBy,
-    outcome: row.outcome,
-    recorded_by: row.recordedByDisplay,
-    recorded_at: row.createdAt.toISOString(),
-  };
 }
 
 function requireIdempotencyKey(request: FastifyRequest): string {

@@ -35,8 +35,19 @@ import {
   claimCorrectionRuns,
 } from '../schema/claim_correction_chase.js';
 import { readVersionChainIndex } from './claim-contact-check.js';
+import type { ClaimContactCallRow } from '../schema/claim_contact_calls.js';
+import type { ClaimContactLadderRow } from '../schema/claim_contact_ladders.js';
+import {
+  type ContactLadderAsk,
+  type ContactLadderFollowUp,
+  ladderFollowUpOf,
+  pendingLadderAsk,
+  unreachableReasonOf,
+} from './contact-ladder.js';
+import { readClaimContactCalls, readClaimLadders } from './contact-ladder-read.js';
 import {
   type CorrectionCannotRemindReason,
+  type PersonReminderRow,
   type PersonRunState,
   claimShortReference,
   evaluatePersonRunState,
@@ -46,6 +57,7 @@ import {
   resolveCorrectionChase,
 } from './correction-chase.js';
 import {
+  CORRECTION_LETTERS_PER_PERSON,
   type RunFamilyRow,
   type RunLetterRow,
   readReturnFamilyLetters,
@@ -86,6 +98,23 @@ export interface CorrectionChasePersonSummary {
   readonly foundDeadOn: string | null;
   readonly remindersAccepted: number;
   readonly letters: readonly CorrectionChaseLetterSummary[];
+  /** Story 6.37c (LD12) — the person's LATEST delivery ladder in the return, or `null`. */
+  readonly followUp: ContactLadderFollowUp | null;
+  /** Story 6.37c (LD12, LD7) — why they read unreachable: a number REFUSED at send, or texts NOT DELIVERED. */
+  readonly unreachableReason: 'refused' | 'not_delivered' | null;
+  /** Story 6.37c (LD12) — the epoch's accepted reminders the network REPORTED undelivered. */
+  readonly reportedUndelivered: number;
+  /** Story 6.37c (LD9, LD12) — a concluded ladder's call-or-letter ask still open, cap-aware, or `null`. */
+  readonly ask: ContactLadderAsk | null;
+  /** Story 6.37c (LD10) — the calls recorded for the person (either surface). ⛔ PII. */
+  readonly calls: readonly ClaimContactCallRow[];
+}
+
+/** Story 6.37c — the ladder facts a person's line reads (ONE read per claim, passed in). */
+interface PersonLadderFacts {
+  readonly ladders: readonly ClaimContactLadderRow[];
+  readonly calls: readonly ClaimContactCallRow[];
+  readonly nomineeCallsCleared: boolean;
 }
 
 export interface CorrectionChaseSummary {
@@ -231,8 +260,16 @@ function personSummary(
   state: PersonRunState,
   letters: readonly RunLetterRow[],
   today: CalendarDateString,
+  ladder: PersonLadderFacts,
 ): CorrectionChasePersonSummary {
   const accepted = state.epochRows.filter((r) => r.outcome === 'accepted').length;
+  const myLadders = ladder.ladders.filter((l) => l.personKey === person.personKey);
+  const myCalls = ladder.calls.filter((c) => c.personKey === person.personKey);
+  const myLetters = letters.filter((l) => l.personKey === person.personKey);
+  // The epoch rows carry the reader's delivery state (the objects pass through `evaluatePersonRunState`).
+  const reportedUndelivered = (state.epochRows as readonly (PersonReminderRow & { readonly deliveryState?: string | null })[]).filter(
+    (r) => r.deliveryState === 'undelivered' && (r.outcome === 'accepted' || r.concluded === true),
+  ).length;
   return {
     personKey: person.personKey,
     role: person.role,
@@ -240,6 +277,18 @@ function personSummary(
     status: correctionPersonStatus(state.deadKind, accepted),
     foundDeadOn: state.foundDeadOn,
     remindersAccepted: accepted,
+    followUp: ladderFollowUpOf(myLadders),
+    unreachableReason: unreachableReasonOf(state.deadKind),
+    reportedUndelivered,
+    ask: pendingLadderAsk({
+      ladders: myLadders,
+      calls: myCalls,
+      letterRecordedAt: myLetters.map((l) => l.createdAt),
+      role: person.role,
+      letterCapReached: myLetters.length >= CORRECTION_LETTERS_PER_PERSON,
+      nomineeCallsCleared: ladder.nomineeCallsCleared,
+    }),
+    calls: myCalls,
     letters: letters
       .filter((l) => l.personKey === person.personKey)
       .map((l) => ({
@@ -267,7 +316,11 @@ export async function readCorrectionChaseSummary(
   pariwarId: PariwarId,
   claimCaseId: ClaimId,
   today: CalendarDateString,
-  opts: { readonly crypto?: FieldCryptoDeps } = {},
+  opts: {
+    readonly crypto?: FieldCryptoDeps;
+    /** Story 6.37c (LD11) — the api config's nominee-call switch (the ask reads it) — ⛔ read here. */
+    readonly nomineeCallsCleared?: boolean;
+  } = {},
 ): Promise<CorrectionChaseSummary> {
   const chase = await resolveCorrectionChase(db, pariwarId, claimCaseId);
   const shortReference = claimShortReference(claimCaseId);
@@ -342,17 +395,23 @@ export async function readCorrectionChaseSummary(
   const familyRun = chase.familyRun;
   let people: CorrectionChasePersonSummary[] = [];
   let numberUnverified = false;
+  // Story 6.37c (LD12) — the return's ladders and the claim's calls, read ONCE for every person's line.
+  const ladderFacts: PersonLadderFacts = {
+    ladders: await readClaimLadders(db, pariwarId, claimCaseId, 'correction', chase.liveReturn.decisionId),
+    calls: await readClaimContactCalls(db, pariwarId, claimCaseId),
+    nomineeCallsCleared: opts.nomineeCallsCleared ?? false,
+  };
   if (familyRun !== null) {
     // ⭐ `-272` §2 / `-273` §1 — the letters AND each person's state are the RETURN's: every family / direction run's
     // rows and letters, for the person's CURRENT number (the sweep's own evaluation).
     const letters = await readReturnFamilyLetters(db, pariwarId, claimCaseId, chase.liveReturn.decisionId);
     /** A record-derived person's line: ⛔ no crypto — their number's epoch is the recorded one. */
     const recordLine = (p: CorrectionRecordPerson): CorrectionChasePersonSummary =>
-      personSummary(p, evaluatePersonRunState(p.rows, p.letters), p.letters, today);
+      personSummary(p, evaluatePersonRunState(p.rows, p.letters), p.letters, today, ladderFacts);
     if (recipients.cannotRemind === null) {
       const states = await readReturnPersonStates(db, pariwarId, familyRun, recipients.people, { crypto: opts.crypto });
       numberUnverified = states.some((s) => s.hashFailed === true);
-      people = states.map(({ person, track }) => personSummary(person, track, letters, today));
+      people = states.map(({ person, track }) => personSummary(person, track, letters, today, ladderFacts));
       const recipientKeys = recipients.people.map((p) => p.personKey);
       if (letters.some((l) => !recipientKeys.includes(l.personKey))) {
         // ⭐ A person who LEFT the recipient set keeps their letters (K1). ⛔ No rank: every effective nominee IS a

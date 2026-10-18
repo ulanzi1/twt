@@ -16,6 +16,7 @@
 
 import { z } from 'zod';
 
+import { ContactCallDto, ContactLadderAsk, ContactLadderFollowUpDto, UnreachableReason } from './contact-ladder.js';
 import { CORRECTION_LETTER_TRACKING_MAX_CHARS, CorrectionPersonKey, isRealCalendarDate } from './correction-chase.js';
 
 const IsoDate = z
@@ -99,6 +100,18 @@ export const CertificateReminderPersonDto = z
     letter: CertificateLetterDto.omit({ person_key: true }).nullable(),
     /** The day-13 escalation's RECORD date — ⚠ the Pariwar Admin is ⛔ not notified in this version. */
     escalation_recorded_on: z.string().nullable(),
+    // ── Story 6.37c (LD12) — the delivery ladder ──
+    /** The person's LATEST follow-up on the claim (certificate runs have ⛔ return), or `null`. */
+    follow_up: ContactLadderFollowUpDto.nullable(),
+    /**
+     * Why the person is letter-eligible: a number refused at send, or texts NOT DELIVERED — read THIS, ⛔ `sms_state`
+     * (the LAST row: a later accepted text reads `reminded` while the person stays letter-eligible).
+     */
+    unreachable_reason: UnreachableReason.nullable(),
+    /** A concluded follow-up's call-or-letter ask still open (cap-aware), or `null`. */
+    ask: ContactLadderAsk.nullable(),
+    /** The calls recorded for the person (either surface). */
+    calls: z.array(ContactCallDto),
   })
   .strict();
 export type CertificateReminderPersonDto = z.output<typeof CertificateReminderPersonDto>;

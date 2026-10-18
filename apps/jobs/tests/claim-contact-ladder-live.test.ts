@@ -794,6 +794,58 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     expect((await laddersOf(s.claimCaseId)).map((l) => l.sms2_state).sort()).toEqual(['satisfied', 'sent']);
   });
 
+  it('⭐ AC7 — a reached call takes the trustee lock THEN the claim row: a certificate plan holding the row makes it WAIT (⛔ deadlock), then it ends the person\'s ladders of BOTH chases', async () => {
+    const s = await seed();
+    const h = harness();
+    const [origin] = await chaseDay(h, s, 10);
+    await reportOn('cr', origin!, 'undelivered');
+    await ladderDay(h, s.claimCaseId, day(s.day0, 11));
+    const person = await personOf(s.claimCaseId);
+    const certRun = await pool.query<{ run_id: string }>(
+      `INSERT INTO claim_certificate_reminder_runs (claim_case_id, pariwar_id, cause, day0) VALUES ($1, $2, 'missing', $3) RETURNING run_id`,
+      [s.claimCaseId, PARIWAR, s.day0],
+    );
+    const ladder = (await laddersOf(s.claimCaseId))[0]!;
+    await pool.query(
+      `INSERT INTO claim_contact_ladders (pariwar_id, claim_case_id, chase, run_id, person_key, recipient_number_hash, origin_row_id, origin_sent_on, whatsapp_step, sms2_due_on)
+       SELECT pariwar_id, claim_case_id, 'certificate', $2, person_key, recipient_number_hash, gen_random_uuid(), origin_sent_on, whatsapp_step, sms2_due_on
+         FROM claim_contact_ladders WHERE ladder_id = $1`,
+      [ladder.ladder_id, certRun.rows[0]!.run_id],
+    );
+    const holder = await pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT 1 FROM claims WHERE claim_case_id = $1 FOR UPDATE', [s.claimCaseId]); // the certificate plan's lock
+      let settled = false;
+      const recorded = onOwnTx(pool, PARIWAR, (client) =>
+        claim.recordContactCall(client, {
+          pariwarId: ids.pariwarId(PARIWAR),
+          claimCaseId: ids.claimId(s.claimCaseId),
+          chase: 'correction',
+          personKey: person.personKey,
+          calledOn: day(s.day0, 11),
+          answeredBy: 'the_person',
+          outcome: 'reached',
+          actorId: randomUUID(),
+          actorDisplay: 'District Admin',
+          nomineeCallsCleared: true,
+          now: tenAmIst(day(s.day0, 12)),
+        }),
+      ).then((r) => {
+        settled = true;
+        return r;
+      });
+      await new Promise((r) => setTimeout(r, 400));
+      expect(settled).toBe(false); // it waits on the row (it already holds the advisory lock)
+      await holder.query('COMMIT');
+      const out = await recorded;
+      expect(out.endedLadderIds).toHaveLength(2);
+    } finally {
+      holder.release();
+    }
+    expect((await laddersOf(s.claimCaseId)).map((l) => l.state)).toEqual(['ended_call', 'ended_call']);
+  });
+
   // ── The certificate chase (`-351` 3 B) ──────────────────────────────────────────────────────────────────────
 
   it('⭐ CERTIFICATE — a reported failure starts a ladder; SMS 2 is the certificate reminder sent again (CRQID `ce`); it CONCLUDES with a RECORDED ask (⛔ push) and the person is letter-eligible', async () => {

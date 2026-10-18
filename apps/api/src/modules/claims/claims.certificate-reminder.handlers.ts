@@ -45,6 +45,7 @@ import {
   refuseFutureDate,
 } from './claims.correction-chase.handlers.js';
 import { actorDisplayOf, auditClaim, inWriteTx } from './claims.correction-closure.handlers.js';
+import { toContactCallDto, toContactLadderFollowUpDto } from './contact-ladder-dto.js';
 
 /** The fresh step-up the address read AND the screenshot read require. */
 export const CERTIFICATE_LETTER_ADDRESS_STEP_UP_CONTEXT = 'certificate_letter_address';
@@ -137,6 +138,11 @@ function itemDto(r: claim.CertificateListItem): CertificateReminderItemDto {
               has_screenshot: p.letter.hasScreenshot,
             },
       escalation_recorded_on: p.escalationRecordedOn,
+      // Story 6.37c (LD12) — the delivery ladder.
+      follow_up: toContactLadderFollowUpDto(p.followUp),
+      unreachable_reason: p.unreachableReason,
+      ask: p.ask,
+      calls: p.calls.map(toContactCallDto),
     })),
   };
 }
@@ -156,7 +162,10 @@ export function createCertificateReminderHandlers(deps: AppDeps) {
       const pariwarId = ids.pariwarId(scopeTx.pariwarId);
       const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
       const geoTree = geoTreeResolverForRequest(request);
-      const scan = await claim.listCertificateReminderClaims(scopeTx.tx, pariwarId, today() as cycleCalendar.CalendarDateString);
+      // Story 6.37c (LD11) — the nominee-call switch reaches the ask (the api config's ONE env var — ⛔ read in the domain).
+      const scan = await claim.listCertificateReminderClaims(scopeTx.tx, pariwarId, today() as cycleCalendar.CalendarDateString, {
+        nomineeCallsCleared: deps.config.claimNomineeCallsCleared,
+      });
       const visible: claim.CertificateListItem[] = [];
       for (const row of scan.items) {
         const posting = await memberDomain.getMemberPostingLatest(scopeTx.tx, pariwarId, ids.memberId(row.deceasedMemberId));

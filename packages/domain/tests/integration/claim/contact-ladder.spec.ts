@@ -18,8 +18,10 @@ import {
   evaluateCertificatePersonStates,
   finaliseCorrectionReminder,
   readClaimCertificateFamilyRows,
+  readCertificateListItem,
   readClaimCertificateLetters,
   readClosureReach,
+  readCorrectionChaseSummary,
   readClosureReadiness,
   readReturnFamilyRows,
   readReturnPersonStates,
@@ -325,6 +327,75 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       expect(states[0]!.track.deadKind).toBe('not_delivered');
       // ⭐ PQ2 A — a concluded CERTIFICATE ladder maps ⛔ correction row.
       expect((await rowsOf(tx, c)).length).toBe(0);
+    });
+  });
+
+  describe('AC9 — what staff see (LD12)', () => {
+    it('⭐ the correction line: the follow-up, `unreachable_reason` not_delivered, the reported count, the cap-aware ask — flipped by the nominee-call switch, and CLOSED by a reached call', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      const origin = await sendRow(tx, c, { slotDay: 3 });
+      await report(client, 'cr', origin, 'undelivered');
+      const running = await ladder(client, c, { originRowId: origin, originSlotDay: 3 });
+      const read = (cleared: boolean) =>
+        readCorrectionChaseSummary(tx, PARIWAR_A, c.cid, addCalendarDays(c.day0, 6), { crypto: ENC, nomineeCallsCleared: cleared });
+      let p = (await read(false)).people[0]!;
+      expect(p).toMatchObject({ followUp: { state: 'running', nextStepOn: addCalendarDays(c.day0, 5) }, unreachableReason: null, reportedUndelivered: 1, ask: null });
+      await client.query(
+        `UPDATE claim_contact_ladders SET state = 'concluded_undelivered', concluded_on = $2, ended_at = now() WHERE ladder_id = $1`,
+        [running, addCalendarDays(c.day0, 11)],
+      );
+      p = (await read(false)).people[0]!;
+      expect(p).toMatchObject({
+        status: 'unreachable',
+        unreachableReason: 'not_delivered',
+        followUp: { state: 'concluded', concludedOn: addCalendarDays(c.day0, 11), nextStepOn: null },
+        reportedUndelivered: 1,
+        ask: 'letter', // a nominee before G1 — "post a letter"
+      });
+      expect((await read(true)).people[0]!.ask).toBe('call_or_letter');
+      await call(client, c, 'reached', addCalendarDays(c.day0, 12));
+      p = (await read(true)).people[0]!;
+      expect(p.ask).toBeNull(); // answered
+      expect(p.calls).toHaveLength(1);
+      expect(p.status).toBe('unreachable'); // the status enum is unchanged — the call shows in `calls` (disclosed)
+    });
+
+    it('⭐ the certificate list keeps a claim whose run ENDED while a ladder RUNS (else invisible); `unreachable_reason` reads not_delivered though `sms_state` reads reminded', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      const runId = randomUUID();
+      await asSuperuser(client, () =>
+        client.query(
+          `INSERT INTO claim_certificate_reminder_runs (run_id, claim_case_id, pariwar_id, cause, day0, ended_at, end_reason) VALUES ($1, $2, $3, 'missing', $4, now(), 'completed')`,
+          [runId, c.cid, PARIWAR_A, addCalendarDays(c.day0, -181)],
+        ),
+      );
+      const hash = (await currentCorrectionNumberHash(c.person.mobileCiphertext, c.person.mobileSource, PARIWAR_A, ENC))!;
+      const insert = async (slotDay: number) =>
+        (
+          await client.query<{ reminder_id: string }>(
+            `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, outcome, recipient_number_hash)
+             VALUES ($1, $2, $3, $4, $5, $6, 'family_sms', 'accepted', $7) RETURNING reminder_id`,
+            [runId, c.cid, PARIWAR_A, slotDay, addCalendarDays(c.day0, slotDay - 181), c.person.personKey, hash],
+          )
+        ).rows[0]!.reminder_id;
+      const origin = await insert(180);
+      await report(client, 'ce', origin, 'undelivered');
+      const today = addCalendarDays(c.day0, 1);
+      // ⛔ ladder ⇒ an ended run with ⛔ letter owed is ⛔ listed.
+      expect(await readCertificateListItem(tx, PARIWAR_A, c.cid, today)).toBeNull();
+      const l = await ladder(client, c, { originRowId: origin, originSlotDay: -1, chase: 'certificate', runId, hash });
+      const item = await readCertificateListItem(tx, PARIWAR_A, c.cid, today);
+      expect(item).not.toBeNull();
+      expect(item!.people[0]!.followUp?.state).toBe('running');
+      // Concluded, then a LATER accepted text: `sms_state` reads reminded, the reason still not_delivered.
+      await client.query(`UPDATE claim_contact_ladders SET state = 'concluded_undelivered', concluded_on = $2, ended_at = now() WHERE ladder_id = $1`, [l, today]);
+      await insert(181);
+      const after = (await readCertificateListItem(tx, PARIWAR_A, c.cid, today))!;
+      expect(after.people[0]).toMatchObject({ smsState: 'reminded', unreachableReason: 'not_delivered', letterEligible: true, ask: 'letter' });
     });
   });
 

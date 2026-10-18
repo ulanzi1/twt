@@ -27,7 +27,11 @@ const IsoDate = z
 /**
  * POST …/correction/calls and …/certificate-reminders/calls — the body. ⛔ `called_on` later than today (IST) or before
  * the claim was filed is the route's / writer's 400 (it needs a clock and the claim). `reached` only when the person
- * or a family member answered (`-351` 5 A — the DB CHECK says the same).
+ * or a family member answered (`-351` 5 A — the DB CHECK says the same) — that business rule is the DOMAIN's
+ * `reached_needs_answer` refusal (`contact-call.ts`, translated by `contactCallRefusalError`), ⛔ a schema `.refine()`
+ * (review P18): this schema is registered directly as the route's Fastify `body` (`fastify-type-provider-zod`), so a
+ * `.refine()` here would be caught by Fastify's OWN validator before the handler runs, masking the domain's friendlier
+ * `contact_call.reached_needs_answer` code behind a generic `request.validation` 400. Shape only, past this line.
  */
 export const RecordContactCallRequest = z
   .object({
@@ -36,11 +40,7 @@ export const RecordContactCallRequest = z
     answered_by: ContactCallAnsweredBy,
     outcome: ContactCallOutcome,
   })
-  .strict()
-  .refine((v) => v.outcome !== 'reached' || v.answered_by === 'the_person' || v.answered_by === 'family_member', {
-    message: 'a call reaches the family only when the person or a family member answered',
-    path: ['outcome'],
-  });
+  .strict();
 export type RecordContactCallRequest = z.output<typeof RecordContactCallRequest>;
 
 

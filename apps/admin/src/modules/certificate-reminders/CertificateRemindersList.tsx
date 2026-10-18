@@ -405,7 +405,14 @@ function PersonRow({ pariwarId, item, person }: { pariwarId: string; item: Item;
       ) : null}
       {/* Story 6.37c (LD12) — the follow-up texts, the ask, the calls, and the call form. */}
       <ContactLadderLines followUp={person.follow_up} unreachableReason={person.unreachable_reason} ask={person.ask} calls={person.calls} />
-      {person.follow_up !== null || person.ask !== null ? (
+      {/* Review P29 — `ask === 'none'` means neither a call nor a letter is possible (escalate instead); the form
+          must ⛔ be offered then. `ask` is ONLY ever set once `follow_up.state === 'concluded'` (LD9), so a bare
+          `follow_up !== null` is ALREADY true there and would make this check a no-op — the `concluded` state
+          defers to `ask` specifically; fix-diff review caught this. Review D11 — every OTHER non-null `follow_up`
+          state (`running`, `ended_delivered`, `ended_call`, `ended_other`) keeps the form offered regardless of
+          `ask`, by design: staff may legitimately need to log a late/historical call after the ladder ended
+          another way. */}
+      {(person.follow_up !== null && person.follow_up.state !== 'concluded') || (person.ask !== null && person.ask !== 'none') ? (
         <ContactCallForm pariwarId={pariwarId} claimCaseId={item.claim_case_id} personKey={person.person_key} chase="certificate" />
       ) : null}
       {showLetter ? <LetterForm pariwarId={pariwarId} item={item} person={person} /> : null}

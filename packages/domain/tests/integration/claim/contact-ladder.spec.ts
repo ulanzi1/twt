@@ -22,6 +22,7 @@ import {
   readCertificateListItem,
   readClaimCertificateLetters,
   readClosureReach,
+  readContactLadder,
   readCorrectionChaseSummary,
   readClosureReadiness,
   readReturnFamilyRows,
@@ -29,6 +30,8 @@ import {
   recordCorrectionLetter,
   recordCorrectionLetterDelivery,
   resolveCorrectionChase,
+  writeCertificateLadderEscalation,
+  writeCorrectionLadderEscalation,
 } from '../../../src/claim/index.js';
 import { addCalendarDays } from '../../../src/cycle-calendar/holiday-resolver.js';
 import type { ClaimId } from '../../../src/ids/index.js';
@@ -193,6 +196,24 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       await expect(assertCorrectionLetterRecordable(tx, PARIWAR_A, c.cid, c.person.personKey, concludedOn, { crypto: ENC })).resolves.toBeDefined();
       // ⛔ D22: the silent row still reaches them (`-351` 1 A).
       expect((await reachOf(tx, c)).people[0]).toMatchObject({ reachedBySms: true, reached: true });
+    });
+
+    // Review P8 — the sweep can run LATE (a missed tick): `concluded_on` then diverges from the schedule's own
+    // on-time date. The mapping must key off the ladder's STORED `concluded_on`, never a re-derived on-time guess.
+    it('⭐ a ladder concluded LATE (the sweep missed a tick) maps `deadOn` to the ACTUAL `concluded_on`, ⛔ the on-time date the schedule would have given', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      const origin = await sendRow(tx, c, { slotDay: 3 });
+      await report(client, 'cr', origin, 'undelivered');
+      const onTimeConclusion = addCalendarDays(c.day0, 11); // origin day 3 + SMS2(2) + SMS3(2) + wait(4)
+      const lateConclusion = addCalendarDays(c.day0, 15); // the sweep missed several ticks before catching up
+      await ladder(client, c, { originRowId: origin, originSlotDay: 3, state: 'concluded_undelivered', concludedOn: lateConclusion });
+      const rows = await rowsOf(tx, c);
+      const row = rows.find((r) => r.reminderId === origin)!;
+      expect(row).toMatchObject({ outcome: 'rejected_unreachable', deadOn: lateConclusion, concluded: true });
+      expect(row.deadOn).not.toBe(onTimeConclusion);
+      expect((await stateOf(tx, c)).track).toMatchObject({ foundDeadOn: lateConclusion });
     });
 
     it('⭐ I4 — a RUNNING, a STOPPED and an ENDED-delivered ladder change ⛔ row (an epoch with ⛔ concluded ladder reads as stored)', async () => {
@@ -428,6 +449,89 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       await insert(181);
       const after = (await readCertificateListItem(tx, PARIWAR_A, c.cid, today))!;
       expect(after.people[0]).toMatchObject({ smsState: 'reminded', unreachableReason: 'not_delivered', letterEligible: true, ask: 'letter' });
+    });
+
+    // Review P2 — LD9's escalation writers had zero direct test coverage (every other AC9 test reads the DERIVED
+    // `ask` through a raw-SQL ladder state, never calls the real writer). This calls BOTH writers for real.
+    it('⭐ LD9 — writeCorrectionLadderEscalation / writeCertificateLadderEscalation each write ONE `ladder_escalation` row and mark the ladder escalated', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      const correctionOrigin = await sendRow(tx, c, { slotDay: 3 });
+      const correctionLadderId = await ladder(client, c, {
+        originRowId: correctionOrigin,
+        originSlotDay: 3,
+        state: 'concluded_undelivered',
+        concludedOn: addCalendarDays(c.day0, 11),
+      });
+      const correctionLadder = (await readContactLadder(tx, PARIWAR_A, correctionLadderId))!;
+      const correctionWritten = await writeCorrectionLadderEscalation(tx, {
+        pariwarId: PARIWAR_A,
+        claimCaseId: c.cid,
+        ladder: correctionLadder,
+        today: addCalendarDays(c.day0, 12),
+        districtAdminKey: 'staff:da-one',
+        ask: 'call_or_letter',
+      });
+      expect(correctionWritten).toMatchObject({ written: true, recipientKey: 'staff:da-one' });
+      const correctionRow = await tx
+        .select({ purpose: schema.claimCorrectionReminders.purpose, outcome: schema.claimCorrectionReminders.outcome, detail: schema.claimCorrectionReminders.detail, subjectKey: schema.claimCorrectionReminders.subjectKey })
+        .from(schema.claimCorrectionReminders)
+        .where(eq(schema.claimCorrectionReminders.subjectKey, `ladder:${correctionLadderId}`));
+      expect(correctionRow).toMatchObject([{ purpose: 'ladder_escalation', outcome: 'recorded', detail: 'ask:call_or_letter', subjectKey: `ladder:${correctionLadderId}` }]);
+      expect((await readContactLadder(tx, PARIWAR_A, correctionLadderId))!.escalatedOn).toBe(addCalendarDays(c.day0, 12));
+      // A second call is a no-op on the ladder (the compare-and-set on `escalated_on IS NULL`) — ⛔ a second row.
+      await writeCorrectionLadderEscalation(tx, {
+        pariwarId: PARIWAR_A,
+        claimCaseId: c.cid,
+        ladder: correctionLadder,
+        today: addCalendarDays(c.day0, 13),
+        districtAdminKey: 'staff:da-one',
+        ask: 'call_or_letter',
+      });
+      expect(
+        await tx
+          .select({ id: schema.claimCorrectionReminders.reminderId })
+          .from(schema.claimCorrectionReminders)
+          .where(eq(schema.claimCorrectionReminders.subjectKey, `ladder:${correctionLadderId}`)),
+      ).toHaveLength(1);
+
+      const certRunId = randomUUID();
+      await asSuperuser(client, () =>
+        client.query(
+          `INSERT INTO claim_certificate_reminder_runs (run_id, claim_case_id, pariwar_id, cause, day0) VALUES ($1, $2, $3, 'missing', $4)`,
+          [certRunId, c.cid, PARIWAR_A, c.day0],
+        ),
+      );
+      const certOrigin = await client.query<{ reminder_id: string }>(
+        `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, outcome, recipient_number_hash)
+         VALUES ($1, $2, $3, 3, $4, $5, 'family_sms', 'accepted', $6) RETURNING reminder_id`,
+        [certRunId, c.cid, PARIWAR_A, addCalendarDays(c.day0, 3), c.person.personKey, (await currentCorrectionNumberHash(c.person.mobileCiphertext, c.person.mobileSource, PARIWAR_A, ENC))!],
+      );
+      const certLadderId = await ladder(client, c, {
+        originRowId: certOrigin.rows[0]!.reminder_id,
+        originSlotDay: 3,
+        chase: 'certificate',
+        runId: certRunId,
+        state: 'concluded_undelivered',
+        concludedOn: addCalendarDays(c.day0, 11),
+      });
+      const certLadder = (await readContactLadder(tx, PARIWAR_A, certLadderId))!;
+      const certWritten = await writeCertificateLadderEscalation(tx, {
+        pariwarId: PARIWAR_A,
+        claimCaseId: c.cid,
+        ladder: certLadder,
+        today: addCalendarDays(c.day0, 12),
+        districtAdminKey: 'staff:unassigned',
+        ask: 'letter',
+      });
+      expect(certWritten).toMatchObject({ written: true, recipientKey: 'staff:unassigned' }); // the FIRST insert — `no_target` is still a written row
+      const certRow = await tx
+        .select({ purpose: schema.claimCertificateReminders.purpose, outcome: schema.claimCertificateReminders.outcome, detail: schema.claimCertificateReminders.detail })
+        .from(schema.claimCertificateReminders)
+        .where(eq(schema.claimCertificateReminders.subjectKey, `ladder:${certLadderId}`));
+      expect(certRow).toMatchObject([{ purpose: 'ladder_escalation', outcome: 'no_target', detail: 'no_target:no_staff_recipient' }]);
+      expect((await readContactLadder(tx, PARIWAR_A, certLadderId))!.escalatedOn).toBe(addCalendarDays(c.day0, 12));
     });
   });
 

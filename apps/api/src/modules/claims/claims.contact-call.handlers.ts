@@ -26,9 +26,6 @@ import { contextOf } from './claims.correction-chase.handlers.js';
 import { actorDisplayOf, auditClaim, inWriteTx } from './claims.correction-closure.handlers.js';
 import { toContactCallDto } from './contact-ladder-dto.js';
 
-// Re-exported for the callers that imported it from here (its home is the leaf `contact-ladder-dto.ts`).
-export { toContactCallDto } from './contact-ladder-dto.js';
-
 /** The FRESH step-up the number reveal requires (a free string — ⛔ registry; the admin's `client.ts` has the same). */
 export const CONTACT_CALL_NUMBER_STEP_UP_CONTEXT = 'contact_call_number';
 /** LD10 — a call's idempotency claim is held this long (a reused key within a day replays the first call). */
@@ -73,13 +70,20 @@ function translateContactCallError(err: unknown): never {
   throw err;
 }
 
+/** Review P27 — a header this long could only be a client bug; capped before it's persisted as part of a store key. */
+const IDEMPOTENCY_KEY_MAX_LENGTH = 200;
+
 function requireIdempotencyKey(request: FastifyRequest): string {
   const raw = request.headers['idempotency-key'];
   const key = Array.isArray(raw) ? raw[0] : raw;
   if (!key || key.trim() === '') {
     throw new BadRequestError('An Idempotency-Key header is required', 'contact_call.idempotency_key_required');
   }
-  return key.trim();
+  const trimmed = key.trim();
+  if (trimmed.length > IDEMPOTENCY_KEY_MAX_LENGTH) {
+    throw new BadRequestError('The Idempotency-Key header is too long', 'contact_call.idempotency_key_too_long');
+  }
+  return trimmed;
 }
 
 /** The call handlers of ONE surface — `correction` (…/correction/calls) or `certificate` (…/certificate-reminders/calls). */
@@ -97,7 +101,9 @@ export function createContactCallHandlers(
       const ctx = contextOf(request);
       const body = request.body as RecordContactCallRequest;
       const key = requireIdempotencyKey(request);
-      const storeKey = `claim.contact_call:${ctx.pariwarIdStr}:${ctx.actorId}:${key}`;
+      // Review P17 — scoped by claim and chase too: an Idempotency-Key value an actor reuses across claims, or
+      // across the correction/certificate surfaces, must ⛔ replay the first claim's/chase's result onto the second.
+      const storeKey = `claim.contact_call:${ctx.pariwarIdStr}:${ctx.actorId}:${ctx.claimCaseIdStr}:${chase}:${key}`;
       const claimed = await idempotencyStore.claim(storeKey, CONTACT_CALL_IDEMPOTENCY_TTL_SECONDS);
       if (claimed === 'already_claimed') {
         const stored = await idempotencyStore.getResult(storeKey);
@@ -136,8 +142,11 @@ export function createContactCallHandlers(
           translateContactCallError(err);
         }
         const dto = toContactCallDto(result!.call);
-        await idempotencyStore.recordResult(storeKey, dto);
+        // Review P26 — the call row already COMMITTED above; a `recordResult` failure here must ⛔ release the key
+        // for a retry (that would write a SECOND call row). Mark `settled` FIRST so the `finally` below only
+        // releases on a failure that happened BEFORE the commit.
         settled = true;
+        await idempotencyStore.recordResult(storeKey, dto);
         auditClaim(deps, request, ctx, audits.recorded, {
           call_id: dto.call_id,
           person_key: dto.person_key,
@@ -149,7 +158,9 @@ export function createContactCallHandlers(
         void reply.status(201);
         return dto;
       } finally {
-        // Any failure after the claim releases it, so the SAME key can be retried at once (⛔ wait out the TTL).
+        // Any failure BEFORE the commit releases it, so the SAME key can be retried at once (⛔ wait out the TTL).
+        // A failure AFTER the commit (`settled = true`) leaves it claimed — a retry gets 409 `idempotency_in_progress`
+        // until the TTL, never a second call row (review P26).
         if (!settled) await idempotencyStore.release(storeKey).catch(() => undefined);
       }
     },

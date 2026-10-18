@@ -48,6 +48,16 @@ export function ladderWhatsappStep(role: 'nominee' | 'claimant'): 'skipped:nomin
   return role === 'nominee' ? 'skipped:nominee_no_whatsapp' : 'skipped:whatsapp_not_built';
 }
 
+/**
+ * LD11 — the nominee-call switch's NAME and parse rule, shared so `apps/api` and `apps/jobs` can't drift on either
+ * (review finding D5). ⛔ `process.env` read here — each app reads its own, under this one name, through this one
+ * parser; `'1'` ⇒ cleared, anything else ⇒ ⛔.
+ */
+export const CLAIM_NOMINEE_CALLS_CLEARED_ENV_VAR = 'CLAIM_NOMINEE_CALLS_CLEARED';
+export function parseNomineeCallsClearedFlag(rawValue: string | undefined): boolean {
+  return rawValue === '1';
+}
+
 // ── The READ-time mapping (LD6, LD7; I3, I4) ───────────────────────────────────────────────────────────────────
 
 /** A send row as the mapping needs it — the chase readers' rows carry these (⛔ any other field is touched). */
@@ -77,11 +87,16 @@ export interface ConcludedLadderFact {
  * by the row OBJECT (a fixture may carry ⛔ id). Pure.
  */
 function epochsOf<R extends LadderMappableRow>(rows: readonly R[]): Map<R, number> {
-  const evidential = rows.filter((r) => isEvidentialReminderRow(r)).sort(compareReminderRowsByTime);
+  // Review P1 — the hash comparison is `sameNumberHash` (timing-safe), matching every other hash comparison in this
+  // module. Review P11 — a `sentOn` + `createdAt` tie (two rows of ONE transaction share a `now()` — a real, not
+  // hypothetical, risk in this codebase's write paths) is broken by `reminderId`, so the ordering stays deterministic.
+  const evidential = rows
+    .filter((r) => isEvidentialReminderRow(r))
+    .sort((a, b) => compareReminderRowsByTime(a, b) || (a.reminderId ?? '').localeCompare(b.reminderId ?? ''));
   const out = new Map<R, number>();
   let epoch = 0;
   for (let i = 0; i < evidential.length; i += 1) {
-    if (i > 0 && evidential[i]!.recipientNumberHash !== evidential[i - 1]!.recipientNumberHash) epoch += 1;
+    if (i > 0 && !sameNumberHash(evidential[i]!.recipientNumberHash, evidential[i - 1]!.recipientNumberHash)) epoch += 1;
     out.set(evidential[i]!, epoch);
   }
   return out;
@@ -308,9 +323,10 @@ export function ladderStepGate(input: {
   return 'send';
 }
 
-/** The step of a running ladder that is DUE today (⛔ more than one per run), or `null`. Pure. */
+/** The step of a RUNNING ladder that is DUE today (⛔ more than one per run), or `null`. Pure. */
 export function dueLadderStep(
   ladder: {
+    readonly state: ContactLadderState;
     readonly sms2DueOn: string;
     readonly sms2State: ContactLadderStepState;
     readonly sms3DueOn: string | null;
@@ -319,6 +335,9 @@ export function dueLadderStep(
   },
   today: string,
 ): 2 | 3 | 'conclude' | null {
+  // Review P9 — the step columns alone are ⛔ enough: an ended/concluded ladder's sms2/sms3 may still read `pending`
+  // if it ended before reaching that step (`ended_delivered` / `ended_call` / `ended_number_changed` / `ended_stopped`).
+  if (ladder.state !== 'running') return null;
   if (ladder.sms2State === 'pending') return ladder.sms2DueOn <= today ? 2 : null;
   if (ladder.sms3State === 'pending') return ladder.sms3DueOn !== null && ladder.sms3DueOn <= today ? 3 : null;
   return ladder.concludeOn !== null && ladder.concludeOn <= today ? 'conclude' : null;

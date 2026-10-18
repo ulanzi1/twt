@@ -24,7 +24,7 @@ import { claimId as toClaimId, memberId as toMemberId } from '../../../src/ids/i
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, driveClaimTo, enterAppScope } from '../_helpers.js';
-import { DA, ENC, KMS, returnedClaim, type Client, type Returned, type Tx } from './_correction-closure-fixture.js';
+import { asSuperuser, DA, ENC, KMS, returnedClaim, type Client, type Returned, type Tx } from './_correction-closure-fixture.js';
 
 const NOW = new Date();
 const TODAY = istDateOf(NOW);
@@ -157,6 +157,24 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the call record (domain, live)', 
     const tomorrow = istDateOf(new Date(NOW.getTime() + 86_400_000));
     await expectRefused(recordContactCall(client, input(c, { calledOn: tomorrow })), 'called_on_in_future');
     await expectRefused(recordContactCall(client, input(c, { calledOn: '2000-01-01' })), 'called_on_before_filing');
+  });
+
+  // Review P4 — the boundaries (`calledOn === today`, `calledOn === filedOn`) are INCLUSIVE: both must be ACCEPTED.
+  it('a call dated exactly today, or exactly the day the claim was filed, is ACCEPTED — ⛔ refused', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await returnedClaim(client);
+    await withClaimantBlock(tx, c);
+    const filedTwoDaysAgo = istDateOf(new Date(NOW.getTime() - 2 * 86_400_000));
+    await asSuperuser(client, async () => {
+      await client.query("SET LOCAL session_replication_role = 'replica'");
+      await client.query(`UPDATE claims SET created_at = $2 WHERE claim_case_id = $1`, [c.cid, `${filedTwoDaysAgo}T00:00:00Z`]);
+      await client.query("SET LOCAL session_replication_role = 'origin'");
+    });
+    // The lower (inclusive) boundary: calledOn === the (now backdated) filing date.
+    await expect(recordContactCall(client, input(c, { calledOn: filedTwoDaysAgo, outcome: 'not_reached', answeredBy: 'nobody' }))).resolves.toBeDefined();
+    // The upper (inclusive) boundary: calledOn === today.
+    await expect(recordContactCall(client, input(c, { calledOn: TODAY, outcome: 'not_reached', answeredBy: 'nobody' }))).resolves.toBeDefined();
   });
 
   it('a person ⛔ on the chase\'s recipient set is refused; D30 — ⛔ a contact record (certificate) / an undetermined declaration (correction) / an agreement ⛔ live', async () => {

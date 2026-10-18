@@ -115,8 +115,15 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
     [],
   );
 
+  // Review P22 — ONE gate, checked by both `begin()` (the reveal/send/verify flows) and `save()`, so the three
+  // async flows and a save can never overlap: each writes into the SAME shared `status` live region, and a save
+  // mid-reveal (or a reveal mid-save) could otherwise clobber the other's message or race the number's epoch.
+  function anyOperationInFlight(): boolean {
+    return busyRef.current !== null || savingRef.current;
+  }
+
   function begin(kind: 'reveal' | 'send' | 'verify'): boolean {
-    if (busyRef.current !== null) return false;
+    if (anyOperationInFlight()) return false;
     busyRef.current = kind;
     setBusy(kind);
     setProblem(null);
@@ -189,15 +196,20 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
       return;
     }
     if (!begin('verify')) return;
+    // Review P25 — the SAME epoch check `reveal()`/`sendCode()` already do: an unmount (or "Hide the number") while
+    // `verifyStepUp` is in flight must ⛔ touch state on return.
+    const epoch = numberEpochRef.current;
     try {
       try {
         await verifyStepUp(otp.trim());
       } catch (err) {
+        if (numberEpochRef.current !== epoch) return;
         setProblem(
           err instanceof ApiError && err.code === 'auth.step_up_failed' ? tl.codeWrong : contactCallRefusalText(err, tl.codeNotChecked),
         );
         return;
       }
+      if (numberEpochRef.current !== epoch) return;
       noteStepUpVerified();
       setOtp('');
       setStepUp('idle');
@@ -222,7 +234,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
 
   async function save(e: FormEvent): Promise<void> {
     e.preventDefault();
-    if (savingRef.current) return;
+    if (anyOperationInFlight()) return;
     setProblem(null);
     setStatus('');
     if (calledOn === '' || answeredBy === '' || outcome === '') {
@@ -271,7 +283,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
             ref={showRef}
             type="button"
             className="self-start rounded border px-2 py-0.5"
-            disabled={busy !== null}
+            disabled={busy !== null || record.isPending}
             onClick={() => void revealNumber()}
           >
             {t.showNumber}
@@ -294,7 +306,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
                 ref={sendRef}
                 type="button"
                 className="self-start rounded border px-2 py-0.5"
-                disabled={busy !== null}
+                disabled={busy !== null || record.isPending}
                 onClick={() => void sendCode()}
               >
                 {tl.sendCode}
@@ -312,10 +324,20 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
                     onChange={(e) => setOtp(e.target.value)}
                   />
                 </label>
-                <button type="button" className="rounded border px-2 py-0.5" disabled={busy !== null} onClick={() => void verifyAndReveal()}>
+                <button
+                  type="button"
+                  className="rounded border px-2 py-0.5"
+                  disabled={busy !== null || record.isPending}
+                  onClick={() => void verifyAndReveal()}
+                >
                   {tl.verify}
                 </button>
-                <button type="button" className="rounded border px-2 py-0.5" disabled={busy !== null} onClick={() => void sendCode()}>
+                <button
+                  type="button"
+                  className="rounded border px-2 py-0.5"
+                  disabled={busy !== null || record.isPending}
+                  onClick={() => void sendCode()}
+                >
                   {tl.resendCode}
                 </button>
               </div>
@@ -367,7 +389,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
             {t.notReached}
           </label>
         </fieldset>
-        <button type="submit" className="self-start rounded border px-3 py-1" disabled={record.isPending}>
+        <button type="submit" className="self-start rounded border px-3 py-1" disabled={record.isPending || busy !== null}>
           {t.save}
         </button>
       </form>

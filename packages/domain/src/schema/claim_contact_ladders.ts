@@ -103,6 +103,15 @@ export const claimContactLadders = pgTable(
       'claim_contact_ladders_sms3_on_pair_check',
       sql`(${t.sms3State} = 'pending') = (${t.sms3On} IS NULL) AND (${t.sms3State} = 'pending') = (${t.concludeOn} IS NULL)`,
     ),
+    // Review P3 — LOCKSTEP with migration 0169's `claim_contact_ladders_sms2_row_id_check` / `_sms3_row_id_check`.
+    check(
+      'claim_contact_ladders_sms2_row_id_check',
+      sql`CASE ${t.sms2State} WHEN 'sent' THEN ${t.sms2RowId} IS NOT NULL WHEN 'satisfied' THEN true ELSE ${t.sms2RowId} IS NULL END`,
+    ),
+    check(
+      'claim_contact_ladders_sms3_row_id_check',
+      sql`CASE ${t.sms3State} WHEN 'sent' THEN ${t.sms3RowId} IS NOT NULL WHEN 'satisfied' THEN true ELSE ${t.sms3RowId} IS NULL END`,
+    ),
     check(
       'claim_contact_ladders_step_order_check',
       sql`${t.sms2DueOn} > ${t.originSentOn} AND (${t.sms3State} = 'pending' OR ${t.sms2State} <> 'pending')`,

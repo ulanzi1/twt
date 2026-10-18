@@ -135,7 +135,7 @@ counted per caller-supplied address; a report that never comes leaves a text cou
 | `docs/knowledge-transfer/adr-index.md` | The three Section A rows flip; summary `drafted` 3→**0**, `ratified` 37→**40**; **Total unchanged at 153**. Row **and** reconciliation in the **same commit**, per `README.md` §7 |
 | `_bmad-output/planning-artifacts/architecture.md` §3.11 | The one-line pointer in Read-first 1 (with ADR-0042 only) |
 | `docs/launch-gate-inventory/inventory-roster.md` | Rows 24 (a), 32 (a), 33 (a) — evidence link to the ratifying decision |
-| `.decision-log.md` | One entry, numbered from the head **at ruling time** (`2026-10-17-353` is the current head; re-verify) |
+| `.decision-log.md` | One entry, numbered from the head **at ruling time** (`2026-10-17-353` was the head when this sheet was prepared 2026-10-17; re-verify before writing — the actual ratification landed as Decision `2026-10-18-358`, minted after `-357`) |
 | This sheet | Filed alongside the prior sheets |
 
 **Nothing else.** No code, no migration, no story status. Ratifying ADR-0042 does **not** approve the architecture §3.4 amendment for

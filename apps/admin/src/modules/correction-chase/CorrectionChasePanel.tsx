@@ -266,7 +266,14 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
                     calls={p.calls}
                     reportedUndelivered={p.reported_undelivered}
                   />
-                  {p.follow_up !== null || p.ask !== null ? (
+                  {/* Review P29 — `ask === 'none'` means neither a call nor a letter is possible (escalate instead);
+                      the form must ⛔ be offered then. `ask` is ONLY ever set once `follow_up.state === 'concluded'`
+                      (LD9), so a bare `follow_up !== null` is ALREADY true there and would make this check a no-op —
+                      the `concluded` state defers to `ask` specifically; fix-diff review caught this. Review D11 —
+                      every OTHER non-null `follow_up` state (`running`, `ended_delivered`, `ended_call`,
+                      `ended_other`) keeps the form offered regardless of `ask`, by design: staff may legitimately
+                      need to log a late/historical call after the ladder ended another way. */}
+                  {(p.follow_up !== null && p.follow_up.state !== 'concluded') || (p.ask !== null && p.ask !== 'none') ? (
                     <ContactCallForm pariwarId={pariwarId} claimCaseId={item.claim_case_id} personKey={p.person_key} chase="correction" />
                   ) : null}
                   {p.letters.length > 0 ? (

@@ -618,7 +618,10 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     expect(bursts[0]).toContain('contact_ladder.burst:3');
     const line = info.mock.calls.map((c) => String(c[0])).find((m) => m.startsWith('[jobs] contact-ladder: started'));
     info.mockRestore();
-    expect(line).toBe('[jobs] contact-ladder: started 3, ended_delivered 0, ended_call 0, concluded 0');
+    // Review P13 — the daily line now also carries ended_other / enqueued_pushes / timed_out_claims (was omitted).
+    expect(line).toBe(
+      '[jobs] contact-ladder: started 3, ended_delivered 0, ended_call 0, ended_other 0, concluded 0, enqueued_pushes 0, timed_out_claims 0',
+    );
     for (const s of seeded) expect(line).not.toContain(s.claimCaseId);
   });
 
@@ -984,7 +987,10 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
        VALUES ($1, $2, 'certificate', $3, 'nominee:gone', 'h-gone', gen_random_uuid(), $4, 'skipped:nominee_no_whatsapp', $5)`,
       [PARIWAR, w.cid, run.rows[0]!.run_id, day(certDay0, 9), day(certDay0, 11)],
     );
-    // The claim leaves the review window (to a state it CAN come back from) — a pause, ⛔ an end.
+    // The claim leaves the review window (to a state it CAN come back from) — a pause, ⛔ an end. Review P15 — a raw
+    // `current_state` write rather than a real lifecycle event, checked: `planCertificateRun`'s pause check
+    // (`certificate-reminder.ts:312-322`) reads `claims.currentState` alone, ⛔ `events_log` / a version — this shortcut
+    // sets exactly the one field the code under test consults, so it is ⛔ a hidden gap for THIS test's purpose.
     const c = await pool.connect();
     try {
       await c.query('BEGIN');

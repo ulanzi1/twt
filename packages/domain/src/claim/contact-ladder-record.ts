@@ -11,7 +11,7 @@
 // claimed through the chase's OWN claim accessor (I2 — ⛔ a send row updated outside its finaliser semantics).
 // ⛔⛔ Nothing here decides anything about a claim: ⛔ a decision writer, ⛔ a claim event (the no-decision fences).
 
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, ne, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
@@ -150,6 +150,9 @@ export async function concludeContactLadder(
         eq(claimContactLadders.pariwarId, input.pariwarId),
         eq(claimContactLadders.ladderId, input.ladderId),
         eq(claimContactLadders.state, 'running'),
+        // Review P10 — `running` alone isn't enough: require sms3 to have resolved out of `pending` too, so a caller
+        // bug can't conclude a ladder before its SMS3 step was ever attempted.
+        ne(claimContactLadders.sms3State, 'pending'),
       ),
     )
     .returning({ ladderId: claimContactLadders.ladderId });
@@ -382,6 +385,7 @@ export async function beginCorrectionLadderSend(
     await giveUp(`ladder_${end.state}`);
     return { kind: 'ended', state: end.state, detail: end.detail };
   }
+  if (stop !== null) return { kind: 'noop', reason: 'ladder_not_running' }; // unreachable — a stop is an end (P6, symmetry with beginCertificateLadderSend)
   // ⛔ An end and ⛔ a stop ⇒ `check` is the passing check — or `null` (the hash failed while a delivered letter was
   // all that could stop the send: the person's state is unknown today).
   const ok = check !== null && check.stop === null ? check : null;
@@ -405,7 +409,10 @@ export async function beginCorrectionLadderSend(
     return retry ? { kind: 'noop', reason: 'held_by_other' } : resolve('skipped:hash_unavailable');
   }
 
-  if (!retry) {
+  // Review D1 — the gate is checked on EVERY call, retry included: time passes between a retry's original claim and
+  // this re-entry, and the run could have crossed its horizon or entered a pause in between (I6 — ⛔ a step gets
+  // sent that honours ⛔ every stop the chase's own reminder honours, even on a retry).
+  {
     // ── The step gate (LD3, LD4, I8; PQ3 A) ──
     const runDay = correctionRunDay(run.day0, input.sentOn);
     const scheduledToday =
@@ -436,7 +443,14 @@ export async function beginCorrectionLadderSend(
       ladderRows,
     });
     const verdict = ladderStepGate({ chase: 'correction', runDay, paused: false, scheduledToday, sentToNumberToday });
-    if (verdict !== 'send') return resolve(verdict);
+    if (verdict !== 'send') {
+      if (!retry) return resolve(verdict);
+      // The row this retry is completing was claimed BEFORE the gate turned it down (the window closed in between) —
+      // abandon the claim (K4's own `giveUp`, ⛔ `resolve`: the step is already `sent`, ⛔ `pending`, so `resolve`'s
+      // CAS would silently no-op) and alarm-worthy-log via the caller's own `expiredAttempt` surface.
+      const expired = await giveUp(`ladder_stale_retry_${verdict}`);
+      return expired ? { kind: 'noop', reason: 'held_by_other', expiredAttempt: true } : { kind: 'noop', reason: 'held_by_other' };
+    }
   }
 
   const claimed = await claimCorrectionReminder(db, { ...key, sentOn: input.sentOn, late: false, jobId: input.jobId, now: input.now });
@@ -586,34 +600,51 @@ export async function beginCertificateLadderSend(
     return { kind: 'ended', state: end.state, detail: end.detail };
   }
   if (check.stop !== null) return { kind: 'noop', reason: 'ladder_not_running' }; // unreachable — a stop is an end
-  if (!retry) {
-    const resolve = async (state: Exclude<ContactLadderStepState, 'pending' | 'sent'>): Promise<BeginLadderSendResult<CertificatePerson>> => {
-      await resolveContactLadderStep(db, {
-        pariwarId: input.pariwarId,
-        ladderId: l.ladderId,
-        step: input.step,
-        state,
-        on: input.sentOn,
-        rowId: null,
-        nextOn: nextAfter(input.step, s.dueOn!, input.sentOn),
-      });
-      return { kind: 'resolved', state };
-    };
-    if (hashFailed || current === null || current === undefined) return resolve('skipped:hash_unavailable');
+  const resolve = async (state: Exclude<ContactLadderStepState, 'pending' | 'sent'>): Promise<BeginLadderSendResult<CertificatePerson>> => {
+    await resolveContactLadderStep(db, {
+      pariwarId: input.pariwarId,
+      ladderId: l.ladderId,
+      step: input.step,
+      state,
+      on: input.sentOn,
+      rowId: null,
+      nextOn: nextAfter(input.step, s.dueOn!, input.sentOn),
+    });
+    return { kind: 'resolved', state };
+  };
+  if (hashFailed || current === null || current === undefined) {
+    return retry ? { kind: 'noop', reason: 'held_by_other' } : resolve('skipped:hash_unavailable');
+  }
+  // Review D1 — the gate is checked on EVERY call, retry included (mirrors `beginCorrectionLadderSend`): the run
+  // could have crossed its horizon or entered a pause between a retry's original claim and this re-entry.
+  {
     const scheduledToday =
       run.endedAt === null && !check.paused && CERTIFICATE_REMINDER_DAYS.includes(check.runDay);
-    const sentToNumberToday = [...rows, ...ladderRows].some(
-      (r) =>
-        r.sentOn === input.sentOn &&
-        r.outcome !== 'skipped_superseded' &&
-        !('subjectKey' in r && r.subjectKey === key.subjectKey) &&
-        r.recipientNumberHash !== null &&
-        sameNumberHash(r.recipientNumberHash, l.recipientNumberHash),
-    );
+    // Review P12 — mirrors correction's `correctionNumberTextedOn`: a row still `attempting` (hash NULL until
+    // finalise) counts by its OWN person's CURRENT hash (already prelocked for everyone — CR7, ⛔ a KMS call here),
+    // not silently excluded.
+    const certificateCurrentHashOf = (personKey: string): string | null => {
+      const h = input.prelock.hashes.get(personKey);
+      if (h === undefined || 'failed' in h) return null;
+      return h.hash;
+    };
+    const sentToNumberToday = [...rows, ...ladderRows].some((r) => {
+      if (r.sentOn !== input.sentOn || r.outcome === 'skipped_superseded') return false;
+      if ('subjectKey' in r && r.subjectKey === key.subjectKey) return false;
+      if (r.recipientNumberHash !== null) return sameNumberHash(r.recipientNumberHash, l.recipientNumberHash);
+      if (r.outcome !== 'attempting') return false;
+      const h = certificateCurrentHashOf(r.recipientKey);
+      return h !== null && sameNumberHash(h, l.recipientNumberHash);
+    });
     const verdict = ladderStepGate({ chase: 'certificate', runDay: check.runDay, paused: check.paused, scheduledToday, sentToNumberToday });
-    if (verdict !== 'send') return resolve(verdict);
+    if (verdict !== 'send') {
+      if (!retry) return resolve(verdict);
+      // Mirrors `beginCorrectionLadderSend`'s retry-abort: the row was claimed BEFORE the window closed — abandon
+      // it (K4's `giveUp`), ⛔ `resolve` (the step is already `sent`, its CAS would silently no-op).
+      const expired = await giveUp(`ladder_stale_retry_${verdict}`);
+      return expired ? { kind: 'noop', reason: 'held_by_other', expiredAttempt: true } : { kind: 'noop', reason: 'held_by_other' };
+    }
   }
-  if (current === null || current === undefined) return { kind: 'noop', reason: 'held_by_other' };
   const claimed = await claimCertificateReminder(db, {
     ...key,
     sentOn: input.sentOn,

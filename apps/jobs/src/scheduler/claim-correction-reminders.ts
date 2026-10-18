@@ -503,12 +503,23 @@ export const STAFF_PUSH_ITEM_PURPOSES: readonly string[] = [
 ];
 
 /** Story 6.37c (LD9) — the ask's words in the staff push (the row's `detail` is `ask:<ask>`). English, name-free. */
-const LADDER_ASK_WORDS: Readonly<Record<string, string>> = {
+export const LADDER_ASK_WORDS: Readonly<Record<string, string>> = {
   'ask:call_or_letter': 'Phone the family or post them a letter',
   'ask:call': 'Phone the family — the letter limit is reached',
   'ask:letter': 'Post the family a letter',
   'ask:none': 'Neither a call nor a letter is possible — escalate it',
 };
+
+/** Review D3 — the fallback for an unrecognized/missing `detail` must be the MOST CONSERVATIVE ask, ⛔ the most permissive. */
+const LADDER_ASK_FALLBACK = LADDER_ASK_WORDS['ask:letter']!;
+
+/**
+ * Review D3 — true when an `ladder_escalation` item's `detail` is present but not one of `LADDER_ASK_WORDS`'s keys.
+ * The caller (which has `alarm`) uses this to fail loud; `correctionStaffPushText` itself stays pure.
+ */
+export function isUnrecognizedLadderAskDetail(detail: string | null | undefined): boolean {
+  return detail !== null && detail !== undefined && detail !== '' && !(detail in LADDER_ASK_WORDS);
+}
 
 /** The staff push's copy — ENGLISH (staff copy is English-only), name-free, naming the correction queue. */
 export function correctionStaffPushText(
@@ -520,9 +531,12 @@ export function correctionStaffPushText(
 } {
   const n = items.length;
   // Story 6.37c (LD9) — a concluded delivery ladder's ask names what is asked (call / letter), cap-aware.
-  const ladder = items.find((i) => i.purpose === 'ladder_escalation');
-  if (ladder !== undefined) {
-    const ask = LADDER_ASK_WORDS[ladder.detail ?? ''] ?? LADDER_ASK_WORDS['ask:call_or_letter']!;
+  const ladders = items.filter((i) => i.purpose === 'ladder_escalation');
+  const otherEscalationLike = items.some(
+    (i) => i.purpose !== 'ladder_escalation' && ['escalation', 'closure_escalation', 'staff_case_escalation', 'closure_letter_escalation'].includes(i.purpose),
+  );
+  if (ladders.length === 1 && !otherEscalationLike) {
+    const ask = LADDER_ASK_WORDS[ladders[0]!.detail ?? ''] ?? LADDER_ASK_FALLBACK;
     return {
       title: `Claim ${reference}: texts did not reach the family`,
       body:
@@ -530,11 +544,19 @@ export function correctionStaffPushText(
         `delivered: ${ask}. Open the correction queue in the admin app.`,
     };
   }
+  if (ladders.length > 0) {
+    // Review D2 — more than one ladder ask, or a ladder ask co-bundled with another escalation purpose, shares this
+    // batch; naming only the first silently dropped the rest. Generic, name-free, cap-safe wording either way.
+    return {
+      title: `Claim ${reference}: texts did not reach the family`,
+      body:
+        `${String(n)} item${n === 1 ? '' : 's'} due on claim ${reference}, including ${String(ladders.length)} where the ` +
+        `network said a reminder was not delivered. Open the correction queue in the admin app.`,
+    };
+  }
   // Story 6.19c — its escalations (the day-97 closure escalation, the staff case to the Super Admin, the closure-letter
   // chase's day 13) read as escalations too.
-  const escalated = items.some((i) =>
-    ['escalation', 'closure_escalation', 'staff_case_escalation', 'closure_letter_escalation'].includes(i.purpose),
-  );
+  const escalated = otherEscalationLike;
   return {
     title: escalated ? `Claim ${reference}: a correction chase needs you` : `Claim ${reference}: correction reminder`,
     body: `${String(n)} item${n === 1 ? '' : 's'} due today on claim ${reference}. Open the correction queue in the admin app.`,
@@ -652,6 +674,14 @@ export async function runCorrectionStaffPush(
     // The day-one state — ⛔ no admin device token. ⛔ No alarm (it would fire daily for every claim).
     await finalise('no_target', 'no_target:no_admin_device_token');
     return { status: 'pushed', outcome: 'no_target' };
+  }
+
+  // Review D3 — fail loud on an unrecognized ladder-ask detail rather than silently defaulting; `correctionStaffPushText`
+  // itself stays pure and falls back to the most CONSERVATIVE wording regardless.
+  for (const item of claimed.items) {
+    if (item.purpose === 'ladder_escalation' && isUnrecognizedLadderAskDetail(item.detail)) {
+      alarmOf(deps)(`[jobs] claim-correction-push: unrecognized ladder-ask detail '${String(item.detail)}' on claim ${p.claimCaseId} — defaulted to the letter-only ask`);
+    }
   }
 
   const alert = correctionStaffPushAlert({

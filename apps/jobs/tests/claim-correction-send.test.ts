@@ -30,7 +30,12 @@ import {
 } from '@twt/channels';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { correctionStaffPushAlert, sendClaimCorrectionSms } from '../src/scheduler/claim-correction-reminders.js';
+import {
+  correctionStaffPushAlert,
+  correctionStaffPushText,
+  isUnrecognizedLadderAskDetail,
+  sendClaimCorrectionSms,
+} from '../src/scheduler/claim-correction-reminders.js';
 import { CLAIM_CORRECTION_SMS_TEMPLATES, renderClaimCorrectionSms } from '../src/scheduler/claim-correction-sms-templates.js';
 import { sendClaimDltSms, type ClaimDltSmsInput, type ClaimDltSmsPreflight } from '../src/scheduler/claim-dlt-sms-send.js';
 import { classifySecretManagerFault } from '../src/scheduler/contribution-providers.js';
@@ -393,6 +398,45 @@ describe('the staff push Alert (AC4, D11) — pure', () => {
     expect(correctionStaffPushAlert({ ...base, sentOn: '2026-10-02' }).alert_id).not.toBe(id);
     expect(correctionStaffPushAlert({ ...base, userId: '66666666-6666-4666-8666-666666666666' }).alert_id).not.toBe(id);
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  });
+});
+
+describe('the staff push text — a single ladder ask, co-bundled asks, and an unrecognized detail (review D2, D3)', () => {
+  it('⭐ ONE ladder_escalation, alone, names its own ask', () => {
+    expect(correctionStaffPushText([{ purpose: 'ladder_escalation', detail: 'ask:call' }], 'ABCDEF01')).toEqual({
+      title: 'Claim ABCDEF01: texts did not reach the family',
+      body: '1 item due on claim ABCDEF01. The network said the reminders were not delivered: Phone the family — the letter limit is reached. Open the correction queue in the admin app.',
+    });
+  });
+
+  it('⛔ an unrecognized detail defaults to the CONSERVATIVE letter-only ask, ⛔ the permissive call-or-letter default (D3)', () => {
+    expect(correctionStaffPushText([{ purpose: 'ladder_escalation', detail: 'ask:something_new' }], 'ABCDEF01').body).toContain(
+      'Post the family a letter',
+    );
+    expect(isUnrecognizedLadderAskDetail('ask:something_new')).toBe(true);
+    expect(isUnrecognizedLadderAskDetail('ask:call')).toBe(false);
+    expect(isUnrecognizedLadderAskDetail(null)).toBe(false);
+    expect(isUnrecognizedLadderAskDetail(undefined)).toBe(false);
+  });
+
+  it('⭐ TWO ladder_escalation items in one batch — generic wording, ⛔ the first one\'s ask alone (D2)', () => {
+    const body = correctionStaffPushText(
+      [
+        { purpose: 'ladder_escalation', detail: 'ask:call' },
+        { purpose: 'ladder_escalation', detail: 'ask:letter' },
+      ],
+      'ABCDEF01',
+    ).body;
+    expect(body).toContain('2 items due on claim ABCDEF01');
+    expect(body).toContain('2 where the network said a reminder was not delivered');
+  });
+
+  it('⭐ a ladder_escalation co-bundled with an unrelated escalation — generic wording, ⛔ the ladder-only ask', () => {
+    const body = correctionStaffPushText(
+      [{ purpose: 'ladder_escalation', detail: 'ask:call' }, { purpose: 'escalation' }],
+      'ABCDEF01',
+    ).body;
+    expect(body).toContain('1 where the network said a reminder was not delivered');
   });
 });
 

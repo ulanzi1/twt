@@ -29,6 +29,7 @@
 import http from 'node:http';
 
 import {
+  claim as claimDomain,
   createDb,
   idempotency,
   pool as poolDomain,
@@ -202,10 +203,11 @@ const PEER_MESH_WINDOW_SECONDS = Number(
 );
 // Story 6.37c (LD11, `2026-10-18-354` decision 5) — a call to a NOMINEE waits for counsel's written basis (G1; roster
 // Row 34 `claim-contact-nominee-call-basis`). ONE switch, set in ONE place in the deployment config and read by BOTH apps
-// (the api's `loadConfig` reads the same name): `1` ⇒ cleared; anything else ⇒ ⛔ (a nominee's ask reads "post a
-// letter"). ⛔ Read under `packages/domain/src/claim` — passed into the ladder sweep's deps. Logged at boot (a drift
-// between the two apps shows there).
-const CLAIM_NOMINEE_CALLS_CLEARED = process.env['CLAIM_NOMINEE_CALLS_CLEARED'] === '1';
+// (the api's `loadConfig` reads the same name, through the same domain-shared parser — review D5): `1` ⇒ cleared;
+// anything else ⇒ ⛔ (a nominee's ask reads "post a letter"). Logged at boot (a drift between the two apps shows there).
+const CLAIM_NOMINEE_CALLS_CLEARED = claimDomain.parseNomineeCallsClearedFlag(
+  process.env[claimDomain.CLAIM_NOMINEE_CALLS_CLEARED_ENV_VAR],
+);
 // Story 7.5 RETIRED the boot-time POOL_SPAWN_FIXED_AMOUNT_INR env constant from the live saga: the
 // spawn planner now resolves the fixed amount from the per-Pariwar effective-dated schedule at the
 // cycle-freeze `committed_at` (pool/fixed-amount.ts). The genesis amount is seeded at Pariwar

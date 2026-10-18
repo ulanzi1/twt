@@ -29,7 +29,8 @@ call and post, and on the nominees, verbatim:
 > necessary to enforce legal rights, prevent fraud, or fulfill contractual/regulatory obligations."*
 
 On 2026-10-18 the Panel narrowed that for WhatsApp: *"drop WhatsApp only notification for nominee"* — no WhatsApp goes to a nominee
-(Decision `2026-10-18-356`; the Trust records that in future a nominee who has opted to receive it, or who is also the claimant, may). Calls, texts and letters to a nominee still rest on the basis quoted above.
+(Decision `2026-10-18-356`, the Panel's ruling). BigDev's own recorded scope — in BigDev's words, not the Panel's — is that in future a
+nominee who has opted to receive it, or who is also the claimant, may. Calls, texts and letters to a nominee still rest on the basis quoted above.
 
 Our own understanding — **not legal advice** — is that the DPDP Act 2023 has no general "legitimate interest" ground; Section 7 lists
 specific legitimate uses, and processing *"necessary for enforcing any legal right or claim"* sits in Section 17(1)(a).
@@ -53,5 +54,6 @@ specific legitimate uses, and processing *"necessary for enforcing any legal rig
 
 ## What we need back
 
-A short written answer to each. It will be recorded as a decision and closes roster Row 18 (questions 1, 4, 5 — with 3 for the claimant)
-and Row 34 (question 2). If any answer depends on facts we have not given, please say which.
+A short written answer to each. It will be recorded as a decision and closes roster Row 18 (questions 1, 4, 5) and Row 34 (question 2).
+Question 3 (the claimant) stands outside Row 18's own (a)–(c) closure criteria — its answer overrides Decision `2026-10-18-354` decision
+2's reading directly, rather than closing a roster row. If any answer depends on facts we have not given, please say which.

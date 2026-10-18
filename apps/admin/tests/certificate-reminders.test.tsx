@@ -97,6 +97,40 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     expect(screen.queryByTestId(`certificate-letter-${CLAIM}-${NOMINEE_B}`)).toBeNull();
   });
 
+  it("Review P29 (fix-diff regression) — a concluded follow-up with ask 'none' offers ⛔ call form", () => {
+    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28' };
+    wrap(
+      <CertificateRemindersList
+        pariwarId={PARIWAR}
+        items={[
+          item({
+            people: [
+              { person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'number_not_working', letter_eligible: true, letter: null, escalation_recorded_on: null, follow_up: concluded, unreachable_reason: 'not_delivered', ask: 'none', calls: [] },
+            ],
+          }),
+        ]}
+      />,
+    );
+    expect(screen.queryByTestId(`call-form-${NOMINEE_A}`)).toBeNull();
+  });
+
+  it("Review P29 (fix-diff regression) — a concluded follow-up with ask 'call' offers the call form", () => {
+    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28' };
+    wrap(
+      <CertificateRemindersList
+        pariwarId={PARIWAR}
+        items={[
+          item({
+            people: [
+              { person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'number_not_working', letter_eligible: true, letter: null, escalation_recorded_on: null, follow_up: concluded, unreachable_reason: 'not_delivered', ask: 'call', calls: [] },
+            ],
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByTestId(`call-form-${NOMINEE_A}`)).toBeInTheDocument();
+  });
+
   it('⭐ CR10 — the escalation line is a RECORD and says the Pariwar Admin is ⛔ not notified (⛔ never "sent")', () => {
     wrap(<CertificateRemindersList pariwarId={PARIWAR} items={[item()]} />);
     const line = screen.getByTestId('certificate-escalation-recorded').textContent ?? '';

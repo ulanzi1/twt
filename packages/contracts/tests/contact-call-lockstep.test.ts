@@ -23,7 +23,7 @@ describe('the call record vocabularies (Story 6.37c)', () => {
     expect([...CONTACT_CALL_CHASES]).toEqual([...schema.CONTACT_LADDER_CHASES]);
   });
 
-  it('the request refuses a bad person key, an unreal date, an unknown role or outcome, an extra key — and `reached` with nobody / someone else', () => {
+  it('the request refuses a bad person key, an unreal date, an unknown role or outcome, an extra key — SHAPE only (review P18: `reached` + nobody/someone-else is the DOMAIN\'s `reached_needs_answer` refusal, ⛔ a schema refine, so Fastify\'s own validator never masks it)', () => {
     const ok = { person_key: 'claimant', called_on: '2026-10-18', answered_by: 'the_person', outcome: 'reached' };
     expect(RecordContactCallRequest.safeParse(ok).success).toBe(true);
     expect(RecordContactCallRequest.safeParse({ ...ok, answered_by: 'family_member' }).success).toBe(true);
@@ -33,8 +33,10 @@ describe('the call record vocabularies (Story 6.37c)', () => {
     expect(RecordContactCallRequest.safeParse({ ...ok, answered_by: 'neighbour' }).success).toBe(false);
     expect(RecordContactCallRequest.safeParse({ ...ok, outcome: 'voicemail' }).success).toBe(false);
     expect(RecordContactCallRequest.safeParse({ ...ok, note: 'free text' }).success).toBe(false); // ⛔ free text
-    expect(RecordContactCallRequest.safeParse({ ...ok, answered_by: 'nobody' }).success).toBe(false);
-    expect(RecordContactCallRequest.safeParse({ ...ok, answered_by: 'someone_else' }).success).toBe(false);
+    // `reached` + `nobody` / `someone_else` is STRUCTURALLY valid at this layer — each field is a real enum member;
+    // `recordContactCall`'s `reached_needs_answer` refusal is what actually rejects the combination (domain test).
+    expect(RecordContactCallRequest.safeParse({ ...ok, answered_by: 'nobody' }).success).toBe(true);
+    expect(RecordContactCallRequest.safeParse({ ...ok, answered_by: 'someone_else' }).success).toBe(true);
   });
 
   it('the DTO and the reveal are `.strict()` (⛔ a number on the DTO; ⛔ an extra field)', () => {

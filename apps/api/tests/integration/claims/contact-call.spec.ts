@@ -215,6 +215,18 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the call record, over HTTP', { ti
     });
   }
 
+  it('Review P27 — an Idempotency-Key at the 200-char bound is accepted; at 201 chars ⇒ 400 contact_call.idempotency_key_too_long', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId } = await seededClaim(pariwarId);
+    const { client: da } = await staff(pariwarId);
+    const url = `${base(pariwarId, claimCaseId, 'correction')}/calls`;
+    const atBound = await da.inject({ method: 'POST', url, payload: body(), headers: { 'idempotency-key': 'k'.repeat(200) } });
+    expect(atBound.statusCode, atBound.body).toBe(201);
+    const overBound = await da.inject({ method: 'POST', url, payload: body(), headers: { 'idempotency-key': 'k'.repeat(201) } });
+    expect(overBound.statusCode).toBe(400);
+    expect(errCode(overBound)).toBe('contact_call.idempotency_key_too_long');
+  });
+
   it('⛔ `reached` with nobody / someone else answering ⇒ 400 (⛔ row); a call date in the future ⇒ 400 contact_call.called_on_in_future', async () => {
     const pariwarId = randomUUID();
     const { claimCaseId } = await seededClaim(pariwarId);
@@ -223,6 +235,9 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the call record, over HTTP', { ti
     for (const answered of ['nobody', 'someone_else']) {
       const res = await da.inject({ method: 'POST', url, payload: body({ answered_by: answered }), headers: { 'idempotency-key': randomUUID() } });
       expect(res.statusCode).toBe(400);
+      // Review P18 — the domain's OWN refusal (⛔ a schema `.refine()`, which Fastify's validator would otherwise
+      // run first and mask behind a generic code).
+      expect(errCode(res)).toBe('contact_call.reached_needs_answer');
     }
     const future = claim.istDateOf(new Date(Date.now() + 2 * 86_400_000));
     const res = await da.inject({ method: 'POST', url, payload: body({ called_on: future }), headers: { 'idempotency-key': randomUUID() } });

@@ -9,7 +9,7 @@
 // env literal in prod (AC-1).
 
 import { MSG91_DEFAULT_API_ORIGIN, parseSmsGatewayOrigin } from '@twt/channels';
-import { nomineeConsole } from '@twt/domain';
+import { claim as claimDomain, nomineeConsole } from '@twt/domain';
 
 const MIN_SESSION_SECRET_LEN = 32;
 
@@ -425,8 +425,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     ),
     // Story 9.3 — v1 single-slug (TWT-Bihar); the bank-parsers registry keys on the slug, not the UUID.
     reconciliationPariwarSlug: env['RECONCILIATION_PARIWAR_SLUG'] ?? 'bihar',
-    // Story 6.37c (LD11) — the nominee-call switch (default ⛔ cleared).
-    claimNomineeCallsCleared: env['CLAIM_NOMINEE_CALLS_CLEARED'] === '1',
+    // Story 6.37c (LD11) — the nominee-call switch (default ⛔ cleared). Name + parse rule shared with apps/jobs's
+    // boot.ts through the domain's `CLAIM_NOMINEE_CALLS_CLEARED_ENV_VAR`/`parseNomineeCallsClearedFlag` (review D5).
+    claimNomineeCallsCleared: claimDomain.parseNomineeCallsClearedFlag(env[claimDomain.CLAIM_NOMINEE_CALLS_CLEARED_ENV_VAR]),
     memberJwt: {
       algorithm: 'ES256',
       privateKeySecretName: env['MEMBER_JWT_PRIVATE_KEY_SECRET_NAME'] ?? 'twt-dev-member-jwt-private-key',

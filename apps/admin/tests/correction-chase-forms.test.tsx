@@ -848,6 +848,38 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
     expect(await screen.findByTestId(`person-${PERSON}`)).toBeInTheDocument();
     expect(screen.queryByTestId(`letter-form-${PERSON}`)).toBeNull();
   });
+
+  it("Review P29 (fix-diff regression) — a concluded follow-up with ask 'none' offers ⛔ call form; ask 'call' offers it", async () => {
+    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28' };
+    getClaimsUnderCorrection.mockResolvedValue({
+      pariwar_id: PARIWAR,
+      late_warnings_unavailable: false,
+      items: [
+        item({
+          person_key: PERSON, role: 'nominee', rank: null, status: 'unreachable', found_dead_on: '2026-09-20',
+          reminders_accepted: 2, follow_up: concluded, unreachable_reason: 'not_delivered', reported_undelivered: 1,
+          ask: 'none', calls: [], letters: [],
+        }),
+      ],
+    });
+    renderWithClient(<QueueHarness />);
+    await screen.findByTestId(`person-${PERSON}`);
+    expect(screen.queryByTestId(`call-form-${PERSON}`)).toBeNull();
+
+    getClaimsUnderCorrection.mockResolvedValue({
+      pariwar_id: PARIWAR,
+      late_warnings_unavailable: false,
+      items: [
+        item({
+          person_key: PERSON, role: 'nominee', rank: null, status: 'unreachable', found_dead_on: '2026-09-20',
+          reminders_accepted: 2, follow_up: concluded, unreachable_reason: 'not_delivered', reported_undelivered: 1,
+          ask: 'call', calls: [], letters: [],
+        }),
+      ],
+    });
+    renderWithClient(<QueueHarness />);
+    expect(await screen.findByTestId(`call-form-${PERSON}`)).toBeInTheDocument();
+  });
 });
 
 describe('<MustActChangeForm> — change who must act', () => {

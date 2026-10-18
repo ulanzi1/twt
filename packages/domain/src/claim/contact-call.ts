@@ -34,6 +34,26 @@ import { endContactLadder } from './contact-ladder-record.js';
 import { acquireCorrectionChaseLock, readCorrectionRecipients } from './correction-chase.js';
 import { type CorrectionMobileSource, resolveCorrectionMobile } from './correction-crypto.js';
 import { istDateOf } from './correction-schedule.js';
+import { getLiveCorrectionReturn } from './state-trustee-decision-persist.js';
+
+/**
+ * Review D10 — a correction ladder's `return_decision_id` scopes it to ONE return (the migration's own CHECK;
+ * `readClaimLadders`'s own doc comment: "every correction reader keys on the live return"). A certificate ladder
+ * carries ⛔ return at all. Resolves the SAME way `writeCorrectionMark` does — re-derived here, ⛔ trusted from a caller.
+ * ⚠ Fix-diff review (edge case) — `undefined` here means the claim has NEVER been returned, ⛔ "the live return is
+ * ambiguous": `claim_contact_ladders_return_pair_check` forces every correction ladder row to carry a
+ * `return_decision_id`, so a never-returned claim has ZERO ladder rows to conflate across returns — the caller's
+ * `readClaimLadders(..., undefined)` reads an empty set either way, ⛔ the cross-return leak D10 closes.
+ */
+async function liveReturnIdFor(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  chase: ContactLadderChase,
+): Promise<string | undefined> {
+  if (chase !== 'correction') return undefined;
+  return (await getLiveCorrectionReturn(db, pariwarId, claimCaseId))?.decisionId;
+}
 
 /** Every refusal of a call record / number reveal, as a stable code (the API maps each to `contact_call.<code>`). */
 export type ContactCallRefusal =
@@ -192,9 +212,10 @@ export async function recordContactCall(
     outcome: input.outcome,
   });
 
-  const mine = (await readClaimLadders(db, input.pariwarId, input.claimCaseId, input.chase)).filter(
-    (l) => l.personKey === input.personKey,
-  );
+  const myChaseLiveReturnId = await liveReturnIdFor(db, input.pariwarId, input.claimCaseId, input.chase);
+  const mine = (
+    await readClaimLadders(db, input.pariwarId, input.claimCaseId, input.chase, myChaseLiveReturnId)
+  ).filter((l) => l.personKey === input.personKey);
   const ladder =
     mine.find((l) => l.state === 'running') ?? [...mine].reverse().find((l) => l.state === 'concluded_undelivered') ?? null;
   const [call] = await db
@@ -216,7 +237,10 @@ export async function recordContactCall(
   const endedLadderIds: string[] = [];
   if (input.outcome === 'reached') {
     for (const chase of ['correction', 'certificate'] as const) {
-      for (const l of await readClaimLadders(db, input.pariwarId, input.claimCaseId, chase)) {
+      // Review D10 — correction is scoped to the SAME live return already resolved above (⛔ a second resolve: the
+      // call and the ladders it ends are one transaction); certificate carries ⛔ return, ⛔ scoping.
+      const chaseLiveReturnId = chase === input.chase ? myChaseLiveReturnId : await liveReturnIdFor(db, input.pariwarId, input.claimCaseId, chase);
+      for (const l of await readClaimLadders(db, input.pariwarId, input.claimCaseId, chase, chaseLiveReturnId)) {
         if (l.personKey !== input.personKey || l.state !== 'running' || l.originSentOn > input.calledOn) continue;
         if (await endContactLadder(db, { pariwarId: input.pariwarId, ladderId: l.ladderId, state: 'ended_call', detail: 'call_reached' })) {
           endedLadderIds.push(l.ladderId);

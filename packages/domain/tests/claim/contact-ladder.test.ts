@@ -346,6 +346,7 @@ describe('the step dates (LD3)', () => {
   });
 
   const l = (over: Partial<Parameters<typeof dueLadderStep>[0]> = {}): Parameters<typeof dueLadderStep>[0] => ({
+    state: 'running',
     sms2DueOn: '2026-10-07',
     sms2State: 'pending',
     sms3DueOn: null,
@@ -366,6 +367,15 @@ describe('the step dates (LD3)', () => {
     expect(dueLadderStep(after3, '2026-10-13')).toBe('conclude');
     // SMS 3 is ⛔ due while SMS 2 is still pending, even with a date.
     expect(dueLadderStep(l({ sms3DueOn: '2026-10-01' }), '2026-10-06')).toBeNull();
+  });
+
+  // Review P9 — the step columns alone are ⛔ enough: an ENDED ladder whose sms2/sms3 columns still read `pending`
+  // (it ended before reaching that step) must never read as having a step due.
+  it('dueLadderStep — a non-`running` ladder is NEVER due, even with a due step column', () => {
+    for (const state of ['ended_delivered', 'ended_call', 'ended_number_changed', 'ended_stopped', 'concluded_undelivered'] as const) {
+      expect(dueLadderStep(l({ state }), '2026-10-07')).toBeNull();
+      expect(dueLadderStep(l({ state, sms2State: 'sent', sms3DueOn: '2026-10-09' }), '2026-10-09')).toBeNull();
+    }
   });
 });
 

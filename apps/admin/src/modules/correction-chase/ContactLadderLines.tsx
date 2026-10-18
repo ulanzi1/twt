@@ -43,8 +43,12 @@ export function followUpLine(followUp: ContactLadderFollowUpDto | null): string 
 
 /** "Texts were reported not delivered — <the ask>", or `null` when ⛔ ask is open and the texts were ⛔ undelivered. Pure. */
 export function notDeliveredLine(unreachableReason: UnreachableReason | null, ask: ContactLadderAsk | null): string | null {
+  // Review P21 — `ask` names a ladder's escalation, so it can only ever be open for a `not_delivered` person; the
+  // explicit check is kept here too (⛔ relying only on that invariant holding elsewhere) so this line never
+  // misdescribes a send-time-dead (`refused`) person as "reported not delivered".
+  if (unreachableReason !== 'not_delivered') return null;
   if (ask !== null) return `${f.notDelivered} — ${f.ask[ask] ?? ask}.`;
-  return unreachableReason === 'not_delivered' ? `${f.notDelivered}.` : null;
+  return `${f.notDelivered}.`;
 }
 
 export function ContactLadderLines({ followUp, unreachableReason, ask, calls, reportedUndelivered }: ContactLadderLinesProps): ReactElement | null {

@@ -8,7 +8,7 @@
 > **What is ours, and not asked:** how the follow-up is timed and stored in the system (recorded as `2026-10-18-355`: the follow-up texts
 > go at 10:00 on the days set below, never two texts to one number in a day). The three questions are independent — answer each alone.
 > What we have decided that you should know is listed at the end of the questions (*"Also given to you as context"*).
-> Routed by BigDev from Story 6.37c (2026-10-18). **Not yet sent.**
+> Routed by BigDev from Story 6.37c (2026-10-18). **Sent and answered 2026-10-18.**
 
 ---
 

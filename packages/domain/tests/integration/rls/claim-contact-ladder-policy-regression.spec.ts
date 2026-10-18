@@ -252,18 +252,45 @@ describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS po
     ['claim_contact_ladders_person_key_check', { person_key: '  ' }, { person_key: 'nominee:abc' }],
     ['claim_contact_ladders_number_hash_check', { recipient_number_hash: ' ' }, { recipient_number_hash: 'h' }],
     ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: 'sent' }, { whatsapp_step: 'skipped:nominee_no_whatsapp' }],
+    // Review P5 — the shared `skipped:[a-z_]{1,48}` grammar's own boundaries: 49 chars refuses, 48 accepts; a digit
+    // or uppercase character in the suffix refuses.
+    ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: `skipped:${'a'.repeat(49)}` }, { whatsapp_step: `skipped:${'a'.repeat(48)}` }],
+    ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: 'skipped:Not_Lowercase' }, { whatsapp_step: 'skipped:not_lowercase' }],
+    ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: 'skipped:has_a_digit_9' }, { whatsapp_step: 'skipped:has_no_digit' }],
     ['claim_contact_ladders_sms2_state_check', { sms2_state: 'delivered', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05' }, { sms2_state: 'satisfied', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05' }],
-    ['claim_contact_ladders_sms2_on_pair_check', { sms2_state: 'sent' }, { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05' }],
+    ['claim_contact_ladders_sms2_on_pair_check', { sms2_state: 'sent' }, { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID() }],
     ['claim_contact_ladders_sms2_on_pair_check', { sms3_due_on: '2026-10-05' }, { sms3_due_on: null }],
+    // Review P3 — `sms<N>_row_id` is REQUIRED once `sent`, ⛔ otherwise (except `satisfied`, which may carry EITHER).
+    [
+      'claim_contact_ladders_sms2_row_id_check',
+      { sms2_row_id: randomUUID() },
+      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID() },
+    ],
+    [
+      'claim_contact_ladders_sms2_row_id_check',
+      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: null },
+      { sms2_state: 'satisfied', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: null },
+    ],
+    [
+      'claim_contact_ladders_sms3_row_id_check',
+      {
+        sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID(),
+        sms3_state: 'sent', sms3_on: '2026-10-05', conclude_on: '2026-10-09', sms3_row_id: null,
+      },
+      {
+        sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID(),
+        sms3_state: 'sent', sms3_on: '2026-10-05', conclude_on: '2026-10-09', sms3_row_id: randomUUID(),
+      },
+    ],
     [
       'claim_contact_ladders_sms3_state_check',
-      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms3_state: 'x', sms3_on: '2026-10-05', conclude_on: '2026-10-09' },
-      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms3_state: 'skipped:past_horizon', sms3_on: '2026-10-05', conclude_on: '2026-10-09' },
+      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID(), sms3_state: 'x', sms3_on: '2026-10-05', conclude_on: '2026-10-09' },
+      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID(), sms3_state: 'skipped:past_horizon', sms3_on: '2026-10-05', conclude_on: '2026-10-09' },
     ],
     [
       'claim_contact_ladders_sms3_on_pair_check',
-      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms3_state: 'sent', sms3_on: '2026-10-05' },
-      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms3_state: 'sent', sms3_on: '2026-10-05', conclude_on: '2026-10-09' },
+      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID(), sms3_state: 'sent', sms3_on: '2026-10-05', sms3_row_id: randomUUID() },
+      { sms2_state: 'sent', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05', sms2_row_id: randomUUID(), sms3_state: 'sent', sms3_on: '2026-10-05', sms3_row_id: randomUUID(), conclude_on: '2026-10-09' },
     ],
     ['claim_contact_ladders_step_order_check', { sms2_due_on: '2026-10-01' }, { sms2_due_on: '2026-10-02' }],
     ['claim_contact_ladders_state_check', { state: 'paused', ended_at: '2026-10-05T04:30:00.000Z' }, { state: 'ended_call', ended_at: '2026-10-05T04:30:00.000Z' }],

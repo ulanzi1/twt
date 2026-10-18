@@ -164,10 +164,6 @@ export const correctionChaseEn = {
       letter: 'post them a letter',
       none: 'neither a call nor a letter is possible — escalate it',
     } as Record<string, string>,
-    unreachableReason: {
-      refused: 'the network refused the number',
-      not_delivered: 'the texts were reported not delivered',
-    } as Record<string, string>,
   },
   calls: {
     heading: 'Calls',

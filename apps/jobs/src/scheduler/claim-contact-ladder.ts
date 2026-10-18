@@ -83,11 +83,19 @@ function alarmOf(deps: Pick<ContactLadderDeps, 'onAlarm'>): (m: string) => void 
   return deps.onAlarm ?? ((m: string): void => console.warn(m));
 }
 
-/** The SQLSTATEs of the plan's two timeouts. */
+/** The SQLSTATEs of the plan's two timeouts. Review P14 — walks the FULL `.cause` chain, ⛔ one level only. */
 function isPlanTimeout(err: unknown): boolean {
   const codeOf = (e: unknown): unknown => (typeof e === 'object' && e !== null ? (e as { readonly code?: unknown }).code : undefined);
-  const code = codeOf(err) ?? codeOf(typeof err === 'object' && err !== null ? (err as { readonly cause?: unknown }).cause : undefined);
-  return code === '55P03' || code === '57014';
+  const causeOf = (e: unknown): unknown => (typeof e === 'object' && e !== null ? (e as { readonly cause?: unknown }).cause : undefined);
+  let e: unknown = err;
+  const seen = new Set<unknown>();
+  while (e !== undefined && e !== null && !seen.has(e)) {
+    const code = codeOf(e);
+    if (code === '55P03' || code === '57014') return true;
+    seen.add(e);
+    e = causeOf(e);
+  }
+  return false;
 }
 
 const ALARM_SAMPLE_IDS = 5;
@@ -291,7 +299,8 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
   if (bounded) alarm(`[jobs] contact-ladder: hit the hard bound of ${String(CONTACT_LADDER_MAX_CLAIMS)} claims — the rest were ⛔ NOT swept today`);
   console.info(
     `[jobs] contact-ladder: started ${String(tally.started)}, ended_delivered ${String(tally.endedDelivered)}, ` +
-      `ended_call ${String(tally.endedCall)}, concluded ${String(tally.concluded)}`,
+      `ended_call ${String(tally.endedCall)}, ended_other ${String(tally.endedOther)}, concluded ${String(tally.concluded)}, ` +
+      `enqueued_pushes ${String(enqueuedPushes)}, timed_out_claims ${String(timedOut.length)}`,
   );
   return {
     refused: false,
@@ -362,6 +371,7 @@ async function planCorrectionLadders(
 ): Promise<ClaimPlan> {
   const pariwarId = ids.pariwarId(row.pariwarId);
   const claimCaseId = ids.claimId(row.claimCaseId);
+  const alarm = alarmOf(deps);
   const sms: LadderSmsPayload[] = [];
   const pushes: CorrectionStaffPushPayload[] = [];
   await client.query(`SET LOCAL lock_timeout = '${CORRECTION_PLAN_LOCK_TIMEOUT}'`);
@@ -463,7 +473,11 @@ async function planCorrectionLadders(
       return;
     }
     const run = await claimDomain.readCorrectionRun(db, pariwarId, l.runId);
-    if (run === null) return;
+    if (run === null) {
+      // Review P16 — every other abnormal branch in this sweep alarms; this one silently no-opped.
+      alarm(`[jobs] contact-ladder: due step unresolved — run ${l.runId} unreadable for ladder ${l.ladderId} (claim ${row.claimCaseId})`);
+      return;
+    }
     const runDay = claimDomain.correctionRunDay(run.day0, today);
     const scheduledToday =
       run.endedAt === null && claimDomain.correctionReminderSchedule(run.kind, run.day0).some((x) => x.kind === 'reminder' && x.day === runDay);
@@ -734,14 +748,16 @@ async function planCertificateLadders(
       }
       const scheduledToday =
         check.run.endedAt === null && !check.paused && claimDomain.CERTIFICATE_REMINDER_DAYS.includes(check.runDay);
-      const sentToNumberToday = [...facts.rows, ...facts.ladderRows].some(
-        (r) =>
-          r.sentOn === today &&
-          r.outcome !== 'skipped_superseded' &&
-          !('subjectKey' in r && r.subjectKey === claimDomain.ladderSmsSubjectKey(l.ladderId, step)) &&
-          r.recipientNumberHash !== null &&
-          claimDomain.sameNumberHash(r.recipientNumberHash, l.recipientNumberHash),
-      );
+      // Review P12b — mirror correction's `correctionNumberTextedOn` (which the name outlives: it is chase-agnostic)
+      // so an in-flight `attempting` row to the SAME number (hash still NULL, recorded at finalise) counts too.
+      const sentToNumberToday = claimDomain.correctionNumberTextedOn({
+        numberHash: l.recipientNumberHash,
+        on: today,
+        exceptSubjectKey: claimDomain.ladderSmsSubjectKey(l.ladderId, step),
+        currentHashOf: (personKey) => hashOf(personKey) ?? null,
+        rows: facts.rows,
+        ladderRows: facts.ladderRows,
+      });
       const verdict = claimDomain.ladderStepGate({ chase: 'certificate', runDay: check.runDay, paused: check.paused, scheduledToday, sentToNumberToday });
       if (verdict === 'send') sms.push({ ladderId: l.ladderId, claimCaseId: row.claimCaseId, step, sentOn: today });
       else await resolve(verdict);
@@ -866,7 +882,11 @@ export async function runCorrectionLadderSmsChild(
       const k = await ownLadderRowKey(db, pariwarId, p);
       if (k === null) return false;
       const run = await claimDomain.readCorrectionRun(db, pariwarId, k.ladder.runId);
-      if (run === null) return false;
+      if (run === null) {
+        // Review P16 — the stale-slot check silently left an `attempting` row un-expired and un-alarmed.
+        alarm(`[jobs] claim-correction-ladder-sms: stale-slot check — run ${k.ladder.runId} unreadable for ladder ${p.ladderId}`);
+        return false;
+      }
       const own = await claimDomain.readCorrectionReminder(db, {
         pariwarId,
         claimCaseId,

@@ -1116,11 +1116,17 @@ export function useRecordContactCall(pariwarId: string, claimCaseId: string, cha
       chase === 'correction'
         ? api.recordCorrectionContactCall(pariwarId, claimCaseId, v.body, v.idempotencyKey)
         : api.recordCertificateContactCall(pariwarId, claimCaseId, v.body, v.idempotencyKey),
+    // Review P28 — `allSettled`, not `all`: a failed invalidation of ONE list must ⛔ stop the other from running, and
+    // ⛔ reject this returned promise (an unhandled rejection outside `save()`'s own try/catch) — either list's
+    // next natural refetch recovers it. A rejection is logged (⛔ swallowed silently) so a persistently broken query
+    // key surfaces in the console rather than just failing invisibly forever.
     onSettled: () =>
-      Promise.all([
+      Promise.allSettled([
         qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
         qc.invalidateQueries({ queryKey: certificateRemindersKey(pariwarId) }),
-      ]),
+      ]).then((results) => {
+        for (const r of results) if (r.status === 'rejected') console.error('[contact-call] invalidateQueries failed', r.reason);
+      }),
   });
 }
 

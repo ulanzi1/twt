@@ -41,6 +41,12 @@ counsel — if counsel advises against them, the production wording names the li
 is unaffected. The **nominee** does not fit §3.4 at all: they never opted in, and the claimant's agreement does not cover them. The
 amendment is therefore needed for the nominee — and is written to cover contact about a claim as a whole, so §3.4 states the full rule.
 
+> ⚠ **Stated per Decision `2026-10-18-354` decision 2 (BigDev, D1 b — 2026-10-18):** the reading above — that the claimant already
+> fits §3.4 — rests on `-352` Consequence 3's last clause, *"the claimant's WhatsApp step goes live on the new agreement"*, and it
+> NARROWS `-351`'s not-covered item (b), *"Whether a single agreement covering SMS, WhatsApp, calls and 'any other means …' is
+> explicit rather than bundled consent … is for counsel"*: this proposal treats that question as answered for the claimant. The Panel
+> is told so when this proposal is presented. (The agreement is also captured staff-assisted — read aloud by helpline staff.)
+
 ### 1.2 Why this is not a re-litigation
 
 The Panel's rulings stand; this proposal does not ask the Panel to revisit them. It asks the Panel to make the architecture say what
@@ -101,7 +107,8 @@ Amend §3.4 with a **claim-contact exception** that is narrow by design:
    needs G3 alone. *(corrected 2026-10-18, code review round 2 — internal consistency with G1 above; ⛔ a change of substance. It
    read: "G1 and G2 gate the NOMINEE's WhatsApp step only". ⚠ `-352` Consequence 3 gates nominee CALLS on the Meta check (b) too —
    *"WhatsApp and calls to a nominee do not go live until counsel confirms the legal basis in writing (a) and the Meta policy check
-   (b) is recorded"* — which G2 as written does not: pending Story 6.37b review D5, ⛔ decided here.)*
+   (b) is recorded"* — which G2 as written does not. ⭐ DECIDED by `2026-10-18-354` decision 5 (BigDev, D5 a): a nominee's WhatsApp
+   waits for G1 AND G2, a call to a nominee for G1 — the Meta check governs WhatsApp, ⛔ calls; this line now states that rule.)*
 
 ---
 

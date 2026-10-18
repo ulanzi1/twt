@@ -26,6 +26,12 @@
 > claimant's agreement can be the nominees' consent. Until then no WhatsApp message is sent (our reading). Everything below is kept
 > **unedited**, as the questions were put.
 
+> ⚠ **CORRECTION, 2026-10-18 ([Decision 2026-10-18-354](../../.decision-log.md#decision-2026-10-18-354) decision 4 — recorded
+> here, ⛔ an edit of anything above or below):** option 1 A's cost below says *"An alarm tells staff when texts go unreported for
+> 2 days"*. As built, every alarm reaches the LOGS only until roster Row 32 (h) wires it to a named person — so today no staff member
+> is told. ⇒ Row 32 (h) closed is a go-live condition of row 6-37c's ladder (the cost becomes true before the Trust relies on it), and
+> the Panel is to be told at its next sitting. ⛔ Told yet (2026-10-18).
+
 ---
 
 # The questions, in short

@@ -9,7 +9,7 @@ OF that sha; Task 0.1 re-checks what moved. Built in its OWN worktree `.claude/w
 `.claude/worktrees/6-31` (row 6-31, also at `dae96d9b`) has ALREADY WRITTEN — uncommitted, 2026-10-17 — its own claims on migration
 0167, decision id `-347`, roster Row 33 and ledger suffix `2026-10-17k` (T9). Whichever lands on a branch first keeps the number.
 
-STATUS: `in-progress` (2026-10-18 — code review round 2: 24 patches applied, five questions D1–D5 for BigDev). Before that: `review` (2026-10-17 — Tasks 1–6 and 8 built; ci:local green on :5433). Before: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G recorded as `-347` (`bf1d57f7`); the Panel ruled PQ1 and its
+STATUS: `done` (2026-10-18 — code review round 2: 24 patches applied; D1–D5 answered by BigDev, `-354`). Before that: `in-progress` pending D1–D5; before that: `review` (2026-10-17 — Tasks 1–6 and 8 built; ci:local green on :5433). Before: `in-progress` — Task 0 is DONE (2026-10-17): DR1–DR14 + DR5-G recorded as `-347` (`bf1d57f7`); the Panel ruled PQ1 and its
 follow-ups (`-350`, `-351`, `-352`); PQ2 was withdrawn (`-348`). ⭐ SPLIT (`-353`): Task 7 — the Panel's delivery ladder and the "not
 delivered" conclusion — is now row `6-37c-undelivered-reminder-ladder`. THIS story builds Tasks 1–6 (receiving and recording reports,
 changing nothing a person receives) and closes with Task 8. No claim-text template id until Row 33 has closed AND 6-37c is `done`.
@@ -40,13 +40,13 @@ routed, ⛔ answered); I = invariants (I1–I9); T = traps (T1–T22). Decision-
 
 # Story 6.37b: The Trust learns whether each text actually arrived — MSG91's delivery reports, received, kept without the phone number, matched to the exact send, and (once the Panel rules) a text the network reports undelivered no longer counts as "reached" `[PRIMITIVE]`
 
-Status: in-progress
+Status: done
 
 > ⚠ **2026-10-18 — code review round 2: the title, the paragraph below (its item (5)), I7, the Policy meaning and AC11 still
 > describe the pre-split story.** `-353` moved Task 7 / AC11 — the D22 / letter-eligibility change and the Panel's delivery
 > ladder — to row `6-37c-undelivered-reminder-ladder`; PQ1 was RULED (`-350`, its follow-ups `-351`; the consent wording `-352`). THIS story receives and records
 > reports only and changes ⛔ who is texted, when, or what counts as reached. Kept as written (⛔ rewritten), annotated here.
-> Status `in-progress`: five questions from round 2 wait for BigDev (Review Findings, round 2, D1–D5).
+> Status `done` (2026-10-18): round 2's five questions answered by BigDev and recorded as `-354` (Review Findings, round 2).
 
 > ⭐⭐ **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37 sends every SMS through MSG91, but MSG91's answer at send time is only
 > *"request received"* — HTTP 200 `type:"success"` even for a fake key (6.37 F9). Whether the operator delivered the text arrives
@@ -1104,7 +1104,7 @@ infra) × 3 layers = 12 parallel reviewers, all returned. Task 7 / AC11 excluded
 
 **Decision-needed — for BigDev (⛔ applied; each is a governance record, ⛔ code):**
 
-- [ ] [Review][Decision] **D1 — HIGH: the §3.4 proposal settles the claimant's consent question by an author reading.**
+- [x] [Review][Decision] **D1 — HIGH: the §3.4 proposal settles the claimant's consent question by an author reading.**
   `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` (as revised by BigDev, `c46402cd`) reads the claimant's filing
   agreement as already meeting §3.4's explicit-capture origin, so *"the claimant's WhatsApp step is unaffected"* if the amendment
   fails. Against it: `-351` not-covered (b) — *"Whether a single agreement covering SMS, WhatsApp, calls and 'any other means …' is
@@ -1118,7 +1118,7 @@ infra) × 3 layers = 12 parallel reviewers, all returned. Task 7 / AC11 excluded
   Consequence 3's last clause (our reading — the bundling question is recorded open and the capture is staff-assisted); (b) keep the
   reading, and say verbatim in the proposal that it rests on Consequence 3's last clause and narrows `-351` (b)'s open item, the
   Panel told when presented.
-- [ ] [Review][Decision] **D2 — MEDIUM: `-347` (author-commit) is narrowed in five places with ⛔ new decision entry.** (i) DR5-G
+- [x] [Review][Decision] **D2 — MEDIUM: `-347` (author-commit) is narrowed in five places with ⛔ new decision entry.** (i) DR5-G
   (G-a, `-347` decision 6): `first_reported_at` added to `sms_send_deliveries`' UPDATE grant (dev, 2026-10-17 — the story's DR5-G
   block says *"2026-10-18 correction (dev, BigDev approved)"* and commit `f7e695b7` *"BigDev approved"*, but Debug Log (k)(1) says
   *"Put to BigDev"* and ⛔ answer is quoted); (ii) G-a's inbox INSERT narrowed to the six projection columns (round 2 P11, migration
@@ -1128,16 +1128,16 @@ infra) × 3 layers = 12 parallel reviewers, all returned. Task 7 / AC11 excluded
   Options: (a) ONE new author-commit decision recording BigDev's words, superseding `-347` decisions 1, 2, 6 and 7 in these five
   points (our reading — supersede, ⛔ reinterpret; ⚠ id race: row 6-37c's create-story already claims `-354` on its branch); (b) (i)
   recorded as un-attested and carried as a risk, (ii)–(v) reverted to `-347`'s letter.
-- [ ] [Review][Decision] **D3 — MEDIUM: `-349`'s Row 30 "recorded as not live" branch narrows ratified texts without saying so.**
+- [x] [Review][Decision] **D3 — MEDIUM: `-349`'s Row 30 "recorded as not live" branch narrows ratified texts without saying so.**
   A flow closed out "not live in production" means that flow's ratified text is ⛔ sent (`-293` item 1 B, `-230` cl.1, `-252` cl.2);
   `-349` §0 says it changes *"nothing a person receives or is owed"* and never quotes those clauses with match / narrow. Options:
   (a) a new author-commit entry: Row 30 note (8) quotes them, says NARROWS, and using that branch needs a Panel note first (our
   reading — consistent with `-349`'s own "raised at the first DLT rejection"); (b) leave `-349` as written.
-- [ ] [Review][Decision] **D4 — MEDIUM: the Panel ruled `-351` 1 A on a stated cost that is not yet true.** The follow-up note's
+- [x] [Review][Decision] **D4 — MEDIUM: the Panel ruled `-351` 1 A on a stated cost that is not yet true.** The follow-up note's
   option text says *"An alarm tells staff when texts go unreported for 2 days"*; alarms reach the LOGS only until roster Row 32 (h)
   wires `onAlarm`. Options: (a) a dated correction recorded under the note's ruling block (⛔ editing above it), Row 32 (h) made a
   6-37c go-live condition, the Panel told at its next sitting (our reading); (b) a correction note sent now.
-- [ ] [Review][Decision] **D5 — MEDIUM: the nominee-contact gates are not recorded where they bind.** `-352` Consequence 3, in full:
+- [x] [Review][Decision] **D5 — MEDIUM: the nominee-contact gates are not recorded where they bind.** `-352` Consequence 3, in full:
   *"A go-live condition is proposed (BigDev's decision, recorded separately): WhatsApp and calls to a nominee do not go live until
   counsel confirms the legal basis in writing (a) and the Meta policy check (b) is recorded; the claimant's WhatsApp step goes live on
   the new agreement."* — ⛔ separate record exists (and the proposal's G2 gates the nominee's WhatsApp on (b), ⛔ the calls); `-353` decision 4 and the 6-37c sprint comment gate only the nominee's
@@ -1145,6 +1145,17 @@ infra) × 3 layers = 12 parallel reviewers, all returned. Task 7 / AC11 excluded
   post nominees already receive. Options: (a) record it now as an author-commit decision — nominee WhatsApp and calls wait for G1
   (and WhatsApp for G2); the nominee SMS / post basis under the new wording put to counsel with 6-37c's create-story (our reading);
   (b) leave all of it to 6-37c's create-story.
+
+**Resolved — BigDev, 2026-10-18: *"D1 b, D2 a, D3 a, D4 a, D5 a"*, recorded as [Decision `2026-10-18-354`](../../.decision-log.md#decision-2026-10-18-354)
+(`a81cdbf7`, committed alone), with BigDev's words on D2 (i) verbatim:** *"I approve the column-limited UPDATE grant on
+sms_send_deliveries to include first_reported_at, in addition to delivery_state, status_code, failure_reason, reported_at, and
+report_count. This is necessary to preserve Decision 7's requirement that the recorded timestamp be the earliest report receive time,
+including when reports are processed out of arrival order."* Applied: D1 — the proposal states its claimant reading rests on `-352`
+Consequence 3's last clause and narrows `-351` (b) (the Panel told when presented); D2 — `-347`'s five narrowings recorded (ADR-0042
+cites `-354`); D3 — roster Row 30's dated note (a Panel ruling before any flow is recorded not live); D4 — the follow-up note's dated
+correction (below its ruling block), Row 32's dated note ((h) a 6-37c go-live condition), the Panel to be told at its next sitting
+(⛔ told yet); D5 — the nominee gates (WhatsApp: G1 + G2; a call: G1) in the proposal and the 6-37c comment; the nominee text / letter
+basis carried to 6-37c (deferred-work).
 
 **Patch — all applied (`[x]`):**
 
@@ -1701,3 +1712,4 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story 6.37b`, Tasks 1–6 and 8 (2026
 | 2026-10-17 | 1.13 | DEV (`bmad-dev-story 6.37b`): Tasks 1–6 and 8 done — the CRQID on every SMS (AC1), MSG91's delivery-report webhook (AC2–AC4), migration 0167's inbox and per-send delivery record with their policy-regression specs (AC8, AC10), the domain accessors, the jobs correlator / prune / silence check (AC5–AC7, AC9), the gates (AC12, AC13); deferred-work dispositions per `-353`. Debug Log (k): `first_reported_at` joins G-a's UPDATE grant (DR6's contract — put to BigDev), the core refuses `ot`, the cleaner's superset of the CHECKs, the content type never decides, `runGlobalAppTx`, the revert-sanity and mutation runs. ci:local green on :5433 (lint fixed and the admin jsdom timeouts re-run alone). Status `review`. |
 | 2026-10-18 | 1.14 | Code review round 1 (`dae96d9b..f7e695b7`, 3 layers): 0 decision / 4 patch / 0 defer / 2 dismissed. F1–F4 applied — F1 a formatted phone number masked in the failure reason (any 1–3 non-letter separator), F2 the inbox INSERT in dedupe-key order (no `40P01` between overlapping batches), F3 `runGlobalAppTx`'s DELIBERATE block, F4 AC6's scoped reads; the fix diff adversarially reviewed (0 H / 0 M / 5 L, applied). Status stays `review` — round 2 (whole branch) follows. |
 | 2026-10-18 | 1.15 | Code review round 2 (`dae96d9b..b5044a2d`, 4 chunks × 3 layers, 12 parallel reviewers): 5 decision / 24 patch / 5 defer / 28 dismissed. All 24 patches applied — ⭐ HIGH P1 the lease claim over-claimed past its LIMIT under a Nested Loop Semi Join (LIMIT 2 ⇒ 40 of 40) ⇒ a `MATERIALIZED` CTE + a forced-plan leg; migration 0168 (separated-number and delivery-time CHECKs, the inbox INSERT narrowed, idempotent cleanup first; :5433 only); I3 closed for `reported_delivery_time`; the 72 h give-up (5 attempts); the RLS-bound refusal; ADR-0042's forgery bound restated for 6-37c. Both halves of the patch adversarially reviewed (code 0 H / 1 M / 9 L; records 2 H / 9 M / 5 L — applied). `ci:local` 35 / 36 + admin re-run alone 1229 / 1229. Status → `in-progress`: D1–D5 wait for BigDev. |
+| 2026-10-18 | 1.16 | D1–D5 answered by BigDev (*"D1 b, D2 a, D3 a, D4 a, D5 a"*; D2 (i)'s approval in his words) and recorded as `-354` (`a81cdbf7`, committed alone): the five `-347` narrowings; the proposal's claimant reading stated as narrowing `-351` (b); Row 30's "not live" branch needs a Panel ruling first; the Panel's alarm cost corrected and Row 32 (h) a 6-37c go-live condition; the nominee gates. Records applied. Status `done`. |

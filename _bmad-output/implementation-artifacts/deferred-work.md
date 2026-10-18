@@ -6,6 +6,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Deferred from: code review round 2 of 6-37b-msg91-delivery-reports (2026-10-18)
 
+- ⭐ **For row 6-37c (carrier, `-354` decisions 4–5): owed before the ladder or any nominee contact goes live** — (a) roster Row 32 (h)
+  closed (alarms reach a named person — the cost the Panel accepted at `-351` 1 A); (b) the Panel TOLD at its next sitting that alarms
+  reach logs only until then (⛔ told yet, 2026-10-18); (c) a WhatsApp to a nominee waits for G1 AND G2, a call to a nominee for G1;
+  (d) the basis for the texts and letters nominees receive today, once the claimant's new agreement no longer names nominees (`-352`'s
+  reading), put to counsel with 6-37c's Task 0. **Not addressed.**
+
 - ⭐ **For row `6-37c-undelivered-reminder-ladder` (the carrier): ADR-0042's forgery bound must be RESTATED for the ladder as ruled**
   [`docs/adr/ADR-0042-msg91-delivery-report-ingress.md`, Consequences — Security] — it holds for 6.37b AS BUILT (*"recording reports
   changes nothing a person receives"* — `-353` decision 2). Relative to today (no report), a forged report still never makes a person

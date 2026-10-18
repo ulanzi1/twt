@@ -742,7 +742,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
       rank: 1,
       status: foundDeadOn === null ? 'reached' : 'dead',
       found_dead_on: foundDeadOn,
-      reminders_accepted: 1,
+      reminders_accepted: 1, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [],
       letters: [letter({ delivered_on: delivered ? '2026-09-28' : null, has_screenshot: delivered })],
     });
     getClaimsUnderCorrection.mockImplementation(async () => ({ pariwar_id: PARIWAR, items: [item(person())], late_warnings_unavailable: false }));
@@ -784,7 +784,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
           rank: 1,
           status: 'dead',
           found_dead_on: '2026-09-20',
-          reminders_accepted: 0,
+          reminders_accepted: 0, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [],
           letters: [letter({ delivered_on: delivered ? '2026-09-27' : null })],
         }),
       ],
@@ -818,7 +818,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
             rank: null,
             status: 'dead',
             found_dead_on: '2026-09-20',
-            reminders_accepted: 0,
+            reminders_accepted: 0, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [],
             letters: [letter({}), letter({ letter_id: L2, sequence: 2, posted_on: '2026-09-10', delivered_on: '2026-09-15' })],
           },
           { cannot_remind: 'agreement_not_live' },
@@ -839,7 +839,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
       late_warnings_unavailable: false, // Story 6.23b — the widened response's required field (code review round 2)
       items: [
         item(
-          { person_key: PERSON, role: 'nominee', rank: null, status: 'dead', found_dead_on: '2026-09-20', reminders_accepted: 0, letters: [] },
+          { person_key: PERSON, role: 'nominee', rank: null, status: 'dead', found_dead_on: '2026-09-20', reminders_accepted: 0, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [], letters: [] },
           { cannot_remind: 'no_contact_record' },
         ),
       ],

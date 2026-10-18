@@ -17,12 +17,18 @@
 // recordable — but a NEW letter is ⛔ offered only while the family can be contacted (`cannot_remind === null`).
 // ⚠ Every control is shown to every queue reader: the page cannot see keys (1)/(7) (district-dimension; the
 // session carries only the national grants), so every control maps an error through ONE classifier (`errors.ts`).
+// ⭐ Story 6.37c (LD12) — per person: the follow-up texts after the network said a reminder did not arrive (running —
+// next on <date>; how it ended), the call-or-letter ask, the reminders reported not delivered, the calls, and the call
+// form (while a follow-up exists or an ask is open). The status words are UNCHANGED — a concluded person reached by a
+// call still reads "unreachable" (the call shows in the list and counts for the closure).
 
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import type { ClaimsUnderCorrectionResponse, CorrectionLetterDto } from '@twt/contracts';
 
 import { ApiError, getCorrectionLetterScreenshot } from '../../api/client.js';
+import { ContactCallForm } from './ContactCallForm.js';
+import { ContactLadderLines } from './ContactLadderLines.js';
 import { CorrectionLetterForm } from './CorrectionLetterForm.js';
 import { MustActChangeForm } from './MustActChangeForm.js';
 import { correctionLetterRefusalText } from './errors.js';
@@ -252,6 +258,17 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
                     {p.found_dead_on !== null ? ` ${t.people.since} ${p.found_dead_on}` : ''}
                   </span>
                   <span className="opacity-70"> · {String(p.reminders_accepted)} {t.people.reminders}</span>
+                  {/* Story 6.37c (LD12) — the follow-up texts, the ask, the calls. */}
+                  <ContactLadderLines
+                    followUp={p.follow_up}
+                    unreachableReason={p.unreachable_reason}
+                    ask={p.ask}
+                    calls={p.calls}
+                    reportedUndelivered={p.reported_undelivered}
+                  />
+                  {p.follow_up !== null || p.ask !== null ? (
+                    <ContactCallForm pariwarId={pariwarId} claimCaseId={item.claim_case_id} personKey={p.person_key} chase="correction" />
+                  ) : null}
                   {p.letters.length > 0 ? (
                     <ul className="mt-1">
                       {p.letters.map((l) => (

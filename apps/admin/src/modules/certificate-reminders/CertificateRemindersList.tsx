@@ -10,6 +10,8 @@
 // ⭐ The success line sits OUTSIDE the form's branch: after the refetch the person shows their letter, and the line is
 // still on screen (TanStack awaits `onSettled`'s refetch before `success` — 6.19c's ClosureColumn lesson). The submit is
 // disabled while the mutation OR its refetch is pending (the 6.19b double-submit finding).
+// ⭐ Story 6.37c (LD12) — per person: the follow-up texts, the call-or-letter ask, the calls and the call form; the
+// owed-letter line is REASON-AWARE (`unreachable_reason` — ⛔ `sms_state`, which shows only the LAST text).
 
 import type { CertificateRemindersResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
@@ -18,6 +20,8 @@ import { useEffect, useId, useState } from 'react';
 import * as api from '../../api/client.js';
 import { ApiError } from '../../api/client.js';
 import { useRecordCertificateLetter, useRecordCertificateLetterDelivery } from '../../api/hooks.js';
+import { ContactCallForm } from '../correction-chase/ContactCallForm.js';
+import { ContactLadderLines } from '../correction-chase/ContactLadderLines.js';
 import { STEP_UP_REQUIRED_CODE } from '../correction-chase/errors.js';
 import { certificateErrorText } from './errors.js';
 import { certificateRemindersEn as t } from './i18n-en.js';
@@ -178,7 +182,7 @@ function LetterForm({ pariwarId, item, person }: { pariwarId: string; item: Item
     <div className="mt-1 flex flex-col gap-1 text-xs" data-testid={`certificate-letter-${testKey}`}>
       {letter === null ? (
         <>
-          <p>{l.owed}</p>
+          <p data-testid="certificate-letter-owed">{person.unreachable_reason === 'not_delivered' ? l.owedNotDelivered : l.owed}</p>
           <p data-testid="certificate-letter-must-say">{l.mustSay}</p>
           <p>{l.onlyOne}</p>
           {address === null && !needsCode ? (
@@ -398,6 +402,11 @@ function PersonRow({ pariwarId, item, person }: { pariwarId: string; item: Item;
         <p className="text-xs" data-testid="certificate-escalation-recorded">
           {t.escalation(person.escalation_recorded_on)}
         </p>
+      ) : null}
+      {/* Story 6.37c (LD12) — the follow-up texts, the ask, the calls, and the call form. */}
+      <ContactLadderLines followUp={person.follow_up} unreachableReason={person.unreachable_reason} ask={person.ask} calls={person.calls} />
+      {person.follow_up !== null || person.ask !== null ? (
+        <ContactCallForm pariwarId={pariwarId} claimCaseId={item.claim_case_id} personKey={person.person_key} chase="certificate" />
       ) : null}
       {showLetter ? <LetterForm pariwarId={pariwarId} item={item} person={person} /> : null}
     </li>

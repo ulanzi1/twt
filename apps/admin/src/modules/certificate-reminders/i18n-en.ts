@@ -51,6 +51,8 @@ export const certificateRemindersEn = {
   escalation: (date: string): string => `Escalation recorded on ${date} (the Pariwar Admin is not notified in this version).`,
   letter: {
     owed: 'A letter is owed — this person’s number does not work.',
+    // Story 6.37c (LD12) — reason-aware: the texts were reported NOT DELIVERED (a concluded follow-up), ⛔ a refused number.
+    owedNotDelivered: 'A letter is owed — texts to this person were reported not delivered.',
     mustSay:
       'The letter must say: the family’s claim still needs a death certificate that clearly shows the date of death, and how to send it — in the app or through the helpline.',
     posted: 'posted',

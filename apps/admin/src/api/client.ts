@@ -298,6 +298,9 @@ import {
   CertificateLetterScreenshotResponse,
   CertificateRemindersResponse,
   type RecordCertificateLetterRequest,
+  ContactCallDto,
+  ContactCallNumberResponse,
+  type RecordContactCallRequest,
   NomineeBankStatusResponse,
   NomineeNameCheckResponse,
   NomineeNameCheckWriteResponse,
@@ -1676,6 +1679,52 @@ export function getCorrectionLetterAddress(pariwarId: string, claimCaseId: strin
     `${correctionBase(pariwarId, claimCaseId)}/letters/address?person_key=${encodeURIComponent(personKey)}`,
     CorrectionLetterAddressResponse,
   );
+}
+
+// ── Story 6.37c (LD10) — the District Admin's CALL RECORD, from either chase's surface ─────────────────────────────
+// Each POST carries a MANDATORY `Idempotency-Key` (a fresh key per user-initiated attempt; a retry of the SAME attempt
+// reuses it — a replay returns the FIRST call, 200). The number reveal needs a fresh step-up (`contact_call_number`).
+
+const callBase = (pariwarId: string, claimCaseId: string, chase: 'correction' | 'certificate'): string =>
+  chase === 'correction'
+    ? `${correctionBase(pariwarId, claimCaseId)}/calls`
+    : `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/certificate-reminders/calls`;
+
+function recordContactCall(
+  chase: 'correction' | 'certificate',
+  pariwarId: string,
+  claimCaseId: string,
+  body: RecordContactCallRequest,
+  idempotencyKey: string,
+) {
+  return apiFetch(callBase(pariwarId, claimCaseId, chase), ContactCallDto, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(body),
+  });
+}
+
+function getContactCallNumber(chase: 'correction' | 'certificate', pariwarId: string, claimCaseId: string, personKey: string) {
+  return apiFetch(
+    `${callBase(pariwarId, claimCaseId, chase)}/number?person_key=${encodeURIComponent(personKey)}`,
+    ContactCallNumberResponse,
+  );
+}
+
+export function recordCorrectionContactCall(pariwarId: string, claimCaseId: string, body: RecordContactCallRequest, idempotencyKey: string) {
+  return recordContactCall('correction', pariwarId, claimCaseId, body, idempotencyKey);
+}
+
+export function recordCertificateContactCall(pariwarId: string, claimCaseId: string, body: RecordContactCallRequest, idempotencyKey: string) {
+  return recordContactCall('certificate', pariwarId, claimCaseId, body, idempotencyKey);
+}
+
+export function getCorrectionContactCallNumber(pariwarId: string, claimCaseId: string, personKey: string) {
+  return getContactCallNumber('correction', pariwarId, claimCaseId, personKey);
+}
+
+export function getCertificateContactCallNumber(pariwarId: string, claimCaseId: string, personKey: string) {
+  return getContactCallNumber('certificate', pariwarId, claimCaseId, personKey);
 }
 
 export function getCorrectionLetterScreenshot(pariwarId: string, claimCaseId: string, letterId: string) {

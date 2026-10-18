@@ -144,6 +144,80 @@ export const correctionChaseEn = {
     error: 'This could not be saved. Try again.',
     saved: 'Saved.',
   },
+  // Story 6.37c (LD12) — the follow-up texts after the network said a reminder did not arrive, and the ask.
+  // ⚠ T18 — the bare word for what the network sends back is a canonical term of the microcopy gate here: say
+  // "reported" or "the network said".
+  followUp: {
+    running: (nextOn: string | null): string =>
+      nextOn === null ? 'Follow-up texts running.' : `Follow-up texts running — next on ${nextOn}.`,
+    concluded: (on: string | null): string =>
+      on === null ? 'Follow-up texts ended — none reached the family.' : `Follow-up texts ended on ${on} — none reached the family.`,
+    ended_delivered: 'Follow-up ended — a text reached the family.',
+    ended_call: 'Follow-up ended — a call reached the family.',
+    ended_other: 'Follow-up stopped.',
+    notDelivered: 'Texts were reported not delivered',
+    reportedUndelivered: (n: number): string =>
+      `${String(n)} reminder${n === 1 ? '' : 's'} the network said ${n === 1 ? 'was' : 'were'} not delivered.`,
+    ask: {
+      call_or_letter: 'phone the family or post them a letter',
+      call: 'phone the family (the letter limit is reached)',
+      letter: 'post them a letter',
+      none: 'neither a call nor a letter is possible — escalate it',
+    } as Record<string, string>,
+    unreachableReason: {
+      refused: 'the network refused the number',
+      not_delivered: 'the texts were reported not delivered',
+    } as Record<string, string>,
+  },
+  calls: {
+    heading: 'Calls',
+    none: 'No call recorded.',
+    answeredBy: {
+      the_person: 'the person answered',
+      family_member: 'a family member answered',
+      someone_else: 'someone else answered',
+      nobody: 'nobody answered',
+    } as Record<string, string>,
+    outcome: {
+      reached: 'reached the family',
+      not_reached: 'did not reach the family',
+    } as Record<string, string>,
+    recordedBy: 'recorded by',
+    record: 'Record a call',
+    calledOn: 'Date of the call',
+    whoAnswered: 'Who answered',
+    choose: 'Choose…',
+    reached: 'It reached the family',
+    notReached: 'It did not reach the family',
+    reachedNeedsAnswer: 'A call reaches the family only when the person or a family member answered.',
+    save: 'Save the call',
+    saved: 'Call recorded.',
+    fieldsRequired: 'Enter the date of the call, who answered and whether it reached the family.',
+    dateInFuture: 'The date is in the future. Use today’s date or an earlier one.',
+    showNumber: 'Show the number to call',
+    hideNumber: 'Hide the number',
+    number: 'Number to call',
+    noNumber: 'There is no number on record for this person.',
+    numberShown: 'The number is shown below. It hides itself after a few minutes.',
+    numberHidden: 'The number is hidden again.',
+    numberError: 'The number could not be shown. Try again.',
+    stepUpIntro: 'Showing a number needs a fresh verification. We will send you a code.',
+    refusals: {
+      claim_not_found: 'This claim is no longer on record. Reload the page.',
+      undetermined: 'Who the family is has not been settled for this claim yet — there is nobody to record a call to.',
+      no_contact_record: 'The family’s contact details are not on this claim — the helpline can add them.',
+      agreement_not_live: 'The family’s agreement to be contacted is not in force.',
+      not_a_recipient: 'This person is not one of the people being reminded on this claim.',
+      nominee_calls_not_cleared: 'A nominee cannot be phoned yet — post them a letter.',
+      called_on_in_future: 'The date is in the future. Use today’s date or an earlier one.',
+      called_on_before_filing: 'The date of the call is before the claim was filed. Check the date.',
+      reached_needs_answer: 'A call reaches the family only when the person or a family member answered.',
+      idempotency_in_progress: 'This call is still being saved. Wait a moment, then reload the page.',
+      idempotency_key_required: 'This call could not be saved. Try again.',
+      number_unavailable: 'The number could not be read just now. Try again in a minute.',
+    } as Record<string, string>,
+    error: 'The call could not be saved. Try again.',
+  },
   queue: {
     nav: 'Correction queue',
     // ⭐ NEUTRAL wording — the page cannot tell a Pariwar Admin from a District Admin (the session carries only the

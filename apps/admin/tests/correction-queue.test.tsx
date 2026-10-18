@@ -83,7 +83,7 @@ const ITEM: Item = {
         rank: 1,
         status: 'reached',
         found_dead_on: null,
-        reminders_accepted: 2,
+        reminders_accepted: 2, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [],
         letters: [],
       },
     ],
@@ -268,7 +268,7 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
             rank: 1,
             status: 'dead',
             found_dead_on: '2026-09-20',
-            reminders_accepted: 0,
+            reminders_accepted: 0, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [],
             letters: [
               { letter_id: '77777777-7777-4777-8777-777777777777', person_key: 'nominee:66666666-6666-4666-8666-666666666666', sequence: 1, posted_on: '2026-09-01', delivered_on: null, overdue: true, has_screenshot: false },
             ],
@@ -323,7 +323,7 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
     rank: 1,
     status: 'not_yet',
     found_dead_on: null,
-    reminders_accepted: 0,
+    reminders_accepted: 0, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [],
     letters: [],
     ...over,
   });
@@ -337,7 +337,7 @@ describe('<CorrectionQueueRoute> — the correction chase (Story 6.19b)', () => 
 
   it('⭐ a number found dead AFTER an earlier "reached" still gets the letter form — the gate is `found_dead_on`', async () => {
     search = {};
-    setup([chase({ people: [person({ status: 'reached', reminders_accepted: 1, found_dead_on: '2026-09-22' })] })]);
+    setup([chase({ people: [person({ status: 'reached', reminders_accepted: 1, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [], found_dead_on: '2026-09-22' })] })]);
     await screen.findByTestId(`correction-queue-item-${CLAIM}`);
     expect(screen.getByTestId(`letter-form-${PERSON}`)).toBeInTheDocument();
   });
@@ -619,7 +619,7 @@ describe('<CorrectionQueueRoute> — nominees WITHOUT a rank (D30) are told apar
       rank: null,
       status: 'not_yet' as const,
       found_dead_on: null,
-      reminders_accepted: 0,
+      reminders_accepted: 0, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [],
       letters: [],
     });
     const K1 = 'nominee:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -633,7 +633,7 @@ describe('<CorrectionQueueRoute> — nominees WITHOUT a rank (D30) are told apar
 
   it('⭐ a known rank is used as is', async () => {
     const { personLabels } = await import('../src/modules/correction-chase/CorrectionChasePanel.js');
-    const base = { status: 'reached' as const, found_dead_on: null, reminders_accepted: 0, letters: [] };
+    const base = { status: 'reached' as const, found_dead_on: null, reminders_accepted: 0, follow_up: null, unreachable_reason: null, reported_undelivered: 0, ask: null, calls: [], letters: [] };
     const labels = personLabels([
       { ...base, person_key: 'nominee:2', role: 'nominee', rank: 2 },
       { ...base, person_key: 'claimant', role: 'claimant', rank: null },

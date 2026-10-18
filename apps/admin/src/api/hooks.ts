@@ -1104,6 +1104,26 @@ export function useRecordCertificateLetterDelivery(pariwarId: string, claimCaseI
   });
 }
 
+// ── Story 6.37c (LD10) — the call record. A call refreshes the list it was recorded from AND the other chase's (a
+// reached call ends the person's follow-ups on BOTH chases). `onSettled` RETURNS the invalidation (the submit stays
+// disabled until the fresh rows are on screen). ⚠ A per-person form reads the outcome from `mutateAsync` — ⛔ per-call
+// callbacks (TanStack keeps only the latest call's).
+
+export function useRecordContactCall(pariwarId: string, claimCaseId: string, chase: 'correction' | 'certificate') {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { body: Parameters<typeof api.recordCorrectionContactCall>[2]; idempotencyKey: string }) =>
+      chase === 'correction'
+        ? api.recordCorrectionContactCall(pariwarId, claimCaseId, v.body, v.idempotencyKey)
+        : api.recordCertificateContactCall(pariwarId, claimCaseId, v.body, v.idempotencyKey),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queuePrefix(pariwarId) }),
+        qc.invalidateQueries({ queryKey: certificateRemindersKey(pariwarId) }),
+      ]),
+  });
+}
+
 /** (6) The helpline's re-file confirmation. */
 export function useRecordRefileConfirmation(pariwarId: string) {
   return useMutation({

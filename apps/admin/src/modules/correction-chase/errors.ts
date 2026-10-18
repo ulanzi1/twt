@@ -38,3 +38,21 @@ export function correctionLetterRefusalText(err: unknown, fallback: string = t.l
   }
   return fallback;
 }
+
+/**
+ * Story 6.37c (LD10) — a call-record / number-reveal error as specific copy: each `contact_call.<suffix>` code maps to
+ * its own line; then the STATUS (the session, a role/scope 403, the rate limit) — the letter classifier's shape.
+ * Anything else is `fallback`.
+ */
+export function contactCallRefusalText(err: unknown, fallback: string = t.calls.error): string {
+  if (err instanceof ApiError) {
+    if (err.code.startsWith('contact_call.')) {
+      const copy = t.calls.refusals[err.code.slice('contact_call.'.length)];
+      if (copy !== undefined) return copy;
+    }
+    if (err.status === 401) return t.letters.sessionExpired;
+    if (isRoleForbidden(err)) return t.letters.forbidden;
+    if (err.status === 429) return t.letters.rateLimited;
+  }
+  return fallback;
+}

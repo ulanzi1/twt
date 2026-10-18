@@ -1,0 +1,87 @@
+// <ContactLadderLines> — what the delivery LADDER shows for ONE person (Story 6.37c, LD12), on the correction chase panel
+// AND the certificate list: the follow-up's state ("Follow-up texts running — next on <date>", how it ended), "Texts
+// were reported not delivered — <the ask>" (cap-aware: phone, post, either, or neither), how many reminders the network
+// said were not delivered (correction only), and the calls recorded (date · who answered · whether it reached the
+// family · by whom). ⭐ Every line is ANNOUNCED (`role="status"`). ⛔ A name, ⛔ a number.
+// ⚠ T18 — the microcopy gate scans comments too: "reported" / "the network said", ⛔ the bare canonical term.
+
+import type { ReactElement } from 'react';
+
+import type { ContactCallDto, ContactLadderAsk, ContactLadderFollowUpDto, UnreachableReason } from '@twt/contracts';
+
+import { correctionChaseEn } from './i18n-en.js';
+import { formatIst } from './ist.js';
+
+const f = correctionChaseEn.followUp;
+const c = correctionChaseEn.calls;
+
+export interface ContactLadderLinesProps {
+  readonly followUp: ContactLadderFollowUpDto | null;
+  readonly unreachableReason: UnreachableReason | null;
+  readonly ask: ContactLadderAsk | null;
+  readonly calls: readonly ContactCallDto[];
+  /** Correction only — the epoch's accepted reminders the network said were not delivered. */
+  readonly reportedUndelivered?: number;
+}
+
+/** The follow-up's own line, or `null` (⛔ follow-up). Pure. */
+export function followUpLine(followUp: ContactLadderFollowUpDto | null): string | null {
+  if (followUp === null) return null;
+  switch (followUp.state) {
+    case 'running':
+      return f.running(followUp.next_step_on);
+    case 'concluded':
+      return f.concluded(followUp.concluded_on);
+    case 'ended_delivered':
+      return f.ended_delivered;
+    case 'ended_call':
+      return f.ended_call;
+    default:
+      return f.ended_other;
+  }
+}
+
+/** "Texts were reported not delivered — <the ask>", or `null` when ⛔ ask is open and the texts were ⛔ undelivered. Pure. */
+export function notDeliveredLine(unreachableReason: UnreachableReason | null, ask: ContactLadderAsk | null): string | null {
+  if (ask !== null) return `${f.notDelivered} — ${f.ask[ask] ?? ask}.`;
+  return unreachableReason === 'not_delivered' ? `${f.notDelivered}.` : null;
+}
+
+export function ContactLadderLines({ followUp, unreachableReason, ask, calls, reportedUndelivered }: ContactLadderLinesProps): ReactElement | null {
+  const follow = followUpLine(followUp);
+  const notDelivered = notDeliveredLine(unreachableReason, ask);
+  const count = reportedUndelivered ?? 0;
+  if (follow === null && notDelivered === null && count === 0 && calls.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-col gap-0.5 text-xs" data-testid="ladder-lines">
+      {follow !== null ? (
+        <p role="status" data-testid="ladder-follow-up">
+          {follow}
+        </p>
+      ) : null}
+      {notDelivered !== null ? (
+        <p role="status" data-testid="ladder-not-delivered">
+          {notDelivered}
+        </p>
+      ) : null}
+      {count > 0 ? (
+        <p role="status" data-testid="ladder-reported-undelivered">
+          {f.reportedUndelivered(count)}
+        </p>
+      ) : null}
+      {calls.length > 0 ? (
+        <div>
+          <p className="font-medium">{c.heading}</p>
+          <ul data-testid="ladder-calls">
+            {calls.map((call) => (
+              <li key={call.call_id} data-testid={`call-${call.call_id}`}>
+                {call.called_on} · {c.answeredBy[call.answered_by] ?? call.answered_by} · {c.outcome[call.outcome] ?? call.outcome} ·{' '}
+                {c.recordedBy} {call.recorded_by} ({formatIst(call.recorded_at)})
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}

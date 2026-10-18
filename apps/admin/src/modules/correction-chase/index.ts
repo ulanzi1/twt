@@ -3,3 +3,6 @@ export { CorrectionChasePanel, type CorrectionChasePanelProps } from './Correcti
 export { CorrectionLetterForm, type CorrectionLetterFormProps } from './CorrectionLetterForm.js';
 export { MustActChangeForm, type MustActChangeFormProps } from './MustActChangeForm.js';
 export { correctionChaseEn } from './i18n-en.js';
+// Story 6.37c — the call record and the delivery ladder's lines (shared with the certificate list).
+export { ContactCallForm, type ContactCallFormProps } from './ContactCallForm.js';
+export { ContactLadderLines, type ContactLadderLinesProps } from './ContactLadderLines.js';

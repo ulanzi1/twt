@@ -67,8 +67,8 @@ const item = (over: Partial<Item> = {}): Item => ({
   next_reminder_on: '2026-10-11',
   cannot_remind: null,
   people: [
-    { person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'number_not_working', letter_eligible: true, letter: null, escalation_recorded_on: '2026-10-09' },
-    { person_key: NOMINEE_B, role: 'nominee', position: 'B', sms_state: 'reminded', letter_eligible: false, letter: null, escalation_recorded_on: null },
+    { person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'number_not_working', letter_eligible: true, letter: null, escalation_recorded_on: '2026-10-09' , follow_up: null, unreachable_reason: null, ask: null, calls: []},
+    { person_key: NOMINEE_B, role: 'nominee', position: 'B', sms_state: 'reminded', letter_eligible: false, letter: null, escalation_recorded_on: null , follow_up: null, unreachable_reason: null, ask: null, calls: []},
   ],
   ...over,
 });
@@ -184,7 +184,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
                 sms_state: 'number_not_working',
                 letter_eligible: true,
                 letter: { letter_id: '99999999-9999-4999-8999-999999999999', posted_on: '2026-10-03', delivered_on: null, overdue: false, has_screenshot: false },
-                escalation_recorded_on: null,
+                escalation_recorded_on: null, follow_up: null, unreachable_reason: null, ask: null, calls: [],
               },
             ],
           }),
@@ -249,7 +249,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     wrap(
       <CertificateRemindersList
         pariwarId={PARIWAR}
-        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'number_not_working', letter_eligible: true, letter: lateLetter, escalation_recorded_on: null }] })]}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'number_not_working', letter_eligible: true, letter: lateLetter, escalation_recorded_on: null , follow_up: null, unreachable_reason: null, ask: null, calls: []}] })]}
       />,
     );
     const banner = screen.getByTestId('certificate-letter-overdue');
@@ -266,7 +266,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     wrap(
       <CertificateRemindersList
         pariwarId={PARIWAR}
-        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null }] })]}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null , follow_up: null, unreachable_reason: null, ask: null, calls: []}] })]}
       />,
     );
     fireEvent.click(screen.getByTestId('certificate-letter-screenshot-load'));
@@ -287,7 +287,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     wrap(
       <CertificateRemindersList
         pariwarId={PARIWAR}
-        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null }] })]}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null , follow_up: null, unreachable_reason: null, ask: null, calls: []}] })]}
       />,
     );
     fireEvent.click(screen.getByTestId('certificate-letter-screenshot-load'));
@@ -303,7 +303,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
     wrap(
       <CertificateRemindersList
         pariwarId={PARIWAR}
-        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null }] })]}
+        items={[item({ people: [{ person_key: NOMINEE_A, role: 'nominee', position: 'A', sms_state: 'reminded', letter_eligible: true, letter: delivered, escalation_recorded_on: null , follow_up: null, unreachable_reason: null, ask: null, calls: []}] })]}
       />,
     );
     fireEvent.click(screen.getByTestId('certificate-letter-screenshot-load'));

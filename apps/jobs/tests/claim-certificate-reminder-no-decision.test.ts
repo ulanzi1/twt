@@ -22,6 +22,12 @@ const CERTIFICATE_MODULES = [
   'packages/domain/src/claim/certificate-reminder-schedule.ts',
   'packages/domain/src/claim/certificate-letter.ts',
   'packages/domain/src/claim/certificate-reminder-read.ts',
+  // Story 6.37c (AC13) — the delivery ladder decides ⛔ claim either: its rules, its reads, its record, its sweep.
+  'packages/domain/src/claim/contact-ladder.ts',
+  'packages/domain/src/claim/contact-ladder-read.ts',
+  'packages/domain/src/claim/contact-ladder-record.ts',
+  'packages/domain/src/claim/contact-call.ts',
+  'apps/jobs/src/scheduler/claim-contact-ladder.ts',
 ] as const;
 
 /** Every writer that DECIDES (or asks for a decision on) a claim, and every claim-event emitter. */

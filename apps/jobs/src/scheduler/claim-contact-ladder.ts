@@ -537,7 +537,7 @@ async function planCorrectionLadders(
         recipientNumberHash: l.recipientNumberHash,
       })),
       calls: callsOf(p.personKey),
-      stopOfRun: (runId) => stops.get(runId) ?? 'unknown',
+      stopOfRun: (runId) => (stops.has(runId) ? stops.get(runId)! : 'unknown'), // ⚠ `??` would read a `null` (⛔ stop) as unknown
     });
     if (origin === null || origin.reminderId === undefined || origin.recipientNumberHash === null) continue;
     const started = await claimDomain.insertContactLadder(db, {
@@ -798,7 +798,7 @@ async function planCertificateLadders(
           recipientNumberHash: l.recipientNumberHash,
         })),
         calls: callsOf(p.personKey),
-        stopOfRun: (runId) => stops.get(runId) ?? 'unknown',
+        stopOfRun: (runId) => (stops.has(runId) ? stops.get(runId)! : 'unknown'), // ⚠ `??` would read a `null` (⛔ stop) as unknown
       });
       if (origin === null || origin.reminderId === undefined || origin.recipientNumberHash === null) continue;
       const started = await claimDomain.insertContactLadder(db, {

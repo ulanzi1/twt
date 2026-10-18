@@ -1620,6 +1620,9 @@ export function getClaimsUnderCorrection(
 // read needs a fresh step-up (`correction_letter_address`) — a 403 `auth.step_up_required` means "elevate, then retry".
 
 export const CORRECTION_LETTER_ADDRESS_STEP_UP_CONTEXT = 'correction_letter_address';
+// Story 6.37c (LD10) — the call form's reveal of the person's CURRENT number needs its OWN fresh step-up (`contact_call_number`,
+// the api's `CONTACT_CALL_NUMBER_STEP_UP_CONTEXT`) — a 403 `auth.step_up_required` means "elevate, then retry".
+export const CONTACT_CALL_NUMBER_STEP_UP_CONTEXT = 'contact_call_number';
 
 const correctionBase = (pariwarId: string, claimCaseId: string): string =>
   `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/claims/${encodeURIComponent(claimCaseId)}/correction`;

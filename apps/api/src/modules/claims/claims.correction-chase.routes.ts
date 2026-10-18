@@ -6,6 +6,10 @@
 //   · GET  …/admin/claims/:claimCaseId/correction/letters/address              — key (1) + the fresh admin STEP-UP
 //     (`correction_letter_address`, 6.19a's plaintext read-back precedent) — the address shows ONLY in the letter form
 //   · GET  …/admin/claims/:claimCaseId/correction/letters/:letterId/screenshot — key (1); a TTL-limited signed URL
+//   · POST …/admin/claims/:claimCaseId/correction/calls                        — key (1) + a MANDATORY Idempotency-Key —
+//     Story 6.37c's CALL RECORD (LD10; `claims.contact-call.handlers.ts`)
+//   · GET  …/admin/claims/:claimCaseId/correction/calls/number                 — key (1) + the fresh STEP-UP
+//     (`contact_call_number`) — the person's CURRENT number, ONLY in the call form
 //
 // Every route composes the authenticated-HUMAN chain [adminSession, scope, district, requirePermissionHook(…)] — the
 // district is the deceased's SERVER-DERIVED posting district, resolved by IMPORTING 6.18's
@@ -20,6 +24,10 @@ import {
   CorrectionLetterAddressResponse,
   CorrectionLetterDto,
   CorrectionLetterScreenshotResponse,
+  ContactCallDto,
+  ContactCallNumberQuery,
+  ContactCallNumberResponse,
+  RecordContactCallRequest,
   RecordCorrectionLetterRequest,
 } from '@twt/contracts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -37,6 +45,7 @@ import {
   CORRECTION_MUST_ACT_KEY,
   createCorrectionChaseHandlers,
 } from './claims.correction-chase.handlers.js';
+import { CONTACT_CALL_NUMBER_STEP_UP_CONTEXT, createContactCallHandlers } from './claims.contact-call.handlers.js';
 import { resolveNomineeNameCheckDistrict } from './claims.nominee-name-check.routes.js';
 
 const TAG = 'claim-correction-chase';
@@ -56,6 +65,11 @@ export function registerCorrectionChaseRoutes(app: FastifyInstance, deps: AppDep
   const canRecordLetter = requirePermissionHook(deps, CORRECTION_LETTER_KEY, atDistrict);
   const canChangeMustAct = requirePermissionHook(deps, CORRECTION_MUST_ACT_KEY, atDistrict);
   const addressStepUp = requireStepUp(deps, CORRECTION_LETTER_ADDRESS_STEP_UP_CONTEXT);
+  const calls = createContactCallHandlers(deps, 'correction', {
+    recorded: 'admin_claim_correction.call_recorded',
+    revealed: 'admin_claim_correction.call_number_revealed',
+  });
+  const callNumberStepUp = requireStepUp(deps, CONTACT_CALL_NUMBER_STEP_UP_CONTEXT);
 
   r.post(
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/must-act',
@@ -100,5 +114,24 @@ export function registerCorrectionChaseRoutes(app: FastifyInstance, deps: AppDep
       preHandler: [adminSession, scope, resolveDistrict, canRecordLetter],
     },
     h.readScreenshot,
+  );
+
+  // Story 6.37c (LD10) — the CALL RECORD and its gated number reveal (key (1); the reveal behind a FRESH step-up).
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/calls',
+    {
+      schema: { params: ClaimParam, body: RecordContactCallRequest, response: { 200: ContactCallDto, 201: ContactCallDto }, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter],
+    },
+    calls.record,
+  );
+
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/calls/number',
+    {
+      schema: { params: ClaimParam, querystring: ContactCallNumberQuery, response: { 200: ContactCallNumberResponse }, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, callNumberStepUp],
+    },
+    calls.readNumber,
   );
 }

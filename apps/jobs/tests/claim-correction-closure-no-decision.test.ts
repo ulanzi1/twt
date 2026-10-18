@@ -20,6 +20,12 @@ const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').repl
 const SWEEP_MODULES = [
   'apps/jobs/src/scheduler/claim-correction-closure.ts',
   'packages/domain/src/claim/correction-closure-jobs.ts',
+  // Story 6.37c (AC13) — the delivery ladder decides ⛔ claim either: its rules, its reads, its record, its sweep.
+  'packages/domain/src/claim/contact-ladder.ts',
+  'packages/domain/src/claim/contact-ladder-read.ts',
+  'packages/domain/src/claim/contact-ladder-record.ts',
+  'packages/domain/src/claim/contact-call.ts',
+  'apps/jobs/src/scheduler/claim-contact-ladder.ts',
 ] as const;
 
 /** Every writer that DECIDES (or asks for a decision on) a claim — ⛔ in the sweep's reach. */

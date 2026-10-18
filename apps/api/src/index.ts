@@ -17,6 +17,8 @@ export type { AppDeps } from './context.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
+  // Story 6.37c (LD11) — logged at boot by BOTH apps (jobs logs the same switch), so a drift between them shows here.
+  console.info('[api] contact calls: nominee calls', config.claimNomineeCallsCleared ? 'CLEARED' : 'NOT cleared (G1 — roster Row 34)');
   const deps = await createDeps(config);
   // End the service pool only when it is a DISTINCT pool (prod SERVICE_DATABASE_URL);
   // in dev/CI it aliases deps.pool, so ending it once via deps.pool suffices.

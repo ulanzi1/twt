@@ -146,6 +146,13 @@ export interface ApiConfig {
    */
   readonly reconciliationPariwarSlug: string;
   /**
+   * Story 6.37c (LD11, `2026-10-18-354` decision 5) — a call to a NOMINEE waits for counsel's written basis (G1; roster
+   * Row 34 `claim-contact-nominee-call-basis`). ONE env var, `CLAIM_NOMINEE_CALLS_CLEARED` (`1` ⇒ cleared, anything else
+   * ⇒ ⛔), read by BOTH apps at boot (jobs' `boot.ts` reads the same name) and passed into the domain as a boolean —
+   * ⛔ read under `packages/domain/src/claim`. Uncleared ⇒ the call routes and the number reveal refuse a nominee.
+   */
+  readonly claimNomineeCallsCleared: boolean;
+  /**
    * Member-JWT signing key (Story 3.2, §2.4). The private key NAME (never the value)
    * for Secret Manager + a local-dev env fallback var name (mirror the argon2 pepper).
    * Asymmetric algorithm pinned (ES256/RS256). When neither the secret nor the env
@@ -418,6 +425,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     ),
     // Story 9.3 — v1 single-slug (TWT-Bihar); the bank-parsers registry keys on the slug, not the UUID.
     reconciliationPariwarSlug: env['RECONCILIATION_PARIWAR_SLUG'] ?? 'bihar',
+    // Story 6.37c (LD11) — the nominee-call switch (default ⛔ cleared).
+    claimNomineeCallsCleared: env['CLAIM_NOMINEE_CALLS_CLEARED'] === '1',
     memberJwt: {
       algorithm: 'ES256',
       privateKeySecretName: env['MEMBER_JWT_PRIVATE_KEY_SECRET_NAME'] ?? 'twt-dev-member-jwt-private-key',

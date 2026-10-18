@@ -345,6 +345,11 @@ export type AuthAuditEventType =
   | 'admin_claim_correction.letter_address_revealed'
   | 'admin_claim_correction.letter_screenshot_read'
   | 'admin_claim_correction.must_act_changed'
+  // Story 6.37c (LD10) — the District Admin's CALL RECORD from the correction surface: `call_recorded` (person key,
+  // date, who answered as a ROLE, outcome, the ladders it ended — ⛔ a number, ⛔ a name); `call_number_revealed` — the
+  // call form's step-up read of the person's CURRENT number, one line PER reveal (the person key only).
+  | 'admin_claim_correction.call_recorded'
+  | 'admin_claim_correction.call_number_revealed'
   // Story 6.19c (AC9c) — the CLOSURE, the Super Admin's review, "no correction needed", the closure letter, the re-file.
   // Every line carries `resourceLocator: 'claim:<lower-case uuid>'` (else `RESOURCE_LOCATOR_PATTERN` silently replaces
   // it) and ⛔ never a note, a direction's text, a response, a tracking number, an address or a screenshot:
@@ -394,6 +399,9 @@ export type AuthAuditEventType =
   | 'admin_claim_certificate_reminder.letter_address_revealed'
   | 'admin_claim_certificate_reminder.letter_screenshot_read'
   | 'admin_claim_certificate_reminder.list_read'
+  // Story 6.37c (LD10) — the same two from the certificate surface.
+  | 'admin_claim_certificate_reminder.call_recorded'
+  | 'admin_claim_certificate_reminder.call_number_revealed'
   // ── ICP convergence-resolution surface (Story 6.4, AR-62) ─────────────────────
   // The operator-console pending/merge/override lines (the <ConvergenceDecisionStrip>). Context
   // is NON-PII throughout: claim ids + intake_attempt_id + intake_channel(s) + the resolving

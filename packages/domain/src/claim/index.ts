@@ -103,6 +103,9 @@ export * from './certificate-reminder-read.js';
 export * from './contact-ladder.js';
 export * from './contact-ladder-read.js';
 export * from './contact-ladder-record.js';
+// Story 6.37c (LD10) — the District Admin's CALL RECORD (both chases): the checks (D30, the recipient set, LD11's nominee
+// gate), the writer under both chase locks (a reached call ends the person's running ladders), the list, the reveal's read.
+export * from './contact-call.js';
 export * from './admin-directory.js';
 // Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
 export * from './nominee-correction-persist.js';

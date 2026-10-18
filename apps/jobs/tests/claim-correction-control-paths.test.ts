@@ -33,6 +33,8 @@ const h = vi.hoisted(() => ({
   readReturnPersonStates: vi.fn(),
   insertFinalCorrectionReminder: vi.fn(),
   listAdminsByRole: vi.fn(),
+  // Story 6.37c (LD9) — planRun reads the claim's calls (a reached call stops a CONCLUDED person's letter asks).
+  readClaimContactCalls: vi.fn(async () => []),
 }));
 
 vi.mock('@twt/domain', async (importOriginal) => {
@@ -61,6 +63,7 @@ vi.mock('@twt/domain', async (importOriginal) => {
       readReturnPersonStates: h.readReturnPersonStates,
       insertFinalCorrectionReminder: h.insertFinalCorrectionReminder,
       listAdminsByRole: h.listAdminsByRole,
+      readClaimContactCalls: h.readClaimContactCalls,
     },
   };
 });

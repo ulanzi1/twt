@@ -18,7 +18,7 @@
 //
 // ⛔ No DB, ⛔ no clock, ⛔ no crypto (hashes compared timing-safe — `sameNumberHash`). ⛔ Decides nothing about a claim.
 
-import { addCalendarDays } from '../cycle-calendar/holiday-resolver.js';
+import { addCalendarDays, istDateOf } from '../cycle-calendar/holiday-resolver.js';
 import { CERTIFICATE_RUN_HORIZON_DAYS } from './certificate-reminder-schedule.js';
 import { compareReminderRowsByTime, isEvidentialReminderRow, type PersonReminderRow } from './correction-chase.js';
 import { sameNumberHash } from './correction-crypto.js';
@@ -362,4 +362,80 @@ export function reachedCallSince(calls: readonly LadderCallFact[], epochStart: D
       .map((c) => c.calledOn)
       .sort()[0] ?? null
   );
+}
+
+// ── What staff see (LD12) — PURE ───────────────────────────────────────────────────────────────────────────────
+
+/** The person's latest follow-up on the staff views. ⚠ LOCKSTEP with the contracts' `CONTACT_LADDER_FOLLOW_UP_STATES`. */
+export const CONTACT_LADDER_FOLLOW_UP_STATES = ['running', 'concluded', 'ended_delivered', 'ended_call', 'ended_other'] as const;
+export type ContactLadderFollowUpState = (typeof CONTACT_LADDER_FOLLOW_UP_STATES)[number];
+
+export interface ContactLadderFollowUp {
+  readonly state: ContactLadderFollowUpState;
+  /** The IST date the follow-up started. */
+  readonly startedOn: string;
+  /** A running follow-up's next date (its next text, or its conclusion date); `null` otherwise. */
+  readonly nextStepOn: string | null;
+  readonly concludedOn: string | null;
+}
+
+/** A ladder as the staff views read it. */
+export interface LadderViewFact {
+  readonly state: ContactLadderState;
+  readonly createdAt: Date;
+  readonly endedAt: Date | null;
+  readonly sms2DueOn: string;
+  readonly sms2State: ContactLadderStepState;
+  readonly sms3DueOn: string | null;
+  readonly sms3State: ContactLadderStepState;
+  readonly concludeOn: string | null;
+  readonly concludedOn: string | null;
+}
+
+/** The LATEST of a person's ladders (by start), or `undefined`. Pure. */
+export function latestLadder<L extends Pick<LadderViewFact, 'createdAt'>>(ladders: readonly L[]): L | undefined {
+  return [...ladders].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).at(-1);
+}
+
+/** LD12 — the person's latest follow-up as staff see it, or `null` (⛔ ladder). Pure. */
+export function ladderFollowUpOf(ladders: readonly LadderViewFact[]): ContactLadderFollowUp | null {
+  const l = latestLadder(ladders);
+  if (l === undefined) return null;
+  const state: ContactLadderFollowUpState =
+    l.state === 'running'
+      ? 'running'
+      : l.state === 'concluded_undelivered'
+        ? 'concluded'
+        : l.state === 'ended_delivered' || l.state === 'ended_call'
+          ? l.state
+          : 'ended_other';
+  const nextStepOn =
+    l.state !== 'running' ? null : l.sms2State === 'pending' ? l.sms2DueOn : l.sms3State === 'pending' ? l.sms3DueOn : l.concludeOn;
+  return { state, startedOn: istDateOf(l.createdAt), nextStepOn, concludedOn: l.concludedOn };
+}
+
+/**
+ * LD9 / LD12 — the call-or-letter ask STILL OPEN for the person, or `null`: their latest ladder CONCLUDED and ⛔ answered
+ * since — ⛔ a call recorded `reached`, ⛔ a letter recorded, after its conclusion. Cap-aware through `ladderAsk`. Pure.
+ */
+export function pendingLadderAsk(input: {
+  readonly ladders: readonly LadderViewFact[];
+  readonly calls: readonly LadderCallFact[];
+  /** When the person's letters were recorded (`created_at`). */
+  readonly letterRecordedAt: readonly Date[];
+  readonly role: 'nominee' | 'claimant';
+  readonly letterCapReached: boolean;
+  readonly nomineeCallsCleared: boolean;
+}): ContactLadderAsk | null {
+  const l = latestLadder(input.ladders);
+  if (l === undefined || l.state !== 'concluded_undelivered' || l.endedAt === null) return null;
+  const since = l.endedAt.getTime();
+  if (input.calls.some((c) => c.outcome === 'reached' && c.createdAt.getTime() >= since)) return null;
+  if (input.letterRecordedAt.some((d) => d.getTime() >= since)) return null;
+  return ladderAsk(input);
+}
+
+/** LD12 — why a person reads unreachable: a number REFUSED at send, or a reminder NOT DELIVERED (a concluded ladder). Pure. */
+export function unreachableReasonOf(deadKind: 'dead' | 'unreachable' | 'not_delivered' | null): 'refused' | 'not_delivered' | null {
+  return deadKind === null ? null : deadKind === 'not_delivered' ? 'not_delivered' : 'refused';
 }

@@ -207,11 +207,13 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     // it decides whom the system chases, `-258`), the posted-letter record and its delivery + screenshot (key (1) —
     // the evidence 6.19c's "reached" and closure gates read), the letter form's ADDRESS read (a second living
     // subject's Tier-1 plaintext, step-up) and the screenshot's signed read. Every one needs the authenticated-HUMAN
-    // chain. `/correction/` matches all five paths.
+    // chain. `/correction/` matches all five paths. ⭐ Story 6.37c (LD10) — + TWO: the CALL RECORD (key (1) — a reached call
+    // counts as reaching the family for the closure, and ends their delivery ladders) and the call form's NUMBER read
+    // (a living subject's Tier-1 plaintext, step-up). `/correction/` matches them too (`…/correction/calls…`).
     file: 'apps/api/src/modules/claims/claims.correction-chase.routes.ts',
     pathSubstrings: ['/correction/'],
     owner: 'Story 6.19b',
-    expectedMethods: ['post', 'post', 'post', 'get', 'get'],
+    expectedMethods: ['post', 'post', 'post', 'get', 'get', 'post', 'get'],
   },
   {
     // ⭐ Story 6.19c — the correction CLOSURE's District Admin and Pariwar Admin routes. ELEVEN: the closure REQUEST
@@ -246,11 +248,12 @@ const COVERAGE_SET: readonly CoverageEntry[] = [
     // the "Certificate reminders" list, the ONE posted letter (`-275` Q1) and its delivery + screenshot, the letter form's
     // ADDRESS read (a second living subject's Tier-1 plaintext, step-up) and the screenshot's signed read (the same
     // step-up). Every one needs the authenticated-HUMAN chain — ⛔ no job ever decides (invariant 1).
-    // `certificate-reminders` matches all five.
+    // `certificate-reminders` matches all five. ⭐ Story 6.37c (LD10) — + TWO: the CALL RECORD and its step-up NUMBER read
+    // (`…/certificate-reminders/calls…`).
     file: 'apps/api/src/modules/claims/claims.certificate-reminder.routes.ts',
     pathSubstrings: ['certificate-reminders'],
     owner: 'Story 6.19d',
-    expectedMethods: ['get', 'post', 'post', 'get', 'get'],
+    expectedMethods: ['get', 'post', 'post', 'get', 'get', 'post', 'get'],
   },
 ];
 

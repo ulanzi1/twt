@@ -54,7 +54,12 @@ import {
   readClaimContactCalls,
   readReturnLadderSmsRows,
 } from './contact-ladder-read.js';
-import { type CorrectionPerson, acquireCorrectionChaseLock, readCorrectionRun } from './correction-chase.js';
+import {
+  type CorrectionPerson,
+  acquireCorrectionChaseLock,
+  readCorrectionRecipients,
+  readCorrectionRun,
+} from './correction-chase.js';
 import { latestRunOfReturn } from './correction-closure-jobs.js';
 import { sameNumberHash } from './correction-crypto.js';
 import {
@@ -64,6 +69,7 @@ import {
   correctionFamilyStopReason,
   insertFinalCorrectionReminder,
   readReturnFamilyRows,
+  readReturnPersonStates,
   skipCorrectionReminder,
 } from './correction-reminder-record.js';
 import { correctionReminderSchedule, correctionRunDay } from './correction-schedule.js';
@@ -405,12 +411,27 @@ export async function beginCorrectionLadderSend(
     const scheduledToday =
       run.endedAt === null &&
       correctionReminderSchedule(run.kind, run.day0).some((x) => x.kind === 'reminder' && x.day === runDay);
-    const myHash = ok.personState.currentNumberHash ?? ok.personState.track.epochRows.at(-1)?.recipientNumberHash ?? null;
+    // T22 — an `attempting` row of ANY person of the claim (its hash NULL until finalise) counts by that person's CURRENT
+    // hash: every person's state is read (the version-unchanged convention — ⛔ a KMS call unless the version moved, or
+    // the claimant).
+    const recipients = await readCorrectionRecipients(db, input.pariwarId, input.claimCaseId);
+    const everyone = await readReturnPersonStates(
+      db,
+      input.pariwarId,
+      { claimCaseId: input.claimCaseId, returnDecisionId: l.returnDecisionId },
+      recipients.cannotRemind === null ? recipients.people : [],
+      { crypto: input.crypto },
+    );
+    const hashOf = (personKey: string): string | null => {
+      const st = personKey === l.personKey ? ok.personState : everyone.find((x) => x.person.personKey === personKey);
+      if (st === undefined || st.hashFailed === true) return null;
+      return st.currentNumberHash !== undefined ? st.currentNumberHash : (st.track.epochRows.at(-1)?.recipientNumberHash ?? null);
+    };
     const sentToNumberToday = correctionNumberTextedOn({
       numberHash: l.recipientNumberHash,
       on: input.sentOn,
       exceptSubjectKey: key.subjectKey,
-      currentHashOf: (personKey) => (personKey === l.personKey ? myHash : null),
+      currentHashOf: hashOf,
       rows,
       ladderRows,
     });

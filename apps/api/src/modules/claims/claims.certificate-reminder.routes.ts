@@ -9,6 +9,10 @@
 //   · POST …/admin/claims/:claimCaseId/certificate-reminders/letters/:letterId/delivery   — `resolveDistrict` + key (1), multipart
 //   · GET  …/admin/claims/:claimCaseId/certificate-reminders/letters/address              — + a FRESH step-up
 //   · GET  …/admin/claims/:claimCaseId/certificate-reminders/letters/:letterId/screenshot — + the SAME step-up
+//   · POST …/admin/claims/:claimCaseId/certificate-reminders/calls                        — Story 6.37c's CALL RECORD
+//     (LD10; a MANDATORY Idempotency-Key; `claims.contact-call.handlers.ts`)
+//   · GET  …/admin/claims/:claimCaseId/certificate-reminders/calls/number                 — + a FRESH step-up
+//     (`contact_call_number`) — the person's CURRENT number, ONLY in the call form
 //
 // Every route composes the authenticated-HUMAN chain [adminSession, scope, …, requirePermissionHook(…)]; a claim of
 // another Pariwar resolves ⛔ no district (the gate fails closed) or ⛔ no row in this tenant's scope (404). The collection
@@ -20,7 +24,11 @@ import {
   CertificateLetterDto,
   CertificateLetterScreenshotResponse,
   CertificateRemindersResponse,
+  ContactCallDto,
+  ContactCallNumberQuery,
+  ContactCallNumberResponse,
   RecordCertificateLetterRequest,
+  RecordContactCallRequest,
 } from '@twt/contracts';
 import { claim, type rbac } from '@twt/domain';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -36,6 +44,7 @@ import {
   CERTIFICATE_LETTER_ADDRESS_STEP_UP_CONTEXT,
   createCertificateReminderHandlers,
 } from './claims.certificate-reminder.handlers.js';
+import { CONTACT_CALL_NUMBER_STEP_UP_CONTEXT, createContactCallHandlers } from './claims.contact-call.handlers.js';
 import { CORRECTION_LETTER_KEY } from './claims.correction-chase.handlers.js';
 import { resolveNomineeNameCheckDistrict, resolveQueueScopeStash } from './claims.nominee-name-check.routes.js';
 
@@ -60,6 +69,11 @@ export function registerCertificateReminderRoutes(app: FastifyInstance, deps: Ap
     resolveValue: (request: FastifyRequest): string | null => request.nomineeNameCheckDistrict ?? null,
   });
   const stepUp = requireStepUp(deps, CERTIFICATE_LETTER_ADDRESS_STEP_UP_CONTEXT);
+  const calls = createContactCallHandlers(deps, 'certificate', {
+    recorded: 'admin_claim_certificate_reminder.call_recorded',
+    revealed: 'admin_claim_certificate_reminder.call_number_revealed',
+  });
+  const callNumberStepUp = requireStepUp(deps, CONTACT_CALL_NUMBER_STEP_UP_CONTEXT);
   // The LIST: a district-scoped caller is gated at their district, a pariwar-ceiling caller at the Pariwar.
   const resolveListScope = resolveQueueScopeStash(CORRECTION_LETTER_KEY);
   const canReadList = requirePermissionHook(deps, CORRECTION_LETTER_KEY, {
@@ -113,5 +127,24 @@ export function registerCertificateReminderRoutes(app: FastifyInstance, deps: Ap
       preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, stepUp],
     },
     h.readCertificateLetterScreenshot,
+  );
+
+  // Story 6.37c (LD10) — the CALL RECORD and its gated number reveal (key (1); the reveal behind a FRESH step-up).
+  r.post(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/certificate-reminders/calls',
+    {
+      schema: { params: ClaimParam, body: RecordContactCallRequest, response: { 200: ContactCallDto, 201: ContactCallDto }, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter],
+    },
+    calls.record,
+  );
+
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/certificate-reminders/calls/number',
+    {
+      schema: { params: ClaimParam, querystring: ContactCallNumberQuery, response: { 200: ContactCallNumberResponse }, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, callNumberStepUp],
+    },
+    calls.readNumber,
   );
 }

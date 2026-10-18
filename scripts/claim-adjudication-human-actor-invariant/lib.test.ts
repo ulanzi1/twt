@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import { evaluateAdjudicationRoute, scanAdjudicationRoutes, scanRouteRegistrations } from './lib.js';
@@ -176,4 +180,44 @@ describe('scanRouteRegistrations + evaluateAdjudicationRoute — units', () => {
     expect(unresolved).toHaveLength(1);
     expect(unresolved[0]!.method).toBe('post');
   });
+});
+
+// ⭐ Story 6.37c (LD10, T21) — the CALL routes live on the chases' OWN path grammar, so the gate SCANS them; a call route
+// moved outside it (`/calls` without `/correction/`, ⛔ `certificate-reminders`) would be UNSCANNED and the gate GREEN
+// over a smaller set — the expected-method multiset is what turns that RED (the gate-bites leg, on the REAL files).
+describe('Story 6.37c — the call routes are scanned, and a renamed one bites', () => {
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const CASES = [
+    {
+      file: 'apps/api/src/modules/claims/claims.correction-chase.routes.ts',
+      substrings: ['/correction/'],
+      callPath: '/correction/calls',
+      renamed: '/contact-calls',
+      want: ['post', 'post', 'post', 'get', 'get', 'post', 'get'],
+    },
+    {
+      file: 'apps/api/src/modules/claims/claims.certificate-reminder.routes.ts',
+      substrings: ['certificate-reminders'],
+      callPath: '/certificate-reminders/calls',
+      renamed: '/certificate-calls',
+      want: ['get', 'post', 'post', 'get', 'get', 'post', 'get'],
+    },
+  ];
+  const sorted = (m: readonly string[]): string => [...m].sort().join(',');
+
+  for (const c of CASES) {
+    it(`${c.file}: both call routes are matched and conform (the expected multiset holds)`, () => {
+      const src = fs.readFileSync(path.join(repoRoot, c.file), 'utf8');
+      const { findings, matchedPaths, matchedMethods } = scanAdjudicationRoutes(c.file, src, c.substrings);
+      expect(findings).toEqual([]);
+      expect(matchedPaths.filter((p) => p.includes(c.callPath))).toHaveLength(2);
+      expect(sorted(matchedMethods)).toBe(sorted(c.want));
+    });
+
+    it(`${c.file}: a call path RENAMED out of the grammar ⇒ the multiset differs (the gate goes RED)`, () => {
+      const src = fs.readFileSync(path.join(repoRoot, c.file), 'utf8').split(c.callPath).join(c.renamed);
+      const { matchedMethods } = scanAdjudicationRoutes(c.file, src, c.substrings);
+      expect(sorted(matchedMethods)).not.toBe(sorted(c.want));
+    });
+  }
 });

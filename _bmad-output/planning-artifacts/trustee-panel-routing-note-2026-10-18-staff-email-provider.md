@@ -17,6 +17,12 @@
 >
 > Neither A nor B alone: **B first, then A** — Zoho ZeptoMail from go-live, AWS SES once Amazon approves the Trust for sending.
 > Everything below is kept **unedited**, as the question was put.
+>
+> ⚠ *Dated correction, 2026-10-18 (Story 6.37c code review round 2) — about the decision entry, ⛔ the ruling:* `-361`'s **NOT
+> RATIFIED** reading (iii) says *"the ZeptoMail adapter stays built and set up after the switch, as the fallback ADR-0040 already
+> keeps."* ADR-0040 keeps no set-up fallback: it says *"the other stays built and unset"* (ADR-0040, Decision section; roster Row 24's
+> notes say the same). So "set up" after the switch is our reading alone, ⛔ supported by the ADR — keeping ZeptoMail configured after
+> SES goes live would need ADR-0040 amended. The Panel's ruling (Zoho first, SES once approved) is unaffected.
 
 ---
 

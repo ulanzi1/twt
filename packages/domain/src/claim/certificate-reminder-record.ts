@@ -186,11 +186,13 @@ export async function claimCertificateReminder(
  * A failed re-check: compare-and-set THIS job's own `attempting` row to `skipped_superseded`, else write the marker.
  * ⭐ When this job's own `attempting` row already carries an attempt's `detail` (a transient failure that may have sent),
  * it is EXPIRED `error` (`exhausted:recheck_<reason>`) — ⛔ never `skipped_superseded` (6.19b's K4); the caller alarms.
+ * `skippedOwn` is `true` ONLY when THIS job's own `attempting` row was just marked `skipped_superseded` (⛔ attempt ran) —
+ * ⛔ for a row already final, held by another job, or a fresh marker (review round 2, fix-diff: the ladder's un-send).
  */
 export async function skipCertificateReminder(
   db: Db,
   k: CertificateReminderKey & { readonly sentOn: string; readonly late: boolean; readonly jobId: string; readonly reason: string },
-): Promise<{ readonly expiredAttempt: boolean }> {
+): Promise<{ readonly expiredAttempt: boolean; readonly skippedOwn: boolean }> {
   const existing = await readCertificateReminder(db, k);
   if (existing !== null) {
     if (existing.outcome === 'attempting' && existing.claimedByJob === k.jobId) {
@@ -201,7 +203,7 @@ export async function skipCertificateReminder(
           jobId: k.jobId,
           detail: `exhausted:recheck_${k.reason}`,
         });
-        return { expiredAttempt: expired };
+        return { expiredAttempt: expired, skippedOwn: false };
       }
       const moved = await db
         .update(claimCertificateReminders)
@@ -225,13 +227,40 @@ export async function skipCertificateReminder(
           jobId: k.jobId,
           detail: `exhausted:recheck_${k.reason}`,
         });
-        return { expiredAttempt: expired };
+        return { expiredAttempt: expired, skippedOwn: false };
       }
+      return { expiredAttempt: false, skippedOwn: true };
     }
-    return { expiredAttempt: false };
+    // ⚠ Review round 2 (fix-diff) — the row is FINAL or held by ANOTHER job: untouched (`skippedOwn: false`).
+    return { expiredAttempt: false, skippedOwn: false };
   }
   await insertFinalCertificateReminder(db, { ...k, outcome: 'skipped_superseded', detail: k.reason });
-  return { expiredAttempt: false };
+  return { expiredAttempt: false, skippedOwn: false };
+}
+
+/**
+ * Review round 2 (fix-diff, P21) — THIS job's own `attempting` row that sent NOTHING (⛔ attempt ran — its `detail` is
+ * still NULL) is abandoned `skipped_superseded` with `detail` = the reason. Compare-and-set on `attempting` + this job +
+ * `detail IS NULL`; `false` when the row moved on (another job, a final outcome, or an attempt that ran).
+ */
+export async function abandonOwnCertificateReminder(
+  db: Db,
+  input: { readonly pariwarId: PariwarId; readonly reminderId: string; readonly jobId: string; readonly detail: string },
+): Promise<boolean> {
+  const rows = await db
+    .update(claimCertificateReminders)
+    .set({ outcome: 'skipped_superseded', detail: input.detail, updatedAt: sql`clock_timestamp()` })
+    .where(
+      and(
+        eq(claimCertificateReminders.pariwarId, input.pariwarId),
+        eq(claimCertificateReminders.reminderId, input.reminderId),
+        eq(claimCertificateReminders.outcome, 'attempting'),
+        eq(claimCertificateReminders.claimedByJob, input.jobId),
+        sql`${claimCertificateReminders.detail} IS NULL`,
+      ),
+    )
+    .returning({ reminderId: claimCertificateReminders.reminderId });
+  return rows.length > 0;
 }
 
 /**

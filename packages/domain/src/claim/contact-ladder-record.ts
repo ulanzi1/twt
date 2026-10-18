@@ -35,6 +35,7 @@ import {
 } from './certificate-reminder.js';
 import {
   CertificateRecipientsMovedError,
+  abandonOwnCertificateReminder,
   certificateLadderStopReason,
   claimCertificateReminder,
   insertFinalCertificateReminder,
@@ -196,6 +197,49 @@ export async function resolveContactLadderStep(
 }
 
 /**
+ * Review round 2 P17 — a RETRY the step gate now turns down, whose claimed row sent NOTHING (`giveUp` marked it
+ * `skipped_superseded` — ⛔ attempt ran): the step was recorded `sent` on that row, which LD3's outcome table reads as "an
+ * attempt was made". Re-record it as the gate's verdict (⛔ row, the next date from the due date — as `resolve` would have
+ * on a first visit). Compare-and-set on `running` + the step still `sent` ON THAT ROW (+ for step 2, step 3 still
+ * `pending` — its due date is rewritten). An attempt that DID run (expired `error`), a row already final or a row held by
+ * another job keeps `sent` — the caller un-sends ONLY on `skippedOwn` (review round 2, fix-diff).
+ */
+export async function unsendContactLadderStep(
+  db: Db,
+  input: {
+    readonly pariwarId: PariwarId;
+    readonly ladderId: string;
+    readonly step: 2 | 3;
+    readonly rowId: string;
+    readonly state: Exclude<ContactLadderStepState, 'pending' | 'sent'>;
+    readonly on: string;
+    readonly nextOn: string;
+  },
+): Promise<boolean> {
+  const t = claimContactLadders;
+  const set =
+    input.step === 2
+      ? { sms2State: input.state, sms2On: input.on, sms2RowId: null, sms3DueOn: input.nextOn }
+      : { sms3State: input.state, sms3On: input.on, sms3RowId: null, concludeOn: input.nextOn };
+  const rows = await db
+    .update(t)
+    .set({ ...set, updatedAt: sql`clock_timestamp()` })
+    .where(
+      and(
+        eq(t.pariwarId, input.pariwarId),
+        eq(t.ladderId, input.ladderId),
+        eq(t.state, 'running'),
+        eq(input.step === 2 ? t.sms2State : t.sms3State, 'sent'),
+        eq(input.step === 2 ? t.sms2RowId : t.sms3RowId, input.rowId),
+        // Step 2 rewrites `sms3_due_on` — ⛔ under a step 3 already resolved (review round 2, fix-diff).
+        ...(input.step === 2 ? [eq(t.sms3State, 'pending')] : []),
+      ),
+    )
+    .returning({ ladderId: t.ladderId });
+  return rows.length > 0;
+}
+
+/**
  * LD4 — the next visit of a `satisfied` step: the scheduled row that carried it is FOUND (`rowId` — its id recorded), or
  * ⛔ (`rowId: null` — it never went: `skipped:scheduled_not_sent`, the clock runs on, ⛔ a resend). Compare-and-set on
  * the step still `satisfied` with ⛔ row (any ladder state — a record correction).
@@ -269,7 +313,13 @@ export type BeginLadderSendResult<P> =
   /** The step was RECORDED without a send (`satisfied` / a skip — LD3, LD4, PQ3). */
   | { readonly kind: 'resolved'; readonly state: Exclude<ContactLadderStepState, 'pending' | 'sent'> }
   /** The ladder ENDED in the re-check (a delivered message, a reached call, a number change, a stop). */
-  | { readonly kind: 'ended'; readonly state: ContactLadderState; readonly detail: string }
+  | {
+      readonly kind: 'ended';
+      readonly state: ContactLadderState;
+      readonly detail: string;
+      /** Review round 2 P18 — this job's own row carried an attempt and was EXPIRED `error` as the ladder ended: ALARM. */
+      readonly expiredAttempt?: true;
+    }
   | {
       readonly kind: 'noop';
       readonly reason: 'ladder_not_running' | 'step_not_due' | 'step_resolved' | 'already_final' | 'held_by_other';
@@ -287,6 +337,50 @@ function stepOf(l: ClaimContactLadderRow, step: 2 | 3) {
 /** The next date after a step resolved on `on` (LD3's outcome table): `sent` counts from the send, the rest from the due date. */
 function nextAfter(step: 2 | 3, anchor: string, on: string): string {
   return nextLadderStepDate(anchor, step === 2 ? LADDER_SMS3_AFTER_DAYS : LADDER_CONCLUDE_AFTER_DAYS, on);
+}
+
+/**
+ * Review round 2 (fix-diff, P21) — a claimed certificate ladder row that sent NOTHING on its FINAL attempt (the number read
+ * back as nothing after the claim): the row is abandoned `skipped_superseded` (⛔ "an attempt ran") and the step moves
+ * `sent` → `skipped:<detail>` (⛔ row, the next date from the due date — LD3), in ONE transaction under the claim-row lock.
+ * `abandoned` is `false` when the row moved on (nothing changed); `unsent` is `false` when the step had already moved.
+ */
+export async function abandonCertificateLadderSend(
+  client: pg.PoolClient,
+  input: {
+    readonly pariwarId: PariwarId;
+    readonly claimCaseId: ClaimId;
+    readonly ladderId: string;
+    readonly step: 2 | 3;
+    readonly reminderId: string;
+    readonly jobId: string;
+    readonly sentOn: string;
+    readonly detail: string;
+  },
+): Promise<{ readonly abandoned: boolean; readonly unsent: boolean }> {
+  const db = bindScopedDb(client);
+  await lockCertificateClaim(db, input.pariwarId, input.claimCaseId);
+  const abandoned = await abandonOwnCertificateReminder(db, {
+    pariwarId: input.pariwarId,
+    reminderId: input.reminderId,
+    jobId: input.jobId,
+    detail: input.detail,
+  });
+  if (!abandoned) return { abandoned: false, unsent: false };
+  const l = await readContactLadder(db, input.pariwarId, input.ladderId);
+  if (l === null) return { abandoned: true, unsent: false };
+  const s = stepOf(l, input.step);
+  if (s.state !== 'sent' || s.rowId !== input.reminderId || s.dueOn === null) return { abandoned: true, unsent: false };
+  const unsent = await unsendContactLadderStep(db, {
+    pariwarId: input.pariwarId,
+    ladderId: input.ladderId,
+    step: input.step,
+    rowId: input.reminderId,
+    state: `skipped:${input.detail}`,
+    on: input.sentOn,
+    nextOn: nextAfter(input.step, s.dueOn, input.sentOn),
+  });
+  return { abandoned: true, unsent };
 }
 
 /**
@@ -330,8 +424,9 @@ export async function beginCorrectionLadderSend(
     subjectKey: ladderSmsSubjectKey(l.ladderId, input.step),
   };
   /** A failed re-check: THIS job's own `attempting` row (if any) is skipped — or EXPIRED when an attempt ran (K4). */
-  const giveUp = async (reason: string): Promise<boolean> =>
-    (await skipCorrectionReminder(db, { ...key, sentOn: input.sentOn, late: false, jobId: input.jobId, reason })).expiredAttempt;
+  const giveUpWith = (reason: string): Promise<{ readonly expiredAttempt: boolean; readonly skippedOwn: boolean }> =>
+    skipCorrectionReminder(db, { ...key, sentOn: input.sentOn, late: false, jobId: input.jobId, reason });
+  const giveUp = async (reason: string): Promise<boolean> => (await giveUpWith(reason)).expiredAttempt;
   if (l.state !== 'running') {
     const expired = await giveUp('ladder_not_running');
     return expired ? { kind: 'noop', reason: 'ladder_not_running', expiredAttempt: true } : { kind: 'noop', reason: 'ladder_not_running' };
@@ -382,8 +477,10 @@ export async function beginCorrectionLadderSend(
   });
   if (end !== null) {
     await endContactLadder(db, { pariwarId: input.pariwarId, ladderId: l.ladderId, state: end.state, detail: end.detail });
-    await giveUp(`ladder_${end.state}`);
-    return { kind: 'ended', state: end.state, detail: end.detail };
+    const expired = await giveUp(`ladder_${end.state}`);
+    return expired
+      ? { kind: 'ended', state: end.state, detail: end.detail, expiredAttempt: true }
+      : { kind: 'ended', state: end.state, detail: end.detail };
   }
   if (stop !== null) return { kind: 'noop', reason: 'ladder_not_running' }; // unreachable — a stop is an end (P6, symmetry with beginCertificateLadderSend)
   // ⛔ An end and ⛔ a stop ⇒ `check` is the passing check — or `null` (the hash failed while a delivered letter was
@@ -447,9 +544,23 @@ export async function beginCorrectionLadderSend(
       if (!retry) return resolve(verdict);
       // The row this retry is completing was claimed BEFORE the gate turned it down (the window closed in between) —
       // abandon the claim (K4's own `giveUp`, ⛔ `resolve`: the step is already `sent`, ⛔ `pending`, so `resolve`'s
-      // CAS would silently no-op) and alarm-worthy-log via the caller's own `expiredAttempt` surface.
-      const expired = await giveUp(`ladder_stale_retry_${verdict}`);
-      return expired ? { kind: 'noop', reason: 'held_by_other', expiredAttempt: true } : { kind: 'noop', reason: 'held_by_other' };
+      // CAS would silently no-op); an attempt that RAN keeps `sent` and alarms via `expiredAttempt`.
+      const given = await giveUpWith(`ladder_stale_retry_${verdict}`);
+      if (given.expiredAttempt) return { kind: 'noop', reason: 'held_by_other', expiredAttempt: true };
+      // Review round 2 (fix-diff) — un-send ONLY when THIS job's own row was just marked `skipped_superseded` (⛔ attempt
+      // ran): a row already FINAL (it may have SENT) or held by ANOTHER job (mid-send) keeps the step `sent`.
+      if (!given.skippedOwn) return { kind: 'noop', reason: 'held_by_other' };
+      // Review round 2 P17 — ⛔ attempt ran (the row is a `skipped_superseded` marker): the step is ⛔ `sent` any more.
+      const unsent = await unsendContactLadderStep(db, {
+        pariwarId: input.pariwarId,
+        ladderId: l.ladderId,
+        step: input.step,
+        rowId: s.rowId!,
+        state: verdict,
+        on: input.sentOn,
+        nextOn: nextAfter(input.step, s.dueOn!, input.sentOn),
+      });
+      return unsent ? { kind: 'resolved', state: verdict } : { kind: 'noop', reason: 'held_by_other' };
     }
   }
 
@@ -544,8 +655,9 @@ export async function beginCertificateLadderSend(
     purpose: 'ladder_sms' as const,
     subjectKey: ladderSmsSubjectKey(l.ladderId, input.step),
   };
-  const giveUp = async (reason: string): Promise<boolean> =>
-    (await skipCertificateReminder(db, { ...key, sentOn: input.sentOn, late: false, jobId: input.jobId, reason })).expiredAttempt;
+  const giveUpWith = (reason: string): Promise<{ readonly expiredAttempt: boolean; readonly skippedOwn: boolean }> =>
+    skipCertificateReminder(db, { ...key, sentOn: input.sentOn, late: false, jobId: input.jobId, reason });
+  const giveUp = async (reason: string): Promise<boolean> => (await giveUpWith(reason)).expiredAttempt;
   if (l.state !== 'running') {
     const expired = await giveUp('ladder_not_running');
     return expired ? { kind: 'noop', reason: 'ladder_not_running', expiredAttempt: true } : { kind: 'noop', reason: 'ladder_not_running' };
@@ -596,8 +708,10 @@ export async function beginCertificateLadderSend(
   });
   if (end !== null) {
     await endContactLadder(db, { pariwarId: input.pariwarId, ladderId: l.ladderId, state: end.state, detail: end.detail });
-    await giveUp(`ladder_${end.state}`);
-    return { kind: 'ended', state: end.state, detail: end.detail };
+    const expired = await giveUp(`ladder_${end.state}`);
+    return expired
+      ? { kind: 'ended', state: end.state, detail: end.detail, expiredAttempt: true }
+      : { kind: 'ended', state: end.state, detail: end.detail };
   }
   if (check.stop !== null) return { kind: 'noop', reason: 'ladder_not_running' }; // unreachable — a stop is an end
   const resolve = async (state: Exclude<ContactLadderStepState, 'pending' | 'sent'>): Promise<BeginLadderSendResult<CertificatePerson>> => {
@@ -641,8 +755,22 @@ export async function beginCertificateLadderSend(
       if (!retry) return resolve(verdict);
       // Mirrors `beginCorrectionLadderSend`'s retry-abort: the row was claimed BEFORE the window closed — abandon
       // it (K4's `giveUp`), ⛔ `resolve` (the step is already `sent`, its CAS would silently no-op).
-      const expired = await giveUp(`ladder_stale_retry_${verdict}`);
-      return expired ? { kind: 'noop', reason: 'held_by_other', expiredAttempt: true } : { kind: 'noop', reason: 'held_by_other' };
+      const given = await giveUpWith(`ladder_stale_retry_${verdict}`);
+      if (given.expiredAttempt) return { kind: 'noop', reason: 'held_by_other', expiredAttempt: true };
+      // Review round 2 (fix-diff) — un-send ONLY when THIS job's own row was just marked `skipped_superseded` (⛔ attempt
+      // ran): a row already FINAL (it may have SENT) or held by ANOTHER job (mid-send) keeps the step `sent`.
+      if (!given.skippedOwn) return { kind: 'noop', reason: 'held_by_other' };
+      // Review round 2 P17 — ⛔ attempt ran (the row is a `skipped_superseded` marker): the step is ⛔ `sent` any more.
+      const unsent = await unsendContactLadderStep(db, {
+        pariwarId: input.pariwarId,
+        ladderId: l.ladderId,
+        step: input.step,
+        rowId: s.rowId!,
+        state: verdict,
+        on: input.sentOn,
+        nextOn: nextAfter(input.step, s.dueOn!, input.sentOn),
+      });
+      return unsent ? { kind: 'resolved', state: verdict } : { kind: 'noop', reason: 'held_by_other' };
     }
   }
   const claimed = await claimCertificateReminder(db, {

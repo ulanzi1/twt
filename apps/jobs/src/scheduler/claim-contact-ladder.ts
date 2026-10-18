@@ -39,6 +39,7 @@ import {
   ClaimCorrectionTransientError,
   sendClaimCorrectionSms,
   type ClaimCorrectionReminderDeps,
+  type CorrectionChildAttempt,
   type CorrectionStaffPushPayload,
 } from './claim-correction-reminders.js';
 import { CLAIM_CORRECTION_SMS_TEMPLATES } from './claim-correction-sms-templates.js';
@@ -104,6 +105,11 @@ function sampleIds(list: readonly string[]): string {
   return list.length > ALARM_SAMPLE_IDS ? `${shown} (+${String(list.length - ALARM_SAMPLE_IDS)} more)` : shown;
 }
 
+/** Round-2 P25 — a claim id listed ONCE in an alarm (a claim can add itself per person and per ladder step). */
+function uniqueIds(list: readonly string[]): string[] {
+  return [...new Set(list)];
+}
+
 /** The candidate scan's PAGE size. */
 export const CONTACT_LADDER_PAGE_SIZE = 500;
 /** The HARD bound on candidate claims one tick visits (hitting it is ALARMED). */
@@ -135,6 +141,19 @@ function newTally(): Tally {
     scheduledNotSentClaims: [],
     unassignedClaims: [],
   };
+}
+
+/** Round-2 P25 — a claim's own tally is merged ONLY once its plan returned (its transaction COMMITTED): ⛔ rolled-back work. */
+function mergeTally(into: Tally, from: Tally): void {
+  into.started += from.started;
+  into.endedDelivered += from.endedDelivered;
+  into.endedCall += from.endedCall;
+  into.endedOther += from.endedOther;
+  into.concluded += from.concluded;
+  for (const [k, n] of from.startedByPariwar) into.startedByPariwar.set(k, (into.startedByPariwar.get(k) ?? 0) + n);
+  into.hashUnavailableClaims.push(...from.hashUnavailableClaims);
+  into.scheduledNotSentClaims.push(...from.scheduledNotSentClaims);
+  into.unassignedClaims.push(...from.unassignedClaims);
 }
 
 function countEnd(t: Tally, state: string): void {
@@ -207,10 +226,12 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
         }
         scannedClaims += 1;
         try {
+          const claimTally = newTally();
           const plan =
             chase === 'correction'
-              ? await withPariwarScope(deps.pool, row.pariwarId, (db: Db, client) => planCorrectionLadders(deps, db, client, row, today, tally))
-              : await planCertificateLadders(deps, row, today, tally);
+              ? await withPariwarScope(deps.pool, row.pariwarId, (db: Db, client) => planCorrectionLadders(deps, db, client, row, today, claimTally))
+              : await planCertificateLadders(deps, row, today, claimTally);
+          mergeTally(tally, claimTally);
           for (const sms of plan.sms) {
             try {
               await boss.send(
@@ -264,30 +285,44 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
   }
 
   // ── LD13 — the alarms (ids only) and the daily line (⛔ id) ──
-  for (const [pariwarId, n] of tally.startedByPariwar) {
-    if (n >= claimDomain.CONTACT_LADDER_BURST_THRESHOLD) {
-      alarm(
-        `[jobs] contact-ladder: contact_ladder.burst:${String(n)} — ${String(n)} ladders started today in Pariwar ${pariwarId} ` +
-          '(a DLT scrub or template fault fails every text — check the delivery reports before the follow-ups go)',
-      );
+  // Round-2 P25 — AC11's burst is per Pariwar per IST DAY, ⛔ per run: the day's count is read from the table (a retried
+  // or second run the same day adds to it), and the alarm fires on the run whose starts CROSS the threshold — once a day.
+  if (tally.startedByPariwar.size > 0) {
+    // A failed count ⛔ fails the tick (its work is committed — a retry would start nothing and alarm nothing): it falls
+    // back to this run's own starts, and says so.
+    const dayCounts = await laddersStartedToday(deps.pool, [...tally.startedByPariwar.keys()]).catch((err: unknown) => {
+      alarm(`[jobs] contact-ladder: the day's ladder-start count could not be read — the burst check used this run's starts only (${String(err)})`);
+      return new Map<string, number>();
+    });
+    for (const [pariwarId, mine] of tally.startedByPariwar) {
+      const n = Math.max(dayCounts.get(pariwarId) ?? 0, mine);
+      if (n >= claimDomain.CONTACT_LADDER_BURST_THRESHOLD && n - mine < claimDomain.CONTACT_LADDER_BURST_THRESHOLD) {
+        alarm(
+          `[jobs] contact-ladder: contact_ladder.burst:${String(n)} — ${String(n)} ladders started today in Pariwar ${pariwarId} ` +
+            '(a DLT scrub or template fault fails every text — check the delivery reports before the follow-ups go)',
+        );
+      }
     }
   }
-  if (tally.hashUnavailableClaims.length > 0) {
+  const hashUnavailable = uniqueIds(tally.hashUnavailableClaims);
+  if (hashUnavailable.length > 0) {
     alarm(
       `[jobs] contact-ladder: contact_ladder.hash_unavailable — a person's current number could not be hashed on ` +
-        `${String(tally.hashUnavailableClaims.length)} claim(s) (claims: ${sampleIds(tally.hashUnavailableClaims)})`,
+        `${String(hashUnavailable.length)} claim(s) (claims: ${sampleIds(hashUnavailable)})`,
     );
   }
-  if (tally.scheduledNotSentClaims.length > 0) {
+  const scheduledNotSent = uniqueIds(tally.scheduledNotSentClaims);
+  if (scheduledNotSent.length > 0) {
     alarm(
       `[jobs] contact-ladder: contact_ladder.scheduled_not_sent — a follow-up step was a scheduled reminder that never ` +
-        `went, on ${String(tally.scheduledNotSentClaims.length)} claim(s) (claims: ${sampleIds(tally.scheduledNotSentClaims)})`,
+        `went, on ${String(scheduledNotSent.length)} claim(s) (claims: ${sampleIds(scheduledNotSent)})`,
     );
   }
-  if (tally.unassignedClaims.length > 0) {
+  const unassigned = uniqueIds(tally.unassignedClaims);
+  if (unassigned.length > 0) {
     alarm(
       `[jobs] contact-ladder: contact_ladder.escalation_unassigned — a concluded follow-up's call-or-letter ask has ⛔ live ` +
-        `shepherd on ${String(tally.unassignedClaims.length)} claim(s) (claims: ${sampleIds(tally.unassignedClaims)})`,
+        `shepherd on ${String(unassigned.length)} claim(s) (claims: ${sampleIds(unassigned)})`,
     );
   }
   if (timedOut.length > 0) {
@@ -314,6 +349,22 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
     enqueuedPushes,
     timedOutClaims: timedOut.length,
   };
+}
+
+/**
+ * ⚠ CROSS-TENANT — the BYPASSRLS pool only (the sweep checked it first). Round-2 P25 — the ladders STARTED today per
+ * Pariwar (both chases), for AC11's per-day burst count: the IST day of the DATABASE clock — the clock `created_at` is
+ * written by (⛔ the sweep's `now`, which only a test moves). Ids and counts only.
+ */
+async function laddersStartedToday(pool: pg.Pool, pariwarIds: readonly string[]): Promise<Map<string, number>> {
+  const { rows } = await pool.query<{ pariwar_id: string; n: string }>(
+    `SELECT pariwar_id, count(*) AS n FROM claim_contact_ladders
+      WHERE pariwar_id = ANY($1::uuid[])
+        AND created_at >= date_trunc('day', now() AT TIME ZONE '${CLAIM_CORRECTION_TZ}') AT TIME ZONE '${CLAIM_CORRECTION_TZ}'
+      GROUP BY pariwar_id`,
+    [pariwarIds],
+  );
+  return new Map(rows.map((r) => [r.pariwar_id, Number(r.n)]));
 }
 
 /**
@@ -714,10 +765,9 @@ async function planCertificateLadders(
         tally.concluded += 1;
         if (hashFailed) tally.hashUnavailableClaims.push(row.claimCaseId);
         const person = check.person;
-        const state = check.states.find((x) => x.personKey === l.personKey);
         const ask = claimDomain.ladderAsk({
           role: person.role,
-          letterCapReached: state?.letter !== null && state?.letter !== undefined,
+          letterCapReached: claimDomain.certificateLetterCapReached(check.states, l.personKey),
           nomineeCallsCleared: deps.nomineeCallsCleared,
         });
         // ⭐ Written on conclusion WHETHER OR NOT the run is paused — a staff RECORD, ⛔ a family text (LD9).
@@ -878,6 +928,8 @@ export async function runCorrectionLadderSmsChild(
 
   if (p.sentOn < cycleCalendar.istDateOf(now)) {
     const expired = await withPariwarScope(deps.pool, pid, async (db: Db, client) => {
+      // Round-2 P26 — a bounded wait on the trustee lock, as the certificate child bounds its claim-row lock.
+      await client.query(`SET LOCAL lock_timeout = '${CORRECTION_PLAN_LOCK_TIMEOUT}'`);
       await claimDomain.acquireCorrectionChaseLock(client, pid, p.claimCaseId);
       const k = await ownLadderRowKey(db, pariwarId, p);
       if (k === null) return false;
@@ -898,6 +950,12 @@ export async function runCorrectionLadderSmsChild(
       });
       if (own === null || own.outcome !== 'attempting' || own.claimedByJob !== jobId) return false;
       return claimDomain.expireOwnCorrectionReminder(db, { pariwarId, reminderId: own.reminderId, jobId, detail: 'exhausted:crossed_midnight' });
+    }).catch((err: unknown) => {
+      // Fix-diff review — the stale-slot wait is bounded too; its timeout is the same transient retry as the begin's.
+      if (isPlanTimeout(err)) {
+        throw new ClaimCorrectionTransientError(`[jobs] claim-correction-ladder-sms: lock wait timed out (stale slot) for ladder ${p.ladderId} — retrying`);
+      }
+      throw err;
     });
     if (expired) {
       alarm(`[jobs] claim-correction-ladder-sms: ladder ${p.ladderId} (claim ${p.claimCaseId}) was still 'attempting' past IST midnight — recorded 'error'`);
@@ -905,8 +963,10 @@ export async function runCorrectionLadderSmsChild(
     return { status: 'skipped', reason: 'stale_slot' };
   }
 
-  const begun = await withPariwarScope(deps.pool, pid, (_db, client) =>
-    claimDomain.beginCorrectionLadderSend(client, {
+  const begun = await withPariwarScope(deps.pool, pid, async (_db, client) => {
+    // Round-2 P26 — ⛔ an unbounded wait behind a slow plan holding the trustee lock (a timeout is a transient retry).
+    await client.query(`SET LOCAL lock_timeout = '${CORRECTION_PLAN_LOCK_TIMEOUT}'`);
+    return claimDomain.beginCorrectionLadderSend(client, {
       pariwarId,
       claimCaseId,
       ladderId: p.ladderId,
@@ -915,10 +975,21 @@ export async function runCorrectionLadderSmsChild(
       jobId,
       now,
       crypto: deps.encryption,
-    }),
-  );
+    });
+  }).catch((err: unknown) => {
+    if (isPlanTimeout(err)) {
+      throw new ClaimCorrectionTransientError(`[jobs] claim-correction-ladder-sms: lock wait timed out for ladder ${p.ladderId} — retrying`);
+    }
+    throw err;
+  });
   if (begun.kind === 'resolved') return { status: 'resolved', state: begun.state };
-  if (begun.kind === 'ended') return { status: 'ended', state: begun.state };
+  if (begun.kind === 'ended') {
+    // Round-2 P18 — an end found in the re-check can still expire THIS job's own attempt: alarm as the noop branch does.
+    if (begun.expiredAttempt === true) {
+      alarm(`[jobs] claim-correction-ladder-sms: ladder ${p.ladderId} (claim ${p.claimCaseId}) — an earlier attempt ran before the ladder ended; recorded 'error'`);
+    }
+    return { status: 'ended', state: begun.state };
+  }
   if (begun.kind === 'noop') {
     if (begun.expiredAttempt === true) {
       alarm(`[jobs] claim-correction-ladder-sms: ladder ${p.ladderId} (claim ${p.claimCaseId}) — an earlier attempt ran before the re-check failed; recorded 'error'`);
@@ -988,14 +1059,17 @@ export async function runCorrectionLadderSmsChild(
 
 /**
  * ⭐ ONE certificate ladder SMS (CR6–CR8's shape): hash EVERY person's number and decrypt its OWN BEFORE the claim-row
- * lock; the re-check + claim under it (`beginCertificateLadderSend`); commit; send; compare-and-set. A KMS failure is
- * retried (the step is recorded `skipped:hash_unavailable` by the re-check when the hash never clears that morning).
+ * lock; the re-check + claim under it (`beginCertificateLadderSend`); commit; send; compare-and-set. A KMS failure on the
+ * person's OWN hash or decrypt is RETRIED (a transient throw before anything is claimed — round-2 P8); only on the FINAL
+ * attempt does the re-check see the failure and record the step `skipped:hash_unavailable` (the hash never cleared that
+ * morning). `attempt` is pg-boss's retry metadata (`includeMetadata`); without it every attempt counts as the final one.
  * @throws ClaimCorrectionTransientError  a transient failure
  */
 export async function runCertificateLadderSmsChild(
   deps: ContactLadderDeps,
   envelope: JobEnvelope<LadderSmsPayload>,
   jobId: string,
+  attempt?: CorrectionChildAttempt,
 ): Promise<LadderSmsChildResult> {
   const alarm = alarmOf(deps);
   const now = deps.now?.() ?? new Date();
@@ -1011,11 +1085,18 @@ export async function runCertificateLadderSmsChild(
   if (p.sentOn < cycleCalendar.istDateOf(now)) {
     const expired = await withPariwarScope(deps.pool, pid, async (db: Db, client: pg.PoolClient) => {
       await client.query(`SET LOCAL lock_timeout = '${CORRECTION_PLAN_LOCK_TIMEOUT}'`);
-      await claimDomain.lockCertificateClaim(db, pariwarId, claimCaseId);
+      if ((await claimDomain.lockCertificateClaim(db, pariwarId, claimCaseId)) === null) {
+        // Round-2 P20 — mirrors the correction child (review P16): ⛔ a silent no-op on an abnormal branch.
+        alarm(`[jobs] claim-certificate-ladder-sms: stale-slot check — claim ${p.claimCaseId} unreadable for ladder ${p.ladderId}`);
+        return false;
+      }
       const k = await ownLadderRowKey(db, pariwarId, p);
       if (k === null) return false;
       const run = await claimDomain.readCertificateRun(db, pariwarId, k.ladder.runId);
-      if (run === null) return false;
+      if (run === null) {
+        alarm(`[jobs] claim-certificate-ladder-sms: stale-slot check — run ${k.ladder.runId} unreadable for ladder ${p.ladderId}`);
+        return false;
+      }
       const own = await claimDomain.readCertificateReminder(db, {
         pariwarId,
         claimCaseId,
@@ -1043,12 +1124,22 @@ export async function runCertificateLadderSmsChild(
   const hashes = await claimDomain.hashCertificateRecipients(people, pid, deps.encryption);
   const me = pre.ladder === null ? undefined : people.find((x) => x.personKey === pre.ladder!.personKey);
   let e164: string | null = null;
-  if (me !== undefined && !('failed' in (hashes.get(me.personKey) ?? { failed: true }))) {
+  let myHashFailed = me !== undefined && 'failed' in (hashes.get(me.personKey) ?? { failed: true });
+  if (me !== undefined && !myHashFailed) {
     try {
       e164 = await claimDomain.resolveCorrectionMobile(me.mobileCiphertext, me.mobileSource, pid, deps.encryption);
     } catch {
-      hashes.set(me.personKey, { failed: true });
+      myHashFailed = true;
     }
+  }
+  if (myHashFailed) {
+    // Round-2 P8 — ⛔ one KMS blip skips the step: retried (nothing is claimed yet), like the certificate FAMILY child.
+    // Only the FINAL attempt lets the re-check record `skipped:hash_unavailable` (the hash never cleared that morning).
+    const finalAttempt = attempt === undefined || attempt.retryCount >= attempt.retryLimit;
+    if (!finalAttempt) {
+      throw new ClaimCorrectionTransientError(`[jobs] claim-certificate-ladder-sms: the number could not be hashed / read for ladder ${p.ladderId} — retrying`);
+    }
+    hashes.set(me!.personKey, { failed: true });
   }
 
   let begun: claimDomain.BeginLadderSendResult<claimDomain.CertificatePerson>;
@@ -1073,7 +1164,13 @@ export async function runCertificateLadderSmsChild(
     throw err;
   }
   if (begun.kind === 'resolved') return { status: 'resolved', state: begun.state };
-  if (begun.kind === 'ended') return { status: 'ended', state: begun.state };
+  if (begun.kind === 'ended') {
+    // Round-2 P18 — an end found in the re-check can still expire THIS job's own attempt: alarm as the noop branch does.
+    if (begun.expiredAttempt === true) {
+      alarm(`[jobs] claim-certificate-ladder-sms: ladder ${p.ladderId} (claim ${p.claimCaseId}) — an earlier attempt ran before the ladder ended; recorded 'error'`);
+    }
+    return { status: 'ended', state: begun.state };
+  }
   if (begun.kind === 'noop') {
     if (begun.expiredAttempt === true) {
       alarm(`[jobs] claim-certificate-ladder-sms: ladder ${p.ladderId} (claim ${p.claimCaseId}) — an earlier attempt ran before the re-check failed; recorded 'error'`);
@@ -1081,8 +1178,36 @@ export async function runCertificateLadderSmsChild(
     return { status: 'noop', reason: begun.reason };
   }
   if (e164 === null) {
-    // The person's hash cleared but the decrypt did ⛔ (a race with an edit) — retried.
-    throw new ClaimCorrectionTransientError(`[jobs] claim-certificate-ladder-sms: no number for a claimed row on ladder ${p.ladderId}`);
+    // The person's hash cleared but the number read back as nothing (a race with an edit) — NOTHING was sent. Round-2 P21
+    // + fix-diff review: a non-final attempt retries WITHOUT a transient note (a `detail` would read as "an attempt ran"
+    // to the next re-check — K4); the FINAL attempt abandons the own row `skipped_superseded` and moves the step to
+    // `skipped:no_sendable_number` (⛔ `sent` — LD3's "an attempt was made" would be untrue). Alarms on what moved.
+    const finalAttempt = attempt === undefined || attempt.retryCount >= attempt.retryLimit;
+    if (!finalAttempt) {
+      throw new ClaimCorrectionTransientError(`[jobs] claim-certificate-ladder-sms: no number for a claimed row on ladder ${p.ladderId} — retrying`);
+    }
+    const out = await withPariwarScope(deps.pool, pid, async (_db: Db, client: pg.PoolClient) => {
+      await client.query(`SET LOCAL lock_timeout = '${CORRECTION_PLAN_LOCK_TIMEOUT}'`);
+      return claimDomain.abandonCertificateLadderSend(client, {
+        pariwarId,
+        claimCaseId,
+        ladderId: p.ladderId,
+        step: p.step,
+        reminderId: begun.reminderId,
+        jobId,
+        sentOn: p.sentOn,
+        detail: 'no_sendable_number',
+      });
+    });
+    if (!out.abandoned) {
+      alarm(`[jobs] claim-certificate-ladder-sms: no sendable number on ladder ${p.ladderId} (claim ${p.claimCaseId}) — the claimed row moved on before it could be abandoned`);
+      return { status: 'noop', reason: 'held_by_other' };
+    }
+    alarm(
+      `[jobs] claim-certificate-ladder-sms: no sendable number for a claimed row on ladder ${p.ladderId} (claim ${p.claimCaseId}) — ⛔ sent; ` +
+        (out.unsent ? "step recorded 'skipped:no_sendable_number'" : 'the step had already moved'),
+    );
+    return out.unsent ? { status: 'resolved', state: 'skipped:no_sendable_number' } : { status: 'noop', reason: 'held_by_other' };
   }
 
   const result = await sendClaimCorrectionSms(deps, {
@@ -1133,15 +1258,25 @@ export async function registerContactLadderWorkers(
   opts: { readonly sweepCron?: string; readonly tz?: string } = {},
 ): Promise<void> {
   // A transient throw fails THIS job (pg-boss retries it with the same id — it re-claims its own row); ⛔ a sibling's.
-  const child = (run: typeof runCorrectionLadderSmsChild) => async (jobs: Job[]) => {
-    const results = [];
-    for (const job of jobs) results.push(await run(deps, job.data as JobEnvelope<LadderSmsPayload>, job.id));
-    return { processed: results.length, results };
-  };
+  // `includeMetadata` — a child reads its retry count (round-2 P8 / P21: the FINAL attempt records what never cleared).
+  const child =
+    (run: (d: ContactLadderDeps, e: JobEnvelope<LadderSmsPayload>, id: string, a?: CorrectionChildAttempt) => Promise<LadderSmsChildResult>) =>
+    async (jobs: Job[]) => {
+      const results = [];
+      for (const job of jobs) {
+        const meta = job as Job & { readonly retryCount?: unknown; readonly retryLimit?: unknown };
+        const attempt =
+          typeof meta.retryCount === 'number' && typeof meta.retryLimit === 'number'
+            ? { retryCount: meta.retryCount, retryLimit: meta.retryLimit }
+            : undefined;
+        results.push(await run(deps, job.data as JobEnvelope<LadderSmsPayload>, job.id, attempt));
+      }
+      return { processed: results.length, results };
+    };
   await boss.createQueue(QUEUE_NAMES.CLAIM_CORRECTION_LADDER_SMS);
-  await boss.work(QUEUE_NAMES.CLAIM_CORRECTION_LADDER_SMS, child(runCorrectionLadderSmsChild));
+  await boss.work(QUEUE_NAMES.CLAIM_CORRECTION_LADDER_SMS, { includeMetadata: true }, child(runCorrectionLadderSmsChild));
   await boss.createQueue(QUEUE_NAMES.CLAIM_CERTIFICATE_LADDER_SMS);
-  await boss.work(QUEUE_NAMES.CLAIM_CERTIFICATE_LADDER_SMS, child(runCertificateLadderSmsChild));
+  await boss.work(QUEUE_NAMES.CLAIM_CERTIFICATE_LADDER_SMS, { includeMetadata: true }, child(runCertificateLadderSmsChild));
   // ⚠ The expiry set TWICE on purpose (6.19b's lesson): `createQueue` keeps an existing queue's default, `schedule` upserts.
   await boss.createQueue(QUEUE_NAMES.CLAIM_CONTACT_LADDER_SWEEP, { expireInSeconds: CORRECTION_SWEEP_EXPIRE_SECONDS });
   await boss.work(QUEUE_NAMES.CLAIM_CONTACT_LADDER_SWEEP, async (jobs: Job[]) => {

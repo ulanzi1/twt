@@ -39,6 +39,11 @@ services:
       SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME: ${SMS_REPORT_WEBHOOK_TOKEN_NEXT_SECRET_NAME}
       # The webhook's per-route limit per minute — PROVISIONAL (roster Row 33 (c2)); a positive integer or the api refuses boot.
       SMS_REPORT_WEBHOOK_RATE_MAX: ${SMS_REPORT_WEBHOOK_RATE_MAX:-1200}
+      # Story 6.37c (`2026-10-18-355` decision 11, LD11; `-354` decision 5) — the ONE nominee-call switch, set in ONE place
+      # (the Dokploy project env) and passed to BOTH the api and jobs. Only the exact value 1 clears nominee calls
+      # (`parseNomineeCallsClearedFlag`); unset / empty / anything else ⇒ refused (fail closed). Set to 1 ONLY when roster
+      # Row 34 (claim-contact-nominee-call-basis) closes on counsel's written basis (G1) — the operator applies.
+      CLAIM_NOMINEE_CALLS_CLEARED: ${CLAIM_NOMINEE_CALLS_CLEARED:-}
     labels:
       # Dokploy/Traefik path routing — the API surface.
       - "traefik.http.routers.twt-api.rule=PathPrefix(`/api/v1`)"
@@ -67,6 +72,11 @@ services:
       # The OPTIONAL template-read-only key (MG17 (b)) — unset ⇒ the send key reads the templates. Values: roster Row 32 (b).
       SMS_GATEWAY_API_KEY_SECRET_NAME: ${SMS_GATEWAY_API_KEY_SECRET_NAME}
       SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME: ${SMS_GATEWAY_PREFLIGHT_KEY_SECRET_NAME}
+      # Story 6.37c (`2026-10-18-355` decision 11, LD11; `-354` decision 5) — the ONE nominee-call switch, set in ONE place
+      # (the Dokploy project env) and passed to BOTH the api and jobs. Only the exact value 1 clears nominee calls
+      # (`parseNomineeCallsClearedFlag`); unset / empty / anything else ⇒ refused (fail closed). Set to 1 ONLY when roster
+      # Row 34 (claim-contact-nominee-call-basis) closes on counsel's written basis (G1) — the operator applies.
+      CLAIM_NOMINEE_CALLS_CLEARED: ${CLAIM_NOMINEE_CALLS_CLEARED:-}
 
   public:
     image: ${AR_BASE}/public:${IMAGE_TAG}

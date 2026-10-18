@@ -50,6 +50,8 @@ export function contactCallRefusalText(err: unknown, fallback: string = t.calls.
       const copy = t.calls.refusals[err.code.slice('contact_call.'.length)];
       if (copy !== undefined) return copy;
     }
+    // Review round 2, P29 — the actor's missing display name (409): ⛔ "Try again" (a retry can never succeed).
+    if (err.code === 'admin.display_name_missing') return t.calls.displayNameMissing;
     if (err.status === 401) return t.letters.sessionExpired;
     if (isRoleForbidden(err)) return t.letters.forbidden;
     if (err.status === 429) return t.letters.rateLimited;

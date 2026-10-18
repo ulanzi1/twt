@@ -88,8 +88,9 @@ export interface ConcludedLadderFact {
  */
 function epochsOf<R extends LadderMappableRow>(rows: readonly R[]): Map<R, number> {
   // Review P1 — the hash comparison is `sameNumberHash` (timing-safe), matching every other hash comparison in this
-  // module. Review P11 — a `sentOn` + `createdAt` tie (two rows of ONE transaction share a `now()` — a real, not
-  // hypothetical, risk in this codebase's write paths) is broken by `reminderId`, so the ordering stays deterministic.
+  // module. Review P11 — a `sentOn` + `createdAt` tie is broken by `reminderId`, so the ordering stays deterministic.
+  // ⚠ Corrected in review round 2: both send tables default `created_at` to `clock_timestamp()`, so two rows of one
+  // transaction do ⛔ share a `now()` — a tie needs a hand-set fixture; the tie-break is harmless determinism only.
   const evidential = rows
     .filter((r) => isEvidentialReminderRow(r))
     .sort((a, b) => compareReminderRowsByTime(a, b) || (a.reminderId ?? '').localeCompare(b.reminderId ?? ''));
@@ -214,10 +215,14 @@ export function planLadderStart(input: {
     if (sameNumber.some((x) => x.createdAt.getTime() > r.createdAt.getTime() && x.deliveryState === 'delivered')) continue;
     if (input.calls.some((c) => c.outcome === 'reached' && c.calledOn >= r.sentOn)) continue;
     const t = r.createdAt.getTime();
+    // Review round 2 P1 — a ladder COVERS only rows to ITS number: a text to a NEW number sent before the old number's
+    // ladder ended `ended_number_changed` (the 10:00 chase sweep before the ladder sweep) is ⛔ covered by it.
     const coveredOrOrigin = input.ladders.some(
       (l) =>
         l.originRowId === r.reminderId ||
-        (t >= l.originCreatedAt.getTime() && (l.endedAt === null || t <= l.endedAt.getTime())),
+        (sameNumberHash(l.recipientNumberHash, r.recipientNumberHash) &&
+          t >= l.originCreatedAt.getTime() &&
+          (l.endedAt === null || t <= l.endedAt.getTime())),
     );
     if (coveredOrOrigin) continue;
     if (input.stopOfRun(r.runId) !== null) continue;
@@ -369,15 +374,27 @@ export function ladderAsk(input: {
 }
 
 /**
- * LD9 — the EARLIEST date of a call recorded `reached` for the person since the epoch began (recorded at or after its
- * first row — the delivered-letter convention), or `null`. It stops the staff asks ONLY for a CONCLUDED person
- * (`deadKind 'not_delivered'`) — the caller checks that. Pure.
+ * `2026-10-18-363` decision 1 — THE ONE RULE: a call recorded `reached` answers a concluded ladder's ask only when it
+ * was MADE (`called_on`) on or after that ladder's `origin_sent_on` (the IST date of the failed text that started it).
+ * When it was RECORDED does ⛔ matter: a historical call logged late counts iff its date is on/after the origin; a call
+ * that ended an EARLIER ladder answers ⛔ a later one. Shared by the staff view (`pendingLadderAsk`) and the letter-chase
+ * stop (`reachedCallSince`) — ⛔ two rules (round 2 D1). Pure.
  */
-export function reachedCallSince(calls: readonly LadderCallFact[], epochStart: Date | null): string | null {
-  const since = epochStart?.getTime() ?? Number.NEGATIVE_INFINITY;
+export function callAnswersLadder(call: LadderCallFact, originSentOn: string): boolean {
+  return call.outcome === 'reached' && call.calledOn >= originSentOn;
+}
+
+/**
+ * LD9 as narrowed by `2026-10-18-363` decision 1 — the EARLIEST `called_on` of a call recorded `reached` for the person
+ * on or after the CONCLUDED ladder's `originSentOn` (`callAnswersLadder`), or `null` (and `null` for a `null` origin —
+ * ⛔ concluded ladder). It stops the staff letter-chase asks ONLY for a CONCLUDED person (`deadKind 'not_delivered'`) —
+ * the caller checks that and passes that person's latest concluded ladder's origin date. Pure.
+ */
+export function reachedCallSince(calls: readonly LadderCallFact[], originSentOn: string | null): string | null {
+  if (originSentOn === null) return null;
   return (
     calls
-      .filter((c) => c.outcome === 'reached' && c.createdAt.getTime() >= since)
+      .filter((c) => callAnswersLadder(c, originSentOn))
       .map((c) => c.calledOn)
       .sort()[0] ?? null
   );
@@ -403,6 +420,8 @@ export interface LadderViewFact {
   readonly state: ContactLadderState;
   readonly createdAt: Date;
   readonly endedAt: Date | null;
+  /** The IST date of the failed text that started the ladder — the ask's call window (`-363` decision 1). */
+  readonly originSentOn: string;
   readonly sms2DueOn: string;
   readonly sms2State: ContactLadderStepState;
   readonly sms3DueOn: string | null;
@@ -435,7 +454,9 @@ export function ladderFollowUpOf(ladders: readonly LadderViewFact[]): ContactLad
 
 /**
  * LD9 / LD12 — the call-or-letter ask STILL OPEN for the person, or `null`: their latest ladder CONCLUDED and ⛔ answered
- * since — ⛔ a call recorded `reached`, ⛔ a letter recorded, after its conclusion. Cap-aware through `ladderAsk`. Pure.
+ * since — ⛔ a call recorded `reached` MADE on or after that ladder's origin date (`callAnswersLadder` — `-363`
+ * decision 1: the same rule as the letter-chase stop), ⛔ a letter recorded after its conclusion. Cap-aware through
+ * `ladderAsk`. Pure.
  */
 export function pendingLadderAsk(input: {
   readonly ladders: readonly LadderViewFact[];
@@ -449,7 +470,7 @@ export function pendingLadderAsk(input: {
   const l = latestLadder(input.ladders);
   if (l === undefined || l.state !== 'concluded_undelivered' || l.endedAt === null) return null;
   const since = l.endedAt.getTime();
-  if (input.calls.some((c) => c.outcome === 'reached' && c.createdAt.getTime() >= since)) return null;
+  if (input.calls.some((c) => callAnswersLadder(c, l.originSentOn))) return null;
   if (input.letterRecordedAt.some((d) => d.getTime() >= since)) return null;
   return ladderAsk(input);
 }

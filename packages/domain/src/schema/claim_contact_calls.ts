@@ -35,8 +35,11 @@ export const claimContactCalls = pgTable(
     personKey: text('person_key').notNull(),
     /** The surface it was recorded from — ⛔ a reach scope (a reached call reached the PERSON). */
     chase: text('chase').notNull().$type<ContactLadderChase>(),
-    /** The ladder whose ask it answers, when one was running or concluded for the person — else null. */
-    ladderId: uuid('ladder_id').references(() => claimContactLadders.ladderId, { onDelete: 'cascade' }),
+    /**
+     * The ladder whose ask it answers, when one was running or concluded for the person — else null. `SET NULL` on the
+     * ladder's delete (round 2 P31, migration 0170): a reached call is a reach FACT (I1) that outlives its attribution.
+     */
+    ladderId: uuid('ladder_id').references(() => claimContactLadders.ladderId, { onDelete: 'set null' }),
     /** IST date of the call (≤ today, ≥ the claim's filing date — the writer's checks). */
     calledOn: date('called_on', { mode: 'string' }).notNull(),
     answeredBy: text('answered_by').notNull().$type<ContactCallAnsweredBy>(),

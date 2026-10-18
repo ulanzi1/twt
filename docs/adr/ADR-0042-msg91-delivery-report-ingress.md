@@ -204,10 +204,8 @@ Load-bearing details:
     cross-tenant path, or the paused-webhook detector stops (roster Row 26's dated note, 2026-10-18).
   - Every alarm — the silence alarm, the unmatched-report and `second_request_for_one_send` alarms included — reaches the logs only
     until `onAlarm` is wired to a named person (roster Row 32 (h)); until then a detector is a log line nobody is paged by.
-- **Migration / pivot.** ⭐ Trigger: MSG91 adds request signing to its delivery-report webhook. If it does, a successor ADR adds
-  signature verification ahead of the header check and restores §3.11 step 1 and the edge bar's webhook reading (Context, "The edge
-  bar, too") — this exception, unlike this story's other deferred-work items, had carried no named trigger until review (D-level
-  finding, 6-37c code review). A new gateway is a new adapter and a new ingress route; the inbox and `sms_send_deliveries` are
+- **Migration / pivot.** If MSG91 adds request signing, a successor ADR adds signature verification ahead of the header check and
+  restores §3.11 step 1 and the edge bar's webhook reading (Context, "The edge bar, too"). A new gateway is a new adapter and a new ingress route; the inbox and `sms_send_deliveries` are
   gateway-neutral apart from the request-id format.
 
 ## References

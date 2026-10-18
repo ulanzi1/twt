@@ -2257,6 +2257,10 @@ onboarding:
   §3 of this proposal and carried by sprint row `6-37d-claim-contact-whatsapp-step`.
   *(Approved 2026-10-18, Decision 2026-10-18-357; "this proposal" =
   `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md`.)*
+  *(Dated 2026-10-18, Story 6.37c code review round 2: the bullet above is the approved text,
+  unedited. Its heading names the rulings that asked for this contact (`-350` / `-351` / `-352`);
+  the exception was narrowed to the claimant by Decision 2026-10-18-356 (`-352` Q2's nominee
+  WhatsApp superseded) and approved by Decision 2026-10-18-357.)*
 - **Fallback driven by WA-Cloud-API undelivered status,** not pre-send presence
   detection.
 

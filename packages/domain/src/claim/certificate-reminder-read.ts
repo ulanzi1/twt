@@ -24,6 +24,7 @@ import { certificateCatchUp, certificateReminderSchedule } from './certificate-r
 import {
   type CertificateCannotRemindReason,
   type CertificatePauseReason,
+  certificateLetterCapReached,
   certificateRecordedDays,
   evaluateCertificatePersonStates,
   planCertificateRun,
@@ -255,7 +256,8 @@ export async function readCertificateListItem(
         calls: calls.filter((c) => c.personKey === p.personKey),
         letterRecordedAt: s.letter === null ? [] : [s.letter.createdAt],
         role: p.role,
-        letterCapReached: s.letter !== null, // `-275` Q1 — ONE letter per person per claim, ever
+        // `-275` Q1 — ONE letter per person per claim, ever — AND CR6's one per NUMBER (round 2 P24: the route refuses it).
+        letterCapReached: certificateLetterCapReached(states, p.personKey),
         nomineeCallsCleared: opts.nomineeCallsCleared ?? false,
       }),
       calls: calls.filter((c) => c.personKey === p.personKey),

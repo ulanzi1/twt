@@ -18,7 +18,7 @@
 // ⚠ Every control is shown to every queue reader: the page cannot see keys (1)/(7) (district-dimension; the
 // session carries only the national grants), so every control maps an error through ONE classifier (`errors.ts`).
 // ⭐ Story 6.37c (LD12) — per person: the follow-up texts after the network said a reminder did not arrive (running —
-// next on <date>; how it ended), the call-or-letter ask, the reminders reported not delivered, the calls, and the call
+// next step on <date>; how it ended), the call-or-letter ask, the reminders reported not delivered, the calls, and the call
 // form (while a follow-up exists or an ask is open). The status words are UNCHANGED — a concluded person reached by a
 // call still reads "unreachable" (the call shows in the list and counts for the closure).
 
@@ -27,7 +27,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { ClaimsUnderCorrectionResponse, CorrectionLetterDto } from '@twt/contracts';
 
 import { ApiError, getCorrectionLetterScreenshot } from '../../api/client.js';
-import { ContactCallForm } from './ContactCallForm.js';
+import { ContactCallForm, callFormOffered } from './ContactCallForm.js';
 import { ContactLadderLines } from './ContactLadderLines.js';
 import { CorrectionLetterForm } from './CorrectionLetterForm.js';
 import { MustActChangeForm } from './MustActChangeForm.js';
@@ -266,16 +266,15 @@ export function CorrectionChasePanel({ pariwarId, item }: CorrectionChasePanelPr
                     calls={p.calls}
                     reportedUndelivered={p.reported_undelivered}
                   />
-                  {/* Review P29 — `ask === 'none'` means neither a call nor a letter is possible (escalate instead);
-                      the form must ⛔ be offered then. `ask` is ONLY ever set once `follow_up.state === 'concluded'`
-                      (LD9), so a bare `follow_up !== null` is ALREADY true there and would make this check a no-op —
-                      the `concluded` state defers to `ask` specifically; fix-diff review caught this. Review D11 —
-                      every OTHER non-null `follow_up` state (`running`, `ended_delivered`, `ended_call`,
-                      `ended_other`) keeps the form offered regardless of `ask`, by design: staff may legitimately
-                      need to log a late/historical call after the ladder ended another way. */}
-                  {(p.follow_up !== null && p.follow_up.state !== 'concluded') || (p.ask !== null && p.ask !== 'none') ? (
-                    <ContactCallForm pariwarId={pariwarId} claimCaseId={item.claim_case_id} personKey={p.person_key} chase="correction" />
-                  ) : null}
+                  {/* The offer rule is ONE function (`callFormOffered` — review P29 / D11 / round 2 P6); the form stays
+                      MOUNTED once offered so its "Call recorded." outlives the refetch that withdraws it (round 2, P3). */}
+                  <ContactCallForm
+                    pariwarId={pariwarId}
+                    claimCaseId={item.claim_case_id}
+                    personKey={p.person_key}
+                    chase="correction"
+                    offered={callFormOffered(p.follow_up, p.ask)}
+                  />
                   {p.letters.length > 0 ? (
                     <ul className="mt-1">
                       {p.letters.map((l) => (

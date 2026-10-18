@@ -70,6 +70,9 @@ export function registerCorrectionChaseRoutes(app: FastifyInstance, deps: AppDep
     revealed: 'admin_claim_correction.call_number_revealed',
   });
   const callNumberStepUp = requireStepUp(deps, CONTACT_CALL_NUMBER_STEP_UP_CONTEXT);
+  // Review round 2, P6 — the call refusals BEFORE the step-up (a plain identifier: the human-actor gate classifies each
+  // preHandler element statically).
+  const callNumberPrecheck = calls.precheckNumber;
 
   r.post(
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/must-act',
@@ -130,7 +133,7 @@ export function registerCorrectionChaseRoutes(app: FastifyInstance, deps: AppDep
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/calls/number',
     {
       schema: { params: ClaimParam, querystring: ContactCallNumberQuery, response: { 200: ContactCallNumberResponse }, tags: [TAG] },
-      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, callNumberStepUp],
+      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, callNumberPrecheck, callNumberStepUp],
     },
     calls.readNumber,
   );

@@ -14,7 +14,7 @@
 // and ⛔ certificate writer takes the advisory key, so ⛔ deadlock.
 // ⛔⛔ Nothing here decides anything about a claim (⛔ a decision writer, ⛔ a claim event).
 
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
@@ -26,7 +26,8 @@ import {
   type ContactCallAnsweredBy,
   type ContactCallOutcome,
 } from '../schema/claim_contact_calls.js';
-import type { ContactLadderChase } from '../schema/claim_contact_ladders.js';
+import { type ContactLadderChase } from '../schema/claim_contact_ladders.js';
+import { claimStateTrusteeDecisions } from '../schema/claim_state_trustee_decisions.js';
 import { claims } from '../schema/claims.js';
 import { lockCertificateClaim, readCertificateRecipients } from './certificate-reminder.js';
 import { readClaimContactCalls, readClaimLadders } from './contact-ladder-read.js';
@@ -40,10 +41,12 @@ import { getLiveCorrectionReturn } from './state-trustee-decision-persist.js';
  * Review D10 — a correction ladder's `return_decision_id` scopes it to ONE return (the migration's own CHECK;
  * `readClaimLadders`'s own doc comment: "every correction reader keys on the live return"). A certificate ladder
  * carries ⛔ return at all. Resolves the SAME way `writeCorrectionMark` does — re-derived here, ⛔ trusted from a caller.
- * ⚠ Fix-diff review (edge case) — `undefined` here means the claim has NEVER been returned, ⛔ "the live return is
- * ambiguous": `claim_contact_ladders_return_pair_check` forces every correction ladder row to carry a
- * `return_decision_id`, so a never-returned claim has ZERO ladder rows to conflate across returns — the caller's
- * `readClaimLadders(..., undefined)` reads an empty set either way, ⛔ the cross-return leak D10 closes.
+ * ⚠ Review round 2 P19 — ⛔ live return does ⛔ mean "never returned": the correction closure SUPERSEDES the return
+ * (`supersedeReturn` sets `superseded_at`), and `getLiveCorrectionReturn` reads only an unsuperseded one. With ⛔ live
+ * return the scope is the claim's LATEST return (superseded or not — by `decided_at`, then id), ⛔ the latest LADDER's
+ * return (fix-diff review: a latest return with ⛔ ladder would otherwise fall back to an OLDER return's ladders);
+ * ⛔ return at all ⇒ `undefined` (⛔ correction ladder can exist — `claim_contact_ladders_return_pair_check`). ⛔ an
+ * unscoped read across returns.
  */
 async function liveReturnIdFor(
   db: Db,
@@ -52,7 +55,23 @@ async function liveReturnIdFor(
   chase: ContactLadderChase,
 ): Promise<string | undefined> {
   if (chase !== 'correction') return undefined;
-  return (await getLiveCorrectionReturn(db, pariwarId, claimCaseId))?.decisionId;
+  const live = await getLiveCorrectionReturn(db, pariwarId, claimCaseId);
+  if (live) return live.decisionId;
+  const t = claimStateTrusteeDecisions;
+  const [latest] = await db
+    .select({ decisionId: t.decisionId })
+    .from(t)
+    .where(
+      and(
+        eq(t.pariwarId, pariwarId),
+        eq(t.claimCaseId, claimCaseId),
+        eq(t.phase, 'correction_return'),
+        eq(t.outcome, 'returned_for_correction'),
+      ),
+    )
+    .orderBy(desc(t.decidedAt), desc(t.decisionId))
+    .limit(1);
+  return latest?.decisionId ?? undefined;
 }
 
 /** Every refusal of a call record / number reveal, as a stable code (the API maps each to `contact_call.<code>`). */
@@ -237,7 +256,7 @@ export async function recordContactCall(
   const endedLadderIds: string[] = [];
   if (input.outcome === 'reached') {
     for (const chase of ['correction', 'certificate'] as const) {
-      // Review D10 — correction is scoped to the SAME live return already resolved above (⛔ a second resolve: the
+      // Review D10 / round 2 P19 — correction is scoped to the SAME return already resolved above (⛔ a second resolve: the
       // call and the ladders it ends are one transaction); certificate carries ⛔ return, ⛔ scoping.
       const chaseLiveReturnId = chase === input.chase ? myChaseLiveReturnId : await liveReturnIdFor(db, input.pariwarId, input.claimCaseId, chase);
       for (const l of await readClaimLadders(db, input.pariwarId, input.claimCaseId, chase, chaseLiveReturnId)) {

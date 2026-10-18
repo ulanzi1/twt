@@ -1,8 +1,11 @@
 // <ContactLadderLines> — what the delivery LADDER shows for ONE person (Story 6.37c, LD12), on the correction chase panel
-// AND the certificate list: the follow-up's state ("Follow-up texts running — next on <date>", how it ended), "Texts
-// were reported not delivered — <the ask>" (cap-aware: phone, post, either, or neither), how many reminders the network
-// said were not delivered (correction only), and the calls recorded (date · who answered · whether it reached the
-// family · by whom). ⭐ Every line is ANNOUNCED (`role="status"`). ⛔ A name, ⛔ a number.
+// AND the certificate list: the follow-up's state ("Follow-up running — next step on <date>", how it ended — wording per
+// `2026-10-18-363` decision 2), "Texts were reported not delivered — <the ask>" (cap-aware: phone, post, either, or
+// neither), how many reminders the network said were not delivered (correction only), and the calls recorded (date · who
+// answered · whether it reached the family · by whom). ⛔ A name, ⛔ a number.
+// ⚠ Each line is a `role="status"` region: a CHANGE to a line that is already on screen (a refetch moving the next step,
+// a follow-up ending) is announced; a line that MOUNTS already holding its text is ⛔ announced — it is read with the rest
+// of the person's row (review round 2, P30 — an earlier comment here said "every line is ANNOUNCED", which was untrue).
 // ⚠ T18 — the microcopy gate scans comments too: "reported" / "the network said", ⛔ the bare canonical term.
 
 import type { ReactElement } from 'react';

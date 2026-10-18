@@ -2,11 +2,13 @@
 // drives them. The network is the only thing faked (`api/client.js`, function by function) — the real hooks, the real
 // components and the real copy run; ONE leg drives the REAL client over a stubbed `fetch` to pin the `Idempotency-Key`.
 //
-// ⭐ What these pin: "Follow-up texts running — next on <date>"; "Texts were reported not delivered — <the ask>" for each
+// ⭐ What these pin: "Follow-up running — next step on <date>" (`2026-10-18-363` d2); "Texts were reported not delivered — <the ask>" for each
 // ask; the reminders the network said were not delivered; the call list; the certificate list's REASON-AWARE owed-letter
 // line; the form — "it reached the family" only when the person or a family member answered, ONE key per attempt (kept
 // across a retry, renewed after a success), the step-up number reveal (elevate ⇒ retry ⇒ number shown), the nominee
-// refusal in plain words.
+// refusal in plain words. Round 2: Enter in the code box verifies (P2); "Call recorded." outlives the refetch that withdraws
+// the form, on both surfaces (P3); an EDITED retry is a new key (P4); ⛔ form for ask `letter` (P6); the named radio group
+// and the disabled option's reason (P30); a missing display name reads its own line (P29).
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -36,7 +38,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
 const { ApiError } = await import('../src/api/client.js');
 const { CorrectionChasePanel, ContactCallForm, correctionChaseEn: t } = await import('../src/modules/correction-chase/index.js');
 const { forgetStepUpVerified } = await import('../src/modules/correction-chase/CorrectionLetterForm.js');
-const { canBeReached } = await import('../src/modules/correction-chase/ContactCallForm.js');
+const { canBeReached, callFormOffered } = await import('../src/modules/correction-chase/ContactCallForm.js');
 const { CertificateRemindersList } = await import('../src/modules/certificate-reminders/CertificateRemindersList.js');
 const { certificateRemindersEn } = await import('../src/modules/certificate-reminders/i18n-en.js');
 const { istToday } = await import('../src/modules/correction-chase/ist.js');
@@ -117,7 +119,7 @@ describe('the delivery ladder lines (LD12)', () => {
       />,
     );
     const row = screen.getByTestId(`person-${PERSON}`);
-    expect(within(row).getByTestId('ladder-follow-up').textContent).toBe('Follow-up texts running — next on 2026-10-12.');
+    expect(within(row).getByTestId('ladder-follow-up').textContent).toBe('Follow-up running — next step on 2026-10-12.');
     expect(within(row).getByTestId('ladder-follow-up').getAttribute('role')).toBe('status');
     expect(within(row).getByTestId('ladder-reported-undelivered').textContent).toBe('1 reminder the network said was not delivered.');
     expect(within(row).getByTestId(`call-form-${PERSON}`)).toBeTruthy();
@@ -143,7 +145,7 @@ describe('the delivery ladder lines (LD12)', () => {
       />,
     );
     expect(screen.getByTestId('ladder-not-delivered').textContent).toBe(`Texts were reported not delivered — ${words}.`);
-    expect(screen.getByTestId('ladder-follow-up').textContent).toBe('Follow-up texts ended on 2026-10-18 — none reached the family.');
+    expect(screen.getByTestId('ladder-follow-up').textContent).toBe('Follow-up ended on 2026-10-18 — none was reported delivered.');
     expect(screen.getByTestId('ladder-reported-undelivered').textContent).toBe('2 reminders the network said were not delivered.');
   });
 
@@ -204,13 +206,26 @@ describe('the delivery ladder lines (LD12)', () => {
     );
     expect(screen.getByTestId('certificate-letter-owed').textContent).toBe('A letter is owed — texts to this person were reported not delivered.');
     expect(screen.getByTestId('ladder-not-delivered').textContent).toBe('Texts were reported not delivered — post them a letter.');
-    expect(screen.getByTestId(`call-form-${PERSON}`)).toBeTruthy();
+    // Review round 2, P6 — ask `letter` (a nominee while nominee calls are not cleared): every call and reveal would be
+    // refused, so the form is ⛔ offered.
+    expect(screen.queryByTestId(`call-form-${PERSON}`)).toBeNull();
+  });
+
+  it.each([
+    ['call_or_letter', true],
+    ['call', true],
+    ['letter', false],
+    ['none', false],
+  ] as const)('round 2, P6 — a CONCLUDED follow-up with ask %s offers the call form: %s (callFormOffered)', (ask, offered) => {
+    expect(callFormOffered({ state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18' }, ask)).toBe(offered);
+    expect(callFormOffered({ state: 'running', started_on: '2026-10-11', next_step_on: '2026-10-13', concluded_on: null }, ask)).toBe(true);
+    expect(callFormOffered(null, null)).toBe(false);
   });
 });
 
 describe('the call form (LD10, LD11)', () => {
   const renderForm = (chase: 'correction' | 'certificate' = 'correction') =>
-    wrap(<ContactCallForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} chase={chase} />);
+    wrap(<ContactCallForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} chase={chase} offered />);
 
   async function fill(user: ReturnType<typeof userEvent.setup>, answered: string, outcome: 'reached' | 'not_reached') {
     const form = screen.getByRole('form', { name: t.calls.record });
@@ -258,6 +273,67 @@ describe('the call form (LD10, LD11)', () => {
     await user.click(screen.getByRole('button', { name: t.calls.save }));
     await waitFor(() => expect(recordCorrectionContactCall).toHaveBeenCalledTimes(3));
     expect(recordCorrectionContactCall.mock.calls[2]![3]).not.toBe(first![3]); // ⭐ a NEW attempt
+  });
+
+  it('⭐ round 2, P4 — an EDITED retry after a failure is a NEW attempt (a new key); the SAME fields keep the key', async () => {
+    const user = userEvent.setup();
+    recordCorrectionContactCall.mockRejectedValueOnce(new Error('network down')).mockRejectedValueOnce(new Error('network down')).mockResolvedValue(CALL);
+    renderForm();
+    await fill(user, 'family_member', 'reached');
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    await waitFor(() => expect(recordCorrectionContactCall).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(t.calls.error));
+    // The admin corrects who answered — and the outcome with it.
+    await user.selectOptions(screen.getByLabelText(t.calls.whoAnswered), 'nobody');
+    await user.click(screen.getByLabelText(t.calls.notReached));
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    await waitFor(() => expect(recordCorrectionContactCall).toHaveBeenCalledTimes(2));
+    const [first, second] = recordCorrectionContactCall.mock.calls;
+    expect(second![2]).toEqual({ person_key: PERSON, called_on: '2026-10-01', answered_by: 'nobody', outcome: 'not_reached' });
+    expect(second![3]).not.toBe(first![3]); // ⭐ ⛔ a replay of the first call under its key
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(t.calls.error));
+    await user.click(screen.getByRole('button', { name: t.calls.save })); // the SAME (edited) fields again
+    await waitFor(() => expect(recordCorrectionContactCall).toHaveBeenCalledTimes(3));
+    expect(recordCorrectionContactCall.mock.calls[2]![3]).toBe(second![3]);
+  });
+
+  it('round 2, P2 — Enter in the code box VERIFIES the code; ⛔ it saves the call', async () => {
+    const user = userEvent.setup();
+    getCorrectionContactCallNumber
+      .mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'elevate'))
+      .mockResolvedValue({ person_key: PERSON, number: '+919812345678' });
+    requestStepUp.mockResolvedValue({ sent: true, expiresInSeconds: 300 });
+    verifyStepUp.mockResolvedValue({ elevated: true, elevatedUntil: new Date(Date.now() + 300_000).toISOString() });
+    renderForm();
+    await fill(user, 'family_member', 'reached');
+    await user.click(screen.getByRole('button', { name: t.calls.showNumber }));
+    await user.click(await screen.findByRole('button', { name: t.letters.sendCode }));
+    await user.type(await screen.findByLabelText(t.letters.code), '123456{Enter}');
+    expect((await screen.findByTestId('call-number')).textContent).toContain('+919812345678');
+    expect(verifyStepUp).toHaveBeenCalledWith('123456');
+    expect(recordCorrectionContactCall).not.toHaveBeenCalled();
+  });
+
+  it('round 2, P30 — the outcome radios are a NAMED group; a disabled "reached" says why', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    expect(screen.getByRole('group', { name: t.calls.outcomeLegend })).toBeTruthy();
+    const reached = screen.getByLabelText(t.calls.reached) as HTMLInputElement;
+    expect(reached.disabled).toBe(true);
+    const hint = document.getElementById(reached.getAttribute('aria-describedby') ?? '');
+    expect(hint?.textContent).toBe(t.calls.reachedHint);
+    expect(t.calls.reachedHint).not.toBe(t.calls.reachedNeedsAnswer); // ⛔ the alert's sentence twice (fix-diff review)
+    await user.selectOptions(screen.getByLabelText(t.calls.whoAnswered), 'the_person');
+    expect(reached.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('round 2, P29 — a missing display name reads its own line, ⛔ "Try again"', async () => {
+    const user = userEvent.setup();
+    recordCorrectionContactCall.mockRejectedValue(new ApiError(409, 'admin.display_name_missing', 'x'));
+    renderForm();
+    await fill(user, 'nobody', 'not_reached');
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(t.calls.displayNameMissing));
   });
 
   it('a missing field and a future date are VISIBLE messages, ⛔ a request', async () => {
@@ -319,6 +395,128 @@ describe('the call form (LD10, LD11)', () => {
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(t.calls.refusals['number_unavailable']));
     await user.click(screen.getByRole('button', { name: t.calls.showNumber }));
     expect((await screen.findByTestId('call-number')).textContent).toContain(t.calls.noNumber);
+  });
+});
+
+describe('round 2, P3 — "Call recorded." outlives the refetch that withdraws the form', () => {
+  function deferred<T>() {
+    let resolve!: (v: T) => void;
+    const promise = new Promise<T>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  }
+  const concluded = { state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18' } as const;
+
+  async function saveReachedThenWithdraw(
+    user: ReturnType<typeof userEvent.setup>,
+    pending: ReturnType<typeof deferred<ContactCallDto>>,
+    withdraw: () => void,
+  ): Promise<void> {
+    const form = screen.getByRole('form', { name: t.calls.record });
+    await user.type(within(form).getByLabelText(t.calls.calledOn), '2026-10-01');
+    await user.selectOptions(within(form).getByLabelText(t.calls.whoAnswered), 'family_member');
+    await user.click(within(form).getByLabelText(t.calls.reached));
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    // The refetch lands BEFORE the mutation resolves (`onSettled` runs first): the ask is answered ⇒ ⛔ form.
+    withdraw();
+    pending.resolve(CALL);
+    await waitFor(() => expect(screen.getByTestId('call-form-status').textContent).toBe(t.calls.saved));
+    expect(screen.queryByRole('form', { name: t.calls.record })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('call-form-status')));
+  }
+
+  it('⭐ the CORRECTION panel', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<ContactCallDto>();
+    recordCorrectionContactCall.mockReturnValue(pending.promise);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const ui = (ask: 'call_or_letter' | null) => (
+      <QueryClientProvider client={qc}>
+        <CorrectionChasePanel
+          pariwarId={PARIWAR}
+          item={item([person({ follow_up: concluded, unreachable_reason: 'not_delivered', ask, calls: ask === null ? [CALL] : [] })])}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui('call_or_letter'));
+    await saveReachedThenWithdraw(user, pending, () => rerender(ui(null)));
+  });
+
+  it('⭐ the CERTIFICATE list', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<ContactCallDto>();
+    recordCertificateContactCall.mockReturnValue(pending.promise);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const certPerson = (ask: 'call' | null): CertPerson => ({
+      person_key: PERSON,
+      role: 'nominee',
+      position: 'A',
+      sms_state: 'reminded',
+      letter_eligible: true,
+      letter: null,
+      escalation_recorded_on: null,
+      follow_up: concluded,
+      unreachable_reason: 'not_delivered',
+      ask,
+      calls: ask === null ? [{ ...CALL, chase: 'certificate' }] : [],
+    });
+    const ui = (ask: 'call' | null) => (
+      <QueryClientProvider client={qc}>
+        <CertificateRemindersList
+          pariwarId={PARIWAR}
+          items={[
+            {
+              claim_case_id: CLAIM,
+              short_reference: '11111111',
+              cause: 'rejected',
+              run_state: 'open',
+              pause_reason: null,
+              run_day: 20,
+              next_reminder_on: '2026-10-21',
+              cannot_remind: null,
+              people: [certPerson(ask)],
+            },
+          ]}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui('call'));
+    await saveReachedThenWithdraw(user, pending, () => rerender(ui(null)));
+  });
+
+  // Fix-diff review — a withdrawn form's fields, kept key and problem go too: offered AGAIN it starts EMPTY, and a save of
+  // the same fields is a NEW attempt (⛔ the old key replayed), ⛔ the old alert left behind.
+  it('⛔ withdrawn then offered again ⇒ empty fields, ⛔ old problem, a NEW key', async () => {
+    const user = userEvent.setup();
+    recordCorrectionContactCall.mockRejectedValueOnce(new Error('network down')).mockResolvedValue(CALL);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const ui = (offered: boolean) => (
+      <QueryClientProvider client={qc}>
+        <ContactCallForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} chase="correction" offered={offered} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui(true));
+    const fillReached = async () => {
+      const form = screen.getByRole('form', { name: t.calls.record });
+      await user.type(within(form).getByLabelText(t.calls.calledOn), '2026-10-01');
+      await user.selectOptions(within(form).getByLabelText(t.calls.whoAnswered), 'family_member');
+      await user.click(within(form).getByLabelText(t.calls.reached));
+    };
+    await fillReached();
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+    rerender(ui(false));
+    rerender(ui(true));
+    const form = screen.getByRole('form', { name: t.calls.record });
+    expect((within(form).getByLabelText(t.calls.calledOn) as HTMLInputElement).value).toBe('');
+    expect((within(form).getByLabelText(t.calls.whoAnswered) as HTMLSelectElement).value).toBe('');
+    expect(screen.queryByRole('alert')).toBeNull();
+    await fillReached();
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    await waitFor(() => expect(recordCorrectionContactCall).toHaveBeenCalledTimes(2));
+    const [first, second] = recordCorrectionContactCall.mock.calls;
+    expect(second![3]).not.toBe(first![3]);
   });
 });
 

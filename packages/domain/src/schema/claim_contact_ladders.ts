@@ -103,7 +103,8 @@ export const claimContactLadders = pgTable(
       'claim_contact_ladders_sms3_on_pair_check',
       sql`(${t.sms3State} = 'pending') = (${t.sms3On} IS NULL) AND (${t.sms3State} = 'pending') = (${t.concludeOn} IS NULL)`,
     ),
-    // Review P3 — LOCKSTEP with migration 0169's `claim_contact_ladders_sms2_row_id_check` / `_sms3_row_id_check`.
+    // Review P3 — LOCKSTEP with migration 0170's `claim_contact_ladders_sms2_row_id_check` / `_sms3_row_id_check` (round 2 P9:
+    // moved out of 0169, which is restored as applied).
     check(
       'claim_contact_ladders_sms2_row_id_check',
       sql`CASE ${t.sms2State} WHEN 'sent' THEN ${t.sms2RowId} IS NOT NULL WHEN 'satisfied' THEN true ELSE ${t.sms2RowId} IS NULL END`,
@@ -122,6 +123,11 @@ export const claimContactLadders = pgTable(
     ),
     check('claim_contact_ladders_ended_pair_check', sql`(${t.state} = 'running') = (${t.endedAt} IS NULL)`),
     check('claim_contact_ladders_concluded_pair_check', sql`(${t.state} = 'concluded_undelivered') = (${t.concludedOn} IS NOT NULL)`),
+    // Review round 2 P31 — LOCKSTEP with migration 0170: a CONCLUDED ladder resolved both steps (`concludeContactLadder`'s CAS).
+    check(
+      'claim_contact_ladders_concluded_steps_check',
+      sql`${t.state} <> 'concluded_undelivered' OR (${t.sms2State} <> 'pending' AND ${t.sms3State} <> 'pending')`,
+    ),
     check('claim_contact_ladders_escalated_check', sql`${t.escalatedOn} IS NULL OR ${t.state} = 'concluded_undelivered'`),
     check(
       'claim_contact_ladders_end_detail_check',

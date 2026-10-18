@@ -54,6 +54,8 @@ specific legitimate uses, and processing *"necessary for enforcing any legal rig
 
 ## What we need back
 
-A short written answer to each. It will be recorded as a decision and closes roster Row 18 (questions 1, 4, 5) and Row 34 (question 2).
+A short written answer to each. It will be recorded as a decision; it answers roster Row 18's three questions (questions 1, 4, 5) and closes Row 34 (question 2). Row 18 closes only when, in addition, the claim-contact agreement's wording marked *"pending Story 0.13"* is replaced by the text counsel approves.
 Question 3 (the claimant) stands outside Row 18's own (a)–(c) closure criteria — its answer overrides Decision `2026-10-18-354` decision
 2's reading directly, rather than closing a roster row. If any answer depends on facts we have not given, please say which.
+
+*Revised 2026-10-18, before sending (Story 6.37c code review round 2): "closes roster Row 18" → "answers Row 18's three questions" — Row 18's testable signal also needs the `claim_contact_agreement` copy's "pending Story 0.13" marker replaced by counsel's approved text (roster Row 18, closure_criteria).*

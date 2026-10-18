@@ -35,6 +35,8 @@ const h = vi.hoisted(() => ({
   listAdminsByRole: vi.fn(),
   // Story 6.37c (LD9) — planRun reads the claim's calls (a reached call stops a CONCLUDED person's letter asks).
   readClaimContactCalls: vi.fn(async () => []),
+  // `2026-10-18-363` d1 — planRun reads the return's ladders (a call answers only on/after a CONCLUDED ladder's origin).
+  readClaimLadders: vi.fn(async () => []),
 }));
 
 vi.mock('@twt/domain', async (importOriginal) => {
@@ -64,6 +66,7 @@ vi.mock('@twt/domain', async (importOriginal) => {
       insertFinalCorrectionReminder: h.insertFinalCorrectionReminder,
       listAdminsByRole: h.listAdminsByRole,
       readClaimContactCalls: h.readClaimContactCalls,
+      readClaimLadders: h.readClaimLadders,
     },
   };
 });

@@ -79,9 +79,13 @@ async function ladder(
   const due = new Date(Date.parse(`${origin}T00:00:00Z`) + 2 * 86_400_000).toISOString().slice(0, 10);
   const concluded = over.state === 'concluded';
   const { rows } = await client.query<{ ladder_id: string }>(
+    // Round 2 P31 — a CONCLUDED ladder resolved both steps (0170's `claim_contact_ladders_concluded_steps_check`): the
+    // fixture records them `satisfied` on the due date (⛔ row — a satisfied step may carry none).
     `INSERT INTO claim_contact_ladders (pariwar_id, claim_case_id, chase, run_id, return_decision_id, person_key, recipient_number_hash,
-       origin_row_id, origin_sent_on, whatsapp_step, sms2_due_on, state, ended_at, concluded_on)
-     VALUES ($1, $2, $3, $4, $5, $6, 'h', gen_random_uuid(), $7, 'skipped:whatsapp_not_built', $8, $9, $10, $11) RETURNING ladder_id`,
+       origin_row_id, origin_sent_on, whatsapp_step, sms2_due_on, state, ended_at, concluded_on,
+       sms2_state, sms2_on, sms3_due_on, sms3_state, sms3_on, conclude_on)
+     VALUES ($1, $2, $3, $4, $5, $6, 'h', gen_random_uuid(), $7, 'skipped:whatsapp_not_built', $8, $9, $10, $11,
+       $12, $13, $13, $12, $13, $13) RETURNING ladder_id`,
     [
       PARIWAR_A,
       c.cid,
@@ -93,6 +97,8 @@ async function ladder(
       due,
       concluded ? 'concluded_undelivered' : 'running',
       concluded ? new Date() : null,
+      concluded ? due : null,
+      concluded ? 'satisfied' : 'pending',
       concluded ? due : null,
     ],
   );
@@ -125,9 +131,8 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the call record (domain, live)', 
     const running = await ladder(client, c, { originSentOn: '2026-02-01' });
     const third = await recordContactCall(client, input(c, { outcome: 'not_reached', answeredBy: 'nobody' }));
     expect(third.call.ladderId).toBe(running);
-    expect((await listContactCalls(tx, PARIWAR_A, c.cid)).map((x) => x.callId)).toEqual(
-      expect.arrayContaining([first.call.callId, second.call.callId, third.call.callId]),
-    );
+    // Round 2 P34 — EXACTLY these three, oldest first (same `called_on` ⇒ `created_at`, a `clock_timestamp()`).
+    expect((await listContactCalls(tx, PARIWAR_A, c.cid)).map((x) => x.callId)).toEqual([first.call.callId, second.call.callId, third.call.callId]);
   });
 
   it('`reached` only when the person or a family member answered — the writer refuses, and so does the DB CHECK', async () => {
@@ -216,21 +221,49 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the call record (domain, live)', 
     ).toBe('certificate');
   });
 
-  it('⭐ a REACHED call ENDS the person\'s RUNNING ladders of BOTH chases whose origin is on / before the call — ⛔ a later one, ⛔ another person\'s, ⛔ a concluded one', async () => {
+  // Round 2 P34 — the title named "a later one" the body never built (a LATER origin is the next leg's).
+  it('⭐ a REACHED call ENDS the person\'s RUNNING ladders of BOTH chases whose origin is on / before the call — ⛔ another person\'s, ⛔ a concluded one', async () => {
     const { client, tx } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const c = await returnedClaim(client);
     await withClaimantBlock(tx, c);
     const corr = await ladder(client, c, { chase: 'correction', originSentOn: '2026-01-01' });
     const cert = await ladder(client, c, { chase: 'certificate', originSentOn: TODAY });
-    const later = await ladder(client, c, { chase: 'correction', personKey: 'nominee:other', originSentOn: '2026-01-01' });
+    const otherPerson = await ladder(client, c, { chase: 'correction', personKey: 'nominee:other', originSentOn: '2026-01-01' });
     const concluded = await ladder(client, c, { chase: 'certificate', originSentOn: '2026-03-01', state: 'concluded' });
     const out = await recordContactCall(client, input(c, { chase: 'certificate' }));
     expect([...out.endedLadderIds].sort()).toEqual([corr, cert].sort());
     expect(await stateOfLadder(client, corr)).toEqual({ state: 'ended_call', end_detail: 'call_reached' });
     expect(await stateOfLadder(client, cert)).toEqual({ state: 'ended_call', end_detail: 'call_reached' });
-    expect((await stateOfLadder(client, later)).state).toBe('running');
+    expect((await stateOfLadder(client, otherPerson)).state).toBe('running');
     expect((await stateOfLadder(client, concluded)).state).toBe('concluded_undelivered');
+  });
+
+  // Round 2 P19 — after the correction closure SUPERSEDES the return there is ⛔ live return; the call's ladder reads
+  // are scoped to the claim's LATEST RETURN (by `decided_at`), ⛔ every return (round 1's D10 read `undefined` as "never
+  // returned" and read unscoped) and ⛔ the latest LADDER's return (fix-diff review: the stray ladder below is created
+  // LAST, on a return that is ⛔ the claim's latest — scoping by the latest ladder would pick it).
+  it('⭐ ⛔ live return (superseded at closure) ⇒ scoped to the claim\'s LATEST return — a ladder of ANOTHER return, even the newest ladder, is ⛔ attributed or ended', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await returnedClaim(client);
+    await withClaimantBlock(tx, c);
+    const concluded = await ladder(client, c, { state: 'concluded' });
+    const { rows } = await client.query<{ ladder_id: string }>(
+      `INSERT INTO claim_contact_ladders (pariwar_id, claim_case_id, chase, run_id, return_decision_id, person_key, recipient_number_hash,
+         origin_row_id, origin_sent_on, whatsapp_step, sms2_due_on)
+       VALUES ($1, $2, 'correction', $3, gen_random_uuid(), 'claimant', 'h', gen_random_uuid(), '2026-01-01', 'skipped:whatsapp_not_built', '2026-01-03')
+       RETURNING ladder_id`,
+      [PARIWAR_A, c.cid, c.runId],
+    );
+    const otherReturnRunning = rows[0]!.ladder_id;
+    await asSuperuser(client, () =>
+      client.query(`UPDATE claim_state_trustee_decisions SET superseded_at = now() WHERE decision_id = $1`, [c.returnId]),
+    );
+    const out = await recordContactCall(client, input(c));
+    expect(out.call.ladderId).toBe(concluded);
+    expect(out.endedLadderIds).toEqual([]);
+    expect((await stateOfLadder(client, otherReturnRunning)).state).toBe('running');
   });
 
   it('a call EARLIER than a ladder\'s origin ends ⛔ it; a `not_reached` call ends ⛔ ladder', async () => {

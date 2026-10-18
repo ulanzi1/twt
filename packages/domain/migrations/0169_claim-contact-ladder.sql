@@ -81,23 +81,6 @@ ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_sms2_s
 ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_sms3_state_check" CHECK ("sms3_state" ~ '^(pending|sent|satisfied|skipped:[a-z_]{1,48})$');--> statement-breakpoint
 ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_sms2_on_pair_check" CHECK (("sms2_state" = 'pending') = ("sms2_on" IS NULL) AND ("sms2_state" = 'pending') = ("sms3_due_on" IS NULL));--> statement-breakpoint
 ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_sms3_on_pair_check" CHECK (("sms3_state" = 'pending') = ("sms3_on" IS NULL) AND ("sms3_state" = 'pending') = ("conclude_on" IS NULL));--> statement-breakpoint
--- Review P3 — `sms<N>_row_id` is REQUIRED once `sent` (the row the attempt landed on), ⛔ while `pending` or a
--- skip (`resolve()` always passes `rowId: null` there); `satisfied` may carry ⛔ ONE, EITHER (LD4's later backfill —
--- `settleSatisfiedContactLadderStep`).
-ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_sms2_row_id_check" CHECK (
-  CASE "sms2_state"
-    WHEN 'sent' THEN "sms2_row_id" IS NOT NULL
-    WHEN 'satisfied' THEN true
-    ELSE "sms2_row_id" IS NULL
-  END
-);--> statement-breakpoint
-ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_sms3_row_id_check" CHECK (
-  CASE "sms3_state"
-    WHEN 'sent' THEN "sms3_row_id" IS NOT NULL
-    WHEN 'satisfied' THEN true
-    ELSE "sms3_row_id" IS NULL
-  END
-);--> statement-breakpoint
 ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_step_order_check" CHECK ("sms2_due_on" > "origin_sent_on" AND ("sms3_state" = 'pending' OR "sms2_state" <> 'pending'));--> statement-breakpoint
 ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_state_check" CHECK ("state" IN ('running', 'ended_delivered', 'ended_call', 'ended_number_changed', 'ended_stopped', 'concluded_undelivered'));--> statement-breakpoint
 ALTER TABLE "claim_contact_ladders" ADD CONSTRAINT "claim_contact_ladders_ended_pair_check" CHECK (("state" = 'running') = ("ended_at" IS NULL));--> statement-breakpoint

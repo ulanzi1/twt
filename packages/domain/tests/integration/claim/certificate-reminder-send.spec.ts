@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CertificateRecipientsMovedError,
   type CertificateReminderKey,
+  certificateLadderStopReason,
   claimCertificateReminder,
   expireOwnCertificateReminder,
   finaliseCertificateReminder,
@@ -31,6 +32,8 @@ import {
   recordCertificateHashFailure,
   recordCertificateLetter,
   recordCertificateLetterDelivery,
+  readDeathCertificateSnapshot,
+  recordDeathCertificateReview,
   skipCertificateReminder,
   type CertificateRunPlan,
   beginCertificateFamilySend,
@@ -49,8 +52,11 @@ import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integra
 import {
   PARIWAR_A,
   enterAppScope,
+  fixtureAcceptedDateCiphertext,
+  fixtureDeathDateIndex,
   seedClaim,
   seedClaimContact,
+  seedDeathCertificate,
   seedEvent,
   seedNomineeDeclaration,
   seedRejectedDeathCertificate,
@@ -455,7 +461,7 @@ describe.skipIf(!hasDatabase)('the certificate reminder — send/claim/finalize 
       const { client } = getTx();
       const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
       const db = bindScopedDb(client);
-      await expect(skipCertificateReminder(db, { ...skipKey(c, c.a.personKey), sentOn: TODAY(), late: false, jobId: 'job-1', reason: 'run_ended' })).resolves.toEqual({ expiredAttempt: false });
+      await expect(skipCertificateReminder(db, { ...skipKey(c, c.a.personKey), sentOn: TODAY(), late: false, jobId: 'job-1', reason: 'run_ended' })).resolves.toEqual({ expiredAttempt: false, skippedOwn: false });
       const row = await readCertificateReminder(db, skipKey(c, c.a.personKey));
       expect(row).toMatchObject({ outcome: 'skipped_superseded', detail: 'run_ended' });
     });
@@ -466,7 +472,7 @@ describe.skipIf(!hasDatabase)('the certificate reminder — send/claim/finalize 
       const sent = await beginCertificateFamilySend(client, sendInput(c, c.a.personKey));
       if (sent.kind !== 'send') throw new Error('expected a send');
       const db = bindScopedDb(client);
-      await expect(skipCertificateReminder(db, { ...skipKey(c, c.a.personKey), sentOn: TODAY(), late: false, jobId: 'job-1', reason: 'not_due' })).resolves.toEqual({ expiredAttempt: false });
+      await expect(skipCertificateReminder(db, { ...skipKey(c, c.a.personKey), sentOn: TODAY(), late: false, jobId: 'job-1', reason: 'not_due' })).resolves.toEqual({ expiredAttempt: false, skippedOwn: true });
       const row = await readCertificateReminder(db, skipKey(c, c.a.personKey));
       expect(row).toMatchObject({ outcome: 'skipped_superseded', detail: 'not_due' });
     });
@@ -480,9 +486,35 @@ describe.skipIf(!hasDatabase)('the certificate reminder — send/claim/finalize 
       await noteCertificateReminderTransient(db, { pariwarId: PID, reminderId: sent.reminderId, jobId: 'job-1', detail: 'api_unavailable' });
       await expect(
         skipCertificateReminder(db, { ...skipKey(c, c.a.personKey), sentOn: TODAY(), late: false, jobId: 'job-1', reason: 'not_due' }),
-      ).resolves.toEqual({ expiredAttempt: true });
+      ).resolves.toEqual({ expiredAttempt: true, skippedOwn: false });
       const row = await readCertificateReminder(db, skipKey(c, c.a.personKey));
       expect(row).toMatchObject({ outcome: 'error', detail: 'exhausted:recheck_not_due', firstDetail: 'api_unavailable' });
+    });
+
+    // Review round 2 (fix-diff) — `skippedOwn` is the ladder's un-send key: ⛔ for a row that may have SENT or is mid-send.
+    it('⛔ a row already FINAL (`accepted` — it may have SENT) ⇒ untouched, `skippedOwn: false`', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      const sent = await beginCertificateFamilySend(client, sendInput(c, c.a.personKey));
+      if (sent.kind !== 'send') throw new Error('expected a send');
+      const db = bindScopedDb(client);
+      await finaliseCertificateReminder(db, { pariwarId: PID, reminderId: sent.reminderId, jobId: 'job-1', outcome: 'accepted' });
+      await expect(
+        skipCertificateReminder(db, { ...skipKey(c, c.a.personKey), sentOn: TODAY(), late: false, jobId: 'job-1', reason: 'not_due' }),
+      ).resolves.toEqual({ expiredAttempt: false, skippedOwn: false });
+      expect(await readCertificateReminder(db, skipKey(c, c.a.personKey))).toMatchObject({ outcome: 'accepted' });
+    });
+
+    it('⛔ an `attempting` row held by ANOTHER job (mid-send) ⇒ untouched, `skippedOwn: false`', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      const sent = await beginCertificateFamilySend(client, sendInput(c, c.a.personKey));
+      if (sent.kind !== 'send') throw new Error('expected a send');
+      const db = bindScopedDb(client);
+      await expect(
+        skipCertificateReminder(db, { ...skipKey(c, c.a.personKey), sentOn: TODAY(), late: false, jobId: 'job-other', reason: 'not_due' }),
+      ).resolves.toEqual({ expiredAttempt: false, skippedOwn: false });
+      expect(await readCertificateReminder(db, skipKey(c, c.a.personKey))).toMatchObject({ outcome: 'attempting', claimedByJob: 'job-1' });
     });
   });
 
@@ -524,6 +556,153 @@ describe.skipIf(!hasDatabase)('the certificate reminder — send/claim/finalize 
       const input = { pariwarId: PID, claimCaseId: c.cid, runId: c.runId, slotDay: 1, personKey: c.a.personKey, sentOn: TODAY(), late: false };
       await expect(recordCertificateHashFailure(client, input)).resolves.toBe(true);
       await expect(recordCertificateHashFailure(client, input)).resolves.toBe(false);
+    });
+  });
+
+  // ── Story 6.37c review round 2 P12 — AC2: every certificate ladder stop, one leg each, through the EXTRACTED predicate ──
+  describe('certificateLadderStopReason — the ladder SMS\'s composed stops (AC2, LD5, I6)', () => {
+    const stopOf = (client: Client, c: { cid: ReturnType<typeof toClaimId>; runId: string; hashes: Awaited<ReturnType<typeof hashCertificateRecipients>> }, personKey: string, runId = c.runId) =>
+      certificateLadderStopReason(bindScopedDb(client), { pariwarId: PID, claimCaseId: c.cid, runId, personKey, today: TODAY(), hashes: c.hashes });
+
+    /** A `rejected` run on a properly event-sourced claim (the anchor upload is the rejected one). */
+    async function openRejectedRun(client: Client) {
+      const { cid, member } = await seedCheckedClaim(client, { mobiles: ['9876543210', '9123456789'] });
+      await seedClaimContact(client, PARIWAR_A, cid);
+      await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+      const opened = await openUnderLock(client, cid, await planNow(client, cid));
+      if (opened.status !== 'opened') throw new Error('run not opened');
+      const people = (await readCertificateRecipients(bindScopedDb(client), PID, cid)).people;
+      const hashes = await hashCertificateRecipients(people, PARIWAR_A, ENC);
+      return { cid, member, runId: opened.run.runId, people, hashes, a: people[0]!, b: people[1]! };
+    }
+
+    it('the baseline — an open run, a recipient, ⛔ stop: `stop: null`, ⛔ paused, the origin run\'s day', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      await expect(stopOf(client, c, c.a.personKey)).resolves.toMatchObject({ stop: null, paused: false, runDay: 1 });
+    });
+
+    it('⛔ an unknown run ⇒ `run_ended`', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      await expect(stopOf(client, c, c.a.personKey, randomUUID())).resolves.toEqual({ stop: 'run_ended' });
+    });
+
+    it('⛔ the origin run ended `superseded` (`-260` G5) ⇒ `run_superseded`', async () => {
+      const { client } = getTx();
+      const c = await openRejectedRun(client);
+      await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: c.cid });
+      await seedRejectedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: c.cid });
+      const second = await openUnderLock(client, c.cid, await planNow(client, c.cid));
+      expect(second.status).toBe('opened');
+      await expect(stopOf(client, c, c.a.personKey)).resolves.toEqual({ stop: 'run_superseded' });
+    });
+
+    it('⛔ a certificate RECEIVED since (a `missing` run, an upload now awaiting review) ⇒ `certificate_received`', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: c.cid });
+      await expect(stopOf(client, c, c.a.personKey)).resolves.toEqual({ stop: 'certificate_received' });
+    });
+
+    it('⛔ a `rejected` run whose SAME upload is accepted on a re-review (`-275` Q4) ⇒ `certificate_accepted`', async () => {
+      const { client } = getTx();
+      const c = await openRejectedRun(client);
+      const snap = await readDeathCertificateSnapshot(bindScopedDb(client), PID, c.cid);
+      const date = '2026-01-15';
+      await recordDeathCertificateReview(client, {
+        claimCaseId: c.cid,
+        pariwarId: PID,
+        verdict: 'accepted',
+        certificateToken: snap.currentUploadId as string,
+        acceptedDate: date,
+        acceptedDateCiphertext: fixtureAcceptedDateCiphertext(date),
+        acceptedDateIndex: fixtureDeathDateIndex(date),
+        registerCheck: 'matches',
+        rejectionReason: null,
+        noteCiphertext: 'enc:v1:review-note',
+        expectedLiveReviewId: (snap.liveReview?.reviewId as string | undefined) ?? null,
+        actorId: randomUUID(),
+        actorDisplay: 'Test District Admin',
+        actor: 'operator',
+        now: new Date(),
+      });
+      await expect(stopOf(client, c, c.a.personKey)).resolves.toEqual({ stop: 'certificate_accepted' });
+    });
+
+    it('⛔ a pause in a state that NEVER re-enters the window (`state_trustee_approved`) ⇒ `never_reenters`', async () => {
+      const { client } = getTx();
+      const c = await openRejectedRun(client);
+      await projectClaimState(client, {
+        claimCaseId: c.cid,
+        pariwarId: PARIWAR_A,
+        deceasedMemberId: toMemberId(c.member),
+        intakeChannels: ['member_app'],
+        claimantActorId: null,
+        eventType: 'claim.r9_outcome',
+        payload: {
+          from_state: 'verifier_review',
+          to_state: 'state_trustee_approved',
+          trigger: 'test',
+          actor: 'system',
+          outcome: 'approved',
+          clause_id: 'c1',
+          clause_version_id: randomUUID(),
+          voting_requirement: 'majority',
+          approve_count: 3,
+          deny_count: 0,
+        },
+        actorId: null,
+      });
+      await expect(stopOf(client, c, c.a.personKey)).resolves.toEqual({ stop: 'never_reenters' });
+    });
+
+    it('⛔ the family ⛔ remindable (`cannotRemind` — a revoked agreement) ⇒ `agreement_not_live`', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      await client.query(
+        `UPDATE consent_records SET revoked_at = now() WHERE consent_id = (SELECT agreement_consent_id FROM claim_contacts WHERE claim_case_id = $1)`,
+        [c.cid],
+      );
+      await expect(stopOf(client, c, c.a.personKey)).resolves.toEqual({ stop: 'agreement_not_live' });
+    });
+
+    it('⛔ the person off the contact record ⇒ `not_a_recipient`', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      await expect(stopOf(client, c, 'claimant')).resolves.toEqual({ stop: 'not_a_recipient' });
+    });
+
+    it('⛔ a letter DELIVERED at that number (CR6 — to ANY person at it) ⇒ `letter_delivered`; the other number ⛔ stopped', async () => {
+      const { client } = getTx();
+      const c = await openMissingRun(client, { mobiles: ['9876543210', '9123456789'] });
+      await deadRow(client, c.cid, c.runId, c.a.personKey, (c.hashes.get(c.a.personKey) as { hash: string }).hash);
+      const letter = await recordCertificateLetter(
+        client,
+        {
+          pariwarId: PID,
+          claimCaseId: c.cid,
+          personKey: c.a.personKey,
+          postedOn: TODAY(),
+          trackingNumberCiphertext: 'enc:v1:track',
+          actorId: randomUUID(),
+          actorDisplay: 'Test District Admin',
+        },
+        { crypto: ENC },
+      );
+      await recordCertificateLetterDelivery(client, {
+        pariwarId: PID,
+        claimCaseId: c.cid,
+        letterId: letter.letterId,
+        deliveredOn: TODAY(),
+        screenshotStorageKey: `k/${letter.letterId}`,
+        screenshotContentType: 'image/png',
+        screenshotSizeBytes: 10,
+        actorId: randomUUID(),
+        actorDisplay: 'Test District Admin',
+      });
+      await expect(stopOf(client, c, c.a.personKey)).resolves.toEqual({ stop: 'letter_delivered' });
+      await expect(stopOf(client, c, c.b.personKey)).resolves.toMatchObject({ stop: null });
     });
   });
 });

@@ -38,6 +38,7 @@ import {
   endCorrectionRun,
   expireOwnCorrectionReminder,
   finaliseCorrectionReminder,
+  skipCorrectionReminder,
   hasLiveReturnRow,
   insertFinalCorrectionReminder,
   isPersonAtLetterCap,
@@ -981,6 +982,25 @@ describe.skipIf(!hasDatabase)('the correction chase — the send claim (AC2 send
     // A second begin of the same slot is a no-op (already final); a second finalise is refused (CAS).
     expect(await begin(client, c, 'job-2')).toEqual({ kind: 'noop', reason: 'already_final' });
     expect(await finaliseCorrectionReminder(tx, { pariwarId: PARIWAR_A, reminderId: res.reminderId, jobId: 'job-1', outcome: 'error' })).toBe(false);
+  });
+
+  // Review round 2 (fix-diff) — `skippedOwn` keys the ladder's un-send: ⭐ only THIS job's own row just marked
+  // `skipped_superseded`; ⛔ another job's row (mid-send), ⛔ a FINAL row (it may have SENT) — both untouched.
+  it('⭐ skipCorrectionReminder — `skippedOwn` only for THIS job\'s own attempting row; ⛔ another job\'s, ⛔ a final row', async () => {
+    const { client, tx } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const c = await familyCase(client, tx);
+    const res = await begin(client, c, 'job-1');
+    if (res.kind !== 'send') throw new Error('expected a send');
+    const key = {
+      pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: c.runId!, slotDay: 1, recipientKey: c.person.personKey, purpose: 'family_sms' as const, subjectKey: '',
+    };
+    const skip = (jobId: string) => skipCorrectionReminder(tx, { ...key, sentOn: addCalendarDays(c.day0!, 1), late: false, jobId, reason: 'x' });
+    expect(await skip('job-other')).toEqual({ expiredAttempt: false, skippedOwn: false });
+    expect(await readCorrectionReminder(tx, key)).toMatchObject({ outcome: 'attempting', claimedByJob: 'job-1' });
+    expect(await skip('job-1')).toEqual({ expiredAttempt: false, skippedOwn: true });
+    expect(await readCorrectionReminder(tx, key)).toMatchObject({ outcome: 'skipped_superseded', detail: 'x' });
+    expect(await skip('job-1')).toEqual({ expiredAttempt: false, skippedOwn: false }); // now FINAL — untouched
   });
 
   it('⭐ a transient failure then a retry of the SAME job ⇒ re-claimed AT ONCE (attempt_count 2, first_detail kept) — ⛔ never a second row', async () => {

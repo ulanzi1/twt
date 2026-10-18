@@ -30,6 +30,8 @@ import {
   recordCorrectionLetter,
   recordCorrectionLetterDelivery,
   resolveCorrectionChase,
+  unsendContactLadderStep,
+  abandonCertificateLadderSend,
   writeCertificateLadderEscalation,
   writeCorrectionLadderEscalation,
 } from '../../../src/claim/index.js';
@@ -128,9 +130,13 @@ async function ladder(
   const originSentOn = addCalendarDays(c.day0, o.originSlotDay);
   const chase = o.chase ?? 'correction';
   const { rows } = await client.query<{ ladder_id: string }>(
+    // Round 2 P31 — a CONCLUDED ladder resolved both steps (0170's `claim_contact_ladders_concluded_steps_check`): the
+    // fixture records them `satisfied` (⛔ row) on their due dates.
     `INSERT INTO claim_contact_ladders (pariwar_id, claim_case_id, chase, run_id, return_decision_id, person_key, recipient_number_hash,
-       origin_row_id, origin_sent_on, whatsapp_step, sms2_due_on, state, ended_at, concluded_on, end_detail)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'skipped:nominee_no_whatsapp', $10, $11, $12, $13, $14) RETURNING ladder_id`,
+       origin_row_id, origin_sent_on, whatsapp_step, sms2_due_on, state, ended_at, concluded_on, end_detail,
+       sms2_state, sms2_on, sms3_due_on, sms3_state, sms3_on, conclude_on)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'skipped:nominee_no_whatsapp', $10, $11, $12, $13, $14,
+       $15, $16, $17, $15, $17, $18) RETURNING ladder_id`,
     [
       PARIWAR_A,
       c.cid,
@@ -146,6 +152,10 @@ async function ladder(
       state === 'running' ? null : new Date(),
       state === 'concluded_undelivered' ? (o.concludedOn ?? addCalendarDays(originSentOn, 8)) : null,
       state === 'ended_stopped' ? 'stopped:run_ended' : null,
+      state === 'concluded_undelivered' ? 'satisfied' : 'pending',
+      state === 'concluded_undelivered' ? addCalendarDays(originSentOn, 2) : null,
+      state === 'concluded_undelivered' ? addCalendarDays(originSentOn, 4) : null,
+      state === 'concluded_undelivered' ? addCalendarDays(originSentOn, 8) : null,
     ],
   );
   return rows[0]!.ladder_id;
@@ -396,7 +406,8 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       let p = (await read(false)).people[0]!;
       expect(p).toMatchObject({ followUp: { state: 'running', nextStepOn: addCalendarDays(c.day0, 5) }, unreachableReason: null, reportedUndelivered: 1, ask: null });
       await client.query(
-        `UPDATE claim_contact_ladders SET state = 'concluded_undelivered', concluded_on = $2, ended_at = now() WHERE ladder_id = $1`,
+        // Round 2 P31 — a concluded ladder resolved both steps (0170).
+        `UPDATE claim_contact_ladders SET state = 'concluded_undelivered', concluded_on = $2, ended_at = now(), sms2_state = 'satisfied', sms2_on = sms2_due_on, sms3_due_on = sms2_due_on, sms3_state = 'satisfied', sms3_on = sms2_due_on, conclude_on = sms2_due_on WHERE ladder_id = $1`,
         [running, addCalendarDays(c.day0, 11)],
       );
       p = (await read(false)).people[0]!;
@@ -445,7 +456,10 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       expect(item).not.toBeNull();
       expect(item!.people[0]!.followUp?.state).toBe('running');
       // Concluded, then a LATER accepted text: `sms_state` reads reminded, the reason still not_delivered.
-      await client.query(`UPDATE claim_contact_ladders SET state = 'concluded_undelivered', concluded_on = $2, ended_at = now() WHERE ladder_id = $1`, [l, today]);
+      await client.query(
+        `UPDATE claim_contact_ladders SET state = 'concluded_undelivered', concluded_on = $2, ended_at = now(), sms2_state = 'satisfied', sms2_on = sms2_due_on, sms3_due_on = sms2_due_on, sms3_state = 'satisfied', sms3_on = sms2_due_on, conclude_on = sms2_due_on WHERE ladder_id = $1`,
+        [l, today],
+      );
       await insert(181);
       const after = (await readCertificateListItem(tx, PARIWAR_A, c.cid, today))!;
       expect(after.people[0]).toMatchObject({ smsState: 'reminded', unreachableReason: 'not_delivered', letterEligible: true, ask: 'letter' });
@@ -481,7 +495,8 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       expect(correctionRow).toMatchObject([{ purpose: 'ladder_escalation', outcome: 'recorded', detail: 'ask:call_or_letter', subjectKey: `ladder:${correctionLadderId}` }]);
       expect((await readContactLadder(tx, PARIWAR_A, correctionLadderId))!.escalatedOn).toBe(addCalendarDays(c.day0, 12));
       // A second call is a no-op on the ladder (the compare-and-set on `escalated_on IS NULL`) — ⛔ a second row.
-      await writeCorrectionLadderEscalation(tx, {
+      // Round 2 P34 — and it SAYS so: `written: false`, and `escalated_on` stays the FIRST day (⛔ moved to day 13).
+      const again = await writeCorrectionLadderEscalation(tx, {
         pariwarId: PARIWAR_A,
         claimCaseId: c.cid,
         ladder: correctionLadder,
@@ -495,6 +510,8 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
           .from(schema.claimCorrectionReminders)
           .where(eq(schema.claimCorrectionReminders.subjectKey, `ladder:${correctionLadderId}`)),
       ).toHaveLength(1);
+      expect(again.written).toBe(false);
+      expect((await readContactLadder(tx, PARIWAR_A, correctionLadderId))!.escalatedOn).toBe(addCalendarDays(c.day0, 12));
 
       const certRunId = randomUUID();
       await asSuperuser(client, () =>
@@ -532,6 +549,105 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
         .where(eq(schema.claimCertificateReminders.subjectKey, `ladder:${certLadderId}`));
       expect(certRow).toMatchObject([{ purpose: 'ladder_escalation', outcome: 'no_target', detail: 'no_target:no_staff_recipient' }]);
       expect((await readContactLadder(tx, PARIWAR_A, certLadderId))!.escalatedOn).toBe(addCalendarDays(c.day0, 12));
+    });
+  });
+
+  // Round 2 P17 — a retry the step gate turns down whose claimed row sent NOTHING: the step is ⛔ `sent` any more.
+  describe('unsendContactLadderStep — `sent` on a row that sent nothing ⇒ the gate\'s verdict (LD3)', () => {
+    it('⭐ moves `sent` on THAT row to the verdict, ⛔ row, the next date from the due date; ⛔ another row, ⛔ a non-`sent` step, ⛔ twice', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      const origin = await sendRow(tx, c, { slotDay: 3 });
+      const l = await ladder(client, c, { originRowId: origin, originSlotDay: 3 });
+      const before = (await readContactLadder(tx, PARIWAR_A, l))!;
+      const claimedRow = randomUUID();
+      const sentOn = addCalendarDays(before.sms2DueOn, 1);
+      await client.query(
+        `UPDATE claim_contact_ladders SET sms2_state = 'sent', sms2_on = $2, sms2_row_id = $3, sms3_due_on = $4 WHERE ladder_id = $1`,
+        [l, sentOn, claimedRow, addCalendarDays(sentOn, 2)],
+      );
+      const nextOn = addCalendarDays(before.sms2DueOn, 2);
+      const move = (rowId: string) =>
+        unsendContactLadderStep(tx, { pariwarId: PARIWAR_A, ladderId: l, step: 2, rowId, state: 'satisfied', on: sentOn, nextOn });
+      await expect(move(randomUUID())).resolves.toBe(false);
+      await expect(move(claimedRow)).resolves.toBe(true);
+      expect(await readContactLadder(tx, PARIWAR_A, l)).toMatchObject({ sms2State: 'satisfied', sms2RowId: null, sms2On: sentOn, sms3DueOn: nextOn });
+      await expect(move(claimedRow)).resolves.toBe(false);
+    });
+
+    it('⛔ step 2 is ⛔ un-sent under a step 3 already RESOLVED (its due date would be rewritten — review round 2, fix-diff)', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      const origin = await sendRow(tx, c, { slotDay: 3 });
+      const l = await ladder(client, c, { originRowId: origin, originSlotDay: 3 });
+      const before = (await readContactLadder(tx, PARIWAR_A, l))!;
+      const claimedRow = randomUUID();
+      const sentOn = addCalendarDays(before.sms2DueOn, 1);
+      const sms3On = addCalendarDays(sentOn, 2);
+      await client.query(
+        `UPDATE claim_contact_ladders SET sms2_state = 'sent', sms2_on = $2, sms2_row_id = $3, sms3_due_on = $4,
+           sms3_state = 'skipped:past_horizon', sms3_on = $4, conclude_on = $5 WHERE ladder_id = $1`,
+        [l, sentOn, claimedRow, sms3On, addCalendarDays(sms3On, 4)],
+      );
+      await expect(
+        unsendContactLadderStep(tx, { pariwarId: PARIWAR_A, ladderId: l, step: 2, rowId: claimedRow, state: 'satisfied', on: sentOn, nextOn: addCalendarDays(before.sms2DueOn, 2) }),
+      ).resolves.toBe(false);
+      expect(await readContactLadder(tx, PARIWAR_A, l)).toMatchObject({ sms2State: 'sent', sms2RowId: claimedRow, sms3DueOn: sms3On });
+    });
+  });
+
+  // Review round 2 (fix-diff, P21) — a claimed certificate ladder row that sent NOTHING on its final attempt is abandoned
+  // `skipped_superseded` (⛔ "an attempt ran") and the step leaves `sent` (LD3); ⛔ another job's row, ⛔ twice.
+  describe('abandonCertificateLadderSend — a claimed row that sent nothing (P21)', () => {
+    it('⭐ own `attempting` row ⇒ `skipped_superseded` + the step `skipped:no_sendable_number` (⛔ row, next date from the due date); ⛔ another job, ⛔ twice', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      const runId = randomUUID();
+      await asSuperuser(client, () =>
+        client.query(
+          `INSERT INTO claim_certificate_reminder_runs (run_id, claim_case_id, pariwar_id, cause, day0) VALUES ($1, $2, $3, 'missing', $4)`,
+          [runId, c.cid, PARIWAR_A, c.day0],
+        ),
+      );
+      const hash = (await currentCorrectionNumberHash(c.person.mobileCiphertext, c.person.mobileSource, PARIWAR_A, ENC))!;
+      const origin = (
+        await client.query<{ reminder_id: string }>(
+          `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, outcome, recipient_number_hash)
+           VALUES ($1, $2, $3, 3, $4, $5, 'family_sms', 'accepted', $6) RETURNING reminder_id`,
+          [runId, c.cid, PARIWAR_A, addCalendarDays(c.day0, 3), c.person.personKey, hash],
+        )
+      ).rows[0]!.reminder_id;
+      const l = await ladder(client, c, { originRowId: origin, originSlotDay: 3, chase: 'certificate', runId, hash });
+      const before = (await readContactLadder(tx, PARIWAR_A, l))!;
+      const sentOn = before.sms2DueOn;
+      const claimed = (
+        await client.query<{ reminder_id: string }>(
+          `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, subject_key,
+             outcome, claimed_by_job, claimed_at)
+           VALUES ($1, $2, $3, 5, $4, $5, 'ladder_sms', $6, 'attempting', 'job-1', now()) RETURNING reminder_id`,
+          [runId, c.cid, PARIWAR_A, sentOn, c.person.personKey, `ladder:${l}:2`],
+        )
+      ).rows[0]!.reminder_id;
+      await client.query(
+        `UPDATE claim_contact_ladders SET sms2_state = 'sent', sms2_on = $2, sms2_row_id = $3, sms3_due_on = $4 WHERE ladder_id = $1`,
+        [l, sentOn, claimed, addCalendarDays(sentOn, 2)],
+      );
+      const abandon = (jobId: string) =>
+        abandonCertificateLadderSend(client, {
+          pariwarId: PARIWAR_A, claimCaseId: c.cid, ladderId: l, step: 2, reminderId: claimed, jobId, sentOn, detail: 'no_sendable_number',
+        });
+      await expect(abandon('job-other')).resolves.toEqual({ abandoned: false, unsent: false });
+      expect((await readContactLadder(tx, PARIWAR_A, l))!.sms2State).toBe('sent');
+      await expect(abandon('job-1')).resolves.toEqual({ abandoned: true, unsent: true });
+      const row = await client.query<{ outcome: string; detail: string }>(`SELECT outcome, detail FROM claim_certificate_reminders WHERE reminder_id = $1`, [claimed]);
+      expect(row.rows[0]).toEqual({ outcome: 'skipped_superseded', detail: 'no_sendable_number' });
+      expect(await readContactLadder(tx, PARIWAR_A, l)).toMatchObject({
+        sms2State: 'skipped:no_sendable_number', sms2RowId: null, sms2On: sentOn, sms3DueOn: addCalendarDays(before.sms2DueOn, 2),
+      });
+      await expect(abandon('job-1')).resolves.toEqual({ abandoned: false, unsent: false });
     });
   });
 

@@ -20,7 +20,7 @@ import { useEffect, useId, useState } from 'react';
 import * as api from '../../api/client.js';
 import { ApiError } from '../../api/client.js';
 import { useRecordCertificateLetter, useRecordCertificateLetterDelivery } from '../../api/hooks.js';
-import { ContactCallForm } from '../correction-chase/ContactCallForm.js';
+import { ContactCallForm, callFormOffered } from '../correction-chase/ContactCallForm.js';
 import { ContactLadderLines } from '../correction-chase/ContactLadderLines.js';
 import { STEP_UP_REQUIRED_CODE } from '../correction-chase/errors.js';
 import { certificateErrorText } from './errors.js';
@@ -405,16 +405,15 @@ function PersonRow({ pariwarId, item, person }: { pariwarId: string; item: Item;
       ) : null}
       {/* Story 6.37c (LD12) — the follow-up texts, the ask, the calls, and the call form. */}
       <ContactLadderLines followUp={person.follow_up} unreachableReason={person.unreachable_reason} ask={person.ask} calls={person.calls} />
-      {/* Review P29 — `ask === 'none'` means neither a call nor a letter is possible (escalate instead); the form
-          must ⛔ be offered then. `ask` is ONLY ever set once `follow_up.state === 'concluded'` (LD9), so a bare
-          `follow_up !== null` is ALREADY true there and would make this check a no-op — the `concluded` state
-          defers to `ask` specifically; fix-diff review caught this. Review D11 — every OTHER non-null `follow_up`
-          state (`running`, `ended_delivered`, `ended_call`, `ended_other`) keeps the form offered regardless of
-          `ask`, by design: staff may legitimately need to log a late/historical call after the ladder ended
-          another way. */}
-      {(person.follow_up !== null && person.follow_up.state !== 'concluded') || (person.ask !== null && person.ask !== 'none') ? (
-        <ContactCallForm pariwarId={pariwarId} claimCaseId={item.claim_case_id} personKey={person.person_key} chase="certificate" />
-      ) : null}
+      {/* The offer rule is ONE function (`callFormOffered` — review P29 / D11 / round 2 P6); the form stays MOUNTED once
+          offered so its "Call recorded." outlives the refetch that withdraws it (round 2, P3). */}
+      <ContactCallForm
+        pariwarId={pariwarId}
+        claimCaseId={item.claim_case_id}
+        personKey={person.person_key}
+        chase="certificate"
+        offered={callFormOffered(person.follow_up, person.ask)}
+      />
       {showLetter ? <LetterForm pariwarId={pariwarId} item={item} person={person} /> : null}
     </li>
   );

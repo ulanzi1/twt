@@ -5,12 +5,15 @@
 // succeeds); a `reached` call with nobody answering ⇒ 400; 403 for a role without the key and outside the district;
 // the number reveal behind a FRESH step-up (`contact_call_number`) — the CURRENT number, `no-store`, ONE audit line per
 // reveal, ⛔ the number in any audit line; ⭐ LD11 — a nominee refused while `CLAIM_NOMINEE_CALLS_CLEARED` is unset and
-// allowed when it is `1`, read through `loadConfig(env)` (a second app).
+// allowed when it is `1`, read through `loadConfig(env)` (a second app). Review round 2: the nominee refusal answers
+// BEFORE the step-up (P6 — ⛔ an OTP spent on a refused reveal); a replay while the first is in flight ⇒ 409
+// `contact_call.idempotency_in_progress` (P10, AC7); family 3 per new route — a claim of ANOTHER Pariwar, ⛔ a session,
+// and a TAMPERED (non-human) session (P11).
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, ids } from '@twt/domain';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { claim, idempotency, ids } from '@twt/domain';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { encryptClaimContactField } from '../../../src/modules/claims/claim-contact-crypto.js';
@@ -276,6 +279,134 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the call record, over HTTP', { ti
     expect(await rows(claimCaseId)).toEqual([]);
   });
 
+  it('⭐ round 2, P5 (family 8) — a `recordResult` failure AFTER the commit still writes the audit line and answers 201 (⛔ "could not be saved")', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId } = await seededClaim(pariwarId);
+    const { client: da } = await staff(pariwarId);
+    expect(t.deps.pool).toBe(t.pool);
+    // Fail ONLY the keyed store's "completed" write — every other statement (the call's own tx) runs for real.
+    const realConnect = t.pool.connect.bind(t.pool) as (cb?: unknown) => Promise<import('pg').PoolClient>;
+    const spy = vi.spyOn(t.pool, 'connect').mockImplementation(((cb?: unknown) => {
+      // `pool.query` checks out through the CALLBACK form — passed through untouched.
+      if (typeof cb === 'function') return realConnect(cb);
+      return wrapped();
+    }) as never);
+    const wrapped = async (): Promise<import('pg').PoolClient> => {
+      const client = await realConnect();
+      const realQuery = client.query.bind(client) as (...a: unknown[]) => unknown;
+      (client as unknown as { query: (...a: unknown[]) => unknown }).query = (...args: unknown[]) => {
+        const sql = typeof args[0] === 'string' ? args[0] : '';
+        if (sql.includes("SET status = 'completed'")) return Promise.reject(new Error('store down'));
+        return realQuery(...args);
+      };
+      const realRelease = client.release.bind(client);
+      client.release = ((err?: Error | boolean) => {
+        (client as unknown as { query: unknown }).query = realQuery;
+        return realRelease(err);
+      }) as typeof client.release;
+      return client;
+    };
+    t.auditSink.events.length = 0;
+    const key = randomUUID();
+    try {
+      const res = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId, 'correction')}/calls`, payload: body(), headers: { 'idempotency-key': key } });
+      expect(res.statusCode, res.body).toBe(201);
+    } finally {
+      spy.mockRestore();
+    }
+    // The store write DID fail (the key is still `pending` — ⛔ a vacuous pass).
+    const keyRow = await t.pool.query<{ status: string }>('SELECT status FROM idempotency_keys WHERE key LIKE $1', [`%:correction:${key}`]);
+    expect(keyRow.rows.map((r) => r.status)).toEqual(['pending']);
+    expect(await rows(claimCaseId)).toEqual([{ chase: 'correction', outcome: 'reached' }]);
+    expect(t.auditSink.events.filter((e) => e.type === 'admin_claim_correction.call_recorded')).toHaveLength(1);
+  });
+
+  it('round 2, P32 — an UNREADABLE number envelope ⇒ the retryable 503 contact_call.number_unavailable (⛔ audit line)', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId } = await seededClaim(pariwarId);
+    const { client: da } = await staff(pariwarId);
+    await t.pool.query(`UPDATE claim_contacts SET claimant_mobile_ciphertext = 'enc:v1:not-an-envelope' WHERE claim_case_id = $1`, [claimCaseId]);
+    await elevate(t, da, 'contact_call_number');
+    t.auditSink.events.length = 0;
+    const res = await da.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId, 'correction')}/calls/number?person_key=claimant` });
+    expect(res.statusCode, res.body).toBe(503);
+    expect(errCode(res)).toBe('contact_call.number_unavailable');
+    expect(t.auditSink.events.filter((e) => e.type === 'admin_claim_correction.call_number_revealed')).toHaveLength(0);
+  });
+
+  it('⭐ round 2, P10 (AC7) — a replay while the FIRST is still in flight ⇒ 409 contact_call.idempotency_in_progress (⛔ row)', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId } = await seededClaim(pariwarId);
+    const { client: da, userId } = await staff(pariwarId);
+    const key = `k-${randomUUID()}`;
+    // The first request has CLAIMED the key and not yet recorded its result — the store in exactly that state.
+    const store = idempotency.createKeyedStore(t.pool);
+    expect(await store.claim(`claim.contact_call:${pariwarId}:${userId}:${claimCaseId}:correction:${key}`, 3600)).toBe('acquired');
+    const res = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId, 'correction')}/calls`, payload: body(), headers: { 'idempotency-key': key } });
+    expect(res.statusCode, res.body).toBe(409);
+    expect(errCode(res)).toBe('contact_call.idempotency_in_progress');
+    expect(await rows(claimCaseId)).toEqual([]);
+    // ⛔ The SAME key on the OTHER surface is a different store key (review P17) — it records.
+    const other = await da.inject({ method: 'POST', url: `${base(pariwarId, claimCaseId, 'certificate-reminders')}/calls`, payload: body(), headers: { 'idempotency-key': key } });
+    expect(other.statusCode, other.body).toBe(201);
+  });
+
+  it('⭐ round 2, P11 (family 3) — a District Admin of ANOTHER Pariwar is refused on every call route (403, ⛔ row, ⛔ number)', async () => {
+    const pariwarA = randomUUID();
+    const pariwarB = randomUUID();
+    const { claimCaseId } = await seededClaim(pariwarA);
+    const { client: daB } = await staff(pariwarB);
+    await elevate(t, daB, 'contact_call_number');
+    for (const s of surfaces) {
+      // Through B's OWN Pariwar URL: A's claim resolves ⛔ district in B's scope ⇒ the gate fails CLOSED.
+      const url = `${base(pariwarB, claimCaseId, s.path)}/calls`;
+      const rec = await daB.inject({ method: 'POST', url, payload: body(), headers: { 'idempotency-key': randomUUID() } });
+      expect(rec.statusCode, rec.body).toBe(403);
+      const num = await daB.inject({ method: 'GET', url: `${url}/number?person_key=claimant` });
+      expect(num.statusCode, num.body).toBe(403);
+      expect(num.body).not.toContain(CLAIMANT_MOBILE);
+      // Through A's URL with B's session: the session holds ⛔ scope in A.
+      const aUrl = `${base(pariwarA, claimCaseId, s.path)}/calls`;
+      const recA = await daB.inject({ method: 'POST', url: aUrl, payload: body(), headers: { 'idempotency-key': randomUUID() } });
+      expect([403, 404], recA.body).toContain(recA.statusCode);
+      const numA = await daB.inject({ method: 'GET', url: `${aUrl}/number?person_key=claimant` });
+      expect([403, 404], numA.body).toContain(numA.statusCode);
+      expect(numA.body).not.toContain(CLAIMANT_MOBILE);
+    }
+    expect(await rows(claimCaseId)).toEqual([]);
+  });
+
+  it('⭐ round 2, P11 (family 3) — NON-HUMAN: ⛔ admin session ⇒ 401/403; a TAMPERED session naming a non-human actor ⇒ EXACTLY 404 (⛔ row)', async () => {
+    const pariwarId = randomUUID();
+    const { claimCaseId } = await seededClaim(pariwarId);
+    const routes = (p: string) => [
+      { method: 'POST' as const, url: `${base(pariwarId, claimCaseId, p)}/calls`, payload: body() },
+      { method: 'GET' as const, url: `${base(pariwarId, claimCaseId, p)}/calls/number?person_key=claimant` },
+    ];
+    for (const s of surfaces) {
+      for (const r of routes(s.path)) {
+        const res = await t.app.inject({
+          method: r.method,
+          url: r.url,
+          ...('payload' in r ? { payload: r.payload } : {}),
+          headers: { origin: 'http://localhost:3001', 'idempotency-key': randomUUID() },
+        });
+        expect([401, 403], `${r.method} ${r.url}`).toContain(res.statusCode);
+      }
+    }
+    const { client, userId } = await staff(pariwarId);
+    await t.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE sess ->> 'userId' = $2`, [randomUUID(), userId]);
+    for (const s of surfaces) {
+      for (const r of routes(s.path)) {
+        const res = await client.inject({ method: r.method, url: r.url, ...('payload' in r ? { payload: r.payload } : {}), headers: { 'idempotency-key': randomUUID() } });
+        // The swapped id holds ⛔ membership: `scopeResolutionHook` treats it as any non-member — EXACTLY 404 (the
+        // verifier-decision precedent; ⛔ a 401, which would never reach scope resolution).
+        expect(res.statusCode, `${r.method} ${r.url}`).toBe(404);
+      }
+    }
+    expect(await rows(claimCaseId)).toEqual([]);
+  });
+
   for (const s of surfaces) {
     it(`⭐ ${s.name} — the number: 403 without the FRESH step-up; with it the CURRENT number (no-store), ONE audit line PER reveal, ⛔ the number in it`, async () => {
       const pariwarId = randomUUID();
@@ -315,6 +446,13 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the call record, over HTTP', { ti
     const refused = await off.inject({ method: 'POST', url, payload: body({ person_key: nomineeKey }), headers: { 'idempotency-key': randomUUID() } });
     expect(refused.statusCode).toBe(409);
     expect(errCode(refused)).toBe('contact_call.nominee_calls_not_cleared');
+    // Review round 2, P6 — the refusal answers BEFORE the step-up: ⛔ a code is asked for (⛔ 403
+    // `auth.step_up_required`) on a reveal that would be refused — on BOTH surfaces.
+    for (const p of ['correction', 'certificate-reminders']) {
+      const cold = await off.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId, p)}/calls/number?person_key=${encodeURIComponent(nomineeKey)}` });
+      expect(cold.statusCode, cold.body).toBe(409);
+      expect(errCode(cold)).toBe('contact_call.nominee_calls_not_cleared');
+    }
     await elevate(t, off, 'contact_call_number');
     const hidden = await off.inject({ method: 'GET', url: `${url}/number?person_key=${encodeURIComponent(nomineeKey)}` });
     expect(hidden.statusCode).toBe(409);

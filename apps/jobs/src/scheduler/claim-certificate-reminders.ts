@@ -47,6 +47,7 @@ import {
   DEFAULT_CORRECTION_SWEEP_MAX_RUNS,
   DEFAULT_CORRECTION_SWEEP_RUN_LIMIT,
   ClaimCorrectionTransientError,
+  concludedLadderOriginOf,
   sendClaimCorrectionSms,
   type ClaimCorrectionReminderDeps,
   type CorrectionChildAttempt,
@@ -460,6 +461,9 @@ async function planClaim(
     let written = 0;
     // Story 6.37c (LD9) — a call recorded `reached` stops a CONCLUDED person's chase (the planner checks `deadKind`).
     const calls = await claimDomain.readClaimContactCalls(db, pariwarId, claimCaseId);
+    // `2026-10-18-363` decision 1 — a call counts only when MADE on or after the failed text that started the person's
+    // concluded ladder (⛔ any call recorded since the epoch began — a call that ended an EARLIER ladder answers ⛔ this one).
+    const certificateLadders = await claimDomain.readClaimLadders(db, pariwarId, claimCaseId, 'certificate');
     const staffPlans = claimDomain.planCertificateStaffChase({
       day0: run.day0,
       today,
@@ -467,7 +471,7 @@ async function planClaim(
         ...s,
         reachedCallOn: claimDomain.reachedCallSince(
           calls.filter((c) => c.personKey === s.personKey),
-          s.track.epochRows[0]?.createdAt ?? null,
+          concludedLadderOriginOf(certificateLadders, s.personKey),
         ),
       })),
       staffRows: await claimDomain.readClaimCertificateStaffRows(db, pariwarId, claimCaseId),

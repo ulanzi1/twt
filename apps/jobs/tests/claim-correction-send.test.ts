@@ -34,6 +34,7 @@ import {
   correctionStaffPushAlert,
   correctionStaffPushText,
   isUnrecognizedLadderAskDetail,
+  LADDER_ASK_FALLBACK,
   sendClaimCorrectionSms,
 } from '../src/scheduler/claim-correction-reminders.js';
 import { CLAIM_CORRECTION_SMS_TEMPLATES, renderClaimCorrectionSms } from '../src/scheduler/claim-correction-sms-templates.js';
@@ -409,10 +410,11 @@ describe('the staff push text — a single ladder ask, co-bundled asks, and an u
     });
   });
 
-  it('⛔ an unrecognized detail defaults to the CONSERVATIVE letter-only ask, ⛔ the permissive call-or-letter default (D3)', () => {
-    expect(correctionStaffPushText([{ purpose: 'ladder_escalation', detail: 'ask:something_new' }], 'ABCDEF01').body).toContain(
-      'Post the family a letter',
-    );
+  it('⛔ an unrecognized detail falls back to NEUTRAL words — ⛔ "post a letter" (a capped person), ⛔ "phone" (D3, round-2 P23)', () => {
+    const body = correctionStaffPushText([{ purpose: 'ladder_escalation', detail: 'ask:something_new' }], 'ABCDEF01').body;
+    expect(body).toContain(LADDER_ASK_FALLBACK);
+    expect(body).not.toContain('letter');
+    expect(body).not.toContain('Phone');
     expect(isUnrecognizedLadderAskDetail('ask:something_new')).toBe(true);
     expect(isUnrecognizedLadderAskDetail('ask:call')).toBe(false);
     expect(isUnrecognizedLadderAskDetail(null)).toBe(false);
@@ -437,6 +439,27 @@ describe('the staff push text — a single ladder ask, co-bundled asks, and an u
       'ABCDEF01',
     ).body;
     expect(body).toContain('1 where the network said a reminder was not delivered');
+  });
+
+  it('⭐ round-2 P22 — a co-bundled ESCALATION keeps the escalation\'s title and the body names both', () => {
+    for (const purpose of ['escalation', 'closure_escalation', 'staff_case_escalation', 'closure_letter_escalation']) {
+      expect(correctionStaffPushText([{ purpose: 'ladder_escalation', detail: 'ask:call' }, { purpose }], 'ABCDEF01')).toEqual({
+        title: 'Claim ABCDEF01: a correction chase needs you',
+        body:
+          '2 items due on claim ABCDEF01, including 1 where the network said a reminder was not delivered and an escalation. ' +
+          'Open the correction queue in the admin app.',
+      });
+    }
+    // ⛔ escalation in the batch (two ladder asks) — the ladder title stands.
+    expect(
+      correctionStaffPushText(
+        [
+          { purpose: 'ladder_escalation', detail: 'ask:call' },
+          { purpose: 'ladder_escalation', detail: 'ask:letter' },
+        ],
+        'ABCDEF01',
+      ).title,
+    ).toBe('Claim ABCDEF01: texts did not reach the family');
   });
 });
 

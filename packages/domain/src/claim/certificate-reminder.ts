@@ -65,7 +65,7 @@ import {
   type PersonRunState,
   evaluatePersonRunState,
 } from './correction-chase.js';
-import { type CorrectionMobileSource, currentCorrectionNumberHash } from './correction-crypto.js';
+import { type CorrectionMobileSource, currentCorrectionNumberHash, sameNumberHash } from './correction-crypto.js';
 import { calendarDaysBetween, istDateOf } from './correction-schedule.js';
 import {
   type DeathCertificateStatus,
@@ -834,6 +834,26 @@ export interface CertificatePersonState {
   readonly numberLetterDelivered: boolean;
   /** Letter-eligible: a dead / unreachable / no-target outcome of the CURRENT number (CR8). */
   readonly letterEligible: boolean;
+}
+
+/**
+ * Round-2 P24 — the certificate letter cap as the letter route enforces it (`recordCertificateLetter` —
+ * `already_recorded`): the person's OWN letter on the claim, ⛔ ANY other person at the SAME number with one (CR6 — one
+ * letter per NUMBER). ONE rule for the staff view's ask and the ladder sweep's escalation — the ask must never tell staff
+ * to post a letter the route will refuse. Pure.
+ */
+export function certificateLetterCapReached(
+  states: readonly Pick<CertificatePersonState, 'personKey' | 'numberHash' | 'letter'>[],
+  personKey: string,
+): boolean {
+  const mine = states.find((x) => x.personKey === personKey);
+  if (mine === undefined) return false;
+  if (mine.letter !== null) return true;
+  const myHash = mine.numberHash;
+  return (
+    myHash !== null &&
+    states.some((x) => x.personKey !== personKey && x.letter !== null && x.numberHash !== null && sameNumberHash(x.numberHash, myHash))
+  );
 }
 
 /**

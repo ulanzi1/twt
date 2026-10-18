@@ -196,12 +196,14 @@ export async function claimCorrectionReminder(
  * it — possibly after a gateway accept): it is ⛔ never `skipped_superseded` (that would claim "⛔ not sent" and erase
  * the evidence). It is EXPIRED like the stale-child path (`expireOwnCorrectionReminder`: `error`, the transient detail
  * kept in `first_detail`, `detail` = `exhausted:recheck_<reason>`) and `expiredAttempt: true` is returned — the
- * caller ALARMS (ids only).
+ * caller ALARMS (ids only). `skippedOwn` is `true` ONLY when THIS job's own `attempting` row was just marked
+ * `skipped_superseded` (⛔ attempt ran) — ⛔ for a row already final, held by another job, or a fresh marker (review
+ * round 2, fix-diff: the ladder's un-send keys on it).
  */
 export async function skipCorrectionReminder(
   db: Db,
   k: CorrectionReminderKey & { readonly sentOn: string; readonly late: boolean; readonly jobId: string; readonly reason: string },
-): Promise<{ readonly expiredAttempt: boolean }> {
+): Promise<{ readonly expiredAttempt: boolean; readonly skippedOwn: boolean }> {
   const existing = await readCorrectionReminder(db, k);
   if (existing !== null) {
     if (existing.outcome === 'attempting' && existing.claimedByJob === k.jobId) {
@@ -212,9 +214,9 @@ export async function skipCorrectionReminder(
           jobId: k.jobId,
           detail: `exhausted:recheck_${k.reason}`,
         });
-        return { expiredAttempt: expired };
+        return { expiredAttempt: expired, skippedOwn: false };
       }
-      await db
+      const moved = await db
         .update(claimCorrectionReminders)
         .set({ outcome: 'skipped_superseded', detail: k.reason, updatedAt: sql`clock_timestamp()` })
         .where(
@@ -224,12 +226,15 @@ export async function skipCorrectionReminder(
             eq(claimCorrectionReminders.claimedByJob, k.jobId),
             sql`${claimCorrectionReminders.detail} IS NULL`,
           ),
-        );
+        )
+        .returning({ reminderId: claimCorrectionReminders.reminderId });
+      return { expiredAttempt: false, skippedOwn: moved.length > 0 };
     }
-    return { expiredAttempt: false };
+    // ⚠ Review round 2 (fix-diff) — the row is FINAL or held by ANOTHER job: untouched (`skippedOwn: false`).
+    return { expiredAttempt: false, skippedOwn: false };
   }
   await insertFinalCorrectionReminder(db, { ...k, outcome: 'skipped_superseded', detail: k.reason });
-  return { expiredAttempt: false };
+  return { expiredAttempt: false, skippedOwn: false };
 }
 
 /**

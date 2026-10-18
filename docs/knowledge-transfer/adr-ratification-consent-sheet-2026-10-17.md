@@ -135,7 +135,7 @@ counted per caller-supplied address; a report that never comes leaves a text cou
 | `docs/knowledge-transfer/adr-index.md` | The three Section A rows flip; summary `drafted` 3→**0**, `ratified` 37→**40**; **Total unchanged at 153**. Row **and** reconciliation in the **same commit**, per `README.md` §7 |
 | `_bmad-output/planning-artifacts/architecture.md` §3.11 | The one-line pointer in Read-first 1 (with ADR-0042 only) |
 | `docs/launch-gate-inventory/inventory-roster.md` | Rows 24 (a), 32 (a), 33 (a) — evidence link to the ratifying decision |
-| `.decision-log.md` | One entry, numbered from the head **at ruling time** (`2026-10-17-353` was the head when this sheet was prepared 2026-10-17; re-verify before writing — the actual ratification landed as Decision `2026-10-18-358`, minted after `-357`) |
+| `.decision-log.md` | One entry, numbered from the head **at ruling time** (`2026-10-17-353` is the current head; re-verify) |
 | This sheet | Filed alongside the prior sheets |
 
 **Nothing else.** No code, no migration, no story status. Ratifying ADR-0042 does **not** approve the architecture §3.4 amendment for
@@ -147,3 +147,11 @@ WhatsApp contact about a claim — that is its own item in the same pack (now fo
 departure ADR-0042 records; Read-first 2 rewritten — it said the bound "holds under the Panel's ruling", true of Story 6.37b as built
 but not under the follow-up ladder; this sheet's own "seven-field record" corrected to six of MSG91's fields plus our receive time (ADR-0042: "seven columns — six of MSG91's
 fields").*
+
+*Dated note, 2026-10-18, AFTER presentation (Story 6.37c code review round 2 — the sheet above is kept as presented; this note adds facts
+only). (1) The ratification landed as Decision `2026-10-18-358` (`-357` and `-358` were minted together in `4c09d2a3` after the sitting; the head before it
+was `-356`) — code review round 1 (`b2aa00ff`) had written this into the `.decision-log.md` row above in place; round 2 restored the
+presented words and moved it here. (2) The tally in "Status as of 2026-10-17" and in the `adr-index.md` row (`ratified` 37→40, Total
+153) was already stale when the sheet was presented: Story 6.37b's code review round 2 (`ac123e19`, 2026-10-18) had corrected the
+index summary to the row tally the sheet's own ⚠ line quotes (111 / 39; Total 154 by the recount). The flip the ratification ordered was applied
+against that corrected summary — `drafted` 3→0, `ratified` 39→**42**, Total **154** (`adr-index.md`, records commit `4e7ddd84`).*

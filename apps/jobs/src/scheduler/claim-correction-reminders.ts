@@ -510,8 +510,24 @@ export const LADDER_ASK_WORDS: Readonly<Record<string, string>> = {
   'ask:none': 'Neither a call nor a letter is possible — escalate it',
 };
 
-/** Review D3 — the fallback for an unrecognized/missing `detail` must be the MOST CONSERVATIVE ask, ⛔ the most permissive. */
-const LADDER_ASK_FALLBACK = LADDER_ASK_WORDS['ask:letter']!;
+/**
+ * Review D3 / round-2 P23 — the fallback for an unrecognized/missing `detail`: NEUTRAL words that ask for ⛔ particular
+ * act — "post a letter" would tell staff to post a letter the cap forbids for a capped person (and "phone" a nominee
+ * whose calls are not cleared). The caller alarms on it.
+ */
+export const LADDER_ASK_FALLBACK = 'Follow up with the family — open the claim to see what is possible';
+
+/**
+ * `2026-10-18-363` decision 1 — the IST date a reached call must be made ON OR AFTER to answer a person's call-or-letter
+ * ask (and stop their letter-chase asks): the `origin_sent_on` of the person's LATEST concluded ladder (the failed text
+ * that started it); `null` ⇒ ⛔ concluded ladder (⛔ call answers anything). Ladders are read oldest first.
+ */
+export function concludedLadderOriginOf(
+  ladders: readonly { readonly personKey: string; readonly state: string; readonly originSentOn: string }[],
+  personKey: string,
+): string | null {
+  return ladders.filter((l) => l.personKey === personKey && l.state === 'concluded_undelivered').at(-1)?.originSentOn ?? null;
+}
 
 /**
  * Review D3 — true when an `ladder_escalation` item's `detail` is present but not one of `LADDER_ASK_WORDS`'s keys.
@@ -547,11 +563,12 @@ export function correctionStaffPushText(
   if (ladders.length > 0) {
     // Review D2 — more than one ladder ask, or a ladder ask co-bundled with another escalation purpose, shares this
     // batch; naming only the first silently dropped the rest. Generic, name-free, cap-safe wording either way.
+    // Round-2 P22 — a co-bundled ESCALATION keeps the escalation's title (it outranks the ladder's) and the body names both.
     return {
-      title: `Claim ${reference}: texts did not reach the family`,
+      title: otherEscalationLike ? `Claim ${reference}: a correction chase needs you` : `Claim ${reference}: texts did not reach the family`,
       body:
         `${String(n)} item${n === 1 ? '' : 's'} due on claim ${reference}, including ${String(ladders.length)} where the ` +
-        `network said a reminder was not delivered. Open the correction queue in the admin app.`,
+        `network said a reminder was not delivered${otherEscalationLike ? ' and an escalation' : ''}. Open the correction queue in the admin app.`,
     };
   }
   // Story 6.19c — its escalations (the day-97 closure escalation, the staff case to the Super Admin, the closure-letter
@@ -677,10 +694,10 @@ export async function runCorrectionStaffPush(
   }
 
   // Review D3 — fail loud on an unrecognized ladder-ask detail rather than silently defaulting; `correctionStaffPushText`
-  // itself stays pure and falls back to the most CONSERVATIVE wording regardless.
+  // itself stays pure and falls back to NEUTRAL wording regardless (round-2 P23).
   for (const item of claimed.items) {
     if (item.purpose === 'ladder_escalation' && isUnrecognizedLadderAskDetail(item.detail)) {
-      alarmOf(deps)(`[jobs] claim-correction-push: unrecognized ladder-ask detail '${String(item.detail)}' on claim ${p.claimCaseId} — defaulted to the letter-only ask`);
+      alarmOf(deps)(`[jobs] claim-correction-push: unrecognized ladder-ask detail '${String(item.detail)}' on claim ${p.claimCaseId} — defaulted to the neutral follow-up wording`);
     }
   }
 
@@ -1333,6 +1350,10 @@ async function planRun(
     // Story 6.37c (LD9) — a call recorded `reached` stops the asks ONLY for a person whose dead outcome is a CONCLUDED
     // ladder's (`deadKind 'not_delivered'` — `-351` 5 A: "call or post"); a send-time dead number keeps its letter track.
     const calls = await claimDomain.readClaimContactCalls(db, pariwarId, claimCaseId);
+    // `2026-10-18-363` decision 1 — the call must be made on or after the failed text that started the person's
+    // CONCLUDED ladder (its `origin_sent_on`), ⛔ merely recorded since the epoch began: a call that ended an EARLIER
+    // ladder answers ⛔ a later one's ask.
+    const returnLadders = await claimDomain.readClaimLadders(db, pariwarId, claimCaseId, 'correction', run.returnDecisionId);
     for (const { personKey, track, lettersInReturn, firstDeliveredInReturnOn } of tracked) {
       const mine = returnStaff.filter((r) => r.subjectKey === personKey);
       const capped = claimDomain.isPersonAtLetterCap({ lettersInReturn });
@@ -1340,7 +1361,7 @@ async function planRun(
         track.deadKind === 'not_delivered' &&
         claimDomain.reachedCallSince(
           calls.filter((c) => c.personKey === personKey),
-          track.epochRows[0]?.createdAt ?? null,
+          concludedLadderOriginOf(returnLadders, personKey),
         ) !== null;
       if (track.foundDeadOn !== null && !capped && !reachedByCall) {
         const foundDeadOn = track.foundDeadOn;

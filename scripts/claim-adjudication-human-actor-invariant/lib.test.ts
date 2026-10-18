@@ -214,10 +214,21 @@ describe('Story 6.37c — the call routes are scanned, and a renamed one bites',
       expect(sorted(matchedMethods)).toBe(sorted(c.want));
     });
 
-    it(`${c.file}: a call path RENAMED out of the grammar ⇒ the multiset differs (the gate goes RED)`, () => {
+    it(`${c.file}: a call path RENAMED out of the grammar ⇒ EXACTLY the two call routes drop out (the gate goes RED)`, () => {
       const src = fs.readFileSync(path.join(repoRoot, c.file), 'utf8').split(c.callPath).join(c.renamed);
-      const { matchedMethods } = scanAdjudicationRoutes(c.file, src, c.substrings);
-      expect(sorted(matchedMethods)).not.toBe(sorted(c.want));
+      const { findings, matchedPaths, matchedMethods } = scanAdjudicationRoutes(c.file, src, c.substrings);
+      // Review round 2, P34 — pinned to WHAT dropped (the record's POST + the reveal's GET), ⛔ merely "something
+      // differs" (which a source that no longer parsed, or matched nothing, would also satisfy).
+      const remaining = [...c.want];
+      for (const dropped of ['post', 'get']) {
+        const at = remaining.indexOf(dropped);
+        expect(at).toBeGreaterThanOrEqual(0); // ⛔ splice(-1, 1) silently drops the LAST element (fix-diff review)
+        remaining.splice(at, 1);
+      }
+      expect(findings).toEqual([]);
+      expect(matchedPaths.filter((p) => p.includes(c.callPath) || p.includes(c.renamed))).toEqual([]);
+      expect(sorted(matchedMethods)).toBe(sorted(remaining));
+      expect(matchedMethods).toHaveLength(c.want.length - 2);
     });
   }
 });

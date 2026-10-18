@@ -74,6 +74,9 @@ export function registerCertificateReminderRoutes(app: FastifyInstance, deps: Ap
     revealed: 'admin_claim_certificate_reminder.call_number_revealed',
   });
   const callNumberStepUp = requireStepUp(deps, CONTACT_CALL_NUMBER_STEP_UP_CONTEXT);
+  // Review round 2, P6 — the call refusals BEFORE the step-up (a plain identifier: the human-actor gate classifies each
+  // preHandler element statically).
+  const callNumberPrecheck = calls.precheckNumber;
   // The LIST: a district-scoped caller is gated at their district, a pariwar-ceiling caller at the Pariwar.
   const resolveListScope = resolveQueueScopeStash(CORRECTION_LETTER_KEY);
   const canReadList = requirePermissionHook(deps, CORRECTION_LETTER_KEY, {
@@ -143,7 +146,7 @@ export function registerCertificateReminderRoutes(app: FastifyInstance, deps: Ap
     '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/certificate-reminders/calls/number',
     {
       schema: { params: ClaimParam, querystring: ContactCallNumberQuery, response: { 200: ContactCallNumberResponse }, tags: [TAG] },
-      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, callNumberStepUp],
+      preHandler: [adminSession, scope, resolveDistrict, canRecordLetter, callNumberPrecheck, callNumberStepUp],
     },
     calls.readNumber,
   );

@@ -7,10 +7,16 @@
 //                  ([[project_idempotent_write_handler_shape]]): the claim, the write tx opened INSIDE the claim's try,
 //                  COMMIT, THEN `recordResult`, `release()` on any failure; a replay under the same key returns the
 //                  FIRST result (200) whatever its body (the store compares ⛔ bodies); a replay while the first is in
-//                  flight ⇒ 409 `contact_call.idempotency_in_progress`. 201 + the DTO; one audit line after the commit.
+//                  flight ⇒ 409 `contact_call.idempotency_in_progress`. 201 + the DTO; one audit line RIGHT after the
+//                  commit — BEFORE `recordResult`, so a store failure can ⛔ drop the audit of a committed call (review
+//                  round 2, P5); a `recordResult` failure after the commit is logged and the committed call still returns
+//                  201 (⛔ "could not be saved" for a call that WAS saved).
+//   · precheckNumber — a preHandler BEFORE the step-up on the reveal route: the call refusals (claim, D30, recipient,
+//                  LD11's nominee gate) run FIRST, so ⛔ OTP is spent on a reveal that will be refused (round 2, P6).
 //   · readNumber — GET …/calls/number?person_key=: behind a FRESH step-up (`contact_call_number`), the person's CURRENT
 //                  number (after a 6.20 correction, the new one), `Cache-Control: no-store`, ONE audit line per reveal;
-//                  an unreadable envelope / a KMS fault ⇒ a retryable 503 `contact_call.number_unavailable` (logged, ids only).
+//                  an unreadable envelope / a KMS fault IN THE DECRYPT ⇒ a retryable 503 `contact_call.number_unavailable`
+//                  (logged, ids + the error's message only); anything else (a DB fault, a bug) is a 500 (round 2, P32).
 // ⭐ LD11 — the nominee-call switch is the api config's `claimNomineeCallsCleared` (ONE env var, read at boot), passed
 // into the domain — ⛔ read there. Uncleared ⇒ both routes refuse a NOMINEE (409 `contact_call.nominee_calls_not_cleared`).
 // Every audit line: `resourceLocator: 'claim:<lower-case uuid>'`, ⛔ a number, ⛔ a name (who answered is a ROLE).
@@ -146,7 +152,8 @@ export function createContactCallHandlers(
         // for a retry (that would write a SECOND call row). Mark `settled` FIRST so the `finally` below only
         // releases on a failure that happened BEFORE the commit.
         settled = true;
-        await idempotencyStore.recordResult(storeKey, dto);
+        // Review round 2, P5 — the audit/mutation pair: the line is written for EVERY committed call, BEFORE the
+        // store's `recordResult`, so a store failure can ⛔ leave a committed call un-audited.
         auditClaim(deps, request, ctx, audits.recorded, {
           call_id: dto.call_id,
           person_key: dto.person_key,
@@ -155,6 +162,16 @@ export function createContactCallHandlers(
           outcome: dto.outcome,
           ended_ladder_count: result!.endedLadderIds.length,
         });
+        try {
+          await idempotencyStore.recordResult(storeKey, dto);
+        } catch (err) {
+          // The call IS saved (committed + audited): ⛔ tell the client it was not. The key stays claimed with ⛔
+          // result — a replay under it gets 409 until the TTL (the deferred P26 residual), ⛔ a second row.
+          request.log.warn(
+            { claimCaseId: ctx.claimCaseIdStr, callId: dto.call_id, err: err instanceof Error ? err.name : 'unknown' },
+            'contact-call: the idempotency result could not be recorded after the commit',
+          );
+        }
         void reply.status(201);
         return dto;
       } finally {
@@ -165,29 +182,62 @@ export function createContactCallHandlers(
       }
     },
 
+    /**
+     * Review round 2, P6 — a preHandler on the reveal route, BEFORE the step-up: the call refusals (the claim, D30, the
+     * recipient set, LD11's nominee gate) answer first, so a District Admin is ⛔ sent a code for a reveal that the
+     * handler would refuse. Reads only; the handler re-runs it (the step-up sits between the two).
+     */
+    async precheckNumber(request: FastifyRequest): Promise<void> {
+      const ctx = contextOf(request);
+      const { person_key: personKey } = request.query as { person_key: string };
+      try {
+        await claim.assertContactCallAllowed(request.scopeTx!.tx, {
+          pariwarId: ctx.pariwarId,
+          claimCaseId: ctx.claimCaseId,
+          chase,
+          personKey,
+          nomineeCallsCleared: nomineeCallsCleared(),
+        });
+      } catch (err) {
+        translateContactCallError(err);
+      }
+    },
+
     /** GET …/calls/number?person_key= — key (1) + a FRESH step-up; one audit line per reveal; `no-store`. */
     async readNumber(request: FastifyRequest, reply: FastifyReply): Promise<ContactCallNumberResponse> {
       const ctx = contextOf(request);
       const { person_key: personKey } = request.query as { person_key: string };
       // ⛔ A step-up-gated Tier-1 read is never cached.
       void reply.header('cache-control', 'no-store');
-      let e164: string | null = null;
+      let person: claim.ContactCallPerson;
       try {
-        ({ e164 } = await claim.readContactCallNumber(request.scopeTx!.tx, {
+        person = await claim.assertContactCallAllowed(request.scopeTx!.tx, {
           pariwarId: ctx.pariwarId,
           claimCaseId: ctx.claimCaseId,
           chase,
           personKey,
           nomineeCallsCleared: nomineeCallsCleared(),
-          crypto: deps.encryption,
-        }));
+        });
       } catch (err) {
-        if (!(err instanceof claim.ContactCallRefusedError)) {
-          // An unreadable envelope / a KMS blip — a data or transport fault, retryable (⛔ a 500 with ⛔ trace). Ids only.
-          request.log.warn({ claimCaseId: ctx.claimCaseIdStr, personKey, err: err instanceof Error ? err.name : 'unknown' }, 'contact-call: the number could not be read');
-          throw new ServiceUnavailableError("This person's number could not be read just now — try again in a minute", 'contact_call.number_unavailable');
-        }
-        translateContactCallError(err);
+        translateContactCallError(err); // a refusal ⇒ its 4xx; a DB fault / a bug ⇒ rethrown (a 500)
+      }
+      let e164: string | null;
+      try {
+        e164 = await claim.resolveCorrectionMobile(person!.mobileCiphertext, person!.mobileSource, ctx.pariwarIdStr, deps.encryption);
+      } catch (err) {
+        // Review round 2, P32 — ONLY the decrypt maps to the retryable 503 (an unreadable envelope / a KMS blip). Ids and
+        // the error's CLASS only — ⛔ its message: an envelope parser's SyntaxError or a normaliser's message can echo the
+        // stored value (fix-diff review).
+        request.log.warn(
+          {
+            claimCaseId: ctx.claimCaseIdStr,
+            personKey,
+            err: err instanceof Error ? err.name : 'unknown',
+            errClass: err instanceof Error ? err.constructor.name : typeof err,
+          },
+          'contact-call: the number could not be read',
+        );
+        throw new ServiceUnavailableError("This person's number could not be read just now — try again in a minute", 'contact_call.number_unavailable');
       }
       auditClaim(deps, request, ctx, audits.revealed, { person_key: personKey });
       return { person_key: personKey, number: e164 };

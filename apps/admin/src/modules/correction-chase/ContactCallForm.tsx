@@ -5,8 +5,14 @@
 // family — "it reached the family" is offered ONLY when the person or a family member answered (the server and the DB
 // refuse it otherwise). A call that reached the family counts as reaching them and ends their follow-up texts.
 // ⭐ ONE `Idempotency-Key` per user-initiated attempt: made on the first submit, KEPT across a retry of that attempt (a
-// network failure, a refusal — a request that DID land replays its first result, ⛔ a second call), and made afresh only
-// after a success.
+// network failure, a refusal — a request that DID land replays its first result, ⛔ a second call), and made afresh
+// after a success — AND whenever the fields differ from the ones the kept key was made for (review round 2, P4: an
+// EDITED retry is a new call, ⛔ a replay of the first one that silently drops the edit). Made by `newIdempotencyKey()`
+// (safe outside a secure context — P7).
+// ⭐ ALWAYS MOUNTED once offered (`offered`): the status line ("Call recorded.") must outlive the refetch that can
+// withdraw the form — a `reached` call closes the ask, and a form that unmounts on success takes its confirmation (and
+// the focus) with it (review round 2, P3 — the letter form's 6.19c lesson). When the parent stops offering it, the
+// form's fields and any shown number go; the status line stays.
 // ⭐ The NUMBER to call is shown ONLY here, on demand, behind a fresh step-up (`contact_call_number`) — the letter form's
 // address-reveal flow (`CorrectionLetterForm.tsx`): held in this component's state only (⛔ the query cache), cleared by
 // "Hide the number", after a saved call, at the step-up window's deadline (re-checked on `visibilitychange` / `focus`)
@@ -16,9 +22,9 @@
 // number itself is ⛔ in a live region (it is focused instead).
 // ⚠ T18 — the microcopy gate scans comments too: say "reported" / "the network said", ⛔ the bare canonical term.
 
-import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactElement } from 'react';
 
-import type { ContactCallAnsweredBy, ContactCallOutcome } from '@twt/contracts';
+import type { ContactCallAnsweredBy, ContactCallOutcome, ContactLadderAsk, ContactLadderFollowUpDto } from '@twt/contracts';
 
 import {
   ApiError,
@@ -28,7 +34,7 @@ import {
   requestStepUp,
   verifyStepUp,
 } from '../../api/client.js';
-import { useRecordContactCall } from '../../api/hooks.js';
+import { newIdempotencyKey, useRecordContactCall } from '../../api/hooks.js';
 import { addressVisibleMs, msSinceLastStepUpVerify, noteStepUpVerified } from './CorrectionLetterForm.js';
 import { STEP_UP_REQUIRED_CODE, contactCallRefusalText } from './errors.js';
 import { correctionChaseEn } from './i18n-en.js';
@@ -44,17 +50,35 @@ export function canBeReached(answeredBy: ContactCallAnsweredBy | ''): boolean {
   return answeredBy === 'the_person' || answeredBy === 'family_member';
 }
 
+/**
+ * Whether a person's row OFFERS the call form — ONE rule for both surfaces. Pure.
+ * · A follow-up that is NOT concluded (running, or ended another way) keeps it offered regardless of the ask — staff may
+ *   log a late / historical call after the ladder ended (review D11).
+ * · A CONCLUDED follow-up defers to its ask (`ask` is only ever set once the follow-up concluded — LD9): offered only
+ *   when a CALL can answer it — ⛔ `none` (neither is possible: escalate — review P29) and ⛔ `letter` (a nominee while
+ *   nominee calls are not cleared: every call and reveal is refused — review round 2, P6).
+ */
+export function callFormOffered(followUp: ContactLadderFollowUpDto | null, ask: ContactLadderAsk | null): boolean {
+  if (followUp !== null && followUp.state !== 'concluded') return true;
+  return ask === 'call_or_letter' || ask === 'call';
+}
+
 export interface ContactCallFormProps {
   readonly pariwarId: string;
   readonly claimCaseId: string;
   readonly personKey: string;
   /** The surface — the correction chase panel or the certificate list (the routes differ; the record is one). */
   readonly chase: 'correction' | 'certificate';
+  /**
+   * Whether the parent offers the form now (a follow-up runs, or a call can answer an open ask). ⭐ The component stays
+   * mounted when it turns false — its status line holds the save's confirmation (P3).
+   */
+  readonly offered: boolean;
 }
 
 type FocusTarget = 'show' | 'send' | 'otp' | 'number' | 'status';
 
-export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: ContactCallFormProps): ReactElement {
+export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase, offered }: ContactCallFormProps): ReactElement | null {
   const record = useRecordContactCall(pariwarId, claimCaseId, chase);
   const [calledOn, setCalledOn] = useState('');
   const [answeredBy, setAnsweredBy] = useState<ContactCallAnsweredBy | ''>('');
@@ -67,8 +91,13 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
   const [busy, setBusy] = useState<'reveal' | 'send' | 'verify' | null>(null);
   const busyRef = useRef<'reveal' | 'send' | 'verify' | null>(null);
   const savingRef = useRef(false);
-  // ⭐ The attempt's key — kept across a retry of the SAME attempt, replaced only after a success.
-  const keyRef = useRef<string | null>(null);
+  // ⭐ The attempt's key and the body it was made for — kept across a retry of the SAME attempt (the same fields),
+  // replaced after a success or when the fields change (P4).
+  const keyRef = useRef<{ readonly key: string; readonly body: string } | null>(null);
+  // ⭐ Once offered, the status line stays mounted for the component's life (P3).
+  const [everOffered, setEverOffered] = useState(offered);
+  if (offered && !everOffered) setEverOffered(true);
+  const hintId = useId();
   const numberEpochRef = useRef(0);
   const focusNext = useRef<FocusTarget | null>(null);
   const statusRef = useRef<HTMLParagraphElement | null>(null);
@@ -106,6 +135,23 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
       window.removeEventListener('focus', recheck);
     };
   }, [number]);
+
+  // P3 — the parent withdrew the form (e.g. a `reached` call closed the ask): the number and the step-up go with it
+  // (the epoch moves on, so a reveal in flight is discarded); the status line — and its "Call recorded." — stays.
+  // Fix-diff review — the fields, the kept key and any problem go too: a form offered AGAIN later (a new ladder) starts
+  // EMPTY (⛔ an old attempt's key replayed, ⛔ an old alert with no form to retry from).
+  useEffect(() => {
+    if (offered) return;
+    numberEpochRef.current += 1;
+    setNumber(null);
+    setStepUp('idle');
+    setOtp('');
+    setCalledOn('');
+    setAnsweredBy('');
+    setOutcome('');
+    setProblem(null);
+    keyRef.current = null;
+  }, [offered]);
 
   // ⛔ A reveal resolving after unmount is DISCARDED (the epoch moves on).
   useEffect(
@@ -219,6 +265,14 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
     }
   }
 
+  // P2 — Enter in the code box VERIFIES the code; ⛔ it submits the call form around it (which would save the call
+  // with the code unchecked and the step-up cleared).
+  function onOtpKeyDown(e: KeyboardEvent<HTMLInputElement>): void {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    void verifyAndReveal();
+  }
+
   function hideNumber(): void {
     numberEpochRef.current += 1;
     setNumber(null);
@@ -249,11 +303,16 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
       setProblem(t.reachedNeedsAnswer);
       return;
     }
+    // P4 / P7 — the key is settled BEFORE the in-flight flag (nothing between `savingRef = true` and the `try` can
+    // throw): the kept key only for the SAME fields; edited fields are a new attempt.
+    const body = { person_key: personKey, called_on: calledOn, answered_by: answeredBy, outcome };
+    const signature = JSON.stringify(body);
+    const kept = keyRef.current;
+    const idempotencyKey = kept !== null && kept.body === signature ? kept.key : newIdempotencyKey();
+    keyRef.current = { key: idempotencyKey, body: signature };
     savingRef.current = true;
-    const idempotencyKey = keyRef.current ?? crypto.randomUUID();
-    keyRef.current = idempotencyKey;
     try {
-      await record.mutateAsync({ body: { person_key: personKey, called_on: calledOn, answered_by: answeredBy, outcome }, idempotencyKey });
+      await record.mutateAsync({ body, idempotencyKey });
       keyRef.current = null; // ⭐ the next call is a NEW attempt
       setCalledOn('');
       setAnsweredBy('');
@@ -271,11 +330,13 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
     }
   }
 
+  if (!everOffered) return null;
   return (
     <div className="mt-2 flex flex-col gap-2 text-xs" data-testid={`call-form-${personKey}`}>
       <p role="status" aria-live="polite" data-testid="call-form-status" tabIndex={-1} ref={statusRef}>
         {status}
       </p>
+      {offered ? (
       <form noValidate onSubmit={(e) => void save(e)} className="flex flex-col gap-2 rounded border p-2" aria-label={t.record}>
         <span className="font-medium">{t.record}</span>
         {number === null ? (
@@ -322,6 +383,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
                     autoComplete="one-time-code"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
+                    onKeyDown={onOtpKeyDown}
                   />
                 </label>
                 <button
@@ -367,6 +429,8 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
           </label>
         </div>
         <fieldset className="flex flex-wrap gap-3">
+          {/* P30 — the radio group is NAMED; a disabled "reached" says why (⛔ a silent grey option). */}
+          <legend className="opacity-70">{t.outcomeLegend}</legend>
           <label className="flex items-center gap-1">
             <input
               type="radio"
@@ -374,6 +438,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
               value="reached"
               checked={outcome === 'reached'}
               disabled={!canBeReached(answeredBy)}
+              aria-describedby={canBeReached(answeredBy) ? undefined : hintId}
               onChange={() => setOutcome('reached')}
             />
             {t.reached}
@@ -388,11 +453,17 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase }: Co
             />
             {t.notReached}
           </label>
+          {canBeReached(answeredBy) ? null : (
+            <span id={hintId} className="w-full opacity-70" data-testid="call-reached-hint">
+              {t.reachedHint}
+            </span>
+          )}
         </fieldset>
         <button type="submit" className="self-start rounded border px-3 py-1" disabled={record.isPending || busy !== null}>
           {t.save}
         </button>
       </form>
+      ) : null}
       {problem !== null ? (
         <p role="alert" className="text-status-fail-fg">
           {problem}

@@ -27,6 +27,7 @@ import {
   type LadderSmsPayload,
 } from '../src/scheduler/claim-contact-ladder.js';
 import {
+  ClaimCorrectionTransientError,
   runCorrectionFamilySmsChild,
   runCorrectionReminderSweep,
   runCorrectionStaffPush,
@@ -573,6 +574,14 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     // LD9 (iii) — the run is ENDED: the ladder sweep enqueued the push itself (⛔ a chase sweep visits this run).
     const pushes = take(h, 'claim.correction.staff_push', s.claimCaseId);
     expect(pushes.map((e) => (e.data.payload as CorrectionStaffPushPayload).userId)).toEqual([da]);
+    // Round-2 P28 — the REAL push child LISTS the ask (⛔ "no items" — it reaches the token lookup) …
+    await runCorrectionStaffPush(h.chase, pushes[0]!.data as JobEnvelope<CorrectionStaffPushPayload>, randomUUID());
+    expect((await correctionRows(s.claimCaseId, 'staff_push')).map((r) => [r.sent_on, r.detail])).toEqual([
+      [day(s.day0, 98), 'no_target:no_admin_device_token'],
+    ]);
+    // … ONCE: the next day ⛔ re-lists it (a push created after the ask carried it) — ⛔ enqueued again.
+    await ladderDay(h, s.claimCaseId, day(s.day0, 99));
+    expect(take(h, 'claim.correction.staff_push', s.claimCaseId)).toEqual([]);
   });
 
   it('⭐ T24 — under an RLS-bound pool role the sweep REFUSES (`contact_ladder.rls_bound_role`) and starts ⛔ ladder', async () => {
@@ -764,18 +773,56 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     expect((await correctionRows(dead.claimCaseId, 'letter_chase')).map((r) => r.sent_on)).toEqual([day(dead.day0, 17)]);
   });
 
-  it('LD11 — nominee calls CLEARED ⇒ a nominee\'s ask is `call_or_letter` (the SAME switch the api reads)', async () => {
+  it('⭐ `-363` d1 — a reached call made BEFORE a later ladder\'s origin (it ended an EARLIER ladder) does ⛔ stop that ladder\'s letter chase', async () => {
     const s = await seed();
-    const h = harness({ nomineeCallsCleared: true });
-    const [origin] = await chaseDay(h, s, 10);
-    await reportOn('cr', origin!, 'undelivered');
-    for (const n of [11, 12, 14, 18]) {
-      if (n === 14) await chaseDay(h, s, 14);
-      await ladderDay(h, s.claimCaseId, day(s.day0, n));
+    const h = harness();
+    const person = await personOf(s.claimCaseId);
+    const [o10] = await chaseDay(h, s, 10);
+    await reportOn('cr', o10!, 'undelivered');
+    await ladderDay(h, s.claimCaseId, day(s.day0, 11));
+    await recordCall(s.claimCaseId, person.personKey, day(s.day0, 11)); // reached — it ends ladder 1
+    await ladderDay(h, s.claimCaseId, day(s.day0, 12));
+    expect((await laddersOf(s.claimCaseId))[0]!.state).toBe('ended_call');
+    // A LATER reminder fails too: a second ladder starts on it and CONCLUDES (⛔ the day-11 call answers it).
+    const [o14] = await chaseDay(h, s, 14);
+    await reportOn('cr', o14!, 'undelivered');
+    for (const n of [15, 16, 18, 22]) await ladderDay(h, s.claimCaseId, day(s.day0, n));
+    const ladders = await laddersOf(s.claimCaseId);
+    expect(ladders).toHaveLength(2);
+    expect(ladders[1]).toMatchObject({ origin_row_id: o14, origin_sent_on: day(s.day0, 14), state: 'concluded_undelivered', concluded_on: day(s.day0, 22) });
+    // Found dead on day 22 ⇒ the letter chase from day 29 — the day-11 call (before day 14) does ⛔ stop it.
+    h.setNow(tenAmIst(day(s.day0, 29)));
+    await runCorrectionReminderSweep(h.chase, boss(h));
+    expect((await correctionRows(s.claimCaseId, 'letter_chase')).map((r) => r.sent_on)).toEqual([day(s.day0, 29)]);
+    // A call made ON/AFTER the second ladder's origin does — the next day's chase writes ⛔ another row. ⚠ Day 30 IS a
+    // chase day: the letter chase writes EVERY due day from found-dead + 7 through + 12 (day 30 = + 8), so ⛔ a row there
+    // is the call's doing, ⛔ a quiet day (fix-diff review — proven RED with the call ignored).
+    await recordCall(s.claimCaseId, person.personKey, day(s.day0, 23));
+    h.setNow(tenAmIst(day(s.day0, 30)));
+    await runCorrectionReminderSweep(h.chase, boss(h));
+    expect((await correctionRows(s.claimCaseId, 'letter_chase')).map((r) => r.sent_on)).toEqual([day(s.day0, 29)]);
+  });
+
+  it('LD11 — nominee calls CLEARED ⇒ the SWEEP writes a nominee\'s ask `call_or_letter` (the SAME switch the api reads); uncleared ⇒ `letter`', async () => {
+    // Round-2 P16 — driven THROUGH the sweep's deps with a live shepherd (a RECORDED ask), ⛔ the pure table read back.
+    for (const [cleared, ask] of [
+      [true, 'ask:call_or_letter'],
+      [false, 'ask:letter'],
+    ] as const) {
+      const s = await seed();
+      const da = await staffUser(`District Admin LD11 ${String(cleared)}`);
+      await assignShepherd(s.claimCaseId, PARIWAR, da);
+      const h = harness({ nomineeCallsCleared: cleared });
+      const [origin] = await chaseDay(h, s, 10);
+      await reportOn('cr', origin!, 'undelivered');
+      for (const n of [11, 12, 14, 18]) {
+        if (n === 14) await chaseDay(h, s, 14);
+        await ladderDay(h, s.claimCaseId, day(s.day0, n));
+      }
+      expect(await correctionRows(s.claimCaseId, 'ladder_escalation')).toEqual([
+        expect.objectContaining({ outcome: 'recorded', recipient_key: `staff:${da}`, detail: ask }),
+      ]);
     }
-    expect((await correctionRows(s.claimCaseId, 'ladder_escalation')).map((r) => r.detail)).toEqual(['no_target:no_staff_recipient']);
-    // (⛔ live shepherd here ⇒ `no_target`; the ask's words are pinned by the pure `ladderAsk` table — read it back:)
-    expect(claim.ladderAsk({ role: 'nominee', letterCapReached: false, nomineeCallsCleared: true })).toBe('call_or_letter');
   });
 
   it('⭐ AC1 — two CONCURRENT sweeps start ONE ladder (the chase lock + the UNIQUEs)', async () => {
@@ -852,6 +899,43 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
       holder.release();
     }
     expect((await laddersOf(s.claimCaseId)).map((l) => l.state)).toEqual(['ended_call', 'ended_call']);
+  });
+
+  it('⭐ round-2 P25 — the burst is per IST DAY, ⛔ per run: two ladders in one run, a third in a second run that day ⇒ ONE `burst:3` (on the run that crosses), ⛔ again on a third run', async () => {
+    const DAYP = randomUUID();
+    const h = harness({ allowlist: [DAYP] });
+    const seeded: Seeded[] = [];
+    for (let i = 0; i < 3; i += 1) seeded.push(await seed({ pariwarId: DAYP }));
+    const failFirst = async (s: Seeded) => {
+      h.setNow(tenAmIst(day(s.day0, 10)));
+      await runCorrectionReminderSweep(h.chase, boss(h));
+      for (const e of take(h, 'claim.correction.family_sms', s.claimCaseId)) {
+        await runCorrectionFamilySmsChild(h.chase, e.data as JobEnvelope<CorrectionFamilySmsPayload>, randomUUID());
+      }
+      const { rows } = await pool.query<{ reminder_id: string }>(
+        `SELECT reminder_id FROM claim_correction_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms' AND outcome = 'accepted'`,
+        [s.claimCaseId],
+      );
+      await reportOn('cr', rows[0]!.reminder_id, 'undelivered', DAYP);
+    };
+    try {
+      await failFirst(seeded[0]!);
+      await failFirst(seeded[1]!);
+      h.setNow(tenAmIst(day(seeded[0]!.day0, 11)));
+      expect((await runContactLadderSweep(h.ladder, boss(h))).started).toBe(2);
+      expect(h.alarms.filter((a) => a.includes('contact_ladder.burst:'))).toEqual([]);
+      await failFirst(seeded[2]!);
+      h.setNow(tenAmIst(day(seeded[0]!.day0, 11)));
+      expect((await runContactLadderSweep(h.ladder, boss(h))).started).toBe(1);
+      const bursts = h.alarms.filter((a) => a.includes('contact_ladder.burst:'));
+      expect(bursts).toHaveLength(1);
+      expect(bursts[0]).toContain('contact_ladder.burst:3');
+      expect(bursts[0]).toContain(DAYP);
+      await runContactLadderSweep(h.ladder, boss(h)); // a third run that day — ⛔ start, ⛔ a second alarm
+      expect(h.alarms.filter((a) => a.includes('contact_ladder.burst:'))).toHaveLength(1);
+    } finally {
+      await pool.query('DELETE FROM sms_send_deliveries WHERE pariwar_id = $1', [DAYP]);
+    }
   });
 
   it('AC11 — TWO ladders started in one Pariwar on one day ⇒ ⛔ burst alarm', async () => {
@@ -957,6 +1041,55 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
       expect(states[0]).toMatchObject({ letterEligible: true });
       expect(states[0]!.track).toMatchObject({ foundDeadOn: day(certDay0, 18), deadKind: 'not_delivered' });
     });
+  });
+
+  it('⭐ round-2 P8 — CERTIFICATE child: a KMS failure on the person\'s own hash is RETRIED (a transient, ⛔ claimed, the step still pending); only the FINAL attempt records `skipped:hash_unavailable`', async () => {
+    const w = await seedWait();
+    const h = harness();
+    h.setNow(new Date());
+    await runCertificateReminderSweep(h.ladder, boss(h));
+    take(h, 'claim.certificate.family_sms', w.cid);
+    const run = await pool.query<{ day0: string }>(
+      `SELECT to_char(day0, 'YYYY-MM-DD') AS day0 FROM claim_certificate_reminder_runs WHERE claim_case_id = $1 AND ended_at IS NULL`,
+      [w.cid],
+    );
+    const certDay0 = run.rows[0]!.day0;
+    h.setNow(tenAmIst(day(certDay0, 10)));
+    await runCertificateReminderSweep(h.ladder, boss(h));
+    for (const e of take(h, 'claim.certificate.family_sms', w.cid)) {
+      await runCertificateFamilySmsChild(h.ladder, e.data as JobEnvelope<CertificateFamilySmsPayload>, randomUUID());
+    }
+    const { rows: sent } = await pool.query<{ reminder_id: string }>(
+      `SELECT reminder_id FROM claim_certificate_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms' AND outcome = 'accepted' AND sent_on = $2`,
+      [w.cid, day(certDay0, 10)],
+    );
+    await reportOn('ce', sent[0]!.reminder_id, 'undelivered');
+    await ladderDay(h, w.cid, day(certDay0, 11), 'certificate');
+    // Day 12 — the sweep (KMS up) enqueues SMS 2; the CHILD then meets a KMS outage.
+    h.setNow(tenAmIst(day(certDay0, 12)));
+    await runContactLadderSweep(h.ladder, boss(h));
+    const [job] = take(h, 'claim.certificate.ladder_sms', w.cid);
+    expect(job).toBeDefined();
+    const down = harness();
+    down.setNow(tenAmIst(day(certDay0, 12)));
+    (down.ladder as { encryption: typeof enc }).encryption = {
+      ...enc,
+      kms: { ...enc.kms, computeHmac: () => Promise.reject(new Error('kms hmac unavailable')) },
+    };
+    const env = job!.data as JobEnvelope<LadderSmsPayload>;
+    const jobId = randomUUID();
+    await expect(runCertificateLadderSmsChild(down.ladder, env, jobId, { retryCount: 0, retryLimit: 3 })).rejects.toBeInstanceOf(
+      ClaimCorrectionTransientError,
+    );
+    expect((await laddersOf(w.cid))[0]).toMatchObject({ sms2_state: 'pending' });
+    const { rows: claimed } = await pool.query(`SELECT 1 FROM claim_certificate_reminders WHERE claim_case_id = $1 AND purpose = 'ladder_sms'`, [w.cid]);
+    expect(claimed).toEqual([]); // ⛔ a row claimed before the retry
+    // The FINAL attempt — the hash never cleared that morning ⇒ the re-check records the skip (the clock runs on).
+    expect(await runCertificateLadderSmsChild(down.ladder, env, jobId, { retryCount: 3, retryLimit: 3 })).toEqual({
+      status: 'resolved',
+      state: 'skipped:hash_unavailable',
+    });
+    expect((await laddersOf(w.cid))[0]).toMatchObject({ sms2_state: 'skipped:hash_unavailable', state: 'running' });
   });
 
   it('CERTIFICATE — a PAUSE (the claim outside the review window, ⛔ for good) skips the step `skipped:paused` (PQ3 A — the clock runs on); the person OFF the contact record ends it `stopped:not_a_recipient`', async () => {

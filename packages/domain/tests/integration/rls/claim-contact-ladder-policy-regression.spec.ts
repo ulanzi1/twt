@@ -75,6 +75,11 @@ async function checkValues(client: Client, conname: string): Promise<string[]> {
 }
 
 const ENDED = { state: 'ended_stopped', ended_at: '2026-10-05T04:30:00.000Z', end_detail: 'stopped:run_ended' };
+/** Round 2 P31 — both steps RESOLVED (0170's `claim_contact_ladders_concluded_steps_check` — a concluded ladder needs them). */
+const RESOLVED = {
+  sms2_state: 'satisfied', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05',
+  sms3_state: 'satisfied', sms3_on: '2026-10-05', conclude_on: '2026-10-09',
+};
 
 describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS policy regression', { timeout: 20000 }, () => {
   setupLiveDb();
@@ -211,6 +216,18 @@ describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS po
     expect((await client.query(`UPDATE ${T} SET updated_at = clock_timestamp() WHERE ladder_id = $1`, [a.ladderId])).rowCount).toBe(1);
   });
 
+  // Round 2 P31 (family 5) — the tenant-scoped indexes 0169 creates are asserted directly, ⛔ inferred.
+  it('the indexes: (pariwar_id, claim_case_id) leads the tenant read; (state, conclude_on) the sweep\'s due scan', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ indexname: string; indexdef: string }>(
+      `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = $1 AND indexname IN ($2, $3) ORDER BY indexname`,
+      [T, 'claim_contact_ladders_pariwar_claim_idx', 'claim_contact_ladders_state_conclude_idx'],
+    );
+    expect(rows.map((r) => r.indexname)).toEqual(['claim_contact_ladders_pariwar_claim_idx', 'claim_contact_ladders_state_conclude_idx']);
+    expect(rows[0]!.indexdef).toMatch(/\(pariwar_id, claim_case_id\)$/);
+    expect(rows[1]!.indexdef).toMatch(/\(state, conclude_on\)$/);
+  });
+
   it('the claim FK refuses a ladder on ⛔ claim (23503)', async () => {
     const { client } = getTx();
     await expectPgError(client, () => insertRow(client, validRow(randomUUID())), { code: '23503', constraint: 'claim_contact_ladders_claim_case_id_fk' });
@@ -298,13 +315,23 @@ describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS po
     ['claim_contact_ladders_ended_pair_check', { ended_at: '2026-10-05T04:30:00.000Z' }, { ended_at: null }],
     [
       'claim_contact_ladders_concluded_pair_check',
-      { state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z' },
-      { state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z', concluded_on: '2026-10-09' },
+      { ...RESOLVED, state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z' },
+      { ...RESOLVED, state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z', concluded_on: '2026-10-09' },
+    ],
+    // Round 2 P31 (0170) — a CONCLUDED ladder resolved both steps (`concludeContactLadder`'s CAS mirrored): SMS 3 still
+    // pending refuses; both resolved accepts.
+    [
+      'claim_contact_ladders_concluded_steps_check',
+      {
+        state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z', concluded_on: '2026-10-09',
+        sms2_state: 'satisfied', sms2_on: '2026-10-03', sms3_due_on: '2026-10-05',
+      },
+      { ...RESOLVED, state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z', concluded_on: '2026-10-09' },
     ],
     [
       'claim_contact_ladders_escalated_check',
       { escalated_on: '2026-10-09' },
-      { state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z', concluded_on: '2026-10-09', escalated_on: '2026-10-09' },
+      { ...RESOLVED, state: 'concluded_undelivered', ended_at: '2026-10-09T04:30:00.000Z', concluded_on: '2026-10-09', escalated_on: '2026-10-09' },
     ],
     ['claim_contact_ladders_end_detail_check', { end_detail: 'stopped:run_ended' }, { ...ENDED }],
     ['claim_contact_ladders_end_detail_check', { ...ENDED, end_detail: 'Stopped Because' }, { ...ENDED, end_detail: 'stopped:not_a_recipient' }],

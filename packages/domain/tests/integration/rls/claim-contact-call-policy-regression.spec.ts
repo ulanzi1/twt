@@ -163,6 +163,35 @@ describe.skipIf(!hasDatabase)('claim_contact_calls — migration 0169 + RLS poli
     await expectAccepted(client, () => insertRow(client, validRow(claimCaseId, PARIWAR_A, { ladder_id: rows[0]!.ladder_id, chase: 'certificate' })));
   });
 
+  // Round 2 P31 (0170) — a reached call is a reach FACT (I1): deleting the ladder it was attributed to nulls the
+  // attribution, ⛔ deletes the call (was ON DELETE CASCADE in 0169).
+  it('⭐ the ladder FK is ON DELETE SET NULL — a call outlives its ladder', async () => {
+    const { client } = getTx();
+    const { tx } = getTx();
+    const claimCaseId = await seedClaim(tx, PARIWAR_A);
+    const fk = await client.query<{ def: string }>(`SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_contact_calls_ladder_id_fk'`);
+    expect(fk.rows[0]!.def).toMatch(/ON DELETE SET NULL/);
+    const ladder = await client.query<{ ladder_id: string }>(
+      `INSERT INTO claim_contact_ladders (pariwar_id, claim_case_id, chase, run_id, person_key, recipient_number_hash, origin_row_id,
+         origin_sent_on, whatsapp_step, sms2_due_on)
+       VALUES ($1, $2, 'certificate', gen_random_uuid(), 'claimant', 'h', gen_random_uuid(), '2026-10-01', 'skipped:whatsapp_not_built', '2026-10-03')
+       RETURNING ladder_id`,
+      [PARIWAR_A, claimCaseId],
+    );
+    const ladderId = ladder.rows[0]!.ladder_id;
+    const call = await insertRow(client, validRow(claimCaseId, PARIWAR_A, { ladder_id: ladderId, chase: 'certificate' }));
+    await client.query(`DELETE FROM claim_contact_ladders WHERE ladder_id = $1`, [ladderId]);
+    const after = await client.query<{ ladder_id: string | null }>(`SELECT ladder_id FROM claim_contact_calls WHERE call_id = $1`, [call.rows[0]!.call_id]);
+    expect(after.rows).toEqual([{ ladder_id: null }]);
+  });
+
+  it('the tenant index (pariwar_id, claim_case_id) exists on the calls', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ indexdef: string }>(`SELECT indexdef FROM pg_indexes WHERE indexname = 'claim_contact_calls_pariwar_claim_idx'`);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.indexdef).toMatch(/\(pariwar_id, claim_case_id\)$/);
+  });
+
   it('⭐ LOCKSTEP — the answered-by and outcome CHECKs name EXACTLY the TS vocabularies', async () => {
     const { client } = getTx();
     expect(await checkValues(client, 'claim_contact_calls_answered_by_check')).toEqual([...CONTACT_CALL_ANSWERED_BY].sort());

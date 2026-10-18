@@ -148,10 +148,13 @@ export const correctionChaseEn = {
   // ⚠ T18 — the bare word for what the network sends back is a canonical term of the microcopy gate here: say
   // "reported" or "the network said".
   followUp: {
+    // `2026-10-18-363` decision 2 — say only what the system knows: the next STEP (it can be skipped, or be the
+    // conclusion — ⛔ a promised text), and that NONE was reported delivered (⛔ "none reached": a follow-up text the
+    // network said nothing about still counts as reaching the family — `-360` Q1 A).
     running: (nextOn: string | null): string =>
-      nextOn === null ? 'Follow-up texts running.' : `Follow-up texts running — next on ${nextOn}.`,
+      nextOn === null ? 'Follow-up running.' : `Follow-up running — next step on ${nextOn}.`,
     concluded: (on: string | null): string =>
-      on === null ? 'Follow-up texts ended — none reached the family.' : `Follow-up texts ended on ${on} — none reached the family.`,
+      on === null ? 'Follow-up ended — none was reported delivered.' : `Follow-up ended on ${on} — none was reported delivered.`,
     ended_delivered: 'Follow-up ended — a text reached the family.',
     ended_call: 'Follow-up ended — a call reached the family.',
     ended_other: 'Follow-up stopped.',
@@ -183,9 +186,12 @@ export const correctionChaseEn = {
     calledOn: 'Date of the call',
     whoAnswered: 'Who answered',
     choose: 'Choose…',
+    outcomeLegend: 'Did the call reach the family?',
     reached: 'It reached the family',
     notReached: 'It did not reach the family',
     reachedNeedsAnswer: 'A call reaches the family only when the person or a family member answered.',
+    // Fix-diff review — the disabled option's own reason, ⛔ the alert's sentence (it would be on screen twice).
+    reachedHint: 'Choose who answered first — this option is for the person or a family member.',
     save: 'Save the call',
     saved: 'Call recorded.',
     fieldsRequired: 'Enter the date of the call, who answered and whether it reached the family.',
@@ -210,8 +216,12 @@ export const correctionChaseEn = {
       reached_needs_answer: 'A call reaches the family only when the person or a family member answered.',
       idempotency_in_progress: 'This call is still being saved. Wait a moment, then reload the page.',
       idempotency_key_required: 'This call could not be saved. Try again.',
+      idempotency_key_too_long: 'This call could not be saved. Reload the page and try again.',
       number_unavailable: 'The number could not be read just now. Try again in a minute.',
     } as Record<string, string>,
+    // Review round 2, P29 — `admin.display_name_missing`: every call names who recorded it, so a retry can ⛔ succeed
+    // until a display name is set (⛔ "Try again").
+    displayNameMissing: 'Your admin account has no display name yet, and every call names who recorded it. Ask for one to be set first.',
     error: 'The call could not be saved. Try again.',
   },
   queue: {

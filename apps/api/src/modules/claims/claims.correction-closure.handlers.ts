@@ -128,8 +128,9 @@ export function closureRefusalError(refusal: claim.CorrectionClosureRefusal, not
     case 'claim_corrected':
       return c('The family has sent corrected details — the claim cannot be closed for no response');
     case 'ladder_running':
-      // Story 6.37c (LD8, `-351` 6 A) — closure waits while a delivery ladder runs.
-      return c('Follow-up texts are still being sent to someone whose reminder the network reported as not delivered — try again once they end');
+      // Story 6.37c (LD8, `-351` 6 A) — closure waits while a delivery ladder runs. The words are Decision
+      // `2026-10-18-363` decision 2 (i), exactly (the admin's line is the same sentence).
+      return c('A follow-up is still open for someone the network said a text did not reach.');
     case 'not_reached':
       // D22 — a count and the roles only, ⛔ never a person.
       return c(

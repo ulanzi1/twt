@@ -9,6 +9,7 @@ import {
   type ConcludedLadderFact,
   type LadderCallFact,
   type LadderStartFact,
+  type LadderViewFact,
   applyConcludedLadderMapping,
   dueLadderStep,
   ladderAsk,
@@ -17,6 +18,7 @@ import {
   ladderStepGate,
   ladderWhatsappStep,
   nextLadderStepDate,
+  pendingLadderAsk,
   planLadderStart,
   reachedCallSince,
 } from '../../src/claim/contact-ladder.js';
@@ -243,12 +245,18 @@ const TODAY = date(10);
 type StartInput = Parameters<typeof planLadderStart>[0];
 const start = (over: Partial<StartInput> & Pick<StartInput, 'rows'>): ReturnType<typeof planLadderStart> =>
   planLadderStart({ today: TODAY, ladderRows: [], currentNumberHash: 'A', ladders: [], calls: [], stopOfRun: () => null, ...over });
-const ladder = (originRowId: string, state: LadderStartFact['state'], originAt: number, endedAt: number | null): LadderStartFact => ({
+const ladder = (
+  originRowId: string,
+  state: LadderStartFact['state'],
+  originAt: number,
+  endedAt: number | null,
+  recipientNumberHash = 'A',
+): LadderStartFact => ({
   state,
   originRowId,
   originCreatedAt: t(originAt),
   endedAt: endedAt === null ? null : t(endedAt),
-  recipientNumberHash: 'A',
+  recipientNumberHash,
 });
 const call = (calledOn: string, outcome: LadderCallFact['outcome'] = 'reached'): LadderCallFact => ({ outcome, calledOn, createdAt: t(500) });
 
@@ -309,6 +317,31 @@ describe('planLadderStart (LD5)', () => {
     const rows = [row('c', 2, 'accepted', 'A', 'undelivered'), row('cov', 4, 'accepted', 'A', 'undelivered'), row('n', 8, 'accepted', 'A', 'undelivered')];
     expect(start({ rows: rows.slice(0, 2), ladders: [ladder('c', 'ended_stopped', 20, 50)] })).toBeNull();
     expect(start({ rows, ladders: [ladder('c', 'ended_stopped', 20, 50)] })?.reminderId).toBe('n');
+  });
+
+  // Review round 2 P1 — a ladder covers only rows to ITS number.
+  it('⭐ a failed text to a NEW number inside an old-number ladder\'s window ⇒ ⛔ covered — it starts; on the SAME number it is covered', () => {
+    // The person moved A → B; the 10:00 chase sweep texted B (t(40)) BEFORE the ladder sweep ended A's ladder (t(50)).
+    const rows = [row('c', 2, 'accepted', 'A', 'undelivered'), row('b', 4, 'accepted', 'B', 'undelivered')];
+    expect(start({ rows, currentNumberHash: 'B', ladders: [ladder('c', 'ended_number_changed', 20, 50, 'A')] })?.reminderId).toBe('b');
+    // The control: a ladder on B over the same window DOES cover the row.
+    expect(start({ rows, currentNumberHash: 'B', ladders: [ladder('x', 'ended_stopped', 20, 50, 'B')] })).toBeNull();
+  });
+
+  // Review round 2 P33 — AC4's A→B→A leg after a conclusion on the FIRST A epoch.
+  it('⭐ A→B→A after a conclusion on A: the new A epoch\'s report is ⛔ mapped by the old ladder, and it STARTS a ladder', () => {
+    const rows = [
+      row('a1', 2, 'accepted', 'A', 'undelivered'),
+      row('b', 3, 'accepted', 'B'),
+      row('a2', 5, 'accepted', 'A', 'undelivered'),
+    ];
+    expect(outcomes(applyConcludedLadderMapping(rows, [concluded('a1', date(9))]))).toEqual([
+      ['a1', 'rejected_unreachable', date(9), true],
+      ['b', 'accepted', null, null],
+      ['a2', 'accepted', null, null],
+    ]);
+    // The no-restart rule keys on the CURRENT epoch (a2's) — a1's conclusion is history; its window ended before a2.
+    expect(start({ rows, ladders: [ladder('a1', 'concluded_undelivered', 20, 25)] })?.reminderId).toBe('a2');
   });
 
   it('a row sent more than CONTACT_LADDER_SCAN_DAYS ago ⇒ ⛔', () => {
@@ -458,18 +491,58 @@ describe('ladderAsk (LD9 — cap-aware; LD11 — nominee calls)', () => {
   });
 });
 
-describe('reachedCallSince / ladderWhatsappStep', () => {
-  it('the EARLIEST reached call recorded at or after the epoch start; ⛔ not_reached; ⛔ one recorded before', () => {
-    const calls: LadderCallFact[] = [
-      { outcome: 'reached', calledOn: '2026-10-08', createdAt: t(80) },
-      { outcome: 'reached', calledOn: '2026-10-06', createdAt: t(90) },
-      { outcome: 'not_reached', calledOn: '2026-10-02', createdAt: t(95) },
-      { outcome: 'reached', calledOn: '2026-10-01', createdAt: t(10) },
-    ];
-    expect(reachedCallSince(calls, t(50))).toBe('2026-10-06');
-    expect(reachedCallSince(calls, null)).toBe('2026-10-01');
-    expect(reachedCallSince(calls, t(100))).toBeNull();
-    expect(reachedCallSince([], null)).toBeNull();
+describe('reachedCallSince / pendingLadderAsk / ladderWhatsappStep', () => {
+  // `2026-10-18-363` decision 1 — ONE rule: a reached call answers iff it was MADE on/after the ladder's origin date.
+  const calls: LadderCallFact[] = [
+    { outcome: 'reached', calledOn: '2026-10-08', createdAt: t(80) },
+    { outcome: 'reached', calledOn: '2026-10-06', createdAt: t(90) },
+    { outcome: 'not_reached', calledOn: '2026-10-07', createdAt: t(95) },
+    { outcome: 'reached', calledOn: '2026-10-01', createdAt: t(10) },
+  ];
+
+  it('the EARLIEST reached call MADE on/after the origin date; ⛔ not_reached; ⛔ one made before; ⛔ origin ⇒ null', () => {
+    expect(reachedCallSince(calls, '2026-10-05')).toBe('2026-10-06');
+    expect(reachedCallSince(calls, '2026-10-06')).toBe('2026-10-06'); // the origin's own day counts (a date-only record)
+    expect(reachedCallSince(calls, '2026-10-01')).toBe('2026-10-01');
+    expect(reachedCallSince(calls, '2026-10-09')).toBeNull();
+    expect(reachedCallSince(calls, null)).toBeNull();
+    expect(reachedCallSince([], '2026-10-01')).toBeNull();
+  });
+
+  it('⭐ RECORDED time is irrelevant: a call logged LATE but made after the origin answers; one made before it never does', () => {
+    const lateLogged: LadderCallFact = { outcome: 'reached', calledOn: '2026-10-06', createdAt: t(10_000) };
+    const earlierLadderCall: LadderCallFact = { outcome: 'reached', calledOn: '2026-10-03', createdAt: t(10_000) };
+    expect(reachedCallSince([earlierLadderCall], '2026-10-05')).toBeNull();
+    expect(reachedCallSince([earlierLadderCall, lateLogged], '2026-10-05')).toBe('2026-10-06');
+  });
+
+  const view = (over: Partial<LadderViewFact> = {}): LadderViewFact => ({
+    state: 'concluded_undelivered',
+    createdAt: t(100),
+    endedAt: t(900),
+    originSentOn: '2026-10-05',
+    sms2DueOn: '2026-10-07',
+    sms2State: 'sent',
+    sms3DueOn: '2026-10-09',
+    sms3State: 'sent',
+    concludeOn: '2026-10-13',
+    concludedOn: '2026-10-13',
+    ...over,
+  });
+  const ask = (c: readonly LadderCallFact[], letterRecordedAt: readonly Date[] = []) =>
+    pendingLadderAsk({ ladders: [view()], calls: c, letterRecordedAt, role: 'claimant', letterCapReached: false, nomineeCallsCleared: false });
+
+  it('⭐ pendingLadderAsk uses the SAME rule — a call before the origin leaves the ask open; a late-logged one after it closes it', () => {
+    expect(ask([])).toBe('call_or_letter');
+    // A call that ended an EARLIER ladder (made before this origin), even if RECORDED after the conclusion ⇒ still open.
+    expect(ask([{ outcome: 'reached', calledOn: '2026-10-03', createdAt: t(2_000) }])).toBe('call_or_letter');
+    // Made between the failure and the conclusion, logged after it ⇒ answered.
+    expect(ask([{ outcome: 'reached', calledOn: '2026-10-10', createdAt: t(2_000) }])).toBeNull();
+    // Made after the conclusion ⇒ answered; `not_reached` ⇒ ⛔.
+    expect(ask([{ outcome: 'reached', calledOn: '2026-10-14', createdAt: t(2_000) }])).toBeNull();
+    expect(ask([{ outcome: 'not_reached', calledOn: '2026-10-14', createdAt: t(2_000) }])).toBe('call_or_letter');
+    // A letter recorded after the conclusion still answers it.
+    expect(ask([], [t(1_000)])).toBeNull();
   });
 
   it('LD1 / `-356` — a nominee\'s WhatsApp step is ⛔ ever built; a claimant\'s waits for 6-37d', () => {

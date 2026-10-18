@@ -14,6 +14,7 @@ import {
   certificateRecordedDays,
   chainHeadOf,
   evaluateCertificatePersonStates,
+  certificateLetterCapReached,
 } from '../../src/claim/certificate-reminder.js';
 
 const v = (versionId: string, correctsVersionId: string | null, versionNo: number): ChainVersion => ({
@@ -168,5 +169,23 @@ describe('certificateRecordedDays — THIS run\'s rows of the person, ANY outcom
       row({ runId: RUN1, recipientKey: 'nominee:b', slotDay: 4, sentOn: '2026-10-05', outcome: 'accepted' }),
     ];
     expect([...certificateRecordedDays(rows, RUN1, 'nominee:a')].sort()).toEqual([1, 2]);
+  });
+});
+
+// Round-2 P24 — ONE letter cap for the staff view's ask and the ladder sweep's escalation, as the letter route enforces it.
+describe('certificateLetterCapReached — one letter per person AND per number (CR6)', () => {
+  const letter = { letterId: 'l1' } as never;
+  const st = (personKey: string, numberHash: string | null, hasLetter: boolean) => ({ personKey, numberHash, letter: hasLetter ? letter : null });
+  it('⭐ the person\'s OWN letter ⇒ reached', () => {
+    expect(certificateLetterCapReached([st('nominee:a', 'h1', true)], 'nominee:a')).toBe(true);
+  });
+  it('⭐ ANOTHER person at the SAME number with a letter ⇒ reached (the route refuses `already_recorded`)', () => {
+    expect(certificateLetterCapReached([st('nominee:a', 'h1', false), st('nominee:b', 'h1', true)], 'nominee:a')).toBe(true);
+  });
+  it('⛔ another person at a DIFFERENT number, ⛔ a null hash on either side, ⛔ an unknown person ⇒ not reached', () => {
+    expect(certificateLetterCapReached([st('nominee:a', 'h1', false), st('nominee:b', 'h2', true)], 'nominee:a')).toBe(false);
+    expect(certificateLetterCapReached([st('nominee:a', null, false), st('nominee:b', 'h1', true)], 'nominee:a')).toBe(false);
+    expect(certificateLetterCapReached([st('nominee:a', 'h1', false), st('nominee:b', null, true)], 'nominee:a')).toBe(false);
+    expect(certificateLetterCapReached([st('nominee:b', 'h1', true)], 'nominee:a')).toBe(false);
   });
 });

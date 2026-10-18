@@ -466,6 +466,11 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     });
     const stored = await pool.query<{ outcome: string }>(`SELECT outcome FROM claim_correction_reminders WHERE reminder_id = $1`, [origin]);
     expect(stored.rows[0]!.outcome).toBe('accepted');
+    // ⛔ `escalated` on the queue is lit by the ask (it counts `purpose = 'escalation'` only — LD9).
+    const summary = await withPariwarScope(pool, PARIWAR, (db) =>
+      claim.readCorrectionChaseSummary(db, ids.pariwarId(PARIWAR), ids.claimId(s.claimCaseId), day(s.day0, 18)),
+    );
+    expect(summary.escalated).toBe(false);
 
     // ⭐ The no-restart rule — a later reported failure on the SAME number in the same epoch starts ⛔ new ladder.
     const [r21] = await chaseDay(h, s, 21);
@@ -846,6 +851,44 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     expect((await laddersOf(s.claimCaseId)).map((l) => l.state)).toEqual(['ended_call', 'ended_call']);
   });
 
+  it('AC11 — TWO ladders started in one Pariwar on one day ⇒ ⛔ burst alarm', async () => {
+    const TWO = randomUUID();
+    const h = harness({ allowlist: [TWO] });
+    const seeded: Seeded[] = [];
+    for (let i = 0; i < 2; i += 1) seeded.push(await seed({ pariwarId: TWO }));
+    for (const s of seeded) {
+      h.setNow(tenAmIst(day(s.day0, 10)));
+      await runCorrectionReminderSweep(h.chase, boss(h));
+      for (const e of take(h, 'claim.correction.family_sms', s.claimCaseId)) {
+        await runCorrectionFamilySmsChild(h.chase, e.data as JobEnvelope<CorrectionFamilySmsPayload>, randomUUID());
+      }
+      const { rows } = await pool.query<{ reminder_id: string }>(
+        `SELECT reminder_id FROM claim_correction_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms' AND outcome = 'accepted'`,
+        [s.claimCaseId],
+      );
+      await reportOn('cr', rows[0]!.reminder_id, 'undelivered', TWO);
+    }
+    h.setNow(tenAmIst(day(seeded[0]!.day0, 11)));
+    const out = await runContactLadderSweep(h.ladder, boss(h));
+    expect(out.started).toBe(2);
+    expect(h.alarms.filter((a) => a.includes('contact_ladder.burst:'))).toEqual([]);
+    await pool.query('DELETE FROM sms_send_deliveries WHERE pariwar_id = $1', [TWO]);
+  });
+
+  it('LD3 — a ladder SMS the network REFUSES at send (a dead number) counts as the step `sent`; the ladder runs on to its date (⛔ an early conclusion — disclosed)', async () => {
+    const s = await seed();
+    const h = harness();
+    const [origin] = await chaseDay(h, s, 10);
+    await reportOn('cr', origin!, 'undelivered');
+    await ladderDay(h, s.claimCaseId, day(s.day0, 11));
+    const refusing = harness({ gateway: () => Promise.reject(new SmsSendError('x', '202', 200)) });
+    const t = await ladderDay(refusing, s.claimCaseId, day(s.day0, 12));
+    expect(t.results).toEqual([{ status: 'sent', outcome: 'rejected_invalid_number' }]);
+    expect((await laddersOf(s.claimCaseId))[0]).toMatchObject({ state: 'running', sms2_state: 'sent', sms3_due_on: day(s.day0, 14) });
+    await ladderDay(h, s.claimCaseId, day(s.day0, 13));
+    expect((await laddersOf(s.claimCaseId))[0]!.state).toBe('running');
+  });
+
   // ── The certificate chase (`-351` 3 B) ──────────────────────────────────────────────────────────────────────
 
   it('⭐ CERTIFICATE — a reported failure starts a ladder; SMS 2 is the certificate reminder sent again (CRQID `ce`); it CONCLUDES with a RECORDED ask (⛔ push) and the person is letter-eligible', async () => {
@@ -956,6 +999,19 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     const ladders = await laddersOf(w.cid);
     expect(ladders.find((l) => l.person_key !== 'nominee:gone')).toMatchObject({ state: 'running', sms2_state: 'skipped:paused', sms3_due_on: day(certDay0, 14) });
     expect(ladders.find((l) => l.person_key === 'nominee:gone')).toMatchObject({ state: 'ended_stopped', end_detail: 'stopped:not_a_recipient' });
+    // Still paused on day 14 (skipped) and on its conclusion date: it CONCLUDES and its ask is RECORDED while paused (LD9).
+    await ladderDay(h, w.cid, day(certDay0, 14), 'certificate');
+    await ladderDay(h, w.cid, day(certDay0, 18), 'certificate');
+    expect((await laddersOf(w.cid)).find((l) => l.person_key !== 'nominee:gone')).toMatchObject({
+      sms3_state: 'skipped:paused',
+      state: 'concluded_undelivered',
+      escalated_on: day(certDay0, 18),
+    });
+    const { rows: asks } = await pool.query<{ outcome: string }>(
+      `SELECT outcome FROM claim_certificate_reminders WHERE claim_case_id = $1 AND purpose = 'ladder_escalation'`,
+      [w.cid],
+    );
+    expect(asks).toHaveLength(1);
   });
 
   it('CERTIFICATE stops — a certificate RECEIVED since (a `missing` run whose claim now has one) ends the ladder `stopped:certificate_received`', async () => {

@@ -4,6 +4,33 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 6.37c dev — the undelivered-reminder ladder (2026-10-18, `2026-10-18-355`)
+
+- **The ladder's WhatsApp step** — RECORDED skipped (`skipped:whatsapp_not_built` for a claimant, `skipped:nominee_no_whatsapp` for a
+  nominee — `-356`); the ladder goes on to the 48-hour SMS (`-351`'s recorded reading). ⭐ Trigger: row `6-37d-claim-contact-whatsapp-step`
+  (the claimant's step only, behind G3 and the approved §3.4 exception — `-357`). **Deferred to 6-37d.**
+- **Phase 2 call tracking** (`-351` Consequence 4) — a call is RECORDED by hand (date, who answered, outcome — LD10); ⛔ call
+  tracking, recording or transcription. ⛔ Row exists. ⭐ Trigger: a decision to track calls. **Deferred.**
+- **The chase's own catch-up `late` send does ⛔ check ladder rows** (T22's residual) [`apps/jobs/src/scheduler/claim-correction-reminders.ts`
+  `planRun`, `claim-certificate-reminders.ts` `planClaim`] — the ladder child refuses a second text to a number in one chase on one day
+  (it counts every `family_sms` / `ladder_sms` row), but a scheduled reminder caught up `late` the same morning a ladder SMS went is ⛔
+  stopped by it: two texts to one phone that day. ⭐ Trigger: an incident, or a change to the catch-up. **Deferred.**
+- **A ladder SMS that went transient → `error` but WAS delivered can never end its ladder** (6.37c F3) — its report arrives while the
+  row is not `accepted` with that request id, so it settles `other_attempt` (⛔ a delivery record): the ladder runs on to its conclusion
+  and the ask, though the family got the text. ⭐ Trigger: Row 33 observes it, or the correlator learns to credit a final `error` row.
+  **Deferred.**
+- **The correction ladder plan re-hashes a person's number in the extracted stop predicate** [`apps/jobs/src/scheduler/claim-contact-ladder.ts`
+  `planCorrectionLadders` — `correctionFamilyStopReason` → `readReturnPersonStates`] — for a claimant (always hashed) or a moved
+  version, one more HMAC (and one KMS audit line under the global lock — [[project_kms_audit_per_hmac_global_lock]]) per running ladder per
+  day, beside the plan's own person states. ⭐ Trigger: the bulk-HMAC audit batching (D10-1.5), or a ladder count that makes it show.
+  **Deferred.**
+- **SMS 2 due on the very morning a ladder STARTS is sent in that same run** [`packages/domain/src/claim/contact-ladder.ts`
+  `ladderFirstDueOn`] — only a date strictly PASSED moves to the next run (LD3's *"a step whose date has passed"*); a report first seen on
+  D + 2 starts the ladder and sends SMS 2 that morning (48 hours, as `-350` ruling 2 says). ⛔ Two steps in one run either way. Recorded
+  as our reading. ⭐ Trigger: a ruling that the start run sends nothing. **Deferred.**
+
+---
+
 ## Deferred from: the Trustee Panel sitting of 2026-10-18 (Story 6.37c's pack)
 
 - **The neighbours' text and an over-long name — the same question as `-359`, OWED to the Panel** — the name-too-long routing note told
@@ -27,7 +54,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   closed (alarms reach a named person — the cost the Panel accepted at `-351` 1 A); (b) the Panel TOLD at its next sitting that alarms
   reach logs only until then (⛔ told yet, 2026-10-18 — ✅ **Closed by** [Decision 2026-10-18-360](../../.decision-log.md#decision-2026-10-18-360): told at the 2026-10-18 sitting, pack item 5); (c) a WhatsApp to a nominee waits for G1 AND G2 (⚠ superseded 2026-10-18 by [Decision 2026-10-18-356](../../.decision-log.md#decision-2026-10-18-356): ⛔ WhatsApp to a nominee — no case left), a call to a nominee for G1;
   (d) the basis for the texts and letters nominees receive today, once the claimant's new agreement no longer names nominees (`-352`'s
-  reading), put to counsel with 6-37c's Task 0. **Not addressed.**
+  reading), put to counsel with 6-37c's Task 0. **Not addressed.** ⚠ **Dated 2026-10-18 (Story 6.37c dev, Task 10):** (a) **⛔ addressed** —
+  a GO-LIVE condition of the ladder, carried (the ladder's alarms reach the logs only until Row 32 (h) — `-354` decision 4 (b)); (b) ✅
+  closed as above; (c) the CALL half **Closed by** Story 6.37c — the gate as built (`CLAIM_NOMINEE_CALLS_CLEARED`, read at boot by the api
+  and jobs: uncleared ⇒ a nominee's call record and number reveal are refused `contact_call.nominee_calls_not_cleared` and the conclusion's
+  ask reads "post a letter" — LD11 as recorded in [Decision 2026-10-18-355](../../.decision-log.md#decision-2026-10-18-355)); the
+  WhatsApp half has ⛔ case (`-356`); (d) **⛔ addressed** — the question is WRITTEN
+  (`_bmad-output/planning-artifacts/counsel-question-2026-10-18-nominee-contact-basis.md`), ⛔ sent; addressed only when sent, closed only
+  when counsel answers.
 
 - ⭐ **For row `6-37c-undelivered-reminder-ladder` (the carrier): ADR-0042's forgery bound must be RESTATED for the ladder as ruled**
   [`docs/adr/ADR-0042-msg91-delivery-report-ingress.md`, Consequences — Security] — it holds for 6.37b AS BUILT (*"recording reports
@@ -69,10 +103,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - **Reports in one POST share `received_at`** [`apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts`; the inbox claim's
   `ORDER BY received_at, report_id`] — the tie is broken by the random `report_id`, so which of two same-POST reports for one send
   counts as "first" is arbitrary. MSG91 gives ⛔ order within one POST, so none exists to keep. ⭐ Trigger: a real POST carrying two
-  final statuses for one request (Row 33 (e)), or 6-37c reading report order. **Deferred.**
+  final statuses for one request (Row 33 (e)), or 6-37c reading report order. **Deferred.** ⚠ **Dated 2026-10-18 (Story 6.37c dev):**
+  **trigger ⛔ fired** — the delivery ladder reads the ABSORBING state (`undelivered` wins) and the send's own IST date, ⛔ report order
+  (6.37c F2); still deferred.
 - **`readSmsSendDeliveries` takes an unbounded id list, and a non-uuid id raises `22P02`** [`packages/domain/src/sms-delivery/reports.ts`]
   — ⛔ production caller today (only its export and the domain integration tests; checked 2026-10-18). ⭐ Trigger: its first caller —
-  row 6-37c — bounds the list (or batches it) and validates ids at its edge. **Deferred to 6-37c.**
+  row 6-37c — bounds the list (or batches it) and validates ids at its edge. **Deferred to 6-37c.** ⚠ **Dated 2026-10-18 (Story 6.37c
+  dev):** **trigger ⛔ fired** — 6.37c reads the delivery state by a LEFT JOIN on `('cr' | 'ce', reminder_id)` inside the chase readers and
+  ⛔ calls `readSmsSendDeliveries` (T23); still ⛔ production caller. **Deferred.**
 
 ---
 
@@ -94,7 +132,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - **⛔ Staff view labels a send "reported undelivered"** — DR13: the correction, certificate and peer-mesh staff views show a send the
   network reported undelivered as sent (`correction-chase-read.ts`, `certificate-reminder-read.ts`, the peer-mesh link). ⭐ Trigger: row
   `6-37c-undelivered-reminder-ladder`'s create-story (the Panel ruled — `-350` / `-351` 3 B: correction AND certificate reminders); the
-  peer-mesh view's part stays here until a story shows peer-mesh delivery.
+  peer-mesh view's part stays here until a story shows peer-mesh delivery. ⚠ **Dated 2026-10-18 (Story 6.37c dev):** **Closed by**
+  Story 6.37c for the CORRECTION and CERTIFICATE views (LD12 — each person's `follow_up`, `unreachable_reason`, the correction view's
+  `reported_undelivered`, "Texts were reported not delivered — <the ask>"); the PEER-MESH part stays here (**⛔ addressed**).
 - **The webhook's tokens are read once, at boot** — DR1: a Secret Manager outage at boot disables the webhook (403 to every report) until
   the next api restart, and those 403s count toward MSG91's auto-pause (ADR-0042's residual; the silence alarm is the detector). ⭐
   Trigger: Row 33 (b) finds the disabled-webhook boot line, or the silence alarm fires after a restart.
@@ -1025,8 +1065,8 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
     is — ⛔ none exist in production.
 - **A T12 legacy certificate row (sent before 6.21a, ⛔ no upload row) reads as `missing`, and the OCR job's tolerance path could make a claim `missing` AGAIN (Trap 6).** A legacy row is chased as `missing`; a second `missing` wait on one claim is impossible (UNIQUE — the planner reads the existing run as "exists", the opener's 23505 is "exists", ⛔ never a crash), so a claim that became `missing` again after a certificate is ⛔ not re-chased. ⛔ Neither is reachable in production (⛔ no production data exists); ⚠ a dev/staging DB may hold a legacy row. ⭐ Trigger: any migration of pre-6.21a certificates into production.
 - **⛔ No staff push in 6.19d — so the found-dead + 13 escalation reaches ⛔ no Pariwar Admin (CR10, a departure from shared-spec D11).** The escalation is a RECORD on the District Admin's list (*"the Pariwar Admin is not notified in this version"*); ⛔ no Pariwar-Admin surface shows it. ⭐ Trigger: an admin client that registers a device token, or a Pariwar-Admin view of the certificate reminders.
-- **⛔ No staff prompt to CALL a dead-phone family whose second certificate is rejected after their one letter (CR10; `-275` "does NOT cover").** Such a person gets ⛔ no SMS (the delivered-letter stop), ⛔ no second letter (`-275` Q1) and ⛔ no chase; the list shows *"Letter delivered — no further texts"*. ⭐ Trigger: a staff call-task seam.
-- **At-least-once SMS (inherited from 6.19b).** A retried `api_unavailable` can text a person twice — recorded in `attempt_count` / `first_detail`, ⛔ never hidden. ⭐ Trigger: a gateway idempotency key or a delivery-receipt (DLR) seam. ⚠ **2026-10-17 ([`-345`](../../.decision-log.md#decision-2026-10-17-345) MG1 / MG9):** closer: row `6-37b-msg91-delivery-reports` (MSG91's delivery reports — the DLR seam); MSG91 has ⛔ idempotency key, so 6.37 leaves this OPEN — ⛔ closed. ⚠ **2026-10-17 (Story 6.37b dev; [`-347`](../../.decision-log.md#decision-2026-10-17-347) DR6):** the trigger's DLR half has FIRED — 6.37b ships the delivery-report seam — and the item is PARTLY addressed: a second request MSG91 accepted for ONE send is now DETECTED and alarmed (the report settles `other_attempt:<kind>` with `sms_report.second_request_for_one_send:<kind>`, once the webhook is live — roster Row 33 (d)), ⛔ prevented (MSG91 has ⛔ idempotency key). OPEN; the residual's trigger is now *a gateway idempotency key* only.
+- **⛔ No staff prompt to CALL a dead-phone family whose second certificate is rejected after their one letter (CR10; `-275` "does NOT cover").** Such a person gets ⛔ no SMS (the delivered-letter stop), ⛔ no second letter (`-275` Q1) and ⛔ no chase; the list shows *"Letter delivered — no further texts"*. ⭐ Trigger: a staff call-task seam. ⚠ **Dated 2026-10-18 (Story 6.37c dev):** **trigger FIRED, partly addressed** — the seam exists: a District Admin can RECORD a call from the certificate list (LD10 — it ends that person's ladders and, on the correction chase, reaches them for the closure); ⛔ PROMPT for this family unless a delivery ladder concludes for them (its call-or-letter ask). OPEN.
+- **At-least-once SMS (inherited from 6.19b).** A retried `api_unavailable` can text a person twice — recorded in `attempt_count` / `first_detail`, ⛔ never hidden. ⭐ Trigger: a gateway idempotency key or a delivery-receipt (DLR) seam. ⚠ **2026-10-17 ([`-345`](../../.decision-log.md#decision-2026-10-17-345) MG1 / MG9):** closer: row `6-37b-msg91-delivery-reports` (MSG91's delivery reports — the DLR seam); MSG91 has ⛔ idempotency key, so 6.37 leaves this OPEN — ⛔ closed. ⚠ **2026-10-17 (Story 6.37b dev; [`-347`](../../.decision-log.md#decision-2026-10-17-347) DR6):** the trigger's DLR half has FIRED — 6.37b ships the delivery-report seam — and the item is PARTLY addressed: a second request MSG91 accepted for ONE send is now DETECTED and alarmed (the report settles `other_attempt:<kind>` with `sms_report.second_request_for_one_send:<kind>`, once the webhook is live — roster Row 33 (d)), ⛔ prevented (MSG91 has ⛔ idempotency key). OPEN; the residual's trigger is now *a gateway idempotency key* only. ⚠ **Dated 2026-10-18 (Story 6.37c dev):** a delivery ladder adds up to two SMS per REPORTED-undelivered reminder (`ladder_sms` rows) under the SAME residual — a retried `api_unavailable` on a ladder SMS can text twice, recorded the same way (`attempt_count` / `first_detail`). OPEN.
 - **⛔ No virus scan on the certificate letter's delivery screenshot (D6).** MIME + size are checked before the port's `put`; nothing scans the bytes. Same failed-COMMIT orphan caveat as 6.19b / 6.19c. ⭐ Trigger: the document-scanning story.
 - **⛔ No RTBF path reaches the 6.19d tables (T8's class).** `claim_certificate_reminder_letters.tracking_number_ciphertext` (Tier-1) and the reminder rows' keyed number hashes are swept by ⛔ no erasure path. ⭐ Trigger: the RTBF story that covers the claim-correction tables.
 - **Two race tests NOT built (Testing §"Races").** Built (live, concurrent): two sweeps opening the same claim's run at once (exactly ONE run), two children of one number in one slot at once (ONE text, the lower key's); and sequentially: a stale plan returning `stale` without ending the new run, a `-260` G5 restart ending the old run in the same transaction. ⛔ NOT built: the child racing the 6.21a review writer, and the child racing the OCR job's pointer move, under NOWAIT / `lock_timeout` — both lock the claim row first, as the child does, so they serialise by construction. ⭐ Trigger: any change to the claim-row lock ORDER (or to `NOWAIT`/`lock_timeout`) in ANY of the three writers — the certificate child (`claim-certificate-reminders.ts`), 6.21a's review writer (`recordDeathCertificateReview`), the OCR job's current-pointer move — since "they serialise by construction" is exactly what such a change would break. ⚠ **Re-keyed by code review round 2 (2026-10-04):** the old trigger, *"the next code review of 6.19d"*, FIRED TWICE (the 5-chunk pass and round 2) and was re-deferred both times — an event that always passes never forces the work.
@@ -11299,7 +11339,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **⛔ No virus scan on the posted-letter SCREENSHOT** (D6, AC9b). The District Admin's delivery screenshot is stored through the `claimDocumentStorage` port under its own prefix (`…/correction-letter/{letterId}/…`), images only (JPEG / PNG / WebP), ≤ 10 MiB, checked BEFORE `put` — and read back only through a 300-second signed URL under key (1). ⛔ Nothing scans the bytes. The same gap as every other upload on this port; ⛔ not fixed here. ⭐ Trigger: a malware-scanning adapter on the storage port.
 - **⚠ The Hindi of D28's staff-case line and of the four family SMS messages is agent-authored and ⛔ not yet human-reviewed** (`-267` §6). Marked in `claim.json`'s `$comment.correction_chase`; a **go-live** gate — `inventory-roster.md` **Row 20** (`correction-chase-hindi-human-review`). A corrected SMS text must be re-registered on the DLT portal. ⛔ Never shown to a real family unreviewed — nothing is in production.
 - **⚠ The admin push is INERT on day one** (AC4). The daily staff push (one per claim, staff member and IST day, deduped by its `staff_push` row) resolves admin device tokens under `ADMIN_GLOBAL_NAMESPACE` — and ⛔ no admin client registers one, so every push records `no_target` (⛔ no alarm — it would fire daily for every claim). Built and tested against a fake provider (⚠ *corrected 2026-10-01:* at first only the `no_target` path ran; the `dispatch()` accepted path gained a live test in the third-pass review). ⭐ The queues are the channel: every due reminder, letter chase and escalation is on the correction queue. ⭐ Trigger: an admin client that registers a device token.
-- **⚠ At-least-once family SMS** (AC2, recorded ⛔ not hidden). `api_unavailable` includes "no response" and 5xx, which can follow a gateway accept, so a retried slot can text a person twice; `attempt_count` and `first_detail` record it. ⭐ Trigger: a gateway idempotency key, or a DLR seam (T1 — ⛔ none in v1). ⚠ **2026-10-17 ([`-345`](../../.decision-log.md#decision-2026-10-17-345) MG1 / MG9):** closer: row `6-37b-msg91-delivery-reports` (MSG91's delivery reports — the DLR seam); MSG91 has ⛔ idempotency key, so 6.37 leaves this OPEN — ⛔ closed. ⚠ **2026-10-17 (Story 6.37b dev; [`-347`](../../.decision-log.md#decision-2026-10-17-347) DR6):** the trigger's DLR half has FIRED — 6.37b ships the delivery-report seam — and the item is PARTLY addressed: a second request MSG91 accepted for ONE send is now DETECTED and alarmed (the report settles `other_attempt:<kind>` with `sms_report.second_request_for_one_send:<kind>`, once the webhook is live — roster Row 33 (d)), ⛔ prevented (MSG91 has ⛔ idempotency key). OPEN; the residual's trigger is now *a gateway idempotency key* only.
+- **⚠ At-least-once family SMS** (AC2, recorded ⛔ not hidden). `api_unavailable` includes "no response" and 5xx, which can follow a gateway accept, so a retried slot can text a person twice; `attempt_count` and `first_detail` record it. ⭐ Trigger: a gateway idempotency key, or a DLR seam (T1 — ⛔ none in v1). ⚠ **2026-10-17 ([`-345`](../../.decision-log.md#decision-2026-10-17-345) MG1 / MG9):** closer: row `6-37b-msg91-delivery-reports` (MSG91's delivery reports — the DLR seam); MSG91 has ⛔ idempotency key, so 6.37 leaves this OPEN — ⛔ closed. ⚠ **2026-10-17 (Story 6.37b dev; [`-347`](../../.decision-log.md#decision-2026-10-17-347) DR6):** the trigger's DLR half has FIRED — 6.37b ships the delivery-report seam — and the item is PARTLY addressed: a second request MSG91 accepted for ONE send is now DETECTED and alarmed (the report settles `other_attempt:<kind>` with `sms_report.second_request_for_one_send:<kind>`, once the webhook is live — roster Row 33 (d)), ⛔ prevented (MSG91 has ⛔ idempotency key). OPEN; the residual's trigger is now *a gateway idempotency key* only. ⚠ **Dated 2026-10-18 (Story 6.37c dev):** a delivery ladder adds up to two SMS per REPORTED-undelivered reminder (`ladder_sms` rows) under the SAME residual — a retried `api_unavailable` on a ladder SMS can text twice, recorded the same way (`attempt_count` / `first_detail`). OPEN.
 - **⚠ ⛔ No RTBF path reaches the chase's new Tier-1 columns** — `claim_correction_letters.tracking_number_ciphertext` and `claim_correction_marks.note_ciphertext` (and the letter screenshot object) — the same posture as the 6.19a contact tables (shared-spec invariant 9, `-243` leaves claim tables alone). ⛔ Not fixed here.
 - **⚠ The letter precondition's "found unreachable" reads the CURRENT number only through the sweep's reset** (AC3's per-number state). The API route evaluates a person's letter-eligibility from the run's rows WITHOUT re-hashing their number (it holds no reason to decrypt a mobile); the daily sweep detects a 6.20 number change (version first, then hash) and resets the person from its next row. ⇒ between a 6.20 correction that changes a number and the next sweep, a letter can still be recorded for the OLD number's death — harmless (a letter only adds reach). ⭐ Trigger: a letter recorded against a stale epoch is ever reported.
 - **⚠ The queue's chase summary is read PER ROW** (AC8b). `readCorrectionChaseSummary` runs its own reads for each visible claim — bounded by the queue's page (default 50, cap 200), ⛔ not a set-based read like the queue's district column. ⭐ Trigger: the correction queue's p95 in the measured-validation harness, or a Pariwar with a long queue.
@@ -11455,6 +11495,12 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   correction chase a send REPORTED undelivered still counts the family reached (D22 is unchanged) and the staff chase views still show
   it as sent, until row `6-37c-undelivered-reminder-ladder` builds the Panel-ruled conclusion (`-350`–`-352`) — the closer is now
   6-37c. Roster Row 32 note (9): no claim-text template id until Row 33 has closed AND 6-37c is `done`.
+  ⚠ **Dated 2026-10-18 (Story 6.37c dev):** **Closed by** Story 6.37c for a REPORTED failure on the correction AND certificate chases — it
+  starts a delivery ladder and, once that CONCLUDES undelivered, the reminder reads never delivered (D22 stops counting it, the person is
+  letter-eligible, the staff views say so; a closure for silence waits while it runs); **narrowed** to SILENCE — a text with ⛔ report
+  still counts as reaching the family (`-351` 1 A; DR12's silence alarm is the detector); **⛔ addressed** for the peer-mesh ping and the
+  suspicion notices (their reports are recorded, ⛔ acted on). ⚠ GO-LIVE (⛔ a merge fence): roster Row 32 (h) — the ladder's alarms reach
+  a named person (`-354` decision 4 (b)).
 - **The helpline warning reaches the logs only** [`apps/jobs/src/boot.ts:594-604` — the claim deps carry ⛔ `onAlarm`] — Story 6.34's
   `helplineNotCallbackNumber` warning (`-322` C1 / `-323` R1) goes through each sweep's existing `alarmOf(deps)` sink, which falls back to
   `console.warn` while jobs boot wires ⛔ `onAlarm` (the existing 8.14 alarm-transport item). ⭐ Trigger: the same as that item.

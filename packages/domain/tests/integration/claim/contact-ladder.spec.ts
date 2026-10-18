@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assertCorrectionLetterRecordable,
   claimCorrectionReminder,
+  correctionFamilyStopReason,
   closureNoticeRecipients,
   currentCorrectionNumberHash,
   evaluateCertificatePersonStates,
@@ -327,6 +328,37 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       expect(states[0]!.track.deadKind).toBe('not_delivered');
       // ⭐ PQ2 A — a concluded CERTIFICATE ladder maps ⛔ correction row.
       expect((await rowsOf(tx, c)).length).toBe(0);
+    });
+  });
+
+  describe('LD5 — the ladder\'s stops (the EXTRACTED predicate, `forLadder`)', () => {
+    it('⭐ `closure_closed` — a closure DECIDED on a run that had ended `day_90` (which stays `day_90`, F8) stops a ladder; the same run with ⛔ closure is ⛔ a stop for a ladder (only the chase\'s own send stops at day 90)', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await returnedClaim(client);
+      await sendRow(tx, c, { slotDay: 1 });
+      await asSuperuser(client, () =>
+        client.query(`UPDATE claim_correction_runs SET ended_at = now(), end_reason = 'day_90' WHERE run_id = $1`, [c.runId]),
+      );
+      const stop = async () =>
+        (
+          await correctionFamilyStopReason(tx, {
+            pariwarId: PARIWAR_A,
+            claimCaseId: c.cid,
+            runId: c.runId,
+            personKey: c.person.personKey,
+            crypto: ENC,
+            forLadder: true,
+          })
+        ).stop;
+      expect(await stop()).toBeNull();
+      // The chase's own send still refuses an ended run (⛔ `forLadder`).
+      expect(
+        (await correctionFamilyStopReason(tx, { pariwarId: PARIWAR_A, claimCaseId: c.cid, runId: c.runId, personKey: c.person.personKey, crypto: ENC })).stop,
+      ).toBe('run_ended');
+      await request(client, c);
+      await approve(client, c);
+      expect(await stop()).toBe('closure_closed');
     });
   });
 

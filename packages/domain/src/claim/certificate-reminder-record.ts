@@ -239,31 +239,6 @@ export async function skipCertificateReminder(
 }
 
 /**
- * Review round 2 (fix-diff, P21) — THIS job's own `attempting` row that sent NOTHING (⛔ attempt ran — its `detail` is
- * still NULL) is abandoned `skipped_superseded` with `detail` = the reason. Compare-and-set on `attempting` + this job +
- * `detail IS NULL`; `false` when the row moved on (another job, a final outcome, or an attempt that ran).
- */
-export async function abandonOwnCertificateReminder(
-  db: Db,
-  input: { readonly pariwarId: PariwarId; readonly reminderId: string; readonly jobId: string; readonly detail: string },
-): Promise<boolean> {
-  const rows = await db
-    .update(claimCertificateReminders)
-    .set({ outcome: 'skipped_superseded', detail: input.detail, updatedAt: sql`clock_timestamp()` })
-    .where(
-      and(
-        eq(claimCertificateReminders.pariwarId, input.pariwarId),
-        eq(claimCertificateReminders.reminderId, input.reminderId),
-        eq(claimCertificateReminders.outcome, 'attempting'),
-        eq(claimCertificateReminders.claimedByJob, input.jobId),
-        sql`${claimCertificateReminders.detail} IS NULL`,
-      ),
-    )
-    .returning({ reminderId: claimCertificateReminders.reminderId });
-  return rows.length > 0;
-}
-
-/**
  * ⭐ THE COMPARE-AND-SET: `attempting` → final, only from `attempting` and only by the job holding the row. ⭐ KEEPS the
  * row's number hash (written at claim). Returns `false` when the row moved on — the caller CHECKS it (6.19c's lost-CAS
  * finding). ⛔ `delivered_at` is ⛔ never written here — an accept is ⛔ not a delivery.
@@ -274,7 +249,8 @@ export async function finaliseCertificateReminder(
     readonly pariwarId: PariwarId;
     readonly reminderId: string;
     readonly jobId: string;
-    readonly outcome: 'accepted' | 'rejected_invalid_number' | 'rejected_unreachable' | 'error';
+    /** `no_target` — a claimed LADDER row whose number read back as nothing (LD3: the step stays `sent`, as the correction child). */
+    readonly outcome: 'accepted' | 'rejected_invalid_number' | 'rejected_unreachable' | 'no_target' | 'error';
     readonly providerMessageId?: string | null;
     readonly detail?: string | null;
   },

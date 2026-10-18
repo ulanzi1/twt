@@ -35,7 +35,6 @@ import {
 } from './certificate-reminder.js';
 import {
   CertificateRecipientsMovedError,
-  abandonOwnCertificateReminder,
   certificateLadderStopReason,
   claimCertificateReminder,
   insertFinalCertificateReminder,
@@ -200,8 +199,8 @@ export async function resolveContactLadderStep(
  * Review round 2 P17 — a RETRY the step gate now turns down, whose claimed row sent NOTHING (`giveUp` marked it
  * `skipped_superseded` — ⛔ attempt ran): the step was recorded `sent` on that row, which LD3's outcome table reads as "an
  * attempt was made". Re-record it as the gate's verdict (⛔ row, the next date from the due date — as `resolve` would have
- * on a first visit). Compare-and-set on `running` + the step still `sent` ON THAT ROW (+ for step 2, step 3 still
- * `pending` — its due date is rewritten). An attempt that DID run (expired `error`), a row already final or a row held by
+ * on a first visit). Compare-and-set on `running` + the step still `sent` ON THAT ROW (step 2 moves `sms3_due_on` only
+ * while step 3 is still `pending`). An attempt that DID run (expired `error`), a row already final or a row held by
  * another job keeps `sent` — the caller un-sends ONLY on `skippedOwn` (review round 2, fix-diff).
  */
 export async function unsendContactLadderStep(
@@ -219,7 +218,13 @@ export async function unsendContactLadderStep(
   const t = claimContactLadders;
   const set =
     input.step === 2
-      ? { sms2State: input.state, sms2On: input.on, sms2RowId: null, sms3DueOn: input.nextOn }
+      ? {
+          sms2State: input.state,
+          sms2On: input.on,
+          sms2RowId: null,
+          // Step 3's due date moves ONLY while step 3 is still pending (⛔ rewritten under a resolved step 3).
+          sms3DueOn: sql`CASE WHEN ${t.sms3State} = 'pending' THEN ${input.nextOn}::date ELSE ${t.sms3DueOn} END`,
+        }
       : { sms3State: input.state, sms3On: input.on, sms3RowId: null, concludeOn: input.nextOn };
   const rows = await db
     .update(t)
@@ -231,8 +236,6 @@ export async function unsendContactLadderStep(
         eq(t.state, 'running'),
         eq(input.step === 2 ? t.sms2State : t.sms3State, 'sent'),
         eq(input.step === 2 ? t.sms2RowId : t.sms3RowId, input.rowId),
-        // Step 2 rewrites `sms3_due_on` — ⛔ under a step 3 already resolved (review round 2, fix-diff).
-        ...(input.step === 2 ? [eq(t.sms3State, 'pending')] : []),
       ),
     )
     .returning({ ladderId: t.ladderId });
@@ -337,50 +340,6 @@ function stepOf(l: ClaimContactLadderRow, step: 2 | 3) {
 /** The next date after a step resolved on `on` (LD3's outcome table): `sent` counts from the send, the rest from the due date. */
 function nextAfter(step: 2 | 3, anchor: string, on: string): string {
   return nextLadderStepDate(anchor, step === 2 ? LADDER_SMS3_AFTER_DAYS : LADDER_CONCLUDE_AFTER_DAYS, on);
-}
-
-/**
- * Review round 2 (fix-diff, P21) — a claimed certificate ladder row that sent NOTHING on its FINAL attempt (the number read
- * back as nothing after the claim): the row is abandoned `skipped_superseded` (⛔ "an attempt ran") and the step moves
- * `sent` → `skipped:<detail>` (⛔ row, the next date from the due date — LD3), in ONE transaction under the claim-row lock.
- * `abandoned` is `false` when the row moved on (nothing changed); `unsent` is `false` when the step had already moved.
- */
-export async function abandonCertificateLadderSend(
-  client: pg.PoolClient,
-  input: {
-    readonly pariwarId: PariwarId;
-    readonly claimCaseId: ClaimId;
-    readonly ladderId: string;
-    readonly step: 2 | 3;
-    readonly reminderId: string;
-    readonly jobId: string;
-    readonly sentOn: string;
-    readonly detail: string;
-  },
-): Promise<{ readonly abandoned: boolean; readonly unsent: boolean }> {
-  const db = bindScopedDb(client);
-  await lockCertificateClaim(db, input.pariwarId, input.claimCaseId);
-  const abandoned = await abandonOwnCertificateReminder(db, {
-    pariwarId: input.pariwarId,
-    reminderId: input.reminderId,
-    jobId: input.jobId,
-    detail: input.detail,
-  });
-  if (!abandoned) return { abandoned: false, unsent: false };
-  const l = await readContactLadder(db, input.pariwarId, input.ladderId);
-  if (l === null) return { abandoned: true, unsent: false };
-  const s = stepOf(l, input.step);
-  if (s.state !== 'sent' || s.rowId !== input.reminderId || s.dueOn === null) return { abandoned: true, unsent: false };
-  const unsent = await unsendContactLadderStep(db, {
-    pariwarId: input.pariwarId,
-    ladderId: input.ladderId,
-    step: input.step,
-    rowId: input.reminderId,
-    state: `skipped:${input.detail}`,
-    on: input.sentOn,
-    nextOn: nextAfter(input.step, s.dueOn, input.sentOn),
-  });
-  return { abandoned: true, unsent };
 }
 
 /**

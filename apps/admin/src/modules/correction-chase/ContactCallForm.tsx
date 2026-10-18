@@ -140,8 +140,21 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase, offe
   // (the epoch moves on, so a reveal in flight is discarded); the status line — and its "Call recorded." — stays.
   // Fix-diff review — the fields, the kept key and any problem go too: a form offered AGAIN later (a new ladder) starts
   // EMPTY (⛔ an old attempt's key replayed, ⛔ an old alert with no form to retry from).
+  // The latest `offered` for a save settling AFTER a withdrawal (its refusal has ⛔ form to show beside — fix-diff review).
+  const offeredRef = useRef(offered);
+  const withdrawnRef = useRef(false);
   useEffect(() => {
-    if (offered) return;
+    offeredRef.current = offered;
+    if (offered) {
+      // Offered AGAIN after a withdrawal (a new ladder): the old "Call recorded." / alert is ⛔ about this form.
+      if (withdrawnRef.current) {
+        withdrawnRef.current = false;
+        setStatus('');
+        setProblem(null);
+      }
+      return;
+    }
+    withdrawnRef.current = everOffered;
     numberEpochRef.current += 1;
     setNumber(null);
     setStepUp('idle');
@@ -151,7 +164,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase, offe
     setOutcome('');
     setProblem(null);
     keyRef.current = null;
-  }, [offered]);
+  }, [offered, everOffered]);
 
   // ⛔ A reveal resolving after unmount is DISCARDED (the epoch moves on).
   useEffect(
@@ -324,7 +337,7 @@ export function ContactCallForm({ pariwarId, claimCaseId, personKey, chase, offe
       setStatus(t.saved);
       focusNext.current = 'status';
     } catch (err) {
-      setProblem(contactCallRefusalText(err));
+      if (offeredRef.current) setProblem(contactCallRefusalText(err));
     } finally {
       savingRef.current = false;
     }

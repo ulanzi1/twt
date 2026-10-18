@@ -31,7 +31,7 @@ import {
   recordCorrectionLetterDelivery,
   resolveCorrectionChase,
   unsendContactLadderStep,
-  abandonCertificateLadderSend,
+  finaliseCertificateReminder,
   writeCertificateLadderEscalation,
   writeCorrectionLadderEscalation,
 } from '../../../src/claim/index.js';
@@ -576,7 +576,7 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       await expect(move(claimedRow)).resolves.toBe(false);
     });
 
-    it('⛔ step 2 is ⛔ un-sent under a step 3 already RESOLVED (its due date would be rewritten — review round 2, fix-diff)', async () => {
+    it('step 2 un-sent under a step 3 already RESOLVED keeps step 3\'s due date (⛔ rewritten — fix-diff review)', async () => {
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
       const c = await returnedClaim(client);
@@ -593,15 +593,18 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
       );
       await expect(
         unsendContactLadderStep(tx, { pariwarId: PARIWAR_A, ladderId: l, step: 2, rowId: claimedRow, state: 'satisfied', on: sentOn, nextOn: addCalendarDays(before.sms2DueOn, 2) }),
-      ).resolves.toBe(false);
-      expect(await readContactLadder(tx, PARIWAR_A, l)).toMatchObject({ sms2State: 'sent', sms2RowId: claimedRow, sms3DueOn: sms3On });
+      ).resolves.toBe(true);
+      expect(await readContactLadder(tx, PARIWAR_A, l)).toMatchObject({
+        sms2State: 'satisfied', sms2RowId: null, sms3State: 'skipped:past_horizon', sms3DueOn: sms3On,
+      });
     });
   });
 
-  // Review round 2 (fix-diff, P21) — a claimed certificate ladder row that sent NOTHING on its final attempt is abandoned
-  // `skipped_superseded` (⛔ "an attempt ran") and the step leaves `sent` (LD3); ⛔ another job's row, ⛔ twice.
-  describe('abandonCertificateLadderSend — a claimed row that sent nothing (P21)', () => {
-    it('⭐ own `attempting` row ⇒ `skipped_superseded` + the step `skipped:no_sendable_number` (⛔ row, next date from the due date); ⛔ another job, ⛔ twice', async () => {
+  // Fix-diff review — a claimed certificate ladder row whose number reads back as nothing is finalised `no_target` on the
+  // final attempt (LD3: the step stays `sent`, as the correction child) — EVEN when an earlier attempt noted a transient
+  // `detail` (the CAS matches any detail ⇒ ⛔ row stranded `attempting`); ⛔ another job's row.
+  describe('finaliseCertificateReminder — `no_target` for a claimed ladder row (P21)', () => {
+    it('⭐ own `attempting` row with a transient detail ⇒ `no_target`; ⛔ another job; the step stays `sent`', async () => {
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);
       const c = await returnedClaim(client);
@@ -635,19 +638,15 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder through the r
         `UPDATE claim_contact_ladders SET sms2_state = 'sent', sms2_on = $2, sms2_row_id = $3, sms3_due_on = $4 WHERE ladder_id = $1`,
         [l, sentOn, claimed, addCalendarDays(sentOn, 2)],
       );
-      const abandon = (jobId: string) =>
-        abandonCertificateLadderSend(client, {
-          pariwarId: PARIWAR_A, claimCaseId: c.cid, ladderId: l, step: 2, reminderId: claimed, jobId, sentOn, detail: 'no_sendable_number',
-        });
-      await expect(abandon('job-other')).resolves.toEqual({ abandoned: false, unsent: false });
-      expect((await readContactLadder(tx, PARIWAR_A, l))!.sms2State).toBe('sent');
-      await expect(abandon('job-1')).resolves.toEqual({ abandoned: true, unsent: true });
+      await client.query(`UPDATE claim_certificate_reminders SET detail = 'api_unavailable' WHERE reminder_id = $1`, [claimed]);
+      const fin = (jobId: string) =>
+        finaliseCertificateReminder(tx, { pariwarId: PARIWAR_A, reminderId: claimed, jobId, outcome: 'no_target', detail: 'no_target:no_sendable_number' });
+      await expect(fin('job-other')).resolves.toBe(false);
+      await expect(fin('job-1')).resolves.toBe(true);
       const row = await client.query<{ outcome: string; detail: string }>(`SELECT outcome, detail FROM claim_certificate_reminders WHERE reminder_id = $1`, [claimed]);
-      expect(row.rows[0]).toEqual({ outcome: 'skipped_superseded', detail: 'no_sendable_number' });
-      expect(await readContactLadder(tx, PARIWAR_A, l)).toMatchObject({
-        sms2State: 'skipped:no_sendable_number', sms2RowId: null, sms2On: sentOn, sms3DueOn: addCalendarDays(before.sms2DueOn, 2),
-      });
-      await expect(abandon('job-1')).resolves.toEqual({ abandoned: false, unsent: false });
+      expect(row.rows[0]).toEqual({ outcome: 'no_target', detail: 'no_target:no_sendable_number' });
+      expect(await readContactLadder(tx, PARIWAR_A, l)).toMatchObject({ sms2State: 'sent', sms2RowId: claimed });
+      await expect(fin('job-1')).resolves.toBe(false);
     });
   });
 

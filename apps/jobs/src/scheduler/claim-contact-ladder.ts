@@ -1178,36 +1178,26 @@ export async function runCertificateLadderSmsChild(
     return { status: 'noop', reason: begun.reason };
   }
   if (e164 === null) {
-    // The person's hash cleared but the number read back as nothing (a race with an edit) — NOTHING was sent. Round-2 P21
-    // + fix-diff review: a non-final attempt retries WITHOUT a transient note (a `detail` would read as "an attempt ran"
-    // to the next re-check — K4); the FINAL attempt abandons the own row `skipped_superseded` and moves the step to
-    // `skipped:no_sendable_number` (⛔ `sent` — LD3's "an attempt was made" would be untrue). Alarms on what moved.
+    // The person's hash cleared but the number read back as nothing — NOTHING was sent. (Effectively unreachable: the hash
+    // and the number decrypt from the SAME ciphertext.) A non-final attempt retries WITHOUT a transient note (a `detail`
+    // would read as "an attempt ran" to the next re-check — K4); the FINAL attempt finalises the row `no_target`
+    // (`no_target:no_sendable_number`) and the step stays `sent` — LD3's outcome table, exactly as the CORRECTION child
+    // does (fix-diff review: one event recorded one way in both chases; the CAS matches any detail, so ⛔ row is stranded).
     const finalAttempt = attempt === undefined || attempt.retryCount >= attempt.retryLimit;
     if (!finalAttempt) {
       throw new ClaimCorrectionTransientError(`[jobs] claim-certificate-ladder-sms: no number for a claimed row on ladder ${p.ladderId} — retrying`);
     }
-    const out = await withPariwarScope(deps.pool, pid, async (_db: Db, client: pg.PoolClient) => {
-      await client.query(`SET LOCAL lock_timeout = '${CORRECTION_PLAN_LOCK_TIMEOUT}'`);
-      return claimDomain.abandonCertificateLadderSend(client, {
+    const moved = await withPariwarScope(deps.pool, pid, (db: Db) =>
+      claimDomain.finaliseCertificateReminder(db, {
         pariwarId,
-        claimCaseId,
-        ladderId: p.ladderId,
-        step: p.step,
         reminderId: begun.reminderId,
         jobId,
-        sentOn: p.sentOn,
-        detail: 'no_sendable_number',
-      });
-    });
-    if (!out.abandoned) {
-      alarm(`[jobs] claim-certificate-ladder-sms: no sendable number on ladder ${p.ladderId} (claim ${p.claimCaseId}) — the claimed row moved on before it could be abandoned`);
-      return { status: 'noop', reason: 'held_by_other' };
-    }
-    alarm(
-      `[jobs] claim-certificate-ladder-sms: no sendable number for a claimed row on ladder ${p.ladderId} (claim ${p.claimCaseId}) — ⛔ sent; ` +
-        (out.unsent ? "step recorded 'skipped:no_sendable_number'" : 'the step had already moved'),
+        outcome: 'no_target',
+        detail: 'no_target:no_sendable_number',
+      }),
     );
-    return out.unsent ? { status: 'resolved', state: 'skipped:no_sendable_number' } : { status: 'noop', reason: 'held_by_other' };
+    if (!moved) alarm(`[jobs] claim-certificate-ladder-sms: the row for ladder ${p.ladderId} moved on before its finalise`);
+    return { status: 'sent', outcome: 'no_target' };
   }
 
   const result = await sendClaimCorrectionSms(deps, {

@@ -518,6 +518,45 @@ describe('round 2, P3 — "Call recorded." outlives the refetch that withdraws t
     const [first, second] = recordCorrectionContactCall.mock.calls;
     expect(second![3]).not.toBe(first![3]);
   });
+
+  // Fix-diff review (2nd) — a save that FAILS after the form was withdrawn leaves ⛔ alert (⛔ form to retry from), and a
+  // form offered again does ⛔ carry the old "Call recorded." line.
+  it('⛔ a refusal settling after withdrawal shows ⛔ alert; offered again ⇒ ⛔ old status line', async () => {
+    const user = userEvent.setup();
+    let reject!: (e: Error) => void;
+    recordCorrectionContactCall
+      .mockImplementationOnce(() => new Promise((_r, rej) => { reject = rej; }))
+      .mockResolvedValueOnce(CALL);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const ui = (offered: boolean) => (
+      <QueryClientProvider client={qc}>
+        <ContactCallForm pariwarId={PARIWAR} claimCaseId={CLAIM} personKey={PERSON} chase="correction" offered={offered} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui(true));
+    const fillReached = async () => {
+      const form = screen.getByRole('form', { name: t.calls.record });
+      await user.type(within(form).getByLabelText(t.calls.calledOn), '2026-10-01');
+      await user.selectOptions(within(form).getByLabelText(t.calls.whoAnswered), 'family_member');
+      await user.click(within(form).getByLabelText(t.calls.reached));
+    };
+    await fillReached();
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    await waitFor(() => expect(recordCorrectionContactCall).toHaveBeenCalledTimes(1));
+    rerender(ui(false));
+    reject(new Error('network down'));
+    await waitFor(() => expect(screen.queryByRole('form', { name: t.calls.record })).toBeNull());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByRole('alert')).toBeNull();
+    rerender(ui(true));
+    await fillReached();
+    await user.click(screen.getByRole('button', { name: t.calls.save }));
+    await waitFor(() => expect(screen.getByTestId('call-form-status').textContent).toBe(t.calls.saved));
+    rerender(ui(false));
+    expect(screen.getByTestId('call-form-status').textContent).toBe(t.calls.saved); // P3 — it outlives the withdrawal
+    rerender(ui(true));
+    expect(screen.getByTestId('call-form-status').textContent).toBe('');
+  });
 });
 
 describe('the REAL client sends the Idempotency-Key (LD10)', () => {

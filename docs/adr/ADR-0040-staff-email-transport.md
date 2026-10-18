@@ -1,9 +1,9 @@
 # ADR-0040: Staff email transport (AWS SES v2 `ap-south-1` and Zoho ZeptoMail, one selected by config) and two new identity-data read paths for it — an amendment of ADR-0009 §5's "sole query path"
 
-> **Status:** drafted
-> **Date:** 2026-10-09 (date entered current status)
+> **Status:** ratified
+> **Date:** 2026-10-18 (date entered current status)
 > **Author:** BigDev (Solo Builder)
-> **Ratifying trustees:** — (populated at `ratified`)
+> **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — 2026-10-18; logged in `.decision-log.md` Decision `2026-10-18-358`
 > **Supersedes:** — (⛔ a whole-ADR supersession: this ADR AMENDS one clause of ADR-0009 §5 in its body — the ADR-0004 in-body amendment form; ADR-0009 stays `ratified`)
 > **Superseded by:** —
 
@@ -81,6 +81,8 @@ Load-bearing details:
   `-299` §3, Story 6.25's Task 0.2 record (re-verified against the providers' current docs on 2026-10-09) and the adapter's module header.
   BigDev chose to build BOTH (`-299` §3) so that go-live picks ONE by config — **this ADR, when ratified, records which provider is
   enabled in production** (the Panel's choice; ⭐ recommended: SES, the documented India region); the other stays built and unset.
+  ⚠ *2026-10-18: ratified (`-358`) WITHOUT a provider choice — it was not asked; ⛔ provider is enabled in production until the Panel's
+  choice is recorded (roster Row 24 (a); deferred-work).*
 - **Plain text only, UTF-8, tracking OFF.** ⛔ HTML (⛔ tracking pixel, ⛔ link rewriting). SES: ⛔ configuration set unless one is
   configured, ⛔ OPEN/CLICK event destination on it or on any default configuration set of the sender identity, and VDM engagement metrics OFF at the set and the account (the per-message
   `ConfigurationOverrides.Tracking` override is ⛔ used — it needs IAM `ses:ApplyTrackingConfigurationOverrides`, else the send fails).
@@ -145,3 +147,11 @@ Load-bearing details:
 - [Source: epics.md, Story 6.25] — owning Story
 - [Source: `docs/launch-gate-inventory/inventory-roster.md`, Row 24] — the go-live gate
 - [Source: `docs/knowledge-transfer/adr-index.md`] — the live index row
+
+## Changelog
+
+| Date | Status flip | Author | Notes |
+|---|---|---|---|
+| 2026-10-09 | (initial draft) | BigDev (Solo Builder) | Authored under Story 6.25 (Decision `2026-10-09-299`). |
+| 2026-10-09 | (draft — amended) | BigDev (Solo Builder) | Story 6.25 code review rounds 3–4 (`8301f63d`): Fail-closed config — stalled in-flight rows parked, ⛔ given up (Decision `2026-10-09-300`). |
+| 2026-10-18 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-10-18 Trustee Panel session (Panel pack item 2; consent sheet `adr-ratification-consent-sheet-2026-10-17.md`, revised before presentation); logged in Decision `2026-10-18-358`. No amendments, no conditions. ⚠ Not covered: the production provider (SES or ZeptoMail) — the sheet did not ask; ⛔ provider is enabled in production until the Panel's choice is recorded (roster Row 24 (a)). The ADR-0009 §5 amendment above is now in effect. |

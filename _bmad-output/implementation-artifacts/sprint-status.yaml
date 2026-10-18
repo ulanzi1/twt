@@ -1,3 +1,11 @@
+# last_updated: 2026-10-18f (TRUSTEE PANEL SITTING — the 6.37c pack PRESENTED and ANSWERED 2026-10-18 (Dhiraj Rahul + Kalpana Bharti,
+# relayed by BigDev): *"Answers for pack 1. approved 2. ratified 3. B 4. Q1 A, Q2 A, Q3 A"* — Decisions `2026-10-18-357` – `-360`
+# (committed alone `4c09d2a3`). -357: the §3.4 claim-contact exception approved for the CLAIMANT (G3) — applied to architecture §3.4 and
+# ADR-0029. -358: ADR-0040 / -0041 / -0042 RATIFIED (+ the §3.11 pointer; ADR-0009 §5 amended by ADR-0040) — adr-index drafted 3→0,
+# ratified 39→42; roster Rows 32 (a) and 33 (a) MET, Row 24 (a) PART (the production email provider was NOT asked — owed). -359: option B —
+# the shorter name form for an over-long name in the three suspicion texts ⇒ ⭐ NEW ROW `6-37e-suspicion-text-short-name-fallback: backlog`;
+# the neighbours'-text question owed. -360: the ladder's PQ1–PQ3 ruled as our readings; pack item 5 told (discharges `-354` d4 (c)).
+# Row 6-37c: PQ1–PQ3 RULED — its "not done until ruled" gate discharged (the code must still match).)
 # last_updated: 2026-10-18e (TRUSTEE RULING — Decision `2026-10-18-356` (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev, given without a
 # routing note): *"drop WhatsApp only notification for nominee."* — scope in BigDev's words: *"WhatsApp can be in future if nominee has
 # opted to receive the notification, or a case where nominee and claimant is same."* Supersedes `-352` Q2 in part (WhatsApp to the
@@ -20091,6 +20099,7 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-18 (Panel sitting: -357 §3.4 claimant exception approved; -358 ADR-0040/41/42 ratified; -359 B → new row 6-37e; -360 PQ1–PQ3 A.)
   2026-10-18 (-356 Trustee-ratified: no WhatsApp to a nominee; the §3.4 amendment narrowed to the claimant; 6-37d claimant-only.)
   2026-10-18 (Story 6.37c Task 0: -355; new row 6-37d backlog; Row 34; pack + PQ note + counsel question written; 6-37c in-progress.)
   2026-10-18 (Story 6.37c validated, v1.2: rebased on main; ce filter, numbers, -354's carriers, LD15–LD17; ready-for-dev.)
@@ -20596,6 +20605,8 @@ development_status:
   # ⭐ 2026-10-18 (Task 0, `-355` `d93b7c75`): LD1–LD17 DECIDED; PQ1–PQ3 routed (note written, ⛔ sent); the counsel question written
   # (⛔ sent). Code may start. Not `done` until PQ1–PQ3 are ruled. GO-LIVE: Row 32 (h); nominee calls after Row 34. (SHAs in the notes above:
   # `1e0c6f2e` is now `c19e6534`, `f8102c02` is now `1534293b` — the rebase.)
+  # ⭐ 2026-10-18 (`-360`): PQ1–PQ3 RULED by the Panel as our readings (Q1 A, Q2 A, Q3 A) — the "not `done` until ruled" gate discharged; the
+  # code must still match at review. Pack item 5 told (`-354` d4 (c)). The §3.4 exception approved for the claimant (`-357`); ADR-0042 ratified (`-358`).
   6-37c-undelivered-reminder-ladder: in-progress
   # ⭐ 2026-10-18 NEW ROW (`-355` decision 1 — row 6-37c's LD1 (a)): the delivery ladder's WhatsApp step and the filing agreement's
   # `-352` Q1 wording (en + reviewed hi, a bumped copy version, a version-aware reader — G3), the nominees' removal from it (the rewording
@@ -20607,7 +20618,14 @@ development_status:
   # row (BigDev's scope: in future only a nominee who opted to receive it, or one who is also the claimant); the §3.4 amendment is
   # NARROWED to the claimant. This row builds the CLAIMANT's WhatsApp step (G3 — the new agreement live; a claim filed under the old
   # wording keeps SMS, calls and post only) and the agreement's rewording.
+  # ⭐ 2026-10-18 (`-357`): the §3.4 claim-contact exception for the claimant is APPROVED (applied to architecture §3.4 / ADR-0029); this row's
+  # create-story picks it up with G3.
   6-37d-claim-contact-whatsapp-step: backlog
+  # ⭐ 2026-10-18 NEW ROW (`-359`, Trustee-ratified option B): when the deceased member's full name does not fit a suspicion text's name slot
+  # (the nominee text FQ7, the refused person's appeal text `-293` item 1, the closure text `-291` Q2), send it with first name + surname
+  # initial; a name that still does not fit keeps today's refusal + alarm. One function and its tests. ⛔ Story file yet. The neighbours'
+  # text (6.27c) gets the same only if the Panel rules it — that question is OWED (deferred-work). Not a merge fence.
+  6-37e-suspicion-text-short-name-fallback: backlog
   epic-6-retrospective: done
 
   # ==========================================================================

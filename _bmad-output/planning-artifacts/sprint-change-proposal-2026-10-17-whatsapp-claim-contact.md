@@ -14,7 +14,9 @@
 - **Change scope classification:** **Minor edit, Major gate** — one new bullet in §3.4 and a dated note on ADR-0029; landing it needs
   Trustee Panel sign-off because it changes ratified architecture text and a ratified ADR.
 - **Mode:** Incremental
-- **Status:** **REVISED 2026-10-18, before presentation — NARROWED TO THE CLAIMANT** ([Decision 2026-10-18-356](../../.decision-log.md#decision-2026-10-18-356), Trustee-ratified: *"drop WhatsApp
+- **Status:** ✅ **APPROVED 2026-10-18** (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — *"1. approved"*; Decision `2026-10-18-357`),
+  as presented — the claimant only, with G3; §4.1 applied to architecture §3.4 and §4.2 to ADR-0029 the same day. Before that:
+  **REVISED 2026-10-18, before presentation — NARROWED TO THE CLAIMANT** ([Decision 2026-10-18-356](../../.decision-log.md#decision-2026-10-18-356), Trustee-ratified: *"drop WhatsApp
   only notification for nominee"*). The nominee half is withdrawn: no WhatsApp to a nominee (BigDev's scope: in future only a nominee
   who has opted to receive it, or one who is also the claimant). The amendment still matters for the claimant: §3.4's channel model sends
   to members (recipients `member_ids`, a per-member opt-in through the member onboarding flow), and a claimant is often not a member — this

@@ -3591,7 +3591,9 @@ and the reason; no WhatsApp, no new family-facing text, no new DLT template; no 
 > skipped. The call record uses the letter key. A NOMINEE is asked for a letter, not a call, until counsel's written basis (G1 — roster
 > Row 34; [`-354`](../../.decision-log.md#decision-2026-10-18-354) decision 5). Roster Row 32 (h) — alarms reaching a named person — is a
 > GO-LIVE condition of the ladder (`-354` decision 4 (b)); ⛔ a merge fence. Three edges are routed to the Panel
-> (`trustee-panel-routing-note-2026-10-18-6-37c-ladder-edges.md`); written, ⛔ yet sent; this row is not `done` until they are ruled.
+> (`trustee-panel-routing-note-2026-10-18-6-37c-ladder-edges.md`); written, ⛔ yet sent; this row is not `done` until they are ruled. ⚠ **2026-10-18:** RULED — [`-360`](../../.decision-log.md#decision-2026-10-18-360)
+> (Q1 A, Q2 A, Q3 A, our readings); the §3.4 claimant exception approved ([`-357`](../../.decision-log.md#decision-2026-10-18-357)); ADR-0042
+> ratified ([`-358`](../../.decision-log.md#decision-2026-10-18-358)); a nominee gets ⛔ WhatsApp ([`-356`](../../.decision-log.md#decision-2026-10-18-356)).
 
 ---
 

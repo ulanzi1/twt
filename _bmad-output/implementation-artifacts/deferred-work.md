@@ -4,11 +4,23 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: the Trustee Panel sitting of 2026-10-18 (Story 6.37c's pack)
+
+- **The neighbours' text and an over-long name — the same question as `-359`, OWED to the Panel** — the name-too-long routing note told
+  the Panel *"If you choose B here, we will propose the same fallback for the neighbours' text, as a separate question"*; they chose B
+  ([Decision 2026-10-18-359](../../.decision-log.md#decision-2026-10-18-359)). Story 6.27c's neighbours' text still refuses a name that
+  cannot fit (`no_target:name_too_long` — `-311` PM3, our reading). ⭐ Trigger: write that routing note before row 6-37e is built (the
+  fallback function can serve both). **Not addressed.**
+- **ADR-0040's production email provider — the Panel's choice, not asked** — ADR-0040 ratified ([Decision
+  2026-10-18-358](../../.decision-log.md#decision-2026-10-18-358)) but *"this ADR, when ratified, records which provider is enabled in
+  production (the Panel's choice; recommended: SES)"* — the consent sheet asked Ratify / Defer / Reject only. ⭐ Trigger: before roster
+  Row 24's go-live — put SES vs ZeptoMail to the Panel (one line). Row 24 (a) stays open. **Not addressed.**
+
 ## Deferred from: code review round 2 of 6-37b-msg91-delivery-reports (2026-10-18)
 
 - ⭐ **For row 6-37c (carrier, `-354` decisions 4–5): owed before the ladder or any nominee contact goes live** — (a) roster Row 32 (h)
   closed (alarms reach a named person — the cost the Panel accepted at `-351` 1 A); (b) the Panel TOLD at its next sitting that alarms
-  reach logs only until then (⛔ told yet, 2026-10-18); (c) a WhatsApp to a nominee waits for G1 AND G2 (⚠ superseded 2026-10-18 by [Decision 2026-10-18-356](../../.decision-log.md#decision-2026-10-18-356): ⛔ WhatsApp to a nominee — no case left), a call to a nominee for G1;
+  reach logs only until then (⛔ told yet, 2026-10-18 — ✅ **Closed by** [Decision 2026-10-18-360](../../.decision-log.md#decision-2026-10-18-360): told at the 2026-10-18 sitting, pack item 5); (c) a WhatsApp to a nominee waits for G1 AND G2 (⚠ superseded 2026-10-18 by [Decision 2026-10-18-356](../../.decision-log.md#decision-2026-10-18-356): ⛔ WhatsApp to a nominee — no case left), a call to a nominee for G1;
   (d) the basis for the texts and letters nominees receive today, once the claimant's new agreement no longer names nominees (`-352`'s
   reading), put to counsel with 6-37c's Task 0. **Not addressed.**
 
@@ -31,7 +43,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   branch was rebased onto `main` — `1e0c6f2e` is now `c19e6534`, `f8102c02` is now `1534293b`. Trigger actions taken by [Decision
   2026-10-18-355](../../.decision-log.md#decision-2026-10-18-355) decision 15 (the static token kept), ADR-0042's dated note (the bound
   restated) and the consent sheet's §1–§2 revised, all before the ladder is built; it stays open until row 6-37c's Task 10
-  closes it (once the pack goes out with the revised sheet).
+  closes it (once the pack goes out with the revised sheet). ✅ **Closed by [Decision 2026-10-18-358](../../.decision-log.md#decision-2026-10-18-358)** (2026-10-18):
+  the pack went out with the revised sheet and ADR-0042 was ratified with the restated bound — both conditions met before the ladder is built.
 - **The `UPDATE … WHERE id IN (SELECT … LIMIT … FOR UPDATE SKIP LOCKED)` over-claim shape exists in two older drains**
   [`packages/domain/src/telegram-opt-in/webhook-events.ts`, `packages/domain/src/wa-opt-in/webhook-events.ts` — Drizzle `inArray`
   over `.limit(…).for('update', { skipLocked: true })`] — 6.37b's own claim leased 40 of 40 due rows under `LIMIT 2` on :5433 (a

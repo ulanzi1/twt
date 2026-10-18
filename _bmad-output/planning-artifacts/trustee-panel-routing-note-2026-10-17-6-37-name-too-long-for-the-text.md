@@ -12,10 +12,12 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## PANEL RULING — 2026-10-18 (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev) — Decision `2026-10-18-359`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put**.
+> *"3. B"* (Panel pack item 3) — **send it with the shorter form of the name, only when the full name does not fit** (first name and
+> surname initial). Built by a NEW row `6-37e-suspicion-text-short-name-fallback`. Not covered: a one-word name that is itself too long
+> (still not sent); the operators' count (Row 30 (d)); the neighbours' text — the same question is OWED to you separately, as promised
+> below. Everything below is kept **unedited**, as the question was put.
 
 ---
 

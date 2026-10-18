@@ -31,6 +31,7 @@
 > 2 days"*. As built, every alarm reaches the LOGS only until roster Row 32 (h) wires it to a named person — so today no staff member
 > is told. ⇒ Row 32 (h) closed is a go-live condition of row 6-37c's ladder (the cost becomes true before the Trust relies on it), and
 > the Panel is to be told at its next sitting. ⛔ Told yet (2026-10-18).
+> ✅ **Told 2026-10-18** (Panel pack item 5; recorded in Decision `2026-10-18-360`) — no objection raised; 1 A was not re-ruled.
 
 ---
 

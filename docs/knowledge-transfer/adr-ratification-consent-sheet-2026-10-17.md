@@ -5,6 +5,8 @@
 
 **Trustee Panel (≥2-trustee quorum required to ratify):** Dhiraj Rahul (Trustee 1) · Kalpana Bharti (Trustee 2)
 **Prepared by:** BigDev (Solo Builder)
+**Outcome:** ✅ **ALL THREE RATIFIED 2026-10-18** (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev — *"2. ratified"*; Decision `2026-10-18-358`),
+with ADR-0042's §3.11 pointer. ⚠ Not covered: ADR-0040's production email provider (not asked — roster Row 24 (a)).
 **Authority for the flip:** `docs/adr/README.md` lifecycle (`drafted → under-trustee-review → ratified`); `docs/knowledge-transfer/adr-index.md` is the authoritative status ledger.
 
 > **Status as of 2026-10-17.** Section A breakdown (the index summary): `slot-reserved-pre-write` 112 · `drafted` **3** ·
@@ -76,8 +78,8 @@ alarm reaches the logs only until alerting is wired to a named person (Row 24).
 
 | | Ratify | Defer | Reject | Initials | Notes / conditions |
 |---|---|---|---|---|---|
-| **Dhiraj Rahul** | ☐ | ☐ | ☐ | | |
-| **Kalpana Bharti** | ☐ | ☐ | ☐ | | |
+| **Dhiraj Rahul** | ☑ | ☐ | ☐ | (relayed by BigDev) | *"2. ratified"* — Decision `2026-10-18-358` |
+| **Kalpana Bharti** | ☑ | ☐ | ☐ | (relayed by BigDev) | *"2. ratified"* — Decision `2026-10-18-358` |
 
 ---
 
@@ -97,8 +99,8 @@ twice (recorded, not hidden); a false template mismatch can hold a run until MSG
 
 | | Ratify | Defer | Reject | Initials | Notes / conditions |
 |---|---|---|---|---|---|
-| **Dhiraj Rahul** | ☐ | ☐ | ☐ | | |
-| **Kalpana Bharti** | ☐ | ☐ | ☐ | | |
+| **Dhiraj Rahul** | ☑ | ☐ | ☐ | (relayed by BigDev) | *"2. ratified"* — Decision `2026-10-18-358` |
+| **Kalpana Bharti** | ☑ | ☐ | ☐ | (relayed by BigDev) | *"2. ratified"* — Decision `2026-10-18-358` |
 
 ---
 
@@ -120,8 +122,8 @@ counted per caller-supplied address; a report that never comes leaves a text cou
 
 | | Ratify | Defer | Reject | Initials | Notes / conditions |
 |---|---|---|---|---|---|
-| **Dhiraj Rahul** | ☐ | ☐ | ☐ | | |
-| **Kalpana Bharti** | ☐ | ☐ | ☐ | | |
+| **Dhiraj Rahul** | ☑ | ☐ | ☐ | (relayed by BigDev) | *"2. ratified"* — Decision `2026-10-18-358` |
+| **Kalpana Bharti** | ☑ | ☐ | ☐ | (relayed by BigDev) | *"2. ratified"* — Decision `2026-10-18-358` |
 
 ---
 

@@ -12,10 +12,13 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## PANEL RULING — 2026-10-18 (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev) — Decision `2026-10-18-360`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, the answer is transcribed into this block **and** into `.decision-log.md` as a
-> new Trustee-ratified decision. Everything below is then kept **unedited** as the questions **as they were put**.
+> *"4. Q1 A, Q2 A, Q3 A"* (Panel pack item 4)
+>
+> Q1 A — carry on: only a delivered text or a call that reaches the family ends the follow-up; Q2 A — each chase on its own; Q3 A — the
+> end wins for texts. Our readings, as designed — row 6-37c builds them; the code must match at review. The *"Also given to you as context"* points were told, not ruled (no objection raised).
+> Everything below is kept **unedited**, as the questions were put.
 
 ---
 

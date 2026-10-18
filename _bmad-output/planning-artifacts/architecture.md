@@ -2242,6 +2242,21 @@ onboarding:
   consent, or inference from other settings are not valid opt-in origins. This
   protects against compliance drift under Meta policy and DPDPA consent
   semantics.
+- **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
+  Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
+  correction and certificate reminders' delivery ladder — to ONE person only: the
+  **claimant**, on the claim's filing agreement, which names WhatsApp among the
+  channels the Trust may use about this claim — an explicit affirmative capture
+  recorded per claim with timestamp + the UI context, never pre-ticked; withdrawing
+  it, or STOP, ends WhatsApp contact for that claim. ⛔ WhatsApp goes to a nominee
+  under this exception (Decision 2026-10-18-356).
+  The exception does not change any member's opt-in state and opens WhatsApp to no
+  other surface; the Pariwar's WA toggle and number, Meta-approved templates, and STOP
+  handling apply unchanged. Go-live condition G3 (the claimant's new agreement live;
+  a claim filed under the old wording keeps SMS, calls and post only) is recorded in
+  §3 of this proposal and carried by sprint row `6-37d-claim-contact-whatsapp-step`.
+  *(Approved 2026-10-18, Decision 2026-10-18-357; "this proposal" =
+  `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md`.)*
 - **Fallback driven by WA-Cloud-API undelivered status,** not pre-send presence
   detection.
 
@@ -2575,6 +2590,9 @@ Every inbound webhook (telephony provider, partner replies, bank-statement push,
 payment-gateway callbacks, future Crowdfunding Module donor confirms) follows the
 **persist + ack** pattern:
 1. **Verify** provider signature at handler entry (per §3.5, §2.8 patterns).
+   A provider that offers no request signature (MSG91's SMS delivery reports) is authenticated by a
+   static secret header compared in constant time, as recorded in ADR-0042; the signature step is
+   restored if the provider adds signing. *(Ratified with ADR-0042, Decision 2026-10-18-358.)*
 2. **Persist** the inbound event to a dedicated webhook-queue table.
 3. **ACK** the provider (200 OK + minimal body).
 4. **Return.** No business logic, no synchronous downstream calls, no external API

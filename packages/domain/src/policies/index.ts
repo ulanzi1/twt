@@ -243,6 +243,10 @@ export * from './claim-correction-no-correction-record-rls.js';
 // Story 6.19d (0137–0139) — the certificate reminder's runs, reminder record and letters (ONE file). Per command; ⛔ no
 // DELETE leg and ⛔ no `FOR ALL`; each UPDATE leg is narrowed by its migration's column grant.
 export * from './claim-certificate-reminder-rls.js';
+// Story 6.37c (0169) — the delivery ladder (SELECT + INSERT + a column-narrowed UPDATE) and the call record (SELECT +
+// INSERT — append-only). Per command; ⛔ no DELETE leg, ⛔ no `FOR ALL`.
+export * from './claim-contact-ladder-rls.js';
+export * from './claim-contact-call-rls.js';
 // Story 6.23a (0142, 0143) — the warning-reason list and the approval-over-warning record. Per command; ⛔ no DELETE leg
 // and ⛔ no `FOR ALL`; each UPDATE leg is narrowed by its migration's column grant (and is load-bearing — `-279` A12).
 export * from './approval-warning-reasons-rls.js';

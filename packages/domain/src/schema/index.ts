@@ -214,6 +214,10 @@ export * from './claim_correction_closure.js';
 // Story 6.19d — the replacement-certificate reminder (migrations 0137–0139): its OWN runs, reminder record and the
 // ONE letter per person per claim (`2026-10-03-276` CR1 — ⛔ never a kind on `claim_correction_runs`).
 export * from './claim_certificate_reminder.js';
+// Story 6.37c — the delivery ladder (one follow-up per person at a time after a reported-undelivered reminder) and the
+// District Admin's call record (migration 0169).
+export * from './claim_contact_ladders.js';
+export * from './claim_contact_calls.js';
 // Story 6.23a — the WARNING-REASON LIST (0142: per Pariwar; the Super Admin adds or replaces, ⛔ never edits or deletes)
 // and the record of every approval over a nominee-change warning (0143: the keys covered + the reason chosen; append-only).
 export * from './approval_warning_reasons.js';

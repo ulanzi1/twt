@@ -90,6 +90,11 @@ export const CORRECTION_REMINDER_PURPOSES = [
   'closure_letter_chase',
   /** … then escalated to every Pariwar Admin (closure date + 13). */
   'closure_letter_escalation',
+  // ── Story 6.37c (0169) ──
+  /** A delivery ladder's SMS 2 / SMS 3 — the chase's OWN approved reminder, sent again (`subject_key 'ladder:<id>:2|3'`). */
+  'ladder_sms',
+  /** The ONE call-or-letter ask to the District Admin when a ladder CONCLUDES undelivered (`subject_key 'ladder:<id>'`). */
+  'ladder_escalation',
 ] as const;
 export type CorrectionReminderPurpose = (typeof CORRECTION_REMINDER_PURPOSES)[number];
 
@@ -270,9 +275,13 @@ export const claimCorrectionReminders = pgTable(
     uniqueIndex('claim_correction_reminders_closure_notice_uq')
       .on(t.claimCaseId, t.recipientKey)
       .where(sql`"purpose" = 'closure_notice'`),
+    // ⭐ 0169 (Story 6.37c) — ONE row per ladder step and ONE ask per ladder, whichever run / slot it keys on.
+    uniqueIndex('claim_correction_reminders_ladder_uq')
+      .on(t.claimCaseId, t.subjectKey)
+      .where(sql`"purpose" IN ('ladder_sms', 'ladder_escalation')`),
     check(
       'claim_correction_reminders_purpose_check',
-      sql`${t.purpose} IN ('family_sms', 'staff_reminder', 'staff_push', 'letter_chase', 'letter_second_due', 'replacement_reminder', 'escalation', 'closure_due', 'closure_escalation', 'staff_case_escalation', 'review_reminder', 'direction_reminder', 'closure_notice', 'closure_letter_chase', 'closure_letter_escalation')`,
+      sql`${t.purpose} IN ('family_sms', 'staff_reminder', 'staff_push', 'letter_chase', 'letter_second_due', 'replacement_reminder', 'escalation', 'closure_due', 'closure_escalation', 'staff_case_escalation', 'review_reminder', 'direction_reminder', 'closure_notice', 'closure_letter_chase', 'closure_letter_escalation', 'ladder_sms', 'ladder_escalation')`, // 0169
     ),
     check(
       'claim_correction_reminders_outcome_check',

@@ -46,7 +46,14 @@ export type CertificateRunEndReason = (typeof CERTIFICATE_RUN_END_REASONS)[numbe
  * What a reminder row is FOR (CR1, CR10). ⛔ Never 6.19b's `replacement_reminder` (D21's reserved value — Trap 7).
  * ⚠ LOCKSTEP with 0138.
  */
-export const CERTIFICATE_REMINDER_PURPOSES = ['family_sms', 'letter_chase', 'letter_escalation'] as const;
+export const CERTIFICATE_REMINDER_PURPOSES = [
+  'family_sms',
+  'letter_chase',
+  'letter_escalation',
+  // ── Story 6.37c (0169) — a delivery ladder's SMS 2 / SMS 3, and its ONE call-or-letter ask ──
+  'ladder_sms',
+  'ladder_escalation',
+] as const;
 export type CertificateReminderPurpose = (typeof CERTIFICATE_REMINDER_PURPOSES)[number];
 
 /** What is KNOWN about an attempt — the same eight values as 0128's. ⚠ LOCKSTEP with 0138. */
@@ -172,22 +179,27 @@ export const claimCertificateReminders = pgTable(
     uniqueIndex('claim_certificate_reminders_staff_day_uq')
       .on(t.claimCaseId, t.recipientKey, t.subjectKey, t.purpose, t.sentOn)
       .where(sql`"purpose" IN ('letter_chase', 'letter_escalation')`),
+    // ⭐ 0169 (Story 6.37c) — ONE row per ladder step and ONE ask per ladder, whichever run / slot it keys on.
+    uniqueIndex('claim_certificate_reminders_ladder_uq')
+      .on(t.claimCaseId, t.subjectKey)
+      .where(sql`"purpose" IN ('ladder_sms', 'ladder_escalation')`),
     index('claim_certificate_reminders_attempting_idx').on(t.claimedAt).where(sql`"outcome" = 'attempting'`),
     index('claim_certificate_reminders_pariwar_claim_idx').on(t.pariwarId, t.claimCaseId),
     index('claim_certificate_reminders_run_idx').on(t.runId, t.recipientKey),
     check(
       'claim_certificate_reminders_purpose_check',
-      sql`${t.purpose} IN ('family_sms', 'letter_chase', 'letter_escalation')`,
+      sql`${t.purpose} IN ('family_sms', 'letter_chase', 'letter_escalation', 'ladder_sms', 'ladder_escalation')`, // 0169
     ),
     check(
       'claim_certificate_reminders_outcome_check',
       sql`${t.outcome} IN ('attempting', 'accepted', 'rejected_invalid_number', 'rejected_unreachable', 'no_target', 'error', 'skipped_superseded', 'recorded')`,
     ),
-    // 0141, code review — `recorded` is staff-purpose-only; the family outcomes are family_sms-only.
+    // 0141, code review — `recorded` is staff-purpose-only; the family outcomes are family_sms-only. ⭐ 0169 (Story 6.37c)
+    // replaced it: `ladder_sms` takes the family outcomes, `ladder_escalation` the staff ones.
     check(
       'claim_certificate_reminders_purpose_outcome_check',
-      sql`(${t.purpose} = 'family_sms' AND ${t.outcome} IN ('attempting', 'accepted', 'rejected_invalid_number', 'rejected_unreachable', 'no_target', 'error', 'skipped_superseded'))
-        OR (${t.purpose} IN ('letter_chase', 'letter_escalation') AND ${t.outcome} IN ('recorded', 'no_target'))`,
+      sql`(${t.purpose} IN ('family_sms', 'ladder_sms') AND ${t.outcome} IN ('attempting', 'accepted', 'rejected_invalid_number', 'rejected_unreachable', 'no_target', 'error', 'skipped_superseded'))
+        OR (${t.purpose} IN ('letter_chase', 'letter_escalation', 'ladder_escalation') AND ${t.outcome} IN ('recorded', 'no_target'))`,
     ),
     check('claim_certificate_reminders_slot_day_check', sql`${t.slotDay} >= 0`),
     check('claim_certificate_reminders_attempt_count_check', sql`${t.attemptCount} >= 1`),

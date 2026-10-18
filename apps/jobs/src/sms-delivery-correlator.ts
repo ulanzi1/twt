@@ -10,7 +10,8 @@
 // ── What a report may change (I1, I2) ───────────────────────────────────────────────────────────────────────────
 // ONLY `sms_send_deliveries` (DR6 row 8) and the inbox row itself. The four send tables are READ by one primary-key
 // lookup and ⛔ ever written (their freezes — 0155, 0166 — stay untouched). ⛔ A predicate that decides a send, a closure,
-// reach or letter-eligibility reads `sms_send_deliveries` in this story (the Panel-ruled use is row 6-37c).
+// reach or letter-eligibility reads `sms_send_deliveries` in this story — the Panel-ruled reader is Story 6.37c's
+// delivery ladder (`claim-contact-ladder.ts`; the chase readers' B1 mapping, `applyConcludedLadderMapping`).
 //
 // ── DR4 — the status table (data, ⛔ branches) ─────────────────────────────────────────────────────────────────
 // `1` ⇒ delivered; `2` / `9` / `16` / `17` / `20` / `25` ⇒ undelivered (final — MSG91's help page, 2026-09-10); `0` ⇒
@@ -59,10 +60,17 @@ export function smsReportRetryDelayMs(attempts: number): number {
 /** DR6 — a retried row settles as its "after 72 h" result once this long after it was received. */
 export const SMS_REPORT_RETRY_WINDOW_MS = 72 * 3_600_000;
 
-/** The SMS purposes of a `claim_correction_reminders` row (a `staff_push` holds an FCM id — DR6 row 4). */
-const CORRECTION_SMS_PURPOSES: ReadonlySet<string> = new Set(['family_sms', 'closure_notice']);
-/** The SMS purpose of a `claim_certificate_reminders` row (`letter_chase` / `letter_escalation` are STAFF rows — DR6 row 4). */
-const CERTIFICATE_SMS_PURPOSES: ReadonlySet<string> = new Set(['family_sms']);
+/**
+ * The SMS purposes of a `claim_correction_reminders` row (a `staff_push` holds an FCM id — DR6 row 4). Story 6.37c (F4,
+ * T8): + `ladder_sms` — a delivery ladder's SMS 2 / 3 carries the `cr` CRQID, and its report must reach the ladder (else
+ * ⛔ correction ladder ever ends `delivered`). ⛔ `ladder_escalation` (a staff record — ⛔ CRQID).
+ */
+const CORRECTION_SMS_PURPOSES: ReadonlySet<string> = new Set(['family_sms', 'closure_notice', 'ladder_sms']);
+/**
+ * The SMS purposes of a `claim_certificate_reminders` row (`letter_chase` / `letter_escalation` / `ladder_escalation` are
+ * STAFF rows — DR6 row 4). Story 6.37c (F4, T8): + `ladder_sms` (the `ce` CRQID).
+ */
+const CERTIFICATE_SMS_PURPOSES: ReadonlySet<string> = new Set(['family_sms', 'ladder_sms']);
 
 /** DR6 — one row's decision. */
 export type SmsReportDecision =

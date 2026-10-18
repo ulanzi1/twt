@@ -123,6 +123,7 @@ import { buildContributionProviderResolver, resolveSmsDltConfig } from './schedu
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
+import { registerContactLadderWorkers } from './scheduler/claim-contact-ladder.js';
 import { enqueuePeerMeshRequestChild, registerClaimPeerMeshRequestWorkers } from './scheduler/claim-peer-mesh-requests.js';
 import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
 import { registerClaimSuspicionStaffEmailWorkers } from './scheduler/claim-suspicion-staff-emails.js';
@@ -199,6 +200,12 @@ const VALIDITY_CACHE_GC_MAX_AGE_SECONDS = Number(
 const PEER_MESH_WINDOW_SECONDS = Number(
   process.env['CLAIM_PEER_MESH_WINDOW_SECONDS'] ?? DEFAULT_PEER_MESH_WINDOW_SECONDS,
 );
+// Story 6.37c (LD11, `2026-10-18-354` decision 5) — a call to a NOMINEE waits for counsel's written basis (G1; roster
+// Row 34 `claim-contact-nominee-call-basis`). ONE switch, set in ONE place in the deployment config and read by BOTH apps
+// (the api's `loadConfig` reads the same name): `1` ⇒ cleared; anything else ⇒ ⛔ (a nominee's ask reads "post a
+// letter"). ⛔ Read under `packages/domain/src/claim` — passed into the ladder sweep's deps. Logged at boot (a drift
+// between the two apps shows there).
+const CLAIM_NOMINEE_CALLS_CLEARED = process.env['CLAIM_NOMINEE_CALLS_CLEARED'] === '1';
 // Story 7.5 RETIRED the boot-time POOL_SPAWN_FIXED_AMOUNT_INR env constant from the live saga: the
 // spawn planner now resolves the fixed amount from the per-Pariwar effective-dated schedule at the
 // cycle-freeze `committed_at` (pool/fixed-amount.ts). The genesis amount is seeded at Pariwar
@@ -673,6 +680,12 @@ async function main(): Promise<void> {
     // `certificate_reminder`); its staff push is ⛔ never used (CR10). ⛔ Neither ever refuses, closes, approves or
     // time-limits a claim (invariant 1).
     await registerClaimCertificateReminderWorkers(boss, claimCorrectionDeps);
+    // Story 6.37c (AC1–AC6) — the DELIVERY LADDER: a reminder the network REPORTED undelivered is followed up (the chase's
+    // own reminder twice more over four days, on the 10:00 rhythm), then CONCLUDED with a call-or-letter ask. Its OWN
+    // daily 10:00 IST sweep and two SMS children; the SAME deps (the chases' send) + LD11's nominee-call switch. ⛔ WhatsApp
+    // (LD1). ⚠ GO-LIVE: roster Row 32 (h) — its alarms reach the logs only until `onAlarm` names a person.
+    console.info('[jobs] contact-ladder: nominee calls', CLAIM_NOMINEE_CALLS_CLEARED ? 'CLEARED' : 'NOT cleared (G1 — roster Row 34)');
+    await registerContactLadderWorkers(boss, { ...claimCorrectionDeps, nomineeCallsCleared: CLAIM_NOMINEE_CALLS_CLEARED });
     // Story 6.24b (AC7b) — the SUSPICION NOTICES: its OWN daily 10:00 IST sweep and SMS child — the three once-ever texts
     // of a `-239` refusal (FQ7 B, `-291` Q2 B, `-293` item 1 B). The SAME deps (the shared DLT core `sendClaimDltSms`,
     // its sibling registry); ⛔ never `dispatch()`. Its DLT template ids stay UNSET until go-live (Row 22 AND Row 23 —

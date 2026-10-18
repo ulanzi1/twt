@@ -127,15 +127,29 @@ describe('DR6 — the matching rule, row by row (AC6)', () => {
     });
   });
 
-  it('row 4 — `sn` / `pm` rows have ⛔ purpose and are SMS; a `ce` row is an SMS only as `family_sms`', async () => {
+  it('⭐ Story 6.37c (AC10) — a delivery ladder SMS (`ladder_sms`) is an SMS on BOTH kinds ⇒ matched; its ask (`ladder_escalation`, ⛔ CRQID) ⇒ unmatched:not_sms', async () => {
+    for (const kind of ['cr', 'ce']) {
+      expect(await decideSmsReport(claimed({ crqid: `${kind}${HEX}` }), T0, lookupOf(send({ purpose: 'ladder_sms' })))).toMatchObject({
+        matchState: 'matched',
+      });
+      expect(await decideSmsReport(claimed({ crqid: `${kind}${HEX}` }), T0, lookupOf(send({ purpose: 'ladder_escalation' })))).toEqual({
+        kind: 'settle',
+        matchState: 'unmatched',
+        matchDetail: 'not_sms',
+        alarm: 'sms_report.not_sms',
+      });
+    }
+  });
+
+  it('row 4 — `sn` / `pm` rows have ⛔ purpose and are SMS; a `ce` row is an SMS only as `family_sms` or (Story 6.37c) `ladder_sms`', async () => {
     for (const kind of ['sn', 'pm']) {
       expect(await decideSmsReport(claimed({ crqid: `${kind}${HEX}` }), T0, lookupOf(send({ purpose: null })))).toMatchObject({ matchState: 'matched' });
     }
     expect(await decideSmsReport(claimed({ crqid: `ce${HEX}` }), T0, lookupOf(send()))).toMatchObject({ matchState: 'matched' });
   });
 
-  it('row 4 — a certificate STAFF row (`letter_chase` / `letter_escalation` / ⛔ purpose) ⇒ unmatched:not_sms (code review round 2)', async () => {
-    for (const purpose of ['letter_chase', 'letter_escalation', null]) {
+  it('row 4 — a certificate STAFF row (`letter_chase` / `letter_escalation` / Story 6.37c\'s `ladder_escalation` / ⛔ purpose) ⇒ unmatched:not_sms (code review round 2)', async () => {
+    for (const purpose of ['letter_chase', 'letter_escalation', 'ladder_escalation', null]) {
       expect(await decideSmsReport(claimed({ crqid: `ce${HEX}` }), T0, lookupOf(send({ purpose })))).toEqual({
         kind: 'settle',
         matchState: 'unmatched',

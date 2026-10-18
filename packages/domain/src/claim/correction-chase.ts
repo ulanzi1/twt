@@ -668,6 +668,13 @@ export interface PersonReminderRow {
   readonly recipientVersionId: string | null;
   readonly recipientNumberHash: string | null;
   readonly createdAt: Date;
+  /**
+   * Story 6.37c (LD7) — set ONLY by the delivery ladder's read-time mapping: the IST date a CONCLUDED ladder made this
+   * reminder "never delivered" (its conclusion date). ⛔ Set ⇒ the row is dead on its `sentOn`, as before.
+   */
+  readonly deadOn?: string;
+  /** Story 6.37c (LD6) — set ONLY by the mapping: this row's dead outcome is a concluded ladder's, ⛔ the network's at send. */
+  readonly concluded?: true;
 }
 
 /** A person's letters across the live return's family / direction runs. */
@@ -681,8 +688,11 @@ export interface PersonLetterRow {
 export interface PersonRunState {
   /** The found-dead day (IST date) — the first dead / unreachable / no-target outcome of the CURRENT number. */
   readonly foundDeadOn: string | null;
-  /** `dead` (`rejected_invalid_number`) or `unreachable` (`rejected_unreachable`, `no_target`). */
-  readonly deadKind: 'dead' | 'unreachable' | null;
+  /**
+   * `dead` (`rejected_invalid_number`) or `unreachable` (`rejected_unreachable`, `no_target`) — or (Story 6.37c, LD7)
+   * `not_delivered`: the chosen dead row is a reminder a CONCLUDED delivery ladder made "never delivered".
+   */
+  readonly deadKind: 'dead' | 'unreachable' | 'not_delivered' | null;
   /** A letter to them has a recorded delivery (in the current number's epoch) ⇒ their reminders stop (`-250` #1). */
   readonly letterDelivered: boolean;
   /** The first delivered letter's delivery date (D21's second-letter anchor), in the current epoch. */
@@ -755,15 +765,29 @@ export function evaluatePersonRunState(
     ? []
     : letters.filter((l) => epochStart === null || l.createdAt.getTime() >= epochStart.getTime());
 
-  const dead = epoch.find((r) => DEAD_OUTCOMES.has(r.outcome));
+  // Story 6.37c (LD7) — the found-dead date is the EARLIEST dead date of the epoch: a concluded ladder's rows are dead on
+  // their `deadOn` (the conclusion date), every other dead row on its `sentOn`; a tie keeps the earlier row in time
+  // order. With ⛔ `deadOn` anywhere this is exactly the first dead row of the time-sorted epoch.
+  let dead: PersonReminderRow | undefined;
+  for (const r of epoch) {
+    if (!DEAD_OUTCOMES.has(r.outcome)) continue;
+    if (dead === undefined || (r.deadOn ?? r.sentOn) < (dead.deadOn ?? dead.sentOn)) dead = r;
+  }
   // By insert (⛔ by `sequence`: before `-273` §2 a sequence restarted per run, so two letters of one return could
   // both be 1).
   const delivered = epochLetters
     .filter((l) => l.deliveredOn !== null)
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   return {
-    foundDeadOn: dead?.sentOn ?? null,
-    deadKind: dead === undefined ? null : dead.outcome === 'rejected_invalid_number' ? 'dead' : 'unreachable',
+    foundDeadOn: dead === undefined ? null : (dead.deadOn ?? dead.sentOn),
+    deadKind:
+      dead === undefined
+        ? null
+        : dead.concluded === true
+          ? 'not_delivered'
+          : dead.outcome === 'rejected_invalid_number'
+            ? 'dead'
+            : 'unreachable',
     letterDelivered: delivered.length > 0,
     firstDeliveredOn: delivered[0]?.deliveredOn ?? null,
     reset,

@@ -27,15 +27,23 @@ import {
 import {
   type CertificateNumberHash,
   type CertificatePerson,
+  type CertificatePersonState,
+  type CertificateRecipients,
+  type CertificateRunView,
+  NEVER_REENTERS,
+  certificateRunPauseReason,
+  certificateRunReceived,
   evaluateCertificatePersonStates,
   lockCertificateClaim,
   planCertificateRun,
   readCertificatePlanFacts,
   readCertificateRecipients,
+  readCertificateRun,
   readClaimCertificateFamilyRows,
   readClaimCertificateLetters,
   samePersonSource,
 } from './certificate-reminder.js';
+import { certificateRunDay } from './certificate-reminder-schedule.js';
 import { istDateOf } from './correction-schedule.js';
 import { CORRECTION_SEND_LEASE_MS } from './correction-reminder-record.js';
 
@@ -468,6 +476,73 @@ export async function beginCertificateFamilySend(
     attemptCount: claimed.attemptCount,
     person,
     contactLocale: recipients.contactLocale,
+  };
+}
+
+// ── The delivery ladder's stops (Story 6.37c — I6, LD5) ────────────────────────────────────────────────────────
+
+export type CertificateLadderStopCheck =
+  | { readonly stop: string }
+  | {
+      readonly stop: null;
+      /** A pause that does ⛔ end the ladder (`-275` Q4 governs the reminders) — the step is `skipped:paused`. */
+      readonly paused: boolean;
+      /** The ORIGIN run's day number today (> 180 ⇒ past the horizon — the step gate's). */
+      readonly runDay: number;
+      readonly run: CertificateRunView;
+      readonly person: CertificatePerson;
+      readonly recipients: CertificateRecipients;
+      readonly states: readonly CertificatePersonState[];
+    };
+
+/**
+ * ⭐ THE STOPS OF A CERTIFICATE LADDER'S SMS (LD5 — composed, ⛔ copied: `planCertificateRun` CANNOT be reused, it judges
+ * only the claim's OPEN run). Over the ladder's ORIGIN run (`readCertificateRun` — open OR ended), in order: the run
+ * ended `superseded` / `certificate_received` ⇒ END; the certificate received since (`certificateRunReceived`) ⇒ END;
+ * a pause (`certificateRunPauseReason`) — `certificate_accepted`, or a claim state that ⛔ never re-enters the window ⇒
+ * END, any other pause ⇒ `paused` (the step is skipped, the clock runs on — PQ3 A); the family ⛔ remindable
+ * (`cannotRemind`) ⇒ END; the person off the contact record ⇒ END (`not_a_recipient`); a letter DELIVERED at that
+ * number to ANY person (`numberLetterDelivered`, CR6) ⇒ END. The horizon (run day > 180) is the step gate's
+ * (`ladderStepGate`), ⛔ a stop. `hashes` are the persons' current number hashes taken BEFORE the claim-row lock (CR7 —
+ * ⛔ KMS here). Reads only; the caller holds the claim-row lock.
+ */
+export async function certificateLadderStopReason(
+  db: Db,
+  input: {
+    readonly pariwarId: PariwarId;
+    readonly claimCaseId: ClaimId;
+    readonly runId: string;
+    readonly personKey: string;
+    readonly today: string;
+    readonly hashes: ReadonlyMap<string, CertificateNumberHash>;
+  },
+): Promise<CertificateLadderStopCheck> {
+  const stop = (reason: string): CertificateLadderStopCheck => ({ stop: reason });
+  const run = await readCertificateRun(db, input.pariwarId, input.runId);
+  if (run === null) return stop('run_ended');
+  if (run.endReason === 'superseded' || run.endReason === 'certificate_received') return stop(`run_${run.endReason}`);
+  const facts = await readCertificatePlanFacts(db, input.pariwarId, input.claimCaseId);
+  if (facts === null) return stop('run_ended');
+  if (certificateRunReceived(run, facts)) return stop('certificate_received');
+  const pause = certificateRunPauseReason(run, facts);
+  if (pause === 'certificate_accepted') return stop('certificate_accepted');
+  if (pause !== null && NEVER_REENTERS.has(facts.claimState)) return stop('never_reenters');
+  const recipients = await readCertificateRecipients(db, input.pariwarId, input.claimCaseId);
+  if (recipients.cannotRemind !== null) return stop(recipients.cannotRemind);
+  const person = recipients.people.find((p) => p.personKey === input.personKey);
+  if (person === undefined) return stop('not_a_recipient');
+  const rows = await readClaimCertificateFamilyRows(db, input.pariwarId, input.claimCaseId);
+  const letters = await readClaimCertificateLetters(db, input.pariwarId, input.claimCaseId);
+  const states = evaluateCertificatePersonStates(recipients.people, rows, letters, input.hashes);
+  if (states.find((x) => x.personKey === input.personKey)?.numberLetterDelivered === true) return stop('letter_delivered');
+  return {
+    stop: null,
+    paused: pause !== null,
+    runDay: certificateRunDay(run.day0, input.today),
+    run,
+    person,
+    recipients,
+    states,
   };
 }
 

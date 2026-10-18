@@ -90,6 +90,8 @@ export const ClosureRequestBlocker = z.enum([
   'too_early',
   'claim_routed_to_r9',
   'claim_corrected',
+  /** Story 6.37c (`-351` 6 A) — follow-up texts are still running for someone the network reported a text undelivered to. */
+  'ladder_running',
   'not_reached',
   'claim_contact_required',
   /** A person's CURRENT number could not be checked just now — D22 cannot be judged (retryable, ⛔ a refusal). */

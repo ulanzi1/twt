@@ -127,10 +127,13 @@ export function closureRefusalError(refusal: claim.CorrectionClosureRefusal, not
       return c('This claim was routed to R9 — it cannot be closed here');
     case 'claim_corrected':
       return c('The family has sent corrected details — the claim cannot be closed for no response');
+    case 'ladder_running':
+      // Story 6.37c (LD8, `-351` 6 A) — closure waits while a delivery ladder runs.
+      return c('Follow-up texts are still being sent to someone whose reminder the network reported as not delivered — try again once they end');
     case 'not_reached':
       // D22 — a count and the roles only, ⛔ never a person.
       return c(
-        'Not everyone has been reached yet — a closure needs every person reached by a delivered text or letter',
+        'Not everyone has been reached yet — a closure needs every person reached by a delivered text, a letter or a call',
         notReached === undefined ? undefined : { count: notReached.count, roles: [...notReached.roles] },
       );
     case 'no_pending_request':

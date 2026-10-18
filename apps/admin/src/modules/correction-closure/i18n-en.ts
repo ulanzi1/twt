@@ -15,6 +15,7 @@ export const correctionClosureEn = {
     too_early: 'Too early — the family has not had 90 days since the reminders began.',
     claim_routed_to_r9: 'Routed to R9 — it cannot be closed here.',
     claim_corrected: 'The family has sent corrected details.',
+    ladder_running: 'Follow-up texts are still being sent to someone the network said a text did not reach.',
     not_reached: 'Not everyone reached yet.',
     claim_contact_required: 'The family’s contact details or their agreement are missing — the helpline can add them.',
     number_unverified: 'A family member’s number could not be checked just now — try again in a minute.',

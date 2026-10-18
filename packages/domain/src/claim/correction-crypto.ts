@@ -10,6 +10,8 @@
 // class `claim_contact_mobile`, bound to the claim's REAL `pariwarId` — ⛔ never `mobileBlindIndex` (the login key).
 // ⛔ NEVER log a decrypted value; ⛔ never put one in an event, audit line, error body or job payload.
 
+import { timingSafeEqual } from 'node:crypto';
+
 import { blindIndex } from '../encryption/blind-index.js';
 import { decryptTier1, parseEnvelope } from '../encryption/envelope.js';
 import {
@@ -89,4 +91,24 @@ export class CorrectionNumberUnverifiedError extends Error {
   ) {
     super(`[correction-letter] claim ${claimCaseId} person ${personKey}: the current number could not be verified`);
   }
+}
+
+/**
+ * Constant-time string comparison (UTF-8 bytes) — the API's `timingSafeEqualString` idiom (length, then
+ * `timingSafeEqual`), declared here because the domain must ⛔ import the API.
+ */
+function timingSafeEqualString(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Timing-safe equality of two keyed hashes (`null` = "⛔ no sendable number"). ⛔ Never `===` on an HMAC (inv. (f)).
+ * (Story 6.19c's; moved here from `correction-closure.ts` by Story 6.37c — a leaf the ladder mapping can import.)
+ */
+export function sameNumberHash(a: string | null, b: string | null): boolean {
+  if (a === null || b === null) return a === null && b === null;
+  return timingSafeEqualString(a, b);
 }

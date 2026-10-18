@@ -91,7 +91,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
   /** A send row of `kind`, as its finaliser would leave it. Returns its uuid. */
   async function sendRow(
     kind: Kind,
-    o: { outcome?: string | null; providerMessageId?: string | null; purpose?: string; updatedAt?: Date; pariwarId?: string } = {},
+    o: { outcome?: string | null; providerMessageId?: string | null; purpose?: string; updatedAt?: Date; pariwarId?: string; subjectKey?: string } = {},
   ): Promise<string> {
     const pariwarId = o.pariwarId ?? PARIWAR;
     let ctx = ctxs.find((c) => c.pariwarId === pariwarId && (kind !== 'sn' || c.snPurposes.length > 0));
@@ -104,22 +104,36 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
     let id: string;
     if (kind === 'cr') {
       const purpose = o.purpose ?? 'family_sms';
-      const recipient = purpose === 'staff_push' ? `staff:${randomUUID()}` : `nominee:${randomUUID()}`;
+      const recipient = purpose === 'staff_push' || purpose === 'ladder_escalation' ? `staff:${randomUUID()}` : `nominee:${randomUUID()}`;
       id = (
         await pool.query<{ reminder_id: string }>(
-          `INSERT INTO claim_correction_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, outcome,
+          `INSERT INTO claim_correction_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, subject_key, outcome,
              provider_message_id, claimed_at, claimed_by_job, updated_at)
-           VALUES ($1, $2, $3, $4, '2000-01-01', $5, $6, $7, $8, $9, $10, $11) RETURNING reminder_id`,
-          [ctx.runId, ctx.claimCaseId, pariwarId, slot, recipient, purpose, outcome, pmid, attempting ? T0 : null, attempting ? 'job' : null, updatedAt],
+           VALUES ($1, $2, $3, $4, '2000-01-01', $5, $6, $12, $7, $8, $9, $10, $11) RETURNING reminder_id`,
+          [ctx.runId, ctx.claimCaseId, pariwarId, slot, recipient, purpose, outcome, pmid, attempting ? T0 : null, attempting ? 'job' : null, updatedAt, o.subjectKey ?? ''],
         )
       ).rows[0]!.reminder_id;
     } else if (kind === 'ce') {
+      const purpose = o.purpose ?? 'family_sms';
       id = (
         await pool.query<{ reminder_id: string }>(
-          `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, outcome,
+          `INSERT INTO claim_certificate_reminders (run_id, claim_case_id, pariwar_id, slot_day, sent_on, recipient_key, purpose, subject_key, outcome,
              provider_message_id, claimed_at, claimed_by_job, updated_at)
-           VALUES ($1, $2, $3, $4, '2000-01-01', $5, 'family_sms', $6, $7, $8, $9, $10) RETURNING reminder_id`,
-          [ctx.certRunId, ctx.claimCaseId, pariwarId, slot, `nominee:${randomUUID()}`, outcome, pmid, attempting ? T0 : null, attempting ? 'job' : null, updatedAt],
+           VALUES ($1, $2, $3, $4, '2000-01-01', $5, $11, $12, $6, $7, $8, $9, $10) RETURNING reminder_id`,
+          [
+            ctx.certRunId,
+            ctx.claimCaseId,
+            pariwarId,
+            slot,
+            purpose === 'ladder_escalation' ? `staff:${randomUUID()}` : `nominee:${randomUUID()}`,
+            outcome,
+            pmid,
+            attempting ? T0 : null,
+            attempting ? 'job' : null,
+            updatedAt,
+            purpose,
+            o.subjectKey ?? '',
+          ],
         )
       ).rows[0]!.reminder_id;
     } else if (kind === 'sn') {
@@ -384,6 +398,26 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         expect(await read(pid)).toEqual([{ delivery_state: 'delivered', report_count: 1 }]);
         expect(await read(other)).toEqual([]);
       }
+    });
+
+    it('⭐ Story 6.37c (AC10) — a `cr` and a `ce` `ladder_sms` report ⇒ matched + a delivery row; a `ladder_escalation` (⛔ CRQID) ⇒ unmatched:not_sms on both', async () => {
+      const ladder = randomUUID();
+      const sms = [
+        { kind: 'cr' as const, id: await sendRow('cr', { purpose: 'ladder_sms', subjectKey: `ladder:${ladder}:2` }) },
+        { kind: 'ce' as const, id: await sendRow('ce', { purpose: 'ladder_sms', subjectKey: `ladder:${ladder}:2` }) },
+      ];
+      const asks = [
+        { kind: 'cr' as const, id: await sendRow('cr', { purpose: 'ladder_escalation', subjectKey: `ladder:${ladder}`, outcome: 'recorded', providerMessageId: rid() }) },
+        { kind: 'ce' as const, id: await sendRow('ce', { purpose: 'ladder_escalation', subjectKey: `ladder:${ladder}`, outcome: 'recorded', providerMessageId: rid() }) },
+      ];
+      const reports = [];
+      for (const r of [...sms, ...asks]) reports.push(await inbox({ crqid: `${r.kind}${hex(r.id)}`, requestId: (await pmidOf(r.kind, r.id))!, status: '2' }));
+      await tick(at(1));
+      for (const r of sms) expect((await deliveries(r.kind, r.id)).map((d) => d.delivery_state)).toEqual(['undelivered']);
+      for (const r of asks) expect(await deliveries(r.kind, r.id)).toEqual([]);
+      expect((await inboxRow(reports[0]!)).match_state).toBe('matched');
+      expect((await inboxRow(reports[1]!)).match_state).toBe('matched');
+      for (const rep of reports.slice(2)) expect(await inboxRow(rep)).toMatchObject({ match_state: 'unmatched', match_detail: 'not_sms' });
     });
 
     it('(9) status 0, and an unknown status (7), on a matching row ⇒ ignored:*, ⛔ delivery write; the unknown one alarms', async () => {
@@ -676,6 +710,18 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       expect(alarms[0]).toContain('cr 2, ce 1, sn 1, pm 1');
       for (const s of silent) expect(alarms[0]).not.toContain(hex(s.id));
       expect(lines).toHaveLength(1);
+    });
+
+    it('⭐ Story 6.37c (AC10) — an accepted `ladder_sms` with ⛔ report is silent on BOTH kinds; its ask (`ladder_escalation`) ⛔', async () => {
+      const LATE = new Date('2000-05-01T00:00:00.000Z');
+      const hrs = (h: number) => new Date(LATE.getTime() - h * 3_600_000);
+      const ladder = randomUUID();
+      await sendRow('cr', { purpose: 'ladder_sms', subjectKey: `ladder:${ladder}:3`, updatedAt: hrs(49) });
+      await sendRow('ce', { purpose: 'ladder_sms', subjectKey: `ladder:${ladder}:3`, updatedAt: hrs(49) });
+      await sendRow('cr', { purpose: 'ladder_escalation', subjectKey: `ladder:${ladder}x`, outcome: 'recorded', providerMessageId: null, updatedAt: hrs(49) });
+      const out = await runSmsDeliverySilenceCheck({ pool, now: () => LATE, onAlarm: () => undefined, log: () => undefined });
+      expect(out.silent.cr).toBe(1);
+      expect(out.silent.ce).toBe(1);
     });
 
     it('⛔ silent send ⇒ ⛔ alarm; the login-code line counts `otp:*` settled in the last 24 h by result, ⛔ an id', async () => {

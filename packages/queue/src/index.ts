@@ -418,6 +418,29 @@ export const QUEUE_NAMES = {
    */
   CLAIM_CERTIFICATE_FAMILY_SMS: 'claim.certificate.family_sms',
   /**
+   * The DELIVERY LADDER SWEEP (Story 6.37c, AC1–AC6, AC11; `2026-10-17-350` ruling 2, `-351` 4 A / 5 A / 6 A) — daily
+   * 10:00 IST (`-250` #5's hour), its OWN queue. It refuses to run under an RLS-bound role (`canReadAcrossPariwars` —
+   * its cross-tenant candidate scan would see ⛔ row, T24). Per chase (correction, certificate) it pages the claims with
+   * a reminder REPORTED undelivered in the last 14 days, a RUNNING ladder, or a recent ask; per claim, under the chase's
+   * OWN lock, it ends ladders (a delivered message, a reached call, a number change, a stop), resolves due steps (a
+   * scheduled day IS the step; ⛔ past the reminders' end or in a pause), CONCLUDES the rest — writing ONE
+   * `ladder_escalation` ask — and STARTS new ladders; it enqueues one CLAIM_*_LADDER_SMS child per step to send (and a
+   * staff push for an ask on an ENDED correction run). ⛔ It never refuses, closes or approves a claim. Job class C.
+   */
+  CLAIM_CONTACT_LADDER_SWEEP: 'claim.contact_ladder.sweep',
+  /**
+   * ONE correction ladder SMS (Story 6.37c, AC2) — the chase's OWN approved reminder sent again: the re-check under the
+   * trustee lock (the EXTRACTED stops, the ends, the step gate), the `ladder_sms` row claimed `attempting`, COMMIT, THEN
+   * the send through `sendClaimCorrectionSms` (CRQID `cr` + the row's id). Transient-only throws. Ids only. Job class B.
+   */
+  CLAIM_CORRECTION_LADDER_SMS: 'claim.correction.ladder_sms',
+  /**
+   * ONE certificate ladder SMS (Story 6.37c, AC2) — hashes EVERY person's number BEFORE the claim-row lock (CR7), the
+   * re-check under it (the COMPOSED stops over the origin run, the ends, the step gate), the row claimed WITH its hash,
+   * COMMIT, THEN the send (CRQID `ce`). Transient-only throws. Ids only. Job class B.
+   */
+  CLAIM_CERTIFICATE_LADDER_SMS: 'claim.certificate.ladder_sms',
+  /**
    * The SUSPICION NOTICE SWEEP (Story 6.24b, AC7b; `2026-10-07-292` RF11 / RF12, `2026-10-07-293` item 1 B,
    * `2026-10-08-295` RB10, RB12) — daily 10:00 IST, its OWN queue. Three keyset-paged cross-tenant scans on the BYPASSRLS
    * pool — a standing `-239` refusal (FQ7 B's text to the nominee in place at the death), a claim CLOSED by an allowed

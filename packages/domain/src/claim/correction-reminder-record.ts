@@ -37,6 +37,8 @@ import {
   claimCorrectionReminders,
   claimCorrectionRuns,
 } from '../schema/claim_correction_chase.js';
+import { claimCorrectionClosures } from '../schema/claim_correction_closure.js';
+import { smsSendDeliveries, type SmsDeliveryState } from '../schema/sms_send_deliveries.js';
 import {
   type CorrectionPerson,
   type CorrectionRunView,
@@ -51,8 +53,11 @@ import {
   readFamilyPartDoneAt,
   readLatestCorrectionMark,
 } from './correction-chase.js';
+import { applyConcludedLadderMapping } from './contact-ladder.js';
+import { readConcludedLadderFacts } from './contact-ladder-read.js';
 import { currentCorrectionNumberHash } from './correction-crypto.js';
 import { istDateOf, isCorrectionRunExpired } from './correction-schedule.js';
+import { CLAIM_NOT_CLOSABLE_STATES } from './state.js';
 import { getLiveCorrectionReturn, resolveClaimCorrectionState } from './state-trustee-decision-persist.js';
 
 /** A row held by ANOTHER job is re-claimed only after this (longer than any single attempt: a 10-second send). */
@@ -426,41 +431,18 @@ export async function beginCorrectionFamilySend(
     return expiredAttempt ? { kind: 'skipped', reason, expiredAttempt: true } : { kind: 'skipped', reason };
   };
 
-  const run = await readCorrectionRun(db, input.pariwarId, input.runId);
-  if (run === null || run.endedAt !== null) return skip('run_ended');
-  if (run.kind !== 'family' && run.kind !== 'direction') return skip('not_a_family_run');
-  const ret = await getLiveCorrectionReturn(db, input.pariwarId, input.claimCaseId);
-  if (!ret || ret.decisionId !== run.returnDecisionId) return skip('return_superseded');
-  if (run.kind === 'family') {
-    // A held switch to `staff` (6.19c) can leave ⛔ no run to end before this job runs — the MARK is the truth.
-    const mark = await readLatestCorrectionMark(db, input.pariwarId, ret.decisionId);
-    if (mark?.mustAct !== 'family') return skip('not_a_family_mark');
-  }
-  if (isCorrectionRunExpired(run.day0, istDateOf(input.now))) return skip('day_90');
-
-  const claimRow = await readCorrectionClaimRow(db, input.pariwarId, input.claimCaseId);
-  if (claimRow === null) return skip('run_ended');
-  const correction = await resolveClaimCorrectionState(
-    db,
-    input.pariwarId,
-    input.claimCaseId,
-    claimRow.deceasedMemberId as MemberId,
-    claimRow.currentState,
-  );
-  if (correction.resubmitted) return skip('resubmitted');
-  if ((await readFamilyPartDoneAt(db, input.pariwarId, input.claimCaseId, ret.decidedAt)) !== null) {
-    return skip('family_part_done');
-  }
-  const recipients = await readCorrectionRecipients(db, input.pariwarId, input.claimCaseId);
-  if (recipients.cannotRemind !== null) return skip(recipients.cannotRemind);
-  const person = recipients.people.find((p) => p.personKey === input.personKey);
-  if (person === undefined) return skip('not_a_recipient');
-  const [personState] = await readReturnPersonStates(db, input.pariwarId, run, [person], { crypto: input.crypto });
-  if (personState === undefined) return skip('not_a_recipient');
-  if (personState.track.letterDelivered) {
-    if (personState.hashFailed === true) throw new CorrectionNumberHashUnavailableError(input.claimCaseId, input.runId);
-    return skip('letter_delivered');
-  }
+  // ⭐ Story 6.37c (I6, T7) — the stops are the EXTRACTED predicate the delivery ladder shares (⛔ a copy): the same
+  // checks in the same order; this send keeps its own `day < 90` gate at its original place (`runGate`).
+  const check = await correctionFamilyStopReason(db, {
+    pariwarId: input.pariwarId,
+    claimCaseId: input.claimCaseId,
+    runId: input.runId,
+    personKey: input.personKey,
+    crypto: input.crypto,
+    runGate: (run) => (isCorrectionRunExpired(run.day0, istDateOf(input.now)) ? 'day_90' : null),
+  });
+  if (check.stop !== null) return skip(check.stop as CorrectionSkipReason);
+  const { person, contactLocale } = check;
 
   const claimed = await claimCorrectionReminder(db, {
     ...key,
@@ -475,8 +457,121 @@ export async function beginCorrectionFamilySend(
     reminderId: claimed.reminderId,
     attemptCount: claimed.attemptCount,
     person,
-    contactLocale: recipients.contactLocale,
+    contactLocale,
   };
+}
+
+// ── The stops, EXTRACTED (Story 6.37c — I6, T7) ────────────────────────────────────────────────────────────────
+
+/** A stop of a family send — the chase's own reasons, plus (a delivery ladder only) `closure_closed`. */
+export type CorrectionFamilyStopReason = CorrectionSkipReason | 'closure_closed';
+
+export type CorrectionFamilyStopCheck =
+  | { readonly stop: CorrectionFamilyStopReason }
+  | {
+      readonly stop: null;
+      readonly run: CorrectionRunView;
+      readonly person: CorrectionPerson;
+      readonly contactLocale: 'hi' | 'en';
+      /** The person's state across the return (its current number hashed when it may have moved — `-271` §1). */
+      readonly personState: ReturnPersonState;
+    };
+
+/** The claim states a correction text is ⛔ ever about again (a decided closure ends in `denied`). */
+const CORRECTION_TERMINAL_STATES: ReadonlySet<string> = new Set(['denied', ...CLAIM_NOT_CLOSABLE_STATES]);
+
+/**
+ * `closure_closed` (LD5) — the return's closure was DECIDED (a `closed` closures row — `day_90` alone does ⛔ tell
+ * "closed" from "time ran out", F8), or the claim is in a terminal state. Read by its OWN query here — ⛔ an import of
+ * `correction-closure.ts` (which imports this module: a cycle). Reads only.
+ */
+export async function isCorrectionClosureClosed(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  returnDecisionId: string,
+): Promise<boolean> {
+  const closed = await db
+    .select({ closureId: claimCorrectionClosures.closureId })
+    .from(claimCorrectionClosures)
+    .where(
+      and(
+        eq(claimCorrectionClosures.pariwarId, pariwarId),
+        eq(claimCorrectionClosures.claimCaseId, claimCaseId),
+        eq(claimCorrectionClosures.returnDecisionId, returnDecisionId as TrusteeDecisionId),
+        eq(claimCorrectionClosures.state, 'closed'),
+      ),
+    )
+    .limit(1);
+  if (closed.length > 0) return true;
+  const claimRow = await readCorrectionClaimRow(db, pariwarId, claimCaseId);
+  return claimRow === null || CORRECTION_TERMINAL_STATES.has(claimRow.currentState);
+}
+
+/**
+ * ⭐ THE STOPS OF A FAMILY SEND (`beginCorrectionFamilySend`'s, EXTRACTED — Story 6.37c, I6): in order — the run is
+ * still open, a family / direction run, its return still the live one, a `family` run's return still MARKED `family`,
+ * the caller's `runGate` (the chase send's own `day < 90`), the claim not `resubmitted`, the family's part ⛔ done, the
+ * family remindable (D30), the person still a recipient, and their letter ⛔ delivered in the current number's epoch.
+ * ⭐ `forLadder` (a delivery ladder's SMS — LD5): a run ended `day_90` is ⛔ a stop (the ladder's horizon is its step
+ * gate — `ladderStepGate`), every other end reason is; and `closure_closed` is checked right after the run. Under the
+ * caller's lock; the only crypto is the person's CURRENT number hash (`readReturnPersonStates`).
+ * @throws CorrectionNumberHashUnavailableError  the hash failed AND a delivered letter would otherwise stop the send
+ */
+export async function correctionFamilyStopReason(
+  db: Db,
+  input: {
+    readonly pariwarId: PariwarId;
+    readonly claimCaseId: ClaimId;
+    readonly runId: string;
+    readonly personKey: string;
+    readonly crypto: FieldCryptoDeps;
+    readonly forLadder?: boolean;
+    readonly runGate?: (run: CorrectionRunView) => CorrectionSkipReason | null;
+  },
+): Promise<CorrectionFamilyStopCheck> {
+  const stop = (reason: CorrectionFamilyStopReason): CorrectionFamilyStopCheck => ({ stop: reason });
+  const run = await readCorrectionRun(db, input.pariwarId, input.runId);
+  if (run === null) return stop('run_ended');
+  if (run.endedAt !== null && !(input.forLadder === true && run.endReason === 'day_90')) return stop('run_ended');
+  if (input.forLadder === true && (await isCorrectionClosureClosed(db, input.pariwarId, input.claimCaseId, run.returnDecisionId))) {
+    return stop('closure_closed');
+  }
+  if (run.kind !== 'family' && run.kind !== 'direction') return stop('not_a_family_run');
+  const ret = await getLiveCorrectionReturn(db, input.pariwarId, input.claimCaseId);
+  if (!ret || ret.decisionId !== run.returnDecisionId) return stop('return_superseded');
+  if (run.kind === 'family') {
+    // A held switch to `staff` (6.19c) can leave ⛔ no run to end before this job runs — the MARK is the truth.
+    const mark = await readLatestCorrectionMark(db, input.pariwarId, ret.decisionId);
+    if (mark?.mustAct !== 'family') return stop('not_a_family_mark');
+  }
+  const gate = input.runGate?.(run) ?? null;
+  if (gate !== null) return stop(gate);
+
+  const claimRow = await readCorrectionClaimRow(db, input.pariwarId, input.claimCaseId);
+  if (claimRow === null) return stop('run_ended');
+  const correction = await resolveClaimCorrectionState(
+    db,
+    input.pariwarId,
+    input.claimCaseId,
+    claimRow.deceasedMemberId as MemberId,
+    claimRow.currentState,
+  );
+  if (correction.resubmitted) return stop('resubmitted');
+  if ((await readFamilyPartDoneAt(db, input.pariwarId, input.claimCaseId, ret.decidedAt)) !== null) {
+    return stop('family_part_done');
+  }
+  const recipients = await readCorrectionRecipients(db, input.pariwarId, input.claimCaseId);
+  if (recipients.cannotRemind !== null) return stop(recipients.cannotRemind);
+  const person = recipients.people.find((p) => p.personKey === input.personKey);
+  if (person === undefined) return stop('not_a_recipient');
+  const [personState] = await readReturnPersonStates(db, input.pariwarId, run, [person], { crypto: input.crypto });
+  if (personState === undefined) return stop('not_a_recipient');
+  if (personState.track.letterDelivered) {
+    if (personState.hashFailed === true) throw new CorrectionNumberHashUnavailableError(input.claimCaseId, input.runId);
+    return stop('letter_delivered');
+  }
+  return { stop: null, run, person, contactLocale: recipients.contactLocale, personState };
 }
 
 // ── Run reads + per-person state (the sweep, the letter precondition, the queue) ───────────────────────────────
@@ -595,11 +690,24 @@ export async function readReturnFamilyLetters(
 /** A `family_sms` row of a RETURN — a run row carrying the run it was sent in. */
 export interface ReturnFamilyRow extends RunFamilyRow {
   readonly runId: string;
+  /** Story 6.37c — the row's own id (a ladder's `origin_row_id` names it). Always set by `readReturnFamilyRows`. */
+  readonly reminderId?: string;
+  /** Story 6.37c — 6.37b's recorded delivery state for this send (`sms_send_deliveries`), or `null` (⛔ report). */
+  readonly deliveryState?: SmsDeliveryState | null;
+  /** Story 6.37c (LD6, LD7) — set only by the concluded-ladder mapping (see `applyConcludedLadderMapping`). */
+  readonly deadOn?: string;
+  readonly concluded?: true;
 }
 
 /**
  * ⭐ Every `family_sms` row of the live return's FAMILY / DIRECTION runs (`-272` §2, `-273` §1 — Story 6.19c Task 0a),
  * ordered by TIME (`sent_on`, then insert) — ⛔ never `slot_day` (a run's own day number).
+ * ⭐ Story 6.37c (LD6, I3) — THE correction chase's ONE B1 mapping lives HERE: each row carries its id and 6.37b's
+ * delivery state (a LEFT JOIN on `('cr', reminder_id)` — at most one row per send, the PK), the return's CONCLUDED
+ * ladders are read SEPARATELY (⛔ a row-multiplying join), and `applyConcludedLadderMapping` reads every undelivered
+ * reminder of a concluded ladder's epoch as `rejected_unreachable` (`deadOn` = the conclusion date) — ⛔ a stored
+ * outcome rewritten (I2). Every caller (the person states, the letter precondition, D22's `readClosureReach`, the
+ * sweep, the queue, the D30 path) inherits it by construction; the catch-up's `readRunFamilyRows` stays unmapped.
  */
 export async function readReturnFamilyRows(
   db: Db,
@@ -609,6 +717,7 @@ export async function readReturnFamilyRows(
 ): Promise<ReturnFamilyRow[]> {
   const rows = await db
     .select({
+      reminderId: claimCorrectionReminders.reminderId,
       runId: claimCorrectionReminders.runId,
       recipientKey: claimCorrectionReminders.recipientKey,
       slotDay: claimCorrectionReminders.slotDay,
@@ -618,6 +727,7 @@ export async function readReturnFamilyRows(
       recipientNumberHash: claimCorrectionReminders.recipientNumberHash,
       createdAt: claimCorrectionReminders.createdAt,
       late: claimCorrectionReminders.late,
+      deliveryState: smsSendDeliveries.deliveryState,
     })
     .from(claimCorrectionReminders)
     .innerJoin(
@@ -625,6 +735,14 @@ export async function readReturnFamilyRows(
       and(
         eq(claimCorrectionRuns.runId, claimCorrectionReminders.runId),
         eq(claimCorrectionRuns.pariwarId, claimCorrectionReminders.pariwarId),
+      ),
+    )
+    .leftJoin(
+      smsSendDeliveries,
+      and(
+        eq(smsSendDeliveries.sendKind, 'cr'),
+        eq(smsSendDeliveries.sendRowId, claimCorrectionReminders.reminderId),
+        eq(smsSendDeliveries.pariwarId, claimCorrectionReminders.pariwarId),
       ),
     )
     .where(
@@ -637,7 +755,13 @@ export async function readReturnFamilyRows(
       ),
     )
     .orderBy(asc(claimCorrectionReminders.sentOn), asc(claimCorrectionReminders.createdAt));
-  return rows.map((r) => ({ ...r, recipientVersionId: (r.recipientVersionId as string | null) ?? null }));
+  const stored: ReturnFamilyRow[] = rows.map((r) => ({
+    ...r,
+    recipientVersionId: (r.recipientVersionId as string | null) ?? null,
+    deliveryState: r.deliveryState ?? null,
+  }));
+  const concluded = await readConcludedLadderFacts(db, pariwarId, claimCaseId, 'correction', returnDecisionId);
+  return applyConcludedLadderMapping(stored, concluded);
 }
 
 /** A staff-side row of a RETURN, with the calendar date its slot stands for (its OWN run's `day0 + slot_day`). */

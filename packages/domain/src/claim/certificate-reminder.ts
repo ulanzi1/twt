@@ -53,8 +53,11 @@ import {
 } from '../schema/claim_certificate_reminder.js';
 import { claims } from '../schema/claims.js';
 import { eventsLog } from '../schema/events_log.js';
+import { smsSendDeliveries, type SmsDeliveryState } from '../schema/sms_send_deliveries.js';
 import { addCalendarDays } from '../cycle-calendar/holiday-resolver.js';
 import { certificateRunDay, isCertificateRunPastHorizon } from './certificate-reminder-schedule.js';
+import { applyConcludedLadderMapping } from './contact-ladder.js';
+import { readConcludedLadderFacts } from './contact-ladder-read.js';
 import { readClaimContact, readClaimContactAgreementState } from './claim-contact-check.js';
 import {
   type PersonLetterRow,
@@ -207,6 +210,41 @@ export type CertificateRunPlan =
   | { readonly kind: 'none'; readonly alarm?: 'no_window_entry' };
 
 /**
+ * States from which a claim ⛔ never re-enters the review window. Story 6.24a (RF4): `closed` — ⛔ nothing leaves it.
+ * (Story 6.37c moved it here from `certificate-reminder-read.ts` and exported it: a delivery ladder ENDS on such a pause
+ * — `certificateLadderStopReason`.)
+ */
+export const NEVER_REENTERS: ReadonlySet<string> = new Set(['state_trustee_approved', 'approved', 'settled', 'closed']);
+
+/**
+ * CR5 — the run's certificate is RECEIVED: a `rejected` run's anchor is no longer the current upload, a `missing`
+ * run's claim no longer `missing`. Pure. (Extracted from `planCertificateRun` by Story 6.37c — the delivery ladder's
+ * stop composes it over the ORIGIN run, open or ended; `planCertificateRun` judges only the OPEN run.)
+ */
+export function certificateRunReceived(
+  run: Pick<CertificateRunView, 'cause' | 'anchorUploadId'>,
+  f: Pick<CertificatePlanFacts, 'currentUploadId' | 'status'>,
+): boolean {
+  return run.cause === 'rejected' ? f.currentUploadId !== run.anchorUploadId : f.status !== 'missing';
+}
+
+/**
+ * CR5 — why the run is PAUSED, or `null`: the claim outside the review window (`-275` Q2), or a `rejected` run's
+ * anchor no longer rejected (`-275` Q4 — accepted on a re-review). Pure. (Extracted from `planCertificateRun` by
+ * Story 6.37c, which calls it — its order and verdicts unchanged.)
+ */
+export function certificateRunPauseReason(
+  run: Pick<CertificateRunView, 'cause'>,
+  f: Pick<CertificatePlanFacts, 'claimState' | 'status'>,
+): CertificatePauseReason | null {
+  if (!isInDeathCertificateReviewWindow(f.claimState)) return 'outside_window';
+  if (run.cause === 'rejected' && f.status !== 'rejected') {
+    return f.status === 'accepted' ? 'certificate_accepted' : 'certificate_not_rejected';
+  }
+  return null;
+}
+
+/**
  * ⭐ THE PLAN for one claim today — CR2's opening rule, then CR5's stop / pause / continue for its open run. For a sweep
  * decision, precedence is: open ≻ `completed` ≻ `certificate_received` ≻ pause ≻ continue. Pure.
  */
@@ -252,20 +290,11 @@ export function planCertificateRun(f: CertificatePlanFacts, today: string): Cert
   if (isCertificateRunPastHorizon(runDay)) return { kind: 'end', runId: run.runId, reason: 'completed' };
 
   // ── certificate_received ──
-  const received =
-    run.cause === 'rejected' ? f.currentUploadId !== run.anchorUploadId : f.status !== 'missing';
-  if (received) return { kind: 'end', runId: run.runId, reason: 'certificate_received' };
+  if (certificateRunReceived(run, f)) return { kind: 'end', runId: run.runId, reason: 'certificate_received' };
 
   // ── pause ──
-  if (!inWindow) return { kind: 'pause', runId: run.runId, runDay, reason: 'outside_window' };
-  if (run.cause === 'rejected' && f.status !== 'rejected') {
-    return {
-      kind: 'pause',
-      runId: run.runId,
-      runDay,
-      reason: f.status === 'accepted' ? 'certificate_accepted' : 'certificate_not_rejected',
-    };
-  }
+  const pause = certificateRunPauseReason(run, f);
+  if (pause !== null) return { kind: 'pause', runId: run.runId, runDay, reason: pause };
   return { kind: 'continue', runId: run.runId, runDay };
 }
 
@@ -693,9 +722,21 @@ export interface CertificateFamilyRow extends PersonReminderRow {
   readonly runId: string;
   readonly recipientKey: string;
   readonly late: boolean;
+  /** Story 6.37c — the row's own id (a ladder's `origin_row_id`). Always set by `readClaimCertificateFamilyRows`. */
+  readonly reminderId?: string;
+  /** Story 6.37c — 6.37b's recorded delivery state for this send (`sms_send_deliveries`), or `null` (⛔ report). */
+  readonly deliveryState?: SmsDeliveryState | null;
 }
 
-/** Every `family_sms` row of the claim's certificate runs. */
+/**
+ * Every `family_sms` row of the claim's certificate runs.
+ * ⭐ Story 6.37c (LD6, I3; `-351` 3 B *"The certificate chase's own letter rule takes the same B1 change"*) — THE
+ * certificate chase's ONE B1 mapping lives HERE, CLAIM-wide across runs: each row carries its id and 6.37b's delivery
+ * state (a LEFT JOIN on `('ce', reminder_id)`), the claim's CONCLUDED certificate ladders are read separately, and
+ * `applyConcludedLadderMapping` reads every undelivered reminder of a concluded ladder's epoch as
+ * `rejected_unreachable` — so letter-eligibility (`foundDeadOn`), the CR10 staff chase and the list's `sms_state`
+ * follow by construction. ⛔ A stored outcome rewritten (I2).
+ */
 export async function readClaimCertificateFamilyRows(
   db: Db,
   pariwarId: PariwarId,
@@ -703,6 +744,7 @@ export async function readClaimCertificateFamilyRows(
 ): Promise<CertificateFamilyRow[]> {
   const rows = await db
     .select({
+      reminderId: claimCertificateReminders.reminderId,
       runId: claimCertificateReminders.runId,
       recipientKey: claimCertificateReminders.recipientKey,
       slotDay: claimCertificateReminders.slotDay,
@@ -712,8 +754,17 @@ export async function readClaimCertificateFamilyRows(
       recipientNumberHash: claimCertificateReminders.recipientNumberHash,
       createdAt: claimCertificateReminders.createdAt,
       late: claimCertificateReminders.late,
+      deliveryState: smsSendDeliveries.deliveryState,
     })
     .from(claimCertificateReminders)
+    .leftJoin(
+      smsSendDeliveries,
+      and(
+        eq(smsSendDeliveries.sendKind, 'ce'),
+        eq(smsSendDeliveries.sendRowId, claimCertificateReminders.reminderId),
+        eq(smsSendDeliveries.pariwarId, claimCertificateReminders.pariwarId),
+      ),
+    )
     .where(
       and(
         eq(claimCertificateReminders.pariwarId, pariwarId),
@@ -722,11 +773,14 @@ export async function readClaimCertificateFamilyRows(
       ),
     )
     .orderBy(asc(claimCertificateReminders.sentOn), asc(claimCertificateReminders.createdAt));
-  return rows.map((r) => ({
+  const stored: CertificateFamilyRow[] = rows.map((r) => ({
     ...r,
     outcome: r.outcome as CertificateReminderOutcome,
     recipientVersionId: (r.recipientVersionId as string | null) ?? null,
+    deliveryState: r.deliveryState ?? null,
   }));
+  const concluded = await readConcludedLadderFacts(db, pariwarId, claimCaseId, 'certificate');
+  return applyConcludedLadderMapping(stored, concluded);
 }
 
 /** One certificate letter of the claim, as the state and the list need it (⛔ no tracking number). */
@@ -875,7 +929,14 @@ export interface CertificateStaffRowPlan {
 export function planCertificateStaffChase(input: {
   readonly day0: string;
   readonly today: string;
-  readonly people: readonly Pick<CertificatePersonState, 'personKey' | 'track' | 'letter' | 'letterEligible'>[];
+  readonly people: readonly (Pick<CertificatePersonState, 'personKey' | 'track' | 'letter' | 'letterEligible'> & {
+    /**
+     * ⭐ Story 6.37c (LD9) — the earliest call recorded `reached` for the person since the epoch began, or `null`. It
+     * stops the chase ONLY for a person whose dead outcome is a CONCLUDED ladder's (`deadKind 'not_delivered'` —
+     * `-351` 5 A: asked to call OR post); a send-time dead number keeps its letter chase (`-230` / `-231` C).
+     */
+    readonly reachedCallOn?: string | null;
+  })[];
   /** The claim's staff rows (every run). */
   readonly staffRows: readonly { readonly purpose: string; readonly subjectKey: string; readonly sentOn: string }[];
   /** `staff:<shepherd>` or `staff:unassigned`. */
@@ -893,6 +954,7 @@ export function planCertificateStaffChase(input: {
   for (const p of input.people) {
     const foundDeadOn = p.track.foundDeadOn;
     if (!p.letterEligible || foundDeadOn === null || p.letter !== null) continue;
+    if (p.track.deadKind === 'not_delivered' && (p.reachedCallOn ?? null) !== null) continue; // Story 6.37c (LD9)
     const fd = calendarDaysBetween(foundDeadOn, input.today);
     const mine = input.staffRows.filter((r) => r.subjectKey === p.personKey && r.sentOn > foundDeadOn);
     if (fd >= input.chase.first) {

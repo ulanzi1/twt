@@ -33,13 +33,12 @@ import {
   readClaimCertificateLetters,
   readClaimCertificateRuns,
   readClaimCertificateStaffRows,
+  NEVER_REENTERS,
 } from './certificate-reminder.js';
 import { claimShortReference, isEvidentialReminderRow, compareReminderRowsByTime } from './correction-chase.js';
 import { closureLetterOverdue } from './correction-closure-read.js';
 import type { CalendarDateString } from '../cycle-calendar/holiday-resolver.js';
 
-/** States from which a claim ⛔ never re-enters the review window. Story 6.24a (RF4): `closed` — ⛔ nothing leaves it. */
-const NEVER_REENTERS: ReadonlySet<string> = new Set(['state_trustee_approved', 'approved', 'settled', 'closed']);
 
 export const CERTIFICATE_LIST_DEFAULT_LIMIT = 50;
 export const CERTIFICATE_LIST_MAX_LIMIT = 200;

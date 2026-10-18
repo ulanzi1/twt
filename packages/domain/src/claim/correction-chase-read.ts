@@ -122,10 +122,16 @@ export interface CorrectionChaseSummary {
  * letter), so the queue must show it dead — and offer the letter form — ⛔ never mask it as "reached". Pure.
  */
 export function correctionPersonStatus(
-  deadKind: 'dead' | 'unreachable' | null,
+  deadKind: 'dead' | 'unreachable' | 'not_delivered' | null,
   accepted: number,
 ): CorrectionPersonStatus {
-  return deadKind === 'dead' ? 'dead' : deadKind === 'unreachable' ? 'unreachable' : accepted > 0 ? 'reached' : 'not_yet';
+  return deadKind === 'dead'
+    ? 'dead'
+    : deadKind === 'unreachable' || deadKind === 'not_delivered' // Story 6.37c (LD7) — a concluded ladder reads unreachable
+      ? 'unreachable'
+      : accepted > 0
+        ? 'reached'
+        : 'not_yet';
 }
 
 /**

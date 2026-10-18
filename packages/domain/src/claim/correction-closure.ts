@@ -29,16 +29,19 @@
 // ⛔ IMPORT DISCIPLINE (S-T1): `correction-chase.ts` and `state-trustee-decision-persist.ts` must ⛔ never import this
 // module — a cycle is the runtime-init trap typecheck cannot see. This module imports them; ⛔ never the reverse.
 
-import { timingSafeEqual } from 'node:crypto';
-
-import { and, desc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
 import type { FieldCryptoDeps } from '../encryption/field-classes.js';
 import type { ClaimId, MemberId, PariwarId, TrusteeDecisionId } from '../ids/index.js';
 import { claimAppeals } from '../schema/claim_appeals.js';
-import { claimCorrectionMarks, type CorrectionMarkRole, type CorrectionMustAct } from '../schema/claim_correction_chase.js';
+import {
+  claimCorrectionMarks,
+  claimCorrectionRuns,
+  type CorrectionMarkRole,
+  type CorrectionMustAct,
+} from '../schema/claim_correction_chase.js';
 import {
   CLOSURE_HELD_STATES,
   CLOSURE_SUPER_ADMIN_REASONS,
@@ -79,7 +82,13 @@ import {
   resolveCorrectionChase,
   writeCorrectionMark,
 } from './correction-chase.js';
-import { CorrectionNumberUnverifiedError } from './correction-crypto.js';
+import {
+  type ReturnLadderSmsRow,
+  hasRunningCorrectionLadder,
+  readClaimContactCalls,
+  readReturnLadderSmsRows,
+} from './contact-ladder-read.js';
+import { CorrectionNumberUnverifiedError, sameNumberHash } from './correction-crypto.js';
 import {
   type ReturnFamilyRow,
   type ReturnLetterRow,
@@ -111,6 +120,8 @@ export type CorrectionClosureRefusal =
   | 'too_early'
   | 'claim_routed_to_r9'
   | 'claim_corrected'
+  // Story 6.37c (LD8, `-351` 6 A) — a delivery ladder still RUNS for one of the return's people
+  | 'ladder_running'
   | 'not_reached'
   // The Pariwar Admin's decision
   | 'no_pending_request'
@@ -151,6 +162,7 @@ export const AC6_REQUEST_REFUSALS = [
   'too_early',
   'claim_routed_to_r9',
   'claim_corrected',
+  'ladder_running',
   'not_reached',
 ] as const satisfies readonly CorrectionClosureRefusal[];
 
@@ -309,22 +321,10 @@ export async function isClosureRequestLapsed(
 
 // ── D22 — "reached", across the whole RETURN (`-252` cl.1, `-271` §1, `-273` §1) ─────────────────────────────────
 
-/**
- * Constant-time string comparison (UTF-8 bytes) — the API's `timingSafeEqualString` idiom (length, then
- * `timingSafeEqual`), declared here because the domain must ⛔ import the API.
- */
-function timingSafeEqualString(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, 'utf8');
-  const bufB = Buffer.from(b, 'utf8');
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
-
-/** Timing-safe equality of two keyed hashes (`null` = "⛔ no sendable number"). ⛔ Never `===` on an HMAC (inv. (f)). */
-export function sameNumberHash(a: string | null, b: string | null): boolean {
-  if (a === null || b === null) return a === null && b === null;
-  return timingSafeEqualString(a, b);
-}
+// `sameNumberHash` — timing-safe equality of two keyed number hashes. ⭐ Story 6.37c moved its ONE definition to the leaf
+// `correction-crypto.ts` (the delivery ladder's mapping, which the row readers call, must compare hashes without
+// importing this module — a cycle); re-exported here so every existing import keeps working.
+export { sameNumberHash } from './correction-crypto.js';
 
 /** One person's D22 verdict. ⛔ No name, ⛔ no number. */
 export interface ClosurePersonReach {
@@ -333,6 +333,10 @@ export interface ClosurePersonReach {
   readonly rank: 1 | 2 | null;
   readonly reachedBySms: boolean;
   readonly reachedByLetter: boolean;
+  /** Story 6.37c (LD8) — a correction `ladder_sms` was accepted to their current number and ⛔ reported undelivered. */
+  readonly reachedByLadderSms: boolean;
+  /** Story 6.37c (LD8, `-351` 5 A) — a District Admin recorded a call that REACHED them (either surface — LD10). */
+  readonly reachedByCall: boolean;
   readonly reached: boolean;
   /** `-273` §5 — their CURRENT number's latest evidential outcome is dead / unreachable / ⛔ no target. */
   readonly numberKnownDead: boolean;
@@ -367,12 +371,43 @@ export function evaluateClosurePersonReach(
   currentNumberHash: string | null | undefined,
   rows: readonly ReturnFamilyRow[],
   letters: readonly Pick<ReturnLetterRow, 'personKey' | 'deliveredOn'>[],
+  /**
+   * ⭐ Story 6.37c (LD8) — the two reaches a delivery ladder adds (absent ⇒ neither — the 6.19c legs unchanged): the
+   * return's correction `ladder_sms` rows (with 6.37b's delivery state), and the claim's calls with the date reach by
+   * call counts from (the return's first family run's day 0).
+   */
+  ladder?: {
+    readonly ladderRows: readonly Pick<ReturnLadderSmsRow, 'recipientKey' | 'outcome' | 'recipientNumberHash' | 'deliveryState'>[];
+    readonly calls: readonly { readonly personKey: string; readonly outcome: string; readonly calledOn: string }[];
+    readonly callsCountFrom: string | null;
+  },
 ): ClosurePersonReach {
   const mine = rows.filter((r) => r.recipientKey === person.personKey);
   const current = currentNumberHash === undefined ? null : currentNumberHash;
   const reachedBySms =
     currentNumberHash !== undefined &&
     mine.some((r) => r.outcome === 'accepted' && r.recipientNumberHash !== null && sameNumberHash(r.recipientNumberHash, current));
+  // LD8 — a ladder SMS the network accepted counts unless it was REPORTED undelivered (a SILENT one counts — `-351`
+  // 1 A, PQ1 A); it is read beside the family rows, ⛔ through them (LD2 — it never suppresses a scheduled slot).
+  const reachedByLadderSms =
+    ladder !== undefined &&
+    currentNumberHash !== undefined &&
+    ladder.ladderRows.some(
+      (r) =>
+        r.recipientKey === person.personKey &&
+        r.outcome === 'accepted' &&
+        r.recipientNumberHash !== null &&
+        r.deliveryState !== 'undelivered' &&
+        sameNumberHash(r.recipientNumberHash, current),
+    );
+  const reachedByCall =
+    ladder !== undefined &&
+    ladder.calls.some(
+      (c) =>
+        c.personKey === person.personKey &&
+        c.outcome === 'reached' &&
+        (ladder.callsCountFrom === null || c.calledOn >= ladder.callsCountFrom),
+    );
   const reachedByLetter = letters.some((l) => l.personKey === person.personKey && l.deliveredOn !== null);
   const last = lastEvidentialAttempt(mine.filter(isEvidentialReminderRow));
   const numberKnownDead =
@@ -386,9 +421,28 @@ export function evaluateClosurePersonReach(
     rank: person.rank,
     reachedBySms,
     reachedByLetter,
-    reached: reachedBySms || reachedByLetter,
+    reachedByLadderSms,
+    reachedByCall,
+    reached: reachedBySms || reachedByLadderSms || reachedByLetter || reachedByCall,
     numberKnownDead,
   };
+}
+
+/** The day 0 of the return's FIRST family / direction run (reach by a call counts from it — LD8), or `null`. */
+async function readReturnFirstFamilyDay0(db: Db, pariwarId: PariwarId, returnDecisionId: string): Promise<string | null> {
+  const [run] = await db
+    .select({ day0: claimCorrectionRuns.day0 })
+    .from(claimCorrectionRuns)
+    .where(
+      and(
+        eq(claimCorrectionRuns.pariwarId, pariwarId),
+        eq(claimCorrectionRuns.returnDecisionId, returnDecisionId as TrusteeDecisionId),
+        inArray(claimCorrectionRuns.kind, ['family', 'direction']),
+      ),
+    )
+    .orderBy(asc(claimCorrectionRuns.day0))
+    .limit(1);
+  return run?.day0 ?? null;
 }
 
 /**
@@ -408,8 +462,14 @@ export async function readClosureReach(
   }
   const rows = await readReturnFamilyRows(db, pariwarId, claimCaseId, chase.liveReturn.decisionId);
   const letters = await readReturnFamilyLetters(db, pariwarId, claimCaseId, chase.liveReturn.decisionId);
+  // Story 6.37c (LD8) — the ladder SMS and the reached calls (a call counts from the return's first family run's day 0).
+  const ladder = {
+    ladderRows: await readReturnLadderSmsRows(db, pariwarId, claimCaseId, chase.liveReturn.decisionId),
+    calls: await readClaimContactCalls(db, pariwarId, claimCaseId),
+    callsCountFrom: await readReturnFirstFamilyDay0(db, pariwarId, chase.liveReturn.decisionId),
+  };
   const people = recipients.people.map((p) =>
-    evaluateClosurePersonReach(p, chase.currentNumberHashes?.get(p.personKey), rows, letters),
+    evaluateClosurePersonReach(p, chase.currentNumberHashes?.get(p.personKey), rows, letters, ladder),
   );
   const unreached = people.filter((p) => !p.reached);
   return {
@@ -474,6 +534,12 @@ async function assertClosureGround(input: ClosureGateInput): Promise<ClosureReac
   const correction = await resolveClaimCorrectionState(db, pariwarId, claimCaseId, input.deceasedMemberId, input.currentState);
   if (correction.resubmitted || chase.familyPartDoneAt !== null) {
     throw new CorrectionClosureRefusedError(claimCaseId, 'claim_corrected');
+  }
+  // ⭐ Story 6.37c (LD8, `-351` 6 A) — CLOSURE WAITS while a delivery ladder runs for ANY of the return's people: BEFORE
+  // `not_reached` so staff see WHY. The ladder's start and every state move take the SAME chase lock as the request /
+  // decide (⛔ a check-then-act race). A running CERTIFICATE ladder holds ⛔ this closure (PQ2 A).
+  if (chase.liveReturn !== null && (await hasRunningCorrectionLadder(db, pariwarId, claimCaseId, chase.liveReturn.decisionId))) {
+    throw new CorrectionClosureRefusedError(claimCaseId, 'ladder_running');
   }
   const reach = await readClosureReach(db, pariwarId, claimCaseId, chase);
   if (!reach.allReached) throw new CorrectionClosureRefusedError(claimCaseId, 'not_reached', reach.notReached);

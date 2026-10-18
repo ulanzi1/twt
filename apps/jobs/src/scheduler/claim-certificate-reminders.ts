@@ -458,10 +458,18 @@ async function planClaim(
 
     // ── The District Admin's letter chase + the day-13 escalation RECORD (CR10) ──
     let written = 0;
+    // Story 6.37c (LD9) — a call recorded `reached` stops a CONCLUDED person's chase (the planner checks `deadKind`).
+    const calls = await claimDomain.readClaimContactCalls(db, pariwarId, claimCaseId);
     const staffPlans = claimDomain.planCertificateStaffChase({
       day0: run.day0,
       today,
-      people: states,
+      people: states.map((s) => ({
+        ...s,
+        reachedCallOn: claimDomain.reachedCallSince(
+          calls.filter((c) => c.personKey === s.personKey),
+          s.track.epochRows[0]?.createdAt ?? null,
+        ),
+      })),
       staffRows: await claimDomain.readClaimCertificateStaffRows(db, pariwarId, claimCaseId),
       districtAdminKey: await districtAdminKey(db, pariwarId, claimCaseId),
       pariwarAdminKeys: await pariwarAdminKeys(db, pariwarId, alarm),

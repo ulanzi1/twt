@@ -498,14 +498,38 @@ export const STAFF_PUSH_ITEM_PURPOSES: readonly string[] = [
   'letter_second_due',
   'escalation',
   ...claimDomain.CLOSURE_STAFF_PURPOSES,
+  // Story 6.37c (LD9) — a concluded delivery ladder's ONE call-or-letter ask.
+  'ladder_escalation',
 ];
 
+/** Story 6.37c (LD9) — the ask's words in the staff push (the row's `detail` is `ask:<ask>`). English, name-free. */
+const LADDER_ASK_WORDS: Readonly<Record<string, string>> = {
+  'ask:call_or_letter': 'Phone the family or post them a letter',
+  'ask:call': 'Phone the family — the letter limit is reached',
+  'ask:letter': 'Post the family a letter',
+  'ask:none': 'Neither a call nor a letter is possible — escalate it',
+};
+
 /** The staff push's copy — ENGLISH (staff copy is English-only), name-free, naming the correction queue. */
-export function correctionStaffPushText(items: readonly { readonly purpose: string }[], reference: string): {
+export function correctionStaffPushText(
+  items: readonly { readonly purpose: string; readonly detail?: string | null }[],
+  reference: string,
+): {
   readonly title: string;
   readonly body: string;
 } {
   const n = items.length;
+  // Story 6.37c (LD9) — a concluded delivery ladder's ask names what is asked (call / letter), cap-aware.
+  const ladder = items.find((i) => i.purpose === 'ladder_escalation');
+  if (ladder !== undefined) {
+    const ask = LADDER_ASK_WORDS[ladder.detail ?? ''] ?? LADDER_ASK_WORDS['ask:call_or_letter']!;
+    return {
+      title: `Claim ${reference}: texts did not reach the family`,
+      body:
+        `${String(n)} item${n === 1 ? '' : 's'} due on claim ${reference}. The network said the reminders were not ` +
+        `delivered: ${ask}. Open the correction queue in the admin app.`,
+    };
+  }
   // Story 6.19c — its escalations (the day-97 closure escalation, the staff case to the Super Admin, the closure-letter
   // chase's day 13) read as escalations too.
   const escalated = items.some((i) =>
@@ -529,7 +553,7 @@ export function correctionStaffPushAlert(input: {
   readonly userId: string;
   readonly sentOn: string;
   readonly deceasedMemberId: string;
-  readonly items: readonly { readonly purpose: string }[];
+  readonly items: readonly { readonly purpose: string; readonly detail?: string | null }[];
   readonly now: Date;
 }): Alert {
   const text = correctionStaffPushText(input.items, claimDomain.claimShortReference(input.claimCaseId));
@@ -589,11 +613,21 @@ export async function runCorrectionStaffPush(
       jobId,
       now,
     });
-    if (c.status !== 'claimed') return { c, items: [] as { purpose: string }[], deceased: null as string | null };
-    const { rows } = await client.query<{ purpose: string }>(
-      `SELECT purpose FROM claim_correction_reminders
-        WHERE pariwar_id = $1 AND claim_case_id = $2 AND recipient_key = $3 AND sent_on = $4
-          AND outcome = 'recorded' AND purpose = ANY($5::text[])`,
+    if (c.status !== 'claimed') return { c, items: [] as { purpose: string; detail: string | null }[], deceased: null as string | null };
+    // ⭐ Story 6.37c (LD9 (ii)) — PLUS every un-pushed `ladder_escalation` dated BEFORE today: one written after the
+    // previous push went (or with ⛔ push since) — the latest `staff_push` of an EARLIER day for this recipient on the
+    // claim (⛔ today's, which this child claimed just above) is the line. "The next morning's push" alone would ⛔ ever
+    // list a row dated yesterday.
+    const { rows } = await client.query<{ purpose: string; detail: string | null }>(
+      `SELECT purpose, detail FROM claim_correction_reminders
+        WHERE pariwar_id = $1 AND claim_case_id = $2 AND recipient_key = $3 AND outcome = 'recorded'
+          AND (
+            (sent_on = $4 AND purpose = ANY($5::text[]))
+            OR (purpose = 'ladder_escalation' AND sent_on < $4
+                AND created_at > COALESCE((SELECT max(p.created_at) FROM claim_correction_reminders p
+                                            WHERE p.pariwar_id = $1 AND p.claim_case_id = $2 AND p.recipient_key = $3
+                                              AND p.purpose = 'staff_push' AND p.sent_on < $4), '-infinity'::timestamptz))
+          )`,
       [pid, p.claimCaseId, recipientKey, p.sentOn, STAFF_PUSH_ITEM_PURPOSES],
     );
     const claimRow = await claimDomain.readCorrectionClaimRow(db, pariwarId, claimCaseId);
@@ -1266,10 +1300,19 @@ async function planRun(
       return s >= 0 ? s : Math.max(0, d);
     };
     const returnStaff = await claimDomain.readReturnLetterTrackStaffRows(db, pariwarId, claimCaseId, run.returnDecisionId);
+    // Story 6.37c (LD9) — a call recorded `reached` stops the asks ONLY for a person whose dead outcome is a CONCLUDED
+    // ladder's (`deadKind 'not_delivered'` — `-351` 5 A: "call or post"); a send-time dead number keeps its letter track.
+    const calls = await claimDomain.readClaimContactCalls(db, pariwarId, claimCaseId);
     for (const { personKey, track, lettersInReturn, firstDeliveredInReturnOn } of tracked) {
       const mine = returnStaff.filter((r) => r.subjectKey === personKey);
       const capped = claimDomain.isPersonAtLetterCap({ lettersInReturn });
-      if (track.foundDeadOn !== null && !capped) {
+      const reachedByCall =
+        track.deadKind === 'not_delivered' &&
+        claimDomain.reachedCallSince(
+          calls.filter((c) => c.personKey === personKey),
+          track.epochRows[0]?.createdAt ?? null,
+        ) !== null;
+      if (track.foundDeadOn !== null && !capped && !reachedByCall) {
         const foundDeadOn = track.foundDeadOn;
         const fd = claimDomain.calendarDaysBetween(foundDeadOn, today);
         if (familyCanBeReminded && !track.letterDelivered && !familyPaused && fd >= claimDomain.LETTER_CHASE_FIRST_OFFSET) {
@@ -1362,10 +1405,18 @@ async function planRun(
   }
 
   // ── One push per staff member with a recorded row TODAY on this claim (the push dedups on its own row) ───────
+  // ⭐ Story 6.37c (LD9 (i), (iii)) — a concluded ladder's ask (`ladder_escalation`) on this OPEN run is pushed here: today's,
+  // or one still un-pushed from an earlier day (⛔ `staff_push` for that recipient on the claim created after it).
   const { rows: todays } = await client.query<{ recipient_key: string }>(
-    `SELECT DISTINCT recipient_key FROM claim_correction_reminders
-      WHERE pariwar_id = $1 AND claim_case_id = $2 AND sent_on = $3 AND outcome = 'recorded'
-        AND purpose IN ('staff_reminder', 'letter_chase', 'letter_second_due', 'escalation')`,
+    `SELECT DISTINCT e.recipient_key FROM claim_correction_reminders e
+      WHERE e.pariwar_id = $1 AND e.claim_case_id = $2 AND e.outcome = 'recorded'
+        AND (
+          (e.sent_on = $3 AND e.purpose IN ('staff_reminder', 'letter_chase', 'letter_second_due', 'escalation', 'ladder_escalation'))
+          OR (e.purpose = 'ladder_escalation' AND e.sent_on < $3
+              AND NOT EXISTS (SELECT 1 FROM claim_correction_reminders p
+                               WHERE p.pariwar_id = e.pariwar_id AND p.claim_case_id = e.claim_case_id
+                                 AND p.recipient_key = e.recipient_key AND p.purpose = 'staff_push' AND p.created_at > e.created_at))
+        )`,
     [row.pariwar_id, row.claim_case_id, today],
   );
   const pushes = todays

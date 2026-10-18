@@ -96,6 +96,13 @@ export * from './certificate-reminder.js';
 export * from './certificate-reminder-record.js';
 export * from './certificate-letter.js';
 export * from './certificate-reminder-read.js';
+// Story 6.37c — the DELIVERY LADDER (a reminder REPORTED undelivered is followed up — the same reminder twice more, then a
+// call or a letter — `-350` / `-351`): its pure rules (the read-time B1 mapping, the start, the ends, the step gate,
+// the ask), its leaf reads (the chase readers and the closure gate read ladders through them — ⛔ a cycle), and its
+// record (the CAS moves, the ladder SMS's re-check under each chase's lock, the ask's writer). ⛔ Decides nothing.
+export * from './contact-ladder.js';
+export * from './contact-ladder-read.js';
+export * from './contact-ladder-record.js';
 export * from './admin-directory.js';
 // Story 6.20 (D7) — the genuine-mistake CORRECTION: raise, District Admin step, Pariwar Admin step (applies).
 export * from './nominee-correction-persist.js';

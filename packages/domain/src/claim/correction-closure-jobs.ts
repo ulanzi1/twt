@@ -99,13 +99,16 @@ export function latestCadenceDue(
   return addCalendarDays(anchor, firstOffset + every * Math.floor((d - firstOffset) / every));
 }
 
-interface AnchorRun {
+export interface AnchorRun {
   readonly runId: string;
   readonly slotDay: number;
 }
 
-/** The live return's LATEST run of any kind (open or ended) and its day number today — the pre-closure anchor. */
-async function latestRunOfReturn(
+/**
+ * The live return's LATEST run of any kind (open or ended) and its day number today — the pre-closure anchor.
+ * (Exported by Story 6.37c — a concluded delivery ladder's `ladder_escalation` keys on it, ended run or not — LD9.)
+ */
+export async function latestRunOfReturn(
   db: Db,
   pariwarId: PariwarId,
   returnDecisionId: string,

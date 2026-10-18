@@ -310,8 +310,9 @@ export const SMS_SILENCE_WINDOW = { olderThanHours: 48, newerThanDays: 7 } as co
 /**
  * DR12 — per send kind, the ACCEPTED SMS sends finalised between 7 days and 48 h before `now` that have ⛔ delivery
  * record AND ⛔ inbox row carrying their CRQID (a report that never matched still proves the webhook is alive).
- * `claim_correction_reminders` counts only its SMS purposes (`family_sms`, `closure_notice` — a `staff_push` holds an FCM
- * id and ⛔ CRQID); pings by `send_outcome` / `send_updated_at`. Reads ONLY (I2).
+ * `claim_correction_reminders` counts only its SMS purposes (`family_sms`, `closure_notice`, and — Story 6.37c — a
+ * delivery ladder's `ladder_sms`; a `staff_push` holds an FCM id and ⛔ CRQID), `claim_certificate_reminders` its
+ * `family_sms` and `ladder_sms`; pings by `send_outcome` / `send_updated_at`. Reads ONLY (I2).
  */
 export async function countSilentSmsSends(q: Queryable, opts: { readonly now: Date }): Promise<Record<SmsSendRowKind, number>> {
   // DELIBERATE — cross-tenant, as {@link lookupSendForCorrelation}: under an RLS-bound role every count is a silent 0 (DR12's
@@ -324,10 +325,10 @@ export async function countSilentSmsSends(q: Queryable, opts: { readonly now: Da
   const { rows } = await q.query<{ cr: string; ce: string; sn: string; pm: string }>(
     `SELECT
        (SELECT count(*) FROM claim_correction_reminders s
-         WHERE s.purpose IN ('family_sms', 'closure_notice') AND s.outcome = 'accepted' AND s.updated_at ${window}
+         WHERE s.purpose IN ('family_sms', 'closure_notice', 'ladder_sms') AND s.outcome = 'accepted' AND s.updated_at ${window}
            AND ${silent('cr', 'reminder_id')}) AS cr,
        (SELECT count(*) FROM claim_certificate_reminders s
-         WHERE s.purpose = 'family_sms' AND s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('ce', 'reminder_id')}) AS ce,
+         WHERE s.purpose IN ('family_sms', 'ladder_sms') AND s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('ce', 'reminder_id')}) AS ce,
        (SELECT count(*) FROM claim_suspicion_notices s
          WHERE s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('sn', 'notice_id')}) AS sn,
        (SELECT count(*) FROM claim_peer_mesh_pings s

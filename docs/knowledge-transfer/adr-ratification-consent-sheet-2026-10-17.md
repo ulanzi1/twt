@@ -137,7 +137,7 @@ counted per caller-supplied address; a report that never comes leaves a text cou
 | This sheet | Filed alongside the prior sheets |
 
 **Nothing else.** No code, no migration, no story status. Ratifying ADR-0042 does **not** approve the architecture §3.4 amendment for
-WhatsApp contact about a claim — that is its own item in the same pack.
+WhatsApp contact about a claim — that is its own item in the same pack (now for the claimant only — Decision `2026-10-18-356`).
 
 **Quorum:** ≥2 trustees. **Prepared:** 2026-10-17, BigDev (Solo Builder).
 

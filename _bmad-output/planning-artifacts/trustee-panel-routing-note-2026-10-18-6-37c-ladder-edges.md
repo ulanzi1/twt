@@ -110,8 +110,8 @@ closure still waits for it (the option you chose said *"at most about a week pas
 
 These follow from how we build your rulings. None is a question; if you see one differently, tell us and it becomes one.
 
-- **WhatsApp is not sent yet.** The WhatsApp step needs the new filing agreement and, for a nominee, the architecture change in the same
-  pack; it is a separate piece of work (row 6-37d). Until then the follow-up goes straight to the second text. Cost: nothing is sent
+- **WhatsApp is not sent yet.** The WhatsApp step is for the claimant only (you ruled on 2026-10-18 that no WhatsApp goes to a nominee)
+  and needs the claimant's new filing agreement; it is a separate piece of work (row 6-37d). Until then the follow-up goes straight to the second text. Cost: nothing is sent
   between hour 4 and day 2.
 - **The days.** The follow-up texts go at 10:00 on day 2 and day 4 after the failed reminder, and the follow-up ends four days later
   (about eight days in all). A report that arrives late moves the whole follow-up later — and the hold on closing the claim with it, which

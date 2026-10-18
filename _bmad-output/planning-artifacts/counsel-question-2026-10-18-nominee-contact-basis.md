@@ -28,6 +28,9 @@ call and post, and on the nominees, verbatim:
 > estate settlement, banking claim), processing the nominee's personal data (phone number/email) to reach out is permissible if it is
 > necessary to enforce legal rights, prevent fraud, or fulfill contractual/regulatory obligations."*
 
+On 2026-10-18 the Panel narrowed that for WhatsApp: *"drop WhatsApp only notification for nominee"* — no WhatsApp goes to a nominee
+(Decision `2026-10-18-356`; the Trust records that in future a nominee who has opted to receive it, or who is also the claimant, may). Calls, texts and letters to a nominee still rest on the basis quoted above.
+
 Our own understanding — **not legal advice** — is that the DPDP Act 2023 has no general "legitimate interest" ground; Section 7 lists
 specific legitimate uses, and processing *"necessary for enforcing any legal right or claim"* sits in Section 17(1)(a).
 
@@ -37,12 +40,13 @@ specific legitimate uses, and processing *"necessary for enforcing any legal rig
    basis — if any — may the Trust send a nominee the claim's text-message reminders, posted letters and closure notice? If a basis exists,
    what (if anything) must the Trust record, tell the nominee, or change? (And today, with the agreement as built: may the claimant agree
    on the nominees' behalf to their being contacted by text and post?)
-2. **A phone call, and WhatsApp, to a nominee.** On what basis may the District Admin phone a nominee about the claim (for example when
-   texts are reported as not delivered), and may the Trust send a nominee a WhatsApp message about the claim? Your written confirmation
-   is condition G1: until it is recorded, no call or WhatsApp reaches a nominee (`2026-10-18-354` decision 5).
+2. **A phone call to a nominee.** On what basis may the District Admin phone a nominee about the claim (for example when texts are
+   reported as not delivered)? Your written confirmation is condition G1: until it is recorded, no call reaches a nominee
+   (`2026-10-18-354` decision 5). (The Panel has since ruled — `2026-10-18-356` — that no WhatsApp goes to a nominee, so WhatsApp to a
+   nominee is not asked.)
 3. **The claimant.** Is the claimant's own reworded agreement a sufficient basis for texts, WhatsApp, calls and post to the claimant, and
-   may the phrase *"or any other means of communication that may appear in future"* stay in it? (Our planning document currently treats the
-   claimant as covered by the reworded agreement; your answer would override that.)
+   may the phrase *"or any other means of communication that may appear in future"* stay in it? (The Trust currently reads the reworded
+   agreement as covering the claimant — Decision `2026-10-18-354` decision 2; your answer would override that.)
 4. **A condition of approval.** May the agreement be a condition of the claim's approval — a claim waits until it is given, so a
    claimant who declines leaves the claim unapprovable?
 5. **Withdrawal.** Must the agreement be withdrawable? In this first version it cannot be withdrawn.

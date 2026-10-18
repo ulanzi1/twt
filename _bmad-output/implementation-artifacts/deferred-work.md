@@ -8,7 +8,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 - ⭐ **For row 6-37c (carrier, `-354` decisions 4–5): owed before the ladder or any nominee contact goes live** — (a) roster Row 32 (h)
   closed (alarms reach a named person — the cost the Panel accepted at `-351` 1 A); (b) the Panel TOLD at its next sitting that alarms
-  reach logs only until then (⛔ told yet, 2026-10-18); (c) a WhatsApp to a nominee waits for G1 AND G2, a call to a nominee for G1;
+  reach logs only until then (⛔ told yet, 2026-10-18); (c) a WhatsApp to a nominee waits for G1 AND G2 (⚠ superseded 2026-10-18 by [Decision 2026-10-18-356](../../.decision-log.md#decision-2026-10-18-356): ⛔ WhatsApp to a nominee — no case left), a call to a nominee for G1;
   (d) the basis for the texts and letters nominees receive today, once the claimant's new agreement no longer names nominees (`-352`'s
   reading), put to counsel with 6-37c's Task 0. **Not addressed.**
 

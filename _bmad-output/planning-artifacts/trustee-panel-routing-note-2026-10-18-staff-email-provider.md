@@ -7,14 +7,16 @@
 > choice, not an engineering one.
 > **What is ours, and not asked:** how the email is built and sent (plain text, no tracking, one email per admin per refusal), and the
 > technical set-up of either account.
-> Routed by BigDev (2026-10-18), owed from the 2026-10-18 sitting. **Not yet sent.**
+> Routed by BigDev (2026-10-18), owed from the 2026-10-18 sitting. Sent and answered 2026-10-18.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## PANEL RULING — 2026-10-18 (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev) — Decision `2026-10-18-361`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, the answer is transcribed into this block **and** into `.decision-log.md` as a
-> new Trustee-ratified decision. Everything below is then kept **unedited** as the question **as it was put**.
+> *"email provider / We start with Zoho, until AWS SES approves us."*
+>
+> Neither A nor B alone: **B first, then A** — Zoho ZeptoMail from go-live, AWS SES once Amazon approves the Trust for sending.
+> Everything below is kept **unedited**, as the question was put.
 
 ---
 

@@ -83,6 +83,8 @@ Load-bearing details:
   enabled in production** (the Panel's choice; ⭐ recommended: SES, the documented India region); the other stays built and unset.
   ⚠ *2026-10-18: ratified (`-358`) WITHOUT a provider choice — it was not asked; ⛔ provider is enabled in production until the Panel's
   choice is recorded (roster Row 24 (a); deferred-work).*
+  ⚠ *2026-10-18 (later): the Panel chose — Decision `2026-10-18-361`: "We start with Zoho, until AWS SES approves us." Production starts
+  on ZeptoMail and moves to SES once Amazon grants production access (the switch recorded on roster Row 24).*
 - **Plain text only, UTF-8, tracking OFF.** ⛔ HTML (⛔ tracking pixel, ⛔ link rewriting). SES: ⛔ configuration set unless one is
   configured, ⛔ OPEN/CLICK event destination on it or on any default configuration set of the sender identity, and VDM engagement metrics OFF at the set and the account (the per-message
   `ConfigurationOverrides.Tracking` override is ⛔ used — it needs IAM `ses:ApplyTrackingConfigurationOverrides`, else the send fails).
@@ -155,3 +157,4 @@ Load-bearing details:
 | 2026-10-09 | (initial draft) | BigDev (Solo Builder) | Authored under Story 6.25 (Decision `2026-10-09-299`). |
 | 2026-10-09 | (draft — amended) | BigDev (Solo Builder) | Story 6.25 code review rounds 3–4 (`8301f63d`): Fail-closed config — stalled in-flight rows parked, ⛔ given up (Decision `2026-10-09-300`). |
 | 2026-10-18 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-10-18 Trustee Panel session (Panel pack item 2; consent sheet `adr-ratification-consent-sheet-2026-10-17.md`, revised before presentation); logged in Decision `2026-10-18-358`. No amendments, no conditions. ⚠ Not covered: the production provider (SES or ZeptoMail) — the sheet did not ask; ⛔ provider is enabled in production until the Panel's choice is recorded (roster Row 24 (a)). The ADR-0009 §5 amendment above is now in effect. |
+| 2026-10-18 | (ratified — provider recorded) | Dhiraj Rahul + Kalpana Bharti | The production provider chosen — Decision `2026-10-18-361`: ZeptoMail first, then SES once AWS grants production access. No decision text edited. |

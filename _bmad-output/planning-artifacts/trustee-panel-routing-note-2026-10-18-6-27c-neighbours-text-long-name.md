@@ -7,7 +7,7 @@
 > shorter name, is what the Trust discloses about a member and to whom — so it is yours.
 > **What is ours, and not asked:** how the length is counted (the SMS operators' rule — on the go-live list, roster Row 30 (d)) and how a
 > fallback is built (one function, shared with the suspicion texts).
-> Routed by BigDev (2026-10-18), owed by `2026-10-18-359`. **Not yet sent.**
+> Routed by BigDev (2026-10-18), owed by `2026-10-18-359`. **Sent 2026-10-18** — the Panel asked a question back (below).
 
 ---
 
@@ -15,6 +15,19 @@
 >
 > ⛔ **Nothing is recorded here yet.** When the Panel rules, the answer is transcribed into this block **and** into `.decision-log.md` as a
 > new Trustee-ratified decision. Everything below is then kept **unedited** as the question **as it was put**.
+
+> ### The Panel's question (2026-10-18), and our answer
+>
+> *"for long name, what's the present text length for name ?"*
+>
+> **40 characters**, counting every letter, space and mark. In Hindi each vowel sign (ा ि ी ु ू े ै ो ौ) and the joining mark (्) counts
+> as its own character, so a Hindi name counts longer than it looks. Examples, in the Pariwar's chosen form (usually the full name):
+> *"Ramesh Kumar Sharma"* = 19 (fits); *"रमेश कुमार शर्मा"* = 16 (fits); *"श्री राजेन्द्र प्रसाद श्रीवास्तव"* = 32 (fits);
+> *"सत्यनारायण मूर्ति सुब्रह्मण्यम चतुर्वेदी"* = 40 (just fits); *"Venkata Satya Narayana Murthy Subrahmanyam"* = 42 (does ⛔ fit — today
+> no neighbour is texted). The same 40 applies to the three suspicion texts. 40 is the limit our system applies for a name-type value in
+> a registered SMS template; whether the SMS operators count Hindi marks the same strict way is still to be confirmed in writing (roster
+> Row 30 (d)) — if they count more loosely, fewer names are affected.
+> (`apps/jobs/src/scheduler/peer-mesh-sms-templates.ts` `fitsDltAlphanumeric` — code points ≤ `DLT_TYPE_MAX_LENGTH.alphanumeric` = 40.)
 
 ---
 

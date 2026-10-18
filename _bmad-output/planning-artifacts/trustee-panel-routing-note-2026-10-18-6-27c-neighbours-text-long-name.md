@@ -11,10 +11,11 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## PANEL RULING — 2026-10-18 (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev) — Decision `2026-10-18-362`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, the answer is transcribed into this block **and** into `.decision-log.md` as a
-> new Trustee-ratified decision. Everything below is then kept **unedited** as the question **as it was put**.
+> *"for name go with option B."* — **send it with the shorter form of the name (first name + surname initial), only when the full name
+> does not fit.** Built with the suspicion texts in row `6-37e-suspicion-text-short-name-fallback`. Everything below (incl. the Panel's
+> question and our answer, given before the ruling) is kept **unedited**, as the question was put.
 
 > ### The Panel's question (2026-10-18), and our answer
 >

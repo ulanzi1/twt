@@ -930,3 +930,4 @@ Claude Opus 5.5 (1M context) — `bmad-dev-story`, 2026-10-16/17, in worktree `.
 | 2026-10-10 | 2.6 | `-306`: predecessor row 6-36 added. |
 | 2026-10-10 | 2.1–2.5 | Validate rounds 2–6: the migration + builder moved here; the ONE window predicate; the `'pending'`-question hold in sweep AND child; the `?c=` split; `locale_source`. |
 | 2026-10-10 | 1.0 | Cut from Story 6.27 v2.0 (`-305` §2 items 1, 2, 4). |
+| 2026-10-18 | annotation | Annotation only: the Panel ruled option B for an over-long member name in the neighbours' text (`2026-10-18-362`) — first name + surname initial when the full name does not fit, superseding `-311` PM3's `no_target:name_too_long` reading; built in row `6-37e-suspicion-text-short-name-fallback`. This story's code is unchanged until then. |

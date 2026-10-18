@@ -12,7 +12,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   cannot fit (`no_target:name_too_long` — `-311` PM3, our reading). ⭐ Trigger: write that routing note before row 6-37e is built (the
   fallback function can serve both). **Not addressed** — the note is WRITTEN (2026-10-18,
   `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-18-6-27c-neighbours-text-long-name.md`), ⛔ sent. ⚠ 2026-10-18:
-  SENT; the Panel asked a question back (the present name length) — answered in the note; ⛔ ruled yet.
+  SENT; the Panel asked a question back (the present name length) — answered in the note; ⛔ ruled yet. ✅ **Closed by
+  [Decision 2026-10-18-362](../../.decision-log.md#decision-2026-10-18-362)** (option B — built in row `6-37e`).
 - **ADR-0040's production email provider — the Panel's choice, not asked** — ADR-0040 ratified ([Decision
   2026-10-18-358](../../.decision-log.md#decision-2026-10-18-358)) but *"this ADR, when ratified, records which provider is enabled in
   production (the Panel's choice; recommended: SES)"* — the consent sheet asked Ratify / Defer / Reject only. ⭐ Trigger: before roster

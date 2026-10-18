@@ -1,3 +1,7 @@
+# last_updated: 2026-10-18h (TRUSTEE RULING — Decision `2026-10-18-362` (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev, committed alone
+# `2dfb7669`): *"for name go with option B."* — the neighbours' text sends the shorter name form only when the full name does not fit
+# (supersedes `-311` PM3's no-text reading). Row `6-37e-suspicion-text-short-name-fallback` now covers the four texts; deferred-work's
+# neighbours'-text item Closed by -362; the routing note's ruling block; Story 6.27c annotated.)
 # last_updated: 2026-10-18g (TRUSTEE RULING — Decision `2026-10-18-361` (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev, committed alone
 # `ac93875c`): *"We start with Zoho, until AWS SES approves us."* — staff email goes live on Zoho ZeptoMail and moves to AWS SES once Amazon
 # grants production access; roster Row 24 (a) MET; ADR-0040 notes the provider; deferred-work's provider item Closed by -361. The
@@ -20104,6 +20108,7 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-18 (-362 Trustee-ratified: neighbours' text short-name fallback (B) — row 6-37e covers four texts.)
   2026-10-18 (-361 Trustee-ratified: staff email on Zoho first, AWS SES once approved; neighbours' long-name note sent, question answered.)
   2026-10-18 (Panel sitting: -357 §3.4 claimant exception approved; -358 ADR-0040/41/42 ratified; -359 B → new row 6-37e; -360 PQ1–PQ3 A.)
   2026-10-18 (-356 Trustee-ratified: no WhatsApp to a nominee; the §3.4 amendment narrowed to the claimant; 6-37d claimant-only.)
@@ -20631,6 +20636,9 @@ development_status:
   # (the nominee text FQ7, the refused person's appeal text `-293` item 1, the closure text `-291` Q2), send it with first name + surname
   # initial; a name that still does not fit keeps today's refusal + alarm. One function and its tests. ⛔ Story file yet. The neighbours'
   # text (6.27c) gets the same only if the Panel rules it — that question is OWED (deferred-work). Not a merge fence.
+  # ⭐ 2026-10-18 (`-362`, Trustee-ratified option B): the NEIGHBOURS' text (Story 6.27c, `peer_mesh_sms.request`) joins this row — the same
+  # fallback (first name + surname initial, only when the full name does not fit); today's claim-wide `no_target:name_too_long` stays only for
+  # a name that still does not fit. ONE function for the four texts.
   6-37e-suspicion-text-short-name-fallback: backlog
   epic-6-retrospective: done
 

@@ -1,34 +1,40 @@
 ---
-baseline_commit: f8102c02
+baseline_commit: c19e6534
 ---
 
 <!--
-PINNED: `f8102c02` (2026-10-17 — branch `story/6-37c-undelivered-reminder-ladder`, on `story/6-37b-msg91-delivery-reports` @ `c46402cd`;
-`main` == `origin/main` == `dae96d9b`). `git diff --stat dae96d9b f8102c02 -- apps packages` is EMPTY ⇒ every plain `apps/` / `packages/`
-cite is true of `main`. ⭐ Story 6.37b's code is COMMITTED as `f7e695b7` on `story/6-37b-msg91-delivery-reports` (2026-10-18 00:08 +0530)
-but is ⛔ yet on THIS branch — cites marked **(6.37b)** are at `f7e695b7`. ⚠ Once this branch carries `f7e695b7` (Task 0.1), every plain
-cite into `apps/jobs/src/scheduler/claim-correction-reminders.ts` past line 65 shifts (+1 … +8 to line 438, +9 from 439 — 6.37b's
-hunks sit at 65, 220, 230, 242, 433) and into `apps/jobs/src/scheduler/claim-certificate-reminders.ts` at line ≥ 662 by **+1** —
-re-locate by FUNCTION, ⛔ by number ([[feedback_story_validate_footguns]] #19, #21, #24). Built in its OWN worktree
+PINNED: `c19e6534` (2026-10-18 — branch `story/6-37c-undelivered-reminder-ladder` REBASED onto `main` @ `ed862339`, which carries ALL of
+Story 6.37b: dev `f7e695b7`, review rounds `b5044a2d` / `ac123e19`, Decision `2026-10-18-354` `a81cdbf7`, its records `ed862339`; 6.37b is
+`done`). Two facts, stated separately: (1) the pin is an ancestor of this branch (durable); (2) every `apps/` / `packages/` / `scripts/`
+cite in this file was RE-DERIVED at `c19e6534`, whose code tree equals `ed862339`'s (perishable — re-check at Task 0.1:
+`git diff --name-only c19e6534..HEAD -- apps packages scripts`). The v1.0 / v1.1 pin `f8102c02` is ⛔ an ancestor any more (its rebased twin
+is `1534293b`; the trees differ — the base moved). Every cite into 6.37b's files (`sms-delivery/*`, `sms-delivery-correlator.ts`, `claim-dlt-sms-send.ts`, 0167 / 0168) is its FINAL code
+(after both review rounds), ⛔ `f7e695b7`.
+Re-locate by FUNCTION, ⛔ by number ([[feedback_story_validate_footguns]] #19, #21, #24). Built in its OWN worktree
 `.claude/worktrees/6-37c` ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]]).
 
-STATUS: `ready-for-dev` — buildable after Task 0 (LD1–LD14 answered by BigDev and committed; PQ1–PQ3 put through the §0 gate and, if
-they pass it, routed) and after this branch carries `f7e695b7`.
+STATUS: `ready-for-dev` — buildable after Task 0 (LD1–LD17 answered by BigDev and committed; PQ1–PQ3 put through the §0 gate and, if
+they pass it, routed). GO-LIVE (⛔ merge or `done` fences — [[project_not_in_production_merge_is_not_golive]]): roster Row 32 (h) closed is a
+go-live condition of this row's ladder (`-354` decision 4 (b)); a call to a nominee waits for G1 (`-354` decision 5).
 
 §0 GATE (the routing template's, applied FIRST — `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`): the
 behaviour is the Panel's and is ALREADY RULED (`-350`, `-351`, `-352`); each LD below is the AUTHOR's because it decides how that ruling
 is timed, stored, shown to staff or split into rows — the follow-up note's own §0 put *"how the ladder is timed and stored in the
 system"* on our side and the Panel ruled on that note. ⚠ FOUR LDs have a person-facing half and are FLAGGED for BigDev's own §0 check at
 Task 0.2: LD4 (one message a day — fewer texts), LD5's no-restart rule (fewer texts), LD9 (a reached call stops the staff asks — ladder
-persons only) and LD11 (calls to a nominee before counsel — narrows `-352` Q2). ⭐ THREE questions look like the PANEL's (PQ1–PQ3) —
-two Trustee-ratified rulings meet at an edge the notes never put ([[feedback_panel_gate_read_ratified_verbatim]]).
+persons only) and LD17 (letter-eligibility after a later delivered reminder — 6.37b's AC11 annotation). LD11 is ⛔ on that list any more:
+the nominee gates are DECIDED by `-354` decision 5 (author-commit; its §0: *"stricter, never looser"*) — LD11 now picks only the
+MECHANISM. ⭐ THREE questions look like the PANEL's (PQ1–PQ3) — two Trustee-ratified rulings meet at an edge the notes never put
+([[feedback_panel_gate_read_ratified_verbatim]]). ⭐ ONE question goes to COUNSEL with Task 0 (`-354` decision 5 — LD16).
 
 GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `⚠` a hazard. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md` or `sprint-status.yaml` (newest-first files — footgun #19) — cite the decision id, the item's phrase, or the row key.
 
-LETTERS: F = found facts (F1–F21); LD = build decisions (LD1–LD14 — PROPOSED, ⏳ BigDev at Task 0.2); PQ = candidate Panel questions
-(PQ1–PQ3); I = invariants (I1–I9); T = traps (T1–T22). Decision-entry letters stay the entry's own (`-351` rulings 1–6, `-252`
-cl.1–cl.3, `-250` #1–#6, `-347` DR1–DR14); G1–G3 are the §3.4 proposal's go-live conditions.
+LETTERS: F = found facts (F1–F21); LD = build decisions (LD1–LD17 — PROPOSED, ⏳ BigDev at Task 0.2); PQ = candidate Panel questions
+(PQ1–PQ3); I = invariants (I1–I9); T = traps (T1–T24). Decision-entry letters stay the entry's own (`-351` rulings 1–6, `-252`
+cl.1–cl.3, `-250` #1–#6, `-347` DR1–DR14, `-354` decisions 1–5); G1–G3 are the §3.4 proposal's go-live conditions. This story's OWN
+decision entry is called **"the 6.37c entry"** below — its id is the next free one at Task 0.3 (`-355` at this pin; ⛔ written as a number
+anywhere but here and F18, so it cannot go stale twice).
 -->
 
 # Story 6.37c: A reminder the network reports undelivered is followed up — the same reminder twice more over four days, then a call or a letter — and only then stops counting as reaching the family; a claim is never closed for silence while that follow-up runs `[PRIMITIVE]`
@@ -54,19 +60,24 @@ Status: ready-for-dev
 > reminder, sent again); ⛔ no claim-text template id is provisioned by this story (roster Row 32 note (9)).
 
 > **What already ships and this story READS — rebuild ⛔ none of it:**
-> - **6.37b (`f7e695b7`):** `sms_send_deliveries` (`0167_sms-delivery-reports.sql:78-106` — PK (`send_kind`, `send_row_id`), `send_kind
->   IN ('cr','ce','sn','pm')`, `delivery_state IN ('delivered','undelivered')`, `first_reported_at`, `reported_at`, `report_count`, tenant
->   RLS, ⛔ DELETE, indexes: the PK and `pariwar_id` only); `readSmsSendDeliveries(db, kind, rowIds)` (`packages/domain/src/sms-delivery/reports.ts:254-260`
->   — ⛔ production caller; RLS-scoped, unordered); the correlator `apps/jobs/src/sms-delivery-correlator.ts` (writes `sms_send_deliveries`
->   ONLY for a finished `accepted` row whose `provider_message_id` = the report's request id — `decideSmsReport` `:96-167`; for `cr` ONLY it
->   checks `CORRECTION_SMS_PURPOSES = {'family_sms','closure_notice'}` `:61-62`, `:121`; the `ce` lookup returns `NULL::text AS purpose`,
->   `reports.ts:190`); the silence check `countSilentSmsSends` (`reports.ts:273`; its `cr` filter `s.purpose IN ('family_sms','closure_notice')`
->   `:282`; ⛔ purpose filter on `ce`); the CRQID on every send (`claim-dlt-sms-send.ts:144` required `correlation`; the wrapper
->   `sendClaimCorrectionSms` derives `ce` for `certificate_reminder`, else `cr` — `claim-correction-reminders.ts:238-252`).
-> - **The correction chase** (6.19b / 6.19c): persons `readCorrectionRecipients` (`packages/domain/src/claim/correction-chase.ts:601-656`;
+> - **6.37b (final code, `done`):** `sms_send_deliveries` (`0167_sms-delivery-reports.sql:78-106` — PK (`send_kind`, `send_row_id`),
+>   `send_kind IN ('cr','ce','sn','pm')`, `delivery_state IN ('delivered','undelivered')`, `first_reported_at`, `reported_at`,
+>   `report_count`, tenant RLS, ⛔ DELETE, indexes: the PK and `pariwar_id` only; ⛔ pruned — the 30-day prune deletes INBOX rows only,
+>   `pruneSettledSmsDeliveryReports`; `0168_sms-delivery-report-backstops.sql` adds only CHECKs); `readSmsSendDeliveries(db, kind, rowIds)`
+>   (`packages/domain/src/sms-delivery/reports.ts:296-303` — ⛔ production caller; RLS-scoped, unordered; an unbounded id list, a non-uuid
+>   id raises `22P02` — deferred to THIS row's first call, T23); the correlator `apps/jobs/src/sms-delivery-correlator.ts` (writes
+>   `sms_send_deliveries` ONLY for a finished `accepted` row whose `provider_message_id` = the report's request id — `decideSmsReport`
+>   `:95-178`; row 4 `:123-128` checks the purpose on BOTH send tables: `CORRECTION_SMS_PURPOSES = {'family_sms','closure_notice'}` `:63`,
+>   `CERTIFICATE_SMS_PURPOSES = {'family_sms'}` `:65` — anything else settles `unmatched:not_sms`; the `ce` lookup reads the row's real
+>   `purpose`, `reports.ts:212`; it refuses to run unless `canReadAcrossPariwars` `:259-262`, `reports.ts:242`); the silence check
+>   `countSilentSmsSends` (`reports.ts:316`; `cr` `s.purpose IN ('family_sms','closure_notice')` `:327`; `ce` `s.purpose = 'family_sms'`
+>   `:330`); the CRQID on every send (`apps/jobs/src/scheduler/claim-dlt-sms-send.ts:144` required `correlation` — kind + row id only;
+>   the wrapper `sendClaimCorrectionSms` `claim-correction-reminders.ts:238-264` maps `reminder` / `closure_notice` ⇒ `cr`,
+>   `certificate_reminder` ⇒ `ce` through the exhaustive `CLAIM_CORRECTION_SMS_KIND` `:214-222`).
+> - **The correction chase** (6.19b / 6.19c): persons `readCorrectionRecipients` (`packages/domain/src/claim/correction-chase.ts:601-654`;
 >   the `CorrectionPerson` shape `:564-576`); rows `readReturnFamilyRows` (`correction-reminder-record.ts:604-641`, `purpose='family_sms'`
 >   `:634`, ⛔ `reminder_id` selected) → `readReturnPersonStates` (`:816-858`) → the shared pure `evaluatePersonRunState`
->   (`correction-chase.ts:737-772`; `DEAD_OUTCOMES` `:698-702`; `foundDeadOn = dead?.sentOn` `:765` — the FIRST dead row of the
+>   (`correction-chase.ts:737-772`; `DEAD_OUTCOMES` `:698-702`; `const dead = epoch.find(…)` `:758`, `foundDeadOn = dead?.sentOn` `:765` — the FIRST dead row of the
 >   current-number epoch, sticky); D22 `evaluateClosurePersonReach` (`correction-closure.ts:365-392`), `readClosureReach` (`:399-421`, calls
 >   `readReturnFamilyRows` DIRECTLY `:409`), `assertClosureGround` (`:457-482`, four callers); letters `correction-letter.ts`; the staff view
 >   `correction-chase-read.ts`; the daily 10:00 sweep `apps/jobs/src/scheduler/claim-correction-reminders.ts`.
@@ -89,17 +100,18 @@ unreached because one phone was switched off**.
 |---|---|---|
 | **`2026-10-17-350`** | ruling 1 *"A reminder the system has concluded was never delivered no longer counts as reaching the person, and the person is offered the letter route — as when the network refuses a number at the moment of sending."* ruling 2 *"(1) sent the message over WhatsApp, when the SMS has not been delivered 4 hours after it was sent; (2) sent the SMS once more, when the message is still not delivered by either channel after 48 hours; (3) sent one more SMS 48 hours after the second, and waited 96 hours. If it has still failed, the reminder is escalated for a call or a letter."* ⚠ Its *"Our reading of the ladder's timing — NOT RATIFIED"* (hours 0 / 4 / 48 / 96 / 192). Consequence 3: *"up to two extra SMS per undelivered reminder"*. | ⭐⭐ **TRUSTEE-RATIFIED** (Dhiraj Rahul + Kalpana Bharti) |
 | **`2026-10-17-351`** | 1 A *"ONLY A TEXT REPORTED AS FAILED STARTS THE LADDER. A text with no report keeps counting as reaching the person … a text lost without any report is caught by the silence alarm, not followed up with the family."* 3 B *"THE LADDER APPLIES TO THE CORRECTION REMINDERS AND THE CERTIFICATE REMINDERS … The certificate chase's own letter rule takes the same B1 change."* 4 A *"ONE LADDER PER PERSON AT A TIME, started by the first reminder that is not delivered; any message to that person that IS delivered — a later reminder or a ladder step, on either channel — ends it, and the person counts as reached."* 5 A *"THE DISTRICT ADMIN IS ASKED TO CALL OR POST THE LETTER; A CALL THAT REACHES THE FAMILY IS RECORDED (DATE, WHO ANSWERED) AND COUNTS AS REACHING THEM."* 6 A *"CLOSURE WAITS: a claim cannot be closed for silence while a ladder for any of its people is still running."* (option A as put: *"(at most about a week past day 90)"*). ⚠ Its NOT-RATIFIED readings: the call is recorded by hand (date, who answered, outcome); the certificate ladder uses the same timings; *"no WhatsApp message is sent … the ladder goes on to the second SMS at 48 hours … The call half of the escalation is not held"*. Consequence 2: *"with the WhatsApp step built but off until (a)–(c) are settled"*. Consequence 4: phase 2 (call tracking / recording / transcription) has ⛔ row. | ⭐⭐ **TRUSTEE-RATIFIED** |
-| **`2026-10-17-352`** | Q1 B — *"The claimant's filing agreement names text message, WhatsApp, phone call and post, and adds "or any other means of communication that may appear in future"."* Q2 — *"WhatsApp and calls go to the claimant and nominee both but The claimant's agreement doesn't cover the nominees. Instead it's permissible under DPDPA."* NOT covered (for counsel): (a) the legal basis as quoted; (b) Meta's opt-in rule; (c) architecture §3.4. Consequence 3: *"A go-live condition is proposed (BigDev's decision, recorded separately): WhatsApp and calls to a nominee do not go live until counsel confirms the legal basis in writing (a) and the Meta policy check (b) is recorded"* — ⚠ ⛔ recorded separately yet (LD11). | ⭐⭐ **TRUSTEE-RATIFIED** |
-| **`2026-10-17-353`** | decision 1: row 6-37c builds the conclusion, the ladder, the call / letter escalation with a call that counts, closure waiting, *"the new wording of the claimant's filing agreement (`-352` Q1); and WhatsApp and calls to the claimant and the nominee … the nominee's WhatsApp step only once the architecture §3.4 amendment is ratified"*; *"its `epics.md` entry is owed at its create-story"*. decision 2: 6.37b's Task 7 and AC11 *"move to 6-37c unchanged, as that row's starting point"*. decision 3: no claim-text template id until Row 33 has closed AND 6-37c is `done`. Consequence 2: the deferred-work dispositions against *"Task 7"* are made by 6-37c when it closes. | author-commit — THIS ROW's charter |
-| `2026-10-17-347` | DR4 (`1` ⇒ delivered; `2/9/16/17/20/25` ⇒ undelivered); DR6 (`undelivered` absorbing; the counting contract); DR12 (silence alarm); DR13 (*"The correction chase screen changes only through Task 7"*). | author-commit |
+| **`2026-10-17-352`** | Q1 B — *"The claimant's filing agreement names text message, WhatsApp, phone call and post, and adds "or any other means of communication that may appear in future"."* Q2 — *"WhatsApp and calls go to the claimant and nominee both but The claimant's agreement doesn't cover the nominees. Instead it's permissible under DPDPA."* NOT covered (for counsel): (a) the legal basis as quoted; (b) Meta's opt-in rule; (c) architecture §3.4. Consequence 3: *"A go-live condition is proposed (BigDev's decision, recorded separately): WhatsApp and calls to a nominee do not go live until counsel confirms the legal basis in writing (a) and the Meta policy check (b) is recorded"* — RECORDED by `-354` decision 5 (calls narrowed to G1 alone). | ⭐⭐ **TRUSTEE-RATIFIED** |
+| **`2026-10-17-353`** | decision 1: row 6-37c builds the conclusion, the ladder, the call / letter escalation with a call that counts, closure waiting, *"the new wording of the claimant's filing agreement (`-352` Q1); and WhatsApp and calls to the claimant and the nominee (`-352` Q2) — the nominee's WhatsApp step only once the architecture §3.4 amendment is ratified and its go-live conditions are met"* (the go-live conditions are now `-354` decision 5's); *"its `epics.md` entry is owed at its create-story"*. decision 2: 6.37b's Task 7 and AC11 *"move to 6-37c unchanged, as that row's starting point"*. decision 3: no claim-text template id until Row 33 has closed AND 6-37c is `done`. Consequence 2: the deferred-work dispositions against *"Task 7"* are made by 6-37c when it closes. | author-commit — THIS ROW's charter |
+| `2026-10-17-347` | DR4 (`1` ⇒ delivered; `2/9/16/17/20/25` ⇒ undelivered); DR6 (`undelivered` absorbing; the counting contract); DR12 (silence alarm); DR13 (*"The correction chase screen changes only through Task 7"*). DR1 / DR2 / DR5-G / DR6 as NARROWED by `-354` decision 1. | author-commit |
+| **`2026-10-18-354`** | (6.37b's review round 2.) decision 1 narrows `-347` (i) `first_reported_at` in G-a's UPDATE grant; (ii) the inbox INSERT limited to the six projection columns; (iii) a printable-ASCII token; (iv) a timestamp-shaped delivery time, the wider mask; (v) *"A report whose processing fails every time is settled `unmatched:row_failed` once it has had 5 attempts AND is 72 hours past receipt"*. decision 4 *"every alarm reaches the LOGS only until roster Row 32 (h) wires `onAlarm` to a named person … (b) Row 32 (h) closed is a go-live condition of row `6-37c-undelivered-reminder-ladder`'s ladder … (c) the Panel is told at its next sitting — ⛔ told yet (owed, recorded here)."* decision 5 *"**a WhatsApp message to a nominee** waits for G1 … AND G2 …; **a call to a nominee** waits for G1 … The basis for the texts and letters nominees receive TODAY, once the claimant's new agreement no longer names nominees (`-352`'s reading), is put to counsel with row 6-37c's Task 0 — ⛔ changed until then."* Consequence 2: *"Row 6-37c carries decision 4 (b), decision 5 and the nominee text / letter basis question; its create-story … planned decision id `-354` — it takes the next free id."* | author-commit — binds THIS row |
 | **`2026-09-27-252`** | cl.1 *"A closure may be **requested** only when, for **each** person who must be reached, ≥ 1 reminder was **accepted** by the network (or shown **delivered**, where a report exists) — **or** a posted letter has a **recorded delivery date**."* cl.2 *"A FAMILY NO CHANNEL CAN REACH IS OFFERED THE LETTER ROUTE — as for an invalid number."* | ⭐⭐ **TRUSTEE-RATIFIED** (as narrowed by `-350`) |
 | **`2026-09-27-250`** | #2 the letter chase *"counts from the day the phone was found dead"*; #4 *"A letter can **still be recorded** after day 90, with **no more reminders**."*; #5 *"… weekly on days 42, 49, 56, 63, 70, 77, 84; **stop at day 90**. One message a day, at **10:00 in the morning**."* (*"⇒ the 10:00 hour is now the Panel's"*). | ⭐⭐ **TRUSTEE-RATIFIED** |
 | **`2026-09-27-259`** | the certificate reminders follow the correction schedule to day 90, then monthly — *"AND THE REMINDERS STOP AFTER"* 180 days (`-260` G6: days 120 / 150 / 180). | ⭐⭐ **TRUSTEE-RATIFIED** |
 | **`2026-10-03-275`** | Q1 A one certificate letter per person per CLAIM, ever; Q4 A *"reminders stop while it stands accepted and resume on the re-rejection"*. | ⭐⭐ **TRUSTEE-RATIFIED** |
 | `2026-09-20-230` / `-231` C | a DEAD NUMBER is answered by the District Admin's POSTED LETTERS; the letter record is chased by reminders and then ESCALATED. | ⭐⭐ **TRUSTEE-RATIFIED** |
 | 6.37b story (`6-37b-msg91-delivery-reports.md`) | AC11 + Task 7 — MOVED here (`-353`), kept there as written. ⚠ Two of its lines do ⛔ survive the rulings: AC11 maps the REPORT straight to `rejected_unreachable` (⛔ — the rulings conclude only after the ladder — F1) and says *"the certificate chase's letter-eligibility is unchanged"* (⛔ — `-351` 3 B). | story record |
-| Panel pack `panel-pack-2026-10-17-6-37c.md` + `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` | the §3.4 claim-contact amendment + G1 (counsel's written nominee basis before any WhatsApp **or call** reaches a nominee — pack line 35), G2 (Meta check), G3 (new agreement live before a claimant gets WhatsApp). ⚠ The unpresented bullet names *"roster row `6-37c-undelivered-reminder-ladder`'s gate"* (proposal `:124-125`; pack `:16`, `:56`) — a SPRINT row, and the wrong one under LD1 (F19). | ⛔ PREPARED, ⛔ presented — ⛔ ratified |
-| deferred-work | *"⛔ DLT send consumes a delivery report — a rejection seen only there is recorded `accepted`, and on the correction chase D22 counts the family reached"* (closer now 6-37c — 6.37b's annotation); *"⛔ Staff view labels a send 'reported undelivered'"* (6.37b — ⭐ trigger: THIS create-story); *"`delivered_at` on `claim_correction_reminders` / `claim_certificate_reminders` stays NULL — an unused seam"* (6.37b — trigger: the next migration touching either table — THIS story's); *"⛔ No staff prompt to CALL a dead-phone family whose second certificate is rejected after their one letter"* (trigger: *"a staff call-task seam"* — THIS story's call record); both *"At-least-once SMS"* items. | open |
+| Panel pack `panel-pack-2026-10-17-6-37c.md` + `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md` | the §3.4 claim-contact amendment + G1 (counsel's written nominee basis), G2 (Meta check), G3 (new agreement live before a claimant gets WhatsApp); the nominee gates as decided by `-354` decision 5 (a WhatsApp: G1 + G2; a call: G1). ⚠ The proposal's new-bullet text was ALREADY corrected by 6.37b's review round 2 (it now names *"sprint row `6-37c-undelivered-reminder-ladder`'s comment"*, with a revision line); what still names this row for work LD1 moves to 6-37d is listed in F19. | PREPARED, ⛔ presented, ⛔ ratified |
+| deferred-work | Routed to THIS row (navigate by phrase — ⛔ line): *"⛔ DLT send consumes a delivery report — a rejection seen only there is recorded `accepted`, and on the correction chase D22 counts the family reached"* (closer now 6-37c — 6.37b's annotation); *"⛔ Staff view labels a send 'reported undelivered'"* (6.37b — ⭐ trigger: THIS create-story); *"`delivered_at` on `claim_correction_reminders` / `claim_certificate_reminders` stays NULL — an unused seam"* (trigger: the next migration touching either table — THIS story's); *"⛔ No staff prompt to CALL a dead-phone family whose second certificate is rejected after their one letter"* (trigger: *"a staff call-task seam"* — THIS story's call record); both *"At-least-once SMS"* items; *"`readSmsSendDeliveries` takes an unbounded id list, and a non-uuid id raises `22P02`"* (**"Deferred to 6-37c"** — its first caller bounds / batches and validates); *"Reports in one POST share `received_at`"* (trigger includes *"6-37c reading report order"*); the `-354` carrier *"For row 6-37c"* (items (a) Row 32 (h) a go-live condition, (b) the Panel told, (c) the nominee gates, (d) the nominee text / letter basis to counsel); the ADR-0042 restatement (*"ADR-0042 restated (or stronger ingress authentication / a cross-check adopted) BEFORE the ladder is built; the consent sheet §1–§2 revised (or ADR-0042 pulled from the pack) BEFORE it is presented"*). | open |
 
 ## ⭐ THE INVARIANTS
 
@@ -109,22 +121,30 @@ unreached because one phone was switched off**.
    header token): a forged `undelivered` on a reminder whose person receives ⛔ later `delivered` report STARTS a ladder (up to two more
    copies of an approved reminder), holds the closure ≈ 8 days, then CONCLUDES — un-counting that reminder (closure `not_reached` until a
    letter's delivery or a reached call is recorded), making the person letter-eligible and asking the District Admin to call or post; a
-   forged `delivered` ENDS a ladder early (the person then counts as reached through rows that were already `accepted` — ⛔ worse than today).
-   ADR-0042's forgery bound gains these lines (Task 0.4 — a dated note, ⛔ a word above rewritten).
-2. **I2 — The send tables are written ONLY by new INSERTs through the existing claim / finalise accessors** (generalised to a purpose —
-   Task 3). ⛔ `UPDATE` of an existing reminder row outside its existing finaliser semantics; ⛔ a stored `outcome` rewritten by the
+   forged `delivered` ENDS a ladder early (the person then counts as reached through rows that were already `accepted` — ⛔ worse than
+   TODAY; but relative to a GENUINE failure report it cancels the protection the Panel ruled — the ladder's closure hold, `-351` 6 A — for a
+   person the network never reached: ADR-0042 Security effect (i)). ADR-0042 already records the bound as an OPEN item and says this row
+   *"restates this bound in this ADR (a dated note …) and decides whether the static token is still enough, BEFORE it builds the ladder and
+   before Row 33 (a) ratifies this text"* ⇒ LD15 decides the token; Task 0.4 writes the dated note (⛔ a word above rewritten) and revises
+   the consent sheet §1–§2 (or pulls ADR-0042 from the pack).
+2. **I2 — The send tables are written ONLY by new INSERTs through the existing claim / finalise accessors** (already keyed on
+   `purpose` + `subjectKey` — `CorrectionReminderKey` `correction-reminder-record.ts:61-70`, `CertificateReminderKey`
+   `certificate-reminder-record.ts:43-52`; only the hard-coded `family_sms` call sites are new paths — Task 3). ⛔ `UPDATE` of an existing reminder row outside its existing finaliser semantics; ⛔ a stored `outcome` rewritten by the
    conclusion (the mapping is READ-time — LD6); `delivered_at` stays NULL (LD14 (d)).
 3. **I3 — ONE mapping per chase, inside its row reader** — `readReturnFamilyRows` (correction) and `readClaimCertificateFamilyRows`
    (certificate) — BEFORE the shared `evaluatePersonRunState`. ⛔ in `DEAD_OUTCOMES`, ⛔ in `evaluatePersonRunState`'s OUTCOME logic (both
    are shared by `correction-closure.ts:73,380` and the certificate chase — `certificate-reminder.ts:63, 809, 818`), ⛔ a second copy per
    reader. `readClosureReach` already reads `readReturnFamilyRows` directly (`:409`) ⇒ it inherits the mapping by construction.
 4. **I4 — The mapping keys on a CONCLUDED ladder, ⛔ on a raw report** (F1). A reminder reported `undelivered` whose ladder is running
-   or ended `delivered` reads EXACTLY as today (`accepted`).
+   or ended `delivered` reads EXACTLY as today (`accepted`) — in an epoch with ⛔ concluded ladder; once ANY ladder of that person and number
+   concludes in the epoch, LD6 maps every undelivered row of it.
 5. **I5 — One running ladder per (claim, chase, person)** — a partial UNIQUE index, ⛔ an application check alone (`-351` 4 A); every
    start and state move happens under the chase's lock (LD5 — the closure gate reads the same lock).
-6. **I6 — Every ladder SMS honours every stop the chase's own reminder honours, PLUS the chase's ratified horizon and pause** — through ONE
-   extracted predicate per chase, shared with `beginCorrectionFamilySend` (`correction-reminder-record.ts:391-480`) /
-   `beginCertificateFamilySend` (`certificate-reminder-record.ts:360-466`) — ⛔ a copy (T7). ⛔ A ladder SMS on correction day ≥ 90, on a
+6. **I6 — Every ladder SMS honours every stop the chase's own reminder honours, PLUS the chase's ratified horizon and pause** — through
+   extracted predicates SHARED with `beginCorrectionFamilySend` (`correction-reminder-record.ts:391-480`) / `beginCertificateFamilySend`
+   (`certificate-reminder-record.ts:360-471`) — ⛔ a copy (T7). Correction: ONE extracted function. Certificate: ONE set of extracted
+   sub-predicates (received, pause reason) that `planCertificateRun` and the ladder's predicate BOTH compose — ⛔ the same function, because
+   `planCertificateRun` judges only the OPEN run (Task 3). ⛔ A ladder SMS on correction day ≥ 90, on a
    certificate run that is `completed` (day > 180), or while a certificate run is paused (`-250` #5, `-259`, `-275` Q4 — PQ3 asks whether a
    ladder may then CONCLUDE without that text; our reading: yes, LD3).
 7. **I7 — ⛔ WhatsApp is sent by this story** (LD1 (a)). The WhatsApp step is a RECORDED skip; ⛔ a WhatsApp provider, `dispatch()`,
@@ -151,8 +171,9 @@ gets through, or the District Admin reaches you by phone, you count as reached; 
 you, and the District Admin is asked to phone you or post you a letter (a nominee: post a letter, until the Trust's lawyer confirms it may
 phone them)."* Its costs to the family: up to two extra copies of a reminder (often none in the first week, when a daily reminder already
 goes); a closure up to about a week later (longer when the network's report itself arrives late — LD3); and — as for a number refused at
-send today — once concluded, the person stays letter-eligible and shown "unreachable" for that number even if a later text gets through
-(letter-eligibility keys on the FIRST dead outcome — B1's *"as when the network refuses a number"*). ⚠ What it does ⛔ mean: a text with
+send today — once concluded, the person stays letter-eligible for that number even if a later text gets through (letter-eligibility
+keys on the FIRST dead outcome — B1's *"as when the network refuses a number"*; ⚠ 6.37b's AC11 annotation says this CONFLICTS with `-351`
+4 A's *"the person counts as reached"* — LD17, flagged for BigDev's §0 check). ⚠ What it does ⛔ mean: a text with
 NO report at all still counts as reaching the person (`-351` 1 A); a WhatsApp message is ⛔ sent by this story (LD1); a certificate
 reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 asks whether that holds for ladders).
 **Niyamavali check:** ⛔ applicable — the Niyamavali does not speak to how a reminder is proven delivered, and it is ⛔ ratified
@@ -164,17 +185,30 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   ruling 2's hours (a step waits for 10:00 and for a free day — LD3, LD4) and, at the horizon, may conclude a ladder with a step unsent (PQ3);
 - found-dead = the conclusion date (LD7) — MATCHES `-250` #2 (*"the day the phone was found dead"*);
 - each chase alone (PQ2) — NARROWS `-351` 4 A's *"any message"* and 6 A's *"any of its people"* (routed);
-- a nominee is asked for a letter, ⛔ a call, until counsel (LD11 (a)) — NARROWS `-352` Q2 and `-351` 5 A for nominees (`-352` C3's own condition);
+- a nominee is asked for a letter, ⛔ a call, until counsel (G1) — a go-live hold DECIDED by `-354` decision 5 (author-commit; its §0:
+  *"stricter, never looser"*, ⛔ a Trustee-ratified clause moves); LD11 builds it; disclosed to the Panel with the pack (Task 0.4);
+- the nominee's EXISTING texts and letters keep going on today's basis until counsel answers (`-354` decision 5: *"⛔ changed until then"*) — LD16;
 - the no-restart rule (LD5) — our reading of 4 A's *"one ladder … at a time"* for a person already concluded (flagged);
 - a ladder SMS the network REFUSES at send (dead number) does ⛔ conclude the ladder early — it waits for the conclusion date like any step
   (LD3) — NARROWS `-350` ruling 1's *"as when the network refuses a number"* by up to ≈ 4 days for that person (disclosed);
 - the one-off `ladder_escalation` (+ push) after day 90 — our reading that a staff ask is ⛔ a *"reminder"* in `-250` #4's *"no more
   reminders"* (6.19 built `slot < 90` on every staff ask, F8) — flagged for BigDev at Task 0.2, and put in PQ3's note as context;
-- a failure reported more than 14 days after its send is never followed up and keeps counting (LD5's scan bound) — NARROWS `-350` ruling 2
+- a failure reported more than 14 days after its send is never followed up and keeps counting unless another ladder on that number
+  concludes in the same epoch (LD6) (LD5's scan bound) — NARROWS `-350` ruling 2
   at the edge (MSG91 reports on the final status, usually within minutes — 6.37b F5);
-- a failure reported after a closure was DECIDED changes nothing (`closure_closed`) — the closure already happened; disclosed.
+- a failure reported after a closure was DECIDED changes nothing (`closure_closed`) — the closure already happened; disclosed;
+- a reported failure whose follow-up was STOPPED (a pause, a mark switch, a contact-record gap) and that is followed by ⛔ later reported
+  failure in the epoch keeps counting as reaching the person (D22) — re-starting it would re-send its steps (`-350` Consequence 3); disclosed;
+- a certificate ladder ENDS (⛔ pauses) when the certificate stands ACCEPTED — `-275` Q4 makes that a PAUSE for the reminders (*"resume on
+  the re-rejection"*); a re-rejection opens a new run, and a new failure there may start a new ladder — disclosed (LD5);
+- a certificate ladder ENDS when the contact record cannot be reminded (`cannotRemind`) — the chase treats that as a retryable no-op
+  (`certificate-reminder-record.ts:408`); the ladder does ⛔ wait for it — disclosed (LD5);
+- a certificate ladder's `ladder_escalation` is written on conclusion even while the run is PAUSED (a staff record, ⛔ a family text —
+  `-275` Q4 governs reminders) — ⛔ deferred to an unpaused day (LD9);
+- a CONCLUDED person later reached by a recorded call still shows `unreachable` on the correction queue (the status reads SMS outcomes); the call
+  shows in `calls` and counts for D22 (LD12) — disclosed.
 
-## ⭐ FOUND FACTS (at `f8102c02` / `dae96d9b`, plus 6.37b at `f7e695b7`; re-check at Task 0.1)
+## ⭐ FOUND FACTS (re-derived at `c19e6534` — code tree = `main` @ `ed862339`, 6.37b final; re-check at Task 0.1)
 
 **What 6.37b gives this story**
 - **F1 — The report is NOT the conclusion.** `-350` concludes "not delivered" only after the ladder (≈ 8 days) with ⛔ delivered message.
@@ -182,17 +216,25 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   `rejected_unreachable`"*) fires on the REPORT — eight days early: letter-eligible, `unreachable` on the queue and the found-dead +7
   letter chase all start at once. ⇒ I4.
 - **F2 — ⛔ Column records WHEN a send became `undelivered`.** `first_reported_at` / `reported_at` are the earliest / latest matching
-  report of ANY state (`0167:78-106`; `upsertSmsSendDelivery` `reports.ts:234-251`). ⇒ the ladder's clock is anchored on the SEND's IST
-  date (LD3), ⛔ on a report time; the ladder STARTS when the sweep first sees the `undelivered` row.
-- **F3 — Reports are recorded only for the request the row holds** (`sms-delivery-correlator.ts:96-167`, row 7 ⇒ `other_attempt`); a row
-  stuck `attempting` > 72 h never gets one; reports can arrive minutes to days late (6.37b F5 — on the FINAL operator status).
-- **F4 — The correlator and the silence check filter by purpose ON `cr` ONLY.** `CORRECTION_SMS_PURPOSES = {'family_sms','closure_notice'}`
-  (`sms-delivery-correlator.ts:61-62`, `:121`) ⇒ a `cr` report on any other purpose settles `unmatched:not_sms`; the `cr` silence filter
-  (`reports.ts:282`). The `ce` lookup returns `NULL::text AS purpose` (`reports.ts:190`) and the `ce` silence query has ⛔ purpose filter ⇒
-  a `ce` `ladder_sms` report already matches UNCHANGED. ⇒ Task 5 is correction-only (+ a leg proving the `ce` side).
+  report of ANY state (`0167:78-106`; `upsertSmsSendDelivery` `reports.ts:277-294`). ⇒ the ladder's clock is anchored on the SEND's IST
+  date (LD3), ⛔ on a report time; the ladder STARTS when the sweep first sees the `undelivered` row. ⇒ 6.37c reads ⛔ report ORDER (an
+  absorbing state + the send date) — the deferred *"Reports in one POST share `received_at`"* trigger does ⛔ fire (Task 10).
+- **F3 — Reports are recorded only while the row is `accepted` with that request id** (`decideSmsReport` `sms-delivery-correlator.ts:95-178`).
+  A report arriving while the row is still `attempting` is retried up to 72 h from receipt (row 6), but the next 10:00 exhausted finaliser
+  makes the row `error` (`claim-correction-reminders.ts:748-759`), after which the report settles `other_attempt` (row 7, `:137-152`); a
+  report whose processing throws 5× over 72 h settles `unmatched:row_failed` (`-354` decision 1 (v)). ⇒ a ladder SMS that went
+  transient → `error` but WAS delivered can never end its ladder `delivered` (disclosed — LD3's outcome table). Reports can arrive minutes
+  to days late (6.37b F5 — on the FINAL operator status).
+- **F4 — The correlator and the silence check filter by purpose on BOTH `cr` AND `ce`** (6.37b review round 2). `CORRECTION_SMS_PURPOSES =
+  {'family_sms','closure_notice'}` and `CERTIFICATE_SMS_PURPOSES = {'family_sms'}` (`sms-delivery-correlator.ts:63`, `:65`; row 4
+  `:123-128`) ⇒ a `cr` or `ce` report on any other purpose settles `unmatched:not_sms`. The `ce` lookup reads the row's real `purpose`
+  (`reports.ts:212`). Silence filters: `cr` `s.purpose IN ('family_sms','closure_notice')` (`:327`), `ce` `s.purpose = 'family_sms'`
+  (`:330`). ⇒ Task 5 widens BOTH sets and BOTH silence filters with `ladder_sms` (⛔ `ladder_escalation` — it carries ⛔ CRQID).
 - **F5 — `readSmsSendDeliveries(db, kind, rowIds)`** is RLS-scoped (on the BYPASSRLS pool it reads EVERY Pariwar) and unordered
-  (`reports.ts:254-260`). Kinds: `cr` = a `claim_correction_reminders` row (reminder OR closure notice — filter by `purpose`), `ce` =
-  `claim_certificate_reminders` (`correlation.ts:21-36`). `send_kind` CHECK `IN ('cr','ce','sn','pm')` (`0167:91`) and the CRQID grammar
+  (`reports.ts:296-303`). Kinds: `cr` = a `claim_correction_reminders` row (reminder OR closure notice — filter by `purpose`), `ce` =
+  `claim_certificate_reminders` (`correlation.ts:7-11`). ⚠ The INVERSE of T12 also holds: under an RLS-bound role (roster Row 26's
+  leading option) every cross-tenant send-table read returns ⛔ row SILENTLY — 6.37b's correlator and silence check therefore call
+  `canReadAcrossPariwars` first and refuse (`reports.ts:220-224`, `:242`; `sms-delivery-correlator.ts:259-262`) ⇒ T24. `send_kind` CHECK `IN ('cr','ce','sn','pm')` (`0167:91`) and the CRQID grammar
   (`0167:50`) ⇒ a NEW send table would need a 6.37b CHECK + grammar change (LD2 (b)). `sms_send_deliveries` has ⛔ index on
   `delivery_state` and ⛔ DELETE ⇒ an unbounded scan grows forever (LD5 bounds it).
 
@@ -207,45 +249,52 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   `numberKnownDead` (`:377-382`, the LAST evidential row dead — picks closure LETTER vs SMS in `closureNoticeRecipients` `:428-437`, frozen
   at `markClosed` `:897-923`). `assertClosureGround` (`:457-482`) order: `not_family_action` → `too_early` → `claim_routed_to_r9` →
   `claim_corrected` → `not_reached` (`:478-479`) → D14; four callers — `readClosureReadiness` `:754`, `requestCorrectionClosure` `:804`,
-  `decideCorrectionClosure` `:978`, `decideEscalatedClosure` `:1309`; request / decide take `acquireCorrectionChaseLock` (`:179`, `:275`;
-  the lock order — advisory THEN row — `:12-16`). A new refusal code must ALSO reach: the union `CorrectionClosureRefusal` (`:104-134`), the
+  `decideCorrectionClosure` `:978`, `decideEscalatedClosure` `:1309`; request / decide / escalated-decide take the chase lock through
+  `lockForClosure` (`:178-188` — `acquireCorrectionChaseLock(client, pariwarId, claimCaseId)`, claim-keyed, THEN `claims` FOR UPDATE; the
+  lock order — advisory THEN row — `:12-16`); `readClosureReadiness` takes none. A new refusal code must ALSO reach: the union
+  `CorrectionClosureRefusal` (`:105-135`), the
   hand-kept `AC6_REQUEST_REFUSALS` (`:146-155`) pinned IN ORDER by `packages/contracts/tests/correction-closure-lockstep.test.ts:55-56`, the
   contracts `ClosureRequestBlocker` (`packages/contracts/src/claims/correction-closure.ts:84-96`), `blockerDto`
   (`apps/api/src/modules/claims/correction-closure-dto.ts:18-23` — THROWS on a code missing from the contract enum ⇒ the queue 500s), the
-  exhaustive api switch `closureRefusalError` (`claims.correction-closure.handlers.ts:113+`), and the admin copy
-  (`apps/admin/src/modules/correction-closure/i18n-en.ts`, `errors.ts`); `readClosureReadiness`'s `number_unverified` special case applies to
+  exhaustive api switch `closureRefusalError` (`claims.correction-closure.handlers.ts:113+`, `never` at `:176`), and the admin
+  blocker copy (`apps/admin/src/modules/correction-closure/i18n-en.ts:10-21` — cast `as Record<string, string>`, ⛔ exhaustive: a missing
+  code renders `''` silently; `errors.ts` needs ⛔ change — its `closure.` prefix shows the server's message); `readClosureReadiness`'s `number_unverified` special case applies to
   `not_reached` only (`:762-765`).
-- **F8 — The day-90 edge.** The sweep visits OPEN runs only (`claim-correction-reminders.ts:818`, `ended_at IS NULL`); `planRun` ends a
-  run `day_90` / `superseded` (`:1034-1041`); every letter-chase / escalation write is guarded `slot < 90` (`:1239-1345`). A closure decided
+- **F8 — The day-90 edge.** The sweep visits OPEN runs only (`claim-correction-reminders.ts:837`, `ended_at IS NULL`); `planRun` ends a
+  run `day_90` / `superseded` (`:1053-1060`); every letter-chase / escalation write is guarded `slot < 90` (`:1258-1364`). A closure decided
   on a run already ended `day_90` keeps `end_reason = 'day_90'` (`endOpenRunDecided` is a no-op there, `correction-closure.ts:575-584`) — so `run_ended` / `day_90` alone does ⛔
   tell "closed" from "time ran out". The last reminder is day 84 (`correction-schedule.ts:24-26`). `closure_due` (days 90–96) and
   `closure_escalation` (day 97) fire whether or not anyone was reached (`packages/domain/src/claim/correction-closure-jobs.ts:259-290`;
   `:74-75`). The ended-run staff-row anchor: `latestRunOfReturn` / `staffWriter` (`correction-closure-jobs.ts:107-126`, `:163-188`).
 - **F9 — The send table's constraints** (0128 / 0130 / 0135 — ⛔ trigger on any `claim_correction_*` table): purpose CHECK replaced in 0135
-  (`:26-27`), lockstep with `CORRECTION_REMINDER_PURPOSES` (`schema/claim_correction_chase.ts:62-94`) AND the Drizzle `check()` copy
-  (`:274-275`) and the policy spec (`packages/domain/tests/integration/rls/claim-correction-chase-policy-regression.spec.ts`, grant leg
-  `:328-336`); outcome CHECK (`0128:57`); the slot UNIQUE `(run_id, slot_day, recipient_key, purpose, subject_key)` (`0128:75`); the
+  (`:26-27`), lockstep with `CORRECTION_REMINDER_PURPOSES` (`schema/claim_correction_chase.ts:68-93`) AND the Drizzle `check()` copy
+  (`:274-275`) — pinned by the LOCKSTEP leg in `packages/domain/tests/integration/rls/claim-correction-closure-policy-regression.spec.ts:516-524`
+  (`pg_get_constraintdef` against the tuple — ⛔ the chase spec, whose `:328-336` is the UPDATE-column 42501 leg); CHECKs on the table are
+  purpose, outcome, `slot_day >= 0` (⛔ upper bound — a row on day 92 of an ended run passes; the 6.19c spec seeds `slot_day: 92`),
+  recipient non-blank, attempting / claimed, delivered / accepted — ⛔ purpose↔outcome or purpose↔subject CHECK; outcome CHECK (`0128:57`); the slot UNIQUE `(run_id, slot_day, recipient_key, purpose, subject_key)` (`0128:75`); the
   `staff_push` day UNIQUE (`0128:77`); `run_id` NOT NULL FK; `sent_on` a DATE; `created_at`; UPDATE grant `0128:68`; `delivered_at` ⛔
   granted (`0128:64`, `:68`).
-- **F10 — The send path.** The child `runCorrectionFamilySmsChild` (`claim-correction-reminders.ts:268-458`): stale-day guard → `beginCorrectionFamilySend`
-  (the stops `correction-reminder-record.ts:429-463` — FIRST `run.endedAt !== null ⇒ run_ended` `:433`; hard-coded `purpose:'family_sms',
+- **F10 — The send path.** The child `runCorrectionFamilySmsChild` (`claim-correction-reminders.ts:286-475`): stale-day guard → `beginCorrectionFamilySend`
+  (the stops `correction-reminder-record.ts:429-463` — FIRST `run.endedAt !== null ⇒ run_ended` `:430`; hard-coded `purpose:'family_sms',
   subjectKey:''` `:409-417`) → commit → decrypt (`resolveCorrectionMobile`) → hash → send → `finaliseCorrectionReminder` (`:235-268`, stamps
-  `updated_at = clock_timestamp()` `:256`). The exhausted finaliser is raw cross-tenant SQL over ALL purposes (`:734-745`) — it will
-  finalise a stale `ladder_sms` row too (LD3's outcome table relies on it). Only the 10:00 cron times a send (`:91`, `:1411-1416`).
+  `updated_at = clock_timestamp()` `:256`). The exhausted finaliser is raw cross-tenant SQL over ALL purposes (`claim-correction-reminders.ts:748-759`) — it
+  will finalise a stale `ladder_sms` row too (LD3's outcome table relies on it). Only the 10:00 cron times a send (`:92`, `:1430-1435`).
 - **F11 — The staff view.** `correctionPersonStatus` (`correction-chase-read.ts:124-129`): `dead` ≻ `unreachable` ≻ `reached`
   (accepted > 0) ≻ `not_yet`; `deadKind` `'dead'` for `rejected_invalid_number`, else `'unreachable'` (`correction-chase.ts:766`; the union
   `:685`); `remindersAccepted` (`:229`); `escalated` = ANY `purpose='escalation'` row in the return (`:367-378`); the DTO `correctionChaseDto`
   (`claims.nominee-name-check.handlers.ts:804-834`); the contract enum `status: z.enum(['reached','dead','unreachable','not_yet'])`
   (`packages/contracts/src/claims/correction-chase.ts:158`; header `:10-13` — vocabularies re-declared by hand, ⛔ lockstep test).
 - **F12 — The staff asks.** `letter_chase` to the District Admin on found-dead +7…+12 (`subject_key = personKey`) and ONE `escalation`
-  to every Pariwar Admin on +13 (`claim-correction-reminders.ts:1253-1293`, gated `familyCanBeReminded && !track.letterDelivered &&
-  !familyPaused`; offsets `correction-schedule.ts:35-37`), then one `staff_push` per staff member per day (dispatch `:616-631`; the day
-  UNIQUE `0128:77`; `STAFF_PUSH_ITEM_PURPOSES` `:476-482`; the push copy is HARD-CODED English `correctionStaffPushText` `:485-499`; the
-  "escalated" wording list `:494-496`). The family's correction reminder already says *"…or **the District Admin will contact you**"*
+  to every Pariwar Admin on +13 (`claim-correction-reminders.ts:1272-1312`; both gated `track.foundDeadOn !== null && !capped`; the chase
+  also `familyCanBeReminded && !track.letterDelivered && !familyPaused`, the +13 escalation only `!track.letterDelivered && !familyPaused`
+  — it runs under D30; offsets `correction-schedule.ts:35-37`), then one `staff_push` per staff member per day (dispatch `:635-650`; the
+  day UNIQUE `0128:77`; `STAFF_PUSH_ITEM_PURPOSES` `:495-501`; the push child lists ONLY rows with `sent_on = p.sentOn` `:592-597`, and a
+  push is enqueued only for staff with a recorded row TODAY `:1364-1369`; the push copy is HARD-CODED English `correctionStaffPushText`
+  `:504-518`; the "escalated" wording list `:511-513`). The family's correction reminder already says *"…or **the District Admin will contact you**"*
   (`en/claim.json:148`). Letters are capped at 2 per person per return (`CORRECTION_LETTERS_PER_PERSON`, `correction-reminder-record.ts:763`;
   `correction-letter.ts:249`).
 - **F13 — The burst alarm** (`-269` §4): raw SQL `purpose='family_sms' AND outcome='rejected_unreachable' AND sent_on=$1`, threshold 3
-  (`claim-correction-reminders.ts:747-763`, `:120`) — counts SEND-time refusals only.
+  (`claim-correction-reminders.ts:766-782`, `:121`) — counts SEND-time refusals only.
 
 **The certificate chase (as built)**
 - **F14 — It never refuses, closes or time-limits a claim** (6.19d invariant 1); ⛔ "reached" consumer exists; B1's only effects are
@@ -257,7 +306,7 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   `completed` (day > 180 — BEFORE pause, `:252`) ≻ `certificate_received` ≻ pause ≻ continue; ends `superseded` / `completed` /
   `certificate_received`; a PAUSE (the claim outside `CLAIM_REVIEW_WINDOW_STATES`, or the anchor upload standing accepted — `-275` Q4) sends
   nothing; `NEVER_REENTERS` (`certificate-reminder-read.ts:42`) names states a claim never comes back from. The sweep visits OPEN runs
-  (`claim-certificate-reminders.ts:260-291`); the CR10 chase runs only while the run is open and not paused (`:388-396`).
+  (`claim-certificate-reminders.ts:262-276`) and candidate claims (`:277-291`); the CR10 chase runs only while the run is open and not paused (`:388-396`).
 - **F15 — Its table** (0138 / 0141): purpose CHECK `{family_sms, letter_chase, letter_escalation}` (`0138:48`) pinned by
   `packages/domain/tests/integration/rls/claim-certificate-reminder-policy-regression.spec.ts:388` and the Drizzle `check()` copy
   (`schema/claim_certificate_reminder.ts:179-190`); `subject_key` CHECK `(purpose='family_sms') = (subject_key='')` (`0138:54`); the
@@ -275,27 +324,42 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   `packages/contracts/src/claims/correction-chase.ts` (`:82-117`); api `claims.correction-chase.{routes,handlers}.ts` — paths
   `/api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/…` (pre-handler chain `[adminSession, scope, resolveNomineeNameCheckDistrict(),
   requirePermissionHook(KEY, {dimension:'district'})]`) and `/admin/claims/:claimCaseId/certificate-reminders/…` (`claims.certificate-reminder.routes.ts:81`);
-  `emitAuthAudit(… 'admin_claim_correction.letter_recorded', { resourceLocator: 'claim:<lower uuid>' })` after commit (`audit-sink.ts:338-347`);
+  `emitAuthAudit(… 'admin_claim_correction.letter_recorded', { resourceLocator: 'claim:<lower uuid>' })` after commit (the
+  `AuthAuditEventType` union `audit-sink.ts:338-347`; the certificate events use the prefix `admin_claim_certificate_reminder.` —
+  `claims.certificate-reminder.handlers.ts:175`, `:227`, `:275`); the display name `getDisplayName` ⇒ `AdminDisplayNameMissingError` on
+  null, ⛔ fallback (`claims.correction-chase.handlers.ts:239-240`);
   admin `apps/admin/src/modules/correction-chase/{CorrectionChasePanel,CorrectionLetterForm}.tsx`, `errors.ts`, `i18n-en.ts`; the step-up
   context precedent `correction_letter_address` (+ the admin's copy of the constant, `apps/admin/src/api/client.ts:1622`). The key
   `claim.record_correction_letter` (`permissions.ts:1048`, `district_admin` + derived `super_admin`; catalog `PERMISSION_CATALOG_VERSION = 52`
   `:770`; pin `permissions.test.ts:232-234`) was reused by 6.19c and 6.19d *"the same act, the same holder"*. The route gate
   `scripts/claim-adjudication-human-actor-invariant/check.ts` matches the correction-chase file by `pathSubstrings: ['/correction/']`
   (`:212`) and scans ONLY matched paths (`:382-386`) — a path outside it is UNSCANNED (`COVERAGE_SET` `:46`, `expectedMethods` `:211-214`,
-  floor `:347`). The letter route has ⛔ idempotency key; a call has ⛔ natural cap ⇒ the keyed store (`idempotency.createKeyedStore`;
-  mandatory-key precedent `claims.ground-inspection.handlers.ts:398-403`; [[project_idempotent_write_handler_shape]]).
+  floor `:347`). The letter route has ⛔ idempotency key; a call has ⛔ natural cap ⇒ the keyed store (`idempotency.createKeyedStore`,
+  `packages/domain/src/idempotency/keyed-store.ts:50-77` — `claim` / `recordResult` / `getResult` / `release` ONLY: ⛔ body comparison, a
+  replay returns the stored result whatever the body; the house handler `apps/api/src/modules/contributions/personal-event-handlers.ts:113-125`;
+  the mandatory-HEADER precedent `claims.ground-inspection.handlers.ts:398-403`; [[project_idempotent_write_handler_shape]]).
 
 **Governance and numbers**
-- **F18 — Numbers (checked across every ref and the three worktrees).** Decision: head `-353` ⇒ next **`-354`**. Migration: 0167 =
-  6.37b (`f7e695b7`); 6.31 plans 0167 PROVISIONALLY ⇒ this story takes the **next free at Task 0** (0168 if 6.31 has not committed one,
-  else 0169), journal `when` = previous + 1 ms (`1794195600012` after 0167's `…011`). ADR: ⛔ needed. Roster: ONE new row if LD11 (a)
-  (next free — Row 34 if 6.31 has not taken it). Ledger: this create-story = `2026-10-17u` (agreed with the 6.37b session, which took `t`);
+- **F18 — Numbers (checked at the pin across every ref, `origin`, and the 6-31 / 6-37b worktrees).** Decision: head `2026-10-18-354`
+  (6.37b's round 2) ⇒ the 6.37c entry is the next free (**`-355`** at this pin). Migration: 0167 / 0168 = 6.37b
+  (`0168_sms-delivery-report-backstops.sql`, journal `when` `1794195600012`) ⇒ this story takes the **next free at Task 0** (**0169** if
+  6.31 has not committed one, else 0170), journal `when` = previous + 1 ms (`1794195600013` after 0168's `…012`). Roster: ends at Row 33 ⇒
+  ONE new row (LD11) takes the next free (Row 34 if 6.31 has not taken it). ⚠ 6.31's story still claims `0167` / `-347` / Row 33
+  *"provisional"* — all taken — so 6.31 and 6.37c will both reach for 0169 / `-355` / Row 34: re-grep EVERY branch and worktree right
+  before each write (Task 0.3, Task 1). ADR: ⛔ new one (ADR-0042 gets a dated note — LD15). Ledger: this create-story = `2026-10-17u`;
   Task 0's = the next free then.
 - **F19 — The Panel pack and the §3.4 amendment are PREPARED / DRAFTED, ⛔ sent, ⛔ ratified** (pack *"PREPARED, not yet presented"*;
-  proposal *"DRAFTED 2026-10-17 — not yet presented"*; ⛔ decision entry approving either). Its new §3.4 bullet names *"roster row
-  `6-37c-undelivered-reminder-ladder`'s gate"* — a SPRINT row, and the WRONG row under LD1 (a). Because the Panel would RATIFY that sentence
-  (a ratified sentence is superseded, ⛔ re-read — [[feedback_supersede_never_reinterpret]]), it is CORRECTED in place while it is still
-  unpresented (it was revised before, `c46402cd`) — Task 0.4. G1's CALL half stays in THIS row (LD11), its WhatsApp half goes to 6-37d.
+  proposal *"DRAFTED 2026-10-17 — not yet presented"*; ⛔ decision entry approving either). The new bullet's *"roster row … gate"* was
+  ALREADY corrected by 6.37b's review round 2 (it now reads *"sprint row `6-37c-undelivered-reminder-ladder`'s comment"*, with a revision
+  line). Still naming THIS row for work LD1 (a) moves to 6-37d (navigate by phrase — ⛔ line): the proposal's *"(the row that builds it,
+  `6-37c-undelivered-reminder-ladder`)"*, *"row 6-37c changes it to `-352` Q1's wording"*, *"**Row 6-37c** builds the exception"*,
+  *"Roster: row 6-37c's gate carries G1–G3"* and *"row 6-37c's create-story picks up the exception and G1–G3"*; the pack's *"row 6-37c's
+  create-story carries G1–G3"* and its stale *"`2026-10-17-353` is the head today"*. Because the Panel would RATIFY those sentences (a
+  ratified sentence is superseded, ⛔ re-read — [[feedback_supersede_never_reinterpret]]), they are CORRECTED in place while unpresented,
+  each with a revision line — Task 0.4. Disclosures: `-354` decision 2's (*"the Panel is told this when the proposal is presented"* — the claimant
+  reading narrows `-351` (b)) ALREADY stands in the proposal (*"⚠ Stated per Decision `2026-10-18-354` decision 2 …"*, `ed862339`) — the
+  pack's cover does ⛔ point to it yet (Task 0.4 adds the pointer); `-354` decision 4 (c)'s (alarms reach the LOGS only until Row 32 (h)) is OWED in full.
+  G1's CALL half stays in THIS row (LD11), its WhatsApp half goes to 6-37d.
 - **F20 — The WhatsApp infrastructure cannot do the ladder's step today** (why LD1): ⛔ path messages a NON-member (the one live WA call
   site is member-gated — `contribution-notify.ts:246` → `resolveWaTarget`, `packages/domain/src/notifications/delivery.ts:116-148`);
   `whatsapp-app.ts` sends ONE body value (`:46-47`) with ⛔ timeout (`:169-176`), the reminder has two; `pariwar_wa_templates` holds one
@@ -307,16 +371,17 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
 - **F21 — The agreement as built** names *"by text message and by post"* only (`packages/i18n/locales/en/claim.json:139`, hi `:139`;
   the server copy `apps/api/src/modules/claims/claim-contact-copy.ts:19-24`, version `'2026-09-28.v1-pending-story-0.13'`, pinned
   byte-identical by `apps/api/tests/unit/claim-contact-copy.test.ts:24-31`); the version lives only in `consent_payload` JSON and the
-  reader ignores it (`claim-contact-check.ts:120-132`); roster Row 18 (counsel) covers SMS and post only. ⇒ a CLAIMANT call rides on
+  reader ignores it (`packages/domain/src/claim/claim-contact-check.ts:120-132`, `readClaimContactAgreementState`); roster Row 18 (counsel) covers SMS and post only. ⇒ a CLAIMANT call rides on
   `-351`'s reading (*"The call half of the escalation is not held"* — the correction text promises *"the District Admin will contact you"*),
   ⛔ on the agreement (disclosed in LD11).
 
-## ⚖️ Build decisions LD1–LD14 (PROPOSED — ⏳ BigDev at Task 0.2; each with its recommendation and its cost)
+## ⚖️ Build decisions LD1–LD17 (PROPOSED — ⏳ BigDev at Task 0.2; each with its recommendation and its cost)
 
 - **LD1 — Story shape: the WhatsApp step and the agreement's new wording move to a NEW row `6-37d-claim-contact-whatsapp-step`.**
   ⭐ **(a) Recommended.** 6.37c builds the ladder with step 1 RECORDED `skipped:whatsapp_not_built` and goes on to the 48-hour SMS —
   `-351`'s recorded reading. 6-37d (backlog; AFTER 6.31 and 6.37c) builds: the filing agreement's `-352` Q1 wording (en + reviewed hi) with
-  a BUMPED copy version and a version-aware reader (G3, F21); the nominees removed from it (and Row 18's question re-put to counsel); the
+  a BUMPED copy version and a version-aware reader (G3, F21); the nominees removed from it (the REWORDING only — the question to counsel
+  on the basis of the texts and letters nominees receive today stays with THIS row's Task 0, `-354` decision 5 — LD16); the
   claim-contact WhatsApp templates (Meta, en + hi); a direct non-member sender (on 6.31's client work); a sub-daily step; claim-contact STOP;
   an absorbing WA "ever delivered" read; the member-opt-in side-effect isolation (F20); the nominee step behind the §3.4 amendment + G1 + G2;
   and the G1 (WhatsApp half) / G2 / G3 roster row. It SUPERSEDES `-353` decision 1 IN PART (those items move rows) and NARROWS `-351`
@@ -328,11 +393,12 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   ratified; its tests drive a send that cannot go; a sub-daily sweep for one dark step).
 - **LD2 — Where a ladder lives.** ⭐ **(a) Recommended:** ONE new tenant table `claim_contact_ladders` + each ladder SMS as a NEW-PURPOSE
   row `ladder_sms` in the chase's OWN send table (`claim_correction_reminders` / `claim_certificate_reminders`) — so its CRQID is `cr` / `ce`
-  with the row's own uuid and 6.37b's inbox, grammar and `sms_send_deliveries` need ⛔ change, only the `cr` purpose filters widened (F4).
+  with the row's own uuid and 6.37b's inbox, grammar and `sms_send_deliveries` need ⛔ change, only the `cr` AND `ce` purpose filters
+  widened (F4).
   `subject_key = 'ladder:<ladder_id>:<step>'` (step `2` / `3`); `run_id` = the ladder's origin run (an ENDED run is fine — the 6.19c
   closure-notice precedent); `slot_day` = the run day of the step's DUE DATE, fixed when the row is first claimed (a label — a retry
   re-claims the SAME row); `sent_on` = the due date. ⚠ Every `family_sms`-filtered reader IGNORES `ladder_sms` by construction
-  (`readReturnFamilyRows` `:634`, `readRunFamilyRows` `:513`, the burst alarm, the D30 `DISTINCT ON` `:1146-1153`,
+  (`readReturnFamilyRows` `:634`, `readRunFamilyRows` `:513`, the burst alarm, the D30 `DISTINCT ON` `claim-correction-reminders.ts:1165-1172`,
   `readClaimCertificateFamilyRows` `:721`, `certificateRecordedDays`) — that is the POINT: a ladder SMS never suppresses a scheduled slot and
   never changes `numberKnownDead` / `remindersAccepted`; its reach is added on purpose (LD8). A NEW partial UNIQUE on each send table
   `(claim_case_id, subject_key) WHERE purpose IN ('ladder_sms','ladder_escalation')` (the slot UNIQUE includes `slot_day` and `recipient_key`
@@ -343,11 +409,16 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   NOT NULL` (CHECK `^(pending|skipped:[a-z_]{1,48})$` so 6-37d can add values), `sms2_due_on date`, `sms2_state` / `sms3_state`
   (`pending|sent|satisfied|skipped:<reason>`), `sms2_row_id`, `sms3_row_id`, `sms3_due_on`, `conclude_on date`, `state`
   (`running|ended_delivered|ended_call|ended_number_changed|ended_stopped|concluded_undelivered`), `end_detail` (≤ 64 `[a-z_:]`), `ended_at`,
-  `concluded_on date`, `created_at`. CHECKs: state ↔ `ended_at` pair; `concluded_on` NOT NULL ⇔ `concluded_undelivered`. Partial UNIQUE
-  `(claim_case_id, chase, person_key) WHERE state = 'running'` (I5); UNIQUE `(chase, origin_row_id)`; an index `(state, conclude_on)`.
-  Tenant RLS per command (the 0128 / 0167 shape); grants G-a (`-347` DR5-G's house shape): `SELECT, INSERT` + `UPDATE` of the mutable
+  `concluded_on date`, `escalated_on date` (the `ladder_escalation`'s date, NULL until written), `created_at` DEFAULT `clock_timestamp()`.
+  CHECKs: state ↔ `ended_at` pair; `concluded_on` NOT NULL ⇔ `concluded_undelivered`. Partial UNIQUE `(claim_case_id, chase, person_key)
+  WHERE state = 'running'` (I5); UNIQUE `(chase, origin_row_id)` (a row is the origin of at most ONE ladder, ever — a stopped ladder keeps
+  it, so a lifted stop cannot re-send its steps; LD6 still maps it if a later ladder concludes); an index `(state, conclude_on)`. Tenant RLS per command (the 0128 / 0167 shape) — declared in
+  `packages/domain/src/policies/claim-contact-ladder-rls.ts` (`pgPolicy`, the `*-rls.ts` convention; precedent
+  `claim-certificate-reminder-rls.ts`; `policies/index.ts`); grants G-a (`-347` DR5-G's house shape, as narrowed by `-354` decision 1
+  (i)–(ii) — its column-limited INSERT is the precedent for refusing a pre-settled row): `SELECT, INSERT` + `UPDATE` of the mutable
   columns only (⛔ identity columns; ⛔ DELETE); a comment naming roster Row 26. **Cost:** two purpose CHECK replacements (correction
-  0135-style; certificate 0138 + 0141's purpose↔outcome) + TS tuples + Drizzle `check()` copies + policy-spec legs in lockstep (T9). **(b)**
+  0135-style; certificate 0138 + 0141's purpose↔outcome — `ladder_sms` with the family outcomes, `ladder_escalation` beside the staff
+  purposes as `('recorded','no_target')`, LD9) + TS tuples + Drizzle `check()` copies + the purpose-lockstep legs (T9). **(b)**
   a new send table with kind `ld` — 6.37b's `send_kind` CHECK, CRQID grammar, correlator lookup and the wrapper's kind derivation all change.
   **(c)** ladder SMS as `family_sms` rows — REFUSED: they would enter the catch-up's recorded set and SUPPRESS real scheduled reminders, and
   join D22 / epochs / `numberKnownDead` / the burst alarm as ordinary reminders.
@@ -359,14 +430,15 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   has passed when the ladder starts (a report seen late — F3) is due on the run AFTER the one that starts the ladder (⛔ two steps in one run); every later date moves
   with it. ⚠ **The horizon (I6, PQ3):** ⛔ ladder SMS on correction day ≥ 90, on a certificate run `completed` (day > 180), or while a
   certificate run is paused; such a step is recorded `skipped:past_horizon` / `skipped:paused` (the clock runs on — ⛔ a hold) and the
-  ladder CONCLUDES on its date (its `ladder_escalation` is written only on a day the run is not paused — LD9) — our reading of how `-351` 6 A's *"at most about a week past day 90"* and `-250` #5's *"stop at day 90"* fit
+  ladder CONCLUDES on its date (its `ladder_escalation` is written on conclusion, paused or not — a staff record — LD9) — our reading of how `-351` 6 A's *"at most about a week past day 90"* and `-250` #5's *"stop at day 90"* fit
   together (PQ3 asks). ⭐ **What each ladder SMS outcome does to its step** (the core's outcomes, F10):
 
   | Row outcome | Step | Next date counts from |
   |---|---|---|
   | `accepted` | `sent` | the row's `sent_on` |
   | `rejected_invalid_number` / `rejected_unreachable` / `no_target` | `sent` (the attempt was made; the number is dead at send — ⛔ a reach; ⚠ the ladder still waits for its conclusion date — disclosed, Policy meaning) | its `sent_on` |
-  | a transient (the row stays `attempting`) | retried within the same run's backoff only (*"60 s with backoff over 4 tries … ⛔ never a day"*, `claim-correction-reminders.ts:715-716`); a row still `attempting` from a previous IST day is finalised `error` by the exhausted finaliser (or treated as `error` by the ladder sweep if it runs first) ⇒ `sent` | its `sent_on` |
+  | a transient (the row stays `attempting`) | retried within the same run's backoff only (*"(60 s with backoff over 4 tries) is minutes, ⛔ never a day"*, `claim-correction-reminders.ts:735-736`); a row still `attempting` from a previous IST day is finalised `error` by the exhausted finaliser (or treated as `error` by the ladder sweep if it runs first) ⇒ `sent` (⚠ if that text WAS delivered, its report can never match — F3 — so it cannot end the ladder; disclosed) | its `sent_on` |
+  | the person's current number hash FAILS (KMS) before the send | `skipped:hash_unavailable` (the clock runs on — ⛔ a hold; alarmed by ids) | the due date |
   | `error` (any final) | `sent` (one attempt, as a scheduled slot spends its day — `-349` FOUND (a)) | its `sent_on` |
   | refused by a stop (LD5) | ⛔ a step — the ladder ENDS `ended_stopped:<reason>` | — |
   | refused by the horizon / pause | `skipped:past_horizon` / `skipped:paused` | the due date |
@@ -376,161 +448,280 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   past day 90"* the Panel was told (disclosed in the PQ note's E3 and the Policy meaning).
 - **LD4 — One message a day: a scheduled day IS the step (⚠ flagged for BigDev's §0 check — it changes how many texts a family gets).**
   ⭐ **(a) Recommended:** on a date the chase has a scheduled reminder slot for ANY person of that claim and chase whose current number hash equals the
-  ladder's (the run is open and the run day is in
-  `CORRECTION_REMINDER_DAYS` / the certificate days — computed from the SCHEDULE, ⛔ by watching for a sent row, so ⛔ race with the 10:00
-  chase sweep), the ladder does ⛔ send: the step is `satisfied` (the scheduled reminder, whatever its outcome, is that day's SMS — its row id
-  recorded when found). And, under the chase lock, the ladder child refuses (step `satisfied`) when ANY `family_sms` / `ladder_sms` row of
-  that claim and chase to that NUMBER (any person — T22) has `sent_on = today`. For an origin on days 1–3 the ladder adds ⛔ extra SMS (days 3, 5, 7
+  ladder's (the run is open and the run day is a slot of `correctionReminderSchedule(run.kind, run.day0)` (`correction-schedule.ts:95-104`
+  — ⛔ the raw `CORRECTION_REMINDER_DAYS`) / the certificate schedule — computed from the SCHEDULE, ⛔ by watching for a sent row, so ⛔ race
+  with the 10:00 chase sweep), the ladder does ⛔ send: the step is `satisfied` (the scheduled reminder, whatever its outcome, is that
+  day's SMS — its row id recorded when found). ⚠ On the ladder's NEXT visit, a `satisfied` step whose scheduled row is ABSENT or
+  `skipped_superseded` (the chase sweep skipped the run that day — a timed-out run — or its child never sent) is re-recorded
+  `skipped:scheduled_not_sent` with an alarm by ids (the clock runs on; ⛔ a resend — the day is gone). And, under the chase lock, the
+  ladder child refuses (step `satisfied`) when ANY `family_sms` / `ladder_sms` row of that claim and chase to that NUMBER (any person —
+  T22) has `sent_on = today` — counting rows whose `recipient_number_hash` = the number's hash PLUS `attempting` rows (whose hash is still
+  NULL until finalise — `claimCorrectionReminder` / `finaliseCorrectionReminder`) whose `recipient_key` is a person whose CURRENT hash is
+  that hash (the child hashes before a send anyway — F6). For an origin on days 1–3 the ladder adds ⛔ extra SMS (days 3, 5, 7
   are scheduled); from day 4 it adds one or two (e.g. day 4 ⇒ day 8; day 7 ⇒ days 9, 11). This MATCHES `-250` #5 (*"One message a day"*) and meets *"try again with SMS
   one more time"*; the family never gets more texts than the Panel was told (*"up to two extra SMS"*). **Cost:** for an early-week origin the
   ladder's value is the conclusion and the closure hold only. **(b)** always a separate ladder SMS (two identical texts on a scheduled morning —
   against `-250` #5).
 - **LD5 — What starts, stops and ends a ladder** (the start, every state move and every send-begin under the chase's lock —
   `acquireCorrectionChaseLock` / `lockCertificateClaim` — the lock the closure request / decide take, F7 — so `ladder_running` at decide is ⛔
-  a check-then-act race). **Start** (the 10:00 sweep, per chase, per person; the candidate scan bounded to `family_sms` rows with `sent_on`
-  within the last 14 days — ⛔ an unbounded scan of `sms_send_deliveries`, F5): a `family_sms` row `accepted` whose `sms_send_deliveries`
-  state is `undelivered` (filtered by `pariwar_id` — T12); ⛔ running ladder for (claim, chase, person); the row's `recipient_number_hash`
-  = the person's CURRENT number hash (an old-number failure starts nothing); ⛔ `family_sms` / `ladder_sms` row of that chase to that person
-  on that number CREATED after the origin (`created_at > origin.created_at`) is `delivered` (4 A — already reached); ⛔ call recorded
-  `reached` for that person on/after the origin's `sent_on`; ⛔ ladder CONCLUDED for (claim, chase, person, number) in the CURRENT epoch — ⚠ **the no-restart rule
-  (flagged for BigDev's §0 check):** a person already concluded on that number is letter-eligible and `foundDeadOn` is sticky, so a second
-  ladder would only add texts (a dead phone would otherwise get a new ladder about every 8 days to day 84 — nine ladders, eighteen extra
-  SMS — against `-350` Consequence 3 and the Panel's refusal of one ladder per reminder, Q4 B); a ladder that ENDED (delivered / call /
-  number changed / stopped) may be followed by a new one on a NEW failure; a person already dead AT SEND in the epoch may still start one
-  (their later accepted rows count for D22, so the ladder's closure hold matters); and the stop predicate (I6). ⚠ The ORIGIN = the EARLIEST such row
-  in the epoch not covered by an ended or concluded ladder. **Stop predicates** (extracted, I6 — Task 3): correction — the stops of
-  `beginCorrectionFamilySend` with `run_ended` allowed ONLY for `end_reason = 'day_90'`, PLUS ⭐ `closure_closed` (the return's
-  `claim_correction_closures` row is `closed`, or the claim is in a terminal state — F8: `day_90` alone does ⛔ say whether a closure was
-  decided); certificate — `certificateFamilyStopReason` reads the ladder's ORIGIN run by `run_id` (open OR ended — `planCertificateRun` reads only
-  `f.openRun` and, once the day-181 sweep ends a run `completed`, never returns `completed` again, `certificate-reminder.ts:246-252`;
-  `beginCertificateFamilySend` maps anything but `continue` to `run_ended`, `certificate-reminder-record.ts:404`): ended `superseded` /
-  `certificate_received` ⇒ END; otherwise, IN THIS ORDER, the certificate received (the run's anchor against the current upload / status) ⇒
-  END; the pause reasons — `certificate_accepted` or a state in `NEVER_REENTERS` (moved out of the read model and exported — it is
-  module-private at `certificate-reminder-read.ts:42`) ⇒ END, any other pause ⇒ the step `skipped:paused` (I6, LD3 — ⛔ a hold);
-  `recipients.cannotRemind` (`certificate-reminder-record.ts:408`) ⇒ END; and only then the horizon (run day > 180, the run open or ended
-  `completed`) ⇒ `skipped:past_horizon`. ⛔ `planCertificateRun`'s sweep order (completed BEFORE received / pause — it ends RUNS, ⛔ ladders). Checked at start, before each send and before conclusion / `ladder_escalation`. **End `ended_delivered`:** a
-  `delivered` report on ANY `family_sms` or `ladder_sms` row of THAT chase to that person's number created after the origin — incl. a row
-  sent to ANOTHER person of the claim on the same number that satisfied this person's step (T22) (PQ2 (a) asks whether the OTHER chase's
-  delivered message also ends it — our reading ⛔). **End `ended_call`:** a call recorded `reached` for that person with `called_on ≥`
-  `origin_sent_on` (LD10 — the call is a fact about the PERSON, so it ends a running ladder of EITHER chase — disclosed in PQ2). **End
-  `ended_number_changed`:** the person's current number hash ≠ the ladder's (hash only at start, before a send and at conclusion —
-  F6's KMS cost; between them the version-unchanged convention `currentNumberHash: undefined`). **End `ended_stopped:<reason>`:** a stop.
-  ⚠ **A step with NO report (silence) does ⛔ end a ladder** — our reading of 4 A's *"IS delivered"* (PQ1 asks). **Conclude** on `conclude_on`
-  when ⛔ end condition has fired ⇒ `concluded_undelivered`, `concluded_on` = the IST date the sweep concluded it (= `conclude_on` unless a
-  run was missed). A `delivered` report arriving AFTER conclusion: ⛔
-  un-conclude — the person counts as reached through that accepted row (D22, as for any accepted row) and stays letter-eligible (LD6), as
-  for a send-time refusal today.
-- **LD6 — What a conclusion un-counts (the B1 mapping — I3, I4).** Inside each chase's row reader (gaining `reminder_id` and a LEFT JOIN on
-  `claim_contact_ladders` + `sms_send_deliveries` for (`cr`|`ce`, `reminder_id`), scoped to the return (`run.return_decision_id`) as the
-  reader already is): a `family_sms` row that is `accepted`, whose `sms_send_deliveries` state is `undelivered`, on the number of a
-  `concluded_undelivered` ladder of that person and chase, and created at/after that ladder's origin IN THE SAME EPOCH (⛔ a row of another hash
-  created between the origin and it — a number changed A→B→A starts a new epoch; OPEN-ended within the epoch — the no-restart rule means
-  every later reported failure on that number in it belongs to it), reads with EFFECTIVE outcome `rejected_unreachable`,
-  `deadOn = concluded_on`, `concluded: true`. Every other row reads as stored — incl. an `accepted` row with ⛔ report (`-351` 1 A) and every
-  row of a RUNNING or ENDED ladder. ⛔ A stored outcome changes (I2). ⇒ by construction: D22 `reachedBySms` stops counting the concluded rows;
-  `foundDeadOn` is set (letter-eligible on BOTH chases — `correction-letter.ts:185-187`, `certificate-reminder.ts:818`); `numberKnownDead`
-  follows if the LAST evidential row is a concluded one (⇒ closure notice by LETTER, `closureNoticeRecipients` `:435`); the queue status
-  `unreachable`; the letter track starts. ⚠ The record-derived queue lines and the D30 sweep path read rows WITHOUT crypto
-  (`correction-chase-read.ts:345`, `claim-correction-reminders.ts:1167`) — they judge on the recorded epoch, as today.
+  a check-then-act race). **Start** (the 10:00 sweep, per chase, per person — ⭐ after `canReadAcrossPariwars` (T24); the candidate scan
+  bounded to `family_sms` rows with `sent_on` within the last 14 days — ⛔ an unbounded scan of `sms_send_deliveries`, F5): a `family_sms`
+  row `accepted` whose `sms_send_deliveries` state is `undelivered` (filtered by `pariwar_id` — T12); ⛔ running ladder for (claim, chase,
+  person); the row's `recipient_number_hash` = the person's CURRENT number hash (an old-number failure starts nothing); ⛔ `family_sms` /
+  `ladder_sms` row of that chase to that person on that number CREATED after the origin (`created_at > origin.created_at`) is `delivered`
+  (4 A — already reached); ⛔ call recorded `reached` for that person on/after the origin's `sent_on`; ⛔ ladder CONCLUDED for (claim, chase,
+  person, number) in the CURRENT epoch — ⚠ **the no-restart rule (flagged for BigDev's §0 check):** a person already concluded on that
+  number is letter-eligible and `foundDeadOn` is sticky, so a second ladder would only add texts (a dead phone would otherwise get a new
+  ladder about every 8 days to day 84 — nine ladders, eighteen extra SMS — against `-350` Consequence 3 and the Panel's refusal of one
+  ladder per reminder, Q4 B); a ladder that ENDED (delivered / call / number changed / stopped) may be followed by a new one on a NEW
+  failure; a person already dead AT SEND in the epoch may still start one (their later accepted rows count for D22, so the ladder's closure
+  hold matters); and the stop predicate (I6). ⚠ The ORIGIN = the EARLIEST row in the epoch that passes EVERY row-level start condition above
+  (accepted + `undelivered`, the current hash, ⛔ later `delivered` row, ⛔ reached call on/after its `sent_on`, the stop predicate judged on
+  the row's OWN `run_id` — so a row in a run ended `mark_changed` fails it and blocks nothing) and is ⛔ COVERED: a row is COVERED by a
+  ladder when its `created_at` lies between that ladder's origin's `created_at` and its `ended_at` (or the ladder still runs); an origin and a
+  covered row never start a ladder (the UNIQUE `(chase, origin_row_id)`, LD2, backs the origin half). A stopped ladder KEEPS its origin and
+  its covered rows: after a mark switch
+  ends a family run `mark_changed` (`correction-chase.ts:20-28`) — or a `resubmitted` pause, a lifted `cannotRemind`, a person re-added —
+  the NEXT reported failure (a row created after the stopped ladder's `ended_at`) starts the next ladder; re-starting the old origin or a
+  covered row would re-send its steps (four extra texts for one
+  undelivered reminder, against `-350` Consequence 3). If that later ladder concludes, LD6 maps the earlier row too.
+  **Stop predicates** (extracted, I6 — Task 3): correction — the stops of `beginCorrectionFamilySend` with `run_ended` allowed ONLY for
+  `end_reason = 'day_90'`, PLUS ⭐ `closure_closed` (the return's `claim_correction_closures` row is `closed` (`0131:77`), or the claim is in a
+  terminal state — F8: `day_90` alone does ⛔ say whether a closure was decided) — read by its OWN query in the predicate's module or an
+  injected hook shaped like `CorrectionHoldCheck` (`correction-chase.ts:142`), ⛔ an import of `correction-closure.ts` (which imports
+  `correction-reminder-record.ts`, `:83-89` — a cycle; [[project_type_only_import_cycle_trap]]; the same holds for `contact-ladder-record.ts`
+  if `correction-closure.ts` imports it for `ladder_running`); certificate — `certificateLadderStopReason` reads the ladder's ORIGIN run by
+  `run_id` through `readCertificateRun(db, pariwarId, runId)` (`certificate-reminder.ts:123` — open OR ended; `planCertificateRun` CANNOT be
+  reused: it judges only `f.openRun` (`readCertificatePlanFacts`, `:291`, `:306`), returns `{ kind: 'none' }` with no open run (`:248`) and,
+  once the day-181 sweep ends a run `completed`, never returns `completed` again, `:246-252`; `beginCertificateFamilySend` maps anything but
+  `continue` to `run_ended`, `certificate-reminder-record.ts:404`) and composes sub-predicates EXTRACTED from `planCertificateRun` (which
+  calls them, so its own order is unchanged): `certificateRunReceived(run, facts)` (`:255-257`) and `certificateRunPauseReason(run, facts)`
+  (`:259-268`). Its order: ended `superseded` / `certificate_received` ⇒ END; the certificate received ⇒ END; the pause reasons —
+  `certificate_accepted` or a state in `NEVER_REENTERS` (moved out of the read model and exported — module-private at
+  `certificate-reminder-read.ts:42`, its only user `:237`) ⇒ END, any other pause ⇒ the step `skipped:paused` (I6, LD3 — ⛔ a hold);
+  `recipients.cannotRemind` (`certificate-reminder-record.ts:408`) ⇒ END; the person no longer on the contact record
+  (`not_a_recipient`, `:410`) ⇒ END; a letter DELIVERED at that number to ANY person (`numberLetterDelivered`, `:420`; CR6
+  `certificate-reminder.ts:779`) ⇒ END; and only then the horizon (run day > 180, the run open or ended `completed`) ⇒
+  `skipped:past_horizon`. ⛔ `planCertificateRun`'s sweep order (completed BEFORE received / pause — it ends RUNS, ⛔ ladders). Checked at
+  start, before each send and before conclusion / `ladder_escalation`. **End `ended_delivered`:** a `delivered` report on ANY `family_sms`
+  or `ladder_sms` row of THAT chase to that person's number created after the origin — incl. a row sent to ANOTHER person of the claim on
+  the same number that satisfied this person's step (T22) (PQ2 (a) asks whether the OTHER chase's delivered message also ends it — our
+  reading ⛔). **End `ended_call`:** a call recorded `reached` for that person with `called_on ≥` `origin_sent_on` (LD10 — the call is a fact
+  about the PERSON, so it ends a running ladder of EITHER chase — disclosed in PQ2). **End `ended_number_changed`:** the person's current
+  number hash ≠ the ladder's (hash only at start, before a send and at conclusion — F6's KMS cost; between them the version-unchanged
+  convention `currentNumberHash: undefined`). ⚠ **A hash that FAILS** (`readReturnPersonStates` catches it per person and sets `hashFailed`,
+  `correction-reminder-record.ts:833-845`): before a send ⇒ the step `skipped:hash_unavailable` (LD3); at conclusion ⇒ conclude on the
+  RECORDED number (the D30 convention) and alarm by ids — so a failing envelope can ⛔ hold a closure past `conclude_on`. **End
+  `ended_stopped:<reason>`:** a stop. ⚠ **A step with NO report (silence) does ⛔ end a ladder** — our reading of 4 A's *"IS delivered"*
+  (PQ1 asks). **Conclude** on `conclude_on` when ⛔ end condition has fired ⇒ `concluded_undelivered`, `concluded_on` = the IST date the
+  sweep concluded it (= `conclude_on` unless a run was missed). A `delivered` report arriving AFTER conclusion: ⛔ un-conclude — the person
+  counts as reached through that accepted row (D22, as for any accepted row) and stays letter-eligible (LD6) — as for a send-time refusal
+  today, unless LD17 decides otherwise.
+- **LD6 — What a conclusion un-counts (the B1 mapping — I3, I4).** Inside each chase's row reader (`readReturnFamilyRows` — return-scoped,
+  `run.return_decision_id`; `readClaimCertificateFamilyRows` — CLAIM-wide across runs, `certificate-reminder.ts:699-731`): the SQL gains
+  `reminder_id` and the row's `sms_send_deliveries` state (a LEFT JOIN on (`cr`|`ce`, `reminder_id`) — at most ONE row per send, the PK);
+  the person's concluded ladders are read SEPARATELY; and the mapping is applied in TS INSIDE the reader (still the ONE copy per chase) —
+  ⛔ a row-multiplying JOIN on `claim_contact_ladders` (under A→B→A two concluded ladders share hash A and a JOIN returns every A row twice,
+  inflating `remindersAccepted`), ⛔ an `=` on a hash in SQL (`correction-closure.ts:323` — inv. (f): compare with `sameNumberHash`).
+  Epochs come from the SAME rules as `evaluatePersonRunState` — `isEvidentialReminderRow` (`correction-chase.ts:711-714`) + the time order
+  `compareReminderRowsByTime` — and each row matches at most ONE ladder (its own epoch's). **The rule:** once ANY ladder of that (claim,
+  chase, person, number) is `concluded_undelivered` in an epoch, EVERY `accepted` `family_sms` row of that person, on that number, in that
+  epoch, whose report is `undelivered` — EARLIER rows included (a row "covered" by a stopped ladder — LD5) — reads with EFFECTIVE outcome
+  `rejected_unreachable`, `deadOn = concluded_on`, `concluded: true` (a row covered by an `ended_delivered` ladder may be mapped harmlessly:
+  that ladder's delivered row still counts). Every other row reads as stored — incl. an `accepted` row with ⛔ report (`-351` 1 A) and
+  every row of an epoch with ⛔ concluded ladder (a RUNNING or ENDED ladder only). ⛔ A stored outcome changes (I2). ⇒ by construction: D22
+  `reachedBySms` stops counting the concluded rows; `foundDeadOn` is set (letter-eligible on BOTH chases — `correction-letter.ts:185-187`,
+  `certificate-reminder.ts:818`); `numberKnownDead` follows if the LAST evidential row is a concluded one (⇒ closure notice by LETTER,
+  `closureNoticeRecipients` `:435`); the queue status `unreachable`; the letter track starts. The mapping needs ⛔ number hash and ⛔ KMS (it
+  compares the ladder's STORED hash with the rows' stored hashes) ⇒ the record-derived queue lines and the D30 sweep path, which read rows
+  WITHOUT crypto (`correction-chase-read.ts:345`, `claim-correction-reminders.ts:1186`), inherit it — they judge on the recorded epoch, as
+  today. Every caller of `readReturnFamilyRows` gets it (`readReturnPersonStates` → `beginCorrectionFamilySend`, the letter precondition
+  `correction-letter.ts:181`, the sweep, the queue; `readClosureReach` `:409`; the record lines; the D30 path) — intended; the catch-up's
+  `readRunFamilyRows` stays unmapped (slot presence only).
 - **LD7 — The found-dead DATE of a concluded reminder = `concluded_on`, and `foundDeadOn` = the EARLIEST dead date in the epoch.** `-250`
   #2: the letter chase *"counts from the day the phone was found dead"* — under a ladder that is the day the system concluded it (with
-  `sent_on` the +7 chase would be overdue on the day of conclusion). The row type gains OPTIONAL `deadOn?: string` and `concluded?: true` (set only
-  by the mapping); `evaluatePersonRunState` computes `foundDeadOn = min over the epoch's dead rows of (deadOn ?? sentOn)` and takes `deadKind` from
-  THAT row (⛔ "the first row in time order" — a concluded origin sent on day 1 but dated day 9 must ⛔ push a day-5 send-time refusal's
-  found-dead date to day 9, `correction-chase.ts:757`); `deadKind` gains `'not_delivered'` (iff the chosen dead row has `concluded`); `correctionPersonStatus`
-  (`correction-chase-read.ts:124-129`) maps it to `unreachable` (else it falls through to `reached` / `not_yet`). ⛔ Its OUTCOME logic
-  changes (I3). **Cost:** a shared pure function gains one optional input — both chases' tests pin the default (⛔ `deadOn` ⇒ today's result).
+  `sent_on` the +7 chase would be overdue on the day of conclusion). The row type gains OPTIONAL `deadOn?: string` and `concluded?: true` (set
+  only by the mapping); `evaluatePersonRunState` computes `foundDeadOn = min over the epoch's dead rows of (deadOn ?? sentOn)` and takes
+  `deadKind` from THAT row, ties broken by `compareReminderRowsByTime` (the earlier row) — with ⛔ `deadOn` anywhere this is EXACTLY today's
+  `epoch.find` on the time-sorted epoch (`correction-chase.ts:758`) (⛔ "the first row in time order" otherwise — a concluded origin sent on
+  day 1 but dated day 9 must ⛔ push a day-5 send-time refusal's found-dead date to day 9); the epoch and reset logic read `sentOn` only and
+  are unaffected; `deadKind` gains `'not_delivered'` (iff the chosen dead row has `concluded`) — its only consumer TODAY is
+  `correctionPersonStatus` (`correction-chase-read.ts:124-129`; ⛔ on any DTO; the certificate chase never reads it — this story adds LD9's `planCertificateStaffChase`
+  read and LD12's `unreachable_reason` on both DTOs), which maps it to
+  `unreachable` (a compile error until widened). ⛔ Its OUTCOME logic changes (I3). **Cost:** a shared pure function gains one optional input
+  — both chases' tests pin the default (⛔ `deadOn` ⇒ today's result).
 - **LD8 — D22 and the closure hold (`-351` 4 A, 5 A, 6 A).** `evaluateClosurePersonReach` (`correction-closure.ts:365-392`) gains
   `reachedByLadderSms` — any correction `ladder_sms` row of that person, scoped to the return, `accepted`, on the current number, whose OWN
   `sms_send_deliveries` state is ⛔ `undelivered` (so a SILENT ladder SMS counts — `-351` 1 A, PQ1's reading) — read by ONE new reader beside
   `readReturnFamilyRows` (⛔ widening it — LD2), and `reachedByCall` — any call recorded `reached` for that person on/after the return's
   first family run's start (LD10); `reached = sms || ladderSms || letter || call`. `assertClosureGround` gains `ladder_running` — ANY
   correction ladder `running` for any person of the claim's live return — placed AFTER `claim_corrected` and BEFORE `not_reached` (so staff
-  see WHY) in the guard, the union, `AC6_REQUEST_REFUSALS` (its lockstep test pins the literal against the contract's order — ⛔ `assertClosureGround`'s own order) and `ClosureRequestBlocker`; at ALL four callers
-  by construction; plus F7's list (`blockerDto`, the api switch, admin copy). ⚠ A running CERTIFICATE ladder does ⛔ hold the correction
-  closure (our reading — 6.19d invariant 2; PQ2 (b) asks). `closure_due` / `closure_escalation` keep firing (`readClosureReadiness` shows
-  `ladder_running`; ⛔ change to `correction-closure-jobs.ts` — a staff prompt, ⛔ what a family receives). The frozen closure notice: a ladder
-  cannot be running at decide (the gate) and ⛔ ladder starts after a closure (`closure_closed`, LD5).
+  see WHY) in the guard, the union, `AC6_REQUEST_REFUSALS` (its lockstep test pins `ClosureRequestBlocker.options.slice(0, AC6.length)` against
+  it plus the literal tail — inserting before `not_reached` in BOTH stays green; ⛔ `assertClosureGround`'s own order) and
+  `ClosureRequestBlocker`; at ALL four callers by construction (request / decide / escalated-decide under `lockForClosure`; `readClosureReadiness`
+  unlocked — a read); plus F7's list (`blockerDto`, the api switch, the admin blocker copy — asserted by TEXT, since the map is ⛔
+  exhaustive); the api `not_reached` message (*"reached by a delivered text or letter"*, `claims.correction-closure.handlers.ts:130-134`)
+  gains *"or a call"*. ⚠ A running CERTIFICATE ladder does ⛔ hold the correction closure (our reading — 6.19d invariant 2; PQ2 (b) asks).
+  `closure_due` / `closure_escalation` keep firing (`readClosureReadiness` shows `ladder_running`; ⛔ change to `correction-closure-jobs.ts`
+  — a staff prompt, ⛔ what a family receives). The frozen closure notice: a ladder cannot be running at decide (the gate) and ⛔ ladder
+  starts after a closure (`closure_closed`, LD5).
 - **LD9 — The escalation "for a call or a letter" (`-350` ruling 2, `-351` 5 A; ⚠ the reached-call half flagged for BigDev's §0 check).** On
   conclusion the sweep writes ONE staff row per ladder, purpose `ladder_escalation` (NEW on both send tables, `subject_key =
-  'ladder:<ladder_id>'`, `outcome 'recorded'`, the new partial UNIQUE), to the claim's live District Admin (correction: the `letter_chase`
-  recipient rule; certificate: the live shepherd, as CR10) — on the return's LATEST run even if ended (the `staffWriter` anchor, F8 — exported for
-  this; correction) / the origin run (certificate), and only on a day the run is not paused (certificate). Correction: pushed (added to
-  `STAFF_PUSH_ITEM_PURPOSES` and the push query; the ladder sweep issues the push itself whenever ⛔ `staff_push` exists for that staff
-  member today — open or ended run — under the day UNIQUE; if one already went, the item rides the next morning's push); certificate: RECORDED only (CR10 — ⛔ push in v1). The ask
-  is CAP-AWARE: "call or post a letter"; "call" only when the letter cap is reached (correction 2 per person per return — F12; certificate
-  one per claim, ever — F14); "post a letter" only for a nominee under LD11 (a); "neither is possible — escalate" when both are closed (a
-  nominee at the certificate letter cap before counsel). The existing found-dead letter track (+7…+12 / +13) then runs FROM `concluded_on`
-  (LD7) where its window allows (open run, `slot < 90` / not paused) — its rules unchanged. ⭐ A call recorded `reached` stops the staff asks
-  ONLY for a person whose dead outcome is a CONCLUDED one (`deadKind 'not_delivered'`): `planRun` and `planCertificateStaffChase` gain a
-  per-person `reachedCallOn` (scoped to the epoch like `letterDelivered`) consulted only then — that MATCHES `-351` 5 A (*"asked to call or
-  post"*, satisfied by either); for a SEND-time dead number the letter track is unchanged (`-230` / `-231` C — a dead number is answered by
-  POSTED LETTERS — a reached call stopping it there would NARROW them ⇒ the Panel's, ⛔ built). ⛔ The scheduled family reminders change (their
-  stop stays `-250` #1, a DELIVERED letter). `escalated` on the correction queue counts `purpose='escalation'` only — `ladder_escalation` does
-  ⛔ light it. **Cost:** a day-84 ladder concluding ≈ day 92 gets the `ladder_escalation` + push, but ⛔ +7…+13 chase (the run is ended — as
-  today for a number refused on day 84).
+  'ladder:<ladder_id>'`, the new partial UNIQUE), to the claim's live District Admin (correction: the `letter_chase` recipient rule;
+  certificate: the live shepherd, as CR10 — `districtAdminKey`, `claim-certificate-reminders.ts:499-502`) — outcome `recorded`, or
+  `no_target` when there is no live shepherd (`staff:unassigned`, with the `contact_ladder.escalation_unassigned` alarm in CR10's shape `:487-491`; the certificate purpose↔outcome CHECK
+  allows both — LD2) — on the return's LATEST run even if ended (the `staffWriter` anchor, F8 — exported for this; correction) / the origin
+  run (certificate), written on conclusion WHETHER OR NOT the certificate run is paused (a staff record, ⛔ a family text; `-275` Q4 governs
+  reminders — disclosed in the Policy meaning); `claim_contact_ladders.escalated_on` records it. Correction: PUSHED — and the push must
+  actually reach it: the push child lists only rows with `sent_on = p.sentOn` and a push is enqueued only for staff with a row recorded
+  TODAY (F12), so (i) `ladder_escalation` joins `STAFF_PUSH_ITEM_PURPOSES` (`claim-correction-reminders.ts:495-501`) AND the `todays`
+  enqueue list (`:1366-1369`); (ii) the push child's item query takes `ladder_escalation` rows with `sent_on <= p.sentOn` that were created
+  after the LATEST `staff_push` row for that recipient on the claim with `sent_on < p.sentOn` (or with none) — ⛔ today's, which
+  `runCorrectionStaffPush` claims BEFORE its item query (`claim-correction-reminders.ts:577-597`) — ⛔ "the next morning's push" would never list a row
+  dated yesterday; (iii) the ladder sweep enqueues a push for (claim, District Admin, today) whenever such an un-pushed row exists and ⛔
+  `staff_push` row exists for them today — open or ended run — under the day UNIQUE (`0128:77`); a row written AFTER today's push went is
+  carried by (ii) into the next push. Certificate: RECORDED only (CR10 — ⛔ push in v1). The ask is CAP-AWARE: "call or post a letter";
+  "call" only when the letter cap is reached (correction 2 per person per return — F12; certificate one per claim, ever — F14); "post a
+  letter" only for a nominee while nominee calls are not cleared (LD11 — `-354` decision 5); "neither is possible — escalate" when both are
+  closed (a nominee at the certificate letter cap before counsel). The existing found-dead letter track (+7…+12 / +13) then runs FROM
+  `concluded_on` (LD7) where its window allows (open run, `slot < 90` / not paused) — its rules unchanged. ⭐ A call recorded `reached` stops
+  the staff asks ONLY for a person whose dead outcome is a CONCLUDED one (`deadKind 'not_delivered'`): `planRun` and
+  `planCertificateStaffChase` (which already receives `deadKind` through `p.track`) gain a per-person `reachedCallOn` (scoped to the epoch
+  like `letterDelivered`) consulted only then — that MATCHES `-351` 5 A (*"asked to call or post"*, satisfied by either); for a SEND-time
+  dead number the letter track is unchanged (`-230` / `-231` C — a dead number is answered by POSTED LETTERS — a reached call stopping it
+  there would NARROW them ⇒ the Panel's, ⛔ built). ⛔ The scheduled family reminders change (their stop stays `-250` #1, a DELIVERED letter).
+  `escalated` on the correction queue counts `purpose='escalation'` only — `ladder_escalation` does ⛔ light it. **Cost:** a day-84 ladder
+  concluding ≈ day 92 gets the `ladder_escalation` + push, but ⛔ +7…+13 chase (the run is ended — as today for a number refused on day 84).
 - **LD10 — The call record.** NEW tenant table `claim_contact_calls` (append-only): `call_id`, `pariwar_id`, `claim_case_id` FK,
   `person_key` (the chase grammar), `chase` (`correction|certificate` — the surface it was recorded from; ⛔ a reach scope), `ladder_id`
   (nullable), `called_on date` (IST; ≤ today; ≥ the claim's filing date), `answered_by` (`the_person|family_member|someone_else|nobody`),
   `outcome` (`reached|not_reached`; CHECK `outcome='reached' ⇒ answered_by IN ('the_person','family_member')`), `recorded_by_actor`,
-  `recorded_by_display` (`getDisplayName` — [[project_admin_display_name_attribution]]), `created_at` (`clock_timestamp()`). ⛔ free text, ⛔
-  names, ⛔ a number (*"who answered"* as a role — `-351` 5 A's reading). GRANT `SELECT, INSERT` only; tenant RLS per command;
-  policy-regression spec. Routes, in the EXISTING route files and path grammar (so the district resolver and the human-actor gate apply — F17):
-  `POST /api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/calls`, `GET …/correction/calls/number?person_key=`, `POST
-  …/admin/claims/:claimCaseId/certificate-reminders/calls`, `GET …/certificate-reminders/calls/number?person_key=`. Each POST takes a
-  MANDATORY `Idempotency-Key` (the keyed store); each GET is behind a NEW step-up context `contact_call_number` (the constant in BOTH
-  `apps/api` and `apps/admin/src/api/client.ts`), decrypts the person's CURRENT number through the reminders' resolver (after a 6.20 change:
-  the new number), writes ONE audit line per reveal, `Cache-Control: no-store`. Audit: `admin_claim_correction.call_recorded`,
-  `…call_number_revealed`, `admin_claim_certificate.call_recorded`, `…call_number_revealed` (the `AuthAuditEventType` union; locator
-  `claim:<lower uuid>`; ⛔ PII in `context`). Preconditions: a contact record + live agreement (D30 — as letters); the person on the chase's
-  recipient set; LD11. **Locks:** a call that may end ladders of BOTH chases takes `acquireCorrectionChaseLock` THEN `lockCertificateClaim`
-  (advisory THEN row — `correction-closure.ts:12-16`); the ladder sweep re-reads calls inside each chase's lock before an end / conclude.
-  **Key — ⭐ (a) Recommended:** REUSE `claim.record_correction_letter` (same holder, same act family; the 6.19c / 6.19d precedent; catalog
-  stays 52 / 68). **(b)** mint `claim.record_contact_call` (catalog 52 → 53, authorised in `-354` first). ⭐ A reached call: ⇒ D22
-  `reachedByCall` (LD8 — a call recorded from either surface counts for the correction closure, because it reached the PERSON; disclosed in
-  PQ2); ⇒ ends that person's running ladder(s) whose `origin_sent_on` ≤ `called_on` (LD5); ⇒ stops their asks if concluded (LD9); ⇒ ⛔ changes
-  letter-eligibility or the scheduled reminders.
-- **LD11 — Calls to a NOMINEE before counsel (⚠ BigDev's — `-352` Consequence 3 calls it *"BigDev's decision, recorded separately"*; ⛔
-  recorded yet; it NARROWS `-352` Q2 and `-351` 5 A for nominees).** ⭐ **(a) Recommended:** the conclusion's ask for a NOMINEE reads "post a
-  letter" (LD9), and the call routes refuse a nominee person key (`nominee_calls_not_cleared`) and its number reveal until a per-deployment
-  config key `claim.contact.nominee_calls_cleared` reads `true` (registered where the api's other boolean config keys are — Task 6); the key
-  may be set ONLY when a NEW roster row (next free — F18) `claim-contact-nominee-call-basis` closes on counsel's written basis (G1's call
-  half). The claimant's calls are live — on `-351`'s reading, ⛔ on the agreement (F21; disclosed). **Cost:** a nominee is reached only by
-  post until counsel answers (and at the certificate letter cap, not at all — LD9's "neither"); a DA who phoned a nominee anyway cannot record
-  it. **(b)** both live now (`-351`'s reading for everyone) — a nominee is called on a basis counsel has ⛔ confirmed (`-352` (a)). **(c)**
-  calls to nobody until counsel — beyond `-352` C3. **(d)** both built live, and the nominee-call condition held ONLY as a closure leg of
-  the new roster row that must close before claim texts go live (`-352` C3's own form; the product is ⛔ in production —
-  [[project_not_in_production_merge_is_not_golive]]) — cost: counsel's answer then gates EVERY claim text, ⛔ only nominee calls.
+  `recorded_by_display` (`getDisplayName` ⇒ `AdminDisplayNameMissingError` on null, ⛔ fallback — F17;
+  [[project_admin_display_name_attribution]]), `created_at` (`clock_timestamp()`). ⛔ free text, ⛔ names, ⛔ a number (*"who answered"* as
+  a role — `-351` 5 A's reading). GRANT `SELECT, INSERT` only; tenant RLS per command (`policies/claim-contact-call-rls.ts`);
+  policy-regression spec. Routes, in the EXISTING route files and path grammar (so the district resolver and the human-actor gate apply —
+  F17): `POST /api/v1/p/:pariwarId/admin/claims/:claimCaseId/correction/calls`, `GET …/correction/calls/number?person_key=`, `POST
+  …/admin/claims/:claimCaseId/certificate-reminders/calls`, `GET …/certificate-reminders/calls/number?person_key=` (⛔ collision with an
+  existing segment). Each POST takes a MANDATORY `Idempotency-Key` (`400` without it) over the keyed store, in the house shape (T17): store
+  key `claim.contact_call:<pariwar>:<actor>:<Idempotency-Key>`, a 24 h TTL, the tx opened INSIDE the claim's try (the letter handler already
+  opens its own `openScopeTx`), COMMIT then `recordResult`, `release()` on failure; a replay under the same key returns the FIRST result
+  whatever the body (the store compares ⛔ bodies — F17; ⛔ a "mismatch refusal"); a replay while the first is in flight ⇒ `409
+  …idempotency_in_progress`. Each GET is behind a NEW step-up context `contact_call_number` (a free string — ⛔ registry; the constant in
+  BOTH `apps/api` and `apps/admin/src/api/client.ts`), decrypts the person's CURRENT number through the reminders' resolver (after a 6.20
+  change: the new number), writes ONE audit line per reveal, `Cache-Control: no-store`. Audit: `admin_claim_correction.call_recorded`,
+  `admin_claim_correction.call_number_revealed`, `admin_claim_certificate_reminder.call_recorded`,
+  `admin_claim_certificate_reminder.call_number_revealed` (the `AuthAuditEventType` union — ⛔ frozen pin; locator `claim:<lower uuid>`; ⛔
+  PII in `context`). Preconditions: a contact record + live agreement (D30 — as letters); the person on the chase's recipient set; LD11.
+  **Locks:** a call that may end ladders of BOTH chases takes `acquireCorrectionChaseLock` THEN `lockCertificateClaim` (advisory THEN row —
+  `correction-closure.ts:12-16`; `lockCertificateClaim` is `claims` FOR UPDATE, `certificate-reminder.ts:322-334`, and ⛔ certificate writer
+  takes the advisory key ⇒ ⛔ deadlock); the ladder sweep re-reads calls inside each chase's lock before an end / conclude. **Key — ⭐ (a)
+  Recommended:** REUSE `claim.record_correction_letter` (same holder, same act family; the 6.19c / 6.19d precedent; catalog stays version 52
+  / 68 keys). **(b)** mint `claim.record_contact_call` (catalog version 52 → 53 and keys 68 → 69 — `permissions.test.ts:234`; authorised in
+  the 6.37c entry first). ⭐ A reached call: ⇒ D22 `reachedByCall` (LD8 — a call recorded from either surface counts for the correction
+  closure, because it reached the PERSON; disclosed in PQ2); ⇒ ends that person's running ladder(s) whose `origin_sent_on` ≤ `called_on`
+  (LD5); ⇒ stops their asks if concluded (LD9); ⇒ ⛔ changes letter-eligibility or the scheduled reminders.
+- **LD11 — Calls to a NOMINEE before counsel: the gate is DECIDED, only its MECHANISM is open.** `-354` decision 5 (author-commit) recorded
+  what `-352` Consequence 3 called *"BigDev's decision, recorded separately"*: *"**a call to a nominee** waits for G1"* (counsel's written
+  confirmation of the nominee's basis); its §0: *"stricter, never looser"* — ⛔ a Trustee-ratified clause moves. ⇒ the conclusion's ask for
+  a NOMINEE reads "post a letter" (LD9), and the call routes refuse a nominee person key (`nominee_calls_not_cleared`) and its number reveal
+  until the gate is cleared, which happens ONLY when a NEW roster row (next free — F18) `claim-contact-nominee-call-basis` closes on
+  counsel's written basis (G1's call half). The claimant's calls are live — on `-351`'s reading, ⛔ on the agreement (F21; disclosed).
+  **Mechanism — ⭐ (a) Recommended:** ONE environment variable (e.g. `CLAIM_NOMINEE_CALLS_CLEARED=1`, default unset ⇒ refused) read at boot
+  by BOTH `apps/api/src/config.ts` `loadConfig` (the api's booleans are ad-hoc env vars there — `COOKIE_SECURE`, `TURNSTILE_FAIL_OPEN`; ⛔
+  a dotted-key registry exists; the dotted `sms.dlt.*` names are Secret Manager names) AND `apps/jobs/src/boot.ts` (module-level, beside
+  `CLAIM_PEER_MESH_WINDOW_SECONDS` `:200` — jobs has ⛔ config module; passed into the ladder sweep's deps as `nomineeCallsCleared`, the
+  `appLinksBaseUrl` precedent `:687`), set in ONE place in the deployment config and logged at boot by both apps; the domain never reads
+  it — the api call handlers, the api staff-view DTO handlers (LD12's `ask`) and the jobs ladder sweep pass
+  `nomineeCallsCleared: boolean` into the domain (`contact-call.ts`, `ladderAsk`). **Cost:** two readers of one variable (a boot line in
+  each shows a drift). **(b′)** a governed feature flag in the Story 10.8 registry (`packages/domain/src/feature-flags/registry.ts:110`
+  `FLAG_DEFAULTS`) — **cost:** `governance_boundary.yaml` admits a flag only with a Trustee attestation in `.decision-log.md`, an
+  ADR-cited `allow` entry and a `count` bump; none of its three kinds (`member_flow` / `provider_selection` / `channel_routing`) fits a
+  staff call gate, and a new kind is itself a bar expansion; `packages/domain/src/claim` is a PROHIBITED root (*"A flag must never condition
+  claim lifecycle …"*) — leg (b) goes RED on a flag import there, so the flag could be read only in `apps/api/src/modules/claims` handlers
+  and `apps/jobs`, passed in as the same boolean; and its per-Pariwar ≻ global override contradicts *"cleared ONLY when the roster row
+  closes"*. **(d)** ⛔ switch:
+  the nominee-call condition held ONLY as a closure leg of the new roster row that must close before claim texts go live — cost: counsel's
+  answer then gates EVERY claim text, ⛔ only nominee calls. ~~(b) both live now~~ — FORECLOSED by `-354` decision 5 (choosing it would
+  need a superseding entry). **Cost (all):** a nominee is reached only by post until counsel answers (and at the certificate letter cap,
+  not at all — LD9's "neither"); a DA who phoned a nominee anyway cannot record it.
 - **LD12 — What staff see (fires the deferred *"⛔ Staff view labels a send 'reported undelivered'"* — its trigger is THIS create-story).**
   Correction: `CorrectionChasePersonDto` gains `follow_up: { state: 'running'|'concluded'|'ended_delivered'|'ended_call'|'ended_other',
-  started_on, next_step_on, concluded_on } | null` (the person's LATEST ladder in the return), `unreachable_reason: 'refused'|'not_delivered'|null`,
-  `reported_undelivered: number` (accepted reminders in the epoch whose report says undelivered), `ask: 'call_or_letter'|'call'|'letter'|'none'|null`
-  (LD9), and `calls: ContactCallDto[]`; the status enum is UNCHANGED (F11). Certificate: `CertificateReminderPersonDto` gains the same
-  `follow_up`, `unreachable_reason`, `ask`, `calls`; `sms_state` gains ⛔ value (a concluded person shows `unreachable` with reason
-  `not_delivered`; the copy *"this person's number does not work"* (`certificate-reminders/i18n-en.ts:53`) becomes reason-aware). Admin:
-  both panels show "Follow-up texts running — next on <date>", "Texts were reported not delivered — <the ask>", the call form and the call
-  list. Contracts re-declare the vocabularies by hand (F11); contracts tests run outside tsc ([[project_contracts_tests_outside_tsc]]).
-  Peer-mesh / suspicion views: ⛔ (the deferred item's peer-mesh part stays).
+  started_on, next_step_on, concluded_on } | null` (the person's LATEST ladder in the return), `unreachable_reason: 'refused'|'not_delivered'|null`
+  (from `track.deadKind` — LD7's MIN row), `reported_undelivered: number` (accepted reminders in the epoch whose report says undelivered),
+  `ask: 'call_or_letter'|'call'|'letter'|'none'|null` (LD9), and `calls: ContactCallDto[]`; the status enum is UNCHANGED (F11) — a concluded
+  person reached by a call still shows `unreachable` (disclosed in the Policy meaning). Certificate: `CertificateReminderPersonDto` gains the
+  same `follow_up` (the LATEST ladder in the CLAIM — certificate runs have no return), `unreachable_reason` (from `track.deadKind`), `ask`,
+  `calls`; `sms_state` gains ⛔ value — it shows `unreachable` only when the LAST evidential row is the concluded one
+  (`certificate-reminder-read.ts:197-209`); a later accepted row shows `reminded` while the person stays letter-eligible, so the panel reads
+  `unreachable_reason`, ⛔ `sms_state`; the copy *"this person's number does not work"* (`certificate-reminders/i18n-en.ts:53`) becomes
+  reason-aware. ⚠ The certificate LIST hides a claim whose run is ended (`listedForRun` `certificate-reminder-read.ts:237-238`) ⇒ the listing
+  predicate gains "any running ladder, or a concluded ladder whose ask is not yet answered" (else a day-180 origin's ladder and a "call"-only
+  ask after day 180 are invisible). Both DTOs are `.strict()` RESPONSE schemas (`packages/contracts/src/claims/correction-chase.ts:153-163`,
+  `certificate-reminder.ts:91-103`) — a field missing from the schema fails the serializer. Admin: both panels show "Follow-up texts running —
+  next on <date>", "Texts were reported not delivered — <the ask>", the call form and the call list. Contracts re-declare the vocabularies
+  by hand (F11) — the certificate side HAS a lockstep test (`packages/contracts/tests/certificate-reminder-lockstep.test.ts:25-30`) that
+  gains legs for `follow_up.state`, `unreachable_reason`, `ask`; the correction side has ⛔; contracts tests run outside tsc
+  ([[project_contracts_tests_outside_tsc]]). Peer-mesh / suspicion views: ⛔ (the deferred item's peer-mesh part stays).
 - **LD13 — Alarms and the burst.** The `-269` §4 burst alarm (F13) is ⛔ extended (it counts SEND-time refusals — a different signal). NEW:
   a daily ladder line `[jobs] contact-ladder: started N, ended_delivered N, ended_call N, concluded N` and an alarm
   `contact_ladder.burst:<count>` when ≥ 3 ladders START in one Pariwar on one IST day (a DLT scrub / template fault makes EVERY report
-  undelivered ⇒ every person gets a ladder, more failing texts and a conclusion — the alarm is the pointer; logs only until Row 32 (h)). ⛔ an
-  id, number or name in a line.
-- **LD14 — Records.** (a) ONE author-commit `2026-10-17-354` (or the next free id, re-grepped on EVERY branch and worktree right before)
-  carrying LD1–LD13 as answered + the supersessions (the ONE copy): `-353` decision 1 IN PART (LD1); `-353` decision 2's *"move to 6-37c
-  unchanged"* (AC11 is re-written — F1, `-351` 3 B); (⛔ a supersession: `-353` decision 1's *"its `epics.md` entry is owed at its create-story"* was DISCHARGED at create-story —
-  Task 0.4 adds the decided shape as a dated note); `-351` Consequence 2's *"built but off"* (LD1 —
-  NARROWED); `-352` C3's *"BigDev's decision, recorded separately"* — RECORDED here as LD11, which NARROWS `-352` Q2 / `-351` 5 A for
-  nominees; the 6.37b story file's AC11 / Task 7 lines (F1) and *"the certificate chase's letter-eligibility is unchanged"* (superseded by
-  `-351` 3 B — recorded, ⛔ an edit); the 6.37b I1 restated (I1 here). (b) Records commit: a dated note under the `epics.md` `### Story 6.37c`
-  entry (the decided shape) and under 6.37b's (its *"Task 7 waits for that ruling"* is stale — ⛔ edited); the sprint rows (6-37c →
-  `in-progress`; NEW `6-37d-claim-contact-whatsapp-step: backlog` with its comment, if LD1 (a)); roster Row 32 note (9.1) (6-37c `done` does ⛔
-  need 6-37d); Row 26 note (the ladder sweep joins the jobs-role list); Row 18 note (`-352` moves the nominee basis off the claimant's
-  agreement; claimant calls ride on `-351`'s reading — F21); the NEW nominee-call roster row (LD11 (a) / (d)); ADR-0042 dated note (I1's
-  forgery lines); the §3.4 proposal's bullet and the Panel pack's row references CORRECTED in place while unpresented, with a revision line
-  (F19 — 6-37d for WhatsApp; this row for G1's call half). (c) ⛔ new ADR (the ladder is domain logic on existing transports). (d) The
-  deferred *"`delivered_at` … an unused seam"* item's trigger FIRES (this migration touches both tables): ⭐ recommended — keep it unused
-  (delivery lives in `sms_send_deliveries`, `-347` DR5) and record that in `-354`, the item **Closed by** `-354`.
+  undelivered ⇒ every person gets a ladder, more failing texts and a conclusion — the alarm is the pointer); plus
+  `contact_ladder.rls_bound_role` (T24), `…hash_unavailable`, `…scheduled_not_sent`, `…escalation_unassigned`. ⚠ Every alarm reaches the
+  LOGS only until roster Row 32 (h) wires `onAlarm` to a named person — and Row 32 (h) closed is a GO-LIVE condition of this ladder
+  (`-354` decision 4 (b); ⛔ a merge or `done` fence). ⛔ an id, number or name in a line (the hash / scheduled alarms carry claim ids only, as
+  6.37b's do).
+- **LD14 — Records.** (a) ONE author-commit — the 6.37c entry (the next free id, re-grepped on EVERY branch and worktree right before;
+  6-31 wants the next id too — F18), dated the day it is committed — carrying LD1–LD13 and LD15–LD17 as answered + the supersessions (the
+  ONE copy): `-353` decision 1 IN PART (LD1); `-353` decision 2's *"move to 6-37c unchanged"* (AC11 is re-written — F1, `-351` 3 B); (⛔ a
+  supersession: `-353` decision 1's *"its `epics.md` entry is owed at its create-story"* was DISCHARGED at create-story — Task 0.4 adds the
+  decided shape as a dated note); `-351` Consequence 2's *"built but off"* (LD1 — NARROWED); the 6.37b story file's AC11 / Task 7 lines (F1)
+  and *"the certificate chase's letter-eligibility is unchanged"* (superseded by `-351` 3 B — recorded, ⛔ an edit); the 6.37b I1 restated (I1
+  here); LD16's answer — if BigDev moves the counsel question to 6-37d, `-354` decision 5's *"with row 6-37c's Task 0"* is superseded IN
+  PART (⛔ re-read). ⛔ `-352` C3 on that list — `-354` decision 5 already recorded it (LD11). (b) Records commit: a dated note under the
+  `epics.md` `### Story 6.37c` entry (the decided shape, the nominee caveat — `-354` decision 5 — and the Row 32 (h) go-live condition —
+  `-354` decision 4 (b)); (6.37b's `epics.md` entry already carries its round-2 dated note — ⛔ another); the sprint rows (6-37c →
+  `in-progress`; NEW `6-37d-claim-contact-whatsapp-step: backlog` with its comment, if LD1 (a)); roster Row 32 note (9) AND Row 33's note
+  that repeats its gate (6-37c `done` does ⛔ need 6-37d — both sites, ⛔ one); Row 26 note (the ladder sweep joins the jobs-role list and
+  adopts the `canReadAcrossPariwars` guard — T24); Row 18 note (`-352` moves the nominee basis off the claimant's agreement; claimant calls
+  ride on `-351`'s reading — F21; the counsel question LD16 put); the NEW nominee-call roster row (LD11); ADR-0042's dated note (LD15 — the
+  restated bound incl. I1's genuine-failure effect, and the token decision); the consent sheet
+  `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-10-17.md` §1–§2 revised (§2's *"holds under the Panel's ruling"* lacks
+  ADR-0042's two effects; §1 lacks the edge-bar departure) — or ADR-0042 pulled from the pack; the §3.4 proposal's and the Panel pack's
+  row references CORRECTED in place while unpresented, each with a revision line (F19's list — 6-37d for WhatsApp; this row for G1's call
+  half), plus the pack's disclosures (a pointer to `-354` decision 2's, which stands in the proposal; `-354` decision 4 (c)'s in full); and an annotation where deferred-work, the sprint comment and the
+  6.37b story cite this row's pre-rebase SHAs (`1e0c6f2e` ⇒ `c19e6534`, `f8102c02` ⇒ `1534293b`). (c) ⛔ new ADR (the ladder is domain
+  logic on existing transports). (d) The deferred *"`delivered_at` … an unused seam"* item's trigger FIRES (this migration touches both
+  tables): ⭐ recommended — keep it unused (delivery lives in `sms_send_deliveries`, `-347` DR5) and record that in the 6.37c entry, the
+  item **Closed by** that entry.
+- **LD15 — The report token, BEFORE the ladder is built (ADR-0042 Security: this row *"decides whether the static token is still enough,
+  BEFORE it builds the ladder and before Row 33 (a) ratifies this text"*).** Under the ladder a forged report has two new effects relative
+  to a genuine failure (I1; ADR-0042 (i) and (ii)): a forged `delivered` cancels a person's closure hold; a forged `undelivered` starts up to
+  two more copies of an approved reminder, an ≈ 8-day closure hold and a call / letter ask. ⭐ **(a) Recommended:** keep the static header
+  token (rotation as ADR-0042 says) and RESTATE the bound in a dated ADR-0042 note — the forger must hold the token; the worst case is
+  bounded per person (one ladder at a time, the no-restart rule, the burst alarm); ⛔ worse than today's no-report state. **Cost:** a token
+  leak lets one end a real failure's protection for persons the forger targets until rotation. **(b)** a cross-check — a ladder ends
+  `ended_delivered` only when a status pulled from MSG91 for that request id agrees (whether MSG91 offers such a pull for Flow sends is
+  UNVERIFIED — a Task 0 check before choosing it; a new outbound call, a new failure mode). **(c)** stronger ingress authentication — ⛔
+  available from MSG91: it signs ⛔ report (⛔ HMAC, ⛔ shared secret) and publishes ⛔ source IPs (ADR-0042's deciding fact), so only the token's
+  handling can be hardened (shorter rotation), which narrows a leak's window and ⛔ closes it. Whichever: the consent sheet §1–§2 is revised (or ADR-0042 pulled from the pack) before the pack is
+  presented (LD14 (b)).
+- **LD16 — The nominee text / letter basis question goes to COUNSEL with THIS row's Task 0 (`-354` decision 5: *"The basis for the texts
+  and letters nominees receive TODAY, once the claimant's new agreement no longer names nominees (`-352`'s reading), is put to counsel with
+  row 6-37c's Task 0 — ⛔ changed until then"*; Consequence 2).** ⭐ **(a) Recommended:** Task 0.5 puts it (a short written question; a Row
+  18 dated note naming it); nothing a nominee receives changes until counsel answers; 6-37d keeps only the REWORDING. **Cost:** ⛔ (the
+  question rides with the Row 18 conversation already open). **(b)** move it to 6-37d with the rewording — supersedes `-354` decision 5 IN
+  PART in the 6.37c entry. **Cost:** the question waits for 6-37d (after 6.31), though the nominees' basis question exists today.
+- **LD17 — Letter-eligibility after a later DELIVERED reminder (⚠ flagged for BigDev's §0 check — it decides who is offered letters).**
+  6.37b's AC11 annotation: *"the leg 'STILL so after a later reminder is reported `delivered`' CONFLICTS with `-351` ruling 4 A … row
+  6-37c's Task 0 reconciles both."* B1 (`-350` ruling 1) says a concluded person is offered the letter route *"as when the network refuses
+  a number at the moment of sending"* — and a send-time refusal today stays letter-eligible for that number for good (`foundDeadOn` is
+  sticky); 4 A says a delivered message *"ends it, and the person counts as reached"* — which this story honours for REACH (the delivered
+  row counts for D22). ⭐ **(a) Recommended:** keep letter-eligibility sticky after conclusion (B1's *"as when"*; reach is restored by the
+  delivered row; a letter is an EXTRA channel, ⛔ a penalty) and disclose it — AC4's leg stays. **Cost:** a District Admin may post a letter
+  to a family whose later text got through. **(b)** a `delivered` report on a later row of the SAME epoch clears the concluded mapping
+  for letter-eligibility (the person counts as reached in every sense) — cost: the epoch rule gains a delivered-report exception in the
+  shared pure function (I3's "outcome logic unchanged" no longer holds) and the found-dead letter chase can stop mid-way. If BigDev judges
+  it the Panel's, it joins the PQ note as PQ4.
 
 ## 🏛️ Candidate Panel questions (⏳ §0 check by BigDev at Task 0.2; routed at Task 0.3 only if they pass — ⛔ answered here)
 
@@ -542,7 +733,8 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   silent ladder SMS still COUNTS for D22 (1 A — LD8), so the claim CAN be closed once the ladder concludes, while the person is ALSO
   letter-eligible and the District Admin asked. Options: **A** run on (our reading — cost: a call / letter for a family a silent text may have
   reached); **B** end as reached once the step is two days old with ⛔ report (cost: a family whose phone stayed off is treated as reached on a
-  text ⛔ report confirms; ⛔ call / letter). Arises only when reports stop — the silence alarm (`-347` DR12) fires then.
+  text ⛔ report confirms; ⛔ call / letter). Arises only when reports stop — the silence alarm (`-347` DR12) fires then, to the LOGS only
+  until roster Row 32 (h) (`-354` decision 4 — the note says so; ⛔ "tells staff").
 - **PQ2 — Across the two chases.** (a) Does a DELIVERED message of one chase end the OTHER chase's ladder for the same person on the same
   number, and count them reached for the correction closure? (b) Does a running CERTIFICATE ladder hold the CORRECTION closure? The
   follow-up note put every question inside ONE chase (Q4's "later reminder" was a correction reminder; Q3 B extended the ladder to the
@@ -567,16 +759,17 @@ reminder ⛔ counts toward the correction closure (6.19d invariant 2 — PQ2 ask
   commands run (an empty result is a finding), ⛔ "shown to the Panel" until BigDev SENDS it ([[feedback_shown_to_panel_means_sent]]).
   **Blocks:** ⛔ any code task (Tasks 1–9); the end / horizon rules are written to our readings behind ONE pure function `ladderEndReason(…)` and ONE
   `ladderStepGate(…)` so a ruling is a one-function change + its legs; the row is ⛔ `done` until each routed question is RULED and transcribed
-  (a Trustee-ratified entry) and the code matches it. If BigDev judges any one the author's at Task 0.2, it is recorded in `-354` instead.
+  (a Trustee-ratified entry) and the code matches it. If BigDev judges any one the author's at Task 0.2, it is recorded in the 6.37c entry
+  instead. If BigDev judges LD17 the Panel's, it joins the same note as PQ4.
 
 ## Acceptance Criteria
 
 Notation: "the chase" = correction or certificate; every AC holds for BOTH unless it names one. Live legs at :5433. A controllable clock.
 
-- **AC0 — Governance before code (Task 0).** LD1–LD14 answered by BigDev (verbatim in the Debug Log) and committed ALONE as `-354` (id
-  re-grepped on every branch and worktree first); PQ1–PQ3 through BigDev's §0 check and, if they pass, the ONE routing note WRITTEN (⛔ sent);
-  then ONE records commit (LD14 (b)); the sprint row → `in-progress` and the ledger — all BEFORE any code; ⛔ code before this branch carries
-  `f7e695b7`.
+- **AC0 — Governance before code (Task 0).** LD1–LD17 answered by BigDev (verbatim in the Debug Log) and committed ALONE as the 6.37c entry
+  (the next free id, re-grepped on every branch and worktree first — F18); PQ1–PQ3 (+ PQ4 if LD17 is routed) through BigDev's §0 check and,
+  if they pass, the ONE routing note WRITTEN (⛔ sent); the counsel question (LD16) WRITTEN; LD15's token decision taken; then ONE records
+  commit (LD14 (b)); the sprint row → `in-progress` and the ledger — all BEFORE any code.
 - **AC1 — A ladder starts only on a REPORTED failure (LD5 start; I5).** Legs: `accepted` + `undelivered` ⇒ ONE `running` ladder
   (`origin_sent_on` = the row's `sent_on`; `sms2_due_on = D + 2`; `whatsapp_step = 'skipped:whatsapp_not_built'`); `accepted` + ⛔ report ⇒ ⛔
   ladder (1 A); `delivered` ⇒ ⛔; a report on an OLD number (after a 6.20 change) ⇒ ⛔; a second undelivered reminder while one runs ⇒ ⛔ second
@@ -585,32 +778,47 @@ Notation: "the chase" = correction or certificate; every AC holds for BOTH unles
   delivered and who fails again ⇒ a new ladder; a report on a day-84 origin first seen on day ≥ 90 (the run ended `day_90`) ⇒ starts; a report after a closure
   was DECIDED (incl. on a `day_90`-ended run) ⇒ ⛔ (`closure_closed`); a stop failing ⇒ ⛔; two concurrent sweeps ⇒ one ladder (UNIQUE `(chase,
   origin_row_id)` and the chase lock); a row older than the 14-day scan bound ⇒ ⛔ scanned; a `closure_notice` / `ladder_sms` / other-chase row
-  ⇒ ⛔ origin.
+  ⇒ ⛔ origin; a ladder ended `ended_stopped` (a mark switch ends its run `mark_changed`) KEEPS its origin — after the switch back opens a
+  new family run, that origin row starts ⛔ second ladder (the UNIQUE refuses a direct INSERT) and the NEXT reported failure starts the next
+  ladder; a stop that lifts (`resubmitted` resumes) re-sends ⛔ step of the stopped ladder, and a COVERED row of it starts ⛔ ladder; a covered row
+  before an `ended_delivered` end does ⛔ block a fresh failure created after that end; under an RLS-bound
+  role the sweep refuses with `contact_ladder.rls_bound_role` and starts ⛔ ladder (T24 — a leg).
 - **AC2 — The steps and the clock (LD3, LD4, I6, I8).** SMS 2 on D + 2 at the 10:00 run; SMS 3 on <SMS 2's date> + 2; conclusion on <SMS 3's
   date> + 4 (D + 8); a late-detected ladder sends its first due step at the next 10:00 run (⛔ two in one run) and every later date moves; each
   ladder SMS is a `ladder_sms` row in the chase's own table with `subject_key 'ladder:<id>:2|3'`, the chase's reminder template and named
   values (⛔ a new template), `correlation` `cr` / `ce` + its own row id; every row of LD3's outcome table, one leg each (incl. a transient
-  retried within the run's backoff, and a row left `attempting` past the day finalised `error` ⇒ `sent`, the next date from its `sent_on`); every stop refuses (one leg per
+  retried within the run's backoff, a row left `attempting` past the day finalised `error` ⇒ `sent`, the next date from its `sent_on`, and a
+  failed hash ⇒ `skipped:hash_unavailable`); every stop refuses (one leg per
   stop through the EXTRACTED predicate — and the original `begin*FamilySend` suites green UNCHANGED); ⛔ ladder SMS on correction day ≥ 90, on
   a `completed` certificate run, or while paused ⇒ `skipped:past_horizon` / `skipped:paused`, the ladder still concludes on its date (PQ3 —
-  or as ruled); a pause `certificate_accepted` / a never-re-entering state / `cannotRemind` ⇒ `ended_stopped`; a certificate run ended `completed` with a
-  certificate since received ⇒ END (⛔ `skipped:past_horizon`); a ladder concluding during a pause writes its `ladder_escalation` on the first
-  unpaused day. LD4 (a): on a scheduled day for that person ⇒
-  `satisfied`, ⛔ `ladder_sms` row (incl. the scheduled reminder and the ladder child running in either order at 10:00, the day-14 collision, and a step falling on a scheduled day after a slip); a second person of the claim on the SAME number already texted today
-  ⇒ `satisfied` (T22); (b) if chosen instead: a `ladder_sms` row regardless.
+  or as ruled); a pause `certificate_accepted` / a never-re-entering state / `cannotRemind` / the person off the record (`not_a_recipient`) / a letter
+  delivered at that number to any person ⇒ `ended_stopped`; a certificate run ended `completed` with a certificate since received ⇒ END (⛔
+  `skipped:past_horizon`); an SMS due on day 182 of a run ended `completed` on day 181 ⇒ `skipped:past_horizon` (⛔ a stop — the ended ORIGIN
+  run is read, ⛔ `planCertificateRun`); a ladder concluding during a pause writes its `ladder_escalation` on conclusion. LD4 (a): on a
+  scheduled day for that person ⇒ `satisfied`, ⛔ `ladder_sms` row (incl. the scheduled reminder and the ladder child running in either
+  order at 10:00, the day-14 collision, and a step falling on a scheduled day after a slip); a `satisfied` step whose scheduled row never
+  went ⇒ re-recorded `skipped:scheduled_not_sent` + the alarm; a second person of the claim on the SAME number already texted today ⇒
+  `satisfied` (T22) — incl. while that person's row is still `attempting` with a NULL hash (two children, one phone); (b) if chosen
+  instead: a `ladder_sms` row regardless.
 - **AC3 — What ends a ladder (LD5; PQ1 / PQ2 as ruled).** `delivered` on a later `family_sms` ⇒ `ended_delivered`; on a `ladder_sms` ⇒
   `ended_delivered`; on another person's row that satisfied this step (same number) ⇒ `ended_delivered`; a reached call with `called_on ≥`
   the origin ⇒ `ended_call` (for a running ladder of EITHER chase), an earlier call ⇒ ⛔; a number change ⇒ `ended_number_changed`; each stop ⇒
   `ended_stopped:<reason>`; a silent `ladder_sms` ⇒ ⛔ end (PQ1 reading — or as ruled); a `delivered` message of the OTHER chase ⇒ ⛔ end (PQ2
   (a) reading — or as ruled); `undelivered` on a `ladder_sms` ⇒ ⛔ end; an end condition and `conclude_on` on the same run ⇒ the END wins; a
-  `delivered` report after conclusion ⇒ ⛔ un-conclude, the person reached through the accepted row, still letter-eligible. All end rules live
+  `delivered` report after conclusion ⇒ ⛔ un-conclude, the person reached through the accepted row, still letter-eligible (LD17 (a) — or
+  as decided). All end rules live
   in ONE pure `ladderEndReason(…)` with a unit table of every row above; the horizon / pause / one-a-day rules in ONE `ladderStepGate(…)`.
 - **AC4 — The conclusion and the ONE mapping per chase (LD6, LD7, I2–I4).** Live, per chase: a ladder past `conclude_on` with ⛔ end ⇒
-  `concluded_undelivered`, `concluded_on` = that date. Then, through the REAL readers: the origin + every later `undelivered` `family_sms` row of
-  that person/number in the epoch reads `rejected_unreachable` (`deadOn = concluded_on`); an `accepted` row with ⛔ report still `accepted`; a
-  RUNNING or ENDED ladder's rows read UNCHANGED (I4 — one leg each); `foundDeadOn = concluded_on`, `deadKind 'not_delivered'`; a concluded
+  `concluded_undelivered`, `concluded_on` = that date; a failed hash at conclusion ⇒ concluded on the recorded number + the alarm. Then,
+  through the REAL readers: EVERY `accepted` `undelivered` `family_sms` row of that person/number in the epoch — the origin, every later one,
+  AND an earlier one covered by a stopped ladder (the mark-switch round trip — every accepted row of the epoch reported `undelivered` in
+  the fixture, else a silent row legitimately counts: D22 then refuses a silence closure) — reads
+  `rejected_unreachable` (`deadOn = concluded_on`); under A→B→A with a concluded ladder in each A epoch, every row is returned ONCE
+  (`remindersAccepted` unchanged by the mapping — a no-duplication leg); an `accepted` row with ⛔ report still `accepted`; a concluded row and a send-time refusal on the SAME date ⇒
+  the earlier row by `compareReminderRowsByTime` gives `deadKind` (the tie-break); a
+  RUNNING or ENDED ladder's rows read UNCHANGED in an epoch with ⛔ concluded ladder (I4 — one leg each); `foundDeadOn = concluded_on`, `deadKind 'not_delivered'`; a concluded
   origin sent BEFORE a send-time refusal ⇒ `foundDeadOn` = the refusal's date (the MIN — LD7); letter-eligible (`assertCorrectionLetterRecordable`
-  and the certificate letter precondition accept); still so after a later reminder is `delivered`; the LAST evidential row concluded ⇒
+  and the certificate letter precondition accept); still so after a later reminder is `delivered` (LD17 (a) — or as decided); the LAST evidential row concluded ⇒
   `numberKnownDead` ⇒ the closure notice recipient is a LETTER; a concluded row on an OLD number changes ⛔ the current number's facts; every
   stored `outcome` byte-identical before / after (I2 — a row snapshot); `DEAD_OUTCOMES` and the OUTCOME logic unchanged — the `git diff` of
   `correction-chase.ts` shows only `deadOn?` / `concluded?` on the row type, the `deadKind` union and the MIN computation (`not_delivered` iff
@@ -622,130 +830,194 @@ Notation: "the chase" = correction or certificate; every AC holds for BOTH unles
   AND `decideEscalatedClosure` (one leg each — a ladder that starts between request and decide refuses the decide; the start and the decide
   serialise on the chase lock); its position (after `claim_corrected`, before `not_reached`) in the guard, the union, `AC6_REQUEST_REFUSALS`
   (+ the lockstep test) and `ClosureRequestBlocker`, + a guard-order leg (the lockstep test does ⛔ pin `assertClosureGround`'s order); `blockerDto` maps it (the queue does ⛔ 500); the api switch (exhaustive — a
-  typecheck leg); the admin blocker copy; a running CERTIFICATE ladder ⇒ ⛔ refusal (PQ2 (b) reading — or as ruled); `closure_due` /
+  typecheck leg); the admin blocker copy — asserted by its TEXT (the map is ⛔ exhaustive; a missing key renders `''`); the api `not_reached`
+  message names a call; a running CERTIFICATE ladder ⇒ ⛔ refusal (PQ2 (b) reading — or as ruled); `closure_due` /
   `closure_escalation` unchanged.
 - **AC6 — The escalation (LD9, LD11).** On conclusion: ONE `ladder_escalation` row per ladder (the partial UNIQUE refuses a second), on the
-  ladder's run even if ENDED; correction ⇒ a `staff_push` that day, or the next morning when that day's push had already gone (both pinned; the day UNIQUE kept); certificate
-  ⇒ recorded only; the ask per LD9's cap-aware table (one leg per row: call-or-letter, call only at the letter cap, letter only for a nominee
-  under LD11 (a), neither); the found-dead letter track then runs from `concluded_on` (+7 / +12 / +13) inside its existing window, and ⛔
+  ladder's run even if ENDED; correction ⇒ in a `staff_push` that day when none had gone, or — when that day's push had ALREADY claimed and
+  listed its items — in the NEXT push for that recipient, which lists the un-pushed `ladder_escalation` dated before it (both pinned, the
+  second through the REAL push child; the day UNIQUE kept); on an ENDED run whose next day has ⛔ other staff row, the ladder
+  sweep enqueues the push and it lists the escalation ONCE; certificate ⇒ recorded only, `recorded` or `no_target` (no live shepherd — the
+  `contact_ladder.escalation_unassigned` alarm), and written while the run is PAUSED too; the ask per LD9's cap-aware table (one leg per row: call-or-letter, call only at the letter cap, letter only for a nominee
+  while nominee calls are uncleared (LD11), neither); the found-dead letter track then runs from `concluded_on` (+7 / +12 / +13) inside its existing window, and ⛔
   outside it (a day-84 ladder concluded on day 92 gets the `ladder_escalation` only); a reached call stops `letter_chase` / `escalation` /
   `letter_escalation` for a CONCLUDED person, and ⛔ for a send-time dead person (both pinned); ⛔ the scheduled
   `family_sms`; `escalated` on the correction queue ⛔ lit by `ladder_escalation`.
 - **AC7 — The call record (LD10, LD11).** Each `POST …/calls` (both routes) with a valid key ⇒ one row, `201`, the DTO; the SAME
-  `Idempotency-Key` replayed ⇒ the same result, ONE row; a different body under the same key ⇒ the keyed store's mismatch refusal; ⛔ key ⇒
-  `400`; `outcome 'reached'` with `answered_by 'nobody'` / `'someone_else'` ⇒ `400` (and the CHECK refuses a direct INSERT); a `called_on` in the
+  `Idempotency-Key` replayed ⇒ the FIRST result, ONE row — whatever the replay's body (the keyed store compares ⛔ bodies); a replay while
+  the first is in flight ⇒ `409 …idempotency_in_progress`; a failed write releases the key (a retry succeeds); ⛔ key ⇒ `400`; a missing
+  display name ⇒ `AdminDisplayNameMissingError` (⛔ fallback); `outcome 'reached'` with `answered_by 'nobody'` / `'someone_else'` ⇒ `400` (and the CHECK refuses a direct INSERT); a `called_on` in the
   future or before filing ⇒ `400`; a person ⛔ on the chase's recipient set ⇒ refused; agreement not live / ⛔ contact record ⇒ refused; a nominee
-  under LD11 (a) with the key unset ⇒ `nominee_calls_not_cleared` (route AND number reveal), allowed once it is `true`; a caller ⛔ holding the
+  while the LD11 gate is uncleared ⇒ `nominee_calls_not_cleared` (route AND number reveal), allowed once it is cleared (the SAME
+  variable read by the jobs ask — a leg per app: the api through `loadConfig(env)`, jobs through the sweep's deps — each flipping it and
+  seeing the route / the ask change); a caller ⛔ holding the
   key, or outside the district ⇒ `403`; `GET …/calls/number` needs the fresh step-up `contact_call_number`, returns the CURRENT number (a leg
   after a 6.20 change), `no-store`, ONE audit line per reveal; every audit line holds ⛔ name / number (a recorder); the human-actor gate's
-  `expectedMethods` updated — correction-chase `['post','post','post','post','get','get','get']`, certificate + one `post` + one `get` — and a
+  `expectedMethods` updated (a sorted multiset — `check.ts:403-408`) — correction-chase `['post','post','post','get','get']` (`:214`) ⇒
+  `['post','post','post','post','get','get','get']`, certificate `['get','post','post','get','get']` (`:255`) + one `post` + one `get` — and a
   gate-bites leg (a renamed path ⇒ the gate goes RED); a call ending ladders of both chases takes both locks in order (a concurrency leg). The
   policy-regression spec pins `SELECT, INSERT` only and the tenant policies.
 - **AC8 — Records are append-only and scoped (LD2, LD10).** `claim_contact_ladders`: the grants (⛔ UPDATE of an identity column — a `42501`
   leg; ⛔ DELETE), the tenant policies (a row invisible under another Pariwar), the state ↔ `ended_at` / `concluded_on` CHECKs; both send
-  tables' purpose CHECKs accept `ladder_sms` / `ladder_escalation` and their TS tuples AND Drizzle `check()` copies match (the policy specs'
-  purpose legs); the certificate purpose↔outcome CHECK allows `ladder_sms` the family outcomes and `ladder_escalation` `recorded`; the new
+  tables' purpose CHECKs accept `ladder_sms` / `ladder_escalation` and their TS tuples AND Drizzle `check()` copies match (the purpose
+  LOCKSTEP legs — correction `claim-correction-closure-policy-regression.spec.ts:516-524`, certificate
+  `claim-certificate-reminder-policy-regression.spec.ts:388`); the certificate purpose↔outcome CHECK allows `ladder_sms` the family outcomes
+  and `ladder_escalation` `recorded` / `no_target`; the new
   partial UNIQUEs; `delivered_at` NULL on every row.
-- **AC9 — What staff see (LD12).** Both DTOs carry `follow_up`, `unreachable_reason`, `ask`, `calls` (+ `reported_undelivered` on correction);
-  the status enums unchanged; the admin panels render "follow-up running — next on", "texts reported not delivered — <the ask>", the call form
+- **AC9 — What staff see (LD12).** Both DTOs carry `follow_up`, `unreachable_reason`, `ask`, `calls` (+ `reported_undelivered` on correction),
+  each in the `.strict()` response schema; the status enums unchanged; `unreachable_reason` is `not_delivered` for a concluded person even when
+  a later accepted row makes `sms_state` `reminded`; a certificate claim whose run has ENDED is still LISTED while a ladder runs or a
+  concluded ladder's ask is unanswered (a day-180 origin; a "call"-only ask after day 180); the certificate lockstep test gains the new
+  enums; flipping `nomineeCallsCleared` changes a nominee's DTO `ask` (`letter` ⇒ `call_or_letter`); the admin panels render "follow-up running — next on", "texts reported not delivered — <the ask>", the call form
   (with the step-up number reveal) and the list; refusal texts in `errors.ts`; the microcopy gate green over every new admin string (it scans
-  comments too); contracts vitest green (fixtures updated).
-- **AC10 — 6.37b's reports reach the ladder (F4).** The correlator's `cr` purpose set accepts `ladder_sms` (a `cr` `ladder_sms` report ⇒
-  `matched:*` + an `sms_send_deliveries` row — live); a `ce` `ladder_sms` report matches with ⛔ correlator change (a live leg proving it);
-  `ladder_escalation` (⛔ CRQID) ⇒ never matched; the `cr` silence query counts an accepted `ladder_sms` with ⛔ report; the 6.37b suites green
-  with ONLY those legs added.
+  comments too — and its `report` term bans the bare word in both modules, T18); contracts vitest green (fixtures updated —
+  `apps/admin/tests/{correction-chase-forms,correction-queue,certificate-reminders}.test.tsx`,
+  `packages/domain/tests/integration/claim/correction-chase-shape.spec.ts`).
+- **AC10 — 6.37b's reports reach the ladder (F4).** The correlator's `cr` AND `ce` purpose sets accept `ladder_sms` (a `cr` and a `ce`
+  `ladder_sms` report ⇒ `matched:*` + an `sms_send_deliveries` row — live, one leg each, RED before Task 5); `ladder_escalation` (⛔ CRQID) ⇒
+  `unmatched:not_sms` on both kinds; the `cr` AND `ce` silence queries count an accepted `ladder_sms` with ⛔ report; the 6.37b suites green
+  with ONLY those legs added (the certificate staff-row leg *"a `ce` row is an SMS only as `family_sms`"* re-worded to the widened set).
 - **AC11 — Alarms (LD13).** The daily ladder line counts by state and carries ⛔ id; three ladders started in one Pariwar on one IST day ⇒ ONE
-  `contact_ladder.burst:3`, two ⇒ ⛔; the `-269` §4 alarm unchanged.
+  `contact_ladder.burst:3`, two ⇒ ⛔; `…rls_bound_role`, `…hash_unavailable`, `…scheduled_not_sent`, `…escalation_unassigned` one leg each
+  (claim ids only — ⛔ number, ⛔ name); the `-269` §4 alarm unchanged.
 - **AC12 — Nothing else moves (I7, I8).** ⛔ `packages/i18n/locales/**` diff; ⛔ DLT template / registry text / sheet edit; ⛔ change to
   `packages/channels/**` or any WhatsApp file; `CORRECTION_REMINDER_DAYS` / the certificate schedule unchanged; the suspicion / peer-mesh /
   closure-notice paths unchanged (⛔ edit of `claim-peer-mesh-requests.ts`); `dlt-typed-variables` gate green (new files spell ⛔ the
-  template-id prefix, `DLT_VAR` or the `{#var#}` literal; the config key is ⛔ under `sms.dlt.`); `channels-determinism` green.
+  template-id prefix, `DLT_VAR` or the `{#var#}` literal; the env var name holds ⛔ `sms.dlt.template_id.`); `channels-determinism` green.
 - **AC13 — The proof.** `pnpm ci:local` green with `DATABASE_URL` at :5433 EXPLICITLY (each red explained and re-run alone —
   [[project_known_livedb_test_failures]]); a global-fetch RECORDER at ZERO calls across the new suites (I9); every new table has its
-  `…-policy-regression.spec.ts`; the access-wrapper and human-actor route-gate invariants green.
+  `…-policy-regression.spec.ts` and its `policies/*-rls.ts`; the access-wrapper and human-actor route-gate invariants green; the new modules
+  ENROLLED in the no-decision fences (`apps/jobs/tests/claim-certificate-reminder-no-decision.test.ts` `CERTIFICATE_MODULES`,
+  `claim-correction-closure-no-decision.test.ts` `SWEEP_MODULES` — they read named files only: `contact-ladder.ts`,
+  `contact-ladder-record.ts`, `contact-call.ts`, `claim-contact-ladder.ts`).
+- **AC14 — Records and close (Task 10).** Every deferred-work disposition Task 10 lists is written with its precise status word (**Closed by** /
+  **narrowed** / **⛔ addressed** / **trigger ⛔ fired** / **trigger FIRED, partly addressed** / **addressed** only when sent —
+  [[feedback_closure_language_precision]], ⛔ collapsed), each naming its instrument;
+  the NEW items recorded; the Change Log and File List complete; the sprint row → `review` and the ledger prepended safely.
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; bring `f7e695b7` (6.37b's dev commit) onto this branch (BigDev's call — rebase onto / merge
-        `story/6-37b-msg91-delivery-reports`; ⛔ cherry-pick a subset); re-read every (6.37b) cite against it and re-locate the shifted plain
-        cites (header); `git diff --name-only f8102c02..HEAD -- packages/domain/src/claim apps/jobs/src/scheduler apps/api/src/modules/claims
-        packages/contracts/src/claims apps/admin/src/modules packages/domain/migrations docs/launch-gate-inventory` and re-read any cited file
-        that moved. Re-check the 6-31 worktree / branch for its claims (migration, decision id, roster row, the `epics.md` slot) — F18.
-  - [ ] 0.2 Put LD1–LD14 to BigDev, each with its recommendation and cost (incl. LD4's, LD5's no-restart, LD9's and LD11's §0 flags, LD10's
-        key, LD14 (d)); then PQ1–PQ3 — BigDev's §0 check FIRST (*"STRIP THE CITATIONS AND READ WHAT IS LEFT"*): route, or record as the
-        author's in `-354`. Record every answer verbatim (Debug Log).
-  - [ ] 0.3 Write `-354` (`.decision-log.md`, prepended; the `-353` shape) with LD14 (a)'s supersession list. ⛔ Edits any entry
-        ([[feedback_supersede_never_reinterpret]]). Stage in scratchpad; try the insert ([[project_decision_log_writes_user_inserted]]). Commit
-        ALONE; write its SHA after, ⛔ before. Then, if routed, WRITE the PQ note (⛔ sent).
-  - [ ] 0.4 The records commit (LD14 (b)) — every item listed there; ⛔ a word above a dated note rewritten, EXCEPT the unpresented §3.4
-        proposal bullet and Panel-pack row references (corrected in place with a revision line — F19); both ledgers
-        ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML parses).
+  - [ ] 0.1 `git fetch origin`; 6.37b is ALREADY on this branch (rebased onto `main` @ `ed862339` at the pin); `git log c19e6534..origin/main`
+        — if `main` moved, rebase again (BigDev's call; local branch); `git diff --name-only c19e6534..HEAD -- apps packages scripts
+        docs/launch-gate-inventory docs/adr .decision-log.md _bmad-output/implementation-artifacts/deferred-work.md` and re-read any cited
+        file that moved — re-locate by FUNCTION. Re-check the 6-31 worktree / branch for its claims (migration, decision id, roster row, the
+        `epics.md` slot) — F18. 6.37b's recorded proof: `ci:local` 35/36 on :5433 + `@twt/admin` re-run alone 1229/1229 (`ac123e19`).
+  - [ ] 0.2 Put LD1–LD17 to BigDev, each with its recommendation and cost (incl. LD4's, LD5's no-restart, LD9's and LD17's §0 flags, LD10's
+        key, LD11's MECHANISM, LD14 (d), LD15's token, LD16's counsel question); then PQ1–PQ3 (+ LD17 if judged the Panel's) — BigDev's §0
+        check FIRST (*"STRIP THE CITATIONS AND READ WHAT IS LEFT"*): route, or record as the author's in the 6.37c entry. Record every answer
+        verbatim (Debug Log).
+  - [ ] 0.3 Write the 6.37c entry (`.decision-log.md`, prepended; the `-353` / `-354` shape; the next free id re-grepped on EVERY branch and
+        worktree right before — F18) with LD14 (a)'s supersession list. ⛔ Edits any entry ([[feedback_supersede_never_reinterpret]]). Stage in
+        scratchpad; try the insert ([[project_decision_log_writes_user_inserted]]). Commit ALONE; write its SHA after, ⛔ before. Then, if
+        routed, WRITE the PQ note (⛔ sent).
+  - [ ] 0.4 The records commit (LD14 (b)) — every item listed there, incl. ADR-0042's dated note (LD15), the consent sheet §1–§2 (or ADR-0042
+        pulled from the pack), the Panel pack's disclosures (a pointer to `-354` decision 2's in the proposal; decision 4 (c)'s in full — alarms reach logs only),
+        and the pre-rebase SHA annotations; ⛔ a word above a dated note rewritten, EXCEPT the unpresented §3.4 proposal's and Panel pack's
+        phrases F19 lists (corrected in place, each with a revision line); both ledgers ([[project_sprint_status_safe_prepend]] — guard the
+        size, verify the YAML parses).
+  - [ ] 0.5 The counsel question (LD16 (a) — `-354` decision 5): the basis for the texts and letters nominees receive TODAY, once the
+        claimant's new agreement no longer names them — written, handed to BigDev for counsel (⛔ "asked" until it is sent), named in the
+        Row 18 dated note; nothing a nominee receives changes until counsel answers.
 
-- [ ] **Task 1 — the migration (LD2, LD9, LD10; AC8).** `packages/domain/migrations/0168_claim-contact-ladder.sql` (or the next free — F18;
-      hand-authored, journal `when` + 1 ms — T10): `claim_contact_ladders` (LD2's columns, CHECKs, partial UNIQUE, UNIQUE `(chase,
-      origin_row_id)`, the `(state, conclude_on)` index), `claim_contact_calls` (LD10), the correction purpose CHECK replaced (+ `ladder_sms`,
-      `ladder_escalation`), the certificate purpose CHECK (0138) and purpose↔outcome CHECK (0141) replaced, the two new partial UNIQUEs
+- [ ] **Task 1 — the migration (LD2, LD9, LD10; AC8).** `packages/domain/migrations/0169_claim-contact-ladder.sql` (or the next free — F18;
+      hand-authored, journal `when` + 1 ms — `1794195600013` after 0168's `…012` — T10): `claim_contact_ladders` (LD2's columns, CHECKs, the
+      running partial UNIQUE, the UNIQUE `(chase, origin_row_id)`, the `(state, conclude_on)` index),
+      `claim_contact_calls` (LD10), the correction purpose CHECK replaced (+ `ladder_sms`, `ladder_escalation`), the certificate purpose CHECK
+      (0138) and purpose↔outcome CHECK (0141) replaced (`ladder_escalation` `('recorded','no_target')`), the two new partial UNIQUEs
       `(claim_case_id, subject_key) WHERE purpose IN ('ladder_sms','ladder_escalation')`; grants (G-a) + tenant per-command policies; a comment
-      naming roster Row 26. Drizzle schema files (+ index exports) incl. the `check()` copies; the purpose tuples; policy-regression specs for
-      both new tables and the two existing specs' purpose legs. ⛔ Touch an existing migration; ⛔ `delivered_at` (LD14 (d)).
+      naming roster Row 26. Drizzle schema files (+ index exports) incl. the `check()` copies; the RLS declarations
+      `packages/domain/src/policies/claim-contact-ladder-rls.ts` / `claim-contact-call-rls.ts` (+ `policies/index.ts`); the purpose tuples;
+      policy-regression specs for both new tables; the two purpose LOCKSTEP legs stay green by moving the tuple with the CHECK (correction
+      `claim-correction-closure-policy-regression.spec.ts:516-524`, certificate `claim-certificate-reminder-policy-regression.spec.ts:388`).
+      ⛔ Touch an existing migration; ⛔ `delivered_at` (LD14 (d)).
 - [ ] **Task 2 — the readers and the mapping (LD6, LD7, LD8; AC4, AC5).** `readReturnFamilyRows` and `readClaimCertificateFamilyRows`: select
-      `reminder_id`; LEFT JOIN `claim_contact_ladders` (concluded, same person / number / chase) and `sms_send_deliveries` (`cr` / `ce`); emit
-      the effective outcome + `deadOn` + `concluded` (I3, I4 — the SQL is the ONE copy per chase). `correction-chase.ts`: `deadOn?`, the
-      `deadKind` union, the MIN computation (LD7). `correction-chase-read.ts`: `correctionPersonStatus`'s `'not_delivered'` case.
-      `correction-closure.ts`: `reachedByLadderSms` (a new reader `readReturnLadderSmsRows`, return-scoped), `reachedByCall` (a new reader
-      `readReturnContactCalls`, return-scoped), `ladder_running` in `assertClosureGround` + F7's whole lockstep list (incl. `blockerDto` and
-      `apps/admin/src/modules/correction-closure/{i18n-en,errors}.ts`). Legs per AC4 / AC5 (live, real readers).
+      `reminder_id` and the row's `sms_send_deliveries` state (`cr` / `ce`, one row per send); read the person's concluded ladders separately;
+      apply the mapping in TS inside the reader (I3, I4 — the ONE copy per chase; epochs by `isEvidentialReminderRow` +
+      `compareReminderRowsByTime`; hashes by `sameNumberHash`; ⛔ a row-multiplying JOIN) and emit the effective outcome + `deadOn` +
+      `concluded`. If `readSmsSendDeliveries` is called at all (⛔ needed — the JOIN suffices), bound / batch its id list and validate uuids at
+      the edge (the deferred item's trigger — T23). `correction-chase.ts`: `deadOn?`, the `deadKind` union, the MIN computation + its
+      tie-break (LD7). `correction-chase-read.ts`: `correctionPersonStatus`'s `'not_delivered'` case. `correction-closure.ts`:
+      `reachedByLadderSms` (a new reader `readReturnLadderSmsRows`, return-scoped), `reachedByCall` (a new reader `readReturnContactCalls`,
+      return-scoped), `ladder_running` in `assertClosureGround` + F7's whole lockstep list (incl. `blockerDto`, the api `not_reached` message
+      and `apps/admin/src/modules/correction-closure/i18n-en.ts` — ⛔ `errors.ts`). Legs per AC4 / AC5 (live, real readers).
 - [ ] **Task 3 — the extracted stop predicates (I6, LD5; AC2).** Factor `correctionFamilyStopReason(tx, …)` out of `beginCorrectionFamilySend`
-      (taking the run's END REASON — `day_90` is ⛔ a stop for a ladder, every other end reason is; + the NEW `closure_closed`) and
-      `certificateFamilyStopReason(tx, …)` out of `beginCertificateFamilySend` (returning `planCertificateRun`'s verdict incl. the pause reason,
-      ⛔ the slot-label `taken` check — T22); both `begin*FamilySend` call them and keep their own `day < 90` / `not_due` / `taken` — their
-      existing suites green UNCHANGED (a refactor leg: every original stop still refuses). Generalise the claim / finalise accessors to take
-      `purpose` + `subjectKey` (default `family_sms` / `''` — ⛔ a caller changes).
+      (taking the run's END REASON — `day_90` is ⛔ a stop for a ladder, every other end reason is; + the NEW `closure_closed`, read WITHOUT
+      importing `correction-closure.ts` — LD5) — `beginCorrectionFamilySend` calls it and keeps its own `day < 90` / `not_due`. Certificate:
+      extract `certificateRunReceived(run, facts)` and `certificateRunPauseReason(run, facts)` from `planCertificateRun` (which calls them —
+      its order and verdicts unchanged), and compose `certificateLadderStopReason(tx, …)` over `readCertificateRun` (the ORIGIN run, open or
+      ended) in LD5's order, incl. `cannotRemind`, `not_a_recipient` and `numberLetterDelivered`; `beginCertificateFamilySend` keeps
+      `planCertificateRun` and its slot-label `taken` check (T22). Export `NEVER_REENTERS`. Existing suites green UNCHANGED (a refactor leg:
+      every original stop still refuses). The claim / finalise accessors are ALREADY keyed on `purpose` + `subjectKey` (I2) — the new paths
+      are only the hard-coded `family_sms` sites: `beginCorrectionFamilySend`'s key (`correction-reminder-record.ts:409-417`), the stale-child
+      read in `runCorrectionFamilySmsChild` (`claim-correction-reminders.ts:314-322`) and `beginCertificateFamilySend` /
+      `recordCertificateHashFailure` (`certificate-reminder-record.ts:385-386`, `:500-501`) — the ladder child gets its own begin / stale read,
+      ⛔ a changed default.
 - [ ] **Task 4 — the ladder engine (LD3–LD5, LD9; AC1–AC3, AC6).**
   - [ ] 4.1 `packages/domain/src/claim/contact-ladder.ts` (PURE: `planLadderStart`, `ladderEndReason` (AC3's table), `ladderStepGate` (the
         horizon / pause / one-a-day rules), `nextLadderStepDate` (LD3's outcome table), the cap-aware `ladderAsk`; IST dates through
         `cycleCalendar`'s primitives — ⛔ re-derive the offset) + `contact-ladder-record.ts` (accessors: start with `ON CONFLICT DO NOTHING` under
         the chase lock, CAS state moves `WHERE state = 'running'`, step row links, the `ladder_escalation` writer on an ended run).
-  - [ ] 4.2 `apps/jobs/src/scheduler/claim-contact-ladder.ts`: the 10:00 sweep (`'0 10 * * *'` IST; the service pool — T12: filter by
-        `pariwar_id` explicitly) + a child queue per ladder SMS (the send through `sendClaimCorrectionSms` with `message` `reminder` /
-        `certificate_reminder`, `rowId` = the `ladder_sms` row; the chase child's stale-day guard; hash only at start / before send / at
-        conclusion — F6); queue constants in `QUEUE_NAMES`; registered in `boot.ts` (⚠ 6.37b and 6.31 also edit it — merge, ⛔ overwrite); the
-        push for an ended run (LD9); alarms through an `onAlarm?` dep (default `console.warn`, unwired).
+  - [ ] 4.2 `apps/jobs/src/scheduler/claim-contact-ladder.ts`: the 10:00 sweep (`'0 10 * * *'` IST; the service pool — FIRST
+        `smsDelivery.canReadAcrossPariwars` (T24: else alarm `contact_ladder.rls_bound_role` and refuse); T12: filter by `pariwar_id`
+        explicitly; a batched candidate claim with a `LIMIT` uses a `MATERIALIZED` CTE — [[project_in_subquery_limit_skip_locked_overclaim]])
+        + a child queue per ladder SMS (the send through `sendClaimCorrectionSms` with `message` `reminder` / `certificate_reminder`, `rowId` =
+        the `ladder_sms` row; the chase child's stale-day guard; hash only at start / before send / at conclusion — F6; a failed hash per LD5);
+        queue constants in `QUEUE_NAMES`; registered in `boot.ts` (⚠ 6.31 also edits it — merge, ⛔ overwrite); LD9 (iii): each run, for every ladder with `escalated_on`
+        set whose `ladder_escalation` is un-pushed (keyed as in LD9 (ii)) on an ENDED run, enqueue a push to that row's own `recipient_key`
+        (⛔ the live District Admin; ⛔ `staff:unassigned`) when ⛔ `staff_push` exists for it today — for an OPEN run the chase sweep's
+        `todays` query carries it (Task 4.3), so an early ladder push never claims the day before the chase writes its own rows; alarms through an `onAlarm?` dep (default `console.warn`, unwired — logs only until Row 32 (h)).
   - [ ] 4.3 The reached-call stop on the staff asks (LD9): `planRun` (`claim-correction-reminders.ts` — the letter track) and
         `planCertificateStaffChase` (`certificate-reminder.ts:875-925`) take a per-person `reachedCallOn` (epoch-scoped, like
-        `letterDelivered`), consulted ONLY for `deadKind 'not_delivered'`; `STAFF_PUSH_ITEM_PURPOSES`, the push query and
-        `correctionStaffPushText` gain `ladder_escalation` and the ask's words.
-- [ ] **Task 5 — 6.37b's `cr` purpose filters (AC10).** `sms-delivery-correlator.ts` `CORRECTION_SMS_PURPOSES` (+ `ladder_sms`);
-      `reports.ts` `countSilentSmsSends`' `cr` filter; ⛔ `ce` change (F4 — a leg proves it); the correlator comment *"the Panel-ruled use is
-      row 6-37c"* (`:13`) updated to name the reader.
+        `letterDelivered`), consulted ONLY for `deadKind 'not_delivered'`. The push (LD9): `ladder_escalation` joins `STAFF_PUSH_ITEM_PURPOSES`
+        (`:495-501`) and the `todays` enqueue list (`:1366-1369`); the push child's item query (`:592-597`) also takes un-pushed
+        `ladder_escalation` rows dated ≤ `p.sentOn` (created after that recipient's previous `staff_push` on the claim); `correctionStaffPushText`
+        gains the ask's words; for an OPEN run the `todays` query (`:1365-1369`) ALSO selects recipients holding an un-pushed
+        `ladder_escalation` (LD9 (iii)). (A retry of one push job re-claims the same row and may list an escalation written in between on
+        two days — harmless, noted.)
+- [ ] **Task 5 — 6.37b's purpose filters, BOTH chases (AC10).** `sms-delivery-correlator.ts` `CORRECTION_SMS_PURPOSES` AND
+      `CERTIFICATE_SMS_PURPOSES` (+ `ladder_sms`; ⛔ `ladder_escalation`); `reports.ts` `countSilentSmsSends`' `cr` AND `ce` filters (`:327`,
+      `:330`) + its doc-block; the certificate staff-row unit leg (`sms-delivery-correlator.test.ts:130`) re-worded to the widened set; the
+      correlator comment *"the Panel-ruled use is row 6-37c"* (`:13`) updated to name the reader.
 - [ ] **Task 6 — the call record (LD10, LD11; AC7).** `packages/domain/src/claim/contact-call.ts` (assert-allowed — D30, recipient, LD11 —
       under both locks in order; record; list; refusal union) + index export; contracts `RecordContactCallRequest` / `ContactCallDto` (hand
-      re-declared enums); api routes + handlers in the two existing route files on F17's path grammar (the keyed idempotency store; the step-up
-      context `contact_call_number` in api AND admin; the audit event types); RBAC per LD10 (reuse ⇒ ⛔ catalog change); the LD11 config key,
-      registered with the api's other boolean config keys; `scripts/claim-adjudication-human-actor-invariant/check.ts` `expectedMethods` (both
-      entries) + the gate-bites leg.
-- [ ] **Task 7 — staff views (LD12; AC9).** Domain read models (`correction-chase-read.ts`, `certificate-reminder-read.ts`) + DTO mappers
-      (`claims.nominee-name-check.handlers.ts:804-834`, `claims.certificate-reminder.handlers.ts:127-128`) + contracts; admin
-      `CorrectionChasePanel.tsx`, `CertificateRemindersList.tsx`, a `ContactCallForm.tsx` (one component imported by both modules is fine —
-      [[feedback_no_premature_package]] is about packages), `api/{client,hooks}.ts`, `errors.ts`, `i18n-en.ts` (both modules). Tests: the admin
-      suites + contracts vitest.
+      re-declared enums); api routes + handlers in the two existing route files on F17's path grammar (the keyed idempotency store in the
+      house shape — LD10, T17; the step-up context `contact_call_number` in api AND admin; the audit event types with the house prefixes;
+      `AdminDisplayNameMissingError`); RBAC per LD10 (reuse ⇒ ⛔ catalog change); the LD11 gate by the mechanism BigDev picks (⭐ ONE env
+      var read by api AND jobs, passed into the domain as `nomineeCallsCleared` — ⛔ a read under `packages/domain/src/claim`); `scripts/claim-adjudication-human-actor-invariant/check.ts` `expectedMethods` (both entries) + the
+      gate-bites leg.
+- [ ] **Task 7 — staff views (LD12; AC9).** Domain read models (`correction-chase-read.ts`, `certificate-reminder-read.ts` — incl. its
+      listing predicate) + DTO mappers (`claims.nominee-name-check.handlers.ts:804-834`, `claims.certificate-reminder.handlers.ts:127-128`) +
+      contracts (`.strict()` response schemas; the certificate lockstep legs); admin `CorrectionChasePanel.tsx`, `CertificateRemindersList.tsx`,
+      a `ContactCallForm.tsx` (one component imported by both modules is fine — [[feedback_no_premature_package]] is about packages),
+      `api/{client,hooks}.ts`, `errors.ts`, `i18n-en.ts` (both modules — ⛔ the bare word "report", T18). The DTO handlers
+      (`claims.nominee-name-check.handlers.ts`, `claims.certificate-reminder.handlers.ts`) pass the api config's `nomineeCallsCleared` into
+      the read models' `ladderAsk` — ⛔ a read in `correction-chase-read.ts` / `certificate-reminder-read.ts`. Tests: the admin suites +
+      contracts vitest + the fixtures AC9 names.
 - [ ] **Task 8 — alarms (LD13; AC11)** in the ladder sweep; the daily line.
 - [ ] **Task 9 — gates and the untouched (AC12, AC13).** I2's snapshot leg; the `git diff`s of AC4; ⛔ diff under `packages/i18n/locales`,
       `packages/channels`, any `whatsapp*` file, `claim-peer-mesh-requests.ts`; `pnpm dlt-typed-variables:test && pnpm dlt-typed-variables:check`
-      (`git add` new files first); `pnpm --filter @twt/channels test:determinism`; the microcopy gate; the human-actor gate; the fetch recorder;
-      `pnpm ci:local` at :5433.
-- [ ] **Task 10 — records and close.** The deferred-work dispositions ([[feedback_closure_language_precision]] — ⛔ collapsed): *"⛔ DLT send
+      (`git add` new files first); `pnpm --filter @twt/channels test:determinism`; the microcopy gate; the human-actor gate; the no-decision
+      fences' enrolment; the fetch recorder; `pnpm ci:local` at :5433.
+- [ ] **Task 10 — records and close (AC14).** The deferred-work dispositions ([[feedback_closure_language_precision]] — ⛔ collapsed): *"⛔ DLT send
       consumes a delivery report …"* — **Closed by** this story for a REPORTED failure on the correction AND certificate chases, **narrowed** to
       silence (a text with ⛔ report still counts — `-351` 1 A; DR12 alarms it), **⛔ addressed** for peer mesh / suspicion (recorded, ⛔ acted on);
       *"⛔ Staff view labels a send 'reported undelivered'"* — **Closed by** this story for the correction and certificate views, the peer-mesh
-      part stays; *"`delivered_at` … an unused seam"* — **Closed by** `-354` (LD14 (d)); *"⛔ No staff prompt to CALL a dead-phone family whose
-      second certificate is rejected after their one letter"* — the seam exists (the call record) ⇒ **trigger FIRED, partly addressed** (a call
-      can be recorded and counts; ⛔ prompt for that family unless a ladder concludes for them); both *"At-least-once SMS"* items — a dated
-      annotation: a ladder adds up to two SMS per undelivered reminder under the same residual. NEW items: the WhatsApp step (→ row 6-37d, if
-      LD1 (a)); phase 2 call tracking (`-351` Consequence 4 — ⛔ row); a scheduled catch-up `late` send does ⛔ check ladder rows (a ladder SMS and a
-      catch-up text can meet on one day — T22's residual); any PQ not yet ruled. The Change Log; the File List; the sprint row → `review`; the
-      ledger. ⛔ Fast-forward to `main` — BigDev's call ([[feedback_land_prs_by_fast_forward]]).
+      part stays; *"`delivered_at` … an unused seam"* — **Closed by** the 6.37c entry (LD14 (d)); *"⛔ No staff prompt to CALL a dead-phone
+      family whose second certificate is rejected after their one letter"* — the seam exists (the call record) ⇒ **trigger FIRED, partly
+      addressed** (a call can be recorded and counts; ⛔ prompt for that family unless a ladder concludes for them); both *"At-least-once
+      SMS"* items — a dated annotation: a ladder adds up to two SMS per undelivered reminder under the same residual; *"`readSmsSendDeliveries`
+      takes an unbounded id list …"* — **Closed by** this story if it calls it (bounded + validated), else **trigger ⛔ fired** (6.37c reads
+      the state by JOIN); *"Reports in one POST share `received_at`"* — **trigger ⛔ fired** (6.37c reads state, ⛔ order — F2); the `-354`
+      carrier *"For row 6-37c"* — (a) Row 32 (h): **⛔ addressed** (a go-live condition, carried — LD13), (b) the Panel told: **addressed**
+      only once BigDev SENDS the pack ([[feedback_shown_to_panel_means_sent]]), (c) the nominee gates: the CALL half **Closed by** this story (the gate as built; LD11 as recorded in the 6.37c entry), the WhatsApp half (G1 + G2) carried to row 6-37d (LD1 (a)) — **⛔
+      addressed** here, (d) the
+      counsel question: **addressed** when sent (LD16), **closed** only when counsel answers; the ADR-0042 restatement — **Closed by** the
+      ADR-0042 dated note + the consent-sheet revision (LD15, Task 0.4). NEW items: the WhatsApp step (→ row 6-37d, if LD1 (a)); phase 2
+      call tracking (`-351` Consequence 4 — ⛔ row); a scheduled catch-up `late` send does ⛔ check ladder rows (a ladder SMS and a catch-up text
+      can meet on one day — T22's residual); a transient → `error` ladder SMS that was delivered can never end its ladder (F3); any PQ not yet
+      ruled. The Change Log; the File List; the sprint row → `review`; the ledger. Landing on `main` (fast-forward) is BigDev's call
+      ([[feedback_land_prs_by_fast_forward]]).
 
 ## Dev Notes
 
@@ -756,21 +1028,22 @@ Notation: "the chase" = correction or certificate; every AC holds for BOTH unles
    chase. Only `deadOn?`, the `deadKind` union and the MIN (LD7).
 3. **T3 — `readClosureReach` bypasses `readReturnPersonStates`** (`correction-closure.ts:409`) ⇒ the mapping lives in `readReturnFamilyRows`
    ITSELF.
-4. **T4 — `foundDeadOn` is sticky, dated, and "first" in TIME** (F6, `correction-chase.ts:757`) — LD7's MIN or the found-dead date moves
+4. **T4 — `foundDeadOn` is sticky, dated, and "first" in TIME** (F6, `correction-chase.ts:758`) — LD7's MIN or the found-dead date moves
    LATER at conclusion.
 5. **T5 — The chase sweeps only see OPEN runs and `slot < 90`** (F8, F14) — the ladder has its OWN sweep; its `ladder_escalation` writes on an
    ended run.
 6. **T6 — ⛔ Ladder SMS as `family_sms`** (LD2 (c)) — they would suppress scheduled slots through the catch-up's recorded set.
 7. **T7 — ⛔ Copy the stop predicates** (I6) — extract them ([[feedback_mechanization_split_commitment]]); and `run_ended` is the FIRST stop
-   (`:433`) — a ladder must read the END REASON, or every ladder dies at day 90 (and `day_90` alone does ⛔ mean "not closed" — `closure_closed`).
-8. **T8 — 6.37b's correlator filters `cr` by purpose** (F4) — forget `ladder_sms` and every correction ladder SMS report lands
-   `unmatched:not_sms`: ⛔ ladder ever ends `delivered`.
+   (`correction-reminder-record.ts:430`) — a ladder must read the END REASON, or every ladder dies at day 90 (and `day_90` alone does ⛔ mean "not closed" — `closure_closed`).
+8. **T8 — 6.37b's correlator filters `cr` AND `ce` by purpose** (F4) — forget `ladder_sms` in EITHER set and that chase's ladder SMS reports
+   land `unmatched:not_sms`: ⛔ ladder of that chase ever ends `delivered` — and a delivered person is wrongly concluded.
 9. **T9 — A purpose is lockstep in FOUR places** — the TS tuple, the migration CHECK, the Drizzle `check()` copy, the partial unique indexes (+
-   the policy spec's purpose leg). A missed one is a `23514` that rolls back a whole sweep plan.
+   the purpose LOCKSTEP leg — correction in the CLOSURE policy spec `:516-524`, certificate `:388`; + the certificate purpose↔outcome CHECK). A missed one is a `23514` that rolls back a whole sweep plan.
 10. **T10 — Migrations are hand-authored; ⛔ regenerate an applied one** (42P07); ⛔ `DROP SCHEMA`; edits reach :5432 AND :5433
     ([[project_live_db_test_gotchas]]); push with `DATABASE_URL` at :5433 ([[project_prepush_hook_inherits_5432]]). The number races 6.31.
 11. **T11 — The WhatsApp fixture reports `accepted`** (I7) — ⛔ `resolveWhatsappProvider` / `dispatch()` / `cascade`.
 12. **T12 — `readSmsSendDeliveries` / any raw read on the BYPASSRLS pool reads EVERY Pariwar** (F5) — filter by `pariwar_id` or run in scope.
+    The inverse is T24.
 13. **T13 — DB-clock ordering ties in one transaction** ([[project_db_clock_ordering_tests_tie]]) — `created_at` / `updated_at` comparisons
     need SEPARATE transactions or an injected clock; `clock_timestamp()` vs `now()`.
 14. **T14 — Dates are IST** — `cycleCalendar`'s primitives (`istDateOf`, `addCalendarDays`, `istMidnightAt`); ⛔ a new copy of the offset.
@@ -779,32 +1052,42 @@ Notation: "the chase" = correction or certificate; every AC holds for BOTH unles
     (throws ⇒ 500), the api's exhaustive switch, the admin copy.
 17. **T17 — Idempotent handler shape** ([[project_idempotent_write_handler_shape]]) — the tx INSIDE the claim's try; COMMIT then
     `recordResult`; `closeScopeTx` RETHROWS a failed COMMIT.
-18. **T18 — The microcopy gate scans comments** in `apps/admin/src/**`; the DLT gate scans comments in new `src` files — ⛔ spell the
-    template-id prefix, `DLT_VAR` or `{#var#}`.
+18. **T18 — The microcopy gate scans comments** in `apps/admin/src/**` (`microcopy.yaml:283-284`) — and its canonical term `report`
+    (`microcopy.yaml:36`, matched whole-word, case-insensitive) is allow-listed ONLY for the Reports page files and `client.ts`: in
+    `correction-chase/` and `certificate-reminders/` write "reported" or "the network said", ⛔ the bare word "report" (`reported_undelivered`
+    passes). The DLT gate scans comments in new `src` files — ⛔ spell the template-id prefix, `DLT_VAR` or `{#var#}`.
 19. **T19 — Prettier is ⛔ enforced** — hand-format ([[project_prettier_not_enforced]]); ⚠ `**cl.3**` inside a JSDoc closes it
     ([[project_markdown_emphasis_closes_jsdoc]]).
-20. **T20 — Three sessions edit `boot.ts` and `packages/queue/src/index.ts`** (6.37b committed; 6.31 planned) — merge by hand.
+20. **T20 — `boot.ts` and `packages/queue/src/index.ts` are shared** (6.37b's edits are on this branch; 6.31 plans its own) — merge by hand.
 21. **T21 — The route gate scans only matched paths** (F17) — a call route outside `/correction/` / `/certificate-reminders/` is UNSCANNED and the
     gate stays GREEN; the gate-bites leg proves it.
 22. **T22 — One human can be two person keys; one number one text a day** (certificate CR6; LD4) — the ladder child's same-number-same-day check
-    under the chase lock covers ladder-vs-ladder and ladder-vs-scheduled; ⚠ the chase's own catch-up `late` send does ⛔ check ladder rows (a
-    residual, recorded at Task 10).
+    under the chase lock covers ladder-vs-ladder and ladder-vs-scheduled — counting an `attempting` row, whose hash is NULL until finalise, by
+    its person's CURRENT hash (LD4); ⚠ the chase's own catch-up `late` send does ⛔ check ladder rows (a residual, recorded at Task 10).
+23. **T23 — `readSmsSendDeliveries` takes an UNBOUNDED id list and a non-uuid id raises `22P02`** (6.37b's deferred item, **"Deferred to
+    6-37c"**) — prefer the JOIN (LD6); if it is called, bound / batch and validate at the edge.
+24. **T24 — Under an RLS-bound jobs role the ladder sweep's cross-tenant scan returns ⛔ row SILENTLY** (F5; `reports.ts:220-224`) — ⛔
+    ladder would ever start and every reported failure would keep counting as reached: the very gap `-350` closed. ⇒ call
+    `smsDelivery.canReadAcrossPariwars` FIRST and alarm + refuse (6.37b's correlator / silence-check precedent), or run per Pariwar in scope;
+    a leg for it; roster Row 26's note names the sweep (LD14 (b)).
 
 ### Reuse map
 
 | Need | Reuse | ⛔ Rebuild |
 |---|---|---|
-| Delivery state | a JOIN on `sms_send_deliveries` / `readSmsSendDeliveries` (6.37b) | a report reader of our own |
+| Delivery state | a JOIN on `sms_send_deliveries` (6.37b; `readSmsSendDeliveries` only bounded + validated — T23) | a report reader of our own |
 | Send + CRQID | `sendClaimCorrectionSms` (`rowId`, kind derived) | a send core |
-| Stop predicates | the extracted `*FamilyStopReason` (Task 3) | a copy |
+| Stop predicates | `correctionFamilyStopReason`; the certificate sub-predicates extracted from `planCertificateRun` (Task 3) | a copy |
 | Rhythm | the chases' `'0 10 * * *'` IST cron + the chase child's stale-day guard | an hourly sweep, a send window |
 | IST dates | `cycleCalendar` (`istDateOf`, `addCalendarDays`, `istMidnightAt`) | offset arithmetic |
 | Ended-run staff row | `latestRunOfReturn` / `staffWriter` (`correction-closure-jobs.ts:107-188`) | a new anchor |
-| Staff push | `staff_push` rows + the day UNIQUE (`claim-correction-reminders.ts:458-632`) | a push path |
+| Staff push | `staff_push` rows + the day UNIQUE (`claim-correction-reminders.ts:477-651`) — with the un-pushed item query (LD9) | a push path |
 | Staff record | the letter record end to end (F17) | a new shape |
-| Idempotency | `idempotency.createKeyedStore` (ground-inspection precedent) | a dedupe column |
+| Idempotency | `idempotency.createKeyedStore` (the `personal-event-handlers.ts:113-125` shape; ground-inspection's mandatory header) | a dedupe column |
 | Step-up reveal | the letter-address reveal (`correction_letter_address`) | a new reveal mechanism |
-| Tenant RLS | 0128's / 0167's per-command block | a new policy shape |
+| Tenant RLS | 0128's / 0167's per-command block + a `policies/*-rls.ts` declaration | a new policy shape |
+| Cross-tenant guard | `smsDelivery.canReadAcrossPariwars` (6.37b) | an unguarded scan (T24) |
+| The nominee-call switch | ONE env var read by api + jobs at boot, passed to the domain as a boolean (LD11 (a)) | a flag read under `packages/domain/src/claim` (a prohibited root) |
 | Alarms | per-module `onAlarm?` (`cycle-spawn.ts:75,118`) | a sink |
 
 ### Testing standards
@@ -816,18 +1099,20 @@ for `ladderEndReason`, `ladderStepGate`, `nextLadderStepDate`, `ladderAsk`. Ever
 
 ### Project structure notes
 
-- **NEW:** `packages/domain/migrations/0168_claim-contact-ladder.sql` (+ journal); `packages/domain/src/schema/claim_contact_ladders.ts`,
-  `claim_contact_calls.ts`; `packages/domain/src/claim/contact-ladder.ts`, `contact-ladder-record.ts`, `contact-call.ts` (+ tests, two
-  policy-regression specs); `apps/jobs/src/scheduler/claim-contact-ladder.ts` (+ tests); `apps/admin/src/modules/…/ContactCallForm.tsx`; the
-  PQ routing note (if routed).
+- **NEW:** `packages/domain/migrations/0169_claim-contact-ladder.sql` (or the next free — F18; + journal); `packages/domain/src/schema/claim_contact_ladders.ts`,
+  `claim_contact_calls.ts`; `packages/domain/src/policies/claim-contact-ladder-rls.ts`, `claim-contact-call-rls.ts`;
+  `packages/domain/src/claim/contact-ladder.ts`, `contact-ladder-record.ts`, `contact-call.ts` (+ tests, two policy-regression specs); `apps/jobs/src/scheduler/claim-contact-ladder.ts` (+ tests); `apps/admin/src/modules/…/ContactCallForm.tsx`; the
+  PQ routing note (if routed); the counsel question (LD16).
 - **UPDATE:** `packages/domain/src/claim/{correction-reminder-record,correction-chase,correction-closure,correction-chase-read,certificate-reminder,certificate-reminder-record,certificate-reminder-read}.ts`,
-  `claim/index.ts`, `schema/{claim_correction_chase,claim_certificate_reminder,index}.ts`; `apps/jobs/src/sms-delivery-correlator.ts`,
-  `packages/domain/src/sms-delivery/reports.ts` (`cr` purpose filters only); `apps/jobs/src/boot.ts`, `packages/queue/src/index.ts`;
+  `claim/index.ts`, `schema/{claim_correction_chase,claim_certificate_reminder,index}.ts`, `policies/index.ts`; `apps/jobs/src/sms-delivery-correlator.ts`,
+  `packages/domain/src/sms-delivery/reports.ts` (the `cr` AND `ce` purpose filters only) + `apps/jobs/tests/sms-delivery-correlator.test.ts`;
+  `apps/jobs/tests/claim-certificate-reminder-no-decision.test.ts` / `claim-correction-closure-no-decision.test.ts` (enrolment);
+  `apps/api/src/config.ts` + `apps/jobs/src/boot.ts` (LD11 (a)); `apps/jobs/src/boot.ts`, `packages/queue/src/index.ts`;
   `apps/jobs/src/scheduler/claim-correction-reminders.ts` (the letter track's `reachedCallOn` — Task 4.3 — and the push purposes / copy),
   `apps/jobs/src/scheduler/claim-certificate-reminders.ts` (its `planCertificateStaffChase` call `:461` — the new input);
   `packages/contracts/src/claims/{correction-chase,correction-closure,certificate-reminder}.ts` + tests;
   `apps/api/src/modules/claims/{claims.correction-chase.routes,claims.correction-chase.handlers,claims.certificate-reminder.routes,claims.certificate-reminder.handlers,claims.correction-closure.handlers,claims.nominee-name-check.handlers,correction-closure-dto}.ts`,
-  `apps/api/src/audit/audit-sink.ts`, the api config-key registration; `apps/admin/src/modules/{correction-chase,certificate-reminders,correction-closure}/**`,
+  `apps/api/src/audit/audit-sink.ts`; `apps/admin/src/modules/{correction-chase,certificate-reminders,correction-closure}/**`,
   `apps/admin/src/api/{client,hooks}.ts`; `scripts/claim-adjudication-human-actor-invariant/check.ts`; the records (Task 0.4).
 - **⛔ Touched:** `packages/i18n/locales/**`; `packages/channels/**`; every WhatsApp file; `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`;
   `apps/mobile`; every existing migration; `DEAD_OUTCOMES`. `packages/domain/src/claim/correction-closure-jobs.ts`: behaviour unchanged (LD8) —
@@ -835,8 +1120,9 @@ for `ladderEndReason`, `ladderStepGate`, `nextLadderStepDate`, `ladderAsk`. Ever
 
 ### Sequencing
 
-6.37b's dev commit `f7e695b7` (on its branch) → this branch carries it (Task 0.1) → **6.37c** (Task 0 → code) → roster Row 33 closed AND 6-37c
-`done` → claim-text template ids (Row 32 note (9); under LD1 (a) ⛔ 6-37d). 6-37d (WhatsApp step + agreement wording) AFTER 6.31 (the direct
+6.37b `done` and on `main` (this branch is rebased on it) → **6.37c** (Task 0 → code) → roster Row 33 closed AND 6-37c `done` → claim-text
+template ids (Row 32 note (9); under LD1 (a) ⛔ 6-37d). GO-LIVE of the ladder (⛔ a merge or `done` fence): roster Row 32 (h) closed (`-354`
+decision 4 (b)); nominee calls after G1 (`-354` decision 5). 6-37d (WhatsApp step + agreement wording) AFTER 6.31 (the direct
 WA client) and 6.37c, behind the §3.4 amendment for its nominee half. The Panel pack's items (the amendment, the three ADRs) block ⛔ code here;
 a routed PQ blocks `done`, ⛔ code.
 
@@ -846,14 +1132,17 @@ a routed PQ blocks `done`, ⛔ code.
   reachability trace is withdrawn, ⛔ sent (6.37b's PQ2 — `-348`; [[feedback_trace_reachability_before_escalating]]). PQ1–PQ3 here are
   reachable: PQ1 whenever reports stop (6.37b F6 auto-pause, F8 account faults); PQ2 whenever both chases run on one claim (F16); PQ3 on every
   day-84 / day-180 failure (F8, F14).
-- 6.37b's dev diverged from its design in small, recorded ways (its Debug Log (k)): `first_reported_at` in the UPDATE grant; the core refuses
-  `ot`; `lookupSendForCorrelation` selects ⛔ `updated_at`. Read the code, ⛔ the design ([[feedback_trace_internal_state_never_cite_decision_text]]).
-- Check 6.37b's recorded `ci:local` at Task 0.1 before relying on its suites.
+- 6.37b's dev diverged from its design in small, recorded ways (its Debug Log (k)): `first_reported_at` in the UPDATE grant (since recorded by
+  `-354` decision 1 (i)); the core refuses `ot`; `lookupSendForCorrelation` selects ⛔ `updated_at`. Its review rounds then changed what this
+  story leans on: the `ce` purpose filter (F4), the `canReadAcrossPariwars` guard (T24), the 72 h / 5-attempt give-up (F3), the
+  `MATERIALIZED` lease claim. Read the code, ⛔ the design ([[feedback_trace_internal_state_never_cite_decision_text]]).
+- 6.37b's recorded proof: `ci:local` 35/36 on :5433 + `@twt/admin` re-run alone 1229/1229 (jsdom timeouts) — `ac123e19`.
 
 ### Git intelligence
 
-This branch: 22 records-only commits over `dae96d9b` (`-347` … `-353`, the routing notes, ADR-0042, Rows 32 / 33, the Panel pack `f8102c02`).
-The code 6.37c extends is 6.37b's `f7e695b7` (57 files; F1–F5) and 6.19b / 6.19c / 6.19d's chase code on `main`.
+This branch: `main` @ `ed862339` (all of 6.37b — dev `f7e695b7`, reviews `b5044a2d` / `ac123e19`, `-354` `a81cdbf7`, records `ed862339`) + two
+commits of its own: the Panel pack `1534293b` (was `f8102c02` before the rebase) and the create-story `c19e6534` (was `1e0c6f2e`). The code
+6.37c extends is 6.37b's final code (F1–F5) and 6.19b / 6.19c / 6.19d's chase code.
 
 ### Latest tech information
 
@@ -862,7 +1151,8 @@ Postgres partial UNIQUE + `ON CONFLICT DO NOTHING` for the start race; `clock_ti
 
 ### References
 
-- `.decision-log.md` — `2026-10-17-350`, `-351`, `-352` (TRUSTEE-RATIFIED), `-353`, `-347` (DR4, DR5-G, DR6, DR12, DR13), `-349`,
+- `.decision-log.md` — `2026-10-17-350`, `-351`, `-352` (TRUSTEE-RATIFIED), `-353`, `2026-10-18-354` (decisions 1, 4, 5; Consequence 2),
+  `-347` (DR4, DR5-G, DR6, DR12, DR13), `-349`,
   `2026-09-27-252` (cl.1–cl.2), `2026-09-27-250` (#1, #2, #4, #5), `2026-09-27-259`, `2026-10-03-275` (Q1, Q4), `2026-09-20-230` / `-231` C,
   `2026-09-29-269` §4, `2026-10-12-322` §0, `2026-10-12-323` R2.
 - `_bmad-output/implementation-artifacts/6-37b-msg91-delivery-reports.md` (AC11, Task 7 — MOVED; F5, F6, F8, F12–F16, DR4–DR13, I1);
@@ -871,8 +1161,10 @@ Postgres partial UNIQUE + `ON CONFLICT DO NOTHING` for the start race; `clock_ti
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`; `…-2026-10-17-6-37b-reported-undelivered.md`,
   `…-6-37b-delivery-ladder-follow-ups.md`, `…-6-37b-whatsapp-consent-wording.md` (the rulings' blocks); `panel-pack-2026-10-17-6-37c.md`;
   `sprint-change-proposal-2026-10-17-whatsapp-claim-contact.md`.
-- `docs/launch-gate-inventory/inventory-roster.md` Rows 18, 20, 21, 26, 30, 32 (note (9)), 33; `docs/adr/ADR-0042-msg91-delivery-report-ingress.md`,
-  `ADR-0029-…`; architecture.md §3.4 (`:2218-2246`).
+- `docs/launch-gate-inventory/inventory-roster.md` Rows 18, 20, 21, 26, 30, 32 (notes (9), (h)), 33; `docs/adr/ADR-0042-msg91-delivery-report-ingress.md`
+  (Security — the OPEN restatement item), `ADR-0029-…`; `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-10-17.md` §1–§2;
+  architecture.md §3.4 (`:2088+`; the member WA opt-in flow `:2218-2246`); `_bmad-output/implementation-artifacts/deferred-work.md` (the
+  items in the rulings table — by phrase).
 
 ## Dev Agent Record
 
@@ -898,3 +1190,4 @@ Postgres partial UNIQUE + `ON CONFLICT DO NOTHING` for the start race; `clock_ti
 |---|---|---|
 | 2026-10-17 | 1.0 | Created by `bmad-create-story 6.37c` at `f8102c02` (worktree `.claude/worktrees/6-37c`). F1–F20 found; LD1–LD14 PROPOSED (⏳ Task 0.2); PQ1 / PQ2 candidate. Status `ready-for-dev`. |
 | 2026-10-17 | 1.1 | Create-story's own validation (one fresh-context read-only verifier, `checklist.md` + the footgun catalogue): 7 CRITICAL / 17 SHOULD / 10 NICE, all applied. ⭐ The ladder now keeps the reminders' RATIFIED rhythm — `-250` #5 (*"One message a day, at 10:00"*, *"stop at day 90"*), `-259` (180 days), `-275` Q4 (pause) — steps are IST dates sent by the 10:00 sweep, a scheduled day IS the step, ⛔ text past the end or in a pause (new PQ3: may the ladder conclude without that text?); the stop predicates read the run's END REASON and gain `closure_closed` (a late report after a decided closure could otherwise text a closed claim); every start / state move under the chase lock; the no-restart rule after a conclusion (else nine ladders to day 84); LD3's per-outcome step table; the call routes on the real path grammar (else the human-actor gate is vacuous) + a gate-bites leg; the reached call stops the staff asks ONLY for concluded persons (send-time dead numbers keep `-230` / `-231` C's letter track) — Task 4.3 added; `foundDeadOn` = the MIN dead date; PQ2 states that it narrows `-351` 4 A / 6 A and that a call already crosses chases; the `-354` supersession list completed (`-353` decision 2, `-351` Consequence 2, `-352` C3 → LD11); the unpresented §3.4 bullet corrected in place (F19); LD11 gains option (d) and a roster row; the ask is letter-cap-aware; the call takes both locks in order; F4's `ce` premise corrected (Task 5 is correction-only); I1's forgery bound completed; `ladder_running` after `claim_corrected` + `blockerDto` and the closure admin copy named; a partial UNIQUE per ladder step / escalation; 6.37b is COMMITTED (`f7e695b7`) — the header's cite shifts; the Policy meaning rewritten match / narrow per line; cites corrected (`sameNumberHash` `:324-327`, `readCorrectionRecipients` `:601`, the certificate one-letter check `:233`, the spec paths, `correction-closure-jobs.ts`'s package); the `epics.md` entry written now (`-353`). F21 added (the agreement as built). A second fresh-context review of the v1.1 rewrite (3 HIGH / 11 MED / 12 LOW, all applied): a certificate pause SKIPS a step and the clock runs on (⛔ a hold) everywhere; the certificate stop predicate reads the ORIGIN run (open or ended) and checks received / pause BEFORE the horizon; AC4's diff pin matches Task 7 and the `concluded` marker; the transient row matches the code's minute-scale backoff; the old anchor wording removed; LD4's early-week counts and the Policy meaning's wording corrected; the one-a-day check covers every person on the number; the mapping and no-restart rule are epoch-scoped (A→B→A); a send-time refusal of a ladder SMS waits for the conclusion (disclosed); the push "that day or next morning"; `staffWriter` exported, `correction-closure-jobs.ts` behaviour unchanged; three more disclosed narrowings in the Policy meaning; PQs block every code task; cites corrected. |
+| 2026-10-18 | 1.2 | `bmad-create-story validate 6.37c` after 6.37b reached `main`: the branch REBASED onto `main` @ `ed862339` (two ledger conflicts resolved, both entries kept); re-pinned `c19e6534` (the v1.0 / v1.1 pin `f8102c02` is ⛔ an ancestor any more). Four parallel read-only verifiers (governance; 6.37b's final code; the correction chase; the certificate chase + call record + staff views), each headline finding re-checked by hand: 14 critical / 16 should / ≈ 15 small — all applied. ⭐ F4 was FALSE after 6.37b's round 2 — the correlator and the silence check filter `ce` by purpose too (`CERTIFICATE_SMS_PURPOSES`), so Task 5 / AC10 / T8 widen BOTH chases (the v1.1 row's *"F4's `ce` premise corrected (Task 5 is correction-only)"* is SUPERSEDED here, kept as written); the numbers moved — `-354` and migration 0168 are 6.37b's ⇒ the 6.37c entry is the next free (F18; v1.1's "`-354`" everywhere meant what is now "the 6.37c entry"), the migration 0169; `-354` decision 5 already DECIDES the nominee gates ⇒ LD11 picks only the MECHANISM ((b) foreclosed; the invented "api boolean config registry" replaced by ONE env var read by both apps — a 10.8 feature flag is barred under `packages/domain/src/claim` by `governance_boundary.yaml`); `-354` decision 4 (b) makes Row 32 (h) a GO-LIVE condition and (c) owes the Panel a telling (PQ1's alarm sentence corrected); `-354` decision 5 routes the nominee text / letter basis to counsel with Task 0 (new LD16, Task 0.5 — LD1 (a)'s contrary line corrected); ADR-0042 obliges a token decision before the ladder (new LD15) and the consent sheet's revision; 6.37b's AC11 annotation's conflict put to BigDev (new LD17). Design: a stopped ladder RELEASES its origin and the mapping reaches every undelivered row of a concluded epoch (else a mark-switch round trip left a reported failure counting as reached); the mapping is applied in TS (⛔ a row-multiplying JOIN, ⛔ `=` on a hash); the push carries a late `ladder_escalation` through an un-pushed item query ("the next morning's push" could never list it); the certificate stop composes extracted sub-predicates over the ORIGIN run (`planCertificateRun` judges only the open run) and gains `not_a_recipient` / `letter_delivered`; the keyed store's "mismatch refusal" (⛔ such thing) replaced by its real replay semantics; T24 — the `canReadAcrossPariwars` guard; the one-a-day check counts in-flight rows; a failed hash and a scheduled day that never sent are specified; the certificate escalation `no_target` and written while paused; the certificate list shows a running ladder after its run ends; the microcopy `report` term (T18); LD7's tie-break; RLS policy files, the no-decision fences, the certificate lockstep legs, the audit prefix, the 68 → 69 key count. Cites re-derived at the pin (the header's old shift table removed — it was wrong past line ≈ 436). The deferred items routed to this row (the `readSmsSendDeliveries` bound, the shared `received_at`, the `-354` carrier, the ADR-0042 restatement) are now in the rulings table and Task 10. A fresh-context re-validate of this rewrite (footgun #22) found 2 HIGH / 3 MEDIUM / 8 LOW in the pass's OWN edits — all applied: the feature-flag mechanism it first recommended is barred (prohibited root + Trustee attestation) ⇒ an env var; "a stopped ladder releases its origin" would re-send a stopped ladder's steps after a lifted stop (four extra texts) and was unneeded (LD6 maps the earlier row) ⇒ the origin is kept, the UNIQUE unconditional; I4 / AC4 / the Policy meaning narrowed to an epoch with ⛔ concluded ladder; Task 10's nominee-gate closure split (call half here, WhatsApp half 6-37d); LD9's push query keyed on the latest PREVIOUS-day `staff_push`; one alarm name; `-354` decision 2's disclosure already stands in the proposal; AC3's LD17 qualifier; two cites; the header's (6.37b) marker; LD7's "only consumer TODAY"; AC14 added for Task 10. A second round (0 HIGH / 4 MEDIUM / 5 LOW, all applied): jobs has ⛔ config module — the env var is read in `apps/jobs/src/boot.ts` and passed through deps; the staff-view `ask` gets the same boolean through the api DTO handlers; "COVERED" defined (origin `created_at` … `ended_at`) so a lifted stop starts ⛔ ladder from a covered row and "the NEXT failure" holds; LD9 (iii) carried into Task 4.2 / 4.3 (an open run's push rides the chase's own `todays` query); the stopped-ladder gap disclosed; the pack pointer is OWED (⛔ already there); status words. |

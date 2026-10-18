@@ -1,3 +1,14 @@
+# last_updated: 2026-10-18c (STORY 6.37c — VALIDATED (`bmad-create-story validate 6.37c`, story v1.2) after 6.37b reached `main`: branch
+# `story/6-37c-undelivered-reminder-ladder` REBASED onto `main` @ `ed862339` (two ledger conflicts resolved, both entries kept); re-pinned
+# `c19e6534`. Four parallel read-only verifiers + two fresh-context re-validate rounds of the rewrite (2 H / 3 M / 8 L, then 0 H / 4 M / 5 L —
+# all the pass's own, all applied). ⭐ F4 FALSE after 6.37b's round 2 — `ce` is purpose-filtered too ⇒ Task 5 widens BOTH chases; `-354`
+# and migration 0168 are 6.37b's ⇒ the 6.37c entry takes the next free id, the migration 0169; `-354` d5 already DECIDES the nominee gates
+# ⇒ LD11 is mechanism-only (one env var read by api + jobs — a 10.8 flag is barred under `packages/domain/src/claim`); `-354` d4 (b) Row
+# 32 (h) a GO-LIVE condition, (c) the Panel owed a telling; NEW LD15 (ADR-0042's token, before the ladder), LD16 (the nominee text / letter
+# basis to counsel with Task 0 — `-354` d5), LD17 (6.37b AC11's "still letter-eligible" leg vs `-351` 4 A). Design: the mapping reaches
+# every undelivered row of a concluded epoch; a stopped ladder KEEPS its origin and covered rows; the push carries a late
+# `ladder_escalation`; the certificate stop reads the ORIGIN run through extracted sub-predicates; T24 the `canReadAcrossPariwars` guard.
+# Row stays `ready-for-dev` — buildable after Task 0 (LD1–LD17). ⛔ Code; ⛔ decision entry.)
 # last_updated: 2026-10-18b (STORY 6.37b — DONE: code review round 2's five questions answered by BigDev ("D1 b, D2 a, D3 a, D4 a,
 # D5 a") and recorded as Decision `2026-10-18-354` (author-commit, committed alone `a81cdbf7`): `-347` narrowed in five points (the
 # `first_reported_at` UPDATE grant in BigDev's words; the inbox INSERT to the projection; a printable-ASCII token; a timestamp-shaped
@@ -20062,6 +20073,7 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-18 (Story 6.37c validated, v1.2: rebased on main; ce filter, numbers, -354's carriers, LD15–LD17; ready-for-dev.)
   2026-10-17 (Story 6.37c created: the delivery ladder, both chases; LD1–LD14 proposed for BigDev at Task 0; PQ1–PQ3 candidate; ready-for-dev.)
   2026-10-17 (Story 6.37b dev done: CRQID on every SMS, the MSG91 report webhook, the correlator, prune and silence alarm; ci:local green on :5433; 6-37b review.)
   2026-10-17 (-353: 6.37b split — the delivery ladder is new row 6-37c-undelivered-reminder-ladder (backlog); the §3.4 amendment drafted.)
@@ -20558,6 +20570,9 @@ development_status:
   # ⭐ 2026-10-17 (`bmad-create-story 6.37c`): story file `6-37c-undelivered-reminder-ladder.md`; buildable after Task 0 (LD1–LD14;
   # PQ1–PQ3 through §0) and after 6.37b's code (`f7e695b7`) is on this branch. LD1 (proposed) moves the WhatsApp step and the agreement's
   # new wording to a new row 6-37d.
+  # ⭐ 2026-10-18 (validate, story v1.2): branch rebased onto `main` (6.37b on it — Task 0.1's "bring f7e695b7" DISCHARGED); the
+  # `-354` carriers above are IN the story (LD11 mechanism-only, LD13 go-live, LD16 counsel, Task 0.4 Panel telling), plus LD15 (token)
+  # and LD17 (the "STILL so" leg); the 6.37c entry is the next free id; migration 0169. Buildable after Task 0 (LD1–LD17).
   6-37c-undelivered-reminder-ladder: ready-for-dev
   epic-6-retrospective: done
 

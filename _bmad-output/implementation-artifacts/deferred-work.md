@@ -10,11 +10,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   the Panel *"If you choose B here, we will propose the same fallback for the neighbours' text, as a separate question"*; they chose B
   ([Decision 2026-10-18-359](../../.decision-log.md#decision-2026-10-18-359)). Story 6.27c's neighbours' text still refuses a name that
   cannot fit (`no_target:name_too_long` — `-311` PM3, our reading). ⭐ Trigger: write that routing note before row 6-37e is built (the
-  fallback function can serve both). **Not addressed.**
+  fallback function can serve both). **Not addressed** — the note is WRITTEN (2026-10-18,
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-18-6-27c-neighbours-text-long-name.md`), ⛔ sent.
 - **ADR-0040's production email provider — the Panel's choice, not asked** — ADR-0040 ratified ([Decision
   2026-10-18-358](../../.decision-log.md#decision-2026-10-18-358)) but *"this ADR, when ratified, records which provider is enabled in
   production (the Panel's choice; recommended: SES)"* — the consent sheet asked Ratify / Defer / Reject only. ⭐ Trigger: before roster
-  Row 24's go-live — put SES vs ZeptoMail to the Panel (one line). Row 24 (a) stays open. **Not addressed.**
+  Row 24's go-live — put SES vs ZeptoMail to the Panel (one line). Row 24 (a) stays open. **Not addressed** — the note is WRITTEN
+  (2026-10-18, `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-18-staff-email-provider.md`), ⛔ sent.
 
 ## Deferred from: code review round 2 of 6-37b-msg91-delivery-reports (2026-10-18)
 

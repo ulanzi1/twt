@@ -129,6 +129,14 @@ describe.skipIf(!hasDatabase)('claim_peer_mesh_wa_reminders — migration 0171 (
     }
   });
 
+  it('⭐ R7 — new evidence, 2026-10-19: WITHOUT the trigger the SAME forbidden update on a finished row would succeed (mutation-kill of the guard the prior test exercises)', async () => {
+    const { client } = getTx();
+    const { id } = await insertOn(client, { send_outcome: 'accepted', send_started_at: AT, provider_message_id: 'wamid.X', recipient_number_hash: 'h' });
+    await client.query('ALTER TABLE claim_peer_mesh_wa_reminders DISABLE TRIGGER claim_peer_mesh_wa_reminders_guard_delivery');
+    await expectAccepted(client, () => update(client, id, `detail = 'held:x'`));
+    await client.query('ALTER TABLE claim_peer_mesh_wa_reminders ENABLE TRIGGER claim_peer_mesh_wa_reminders_guard_delivery');
+  });
+
   it('the trigger while attempting: attempt_count ⛔ decreases; first_detail once; aging_since forward-only; the marker ⛔ re-stamped (cleared then set is fine)', async () => {
     const { client } = getTx();
     const { id } = await insertOn(client, { attempt_count: 2, first_detail: 'rate_limited:none', send_started_at: AT });

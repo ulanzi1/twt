@@ -108,6 +108,8 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     neighbours?: number;
     name?: string;
     hoursAgo?: number;
+    /** A finer-grained age than `hoursAgo` alone can express (`make_interval`'s `hours` is an int4) — ADDED to it. */
+    secondsAgo?: number;
     switchOn?: boolean;
     phoneNumberId?: string | null;
     secretName?: string | null;
@@ -189,8 +191,8 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
         `INSERT INTO claim_peer_mesh_pings (ping_id, selection_id, pariwar_id, member_id, source, send_outcome, attempt_count, claimed_at,
            claimed_by_job, aging_since, link_code, locale_source, send_updated_at, provider_message_id)
          VALUES ($1, $2, $3, $4, 'workplace', 'accepted', 1, now(), 'job-text', now(), $5, 'pariwar_default',
-                 clock_timestamp() - make_interval(hours => $6), 'gw-1')`,
-        [pingId, selectionId, pid, m, linkCode, o.hoursAgo ?? 49],
+                 clock_timestamp() - make_interval(hours => $6, secs => $7), 'gw-1')`,
+        [pingId, selectionId, pid, m, linkCode, o.hoursAgo ?? 49, o.secondsAgo ?? 0],
       );
       pings.push({ pingId, memberId: m, linkCode });
       const consentId = randomUUID();
@@ -446,6 +448,50 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     }
   });
 
+  it('⭐ R6 — several HELD Pariwars in ONE tick get their OWN alarm, each naming only its OWN Pariwar and gap — ⛔ one merged alarm', async () => {
+    const a = await world({ secretName: '' }); // config:wa_config_incomplete
+    const b = await world({ locale: null }); // config:locale_unavailable
+    const h = harness(a);
+    h.deps = { ...h.deps, pariwarAllowlist: [a.pid, b.pid] };
+    const swept = await runPeerMeshWaReminderSweep(h.deps, boss(h));
+    expect(swept).toMatchObject({ heldForConfig: 2, enqueued: 0 });
+    const heldAlarms = h.alarms.filter((al) => al.includes('WhatsApp reminders HELD'));
+    expect(heldAlarms).toHaveLength(2); // ⛔ ONE merged alarm for both Pariwars
+    const forA = heldAlarms.find((al) => al.includes(a.pid))!;
+    const forB = heldAlarms.find((al) => al.includes(b.pid))!;
+    expect(forA, 'an alarm naming Pariwar A').toBeDefined();
+    expect(forB, 'an alarm naming Pariwar B').toBeDefined();
+    expect(forA).toContain('config:wa_config_incomplete');
+    expect(forA).not.toContain(b.pid);
+    expect(forA).not.toContain('config:locale_unavailable');
+    expect(forB).toContain('config:locale_unavailable');
+    expect(forB).not.toContain(a.pid);
+    expect(forB).not.toContain('config:wa_config_incomplete');
+  });
+
+  it('⭐ R4 — a bounded tick\'s resume cursor reaches the claim a persistently-due one would otherwise crowd out, next tick', async () => {
+    const a = await world();
+    const b = await world();
+    const [first, second] = a.claimCaseId < b.claimCaseId ? [a, b] : [b, a];
+    const h = harness(first);
+    h.deps = { ...h.deps, pariwarAllowlist: [first.pid, second.pid], maxRuns: 1 };
+
+    const tick1 = await runPeerMeshWaReminderSweep(h.deps, boss(h));
+    expect(tick1).toMatchObject({ enqueued: 1, budgetExhausted: false });
+    expect(h.enqueued.map((e) => e.data.payload.claimCaseId)).toEqual([first.claimCaseId]);
+    expect(tick1.resumeCursor).not.toBeNull();
+
+    h.enqueued.length = 0;
+    const tick2 = await runPeerMeshWaReminderSweep(h.deps, boss(h), tick1.resumeCursor);
+    expect(tick2.enqueued).toBe(1);
+    expect(h.enqueued.map((e) => e.data.payload.claimCaseId)).toEqual([second.claimCaseId]); // ⛔ `first` again — fairness
+
+    // WITHOUT the cursor (the OLD behaviour — restarting at the top) `first` wins AGAIN, proving the fix matters.
+    h.enqueued.length = 0;
+    await runPeerMeshWaReminderSweep(h.deps, boss(h), null);
+    expect(h.enqueued.map((e) => e.data.payload.claimCaseId)).toEqual([first.claimCaseId]);
+  });
+
   it('a switch-OFF Pariwar is ⛔ offered at all — ⛔ enqueued, ⛔ row, ⛔ alarm; turned ON, its due ping goes', async () => {
     const w = await world({ switchOn: false });
     const h = harness(w);
@@ -520,6 +566,46 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'attempting', send_started_at: null });
     expect(h.alarms.some((a) => a.includes('lease lapsed'))).toBe(true);
   });
+
+  it('⭐ R2 — quiet hours arriving DURING the marker\'s own commit (after it is sampled) ⇒ the marker is RELEASED, ⛔ sent, deferred', async () => {
+    const w = await world();
+    const h = harness(w);
+    // now / beginAt / markAt all still inside the window (19:59:30 IST) — the EXISTING pre-marker check passes; the clock the
+    // code reads AFTER the marker's own commit (R2's new recheck) falls back to past 20:00 IST.
+    const calls = [new Date('2026-10-16T14:29:30.000Z'), new Date('2026-10-16T14:29:30.000Z'), new Date('2026-10-16T14:29:30.000Z')];
+    h.setNow(() => calls.shift() ?? new Date('2026-10-16T14:30:30.000Z'));
+    const jobId = randomUUID();
+    const result = await child(h, w, jobId);
+    expect(result).toMatchObject({ status: 'deferred_quiet_hours' });
+    expect(h.sent).toHaveLength(0); // Meta was ⛔ called
+    const [r] = await reminders(w);
+    expect(r).toMatchObject({ send_outcome: 'attempting', send_started_at: null }); // RELEASED, ⛔ left in flight
+    // the SAME job's pg-boss retry (next morning) re-claims it and sends normally — the row was ⛔ stranded.
+    const h2 = harness(w);
+    await child(h2, w, jobId);
+    expect(h2.sent).toHaveLength(1);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'accepted' });
+  });
+
+  it(
+    '⭐ R5 — a child deferred at night BEFORE its first begin still closes a ping that crosses + 72 h while deferred (skipped_late, ⛔ zero rows left behind)',
+    async () => {
+      // 2 seconds of margin left on the 72-hour bound at seed time.
+      const w = await world({ hoursAgo: 71, secondsAgo: 59 * 60 + 58 });
+      const h = harness(w);
+      h.setNow(NIGHT); // outside 09:00-20:00 ⇒ the TOP-level check defers BEFORE any row is touched (⛔ a begin yet)
+      const deferred = await child(h, w);
+      expect(deferred).toMatchObject({ status: 'deferred_quiet_hours' });
+      expect(await reminders(w)).toEqual([]); // R5's gap, before the fix: ⛔ row — the deadline is about to pass unrecorded
+      await new Promise((resolve) => setTimeout(resolve, 3_000)); // the deadline passes while deferred overnight
+      h.setNow(DAYTIME); // the deferred child wakes up the next morning
+      const woke = await child(h, w);
+      expect(woke).toMatchObject({ status: 'done' });
+      expect(h.sent).toHaveLength(0);
+      expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'skipped_late', send_started_at: null });
+    },
+    10_000,
+  );
 
   // ── AC7 — the outcomes, through the REAL client ─────────────────────────────────────────────────────────────
 

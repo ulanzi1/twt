@@ -22,6 +22,7 @@ import {
   CORRECTION_SEND_LEASE_MS,
   PEER_MESH_WA_REMINDER_FINALISE_LOCK_TIMEOUT_MS,
   PEER_MESH_WA_REMINDER_FINALISE_STATEMENT_TIMEOUT_MS,
+  PEER_MESH_WA_REMINDER_LATE_BY,
   PEER_MESH_WA_REMINDER_PARKED_BY,
   beginPeerMeshWaReminder,
   finalisePeerMeshWaReminder,
@@ -102,7 +103,17 @@ async function optIn(client: Client, pid: string, memberId: string): Promise<voi
  * ago (DB clock), the Pariwar's WhatsApp switch `switchOn`; then `twt_app` in the Pariwar.
  */
 async function seedReminder(
-  o: { state?: string; n?: number; hoursAgo?: number; switchOn?: boolean; optedIn?: boolean; outcome?: string | null; neighbourState?: string } = {},
+  o: {
+    state?: string;
+    n?: number;
+    hoursAgo?: number;
+    /** A finer-grained age than `hoursAgo` alone can express (`make_interval`'s `hours` is an int4) — ADDED to it. */
+    secondsAgo?: number;
+    switchOn?: boolean;
+    optedIn?: boolean;
+    outcome?: string | null;
+    neighbourState?: string;
+  } = {},
 ): Promise<Seeded> {
   const { tx, client } = getTx();
   await client.query('RESET ROLE');
@@ -138,8 +149,8 @@ async function seedReminder(
       await client.query(
         `INSERT INTO claim_peer_mesh_pings (ping_id, selection_id, pariwar_id, member_id, send_outcome, attempt_count, claimed_at, claimed_by_job,
            aging_since, link_code, locale_source, send_updated_at)
-         VALUES ($1, $2, $3, $4, $7, 1, now(), 'job-text', now(), $5, 'pariwar_default', clock_timestamp() - make_interval(hours => $6))`,
-        [pingId, selectionId, pid, memberId, linkCode, o.hoursAgo ?? 49, outcome],
+         VALUES ($1, $2, $3, $4, $7, 1, now(), 'job-text', now(), $5, 'pariwar_default', clock_timestamp() - make_interval(hours => $6, secs => $8))`,
+        [pingId, selectionId, pid, memberId, linkCode, o.hoursAgo ?? 49, outcome, o.secondsAgo ?? 0],
       );
     }
     pings.push({ pingId, memberId, linkCode });
@@ -382,6 +393,20 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(old, await only(old)), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
     expect((await only(old)).send_started_at).toBeNull();
   });
+
+  it(
+    '⭐ R1 — the marker rechecks WR5\'s 72-hour deadline too: a slow decrypt/hash crossing it ⇒ skipped_late, ⛔ sent (⛔ left attempting for a wasted re-claim)',
+    async () => {
+      // 2 seconds of margin left on the 72-hour bound at seed time (the "ping seeded two seconds before its deadline" repro).
+      const s = await seedReminder({ hoursAgo: 71, secondsAgo: 59 * 60 + 58 });
+      expect((await begin(s)).kind).toBe('begun'); // in_time still true — 2 s of margin left
+      const r = await only(s);
+      await new Promise((resolve) => setTimeout(resolve, 3_000)); // the "three-second HMAC delay" — crosses the deadline
+      expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
+      expect(await only(s)).toMatchObject({ send_outcome: 'skipped_late', send_started_at: null, claimed_by_job: PEER_MESH_WA_REMINDER_LATE_BY });
+    },
+    10_000,
+  );
 
   it('the finalise needs the marker; accepted writes the wamid + hash; it is BOUNDED (both SET LOCALs in its transaction)', async () => {
     const s = await seedReminder();

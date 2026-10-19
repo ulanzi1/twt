@@ -15,7 +15,12 @@ import pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { setPariwarScope } from '../../../src/db.js';
-import { beginPeerMeshWaReminder, generatePeerRequestLinkCode } from '../../../src/claim/index.js';
+import {
+  CORRECTION_SEND_LEASE_MS,
+  beginPeerMeshWaReminder,
+  finishLapsedInFlightPeerMeshWaReminders,
+  generatePeerRequestLinkCode,
+} from '../../../src/claim/index.js';
 import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId, peerMeshPingId as toPingId } from '../../../src/ids/index.js';
 import type { ClaimId, MemberId, PariwarId, PeerMeshPingId } from '../../../src/ids/index.js';
 import { driveClaimTo } from '../_helpers.js';
@@ -202,4 +207,37 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder under two co
     expect(await fromSend).toEqual({ kind: 'skipped', outcome: 'skipped_answered' });
     await send.commit();
   });
+
+  it(
+    '⭐ R3 — SKIP LOCKED: a single locked lapsed row ⛔ stalls the maintenance pass; it is skipped now and swept once released',
+    { timeout: TIMEOUT },
+    async () => {
+      const a = await seed();
+      const b = await seed();
+      const old = new Date(Date.now() - CORRECTION_SEND_LEASE_MS - 60_000);
+      for (const s of [a, b]) {
+        await pool.query(
+          `INSERT INTO claim_peer_mesh_wa_reminders
+             (ping_id, pariwar_id, claim_case_id, selection_id, member_id, send_outcome, attempt_count, claimed_at, claimed_by_job, aging_since, send_started_at)
+           VALUES ($1, $2, $3, $4, $5, 'attempting', 1, $6, 'job-x', $6, $6)`,
+          [s.pingId, s.pid, s.cid, s.selectionId, s.memberId, old],
+        );
+      }
+      const locker = await openTx(a.pid);
+      await locker.client.query(`SELECT 1 FROM claim_peer_mesh_wa_reminders WHERE ping_id = $1 FOR UPDATE`, [a.pingId]);
+
+      // ⛔ `waitingOn` — SKIP LOCKED must never reach a lock wait at all; a bounded race against a short timer proves it.
+      const TIMED_OUT = Symbol('timed out');
+      const result = await Promise.race([
+        finishLapsedInFlightPeerMeshWaReminders(pool, { now: new Date(), allow: null }),
+        new Promise<typeof TIMED_OUT>((resolve) => setTimeout(() => resolve(TIMED_OUT), 1_000)),
+      ]);
+      expect(result, 'a locked row must ⛔ stall the whole batch (SKIP LOCKED)').not.toBe(TIMED_OUT);
+      expect((result as Awaited<ReturnType<typeof finishLapsedInFlightPeerMeshWaReminders>>).map((r) => r.claimCaseId)).toEqual([b.cid]);
+
+      await locker.commit();
+      const after = await finishLapsedInFlightPeerMeshWaReminders(pool, { now: new Date(), allow: null });
+      expect(after.map((r) => r.claimCaseId)).toEqual([a.cid]); // swept once the lock is released — ⛔ stranded
+    },
+  );
 });

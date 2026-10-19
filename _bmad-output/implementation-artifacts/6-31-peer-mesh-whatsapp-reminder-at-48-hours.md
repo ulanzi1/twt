@@ -71,7 +71,7 @@ S = Task 0.1 STOP conditions. Decision-entry letters (PM, SW, MG, CF, FQ …) ke
 
 # Story 6.31: One WhatsApp Reminder, Two Days After the Text, to Each Neighbour Who Has ⛔ Not Answered and Chose WhatsApp — the Same Words, Its Own Record, ⛔ Never a Second SMS `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a member's death is reported, up to five neighbours are texted (Story 6.27c) with
 > the member's name, a link to a few short questions, and the helpline. The Panel ruled (`-303` Q1 A) that those of the five who
@@ -784,31 +784,47 @@ verification against the worktree. All layers completed. Deduplicated dispositio
 Every retained finding is an engineering or documentation correction under the Panel-routing template's §0; no trustee
 question is required.
 
-- [ ] [Review][Patch][HIGH][R1] Enforce the 72-hour deadline at the send marker, after decrypt/hash work
+- [x] [Review][Patch][HIGH][R1] Enforce the 72-hour deadline at the send marker, after decrypt/hash work
   [packages/domain/src/claim/peer-mesh-wa-reminder.ts:400] — WR5 / Decision `2026-10-19-365` forbids an attempt starting
   at or after text acceptance +72h. Begin checks `ping.in_time`, then commits; the child awaits mobile decryption and hashing.
   The marker checks ownership and lease only, so that delay can cross the independent deadline. Live reproduction: a ping
   seeded two seconds before its deadline, followed by a three-second HMAC delay, sent once at age **72.00029358 hours**.
   Recheck the ping's deadline at handoff and record an unsent expired attempt as `skipped_late`; add the delayed-hash leg.
   Sources: blind + edge + auditor.
+  **RESOLVED 2026-10-19.** `markPeerMeshWaReminderInFlight`'s OWN statement now rechecks `send_updated_at + 72h` against
+  `clock_timestamp()` (a `LATERAL` subquery, ONE evaluation reused by every branch) and finalises `skipped_late` atomically
+  in the SAME statement when it has passed, instead of marking — ⛔ a second statement, ⛔ a window between the two. New leg
+  `peer-mesh-wa-reminder.spec.ts` ("the marker rechecks WR5's 72-hour deadline too…", a seeded 2 s margin + a real 3 s delay);
+  confirmed RED against the unfixed code (`expected true to be false`) before the fix was re-applied.
 
-- [ ] [Review][Patch][MEDIUM][R2] Recheck quiet hours after the marker transaction completes
+- [x] [Review][Patch][MEDIUM][R2] Recheck quiet hours after the marker transaction completes
   [apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts:539] — WR2 (viii), WR10 and AC3 require no send outside
   09:00–20:00 IST. `markAt` is sampled before awaiting a pooled connection, the marker UPDATE and COMMIT; after they return,
   the child calls Meta without reading the clock again. A wait crossing 20:00 therefore sends at night. The marker's lease
   threshold also uses the pre-wait time. Reproduction advanced the injected clock from 19:59:59 to 20:00:01 at the marker
   query and observed one send. Bound the marker operation and check fresh time before handoff; if handoff is cancelled,
   safely release the known-unsent marker and defer. Sources: blind + edge.
+  **RESOLVED 2026-10-19.** The child rereads the clock immediately AFTER the marker is known committed; if quiet hours
+  arrived, the NEW `releasePeerMeshWaReminderInFlight` clears the marker (⛔ a send, ⛔ a transient — Meta was never called)
+  and the claim is deferred to the next morning, where a fresh begin / marker re-judges everything. New leg in
+  `claim-peer-mesh-wa-reminders-live.test.ts` ("quiet hours arriving DURING the marker's own commit…"); confirmed RED
+  (`expected 'done' to match 'deferred_quiet_hours'`) before the fix was re-applied.
 
-- [ ] [Review][Patch][MEDIUM][R3] Bound and batch the sweep's maintenance writes before scanning due work
+- [x] [Review][Patch][MEDIUM][R3] Bound and batch the sweep's maintenance writes before scanning due work
   [packages/domain/src/claim/peer-mesh-wa-reminder.ts:630] — WR12 / AC10's run budget does not cover the lapsed finisher or
   late marking: both run before the first budget check, update all matching rows, and have no lock/statement bounds or
   `SKIP LOCKED` batching. A single locked reminder can stall every tenant's due scan; pg-boss expiry does not cancel the
   running SQL. Live reproduction held a qualifying row lock: a sweep with a 10ms budget remained blocked after 200ms and
   resumed only after the lock was released. Use bounded maintenance batches that skip busy rows and observe the tick's
   remaining budget. Sources: blind + edge.
+  **RESOLVED 2026-10-19.** Both maintenance passes now take ONE bounded, `FOR UPDATE SKIP LOCKED` batch per call
+  (`PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH = 200`, a `MATERIALIZED` CTE — `claimDueSmsDeliveryReports`'s shape,
+  [[project_in_subquery_limit_skip_locked_overclaim]]); the sweep loops each between budget checks and skips the due-ping
+  scan entirely once the budget is already spent. New two-connection leg in `peer-mesh-wa-reminder-concurrency.spec.ts`
+  ("SKIP LOCKED: a single locked lapsed row…"); confirmed RED (timed out waiting on the held lock) before the fix was
+  re-applied.
 
-- [ ] [Review][Patch][MEDIUM][R4] Give unattempted claims progress when parked claims repeatedly fill a sweep's bound
+- [x] [Review][Patch][MEDIUM][R4] Give unattempted claims progress when parked claims repeatedly fill a sweep's bound
   [apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts:336] — Each tick resets the keyset cursor, orders by claim UUID,
   and stops at `maxRuns` or its budget. Parked rows are immediately due again. Under a saturated bound, the same refusing
   prefix can take every tick until later healthy claims age out. Reproduction used two due claims and the supported
@@ -816,36 +832,66 @@ question is required.
   Preserve fair progress across ticks or schedule parked retries separately from first attempts; cover repeated bounded
   ticks with a refusing claim followed by healthy work. This is conditional on reaching the bound, not a claim that today's
   default is already saturated. Source: blind.
+  **RESOLVED 2026-10-19.** The sweep now returns a `resumeCursor` (the trailing processed item) when a tick is bounded
+  (the budget or `maxRuns`) and `null` once a tick drains the whole due set; `registerClaimPeerMeshWaReminderWorkers`
+  threads it into the next tick via a closure, so an unsaturated sweep behaves exactly as before and a saturated one
+  marches forward instead of restarting at the keyset's head every time. New leg in `claim-peer-mesh-wa-reminders-live.test.ts`
+  ("a bounded tick's resume cursor reaches the claim a persistently-due one would otherwise crowd out…"); confirmed RED
+  (the SAME claim won again) before the fix was re-applied.
 
-- [ ] [Review][Patch][MEDIUM][R5] Preserve a late disposition for due work deferred before its first begin
+- [x] [Review][Patch][MEDIUM][R5] Preserve a late disposition for due work deferred before its first begin
   [packages/domain/src/claim/peer-mesh-wa-reminder.ts:541] — AC3 explicitly requires the child queued at +71h and deferred
   overnight to record `skipped_late` at its late begin. The child list shares the sweep's `< +72h` predicate, and jobs returns
   `noop/nothing_due` before begin. With no existing row, late marking cannot recover it. Live reproduction first deferred
   a due claim at night, let its deadline pass, then resumed at an injected morning: `nothing_due`, zero reminder rows.
   Carry/reconcile provenance of queued due work so the specified late judgement is reachable, without backfilling pings
   that were never due. Add a resume-after-deadline child test rather than only calling domain begin directly. Source: auditor.
+  **RESOLVED 2026-10-19.** `dueConjunctsSql`'s CHILD mode (⛔ the SWEEP's) drops the `< +72h` upper bound — the `+48h` floor
+  and `send_outcome = 'accepted'` still gate it, and `beginPeerMeshWaReminder`'s OWN `in_time` recheck is what still refuses
+  the SEND; this only keeps a legitimately-due ping visible long enough for ITS OWN claim's already-enqueued child to run
+  begin and write `skipped_late`, ⛔ a backfill of a ping that was never due. New leg in
+  `claim-peer-mesh-wa-reminders-live.test.ts` ("a child deferred at night BEFORE its first begin still closes a ping that
+  crosses + 72 h while deferred…", mirroring the finding's own repro); confirmed RED (`nothing_due`, zero rows) before the
+  fix was re-applied.
 
-- [ ] [Review][Patch][MEDIUM][R6] Keep config-hold alarms associated with each Pariwar and its actual gap
+- [x] [Review][Patch][MEDIUM][R6] Keep config-hold alarms associated with each Pariwar and its actual gap
   [apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts:370] — WR7 / WR12 / AC9 require one actionable alarm per held
   Pariwar per tick. Separate global `heldClaims` and `heldGaps` sets discard the association, then emit one combined alarm
   with at most five claim IDs and no Pariwar IDs. With several tenants, the operator cannot tell which fix belongs where;
   claims beyond the sample are unidentified. Live reproduction with two Pariwars and different gaps produced one alarm
   naming neither Pariwar. Group holds by Pariwar, emit one alarm for each, and test multiple tenants together. Source: auditor.
+  **RESOLVED 2026-10-19.** HELD claims are now grouped by their OWN Pariwar (`heldByPariwar: Map<pariwarId, {claims, gaps}>`)
+  and the sweep emits ONE alarm per held Pariwar, each naming only its own gap(s) and claim sample. New leg in
+  `claim-peer-mesh-wa-reminders-live.test.ts` ("several HELD Pariwars in ONE tick get their OWN alarm…", two Pariwars with
+  different gaps); confirmed RED (ONE merged alarm, length 1 not 2) before the fix was re-applied.
 
-- [ ] [Review][Patch][MEDIUM][R7] Correct the completion claim and disclose the portions of AC13 without RED evidence
+- [x] [Review][Patch][MEDIUM][R7] Correct the completion claim and disclose the portions of AC13 without RED evidence
   [_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md — Debug Log (d), Completion Notes]
   — AC13 requires every new test to have been shown RED against unfixed code. Debug Log (d) explicitly says the remaining
   record/RLS legs were written against the applied table and had no separate unfixed-code run; Task 4 records no such run.
   An expected SQL refusal in a passing test is not a RED test execution. Completion Notes nevertheless claim ACs 0–13 met.
   Checklist family 10 is a REAL GAP: record the un-attested proof honestly and supply meaningful new mutation/guard-bites
   evidence where useful, dated as new evidence. Do not backfill a claim that an earlier run occurred. Source: auditor.
+  **RESOLVED 2026-10-19.** Completion Notes corrected below to stop claiming a blanket "ACs 0–13 met" and name the gap
+  honestly: a `CREATE TABLE` migration's existence/CHECK/trigger assertions have no "before the fix" state to run most
+  legs against (the table did not exist), so AC13's RED-before-fix ceremony is a category mismatch for most of Task 1's
+  record/RLS legs — accepted as a structural limit, ⛔ swept under the rug. ONE piece of real, dated mutation-kill evidence
+  added for the highest-value guard (I1's finished-row trigger): a new leg in `peer-mesh-wa-reminder-record.spec.ts`
+  DISABLES the trigger inside the test's own rolled-back transaction and shows the SAME forbidden update that the prior
+  test proves refused now SUCCEEDS — proof the trigger, not something else, is the guard. Dated 2026-10-19, ⛔ backdated to
+  Task 1.
 
-- [ ] [Review][Patch][LOW][R8] Keep Row 27's build evidence separate from Row 35's production readiness
+- [x] [Review][Patch][LOW][R8] Keep Row 27's build evidence separate from Row 35's production readiness
   [docs/launch-gate-inventory/inventory-roster.md:480] — AC0 / WR15 call for a dated pointer. Row 27 note (3) requires 6.31
   to be built, or its absence at go-live recorded; the story's Sequencing says 6.31 `done` discharges it. The new annotation
   and Row 35's notes instead say Row 35 must close, apparently adding Meta/counsel/successor-story readiness to the build
   evidence line. Correct those annotations while preserving the existing note and the reminder's own go-live gates.
   Source: auditor.
+  **RESOLVED 2026-10-19.** The inventory roster's dated note corrected: note (3)'s OWN criterion ("Row 6-31 built, or its
+  absence at go-live recorded") is discharged by 6.31 being BUILT (Task 6, 2026-10-19), exactly as this story's own
+  Sequencing already said — ⛔ by Row 35 closing. Row 35 remains its OWN, separate, LATER production-readiness gate (Meta
+  approval, provisioning, counsel, the Hindi review, alarm routing) that the reminder's ACTUAL SENDING waits on; it is
+  ⛔ note (3)'s own condition and the earlier wording conflating the two is withdrawn as written.
 
 **Verification.** Existing focused suites passed on this reviewed HEAD: jobs 40/40 (including 19 live tests), domain/RLS
 50/50 (five live suites), channels 58/58 (new direct-client tests and existing WhatsApp/provider compatibility tests),
@@ -1114,6 +1160,25 @@ static gate incl. `dlt-typed-variables`, `channels-determinism`, `pii-scrape`, `
 1209/1209, api 1987 / 1 skipped, channels 436/436 — ⛔ load timeout this run, ⛔ re-run needed. ⛔ Network call in any test (every WA
 send goes through an injected `fetch` or a fake handle).
 
+**(f) Review round 2 — 2026-10-19.** The eight action items of `036398ed`'s code review, worked as `bmad-dev-story 6.31`'s
+continuation (BigDev's "leave as action items"; `review_continuation`). For R1–R6 (code fixes): wrote the NEW regression leg
+FIRST against the already-shipped code, confirmed it failed for the reason the review names, THEN implemented the fix and
+confirmed green. To honestly confirm "RED against unfixed code" (R7's own lesson) rather than merely reasoning about it: saved
+`git diff` patches of the two touched implementation files (`packages/domain/src/claim/peer-mesh-wa-reminder.ts`,
+`apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts`), `git checkout`'d them back to the pre-fix content (the test files
+UNTOUCHED), re-ran every new leg — all six (R1–R6) failed with the expected assertion — then `git apply`'d the saved patches
+back and re-ran the full suites green. R7's own new leg (the trigger-disable mutation test) and R3's SKIP LOCKED leg are
+own-committing (`peer-mesh-wa-reminder-record.spec.ts`, `peer-mesh-wa-reminder-concurrency.spec.ts`); R1 / R5 use a real ~3 s
+wall-clock delay against a seeded sub-hour margin (`+ make_interval(…, secs => $n)`, added to both `seedReminder` and
+`world()` — `make_interval`'s `hours` is an int4, ⛔ fractional); R2 / R4 / R6 are deterministic (an injected clock queue, a
+direct `runPeerMeshWaReminderSweep` call with a `resumeCursor`, two Pariwars in one allowlist) — ⛔ a sleep. Domain 58/58
+(peer-mesh-wa-reminder 21, -record 12, -concurrency 3, RLS-policy-regression 10, wa-opt-in 7, UNCHANGED fences); jobs 44/44
+(-live 23, the pure suite 13, templates 8). `tsc` + `eslint` clean on every touched file. `git fetch origin`: `main` ==
+`origin/main` == `15acb570` (unmoved). `DATABASE_URL=…:5433 pnpm ci:local` ⇒ **PASSED — 36 jobs green** on the second run
+(the first hit `tests/integration/pool/sahyog-drive-public-read.spec.ts` — a fixture collision on a FIXED canonical
+identifier, unrelated to any file this story touches; re-run alone green, 41/41 — a known class of `ci:local test`
+concurrency flake, ⛔ a regression). ⛔ Network call in any test.
+
 ### Completion Notes List
 
 - **Implemented (2026-10-19, `bmad-dev-story 6.31`).** ONE WhatsApp reminder per text, 48–72 h after the text was ACCEPTED, to a
@@ -1123,7 +1188,28 @@ send goes through an injected `fetch` or a fake handle).
   grammar); WR3's ONE opt-in read; WR8's three values + per-send timeout (additive); WR10's exported classifier for row 6-37d;
   the locked begin (claim → ping → reminder) with the five finished judgements; an hourly 09:20–19:20 IST sweep (role guard →
   lapsed in-flight finisher → late marking → one child per claim); the FULL member-facing name (6.27c's name read split, its text
-  unchanged). ACs 0–13 met (AC0 at Task 0).
+  unchanged). ACs 0–12 met; AC13 met with ONE disclosed gap, corrected 2026-10-19 (R7, below) — the original "ACs 0–13 met"
+  line overclaimed it.
+- **AC13's disclosed gap, corrected 2026-10-19 (R7).** Task 1's record / RLS-policy specs (21 legs) assert against the
+  MIGRATED table; most of those legs have ⛔ separate "unfixed code" run to show RED against, because the fix IS the table's
+  existence — a `CREATE TABLE` migration has no "before" state most assertions can fail under. Debug Log (d) already said
+  this at Task 6 ("their RED is the refusal they assert; ⛔ a separate unfixed-code run"); the Completion Notes line above
+  it did not carry that caveat through — corrected here, ⛔ backfilled as an earlier run that never happened. ONE piece of
+  real, dated mutation-kill evidence was added instead, for the highest-value guard (I1's finished-row trigger): a new leg
+  in `peer-mesh-wa-reminder-record.spec.ts`, dated 2026-10-19, DISABLES the trigger inside its own rolled-back transaction
+  and shows the SAME forbidden update the prior test proves refused now SUCCEEDS.
+- **Review round 2 (2026-10-19) — the eight action items resolved.** `R1` the marker's own statement rechecks WR5's `+72h`
+  bound (a `LATERAL` subquery) and finalises `skipped_late` atomically instead of marking past it; `R2` the child rereads
+  the clock AFTER the marker's own commit and releases it (NEW `releasePeerMeshWaReminderInFlight`) if quiet hours arrived
+  in that gap; `R3` the lapsed finisher and late marking are now bounded, `FOR UPDATE SKIP LOCKED` batches
+  (`PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH`), looped between budget checks; `R4` the sweep returns a `resumeCursor` when a
+  tick is bounded, threaded into the next tick by the registration closure, so a persistently-due claim can ⛔ starve every
+  claim after it forever; `R5` the CHILD's own due-list conjuncts drop the SWEEP's `+72h` upper bound so a ping deferred
+  past quiet hours before its first begin still gets its late begin; `R6` HELD claims are grouped by their OWN Pariwar, ONE
+  alarm per held Pariwar per tick; `R7` / `R8` above. Each of R1–R6 has a NEW regression leg, confirmed RED against the
+  pre-fix code (the two implementation files reverted via `git checkout`, the new tests re-run, then the fixes re-applied —
+  [[feedback_review_the_fix_diff_before_commit]]) before being re-applied; R7's new leg and R8 are documentation / evidence
+  corrections, ⛔ behaviour changes. `ci:local` re-run clean on :5433 (Task 6, below).
 - **Day-one output: none** — every Pariwar's switch is OFF, ⛔ template name is set (roster Row 35), the texts it follows are held
   (Row 27), and until row 5-12 ships an opt-in reaches 24 hours only. Built to send the day those lift.
 - **Deviations, each recorded in Debug Log (d):** the marker CAS reads the CHILD's clock (⛔ `clock_timestamp()`); the child's
@@ -1178,6 +1264,7 @@ UPDATED
 - `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` — `readMemberFacingDeceasedName` split out + exported (WR13; ⛔ on AC12's
   list); 6.27c's `readDeceasedName` keeps its fit check — behaviour and spec unchanged
 - `apps/jobs/src/boot.ts` — the reminder's registration
+- `docs/launch-gate-inventory/inventory-roster.md` — Row 27 note (3)'s dated annotation corrected (R8)
 - `_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
@@ -1193,3 +1280,5 @@ UPDATED
 | 2026-10-19 | 1.6 | The Panel RULED the note: `2026-10-19-364` (Trustee-ratified, *"by DR and KB / option A"*) — a yes lasts until withdrawn, for every WhatsApp message, after four conditions; committed alone (`92155fce`). Its build is NEW row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev: *"New row 5-12"*), ⛔ 6.31: Task 0.5 discharged, AC12's carve-out (b) withdrawn, WR3 / F14 / T2 / WR15 / WR16 (g) / AC0 / the §0 header / Sequencing updated; the note's ruling block, ADR-0029's changelog row and a dated §3.4 note written. |
 | 2026-10-19 | 1.7 | Task 0 DONE: BigDev *"accept all recommended"* ⇒ `2026-10-19-365` (author-commit, WR1–WR16; `990f7db2`, alone); records — the `epics.md` entry, roster Row 35 `peer-mesh-wa-reminder-template-approved`, Row 26 / Row 27 dated notes, §3.4 / ADR-0028 / ADR-0029 dated notes, three deferred-work items; sprint row → `in-progress` (ledger `2026-10-19e`). Story → `in-progress`. |
 | 2026-10-19 | 1.8 | Tasks 1–6 DONE (`bmad-dev-story 6.31`): migration 0171 + the record / RLS specs; `isPeerMeshWaReminderOptedIn`; WR8's client additions + `classifyDirectWaSendFailure`; the domain begin / marker / finalise / park / sweep reads + race spec; the jobs sweep + child, the template file + key builder, the split name read, the exposed cache, boot wiring; pure, lockstep and live suites. Two corrections found while building (the marker's clock; the child's list) and two extra alarm-only gaps — Debug Log (d). AC12 diff empty; `ci:local` on :5433 36/36 green. Status → `review`. |
+| 2026-10-19 | 1.9 | Code review (`036398ed`): 8 patch (1 HIGH / 6 MEDIUM / 1 LOW), 0 decision-needed, 0 defer, 1 dismissed — BigDev chose "leave as action items". Status `review` → `in-progress`. |
+| 2026-10-19 | 2.0 | Review round 2 DONE (`bmad-dev-story 6.31`'s continuation) — all eight findings resolved (Debug Log (f)): R1 the marker rechecks WR5's `+72h` bound in its own statement, finalising `skipped_late` atomically past it; R2 the child rereads the clock after the marker's own commit and releases it if quiet hours arrived; R3 the lapsed finisher / late marking are bounded `SKIP LOCKED` batches, looped between budget checks; R4 the sweep returns a `resumeCursor` so a bounded tick's next run does ⛔ restart at the keyset's head; R5 the child's own due list drops the sweep's `+72h` upper bound so a ping deferred before its first begin still gets `skipped_late`; R6 HELD claims are grouped and alarmed per Pariwar; R7 the Completion Notes' "ACs 0–13 met" overclaim corrected (AC13's disclosed gap) with new mutation-kill evidence for the finished-row trigger; R8 the inventory roster's Row 27 / Row 35 annotations corrected (6.31 `done` discharges note (3) directly, ⛔ Row 35's closure). Each of R1–R6 has a new regression leg, confirmed RED against the pre-fix code before being re-applied green. Status → `review`. |

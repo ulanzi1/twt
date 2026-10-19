@@ -21,6 +21,10 @@
 //     lease; ONLY while the marker is NULL) and the mobile ciphertext is returned AS STORED.
 // ⭐ THE IN-FLIGHT MARKER (WR10) — `markPeerMeshWaReminderInFlight`: its OWN committed CAS immediately before the WhatsApp call,
 // requiring the lease still to have `leaseMarginMs` left; zero rows ⇒ ⛔ send. Cleared only by a park or a transient note.
+// ⚠ Code review R1 (2026-10-19): the SAME statement also rechecks WR5's `+ 72 h` bound (the ping's `send_updated_at`) —
+// the begin's `in_time` check runs BEFORE the decrypt / hash work, so a slow send can cross the deadline between the two; the
+// marker is the LAST gate before Meta is called, so it is the one that must ⛔ let a late send through. Past the deadline the
+// SAME atomic statement finalises `skipped_late` instead of marking (⛔ a second statement, ⛔ a window between the two).
 // ⚠ ⛔ Never a Drizzle correlated subquery — raw SQL with explicit `wr_` aliases ([[project_epic6_drizzle_correlated_subquery_bug]]).
 
 import { type SQL, sql } from 'drizzle-orm';
@@ -394,23 +398,59 @@ interface RowRef {
 /**
  * ⭐ WR10 — THE IN-FLIGHT MARKER: `send_started_at = clock_timestamp()` in its OWN committed UPDATE, as a CAS — only on this job's
  * `attempting` row, ⛔ already marked, whose claim still has `leaseMarginMs` of lease left (`claimed_at > now − (lease − margin)`).
- * `false` ⇒ ⛔ send (the lease was lost, or the row moved on). ⚠ `now` is the CHILD's clock: `claimed_at` is stamped from it, and the
- * re-claim and the lapsed-row finisher judge the lease on the same clock (6.27c's form) — ⛔ a host stamp compared to the DB clock.
+ * `false` ⇒ ⛔ send (the lease was lost, the row moved on, or — R1 — the ping's `+ 72 h` bound (WR5) passed between the begin and
+ * this call: the SAME statement then finalises `skipped_late` atomically, so a slow decrypt / hash never lets a send cross the
+ * deadline). ⚠ `now` is the CHILD's clock for the LEASE only: `claimed_at` is stamped from it, and the re-claim and the lapsed-row
+ * finisher judge the lease on the same clock (6.27c's form) — ⛔ a host stamp compared to the DB clock. The `+ 72 h` recheck reads
+ * the ping's OWN `send_updated_at` against `clock_timestamp()` (the DB clock) — the SAME comparison `lockClaimPingReminder`'s
+ * `in_time` column and the due lists use, computed ONCE per row (a `LATERAL` subquery) so every branch agrees.
  */
 export async function markPeerMeshWaReminderInFlight(
   db: Db,
   input: RowRef & { readonly leaseMarginMs: number; readonly now: Date },
 ): Promise<boolean> {
   const notBefore = new Date(input.now.getTime() - (CORRECTION_SEND_LEASE_MS - input.leaseMarginMs));
+  const result = await db.execute<{ reminder_id: string; marked: boolean }>(sql`
+    UPDATE claim_peer_mesh_wa_reminders wr
+       SET send_started_at = CASE WHEN still.in_time THEN clock_timestamp() ELSE NULL END,
+           send_outcome    = CASE WHEN still.in_time THEN wr.send_outcome ELSE 'skipped_late' END,
+           claimed_by_job  = CASE WHEN still.in_time THEN wr.claimed_by_job ELSE ${PEER_MESH_WA_REMINDER_LATE_BY} END,
+           parked_at       = CASE WHEN still.in_time THEN wr.parked_at ELSE NULL END,
+           first_detail    = CASE WHEN still.in_time THEN wr.first_detail ELSE COALESCE(wr.first_detail, wr.detail) END,
+           send_updated_at = clock_timestamp()
+      FROM claim_peer_mesh_pings p
+      CROSS JOIN LATERAL (
+        SELECT clock_timestamp() < p.send_updated_at + make_interval(hours => ${PEER_MESH_WA_REMINDER_LATE_AFTER_HOURS}) AS in_time
+      ) still
+     WHERE wr.pariwar_id = ${input.pariwarId}
+       AND wr.reminder_id = ${input.reminderId}::uuid
+       AND wr.send_outcome = 'attempting'
+       AND wr.claimed_by_job = ${input.jobId}
+       AND wr.send_started_at IS NULL
+       AND wr.claimed_at > ${notBefore}
+       AND p.pariwar_id = wr.pariwar_id
+       AND p.ping_id = wr.ping_id
+    RETURNING wr.reminder_id, still.in_time AS marked
+  `);
+  return result.rows?.[0]?.marked === true;
+}
+
+/**
+ * ⭐ R2 — RELEASE the in-flight marker WITHOUT a send: quiet hours arrived in the gap between the marker's CAS (committed) and
+ * the actual Meta call — the pooled-connection wait + that CAS's own commit can itself cross 20:00 IST. Meta was ⛔ called
+ * (⛔ a transient — a transient records a PROVIDER signal), so the row is left `attempting`, un-noted, owned by this job; the
+ * CHILD re-enqueues itself for the next morning, where a fresh begin / marker re-judges everything (incl. the `+ 72 h` bound).
+ * ⛔ On a row ⛔ in flight (already released, finished, or held by another job) — returns `false`.
+ */
+export async function releasePeerMeshWaReminderInFlight(db: Db, input: RowRef): Promise<boolean> {
   const result = await db.execute<{ reminder_id: string }>(sql`
     UPDATE claim_peer_mesh_wa_reminders
-       SET send_started_at = clock_timestamp()
+       SET send_started_at = NULL, send_updated_at = clock_timestamp()
      WHERE pariwar_id = ${input.pariwarId}
        AND reminder_id = ${input.reminderId}::uuid
        AND send_outcome = 'attempting'
        AND claimed_by_job = ${input.jobId}
-       AND send_started_at IS NULL
-       AND claimed_at > ${notBefore}
+       AND send_started_at IS NOT NULL
     RETURNING reminder_id
   `);
   return (result.rows?.length ?? 0) > 0;
@@ -529,18 +569,28 @@ export async function listClaimDuePeerMeshWaReminderPings(
 }
 
 /**
- * ⭐ AC2's per-ping conjuncts over aliases `wr_p` (the ping) and `wr_c` (its claim): the text ACCEPTED; `+ 48 h ≤ now < + 72 h` on the
- * DB clock; the claim in the answer window (`answerWindowSql` — ⛔ hand-composed); and EITHER ⛔ reminder row, a PARKED one, or a
- * re-claimable `attempting` one (⛔ marker; for the SWEEP its lease lapsed — a live child's row is ⛔ enqueued again; for the CHILD
- * any holder — the begin judges it). ⛔ The switch (the callers add it).
+ * ⭐ AC2's per-ping conjuncts over aliases `wr_p` (the ping) and `wr_c` (its claim): the text ACCEPTED; `+ 48 h ≤ now` on the DB
+ * clock (the SWEEP also bounds it `< + 72 h` — WR5; the CHILD does ⛔, R5 below); the claim in the answer window
+ * (`answerWindowSql` — ⛔ hand-composed); and EITHER ⛔ reminder row, a PARKED one, or a re-claimable `attempting` one (⛔ marker;
+ * for the SWEEP its lease lapsed — a live child's row is ⛔ enqueued again; for the CHILD any holder — the begin judges it).
+ * ⛔ The switch (the callers add it).
+ *
+ * ⭐ R5 — the CHILD keeps a ping visible PAST `+ 72 h` (⛔ the SWEEP's upper bound). A child is enqueued because SOMETHING in its
+ * claim was due; if quiet hours or a retry defers it past `+ 72 h` BEFORE any row exists, the sweep's `< + 72 h` list would never
+ * surface that ping again and `markLatePeerMeshWaReminders` has ⛔ row to act on — AC3's *"the child queued at + 71 h and
+ * deferred overnight… records `skipped_late` at its late begin"* would be unreachable. Widening is ⛔ a backfill: the `+ 48 h`
+ * floor and `send_outcome = 'accepted'` still gate it, and `beginPeerMeshWaReminder`'s OWN `in_time` recheck is what refuses a
+ * SEND past the bound — this only keeps the ping visible long enough for that begin to run and write `skipped_late`.
  */
 function dueConjunctsSql(now: Date, mode: 'sweep' | 'child'): SQL {
   const lease = new Date(now.getTime() - CORRECTION_SEND_LEASE_MS);
   const reclaimable =
     mode === 'child' ? sql`true` : sql`(wr_r.claimed_by_job = ${PEER_MESH_WA_REMINDER_PARKED_BY} OR wr_r.claimed_at < ${lease})`;
+  const upperBound =
+    mode === 'sweep' ? sql`AND clock_timestamp() < wr_p.send_updated_at + make_interval(hours => ${PEER_MESH_WA_REMINDER_LATE_AFTER_HOURS})` : sql``;
   return sql`wr_p.send_outcome = 'accepted'
        AND wr_p.send_updated_at + make_interval(hours => ${PEER_MESH_WA_REMINDER_DUE_AFTER_HOURS}) <= clock_timestamp()
-       AND clock_timestamp() < wr_p.send_updated_at + make_interval(hours => ${PEER_MESH_WA_REMINDER_LATE_AFTER_HOURS})
+       ${upperBound}
        AND ${answerWindowSql('wr_c')}
        AND NOT EXISTS (
              SELECT 1 FROM claim_peer_mesh_wa_reminders wr_r
@@ -616,30 +666,48 @@ export interface FinishedPeerMeshWaReminder {
 }
 
 /**
+ * ⭐ R3 — the two maintenance passes' (the lapsed finisher, the late marking) per-call BATCH cap: `FOR UPDATE SKIP LOCKED` so a
+ * single locked row is SKIPPED rather than stalling the whole cross-tenant scan, and a bound so the caller can check the tick's
+ * remaining budget between batches (`claimDueSmsDeliveryReports`'s shape — [[project_in_subquery_limit_skip_locked_overclaim]]).
+ */
+export const PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH = 200;
+
+/**
  * ⭐ WR10 — THE LAPSED IN-FLIGHT FINISHER (runs FIRST): every `attempting` row WITH the marker whose claim is older than the send
  * lease died mid-flight — it MAY have reached Meta ⇒ `error` / `may_have_sent:lease_lapsed` (the previous note kept in
  * `first_detail`), ⛔ ever re-claimed or parked. REGARDLESS of the switch, the answer window and the 72-hour bound, so ⛔ such row is
  * stranded. (A live send can ⛔ be caught: the marker CAS leaves at least the handoff margin, and the send + the bounded finalise fit
- * inside it — pinned by a test.)
+ * inside it — pinned by a test.) R3 — ONE bounded, `SKIP LOCKED` batch per call (oldest `claimed_at` first); the caller loops it
+ * between budget checks.
  *
  * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ── 6.27c's `expireExhaustedPeerMeshRequests` reasoning: a
  * time bound over every tenant's rows; predicate and effect read and write ⛔ nothing tenant-derived. A child holding the row
- * finalises under a row lock, so this UPDATE waits and re-evaluates. RE-EXAMINE when: the statement writes a value derived from
- * another row or tenant, the pool loses BYPASSRLS, a per-tenant scheduler exists, or `CORRECTION_SEND_LEASE_MS` moves.
+ * finalises under a row lock — SKIP LOCKED now passes it by instead of waiting. RE-EXAMINE when: the statement writes a value
+ * derived from another row or tenant, the pool loses BYPASSRLS, a per-tenant scheduler exists, or `CORRECTION_SEND_LEASE_MS` moves.
+ * ⚠ The due set is a `MATERIALIZED` CTE, evaluated ONCE — `claimDueSmsDeliveryReports`'s `IN (SELECT … LIMIT n FOR UPDATE SKIP
+ * LOCKED)` is NOT bounded by its LIMIT under a re-run subquery plan ([[project_in_subquery_limit_skip_locked_overclaim]]).
  */
 export async function finishLapsedInFlightPeerMeshWaReminders(
   q: Queryable,
-  input: { readonly now: Date; readonly allow: readonly string[] | null },
+  input: { readonly now: Date; readonly allow: readonly string[] | null; readonly limit?: number },
 ): Promise<FinishedPeerMeshWaReminder[]> {
   const detail = peerMeshWaReminderDetail({ kind: 'may_have_sent', how: 'lease_lapsed' });
+  const limit = clampLimit(input.limit, { default: PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH, cap: PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH });
   const { rows } = await q.query<{ reminder_id: string; claim_case_id: string }>(
-    `UPDATE claim_peer_mesh_wa_reminders
-        SET send_outcome = 'error', first_detail = COALESCE(first_detail, detail), detail = $1, claimed_by_job = $2,
+    `WITH due AS MATERIALIZED (
+       SELECT reminder_id FROM claim_peer_mesh_wa_reminders
+        WHERE send_outcome = 'attempting' AND send_started_at IS NOT NULL AND claimed_at < $3
+          AND ($4::uuid[] IS NULL OR pariwar_id = ANY($4::uuid[]))
+        ORDER BY claimed_at
+        LIMIT $5
+        FOR UPDATE SKIP LOCKED)
+     UPDATE claim_peer_mesh_wa_reminders r
+        SET send_outcome = 'error', first_detail = COALESCE(r.first_detail, r.detail), detail = $1, claimed_by_job = $2,
             send_updated_at = clock_timestamp()
-      WHERE send_outcome = 'attempting' AND send_started_at IS NOT NULL AND claimed_at < $3
-        AND ($4::uuid[] IS NULL OR pariwar_id = ANY($4::uuid[]))
-      RETURNING reminder_id, claim_case_id`,
-    [detail, PEER_MESH_WA_REMINDER_LAPSED_BY, new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS), input.allow === null ? null : [...input.allow]],
+       FROM due
+      WHERE r.reminder_id = due.reminder_id
+      RETURNING r.reminder_id, r.claim_case_id`,
+    [detail, PEER_MESH_WA_REMINDER_LAPSED_BY, new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS), input.allow === null ? null : [...input.allow], limit],
   );
   return rows.map((r) => ({ reminderId: r.reminder_id, claimCaseId: r.claim_case_id as ClaimId }));
 }
@@ -650,26 +718,35 @@ export async function finishLapsedInFlightPeerMeshWaReminders(
  * and `parked_at` cleared together — 0171's biconditional). REGARDLESS of the switch, a config hold and the answer window (a row
  * parked before the Pariwar was switched OFF or its claim decided still finishes — the due list requires both, so ⛔ other path
  * reaches it). An in-flight row (the marker set) is ⛔ touched. ⛔ A row is CREATED (⛔ backfill — a ping never begun gets ⛔ row).
- * A live child whose row this finishes loses its marker CAS (`attempting` required) ⇒ ⛔ send.
+ * A live child whose row this finishes loses its marker CAS (`attempting` required) ⇒ ⛔ send. R3 — ONE bounded, `SKIP LOCKED`
+ * batch per call (oldest text first); `FOR UPDATE OF r` ONLY — the ping join is read-only and must ⛔ take the ping lock begins
+ * and finalises contend on.
  *
  * ── DELIBERATE: a CROSS-TENANT WRITE on the BYPASSRLS pool (family 9) ── the lapsed finisher's reasoning; the 72-hour test reads
  * the row's OWN ping (its FK owner — the same tenant). RE-EXAMINE as above.
  */
 export async function markLatePeerMeshWaReminders(
   q: Queryable,
-  input: { readonly allow: readonly string[] | null },
+  input: { readonly allow: readonly string[] | null; readonly limit?: number },
 ): Promise<FinishedPeerMeshWaReminder[]> {
+  const limit = clampLimit(input.limit, { default: PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH, cap: PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH });
   const { rows } = await q.query<{ reminder_id: string; claim_case_id: string }>(
-    `UPDATE claim_peer_mesh_wa_reminders r
+    `WITH due AS MATERIALIZED (
+       SELECT r.reminder_id FROM claim_peer_mesh_wa_reminders r
+         JOIN claim_peer_mesh_pings p ON p.pariwar_id = r.pariwar_id AND p.ping_id = r.ping_id
+        WHERE r.send_outcome = 'attempting' AND r.send_started_at IS NULL
+          AND p.send_updated_at + make_interval(hours => $2) <= clock_timestamp()
+          AND ($3::uuid[] IS NULL OR r.pariwar_id = ANY($3::uuid[]))
+        ORDER BY p.send_updated_at
+        LIMIT $4
+        FOR UPDATE OF r SKIP LOCKED)
+     UPDATE claim_peer_mesh_wa_reminders r
         SET send_outcome = 'skipped_late', claimed_by_job = $1, parked_at = NULL, first_detail = COALESCE(r.first_detail, r.detail),
             send_updated_at = clock_timestamp()
-       FROM claim_peer_mesh_pings p
-      WHERE p.pariwar_id = r.pariwar_id AND p.ping_id = r.ping_id
-        AND r.send_outcome = 'attempting' AND r.send_started_at IS NULL
-        AND p.send_updated_at + make_interval(hours => $2) <= clock_timestamp()
-        AND ($3::uuid[] IS NULL OR r.pariwar_id = ANY($3::uuid[]))
+       FROM due
+      WHERE r.reminder_id = due.reminder_id
       RETURNING r.reminder_id, r.claim_case_id`,
-    [PEER_MESH_WA_REMINDER_LATE_BY, PEER_MESH_WA_REMINDER_LATE_AFTER_HOURS, input.allow === null ? null : [...input.allow]],
+    [PEER_MESH_WA_REMINDER_LATE_BY, PEER_MESH_WA_REMINDER_LATE_AFTER_HOURS, input.allow === null ? null : [...input.allow], limit],
   );
   return rows.map((r) => ({ reminderId: r.reminder_id, claimCaseId: r.claim_case_id as ClaimId }));
 }

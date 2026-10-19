@@ -217,6 +217,12 @@ export async function peerMeshWaReminderConfig(
 
 // ── The SWEEP ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
+/** A due-ping keyset position (R4). */
+export interface PeerMeshWaReminderCursor {
+  readonly claimCaseId: string;
+  readonly pingId: string;
+}
+
 export interface PeerMeshWaReminderSweepResult {
   readonly scannedPings: number;
   readonly enqueued: number;
@@ -227,6 +233,14 @@ export interface PeerMeshWaReminderSweepResult {
   readonly budgetExhausted: boolean;
   /** `true` ⇒ the role guard refused the tick (an RLS-bound role — roster Row 26). */
   readonly refused: boolean;
+  /**
+   * ⭐ R4 — where a BOUNDED tick (the budget, or `maxRuns`) stopped scanning — `null` once a tick drains the whole due set.
+   * Pass it back in as the NEXT call's `resumeCursor` so that tick continues from here instead of restarting at the keyset's
+   * head: a claim that is PERSISTENTLY due (repeatedly parked, still due every tick) would otherwise occupy the bound's front
+   * seat forever and starve every claim after it, tick after tick. Over several ticks the cursor marches through the ring and
+   * resets to `null` once it is fully drained, so an unsaturated sweep behaves exactly as before.
+   */
+  readonly resumeCursor: PeerMeshWaReminderCursor | null;
 }
 
 type EnqueueBoss = Pick<QueueClient, 'send'>;
@@ -260,7 +274,11 @@ export async function enqueuePeerMeshWaReminderChild(
 const CONFIG_UNREADABLE: unique symbol = Symbol('peer-mesh-wa-reminder-config-unreadable');
 
 /** ⭐ THE HOURLY SWEEP. See the module header. A per-claim try/catch around the enqueue — one claim never costs another its reminders. */
-export async function runPeerMeshWaReminderSweep(deps: ClaimPeerMeshWaReminderDeps, boss: EnqueueBoss): Promise<PeerMeshWaReminderSweepResult> {
+export async function runPeerMeshWaReminderSweep(
+  deps: ClaimPeerMeshWaReminderDeps,
+  boss: EnqueueBoss,
+  resumeCursor: PeerMeshWaReminderCursor | null = null,
+): Promise<PeerMeshWaReminderSweepResult> {
   const alarm = alarmOf(deps);
   const now = deps.now?.() ?? new Date();
   const limit = Math.max(1, deps.runLimit ?? DEFAULT_CORRECTION_SWEEP_RUN_LIMIT);
@@ -277,6 +295,7 @@ export async function runPeerMeshWaReminderSweep(deps: ClaimPeerMeshWaReminderDe
     markedLate: 0,
     budgetExhausted: false,
     refused: false,
+    resumeCursor: null,
   };
   if (allow !== null && process.env['NODE_ENV'] === 'production') {
     alarm('[jobs] claim-peer-mesh-wa-reminder-sweep: REFUSED — `pariwarAllowlist` is set while NODE_ENV is production (it is test-only); nothing was swept');
@@ -292,16 +311,40 @@ export async function runPeerMeshWaReminderSweep(deps: ClaimPeerMeshWaReminderDe
     return { ...empty, refused: true };
   }
 
+  let budgetExhausted = false;
+
   // (1) WR10 — the LAPSED in-flight rows FIRST (regardless of the switch, the window and the bound — ⛔ such row is stranded).
-  const lapsed = await claimDomain.finishLapsedInFlightPeerMeshWaReminders(deps.pool, { now, allow });
+  // R3 — bounded `SKIP LOCKED` batches, checking the tick's remaining budget between them (a single locked row ⛔ stalls the scan).
+  const lapsed: { reminderId: string; claimCaseId: string }[] = [];
+  for (;;) {
+    if (clockMs() - startedMs > budgetMs) {
+      budgetExhausted = true;
+      break;
+    }
+    const batch = await claimDomain.finishLapsedInFlightPeerMeshWaReminders(deps.pool, { now, allow });
+    lapsed.push(...batch);
+    if (batch.length < claimDomain.PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH) break;
+  }
   if (lapsed.length > 0) {
     alarm(
       `[jobs] claim-peer-mesh-wa-reminder-sweep: ${String(lapsed.length)} WhatsApp reminder(s) died mid-send (the lease lapsed after the send began) — ` +
         `recorded 'error' (may_have_sent:lease_lapsed); a reminder MAY have reached the neighbour, ⛔ resent (claims: ${sampleIds([...new Set(lapsed.map((l) => l.claimCaseId as string))])})`,
     );
   }
-  // (2) WR5 — the LATE rows (regardless of the switch, a config hold and the window). ⛔ A row is created.
-  const late = await claimDomain.markLatePeerMeshWaReminders(deps.pool, { allow });
+  // (2) WR5 — the LATE rows (regardless of the switch, a config hold and the window). ⛔ A row is created. R3 — the same bounded,
+  // `SKIP LOCKED` batch shape.
+  const late: { reminderId: string; claimCaseId: string }[] = [];
+  if (!budgetExhausted) {
+    for (;;) {
+      if (clockMs() - startedMs > budgetMs) {
+        budgetExhausted = true;
+        break;
+      }
+      const batch = await claimDomain.markLatePeerMeshWaReminders(deps.pool, { allow });
+      late.push(...batch);
+      if (batch.length < claimDomain.PEER_MESH_WA_REMINDER_MAINTENANCE_BATCH) break;
+    }
+  }
   if (late.length > 0) {
     alarm(
       `[jobs] claim-peer-mesh-wa-reminder-sweep: ${String(late.length)} WhatsApp reminder(s) still un-sent 72 hours after the text — recorded 'skipped_late' ` +
@@ -326,51 +369,73 @@ export async function runPeerMeshWaReminderSweep(deps: ClaimPeerMeshWaReminderDe
     }
     return gapByPariwar.get(pariwarId)!;
   };
-  let budgetExhausted = false;
   let bounded = false;
   let scannedPings = 0;
   let enqueued = 0;
   const seenClaims = new Set<string>();
-  const heldClaims = new Set<string>();
-  const heldGaps = new Set<string>();
-  let after: { claimCaseId: string; pingId: string } | null = null;
-  sweep: for (;;) {
-    const page = await claimDomain.listDuePeerMeshWaReminderPings(deps.pool, { now, after, limit, allow });
-    for (const due of page.due) {
-      if (clockMs() - startedMs > budgetMs) {
-        budgetExhausted = true;
-        break sweep;
-      }
-      scannedPings += 1;
-      if (seenClaims.has(due.claimCaseId)) continue;
-      const gap = await gapOf(due.pariwarId);
-      if (gap === CONFIG_UNREADABLE || gap === 'switch_off') continue;
-      if (gap !== null) {
+  // R6 — HELD claims grouped by their OWN Pariwar (AC9 / WR12: ONE actionable alarm per held Pariwar per tick, ⛔ one merged
+  // alarm naming neither tenant).
+  const heldByPariwar = new Map<string, { claims: Set<string>; gaps: Set<string> }>();
+  // R4 — resume AT the last tick's bounded stop, not the keyset's head; `resumeAt` trails the loop by one processed item so a
+  // re-enter with it as `after` starts exactly AT the item the previous tick stopped on.
+  let after: PeerMeshWaReminderCursor | null = resumeCursor;
+  let resumeAt: PeerMeshWaReminderCursor | null = after;
+  if (!budgetExhausted) {
+    sweep: for (;;) {
+      const page = await claimDomain.listDuePeerMeshWaReminderPings(deps.pool, { now, after, limit, allow });
+      for (const due of page.due) {
+        if (clockMs() - startedMs > budgetMs) {
+          budgetExhausted = true;
+          break sweep;
+        }
+        scannedPings += 1;
+        const dueCursor: PeerMeshWaReminderCursor = { claimCaseId: due.claimCaseId, pingId: due.pingId };
+        if (seenClaims.has(due.claimCaseId)) {
+          resumeAt = dueCursor;
+          continue;
+        }
+        const gap = await gapOf(due.pariwarId);
+        if (gap === CONFIG_UNREADABLE || gap === 'switch_off') {
+          resumeAt = dueCursor;
+          continue;
+        }
+        if (gap !== null) {
+          seenClaims.add(due.claimCaseId);
+          const held = heldByPariwar.get(due.pariwarId) ?? { claims: new Set<string>(), gaps: new Set<string>() };
+          held.claims.add(due.claimCaseId);
+          held.gaps.add(gap);
+          heldByPariwar.set(due.pariwarId, held);
+          resumeAt = dueCursor;
+          continue;
+        }
+        if (enqueued >= maxClaims) {
+          bounded = true;
+          break sweep; // `resumeAt` is still the PREVIOUS item — the next tick re-includes `due` as its first result.
+        }
         seenClaims.add(due.claimCaseId);
-        heldClaims.add(due.claimCaseId);
-        heldGaps.add(gap);
-        continue;
+        try {
+          await enqueuePeerMeshWaReminderChild(boss, { pariwarId: due.pariwarId, claimCaseId: due.claimCaseId });
+          enqueued += 1;
+        } catch (err) {
+          alarm(`[jobs] claim-peer-mesh-wa-reminder-sweep: failed to enqueue the WhatsApp reminders for claim ${due.claimCaseId} — ${err instanceof Error ? err.name : 'error'}`);
+        }
+        resumeAt = dueCursor;
       }
-      if (enqueued >= maxClaims) {
-        bounded = true;
-        break sweep;
+      if (page.scanned < Math.min(limit, claimDomain.PEER_MESH_WA_REMINDER_PAGE_CAP) || page.last === null) {
+        resumeAt = null; // the ring drained with room to spare — the next tick starts fresh at the head again.
+        break;
       }
-      seenClaims.add(due.claimCaseId);
-      try {
-        await enqueuePeerMeshWaReminderChild(boss, { pariwarId: due.pariwarId, claimCaseId: due.claimCaseId });
-        enqueued += 1;
-      } catch (err) {
-        alarm(`[jobs] claim-peer-mesh-wa-reminder-sweep: failed to enqueue the WhatsApp reminders for claim ${due.claimCaseId} — ${err instanceof Error ? err.name : 'error'}`);
-      }
+      after = page.last;
     }
-    if (page.scanned < Math.min(limit, claimDomain.PEER_MESH_WA_REMINDER_PAGE_CAP) || page.last === null) break;
-    after = page.last;
   }
 
-  if (heldClaims.size > 0) {
+  let heldForConfig = 0;
+  for (const [pariwarId, held] of heldByPariwar) {
+    heldForConfig += held.claims.size;
     alarm(
-      `[jobs] claim-peer-mesh-wa-reminder-sweep: ${String(heldClaims.size)} claim(s)' WhatsApp reminders HELD — ${[...heldGaps].sort().join(', ')}; ` +
-        `⛔ enqueued, ⛔ row written — they go once it is fixed, while still inside 72 hours of the text (claims: ${sampleIds([...heldClaims])})`,
+      `[jobs] claim-peer-mesh-wa-reminder-sweep: Pariwar ${pariwarId} — ${String(held.claims.size)} claim(s)' WhatsApp reminders HELD — ` +
+        `${[...held.gaps].sort().join(', ')}; ⛔ enqueued, ⛔ row written — they go once it is fixed, while still inside 72 hours of the ` +
+        `text (claims: ${sampleIds([...held.claims])})`,
     );
   }
   if (budgetExhausted) {
@@ -378,7 +443,16 @@ export async function runPeerMeshWaReminderSweep(deps: ClaimPeerMeshWaReminderDe
   } else if (bounded) {
     alarm(`[jobs] claim-peer-mesh-wa-reminder-sweep: hit the hard bound of ${String(maxClaims)} claims — the rest wait for the next tick`);
   }
-  return { scannedPings, enqueued, heldForConfig: heldClaims.size, finishedLapsed: lapsed.length, markedLate: late.length, budgetExhausted, refused: false };
+  return {
+    scannedPings,
+    enqueued,
+    heldForConfig,
+    finishedLapsed: lapsed.length,
+    markedLate: late.length,
+    budgetExhausted,
+    refused: false,
+    resumeCursor: budgetExhausted || bounded ? resumeAt : null,
+  };
 }
 
 // ── The CHILD — one claim ──────────────────────────────────────────────────────────────────────────────────────────
@@ -538,12 +612,23 @@ export async function runPeerMeshWaReminderChild(
     // row past its lease.
     const markAt = clock();
     if (!isInPeerRequestSendWindow(markAt)) return deferToMorning(markAt, counts);
-    // ⭐ THE IN-FLIGHT MARKER — its own committed CAS; ⛔ marker ⇒ ⛔ send (the lease was lost to another child).
+    // ⭐ THE IN-FLIGHT MARKER — its own committed CAS; ⛔ marker ⇒ ⛔ send (the lease was lost to another child, or — the
+    // domain's OWN recheck — the ping's `+ 72 h` bound passed).
     const marked = await scoped((d) => claimDomain.markPeerMeshWaReminderInFlight(d, { ...row, leaseMarginMs: PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS, now: markAt }));
     if (!marked) {
-      alarm(`[jobs] claim-peer-mesh-wa-reminder: ${ptag} — the lease lapsed (or nearly) before the send; ⛔ sent (left to the re-claim)`);
+      alarm(`[jobs] claim-peer-mesh-wa-reminder: ${ptag} — the lease lapsed, or the 72-hour window closed, before the send; ⛔ sent (a retry finds the row settled)`);
       counts.transient += 1;
       continue;
+    }
+    // ⭐ R2 — the marker's OWN commit is a pooled-connection wait + an UPDATE + a COMMIT: `markAt` was sampled BEFORE it, so a
+    // slow handoff can itself cross 20:00 IST between the sample and the marker actually landing. Recheck the clock AFTER the
+    // marker is known committed, and if quiet hours arrived, RELEASE it (⛔ a send; ⛔ a transient — Meta was never called) and
+    // defer the whole claim to the next morning, where a fresh begin / marker re-judges everything.
+    const afterMarkAt = clock();
+    if (!isInPeerRequestSendWindow(afterMarkAt)) {
+      const released = await scoped((d) => claimDomain.releasePeerMeshWaReminderInFlight(d, row));
+      if (!released) alarm(`[jobs] claim-peer-mesh-wa-reminder: ${ptag} — moved on before its marker could be released for the night`);
+      return deferToMorning(afterMarkAt, counts);
     }
 
     // ── The send — the ruled words' three values (WR13), the template for the language (WR7), its registered code (WR6) ──
@@ -648,9 +733,13 @@ export async function registerClaimPeerMeshWaReminderWorkers(
   // ⚠ The expiry is set TWICE on purpose (6.19b's lesson): `createQueue` keeps an existing queue's default, while `schedule` upserts
   // its options on every boot and pg-boss copies them onto each job it fires.
   await boss.createQueue(QUEUE_NAMES.CLAIM_PEER_MESH_WA_REMINDER_SWEEP, { expireInSeconds: PEER_MESH_WA_REMINDER_SWEEP_EXPIRE_SECONDS });
+  // R4 — the resume cursor a BOUNDED tick hands back, threaded into the NEXT tick via this closure (this registration runs
+  // ONCE at boot; a restart loses it — ⛔ a correctness property, a fairness one).
+  let resumeCursor: PeerMeshWaReminderCursor | null = null;
   await boss.work(QUEUE_NAMES.CLAIM_PEER_MESH_WA_REMINDER_SWEEP, async (jobs: Job[]) => {
     try {
-      const swept = await runPeerMeshWaReminderSweep(deps, boss);
+      const swept = await runPeerMeshWaReminderSweep(deps, boss, resumeCursor);
+      resumeCursor = swept.resumeCursor;
       console.info('[jobs] claim-peer-mesh-wa-reminder-sweep tick', JSON.stringify({ jobs: jobs.length, ...swept }));
       return swept;
     } catch (err) {

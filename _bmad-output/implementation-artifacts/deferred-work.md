@@ -438,6 +438,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   the neighbours asked (6.27c texts them) — and their answer is shown to staff like any other. ⭐ Trigger: a family-link substrate (⛔ owned
   by any story), or row 6-36's selection rule if it gains one.
   - *Appended 2026-10-16 (Story 6.36):* ⛔ **not taken by 6.36** — no family-link data (SW23); stays OPEN.
+  - *Appended 2026-10-19 (Story 6.31's validate, BigDev in session: *"Exclude at selection"*):* the NOMINEES are the one family link the
+    Trust DOES hold (declared name + mobile, `member_nominees`), and a nominee has a stake in the payout ⇒ new row
+    `6-36d-exclude-nominees-from-the-five` (backlog) removes them from the five by a mobile match. When it is `done` this item NARROWS to
+    the deceased's OTHER relatives; until then it stays OPEN as written.
 - **A live SENSITIVE answer that cannot be DECRYPTED blocks further saves on that reply** [`apps/api/src/modules/claims/peer-request-core.ts`
   `decryptLiveSensitive` → `claim.savePeerAnswer` `PeerRequestStaleError`]. The handler leaves an undecryptable live answer OUT of the map it
   hands the writer, and the writer refuses the save as STALE (409 `peer_request.stale`) rather than act on an unknown (fail-closed — ⛔ a

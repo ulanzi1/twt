@@ -11,7 +11,7 @@ Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); t
 and `claim-correction-reminders.ts` moved, and AC12's frozen files did ⛔ not.
 Re-check before Task 1: `git diff --name-only 15acb570..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: ready-for-dev (created 2026-10-17 via `bmad-create-story 6.31`; was `backlog`; validated v1.5 on 2026-10-19).
+STATUS: in-progress (created 2026-10-17 via `bmad-create-story 6.31`; validated v1.5 on 2026-10-19; Task 0 done 2026-10-19 — `-365`).
 
 START CONDITION — MET at the pin: rows 6-27 (a), 6-27b, 6-27c, 6-27d, 6-30, 6-34, 6-36, 6-37, 6-37b, 6-37c are `done`. 6.31
 reads 6.27c's send record and 6.27a's reply state; it changes ⛔ neither. Row 6-35 (language switch) is ⛔ not needed (WR14).
@@ -71,7 +71,7 @@ S = Task 0.1 STOP conditions. Decision-entry letters (PM, SW, MG, CF, FQ …) ke
 
 # Story 6.31: One WhatsApp Reminder, Two Days After the Text, to Each Neighbour Who Has ⛔ Not Answered and Chose WhatsApp — the Same Words, Its Own Record, ⛔ Never a Second SMS `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a member's death is reported, up to five neighbours are texted (Story 6.27c) with
 > the member's name, a link to a few short questions, and the helpline. The Panel ruled (`-303` Q1 A) that those of the five who
@@ -687,8 +687,8 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; re-run the Re-check diff (header); re-grep F1–F21 and record the results in Debug Log (a). Settle:
+- [x] **Task 0 — governance FIRST (AC0). ⛔ No code.** — DONE 2026-10-19 (Debug Log (a), (b)).
+  - [x] 0.1 `git fetch origin`; re-run the Re-check diff (header); re-grep F1–F21 and record the results in Debug Log (a). Settle:
     - **S1** — Meta's current template rules (its error-codes page listed 2388299 *"Variables cannot be at the start or end of
       the template"* and 2388293 on the variable-to-word ratio on 2026-10-19 — WR6) and WR10's Meta codes: re-read Meta's own
       pages and record the date. Whether `… {{3}}.` counts as trailing is answered only by Meta at submission: a refused
@@ -701,14 +701,14 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
     - **S4** — `git branch -a` + every worktree (⚠ row 6-37d's branch plans the same next migration, decision id, roster row and
       ledger letter): take the next free of each at the moment of ITS commit, and a journal `when` above every branch's
       ([[feedback_concurrent_review_agents_mutate_tree]]; F15). Re-grep again right before each commit.
-  - [ ] 0.2 Put WR1–WR16 to BigDev, each with its ⭐ recommendation and cost (WR2 (iii), WR4, WR5, WR7 have real alternatives).
+  - [x] 0.2 Put WR1–WR16 to BigDev, each with its ⭐ recommendation and cost (WR2 (iii), WR4, WR5, WR7 have real alternatives).
     Record the answers verbatim in Debug Log (b).
-  - [ ] 0.3 Write the author-commit (`.decision-log.md`, prepended; the `-345` / `-346` entry shape: Decision type / Status / Author /
+  - [x] 0.3 Write the author-commit (`.decision-log.md`, prepended; the `-345` / `-346` entry shape: Decision type / Status / Author /
     Ratifying trustees: ⛔ None / §0 gate / Occasion / FOUND / The decisions / Consequences / References). It REALISES `-311` PM7 (g)
     + Trap 17 and ANNOTATES ADR-0028 / ADR-0029 — it supersedes ⛔ nothing. Stage in the scratchpad; try the insert
     ([[project_decision_log_writes_user_inserted]]); commit ALONE on the story branch; write its SHA here AFTER the commit
     ([[feedback_governance_commits_precede_implementation]]).
-  - [ ] 0.4 The records, ONE commit after 0.3 (WR15, WR16): `epics.md` `### Story 6.31: … \`[SURFACE]\`` placed after the LAST
+  - [x] 0.4 The records, ONE commit after 0.3 (WR15, WR16): `epics.md` `### Story 6.31: … \`[SURFACE]\`` placed after the LAST
     Epic 6 entry, before the `---` that precedes `## Epic 7` (the 6.30 / 6.34 blockquote shape — *"⛔ Never a merge fence"*); the
     roster row `peer-mesh-wa-reminder-template-approved` (the next free number; Row 34's block format, eleven fields, (a)–(g)) + a
     dated pointer on Row 27 note (3) (⛔ a word of Row 27 rewritten) + a dated note on Row 26 (F21); ANNOTATIONS on
@@ -950,6 +950,23 @@ commit ALONE first (`governance: …`), then `story(6.xx): …` commits naming t
 
 ### Debug Log References
 
+**(a) Task 0.1 — 2026-10-19, at `15acb570` + the story branch.** `git fetch origin`: `main` == `origin/main` == `15acb570`; the
+Re-check diff `15acb570..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` is EMPTY (F1–F21 were re-derived at
+this pin by the validate pass the same day). **S1** — Meta's error-codes page lists 2388299 *"Variables cannot be at the start or end of
+the template"* and 2388293 (ratio); the English body ends `… {{3}}.`; a refused locale is "Meta refuses" (`-303`), ⛔ re-worded.
+**S2** — `normalizeMobile` returns `+91XXXXXXXXXX`; the `+` is stripped for Meta's `to`. **S3** — `resolveSmsDltConfig` reads GCP
+Secret Manager + a local env fallback (F20). **S4** — every branch and worktree grepped: next free decision `-365`, roster Row 35,
+migration `0171` (row 6-37d plans the same three; whichever commits second moves on), ledger `2026-10-19e`.
+
+**(b) Task 0.2 — BigDev's answers, verbatim (2026-10-19).** To WR1–WR16 as presented: *"accept all recommended"*. Given earlier in the
+same session during the validate pass, and folded into the recommendations: WR2 (i) *"(a) Send it"*; WR13 *"(a) Full name always"*;
+WR10 rule 6 *"Park, continue loop"*; the nominee question *"Exclude at selection"* (row 6-36d). The Panel note was ruled first:
+`-364`, *"by DR and KB / option A"* (row 5-12, *"New row 5-12"*).
+
+**(c) Task 0.3 / 0.4 — commits.** `990f7db2` — `governance: Decision 2026-10-19-365`, committed ALONE. The records commit follows
+(epics entry; roster Row 35 + Row 26 / Row 27 notes; §3.4, ADR-0028, ADR-0029 notes; deferred-work items; sprint row → `in-progress`,
+ledger `2026-10-19e`).
+
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (2026-10-17, `bmad-create-story 6.31`; four
@@ -972,3 +989,4 @@ commit ALONE first (`governance: …`), then `story(6.xx): …` commits naming t
 | 2026-10-17 | 1.4 | Validation round 4 (the v1.3 edits): 1 HIGH / 2 MEDIUM / 7 LOW, all applied — the lease inequality corrected (`CORRECTION_SEND_TIMEOUT_MS` + finalise < the 2-min handoff margin, pinned by a test); the lapsed in-flight finisher runs first, regardless of switch and bound, and late marking skips in-flight rows; rule 1's `detail` values; `config:<gap>` alarm-only; the three re-claim grounds; `readDeceasedName`'s label sites; WR5's sweep-vs-begin bound; AC7 legs for 502 / 131009 / the marker; Task 4's scope-park and marker functions + specs. |
 | 2026-10-19 | 1.5 | Validate (`bmad-create-story validate 6.31`): the branch REBASED onto `main` `15acb570` (50 commits — 6.37b / 6.37c shipped; ledger `2026-10-17k` re-placed in its slot) and RE-PINNED; four parallel fresh-context verifiers (governance staleness; every code cite at HEAD; the mechanism; premise + Meta's own pages): 6 HIGH / ~15 MEDIUM / ~20 LOW, all applied. BigDev answered three in session (recorded as §0 edges (i)–(ii) and WR10 rule 6, again at Task 0.2): *"(a) Send it"* (a text REPORTED undelivered is still "a text that went"), *"(a) Full name always"* (the reminder skips the SMS name fit check — `-362` narrows the TEXT only), *"Park, continue loop"* (131008 / 131009). HIGH: every planned number taken (0167 / `-347` / Row 33 → "the next free", the 6.37d race named, the roster row by KEY); F18 the peer-mesh delivery report; F19 `-362` and the name read SPLIT (`readMemberFacingDeceasedName`); WR10 rule 6 no longer FINISHES a refusal of unknown scope (401/403, code 100, account codes ⇒ park) and an exported `classifyDirectWaSendFailure` for 6.37d; consent rows accumulate and withdrawal revokes only the newest (F14, WR3, deferred item (4)); the Panel note revised before sending (`-357`'s claimant precedent, `-350`'s put-back, Meta's policy cited, the Hindi copy, the withdrawal cost). Also: §0 edges (iii) `-356` and (iv) the §3.4 annotation; new rulings rows; the day-one line; I1 per ping; I2 / AC8 a type-level SMS absence + SMS symbols; `hash_failed:tier1`; the begin's in-flight test (⛔ 23514); quiet hours at the marker; the bounded finalise + wamid alarm; late marking regardless of window; WR7 a key family, dotted-name item inherited, `config:wa_template_unreadable`; WR12 the role guard, `clampLimit`, an explicit child expiry; Row 26 note; `anonymize.ts` line; Meta codes 131048 / 133016 / 131026 / 131047; S1 / S3 re-scoped; DOWNSTREAM 6.37d and 6-37e in the header and Sequencing; cites corrected (`:719`, the helpline key's definition, F10, F11). Re-validation (two fresh-context reviewers) then found 3 HIGH in the story edits (WR10's reordering left rule 4's codes unreachable — 131048 / 131057 arrive on 429 / 503; `WhatsappTemplateParamError` fell into `may_have_sent`; §0 edge (iii) cited `-356`'s scope line against its own reading) and 1 HIGH in the note (`-357` presented as ruling a duration) — all applied; edge (iii) REPLACED by BigDev's *"Exclude at selection"*: nominees leave the five under the NEW row `6-36d-exclude-nominees-from-the-five`, 6.31 adds ⛔ nominee check. Same session, two more rows from BigDev: `5-10-signup-whatsapp-opt-in-checkbox` (UNTICKED + a popup — the ratified rule refuses pre-checked boxes; the Terms name ⛔ WhatsApp) and `5-11-per-member-sms-fallback-fixed-wording` (the alert SMS fallback is dark); Sequencing names 5-10, the note gains it as a fact. |
 | 2026-10-19 | 1.6 | The Panel RULED the note: `2026-10-19-364` (Trustee-ratified, *"by DR and KB / option A"*) — a yes lasts until withdrawn, for every WhatsApp message, after four conditions; committed alone (`92155fce`). Its build is NEW row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev: *"New row 5-12"*), ⛔ 6.31: Task 0.5 discharged, AC12's carve-out (b) withdrawn, WR3 / F14 / T2 / WR15 / WR16 (g) / AC0 / the §0 header / Sequencing updated; the note's ruling block, ADR-0029's changelog row and a dated §3.4 note written. |
+| 2026-10-19 | 1.7 | Task 0 DONE: BigDev *"accept all recommended"* ⇒ `2026-10-19-365` (author-commit, WR1–WR16; `990f7db2`, alone); records — the `epics.md` entry, roster Row 35 `peer-mesh-wa-reminder-template-approved`, Row 26 / Row 27 dated notes, §3.4 / ADR-0028 / ADR-0029 dated notes, three deferred-work items; sprint row → `in-progress` (ledger `2026-10-19e`). Story → `in-progress`. |

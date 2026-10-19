@@ -19,6 +19,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   has `consentExists('whatsapp_opt_in') = true`, and their data download lists the old rows as granted. Latent today (nothing decides a
   send on `consentExists` alone). ⭐ `-364` condition 4 (*"taking a yes back must end every earlier yes, not only the newest"*). HOMED —
   row `5-12-whatsapp-yes-lasts-until-withdrawn`; stays OPEN until that row is `done`.
+- **`WA_BLOCK_ERROR_CODES` revokes a member's WhatsApp consent on signals that are not consent** [`apps/jobs/src/wa-webhook-processor.ts`
+  `WA_BLOCK_ERROR_CODES`] — a failed status carrying 131049 (Meta's per-user MARKETING cap), 131026 (not on WhatsApp / Terms not accepted
+  / an old app version) or 131047 (*"More than 24 hours have passed … Send a template message instead"* — the chat window) moves the
+  opt-in to `BLOCKED_BY_META` and revokes the consent, for ANY message id — Story 6.31's reminder included. Only 131050 (the person
+  blocked the business) is a consent signal. ⭐ Recorded by `2026-10-19-365` (WR11, WR15); ⛔ fixed by 6.31 (5.4's worker is frozen there).
+  Trigger: row 5-12 (which edits the same worker), or the first production WhatsApp send.
+- **⛔ handling of Meta's `template_category_update` webhook** [`apps/jobs/src/wa-webhook-processor.ts`] — Meta may re-categorise an
+  approved UTILITY template as MARKETING (one day's notice); the repo ignores the event, so a re-categorised reminder template would go
+  on being sent as marketing (and 131049 then revokes consent — the item above). ⭐ Recorded by `-365` (WR15, WR16 (f) — roster Row 35
+  carries a manual re-check procedure meanwhile). Trigger: Row 35 closes, or the first production WhatsApp send.
+- **`whatsapp-errors.ts` files 131048 and 133016 as rate limits** [`packages/channels/src/providers/whatsapp-errors.ts` `RATE_LIMIT_CODES`]
+  — per Meta's error-codes page (read 2026-10-19), 131048 is the sending NUMBER's quality restriction (Pariwar-wide, not a retry
+  matter) and 133016 is a registration-attempt limit that a send never returns. `dispatch()`'s classification keeps them as transient;
+  Story 6.31's own classifier (`classifyDirectWaSendFailure`) reads them first, so 6.31 is unaffected. ⭐ Recorded by `-365` (WR10,
+  WR15); ⛔ fixed (the file is frozen by 6.31's AC12). Trigger: the next story that touches `whatsapp-errors.ts`.
 
 ## Deferred from: code review of 6-37c-undelivered-reminder-ladder.md, round 2 (2026-10-18)
 

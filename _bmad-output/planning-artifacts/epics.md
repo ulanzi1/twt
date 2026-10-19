@@ -3595,6 +3595,30 @@ and the reason; no WhatsApp, no new family-facing text, no new DLT template; no 
 > (Q1 A, Q2 A, Q3 A, our readings); the §3.4 claimant exception approved ([`-357`](../../.decision-log.md#decision-2026-10-18-357)); ADR-0042
 > ratified ([`-358`](../../.decision-log.md#decision-2026-10-18-358)); a nominee gets ⛔ WhatsApp ([`-356`](../../.decision-log.md#decision-2026-10-18-356)).
 
+
+### Story 6.31: One WhatsApp Reminder, Two Days After the Text, to Each Neighbour Who Has Not Answered and Chose WhatsApp — the Same Words, Its Own Record, Never a Second SMS `[SURFACE]`
+
+> **Added 2026-10-19 (Story 6.31, Task 0.4)** — the row `6-31-peer-mesh-whatsapp-reminder-at-48-hours` builds the reminder the Trustee
+> Panel ruled in [`-303`](../../.decision-log.md#decision-2026-10-10-303) Q1 A (*"one WhatsApp reminder after two days (48 hours), with the
+> same words, to those of the five who have ⛔ not answered and have chosen WhatsApp messages from the Trust"*), in the language of
+> [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF1 A and only inside the answer window
+> ([`-305`](../../.decision-log.md#decision-2026-10-10-305) §2 item 4). Its build decisions WR1–WR16 are DECIDED by
+> [`-365`](../../.decision-log.md#decision-2026-10-19-365) (author-commit). How long a member's WhatsApp yes lasts was put to the Panel and
+> RULED by [`-364`](../../.decision-log.md#decision-2026-10-19-364) (option A — until withdrawn, built by row
+> `5-12-whatsapp-yes-lasts-until-withdrawn`). Go-live: roster Row 35. Full ACs:
+> `_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md`. ⛔ Never a merge fence.
+
+As the Trust, I want each texted neighbour who has not answered after two days, and who chose WhatsApp messages from the Trust, to get
+ONE WhatsApp reminder with the same words as the text, so that a neighbour who missed the text has one more chance to answer while an
+answer can still be taken.
+
+**Acceptance Criteria (in brief):** one reminder per text, at most, claimed once and frozen once finished, in its own table; due 48 hours
+after the text was accepted and never started after 72; only to a neighbour who has not submitted, while the claim can take an answer,
+in a Pariwar with WhatsApp on, to a member whose WhatsApp yes stands, still eligible, between 09:00 and 20:00 IST; the ruled words in a
+Meta-approved UTILITY template with three values (the full name, the link, the helpline); sent directly to Meta — never `dispatch()`,
+never an SMS, never an alert; a send that may have reached Meta is never resent, and a refusal of unknown scope is parked, never spent;
+ids only in logs and alarms; no event, no claim state; no call to Meta in any test.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

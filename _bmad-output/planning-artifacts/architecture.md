@@ -2248,6 +2248,10 @@ onboarding:
   ends the opt-in. Before anything is sent on an opt-in older than a day: the app's "expired" wording
   changes, the withdraw control shows, STOP always works, and a withdrawal ends every earlier opt-in —
   sprint row `5-12-whatsapp-yes-lasts-until-withdrawn`. The bullets above are unedited.)*
+  *(Dated 2026-10-19, Decision 2026-10-19-365 — author-commit, Story 6.31: the neighbours' WhatsApp reminder
+  is a second, DIRECT WhatsApp sender outside the dispatcher — it reads the member dual gate above (the
+  Pariwar switch AND the member's opt-in), sends one Meta-approved UTILITY template with three body values,
+  never falls back to SMS, and is not the claim-contact exception. The bullets above are unedited.)*
 - **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
   Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
   correction and certificate reminders' delivery ladder — to ONE person only: the

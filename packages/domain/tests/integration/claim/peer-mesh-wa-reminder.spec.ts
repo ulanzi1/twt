@@ -22,6 +22,7 @@ import {
   CORRECTION_SEND_LEASE_MS,
   PEER_MESH_WA_REMINDER_FINALISE_LOCK_TIMEOUT_MS,
   PEER_MESH_WA_REMINDER_FINALISE_STATEMENT_TIMEOUT_MS,
+  PEER_MESH_WA_REMINDER_MARKER_TIMEOUT_MS,
   PEER_MESH_WA_REMINDER_LATE_BY,
   PEER_MESH_WA_REMINDER_PARKED_BY,
   beginPeerMeshWaReminder,
@@ -109,6 +110,8 @@ async function seedReminder(
     hoursAgo?: number;
     /** A finer-grained age than `hoursAgo` alone can express (`make_interval`'s `hours` is an int4) — ADDED to it. */
     secondsAgo?: number;
+    /** Per-ping ages (index ⇒ hours), overriding `hoursAgo` — the ping row is frozen once accepted, so it is seeded, ⛔ updated. */
+    hoursAgoEach?: readonly number[];
     switchOn?: boolean;
     optedIn?: boolean;
     outcome?: string | null;
@@ -134,7 +137,7 @@ async function seedReminder(
     [selectionId, claimCaseId, pid, deceased, members],
   );
   const pings: Seeded['pings'] = [];
-  for (const memberId of members) {
+  for (const [idx, memberId] of members.entries()) {
     const pingId = toPingId(randomUUID());
     const linkCode = generatePeerRequestLinkCode();
     const outcome = o.outcome === undefined ? 'accepted' : o.outcome;
@@ -150,7 +153,7 @@ async function seedReminder(
         `INSERT INTO claim_peer_mesh_pings (ping_id, selection_id, pariwar_id, member_id, send_outcome, attempt_count, claimed_at, claimed_by_job,
            aging_since, link_code, locale_source, send_updated_at)
          VALUES ($1, $2, $3, $4, $7, 1, now(), 'job-text', now(), $5, 'pariwar_default', clock_timestamp() - make_interval(hours => $6, secs => $8))`,
-        [pingId, selectionId, pid, memberId, linkCode, o.hoursAgo ?? 49, outcome, o.secondsAgo ?? 0],
+        [pingId, selectionId, pid, memberId, linkCode, o.hoursAgoEach?.[idx] ?? o.hoursAgo ?? 49, outcome, o.secondsAgo ?? 0],
       );
     }
     pings.push({ pingId, memberId, linkCode });
@@ -228,6 +231,8 @@ async function insertReminderRow(s: Seeded, i: number, over: Record<string, unkn
 
 const ref = (s: Seeded, r: Row, jobId = JOB) => ({ pariwarId: s.pid, reminderId: r.reminder_id, jobId });
 const db = () => bindScopedDb(getTx().client);
+/** Mark a row in flight (a park follows a send attempt — round-2 P2). */
+const mark = (s: Seeded, r: Row, jobId = JOB) => markPeerMeshWaReminderInFlight(db(), { ...ref(s, r, jobId), leaseMarginMs: MARGIN_MS, now: new Date() });
 
 describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain half', { timeout: 30_000 }, () => {
   setupLiveDb();
@@ -256,6 +261,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     await begin(s);
     expect((await begin(s, 0, { jobId: 'job-b' })).kind).toBe('held_by_other');
     expect(await begin(s)).toMatchObject({ kind: 'begun', attemptCount: 2 });
+    expect(await mark(s, await only(s))).toBe('marked');
     expect(await parkPeerMeshWaReminder(db(), { ...ref(s, await only(s)), detail: 'held:meta_131009' })).toBe(true);
     expect(await begin(s, 0, { jobId: 'job-b' })).toMatchObject({ kind: 'begun', attemptCount: 3 });
     expect(await only(s)).toMatchObject({ claimed_by_job: 'job-b', parked_at: null, first_detail: 'held:meta_131009' });
@@ -266,7 +272,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
   it('⭐ the in-flight test is FIRST: the marker set ⇒ in_flight, ⛔ write and ⛔ re-check — even after the neighbour SUBMITTED (⛔ 23514)', async () => {
     const s = await seedReminder();
     await begin(s);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(true);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe('marked');
     const before = await only(s);
     await asSuperuser(getTx().client, async () => {
       await getTx().client.query(
@@ -308,6 +314,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     expect(await rows(off)).toHaveLength(0);
     const s = await seedReminder();
     await begin(s);
+    await mark(s, await only(s));
     await parkPeerMeshWaReminder(db(), { ...ref(s, await only(s)), detail: 'scope:template_not_approved' });
     const parked = await only(s);
     await asSuperuser(getTx().client, async () => {
@@ -384,28 +391,34 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     const s = await seedReminder();
     await begin(s);
     const r = await only(s);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r, 'job-b'), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(true);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r, 'job-b'), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe('lost');
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe('marked');
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe('lost');
 
     const old = await seedReminder();
     await begin(old, 0, { now: new Date(Date.now() - (CORRECTION_SEND_LEASE_MS - MARGIN_MS) - 5_000) });
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(old, await only(old)), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(old, await only(old)), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe('lost');
     expect((await only(old)).send_started_at).toBeNull();
+    // Round-2 P3 — the marker is BOUNDED (both SET LOCALs in its transaction); a margin outside (0, lease) is refused.
+    const { rows: t } = await getTx().client.query<{ lock: string; stmt: string }>(`SELECT current_setting('lock_timeout') AS lock, current_setting('statement_timeout') AS stmt`);
+    expect(t[0]).toEqual({ lock: `${String(PEER_MESH_WA_REMINDER_MARKER_TIMEOUT_MS / 1000)}s`, stmt: `${String(PEER_MESH_WA_REMINDER_MARKER_TIMEOUT_MS / 1000)}s` });
+    for (const leaseMarginMs of [0, -1, CORRECTION_SEND_LEASE_MS]) {
+      await expect(markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs, now: new Date() })).rejects.toThrow(/leaseMarginMs/);
+    }
   });
 
   it(
     '⭐ R1 — the marker rechecks WR5\'s 72-hour deadline too: a slow decrypt/hash crossing it ⇒ skipped_late, ⛔ sent (⛔ left attempting for a wasted re-claim)',
     async () => {
-      // 2 seconds of margin left on the 72-hour bound at seed time (the "ping seeded two seconds before its deadline" repro).
-      const s = await seedReminder({ hoursAgo: 71, secondsAgo: 59 * 60 + 58 });
-      expect((await begin(s)).kind).toBe('begun'); // in_time still true — 2 s of margin left
+      // 6 seconds of margin left on the 72-hour bound at seed time (round-2 P14 — wide enough for a loaded ci:local seed + begin).
+      const s = await seedReminder({ hoursAgo: 71, secondsAgo: 59 * 60 + 54 });
+      expect((await begin(s)).kind).toBe('begun'); // in_time still true — 6 s of margin left
       const r = await only(s);
-      await new Promise((resolve) => setTimeout(resolve, 3_000)); // the "three-second HMAC delay" — crosses the deadline
-      expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
+      await new Promise((resolve) => setTimeout(resolve, 7_000)); // a slow decrypt / HMAC — crosses the deadline
+      expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe('late');
       expect(await only(s)).toMatchObject({ send_outcome: 'skipped_late', send_started_at: null, claimed_by_job: PEER_MESH_WA_REMINDER_LATE_BY });
     },
-    10_000,
+    20_000,
   );
 
   it('the finalise needs the marker; accepted writes the wamid + hash; it is BOUNDED (both SET LOCALs in its transaction)', async () => {
@@ -428,6 +441,11 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     const [a, b] = await rows(s);
     for (const r of [a!, b!]) await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() });
     await expect(finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'error', detail: 'may_have_sent:9876543210' })).rejects.toThrow(/fixed grammar/);
+    // Round-2 P9 — the outcome and its fields agree, refused BEFORE the statement.
+    await expect(finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'error', detail: 'rate_limited:none' })).rejects.toThrow(/may_have_sent/);
+    await expect(finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'error' })).rejects.toThrow(/may_have_sent/);
+    await expect(finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'accepted', providerMessageId: 'wamid.Q' })).rejects.toThrow(/number hash/);
+    await expect(finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'accepted', recipientNumberHash: 'h' })).rejects.toThrow(/number hash/);
     expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'error', detail: peerMeshWaReminderDetail({ kind: 'may_have_sent', how: 'timeout' }) })).toBe(true);
     expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, b!), outcome: 'rejected_recipient' })).toBe(true);
     expect((await rows(s)).map((r) => [r.send_outcome, r.detail])).toEqual([
@@ -441,7 +459,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     await begin(s);
     let r = await only(s);
     await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() });
-    expect(await notePeerMeshWaReminderTransient(db(), { ...ref(s, r), detail: 'rate_limited:none' })).toBe(true);
+    expect(await notePeerMeshWaReminderTransient(db(), { ...ref(s, r), detail: 'rate_limited:none', phase: 'post_send' })).toBe(true);
     expect(await only(s)).toMatchObject({ send_outcome: 'attempting', detail: 'rate_limited:none', send_started_at: null, claimed_by_job: JOB });
     await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() });
     expect(await parkPeerMeshWaReminder(db(), { ...ref(s, r), detail: 'scope:meta_131048' })).toBe(true);
@@ -449,6 +467,22 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     expect(r).toMatchObject({ send_outcome: 'attempting', claimed_by_job: PEER_MESH_WA_REMINDER_PARKED_BY, detail: 'scope:meta_131048', send_started_at: null });
     expect(r.parked_at).not.toBeNull();
     expect(await parkPeerMeshWaReminder(db(), { ...ref(s, r), detail: 'held:x' })).toBe(false);
+  });
+
+  it('⭐ round-2 P2 — the notes and the park are CAS\'d on the marker: a same-job-id twin\'s PRE-send fault can ⛔ clear a LIVE send\'s marker', async () => {
+    const s = await seedReminder();
+    await begin(s);
+    const r = await only(s);
+    // ⛔ marker: a post-send note and a park are refused (⛔ send began); a pre-send note lands.
+    expect(await notePeerMeshWaReminderTransient(db(), { ...ref(s, r), detail: 'rate_limited:none', phase: 'post_send' })).toBe(false);
+    expect(await parkPeerMeshWaReminder(db(), { ...ref(s, r), detail: 'held:meta_100' })).toBe(false);
+    expect(await notePeerMeshWaReminderTransient(db(), { ...ref(s, r), detail: peerMeshWaReminderDetail({ kind: 'pre_send', fault: 'decrypt_failed:tier1' }), phase: 'pre_send' })).toBe(true);
+    // The marker SET by the run that won it: the twin's pre-send note (the SAME job id) is refused and the marker stays.
+    expect(await begin(s)).toMatchObject({ kind: 'begun' });
+    expect(await mark(s, await only(s))).toBe('marked');
+    expect(await notePeerMeshWaReminderTransient(db(), { ...ref(s, r), detail: peerMeshWaReminderDetail({ kind: 'pre_send', fault: 'hash_failed:tier1' }), phase: 'pre_send' })).toBe(false);
+    expect((await only(s)).send_started_at).not.toBeNull();
+    expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, r), outcome: 'accepted', providerMessageId: 'wamid.T', recipientNumberHash: 'h' })).toBe(true);
   });
 
   it('no sendable number ⇒ no_target:no_sendable_number (only before the marker)', async () => {
@@ -470,8 +504,12 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
   it('⭐ AC2 — the due list: 48 h due; 47 h ⛔; 72 h ⛔; a decided claim ⛔; switch OFF ⛔; a REPORTED-undelivered text still due', async () => {
     const due = await seedReminder({ hoursAgo: 48 });
     expect(await dueOf(due)).toEqual([due.pings[0]!.pingId]);
-    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: due.pid, claimCaseId: due.claimCaseId, now: new Date() })).toEqual([due.pings[0]!.pingId]);
+    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: due.pid, claimCaseId: due.claimCaseId, now: new Date(), dueAsOf: new Date() })).toEqual([due.pings[0]!.pingId]);
     expect(await dueOf(await seedReminder({ hoursAgo: 47 }))).toEqual([]);
+    // Round-2 P16 — the minute either side of each bound.
+    expect(await dueOf(await seedReminder({ hoursAgo: 47, secondsAgo: 59 * 60 }))).toEqual([]);
+    const last = await seedReminder({ hoursAgo: 71, secondsAgo: 59 * 60 });
+    expect(await dueOf(last)).toEqual([last.pings[0]!.pingId]);
     expect(await dueOf(await seedReminder({ hoursAgo: 72 }))).toEqual([]);
     expect(await dueOf(await seedReminder({ state: OUT_OF_WINDOW }))).toEqual([]);
     expect(await dueOf(await seedReminder({ switchOn: false }))).toEqual([]);
@@ -496,6 +534,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     const [r0, r1, , r3] = await rows(s);
     await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r0!), leaseMarginMs: MARGIN_MS, now: new Date() });
     await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, r0!), outcome: 'rejected_recipient' });
+    await mark(s, r1!);
     await parkPeerMeshWaReminder(db(), { ...ref(s, r1!), detail: 'held:meta_131009' });
     await getTx().client.query(`UPDATE claim_peer_mesh_wa_reminders SET send_started_at = claimed_at, detail = 'rate_limited:none' WHERE reminder_id = $1`, [r3!.reminder_id]);
     expect((await dueOf(s)).sort()).toEqual([s.pings[1]!.pingId, s.pings[2]!.pingId].sort());
@@ -504,15 +543,26 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
   it('the CHILD\'s list includes a row a LIVE job holds (the begin judges the holder — its own pg-boss retry re-claims it); the SWEEP\'s does ⛔', async () => {
     const s = await seedReminder();
     await begin(s);
-    await notePeerMeshWaReminderTransient(db(), { ...ref(s, await only(s)), detail: 'rate_limited:none' });
+    await notePeerMeshWaReminderTransient(db(), { ...ref(s, await only(s)), detail: 'rate_limited:none', phase: 'pre_send' });
     expect(await dueOf(s)).toEqual([]);
-    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: s.pid, claimCaseId: s.claimCaseId, now: new Date() })).toEqual([s.pings[0]!.pingId]);
+    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: s.pid, claimCaseId: s.claimCaseId, now: new Date(), dueAsOf: new Date() })).toEqual([s.pings[0]!.pingId]);
     expect(await begin(s)).toMatchObject({ kind: 'begun', attemptCount: 2 });
     await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS, now: new Date() });
-    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: s.pid, claimCaseId: s.claimCaseId, now: new Date() })).toEqual([]);
+    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: s.pid, claimCaseId: s.claimCaseId, now: new Date(), dueAsOf: new Date() })).toEqual([]);
   });
 
-  it('⭐ the lapsed in-flight finisher: the marker set + the lease lapsed ⇒ error / may_have_sent:lease_lapsed — past the bound and switch OFF too; a live one untouched', async () => {
+  it('⭐ round-2 P1 — the CHILD\'s list past `+ 72 h` is bounded by `dueAsOf`: a sibling ping that was NEVER due gets ⛔ row (WR5)', async () => {
+    // The sibling's text went 80 h ago: its window closed BEFORE the sweep found the claim due (the switch was OFF, a hold …).
+    const s = await seedReminder({ n: 2, hoursAgoEach: [49, 80] });
+    const list = (dueAsOf: Date) => listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: s.pid, claimCaseId: s.claimCaseId, now: new Date(), dueAsOf });
+    expect(await list(new Date())).toEqual([s.pings[0]!.pingId]);
+    // A child the sweep enqueued 25 h ago (the sibling then 55 h old — DUE) and deferred since: it sees both; the begin judges the
+    // sibling late (AC3's deferred-overnight leg).
+    expect((await list(new Date(Date.now() - 25 * 3_600_000))).sort()).toEqual([s.pings[0]!.pingId, s.pings[1]!.pingId].sort());
+    expect(await begin(s, 1)).toEqual({ kind: 'skipped', outcome: 'skipped_late' });
+  });
+
+  it('⭐ the lapsed in-flight finisher: the marker set + the lease lapsed ⇒ error / may_have_sent:lease_lapsed — switch OFF too (past the bound: the jobs live leg); a live one untouched', async () => {
     const s = await seedReminder({ n: 2, hoursAgo: 71 });
     const old = new Date(Date.now() - CORRECTION_SEND_LEASE_MS - 60_000);
     await begin(s, 0, { now: old });
@@ -559,15 +609,36 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
   });
 
   it('I8 — ⛔ event from a begin, a finalise, a park or a sweep finisher', async () => {
-    const s = await seedReminder({ n: 2 });
+    const s = await seedReminder({ n: 3 });
     const count = async () => (await getTx().client.query<{ n: number }>(`SELECT count(*)::int AS n FROM events_log WHERE pariwar_id = $1`, [s.pid])).rows[0]!.n;
     const before = await count();
     await begin(s, 0);
     await begin(s, 1);
-    const [a, b] = await rows(s);
+    await begin(s, 2, { now: new Date(Date.now() - CORRECTION_SEND_LEASE_MS - 60_000) });
+    const [a, b, c] = await rows(s);
     await markPeerMeshWaReminderInFlight(db(), { ...ref(s, a!), leaseMarginMs: MARGIN_MS, now: new Date() });
+    await mark(s, b!); // before the finalise — its 30 s `SET LOCAL`s then outlast the marker's 5 s for the rest of this test
     await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'accepted', providerMessageId: 'wamid.Z', recipientNumberHash: 'h' });
     await parkPeerMeshWaReminder(db(), { ...ref(s, b!), detail: 'held:meta_100' });
+    await getTx().client.query(`UPDATE claim_peer_mesh_wa_reminders SET send_started_at = claimed_at WHERE reminder_id = $1`, [c!.reminder_id]);
+    await asSuperuser(getTx().client, async () => {
+      expect(await finishLapsedInFlightPeerMeshWaReminders(getTx().client, { now: new Date(), allow: [s.pid] })).toHaveLength(1);
+      await markLatePeerMeshWaReminders(getTx().client, { allow: [s.pid] });
+    });
+    await enterAppScope(getTx().client, s.pid);
     expect(await count()).toBe(before);
+  });
+
+  it('round-2 P13 — each maintenance pass takes ONE batch of at most `limit` rows (the MATERIALIZED CTE bounds it)', async () => {
+    const lapsed = await seedReminder({ n: 3 });
+    for (let i = 0; i < 3; i++) await insertReminderRow(lapsed, i, { claimed_at: new Date(Date.now() - CORRECTION_SEND_LEASE_MS - 60_000), send_started_at: new Date(Date.now() - CORRECTION_SEND_LEASE_MS - 60_000) });
+    const late = await seedReminder({ n: 3, hoursAgo: 73 });
+    for (let i = 0; i < 3; i++) await insertReminderRow(late, i, { claimed_by_job: PEER_MESH_WA_REMINDER_PARKED_BY, parked_at: new Date(), detail: 'held:meta_100' });
+    await asSuperuser(getTx().client, async () => {
+      expect(await finishLapsedInFlightPeerMeshWaReminders(getTx().client, { now: new Date(), allow: [lapsed.pid], limit: 2 })).toHaveLength(2);
+      expect(await finishLapsedInFlightPeerMeshWaReminders(getTx().client, { now: new Date(), allow: [lapsed.pid], limit: 2 })).toHaveLength(1);
+      expect(await markLatePeerMeshWaReminders(getTx().client, { allow: [late.pid], limit: 2 })).toHaveLength(2);
+      expect(await markLatePeerMeshWaReminders(getTx().client, { allow: [late.pid], limit: 2 })).toHaveLength(1);
+    });
   });
 });

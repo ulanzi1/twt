@@ -5,6 +5,9 @@
 //     `WhatsappSendError` with `httpStatus` 0 and `transport: 'timeout'`; a plain network failure ⇒ `transport: 'network'`;
 //     ⛔ `signal` is passed when ⛔ `timeoutMs` (the dispatch path's request is byte-identical).
 //   · WR10 — `classifyDirectWaSendFailure`: one leg per rule and per named code, IN ORDER (rule 4 before rule 3's status test).
+//   · Decision 2026-10-19-366 — a fetch whose connection never opened (`cause.code` in `WHATSAPP_PRE_CONNECT_CODES`) ⇒
+//     `transport: 'connect'` ⇒ `transient` (`api_unavailable:000`); a reset stays `may_have_sent`. Round 2 P8 — an invalid
+//     `timeoutMs` or a non-list `bodyParams` is a param error BEFORE fetch; every `http_` token fits the stored grammar.
 
 import { describe, expect, it } from 'vitest';
 
@@ -13,6 +16,7 @@ import {
   createWhatsappAppCache,
   WhatsappSendError,
   WhatsappTemplateParamError,
+  WHATSAPP_PRE_CONNECT_CODES,
   type FetchInit,
   type FetchLike,
   type WhatsappTemplateMessage,
@@ -106,6 +110,42 @@ describe('WR8 — three values on the wire', () => {
     await expect(handle.send({ ...BASE, bodyParam: 'x' })).rejects.toMatchObject({ metaCode: null, httpStatus: 0, transport: 'network' });
   });
 
+  it('`-366` — a connection that never opened (each pre-connect cause code) ⇒ transport "connect" ⇒ transient; a reset ⇒ "network"', async () => {
+    const failWith = (code: string): FetchLike => () => Promise.reject(Object.assign(new Error('fetch failed'), { cause: { code } }));
+    expect([...WHATSAPP_PRE_CONNECT_CODES].sort()).toEqual(['EAI_AGAIN', 'ECONNREFUSED', 'ENOTFOUND', 'UND_ERR_CONNECT_TIMEOUT']);
+    for (const code of WHATSAPP_PRE_CONNECT_CODES) {
+      const err = await createWhatsappAppCache(failWith(code)).messagingFor('pariwar-a', CONFIG).send({ ...BASE, bodyParams: ['a'] }, { timeoutMs: 5000 }).catch((e: unknown) => e);
+      expect(err, code).toMatchObject({ metaCode: null, httpStatus: 0, transport: 'connect' });
+      expect(classifyDirectWaSendFailure(err), code).toEqual({ kind: 'transient', token: 'api_unavailable:000' });
+    }
+    for (const code of ['ECONNRESET', 'UND_ERR_SOCKET', 'EPIPE']) {
+      const err = await createWhatsappAppCache(failWith(code)).messagingFor('pariwar-a', CONFIG).send({ ...BASE, bodyParams: ['a'] }).catch((e: unknown) => e);
+      expect(err, code).toMatchObject({ httpStatus: 0, transport: 'network' });
+      expect(classifyDirectWaSendFailure(err), code).toEqual({ kind: 'may_have_sent', token: 'network' });
+    }
+    // A hostile `cause` getter ⇒ ⛔ throw out of the client: a plain network failure.
+    const hostile: FetchLike = () => Promise.reject(Object.defineProperty(new Error('x'), 'cause', { get: () => { throw new Error('getter'); } }));
+    await expect(createWhatsappAppCache(hostile).messagingFor('pariwar-a', CONFIG).send({ ...BASE, bodyParam: 'x' })).rejects.toMatchObject({ transport: 'network' });
+  });
+
+  it('P8 — an invalid `timeoutMs` (−1, 0, NaN, ∞) or a non-list `bodyParams` is a param error BEFORE fetch (⛔ "may have sent")', async () => {
+    const { fetchImpl, calls } = recorder();
+    const handle = createWhatsappAppCache(fetchImpl).messagingFor('pariwar-a', CONFIG);
+    for (const timeoutMs of [-1, 0, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648, Number.MAX_SAFE_INTEGER + 2]) {
+      const err = await handle.send({ ...BASE, bodyParams: ['a'] }, { timeoutMs }).catch((e: unknown) => e);
+      expect(err, String(timeoutMs)).toBeInstanceOf(WhatsappTemplateParamError);
+      expect(classifyDirectWaSendFailure(err)).toEqual({ kind: 'unknown_scope', token: 'param_invalid' });
+    }
+    for (const bodyParams of [null, 'Ram Kumar', { 0: 'a', length: 1 }]) {
+      const err = await handle.send({ ...BASE, bodyParams } as unknown as WhatsappTemplateMessage).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(WhatsappTemplateParamError);
+      expect((err as Error).message).not.toContain('Ram Kumar');
+    }
+    expect(calls).toHaveLength(0);
+    await handle.send({ ...BASE, bodyParams: ['a'] }, { timeoutMs: 1 }).catch(() => undefined);
+    expect(calls).toHaveLength(1);
+  });
+
   it('a 2xx without a wamid still rejects with its status (the body-read path is unchanged)', async () => {
     const empty: FetchLike = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
     const handle = createWhatsappAppCache(empty).messagingFor('pariwar-a', CONFIG);
@@ -121,6 +161,10 @@ const meta = (metaCode: number | null, httpStatus: number): WhatsappSendError =>
 describe('WR10 — classifyDirectWaSendFailure (the ordered rules)', () => {
   it('rule 0 — a param error (nothing was sent) ⇒ unknown_scope / param_invalid', () => {
     expect(classifyDirectWaSendFailure(new WhatsappTemplateParamError('bad'))).toEqual({ kind: 'unknown_scope', token: 'param_invalid' });
+  });
+
+  it('rule 3 (`-366`) — transport "connect" (the connection never opened) ⇒ transient api_unavailable:000, ⛔ may_have_sent', () => {
+    expect(classifyDirectWaSendFailure(new WhatsappSendError('x', null, 0, 'connect'))).toEqual({ kind: 'transient', token: 'api_unavailable:000' });
   });
 
   it('rule 1 — a thrown fetch, any non-WhatsappSendError throw, or a 2xx without a wamid ⇒ may_have_sent', () => {
@@ -181,6 +225,28 @@ describe('WR10 — classifyDirectWaSendFailure (the ordered rules)', () => {
     expect(classifyDirectWaSendFailure(meta(131047, 400))).toEqual({ kind: 'unknown_scope', token: 'meta_131047' });
     expect(classifyDirectWaSendFailure(meta(999999, 400))).toEqual({ kind: 'unknown_scope', token: 'meta_999999' });
     expect(classifyDirectWaSendFailure(meta(null, 400))).toEqual({ kind: 'unknown_scope', token: 'http_400' });
+  });
+
+  it('rule 6 (P18) — 131052 (inbound media — cannot arise here; if it does, rule 6) and the window class 131051 / 131053 ⇒ unknown scope', () => {
+    for (const code of [131052, 131051, 131053]) {
+      expect(classifyDirectWaSendFailure(meta(code, 400)), String(code)).toEqual({ kind: 'unknown_scope', token: `meta_${String(code)}` });
+    }
+  });
+
+  it('rule 1 (P18) — a negative httpStatus (⛔ HTTP information) ⇒ may_have_sent / unknown', () => {
+    expect(classifyDirectWaSendFailure(meta(null, -1))).toEqual({ kind: 'may_have_sent', token: 'unknown' });
+    expect(classifyDirectWaSendFailure(meta(131048, -1))).toEqual({ kind: 'may_have_sent', token: 'unknown' });
+  });
+
+  it('P8 — an unusable status (NaN, fractional, 7 digits, outside 100–599) never yields an ungrammatical token', () => {
+    const grammar = /^(?!.*[0-9]{7})(rate_limited:([0-9]{1,6}|none)|api_unavailable:[0-9]{3}|[a-z0-9_]{1,48})$/;
+    for (const status of [Number.NaN, 400.5, 500.5, 1_000_000, 9_999_999, 600, 99]) {
+      const out = classifyDirectWaSendFailure(meta(null, status));
+      expect(out.token, String(status)).toMatch(grammar);
+    }
+    expect(classifyDirectWaSendFailure(meta(null, Number.NaN))).toEqual({ kind: 'unknown_scope', token: 'http_other' });
+    expect(classifyDirectWaSendFailure(meta(null, 1_000_000))).toEqual({ kind: 'unknown_scope', token: 'http_other' });
+    expect(classifyDirectWaSendFailure(meta(null, 500.5))).toEqual({ kind: 'unknown_scope', token: 'http_other' });
   });
 
   it('a token is ALWAYS `[a-z0-9_]+` with ⛔ a 7-digit run (a code outside 0–999999 is `meta_other`)', () => {

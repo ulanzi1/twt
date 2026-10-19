@@ -73,7 +73,7 @@ export const claimPeerMeshWaReminders = pgTable(
     /** The first begin's instant — moves only forward. */
     agingSince: timestamp('aging_since', { withTimezone: true, mode: 'date' }),
     parkedAt: timestamp('parked_at', { withTimezone: true, mode: 'date' }),
-    /** ⭐ The IN-FLIGHT marker (WR10) — set just before the WhatsApp call; cleared only by a park or a transient. */
+    /** ⭐ The IN-FLIGHT marker (WR10) — set just before the WhatsApp call; cleared by a park, a transient, or R2's quiet-hours release (`-366` 4 (b)). */
     sendStartedAt: timestamp('send_started_at', { withTimezone: true, mode: 'date' }),
     /** The fixed grammar (`PEER_MESH_WA_REMINDER_DETAIL_PATTERN`). ⛔ Never PII, ⛔ never the link code. */
     detail: text('detail'),

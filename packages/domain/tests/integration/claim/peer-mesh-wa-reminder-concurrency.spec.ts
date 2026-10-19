@@ -229,14 +229,14 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder under two co
       // ⛔ `waitingOn` — SKIP LOCKED must never reach a lock wait at all; a bounded race against a short timer proves it.
       const TIMED_OUT = Symbol('timed out');
       const result = await Promise.race([
-        finishLapsedInFlightPeerMeshWaReminders(pool, { now: new Date(), allow: null }),
+        finishLapsedInFlightPeerMeshWaReminders(pool, { now: new Date(), allow: [a.pid, b.pid] }),
         new Promise<typeof TIMED_OUT>((resolve) => setTimeout(() => resolve(TIMED_OUT), 1_000)),
       ]);
       expect(result, 'a locked row must ⛔ stall the whole batch (SKIP LOCKED)').not.toBe(TIMED_OUT);
       expect((result as Awaited<ReturnType<typeof finishLapsedInFlightPeerMeshWaReminders>>).map((r) => r.claimCaseId)).toEqual([b.cid]);
 
       await locker.commit();
-      const after = await finishLapsedInFlightPeerMeshWaReminders(pool, { now: new Date(), allow: null });
+      const after = await finishLapsedInFlightPeerMeshWaReminders(pool, { now: new Date(), allow: [a.pid, b.pid] });
       expect(after.map((r) => r.claimCaseId)).toEqual([a.cid]); // swept once the lock is released — ⛔ stranded
     },
   );

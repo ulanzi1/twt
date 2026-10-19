@@ -100,9 +100,15 @@ export interface ClaimPeerMeshWaReminderDeps {
   readonly pariwarAllowlist?: readonly string[];
 }
 
-/** The child's payload — ids ONLY. */
+/** The child's payload — ids ONLY (and the instant the sweep found the claim due). */
 export interface PeerMeshWaReminderPayload {
   readonly claimCaseId: string;
+  /**
+   * ISO DB-clock instant of the sweep page that listed the claim due (`DuePeerMeshWaReminderPage.asOf`) — a quiet-hours deferral
+   * carries it unchanged. Bounds the child's list past `+ 72 h` (round-2 P1 — a sibling ping already past its window then was never
+   * due). Absent or unreadable ⇒ the child's own clock (⛔ a payload this code enqueues).
+   */
+  readonly dueAsOf?: string;
 }
 
 // ── WR12 — the run limits, sized for an HOURLY cron (6.25's sub-interval constants — ⛔ 6.27c's daily 45 min / 90 min) ─────────
@@ -134,6 +140,8 @@ function sampleIds(list: readonly string[]): string {
 /** What a ready Pariwar sends with. ⛔ Logged (the client holds the token). */
 export interface PeerMeshWaReminderSendConfig {
   readonly locale: PeerMeshWaReminderLocale;
+  /** WR14 — WHY that language (`resolvePeerRequestLocale`'s `source`), recorded on the row as it is read. */
+  readonly localeSource: claimDomain.PeerRequestLocale['source'];
   readonly templateName: string;
   readonly helpline: string;
   readonly origin: string;
@@ -174,8 +182,9 @@ export async function peerMeshWaReminderConfig(
   if (live === null) return gap('config:questionnaire_unavailable');
   if (questionnaires.pendingCounselBasisKeys(live).length > 0) return gap('config:counsel_basis_pending');
   let locale: PeerMeshWaReminderLocale;
+  let localeSource: claimDomain.PeerRequestLocale['source'];
   try {
-    locale = (await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePeerRequestLocale(db, pid))).locale;
+    ({ locale, source: localeSource } = await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePeerRequestLocale(db, pid)));
   } catch (err) {
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return gap('config:locale_unavailable');
     throw new PeerMeshWaReminderLocaleReadError(err);
@@ -212,7 +221,7 @@ export async function peerMeshWaReminderConfig(
   } catch {
     return gap('config:wa_config_incomplete');
   }
-  return { state: 'ready', config: { locale, templateName, helpline, origin, client } };
+  return { state: 'ready', config: { locale, localeSource, templateName, helpline, origin, client } };
 }
 
 // ── The SWEEP ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -248,7 +257,7 @@ type EnqueueBoss = Pick<QueueClient, 'send'>;
 /** ONE child per claim — ids only; `singletonKey` is a LABEL (the claim lock + the per-ping CAS are the dedup). */
 export async function enqueuePeerMeshWaReminderChild(
   boss: EnqueueBoss,
-  input: { readonly pariwarId: string; readonly claimCaseId: string; readonly startAfter?: Date },
+  input: { readonly pariwarId: string; readonly claimCaseId: string; readonly dueAsOf: string; readonly startAfter?: Date },
 ): Promise<void> {
   await boss.send(
     QUEUE_NAMES.CLAIM_PEER_MESH_WA_REMINDER_SEND,
@@ -257,7 +266,7 @@ export async function enqueuePeerMeshWaReminderChild(
       requestId: `claim.peer_mesh_wa_reminder:${input.claimCaseId}`,
       actorId: null,
       traceId: `claim.peer_mesh_wa_reminder:${input.claimCaseId}`,
-      payload: { claimCaseId: input.claimCaseId },
+      payload: { claimCaseId: input.claimCaseId, dueAsOf: input.dueAsOf },
     } satisfies JobEnvelope<PeerMeshWaReminderPayload>,
     {
       singletonKey: input.claimCaseId,
@@ -414,7 +423,7 @@ export async function runPeerMeshWaReminderSweep(
         }
         seenClaims.add(due.claimCaseId);
         try {
-          await enqueuePeerMeshWaReminderChild(boss, { pariwarId: due.pariwarId, claimCaseId: due.claimCaseId });
+          await enqueuePeerMeshWaReminderChild(boss, { pariwarId: due.pariwarId, claimCaseId: due.claimCaseId, dueAsOf: (page.asOf ?? now).toISOString() });
           enqueued += 1;
         } catch (err) {
           alarm(`[jobs] claim-peer-mesh-wa-reminder-sweep: failed to enqueue the WhatsApp reminders for claim ${due.claimCaseId} — ${err instanceof Error ? err.name : 'error'}`);
@@ -502,12 +511,16 @@ export async function runPeerMeshWaReminderChild(
   const pariwarId = ids.pariwarId(pid);
   const claimCaseId = ids.claimId(p.claimCaseId);
   const tag = `claim ${p.claimCaseId}`;
+  const ptagOf = (pingId: string): string => `ping ${pingId} of ${tag} (Pariwar ${pid})`;
+  // Round-2 P1 — when the sweep found the claim due (a deferral keeps it); an absent / unreadable value ⇒ this child's clock.
+  const parsedDueAsOf = p.dueAsOf === undefined ? Number.NaN : Date.parse(p.dueAsOf);
+  const dueAsOf = Number.isFinite(parsedDueAsOf) ? new Date(parsedDueAsOf) : now;
 
   // (1) ⛔ never at night — the child comes back at the next 09:00 IST (6.27c's floored deferral).
   const deferToMorning = async (at: Date, counts?: PeerMeshWaReminderChildCounts): Promise<PeerMeshWaReminderChildResult> => {
     const next = nextPeerRequestSendWindowStart(at);
     const startAfter = new Date(Math.max(next.getTime(), at.getTime() + PEER_REQUEST_DEFER_FLOOR_MS));
-    await enqueuePeerMeshWaReminderChild(boss, { pariwarId: pid, claimCaseId: p.claimCaseId, startAfter });
+    await enqueuePeerMeshWaReminderChild(boss, { pariwarId: pid, claimCaseId: p.claimCaseId, dueAsOf: dueAsOf.toISOString(), startAfter });
     return counts === undefined ? { status: 'deferred_quiet_hours', startAfter } : { status: 'deferred_quiet_hours', startAfter, counts: { ...counts } };
   };
   if (!isInPeerRequestSendWindow(now)) return deferToMorning(now);
@@ -536,17 +549,18 @@ export async function runPeerMeshWaReminderChild(
   }
 
   // (3) the due pings — read BEFORE the name (⛔ decrypted for nothing).
-  const queue = await scoped((db) => claimDomain.listClaimDuePeerMeshWaReminderPings(db, { pariwarId, claimCaseId, now }));
+  const queue = await scoped((db) => claimDomain.listClaimDuePeerMeshWaReminderPings(db, { pariwarId, claimCaseId, now, dueAsOf }));
   if (queue.length === 0) return { status: 'noop', reason: 'nothing_due' };
 
   // (4) WR13 — the FULL member-facing name, ONCE (⛔ SMS fit check — §0 edge (ii)).
   const nameRead = await readMemberFacingDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag, 'claim-peer-mesh-wa-reminder');
   const nameFault = 'fault' in nameRead ? nameRead.fault : null;
+  const memberName = 'fault' in nameRead ? null : nameRead.name;
   const counts = { accepted: 0, mayHaveSent: 0, rejectedRecipient: 0, parked: 0, skipped: 0, noTarget: 0, passed: 0, transient: 0 };
   const sendTimeoutMs = deps.sendTimeoutMs ?? CORRECTION_SEND_TIMEOUT_MS;
 
   for (const pingId of queue) {
-    const ptag = `ping ${pingId} of ${tag}`;
+    const ptag = ptagOf(pingId);
     const beginAt = clock();
     if (!isInPeerRequestSendWindow(beginAt)) return deferToMorning(beginAt, counts);
     const begun = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
@@ -557,7 +571,7 @@ export async function runPeerMeshWaReminderChild(
         jobId,
         now: beginAt,
         nameFault,
-        template: { name: config.templateName, locale: config.locale, localeSource: 'pariwar_default' },
+        template: { name: config.templateName, locale: config.locale, localeSource: config.localeSource },
       }),
     );
     if (begun.kind === 'skipped') {
@@ -574,10 +588,14 @@ export async function runPeerMeshWaReminderChild(
       continue;
     }
     const row = { pariwarId, reminderId: begun.reminderId, jobId };
+    // A `begun` row means the begin found ⛔ name fault (WR13); a regression must ⛔ reach Meta with `undefined` — refused HERE,
+    // BEFORE the marker, so the row stays re-claimable (⛔ a false "may have sent").
+    if (memberName === null) throw new Error(`[jobs] claim-peer-mesh-wa-reminder: ${ptag} was begun without a member-facing name`);
 
     // ── After the commit: ⛔ KMS under a lock ──
-    const transient = async (detail: string): Promise<void> => {
-      const noted = await scoped((d) => claimDomain.notePeerMeshWaReminderTransient(d, { ...row, detail }));
+    // Round-2 P2 — `phase` is CAS'd on the marker (a same-job-id twin's pre-send fault can ⛔ clear a live send's marker).
+    const transient = async (detail: string, phase: 'pre_send' | 'post_send'): Promise<void> => {
+      const noted = await scoped((d) => claimDomain.notePeerMeshWaReminderTransient(d, { ...row, detail, phase }));
       if (!noted) alarm(`[jobs] claim-peer-mesh-wa-reminder: the row of ${ptag} moved on before its transient note (${detail})`);
       counts.transient += 1;
     };
@@ -589,7 +607,7 @@ export async function runPeerMeshWaReminderChild(
       try {
         plain = await encryption.decryptMobile(begun.mobileCiphertext, deps.encryption);
       } catch {
-        await transient(claimDomain.peerMeshWaReminderDetail({ kind: 'pre_send', fault: 'decrypt_failed:tier1' }));
+        await transient(claimDomain.peerMeshWaReminderDetail({ kind: 'pre_send', fault: 'decrypt_failed:tier1' }), 'pre_send');
         continue;
       }
       e164 = encryption.normalizeMobile(plain);
@@ -604,7 +622,7 @@ export async function runPeerMeshWaReminderChild(
     try {
       hash = await claimDomain.correctionNumberHash(e164, pariwarId, deps.encryption);
     } catch {
-      await transient(claimDomain.peerMeshWaReminderDetail({ kind: 'pre_send', fault: 'hash_failed:tier1' }));
+      await transient(claimDomain.peerMeshWaReminderDetail({ kind: 'pre_send', fault: 'hash_failed:tier1' }), 'pre_send');
       continue;
     }
 
@@ -612,11 +630,19 @@ export async function runPeerMeshWaReminderChild(
     // row past its lease.
     const markAt = clock();
     if (!isInPeerRequestSendWindow(markAt)) return deferToMorning(markAt, counts);
-    // ⭐ THE IN-FLIGHT MARKER — its own committed CAS; ⛔ marker ⇒ ⛔ send (the lease was lost to another child, or — the
-    // domain's OWN recheck — the ping's `+ 72 h` bound passed).
-    const marked = await scoped((d) => claimDomain.markPeerMeshWaReminderInFlight(d, { ...row, leaseMarginMs: PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS, now: markAt }));
-    if (!marked) {
-      alarm(`[jobs] claim-peer-mesh-wa-reminder: ${ptag} — the lease lapsed, or the 72-hour window closed, before the send; ⛔ sent (a retry finds the row settled)`);
+    // ⭐ THE IN-FLIGHT MARKER — its own committed CAS; ⛔ marker ⇒ ⛔ send. Round-2 P3 — the lease clock is read INSIDE the scope
+    // (after the pooled-connection wait), and the statement is bounded. Round-2 P4 — `late` (the domain's OWN `+ 72 h` recheck
+    // finalised `skipped_late`) is a FINISHED row (⛔ retry); `lost` (this job's lease margin passed, another job holds the row, or it
+    // moved on) is a transient.
+    const marked = await scoped((d) =>
+      claimDomain.markPeerMeshWaReminderInFlight(d, { ...row, leaseMarginMs: PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS, now: clock() }),
+    );
+    if (marked === 'late') {
+      counts.skipped += 1;
+      continue;
+    }
+    if (marked === 'lost') {
+      alarm(`[jobs] claim-peer-mesh-wa-reminder: ${ptag} — the lease lapsed before the send; ⛔ sent (a retry re-judges the row)`);
       counts.transient += 1;
       continue;
     }
@@ -632,7 +658,7 @@ export async function runPeerMeshWaReminderChild(
     }
 
     // ── The send — the ruled words' three values (WR13), the template for the language (WR7), its registered code (WR6) ──
-    const member = (nameRead as { name: string }).name;
+    const member = memberName;
     const link = buildAppLinkUrl(config.origin, 'peerRequest', begun.linkCode);
     let wamid: string | null = null;
     let failure: unknown = null;
@@ -680,7 +706,7 @@ export async function runPeerMeshWaReminderChild(
       continue;
     }
     if (outcome.kind === 'transient') {
-      await transient(claimDomain.peerMeshWaReminderDetail({ kind: 'transient', note: outcome.token }));
+      await transient(claimDomain.peerMeshWaReminderDetail({ kind: 'transient', note: outcome.token }), 'post_send');
       continue;
     }
     if (outcome.kind === 'recipient') {
@@ -699,7 +725,7 @@ export async function runPeerMeshWaReminderChild(
     counts.parked += 1;
     if (outcome.kind === 'scope') {
       alarm(
-        `[jobs] claim-peer-mesh-wa-reminder: the WhatsApp reminders of ${tag} STOPPED — Meta refused the send for a reason about the Pariwar's ` +
+        `[jobs] claim-peer-mesh-wa-reminder: the WhatsApp reminders of ${tag} in Pariwar ${pid} STOPPED — Meta refused the send for a reason about the Pariwar's ` +
           `account, number or template (${detail}); the reminder is parked (⛔ finished) and re-tried by the next sweep while still inside 72 hours`,
       );
       return { status: 'stopped_scope', reason: detail, counts };

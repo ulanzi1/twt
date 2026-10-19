@@ -14,7 +14,18 @@ is built by Story 6.31 either way. Only the meaning is asked here.
 > **A — "A yes lasts until the member takes it back (in the app, or by replying STOP), for every WhatsApp message from the
 > Trust."** Its cost was accepted with its conditions: before anything is sent on a yes older than a day, the app's "expired"
 > wording changes, its withdraw control shows, STOP always works, and taking a yes back ends every earlier yes, not only the
-> newest. Built by sprint row `5-12-whatsapp-yes-lasts-until-withdrawn`; until it ships the system keeps the 24-hour behaviour.
+> newest. Built by sprint row `5-12-whatsapp-yes-lasts-until-withdrawn`; until it ships the system keeps the 24-hour behaviour
+> (⚠ that last clause is `-364`'s *"Our reading — NOT RATIFIED"* (iii), ⛔ part of the ruling — labelled 2026-10-19, Story 6.31 code
+> review round 2).
+>
+> **Not covered by this ruling** (the full list is `-364`'s *"Not covered by this ruling"*): counsel's view on the consent wording;
+> Meta's classification of the 6.31 reminder template; the planned signup box (row `5-10-signup-whatsapp-opt-in-checkbox`). `-364`'s
+> readings (i)–(iv) are the author's, ⛔ ratified.
+>
+> ⚠ **Dated 2026-10-19 (Story 6.31 code review round 2):** E3's *"No code calls `consentExists` for `whatsapp_opt_in`"* and E4's
+> `# expect none` describe the PIN (`15acb570`). At the branch's HEAD `packages/domain/src/wa-opt-in/read.ts`
+> `isPeerMeshWaReminderOptedIn` calls `consentExists(…, 'whatsapp_opt_in')` as a DEFENSIVE AND-conjunct (WR3 — it can only narrow),
+> so E4's grep now returns that line by design; ⛔ code decides a send on `consentExists` alone.
 >
 > Written 2026-10-17 at `bmad-create-story 6.31` (pin `dae96d9b`); revised 2026-10-19 before sending (pin `15acb570`); sent and
 > ruled 2026-10-19. Everything below stays **unedited**, as the question **as it was put**.

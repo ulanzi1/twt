@@ -2245,7 +2245,7 @@ onboarding:
   *(Dated 2026-10-19, Decision 2026-10-19-364 — Trustee-ratified, option A: a member's opt-in lasts
   until the member withdraws it (app settings or STOP), for every WhatsApp message from the Trust; the
   "Meta 24h customer-service window opened" above is a fact about free-form messages and no longer
-  ends the opt-in. Before anything is sent on an opt-in older than a day: the app's "expired" wording
+  ends the opt-in (our reading (ii) of `-364`, ⛔ ratified — dated 2026-10-19, code review round 2). Before anything is sent on an opt-in older than a day: the app's "expired" wording
   changes, the withdraw control shows, STOP always works, and a withdrawal ends every earlier opt-in —
   sprint row `5-12-whatsapp-yes-lasts-until-withdrawn`. The bullets above are unedited.)*
   *(Dated 2026-10-19, Decision 2026-10-19-365 — author-commit, Story 6.31: the neighbours' WhatsApp reminder

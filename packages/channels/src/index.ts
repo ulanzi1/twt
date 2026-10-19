@@ -51,6 +51,7 @@ export {
   WhatsappSendError,
   WhatsappTemplateParamError,
   WHATSAPP_MAX_BODY_PARAMS,
+  WHATSAPP_PRE_CONNECT_CODES,
   type WhatsappAppCache,
   type WhatsappAppCacheOptions,
   type WhatsappMessagingHandle,

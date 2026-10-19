@@ -70,6 +70,11 @@ describe('I2 / AC8 — ⛔ the alert path, ⛔ an SMS', () => {
     expectTypeOf<ClaimPeerMeshWaReminderDeps>().not.toHaveProperty('smsPreflight');
     expectTypeOf<ClaimPeerMeshWaReminderDeps['whatsappAppCache']>().toEqualTypeOf<WhatsappAppCache>();
   });
+  it('round-2 P6 — `locale_source` is recorded from the read; its type MUST move with 0171\'s CHECK (`IN (\'pariwar_default\')`)', () => {
+    // A wider `PeerRequestLocale['source']` (row 6-35) FAILS here — otherwise it would 23514 at every begin; widen the CHECK in the
+    // same row, then this leg.
+    expectTypeOf<claimDomain.PeerRequestLocale['source']>().toEqualTypeOf<'pariwar_default'>();
+  });
 });
 
 describe('AC4 — "opted in" is ONE read (`isPeerMeshWaReminderOptedIn`)', () => {
@@ -85,8 +90,16 @@ describe('AC4 — "opted in" is ONE read (`isPeerMeshWaReminderOptedIn`)', () =>
 });
 
 describe('WR10 — the lease inequality and the marker', () => {
-  it('⭐ the send\'s timeout + the finalise\'s lock and statement bounds < the handoff margin', () => {
-    const tail = CORRECTION_SEND_TIMEOUT_MS + claimDomain.PEER_MESH_WA_REMINDER_FINALISE_LOCK_TIMEOUT_MS + claimDomain.PEER_MESH_WA_REMINDER_FINALISE_STATEMENT_TIMEOUT_MS;
+  it('⭐ everything after the marker\'s lease sample < the handoff margin: its own bound, the send, the finalise\'s pooled-connection wait and its two bounds', () => {
+    // Round-2 P3 / P10 — the marker samples the lease clock INSIDE its transaction (after the connection wait), so its OWN bound and
+    // the finalise's connection wait (`createDb`'s 10 s `connectionTimeoutMillis`, packages/domain/src/db.ts) belong in the tail.
+    const POOL_CONNECT_TIMEOUT_MS = 10_000;
+    const tail =
+      claimDomain.PEER_MESH_WA_REMINDER_MARKER_TIMEOUT_MS +
+      CORRECTION_SEND_TIMEOUT_MS +
+      POOL_CONNECT_TIMEOUT_MS +
+      claimDomain.PEER_MESH_WA_REMINDER_FINALISE_LOCK_TIMEOUT_MS +
+      claimDomain.PEER_MESH_WA_REMINDER_FINALISE_STATEMENT_TIMEOUT_MS;
     expect(tail).toBeLessThan(PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS);
     expect(PEER_REQUEST_HANDOFF_LEASE_MARGIN_MS).toBeLessThan(claimDomain.CORRECTION_SEND_LEASE_MS);
   });

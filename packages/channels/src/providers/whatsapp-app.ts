@@ -120,10 +120,11 @@ export class WhatsappSendError extends Error {
     /** The HTTP status (0 for a network failure with no response). */
     public readonly httpStatus: number,
     /**
-     * Story 6.31 (WR8) — on a `httpStatus` 0 failure only: `timeout` when the per-send `timeoutMs` aborted the fetch, else
-     * `network`. Undefined on every failure that carries a response.
+     * Story 6.31 (WR8) — on a `httpStatus` 0 failure only: `timeout` when the per-send `timeoutMs` aborted the fetch,
+     * `connect` when the connection never opened (`WHATSAPP_PRE_CONNECT_CODES` — Decision 2026-10-19-366), else `network`.
+     * Undefined on every failure that carries a response.
      */
-    public readonly transport?: 'timeout' | 'network',
+    public readonly transport?: 'timeout' | 'connect' | 'network',
   ) {
     super(message);
   }
@@ -138,12 +139,34 @@ export class WhatsappTemplateParamError extends Error {
   public readonly name = 'WhatsappTemplateParamError';
 }
 
+/**
+ * Decision 2026-10-19-366 — the network library's cause codes for a fetch that failed BEFORE a connection to Meta opened (the
+ * name lookup failed, the connection was refused, the connect timed out): the request provably never left ⇒ `transport:
+ * 'connect'` (a direct sender retries it). ⛔ A reset / socket error — those can follow a written request (`network`).
+ */
+export const WHATSAPP_PRE_CONNECT_CODES: ReadonlySet<string> = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'UND_ERR_CONNECT_TIMEOUT']);
+
+/** The rejection's `cause.code` (undici's shape), read defensively — a hostile getter yields `null`, ⛔ a throw. */
+function causeCodeOf(err: unknown): string | null {
+  try {
+    const cause = err !== null && typeof err === 'object' ? (err as { cause?: unknown }).cause : undefined;
+    const code = cause !== null && typeof cause === 'object' ? (cause as { code?: unknown }).code : undefined;
+    return typeof code === 'string' ? code : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Validate a direct send's values BEFORE the request (WR8). ⛔ A value in the message. */
-function assertBodyParams(params: readonly string[]): void {
+function assertBodyParams(params: unknown): void {
+  // P8 — a cast / JSON caller can hand a non-list: refuse it as a param error (⛔ a TypeError the classifier reads as "may have sent").
+  if (!Array.isArray(params)) {
+    throw new WhatsappTemplateParamError('whatsapp-app: bodyParams is not a list');
+  }
   if (params.length < 1 || params.length > WHATSAPP_MAX_BODY_PARAMS) {
     throw new WhatsappTemplateParamError(`whatsapp-app: a template send carries 1–${String(WHATSAPP_MAX_BODY_PARAMS)} body values (got ${String(params.length)})`);
   }
-  params.forEach((p, i) => {
+  params.forEach((p: unknown, i) => {
     if (typeof p !== 'string' || p.trim() === '') {
       throw new WhatsappTemplateParamError(`whatsapp-app: body value {{${String(i + 1)}}} is empty`);
     }
@@ -225,7 +248,13 @@ export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch, optio
           async send(message, sendOptions): Promise<string> {
             // Story 6.31 (WR8) — a direct send's values are checked BEFORE the request (⛔ a call on a bad value).
             if (message.bodyParams !== undefined) assertBodyParams(message.bodyParams);
-            const signal = sendOptions?.timeoutMs !== undefined ? timeoutSignal(sendOptions.timeoutMs) : undefined;
+            // P8 — an invalid bound would make `AbortSignal.timeout` throw BEFORE the request: a param error, ⛔ "may have sent".
+            const timeoutMs = sendOptions?.timeoutMs;
+            // ≤ 2^31 − 1: Node clamps a longer timer to 1 ms (an instant abort), and `AbortSignal.timeout` throws past 2^32 − 1.
+            if (timeoutMs !== undefined && !(typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 2_147_483_647)) {
+              throw new WhatsappTemplateParamError('whatsapp-app: timeoutMs is invalid');
+            }
+            const signal = timeoutMs !== undefined ? timeoutSignal(timeoutMs) : undefined;
             let res: FetchResponse;
             try {
               res = await fetchImpl(url, {
@@ -239,10 +268,16 @@ export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch, optio
               });
             } catch (err) {
               // Network / transport failure — no HTTP response. Classify as api_unavailable downstream.
-              // Story 6.31 (WR8) — which one: the per-send bound aborted it, or the transport failed (a direct sender reads
-              // either as "may have sent", WR10 rule 1).
+              // Story 6.31 (WR8) — which one: the per-send bound aborted it (`timeout`), the connection never opened (`connect` —
+              // a direct sender retries it, `-366` 1), or the transport failed after it opened (`network`); `timeout` and `network`
+              // read as "may have sent" (WR10 rule 1).
               if (signal?.aborted === true) {
                 throw new WhatsappSendError('whatsapp send timed out', null, 0, 'timeout');
+              }
+              // Decision 2026-10-19-366 — the connection never opened: ⛔ request left (a direct sender retries it).
+              const causeCode = causeCodeOf(err);
+              if (causeCode !== null && WHATSAPP_PRE_CONNECT_CODES.has(causeCode)) {
+                throw new WhatsappSendError(`whatsapp send could not connect (${causeCode})`, null, 0, 'connect');
               }
               const detail = err instanceof Error ? err.message : 'network error';
               throw new WhatsappSendError(`whatsapp send transport failure: ${detail}`, null, 0, 'network');

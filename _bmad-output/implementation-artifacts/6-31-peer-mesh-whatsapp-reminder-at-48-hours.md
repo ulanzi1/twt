@@ -12,6 +12,8 @@ and `claim-correction-reminders.ts` moved, and AC12's frozen files did ⛔ not.
 Re-check before Task 1: `git diff --name-only 15acb570..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
 STATUS: in-progress (created 2026-10-17 via `bmad-create-story 6.31`; validated v1.5 on 2026-10-19; Task 0 done 2026-10-19 — `-365`).
+*(Dated 2026-10-19, code review round 2: the line above is history — dev done (`review`, 1.8), code review round 1 (`in-progress`,
+1.9), its eight items resolved (`review`, 2.0), code review round 2 applied (`done`, 2.1). The current status is `Status:` below.)*
 
 START CONDITION — MET at the pin: rows 6-27 (a), 6-27b, 6-27c, 6-27d, 6-30, 6-34, 6-36, 6-37, 6-37b, 6-37c are `done`. 6.31
 reads 6.27c's send record and 6.27a's reply state; it changes ⛔ neither. Row 6-35 (language switch) is ⛔ not needed (WR14).
@@ -24,6 +26,9 @@ not yet TAKEN. At the pin `main` holds migrations to 0170, decisions to `-363`, 
 `story/6-37d-claim-contact-whatsapp-step` plans 0171 / `-364` / Row 35 / ledger `2026-10-19b`. Each is "the next free one" at
 the moment of ITS commit — re-grep `main`, every branch and every worktree (T4). This story's roster row is named by its KEY,
 `peer-mesh-wa-reminder-template-approved`; its migration by its SLUG, `peer-mesh-wa-reminders`.
+*(Dated 2026-10-19, code review round 2 — the NUMBERS above describe the pin. This branch has since TAKEN migration 0171,
+decisions `-364` / `-365` / `-366`, roster Row 35 and ledger letters `2026-10-19c`–`h` (`19b` is 6.37d's); row 6-37d takes the
+next free ones at its own commits — `2026-10-19-366` decision 6.)*
 
 §0 GATE (the Panel template, `trustee-panel-routing-note-TEMPLATE.md`): the reminder ITSELF is ratified (`-303` Q1 A, Consequence 3;
 its language by `-310` CF1 A; its window by `-305` §2 item 4). Every build decision WR1–WR16 is the AUTHOR's. ONE question is the
@@ -44,6 +49,8 @@ mechanism); WR6's "Meta files it as MARKETING ⇒ Meta refuses" applies
 `-303`'s *"if Meta refuses"* under architecture §3.4's *"Meta UTILITY templates only"* (and F13 — a marketing cap revokes consent);
 WR2 (ix)'s "still an eligible member" applies who the five ARE (`-310` CF4 A + `-311` PM1's filters — a neighbour who has since
 died or left is ⛔ one of the five).
+*(Dated 2026-10-19, code review round 2: `-365` did ⛔ record these three edges — `2026-10-19-366` decision 5 records them, and
+makes `-365`'s MATCH (iii) CONDITIONAL on row 6-36d shipping.)*
 Four more edges (validate 2026-10-19; (i)–(iii) answered by BigDev in session, each recorded again at Task 0.2):
 (i) "a text that went" = `send_outcome = 'accepted'`; a delivery report is ⛔ read (BigDev: *"(a) Send it"*) — MATCH: `-303` Q1 A
 names *"those of the five who have ⛔ not answered"* with ⛔ delivery condition, `-347` DR13 records peer-mesh reports *"recorded
@@ -71,7 +78,7 @@ S = Task 0.1 STOP conditions. Decision-entry letters (PM, SW, MG, CF, FQ …) ke
 
 # Story 6.31: One WhatsApp Reminder, Two Days After the Text, to Each Neighbour Who Has ⛔ Not Answered and Chose WhatsApp — the Same Words, Its Own Record, ⛔ Never a Second SMS `[SURFACE]`
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a member's death is reported, up to five neighbours are texted (Story 6.27c) with
 > the member's name, a link to a few short questions, and the helpline. The Panel ruled (`-303` Q1 A) that those of the five who
@@ -357,6 +364,10 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   begun before `+ 72 h`, gets ⛔ row; an answered or non-opted-in neighbour reached by a begin gets its `skipped_*` row, WR2). It is a reminder, ⛔ not the request: a hold or
   outage longer than a day loses it — a DELIVERY failure (§0). (b) send any time within the answer window — cost: a reminder days
   late. ⛔ Never outside the answer window under either (I4).
+  *(Dated 2026-10-19, code review round 2 — round 1's R5 widened the CHILD's list past `+ 72 h` for EVERY ping of the claim, which
+  wrote `skipped_late` for a sibling ping that was never due. As built now (P1, `2026-10-19-366` Consequence 1): the child's list
+  past `+ 72 h` is bounded by the payload's `dueAsOf` — the instant the sweep found the claim due, kept by a deferral — so only a
+  ping that WAS due then is judged late.)*
 - **WR6 — The words and the template.** ⭐ The Meta template body, per locale, is the ruled text with three body variables:
   `{{1}}` the member's name, `{{2}}` the link, `{{3}}` the helpline — ⛔ no header, ⛔ no footer, ⛔ no buttons, ⛔ no "TWT:"
   prefix (WhatsApp shows the Pariwar's business name; PM3's reading for the DLT header). Category **UTILITY**. Registered in ONE
@@ -478,6 +489,12 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   the previous `detail` — `-302` RN6 — so a stale transient note would make a mid-flight death look re-claimable.) ⚠ A timeout
   DURING the body read is caught by the client (`whatsapp-app.ts:184-188`): a 2xx becomes "no wamid" (rule 1) and a non-2xx
   keeps its status class — still safe.
+  *(Dated 2026-10-19, code review round 2 — `2026-10-19-366` decisions 1, 2 and 4: (1) rule 1 AMENDED — a fetch whose connection never opened
+  (ENOTFOUND / EAI_AGAIN / ECONNREFUSED / UND_ERR_CONNECT_TIMEOUT ⇒ `transport: 'connect'`) is a TRANSIENT, note
+  `api_unavailable:000` (0171's grammar), retried to the bound; every other thrown fetch stays `may_have_sent`; (2) the rule ORDER
+  is the one stated here (rule 4 BEFORE rule 3's status test), ⛔ `-365` 10's list; (4) the marker's lease is judged on the CHILD's
+  clock (⛔ `clock_timestamp()` as written above), sampled inside its own bounded transaction; the marker is cleared by THREE
+  paths — a park, a transient note, R2's quiet-hours release — and a PRE-send note requires it UNSET.)*
 - **WR11 — ⛔ No events; the wamid is the trail.** Like 6.27c (AC5b) the reminder emits ⛔ no event; `provider_message_id` holds the
   wamid; delivery statuses join `whatsapp_send_status` read-only. 6.31 builds ⛔ no reaction to a status (⛔ no fallback, I2).
   ⚠ RECORDED, ⛔ built here: 5.4's existing webhook worker (`wa-webhook-processor.ts:356-368`) moves a recipient's opt-in to
@@ -542,6 +559,8 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   webhook handling; (4) withdrawal revokes only the CURRENT consent row while every re-opt-in mints another (F14) — latent; the
   HOMED in row 5-12 (`-364` condition 4) — record it as homed, ⛔ open; (5) `whatsapp-errors.ts` files 131048 (a number quality restriction) and 133016 (never a
   send response) as rate limits — `dispatch()`'s classification, ⛔ fixed here (WR10's classifier reads them first).
+  *(Dated 2026-10-19, code review round 2 (P28): read (4) as "homed in row 5-12, OPEN until that row is `done`" — the
+  `deferred-work.md` item's status; "homed, ⛔ open" above overstated it. Items (2), (3), (5) are unhomed — trigger only.)*
 - **WR16 — Roster row `peer-mesh-wa-reminder-template-approved`** (the next free row number; Rows 29–34's eleven fields): **(a)**
   each live Pariwar's WABA provisioned (`pariwar_wa_config` complete, switch on); **(b)** the en + hi templates approved by Meta
   **as UTILITY**, the names set under WR7's keys AND each key proven to RESOLVE in production (the dotted-name item, F20), each
@@ -781,6 +800,8 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
 Edge Case Hunter: diff + referenced code; Acceptance Auditor: diff + story + governance + invariant checklist), followed by
 verification against the worktree. All layers completed. Deduplicated disposition: **0 decision-needed, 8 patch
 (1 HIGH / 6 MEDIUM / 1 LOW), 0 defer, 1 dismissed**. BigDev chose option 2 ("Leave as action items"): all eight findings remain unchecked; no implementation patches applied. Story status is `in-progress`.
+*(Dated 2026-10-19, code review round 2: the line above describes `036398ed`. All eight were then resolved in `5745ad5d` (`[x]`
+below) and the story went `in-progress` → `review`; the families table's REAL GAP verdicts are re-judged in round 2 below.)*
 Every retained finding is an engineering or documentation correction under the Panel-routing template's §0; no trustee
 question is required.
 
@@ -925,6 +946,175 @@ maintenance SQL.
 | 10 — closure honesty | **REAL GAP** | R7: the disclosed missing historical RED runs do not support the blanket AC13 completion claim. |
 | 12 — ownership | Covered by test and construction | Owner-FK regression rejects wrong tenant/member/selection-claim; locked begin validates ping ownership, later writes require tenant/reminder/job and an unfinished outcome. |
 | 13 — semantic accessibility | Not constructible in this system | No React Native/HTML component, role or local screen state is added. Meta owns message-reader accessibility; real-`t()` lockstep tests cover the supplied words/link. |
+
+### Review Findings — code review round 2 (2026-10-19, whole branch `15acb570..5745ad5d`)
+
+Whole branch (40 files, +6572/−27), 4 chunks (domain / jobs+queue / channels / governance records) × 3 layers (Blind Hunter,
+Edge Case Hunter, Acceptance Auditor) = 12 parallel read-only reviewers, ⛔ failed layer. The reviewer verified the load-bearing
+findings in the worktree before classifying them. The verdicts on the round-1 families table above stand as written then;
+R5's fix re-opens family 1 (P1) and family 10 stays a REAL GAP for P20/P21/P23 below. Panel §0 gate applied: ⛔ finding is
+the Panel's (strip the clause ids — each is "the code / record should do X").
+
+**Decision-needed**
+
+- [x] [Review][Decision][MEDIUM] D1 — RESOLVED 2026-10-19, BigDev: "(b) Retry these" ⇒ patch P29. Is a connection that never opened "may have sent"? — WR10 rule 1 (`-365` 10) makes every
+  thrown fetch `may_have_sent` ⇒ finished `error`, ⛔ resent. A DNS / egress / connection-refused failure proves the request
+  never left (undici `err.cause.code` ENOTFOUND / EAI_AGAIN / ECONNREFUSED / UND_ERR_CONNECT_TIMEOUT), yet the child then
+  moves to the next neighbour, which fails the same way: ONE egress outage spends every reminder due in that window, once ever.
+  Options: (a) keep WR10 rule 1 as decided, record the cost; (b) a new `transport: 'connect'` for those codes only, classified
+  `transient` (retried to the 72 h bound) — ECONNRESET / socket errors stay `may_have_sent`; amends `-365` WR10 rule 1, so it
+  rides D2's entry and 6.37d inherits it. [`packages/channels/src/providers/whatsapp-app.ts:240-248`,
+  `whatsapp-direct-send-outcome.ts:84`]
+- [x] [Review][Decision][MEDIUM] D2 — RESOLVED 2026-10-19, BigDev: "(a) New author entry" ⇒ patch P30. How to correct `-365` where its text and the build disagree — `-365` says the full text is
+  the story's WR block v1.6 (*"Nothing in any earlier entry changes"*), but: (i) `-365` 10 lists WR10's rules "in order" with the
+  rate-limit / 5xx rule BEFORE the scope codes — the order the story's v1.5 re-validation marked as a HIGH bug (131048 on a 429,
+  131057 on a 503); 6.37d builds on WR7–WR10 "as decided here"; (ii) `-365` 2 says "A begin that finds a condition false writes
+  a finished skip row" — a switch-OFF begin and quiet hours write ⛔ row; (iii) the story's §0 says the author-commit records three
+  MORE MATCH edges (WR5's give-up, WR6's MARKETING ⇒ refusal, WR2 (ix)'s eligibility) — `-365` records four, ⛔ these;
+  (iv) MATCH (iii) is stated unconditionally though row 6-36d is `backlog` (the story records the interim exposure);
+  (v) as built: the marker CAS judges the lease on the CHILD's clock (WR10 wrote `clock_timestamp()`), and R2 added a THIRD
+  way to clear the marker (the quiet-hours release); (vi) S4 says "whichever commits second moves on", the story and ledger
+  say "lands second renumbers". Options: (a) ONE author-commit entry (`-363`'s "narrows as built" form), committed alone before
+  the patch, recording (i)–(vi) and D1's answer; (b) record them in the story only (cheaper; leaves `-365` 10's wrong order for
+  6.37d to read). [`.decision-log.md` `-365`]
+
+**Patch**
+
+- [x] [Review][Patch][MEDIUM] P1 — R5's child list writes `skipped_late` for a sibling ping that was NEVER due — `dueConjunctsSql(…,
+  'child')` drops the `< +72 h` bound for every ping of the claim, so a ping whose window passed while the switch was OFF (or held)
+  gets a row when a sibling becomes due; WR5 sanctions `skipped_late` only for a ping that WAS due when its child was enqueued.
+  Carry the enqueue instant (`dueAsOf`) in the payload (kept unchanged by `deferToMorning`) and bound the child's list to pings in
+  their window at `dueAsOf`; a sibling leg; correct R5's "⛔ a backfill" text. (Auditors 1, 2, 4 + Edge 1, 2 + Blind 1.)
+  [`packages/domain/src/claim/peer-mesh-wa-reminder.ts:578-598`, `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts:507-513,539`]
+- [x] [Review][Patch][MEDIUM] P2 — A same-job-id twin can clear a LIVE send's marker — `notePeerMeshWaReminderTransient` and
+  `parkPeerMeshWaReminder` check only `claimed_by_job`; a pg-boss expiry re-run of the same id hitting a pre-send decrypt / hash
+  fault NULLs the other run's marker mid-send ⇒ its finalise misses, the row is re-claimable, a second send. A pre-send note
+  requires `send_started_at IS NULL`; a post-send note and the park require `IS NOT NULL`; a leg. (Blind 1, Edge 1.)
+  [`packages/domain/src/claim/peer-mesh-wa-reminder.ts:492-525`]
+- [x] [Review][Patch][MEDIUM] P3 — R2's other half — the marker's lease threshold is sampled before the pooled-connection wait, and
+  the marker UPDATE has ⛔ `lock_timeout` / `statement_timeout`; R2 is marked RESOLVED. Sample the lease clock inside the scope and
+  bound the statement. [`claim-peer-mesh-wa-reminders.ts:613-617`, `peer-mesh-wa-reminder.ts:408-436`]
+- [x] [Review][Patch][LOW] P4 — `markPeerMeshWaReminderInFlight` returns `false` both for a lost lease and for its OWN atomic
+  `skipped_late` — the child counts the late one as a transient, throws, pg-boss re-runs a settled claim with a misleading alarm.
+  Return `'marked' | 'late' | 'lost'`; `late` counts as skipped. [`peer-mesh-wa-reminder.ts:433-435`, `claim-peer-mesh-wa-reminders.ts:617-621`]
+- [x] [Review][Patch][LOW] P5 — WR10 rule 4's alarm must name the Pariwar — the STOPPED alarm (and rule 6's) names only the claim.
+  [`claim-peer-mesh-wa-reminders.ts:701-707`]
+- [x] [Review][Patch][LOW] P6 — WR14: `locale_source` is a hard-coded literal, not the resolver's `source` — thread it through the
+  config so row 6-35 changes it in one place. [`claim-peer-mesh-wa-reminders.ts:178,560`, `peer-mesh-wa-reminder.ts:290`]
+- [x] [Review][Patch][LOW] P7 — a blind cast feeds `{{1}}` — narrow `nameRead` (throw if a `begun` ever meets a name fault).
+  [`claim-peer-mesh-wa-reminders.ts:635`]
+- [x] [Review][Patch][LOW] P8 — pre-fetch throws the classifier reads as `may_have_sent` — an invalid `timeoutMs` (AbortSignal.timeout
+  throws) and a non-array `bodyParams` throw before any request; make both a `WhatsappTemplateParamError`. Bound the `http_<status>`
+  token (`Number.isInteger`, 100–599, else `http_other`) so it always fits the 0171 grammar. [`whatsapp-app.ts:227-228`,
+  `whatsapp-direct-send-outcome.ts:94,105`]
+- [x] [Review][Patch][LOW] P9 — `finalisePeerMeshWaReminder` does not tie outcome to detail — `error` must carry `may_have_sent:*`;
+  `accepted` needs the wamid and the number hash. Assert in TS before the UPDATE. [`peer-mesh-wa-reminder.ts:465-486`]
+- [x] [Review][Patch][LOW] P10 — the pinned lease inequality omits the pooled-connection wait (10 s connect timeout) — add it
+  (80 s < 120 s still holds). [`apps/jobs/tests/claim-peer-mesh-wa-reminders.test.ts` lease leg]
+- [x] [Review][Patch][LOW] P11 — the docs still say the marker is cleared ONLY by a park or a transient — R2's release is a third
+  path; the schema doc and module header say so (0171's applied header comment is left, recorded under Deviations).
+  [`schema/claim_peer_mesh_wa_reminders.ts`, `peer-mesh-wa-reminder.ts:197-198`]
+- [x] [Review][Patch][MEDIUM] P12 — the R3 SKIP LOCKED leg runs the cross-tenant finisher with `allow: null` and COMMITS — it
+  finishes any lapsed row on the shared DB (a peer worktree's, a crashed run's) and its exact `toEqual` flakes. `allow: [a.pid, b.pid]`.
+  [`peer-mesh-wa-reminder-concurrency.spec.ts` R3 leg]
+- [x] [Review][Patch][LOW] P13 — ⛔ leg proves the MATERIALIZED CTE's LIMIT bounds the batch (the known over-claim trap) — seed
+  limit+1, call with `limit: N`, expect N; for both maintenance passes (only the finisher's SKIP LOCKED is tested).
+- [x] [Review][Patch][LOW] P14 — the R1 leg has 2 s of real margin between seed and begin — widen it (ci:local load).
+- [x] [Review][Patch][LOW] P15 — the R2 leg re-runs under the SAME job id with a clock BEHIND `claimed_at`; production defers by
+  enqueueing a NEW job — re-run with a fresh id past the lease. [`claim-peer-mesh-wa-reminders-live.test.ts` R2 leg]
+- [x] [Review][Patch][LOW] P16 — AC2's "47 h 59 m (⛔ due)" boundary is tested as 47 h — add the minute legs (domain + jobs).
+- [x] [Review][Patch][LOW] P17 — AC9 asks ONE leg per gap — `config:wa_template_invalid:<locale>`, `config:helpline_unreadable`
+  and the `messagingFor`-throw branch have none; AC10's "due again once the gap closes" only for the switch.
+- [x] [Review][Patch][LOW] P18 — AC7 asks a leg for every rule and code named in WR10 — 131052, the window codes 131051 / 131053
+  and a negative `httpStatus` have none. [`packages/channels/tests/whatsapp-direct-send.test.ts`]
+- [x] [Review][Patch][LOW] P19 — test titles promise more than they assert — "the lapsed finisher … past the bound" seeds 71 h;
+  "I8 — ⛔ event from … a sweep finisher" runs none; the rule-1/2 title lists a timeout leg it lacks; "a text that was ⛔ accepted
+  is never followed" has no non-accepted leg.
+- [x] [Review][Patch][HIGH] P20 — AC13 / R7: Completion Notes still say "AC13 met with ONE disclosed gap" — Task 4's 22 domain legs
+  and most of Task 5's legs have ⛔ recorded RED run either. Record that openly (⛔ backfill), and correct "ACs 0–12 met" until P1 lands.
+- [x] [Review][Patch][MEDIUM] P21 — Row 27 note (3) and Row 35 say note (3) is DISCHARGED by "6.31's `done` at Task 6" — Task 6 set
+  `review`; nothing is on `main`. Reword to "discharged when row 6-31 is `done` on `main`"; restore Row 35's erased original
+  sentence with the dated correction after it (Row 27's form). [`docs/launch-gate-inventory/inventory-roster.md` Rows 27, 35]
+- [x] [Review][Patch][MEDIUM] P22 — the numbering race FIRED — branch `story/6-37d-…` (@ `8a3d144a`) names Row 35 for a different
+  gate and plans `-364` / 0171 / ledger `19c`; this branch holds all of them. Annotate deferred-work's race item (trigger fired) and
+  sprint row 6-37d (it takes the next free numbers at its own commit); point 6.37d's Task 0.1 at the outcome rules as SHIPPED
+  (131008 / 131009 ⇒ unknown scope, recipient = 131026 / 131021 only — its F3 / AC5 describe the proposal).
+- [x] [Review][Patch][MEDIUM] P23 — stale status text — the story header says `STATUS: in-progress`; the round-1 Review Findings
+  preamble says "all eight findings remain unchecked … `in-progress`"; the newest comment-ledger entry (`19g`) says "review ->
+  in-progress" with ⛔ entry for round 2's flip back; the NUMBERS header predates `-364` / `-365` / Row 35. Annotate (dated), and
+  this review's ledger entry carries round 2's flip.
+- [x] [Review][Patch][LOW] P24 — the sprint row states row 6-36d's effect as fact ("a nominee is ⛔ one of the five") — 6-36d is
+  `backlog`; say "once 6-36d ships; until then the recorded exposure".
+- [x] [Review][Patch][LOW] P25 — the File List leaves out the records the branch changed (`.decision-log.md`, ADR-0028, ADR-0029,
+  architecture.md, epics.md, deferred-work.md, the routing note, Row 35 / Row 26); Debug Log (f) calls R7's leg "own-committing"
+  (it runs in the per-test ROLLBACK); Completion Notes cite "Task 6, below" for evidence in Debug Log (f); the §3.4 dated notes
+  sit under the opt-in bullet they annotate, ⛔ after `-357` as WR15 wrote — record that as a Deviation.
+- [x] [Review][Patch][LOW] P26 — the 24-hour interim ("until 5-12 ships the system keeps the 24-hour behaviour") is `-364`'s
+  "Our reading — NOT RATIFIED (iii)", but the routing note's ruling block, ADR-0029's changelog row and the §3.4 note state it
+  unlabelled — label it; the ruling block also lacks the template's "Not covered by this ruling" pointer.
+- [x] [Review][Patch][LOW] P27 — the routing note's E3 / E4 ("No code calls `consentExists` for `whatsapp_opt_in`", `# expect none`)
+  now fail at HEAD by design — a dated note in the ruling block that they describe the pin. ADR index row ADR-0029 lacks the
+  "amended by `-364`" annotation. [`docs/knowledge-transfer/adr-index.md:127`]
+- [x] [Review][Patch][LOW] P28 — Row 26's dated note lists the wrong tables (the opt-in reads are per tenant in the child; the
+  cross-tenant scan reads pings, selections, claims, `pariwar_wa_config`, reminders); deferred-work's 6.31 section heading says
+  "validate … and `-364`" but holds three `-365` items; items 3–5 name ⛔ home row.
+
+- [x] [Review][Patch][MEDIUM] P29 — (from D1) a connection that never opened is a TRANSIENT — `whatsapp-app.ts` sets
+  `transport: 'connect'` when the fetch rejection's `cause.code` is ENOTFOUND / EAI_AGAIN / ECONNREFUSED /
+  UND_ERR_CONNECT_TIMEOUT; the classifier maps it to `transient` (`api_unavailable:connect`-style note within the 0171 grammar);
+  every other transport throw stays `may_have_sent`. Legs for each code and for ECONNRESET (stays `may_have_sent`).
+- [x] [Review][Patch][MEDIUM] P30 — (from D2) ONE author-commit decision entry (next free id at its commit, re-grepped across
+  `main`, every branch and worktree — 6-37d included), `-363`'s "narrows as built" form, committed ALONE before the code patch:
+  D2 (i)–(vi) and D1's answer (amends `-365` WR10 rule 1).
+
+**Patches — APPLIED 2026-10-19 (all 30; BigDev: "1", apply every patch).** Code + tests in one commit after `-366` (`5ac6b060`,
+alone); Debug Log (g) has the RED / GREEN evidence. Then a FIX-DIFF review (two fresh-context reviewers — code, records): ⛔ HIGH in
+the code (⛔ path to a second send or a stranded row); 2 MEDIUM — P1's `dueAsOf` compared a HOST stamp to the DB clock (now the
+sweep page's `statement_timestamp()`, `DuePeerMeshWaReminderPage.asOf`), and ⛔ leg failed if a deferral dropped `dueAsOf` (a
+deferral leg added, RED without the fix); LOWs applied (the name guard moved BEFORE the marker, the marker's 5 s `SET LOCAL`s
+ordered before the finalise in I8, `timeoutMs ≤ 2^31 − 1`, a `locale_source` lockstep type leg, three comments). Records: 1 HIGH
+(the AC13 note overclaimed RED runs — rewritten to name exactly which legs have one), 5 MEDIUM (R8's roster sentences restored
+verbatim with dated notes after them; Row 26's original kept + `claim_state_trustee_decisions` added; "built on its branch, ⛔ yet
+`done` on `main`"; the race item "plans collide, ⛔ yet a hit"; W-item cites dated to `5745ad5d`), 5 LOW — all applied.
+Families after the patch: 1 — covered by test (the P1 sibling legs, domain + jobs + through a deferral); 10 — covered (the AC13
+second gap disclosed, Row 27 / 35 closure words, the stale status text annotated).
+
+**Defer** (each appended to `deferred-work.md`)
+
+- [x] [Review][Defer] Lease judged across two hosts' clocks — `claimed_at` is the child host's, the lapsed finisher compares the sweep
+  host's `now`; skew past ~40 s records a live accepted send as `may_have_sent:lease_lapsed` (wamid lost, ⛔ resent) — deferred, a
+  DB-clock lease is a shape change shared with 6.27c [`peer-mesh-wa-reminder.ts:690-712`]
+- [x] [Review][Defer] A DB fault on a post-marker write after a DEFINITE non-send (transient note, park, release) leaves the marker
+  set ⇒ the finisher records `may_have_sent` and the reminder is spent — deferred, safe side (⛔ double send), needs a recovery seam
+  [`claim-peer-mesh-wa-reminders.ts:579-583,629,697`]
+- [x] [Review][Defer] The answer window, a SUBMIT and the opt-in are judged at the begin, ⛔ again at the marker (R1 rechecks only
+  the 72 h bound) — a seconds-wide gap; matches WR2's letter and 6.27c — deferred [`peer-mesh-wa-reminder.ts:408-436`]
+- [x] [Review][Defer] A scope-wide park is re-tried by every hourly sweep for every claim of the Pariwar (one Meta call + one
+  STOPPED alarm per claim per hour, up to 24 h) — deferred, WR10 as decided; a per-Pariwar memo of the stop is the seam
+- [x] [Review][Defer] A persistent pre-send decrypt / hash fault is never alarmed until the late marking — deferred
+- [x] [Review][Defer] Duplicate children for a claim queued but not yet run (Secret Manager + KMS re-reads); `maxRuns` defaults to
+  the daily sweep's 20 000 — deferred, ⛔ correctness (the CAS dedups)
+- [x] [Review][Defer] The sweep's budget does not bound its slow calls (Secret Manager, `boss.send`); an expired tick re-run can
+  overlap and both write the closure's cursor; a multi-replica jobs service keeps one cursor per process — deferred, fairness only
+- [x] [Review][Defer] The due lists scan every accepted ping (⛔ index on `send_updated_at` for accepted pings) — deferred until volume
+- [x] [Review][Defer] A 132xxx code that is about ONE value (132005 / 132012 / 132018) is filed as scope-wide ⇒ the claim STOPS;
+  unreachable for the name today (whitespace collapsed, length far below Meta's cap), reachable via a helpline config value —
+  deferred [`whatsapp-direct-send-outcome.ts:93`]
+- [x] [Review][Defer] The record spec's R7 leg takes an ACCESS EXCLUSIVE lock (`DISABLE TRIGGER`) inside its ROLLBACK — brief,
+  precedent `audit-log/integrity-check.spec.ts`; Debug Log (d) rejected the pattern elsewhere — deferred
+- [x] [Review][Defer] AC11's ids-only capture runs in 8 of 23 live legs and captures only `onAlarm` — deferred
+- [x] [Review][Defer] The client cache keeps the FIRST token / phone number id for a Pariwar; a rotation is RESTART-REQUIRED
+  (roster Row 35 (a)); ⛔ detection, ⛔ eviction on an auth refusal — deferred, documented
+
+23 dismissed (verified or by design): `singletonKey` dedup (a LABEL on the standard policy — Story 6.36 AC8); a batch failure
+(pg-boss 12 `batchSize` 1); PII in a Meta error (the message carries the status only — verified); 502 / 504 with a coded body and
+a 500's double-send risk (WR10's order, safe side); a rate-limit code on 401 / 403; `first_detail` semantics; `claimed_by_job`
+`sweep:late` vs the child's id on a late begin; `SET LOCAL` scope (intended, tested); the trigger's INSERT side (column grants);
+a deleted ping (claims never deleted); `consentExists` not tied to the opt-in's consent id (homed in 5-12); transient rows
+waiting out the lease; the cursor not wrapping (next tick); constant-restating tests; the unused `timeoutSignal` seam; the
+classifier's second read outside its try; `error_subcode`; the `transient` token's type; the timeout via `signal` (undici
+honours it); two review references (both correct); the dropped-and-re-applied 0171 (branch-only, disclosed); repro scripts in
+`/private/tmp` (disclosed).
 
 ## Dev Notes
 
@@ -1167,8 +1357,9 @@ confirmed green. To honestly confirm "RED against unfixed code" (R7's own lesson
 `git diff` patches of the two touched implementation files (`packages/domain/src/claim/peer-mesh-wa-reminder.ts`,
 `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts`), `git checkout`'d them back to the pre-fix content (the test files
 UNTOUCHED), re-ran every new leg — all six (R1–R6) failed with the expected assertion — then `git apply`'d the saved patches
-back and re-ran the full suites green. R7's own new leg (the trigger-disable mutation test) and R3's SKIP LOCKED leg are
-own-committing (`peer-mesh-wa-reminder-record.spec.ts`, `peer-mesh-wa-reminder-concurrency.spec.ts`); R1 / R5 use a real ~3 s
+back and re-ran the full suites green. R3's SKIP LOCKED leg is own-committing (`peer-mesh-wa-reminder-concurrency.spec.ts`);
+R7's own new leg (the trigger-disable mutation test, `peer-mesh-wa-reminder-record.spec.ts`) runs inside the per-test ROLLBACK
+*(corrected 2026-10-19, code review round 2 — this line first called both own-committing)*; R1 / R5 use a real ~3 s
 wall-clock delay against a seeded sub-hour margin (`+ make_interval(…, secs => $n)`, added to both `seedReminder` and
 `world()` — `make_interval`'s `hours` is an int4, ⛔ fractional); R2 / R4 / R6 are deterministic (an injected clock queue, a
 direct `runPeerMeshWaReminderSweep` call with a `resumeCursor`, two Pariwars in one allowlist) — ⛔ a sleep. Domain 58/58
@@ -1178,6 +1369,21 @@ direct `runPeerMeshWaReminderSweep` call with a `resumeCursor`, two Pariwars in 
 (the first hit `tests/integration/pool/sahyog-drive-public-read.spec.ts` — a fixture collision on a FIXED canonical
 identifier, unrelated to any file this story touches; re-run alone green, 41/41 — a known class of `ci:local test`
 concurrency flake, ⛔ a regression). ⛔ Network call in any test.
+
+**(g) Code review round 2 — 2026-10-19.** Whole branch `15acb570..5745ad5d`, 4 chunks × 3 layers, 12 parallel read-only
+reviewers; every load-bearing finding verified in the worktree before triage (several rejected: `singletonKey` dedup, batch
+failure, PII in a Meta error). 2 decision-needed → `2026-10-19-366` (`5ac6b060`, committed alone); 30 patches applied; 12 deferred;
+23 dismissed. Each new code leg was proven RED by HAND-disabling its fix in the working file (⛔ `git checkout` — the
+implementation saved to the scratchpad and restored by copy): domain P1 (the child's `dueAsOf` bound), P2 (the marker CAS on the
+notes and the park), P3 (the marker's `SET LOCAL`s), P9 (the finalise's field check) — 4 RED of 24; jobs P1 (a sibling never due)
+and P4 (`late` ⇒ a transient throw) — 2 RED of 26; channels (by its fork) the connect rule in the client and the classifier, the
+param guards and the status token — 4 RED of 23; each GREEN again once restored. The P16 / P18 boundary legs pin behaviour that
+already held (⛔ RED expected). Domain 56/56 (peer-mesh-wa-reminder 24, -record 12, -concurrency 3, RLS 10, opt-in 7), jobs 47/47
+(-live 26, pure 13, templates 8), channels 442/442 — all on :5433; `tsc` + `eslint` clean on every touched package. The FIX-DIFF
+review's corrections (the story's round-2 "Patches — APPLIED" note): one more RED — a deferral that drops `dueAsOf` turns the R5 and
+the through-a-deferral P1 legs RED (2 of 27), GREEN restored; final counts domain 56/56, jobs 49/49 (-live 27, pure 14, templates 8),
+channels 442/442; `tsc` + `eslint` clean. `DATABASE_URL=…:5433 pnpm ci:local` ran on the patch BEFORE the fix-diff corrections
+(result in the Change Log row 2.1).
 
 ### Completion Notes List
 
@@ -1209,16 +1415,37 @@ concurrency flake, ⛔ a regression). ⛔ Network call in any test.
   alarm per held Pariwar per tick; `R7` / `R8` above. Each of R1–R6 has a NEW regression leg, confirmed RED against the
   pre-fix code (the two implementation files reverted via `git checkout`, the new tests re-run, then the fixes re-applied —
   [[feedback_review_the_fix_diff_before_commit]]) before being re-applied; R7's new leg and R8 are documentation / evidence
-  corrections, ⛔ behaviour changes. `ci:local` re-run clean on :5433 (Task 6, below).
+  corrections, ⛔ behaviour changes. `ci:local` re-run clean on :5433 (Debug Log (f), above — *corrected 2026-10-19, round 2*).
+- **AC13 — a SECOND disclosed gap (code review round 2, 2026-10-19, P20).** The R7 correction above named only Task 1's record /
+  RLS legs. The domain legs of Task 4 (`peer-mesh-wa-reminder.spec.ts` 20 + the race spec 2, as of Task 6) and most jobs legs
+  (the 19 live legs as of Task 6, incl. Task 6's F21 role-guard leg; the pure legs other than the lockstep and type-level ones)
+  have ⛔ recorded RED run on the unfixed code either — Debug Log (d) / (e) record none, and none is backfilled here. Round 1's
+  R1–R6 legs have a dated RED run (Debug Log (f)); round 2's RED runs are EXACTLY those Debug Log (g) lists — every other round-2
+  leg has ⛔ recorded RED run (P5's alarm assertion, P6's type leg, P12 / P13 / P15 / P17 / AC10 / P19, and the P1 sibling leg as
+  rewritten to go through the sweep — (g)'s jobs-P1 RED was its earlier direct-child body); the P16 / P18 legs pin behaviour that
+  already held. And AC2 was ⛔ met between `5745ad5d` and round 2: R5's child list wrote a row for a sibling ping that was
+  never due (P1) — met again as of round 2. Read "ACs 0–12 met" above with both.
+- **Code review round 2 (2026-10-19) — 30 patches** (story Review Findings round 2; `2026-10-19-366`): the child's list bounded by
+  `dueAsOf` (P1); the notes and the park CAS'd on the marker (P2); the marker's clock read inside its own BOUNDED transaction (P3)
+  and its three answers `marked` / `late` / `lost` (P4); the Pariwar named in the STOPPED / rule-6 alarms (P5); `locale_source`
+  from the read (P6); the name narrowed (P7); the client's pre-fetch guards and a bounded status token (P8); the finalise's
+  outcome / field check (P9); a connection that never opened ⇒ transient `api_unavailable:000` (P29, `-366` 1); the tests and
+  the records listed there.
 - **Day-one output: none** — every Pariwar's switch is OFF, ⛔ template name is set (roster Row 35), the texts it follows are held
   (Row 27), and until row 5-12 ships an opt-in reaches 24 hours only. Built to send the day those lift.
 - **Deviations, each recorded in Debug Log (d):** the marker CAS reads the CHILD's clock (⛔ `clock_timestamp()`); the child's
   per-claim list includes an own-held transient row (the SAME job's retry re-claims it); two extra alarm-only gaps
   (`config:wa_template_invalid:<locale>`, `config:helpline_unreadable`); `wa-template-config-key.ts` is a separate file (WR7's
-  builder, so row 6-37d imports it without the peer-mesh template file).
+  builder, so row 6-37d imports it without the peer-mesh template file). *Added by code review round 2 (2026-10-19), each now
+  recorded in `2026-10-19-366`:* R2's quiet-hours release is a THIRD way to clear the marker (0171's applied header comment AND its
+  trigger's RAISE text still say two — an applied migration is ⛔ edited; the schema doc and module header say three); the connect transient's note is
+  `api_unavailable:000` (0171's grammar takes three digits); the architecture §3.4 dated notes sit under the opt-in bullet they
+  annotate, ⛔ after `-357`'s as WR15 wrote.
 - **For row 6-37d (DOWNSTREAM):** reuse `waTemplateConfigKey` (add its purposes to `WaTemplatePurpose`), `{ bodyParams }` +
   `timeoutMs`, `ContributionProviderWiring.whatsappAppCache`, `resolveChannelSecret`, `classifyDirectWaSendFailure` — shapes as
   committed. ⚠ It also plans migration 0171: whichever lands second renumbers (and moves its journal `when` above the other's).
+  *(Dated 2026-10-19, round 2: `2026-10-19-366` decision 6 — the number is the first COMMIT's; this branch holds 0171, so 6.37d
+  renumbers. Its F3 describes WR10 as PROPOSED — read the classifier as SHIPPED and `-366` 1–2.)*
 - **Left as found (⛔ 6.31's):** `whatsapp-app.ts`'s pre-existing transport-failure message embeds the fetch error's message (the
   direct path never stores or alarms it — only the classifier's token is kept).
 
@@ -1264,8 +1491,15 @@ UPDATED
 - `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` — `readMemberFacingDeceasedName` split out + exported (WR13; ⛔ on AC12's
   list); 6.27c's `readDeceasedName` keeps its fit check — behaviour and spec unchanged
 - `apps/jobs/src/boot.ts` — the reminder's registration
-- `docs/launch-gate-inventory/inventory-roster.md` — Row 27 note (3)'s dated annotation corrected (R8)
+- `docs/launch-gate-inventory/inventory-roster.md` — Row 35 `peer-mesh-wa-reminder-template-approved` (NEW), Row 26 and Row 27
+  dated notes; Row 27 note (3)'s annotation corrected (R8) and again in round 2 (P21, P28)
 - `_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- *(Added 2026-10-19, round 2 — P25: the records the branch also changed)* `.decision-log.md` (`-364`, `-365`, `-366`);
+  `_bmad-output/implementation-artifacts/deferred-work.md`; `_bmad-output/planning-artifacts/epics.md` (Story 6.31);
+  `_bmad-output/planning-artifacts/architecture.md` (§3.4 dated notes); `docs/adr/ADR-0028-whatsapp-provider-selection.md`,
+  `docs/adr/ADR-0029-whatsapp-webhook-ingress-and-opt-in-lifecycle.md` (changelog rows); `docs/knowledge-transfer/adr-index.md`
+  (ADR-0029's annotation, P27); `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-31-how-long-a-whatsapp-yes-lasts.md`
+  (NEW — the Panel note and its ruling block)
 
 ## Change Log
 
@@ -1282,3 +1516,4 @@ UPDATED
 | 2026-10-19 | 1.8 | Tasks 1–6 DONE (`bmad-dev-story 6.31`): migration 0171 + the record / RLS specs; `isPeerMeshWaReminderOptedIn`; WR8's client additions + `classifyDirectWaSendFailure`; the domain begin / marker / finalise / park / sweep reads + race spec; the jobs sweep + child, the template file + key builder, the split name read, the exposed cache, boot wiring; pure, lockstep and live suites. Two corrections found while building (the marker's clock; the child's list) and two extra alarm-only gaps — Debug Log (d). AC12 diff empty; `ci:local` on :5433 36/36 green. Status → `review`. |
 | 2026-10-19 | 1.9 | Code review (`036398ed`): 8 patch (1 HIGH / 6 MEDIUM / 1 LOW), 0 decision-needed, 0 defer, 1 dismissed — BigDev chose "leave as action items". Status `review` → `in-progress`. |
 | 2026-10-19 | 2.0 | Review round 2 DONE (`bmad-dev-story 6.31`'s continuation) — all eight findings resolved (Debug Log (f)): R1 the marker rechecks WR5's `+72h` bound in its own statement, finalising `skipped_late` atomically past it; R2 the child rereads the clock after the marker's own commit and releases it if quiet hours arrived; R3 the lapsed finisher / late marking are bounded `SKIP LOCKED` batches, looped between budget checks; R4 the sweep returns a `resumeCursor` so a bounded tick's next run does ⛔ restart at the keyset's head; R5 the child's own due list drops the sweep's `+72h` upper bound so a ping deferred before its first begin still gets `skipped_late`; R6 HELD claims are grouped and alarmed per Pariwar; R7 the Completion Notes' "ACs 0–13 met" overclaim corrected (AC13's disclosed gap) with new mutation-kill evidence for the finished-row trigger; R8 the inventory roster's Row 27 / Row 35 annotations corrected (6.31 `done` discharges note (3) directly, ⛔ Row 35's closure). Each of R1–R6 has a new regression leg, confirmed RED against the pre-fix code before being re-applied green. Status → `review`. |
+| 2026-10-19 | 2.1 | Code review round 2 (whole branch `15acb570..5745ad5d`, 12 reviewers): 2 decision-needed → `2026-10-19-366` (`5ac6b060`, alone — BigDev *"(b) Retry these"*, *"(a) New author entry"*); 30 patches applied (code P1–P9, P29; tests P10, P12–P19; records P11, P20–P28, P30); 12 deferred (`deferred-work.md`); 23 dismissed. Then a fix-diff review (two fresh-context reviewers): ⛔ HIGH in code; `dueAsOf` moved to the sweep page's DB clock, a deferral leg, the name guard before the marker; records corrected (R8's roster sentences restored with dated notes; the AC13 note names exactly the legs with a RED run). `DATABASE_URL=…:5433 pnpm ci:local` ⇒ **PASSED — 36 jobs green**, first run (on the patch before the fix-diff corrections; their suites re-run green: domain 56/56, jobs 49/49, channels 442/442). Debug Log (g); ledger `2026-10-19h`. Status → `done` (on the branch; Row 27 note (3) waits for `main`). |

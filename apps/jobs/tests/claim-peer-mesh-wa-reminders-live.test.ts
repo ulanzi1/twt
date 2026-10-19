@@ -110,6 +110,8 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     hoursAgo?: number;
     /** A finer-grained age than `hoursAgo` alone can express (`make_interval`'s `hours` is an int4) — ADDED to it. */
     secondsAgo?: number;
+    /** Per-neighbour ages (index ⇒ hours), overriding `hoursAgo` — an accepted ping is frozen, so it is seeded, ⛔ updated. */
+    hoursAgoEach?: readonly number[];
     switchOn?: boolean;
     phoneNumberId?: string | null;
     secretName?: string | null;
@@ -184,7 +186,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     });
     // As the superuser: the texts ACCEPTED (6.27c's record — the reminder only reads it), the opt-ins, the WhatsApp config.
     const pings: World['pings'] = [];
-    for (const m of members) {
+    for (const [idx, m] of members.entries()) {
       const pingId = randomUUID();
       const linkCode = claim.generatePeerRequestLinkCode();
       await pool.query(
@@ -192,7 +194,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
            claimed_by_job, aging_since, link_code, locale_source, send_updated_at, provider_message_id)
          VALUES ($1, $2, $3, $4, 'workplace', 'accepted', 1, now(), 'job-text', now(), $5, 'pariwar_default',
                  clock_timestamp() - make_interval(hours => $6, secs => $7), 'gw-1')`,
-        [pingId, selectionId, pid, m, linkCode, o.hoursAgo ?? 49, o.secondsAgo ?? 0],
+        [pingId, selectionId, pid, m, linkCode, o.hoursAgoEach?.[idx] ?? o.hoursAgo ?? 49, o.secondsAgo ?? 0],
       );
       pings.push({ pingId, memberId: m, linkCode });
       const consentId = randomUUID();
@@ -295,14 +297,18 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
         return Promise.resolve(randomUUID());
       },
     }) as unknown as Parameters<typeof runPeerMeshWaReminderSweep>[1];
-  const envelopeOf = (w: World): JobEnvelope<PeerMeshWaReminderPayload> => ({
+  /** `dueAsOf` — the REAL instant the sweep found it due (round-2 P1); the harness clock is a fixed past day, so omit it ⇒ lenient. */
+  const envelopeOf = (w: World, dueAsOf?: Date): JobEnvelope<PeerMeshWaReminderPayload> => ({
     pariwarId: w.pid,
     requestId: randomUUID(),
     actorId: null,
     traceId: randomUUID(),
-    payload: { claimCaseId: w.claimCaseId },
+    payload: { claimCaseId: w.claimCaseId, ...(dueAsOf !== undefined ? { dueAsOf: dueAsOf.toISOString() } : {}) },
   });
-  const child = (h: Harness, w: World, jobId: string = randomUUID()) => runPeerMeshWaReminderChild(h.deps, boss(h), envelopeOf(w), jobId);
+  const child = (h: Harness, w: World, jobId: string = randomUUID(), dueAsOf?: Date) =>
+    runPeerMeshWaReminderChild(h.deps, boss(h), envelopeOf(w, dueAsOf), jobId);
+  /** The DB clock — `dueAsOf` is a DB-clock instant (round-2 P1: ⛔ a host stamp compared to the DB clock). */
+  const dbNow = async (): Promise<Date> => (await pool.query<{ t: Date }>('SELECT clock_timestamp() AS t')).rows[0]!.t;
   /** Sweep, then run every enqueued child of OUR claim (each a fresh job). */
   async function tick(h: Harness, w: World) {
     h.enqueued.length = 0;
@@ -417,9 +423,18 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
   // ── AC9 — the holds ─────────────────────────────────────────────────────────────────────────────────────────
 
   it('⭐ AC9 — every config gap of a switch-ON Pariwar HOLDS: ⛔ enqueued, ⛔ row, ONE alarm naming the gap; the child holds too', async () => {
-    const legs: { gap: string; world?: WorldOpts; opts?: HarnessOpts }[] = [
+    const throwingClient: WhatsappAppCache = {
+      messagingFor: () => {
+        throw new Error('whatsapp-app: graph_api_version is missing/blank');
+      },
+    };
+    const legs: { gap: string; world?: WorldOpts; opts?: HarnessOpts; configOf?: (w: World) => Record<string, string | null> }[] = [
       { gap: 'config:wa_config_incomplete', world: { secretName: '' } },
       { gap: 'config:wa_config_incomplete', world: { phoneNumberId: null } },
+      // Round-2 P17 — the gaps that had ⛔ leg: the client's own config throw, a template name outside 0171's form, the helpline read.
+      { gap: 'config:wa_config_incomplete', opts: { cache: throwingClient } },
+      { gap: 'config:wa_template_invalid:hi', configOf: (w) => ({ [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: 'Peer-Mesh.Reminder' }) },
+      { gap: 'config:helpline_unreadable', opts: { throwOn: 'sms.claim_correction.helpline_number.' } },
       { gap: 'config:wa_secret_unresolved', opts: { secretThrows: true } },
       { gap: 'config:wa_template_missing:hi', opts: { config: {} } },
       { gap: 'config:wa_template_unreadable', opts: { throwOn: 'wa.template.' } },
@@ -432,11 +447,12 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     for (const leg of legs) {
       const w = await world(leg.world);
       const config =
-        leg.gap === 'config:wa_template_missing:hi'
+        leg.configOf?.(w) ??
+        (leg.gap === 'config:wa_template_missing:hi'
           ? { [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: null }
           : leg.gap === 'config:helpline_number_missing'
             ? { [`sms.claim_correction.helpline_number.${w.pid}`]: null }
-            : undefined;
+            : undefined);
       const h = harness(w, { ...leg.opts, ...(config ? { config } : {}) });
       const { swept } = await tick(h, w);
       expect(swept, leg.gap).toMatchObject({ enqueued: 0, heldForConfig: 1 });
@@ -446,6 +462,17 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       expect(h.sent, leg.gap).toHaveLength(0);
       expectIdsOnly(h, w);
     }
+  });
+
+  it('AC10 — a HELD claim is due again once its config gap closes (⛔ only the switch): the next tick sends it', async () => {
+    const w = await world();
+    const held = harness(w, { config: { [`sms.claim_correction.helpline_number.${w.pid}`]: null } });
+    expect((await tick(held, w)).swept).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    expect(await reminders(w)).toEqual([]);
+    const fixed = harness(w);
+    expect((await tick(fixed, w)).swept).toMatchObject({ enqueued: 1, heldForConfig: 0 });
+    expect(fixed.sent).toHaveLength(1);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'accepted', attempt_count: 1 });
   });
 
   it('⭐ R6 — several HELD Pariwars in ONE tick get their OWN alarm, each naming only its OWN Pariwar and gap — ⛔ one merged alarm', async () => {
@@ -528,7 +555,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'attempting' });
   });
 
-  it('⛔ due before 48 h or at 72 h: ⛔ enqueued, ⛔ row; a text that was ⛔ accepted is never followed', async () => {
+  it('⛔ due before 48 h or at 72 h: ⛔ enqueued, ⛔ row (a text that was ⛔ accepted: the domain spec\'s non-accepted legs)', async () => {
     for (const hoursAgo of [47, 72]) {
       const w = await world({ hoursAgo });
       const h = harness(w);
@@ -580,38 +607,96 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expect(h.sent).toHaveLength(0); // Meta was ⛔ called
     const [r] = await reminders(w);
     expect(r).toMatchObject({ send_outcome: 'attempting', send_started_at: null }); // RELEASED, ⛔ left in flight
-    // the SAME job's pg-boss retry (next morning) re-claims it and sends normally — the row was ⛔ stranded.
+    // Round-2 P15 — the PRODUCTION path: the deferral enqueued a NEW job for the next morning; that job (a fresh id, its clock past
+    // the lease) re-claims the released row and sends normally — the row was ⛔ stranded.
+    const deferral = h.enqueued.filter((e) => e.queue === SEND_QUEUE);
+    expect(deferral).toHaveLength(1);
     const h2 = harness(w);
-    await child(h2, w, jobId);
+    h2.setNow(new Date('2026-10-17T04:00:00.000Z')); // 09:30 IST the next morning — past the 10-minute lease
+    const morning = await runPeerMeshWaReminderChild(h2.deps, boss(h2), deferral[0]!.data, randomUUID());
+    expect(morning).toMatchObject({ status: 'done', counts: expect.objectContaining({ accepted: 1 }) });
     expect(h2.sent).toHaveLength(1);
-    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'accepted' });
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'accepted', attempt_count: 2 });
   });
 
   it(
     '⭐ R5 — a child deferred at night BEFORE its first begin still closes a ping that crosses + 72 h while deferred (skipped_late, ⛔ zero rows left behind)',
     async () => {
-      // 2 seconds of margin left on the 72-hour bound at seed time.
-      const w = await world({ hoursAgo: 71, secondsAgo: 59 * 60 + 58 });
+      // 6 seconds of margin left on the 72-hour bound at seed time (round-2 P14).
+      const w = await world({ hoursAgo: 71, secondsAgo: 59 * 60 + 54 });
       const h = harness(w);
       h.setNow(NIGHT); // outside 09:00-20:00 ⇒ the TOP-level check defers BEFORE any row is touched (⛔ a begin yet)
-      const deferred = await child(h, w);
+      const dueAsOf = await dbNow(); // the sweep's page listed it due NOW (DB clock — round-2 P1)
+      const deferred = await child(h, w, randomUUID(), dueAsOf);
       expect(deferred).toMatchObject({ status: 'deferred_quiet_hours' });
       expect(await reminders(w)).toEqual([]); // R5's gap, before the fix: ⛔ row — the deadline is about to pass unrecorded
-      await new Promise((resolve) => setTimeout(resolve, 3_000)); // the deadline passes while deferred overnight
-      h.setNow(DAYTIME); // the deferred child wakes up the next morning
-      const woke = await child(h, w);
+      await new Promise((resolve) => setTimeout(resolve, 7_000)); // the deadline passes while deferred overnight
+      h.setNow(DAYTIME); // the deferred child wakes up the next morning — THE ENVELOPE ITS DEFERRAL ENQUEUED (its `dueAsOf` kept)
+      const [again] = h.enqueued.filter((e) => e.queue === SEND_QUEUE);
+      expect(again!.data.payload.dueAsOf, 'the deferral keeps the ORIGINAL dueAsOf').toBe(dueAsOf.toISOString());
+      const woke = await runPeerMeshWaReminderChild(h.deps, boss(h), again!.data, randomUUID());
       expect(woke).toMatchObject({ status: 'done' });
       expect(h.sent).toHaveLength(0);
       expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'skipped_late', send_started_at: null });
     },
-    10_000,
+    20_000,
+  );
+
+  it('⭐ round-2 P1 — a sibling ping already PAST its window when the sweep found the claim due gets ⛔ row (WR5); the due one goes', async () => {
+    const w = await world({ neighbours: 2, hoursAgoEach: [49, 80] });
+    const h = harness(w);
+    // Through the SWEEP: its page stamps `dueAsOf` from the DB clock, and the child it enqueued leaves the sibling out.
+    const { out } = await tick(h, w);
+    expect(h.enqueued.filter((e) => e.queue === SEND_QUEUE).map((e) => typeof e.data.payload.dueAsOf)).toEqual(['string']);
+    expect(out).toEqual([expect.objectContaining({ status: 'done', counts: expect.objectContaining({ accepted: 1, skipped: 0 }) })]);
+    expect((await reminders(w)).map((r) => r.ping_id)).toEqual([w.pings[0]!.pingId]);
+    expect(h.sent).toHaveLength(1);
+  });
+
+  it('⭐ round-2 P1 — THROUGH A DEFERRAL: the morning child keeps the sweep\'s `dueAsOf`, so the never-due sibling still gets ⛔ row', async () => {
+    const w = await world({ neighbours: 2, hoursAgoEach: [49, 80] });
+    const h = harness(w);
+    h.setNow(NIGHT);
+    expect(await child(h, w, randomUUID(), await dbNow())).toMatchObject({ status: 'deferred_quiet_hours' });
+    const [again] = h.enqueued.filter((e) => e.queue === SEND_QUEUE);
+    h.setNow(DAYTIME); // a dropped `dueAsOf` would fall back to this fixed PAST day — lenient — and list the sibling
+    expect(await runPeerMeshWaReminderChild(h.deps, boss(h), again!.data, randomUUID())).toMatchObject({ status: 'done', counts: expect.objectContaining({ accepted: 1, skipped: 0 }) });
+    expect((await reminders(w)).map((r) => r.ping_id)).toEqual([w.pings[0]!.pingId]);
+  });
+
+  it(
+    '⭐ round-2 P4 — the marker\'s OWN 72-hour recheck finalising skipped_late is a FINISHED ping: counted skipped, ⛔ a transient throw',
+    async () => {
+      const w = await world({ hoursAgo: 71, secondsAgo: 59 * 60 + 54 });
+      // A slow HMAC (after the begin, before the marker) carries the ping past its bound.
+      const slowHmac = {
+        ...enc,
+        kms: {
+          encryptDek: enc.kms.encryptDek.bind(enc.kms),
+          decryptDek: enc.kms.decryptDek.bind(enc.kms),
+          computeHmac: async (...a: Parameters<typeof enc.kms.computeHmac>) => {
+            await new Promise((resolve) => setTimeout(resolve, 7_000));
+            return enc.kms.computeHmac(...a);
+          },
+        },
+      };
+      const h = harness(w, { encryption: slowHmac as never });
+      expect(await child(h, w)).toMatchObject({ status: 'done', counts: expect.objectContaining({ skipped: 1, transient: 0 }) });
+      expect(h.sent).toHaveLength(0);
+      // `sweep:late` — the MARKER's statement finalised it (a begin's late judgement keeps the child's job id).
+      expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'skipped_late', send_started_at: null, claimed_by_job: 'sweep:late' });
+      expect(h.alarms.some((a) => a.includes('lease lapsed'))).toBe(false);
+    },
+    20_000,
   );
 
   // ── AC7 — the outcomes, through the REAL client ─────────────────────────────────────────────────────────────
 
-  it('⭐ rule 1 / 2 — a thrown fetch, a timeout, a 2xx with ⛔ wamid, a 502, a 504 ⇒ error / may_have_sent:*; a re-run sends ⛔ again', async () => {
+  it('⭐ rule 1 / 2 — a thrown fetch, a 2xx with ⛔ wamid, a 502, a 504 ⇒ error / may_have_sent:*; a re-run sends ⛔ again (a timeout: the next leg)', async () => {
     const legs: { respond: Responder; detail: string }[] = [
       { respond: () => Promise.reject(new Error('ECONNRESET')), detail: 'may_have_sent:network' },
+      // `-366` 1 — a reset AFTER the connection opened stays "may have sent".
+      { respond: () => Promise.reject(Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNRESET' } })), detail: 'may_have_sent:network' },
       { respond: () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) }), detail: 'may_have_sent:no_wamid' },
       { respond: metaError(502, null), detail: 'may_have_sent:gateway_502' },
       { respond: metaError(504, null), detail: 'may_have_sent:gateway_504' },
@@ -651,6 +736,9 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       { respond: metaError(429, 130429), detail: 'rate_limited:130429' },
       { respond: metaError(400, 131056), detail: 'rate_limited:131056' },
       { respond: metaError(503, null), detail: 'api_unavailable:503' },
+      // `-366` 1 — a connection that never opened is a transient (status 0 — ⛔ "may have sent").
+      { respond: () => Promise.reject(Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } })), detail: 'api_unavailable:000' },
+      { respond: () => Promise.reject(Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } })), detail: 'api_unavailable:000' },
     ];
     for (const leg of legs) {
       const w = await world();
@@ -679,7 +767,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       const rows = await reminders(w);
       expect(rows, leg.detail).toHaveLength(1);
       expect(rows[0], leg.detail).toMatchObject({ send_outcome: 'attempting', claimed_by_job: 'sweep:held', detail: leg.detail, send_started_at: null });
-      expect(h.alarms.some((a) => a.includes('STOPPED') && a.includes(leg.detail)), leg.detail).toBe(true);
+      expect(h.alarms.some((a) => a.includes('STOPPED') && a.includes(leg.detail) && a.includes(w.pid)), leg.detail).toBe(true); // WR10 rule 4 — names the Pariwar
     }
   });
 
@@ -707,6 +795,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       expect(await child(h, w), leg.detail).toMatchObject({ status: 'done', counts: expect.objectContaining({ parked: 2 }) });
       expect(leg.cache ? calls : h.sent.length, leg.detail).toBe(2); // the second due ping IS attempted
       for (const r of await reminders(w)) expect(r, leg.detail).toMatchObject({ send_outcome: 'attempting', claimed_by_job: 'sweep:held', detail: leg.detail });
+      expect(h.alarms.filter((a) => a.includes('scope unknown') && a.includes(w.pid)), leg.detail).toHaveLength(2);
     }
   });
 

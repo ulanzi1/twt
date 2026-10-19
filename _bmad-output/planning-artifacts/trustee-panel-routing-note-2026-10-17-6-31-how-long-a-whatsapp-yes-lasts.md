@@ -10,7 +10,7 @@ is built by Story 6.31 either way. Only the meaning is asked here.
 > ## ⏳ AWAITING PANEL RULING
 >
 > **Nothing is recorded here yet.** Written 2026-10-17 at `bmad-create-story 6.31` (pin `dae96d9b`); revised 2026-10-19 before
-> sending (pin `15acb570` — two facts added, the deciding fact cited, the "utility" uncertainty re-sourced). **Not yet sent.** When the
+> sending (pin `15acb570` — three facts added, the deciding fact cited, the "utility" uncertainty re-sourced). **Not yet sent.** When the
 > Panel rules, the ruling is copied into this block **and** into `.decision-log.md` as a new decision id. Everything below then stays
 > **unedited**, as the question **as it was put**.
 
@@ -37,12 +37,16 @@ in Hindi, *"आपकी व्हाट्सएप ऑप्ट-इन अव�
 ended. Tap below to turn it on again."), and the Trust stops sending to them. But the member's consent record still says
 *granted*, and a WhatsApp "STOP" from them is ignored.
 
-**Two more facts you should have.** (1) On 2026-10-18 you approved WhatsApp to a **claimant**, about that one claim, on the
+**Three more facts you should have.** (1) On 2026-10-18 you approved WhatsApp to a **claimant**, about that one claim, on the
 claim's filing agreement: *"withdrawing it, or STOP, ends WhatsApp contact for that claim"*. That approval says nothing about 24
 hours, and how long it lasts was not asked; we read it as lasting until withdrawn, for that claim only. (2) When a member's yes
 runs out after 24 hours, its record is never closed; each new yes adds a new record, and taking it back closes only the newest,
 so every yes that ran out before still reads *granted*. Nothing decides a message on those records today, though a member's own
-data download lists them as granted; any longer-lasting yes must first make taking it back close every one of them.
+data download lists them as granted; any longer-lasting yes must first make taking it back close every one of them. (3) A member's yes can be
+asked for at signup: a separate WhatsApp box, not ticked in advance, with a reminder that important notices come on WhatsApp and
+a choice to go back or carry on, is now planned (a new backlog item). Accepting the Terms is not the yes — the Terms do not name
+WhatsApp as a way of contacting members, and your 2026-07-08 design does not allow a pre-ticked box or a yes bundled into other
+terms. How long that yes lasts is still this question: as built, it too would end after 24 hours.
 
 ---
 
@@ -82,7 +86,7 @@ cautious, **B** limits the change to the reminder you already ruled on.
   built. This was found on 2026-10-17 while writing Story 6.31.
 - **Corrected in this note before sending:** the first draft said the app's "withdraw" button refuses. In fact the app never shows
   that button to an expired member; it tells them the opt-in expired. It is the server, and a WhatsApp STOP, that refuse. A
-  revision on 2026-10-19 added the two facts above (the claimant's yes; the older records of a yes), cited WhatsApp's own
+  revision on 2026-10-19 added the three facts above (the claimant's yes; the older records of a yes; the planned signup box), cited WhatsApp's own
   policy for the deciding fact (which the first draft called our reading), re-sourced "Still uncertain" (2) from third-party
   guides to WhatsApp's own guidance, and changed "Earlier versions" from "none" to "none put to you; you were told it exists".
 - **Still uncertain:** (1) whether counsel would want the consent wording itself to say how long a yes lasts; counsel's view on
@@ -136,6 +140,18 @@ prefer, the change can apply only to the neighbours' reminder for now.
 No ruling says how long a member's WhatsApp consent lasts as consent. ADR-0029 ratified a state machine in which a 24-hour expiry
 exists. It does not say that the expiry ends the member's consent, and the consent record is not revoked by it (E3). No ruling covers
 withdrawing an expired opt-in, or what the app tells the member when the 24 hours pass.
+
+## E2b — The Terms and the planned signup box
+
+- `docs/legal/terms-and-conditions.md` (DRAFT, version `[[v1.0]]`), R10(B): *"Official communications are delivered through the
+  **in-app surface** — that is the channel of record. WhatsApp/Telegram are convenience mirrors only."* No clause names WhatsApp as a
+  way the Trust will contact a member. `docs/legal/privacy-policy.md` (draft): *"Contact | Phone, email | Official communications,
+  alerts, support | Consent; contract performance"*.
+- Architecture §3.4 (ratified with ADR-0029 by `-065`): *"Passive defaults, pre-checked boxes, bundled consent, or inference from
+  other settings are not valid opt-in origins."*
+- Sprint row `5-10-signup-whatsapp-opt-in-checkbox` (backlog, added 2026-10-19): an unticked signup box + a reminder popup — the
+  §3.4 *"explicit affirmative consent capture in-app"*. Not built; today an opt-in becomes active only by the member sending the
+  phrase on WhatsApp (Story 5.4).
 
 ## E3 — What the code actually does (written at `dae96d9b`, re-checked at `15acb570`)
 

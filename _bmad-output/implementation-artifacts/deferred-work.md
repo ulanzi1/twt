@@ -11513,6 +11513,9 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   ⚠ **Provisioning `sms.dlt.template_id.<category>` for any of the five does NOTHING** (roster Row 30 note (1)). Turning the fallback ON needs
   FIXED wording per category (en + hi) — new member-facing copy, Hindi review, its own §0 — a later story. ⭐ Trigger: before any
   `sms.dlt.template_id.<category>` is provisioned, or the per-member SMS fallback is claimed at go-live.
+  - *Appended 2026-10-19 (Story 6.31's validate, BigDev in session: *"Yes, add it"*):* HOMED — row `5-11-per-member-sms-fallback-fixed-wording`
+    (backlog) owns it; stays OPEN until that row is `done`. Its create-story also proposes the fallback for members WITHOUT WhatsApp
+    (§3.4 (iii) today requires both WA gates ON).
 - **The data-export delivery OTP says "Valid 3 min" for a code that lives 60** [`apps/api/src/modules/member-data-rights/handlers.ts:659-663`
   delivers with `intent: 'step_up'`; TTL `apps/api/src/config.ts:386`, `member-otp.service.ts:38-43`] — it UNDERSTATES (⛔ refuses anyone: the
   code still works after 3 minutes). Story 6.34 TV9 fixed only the claim handover (a 3-minute code told *"5 min"* — a nominee typing it in

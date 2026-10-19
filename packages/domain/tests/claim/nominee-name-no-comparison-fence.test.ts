@@ -145,6 +145,10 @@ const FENCED_FILES = [
   // the neighbour's mobile ciphertext AS STORED and ⛔ never decrypts (the jobs child does, AFTER the claiming commit — Trap 9);
   // it reads the deceased's NAME ⛔ at all (the child resolves it before the transaction and passes only a fault code).
   'packages/domain/src/claim/peer-mesh-request.ts',
+  // ⭐ STORY 6.31 (T15) — the neighbours' WHATSAPP REMINDER: the locked begin, the marker, the finalise / park, the sweep's reads. It
+  // returns the neighbour's mobile ciphertext AS STORED and ⛔ never decrypts (the jobs child does, AFTER the claiming commit); it
+  // reads the deceased's NAME ⛔ at all (the child resolves it before the transaction and passes only a fault code).
+  'packages/domain/src/claim/peer-mesh-wa-reminder.ts',
 ] as const;
 
 /**
@@ -194,7 +198,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(53); // Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(54); // Story 6.31 FROM 53 (+1 — the WhatsApp reminder's module, T15); Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -473,6 +477,16 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     expect(code).toContain('mobileCiphertext');
     for (const forbidden of [/decrypt\w*\s*\(/i, /\bkms\b/i, /\bencryption\b/, /nameCiphertext/, /getMemberKycProfile/]) {
       expect(forbidden.test(code), `peer-mesh-request.ts reached for ${String(forbidden)}`).toBe(false);
+    }
+  });
+
+  it('⛔⛔ Story 6.31 (T15) — the WhatsApp REMINDER module returns the mobile ciphertext AS STORED, ⛔ never decrypts, ⛔ a name', () => {
+    // The 6.27c arm's form: the module names the child's `decrypt_failed:tier1` step in its `detail` vocabulary, so the decrypt arm
+    // matches a decrypt CALL, ⛔ the bare word.
+    const code = stripComments(read('packages/domain/src/claim/peer-mesh-wa-reminder.ts'));
+    expect(code).toContain('mobileCiphertext');
+    for (const forbidden of [/decrypt\w*\s*\(/i, /\bkms\b/i, /\bencryption\b/, /nameCiphertext/, /getMemberKycProfile/]) {
+      expect(forbidden.test(code), `peer-mesh-wa-reminder.ts reached for ${String(forbidden)}`).toBe(false);
     }
   });
 

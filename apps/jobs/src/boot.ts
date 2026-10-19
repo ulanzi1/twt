@@ -120,12 +120,13 @@ import {
   DEFAULT_MATCHER_PARSER_SLUG,
   registerReconciliationMatchWorkers,
 } from './matcher/matcher-worker.js';
-import { buildContributionProviderResolver, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
+import { buildContributionProviderResolver, resolveChannelSecret, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
 import { registerContactLadderWorkers } from './scheduler/claim-contact-ladder.js';
 import { enqueuePeerMeshRequestChild, registerClaimPeerMeshRequestWorkers } from './scheduler/claim-peer-mesh-requests.js';
+import { registerClaimPeerMeshWaReminderWorkers } from './scheduler/claim-peer-mesh-wa-reminders.js';
 import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
 import { registerClaimSuspicionStaffEmailWorkers } from './scheduler/claim-suspicion-staff-emails.js';
 import { buildStaffEmailClient } from './scheduler/staff-email-config.js';
@@ -700,6 +701,20 @@ async function main(): Promise<void> {
     // stay UNSET until roster Row 27 closes (ALL EIGHT conditions) — and the LIVE questionnaire carries questions awaiting counsel —
     // so the sweep HOLDS every Pariwar and alarms (R11 / AC2b). ⛔ Neither ever refuses, closes or approves a claim.
     await registerClaimPeerMeshRequestWorkers(boss, { ...claimCorrectionDeps, appLinksBaseUrl: process.env['APP_LINKS_BASE_URL'] });
+    // Story 6.31 (WR9, WR12) — the neighbours' WHATSAPP REMINDER: ONE Meta template, 48–72 hours after a text was accepted, to a
+    // neighbour who has ⛔ submitted and said yes to WhatsApp, while the claim can still take an answer. Its OWN hourly 09:20–19:20 IST
+    // sweep and per-claim child; THE one WhatsApp client cache (exposed — ⛔ a second), the fail-loud token resolver, the config
+    // resolver, the app-link base. ⛔ The SMS client (I2 — ⛔ fallback, ⛔ a second text). Day one sends ⛔ thing: every Pariwar's
+    // switch is OFF until an operator provisions it, its template names are unset until roster Row 35 closes, and the texts it follows
+    // are themselves held (Row 27). ⛔ It ever refuses, closes or approves a claim.
+    await registerClaimPeerMeshWaReminderWorkers(boss, {
+      pool,
+      encryption: jobsEncryption,
+      whatsappAppCache: contributionProviders.whatsappAppCache,
+      resolveSecret: resolveChannelSecret,
+      resolveConfig: resolveSmsDltConfig,
+      appLinksBaseUrl: process.env['APP_LINKS_BASE_URL'],
+    });
     // Story 6.25 (`2026-10-09-299`) — the STAFF EMAIL: every Pariwar Admin appointed before a `-239` refusal, active and with a
     // login, is emailed ONCE per standing refusal (`-262` FQ3 A — "open the list", ⛔ no names, ⛔ no note). Its OWN 15-minute IST
     // sweep and email child; the jobs KMS deps decrypt the admin email AFTER the claiming commit (ADR-0040 Q2). The client is

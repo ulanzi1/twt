@@ -255,7 +255,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
   it('⭐ the in-flight test is FIRST: the marker set ⇒ in_flight, ⛔ write and ⛔ re-check — even after the neighbour SUBMITTED (⛔ 23514)', async () => {
     const s = await seedReminder();
     await begin(s);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS })).toBe(true);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(true);
     const before = await only(s);
     await asSuperuser(getTx().client, async () => {
       await getTx().client.query(
@@ -272,7 +272,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
   it('once ever: a FINISHED row ⇒ already_final (⛔ write)', async () => {
     const s = await seedReminder();
     await begin(s);
-    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS, now: new Date() });
     await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, await only(s)), outcome: 'accepted', providerMessageId: 'wamid.A', recipientNumberHash: 'h' });
     const before = await only(s);
     expect((await begin(s, 0, { jobId: 'job-b' })).kind).toBe('already_final');
@@ -373,13 +373,13 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     const s = await seedReminder();
     await begin(s);
     const r = await only(s);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r, 'job-b'), leaseMarginMs: MARGIN_MS })).toBe(false);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS })).toBe(true);
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS })).toBe(false);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r, 'job-b'), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(true);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
 
     const old = await seedReminder();
     await begin(old, 0, { now: new Date(Date.now() - (CORRECTION_SEND_LEASE_MS - MARGIN_MS) - 5_000) });
-    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(old, await only(old)), leaseMarginMs: MARGIN_MS })).toBe(false);
+    expect(await markPeerMeshWaReminderInFlight(db(), { ...ref(old, await only(old)), leaseMarginMs: MARGIN_MS, now: new Date() })).toBe(false);
     expect((await only(old)).send_started_at).toBeNull();
   });
 
@@ -388,7 +388,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     await begin(s);
     const r = await only(s);
     expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, r), outcome: 'accepted', providerMessageId: 'wamid.X', recipientNumberHash: 'h' })).toBe(false);
-    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() });
     expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, r, 'job-b'), outcome: 'accepted', providerMessageId: 'wamid.X', recipientNumberHash: 'h' })).toBe(false);
     expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, r), outcome: 'accepted', providerMessageId: 'wamid.X', recipientNumberHash: 'h' })).toBe(true);
     expect(await only(s)).toMatchObject({ send_outcome: 'accepted', provider_message_id: 'wamid.X', recipient_number_hash: 'h' });
@@ -401,7 +401,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     await begin(s, 0);
     await begin(s, 1);
     const [a, b] = await rows(s);
-    for (const r of [a!, b!]) await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS });
+    for (const r of [a!, b!]) await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() });
     await expect(finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'error', detail: 'may_have_sent:9876543210' })).rejects.toThrow(/fixed grammar/);
     expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'error', detail: peerMeshWaReminderDetail({ kind: 'may_have_sent', how: 'timeout' }) })).toBe(true);
     expect(await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, b!), outcome: 'rejected_recipient' })).toBe(true);
@@ -415,10 +415,10 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     const s = await seedReminder();
     await begin(s);
     let r = await only(s);
-    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() });
     expect(await notePeerMeshWaReminderTransient(db(), { ...ref(s, r), detail: 'rate_limited:none' })).toBe(true);
     expect(await only(s)).toMatchObject({ send_outcome: 'attempting', detail: 'rate_limited:none', send_started_at: null, claimed_by_job: JOB });
-    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r), leaseMarginMs: MARGIN_MS, now: new Date() });
     expect(await parkPeerMeshWaReminder(db(), { ...ref(s, r), detail: 'scope:meta_131048' })).toBe(true);
     r = await only(s);
     expect(r).toMatchObject({ send_outcome: 'attempting', claimed_by_job: PEER_MESH_WA_REMINDER_PARKED_BY, detail: 'scope:meta_131048', send_started_at: null });
@@ -469,11 +469,22 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     await begin(s, 2, { now: old }); // lapsed, ⛔ marker
     await begin(s, 3, { now: old }); // lapsed WITH the marker
     const [r0, r1, , r3] = await rows(s);
-    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r0!), leaseMarginMs: MARGIN_MS });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, r0!), leaseMarginMs: MARGIN_MS, now: new Date() });
     await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, r0!), outcome: 'rejected_recipient' });
     await parkPeerMeshWaReminder(db(), { ...ref(s, r1!), detail: 'held:meta_131009' });
     await getTx().client.query(`UPDATE claim_peer_mesh_wa_reminders SET send_started_at = claimed_at, detail = 'rate_limited:none' WHERE reminder_id = $1`, [r3!.reminder_id]);
     expect((await dueOf(s)).sort()).toEqual([s.pings[1]!.pingId, s.pings[2]!.pingId].sort());
+  });
+
+  it('the CHILD\'s list includes a row a LIVE job holds (the begin judges the holder — its own pg-boss retry re-claims it); the SWEEP\'s does ⛔', async () => {
+    const s = await seedReminder();
+    await begin(s);
+    await notePeerMeshWaReminderTransient(db(), { ...ref(s, await only(s)), detail: 'rate_limited:none' });
+    expect(await dueOf(s)).toEqual([]);
+    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: s.pid, claimCaseId: s.claimCaseId, now: new Date() })).toEqual([s.pings[0]!.pingId]);
+    expect(await begin(s)).toMatchObject({ kind: 'begun', attemptCount: 2 });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, await only(s)), leaseMarginMs: MARGIN_MS, now: new Date() });
+    expect(await listClaimDuePeerMeshWaReminderPings(db(), { pariwarId: s.pid, claimCaseId: s.claimCaseId, now: new Date() })).toEqual([]);
   });
 
   it('⭐ the lapsed in-flight finisher: the marker set + the lease lapsed ⇒ error / may_have_sent:lease_lapsed — past the bound and switch OFF too; a live one untouched', async () => {
@@ -483,7 +494,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     await begin(s, 1);
     const [lapsed, live] = await rows(s);
     await getTx().client.query(`UPDATE claim_peer_mesh_wa_reminders SET send_started_at = claimed_at, detail = 'rate_limited:none' WHERE reminder_id = $1`, [lapsed!.reminder_id]);
-    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, live!), leaseMarginMs: MARGIN_MS });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, live!), leaseMarginMs: MARGIN_MS, now: new Date() });
     await asSuperuser(getTx().client, async () => {
       await getTx().client.query(`UPDATE pariwar_wa_config SET enabled = false WHERE pariwar_id = $1`, [s.pid]);
       const finished = await finishLapsedInFlightPeerMeshWaReminders(getTx().client, { now: new Date(), allow: [s.pid] });
@@ -529,7 +540,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     await begin(s, 0);
     await begin(s, 1);
     const [a, b] = await rows(s);
-    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, a!), leaseMarginMs: MARGIN_MS });
+    await markPeerMeshWaReminderInFlight(db(), { ...ref(s, a!), leaseMarginMs: MARGIN_MS, now: new Date() });
     await finalisePeerMeshWaReminder(getTx().client, { ...ref(s, a!), outcome: 'accepted', providerMessageId: 'wamid.Z', recipientNumberHash: 'h' });
     await parkPeerMeshWaReminder(db(), { ...ref(s, b!), detail: 'held:meta_100' });
     expect(await count()).toBe(before);

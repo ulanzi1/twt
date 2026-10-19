@@ -479,6 +479,22 @@ export const QUEUE_NAMES = {
    */
   CLAIM_PEER_MESH_REQUEST_SMS: 'claim.peer_mesh_request.sms',
   /**
+   * The neighbours' WHATSAPP REMINDER sweep (Story 6.31, WR12; `2026-10-10-303` Q1 A; `2026-10-19-365`) — hourly 09:20–19:20 IST,
+   * its OWN queue. After the cross-tenant role guard it FIRST finishes in-flight rows whose lease lapsed (`may_have_sent:lease_lapsed`),
+   * THEN marks parked / transient rows past `+ 72 h` late, checks each Pariwar's config once (a gap enqueues and writes ⛔ nothing — one
+   * alarm) and enqueues one CLAIM_PEER_MESH_WA_REMINDER_SEND child per claim with a ping whose text was ACCEPTED 48–72 hours ago,
+   * whose claim can still take an answer, in a Pariwar with WhatsApp ON. ⛔ Never `dispatch()`, ⛔ never an SMS. Job class C.
+   */
+  CLAIM_PEER_MESH_WA_REMINDER_SWEEP: 'claim.peer_mesh_wa_reminder.sweep',
+  /**
+   * ONE claim's WhatsApp reminders (Story 6.31). Re-checks the config (a race guard), reads the deceased's name ONCE, then for each
+   * due ping — under the CLAIM-ROW lock, then the ping's, then the reminder's — re-checks "not submitted", the answer window, the
+   * opt-in and the neighbour's eligibility, begins the reminder ONCE EVER, commits, THEN decrypts the number, sets the in-flight
+   * marker and sends ONE Meta template DIRECTLY (⛔ fallback). A refusal of unknown or scope-wide reach is PARKED, ⛔ finished. The
+   * payload carries ids only. Job class B.
+   */
+  CLAIM_PEER_MESH_WA_REMINDER_SEND: 'claim.peer_mesh_wa_reminder.send',
+  /**
    * The STAFF EMAIL sweep (Story 6.25, `2026-10-09-299` RE10 / RE11) — every 15 minutes IST: every Pariwar Admin appointed before a
    * `-239` refusal that STANDS (RF1), active and with a login, with ⛔ FINISHED row for (claim, recipient) — or the claim-level
    * NULL pair when ⛔ admin is eligible (RE4). It gives up `attempting` rows three IST days old AND past the 30-minute lease,

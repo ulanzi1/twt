@@ -97,7 +97,7 @@ export interface PeerMeshRequestPayload {
   readonly claimCaseId: string;
 }
 
-function alarmOf(deps: ClaimPeerMeshRequestDeps): (m: string) => void {
+function alarmOf(deps: Pick<ClaimPeerMeshRequestDeps, 'onAlarm'>): (m: string) => void {
   return deps.onAlarm ?? ((m: string): void => console.warn(m));
 }
 
@@ -468,17 +468,27 @@ export type PeerMeshRequestChildResult =
 
 type NameRead = { readonly name: string } | { readonly fault: schema.PeerMeshRequestNameReason };
 
+/** The member-facing name, or a fault — ⛔ the SMS slot's `name_too_long` (that is the text's own step). */
+export type MemberFacingDeceasedNameRead =
+  | { readonly name: string }
+  | { readonly fault: Exclude<schema.PeerMeshRequestNameReason, 'name_too_long'> };
+
 /**
  * R9 — the deceased's name, read ONCE, outside any claiming transaction (the suspicion child's sources — BF13): the mode, the KYC
- * name, the erased sentinel, the mode-resolved form, its length. Throws `ClaimCorrectionTransientError` on a read / decrypt
- * fault (⛔ a ping begun yet ⇒ ⛔ stored).
+ * name, the erased sentinel, the mode-resolved form — everything up to and including `name_unresolvable`. Throws
+ * `ClaimCorrectionTransientError` on a read / decrypt fault (⛔ a ping begun yet ⇒ ⛔ stored). `label` names the caller in its
+ * alarms and errors.
+ * ⭐ Story 6.31 (WR13) — SPLIT out of `readDeceasedName` and EXPORTED: the WhatsApp reminder carries the FULL name (§0 edge (ii)) and
+ * applies ⛔ SMS fit check; 6.27c's text keeps its fit check in `readDeceasedName` below (⛔ a behaviour change). ⚠ Row 6-37e
+ * (`-362`'s short-name fallback) edits the TEXT's step there — ⛔ this function.
  */
-async function readDeceasedName(
-  deps: ClaimPeerMeshRequestDeps,
+export async function readMemberFacingDeceasedName(
+  deps: Pick<ClaimPeerMeshRequestDeps, 'pool' | 'encryption' | 'onAlarm'>,
   pariwarId: ReturnType<typeof ids.pariwarId>,
   deceasedMemberId: ReturnType<typeof ids.memberId>,
   tag: string,
-): Promise<NameRead> {
+  label: string,
+): Promise<MemberFacingDeceasedNameRead> {
   const alarm = alarmOf(deps);
   let mode: Awaited<ReturnType<typeof kycDomain.resolvePublicNamePresentationMode>>;
   let profile: Awaited<ReturnType<typeof kycDomain.getMemberKycProfile>> | undefined;
@@ -488,22 +498,34 @@ async function readDeceasedName(
       await kycDomain.getMemberKycProfile(db, pariwarId, deceasedMemberId),
     ] as const);
   } catch {
-    alarm(`[jobs] claim-peer-mesh-request: the name read failed for ${tag} — retrying`);
-    throw new ClaimCorrectionTransientError(`[jobs] claim-peer-mesh-request: transient name_read_failed for ${tag}`);
+    alarm(`[jobs] ${label}: the name read failed for ${tag} — retrying`);
+    throw new ClaimCorrectionTransientError(`[jobs] ${label}: transient name_read_failed for ${tag}`);
   }
   if (!profile || profile.nameCiphertext === null) return { fault: 'name_none' };
   let stored: string;
   try {
     stored = await encryption.decryptKycField(profile.nameCiphertext, pariwarId, deps.encryption);
   } catch {
-    alarm(`[jobs] claim-peer-mesh-request: the name decrypt failed for ${tag} — retrying (⛔ ping begun)`);
-    throw new ClaimCorrectionTransientError(`[jobs] claim-peer-mesh-request: transient name_decrypt_failed for ${tag}`);
+    alarm(`[jobs] ${label}: the name decrypt failed for ${tag} — retrying (⛔ ping begun)`);
+    throw new ClaimCorrectionTransientError(`[jobs] ${label}: transient name_decrypt_failed for ${tag}`);
   }
   if (stored === memberDomain.ANONYMIZED_SENTINEL) return { fault: 'name_erased' };
   const name = notifications.resolveMemberFacingDeceasedName(mode, stored);
   if (name === '') return { fault: 'name_unresolvable' };
-  if (!fitsDltAlphanumeric(name)) return { fault: 'name_too_long' };
   return { name };
+}
+
+/** R9 — the TEXT's name: `readMemberFacingDeceasedName`, then the SMS `{member}` slot's length (`fitsDltAlphanumeric`). */
+async function readDeceasedName(
+  deps: ClaimPeerMeshRequestDeps,
+  pariwarId: ReturnType<typeof ids.pariwarId>,
+  deceasedMemberId: ReturnType<typeof ids.memberId>,
+  tag: string,
+): Promise<NameRead> {
+  const read = await readMemberFacingDeceasedName(deps, pariwarId, deceasedMemberId, tag, 'claim-peer-mesh-request');
+  if ('fault' in read) return read;
+  if (!fitsDltAlphanumeric(read.name)) return { fault: 'name_too_long' };
+  return read;
 }
 
 /**

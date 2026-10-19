@@ -34,6 +34,7 @@ import {
   type FirebaseAppCache,
   type Msg91TemplateReader,
   type SmsAppClient,
+  type WhatsappAppCache,
 } from '@twt/channels';
 import { resolveSecretValue, withPariwarScope, type Db } from '@twt/domain';
 import type pg from 'pg';
@@ -62,6 +63,12 @@ export interface ContributionProviderWiring {
   readonly smsTemplateReader: Msg91TemplateReader;
   /** MG17 — `true` iff the reader uses the SEND key, so its `auth*` refusal PROVES the send would fail. */
   readonly smsPreflightReadsWithSendKey: boolean;
+  /**
+   * ⭐ Story 6.31 (WR9) — THE one per-process WhatsApp client cache, exposed (⛔ never a second cache built) so the
+   * neighbours' WhatsApp reminder sends DIRECTLY to Meta (⛔ `dispatch()`) through the SAME clients. ⚠ `messagingFor` caches one client
+   * per Pariwar and IGNORES later config — a rotated token or phone number needs a jobs restart (roster Row 35 (a)).
+   */
+  readonly whatsappAppCache: WhatsappAppCache;
   /** Tear down the per-Pariwar Firebase Apps (SIGTERM drain). The fetch-based WA/TG/SMS clients hold nothing. */
   readonly teardown: () => Promise<void>;
 }
@@ -74,8 +81,10 @@ export interface ContributionProviderWiring {
  * reads, both gated behind a DB config row that already asserts "this channel IS provisioned") must throw on
  * any resolution failure, never degrade silently — a config row saying `enabled` with an unresolvable credential
  * is a real misconfiguration, not a "not provisioned" state.
+ * ⭐ Story 6.31 (WR9) — EXPORTED for the WhatsApp reminder's race guard: it THROWS on not-found and on an outage alike, and any throw
+ * HOLDS the Pariwar (`config:wa_secret_unresolved`).
  */
-function resolveChannelSecret(secretName: string): Promise<string> {
+export function resolveChannelSecret(secretName: string): Promise<string> {
   return resolveSecretValue(secretName, {
     envFallback: secretName.replace(/[^A-Za-z0-9]/g, '_').toUpperCase(),
   });
@@ -322,6 +331,7 @@ export async function buildContributionProviderResolver(
     smsAppClient,
     smsTemplateReader,
     smsPreflightReadsWithSendKey: readsWithSendKey,
+    whatsappAppCache,
     teardown: () => firebaseAppCache.close(),
   };
 }

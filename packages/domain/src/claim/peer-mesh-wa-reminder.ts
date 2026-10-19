@@ -393,11 +393,15 @@ interface RowRef {
 
 /**
  * ⭐ WR10 — THE IN-FLIGHT MARKER: `send_started_at = clock_timestamp()` in its OWN committed UPDATE, as a CAS — only on this job's
- * `attempting` row, ⛔ already marked, whose claim still has `leaseMarginMs` of lease left (`claimed_at > clock_timestamp() −
- * (lease − margin)`). `false` ⇒ ⛔ send (the lease was lost, or the row moved on).
+ * `attempting` row, ⛔ already marked, whose claim still has `leaseMarginMs` of lease left (`claimed_at > now − (lease − margin)`).
+ * `false` ⇒ ⛔ send (the lease was lost, or the row moved on). ⚠ `now` is the CHILD's clock: `claimed_at` is stamped from it, and the
+ * re-claim and the lapsed-row finisher judge the lease on the same clock (6.27c's form) — ⛔ a host stamp compared to the DB clock.
  */
-export async function markPeerMeshWaReminderInFlight(db: Db, input: RowRef & { readonly leaseMarginMs: number }): Promise<boolean> {
-  const windowMs = CORRECTION_SEND_LEASE_MS - input.leaseMarginMs;
+export async function markPeerMeshWaReminderInFlight(
+  db: Db,
+  input: RowRef & { readonly leaseMarginMs: number; readonly now: Date },
+): Promise<boolean> {
+  const notBefore = new Date(input.now.getTime() - (CORRECTION_SEND_LEASE_MS - input.leaseMarginMs));
   const result = await db.execute<{ reminder_id: string }>(sql`
     UPDATE claim_peer_mesh_wa_reminders
        SET send_started_at = clock_timestamp()
@@ -406,7 +410,7 @@ export async function markPeerMeshWaReminderInFlight(db: Db, input: RowRef & { r
        AND send_outcome = 'attempting'
        AND claimed_by_job = ${input.jobId}
        AND send_started_at IS NULL
-       AND claimed_at > clock_timestamp() - make_interval(secs => ${windowMs / 1000})
+       AND claimed_at > ${notBefore}
     RETURNING reminder_id
   `);
   return (result.rows?.length ?? 0) > 0;
@@ -503,7 +507,9 @@ export async function finishPeerMeshWaReminderNoSendableNumber(db: Db, input: Ro
 
 /**
  * The claim's DUE pings (AC2's predicate within one claim, ⛔ the switch — the child's race guard read it), in `ping_id` order.
- * Clamped. The begin re-judges every conjunct under the lock.
+ * Clamped. The begin re-judges every conjunct under the lock. ⚠ Unlike the sweep's list, an `attempting` row WITHOUT the marker is
+ * listed whoever holds it (6.27c's `listDuePeerMeshRequestPings` form): the begin judges the holder — the SAME job's pg-boss retry
+ * re-claims its own transient row at once, another live job's row is `held_by_other`.
  */
 export async function listClaimDuePeerMeshWaReminderPings(
   db: Db,
@@ -516,7 +522,7 @@ export async function listClaimDuePeerMeshWaReminderPings(
       JOIN claim_peer_mesh_selections wr_s ON wr_s.pariwar_id = wr_p.pariwar_id AND wr_s.selection_id = wr_p.selection_id
       JOIN claims wr_c ON wr_c.pariwar_id = wr_s.pariwar_id AND wr_c.claim_case_id = wr_s.claim_case_id
      WHERE wr_p.pariwar_id = ${input.pariwarId} AND wr_s.claim_case_id = ${input.claimCaseId}
-       AND ${dueConjunctsSql(input.now)}
+       AND ${dueConjunctsSql(input.now, 'child')}
      ORDER BY wr_p.ping_id
      LIMIT ${n}`);
   return rows.map((r) => r.ping_id as PeerMeshPingId);
@@ -525,10 +531,13 @@ export async function listClaimDuePeerMeshWaReminderPings(
 /**
  * ⭐ AC2's per-ping conjuncts over aliases `wr_p` (the ping) and `wr_c` (its claim): the text ACCEPTED; `+ 48 h ≤ now < + 72 h` on the
  * DB clock; the claim in the answer window (`answerWindowSql` — ⛔ hand-composed); and EITHER ⛔ reminder row, a PARKED one, or a
- * re-claimable `attempting` one (⛔ marker; its lease lapsed). ⛔ The switch (the callers add it).
+ * re-claimable `attempting` one (⛔ marker; for the SWEEP its lease lapsed — a live child's row is ⛔ enqueued again; for the CHILD
+ * any holder — the begin judges it). ⛔ The switch (the callers add it).
  */
-function dueConjunctsSql(now: Date): SQL {
+function dueConjunctsSql(now: Date, mode: 'sweep' | 'child'): SQL {
   const lease = new Date(now.getTime() - CORRECTION_SEND_LEASE_MS);
+  const reclaimable =
+    mode === 'child' ? sql`true` : sql`(wr_r.claimed_by_job = ${PEER_MESH_WA_REMINDER_PARKED_BY} OR wr_r.claimed_at < ${lease})`;
   return sql`wr_p.send_outcome = 'accepted'
        AND wr_p.send_updated_at + make_interval(hours => ${PEER_MESH_WA_REMINDER_DUE_AFTER_HOURS}) <= clock_timestamp()
        AND clock_timestamp() < wr_p.send_updated_at + make_interval(hours => ${PEER_MESH_WA_REMINDER_LATE_AFTER_HOURS})
@@ -536,8 +545,7 @@ function dueConjunctsSql(now: Date): SQL {
        AND NOT EXISTS (
              SELECT 1 FROM claim_peer_mesh_wa_reminders wr_r
               WHERE wr_r.ping_id = wr_p.ping_id
-                AND NOT (wr_r.send_outcome = 'attempting' AND wr_r.send_started_at IS NULL
-                         AND (wr_r.claimed_by_job = ${PEER_MESH_WA_REMINDER_PARKED_BY} OR wr_r.claimed_at < ${lease})))`;
+                AND NOT (wr_r.send_outcome = 'attempting' AND wr_r.send_started_at IS NULL AND ${reclaimable}))`;
 }
 
 // ── The sweep's reads and writes — cross-tenant, BYPASSRLS pool ──────────────────────────────────────────────────────────
@@ -589,7 +597,7 @@ export async function listDuePeerMeshWaReminderPings(
         JOIN claim_peer_mesh_selections wr_s ON wr_s.pariwar_id = wr_p.pariwar_id AND wr_s.selection_id = wr_p.selection_id
         JOIN claims wr_c ON wr_c.pariwar_id = wr_s.pariwar_id AND wr_c.claim_case_id = wr_s.claim_case_id
         JOIN pariwar_wa_config wr_w ON wr_w.pariwar_id = wr_p.pariwar_id AND wr_w.enabled = true
-       WHERE ${dueConjunctsSql(input.now)}${after}${allow}
+       WHERE ${dueConjunctsSql(input.now, 'sweep')}${after}${allow}
        ORDER BY wr_c.claim_case_id, wr_p.ping_id
        LIMIT ${sql.raw(String(n))}`,
   );

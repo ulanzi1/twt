@@ -71,7 +71,7 @@ S = Task 0.1 STOP conditions. Decision-entry letters (PM, SW, MG, CF, FQ …) ke
 
 # Story 6.31: One WhatsApp Reminder, Two Days After the Text, to Each Neighbour Who Has ⛔ Not Answered and Chose WhatsApp — the Same Words, Its Own Record, ⛔ Never a Second SMS `[SURFACE]`
 
-Status: review
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a member's death is reported, up to five neighbours are texted (Story 6.27c) with
 > the member's name, a link to a few short questions, and the helpline. The Panel ruled (`-303` Q1 A) that those of the five who
@@ -774,6 +774,111 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
     legs; the source and type fences (AC4, AC8).
 - [x] **Task 6 — the proof (AC12, AC13).** The frozen-file diff; `ci:local` on :5433; the RED-first evidence for every new test in
   Debug Log; Completion Notes; File List; Change Log; the story → `review`, the sprint row → `review` (a ledger line).
+
+### Review Findings
+
+**2026-10-19 — full-diff code review, `15acb570..b6285f86`.** Three independent layers (Blind Hunter: diff only;
+Edge Case Hunter: diff + referenced code; Acceptance Auditor: diff + story + governance + invariant checklist), followed by
+verification against the worktree. All layers completed. Deduplicated disposition: **0 decision-needed, 8 patch
+(1 HIGH / 6 MEDIUM / 1 LOW), 0 defer, 1 dismissed**. BigDev chose option 2 ("Leave as action items"): all eight findings remain unchecked; no implementation patches applied. Story status is `in-progress`.
+Every retained finding is an engineering or documentation correction under the Panel-routing template's §0; no trustee
+question is required.
+
+- [ ] [Review][Patch][HIGH][R1] Enforce the 72-hour deadline at the send marker, after decrypt/hash work
+  [packages/domain/src/claim/peer-mesh-wa-reminder.ts:400] — WR5 / Decision `2026-10-19-365` forbids an attempt starting
+  at or after text acceptance +72h. Begin checks `ping.in_time`, then commits; the child awaits mobile decryption and hashing.
+  The marker checks ownership and lease only, so that delay can cross the independent deadline. Live reproduction: a ping
+  seeded two seconds before its deadline, followed by a three-second HMAC delay, sent once at age **72.00029358 hours**.
+  Recheck the ping's deadline at handoff and record an unsent expired attempt as `skipped_late`; add the delayed-hash leg.
+  Sources: blind + edge + auditor.
+
+- [ ] [Review][Patch][MEDIUM][R2] Recheck quiet hours after the marker transaction completes
+  [apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts:539] — WR2 (viii), WR10 and AC3 require no send outside
+  09:00–20:00 IST. `markAt` is sampled before awaiting a pooled connection, the marker UPDATE and COMMIT; after they return,
+  the child calls Meta without reading the clock again. A wait crossing 20:00 therefore sends at night. The marker's lease
+  threshold also uses the pre-wait time. Reproduction advanced the injected clock from 19:59:59 to 20:00:01 at the marker
+  query and observed one send. Bound the marker operation and check fresh time before handoff; if handoff is cancelled,
+  safely release the known-unsent marker and defer. Sources: blind + edge.
+
+- [ ] [Review][Patch][MEDIUM][R3] Bound and batch the sweep's maintenance writes before scanning due work
+  [packages/domain/src/claim/peer-mesh-wa-reminder.ts:630] — WR12 / AC10's run budget does not cover the lapsed finisher or
+  late marking: both run before the first budget check, update all matching rows, and have no lock/statement bounds or
+  `SKIP LOCKED` batching. A single locked reminder can stall every tenant's due scan; pg-boss expiry does not cancel the
+  running SQL. Live reproduction held a qualifying row lock: a sweep with a 10ms budget remained blocked after 200ms and
+  resumed only after the lock was released. Use bounded maintenance batches that skip busy rows and observe the tick's
+  remaining budget. Sources: blind + edge.
+
+- [ ] [Review][Patch][MEDIUM][R4] Give unattempted claims progress when parked claims repeatedly fill a sweep's bound
+  [apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts:336] — Each tick resets the keyset cursor, orders by claim UUID,
+  and stops at `maxRuns` or its budget. Parked rows are immediately due again. Under a saturated bound, the same refusing
+  prefix can take every tick until later healthy claims age out. Reproduction used two due claims and the supported
+  `maxRuns: 1`: three consecutive ticks retried the first claim three times, while the second had no row or child.
+  Preserve fair progress across ticks or schedule parked retries separately from first attempts; cover repeated bounded
+  ticks with a refusing claim followed by healthy work. This is conditional on reaching the bound, not a claim that today's
+  default is already saturated. Source: blind.
+
+- [ ] [Review][Patch][MEDIUM][R5] Preserve a late disposition for due work deferred before its first begin
+  [packages/domain/src/claim/peer-mesh-wa-reminder.ts:541] — AC3 explicitly requires the child queued at +71h and deferred
+  overnight to record `skipped_late` at its late begin. The child list shares the sweep's `< +72h` predicate, and jobs returns
+  `noop/nothing_due` before begin. With no existing row, late marking cannot recover it. Live reproduction first deferred
+  a due claim at night, let its deadline pass, then resumed at an injected morning: `nothing_due`, zero reminder rows.
+  Carry/reconcile provenance of queued due work so the specified late judgement is reachable, without backfilling pings
+  that were never due. Add a resume-after-deadline child test rather than only calling domain begin directly. Source: auditor.
+
+- [ ] [Review][Patch][MEDIUM][R6] Keep config-hold alarms associated with each Pariwar and its actual gap
+  [apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts:370] — WR7 / WR12 / AC9 require one actionable alarm per held
+  Pariwar per tick. Separate global `heldClaims` and `heldGaps` sets discard the association, then emit one combined alarm
+  with at most five claim IDs and no Pariwar IDs. With several tenants, the operator cannot tell which fix belongs where;
+  claims beyond the sample are unidentified. Live reproduction with two Pariwars and different gaps produced one alarm
+  naming neither Pariwar. Group holds by Pariwar, emit one alarm for each, and test multiple tenants together. Source: auditor.
+
+- [ ] [Review][Patch][MEDIUM][R7] Correct the completion claim and disclose the portions of AC13 without RED evidence
+  [_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md — Debug Log (d), Completion Notes]
+  — AC13 requires every new test to have been shown RED against unfixed code. Debug Log (d) explicitly says the remaining
+  record/RLS legs were written against the applied table and had no separate unfixed-code run; Task 4 records no such run.
+  An expected SQL refusal in a passing test is not a RED test execution. Completion Notes nevertheless claim ACs 0–13 met.
+  Checklist family 10 is a REAL GAP: record the un-attested proof honestly and supply meaningful new mutation/guard-bites
+  evidence where useful, dated as new evidence. Do not backfill a claim that an earlier run occurred. Source: auditor.
+
+- [ ] [Review][Patch][LOW][R8] Keep Row 27's build evidence separate from Row 35's production readiness
+  [docs/launch-gate-inventory/inventory-roster.md:480] — AC0 / WR15 call for a dated pointer. Row 27 note (3) requires 6.31
+  to be built, or its absence at go-live recorded; the story's Sequencing says 6.31 `done` discharges it. The new annotation
+  and Row 35's notes instead say Row 35 must close, apparently adding Meta/counsel/successor-story readiness to the build
+  evidence line. Correct those annotations while preserving the existing note and the reminder's own go-live gates.
+  Source: auditor.
+
+**Verification.** Existing focused suites passed on this reviewed HEAD: jobs 40/40 (including 19 live tests), domain/RLS
+50/50 (five live suites), channels 58/58 (new direct-client tests and existing WhatsApp/provider compatibility tests),
+**148/148 total**. Live tests used :5433 explicitly. The initial sandbox attempt could not connect (`EPERM`); the permitted
+reruns passed. AC12's frozen-file diff was also checked empty by the Acceptance Auditor. This review did not rerun all of
+`ci:local`; its earlier green result remains the development record above.
+
+Six isolated regression reproductions under `/private/tmp/twt-6-31-review-tests/` fail the desired assertions on the reviewed
+code and confirm R1–R6. They reuse the existing jobs live fixture, real domain/database writes and injected Meta transport;
+R1/R5 let real DB time cross the deadline, R2 injects a clock crossing at the marker query, R3 uses a real second-connection
+row lock, R4 lowers the supported bound, and R6 scans two tenants. Fixture cleanup completed. Re-run:
+`DATABASE_URL='postgresql://twt_dev_app:devpass@127.0.0.1:5433/twt_dev?sslmode=disable' pnpm exec vitest run --config /private/tmp/twt-6-31-review-tests/vitest.config.mjs -t 'review repro'`.
+These scratch files are local review artifacts, not committed regression tests.
+
+**Dismissed (1).** The candidate that finalisation has an *unbounded pool-acquisition wait* was rejected after tracing boot's
+`createDb` through `packages/domain/src/db.ts`: the production pool has a 10-second connection timeout. That candidate did
+not establish exhaustion of the two-minute margin. It is distinct from R2's proven quiet-hours crossing and R3's unbounded
+maintenance SQL.
+
+**Touched load-bearing invariant families (Acceptance Auditor, with verified findings incorporated):**
+
+| Family | Verdict | Evidence / reason |
+|---|---|---|
+| 1 — state guards | **REAL GAP** | R1/R2 violate the send-time bounds; R5 bypasses the specified late judgement. Finished-row protection is otherwise directly exercised by the record and domain specs. |
+| 2 — concurrency / redelivery | Covered by test and construction | `peer-mesh-wa-reminder-concurrency.spec.ts` proves one begin under two connections and SUBMIT/begin lock order; marker CAS and live ambiguous-send/finalise-failure tests prevent re-send. The race test proves one begin, not literally a complete pair of competing sends. |
+| 3 — tenant / actor boundaries | Covered by test; actor-route part not constructible | Policy regression tests scope A/B, fail-closed, cross-tenant INSERT/UPDATE; opt-in spec checks another Pariwar. No new human mutation route exists. |
+| 5 — DB backstops | Covered by test | Policy regression directly exercises FORCE/RLS, exact grants, owner FKs and indexes; record spec exercises uniqueness, CHECKs and the frozen-row trigger. |
+| 6 — projections / snapshots | Covered by construction | Due reads project IDs; domain returns stored ciphertext; jobs renders PII without storing it in the reminder or its bounded notes. Live AC5 checks unchanged events/claim/pings/selection. |
+| 7 — aggregates | Covered by construction | Due reads reuse `answerWindowSql`, joins do not fan out, and `seenClaims` deduplicates enqueueing. The existing reply tally is untouched. |
+| 9 — deliberate bypasses | Covered by construction and test | Cross-tenant scans/writes document rationale and re-examination triggers; the live F21 role-guard test refuses an RLS-bound sweep. |
+| 10 — closure honesty | **REAL GAP** | R7: the disclosed missing historical RED runs do not support the blanket AC13 completion claim. |
+| 12 — ownership | Covered by test and construction | Owner-FK regression rejects wrong tenant/member/selection-claim; locked begin validates ping ownership, later writes require tenant/reminder/job and an unfinished outcome. |
+| 13 — semantic accessibility | Not constructible in this system | No React Native/HTML component, role or local screen state is added. Meta owns message-reader accessibility; real-`t()` lockstep tests cover the supplied words/link. |
 
 ## Dev Notes
 

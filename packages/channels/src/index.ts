@@ -49,8 +49,12 @@ export {
 export {
   createWhatsappAppCache,
   WhatsappSendError,
+  WhatsappTemplateParamError,
+  WHATSAPP_MAX_BODY_PARAMS,
   type WhatsappAppCache,
+  type WhatsappAppCacheOptions,
   type WhatsappMessagingHandle,
+  type WhatsappSendOptions,
   type WhatsappTemplateMessage,
   type WhatsappClientConfig,
   type FetchLike,
@@ -62,6 +66,14 @@ export {
   rejectionDetail as whatsappRejectionDetail,
   type WhatsappErrorClass,
 } from './providers/whatsapp-errors.js';
+// Story 6.31 (WR10) — the DIRECT WhatsApp path's failure classifier (6.31's reminder; row 6-37d reuses it).
+export {
+  classifyDirectWaSendFailure,
+  DIRECT_WA_RATE_LIMIT_CODES,
+  DIRECT_WA_RECIPIENT_CODES,
+  DIRECT_WA_SCOPE_CODES,
+  type DirectWaSendFailure,
+} from './providers/whatsapp-direct-send-outcome.js';
 // Story 5.5 — real Telegram Bot transport: the per-Pariwar Telegram Bot API client cache + the narrow
 // messaging seam, and the Telegram send-error classifier (the honest AC2 failure classes read off
 // SendResult.detail). Telegram is a fire-and-forget mirror side-channel — no cascade, no fallback.

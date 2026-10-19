@@ -32,20 +32,46 @@ export interface WhatsappMessagingHandle {
    * REJECTS (throws a `WhatsappSendError`) on a Meta error / non-2xx / network failure so the provider's
    * catch can classify it (whatsapp-errors.ts). Never returns a fabricated id on failure.
    */
-  send(message: WhatsappTemplateMessage): Promise<string>;
+  send(message: WhatsappTemplateMessage, options?: WhatsappSendOptions): Promise<string>;
 }
 
-/** The provider-built template message (Meta-agnostic shape; the client turns it into the REST body). */
-export interface WhatsappTemplateMessage {
+/**
+ * Story 6.31 (WR8) — per-send options for the DIRECT path (⛔ used by the dispatch provider, whose request is unchanged):
+ * `timeoutMs` bounds the fetch with an `AbortSignal` (architecture §3.12); an abort rejects with `httpStatus` 0 and
+ * `transport: 'timeout'`.
+ */
+export interface WhatsappSendOptions {
+  readonly timeoutMs?: number;
+}
+
+interface WhatsappTemplateMessageBase {
   /** Recipient msisdn in E.164 WITHOUT the leading '+' (Meta's `to` format). */
   readonly to: string;
   /** The Meta-registered UTILITY template name (from resolveApprovedTemplate). */
   readonly templateName: string;
   /** The template language code (e.g. 'en', 'hi'). */
   readonly languageCode: string;
-  /** The single `{{1}}` body parameter — the whitespace-normalized render output (Q1=A). */
-  readonly bodyParam: string;
 }
+
+/**
+ * The provider-built template message (Meta-agnostic shape; the client turns it into the REST body). EITHER the single
+ * `{{1}}` body parameter (the dispatch provider — Q1=A, unchanged) OR — Story 6.31 (WR8), the direct path — `bodyParams`:
+ * 1–3 NON-EMPTY values sent as `{{1}}`…`{{n}}` in order (validated BEFORE `fetch` — `WhatsappTemplateParamError`).
+ */
+export type WhatsappTemplateMessage =
+  | (WhatsappTemplateMessageBase & {
+      /** The single `{{1}}` body parameter — the whitespace-normalized render output (Q1=A). */
+      readonly bodyParam: string;
+      readonly bodyParams?: never;
+    })
+  | (WhatsappTemplateMessageBase & {
+      /** Story 6.31 (WR8) — the template's body values in order (1–3, each non-blank). */
+      readonly bodyParams: readonly string[];
+      readonly bodyParam?: never;
+    });
+
+/** The most body values a direct send carries (WR8 — the reminder sends three; row 6-37d two). */
+export const WHATSAPP_MAX_BODY_PARAMS = 3;
 
 /** The per-Pariwar client config the composition layer resolves (token = resolved Secret-Manager VALUE). */
 export interface WhatsappClientConfig {
@@ -71,6 +97,8 @@ export interface FetchInit {
   method: string;
   headers: Record<string, string>;
   body: string;
+  /** Story 6.31 (WR8) — present ONLY when the send carries `timeoutMs` (additive; the dispatch path never sets it). */
+  signal?: AbortSignal;
 }
 export interface FetchResponse {
   ok: boolean;
@@ -91,9 +119,35 @@ export class WhatsappSendError extends Error {
     public readonly metaCode: number | null,
     /** The HTTP status (0 for a network failure with no response). */
     public readonly httpStatus: number,
+    /**
+     * Story 6.31 (WR8) — on a `httpStatus` 0 failure only: `timeout` when the per-send `timeoutMs` aborted the fetch, else
+     * `network`. Undefined on every failure that carries a response.
+     */
+    public readonly transport?: 'timeout' | 'network',
   ) {
     super(message);
   }
+}
+
+/**
+ * Story 6.31 (WR8) — a direct send's body values are invalid (outside 1–3, or a blank value). Thrown BEFORE `fetch`: ⛔
+ * request was made, so it is ⛔ a `WhatsappSendError` (WR10 rule 0 — a refusal of unknown scope, ⛔ "may have sent"). Its
+ * message carries ⛔ value (a value is a name, a link or a number).
+ */
+export class WhatsappTemplateParamError extends Error {
+  public readonly name = 'WhatsappTemplateParamError';
+}
+
+/** Validate a direct send's values BEFORE the request (WR8). ⛔ A value in the message. */
+function assertBodyParams(params: readonly string[]): void {
+  if (params.length < 1 || params.length > WHATSAPP_MAX_BODY_PARAMS) {
+    throw new WhatsappTemplateParamError(`whatsapp-app: a template send carries 1–${String(WHATSAPP_MAX_BODY_PARAMS)} body values (got ${String(params.length)})`);
+  }
+  params.forEach((p, i) => {
+    if (typeof p !== 'string' || p.trim() === '') {
+      throw new WhatsappTemplateParamError(`whatsapp-app: body value {{${String(i + 1)}}} is empty`);
+    }
+  });
 }
 
 /** Validate the client config BEFORE building — a missing credential fails clear, not as an opaque Meta 400. */
@@ -109,8 +163,12 @@ function assertClientConfig(pariwarId: string, config: WhatsappClientConfig): vo
   }
 }
 
-/** Build the Meta REST request body for a UTILITY template send (the single-body-parameter shape, Q1=A). */
+/**
+ * Build the Meta REST request body for a UTILITY template send — the single-body-parameter shape (Q1=A), or one text
+ * parameter per `bodyParams` value, in order (Story 6.31, WR8).
+ */
 function buildRequestBody(message: WhatsappTemplateMessage): string {
+  const values = message.bodyParams !== undefined ? message.bodyParams : [message.bodyParam];
   return JSON.stringify({
     messaging_product: 'whatsapp',
     to: message.to,
@@ -121,7 +179,7 @@ function buildRequestBody(message: WhatsappTemplateMessage): string {
       components: [
         {
           type: 'body',
-          parameters: [{ type: 'text', text: message.bodyParam }],
+          parameters: values.map((text) => ({ type: 'text', text })),
         },
       ],
     },
@@ -151,7 +209,8 @@ function extractMetaCode(payload: unknown): number | null {
  * Build a fresh WA client cache. One per process (the composition layer holds it). `fetchImpl` defaults to
  * the global `fetch` (Node 18+/undici); tests inject a fake so NO network is touched.
  */
-export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch): WhatsappAppCache {
+export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch, options: WhatsappAppCacheOptions = {}): WhatsappAppCache {
+  const timeoutSignal = options.timeoutSignal ?? ((ms: number) => AbortSignal.timeout(ms));
   const clients = new Map<string, WhatsappMessagingHandle>();
 
   return {
@@ -163,7 +222,10 @@ export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch): What
         // corrupt the request path.
         const url = `https://graph.facebook.com/${encodeURIComponent(config.graphApiVersion)}/${encodeURIComponent(config.phoneNumberId)}/messages`;
         client = {
-          async send(message): Promise<string> {
+          async send(message, sendOptions): Promise<string> {
+            // Story 6.31 (WR8) — a direct send's values are checked BEFORE the request (⛔ a call on a bad value).
+            if (message.bodyParams !== undefined) assertBodyParams(message.bodyParams);
+            const signal = sendOptions?.timeoutMs !== undefined ? timeoutSignal(sendOptions.timeoutMs) : undefined;
             let res: FetchResponse;
             try {
               res = await fetchImpl(url, {
@@ -173,11 +235,17 @@ export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch): What
                   'Content-Type': 'application/json',
                 },
                 body: buildRequestBody(message),
+                ...(signal !== undefined ? { signal } : {}),
               });
             } catch (err) {
               // Network / transport failure — no HTTP response. Classify as api_unavailable downstream.
+              // Story 6.31 (WR8) — which one: the per-send bound aborted it, or the transport failed (a direct sender reads
+              // either as "may have sent", WR10 rule 1).
+              if (signal?.aborted === true) {
+                throw new WhatsappSendError('whatsapp send timed out', null, 0, 'timeout');
+              }
               const detail = err instanceof Error ? err.message : 'network error';
-              throw new WhatsappSendError(`whatsapp send transport failure: ${detail}`, null, 0);
+              throw new WhatsappSendError(`whatsapp send transport failure: ${detail}`, null, 0, 'network');
             }
 
             let payload: unknown = null;
@@ -215,6 +283,11 @@ export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch): What
       return client;
     },
   };
+}
+
+/** Options the tests drive: the per-send bound's signal factory (`AbortSignal.timeout` by default — sms-app.ts's MG9 shape). */
+export interface WhatsappAppCacheOptions {
+  readonly timeoutSignal?: (ms: number) => AbortSignal;
 }
 
 /** Pull the `messages[0].id` wamid off a Meta success response, defensively (never throws). */

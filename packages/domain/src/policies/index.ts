@@ -79,6 +79,8 @@ export * from './intake-attempts-rls.js';
 export * from './claim-peer-mesh-selections-rls.js';
 // Story 6.27a — the neighbours' replies + append-only answers (per-command tenant isolation; 0156).
 export * from './claim-peer-mesh-replies-rls.js';
+// Story 6.31 — the WhatsApp reminder's record (per-command tenant isolation; 0171).
+export * from './claim-peer-mesh-wa-reminders-rls.js';
 // Story 6.7 — ground-inspection tables (claim_ground_inspections + claim_ground_inspection_photos)
 // tenant-isolation policies (NOT cross-readable; mirror claims-rls). No write-rejection trigger —
 // status/structured_findings are plain columns; the claim's lifecycle stays on claims.current_state.

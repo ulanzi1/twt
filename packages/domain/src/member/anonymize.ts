@@ -340,6 +340,8 @@ export async function anonymizeMember(
   // `detail`; ⛔ address, ⛔ name) ⇒ nothing to scrub.
   // Story 6.27c (BF32, 0156 / 0166) — `claim_peer_mesh_pings`' delivery record holds ⛔ plaintext (ids, a KEYED number hash, a
   // fixed-vocabulary `detail`, the link code — ⛔ a name, ⛔ a number) ⇒ nothing to scrub.
+  // Story 6.31 (WR15, 0171) — `claim_peer_mesh_wa_reminders` holds ⛔ plaintext (ids, a KEYED number hash, the wamid, the template
+  // NAME, a fixed-vocabulary `detail` — ⛔ a name, ⛔ a number, ⛔ the link code or the link) ⇒ nothing to scrub.
 
   // ── member_medical_disclosures ── ALL rows: conditions → sentinel (NOT NULL); context → NULL. ──────
   await client

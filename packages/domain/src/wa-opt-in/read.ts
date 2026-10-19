@@ -6,6 +6,7 @@
 
 import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 
+import { consentExists } from '../consent/read.js';
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
 import {
@@ -159,4 +160,17 @@ export async function isOptInActive(
     )
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * ⭐ Story 6.31 (WR3) — "has chosen WhatsApp messages from the Trust" for the peer-mesh WhatsApp reminder: the ONE read the
+ * reminder calls. `isOptInActive` (the ratified dual gate's member half as built — ADR-0029, `-065`; `resolveWaTarget` reads it)
+ * AND `consentExists(…, 'whatsapp_opt_in')` — a DEFENSIVE conjunct that can only narrow. ⚠ As built an opt-in counts for 24
+ * hours (F14); `2026-10-19-364` (option A) makes a yes last until withdrawn, built by row `5-12-whatsapp-yes-lasts-until-withdrawn`
+ * in the shared read — this function's composition is unchanged by it. ⛔ `consentExists` alone: until `-364`'s condition 4 ships
+ * it still counts a withdrawn yes (withdrawal revokes only the newest consent row).
+ */
+export async function isPeerMeshWaReminderOptedIn(db: Db, args: { pariwarId: PariwarId; memberId: MemberId }): Promise<boolean> {
+  if (!(await isOptInActive(db, { pariwarId: args.pariwarId, memberId: args.memberId }))) return false;
+  return consentExists(db, args.pariwarId, args.memberId, 'whatsapp_opt_in');
 }

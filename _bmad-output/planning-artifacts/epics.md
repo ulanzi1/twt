@@ -3619,6 +3619,33 @@ Meta-approved UTILITY template with three values (the full name, the link, the h
 never an SMS, never an alert; a send that may have reached Meta is never resent, and a refusal of unknown scope is parked, never spent;
 ids only in logs and alarms; no event, no claim state; no call to Meta in any test.
 
+### Story 6.37d: When a Reminder to the Claimant Is Reported Undelivered, the Trust Tries WhatsApp Four Hours Later — on the Claimant's Reworded Filing Agreement `[PRIMITIVE]`
+
+> **Added 2026-10-19 (`bmad-create-story 6.37d`)** — the row `6-37d-claim-contact-whatsapp-step` was created by
+> [`-355`](../../.decision-log.md#decision-2026-10-18-355) decision 1 (row 6-37c's LD1 (a)), whose comment says this entry is *"owed at
+> its create-story"*; narrowed to the CLAIMANT by [`-356`](../../.decision-log.md#decision-2026-10-18-356) (no WhatsApp to a nominee)
+> and built on the §3.4 claim-contact exception approved by [`-357`](../../.decision-log.md#decision-2026-10-18-357) with go-live
+> condition G3. It builds the WhatsApp step of [`-350`](../../.decision-log.md#decision-2026-10-17-350) ruling 2 (1) that row 6-37c
+> records as skipped, and the filing agreement's [`-352`](../../.decision-log.md#decision-2026-10-17-352) Q1 B wording. Its build
+> decisions (WS1–WS14) are PROPOSED for BigDev at its Task 0 — not yet decided; two edge questions (the claimant who is also a nominee;
+> WhatsApp at four hours against "one message a day, at 10:00") may go to the Panel. Proposed to start only after row 6.31 is done (the
+> WhatsApp client work). GO-LIVE: a new roster row for G3. Full ACs:
+> `_bmad-output/implementation-artifacts/6-37d-claim-contact-whatsapp-step.md`. Not a merge fence.
+
+As a claimant whose family's claim is being chased for a bank-details correction or a death certificate, I want a reminder the phone
+network reports it could not deliver to me to be tried on WhatsApp a few hours later — only because I agreed to WhatsApp when I filed,
+never if I said STOP, and without touching my own WhatsApp settings as a member — so that the reminder has a second way to reach me
+before the Trust falls back to more texts, a call or a letter.
+
+**Acceptance Criteria (in brief):** the filing agreement reworded to name text message, WhatsApp, phone call, post and any later means,
+for the claimant only (English, and Hindi through its human review), with a bumped copy version, the old text kept as evidence, and a
+version-aware reader — a claim on the old wording keeps SMS, calls and post only; the nominees' texts and letters unchanged until counsel
+answers; for the claimant's ladder only, ONE WhatsApp — the same words as the reminder that failed, a Meta-approved UTILITY template, sent
+directly (never the alert cascade) — about four hours after a REPORTED failure, in the daytime, never past the reminders' end, in a pause
+or after the second text; a delivered WhatsApp ends the follow-up and counts as reaching the claimant (per chase); STOP ends claim
+WhatsApp to that number and is recorded even for a non-member; a claim send never changes anyone's member opt-in; staff see which
+channel got through; ADR-0042's forgery bound restated; no new SMS text, no new DLT template, no call to Meta in any test.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

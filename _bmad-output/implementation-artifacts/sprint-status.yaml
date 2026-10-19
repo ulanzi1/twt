@@ -49,6 +49,16 @@
 # item gets a dated note. ALSO (BigDev, same session): NEW rows `5-10-signup-whatsapp-opt-in-checkbox` (an UNTICKED WhatsApp box at
 # signup + a popup to go back or proceed — the ratified rule refuses pre-checked boxes) and `5-11-per-member-sms-fallback-fixed-wording`
 # (the alert SMS fallback is DARK; propose it for members without WhatsApp too) — both backlog; the Panel note gains the box as a fact.)
+# last_updated: 2026-10-19b (STORY 6.37d — CREATED by `bmad-create-story 6.37d` (worktree `.claude/worktrees/6-37d`, branch
+# `story/6-37d-claim-contact-whatsapp-step`, pinned `15acb570`): row `6-37d-claim-contact-whatsapp-step` `backlog` → `ready-for-dev`;
+# story file `6-37d-claim-contact-whatsapp-step.md`; the `epics.md` entry `-355` d1 owed. WS1–WS14 PROPOSED for BigDev at Task 0 (⏳ —
+# the agreement's -352 wording + a versioned registry (v1 kept as evidence, the `pending-story-0.13` marker kept) + a G3 reader; one
+# WhatsApp per claimant ladder at the origin's created_at + 4 h in 09:00–20:00 IST on a quarter-hourly sweep; a forward migration (the
+# ladder's whatsapp_step pending → sent | skipped once; `claim_contact_wa_sends`, `claim_contact_wa_stops`); STOP number-wide (claim hash space); a claim
+# send never moves a member opt-in; a delivered WhatsApp ends the ladder and counts for D22 per chase; roster Row 35 for G3; ADR-0042's
+# bound restated). PQ1 (the claimant who is also a nominee — `-356` vs `-357`) and PQ2 (WhatsApp at 4 h vs `-250` #5's one message a day
+# at 10:00) — BigDev's §0 first. ⚠ WS1 (a) proposes code only after row 6-31 is `done` on `main` (its client work exists only as a story
+# file on its branch); the ledger `2026-10-18i` note "6.31 must take 0170" is STALE (0170 is 6.37c's) — next free 0171 / `-364` / Row 35, raced by 6.31.)
 # last_updated: 2026-10-19a (STORY 6.37c — code review round 2, the 2nd fix-diff pass: fork E's corrections reviewed in fresh
 # context (1 H / 3 M) and corrected — the certificate ladder's no-number branch finalises `no_target` as LD3 and the correction child
 # (⛔ a stranded `attempting` row), step-2 un-send under a resolved step 3, the call form's late refusal / re-offer; W21, W22
@@ -20203,6 +20213,7 @@ last_updated: >-
   2026-10-19 (Story 6.31 Task 0 done: -365 committed alone (WR1–WR16, accept all recommended); Row 35; records; 6-31 in-progress.)
   2026-10-19 (-364 Trustee-ratified: a WhatsApp yes lasts until withdrawn (option A); new row 5-12 builds it; Story 6.31 v1.6.)
   2026-10-19 (Story 6.31 validated, v1.5: rebased on main, re-pinned; new rows 6-36d (nominees out of the five), 5-10 (signup WhatsApp box, unticked), 5-11 (SMS fallback wording) backlog; Panel note revised, not yet sent.)
+  2026-10-19 (Story 6.37d created: WS1–WS14 proposed, PQ1–PQ2 candidate; after 6.31 (WS1 a); 6-37d ready-for-dev.)
   2026-10-19 (Story 6.37c round-2 fix diff re-reviewed (1 H / 3 M) and corrected; 6-37c done.)
   2026-10-18 (Story 6.37c code review round 2 done: -363 (D1/D2) committed alone; 38 patches applied, P27 deferred; 0169 restored + 0170; ratified/presented records restored with dated notes; ci:local 36/36 on :5433. 6-37c done.)
   2026-10-18 (Story 6.37c code review done: 11 decisions resolved, 43 patches applied, 18 deferred; the fix diff itself re-reviewed (2 bugs caught and fixed); ci:local green on :5433, all 36 jobs, confirmed twice. 6-37c done.)
@@ -20795,11 +20806,13 @@ development_status:
   # wording keeps SMS, calls and post only) and the agreement's rewording.
   # ⭐ 2026-10-18 (`-357`): the §3.4 claim-contact exception for the claimant is APPROVED (applied to architecture §3.4 / ADR-0029); this row's
   # create-story picks it up with G3.
+  # ⭐ 2026-10-19 (`bmad-create-story 6.37d`): story file `6-37d-claim-contact-whatsapp-step.md`; buildable after Task 0 (WS1–WS14; PQ1–PQ2
+  # through §0) and — WS1 (a), proposed — after row 6-31 is `done` on `main`. GO-LIVE: roster Row 35 (G3 — proposed by WS4) and Row 32 (h).
   # ⚠ 2026-10-19 (Story 6.31 code review round 2, ledger `2026-10-19h`): the numbers this row's branch planned — migration 0171,
   # `-364`, roster Row 35, ledger `19c` — are TAKEN by branch `story/6-31-…` (with `-365`, `-366`, `19d`–`19h`); per `2026-10-19-366`
   # decision 6 this row takes the next free ones at its own commits. Its F3 describes 6.31's outcome rules as PROPOSED — read
   # `classifyDirectWaSendFailure` as shipped and `-366` decisions 1–2 at its Task 0.1.
-  6-37d-claim-contact-whatsapp-step: backlog
+  6-37d-claim-contact-whatsapp-step: ready-for-dev
   # ⭐ 2026-10-18 NEW ROW (`-359`, Trustee-ratified option B): when the deceased member's full name does not fit a suspicion text's name slot
   # (the nominee text FQ7, the refused person's appeal text `-293` item 1, the closure text `-291` Q2), send it with first name + surname
   # initial; a name that still does not fit keeps today's refusal + alarm. One function and its tests. ⛔ Story file yet. The neighbours'

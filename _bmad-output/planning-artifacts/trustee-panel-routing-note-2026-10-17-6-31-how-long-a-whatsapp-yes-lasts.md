@@ -7,12 +7,17 @@ citations, the question is: *"a member said yes to WhatsApp from the Trust; does
 one day?"* That is a trustee question, not an engineering one. The engineering half (how the system stores and reads the answer)
 is built by Story 6.31 either way. Only the meaning is asked here.
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — 2026-10-19 — OPTION A (Decision `2026-10-19-364`, Trustee-ratified)
 >
-> **Nothing is recorded here yet.** Written 2026-10-17 at `bmad-create-story 6.31` (pin `dae96d9b`); revised 2026-10-19 before
-> sending (pin `15acb570` — three facts added, the deciding fact cited, the "utility" uncertainty re-sourced). **Not yet sent.** When the
-> Panel rules, the ruling is copied into this block **and** into `.decision-log.md` as a new decision id. Everything below then stays
-> **unedited**, as the question **as it was put**.
+> **The ruling, verbatim, as relayed by BigDev:** *"by DR and KB / option A"* — Dhiraj Rahul and Kalpana Bharti.
+>
+> **A — "A yes lasts until the member takes it back (in the app, or by replying STOP), for every WhatsApp message from the
+> Trust."** Its cost was accepted with its conditions: before anything is sent on a yes older than a day, the app's "expired"
+> wording changes, its withdraw control shows, STOP always works, and taking a yes back ends every earlier yes, not only the
+> newest. Built by sprint row `5-12-whatsapp-yes-lasts-until-withdrawn`; until it ships the system keeps the 24-hour behaviour.
+>
+> Written 2026-10-17 at `bmad-create-story 6.31` (pin `dae96d9b`); revised 2026-10-19 before sending (pin `15acb570`); sent and
+> ruled 2026-10-19. Everything below stays **unedited**, as the question **as it was put**.
 
 ---
 

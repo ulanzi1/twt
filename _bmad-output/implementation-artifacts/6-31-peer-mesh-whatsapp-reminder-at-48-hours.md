@@ -27,9 +27,12 @@ the moment of ITS commit — re-grep `main`, every branch and every worktree (T4
 
 §0 GATE (the Panel template, `trustee-panel-routing-note-TEMPLATE.md`): the reminder ITSELF is ratified (`-303` Q1 A, Consequence 3;
 its language by `-310` CF1 A; its window by `-305` §2 item 4). Every build decision WR1–WR16 is the AUTHOR's. ONE question is the
-Panel's and is routed (F14, Task 0.5): how long a member's "yes to WhatsApp from the Trust" lasts — the Trustee-ratified ADR-0029
-(`-065`) built it as 24 hours; reading it longer would SUPERSEDE a ratified clause and is a consent basis. ⭐ It blocks ⛔ nothing:
-6.31 builds on the ratified 24-hour reading (WR3) and one read changes if the Panel rules otherwise.
+Panel's and was routed (F14, Task 0.5): how long a member's "yes to WhatsApp from the Trust" lasts — the Trustee-ratified ADR-0029
+(`-065`) built it as 24 hours. ⭐ RULED 2026-10-19 — `2026-10-19-364` (Trustee-ratified, *"by DR and KB / option A"*): a yes lasts
+until the member takes it back, for every WhatsApp message from the Trust; before anything is sent on a yes older than a day the
+app's "expired" wording changes, the withdraw control shows, STOP always works, and a withdrawal ends every earlier yes. Built by
+row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev: *"New row 5-12"*), ⛔ by 6.31. It blocks ⛔ thing here: 6.31 reads the ONE
+opt-in function (WR3); its reach widens when 5-12 changes what that function reads.
 Places a decision would become the Panel's, each kept OUT: (1) a reminder to someone whose text was never ACCEPTED by the gateway
 (WR2 (i) — it would be a FIRST message, widening `-303`; a text accepted and later REPORTED undelivered is ⛔ this case — F18,
 WR2 (i)); (2) any wording but the ruled text (WR6 — if Meta refuses the words, the reminder does ⛔ not go in that language, S1); (3) a reminder
@@ -80,8 +83,8 @@ Status: ready-for-dev
 >
 > **Day-one output: none, by design of its gates.** At the pin 6.27c HOLDS every Pariwar's texts (`config:counsel_basis_pending`
 > — the live questionnaire's two counsel-pending questions; Row 27), ⛔ Pariwar has WhatsApp provisioned (`pariwar_wa_config.enabled`
-> defaults `false`, set only by an operator through the admin channel-config form), and the ratified 24-hour opt-in reaches almost
-> nobody (F14). 6.31 is built so that the reminder goes the day all three lift — ⛔ a green suite proves it sends today.
+> defaults `false`, set only by an operator through the admin channel-config form), and until row 5-12 ships (`-364`) an opt-in
+> counts for 24 hours, which reaches almost nobody (F14). 6.31 is built so that the reminder goes the day all three lift — ⛔ a green suite proves it sends today.
 >
 > **What already ships and this story READS — rebuild ⛔ none of it:**
 > - the text's send record — `claim_peer_mesh_pings` (`send_outcome`, `send_updated_at`, `link_code`, `locale_source`) — 6.27c;
@@ -127,6 +130,7 @@ second SMS, a message in other words, or a reminder after the claim is decided.
 | `2026-10-18-356` | *"drop WhatsApp only notification for nominee."*; BigDev's scope: *"WhatsApp can be in future if nominee has opted to receive the notification …"*; its NOT-ratified reading (ii): a member nominee's existing member WhatsApp opt-in *"does not count by itself"* — ⇒ nominees leave the five at SELECTION (row 6-36d, §0 edge (iii)), ⛔ a reminder-side reading | ⭐ TRUSTEE-RATIFIED (ruling); scope BigDev's |
 | `2026-10-18-357` (applied to architecture §3.4 "Claim-contact exception", ADR-0029 changelog) | *"Outside the member opt-in flow, WhatsApp may carry messages about a claim … to ONE person only: the **claimant** … The exception does not change any member's opt-in state and opens WhatsApp to no other surface"*; for the claimant *"withdrawing it, or STOP, ends WhatsApp contact for that claim"* — about ONE claim; it says ⛔ thing about a duration and its duration was ⛔ asked (⛔ a ruling on how long a member's yes lasts) — 6.31 is ⛔ under it (§0 edge (iv)) | ⭐ TRUSTEE-RATIFIED |
 | `2026-10-18-362` | the neighbours' TEXT carries *"first name and the initial of the surname … only when the full name does not fit"* — SUPERSEDES `-311` PM3's "no text" reading; row 6-37e builds the fallback. The reminder carries the full name (§0 edge (ii), WR13) | ⭐ TRUSTEE-RATIFIED |
+| `2026-10-19-364` | *"by DR and KB / option A"* — *"A yes lasts until the member takes it back (in the app, or by replying STOP), for every WhatsApp message from the Trust"*; before anything is sent on a yes older than a day: the "expired" wording changes, the withdraw control shows, STOP always works, a withdrawal ends every earlier yes — built by row 5-12 | ⭐ TRUSTEE-RATIFIED |
 | Roster Row 27 note (3) | *"Row 6-31 … built, or its absence at go-live recorded as a decision."* | go-live gate — ⛔ never a merge fence |
 
 ⚠ **STALE LEDGER TEXT — do ⛔ not build it.** The sprint ledger entry `2026-10-10f` (which added this row) says *"⛔ no reminder once
@@ -238,7 +242,8 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   (`apps/mobile/app/(settings)/notifications.tsx`; `waNotifications.expired_*` in `packages/i18n/locales/en/common.json`). So the
   member is TOLD their yes ended, while the consent record still says granted. ADR-0029 (Trustee-ratified, `-065`) ratified the lifecycle *"incl.
   the 24h-window expiry"* and the dual gate on `isOptInActive`. ⇒ under the ratified reading the reminder reaches only neighbours
-  who opted in within the last 24 hours — almost nobody. ⇒ the Panel note (Task 0.5); WR3 builds the ratified reading meanwhile.
+  who opted in within the last 24 hours — almost nobody. ⇒ the Panel note (Task 0.5) — RULED `-364` option A: a yes lasts until
+  withdrawn; row 5-12 builds it (the four conditions first). WR3's function is unchanged in shape; 5-12 changes what it reads.
   ⚠ The same 24-hour reach applies to `dispatch()`'s WhatsApp rung today (a deferred-work item, Task 0.4 — ⛔ not 6.31's to fix).
   ⭐ The 24 hours is Meta's CHAT window, ⛔ an opt-in life: the code names it so (`wa-webhook-processor.ts:40` *"The 24h Meta
   customer-service window"*; `whatsapp-errors.ts:31` *"UTILITY templates CAN be sent outside 24h"*), and Meta's Business Messaging
@@ -250,7 +255,7 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   `consentId`, `wa-webhook-processor.ts` activation path); expiry revokes ⛔ none; STOP and the API revoke revoke ONLY the current
   opt-in's `consentId`; `consent_records` has ⛔ unique index; `consentExists` is true on ANY unrevoked row. ⇒ a member who
   expired, opted in again and then sent STOP still has `consentExists('whatsapp_opt_in') = true`. Latent today (nothing reads
-  `consentExists` alone for WhatsApp); under the Panel note's A or B it would message a member who withdrew — WR3, T2, WR15 (4).
+  `consentExists` alone for WhatsApp); `-364`'s condition 4 (a withdrawal ends EVERY earlier yes) is row 5-12's — WR3, T2, WR15 (4).
 
 **The plumbing**
 - **F15 — Migrations** are hand-authored SQL with `--> statement-breakpoint` and a manual journal entry; at the pin the last is
@@ -329,13 +334,12 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   memberId})` in `packages/domain/src/wa-opt-in/` = `isOptInActive(…)` (the ratified dual gate's member half as built — ADR-0029, `-065`; `resolveWaTarget` reads exactly this) AND
   `consentExists(…, 'whatsapp_opt_in')` — a DEFENSIVE extra conjunct (it can only narrow: 5.4 mints and revokes both in one
   transaction; with rows accumulating (F14) it is still only narrowing, because `isOptInActive` is false after a STOP). Cost:
-  reaches almost nobody (F14). The Panel note asks whether the choice lasts
-  until withdrawn; under option B this function's body changes PLUS the wording / withdrawal fixes the note names — and the
-  withdrawal fix must revoke EVERY unrevoked `whatsapp_opt_in` consent row of the member, ⛔ only the current opt-in's (F14),
-  with a leg "opt in, expire, opt in again, STOP ⇒ ⛔ reminder"; under A,
-  ALSO the alert system's gate (`resolveWaTarget`) and the expiry sweep / EXPIRED state change — in a follow-up row, or
-  in 6.31 if the ruling lands before Task 1. ⛔ Never read `consentExists` alone before a ruling (it would SUPERSEDE a ratified
-  clause by reading — [[feedback_supersede_never_reinterpret]]).
+  reaches almost nobody (F14) until row 5-12 ships. RULED (`-364`, option A): a yes lasts until withdrawn, for every WhatsApp
+  message from the Trust — so the change is to the SHARED opt-in read (`isOptInActive` / the expiry sweep / the EXPIRED state),
+  the alert gate (`resolveWaTarget`) and the four conditions (wording, withdraw control, STOP always, every earlier yes revoked —
+  with a leg "opt in, expire, opt in again, STOP ⇒ ⛔ message"), ALL in row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev:
+  *"New row 5-12"*). 6.31's function keeps its composition and gains the wider reach when 5-12 ships, with ⛔ edit here. ⛔ Read
+  `consentExists` alone even now: it is ⛔ the ruling's mechanism, and until condition 4 ships it still counts withdrawn yeses.
 - **WR4 — The 48 hours count from the TEXT.** ⭐ (a) due at `send_updated_at + 48 h` of the accepted ping — *"after two days"* stays
   literally true and the reminder ⛔ never precedes or crowds the text; a replacement ping counts from its OWN text. Cost: a late
   text pushes the reminder past the 72-hour tally (F3/F5) — recorded. (b) selection + 48 h, only if the text went ≥ 24 h earlier —
@@ -528,14 +532,15 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   join its list (F21); ANNOTATIONS (⛔ rewrites), each a DATED NOTE placed AFTER the 2026-10-18 `-357` amendment and ⛔ a new
   bullet in a ratified list, on architecture §3.4 (a direct WhatsApp path outside `dispatch()` that rides the MEMBER opt-in dual
   gate — ⛔ the claim-contact exception; a message outside the UTILITY list's examples; three body values), ADR-0028 (multi-value
-  for this path), ADR-0029 (the reminder reads the dual gate as ratified; the Panel note pending; the 2026-10-18 amendment changes
+  for this path), ADR-0029 (the reminder reads the dual gate as ratified, amended by `-364` — ADR-0029's own changelog row was
+  written with the ruling; the 2026-10-18 amendment changes
   ⛔ member opt-in); the sprint row → `in-progress` (its annotation on the stale ledger-`2026-10-10f` clause was ⭐ DONE at
   creation); `anonymize.ts` gains a "nothing to scrub" line for the new table in the BF32 shape (it holds ⛔ name, ⛔ mobile, ⛔
   link — ids, the number hash and the wamid only); `deferred-work.md` items: (1) the 24-hour opt-in reach of `dispatch()`'s WA rung
   and the un-withdrawable EXPIRED consent (F14); (2) `WA_BLOCK_ERROR_CODES` revoking consent on signals that are ⛔ consent —
   131049 (a marketing cap), 131026 (an app / Terms state), 131047 (the chat window) (F13); (3) ⛔ no `template_category_update`
   webhook handling; (4) withdrawal revokes only the CURRENT consent row while every re-opt-in mints another (F14) — latent; the
-  Panel note's A / B fix must revoke all; (5) `whatsapp-errors.ts` files 131048 (a number quality restriction) and 133016 (never a
+  HOMED in row 5-12 (`-364` condition 4) — record it as homed, ⛔ open; (5) `whatsapp-errors.ts` files 131048 (a number quality restriction) and 133016 (never a
   send response) as rate limits — `dispatch()`'s classification, ⛔ fixed here (WR10's classifier reads them first).
 - **WR16 — Roster row `peer-mesh-wa-reminder-template-approved`** (the next free row number; Rows 29–34's eleven fields): **(a)**
   each live Pariwar's WABA provisioned (`pariwar_wa_config` complete, switch on); **(b)** the en + hi templates approved by Meta
@@ -545,7 +550,8 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   the deceased member's name and the neighbour's number (Row 27 (a) names only the DLT text); **(e)** an owner for the HOLD /
   `may_have_sent` alarms — ⭐ tied to Row 32 (h), the leg under which alarms stop reaching the LOGS only (`-354` decision 4; the
   Panel was told, `-360` "Item 5 of the pack"), ⛔ a second alarm route; **(f)** a re-check procedure for Meta re-categorising an approved template (no webhook handles it — WR15
-  (3)); **(g)** the Panel's ruling on Task 0.5's note recorded, or its absence at go-live recorded as a decision; and row 6-36d
+  (3)); **(g)** row `5-12-whatsapp-yes-lasts-until-withdrawn` `done` (`-364`'s four conditions — until then the reminder reaches
+  only a yes given in the last 24 hours), or its absence recorded as a decision; and row 6-36d
   (nominees out of the five) `done`, or its absence recorded as a decision. ⛔ Never a merge fence.
 
 ## Acceptance Criteria
@@ -555,7 +561,7 @@ one author-commit (the next free decision id — header NUMBERS) naming what it 
 it annotates (ADR-0028, ADR-0029 — ⛔ superseding either), and the §0 block's MATCH edges incl. (i)–(iv); then, in one records
 commit: the `epics.md` entry, the roster row `peer-mesh-wa-reminder-template-approved`, the Row 26 dated note, the Row 27 note (3) pointer, the architecture
 §3.4 / ADR annotations (the sprint-row annotation was made at creation), the `deferred-work.md` items (1)–(5) (WR15), the ledger
-line — all BEFORE any code. The Panel note (Task 0.5) is WRITTEN at creation and ⛔ yet sent; it blocks ⛔ nothing.
+line — all BEFORE any code. The Panel note (Task 0.5) was sent and RULED (`-364`, option A); it blocks ⛔ thing in 6.31.
 
 **AC1 — The record (WR1).** Migration `<next free>_peer-mesh-wa-reminders.sql` (hand-authored; its journal idx the next free and
 its `when` greater than the highest on `main` and every branch — F15) creates
@@ -671,8 +677,7 @@ packages/channels/src/providers/whatsapp-errors.ts
 packages/contracts/src/alerts packages/domain/migrations/0038_pariwar-wa-config.sql packages/domain/migrations/0156*
 packages/domain/migrations/0166* packages/domain/src/claim/peer-mesh-request.ts packages/domain/src/claim/peer-mesh-reply.ts
 packages/domain/src/claim/answer-window.ts apps/jobs/src/scheduler/contribution-notify.ts apps/jobs/src/wa-webhook-processor.ts` is
-EMPTY — except (b): ONLY if Task 0.5's in-story path is taken (the Panel ruled before Task 1), the withdrawal fix's edits to
-`wa-webhook-processor.ts`, each listed in the File List. (The two exports 6.31 adds — `readMemberFacingDeceasedName` split out of
+EMPTY, with ⛔ exception (`-364`'s fixes are row 5-12's, ⛔ 6.31's — the in-story path of v1.5's Task 0.5 is withdrawn). (The two exports 6.31 adds — `readMemberFacingDeceasedName` split out of
 `readDeceasedName` in `claim-peer-mesh-requests.ts` (deps narrowed + a label parameter; 6.27c's wrapper keeps the fit check, its
 behaviour and its spec unchanged), `resolveChannelSecret` in `contribution-providers.ts` — are in files ⛔ on this list; each is listed in the File List with its reason.)
 
@@ -711,14 +716,11 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
     (its annotation pointing the stale ledger-`2026-10-10f` clause to `-305` §2 item 4 was ⭐ DONE at creation — ⛔ repeat it);
     `deferred-work.md` items (1)–(5); the ledger line (the next free letter of the commit's day — re-check every branch) ([[project_sprint_status_safe_prepend]] — guard the size, verify
     the YAML).
-  - [ ] 0.5 The Panel note `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-31-how-long-a-whatsapp-yes-lasts.md`
-    exists (written at creation, from the TEMPLATE; revised at validate 2026-10-19 — ⛔ yet sent). Re-run its E4 commands; BigDev
-    decides whether and when to send it (it may go with any sitting; the ladder follow-up note — sent, answered as `-351` — already told the Panel the question exists). Record it
-    as "shown to the Panel" ONLY once it has gone ([[feedback_shown_to_panel_means_sent]]). ⭐ Nothing waits on it: Task 1 builds WR3
-    as ratified. If the Panel rules BEFORE Task 1 starts, apply the ruling's read + withdrawal fix inside 6.31 (re-open AC4; the
-    fix touches `wa-webhook-processor.ts` STOP handling (revoking EVERY unrevoked `whatsapp_opt_in` consent row — F14), the API
-    revoke handler and the app's expired-state screen — AC12's carve-out (b); ⚠ row 6-37d's claim-contact STOP work edits the
-    same STOP path — sequence with it); after, it is a new row.
+  - [x] 0.5 The Panel note `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-31-how-long-a-whatsapp-yes-lasts.md`
+    — DISCHARGED 2026-10-19: written at creation, revised at validate, sent and RULED (`2026-10-19-364`, Trustee-ratified, option A;
+    committed alone, `92155fce`). The ruling's build is row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev: *"New row 5-12"*),
+    ⛔ 6.31: Task 1 builds WR3 unchanged and AC12 has ⛔ carve-out. ⚠ Row 5-12 and row 6-37d's claim-contact STOP work edit the same
+    STOP path in `wa-webhook-processor.ts` — sequenced between them, ⛔ here.
 - [ ] **Task 1 — the record (AC1, WR1).**
   - [ ] 1.1 Hand-write `<next free>_peer-mesh-wa-reminders.sql` (header: the pre-apply CHECK queries, the GRANT list, why a separate
     table — F1); its journal entry (the next idx; `when` > the highest `when` on `main` AND on every branch — F15); ⛔ `db:generate`
@@ -731,7 +733,7 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
     (the `claim-peer-mesh-replies-policy-regression.spec.ts` shape).
 - [ ] **Task 2 — opted in (AC4, WR3).**
   - [ ] 2.1 `isPeerMeshWaReminderOptedIn` in `packages/domain/src/wa-opt-in/read.ts` (or a sibling file exported through the same
-    `waOptIn` namespace) — a one-line doc naming F14 and the Panel note.
+    `waOptIn` namespace) — a one-line doc naming F14, `-364` and row 5-12.
   - [ ] 2.2 Its spec: every AC4 leg, seeded through `member_wa_opt_in` + `consent_records` writers (⛔ raw INSERTs that bypass them — except AC4's one
     split-state leg).
 - [ ] **Task 3 — three values on the wire (AC6, WR8).**
@@ -780,9 +782,9 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
 - **T1 — The stale "District Admin" clause.** Ledger entry `2026-10-10f` says *"⛔ no reminder once the District Admin has decided"*.
   WITHDRAWN (`-305` §2 item 4). The gate is the ANSWER WINDOW — build ⛔ nothing keyed on a District Admin step.
 - **T2 — `consentExists` alone is a SUPERSESSION, ⛔ a convenience.** It would send to `EXPIRED_24H_WINDOW` members whom the app
-  has TOLD their opt-in expired, and whom the STOP path ignores (F14). Until the Panel rules, WR3's read is the ratified gate.
-  ⛔ "Fix" the 24-hour window in Story 5.4's code as part of 6.31's Task 1–6 (only Task 0.5's ruled path may). And a
-  consent-based read is UNSAFE even after a ruling until withdrawal revokes EVERY consent row (F14).
+  has TOLD their opt-in expired, and whom the STOP path ignores (F14). `-364` (option A) makes a yes last until withdrawn, but
+  ONLY after its four conditions ship — row 5-12's job. ⛔ "Fix" the 24-hour window in Story 5.4's code as part of 6.31's Tasks
+  1–6. A consent-based read stays UNSAFE until withdrawal revokes EVERY consent row (F14; `-364` condition 4).
 - **T3 — ⛔ Never `dispatch()`, ⛔ never `resolveWhatsappProviderDeps`.** Both are keyed by `AlertCategory`; the cascade falls back
   to SMS on a WA reject — a SECOND text (Trap 17 of 6.27; `-311` PM2). Build the `WhatsappTemplateMessage` yourself and call
   `messagingFor(pariwarId, config).send(…)`.
@@ -875,10 +877,12 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
 - ⭐ REACH (⛔ a merge fence): row `5-10-signup-whatsapp-opt-in-checkbox` (backlog, BigDev 2026-10-19) adds an UNTICKED signup box
   *"Send me WhatsApp messages from the Trust"* + a popup to go back or proceed — the ratified §3.4 *"explicit affirmative consent
   capture in-app"*; the draft Terms name ⛔ WhatsApp as a contact channel (R10(B): *"convenience mirrors only"*), and `-065`
-  refuses *"pre-checked boxes, bundled consent"*. With the Panel note's A it would make most members reachable; under today's
-  24-hour reading (WR3) it adds almost nothing. 6.31 reads the opt-in through WR3's ONE function either way.
+  refuses *"pre-checked boxes, bundled consent"*. With `-364` (option A) and row 5-12 shipped it would make most members
+  reachable; before 5-12 it adds almost nothing.
+- ⭐ REACH (⛔ a merge fence): row `5-12-whatsapp-yes-lasts-until-withdrawn` (backlog, `-364`) — until it ships the reminder reaches
+  only a yes given in the last 24 hours. 6.31 needs ⛔ change when it lands. 6.31 reads the opt-in through WR3's ONE function either way.
 - ⭐ DOWNSTREAM: row 6-37d builds on WR7–WR10 (header). Row 6-37e (`-362`'s short-name fallback) edits the same name function
-  as WR13 — whichever lands second rebases (F19). Row 6-37d's STOP work and Task 0.5's in-story path share `wa-webhook-processor.ts`.
+  as WR13 — whichever lands second rebases (F19).
 - 6.31 adds ⛔ nothing 6.27c's go-live (Rows 27–29) waits on; Row 27 note (3) is discharged by 6.31's `done`.
 - Go-live of the reminder waits on the roster row `peer-mesh-wa-reminder-template-approved` — ⛔ never a merge fence
   ([[project_not_in_production_merge_is_not_golive]]).
@@ -967,3 +971,4 @@ commit ALONE first (`governance: …`), then `story(6.xx): …` commits naming t
 | 2026-10-17 | 1.3 | Validation round 3 (fresh context, the round-2 edits): 4 HIGH / 6 MEDIUM / 5 LOW, all applied — AC2's lapsed legs keyed on `send_started_at` (⛔ `detail`); a rule-2 park clears the marker; begin re-checks `< + 72 h`; the marker write is a CAS with the lease margin and `timeoutMs` + margin < lease; `send_started_at`'s CHECKs / GRANT / trigger named; one ending at the bound (`skipped_late`); the set-based park function removed; `sweep:held` is a `claimed_by_job` marker; 502 / 504 ⇒ `may_have_sent`; `config:locale_unavailable`; `rate_limited` = HTTP 429; the 6.31 park cost vs 6.27c's P1 recorded; the `6-37b` branch's committed numbers ⇒ this creation's ledger `2026-10-17k`, 0167 / `-347` / Row 33 PROVISIONAL. |
 | 2026-10-17 | 1.4 | Validation round 4 (the v1.3 edits): 1 HIGH / 2 MEDIUM / 7 LOW, all applied — the lease inequality corrected (`CORRECTION_SEND_TIMEOUT_MS` + finalise < the 2-min handoff margin, pinned by a test); the lapsed in-flight finisher runs first, regardless of switch and bound, and late marking skips in-flight rows; rule 1's `detail` values; `config:<gap>` alarm-only; the three re-claim grounds; `readDeceasedName`'s label sites; WR5's sweep-vs-begin bound; AC7 legs for 502 / 131009 / the marker; Task 4's scope-park and marker functions + specs. |
 | 2026-10-19 | 1.5 | Validate (`bmad-create-story validate 6.31`): the branch REBASED onto `main` `15acb570` (50 commits — 6.37b / 6.37c shipped; ledger `2026-10-17k` re-placed in its slot) and RE-PINNED; four parallel fresh-context verifiers (governance staleness; every code cite at HEAD; the mechanism; premise + Meta's own pages): 6 HIGH / ~15 MEDIUM / ~20 LOW, all applied. BigDev answered three in session (recorded as §0 edges (i)–(ii) and WR10 rule 6, again at Task 0.2): *"(a) Send it"* (a text REPORTED undelivered is still "a text that went"), *"(a) Full name always"* (the reminder skips the SMS name fit check — `-362` narrows the TEXT only), *"Park, continue loop"* (131008 / 131009). HIGH: every planned number taken (0167 / `-347` / Row 33 → "the next free", the 6.37d race named, the roster row by KEY); F18 the peer-mesh delivery report; F19 `-362` and the name read SPLIT (`readMemberFacingDeceasedName`); WR10 rule 6 no longer FINISHES a refusal of unknown scope (401/403, code 100, account codes ⇒ park) and an exported `classifyDirectWaSendFailure` for 6.37d; consent rows accumulate and withdrawal revokes only the newest (F14, WR3, deferred item (4)); the Panel note revised before sending (`-357`'s claimant precedent, `-350`'s put-back, Meta's policy cited, the Hindi copy, the withdrawal cost). Also: §0 edges (iii) `-356` and (iv) the §3.4 annotation; new rulings rows; the day-one line; I1 per ping; I2 / AC8 a type-level SMS absence + SMS symbols; `hash_failed:tier1`; the begin's in-flight test (⛔ 23514); quiet hours at the marker; the bounded finalise + wamid alarm; late marking regardless of window; WR7 a key family, dotted-name item inherited, `config:wa_template_unreadable`; WR12 the role guard, `clampLimit`, an explicit child expiry; Row 26 note; `anonymize.ts` line; Meta codes 131048 / 133016 / 131026 / 131047; S1 / S3 re-scoped; DOWNSTREAM 6.37d and 6-37e in the header and Sequencing; cites corrected (`:719`, the helpline key's definition, F10, F11). Re-validation (two fresh-context reviewers) then found 3 HIGH in the story edits (WR10's reordering left rule 4's codes unreachable — 131048 / 131057 arrive on 429 / 503; `WhatsappTemplateParamError` fell into `may_have_sent`; §0 edge (iii) cited `-356`'s scope line against its own reading) and 1 HIGH in the note (`-357` presented as ruling a duration) — all applied; edge (iii) REPLACED by BigDev's *"Exclude at selection"*: nominees leave the five under the NEW row `6-36d-exclude-nominees-from-the-five`, 6.31 adds ⛔ nominee check. Same session, two more rows from BigDev: `5-10-signup-whatsapp-opt-in-checkbox` (UNTICKED + a popup — the ratified rule refuses pre-checked boxes; the Terms name ⛔ WhatsApp) and `5-11-per-member-sms-fallback-fixed-wording` (the alert SMS fallback is dark); Sequencing names 5-10, the note gains it as a fact. |
+| 2026-10-19 | 1.6 | The Panel RULED the note: `2026-10-19-364` (Trustee-ratified, *"by DR and KB / option A"*) — a yes lasts until withdrawn, for every WhatsApp message, after four conditions; committed alone (`92155fce`). Its build is NEW row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev: *"New row 5-12"*), ⛔ 6.31: Task 0.5 discharged, AC12's carve-out (b) withdrawn, WR3 / F14 / T2 / WR15 / WR16 (g) / AC0 / the §0 header / Sequencing updated; the note's ruling block, ADR-0029's changelog row and a dated §3.4 note written. |

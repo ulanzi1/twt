@@ -2242,6 +2242,12 @@ onboarding:
   consent, or inference from other settings are not valid opt-in origins. This
   protects against compliance drift under Meta policy and DPDPA consent
   semantics.
+  *(Dated 2026-10-19, Decision 2026-10-19-364 — Trustee-ratified, option A: a member's opt-in lasts
+  until the member withdraws it (app settings or STOP), for every WhatsApp message from the Trust; the
+  "Meta 24h customer-service window opened" above is a fact about free-form messages and no longer
+  ends the opt-in. Before anything is sent on an opt-in older than a day: the app's "expired" wording
+  changes, the withdraw control shows, STOP always works, and a withdrawal ends every earlier opt-in —
+  sprint row `5-12-whatsapp-yes-lasts-until-withdrawn`. The bullets above are unedited.)*
 - **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
   Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
   correction and certificate reminders' delivery ladder — to ONE person only: the

@@ -4,6 +4,22 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: validate of 6-31-peer-mesh-whatsapp-reminder-at-48-hours.md and Decision 2026-10-19-364 (2026-10-19)
+
+- **A member's WhatsApp opt-in counts for 24 hours only, and an expired one cannot be withdrawn** [`packages/domain/src/wa-opt-in/read.ts`
+  `isOptInActive`; `apps/jobs/src/wa-webhook-processor.ts` `resolveWindowExpiresAt` / the expiry sweep / `getActiveOptInByMobile`;
+  `apps/api/src/modules/wa-opt-in/handlers.ts` 409 `wa_opt_in.not_active`; `apps/mobile/app/(settings)/notifications.tsx`] — every
+  WhatsApp message on a member opt-in (the alert system's rung via `resolveWaTarget`, and Story 6.31's reminder) reaches only a yes
+  given in the last 24 hours; the app tells an expired member their opt-in ended while the consent row still reads granted, and a
+  STOP from them is ignored. ⭐ RULED by `2026-10-19-364` (Trustee-ratified, option A: a yes lasts until withdrawn, after four
+  conditions). HOMED — row `5-12-whatsapp-yes-lasts-until-withdrawn` (backlog); stays OPEN until that row is `done`.
+- **Withdrawing a WhatsApp opt-in revokes only the newest consent row, and every re-opt-in mints another** [`apps/jobs/src/wa-webhook-processor.ts`
+  activation (`recordConsent`, a fresh `consentId`) and revoke paths; `apps/api/src/modules/wa-opt-in/handlers.ts`; `consent_records`
+  (no unique index); `packages/domain/src/consent/read.ts` `consentExists`] — a member who expired, opted in again and sent STOP still
+  has `consentExists('whatsapp_opt_in') = true`, and their data download lists the old rows as granted. Latent today (nothing decides a
+  send on `consentExists` alone). ⭐ `-364` condition 4 (*"taking a yes back must end every earlier yes, not only the newest"*). HOMED —
+  row `5-12-whatsapp-yes-lasts-until-withdrawn`; stays OPEN until that row is `done`.
+
 ## Deferred from: code review of 6-37c-undelivered-reminder-ladder.md, round 2 (2026-10-18)
 
 - **Same-day boundary: a reached call made earlier on the day a text fails still ends or blocks that ladder** [`packages/domain/src/claim/contact-ladder.ts:215,288`; `contact-call.ts:244`] — every comparison is `called_on >= sent_on` on whole dates, and `claim_contact_calls` stores a date only (LD10's PII-free record). Trigger: a call time is ever recorded.

@@ -459,6 +459,29 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expect(h.sent).toHaveLength(1);
   });
 
+  it('F21 / WR12 — an RLS-bound role (the guard false) ⇒ ONE alarm, the tick ends: ⛔ listed, ⛔ finished, ⛔ row', async () => {
+    const w = await world();
+    await insertReminder(w, 0, { claimed_at: new Date(DAYTIME.getTime() - 11 * MIN), send_started_at: new Date(DAYTIME.getTime() - 11 * MIN) });
+    const rlsBound = new Proxy(pool, {
+      get(target, key) {
+        if (key === 'query') {
+          return (text: unknown, ...rest: unknown[]) =>
+            typeof text === 'string' && text.includes('rolbypassrls')
+              ? Promise.resolve({ rows: [{ ok: false }], rowCount: 1 })
+              : (target.query as (...a: unknown[]) => unknown).call(target, text, ...rest);
+        }
+        const v = Reflect.get(target, key) as unknown;
+        return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
+      },
+    });
+    const h = harness(w, { pool: rlsBound });
+    const { swept } = await tick(h, w);
+    expect(swept).toMatchObject({ refused: true, enqueued: 0, finishedLapsed: 0, markedLate: 0 });
+    expect(h.alarms.filter((a) => a.includes('cannot read across Pariwars'))).toHaveLength(1);
+    expect(h.alarms).toHaveLength(1);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'attempting' });
+  });
+
   it('⛔ due before 48 h or at 72 h: ⛔ enqueued, ⛔ row; a text that was ⛔ accepted is never followed', async () => {
     for (const hoursAgo of [47, 72]) {
       const w = await world({ hoursAgo });

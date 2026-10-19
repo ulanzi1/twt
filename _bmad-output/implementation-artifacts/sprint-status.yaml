@@ -1,3 +1,11 @@
+# last_updated: 2026-10-19f (⭐ **STORY 6.31 — DEV DONE ⇒ `in-progress → review`** (`bmad-dev-story 6.31`). Tasks 1–6 on
+# `story/6-31-peer-mesh-whatsapp-reminder-at-48-hours`: `5a445c1c` (migration **0171** `claim_peer_mesh_wa_reminders` — once per ping,
+# the in-flight marker, the finished-row trigger; `isPeerMeshWaReminderOptedIn`; WR8's three values + timeout; the exported
+# `classifyDirectWaSendFailure`), `8ce00c3a` (the domain begin / marker / finalise / park / sweep reads), `ce850dd2` (the hourly sweep
+# and per-claim child, sent DIRECTLY — ⛔ `dispatch()`, ⛔ SMS). Two build corrections recorded in the story (the marker reads the
+# child's clock; the child's list includes its own transient row). AC12's frozen-file diff EMPTY; `ci:local` on :5433 36/36 green.
+# Numbers taken: migration 0171 (journal `when` 1794282000015) — ⚠ row 6-37d plans the same; whichever lands second renumbers.
+# ⛔ Other row moves.)
 # last_updated: 2026-10-19e (⭐ **STORY 6.31 — TASK 0 DONE ⇒ `ready-for-dev → in-progress`.** BigDev: *"accept all recommended"* ⇒ Decision
 # `2026-10-19-365` (author-commit, WR1–WR16; committed alone, `990f7db2`). Records: the `epics.md` entry; roster Row 35
 # `peer-mesh-wa-reminder-template-approved` (a)–(g); dated notes on Row 26 (the sweep joins `jobs-db-role`) and Row 27 note (3); dated notes
@@ -20617,7 +20625,7 @@ development_status:
   # ⭐ 2026-10-19 (Task 0, ledger `2026-10-19e`): WR1–WR16 DECIDED — `2026-10-19-365` (BigDev: *"accept all recommended"*; `990f7db2`,
   # committed alone); records (epics entry, roster Row 35, Rows 26 / 27 notes, §3.4 + ADR-0028 / -0029 notes, deferred-work) committed. Code may start.
   # GO-LIVE (⛔ a merge fence): Row 35, incl. rows 5-12 and 6-36d.
-  6-31-peer-mesh-whatsapp-reminder-at-48-hours: in-progress
+  6-31-peer-mesh-whatsapp-reminder-at-48-hours: review
   # ⭐ 2026-10-10 ADDED (BigDev, in session: *"Yes, do it"*): the inspector's questionnaire for the family at the ground inspection (a
   # versioned, conditional form beside 6.26a's fixed checks; the family's comparable answers under shared keys; offline saving), and the
   # staff editor for questionnaire versions with a second approver (both questionnaires). Panel Q8 (unsent note) governs who may author.

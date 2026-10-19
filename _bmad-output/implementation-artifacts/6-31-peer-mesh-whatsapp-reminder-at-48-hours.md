@@ -71,7 +71,7 @@ S = Task 0.1 STOP conditions. Decision-entry letters (PM, SW, MG, CF, FQ …) ke
 
 # Story 6.31: One WhatsApp Reminder, Two Days After the Text, to Each Neighbour Who Has ⛔ Not Answered and Chose WhatsApp — the Same Words, Its Own Record, ⛔ Never a Second SMS `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** When a member's death is reported, up to five neighbours are texted (Story 6.27c) with
 > the member's name, a link to a few short questions, and the helpline. The Panel ruled (`-303` Q1 A) that those of the five who
@@ -721,29 +721,29 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
     committed alone, `92155fce`). The ruling's build is row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev: *"New row 5-12"*),
     ⛔ 6.31: Task 1 builds WR3 unchanged and AC12 has ⛔ carve-out. ⚠ Row 5-12 and row 6-37d's claim-contact STOP work edit the same
     STOP path in `wa-webhook-processor.ts` — sequenced between them, ⛔ here.
-- [ ] **Task 1 — the record (AC1, WR1).**
-  - [ ] 1.1 Hand-write `<next free>_peer-mesh-wa-reminders.sql` (header: the pre-apply CHECK queries, the GRANT list, why a separate
+- [x] **Task 1 — the record (AC1, WR1).**
+  - [x] 1.1 Hand-write `<next free>_peer-mesh-wa-reminders.sql` (header: the pre-apply CHECK queries, the GRANT list, why a separate
     table — F1); its journal entry (the next idx; `when` > the highest `when` on `main` AND on every branch — F15); ⛔ `db:generate`
     (the snapshot is frozen). `packages/domain/src/member/anonymize.ts` gains the "nothing to scrub" line for the new table in
     6.27c's BF32 shape (WR15).
-  - [ ] 1.2 The Drizzle schema + its export from the schema index; `REMINDER_SEND_OUTCOMES` + `PEER_MESH_WA_REMINDER_DETAIL_PATTERN`
+  - [x] 1.2 The Drizzle schema + its export from the schema index; `REMINDER_SEND_OUTCOMES` + `PEER_MESH_WA_REMINDER_DETAIL_PATTERN`
     exported beside it (one grammar — the CHECK mirrors it; a test compares them).
-  - [ ] 1.3 Apply on :5432 and :5433; the AC1 spec (`packages/domain/tests/integration/claim/peer-mesh-wa-reminder-record.spec.ts`)
+  - [x] 1.3 Apply on :5432 and :5433; the AC1 spec (`packages/domain/tests/integration/claim/peer-mesh-wa-reminder-record.spec.ts`)
     and the RLS policy-regression spec `packages/domain/tests/integration/rls/claim-peer-mesh-wa-reminders-policy-regression.spec.ts`
     (the `claim-peer-mesh-replies-policy-regression.spec.ts` shape).
-- [ ] **Task 2 — opted in (AC4, WR3).**
-  - [ ] 2.1 `isPeerMeshWaReminderOptedIn` in `packages/domain/src/wa-opt-in/read.ts` (or a sibling file exported through the same
+- [x] **Task 2 — opted in (AC4, WR3).**
+  - [x] 2.1 `isPeerMeshWaReminderOptedIn` in `packages/domain/src/wa-opt-in/read.ts` (or a sibling file exported through the same
     `waOptIn` namespace) — a one-line doc naming F14, `-364` and row 5-12.
-  - [ ] 2.2 Its spec: every AC4 leg, seeded through `member_wa_opt_in` + `consent_records` writers (⛔ raw INSERTs that bypass them — except AC4's one
+  - [x] 2.2 Its spec: every AC4 leg, seeded through `member_wa_opt_in` + `consent_records` writers (⛔ raw INSERTs that bypass them — except AC4's one
     split-state leg).
-- [ ] **Task 3 — three values on the wire (AC6, WR8).**
-  - [ ] 3.1 The `WhatsappTemplateMessage` union + `buildRequestBody` + the validation (`WhatsappTemplateParamError`); `timeoutMs` via
+- [x] **Task 3 — three values on the wire (AC6, WR8).**
+  - [x] 3.1 The `WhatsappTemplateMessage` union + `buildRequestBody` + the validation (`WhatsappTemplateParamError`); `timeoutMs` via
     `AbortSignal.timeout` (or an `AbortController` the client owns) — the rejection is a `WhatsappSendError` with `httpStatus` 0 and
     `transport: 'timeout'` (the fetch catch; the body-read catch unchanged — WR8) (AC6; WR10 rule 1 ⇒ `may_have_sent`).
-  - [ ] 3.1b `packages/channels/src/providers/whatsapp-direct-send-outcome.ts`: `classifyDirectWaSendFailure` (WR10 — pure,
+  - [x] 3.1b `packages/channels/src/providers/whatsapp-direct-send-outcome.ts`: `classifyDirectWaSendFailure` (WR10 — pure,
     exported through the barrel; ⛔ edit to `whatsapp-errors.ts`, AC12) + its unit legs (AC7).
-  - [ ] 3.2 Unit tests (AC6), RED first; the existing WA tests UNCHANGED and green.
-- [ ] **Task 4 — the domain begin / finalise (AC3, AC7).** `packages/domain/src/claim/peer-mesh-wa-reminder.ts`:
+  - [x] 3.2 Unit tests (AC6), RED first; the existing WA tests UNCHANGED and green.
+- [x] **Task 4 — the domain begin / finalise (AC3, AC7).** `packages/domain/src/claim/peer-mesh-wa-reminder.ts`:
   `beginPeerMeshWaReminder` (lock claim → ping; a FINISHED existing row ⇒ done, ⛔ write; on an existing `attempting` row FIRST
   `send_started_at IS NOT NULL` ⇒ "in flight", ⛔ write;
   then insert-or-CAS the row, the re-checks, the skip rows), `finalisePeerMeshWaReminder` (bounded: `SET LOCAL lock_timeout` +
@@ -756,9 +756,9 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
   bound and switch-OFF), the late and skip paths. Add the module to the decrypt
   fence `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` (`FENCED_FILES` 53 → 54) with a "returns the mobile
   ciphertext AS STORED, ⛔ never decrypts" arm (6.27c's BF16 shape) — the decrypt is the jobs child's, after COMMIT.
-- [ ] **Task 5 — the jobs sweep + child (AC2, AC3, AC5, AC7–AC11, WR9–WR14).**
-  - [ ] 5.1 `apps/jobs/src/scheduler/peer-mesh-wa-templates.ts` (WR6) + its lockstep test against the real `t()`.
-  - [ ] 5.2 `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts`: config gaps for a switch-ON Pariwar (`config:wa_config_incomplete`,
+- [x] **Task 5 — the jobs sweep + child (AC2, AC3, AC5, AC7–AC11, WR9–WR14).**
+  - [x] 5.1 `apps/jobs/src/scheduler/peer-mesh-wa-templates.ts` (WR6) + its lockstep test against the real `t()`.
+  - [x] 5.2 `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts`: config gaps for a switch-ON Pariwar (`config:wa_config_incomplete`,
     `config:wa_template_missing:<locale>`, `config:wa_secret_unresolved`, `config:app_links_base_url_invalid`,
     `config:helpline_number_missing`, `config:questionnaire_unavailable`, `config:counsel_basis_pending`,
     `config:locale_unavailable` — `resolvePeerRequestLocale` throws `PeerRequestLocaleMissingError`, as 6.27c holds it; a failed
@@ -768,11 +768,11 @@ tests), ⛔ no network call in any test. New tests are each shown RED on the unf
     the sweep (the role guard first — F21); the `register…Workers` export (an explicit child `expireInSeconds`). IMPORT 6.27c's
     quiet-hours helpers (already exported) and the SPLIT name read `readMemberFacingDeceasedName` (WR13 — 6.27c's
     `readDeceasedName` keeps its fit check, ⛔ a behaviour change); export `resolveChannelSecret`.
-  - [ ] 5.3 Queue names in `packages/queue/src/index.ts`; expose `whatsappAppCache` (WR9); wire in `boot.ts` beside 6.27c's
+  - [x] 5.3 Queue names in `packages/queue/src/index.ts`; expose `whatsappAppCache` (WR9); wire in `boot.ts` beside 6.27c's
     registration (pass `APP_LINKS_BASE_URL` the same way).
-  - [ ] 5.4 Pure tests (`claim-peer-mesh-wa-reminders.test.ts`) + the live suite (AC10) incl. the alarm-capture and event-count
+  - [x] 5.4 Pure tests (`claim-peer-mesh-wa-reminders.test.ts`) + the live suite (AC10) incl. the alarm-capture and event-count
     legs; the source and type fences (AC4, AC8).
-- [ ] **Task 6 — the proof (AC12, AC13).** The frozen-file diff; `ci:local` on :5433; the RED-first evidence for every new test in
+- [x] **Task 6 — the proof (AC12, AC13).** The frozen-file diff; `ci:local` on :5433; the RED-first evidence for every new test in
   Debug Log; Completion Notes; File List; Change Log; the story → `review`, the sprint row → `review` (a ledger line).
 
 ## Dev Notes
@@ -948,6 +948,8 @@ commit ALONE first (`governance: …`), then `story(6.xx): …` commits naming t
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `bmad-dev-story 6.31`, 2026-10-19.
+
 ### Debug Log References
 
 **(a) Task 0.1 — 2026-10-19, at `15acb570` + the story branch.** `git fetch origin`: `main` == `origin/main` == `15acb570`; the
@@ -967,7 +969,67 @@ WR10 rule 6 *"Park, continue loop"*; the nominee question *"Exclude at selection
 (epics entry; roster Row 35 + Row 26 / Row 27 notes; §3.4, ADR-0028, ADR-0029 notes; deferred-work items; sprint row → `in-progress`,
 ledger `2026-10-19e`).
 
+**(d) Tasks 1–5 — 2026-10-19, at the pin (`main` == `origin/main` == `15acb570` throughout; the Re-check diff stayed EMPTY).**
+Commits: `5a445c1c` (Tasks 1–3), `8ce00c3a` (Task 4), `ce850dd2` (Task 5). Numbers: migration **0171** (journal `when`
+`1794282000015` — above every branch's `1794195600014`); ⚠ row 6-37d's branch also plans 0171 — whichever lands second renumbers
+(T4). Live suites with `DATABASE_URL=…:5433` explicitly; 0171 applied on :5432 AND :5433.
+- **Task 1.** The first apply's template-name CHECK used `{1,512}`, past PG's ARE repetition cap (255) — every non-NULL name raised
+  `2201B`; the record spec caught it (RED). The table was NEVER committed and existed on no other branch, so it was dropped on both
+  DBs (`DROP TABLE`, `DROP FUNCTION`, the `__drizzle_migrations` row) and re-applied with `^[a-z0-9_]+$` + `char_length ≤ 512` —
+  ⛔ the 42P07 trap (nothing else had applied it). Specs: record 11, RLS policy regression 10 ⇒ 21/21. The remaining legs were
+  written against the applied table (their RED is the refusal they assert; ⛔ a separate unfixed-code run).
+- **Task 2.** Spec 7/7. RED by mutation: dropping the `consentExists` conjunct reddens the split-state leg; dropping `isOptInActive`
+  reddens the past-window and EXPIRED/REVOKED/BLOCKED legs.
+- **Task 3.** `whatsapp-direct-send.test.ts` 16/17 RED before the code (the one green leg pins the unchanged `{ bodyParam }`
+  request); then 17/17; the existing WA tests unchanged (channels 436/436); api `whatsapp-composition` 6/6.
+- **Task 4.** Domain spec 20 + race spec 2. Two fixture traps met and avoided: a second seed in one test ran as `twt_app` (seed now
+  `RESET ROLE`s first); `members.state` is projector-only (the ineligible neighbour is SEEDED `withdrawn`). A first draft moved a
+  frozen ping's `send_updated_at` under `ALTER TABLE … DISABLE TRIGGER` — replaced before running (an ACCESS EXCLUSIVE lock for the
+  test transaction would block parallel files): late rows are seeded at their age, reminder rows inserted as fixtures.
+- **Task 5.** Lockstep 8/8 (RED: one Hindi word changed ⇒ the real-`t()` leg fails); pure 13/13 (the type-level SMS-absence leg
+  shown to bite under `tsc` by adding an SMS-typed field); live 19/19 on :5433 (the 19th — the role guard false ⇒ ONE alarm, ⛔ listed, ⛔ finished — added during Task 6); 6.27c's `claim-peer-mesh-requests-live` +
+  unit + SMS-template suites 118/118 UNCHANGED after the name-read split; `contribution-providers.test.ts` 23/23.
+- **Two corrections found while building (both recorded in `ce850dd2`).** (1) The marker CAS compares `claimed_at` with the CHILD's
+  clock, ⛔ `clock_timestamp()` as WR10 wrote it: `claimed_at` is stamped from the child's clock and the re-claim and the lapsed
+  finisher judge the lease on that same clock (6.27c's form) — a host stamp against the DB clock would make the margin depend on
+  host/DB skew. The guarantee WR10 wants (the send's tail fits inside the margin) is unchanged. (2) The child's per-claim list now
+  includes an `attempting` row (⛔ marker) WHOEVER holds it — 6.27c's `listDuePeerMeshRequestPings` form — so the SAME job's pg-boss
+  retry re-claims its own transient row at once; the live suite caught the gap (the retry found "nothing due" and the row waited
+  for the lease to lapse and the next hourly sweep). The SWEEP's list keeps the lapsed-lease rule (a live child's row is ⛔
+  enqueued twice); a domain leg pins the difference.
+- **Gaps beyond Task 5.2's list (alarm codes only — ⛔ stored):** `config:wa_template_invalid:<locale>` (a configured name outside
+  0171's form would otherwise fail the begin's INSERT with 23514 on every ping) and `config:helpline_unreadable` (a helpline read
+  that THROWS — 6.27c folds it into `config:secret_manager`).
+- **AC12.** `git diff --stat 15acb570 -- <the frozen list>` is EMPTY.
+
+**(e) Task 6 — 2026-10-19.** AC12 diff EMPTY (above). `git fetch origin`: `main` == `origin/main` == `15acb570` (unmoved).
+`DATABASE_URL=…:5433 pnpm ci:local` ⇒ **PASSED — 36 jobs green** on the first run (lint, typecheck, build, test (unit), db-check, every
+static gate incl. `dlt-typed-variables`, `channels-determinism`, `pii-scrape`, `schema-diff`, `domain-invariants`,
+`access-wrapper-invariants`, the AI-10-5 coverage guard, `integration-tests`): integration domain 5860 passed / 1 skipped, jobs
+1209/1209, api 1987 / 1 skipped, channels 436/436 — ⛔ load timeout this run, ⛔ re-run needed. ⛔ Network call in any test (every WA
+send goes through an injected `fetch` or a fake handle).
+
 ### Completion Notes List
+
+- **Implemented (2026-10-19, `bmad-dev-story 6.31`).** ONE WhatsApp reminder per text, 48–72 h after the text was ACCEPTED, to a
+  neighbour who has ⛔ submitted and said yes to WhatsApp, while the claim is in the answer window, in a Pariwar with WhatsApp ON —
+  sent DIRECTLY through the one WhatsApp client cache (⛔ `dispatch()`, ⛔ SMS, ⛔ fallback; the deps type carries ⛔ SMS client). Its
+  own record `claim_peer_mesh_wa_reminders` (0171: once per ping, the in-flight marker, a finished-row trigger, a fixed `detail`
+  grammar); WR3's ONE opt-in read; WR8's three values + per-send timeout (additive); WR10's exported classifier for row 6-37d;
+  the locked begin (claim → ping → reminder) with the five finished judgements; an hourly 09:20–19:20 IST sweep (role guard →
+  lapsed in-flight finisher → late marking → one child per claim); the FULL member-facing name (6.27c's name read split, its text
+  unchanged). ACs 0–13 met (AC0 at Task 0).
+- **Day-one output: none** — every Pariwar's switch is OFF, ⛔ template name is set (roster Row 35), the texts it follows are held
+  (Row 27), and until row 5-12 ships an opt-in reaches 24 hours only. Built to send the day those lift.
+- **Deviations, each recorded in Debug Log (d):** the marker CAS reads the CHILD's clock (⛔ `clock_timestamp()`); the child's
+  per-claim list includes an own-held transient row (the SAME job's retry re-claims it); two extra alarm-only gaps
+  (`config:wa_template_invalid:<locale>`, `config:helpline_unreadable`); `wa-template-config-key.ts` is a separate file (WR7's
+  builder, so row 6-37d imports it without the peer-mesh template file).
+- **For row 6-37d (DOWNSTREAM):** reuse `waTemplateConfigKey` (add its purposes to `WaTemplatePurpose`), `{ bodyParams }` +
+  `timeoutMs`, `ContributionProviderWiring.whatsappAppCache`, `resolveChannelSecret`, `classifyDirectWaSendFailure` — shapes as
+  committed. ⚠ It also plans migration 0171: whichever lands second renumbers (and moves its journal `when` above the other's).
+- **Left as found (⛔ 6.31's):** `whatsapp-app.ts`'s pre-existing transport-failure message embeds the fetch error's message (the
+  direct path never stores or alarms it — only the classifier's token is kept).
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (2026-10-17, `bmad-create-story 6.31`; four
   read-only research passes over the governance trail, the peer-mesh sender, the WhatsApp substrate and the planning records).
@@ -977,6 +1039,41 @@ ledger `2026-10-19e`).
   ⛔ re-reviewed by a further round.
 
 ### File List
+
+NEW
+- `packages/domain/migrations/0171_peer-mesh-wa-reminders.sql` — the reminder's own record (WR1)
+- `packages/domain/src/schema/claim_peer_mesh_wa_reminders.ts` — the Drizzle schema, the outcome list, the detail grammar
+- `packages/domain/src/policies/claim-peer-mesh-wa-reminders-rls.ts` — the per-command policies
+- `packages/domain/src/claim/peer-mesh-wa-reminder.ts` — the begin, the marker, the finalise / park, the sweep's reads (Task 4)
+- `packages/channels/src/providers/whatsapp-direct-send-outcome.ts` — `classifyDirectWaSendFailure` (WR10)
+- `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts` — the sweep, the child, the config check, registration (Task 5.2)
+- `apps/jobs/src/scheduler/peer-mesh-wa-templates.ts` — the Meta template bodies + the language map (WR6)
+- `apps/jobs/src/scheduler/wa-template-config-key.ts` — the ONE template-name key builder (WR7; row 6-37d extends it)
+- `packages/domain/tests/integration/claim/peer-mesh-wa-reminder-record.spec.ts`
+- `packages/domain/tests/integration/rls/claim-peer-mesh-wa-reminders-policy-regression.spec.ts`
+- `packages/domain/tests/integration/wa-opt-in/peer-mesh-wa-reminder-opted-in.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-wa-reminder.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-wa-reminder-concurrency.spec.ts`
+- `packages/channels/tests/whatsapp-direct-send.test.ts`
+- `apps/jobs/tests/peer-mesh-wa-templates.test.ts`
+- `apps/jobs/tests/claim-peer-mesh-wa-reminders.test.ts`
+- `apps/jobs/tests/claim-peer-mesh-wa-reminders-live.test.ts`
+
+UPDATED
+- `packages/domain/migrations/meta/_journal.json` — idx 171
+- `packages/domain/src/schema/index.ts`, `packages/domain/src/policies/index.ts`, `packages/domain/src/claim/index.ts` — exports
+- `packages/domain/src/wa-opt-in/read.ts` — `isPeerMeshWaReminderOptedIn` (WR3)
+- `packages/domain/src/member/anonymize.ts` — the "nothing to scrub" line (WR15)
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` — 53 → 54 + the module's "never decrypts" arm
+- `packages/channels/src/providers/whatsapp-app.ts` — WR8, ADDITIVE (the message union, `WhatsappTemplateParamError`, per-send
+  `timeoutMs`, `FetchInit.signal`, `WhatsappSendError.transport`)
+- `packages/channels/src/index.ts` — barrel exports
+- `packages/queue/src/index.ts` — two queue names
+- `apps/jobs/src/scheduler/contribution-providers.ts` — exposes `whatsappAppCache`; exports `resolveChannelSecret` (WR9; ⛔ on AC12's list)
+- `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` — `readMemberFacingDeceasedName` split out + exported (WR13; ⛔ on AC12's
+  list); 6.27c's `readDeceasedName` keeps its fit check — behaviour and spec unchanged
+- `apps/jobs/src/boot.ts` — the reminder's registration
+- `_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
@@ -990,3 +1087,4 @@ ledger `2026-10-19e`).
 | 2026-10-19 | 1.5 | Validate (`bmad-create-story validate 6.31`): the branch REBASED onto `main` `15acb570` (50 commits — 6.37b / 6.37c shipped; ledger `2026-10-17k` re-placed in its slot) and RE-PINNED; four parallel fresh-context verifiers (governance staleness; every code cite at HEAD; the mechanism; premise + Meta's own pages): 6 HIGH / ~15 MEDIUM / ~20 LOW, all applied. BigDev answered three in session (recorded as §0 edges (i)–(ii) and WR10 rule 6, again at Task 0.2): *"(a) Send it"* (a text REPORTED undelivered is still "a text that went"), *"(a) Full name always"* (the reminder skips the SMS name fit check — `-362` narrows the TEXT only), *"Park, continue loop"* (131008 / 131009). HIGH: every planned number taken (0167 / `-347` / Row 33 → "the next free", the 6.37d race named, the roster row by KEY); F18 the peer-mesh delivery report; F19 `-362` and the name read SPLIT (`readMemberFacingDeceasedName`); WR10 rule 6 no longer FINISHES a refusal of unknown scope (401/403, code 100, account codes ⇒ park) and an exported `classifyDirectWaSendFailure` for 6.37d; consent rows accumulate and withdrawal revokes only the newest (F14, WR3, deferred item (4)); the Panel note revised before sending (`-357`'s claimant precedent, `-350`'s put-back, Meta's policy cited, the Hindi copy, the withdrawal cost). Also: §0 edges (iii) `-356` and (iv) the §3.4 annotation; new rulings rows; the day-one line; I1 per ping; I2 / AC8 a type-level SMS absence + SMS symbols; `hash_failed:tier1`; the begin's in-flight test (⛔ 23514); quiet hours at the marker; the bounded finalise + wamid alarm; late marking regardless of window; WR7 a key family, dotted-name item inherited, `config:wa_template_unreadable`; WR12 the role guard, `clampLimit`, an explicit child expiry; Row 26 note; `anonymize.ts` line; Meta codes 131048 / 133016 / 131026 / 131047; S1 / S3 re-scoped; DOWNSTREAM 6.37d and 6-37e in the header and Sequencing; cites corrected (`:719`, the helpline key's definition, F10, F11). Re-validation (two fresh-context reviewers) then found 3 HIGH in the story edits (WR10's reordering left rule 4's codes unreachable — 131048 / 131057 arrive on 429 / 503; `WhatsappTemplateParamError` fell into `may_have_sent`; §0 edge (iii) cited `-356`'s scope line against its own reading) and 1 HIGH in the note (`-357` presented as ruling a duration) — all applied; edge (iii) REPLACED by BigDev's *"Exclude at selection"*: nominees leave the five under the NEW row `6-36d-exclude-nominees-from-the-five`, 6.31 adds ⛔ nominee check. Same session, two more rows from BigDev: `5-10-signup-whatsapp-opt-in-checkbox` (UNTICKED + a popup — the ratified rule refuses pre-checked boxes; the Terms name ⛔ WhatsApp) and `5-11-per-member-sms-fallback-fixed-wording` (the alert SMS fallback is dark); Sequencing names 5-10, the note gains it as a fact. |
 | 2026-10-19 | 1.6 | The Panel RULED the note: `2026-10-19-364` (Trustee-ratified, *"by DR and KB / option A"*) — a yes lasts until withdrawn, for every WhatsApp message, after four conditions; committed alone (`92155fce`). Its build is NEW row `5-12-whatsapp-yes-lasts-until-withdrawn` (BigDev: *"New row 5-12"*), ⛔ 6.31: Task 0.5 discharged, AC12's carve-out (b) withdrawn, WR3 / F14 / T2 / WR15 / WR16 (g) / AC0 / the §0 header / Sequencing updated; the note's ruling block, ADR-0029's changelog row and a dated §3.4 note written. |
 | 2026-10-19 | 1.7 | Task 0 DONE: BigDev *"accept all recommended"* ⇒ `2026-10-19-365` (author-commit, WR1–WR16; `990f7db2`, alone); records — the `epics.md` entry, roster Row 35 `peer-mesh-wa-reminder-template-approved`, Row 26 / Row 27 dated notes, §3.4 / ADR-0028 / ADR-0029 dated notes, three deferred-work items; sprint row → `in-progress` (ledger `2026-10-19e`). Story → `in-progress`. |
+| 2026-10-19 | 1.8 | Tasks 1–6 DONE (`bmad-dev-story 6.31`): migration 0171 + the record / RLS specs; `isPeerMeshWaReminderOptedIn`; WR8's client additions + `classifyDirectWaSendFailure`; the domain begin / marker / finalise / park / sweep reads + race spec; the jobs sweep + child, the template file + key builder, the split name read, the exposed cache, boot wiring; pure, lockstep and live suites. Two corrections found while building (the marker's clock; the child's list) and two extra alarm-only gaps — Debug Log (d). AC12 diff empty; `ci:local` on :5433 36/36 green. Status → `review`. |

@@ -8,7 +8,7 @@ cut from the pin in the main checkout (no peer session was running — ListAgent
 Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); the CODE claims below were derived at ec6d826e
 (perishable). Re-check before Task 1: `git fetch origin && git diff --name-only ec6d826e..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: done — code review closed 2026-10-21 (F1–F5 fixed; ci:local 36/36 green on :5433; final mobile gate 1096 tests). Was: review — Tasks 0–7 DONE 2026-10-21 (`bmad-dev-story 5.12`). Was: in-progress — Task 0 DONE 2026-10-21 (Decision `2026-10-21-373`, `97e1e7ad`, alone; records next). Was: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
+STATUS: done — second code review closed 2026-10-21 (P1–P14 fixed in `b64dd462` + `dea4e5d1`; W1–W4 deferred; ci:local 36/36 green on :5433 at `dea4e5d1`). Was: done — code review closed 2026-10-21 (F1–F5 fixed; ci:local 36/36 green on :5433; final mobile gate 1096 tests). Was: review — Tasks 0–7 DONE 2026-10-21 (`bmad-dev-story 5.12`). Was: in-progress — Task 0 DONE 2026-10-21 (Decision `2026-10-21-373`, `97e1e7ad`, alone; records next). Was: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
 every code claim re-derived at ec6d826e = `origin/main`).
 
 START CONDITION — MET at the pin: row 6-37d is `done` and ON `main` (its worker edit — the claim half of the STOP / block branches —
@@ -880,7 +880,7 @@ Three of the patches (P1, P2, P3) are regressions introduced by the F1 / F3 fixe
   List omits `.decision-log.md`, `epics.md` and the told item. (d) The v1.6 Change Log row sits outside its table (blank line
   `:1045`). (e) Task 7.1's third `decision-flow-end-to-end.md` site (the sprint-row line) is undated (gitignored — local only).
   (auditor)
-- [ ] [Review][Patch] **P14 (Low) — AC12's gate has not run at the final commit.** The 36/36 `ci:local` ran on the uncommitted
+- [x] [Review][Patch] **P14 (Low) — AC12's gate has not run at the final commit.** The 36/36 `ci:local` ran on the uncommitted
   tree before F3's last mobile follow-up (disclosed). Re-run `ci:local` on :5433 at the commit that carries P1–P13. (auditor)
 - [x] [Review][Defer] **W1 — An ambiguous COMMIT failure is compensated as a rollback.** COMMIT reaches the server, the client
   sees a reset ⇒ a `_rolled_back` line for a transition that happened; the STOP retry then finds nothing to end. The same class
@@ -945,6 +945,14 @@ joined an older read (now `refresh`); an action error outlived a read showing th
 "not available for your Pariwar"; P2's leg could not see the boot wiring (pins added; `localConcurrency: 1`); P7 omitted
 `revokeOptIn`; P9's helper name over-claimed; the told item's opening line still read "STOP always works"; P11's status word;
 P13 (a) half applied; the §0 sentence wider than its items; the decision-flow note named a status the row did not have.
+**P14 — the gate at the final code commit:** `ci:local` with `DATABASE_URL` explicitly on :5433 at `b64dd462` FAILED one job
+(`test (unit)` — the mobile P4 leg, a frame race in the first P3/P4 clearing; fixed in `dea4e5d1`), then PASSED at `dea4e5d1` —
+**36 jobs green** (domain 6027 / 1 skipped, API 1999 / 1 skipped, jobs 1338, mobile 1107). Logs:
+`/private/tmp/claude-501/-Users-dev-Developer-projects-TWT/7dfe2766-50dc-451f-a59f-c8d354b1fb0b/scratchpad/ci-local-b64dd462.log` and
+`…/ci-local-dea4e5d1.log` (scratchpad — not repo artifacts). The records commit that follows touches no code.
+**Second review closure:** P1–P14 fixed; 0 decision-needed; W1–W4 deferred (`deferred-work.md`, round 2); D1 unchanged.
+Status stays `done` (⛔ yet on `main`, ⛔ pushed). Native screen-reader behaviour remains unattested.
+
 Mobile: 11 new legs — 10 RED against `5022a43c`'s screen (the eleventh, "⛔ announced while the app is behind", is a negative
 control: that screen announced nothing), and the six follow-up legs RED against the first-pass fix.
 
@@ -1188,3 +1196,4 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
 | 2026-10-21 | 1.4 | Task 0 done: BigDev *"all as recommended"* (LY1–LY13, the LY6 punctuation option, PQ1 / PQ2 yes); Decision `2026-10-21-373` (`97e1e7ad`, alone); WhatsApp enquiries → the helpdesk after go-live (`-373` decision 10); the records commit (told item WRITTEN, Row 37, epics.md, ADR-0029 / §3.4 notes, deferred-work). Status → in-progress. |
 | 2026-10-21 | 1.5 | `bmad-dev-story 5.12`: Tasks 1–7 built and checked (order per I6: domain → worker → API → app → the read change → fences → records). Migration 0177; 38 new / re-coded legs across domain, jobs, API and mobile, RED-proven per task; `ci:local` (:5433) 36/36 green on the second run (run 1's single failure a flaky substring leg in `channel-webhooks-msg91.spec.ts`, outside this story). Records closed with the "effective when `done` on `main`" caveat. Status → review. |
 | 2026-10-21 | 1.6 | `bmad-code-review 5.12`: three layers; 0 decision-needed, 5 patches fixed after BigDev chose "1", 1 pre-existing issue deferred, 4 dismissed. True two-connection serialization and API audit-snapshot proofs, second-write rollback, unavailable/return-from-WhatsApp/in-flight-refresh UI regressions; disclosure retry wording corrected. Full `ci:local` :5433 36/36 green; final mobile gate 1096/1096. Story and sprint row → done. Changes local, uncommitted (true when written; committed afterwards in `5022a43c`, unpushed — second review P13 (a)); go-live gates remain separate. |
+| 2026-10-21 | 1.7 | Second `bmad-code-review 5.12` (whole branch `ec6d826e..5022a43c`, three parallel layers; BigDev: "B, go ahead in parallel", then "1"): 0 decision-needed / 14 patch / 4 defer / 12 dismissed; a fresh-context review of the patch diff (0 H / 2 M / 11 L, applied). The worker's own two-connection pool (a STOP needs its locked transaction + an audit line); bounded reads and mutations, focus-gated polling, per-source errors, fresh re-reads and announced state changes on the settings screen; comment, test and record corrections. `b64dd462`, `dea4e5d1`; `ci:local` :5433 36/36 green at `dea4e5d1`. Status stays done; unpushed. |

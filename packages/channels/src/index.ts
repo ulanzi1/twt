@@ -48,6 +48,8 @@ export {
 // SendResult.detail), and the pure Meta-status mapping seam Story 5.4's webhook receiver consumes.
 export {
   createWhatsappAppCache,
+  // Story 6.37d — a direct sender validates its body values BEFORE its in-flight marker.
+  assertBodyParams as assertWhatsappBodyParams,
   WhatsappSendError,
   WhatsappTemplateParamError,
   WHATSAPP_MAX_BODY_PARAMS,

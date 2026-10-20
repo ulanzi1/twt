@@ -412,7 +412,9 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
       origin_row_id: origin,
       origin_sent_on: day(s.day0, 10),
       sms2_due_on: day(s.day0, 12),
-      whatsapp_step: 'skipped:nominee_no_whatsapp',
+      // Story 6.37d (WS5, `-367` PQ1 reading A) — this nominee IS the claimant ⇒ reached as the claimant: the step starts PENDING
+      // (6.37c recorded `skipped:nominee_no_whatsapp` here).
+      whatsapp_step: 'pending',
       state: 'running',
     });
     // A second tick on the same day starts ⛔ second ladder (the partial UNIQUE + the origin UNIQUE).
@@ -662,7 +664,7 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     expect(after.blocker).not.toBe('ladder_running');
   });
 
-  it('LD3 / AC11 — the claimant\'s current number cannot be hashed on a step day ⇒ `skipped:hash_unavailable` (the clock runs on) + `contact_ladder.hash_unavailable` (ids only); the claimant\'s WhatsApp step is `skipped:whatsapp_not_built`', async () => {
+  it('LD3 / AC11 — the claimant\'s current number cannot be hashed on a step day ⇒ `skipped:hash_unavailable` (the clock runs on) + `contact_ladder.hash_unavailable` (ids only); the claimant\'s WhatsApp step starts `pending` (Story 6.37d WS5)', async () => {
     const s = await seed({ claimantMobile: '9812300001' });
     const h = harness();
     const ids10 = await chaseDay(h, s, 10);
@@ -670,7 +672,8 @@ describe.skipIf(!hasDatabase)('Story 6.37c — the delivery ladder (live DB, own
     await reportOn('cr', claimantRow.reminder_id, 'undelivered');
     await ladderDay(h, s.claimCaseId, day(s.day0, 11));
     const [l] = (await laddersOf(s.claimCaseId)).filter((x) => x.person_key === 'claimant');
-    expect(l).toMatchObject({ whatsapp_step: 'skipped:whatsapp_not_built', state: 'running' });
+    // Story 6.37d (WS5) — the claimant's step starts PENDING (6.37c recorded `skipped:whatsapp_not_built`).
+    expect(l).toMatchObject({ whatsapp_step: 'pending', state: 'running' });
     const down = harness();
     const hmacDown = {
       ...enc,

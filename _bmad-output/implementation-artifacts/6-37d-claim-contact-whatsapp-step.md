@@ -54,7 +54,7 @@ rulings 1–6, `-352` Q1 / Q2, `-355` decisions 1–18, `-356` calls 1–3, `-36
 
 # Story 6.37d: When a reminder to the claimant is reported undelivered, the Trust tries WhatsApp four hours later — on the claimant's reworded filing agreement `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 > ## ⭐ `-367` OUTCOME — Task 0, 2026-10-20 (governs every earlier sentence it contradicts; the text below is kept as PROPOSED, ⛔ edited)
 >
@@ -942,37 +942,37 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
         claimant and ask whether that tick is a basis for WhatsApp to the claimant (F25, PQ3 — unless BigDev rules PQ3 otherwise); remind
         BigDev it is still unsent. ⚠ **As done:** ⛔ revision for PQ3 (dissolved — `-367` decision 17); a dated note records that question
         3's second half is moot if the Panel drops the clause, and the first-person wording.
-- [ ] **Task 1 — The agreement's versions and words (AC1; WS2).**
-  - [ ] 1.1 The registry in `packages/domain/src/claim/` (e.g. `claim-contact-agreement-copy.ts`, its own `'en' | 'hi'` type), exported
+- [x] **Task 1 — The agreement's versions and words (AC1; WS2).**
+  - [x] 1.1 The registry in `packages/domain/src/claim/` (e.g. `claim-contact-agreement-copy.ts`, its own `'en' | 'hi'` type), exported
         via `index.ts`; v1 verbatim; v2; `claim-contact-copy.ts` re-exports (the api's imports unchanged).
-  - [ ] 1.2 en / hi `contact.agreement` = `-367` decision 2's v2 (first person, ⛔ the clause; Hindi WhatsApp = व्हाट्सएप) + the `$comment` markers; WS2 (iii) lines; the admin helpline copy
+  - [x] 1.2 en / hi `contact.agreement` = `-367` decision 2's v2 (first person, ⛔ the clause; Hindi WhatsApp = व्हाट्सएप) + the `$comment` markers; WS2 (iii) lines; the admin helpline copy
         (`apps/admin/src/modules/helpline-claims/i18n-en.ts`: `helpline.contact.duty`, `helpline.contact.savedAgreementIgnored`).
-  - [ ] 1.3 `ConsentPayloadSchema` / `ConsentPayload` declare `copyVersion`.
-  - [ ] 1.4 Tests: the lockstep (JSON ↔ registry current), v1 byte-identity to F11, the marker regex, the admin + mobile tests, parity,
+  - [x] 1.3 `ConsentPayloadSchema` / `ConsentPayload` declare `copyVersion`.
+  - [x] 1.4 Tests: the lockstep (JSON ↔ registry current), v1 byte-identity to F11, the marker regex, the admin + mobile tests, parity,
         microcopy.
-- [ ] **Task 2 — The basis reader (AC2; WS3).** The reader in `claim-contact-check.ts` (or a sibling), reading `consent_payload`
+- [x] **Task 2 — The basis reader (AC2; WS3).** The reader in `claim-contact-check.ts` (or a sibling), reading `consent_payload`
       `copyVersion` + `locale`; unit legs for every reason; a live leg; the F13 callers' diff fence.
-- [ ] **Task 3 — Migration, schema, policies (AC8; WS8, WS10).** Forward migration at the next free number (journal `when` greater than
+- [x] **Task 3 — Migration, schema, policies (AC8; WS8, WS10).** Forward migration at the next free number (journal `when` greater than
       the highest on `main` AND every branch — re-grep before the commit); the ladder `GRANT UPDATE ("whatsapp_step")` + the BEFORE UPDATE trigger refusing any change FROM a
       non-`pending` value + the ladder CHECK + its Drizzle `check()` copy in
       `packages/domain/src/schema/claim_contact_ladders.ts` in LOCKSTEP; Drizzle schema files for the two tables (`claim_contact_wa_sends`
       on 0171's marker shape with WS8 (ii)'s 6.37d marker-outcome CHECK — ⛔ 0171's `send_started_outcome_check` — `recipient_number_hash`
       NOT NULL, and the delivery-status columns outside the freeze); policy declarations; the ladder spec flip
       (T3) + two new specs; ⛔ data-export section (T20); apply to :5433 ONLY (⛔ :5432 — [[project_prepush_hook_inherits_5432]]).
-- [ ] **Task 4 — The pure rules (AC3, AC4, AC6; WS5–WS7, WS12).** `isClaimant` on both person types (in each recipient reader);
+- [x] **Task 4 — The pure rules (AC3, AC4, AC6; WS5–WS7, WS12).** `isClaimant` on both person types (in each recipient reader);
       `ladderWhatsappStep` by it; a `ladderWhatsappGate` (due time, `inWindow` / `nextWindowStart` as INPUTS, the extracted horizon / pause
       half of `ladderStepGate`, overtaken, stop, basis, config) returning `send | wait | skipped:<r>`; `ladderEndReason` WhatsApp input
       (`LadderEnd.detail` widened); D22's `reachedByLadderWhatsapp` on its OWN row (WS12 — the two-ladder leg); the quarter-hourly start's
       `sms2_due_on` rule (WS6); update the stale JSDoc on `ladderWhatsappStep` and the test title *"a claimant's waits for 6-37d"*
       (`contact-ladder.ts`, `contact-ladder.test.ts`) and 0169's *"row 6-37d may add values"* comment's successor in the new migration;
       unit legs for each verdict and order.
-- [ ] **Task 5 — The sender (AC5; WS8, WS9).** `apps/jobs/src/scheduler/claim-contact-wa-templates.ts` + its lockstep test (real `t()`,
+- [x] **Task 5 — The sender (AC5; WS8, WS9).** `apps/jobs/src/scheduler/claim-contact-wa-templates.ts` + its lockstep test (real `t()`,
       the `peer-mesh-wa-templates` shape); `WaTemplatePurpose` widened; `TEMPLATE_NAME_FORM` exported from 6.31's module and reused; the
       domain begin (with the two-half re-check — WS8 (iii) (2)) / marker / release / transient-note / finalise / final-attempt finish /
       row skip (AC5's preamble) / lapsed-finisher / no-target functions on 6.31's shapes (`peer-mesh-wa-reminder.ts`), with
       `CONTACT_LADDER_WA_LEASE_MS` and the claim-time `recipient_number_hash`; `assertBodyParams` exported; the send through 6.31's client + the ONE cache + `resolveChannelSecret`; every classifier kind mapped
       per WS8 (iv); ⛔ fixture.
-- [ ] **Task 6 — The jobs (AC4, AC5).** A quarter-hourly `claim.contact_ladder.whatsapp_sweep` (queue names in `packages/queue`; IST;
+- [x] **Task 6 — The jobs (AC4, AC5).** A quarter-hourly `claim.contact_ladder.whatsapp_sweep` (queue names in `packages/queue`; IST;
       around the clock; registered beside `registerContactLadderWorkers` from a SIBLING module (the I5 fence — AC12), with an expiry /
       singleton shorter than `CORRECTION_SWEEP_EXPIRE_SECONDS`, ⛔ the daily `console.info` summary on every tick): the lapsed-marker
       finisher; the START for new reports (AC4's `reported_at` window, ⛔ `advance`) sharing the extracted START with the 10:00 sweep, and
@@ -981,7 +981,7 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
       chase lock, the UNIQUE `ladder_id` and the holder CAS are the dedup and a duplicate exits `held_by_other`) in
       AC5's ORDER with the stale-window guard, the `finalAttempt` finish (WS8 (iv)) and the self-re-enqueue for the next 09:00 (WS8 (ii)); the RLS-bound-role refusal (6.37c T24); reading `pariwar_wa_config` (granted to `twt_app`
       only — the Row 26 note); any raw-SQL `LIMIT` clamped by hand (AC12).
-- [ ] **Task 7 — The webhook worker (AC6, AC7; WS10, WS11).** The RLS-bound-role refusal (ends the tick before any claim); parse
+- [x] **Task 7 — The webhook worker (AC6, AC7; WS10, WS11).** The RLS-bound-role refusal (ends the tick before any claim); parse
       `value.metadata.phone_number_id` and act on the claim branch only on a match; the claim branch inside
       `withPariwarScope(event.pariwarId)`; STOP ⇒ the claim stop in the `claim_contact_mobile` hash space (deps take the full
       `jobsEncryption`; hashed from the DOMAIN `encryption.normalizeMobile`) + its own audit action through `audit.withCompensatingAudit`
@@ -990,11 +990,11 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
       skipped (WS11 (2)); legs (a)–(c), both status legs, the `read`-only leg, the metadata-mismatch leg, the duplicate-status leg.
       A leg pins that the stop hash and the ladder hash agree for the same number written several ways (`+91…`, `91…`, a bare 10
       digits) — both through the DOMAIN `normalizeMobile` (v1.1's worker ↔ api parity pair is the wrong pair).
-- [ ] **Task 8 — Staff view (AC9; WS13).** `LadderViewFact` / `ladderFollowUpOf` → `delivered_by`; contracts + lockstep; api DTO mapper;
+- [x] **Task 8 — Staff view (AC9; WS13).** `LadderViewFact` / `ladderFollowUpOf` → `delivered_by`; contracts + lockstep; api DTO mapper;
       `ContactLadderLines.tsx` + i18n-en.
-- [ ] **Task 9 — Alarms and fences (AC11, AC12; WS14 (ii)).** Log lines and the two alarms; the symbol fence (I5, mirroring 6.31's); the
+- [x] **Task 9 — Alarms and fences (AC11, AC12; WS14 (ii)).** Log lines and the two alarms; the symbol fence (I5, mirroring 6.31's); the
       recorder's audit source fence (AC8); the untouched-path diffs; `ci:local` on :5433; the gates.
-- [ ] **Task 10 — Records and close (AC10).** ADR-0028, ADR-0042 and ADR-0029 dated notes; the Panel "told" item WRITTEN (the forgery
+- [x] **Task 10 — Records and close (AC10).** ADR-0028, ADR-0042 and ADR-0029 dated notes; the Panel "told" item WRITTEN (the forgery
       bound's widening — ⛔ told until sent); deferred-work dispositions with their status words ([[feedback_closure_language_precision]]) and
       the new items AC10 lists; the epics.md entry's dated note; Debug Log, Completion Notes, File List; status + sprint row → `review`; ledger.
 
@@ -1191,6 +1191,8 @@ tests pinned by policy regression specs and source fences.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d` (Tasks 1–10), 2026-10-20.
+
 ### Debug Log References
 
 - **(a) Task 0 — 2026-10-20.** 0.1: `origin/main` = `0e88ddd1` (unmoved); next free numbers on `main`, every branch and worktree:
@@ -1207,15 +1209,169 @@ tests pinned by policy regression specs and source fences.
   Decision 2. And drop it from Decision 19."*, *"insert it"*. 0.3: `-367` committed ALONE (`5ab99fc0`, 44 lines added, ⛔ removed); the
   routing note written. 0.4: the records commit (Row 36; Rows 18 / 19 / 26 notes; epics.md; counsel question dated note; deferred-work;
   sprint row → `in-progress`, ledger `2026-10-20b`). 0.5: ⛔ new counsel question.
+- **(b) Dev — 2026-10-20 (Tasks 1–10).** (1) **The worktree had ⛔ `node_modules`** — `.claude/worktrees/6-37d` sits under the repo
+  root, so every `@twt/*` import resolved to the MAIN checkout's sources (a test of main, ⛔ this branch). `pnpm install
+  --frozen-lockfile --prefer-offline` in the worktree (⛔ a new dependency; 1,954 packages linked from the store). (2) **Numbers**,
+  re-grepped on `main`, every branch and every worktree right before use: migration **0172** (journal `when` 1794368400016 > 0171's
+  1794282000015), ledger **`2026-10-20d`**; `origin/main` unmoved at `0e88ddd1` (⛔ re-pin). (3) **0172 on :5433 ONLY** (`DATABASE_URL`
+  explicit — [[project_prepush_hook_inherits_5432]]); TWICE rolled back on :5433 by a scoped script (drop 0172's objects, restore 0169's
+  CHECK, revoke the column grant, delete the journal row) and re-applied — 0172 was committed NOWHERE, and :5432 was checked untouched
+  (latest migration 0171, ⛔ `claim_contact_wa_sends`): (i) PostgreSQL caps a regex repeat bound at 255 — `template_name ~ '^[a-z0-9_]{1,512}$'`
+  is accepted at CREATE and fails at RUN time, so EVERY insert raised "invalid regular expression" ⇒ 0171's `'^[a-z0-9_]+$' AND
+  char_length(...) <= 512`; (ii) the outcome/detail CHECK passed a NULL `detail` (`NULL LIKE …` is NULL and a CHECK passes on NULL) ⇒
+  `COALESCE("detail", '')`. Both caught by the new policy spec's legs (⛔ a guess). (4) **RED evidence** (a fix hand-disabled, the leg
+  run, the fix restored and re-run green): (i) the worker's `!claimOwned` guard removed ⇒ the two I7 legs RED (the member opt-in
+  `BLOCKED_BY_META` by a claim send's block code, matched by wamid and by the claim-space hash); (ii) `reachedByLadderWhatsapp` removed
+  from D22's `reached` ⇒ the two-ladder D22 leg RED. ⚠ Every OTHER new leg was written with or after its code — ⛔ recorded RED run
+  (named here, ⛔ claimed). (5) **Deliberate expectation changes:** 6.37c's jobs live test pinned `skipped:nominee_no_whatsapp` for a
+  claimant-nominee's ladder and `skipped:whatsapp_not_built` for a claimant's — now `pending` (WS5, `-367` PQ1 A), each with a dated
+  comment; the ladder policy spec FLIPPED (T3 — `whatsapp_step` joins the UPDATE grant, `sent` is a CHECK value, the trigger legs
+  added; the old 42501 assertion replaced, ⛔ deleted silently). (6) **Design as built:** the begin writes a skip on the STEP for a
+  first visit and FINISHES the ROW on a re-take (0172's trigger refuses a second step write); the quarter-hourly START reuses 6.37c's
+  `planCorrectionLadders` / `planCertificateLadders` in a STARTS-ONLY mode (⛔ running ladders, ⛔ `advance`, ⛔ pushes; SMS 2 by
+  `ladderFirstDueOnForLateStart`) — T13's one start path; LD13's tail EXTRACTED (`raiseLadderStartAlarms`) and run by both sweeps;
+  `settleContactLadderWhatsappDeliveries` is a LEAF module (the WhatsApp record imports the ladder writers — a back-import would be a
+  cycle) and is called by the WhatsApp begin, both SMS begins and both 10:00 plans, so a delivered WhatsApp ends the ladder whichever
+  path looks first; WS2 (iii)'s earlier-wording line needs to know the agreement on file's version ⇒ a new response field
+  `agreementOnFileEarlierWording` threaded persist → contract → api → admin; the webhook worker's `enc` is now the FULL jobs KMS deps
+  (a superset — the member blind index unchanged); the STOP recorder is its own file (`claim-contact-wa-stop.ts`) so the source fence
+  can pin `audit.withCompensatingAudit` there (the worker file already holds the member path's raw writer).
+  (7) **The proof (AC12) — `pnpm ci:local` on :5433 ran with TWO jobs red, both LOAD timeouts, each re-run ALONE green (SAID so —
+  [[project_known_livedb_test_failures]]):** lint, typecheck, build and EVERY gate green (db-check, contracts determinism, crypto,
+  i18n parity, microcopy, dlt-typed-variables, access-wrapper, domain-invariants, schema-diff, friction-budget, the AI-10-5 guard, …).
+  (i) `test (unit)` — four admin jsdom files timed out under the 4-way load (`ground-inspection-discrepancy`, `ground-inspection-page`,
+  `correction-queue`, `integrity-page` — ⛔ module this story touched; one file failed a DIFFERENT test on each loaded run); the admin
+  suite alone 76 files / 1263 green, the discrepancy file 37/37 twice in the worktree and twice on the untouched `main` checkout; the whole
+  unit stage re-run with `--continue` 37/37 tasks. (ii) `integration-tests` — 8 domain tests in 7 files timed out (suspicion-notice /
+  R9 voting / workplace concurrency, one-payment-per-death, cycle freeze, the workplace import — ⛔ area this story touched); the seven
+  files alone 106/106; turbo had then CANCELLED the other packages, so they were run in the same shape (`--concurrency=1 --continue`):
+  jobs 72 files / 1294, api 174 / 1992 (+1 skipped), channels 442, events 36, niyamavali-engine 144, validity-service 284 — all green.
+  This story's own live suites: the domain record spec 29, the 0172 + ladder policy specs 83, the jobs live suite 22 (incl. the AC4
+  late-start leg added after the run, then run alone), the worker 15, the ladder live suite 24. ⛔ A network call (the fetch spy at zero).
 
 ### Completion Notes List
 
 - Story created by `bmad-create-story 6.37d` (2026-10-19) — ultimate context engine analysis completed - comprehensive developer guide created. Four parallel read-only research passes (the governance spine; 6.37c's ladder code; the WhatsApp substrate and the 6.31 branch; the filing agreement).
 - Validated by `bmad-create-story validate 6.37d` (2026-10-20, v1.2) — branch rebased onto `main` `0e88ddd1` and re-pinned; four parallel fresh-context read-only verifiers (governance staleness; code cites at HEAD; mechanism; premise + Meta's own pages); every finding applied (BigDev: *"all"*).
+- **Dev (2026-10-20) — Tasks 1–10 implemented.** What was BUILT and how it is proven:
+  - **AC1 / WS2 — the agreement.** A domain registry (`claim-contact-agreement-copy.ts`): v1 VERBATIM (`namesWhatsapp: false`), v2 =
+    `-367` decision 2's first-person English without the clause (`-368` Q2 A) + an agent-drafted Hindi (व्हाट्सएप), `hiReviewed: false`;
+    the current id `2026-10-20.v2-pending-story-0.13` (Row 18's marker kept); `apps/api`'s copy module re-exports it. Both claim.json
+    files carry `contact.agreement` / `contact.agreement_required` v2 and a `$comment.contact_agreement` "NOT YET HUMAN-REVIEWED" marker
+    (Row 36 (a)); `helpline.contact.duty` names the caller as the claimant; a tick ignored over an EARLIER-wording agreement says so
+    (`savedAgreementIgnoredEarlierWording`). `copyVersion` declared on both payload types. Legs: the registry (v1 byte-identity, v2 ↔ the
+    JSON, the marker), the api's stored payload (v2's id + words), the admin and mobile surfaces (the new words; the box UNTICKED by
+    default on both).
+  - **AC2 / WS3 — the basis reader** (`claim-contact-whatsapp-basis.ts`, a sibling — `claim-contact-check.ts` is byte-identical):
+    eligible ONLY on a live `claim_contact_agreement` whose KNOWN version names WhatsApp and — agreed in Hindi (or an unrecorded locale)
+    — whose Hindi is reviewed; read through the claim's CURRENT agreement. Unit legs per reason; live legs (old wording, a member re-save
+    on v2 moving the claim onto it, Hindi, revoked); the F13 gate fence (each caller's gate pinned verbatim, ⛔ a basis read).
+  - **AC8 — migration 0172** (the step moves ONCE under a trigger; `claim_contact_wa_sends` with 6.37d's marker mapping, the identity /
+    finished-row / set-once-status trigger; `claim_contact_wa_stops`), the Drizzle schema + the ladder's `check()` copy in lockstep, the
+    policies; the ladder spec flipped and a new 0172 spec (37 legs — RLS, grants, every CHECK by name with a positive counterpart, the
+    trigger).
+  - **AC3–AC7 / WS5–WS12 — the rules, the record, the jobs, the worker.** `isClaimant` on both recipient types (the claimant-nominee
+    reached as the claimant — PQ1 A); `ladderWhatsappStep` / `ladderWhatsappGate` / `ladderHorizonVerdict` (extracted) /
+    `ladderFirstDueOnForLateStart` / `ladderEndReason`'s WhatsApp input; D22's `reachedByLadderWhatsapp` on its own row; the domain send
+    record (`contact-ladder-whatsapp-record.ts` — the two-half begin under the chase lock, the marker, the release, the notes, the
+    exhausted finish in ONE statement, the finalise copying an early `delivered`, the lapsed finisher, the SQL-only due selection, the
+    worker's status / stop / isolation writes); the quarter-hourly sweep + child (`claim-contact-ladder-whatsapp.ts` — around the clock,
+    children only 09:00–20:00, the real client over the ONE cache); the worker's claim branch. Live legs: the domain record spec (29),
+    the jobs live suite (22 — the REAL client over an injected fetch; ⛔ network), the worker (10 new legs incl. the RLS-bound refusal).
+  - **AC9 / WS13 — staff see the channel** (`delivered_by` — domain, contract, api mapper, the admin line).
+  - **AC10 — records.** ADR-0028 / ADR-0029 / ADR-0042 dated notes (⛔ decision text edited); the Panel "told" item
+    `trustee-panel-told-2026-10-20-6-37d-whatsapp-and-forged-reports.md` WRITTEN and TOLD 2026-10-20 (sent by BigDev — *"report has been sent"*); deferred-work — 6.37c's "The ladder's
+    WhatsApp step" **Closed by Story 6.37d**, W9 and the forged-report item annotated, a new section of eight disclosed items; the
+    epics.md entry's dated note.
+  - **AC11 / AC12 — fences.** The symbol fence over the five WhatsApp modules (6.31's list + the fixture provider, the ladder's own SMS
+    path, a second cache) with a "fence bites" leg; the recorder's audit fence; the lease inequality; eleven untouched files sha256-PINNED
+    and both reminders' SMS words pinned; the raw-SQL clamps.
+  - ⚠ **GO-LIVE is untouched by this story's code:** nothing is SENT until roster Row 36 closes (and Row 35 (a) provisions a Pariwar's
+    WhatsApp, Row 32 / 33 / 21) — every Pariwar's switch is OFF, the claim template names are unset, and v2's Hindi is unreviewed.
 
 ### File List
 
+- `_bmad-output/implementation-artifacts/6-37d-claim-contact-whatsapp-step.md` (Tasks, Dev Agent Record, Change Log, Status)
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/planning-artifacts/epics.md`
+- `_bmad-output/planning-artifacts/trustee-panel-told-2026-10-20-6-37d-whatsapp-and-forged-reports.md` (new)
+- `docs/adr/ADR-0028-whatsapp-provider-selection.md`
+- `docs/adr/ADR-0029-whatsapp-webhook-ingress-and-opt-in-lifecycle.md`
+- `docs/adr/ADR-0042-msg91-delivery-report-ingress.md`
+- `packages/domain/migrations/0172_claim-contact-whatsapp-step.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/claim/claim-contact-agreement-copy.ts` (new)
+- `packages/domain/src/claim/claim-contact-whatsapp-basis.ts` (new)
+- `packages/domain/src/claim/contact-ladder-whatsapp-delivery.ts` (new)
+- `packages/domain/src/claim/contact-ladder-whatsapp-record.ts` (new)
+- `packages/domain/src/claim/certificate-reminder.ts`
+- `packages/domain/src/claim/claim-contact-persist.ts`
+- `packages/domain/src/claim/contact-ladder.ts`
+- `packages/domain/src/claim/contact-ladder-read.ts`
+- `packages/domain/src/claim/contact-ladder-record.ts`
+- `packages/domain/src/claim/correction-chase.ts`
+- `packages/domain/src/claim/correction-closure.ts`
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/policies/claim-contact-wa-rls.ts` (new)
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/schema/claim_contact_wa_sends.ts` (new)
+- `packages/domain/src/schema/claim_contact_ladders.ts`
+- `packages/domain/src/schema/consent_records.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/tests/claim/claim-contact-agreement-gate-fence.test.ts` (new)
+- `packages/domain/tests/claim/claim-contact-whatsapp-basis.test.ts` (new)
+- `packages/domain/tests/claim/contact-ladder.test.ts`
+- `packages/domain/tests/integration/claim/certificate-reminder.spec.ts`
+- `packages/domain/tests/integration/claim/claim-contact.spec.ts`
+- `packages/domain/tests/integration/claim/contact-ladder-whatsapp.spec.ts` (new)
+- `packages/domain/tests/integration/claim/correction-chase.spec.ts`
+- `packages/domain/tests/integration/rls/claim-contact-ladder-policy-regression.spec.ts`
+- `packages/domain/tests/integration/rls/claim-contact-wa-policy-regression.spec.ts` (new)
+- `packages/contracts/src/claims/contact-ladder.ts`
+- `packages/contracts/src/claims/contact.ts`
+- `packages/contracts/src/consent/consent-record.ts`
+- `packages/contracts/tests/certificate-reminder-lockstep.test.ts`
+- `packages/channels/src/index.ts`
+- `packages/channels/src/providers/whatsapp-app.ts`
+- `packages/queue/src/index.ts`
+- `packages/i18n/locales/en/claim.json`
+- `packages/i18n/locales/hi/claim.json`
+- `apps/jobs/src/boot.ts`
+- `apps/jobs/src/claim-contact-wa-stop.ts` (new)
+- `apps/jobs/src/scheduler/claim-contact-ladder.ts`
+- `apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts` (new)
+- `apps/jobs/src/scheduler/claim-contact-wa-templates.ts` (new)
+- `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts` (`TEMPLATE_NAME_FORM` exported only)
+- `apps/jobs/src/scheduler/wa-template-config-key.ts`
+- `apps/jobs/src/wa-webhook-processor.ts`
+- `apps/jobs/tests/claim-contact-ladder-live.test.ts`
+- `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` (new)
+- `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts` (new)
+- `apps/jobs/tests/claim-contact-wa-templates.test.ts` (new)
+- `apps/jobs/tests/wa-webhook-processor.test.ts`
+- `apps/api/src/modules/claims/claim-contact-copy.ts`
+- `apps/api/src/modules/claims/claims.contact.handlers.ts`
+- `apps/api/src/modules/claims/contact-ladder-dto.ts`
+- `apps/api/tests/integration/claims/claim-contact.spec.ts`
+- `apps/api/tests/unit/claim-contact-copy.test.ts`
+- `apps/admin/src/modules/correction-chase/ContactLadderLines.tsx`
+- `apps/admin/src/modules/correction-chase/i18n-en.ts`
+- `apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx`
+- `apps/admin/src/modules/helpline-claims/i18n-en.ts`
+- `apps/admin/tests/certificate-reminders.test.tsx`
+- `apps/admin/tests/contact-call-form.test.tsx`
+- `apps/admin/tests/correction-chase-forms.test.tsx`
+- `apps/admin/tests/helpline-claim-contact.test.tsx`
+- `apps/mobile/tests/unit/claim-contact.test.ts`
+
 ## Change Log
+
+- v1.5 (2026-10-20) — `bmad-dev-story 6.37d`: Tasks 1–10 implemented (Debug Log (b), Completion Notes, File List). Migration 0172; the
+  agreement's v2 + the basis reader; the step's rules, record, quarter-hourly sweep and child; the webhook worker's claim branch; D22's
+  WhatsApp reach; staff see the channel; ADR-0028 / -0029 / -0042 dated notes; the Panel "told" item WRITTEN and TOLD 2026-10-20 (BigDev: *"report has been sent"*); deferred-work
+  dispositions. ci:local on :5433 — every gate green; the two red jobs were load timeouts, each re-run alone green (Debug Log (b) 7).
+  Status `in-progress` → `review`.
 
 - v1.0 (2026-10-19) — created by `bmad-create-story 6.37d` at `15acb570`; WS1–WS14 proposed, PQ1–PQ2 candidate; status `ready-for-dev`.
 - v1.1 (2026-10-19) — the create-story's own checklist pass (one fresh-context validator, read-only: 7 HIGH / 12 MEDIUM / 5 LOW, all applied): the STOP key moved to the ladder's `claim_contact_mobile` hash space (⛔ the member login key); the webhook worker's claim branch scoped to the event's Pariwar behind the RLS-bound-role refusal; the quarter-hourly sweep starts ladders only for NEW reports and ⛔ calls `advance`; the 4 h anchor = the origin's `created_at` (⛔ `claimed_at`, re-set on retry); `isClaimant` on both person types (the certificate reader is shaped differently); AC2's fence narrowed to the agreement-state gate; D22 is correction-only and the post-conclusion case decided in WS12; WS12 flagged against `-360` Q1 A; `-355` d3 superseded in part; ADR-0029 / Row 19 / Row 26 notes; grants bind `twt_app` only — triggers are the jobs controls; counsel question 3's two halves; the gate list corrected.

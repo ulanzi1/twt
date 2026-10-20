@@ -14,8 +14,14 @@ import {
   dueLadderStep,
   ladderAsk,
   ladderEndReason,
+  LADDER_WHATSAPP_CONFIG_FAULTS,
   ladderFirstDueOn,
+  ladderFollowUpOf,
+  ladderFirstDueOnForLateStart,
+  ladderHorizonVerdict,
   ladderStepGate,
+  ladderWhatsappDueAt,
+  ladderWhatsappGate,
   ladderWhatsappStep,
   nextLadderStepDate,
   pendingLadderAsk,
@@ -443,6 +449,11 @@ describe('ladderEndReason (AC3)', () => {
     ['a stop', { stop: 'not_a_recipient' }, { state: 'ended_stopped', detail: 'stopped:not_a_recipient' }],
     ['PQ1 A — a silent ladder SMS', { rows: [r(70, 'A', null)] }, null],
     ['an `undelivered` ladder SMS', { rows: [r(70, 'A', 'undelivered')] }, null],
+    // Story 6.37d (WS12; `-351` 4 A *"on either channel"*) — the ladder's own WhatsApp delivered ends it.
+    ['6.37d — the ladder\'s WhatsApp DELIVERED', { whatsappDelivered: true }, { state: 'ended_delivered', detail: 'delivered:whatsapp' }],
+    ['6.37d — a WhatsApp ⛔ delivered (sent, failed, none)', { whatsappDelivered: false }, null],
+    ['6.37d — a delivered SMS and a delivered WhatsApp ⇒ the SMS names it', { rows: [r(70, 'A', 'delivered')], whatsappDelivered: true }, { state: 'ended_delivered', detail: 'delivered' }],
+    ['6.37d — a delivered WhatsApp ≻ a reached call', { whatsappDelivered: true, calls: [call(date(5))] }, { state: 'ended_delivered', detail: 'delivered:whatsapp' }],
   ])('%s', (_label, over, expected) => {
     expect(end(over)).toEqual(expected);
   });
@@ -527,6 +538,7 @@ describe('reachedCallSince / pendingLadderAsk / ladderWhatsappStep', () => {
     sms3State: 'sent',
     concludeOn: '2026-10-13',
     concludedOn: '2026-10-13',
+    endDetail: null,
     ...over,
   });
   const ask = (c: readonly LadderCallFact[], letterRecordedAt: readonly Date[] = []) =>
@@ -545,8 +557,147 @@ describe('reachedCallSince / pendingLadderAsk / ladderWhatsappStep', () => {
     expect(ask([], [t(1_000)])).toBeNull();
   });
 
-  it('LD1 / `-356` — a nominee\'s WhatsApp step is ⛔ ever built; a claimant\'s waits for 6-37d', () => {
-    expect(ladderWhatsappStep('nominee')).toBe('skipped:nominee_no_whatsapp');
-    expect(ladderWhatsappStep('claimant')).toBe('skipped:whatsapp_not_built');
+  it('`-356` / Story 6.37d WS5 — the claimant\'s WhatsApp step starts PENDING (a claimant-nominee too — PQ1 A); every other nominee\'s is recorded skipped', () => {
+    expect(ladderWhatsappStep(true)).toBe('pending');
+    expect(ladderWhatsappStep(false)).toBe('skipped:nominee_no_whatsapp');
+  });
+});
+
+// ── Story 6.37d — the WhatsApp step's pure rules ─────────────────────────────────────────────────────────────
+
+describe('Story 6.37d — ladderWhatsappGate (AC4, AC5 (2); WS6, WS7, WS9, WS10; I2, I10)', () => {
+  type GateInput = Parameters<typeof ladderWhatsappGate>[0];
+  const origin = new Date('2026-10-20T04:30:00.000Z'); // 10:00 IST
+  const due = new Date('2026-10-20T08:30:00.000Z'); // 14:00 IST
+  const nextMorning = new Date('2026-10-21T03:30:00.000Z'); // 09:00 IST
+  const gate = (over: Partial<GateInput>) =>
+    ladderWhatsappGate({
+      originCreatedAt: origin,
+      now: due,
+      inWindow: true,
+      nextWindowStart: nextMorning,
+      sms2State: 'pending',
+      horizon: { chase: 'correction', runDay: 10, paused: false },
+      stopped: false,
+      basis: { eligible: true, copyVersion: 'v2' },
+      config: 'ok',
+      ...over,
+    });
+
+  it('⭐ the step is due at the ORIGIN row\'s created_at + 4 h (T5)', () => {
+    expect(ladderWhatsappDueAt(origin)).toEqual(due);
+  });
+
+  it.each<[string, Partial<GateInput>, ReturnType<typeof ladderWhatsappGate>]>([
+    ['⭐ due, in the window, every check passes ⇒ send', {}, { kind: 'send' }],
+    ['a NULL anchor ⇒ anchor_unknown (I10)', { originCreatedAt: null }, { kind: 'skip', reason: 'anchor_unknown' }],
+    ['⭐ a STOP from the number ⇒ stopped (WS10)', { stopped: true }, { kind: 'skip', reason: 'stopped' }],
+    ['⭐ the old wording ⇒ old_wording (I2 / G3)', { basis: { eligible: false, reason: 'old_wording' } }, { kind: 'skip', reason: 'old_wording' }],
+    ['the Hindi ⛔ reviewed ⇒ hindi_not_reviewed', { basis: { eligible: false, reason: 'hindi_not_reviewed' } }, { kind: 'skip', reason: 'hindi_not_reviewed' }],
+    ['correction day 90 ⇒ past_horizon (WS7)', { horizon: { chase: 'correction', runDay: 90, paused: false } }, { kind: 'skip', reason: 'past_horizon' }],
+    ['certificate day 181 ⇒ past_horizon', { horizon: { chase: 'certificate', runDay: 181, paused: false } }, { kind: 'skip', reason: 'past_horizon' }],
+    ['certificate day 180 ⇒ send', { horizon: { chase: 'certificate', runDay: 180, paused: false } }, { kind: 'send' }],
+    ['a certificate pause ⇒ paused', { horizon: { chase: 'certificate', runDay: 20, paused: true } }, { kind: 'skip', reason: 'paused' }],
+    ['⭐ SMS 2 resolved (sent / satisfied / skipped) ⇒ overtaken (WS6)', { sms2State: 'sent' }, { kind: 'skip', reason: 'overtaken' }],
+    ['SMS 2 skipped ⇒ overtaken', { sms2State: 'skipped:past_horizon' }, { kind: 'skip', reason: 'overtaken' }],
+    ['⭐ a minute before origin + 4 h ⇒ wait until then', { now: new Date(due.getTime() - 60_000) }, { kind: 'wait', until: due }],
+    ['⭐ due but outside 09:00–20:00 ⇒ defer to the next 09:00', { inWindow: false }, { kind: 'defer', until: nextMorning }],
+    ['the Pariwar not live ⇒ whatsapp_not_configured', { config: 'whatsapp_not_configured' }, { kind: 'skip', reason: 'whatsapp_not_configured' }],
+    ['an unreadable key ⇒ whatsapp_config_unreadable', { config: 'whatsapp_config_unreadable' }, { kind: 'skip', reason: 'whatsapp_config_unreadable' }],
+    ['a malformed template name ⇒ whatsapp_template_invalid', { config: 'whatsapp_template_invalid' }, { kind: 'skip', reason: 'whatsapp_template_invalid' }],
+    ['an unreadable helpline ⇒ helpline_unreadable', { config: 'helpline_unreadable' }, { kind: 'skip', reason: 'helpline_unreadable' }],
+  ])('%s', (_label, over, expected) => {
+    expect(gate(over)).toEqual(expected);
+  });
+
+  it('⭐ the ORDER: stop ≻ basis ≻ horizon ≻ pause ≻ overtaken ≻ not-due ≻ window ≻ config', () => {
+    const all: Partial<GateInput> = {
+      stopped: true,
+      basis: { eligible: false, reason: 'old_wording' },
+      horizon: { chase: 'certificate', runDay: 200, paused: true },
+      sms2State: 'sent',
+      now: new Date(due.getTime() - 1),
+      inWindow: false,
+      config: 'whatsapp_config_unreadable',
+    };
+    expect(gate(all)).toEqual({ kind: 'skip', reason: 'stopped' });
+    expect(gate({ ...all, stopped: false })).toEqual({ kind: 'skip', reason: 'old_wording' });
+    expect(gate({ ...all, stopped: false, basis: { eligible: true, copyVersion: 'v2' } })).toEqual({ kind: 'skip', reason: 'past_horizon' });
+    const open = { ...all, stopped: false, basis: { eligible: true, copyVersion: 'v2' } as const };
+    expect(gate({ ...open, horizon: { chase: 'certificate', runDay: 20, paused: true } })).toEqual({ kind: 'skip', reason: 'paused' });
+    const live = { ...open, horizon: { chase: 'certificate' as const, runDay: 20, paused: false } };
+    expect(gate(live)).toEqual({ kind: 'skip', reason: 'overtaken' });
+    expect(gate({ ...live, sms2State: 'pending' })).toEqual({ kind: 'wait', until: due });
+    expect(gate({ ...live, sms2State: 'pending', now: due })).toEqual({ kind: 'defer', until: nextMorning });
+    // A config fault is judged LAST — only inside the window, on a step that would otherwise go.
+    expect(gate({ ...live, sms2State: 'pending', now: due, inWindow: true })).toEqual({ kind: 'skip', reason: 'whatsapp_config_unreadable' });
+  });
+
+  it('every skip reason fits the step CHECK `skipped:[a-z_]{1,48}`', () => {
+    for (const reason of ['anchor_unknown', 'stopped', 'not_live', 'old_wording', 'unknown_version', 'hindi_not_reviewed', 'past_horizon', 'paused', 'overtaken', 'whatsapp_not_configured', ...LADDER_WHATSAPP_CONFIG_FAULTS]) {
+      expect(`skipped:${reason}`).toMatch(/^skipped:[a-z_]{1,48}$/);
+    }
+  });
+
+  it('the faults are exactly the three alarmed config verdicts (⛔ `whatsapp_not_configured` — a Pariwar not yet live)', () => {
+    expect([...LADDER_WHATSAPP_CONFIG_FAULTS].sort()).toEqual(['helpline_unreadable', 'whatsapp_config_unreadable', 'whatsapp_template_invalid']);
+  });
+});
+
+describe('Story 6.37d — what staff see (WS13): the channel that got through', () => {
+  const base = {
+    createdAt: t(100),
+    endedAt: t(900),
+    originSentOn: '2026-10-05',
+    sms2DueOn: '2026-10-07',
+    sms2State: 'pending' as const,
+    sms3DueOn: null,
+    sms3State: 'pending' as const,
+    concludeOn: null,
+    concludedOn: null,
+  };
+  it('⭐ ended_delivered by a WhatsApp ⇒ deliveredBy whatsapp; by a text ⇒ text; every other state ⇒ null', () => {
+    expect(ladderFollowUpOf([{ ...base, state: 'ended_delivered', endDetail: 'delivered:whatsapp' }])!.deliveredBy).toBe('whatsapp');
+    expect(ladderFollowUpOf([{ ...base, state: 'ended_delivered', endDetail: 'delivered' }])!.deliveredBy).toBe('text');
+    expect(ladderFollowUpOf([{ ...base, state: 'ended_call', endDetail: 'call_reached' }])!.deliveredBy).toBeNull();
+    expect(ladderFollowUpOf([{ ...base, state: 'running', endedAt: null, endDetail: null }])!.deliveredBy).toBeNull();
+  });
+});
+
+describe('Story 6.37d — the extracted horizon / pause half (WS7) and ladderStepGate unchanged', () => {
+  it('ladderHorizonVerdict: correction ≥ 90, certificate > 180, a pause; else null', () => {
+    expect(ladderHorizonVerdict({ chase: 'correction', runDay: 89, paused: false })).toBeNull();
+    expect(ladderHorizonVerdict({ chase: 'correction', runDay: 90, paused: false })).toBe('skipped:past_horizon');
+    expect(ladderHorizonVerdict({ chase: 'certificate', runDay: 180, paused: false })).toBeNull();
+    expect(ladderHorizonVerdict({ chase: 'certificate', runDay: 181, paused: true })).toBe('skipped:past_horizon');
+    expect(ladderHorizonVerdict({ chase: 'certificate', runDay: 10, paused: true })).toBe('skipped:paused');
+  });
+
+  it('ladderStepGate still reads horizon ≻ pause ≻ satisfied ≻ send', () => {
+    const g = (over: Partial<Parameters<typeof ladderStepGate>[0]>) =>
+      ladderStepGate({ chase: 'certificate', runDay: 10, paused: false, scheduledToday: false, sentToNumberToday: false, ...over });
+    expect(g({ runDay: 181, paused: true, scheduledToday: true })).toBe('skipped:past_horizon');
+    expect(g({ paused: true, scheduledToday: true })).toBe('skipped:paused');
+    expect(g({ sentToNumberToday: true })).toBe('satisfied');
+    expect(g({})).toBe('send');
+  });
+});
+
+describe('Story 6.37d — ladderFirstDueOnForLateStart (WS6 — a quarter-hourly start never calls advance)', () => {
+  it('⭐ after today\'s 10:00 run, origin + 2 = today ⇒ TOMORROW (the next run), ⛔ today', () => {
+    expect(ladderFirstDueOn('2026-10-18', '2026-10-20')).toBe('2026-10-20');
+    expect(ladderFirstDueOnForLateStart('2026-10-18', '2026-10-20', '2026-10-21')).toBe('2026-10-21');
+  });
+
+  it('before today\'s 10:00 run, the next run IS today ⇒ the plain rule', () => {
+    expect(ladderFirstDueOnForLateStart('2026-10-18', '2026-10-20', '2026-10-20')).toBe('2026-10-20');
+  });
+
+  it('a normal start (origin + 2 is later) keeps origin + 2', () => {
+    expect(ladderFirstDueOnForLateStart('2026-10-20', '2026-10-20', '2026-10-21')).toBe('2026-10-22');
+  });
+
+  it('⛔ passing the next run AS today would return the day after it (the trap the rule avoids)', () => {
+    expect(ladderFirstDueOn('2026-10-18', '2026-10-21')).toBe('2026-10-22');
   });
 });

@@ -18,6 +18,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CertificateRemindersResponse, ClaimsUnderCorrectionResponse, ContactCallDto } from '@twt/contracts';
 
+import { followUpLine } from '../src/modules/correction-chase/ContactLadderLines.js';
+
 const recordCorrectionContactCall = vi.fn();
 const recordCertificateContactCall = vi.fn();
 const getCorrectionContactCallNumber = vi.fn();
@@ -115,7 +117,7 @@ describe('the delivery ladder lines (LD12)', () => {
     wrap(
       <CorrectionChasePanel
         pariwarId={PARIWAR}
-        item={item([person({ follow_up: { state: 'running', started_on: '2026-10-11', next_step_on: '2026-10-12', concluded_on: null }, reported_undelivered: 1 })])}
+        item={item([person({ follow_up: { state: 'running', started_on: '2026-10-11', next_step_on: '2026-10-12', concluded_on: null, delivered_by: null }, reported_undelivered: 1 })])}
       />,
     );
     const row = screen.getByTestId(`person-${PERSON}`);
@@ -136,7 +138,7 @@ describe('the delivery ladder lines (LD12)', () => {
         pariwarId={PARIWAR}
         item={item([
           person({
-            follow_up: { state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18' },
+            follow_up: { state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18', delivered_by: null },
             unreachable_reason: 'not_delivered',
             ask,
             reported_undelivered: 2,
@@ -147,6 +149,12 @@ describe('the delivery ladder lines (LD12)', () => {
     expect(screen.getByTestId('ladder-not-delivered').textContent).toBe(`Texts were reported not delivered — ${words}.`);
     expect(screen.getByTestId('ladder-follow-up').textContent).toBe('Follow-up ended on 2026-10-18 — none was reported delivered.');
     expect(screen.getByTestId('ladder-reported-undelivered').textContent).toBe('2 reminders the network said were not delivered.');
+  });
+
+  it('⭐ Story 6.37d (WS13) — a follow-up ended by a delivered WhatsApp says WhatsApp (⛔ "a text"); one ended by a text still says a text', () => {
+    const ended = (delivered_by: 'text' | 'whatsapp') => ({ state: 'ended_delivered' as const, started_on: '2026-10-11', next_step_on: null, concluded_on: null, delivered_by });
+    expect(followUpLine(ended('whatsapp'))).toBe('Follow-up ended — a WhatsApp message reached the family.');
+    expect(followUpLine(ended('text'))).toBe('Follow-up ended — a text reached the family.');
   });
 
   it('the call list — date, who answered, whether it reached the family, by whom; ⛔ form without a follow-up or an ask', () => {
@@ -198,7 +206,7 @@ describe('the delivery ladder lines (LD12)', () => {
             cert({
               unreachable_reason: 'not_delivered',
               ask: 'letter',
-              follow_up: { state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18' },
+              follow_up: { state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18', delivered_by: null },
             }),
           ),
         ]}
@@ -217,8 +225,8 @@ describe('the delivery ladder lines (LD12)', () => {
     ['letter', false],
     ['none', false],
   ] as const)('round 2, P6 — a CONCLUDED follow-up with ask %s offers the call form: %s (callFormOffered)', (ask, offered) => {
-    expect(callFormOffered({ state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18' }, ask)).toBe(offered);
-    expect(callFormOffered({ state: 'running', started_on: '2026-10-11', next_step_on: '2026-10-13', concluded_on: null }, ask)).toBe(true);
+    expect(callFormOffered({ state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18', delivered_by: null }, ask)).toBe(offered);
+    expect(callFormOffered({ state: 'running', started_on: '2026-10-11', next_step_on: '2026-10-13', concluded_on: null, delivered_by: null }, ask)).toBe(true);
     expect(callFormOffered(null, null)).toBe(false);
   });
 });
@@ -406,7 +414,7 @@ describe('round 2, P3 — "Call recorded." outlives the refetch that withdraws t
     });
     return { promise, resolve };
   }
-  const concluded = { state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18' } as const;
+  const concluded = { state: 'concluded', started_on: '2026-10-11', next_step_on: null, concluded_on: '2026-10-18', delivered_by: null } as const;
 
   async function saveReachedThenWithdraw(
     user: ReturnType<typeof userEvent.setup>,

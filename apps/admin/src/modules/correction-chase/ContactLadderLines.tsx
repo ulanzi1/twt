@@ -36,7 +36,8 @@ export function followUpLine(followUp: ContactLadderFollowUpDto | null): string 
     case 'concluded':
       return f.concluded(followUp.concluded_on);
     case 'ended_delivered':
-      return f.ended_delivered;
+      // Story 6.37d (WS13) — say WHICH channel got through (⛔ "a text" for a delivered WhatsApp).
+      return followUp.delivered_by === 'whatsapp' ? f.ended_delivered_whatsapp : f.ended_delivered;
     case 'ended_call':
       return f.ended_call;
     default:

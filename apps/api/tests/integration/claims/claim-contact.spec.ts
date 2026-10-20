@@ -226,6 +226,32 @@ describe.skipIf(!hasDatabase)('claim contact record — routes (Story 6.19a)', {
       expect(dpdpa.rows).toHaveLength(0);
     });
 
+    it('⭐ Story 6.37d (AC1) — the recorded agreement carries v2’s id and v2’s words in the locale shown; the claim’s WhatsApp basis reads it', async () => {
+      const { memberId, pariwarId, claimCaseId } = await fileClaim();
+      const res = await inject('POST', memberUrl(claimCaseId), {
+        payload: { locale: 'en', nominees: [{ rank: 1, address: 'House 1, Kanpur' }], claimantNomineeRank: 1, agreed: true },
+        token: memberToken(memberId, pariwarId),
+      });
+      expect(res.status, res.raw).toBe(201);
+      const row = await t.pool.query<{ consent_payload: Json }>(
+        `SELECT cr.consent_payload FROM claim_contacts cc JOIN consent_records cr ON cr.consent_id = cc.agreement_consent_id WHERE cc.claim_case_id = $1`,
+        [claimCaseId],
+      );
+      expect(row.rows[0]!.consent_payload).toEqual({
+        checkboxTextShown: 'I agree that the Trust may contact me by text message, WhatsApp, phone call or post, about this claim.',
+        locale: 'en',
+        copyVersion: '2026-10-20.v2-pending-story-0.13',
+      });
+      const scopeTx = await openScopeTx(t.deps, pariwarId);
+      try {
+        await expect(
+          claim.readClaimantWhatsappBasis(scopeTx.tx, ids.pariwarId(pariwarId), ids.claimId(claimCaseId)),
+        ).resolves.toEqual({ eligible: true, copyVersion: '2026-10-20.v2-pending-story-0.13' });
+      } finally {
+        await closeScopeTx(scopeTx, true);
+      }
+    });
+
     it('⛔ no session → 401; another member’s claim → 404 (⛔ never a 403 oracle); the contract’s own 400s', async () => {
       const { memberId, pariwarId, claimCaseId } = await fileClaim();
       const body = { locale: 'hi', nominees: [{ rank: 1, address: 'A' }], claimantNomineeRank: 1, agreed: true };

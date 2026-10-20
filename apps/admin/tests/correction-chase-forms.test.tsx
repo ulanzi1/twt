@@ -850,7 +850,7 @@ describe('<CorrectionChasePanel> — a recorded delivery survives the refetch th
   });
 
   it("Review P29 (fix-diff regression) — a concluded follow-up with ask 'none' offers ⛔ call form; ask 'call' offers it", async () => {
-    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28' };
+    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28', delivered_by: null };
     getClaimsUnderCorrection.mockResolvedValue({
       pariwar_id: PARIWAR,
       late_warnings_unavailable: false,

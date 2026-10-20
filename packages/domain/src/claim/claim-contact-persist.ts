@@ -45,6 +45,7 @@ import {
   readVersionChainIndex,
   resolveContactRow,
 } from './claim-contact-check.js';
+import { agreementOnFileNamesWhatsapp } from './claim-contact-whatsapp-basis.js';
 import { ClaimContactWriteRefusedError, NOMINEE_BANK_COLLECTABLE_STATES } from './errors.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
 import { getClaimCase, lockClaimCase } from './read.js';
@@ -132,6 +133,9 @@ export interface WriteClaimContactResult {
   readonly agreementRecorded: boolean;
   /** A helpline `agreed` over a live agreement outside the member's window — a confirmation, ⛔ not data (W8). */
   readonly agreementIgnored: boolean;
+  /** Story 6.37d (WS2 (iii)): `agreementIgnored` AND the agreement on file is a version that does ⛔ name WhatsApp —
+   *  the tick did not move the claim onto the new wording (WS3). Always `false` when `agreementIgnored` is. */
+  readonly agreementOnFileEarlierWording: boolean;
   /** W6 — the claimant side was set, switched or filled by this write. */
   readonly claimantSideWritten: boolean;
   readonly claimantSide: 'nominee' | 'claimant';
@@ -284,6 +288,7 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
       created: true,
       agreementRecorded: true,
       agreementIgnored: false,
+      agreementOnFileEarlierWording: false,
       claimantSideWritten: true,
       claimantSide: claimantVersion !== undefined ? 'nominee' : 'claimant',
       rowsWritten: rows.length,
@@ -385,6 +390,7 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
   // W8 — the agreement.
   let recordFresh = false;
   let agreementIgnored = false;
+  let agreementOnFileEarlierWording = false;
   if (input.surface === 'member_app') {
     recordFresh = true;
   } else if (input.agreed === true) {
@@ -392,8 +398,10 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
       recordFresh = true;
     } else {
       const agreement = await readClaimContactAgreementState(db, input.pariwarId, stored.agreementConsentId);
-      if (agreement === 'live') agreementIgnored = true;
-      else recordFresh = true;
+      if (agreement === 'live') {
+        agreementIgnored = true;
+        agreementOnFileEarlierWording = !(await agreementOnFileNamesWhatsapp(db, input.pariwarId, stored.agreementConsentId));
+      } else recordFresh = true;
     }
   }
 
@@ -445,6 +453,7 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
     created: false,
     agreementRecorded: recordFresh,
     agreementIgnored,
+    agreementOnFileEarlierWording,
     claimantSideWritten: writeSide,
     claimantSide: nowNominee ? 'nominee' : 'claimant',
     rowsWritten,

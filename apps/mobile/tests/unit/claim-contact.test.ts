@@ -97,6 +97,28 @@ describe('the contact screen (source pins)', () => {
   it('the relationships offered are the DERIVED nineteen (⛔ never a local list)', () => {
     expect(src).toContain('CLAIMANT_NOMINEE_RELATIONSHIP_CODES.map')
   })
+
+  it('⭐ Story 6.37d (§3.4 "never pre-ticked"): the agreement starts UNTICKED', () => {
+    expect(src).toContain('const [agreed, setAgreed] = useState(false)')
+    expect(src).not.toMatch(/setAgreed\(true\)/)
+  })
+})
+
+describe('Story 6.37d — the agreement is the claimant\'s own, v2 (`-367` decision 2, `-368` Q2 A)', () => {
+  it('[en] first person; text, WhatsApp, call or post; ⛔ the nominees, ⛔ "any other means"', () => {
+    const a = t('contact.agreement', undefined, { locale: 'en', namespace: 'claim' })
+    expect(a).toBe('I agree that the Trust may contact me by text message, WhatsApp, phone call or post, about this claim.')
+    expect(t('contact.agreement_required', undefined, { locale: 'en', namespace: 'claim' })).toBe(
+      'Please agree, so that we can contact you about this claim.',
+    )
+  })
+
+  it('[hi] WhatsApp is written व्हाट्सएप, and the agreement is the claimant\'s own (मुझसे)', () => {
+    const a = t('contact.agreement', undefined, { locale: 'hi', namespace: 'claim' })
+    expect(a).toContain('व्हाट्सएप')
+    expect(a).toContain('मुझसे')
+    expect(a).not.toContain('नॉमिनी')
+  })
 })
 
 describe('the relationship question fixes its DIRECTION in both locales', () => {

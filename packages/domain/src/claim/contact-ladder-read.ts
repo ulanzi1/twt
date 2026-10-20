@@ -4,7 +4,7 @@
 // ⛔ `correction-reminder-record.ts`, ⛔ `correction-closure.ts`, ⛔ `certificate-reminder*.ts` here).
 // Tenant-scoped (`pariwar_id` explicit on every statement — T12). ⛔ Writes, ⛔ crypto.
 
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, PariwarId, TrusteeDecisionId } from '../ids/index.js';
@@ -15,6 +15,7 @@ import {
   type ContactLadderChase,
 } from '../schema/claim_contact_ladders.js';
 import { claimCertificateReminders } from '../schema/claim_certificate_reminder.js';
+import { claimContactWaSends } from '../schema/claim_contact_wa_sends.js';
 import { claimCorrectionReminders, claimCorrectionRuns } from '../schema/claim_correction_chase.js';
 import { smsSendDeliveries, type SmsDeliveryState } from '../schema/sms_send_deliveries.js';
 import type { ConcludedLadderFact } from './contact-ladder.js';
@@ -217,6 +218,42 @@ export async function readLadderOriginCreatedAt(
     .from(t)
     .where(and(eq(t.pariwarId, pariwarId), inArray(t.reminderId, [...new Set(originRowIds)])));
   return new Map(rows.map((r) => [r.reminderId, r.createdAt]));
+}
+
+/** Story 6.37d (WS12) — a DELIVERED claim WhatsApp of a correction ladder: whose ladder, to which number (a keyed hash). */
+export interface ReturnLadderWhatsappDelivery {
+  readonly personKey: string;
+  readonly recipientNumberHash: string;
+}
+
+/**
+ * Story 6.37d (WS12; `-351` 4 A *"counts as reached"*) — every DELIVERED WhatsApp of a CORRECTION ladder of the return
+ * (`delivered_at` set — set once, ⛔ cleared), WHATEVER the ladder's state and WHENEVER it was delivered: a delivered
+ * WhatsApp stands on its OWN row, as a delivered `ladder_sms` does (a later ladder's conclusion maps the earlier origin —
+ * it must ⛔ un-count this). ⛔ PII (a person key and a keyed hash).
+ */
+export async function readReturnLadderWhatsappDeliveries(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+  returnDecisionId: string,
+): Promise<ReturnLadderWhatsappDelivery[]> {
+  return db
+    .select({ personKey: claimContactLadders.personKey, recipientNumberHash: claimContactWaSends.recipientNumberHash })
+    .from(claimContactWaSends)
+    .innerJoin(
+      claimContactLadders,
+      and(eq(claimContactLadders.pariwarId, claimContactWaSends.pariwarId), eq(claimContactLadders.ladderId, claimContactWaSends.ladderId)),
+    )
+    .where(
+      and(
+        eq(claimContactWaSends.pariwarId, pariwarId),
+        eq(claimContactWaSends.claimCaseId, claimCaseId),
+        eq(claimContactLadders.chase, 'correction'),
+        eq(claimContactLadders.returnDecisionId, returnDecisionId),
+        isNotNull(claimContactWaSends.deliveredAt),
+      ),
+    );
 }
 
 /** Every call recorded on a claim (either surface), oldest first — ⛔ PII (a role, a date, an outcome). */

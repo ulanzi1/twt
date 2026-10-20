@@ -441,6 +441,22 @@ export const QUEUE_NAMES = {
    */
   CLAIM_CERTIFICATE_LADDER_SMS: 'claim.certificate.ladder_sms',
   /**
+   * The claimant's WHATSAPP STEP sweep (Story 6.37d, AC4; `2026-10-17-350` ruling 2 (1), `-357`, `2026-10-20-368` Q1 A) — every
+   * 15 minutes IST, AROUND THE CLOCK, its OWN queue. After the cross-tenant role guard it FIRST finishes in-flight send rows
+   * whose lease lapsed (`may_have_sent:lease_lapsed`), THEN STARTS ladders for reports received in the last two hours (the SAME
+   * start as the 10:00 sweep, ⛔ `advance`) and runs LD13's start tail, THEN — only inside 09:00–20:00 IST — enqueues one
+   * CLAIM_CONTACT_LADDER_WA_SEND child per due step (SQL only — ⛔ HMAC, ⛔ decrypt). ⛔ Never `dispatch()`, ⛔ never an SMS. Job
+   * class C.
+   */
+  CLAIM_CONTACT_LADDER_WA_SWEEP: 'claim.contact_ladder.wa_sweep',
+  /**
+   * ONE ladder's WhatsApp step (Story 6.37d, AC5): the config OUTSIDE any lock, the two-half re-check under the chase lock (the
+   * stops, the ends, the basis, the gate), the send row claimed `attempting` and the step `sent`, COMMIT, THEN decrypt → the
+   * in-flight marker → the send through the ONE WhatsApp client → the bounded finalise. Transient-only throws; ids only. Job
+   * class B.
+   */
+  CLAIM_CONTACT_LADDER_WA_SEND: 'claim.contact_ladder.wa_send',
+  /**
    * The SUSPICION NOTICE SWEEP (Story 6.24b, AC7b; `2026-10-07-292` RF11 / RF12, `2026-10-07-293` item 1 B,
    * `2026-10-08-295` RB10, RB12) — daily 10:00 IST, its OWN queue. Three keyset-paged cross-tenant scans on the BYPASSRLS
    * pool — a standing `-239` refusal (FQ7 B's text to the nominee in place at the death), a claim CLOSED by an allowed

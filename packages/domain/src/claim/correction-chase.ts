@@ -566,6 +566,12 @@ export interface CorrectionPerson {
   /** `nominee:<correction-chain ROOT of the version>` | `claimant` — stable across a 6.20 correction. */
   readonly personKey: string;
   readonly role: 'nominee' | 'claimant';
+  /**
+   * Story 6.37d (WS5, `-367` PQ1 reading A) — this person IS the claim's claimant: the `'claimant'` block person, or the
+   * nominee the claimant link identifies (`claimantLinkCountsFor`). ⛔ A role change — a claimant-nominee keeps `role:
+   * 'nominee'` (and its `nominee:<root>` key); only the ladder's WhatsApp step reads this.
+   */
+  readonly isClaimant: boolean;
   /** The effective rank (nominees only). */
   readonly rank: 1 | 2 | null;
   /** The EFFECTIVE version (nominees), or `null` (the claimant block). */
@@ -624,9 +630,11 @@ export async function readCorrectionRecipients(
     effective.entries.map((e) => e.versionId as string),
   );
   const byId = new Map(versions.map((v) => [v.versionId as string, v]));
+  const claimantVersion = snapshot.contact.claimantNomineeVersionId as string | null;
   const people: CorrectionPerson[] = effective.entries.map((e) => ({
     personKey: nomineePersonKey(e.versionId as string, index),
     role: 'nominee' as const,
+    isClaimant: claimantVersion !== null && claimantLinkCountsFor(claimantVersion, e.versionId as string, index),
     rank: e.rank,
     versionId: e.versionId as string,
     mobileCiphertext: byId.get(e.versionId as string)?.mobileCiphertext ?? null,
@@ -634,12 +642,12 @@ export async function readCorrectionRecipients(
   }));
 
   let claimantUnresolved = false;
-  const claimantVersion = snapshot.contact.claimantNomineeVersionId as string | null;
   if (claimantVersion === null) {
     // The claimant is none of the nominees — the block is their own recipient.
     people.push({
       personKey: 'claimant',
       role: 'claimant',
+      isClaimant: true,
       rank: null,
       versionId: null,
       mobileCiphertext: snapshot.contact.claimantMobileCiphertext ?? null,

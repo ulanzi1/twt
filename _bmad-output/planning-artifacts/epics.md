@@ -3642,6 +3642,15 @@ ids only in logs and alarms; no event, no claim state; no call to Meta in any te
 > ⚠ **Dated note, 2026-10-20:** the routing note is RULED — [`-368`](../../.decision-log.md#decision-2026-10-20-368) (Trustee-ratified):
 > Q1 A (the WhatsApp about four hours after the failed text, between 9 am and 8 pm) and Q2 A (the clause removed; the agreement names
 > text message, WhatsApp, phone call and post only).
+>
+> ⚠ **Dated note, 2026-10-20 (Story 6.37d dev — Tasks 1–10):** BUILT on `story/6-37d-claim-contact-whatsapp-step` — the agreement's v2
+> (first person, the clause removed; v1 kept verbatim in a domain registry), the WhatsApp basis reader (`-357` G3 — the old wording, an
+> unknown version and an unreviewed Hindi all fail closed), migration 0172 (the step moves once; `claim_contact_wa_sends` on 6.31's
+> crash-safe shape; `claim_contact_wa_stops`), the quarter-hourly WhatsApp sweep and child (`claim-contact-ladder-whatsapp.ts`), the
+> webhook worker's claim branch (STOP for a non-member; a claim send's statuses on its own row; ⛔ a member opt-in moved), D22's
+> `reachedByLadderWhatsapp`, and the staff line by channel. The "(in brief)" text below still says *"and any later means"* — superseded
+> by `-368` Q2 A (the agreement names text message, WhatsApp, phone call and post only). ⚠ Nothing is SENT until roster Row 36 closes
+> (with Row 35 (a), Row 32, Row 33, Row 21) — a merge is ⛔ go-live.
 
 As a claimant whose family's claim is being chased for a bank-details correction or a death certificate, I want a reminder the phone
 network reports it could not deliver to me to be tried on WhatsApp a few hours later — only because I agreed to WhatsApp when I filed,

@@ -257,6 +257,9 @@ export interface ConsentPayload {
   ip?: string;
   /** The originating user-agent string. */
   userAgent?: string;
+  /** The version id of the copy shown (Story 6.37d — e.g. the claim-contact agreement registry's id; the WhatsApp
+   *  basis reader reads it, and a row without one is the old wording). */
+  copyVersion?: string;
   [k: string]: unknown;
 }
 

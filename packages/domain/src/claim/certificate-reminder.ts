@@ -548,6 +548,11 @@ export interface CertificatePerson {
   /** `nominee:<correction-chain ROOT>` | `claimant` — the SAME key 6.19b's `nomineePersonKey` gives. */
   readonly personKey: string;
   readonly role: 'nominee' | 'claimant';
+  /**
+   * Story 6.37d (WS5, `-367` PQ1 reading A) — this person IS the claim's claimant: the `'claimant'` block person, or the
+   * person `nominee:${chainRootOf(claimantNomineeVersionId)}`. ⛔ A role change; only the ladder's WhatsApp step reads it.
+   */
+  readonly isClaimant: boolean;
   /** Display position among the record's nominees (`A`, `B`, …) — ⛔ never an assumed rank; `null` for the claimant. */
   readonly position: string | null;
   /** The HEAD of the person's correction chain (nominees), or `null` (the claimant block). */
@@ -662,11 +667,14 @@ export async function readCertificateRecipients(
     ...(snapshot.contact.claimantNomineeVersionId === null ? [] : [snapshot.contact.claimantNomineeVersionId as string]),
   ];
   const roots = [...new Set(recordVersions.map((v) => chainRootOf(v, byId)))].sort();
+  const claimantRoot =
+    snapshot.contact.claimantNomineeVersionId === null ? null : chainRootOf(snapshot.contact.claimantNomineeVersionId as string, byId);
   const people: CertificatePerson[] = roots.map((root, i) => {
     const head = chainHeadOf(root, versions);
     return {
       personKey: `nominee:${root}`,
       role: 'nominee' as const,
+      isClaimant: root === claimantRoot,
       position: positionLabel(i),
       versionId: head,
       mobileCiphertext: mobileOf.get(head) ?? null,
@@ -677,6 +685,7 @@ export async function readCertificateRecipients(
     people.push({
       personKey: 'claimant',
       role: 'claimant',
+      isClaimant: true,
       position: null,
       versionId: null,
       mobileCiphertext: snapshot.contact.claimantMobileCiphertext ?? null,

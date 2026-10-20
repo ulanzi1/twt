@@ -157,8 +157,12 @@ function causeCodeOf(err: unknown): string | null {
   }
 }
 
-/** Validate a direct send's values BEFORE the request (WR8). ⛔ A value in the message. */
-function assertBodyParams(params: unknown): void {
+/**
+ * Validate a direct send's values BEFORE the request (WR8). ⛔ A value in the message. Exported (Story 6.37d WS8 (ii)) so a
+ * direct sender can validate its bound values BEFORE its in-flight marker — a bad value then never reaches the marker (the client
+ * still runs it inside `send()`).
+ */
+export function assertBodyParams(params: unknown): void {
   // P8 — a cast / JSON caller can hand a non-list: refuse it as a param error (⛔ a TypeError the classifier reads as "may have sent").
   if (!Array.isArray(params)) {
     throw new WhatsappTemplateParamError('whatsapp-app: bodyParams is not a list');

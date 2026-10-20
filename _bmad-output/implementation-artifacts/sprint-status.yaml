@@ -1,3 +1,11 @@
+# last_updated: 2026-10-20d (STORY 6.37d — DEV DONE (Tasks 1–10) on `story/6-37d-claim-contact-whatsapp-step` ⇒ `in-progress → review`. The
+# agreement's v2 (first person, the clause removed — `-367` d2 / `-368` Q2 A; v1 kept verbatim in a domain registry; Hindi ⛔ yet
+# reviewed — Row 36 (a)) + the fail-closed WhatsApp basis reader (`-357` G3); migration 0172 (the step moves ONCE; `claim_contact_wa_sends`
+# on 6.31's crash-safe shape; `claim_contact_wa_stops`); the quarter-hourly WhatsApp sweep + child (around the clock; children 09:00–20:00;
+# the REAL client over THE one cache); the webhook worker's claim branch (STOP for a non-member; ⛔ a member opt-in moved by a claim send);
+# D22's `reachedByLadderWhatsapp`; staff see the channel. ADR-0028 / -0029 / -0042 dated notes; the Panel "told" item WRITTEN and TOLD (BigDev: "report has been sent");
+# deferred-work: 6.37c's "The ladder's WhatsApp step" Closed by 6.37d. Numbers taken: migration 0172, `20d`. ⚠ Nothing is SENT until roster
+# Row 36 closes. ⛔ Other row moves.)
 # last_updated: 2026-10-20c (⭐ **TRUSTEE RULING — Decision `2026-10-20-368` (Dhiraj Rahul + Kalpana Bharti, *"by DR and KB / Q1 A, Q2
 # A"*).** Story 6.37d's routing note was sent and ruled: Q1 A — the claimant's WhatsApp reminder goes about four hours after a failed text,
 # between 9 am and 8 pm (supersedes in part `-250` #5's 10:00 hour, this one step only); Q2 A — *"or any other means of communication that
@@ -20843,7 +20851,10 @@ development_status:
   # also Row 32 (all legs), Row 33, Row 35 (a) / (e) (shared), Row 21. PQ3 (who ticks the agreement) joins PQ1–PQ2 for BigDev's §0.
   # ⭐ 2026-10-20 (ledger `2026-10-20b`): Task 0 DONE — `2026-10-20-367` (`5ab99fc0`); roster Row 36; the routing note (PQ2 + the clause)
   # WRITTEN, ⛔ sent; the row is ⛔ `done` until it is ruled and the code matches.
-  6-37d-claim-contact-whatsapp-step: in-progress
+  # ⭐ 2026-10-20 (ledger `2026-10-20d`): DEV DONE — Tasks 1–10 (migration 0172; the step, its sweep and child, the worker's claim branch,
+  # D22, the staff line); the routing note RULED by `-368` before the code. GO-LIVE (⛔ a merge fence): roster Row 36 (a), (b), (d)–(h); Row
+  # 35 (a) / (e) (shared); Row 32 (all legs); Row 33; Row 21.
+  6-37d-claim-contact-whatsapp-step: review
   # ⭐ 2026-10-18 NEW ROW (`-359`, Trustee-ratified option B): when the deceased member's full name does not fit a suspicion text's name slot
   # (the nominee text FQ7, the refused person's appeal text `-293` item 1, the closure text `-291` Q2), send it with first name + surname
   # initial; a name that still does not fit keeps today's refusal + alarm. One function and its tests. ⛔ Story file yet. The neighbours'

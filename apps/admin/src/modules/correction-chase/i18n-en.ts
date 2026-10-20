@@ -156,6 +156,8 @@ export const correctionChaseEn = {
     concluded: (on: string | null): string =>
       on === null ? 'Follow-up ended — none was reported delivered.' : `Follow-up ended on ${on} — none was reported delivered.`,
     ended_delivered: 'Follow-up ended — a text reached the family.',
+    // Story 6.37d (WS13) — the claimant's WhatsApp was delivered.
+    ended_delivered_whatsapp: 'Follow-up ended — a WhatsApp message reached the family.',
     ended_call: 'Follow-up ended — a call reached the family.',
     ended_other: 'Follow-up stopped.',
     notDelivered: 'Texts were reported not delivered',

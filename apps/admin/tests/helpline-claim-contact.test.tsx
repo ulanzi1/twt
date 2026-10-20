@@ -118,7 +118,52 @@ describe('<HelplineClaimContact>', () => {
     renderCard();
     const box = await screen.findByTestId('helpline-contact-agreement');
     expect(box).toHaveTextContent('मैं सहमति देता/देती हूँ कि ट्रस्ट इस दावे के बारे में');
-    expect(box).toHaveTextContent('I agree that the Trust may contact the nominees and the claimant named here');
+    expect(box).toHaveTextContent(
+      'I agree that the Trust may contact me by text message, WhatsApp, phone call or post, about this claim.',
+    );
+    // Story 6.37d (`-367` decision 2 / `-368` Q2 A): the old words are gone — ⛔ the nominees, ⛔ "any other means".
+    expect(box).not.toHaveTextContent(/the nominees and the claimant named here/);
+    expect(box).not.toHaveTextContent(/any other means/);
+    expect(box).toHaveTextContent('व्हाट्सएप');
+  });
+
+  it('⭐ Story 6.37d (§3.4 "never pre-ticked"): the agreement box starts UNTICKED', async () => {
+    renderCard();
+    expect(await screen.findByTestId('helpline-contact-agreed')).not.toBeChecked();
+  });
+
+  it('⭐ Story 6.37d (WS2 (iii)): a tick over an agreement on the EARLIER wording says the wording did not move', async () => {
+    mocked.getClaimContactPresence.mockResolvedValue(presence({ writeMode: 'add_only', recorded: true, agreement: 'live' }));
+    mocked.recordHelplineClaimContact.mockResolvedValue({
+      presence: presence({ writeMode: 'add_only', recorded: true, agreement: 'live' }),
+      agreementRecorded: false,
+      agreementIgnored: true,
+      agreementOnFileEarlierWording: true,
+    });
+    renderCard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId('helpline-contact-agreed'));
+    await user.click(screen.getByTestId('helpline-contact-save'));
+    expect(await screen.findByTestId('helpline-contact-saved')).toHaveTextContent(
+      'Saved. The agreement was already on file, so the tick was not recorded again (the agreement on file is the earlier wording).',
+    );
+  });
+
+  it('a tick over an agreement on the CURRENT wording keeps the plain ignored line', async () => {
+    mocked.getClaimContactPresence.mockResolvedValue(presence({ writeMode: 'add_only', recorded: true, agreement: 'live' }));
+    mocked.recordHelplineClaimContact.mockResolvedValue({
+      presence: presence({ writeMode: 'add_only', recorded: true, agreement: 'live' }),
+      agreementRecorded: false,
+      agreementIgnored: true,
+      agreementOnFileEarlierWording: false,
+    });
+    renderCard();
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId('helpline-contact-agreed'));
+    await user.click(screen.getByTestId('helpline-contact-save'));
+    const line = await screen.findByTestId('helpline-contact-saved');
+    expect(line).toHaveTextContent('Saved. The agreement was already on file, so the tick was not recorded again.');
+    expect(line).not.toHaveTextContent(/earlier wording/);
   });
 
   it('a first save sends the address BY VERSION ID, the claimant side and the agreement — then announces "saved"', async () => {
@@ -126,6 +171,7 @@ describe('<HelplineClaimContact>', () => {
       presence: presence({ recorded: true, missing: null, agreement: 'live', claimantSide: 'nominee' }),
       agreementRecorded: true,
       agreementIgnored: false,
+      agreementOnFileEarlierWording: false,
     });
     renderCard();
     const user = userEvent.setup();
@@ -246,7 +292,12 @@ describe('<HelplineClaimContact>', () => {
   });
 
   it('⭐ review 2026-09-29: fields are disabled while a save is in flight — no unrelated edit races the reset', async () => {
-    let resolveSave!: (v: { presence: ClaimContactPresenceResponse; agreementRecorded: boolean; agreementIgnored: boolean }) => void;
+    let resolveSave!: (v: {
+      presence: ClaimContactPresenceResponse;
+      agreementRecorded: boolean;
+      agreementIgnored: boolean;
+      agreementOnFileEarlierWording: boolean;
+    }) => void;
     mocked.recordHelplineClaimContact.mockReturnValue(
       new Promise((resolve) => {
         resolveSave = resolve;
@@ -258,7 +309,12 @@ describe('<HelplineClaimContact>', () => {
     await user.click(screen.getByTestId('helpline-contact-save'));
     await waitFor(() => expect(screen.getByTestId('helpline-contact-address-1')).toBeDisabled());
     expect(screen.getByTestId('helpline-contact-agreed')).toBeDisabled();
-    resolveSave({ presence: presence({ recorded: true }), agreementRecorded: true, agreementIgnored: false });
+    resolveSave({
+      presence: presence({ recorded: true }),
+      agreementRecorded: true,
+      agreementIgnored: false,
+      agreementOnFileEarlierWording: false,
+    });
     await waitFor(() => expect(screen.getByTestId('helpline-contact-address-1')).not.toBeDisabled());
   });
 });

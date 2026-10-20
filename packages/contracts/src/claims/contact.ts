@@ -207,6 +207,8 @@ export const RecordHelplineClaimContactResponse = z
     agreementRecorded: z.boolean(),
     /** W8 — `agreed` over a live agreement after verification is a confirmation, ⛔ not data. */
     agreementIgnored: z.boolean(),
+    /** Story 6.37d — `agreementIgnored` AND the agreement on file is the earlier wording (⛔ WhatsApp — `-357` G3). */
+    agreementOnFileEarlierWording: z.boolean(),
   })
   .strict();
 export type RecordHelplineClaimContactResponse = z.output<typeof RecordHelplineClaimContactResponse>;

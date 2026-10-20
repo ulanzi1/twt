@@ -98,7 +98,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
   });
 
   it("Review P29 (fix-diff regression) — a concluded follow-up with ask 'none' offers ⛔ call form", () => {
-    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28' };
+    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28', delivered_by: null };
     wrap(
       <CertificateRemindersList
         pariwarId={PARIWAR}
@@ -115,7 +115,7 @@ describe('the "Certificate reminders" list (Story 6.19d)', () => {
   });
 
   it("Review P29 (fix-diff regression) — a concluded follow-up with ask 'call' offers the call form", () => {
-    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28' };
+    const concluded = { state: 'concluded' as const, started_on: '2026-09-20', next_step_on: null, concluded_on: '2026-09-28', delivered_by: null };
     wrap(
       <CertificateRemindersList
         pariwarId={PARIWAR}

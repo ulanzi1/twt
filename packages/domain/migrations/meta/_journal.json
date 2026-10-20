@@ -1198,6 +1198,13 @@
       "when": 1794282000015,
       "tag": "0171_peer-mesh-wa-reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "7",
+      "when": 1794368400016,
+      "tag": "0172_claim-contact-whatsapp-step",
+      "breakpoints": true
     }
   ]
 }

@@ -125,6 +125,7 @@ import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correc
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
 import { registerContactLadderWorkers } from './scheduler/claim-contact-ladder.js';
+import { registerContactLadderWhatsappWorkers } from './scheduler/claim-contact-ladder-whatsapp.js';
 import { enqueuePeerMeshRequestChild, registerClaimPeerMeshRequestWorkers } from './scheduler/claim-peer-mesh-requests.js';
 import { registerClaimPeerMeshWaReminderWorkers } from './scheduler/claim-peer-mesh-wa-reminders.js';
 import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
@@ -467,7 +468,8 @@ async function main(): Promise<void> {
     // by-value parallel as the api) for the mobile blind-index match. Cross-tenant on the service `pool`.
     await registerWaWebhookProcessorCron(
       boss,
-      { pool, db, enc: { kms: jobsEncryption.kms, hmacKeyRef: jobsEncryption.hmacKeyRef } },
+      // Story 6.37d (WS10 / WS11) — the FULL jobs KMS deps: the claim branch hashes in the ladder's space with the same hmacKeyRef.
+      { pool, db, enc: jobsEncryption },
       { cron: WA_WEBHOOK_PROCESSOR_CRON, tz: WA_WEBHOOK_PROCESSOR_TZ },
     );
 
@@ -689,6 +691,17 @@ async function main(): Promise<void> {
     // (LD1). ⚠ GO-LIVE: roster Row 32 (h) — its alarms reach the logs only until `onAlarm` names a person.
     console.info('[jobs] contact-ladder: nominee calls', CLAIM_NOMINEE_CALLS_CLEARED ? 'CLEARED' : 'NOT cleared (G1 — roster Row 34)');
     await registerContactLadderWorkers(boss, { ...claimCorrectionDeps, nomineeCallsCleared: CLAIM_NOMINEE_CALLS_CLEARED });
+    // Story 6.37d (AC4, AC5) — the claimant's WHATSAPP STEP of that ladder: its OWN quarter-hourly IST sweep (around the clock — the
+    // starts for new reports, then, 09:00–20:00 only, one child per due step) and the child that sends ONE Meta template DIRECTLY
+    // through THE one WhatsApp client cache and the fail-loud secret resolver (I5 — ⛔ `dispatch()`, ⛔ an SMS fallback). Day one
+    // sends ⛔ thing: every Pariwar's switch is OFF until provisioned (Row 35 (a)), the claim-contact template names are unset until
+    // roster Row 36 closes, and the agreement's v2 Hindi is ⛔ yet reviewed (I2 — a Hindi agreement is ⛔ a basis until it is).
+    await registerContactLadderWhatsappWorkers(boss, {
+      ...claimCorrectionDeps,
+      nomineeCallsCleared: CLAIM_NOMINEE_CALLS_CLEARED,
+      whatsappAppCache: contributionProviders.whatsappAppCache,
+      resolveSecret: resolveChannelSecret,
+    });
     // Story 6.24b (AC7b) — the SUSPICION NOTICES: its OWN daily 10:00 IST sweep and SMS child — the three once-ever texts
     // of a `-239` refusal (FQ7 B, `-291` Q2 B, `-293` item 1 B). The SAME deps (the shared DLT core `sendClaimDltSms`,
     // its sibling registry); ⛔ never `dispatch()`. Its DLT template ids stay UNSET until go-live (Row 22 AND Row 23 —

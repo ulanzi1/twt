@@ -8,8 +8,11 @@
 // inherited, ⛔ fixed here; Row 35 (b) proves the key resolves in production). ⛔ The frozen `AlertCategory` table
 // (`pariwar_wa_templates`, F8) — a direct sender's template lives here. Row 6-37d adds its purposes through THIS builder.
 
-/** The direct-WhatsApp template purposes. Row 6-37d adds `claim_contact.correction_reminder` / `…certificate_reminder`. */
-export type WaTemplatePurpose = 'peer_mesh.reminder';
+/**
+ * The direct-WhatsApp template purposes. Story 6.37d (WS9) adds the claimant's WhatsApp step — one per chase
+ * (`claim_contact.correction_reminder` / `claim_contact.certificate_reminder`; roster Row 36 (h) sets them).
+ */
+export type WaTemplatePurpose = 'peer_mesh.reminder' | 'claim_contact.correction_reminder' | 'claim_contact.certificate_reminder';
 
 /** ⭐ WR7 — the ONE key builder of the family. */
 export function waTemplateConfigKey(purpose: WaTemplatePurpose, locale: 'en' | 'hi', pariwarId: string): string {

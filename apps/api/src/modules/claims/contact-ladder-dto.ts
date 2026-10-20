@@ -20,5 +20,7 @@ export function toContactCallDto(row: schema.ClaimContactCallRow): ContactCallDt
 }
 
 export function toContactLadderFollowUpDto(f: claim.ContactLadderFollowUp | null): ContactLadderFollowUpDto | null {
-  return f === null ? null : { state: f.state, started_on: f.startedOn, next_step_on: f.nextStepOn, concluded_on: f.concludedOn };
+  return f === null
+    ? null
+    : { state: f.state, started_on: f.startedOn, next_step_on: f.nextStepOn, concluded_on: f.concludedOn, delivered_by: f.deliveredBy };
 }

@@ -4,6 +4,36 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 6.37d dev — the claimant's WhatsApp step (2026-10-20)
+
+- **⛔ Un-stop path** [`claim_contact_wa_stops`, migration 0172; `apps/jobs/src/claim-contact-wa-stop.ts`] — a STOP ends claim WhatsApp to
+  that number from that Pariwar for good (WS10 — Pariwar-wide, stricter than `-357`'s *"for that claim"*); a claimant who wants WhatsApp
+  again has ⛔ route in v1 (disclosed by `-367`). Trigger: a claimant or staff asking to re-open WhatsApp after a STOP.
+- **The webhook drain is at-most-once** [`claimUnprocessedWebhookEvents` marks events processed AT CLAIM — F8] — a crash mid-batch loses a
+  status; a lost `delivered` is silence (the ladder runs on to its texts, as for an SMS with no report — `-351` 1 A). ⛔ Promise "ever
+  delivered" beyond what arrives (T16). Trigger: a delivered claim WhatsApp observed missing its row's `delivered_at`.
+- **Inbound non-STOP replies to a claim WhatsApp are read by nobody** [`apps/jobs/src/wa-webhook-processor.ts`] — the worker matches
+  only a typed STOP keyword (and the member opt-in phrase); a claimant's free-text reply (a question, "please call me") is dropped. Trigger:
+  roster Row 36 (g)'s decision, or a claimant reporting an unanswered reply.
+- **Off-WhatsApp opt-out requests have ⛔ route** [T25; Meta's policy *"You must respect all requests (either on or off WhatsApp)"*] — a
+  claimant telling the helpline "no WhatsApp", or replying in free text, records nothing. Gated by roster Row 36 (g) (accept the gap, or
+  build the route, BEFORE go-live). Trigger: Row 36 (g).
+- **A delivery to a `may_have_sent` row with ⛔ wamid is UNOBSERVABLE** [WS11 (1)] — a finalise that failed after Meta accepted (a lapsed
+  `may_have_sent:lease_lapsed` row) or a `may_have_sent:timeout | network` row has ⛔ wamid, so its `delivered` status cannot reach it: it
+  neither ends the ladder nor counts for D22. The member-block isolation still covers it (by the claim-space hash — WS11 (2)). Trigger: a
+  `may_have_sent` claim send whose recipient reports receiving the WhatsApp.
+- **A post-send 500 / 503 is retried and MAY send a second WhatsApp** [I4; `-366` d2 rule 3 as 6.31 inherits it] — `classifyDirectWaSendFailure`
+  files any 5xx other than 502 / 504 as `transient`; Meta may have acted on a request it answered 500 / 503. The ladder caps it at
+  `CHILD_RETRY_LIMIT` + 1 sends in the worst case (disclosed by the story's I4). Trigger: a duplicate claim WhatsApp reported, or Meta
+  documenting 5xx idempotency.
+- **The Meta-policy check (Row 36 (d)) is ⛔ yet recorded** — the agreement's opt-in against Meta's three opt-in elements and the business
+  name the claimant sees (the Pariwar's display name vs "the Trust"). Gated by Row 36 (d). Trigger: Row 36 (d).
+- **Disclosed edges of the quarter-hourly start** [AC4] — (i) a report the correlator settles more than two hours after its receipt, or a
+  flip to `undelivered` by an earlier-received report, is started by the next 10:00 sweep instead (a later WhatsApp, ⛔ a lost ladder); (ii)
+  the 10:00 quarter-hourly tick and the daily sweep may EACH raise the burst alarm once; (iii) a WhatsApp switch turned ON between the
+  child's config read and its locked re-check loses that ladder's step (`skipped:whatsapp_not_configured`). Trigger: an operator asking
+  why a step was skipped at go-live, or a duplicate burst alarm.
+
 ## Deferred from: Story 6.37d Task 0 — Decision 2026-10-20-367 (2026-10-20)
 
 - **DPDPA §6(4) — the claim filing agreement cannot be withdrawn** [`packages/domain/migrations/0124_*.sql` (*"⛔ Not revocable in
@@ -112,7 +142,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 - **The ladder's WhatsApp step** — RECORDED skipped (`skipped:whatsapp_not_built` for a claimant, `skipped:nominee_no_whatsapp` for a
   nominee — `-356`); the ladder goes on to the 48-hour SMS (`-351`'s recorded reading). ⭐ Trigger: row `6-37d-claim-contact-whatsapp-step`
-  (the claimant's step only, behind G3 and the approved §3.4 exception — `-357`). **Deferred to 6-37d.**
+  (the claimant's step only, behind G3 and the approved §3.4 exception — `-357`). **Deferred to 6-37d.** ✅ **Closed by Story 6.37d**
+  (2026-10-20, its dev commit on `story/6-37d-claim-contact-whatsapp-step` — migration 0172, `claim-contact-ladder-whatsapp.ts`): a
+  claimant's step (a claimant-nominee's too — `-367` PQ1 A) starts `pending` and is SENT about four hours after the failed text, between
+  9 am and 8 pm (`-368` Q1 A), on the new agreement wording only; a nominee's stays `skipped:nominee_no_whatsapp`. Ladders written before
+  0172 keep their recorded `skipped:whatsapp_not_built` (a step is decided once). ⚠ Nothing is SENT until roster Row 36 closes (and Row 35
+  (a) provisions the Pariwar) — a merge is ⛔ go-live.
 - **Phase 2 call tracking** (`-351` Consequence 4) — a call is RECORDED by hand (date, who answered, outcome — LD10); ⛔ call
   tracking, recording or transcription. ⛔ Row exists. ⭐ Trigger: a decision to track calls. **Deferred.**
 - **The chase's own catch-up `late` send does ⛔ check ladder rows** (T22's residual) [`apps/jobs/src/scheduler/claim-correction-reminders.ts`
@@ -189,6 +224,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   restated) and the consent sheet's §1–§2 revised, all before the ladder is built; it stays open until row 6-37c's Task 10
   closes it (once the pack goes out with the revised sheet). ✅ **Closed by [Decision 2026-10-18-358](../../.decision-log.md#decision-2026-10-18-358)** (2026-10-18):
   the pack went out with the revised sheet and ADR-0042 was ratified with the restated bound — both conditions met before the ladder is built.
+  ⚠ **Dated 2026-10-20 (Story 6.37d — annotation, ⛔ a re-opening):** the bound as restated said *"no WhatsApp — row 6-37c skips that
+  step"*; with the claimant's WhatsApp step built it WIDENS — a forged `undelivered` now also sends at most ONE WhatsApp to the CLAIMANT
+  (⛔ the nominee — `-356`; this item's *"to the claimant and the nominee"* is narrower for WhatsApp), only on the new agreement wording,
+  in a Pariwar with WhatsApp on and its template provisioned (roster Row 36), ⛔ to a number that sent STOP. Recorded in ADR-0042's
+  2026-10-20 dated note; the Panel was TOLD 2026-10-20 (`trustee-panel-told-2026-10-20-6-37d-whatsapp-and-forged-reports.md` — sent by
+  BigDev). The start-burst alarm still bounds it (the quarter-hourly starts run the same tail — 6.37d AC4).
 - **The `UPDATE … WHERE id IN (SELECT … LIMIT … FOR UPDATE SKIP LOCKED)` over-claim shape exists in two older drains**
   [`packages/domain/src/telegram-opt-in/webhook-events.ts`, `packages/domain/src/wa-opt-in/webhook-events.ts` — Drizzle `inArray`
   over `.limit(…).for('update', { skipLocked: true })`] — 6.37b's own claim leased 40 of 40 due rows under `LIMIT 2` on :5433 (a
@@ -11862,7 +11903,11 @@ Whole branch `15acb570..5745ad5d`, 4 chunks × 3 layers. Twelve items deferred; 
 - **W6 — Duplicate children for a claim queued but not yet run** re-read Secret Manager and KMS-decrypt the name for nothing; `maxRuns` defaults to the daily sweep's 20 000 (`claim-correction-reminders.ts:96`). ⛔ Correctness — the begin's CAS dedups.
 - **W7 — The sweep's budget does not bound its slow calls** (Secret Manager, `boss.send`, the due-list read); an expired tick's re-run can overlap and both write the registration closure's `resumeCursor`; a multi-replica jobs service keeps one cursor per process. Fairness only.
 - **W8 — The due lists scan every accepted ping** — ⛔ index on `claim_peer_mesh_pings.send_updated_at` for accepted rows (`0156:66` is partial on `attempting`). Trigger: the hourly sweep's scan time.
-- **W9 — A 132xxx refusal that is about ONE value (132005 / 132012 / 132018) is filed as scope-wide** ⇒ the claim's loop STOPS (`packages/channels/src/providers/whatsapp-direct-send-outcome.ts:93`). Unreachable for the name today (whitespace collapsed in `pool-identity.ts`, length far below Meta's cap); reachable through a helpline config value with a tab or newline. Row 6-37d is a second consumer.
+- **W9 — A 132xxx refusal that is about ONE value (132005 / 132012 / 132018) is filed as scope-wide** ⇒ the claim's loop STOPS (`packages/channels/src/providers/whatsapp-direct-send-outcome.ts:93`). Unreachable for the name today (whitespace collapsed in `pool-identity.ts`, length far below Meta's cap); reachable through a helpline config value with a tab or newline. Row 6-37d is a second consumer. ⚠ **Dated 2026-10-20 (Story 6.37d):** 6.37d classifies a per-value 132xxx as `scope` too
+(`classifyDirectWaSendFailure` unchanged — every 132xxx is `template_not_approved`) and records the claim WhatsApp `refused` + the alarm
+`contact_ladder.whatsapp_refused` — ⛔ a park, the ladder goes on to its texts. Its exposed value (the helpline) is validated BEFORE the
+send (⛔ a newline, a tab or four spaces ⇒ `skipped:helpline_unreadable` + `contact_ladder.whatsapp_config_fault` — T27), so the
+reachable path above is closed for 6.37d's sends; the classifier's own filing stays open (6.31's consumer).
 - **W10 — The record spec's R7 leg takes an ACCESS EXCLUSIVE lock** (`ALTER TABLE … DISABLE TRIGGER`) inside its per-test ROLLBACK — brief; precedent `audit-log/integrity-check.spec.ts`; Debug Log (d) rejected the pattern for Task 4.
 - **W11 — AC11's ids-only capture runs in 8 of 23 live legs** and captures only `onAlarm`, not the registration's `console.info` / `console.error`.
 - **W12 — The WhatsApp client cache keeps the FIRST token / phone number id for a Pariwar** (`whatsapp-app.ts:217-220`); a rotation is RESTART-REQUIRED (roster Row 35 (a)) — ⛔ mismatch detection, ⛔ eviction on an auth refusal. Documented; homed in Row 35 (a).

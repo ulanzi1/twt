@@ -159,8 +159,11 @@ export class PeerMeshWaReminderLocaleReadError extends Error {
   }
 }
 
-/** The 0171 form of a Meta template NAME — a value outside it would be refused by the begin's INSERT. */
-const TEMPLATE_NAME_FORM = /^[a-z0-9_]{1,512}$/;
+/**
+ * The 0171 form of a Meta template NAME — a value outside it would be refused by the begin's INSERT. Exported (Story 6.37d
+ * WS9 — ⛔ a second regex: the claim-contact step checks its template names against THIS one; 0172's CHECK is the same form).
+ */
+export const TEMPLATE_NAME_FORM = /^[a-z0-9_]{1,512}$/;
 
 /**
  * ⭐ WR9 / WR13 — the Pariwar's config, in the order the cheap checks come first. Returns `switch_off` (⛔ offered, ⛔ alarm), a gap

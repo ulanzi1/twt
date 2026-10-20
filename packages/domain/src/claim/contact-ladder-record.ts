@@ -60,6 +60,7 @@ import {
   readCorrectionRecipients,
   readCorrectionRun,
 } from './correction-chase.js';
+import { settleContactLadderWhatsappDeliveries } from './contact-ladder-whatsapp-delivery.js';
 import { latestRunOfReturn } from './correction-closure-jobs.js';
 import { sameNumberHash } from './correction-crypto.js';
 import {
@@ -433,6 +434,8 @@ export async function beginCorrectionLadderSend(
     calls,
     currentNumberHash: hashFailed ? undefined : personState?.currentNumberHash,
     stop: stop === null ? null : String(stop),
+    // Story 6.37d (WS12) — a delivered claim WhatsApp ends the ladder before its SMS 2 / SMS 3 goes.
+    whatsappDelivered: (await settleContactLadderWhatsappDeliveries(db, input.pariwarId, [l.ladderId])).has(l.ladderId),
   });
   if (end !== null) {
     await endContactLadder(db, { pariwarId: input.pariwarId, ladderId: l.ladderId, state: end.state, detail: end.detail });
@@ -664,6 +667,8 @@ export async function beginCertificateLadderSend(
     calls,
     currentNumberHash: current,
     stop: check.stop,
+    // Story 6.37d (WS12) — a delivered claim WhatsApp ends the ladder before its SMS 2 / SMS 3 goes.
+    whatsappDelivered: (await settleContactLadderWhatsappDeliveries(db, input.pariwarId, [l.ladderId])).has(l.ladderId),
   });
   if (end !== null) {
     await endContactLadder(db, { pariwarId: input.pariwarId, ladderId: l.ladderId, state: end.state, detail: end.detail });

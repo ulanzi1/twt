@@ -70,8 +70,10 @@ export * from './death-certificate-review-read.js';
 // Story 6.19a — the claim CONTACT RECORD: the reads, the correction chain (W4a) and the D14 approval check
 // (a leaf the three approval writers import), and the W1–W9 writer + its windows (which imports
 // `state-trustee-decision-persist.ts` for `TRUSTEE_ROUTABLE_STATES` — so the check ⛔ never imports the writer).
+export * from './claim-contact-agreement-copy.js';
 export * from './claim-contact-check.js';
 export * from './claim-contact-persist.js';
+export * from './claim-contact-whatsapp-basis.js';
 // Story 6.19b — the correction-return chase: the schedule (pure), the reminder decrypt + number hash, and the mark /
 // runs / ONE resolver (6.19c calls the mark writer, the run opener, end-run and the resolver — ⛔ never re-derives).
 export * from './correction-schedule.js';
@@ -103,6 +105,8 @@ export * from './certificate-reminder-read.js';
 export * from './contact-ladder.js';
 export * from './contact-ladder-read.js';
 export * from './contact-ladder-record.js';
+export * from './contact-ladder-whatsapp-delivery.js';
+export * from './contact-ladder-whatsapp-record.js';
 // Story 6.37c (LD10) — the District Admin's CALL RECORD (both chases): the checks (D30, the recipient set, LD11's nominee
 // gate), the writer under both chase locks (a reached call ends the person's running ladders), the list, the reveal's read.
 export * from './contact-call.js';

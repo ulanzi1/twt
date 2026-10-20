@@ -24,14 +24,19 @@ import { mapMetaStatus } from '@twt/channels';
 import {
   audit,
   channelConfig,
+  claim as claimDomain,
   consent,
   encryption,
   ids,
+  smsDelivery,
   waOptIn,
+  withPariwarScope,
   type Db,
 } from '@twt/domain';
 import { QUEUE_NAMES, type QueueClient, type Job } from '@twt/queue';
 import type pg from 'pg';
+
+import { recordClaimContactWaStop } from './claim-contact-wa-stop.js';
 
 /** Default cadence (IST) — near-real-time opt-in processing. Operations policy, overridable via env. */
 export const DEFAULT_WA_WEBHOOK_PROCESSOR_CRON = '* * * * *'; // every minute
@@ -169,8 +174,11 @@ export interface WaWebhookProcessorDeps {
   readonly pool: pg.Pool;
   /** Drizzle handle bound to `pool`. */
   readonly db: Db;
-  /** Member-family encryption (kms + admin hmacKeyRef) for the mobile blind index. */
-  readonly enc: WaWebhookEncryption;
+  /**
+   * The jobs KMS deps — the member blind index uses `kms` + `hmacKeyRef`; Story 6.37d's claim branch hashes a STOP sender and a
+   * block-coded recipient in the LADDER's space (`correctionNumberHash` — the SAME `hmacKeyRef` the ladder uses, so they match).
+   */
+  readonly enc: encryption.FieldCryptoDeps;
   /** Injectable clock (deterministic tests). */
   readonly now?: () => Date;
   /** Stale-PENDING TTL override (seconds). */
@@ -192,6 +200,8 @@ interface MetaStatus {
 interface MetaChangeValue {
   messages?: MetaInboundMessage[];
   statuses?: MetaStatus[];
+  /** Story 6.37d (WS11 / T26) — the receiving WhatsApp number; the claim branch acts only when it is the event Pariwar's. */
+  metadata?: { phone_number_id?: string };
 }
 interface MetaEntry {
   changes?: Array<{ value?: MetaChangeValue }>;
@@ -247,12 +257,46 @@ export async function processWebhookEvent(
   await waOptIn.markWebhookEventProcessed(deps.db, ids.waInboundWebhookEventId(event.eventId));
 }
 
+// ── Story 6.37d (WS10, WS11; I7, I8) — the CLAIM branch: before, and independent of, the member lookup ─────────────
+// A claim-contact WhatsApp goes to a claimant who may be NO member (F5): a STOP from them must still end claim WhatsApp, a status
+// for a claim send lands on THAT send's row, and a block-coded `failed` for a claim send must ⛔ revoke anyone's MEMBER opt-in
+// (§3.4 exception: *"does not change any member's opt-in state"*). Every claim read / write runs inside `withPariwarScope(event
+// Pariwar)` with an explicit `pariwar_id` filter; the claim-space hash is `correctionNumberHash` over the DOMAIN `normalizeMobile`
+// (T21 — ⛔ the member blind index, a different space). Row 5-12 (`-364`) will widen the MEMBER half below; this half is its own.
+
+/**
+ * T26 — the claim branch acts ONLY when the change's `metadata.phone_number_id` is the event Pariwar's configured WhatsApp number
+ * (the event's Pariwar is the signed URL's — right only if each Pariwar's Meta app posts to its own URL; `phone_number_id` is ⛔
+ * unique). A mismatch, or ⛔ metadata, ⇒ ⛔ claim action and a log line (the member path runs as today).
+ */
+async function claimBranchOpen(deps: WaWebhookProcessorDeps, pariwarId: ids.PariwarId, value: MetaChangeValue): Promise<boolean> {
+  const pnid = value.metadata?.phone_number_id;
+  if (typeof pnid !== 'string' || pnid.trim() === '') {
+    console.warn('[jobs] wa-webhook: claim branch skipped — the change carries no metadata.phone_number_id');
+    return false;
+  }
+  const wa = await withPariwarScope(deps.pool, pariwarId, (db: Db) => channelConfig.getWaConfig(db, pariwarId));
+  if (wa === null || (wa.phoneNumberId?.trim() ?? '') !== pnid.trim()) {
+    console.warn(`[jobs] wa-webhook: claim branch skipped — the change's phone_number_id is not Pariwar ${pariwarId}'s configured WhatsApp number`);
+    return false;
+  }
+  return true;
+}
+
+/** The claim-space hash of a Meta msisdn — `null` when it is ⛔ a valid Indian mobile (⛔ isolation match, ⛔ stop). */
+async function claimSpaceHash(raw: string, pariwarId: ids.PariwarId, enc: encryption.FieldCryptoDeps): Promise<string | null> {
+  const e164 = encryption.normalizeMobile(raw);
+  return e164 === null ? null : claimDomain.correctionNumberHash(e164, pariwarId, enc);
+}
+
 async function processWebhookEventBody(
   deps: WaWebhookProcessorDeps,
   event: { eventId: string; pariwarId: string; rawPayload: unknown },
   pariwarId: ids.PariwarId,
 ): Promise<void> {
   for (const value of collectValues(event.rawPayload)) {
+    let claimOpen: boolean | null = null;
+    const isClaimBranchOpen = async (): Promise<boolean> => (claimOpen ??= await claimBranchOpen(deps, pariwarId, value));
     // ── Inbound messages: match → ACTIVE, or STOP → REVOKED ──────────────────────────────────────────
     for (const msg of value.messages ?? []) {
       try {
@@ -260,6 +304,18 @@ async function processWebhookEventBody(
         const from = msg.from;
         const body = msg.text?.body ?? '';
         if (!from) continue;
+        // Story 6.37d (WS10) — a STOP ALSO records a claim-contact stop, whether or not the number has a member opt-in. Its own
+        // try: a claim-side fault never costs the member their STOP.
+        if (isStopKeyword(body)) {
+          try {
+            if (await isClaimBranchOpen()) {
+              const hash = await claimSpaceHash(from, pariwarId, deps.enc);
+              if (hash !== null) await recordClaimContactWaStop(deps.pool, { pariwarId, recipientNumberHash: hash, inboundEventId: event.eventId });
+            }
+          } catch (err) {
+            console.error('[jobs] wa-webhook: claim-contact STOP failed to record (isolated)', err);
+          }
+        }
         const blindIndex = await memberMobileBlindIndex(from, deps.enc);
         if (blindIndex === null) {
           console.warn('[jobs] wa-webhook: inbound from a non-Indian-mobile msisdn — ignored');
@@ -355,7 +411,27 @@ async function processWebhookEventBody(
         }
         const isBlock =
           status.status === 'failed' && (status.errors ?? []).some((e) => e.code !== undefined && WA_BLOCK_ERROR_CODES.has(e.code));
-        if (isBlock && status.recipient_id) {
+        // Story 6.37d (WS11) — a CLAIM send's status lands on its row (set once) and ⛔ drives BLOCKED_BY_META: matched by
+        // wamid, or — a block code with ⛔ wamid match (a lapsed / may-have-sent row, a status drained before the finalise) — by the
+        // recipient's CLAIM-space hash against the Pariwar's recent claim sends. A claim-side fault fails THIS item (the member
+        // revoke below does ⛔ run — fail closed for I7).
+        let claimOwned = false;
+        if (status.id && status.status && (await isClaimBranchOpen())) {
+          const firstCode = (status.errors ?? []).find((e) => typeof e.code === 'number')?.code ?? null;
+          const written = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
+            claimDomain.recordClaimContactWaStatus(db, { pariwarId, wamid: status.id!, status: status.status!, errorCode: firstCode }),
+          );
+          claimOwned = written.matched;
+          if (!claimOwned && isBlock && status.recipient_id) {
+            const hash = await claimSpaceHash(status.recipient_id, pariwarId, deps.enc);
+            if (hash !== null) {
+              claimOwned = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
+                claimDomain.hasRecentClaimContactWaSendTo(db, { pariwarId, recipientNumberHash: hash }),
+              );
+            }
+          }
+        }
+        if (isBlock && status.recipient_id && !claimOwned) {
           const blindIndex = await memberMobileBlindIndex(status.recipient_id, deps.enc);
           if (blindIndex === null) continue;
           const active = await waOptIn.getActiveOptInByMobile(deps.db, { pariwarId, mobileBlindIndex: blindIndex });
@@ -488,7 +564,14 @@ async function expireOptIn(
 /** Drain the webhook queue (bounded) + run the expiry sweep. Returns the tick summary (stored in job output). */
 export async function runWaWebhookProcessorTick(
   deps: WaWebhookProcessorDeps,
-): Promise<{ drained: number; expiredPending: number; expiredWindow: number }> {
+): Promise<{ drained: number; expiredPending: number; expiredWindow: number; refused?: true }> {
+  // Story 6.37d (WS11) — under an RLS-bound role every cross-tenant read returns ⛔ row SILENTLY: the claim branch's lookup by
+  // wamid would miss and a block code would REVOKE the member's opt-in (I7) — silently. Refuse BEFORE any event is claimed (⛔
+  // marked processed) — ⛔ a fall-through to the member path (6.37c's `canReadAcrossPariwars` guard; roster Row 26).
+  if (!(await smsDelivery.canReadAcrossPariwars(deps.pool))) {
+    console.warn('[jobs] wa-webhook: REFUSED — the pool role cannot read across Pariwars (roster Row 26); ⛔ event claimed');
+    return { drained: 0, expiredPending: 0, expiredWindow: 0, refused: true };
+  }
   const events = await waOptIn.claimUnprocessedWebhookEvents(deps.db, DRAIN_BATCH);
   for (const event of events) {
     try {

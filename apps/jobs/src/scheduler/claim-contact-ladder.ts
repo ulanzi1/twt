@@ -117,7 +117,8 @@ export const CONTACT_LADDER_MAX_CLAIMS = 20_000;
 
 // ── Per-tick counters ──────────────────────────────────────────────────────────────────────────────────────────
 
-interface Tally {
+/** Per-tick counters — exported (Story 6.37d) so the quarter-hourly START runs the SAME start tail (LD13). */
+export interface Tally {
   started: number;
   endedDelivered: number;
   endedCall: number;
@@ -129,7 +130,7 @@ interface Tally {
   readonly unassignedClaims: string[];
 }
 
-function newTally(): Tally {
+export function newTally(): Tally {
   return {
     started: 0,
     endedDelivered: 0,
@@ -144,7 +145,7 @@ function newTally(): Tally {
 }
 
 /** Round-2 P25 — a claim's own tally is merged ONLY once its plan returned (its transaction COMMITTED): ⛔ rolled-back work. */
-function mergeTally(into: Tally, from: Tally): void {
+export function mergeTally(into: Tally, from: Tally): void {
   into.started += from.started;
   into.endedDelivered += from.endedDelivered;
   into.endedCall += from.endedCall;
@@ -285,32 +286,7 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
   }
 
   // ── LD13 — the alarms (ids only) and the daily line (⛔ id) ──
-  // Round-2 P25 — AC11's burst is per Pariwar per IST DAY, ⛔ per run: the day's count is read from the table (a retried
-  // or second run the same day adds to it), and the alarm fires on the run whose starts CROSS the threshold — once a day.
-  if (tally.startedByPariwar.size > 0) {
-    // A failed count ⛔ fails the tick (its work is committed — a retry would start nothing and alarm nothing): it falls
-    // back to this run's own starts, and says so.
-    const dayCounts = await laddersStartedToday(deps.pool, [...tally.startedByPariwar.keys()]).catch((err: unknown) => {
-      alarm(`[jobs] contact-ladder: the day's ladder-start count could not be read — the burst check used this run's starts only (${String(err)})`);
-      return new Map<string, number>();
-    });
-    for (const [pariwarId, mine] of tally.startedByPariwar) {
-      const n = Math.max(dayCounts.get(pariwarId) ?? 0, mine);
-      if (n >= claimDomain.CONTACT_LADDER_BURST_THRESHOLD && n - mine < claimDomain.CONTACT_LADDER_BURST_THRESHOLD) {
-        alarm(
-          `[jobs] contact-ladder: contact_ladder.burst:${String(n)} — ${String(n)} ladders started today in Pariwar ${pariwarId} ` +
-            '(a DLT scrub or template fault fails every text — check the delivery reports before the follow-ups go)',
-        );
-      }
-    }
-  }
-  const hashUnavailable = uniqueIds(tally.hashUnavailableClaims);
-  if (hashUnavailable.length > 0) {
-    alarm(
-      `[jobs] contact-ladder: contact_ladder.hash_unavailable — a person's current number could not be hashed on ` +
-        `${String(hashUnavailable.length)} claim(s) (claims: ${sampleIds(hashUnavailable)})`,
-    );
-  }
+  await raiseLadderStartAlarms(deps, tally);
   const scheduledNotSent = uniqueIds(tally.scheduledNotSentClaims);
   if (scheduledNotSent.length > 0) {
     alarm(
@@ -349,6 +325,42 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
     enqueuedPushes,
     timedOutClaims: timedOut.length,
   };
+}
+
+/**
+ * LD13's START TAIL — the per-Pariwar IST-day burst check and the `contact_ladder.hash_unavailable` alarm — for the starts THIS
+ * run made. Exported (Story 6.37d AC4): the quarter-hourly WhatsApp sweep starts most ladders now, and ADR-0042's ratified bound
+ * counts on the burst alarm, so it runs the SAME tail for its OWN starts. ⚠ The 10:00 quarter-hourly tick and the daily sweep
+ * running together may EACH fire the burst once (each reads after its own commit — both may fire, neither can miss; disclosed).
+ */
+export async function raiseLadderStartAlarms(deps: Pick<ContactLadderDeps, 'pool' | 'onAlarm'>, tally: Tally): Promise<void> {
+  const alarm = alarmOf(deps);
+  // Round-2 P25 — AC11's burst is per Pariwar per IST DAY, ⛔ per run: the day's count is read from the table (a retried
+  // or second run the same day adds to it), and the alarm fires on the run whose starts CROSS the threshold — once a day.
+  if (tally.startedByPariwar.size > 0) {
+    // A failed count ⛔ fails the tick (its work is committed — a retry would start nothing and alarm nothing): it falls
+    // back to this run's own starts, and says so.
+    const dayCounts = await laddersStartedToday(deps.pool, [...tally.startedByPariwar.keys()]).catch((err: unknown) => {
+      alarm(`[jobs] contact-ladder: the day's ladder-start count could not be read — the burst check used this run's starts only (${String(err)})`);
+      return new Map<string, number>();
+    });
+    for (const [pariwarId, mine] of tally.startedByPariwar) {
+      const n = Math.max(dayCounts.get(pariwarId) ?? 0, mine);
+      if (n >= claimDomain.CONTACT_LADDER_BURST_THRESHOLD && n - mine < claimDomain.CONTACT_LADDER_BURST_THRESHOLD) {
+        alarm(
+          `[jobs] contact-ladder: contact_ladder.burst:${String(n)} — ${String(n)} ladders started today in Pariwar ${pariwarId} ` +
+            '(a DLT scrub or template fault fails every text — check the delivery reports before the follow-ups go)',
+        );
+      }
+    }
+  }
+  const hashUnavailable = uniqueIds(tally.hashUnavailableClaims);
+  if (hashUnavailable.length > 0) {
+    alarm(
+      `[jobs] contact-ladder: contact_ladder.hash_unavailable — a person's current number could not be hashed on ` +
+        `${String(hashUnavailable.length)} claim(s) (claims: ${sampleIds(hashUnavailable)})`,
+    );
+  }
 }
 
 /**
@@ -419,6 +431,7 @@ async function planCorrectionLadders(
   row: { readonly claimCaseId: string; readonly pariwarId: string },
   today: string,
   tally: Tally,
+  startsOnly: StartsOnly | null = null,
 ): Promise<ClaimPlan> {
   const pariwarId = ids.pariwarId(row.pariwarId);
   const claimCaseId = ids.claimId(row.claimCaseId);
@@ -431,7 +444,7 @@ async function planCorrectionLadders(
 
   const ret = await claimDomain.getLiveCorrectionReturn(db, pariwarId, claimCaseId);
   // A running ladder of a return that is no longer live ⇒ `ended_stopped:return_superseded` (its stops would say so).
-  for (const l of await claimDomain.readClaimLadders(db, pariwarId, claimCaseId, 'correction')) {
+  for (const l of startsOnly !== null ? [] : await claimDomain.readClaimLadders(db, pariwarId, claimCaseId, 'correction')) {
     if (l.state === 'running' && (!ret || l.returnDecisionId !== ret.decisionId)) {
       if (await claimDomain.endContactLadder(db, { pariwarId, ladderId: l.ladderId, state: 'ended_stopped', detail: 'stopped:return_superseded' })) {
         countEnd(tally, 'ended_stopped');
@@ -545,8 +558,11 @@ async function planCorrectionLadders(
     else await resolve(verdict);
   };
 
-  // ── (1) The RUNNING ladders: the ends, a satisfied step's row, the due step ──
-  for (const l of facts.ladders.filter((x) => x.state === 'running')) {
+  // ── (1) The RUNNING ladders: the ends, a satisfied step's row, the due step ── (⛔ in a starts-only run — Story 6.37d)
+  const running = startsOnly !== null ? [] : facts.ladders.filter((x) => x.state === 'running');
+  // Story 6.37d (WS11 (1), WS12) — a delivered claim WhatsApp ends its ladder (the status store's copied into the row first).
+  const waDelivered = await claimDomain.settleContactLadderWhatsappDeliveries(db, pariwarId, running.map((x) => x.ladderId));
+  for (const l of running) {
     const { stop, hashFailed } = await stopOf(l.runId, l.personKey);
     const all = [...facts.rows, ...facts.ladderRows];
     const end = claimDomain.ladderEndReason({
@@ -557,6 +573,7 @@ async function planCorrectionLadders(
       calls: callsOf(l.personKey),
       currentNumberHash: hashFailed ? undefined : knownCurrentHash(stateOf(l.personKey)),
       stop,
+      whatsappDelivered: waDelivered.has(l.ladderId),
     });
     if (end !== null) {
       if (await claimDomain.endContactLadder(db, { pariwarId, ladderId: l.ladderId, state: end.state, detail: end.detail })) countEnd(tally, end.state);
@@ -614,22 +631,59 @@ async function planCorrectionLadders(
       recipientNumberHash: origin.recipientNumberHash,
       originRowId: origin.reminderId,
       originSentOn: origin.sentOn,
-      whatsappStep: claimDomain.ladderWhatsappStep(p.role),
-      sms2DueOn: claimDomain.ladderFirstDueOn(origin.sentOn, today),
+      whatsappStep: claimDomain.ladderWhatsappStep(p.isClaimant),
+      sms2DueOn: sms2DueOnFor(origin.sentOn, today, startsOnly),
     });
     if (started === null) continue;
     tally.started += 1;
     tally.startedByPariwar.set(row.pariwarId, (tally.startedByPariwar.get(row.pariwarId) ?? 0) + 1);
-    // A ladder started on SMS 2's own date (a report seen the next morning) takes that step in THIS run.
-    await advance(started, false);
+    // A ladder started on SMS 2's own date (a report seen the next morning) takes that step in THIS run — ⛔ in a starts-only
+    // run (Story 6.37d — a quarter-hourly start takes its SMS steps only at the 10:00 sweep, F18).
+    if (startsOnly === null) await advance(started, false);
   }
 
   // ── (3) LD9 (iii) — an ask on an ENDED run still un-pushed (the day's push went before it, or ⛔ push yet) ──
-  pushes.push(...(await unpushedEndedRunAsks(client, db, pariwarId, claimCaseId, returnDecisionId, today, pushes)));
+  if (startsOnly === null) pushes.push(...(await unpushedEndedRunAsks(client, db, pariwarId, claimCaseId, returnDecisionId, today, pushes)));
   return { sms, pushes };
 }
 
 type schemaStepState = 'pending' | 'sent' | 'satisfied' | `skipped:${string}`;
+
+/** Story 6.37d — a START-ONLY run (the quarter-hourly WhatsApp sweep): ⛔ running ladders, ⛔ `advance`, ⛔ pushes. */
+export interface StartsOnly {
+  /** The date of the NEXT daily 10:00 run (WS6 — `ladderFirstDueOnForLateStart`). */
+  readonly nextDailyRunOn: string;
+}
+
+/** SMS 2's due date for a new ladder: the daily rule, or — a start-only run — the late-start rule (WS6). */
+function sms2DueOnFor(originSentOn: string, today: string, startsOnly: StartsOnly | null): string {
+  return startsOnly === null
+    ? claimDomain.ladderFirstDueOn(originSentOn, today)
+    : claimDomain.ladderFirstDueOnForLateStart(originSentOn, today, startsOnly.nextDailyRunOn);
+}
+
+/**
+ * ⭐ Story 6.37d (AC4; T13) — the quarter-hourly WhatsApp sweep's START for ONE claim of ONE chase: the SAME plan as the 10:00
+ * sweep (the same `planLadderStart` → `insertContactLadder`, under the SAME chase lock), run START-ONLY — ⛔ a running ladder
+ * touched, ⛔ `advance` (a ladder it starts takes its SMS steps only at the 10:00 sweep), SMS 2's date by the late-start rule.
+ * Two starts for one origin are absorbed by `claim_contact_ladders_origin_uq` + `.onConflictDoNothing()`. Returns the claim's
+ * tally (the caller merges it once the claim's transaction committed — round-2 P25).
+ */
+export async function startContactLaddersForClaim(
+  deps: ContactLadderDeps,
+  chase: 'correction' | 'certificate',
+  row: { readonly claimCaseId: string; readonly pariwarId: string },
+  today: string,
+  startsOnly: StartsOnly,
+): Promise<Tally> {
+  const claimTally = newTally();
+  if (chase === 'correction') {
+    await withPariwarScope(deps.pool, row.pariwarId, (db: Db, client) => planCorrectionLadders(deps, db, client, row, today, claimTally, startsOnly));
+  } else {
+    await planCertificateLadders(deps, row, today, claimTally, startsOnly);
+  }
+  return claimTally;
+}
 
 /**
  * LD4's next visit — a `satisfied` step (resolved on an EARLIER day) whose carrying row is ⛔ recorded yet: the row of
@@ -716,6 +770,7 @@ async function planCertificateLadders(
   row: { readonly claimCaseId: string; readonly pariwarId: string },
   today: string,
   tally: Tally,
+  startsOnly: StartsOnly | null = null,
 ): Promise<ClaimPlan> {
   const pariwarId = ids.pariwarId(row.pariwarId);
   const claimCaseId = ids.claimId(row.claimCaseId);
@@ -813,7 +868,10 @@ async function planCertificateLadders(
       else await resolve(verdict);
     };
 
-    for (const l of facts.ladders.filter((x) => x.state === 'running')) {
+    // ⛔ In a starts-only run (Story 6.37d).
+    const running = startsOnly !== null ? [] : facts.ladders.filter((x) => x.state === 'running');
+    const waDelivered = await claimDomain.settleContactLadderWhatsappDeliveries(db, pariwarId, running.map((x) => x.ladderId));
+    for (const l of running) {
       const check = await stopOf(l.runId, l.personKey);
       const all = [...facts.rows, ...facts.ladderRows];
       const end = claimDomain.ladderEndReason({
@@ -824,6 +882,7 @@ async function planCertificateLadders(
         calls: callsOf(l.personKey),
         currentNumberHash: hashOf(l.personKey),
         stop: check.stop,
+        whatsappDelivered: waDelivered.has(l.ladderId),
       });
       if (end !== null) {
         if (await claimDomain.endContactLadder(db, { pariwarId, ladderId: l.ladderId, state: end.state, detail: end.detail })) countEnd(tally, end.state);
@@ -876,13 +935,13 @@ async function planCertificateLadders(
         recipientNumberHash: origin.recipientNumberHash,
         originRowId: origin.reminderId,
         originSentOn: origin.sentOn,
-        whatsappStep: claimDomain.ladderWhatsappStep(p.role),
-        sms2DueOn: claimDomain.ladderFirstDueOn(origin.sentOn, today),
+        whatsappStep: claimDomain.ladderWhatsappStep(p.isClaimant),
+        sms2DueOn: sms2DueOnFor(origin.sentOn, today, startsOnly),
       });
       if (started === null) continue;
       tally.started += 1;
       tally.startedByPariwar.set(row.pariwarId, (tally.startedByPariwar.get(row.pariwarId) ?? 0) + 1);
-      await advance(started, await stopOf(started.runId, started.personKey));
+      if (startsOnly === null) await advance(started, await stopOf(started.runId, started.personKey));
     }
   });
   return { sms, pushes: [] };

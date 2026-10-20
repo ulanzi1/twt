@@ -72,6 +72,11 @@ export const ContactLadderFollowUpDto = z
     /** A running follow-up's next date (its next text, or its conclusion); `null` otherwise. */
     next_step_on: IsoDate.nullable(),
     concluded_on: IsoDate.nullable(),
+    /**
+     * Story 6.37d (WS13) — which channel got through when the follow-up ended `ended_delivered` (a text, or the claimant's
+     * WhatsApp); `null` for every other state.
+     */
+    delivered_by: z.enum(['text', 'whatsapp']).nullable(),
   })
   .strict();
 export type ContactLadderFollowUpDto = z.output<typeof ContactLadderFollowUpDto>;

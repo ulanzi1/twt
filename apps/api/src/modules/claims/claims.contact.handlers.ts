@@ -269,6 +269,7 @@ export function createClaimContactHandlers(deps: AppDeps) {
         presence: toPresenceDto(presence!),
         agreementRecorded: result.agreementRecorded,
         agreementIgnored: result.agreementIgnored,
+        agreementOnFileEarlierWording: result.agreementOnFileEarlierWording,
       };
     },
 

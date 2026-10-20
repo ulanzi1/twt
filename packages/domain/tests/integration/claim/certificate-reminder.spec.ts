@@ -237,6 +237,8 @@ describe.skipIf(!hasDatabase)('the certificate reminder — runs and recipients 
       expect(nominees.map((p) => p.position)).toEqual(['A', 'B']);
       // The claimant is the first bound nominee ⇒ ⛔ no separate claimant block.
       expect(r.people.some((p) => p.role === 'claimant')).toBe(false);
+      // Story 6.37d (WS5, PQ1 A) — EXACTLY that nominee's chain-root person is the claimant; the other is ⛔.
+      expect(nominees.filter((p) => p.isClaimant).map((p) => p.versionId)).toEqual([seeded!.boundVersionIds[0]]);
     });
 
     it('⛔ no contact record ⇒ `no_contact_record`; a REVOKED agreement ⇒ `agreement_not_live` (⛔ never `undetermined`)', async () => {

@@ -13,7 +13,10 @@ import {
   ClaimContactWriteRefusedError,
   assertClaimContactRecorded,
   getEffectiveNomineeDeclaration,
+  CLAIM_CONTACT_AGREEMENT_COPY_VERSION,
+  CLAIM_CONTACT_AGREEMENT_VERSIONS,
   readClaimContact,
+  readClaimantWhatsappBasis,
   readVersionChainIndex,
   resolveContactRow,
   writeClaimContact,
@@ -139,7 +142,7 @@ async function applyCorrection(tx: Tx, cid: ClaimId, mid: MemberId, targetVersio
   return row!.versionId as string;
 }
 
-function agreement(tx: Tx, cid: ClaimId) {
+function agreement(tx: Tx, cid: ClaimId, consentPayload: Record<string, unknown> = { checkboxTextShown: 'test', locale: 'hi' }) {
   return async (deceased: MemberId) =>
     (
       await recordConsent(tx, {
@@ -148,10 +151,17 @@ function agreement(tx: Tx, cid: ClaimId) {
         consentType: 'claim_contact_agreement',
         consentArtifactRef: cid,
         grantedViaActor: 'member_self',
-        consentPayload: { checkboxTextShown: 'test', locale: 'hi' },
+        consentPayload,
       })
     ).consentId as string;
 }
+
+/** Story 6.37d — a payload on the CURRENT wording (v2), agreed in `locale`. */
+const V2_PAYLOAD = (locale: 'en' | 'hi') => ({
+  checkboxTextShown: CLAIM_CONTACT_AGREEMENT_VERSIONS[CLAIM_CONTACT_AGREEMENT_COPY_VERSION]![locale],
+  locale,
+  copyVersion: CLAIM_CONTACT_AGREEMENT_COPY_VERSION,
+});
 
 function member(tx: Tx, cid: ClaimId, mid: MemberId, over: Partial<MemberClaimContactInput> = {}): MemberClaimContactInput {
   return {
@@ -472,6 +482,17 @@ describe.skipIf(!hasDatabase)('the claim contact record — writer, chain and ch
       const res = await writeClaimContact(tx, helpline(tx, cid, { agreed: true }));
       expect(res).toMatchObject({ agreementIgnored: true, agreementRecorded: false });
       expect((await readClaimContact(tx, PARIWAR_A, cid)).contact!.agreementConsentId).toBe(second);
+      // Story 6.37d — the fixture's agreement has ⛔ copyVersion ⇒ the EARLIER wording, and the tick did not move it.
+      expect(res.agreementOnFileEarlierWording).toBe(true);
+    });
+
+    it('⭐ Story 6.37d — an ignored tick over a v2 agreement is ⛔ the earlier wording; a recorded one never is', async () => {
+      const { tx, cid, mid } = await setup();
+      const first = await writeClaimContact(tx, member(tx, cid, mid, { recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      expect(first.agreementOnFileEarlierWording).toBe(false);
+      await forceState(tx, cid, 'verifier_approved');
+      const res = await writeClaimContact(tx, helpline(tx, cid, { agreed: true }));
+      expect(res).toMatchObject({ agreementIgnored: true, agreementRecorded: false, agreementOnFileEarlierWording: false });
     });
 
     it('⭐ over a REVOKED agreement, `agreed: true` alone records a fresh consent, repoints, and `agreement_withdrawn` clears — in the extra states too', async () => {
@@ -492,6 +513,36 @@ describe.skipIf(!hasDatabase)('the claim contact record — writer, chain and ch
       const refiled = toClaimId(randomUUID());
       await driveClaimTo(client, PARIWAR_A, refiled, mid, 'verification_in_progress');
       await expect(assertClaimContactRecorded(tx, PARIWAR_A, refiled)).rejects.toSatisfy(contactRequired('no_record'));
+    });
+  });
+
+  // ── Story 6.37d AC2 — the claimant's WhatsApp basis (`-357` G3), read through the CURRENT agreement (WS3) ────
+  describe('Story 6.37d — readClaimantWhatsappBasis', () => {
+    it('⛔ a claim with no contact record ⇒ not_live', async () => {
+      const { tx, cid } = await setup();
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'not_live' });
+    });
+
+    it('⭐ the old wording (⛔ copyVersion — every fixture, T7) ⇒ old_wording; a member re-save on v2 MOVES the claim onto it (WS3)', async () => {
+      const { tx, cid, mid } = await setup();
+      await writeClaimContact(tx, member(tx, cid, mid));
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'old_wording' });
+      await writeClaimContact(tx, member(tx, cid, mid, { recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({
+        eligible: true,
+        copyVersion: CLAIM_CONTACT_AGREEMENT_COPY_VERSION,
+      });
+    });
+
+    it('⭐ v2 agreed in Hindi ⇒ hindi_not_reviewed; a REVOKED v2 ⇒ not_live — while the nominees’ gate still reads `live` / `revoked` only', async () => {
+      const { tx, cid, mid } = await setup();
+      await writeClaimContact(tx, member(tx, cid, mid, { recordAgreement: agreement(tx, cid, V2_PAYLOAD('hi')) }));
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'hindi_not_reviewed' });
+      // The approval gate is UNCHANGED (AC2): a Hindi v2 agreement is `live` for it.
+      await expect(assertClaimContactRecorded(tx, PARIWAR_A, cid)).resolves.toBeUndefined();
+      const contact = (await readClaimContact(tx, PARIWAR_A, cid)).contact!;
+      await revokeConsent(tx, { pariwarId: PARIWAR_A, consentId: contact.agreementConsentId, reason: 'test' });
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'not_live' });
     });
   });
 

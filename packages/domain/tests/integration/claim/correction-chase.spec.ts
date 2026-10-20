@@ -1373,6 +1373,9 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
       .where(eq(schema.claimContacts.claimCaseId, c.cid));
     const people = (await readCorrectionRecipients(tx, PARIWAR_A, c.cid)).people;
     expect(people.map((p) => p.personKey)).toContain('claimant');
+    // Story 6.37d (WS5) — the block person IS the claimant; every nominee is ⛔.
+    expect(people.find((p) => p.personKey === 'claimant')!.isClaimant).toBe(true);
+    expect(people.filter((p) => p.role === 'nominee').every((p) => !p.isClaimant)).toBe(true);
     expect((await readCorrectionLetterAddress(tx, PARIWAR_A, c.cid, 'claimant')).addressCiphertext).toBe('enc:v1:claimant-address');
   });
 
@@ -1382,6 +1385,8 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     const c = await returnedClaim(client, { mustAct: 'family' });
     const before = await readCorrectionRecipients(tx, PARIWAR_A, c.cid);
     const nominee = before.people.find((p) => p.role === 'nominee')!;
+    // Story 6.37d (WS5, PQ1 A) — the claimant IS this nominee (the fixture links it): `isClaimant`, role unchanged.
+    expect([nominee.role, nominee.isClaimant]).toEqual(['nominee', true]);
     // Point the claimant at a version of ANOTHER member's declaration — it resolves to no effective nominee here.
     const [foreign] = await seedNomineeDeclaration(tx, PARIWAR_A, randomUUID());
     await tx
@@ -1393,6 +1398,8 @@ describe.skipIf(!hasDatabase)('the correction chase — letters (AC5, D31) and t
     expect(r.cannotRemind).toBeNull();
     // EXACTLY the effective nominee (an uncorrected version is its own chain root) — ⛔ no `claimant` row invented.
     expect(r.people.map((p) => [p.personKey, p.role])).toEqual([[`nominee:${nominee.versionId}`, 'nominee']]);
+    // Story 6.37d (AC3) — an UNRESOLVED link names ⛔ person the claimant: ⛔ WhatsApp step for anyone on this claim.
+    expect(r.people.every((p) => !p.isClaimant)).toBe(true);
   });
 
   it('⭐ I4 / `-271` §1 — a letter DELIVERED to number A, then a 6.20 correction to number B ⇒ the child SENDS to B (the reset is detected UNDER THE LOCK)', async () => {

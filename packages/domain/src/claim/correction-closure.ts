@@ -87,6 +87,8 @@ import {
   hasRunningCorrectionLadder,
   readClaimContactCalls,
   readReturnLadderSmsRows,
+  readReturnLadderWhatsappDeliveries,
+  type ReturnLadderWhatsappDelivery,
 } from './contact-ladder-read.js';
 import { CorrectionNumberUnverifiedError, sameNumberHash } from './correction-crypto.js';
 import {
@@ -337,6 +339,11 @@ export interface ClosurePersonReach {
   readonly reachedByLadderSms: boolean;
   /** Story 6.37c (LD8, `-351` 5 A) — a District Admin recorded a call that REACHED them (either surface — LD10). */
   readonly reachedByCall: boolean;
+  /**
+   * Story 6.37d (WS12, `-351` 4 A) — a correction ladder's claim WhatsApp to their CURRENT number was DELIVERED (its own
+   * send row's `delivered_at` — whatever the ladder's state, whenever delivered). ⛔ A WhatsApp only SENT.
+   */
+  readonly reachedByLadderWhatsapp: boolean;
   readonly reached: boolean;
   /** `-273` §5 — their CURRENT number's latest evidential outcome is dead / unreachable / ⛔ no target. */
   readonly numberKnownDead: boolean;
@@ -380,6 +387,8 @@ export function evaluateClosurePersonReach(
     readonly ladderRows: readonly Pick<ReturnLadderSmsRow, 'recipientKey' | 'outcome' | 'recipientNumberHash' | 'deliveryState'>[];
     readonly calls: readonly { readonly personKey: string; readonly outcome: string; readonly calledOn: string }[];
     readonly callsCountFrom: string | null;
+    /** Story 6.37d (WS12) — the return's DELIVERED claim WhatsApps (`readReturnLadderWhatsappDeliveries`). Absent ⇒ none. */
+    readonly whatsappDeliveries?: readonly ReturnLadderWhatsappDelivery[];
   },
 ): ClosurePersonReach {
   const mine = rows.filter((r) => r.recipientKey === person.personKey);
@@ -408,6 +417,12 @@ export function evaluateClosurePersonReach(
         c.outcome === 'reached' &&
         (ladder.callsCountFrom === null || c.calledOn >= ladder.callsCountFrom),
     );
+  // Story 6.37d (WS12) — the delivered WhatsApp stands on its OWN row (stored hashes compared — ⛔ decrypt here).
+  const reachedByLadderWhatsapp =
+    ladder?.whatsappDeliveries !== undefined &&
+    currentNumberHash !== undefined &&
+    current !== null &&
+    ladder.whatsappDeliveries.some((d) => d.personKey === person.personKey && sameNumberHash(d.recipientNumberHash, current));
   const reachedByLetter = letters.some((l) => l.personKey === person.personKey && l.deliveredOn !== null);
   const last = lastEvidentialAttempt(mine.filter(isEvidentialReminderRow));
   const numberKnownDead =
@@ -423,7 +438,8 @@ export function evaluateClosurePersonReach(
     reachedByLetter,
     reachedByLadderSms,
     reachedByCall,
-    reached: reachedBySms || reachedByLadderSms || reachedByLetter || reachedByCall,
+    reachedByLadderWhatsapp,
+    reached: reachedBySms || reachedByLadderSms || reachedByLetter || reachedByCall || reachedByLadderWhatsapp,
     numberKnownDead,
   };
 }
@@ -467,6 +483,7 @@ export async function readClosureReach(
     ladderRows: await readReturnLadderSmsRows(db, pariwarId, claimCaseId, chase.liveReturn.decisionId),
     calls: await readClaimContactCalls(db, pariwarId, claimCaseId),
     callsCountFrom: await readReturnFirstFamilyDay0(db, pariwarId, chase.liveReturn.decisionId),
+    whatsappDeliveries: await readReturnLadderWhatsappDeliveries(db, pariwarId, claimCaseId, chase.liveReturn.decisionId),
   };
   const people = recipients.people.map((p) =>
     evaluateClosurePersonReach(p, chase.currentNumberHashes?.get(p.personKey), rows, letters, ladder),

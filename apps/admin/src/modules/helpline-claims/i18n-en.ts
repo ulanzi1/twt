@@ -206,8 +206,10 @@ const EN: Record<string, string> = {
   // ── Story 6.19a (AC1 / AC8a) — the claim CONTACT RECORD card. English staff chrome; the AGREEMENT itself is read
   // aloud from the shared `claim` namespace (`contact.agreement`) in the caller's language.
   'helpline.contact.heading': 'Contact details and the family’s agreement',
+  // Story 6.37d (WS2 (iii)): the agreement is the CLAIMANT's own (`2026-10-20-367` decisions 2 / 17) — it no longer
+  // covers the nominees, so the duty line names the caller as the claimant.
   'helpline.contact.duty':
-    'Before the claim can be approved the family must give a postal address for each nominee, say who the claimant is, and agree that these people may be contacted. You can add anything missing here, at any point before approval.',
+    'Before the claim can be approved the family must give a postal address for each nominee and say who the claimant is, and the caller, as the claimant, must agree to be contacted. You can add anything missing here, at any point before approval.',
   'helpline.contact.needMember': 'Select the member and confirm the read-back to see their claim’s contact details.',
   'helpline.contact.claimsLoading': 'Loading the member’s claims…',
   'helpline.contact.claimsError': 'The member’s claims could not be loaded.',
@@ -259,6 +261,10 @@ const EN: Record<string, string> = {
   'helpline.contact.saved': 'Saved.',
   'helpline.contact.savedAgreementIgnored':
     'Saved. The agreement was already on file, so the tick was not recorded again.',
+  // Story 6.37d (WS2 (iii), WS3): the agreement on file is v1 (texts and post only) — the tick did not move the
+  // claim onto the new wording, so the claimant gets ⛔ WhatsApp on it.
+  'helpline.contact.savedAgreementIgnoredEarlierWording':
+    'Saved. The agreement was already on file, so the tick was not recorded again (the agreement on file is the earlier wording).',
   'helpline.contact.nothingToSave': 'Nothing to save — fill in a detail or tick the agreement.',
   'helpline.contact.claimantIncomplete': 'Give the claimant’s name, mobile number and postal address.',
   'helpline.contact.claimantNomineeRequired': 'Pick which nominee the claimant is.',

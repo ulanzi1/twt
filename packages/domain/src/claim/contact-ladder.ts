@@ -24,6 +24,7 @@ import { compareReminderRowsByTime, isEvidentialReminderRow, type PersonReminder
 import { sameNumberHash } from './correction-crypto.js';
 import { CORRECTION_RUN_HORIZON_DAYS } from './correction-schedule.js';
 import type { ContactLadderChase, ContactLadderState, ContactLadderStepState } from '../schema/claim_contact_ladders.js';
+import type { ClaimantWhatsappBasis } from './claim-contact-whatsapp-basis.js';
 import type { SmsDeliveryState } from '../schema/sms_send_deliveries.js';
 
 // ── The numbers (LD3, LD5, LD13) ───────────────────────────────────────────────────────────────────────────────
@@ -43,9 +44,15 @@ export const CONTACT_LADDER_SCAN_DAYS = 14;
 /** LD13 — this many ladders STARTED in one Pariwar on one IST day alarm (a DLT scrub / template fault fails EVERY text). */
 export const CONTACT_LADDER_BURST_THRESHOLD = 3;
 
-/** LD1 / `-356` — the WhatsApp step is RECORDED, ⛔ sent: a nominee will ⛔ get one at all; a claimant's waits for 6-37d. */
-export function ladderWhatsappStep(role: 'nominee' | 'claimant'): 'skipped:nominee_no_whatsapp' | 'skipped:whatsapp_not_built' {
-  return role === 'nominee' ? 'skipped:nominee_no_whatsapp' : 'skipped:whatsapp_not_built';
+/**
+ * The WhatsApp step at INSERT — Story 6.37d (WS5; `-357` the claimant only; `-356` ⛔ a nominee; `-367` PQ1 reading A):
+ * the CLAIMANT's step is `pending` (the quarter-hourly WhatsApp sweep takes it at origin + 4 h — `ladderWhatsappGate`),
+ * and that includes a nominee the claimant link identifies (`isClaimant` — a claimant-nominee is reached as the
+ * claimant); every other nominee's is RECORDED `skipped:nominee_no_whatsapp` for good. (6.37c wrote
+ * `skipped:whatsapp_not_built` for a claimant; ladders already written keep it — 0172's trigger decides a step once.)
+ */
+export function ladderWhatsappStep(isClaimant: boolean): 'pending' | 'skipped:nominee_no_whatsapp' {
+  return isClaimant ? 'pending' : 'skipped:nominee_no_whatsapp';
 }
 
 /**
@@ -241,6 +248,18 @@ export function ladderFirstDueOn(originSentOn: string, today: string): string {
 }
 
 /**
+ * Story 6.37d (WS6) — SMS 2's date for a ladder the QUARTER-HOURLY sweep starts (it never calls `advance`): the later of
+ * `ladderFirstDueOn` and the date of the NEXT daily 10:00 run (`nextDailyRunOn` — today before 10:00 IST, else
+ * tomorrow; the jobs compute it). After today's run has gone, `ladderFirstDueOn` alone could name TODAY (origin + 2 =
+ * today) — the step would then be taken tomorrow and a `satisfied` / skipped SMS 2 would anchor SMS 3 on the DUE date,
+ * one day after the step instead of two. ⛔ Pass the next run's date AS `today` (that returns the day AFTER it). Pure.
+ */
+export function ladderFirstDueOnForLateStart(originSentOn: string, today: string, nextDailyRunOn: string): string {
+  const due = ladderFirstDueOn(originSentOn, today);
+  return due < nextDailyRunOn ? nextDailyRunOn : due;
+}
+
+/**
  * LD3 — the NEXT date after a step resolved on `today`: `gap` days after its anchor (a `sent` step's own `sent_on`; a
  * `satisfied` / skipped step's DUE date), and ⛔ earlier than tomorrow (a slipped step never makes two steps in one run).
  * Pure.
@@ -254,7 +273,7 @@ export function nextLadderStepDate(anchor: string, gap: number, today: string): 
 // ── The ends (LD5; PQ1 / PQ2 A) — ONE function ─────────────────────────────────────────────────────────────────
 
 export type LadderEnd =
-  | { readonly state: 'ended_delivered'; readonly detail: 'delivered' }
+  | { readonly state: 'ended_delivered'; readonly detail: 'delivered' | 'delivered:whatsapp' }
   | { readonly state: 'ended_call'; readonly detail: 'call_reached' }
   | { readonly state: 'ended_number_changed'; readonly detail: 'number_changed' }
   | { readonly state: 'ended_stopped'; readonly detail: `stopped:${string}` };
@@ -280,6 +299,11 @@ export function ladderEndReason(input: {
   readonly currentNumberHash: string | null | undefined;
   /** The stop predicate's reason, or `null`. */
   readonly stop: string | null;
+  /**
+   * Story 6.37d (WS12; `-351` 4 A *"on either channel"*) — the ladder's OWN WhatsApp send was DELIVERED (its
+   * `delivered_at`, or the status store's `delivered` copied into it — WS11 (1)). Absent ⇒ ⛔ delivered.
+   */
+  readonly whatsappDelivered?: boolean;
 }): LadderEnd | null {
   const origin = input.originCreatedAt.getTime();
   const delivered =
@@ -290,6 +314,7 @@ export function ladderEndReason(input: {
         sameNumberHash(r.recipientNumberHash, input.ladder.recipientNumberHash),
     ) || input.satisfyingRows.some((r) => r.deliveryState === 'delivered');
   if (delivered) return { state: 'ended_delivered', detail: 'delivered' };
+  if (input.whatsappDelivered === true) return { state: 'ended_delivered', detail: 'delivered:whatsapp' };
   if (input.calls.some((c) => c.outcome === 'reached' && c.calledOn >= input.ladder.originSentOn)) {
     return { state: 'ended_call', detail: 'call_reached' };
   }
@@ -321,11 +346,99 @@ export function ladderStepGate(input: {
   readonly scheduledToday: boolean;
   readonly sentToNumberToday: boolean;
 }): LadderStepVerdict {
+  const limit = ladderHorizonVerdict(input);
+  if (limit !== null) return limit;
+  if (input.scheduledToday || input.sentToNumberToday) return 'satisfied';
+  return 'send';
+}
+
+/**
+ * The horizon / pause HALF of `ladderStepGate`, EXTRACTED so the WhatsApp step obeys the SAME limits (Story 6.37d WS7 —
+ * `-360` Q3 A's *"no follow-up text"* read as *"no follow-up message"*) — ⛔ a copy: correction day ≥ 90, a certificate
+ * run's day > 180 ⇒ `skipped:past_horizon`; a certificate run PAUSED ⇒ `skipped:paused`; else `null`. Pure.
+ */
+export function ladderHorizonVerdict(input: {
+  readonly chase: ContactLadderChase;
+  readonly runDay: number;
+  readonly paused: boolean;
+}): 'skipped:past_horizon' | 'skipped:paused' | null {
   const past = input.chase === 'correction' ? input.runDay >= CORRECTION_RUN_HORIZON_DAYS : input.runDay > CERTIFICATE_RUN_HORIZON_DAYS;
   if (past) return 'skipped:past_horizon';
   if (input.paused) return 'skipped:paused';
-  if (input.scheduledToday || input.sentToNumberToday) return 'satisfied';
-  return 'send';
+  return null;
+}
+
+// ── The WhatsApp step (Story 6.37d — WS6, WS7, WS9, WS10; I2, I3, I10) — ONE function ──────────────────────────
+
+/** `-350` ruling 2 (1) — the WhatsApp is due this many hours after the origin text (`-368` Q1 A — in the daytime). */
+export const LADDER_WHATSAPP_AFTER_HOURS = 4;
+
+/** WS6 — the step is due at the ORIGIN row's `created_at` + 4 h (T5 — it never moves; ⛔ `claimed_at`, ⛔ `sent_on`). Pure. */
+export function ladderWhatsappDueAt(originCreatedAt: Date): Date {
+  return new Date(originCreatedAt.getTime() + LADDER_WHATSAPP_AFTER_HOURS * 3_600_000);
+}
+
+/**
+ * WS9 — what the Pariwar's WhatsApp configuration says: `ok`, or why ⛔. `whatsapp_not_configured` (the switch off, ⛔
+ * phone number, ⛔ template name set — a Pariwar that has not gone live: ⛔ alarm); the other three are FAULTS (an
+ * unreadable key or secret, a malformed template name, an unreadable / unsendable helpline) — skipped AND alarmed (I10).
+ */
+export type LadderWhatsappConfigVerdict =
+  | 'ok'
+  | 'whatsapp_not_configured'
+  | 'whatsapp_config_unreadable'
+  | 'whatsapp_template_invalid'
+  | 'helpline_unreadable';
+
+/** The config verdicts that are FAULTS — each skip raises `contact_ladder.whatsapp_config_fault` (I10). */
+export const LADDER_WHATSAPP_CONFIG_FAULTS: readonly LadderWhatsappConfigVerdict[] = [
+  'whatsapp_config_unreadable',
+  'whatsapp_template_invalid',
+  'helpline_unreadable',
+];
+
+export type LadderWhatsappVerdict =
+  | { readonly kind: 'send' }
+  /** ⛔ Due yet (before origin + 4 h) — ⛔ write; a later tick takes it. */
+  | { readonly kind: 'wait'; readonly until: Date }
+  /** Outside 09:00–20:00 IST — ⛔ write; the child re-enqueues itself for `until` (the next 09:00). */
+  | { readonly kind: 'defer'; readonly until: Date }
+  /** The step is RECORDED `skipped:<reason>` (a `[a-z_]` word — the step CHECK) and the ladder goes on to SMS 2 (I10). */
+  | { readonly kind: 'skip'; readonly reason: string };
+
+/**
+ * ⭐ WHETHER THE CLAIMANT'S WHATSAPP STEP SENDS NOW, in this order (AC5 (2) — the caller has ALREADY asked
+ * `ladderEndReason` and the chase's stop predicate: an end or a stop ENDS the ladder and records nothing for the step):
+ * the anchor unknown ⇒ `skip anchor_unknown`; a STOP from that number in this Pariwar (WS10) ⇒ `skip stopped`; ⛔ a
+ * WhatsApp basis (I2 — the reader's reason: `not_live`, `old_wording`, `unknown_version`, `hindi_not_reviewed`) ⇒ `skip
+ * <reason>`; past the chase's horizon / paused (WS7) ⇒ that skip; SMS 2 already resolved ⇒ `skip overtaken` (⛔ a
+ * WhatsApp after the second text — WS6); before origin + 4 h ⇒ `wait`; outside 09:00–20:00 IST ⇒ `defer` to the next
+ * 09:00 (`inWindow` / `nextWindowStart` are INPUTS — the jobs compute them with `isInPeerRequestSendWindow`; T12); THEN
+ * the config verdict (⛔ `ok` ⇒ `skip <verdict>`); else `send`. ⛔ The one-text-a-day check (F20 — a WhatsApp is ⛔ a
+ * text). Pure.
+ */
+export function ladderWhatsappGate(input: {
+  readonly originCreatedAt: Date | null;
+  readonly now: Date;
+  readonly inWindow: boolean;
+  readonly nextWindowStart: Date;
+  readonly sms2State: ContactLadderStepState;
+  readonly horizon: { readonly chase: ContactLadderChase; readonly runDay: number; readonly paused: boolean };
+  readonly stopped: boolean;
+  readonly basis: ClaimantWhatsappBasis;
+  readonly config: LadderWhatsappConfigVerdict;
+}): LadderWhatsappVerdict {
+  if (input.originCreatedAt === null) return { kind: 'skip', reason: 'anchor_unknown' };
+  if (input.stopped) return { kind: 'skip', reason: 'stopped' };
+  if (!input.basis.eligible) return { kind: 'skip', reason: input.basis.reason };
+  const limit = ladderHorizonVerdict(input.horizon);
+  if (limit !== null) return { kind: 'skip', reason: limit.slice('skipped:'.length) };
+  if (input.sms2State !== 'pending') return { kind: 'skip', reason: 'overtaken' };
+  const dueAt = ladderWhatsappDueAt(input.originCreatedAt);
+  if (input.now.getTime() < dueAt.getTime()) return { kind: 'wait', until: dueAt };
+  if (!input.inWindow) return { kind: 'defer', until: input.nextWindowStart };
+  if (input.config !== 'ok') return { kind: 'skip', reason: input.config };
+  return { kind: 'send' };
 }
 
 /** The step of a RUNNING ladder that is DUE today (⛔ more than one per run), or `null`. Pure. */
@@ -413,6 +526,11 @@ export interface ContactLadderFollowUp {
   /** A running follow-up's next date (its next text, or its conclusion date); `null` otherwise. */
   readonly nextStepOn: string | null;
   readonly concludedOn: string | null;
+  /**
+   * Story 6.37d (WS13) — the channel that got through when the follow-up ended `ended_delivered`: `'whatsapp'` (the ladder's
+   * claim WhatsApp was delivered — `end_detail` `delivered:whatsapp`) or `'text'`; `null` for every other state.
+   */
+  readonly deliveredBy: 'text' | 'whatsapp' | null;
 }
 
 /** A ladder as the staff views read it. */
@@ -428,6 +546,8 @@ export interface LadderViewFact {
   readonly sms3State: ContactLadderStepState;
   readonly concludeOn: string | null;
   readonly concludedOn: string | null;
+  /** Story 6.37d (WS13) — why it ended (`delivered`, `delivered:whatsapp`, `stopped:<reason>`, …), or `null`. */
+  readonly endDetail: string | null;
 }
 
 /** The LATEST of a person's ladders (by start), or `undefined`. Pure. */
@@ -449,7 +569,8 @@ export function ladderFollowUpOf(ladders: readonly LadderViewFact[]): ContactLad
           : 'ended_other';
   const nextStepOn =
     l.state !== 'running' ? null : l.sms2State === 'pending' ? l.sms2DueOn : l.sms3State === 'pending' ? l.sms3DueOn : l.concludeOn;
-  return { state, startedOn: istDateOf(l.createdAt), nextStepOn, concludedOn: l.concludedOn };
+  const deliveredBy = l.state !== 'ended_delivered' ? null : l.endDetail === 'delivered:whatsapp' ? 'whatsapp' : 'text';
+  return { state, startedOn: istDateOf(l.createdAt), nextStepOn, concludedOn: l.concludedOn, deliveredBy };
 }
 
 /**

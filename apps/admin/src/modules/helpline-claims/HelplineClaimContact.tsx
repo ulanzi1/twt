@@ -494,7 +494,13 @@ export function HelplineClaimContact({
           ) : null}
           {save.isSuccess && saveStatusIsCurrent ? (
             <p role="status" data-testid="helpline-contact-saved">
-              {resolveEn(save.data.agreementIgnored ? 'helpline.contact.savedAgreementIgnored' : 'helpline.contact.saved')}
+              {resolveEn(
+                !save.data.agreementIgnored
+                  ? 'helpline.contact.saved'
+                  : save.data.agreementOnFileEarlierWording
+                    ? 'helpline.contact.savedAgreementIgnoredEarlierWording'
+                    : 'helpline.contact.savedAgreementIgnored',
+              )}
             </p>
           ) : null}
           {save.isError && saveStatusIsCurrent ? (

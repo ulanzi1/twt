@@ -58,7 +58,8 @@ export const claimContactLadders = pgTable(
     originRowId: uuid('origin_row_id').notNull(),
     /** The origin's IST date (D) — the ladder's clock is anchored on it (⛔ on a report time — F2). */
     originSentOn: date('origin_sent_on', { mode: 'string' }).notNull(),
-    /** `-350` ruling 2 (1) — RECORDED `skipped:whatsapp_not_built` / `skipped:nominee_no_whatsapp` (LD1, `-356`). */
+    /** `-350` ruling 2 (1) — `pending` (the claimant's — Story 6.37d), then `sent` once its send row is claimed, or a RECORDED
+     *  skip (`skipped:nominee_no_whatsapp` — `-356`; `skipped:<reason>`). Decided ONCE (0172's trigger). */
     whatsappStep: text('whatsapp_step').notNull(),
     sms2DueOn: date('sms2_due_on', { mode: 'string' }).notNull(),
     sms2State: text('sms2_state').notNull().default('pending').$type<ContactLadderStepState>(),
@@ -92,7 +93,9 @@ export const claimContactLadders = pgTable(
     check('claim_contact_ladders_return_pair_check', sql`(${t.chase} = 'correction') = (${t.returnDecisionId} IS NOT NULL)`),
     check('claim_contact_ladders_person_key_check', sql`length(btrim(${t.personKey})) > 0`),
     check('claim_contact_ladders_number_hash_check', sql`length(btrim(${t.recipientNumberHash})) > 0`),
-    check('claim_contact_ladders_whatsapp_step_check', sql`${t.whatsappStep} ~ '^(pending|skipped:[a-z_]{1,48})$'`),
+    // Story 6.37d — LOCKSTEP with migration 0172 (`sent` added; 0172's trigger lets the step move ONCE, from `pending`).
+    check('claim_contact_ladders_whatsapp_step_check', sql`${t.whatsappStep} ~ '^(pending|sent|skipped:[a-z_]{1,48})$'`),
+    index('claim_contact_ladders_wa_pending_idx').on(t.createdAt).where(sql`"whatsapp_step" = 'pending' AND "state" = 'running'`),
     check('claim_contact_ladders_sms2_state_check', sql`${t.sms2State} ~ '^(pending|sent|satisfied|skipped:[a-z_]{1,48})$'`),
     check('claim_contact_ladders_sms3_state_check', sql`${t.sms3State} ~ '^(pending|sent|satisfied|skipped:[a-z_]{1,48})$'`),
     check(

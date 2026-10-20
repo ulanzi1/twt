@@ -155,6 +155,8 @@ describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS po
         'sms3_state',
         'state',
         'updated_at',
+        // Story 6.37d (0172, WS8 (i)) — the WhatsApp step moves ONCE; the trigger (⛔ the grant) pins "only from pending".
+        'whatsapp_step',
       ].sort(),
     );
   });
@@ -172,7 +174,6 @@ describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS po
       `origin_sent_on = origin_sent_on`,
       `run_id = run_id`,
       `return_decision_id = return_decision_id`,
-      `whatsapp_step = 'pending'`,
       `sms2_due_on = sms2_due_on`,
       `pariwar_id = pariwar_id`,
       `claim_case_id = claim_case_id`,
@@ -193,6 +194,34 @@ describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS po
         [ladderId],
       ),
     );
+  });
+
+  // ⭐ Story 6.37d (0172, WS8 (i); T3 — flipped deliberately: 0169 made the step identity, 0172 lets it move ONCE).
+  it('⭐ 6.37d — the WhatsApp step moves ONCE: pending → sent | skipped:* is writable by twt_app; a decided step is refused by the TRIGGER (any role)', async () => {
+    const { client } = getTx();
+    const { tx } = getTx();
+    const claimCaseId = await seedClaim(tx, PARIWAR_A);
+    const pending = (await insertRow(client, validRow(claimCaseId, PARIWAR_A, { whatsapp_step: 'pending' }))).rows[0]!.ladder_id!;
+    const pending2 = (await insertRow(client, validRow(claimCaseId, PARIWAR_A, { whatsapp_step: 'pending', person_key: 'nominee:x' }))).rows[0]!.ladder_id!;
+    const skipped = (await insertRow(client, validRow(claimCaseId, PARIWAR_A, { person_key: 'nominee:y' }))).rows[0]!.ladder_id!;
+    const GUARD = { code: '23000', message: expect.stringMatching(/decided once/) };
+    // As the OWNER role (the jobs pool bypasses grants — the trigger is the control there).
+    await expectPgError(client, () => client.query(`UPDATE ${T} SET whatsapp_step = 'pending' WHERE ladder_id = $1`, [skipped]), GUARD);
+    await expectPgError(client, () => client.query(`UPDATE ${T} SET whatsapp_step = 'sent' WHERE ladder_id = $1`, [skipped]), GUARD);
+    await enterAppScope(client, PARIWAR_A);
+    await expectAccepted(client, () => client.query(`UPDATE ${T} SET whatsapp_step = 'skipped:overtaken' WHERE ladder_id = $1`, [pending2]));
+    expect((await client.query(`UPDATE ${T} SET whatsapp_step = 'sent' WHERE ladder_id = $1`, [pending])).rowCount).toBe(1);
+    await expectPgError(client, () => client.query(`UPDATE ${T} SET whatsapp_step = 'skipped:stopped' WHERE ladder_id = $1`, [pending]), GUARD);
+    await expectPgError(client, () => client.query(`UPDATE ${T} SET whatsapp_step = 'pending' WHERE ladder_id = $1`, [pending]), GUARD);
+    // A same-value write, and a write of OTHER columns of a decided ladder, pass the trigger.
+    await expectAccepted(client, () => client.query(`UPDATE ${T} SET whatsapp_step = 'sent', updated_at = clock_timestamp() WHERE ladder_id = $1`, [pending]));
+  });
+
+  it('⭐ 6.37d — the pending-step index serves the quarter-hourly selection (running ladders whose step is pending)', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ indexdef: string }>(`SELECT indexdef FROM pg_indexes WHERE indexname = 'claim_contact_ladders_wa_pending_idx'`);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.indexdef).toMatch(/\(created_at\) WHERE \(\(whatsapp_step = 'pending'::text\) AND \(state = 'running'::text\)\)$/);
   });
 
   it('cross-tenant INSERT: under scope A, a row carrying Pariwar B is refused by WITH CHECK (42501); A\'s is accepted', async () => {
@@ -268,7 +297,9 @@ describe.skipIf(!hasDatabase)('claim_contact_ladders — migration 0169 + RLS po
     ['claim_contact_ladders_return_pair_check', { chase: 'certificate' }, { chase: 'certificate', return_decision_id: null }],
     ['claim_contact_ladders_person_key_check', { person_key: '  ' }, { person_key: 'nominee:abc' }],
     ['claim_contact_ladders_number_hash_check', { recipient_number_hash: ' ' }, { recipient_number_hash: 'h' }],
-    ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: 'sent' }, { whatsapp_step: 'skipped:nominee_no_whatsapp' }],
+    // Story 6.37d (0172) — `sent` is now a value (WS8 (i)); anything else outside the grammar still refuses.
+    ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: 'delivered' }, { whatsapp_step: 'sent' }],
+    ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: 'sent:x' }, { whatsapp_step: 'skipped:nominee_no_whatsapp' }],
     // Review P5 — the shared `skipped:[a-z_]{1,48}` grammar's own boundaries: 49 chars refuses, 48 accepts; a digit
     // or uppercase character in the suffix refuses.
     ['claim_contact_ladders_whatsapp_step_check', { whatsapp_step: `skipped:${'a'.repeat(49)}` }, { whatsapp_step: `skipped:${'a'.repeat(48)}` }],

@@ -177,6 +177,18 @@ Load-bearing details:
   unverified and not adopted. Cost, accepted: a leaked token lets its holder end a real failure's protection for the persons they target
   until the token is rotated. The deferred item's ADR half is addressed by this note; the consent sheet §1–§2 is revised in the same
   commit.
+  ⚠ **Dated note, 2026-10-20 (Story 6.37d — [Decision 2026-10-20-367](../../.decision-log.md#decision-2026-10-20-367) WS14; no word
+  above rewritten):** **the bound as restated above (and ratified with this ADR by `-358`) WIDENS** now that the claimant's WhatsApp step
+  is built — a consequence of [`-350`](../../.decision-log.md#decision-2026-10-17-350) ruling 2 (1), ⛔ a new decision: a forged
+  `undelivered` now ALSO sends at most ONE WhatsApp message to the CLAIMANT (⛔ a nominee — `-356`), about four hours after the forged
+  text, between 9 am and 8 pm ([`-368`](../../.decision-log.md#decision-2026-10-20-368) Q1 A), and only where the claim's filing
+  agreement on file is the new wording naming WhatsApp (`-357` G3), the Pariwar has WhatsApp switched on and its claim template
+  provisioned (roster Row 36), and the number has not sent STOP. "(no WhatsApp — row 6-37c skips that step)" above is therefore no longer
+  true once roster Row 36 closes. A forged `delivered` is unchanged; a DELIVERED WhatsApp now ALSO ends a ladder (`-351` 4 A) — that
+  report is Meta's own signed webhook, ⛔ MSG91's. The per-person bounds stand (one ladder at a time; ⛔ a new ladder after a conclusion
+  on that number; ONE WhatsApp per ladder, ever — a DB UNIQUE), and the start-burst alarm still bounds it WHICHEVER sweep starts the
+  ladders: the new quarter-hourly WhatsApp sweep starts most ladders and runs the SAME start tail (6.37d AC4). The Panel was TOLD on
+  2026-10-20 (a "told" item, ⛔ a ruling — `trustee-panel-told-2026-10-20-6-37d-whatsapp-and-forged-reports.md`, sent by BigDev). The deferred-work line on the forged report is annotated.
 - **Performance / cost.** One insert per report on the api; one primary-key lookup and one upsert per report in jobs. No per-request
   secret read.
 - **Failure modes accepted.**

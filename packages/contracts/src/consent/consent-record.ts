@@ -80,6 +80,8 @@ export const ConsentPayloadSchema = z
     locale: z.string().optional(),
     ip: z.string().optional(),
     userAgent: z.string().optional(),
+    /** The version id of the copy shown (Story 6.37d — the claim-contact agreement's registry id). */
+    copyVersion: z.string().optional(),
   })
   .passthrough();
 export type ConsentPayloadSchema = z.output<typeof ConsentPayloadSchema>;

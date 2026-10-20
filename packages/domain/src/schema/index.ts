@@ -239,6 +239,7 @@ export * from './claim_peer_mesh_pings.js';
 export * from './claim_peer_mesh_replies.js';
 // Story 6.31 — the WhatsApp reminder's own record: ONE row per ping, ever (0171; WR1).
 export * from './claim_peer_mesh_wa_reminders.js';
+export * from './claim_contact_wa_sends.js';
 // Story 6.7 — ground inspection: `claim_ground_inspections` (ONE row per ASSIGNMENT — the
 // scheduling + structured findings (non-PII jsonb) + Tier-1 ciphertext for location/family
 // contact/notes; separate per-assignment status machine, NO active-uniqueness — D5) + the child

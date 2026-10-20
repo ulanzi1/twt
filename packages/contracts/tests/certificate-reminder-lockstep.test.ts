@@ -84,7 +84,7 @@ describe('the certificate reminder vocabularies (Story 6.19d)', () => {
               letter_eligible: false,
               letter: null,
               escalation_recorded_on: null,
-              follow_up: { state: 'running', started_on: '2026-10-04', next_step_on: '2026-10-06', concluded_on: null },
+              follow_up: { state: 'running', started_on: '2026-10-04', next_step_on: '2026-10-06', concluded_on: null, delivered_by: null },
               unreachable_reason: null,
               ask: null,
               calls: [],

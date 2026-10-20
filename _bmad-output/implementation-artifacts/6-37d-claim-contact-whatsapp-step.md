@@ -349,6 +349,11 @@ and `-356` (no WhatsApp to a nominee who is not the claimant).
   not on WhatsApp, 131047 = outside the 24 h window, 131049 = Meta's per-user MARKETING cap) has the trigger *"row 5-12 … or the first
   production WhatsApp send"* — this story records these codes on CLAIM rows only and does ⛔ adopt the member mapping; the member side
   stays 5-12's.
+  *(Dated 2026-10-21, Story 5.12 Task 7.1: the item is **Closed by 5.12 for the MEMBER path** — effective when row `5-12-whatsapp-yes-lasts-until-withdrawn` is `done` on `main` (the row is `review` at this note): only 131050 ends a
+  member yes (`WA_MEMBER_CONSENT_BLOCK_CODES` / `isMemberConsentBlock`, `814cfec9`); `WA_BLOCK_ERROR_CODES` and `isBlock` are
+  byte-unchanged and still gate this story's claim hash fallback — ⛔ a consent question there. Per Meta's error-code reference 131050 is
+  a MARKETING opt-out, ⛔ "the person blocked the business". This story's claim-isolation legs R4 / I7 / WS11 (2) were re-coded to
+  131050 so they stay non-vacuous.)*
 - **F11 — The agreement as built.** en `contact.agreement`: *"I agree that the Trust may contact the nominees and the claimant named here,
   by text message and by post, about this claim."*; hi: *"मैं सहमति देता/देती हूँ कि ट्रस्ट इस दावे के बारे में यहाँ दिए गए नॉमिनी और
   दावेदार से टेक्स्ट संदेश और डाक द्वारा संपर्क कर सकता है।"* The server copy `claim-contact-copy.ts` holds the same two strings and
@@ -918,6 +923,10 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
    and a wamid-matched claim row records `failed_at` + the code; the same status for a MEMBER-only send still blocks as today (a leg
    each). The claim branch acts only when `value.metadata.phone_number_id` equals the event Pariwar's configured `phone_number_id` (a leg:
    a mismatch ⇒ ⛔ claim action, a log line); the RLS-bound-role refusal ends the tick before any event is claimed (a leg).
+   ⚠ *Dated note (2026-10-21, Story 5.12 — `-364` condition 3):* row 5-12 changed (c) as planned — a STOP now ends every yes on the
+   number, any state; an EXPIRED member seeded with ⛔ consent (this story's leg (c)) has nothing to end ⇒ still ⛔ member write, and the
+   leg is re-titled (⛔ deleted); a legacy EXPIRED member WITH an open consent has it closed (5.12 AC4 (b)). The claim stop is still
+   recorded first in every case.
    ⚠ *Dated note (2026-10-20, round 2 — Decision `2026-10-20-369` decision 4, review R4):* as built only the STOP branch has the
    `phone_number_id` gate. The STATUS branch is matched by wamid, or for a block code by the claim-space hash against the Pariwar's sends of
    the last 7 days (aged by `updated_at` — R5), inside the event Pariwar's scope, with ⛔ `phone_number_id` gate — so a callback that
@@ -1250,6 +1259,9 @@ no committed regression leg and AC12's `ci:local` was not re-run after migration
 - [x] [Review][Patch] **P15 — LOW: the lease-inequality test hard-codes a copy of the pool connect timeout** [apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts:100] — import the real constant (export it from `db.ts` if needed). (blind-B)
 - [x] [Review][Patch] **P16 — LOW: the api copy module's header is stale and the version constant widened to `string`** [apps/api/src/modules/claims/claim-contact-copy.ts:288-303] — the header still describes "whether the filer may agree for the nominees and the claimant". (blind-C)
 - [x] [Review][Patch] **P17 — LOW: WS11's hash fallback can suppress a real MEMBER block — undisclosed** [apps/jobs/src/wa-webhook-processor.ts:431-440] — a member-path wamid failing with a block code, on a number that had a claim send in 7 days, is claimed by the hash ⇒ `BLOCKED_BY_META` never recorded for the member. Disclose as WS11's cost + a deferred item (trigger: row 5-12 / the `WA_BLOCK_ERROR_CODES` item). (blind-B)
+  *(Dated 2026-10-21, Story 5.12 Task 7.1: the row-5-12 trigger FIRED; ⛔ fixed — its check needs a send-time wamid record for alert
+  sends (an `apps/jobs/src/scheduler` edit); the deferred item stays OPEN with its trigger restated to *"the first send-time wamid
+  record for member alert sends"*, its cost BOUNDED to 7 days.)*
 - [x] [Review][Patch] **P18 — LOW: the Policy meaning section misses R2 / R3's two new conjuncts** [6-37d-claim-contact-whatsapp-step.md §Policy meaning] — "a claimant replaced (or re-saved by the helpline) without a fresh tick gets no WhatsApp"; "a former claimant's running ladder gets none" (family 11). (auditor-A)
 - [x] [Review][Patch] **P19 — LOW: `-368`'s scope is imprecise in four places — an author's dated note, ⛔ an edit of the ratified text** [.decision-log.md `2026-10-20-368`] — `-351` ruling 2 is narrowed only in a parenthesis while Consequence 3 says "nothing else changes"; `-250` #5's "one message a day" half also gives way for this step (A's cost: "Two messages are SENT that day") but only "the 10:00 hour" is named; "for BOTH chases" is an author's reading (`-259`), not stated as one; WS12 (a delivered WhatsApp ends the follow-up) appears in A's accepted cost but is absent from "Not covered" — say it stays `-367`'s reading. Also the late-correlated slice (a ladder started at the next 10:00, deferred-work) behaves like option B. (blind-D, auditor-D)
 - [x] [Review][Patch] **P20 — LOW: Row 36's discharge path misstates what every step records before go-live** [docs/launch-gate-inventory/inventory-roster.md Row 36] — "until (h) every claimant's step records `skipped:whatsapp_not_configured`": the basis is tested first (`old_wording`, `hindi_not_reviewed` for every Hindi claimant, `claimant_changed`), and `overtaken` precedes the config verdict. (edge-D)
@@ -1406,6 +1418,8 @@ Every finding verified in the worktree; ALL addressed before commit:
   EXPIRED member's STOP will revoke) and is the trigger of the `WA_BLOCK_ERROR_CODES` deferred item. Keep the claim branch BEFORE and
   independent of the member lookup; AC7's member legs assert *"as `main` stands at build"* — ⛔ hard-code today's EXPIRED behaviour as a
   requirement.
+  *(Dated 2026-10-21, Story 5.12: row 5-12 widened the member half BELOW the claim branch, which is unchanged and still runs first; the
+  `WA_BLOCK_ERROR_CODES` item is closed for the member path — effective when row `5-12-whatsapp-yes-lasts-until-withdrawn` is `done` on `main` (the row is `review` at this note).)*
 - **T23 — A gate that looks like coverage.** The access-wrapper gate matches only `audit.writeAuditEntry(` (a property access on an
   identifier `audit`) and scans `CHANNEL_ROOTS` + `CLAIM_ROOTS` — ⛔ `apps/jobs`; `domain-accessor-invariants` scans Drizzle `.limit(` in
   `packages/domain/src` only. Green proves nothing for this story's jobs code ([[feedback_gate_scope_semantic_coverage]]) — its own

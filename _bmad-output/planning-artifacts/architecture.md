@@ -2258,6 +2258,9 @@ onboarding:
   number carries. The origination requirement is unchanged: a WhatsApp message that is neither STOP nor the
   opt-in phrase creates no opt-in (BigDev: route such messages into the helpdesk after go-live). The bullets
   above are unedited.)*
+  *(Dated 2026-10-21, Story 5.12 Task 7.1: the note above is BUILT on the story branch (row
+  `5-12-whatsapp-yes-lasts-until-withdrawn` → `review`; ⛔ yet `done` on `main`) — migration 0177's trigger and one-ACTIVE
+  index, `endEveryWaYes` on every withdrawal path, the member-only 131050 predicate. The bullets above are unedited.)*
 - **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
   Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
   correction and certificate reminders' delivery ladder — to ONE person only: the

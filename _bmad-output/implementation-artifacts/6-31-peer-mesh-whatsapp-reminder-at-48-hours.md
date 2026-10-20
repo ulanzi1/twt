@@ -263,6 +263,11 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   opt-in's `consentId`; `consent_records` has ⛔ unique index; `consentExists` is true on ANY unrevoked row. ⇒ a member who
   expired, opted in again and then sent STOP still has `consentExists('whatsapp_opt_in') = true`. Latent today (nothing reads
   `consentExists` alone for WhatsApp); `-364`'s condition 4 (a withdrawal ends EVERY earlier yes) is row 5-12's — WR3, T2, WR15 (4).
+  *(Dated 2026-10-21, Story 5.12 Task 7.1: both halves of F14 are **Closed by 5.12** — effective when row `5-12-whatsapp-yes-lasts-until-withdrawn` is `done` on `main` (the row is `review` at this note). `isOptInActive` has ⛔
+  clock (`f9baac1e`), the sweep's ACTIVE half is gone and the database refuses ACTIVE → EXPIRED (migration 0177); every withdrawal
+  — app, admin, STOP, Meta 131050 — ends EVERY open whatsapp_opt_in consent row (`waOptIn.endEveryWaYes`, `a0fa5403`…`c25fcbb0`); the
+  app's `expired_*` words are deleted and its withdraw control shows for every ACTIVE response (`4719b712`). WR3's composition is
+  unchanged.)*
 
 **The plumbing**
 - **F15 — Migrations** are hand-authored SQL with `--> statement-breakpoint` and a manual journal entry; at the pin the last is
@@ -561,6 +566,9 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   send response) as rate limits — `dispatch()`'s classification, ⛔ fixed here (WR10's classifier reads them first).
   *(Dated 2026-10-19, code review round 2 (P28): read (4) as "homed in row 5-12, OPEN until that row is `done`" — the
   `deferred-work.md` item's status; "homed, ⛔ open" above overstated it. Items (2), (3), (5) are unhomed — trigger only.)*
+  *(Dated 2026-10-21, Story 5.12 Task 7.1: (1) and (4) — **Closed by 5.12**, effective when row `5-12-whatsapp-yes-lasts-until-withdrawn` is `done` on `main` (the row is `review` at this note); (2) — closed by 5.12 for the
+  MEMBER path only (only 131050 ends a member yes; `WA_BLOCK_ERROR_CODES` itself still gates the claim hash fallback — ⛔ a consent
+  question there), with the same caveat; (3) and (5) unchanged.)*
 - **WR16 — Roster row `peer-mesh-wa-reminder-template-approved`** (the next free row number; Rows 29–34's eleven fields): **(a)**
   each live Pariwar's WABA provisioned (`pariwar_wa_config` complete, switch on); **(b)** the en + hi templates approved by Meta
   **as UTILITY**, the names set under WR7's keys AND each key proven to RESOLVE in production (the dotted-name item, F20), each
@@ -628,6 +636,9 @@ reached by the same job id's re-run while the neighbour has since SUBMITTED ⇒ 
 consent ⇒ true; ACTIVE past `window_expires_at` ⇒ false; `EXPIRED_24H_WINDOW`, `REVOKED`, `BLOCKED_BY_META`, `PENDING`, no row ⇒
 false; ACTIVE but consent revoked ⇒ false (5.4's writers revoke both together, so THIS leg alone seeds the consent row by a
 raw `UPDATE` — say so in the test).
+*(Dated 2026-10-21, Story 5.12 (`-364` option A; its AC1): the leg "ACTIVE past `window_expires_at` ⇒ false" is FLIPPED to ⇒ true —
+a yes has ⛔ clock — and the `EXPIRED_24H_WINDOW` case is re-seeded by a raw INSERT (the 0177 trigger refuses ACTIVE → EXPIRED).
+WR3's composition and the source fence are unchanged.)*
 
 **AC5 — The words (WR6, WR13, WR14, I6).** `PEER_MESH_WA_REMINDER_BODY.en` / `.hi` equal the real `t('peer_mesh_sms.request', {
 member: '{{1}}', link: '{{2}}', helpline: '{{3}}' }, { namespace: 'claim', locale })` output (the lockstep test calls the REAL `t()`
@@ -1126,6 +1137,8 @@ honours it); two review references (both correct); the dropped-and-re-applied 01
   has TOLD their opt-in expired, and whom the STOP path ignores (F14). `-364` (option A) makes a yes last until withdrawn, but
   ONLY after its four conditions ship — row 5-12's job. ⛔ "Fix" the 24-hour window in Story 5.4's code as part of 6.31's Tasks
   1–6. A consent-based read stays UNSAFE until withdrawal revokes EVERY consent row (F14; `-364` condition 4).
+  *(Dated 2026-10-21, Story 5.12: condition 4 is built — every withdrawal revokes EVERY open consent row (`endEveryWaYes`), and the
+  "expired" words are gone; effective when row `5-12-whatsapp-yes-lasts-until-withdrawn` is `done` on `main` (the row is `review` at this note). `consentExists` alone remains ⛔ the reminder's read — WR3 stands.)*
 - **T3 — ⛔ Never `dispatch()`, ⛔ never `resolveWhatsappProviderDeps`.** Both are keyed by `AlertCategory`; the cascade falls back
   to SMS on a WA reject — a SECOND text (Trap 17 of 6.27; `-311` PM2). Build the `WhatsappTemplateMessage` yourself and call
   `messagingFor(pariwarId, config).send(…)`.

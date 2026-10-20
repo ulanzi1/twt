@@ -1,8 +1,8 @@
 # For the Trustee Panel — told, not asked: a CORRECTION (Story 6.37d, 2026-10-20)
 
 **For:** Dhiraj Rahul · Kalpana Bharti
-**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-10-20 — prepared for relay, NOT YET SENT** (it is "told" only once
-BigDev sends it — [[feedback_shown_to_panel_means_sent]]; BigDev decided it is told, not asked — Decision `2026-10-20-370`). It corrects the item sent earlier today
+**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-10-20 — TOLD 2026-10-20** (sent to the Panel by BigDev: *"report has been
+sent"*). Kept as sent; ⛔ a ruling was asked (BigDev decided it is told, not asked — Decision `2026-10-20-370`). It corrects the item sent earlier today
 (`trustee-panel-told-2026-10-20-6-37d-whatsapp-and-forged-reports.md`), which is kept exactly as sent.
 **What this is:** a correction of something we told you, for your information. Nothing here asks you to decide anything.
 

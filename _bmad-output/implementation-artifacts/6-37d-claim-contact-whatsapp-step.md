@@ -54,7 +54,7 @@ rulings 1–6, `-352` Q1 / Q2, `-355` decisions 1–18, `-356` calls 1–3, `-36
 
 # Story 6.37d: When a reminder to the claimant is reported undelivered, the Trust tries WhatsApp four hours later — on the claimant's reworded filing agreement `[PRIMITIVE]`
 
-Status: done — code review ROUND 2 (2026-10-20): all 24 patches applied, the fix-diff review's corrections and Decisions `2026-10-20-370` / `-371` built; `ci:local` 36 / 36 green at `bbc3d401` (P2). GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]]); the corrective Panel "told" item is WRITTEN, ⛔ sent (BigDev sends it)
+Status: done — code review ROUND 2 (2026-10-20): all 24 patches applied, the fix-diff review's corrections and Decisions `2026-10-20-370` / `-371` built; `ci:local` 36 / 36 green at `bbc3d401` (P2). GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]]); the corrective Panel "told" item is TOLD (BigDev: *"report has been sent"*, 2026-10-20); Decision `-371` CONFIRMED by BigDev (*"-371 confirmed"*)
 
 > ## ⭐ `-367` OUTCOME — Task 0, 2026-10-20 (governs every earlier sentence it contradicts; the text below is kept as PROPOSED, ⛔ edited)
 >
@@ -1329,7 +1329,7 @@ Every finding verified in the worktree; ALL addressed before commit:
   frozen and never decreasing), the capped finish `may_have_sent:send_cap`, the start window 2 h → 8 h, legs RED-proven (Debug Log (c)).
   A FOURTH fresh-context review of that delta (0 H / 2 M / 5 L) — and the existing "429 then a never-opened connection" leg going RED
   under it — showed the marker counted calls that could reach no one ⇒ Decision `2026-10-20-371` (`ef578642`, ALONE — ⚠ committed by
-  the session as `-370`'s mechanism corrected as built, ⛔ a new choice; BigDev to confirm): the cap counts only a post-send 5xx after the
+  the session as `-370`'s mechanism corrected as built, ⛔ a new choice — ⭐ CONFIRMED by BigDev 2026-10-20: *"-371 confirmed"*): the cap counts only a post-send 5xx after the
   connection opened, at the note; the marker answers `capped` (⛔ `lost`) as a backstop; the 8-hour scan skips a report whose person
   already has a running ladder (32 re-plans a day); a LOCKSTEP leg pins the constant to the CHECK. ⛔ Fixed, recorded: the start bound's
   5,000-claim tail (pre-existing keyset restart), 0176's header and dev backfill (applied — `-371` governs), send #2's token kept only in
@@ -1759,7 +1759,8 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   Change Log reordered newest-first (no entry's text changed). Then the fix-diff review (three fresh-context reviewers of the patch
   itself) and Decision `2026-10-20-370` (`5507c756`, alone — BigDev: a TWO-SEND cap, the Panel told; an 8-hour start window): migration
   0176, the capped finish, the window, their legs; every review finding addressed. Status `done` → `in-progress` until `ci:local` is
-  green (P2). ⭐ `ci:local` 36 / 36 green at `bbc3d401` ⇒ Status `in-progress` → `done` (ledger `2026-10-20f`).
+  green (P2). ⭐ `ci:local` 36 / 36 green at `bbc3d401` ⇒ Status `in-progress` → `done` (ledger `2026-10-20f`). ⭐ Then BigDev: *"-371
+  confirmed, report has been sent"* — `-371` confirmed; the corrective "told" item TOLD (ledger `2026-10-20g`).
 - v1.8 (2026-10-20) — "close out R8": the remaining five named legs added, all in live/integration tests, closing R8
   completely. `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` gains the late-correlator leg, the 20:00
   release → 09:00 config-off-finish leg (its own isolated Pariwar — never left the shared `PARIWAR` constant's

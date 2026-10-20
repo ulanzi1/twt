@@ -202,7 +202,8 @@ Load-bearing details:
   note says *"its claim template provisioned (roster Row 36)"*) is Meta's own refusal of an unapproved template, ⛔ a Row 36 check (its
   UTILITY leg (c) was dropped by `-367` decision 4 as a recorded risk). *"⛔ a nominee"* means ⛔ a nominee AS a nominee — a nominee who is
   the claimant is reached as the claimant (`-367` PQ1 A). A corrective "told" item is WRITTEN
-  (`trustee-panel-told-2026-10-20b-6-37d-forgery-bound-correction.md`) — ⛔ "told" until BigDev sends it.
+  (`trustee-panel-told-2026-10-20b-6-37d-forgery-bound-correction.md`) — ⛔ "told" until BigDev sends it. ⭐ SENT 2026-10-20 (BigDev: *"report
+  has been sent"*) — the Panel is TOLD.
 - **Performance / cost.** One insert per report on the api; one primary-key lookup and one upsert per report in jobs. No per-request
   secret read.
 - **Failure modes accepted.**

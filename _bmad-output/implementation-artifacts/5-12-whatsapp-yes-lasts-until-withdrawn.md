@@ -651,12 +651,12 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
     under LY8 (a) the claim-isolation legs `wa-webhook-processor.test.ts:358`, `:374-382`, `:391-397` RE-CODED to 131050 (and their
     `failure_code` asserts `:360`, `:380`) and the member
     control `:384-389` flipped (+ a 131026 ⇒ ACTIVE companion), each with a dated comment (AC8).
-- [ ] **Task 3 — The API (AC3, AC5; LY4 mint guard, LY7)**
-  - [ ] 3.1 DELETE and admin opt-out → `hasAnythingToEnd` / `endEveryWaYes` inside `withCompensatingAudit` (the access-wrapper gate scans
+- [x] **Task 3 — The API (AC3, AC5; LY4 mint guard, LY7)**
+  - [x] 3.1 DELETE and admin opt-out → `hasAnythingToEnd` / `endEveryWaYes` inside `withCompensatingAudit` (the access-wrapper gate scans
     this module — F25); response per LY7; the lost-race arm (LY5) ⇒ 409.
-  - [ ] 3.2 Mint: KEEP the newest-row check; ALSO refuse when `hasActiveOptIn` (any `state = 'ACTIVE'` row).
-  - [ ] 3.3 `emit-openapi.ts` wa-opt-in descriptions (F23) → `pnpm contracts:emit-openapi`; commit `openapi/v1.yaml`.
-  - [ ] 3.4 Legs: AC5; AC3's DELETE and admin legs; RE-TITLE `wa-opt-in.spec.ts:132` / `admin-opt-out.spec.ts:194` (they stay green — F18).
+  - [x] 3.2 Mint: KEEP the newest-row check; ALSO refuse when `hasActiveOptIn` (any `state = 'ACTIVE'` row).
+  - [x] 3.3 `emit-openapi.ts` wa-opt-in descriptions (F23) → `pnpm contracts:emit-openapi`; commit `openapi/v1.yaml`.
+  - [x] 3.4 Legs: AC5; AC3's DELETE and admin legs; RE-TITLE `wa-opt-in.spec.ts:132` / `admin-opt-out.spec.ts:194` (they stay green — F18).
 - [ ] **Task 4 — The app (AC6, AC7; LY10; F13a)**
   - [ ] 4.1 `common.json` (en, hi): delete `expired_*`, add `unconfirmed_*`, change `active_desc` (and `blocked_*` under LY8 (a)) — hand-edit, ⛔ prettier --write
     ([[project_prettier_not_enforced]]).

@@ -408,6 +408,31 @@ describe.skipIf(!hasDatabase)('Story 5.12 — the worker ends every yes; STOP al
     expect(alarms[0]).not.toContain('contact_ladder.stop_unrecorded');
   });
 
+  it('⭐ LY5 lost race — the ACTIVE row moves elsewhere between the read and the write (⛔ open consent) ⇒ primary + `_rolled_back`, ⛔ retry, ⛔ alarm', async () => {
+    const pid = await pariwar();
+    const m = randomUUID();
+    const { rows } = await pool.query<{ opt_in_id: string }>(
+      `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index) VALUES ($1, $2, 'ACTIVE', $3, $4) RETURNING opt_in_id`,
+      [pid, m, phrase(), await blind()],
+    );
+    const optInId = rows[0]!.opt_in_id;
+    // A BEFORE trigger returning NULL SKIPS the row update ⇒ `endEveryWaYes` returns `{ null, 0 }` — the shape a concurrent DELETE leaves.
+    const name = `${FAULT_PREFIX}${randomUUID().replace(/-/g, '')}`;
+    await ddl(`CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $fn$ BEGIN RETURN NULL; END $fn$`);
+    const alarms: string[] = [];
+    try {
+      await ddl(`CREATE TRIGGER ${name} BEFORE UPDATE ON member_wa_opt_in FOR EACH ROW WHEN (OLD.opt_in_id = '${optInId}'::uuid) EXECUTE FUNCTION ${name}()`);
+      await process(pid, inbound('STOP'), { onAlarm: (msg) => alarms.push(msg) });
+    } finally {
+      await ddl(`DROP TRIGGER IF EXISTS ${name} ON member_wa_opt_in`);
+      await ddl(`DROP FUNCTION IF EXISTS ${name}()`);
+    }
+    expect(alarms).toEqual([]);
+    expect(await stateOf(optInId)).toBe('ACTIVE');
+    expect(await auditLines(pid, 'member.wa_opt_in_revoked')).toHaveLength(1);
+    expect(await auditLines(pid, 'member.wa_opt_in_revoked_rolled_back')).toHaveLength(1);
+  });
+
   it('a claim-only STOP (⛔ member on the number) records the claim stop and writes ⛔ member audit', async () => {
     const pid = await pariwar({ withConfig: true });
     await process(pid, inbound('STOP', { withMetadata: true }));

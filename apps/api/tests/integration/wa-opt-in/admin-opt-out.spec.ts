@@ -6,7 +6,9 @@
 //     revoked, and an admin_action audit line lands (actor = the admin, NEVER a secret in the hash).
 //   · state_trustee (granted in the Pariwar but WITHOUT member.moderate) → fail-closed (never 200), no state
 //     change (AI-4-3(b)).
-//   · a member with no ACTIVE opt-in → 409 (nothing to revoke), never an illegal transition.
+//   · a member with nothing to end → 409, never an illegal transition (Story 5.12, LY7: ⛔ ACTIVE row, ⛔ open consent).
+//   · Story 5.12 (`-364` condition 4; AC3, AC5) — the opt-out ends EVERY yes: a legacy yes + an ACTIVE one ⇒ 200 REVOKED, ⛔ open
+//     consent, ONE admin_action line (actor = the admin) on both rows; a legacy EXPIRED-with-consent alone ⇒ 200, state unchanged.
 //
 // Admin auth mirrors channel-config.spec.ts (fake WebAuthn passkey enroll + login + authenticate). The opt-in
 // + consent rows are seeded directly (RLS bypassed under the test login). Fresh random ids per test;
@@ -191,7 +193,8 @@ describe.skipIf(!hasDatabase)('Trustee admin_action WA opt-out (Story 5.4)', () 
     expect((await auditRows(userId, pariwarId)).n).toBe(0);
   });
 
-  it('a member with no ACTIVE opt-in → 409 (nothing to revoke)', async () => {
+  // 2026-10-21 Story 5.12 (LY7) — re-titled: still 409 (⛔ row, ⛔ consent — nothing to end).
+  it('a member with nothing to end (⛔ opt-in row, ⛔ open consent) → 409', async () => {
     const pariwarId = randomUUID();
     const memberId = randomUUID(); // no opt-in seeded
     const { client, userId } = await authenticate();
@@ -199,5 +202,64 @@ describe.skipIf(!hasDatabase)('Trustee admin_action WA opt-out (Story 5.4)', () 
 
     const res = await client.inject({ method: 'POST', url: optOutUrl(pariwarId, memberId) });
     expect(res.statusCode).toBe(409);
+  });
+
+  /** A legacy yes: an open consent granted two days ago + an EXPIRED row carrying it — INSERTed (⛔ UPDATE — the LY4 trigger). */
+  async function seedLegacyYes(pariwarId: string, memberId: string): Promise<string> {
+    const consentId = randomUUID();
+    await td.pool.query(
+      `INSERT INTO consent_records (consent_id, subject_id, pariwar_id, consent_type, granted_at, granted_via_actor, consent_payload)
+       VALUES ($1, $2, $3, 'whatsapp_opt_in', now() - interval '2 days', 'member_self', '{}'::jsonb)`,
+      [consentId, memberId, pariwarId],
+    );
+    const { rows } = await td.pool.query<{ opt_in_id: string }>(
+      `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index, consent_id, matched_at, created_at)
+       VALUES ($1, $2, 'EXPIRED_24H_WINDOW', $3, $4, $5, now() - interval '2 days', now() - interval '2 days') RETURNING opt_in_id`,
+      [pariwarId, memberId, `TWT-${randomUUID().slice(0, 8).toUpperCase().replace(/[^A-Z2-9]/g, 'A')}`, `blind-${memberId}`, consentId],
+    );
+    return rows[0]!.opt_in_id;
+  }
+
+  const consentRows = async (pariwarId: string, memberId: string) =>
+    (
+      await td.pool.query<{ revoked_audit_id: string | null }>(
+        `SELECT revoked_audit_id FROM consent_records WHERE pariwar_id = $1 AND subject_id = $2 AND consent_type = 'whatsapp_opt_in' ORDER BY granted_at`,
+        [pariwarId, memberId],
+      )
+    ).rows.map((r) => r.revoked_audit_id);
+
+  it('⭐ Story 5.12 AC3 — legacy yes + an ACTIVE one ⇒ 200 REVOKED; BOTH consents revoked under ONE admin_action line (actor = the admin)', async () => {
+    const pariwarId = randomUUID();
+    const memberId = randomUUID();
+    await seedLegacyYes(pariwarId, memberId);
+    const optInId = await seedActiveOptIn(pariwarId, memberId);
+    const { client, userId } = await authenticate();
+    await grantPariwarAdmin(userId, pariwarId);
+
+    const res = await client.inject({ method: 'POST', url: optOutUrl(pariwarId, memberId) });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ state: 'REVOKED' });
+    expect(await stateOf(optInId)).toBe('REVOKED');
+    const lines = await td.pool.query<{ audit_id: string; actor_id: string }>(
+      `SELECT audit_id, actor_id FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'member.wa_opt_in_revoked'`,
+      [pariwarId],
+    );
+    expect(lines.rows).toHaveLength(1);
+    expect(lines.rows[0]!.actor_id).toBe(userId);
+    expect(await consentRows(pariwarId, memberId)).toEqual([lines.rows[0]!.audit_id, lines.rows[0]!.audit_id]);
+  });
+
+  it('⭐ Story 5.12 AC5 — a legacy EXPIRED with an open consent alone ⇒ 200 { state: EXPIRED_24H_WINDOW }, the consent closed', async () => {
+    const pariwarId = randomUUID();
+    const memberId = randomUUID();
+    const optInId = await seedLegacyYes(pariwarId, memberId);
+    const { client, userId } = await authenticate();
+    await grantPariwarAdmin(userId, pariwarId);
+
+    const res = await client.inject({ method: 'POST', url: optOutUrl(pariwarId, memberId) });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ state: 'EXPIRED_24H_WINDOW' });
+    expect(await stateOf(optInId)).toBe('EXPIRED_24H_WINDOW');
+    expect((await consentRows(pariwarId, memberId)).every((id) => id !== null)).toBe(true);
   });
 });

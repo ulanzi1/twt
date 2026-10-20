@@ -14,7 +14,7 @@
 // back together on failure, with a compensating `*_rolled_back` line settling the chain). NO secret value
 // ever reaches an audit line (there is none in this flow).
 
-import { audit, channelConfig, consent, ids, waOptIn } from '@twt/domain';
+import { audit, channelConfig, ids, waOptIn, type Db } from '@twt/domain';
 import type {
   CreateWaOptInResponse,
   RevokeWaOptInResponse,
@@ -42,6 +42,55 @@ export function buildSendHelloDeepLink(displayPhoneNumber: string, verificationP
 interface MemberCtx {
   memberId: string;
   pariwarId: string;
+}
+
+/** What a withdrawal will end, read BEFORE its audit line (the five-field snapshot — LY5). */
+interface WithdrawalPlan {
+  readonly beforeState: string;
+  /** `REVOKED` when an ACTIVE row will move; else the newest row's state (an auditor reads "consent closed, state unchanged"). */
+  readonly afterState: RevokeWaOptInResponse['state'];
+  readonly verificationPhrase: string | null;
+}
+
+/**
+ * Story 5.12 (`-364` conditions 3 + 4; LY7) — plan a withdrawal, or 409 `wa_opt_in.not_active` when there is NOTHING to end: ⛔
+ * ACTIVE row and ⛔ open whatsapp_opt_in consent (state reads — ⛔ the window-aware `isOptInActive`). A legacy EXPIRED row with
+ * an open consent is something to end (200, its state unchanged).
+ */
+async function planWithdrawal(db: Db, pariwarId: ids.PariwarId, memberId: ids.MemberId, message: string): Promise<WithdrawalPlan> {
+  const active = await waOptIn.getActiveOptInForMember(db, { pariwarId, memberId });
+  if (!active && !(await waOptIn.hasAnythingToEnd(db, { pariwarId, memberId }))) {
+    throw new ConflictError(message, 'wa_opt_in.not_active');
+  }
+  const snapshot = active ?? (await waOptIn.getOptInForMember(db, { pariwarId, memberId }));
+  // ⛔ row but an open consent is ⛔ reachable through the code (consent is minted only on a match); it still ends — REVOKED.
+  const beforeState = snapshot?.state ?? 'none';
+  return {
+    beforeState,
+    afterState: active || !snapshot ? 'REVOKED' : snapshot.state,
+    verificationPhrase: snapshot?.verificationPhrase ?? null,
+  };
+}
+
+/**
+ * End every yes inside the audited mutate (LY5): `endEveryWaYes` on the scope tx. A lost race (another withdrawal or a STOP
+ * ended it between the plan and here — `{ null, 0 }`) throws the 409 INSIDE `mutate`, so `withCompensatingAudit` writes the
+ * `_rolled_back` line and rethrows (⛔ an audit line asserting a transition that did not happen).
+ */
+async function endYesOrConflict(
+  db: Db,
+  args: { pariwarId: ids.PariwarId; memberId: ids.MemberId; reason: string; revokedAuditId: string; message: string },
+): Promise<void> {
+  const result = await waOptIn.endEveryWaYes(db, {
+    pariwarId: args.pariwarId,
+    memberId: args.memberId,
+    toState: 'REVOKED',
+    reason: args.reason,
+    revokedAuditId: args.revokedAuditId,
+  });
+  if (result.movedOptInId === null && result.consentsRevoked === 0) {
+    throw new ConflictError(args.message, 'wa_opt_in.not_active');
+  }
 }
 
 export function createWaOptInHandlers(deps: AppDeps) {
@@ -109,7 +158,9 @@ export function createWaOptInHandlers(deps: AppDeps) {
           pariwarId,
           memberId: memberIdBranded,
         });
-        if (existing?.state === 'ACTIVE') {
+        // Story 5.12 (LY4) — the newest-row check stays, and ANY `state = 'ACTIVE'` row also refuses (a state read, ⛔ the
+        // window-aware `isOptInActive`); the partial UNIQUE `member_wa_opt_in_active_member_uq` is the DB backstop.
+        if (existing?.state === 'ACTIVE' || (await waOptIn.hasActiveOptIn(scopeTx.tx, { pariwarId, memberId: memberIdBranded }))) {
           throw new ConflictError('You are already opted in to WhatsApp notifications', 'wa_opt_in.already_active');
         }
         if (existing?.state === 'PENDING') {
@@ -201,51 +252,45 @@ export function createWaOptInHandlers(deps: AppDeps) {
       }
     },
 
-    /** DELETE — member-initiated revocation (ACTIVE → REVOKED). Independently revocable (only whatsapp_opt_in). */
+    /**
+     * DELETE — member-initiated withdrawal. Story 5.12 (`-364` conditions 3 + 4; LY7): ends EVERY yes — the ACTIVE row → REVOKED
+     * and every open whatsapp_opt_in consent row revoked; 409 only when there is nothing to end. Independently revocable (only
+     * whatsapp_opt_in).
+     */
     async revoke(request: FastifyRequest): Promise<RevokeWaOptInResponse> {
       const { memberId, pariwarId: pariwarIdStr } = memberCtx(request);
       const pariwarId = ids.pariwarId(pariwarIdStr);
+      const memberIdBranded = ids.memberId(memberId);
+      const message = 'You have no active WhatsApp opt-in to revoke';
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
-        const existing = await waOptIn.getOptInForMember(scopeTx.tx, {
-          pariwarId,
-          memberId: ids.memberId(memberId),
-        });
-        if (!existing || existing.state !== 'ACTIVE') {
-          throw new ConflictError('You have no active WhatsApp opt-in to revoke', 'wa_opt_in.not_active');
-        }
+        const plan = await planWithdrawal(scopeTx.tx, pariwarId, memberIdBranded, message);
 
-        // Audit-or-throw (ADR-0030): intent FIRST (member_app; before ACTIVE, after REVOKED), then consent
-        // revoke + state revoke in ONE scope tx (rolled back together on failure, compensated on the ledger).
+        // Audit-or-throw (ADR-0030): ONE intent line FIRST (member_app), then every yes ended in ONE scope tx (rolled back
+        // together on failure, compensated on the ledger); its id lands on every revoked consent row.
         return await audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: optInAuditIntent({
             pariwarId: pariwarIdStr,
             memberId,
             action: 'member.wa_opt_in_revoked',
             originatingChannel: 'member_app',
-            beforeState: 'ACTIVE',
-            afterState: 'REVOKED',
-            verificationPhrase: existing.verificationPhrase,
+            beforeState: plan.beforeState,
+            afterState: plan.afterState,
+            verificationPhrase: plan.verificationPhrase,
             traceId: request.requestContext.traceId ?? null,
           }),
           mutate: async ({ auditId }) => {
-            if (existing.consentId) {
-              await consent.revokeConsent(scopeTx.tx, {
-                pariwarId,
-                consentId: existing.consentId,
-                reason: 'member revoked WhatsApp opt-in from app settings',
-                revokedAuditId: auditId,
-              });
-            }
-            await waOptIn.revokeOptIn(scopeTx.tx, {
+            await endYesOrConflict(scopeTx.tx, {
               pariwarId,
-              optInId: existing.optInId,
-              toState: 'REVOKED',
+              memberId: memberIdBranded,
+              reason: 'member revoked WhatsApp opt-in from app settings',
+              revokedAuditId: auditId,
+              message,
             });
             ok = true;
-            return { state: 'REVOKED' };
+            return { state: plan.afterState };
           },
         });
       } finally {
@@ -256,8 +301,9 @@ export function createWaOptInHandlers(deps: AppDeps) {
     /**
      * POST /p/:pariwarId/admin/members/:memberId/wa-opt-out — trustee force opt-out (admin_action;
      * trustee defensibility). On the scoped-admin chain [requireAdminSession, scopeResolutionHook,
-     * requirePermissionHook(member.moderate)]; the scope-resolution hook set request.scopeTx. Idempotent —
-     * a member with no ACTIVE opt-in is a 409 (nothing to revoke), never an illegal transition.
+     * requirePermissionHook(member.moderate)]; the scope-resolution hook set request.scopeTx. Story 5.12 (LY7): ends EVERY
+     * yes, as the member DELETE; a member with nothing to end (⛔ ACTIVE row, ⛔ open consent) is a 409, never an illegal
+     * transition.
      */
     async adminOptOut(request: FastifyRequest): Promise<RevokeWaOptInResponse> {
       const scopeTx = request.scopeTx;
@@ -269,16 +315,12 @@ export function createWaOptInHandlers(deps: AppDeps) {
       const { memberId } = request.params as { memberId: string };
       const pariwarId = ids.pariwarId(pariwarIdStr);
 
-      const existing = await waOptIn.getOptInForMember(scopeTx.tx, {
-        pariwarId,
-        memberId: ids.memberId(memberId),
-      });
-      if (!existing || existing.state !== 'ACTIVE') {
-        throw new ConflictError('This member has no active WhatsApp opt-in to revoke', 'wa_opt_in.not_active');
-      }
+      const memberIdBranded = ids.memberId(memberId);
+      const message = 'This member has no active WhatsApp opt-in to revoke';
+      const plan = await planWithdrawal(scopeTx.tx, pariwarId, memberIdBranded, message);
 
-      // Audit-or-throw (ADR-0030): intent FIRST (admin_action; actor = the admin user; before ACTIVE, after
-      // REVOKED), then consent revoke + state revoke (compensated on failure).
+      // Audit-or-throw (ADR-0030): ONE intent line FIRST (admin_action; actor = the admin user), then every yes ended
+      // (compensated on failure).
       return audit.withCompensatingAudit(deps.servicePool, {
         auditIntent: {
           pariwarId: pariwarIdStr,
@@ -289,27 +331,21 @@ export function createWaOptInHandlers(deps: AppDeps) {
           requestPayloadHash: waOptIn.waOptInAuditPayloadHash({
             originatingChannel: 'admin_action',
             memberId,
-            verificationPhrase: existing.verificationPhrase,
-            beforeState: 'ACTIVE',
-            afterState: 'REVOKED',
+            verificationPhrase: plan.verificationPhrase,
+            beforeState: plan.beforeState,
+            afterState: plan.afterState,
           }),
           traceId: request.requestContext.traceId ?? null,
         },
         mutate: async ({ auditId }) => {
-          if (existing.consentId) {
-            await consent.revokeConsent(scopeTx.tx, {
-              pariwarId,
-              consentId: existing.consentId,
-              reason: 'trustee force opt-out (admin action)',
-              revokedAuditId: auditId,
-            });
-          }
-          await waOptIn.revokeOptIn(scopeTx.tx, {
+          await endYesOrConflict(scopeTx.tx, {
             pariwarId,
-            optInId: existing.optInId,
-            toState: 'REVOKED',
+            memberId: memberIdBranded,
+            reason: 'trustee force opt-out (admin action)',
+            revokedAuditId: auditId,
+            message,
           });
-          return { state: 'REVOKED' };
+          return { state: plan.afterState };
         },
       });
     },

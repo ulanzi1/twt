@@ -1550,7 +1550,8 @@ registry.registerPath({
   summary: 'Read the member’s current WhatsApp opt-in status',
   description:
     'Returns the member’s current opt-in state (null when never opted in) + whether the toggle is ' +
-    'available (WA enabled + number) + the deep-link/phrase (PENDING) or window expiry (ACTIVE).',
+    'available (WA enabled + number) + the deep-link/phrase (PENDING) or, while ACTIVE, Meta’s free-form ' +
+    'window end (windowExpiresAt — not the opt-in’s end: an ACTIVE opt-in lasts until withdrawn).',
   tags: waOptInTags,
   responses: {
     200: { description: 'Opt-in status', content: jsonOf(waOptInComponents.WaOptInStatusResponse) },
@@ -1563,14 +1564,15 @@ registry.registerPath({
   path: '/api/v1/member/wa-opt-in',
   summary: 'Revoke the member’s active WhatsApp opt-in (independently revocable)',
   description:
-    'Member-initiated revocation of an ACTIVE opt-in — disables WA delivery immediately, touching ONLY ' +
-    'the whatsapp_opt_in consent. 409 when there is no ACTIVE opt-in. Re-opt-in requires a new WhatsApp ' +
-    'message (no inferred re-consent).',
+    'Member-initiated withdrawal — ends every WhatsApp yes the member gave: the ACTIVE opt-in (if any) is ' +
+    'revoked and every open whatsapp_opt_in consent row is revoked, disabling WA delivery immediately and ' +
+    'touching ONLY the whatsapp_opt_in consent. 409 only when there is nothing to end: no ACTIVE opt-in and ' +
+    'no open whatsapp_opt_in consent. Re-opt-in requires a new WhatsApp message (no inferred re-consent).',
   tags: waOptInTags,
   responses: {
     200: { description: 'Opt-in revoked', content: jsonOf(waOptInComponents.RevokeWaOptInResponse) },
     401: waOptInAuth,
-    409: errorResponse('No active opt-in to revoke'),
+    409: errorResponse('Nothing to end: no ACTIVE opt-in and no open whatsapp_opt_in consent'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -1579,10 +1581,11 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/admin/members/{memberId}/wa-opt-out',
   summary: 'Trustee force opt-out of a member’s WhatsApp opt-in (admin_action)',
   description:
-    'Scoped-admin force opt-out of a member’s ACTIVE WhatsApp opt-in (trustee defensibility). Gated by the ' +
+    'Scoped-admin force opt-out of a member’s WhatsApp opt-in (trustee defensibility) — ends every yes the ' +
+    'member gave (the ACTIVE opt-in, if any, and every open whatsapp_opt_in consent row). Gated by the ' +
     'existing member.moderate permission [requireAdminSession, scopeResolutionHook, ' +
-    'requirePermissionHook(member.moderate)] — 401 no session, 403 no permission. 409 when the member has ' +
-    'no ACTIVE opt-in.',
+    'requirePermissionHook(member.moderate)] — 401 no session, 403 no permission. 409 only when there is ' +
+    'nothing to end: no ACTIVE opt-in and no open whatsapp_opt_in consent.',
   tags: waOptInTags,
   request: {
     params: z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() }),
@@ -1591,7 +1594,7 @@ registry.registerPath({
     200: { description: 'Opt-in revoked', content: jsonOf(waOptInComponents.RevokeWaOptInResponse) },
     401: waOptInAuth,
     403: errorResponse('Missing member.moderate permission'),
-    409: errorResponse('No active opt-in to revoke'),
+    409: errorResponse('Nothing to end: no ACTIVE opt-in and no open whatsapp_opt_in consent'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

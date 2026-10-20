@@ -211,7 +211,7 @@ Load-bearing details:
   claims more; *"one WhatsApp for each"* (the told item of note (b)) is corrected. The cap's own cost: a Meta outage spanning two
   retries (about a minute) spends the step. A STOP that fails to record is lost (the webhook drain is at-most-once — alarmed, ⛔ retried).
   A SECOND corrective told item is WRITTEN (`trustee-panel-told-2026-10-20c-6-37d-forgery-bound-second-correction.md`) — ⛔ "told" until
-  BigDev sends it.
+  BigDev sends it. ⭐ SENT 2026-10-20 (BigDev: *"report has been sent"*) — the Panel is TOLD.
 - **Performance / cost.** One insert per report on the api; one primary-key lookup and one upsert per report in jobs. No per-request
   secret read.
 - **Failure modes accepted.**

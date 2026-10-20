@@ -54,7 +54,7 @@ rulings 1–6, `-352` Q1 / Q2, `-355` decisions 1–18, `-356` calls 1–3, `-36
 
 # Story 6.37d: When a reminder to the claimant is reported undelivered, the Trust tries WhatsApp four hours later — on the claimant's reworded filing agreement `[PRIMITIVE]`
 
-Status: done — code review ROUND 2 (2026-10-20): all 24 patches applied, the fix-diff review's corrections and Decisions `2026-10-20-370` / `-371` built; `ci:local` 36 / 36 green at `bbc3d401` (P2). GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]]); the corrective Panel "told" item is TOLD (BigDev: *"report has been sent"*, 2026-10-20); Decision `-371` CONFIRMED by BigDev (*"-371 confirmed"*); ⚠ a SECOND corrective told item (`-372`) is WRITTEN, ⛔ sent — BigDev sends it
+Status: done — code review ROUND 2 (2026-10-20): all 24 patches applied, the fix-diff review's corrections and Decisions `2026-10-20-370` / `-371` built; `ci:local` 36 / 36 green at `bbc3d401` (P2). GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]]); the corrective Panel "told" item is TOLD (BigDev: *"report has been sent"*, 2026-10-20); Decision `-371` CONFIRMED by BigDev (*"-371 confirmed"*); the SECOND corrective told item (`-372`) is TOLD (BigDev: *"report has been sent"*, 2026-10-20)
 
 > ## ⭐ `-367` OUTCOME — Task 0, 2026-10-20 (governs every earlier sentence it contradicts; the text below is kept as PROPOSED, ⛔ edited)
 >
@@ -1777,7 +1777,8 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   confirmed, report has been sent"* — `-371` confirmed; the corrective "told" item TOLD (ledger `2026-10-20g`). Then BigDev: *"review it
   and then open pr"* — the second fix-diff review (Debug Log (c)); Decision `-372` (`e94408f5`, alone — the cap bounds COPIES per
   follow-up per chase per claim, ⛔ calls; `-370`'s cost restated); a SECOND corrective told item WRITTEN, ⛔ sent; the LOW code fixes
-  and legs (ledger `2026-10-20h`).
+  and legs (ledger `2026-10-20h`); PR #292 opened. Then BigDev: *"report has been sent"* — the second told item TOLD (ledger
+  `2026-10-20i`).
 - v1.8 (2026-10-20) — "close out R8": the remaining five named legs added, all in live/integration tests, closing R8
   completely. `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` gains the late-correlator leg, the 20:00
   release → 09:00 config-off-finish leg (its own isolated Pariwar — never left the shared `PARIWAR` constant's

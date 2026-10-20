@@ -1,3 +1,10 @@
+# last_updated: 2026-10-20j (STORY 5.12 — CREATED by `bmad-create-story 5-12` on branch `story/5-12-whatsapp-yes-lasts-until-withdrawn`
+# (pinned `ec6d826e`, 6.37d on `main` ⇒ the STOP-path sequencing is MET): row `5-12-whatsapp-yes-lasts-until-withdrawn` `backlog` →
+# `ready-for-dev`. Builds `2026-10-19-364` (option A): the four conditions first (the "expired" words go; the withdraw control for every
+# standing yes; STOP always works; a withdrawal ends EVERY open `whatsapp_opt_in` consent row — one shared function for all four paths),
+# then the read change LAST (`isOptInActive` = ACTIVE, ⛔ clock; the sweep keeps only stale PENDING; a DB trigger refuses ACTIVE→EXPIRED;
+# one ACTIVE per member). LY1–LY12 PROPOSED (author's — §0); LY9 decides `-364` reading (iv): ⛔ restoration — the "told expired"
+# population is EMPTY in production. Numbers named by slug / key only (next free at the pin: `-373`, migration 0177, Row 37). ⛔ Other row moves.)
 # last_updated: 2026-10-20i (STORY 6.37d — BigDev: "report has been sent". The SECOND corrective Panel told item
 # (`trustee-panel-told-2026-10-20c-6-37d-forgery-bound-second-correction.md` — up to two copies per follow-up per reminder per claim; the
 # cap's own cost; a STOP that fails to record; the >8 h residual) is TOLD. PR #292 open. ⛔ Row moves — 6-37d stays done.)
@@ -20544,7 +20551,10 @@ development_status:
   # and row 5-10's signup box all follow. Owns deferred-work's two `-364` items. Its create-story decides (`-364` reading (iv)) what a
   # member told "expired" before the ruling is told now. ⚠ Shares the STOP path in `wa-webhook-processor.ts` with row 6-37d — sequence
   # them. ⛔ Story file; ⛔ epics.md entry.
-  5-12-whatsapp-yes-lasts-until-withdrawn: backlog
+  # ⭐ 2026-10-20 (`bmad-create-story 5-12`, ledger `2026-10-20j`): story file `5-12-whatsapp-yes-lasts-until-withdrawn.md` CREATED
+  # (pinned `ec6d826e`; branch `story/5-12-whatsapp-yes-lasts-until-withdrawn`); LY1–LY12 PROPOSED for BigDev at Task 0.2; the
+  # epics.md entry is owed at Task 0.4. The comment above is kept as written.
+  5-12-whatsapp-yes-lasts-until-withdrawn: ready-for-dev
   epic-5-retrospective: done
 
   # ==========================================================================

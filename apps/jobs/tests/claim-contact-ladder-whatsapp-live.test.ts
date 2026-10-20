@@ -8,12 +8,17 @@
 import { randomUUID } from 'node:crypto';
 
 import { createWhatsappAppCache, type FetchInit, type FetchLike, type SmsAppClient } from '@twt/channels';
-import { claim, cycleCalendar, smsDelivery } from '@twt/domain';
+import { bindScopedDb, claim, cycleCalendar, ids, nominee, schema, smsDelivery, withPariwarScope } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
+import {
+  runCertificateFamilySmsChild,
+  runCertificateReminderSweep,
+  type CertificateFamilySmsPayload,
+} from '../src/scheduler/claim-certificate-reminders.js';
 import { runContactLadderSweep, runCorrectionLadderSmsChild, type LadderSmsPayload } from '../src/scheduler/claim-contact-ladder.js';
 import {
   nextDailyLadderRunOn,
@@ -29,7 +34,7 @@ import {
   type ClaimCorrectionReminderDeps,
   type CorrectionFamilySmsPayload,
 } from '../src/scheduler/claim-correction-reminders.js';
-import { cleanupClaims, seedReturnedClaim, type SeedReturnedClaimOptions } from './_claim-correction-seed.js';
+import { cleanupClaims, encryptField, onOwnTx, seedReturnedClaim, type SeedReturnedClaimOptions } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -233,6 +238,168 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     return { out, results };
   }
 
+  // ── The CERTIFICATE chase's own fixture (Review R8, 2026-10-20) — ported from `claim-contact-ladder-live.test.ts`'s
+  // `seedWait` (itself "6.19d's own fixture, copied"), + a v2 WhatsApp-eligible agreement (that fixture's own payload
+  // carries no `copyVersion`, so WhatsApp would never be eligible on a claim seeded by it alone). A claim at
+  // `verifier_review` with a MISSING (or rejected) certificate — the correction chase's `seedReturnedClaim` bakes in an
+  // ACCEPTED certificate, which makes any certificate run on it self-stop immediately (CR5), so this is a SEPARATE
+  // fixture, not a variant of `seed()`.
+  async function seedCertWait(opts: { readonly mobiles?: readonly string[]; readonly missing?: boolean } = {}) {
+    const cid = ids.claimId(randomUUID());
+    const mid = ids.memberId(randomUUID());
+    const pid = ids.pariwarId(PARIWAR);
+    const mobiles = opts.mobiles ?? ['9812345678'];
+    claims.push(cid);
+    members.push(mid);
+    await onOwnTx(pool, PARIWAR, async (client) => {
+      const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
+        claim.projectClaimState(client, {
+          claimCaseId: cid,
+          pariwarId: pid,
+          deceasedMemberId: mid,
+          intakeChannels: ['member_app'],
+          claimantActorId: null,
+          eventType: eventType as never,
+          payload: { from_state: from, to_state: to, trigger: 'test', actor: 'system', ...extra } as never,
+          actorId: null,
+        });
+      await emit(null, 'intake_pending', 'claim.intake_initiated', { deceased_member_id: mid, intake_channel: 'member_app', claimant_actor_id: null });
+      await emit('intake_pending', 'intake_converged', 'claim.intake_converged');
+      await emit('intake_converged', 'documents_pending', 'claim.documents_received');
+      await emit('documents_pending', 'verification_in_progress', 'claim.peer_mesh_pinged', {
+        selected_member_ids: [randomUUID()],
+        metric_id: 'district_cohort_v1',
+        metric_version: 1,
+      });
+      await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+    });
+    await onOwnTx(pool, PARIWAR, async (client) => {
+      const db = bindScopedDb(client);
+      await db.insert(schema.members).values({ memberId: mid, pariwarId: pid, state: 'active', stateEventVersion: 1 }).onConflictDoNothing();
+      const { ranks } = nominee.deriveNomineeSplit(mobiles.length);
+      const rows = await Promise.all(
+        mobiles.map(async (m, i) => ({
+          rank: ranks[i]!.rank,
+          splitPct: ranks[i]!.splitPct,
+          relationship: i === 0 ? 'spouse' : 'son',
+          nameCiphertext: await encryptField(`Nominee ${String(i + 1)}`, PARIWAR, 'member_nominee', enc),
+          mobileCiphertext: await encryptField(m, PARIWAR, 'member_nominee', enc),
+          addressCiphertext: null,
+        })),
+      );
+      await nominee.replaceMemberNominees(db, { memberId: mid, pariwarId: pid, nominees: rows });
+      const plan = nominee.planDeclarationVersions(await nominee.getNomineeVersionHeads(db, pid, mid), rows.map((r) => r.rank));
+      const appended = await nominee.appendMemberDeclarationVersions(db, {
+        memberId: mid,
+        pariwarId: pid,
+        plan,
+        nominees: rows,
+        recordedAt: new Date('2026-01-05T06:00:00.000Z'),
+        eventVersion: null,
+      });
+      const versions = appended.map((a: { versionId: string }) => a.versionId as string);
+      const [agreement] = await db
+        .insert(schema.consentRecords)
+        .values({
+          subjectId: mid,
+          pariwarId: pid,
+          consentType: 'claim_contact_agreement',
+          consentArtifactRef: cid,
+          grantedViaActor: 'member_self',
+          consentPayload: { checkboxTextShown: 'v2', locale: 'en', copyVersion: claim.CLAIM_CONTACT_AGREEMENT_COPY_VERSION },
+          grantedAt: new Date(Date.now() - 60_000),
+        } as never)
+        .returning({ consentId: schema.consentRecords.consentId });
+      const address = await encryptField('House 1, Fixture Lane', PARIWAR, 'claim_contact', enc);
+      const [contact] = await db
+        .insert(schema.claimContacts)
+        .values({
+          claimCaseId: cid,
+          pariwarId: pid,
+          deceasedMemberId: mid,
+          claimantNomineeVersionId: versions[0] as never,
+          agreementConsentId: agreement!.consentId,
+          contactLocale: 'en',
+          recordedByActor: 'fixture',
+          recordedVia: 'member_app',
+        })
+        .returning({ contactId: schema.claimContacts.contactId });
+      for (const v of versions) {
+        await db.insert(schema.claimContactNominees).values({
+          contactId: contact!.contactId,
+          claimCaseId: cid,
+          pariwarId: pid,
+          nomineeVersionId: v as never,
+          addressCiphertext: address,
+          relationship: null,
+        });
+      }
+      if (opts.missing !== true) {
+        const docId = randomUUID();
+        const uploadId = randomUUID();
+        const key = `pariwar/${pid}/claim/${cid}/death_certificate/${docId}/${uploadId}`;
+        await db.insert(schema.claimDocuments).values({
+          claimDocumentId: docId as never,
+          claimCaseId: cid,
+          pariwarId: pid,
+          documentType: 'death_certificate',
+          storageObjectKey: key,
+          contentType: 'application/pdf',
+          byteSize: 1024,
+          parityOutcome: 'match',
+          parityFlags: {},
+          ocrConfidence: 0.9,
+          verifierReviewRequired: false,
+        });
+        await db.insert(schema.claimDeathCertificateUploads).values({
+          uploadId: uploadId as never,
+          claimCaseId: cid,
+          pariwarId: pid,
+          deceasedMemberId: mid,
+          claimDocumentId: docId as never,
+          storageObjectKey: key,
+          contentType: 'application/pdf',
+          byteSize: 1024,
+          channel: 'member_app',
+          uploadedByActorId: null,
+          uploadedAt: new Date(),
+          parityOutcome: 'match',
+          parityFlags: {},
+          ocrConfidence: 0.9,
+        });
+        await claim.recordDeathCertificateReview(client, {
+          claimCaseId: cid,
+          pariwarId: pid,
+          verdict: 'rejected',
+          certificateToken: uploadId,
+          acceptedDate: null,
+          acceptedDateCiphertext: null,
+          rejectionReason: 'no_date_of_death',
+          noteCiphertext: 'enc:v1:review-note',
+          expectedLiveReviewId: null,
+          actorId: randomUUID(),
+          actorDisplay: 'Test District Admin',
+          actor: 'operator',
+        } as never);
+      }
+    });
+    return { claimCaseId: cid as string, deceasedMemberId: mid as string, pariwarId: PARIWAR };
+  }
+  /** 6.37b's record for a certificate-chase send, through its OWN upsert. */
+  async function reportCertUndelivered(rowId: string, pariwarId: string = PARIWAR) {
+    const { rows } = await pool.query<{ provider_message_id: string }>(`SELECT provider_message_id FROM claim_certificate_reminders WHERE reminder_id = $1`, [rowId]);
+    await smsDelivery.upsertSmsSendDelivery(pool, {
+      pariwarId,
+      kind: 'ce',
+      rowId,
+      requestId: rows[0]!.provider_message_id,
+      state: 'undelivered',
+      statusCode: '2',
+      failureReason: null,
+      receivedAt: new Date(),
+    });
+  }
+
   // ── AC4 / AC5 — the happy path ──────────────────────────────────────────────────────────────────────────────
 
   it('⭐ a reported failure starts the ladder within the quarter hour (⛔ `advance` — SMS 2 by the late-start rule, the step PENDING); 4 h after the origin, inside the window, ONE template goes through the REAL client — the number without `+`, the template name, `en`, the reference and the helpline, the 10 s bound; the row `accepted` with the wamid; ⛔ a second send', async () => {
@@ -430,6 +597,63 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'accepted' });
   });
 
+  // Review R8 (2026-10-20) — AC5's named leg: "a row released at 20:00 whose Pariwar turns WhatsApp off overnight ⇒ the
+  // 09:00 child (a new job id) finishes it `skipped:whatsapp_not_configured`; ⛔ re-selected at 09:15." The marker is set
+  // (committed), THEN 20:00 arrives before the Meta call — `releaseContactLadderWhatsappInFlight` is the exact function
+  // that un-marks it (its own doc: "20:00 IST arrived BETWEEN the marker's commit and the Meta call").
+  it('⭐ R8 — a row released at 20:00 (marked, then un-marked before the Meta call) whose Pariwar turns WhatsApp off overnight: the 09:00 child (a NEW job id) finishes it `skipped:whatsapp_not_configured`, ⛔ re-selected again', async () => {
+    // Its OWN Pariwar — this test turns WhatsApp off mid-test and must never leave the SHARED `PARIWAR` constant
+    // disabled for every test that runs after it in this file.
+    const CONFIGOFF = randomUUID();
+    await pool.query(
+      `INSERT INTO pariwar_wa_config (pariwar_id, enabled, phone_number_id, access_token_secret_name) VALUES ($1, true, 'pnid-live', 'wa-token-live')`,
+      [CONFIGOFF],
+    );
+    const h = harness({ allowlist: [CONFIGOFF] });
+    const a = await dueStep(h, { pariwarId: CONFIGOFF });
+    const before2000 = istAt(day(a.s.day0, 10), '19:55');
+    const sendId = await pool.connect().then(async (c) => {
+      try {
+        await c.query('BEGIN');
+        await c.query(`SELECT set_config('app.pariwar_id', $1, true)`, [a.s.pariwarId]);
+        const r = await claim.beginContactLadderWhatsapp(c, {
+          pariwarId: a.s.pariwarId as never,
+          claimCaseId: a.s.claimCaseId as never,
+          ladderId: a.ladderId,
+          chase: 'correction',
+          jobId: 'job-released',
+          now: before2000,
+          inWindow: true,
+          nextWindowStart: istAt(day(a.s.day0, 11), '09:00'),
+          config: { verdict: 'ok', templateName: TEMPLATE, locale: 'en' },
+          finalAttempt: false,
+          crypto: enc,
+        });
+        await c.query('COMMIT');
+        if (r.kind !== 'begun') throw new Error(r.kind);
+        return r.sendId;
+      } finally {
+        c.release();
+      }
+    });
+    const ref = { pariwarId: a.s.pariwarId as never, sendId, jobId: 'job-released' };
+    const marked = await withPariwarScope(pool, a.s.pariwarId, (db) => claim.markContactLadderWhatsappInFlight(db, { ...ref, leaseMarginMs: 60_000, now: before2000 }));
+    expect(marked).toBe('marked');
+    const released = await withPariwarScope(pool, a.s.pariwarId, (db) => claim.releaseContactLadderWhatsappInFlight(db, ref));
+    expect(released).toBe(true);
+    expect((await sendRowOf(a.ladderId))!.send_started_at).toBeNull();
+    // Overnight — the Pariwar turns WhatsApp off.
+    await pool.query(`UPDATE pariwar_wa_config SET enabled = false WHERE pariwar_id = $1`, [a.s.pariwarId]);
+    h.setNow(istAt(day(a.s.day0, 11), '09:00'));
+    const morning = await waTick(h, a.s, istAt(day(a.s.day0, 11), '09:00'));
+    expect(morning.results).toEqual([{ status: 'skipped', reason: 'whatsapp_not_configured', where: 'row' }]);
+    expect(await sendRowOf(a.ladderId)).toMatchObject({ send_outcome: 'skipped', detail: 'skipped:whatsapp_not_configured' });
+    // ⛔ re-selected at the next (09:15) tick — the row is finished, not `attempting`.
+    const again = await waTick(h, a.s, istAt(day(a.s.day0, 11), '09:15'));
+    expect(again.results).toEqual([]);
+    await pool.query(`DELETE FROM pariwar_wa_config WHERE pariwar_id = $1`, [CONFIGOFF]);
+  });
+
   // ── AC6 — a delivered WhatsApp ends the ladder at the 10:00 sweep ───────────────────────────────────────────
 
   it('⭐ a DELIVERED WhatsApp (the status store\'s `delivered`, copied into the row) ENDS the ladder `delivered:whatsapp` at the next 10:00 sweep — ⛔ SMS 2 goes', async () => {
@@ -510,6 +734,31 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(both.rows.map((r) => r.origin_row_id).sort()).toEqual([freshOrigin, staleOrigin].sort());
   });
 
+  // Review R8 (2026-10-20) — the late-correlator leg AC4 discloses by name: `reported_at` is the GREATEST of the reports'
+  // `received_at` (when WE first received a report), ⛔ when the correlator actually SETTLED the row into `undelivered`.
+  // A report received long ago whose correlator write only lands NOW still carries that old `received_at` — so by the
+  // time the row is visible at all, it can already read as outside the quarter-hourly scan's 2-hour window. One person,
+  // one report: proves the disclosed gap behaves exactly as documented (⛔ started now; the next 10:00 sweep gets it).
+  it('⭐ R8 — the late-correlator leg: a report whose correlator write lands NOW still carries an old `received_at` — if that is already >2h in the past, the quarter-hourly start misses it; the next 10:00 sweep does not', async () => {
+    const h = harness();
+    const s = await seed();
+    const [origin] = await chaseDay(h, s, 10);
+    // The correlator writes the row now, but stamps the report's OWN (old) receipt time — simulating its 2h/6h retry
+    // delay: the report was genuinely RECEIVED three hours ago, the correlator just settled it into `undelivered` late.
+    await pool.query(
+      `INSERT INTO sms_send_deliveries (send_kind, send_row_id, pariwar_id, request_id, delivery_state, status_code, first_reported_at, reported_at)
+       SELECT 'cr', $1, $2, provider_message_id, 'undelivered', '2', now() - interval '3 hours', now() - interval '3 hours'
+         FROM claim_correction_reminders WHERE reminder_id = $1`,
+      [origin, s.pariwarId],
+    );
+    h.setNow(istAt(day(s.day0, 10), '14:30'));
+    await runContactLadderWhatsappSweep(h.wa, boss(h));
+    expect(await ladderOf(s.claimCaseId)).toEqual([]);
+    h.setNow(istAt(day(s.day0, 11), '10:00'));
+    await runContactLadderSweep(h.wa, boss(h));
+    expect((await ladderOf(s.claimCaseId))[0]).toMatchObject({ state: 'running' });
+  });
+
   // ── AC4 — LD13's start tail runs for the quarter-hourly starts ──────────────────────────────────────────────
 
   it('⭐ three ladders started by quarter-hourly ticks in ONE Pariwar on one IST day raise ONE `contact_ladder.burst:3`', async () => {
@@ -523,6 +772,66 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     }
     expect(h.alarms.filter((a) => a.includes('contact_ladder.burst:'))).toHaveLength(1);
     expect(h.alarms.find((a) => a.includes('contact_ladder.burst:'))).toContain('contact_ladder.burst:3');
+  });
+
+  // ── Review R8 (2026-10-20) — the CERTIFICATE chase's own WhatsApp legs (`-351` 3 B) ────────────────────────────
+
+  it('⭐ R8 — CERTIFICATE chase: a reported failure starts the ladder within the quarter hour on the claimant\'s rejected-certificate review; 4 h later, inside the window, ONE template goes through the REAL client; the row `accepted`', async () => {
+    // The harness's DEFAULT resolveConfig only maps the CORRECTION chase's WhatsApp template key — the certificate
+    // chase's distinct `claim_contact.certificate_reminder` key needs its own.
+    const h = harness({
+      resolveConfig: async (key: string) => {
+        if (key.startsWith('sms.dlt.template_id.claim_correction.')) return '64b0c0ffee0123456789a0c1';
+        if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
+        if (key.startsWith('wa.template.claim_contact.correction_reminder.')) return TEMPLATE;
+        if (key.startsWith('wa.template.claim_contact.certificate_reminder.')) return TEMPLATE;
+        return null;
+      },
+    });
+    const w = await seedCertWait();
+    h.setNow(new Date());
+    await runCertificateReminderSweep(h.chase, boss(h));
+    take(h, 'claim.certificate.family_sms', w.claimCaseId);
+    const run = await pool.query<{ day0: string }>(
+      `SELECT to_char(day0, 'YYYY-MM-DD') AS day0 FROM claim_certificate_reminder_runs WHERE claim_case_id = $1 AND ended_at IS NULL`,
+      [w.claimCaseId],
+    );
+    const certDay0 = run.rows[0]!.day0;
+    h.setNow(istAt(day(certDay0, 10), '10:00'));
+    await runCertificateReminderSweep(h.chase, boss(h));
+    for (const e of take(h, 'claim.certificate.family_sms', w.claimCaseId)) {
+      await runCertificateFamilySmsChild(h.chase, e.data as JobEnvelope<CertificateFamilySmsPayload>, randomUUID());
+    }
+    const sent = await pool.query<{ reminder_id: string }>(
+      `SELECT reminder_id FROM claim_certificate_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms' AND outcome = 'accepted' AND sent_on = $2`,
+      [w.claimCaseId, day(certDay0, 10)],
+    );
+    expect(sent.rows).toHaveLength(1);
+    const origin = sent.rows[0]!.reminder_id;
+    await reportCertUndelivered(origin, w.pariwarId);
+    // The quarter-hourly start (⛔ `listLadderCandidateClaims`'s 14-day set — T4): the SAME planner as the daily sweep.
+    h.setNow(istAt(day(certDay0, 10), '10:15'));
+    await runContactLadderWhatsappSweep(h.wa, boss(h));
+    const ladder = await pool.query<{ ladder_id: string; chase: string; whatsapp_step: string; state: string; origin_row_id: string }>(
+      `SELECT ladder_id, chase, whatsapp_step, state, origin_row_id FROM claim_contact_ladders WHERE claim_case_id = $1`,
+      [w.claimCaseId],
+    );
+    expect(ladder.rows).toEqual([{ ladder_id: ladder.rows[0]!.ladder_id, chase: 'certificate', whatsapp_step: 'pending', state: 'running', origin_row_id: origin }]);
+    // 4 h after the origin, inside the window: the step is due — the CR7 pre-lock hashes taken, the real client sends.
+    await pool.query(`UPDATE claim_certificate_reminders SET created_at = clock_timestamp() - make_interval(hours => 5) WHERE reminder_id = $1`, [origin]);
+    h.setNow(istAt(day(certDay0, 10), '14:30'));
+    await runContactLadderWhatsappSweep(h.wa, boss(h));
+    const liveResults = [];
+    for (const e of take(h, WA_SEND, w.claimCaseId)) {
+      liveResults.push(await runContactLadderWhatsappChild(h.wa, boss(h), e.data as JobEnvelope<ContactLadderWhatsappPayload>, `job-${randomUUID()}`, { retryCount: 0, retryLimit: 4 }));
+    }
+    expect(liveResults).toEqual([{ status: 'sent', outcome: 'accepted' }]);
+    const sendRow = await pool.query<{ send_outcome: string; chase: string; provider_message_id: string | null }>(
+      `SELECT send_outcome, chase, provider_message_id FROM claim_contact_wa_sends WHERE ladder_id = $1`,
+      [ladder.rows[0]!.ladder_id],
+    );
+    expect(sendRow.rows[0]).toMatchObject({ send_outcome: 'accepted', chase: 'certificate' });
+    expect(sendRow.rows[0]!.provider_message_id).not.toBeNull();
   });
 
   it('WS6 — the next daily run: today before 10:00 IST, else tomorrow', () => {

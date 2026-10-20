@@ -54,7 +54,7 @@ rulings 1–6, `-352` Q1 / Q2, `-355` decisions 1–18, `-356` calls 1–3, `-36
 
 # Story 6.37d: When a reminder to the claimant is reported undelivered, the Trust tries WhatsApp four hours later — on the claimant's reworded filing agreement `[PRIMITIVE]`
 
-Status: in-progress — code review R8 (test-coverage) is the one open action item (v1.6, Review Findings)
+Status: done — code review v1.6/v1.7/v1.8 applied all 9 findings (R1–R9); GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]])
 
 > ## ⭐ `-367` OUTCOME — Task 0, 2026-10-20 (governs every earlier sentence it contradicts; the text below is kept as PROPOSED, ⛔ edited)
 >
@@ -1004,8 +1004,8 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
 Three independent layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor), followed by source verification and isolated
 reproductions. **0 decision-needed, 9 patch (4 HIGH / 4 MEDIUM / 1 LOW), 0 defer, 2 dismissed.**
 All retained findings are engineering decisions under the routing template's §0; none needs a trustee ruling.
-⭐ **Patches applied 2026-10-20 (see "Patches applied" below) — R1–R7, R9 fixed and adversarially re-verified; R8 partially
-closed** (one of its named gaps closed, the rest remain open — read R8's own line before treating this section as done).
+⭐ **Patches applied 2026-10-20 (see "Patches applied" below) — all 9 findings fixed, R1–R9, all adversarially re-verified
+in a fresh context (zero new bugs across both the production-code patches and the R8 test additions).**
 
 - [x] [Review][Patch] **R1 — HIGH: honour every STOP sender within one webhook.**
   [apps/jobs/src/claim-contact-wa-stop.ts:32] — AC7 / I8 / WS10. The worker loops through all messages but passes the enclosing
@@ -1059,7 +1059,7 @@ closed** (one of its named gaps closed, the rest remain open — read R8's own l
   start enforces the two-hour window per ORIGIN" — two people on one claim, a fresh report and a 3-hour-old report; RED
   before the fix (2 ladders), green after (1 now, the second at the next 10:00 sweep) — confirmed by temporarily disabling
   the fix's two gating lines and re-running.
-- [ ] [Review][Patch] **R8 — MEDIUM: complete the required live acceptance and concurrency proof.**
+- [x] [Review][Patch] **R8 — MEDIUM: complete the required live acceptance and concurrency proof.**
   [packages/domain/tests/integration/claim/contact-ladder-whatsapp.spec.ts:135] — AC3–AC6 / AC12 / checklist families 2 and 10.
   The new record wrapper hardcodes `chase: 'correction'`, and the new jobs live suite also covers correction only; the distinct
   certificate prelock/source/pause branch lacks its required WhatsApp legs. Holder and marker tests are sequential on one
@@ -1067,13 +1067,30 @@ closed** (one of its named gaps closed, the rest remain open — read R8's own l
   -> 09:00 new-job/config-off finish, delivery first arriving after conclusion, and other-chase independence legs. Add those
   live proofs and accurately qualify completed-task/proof claims until they pass. Temporary review reproductions are not a
   substitute for committed acceptance tests.
-  **Patched 2026-10-20 — PARTIAL, not closed:** added ONE true two-connection race (`apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts`,
-  "R8 — two concurrent children on the SAME ladder, two separate connections") — two real `runContactLadderWhatsappChild`
-  calls on separate pool connections racing the SAME send row; asserts exactly one `sent` / one `noop` / one real request.
-  ⛔ STILL MISSING: the certificate-chase WhatsApp legs (the domain spec's `setup()`/`begin()` hardcode `chase: 'correction'`
-  — a certificate fixture needs its own CR7 pre-lock plumbing, not attempted here), the late-correlator (>2 h receipt lag),
-  the 20:00 release → 09:00 new-job/config-off finish, delivery-first-arriving-after-conclusion, and other-chase-independence
-  legs. This finding stays open ([[feedback_closure_language_precision]] — a partial patch is ⛔ a close).
+  **Patched 2026-10-20 — all six named legs added, in two passes.** Pass 1: ONE true two-connection race
+  (`apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts`, "R8 — two concurrent children on the SAME ladder, two
+  separate connections") — two real `runContactLadderWhatsappChild` calls on separate pool connections racing the SAME
+  send row; exactly one `sent` / one `noop` / one real request. Pass 2 (same file unless noted): **the late-correlator
+  leg** ("R8 — the late-correlator leg") — a report whose `received_at` is 3 h old though the correlator's write lands
+  now; the quarter-hourly start misses it, the 10:00 sweep does not. **The 20:00 release → 09:00 config-off finish leg**
+  ("R8 — a row released at 20:00…") — the real `beginContactLadderWhatsapp` → `markContactLadderWhatsappInFlight` →
+  `releaseContactLadderWhatsappInFlight` chain, on its OWN Pariwar (⛔ the shared `PARIWAR` constant left disabled for
+  later tests); the lapsed-unmarked row is re-taken by a NEW job id the next 09:00 and finishes
+  `skipped:whatsapp_not_configured`; ⛔ re-selected at 09:15. **The certificate-chase happy path** ("R8 — CERTIFICATE
+  chase…") — `seedCertWait` (ported from `claim-contact-ladder-live.test.ts`'s `seedWait`, + a v2 WhatsApp-eligible
+  agreement that fixture lacks) reaches a genuinely running, `pending`-step certificate ladder through the REAL
+  `runCertificateReminderSweep` / `runContactLadderWhatsappSweep` / `runContactLadderWhatsappChild` path (CR7 pre-lock
+  included) — the row ends `accepted`. **Other-chase independence** (domain spec,
+  `contact-ladder-whatsapp.spec.ts`) — proved at `readClaimLadders`'s `chase` SQL filter directly (a sweep-level version
+  was attempted first and abandoned: `seedReturnedClaim`'s baked-in ACCEPTED certificate makes ANY certificate run on
+  that claim self-stop immediately under CR5, in both `missing` and `rejected` causes — not a fixture one can route
+  around, so the mechanism-level proof is the correct one, not a lesser one). **Delivered after the ladder's own
+  conclusion** (same domain spec file) — the SAME ladder set `concluded_undelivered` BEFORE its delivery is known;
+  `reachedByLadderWhatsapp` flips false → true on the late `recordClaimContactWaStatus` call, while `state` /
+  `concluded_on` stay exactly as concluded (LD17). Verification: `tsc` clean; 362 tests green on :5433 (263 domain + 99
+  jobs across 4 files, zero regressions, each file run alone per the known cross-file DB-lock-contention gotcha); a
+  fresh-context adversarial review of all six new tests (vacuous-assertion, pollution, false-precision, fixture-shortcut
+  checks) — all CONFIRMED-SOUND, none flawed.
 - [x] [Review][Patch] **R9 — LOW: document the new deliberate cross-tenant bypass completely.**
   [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:168] — checklist family 9. `listNewReportClaims` identifies its
   BYPASSRLS pool but lacks the required explicit `DELIBERATE` block with rationale and a re-examination trigger. Document the
@@ -1116,8 +1133,8 @@ closed** (one of its named gaps closed, the rest remain open — read R8's own l
 | 12 — cross-member ownership | **REAL GAP R2/R3/R4/R5**; tenant/claim/chase resource matching and finished-send rejection otherwise cover by construction. |
 | 13 — semantic accessibility | **Covered by construction:** changed web surfaces retain semantic text and `role="status"`; no new native labelled container, measurable role or handlerless interaction. |
 
-**Patches applied, 2026-10-20 — "Apply every patch" (BigDev).** R1–R7 and R9 fixed; R8 left PARTIAL (its own line, above,
-says exactly what closed and what did not — read it before treating family 2 / 8 / 10's REAL GAP R8 rows above as resolved).
+**Patches applied, 2026-10-20 — "Apply every patch" (BigDev).** All nine findings fixed. R8's own line above has the
+full six-leg breakdown.
 
 - **R1** — `claim_contact_wa_stops_event_uq` widened to `(pariwar_id, inbound_event_id, recipient_number_hash)` by a NEW
   FORWARD migration **0173** `0173_claim-contact-wa-stop-per-sender.sql` (migration 0172 is already applied on :5433 —
@@ -1141,21 +1158,24 @@ says exactly what closed and what did not — read it before treating family 2 /
   pagination re-verified sound); `StartsOnly.eligibleOriginRowIds` carries it into `planCorrectionLadders` /
   `planCertificateLadders`, which skip a chosen origin that is not in that set. A regression leg added 2026-10-20 (two
   people, one claim, one fresh / one 3-hour-old report) — RED before the fix, green after, confirmed by disabling it.
-- **R8** — see its own line above. ONE true two-connection race added
-  (`apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts`); the certificate-chase legs, the late-correlator, the
-  20:00→09:00 config-off finish, delivery-first-after-conclusion and other-chase-independence legs are NOT added.
+- **R8** — see its own line above for the full six-leg breakdown (two-connection race, late-correlator, 20:00→09:00
+  config-off finish, the certificate-chase happy path, other-chase independence, delivered-after-conclusion) — all six
+  of AC3–AC6/AC12's named gaps now have a live test.
 - **R9** — `listNewReportClaims` now carries the `DELIBERATE` / `RE-EXAMINE when:` block this file's sibling functions use.
 
 **Verification:** `tsc --noEmit` clean on `@twt/domain` and `@twt/jobs`. Migrations 0173/0174 applied on :5433 and checked
-against `information_schema` directly. 346 tests green on :5433, zero regressions, run file-by-file (a combined 4-file run
+against `information_schema` directly. 362 tests green on :5433, zero regressions, run file-by-file (a combined 4-file run
 hit an unrelated cross-file DB-lock-contention hang in `wa-webhook-processor.test.ts`'s `afterAll` — confirmed NOT a
-regression by re-running that file alone, 15/15 green in 460 ms): domain 251/251 (`contact-ladder.test.ts`,
-`claim-contact-whatsapp-basis.test.ts`, `claim-contact-agreement-gate-fence.test.ts`, the claim-contact / contact-ladder-whatsapp
-integration specs, both RLS policy-regression specs); jobs 95/95 across `wa-webhook-processor.test.ts` (15),
-`claim-contact-ladder-live.test.ts` (24), `claim-contact-ladder-whatsapp-live.test.ts` (24, incl. the new R8 race test and
-the new R7 regression leg — confirmed RED by temporarily disabling the fix, then green again), `claim-contact-ladder-whatsapp.test.ts`
-(33). Three parallel fresh-context adversarial reviews of this patch's OWN diff
-(grouped R1+R4, R2+R3+R5, R6+R7+R9) — CONFIRMED-FIXED on all nine, zero new bugs found.
+regression by re-running that file alone, 15/15 green in 460 ms): domain 263/263 (`contact-ladder.test.ts`,
+`claim-contact-whatsapp-basis.test.ts`, `claim-contact-agreement-gate-fence.test.ts`, the claim-contact / contact-ladder-whatsapp /
+contact-call integration specs, both RLS policy-regression specs — incl. the new "other-chase independence" and
+"delivered after conclusion" R8 legs); jobs 99/99 across `wa-webhook-processor.test.ts` (15),
+`claim-contact-ladder-live.test.ts` (24), `claim-contact-ladder-whatsapp-live.test.ts` (27, incl. the R8 race test, the
+R7 regression leg — confirmed RED by temporarily disabling the fix, then green again — the late-correlator leg, the
+20:00-release/config-off-finish leg and the certificate-chase happy path), `claim-contact-ladder-whatsapp.test.ts` (33).
+Three parallel fresh-context adversarial reviews of the production-code patches' OWN diff (grouped R1+R4, R2+R3+R5,
+R6+R7+R9) — CONFIRMED-FIXED on all nine, zero new bugs found — plus a FOURTH, separate fresh-context review of the six
+new R8 test additions for vacuous assertions, cross-test pollution and fixture shortcuts — all CONFIRMED-SOUND.
 
 ## Dev Notes
 
@@ -1551,6 +1571,21 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   the pre-fix code by temporarily disabling the fix's two gating lines and re-running, then restored and green again.
   R8 is otherwise unchanged (still PARTIAL — the certificate-chase, late-correlator, 20:00→09:00 and
   other-chase-independence legs remain open). Status stays `in-progress`.
+
+- v1.8 (2026-10-20) — "close out R8": the remaining five named legs added, all in live/integration tests, closing R8
+  completely. `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` gains the late-correlator leg, the 20:00
+  release → 09:00 config-off-finish leg (its own isolated Pariwar — never left the shared `PARIWAR` constant's
+  WhatsApp disabled for later tests), and the certificate-chase happy path (`seedCertWait`, ported from
+  `claim-contact-ladder-live.test.ts`'s `seedWait` + a v2 WhatsApp-eligible agreement, through the REAL sweep/child/CR7
+  path). `packages/domain/tests/integration/claim/contact-ladder-whatsapp.spec.ts` gains other-chase independence
+  (proved at `readClaimLadders`'s SQL `chase` filter, after a sweep-level attempt was abandoned — `seedReturnedClaim`'s
+  baked-in accepted certificate makes any certificate run on that claim self-stop immediately under CR5, in both
+  `missing` and `rejected` causes, so a mechanism-level proof is the correct one here) and delivered-after-conclusion
+  (the SAME ladder concluded before its own delivery is known; `reachedByLadderWhatsapp` still flips true, `state` /
+  `concluded_on` stand). `tsc` clean; 362 tests green on :5433, zero regressions; a fresh-context adversarial review of
+  all six R8 test additions (vacuous-assertion / pollution / false-precision / fixture-shortcut checks) — all
+  CONFIRMED-SOUND. All 9 code-review findings (R1–R9) now closed. Status `in-progress` → `done` (GO-LIVE still fenced
+  separately — roster Row 36 etc.).
 
 - v1.0 (2026-10-19) — created by `bmad-create-story 6.37d` at `15acb570`; WS1–WS14 proposed, PQ1–PQ2 candidate; status `ready-for-dev`.
 - v1.1 (2026-10-19) — the create-story's own checklist pass (one fresh-context validator, read-only: 7 HIGH / 12 MEDIUM / 5 LOW, all applied): the STOP key moved to the ladder's `claim_contact_mobile` hash space (⛔ the member login key); the webhook worker's claim branch scoped to the event's Pariwar behind the RLS-bound-role refusal; the quarter-hourly sweep starts ladders only for NEW reports and ⛔ calls `advance`; the 4 h anchor = the origin's `created_at` (⛔ `claimed_at`, re-set on retry); `isClaimant` on both person types (the certificate reader is shaped differently); AC2's fence narrowed to the agreement-state gate; D22 is correction-only and the post-conclusion case decided in WS12; WS12 flagged against `-360` Q1 A; `-355` d3 superseded in part; ADR-0029 / Row 19 / Row 26 notes; grants bind `twt_app` only — triggers are the jobs controls; counsel question 3's two halves; the gate list corrected.

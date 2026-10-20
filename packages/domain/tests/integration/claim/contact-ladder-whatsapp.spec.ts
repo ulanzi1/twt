@@ -23,6 +23,7 @@ import {
   listDueContactLadderWhatsapp,
   markContactLadderWhatsappInFlight,
   noteContactLadderWhatsappTransient,
+  readClaimLadders,
   readClosureReach,
   readContactLadder,
   recordClaimContactWaStatus,
@@ -517,6 +518,78 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       const p = await reach();
       expect(p.reachedBySms).toBe(false);
       expect([p.reachedByLadderWhatsapp, p.reached]).toEqual([true, true]);
+    });
+
+    // Review R8 (2026-10-20) — other-chase independence. `readClaimLadders` filters `chase` at the SQL level (a hard
+    // `eq()`, not a runtime branch), so a correction ladder's delivery / end sequence structurally cannot reach a
+    // certificate ladder of the SAME claim and person — proved directly rather than through the sweep (which would
+    // additionally exercise the certificate chase's OWN, unrelated stop/pause rules — see the story's Review Findings,
+    // R8, for why a sweep-level version of this leg was abandoned).
+    it('⭐ R8 — other-chase independence: a DELIVERED correction WhatsApp ends ITS ladder; a certificate ladder of the SAME claim/person is read-filtered out of the correction view and never touched', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      const r = begun(await begin(client, s));
+      const db = bindScopedDb(client);
+      const ref = { pariwarId: PARIWAR_A, sendId: r.sendId, jobId: 'job-1' };
+      await markContactLadderWhatsappInFlight(db, { ...ref, leaseMarginMs: 60_000, now: new Date() });
+      await finaliseContactLadderWhatsapp(client, { ...ref, outcome: 'accepted', providerMessageId: 'wamid.OTHERCHASE' });
+      // A running CERTIFICATE ladder for the SAME claim and person — chase is the only difference.
+      await asSuperuser(client, () =>
+        client.query(
+          `INSERT INTO claim_contact_ladders (pariwar_id, claim_case_id, chase, run_id, person_key, recipient_number_hash,
+             origin_row_id, origin_sent_on, whatsapp_step, sms2_due_on)
+           VALUES ($1, $2, 'certificate', gen_random_uuid(), $3, $4, gen_random_uuid(), $5, 'pending', $6)`,
+          [PARIWAR_A, s.c.cid, s.c.person.personKey, s.hash, s.c.day0, addCalendarDays(s.c.day0, 2)],
+        ),
+      );
+      await recordClaimContactWaStatus(db, { pariwarId: PARIWAR_A, wamid: 'wamid.OTHERCHASE', status: 'delivered', errorCode: null });
+      await asSuperuser(client, () =>
+        client.query(`UPDATE claim_contact_ladders SET state = 'ended_delivered', ended_at = now(), end_detail = 'delivered:whatsapp' WHERE ladder_id = $1`, [s.ladderId]),
+      );
+      const correctionLadders = await readClaimLadders(db, PARIWAR_A, s.c.cid, 'correction');
+      expect(correctionLadders.map((l) => l.ladderId)).toEqual([s.ladderId]);
+      expect(correctionLadders[0]!.state).toBe('ended_delivered');
+      const certificateLadders = await readClaimLadders(db, PARIWAR_A, s.c.cid, 'certificate');
+      expect(certificateLadders).toHaveLength(1);
+      expect(certificateLadders[0]!.ladderId).not.toBe(s.ladderId);
+      expect(certificateLadders[0]!.state).toBe('running'); // untouched by the correction ladder's delivery / end
+    });
+
+    // Review R8 (2026-10-20) — AC6's named leg: "a WhatsApp delivered after conclusion counts" (D22 reads the send
+    // row's OWN `delivered_at` "whatever the ladder's state" — WS12), paired with LD17: a late delivery leaves the
+    // CONCLUSION and letter-eligibility exactly as already decided — it is ⛔ reverted. Distinct from the EXISTING D22
+    // leg above (a SECOND ladder in the same epoch concluding undelivered): here it is the SAME ladder, concluded
+    // BEFORE its own delivery is known.
+    it('⭐ R8 — a WhatsApp delivered AFTER the ladder\'s OWN conclusion still counts for D22; the conclusion itself is ⛔ reverted (LD17)', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      const r = begun(await begin(client, s));
+      const db = bindScopedDb(client);
+      const ref = { pariwarId: PARIWAR_A, sendId: r.sendId, jobId: 'job-1' };
+      await markContactLadderWhatsappInFlight(db, { ...ref, leaseMarginMs: 60_000, now: new Date() });
+      await finaliseContactLadderWhatsapp(client, { ...ref, outcome: 'accepted', providerMessageId: 'wamid.LATE' });
+      // The ladder CONCLUDES undelivered — nobody has heard back from Meta yet (the send row's delivered_at is NULL).
+      await asSuperuser(client, () =>
+        client.query(
+          `UPDATE claim_contact_ladders
+              SET state = 'concluded_undelivered', ended_at = now(), concluded_on = $2,
+                  sms2_state = 'satisfied', sms2_on = $2, sms3_due_on = $2, sms3_state = 'satisfied', sms3_on = $2, conclude_on = $2
+            WHERE ladder_id = $1`,
+          [s.ladderId, s.c.day0],
+        ),
+      );
+      const reach = async () => {
+        const chase = await resolveCorrectionChase(tx, PARIWAR_A, s.c.cid, { crypto: ENC });
+        return (await readClosureReach(tx, PARIWAR_A, s.c.cid, chase)).people.find((p) => p.personKey === s.c.person.personKey)!;
+      };
+      expect((await reach()).reachedByLadderWhatsapp).toBe(false); // concluded, ⛔ delivered yet
+      // The delivery arrives LATE — after the ladder already concluded.
+      await recordClaimContactWaStatus(db, { pariwarId: PARIWAR_A, wamid: 'wamid.LATE', status: 'delivered', errorCode: null });
+      expect((await reach()).reachedByLadderWhatsapp).toBe(true); // still counts, WHATEVER the ladder's state
+      const ladderRow = await client.query<{ state: string; concluded_on: string }>(`SELECT state, to_char(concluded_on, 'YYYY-MM-DD') AS concluded_on FROM claim_contact_ladders WHERE ladder_id = $1`, [
+        s.ladderId,
+      ]);
+      expect(ladderRow.rows[0]).toEqual({ state: 'concluded_undelivered', concluded_on: s.c.day0 }); // the conclusion stands — ⛔ reverted
     });
   });
 });

@@ -640,14 +640,14 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
     barrel (`export *`).
   - [x] 1.3 Integration legs on :5433: AC3's legacy seed by INSERT (⛔ UPDATE — the trigger lands in Task 5 and would refuse it); the
     double-operation leg (F25).
-- [ ] **Task 2 — The worker (AC3, AC4, AC8; LY6, LY8)**
-  - [ ] 2.1 The member STOP half → LY6: per-member try + per-member `deps.db.transaction`; audit first; compensating `_rolled_back` on
+- [x] **Task 2 — The worker (AC3, AC4, AC8; LY6, LY8)**
+  - [x] 2.1 The member STOP half → LY6: per-member try + per-member `deps.db.transaction`; audit first; compensating `_rolled_back` on
     failure (the P1 pattern in `revokeActiveOptIn`); one retry; then `wa_opt_in.stop_unrecorded` via `deps.onAlarm` (ids only). The claim
     half and its position are ⛔ touched. The optional punctuation strip if chosen.
-  - [ ] 2.2 `revokeActiveOptIn` → calls `endEveryWaYes`; the block path → `'BLOCKED_BY_META'`, gated per LY8 (option (a): the new
+  - [x] 2.2 `revokeActiveOptIn` → calls `endEveryWaYes`; the block path → `'BLOCKED_BY_META'`, gated per LY8 (option (a): the new
     member-only `isMemberConsentBlock` at `:460`; `WA_BLOCK_ERROR_CODES` / `isBlock` byte-unchanged). Date the RE-EXAMINE comment `:438-443`
     and the header comment `:265-270` (*"Row 5-12 (`-364`) will widen the MEMBER half below"* — now done).
-  - [ ] 2.3 Legs: AC4 (a)–(h); AC3's STOP and block legs (incl. the three non-consent codes); 6.37d leg (c) re-titled (dated comment);
+  - [x] 2.3 Legs: AC4 (a)–(h); AC3's STOP and block legs (incl. the three non-consent codes); 6.37d leg (c) re-titled (dated comment);
     under LY8 (a) the claim-isolation legs `wa-webhook-processor.test.ts:358`, `:374-382`, `:391-397` RE-CODED to 131050 (and their
     `failure_code` asserts `:360`, `:380`) and the member
     control `:384-389` flipped (+ a 131026 ⇒ ACTIVE companion), each with a dated comment (AC8).

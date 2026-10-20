@@ -273,13 +273,16 @@ describe.skipIf(!hasDatabase)('wa-webhook-processor — the claim-contact branch
     expect(await stateOf(optInId)).toBe('REVOKED');
   });
 
-  it('⭐ (c) an EXPIRED member: the claim stop is recorded; the member row is as `main` stands (row 5-12 will change it under `-364` condition 3)', async () => {
+  // 2026-10-21 Story 5.12 (`-364` condition 3; AC4 (c)) — re-titled, ⛔ deleted: row 5-12 widened the member half, and an EXPIRED row
+  // seeded with ⛔ consent (as here) has nothing to end ⇒ the member half is a no-op (⛔ member audit). The legacy EXPIRED row WITH an
+  // open consent is AC4 (b) (wa-opt-in-lasting-yes.test.ts — it needs its own consent seed).
+  it('⭐ (c) an EXPIRED member with ⛔ consent: the claim stop is recorded; the member half has nothing to end (5.12 AC4 (c) — ⛔ write, ⛔ member audit)', async () => {
     const pid = await pariwar();
     const optInId = await optIn(pid, 'EXPIRED_24H_WINDOW');
-    const before = await stateOf(optInId);
     await process(pid, inbound('stop'));
     expect(await stopsOf(pid)).toHaveLength(1);
-    expect(await stateOf(optInId)).toBe(before);
+    expect(await stateOf(optInId)).toBe('EXPIRED_24H_WINDOW');
+    expect(await auditCount(pid, 'member.wa_opt_in_revoked')).toBe(0);
   });
 
   it('⭐ R1 — ONE inbound event batching STOPs from TWO senders records TWO stops (one per sender hash); a replay of that event records ⛔ more', async () => {
@@ -355,9 +358,11 @@ describe.skipIf(!hasDatabase)('wa-webhook-processor — the claim-contact branch
         },
       ],
     });
-    await process(pid, rotated('wamid.ROTATED-BLOCK', 'failed', 131026));
+    // 2026-10-21 Story 5.12 (LY8 (a); AC8) — RE-CODED 131026 → 131050: 131026 no longer ends a member yes, so this leg would pass
+    // VACUOUSLY; 131050 still would, so the ACTIVE assert still proves the claim keeps the block.
+    await process(pid, rotated('wamid.ROTATED-BLOCK', 'failed', 131050));
     expect(await stateOf(optInId)).toBe('ACTIVE');
-    expect(await statusRow(blocked)).toMatchObject({ failure_code: '131026' });
+    expect(await statusRow(blocked)).toMatchObject({ failure_code: '131050' });
     await process(pid, rotated('wamid.ROTATED-DELIVERED', 'delivered'));
     expect((await statusRow(delivered)).delivered_at).not.toBeNull();
   });
@@ -375,24 +380,35 @@ describe.skipIf(!hasDatabase)('wa-webhook-processor — the claim-contact branch
     const pid = await pariwar();
     const optInId = await optIn(pid, 'ACTIVE');
     const sendId = await claimSend(pid, { wamid: 'wamid.CLAIM-BLOCK' });
-    await process(pid, statusPayload('wamid.CLAIM-BLOCK', 'failed', 131026));
+    // 2026-10-21 Story 5.12 (LY8 (a); AC8) — RE-CODED 131026 → 131050 (non-vacuous: only 131050 still ends a member yes).
+    await process(pid, statusPayload('wamid.CLAIM-BLOCK', 'failed', 131050));
     expect(await stateOf(optInId)).toBe('ACTIVE');
-    expect(await statusRow(sendId)).toMatchObject({ failure_code: '131026' });
+    expect(await statusRow(sendId)).toMatchObject({ failure_code: '131050' });
     expect((await statusRow(sendId)).failed_at).not.toBeNull();
   });
 
-  it('the SAME status for a MEMBER-only wamid still blocks as today', async () => {
+  // 2026-10-21 Story 5.12 (LY8 (a); AC8) — FLIPPED to 131050 (131026 would now turn this control RED: it ends ⛔ member yes), with
+  // a 131026 ⇒ ACTIVE companion.
+  it('the SAME status for a MEMBER-only wamid still blocks (131050 — the one consent code since 5.12)', async () => {
     const pid = await pariwar();
     const optInId = await optIn(pid, 'ACTIVE');
-    await process(pid, statusPayload('wamid.MEMBER-ONLY', 'failed', 131026));
+    await process(pid, statusPayload('wamid.MEMBER-ONLY', 'failed', 131050));
     expect(await stateOf(optInId)).toBe('BLOCKED_BY_META');
+  });
+
+  it('5.12 companion — a 131026 for a MEMBER-only wamid ends nothing: the member stays ACTIVE (LY8 (a))', async () => {
+    const pid = await pariwar();
+    const optInId = await optIn(pid, 'ACTIVE');
+    await process(pid, statusPayload('wamid.MEMBER-ONLY-131026', 'failed', 131026));
+    expect(await stateOf(optInId)).toBe('ACTIVE');
   });
 
   it('⭐ WS11 (2) — a block code with ⛔ wamid match, to a recipient with a RECENT claim send in flight (⛔ wamid yet) ⇒ the member revoke SKIPPED (matched by the claim-space hash)', async () => {
     const pid = await pariwar();
     const optInId = await optIn(pid, 'ACTIVE');
     await claimSend(pid);
-    await process(pid, statusPayload('wamid.UNKNOWN-TO-US', 'failed', 131049));
+    // 2026-10-21 Story 5.12 (LY8 (a); AC8) — RE-CODED 131049 → 131050 (non-vacuous: only 131050 still ends a member yes).
+    await process(pid, statusPayload('wamid.UNKNOWN-TO-US', 'failed', 131050));
     expect(await stateOf(optInId)).toBe('ACTIVE');
   });
 

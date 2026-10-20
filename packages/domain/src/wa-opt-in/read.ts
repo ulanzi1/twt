@@ -67,9 +67,10 @@ export async function matchPendingOptIn(
 }
 
 /**
- * Resolve the most-recent ACTIVE opt-in for a member, matched by mobile blind index (the STOP-handling +
- * Meta-block path — a STOP / block carries no verification phrase, so it is scoped to the member's ACTIVE
- * opt-in, NOT phrase-matched). Returns null when the member has no ACTIVE opt-in (⇒ a STOP is a no-op).
+ * Resolve the most-recent ACTIVE opt-in matched by mobile blind index — the Meta-block path (a status carries no
+ * verification phrase, so it is scoped to the ACTIVE opt-in, NOT phrase-matched). Returns null when the number has no
+ * ACTIVE opt-in (⇒ a 131050 ends nothing). Story 5.12: a STOP no longer reads this — it ends the yes of every member
+ * whose rows carry the number, any state (`listMemberIdsByOptInMobile`, LY6).
  */
 export async function getActiveOptInByMobile(
   db: Db,

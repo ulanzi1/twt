@@ -4,10 +4,12 @@
 // THIS worker drains `wa_inbound_webhook_events` and does the business logic the handler must not:
 //   · Inbound text → compute the sender's mobile_blind_index → matchPendingOptIn by (blind index, phrase) →
 //     PENDING→ACTIVE + recordConsent('whatsapp_opt_in') + 24h window (audit-or-throw, 5-field audit).
-//   · Inbound STOP/opt-out keyword (whole-message, case-folded allowlist) → the member's ACTIVE opt-in →
-//     REVOKED (+ revokeConsent). A STOP from a member with no ACTIVE opt-in is a no-op.
-//   · Message-status callback → consume 5.3's mapMetaStatus + upsertWaSendStatus (the Q2 ownership split); a
-//     Meta opt-out/block error code additionally drives ACTIVE→BLOCKED_BY_META (+ revokeConsent).
+//   · Inbound STOP/opt-out keyword (whole-message, case-folded allowlist) → Story 5.12 (`-364` condition 3): EVERY member
+//     whose opt-in rows (any state) carry the sender's number ends their yes — the ACTIVE row → REVOKED and EVERY open
+//     whatsapp_opt_in consent row revoked (`endEveryWaYes`); nothing to end ⇒ a no-op. A fault is retried once, then alarmed.
+//   · Message-status callback → consume 5.3's mapMetaStatus + upsertWaSendStatus (the Q2 ownership split); Meta's 131050 (a
+//     marketing opt-out — the one code that records the person's own request; Story 5.12 LY8) additionally ends the member's
+//     yes: ACTIVE→BLOCKED_BY_META + every open consent revoked.
 //   · A stale-PENDING / past-24h-window sweep → EXPIRED_24H_WINDOW (originating_channel: system_expiry).
 //
 // Best-effort + isolated (AI-4-3(d)): a broken per-event write logs and continues; the event is marked
@@ -109,10 +111,38 @@ function isStopKeyword(body: string): boolean {
   return STOP_KEYWORDS.has(normalized);
 }
 
+/** Trailing punctuation a member may type after a keyword (*"STOP."*, *"Stop!"*, *"रोको।"*). */
+const TRAILING_STOP_PUNCTUATION = /[.!।,]+$/u;
+
+/**
+ * Story 5.12 (LY6 option, Decision 2026-10-21-373) — the MEMBER half's STOP: `isStopKeyword`, OR the same whole message once
+ * trailing `[.!।,]` are stripped (⛔ substring matching — *"please stop now"* is ⛔ a STOP). A narrowing of who is messaged.
+ * `isStopKeyword` stays byte-unchanged: the claim half reads it (I5 — widening the claim STOP is a separate question).
+ */
+function isMemberStopKeyword(body: string): boolean {
+  if (isStopKeyword(body)) return true;
+  const normalized = body.normalize('NFKC').replace(ZERO_WIDTH_CHARS, '').trim().toLocaleLowerCase();
+  return STOP_KEYWORDS.has(normalized.replace(TRAILING_STOP_PUNCTUATION, '').trimEnd());
+}
+
 // ── Meta opt-out / block error codes (statuses[].status='failed') → authoritative BLOCKED_BY_META ────────
 // Indicative set — verify against Meta's error-code reference at deploy time. Conservative: only an explicit
 // opt-out/undeliverable-by-user-choice code drives BLOCKED_BY_META (a transient failure must NOT revoke).
 const WA_BLOCK_ERROR_CODES = new Set([131050, 131049, 131026, 131047]);
+
+/**
+ * Story 5.12 (LY8 (a), Decision 2026-10-21-373) — the codes that end a MEMBER's yes: ONLY 131050. Per Meta's Cloud API error
+ * reference (fetched 2026-10-20) 131050 = *"This recipient has chosen to stop receiving marketing messages on WhatsApp from your
+ * business"* — a marketing opt-out (⛔ a block), the one code that records the person's own request. 131049 (a per-user
+ * marketing cap), 131026 (not reachable on WhatsApp) and 131047 (the free-form window) are ⛔ consent: under a lasting yes
+ * (`-364`) they end nothing — each is still recorded by upsertWaSendStatus. `WA_BLOCK_ERROR_CODES` / `isBlock` stay
+ * BYTE-UNCHANGED: they also gate the claim half's hash fallback (6.37d WS11 — I5).
+ */
+const WA_MEMBER_CONSENT_BLOCK_CODES = new Set([131050]);
+
+function isMemberConsentBlock(status: MetaStatus): boolean {
+  return status.status === 'failed' && (status.errors ?? []).some((e) => e.code !== undefined && WA_MEMBER_CONSENT_BLOCK_CODES.has(e.code));
+}
 
 // ── Five-field audit (AC4) — one writeAuditEntry BEFORE each state write (audit-or-throw) ────────────────
 
@@ -268,6 +298,8 @@ export async function processWebhookEvent(
 // (§3.4 exception: *"does not change any member's opt-in state"*). Every claim read / write runs inside `withPariwarScope(event
 // Pariwar)` with an explicit `pariwar_id` filter; the claim-space hash is `correctionNumberHash` over the DOMAIN `normalizeMobile`
 // (T21 — ⛔ the member blind index, a different space). Row 5-12 (`-364`) will widen the MEMBER half below; this half is its own.
+// 2026-10-21 Story 5.12 — DONE: the member half below now ends every yes on the number (LY6); this claim half is unchanged and
+// still runs first.
 
 /**
  * T26 — the claim branch acts ONLY when the change's `metadata.phone_number_id` is the event Pariwar's configured WhatsApp number
@@ -337,16 +369,15 @@ async function processWebhookEventBody(
           continue;
         }
 
-        if (isStopKeyword(body)) {
-          // Opt-out: scoped to the member's ACTIVE opt-in (a STOP carries no phrase). No ACTIVE ⇒ no-op.
-          const active = await waOptIn.getActiveOptInByMobile(deps.db, { pariwarId, mobileBlindIndex: blindIndex });
-          if (!active) continue;
-          await revokeActiveOptIn(deps, pariwarId, active, {
-            channel: 'meta_webhook_inbound',
-            action: 'member.wa_opt_in_revoked',
-            toState: 'REVOKED',
-            reason: 'member sent STOP',
-          });
+        if (isMemberStopKeyword(body)) {
+          // Story 5.12 (`-364` condition 3; LY6) — STOP always works: EVERY member whose opt-in rows (ANY state) carry the
+          // number ends their yes, whatever their newest row's state (a STOP carries no phrase). Nothing to end ⇒ ⛔ write.
+          // Each member in its OWN try + transaction (T12), retried once, then alarmed — ⛔ rethrown (else the catch below
+          // alarms twice). A fault BEFORE this loop (the blind index above, this listing) reaches the catch below.
+          const memberIds = await waOptIn.listMemberIdsByOptInMobile(deps.db, { pariwarId, mobileBlindIndex: blindIndex });
+          for (const memberId of memberIds) {
+            await endMemberYesOnStop(deps, pariwarId, memberId, event.eventId);
+          }
           continue;
         }
 
@@ -410,6 +441,16 @@ async function processWebhookEventBody(
         }
       } catch (err) {
         console.error('[jobs] wa-webhook: inbound-message processing failed (isolated)', err);
+        // Story 5.12 (LY6; I3) — a STOP whose member half faulted BEFORE the per-member loop (the blind index, the member
+        // listing) is ⛔ silent: the drain is at-most-once (F10a), so ⛔ retry reaches it. Ids only (I7) — the claim half
+        // may already have recorded its stop, so the text names the member opt-in only.
+        if (msg.type === 'text' && isMemberStopKeyword(msg.text?.body ?? '')) {
+          raiseAlarm(
+            deps,
+            `[jobs] wa-webhook: wa_opt_in.stop_unrecorded — a member WhatsApp STOP in Pariwar ${pariwarId} (inbound event ` +
+              `${event.eventId}) could not be applied to the member opt-in and will ⛔ be retried; the yes on that number still stands`,
+          );
+        }
       }
     }
 
@@ -441,6 +482,9 @@ async function processWebhookEventBody(
         // the hash fallback can claim a MEMBER send's block on a number that had a claim send in the last 7 days (that
         // member's BLOCKED_BY_META is ⛔ recorded — a deferred item). RE-EXAMINE when: a Pariwar's webhook URL can carry
         // another tenant's events, or row 5-12 / the `WA_BLOCK_ERROR_CODES` item reworks the member block path.
+        // 2026-10-21 Story 5.12 — row 5-12 REWORKED the member block path (LY8 (a)): only 131050 ends a member yes, gated by
+        // `isMemberConsentBlock` below; everything above (incl. `isBlock` and the hash fallback) is unchanged. The fallback's
+        // member cost stays (bounded to 7 days; its fix needs a send-time wamid record for alert sends — the WS11 item).
         let claimOwned = false;
         if (status.id && status.status) {
           const firstCode = (status.errors ?? []).find((e) => typeof e.code === 'number')?.code ?? null;
@@ -457,16 +501,18 @@ async function processWebhookEventBody(
             }
           }
         }
-        if (isBlock && status.recipient_id && !claimOwned) {
+        if (isMemberConsentBlock(status) && status.recipient_id && !claimOwned) {
+          // Story 5.12 (LY8 (a)) — the recipient's ACTIVE row only (a 131050 on a number with ⛔ standing yes ends nothing);
+          // on a hit the member's whole yes ends (every open consent too).
           const blindIndex = await memberMobileBlindIndex(status.recipient_id, deps.enc);
           if (blindIndex === null) continue;
           const active = await waOptIn.getActiveOptInByMobile(deps.db, { pariwarId, mobileBlindIndex: blindIndex });
           if (!active) continue;
-          await revokeActiveOptIn(deps, pariwarId, active, {
+          await endMemberWaYes(deps, pariwarId, ids.memberId(active.memberId), {
             channel: 'meta_webhook_block',
             action: 'member.wa_opt_in_blocked',
             toState: 'BLOCKED_BY_META',
-            reason: 'meta block/opt-out status',
+            reason: 'meta 131050 — the recipient stopped marketing messages from the Trust',
           });
         }
       } catch (err) {
@@ -476,49 +522,94 @@ async function processWebhookEventBody(
   }
 }
 
-/** Revoke an ACTIVE opt-in (member STOP / admin / Meta block): audit FIRST, then consent + state in one tx. */
-async function revokeActiveOptIn(
+/** The alarm sink (ids only — I7); a sink's own fault never costs the caller anything. */
+function raiseAlarm(deps: WaWebhookProcessorDeps, message: string): void {
+  try {
+    (deps.onAlarm ?? ((m: string): void => console.warn(m)))(message);
+  } catch {
+    // ⛔ An alarm sink's own fault must never cost a member their STOP.
+  }
+}
+
+/** What one attempt to end a member's yes did. `lost_race`: another path ended it between the read and the write. */
+type EndMemberYesOutcome = 'ended' | 'nothing_to_end' | 'lost_race';
+
+/**
+ * Story 5.12 (`-364` condition 4; LY5) — end ONE member's WhatsApp yes (member STOP / Meta 131050): ONE audit line FIRST (its own
+ * committed connection — the `revoked_audit_id` FK is then satisfied), then `endEveryWaYes` in its OWN `deps.db` transaction
+ * (the ACTIVE row → `toState`, EVERY open whatsapp_opt_in consent revoked, each carrying that line's id). Nothing to end (⛔
+ * ACTIVE row, ⛔ open consent) ⇒ ⛔ write, ⛔ audit. Snapshot: an ACTIVE row ⇒ `ACTIVE → toState`; else the newest row's state
+ * on both sides (an auditor reads "consent closed, state unchanged"). A fault after the audit line ⇒ a compensating
+ * `_rolled_back` line, rethrown; a lost race (`{ null, 0 }`) ⇒ the compensation and `lost_race` — ⛔ a fault, ⛔ alarm.
+ */
+async function endMemberWaYes(
   deps: WaWebhookProcessorDeps,
   pariwarId: ids.PariwarId,
-  active: { optInId: string; memberId: string; consentId: string | null; verificationPhrase: string },
+  memberId: ids.MemberId,
   opts: {
     channel: WaOptInOriginatingChannel;
     action: string;
     toState: 'REVOKED' | 'BLOCKED_BY_META';
     reason: string;
   },
-): Promise<void> {
+): Promise<EndMemberYesOutcome> {
+  const active = await waOptIn.getActiveOptInForMember(deps.db, { pariwarId, memberId });
+  if (!active && !(await waOptIn.hasAnythingToEnd(deps.db, { pariwarId, memberId }))) return 'nothing_to_end';
+  const snapshot = active ?? (await waOptIn.getOptInForMember(deps.db, { pariwarId, memberId }));
+  const stateBefore = snapshot?.state ?? 'none';
   const auditFacts = {
     pariwarId,
-    memberId: active.memberId,
-    actorId: opts.channel === 'meta_webhook_block' ? null : active.memberId,
+    memberId,
+    actorId: opts.channel === 'meta_webhook_block' ? null : memberId,
     originatingChannel: opts.channel,
-    beforeState: 'ACTIVE',
-    afterState: opts.toState,
-    verificationPhrase: active.verificationPhrase,
+    beforeState: stateBefore,
+    afterState: active ? opts.toState : stateBefore,
+    verificationPhrase: snapshot?.verificationPhrase ?? null,
   };
   const auditId = await auditOptInTransition(deps.pool, { ...auditFacts, action: opts.action });
+  let result: waOptIn.EndEveryWaYesResult;
   try {
-    await deps.db.transaction(async (tx) => {
-      if (active.consentId) {
-        await consent.revokeConsent(tx, {
-          pariwarId,
-          consentId: ids.consentId(active.consentId),
-          reason: opts.reason,
-          revokedAuditId: auditId,
-        });
-      }
-      await waOptIn.revokeOptIn(tx, {
-        pariwarId,
-        optInId: ids.memberWaOptInId(active.optInId),
-        toState: opts.toState,
-      });
-    });
+    result = await deps.db.transaction((tx) =>
+      waOptIn.endEveryWaYes(tx, { pariwarId, memberId, toState: opts.toState, reason: opts.reason, revokedAuditId: auditId }),
+    );
   } catch (err) {
     // P1 (compensating audit) — see the ACTIVE-match path above for the rationale.
     await writeCompensatingOptInAudit(deps.pool, { ...auditFacts, action: `${opts.action}_rolled_back` });
     throw err;
   }
+  if (result.movedOptInId === null && result.consentsRevoked === 0) {
+    // LY5 — ⛔ audit line asserts a transition that did not happen.
+    await writeCompensatingOptInAudit(deps.pool, { ...auditFacts, action: `${opts.action}_rolled_back` });
+    return 'lost_race';
+  }
+  return 'ended';
+}
+
+/**
+ * Story 5.12 (LY6; I3) — a member STOP: `endMemberWaYes`, RETRIED ONCE in a fresh transaction (each attempt writes its own
+ * primary line), then `wa_opt_in.stop_unrecorded` through `deps.onAlarm` (ids only — I7). ⛔ rethrows: the next member on the
+ * number still gets their STOP, and the per-message catch must ⛔ alarm a second time. Residual (Decision 2026-10-21-373, PQ1 —
+ * told to the Panel): the drain is at-most-once, so a STOP that faults twice stays unrecorded until a person acts on the alarm.
+ */
+async function endMemberYesOnStop(deps: WaWebhookProcessorDeps, pariwarId: ids.PariwarId, memberId: ids.MemberId, inboundEventId: string): Promise<void> {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      await endMemberWaYes(deps, pariwarId, memberId, {
+        channel: 'meta_webhook_inbound',
+        action: 'member.wa_opt_in_revoked',
+        toState: 'REVOKED',
+        reason: 'member sent STOP',
+      });
+      return;
+    } catch (err) {
+      console.error(`[jobs] wa-webhook: member STOP attempt ${attempt} failed (isolated)`, err);
+    }
+  }
+  raiseAlarm(
+    deps,
+    `[jobs] wa-webhook: wa_opt_in.stop_unrecorded — a member WhatsApp STOP in Pariwar ${pariwarId} (inbound event ${inboundEventId}, ` +
+      `member ${memberId}) failed twice and will ⛔ be retried; that member's WhatsApp yes still stands`,
+  );
 }
 
 /**

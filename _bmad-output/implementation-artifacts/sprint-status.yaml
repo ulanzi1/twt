@@ -1,3 +1,11 @@
+# last_updated: 2026-10-20b (STORY 6.37d — TASK 0 DONE ⇒ `ready-for-dev → in-progress`. BigDev: *"accept all recommended"* (WS3 note
+# *"code is not in production"*; WS4 (a) *"but drop G3 (c)"* — *"Drop entirely, disclose"*) ⇒ Decision `2026-10-20-367` (author-commit;
+# committed alone, `5ab99fc0`). PQ1 the author's (reading A); PQ2 ROUTED with the drop of *"or any other means of communication that may
+# appear in future"* — `trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md` WRITTEN, ⛔ sent; PQ3 DISSOLVED (BigDev: the claimant
+# is whoever files the claim). The agreement's v2 is first person. Records: roster Row 36 `claim-contact-claimant-whatsapp-go-live` (legs
+# (a), (b), (d)–(h); (c) an accepted risk); dated notes on Rows 18 / 19 / 26, the epics.md entry and the counsel question; deferred-work —
+# two DPDPA items (§6(4) withdrawal, §5 notice — deferred as a risk), the Row 36 (c) risk, the numbering-race item (⛔ fired). Numbers
+# taken: `-367`, Row 36, `20a`–`20b`. Code may start; the row is ⛔ `done` until the routing note is ruled. ⛔ Other row moves.)
 # last_updated: 2026-10-20a (STORY 6.37d — VALIDATED (`bmad-create-story validate 6.37d`), v1.2. The branch was 16 behind ⇒ REBASED onto
 # `main` `0e88ddd1` (both ledger conflicts kept both sides) and RE-PINNED. Four parallel fresh-context verifiers (41 findings, BigDev:
 # *"all"*), then four re-validation rounds of the pass's OWN rewrite (HIGH 4 → 2 → 1 → 0, every HIGH the pass's own); all applied. FOUND: 6.31 SHIPPED ⇒ WS1's precondition MET and F3 rewritten as
@@ -20213,6 +20221,7 @@
 generated: 2026-05-29
 # last_updated: 2026-06-01 (story 0-12 code-review patch pass applied via /bmad-code-review: 7 decision-needed items resolved with BigDev + 22 patches applied across 12 files. Decision 2026-06-01-012-amend-1 appended at .decision-log.md superseding Decision 012 body items 3/6/7 + open-follow-ups per amendments 1-10. Highlights: backfill-log inventory canonicalized to 19 rows with grep-grounded predicate (Story 0.6 backup-engineer 0/3 promised rows is intentional non-target; 4/8 loop-nodes have no explicit Story 0.12 text at author-commit grep → not in backfill-log); §3(d) Hybrid reframed as composition-pattern guide with cut-scope-first/contract-help-next/move-SM-1-last ordering rules; estimation-worksheet §8 totaling uses §7 Epic-aggregation rows only (epic-agg-epic-0 excluded_from_total = true); methodology §4(b) +200% cap is strictly per-surface; claim-filing.md §3 flagged for Task 7 decomposition into Epic-4/Epic-6/Epic-9 sub-rows; per-tier schema extended to §1-§8 with Tier-1 gaining §7 funding-tradeoff; confidence-band formula replaced with asymmetric geometric form floor=midpoint/(1+factor); SM-1 declared in-scope of architecture §Decision Freeze with ADR-NNNN-SM-1-amendment as PRD-edit precondition (slot reserved at adr-index Section J line 224 + spec-to-cadence README §7 slot 7; adr-index total 109→110). Framework provisions added: cut-scope cascade-dependency invariant (§3(a)); anti-laundering ≥2-distinct-trustee rule (§4); day-30 reversal + quorum-unavailable >30 days fallbacks (§4); backfill-log source_line drift recovery (§9 step 2); re-attestation major-architecture-amendment threshold + mid-cycle drift escalation (README §6); engineer-month context-switching deduction de-duplicated (methodology §5). 8 findings deferred to deferred-work.md "## Deferred from: code review of 0-12-..." section. Story 0.12 stays at `review` pending final user disposition.)
 last_updated: >-
+  2026-10-20 (Story 6.37d Task 0 done: -367 committed alone (WS1–WS14 as recommended, WS4 without G3 (c)); Row 36; PQ2 + clause routed (note written, not sent); 6-37d in-progress.)
   2026-10-20 (Story 6.37d validated, v1.2: rebased on main, re-pinned; 6.31 shipped (WS1 met); numbers moved to next-free (G3 row by key); new F25/PQ3 (who ticks the agreement); 6-37d ready-for-dev.)
   2026-10-19 (Story 6.31 landed on main (47397e6a, PR #291); roster Row 27 note (3) discharged.)
   2026-10-19 (Story 6.31 code review round 2: -366 committed alone (D1 connect failures retried; D2 -365 corrected as built); 30 patches applied, fix diff re-reviewed and corrected; 12 deferred; domain 56/56, jobs 49/49, channels 442/442 on :5433. 6-31 done.)
@@ -20825,7 +20834,9 @@ development_status:
   # ⭐ 2026-10-20 (`bmad-create-story validate 6.37d`, v1.2, ledger `2026-10-20a`): WS1 (a)'s precondition is MET (6-31 `done` on `main`);
   # the G3 go-live row is `claim-contact-claimant-whatsapp-go-live` at the next free row number — the "Row 35" above is 6.31's; GO-LIVE
   # also Row 32 (all legs), Row 33, Row 35 (a) / (e) (shared), Row 21. PQ3 (who ticks the agreement) joins PQ1–PQ2 for BigDev's §0.
-  6-37d-claim-contact-whatsapp-step: ready-for-dev
+  # ⭐ 2026-10-20 (ledger `2026-10-20b`): Task 0 DONE — `2026-10-20-367` (`5ab99fc0`); roster Row 36; the routing note (PQ2 + the clause)
+  # WRITTEN, ⛔ sent; the row is ⛔ `done` until it is ruled and the code matches.
+  6-37d-claim-contact-whatsapp-step: in-progress
   # ⭐ 2026-10-18 NEW ROW (`-359`, Trustee-ratified option B): when the deceased member's full name does not fit a suspicion text's name slot
   # (the nominee text FQ7, the refused person's appeal text `-293` item 1, the closure text `-291` Q2), send it with first name + surname
   # initial; a name that still does not fit keeps today's refusal + alarm. One function and its tests. ⛔ Story file yet. The neighbours'

@@ -59,3 +59,10 @@ Question 3 (the claimant) stands outside Row 18's own (a)–(c) closure criteria
 2's reading directly, rather than closing a roster row. If any answer depends on facts we have not given, please say which.
 
 *Revised 2026-10-18, before sending (Story 6.37c code review round 2): "closes roster Row 18" → "answers Row 18's three questions" — Row 18's testable signal also needs the `claim_contact_agreement` copy's "pending Story 0.13" marker replaced by counsel's approved text (roster Row 18, closure_criteria).*
+
+*Dated note, 2026-10-20 (Story 6.37d Task 0.4, Decision `2026-10-20-367` decisions 17–19) — still WRITTEN, ⛔ sent:* question 3's
+second half (whether *"or any other means of communication that may appear in future"* may stay) is MOOT if the Trustee Panel agrees
+to remove the phrase — it has been put to the Panel (`trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md`); if it is
+removed before this goes out, drop that half when sending. Its first half stands (roster Row 36 leg (b) waits on it). The reworded
+agreement now reads in the first person — *"I agree that the Trust may contact me by text message, WhatsApp, phone call or post, about
+this claim."* — the claimant being the person who files the claim and ticks it. ⛔ Change to the question's wording is made here.

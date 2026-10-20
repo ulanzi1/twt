@@ -3631,6 +3631,13 @@ ids only in logs and alarms; no event, no claim state; no call to Meta in any te
 > WhatsApp at four hours against "one message a day, at 10:00") may go to the Panel. Proposed to start only after row 6.31 is done (the
 > WhatsApp client work). GO-LIVE: a new roster row for G3. Full ACs:
 > `_bmad-output/implementation-artifacts/6-37d-claim-contact-whatsapp-step.md`. Not a merge fence.
+>
+> ⚠ **Dated note, 2026-10-20 (Story 6.37d Task 0.4):** the build decisions are DECIDED by
+> [`-367`](../../.decision-log.md#decision-2026-10-20-367) (author-commit — WS1–WS14 as recommended, WS4 without G3 (c)); row 6.31 is
+> done on `main`, so the start condition above is met. The claimant who is also a nominee is reached as the claimant (the author's);
+> WhatsApp at four hours vs "one message a day, at 10:00", and removing *"or any other means of communication that may appear in
+> future"* from the agreement, are ROUTED to the Panel (`trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md` — written, not
+> sent). The agreement's v2 reads in the first person. GO-LIVE: roster Row 36 `claim-contact-claimant-whatsapp-go-live`.
 
 As a claimant whose family's claim is being chased for a bank-details correction or a death certificate, I want a reminder the phone
 network reports it could not deliver to me to be tried on WhatsApp a few hours later — only because I agreed to WhatsApp when I filed,

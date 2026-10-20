@@ -11,10 +11,12 @@ stated separately: (1) the pin is an ancestor of this branch (durable); (2) ever
 re-derived at `0e88ddd1` (perishable — re-check at Task 0.1: `git diff --name-only 0e88ddd1..origin/main -- apps packages scripts`).
 Re-locate by FUNCTION, ⛔ by number ([[feedback_story_validate_footguns]] #19, #21, #24).
 
-STATUS: `ready-for-dev` — ⛔ code until Task 0 is done (governance FIRST — [[feedback_governance_commits_precede_implementation]]): BigDev
-answers WS1–WS14 and makes the §0 call on PQ1–PQ3; the 6.37d entry is committed ALONE; then the records commit. WS1's precondition
-(row 6-31 `done` on `main`) is MET (F3). GO-LIVE (⛔ a merge or `done` fence — [[project_not_in_production_merge_is_not_golive]]): the
-NEW G3 roster row `claim-contact-claimant-whatsapp-go-live` (WS4); roster Row 32 — ALL its legs, incl. (h) alarms and (i) the claim-text
+STATUS: `in-progress` — ⭐ **TASK 0 DONE (2026-10-20):** BigDev answered WS1–WS14 and PQ1–PQ3 (Debug Log (a)); the 6.37d entry is
+Decision `2026-10-20-367` (`5ab99fc0`, committed ALONE); the records commit followed (the G3 roster row = **Row 36**, the routing note
+`trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md` WRITTEN, ⛔ sent). ⭐ **Where `-367` changed this file, the `-367`
+OUTCOME block below governs** — read it before any WS / AC. Code may start (Tasks 1–10). ⚠ Row 6-37d is ⛔ `done` until the routing
+note (PQ2 + the clause) is RULED and the code matches. WS1's precondition (row 6-31 `done` on `main`) is MET (F3). GO-LIVE (⛔ a merge or `done` fence — [[project_not_in_production_merge_is_not_golive]]): the
+G3 roster Row 36 `claim-contact-claimant-whatsapp-go-live` (WS4); roster Row 32 — ALL its legs, incl. (h) alarms and (i) the claim-text
 template ids (6.37c's ladder); Row 33 (MSG91's delivery reports — without a reported `undelivered` ⛔ ladder starts); Row 35 (a) / (e)
 (each Pariwar's WhatsApp provisioning and the alarm route — SHARED with 6.31, ⛔ duplicated); Row 21 (the certificate reminder's Hindi,
 which its WhatsApp twin inherits).
@@ -51,7 +53,30 @@ rulings 1–6, `-352` Q1 / Q2, `-355` decisions 1–18, `-356` calls 1–3, `-36
 
 # Story 6.37d: When a reminder to the claimant is reported undelivered, the Trust tries WhatsApp four hours later — on the claimant's reworded filing agreement `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
+
+> ## ⭐ `-367` OUTCOME — Task 0, 2026-10-20 (governs every earlier sentence it contradicts; the text below is kept as PROPOSED, ⛔ edited)
+>
+> - **WS1–WS14: ALL AS RECOMMENDED** (BigDev: *"accept all recommended"*), with: **WS3** — BigDev's note *"code is not in production"*
+>   (⛔ production claim exists on any wording; the re-save widening touches test data only until go-live). **WS4** — option (a) **without
+>   G3 (c)** (*"drop G3 (c)"*, *"Drop entirely, disclose"*): ⛔ go-live leg records the four templates' UTILITY approval or a 12-hour
+>   time-to-live — an ACCEPTED, disclosed risk (Row 36 notes; deferred-work). The G3 row is **Row 36**; its legs are (a), (b), (d)–(h).
+> - **WS2's v2 English (decided — `-367` decision 2):** *"I agree that the Trust may contact me by text message, WhatsApp, phone call or
+>   post, about this claim."* — FIRST person, WITHOUT *"or any other means of communication that may appear in future"* (routed —
+>   below). `contact.agreement_required` → *"… so that we can contact you about this claim"*; `helpline.contact.duty` → the caller as the
+>   claimant. If the Panel KEEPS the clause, a v3 restores it before *"about this claim"*.
+> - **PQ1 — the author's, reading A** (*"Mine — reading A"*): a nominee who is the claimant is reached as the claimant (WS5 as written).
+> - **PQ2 — ROUTED to the Panel** (*"Route to the Panel"*) in `trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md` (WRITTEN, ⛔
+>   sent), with the clause drop and, for information, the first-person wording. Build WS6 (reading A) meanwhile.
+> - **PQ3 — DISSOLVED** (`-367` decision 17): BigDev — *"claimant is anyone who files for claim, whether the person is nominee or
+>   relative"* (the Panel's own words in `-351` 2: *"when a claimant files a claim, he/she will be asked to agree"*). The person who ticks
+>   IS the claimant ⇒ Meta's *"opt-in permission from the recipient"* and DPDPA §6(1) are met by the tick. **F25's premise is WITHDRAWN**;
+>   ⛔ "who agreed" question, ⛔ IVR, ⛔ counsel revision (BigDev: *"Isn't Meta policy clear enough?"*).
+> - **The clause *"or any other means …"* — DROP, ROUTED** (`-367` decision 18 — it is part of `-352` Q1 B's ratified wording, and §3 item
+>   2's pre-cleared path needs counsel's advice, ⛔ sought).
+> - **DPDPA §6(4) withdrawal and §5 notice — DEFERRED, a RISK** (`-367` decision 19; *"Defer, record as risk"*): two deferred-work items;
+>   ⛔ a Row 36 leg; to close before 13 May 2027 (computed).
+> - **Supersedes** `-355` d3 IN PART; **narrows** `-365` Consequence 2 for this row (WS8 / WS9's named divergences).
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37c built the Panel's delivery ladder for the correction and certificate reminders
 > with its FIRST step — *"after SMS has been sent and not been delivered for 4 hours, send message over WhatsApp"* (`-350` ruling 2 (1))
@@ -378,6 +403,9 @@ NARROW / WIDEN:
   English is third-person (*"the Trust may contact the claimant named here"*). Every ratified text (`-351` 2, `-357`, §3.4's *"the
   claimant, on the claim's filing agreement"*) ASSUMES the claimant agreed; the counsel question asserts it (*"the person filing (the
   claimant) is asked to tick this agreement"*); Meta's policy requires opt-in *"from the recipient"* (F23 (ii)) ⇒ **PQ3**.
+  ⚠ **WITHDRAWN 2026-10-20 (`-367` decision 17):** the facts above hold, the PREMISE does ⛔ — by BigDev's definition the claimant IS the
+  person who files the claim (nominee or relative), so the person who ticks is the claimant; the record's subject being the deceased is
+  a record-keeping note (the claimant is traceable through `claim_contacts.agreement_consent_id`), ⛔ a consent gap. Kept, ⛔ deleted.
 
 ## ⚖️ Build decisions WS1–WS14 (PROPOSED — ⏳ BigDev at Task 0.2)
 
@@ -390,7 +418,8 @@ NARROW / WIDEN:
   member, the block codes) cannot change it; AC7's member legs assert the member path *"as `main` stands at build"*. **Cost:** 5-12 rebases
   over this story's worker edit. **(b)** 5-12 first. **Cost:** this story waits on a backlog row with ⛔ story file.
 - **WS2 — The agreement's words, versions and evidence (⚠ flagged: two family-facing lines change beyond the agreement).** ⭐ **(a)
-  Recommended:** (i) en `contact.agreement` = `-352`'s recorded English VERBATIM; hi drafted by the dev from it — WhatsApp written
+  Recommended:** (i) en `contact.agreement` = `-352`'s recorded English VERBATIM (⚠ DECIDED otherwise by `-367` decision 2 — first person, ⛔ the clause;
+  see the `-367` OUTCOME block); hi drafted by the dev from it — WhatsApp written
   **व्हाट्सएप** (the repo's form: `hi/common.json` `waNotifications.*` and `-364`; the one outlier `shepherd.whatsapp` in `hi/claim.json`
   writes व्हाट्सऐप — noted, ⛔ changed here) — and marked ⛔ yet human-reviewed with a `"$comment.contact_agreement"` key in BOTH claim.json
   files (the 6.19b / 6.19d marker pattern), closed by G3 (a); the key is edited IN PLACE (the app shows the current text). (ii) A
@@ -428,7 +457,7 @@ NARROW / WIDEN:
   routed or BigDev so decides) whether a tick given by a filer or helpline caller who is ⛔ the claimant is a basis (F25); the wording
   narrowed to a new version if counsel advises; *"not sufficient"* ⇒ G3 stays open and the matter returns to BigDev / the Panel (it
   would override `-354` d2) — the approved proposal's *"as counsel settles its last clause"*; the counsel question is WRITTEN, ⛔ sent
-  (BigDev sends it); **G3 (c)** Meta approval of the four templates (correction + certificate × en + hi) as UTILITY, registered under
+  (BigDev sends it); **G3 (c)** (⚠ DROPPED by `-367` decision 4 — an accepted, disclosed risk; ⛔ a Row 36 leg) Meta approval of the four templates (correction + certificate × en + hi) as UTILITY, registered under
   EXACTLY `en` / `hi`, each created with `message_send_ttl_seconds` = 43200 (WS9); **G3 (d)** a recorded check that the agreement meets
   Meta's opt-in policy (F23 (i)–(iii)) — INCLUDING that it is the recipient's own permission when the filer or caller is ⛔ the claimant
   (F25 / PQ3's answer), and that the business the agreement names matches the WhatsApp display name the claimant sees (the Pariwar's vs
@@ -717,6 +746,9 @@ NARROW / WIDEN:
   itself needs a basis — circular. ⚠ ⛔ The author changes the wording under PQ3 (WS2 (v)); Task 0.5 revises counsel question 3 BEFORE it
   is sent (the precedent: the document's own *"Revised 2026-10-18, before sending"* note).
 
+⭐ **Dispositions (2026-10-20, `-367` decisions 15–17):** PQ1 — the AUTHOR's, reading A. PQ2 — ROUTED (the note below, WRITTEN, ⛔
+sent). PQ3 — DISSOLVED by the claimant's definition (see the `-367` OUTCOME block); its options B / C are moot.
+
 ⚠ If BigDev routes any: ONE routing note from the TEMPLATE (`trustee-panel-routing-note-YYYY-MM-DD-6-37d-whatsapp-edges.md`), plain
 question first, the deciding fact, options with costs, evidence last; WRITTEN at Task 0.3, ⛔ "sent" until it goes out
 ([[feedback_shown_to_panel_means_sent]]). This row is ⛔ `done` until a routed question is ruled and the code matches.
@@ -732,7 +764,8 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
    dated note, deferred-work, sprint row) after it. Row 6-31 is `done` on `main` (WS1 — met); if `main` has since moved under F3's
    shapes, re-derive before building.
 2. **AC1 — The agreement's new words.** Given the contact step (app) and the helpline form, when shown, then `contact.agreement` reads
-   `-352`'s recorded English VERBATIM and its Hindi draft (WhatsApp as व्हाट्सएप), both carrying a `"$comment.contact_agreement"`
+   `-367` decision 2's v2 English VERBATIM (*"I agree that the Trust may contact me by text message, WhatsApp, phone call or post, about
+   this claim."* — first person, ⛔ the clause) and its Hindi draft (WhatsApp as व्हाट्सएप), both carrying a `"$comment.contact_agreement"`
    ⛔-yet-reviewed marker; the server registry holds v1 BYTE-IDENTICAL to today's text and v2 identical to the JSON (a lockstep test); the
    current version id matches `/pending-story-0\.13/`; a recorded agreement's payload carries v2's id and the text shown;
    `ConsentPayloadSchema` declares `copyVersion`; the WS2 (iii) lines reworded (incl. `helpline.contact.savedAgreementIgnored`'s
@@ -876,35 +909,36 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; re-pin if `main` moved (`git diff --name-only 0e88ddd1..origin/main -- apps packages scripts`; re-derive
+- [x] **Task 0 — governance FIRST (AC0). ⛔ No code.** ⭐ DONE 2026-10-20 — Debug Log (a).
+  - [x] 0.1 `git fetch origin`; re-pin if `main` moved (`git diff --name-only 0e88ddd1..origin/main -- apps packages scripts`; re-derive
         any F3 shape that moved); re-grep `main`, EVERY branch (`git branch -a`) and every worktree for the next free decision id, roster
         row number, migration number + journal `when`, and ledger letter (T1; `-366` d6); check row 5-12's state (WS1). ⛔ File edits here — the decision entry
         (0.3) commits ALONE.
-  - [ ] 0.2 Put WS1–WS14 to BigDev, each with its recommendation and cost (incl. the §0 flags — WS2, WS3, WS4, WS7, WS10, WS12 — and
+  - [x] 0.2 Put WS1–WS14 to BigDev, each with its recommendation and cost (incl. the §0 flags — WS2, WS3, WS4, WS7, WS10, WS12 — and
         WS8 (v) / WS9's NAMED divergences from `-365` WR7 / WR10); then PQ1–PQ3 — BigDev's §0 check FIRST (*"STRIP THE CITATIONS AND READ
         WHAT IS LEFT"*): route, or record as the author's. Record every answer verbatim (Debug Log).
-  - [ ] 0.3 Write the 6.37d entry (author-commit; its own §0 per WS; the WS3 widening, the WS4 / WS7 / WS10 stricter readings, F14's
+  - [x] 0.3 Write the 6.37d entry (author-commit; its own §0 per WS; the WS3 widening, the WS4 / WS7 / WS10 stricter readings, F14's
         nominee disclosure, F16's withdrawal fact, F25's premise and PQ3's disposition stated; each divergence from `-365` WR7 / WR10
         recorded as NARROWING `-365` Consequence 2 for this row — ⛔ a re-reading); stage in the scratchpad; re-grep every branch for the
         id right before inserting; insert above the newest `### Decision` ([[project_decision_log_writes_user_inserted]] — try, verify
         additive-only, ask once if refused); it names what it supersedes IN PART (`-355` d3 — the WhatsApp step is ⛔ on the 10:00 run)
         and states WS12's reading of `-360` Q1 A verbatim; commit ALONE; write the SHA after the commit, ⛔ before. Then, if routed, the PQ
         note (WRITTEN, ⛔ sent).
-  - [ ] 0.4 The records commit: the G3 roster row `claim-contact-claimant-whatsapp-go-live` at the next free row number (WS4 — legs
+  - [x] 0.4 The records commit: the G3 roster row `claim-contact-claimant-whatsapp-go-live` at the next free row number (WS4 — legs
         G3 (a)–(h), citing Row 35 (a) / (e) and Row 21 as shared preconditions) + deferred-work: the numbering-race item annotated (⛔
         fired — the plans moved to the next free numbers) + Row 18 dated note (the v2 marker) + Row 19 dated note (WhatsApp,
         Meta a processor) + Row 26 note (two new tenant tables); the epics.md entry's dated note (WS1 met; the G3 row named); this row's
         sprint comment (dated — the G3 row by key, ⛔ "Row 35"); ledger. ⛔ ADR-0028 / ADR-0042 / ADR-0029 yet (Task 10, with the code that
         makes them true).
-  - [ ] 0.5 ⛔ NEW counsel question. Counsel question 3 (written by 6.37c, ⛔ sent) is what G3 (b) waits on — REVISE it before it is sent
+  - [x] 0.5 ⛔ NEW counsel question. Counsel question 3 (written by 6.37c, ⛔ sent) is what G3 (b) waits on — REVISE it before it is sent
         (a dated *"Revised … before sending"* note, the document's own precedent): state that the filer or helpline caller may ⛔ be the
         claimant and ask whether that tick is a basis for WhatsApp to the claimant (F25, PQ3 — unless BigDev rules PQ3 otherwise); remind
-        BigDev it is still unsent.
+        BigDev it is still unsent. ⚠ **As done:** ⛔ revision for PQ3 (dissolved — `-367` decision 17); a dated note records that question
+        3's second half is moot if the Panel drops the clause, and the first-person wording.
 - [ ] **Task 1 — The agreement's versions and words (AC1; WS2).**
   - [ ] 1.1 The registry in `packages/domain/src/claim/` (e.g. `claim-contact-agreement-copy.ts`, its own `'en' | 'hi'` type), exported
         via `index.ts`; v1 verbatim; v2; `claim-contact-copy.ts` re-exports (the api's imports unchanged).
-  - [ ] 1.2 en / hi `contact.agreement` (Hindi WhatsApp = व्हाट्सएप) + the `$comment` markers; WS2 (iii) lines; the admin helpline copy
+  - [ ] 1.2 en / hi `contact.agreement` = `-367` decision 2's v2 (first person, ⛔ the clause; Hindi WhatsApp = व्हाट्सएप) + the `$comment` markers; WS2 (iii) lines; the admin helpline copy
         (`apps/admin/src/modules/helpline-claims/i18n-en.ts`: `helpline.contact.duty`, `helpline.contact.savedAgreementIgnored`).
   - [ ] 1.3 `ConsentPayloadSchema` / `ConsentPayload` declare `copyVersion`.
   - [ ] 1.4 Tests: the lockstep (JSON ↔ registry current), v1 byte-identity to F11, the marker regex, the admin + mobile tests, parity,
@@ -1030,7 +1064,8 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
   fences carry it (AC8, AC12).
 - **T24 — A late WhatsApp.** Meta's default TTL for a utility template is 30 days: a message to a switched-off phone can land after
   SMS 2 / 3, after the conclusion, after the claim moved on (*"Your claim is still open."*). The 12 h TTL is set ON THE TEMPLATE at
-  creation (G3 (c)) — the code cannot set it per send; a template created without it is a G3 (c) failure.
+  creation — the code cannot set it per send. ⚠ G3 (c), which would have checked it, was DROPPED (`-367` decision 4): set it when the
+  templates are created anyway; its absence is an ACCEPTED risk (Row 36 notes).
 - **T25 — Off-WhatsApp opt-outs.** Meta's policy: *"You must respect all requests (either on or off WhatsApp)"*. v1 honours only a STOP
   keyword in a `text` message; a request to the helpline or a free-text reply has ⛔ route — disclosed, deferred, G3 (g).
 - **T26 — Which Pariwar sent it.** The event's Pariwar is the URL's; the claim branch also checks `value.metadata.phone_number_id`
@@ -1151,6 +1186,21 @@ tests pinned by policy regression specs and source fences.
 
 ### Debug Log References
 
+- **(a) Task 0 — 2026-10-20.** 0.1: `origin/main` = `0e88ddd1` (unmoved); next free numbers on `main`, every branch and worktree:
+  decision `-367`, roster Row 36, migration 0172 (journal `when` > `1794282000015`), ledger `2026-10-20`; row 5-12 `backlog`. 0.2 —
+  BigDev's answers VERBATIM: *"accept all recommended, note for WS3 - code is not in production. WS4 - option (a) but drop G3 (c)."* · on
+  G3 (c)'s rule and TTL: *"Drop entirely, disclose"* · PQ1: *"Mine — reading A (Recommended)"* · PQ2: *"Route to the Panel
+  (Recommended)"* · on PQ3: *"Can helpline operator transfer call to IVRS for consent, or even before helpline operator answer IVRS
+  should ask for consent?"* — *"Wny do we need counsel again ? Isn't Meta policy clear enough ?"* — *"what's the difference between "I am
+  the claimant" or "I am filing for someone else" ? Also what DPDPA has to say on agreement, is it sufficient. drop "or any other means
+  of communication that may appear in future"."* — *"I presume your wording says claimant is nominee, or atleast that's what I infer when
+  person says "I am the claimant""* — *"no name based wording. I want to know who is claimant as per your understanding? As per my under
+  claimant is anyone who files for claim, whether the person is nominee or relative."* · the clause's route: *"Add to PQ2's Panel note
+  (Recommended)"* · the DPDPA gaps: *"Defer, record as risk"* · the draft: *"yes, draft -367"*, *"You are right, make the correction to
+  Decision 2. And drop it from Decision 19."*, *"insert it"*. 0.3: `-367` committed ALONE (`5ab99fc0`, 44 lines added, ⛔ removed); the
+  routing note written. 0.4: the records commit (Row 36; Rows 18 / 19 / 26 notes; epics.md; counsel question dated note; deferred-work;
+  sprint row → `in-progress`, ledger `2026-10-20b`). 0.5: ⛔ new counsel question.
+
 ### Completion Notes List
 
 - Story created by `bmad-create-story 6.37d` (2026-10-19) — ultimate context engine analysis completed - comprehensive developer guide created. Four parallel read-only research passes (the governance spine; 6.37c's ladder code; the WhatsApp substrate and the 6.31 branch; the filing agreement).
@@ -1162,4 +1212,7 @@ tests pinned by policy regression specs and source fences.
 
 - v1.0 (2026-10-19) — created by `bmad-create-story 6.37d` at `15acb570`; WS1–WS14 proposed, PQ1–PQ2 candidate; status `ready-for-dev`.
 - v1.1 (2026-10-19) — the create-story's own checklist pass (one fresh-context validator, read-only: 7 HIGH / 12 MEDIUM / 5 LOW, all applied): the STOP key moved to the ladder's `claim_contact_mobile` hash space (⛔ the member login key); the webhook worker's claim branch scoped to the event's Pariwar behind the RLS-bound-role refusal; the quarter-hourly sweep starts ladders only for NEW reports and ⛔ calls `advance`; the 4 h anchor = the origin's `created_at` (⛔ `claimed_at`, re-set on retry); `isClaimant` on both person types (the certificate reader is shaped differently); AC2's fence narrowed to the agreement-state gate; D22 is correction-only and the post-conclusion case decided in WS12; WS12 flagged against `-360` Q1 A; `-355` d3 superseded in part; ADR-0029 / Row 19 / Row 26 notes; grants bind `twt_app` only — triggers are the jobs controls; counsel question 3's two halves; the gate list corrected.
+- v1.3 (2026-10-20) — Task 0 DONE: Decision `2026-10-20-367` (`5ab99fc0`, alone) and the records commit; the `-367` OUTCOME block added
+  under Status (it governs); F25 withdrawn (kept); PQ dispositions; AC1 → v2's first-person English without the clause; WS2 (i), WS4's
+  G3 (c), T24 annotated; Task 0 ticked; Debug Log (a). Status `in-progress`.
 - v1.2 (2026-10-20) — `bmad-create-story validate 6.37d`: REBASED onto `main` `0e88ddd1` (16 behind; 6.31 shipped; both ledger conflicts kept both sides) and re-pinned; four parallel fresh-context verifiers (governance / code / mechanism / premise + Meta), 41 findings, all applied (BigDev: *"all"*). ⭐ 6.31 SHIPPED ⇒ WS1's precondition MET, F3 rewritten as built (client, cache, `resolveChannelSecret`, `classifyDirectWaSendFailure` and `-366`'s order, `waTemplateConfigKey`, the once-ever record + in-flight marker), F4–F7 corrected; every v1.1 number TAKEN (`-364`/`-365`/`-366`, Row 35, 0171) ⇒ the G3 row named by key with legs G3 (a)–(h), ⛔ untaken number in the file (`-366` d6); `-364`/`-365`/`-366` and 6.31's told reading added to the rulings table; WS8 rebuilt on 6.31's crash-safe shape (marker, lapsed finisher, window at the marker, a transient rule, every classifier kind mapped, the freeze excluding the status columns) with `-365` WR7 / WR10 divergences NAMED; AC5 re-ordered (config outside the lock; the chase stops and ladder ends re-checked before a send); WS12 / D22: `reachedByLadderWhatsapp` stands on its own row (a later ladder's conclusion maps the earlier origin) and the Policy meaning cost restated (where every text fails, ⛔ more waiting for a call or a letter); ⭐ NEW F25 / PQ3 — the agreement is ticked by whoever files (or the helpline caller) and records ⛔ claimant, while Meta requires opt-in from the recipient — counsel question 3 to be revised before sending; AC4's start keyed on a `reported_at` window (⛔ watermark exists) and its HMAC claim corrected; WS11's honest status rule (three paths with ⛔ wamid; the metadata phone-number check); row 5-12's shared STOP path sequenced (WS1, T22); G3 legs for TTL (12 h), re-categorisation, key resolution, off-WhatsApp opt-outs, the display name; the access-wrapper and clamp gates disclosed as ⛔ covering the jobs code; 6.31's symbol fence reused (a sibling module — T29); AC11's DLT file corrected; T1/T10/T11/T15 rewritten, T22–T30 added; References, Sequencing, Git intelligence refreshed. Then two fresh-context re-validators of the pass's OWN diff (claims: 3 H / 4 M / 4 L; consistency: 1 H / 2 M / 11 L — every HIGH the pass's own), all applied: a claimed step is never `pending` again, so the sweep also re-takes lapsed unmarked `attempting` rows, the final pg-boss attempt finishes the row, the marker answers `marked | lost` (6.31's `late` is its 72-hour give-up) and a window miss defers the child to 09:00; the quarter-hourly START runs 6.37c's burst / hash alarms (ADR-0042's bound counts on them); a status-table delivery is copied into `delivered_at` so D22 sees it; every 132xxx is `scope`; 6.37d's own marker-outcome CHECK (0171's would 23514 every `refused`); the fence adds the ladder's own SMS symbols; `reported_at`'s lag disclosed; the config / hash faults named and alarmed; the numbering-race note moved to Task 0.4 (the decision commits alone); Row 21 a G3 precondition. A ROUND 2 re-validator then found 2 H / 4 M / 3 L in those patches, all applied: the re-check in two halves (a SET marker or another live holder ⇒ ⛔ write — finishing it would lose a sent message's `may_have_sent`), `recipient_number_hash` written at the claim (6.31 writes it at the finalise ⇒ WS11's isolation could never match an in-flight row), where each skip is written (step vs row), both hash-failure shapes transient, one lease constant ≥ 45 min, `assertBodyParams` exported, the burst alarm's concurrency disclosed, `singletonKey` a label only. A ROUND 3 re-validator found 1 H / 6 L in those, all applied: AC5 (1) only READS — its config verdicts are written in (2) after the re-claim (a re-take is a new job id, so an earlier write matched ⛔ row and re-took the row every tick); I4 discloses `-366` d2's 500 / 503 retry; the post-send note-and-finish is ONE statement; the lease reasoning and the child's `expireInSeconds`; the burst disclosure; `contact_ladder.hash_unavailable` named; `param_invalid` via `timeoutMs`. A ROUND 4 re-validator found ⛔ HIGH (3 M / 4 L), all applied: the WhatsApp switch re-read under the lock and the config verdicts placed after the ends / stops; `first_detail` keeps the first transient and the log the last; re-takes only inside the window, every child deferring at its start at night; the lease a liveness bound (the marker CAS the safety control, the same-job-id twin named); 0171's re-stamp predicate verbatim; `param_invalid` after the marker named; I4's headline narrowed.

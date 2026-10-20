@@ -15,7 +15,8 @@ STATUS: `in-progress` — ⭐ **TASK 0 DONE (2026-10-20):** BigDev answered WS1�
 Decision `2026-10-20-367` (`5ab99fc0`, committed ALONE); the records commit followed (the G3 roster row = **Row 36**, the routing note
 `trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md` WRITTEN, ⛔ sent). ⭐ **Where `-367` changed this file, the `-367`
 OUTCOME block below governs** — read it before any WS / AC. Code may start (Tasks 1–10). ⚠ Row 6-37d is ⛔ `done` until the routing
-note (PQ2 + the clause) is RULED and the code matches. WS1's precondition (row 6-31 `done` on `main`) is MET (F3). GO-LIVE (⛔ a merge or `done` fence — [[project_not_in_production_merge_is_not_golive]]): the
+note (PQ2 + the clause) is RULED and the code matches — ⭐ RULED 2026-10-20 by Decision `2026-10-20-368` (Trustee-ratified, Q1 A, Q2 A);
+the code must still match. WS1's precondition (row 6-31 `done` on `main`) is MET (F3). GO-LIVE (⛔ a merge or `done` fence — [[project_not_in_production_merge_is_not_golive]]): the
 G3 roster Row 36 `claim-contact-claimant-whatsapp-go-live` (WS4); roster Row 32 — ALL its legs, incl. (h) alarms and (i) the claim-text
 template ids (6.37c's ladder); Row 33 (MSG91's delivery reports — without a reported `undelivered` ⛔ ladder starts); Row 35 (a) / (e)
 (each Pariwar's WhatsApp provisioning and the alarm route — SHARED with 6.31, ⛔ duplicated); Row 21 (the certificate reminder's Hindi,
@@ -77,6 +78,12 @@ Status: in-progress
 > - **DPDPA §6(4) withdrawal and §5 notice — DEFERRED, a RISK** (`-367` decision 19; *"Defer, record as risk"*): two deferred-work items;
 >   ⛔ a Row 36 leg; to close before 13 May 2027 (computed).
 > - **Supersedes** `-355` d3 IN PART; **narrows** `-365` Consequence 2 for this row (WS8 / WS9's named divergences).
+> - ⭐⭐ **RULED 2026-10-20 — Decision `2026-10-20-368` (Trustee-ratified, DR + KB: *"Q1 A, Q2 A"*):** Q1 A — the WhatsApp goes about four
+>   hours after the failed text, between 9 am and 8 pm (a later failure waits for 9 am) — WS6 as written now stands on a ruling
+>   (supersedes `-250` #5's 10:00 hour for this one step only); Q2 A — *"or any other means of communication that may appear in future"*
+>   is REMOVED (supersedes `-352` Q1 B in part): v2 (first person, without the clause) is FINAL, the v3 contingency is MOOT. The
+>   first-person sentence was shown for information and drew no objection (it stays the author's wording). Counsel's question 3 now asks
+>   sufficiency only (Row 36 (b)).
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37c built the Panel's delivery ladder for the correction and certificate reminders
 > with its FIRST step — *"after SMS has been sent and not been delivered for 4 hours, send message over WhatsApp"* (`-350` ruling 2 (1))
@@ -746,8 +753,8 @@ NARROW / WIDEN:
   itself needs a basis — circular. ⚠ ⛔ The author changes the wording under PQ3 (WS2 (v)); Task 0.5 revises counsel question 3 BEFORE it
   is sent (the precedent: the document's own *"Revised 2026-10-18, before sending"* note).
 
-⭐ **Dispositions (2026-10-20, `-367` decisions 15–17):** PQ1 — the AUTHOR's, reading A. PQ2 — ROUTED (the note below, WRITTEN, ⛔
-sent). PQ3 — DISSOLVED by the claimant's definition (see the `-367` OUTCOME block); its options B / C are moot.
+⭐ **Dispositions (2026-10-20, `-367` decisions 15–17):** PQ1 — the AUTHOR's, reading A. PQ2 — ROUTED (the note below) and RULED 2026-10-20 by `-368`: Q1 A
+(and the clause: Q2 A — removed). PQ3 — DISSOLVED by the claimant's definition (see the `-367` OUTCOME block); its options B / C are moot.
 
 ⚠ If BigDev routes any: ONE routing note from the TEMPLATE (`trustee-panel-routing-note-YYYY-MM-DD-6-37d-whatsapp-edges.md`), plain
 question first, the deciding fact, options with costs, evidence last; WRITTEN at Task 0.3, ⛔ "sent" until it goes out
@@ -1212,6 +1219,9 @@ tests pinned by policy regression specs and source fences.
 
 - v1.0 (2026-10-19) — created by `bmad-create-story 6.37d` at `15acb570`; WS1–WS14 proposed, PQ1–PQ2 candidate; status `ready-for-dev`.
 - v1.1 (2026-10-19) — the create-story's own checklist pass (one fresh-context validator, read-only: 7 HIGH / 12 MEDIUM / 5 LOW, all applied): the STOP key moved to the ladder's `claim_contact_mobile` hash space (⛔ the member login key); the webhook worker's claim branch scoped to the event's Pariwar behind the RLS-bound-role refusal; the quarter-hourly sweep starts ladders only for NEW reports and ⛔ calls `advance`; the 4 h anchor = the origin's `created_at` (⛔ `claimed_at`, re-set on retry); `isClaimant` on both person types (the certificate reader is shaped differently); AC2's fence narrowed to the agreement-state gate; D22 is correction-only and the post-conclusion case decided in WS12; WS12 flagged against `-360` Q1 A; `-355` d3 superseded in part; ADR-0029 / Row 19 / Row 26 notes; grants bind `twt_app` only — triggers are the jobs controls; counsel question 3's two halves; the gate list corrected.
+- v1.4 (2026-10-20) — the Panel RULED the routing note: Decision `2026-10-20-368` (Trustee-ratified, *"Q1 A, Q2 A"*; `041d5f17`,
+  committed alone) and its records commit; the `-367` OUTCOME block gains the ruling; the header's done-gate and the PQ dispositions note
+  it. Status stays `in-progress`.
 - v1.3 (2026-10-20) — Task 0 DONE: Decision `2026-10-20-367` (`5ab99fc0`, alone) and the records commit; the `-367` OUTCOME block added
   under Status (it governs); F25 withdrawn (kept); PQ dispositions; AC1 → v2's first-person English without the clause; WS2 (i), WS4's
   G3 (c), T24 annotated; Task 0 ticked; Debug Log (a). Status `in-progress`.

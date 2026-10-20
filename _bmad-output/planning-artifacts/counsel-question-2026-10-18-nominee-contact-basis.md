@@ -66,3 +66,8 @@ to remove the phrase — it has been put to the Panel (`trustee-panel-routing-no
 removed before this goes out, drop that half when sending. Its first half stands (roster Row 36 leg (b) waits on it). The reworded
 agreement now reads in the first person — *"I agree that the Trust may contact me by text message, WhatsApp, phone call or post, about
 this claim."* — the claimant being the person who files the claim and ticks it. ⛔ Change to the question's wording is made here.
+
+*Dated note, 2026-10-20 (Decision `2026-10-20-368`, Trustee-ratified Q2 A) — still WRITTEN, ⛔ sent:* the Panel has REMOVED *"or any
+other means of communication that may appear in future"* from the claimant's agreement. ⛔ Ask question 3's second half; when sending,
+question 3 reads: *"Is the claimant's own reworded agreement — "I agree that the Trust may contact me by text message, WhatsApp, phone
+call or post, about this claim." — a sufficient basis for texts, WhatsApp, calls and post to the claimant?"* (roster Row 36 (b)).

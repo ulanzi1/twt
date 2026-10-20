@@ -12,13 +12,24 @@ meaning is asked here.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — 2026-10-20 — Q1 A, Q2 A (Decision `2026-10-20-368`, Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **The ruling, verbatim, as relayed by BigDev:** *"by DR and KB / Q1 A, Q2 A"* — Dhiraj Rahul and Kalpana Bharti.
 >
-> Written 2026-10-20 (Story 6.37d Task 0.3, Decision `2026-10-20-367` decisions 16 and 18). **Status: WRITTEN, ⛔ not yet sent.**
-> Nothing here is recorded as shown to the Panel until BigDev sends it ([[feedback_shown_to_panel_means_sent]]).
+> **Q1 — A: "About four hours after the failed text, between 9 am and 8 pm (a later failure waits for 9 am)."** Its cost was accepted:
+> two messages are sent that day (one never arrived), and a delivered WhatsApp ends the follow-up texts, so the claim may be closed for
+> silence sooner. It supersedes in part the 10:00 hour of `-250` #5, for this one step only.
+>
+> **Q2 — A: "Remove the words. The agreement names text message, WhatsApp, phone call and post only."** Its cost was accepted: claims
+> filed before a new way of contact is wanted must be asked again before it is used for them. It supersedes in part `-352` Q1 B.
+>
+> **For information (⛔ ruled):** the first-person sentence was shown; the Panel raised no objection. It stays the author's wording.
+>
+> **Not covered by this ruling** (the full list is `-368`'s): counsel's view on whether the agreement is a sufficient basis (roster Row
+> 36 (b)); Meta's approval of the templates; the DPDPA notice and withdrawal gaps; the scheduled reminders' timing (unchanged).
+>
+> Written 2026-10-20 at Story 6.37d Task 0.3; sent and ruled 2026-10-20. Everything below stays **unedited**, as the question **as it
+> was put**.
 
 ---
 

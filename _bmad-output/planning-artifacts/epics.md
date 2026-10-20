@@ -3638,6 +3638,10 @@ ids only in logs and alarms; no event, no claim state; no call to Meta in any te
 > WhatsApp at four hours vs "one message a day, at 10:00", and removing *"or any other means of communication that may appear in
 > future"* from the agreement, are ROUTED to the Panel (`trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md` — written, not
 > sent). The agreement's v2 reads in the first person. GO-LIVE: roster Row 36 `claim-contact-claimant-whatsapp-go-live`.
+>
+> ⚠ **Dated note, 2026-10-20:** the routing note is RULED — [`-368`](../../.decision-log.md#decision-2026-10-20-368) (Trustee-ratified):
+> Q1 A (the WhatsApp about four hours after the failed text, between 9 am and 8 pm) and Q2 A (the clause removed; the agreement names
+> text message, WhatsApp, phone call and post only).
 
 As a claimant whose family's claim is being chased for a bank-details correction or a death certificate, I want a reminder the phone
 network reports it could not deliver to me to be tried on WhatsApp a few hours later — only because I agreed to WhatsApp when I filed,

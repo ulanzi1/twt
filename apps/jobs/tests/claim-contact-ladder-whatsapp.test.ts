@@ -160,8 +160,11 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     ['packages/channels/src/sms-dlt-registry.ts', '6df1b22813e239cda40c06f1bc324f3d7f6cb05615f1309e13224efa11c3d792'],
     ['packages/domain/src/claim/peer-mesh-wa-reminder.ts', 'cf1e8f1f0cec249e2ac66d8e6ae2f47a46794b998dd42a990d7254af0625aaef'],
     ['packages/channels/src/providers/whatsapp-direct-send-outcome.ts', 'e54f8e1df2195ca192c55f2936e27eb62075d6db8cca6954eb2583b92554e3a7'],
-    ['packages/domain/src/wa-opt-in/write.ts', 'f8c1f0afa4cd030a3704a6538e7f0e61b03e36aac9ca6e57aebcb61194d3cca0'],
-    ['packages/domain/src/wa-opt-in/read.ts', 'd99f4e24d883cde5155be3e699a490f3d5233b0e42fe1807b01894f55809f0ca'],
+    // 2026-10-21 Story 5.12 — `-364` (a yes lasts until withdrawn; every withdrawal ends every yes): these TWO pins re-taken
+    // (endEveryWaYes and the state reads added; isOptInActive's clock and the ACTIVE → EXPIRED edge removed). The rest of the
+    // fence stands.
+    ['packages/domain/src/wa-opt-in/write.ts', '3c1055d74e2f76fe50036b0835c0cce1f0798bb1517ef16e0fbaff6252bc417d'],
+    ['packages/domain/src/wa-opt-in/read.ts', 'a9c6a82d6de5f4201a7b5c61101628cfd96f6399e917b831ef93e078531ca149'],
     ['packages/domain/src/schema/pariwar_wa_templates.ts', '61c4a6420d56260d7b094c9105a9cdebcd3b312168ebab050e265049c89773bd'],
   ];
   it.each(PINS)('%s is unchanged', (rel, sha) => {

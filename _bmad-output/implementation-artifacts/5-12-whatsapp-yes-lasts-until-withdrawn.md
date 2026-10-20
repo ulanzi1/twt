@@ -682,10 +682,10 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
     `packages/contracts` (T11).
   - [x] 5.5 Legs: AC1, AC2, AC9; flip `peer-mesh-wa-reminder-opted-in.spec.ts:61-68`, re-seed its `:70-79` EXPIRED case by INSERT;
     `wa-opt-in.spec.ts:185-209` + header `:9`; `apps/api/tests/unit/wa-target.test.ts:6` header.
-- [ ] **Task 6 — Fences (AC8)**
-  - [ ] 6.1 Update 6.37d's AC11 PINS for `read.ts` / `write.ts` ONLY, with a dated comment (*"2026-10-xx Story 5.12 — `-364`; the rest
+- [x] **Task 6 — Fences (AC8)**
+  - [x] 6.1 Update 6.37d's AC11 PINS for `read.ts` / `write.ts` ONLY, with a dated comment (*"2026-10-xx Story 5.12 — `-364`; the rest
     of the fence stands"*). Re-run the fence; every other pin must still match.
-  - [ ] 6.2 Confirm AC8's empty diff for `packages/channels` and `apps/jobs/src/scheduler`, and that `WA_BLOCK_ERROR_CODES` / `isBlock` are
+  - [x] 6.2 Confirm AC8's empty diff for `packages/channels` and `apps/jobs/src/scheduler`, and that `WA_BLOCK_ERROR_CODES` / `isBlock` are
     byte-unchanged.
 - [ ] **Task 7 — Close the records and the gate (AC11, AC12)**
   - [ ] 7.1 Statuses at EVERY site (grep each verbatim title across `_bmad-output`, `docs`, story files and code comments; the sites known

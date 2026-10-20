@@ -53,7 +53,7 @@ export interface WaTargetDeps {
  * The AC6 dual-gated WA delivery-resolver read (Story 5.4) — a thin apps/api adapter over the ONE domain
  * implementation (`notifications.resolveWaTarget`, relocated by Story 8.8 so apps/jobs can call it). Keeps the
  * apps/api `{ db, encryption }` deps shape so no apps/api call site changed. Resolves a WhatsApp `SendTarget`
- * for a member ONLY when both the per-Pariwar admin toggle AND the member opt-in (ACTIVE, within window) pass;
+ * for a member ONLY when both the per-Pariwar admin toggle AND the member opt-in (ACTIVE — ⛔ clock since Story 5.12) pass;
  * otherwise null. The member's Tier-1 mobile is decrypted inside the domain read (never in dispatch/the provider).
  */
 export async function resolveWaTarget(

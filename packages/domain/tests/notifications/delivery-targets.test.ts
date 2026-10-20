@@ -7,8 +7,8 @@
 // same outcomes. Their apps/api wrappers keep thin delegation tests.
 //
 // What is asserted:
-//   · WhatsApp (5.4 AC6) — DUAL gate: the admin toggle AND an ACTIVE, in-window member opt-in. Either
-//     gate off ⇒ null, and the later gate is not even consulted.
+//   · WhatsApp (5.4 AC6) — DUAL gate: the admin toggle AND an ACTIVE member opt-in (⛔ clock since Story 5.12 —
+//     `-364` option A; ⛔ `at` reaches the read). Either gate off ⇒ null, and the later gate is not even consulted.
 //   · Telegram (5.5 AC5) — DUAL gate: the admin toggle AND an ACTIVE opt-in (no window). Gate 2 reads
 //     the OPERATIONAL state, NEVER a consent-registry read (the load-bearing invariant).
 //   · SMS (5.6 AC4) — NO opt-in gate (the registered KYC mobile IS the address); null only when the
@@ -71,6 +71,17 @@ describe('resolveWaTarget — dual gate (Story 5.4 AC6)', () => {
       channel: 'whatsapp',
       address: '+919876543210',
     });
+  });
+
+  it('⭐ Story 5.12 (AC1) — a caller\'s `at` is ⛔ forwarded: the opt-in read is called with { pariwarId, memberId } only (⛔ clock)', async () => {
+    getWaConfig.mockResolvedValue({ enabled: true });
+    waIsOptInActive.mockResolvedValue(true);
+    getMemberMobileCiphertext.mockResolvedValue('enc:v1:xyz');
+    decryptMobile.mockResolvedValue('+919876543210');
+    const aWeekAfterTheWindow = new Date(Date.now() + 8 * 24 * 3600 * 1000);
+    expect(await resolveWaTarget(DB, ENC, PARIWAR, MEMBER, aWeekAfterTheWindow)).toEqual({ channel: 'whatsapp', address: '+919876543210' });
+    expect(waIsOptInActive).toHaveBeenCalledTimes(1);
+    expect(waIsOptInActive).toHaveBeenCalledWith(DB, { pariwarId: PARIWAR, memberId: MEMBER });
   });
 
   it('admin toggle off → null (opt-in gate not even consulted)', async () => {

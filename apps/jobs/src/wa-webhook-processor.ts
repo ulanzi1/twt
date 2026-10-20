@@ -3,14 +3,16 @@
 // The async half of the §3.11 ingress split: the apps/api primitive verifies + persists raw Meta webhooks;
 // THIS worker drains `wa_inbound_webhook_events` and does the business logic the handler must not:
 //   · Inbound text → compute the sender's mobile_blind_index → matchPendingOptIn by (blind index, phrase) →
-//     PENDING→ACTIVE + recordConsent('whatsapp_opt_in') + 24h window (audit-or-throw, 5-field audit).
+//     PENDING→ACTIVE + recordConsent('whatsapp_opt_in') + Meta's 24h free-form window end recorded (⛔ the opt-in's end —
+//     Story 5.12; audit-or-throw, 5-field audit).
 //   · Inbound STOP/opt-out keyword (whole-message, case-folded allowlist) → Story 5.12 (`-364` condition 3): EVERY member
 //     whose opt-in rows (any state) carry the sender's number ends their yes — the ACTIVE row → REVOKED and EVERY open
 //     whatsapp_opt_in consent row revoked (`endEveryWaYes`); nothing to end ⇒ a no-op. A fault is retried once, then alarmed.
 //   · Message-status callback → consume 5.3's mapMetaStatus + upsertWaSendStatus (the Q2 ownership split); Meta's 131050 (a
 //     marketing opt-out — the one code that records the person's own request; Story 5.12 LY8) additionally ends the member's
 //     yes: ACTIVE→BLOCKED_BY_META + every open consent revoked.
-//   · A stale-PENDING / past-24h-window sweep → EXPIRED_24H_WINDOW (originating_channel: system_expiry).
+//   · A stale-PENDING sweep → EXPIRED_24H_WINDOW ("a request never confirmed"; originating_channel: system_expiry). Story 5.12
+//     (`-364` option A; LY3): an ACTIVE opt-in never expires — a yes lasts until the member takes it back.
 //
 // Best-effort + isolated (AI-4-3(d)): a broken per-event write logs and continues; the event is marked
 // processed regardless (the guards make replays safe) so one bad event never poisons the drain. Runs
@@ -44,7 +46,7 @@ import { recordClaimContactWaStop } from './claim-contact-wa-stop.js';
 export const DEFAULT_WA_WEBHOOK_PROCESSOR_CRON = '* * * * *'; // every minute
 export const WA_WEBHOOK_PROCESSOR_TZ = 'Asia/Kolkata';
 
-/** The 24h Meta customer-service window, in ms. */
+/** Meta's 24h free-form (customer-service) window, in ms — recorded on the match; ⛔ the opt-in's end (Story 5.12, LY2). */
 const META_24H_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** How many events / sweep rows to process per tick (bounded scan). */
 const DRAIN_BATCH = 200;
@@ -126,8 +128,8 @@ function isMemberStopKeyword(body: string): boolean {
 }
 
 // ── Meta opt-out / block error codes (statuses[].status='failed') → authoritative BLOCKED_BY_META ────────
-// Indicative set — verify against Meta's error-code reference at deploy time. Conservative: only an explicit
-// opt-out/undeliverable-by-user-choice code drives BLOCKED_BY_META (a transient failure must NOT revoke).
+// Indicative set — verify against Meta's error-code reference at deploy time. Since Story 5.12 this set gates ONLY the claim
+// half's hash fallback (`isBlock` below); the MEMBER yes ends on `WA_MEMBER_CONSENT_BLOCK_CODES` alone (131050).
 const WA_BLOCK_ERROR_CODES = new Set([131050, 131049, 131026, 131047]);
 
 /**
@@ -613,55 +615,43 @@ async function endMemberYesOnStop(deps: WaWebhookProcessorDeps, pariwarId: ids.P
 }
 
 /**
- * The stale-PENDING / past-24h-window expiry sweep (AC4; originating_channel: system_expiry). A PENDING that
- * never matched within the TTL → EXPIRED_24H_WINDOW; an ACTIVE past its window → EXPIRED_24H_WINDOW. Consent
- * is NOT revoked on window expiry — the member remains opted in; only the Meta delivery window closed (the
- * AC6 gate already blocks delivery via isOptInActive's window check). Best-effort per row.
+ * The stale-PENDING expiry sweep (AC4; originating_channel: system_expiry). A PENDING that never matched within the TTL →
+ * EXPIRED_24H_WINDOW (now meaning "a request never confirmed" — ⛔ a yes; ⛔ consent exists to touch). Story 5.12 (`-364`
+ * option A; LY3): the past-window ACTIVE half is GONE — a yes lasts until withdrawn, and the database refuses ACTIVE →
+ * EXPIRED (trigger `member_wa_opt_in_no_active_expiry`). Best-effort per row.
  */
-export async function runWaOptInExpirySweep(deps: WaWebhookProcessorDeps): Promise<{ expiredPending: number; expiredWindow: number }> {
+export async function runWaOptInExpirySweep(deps: WaWebhookProcessorDeps): Promise<{ expiredPending: number }> {
   const ttl = deps.pendingTtlSeconds ?? DEFAULT_PENDING_TTL_SECONDS;
   let expiredPending = 0;
-  let expiredWindow = 0;
 
   const stale = await waOptIn.listStalePendingOptIns(deps.db, ttl, DRAIN_BATCH);
   for (const row of stale) {
     try {
-      await expireOptIn(deps, row, 'PENDING');
+      await expireOptIn(deps, row);
       expiredPending += 1;
     } catch (err) {
       console.error('[jobs] wa-webhook: stale-PENDING expiry failed (isolated)', err);
     }
   }
-
-  const past = await waOptIn.listExpiredWindowOptIns(deps.db, DRAIN_BATCH);
-  for (const row of past) {
-    try {
-      await expireOptIn(deps, row, 'ACTIVE');
-      expiredWindow += 1;
-    } catch (err) {
-      console.error('[jobs] wa-webhook: past-window expiry failed (isolated)', err);
-    }
-  }
-  return { expiredPending, expiredWindow };
+  return { expiredPending };
 }
 
-/** Transition one opt-in row → EXPIRED_24H_WINDOW with a system_expiry audit line (actorId null). */
+/** Transition one stale PENDING row → EXPIRED_24H_WINDOW with a system_expiry audit line (actorId null). */
 async function expireOptIn(
   deps: WaWebhookProcessorDeps,
   row: { optInId: string; pariwarId: string; memberId: string; verificationPhrase: string },
-  beforeState: 'PENDING' | 'ACTIVE',
 ): Promise<void> {
   const auditFacts = {
     pariwarId: row.pariwarId,
     memberId: row.memberId,
     actorId: null,
     originatingChannel: 'system_expiry' as const,
-    beforeState,
+    beforeState: 'PENDING',
     afterState: 'EXPIRED_24H_WINDOW',
     verificationPhrase: row.verificationPhrase,
   };
   const auditId = await auditOptInTransition(deps.pool, { ...auditFacts, action: 'member.wa_opt_in_expired' });
-  void auditId; // the audit line stands alone; EXPIRED does not touch consent (window-only), so no id threaded.
+  void auditId; // the audit line stands alone; a PENDING has ⛔ consent to touch, so no id threaded.
   try {
     await waOptIn.revokeOptIn(deps.db, {
       pariwarId: ids.pariwarId(row.pariwarId),
@@ -681,13 +671,13 @@ async function expireOptIn(
 /** Drain the webhook queue (bounded) + run the expiry sweep. Returns the tick summary (stored in job output). */
 export async function runWaWebhookProcessorTick(
   deps: WaWebhookProcessorDeps,
-): Promise<{ drained: number; expiredPending: number; expiredWindow: number; refused?: true }> {
+): Promise<{ drained: number; expiredPending: number; refused?: true }> {
   // Story 6.37d (WS11) — under an RLS-bound role every cross-tenant read returns ⛔ row SILENTLY: the claim branch's lookup by
   // wamid would miss and a block code would REVOKE the member's opt-in (I7) — silently. Refuse BEFORE any event is claimed (⛔
   // marked processed) — ⛔ a fall-through to the member path (6.37c's `canReadAcrossPariwars` guard; roster Row 26).
   if (!(await smsDelivery.canReadAcrossPariwars(deps.pool))) {
     console.warn('[jobs] wa-webhook: REFUSED — the pool role cannot read across Pariwars (roster Row 26); ⛔ event claimed');
-    return { drained: 0, expiredPending: 0, expiredWindow: 0, refused: true };
+    return { drained: 0, expiredPending: 0, refused: true };
   }
   const events = await waOptIn.claimUnprocessedWebhookEvents(deps.db, DRAIN_BATCH);
   for (const event of events) {

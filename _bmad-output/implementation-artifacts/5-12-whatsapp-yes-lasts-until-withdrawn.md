@@ -668,19 +668,19 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
     always-present withdraw control)**` paragraph to `friction-budget.md` above `## How to declare` — the payer (the member), what it
     protects (`-364` conditions 1–2), that 5.4's row stands; commit it with Task 4 (a gate input — ⛔ a docs-only commit) and run
     `pnpm friction:check`.
-- [ ] **Task 5 — The read change, LAST (AC1, AC2, AC9, AC10; LY1–LY4)**
-  - [ ] 5.1 `isOptInActive` → LY1; `resolveWaTarget` call + `void at;` + docs (`delivery.ts:108-115`, `:127`); `composition.ts:56`;
+- [x] **Task 5 — The read change, LAST (AC1, AC2, AC9, AC10; LY1–LY4)**
+  - [x] 5.1 `isOptInActive` → LY1; `resolveWaTarget` call + `void at;` + docs (`delivery.ts:108-115`, `:127`); `composition.ts:56`;
     `isPeerMeshWaReminderOptedIn` doc only (`read.ts:169-171`).
-  - [ ] 5.2 The sweep → LY3; `revokeOptIn` edges (`:225-226`) + doc (`:216-222`); delete `listExpiredWindowOptIns`; `expiredWindow` at its
+  - [x] 5.2 The sweep → LY3; `revokeOptIn` edges (`:225-226`) + doc (`:216-222`); delete `listExpiredWindowOptIns`; `expiredWindow` at its
     three sites. Stale comments: worker header `:1-11` (incl. `:7-8` *"A STOP from a member with no ACTIVE opt-in is a no-op"*), `:45-46`,
     `:113-114`, `:524-528`; `read.ts:67-70` (`getActiveOptInByMobile`'s *"⇒ a STOP is a no-op"*); `handlers.ts:6-7`, `:204`, `:256-261`;
     `apps/jobs/src/boot.ts:464-467`; `packages/queue/src/index.ts:101`. ⛔ edit `0042_member-wa-opt-in.sql` (applied).
-  - [ ] 5.3 Migration `NNNN_member-wa-opt-in-lasting-yes.sql` + journal entry (`when` = previous + 86400001 — F19) (LY4); `db:migrate` on
+  - [x] 5.3 Migration `NNNN_member-wa-opt-in-lasting-yes.sql` + journal entry (`when` = previous + 86400001 — F19) (LY4); `db:migrate` on
     :5433, then `psql -f` twice (AC2); ⚠ a dev DB that fails (ii) is a FINDING — report it.
-  - [ ] 5.4 LY2 comments: `schema/member_wa_opt_in.ts` (`:4`, `:6-7`, `:34`, `:37`, `:78` + a comment naming the SQL-only index — T7),
+  - [x] 5.4 LY2 comments: `schema/member_wa_opt_in.ts` (`:4`, `:6-7`, `:34`, `:37`, `:78` + a comment naming the SQL-only index — T7),
     `schema/index.ts:158-159`, `activateOptIn`, contracts `WaOptInStatusResponse` JSDoc (`opt-in.ts:50-56` — ⛔ emitted); run `vitest` in
     `packages/contracts` (T11).
-  - [ ] 5.5 Legs: AC1, AC2, AC9; flip `peer-mesh-wa-reminder-opted-in.spec.ts:61-68`, re-seed its `:70-79` EXPIRED case by INSERT;
+  - [x] 5.5 Legs: AC1, AC2, AC9; flip `peer-mesh-wa-reminder-opted-in.spec.ts:61-68`, re-seed its `:70-79` EXPIRED case by INSERT;
     `wa-opt-in.spec.ts:185-209` + header `:9`; `apps/api/tests/unit/wa-target.test.ts:6` header.
 - [ ] **Task 6 — Fences (AC8)**
   - [ ] 6.1 Update 6.37d's AC11 PINS for `read.ts` / `write.ts` ONLY, with a dated comment (*"2026-10-xx Story 5.12 — `-364`; the rest

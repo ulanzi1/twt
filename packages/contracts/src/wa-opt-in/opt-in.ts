@@ -52,7 +52,8 @@ export type CreateWaOptInResponse = z.output<typeof CreateWaOptInResponse>;
  *   · `available` — the Pariwar has WA enabled AND a display number (⇒ the toggle is shown; false ⇒ absent).
  *   · `state` — null when the member has never opted in; else the current lifecycle state.
  *   · `deepLink` / `verificationPhrase` — present (non-null) ONLY while PENDING (re-open Send-Hello / retry).
- *   · `windowExpiresAt` — present (non-null) ONLY while ACTIVE (the 24h Meta window end).
+ *   · `windowExpiresAt` — present (non-null) ONLY while ACTIVE: Meta's 24h free-form window end — ⛔ the opt-in's end (Story
+ *     5.12, `-364` option A: an ACTIVE opt-in lasts until withdrawn; the app does ⛔ condition on this field).
  */
 export const WaOptInStatusResponse = z
   .object({

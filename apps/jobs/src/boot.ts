@@ -462,9 +462,9 @@ async function main(): Promise<void> {
     );
 
     // ── WhatsApp inbound-webhook processor + opt-in expiry sweep (Story 5.4, AC3/AC4) ──
-    // Drains wa_inbound_webhook_events: inbound match → ACTIVE + consent + 24h window, STOP → REVOKED,
-    // Meta block → BLOCKED_BY_META, status callbacks → 5.3's mapMetaStatus/upsertWaSendStatus; plus the
-    // stale-PENDING / past-window sweep → EXPIRED_24H_WINDOW. Uses the member-family hmac key (same
+    // Drains wa_inbound_webhook_events: inbound match → ACTIVE + consent, STOP → every yes on the number ended,
+    // Meta 131050 → BLOCKED_BY_META, status callbacks → 5.3's mapMetaStatus/upsertWaSendStatus; plus the
+    // stale-PENDING sweep → EXPIRED_24H_WINDOW (Story 5.12: an ACTIVE yes never expires). Uses the member-family hmac key (same
     // by-value parallel as the api) for the mobile blind-index match. Cross-tenant on the service `pool`.
     await registerWaWebhookProcessorCron(
       boss,

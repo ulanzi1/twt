@@ -1,7 +1,8 @@
 // Member WA opt-in write path — Story 5.4 (Task 3; AC1/AC3/AC4).
 //
 // State-machine transitions: createPendingOptIn (mint PENDING) / activateOptIn (PENDING→ACTIVE) /
-// revokeOptIn (ACTIVE→REVOKED|BLOCKED_BY_META, PENDING|ACTIVE→EXPIRED_24H_WINDOW). Mirror consent/write.ts:
+// revokeOptIn (ACTIVE→REVOKED|BLOCKED_BY_META, PENDING→EXPIRED_24H_WINDOW) / endEveryWaYes (Story 5.12 — every withdrawal:
+// ACTIVE→REVOKED|BLOCKED_BY_META + every open whatsapp_opt_in consent revoked). Mirror consent/write.ts:
 // NO HTTP, NO audit-or-throw orchestration (the CONSUMER route/worker writes the audit line FIRST + threads
 // the id — audit-or-throw). These accessors run DIRECTLY on the passed (scoped) `Db` and do NOT open their
 // own transaction; RLS scope is transaction-scoped, so a scoped caller is already inside a tx.
@@ -12,7 +13,7 @@
 // These accessors merely ACCEPT a caller-supplied `consentId` (the ACTIVE back-reference); the audit id is
 // carried on the consent row, never here.
 
-import { and, eq, lt, or, sql } from 'drizzle-orm';
+import { and, eq, lt, sql } from 'drizzle-orm';
 
 import { clampLimit } from '../pagination.js';
 
@@ -164,7 +165,10 @@ export async function createPendingOptIn(
 export interface ActivateOptInInput {
   pariwarId: PariwarId;
   optInId: MemberWaOptInId;
-  /** The Meta 24h customer-service window end (now + 24h), set on the ACTIVE transition. */
+  /**
+   * Meta's 24h free-form (customer-service) window end (now + 24h), set on the ACTIVE transition — ⛔ the opt-in's end: since
+   * Story 5.12 (`-364` option A, reading (ii); LY2) a yes lasts until withdrawn and ⛔ thing gates on this column.
+   */
   windowExpiresAt: Date;
   /** The consent_records row minted on ACTIVE (the registry is canonical; this is a back-reference). */
   consentId: ConsentId;
@@ -210,26 +214,24 @@ export type RevokeToState = Extract<WaOptInState, 'REVOKED' | 'BLOCKED_BY_META' 
 export interface RevokeOptInInput {
   pariwarId: PariwarId;
   optInId: MemberWaOptInId;
-  /** The terminal state to drive into: REVOKED (member/STOP/admin) | BLOCKED_BY_META (Meta) | EXPIRED_24H_WINDOW (sweep). */
+  /** The terminal state to drive into: REVOKED (member/STOP/admin) | BLOCKED_BY_META (Meta) | EXPIRED_24H_WINDOW (stale-PENDING sweep). */
   toState: RevokeToState;
 }
 
 /**
  * Legal transitions (guarded — an illegal edge → `WaOptInStateError`):
  *   · REVOKED             ← ACTIVE (member/STOP/admin opt-out).
- *   · BLOCKED_BY_META     ← ACTIVE (Meta block/opt-out status callback).
- *   · EXPIRED_24H_WINDOW  ← PENDING (stale-TTL sweep) or ACTIVE (window passed).
+ *   · BLOCKED_BY_META     ← ACTIVE (Meta 131050 status callback).
+ *   · EXPIRED_24H_WINDOW  ← PENDING ONLY (stale-TTL sweep — a request never confirmed). Story 5.12 (`-364` option A; LY3): ⛔
+ *     ACTIVE → EXPIRED — a yes lasts until withdrawn; the trigger `member_wa_opt_in_no_active_expiry` (migration
+ *     `member-wa-opt-in-lasting-yes`) refuses that edge in the database too.
  * The FROM-state predicate is pinned in the UPDATE WHERE so a concurrent transition yields 0 rows → the
  * correct typed error. A MUTATE, never a delete (compliance: the row is retained for the AC5 history).
+ * The withdrawal paths call `endEveryWaYes` (ends every consent too); this by-id edge remains for the sweep and the tests.
  */
 export async function revokeOptIn(db: Db, input: RevokeOptInInput): Promise<MemberWaOptInRow> {
-  const legalFrom: WaOptInState[] =
-    input.toState === 'EXPIRED_24H_WINDOW' ? ['PENDING', 'ACTIVE'] : ['ACTIVE'];
-
-  const fromPredicate =
-    legalFrom.length === 1
-      ? eq(memberWaOptIn.state, legalFrom[0]!)
-      : or(...legalFrom.map((s) => eq(memberWaOptIn.state, s)));
+  const legalFrom: WaOptInState = input.toState === 'EXPIRED_24H_WINDOW' ? 'PENDING' : 'ACTIVE';
+  const fromPredicate = eq(memberWaOptIn.state, legalFrom);
 
   const updated = await db
     .update(memberWaOptIn)
@@ -247,7 +249,7 @@ export async function revokeOptIn(db: Db, input: RevokeOptInInput): Promise<Memb
     await assertRowExistsOrThrow(db, input.pariwarId, input.optInId);
     throw new WaOptInStateError(
       input.optInId,
-      `illegal transition to ${input.toState} from current state (expected ${legalFrom.join(' | ')})`,
+      `illegal transition to ${input.toState} from current state (expected ${legalFrom})`,
     );
   }
   return row;
@@ -323,7 +325,8 @@ async function assertRowExistsOrThrow(
 
 /**
  * Stale PENDING opt-ins that never received an inbound match within `ttlSeconds` (candidates for
- * PENDING→EXPIRED_24H_WINDOW). Cross-tenant; bounded by `limit`.
+ * PENDING→EXPIRED_24H_WINDOW — "a request never confirmed"). Cross-tenant; bounded by `limit`. Story 5.12 (LY3): the sweep's
+ * only half — an ACTIVE opt-in never expires (the past-window read `listExpiredWindowOptIns` is gone).
  */
 export async function listStalePendingOptIns(
   db: Db,
@@ -339,17 +342,5 @@ export async function listStalePendingOptIns(
         lt(memberWaOptIn.createdAt, sql`now() - make_interval(secs => ${ttlSeconds})`),
       ),
     )
-    .limit(clampLimit(limit, { default: 200, cap: 500 }));
-}
-
-/**
- * ACTIVE opt-ins whose 24h window has passed (candidates for ACTIVE→EXPIRED_24H_WINDOW). Cross-tenant;
- * bounded by `limit`. `window_expires_at` is compared to DB now().
- */
-export async function listExpiredWindowOptIns(db: Db, limit: number): Promise<MemberWaOptInRow[]> {
-  return db
-    .select()
-    .from(memberWaOptIn)
-    .where(and(eq(memberWaOptIn.state, 'ACTIVE'), lt(memberWaOptIn.windowExpiresAt, sql`now()`)))
     .limit(clampLimit(limit, { default: 200, cap: 500 }));
 }

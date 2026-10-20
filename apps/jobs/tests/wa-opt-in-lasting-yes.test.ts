@@ -6,6 +6,10 @@
 //   · AC4 (a)–(h) — STOP always works (condition 3; LY6): any-state lookup, nothing-to-end ⇒ ⛔ write, two members on one
 //     number, Hindi, a fault retried once then alarmed (ids only), the punctuation option, a pre-loop fault alarmed from the
 //     per-message catch.
+//   · AC2 / AC9 — ⛔ yes expires: a tick leaves an ACTIVE past its window ACTIVE (⛔ `expired` audit, ⛔ `expiredWindow`); the
+//     stale-PENDING sweep is tested (closes the WA half of 5.5's sweep-coverage item): the table is SHARED and un-ordered (≥ 60
+//     stale PENDINGs from other suites, `LIMIT 200`), so the seeded rows are 10 / 8 years old and the TTL is 9 years (a DEPS
+//     field) — ONLY the seeded rows are candidates.
 // Fault injection: the worker runs on its OWN pool connections, so a `pg_temp` trigger inside one uncommitted client tx cannot
 // reach it — a COMMITTED test trigger calling a non-temp function, scoped `WHEN (OLD.opt_in_id = …)`, both dropped in
 // `finally`, on their own connection with a `lock_timeout`; a leaked one is swept in `beforeAll` (the cycle-freeze.spec.ts shape).
@@ -17,7 +21,7 @@ import type pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
-import { memberMobileBlindIndex, processWebhookEvent } from '../src/wa-webhook-processor.js';
+import { memberMobileBlindIndex, processWebhookEvent, runWaOptInExpirySweep, runWaWebhookProcessorTick } from '../src/wa-webhook-processor.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -431,6 +435,53 @@ describe.skipIf(!hasDatabase)('Story 5.12 — the worker ends every yes; STOP al
     expect(await stateOf(optInId)).toBe('ACTIVE');
     expect(await auditLines(pid, 'member.wa_opt_in_revoked')).toHaveLength(1);
     expect(await auditLines(pid, 'member.wa_opt_in_revoked_rolled_back')).toHaveLength(1);
+  });
+
+  // ── AC2 / AC9 — ⛔ yes expires; the stale-PENDING sweep ─────────────────────────────────────────────────────────────────────
+
+  const NINE_YEARS = 9 * 365 * 86400;
+  async function seedAged(pid: string, state: 'PENDING' | 'ACTIVE', yearsOld: number): Promise<string> {
+    const { rows } = await pool.query<{ opt_in_id: string }>(
+      `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index, window_expires_at, created_at)
+       VALUES ($1, $2, $3::wa_opt_in_state, $4, $5, CASE WHEN $3::wa_opt_in_state = 'ACTIVE' THEN now() - make_interval(years => $6::int) ELSE NULL END,
+               now() - make_interval(years => $6::int))
+       RETURNING opt_in_id`,
+      [pid, randomUUID(), state, phrase(), `blind-${randomUUID()}`, yearsOld],
+    );
+    return rows[0]!.opt_in_id;
+  }
+
+  it('⭐ AC2 — a tick leaves an ACTIVE row whose window passed long ago ACTIVE, writes ⛔ `expired` line for it, and its result carries ⛔ expiredWindow', async () => {
+    const pid = await pariwar();
+    const active = await seedAged(pid, 'ACTIVE', 10);
+    const result = await runWaWebhookProcessorTick({ ...deps(), pendingTtlSeconds: NINE_YEARS });
+    expect(result).not.toHaveProperty('expiredWindow');
+    expect(await stateOf(active)).toBe('ACTIVE');
+    expect(await auditLines(pid, 'member.wa_opt_in_expired')).toHaveLength(0);
+  });
+
+  it('⭐ AC9 — the sweep: a stale PENDING expires with ONE audit line; a fresher PENDING is left; an ACTIVE past window is left (⛔ audit)', async () => {
+    const pid = await pariwar();
+    const stale = await seedAged(pid, 'PENDING', 10);
+    const fresh = await seedAged(pid, 'PENDING', 8);
+    const active = await seedAged(pid, 'ACTIVE', 10);
+    const result = await runWaOptInExpirySweep({ ...deps(), pendingTtlSeconds: NINE_YEARS });
+    expect(result.expiredPending).toBeGreaterThanOrEqual(1);
+    expect(await stateOf(stale)).toBe('EXPIRED_24H_WINDOW');
+    expect(await stateOf(fresh)).toBe('PENDING');
+    expect(await stateOf(active)).toBe('ACTIVE');
+    expect(await auditLines(pid, 'member.wa_opt_in_expired')).toHaveLength(1);
+  });
+
+  it('⭐ AC9 — a per-row fault is isolated: the faulted row stays PENDING (one primary + one `_rolled_back`), the next row still expires', async () => {
+    const pid = await pariwar();
+    const faulted = await seedAged(pid, 'PENDING', 10);
+    const next = await seedAged(pid, 'PENDING', 10);
+    await withFault(faulted, 'always', () => runWaOptInExpirySweep({ ...deps(), pendingTtlSeconds: NINE_YEARS }));
+    expect(await stateOf(faulted)).toBe('PENDING');
+    expect(await stateOf(next)).toBe('EXPIRED_24H_WINDOW');
+    expect(await auditLines(pid, 'member.wa_opt_in_expired')).toHaveLength(2);
+    expect(await auditLines(pid, 'member.wa_opt_in_expired_rolled_back')).toHaveLength(1);
   });
 
   it('a claim-only STOP (⛔ member on the number) records the claim stop and writes ⛔ member audit', async () => {

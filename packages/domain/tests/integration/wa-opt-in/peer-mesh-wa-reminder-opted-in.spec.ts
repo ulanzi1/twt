@@ -3,7 +3,8 @@
 // `activateOptIn`, `revokeOptIn`) and the consent writer (`recordConsent`, `revokeConsent`) — the order 5.4's activation uses —
 // EXCEPT the one split-state leg (ACTIVE but consent revoked), which 5.4's writers never produce (they revoke both together),
 // so it is seeded by revoking ONLY the consent row.
-// ⚠ As built an opt-in counts for 24 hours (F14). `2026-10-19-364` (option A) changes the SHARED read in row 5-12 — ⛔ here.
+// 2026-10-21 Story 5.12 (`-364` option A; AC1) — the 24-hour reach (F14) is GONE: the SHARED read has ⛔ clock, so an ACTIVE yes
+// past its window counts (Closed by 5.12). The EXPIRED case is seeded by INSERT — the 0177 trigger refuses ACTIVE → EXPIRED.
 
 import { randomUUID } from 'node:crypto';
 
@@ -58,24 +59,43 @@ describe.skipIf(!hasDatabase)('isPeerMeshWaReminderOptedIn — the reminder\'s O
     expect(await opted(tx, m)).toBe(true);
   });
 
-  it('ACTIVE past window_expires_at (the 24-hour reach as built — F14) ⇒ false, though the consent is still granted', async () => {
+  // 2026-10-21 Story 5.12 (AC1) — FLIPPED: was "⇒ false" (the 24-hour reach — F14); a yes now lasts until withdrawn.
+  it('ACTIVE past window_expires_at AND consent ⇒ true (Story 5.12 — a yes has ⛔ clock)', async () => {
     const { tx, client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const m = member();
     const { optInId } = await optIn(tx, m, new Date(Date.now() + HOUR));
-    await client.query(`UPDATE member_wa_opt_in SET window_expires_at = now() - interval '1 minute' WHERE opt_in_id = $1`, [optInId]);
-    expect(await opted(tx, m)).toBe(false);
+    await client.query(`UPDATE member_wa_opt_in SET window_expires_at = now() - interval '7 days' WHERE opt_in_id = $1`, [optInId]);
+    expect(await opted(tx, m)).toBe(true);
   });
 
   it('EXPIRED_24H_WINDOW, REVOKED and BLOCKED_BY_META ⇒ false', async () => {
     const { tx, client } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    for (const toState of ['EXPIRED_24H_WINDOW', 'REVOKED', 'BLOCKED_BY_META'] as const) {
+    for (const toState of ['REVOKED', 'BLOCKED_BY_META'] as const) {
       const m = member();
       const { optInId } = await optIn(tx, m, new Date(Date.now() + 23 * HOUR));
       await revokeOptIn(tx, { pariwarId: PARIWAR_A, optInId, toState });
       expect(await opted(tx, m), toState).toBe(false);
     }
+    // 2026-10-21 Story 5.12 — re-seeded: ACTIVE → EXPIRED is refused (revokeOptIn and the 0177 trigger), so the EXPIRED case is
+    // a raw INSERT carrying an open consent (the legacy shape) — still ⇒ false.
+    const m = member();
+    const consentId = toConsentId(randomUUID());
+    await recordConsent(tx, {
+      pariwarId: PARIWAR_A,
+      subjectId: m,
+      consentType: 'whatsapp_opt_in',
+      grantedViaActor: 'member_self',
+      consentPayload: { source: 'meta_webhook_inbound' },
+      consentId,
+    });
+    await client.query(
+      `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index, consent_id)
+       VALUES ($1, $2, 'EXPIRED_24H_WINDOW', $3, $4, $5)`,
+      [PARIWAR_A, m, `TWT-${randomUUID().slice(0, 8)}`, `blind-${randomUUID()}`, consentId],
+    );
+    expect(await opted(tx, m), 'EXPIRED_24H_WINDOW').toBe(false);
   });
 
   it('PENDING (never matched) and no opt-in row at all ⇒ false', async () => {

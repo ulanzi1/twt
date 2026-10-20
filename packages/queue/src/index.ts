@@ -96,9 +96,9 @@ export const QUEUE_NAMES = {
   /**
    * WhatsApp inbound-webhook processing + opt-in expiry sweep (Story 5.4, Task 5). A scheduled drain of the
    * `wa_inbound_webhook_events` §3.11 queue table: per persisted event it matches an inbound message to a
-   * PENDING opt-in (→ ACTIVE + consent + 24h window), handles STOP (→ REVOKED) / Meta block (→
+   * PENDING opt-in (→ ACTIVE + consent), handles STOP (→ every yes on the number ended) / Meta 131050 (→
    * BLOCKED_BY_META), and consumes 5.3's mapMetaStatus + upsertWaSendStatus for status callbacks; plus a
-   * stale-PENDING / past-window sweep (→ EXPIRED_24H_WINDOW). Best-effort, cross-tenant on the BYPASSRLS
+   * stale-PENDING sweep (→ EXPIRED_24H_WINDOW; Story 5.12: an ACTIVE yes never expires). Best-effort, cross-tenant on the BYPASSRLS
    * service pool. Job class C (background).
    */
   WA_WEBHOOK_PROCESSOR: 'wa.webhook_processor',

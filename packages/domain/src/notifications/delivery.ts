@@ -109,7 +109,7 @@ export async function resolvePushTargets(
  * The dual-gated WhatsApp delivery-resolver read (Story 5.4, AC6). Resolves a WhatsApp target for a
  * member ONLY when BOTH gates pass:
  *   1. the per-Pariwar admin toggle (`pariwar_wa_config.enabled`, Story 5.3), AND
- *   2. the member opt-in is ACTIVE and within the 24h Meta window (`isOptInActive`, Story 5.4).
+ *   2. the member opt-in is ACTIVE (`isOptInActive` — Story 5.12, `-364` option A: ⛔ clock; a yes lasts until withdrawn).
  * Otherwise `null` (no WA delivery for this member). When both pass, the member's Tier-1 mobile is
  * decrypted HERE (the composition layer) to the recipient number the WA provider addresses.
  */
@@ -124,8 +124,9 @@ export async function resolveWaTarget(
   const config = await channelConfig.getWaConfig(db, pariwarId);
   if (!config || !config.enabled) return null;
 
-  // Gate 2 — the member opt-in ACTIVE + within the 24h window (Story 5.4).
-  const active = await waOptIn.isOptInActive(db, { pariwarId, memberId, at });
+  // Gate 2 — the member opt-in ACTIVE (Story 5.4; ⛔ clock since Story 5.12 — `-364` option A).
+  void at; // retained for callers (contribution-notify.ts — pinned — and the API adapter); the opt-in has ⛔ clock since 5.12
+  const active = await waOptIn.isOptInActive(db, { pariwarId, memberId });
   if (!active) return null;
 
   // Both gates pass — resolve the member's WhatsApp recipient number (their registered mobile). A

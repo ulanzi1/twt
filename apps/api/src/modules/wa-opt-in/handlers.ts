@@ -3,8 +3,8 @@
 // Three member-session-gated handlers over the @twt/domain waOptIn accessors:
 //   · POST   /api/v1/member/wa-opt-in — mint a PENDING (or re-use an outstanding one) → deep-link + phrase.
 //   · GET    /api/v1/member/wa-opt-in — current opt-in state (drives the settings toggle + copy).
-//   · DELETE /api/v1/member/wa-opt-in — member-initiated revocation (ACTIVE → REVOKED; independently
-//     revocable — touches ONLY whatsapp_opt_in).
+//   · DELETE /api/v1/member/wa-opt-in — member-initiated withdrawal (Story 5.12: ends EVERY yes — the ACTIVE row → REVOKED
+//     and every open whatsapp_opt_in consent revoked; independently revocable — touches ONLY whatsapp_opt_in).
 //
 // The member session (requireMemberSession) sets request.requestContext.actorId = member_id + .pariwarId.
 // The PENDING match key is the member's STORED member_identities.mobile_blind_index (so the worker's inbound

@@ -3,7 +3,7 @@
 // ── What moved, and where the real assertions now live ─────────────────────────────────────────────
 // Story 8.8 (Task 1; D4) relocated `resolveWaTarget` into `@twt/domain` so the live notification
 // fan-out in `apps/jobs` can call it (apps cannot import apps). The full DUAL-GATE behavioural suite —
-// admin toggle AND an ACTIVE, in-window member opt-in; either gate off ⇒ null with the later gate not
+// admin toggle AND an ACTIVE member opt-in (⛔ clock since Story 5.12); either gate off ⇒ null with the later gate not
 // even consulted — moved with it and now lives in
 // `packages/domain/tests/notifications/delivery-targets.test.ts`, unchanged.
 //

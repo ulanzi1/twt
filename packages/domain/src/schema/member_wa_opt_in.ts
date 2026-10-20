@@ -1,12 +1,12 @@
 // `member_wa_opt_in` — the member WhatsApp opt-in state-machine substrate (Story 5.4, Task 3; AC1/AC3/AC4).
 //
 // The FIVE-state OPERATIONAL lifecycle the consent registry's two-state grant/revoke row cannot express:
-// PENDING (awaiting the inbound-webhook match) → ACTIVE (matched; 24h Meta customer-service window open) →
-// REVOKED (member/STOP/admin opt-out) | BLOCKED_BY_META (Meta block/opt-out status callback) |
-// EXPIRED_24H_WINDOW (time-based sweep). It carries the operational nuance the registry cannot: the
-// verification phrase (the inbound-match token), the mobile blind index (the match key), and the 24h-window
-// expiry. `consent_records` stays the canonical "valid consent at time Y?" surface (recordConsent on ACTIVE,
-// revokeConsent on REVOKED/BLOCKED) — this table is the state machine; the two are kept consistent by the
+// PENDING (awaiting the inbound-webhook match) → ACTIVE (matched — the yes; Story 5.12, `-364` option A: it lasts until the
+// member takes it back) → REVOKED (member/STOP/admin opt-out) | BLOCKED_BY_META (Meta 131050 status callback); a PENDING never
+// confirmed → EXPIRED_24H_WINDOW (stale sweep). It carries the operational nuance the registry cannot: the verification phrase
+// (the inbound-match token), the mobile blind index (the match key), and Meta's free-form window end (⛔ the opt-in's end).
+// `consent_records` stays the canonical "valid consent at time Y?" surface (recordConsent on ACTIVE; every withdrawal revokes
+// EVERY open whatsapp_opt_in row — `endEveryWaYes`, Story 5.12) — this table is the state machine; the two are kept consistent by the
 // caller's audit-or-throw (audit line FIRST, then consent + state transition in one scoped tx). This mirrors
 // the Story 3.1 member-lifecycle "state machine + events" split (the state machine framework lives in
 // @twt/domain; @twt/domain CANNOT import @twt/events).
@@ -21,6 +21,13 @@
 // plaintext, computed at the apps/api boundary; the domain never sees the raw msisdn. `verification_phrase`
 // is a random, non-PII match token. No Tier-1 envelope column here.
 //
+// ── SQL-only guards (⛔ in the Drizzle DSL — T7) ───────────────────────────────────────────────────────────────
+// · `member_wa_opt_in_pending_member_uq` (0044) — one PENDING per member.
+// · `member_wa_opt_in_active_member_uq` (0177, Story 5.12) — partial UNIQUE (pariwar_id, member_id) WHERE state = 'ACTIVE':
+//   one standing yes per member.
+// · trigger `member_wa_opt_in_no_active_expiry` (0177, Story 5.12) — refuses any UPDATE into EXPIRED_24H_WINDOW from a state
+//   other than PENDING (an ACTIVE yes never expires; terminal states never move).
+//
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS fields camelCase; table plural.
 
 import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
@@ -31,10 +38,11 @@ import type { ConsentId, MemberId, MemberWaOptInId, PariwarId } from '../ids/ind
  * The member WA opt-in operational lifecycle states (AC4). Value order is APPEND-only discipline (a pgEnum
  * yields stored ordinals):
  *   · `PENDING`             — minted on the settings-toggle tap; awaiting the inbound-webhook match.
- *   · `ACTIVE`             — the inbound message matched a PENDING; the 24h Meta window is open.
+ *   · `ACTIVE`             — the inbound message matched a PENDING: the member's yes, until withdrawn (Story 5.12 — ⛔ clock).
  *   · `REVOKED`            — member/STOP/admin opt-out (a MUTATE via revokeOptIn, never a delete).
- *   · `BLOCKED_BY_META`    — Meta block / opt-out status callback → authoritative block signal.
- *   · `EXPIRED_24H_WINDOW` — the time-based sweep (stale PENDING TTL, or ACTIVE past window_expires_at).
+ *   · `BLOCKED_BY_META`    — Meta's 131050 status callback (the person's marketing opt-out — Story 5.12 LY8; the name predates it).
+ *   · `EXPIRED_24H_WINDOW` — a PENDING request never confirmed within the TTL (stale sweep). Story 5.12 (LY3): ⛔ an ACTIVE yes —
+ *     the name is historical (it once also meant "ACTIVE past window_expires_at"); an enum value cannot be renamed or dropped.
  *
  * ⚠ LOCKSTEP with the `@twt/contracts` `WaOptInStateSchema` z.enum (the consent_type discipline): the list
  * is DUPLICATED there because `@twt/domain` must NOT import `@twt/contracts` (turbo cycle). Drift is
@@ -75,7 +83,8 @@ export const memberWaOptIn = pgTable(
     // inbound-match key. Computed at the apps/api boundary — the domain never sees plaintext.
     mobileBlindIndex: text('mobile_blind_index').notNull(),
 
-    // The Meta 24h customer-service window end, set on the ACTIVE transition; NULL while PENDING.
+    // Meta's 24h free-form (customer-service) window end, set on the ACTIVE transition; NULL while PENDING. ⛔ the opt-in's end —
+    // since Story 5.12 (`-364` reading (ii); LY2) ⛔ thing gates on it (Meta templates are not bound by that window).
     windowExpiresAt: timestamp('window_expires_at', { withTimezone: true, mode: 'date' }),
 
     // FK-free link to the consent_records row minted on ACTIVE (the registry is canonical; this is a
@@ -93,6 +102,7 @@ export const memberWaOptIn = pgTable(
     index('member_wa_opt_in_match_idx').on(t.pariwarId, t.mobileBlindIndex, t.state),
     // The member-status read (getOptInForMember + the AC6 resolver gate).
     index('member_wa_opt_in_member_idx').on(t.pariwarId, t.memberId),
+    // + the SQL-only partial UNIQUE indexes and the trigger named in the module header (0044, 0177).
   ],
 );
 

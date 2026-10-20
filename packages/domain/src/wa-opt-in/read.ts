@@ -4,7 +4,7 @@
 // matching the (pariwar_id, …) indexes). Mirror consent/read.ts. Runs statements DIRECTLY on the passed
 // (scoped) `Db` — no own transaction.
 
-import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { consentExists } from '../consent/read.js';
 import type { Db } from '../db.js';
@@ -137,19 +137,12 @@ export async function getMemberMobileCiphertext(
 }
 
 /**
- * The AC6 dual-gate half: TRUE iff the member has an ACTIVE opt-in whose 24h window has not passed —
- * `state = 'ACTIVE' AND (window_expires_at IS NULL OR at < window_expires_at)`. `at` defaults to DB `now()`
- * (§1.11 DB-authoritative). The composition WA resolver consumes this alongside `consentExists`.
+ * The AC6 dual-gate half: TRUE iff the member has an ACTIVE opt-in — `state = 'ACTIVE'`, ⛔ clock. Story 5.12 (`-364` option A,
+ * Trustee-ratified; LY1): a yes lasts until the member takes it back (in the app, by STOP, or Meta's 131050), so
+ * `window_expires_at` — Meta's free-form window end, ⛔ the opt-in's end (reading (ii)) — is ⛔ read here. The composition WA
+ * resolver consumes this alongside the admin toggle; `isPeerMeshWaReminderOptedIn` alongside `consentExists`.
  */
-export async function isOptInActive(
-  db: Db,
-  args: { pariwarId: PariwarId; memberId: MemberId; at?: Date },
-): Promise<boolean> {
-  const windowGuard =
-    args.at === undefined
-      ? sql`(${memberWaOptIn.windowExpiresAt} IS NULL OR now() < ${memberWaOptIn.windowExpiresAt})`
-      : or(isNull(memberWaOptIn.windowExpiresAt), gt(memberWaOptIn.windowExpiresAt, args.at));
-
+export async function isOptInActive(db: Db, args: { pariwarId: PariwarId; memberId: MemberId }): Promise<boolean> {
   const rows = await db
     .select({ one: sql`1` })
     .from(memberWaOptIn)
@@ -158,7 +151,6 @@ export async function isOptInActive(
         eq(memberWaOptIn.pariwarId, args.pariwarId),
         eq(memberWaOptIn.memberId, args.memberId),
         eq(memberWaOptIn.state, 'ACTIVE'),
-        windowGuard,
       ),
     )
     .limit(1);
@@ -167,11 +159,11 @@ export async function isOptInActive(
 
 /**
  * ⭐ Story 6.31 (WR3) — "has chosen WhatsApp messages from the Trust" for the peer-mesh WhatsApp reminder: the ONE read the
- * reminder calls. `isOptInActive` (the ratified dual gate's member half as built — ADR-0029, `-065`; `resolveWaTarget` reads it)
- * AND `consentExists(…, 'whatsapp_opt_in')` — a DEFENSIVE conjunct that can only narrow. ⚠ As built an opt-in counts for 24
- * hours (F14); `2026-10-19-364` (option A) makes a yes last until withdrawn, built by row `5-12-whatsapp-yes-lasts-until-withdrawn`
- * in the shared read — this function's composition is unchanged by it. ⛔ `consentExists` alone: until `-364`'s condition 4 ships
- * it still counts a withdrawn yes (withdrawal revokes only the newest consent row).
+ * reminder calls. `isOptInActive` (the ratified dual gate's member half — ADR-0029, `-065`; `resolveWaTarget` reads it) AND
+ * `consentExists(…, 'whatsapp_opt_in')` — a DEFENSIVE conjunct that can only narrow. 2026-10-21 Story 5.12 (`-364` option A) —
+ * the 24-hour reach (6.31 F14) is GONE: `isOptInActive` has ⛔ clock, so a yes lasts until withdrawn; this composition is
+ * unchanged. Condition 4 shipped too (every withdrawal ends EVERY open consent row — `endEveryWaYes`), so the conjunct no longer
+ * counts a withdrawn yes — it stays, defensive.
  */
 export async function isPeerMeshWaReminderOptedIn(db: Db, args: { pariwarId: PariwarId; memberId: MemberId }): Promise<boolean> {
   if (!(await isOptInActive(db, { pariwarId: args.pariwarId, memberId: args.memberId }))) return false;

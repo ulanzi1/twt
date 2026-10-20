@@ -6,7 +6,10 @@
 //   · partial-unique phrase — createPendingOptIn regenerates the phrase on a (pariwar, phrase) PENDING collision.
 //   · matchPendingOptIn — matches on (mobile blind index, phrase, PENDING); mismatch → null.
 //   · activateOptIn / revokeOptIn — legal transitions succeed; illegal edges throw WaOptInStateError.
-//   · isOptInActive — ACTIVE within the 24h window is true; past-window / PENDING is false.
+//   · isOptInActive — Story 5.12 (`-364` option A; AC1): ACTIVE is true whatever its window (past, future, NULL); PENDING,
+//     REVOKED, BLOCKED_BY_META, EXPIRED_24H_WINDOW and ⛔ row are false — ⛔ clock.
+//   · Story 5.12 (AC2) — ⛔ yes expires: revokeOptIn refuses ACTIVE → EXPIRED; the 0177 trigger refuses a raw UPDATE into
+//     EXPIRED from ACTIVE / REVOKED / BLOCKED (23000) and allows it from PENDING; one ACTIVE per member (23505).
 //   · webhook events — persist + claim + markProcessed drain lifecycle.
 //   · cross-tenant RLS — a PARIWAR_B opt-in is invisible under PARIWAR_A scope.
 
@@ -182,7 +185,8 @@ describe.skipIf(!hasDatabase)('member_wa_opt_in accessors — state machine + RL
     expect(expired.state).toBe('EXPIRED_24H_WINDOW');
   });
 
-  it('isOptInActive: ACTIVE within window → true; past window → false; PENDING → false', async () => {
+  // 2026-10-21 Story 5.12 (AC1) — replaces 5.4's "past window → false": a yes has ⛔ clock (`-364` option A).
+  it('⭐ isOptInActive: ACTIVE → true whatever its window (past, future, NULL); PENDING / REVOKED / BLOCKED / EXPIRED / ⛔ row → false', async () => {
     const { tx, client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const member = toMemberId(randomUUID());
@@ -201,11 +205,84 @@ describe.skipIf(!hasDatabase)('member_wa_opt_in accessors — state machine + RL
       consentId: toConsentId(randomUUID()),
     });
     expect(await isOptInActive(tx, { pariwarId: PARIWAR_A, memberId: member })).toBe(true);
-    // Querying AT an instant after the window → false.
-    const afterWindow = new Date(Date.now() + 48 * 3600 * 1000);
-    expect(await isOptInActive(tx, { pariwarId: PARIWAR_A, memberId: member, at: afterWindow })).toBe(
-      false,
+    for (const window of ["now() - interval '7 days'", 'NULL', "now() + interval '1 hour'"]) {
+      await client.query(`UPDATE member_wa_opt_in SET window_expires_at = ${window} WHERE opt_in_id = $1`, [pending.optInId]);
+      expect(await isOptInActive(tx, { pariwarId: PARIWAR_A, memberId: member }), window).toBe(true);
+    }
+
+    for (const state of ['PENDING', 'REVOKED', 'BLOCKED_BY_META', 'EXPIRED_24H_WINDOW'] as const) {
+      const m = toMemberId(randomUUID());
+      await client.query(
+        `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index, window_expires_at)
+         VALUES ($1, $2, $3, $4, $5, now() + interval '1 day')`,
+        [PARIWAR_A, m, state, generateVerificationPhrase(), BLIND_A],
+      );
+      expect(await isOptInActive(tx, { pariwarId: PARIWAR_A, memberId: m }), state).toBe(false);
+    }
+    expect(await isOptInActive(tx, { pariwarId: PARIWAR_A, memberId: toMemberId(randomUUID()) })).toBe(false);
+  });
+
+  it('⭐ Story 5.12 AC2 — revokeOptIn(…, EXPIRED_24H_WINDOW) on an ACTIVE row throws WaOptInStateError (a yes never expires)', async () => {
+    const { tx, client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const pending = await createPendingOptIn(tx, { pariwarId: PARIWAR_A, memberId: toMemberId(randomUUID()), mobileBlindIndex: BLIND_A });
+    await activateOptIn(tx, {
+      pariwarId: PARIWAR_A,
+      optInId: pending.optInId,
+      windowExpiresAt: new Date(Date.now() - 3600 * 1000),
+      consentId: toConsentId(randomUUID()),
+    });
+    await expect(revokeOptIn(tx, { pariwarId: PARIWAR_A, optInId: pending.optInId, toState: 'EXPIRED_24H_WINDOW' })).rejects.toBeInstanceOf(
+      WaOptInStateError,
     );
+  });
+
+  it('⭐ Story 5.12 AC2 — the 0177 trigger: a raw UPDATE into EXPIRED is REFUSED from ACTIVE / REVOKED / BLOCKED (23000), allowed from PENDING; INSERT and a non-state UPDATE of an EXPIRED row pass', async () => {
+    const { client } = getTx();
+    const insert = async (state: string) =>
+      (
+        await client.query<{ opt_in_id: string }>(
+          `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index) VALUES ($1, $2, $3, $4, $5) RETURNING opt_in_id`,
+          [PARIWAR_A, randomUUID(), state, generateVerificationPhrase(), BLIND_A],
+        )
+      ).rows[0]!.opt_in_id;
+    /** Run one probe under a SAVEPOINT (a refused statement would otherwise abort the per-test tx); its SQLSTATE or null. */
+    async function probe(sql: string, params: unknown[]): Promise<{ code: string | null; message: string }> {
+      await client.query('SAVEPOINT p');
+      try {
+        await client.query(sql, params);
+        await client.query('RELEASE SAVEPOINT p');
+        return { code: null, message: '' };
+      } catch (err) {
+        await client.query('ROLLBACK TO SAVEPOINT p');
+        const e = err as { code?: string; message?: string; constraint?: string };
+        return { code: e.code ?? 'unknown', message: `${e.message ?? ''} ${e.constraint ?? ''}` };
+      }
+    }
+    const toExpired = `UPDATE member_wa_opt_in SET state = 'EXPIRED_24H_WINDOW' WHERE opt_in_id = $1`;
+    for (const state of ['ACTIVE', 'REVOKED', 'BLOCKED_BY_META']) {
+      const r = await probe(toExpired, [await insert(state)]);
+      expect(r.code, state).toBe('23000');
+      expect(r.message, state).toContain('lasts until withdrawn');
+    }
+    expect((await probe(toExpired, [await insert('PENDING')])).code).toBeNull();
+    // The trigger is UPDATE-only: an INSERT of an EXPIRED row passes; so does an update that leaves an EXPIRED row EXPIRED.
+    const expired = await insert('EXPIRED_24H_WINDOW');
+    expect((await probe(`UPDATE member_wa_opt_in SET updated_at = now(), mobile_blind_index = 'scrubbed' WHERE opt_in_id = $1`, [expired])).code).toBeNull();
+    expect((await probe(`UPDATE member_wa_opt_in SET state = 'EXPIRED_24H_WINDOW' WHERE opt_in_id = $1`, [expired])).code).toBeNull();
+  });
+
+  it('⭐ Story 5.12 AC2 — a second ACTIVE row for one member is refused (23505, member_wa_opt_in_active_member_uq)', async () => {
+    const { client } = getTx();
+    const m = randomUUID();
+    const sql = `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index) VALUES ($1, $2, 'ACTIVE', $3, $4)`;
+    await client.query(sql, [PARIWAR_A, m, generateVerificationPhrase(), BLIND_A]);
+    const err = await client.query(sql, [PARIWAR_A, m, generateVerificationPhrase(), BLIND_A]).then(
+      () => null,
+      (e: { code?: string; constraint?: string }) => e,
+    );
+    expect(err?.code).toBe('23505');
+    expect(err?.constraint).toBe('member_wa_opt_in_active_member_uq');
   });
 
   it('getOptInForMember returns the latest row', async () => {

@@ -920,7 +920,8 @@ family 11 covered (§Policy meaning); family 13 (c) covered, (a)/(b) not constru
 - **P3** — errors carry their source (`load` / `action`); a background read clears only its own kind, and an action's error
   is superseded only when a later read changes what the screen shows.
 - **P4** — a failed enable / withdrawal re-reads in a `refresh` mode (no spinner, but it waits out an older read and fetches
-  fresh). A 409 "already off" now shows off without the error.
+  fresh). A 409 "already off" now shows off without the error — cleared in the SAME update as the new status (the first
+  version cleared it in a later effect, and the P4 leg caught the in-between frame under `ci:local`'s load at `b64dd462`).
 - **P5** — polling and the AppState listener run only while focused; the test mock gained a blur (it matches expo-router's
   `useFocusEffect` contract).
 - **P6** — a later change is announced (`AccessibilityInfo.announceForAccessibility`) in the screen's existing words — on /

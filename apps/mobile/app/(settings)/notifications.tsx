@@ -84,6 +84,8 @@ export default function NotificationSettingsScreen() {
   const [error, setError] = useState<ErrorSource>(null)
   const [focused, setFocused] = useState(false)
   const fetching = useRef<Promise<void> | null>(null)
+  /** The announcement key of the body last shown — `null` until the first read lands. */
+  const shownKey = useRef<string | null>(null)
 
   const load = useCallback(async (mode: LoadMode = 'foreground'): Promise<void> => {
     // Background callers share an in-flight read. After a mutation, wait for that older read and then
@@ -95,7 +97,12 @@ export default function NotificationSettingsScreen() {
       if (mode === 'foreground') setLoading(true)
       setError((current) => (mode !== 'foreground' && current === 'action' ? current : null))
       try {
-        setStatus(await withTimeout(memberAuth.getWaOptInStatus(), CALL_TIMEOUT_MS))
+        const next = await withTimeout(memberAuth.getWaOptInStatus(), CALL_TIMEOUT_MS)
+        // A read that changes what the screen shows supersedes an earlier action's error (a 409 "already off" now shows
+        // off) — in the SAME update, so the new body never renders under the old error.
+        const changed = shownKey.current !== null && shownKey.current !== announcementKey(next.state, next.available)
+        setStatus(next)
+        if (changed) setError((current) => (current === 'action' ? null : current))
       } catch {
         setError((current) => current ?? 'load')
       } finally {
@@ -138,16 +145,13 @@ export default function NotificationSettingsScreen() {
 
   // The first read IS the screen; a later one that changes the body (PENDING → ACTIVE from polling, an external STOP) is
   // announced while the screen is in front, so the withdraw control appearing or going reaches a screen-reader user too.
-  // A changed body also supersedes an earlier action's error (a 409 "already off" now shows off).
   const shownState = status ? announcementKey(status.state, status.available) : null
   const announcement = shownState ? t(shownState) : null
-  const shownKey = useRef<string | null>(null)
   useEffect(() => {
     if (shownState === null) return
     const previous = shownKey.current
     shownKey.current = shownState
     if (previous === null || previous === shownState) return
-    setError((current) => (current === 'action' ? null : current))
     if (focused && AppState.currentState === 'active' && announcement) AccessibilityInfo.announceForAccessibility(announcement)
   }, [shownState, announcement, focused])
 

@@ -204,6 +204,14 @@ Load-bearing details:
   the claimant is reached as the claimant (`-367` PQ1 A). A corrective "told" item is WRITTEN
   (`trustee-panel-told-2026-10-20b-6-37d-forgery-bound-correction.md`) — ⛔ "told" until BigDev sends it. ⭐ SENT 2026-10-20 (BigDev: *"report
   has been sent"*) — the Panel is TOLD.
+  ⚠ **Dated note, 2026-10-20 (c) (Story 6.37d — [Decision 2026-10-20-372](../../.decision-log.md#decision-2026-10-20-372); no word above
+  rewritten):** the bound in note (b) is on COPIES that can reach the claimant — at most two sends Meta may have acted on per follow-up —
+  ⛔ on calls (a call Meta provably did not act on, a 429 or a connection that never opened, is retried uncounted). A follow-up is per
+  chase AND per claim, so a person in both reminders on one claim can get up to two copies of each (four), and a claimant on two live
+  claims more; *"one WhatsApp for each"* (the told item of note (b)) is corrected. The cap's own cost: a Meta outage spanning two
+  retries (about a minute) spends the step. A STOP that fails to record is lost (the webhook drain is at-most-once — alarmed, ⛔ retried).
+  A SECOND corrective told item is WRITTEN (`trustee-panel-told-2026-10-20c-6-37d-forgery-bound-second-correction.md`) — ⛔ "told" until
+  BigDev sends it.
 - **Performance / cost.** One insert per report on the api; one primary-key lookup and one upsert per report in jobs. No per-request
   secret read.
 - **Failure modes accepted.**

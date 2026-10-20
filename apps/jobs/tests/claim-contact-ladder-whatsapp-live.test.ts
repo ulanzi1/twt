@@ -758,10 +758,10 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(rows[0]!.sms3_due_on).toBe(day(s.day0, 15));
   });
 
-  // Review R7 (2026-10-20) — a regression leg for the fix itself: the quarter-hourly start's 2-hour recency scan must apply
-  // PER ORIGIN, ⛔ per claim. Two people on the SAME claim, two reports, one fresh (inside the window) and one 3 hours old
-  // (outside it): only the fresh one's ladder may start now; the older one waits for the next 10:00 daily sweep.
-  it('⭐ R7 — the quarter-hourly start enforces the two-hour window per ORIGIN: a fresh report starts its ladder; an older (9 h — outside the 8-hour window), unladdered report for a DIFFERENT person on the SAME claim waits for the next 10:00 sweep', async () => {
+  // Review R7 (2026-10-20) — a regression leg for the fix itself: the quarter-hourly start's recency scan (8 h since `-370` d2)
+  // must apply PER ORIGIN, ⛔ per claim. Two people on the SAME claim, two reports, one fresh (inside the window) and one 9 hours
+  // old (outside it): only the fresh one's ladder may start now; the older one waits for the next 10:00 daily sweep.
+  it('⭐ R7 — the quarter-hourly start enforces its recency window per ORIGIN: a fresh report starts its ladder; an older (9 h — outside the 8-hour window), unladdered report for a DIFFERENT person on the SAME claim waits for the next 10:00 sweep', async () => {
     const h = harness();
     const s = await seed({ nomineeMobiles: ['9812345671', '9812345672'] });
     const origins = await chaseDay(h, s, 10);
@@ -779,7 +779,7 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     const started = await pool.query<{ origin_row_id: string }>(`SELECT origin_row_id FROM claim_contact_ladders WHERE claim_case_id = $1`, [s.claimCaseId]);
     expect(started.rows).toHaveLength(1);
     expect(started.rows[0]!.origin_row_id).toBe(freshOrigin);
-    // The next day's 10:00 DAILY sweep (⛔ the 2-hour restriction) picks up the stale origin too.
+    // The next day's 10:00 DAILY sweep (⛔ the recency window) picks up the stale origin too.
     h.setNow(istAt(day(s.day0, 11), '10:00'));
     await runContactLadderSweep(h.wa, boss(h));
     const both = await pool.query<{ origin_row_id: string }>(`SELECT origin_row_id FROM claim_contact_ladders WHERE claim_case_id = $1`, [s.claimCaseId]);
@@ -1220,7 +1220,7 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(h.requests).toHaveLength(0);
   });
 
-  it('⭐ -370 d1 — the SEND CAP: two post-send 503s across TWO jobs (the second a re-take after the lease lapsed) ⇒ exactly TWO Meta calls and the row `may_have_sent:send_cap` — ⛔ a third, whichever job or day', async () => {
+  it('⭐ -370 d1 — the SEND CAP: two post-send 503s across TWO jobs (the second a re-take after the lease lapsed) ⇒ exactly TWO Meta calls (both may have reached the claimant) and the row `may_have_sent:send_cap` — ⛔ a third such send, whichever job or day (`-372`: the cap bounds copies, ⛔ calls)', async () => {
     const h = harness();
     const { s, ladderId } = await dueStep(h);
     const env = await dueChild(h, s);
@@ -1239,13 +1239,13 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(h.requests).toHaveLength(2);
   });
 
-  it('⭐ -370 fix-diff — a row whose sends are SPENT while unmarked (a 20:00 release kept the count): the marker answers `capped` and the child finishes it `may_have_sent:send_cap` at once — ⛔ a call, ⛔ burnt retries', async () => {
+  it('⭐ -370 / -371 backstop — a row whose ambiguous sends are SPENT while unmarked (only dev backfill or a direct write can make one — the post-send path finishes such a row first): the marker answers `capped` and the child finishes it `may_have_sent:send_cap` at once — ⛔ a call, ⛔ burnt retries', async () => {
     const h = harness();
     const { s, ladderId } = await dueStep(h);
     const env = await dueChild(h, s);
     h.answer({ status: 503, body: { error: { code: 2 } } });
     await expect(runContactLadderWhatsappChild(h.wa, boss(h), env, 'job-R', { retryCount: 0, retryLimit: 4 })).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
-    // A second mark released at 20:00 (⛔ a call) — the count it kept, as the release leaves it.
+    // The backstop's precondition, written directly (⛔ production path reaches it under `-371`).
     await pool.query(`UPDATE claim_contact_wa_sends SET send_count = 2 WHERE ladder_id = $1`, [ladderId]);
     expect(await runContactLadderWhatsappChild(h.wa, boss(h), env, 'job-R', { retryCount: 1, retryLimit: 4 })).toEqual({ status: 'sent', outcome: 'may_have_sent' });
     expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'may_have_sent', detail: 'may_have_sent:send_cap' });

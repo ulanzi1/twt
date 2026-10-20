@@ -545,7 +545,11 @@ export async function runContactLadderWhatsappChild(
     const done = await scoped((d) =>
       claimDomain.finishContactLadderWhatsappSendCapped(d, { ...row, transient: claimDomain.contactLadderWaDetail('marker_lost', 'send_cap'), phase: 'at_marker' }),
     );
-    if (!done) alarm(`[jobs] contact-ladder-whatsapp: the send row of ${tag} moved on before its send-cap finish`);
+    // ⛔ Report a finish this job never wrote (the P10 shape): another holder's outcome stands.
+    if (!done) {
+      logOutcome('noop (the row moved on before the send-cap finish — ⛔ this job\'s)', p, pid);
+      return { status: 'noop', reason: 'marker_lost' };
+    }
     logOutcome('may_have_sent:send_cap (at the marker — ⛔ sent)', p, pid);
     return { status: 'sent', outcome: 'may_have_sent' };
   }
@@ -616,7 +620,8 @@ export async function runContactLadderWhatsappChild(
       return { status: 'sent', outcome: 'may_have_sent' };
     }
     if (finalAttempt) {
-      // The FINAL token is logged (the row alone cannot prove a post-send 5xx happened — `first_detail` keeps the first).
+      // The FINAL token is logged (the row alone cannot prove a post-send 5xx happened — `first_detail` keeps the earliest note
+      // still on the row, which a re-take re-stamps).
       const done = await scoped((d) => claimDomain.finishContactLadderWhatsappExhausted(d, { ...row, transient: note, phase: 'post_send' }));
       if (!done) alarm(`[jobs] contact-ladder-whatsapp: the send row of ${tag} moved on before its exhausted finish (${note})`);
       logOutcome(`skipped:transient_exhausted (final ${note})`, p, pid);

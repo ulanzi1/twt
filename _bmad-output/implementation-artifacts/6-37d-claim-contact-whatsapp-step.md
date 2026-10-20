@@ -54,7 +54,7 @@ rulings 1–6, `-352` Q1 / Q2, `-355` decisions 1–18, `-356` calls 1–3, `-36
 
 # Story 6.37d: When a reminder to the claimant is reported undelivered, the Trust tries WhatsApp four hours later — on the claimant's reworded filing agreement `[PRIMITIVE]`
 
-Status: done — code review ROUND 2 (2026-10-20): all 24 patches applied, the fix-diff review's corrections and Decisions `2026-10-20-370` / `-371` built; `ci:local` 36 / 36 green at `bbc3d401` (P2). GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]]); the corrective Panel "told" item is TOLD (BigDev: *"report has been sent"*, 2026-10-20); Decision `-371` CONFIRMED by BigDev (*"-371 confirmed"*)
+Status: done — code review ROUND 2 (2026-10-20): all 24 patches applied, the fix-diff review's corrections and Decisions `2026-10-20-370` / `-371` built; `ci:local` 36 / 36 green at `bbc3d401` (P2). GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]]); the corrective Panel "told" item is TOLD (BigDev: *"report has been sent"*, 2026-10-20); Decision `-371` CONFIRMED by BigDev (*"-371 confirmed"*); ⚠ a SECOND corrective told item (`-372`) is WRITTEN, ⛔ sent — BigDev sends it
 
 > ## ⭐ `-367` OUTCOME — Task 0, 2026-10-20 (governs every earlier sentence it contradicts; the text below is kept as PROPOSED, ⛔ edited)
 >
@@ -1261,7 +1261,7 @@ no committed regression leg and AC12's `ci:local` was not re-run after migration
 - [x] [Review][Defer] **W1 — a delivery seen only in `whatsapp_send_status` after the finalise's copy is invisible to D22 once the ladder ends otherwise; the copy stamps `updated_at` (possibly the `read` time)** [packages/domain/src/claim/contact-ladder-whatsapp-delivery.ts:27] — deferred, narrow READ COMMITTED slice of WS11's disclosed "status drained before the finalise" path
 - [x] [Review][Defer] **W2 — a `failed` status that arrives before the finalise never reaches `failed_at` / `failure_code`** [packages/domain/src/claim/contact-ladder-whatsapp-record.ts:694] — deferred, nothing reads them today
 - [x] [Review][Defer] **W3 — at 20:00, a failed marker release makes an unsent message `may_have_sent:lease_lapsed`** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:549] — deferred, needs a DB error inside the marker-to-20:00 instant; fails safe (no second send)
-- [x] [Review][Defer] **W4 — the quarter-hourly start re-hashes a claim on every tick for 2 h when the planner declines its fresh origin** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:185] — deferred, a cost under the KMS global audit lock, not a correctness fault
+- [x] [Review][Defer] **W4 — the quarter-hourly start re-hashes a claim on every tick for 8 h (`-370` d2; was 2 h) when the planner declines its fresh origin** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:185] — deferred, a cost under the KMS global audit lock, not a correctness fault
 - [x] [Review][Defer] **W5 — `nextDailyLadderRunOn` assumes the daily run happens at exactly 10:00 IST** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:118] — deferred, a late daily run slips SMS 2 a day
 - [x] [Review][Defer] **W6 — the server stamps the CURRENT copy version, not what the client showed** [apps/api/src/modules/claims/claims.contact.handlers.ts:131] — deferred, pre-existing 6.19a mechanism; not in production; bites at the next COPY-VERSION bump (a Hindi review that accepts the words flips `hiReviewed` in place and mints ⛔ version — fix-diff review)
 
@@ -1592,7 +1592,7 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   late-start leg added after the run, then run alone), the worker 15, the ladder live suite 24. ⛔ A network call (the fetch spy at zero).
 
 - **(c) Code review ROUND 2 — 2026-10-20.** Whole branch `0e88ddd1..a620ee7c`, 12 parallel read-only reviewers (4 chunks × 3 layers),
-  every HIGH verified in the worktree; D1 / D2 → `-369` (`734c9f7a`, alone); 24 patches, 23 applied and P2 open (Review Findings, round 2). **RED evidence** —
+  every HIGH verified in the worktree; D1 / D2 → `-369` (`734c9f7a`, alone); 24 patches — all applied, P2 (the `ci:local` run) last (Review Findings, round 2). **RED evidence** —
   each leg below FAILED with its fix hand-disabled, then passed with it restored: the three `-369` legs with `claim-contact-persist.ts`
   at HEAD; R3's leg with the basis reader's generation check disabled; R2's two correction legs and the certificate leg with the
   `isClaimant` check disabled; R5's leg with `created_at` back in the isolation window; the two "delivered ENDS the ladder" legs with
@@ -1611,13 +1611,27 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   v1.8's "362 tests" came from different file sets, ⛔ recorded — the two are ⛔ comparable; v1.6's "R8 PARTIAL" and "all nine
   CONFIRMED-FIXED" describe two different checks (the patch's own diff vs the R8 legs), and R8's remaining legs were added only in round 2
   (P5). The sprint ledger's row cites `2026-10-20j` / `2026-10-20l`, which were never written — `2026-10-20e` records round 2 and says so.
-  **The fix-diff review's own RED runs:** `-370`'s cap leg with the capped finish removed (a third call is attempted); the window leg
+  **The fix-diff review's own RED runs:** `-370`'s cap leg with the capped finish removed — under `-370`'s marker counting the second
+  503 was noted and the retry's mark refused; RE-RUN under `-371` (the count at the note): the second 503 is noted and RETRIED
+  (`ClaimCorrectionTransientError`), ⛔ finished — RED; the window leg
   with the window back at 2 h (the 3-hour report is ⛔ started); the decrypt-failure leg with its `catch` removed; WS6's rebuilt SMS 3
   leg as above. ⛔ RED run: 0176's policy legs (the CHECK / trigger / grant are new objects — their negatives are the proof), the domain
   cap legs (coverage of the marker CAS and the capped finish).
   **`ci:local` (round 2, on the patch BEFORE the fix-diff corrections):** 35 of 36 jobs green incl. `integration-tests`; `friction-budget`
   RED — AC-4 sees COMMITTED history: round 1's `apps/mobile/tests/unit/claim-contact.test.ts` change had ⛔ declaration (a vacuous pass
-  before that commit — [[project_friction_budget_baseline_ratchet]]); `friction-budget.md` amended.
+  before that commit — [[project_friction_budget_baseline_ratchet]]); `friction-budget.md` amended. **`ci:local` at `bbc3d401` (the
+  committed round-2 patch): 36 / 36 green** (P2).
+  **The SECOND fix-diff review (2026-10-20, two fresh-context reviewers of everything after the fourth review — `-371`'s code, the
+  8-hour scan's exclusion, their tests, the last records):** code 0 H / 0 M / 8 L — fixed: the capped branch returns `noop` when its
+  finish matched nothing (the P10 shape); a row that made an ambiguous send still isolates its number after a `skipped:*` finish
+  (`OR send_count > 0`, a leg); negative backstop legs (below the cap ⇒ ⛔ finish; another job ⇒ `lost`); the "capped" leg's rationale
+  and the R7 / `first_detail` wording; recorded: 0176's mixed dev-backfill meaning (`-372` d5), the partial re-plan saving (deferred).
+  Records 1 H / 3 M / 8 L — the SENT corrective told item said *"one WhatsApp for each"* (up to two of each, per claim), omitted
+  `-370`'s own cost (a short outage spanning two retries spends the step) and left the first item's absolute *"cannot go where the
+  claimant has replied STOP"*; `-371`'s *"⛔ a third call"* is false (a 429 between two 5xx is a third call) ⇒ Decision
+  `2026-10-20-372` (`e94408f5`, ALONE — a wording correction, ⛔ a new choice) and a SECOND corrective told item
+  `trustee-panel-told-2026-10-20c-6-37d-forgery-bound-second-correction.md` (WRITTEN, ⛔ sent — BigDev sends it); the cap leg RE-RUN
+  RED under `-371`; Row 36's gate order, the test and friction wording, W4's "2 h", the counts above — corrected.
 
 ### Completion Notes List
 
@@ -1760,7 +1774,10 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   itself) and Decision `2026-10-20-370` (`5507c756`, alone — BigDev: a TWO-SEND cap, the Panel told; an 8-hour start window): migration
   0176, the capped finish, the window, their legs; every review finding addressed. Status `done` → `in-progress` until `ci:local` is
   green (P2). ⭐ `ci:local` 36 / 36 green at `bbc3d401` ⇒ Status `in-progress` → `done` (ledger `2026-10-20f`). ⭐ Then BigDev: *"-371
-  confirmed, report has been sent"* — `-371` confirmed; the corrective "told" item TOLD (ledger `2026-10-20g`).
+  confirmed, report has been sent"* — `-371` confirmed; the corrective "told" item TOLD (ledger `2026-10-20g`). Then BigDev: *"review it
+  and then open pr"* — the second fix-diff review (Debug Log (c)); Decision `-372` (`e94408f5`, alone — the cap bounds COPIES per
+  follow-up per chase per claim, ⛔ calls; `-370`'s cost restated); a SECOND corrective told item WRITTEN, ⛔ sent; the LOW code fixes
+  and legs (ledger `2026-10-20h`).
 - v1.8 (2026-10-20) — "close out R8": the remaining five named legs added, all in live/integration tests, closing R8
   completely. `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` gains the late-correlator leg, the 20:00
   release → 09:00 config-off-finish leg (its own isolated Pariwar — never left the shared `PARIWAR` constant's

@@ -650,8 +650,9 @@ export async function finishContactLadderWhatsappExhausted(
  * row that already counts `MAX - 1` such sends ⇒ FINISH it `may_have_sent:send_cap`, counting this one (⛔ a further call, whichever
  * job or day); the marker STAYS set (0172's CHECK — a `may_have_sent` row carries it). ⛔ Matches a non-ambiguous transient or a row
  * below the cap — the caller then notes it (or finishes it exhausted) as before. `at_marker`: the marker answered `capped` (a
- * backstop) — the finish SETS the marker field, ⛔ a call. `first_detail` keeps the transient noted before the finish (the first
- * ambiguous send's, on the post-send path).
+ * backstop) — the finish SETS the marker field, ⛔ a call. `first_detail` = COALESCE(first_detail, the row's last note, this
+ * transient) — the earliest note still on the row (a re-take re-stamps it), ⛔ necessarily the ambiguous send's; the cap's own
+ * trigger token is in the child's log line.
  */
 export async function finishContactLadderWhatsappSendCapped(
   db: Db,
@@ -924,7 +925,7 @@ export async function hasRecentClaimContactWaSendTo(
     SELECT send_id FROM claim_contact_wa_sends
      WHERE pariwar_id = ${input.pariwarId}
        AND recipient_number_hash = ${input.recipientNumberHash}
-       AND send_outcome IN ('attempting', 'may_have_sent', 'accepted')
+       AND (send_outcome IN ('attempting', 'may_have_sent', 'accepted') OR send_count > 0)  -- -371: a row that made an ambiguous send, whatever it finished as
        AND updated_at >= clock_timestamp() - make_interval(days => ${CONTACT_LADDER_WA_ISOLATION_DAYS})
      LIMIT 1`);
   return (result.rows?.length ?? 0) > 0;

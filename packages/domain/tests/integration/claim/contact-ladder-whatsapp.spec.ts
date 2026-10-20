@@ -427,7 +427,11 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       const r = begun(await begin(client, s));
       const db = bindScopedDb(client);
       const ref = { pariwarId: PARIWAR_A, sendId: r.sendId, jobId: 'job-1' };
+      // Negatives first: BELOW the cap the at-marker finish matches nothing; ANOTHER job at the cap is `lost`, ⛔ `capped`.
+      await asSuperuser(client, () => client.query(`UPDATE claim_contact_wa_sends SET send_count = 1 WHERE send_id = $1`, [r.sendId]));
+      expect(await finishContactLadderWhatsappSendCapped(db, { ...ref, transient: 'marker_lost:send_cap', phase: 'at_marker' })).toBe(false);
       await asSuperuser(client, () => client.query(`UPDATE claim_contact_wa_sends SET send_count = 2 WHERE send_id = $1`, [r.sendId]));
+      expect(await markContactLadderWhatsappInFlight(db, { ...ref, jobId: 'job-other', leaseMarginMs: 60_000, now: new Date() })).toBe('lost');
       expect(await markContactLadderWhatsappInFlight(db, { ...ref, leaseMarginMs: 60_000, now: new Date() })).toBe('capped');
       expect(await finishContactLadderWhatsappSendCapped(db, { ...ref, transient: 'marker_lost:send_cap', phase: 'at_marker' })).toBe(true);
       const row = (await sendRowOf(client, s))!;
@@ -590,6 +594,19 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       const db = bindScopedDb(client);
       expect(await hasRecentClaimContactWaSendTo(db, { pariwarId: PARIWAR_A, recipientNumberHash: s.hash })).toBe(true);
       expect(await hasRecentClaimContactWaSendTo(db, { pariwarId: PARIWAR_A, recipientNumberHash: 'another-hash' })).toBe(false);
+    });
+
+    it('⭐ -371 — a row that made an AMBIGUOUS send (a post-send 5xx) still isolates its number even after it finished `skipped:*` (a block code for that send must ⛔ revoke a member)', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      const r = begun(await begin(client, s));
+      const db = bindScopedDb(client);
+      const ref = { pariwarId: PARIWAR_A, sendId: r.sendId, jobId: 'job-1' };
+      await markContactLadderWhatsappInFlight(db, { ...ref, leaseMarginMs: 60_000, now: new Date() });
+      await noteContactLadderWhatsappTransient(db, { ...ref, detail: 'api_unavailable:503', phase: 'post_send' });
+      expect(await finishContactLadderWhatsappExhausted(db, { ...ref, transient: 'rate_limited:130429', phase: 'pre_send' })).toBe(true);
+      expect((await sendRowOf(client, s))!.send_outcome).toBe('skipped');
+      expect(await hasRecentClaimContactWaSendTo(db, { pariwarId: PARIWAR_A, recipientNumberHash: s.hash })).toBe(true);
     });
 
     it('⭐ R5 — the 7-day window ages by `updated_at`: a row CREATED 10 days ago but touched now (a reclaim / finalise / status) still matches; touched 8 days ago it does ⛔', async () => {

@@ -2252,6 +2252,12 @@ onboarding:
   is a second, DIRECT WhatsApp sender outside the dispatcher — it reads the member dual gate above (the
   Pariwar switch AND the member's opt-in), sends one Meta-approved UTILITY template with three body values,
   never falls back to SMS, and is not the claim-contact exception. The bullets above are unedited.)*
+  *(Dated 2026-10-21, Decision 2026-10-21-373 — author-commit, Story 5.12 (decided; ⛔ yet built): a member's opt-in has no
+  clock (`isOptInActive` = ACTIVE); withdrawal from app settings, by the admin, by STOP or by Meta's 131050
+  (a marketing opt-out) ends the ACTIVE opt-in AND every earlier consent row; a STOP ends every yes its
+  number carries. The origination requirement is unchanged: a WhatsApp message that is neither STOP nor the
+  opt-in phrase creates no opt-in (BigDev: route such messages into the helpdesk after go-live). The bullets
+  above are unedited.)*
 - **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
   Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
   correction and certificate reminders' delivery ladder — to ONE person only: the

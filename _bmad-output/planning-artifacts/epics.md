@@ -2401,6 +2401,28 @@ So that the OTP delivery is regulator-compliant, audit-traceable, and the gating
 **When** the gating decision is made (which actions require step-up — Story 1.9 admin auth + Story 3.2 member auth own this)
 **Then** the gating surfaces call this story's delivery endpoint; the gating logic itself does not change with Epic 5 — Epic 5 only owns *how the OTP gets to the user* and *audit semantics for send/consume pairs*
 
+### Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
+
+> **Added 2026-10-21 (Story 5.12, Task 0.4)** — the row `5-12-whatsapp-yes-lasts-until-withdrawn` builds the Trustee Panel's ruling
+> [`-364`](../../.decision-log.md#decision-2026-10-19-364) option A (*"A yes lasts until the member takes it back (in the app, or by
+> replying STOP), for every WhatsApp message from the Trust."*) and its four conditions, which come first: the app's "expired" wording
+> goes, the withdraw control shows for every standing yes, STOP always works, and a withdrawal ends every earlier yes. Then the opt-in read
+> loses its 24-hour clock, and the alert rung, Story 6.31's reminder and row 5-10's signup box follow it unedited. Its build decisions
+> LY1–LY13 are DECIDED by [`-373`](../../.decision-log.md#decision-2026-10-21-373) (author-commit), which also decides `-364` reading (iv)
+> (⛔ restoration of a pre-ruling "expired" yes). Go-live: roster Row 37 (and Row 35 (g) for the 6.31 reminder). Full ACs:
+> `_bmad-output/implementation-artifacts/5-12-whatsapp-yes-lasts-until-withdrawn.md`. ⛔ Never a merge fence. (Epic 5's two "9 stories"
+> count lines are left as they stand, as Epic 6's are for its post-hoc entries.)
+
+As a member who told the Trust "yes, you may message me on WhatsApp", I want that yes to stand until I take it back, with a withdraw
+button that is always there while it stands, a STOP that always works, and a withdrawal that ends every yes I ever gave, so that I get
+the Trust's WhatsApp messages for as long as I chose them, can stop them easily at any time, and nothing tells me my yes ended when it
+did not.
+
+**Acceptance Criteria:** see the story file (AC1–AC12) — in short: the opt-in read has ⛔ clock and the database refuses an ACTIVE →
+EXPIRED move; every withdrawal path ends the ACTIVE row and every open `whatsapp_opt_in` consent row; a STOP ends every yes its number
+carries and a STOP that faults is retried then alarmed; only Meta 131050 (a marketing opt-out) ends a yes from Meta's side; the app never
+says "expired"; the claim-contact half of the webhook worker (Story 6.37d) is untouched.
+
 ---
 
 ## Epic 6: Claim Filing, Peer Verification, Ground Inspection & Internal Appeal

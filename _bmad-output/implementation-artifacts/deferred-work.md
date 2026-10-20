@@ -4,6 +4,34 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 5.12 Task 0 — Decision 2026-10-21-373 (2026-10-21)
+
+- **A member's WhatsApp yes is bound to the number that sent it** [`packages/domain/src/wa-opt-in/`; `member_identities`] — the mint
+  copies the identity's blind index, the match requires the inbound number to equal it, and `resolveWaTarget` sends to the identity's
+  registered mobile; ⛔ writer changes a member's mobile today (only the anonymizer updates `member_identities`). Under a lasting yes
+  (`-364` option A, built by row `5-12-whatsapp-yes-lasts-until-withdrawn`) a recycled SIM's new holder — ⛔ a member — receives the
+  Trust's WhatsApp until they reply STOP (Story 5.12 LY6 ends it) or block; before 5.12, ≤ 24 hours. TOLD-item owed:
+  `trustee-panel-told-2026-10-21-5-12-whatsapp-yes-residuals.md` (`-373` decision 4). Trigger: the first mobile-change writer (AR-24's
+  step-up *"mobile change"*) — it must call `waOptIn.endEveryWaYes(…, 'REVOKED')` for the old number in its own transaction.
+- **A WhatsApp yes outlives the member's death and erasure** [`packages/domain/src/member/anonymize.ts`; the death overlay] — death is an
+  overlay the audience predicates do not see ([[project_death_is_an_overlay_not_a_state]]; `news-blog/audience.ts:44-49`), and
+  `anonymizeMember` never touches `member_wa_opt_in` ⇒ a deceased member's phone (often with the family) keeps receiving the Trust's
+  general WhatsApp (e.g. news) until someone replies STOP. Ending the yes at death / erasure NARROWS who is messaged (the author's —
+  Story 5.12 LY13 (b), ⛔ chosen: `-373` decision 8). Trigger: the first production WhatsApp send.
+- **A WhatsApp message that is neither STOP nor an opt-in phrase is silently ignored** [`apps/jobs/src/wa-webhook-processor.ts` message
+  loop] — ⛔ reply, ⛔ reader, ⛔ helpdesk ticket, and ⛔ a yes (§3.4's origination rule); Meta's 24-hour customer-service window it opens
+  goes unused. ⭐ BigDev (`-373` decision 10): *"we will go with option C, but let's postpone that for post go-live"* — route such
+  messages INTO THE HELPDESK. *Cost, accepted:* from go-live until it ships, a person who messages the Trust's WhatsApp number gets ⛔
+  answer. Needs: matching a sender to a member (or none), the helpdesk's intake for a non-app source, and the raw message's retention
+  (`wa_inbound_webhook_events` holds the number and text in plain text until its cleanup sweep). Unhomed — trigger only. Trigger: go-live
+  (cut a backlog row then).
+- **The Telegram settings screen re-fetches in an endless loop** [`apps/mobile/app/(settings)/telegram-notifications.tsx:36-50`] — the
+  same shape Story 5.12 fixes in `notifications.tsx` (F13a): `load = useCallback(…, [t])` + `useEffect([load])`, and `useT()` returns a
+  fresh closure every render ([[project_uset_fresh_closure_memo_trap]]) ⇒ `getTelegramOptInStatus` repeats while the screen is open.
+  Out of 5.12's scope. Trigger: the next edit of `telegram-notifications.tsx`, or the first production Telegram opt-in.
+
+---
+
 ## Deferred from: code review of 6-37d-claim-contact-whatsapp-step.md, round 2 (2026-10-20)
 
 - **WS11's hash fallback can suppress a MEMBER's block** [`apps/jobs/src/wa-webhook-processor.ts` status branch; `-369` decision 4] — a
@@ -12,6 +40,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   round (a claim block revoking a member) is what I7 forbids, so the fallback errs this way on purpose. Trigger: row
   `5-12-whatsapp-yes-lasts-until-withdrawn` or the `WA_BLOCK_ERROR_CODES` item reworking the member block path (check whether the wamid
   is a member send before the hash fallback).
+  ⭐ **Dated 2026-10-21 (Story 5.12 Task 0.4, `-373` decision 5):** the row-5-12 trigger FIRED; ⛔ fixed by 5.12. Its prescribed check
+  is buildable only for 6.31's reminders (`claim_peer_mesh_wa_reminders` records the wamid); an ALERT send's wamid is returned by
+  `dispatch` (`SendResult.providerMessageId`) but ⛔ recorded, and recording it edits `apps/jobs/src/scheduler` (`contribution-notify.ts`,
+  6.37d AC11-pinned) — outside 5.12's scope. Cost restated: BOUNDED in reach — the fallback claims a block-coded status only within 7
+  days of a claim-send row's last write (`CONTACT_LADDER_WA_ISOLATION_DAYS`); and per Meta's error-code reference ⛔ code reports a
+  person blocking a business (131050 is a MARKETING opt-out), so "a member's block" here means a member's 131050. Trigger restated: the
+  first send-time wamid record for member alert sends (the `WA_BLOCK_ERROR_CODES` item below closes for the member path with 5.12).
 - **A late-landing WhatsApp delivery is invisible to D22 once the ladder ends otherwise** [`packages/domain/src/claim/contact-ladder-whatsapp-delivery.ts`; `readReturnLadderWhatsappDeliveries`] — under READ COMMITTED a `delivered` callback drained while the finalise is uncommitted misses the wamid, lands only in `whatsapp_send_status`, and the finalise's copy may already have run; only the running-ladder settles copy it later, and closure reach reads only the row's `delivered_at`. The copy also stamps `wd_w.updated_at` (possibly the `read` time). Trigger: D22 reach disputed for a claim whose WhatsApp was delivered.
 - **A `failed` status that arrives before the finalise never reaches the send row** [`contact-ladder-whatsapp-record.ts` `recordClaimContactWaStatus`] — the finalise copies only `delivered` from the status store; `failed_at` / `failure_code` stay NULL. Nothing reads them today. Trigger: the first reader of `failed_at` / `failure_code`.
 - **At 20:00, a failed marker release turns an unsent message into `may_have_sent:lease_lapsed`** [`apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts` (the post-marker window check)] — needs a DB error between the marker commit and the release; fails safe (no second send) but uses up the once-only step. Trigger: a `lease_lapsed` row with no Meta call in the logs.
@@ -111,6 +146,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   opt-in to `BLOCKED_BY_META` and revokes the consent, for ANY message id — Story 6.31's reminder included. Only 131050 (the person
   blocked the business) is a consent signal. ⭐ Recorded by `2026-10-19-365` (WR11, WR15); ⛔ fixed by 6.31 (5.4's worker is frozen there).
   Trigger: row 5-12 (which edits the same worker), or the first production WhatsApp send.
+  ⭐ **Dated 2026-10-21 (Story 5.12 Task 0.4, `-373` decision 5):** the row-5-12 trigger FIRED. 5.12 narrows the MEMBER path: only
+  131050 ends a member yes, via a new member-only predicate; `WA_BLOCK_ERROR_CODES` and `isBlock` stay unchanged because they also gate
+  the claim half's hash fallback. ⚠ Correction against Meta's Cloud API error-code reference (fetched 2026-10-20): 131050 is *"This
+  recipient has chosen to stop receiving marketing messages on WhatsApp from your business"* — a MARKETING opt-out, ⛔ "the person
+  blocked the business"; ⛔ code reports a block (130403 is the business blocking the user). The member-path half of this item is
+  closed when row 5-12 is `done` on `main` (Story 5.12 Task 7.1); the set's claim-side use is ⛔ a consent question.
 - **⛔ handling of Meta's `template_category_update` webhook** [`apps/jobs/src/wa-webhook-processor.ts`] — Meta may re-categorise an
   approved UTILITY template as MARKETING (one day's notice); the repo ignores the event, so a re-categorised reminder template would go
   on being sent as marketing (and 131049 then revokes consent — the item above). ⭐ Recorded by `-365` (WR15, WR16 (f) — roster Row 35

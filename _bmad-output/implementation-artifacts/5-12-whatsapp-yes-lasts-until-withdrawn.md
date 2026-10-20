@@ -8,7 +8,7 @@ cut from the pin in the main checkout (no peer session was running — ListAgent
 Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); the CODE claims below were derived at ec6d826e
 (perishable). Re-check before Task 1: `git fetch origin && git diff --name-only ec6d826e..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
+STATUS: in-progress — Task 0 DONE 2026-10-21 (Decision `2026-10-21-373`, `97e1e7ad`, alone; records next). Was: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
 every code claim re-derived at ec6d826e = `origin/main`).
 
 START CONDITION — MET at the pin: row 6-37d is `done` and ON `main` (its worker edit — the claim half of the STOP / block branches —
@@ -48,7 +48,7 @@ S = Task 0.1 STOP conditions · PQ = a question for BigDev at Task 0.2 (whether 
 
 # Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** As built (Story 5.4) a member's WhatsApp opt-in counts for 24 hours: the webhook worker
 > stamps `window_expires_at = now() + 24 h` on the match, `isOptInActive` stops counting it after that, and a sweep moves it to
@@ -319,7 +319,13 @@ governs how long a channel preference lasts (the Niyamavali is a rulebook, ⛔ b
   family (c) asks for a double-operation test (convention). ⛔ audit-action registry exists (actions are strings); `governance_boundary.yaml`
   covers flags only (⛔ added here).
 
-## ⚖️ Build decisions LY1–LY13 (PROPOSED — answered by BigDev at Task 0.2; ⭐ = recommended)
+## ⚖️ Build decisions LY1–LY13 (⭐ = recommended)
+
+> ⭐ **OUTCOME (2026-10-21) — it governs:** DECIDED by [Decision 2026-10-21-373](../../.decision-log.md#decision-2026-10-21-373)
+> (author-commit, `97e1e7ad`, alone). BigDev: *"all as recommended"* — every ⭐ option below, INCLUDING LY6's optional member-only
+> punctuation strip; PQ1 and PQ2 = yes (one told item, `trustee-panel-told-2026-10-21-5-12-whatsapp-yes-residuals.md`, WRITTEN — ⛔ told
+> until BigDev sends it); the alarm `wa_opt_in.stop_unrecorded` owned by BigDev (`-373` decision 6); WhatsApp enquiries routed into the
+> helpdesk after go-live (`-373` decision 10 — ⛔ in 5.12's scope). The roster row is **Row 37**. The options below are kept as put.
 
 Each RECOMMENDED option is the author's (§0 — where each sits against option A is stated there). Each carries its cost.
 
@@ -607,19 +613,19 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight, decisions, governance (AC11)**
-  - [ ] 0.1 `git fetch origin`; re-run the baseline diff (header); re-derive F1–F25 (re-grep each symbol). **STOP** and tell BigDev if:
+- [x] **Task 0 — Preflight, decisions, governance (AC11)**
+  - [x] 0.1 `git fetch origin`; re-run the baseline diff (header); re-derive F1–F25 (re-grep each symbol). **STOP** and tell BigDev if:
     **S1** any production database or real member data exists (LY9 (a), LY13 and F15 rest on "not in production"); **S2** a branch or
     worktree other than this one edits `wa-webhook-processor.ts`, `wa-opt-in/`, `consent/write.ts`, `notifications.tsx` or
     `emit-openapi.ts`'s wa-opt-in block (`git branch -a`, `git worktree list`, ListAgents — [[feedback_shared_tree_branch_switch]]);
     **S3** a new decision after `-372` touches WhatsApp opt-in; **S4** Meta's policy now sets an opt-in duration; **S5** a mobile-change
     writer now exists (F10b — LY13 (a)'s premise).
-  - [ ] 0.2 Put LY1–LY13 to BigDev (recommended first, each with its cost) and PQ1 (LY6 cost (1)) / PQ2 (LY13); record the answers
+  - [x] 0.2 Put LY1–LY13 to BigDev (recommended first, each with its cost) and PQ1 (LY6 cost (1)) / PQ2 (LY13); record the answers
     verbatim.
-  - [ ] 0.3 Write the author-commit decision (next free id; `governance:` prefix; "supersedes ⛔ thing; realises `-364` Consequence 1;
+  - [x] 0.3 Write the author-commit decision (next free id; `governance:` prefix; "supersedes ⛔ thing; realises `-364` Consequence 1;
     decides `-364` reading (iv) at LY9"; records LY6 cost (1), LY13's residuals, the alarm's owner and the PQ1 / PQ2 answers); stage in the scratchpad, try the
     insert ([[project_decision_log_writes_user_inserted]]); commit it ALONE; write its SHA only AFTER the commit.
-  - [ ] 0.4 Records commit: the epics.md `### Story 5.12` entry (Epic 5, after 5.9 — 6.31's post-hoc format *"> **Added 2026-10-…
+  - [x] 0.4 Records commit: the epics.md `### Story 5.12` entry (Epic 5, after 5.9 — 6.31's post-hoc format *"> **Added 2026-10-…
     (Story 5.12, Task 0.4)** —"*; Epic 5 has TWO count lines, the summary's *"**9 stories**"* and the checklist's *"Epic 5 — 9 stories"* —
     bump both, or leave both per Epic 6's precedent, and say which); the LY11 roster row; ADR-0029 changelog row *"(ratified —
     annotated)"* + a dated note on §3.4; deferred-work: the LY8 dated notes and the new items (LY13 (1)/(2) if (a); the Telegram screen's
@@ -814,6 +820,16 @@ and honour them. No library upgrade is involved (Drizzle, Fastify, Expo, vitest 
 
 ### Debug Log References
 
+- **(a) Task 0 (2026-10-21).** 0.1: `git fetch origin` — `origin/main` = `ec6d826e` (the pin); `git diff --name-only ec6d826e..HEAD --
+  packages apps scripts` EMPTY; S1 ⛔ production (nothing is deployed); S2 ⛔ other branch / worktree edits the named files, ListAgents
+  empty; S3 ⛔ decision after `-372` except this story's `-373`; S4 Meta's opt-in page (2026-10-20) sets ⛔ duration; S5 ⛔ mobile-change
+  writer (`update(memberIdentities)` only in `anonymize.ts:162`). 0.2 — BigDev, verbatim: *"all as recommended"*; on WhatsApp enquiries
+  (put after the LYs): *"we will go with option C, but let's postpone that for post go-live."*; on the draft decision: *"confirmed,
+  insert and commit"*. 0.3: `-373` committed alone (`97e1e7ad`). 0.4: the records commit — the told item (WRITTEN), roster Row 37,
+  the epics.md entry (Epic 5's two "9 stories" lines LEFT, per Epic 6's precedent), ADR-0029 changelog row and §3.4 dated note (both
+  "decided, ⛔ yet built"), deferred-work (a new 5.12 section of four items; dated notes on the `WA_BLOCK_ERROR_CODES` and WS11 items),
+  the ledger.
+
 ### Completion Notes List
 
 - Story created 2026-10-20 by `bmad-create-story 5-12` (ultimate context engine analysis completed — comprehensive developer guide created).
@@ -828,3 +844,4 @@ and honour them. No library upgrade is involved (Drizzle, Fastify, Expo, vitest 
 | 2026-10-20 | 1.1 | `bmad-create-story validate 5-12` (four fresh-context verifiers: code claims, governance, design, gates; BigDev: *"all"*). Pin unchanged (`origin/main` = `ec6d826e`). Fixed: AC3 / AC4 (b) legacy seed by INSERT (the LY4 trigger refuses the UPDATE); an unnamed RED leg (`peer-mesh-wa-reminder-opted-in.spec.ts:70-79`) and three F18 legs mislabelled RED; the screen's existing endless re-fetch (F13a, T10 was backwards; AC7 now under a real `LocaleProvider`, one fetch); STOP faults silent under an at-most-once drain (F10a; LY6 retry + `wa_opt_in.stop_unrecorded`, per-member transactions; PQ1); LY8 rewritten (its "can only NARROW" was false against option A; `isBlock` also gates the claim fallback ⇒ a member-only 131050 predicate; WS11 restated as bounded and ⛔ fixable inside AC8's scope); the 5.5 item misquoted and over-closed (WA half only); `ci:local` under `env -u` skips `integration-tests` (F21); the friction-budget disposition unordered (F22, Task 4.4); AC5's OpenAPI claim backwards (F23); a yes bound to a NUMBER / outliving the member (F10b, LY13, PQ2); `_at` fails lint (F24); AC6's regex matched zero keys; §0 gate restated; LY9 (b) is ⛔ the author's; `-364` "Not covered" homed (LY11 (c)); citation fixes (F4, F5, F6, T5, `-367` d1, `-065`, R10(B)). |
 | 2026-10-20 | 1.2 | Fresh-context re-validate of v1.1 (2 H / 8 M / 7 L, all in v1.1's own text — applied): Meta's reference (fetched) says 131050 is a MARKETING opt-out, ⛔ a block, and ⛔ code reports a person blocking the business ⇒ LY8 (a) restated as a narrowing, F12's "late BLOCKED_BY_META records a block" struck, `blocked_*` reworded (LY10); under LY8 (a) three 6.37d claim-isolation legs would pass vacuously and one turn RED ⇒ re-coded to 131050 (AC8, Task 2.3); the LY4 trigger refused any update of an EXPIRED row ⇒ `OLD.state IS DISTINCT FROM NEW.state`; LY6 compensation only after a committed audit line, per-attempt primary lines, a lost race returns ⛔ alarm, a pre-loop fault alarms from the per-message catch; the punctuation option made member-only (`isStopKeyword` is the claim half's too); WS11's reason corrected (`dispatch` returns the wamid; recording it is an `apps/jobs/src/scheduler` edit); LY9 (b) MATCHES option A (⛔ a Panel question); AC4 / AC9 fault recipe (committed non-temp function — the worker uses other connections); AC9's TTL is a deps field; AC11 grep by key phrases; LY5 names `ConflictError`; cites `:451-458`, `v1.yaml:10742-10818`. |
 | 2026-10-20 | 1.3 | Third fresh-context round of v1.2: 0 H / 4 M / 5 L, applied — LY8 (a)'s WS11 sentence still said `packages/channels`; AC4 (h) re-seamed on the SECOND HMAC (a throwing `enc` also fails the claim stop — two alarms); the per-message-catch alarm used an out-of-scope `body` and the per-member path must ⛔ rethrow; §0 now counts LY8 (a)'s 131050 arm as a narrowing; the committed-trigger recipe follows `cycle-freeze.spec.ts`'s safeguards; re-coded legs' `failure_code` asserts; F14's probe count; full precedent path; I2 / AC3 "Meta block" labels. Rounds: 4 verifiers → HIGH 2 → 0. |
+| 2026-10-21 | 1.4 | Task 0 done: BigDev *"all as recommended"* (LY1–LY13, the LY6 punctuation option, PQ1 / PQ2 yes); Decision `2026-10-21-373` (`97e1e7ad`, alone); WhatsApp enquiries → the helpdesk after go-live (`-373` decision 10); the records commit (told item WRITTEN, Row 37, epics.md, ADR-0029 / §3.4 notes, deferred-work). Status → in-progress. |

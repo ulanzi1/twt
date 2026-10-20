@@ -1,3 +1,12 @@
+# last_updated: 2026-10-20k (STORY 5.12 — VALIDATED by `bmad-create-story validate 5-12` (BigDev: "all"); v1.0 → v1.3. Four fresh-context
+# verifiers (code claims, governance, design, gates) then three re-validate rounds (HIGH 2 → 0; every HIGH after round 1 was the pass's own).
+# Pin unchanged (`origin/main` = `ec6d826e`). Key changes: AC3's legacy seed by INSERT (the LY4 trigger refuses the UPDATE); the screen's
+# EXISTING endless re-fetch (F13a) fixed in Task 4.2; a member STOP that faults is retried then alarmed (`wa_opt_in.stop_unrecorded`) — the
+# drain is at-most-once (PQ1: whether TOLD to the Panel, BigDev at Task 0.2); LY8 rewritten — Meta's reference says 131050 is a MARKETING
+# opt-out, ⛔ a block, and ⛔ code reports a person blocking the business ⇒ a member-only 131050 predicate, `isBlock` byte-unchanged (it also
+# gates the claim fallback), `blocked_*` reworded; LY13 NEW — a yes follows the NUMBER and outlives death / erasure (PQ2); the 5.5 sweep item
+# is closed for its WA half only; `ci:local` under `env -u` skips `integration-tests`; a friction-budget disposition (Task 4.4); the OpenAPI
+# text lives in `emit-openapi.ts`. LY1–LY13 + PQ1 / PQ2 PROPOSED for Task 0.2. Row stays `ready-for-dev`; ⛔ other row moves.)
 # last_updated: 2026-10-20j (STORY 5.12 — CREATED by `bmad-create-story 5-12` on branch `story/5-12-whatsapp-yes-lasts-until-withdrawn`
 # (pinned `ec6d826e`, 6.37d on `main` ⇒ the STOP-path sequencing is MET): row `5-12-whatsapp-yes-lasts-until-withdrawn` `backlog` →
 # `ready-for-dev`. Builds `2026-10-19-364` (option A): the four conditions first (the "expired" words go; the withdraw control for every

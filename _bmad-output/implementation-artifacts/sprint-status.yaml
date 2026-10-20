@@ -1,3 +1,10 @@
+# last_updated: 2026-10-21b (STORY 5.12 — BUILT by `bmad-dev-story 5.12`; row `5-12-whatsapp-yes-lasts-until-withdrawn` in-progress → review.
+# Commits on the branch, in I6 order: Task 1 domain (`endEveryWaYes`, `revokeOpenConsentsOfType`), 2 worker (STOP any-state + retry +
+# `wa_opt_in.stop_unrecorded`; only 131050 ends a member yes), 3 API (409 only when nothing to end), 4 app (`expired_*` gone; one fetch),
+# 5 the read change LAST (`isOptInActive` ⛔ clock; sweep PENDING-only; migration 0177 trigger + one-ACTIVE index), 6 fences (6.37d AC11
+# read.ts / write.ts pins re-taken), 7 records ("Closed by 5.12", effective when `done` on `main`). `ci:local` on :5433: 36/36 green (run
+# 2; run 1 failed one flaky leg outside the story — `channel-webhooks-msg91.spec.ts`'s `0.25` substring vs a pino `responseTime`).
+# ⛔ pushed. ⛔ Other row moves.)
 # last_updated: 2026-10-21a (STORY 5.12 — Task 0 DONE. BigDev: "all as recommended" (LY1–LY13 + the LY6 member-only punctuation option;
 # PQ1 / PQ2 yes); on WhatsApp enquiries: "we will go with option C, but let's postpone that for post go-live" (route into the helpdesk);
 # on the draft: "confirmed, insert and commit". Decision `2026-10-21-373` (author-commit) committed ALONE (`97e1e7ad`). Records commit:
@@ -20570,7 +20577,10 @@ development_status:
   # ⭐ 2026-10-20 (`bmad-create-story 5-12`, ledger `2026-10-20j`): story file `5-12-whatsapp-yes-lasts-until-withdrawn.md` CREATED
   # (pinned `ec6d826e`; branch `story/5-12-whatsapp-yes-lasts-until-withdrawn`); LY1–LY12 PROPOSED for BigDev at Task 0.2; the
   # epics.md entry is owed at Task 0.4. The comment above is kept as written.
-  5-12-whatsapp-yes-lasts-until-withdrawn: in-progress
+  # ⭐ 2026-10-21 (`bmad-dev-story 5.12`, ledger `2026-10-21b`): BUILT on the branch — the four conditions, then the read change (a yes
+  # has ⛔ clock; every withdrawal ends EVERY open consent row; STOP always works; the app never says "expired"); migration 0177. The two
+  # `-364` items it owns are "Closed by 5.12", effective when this row is `done` on `main`. Go-live: Row 35 (g) + Row 37 (the Hindi).
+  5-12-whatsapp-yes-lasts-until-withdrawn: review
   epic-5-retrospective: done
 
   # ==========================================================================

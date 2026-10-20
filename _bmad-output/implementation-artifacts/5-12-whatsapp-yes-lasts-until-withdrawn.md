@@ -8,7 +8,7 @@ cut from the pin in the main checkout (no peer session was running — ListAgent
 Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); the CODE claims below were derived at ec6d826e
 (perishable). Re-check before Task 1: `git fetch origin && git diff --name-only ec6d826e..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: in-progress — Task 0 DONE 2026-10-21 (Decision `2026-10-21-373`, `97e1e7ad`, alone; records next). Was: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
+STATUS: review — Tasks 0–7 DONE 2026-10-21 (`bmad-dev-story 5.12`). Was: in-progress — Task 0 DONE 2026-10-21 (Decision `2026-10-21-373`, `97e1e7ad`, alone; records next). Was: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
 every code claim re-derived at ec6d826e = `origin/main`).
 
 START CONDITION — MET at the pin: row 6-37d is `done` and ON `main` (its worker edit — the claim half of the STOP / block branches —
@@ -48,7 +48,7 @@ S = Task 0.1 STOP conditions · PQ = a question for BigDev at Task 0.2 (whether 
 
 # Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** As built (Story 5.4) a member's WhatsApp opt-in counts for 24 hours: the webhook worker
 > stamps `window_expires_at = now() + 24 h` on the match, `isOptInActive` stops counting it after that, and a sweep moves it to
@@ -687,8 +687,8 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
     of the fence stands"*). Re-run the fence; every other pin must still match.
   - [x] 6.2 Confirm AC8's empty diff for `packages/channels` and `apps/jobs/src/scheduler`, and that `WA_BLOCK_ERROR_CODES` / `isBlock` are
     byte-unchanged.
-- [ ] **Task 7 — Close the records and the gate (AC11, AC12)**
-  - [ ] 7.1 Statuses at EVERY site (grep each verbatim title across `_bmad-output`, `docs`, story files and code comments; the sites known
+- [x] **Task 7 — Close the records and the gate (AC11, AC12)**
+  - [x] 7.1 Statuses at EVERY site (grep each verbatim title across `_bmad-output`, `docs`, story files and code comments; the sites known
     at validate):
     - the two `-364` items → *"Closed by 5.12"*: deferred-work; Story 6.31 F14, WR15 (4) + its dated P28 note, T2; the 5-12 sprint-row
       comment; code `read.ts:169-171`, `peer-mesh-wa-reminder-opted-in.spec.ts:6` (fixed in Task 5).
@@ -700,8 +700,8 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
       row `wa-opt-in-lasting-yes-hindi-reviewed` closes"*); dated notes on Stories 6.31 (AC4 / F14) and 6.37d (AC7 (c), T22);
       `docs/governance/decision-flow-end-to-end.md` (the 6.31 node *"reaches almost nobody until row `5-12` builds…"*, the `-364` node, the
       sprint-row line).
-  - [ ] 7.2 AC12's `ci:local` command on :5433; record the job count and the commit.
-  - [ ] 7.3 Story Status → `review`; sprint row → `review`; ledger.
+  - [x] 7.2 AC12's `ci:local` command on :5433; record the job count and the commit.
+  - [x] 7.3 Story Status → `review`; sprint row → `review`; ledger.
 
 ## Dev Notes
 
@@ -818,6 +818,8 @@ and honour them. No library upgrade is involved (Drizzle, Fastify, Expo, vitest 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
+
 ### Debug Log References
 
 - **(a) Task 0 (2026-10-21).** 0.1: `git fetch origin` — `origin/main` = `ec6d826e` (the pin); `git diff --name-only ec6d826e..HEAD --
@@ -829,12 +831,101 @@ and honour them. No library upgrade is involved (Drizzle, Fastify, Expo, vitest 
   the epics.md entry (Epic 5's two "9 stories" lines LEFT, per Epic 6's precedent), ADR-0029 changelog row and §3.4 dated note (both
   "decided, ⛔ yet built"), deferred-work (a new 5.12 section of four items; dated notes on the `WA_BLOCK_ERROR_CODES` and WS11 items),
   the ledger.
+- **(b) RED proofs (2026-10-21) — each new leg run against the PRE-change source of its own task, then restored.** Task 1: the nine
+  domain legs import functions that did not exist (RED by construction). Task 2: 9 of 14 worker legs RED at `HEAD~` of the worker
+  (AC3 STOP / 131050 / non-consent codes; AC4 (b), (d), (f) ×2, (g), (h)); the 4 green there guard existing behaviour (AC4 (a), (c),
+  (e), the claim-only STOP). Task 3: all 6 new API legs RED at the pre-change `handlers.ts` (AC3 / AC5 member + admin, the mint guard,
+  the lost race). Task 4: 9 of 10 mobile legs RED at the pin's screen + copy — incl. AC7's "loads EXACTLY ONCE" (the `[t]` loop); the
+  off / unavailable leg guards existing behaviour. Task 5: AC1 (live any-window ⇒ true; the call shape), peer-mesh's flipped leg, AC2's
+  `revokeOptIn` refusal, the tick and the sweep legs RED at the pre-Task-5 sources; the trigger / index legs pass there because 0177
+  was already applied to :5433 (they test the DATABASE).
+- **(c) Fault injection.** AC4 (d)/(f) and AC9's per-row fault: a COMMITTED test trigger on `member_wa_opt_in` calling a non-temp
+  function, `WHEN (OLD.opt_in_id = …)`, its own connection with `lock_timeout = 5s`, a `t512_fault_` prefix sweep in `beforeAll`, dropped
+  in `finally`; first-attempt-only = a sequence's first value (`nextval` survives the rollback). The LY5 lost race (worker and API) is a
+  BEFORE trigger that RETURNS NULL — the row update is skipped, so `endEveryWaYes` returns `{ null, 0 }` exactly as after a concurrent
+  withdrawal. AC4 (h): a `computeHmac` that throws on the SECOND call only.
+- **(d) Dev-DB side effect, disclosed (LY4's stated cost).** The Task 5 RED run executed the OLD sweep against the migrated :5433: it hit
+  the 0177 trigger on each past-window ACTIVE dev row (63 at the read-only check) and wrote an `expired` + `_rolled_back` audit pair for
+  each (test tenants only; dev data). :5432 is ⛔ migrated by this session — the pre-push hook will apply 0177 there
+  ([[project_prepush_hook_inherits_5432]]); neither DB held a member with two ACTIVE rows (read-only check before applying).
 
 ### Completion Notes List
 
 - Story created 2026-10-20 by `bmad-create-story 5-12` (ultimate context engine analysis completed — comprehensive developer guide created).
+- **Built 2026-10-21 (`bmad-dev-story 5.12`), every LY as decided by `-373`.** Domain: `consent.revokeOpenConsentsOfType`;
+  `waOptIn.endEveryWaYes` + the state reads `getActiveOptInForMember` / `hasActiveOptIn` / `hasAnythingToEnd` /
+  `listMemberIdsByOptInMobile`; `isOptInActive` = `state = 'ACTIVE'` (⛔ `at`); the EXPIRED edge PENDING-only;
+  `listExpiredWindowOptIns` deleted. Worker: the member STOP (any-state lookup, per-member try + transaction, one retry, then
+  `wa_opt_in.stop_unrecorded`; a pre-loop fault alarms from the per-message catch; a lost race compensates, ⛔ alarm); the
+  member-only `isMemberStopKeyword` (trailing `[.!।,]`) and `WA_MEMBER_CONSENT_BLOCK_CODES = {131050}`; the sweep's ACTIVE half and
+  `expiredWindow` gone. API: 409 only when nothing to end; ONE audit line + `endEveryWaYes`; the lost race ⇒ 409 + `_rolled_back`;
+  the mint refuses ANY ACTIVE row. Migration `0177_member-wa-opt-in-lasting-yes` (trigger + one-ACTIVE index). App: `expired_*`
+  deleted, `unconfirmed_*` added, `active_desc` / `blocked_*` reworded (Hindi = LY10 DRAFT until Row 37 closes).
+- **I6 / AC10 — commit order:** `a0fa5403` Task 1 → `814cfec9` Task 2 → `c25fcbb0` Task 3 → `4719b712` Task 4 → `f9baac1e` Task 5 (the
+  read change, LAST) → `70d11eee` Task 6 → `edc4cf2f` Task 7.1 records → the Task 7.3 close. Intermediate commits are ⛔ all green: I
+  took I6's first option — 6.37d's AC11 pins on `read.ts` / `write.ts` were RED from `a0fa5403` until `70d11eee` re-took them (every
+  other jobs test green throughout — 1329 pass at Task 2).
+- **One deviation from T10's wording, same intent:** T10 suggested depending on `[locale]`; instead the screen stores an error FLAG and
+  translates at render, so ⛔ callback uses `t` at all (`load` deps `[]` — ⛔ stale `t` possible, nothing to re-fetch on a locale
+  change). AC7's "EXACTLY ONCE" leg under a REAL `LocaleProvider` proves it (RED at the pin).
+- **Records (AC11).** Status words carry the caveat *"effective when the row is `done` on `main` (the row is `review`)"* — the
+  items' own text keeps them OPEN until `done` ([[feedback_closure_language_precision]]). `docs/governance/decision-flow-end-to-end.md`
+  got its two dated notes LOCALLY only — `docs/governance/` is gitignored (that map and its published artifact are synced by the
+  `decision-flow-sync` skill, ⛔ run here; `-373` is ⛔ yet in it). The told item stays WRITTEN, ⛔ told.
+- **AC12 — the gate.** Run 1 (`ci:local`, `DATABASE_URL` = :5433, at `70d11eee`'s code): 36/37 jobs green; `integration-tests` failed
+  ONE leg outside this story — `apps/api/tests/integration/channel-webhooks-msg91.spec.ts` AC3's no-leak check asserts `'0.25'` is
+  absent from EVERY log line, and that run's pino `responseTime` was `10.2556…` ms (a substring collision — a flaky leg; alone it
+  passes 38/38). ⛔ fixed here (out of scope) — a candidate deferred item for BigDev. **Run 2 (same command, tree at `edc4cf2f` —
+  code identical to `70d11eee`; later commits are records only): `ci:local PASSED — 36 job(s) green`** incl. `integration-tests`
+  (api 1998 pass / 1 skipped; domain, jobs, events, channels green), `i18n-parity`, `microcopy`, `friction-budget`,
+  `contracts-determinism`, `db-check`, `domain-invariants`, `access-wrapper-invariants`, `ai-10-5-coverage-guard`.
+- ⚠ Not pushed. Push with `DATABASE_URL` set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]) — otherwise the hook applies
+  0177 to :5432.
 
 ### File List
+
+- `_bmad-output/implementation-artifacts/5-12-whatsapp-yes-lasts-until-withdrawn.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/5-5-telegram-mirror-fire-and-forget.md`
+- `_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md`
+- `_bmad-output/implementation-artifacts/6-37d-claim-contact-whatsapp-step.md`
+- `_bmad-output/planning-artifacts/architecture.md`
+- `docs/adr/ADR-0029-whatsapp-webhook-ingress-and-opt-in-lifecycle.md`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `docs/governance/decision-flow-end-to-end.md` (gitignored — local only)
+- `friction-budget.md`
+- `openapi/v1.yaml`
+- `apps/api/src/modules/channel-config/composition.ts`
+- `apps/api/src/modules/wa-opt-in/handlers.ts`
+- `apps/api/tests/integration/wa-opt-in/admin-opt-out.spec.ts`
+- `apps/api/tests/integration/wa-opt-in/wa-opt-in.spec.ts`
+- `apps/api/tests/unit/wa-target.test.ts`
+- `apps/jobs/src/boot.ts`
+- `apps/jobs/src/wa-webhook-processor.ts`
+- `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts`
+- `apps/jobs/tests/wa-opt-in-lasting-yes.test.ts` (new)
+- `apps/jobs/tests/wa-webhook-processor.test.ts`
+- `apps/mobile/app/(settings)/notifications.tsx`
+- `apps/mobile/tests/unit/wa-notifications-copy-keys.test.ts` (new)
+- `apps/mobile/tests/unit/wa-notifications-screen-render.test.ts` (new)
+- `packages/contracts/scripts/emit-openapi.ts`
+- `packages/contracts/src/wa-opt-in/opt-in.ts`
+- `packages/domain/migrations/0177_member-wa-opt-in-lasting-yes.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/consent/write.ts`
+- `packages/domain/src/notifications/delivery.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/schema/member_wa_opt_in.ts`
+- `packages/domain/src/wa-opt-in/read.ts`
+- `packages/domain/src/wa-opt-in/write.ts`
+- `packages/domain/tests/integration/wa-opt-in/end-every-wa-yes.spec.ts` (new)
+- `packages/domain/tests/integration/wa-opt-in/peer-mesh-wa-reminder-opted-in.spec.ts`
+- `packages/domain/tests/integration/wa-opt-in/wa-opt-in.spec.ts`
+- `packages/domain/tests/notifications/delivery-targets.test.ts`
+- `packages/i18n/locales/en/common.json`
+- `packages/i18n/locales/hi/common.json`
+- `packages/queue/src/index.ts`
 
 ## Change Log
 
@@ -845,3 +936,4 @@ and honour them. No library upgrade is involved (Drizzle, Fastify, Expo, vitest 
 | 2026-10-20 | 1.2 | Fresh-context re-validate of v1.1 (2 H / 8 M / 7 L, all in v1.1's own text — applied): Meta's reference (fetched) says 131050 is a MARKETING opt-out, ⛔ a block, and ⛔ code reports a person blocking the business ⇒ LY8 (a) restated as a narrowing, F12's "late BLOCKED_BY_META records a block" struck, `blocked_*` reworded (LY10); under LY8 (a) three 6.37d claim-isolation legs would pass vacuously and one turn RED ⇒ re-coded to 131050 (AC8, Task 2.3); the LY4 trigger refused any update of an EXPIRED row ⇒ `OLD.state IS DISTINCT FROM NEW.state`; LY6 compensation only after a committed audit line, per-attempt primary lines, a lost race returns ⛔ alarm, a pre-loop fault alarms from the per-message catch; the punctuation option made member-only (`isStopKeyword` is the claim half's too); WS11's reason corrected (`dispatch` returns the wamid; recording it is an `apps/jobs/src/scheduler` edit); LY9 (b) MATCHES option A (⛔ a Panel question); AC4 / AC9 fault recipe (committed non-temp function — the worker uses other connections); AC9's TTL is a deps field; AC11 grep by key phrases; LY5 names `ConflictError`; cites `:451-458`, `v1.yaml:10742-10818`. |
 | 2026-10-20 | 1.3 | Third fresh-context round of v1.2: 0 H / 4 M / 5 L, applied — LY8 (a)'s WS11 sentence still said `packages/channels`; AC4 (h) re-seamed on the SECOND HMAC (a throwing `enc` also fails the claim stop — two alarms); the per-message-catch alarm used an out-of-scope `body` and the per-member path must ⛔ rethrow; §0 now counts LY8 (a)'s 131050 arm as a narrowing; the committed-trigger recipe follows `cycle-freeze.spec.ts`'s safeguards; re-coded legs' `failure_code` asserts; F14's probe count; full precedent path; I2 / AC3 "Meta block" labels. Rounds: 4 verifiers → HIGH 2 → 0. |
 | 2026-10-21 | 1.4 | Task 0 done: BigDev *"all as recommended"* (LY1–LY13, the LY6 punctuation option, PQ1 / PQ2 yes); Decision `2026-10-21-373` (`97e1e7ad`, alone); WhatsApp enquiries → the helpdesk after go-live (`-373` decision 10); the records commit (told item WRITTEN, Row 37, epics.md, ADR-0029 / §3.4 notes, deferred-work). Status → in-progress. |
+| 2026-10-21 | 1.5 | `bmad-dev-story 5.12`: Tasks 1–7 built and checked (order per I6: domain → worker → API → app → the read change → fences → records). Migration 0177; 38 new / re-coded legs across domain, jobs, API and mobile, RED-proven per task; `ci:local` (:5433) 36/36 green on the second run (run 1's single failure a flaky substring leg in `channel-webhooks-msg91.spec.ts`, outside this story). Records closed with the "effective when `done` on `main`" caveat. Status → review. |

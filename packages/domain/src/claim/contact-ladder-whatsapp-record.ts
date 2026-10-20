@@ -326,6 +326,11 @@ export async function beginContactLadderWhatsapp(
   }
   // An end and ⛔ a stop ⇒ the passing check. (A stop is always an end — the shape the SMS begins share.)
   if (facts.person === null) return recordSkip('ended');
+  // Review R2 (2026-10-20, I1/AC3/AC5/WS5) — WhatsApp goes to the CLAIMANT only; `isClaimant` was true at ORIGIN (it gated
+  // the step to `pending`) but is never guaranteed true NOW: a later full write can swap the claim's claimant onto a
+  // different nominee or block without touching this ladder. `facts.person.isClaimant` is the LIVE verdict (read under this
+  // same lock, above) — re-checked on every visit, a first visit and every re-take alike.
+  if (!facts.person.isClaimant) return recordSkip('no_longer_claimant');
 
   // ── The gate (WS6, WS7, WS9, WS10; I2) — the switch RE-READ under the lock (a DB read — 6.31's begin does too) ──
   const dbNow = toDate(((await client.query<{ now: Date }>('SELECT clock_timestamp() AS now')).rows[0]!).now);
@@ -397,7 +402,10 @@ type ChaseFacts =
   | {
       readonly kind: 'facts';
       readonly stop: string | null;
-      readonly person: Pick<CorrectionPerson | CertificatePerson, 'personKey' | 'mobileCiphertext' | 'mobileSource'> | null;
+      // Review R2 (2026-10-20) — `isClaimant` joins the picked shape: `check.person` (from a LIVE `readCorrectionRecipients` /
+      // `readCertificateRecipients` read, taken under this same lock) already carries it fresh; the narrower Pick below used
+      // to drop it before `beginContactLadderWhatsapp` could look at it.
+      readonly person: Pick<CorrectionPerson | CertificatePerson, 'personKey' | 'mobileCiphertext' | 'mobileSource' | 'isClaimant'> | null;
       readonly currentNumberHash: string | null | undefined;
       readonly runDay: number;
       readonly paused: boolean;
@@ -845,6 +853,10 @@ export async function recordClaimContactWaStatus(
  * ⭐ WS11 (2) — is there a CLAIM send of this Pariwar to this recipient (its CLAIM-space hash) that is in flight, `may_have_sent`
  * or `accepted`, in the last `CONTACT_LADDER_WA_ISOLATION_DAYS`? A block-coded `failed` status with ⛔ wamid match is then treated
  * as the claim send's — the member revoke is SKIPPED (I7). Stored hashes only (⛔ the member blind index — T21).
+ * Review R5 (2026-10-20) — aged by `updated_at`, ⛔ the immutable `created_at`: this story has ⛔ 72-hour bound, so an
+ * `attempting` row can be RECLAIMED well past 7 days old (its `created_at`) while every reclaim re-stamps `updated_at`
+ * fresh. `created_at` let a crashed row's isolation lapse before its wamid was finalised; `updated_at` tracks the row's
+ * last claim / reclaim / finalise / status write, so a send made (or still attempting) NOW is never excluded.
  */
 export async function hasRecentClaimContactWaSendTo(
   db: Db,
@@ -855,7 +867,7 @@ export async function hasRecentClaimContactWaSendTo(
      WHERE pariwar_id = ${input.pariwarId}
        AND recipient_number_hash = ${input.recipientNumberHash}
        AND send_outcome IN ('attempting', 'may_have_sent', 'accepted')
-       AND created_at >= clock_timestamp() - make_interval(days => ${CONTACT_LADDER_WA_ISOLATION_DAYS})
+       AND updated_at >= clock_timestamp() - make_interval(days => ${CONTACT_LADDER_WA_ISOLATION_DAYS})
      LIMIT 1`);
   return (result.rows?.length ?? 0) > 0;
 }

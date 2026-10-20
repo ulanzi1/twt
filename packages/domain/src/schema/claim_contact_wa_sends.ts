@@ -113,7 +113,10 @@ export const claimContactWaStops = pgTable(
     stoppedAt: timestamp('stopped_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
   },
   (t) => [
-    unique('claim_contact_wa_stops_event_uq').on(t.pariwarId, t.inboundEventId),
+    // Review R1 (Story 6.37d, 2026-10-20) — widened by migration 0173: a batched webhook payload carries one `inbound_event_id`
+    // for every message in it, so a dedup keyed on the event alone wrongly treats a SECOND sender in the same batch as a
+    // replay. The recipient's own hash joins the identity (⛔ 0172's narrower constraint — forward migration, never an edit).
+    unique('claim_contact_wa_stops_event_uq').on(t.pariwarId, t.inboundEventId, t.recipientNumberHash),
     index('claim_contact_wa_stops_number_idx').on(t.pariwarId, t.recipientNumberHash),
   ],
 );

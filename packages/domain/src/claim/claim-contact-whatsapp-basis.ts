@@ -21,7 +21,7 @@ import { claimContacts } from '../schema/claim_contacts.js';
 import { consentRecords } from '../schema/consent_records.js';
 import { claimContactAgreementVersion } from './claim-contact-agreement-copy.js';
 
-export type ClaimantWhatsappBasisReason = 'not_live' | 'old_wording' | 'unknown_version' | 'hindi_not_reviewed';
+export type ClaimantWhatsappBasisReason = 'not_live' | 'old_wording' | 'unknown_version' | 'hindi_not_reviewed' | 'claimant_changed';
 
 export type ClaimantWhatsappBasis =
   | { readonly eligible: true; readonly copyVersion: string }
@@ -73,11 +73,21 @@ export async function readClaimantWhatsappBasis(
   claimCaseId: ClaimId,
 ): Promise<ClaimantWhatsappBasis> {
   const [contact] = await db
-    .select({ agreementConsentId: claimContacts.agreementConsentId })
+    .select({
+      agreementConsentId: claimContacts.agreementConsentId,
+      claimantGeneration: claimContacts.claimantGeneration,
+      agreementClaimantGeneration: claimContacts.agreementClaimantGeneration,
+    })
     .from(claimContacts)
     .where(and(eq(claimContacts.pariwarId, pariwarId), eq(claimContacts.claimCaseId, claimCaseId)))
     .limit(1);
   if (!contact) return { eligible: false, reason: 'not_live' };
+  // Review R3 (2026-10-20) — the live agreement is PER CLAIM, ⛔ per claimant (W6 can swap the claimant side without a
+  // fresh `agreed` tick). `agreementClaimantGeneration` behind the CURRENT `claimantGeneration` means the live agreement
+  // was given by a claimant this claim no longer has; fail until a fresh affirmative agreement catches it up.
+  if (contact.agreementClaimantGeneration !== contact.claimantGeneration) {
+    return { eligible: false, reason: 'claimant_changed' };
+  }
   return evaluateClaimantWhatsappBasis(
     await readClaimContactAgreementFact(db, pariwarId, contact.agreementConsentId as string),
   );

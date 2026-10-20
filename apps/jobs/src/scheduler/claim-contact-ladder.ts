@@ -330,8 +330,14 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
 /**
  * LD13's START TAIL — the per-Pariwar IST-day burst check and the `contact_ladder.hash_unavailable` alarm — for the starts THIS
  * run made. Exported (Story 6.37d AC4): the quarter-hourly WhatsApp sweep starts most ladders now, and ADR-0042's ratified bound
- * counts on the burst alarm, so it runs the SAME tail for its OWN starts. ⚠ The 10:00 quarter-hourly tick and the daily sweep
- * running together may EACH fire the burst once (each reads after its own commit — both may fire, neither can miss; disclosed).
+ * counts on the burst alarm, so it runs the SAME tail for its OWN starts.
+ * Review R6 (2026-10-20) — the PRIOR comment here claimed "both may fire, neither can miss"; that is false under a precise
+ * interleaving: two concurrent runs each committing `mine` starts before EITHER reads the day's count both see the SAME
+ * post-commit total `n` and both compute `n - mine` equal to the OTHER run's contribution — if that equals the threshold
+ * exactly (e.g. two runs of 3 against a threshold of 3, day total 6), `n - mine < THRESHOLD` is false for BOTH runs and
+ * NEITHER alarms. Fixed by accepting duplicate alarms above the threshold instead of trying to fire exactly once: any run
+ * that both started something today AND sees the day's total at or past the threshold alarms, every time — a burst can
+ * repeat the alarm on a later tick that also started new ladders, but can never be silently missed.
  */
 export async function raiseLadderStartAlarms(deps: Pick<ContactLadderDeps, 'pool' | 'onAlarm'>, tally: Tally): Promise<void> {
   const alarm = alarmOf(deps);
@@ -346,7 +352,10 @@ export async function raiseLadderStartAlarms(deps: Pick<ContactLadderDeps, 'pool
     });
     for (const [pariwarId, mine] of tally.startedByPariwar) {
       const n = Math.max(dayCounts.get(pariwarId) ?? 0, mine);
-      if (n >= claimDomain.CONTACT_LADDER_BURST_THRESHOLD && n - mine < claimDomain.CONTACT_LADDER_BURST_THRESHOLD) {
+      // Review R6 — ⛔ `n - mine < THRESHOLD` (a concurrent run's own contribution can mask the OTHER run's crossing of
+      // the exact threshold, suppressing the alarm entirely). Any run that started something today AND sees the day at
+      // or past the threshold alarms — duplicates above the threshold, ⛔ a silent miss.
+      if (n >= claimDomain.CONTACT_LADDER_BURST_THRESHOLD) {
         alarm(
           `[jobs] contact-ladder: contact_ladder.burst:${String(n)} — ${String(n)} ladders started today in Pariwar ${pariwarId} ` +
             '(a DLT scrub or template fault fails every text — check the delivery reports before the follow-ups go)',
@@ -621,6 +630,8 @@ async function planCorrectionLadders(
       stopOfRun: (runId) => (stops.has(runId) ? stops.get(runId)! : 'unknown'), // ⚠ `??` would read a `null` (⛔ stop) as unknown
     });
     if (origin === null || origin.reminderId === undefined || origin.recipientNumberHash === null) continue;
+    // Review R7 — a quarter-hourly start may claim ONLY an origin whose own report tripped the recency scan.
+    if (startsOnly !== null && !startsOnly.eligibleOriginRowIds.has(origin.reminderId)) continue;
     const started = await claimDomain.insertContactLadder(db, {
       pariwarId,
       claimCaseId,
@@ -653,6 +664,13 @@ type schemaStepState = 'pending' | 'sent' | 'satisfied' | `skipped:${string}`;
 export interface StartsOnly {
   /** The date of the NEXT daily 10:00 run (WS6 — `ladderFirstDueOnForLateStart`). */
   readonly nextDailyRunOn: string;
+  /**
+   * Review R7 (2026-10-20) — the origin reminder ids whose OWN report tripped this tick's narrow recency scan
+   * (`listNewReportClaims`). The per-person starts loop below still evaluates every recipient's full 14-day
+   * candidate set (T4) — but may start a ladder ONLY on an origin IN this set; any other eligible-looking origin
+   * waits for the next 10:00 daily sweep (`startsOnly === null`), which carries no such restriction.
+   */
+  readonly eligibleOriginRowIds: ReadonlySet<string>;
 }
 
 /** SMS 2's due date for a new ladder: the daily rule, or — a start-only run — the late-start rule (WS6). */
@@ -925,6 +943,8 @@ async function planCertificateLadders(
         stopOfRun: (runId) => (stops.has(runId) ? stops.get(runId)! : 'unknown'), // ⚠ `??` would read a `null` (⛔ stop) as unknown
       });
       if (origin === null || origin.reminderId === undefined || origin.recipientNumberHash === null) continue;
+      // Review R7 — a quarter-hourly start may claim ONLY an origin whose own report tripped the recency scan.
+      if (startsOnly !== null && !startsOnly.eligibleOriginRowIds.has(origin.reminderId)) continue;
       const started = await claimDomain.insertContactLadder(db, {
         pariwarId,
         claimCaseId,

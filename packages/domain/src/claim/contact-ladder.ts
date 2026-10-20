@@ -410,8 +410,9 @@ export type LadderWhatsappVerdict =
  * ⭐ WHETHER THE CLAIMANT'S WHATSAPP STEP SENDS NOW, in this order (AC5 (2) — the caller has ALREADY asked
  * `ladderEndReason` and the chase's stop predicate: an end or a stop ENDS the ladder and records nothing for the step):
  * the anchor unknown ⇒ `skip anchor_unknown`; a STOP from that number in this Pariwar (WS10) ⇒ `skip stopped`; ⛔ a
- * WhatsApp basis (I2 — the reader's reason: `not_live`, `old_wording`, `unknown_version`, `hindi_not_reviewed`) ⇒ `skip
- * <reason>`; past the chase's horizon / paused (WS7) ⇒ that skip; SMS 2 already resolved ⇒ `skip overtaken` (⛔ a
+ * WhatsApp basis (I2 — the reader's reason: `not_live`, `old_wording`, `unknown_version`, `hindi_not_reviewed`,
+ * `claimant_changed` — Review R3) ⇒ `skip <reason>`; past the chase's horizon / paused (WS7) ⇒ that skip; SMS 2 already
+ * resolved ⇒ `skip overtaken` (⛔ a
  * WhatsApp after the second text — WS6); before origin + 4 h ⇒ `wait`; outside 09:00–20:00 IST ⇒ `defer` to the next
  * 09:00 (`inWindow` / `nextWindowStart` are INPUTS — the jobs compute them with `isInPeerRequestSendWindow`; T12); THEN
  * the config verdict (⛔ `ok` ⇒ `skip <verdict>`); else `send`. ⛔ The one-text-a-day check (F20 — a WhatsApp is ⛔ a

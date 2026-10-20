@@ -1205,6 +1205,20 @@
       "when": 1794368400016,
       "tag": "0172_claim-contact-whatsapp-step",
       "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1794454800017,
+      "tag": "0173_claim-contact-wa-stop-per-sender",
+      "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1794541200018,
+      "tag": "0174_claim-contact-agreement-claimant-generation",
+      "breakpoints": true
     }
   ]
 }

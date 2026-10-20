@@ -28,8 +28,14 @@ export async function recordClaimContactWaStop(
 ): Promise<'recorded' | 'already'> {
   const pariwarId = ids.pariwarId(input.pariwarId);
   // The idempotent no-op path is checked BEFORE the helper (ADR-0030 — once invoked, the helper always audits).
+  // Review R1 (2026-10-20) — a batched webhook payload carries ONE inbound_event_id for every message in it; the identity
+  // must include the sender's own hash (migration 0173) or a second sender in the same batch reads as an already-recorded
+  // replay of the first.
   const exists = await withPariwarScope(pool, pariwarId, async (_db: Db, client: pg.PoolClient) => {
-    const { rows } = await client.query(`SELECT 1 FROM claim_contact_wa_stops WHERE pariwar_id = $1 AND inbound_event_id = $2`, [pariwarId, input.inboundEventId]);
+    const { rows } = await client.query(
+      `SELECT 1 FROM claim_contact_wa_stops WHERE pariwar_id = $1 AND inbound_event_id = $2 AND recipient_number_hash = $3`,
+      [pariwarId, input.inboundEventId, input.recipientNumberHash],
+    );
     return rows.length > 0;
   });
   if (exists) return 'already';

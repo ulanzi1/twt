@@ -31,7 +31,7 @@
 // (W4: a write never deletes a row it does not carry).
 
 import { sql } from 'drizzle-orm';
-import { check, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { ClaimId, ConsentId, MemberId, NomineeVersionId, PariwarId } from '../ids/index.js';
@@ -80,6 +80,16 @@ export const claimContacts = pgTable(
       .$type<ConsentId>()
       .references(() => consentRecords.consentId),
 
+    // Review R3 (Story 6.37d, 2026-10-20; migration 0174) — WHO the live agreement covers. `claimantGeneration` bumps on
+    // every write that sets the claimant side (W6's `writeSide`), whether a nominee swap or a block-content change (⛔ a
+    // kind alone — two different claimant BLOCKs never differ by kind). `agreementClaimantGeneration` is stamped to the
+    // CURRENT `claimantGeneration` whenever a fresh agreement is recorded (W8's `recordFresh`). The WhatsApp basis reader
+    // (`claim-contact-whatsapp-basis.ts`) is the ONLY reader of either column — SMS/call/post keep reading `agreement`
+    // 'live' / 'revoked' only ([[feedback_architecture_vs_adr_boundary]]-adjacent: this is an engineering tightening of
+    // WS3's existing basis read, not a new Panel-facing rule).
+    claimantGeneration: integer('claimant_generation').notNull().default(1),
+    agreementClaimantGeneration: integer('agreement_claimant_generation').notNull().default(1),
+
     contactLocale: text('contact_locale').notNull().default('hi').$type<ClaimContactLocale>(),
 
     // Set by the CREATING write only (W9); every later write's actor and surface go in its audit event.
@@ -101,6 +111,13 @@ export const claimContacts = pgTable(
     check(
       'claim_contacts_one_claimant_side_check',
       sql`(${t.claimantNomineeVersionId} IS NOT NULL AND ${t.claimantNameCiphertext} IS NULL AND ${t.claimantMobileCiphertext} IS NULL AND ${t.claimantAddressCiphertext} IS NULL) OR (${t.claimantNomineeVersionId} IS NULL AND ${t.claimantNameCiphertext} IS NOT NULL AND ${t.claimantMobileCiphertext} IS NOT NULL AND ${t.claimantAddressCiphertext} IS NOT NULL)`,
+    ),
+    // Review R3 / migration 0174 — both generations are ≥ 1, and the agreement's can never be AHEAD of the claimant's
+    // (it is stamped FROM the claimant generation, in the same write, never independently).
+    check('claim_contacts_claimant_generation_check', sql`${t.claimantGeneration} >= 1`),
+    check(
+      'claim_contacts_agreement_claimant_generation_check',
+      sql`${t.agreementClaimantGeneration} >= 1 AND ${t.agreementClaimantGeneration} <= ${t.claimantGeneration}`,
     ),
   ],
 );

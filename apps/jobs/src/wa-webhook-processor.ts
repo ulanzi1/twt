@@ -415,8 +415,13 @@ async function processWebhookEventBody(
         // wamid, or — a block code with ⛔ wamid match (a lapsed / may-have-sent row, a status drained before the finalise) — by the
         // recipient's CLAIM-space hash against the Pariwar's recent claim sends. A claim-side fault fails THIS item (the member
         // revoke below does ⛔ run — fail closed for I7).
+        // Review R4 (2026-10-20) — ⛔ gated on `isClaimBranchOpen()`: that check compares the callback's `phone_number_id`
+        // against TODAY's configured number, so a legitimate late callback surviving a number rotation failed it, leaving
+        // `claimOwned` false and letting a claim-send failure fall into the MEMBER block path below. Ownership is matched by
+        // wamid (globally unique) or the recipient's claim-space hash — both self-scoping, needing ⛔ today's config to be
+        // authoritative. Retain ownership across a configuration change instead of re-deriving it from `phone_number_id`.
         let claimOwned = false;
-        if (status.id && status.status && (await isClaimBranchOpen())) {
+        if (status.id && status.status) {
           const firstCode = (status.errors ?? []).find((e) => typeof e.code === 'number')?.code ?? null;
           const written = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
             claimDomain.recordClaimContactWaStatus(db, { pariwarId, wamid: status.id!, status: status.status!, errorCode: firstCode }),

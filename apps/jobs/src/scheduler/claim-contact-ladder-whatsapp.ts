@@ -169,30 +169,44 @@ export async function enqueueContactLadderWhatsappChild(
  * ⚠ CROSS-TENANT — the BYPASSRLS pool only (the sweep checked it first). The claims of ONE chase with a `family_sms` row accepted
  * and REPORTED `undelivered` whose report was RECEIVED in the last `CONTACT_LADDER_WA_START_WINDOW_HOURS` and that is ⛔ the origin of
  * a ladder (⛔ the 14-day candidate set — T4). Ids only; keyset on `claim_case_id`; a `MATERIALIZED` CTE under the page's LIMIT.
+ * Review R7 (2026-10-20) — `reminderIds` carries EVERY matching reminder for the claim (`array_agg` under the GROUP BY, ⛔ a
+ * plain `DISTINCT` row per reminder — that would let the SAME `claim_case_id` span two keyset pages and silently drop rows):
+ * the shared start (`startContactLaddersForClaim`) considers every recipient's full 14-day candidate set, so WITHOUT this the
+ * quarter-hourly tick started a ladder for ANY recipient with an old uncovered report once ONE recipient's report tripped the
+ * 2-hour scan — even a recipient whose own report was meant to wait for the next 10:00 daily sweep. The caller narrows the
+ * start to origins actually IN this set (`StartsOnly.eligibleOriginRowIds`).
+ *
+ * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ── ids only (`claim_case_id`, `pariwar_id`,
+ * `reminder_id` — a correction/certificate reminder row's own id, ⛔ PII); every write follows in the per-claim scope
+ * transaction `startContactLaddersForClaim` opens, after its own locked re-check. The caller checks `canReadAcrossPariwars`
+ * FIRST. `allow` (tests) narrows it. RE-EXAMINE when: the result carries more than ids, the read projects PII, a write is
+ * added on this pool, the pool loses BYPASSRLS, or a per-tenant scheduler exists.
  */
 async function listNewReportClaims(
   pool: pg.Pool,
   input: { readonly chase: 'correction' | 'certificate'; readonly after: string | null; readonly allow: readonly string[] | null },
-): Promise<{ readonly claimCaseId: string; readonly pariwarId: string }[]> {
+): Promise<{ readonly claimCaseId: string; readonly pariwarId: string; readonly reminderIds: readonly string[] }[]> {
   const table = input.chase === 'correction' ? 'claim_correction_reminders' : 'claim_certificate_reminders';
   const kind = input.chase === 'correction' ? 'cr' : 'ce';
   const limit = Math.min(Math.max(1, CONTACT_LADDER_WA_START_PAGE), 1000);
-  const { rows } = await pool.query<{ claim_case_id: string; pariwar_id: string }>(
+  const { rows } = await pool.query<{ claim_case_id: string; pariwar_id: string; reminder_ids: string[] }>(
     `WITH c AS MATERIALIZED (
-       SELECT DISTINCT r.claim_case_id, r.pariwar_id FROM ${table} r
+       SELECT r.claim_case_id, r.pariwar_id, r.reminder_id FROM ${table} r
          JOIN sms_send_deliveries d ON d.send_kind = $1 AND d.send_row_id = r.reminder_id AND d.pariwar_id = r.pariwar_id
         WHERE r.purpose = 'family_sms' AND r.outcome = 'accepted' AND d.delivery_state = 'undelivered'
           AND d.reported_at >= now() - make_interval(hours => $2)
           AND NOT EXISTS (SELECT 1 FROM claim_contact_ladders l WHERE l.chase = $3 AND l.origin_row_id = r.reminder_id)
      )
-     SELECT claim_case_id, pariwar_id FROM c
+     SELECT claim_case_id, pariwar_id, array_agg(DISTINCT reminder_id) AS reminder_ids
+       FROM c
       WHERE ($4::uuid IS NULL OR claim_case_id > $4::uuid)
         AND ($5::uuid[] IS NULL OR pariwar_id = ANY($5::uuid[]))
+      GROUP BY claim_case_id, pariwar_id
       ORDER BY claim_case_id ASC
       LIMIT $6`,
     [kind, CONTACT_LADDER_WA_START_WINDOW_HOURS, input.chase, input.after, input.allow === null ? null : [...input.allow], limit],
   );
-  return rows.map((r) => ({ claimCaseId: r.claim_case_id, pariwarId: r.pariwar_id }));
+  return rows.map((r) => ({ claimCaseId: r.claim_case_id, pariwarId: r.pariwar_id, reminderIds: r.reminder_ids }));
 }
 
 /** ⭐ THE QUARTER-HOURLY SWEEP. See the module header. A per-claim / per-ladder try/catch — one never costs another its step. */
@@ -244,7 +258,13 @@ export async function runContactLadderWhatsappSweep(deps: ContactLadderWhatsappD
         }
         startClaims += 1;
         try {
-          mergeTally(tally, await startContactLaddersForClaim(deps, chase, row, today, startsOnly));
+          mergeTally(
+            tally,
+            await startContactLaddersForClaim(deps, chase, row, today, {
+              ...startsOnly,
+              eligibleOriginRowIds: new Set(row.reminderIds),
+            }),
+          );
         } catch (err) {
           alarm(`[jobs] contact-ladder-whatsapp: the ${chase} start for claim ${row.claimCaseId} failed${isLockTimeout(err) ? ' (a lock / statement timeout — the next tick retries)' : ''} — ${err instanceof Error ? err.name : 'error'}`);
         }

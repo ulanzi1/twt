@@ -409,6 +409,13 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
   const set: Partial<typeof claimContacts.$inferInsert> = {};
   if (writeSide) Object.assign(set, await claimantColumns(input.crypto, claimantVersion, block));
   if (recordFresh) set.agreementConsentId = (await input.recordAgreement(deceased)) as never;
+  // Review R3 (2026-10-20) — `claimantGeneration` bumps on EVERY claimant-side write (a nominee swap or a block-content
+  // change alike; two different blocks never differ by kind). `agreementClaimantGeneration` is stamped from the SAME
+  // write's resulting generation, never read back — a fresh agreement always covers the claimant this write leaves in
+  // place, whether or not this write also happened to change that claimant.
+  const nextClaimantGeneration = writeSide ? stored.claimantGeneration + 1 : stored.claimantGeneration;
+  if (writeSide) set.claimantGeneration = nextClaimantGeneration;
+  if (recordFresh) set.agreementClaimantGeneration = nextClaimantGeneration;
   if (!addOnly) set.contactLocale = input.locale; // W9
   let rowsWritten = 0;
   for (const p of plans) {

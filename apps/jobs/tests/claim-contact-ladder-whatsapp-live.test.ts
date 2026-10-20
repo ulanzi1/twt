@@ -410,6 +410,26 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(h.requests.length).toBe(before);
   });
 
+  // Review R8 (2026-10-20) — a TRUE two-connection race (⛔ sequential on one, as the holder/marker specs are): two REAL
+  // concurrent children, each `runContactLadderWhatsappChild`'s OWN pool connection, racing the SAME ladder's send row.
+  it('⭐ R8 — two concurrent children on the SAME ladder, two separate connections: the chase lock serialises the claim — exactly ONE send row `accepted`, exactly ONE real WhatsApp request, the other a `noop`', async () => {
+    const h = harness();
+    const { s, ladderId } = await dueStep(h);
+    h.setNow(istAt(day(s.day0, 10), '14:30'));
+    const payload: ContactLadderWhatsappPayload = { ladderId, claimCaseId: s.claimCaseId, chase: 'correction' };
+    const envelope = { pariwarId: s.pariwarId, requestId: 'r', actorId: null, traceId: 't', payload };
+    const before = h.requests.length;
+    const [r1, r2] = await Promise.all([
+      runContactLadderWhatsappChild(h.wa, boss(h), envelope, 'job-race-a', { retryCount: 0, retryLimit: 4 }),
+      runContactLadderWhatsappChild(h.wa, boss(h), envelope, 'job-race-b', { retryCount: 0, retryLimit: 4 }),
+    ]);
+    const results = [r1, r2];
+    expect(results.filter((r) => r.status === 'sent')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'noop')).toHaveLength(1);
+    expect(h.requests.length - before).toBe(1); // ONE real (fake-fetch) Meta call — ⛔ a second
+    expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'accepted' });
+  });
+
   // ── AC6 — a delivered WhatsApp ends the ladder at the 10:00 sweep ───────────────────────────────────────────
 
   it('⭐ a DELIVERED WhatsApp (the status store\'s `delivered`, copied into the row) ENDS the ladder `delivered:whatsapp` at the next 10:00 sweep — ⛔ SMS 2 goes', async () => {

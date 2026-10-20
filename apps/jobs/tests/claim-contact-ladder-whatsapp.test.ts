@@ -163,7 +163,8 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // 2026-10-21 Story 5.12 — `-364` (a yes lasts until withdrawn; every withdrawal ends every yes): these TWO pins re-taken
     // (endEveryWaYes and the state reads added; isOptInActive's clock and the ACTIVE → EXPIRED edge removed). The rest of the
     // fence stands.
-    ['packages/domain/src/wa-opt-in/write.ts', '3c1055d74e2f76fe50036b0835c0cce1f0798bb1517ef16e0fbaff6252bc417d'],
+    // 2026-10-21 Story 5.12 review F1: member lock shared by mint/activation/withdrawal; only write.ts re-pinned.
+    ['packages/domain/src/wa-opt-in/write.ts', '003062917b16180eff301435cd8b58bf0b4b5f5a11ae249d427e6e64b0211e7c'],
     ['packages/domain/src/wa-opt-in/read.ts', 'a9c6a82d6de5f4201a7b5c61101628cfd96f6399e917b831ef93e078531ca149'],
     ['packages/domain/src/schema/pariwar_wa_templates.ts', '61c4a6420d56260d7b094c9105a9cdebcd3b312168ebab050e265049c89773bd'],
   ];

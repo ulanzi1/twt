@@ -17,8 +17,9 @@ runs out after 24 hours.
 
 ## Two limits you should know about
 
-**1. A STOP can very rarely be lost.** If our system fails at the exact moment it records a member's STOP (for example, a brief outage
-of the service that protects phone numbers), we try once more. If that also fails, the STOP is not kept and staff get an alarm. Until
+**1. A STOP can very rarely be lost.** If our system finds the member but fails while recording their STOP, we try once more. If
+that also fails, the STOP is not kept and staff get an alarm. If a failure prevents us from finding the member in the first place
+(for example, an outage of the service that protects phone numbers), staff get an alarm immediately, without that retry. Until
 someone records it by hand, WhatsApp messages could still go to that member. Today such a lost STOP mattered for at most a day, because
 the yes ran out after 24 hours. Once a yes lasts, it matters until someone acts on the alarm. This is the same limit we told you about
 on 20 October for the claimant's WhatsApp.

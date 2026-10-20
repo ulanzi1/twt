@@ -415,6 +415,8 @@ async function processWebhookEventBody(
         const windowExpiresAt = await resolveWindowExpiresAt(deps);
         try {
           await deps.db.transaction(async (tx) => {
+            // Protect the consent grant as well as PENDING → ACTIVE against every withdrawal path.
+            await waOptIn.lockMemberWaYes(tx, { pariwarId, memberId: pending.memberId });
             await consent.recordConsent(tx, {
               pariwarId,
               subjectId: pending.memberId,
@@ -537,9 +539,10 @@ function raiseAlarm(deps: WaWebhookProcessorDeps, message: string): void {
 type EndMemberYesOutcome = 'ended' | 'nothing_to_end' | 'lost_race';
 
 /**
- * Story 5.12 (`-364` condition 4; LY5) — end ONE member's WhatsApp yes (member STOP / Meta 131050): ONE audit line FIRST (its own
- * committed connection — the `revoked_audit_id` FK is then satisfied), then `endEveryWaYes` in its OWN `deps.db` transaction
- * (the ACTIVE row → `toState`, EVERY open whatsapp_opt_in consent revoked, each carrying that line's id). Nothing to end (⛔
+ * Story 5.12 (`-364` condition 4; LY5) — end ONE member's WhatsApp yes (member STOP / Meta 131050). Its OWN `deps.db`
+ * transaction holds the member lock across the snapshot and both mutations. ONE audit line commits FIRST on a separate
+ * connection (satisfying `revoked_audit_id`), then `endEveryWaYes` moves the ACTIVE row and revokes EVERY open consent.
+ * Nothing to end (⛔
  * ACTIVE row, ⛔ open consent) ⇒ ⛔ write, ⛔ audit. Snapshot: an ACTIVE row ⇒ `ACTIVE → toState`; else the newest row's state
  * on both sides (an auditor reads "consent closed, state unchanged"). A fault after the audit line ⇒ a compensating
  * `_rolled_back` line, rethrown; a lost race (`{ null, 0 }`) ⇒ the compensation and `lost_race` — ⛔ a fault, ⛔ alarm.
@@ -555,36 +558,43 @@ async function endMemberWaYes(
     reason: string;
   },
 ): Promise<EndMemberYesOutcome> {
-  const active = await waOptIn.getActiveOptInForMember(deps.db, { pariwarId, memberId });
-  if (!active && !(await waOptIn.hasAnythingToEnd(deps.db, { pariwarId, memberId }))) return 'nothing_to_end';
-  const snapshot = active ?? (await waOptIn.getOptInForMember(deps.db, { pariwarId, memberId }));
-  const stateBefore = snapshot?.state ?? 'none';
-  const auditFacts = {
-    pariwarId,
-    memberId,
-    actorId: opts.channel === 'meta_webhook_block' ? null : memberId,
-    originatingChannel: opts.channel,
-    beforeState: stateBefore,
-    afterState: active ? opts.toState : stateBefore,
-    verificationPhrase: snapshot?.verificationPhrase ?? null,
-  };
-  const auditId = await auditOptInTransition(deps.pool, { ...auditFacts, action: opts.action });
-  let result: waOptIn.EndEveryWaYesResult;
+  let writtenAudit: WaOptInAuditInput | undefined;
+  let outcome: EndMemberYesOutcome;
   try {
-    result = await deps.db.transaction((tx) =>
-      waOptIn.endEveryWaYes(tx, { pariwarId, memberId, toState: opts.toState, reason: opts.reason, revokedAuditId: auditId }),
-    );
+    outcome = await deps.db.transaction(async (tx): Promise<EndMemberYesOutcome> => {
+      // Snapshot and both writes share the lock with activation, even if there is no ACTIVE row yet.
+      await waOptIn.lockMemberWaYes(tx, { pariwarId, memberId });
+      const active = await waOptIn.getActiveOptInForMember(tx, { pariwarId, memberId });
+      if (!active && !(await waOptIn.hasAnythingToEnd(tx, { pariwarId, memberId }))) return 'nothing_to_end';
+      const snapshot = active ?? (await waOptIn.getOptInForMember(tx, { pariwarId, memberId }));
+      const stateBefore = snapshot?.state ?? 'none';
+      const facts: WaOptInAuditInput = {
+        pariwarId,
+        memberId,
+        actorId: opts.channel === 'meta_webhook_block' ? null : memberId,
+        originatingChannel: opts.channel,
+        beforeState: stateBefore,
+        afterState: active ? opts.toState : stateBefore,
+        verificationPhrase: snapshot?.verificationPhrase ?? null,
+        action: opts.action,
+      };
+      const auditId = await auditOptInTransition(deps.pool, facts);
+      writtenAudit = facts;
+      const result = await waOptIn.endEveryWaYes(tx, {
+        pariwarId, memberId, toState: opts.toState, reason: opts.reason, revokedAuditId: auditId,
+      });
+      return result.movedOptInId === null && result.consentsRevoked === 0 ? 'lost_race' : 'ended';
+    });
   } catch (err) {
-    // P1 (compensating audit) — see the ACTIVE-match path above for the rationale.
-    await writeCompensatingOptInAudit(deps.pool, { ...auditFacts, action: `${opts.action}_rolled_back` });
+    // Compensate only an intent that actually committed, including a failed state-transaction COMMIT.
+    if (writtenAudit) await writeCompensatingOptInAudit(deps.pool, { ...writtenAudit, action: `${opts.action}_rolled_back` });
     throw err;
   }
-  if (result.movedOptInId === null && result.consentsRevoked === 0) {
+  if (outcome === 'lost_race' && writtenAudit) {
     // LY5 — ⛔ audit line asserts a transition that did not happen.
-    await writeCompensatingOptInAudit(deps.pool, { ...auditFacts, action: `${opts.action}_rolled_back` });
-    return 'lost_race';
+    await writeCompensatingOptInAudit(deps.pool, { ...writtenAudit, action: `${opts.action}_rolled_back` });
   }
-  return 'ended';
+  return outcome;
 }
 
 /**

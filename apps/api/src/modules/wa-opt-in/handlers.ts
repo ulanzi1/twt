@@ -58,6 +58,8 @@ interface WithdrawalPlan {
  * an open consent is something to end (200, its state unchanged).
  */
 async function planWithdrawal(db: Db, pariwarId: ids.PariwarId, memberId: ids.MemberId, message: string): Promise<WithdrawalPlan> {
+  // Held through snapshot, audit intent, mutation and commit; activation/mint take the same lock.
+  await waOptIn.lockMemberWaYes(db, { pariwarId, memberId });
   const active = await waOptIn.getActiveOptInForMember(db, { pariwarId, memberId });
   if (!active && !(await waOptIn.hasAnythingToEnd(db, { pariwarId, memberId }))) {
     throw new ConflictError(message, 'wa_opt_in.not_active');
@@ -154,6 +156,7 @@ export function createWaOptInHandlers(deps: AppDeps) {
         // not carry a narrowed object-property type across a function boundary).
         const displayPhoneNumber = config.displayPhoneNumber;
 
+        await waOptIn.lockMemberWaYes(scopeTx.tx, { pariwarId, memberId: memberIdBranded });
         const existing = await waOptIn.getOptInForMember(scopeTx.tx, {
           pariwarId,
           memberId: memberIdBranded,

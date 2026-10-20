@@ -312,7 +312,8 @@ describe.skipIf(!hasDatabase)('Story 5.12 — the worker ends every yes; STOP al
 
   it('⭐ AC4 (d) — DEFENSIVE (⛔ reachable today — F10b): a number on TWO members\' rows ⇒ both yes ended; a fault on the first still ends the second', async () => {
     const pid = await pariwar();
-    const [m1, m2] = [randomUUID(), randomUUID()];
+    // Lookup orders by UUID: always fault the first member, then prove processing reaches the second.
+    const [m1, m2] = [randomUUID(), randomUUID()].sort() as [string, string];
     const o1 = await optInThroughWorker(pid, m1);
     const o2 = await optInThroughWorker(pid, m2);
     const alarms: string[] = [];

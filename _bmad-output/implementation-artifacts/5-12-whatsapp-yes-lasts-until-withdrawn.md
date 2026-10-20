@@ -8,7 +8,7 @@ cut from the pin in the main checkout (no peer session was running — ListAgent
 Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); the CODE claims below were derived at ec6d826e
 (perishable). Re-check before Task 1: `git fetch origin && git diff --name-only ec6d826e..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: review — Tasks 0–7 DONE 2026-10-21 (`bmad-dev-story 5.12`). Was: in-progress — Task 0 DONE 2026-10-21 (Decision `2026-10-21-373`, `97e1e7ad`, alone; records next). Was: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
+STATUS: done — code review closed 2026-10-21 (F1–F5 fixed; ci:local 36/36 green on :5433; final mobile gate 1096 tests). Was: review — Tasks 0–7 DONE 2026-10-21 (`bmad-dev-story 5.12`). Was: in-progress — Task 0 DONE 2026-10-21 (Decision `2026-10-21-373`, `97e1e7ad`, alone; records next). Was: ready-for-dev (created 2026-10-20 via `bmad-create-story 5-12`; validated 2026-10-20 — v1.1, four fresh-context verifiers,
 every code claim re-derived at ec6d826e = `origin/main`).
 
 START CONDITION — MET at the pin: row 6-37d is `done` and ON `main` (its worker edit — the claim half of the STOP / block branches —
@@ -48,7 +48,7 @@ S = Task 0.1 STOP conditions · PQ = a question for BigDev at Task 0.2 (whether 
 
 # Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** As built (Story 5.4) a member's WhatsApp opt-in counts for 24 hours: the webhook worker
 > stamps `window_expires_at = now() + 24 h` on the match, `isOptInActive` stops counting it after that, and a sweep moves it to
@@ -574,6 +574,10 @@ EXPLICITLY (the parity gate walks en keys only — F14). i18n parity and microco
 - BLOCKED_BY_META ⇒ `wa-opt-in-retry` + the `blocked_*` words; REVOKED / null ⇒ `wa-opt-in-off`; `available: false` ⇒
   `wa-opt-in-unavailable`.
 
+**2026-10-21 review clarification (F2/F3):** `available:false` shows the unavailable explanation while retaining withdrawal
+for ACTIVE; it only suppresses enable controls for other states. "Loads once" means one initial fetch, not a ban on focus/
+foreground refresh or PENDING polling after the external WhatsApp interaction. These corrections realize condition 2/I4.
+
 **AC8 — The claim half and every other surface are untouched (I5).** 6.37d's worker legs (a)/(b) pass UNEDITED. Under LY8 (a) the
 claim-isolation legs that use a NON-consent code (`wa-webhook-processor.test.ts:358` R4, `:374-382` I7, `:391-397` WS11 (2) — 131026 /
 131049) would pass VACUOUSLY (those codes no longer end a member yes) ⇒ RE-CODED to `131050` (and their `failure_code` asserts `:360`,
@@ -702,6 +706,105 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
       sprint-row line).
   - [x] 7.2 AC12's `ci:local` command on :5433; record the job count and the commit.
   - [x] 7.3 Story Status → `review`; sprint row → `review`; ledger.
+
+### Review Findings
+
+Full `bmad-code-review` on 2026-10-21: baseline `ec6d826e` → `b6d54a1d`, 44 files, three independent layers
+(Blind Hunter, Edge Case Hunter, Acceptance Auditor). Triage: **0 decision-needed, 5 patch, 1 defer, 4 dismissed**.
+These are engineering and factual-record corrections; the Panel-routing template §0 does not require a new ruling.
+BigDev chose **1 — apply every patch**. All five patches are CLOSED; `ci:local` passed all 36 jobs and the final mobile gate passed.
+The findings below preserve the initial evidence; their implementation dispositions follow the list.
+
+- [x] [Review][Patch] **F1 — P1: Serialize activation and withdrawal, including the withdrawal snapshot.**
+  [`packages/domain/src/wa-opt-in/write.ts:285`; `apps/api/src/modules/wa-opt-in/handlers.ts:61`;
+  `apps/jobs/src/wa-webhook-processor.ts:560`] — AC3/I2 and invariant families 2, 6, 8.
+  Confirmed with two live database connections and the real domain functions: seed a legacy EXPIRED/open consent plus a
+  PENDING request; pause withdrawal after its ACTIVE UPDATE returns zero rows; activate the PENDING and commit; resume the
+  consent UPDATE. Withdrawal returns `{ movedOptInId: null, consentsRevoked: 2 }`, but the committed ACTIVE row survives:
+  `isOptInActive=true`, `isPeerMeshWaReminderOptedIn=false`. Ordinary `resolveWaTarget` can therefore still authorize WhatsApp
+  after withdrawal. Neither serial ordering produces this split state. Protect the entire per-member operation with
+  serialization shared with activation, and plan the audit/response under that protection. The unprotected planning reads
+  also permit activation between the first ACTIVE read and the later snapshot, producing an ACTIVE response/audit after
+  the actual row was revoked. Add true two-connection regression coverage; the trigger-skipped UPDATE tests only exercise
+  the zero-result branch. Reproduction script: `/private/tmp/twt-5-12-race-repro.ts` (temporary review evidence, not a repo artifact).
+- [x] [Review][Patch] **F2 — P1: Keep withdrawal available when Pariwar sending is disabled.**
+  [`apps/mobile/app/(settings)/notifications.tsx:143`; `apps/mobile/tests/unit/wa-notifications-screen-render.test.ts:144`] —
+  ratified condition 2, I4, AC7. GET can legitimately return ACTIVE with `available:false`, because availability comes from
+  the Pariwar configuration independently of consent. `OptInBody` returns the unavailable branch before the ACTIVE branch,
+  hiding withdrawal; the new test explicitly expects that absence. The standing yes can resume sending when the administrator
+  re-enables WhatsApp. Preserve the unavailable explanation while allowing an ACTIVE member to withdraw, and correct the
+  contradictory test. This existing branch is a patch finding because this story expressly undertakes the unconditional
+  withdrawal requirement.
+- [x] [Review][Patch] **F3 — P2: Refresh a pending confirmation after returning from WhatsApp.**
+  [`apps/mobile/app/(settings)/notifications.tsx:51`] — condition 2/I4 and AC7.
+  Stabilizing `load` fixes the fetch loop but leaves only mount/action-triggered refreshes. `Linking.openURL` resolves on
+  opening WhatsApp, before the phrase is sent or the asynchronous webhook runs; `onReopen` never reloads. A mounted screen
+  can remain PENDING indefinitely after the server becomes ACTIVE, so withdrawal never appears. Refresh on foreground/focus
+  and handle the delayed webhook while PENDING, with cleanup; retain a single initial fetch and no render-driven loop.
+- [x] [Review][Patch] **F4 — P2: Make the first-member fault-isolation proof deterministic.**
+  [`apps/jobs/tests/wa-opt-in-lasting-yes.test.ts:315`] — AC4(d).
+  Lookup orders members by UUID, but this test generates two random UUIDs and always faults `m1`. In roughly half of runs
+  the successful `m2` is processed first, so aborting after a fault could pass the advertised proof. Sort the IDs before
+  choosing the faulted member, or seed ordered IDs, and prove the second member is processed after the first fails twice.
+- [x] [Review][Patch] **F5 — P2: Correct the prepared disclosure's retry claim.**
+  [`_bmad-output/planning-artifacts/trustee-panel-told-2026-10-21-5-12-whatsapp-yes-residuals.md:20`] — AC11/LY12,
+  invariant family 10. The note uses the phone-number protection service failing as its example, then says the system
+  tries once more. A pre-loop member HMAC/listing failure instead reaches the per-message catch and alarms immediately;
+  only failures inside the per-member withdrawal receive a retry (AC4(h) proves this distinction). Correct the factual
+  description before sending; preserve WRITTEN versus TOLD. No decision text or consent policy needs changing.
+- [x] [Review][Defer] **D1 — P2: A failed Meta 131050 withdrawal is consumed without retry or an identifying alarm.**
+  [`apps/jobs/src/wa-webhook-processor.ts:506`] — deferred, pre-existing. The status branch catches a failed audit/database
+  withdrawal and logs it; the event is consumed by the at-most-once drain. This failure policy predates 5.12, whereas STOP
+  now has explicit retry/alarm handling. With the expiry removed, a lost 131050 can leave the yes standing indefinitely.
+  Re-trigger: the next change to member status-callback failure handling or WhatsApp alarm wiring; add a fault-injected
+  131050 leg and recover or alarm without changing claim-send ownership. Recorded in `deferred-work.md`.
+
+**Patch dispositions:** F1 — a per-Pariwar/member transaction advisory lock serializes minting, activation and withdrawal;
+API and worker withdrawal snapshots are read under that same lock, before their separately committed audit intent and
+state/consent writes. The worker locks before granting consent too. The transaction can open before the audit, but no
+state/consent mutation precedes its committed intent. Four new live domain legs prove both activation/withdrawal orderings,
+one winner plus one no-op for concurrent withdrawals, and full rollback on a second-write FK failure. A live API leg proves
+DELETE waits before planning, returns REVOKED and hashes ACTIVE → REVOKED after a competing activation. F2 — ACTIVE
+withdrawal renders before the availability guard, with the unavailable explanation when sending is disabled. F3 — one
+initial focus fetch, foreground/focus refresh and five-second PENDING-only foreground polling; background refresh keeps
+controls visible, overlapping background fetches coalesce, and a post-mutation fetch waits for any older read before
+fetching fresh state. Listeners/timers are cleaned up. Five new mobile render legs cover the availability case, delayed
+webhook after returning from WhatsApp, external STOP, withdrawal during an older read, and unmount cleanup. F4 — sort the UUIDs
+before choosing the member whose writes fault. F5 — the prepared disclosure distinguishes per-member retry from immediate
+alarms on pre-resolution failures; its WRITTEN status is unchanged. D1 remains deferred and unchanged.
+
+**Initial review verification:** 141 targeted tests passed (domain 47, jobs 69, API 15, mobile 10), with integration suites using the live
+:5433 database. The initial sandboxed domain run could not connect (`EPERM`); the approved rerun passed. The separate
+two-connection reproduction above confirmed F1. The `packages/channels` / `apps/jobs/src/scheduler` scope-fence diff remains
+empty. This review did not rerun the complete `ci:local` gate; the implementation's recorded gate remains its own evidence.
+
+**Final patch verification (2026-10-21):** `DATABASE_URL` explicitly set to :5433, `pnpm ci:local` PASSED —
+**36 jobs green**, including live integrations (domain 6027 passed / 1 skipped, API withdrawal and worker regressions green).
+The unit phase preceded F3's last mobile-only follow-up (waiting for an older read before refreshing after withdrawal),
+so the complete mobile gate was rerun afterward: `env -u DATABASE_URL pnpm exec turbo run lint typecheck test build
+--filter=@twt/mobile --concurrency=2` — **22 tasks successful**, mobile **1096/1096 tests** across 74 files. The database URL
+was stripped only for this separate hermetic mobile command; the full `ci:local` integration phase used :5433. Backend code
+was unchanged during its full integration run. Logs: `/private/tmp/twt-5-12-review-ci.log` and
+`/private/tmp/twt-5-12-final-mobile.log`. Final domain test-file lint/typecheck and `git diff --check` also passed.
+
+**Review closure:** F1–F5 fixed; zero remaining patch/decision action items. D1 remains deferred, as selected. The initial
+invariant gaps in families 1/2/6/8/10 below are CLOSED by the domain concurrency/rollback, API snapshot and mobile render
+regressions and the corrected disclosure. Native screen-reader validation remains unattested; the go-live Hindi/alarm
+roster gates and the told item's WRITTEN status remain separate from story completion. Changes are local and uncommitted.
+
+**Invariant lens:** family 1 — DB transitions covered by direct tests; reachable UI gap F2/F3. Family 2 — REAL GAP F1;
+sequential idempotency tests pass. Families 3/12 — tenant/member filters and existing route authorization retained, with
+isolation/denial tests. Family 5 — direct SQL trigger/index tests pass; no RLS/FK definitions changed. Family 6 — explicit
+response/ID projections retained, but concurrent withdrawal snapshots are part of F1. Family 7 — DISTINCT member lookup
+and direct updated-row counts. Family 8 — audit attribution/compensation tests pass; concurrency caveat F1. Family 9 —
+existing DELIBERATE bypass and re-examination note retained. Family 10 — REAL GAP F5; other closure caveats remain explicit.
+Family 13 — real button handlers and text retained; native screen-reader behavior remains unattested by the jsdom harness.
+Untouched families 4 and 11 were skipped.
+
+**Dismissed (4):** an unwired future async alarm adapter; hypothetical failure of the future configured alarm sink
+(the current sink is the documented log default); more than 50 members sharing a number (not constructible through the
+current identity/mint paths, and the spec explicitly requires a bounded read); a standalone atomicity-test complaint
+(the actual mutations share one transaction by construction; concurrency coverage is addressed in F1).
 
 ## Dev Notes
 
@@ -851,6 +954,7 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
 
 ### Completion Notes List
 
+- **Code review closed 2026-10-21 (Codex; BigDev: "1", apply every patch).** F1–F5 fixed: shared member transaction lock and protected withdrawal snapshots; withdrawal while Pariwar sending is disabled; focus/foreground refresh and pending polling, including a fresh read after withdrawal; deterministic first-member fault coverage; accurate retry disclosure. Four domain race/rollback legs, one API snapshot race leg and five mobile render legs added. `ci:local` :5433 36/36 green; final mobile lint/typecheck/build/test gate 1096/1096. D1 deferred. Status → done; not committed or pushed.
 - Story created 2026-10-20 by `bmad-create-story 5-12` (ultimate context engine analysis completed — comprehensive developer guide created).
 - **Built 2026-10-21 (`bmad-dev-story 5.12`), every LY as decided by `-373`.** Domain: `consent.revokeOpenConsentsOfType`;
   `waOptIn.endEveryWaYes` + the state reads `getActiveOptInForMember` / `hasActiveOptIn` / `hasAnythingToEnd` /
@@ -920,6 +1024,7 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
 - `packages/domain/src/wa-opt-in/read.ts`
 - `packages/domain/src/wa-opt-in/write.ts`
 - `packages/domain/tests/integration/wa-opt-in/end-every-wa-yes.spec.ts` (new)
+- `packages/domain/tests/integration/wa-opt-in/wa-opt-in-concurrency.spec.ts` (new, review F1)
 - `packages/domain/tests/integration/wa-opt-in/peer-mesh-wa-reminder-opted-in.spec.ts`
 - `packages/domain/tests/integration/wa-opt-in/wa-opt-in.spec.ts`
 - `packages/domain/tests/notifications/delivery-targets.test.ts`
@@ -937,3 +1042,5 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
 | 2026-10-20 | 1.3 | Third fresh-context round of v1.2: 0 H / 4 M / 5 L, applied — LY8 (a)'s WS11 sentence still said `packages/channels`; AC4 (h) re-seamed on the SECOND HMAC (a throwing `enc` also fails the claim stop — two alarms); the per-message-catch alarm used an out-of-scope `body` and the per-member path must ⛔ rethrow; §0 now counts LY8 (a)'s 131050 arm as a narrowing; the committed-trigger recipe follows `cycle-freeze.spec.ts`'s safeguards; re-coded legs' `failure_code` asserts; F14's probe count; full precedent path; I2 / AC3 "Meta block" labels. Rounds: 4 verifiers → HIGH 2 → 0. |
 | 2026-10-21 | 1.4 | Task 0 done: BigDev *"all as recommended"* (LY1–LY13, the LY6 punctuation option, PQ1 / PQ2 yes); Decision `2026-10-21-373` (`97e1e7ad`, alone); WhatsApp enquiries → the helpdesk after go-live (`-373` decision 10); the records commit (told item WRITTEN, Row 37, epics.md, ADR-0029 / §3.4 notes, deferred-work). Status → in-progress. |
 | 2026-10-21 | 1.5 | `bmad-dev-story 5.12`: Tasks 1–7 built and checked (order per I6: domain → worker → API → app → the read change → fences → records). Migration 0177; 38 new / re-coded legs across domain, jobs, API and mobile, RED-proven per task; `ci:local` (:5433) 36/36 green on the second run (run 1's single failure a flaky substring leg in `channel-webhooks-msg91.spec.ts`, outside this story). Records closed with the "effective when `done` on `main`" caveat. Status → review. |
+
+| 2026-10-21 | 1.6 | `bmad-code-review 5.12`: three layers; 0 decision-needed, 5 patches fixed after BigDev chose "1", 1 pre-existing issue deferred, 4 dismissed. True two-connection serialization and API audit-snapshot proofs, second-write rollback, unavailable/return-from-WhatsApp/in-flight-refresh UI regressions; disclosure retry wording corrected. Full `ci:local` :5433 36/36 green; final mobile gate 1096/1096. Story and sprint row → done. Changes local, uncommitted; go-live gates remain separate. |

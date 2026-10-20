@@ -10,7 +10,7 @@
 // real screen reader still need a device ([[feedback_record_unattested_no_backfill]]).
 import '@testing-library/jest-dom/vitest'
 import { createElement, type ReactNode } from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { LocaleProvider } from '@twt/i18n/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -19,18 +19,30 @@ const mock = vi.hoisted(() => ({
   requestWaOptIn: vi.fn(),
   revokeWaOptIn: vi.fn(),
   openURL: vi.fn(),
+  appState: 'active',
+  listeners: new Set<(state: string) => void>(),
 }))
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 vi.mock('../../lib/member-api', () => ({
   memberAuth: { getWaOptInStatus: mock.getWaOptInStatus, requestWaOptIn: mock.requestWaOptIn, revokeWaOptIn: mock.revokeWaOptIn },
 }))
-vi.mock('expo-router', () => ({ Stack: { Screen: () => null } }))
+vi.mock('expo-router', async () => {
+  const { useEffect } = await import('react')
+  return { Stack: { Screen: () => null }, useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) }
+})
 vi.mock('react-native', async () => {
   const { createElement } = await import('react')
   return {
     ScrollView: ({ children }: { children?: ReactNode }) => createElement('div', null, children),
     Linking: { openURL: mock.openURL },
+    AppState: {
+      get currentState() { return mock.appState },
+      addEventListener: (_: string, listener: (state: string) => void) => {
+        mock.listeners.add(listener)
+        return { remove: () => mock.listeners.delete(listener) }
+      },
+    },
   }
 })
 vi.mock('tamagui', async () => {
@@ -71,10 +83,16 @@ function renderScreen(locale: 'en' | 'hi' = 'en') {
 const settle = () => new Promise((r) => setTimeout(r, 50))
 
 beforeEach(() => {
-  for (const f of Object.values(mock)) f.mockReset()
+  for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.revokeWaOptIn, mock.openURL]) f.mockReset()
+  mock.appState = 'active'
   mock.revokeWaOptIn.mockResolvedValue({ state: 'REVOKED' })
 })
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.useRealTimers() })
+
+function changeAppState(state: string) {
+  mock.appState = state
+  for (const listener of mock.listeners) listener(state)
+}
 
 describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
   it('⭐ loads the status EXACTLY ONCE (F13a — at the pin a `[t]` dependency re-fetched on every render)', async () => {
@@ -117,7 +135,7 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
     expect(container.textContent).not.toMatch(/you blocked/i)
   })
 
-  it('REVOKED and null ⇒ the off branch; available: false ⇒ the unavailable line', async () => {
+  it('REVOKED and null ⇒ the off branch; unavailable without a standing yes ⇒ no enable control', async () => {
     for (const state of ['REVOKED', null]) {
       mock.getWaOptInStatus.mockResolvedValue(status(state))
       renderScreen()
@@ -125,10 +143,81 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
       expect(screen.queryByTestId('wa-opt-in-retry')).toBeNull()
       cleanup()
     }
-    mock.getWaOptInStatus.mockResolvedValue(status('ACTIVE', { available: false }))
+    mock.getWaOptInStatus.mockResolvedValue(status(null, { available: false }))
     renderScreen()
     await screen.findByTestId('wa-opt-in-unavailable')
     expect(screen.queryByTestId('wa-opt-in-revoke')).toBeNull()
+    expect(screen.queryByTestId('wa-opt-in-enable')).toBeNull()
+  })
+
+  it('ACTIVE + unavailable preserves withdrawal and the unavailable explanation', async () => {
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE', { available: false }))
+      .mockResolvedValue(status('REVOKED', { available: false }))
+    renderScreen()
+    await screen.findByTestId('wa-opt-in-active')
+    expect(screen.getByTestId('wa-opt-in-unavailable')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('wa-opt-in-revoke'))
+    await waitFor(() => expect(mock.revokeWaOptIn).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByTestId('wa-opt-in-revoke')).toBeNull())
+  })
+
+  it('returning from WhatsApp refreshes PENDING; delayed webhook activation reveals withdrawal and stops polling', async () => {
+    vi.useFakeTimers()
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('PENDING'))
+      .mockResolvedValueOnce(status('PENDING')).mockResolvedValue(status('ACTIVE'))
+    mock.openURL.mockResolvedValue(undefined)
+    await act(async () => { renderScreen() })
+    expect(screen.getByTestId('wa-opt-in-pending')).toBeInTheDocument()
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
+    await act(async () => { fireEvent.click(screen.getByTestId('wa-opt-in-reopen')) })
+    expect(mock.openURL).toHaveBeenCalledTimes(1)
+    await act(async () => { changeAppState('background'); await vi.advanceTimersByTimeAsync(10000) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
+    await act(async () => { changeAppState('active') })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('wa-opt-in-pending')).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+    expect(screen.getByTestId('wa-opt-in-revoke')).toBeInTheDocument()
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(3)
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(3)
+  })
+
+  it('foreground refresh reflects an external STOP for an already ACTIVE member', async () => {
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE')).mockResolvedValue(status('REVOKED'))
+    renderScreen()
+    await screen.findByTestId('wa-opt-in-revoke')
+    await act(async () => { changeAppState('background'); changeAppState('active') })
+    expect(screen.getByTestId('wa-opt-in-off')).toBeInTheDocument()
+    expect(screen.queryByTestId('wa-opt-in-revoke')).toBeNull()
+  })
+
+  it('withdrawal waits for an older background read, then fetches the post-withdrawal state', async () => {
+    let finishBackground!: (value: ReturnType<typeof status>) => void
+    const background = new Promise<ReturnType<typeof status>>((resolve) => { finishBackground = resolve })
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE'))
+      .mockReturnValueOnce(background).mockResolvedValue(status('REVOKED'))
+    renderScreen()
+    await screen.findByTestId('wa-opt-in-revoke')
+    await act(async () => { changeAppState('background'); changeAppState('active') })
+    await act(async () => { fireEvent.click(screen.getByTestId('wa-opt-in-revoke')) })
+    expect(mock.revokeWaOptIn).toHaveBeenCalledTimes(1)
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    await act(async () => { finishBackground(status('ACTIVE')) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(3)
+    expect(screen.getByTestId('wa-opt-in-off')).toBeInTheDocument()
+    expect(screen.queryByTestId('wa-opt-in-revoke')).toBeNull()
+  })
+
+  it('unmount cleans up pending polling and the foreground listener', async () => {
+    vi.useFakeTimers()
+    mock.getWaOptInStatus.mockResolvedValue(status('PENDING'))
+    await act(async () => { renderScreen() })
+    expect(mock.listeners.size).toBe(1)
+    cleanup()
+    expect(mock.listeners.size).toBe(0)
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000); changeAppState('active') })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
   })
 
   it('a failed load shows the translated error line', async () => {

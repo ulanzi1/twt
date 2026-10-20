@@ -53,6 +53,16 @@ const PG_UNIQUE_VIOLATION = '23505';
 /** Bounded regeneration attempts on a phrase collision before surfacing an error (collisions are ~never). */
 const MAX_PHRASE_RETRIES = 5;
 
+/**
+ * Serialize one member's mint, activation and withdrawal in the CALLER's transaction. Call before any
+ * audit snapshot/consent write, including when no ACTIVE row exists yet. Row locks alone cannot cover
+ * that empty result. Reentrant in the same transaction; unrelated members/Pariwars use different keys.
+ */
+export async function lockMemberWaYes(db: Db, input: { pariwarId: PariwarId; memberId: MemberId }): Promise<void> {
+  const key = `member-wa-yes:${input.pariwarId}:${input.memberId}`;
+  await db.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`);
+}
+
 export interface CreatePendingOptInInput {
   pariwarId: PariwarId;
   memberId: MemberId;
@@ -77,6 +87,7 @@ export async function createPendingOptIn(
   db: Db,
   input: CreatePendingOptInInput,
 ): Promise<MemberWaOptInRow> {
+  await lockMemberWaYes(db, input);
   // Guard: reject a second outstanding PENDING for this member (defense-in-depth; the route also pre-checks
   // via getOptInForMember to RE-USE the existing PENDING).
   const existing = await db
@@ -183,6 +194,12 @@ export interface ActivateOptInInput {
  * Returns the mutated row.
  */
 export async function activateOptIn(db: Db, input: ActivateOptInInput): Promise<MemberWaOptInRow> {
+  // Resolve only the immutable owner before locking; the guarded UPDATE below rechecks the state.
+  const [owner] = await db.select({ memberId: memberWaOptIn.memberId }).from(memberWaOptIn).where(
+    and(eq(memberWaOptIn.pariwarId, input.pariwarId), eq(memberWaOptIn.optInId, input.optInId)),
+  );
+  if (!owner) throw new WaOptInNotFoundError(input.pariwarId, input.optInId);
+  await lockMemberWaYes(db, { pariwarId: input.pariwarId, memberId: owner.memberId });
   const updated = await db
     .update(memberWaOptIn)
     .set({
@@ -282,6 +299,7 @@ export interface EndEveryWaYesResult {
  * it first); the CALLER settles its audit line (LY5's compensating `_rolled_back` / the API's 409).
  */
 export async function endEveryWaYes(db: Db, input: EndEveryWaYesInput): Promise<EndEveryWaYesResult> {
+  await lockMemberWaYes(db, input);
   const moved = await db
     .update(memberWaOptIn)
     .set({ state: input.toState, updatedAt: sql`now()` })

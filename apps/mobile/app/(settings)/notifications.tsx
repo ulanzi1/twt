@@ -1,7 +1,7 @@
 // Notification settings — the WhatsApp opt-in surface (Story 5.4, Task 6; AC1/AC4).
 //
 // ONE server-state-driven screen for the "Receive notifications via WhatsApp" choice:
-//   unavailable — the Pariwar has WA disabled / no number → an explanatory line, no toggle.
+//   unavailable — the Pariwar has WA disabled / no number → an explanatory line; a standing yes can still be withdrawn.
 //   off / null  — a "Want WhatsApp notifications? Tap here to enable" CTA → POST mints a PENDING and
 //                 opens the wa.me Send-Hello deep-link (pre-filled with the verification phrase).
 //   pending     — "Waiting for your WhatsApp message…" + a re-open-WhatsApp CTA (the inbound-webhook
@@ -13,18 +13,19 @@
 //                 re-consent — the member must send a new WhatsApp message). EXPIRED_24H_WINDOW now means only "a request
 //                 never confirmed" (Story 5.12, LY3/LY10) — the screen never says "expired" (condition 1).
 //
-// Story 5.12 (F13a) — the load runs ONCE: errors are a flag translated at render, so no callback depends on `t` (`useT()`
+// Story 5.12 (F13a) — one initial load, then focus/foreground refresh and polling while PENDING. Errors are a flag
+// translated at render, so no callback depends on `t` (`useT()`
 // returns a fresh closure every render — a `[t]` dependency re-fetched on every render, endlessly).
 //
 // Bilingual copy via @twt/i18n (hi/en parity). No AsyncStorage — the state is server-driven; MMKV is the
 // app's local-persistence primitive if any were ever needed ([[project_mmkv_asyncstorage_equivalent]]).
 
-import { useCallback, useEffect, useState } from 'react'
-import { Linking, ScrollView } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AppState, Linking, ScrollView } from 'react-native'
 
 import { useT } from '@twt/i18n/react'
 import type { WaOptInStatusResponse } from '@twt/contracts'
-import { Stack } from 'expo-router'
+import { Stack, useFocusEffect } from 'expo-router'
 import { Button, H2, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
@@ -37,22 +38,54 @@ export default function NotificationSettingsScreen() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
+  const fetching = useRef<Promise<void> | null>(null)
 
-  const load = useCallback(async (): Promise<void> => {
-    setLoading(true)
-    setError(false)
+  const load = useCallback(async (background = false): Promise<void> => {
+    // Background callers share an in-flight read. After a mutation, wait for that older read and then
+    // fetch again: its response may predate the withdrawal and must not leave the screen ACTIVE.
+    if (background && fetching.current) return fetching.current
+    while (fetching.current) await fetching.current
+    const pending = (async () => {
+      if (!background) setLoading(true)
+      setError(false)
+      try {
+        setStatus(await memberAuth.getWaOptInStatus())
+      } catch {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    })()
+    fetching.current = pending
     try {
-      setStatus(await memberAuth.getWaOptInStatus())
-    } catch {
-      setError(true)
+      await pending
     } finally {
-      setLoading(false)
+      fetching.current = null
     }
   }, [])
 
+  useFocusEffect(useCallback(() => {
+    void load(true)
+  }, [load]))
+
   useEffect(() => {
-    void load()
+    let previous = AppState.currentState
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active' && previous !== 'active') void load(true)
+      previous = next
+    })
+    return () => subscription.remove()
   }, [load])
+
+  useEffect(() => {
+    if (status?.state !== 'PENDING') return
+    // Returning from WhatsApp can precede the webhook by a minute. Poll only this transitional state,
+    // and keep its controls visible during refresh. Foreground refresh also handles ACTIVE → STOP.
+    const timer = setInterval(() => {
+      if (AppState.currentState !== 'background' && AppState.currentState !== 'inactive') void load(true)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [status?.state, load])
 
   /** Mint (or re-use) a PENDING opt-in, then open WhatsApp pre-filled with the verification phrase. */
   const onEnable = useCallback(async (): Promise<void> => {
@@ -136,6 +169,24 @@ interface OptInBodyProps {
 }
 
 function OptInBody({ state, available, busy, t, onEnable, onReopen, onRevoke }: OptInBodyProps) {
+  if (state === 'ACTIVE') {
+    return (
+      <YStack gap="$2" testID="wa-opt-in-active">
+        {available ? (
+          <>
+            <Paragraph fontWeight="600">{t('waNotifications.active_title')}</Paragraph>
+            <Paragraph>{t('waNotifications.active_desc')}</Paragraph>
+          </>
+        ) : (
+          <Paragraph testID="wa-opt-in-unavailable">{t('waNotifications.unavailable')}</Paragraph>
+        )}
+        <Button disabled={busy} onPress={() => void onRevoke()} testID="wa-opt-in-revoke">
+          {t('waNotifications.revoke_cta')}
+        </Button>
+      </YStack>
+    )
+  }
+
   if (!available) {
     return <Paragraph testID="wa-opt-in-unavailable">{t('waNotifications.unavailable')}</Paragraph>
   }
@@ -147,18 +198,6 @@ function OptInBody({ state, available, busy, t, onEnable, onReopen, onRevoke }: 
         <Paragraph>{t('waNotifications.pending_desc')}</Paragraph>
         <Button disabled={busy} onPress={() => void onReopen()} testID="wa-opt-in-reopen">
           {t('waNotifications.pending_resend')}
-        </Button>
-      </YStack>
-    )
-  }
-
-  if (state === 'ACTIVE') {
-    return (
-      <YStack gap="$2" testID="wa-opt-in-active">
-        <Paragraph fontWeight="600">{t('waNotifications.active_title')}</Paragraph>
-        <Paragraph>{t('waNotifications.active_desc')}</Paragraph>
-        <Button disabled={busy} onPress={() => void onRevoke()} testID="wa-opt-in-revoke">
-          {t('waNotifications.revoke_cta')}
         </Button>
       </YStack>
     )

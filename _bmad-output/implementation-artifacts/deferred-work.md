@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 5-12-whatsapp-yes-lasts-until-withdrawn.md (2026-10-21)
+
+- **D1 — A failed Meta 131050 withdrawal is consumed without retry or an identifying alarm**
+  [`apps/jobs/src/wa-webhook-processor.ts:506`] — pre-existing status-callback failure policy. If the audit or database
+  withdrawal fails, the status catch logs and the at-most-once drain consumes the event; STOP's new retry/alarm path is
+  not used. Removing ACTIVE expiry makes the residual indefinite. **Re-trigger:** the next change to member status-callback
+  failure handling or WhatsApp alarm wiring. Add a fault-injected 131050 leg and recovery or an ids-only alarm, preserving
+  claim-send ownership. No policy ruling is needed to identify this engineering gap.
+
 ## Deferred from: Story 5.12 Task 0 — Decision 2026-10-21-373 (2026-10-21)
 
 - **A member's WhatsApp yes is bound to the number that sent it** [`packages/domain/src/wa-opt-in/`; `member_identities`] — the mint

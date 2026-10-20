@@ -11,6 +11,7 @@
 //   · fail-closed — no member session ⇒ 401.
 
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { consent, ids, member as memberDomain, waOptIn } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
@@ -276,6 +277,61 @@ describe.skipIf(!hasDatabase)('Story 5.12 — member WhatsApp withdrawal ends ev
       // Nothing left to end ⇒ a second DELETE is the 409.
       expect((await inject(t, 'DELETE', '/api/v1/member/wa-opt-in', { token: tok })).status).toBe(409);
     } finally {
+      await teardown(t);
+    }
+  });
+
+  it('F1 — DELETE waits for activation before planning its response and audit snapshot', async () => {
+    const t = await createTestApp();
+    let activation: Awaited<ReturnType<typeof openScopeTx>> | undefined;
+    let request: ReturnType<typeof inject> | undefined;
+    try {
+      const { memberId, pariwarId } = await seedMemberWithConfig(t);
+      const tok = token(t, memberId, pariwarId);
+      await seedLegacyYes(t, pariwarId, memberId);
+      expect((await inject(t, 'POST', '/api/v1/member/wa-opt-in', { token: tok })).status).toBe(200);
+      activation = await openScopeTx(t.deps, pariwarId);
+      const subject = { pariwarId: ids.pariwarId(pariwarId), memberId: ids.memberId(memberId) };
+      await waOptIn.lockMemberWaYes(activation.tx, subject);
+      const pending = await waOptIn.getOptInForMember(activation.tx, subject);
+      const ownerPid = (await activation.client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+      let finished = false;
+      request = inject(t, 'DELETE', '/api/v1/member/wa-opt-in', { token: tok }).finally(() => { finished = true; });
+      let blocked = false;
+      const deadline = Date.now() + 2000;
+      while (!blocked && !finished && Date.now() < deadline) {
+        blocked = (await t.deps.pool.query<{ blocked: boolean }>(
+          'SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))) AS blocked', [ownerPid],
+        )).rows[0]!.blocked;
+        if (!blocked) await delay(10);
+      }
+      const cid = ids.consentId(randomUUID());
+      await consent.recordConsent(activation.tx, {
+        pariwarId: subject.pariwarId, subjectId: memberId, consentType: 'whatsapp_opt_in',
+        grantedViaActor: 'member_self', consentPayload: {}, consentId: cid,
+      });
+      await waOptIn.activateOptIn(activation.tx, {
+        pariwarId: subject.pariwarId, optInId: pending!.optInId, consentId: cid,
+        windowExpiresAt: new Date(Date.now() + 86400000),
+      });
+      await closeScopeTx(activation, true);
+      const res = await request;
+      expect(blocked).toBe(true);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ state: 'REVOKED' });
+      expect(await stateOf(t, pending!.optInId)).toBe('REVOKED');
+      const lines = await t.deps.pool.query<{ request_payload_hash: string }>(
+        `SELECT request_payload_hash FROM audit_log_entries WHERE pariwar_id=$1 AND action='member.wa_opt_in_revoked'`, [pariwarId],
+      );
+      expect(lines.rows).toHaveLength(1);
+      expect(lines.rows[0]!.request_payload_hash).toBe(waOptIn.waOptInAuditPayloadHash({
+        originatingChannel: 'member_app', memberId, verificationPhrase: pending!.verificationPhrase,
+        beforeState: 'ACTIVE', afterState: 'REVOKED',
+      }));
+      expect((await consentRows(t, pariwarId, memberId)).every((row) => row.revoked_at !== null)).toBe(true);
+    } finally {
+      if (activation) await closeScopeTx(activation, false);
+      await request?.catch(() => undefined);
       await teardown(t);
     }
   });

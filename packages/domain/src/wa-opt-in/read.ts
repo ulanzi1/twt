@@ -9,6 +9,8 @@ import { and, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import { consentExists } from '../consent/read.js';
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
+import { clampLimit } from '../pagination.js';
+import { consentRecords } from '../schema/consent_records.js';
 import {
   type MemberWaOptInRow,
   memberWaOptIn,
@@ -173,4 +175,73 @@ export async function isOptInActive(
 export async function isPeerMeshWaReminderOptedIn(db: Db, args: { pariwarId: PariwarId; memberId: MemberId }): Promise<boolean> {
   if (!(await isOptInActive(db, { pariwarId: args.pariwarId, memberId: args.memberId }))) return false;
   return consentExists(db, args.pariwarId, args.memberId, 'whatsapp_opt_in');
+}
+
+// ── Story 5.12 (`-364` conditions 3 + 4; LY4–LY6) — STATE reads, ⛔ through `isOptInActive` (T4) ─────────────
+
+/**
+ * The member's ACTIVE opt-in row (state only — ⛔ window), or null. ≤ 1 by the partial UNIQUE
+ * `member_wa_opt_in_active_member_uq` (Story 5.12, LY4). The withdrawal paths read it for the audit snapshot.
+ */
+export async function getActiveOptInForMember(
+  db: Db,
+  args: { pariwarId: PariwarId; memberId: MemberId },
+): Promise<MemberWaOptInRow | null> {
+  const rows = await db
+    .select()
+    .from(memberWaOptIn)
+    .where(
+      and(
+        eq(memberWaOptIn.pariwarId, args.pariwarId),
+        eq(memberWaOptIn.memberId, args.memberId),
+        eq(memberWaOptIn.state, 'ACTIVE'),
+      ),
+    )
+    .orderBy(desc(memberWaOptIn.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** TRUE iff the member has ANY `state = 'ACTIVE'` row — the mint guard's read (LY4; ⛔ the newest row only, ⛔ window). */
+export async function hasActiveOptIn(db: Db, args: { pariwarId: PariwarId; memberId: MemberId }): Promise<boolean> {
+  return (await getActiveOptInForMember(db, args)) !== null;
+}
+
+/**
+ * TRUE iff a withdrawal has something to end (LY5 / LY7): an ACTIVE opt-in row, OR an open (`revoked_at IS NULL`)
+ * `whatsapp_opt_in` consent row — the predicate `endEveryWaYes` acts on, so "nothing to end" here means it would end nothing.
+ */
+export async function hasAnythingToEnd(db: Db, args: { pariwarId: PariwarId; memberId: MemberId }): Promise<boolean> {
+  if (await hasActiveOptIn(db, args)) return true;
+  const open = await db
+    .select({ one: sql`1` })
+    .from(consentRecords)
+    .where(
+      and(
+        eq(consentRecords.pariwarId, args.pariwarId),
+        eq(consentRecords.subjectId, args.memberId),
+        eq(consentRecords.consentType, 'whatsapp_opt_in'),
+        isNull(consentRecords.revokedAt),
+      ),
+    )
+    .limit(1);
+  return open.length > 0;
+}
+
+/**
+ * Every member whose opt-in rows (ANY state) carry `mobileBlindIndex` in the Pariwar — the member STOP's lookup (LY6): a STOP
+ * ends the yes of each, whatever their newest row's state. One member per number per Pariwar today (F10b — the identity's
+ * unique blind index, ⛔ mobile-change writer); bounded regardless.
+ */
+export async function listMemberIdsByOptInMobile(
+  db: Db,
+  args: { pariwarId: PariwarId; mobileBlindIndex: string; limit?: number },
+): Promise<MemberId[]> {
+  const rows = await db
+    .selectDistinct({ memberId: memberWaOptIn.memberId })
+    .from(memberWaOptIn)
+    .where(and(eq(memberWaOptIn.pariwarId, args.pariwarId), eq(memberWaOptIn.mobileBlindIndex, args.mobileBlindIndex)))
+    .orderBy(memberWaOptIn.memberId)
+    .limit(clampLimit(args.limit, { default: 50, cap: 200 }));
+  return rows.map((r) => r.memberId);
 }

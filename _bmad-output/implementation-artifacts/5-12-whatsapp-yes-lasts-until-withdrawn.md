@@ -631,14 +631,14 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
     annotated)"* + a dated note on §3.4; deferred-work: the LY8 dated notes and the new items (LY13 (1)/(2) if (a); the Telegram screen's
     re-fetch loop — F13a — trigger: the next edit of `telegram-notifications.tsx`); if PQ1 / PQ2 = "tell", the told item(s) WRITTEN from the
     template; the ledger.
-- [ ] **Task 1 — The domain: end every yes (AC3; LY5, LY6)**
-  - [ ] 1.1 `consent/write.ts`: `revokeOpenConsentsOfType` (set-based; returns the count; ⛔ throw on 0) + unit/integration legs.
-  - [ ] 1.2 `wa-opt-in/write.ts`: `endEveryWaYes` (in the caller's tx; ⛔ opens a tx — Story 5.4's accessor rule; selects `state = 'ACTIVE'`
+- [x] **Task 1 — The domain: end every yes (AC3; LY5, LY6)**
+  - [x] 1.1 `consent/write.ts`: `revokeOpenConsentsOfType` (set-based; returns the count; ⛔ throw on 0) + unit/integration legs.
+  - [x] 1.2 `wa-opt-in/write.ts`: `endEveryWaYes` (in the caller's tx; ⛔ opens a tx — Story 5.4's accessor rule; selects `state = 'ACTIVE'`
     directly, ⛔ via `isOptInActive`); `wa-opt-in/read.ts`: `listMemberIdsByOptInMobile` (bounded with `clampLimit` —
     [[project_domain_limit_clamp_and_savepoint_retry]]), a `hasAnythingToEnd` helper (a `state = 'ACTIVE'` row OR an open consent — ⛔
     `isOptInActive`, which is window-aware until Task 5) and a state-only `hasActiveOptIn` for the mint guard. Export through the `waOptIn`
     barrel (`export *`).
-  - [ ] 1.3 Integration legs on :5433: AC3's legacy seed by INSERT (⛔ UPDATE — the trigger lands in Task 5 and would refuse it); the
+  - [x] 1.3 Integration legs on :5433: AC3's legacy seed by INSERT (⛔ UPDATE — the trigger lands in Task 5 and would refuse it); the
     double-operation leg (F25).
 - [ ] **Task 2 — The worker (AC3, AC4, AC8; LY6, LY8)**
   - [ ] 2.1 The member STOP half → LY6: per-member try + per-member `deps.db.transaction`; audit first; compensating `_rolled_back` on

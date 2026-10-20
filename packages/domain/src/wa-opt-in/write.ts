@@ -36,6 +36,7 @@ function uniqueViolationConstraint(err: unknown): string | null {
   return null;
 }
 
+import { revokeOpenConsentsOfType } from '../consent/write.js';
 import type { Db } from '../db.js';
 import type { ConsentId, MemberId, MemberWaOptInId, PariwarId } from '../ids/index.js';
 import {
@@ -250,6 +251,54 @@ export async function revokeOptIn(db: Db, input: RevokeOptInInput): Promise<Memb
     );
   }
   return row;
+}
+
+export interface EndEveryWaYesInput {
+  pariwarId: PariwarId;
+  memberId: MemberId;
+  /** REVOKED (member DELETE / admin / STOP) | BLOCKED_BY_META (Meta 131050 — LY8). */
+  toState: Extract<WaOptInState, 'REVOKED' | 'BLOCKED_BY_META'>;
+  /** Stored on every revoked consent row. */
+  reason: string;
+  /** The ONE withdrawal audit line, written FIRST by the caller — its id lands on every revoked consent row. */
+  revokedAuditId: string | null;
+}
+
+export interface EndEveryWaYesResult {
+  /** The ACTIVE row moved to `toState`, or null when the member had none. */
+  movedOptInId: MemberWaOptInId | null;
+  /** How many open `whatsapp_opt_in` consent rows were revoked. */
+  consentsRevoked: number;
+}
+
+/**
+ * ⭐ Story 5.12 (`-364` condition 4; LY5) — the ONE way a member's WhatsApp yes ends: moves the member's ACTIVE row (≤ 1 —
+ * the partial UNIQUE `member_wa_opt_in_active_member_uq`; selected by `state = 'ACTIVE'`, ⛔ via `isOptInActive`) to
+ * `toState` AND revokes EVERY open `whatsapp_opt_in` consent row of the member (each re-opt-in mints one — a withdrawal ends
+ * them all, ⛔ only the newest). Runs in the CALLER's tx (⛔ opens one). Every withdrawal path calls it: member DELETE, admin
+ * opt-out, STOP, Meta 131050. `{ movedOptInId: null, consentsRevoked: 0 }` is ⛔ an error — a lost race (another path ended
+ * it first); the CALLER settles its audit line (LY5's compensating `_rolled_back` / the API's 409).
+ */
+export async function endEveryWaYes(db: Db, input: EndEveryWaYesInput): Promise<EndEveryWaYesResult> {
+  const moved = await db
+    .update(memberWaOptIn)
+    .set({ state: input.toState, updatedAt: sql`now()` })
+    .where(
+      and(
+        eq(memberWaOptIn.pariwarId, input.pariwarId),
+        eq(memberWaOptIn.memberId, input.memberId),
+        eq(memberWaOptIn.state, 'ACTIVE'),
+      ),
+    )
+    .returning({ optInId: memberWaOptIn.optInId });
+  const consentsRevoked = await revokeOpenConsentsOfType(db, {
+    pariwarId: input.pariwarId,
+    subjectId: input.memberId,
+    consentType: 'whatsapp_opt_in',
+    reason: input.reason,
+    revokedAuditId: input.revokedAuditId,
+  });
+  return { movedOptInId: moved[0]?.optInId ?? null, consentsRevoked };
 }
 
 /** Re-read after a 0-row UPDATE to distinguish "row vanished" (404) from "wrong state" (409). */

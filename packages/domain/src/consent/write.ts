@@ -170,3 +170,46 @@ export async function revokeConsent(
   }
   return row;
 }
+
+// ── revokeOpenConsentsOfType (Story 5.12 — LY5; `-364` condition 4) ─────────
+
+export interface RevokeOpenConsentsOfTypeInput {
+  pariwarId: PariwarId;
+  /** The member-or-pre-member-applicant id whose open rows are revoked. */
+  subjectId: string;
+  consentType: ConsentType;
+  /** The caller-supplied reason for revocation (stored on every revoked row). */
+  reason: string;
+  /** The ONE withdrawal audit line's id, written FIRST by the consumer — carried on every revoked row. */
+  revokedAuditId?: string | null;
+}
+
+/**
+ * Revoke EVERY open (`revoked_at IS NULL`) row of `consentType` for the subject, in one set-based UPDATE, and
+ * return how many rows it revoked. Story 5.12 (`-364` condition 4): a withdrawal ends every earlier yes, not
+ * only the newest — each re-grant mints a fresh row (AC3; no unique on `(subject_id, consent_type)`).
+ * Zero rows is NOT an error (⛔ throw — a concurrent revoke that got there first leaves nothing open, and the
+ * race is benign); `revokeConsent`'s by-id contract (throws on an already-revoked row) is unchanged.
+ */
+export async function revokeOpenConsentsOfType(
+  db: Db,
+  input: RevokeOpenConsentsOfTypeInput,
+): Promise<number> {
+  const updated = await db
+    .update(consentRecords)
+    .set({
+      revokedAt: sql`now()`,
+      revocationReason: input.reason,
+      revokedAuditId: input.revokedAuditId ?? null,
+    })
+    .where(
+      and(
+        eq(consentRecords.pariwarId, input.pariwarId),
+        eq(consentRecords.subjectId, input.subjectId),
+        eq(consentRecords.consentType, input.consentType),
+        isNull(consentRecords.revokedAt),
+      ),
+    )
+    .returning({ consentId: consentRecords.consentId });
+  return updated.length;
+}

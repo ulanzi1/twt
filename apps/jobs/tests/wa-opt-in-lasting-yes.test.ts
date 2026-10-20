@@ -15,6 +15,7 @@
 // `finally`, on their own connection with a `lock_timeout`; a leaked one is swept in `beforeAll` (the cycle-freeze.spec.ts shape).
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 import { claim, consent, createDb, ids, waOptIn } from '@twt/domain';
 import type pg from 'pg';
@@ -27,6 +28,21 @@ const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 
 const FAULT_PREFIX = 't512_fault_';
+
+// Second review P2 — the live leg below proves two connections suffice and one does not; these pins hold boot.ts to giving the
+// processor its OWN two-connection pool, and the processor to one tick at a time.
+describe('Story 5.12 second review P2 — the webhook processor has its own pool, one tick at a time', () => {
+  const read = (rel: string) => readFileSync(new URL(`../${rel}`, import.meta.url), 'utf-8');
+  it('boot.ts creates a dedicated max:2 pool and registers the processor on it (⛔ the shared `pool`)', () => {
+    const boot = read('src/boot.ts');
+    expect(boot).toMatch(/const \{ db: waWebhookDb, pool: waWebhookPool \} = createDb\(connectionString, \{ max: 2, logger: false \}\)/);
+    expect(boot).toMatch(/registerWaWebhookProcessorCron\(\s*boss,[\s\S]{0,200}\{ pool: waWebhookPool, db: waWebhookDb, enc: jobsEncryption \}/);
+    expect(boot.match(/waWebhookPool\.end\(\)/g)).toHaveLength(2);
+  });
+  it('the worker runs with localConcurrency 1', () => {
+    expect(read('src/wa-webhook-processor.ts')).toMatch(/boss\.work\(QUEUE_NAMES\.WA_WEBHOOK_PROCESSOR, \{ localConcurrency: 1 \}/);
+  });
+});
 
 describe.skipIf(!hasDatabase)('Story 5.12 — the worker ends every yes; STOP always works (live :5433)', () => {
   let created: ReturnType<typeof createDb>;
@@ -436,6 +452,33 @@ describe.skipIf(!hasDatabase)('Story 5.12 — the worker ends every yes; STOP al
     expect(await stateOf(optInId)).toBe('ACTIVE');
     expect(await auditLines(pid, 'member.wa_opt_in_revoked')).toHaveLength(1);
     expect(await auditLines(pid, 'member.wa_opt_in_revoked_rolled_back')).toHaveLength(1);
+  });
+
+  it('⭐ second review P2 — a STOP needs TWO connections at once (the locked tx + its audit line): one held elsewhere on a 2-pool loses it; a dedicated 2-pool ends it', async () => {
+    const pid = await pariwar();
+    const m = randomUUID();
+    const optInId = await optInThroughWorker(pid, m);
+    const small = createDb(DATABASE_URL!, { max: 2, ssl: false, connectionTimeoutMillis: 1_000 });
+    try {
+      const smallDeps = { pool: small.pool, db: small.db, enc };
+      // Another job on a SHARED pool holds one connection: the tx takes the other and its audit line cannot connect.
+      const held = await small.pool.connect();
+      const alarms: string[] = [];
+      try {
+        await processWebhookEvent({ ...smallDeps, onAlarm: (msg) => alarms.push(msg) }, { eventId: await event(pid, inbound('STOP')), pariwarId: pid, rawPayload: inbound('STOP') });
+      } finally {
+        held.release();
+      }
+      expect(alarms).toHaveLength(1);
+      expect(alarms[0]).toContain('wa_opt_in.stop_unrecorded');
+      expect(await stateOf(optInId)).toBe('ACTIVE');
+      // The processor's own pool (boot.ts) — nothing else holds it, and two connections are the tick's peak need.
+      await processWebhookEvent(smallDeps, { eventId: await event(pid, inbound('STOP')), pariwarId: pid, rawPayload: inbound('STOP') });
+      expect(await stateOf(optInId)).toBe('REVOKED');
+      await expectNoYes(pid, m);
+    } finally {
+      await small.pool.end();
+    }
   });
 
   // ── AC2 / AC9 — ⛔ yes expires; the stale-PENDING sweep ─────────────────────────────────────────────────────────────────────

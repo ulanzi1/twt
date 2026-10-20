@@ -12,7 +12,7 @@ from the Trust."*
 ## What we are building
 
 The four things you asked for before anything is sent on a yes older than a day: the app stops saying "expired", the button to stop
-WhatsApp always shows while a yes stands, STOP always works, and taking a yes back ends every earlier yes. Then a member's yes no longer
+WhatsApp always shows while a yes stands, STOP always works (with the one limit below), and taking a yes back ends every earlier yes. Then a member's yes no longer
 runs out after 24 hours.
 
 ## Two limits you should know about
@@ -31,7 +31,7 @@ they reply STOP. The same is true of a member who has died: their phone, often w
 WhatsApp messages (for example news) until someone replies STOP. Your ruling accepted *"More WhatsApp messages reach members"*; these
 people are not members, so we are telling you.
 
-**What we did.** Replying STOP from that number always ends it. When the app later lets a member change their mobile number, that change
+**What we did.** Replying STOP from that number ends it (apart from the rare lost STOP in limit 1, which raises an alarm). When the app later lets a member change their mobile number, that change
 is recorded as having to end the old number's yes. Ending a yes automatically at a member's death is recorded as follow-up work. Nothing here changes who
 may say yes or how.
 

@@ -6,6 +6,9 @@
 //   · the status loads EXACTLY ONCE (at the pin it re-fetched on every render, endlessly);
 //   · the withdraw control renders for EVERY ACTIVE response, a `windowExpiresAt` in the PAST included (condition 2);
 //   · EXPIRED_24H_WINDOW reads "not on" — ⛔ "expired" / समाप्त in either locale (condition 1).
+//   · Second review (2026-10-21): `useFocusEffect` is mocked WITH a blur (the old `useEffect(cb, [cb])` stub could not see
+//     blurred polling — P5); a hung read (P1), an action error surviving a refresh (P3), a 409 re-read (P4) and the
+//     announcement of a later state change (P6) each have a leg.
 // The tamagui mocks FORWARD `testID` → `data-testid` (the precedent's `({ children }) => div` drops it). Native layout and a
 // real screen reader still need a device ([[feedback_record_unattested_no_backfill]]).
 import '@testing-library/jest-dom/vitest'
@@ -21,6 +24,9 @@ const mock = vi.hoisted(() => ({
   openURL: vi.fn(),
   appState: 'active',
   listeners: new Set<(state: string) => void>(),
+  focused: true,
+  focusListeners: new Set<() => void>(),
+  announce: vi.fn(),
 }))
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
@@ -29,13 +35,35 @@ vi.mock('../../lib/member-api', () => ({
 }))
 vi.mock('expo-router', async () => {
   const { useEffect } = await import('react')
-  return { Stack: { Screen: () => null }, useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) }
+  // Runs `cb` while focused and its cleanup on blur (or unmount) — the react-navigation contract.
+  const useFocusEffect = (cb: () => void | (() => void)) =>
+    useEffect(() => {
+      let undo: void | (() => void)
+      let active = false
+      const sync = () => {
+        if (mock.focused && !active) {
+          active = true
+          undo = cb()
+        } else if (!mock.focused && active) {
+          active = false
+          if (undo) undo()
+        }
+      }
+      mock.focusListeners.add(sync)
+      sync()
+      return () => {
+        mock.focusListeners.delete(sync)
+        if (active && undo) undo()
+      }
+    }, [cb])
+  return { Stack: { Screen: () => null }, useFocusEffect }
 })
 vi.mock('react-native', async () => {
   const { createElement } = await import('react')
   return {
     ScrollView: ({ children }: { children?: ReactNode }) => createElement('div', null, children),
     Linking: { openURL: mock.openURL },
+    AccessibilityInfo: { announceForAccessibility: mock.announce },
     AppState: {
       get currentState() { return mock.appState },
       addEventListener: (_: string, listener: (state: string) => void) => {
@@ -83,8 +111,9 @@ function renderScreen(locale: 'en' | 'hi' = 'en') {
 const settle = () => new Promise((r) => setTimeout(r, 50))
 
 beforeEach(() => {
-  for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.revokeWaOptIn, mock.openURL]) f.mockReset()
+  for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.revokeWaOptIn, mock.openURL, mock.announce]) f.mockReset()
   mock.appState = 'active'
+  mock.focused = true
   mock.revokeWaOptIn.mockResolvedValue({ state: 'REVOKED' })
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
@@ -92,6 +121,11 @@ afterEach(() => { cleanup(); vi.useRealTimers() })
 function changeAppState(state: string) {
   mock.appState = state
   for (const listener of mock.listeners) listener(state)
+}
+
+function setFocused(focused: boolean) {
+  mock.focused = focused
+  for (const sync of mock.focusListeners) sync()
 }
 
 describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
@@ -218,6 +252,144 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
     expect(mock.listeners.size).toBe(0)
     await act(async () => { await vi.advanceTimersByTimeAsync(10000); changeAppState('active') })
     expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it('⭐ P1 — a status read that never settles does not freeze withdrawal: the controls come back and the new state shows', async () => {
+    vi.useFakeTimers()
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE'))
+      .mockReturnValueOnce(new Promise(() => undefined)).mockResolvedValue(status('REVOKED'))
+    await act(async () => { renderScreen() })
+    await act(async () => { changeAppState('background'); changeAppState('active') })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    await act(async () => { fireEvent.click(screen.getByTestId('wa-opt-in-revoke')) })
+    expect(mock.revokeWaOptIn).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('wa-opt-in-revoke')).toBeDisabled()
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(3)
+    expect(screen.getByTestId('wa-opt-in-off')).toBeInTheDocument()
+    expect(screen.getByTestId('wa-opt-in-enable')).not.toBeDisabled()
+  })
+
+  it('⭐ P1 — a first read that never settles ends in the error line, not an endless spinner', async () => {
+    vi.useFakeTimers()
+    mock.getWaOptInStatus.mockReturnValue(new Promise(() => undefined))
+    await act(async () => { renderScreen() })
+    expect(screen.getByTestId('wa-opt-in-loading')).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000) })
+    expect(screen.queryByTestId('wa-opt-in-loading')).toBeNull()
+    expect(screen.getByTestId('wa-opt-in-error')).toBeInTheDocument()
+    // ⛔ a false body: with no read, "not available for your Pariwar" would be untrue.
+    expect(screen.queryByTestId('wa-opt-in-unavailable')).toBeNull()
+  })
+
+  it('⭐ P1 — a withdrawal that never settles does not freeze the screen: the error shows, a fresh read follows, the controls come back', async () => {
+    vi.useFakeTimers()
+    mock.getWaOptInStatus.mockResolvedValue(status('ACTIVE'))
+    mock.revokeWaOptIn.mockReturnValue(new Promise(() => undefined))
+    await act(async () => { renderScreen() })
+    await act(async () => { fireEvent.click(screen.getByTestId('wa-opt-in-revoke')) })
+    expect(screen.getByTestId('wa-opt-in-revoke')).toBeDisabled()
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000) })
+    expect(screen.getByTestId('wa-opt-in-error')).toBeInTheDocument()
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('wa-opt-in-revoke')).not.toBeDisabled()
+  })
+
+  it('⭐ P4 — the re-read after a failed action is FRESH: it waits out an older read instead of joining it', async () => {
+    vi.useFakeTimers()
+    let finishOld!: (value: ReturnType<typeof status>) => void
+    mock.getWaOptInStatus.mockResolvedValueOnce(status(null))
+      .mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve })).mockResolvedValue(status('PENDING'))
+    mock.requestWaOptIn.mockResolvedValue({ state: 'PENDING', deepLink: 'https://wa.me/919876543210?text=TWT-ABCDEFGH' })
+    mock.openURL.mockRejectedValue(new Error('no handler'))
+    await act(async () => { renderScreen() })
+    await act(async () => { changeAppState('background'); changeAppState('active') })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    await act(async () => { fireEvent.click(screen.getByTestId('wa-opt-in-enable')) })
+    // The mint landed before WhatsApp failed to open; the older read predates it.
+    await act(async () => { finishOld(status(null)) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(3)
+    expect(screen.getByTestId('wa-opt-in-pending')).toBeInTheDocument()
+  })
+
+  it('⭐ P3 — an action\'s error survives the PENDING poll (WhatsApp would not open)', async () => {
+    vi.useFakeTimers()
+    mock.getWaOptInStatus.mockResolvedValue(status('PENDING'))
+    mock.openURL.mockRejectedValue(new Error('no handler'))
+    await act(async () => { renderScreen() })
+    await act(async () => { fireEvent.click(screen.getByTestId('wa-opt-in-reopen')) })
+    expect(screen.getByTestId('wa-opt-in-error')).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('wa-opt-in-error')).toBeInTheDocument()
+  })
+
+  it('⭐ P4 — a withdrawal refused because the yes already ended re-reads: the stale ACTIVE body goes, and so does the error (it is off)', async () => {
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE')).mockResolvedValue(status('REVOKED'))
+    mock.revokeWaOptIn.mockRejectedValue(new Error('409 wa_opt_in.not_active'))
+    renderScreen()
+    await screen.findByTestId('wa-opt-in-revoke')
+    fireEvent.click(screen.getByTestId('wa-opt-in-revoke'))
+    await screen.findByTestId('wa-opt-in-off')
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    expect(screen.queryByTestId('wa-opt-in-error')).toBeNull()
+  })
+
+  it('⭐ P5 — a blurred screen neither polls nor refreshes on foreground; focusing it again refreshes', async () => {
+    vi.useFakeTimers()
+    mock.getWaOptInStatus.mockResolvedValue(status('PENDING'))
+    await act(async () => { renderScreen() })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
+    await act(async () => { setFocused(false) })
+    expect(mock.listeners.size).toBe(0)
+    await act(async () => { await vi.advanceTimersByTimeAsync(20_000); changeAppState('background'); changeAppState('active') })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
+    await act(async () => { setFocused(true) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(3)
+  })
+
+  for (const locale of ['en', 'hi'] as const) {
+    it(`⭐ P6 — the first read is not announced; PENDING → ACTIVE from polling is, in the screen's words (${locale})`, async () => {
+      vi.useFakeTimers()
+      mock.getWaOptInStatus.mockResolvedValueOnce(status('PENDING')).mockResolvedValue(status('ACTIVE'))
+      await act(async () => { renderScreen(locale) })
+      expect(mock.announce).not.toHaveBeenCalled()
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+      expect(screen.getByTestId('wa-opt-in-revoke')).toBeInTheDocument()
+      expect(mock.announce).toHaveBeenCalledTimes(1)
+      const title = screen.getByTestId('wa-opt-in-active').firstElementChild?.textContent
+      expect(title).toBeTruthy()
+      expect(mock.announce).toHaveBeenCalledWith(title)
+    })
+  }
+
+  it('⭐ P6 — ACTIVE → off from a foreground refresh (an external STOP) is announced as "not on"; ACTIVE while sending is disabled → off too', async () => {
+    for (const available of [true, false]) {
+      mock.announce.mockReset()
+      mock.getWaOptInStatus.mockReset()
+      mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE', { available })).mockResolvedValue(status('REVOKED', { available }))
+      renderScreen()
+      await screen.findByTestId('wa-opt-in-revoke')
+      expect(mock.announce).not.toHaveBeenCalled()
+      await act(async () => { changeAppState('background'); changeAppState('active') })
+      expect(screen.queryByTestId('wa-opt-in-revoke')).toBeNull()
+      expect(mock.announce, String(available)).toHaveBeenCalledWith('WhatsApp notifications are not on')
+      cleanup()
+    }
+  })
+
+  it('⭐ P6 — a change read while the app is not in front is not announced', async () => {
+    mock.getWaOptInStatus.mockResolvedValueOnce(status(null)).mockResolvedValue(status('PENDING'))
+    mock.requestWaOptIn.mockResolvedValue({ state: 'PENDING', deepLink: 'https://wa.me/919876543210?text=TWT-ABCDEFGH' })
+    // WhatsApp is in front when the post-mint read lands.
+    mock.openURL.mockImplementation(async () => { mock.appState = 'background' })
+    renderScreen()
+    await screen.findByTestId('wa-opt-in-enable')
+    await act(async () => { fireEvent.click(screen.getByTestId('wa-opt-in-enable')) })
+    await screen.findByTestId('wa-opt-in-pending')
+    expect(mock.announce).not.toHaveBeenCalled()
   })
 
   it('a failed load shows the translated error line', async () => {

@@ -787,10 +787,11 @@ was stripped only for this separate hermetic mobile command; the full `ci:local`
 was unchanged during its full integration run. Logs: `/private/tmp/twt-5-12-review-ci.log` and
 `/private/tmp/twt-5-12-final-mobile.log`. Final domain test-file lint/typecheck and `git diff --check` also passed.
 
-**Review closure:** F1–F5 fixed; zero remaining patch/decision action items. D1 remains deferred, as selected. The initial
+**Review closure:** *(Superseded by the second review below, 2026-10-21 — its fourteen patches reopened the story's action items.)* F1–F5 fixed; zero remaining patch/decision action items. D1 remains deferred, as selected. The initial
 invariant gaps in families 1/2/6/8/10 below are CLOSED by the domain concurrency/rollback, API snapshot and mobile render
 regressions and the corrected disclosure. Native screen-reader validation remains unattested; the go-live Hindi/alarm
 roster gates and the told item's WRITTEN status remain separate from story completion. Changes are local and uncommitted.
+*(True when written; committed afterwards in `5022a43c`, unpushed — second review P13 (a), 2026-10-21.)*
 
 **Invariant lens:** family 1 — DB transitions covered by direct tests; reachable UI gap F2/F3. Family 2 — REAL GAP F1;
 sequential idempotency tests pass. Families 3/12 — tenant/member filters and existing route authorization retained, with
@@ -805,6 +806,146 @@ Untouched families 4 and 11 were skipped.
 (the current sink is the documented log default); more than 50 members sharing a number (not constructible through the
 current identity/mint paths, and the spec explicitly requires a bounded read); a standalone atomicity-test complaint
 (the actual mutations share one transaction by construction; concurrency coverage is addressed in F1).
+
+#### Second review — 2026-10-21 (`bmad-code-review 5.12`, BigDev: "B, go ahead in parallel")
+
+Full re-review of `ec6d826e` → `5022a43c` (45 files, the first review's F1–F5 fixes included), three independent layers in
+parallel (Blind Hunter on the code-only diff; Edge Case Hunter with project read access; Acceptance Auditor against this spec,
+`-364`, `-373` and the load-bearing-invariant checklist). Triage: **0 decision-needed, 14 patch, 4 defer, 12 dismissed**.
+§0 gate: every item is an engineering, test or record correction — none changes what was decided or what a person is owed;
+P10 corrects an unsent told item (WRITTEN, ⛔ TOLD), and P6 adds what a screen-reader user hears of a state the screen already shows. The
+Auditor found every AC realised in code; the scope fence (`packages/channels`, `apps/jobs/src/scheduler`) is EMPTY and
+`WA_BLOCK_ERROR_CODES` / `isBlock` / `isStopKeyword` are byte-identical; F1–F5 are built as their dispositions say.
+Three of the patches (P1, P2, P3) are regressions introduced by the F1 / F3 fixes.
+
+- [x] [Review][Patch] **P1 (Medium) — The F3 single-flight `load` can hang forever.** A GET that never settles (the api-client
+  transport has no timeout) leaves `fetching.current` set: background callers re-join it, foreground callers spin on
+  `while (fetching.current) await fetching.current`, so after a successful DELETE `await load()` never returns — `busy` stays
+  true, every control is disabled and the pre-withdrawal ACTIVE body stays until unmount; a hung first load spins forever.
+  Bound each fetch (race a timeout / abort) and never let a foreground load wait unboundedly on a background read.
+  [`apps/mobile/app/(settings)/notifications.tsx:42`] (blind+edge)
+- [x] [Review][Patch] **P2 (Medium) — The worker's withdrawal needs two connections at once on a 2-connection pool.**
+  `endMemberWaYes` writes its audit line on `deps.pool` while its own `deps.db.transaction` (holding the member lock) holds
+  a connection; the jobs pool is `createDb(…, { max: 2 })`, shared with the data-export / report-export builds, the vacuum and
+  the GC crons. Before 5.12 the audit wrote BEFORE the transaction (one connection at a time); the F1 fix moved it under the
+  lock. With the second connection held elsewhere for > 10 s both STOP attempts fail back-to-back ⇒ `stop_unrecorded` and a
+  lost STOP (at-most-once drain); a 131050 is consumed silently (D1); the member lock is held meanwhile, stalling that
+  member's API DELETE / mint. Give the opt-in audit a connection budget the transaction cannot starve (its own small pool, or
+  a pool sized for tx + audit with a comment) and prove it with a leg. PLAUSIBLE (environment-dependent).
+  [`apps/jobs/src/wa-webhook-processor.ts:564`; `apps/jobs/src/boot.ts:313`] (blind+edge)
+- [x] [Review][Patch] **P3 (Low–Medium) — A background refresh wipes an action's error line.** Every `load(true)` (the 5 s
+  PENDING poll, focus, foreground) calls `setError(false)`: a failed `onReopen` (no app handles wa.me) is cleared within 5 s; a
+  failed `onRevoke` / `onEnable` on the next focus or foreground — the member never learns the withdrawal failed. Background
+  loads clear only a load-originated error. [`apps/mobile/app/(settings)/notifications.tsx:50`] (blind+edge)
+- [x] [Review][Patch] **P4 (Low) — A 409 on withdraw leaves a stale ACTIVE screen.** The yes ended elsewhere (trustee
+  opt-out, 131050, STOP from another device) while the screen stayed focused (no poll in ACTIVE); `onRevoke` reloads only on
+  success, so every tap 409s against the same ACTIVE body. Reload after a failed revoke.
+  [`apps/mobile/app/(settings)/notifications.tsx:120`] (edge)
+- [x] [Review][Patch] **P5 (Low) — The PENDING poll and the AppState listener are not gated on focus.** A mounted-but-blurred
+  screen polls GET every 5 s for up to the 48 h PENDING TTL (each a scope transaction; a 401 / 429 flashes the error line).
+  Gate both on focus; the test mock `useFocusEffect: cb => useEffect(cb, [cb])` has no blur, so the suite cannot see this —
+  give the mock a blur and add legs for P1 / P3 / P5. [`apps/mobile/app/(settings)/notifications.tsx:70`;
+  `apps/mobile/tests/unit/wa-notifications-screen-render.test.ts`] (blind+edge)
+- [x] [Review][Patch] **P6 (Medium — family 13 (d) REAL GAP) — State changes made by polling / foreground refresh are not
+  announced.** PENDING → ACTIVE (the withdraw control appears) and ACTIVE → off (an external STOP) replace the body silently:
+  no live region, no `AccessibilityInfo.announceForAccessibility`; only the error line is `role="alert"`. Condition 2 / I4
+  reaches a screen-reader user only through the visual tree. [`apps/mobile/app/(settings)/notifications.tsx:76`] (edge+auditor)
+- [x] [Review][Patch] **P7 (Low — family 1 / 10) — The schema comment claims more than the trigger enforces.** "Terminal states
+  never move": the 0177 trigger refuses only a move INTO `EXPIRED_24H_WINDOW` from a non-PENDING state — REVOKED → ACTIVE,
+  BLOCKED_BY_META → REVOKED, ACTIVE → PENDING all pass the DB (only code from-state predicates guard them). Reword the TS
+  comment; the migration header says the same but 0177 is APPLIED — ⛔ edit it, record the correction instead.
+  [`packages/domain/src/schema/member_wa_opt_in.ts:28`; `packages/domain/migrations/0177_member-wa-opt-in-lasting-yes.sql:4`] (blind+edge)
+- [x] [Review][Patch] **P8 (Low) — The lost-race comments describe a race the F1 lock rules out.** "another withdrawal or a STOP
+  ended it between the plan and here" — every withdrawal now holds `lockMemberWaYes` from snapshot to write, so the `{ null, 0 }`
+  branch is reachable only by an unlocked writer (the tests reach it by an injected trigger). Keep the guard; say what it guards.
+  [`apps/api/src/modules/wa-opt-in/handlers.ts:77`; `apps/jobs/src/wa-webhook-processor.ts:548`] (blind)
+- [x] [Review][Patch] **P9 (Low) — AC3's admin leg neither opts in through the real path nor asserts the three reads.** It seeds
+  ACTIVE + consent by raw INSERT (`seedActiveOptIn`) and checks `revoked_audit_id` only; AC3 asks for the real opt-in path and
+  `consentExists` / `isPeerMeshWaReminderOptedIn` / `isOptInActive` all false (the DELETE, STOP and 131050 legs do).
+  [`apps/api/tests/integration/wa-opt-in/admin-opt-out.spec.ts:231`] (auditor)
+- [x] [Review][Patch] **P10 (Low) — The told item contradicts itself.** "Replying STOP from that number always ends it" follows
+  limit 1, "A STOP can very rarely be lost". WRITTEN, ⛔ TOLD — correct before BigDev sends it.
+  [`_bmad-output/planning-artifacts/trustee-panel-told-2026-10-21-5-12-whatsapp-yes-residuals.md:34`] (auditor)
+- [x] [Review][Patch] **P11 (Low — family 10) — "Closed by 5.12" for the first `-364` item is wider than its evidence.** The
+  item's own phrase "an expired one cannot be withdrawn" is still true IN THE APP: a legacy EXPIRED row with an open consent
+  renders only `wa-opt-in-enable` (LY7's admitted cost; `-373` decision 7; the population is empty in production). The note
+  should say the API ends it and the app offers no control for that population. [`_bmad-output/implementation-artifacts/deferred-work.md:148`] (auditor)
+- [x] [Review][Patch] **P12 (Low) — An undated comment rewrite beside the frozen set.** The comment above `WA_BLOCK_ERROR_CODES`
+  was rewritten without a date and 5.4's sentence "Conservative: only an explicit opt-out/undeliverable-by-user-choice code
+  drives BLOCKED_BY_META (a transient failure must NOT revoke)" deleted. Restore it and date the 5.12 addition (T1 / AC8).
+  [`apps/jobs/src/wa-webhook-processor.ts:130`] (auditor)
+- [x] [Review][Patch] **P13 (Low — family 10) — Record hygiene.** (a) "Changes are local and uncommitted" / "not committed or
+  pushed" / v1.6 "uncommitted" (this file `:793`, `:957`, `:1046`; `sprint-status.yaml:1`, `:20299`) — `5022a43c` commits them;
+  the branch is unpushed. (b) The newest ledger entry is `2026-10-21` without its same-day suffix (`2026-10-21c`). (c) The File
+  List omits `.decision-log.md`, `epics.md` and the told item. (d) The v1.6 Change Log row sits outside its table (blank line
+  `:1045`). (e) Task 7.1's third `decision-flow-end-to-end.md` site (the sprint-row line) is undated (gitignored — local only).
+  (auditor)
+- [ ] [Review][Patch] **P14 (Low) — AC12's gate has not run at the final commit.** The 36/36 `ci:local` ran on the uncommitted
+  tree before F3's last mobile follow-up (disclosed). Re-run `ci:local` on :5433 at the commit that carries P1–P13. (auditor)
+- [x] [Review][Defer] **W1 — An ambiguous COMMIT failure is compensated as a rollback.** COMMIT reaches the server, the client
+  sees a reset ⇒ a `_rolled_back` line for a transition that happened; the STOP retry then finds nothing to end. The same class
+  as `withCompensatingAudit` everywhere. [`apps/jobs/src/wa-webhook-processor.ts:588`] — deferred, pre-existing (blind+edge)
+- [x] [Review][Defer] **W2 — The stale-PENDING sweep does not take the member lock.** A re-tap near the 48 h TTL returns the
+  outstanding PENDING's deep link; the sweep then expires it and the member's phrase matches nothing. [`apps/jobs/src/wa-webhook-processor.ts:663`]
+  — deferred, pre-existing (edge)
+- [x] [Review][Defer] **W3 — The worker's under-lock snapshot has no live race leg; `revokeOptIn` can still move ACTIVE
+  unlocked.** Only the API has a two-connection F1 leg; a STOP / 131050 racing activation is covered by construction. The
+  exported `waOptIn.revokeOptIn(…, 'REVOKED' | 'BLOCKED_BY_META')` moves ACTIVE without the lock or the consents — no source
+  caller today. [`packages/domain/src/wa-opt-in/write.ts:249`] — deferred, by construction today (auditor)
+- [x] [Review][Defer] **W4 — Deploy order: 0177 ahead of the old jobs build floods the audit chain.** The pre-5.12 sweep
+  re-lists every past-window ACTIVE each minute; the trigger refuses each ⇒ a primary + `_rolled_back` line per row (≈ 400 a
+  minute at the 200 cap) until the new build lands. Not in production; matters at the first deploy carrying 0177.
+  [`packages/domain/migrations/0177_member-wa-opt-in-lasting-yes.sql:19`] — deferred, deploy-time (edge)
+
+**Dismissed (12):** a PENDING not cancelled by a withdrawal (a PENDING is not a yes; the member's own later phrase is a fresh
+yes); 131050 ends only the recipient's ACTIVE row (LY8 (a) as decided; a legacy EXPIRED yes is not sent to — `-373` decision
+7); the lock "outside a transaction" (every call site is inside one — traced); a 200 `REVOKED` with no row (LY7; unreachable);
+> 50 members on a number (first review); STOP ends an earlier holder's yes (LY6 / LY13, told item); `isMemberStopKeyword`
+locale / copy (mirrors the byte-frozen `isStopKeyword`); tests on shared live tables (integration concurrency = 1; green
+gate); `void at` (6.37d pin); a repeated ACTIVE read (trivial); the non-CONCURRENT 0177 index (not in production; dev DBs
+audited — LY4); dated notes still reading "`review` at this note" (true on their dates — supersede, never re-date).
+
+**Invariant lens (second review):** families 1, 5 covered by test (trigger / unique legs) with P7 a comment over-claim;
+family 2 covered by test for domain and API, by construction for the worker (W3), REAL GAP P2 (connection budget); families
+3, 6, 7, 8, 12 covered by test / construction; family 9 covered (DELIBERATE note kept); family 10 REAL GAPS P10, P11, P13;
+family 11 covered (§Policy meaning); family 13 (c) covered, (a)/(b) not constructible here, (d) REAL GAP P6. Family 4 untouched.
+
+**Patch dispositions (BigDev: "1" — apply every patch):**
+- **P1** — every status read AND both mutations race `CALL_TIMEOUT_MS` (15 s) via `withTimeout`; a timed-out call's late
+  answer never reaches state. A hung read no longer freezes withdrawal; a hung first read ends in the error line; a hung
+  withdrawal shows the error, re-reads and re-enables the controls.
+- **P2** — `boot.ts` gives the processor its OWN `createDb(…, { max: 2 })` pool (ended on SIGTERM and on a startup failure); the
+  worker states `localConcurrency: 1`. A live leg proves the need (one connection held elsewhere on a 2-pool ⇒
+  `stop_unrecorded`; a free 2-pool ⇒ the STOP ends the yes); source pins hold the boot wiring and the concurrency.
+- **P3** — errors carry their source (`load` / `action`); a background read clears only its own kind, and an action's error
+  is superseded only when a later read changes what the screen shows.
+- **P4** — a failed enable / withdrawal re-reads in a `refresh` mode (no spinner, but it waits out an older read and fetches
+  fresh). A 409 "already off" now shows off without the error.
+- **P5** — polling and the AppState listener run only while focused; the test mock gained a blur (it matches expo-router's
+  `useFocusEffect` contract).
+- **P6** — a later change is announced (`AccessibilityInfo.announceForAccessibility`) in the screen's existing words — on /
+  waiting / turned off by WhatsApp / not on — and only while the screen is focused and the app in front; the first read is not.
+  ⛔ new copy keys. Native screen-reader behaviour remains unattested (jsdom).
+- **P7** — the schema comment names the three code from-state guards; 0177 (applied) is left as written, the correction recorded.
+- **P8** — the lost-race comments say the guard is reachable only past an unlocked writer.
+- **P9** — the admin AC3 leg opts in through the domain write functions (`createPendingOptIn` → `recordConsent` +
+  `activateOptIn`) and asserts the three reads.
+- **P10** — the told item says STOP ends a yes "with the one limit below" / "apart from the rare lost STOP"; still WRITTEN, ⛔ TOLD.
+- **P11** — deferred-work: closed for the API and STOP; in the app **not addressed — an accepted cost** (LY7, `-373` decision 7).
+- **P12** — 5.4's "Conservative…" sentence restored verbatim; the 5.12 addition dated.
+- **P13** — "uncommitted" claims annotated *true when written; committed in `5022a43c`* (⛔ rewritten); ledger head re-keyed
+  `2026-10-21c`; File List completed; the v1.6 row rejoined its table; the decision-flow sprint-row site dated (gitignored).
+  The first review's closure paragraph is marked superseded by this one.
+
+**Fix-diff review (2026-10-21, one fresh-context reviewer of the patch diff — [[feedback_review_the_fix_diff_before_commit]]):**
+0 H / 2 M / 11 L, all applied before commit — P6 announced "off" with `enable_hint` (no state words) and was silent across
+availability, and announced while the app was behind WhatsApp; P1 left both mutations unbounded; a failed action's re-read
+joined an older read (now `refresh`); an action error outlived a read showing the goal reached; a failed first read rendered
+"not available for your Pariwar"; P2's leg could not see the boot wiring (pins added; `localConcurrency: 1`); P7 omitted
+`revokeOptIn`; P9's helper name over-claimed; the told item's opening line still read "STOP always works"; P11's status word;
+P13 (a) half applied; the §0 sentence wider than its items; the decision-flow note named a status the row did not have.
+Mobile: 11 new legs — 10 RED against `5022a43c`'s screen (the eleventh, "⛔ announced while the app is behind", is a negative
+control: that screen announced nothing), and the six follow-up legs RED against the first-pass fix.
 
 ## Dev Notes
 
@@ -954,7 +1095,7 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
 
 ### Completion Notes List
 
-- **Code review closed 2026-10-21 (Codex; BigDev: "1", apply every patch).** F1–F5 fixed: shared member transaction lock and protected withdrawal snapshots; withdrawal while Pariwar sending is disabled; focus/foreground refresh and pending polling, including a fresh read after withdrawal; deterministic first-member fault coverage; accurate retry disclosure. Four domain race/rollback legs, one API snapshot race leg and five mobile render legs added. `ci:local` :5433 36/36 green; final mobile lint/typecheck/build/test gate 1096/1096. D1 deferred. Status → done; not committed or pushed.
+- **Code review closed 2026-10-21 (Codex; BigDev: "1", apply every patch).** F1–F5 fixed: shared member transaction lock and protected withdrawal snapshots; withdrawal while Pariwar sending is disabled; focus/foreground refresh and pending polling, including a fresh read after withdrawal; deterministic first-member fault coverage; accurate retry disclosure. Four domain race/rollback legs, one API snapshot race leg and five mobile render legs added. `ci:local` :5433 36/36 green; final mobile lint/typecheck/build/test gate 1096/1096. D1 deferred. Status → done; not committed or pushed. *(True when written; committed afterwards in `5022a43c`, unpushed — second review P13 (a).)*
 - Story created 2026-10-20 by `bmad-create-story 5-12` (ultimate context engine analysis completed — comprehensive developer guide created).
 - **Built 2026-10-21 (`bmad-dev-story 5.12`), every LY as decided by `-373`.** Domain: `consent.revokeOpenConsentsOfType`;
   `waOptIn.endEveryWaYes` + the state reads `getActiveOptInForMember` / `hasActiveOptIn` / `hasAnythingToEnd` /
@@ -995,6 +1136,9 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
 - `_bmad-output/implementation-artifacts/6-31-peer-mesh-whatsapp-reminder-at-48-hours.md`
 - `_bmad-output/implementation-artifacts/6-37d-claim-contact-whatsapp-step.md`
 - `_bmad-output/planning-artifacts/architecture.md`
+- `_bmad-output/planning-artifacts/epics.md` (### Story 5.12, Task 0.4)
+- `_bmad-output/planning-artifacts/trustee-panel-told-2026-10-21-5-12-whatsapp-yes-residuals.md` (new — WRITTEN, ⛔ TOLD)
+- `.decision-log.md` (Decision `2026-10-21-373`, its own commit `97e1e7ad`)
 - `docs/adr/ADR-0029-whatsapp-webhook-ingress-and-opt-in-lifecycle.md`
 - `docs/launch-gate-inventory/inventory-roster.md`
 - `docs/governance/decision-flow-end-to-end.md` (gitignored — local only)
@@ -1042,5 +1186,4 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.12`, 2026-10-21.
 | 2026-10-20 | 1.3 | Third fresh-context round of v1.2: 0 H / 4 M / 5 L, applied — LY8 (a)'s WS11 sentence still said `packages/channels`; AC4 (h) re-seamed on the SECOND HMAC (a throwing `enc` also fails the claim stop — two alarms); the per-message-catch alarm used an out-of-scope `body` and the per-member path must ⛔ rethrow; §0 now counts LY8 (a)'s 131050 arm as a narrowing; the committed-trigger recipe follows `cycle-freeze.spec.ts`'s safeguards; re-coded legs' `failure_code` asserts; F14's probe count; full precedent path; I2 / AC3 "Meta block" labels. Rounds: 4 verifiers → HIGH 2 → 0. |
 | 2026-10-21 | 1.4 | Task 0 done: BigDev *"all as recommended"* (LY1–LY13, the LY6 punctuation option, PQ1 / PQ2 yes); Decision `2026-10-21-373` (`97e1e7ad`, alone); WhatsApp enquiries → the helpdesk after go-live (`-373` decision 10); the records commit (told item WRITTEN, Row 37, epics.md, ADR-0029 / §3.4 notes, deferred-work). Status → in-progress. |
 | 2026-10-21 | 1.5 | `bmad-dev-story 5.12`: Tasks 1–7 built and checked (order per I6: domain → worker → API → app → the read change → fences → records). Migration 0177; 38 new / re-coded legs across domain, jobs, API and mobile, RED-proven per task; `ci:local` (:5433) 36/36 green on the second run (run 1's single failure a flaky substring leg in `channel-webhooks-msg91.spec.ts`, outside this story). Records closed with the "effective when `done` on `main`" caveat. Status → review. |
-
-| 2026-10-21 | 1.6 | `bmad-code-review 5.12`: three layers; 0 decision-needed, 5 patches fixed after BigDev chose "1", 1 pre-existing issue deferred, 4 dismissed. True two-connection serialization and API audit-snapshot proofs, second-write rollback, unavailable/return-from-WhatsApp/in-flight-refresh UI regressions; disclosure retry wording corrected. Full `ci:local` :5433 36/36 green; final mobile gate 1096/1096. Story and sprint row → done. Changes local, uncommitted; go-live gates remain separate. |
+| 2026-10-21 | 1.6 | `bmad-code-review 5.12`: three layers; 0 decision-needed, 5 patches fixed after BigDev chose "1", 1 pre-existing issue deferred, 4 dismissed. True two-connection serialization and API audit-snapshot proofs, second-write rollback, unavailable/return-from-WhatsApp/in-flight-refresh UI regressions; disclosure retry wording corrected. Full `ci:local` :5433 36/36 green; final mobile gate 1096/1096. Story and sprint row → done. Changes local, uncommitted (true when written; committed afterwards in `5022a43c`, unpushed — second review P13 (a)); go-live gates remain separate. |

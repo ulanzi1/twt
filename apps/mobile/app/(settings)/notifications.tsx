@@ -16,12 +16,17 @@
 // Story 5.12 (F13a) — one initial load, then focus/foreground refresh and polling while PENDING. Errors are a flag
 // translated at render, so no callback depends on `t` (`useT()`
 // returns a fresh closure every render — a `[t]` dependency re-fetched on every render, endlessly).
+// Story 5.12 second review (2026-10-21): every read and mutation is bounded (P1 — the transport has no timeout, so a hung
+// call froze the controls); a background refresh never clears an action's error unless the body it shows changed (P3); a
+// failed action re-reads fresh (P4); polling and the foreground listener run only while the screen is focused (P5); a later
+// state change is announced while the screen is in front (P6 — the body is replaced, so a screen-reader user would not
+// hear the withdraw control appear or go).
 //
 // Bilingual copy via @twt/i18n (hi/en parity). No AsyncStorage — the state is server-driven; MMKV is the
 // app's local-persistence primitive if any were ever needed ([[project_mmkv_asyncstorage_equivalent]]).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppState, Linking, ScrollView } from 'react-native'
+import { AccessibilityInfo, AppState, Linking, ScrollView } from 'react-native'
 
 import { useT } from '@twt/i18n/react'
 import type { WaOptInStatusResponse } from '@twt/contracts'
@@ -31,27 +36,68 @@ import { Button, H2, Paragraph, Spinner, Text, YStack } from 'tamagui'
 import { memberAuth } from '../../lib/member-api'
 
 type OptInState = WaOptInStatusResponse['state']
+/** `load` — a status read failed; `action` — enable / re-open / withdraw failed (a background refresh keeps it). */
+type ErrorSource = 'load' | 'action' | null
+
+/**
+ * `foreground` — spinner, clears every error; `background` — joins an in-flight read; `refresh` — no spinner, but waits for
+ * any older read and fetches fresh (after a failed action, whose effect that older read may predate).
+ */
+type LoadMode = 'foreground' | 'background' | 'refresh'
+
+/** A call that never settles must not freeze the screen: the api-client transport has no timeout. */
+const CALL_TIMEOUT_MS = 15_000
+const PENDING_POLL_MS = 5000
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('wa-opt-in call timed out')), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err: unknown) => {
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
+}
+
+/**
+ * What a screen reader is told when a later read changes the body: whether the yes is on, waiting, ended by WhatsApp, or not
+ * on — ⛔ availability alone (an ACTIVE yes stays withdrawable while sending is disabled; anything else is "not on").
+ */
+function announcementKey(state: OptInState, available: boolean) {
+  if (state === 'ACTIVE') return 'waNotifications.active_title'
+  if (available && state === 'PENDING') return 'waNotifications.pending_title'
+  if (available && state === 'BLOCKED_BY_META') return 'waNotifications.blocked_title'
+  return 'waNotifications.unconfirmed_title'
+}
 
 export default function NotificationSettingsScreen() {
   const t = useT()
   const [status, setStatus] = useState<WaOptInStatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<ErrorSource>(null)
+  const [focused, setFocused] = useState(false)
   const fetching = useRef<Promise<void> | null>(null)
 
-  const load = useCallback(async (background = false): Promise<void> => {
+  const load = useCallback(async (mode: LoadMode = 'foreground'): Promise<void> => {
     // Background callers share an in-flight read. After a mutation, wait for that older read and then
     // fetch again: its response may predate the withdrawal and must not leave the screen ACTIVE.
-    if (background && fetching.current) return fetching.current
+    // Every read is bounded by CALL_TIMEOUT_MS, so this wait is too.
+    if (mode === 'background' && fetching.current) return fetching.current
     while (fetching.current) await fetching.current
     const pending = (async () => {
-      if (!background) setLoading(true)
-      setError(false)
+      if (mode === 'foreground') setLoading(true)
+      setError((current) => (mode !== 'foreground' && current === 'action' ? current : null))
       try {
-        setStatus(await memberAuth.getWaOptInStatus())
+        setStatus(await withTimeout(memberAuth.getWaOptInStatus(), CALL_TIMEOUT_MS))
       } catch {
-        setError(true)
+        setError((current) => current ?? 'load')
       } finally {
         setLoading(false)
       }
@@ -65,38 +111,58 @@ export default function NotificationSettingsScreen() {
   }, [])
 
   useFocusEffect(useCallback(() => {
-    void load(true)
+    setFocused(true)
+    void load('background')
+    return () => setFocused(false)
   }, [load]))
 
   useEffect(() => {
+    if (!focused) return
     let previous = AppState.currentState
     const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active' && previous !== 'active') void load(true)
+      if (next === 'active' && previous !== 'active') void load('background')
       previous = next
     })
     return () => subscription.remove()
-  }, [load])
+  }, [focused, load])
 
   useEffect(() => {
-    if (status?.state !== 'PENDING') return
+    if (!focused || status?.state !== 'PENDING') return
     // Returning from WhatsApp can precede the webhook by a minute. Poll only this transitional state,
     // and keep its controls visible during refresh. Foreground refresh also handles ACTIVE → STOP.
     const timer = setInterval(() => {
-      if (AppState.currentState !== 'background' && AppState.currentState !== 'inactive') void load(true)
-    }, 5000)
+      if (AppState.currentState !== 'background' && AppState.currentState !== 'inactive') void load('background')
+    }, PENDING_POLL_MS)
     return () => clearInterval(timer)
-  }, [status?.state, load])
+  }, [focused, status?.state, load])
+
+  // The first read IS the screen; a later one that changes the body (PENDING → ACTIVE from polling, an external STOP) is
+  // announced while the screen is in front, so the withdraw control appearing or going reaches a screen-reader user too.
+  // A changed body also supersedes an earlier action's error (a 409 "already off" now shows off).
+  const shownState = status ? announcementKey(status.state, status.available) : null
+  const announcement = shownState ? t(shownState) : null
+  const shownKey = useRef<string | null>(null)
+  useEffect(() => {
+    if (shownState === null) return
+    const previous = shownKey.current
+    shownKey.current = shownState
+    if (previous === null || previous === shownState) return
+    setError((current) => (current === 'action' ? null : current))
+    if (focused && AppState.currentState === 'active' && announcement) AccessibilityInfo.announceForAccessibility(announcement)
+  }, [shownState, announcement, focused])
 
   /** Mint (or re-use) a PENDING opt-in, then open WhatsApp pre-filled with the verification phrase. */
   const onEnable = useCallback(async (): Promise<void> => {
     setBusy(true)
-    setError(false)
+    setError(null)
     try {
-      const res = await memberAuth.requestWaOptIn()
+      const res = await withTimeout(memberAuth.requestWaOptIn(), CALL_TIMEOUT_MS)
       await Linking.openURL(res.deepLink)
       await load()
     } catch {
-      setError(true)
+      // The screen may be stale (a 409 — already on) or the mint may have landed before WhatsApp failed to open: re-read.
+      setError('action')
+      void load('refresh')
     } finally {
       setBusy(false)
     }
@@ -106,12 +172,12 @@ export default function NotificationSettingsScreen() {
   const onReopen = useCallback(async (): Promise<void> => {
     if (!status?.deepLink) return
     setBusy(true)
-    setError(false)
+    setError(null)
     try {
       await Linking.openURL(status.deepLink)
     } catch {
       // No app can handle the wa.me URL (e.g. WhatsApp not installed) — surface it rather than failing silently.
-      setError(true)
+      setError('action')
     } finally {
       setBusy(false)
     }
@@ -119,12 +185,14 @@ export default function NotificationSettingsScreen() {
 
   const onRevoke = useCallback(async (): Promise<void> => {
     setBusy(true)
-    setError(false)
+    setError(null)
     try {
-      await memberAuth.revokeWaOptIn()
+      await withTimeout(memberAuth.revokeWaOptIn(), CALL_TIMEOUT_MS)
       await load()
     } catch {
-      setError(true)
+      // A 409 means the yes already ended elsewhere (a STOP, a trustee, Meta): re-read rather than keep a stale ACTIVE body.
+      setError('action')
+      void load('refresh')
     } finally {
       setBusy(false)
     }
@@ -137,10 +205,11 @@ export default function NotificationSettingsScreen() {
         <H2>{t('waNotifications.title')}</H2>
         {loading ? (
           <Spinner testID="wa-opt-in-loading" />
-        ) : (
+        ) : status === null ? null : (
+          // ⛔ a body until a read succeeds: `available` would default to false and say "not available for your Pariwar".
           <OptInBody
-            state={status?.state ?? null}
-            available={status?.available ?? false}
+            state={status.state}
+            available={status.available}
             busy={busy}
             t={t}
             onEnable={onEnable}
@@ -148,7 +217,7 @@ export default function NotificationSettingsScreen() {
             onRevoke={onRevoke}
           />
         )}
-        {error ? (
+        {error !== null ? (
           <Text role="alert" color="$red10" testID="wa-opt-in-error">
             {t('waNotifications.error')}
           </Text>

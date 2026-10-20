@@ -149,6 +149,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   (the database refuses ACTIVE → EXPIRED — migration 0177; `f9baac1e`); a STOP ends every yes on the number whatever the row's state,
   the API withdraws a legacy EXPIRED yes with an open consent (200), and 409 means only "nothing to end" (`814cfec9`, `c25fcbb0`); the
   app's "expired" words are deleted and its withdraw control shows for every ACTIVE response (`4719b712`).
+  ⚠ Scope of the closure (second code review, 2026-10-21 — P11): the item's second half, *"an expired one cannot be withdrawn"*,
+  is closed by 5.12 for the API and for STOP. In the app it is **not addressed — an accepted cost** (LY7; `-373` decision 7): a
+  legacy EXPIRED row with an open consent renders only the enable control. That population is empty in production; a member in
+  it withdraws by STOP, and their next opt-in and withdrawal revoke the old row's consent (the row itself stays EXPIRED).
 - **Withdrawing a WhatsApp opt-in revokes only the newest consent row, and every re-opt-in mints another** [`apps/jobs/src/wa-webhook-processor.ts`
   activation (`recordConsent`, a fresh `consentId`) and revoke paths; `apps/api/src/modules/wa-opt-in/handlers.ts`; `consent_records`
   (no unique index); `packages/domain/src/consent/read.ts` `consentExists`] — a member who expired, opted in again and sent STOP still
@@ -12003,3 +12007,10 @@ reachable path above is closed for 6.37d's sends; the classifier's own filing st
 - **W10 — The record spec's R7 leg takes an ACCESS EXCLUSIVE lock** (`ALTER TABLE … DISABLE TRIGGER`) inside its per-test ROLLBACK — brief; precedent `audit-log/integrity-check.spec.ts`; Debug Log (d) rejected the pattern for Task 4.
 - **W11 — AC11's ids-only capture runs in 8 of 23 live legs** and captures only `onAlarm`, not the registration's `console.info` / `console.error`.
 - **W12 — The WhatsApp client cache keeps the FIRST token / phone number id for a Pariwar** (`whatsapp-app.ts:217-220`); a rotation is RESTART-REQUIRED (roster Row 35 (a)) — ⛔ mismatch detection, ⛔ eviction on an auth refusal. Documented; homed in Row 35 (a).
+
+## Deferred from: code review of 5-12-whatsapp-yes-lasts-until-withdrawn.md, round 2 (2026-10-21)
+
+- **W1 — An ambiguous COMMIT failure is compensated as a rollback** (`apps/jobs/src/wa-webhook-processor.ts` `endMemberWaYes`, and every `withCompensatingAudit` caller). COMMIT reaches the server but the client sees a connection reset ⇒ a `_rolled_back` line for a transition that DID happen; a STOP retry then finds nothing to end and writes no new line. A codebase-wide class, reachable at 5.12's new site. Re-trigger: the next change to the audit-or-throw compensation helper.
+- **W2 — The stale-PENDING sweep does not take `lockMemberWaYes`** (`expireOptIn` → `revokeOptIn(deps.db, …)`). A member re-tapping enable near the 48 h TTL gets the outstanding PENDING's deep link; the sweep then expires it and the phrase matches nothing (the screen flips to "unconfirmed"). Pre-existing (mint re-use vs sweep predates 5.12). Re-trigger: the next change to the PENDING TTL or the sweep.
+- **W3 — The worker's under-lock withdrawal snapshot has no live two-connection leg; the exported `waOptIn.revokeOptIn(…, 'REVOKED' | 'BLOCKED_BY_META')` can still move ACTIVE without the lock or the consents.** Covered by construction today (no source caller; STOP / 131050 share the lock key with activation). Re-trigger: any new caller of `revokeOptIn`, or the next change to `endMemberWaYes` — narrow `revokeOptIn` to the PENDING-only edge and add a STOP-vs-activation race leg.
+- **W4 — Deploy order: migration 0177 applied ahead of a pre-5.12 jobs build floods the audit chain.** The old sweep re-lists every past-window ACTIVE each minute; the 0177 trigger refuses each ⇒ a primary + `_rolled_back` line per row (≈ 400 a minute at the 200 cap) until the new build lands. Not in production. Re-trigger: the first deploy that carries 0177 — ship the jobs build with (or before) the migration.

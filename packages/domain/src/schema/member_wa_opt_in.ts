@@ -26,7 +26,11 @@
 // · `member_wa_opt_in_active_member_uq` (0177, Story 5.12) — partial UNIQUE (pariwar_id, member_id) WHERE state = 'ACTIVE':
 //   one standing yes per member.
 // · trigger `member_wa_opt_in_no_active_expiry` (0177, Story 5.12) — refuses any UPDATE into EXPIRED_24H_WINDOW from a state
-//   other than PENDING (an ACTIVE yes never expires; terminal states never move).
+//   other than PENDING (an ACTIVE yes never expires). It guards ONLY that edge: REVOKED / BLOCKED_BY_META staying put is the
+//   code's from-state predicates (`activateOptIn` requires PENDING, `endEveryWaYes` requires ACTIVE, `revokeOptIn` requires
+//   ACTIVE or PENDING), ⛔ a DB guard — 0177's
+//   header says "never move again" more widely than its trigger enforces (second review P7, 2026-10-21; 0177 is applied, so
+//   its text stands).
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS fields camelCase; table plural.
 

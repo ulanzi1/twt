@@ -75,9 +75,10 @@ async function planWithdrawal(db: Db, pariwarId: ids.PariwarId, memberId: ids.Me
 }
 
 /**
- * End every yes inside the audited mutate (LY5): `endEveryWaYes` on the scope tx. A lost race (another withdrawal or a STOP
- * ended it between the plan and here — `{ null, 0 }`) throws the 409 INSIDE `mutate`, so `withCompensatingAudit` writes the
- * `_rolled_back` line and rethrows (⛔ an audit line asserting a transition that did not happen).
+ * End every yes inside the audited mutate (LY5): `endEveryWaYes` on the scope tx. A lost race (`{ null, 0 }`: the write found
+ * nothing the plan saw) throws the 409 INSIDE `mutate`, so `withCompensatingAudit` writes the `_rolled_back` line and rethrows
+ * (⛔ an audit line asserting a transition that did not happen). Every withdrawal path holds `lockMemberWaYes` from the plan to
+ * here, so only a writer that skips the lock can reach it; the guard stays for that writer.
  */
 async function endYesOrConflict(
   db: Db,

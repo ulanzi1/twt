@@ -311,6 +311,10 @@ async function main(): Promise<void> {
   // Separate light pool for domain-table maintenance (the vacuum DELETE + the data-export scope-txs).
   // max:2 — the integrity-cli.ts service-pool precedent.
   const { db, pool } = createDb(connectionString, { max: 2, logger: false });
+  // Story 5.12 (second review, P2) — the WhatsApp webhook processor's OWN pool: ending a member's yes holds a transaction
+  // connection (the member lock) while its audit line commits on a second one. On the shared pool above another cron holding
+  // the other connection would starve that audit and lose the STOP; the tick is sequential, so two connections are its peak.
+  const { db: waWebhookDb, pool: waWebhookPool } = createDb(connectionString, { max: 2, logger: false });
 
   // ── Data-export KMS deps (Story 3.11) — the FIRST apps/jobs crypto wiring ──────
   // Resolve the Argon2id pepper (fake-KMS mode derives the KEK from it; live mode ignores it) via the
@@ -363,6 +367,7 @@ async function main(): Promise<void> {
       await contributionProvidersTeardown().catch((err: unknown) => logError('channel-providers-teardown', err));
     }
     await pool.end().catch((err: unknown) => logError('pool-end', err));
+    await waWebhookPool.end().catch((err: unknown) => logError('wa-webhook-pool-end', err));
     console.info('[jobs] shutdown complete');
     process.exit(process.exitCode ?? 0);
   }
@@ -465,11 +470,11 @@ async function main(): Promise<void> {
     // Drains wa_inbound_webhook_events: inbound match → ACTIVE + consent, STOP → every yes on the number ended,
     // Meta 131050 → BLOCKED_BY_META, status callbacks → 5.3's mapMetaStatus/upsertWaSendStatus; plus the
     // stale-PENDING sweep → EXPIRED_24H_WINDOW (Story 5.12: an ACTIVE yes never expires). Uses the member-family hmac key (same
-    // by-value parallel as the api) for the mobile blind-index match. Cross-tenant on the service `pool`.
+    // by-value parallel as the api) for the mobile blind-index match. Cross-tenant on its own service pool (Story 5.12 P2).
     await registerWaWebhookProcessorCron(
       boss,
       // Story 6.37d (WS10 / WS11) — the FULL jobs KMS deps: the claim branch hashes in the ladder's space with the same hmacKeyRef.
-      { pool, db, enc: jobsEncryption },
+      { pool: waWebhookPool, db: waWebhookDb, enc: jobsEncryption },
       { cron: WA_WEBHOOK_PROCESSOR_CRON, tz: WA_WEBHOOK_PROCESSOR_TZ },
     );
 
@@ -865,6 +870,7 @@ async function main(): Promise<void> {
   } catch (err) {
     await boss.stop({ graceful: false }).catch(() => undefined);
     await pool.end().catch(() => undefined);
+    await waWebhookPool.end().catch(() => undefined);
     throw err;
   }
 

@@ -128,8 +128,10 @@ function isMemberStopKeyword(body: string): boolean {
 }
 
 // ── Meta opt-out / block error codes (statuses[].status='failed') → authoritative BLOCKED_BY_META ────────
-// Indicative set — verify against Meta's error-code reference at deploy time. Since Story 5.12 this set gates ONLY the claim
-// half's hash fallback (`isBlock` below); the MEMBER yes ends on `WA_MEMBER_CONSENT_BLOCK_CODES` alone (131050).
+// Indicative set — verify against Meta's error-code reference at deploy time. Conservative: only an explicit
+// opt-out/undeliverable-by-user-choice code drives BLOCKED_BY_META (a transient failure must NOT revoke).
+// Story 5.12 (2026-10-21, LY8 (a)): this set now gates ONLY the claim half's hash fallback (`isBlock` below); the MEMBER yes
+// ends on `WA_MEMBER_CONSENT_BLOCK_CODES` alone (131050).
 const WA_BLOCK_ERROR_CODES = new Set([131050, 131049, 131026, 131047]);
 
 /**
@@ -535,7 +537,10 @@ function raiseAlarm(deps: WaWebhookProcessorDeps, message: string): void {
   }
 }
 
-/** What one attempt to end a member's yes did. `lost_race`: another path ended it between the read and the write. */
+/**
+ * What one attempt to end a member's yes did. `lost_race`: the write found nothing the locked snapshot saw — every withdrawal
+ * path holds `lockMemberWaYes` from snapshot to write, so only a writer that skips the lock reaches it; the guard stays for that.
+ */
 type EndMemberYesOutcome = 'ended' | 'nothing_to_end' | 'lost_race';
 
 /**
@@ -545,7 +550,8 @@ type EndMemberYesOutcome = 'ended' | 'nothing_to_end' | 'lost_race';
  * Nothing to end (⛔
  * ACTIVE row, ⛔ open consent) ⇒ ⛔ write, ⛔ audit. Snapshot: an ACTIVE row ⇒ `ACTIVE → toState`; else the newest row's state
  * on both sides (an auditor reads "consent closed, state unchanged"). A fault after the audit line ⇒ a compensating
- * `_rolled_back` line, rethrown; a lost race (`{ null, 0 }`) ⇒ the compensation and `lost_race` — ⛔ a fault, ⛔ alarm.
+ * `_rolled_back` line, rethrown; a lost race (`{ null, 0 }` — reachable only past an unlocked writer) ⇒ the compensation and
+ * `lost_race` — ⛔ a fault, ⛔ alarm.
  */
 async function endMemberWaYes(
   deps: WaWebhookProcessorDeps,
@@ -721,7 +727,9 @@ export async function registerWaWebhookProcessorCron(
   const cron = opts.cron ?? DEFAULT_WA_WEBHOOK_PROCESSOR_CRON;
   const tz = opts.tz ?? WA_WEBHOOK_PROCESSOR_TZ;
   await boss.createQueue(QUEUE_NAMES.WA_WEBHOOK_PROCESSOR);
-  await boss.work(QUEUE_NAMES.WA_WEBHOOK_PROCESSOR, async (jobs: Job[]) => {
+  // Story 5.12 (second review P2) — ONE tick at a time: boot.ts sizes this processor's own pool for one tick's peak (a locked
+  // transaction + its audit line). pg-boss's default is 1; it is stated so a change is a visible decision.
+  await boss.work(QUEUE_NAMES.WA_WEBHOOK_PROCESSOR, { localConcurrency: 1 }, async (jobs: Job[]) => {
     try {
       const result = await runWaWebhookProcessorTick(deps);
       return { jobs: jobs.length, ...result };

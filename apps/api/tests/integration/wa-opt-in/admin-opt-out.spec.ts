@@ -11,11 +11,13 @@
 //     consent, ONE admin_action line (actor = the admin) on both rows; a legacy EXPIRED-with-consent alone ⇒ 200, state unchanged.
 //
 // Admin auth mirrors channel-config.spec.ts (fake WebAuthn passkey enroll + login + authenticate). The opt-in
-// + consent rows are seeded directly (RLS bypassed under the test login). Fresh random ids per test;
+// + consent rows are seeded directly (RLS bypassed under the test login) — except the AC3 leg's ACTIVE yes, which the domain
+// write functions create (second review P9). Fresh random ids per test;
 // audit_log_entries is append-only + own-committing, so assertions key on MEMBERSHIP, never counts.
 
 import { randomUUID } from 'node:crypto';
 
+import { consent, ids, waOptIn } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
@@ -220,6 +222,35 @@ describe.skipIf(!hasDatabase)('Trustee admin_action WA opt-out (Story 5.4)', () 
     return rows[0]!.opt_in_id;
   }
 
+  /**
+   * Opt in through the domain write functions (second review P9) — `createPendingOptIn`, then the same domain calls the
+   * worker's match makes (`recordConsent` + `activateOptIn`) in one transaction; ⛔ a raw INSERT of an ACTIVE row. (The mint
+   * route needs a member identity this spec does not seed; `wa-opt-in.spec.ts`'s `optInThroughMint` drives it.)
+   */
+  async function optInThroughDomainWrites(pariwarId: string, memberId: string): Promise<string> {
+    const pid = ids.pariwarId(pariwarId);
+    const mid = ids.memberId(memberId);
+    return deps.db.transaction(async (tx) => {
+      const pending = await waOptIn.createPendingOptIn(tx, { pariwarId: pid, memberId: mid, mobileBlindIndex: `blind-${memberId}` });
+      const consentId = ids.consentId(randomUUID());
+      await consent.recordConsent(tx, {
+        pariwarId: pid,
+        subjectId: memberId,
+        consentType: 'whatsapp_opt_in',
+        grantedViaActor: 'member_self',
+        consentPayload: { source: 'meta_webhook_inbound' },
+        consentId,
+      });
+      await waOptIn.activateOptIn(tx, {
+        pariwarId: pid,
+        optInId: ids.memberWaOptInId(pending.optInId),
+        windowExpiresAt: new Date(Date.now() + 24 * 3600 * 1000),
+        consentId,
+      });
+      return pending.optInId;
+    });
+  }
+
   const consentRows = async (pariwarId: string, memberId: string) =>
     (
       await td.pool.query<{ revoked_audit_id: string | null }>(
@@ -232,7 +263,7 @@ describe.skipIf(!hasDatabase)('Trustee admin_action WA opt-out (Story 5.4)', () 
     const pariwarId = randomUUID();
     const memberId = randomUUID();
     await seedLegacyYes(pariwarId, memberId);
-    const optInId = await seedActiveOptIn(pariwarId, memberId);
+    const optInId = await optInThroughDomainWrites(pariwarId, memberId);
     const { client, userId } = await authenticate();
     await grantPariwarAdmin(userId, pariwarId);
 
@@ -247,6 +278,12 @@ describe.skipIf(!hasDatabase)('Trustee admin_action WA opt-out (Story 5.4)', () 
     expect(lines.rows).toHaveLength(1);
     expect(lines.rows[0]!.actor_id).toBe(userId);
     expect(await consentRows(pariwarId, memberId)).toEqual([lines.rows[0]!.audit_id, lines.rows[0]!.audit_id]);
+    // The yes is gone by every read the senders use (AC3).
+    const pid = ids.pariwarId(pariwarId);
+    const mid = ids.memberId(memberId);
+    expect(await consent.consentExists(deps.db, pid, mid, 'whatsapp_opt_in')).toBe(false);
+    expect(await waOptIn.isPeerMeshWaReminderOptedIn(deps.db, { pariwarId: pid, memberId: mid })).toBe(false);
+    expect(await waOptIn.isOptInActive(deps.db, { pariwarId: pid, memberId: mid })).toBe(false);
   });
 
   it('⭐ Story 5.12 AC5 — a legacy EXPIRED with an open consent alone ⇒ 200 { state: EXPIRED_24H_WINDOW }, the consent closed', async () => {

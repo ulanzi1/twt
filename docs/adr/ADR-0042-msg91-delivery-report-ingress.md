@@ -189,6 +189,20 @@ Load-bearing details:
   on that number; ONE WhatsApp per ladder, ever — a DB UNIQUE), and the start-burst alarm still bounds it WHICHEVER sweep starts the
   ladders: the new quarter-hourly WhatsApp sweep starts most ladders and runs the SAME start tail (6.37d AC4). The Panel was TOLD on
   2026-10-20 (a "told" item, ⛔ a ruling — `trustee-panel-told-2026-10-20-6-37d-whatsapp-and-forged-reports.md`, sent by BigDev). The deferred-work line on the forged report is annotated.
+  ⚠ **Dated note, 2026-10-20 (b) (Story 6.37d code review round 2 — [Decision 2026-10-20-369](../../.decision-log.md#decision-2026-10-20-369)
+  decision 5; no word above rewritten):** *"ONE WhatsApp per ladder, ever — a DB UNIQUE"* above bounds the send RECORD, ⛔ the message: under
+  [`-366`](../../.decision-log.md#decision-2026-10-19-366) decision 2 (as 6.31 uses it) a post-send 500 / 503 is treated as unsent and
+  retried, so a forged `undelivered` can, where Meta had in fact acted, cause the SAME reminder to reach the claimant TWICE: since
+  [`-370`](../../.decision-log.md#decision-2026-10-20-370) decision 1 as corrected by [`-371`](../../.decision-log.md#decision-2026-10-20-371)
+  (migration 0176) a follow-up makes at most TWO sends Meta may have acted on, EVER — at most two copies can reach the claimant (before
+  it, a retry deferred overnight or a lapsed row re-taken by a new job started a fresh retry budget — unbounded). The
+  per-person bound *"one ladder at a time"* (above, and the earlier dated note) holds PER CHASE: a person can have a correction ladder and
+  a certificate ladder running at once (`claim_contact_ladders_running_uq` is `(claim_case_id, chase, person_key)`), hence up to one
+  WhatsApp step per chase. The told item's *"Meta has approved the message (the go-live list's row 36)"* (⛔ this ADR's words — the earlier
+  note says *"its claim template provisioned (roster Row 36)"*) is Meta's own refusal of an unapproved template, ⛔ a Row 36 check (its
+  UTILITY leg (c) was dropped by `-367` decision 4 as a recorded risk). *"⛔ a nominee"* means ⛔ a nominee AS a nominee — a nominee who is
+  the claimant is reached as the claimant (`-367` PQ1 A). A corrective "told" item is WRITTEN
+  (`trustee-panel-told-2026-10-20b-6-37d-forgery-bound-correction.md`) — ⛔ "told" until BigDev sends it.
 - **Performance / cost.** One insert per report on the api; one primary-key lookup and one upsert per report in jobs. No per-request
   secret read.
 - **Failure modes accepted.**

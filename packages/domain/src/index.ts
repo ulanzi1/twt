@@ -506,4 +506,4 @@ export * as trusteeLite from './trustee-lite/index.js';
 // ⚠ It is also a DECLARED DEVIATION from §1.7, which names a code file as the definition medium. See
 // ADR-0037 and ESCALATION 1 — architecture is amended by proposal, never by a story's convenience.
 export * as customFields from './custom-fields/index.js';
-export { UUID_REGEX } from './db.js';
+export { DEFAULT_POOL_CONNECTION_TIMEOUT_MS, UUID_REGEX } from './db.js';

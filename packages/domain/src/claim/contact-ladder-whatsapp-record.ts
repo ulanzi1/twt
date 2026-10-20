@@ -92,6 +92,19 @@ export const CONTACT_LADDER_WA_PAGE_CAP = 1000;
 export const CONTACT_LADDER_WA_MAINTENANCE_BATCH = 200;
 /** WS11 (2) — a block-coded failed status is matched to the Pariwar's claim sends of the last this-many days. */
 export const CONTACT_LADDER_WA_ISOLATION_DAYS = 7;
+/**
+ * Decisions 2026-10-20-370 / -371 — at most this many sends Meta MAY have acted on (a post-send 5xx after the connection opened) per
+ * send row, EVER: so at most this many copies can reach the claimant. ⚠ LOCKSTEP with 0176's CHECK.
+ */
+export const CONTACT_LADDER_WA_MAX_SENDS = 2;
+
+/**
+ * `-371` — a post-send transient Meta MAY have acted on: `api_unavailable:<5xx>` other than `api_unavailable:000` (a connection that
+ * never opened — `-366` d1). A `rate_limited:*` (429 / a rate-limit code) is a refusal, ⛔ a send.
+ */
+export function isContactLadderWaAmbiguousTransient(detail: string): boolean {
+  return detail.startsWith('api_unavailable:') && detail !== 'api_unavailable:000';
+}
 
 type Queryable = Pick<pg.Pool, 'query'> | Pick<pg.PoolClient, 'query'>;
 
@@ -534,7 +547,7 @@ export interface ContactLadderWaRowRef {
 export async function markContactLadderWhatsappInFlight(
   db: Db,
   input: ContactLadderWaRowRef & { readonly leaseMarginMs: number; readonly now: Date },
-): Promise<'marked' | 'lost'> {
+): Promise<'marked' | 'lost' | 'capped'> {
   if (!(input.leaseMarginMs > 0 && input.leaseMarginMs < CONTACT_LADDER_WA_LEASE_MS)) {
     throw new Error(`[contact-ladder-whatsapp] leaseMarginMs must be inside (0, ${String(CONTACT_LADDER_WA_LEASE_MS)})`);
   }
@@ -550,8 +563,18 @@ export async function markContactLadderWhatsappInFlight(
        AND claimed_by_job = ${input.jobId}
        AND send_started_at IS NULL
        AND claimed_at > ${notBefore}
+       AND send_count < ${CONTACT_LADDER_WA_MAX_SENDS}
     RETURNING send_id`);
-  return (result.rows?.length ?? 0) > 0 ? 'marked' : 'lost';
+  // `-370` / `-371` — the marker refuses a row whose ambiguous sends are spent (the post-send path finishes such a row before it can
+  // come back; this conjunct is the backstop, 0176's CHECK the last one). The COUNT is taken at the post-send note (`-371`).
+  if ((result.rows?.length ?? 0) > 0) return 'marked';
+  // `capped` ≠ `lost`: THIS job still holds the unmarked row but its ambiguous sends are spent (a backstop — the post-send path
+  // finishes such a row first) — the caller finishes it at once instead of burning retries on a lease it never lost.
+  const held = await db.execute<{ capped: boolean }>(sql`
+    SELECT send_count >= ${CONTACT_LADDER_WA_MAX_SENDS} AS capped FROM claim_contact_wa_sends
+     WHERE pariwar_id = ${input.pariwarId} AND send_id = ${input.sendId}::uuid AND send_outcome = 'attempting'
+       AND claimed_by_job = ${input.jobId} AND send_started_at IS NULL`);
+  return held.rows?.[0]?.capped === true ? 'capped' : 'lost';
 }
 
 /**
@@ -582,9 +605,11 @@ export async function noteContactLadderWhatsappTransient(
 ): Promise<boolean> {
   assertDetail(input.detail);
   const marker = input.phase === 'pre_send' ? sql`send_started_at IS NULL` : sql`send_started_at IS NOT NULL`;
+  // `-371` — a post-send transient Meta MAY have acted on is COUNTED here (⛔ a 429, ⛔ a connection that never opened).
+  const counted = input.phase === 'post_send' && isContactLadderWaAmbiguousTransient(input.detail) ? 1 : 0;
   const result = await db.execute<{ send_id: string }>(sql`
     UPDATE claim_contact_wa_sends
-       SET detail = ${input.detail}, send_started_at = NULL, updated_at = clock_timestamp()
+       SET detail = ${input.detail}, send_started_at = NULL, send_count = send_count + ${counted}, updated_at = clock_timestamp()
      WHERE pariwar_id = ${input.pariwarId}
        AND send_id = ${input.sendId}::uuid
        AND send_outcome = 'attempting'
@@ -616,6 +641,39 @@ export async function finishContactLadderWhatsappExhausted(
        AND send_outcome = 'attempting'
        AND claimed_by_job = ${input.jobId}
        AND ${marker}
+    RETURNING send_id`);
+  return (result.rows?.length ?? 0) > 0;
+}
+
+/**
+ * ⭐ Decisions 2026-10-20-370 / -371 — the SEND CAP. `post_send` (the default): a post-send transient Meta MAY have acted on, on a
+ * row that already counts `MAX - 1` such sends ⇒ FINISH it `may_have_sent:send_cap`, counting this one (⛔ a further call, whichever
+ * job or day); the marker STAYS set (0172's CHECK — a `may_have_sent` row carries it). ⛔ Matches a non-ambiguous transient or a row
+ * below the cap — the caller then notes it (or finishes it exhausted) as before. `at_marker`: the marker answered `capped` (a
+ * backstop) — the finish SETS the marker field, ⛔ a call. `first_detail` keeps the transient noted before the finish (the first
+ * ambiguous send's, on the post-send path).
+ */
+export async function finishContactLadderWhatsappSendCapped(
+  db: Db,
+  input: ContactLadderWaRowRef & { readonly transient: string; readonly phase?: 'post_send' | 'at_marker' },
+): Promise<boolean> {
+  assertDetail(input.transient);
+  const atMarker = input.phase === 'at_marker';
+  if (!atMarker && !isContactLadderWaAmbiguousTransient(input.transient)) return false;
+  const detail = contactLadderWaDetail('may_have_sent', 'send_cap');
+  const marker = atMarker ? sql`send_started_at IS NULL` : sql`send_started_at IS NOT NULL`;
+  const reached = atMarker ? sql`send_count >= ${CONTACT_LADDER_WA_MAX_SENDS}` : sql`send_count >= ${CONTACT_LADDER_WA_MAX_SENDS - 1}`;
+  const result = await db.execute<{ send_id: string }>(sql`
+    UPDATE claim_contact_wa_sends
+       SET send_outcome = 'may_have_sent', send_started_at = COALESCE(send_started_at, clock_timestamp()),
+           send_count = ${atMarker ? sql`send_count` : sql`send_count + 1`},
+           first_detail = COALESCE(first_detail, detail, ${input.transient}), detail = ${detail}, updated_at = clock_timestamp()
+     WHERE pariwar_id = ${input.pariwarId}
+       AND send_id = ${input.sendId}::uuid
+       AND send_outcome = 'attempting'
+       AND claimed_by_job = ${input.jobId}
+       AND ${marker}
+       AND ${reached}
     RETURNING send_id`);
   return (result.rows?.length ?? 0) > 0;
 }

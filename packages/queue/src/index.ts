@@ -443,7 +443,7 @@ export const QUEUE_NAMES = {
   /**
    * The claimant's WHATSAPP STEP sweep (Story 6.37d, AC4; `2026-10-17-350` ruling 2 (1), `-357`, `2026-10-20-368` Q1 A) — every
    * 15 minutes IST, AROUND THE CLOCK, its OWN queue. After the cross-tenant role guard it FIRST finishes in-flight send rows
-   * whose lease lapsed (`may_have_sent:lease_lapsed`), THEN STARTS ladders for reports received in the last two hours (the SAME
+   * whose lease lapsed (`may_have_sent:lease_lapsed`), THEN STARTS ladders for reports received in the last eight hours — `-370` (the SAME
    * start as the 10:00 sweep, ⛔ `advance`) and runs LD13's start tail, THEN — only inside 09:00–20:00 IST — enqueues one
    * CLAIM_CONTACT_LADDER_WA_SEND child per due step (SQL only — ⛔ HMAC, ⛔ decrypt). ⛔ Never `dispatch()`, ⛔ never an SMS. Job
    * class C.

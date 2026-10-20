@@ -23,7 +23,8 @@
 //       changes only as a FILL; `awaiting_determination` while a correction has superseded it;
 //   W7  the creating write needs the agreement, the complete allowed set and one claimant side;
 //   W8  the agreement is repointed on every member write, and on a helpline `agreed` inside the member's
-//       window or over a REVOKED/missing agreement — otherwise ignored, and the result says so;
+//       window or over a REVOKED/missing agreement — or (Decision 2026-10-20-369) a live one that does ⛔ cover
+//       the claimant the write leaves — otherwise ignored, and the result says so;
 //   W9  `locale` follows every write inside the member's window; provenance is the creating write's.
 
 import { and, eq, sql } from 'drizzle-orm';
@@ -131,7 +132,7 @@ export interface WriteClaimContactResult {
   readonly created: boolean;
   /** A fresh `claim_contact_agreement` was recorded and the row repointed at it (W7/W8). */
   readonly agreementRecorded: boolean;
-  /** A helpline `agreed` over a live agreement outside the member's window — a confirmation, ⛔ not data (W8). */
+  /** A helpline `agreed` over a live agreement that covers the claimant, outside the member's window — a confirmation, ⛔ not data (W8). */
   readonly agreementIgnored: boolean;
   /** Story 6.37d (WS2 (iii)): `agreementIgnored` AND the agreement on file is a version that does ⛔ name WhatsApp —
    *  the tick did not move the claim onto the new wording (WS3). Always `false` when `agreementIgnored` is. */
@@ -387,6 +388,31 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
     }
   }
 
+  // Review R3 (2026-10-20), as corrected by Decision 2026-10-20-369 decision 2 — `claimantGeneration` moves only on a
+  // REAL claimant change: a different nominee version, a switch between a version and the block, or a block whose
+  // decrypted content differs (an add-only (b) FILL of a non-effective version always differs). An identical re-send
+  // leaves it, so the live agreement keeps covering the claimant it was given for.
+  let claimantChanged = false;
+  if (writeSide) {
+    const storedVersion = stored.claimantNomineeVersionId as string | null;
+    if (claimantVersion !== undefined) claimantChanged = claimantVersion !== storedVersion;
+    else if (storedVersion !== null) claimantChanged = true;
+    else {
+      // Round-2 fix-diff review — a stored block that cannot be decrypted (or a KMS blip) must ⛔ fail the write that would
+      // repair it: an undecidable comparison counts as a CHANGE (the safe direction — WhatsApp then waits for a fresh tick).
+      try {
+        claimantChanged = !(
+          (await sameAs(stored.claimantNameCiphertext!, block!.name)) &&
+          (await sameAs(stored.claimantMobileCiphertext!, block!.mobile)) &&
+          (await sameAs(stored.claimantAddressCiphertext!, block!.address))
+        );
+      } catch {
+        claimantChanged = true;
+      }
+    }
+  }
+  const nextClaimantGeneration = claimantChanged ? stored.claimantGeneration + 1 : stored.claimantGeneration;
+
   // W8 — the agreement.
   let recordFresh = false;
   let agreementIgnored = false;
@@ -397,8 +423,11 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
     if (!addOnly) {
       recordFresh = true;
     } else {
+      // Decision 2026-10-20-369 decision 1 — a live agreement that does ⛔ cover the claimant THIS write leaves (its
+      // generation behind) counts as MISSING, like a revoked one: the tick records a fresh agreement. Otherwise it is a
+      // confirmation, ⛔ data.
       const agreement = await readClaimContactAgreementState(db, input.pariwarId, stored.agreementConsentId);
-      if (agreement === 'live') {
+      if (agreement === 'live' && stored.agreementClaimantGeneration === nextClaimantGeneration) {
         agreementIgnored = true;
         agreementOnFileEarlierWording = !(await agreementOnFileNamesWhatsapp(db, input.pariwarId, stored.agreementConsentId));
       } else recordFresh = true;
@@ -409,12 +438,9 @@ export async function writeClaimContact(db: Db, input: WriteClaimContactInput): 
   const set: Partial<typeof claimContacts.$inferInsert> = {};
   if (writeSide) Object.assign(set, await claimantColumns(input.crypto, claimantVersion, block));
   if (recordFresh) set.agreementConsentId = (await input.recordAgreement(deceased)) as never;
-  // Review R3 (2026-10-20) — `claimantGeneration` bumps on EVERY claimant-side write (a nominee swap or a block-content
-  // change alike; two different blocks never differ by kind). `agreementClaimantGeneration` is stamped from the SAME
-  // write's resulting generation, never read back — a fresh agreement always covers the claimant this write leaves in
-  // place, whether or not this write also happened to change that claimant.
-  const nextClaimantGeneration = writeSide ? stored.claimantGeneration + 1 : stored.claimantGeneration;
-  if (writeSide) set.claimantGeneration = nextClaimantGeneration;
+  // `agreementClaimantGeneration` is stamped from the SAME write's resulting generation, never read back — a fresh
+  // agreement always covers the claimant this write leaves in place.
+  if (claimantChanged) set.claimantGeneration = nextClaimantGeneration;
   if (recordFresh) set.agreementClaimantGeneration = nextClaimantGeneration;
   if (!addOnly) set.contactLocale = input.locale; // W9
   let rowsWritten = 0;

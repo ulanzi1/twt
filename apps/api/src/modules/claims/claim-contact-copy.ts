@@ -12,16 +12,18 @@
 // (`packages/domain/src/claim/claim-contact-agreement-copy.ts`) so the WhatsApp basis reader can read what a
 // recorded version names; this module re-exports it, and the api's imports are unchanged.
 //
-// ⚠⭐ GO-LIVE GATED — PENDING STORY 0.13 (counsel's M: whether the filer may agree for the nominees and the
-// claimant, whether the agreement may be a condition of approval, whether it must be withdrawable; launch-gate
-// row 18). The version string carries the marker so every row written before counsel's return is identifiable.
+// ⚠⭐ GO-LIVE GATED — PENDING STORY 0.13 (launch-gate row 18; the version string carries the marker so every row
+// written before counsel's return is identifiable). Since Story 6.37d v2 the agreement is the CLAIMANT's own, in the
+// first person (`-367` decision 2, `-368` Q2 A); counsel's question 3 asks whether it is a sufficient basis for texts,
+// WhatsApp, calls and post to the claimant (roster Row 36 (b)). v1's words — the filer agreeing for the nominees and
+// the claimant — stay in the registry as evidence only.
 
 import type { ClaimContactLocale } from '@twt/contracts';
 import { claim } from '@twt/domain';
 
 /** The version recorded on every `claim_contact_agreement` row. Bump it (⛔ never edit in place) when the copy
  *  changes — a row must always be explicable by the text its version names. */
-export const CLAIM_CONTACT_AGREEMENT_COPY_VERSION: string = claim.CLAIM_CONTACT_AGREEMENT_COPY_VERSION;
+export const CLAIM_CONTACT_AGREEMENT_COPY_VERSION = claim.CLAIM_CONTACT_AGREEMENT_COPY_VERSION; // round 2 (P16) — the domain's type, ⛔ widened
 
 /** The canonical agreement copy for a locale (the evidence text). */
 export function resolveClaimContactAgreementCopy(locale: ClaimContactLocale): string {

@@ -342,7 +342,9 @@ export async function runContactLadderSweep(deps: ContactLadderDeps, boss: Enque
 export async function raiseLadderStartAlarms(deps: Pick<ContactLadderDeps, 'pool' | 'onAlarm'>, tally: Tally): Promise<void> {
   const alarm = alarmOf(deps);
   // Round-2 P25 — AC11's burst is per Pariwar per IST DAY, ⛔ per run: the day's count is read from the table (a retried
-  // or second run the same day adds to it), and the alarm fires on the run whose starts CROSS the threshold — once a day.
+  // or second run the same day adds to it). Since Story 6.37d review R6 the alarm fires on EVERY run that starts a ladder
+  // while the day is at or past the threshold — it REPEATS (up to every quarter-hourly tick), ⛔ "once a day"; a duplicate
+  // is accepted over a silent miss.
   if (tally.startedByPariwar.size > 0) {
     // A failed count ⛔ fails the tick (its work is committed — a retry would start nothing and alarm nothing): it falls
     // back to this run's own starts, and says so.

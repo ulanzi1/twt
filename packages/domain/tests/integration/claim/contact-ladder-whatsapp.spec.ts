@@ -11,12 +11,14 @@ import {
   CLAIM_CONTACT_AGREEMENT_COPY_VERSION,
   CONTACT_LADDER_WA_LEASE_MS,
   beginContactLadderWhatsapp,
+  beginCorrectionLadderSend,
   claimCorrectionReminder,
   currentCorrectionNumberHash,
   finaliseContactLadderWhatsapp,
   finaliseCorrectionReminder,
   finishContactLadderWhatsappExhausted,
   finishContactLadderWhatsappNoTarget,
+  finishContactLadderWhatsappSendCapped,
   finishLapsedInFlightContactLadderWhatsapp,
   hasRecentClaimContactWaSendTo,
   insertClaimContactWaStop,
@@ -36,7 +38,7 @@ import { bindScopedDb } from '../../../src/db.js';
 import { addCalendarDays } from '../../../src/cycle-calendar/holiday-resolver.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
-import { ENC, asSuperuser, returnedClaim, type Client, type Returned, type Tx } from './_correction-closure-fixture.js';
+import { ENC, asSuperuser, resubmit, returnedClaim, type Client, type Returned, type Tx } from './_correction-closure-fixture.js';
 
 const NEXT_MORNING = new Date('2099-01-01T03:30:00.000Z');
 
@@ -170,6 +172,32 @@ async function sendRowOf(client: Client, s: Setup) {
   return rows[0] ?? null;
 }
 
+/** The ladder's SMS 2 re-check (the 10:00 run's begin) on its due date — the path that ENDS a ladder on a delivered WhatsApp. */
+function smsTwo(client: Client, s: Setup) {
+  return beginCorrectionLadderSend(client, {
+    pariwarId: PARIWAR_A,
+    claimCaseId: s.c.cid,
+    ladderId: s.ladderId,
+    step: 2,
+    sentOn: addCalendarDays(s.c.day0, 2),
+    jobId: 'sms2-job',
+    now: new Date(),
+    crypto: ENC,
+  });
+}
+
+/** Review R2 — a later write moves the claim's claimant onto the BLOCK: the ladder's nominee is ⛔ the claimant any more. */
+async function claimantMovesToBlock(client: Client, s: Setup): Promise<void> {
+  await asSuperuser(client, () =>
+    client.query(
+      `UPDATE claim_contacts SET claimant_nominee_version_id = NULL, claimant_name_ciphertext = 'enc:v1:block-name',
+         claimant_mobile_ciphertext = 'enc:v1:block-mobile', claimant_address_ciphertext = 'enc:v1:block-address'
+        WHERE claim_case_id = $1`,
+      [s.c.cid],
+    ),
+  );
+}
+
 const begun = (r: BeginContactLadderWhatsappResult) => {
   if (r.kind !== 'begun') throw new Error(`expected begun, got ${JSON.stringify(r)}`);
   return r;
@@ -254,6 +282,25 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       expect([l.state, l.whatsappStep]).toEqual(['ended_call', 'pending']);
     });
 
+    it('⭐ AC5 (2) — a correction RESUBMITTED before the step is due (11:00) ⇒ the chase stops: ⛔ WhatsApp at 14:00, ⛔ send row, the step left `pending`', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      await resubmit(client, tx, s.c);
+      expect(await begin(client, s)).toEqual({ kind: 'ended', state: 'ended_stopped', detail: 'stopped:resubmitted', finishedRow: false });
+      expect(await sendRowOf(client, s)).toBeNull();
+      const l = (await readContactLadder(tx, PARIWAR_A, s.ladderId))!;
+      expect([l.state, l.endDetail, l.whatsappStep]).toEqual(['ended_stopped', 'stopped:resubmitted', 'pending']);
+    });
+
+    it('⭐ R2 — the person is ⛔ the claimant any more (a later write moved the claimant) ⇒ `skipped:no_longer_claimant` on the FIRST visit (⛔ send row)', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      await claimantMovesToBlock(client, s);
+      expect(await begin(client, s)).toEqual({ kind: 'skipped', reason: 'no_longer_claimant', where: 'step' });
+      expect(await stepOf(tx, s)).toBe('skipped:no_longer_claimant');
+      expect(await sendRowOf(client, s)).toBeNull();
+    });
+
     it('a ladder ⛔ running on a first visit ⇒ noop (⛔ write)', async () => {
       const { client, tx } = getTx();
       const s = await setup(client, tx);
@@ -306,6 +353,16 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       expect(await sendRowOf(client, s)).toMatchObject({ send_outcome: 'skipped', detail: 'skipped:old_wording', first_detail: 'hash_failed:tier1', send_started_at: null });
     });
 
+    it('⭐ R2 — the claimant moved while a claimed row waited ⇒ the RE-TAKE finishes the row `skipped:no_longer_claimant` (⛔ send)', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      begun(await begin(client, s));
+      await claimantMovesToBlock(client, s);
+      expect(await begin(client, s, { jobId: 'job-1' })).toEqual({ kind: 'skipped', reason: 'no_longer_claimant', where: 'row' });
+      expect(await stepOf(tx, s)).toBe('sent');
+      expect(await sendRowOf(client, s)).toMatchObject({ send_outcome: 'skipped', detail: 'skipped:no_longer_claimant', send_started_at: null });
+    });
+
     it('⭐ the ladder ended while a re-taken row waited ⇒ the row finished `skipped:ended`', async () => {
       const { client, tx } = getTx();
       const s = await setup(client, tx);
@@ -325,12 +382,59 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       await finaliseContactLadderWhatsapp(client, { pariwarId: PARIWAR_A, sendId: r.sendId, jobId: 'job-1', outcome: 'accepted', providerMessageId: 'wamid.END1' });
       expect((await sendRowOf(client, s))!.delivered_at).toBeNull();
       await client.query(`INSERT INTO whatsapp_send_status (wamid, pariwar_id, state, meta_status) VALUES ('wamid.END1', $1, 'delivered', 'read')`, [PARIWAR_A]);
-      expect(await settleContactLadderWhatsappDeliveries(db, PARIWAR_A, [s.ladderId])).toEqual(new Set([s.ladderId]));
+      // Round 2 (P5) — the END itself, through the REAL re-check the ladder's SMS 2 runs (its settle copies the status
+      // store's delivery, then `ladderEndReason` ends the ladder) — ⛔ a fixture write of the state.
+      expect(await smsTwo(client, s)).toEqual({ kind: 'ended', state: 'ended_delivered', detail: 'delivered:whatsapp' });
       expect((await sendRowOf(client, s))!.delivered_at).not.toBeNull();
+      const l = (await readContactLadder(tx, PARIWAR_A, s.ladderId))!;
+      expect([l.state, l.endDetail, l.sms2State]).toEqual(['ended_delivered', 'delivered:whatsapp', 'pending']);
     });
   });
 
   describe('WS8 (ii) / (iv) — the marker, the release, the notes, the finalise', () => {
+    it('⭐ -370 / -371 — the cap counts only sends Meta MAY have acted on: a 429 and a never-opened connection are ⛔ counted; the SECOND 503 finishes the row `may_have_sent:send_cap` (the marker kept, first_detail the first ambiguous send\'s note)', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      const r = begun(await begin(client, s));
+      const db = bindScopedDb(client);
+      const ref = { pariwarId: PARIWAR_A, sendId: r.sendId, jobId: 'job-1' };
+      const mark = () => markContactLadderWhatsappInFlight(db, { ...ref, leaseMarginMs: 60_000, now: new Date() });
+      const note = (detail: string) => noteContactLadderWhatsappTransient(db, { ...ref, detail, phase: 'post_send' });
+      const capped = (transient: string) => finishContactLadderWhatsappSendCapped(db, { ...ref, transient });
+      const count = async () =>
+        (await client.query<{ send_count: number }>(`SELECT send_count FROM claim_contact_wa_sends WHERE send_id = $1`, [r.sendId])).rows[0]!.send_count;
+      for (const unsent of ['rate_limited:130429', 'api_unavailable:000']) {
+        expect(await mark()).toBe('marked');
+        expect(await capped(unsent)).toBe(false);
+        expect(await note(unsent)).toBe(true);
+      }
+      expect(await count()).toBe(0);
+      expect(await mark()).toBe('marked');
+      expect(await capped('api_unavailable:503')).toBe(false); // the FIRST ambiguous send — below the cap
+      expect(await note('api_unavailable:503')).toBe(true);
+      expect(await count()).toBe(1);
+      expect(await mark()).toBe('marked');
+      expect(await capped('api_unavailable:500')).toBe(true);
+      expect(await count()).toBe(2);
+      const row = (await sendRowOf(client, s))!;
+      expect(row).toMatchObject({ send_outcome: 'may_have_sent', detail: 'may_have_sent:send_cap', first_detail: 'api_unavailable:503' }); // the note before the finish — the FIRST ambiguous send
+      expect(row.send_started_at).not.toBeNull();
+    });
+
+    it('⭐ -370 backstop — a row whose ambiguous sends are SPENT while unmarked: the marker answers `capped` (⛔ `lost`), the at-marker finish records `may_have_sent:send_cap` with ⛔ call', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      const r = begun(await begin(client, s));
+      const db = bindScopedDb(client);
+      const ref = { pariwarId: PARIWAR_A, sendId: r.sendId, jobId: 'job-1' };
+      await asSuperuser(client, () => client.query(`UPDATE claim_contact_wa_sends SET send_count = 2 WHERE send_id = $1`, [r.sendId]));
+      expect(await markContactLadderWhatsappInFlight(db, { ...ref, leaseMarginMs: 60_000, now: new Date() })).toBe('capped');
+      expect(await finishContactLadderWhatsappSendCapped(db, { ...ref, transient: 'marker_lost:send_cap', phase: 'at_marker' })).toBe(true);
+      const row = (await sendRowOf(client, s))!;
+      expect(row).toMatchObject({ send_outcome: 'may_have_sent', detail: 'may_have_sent:send_cap' });
+      expect(row.send_started_at).not.toBeNull();
+    });
+
     it('⭐ the marker is ONE CAS: a second mark (a same-job-id twin) is `lost`; another job is `lost`; a lease with ⛔ margin left is `lost`', async () => {
       const { client, tx } = getTx();
       const s = await setup(client, tx);
@@ -428,12 +532,21 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       expect(await list(later)).toContain(taken.ladderId);
     });
 
-    it('⭐ a NULL anchor (the origin row gone) is listed — the child records `skipped:anchor_unknown` (I10)', async () => {
+    it('⭐ a NULL anchor (the origin row gone) is listed even when its origin was ⛔ yet due — the child records `skipped:anchor_unknown` (I10)', async () => {
       const { client, tx } = getTx();
-      const s = await setup(client, tx);
-      await asSuperuser(client, () => client.query(`UPDATE claim_contact_ladders SET origin_row_id = gen_random_uuid() WHERE ladder_id = $1`, [s.ladderId]).catch(() => undefined));
-      const list = (await asSuperuser(client, () => listDueContactLadderWhatsapp(client, { now: new Date(), after: null, allow: [PARIWAR_A] }))).map((d) => d.ladderId);
-      expect(list).toContain(s.ladderId);
+      const s = await setup(client, tx, { hoursAgo: 1 }); // origin + 4 h is still ahead ⇒ ⛔ listed while the anchor is known
+      const list = async () =>
+        (await asSuperuser(client, () => listDueContactLadderWhatsapp(client, { now: new Date(), after: null, allow: [PARIWAR_A] }))).map((d) => d.ladderId);
+      expect(await list()).not.toContain(s.ladderId);
+      await asSuperuser(client, async () => {
+        await client.query("SET LOCAL session_replication_role = 'replica'"); // the ladder's identity trigger freezes origin_row_id
+        const { rowCount } = await client.query(`UPDATE claim_contact_ladders SET origin_row_id = gen_random_uuid() WHERE ladder_id = $1`, [s.ladderId]);
+        expect(rowCount).toBe(1);
+        await client.query("SET LOCAL session_replication_role = 'origin'");
+      });
+      expect(await list()).toContain(s.ladderId);
+      expect(await begin(client, s)).toEqual({ kind: 'skipped', reason: 'anchor_unknown', where: 'step' });
+      expect(await stepOf(tx, s)).toBe('skipped:anchor_unknown');
     });
 
     it('⭐ the lapsed finisher: a MARKED row past the lease ⇒ `may_have_sent:lease_lapsed` (⛔ re-claimed); an unmarked one is left for the re-take', async () => {
@@ -477,6 +590,26 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
       const db = bindScopedDb(client);
       expect(await hasRecentClaimContactWaSendTo(db, { pariwarId: PARIWAR_A, recipientNumberHash: s.hash })).toBe(true);
       expect(await hasRecentClaimContactWaSendTo(db, { pariwarId: PARIWAR_A, recipientNumberHash: 'another-hash' })).toBe(false);
+    });
+
+    it('⭐ R5 — the 7-day window ages by `updated_at`: a row CREATED 10 days ago but touched now (a reclaim / finalise / status) still matches; touched 8 days ago it does ⛔', async () => {
+      const { client, tx } = getTx();
+      const s = await setup(client, tx);
+      const r = begun(await begin(client, s));
+      const db = bindScopedDb(client);
+      const age = (createdDays: number, updatedDays: number) =>
+        asSuperuser(client, async () => {
+          await client.query("SET LOCAL session_replication_role = 'replica'"); // the identity trigger freezes created_at
+          await client.query(
+            `UPDATE claim_contact_wa_sends SET created_at = now() - make_interval(days => $2), updated_at = now() - make_interval(days => $3) WHERE send_id = $1`,
+            [r.sendId, createdDays, updatedDays],
+          );
+          await client.query("SET LOCAL session_replication_role = 'origin'");
+        });
+      await age(10, 0);
+      expect(await hasRecentClaimContactWaSendTo(db, { pariwarId: PARIWAR_A, recipientNumberHash: s.hash })).toBe(true);
+      await age(10, 8);
+      expect(await hasRecentClaimContactWaSendTo(db, { pariwarId: PARIWAR_A, recipientNumberHash: s.hash })).toBe(false);
     });
 
     it('⭐ D22 — ladder 1 ended by a DELIVERED WhatsApp, ladder 2 in the same epoch CONCLUDES undelivered ⇒ the person is STILL reached (`reachedByLadderWhatsapp`)', async () => {
@@ -543,9 +676,20 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step: th
         ),
       );
       await recordClaimContactWaStatus(db, { pariwarId: PARIWAR_A, wamid: 'wamid.OTHERCHASE', status: 'delivered', errorCode: null });
+      // Round 2 (P5) — the correction ladder ENDS through its real re-check (⛔ a fixture write) …
+      expect(await smsTwo(client, s)).toEqual({ kind: 'ended', state: 'ended_delivered', detail: 'delivered:whatsapp' });
+      // … and the delivery is attributed per LADDER: the certificate ladder — with its OWN accepted, undelivered WhatsApp to the
+      // SAME number — sees ⛔ the correction ladder's delivery in its own settle (what ITS re-check reads).
+      const certificateLadderId = (await readClaimLadders(db, PARIWAR_A, s.c.cid, 'certificate'))[0]!.ladderId;
       await asSuperuser(client, () =>
-        client.query(`UPDATE claim_contact_ladders SET state = 'ended_delivered', ended_at = now(), end_detail = 'delivered:whatsapp' WHERE ladder_id = $1`, [s.ladderId]),
+        client.query(
+          `INSERT INTO claim_contact_wa_sends (ladder_id, pariwar_id, claim_case_id, chase, recipient_number_hash, template_name, locale,
+             send_outcome, claimed_at, claimed_by_job, aging_since, send_started_at, provider_message_id)
+           VALUES ($1, $2, $3, 'certificate', $4, 'claim_certificate_reminder_en', 'en', 'accepted', now(), 'job-cert', now(), now(), 'wamid.CERT-OWN')`,
+          [certificateLadderId, PARIWAR_A, s.c.cid, s.hash],
+        ),
       );
+      expect(await settleContactLadderWhatsappDeliveries(db, PARIWAR_A, [s.ladderId, certificateLadderId])).toEqual(new Set([s.ladderId]));
       const correctionLadders = await readClaimLadders(db, PARIWAR_A, s.c.cid, 'correction');
       expect(correctionLadders.map((l) => l.ladderId)).toEqual([s.ladderId]);
       expect(correctionLadders[0]!.state).toBe('ended_delivered');

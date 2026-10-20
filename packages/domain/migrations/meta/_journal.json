@@ -1219,6 +1219,20 @@
       "when": 1794541200018,
       "tag": "0174_claim-contact-agreement-claimant-generation",
       "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1794627600019,
+      "tag": "0175_claim-contact-wa-send-owner-fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 176,
+      "version": "7",
+      "when": 1794714000020,
+      "tag": "0176_claim-contact-wa-send-cap",
+      "breakpoints": true
     }
   ]
 }

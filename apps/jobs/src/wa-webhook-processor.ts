@@ -183,6 +183,11 @@ export interface WaWebhookProcessorDeps {
   readonly now?: () => Date;
   /** Stale-PENDING TTL override (seconds). */
   readonly pendingTtlSeconds?: number;
+  /**
+   * Story 6.37d round 2 (P4) — the alarm sink (ids only, ⛔ a number). Default `console.warn` — logs only until roster
+   * Row 32 (h) names a person, like every claim-contact alarm.
+   */
+  readonly onAlarm?: (message: string) => void;
 }
 
 // ── Loose Meta-payload narrowing (verify the shape at deploy time) ───────────────────────────────────────
@@ -314,6 +319,16 @@ async function processWebhookEventBody(
             }
           } catch (err) {
             console.error('[jobs] wa-webhook: claim-contact STOP failed to record (isolated)', err);
+            // Round 2 (P4, I8 / I10 — ⛔ silent): the drain marks an event processed AT CLAIM (at-most-once — F8), so ⛔ retry
+            // reaches this STOP again; the claimant stays eligible for claim WhatsApp until someone acts. Ids only.
+            try {
+              (deps.onAlarm ?? ((m: string): void => console.warn(m)))(
+                `[jobs] wa-webhook: contact_ladder.stop_unrecorded — a claim-contact STOP in Pariwar ${pariwarId} (inbound event ` +
+                  `${event.eventId}) could not be recorded and will ⛔ be retried; that number can still receive claim WhatsApp`,
+              );
+            } catch {
+              // ⛔ An alarm sink's own fault must never cost the member their STOP below.
+            }
           }
         }
         const blindIndex = await memberMobileBlindIndex(from, deps.enc);
@@ -420,6 +435,12 @@ async function processWebhookEventBody(
         // `claimOwned` false and letting a claim-send failure fall into the MEMBER block path below. Ownership is matched by
         // wamid (globally unique) or the recipient's claim-space hash — both self-scoping, needing ⛔ today's config to be
         // authoritative. Retain ownership across a configuration change instead of re-deriving it from `phone_number_id`.
+        // DELIBERATE (Decision 2026-10-20-369 decision 4 — `-367` decision 11 corrected as built): the STATUS branch has ⛔
+        // `metadata.phone_number_id` gate; only the STOP branch above keeps it. Accepted costs: a callback with a mismatched
+        // or absent `phone_number_id` can still write `delivered_at` / `failed_at` on THIS Pariwar's own wamid-matched row; and
+        // the hash fallback can claim a MEMBER send's block on a number that had a claim send in the last 7 days (that
+        // member's BLOCKED_BY_META is ⛔ recorded — a deferred item). RE-EXAMINE when: a Pariwar's webhook URL can carry
+        // another tenant's events, or row 5-12 / the `WA_BLOCK_ERROR_CODES` item reworks the member block path.
         let claimOwned = false;
         if (status.id && status.status) {
           const firstCode = (status.errors ?? []).find((e) => typeof e.code === 'number')?.code ?? null;

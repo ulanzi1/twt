@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { claim as claimDomain } from '@twt/domain';
+import { DEFAULT_POOL_CONNECTION_TIMEOUT_MS, claim as claimDomain } from '@twt/domain';
 import { QUEUE_NAMES } from '@twt/queue';
 import { describe, expect, it } from 'vitest';
 
@@ -97,7 +97,7 @@ describe('AC8 — the STOP recorder audits through the compensating helper ONLY'
 
 describe('WS8 (ii) — the lease, the marker and the jobs', () => {
   it('⭐ everything after the marker\'s lease sample < the handoff margin < the lease (a live send can ⛔ be finished `lease_lapsed`)', () => {
-    const POOL_CONNECT_TIMEOUT_MS = 10_000; // createDb's connectionTimeoutMillis (packages/domain/src/db.ts)
+    const POOL_CONNECT_TIMEOUT_MS = DEFAULT_POOL_CONNECTION_TIMEOUT_MS; // round 2 (P15) — the real default, ⛔ a copy
     const tail =
       claimDomain.CONTACT_LADDER_WA_MARKER_TIMEOUT_MS +
       CORRECTION_SEND_TIMEOUT_MS +

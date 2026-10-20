@@ -10,7 +10,7 @@
 // TENANT-ISOLATED; RLS in policies/claim-contact-ladder-rls.ts. ⛔ No number (a KEYED hash only), ⛔ no name.
 
 import { sql } from 'drizzle-orm';
-import { check, date, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, date, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import type { ClaimId, PariwarId } from '../ids/index.js';
 import { claims } from './claims.js';
@@ -87,6 +87,8 @@ export const claimContactLadders = pgTable(
   (t) => [
     uniqueIndex('claim_contact_ladders_running_uq').on(t.claimCaseId, t.chase, t.personKey).where(sql`"state" = 'running'`),
     uniqueIndex('claim_contact_ladders_origin_uq').on(t.chase, t.originRowId),
+    // Migration 0175 — the referenced key of `claim_contact_wa_sends_ladder_owner_fk` (trivially unique: `ladder_id` is the key).
+    unique('claim_contact_ladders_owner_uq').on(t.pariwarId, t.ladderId, t.claimCaseId, t.chase),
     index('claim_contact_ladders_state_conclude_idx').on(t.state, t.concludeOn),
     index('claim_contact_ladders_pariwar_claim_idx').on(t.pariwarId, t.claimCaseId),
     check('claim_contact_ladders_chase_check', sql`${t.chase} IN ('correction', 'certificate')`),

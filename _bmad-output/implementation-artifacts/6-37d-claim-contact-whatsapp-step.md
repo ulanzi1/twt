@@ -11,7 +11,7 @@ stated separately: (1) the pin is an ancestor of this branch (durable); (2) ever
 re-derived at `0e88ddd1` (perishable — re-check at Task 0.1: `git diff --name-only 0e88ddd1..origin/main -- apps packages scripts`).
 Re-locate by FUNCTION, ⛔ by number ([[feedback_story_validate_footguns]] #19, #21, #24).
 
-STATUS: `in-progress` — ⭐ **TASK 0 DONE (2026-10-20):** BigDev answered WS1–WS14 and PQ1–PQ3 (Debug Log (a)); the 6.37d entry is
+STATUS (⚠ the Task-0 snapshot — the LIVE status is the `Status:` line under the title; round 2, 2026-10-20): `in-progress` — ⭐ **TASK 0 DONE (2026-10-20):** BigDev answered WS1–WS14 and PQ1–PQ3 (Debug Log (a)); the 6.37d entry is
 Decision `2026-10-20-367` (`5ab99fc0`, committed ALONE); the records commit followed (the G3 roster row = **Row 36**, the routing note
 `trustee-panel-routing-note-2026-10-20-6-37d-whatsapp-edges.md` WRITTEN, ⛔ sent). ⭐ **Where `-367` changed this file, the `-367`
 OUTCOME block below governs** — read it before any WS / AC. Code may start (Tasks 1–10). ⚠ Row 6-37d is ⛔ `done` until the routing
@@ -54,7 +54,7 @@ rulings 1–6, `-352` Q1 / Q2, `-355` decisions 1–18, `-356` calls 1–3, `-36
 
 # Story 6.37d: When a reminder to the claimant is reported undelivered, the Trust tries WhatsApp four hours later — on the claimant's reworded filing agreement `[PRIMITIVE]`
 
-Status: done — code review v1.6/v1.7/v1.8 applied all 9 findings (R1–R9); GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]])
+Status: in-progress — code review ROUND 2 (2026-10-20): 23 of 24 patches applied, P2 open (Review Findings, round 2), then the fix-diff review's corrections and Decision `2026-10-20-370` (a two-send cap; an 8-hour start window); `done` only once AC12's `ci:local` is green on the round-2 patch (P2). v1.8's `done` was premature — R1–R6 had no committed regression leg and `ci:local` had not run after 0173 / 0174. GO-LIVE still fenced (roster Row 36 etc. — [[project_not_in_production_merge_is_not_golive]])
 
 > ## ⭐ `-367` OUTCOME — Task 0, 2026-10-20 (governs every earlier sentence it contradicts; the text below is kept as PROPOSED, ⛔ edited)
 >
@@ -84,6 +84,19 @@ Status: done — code review v1.6/v1.7/v1.8 applied all 9 findings (R1–R9); GO
 >   is REMOVED (supersedes `-352` Q1 B in part): v2 (first person, without the clause) is FINAL, the v3 contingency is MOOT. The
 >   first-person sentence was shown for information and drew no objection (it stays the author's wording). Counsel's question 3 now asks
 >   sufficiency only (Row 36 (b)).
+> - ⚠ **Dated note (2026-10-20, code review round 2 — P19): how `-368` reads against the build — the AUTHOR's readings, ⛔ ratified, ⛔ an
+>   edit of `-368`** (the decision log carries ⛔ dated notes — its corrections are new entries; a `-370` author entry if BigDev wants
+>   these there). (i) `-351` ruling 2's *"… or any other means of communication that may appear in future"* is narrowed WITH `-352`'s
+>   words — `-368`'s Decision-type parenthesis says so; its Consequence 3 (*"Nothing else … changes"*) is read as "nothing beyond the two
+>   supersessions and that parenthesis". (ii) `-250` #5's *"one message a day"* half ALSO gives way for this step, ⛔ only the 10:00 hour —
+>   option A's accepted cost as put: *"Two messages are SENT that day"*. (iii) *"for BOTH chases"* (`-368` settlement 1) is a reading: the
+>   certificate chase's 10:00 hour was itself the author's (`-259`, ⛔ ratified). (iv) WS12 — a delivered WhatsApp ends the follow-up — is
+>   in option A's cost as put but is ⛔ ruled by `-368`; it stays `-367` decision 12's reading of `-351` 4 A / `-360` Q1 A. (v) A report
+>   correlated LATE (outside the quarter-hourly start's 2-hour window) starts its ladder at the next 10:00 (deferred-work's late-correlator
+>   item) — in that slice the WhatsApp goes as option B would have it: a delivery-report latency, disclosed, ⛔ a narrowing of Q1 A.
+>   ⭐ *Superseded the same day:* these readings are in the decision log as `2026-10-20-370` decision 4 (as the author's; (iv) worded
+>   there as "whether option A's accepted cost ratifies WS12 is ⛔ recorded — treated as the author's reading"), and (v)'s slice is
+>   CLOSED by `-370` decision 2 (an 8-hour start window) except for reports settled more than 8 h late.
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 6.37c built the Panel's delivery ladder for the correction and certificate reminders
 > with its FIRST step — *"after SMS has been sent and not been delivered for 4 hours, send message over WhatsApp"* (`-350` ruling 2 (1))
@@ -98,6 +111,9 @@ Status: done — code review v1.6/v1.7/v1.8 applied all 9 findings (R1–R9); GO
 > staff view says which channel got through; (6) the go-live roster row `claim-contact-claimant-whatsapp-go-live` carries G3. ⛔ WhatsApp
 > to a nominee (`-356`). ⛔ A second SMS, a
 > new DLT template, or any change to the SMS steps, the conclusion, the call record or the nominees' texts and letters.
+>
+> ⚠ *Dated note (2026-10-20, round 2):* *"… post and any later means"* above is `-352` Q1 B's wording as it stood at create-story; `-368`
+> Q2 A REMOVED the clause — v2 names text message, WhatsApp, phone call and post ONLY (see the OUTCOME block).
 
 **What already ships and this story READS — rebuild ⛔ none of it:**
 - The ladder (6.37c): `claim_contact_ladders` (0169 / 0170), its pure rules `packages/domain/src/claim/contact-ladder.ts`
@@ -175,7 +191,10 @@ closed for a silence that was really a failed text.**
   MESSAGE is possible only under `-366` d2's taxonomy, as
   6.31 inherits it: a post-send 429 / rate-limit code / other 5xx (⛔ 502 / 504) is treated as unsent and retried, and a 500 / 503 is ⛔
   PROVABLY unsent — a second message after one Meta acted on is possible there (disclosed; an AC10 deferred item). ⛔ A
-  WhatsApp for a ladder SMS (step 2 / 3) — only step 1 is WhatsApp.
+  WhatsApp for a ladder SMS (step 2 / 3) — only step 1 is WhatsApp. ⚠ *Dated note (2026-10-20, round 2 — Decision `2026-10-20-370`
+  decision 1):* that retry was UNBOUNDED across jobs (an overnight deferral or a lapsed re-take starts a fresh retry budget); since 0176
+  a send row makes at most TWO sends Meta may have acted on (`send_count`, CHECK ≤ 2 — counted at the post-send note, a 5xx after the
+  connection opened, ⛔ a 429 or a never-opened connection: `-371`) — the second finishes it `may_have_sent:send_cap`.
 - **I5 — Directly, never the cascade.** ⛔ `dispatch()`, `runChannelCascade`, `resolveWhatsappProviderDeps`,
   `createContributionProviderResolver`, `resolveApprovedTemplate`, `AlertCategory`, `pariwar_wa_templates`, `sendClaimDltSms`,
   `smsAppClient`, the WhatsApp fixture provider `createFixtureWhatsappProvider` (it reports `accepted` — a step "sent" that never went),
@@ -233,6 +252,17 @@ NARROW / WIDEN:
   ratified text makes and the code does ⛔ record (F25) ⇒ **PQ3**;
 - the agreement no longer names the nominees, and their texts and letters carry on unchanged until counsel answers — `-355` d16 /
   `-354` d5 (*"⛔ changed until then"*), disclosed (F14).
+
+⚠ *Dated note (2026-10-20, code review round 2 — P18; review R2 / R3, Decision `2026-10-20-369`):* two conjuncts joined the chain from
+"a reminder failed" to "a WhatsApp reached the family" after this section was written. **(1)** A claimant REPLACED on the record without
+a fresh tick of the agreement — by a helpline write, or after verification by a helpline fill — gets ⛔ WhatsApp until a fresh tick
+covers them (`claimant_changed`); since `-369` decision 1 the helpline's tick after verification RECORDS that agreement, so the claimant is
+⛔ cut off for good. **(2)** A person who is ⛔ the claimant any more gets ⛔ WhatsApp from a follow-up that was running for them
+(`no_longer_claimant`). For the family: the WhatsApp goes only to the person the record names as the claimant NOW, on an agreement
+ticked AFTER that person was named. ⚠ That the ticker IS that person is the AUTHOR's reading — `-367` decision 17 (*"claimant is anyone who
+files"*), ⛔ something the code records: the payload names neither who ticked nor the claimant, and a helpline caller may be any family
+member (F25, withdrawn by that decision). Checked against the ratified text: MATCHES `-357`'s explicit affirmative capture on that reading,
+and `-356` (no WhatsApp to a nominee who is not the claimant).
 
 ## ⭐ FOUND FACTS
 
@@ -821,6 +851,14 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
    both may fire, neither can miss — each reads after its own commit; ⛔ a lock around the tail alone dedupes it) and the `contact_ladder.hash_unavailable` alarm — because once new reports are started within 15
    minutes the 10:00 run starts almost none and its tail would never fire, while ADR-0042's ratified bound counts on that alarm (a leg:
    three ladders started by quarter-hourly ticks raise ONE `contact_ladder.burst:3`).
+   ⚠ *Dated note (2026-10-20, round 2 — P9, review R6):* *"fires on the run whose starts cross"* and *"neither can miss"* are SUPERSEDED as
+   built: since R6 EVERY run that starts a ladder while the Pariwar's day is at or past the threshold alarms — it REPEATS (up to every
+   quarter-hourly tick); a duplicate is accepted over a silent miss (the removed `n - mine < THRESHOLD` conjunct let two overlapping runs
+   that crossed together BOTH stay silent). Legs: the repeat (`burst:3` then `burst:4`) and the overlap (`raiseLadderStartAlarms` with a
+   one-ladder tally over a day already at four).
+   ⚠ *Dated note (2026-10-20, round 2 — Decision `2026-10-20-370` decision 2):* the start considers reports RECEIVED in the last EIGHT
+   hours (was two) — MSG91's 2 h / 6 h correlation retries no longer push a report to the next 10:00 run; a report settled more than 8 h
+   late still is (disclosed). Leg: a report received 3 h ago is started by the tick, one received 9 h ago at 10:00.
 6. **AC5 — The send.** WHERE A SKIP IS WRITTEN: step `pending` ⇒ the ladder column under the chase lock (CAS `pending →
    skipped:<reason>`, ⛔ a send row); step `sent` (a retry or a re-take) ⇒ the send ROW finished `skipped:<reason>` (WS8 (iii) (2)'s
    CAS) — including (1)'s config skips and an end or stop found in (2) (⛔ a write to the step, which WS8 (i)'s trigger refuses and would
@@ -880,6 +918,10 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
    and a wamid-matched claim row records `failed_at` + the code; the same status for a MEMBER-only send still blocks as today (a leg
    each). The claim branch acts only when `value.metadata.phone_number_id` equals the event Pariwar's configured `phone_number_id` (a leg:
    a mismatch ⇒ ⛔ claim action, a log line); the RLS-bound-role refusal ends the tick before any event is claimed (a leg).
+   ⚠ *Dated note (2026-10-20, round 2 — Decision `2026-10-20-369` decision 4, review R4):* as built only the STOP branch has the
+   `phone_number_id` gate. The STATUS branch is matched by wamid, or for a block code by the claim-space hash against the Pariwar's sends of
+   the last 7 days (aged by `updated_at` — R5), inside the event Pariwar's scope, with ⛔ `phone_number_id` gate — so a callback that
+   outlives a number rotation stays the claim's (a leg). Costs recorded in `-369` decision 4 (a DELIBERATE block at the status branch).
 9. **AC8 — Records.** The forward migration (WS8): the ladder grant / CHECK / trigger (an UPDATE from a skip or `sent` refused by the
    DB; `pending → sent | skipped:*` allowed) and the Drizzle `check()` copy in lockstep; `claim_contact_wa_sends` (6.31's marker shape —
    the marker-outcome CHECK in WS8 (ii)'s 6.37d mapping, ⛔ 0171's copied; a leg per outcome, the re-stamp trigger, the finished-row freeze EXCLUDING `delivered_at` / `failed_at` / `failure_code`, each
@@ -972,7 +1014,9 @@ controllable clock; every Meta call through an injected fetch (⛔ network in an
       row skip (AC5's preamble) / lapsed-finisher / no-target functions on 6.31's shapes (`peer-mesh-wa-reminder.ts`), with
       `CONTACT_LADDER_WA_LEASE_MS` and the claim-time `recipient_number_hash`; `assertBodyParams` exported; the send through 6.31's client + the ONE cache + `resolveChannelSecret`; every classifier kind mapped
       per WS8 (iv); ⛔ fixture.
-- [x] **Task 6 — The jobs (AC4, AC5).** A quarter-hourly `claim.contact_ladder.whatsapp_sweep` (queue names in `packages/queue`; IST;
+- [x] **Task 6 — The jobs (AC4, AC5).** ⚠ *Dated note (2026-10-20, round 2 — P21): the queues are named `claim.contact_ladder.wa_sweep` and
+      `claim.contact_ladder.wa_send` as built (`QUEUE_NAMES.CLAIM_CONTACT_LADDER_WA_SWEEP` / `_WA_SEND`); the name below is the plan's.*
+      A quarter-hourly `claim.contact_ladder.whatsapp_sweep` (queue names in `packages/queue`; IST;
       around the clock; registered beside `registerContactLadderWorkers` from a SIBLING module (the I5 fence — AC12), with an expiry /
       singleton shorter than `CORRECTION_SWEEP_EXPIRE_SECONDS`, ⛔ the daily `console.info` summary on every tick): the lapsed-marker
       finisher; the START for new reports (AC4's `reported_at` window, ⛔ `advance`) sharing the extracted START with the 10:00 sweep, and
@@ -1177,6 +1221,123 @@ Three parallel fresh-context adversarial reviews of the production-code patches'
 R6+R7+R9) — CONFIRMED-FIXED on all nine, zero new bugs found — plus a FOURTH, separate fresh-context review of the six
 new R8 test additions for vacuous assertions, cross-test pollution and fixture shortcuts — all CONFIRMED-SOUND.
 
+**Code review ROUND 2, 2026-10-20 — whole branch `0e88ddd1..a620ee7c` (80 files, +7,810 / −117), 4 chunks (domain / jobs /
+surfaces + contracts / governance records) × 3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) = 12 parallel read-only
+reviewers; every HIGH and every disputed finding verified against the worktree before triage.** **2 decision-needed, 22 patch
+(3 HIGH / 6 MEDIUM / 13 LOW), 6 defer, 21 dismissed.** Neither decision is the Panel's under the routing template's §0 (both are
+"the code / the record should do X"); both are BigDev's as author. ⚠ Status `done` (v1.8) is NOT supported by this round: R1–R6 carry
+no committed regression leg and AC12's `ci:local` was not re-run after migrations 0173 / 0174 — see P1 / P2.
+
+- [x] [Review][Decision] **D1 — MEDIUM: an add-only claimant fill strands the WhatsApp basis for the rest of the claim, and the helpline is told the agreement is on file** — `claim-contact-persist.ts` W6 case (b) sets `writeSide` ⇒ `claimantGeneration` bumps; W8 in `add_only` IGNORES a helpline `agreed` over a `live` agreement ⇒ `agreementClaimantGeneration` never catches up ⇒ `readClaimantWhatsappBasis` returns `claimant_changed` for good (the member app cannot write in add-only states). `agreementOnFileEarlierWording` checks only `namesWhatsapp`, so the operator sees the plain "already on file" line. Same root, LOW: a FULL write re-sending the IDENTICAL claimant without `agreed` also bumps (no same-as-stored compare in full mode). This is NEW with R3 — WS3's accepted cost covered only the v1→v2 wording move. Found by 5 layers (blind-A, edge-A, auditor-A, edge-C, auditor-C). Options: **(a) recommended** — W8 treats a live agreement whose generation is behind the generation THIS write leaves as not covering ⇒ the helpline tick records a fresh agreement (W8 narrowed, R3's own remedy text: "until a fresh affirmative agreement covers that recipient"); the staff line derives from the basis reader (says when WhatsApp is not covered and why); full mode bumps only on a real change (version id differs or decrypted block differs). Cost: a post-verification helpline tick becomes data in this one case — a W8 amendment, recorded. **(b)** add-only fill (b) does not bump the generation. Cost: a re-determination may re-point to a DIFFERENT person who never agreed — reopens R3. **(c)** accept, disclose, fix only the staff line. Cost: a verified claimant silently loses WhatsApp.
+- [x] [Review][Decision] **D2 — MEDIUM: the records describe a metadata gate R4 removed and omit R3's generation binding — how to record the as-built corrections** — `wa-webhook-processor.ts:418-437` writes every claim status regardless of `metadata.phone_number_id` (harmless as traced: wamid-matched inside the event Pariwar's scope), but AC7, T26, `-367` decision 11 (WS11) and ADR-0029's 2026-10-20 dated note all say the claim branch acts ONLY on a matching number; R4's own remedy said "keep the claim-write metadata guard". R3's claimant-generation binding narrows `-367` decision 3 (WS3) and is in no decision entry. Found by blind-D, edge-D, auditor-B. Options: **(a) recommended** — a new author-commit entry correcting `-367` decisions 3 and 11 "as built" (the 6.31 precedent, `-366` correcting `-365`), committed alone first; then dated notes on AC7 / T26 / ADR-0029 and a DELIBERATE / RE-EXAMINE block at the status branch. **(b)** dated notes only (story, ADR-0029), no entry. Cost: `-367` keeps describing a guard the code no longer applies.
+
+  ⭐ **RESOLVED 2026-10-20 (BigDev): D1 → *"(a) Record fresh tick (Recommended)"*; D2 → *"(a) New author entry (Recommended)"*** — both become patches P23 / P24 below. P24's author entry commits ALONE, before any code or records patch ([[feedback_governance_commits_precede_implementation]]); it also records D1 (a)'s W8 amendment.
+
+- [x] [Review][Patch] **P1 — HIGH: R1–R6 are ticked fixed with NO committed regression leg; the existing legs cannot catch their regressions** [packages/domain/tests/integration/rls/claim-contact-wa-policy-regression.spec.ts:244] — `git grep no_longer_claimant / claimant_changed / claimant_generation` over every test tree ⇒ nothing. R1: the only `claim_contact_wa_stops_event_uq` leg re-inserts the SAME hash, so it passes under 0172's narrower key too; no batched two-sender payload + replay in the worker test. R2: no former-claimant leg (first visit + re-take, both chases). R3: no swap-without-tick ⇒ `claimant_changed` / with-tick ⇒ eligible leg. R4: no number-rotation status leg. R5: `hasRecentClaimContactWaSendTo` never sees an old `created_at` + fresh `updated_at`. R6: both burst legs pass with the removed conjunct restored. 0174's two CHECKs have no policy-spec leg. R8's own text: "Temporary review reproductions are not a substitute for committed acceptance tests" — the R1–R6 proofs live only in `/private/tmp`. Add each leg, RED-proven against the pre-fix code. (all three auditors, edge-D, blind-D)
+- [ ] [Review][Patch] **P2 — HIGH: row moved to `done` without AC12's `ci:local` after migrations 0173 / 0174 and R3's change to the api-shared writer** [_bmad-output/implementation-artifacts/6-37d-claim-contact-whatsapp-step.md:1103] — "Full `ci:local` was not re-run by this review"; db-check, schema-diff, lint and `apps/api` suites never ran on them. Run `ci:local` on :5433 after this round's patches; status stays `in-progress` until green. (edge-D, auditor-D)
+- [x] [Review][Patch] **P3 — HIGH: the Panel was TOLD "at most one WhatsApp message per follow-up, ever" — false as built** [_bmad-output/planning-artifacts/trustee-panel-told-2026-10-20-6-37d-whatsapp-and-forged-reports.md:21] — I4 itself: "a second MESSAGE is possible … a 500 / 503 is ⛔ PROVABLY unsent" (`-366` d2); deferred-work: up to `CHILD_RETRY_LIMIT` + 1 sends. The UNIQUE bounds send ROWS, not messages. ADR-0042's 2026-10-20 dated note says the same ("ONE WhatsApp per ladder, ever — a DB UNIQUE"). The sent note is kept as sent ([[feedback_shown_to_panel_means_sent]]); write a NEW corrective told item (also: "Meta has approved the message (row 36)" — Row 36 dropped G3 (c), approval is Meta's own refusal, not a roster check; "it cannot reach a nominee" — qualify for a claimant who is a nominee, `-367` PQ1 A) and a new ADR-0042 dated note. ⚠ SENDING it is BigDev's act. (all three records layers)
+- [x] [Review][Patch] **P4 — MEDIUM: a claim-contact STOP that fails to record is dropped for good, with no alarm** [apps/jobs/src/wa-webhook-processor.ts:309-317] — the catch only `console.error`s; the drain marks events processed at claim (at-most-once, F8), so nothing retries; the claimant stays eligible after sending STOP (I8, I10 "never silent"). Raise `onAlarm` (`contact_ladder.stop_unrecorded`, ids only) and add a leg; name the residual in the F8 deferred item. (blind-B, edge-B, auditor-B)
+- [x] [Review][Patch] **P5 — MEDIUM: R8 is recorded "closed completely" but its named legs are partly missing or cannot fail** [apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts:779] — no certificate `skipped:paused` / prelock hash-failure / `CertificateRecipientsMovedError` leg; the marker race is still one connection; "other-chase independence" (domain spec :528) superuser-sets the state and checks only a SQL filter; "a delivered WhatsApp ENDS the ladder" (:319) never runs the end; no certificate ladder is ever shown ending `delivered:whatsapp` (AC6 "either chase"). Add the legs (or reopen the remainder by name). (auditor-A, auditor-B, edge-D, blind-D, blind-A)
+- [x] [Review][Patch] **P6 — MEDIUM: AC-named legs absent from every suite** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:484] — AC5 "a correction resubmitted at 11:00 ⇒ ⛔ WhatsApp"; AC5 (2)/(3) final attempt ⇒ `skipped:hash_unavailable` + `contact_ladder.hash_unavailable`; the child's `marked === 'lost'` branch (:539); AC4 "a final-attempt crash; a lost deferral"; WS6 "SMS 3 two days after the DUE date". (auditor-A, auditor-B)
+- [x] [Review][Patch] **P7 — MEDIUM: the `anchor_unknown` leg cannot fail** [packages/domain/tests/integration/claim/contact-ladder-whatsapp.spec.ts:431] — the origin is seeded 5 h old so the ladder lists either way; the UPDATE's error is swallowed by `.catch(() => undefined)`; `skipped:anchor_unknown` is never asserted. (blind-A, auditor-A)
+- [x] [Review][Patch] **P8 — MEDIUM: the AC11 "no number in alarms" leg is flaky** [apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts:849] — `/\d{10}/` over alarms that carry random UUIDs: a 12-hex group holds 10 consecutive digits ≈ 2.7 % per UUID. Strip UUIDs before matching (or match E.164 shapes). (blind-B)
+- [x] [Review][Patch] **P9 — MEDIUM: the burst-alarm record was not corrected after R6, as R6 asked** [apps/jobs/src/scheduler/claim-contact-ladder.ts:345] — the comment still says "fires on the run whose starts CROSS the threshold — once a day"; AC4 still says "neither can miss"; deferred-work still says "may EACH raise the burst alarm once". Since R6 it repeats on every tick that starts a ladder at/over the threshold. (blind-B, edge-B, auditor-B, blind-D, edge-D)
+- [x] [Review][Patch] **P10 — LOW: on the final attempt, `lost` ignores `finishContactLadderWhatsappExhausted`'s CAS result** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:541-545] — it logs and returns `transient_exhausted` when a twin holds the row and nothing was written; the other finishes alarm on `!done`. (edge-B, auditor-B)
+- [x] [Review][Patch] **P11 — LOW: no composite owner FK on `claim_contact_wa_sends`; the recipient index ends in `created_at` while R5 filters `updated_at`** [packages/domain/migrations/0172_claim-contact-whatsapp-step.sql:91] — 0171 (6.31's shape) uses `(pariwar_id, …)` composite FKs; 0172 ties `ladder_id` / `claim_case_id` alone, so the DB cannot stop a row's Pariwar disagreeing with its ladder (family 5). Forward migration 0175 (0172 is applied — never edited). (blind-A, auditor-A)
+- [x] [Review][Patch] **P12 — LOW: the Hindi-review marker test is not tied to `hiReviewed`** [apps/api/tests/unit/claim-contact-copy.test.ts:418] — assert the `$comment` marker present exactly when `!v2.hiReviewed`, so G3 (a)'s closing commit cannot flip one half. (blind-C, auditor-C)
+- [x] [Review][Patch] **P13 — LOW: no contracts leg parses `delivered_by: 'whatsapp' | 'text'` or rejects an unknown channel** [packages/contracts/tests/certificate-reminder-lockstep.test.ts:87] — contracts tests sit outside tsc. (auditor-C)
+- [x] [Review][Patch] **P14 — LOW: the new sweep's own refusals are untested** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:217] — `canReadAcrossPariwars` and the production-allowlist refusal of `runContactLadderWhatsappSweep` (Task 6, family 3); only the worker's refusal has a leg. (auditor-B)
+- [x] [Review][Patch] **P15 — LOW: the lease-inequality test hard-codes a copy of the pool connect timeout** [apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts:100] — import the real constant (export it from `db.ts` if needed). (blind-B)
+- [x] [Review][Patch] **P16 — LOW: the api copy module's header is stale and the version constant widened to `string`** [apps/api/src/modules/claims/claim-contact-copy.ts:288-303] — the header still describes "whether the filer may agree for the nominees and the claimant". (blind-C)
+- [x] [Review][Patch] **P17 — LOW: WS11's hash fallback can suppress a real MEMBER block — undisclosed** [apps/jobs/src/wa-webhook-processor.ts:431-440] — a member-path wamid failing with a block code, on a number that had a claim send in 7 days, is claimed by the hash ⇒ `BLOCKED_BY_META` never recorded for the member. Disclose as WS11's cost + a deferred item (trigger: row 5-12 / the `WA_BLOCK_ERROR_CODES` item). (blind-B)
+- [x] [Review][Patch] **P18 — LOW: the Policy meaning section misses R2 / R3's two new conjuncts** [6-37d-claim-contact-whatsapp-step.md §Policy meaning] — "a claimant replaced (or re-saved by the helpline) without a fresh tick gets no WhatsApp"; "a former claimant's running ladder gets none" (family 11). (auditor-A)
+- [x] [Review][Patch] **P19 — LOW: `-368`'s scope is imprecise in four places — an author's dated note, ⛔ an edit of the ratified text** [.decision-log.md `2026-10-20-368`] — `-351` ruling 2 is narrowed only in a parenthesis while Consequence 3 says "nothing else changes"; `-250` #5's "one message a day" half also gives way for this step (A's cost: "Two messages are SENT that day") but only "the 10:00 hour" is named; "for BOTH chases" is an author's reading (`-259`), not stated as one; WS12 (a delivered WhatsApp ends the follow-up) appears in A's accepted cost but is absent from "Not covered" — say it stays `-367`'s reading. Also the late-correlated slice (a ladder started at the next 10:00, deferred-work) behaves like option B. (blind-D, auditor-D)
+- [x] [Review][Patch] **P20 — LOW: Row 36's discharge path misstates what every step records before go-live** [docs/launch-gate-inventory/inventory-roster.md Row 36] — "until (h) every claimant's step records `skipped:whatsapp_not_configured`": the basis is tested first (`old_wording`, `hindi_not_reviewed` for every Hindi claimant, `claimant_changed`), and `overtaken` precedes the config verdict. (edge-D)
+- [x] [Review][Patch] **P21 — LOW: the queue name differs from Task 6** [packages/queue/src/index.ts:604] — built `claim.contact_ladder.wa_sweep`; the story and Row 32 (h) routing name `claim.contact_ladder.whatsapp_sweep`. Annotate the spec (the code name stands). (auditor-C)
+- [x] [Review][Patch] **P22 — LOW: the status and ledger records disagree** [_bmad-output/implementation-artifacts/sprint-status.yaml; story :14, :57] — the newest `# last_updated` is `2026-10-20d` ("in-progress → review"); the row cites ledgers `2026-10-20j` / `2026-10-20l` that exist nowhere (e–i, k never written); 0173 / 0174 in no "Numbers taken" line; the story header says `STATUS: in-progress … Code may start` against `Status: done`; the Change Log runs v1.5–v1.8, v1.0, v1.1, v1.4, v1.3, v1.2; "345 → 362 tests" does not add up from +6 legs; v1.6 says both "R8 PARTIAL" and "all nine CONFIRMED-FIXED"; 0174's header "the backfill is exact" (a W6 swap without a tick already existed — record it in the story, ⛔ edit the applied migration). (blind-D, edge-D, auditor-D)
+- [x] [Review][Patch] **P23 — MEDIUM (from D1 (a)): a live agreement that does not cover the claimant this write leaves is not "on file"** [packages/domain/src/claim/claim-contact-persist.ts:395-418] — W8 in `add_only`: when the agreement's `agreementClaimantGeneration` is behind the generation THIS write leaves, a helpline `agreed` records a fresh agreement (stamped to that generation); the staff line derives from `readClaimantWhatsappBasis` (names why WhatsApp is not covered — `claimant_changed`, `old_wording`, `hindi_not_reviewed`); a FULL write bumps the generation only on a real change (version id differs, or the decrypted block differs). Legs: add-only fill + tick ⇒ eligible; fill without tick ⇒ `claimant_changed` and the staff line says so; identical full re-send ⇒ no bump. ⚠ *As built (round 2):* the staff line needs ⛔ new field — the one case that misled staff (a covering-looking agreement behind the generation) now RECORDS the tick.
+- [x] [Review][Patch] **P24 — MEDIUM (from D2 (a)): a new author-commit entry corrects `-367` decisions 3 and 11 as built, then the dated notes** [.decision-log.md] — decision 3 gains R3's claimant-generation binding and D1 (a)'s W8 amendment; decision 11: the claim STATUS branch is matched by wamid / claim-space hash inside the event Pariwar's scope with ⛔ `phone_number_id` gate (R4), the STOP branch keeps it. Committed ALONE first; then dated notes on AC7 / T26 (story) and ADR-0029, and a DELIBERATE / RE-EXAMINE block at `wa-webhook-processor.ts` status branch.
+
+- [x] [Review][Defer] **W1 — a delivery seen only in `whatsapp_send_status` after the finalise's copy is invisible to D22 once the ladder ends otherwise; the copy stamps `updated_at` (possibly the `read` time)** [packages/domain/src/claim/contact-ladder-whatsapp-delivery.ts:27] — deferred, narrow READ COMMITTED slice of WS11's disclosed "status drained before the finalise" path
+- [x] [Review][Defer] **W2 — a `failed` status that arrives before the finalise never reaches `failed_at` / `failure_code`** [packages/domain/src/claim/contact-ladder-whatsapp-record.ts:694] — deferred, nothing reads them today
+- [x] [Review][Defer] **W3 — at 20:00, a failed marker release makes an unsent message `may_have_sent:lease_lapsed`** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:549] — deferred, needs a DB error inside the marker-to-20:00 instant; fails safe (no second send)
+- [x] [Review][Defer] **W4 — the quarter-hourly start re-hashes a claim on every tick for 2 h when the planner declines its fresh origin** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:185] — deferred, a cost under the KMS global audit lock, not a correctness fault
+- [x] [Review][Defer] **W5 — `nextDailyLadderRunOn` assumes the daily run happens at exactly 10:00 IST** [apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts:118] — deferred, a late daily run slips SMS 2 a day
+- [x] [Review][Defer] **W6 — the server stamps the CURRENT copy version, not what the client showed** [apps/api/src/modules/claims/claims.contact.handlers.ts:131] — deferred, pre-existing 6.19a mechanism; not in production; bites at the next COPY-VERSION bump (a Hindi review that accepts the words flips `hiReviewed` in place and mints ⛔ version — fix-diff review)
+
+**Patches applied (round 2), 2026-10-20 — BigDev: *"1"* (apply every patch).** Decision `2026-10-20-369` (`734c9f7a`) committed ALONE
+first (D1 / D2). The legs Debug Log (c) NAMES were proven RED by hand-disabling their fix and re-running, then restored; every other new
+or changed leg is COVERAGE of behaviour already built, with ⛔ RED run (Debug Log (c) lists both).
+- **P1** — committed legs for every round-1 fix: R1 — a batched two-sender STOP + its replay (`wa-webhook-processor.test.ts`) and the
+  per-sender key in the policy spec (a second sender in the SAME event accepted); R2 — first visit AND re-take on the correction chase
+  (`contact-ladder-whatsapp.spec.ts`) and the certificate chase (`claim-contact-ladder-whatsapp-live.test.ts`); R3 — a helpline swap
+  without a tick ⇒ `claimant_changed`, a fresh tick ⇒ eligible (`claim-contact.spec.ts`); R4 — a status after a number ROTATION stays
+  the claim's (block AND delivery); R5 — `created_at` 10 days / `updated_at` now matches, `updated_at` 8 days does ⛔; R6 — the repeat
+  (`burst:3`, `burst:4`) and the overlap; 0174's CHECKs by name (three refusals, two positives, the definitions — `claimant_generation >= 1`
+  can never fire alone, the second CHECK implies it).
+- **P3** — `trustee-panel-told-2026-10-20b-6-37d-forgery-bound-correction.md` WRITTEN (⛔ sent — BigDev sends it); ADR-0042 gains a NEW
+  dated note; the sent item kept as sent.
+- **P4** — `onAlarm` on the webhook worker's deps (default `console.warn` — Row 32 (h)); a STOP that fails to record raises
+  `contact_ladder.stop_unrecorded` (ids only; the alarm call isolated so a faulty sink never costs the member their STOP — fix-diff
+  review); a leg (the first HMAC fails, the member path still runs). F8's deferred item names it.
+- **P5** — the "delivered ENDS the ladder" and "other-chase independence" legs now run the REAL end (`beginCorrectionLadderSend` step 2)
+  and the per-ladder settle; the certificate chase: delivered ⇒ `delivered:whatsapp` at the 10:00 sweep, `skipped:paused`, the contact
+  record moving between the pre-lock hashes and the lock (CR7) ⇒ a transient (asserted by its message), the pre-lock hash failing ⇒
+  transient then `skipped:hash_unavailable` + the alarm; the MARKER CAS on two connections (they may overlap or serialise — exactly one
+  `marked`). The other-chase check gives the certificate ladder its OWN accepted send to the same number (fix-diff review).
+- **P6** — AC5 "resubmitted" ⇒ `ended_stopped` / `stopped:resubmitted`, ⛔ send row, the step `pending`; the final-attempt hash failure
+  (non-final: the row stays `attempting`, ⛔ spent); the marker `lost` (a NEW job re-takes the row between the commit and the marker); a
+  final-attempt crash; a LOST deferral; WS6's SMS 3: SMS 2 resolves `satisfied` on its due date (a family text reached the number
+  that day) ⇒ SMS 3 on due date + 2 (origin + 5) — the case that tells the right due date from the wrong one (fix-diff review: the
+  first version could not fail).
+- **P7** — the `anchor_unknown` leg: ⛔ listed while its origin is 1 h old, listed once the anchor is gone (the UPDATE's error no longer
+  swallowed — triggers off for the fixture), the begin records `skipped:anchor_unknown`.
+- **P8** — the AC11 leg strips UUIDs before the ten-digit check and asserts an alarm exists.
+- **P9** — the burst comment in `claim-contact-ladder.ts`, AC4 (a dated note) and deferred-work's item (a dated note) say it REPEATS.
+- **P10** — the child's final-attempt `lost` reads the finish's CAS: ⛔ written ⇒ `noop` `marker_lost` (the holder's outcome stands).
+- **P11** — FORWARD migration **0175** `0175_claim-contact-wa-send-owner-fk.sql` (applied on :5433): `claim_contact_ladders_owner_uq` +
+  the composite `claim_contact_wa_sends_ladder_owner_fk`; the recipient index rebuilt on `updated_at`; schema mirrored; a policy leg
+  (chase, claim and tenant mismatches ⇒ 23503). The chase-CHECK positive is now the ladder's own chase.
+- **P12** — the marker test asserts "marked EXACTLY while `!hiReviewed`". **P13** — contracts: `text` / `whatsapp` / null parse, four
+  other values and an omitted field refuse. **P14** — the sweep's three refusals (RLS-bound pool, empty allowlist, production).
+  **P15** — `DEFAULT_POOL_CONNECTION_TIMEOUT_MS` exported from `db.ts`; the lease test reads it. **P16** — the api header restated; the
+  constant keeps the domain's literal type.
+- **P17** — WS11's member-block cost disclosed (`-369` decision 4, the DELIBERATE block, a deferred item). **P18** — Policy meaning's
+  dated note. **P19** — the OUTCOME block's dated note (the decision log has ⛔ dated notes — a `-370` entry if wanted). **P20** — Row
+  36's dated note. **P21** — Task 6's dated note. **P22** — the header STATUS, the `Status:` line, the Change Log newest-first, the
+  ledger (`2026-10-20e`; `j` / `l` were never written), Debug Log (c) (0174's "exact backfill", the 345 → 362 counts, v1.6's two claims).
+- **P23** — `claim-contact-persist.ts`: the generation moves only on a REAL change (a decrypted compare for a block — `compareDecrypts`
+  counts it — and an undecidable comparison, a stored block that cannot be decrypted, counts as a CHANGE, ⛔ a failed write: fix-diff
+  review); in `add_only` a live agreement whose generation is behind the one the write leaves counts as missing ⇒ the tick RECORDS a
+  fresh agreement. The staff line needs ⛔ new field: the one case that misled staff now records the tick. Five legs (four RED-proven).
+- **P24** — `-369`; AC7 / T26 / ADR-0029 dated notes; the DELIBERATE / RE-EXAMINE block at the worker's status branch.
+- **P2 — OPEN until `ci:local` is green on this patch** (then `done`).
+
+**Fix-diff review (round 2), 2026-10-20 — three fresh-context reviewers of the round-2 patch itself (code / test legs / records).**
+Every finding verified in the worktree; ALL addressed before commit:
+- *Code (1 M / 1 L):* the block comparison P23 added made a full write FAIL on an undecryptable stored block — now an undecidable
+  comparison counts as a change (a leg); a throwing alarm sink would have skipped the member's STOP — the alarm call isolated.
+- *Test legs (1 M / 7 L):* WS6's SMS 3 leg could not fail — rebuilt on the `satisfied` path (a family text reached the number on SMS 2's
+  due date) and RED-proven; the marker leg retitled (two marks may serialise); the R6 overlap comment says what it models; the KMS-down
+  leg pins its exact outcome; the other-chase check gives the certificate ladder its OWN send; the chase-CHECK positive explained;
+  `NODE_ENV` restored exactly; the CR7 "moved" transient asserted by its message.
+- *Records (2 H / 6 M / 6 L):* (H) the corrective told item restated a FALSE bound — the post-send retry was unbounded across jobs — and
+  (H) the duplicate-message choice needed a §0 call: BigDev — *"go with option 2, no need to route every minor thing to Panel"* (a
+  TWO-SEND CAP, the Panel told) and, for the late-report slice that ran on option B's timing, *"(a) Widen the window"* ⇒ Decision
+  `2026-10-20-370` (`5507c756`, committed ALONE), migration **0176** (`send_count`, CHECK ≤ 2, the guard function replaced with it
+  frozen and never decreasing), the capped finish `may_have_sent:send_cap`, the start window 2 h → 8 h, legs RED-proven (Debug Log (c)).
+  A FOURTH fresh-context review of that delta (0 H / 2 M / 5 L) — and the existing "429 then a never-opened connection" leg going RED
+  under it — showed the marker counted calls that could reach no one ⇒ Decision `2026-10-20-371` (`ef578642`, ALONE — ⚠ committed by
+  the session as `-370`'s mechanism corrected as built, ⛔ a new choice; BigDev to confirm): the cap counts only a post-send 5xx after the
+  connection opened, at the note; the marker answers `capped` (⛔ `lost`) as a backstop; the 8-hour scan skips a report whose person
+  already has a running ladder (32 re-plans a day); a LOCKSTEP leg pins the constant to the CHECK. ⛔ Fixed, recorded: the start bound's
+  5,000-claim tail (pre-existing keyset restart), 0176's header and dev backfill (applied — `-371` governs), send #2's token kept only in
+  the log line;
+  `-369` d3's contradiction with d1 corrected by `-370` d3; the per-person bound is PER CHASE (`-370` d5, the told item, ADR-0042);
+  the "24 applied" counts (23 + P2 open), the RED claims (now exactly what was run), P18's sentence (the author's reading of `-367` d17),
+  ADR-0042 note (b)'s quote, Row 36's gate order, the told item's status line, W6's trigger — corrected. The friction-budget gate (AC-4,
+  committed history): round 1's `apps/mobile` test change had ⛔ declaration — `friction-budget.md`'s claim-contact row AMENDED for v2.
+
 ## Dev Notes
 
 ### TRAPS
@@ -1255,7 +1416,8 @@ new R8 test additions for vacuous assertions, cross-test pollution and fixture s
 - **T25 — Off-WhatsApp opt-outs.** Meta's policy: *"You must respect all requests (either on or off WhatsApp)"*. v1 honours only a STOP
   keyword in a `text` message; a request to the helpline or a free-text reply has ⛔ route — disclosed, deferred, G3 (g).
 - **T26 — Which Pariwar sent it.** The event's Pariwar is the URL's; the claim branch also checks `value.metadata.phone_number_id`
-  against that Pariwar's configured `phone_number_id` (WS11) — ⛔ act on a mismatch.
+  against that Pariwar's configured `phone_number_id` (WS11) — ⛔ act on a mismatch. ⚠ *Dated note (2026-10-20, round 2):* the STOP branch
+  only — the status branch has ⛔ gate since R4 (`-369` decision 4; AC7's dated note).
 - **T27 — A helpline value can break the send.** A parameter value with a newline, a tab or 4+ spaces is refused by Meta, and a per-value
   132005 / 132012 / 132018 is classified `scope` (every 132xxx is `template_not_approved` — deferred W9: *"filed as scope-wide … Row
   6-37d is a second consumer"*); the helpline is a config value.
@@ -1428,6 +1590,34 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   This story's own live suites: the domain record spec 29, the 0172 + ladder policy specs 83, the jobs live suite 22 (incl. the AC4
   late-start leg added after the run, then run alone), the worker 15, the ladder live suite 24. ⛔ A network call (the fetch spy at zero).
 
+- **(c) Code review ROUND 2 — 2026-10-20.** Whole branch `0e88ddd1..a620ee7c`, 12 parallel read-only reviewers (4 chunks × 3 layers),
+  every HIGH verified in the worktree; D1 / D2 → `-369` (`734c9f7a`, alone); 24 patches, 23 applied and P2 open (Review Findings, round 2). **RED evidence** —
+  each leg below FAILED with its fix hand-disabled, then passed with it restored: the three `-369` legs with `claim-contact-persist.ts`
+  at HEAD; R3's leg with the basis reader's generation check disabled; R2's two correction legs and the certificate leg with the
+  `isClaimant` check disabled; R5's leg with `created_at` back in the isolation window; the two "delivered ENDS the ladder" legs with
+  `beginCorrectionLadderSend`'s WhatsApp input forced false; R1's worker leg with the recorder's pre-check keyed on the event only; R4's
+  leg with `isClaimBranchOpen()` re-gating the status branch; P4's leg with the alarm removed; P10's leg with the CAS result ignored;
+  R6's leg with the `n - mine` conjunct restored; 0173's leg — 0172's `(pariwar_id, inbound_event_id)` key re-created inside a
+  ROLLED-BACK psql transaction refuses the second sender (23505); 0175's owner-FK leg — the composite FK refuses a `certificate` row on a
+  correction ladder, and with the FK dropped inside a rolled-back transaction the same row is ACCEPTED; the decrypt-failure leg (a fix-
+  diff correction) with its `catch` removed (the write throws); WS6's SMS 3 leg (`satisfied` on the due date ⇒ origin + 5) with the
+  late-start due rule disabled (and line 705's own check bypassed) — origin + 4. In all, the four `-369` / decrypt legs and the other
+  named legs above. ⛔ RED run (COVERAGE of behaviour already built, or a test-only change): the marker CAS on two connections, the
+  lost deferral, the final-attempt crash, the sweep refusals, the certificate pause / moved / hash legs, AC5 resubmitted,
+  `anchor_unknown`, 0174's CHECK legs, the other-chase settle check, P8 (UUID strip), P12 (marker ⇔ `hiReviewed`), P13 (contracts). **Records found wrong, corrected HERE (⛔ in the artifacts):** 0174's header
+  says *"the backfill is exact"* — a W6 full write could already swap the claimant without a tick before 0174, so a row backfilled 1 = 1
+  could carry a former claimant's agreement (dev data only — ⛔ in production; 0174 is applied and ⛔ edited); v1.6's "345 tests" and
+  v1.8's "362 tests" came from different file sets, ⛔ recorded — the two are ⛔ comparable; v1.6's "R8 PARTIAL" and "all nine
+  CONFIRMED-FIXED" describe two different checks (the patch's own diff vs the R8 legs), and R8's remaining legs were added only in round 2
+  (P5). The sprint ledger's row cites `2026-10-20j` / `2026-10-20l`, which were never written — `2026-10-20e` records round 2 and says so.
+  **The fix-diff review's own RED runs:** `-370`'s cap leg with the capped finish removed (a third call is attempted); the window leg
+  with the window back at 2 h (the 3-hour report is ⛔ started); the decrypt-failure leg with its `catch` removed; WS6's rebuilt SMS 3
+  leg as above. ⛔ RED run: 0176's policy legs (the CHECK / trigger / grant are new objects — their negatives are the proof), the domain
+  cap legs (coverage of the marker CAS and the capped finish).
+  **`ci:local` (round 2, on the patch BEFORE the fix-diff corrections):** 35 of 36 jobs green incl. `integration-tests`; `friction-budget`
+  RED — AC-4 sees COMMITTED history: round 1's `apps/mobile/tests/unit/claim-contact.test.ts` change had ⛔ declaration (a vacuous pass
+  before that commit — [[project_friction_budget_baseline_ratchet]]); `friction-budget.md` amended.
+
 ### Completion Notes List
 
 - Story created by `bmad-create-story 6.37d` (2026-10-19) — ultimate context engine analysis completed - comprehensive developer guide created. Four parallel read-only research passes (the governance spine; 6.37c's ladder code; the WhatsApp substrate and the 6.31 branch; the filing agreement).
@@ -1546,32 +1736,29 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
 - `apps/admin/tests/correction-chase-forms.test.tsx`
 - `apps/admin/tests/helpline-claim-contact.test.tsx`
 - `apps/mobile/tests/unit/claim-contact.test.ts`
+- Code review ROUND 2 (2026-10-20): `.decision-log.md` (`-369`, committed alone); `packages/domain/migrations/0175_claim-contact-wa-send-owner-fk.sql`
+  (new) + `meta/_journal.json`; `packages/domain/src/claim/claim-contact-persist.ts`, `src/db.ts`, `src/index.ts`,
+  `src/schema/claim_contact_ladders.ts`, `src/schema/claim_contact_wa_sends.ts`, `src/schema/claim_contacts.ts`; the domain specs
+  `claim-contact.spec.ts`, `contact-ladder-whatsapp.spec.ts`, `rls/claim-contact-policy-regression.spec.ts`,
+  `rls/claim-contact-wa-policy-regression.spec.ts`; `apps/jobs/src/wa-webhook-processor.ts`, `src/scheduler/claim-contact-ladder.ts`,
+  `src/scheduler/claim-contact-ladder-whatsapp.ts` and the three jobs tests; `apps/api/src/modules/claims/claim-contact-copy.ts` and its
+  unit test; `packages/contracts/tests/certificate-reminder-lockstep.test.ts`;
+  `_bmad-output/planning-artifacts/trustee-panel-told-2026-10-20b-6-37d-forgery-bound-correction.md` (new — WRITTEN, ⛔ sent);
+  ADR-0029 / ADR-0042 dated notes; `docs/launch-gate-inventory/inventory-roster.md` (Row 36); deferred-work; sprint-status.
+  The fix-diff review: `.decision-log.md` (`-370`, committed alone); `packages/domain/migrations/0176_claim-contact-wa-send-cap.sql` (new)
+  + journal; `friction-budget.md` (the claim-contact row amended).
 
 ## Change Log
 
-- v1.5 (2026-10-20) — `bmad-dev-story 6.37d`: Tasks 1–10 implemented (Debug Log (b), Completion Notes, File List). Migration 0172; the
-  agreement's v2 + the basis reader; the step's rules, record, quarter-hourly sweep and child; the webhook worker's claim branch; D22's
-  WhatsApp reach; staff see the channel; ADR-0028 / -0029 / -0042 dated notes; the Panel "told" item WRITTEN and TOLD 2026-10-20 (BigDev: *"report has been sent"*); deferred-work
-  dispositions. ci:local on :5433 — every gate green; the two red jobs were load timeouts, each re-run alone green (Debug Log (b) 7).
-  Status `in-progress` → `review`.
-
-- v1.6 (2026-10-20) — `bmad-code-review 6.37d`, "apply every patch": R1–R7 / R9 of the round-1 findings fixed (migrations 0173 /
-  0174 — both FORWARD, 0172 is already applied on :5433 and never edited; `isClaimant` re-checked live under the send lock;
-  the agreement bound to a claimant generation; the webhook's claim-ownership match freed from `isClaimBranchOpen()`; the
-  isolation window aged by `updated_at`; the burst alarm's de-dup removed; the quarter-hourly start's origin set threaded
-  through `StartsOnly.eligibleOriginRowIds`; the `listNewReportClaims` DELIBERATE block). R8 PARTIAL — one true
-  two-connection race added, the certificate-chase / late-correlator / 20:00→09:00 / other-chase-independence legs NOT
-  added (its own Review Findings line says so — stays an open action item). `tsc` clean on domain + jobs; 345 tests green
-  on :5433, zero regressions; three parallel fresh-context adversarial reviews of this patch's own diff, all nine
-  CONFIRMED-FIXED, zero new bugs. Status stays `in-progress` (R8 unresolved — Review Findings govern).
-
-- v1.7 (2026-10-20) — autonomous follow-up (continuing "apply every patch"): added the R7 regression leg
-  `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` "R7 — the quarter-hourly start enforces the two-hour window
-  per ORIGIN" that v1.6 had not covered (two people, one claim, one fresh / one 3-hour-old report); confirmed RED against
-  the pre-fix code by temporarily disabling the fix's two gating lines and re-running, then restored and green again.
-  R8 is otherwise unchanged (still PARTIAL — the certificate-chase, late-correlator, 20:00→09:00 and
-  other-chase-independence legs remain open). Status stays `in-progress`.
-
+- v1.9 (2026-10-20) — `bmad-code-review 6.37d` ROUND 2 (whole branch `0e88ddd1..a620ee7c`, 12 parallel reviewers): 2 decisions → Decision
+  `2026-10-20-369` (`734c9f7a`, alone — D1 (a) a live agreement that does ⛔ cover the claimant a write leaves counts as missing, so the
+  helpline's tick records one; the generation moves only on a real change; D2 (a) `-367` decisions 3, 11 and 14 corrected as built); 24
+  patches applied (Review Findings, round 2 — committed regression legs for R1–R6, RED-proven; migration 0175's composite owner FK; the
+  STOP-unrecorded alarm; the final-attempt `lost` CAS; the corrective "told" item WRITTEN, ⛔ sent; records); 6 deferred, 21 dismissed.
+  Change Log reordered newest-first (no entry's text changed). Then the fix-diff review (three fresh-context reviewers of the patch
+  itself) and Decision `2026-10-20-370` (`5507c756`, alone — BigDev: a TWO-SEND cap, the Panel told; an 8-hour start window): migration
+  0176, the capped finish, the window, their legs; every review finding addressed. Status `done` → `in-progress` until `ci:local` is
+  green (P2).
 - v1.8 (2026-10-20) — "close out R8": the remaining five named legs added, all in live/integration tests, closing R8
   completely. `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` gains the late-correlator leg, the 20:00
   release → 09:00 config-off-finish leg (its own isolated Pariwar — never left the shared `PARIWAR` constant's
@@ -1586,9 +1773,26 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   all six R8 test additions (vacuous-assertion / pollution / false-precision / fixture-shortcut checks) — all
   CONFIRMED-SOUND. All 9 code-review findings (R1–R9) now closed. Status `in-progress` → `done` (GO-LIVE still fenced
   separately — roster Row 36 etc.).
-
-- v1.0 (2026-10-19) — created by `bmad-create-story 6.37d` at `15acb570`; WS1–WS14 proposed, PQ1–PQ2 candidate; status `ready-for-dev`.
-- v1.1 (2026-10-19) — the create-story's own checklist pass (one fresh-context validator, read-only: 7 HIGH / 12 MEDIUM / 5 LOW, all applied): the STOP key moved to the ladder's `claim_contact_mobile` hash space (⛔ the member login key); the webhook worker's claim branch scoped to the event's Pariwar behind the RLS-bound-role refusal; the quarter-hourly sweep starts ladders only for NEW reports and ⛔ calls `advance`; the 4 h anchor = the origin's `created_at` (⛔ `claimed_at`, re-set on retry); `isClaimant` on both person types (the certificate reader is shaped differently); AC2's fence narrowed to the agreement-state gate; D22 is correction-only and the post-conclusion case decided in WS12; WS12 flagged against `-360` Q1 A; `-355` d3 superseded in part; ADR-0029 / Row 19 / Row 26 notes; grants bind `twt_app` only — triggers are the jobs controls; counsel question 3's two halves; the gate list corrected.
+- v1.7 (2026-10-20) — autonomous follow-up (continuing "apply every patch"): added the R7 regression leg
+  `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` "R7 — the quarter-hourly start enforces the two-hour window
+  per ORIGIN" that v1.6 had not covered (two people, one claim, one fresh / one 3-hour-old report); confirmed RED against
+  the pre-fix code by temporarily disabling the fix's two gating lines and re-running, then restored and green again.
+  R8 is otherwise unchanged (still PARTIAL — the certificate-chase, late-correlator, 20:00→09:00 and
+  other-chase-independence legs remain open). Status stays `in-progress`.
+- v1.6 (2026-10-20) — `bmad-code-review 6.37d`, "apply every patch": R1–R7 / R9 of the round-1 findings fixed (migrations 0173 /
+  0174 — both FORWARD, 0172 is already applied on :5433 and never edited; `isClaimant` re-checked live under the send lock;
+  the agreement bound to a claimant generation; the webhook's claim-ownership match freed from `isClaimBranchOpen()`; the
+  isolation window aged by `updated_at`; the burst alarm's de-dup removed; the quarter-hourly start's origin set threaded
+  through `StartsOnly.eligibleOriginRowIds`; the `listNewReportClaims` DELIBERATE block). R8 PARTIAL — one true
+  two-connection race added, the certificate-chase / late-correlator / 20:00→09:00 / other-chase-independence legs NOT
+  added (its own Review Findings line says so — stays an open action item). `tsc` clean on domain + jobs; 345 tests green
+  on :5433, zero regressions; three parallel fresh-context adversarial reviews of this patch's own diff, all nine
+  CONFIRMED-FIXED, zero new bugs. Status stays `in-progress` (R8 unresolved — Review Findings govern).
+- v1.5 (2026-10-20) — `bmad-dev-story 6.37d`: Tasks 1–10 implemented (Debug Log (b), Completion Notes, File List). Migration 0172; the
+  agreement's v2 + the basis reader; the step's rules, record, quarter-hourly sweep and child; the webhook worker's claim branch; D22's
+  WhatsApp reach; staff see the channel; ADR-0028 / -0029 / -0042 dated notes; the Panel "told" item WRITTEN and TOLD 2026-10-20 (BigDev: *"report has been sent"*); deferred-work
+  dispositions. ci:local on :5433 — every gate green; the two red jobs were load timeouts, each re-run alone green (Debug Log (b) 7).
+  Status `in-progress` → `review`.
 - v1.4 (2026-10-20) — the Panel RULED the routing note: Decision `2026-10-20-368` (Trustee-ratified, *"Q1 A, Q2 A"*; `041d5f17`,
   committed alone) and its records commit; the `-367` OUTCOME block gains the ruling; the header's done-gate and the PQ dispositions note
   it. Status stays `in-progress`.
@@ -1596,3 +1800,5 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   under Status (it governs); F25 withdrawn (kept); PQ dispositions; AC1 → v2's first-person English without the clause; WS2 (i), WS4's
   G3 (c), T24 annotated; Task 0 ticked; Debug Log (a). Status `in-progress`.
 - v1.2 (2026-10-20) — `bmad-create-story validate 6.37d`: REBASED onto `main` `0e88ddd1` (16 behind; 6.31 shipped; both ledger conflicts kept both sides) and re-pinned; four parallel fresh-context verifiers (governance / code / mechanism / premise + Meta), 41 findings, all applied (BigDev: *"all"*). ⭐ 6.31 SHIPPED ⇒ WS1's precondition MET, F3 rewritten as built (client, cache, `resolveChannelSecret`, `classifyDirectWaSendFailure` and `-366`'s order, `waTemplateConfigKey`, the once-ever record + in-flight marker), F4–F7 corrected; every v1.1 number TAKEN (`-364`/`-365`/`-366`, Row 35, 0171) ⇒ the G3 row named by key with legs G3 (a)–(h), ⛔ untaken number in the file (`-366` d6); `-364`/`-365`/`-366` and 6.31's told reading added to the rulings table; WS8 rebuilt on 6.31's crash-safe shape (marker, lapsed finisher, window at the marker, a transient rule, every classifier kind mapped, the freeze excluding the status columns) with `-365` WR7 / WR10 divergences NAMED; AC5 re-ordered (config outside the lock; the chase stops and ladder ends re-checked before a send); WS12 / D22: `reachedByLadderWhatsapp` stands on its own row (a later ladder's conclusion maps the earlier origin) and the Policy meaning cost restated (where every text fails, ⛔ more waiting for a call or a letter); ⭐ NEW F25 / PQ3 — the agreement is ticked by whoever files (or the helpline caller) and records ⛔ claimant, while Meta requires opt-in from the recipient — counsel question 3 to be revised before sending; AC4's start keyed on a `reported_at` window (⛔ watermark exists) and its HMAC claim corrected; WS11's honest status rule (three paths with ⛔ wamid; the metadata phone-number check); row 5-12's shared STOP path sequenced (WS1, T22); G3 legs for TTL (12 h), re-categorisation, key resolution, off-WhatsApp opt-outs, the display name; the access-wrapper and clamp gates disclosed as ⛔ covering the jobs code; 6.31's symbol fence reused (a sibling module — T29); AC11's DLT file corrected; T1/T10/T11/T15 rewritten, T22–T30 added; References, Sequencing, Git intelligence refreshed. Then two fresh-context re-validators of the pass's OWN diff (claims: 3 H / 4 M / 4 L; consistency: 1 H / 2 M / 11 L — every HIGH the pass's own), all applied: a claimed step is never `pending` again, so the sweep also re-takes lapsed unmarked `attempting` rows, the final pg-boss attempt finishes the row, the marker answers `marked | lost` (6.31's `late` is its 72-hour give-up) and a window miss defers the child to 09:00; the quarter-hourly START runs 6.37c's burst / hash alarms (ADR-0042's bound counts on them); a status-table delivery is copied into `delivered_at` so D22 sees it; every 132xxx is `scope`; 6.37d's own marker-outcome CHECK (0171's would 23514 every `refused`); the fence adds the ladder's own SMS symbols; `reported_at`'s lag disclosed; the config / hash faults named and alarmed; the numbering-race note moved to Task 0.4 (the decision commits alone); Row 21 a G3 precondition. A ROUND 2 re-validator then found 2 H / 4 M / 3 L in those patches, all applied: the re-check in two halves (a SET marker or another live holder ⇒ ⛔ write — finishing it would lose a sent message's `may_have_sent`), `recipient_number_hash` written at the claim (6.31 writes it at the finalise ⇒ WS11's isolation could never match an in-flight row), where each skip is written (step vs row), both hash-failure shapes transient, one lease constant ≥ 45 min, `assertBodyParams` exported, the burst alarm's concurrency disclosed, `singletonKey` a label only. A ROUND 3 re-validator found 1 H / 6 L in those, all applied: AC5 (1) only READS — its config verdicts are written in (2) after the re-claim (a re-take is a new job id, so an earlier write matched ⛔ row and re-took the row every tick); I4 discloses `-366` d2's 500 / 503 retry; the post-send note-and-finish is ONE statement; the lease reasoning and the child's `expireInSeconds`; the burst disclosure; `contact_ladder.hash_unavailable` named; `param_invalid` via `timeoutMs`. A ROUND 4 re-validator found ⛔ HIGH (3 M / 4 L), all applied: the WhatsApp switch re-read under the lock and the config verdicts placed after the ends / stops; `first_detail` keeps the first transient and the log the last; re-takes only inside the window, every child deferring at its start at night; the lease a liveness bound (the marker CAS the safety control, the same-job-id twin named); 0171's re-stamp predicate verbatim; `param_invalid` after the marker named; I4's headline narrowed.
+- v1.1 (2026-10-19) — the create-story's own checklist pass (one fresh-context validator, read-only: 7 HIGH / 12 MEDIUM / 5 LOW, all applied): the STOP key moved to the ladder's `claim_contact_mobile` hash space (⛔ the member login key); the webhook worker's claim branch scoped to the event's Pariwar behind the RLS-bound-role refusal; the quarter-hourly sweep starts ladders only for NEW reports and ⛔ calls `advance`; the 4 h anchor = the origin's `created_at` (⛔ `claimed_at`, re-set on retry); `isClaimant` on both person types (the certificate reader is shaped differently); AC2's fence narrowed to the agreement-state gate; D22 is correction-only and the post-conclusion case decided in WS12; WS12 flagged against `-360` Q1 A; `-355` d3 superseded in part; ADR-0029 / Row 19 / Row 26 notes; grants bind `twt_app` only — triggers are the jobs controls; counsel question 3's two halves; the gate list corrected.
+- v1.0 (2026-10-19) — created by `bmad-create-story 6.37d` at `15acb570`; WS1–WS14 proposed, PQ1–PQ2 candidate; status `ready-for-dev`.

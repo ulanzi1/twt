@@ -546,6 +546,115 @@ describe.skipIf(!hasDatabase)('the claim contact record — writer, chain and ch
     });
   });
 
+  // ── Story 6.37d review R3 + Decision 2026-10-20-369 — the agreement covers the claimant it was given for ────
+  describe('Story 6.37d R3 / -369 — the claimant generation', () => {
+    const ELIGIBLE = { eligible: true, copyVersion: CLAIM_CONTACT_AGREEMENT_COPY_VERSION };
+    const generations = async (tx: Tx, cid: ClaimId) => {
+      const c = (await readClaimContact(tx, PARIWAR_A, cid)).contact!;
+      return [c.claimantGeneration, c.agreementClaimantGeneration];
+    };
+
+    it('⭐ R3 — a helpline swap of the claimant WITHOUT a tick ⇒ claimant_changed (the old agreement does ⛔ transfer); a fresh tick covers the new one', async () => {
+      const { tx, cid, mid } = await setup();
+      await writeClaimContact(tx, member(tx, cid, mid, { recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual(ELIGIBLE);
+      const swap = await writeClaimContact(tx, helpline(tx, cid, { claimantBlock: BLOCK }));
+      expect(swap).toMatchObject({ mode: 'full', claimantSideWritten: true, agreementRecorded: false });
+      expect(await generations(tx, cid)).toEqual([2, 1]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'claimant_changed' });
+      await writeClaimContact(tx, helpline(tx, cid, { agreed: true, recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      expect(await generations(tx, cid)).toEqual([2, 2]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual(ELIGIBLE);
+    });
+
+    it('⭐ -369 d2 — an IDENTICAL full re-send (the same version, or the same block) leaves the generation, so the basis stands', async () => {
+      const { tx, cid, mid } = await setup();
+      await writeClaimContact(tx, member(tx, cid, mid, { recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      const stored = (await readClaimContact(tx, PARIWAR_A, cid)).contact!.claimantNomineeVersionId as string;
+      const same = await writeClaimContact(tx, helpline(tx, cid, { claimantNomineeVersionId: stored }));
+      expect(same).toMatchObject({ claimantSideWritten: true, compareDecrypts: 0 });
+      expect(await generations(tx, cid)).toEqual([1, 1]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual(ELIGIBLE);
+
+      // The block: a member re-save onto it records a fresh agreement; an identical helpline block re-send does ⛔ bump.
+      await writeClaimContact(tx, member(tx, cid, mid, {
+        claimantNomineeRank: undefined,
+        claimantBlock: BLOCK,
+        ranks: [{ rank: 1, address: 'Rank one address', relationship: 'son' }],
+        recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')),
+      }));
+      expect(await generations(tx, cid)).toEqual([2, 2]);
+      const sameBlock = await writeClaimContact(tx, helpline(tx, cid, { claimantBlock: BLOCK }));
+      expect(sameBlock.compareDecrypts).toBe(3);
+      expect(await generations(tx, cid)).toEqual([2, 2]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual(ELIGIBLE);
+      // …while a block with ONE different field is a change.
+      await writeClaimContact(tx, helpline(tx, cid, { claimantBlock: { ...BLOCK, mobile: '9999999999' } }));
+      expect(await generations(tx, cid)).toEqual([3, 2]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'claimant_changed' });
+    });
+
+    it('⭐ round-2 fix-diff — a stored block that CANNOT be decrypted does ⛔ fail a full write: the comparison counts as a change (the safe direction)', async () => {
+      const { tx, cid, mid } = await setup();
+      await writeClaimContact(tx, member(tx, cid, mid, {
+        claimantNomineeRank: undefined,
+        claimantBlock: BLOCK,
+        ranks: [{ rank: 1, address: 'Rank one address', relationship: 'son' }],
+        recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')),
+      }));
+      const broken = { encrypt: crypto.encrypt, decrypt: async (): Promise<string> => Promise.reject(new Error('kms unavailable')) };
+      const res = await writeClaimContact(tx, helpline(tx, cid, { claimantBlock: BLOCK, crypto: broken }));
+      expect(res).toMatchObject({ mode: 'full', claimantSideWritten: true });
+      expect(await generations(tx, cid)).toEqual([2, 1]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'claimant_changed' });
+    });
+
+    it('⭐ -369 d1 — after verification, the (b) FILL moves the generation; the helpline tick then RECORDS a fresh agreement (⛔ ignored) and the basis returns', async () => {
+      const { client, tx, cid, mid } = await setup({ postDeathChange: true, determine: 'post_death', state: 'verifier_review' });
+      const [effective] = await effectiveIds(tx, cid);
+      await writeClaimContact(tx, member(tx, cid, mid, { recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      await writeClaimContact(tx, helpline(tx, cid, { rows: [{ nomineeVersionId: effective!, address: 'Effective address' }] }));
+      await forceState(tx, cid, 'verifier_approved');
+      const corrected = await applyCorrection(tx, cid, mid, effective!);
+      await determinePostDeath(client, tx, cid, mid);
+      await forceState(tx, cid, 'verifier_approved'); // the certificate helper's real review writer moves the state
+
+      // The FILL without a tick: the old claimant's agreement does ⛔ cover the one the fill names.
+      const fill = await writeClaimContact(tx, helpline(tx, cid, { claimantNomineeVersionId: corrected }));
+      expect(fill).toMatchObject({ mode: 'add_only', claimantSideWritten: true, agreementRecorded: false });
+      expect(await generations(tx, cid)).toEqual([2, 1]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual({ eligible: false, reason: 'claimant_changed' });
+
+      // The tick over that live-but-uncovering agreement is RECORDED (before -369 it was ignored, for good).
+      const tick = await writeClaimContact(tx, helpline(tx, cid, { agreed: true, recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      expect(tick).toMatchObject({ mode: 'add_only', agreementRecorded: true, agreementIgnored: false });
+      expect(await generations(tx, cid)).toEqual([2, 2]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual(ELIGIBLE);
+
+      // A second tick over the now-covering agreement is a confirmation again (W8 unchanged).
+      const again = await writeClaimContact(tx, helpline(tx, cid, { agreed: true }));
+      expect(again).toMatchObject({ agreementIgnored: true, agreementRecorded: false, agreementOnFileEarlierWording: false });
+    });
+
+    it('⭐ -369 d1 — a fill AND a tick in ONE add-only write records the agreement at the generation that write leaves', async () => {
+      const { client, tx, cid, mid } = await setup({ postDeathChange: true, determine: 'post_death', state: 'verifier_review' });
+      const [effective] = await effectiveIds(tx, cid);
+      await writeClaimContact(tx, member(tx, cid, mid, { recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }));
+      await writeClaimContact(tx, helpline(tx, cid, { rows: [{ nomineeVersionId: effective!, address: 'Effective address' }] }));
+      await forceState(tx, cid, 'verifier_approved');
+      const corrected = await applyCorrection(tx, cid, mid, effective!);
+      await determinePostDeath(client, tx, cid, mid);
+      await forceState(tx, cid, 'verifier_approved');
+      const both = await writeClaimContact(
+        tx,
+        helpline(tx, cid, { claimantNomineeVersionId: corrected, agreed: true, recordAgreement: agreement(tx, cid, V2_PAYLOAD('en')) }),
+      );
+      expect(both).toMatchObject({ mode: 'add_only', agreementRecorded: true, agreementIgnored: false });
+      expect(await generations(tx, cid)).toEqual([2, 2]);
+      await expect(readClaimantWhatsappBasis(tx, PARIWAR_A, cid)).resolves.toEqual(ELIGIBLE);
+    });
+  });
+
   // ── D14 — the reasons, in their pinned precedence ───────────────────────────────────────────────────────
   describe('D14 — one test per reason, each satisfying every EARLIER condition', () => {
     it('no_record', async () => {

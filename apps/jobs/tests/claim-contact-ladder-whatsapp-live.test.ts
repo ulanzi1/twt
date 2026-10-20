@@ -19,7 +19,13 @@ import {
   runCertificateReminderSweep,
   type CertificateFamilySmsPayload,
 } from '../src/scheduler/claim-certificate-reminders.js';
-import { runContactLadderSweep, runCorrectionLadderSmsChild, type LadderSmsPayload } from '../src/scheduler/claim-contact-ladder.js';
+import {
+  newTally,
+  raiseLadderStartAlarms,
+  runContactLadderSweep,
+  runCorrectionLadderSmsChild,
+  type LadderSmsPayload,
+} from '../src/scheduler/claim-contact-ladder.js';
 import {
   nextDailyLadderRunOn,
   runContactLadderWhatsappChild,
@@ -40,6 +46,7 @@ const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const PARIWAR = randomUUID();
 const BURST_PARIWAR = randomUUID();
+const BURST_PARIWAR_2 = randomUUID(); // round 2 (R6) — its own day count
 const HELPLINE = '1800123456';
 const TEMPLATE = 'claim_correction_reminder_en_v1';
 const enc = buildJobsEncryptionDeps('claim-contact-ladder-whatsapp-live-pepper');
@@ -57,7 +64,7 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
   beforeAll(async () => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 8, ssl: false, connectionTimeoutMillis: 5000 });
     pool.on('error', (err) => console.error('[claim-contact-ladder-whatsapp-live] idle client error:', err.message));
-    for (const pid of [PARIWAR, BURST_PARIWAR]) {
+    for (const pid of [PARIWAR, BURST_PARIWAR, BURST_PARIWAR_2]) {
       await pool.query(
         `INSERT INTO pariwar_wa_config (pariwar_id, enabled, phone_number_id, access_token_secret_name)
          VALUES ($1, true, 'pnid-live', 'wa-token-live') ON CONFLICT (pariwar_id) DO NOTHING`,
@@ -70,10 +77,10 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
     try {
-      await pool.query('DELETE FROM claim_contact_wa_stops WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR]]);
-      await pool.query('DELETE FROM whatsapp_send_status WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR]]);
-      await pool.query('DELETE FROM sms_send_deliveries WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR]]);
-      await pool.query('DELETE FROM pariwar_wa_config WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR]]);
+      await pool.query('DELETE FROM claim_contact_wa_stops WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR, BURST_PARIWAR_2]]);
+      await pool.query('DELETE FROM whatsapp_send_status WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR, BURST_PARIWAR_2]]);
+      await pool.query('DELETE FROM sms_send_deliveries WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR, BURST_PARIWAR_2]]);
+      await pool.query('DELETE FROM pariwar_wa_config WHERE pariwar_id = ANY($1::uuid[])', [[PARIWAR, BURST_PARIWAR, BURST_PARIWAR_2]]);
       await cleanupClaims(pool, claims, members);
     } finally {
       await pool.end();
@@ -704,12 +711,57 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
       status: 'sent',
       outcome: 'accepted',
     });
+    // Round 2 (P6 — WS6's named leg, made to BITE): SMS 2 resolves `satisfied` on its stored DUE date (origin + 3) because a
+    // family text already reached that number that day; a `satisfied` step anchors SMS 3 on the DUE date (`nextAfter`) ⇒
+    // origin + 5. Had the start stored "today" (origin + 2) as the due date, the same day's resolution would give origin + 4.
+    const { rows: o } = await pool.query<{ run_id: string; recipient_key: string; recipient_version_id: string; recipient_number_hash: string }>(
+      `SELECT run_id, recipient_key, recipient_version_id, recipient_number_hash FROM claim_correction_reminders WHERE reminder_id = $1`,
+      [origin!],
+    );
+    await onOwnTx(pool, PARIWAR, async (client) => {
+      const db = bindScopedDb(client);
+      const jobId = `job-${randomUUID()}`;
+      const claimed = await claim.claimCorrectionReminder(db, {
+        pariwarId: PARIWAR as never,
+        claimCaseId: s.claimCaseId as never,
+        runId: o[0]!.run_id,
+        slotDay: 13,
+        recipientKey: o[0]!.recipient_key,
+        purpose: 'family_sms',
+        subjectKey: '',
+        sentOn: day(s.day0, 13),
+        late: false,
+        jobId,
+        now: new Date(),
+      });
+      if (claimed.status !== 'claimed') throw new Error(claimed.status);
+      await claim.finaliseCorrectionReminder(db, {
+        pariwarId: PARIWAR as never,
+        reminderId: claimed.reminderId,
+        jobId,
+        outcome: 'accepted',
+        providerMessageId: `pm${randomUUID().replace(/-/g, '')}`,
+        recipientVersionId: o[0]!.recipient_version_id,
+        recipientNumberHash: o[0]!.recipient_number_hash,
+      });
+    });
+    h.setNow(istAt(day(s.day0, 13), '10:00'));
+    await runContactLadderSweep(h.wa, boss(h));
+    for (const e of take(h, 'claim.correction.ladder_sms', s.claimCaseId)) {
+      await runCorrectionLadderSmsChild(h.wa, e.data as JobEnvelope<LadderSmsPayload>, randomUUID());
+    }
+    const { rows } = await pool.query<{ sms2_state: string; sms3_due_on: string | null }>(
+      `SELECT sms2_state, to_char(sms3_due_on, 'YYYY-MM-DD') AS sms3_due_on FROM claim_contact_ladders WHERE ladder_id = $1`,
+      [l!.ladder_id],
+    );
+    expect(rows[0]!.sms2_state).toBe('satisfied');
+    expect(rows[0]!.sms3_due_on).toBe(day(s.day0, 15));
   });
 
   // Review R7 (2026-10-20) — a regression leg for the fix itself: the quarter-hourly start's 2-hour recency scan must apply
   // PER ORIGIN, ⛔ per claim. Two people on the SAME claim, two reports, one fresh (inside the window) and one 3 hours old
   // (outside it): only the fresh one's ladder may start now; the older one waits for the next 10:00 daily sweep.
-  it('⭐ R7 — the quarter-hourly start enforces the two-hour window per ORIGIN: a fresh report starts its ladder; an older, unladdered report for a DIFFERENT person on the SAME claim waits for the next 10:00 sweep', async () => {
+  it('⭐ R7 — the quarter-hourly start enforces the two-hour window per ORIGIN: a fresh report starts its ladder; an older (9 h — outside the 8-hour window), unladdered report for a DIFFERENT person on the SAME claim waits for the next 10:00 sweep', async () => {
     const h = harness();
     const s = await seed({ nomineeMobiles: ['9812345671', '9812345672'] });
     const origins = await chaseDay(h, s, 10);
@@ -717,9 +769,9 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     const [freshOrigin, staleOrigin] = origins;
     await reportUndelivered(freshOrigin!, s.pariwarId);
     await reportUndelivered(staleOrigin!, s.pariwarId);
-    // The stale origin's report was RECEIVED three hours ago — outside the quarter-hourly scan's 2-hour window (T4).
+    // The stale origin's report was RECEIVED nine hours ago — outside the quarter-hourly scan's window (T4; 8 h since `-370` d2).
     await pool.query(
-      `UPDATE sms_send_deliveries SET reported_at = now() - interval '3 hours', first_reported_at = now() - interval '3 hours' WHERE send_row_id = $1`,
+      `UPDATE sms_send_deliveries SET reported_at = now() - interval '9 hours', first_reported_at = now() - interval '9 hours' WHERE send_row_id = $1`,
       [staleOrigin],
     );
     h.setNow(istAt(day(s.day0, 10), '14:30'));
@@ -739,24 +791,29 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
   // A report received long ago whose correlator write only lands NOW still carries that old `received_at` — so by the
   // time the row is visible at all, it can already read as outside the quarter-hourly scan's 2-hour window. One person,
   // one report: proves the disclosed gap behaves exactly as documented (⛔ started now; the next 10:00 sweep gets it).
-  it('⭐ R8 — the late-correlator leg: a report whose correlator write lands NOW still carries an old `received_at` — if that is already >2h in the past, the quarter-hourly start misses it; the next 10:00 sweep does not', async () => {
+  it('⭐ R8 / -370 d2 — the late-correlator leg: a report the correlator settles NOW keeps its old `received_at`; within EIGHT hours (3 h) the quarter-hourly start takes it (the WhatsApp as `-368` Q1 A has it); older (9 h) waits for the next 10:00 sweep', async () => {
     const h = harness();
-    const s = await seed();
-    const [origin] = await chaseDay(h, s, 10);
-    // The correlator writes the row now, but stamps the report's OWN (old) receipt time — simulating its 2h/6h retry
-    // delay: the report was genuinely RECEIVED three hours ago, the correlator just settled it into `undelivered` late.
-    await pool.query(
-      `INSERT INTO sms_send_deliveries (send_kind, send_row_id, pariwar_id, request_id, delivery_state, status_code, first_reported_at, reported_at)
-       SELECT 'cr', $1, $2, provider_message_id, 'undelivered', '2', now() - interval '3 hours', now() - interval '3 hours'
-         FROM claim_correction_reminders WHERE reminder_id = $1`,
-      [origin, s.pariwarId],
-    );
-    h.setNow(istAt(day(s.day0, 10), '14:30'));
+    const lateSettle = async (hoursAgo: number) => {
+      const s = await seed();
+      const [origin] = await chaseDay(h, s, 10);
+      // The correlator writes the row now, but stamps the report's OWN (old) receipt time — MSG91's 2 h / 6 h retry delay.
+      await pool.query(
+        `INSERT INTO sms_send_deliveries (send_kind, send_row_id, pariwar_id, request_id, delivery_state, status_code, first_reported_at, reported_at)
+         SELECT 'cr', $1, $2, provider_message_id, 'undelivered', '2', now() - make_interval(hours => $3), now() - make_interval(hours => $3)
+           FROM claim_correction_reminders WHERE reminder_id = $1`,
+        [origin, s.pariwarId, hoursAgo],
+      );
+      return s;
+    };
+    const recent = await lateSettle(3);
+    const old = await lateSettle(9);
+    h.setNow(istAt(day(recent.day0, 10), '14:30'));
     await runContactLadderWhatsappSweep(h.wa, boss(h));
-    expect(await ladderOf(s.claimCaseId)).toEqual([]);
-    h.setNow(istAt(day(s.day0, 11), '10:00'));
+    expect((await ladderOf(recent.claimCaseId))[0]).toMatchObject({ state: 'running', whatsapp_step: 'pending' });
+    expect(await ladderOf(old.claimCaseId)).toEqual([]);
+    h.setNow(istAt(day(old.day0, 11), '10:00'));
     await runContactLadderSweep(h.wa, boss(h));
-    expect((await ladderOf(s.claimCaseId))[0]).toMatchObject({ state: 'running' });
+    expect((await ladderOf(old.claimCaseId))[0]).toMatchObject({ state: 'running' });
   });
 
   // ── AC4 — LD13's start tail runs for the quarter-hourly starts ──────────────────────────────────────────────
@@ -834,6 +891,378 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     expect(sendRow.rows[0]!.provider_message_id).not.toBeNull();
   });
 
+  // ── Code review ROUND 2 (2026-10-20) — the legs round 2 found missing or unable to fail (P1 R6, P5, P6, P10, P14) ──────
+
+  /** The jobs KMS, with hooks that run BEFORE each HMAC / DEK decrypt (a hook may throw — a KMS outage — or act on the DB). */
+  function hookedEnc(hk: { readonly beforeHmac?: () => Promise<void>; readonly beforeDecrypt?: () => Promise<void> }): typeof enc {
+    const kms = Object.create(enc.kms) as typeof enc.kms;
+    kms.computeHmac = async (...a: Parameters<typeof enc.kms.computeHmac>) => {
+      await hk.beforeHmac?.();
+      return enc.kms.computeHmac(...a);
+    };
+    kms.decryptDek = async (...a: Parameters<typeof enc.kms.decryptDek>) => {
+      await hk.beforeDecrypt?.();
+      return enc.kms.decryptDek(...a);
+    };
+    return { ...enc, kms };
+  }
+  const kmsDown = () => Promise.reject(new Error('kms unavailable'));
+  /** The child the 14:30 tick enqueues for a due step — its envelope (⛔ run). */
+  async function dueChild(h: Harness, s: Seeded) {
+    h.setNow(istAt(day(s.day0, 10), '14:30'));
+    await runContactLadderWhatsappSweep(h.wa, boss(h));
+    const [child] = take(h, WA_SEND, s.claimCaseId);
+    return child!.data as JobEnvelope<ContactLadderWhatsappPayload>;
+  }
+  /** As another job: re-take this ladder's claimed row (a re-claim — the trigger's own rules) between the commit and the marker. */
+  function thief(ladderId: string) {
+    const state = { stolen: false };
+    const steal = async () => {
+      if (state.stolen) return;
+      const { rowCount } = await pool.query(
+        `UPDATE claim_contact_wa_sends SET claimed_by_job = 'job-thief', attempt_count = attempt_count + 1, claimed_at = clock_timestamp()
+          WHERE ladder_id = $1 AND send_outcome = 'attempting' AND send_started_at IS NULL AND claimed_by_job <> 'job-thief'`,
+        [ladderId],
+      );
+      if ((rowCount ?? 0) > 0) state.stolen = true; // the begin's own row is invisible until it COMMITS — the first visible decrypt steals it
+    };
+    return { state, enc: hookedEnc({ beforeDecrypt: steal }) };
+  }
+
+  it('⭐ R6 — the burst alarm REPEATS on a later tick that starts a ladder past the threshold (⛔ "once a day"); a run whose OWN start is not the crossing one still alarms (the overlap the removed conjunct missed)', async () => {
+    const h = harness({ allowlist: [BURST_PARIWAR_2] });
+    for (let i = 0; i < 4; i += 1) {
+      const s = await seed({ pariwarId: BURST_PARIWAR_2 });
+      const [origin] = await chaseDay(h, s, 10);
+      await reportUndelivered(origin!, BURST_PARIWAR_2);
+      h.setNow(istAt(day(s.day0, 10), '10:30'));
+      await runContactLadderWhatsappSweep(h.wa, boss(h));
+    }
+    const counts = h.alarms.filter((a) => a.includes('contact_ladder.burst:')).map((a) => /contact_ladder\.burst:(\d+)/.exec(a)![1]);
+    expect(counts).toEqual(['3', '4']);
+    // The tail itself, with a run's own starts (1) BELOW the day's count (4) — the shape that, for two overlapping runs that
+    // crossed TOGETHER (each `mine` excluding only its own starts), made `n - mine < THRESHOLD` false for BOTH and silenced them
+    // (this models the per-run check, ⛔ a real concurrent pair). ⚠ The four seeds and this call must fall in ONE IST day.
+    const overlap: string[] = [];
+    const tally = newTally();
+    tally.startedByPariwar.set(BURST_PARIWAR_2, 1);
+    await raiseLadderStartAlarms({ pool, onAlarm: (m: string) => overlap.push(m) }, tally);
+    expect(overlap.filter((a) => a.includes('contact_ladder.burst:4'))).toHaveLength(1);
+  });
+
+  it('⭐ R8 / P5 — the MARKER CAS on two connections: two marks of the SAME claimed row (they may overlap or serialise) ⇒ exactly ONE `marked`, the other `lost`', async () => {
+    const h = harness();
+    const { s, ladderId } = await dueStep(h);
+    const sendId = await pool.connect().then(async (c) => {
+      try {
+        await c.query('BEGIN');
+        await c.query(`SELECT set_config('app.pariwar_id', $1, true)`, [PARIWAR]);
+        const r = await claim.beginContactLadderWhatsapp(c, {
+          pariwarId: PARIWAR as never,
+          claimCaseId: s.claimCaseId as never,
+          ladderId,
+          chase: 'correction',
+          jobId: 'job-twin',
+          now: new Date(),
+          inWindow: true,
+          nextWindowStart: istAt(day(s.day0, 11), '09:00'),
+          config: { verdict: 'ok', templateName: TEMPLATE, locale: 'en' },
+          finalAttempt: false,
+          crypto: enc,
+        });
+        await c.query('COMMIT');
+        if (r.kind !== 'begun') throw new Error(r.kind);
+        return r.sendId;
+      } finally {
+        c.release();
+      }
+    });
+    const mark = () =>
+      withPariwarScope(pool, PARIWAR as never, (db) =>
+        claim.markContactLadderWhatsappInFlight(db, { pariwarId: PARIWAR as never, sendId, jobId: 'job-twin', leaseMarginMs: 60_000, now: new Date() }),
+      );
+    const outcomes = (await Promise.all([mark(), mark()])).sort();
+    expect(outcomes).toEqual(['lost', 'marked']);
+    expect((await sendRowOf(ladderId))!.send_started_at).not.toBeNull();
+  });
+
+  it('⭐ P6 / P10 — the marker `lost` (another job re-took the row between the commit and the marker): a NON-final attempt retries with ⛔ request; on the FINAL attempt the child reports `noop` (⛔ an exhausted finish it never wrote) and the holder\'s row stands', async () => {
+    const h = harness();
+    const a = await dueStep(h);
+    const ta = thief(a.ladderId);
+    await expect(
+      runContactLadderWhatsappChild({ ...h.wa, encryption: ta.enc }, boss(h), await dueChild(h, a.s), 'job-L', { retryCount: 0, retryLimit: 4 }),
+    ).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(ta.state.stolen).toBe(true);
+    expect(await sendRowOf(a.ladderId)).toMatchObject({ send_outcome: 'attempting', send_started_at: null });
+    const b = await dueStep(h);
+    const tb = thief(b.ladderId);
+    expect(await runContactLadderWhatsappChild({ ...h.wa, encryption: tb.enc }, boss(h), await dueChild(h, b.s), 'job-L2', { retryCount: 4, retryLimit: 4 })).toEqual({
+      status: 'noop',
+      reason: 'marker_lost',
+    });
+    expect(tb.state.stolen).toBe(true);
+    expect(await sendRowOf(b.ladderId)).toMatchObject({ send_outcome: 'attempting', send_started_at: null }); // ⛔ finished by the loser
+    expect(h.requests).toHaveLength(0);
+  });
+
+  it('⭐ P6 — AC5 (2)/(3): the number cannot be hashed (a KMS outage) — a NON-final attempt is a transient (the once-only step ⛔ spent); the FINAL attempt records `skipped:hash_unavailable` and raises `contact_ladder.hash_unavailable` (ids only); ⛔ request', async () => {
+    const h = harness();
+    const { s, ladderId } = await dueStep(h);
+    const env = await dueChild(h, s);
+    const down = { ...h.wa, encryption: hookedEnc({ beforeHmac: kmsDown, beforeDecrypt: kmsDown }) };
+    await expect(runContactLadderWhatsappChild(down, boss(h), env, 'job-K', { retryCount: 0, retryLimit: 4 })).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    // ⛔ spent: the claimed row stays `attempting` with the transient noted (WS8 (iii)'s retry form), ⛔ finished.
+    expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'attempting', send_started_at: null, detail: 'decrypt_failed:tier1' });
+    const r = await runContactLadderWhatsappChild(down, boss(h), env, 'job-K', { retryCount: 4, retryLimit: 4 });
+    // The begin does ⛔ hash here (a claimant-nominee whose version is unchanged), so the first decrypt after the commit fails:
+    // the step stays `sent`, the ROW finishes `skipped:hash_unavailable`, first_detail the first transient.
+    expect(r).toEqual({ status: 'skipped', reason: 'hash_unavailable', where: 'row' });
+    expect((await ladderOf(s.claimCaseId))[0]!.whatsapp_step).toBe('sent');
+    expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'skipped', detail: 'skipped:hash_unavailable', first_detail: 'decrypt_failed:tier1' });
+    const alarm = h.alarms.find((m) => m.includes('contact_ladder.hash_unavailable'));
+    expect(alarm).toBeDefined();
+    expect(alarm!).toContain(ladderId);
+    expect(h.requests).toHaveLength(0);
+  });
+
+  it('⭐ P6 — AC4: a deferral that is LOST (a child at 21:00 defers to 09:00; that job never runs) — the step is still `pending`, so the next in-window tick enqueues it again and it goes', async () => {
+    const h = harness();
+    const { s, ladderId } = await dueStep(h);
+    h.setNow(istAt(day(s.day0, 10), '21:00'));
+    const envelope = { pariwarId: s.pariwarId, requestId: 'r', actorId: null, traceId: 't', payload: { ladderId, claimCaseId: s.claimCaseId, chase: 'correction' as const } };
+    expect((await runContactLadderWhatsappChild(h.wa, boss(h), envelope, 'job-night', { retryCount: 0, retryLimit: 4 })).status).toBe('deferred');
+    expect(take(h, WA_SEND, s.claimCaseId)).toHaveLength(1); // the deferral — LOST (dropped, never run)
+    expect((await ladderOf(s.claimCaseId))[0]!.whatsapp_step).toBe('pending');
+    expect((await waTick(h, s, istAt(day(s.day0, 11), '09:15'))).results).toEqual([{ status: 'sent', outcome: 'accepted' }]);
+  });
+
+  it('⭐ P6 — AC4: a FINAL-attempt crash after the claim (no retry follows) — the row is re-taken by a NEW job once the lease lapses and sent', async () => {
+    const h = harness();
+    const { s, ladderId } = await dueStep(h);
+    await pool.connect().then(async (c) => {
+      try {
+        await c.query('BEGIN');
+        await c.query(`SELECT set_config('app.pariwar_id', $1, true)`, [PARIWAR]);
+        await claim.beginContactLadderWhatsapp(c, {
+          pariwarId: PARIWAR as never,
+          claimCaseId: s.claimCaseId as never,
+          ladderId,
+          chase: 'correction',
+          jobId: 'job-final-crashed',
+          now: istAt(day(s.day0, 10), '14:30'),
+          inWindow: true,
+          nextWindowStart: istAt(day(s.day0, 11), '09:00'),
+          config: { verdict: 'ok', templateName: TEMPLATE, locale: 'en' },
+          finalAttempt: true,
+          crypto: enc,
+        });
+        await c.query('COMMIT');
+      } finally {
+        c.release();
+      }
+    });
+    expect((await sendRowOf(ladderId))!.send_outcome).toBe('attempting');
+    const later = new Date(istAt(day(s.day0, 10), '14:30').getTime() + LEASE_MS + 60_000);
+    expect((await waTick(h, s, later)).results).toEqual([{ status: 'sent', outcome: 'accepted' }]);
+  });
+
+  it('⭐ P14 — the SWEEP refuses (⛔ start, ⛔ child, one alarm): an RLS-bound pool; an EMPTY allowlist; an allowlist in production', async () => {
+    const bound = new pg.Pool({ connectionString: `${DATABASE_URL!}${DATABASE_URL!.includes('?') ? '&' : '?'}options=-c%20role%3Dtwt_app`, max: 1, ssl: false });
+    try {
+      const h = harness();
+      const r = await runContactLadderWhatsappSweep({ ...h.wa, pool: bound }, boss(h));
+      expect(r).toMatchObject({ refused: true, started: 0, enqueued: 0 });
+      expect(h.alarms.filter((a) => a.includes('contact_ladder.rls_bound_role'))).toHaveLength(1);
+    } finally {
+      await bound.end();
+    }
+    const empty = harness({ allowlist: [] });
+    expect(await runContactLadderWhatsappSweep(empty.wa, boss(empty))).toMatchObject({ refused: true });
+    expect(empty.alarms.filter((a) => a.includes('`pariwarAllowlist` is EMPTY'))).toHaveLength(1);
+    const prod = harness();
+    const was = process.env['NODE_ENV'];
+    process.env['NODE_ENV'] = 'production';
+    try {
+      expect(await runContactLadderWhatsappSweep(prod.wa, boss(prod))).toMatchObject({ refused: true });
+    } finally {
+      if (was === undefined) delete process.env['NODE_ENV'];
+      else process.env['NODE_ENV'] = was;
+    }
+    expect(prod.alarms.filter((a) => a.includes('while NODE_ENV is production'))).toHaveLength(1);
+    expect([...empty.enqueued, ...prod.enqueued]).toEqual([]);
+  });
+
+  // ── The CERTIFICATE chase's remaining branches (P5 — R8's "prelock / source / pause", R2 on this chase, AC6 either chase) ──
+
+  const certConfig = async (key: string) => {
+    if (key.startsWith('sms.dlt.template_id.claim_correction.')) return '64b0c0ffee0123456789a0c1';
+    if (key.startsWith('sms.claim_correction.helpline_number.')) return HELPLINE;
+    if (key.startsWith('wa.template.claim_contact.correction_reminder.')) return TEMPLATE;
+    if (key.startsWith('wa.template.claim_contact.certificate_reminder.')) return TEMPLATE;
+    return null;
+  };
+  /** A certificate claim whose origin (cert day 10) was reported undelivered, its ladder started, and the step DUE (14:30). */
+  async function certDue(h: Harness) {
+    const w = await seedCertWait();
+    h.setNow(new Date());
+    await runCertificateReminderSweep(h.chase, boss(h));
+    take(h, 'claim.certificate.family_sms', w.claimCaseId);
+    const run = await pool.query<{ day0: string }>(
+      `SELECT to_char(day0, 'YYYY-MM-DD') AS day0 FROM claim_certificate_reminder_runs WHERE claim_case_id = $1 AND ended_at IS NULL`,
+      [w.claimCaseId],
+    );
+    const certDay0 = run.rows[0]!.day0;
+    h.setNow(istAt(day(certDay0, 10), '10:00'));
+    await runCertificateReminderSweep(h.chase, boss(h));
+    for (const e of take(h, 'claim.certificate.family_sms', w.claimCaseId)) {
+      await runCertificateFamilySmsChild(h.chase, e.data as JobEnvelope<CertificateFamilySmsPayload>, randomUUID());
+    }
+    const sent = await pool.query<{ reminder_id: string }>(
+      `SELECT reminder_id FROM claim_certificate_reminders WHERE claim_case_id = $1 AND purpose = 'family_sms' AND outcome = 'accepted' AND sent_on = $2`,
+      [w.claimCaseId, day(certDay0, 10)],
+    );
+    const origin = sent.rows[0]!.reminder_id;
+    await reportCertUndelivered(origin, w.pariwarId);
+    h.setNow(istAt(day(certDay0, 10), '10:15'));
+    await runContactLadderWhatsappSweep(h.wa, boss(h));
+    const [l] = await ladderOf(w.claimCaseId);
+    await pool.query(`UPDATE claim_certificate_reminders SET created_at = clock_timestamp() - make_interval(hours => 5) WHERE reminder_id = $1`, [origin]);
+    h.setNow(istAt(day(certDay0, 10), '14:30'));
+    await runContactLadderWhatsappSweep(h.wa, boss(h));
+    const [child] = take(h, WA_SEND, w.claimCaseId);
+    return { w, certDay0, ladderId: l!.ladder_id, env: child!.data as JobEnvelope<ContactLadderWhatsappPayload> };
+  }
+  /** Review R2 — the claim's claimant moves onto the BLOCK (a real-ciphertext block, so the prelock can hash it). */
+  async function certClaimantToBlock(cid: string) {
+    await pool.query(
+      `UPDATE claim_contacts SET claimant_nominee_version_id = NULL, claimant_name_ciphertext = $2, claimant_mobile_ciphertext = $3,
+         claimant_address_ciphertext = $4 WHERE claim_case_id = $1`,
+      [
+        cid,
+        await encryptField('Block Claimant', PARIWAR, 'claim_contact', enc),
+        await encryptField('9811111111', PARIWAR, 'claim_contact', enc),
+        await encryptField('House 2, Fixture Lane', PARIWAR, 'claim_contact', enc),
+      ],
+    );
+  }
+
+  it('⭐ P5 / AC6 — CERTIFICATE: a DELIVERED WhatsApp ends the certificate ladder `delivered:whatsapp` at the next 10:00 sweep (⛔ SMS 2)', async () => {
+    const h = harness({ resolveConfig: certConfig });
+    const c = await certDue(h);
+    expect(await runContactLadderWhatsappChild(h.wa, boss(h), c.env, `job-${randomUUID()}`, { retryCount: 0, retryLimit: 4 })).toEqual({ status: 'sent', outcome: 'accepted' });
+    const wamid = (await sendRowOf(c.ladderId))!.provider_message_id!;
+    await pool.query(`INSERT INTO whatsapp_send_status (wamid, pariwar_id, state, meta_status) VALUES ($1, $2, 'delivered', 'delivered')`, [wamid, PARIWAR]);
+    h.setNow(istAt(day(c.certDay0, 12), '10:00'));
+    await runContactLadderSweep(h.wa, boss(h));
+    expect(take(h, 'claim.certificate.ladder_sms', c.w.claimCaseId)).toHaveLength(0);
+    const [l] = await ladderOf(c.w.claimCaseId);
+    expect([l!.state, l!.end_detail]).toEqual(['ended_delivered', 'delivered:whatsapp']);
+  });
+
+  it('⭐ P5 / R2 — CERTIFICATE: the ladder\'s nominee is ⛔ the claimant any more (the claimant moved to the block) ⇒ `skipped:no_longer_claimant`, ⛔ request', async () => {
+    const h = harness({ resolveConfig: certConfig });
+    const c = await certDue(h);
+    await certClaimantToBlock(c.w.claimCaseId);
+    expect(await runContactLadderWhatsappChild(h.wa, boss(h), c.env, `job-${randomUUID()}`, { retryCount: 0, retryLimit: 4 })).toEqual({
+      status: 'skipped',
+      reason: 'no_longer_claimant',
+      where: 'step',
+    });
+    expect(h.requests).toHaveLength(0);
+  });
+
+  it('⭐ P5 — CERTIFICATE: a PAUSED chase (the claim outside the review window) ⇒ `skipped:paused` (WS7), ⛔ request', async () => {
+    const h = harness({ resolveConfig: certConfig });
+    const c = await certDue(h);
+    const cl = await pool.connect();
+    try {
+      await cl.query('BEGIN');
+      await cl.query("SET LOCAL session_replication_role = 'replica'"); // the field the pause check reads (see the ladder suite's P15 note)
+      await cl.query(`UPDATE claims SET current_state = 'documents_pending' WHERE claim_case_id = $1`, [c.w.claimCaseId]);
+      await cl.query('COMMIT');
+    } finally {
+      cl.release();
+    }
+    expect(await runContactLadderWhatsappChild(h.wa, boss(h), c.env, `job-${randomUUID()}`, { retryCount: 0, retryLimit: 4 })).toMatchObject({
+      status: 'skipped',
+      reason: 'paused',
+    });
+    expect(h.requests).toHaveLength(0);
+  });
+
+  it('⭐ P5 — CERTIFICATE: the contact record MOVES between the pre-lock hashes and the lock (CR7) ⇒ a transient (⛔ write, ⛔ request); the pre-lock hash FAILS ⇒ a transient, and on the FINAL attempt `skipped:hash_unavailable` + the alarm', async () => {
+    const h = harness({ resolveConfig: certConfig });
+    const c = await certDue(h);
+    let moved = false;
+    const mover = hookedEnc({
+      beforeHmac: async () => {
+        if (moved) return;
+        moved = true; // the prelock's FIRST hash — the record moves while the child is outside the lock
+        await certClaimantToBlock(c.w.claimCaseId);
+      },
+    });
+    await expect(
+      runContactLadderWhatsappChild({ ...h.wa, encryption: mover }, boss(h), c.env, `job-${randomUUID()}`, { retryCount: 0, retryLimit: 4 }),
+    ).rejects.toThrow(/the contact record moved/);
+    expect(moved).toBe(true);
+    expect(await sendRowOf(c.ladderId)).toBeNull();
+    expect((await ladderOf(c.w.claimCaseId))[0]!.whatsapp_step).toBe('pending');
+
+    const d = await certDue(h);
+    const down = { ...h.wa, encryption: hookedEnc({ beforeHmac: kmsDown }) };
+    await expect(runContactLadderWhatsappChild(down, boss(h), d.env, 'job-CK', { retryCount: 0, retryLimit: 4 })).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(await runContactLadderWhatsappChild(down, boss(h), d.env, 'job-CK', { retryCount: 4, retryLimit: 4 })).toMatchObject({
+      status: 'skipped',
+      reason: 'hash_unavailable',
+    });
+    expect(h.alarms.some((m) => m.includes('contact_ladder.hash_unavailable') && m.includes(d.ladderId))).toBe(true);
+    expect(h.requests).toHaveLength(0);
+  });
+
+  it('⭐ -370 d1 — the SEND CAP: two post-send 503s across TWO jobs (the second a re-take after the lease lapsed) ⇒ exactly TWO Meta calls and the row `may_have_sent:send_cap` — ⛔ a third, whichever job or day', async () => {
+    const h = harness();
+    const { s, ladderId } = await dueStep(h);
+    const env = await dueChild(h, s);
+    h.answer({ status: 503, body: { error: { code: 2 } } });
+    await expect(runContactLadderWhatsappChild(h.wa, boss(h), env, 'job-C1', { retryCount: 0, retryLimit: 4 })).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'attempting', send_started_at: null });
+    // job-C1 never comes back; the lease lapses; the sweep's re-take hands the row to a NEW job (a fresh retry budget).
+    const later = new Date(istAt(day(s.day0, 10), '14:30').getTime() + LEASE_MS + 60_000);
+    const out = await waTick(h, s, later);
+    expect(out.results).toEqual([{ status: 'sent', outcome: 'may_have_sent' }]);
+    expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'may_have_sent', detail: 'may_have_sent:send_cap' });
+    expect((await pool.query<{ send_count: number }>(`SELECT send_count FROM claim_contact_wa_sends WHERE ladder_id = $1`, [ladderId])).rows[0]!.send_count).toBe(2);
+    expect(h.requests).toHaveLength(2);
+    // ⛔ a third: the row is finished — a later tick lists nothing for it.
+    expect((await waTick(h, s, new Date(later.getTime() + LEASE_MS + 60_000))).results).toEqual([]);
+    expect(h.requests).toHaveLength(2);
+  });
+
+  it('⭐ -370 fix-diff — a row whose sends are SPENT while unmarked (a 20:00 release kept the count): the marker answers `capped` and the child finishes it `may_have_sent:send_cap` at once — ⛔ a call, ⛔ burnt retries', async () => {
+    const h = harness();
+    const { s, ladderId } = await dueStep(h);
+    const env = await dueChild(h, s);
+    h.answer({ status: 503, body: { error: { code: 2 } } });
+    await expect(runContactLadderWhatsappChild(h.wa, boss(h), env, 'job-R', { retryCount: 0, retryLimit: 4 })).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    // A second mark released at 20:00 (⛔ a call) — the count it kept, as the release leaves it.
+    await pool.query(`UPDATE claim_contact_wa_sends SET send_count = 2 WHERE ladder_id = $1`, [ladderId]);
+    expect(await runContactLadderWhatsappChild(h.wa, boss(h), env, 'job-R', { retryCount: 1, retryLimit: 4 })).toEqual({ status: 'sent', outcome: 'may_have_sent' });
+    expect(await sendRowOf(ladderId)).toMatchObject({ send_outcome: 'may_have_sent', detail: 'may_have_sent:send_cap' });
+    expect(h.requests).toHaveLength(1);
+  });
+
+  it('⭐ -370 fix-diff — a new undelivered report for a person whose ladder is ALREADY running is ⛔ re-planned by the 8-hour scan', async () => {
+    const h = harness({ allowlist: [BURST_PARIWAR] });
+    const { s } = await dueStep(h, { pariwarId: BURST_PARIWAR });
+    const [second] = await chaseDay(h, s, 14);
+    await reportUndelivered(second!, BURST_PARIWAR);
+    h.setNow(istAt(day(s.day0, 14), '10:30'));
+    const out = await runContactLadderWhatsappSweep(h.wa, boss(h));
+    expect(out.startClaims).toBe(0);
+    expect(await ladderOf(s.claimCaseId)).toHaveLength(1);
+  });
+
   it('WS6 — the next daily run: today before 10:00 IST, else tomorrow', () => {
     expect(nextDailyLadderRunOn(istAt('2026-10-20', '09:59'))).toBe('2026-10-20');
     expect(nextDailyLadderRunOn(istAt('2026-10-20', '10:00'))).toBe('2026-10-21');
@@ -845,8 +1274,11 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     const { s } = await dueStep(h);
     h.answer({ status: 400, body: { error: { code: 131031 } } });
     await waTick(h, s);
+    expect(h.alarms.length).toBeGreaterThan(0);
     for (const a of h.alarms) {
-      expect(a).not.toMatch(/\d{10}/);
+      // Round 2 (P8) — the alarm's ids are random UUIDs, whose 12-hex group can hold ten digits in a row (~2.7 % each):
+      // strip them first, then ⛔ a ten-digit run (a mobile) may remain.
+      expect(a.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<id>')).not.toMatch(/\d{10}/);
       expect(a).not.toContain(HELPLINE);
     }
   });

@@ -282,6 +282,86 @@ describe.skipIf(!hasDatabase)('wa-webhook-processor — the claim-contact branch
     expect(await stateOf(optInId)).toBe(before);
   });
 
+  it('⭐ R1 — ONE inbound event batching STOPs from TWO senders records TWO stops (one per sender hash); a replay of that event records ⛔ more', async () => {
+    const pid = await pariwar();
+    const MOBILE_2 = '9812345670';
+    const batched = {
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: PNID },
+                messages: [
+                  { from: FROM, type: 'text', text: { body: 'STOP' } },
+                  { from: `91${MOBILE_2}`, type: 'text', text: { body: 'STOP' } },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const eventId = await event(pid, batched);
+    await process(pid, batched, eventId);
+    const want = [await claimHash(pid), await claim.correctionNumberHash(`+91${MOBILE_2}`, pid, enc)].sort();
+    expect((await stopsOf(pid)).map((r) => r.recipient_number_hash).sort()).toEqual(want);
+    expect(await auditCount(pid, 'claim_contact.wa_stopped')).toBe(2);
+    await process(pid, batched, eventId);
+    expect(await stopsOf(pid)).toHaveLength(2);
+    expect(await auditCount(pid, 'claim_contact.wa_stopped')).toBe(2);
+  });
+
+  it('⭐ round 2 (P4) — a claim STOP that FAILS to record raises `contact_ladder.stop_unrecorded` (ids only, ⛔ the number); the member path still runs', async () => {
+    const pid = await pariwar();
+    const optInId = await optIn(pid, 'ACTIVE');
+    let first = true;
+    const kms = Object.create(enc.kms) as typeof enc.kms;
+    kms.computeHmac = async (...a: Parameters<typeof enc.kms.computeHmac>) => {
+      if (first) {
+        first = false; // the claim-space hash is the FIRST HMAC of a STOP; the member blind index follows
+        throw new Error('kms unavailable');
+      }
+      return enc.kms.computeHmac(...a);
+    };
+    const alarms: string[] = [];
+    const payload = inbound('STOP');
+    const eventId = await event(pid, payload);
+    await processWebhookEvent({ ...deps(), enc: { ...enc, kms }, onAlarm: (m: string) => alarms.push(m) }, { eventId, pariwarId: pid, rawPayload: payload });
+    expect(await stopsOf(pid)).toHaveLength(0);
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('contact_ladder.stop_unrecorded');
+    expect(alarms[0]).toContain(eventId);
+    expect(alarms[0]).not.toContain(MOBILE);
+    expect(await stateOf(optInId)).toBe('REVOKED');
+  });
+
+  it('⭐ R4 / -369 d4 — after a number ROTATION (the callback\'s phone_number_id is ⛔ today\'s): a claim wamid\'s block stays the CLAIM\'s (the member opt-in UNCHANGED) and a delivery still lands on its row', async () => {
+    const pid = await pariwar();
+    const optInId = await optIn(pid, 'ACTIVE');
+    const blocked = await claimSend(pid, { wamid: 'wamid.ROTATED-BLOCK' });
+    const delivered = await claimSend(pid, { wamid: 'wamid.ROTATED-DELIVERED' });
+    const rotated = (wamid: string, status: string, code?: number) => ({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                metadata: { phone_number_id: 'pnid-before-rotation' },
+                statuses: [{ id: wamid, status, recipient_id: FROM, ...(code !== undefined ? { errors: [{ code }] } : {}) }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    await process(pid, rotated('wamid.ROTATED-BLOCK', 'failed', 131026));
+    expect(await stateOf(optInId)).toBe('ACTIVE');
+    expect(await statusRow(blocked)).toMatchObject({ failure_code: '131026' });
+    await process(pid, rotated('wamid.ROTATED-DELIVERED', 'delivered'));
+    expect((await statusRow(delivered)).delivered_at).not.toBeNull();
+  });
+
   it('⭐ T26 — the change\'s phone_number_id is NOT the Pariwar\'s (or absent) ⇒ ⛔ claim action; the member path still runs', async () => {
     const pid = await pariwar();
     const optInId = await optIn(pid, 'ACTIVE');

@@ -61,9 +61,11 @@ describe('the agreement registry — v1 kept as evidence, v2 current', () => {
     }
   });
 
-  it('⛔ the claim.json files keep the "not yet reviewed" marker while the current Hindi is unreviewed', () => {
+  it('⛔ the claim.json files carry the "not yet reviewed" marker EXACTLY while the current Hindi is unreviewed (G3 (a) flips both in ONE commit)', () => {
+    const current = claim.CLAIM_CONTACT_AGREEMENT_VERSIONS[CLAIM_CONTACT_AGREEMENT_COPY_VERSION]!;
     for (const locale of ['en', 'hi'] as const) {
-      expect(claimJson(locale)['$comment.contact_agreement']).toMatch(/NOT YET HUMAN-REVIEWED/);
+      const marked = /NOT YET HUMAN-REVIEWED/.test(String(claimJson(locale)['$comment.contact_agreement'] ?? ''));
+      expect(marked).toBe(!current.hiReviewed);
     }
   });
 });

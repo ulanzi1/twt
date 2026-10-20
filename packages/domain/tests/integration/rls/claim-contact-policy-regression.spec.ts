@@ -261,6 +261,35 @@ describe.skipIf(!hasDatabase)('claim_contacts + claim_contact_nominees — migra
       await expect(attempt(block)).resolves.toBeDefined();
     });
 
+    it.each([
+      [0, 0],
+      [2, 0],
+      [2, 3],
+    ])('⭐ 0174 (Story 6.37d R3) — claimant_generation %i / agreement_claimant_generation %i is refused (23514, the agreement CHECK)', async (g, a) => {
+      await expect(attempt({ claimant_generation: g, agreement_claimant_generation: a })).rejects.toMatchObject({
+        code: '23514',
+        constraint: 'claim_contacts_agreement_claimant_generation_check',
+      });
+    });
+
+    it.each([
+      [3, 2],
+      [2, 2],
+    ])('✅ 0174 — claimant_generation %i / agreement_claimant_generation %i is accepted (behind ⇒ the basis reads `claimant_changed`)', async (g, a) => {
+      await expect(attempt({ claimant_generation: g, agreement_claimant_generation: a })).resolves.toBeDefined();
+    });
+
+    it('0174 — the two generation CHECKs by NAME and definition (`claimant_generation >= 1` is implied by the second, so it can never fire alone)', async () => {
+      const { client } = getTx();
+      const { rows } = await client.query<{ conname: string; def: string }>(
+        `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint
+          WHERE conname IN ('claim_contacts_claimant_generation_check', 'claim_contacts_agreement_claimant_generation_check') ORDER BY conname`,
+      );
+      expect(rows.map((r) => r.conname)).toEqual(['claim_contacts_agreement_claimant_generation_check', 'claim_contacts_claimant_generation_check']);
+      expect(rows[0]!.def).toMatch(/agreement_claimant_generation >= 1\) AND \(agreement_claimant_generation <= claimant_generation/);
+      expect(rows[1]!.def).toMatch(/claimant_generation >= 1/);
+    });
+
     it('contact_locale ∈ {hi, en}', async () => {
       await expect(attempt({ contact_locale: 'fr' })).rejects.toMatchObject({ code: '23514' });
     });

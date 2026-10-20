@@ -81,8 +81,9 @@ export const claimContacts = pgTable(
       .references(() => consentRecords.consentId),
 
     // Review R3 (Story 6.37d, 2026-10-20; migration 0174) — WHO the live agreement covers. `claimantGeneration` bumps on
-    // every write that sets the claimant side (W6's `writeSide`), whether a nominee swap or a block-content change (⛔ a
-    // kind alone — two different claimant BLOCKs never differ by kind). `agreementClaimantGeneration` is stamped to the
+    // every write that CHANGES the claimant (Decision 2026-10-20-369 decision 2): a different nominee version, a switch
+    // between a version and the block, or a block whose decrypted content differs — an identical re-send leaves it (0174's
+    // header said "every write that sets the claimant side"; corrected here, never in the applied migration). `agreementClaimantGeneration` is stamped to the
     // CURRENT `claimantGeneration` whenever a fresh agreement is recorded (W8's `recordFresh`). The WhatsApp basis reader
     // (`claim-contact-whatsapp-basis.ts`) is the ONLY reader of either column — SMS/call/post keep reading `agreement`
     // 'live' / 'revoked' only ([[feedback_architecture_vs_adr_boundary]]-adjacent: this is an engineering tightening of

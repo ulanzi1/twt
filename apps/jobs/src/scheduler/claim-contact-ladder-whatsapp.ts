@@ -9,11 +9,11 @@
 // ── The sweep, every 15 minutes IST, AROUND THE CLOCK ─────────────────────────────────────────────────────────────────────
 //   (0) the role guard (`canReadAcrossPariwars` — false ⇒ ONE alarm, the tick ends; ⛔ "nothing due");
 //   (1) the LAPSED in-flight send rows finished `may_have_sent:lease_lapsed` (⛔ re-sent);
-//   (2) the STARTS — a ladder for every `family_sms` row REPORTED `undelivered` in the last two hours that has ⛔ ladder
+//   (2) the STARTS — a ladder for every `family_sms` row REPORTED `undelivered` in the last EIGHT hours (`-370` d2 — was two) that has ⛔ ladder
 //       (`sms_send_deliveries.reported_at` — the time WE received a report; ⛔ a "previous tick" watermark exists: a missed tick is
 //       covered by the overlap, a duplicate start absorbed by `claim_contact_ladders_origin_uq`), through the SAME start as the
 //       10:00 sweep (`startContactLaddersForClaim` — ⛔ `advance`), then LD13's start tail (the burst / hash alarms — ADR-0042's
-//       ratified bound counts on them). ⚠ A report the correlator settles more than two hours after receipt, or a flip to
+//       ratified bound counts on them). ⚠ A report the correlator settles more than eight hours after receipt, or a flip to
 //       `undelivered` by an earlier-received report, is started by the next 10:00 sweep instead (disclosed);
 //   (3) only INSIDE 09:00–20:00 IST — the due steps (SQL only, ⛔ HMAC, ⛔ decrypt): running ladders whose step is `pending` 4 hours
 //       after the origin, and send rows `attempting` with ⛔ marker and a lapsed lease — ONE child each.
@@ -81,7 +81,7 @@ export const CONTACT_LADDER_WA_SWEEP_EXPIRE_SECONDS = 12 * 60;
 /** The child's expiry — ≤ 10 min (one send ≤ its 10 s timeout + the bounded statements). ⛔ 6.31's 45. */
 export const CONTACT_LADDER_WA_CHILD_EXPIRE_SECONDS = 10 * 60;
 /** AC4 — a quarter-hourly start considers reports RECEIVED in the last this-many hours (the overlap covers a missed tick). */
-export const CONTACT_LADDER_WA_START_WINDOW_HOURS = 2;
+export const CONTACT_LADDER_WA_START_WINDOW_HOURS = 8; // Decision 2026-10-20-370 decision 2 (was 2): covers MSG91's 2 h / 6 h correlation retries
 /** The start scan's page size (raw SQL — clamped BY HAND, AC12) and the tick's claim bound (hitting it is ALARMED). */
 export const CONTACT_LADDER_WA_START_PAGE = 500;
 export const CONTACT_LADDER_WA_START_MAX_CLAIMS = 5_000;
@@ -173,7 +173,7 @@ export async function enqueueContactLadderWhatsappChild(
  * plain `DISTINCT` row per reminder — that would let the SAME `claim_case_id` span two keyset pages and silently drop rows):
  * the shared start (`startContactLaddersForClaim`) considers every recipient's full 14-day candidate set, so WITHOUT this the
  * quarter-hourly tick started a ladder for ANY recipient with an old uncovered report once ONE recipient's report tripped the
- * 2-hour scan — even a recipient whose own report was meant to wait for the next 10:00 daily sweep. The caller narrows the
+ * recency scan — even a recipient whose own report was meant to wait for the next 10:00 daily sweep. The caller narrows the
  * start to origins actually IN this set (`StartsOnly.eligibleOriginRowIds`).
  *
  * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ── ids only (`claim_case_id`, `pariwar_id`,
@@ -196,6 +196,10 @@ async function listNewReportClaims(
         WHERE r.purpose = 'family_sms' AND r.outcome = 'accepted' AND d.delivery_state = 'undelivered'
           AND d.reported_at >= now() - make_interval(hours => $2)
           AND NOT EXISTS (SELECT 1 FROM claim_contact_ladders l WHERE l.chase = $3 AND l.origin_row_id = r.reminder_id)
+          -- Decision -370 fix-diff review: skip a report whose person ALREADY has a running ladder in this chase (the start would decline it
+          -- (one ladder at a time), so re-planning it every tick of the 8-hour window was pure lock and KMS load.
+          AND NOT EXISTS (SELECT 1 FROM claim_contact_ladders l2 WHERE l2.chase = $3 AND l2.claim_case_id = r.claim_case_id
+                            AND l2.person_key = r.recipient_key AND l2.state = 'running')
      )
      SELECT claim_case_id, pariwar_id, array_agg(DISTINCT reminder_id) AS reminder_ids
        FROM c
@@ -241,7 +245,7 @@ export async function runContactLadderWhatsappSweep(deps: ContactLadderWhatsappD
     console.info(`[jobs] contact-ladder-whatsapp: contact_ladder.whatsapp may_have_sent:lease_lapsed — send ${l.sendId}, claim ${l.claimCaseId}, Pariwar ${l.pariwarId}`);
   }
 
-  // (2) The STARTS for reports received in the last two hours — the SAME start as the 10:00 sweep, ⛔ `advance`.
+  // (2) The STARTS for reports received in the last eight hours (`-370` d2) — the SAME start as the 10:00 sweep, ⛔ `advance`.
   const today = cycleCalendar.istDateOf(now);
   const startsOnly = { nextDailyRunOn: nextDailyLadderRunOn(now) };
   const tally = newTally();
@@ -536,10 +540,25 @@ export async function runContactLadderWhatsappChild(
   const marked = await scoped((d) =>
     claimDomain.markContactLadderWhatsappInFlight(d, { ...row, leaseMarginMs: claimDomain.CONTACT_LADDER_WA_HANDOFF_MARGIN_MS, now: clock() }),
   );
+  if (marked === 'capped') {
+    // `-370` / `-371` backstop — this job holds the row but its two ambiguous sends are spent: ⛔ a call, finish it now.
+    const done = await scoped((d) =>
+      claimDomain.finishContactLadderWhatsappSendCapped(d, { ...row, transient: claimDomain.contactLadderWaDetail('marker_lost', 'send_cap'), phase: 'at_marker' }),
+    );
+    if (!done) alarm(`[jobs] contact-ladder-whatsapp: the send row of ${tag} moved on before its send-cap finish`);
+    logOutcome('may_have_sent:send_cap (at the marker — ⛔ sent)', p, pid);
+    return { status: 'sent', outcome: 'may_have_sent' };
+  }
   if (marked === 'lost') {
     const lost = claimDomain.contactLadderWaDetail('marker_lost', 'lease');
     if (finalAttempt) {
-      await scoped((d) => claimDomain.finishContactLadderWhatsappExhausted(d, { ...row, transient: lost, phase: 'pre_send' }));
+      const done = await scoped((d) => claimDomain.finishContactLadderWhatsappExhausted(d, { ...row, transient: lost, phase: 'pre_send' }));
+      // Round 2 (P10) — `lost` means another job (or a same-job-id twin) holds the row: the finish then matches ⛔ row, and
+      // THAT holder's outcome stands — ⛔ report an exhausted finish this job never wrote.
+      if (!done) {
+        logOutcome('noop (marker lost to another holder — the row is ⛔ this job\'s)', p, pid);
+        return { status: 'noop', reason: 'marker_lost' };
+      }
       logOutcome('skipped:transient_exhausted', p, pid);
       return { status: 'sent', outcome: 'transient_exhausted' };
     }
@@ -590,6 +609,12 @@ export async function runContactLadderWhatsappChild(
   }
   if (outcome.kind === 'transient') {
     const note = claimDomain.contactLadderWaTransientDetail(outcome.token);
+    // Decisions -370 / -371 — the row's SECOND send Meta may have acted on (a 5xx after the connection opened): finish it
+    // `may_have_sent:send_cap`, ⛔ a third call. A 429 or a connection that never opened is ⛔ counted (the domain decides).
+    if (await scoped((d) => claimDomain.finishContactLadderWhatsappSendCapped(d, { ...row, transient: note }))) {
+      logOutcome(`may_have_sent:send_cap (after ${note})`, p, pid);
+      return { status: 'sent', outcome: 'may_have_sent' };
+    }
     if (finalAttempt) {
       // The FINAL token is logged (the row alone cannot prove a post-send 5xx happened — `first_detail` keeps the first).
       const done = await scoped((d) => claimDomain.finishContactLadderWhatsappExhausted(d, { ...row, transient: note, phase: 'post_send' }));

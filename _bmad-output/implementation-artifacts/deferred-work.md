@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-37d-claim-contact-whatsapp-step.md, round 2 (2026-10-20)
+
+- **WS11's hash fallback can suppress a MEMBER's block** [`apps/jobs/src/wa-webhook-processor.ts` status branch; `-369` decision 4] — a
+  block-coded `failed` for a MEMBER-path wamid, on a number that had a claim send in the last 7 days, is claimed by the claim-space hash ⇒
+  that member's `BLOCKED_BY_META` is ⛔ recorded and the member path keeps sending to a number that blocked the Trust. The other way
+  round (a claim block revoking a member) is what I7 forbids, so the fallback errs this way on purpose. Trigger: row
+  `5-12-whatsapp-yes-lasts-until-withdrawn` or the `WA_BLOCK_ERROR_CODES` item reworking the member block path (check whether the wamid
+  is a member send before the hash fallback).
+- **A late-landing WhatsApp delivery is invisible to D22 once the ladder ends otherwise** [`packages/domain/src/claim/contact-ladder-whatsapp-delivery.ts`; `readReturnLadderWhatsappDeliveries`] — under READ COMMITTED a `delivered` callback drained while the finalise is uncommitted misses the wamid, lands only in `whatsapp_send_status`, and the finalise's copy may already have run; only the running-ladder settles copy it later, and closure reach reads only the row's `delivered_at`. The copy also stamps `wd_w.updated_at` (possibly the `read` time). Trigger: D22 reach disputed for a claim whose WhatsApp was delivered.
+- **A `failed` status that arrives before the finalise never reaches the send row** [`contact-ladder-whatsapp-record.ts` `recordClaimContactWaStatus`] — the finalise copies only `delivered` from the status store; `failed_at` / `failure_code` stay NULL. Nothing reads them today. Trigger: the first reader of `failed_at` / `failure_code`.
+- **At 20:00, a failed marker release turns an unsent message into `may_have_sent:lease_lapsed`** [`apps/jobs/src/scheduler/claim-contact-ladder-whatsapp.ts` (the post-marker window check)] — needs a DB error between the marker commit and the release; fails safe (no second send) but uses up the once-only step. Trigger: a `lease_lapsed` row with no Meta call in the logs.
+- **The quarter-hourly start re-hashes a claim on every tick for two hours when the planner declines its fresh origin** [`listNewReportClaims` + `eligibleOriginRowIds`] — a cost under the KMS global audit lock ([[project_kms_audit_per_hmac_global_lock]]), not a correctness fault. Trigger: KMS audit volume or lock wait from the sweep.
+- **`nextDailyLadderRunOn` assumes the daily run happens at exactly 10:00 IST** [`claim-contact-ladder-whatsapp.ts`] — a late or retried daily run (e.g. 10:40) makes a 10:15 start's SMS 2 slip a day. Trigger: a daily-sweep run observed later than 10:15.
+- **The server stamps the CURRENT agreement copy version, not the one the client showed** [`apps/api/src/modules/claims/claims.contact.handlers.ts`; the 6.19a mechanism] — pre-existing; an older client build (or a stale admin tab) posting `agreed: true` over bundled v1 text records v2 as shown. Not in production. Trigger: the next copy-version bump (⛔ Row 36 (a)'s Hindi review if it accepts the words — that flips `hiReviewed` in place; a reworded Hindi or English does mint one) — carry a client-sent `copyVersion` and refuse a mismatch then.
+
 ## Deferred from: Story 6.37d dev — the claimant's WhatsApp step (2026-10-20)
 
 - **⛔ Un-stop path** [`claim_contact_wa_stops`, migration 0172; `apps/jobs/src/claim-contact-wa-stop.ts`] — a STOP ends claim WhatsApp to
@@ -11,7 +26,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   again has ⛔ route in v1 (disclosed by `-367`). Trigger: a claimant or staff asking to re-open WhatsApp after a STOP.
 - **The webhook drain is at-most-once** [`claimUnprocessedWebhookEvents` marks events processed AT CLAIM — F8] — a crash mid-batch loses a
   status; a lost `delivered` is silence (the ladder runs on to its texts, as for an SMS with no report — `-351` 1 A). ⛔ Promise "ever
-  delivered" beyond what arrives (T16). Trigger: a delivered claim WhatsApp observed missing its row's `delivered_at`.
+  delivered" beyond what arrives (T16). Trigger: a delivered claim WhatsApp observed missing its row's `delivered_at`. ⚠ *Dated note
+  (2026-10-20, code review round 2 — P4):* the same at-most-once drain LOSES a claimant's STOP whose recording fails (a KMS or DB fault);
+  it is ⛔ silent any more — `contact_ladder.stop_unrecorded` (ids only; logs-only until Row 32 (h)). ⛔ Retried: the number can still
+  receive claim WhatsApp until someone records the stop.
 - **Inbound non-STOP replies to a claim WhatsApp are read by nobody** [`apps/jobs/src/wa-webhook-processor.ts`] — the worker matches
   only a typed STOP keyword (and the member opt-in phrase); a claimant's free-text reply (a question, "please call me") is dropped. Trigger:
   roster Row 36 (g)'s decision, or a claimant reporting an unanswered reply.
@@ -25,14 +43,25 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - **A post-send 500 / 503 is retried and MAY send a second WhatsApp** [I4; `-366` d2 rule 3 as 6.31 inherits it] — `classifyDirectWaSendFailure`
   files any 5xx other than 502 / 504 as `transient`; Meta may have acted on a request it answered 500 / 503. The ladder caps it at
   `CHILD_RETRY_LIMIT` + 1 sends in the worst case (disclosed by the story's I4). Trigger: a duplicate claim WhatsApp reported, or Meta
-  documenting 5xx idempotency.
+  documenting 5xx idempotency. ⚠ *Dated note (2026-10-20, code review round 2):* "`CHILD_RETRY_LIMIT` + 1" was WRONG — an overnight
+  deferral or a lapsed re-take starts a fresh retry budget, so it was unbounded; since Decision `2026-10-20-370` (migration 0176) a
+  follow-up makes at most TWO sends Meta may have acted on (`may_have_sent:send_cap`; `-371` — a 429 or a never-opened connection does ⛔
+  count). The residual is one duplicate, disclosed to the Panel (the told item).
+- **The quarter-hourly start's 5,000-claim bound restarts its keyset each tick** [`runContactLadderWhatsappSweep` (2)] — past 5,000
+  in-window claims the same first ids are re-scanned and the tail waits for the 10:00 run (the alarm's "next tick" is then untrue); the
+  8-hour window (`-370` d2) makes the set larger. Trigger: the `start bound` alarm firing.
+- **Send #2's own transient is only in the log** [`finishContactLadderWhatsappSendCapped`] — `first_detail` keeps send #1's note and
+  `detail` is `may_have_sent:send_cap`. Trigger: an operator needing the second error from the row.
 - **The Meta-policy check (Row 36 (d)) is ⛔ yet recorded** — the agreement's opt-in against Meta's three opt-in elements and the business
   name the claimant sees (the Pariwar's display name vs "the Trust"). Gated by Row 36 (d). Trigger: Row 36 (d).
-- **Disclosed edges of the quarter-hourly start** [AC4] — (i) a report the correlator settles more than two hours after its receipt, or a
+- **Disclosed edges of the quarter-hourly start** [AC4] — ⚠ *dated note (2026-10-20, round 2): (i)'s "two hours" is EIGHT since
+  `-370` decision 2.* (i) a report the correlator settles more than two hours after its receipt, or a
   flip to `undelivered` by an earlier-received report, is started by the next 10:00 sweep instead (a later WhatsApp, ⛔ a lost ladder); (ii)
   the 10:00 quarter-hourly tick and the daily sweep may EACH raise the burst alarm once; (iii) a WhatsApp switch turned ON between the
   child's config read and its locked re-check loses that ladder's step (`skipped:whatsapp_not_configured`). Trigger: an operator asking
-  why a step was skipped at go-live, or a duplicate burst alarm.
+  why a step was skipped at go-live, or a duplicate burst alarm. ⚠ *Dated note (2026-10-20, code review round 2 — P9):* since review R6
+  the burst alarm REPEATS on every run that starts a ladder while the day is at or past the threshold (up to every quarter-hourly
+  tick) — "once" above is superseded; a duplicate burst alarm is now the NORMAL shape, ⛔ this item's trigger.
 
 ## Deferred from: Story 6.37d Task 0 — Decision 2026-10-20-367 (2026-10-20)
 

@@ -26,6 +26,9 @@ export type Db = NodePgDatabase<DbSchema>;
 export const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** `createDb`'s default pg.Pool `connectionTimeoutMillis` — exported so a bound that sums it (6.37d's lease inequality) reads the real value. */
+export const DEFAULT_POOL_CONNECTION_TIMEOUT_MS = 10_000;
+
 export interface CreateDbOptions {
   /**
    * pg.Pool max-connection ceiling. Default 10.
@@ -64,7 +67,7 @@ export function createDb(connectionString: string, options: CreateDbOptions = {}
     connectionString,
     max: options.max ?? 10,
     idleTimeoutMillis: options.idleTimeoutMillis ?? 30_000,
-    connectionTimeoutMillis: options.connectionTimeoutMillis ?? 10_000,
+    connectionTimeoutMillis: options.connectionTimeoutMillis ?? DEFAULT_POOL_CONNECTION_TIMEOUT_MS,
     ssl: options.ssl ?? { rejectUnauthorized: false },
   });
 

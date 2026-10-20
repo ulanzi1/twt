@@ -19,6 +19,7 @@ import {
   CertificateRemindersResponse,
   CONTACT_LADDER_ASKS,
   CONTACT_LADDER_FOLLOW_UP_STATES,
+  ContactLadderFollowUpDto,
   RecordCertificateLetterRequest,
   UNREACHABLE_REASONS,
 } from '../src/index.js';
@@ -95,5 +96,14 @@ describe('the certificate reminder vocabularies (Story 6.19d)', () => {
       truncated: false,
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it('⭐ Story 6.37d round 2 (P13) — `follow_up.delivered_by` parses `text` / `whatsapp` / null and REFUSES any other channel (contracts tests sit outside tsc)', () => {
+    const followUp = (delivered_by: unknown) => ({ state: 'ended_delivered', started_on: '2026-10-04', next_step_on: null, concluded_on: null, delivered_by });
+    for (const ok of ['text', 'whatsapp', null]) expect(ContactLadderFollowUpDto.safeParse(followUp(ok)).success).toBe(true);
+    for (const bad of ['sms', 'WhatsApp', 'telegram', '']) expect(ContactLadderFollowUpDto.safeParse(followUp(bad)).success).toBe(false);
+    const missing: Record<string, unknown> = { ...followUp('text') };
+    delete missing['delivered_by'];
+    expect(ContactLadderFollowUpDto.safeParse(missing).success).toBe(false); // REQUIRED — a stale producer fails loudly
   });
 });

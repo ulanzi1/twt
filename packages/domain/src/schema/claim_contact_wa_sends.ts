@@ -12,7 +12,7 @@
 // ⛔ PII: ids, a KEYED number hash, the wamid, the template NAME, a fixed-vocabulary `detail` — ⛔ a name, ⛔ a number.
 
 import { sql } from 'drizzle-orm';
-import { index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { foreignKey, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import type { ClaimId, PariwarId } from '../ids/index.js';
 import { claimContactLadders, type ContactLadderChase } from './claim_contact_ladders.js';
@@ -71,6 +71,8 @@ export const claimContactWaSends = pgTable(
     sendOutcome: text('send_outcome').notNull().$type<ContactLadderWaSendOutcome>(),
     /** ≥ 1 — the claims that took the row (a re-claim adds one; 0172's trigger: ⛔ decreasing). */
     attemptCount: integer('attempt_count').notNull().default(1),
+    /** Decisions 2026-10-20-370 / -371 (migration 0176) — the sends Meta MAY have acted on (a post-send 5xx after the connection opened — counted at the note); a CHECK holds it to `0..2`, ⛔ decreasing. */
+    sendCount: integer('send_count').notNull().default(0),
     claimedAt: timestamp('claimed_at', { withTimezone: true, mode: 'date' }).notNull(),
     claimedByJob: text('claimed_by_job').notNull(),
     /** The first claim's instant — moves only forward. */
@@ -95,7 +97,14 @@ export const claimContactWaSends = pgTable(
     unique('claim_contact_wa_sends_wamid_uq').on(t.providerMessageId),
     index('claim_contact_wa_sends_claim_idx').on(t.pariwarId, t.claimCaseId),
     index('claim_contact_wa_sends_attempting_idx').on(t.claimedAt).where(sql`send_outcome = 'attempting'`),
-    index('claim_contact_wa_sends_recipient_idx').on(t.pariwarId, t.recipientNumberHash, t.createdAt),
+    // Story 6.37d round 2 (P11, migration 0175) — the isolation lookup ages by `updated_at` (review R5); the index follows it.
+    index('claim_contact_wa_sends_recipient_idx').on(t.pariwarId, t.recipientNumberHash, t.updatedAt),
+    // Migration 0175 — the composite OWNER FK (6.31's shape): a send row's tenant, claim and chase are its ladder's.
+    foreignKey({
+      name: 'claim_contact_wa_sends_ladder_owner_fk',
+      columns: [t.pariwarId, t.ladderId, t.claimCaseId, t.chase],
+      foreignColumns: [claimContactLadders.pariwarId, claimContactLadders.ladderId, claimContactLadders.claimCaseId, claimContactLadders.chase],
+    }).onDelete('cascade'),
   ],
 );
 

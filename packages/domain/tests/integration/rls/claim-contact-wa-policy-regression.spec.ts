@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
+import { CONTACT_LADDER_WA_MAX_SENDS } from '../../../src/claim/index.js';
 import {
   CONTACT_LADDER_WA_DETAIL_PATTERN,
   CONTACT_LADDER_WA_SEND_OUTCOMES,
@@ -170,6 +171,7 @@ describe.skipIf(!hasDatabase)('claim_contact_wa_sends / claim_contact_wa_stops �
         'first_detail',
         'locale',
         'provider_message_id',
+        'send_count', // 0176 (`-370`)
         'send_outcome',
         'send_started_at',
         'template_name',
@@ -238,6 +240,18 @@ describe.skipIf(!hasDatabase)('claim_contact_wa_sends / claim_contact_wa_stops �
     });
   });
 
+  it('⭐ 0175 (round 2, P11) — the composite OWNER FK: a send row\'s tenant, claim and chase must be its ladder\'s (23503)', async () => {
+    const { client } = getTx();
+    const mine = await seedLadder(client, PARIWAR_A);
+    const another = await seedLadder(client, PARIWAR_A);
+    const theirs = await seedLadder(client, PARIWAR_B);
+    const owner = { code: '23503', constraint: 'claim_contact_wa_sends_ladder_owner_fk' };
+    await expectPgError(client, () => insertRow(client, rowOf(mine, PARIWAR_A, { chase: 'certificate' })), owner);
+    await expectPgError(client, () => insertRow(client, rowOf({ ...mine, claimCaseId: another.claimCaseId }, PARIWAR_A)), owner);
+    await expectPgError(client, () => insertRow(client, rowOf(theirs, PARIWAR_A)), owner); // FK checks bypass RLS — the FK holds
+    await expectAccepted(client, () => insertRow(client, rowOf(mine, PARIWAR_A)));
+  });
+
   it('⭐ the stops: a replayed inbound event records ⛔ a second stop (23505); the same number again from a NEW event is another row', async () => {
     const { client } = getTx();
     const ev = randomUUID();
@@ -246,8 +260,16 @@ describe.skipIf(!hasDatabase)('claim_contact_wa_sends / claim_contact_wa_stops �
       code: '23505',
       constraint: 'claim_contact_wa_stops_event_uq',
     });
+    // Review R1 (0173) — the replay key is PER SENDER: a second sender in the SAME inbound event is its own stop.
+    await expectAccepted(client, () => insertRow(client, { pariwar_id: PARIWAR_A, recipient_number_hash: 'h-second-sender', inbound_event_id: ev }, S));
     await expectAccepted(client, () => insertRow(client, { pariwar_id: PARIWAR_A, recipient_number_hash: 'h', inbound_event_id: randomUUID() }, S));
     await expectPgError(client, () => insertRow(client, { pariwar_id: PARIWAR_A, recipient_number_hash: ' ', inbound_event_id: randomUUID() }, S), CHECK('claim_contact_wa_stops_number_hash_check'));
+  });
+
+  it('⭐ LOCKSTEP (0176, `-370`) — the send-count CHECK\'s ceiling IS `CONTACT_LADDER_WA_MAX_SENDS` (a drift would turn the marker\'s refusal into a 23514)', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ def: string }>(`SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_contact_wa_sends_send_count_check'`);
+    expect(rows[0]!.def).toContain(`send_count <= ${String(CONTACT_LADDER_WA_MAX_SENDS)}`);
   });
 
   it('⭐ LOCKSTEP — the outcome CHECK names EXACTLY the TS vocabulary; the two grammar CHECKs carry EXACTLY the TS pattern', async () => {
@@ -264,7 +286,11 @@ describe.skipIf(!hasDatabase)('claim_contact_wa_sends / claim_contact_wa_stops �
   // ⭐ Every CHECK by NAME, each with a POSITIVE counterpart (a fresh ladder per leg).
   it.each<[string, Record<string, unknown>, Record<string, unknown>]>([
     ['claim_contact_wa_sends_send_outcome_check', { send_outcome: 'error' }, { send_outcome: 'attempting' }],
-    ['claim_contact_wa_sends_chase_check', { chase: 'peer_mesh' }, { chase: 'certificate' }],
+    ['claim_contact_wa_sends_send_count_check', { send_count: 3 }, { send_count: 2 }], // 0176 (`-370` — at most two sends)
+    ['claim_contact_wa_sends_send_count_check', { send_count: -1 }, { send_count: 0 }],
+    // The positive is the LADDER's own chase — since 0175 a send row's chase must equal its ladder's (the owner FK). That the CHECK
+    // ACCEPTS `certificate` is shown by the 0175 leg: a `certificate` row on a correction ladder is refused 23503 (the FK), ⛔ 23514.
+    ['claim_contact_wa_sends_chase_check', { chase: 'peer_mesh' }, { chase: 'correction' }],
     ['claim_contact_wa_sends_number_hash_check', { recipient_number_hash: '  ' }, { recipient_number_hash: 'h' }],
     ['claim_contact_wa_sends_template_name_check', { template_name: 'Has-Caps' }, { template_name: 'claim_certificate_reminder_hi' }],
     ['claim_contact_wa_sends_template_name_check', { template_name: 'a'.repeat(513) }, { template_name: 'a'.repeat(512) }],
@@ -321,6 +347,9 @@ describe.skipIf(!hasDatabase)('claim_contact_wa_sends / claim_contact_wa_stops �
     expect((await upd(`first_detail = 'api_unavailable:503'`)).rowCount).toBe(1);
     await expectPgError(client, () => upd(`first_detail = 'rate_limited:none'`), GUARD(/first_detail is written once/));
     await expectPgError(client, () => upd(`aging_since = '2026-01-01T00:00:00Z'`), GUARD(/aging_since moves only forward/));
+    // 0176 (`-370`) — the send count never decreases; it is held to 0..2 by its CHECK.
+    expect((await upd(`send_count = 2`)).rowCount).toBe(1);
+    await expectPgError(client, () => upd(`send_count = 1`), GUARD(/send_count never decreases/));
   });
 
   it('⭐ T28 — a FINISHED row is frozen EXCEPT the status columns: on an accepted row each is set ONCE; ⛔ on any other outcome', async () => {
@@ -330,6 +359,7 @@ describe.skipIf(!hasDatabase)('claim_contact_wa_sends / claim_contact_wa_stops �
     await expectPgError(client, () => upd(accepted.sendId, `send_outcome = 'refused', detail = 'refused:x'`), GUARD(/finished send .* is never rewritten/));
     await expectPgError(client, () => upd(accepted.sendId, `detail = 'skipped:x'`), GUARD(/finished send .* is never rewritten/));
     await expectPgError(client, () => upd(accepted.sendId, `provider_message_id = 'wamid.other'`), GUARD(/finished send .* is never rewritten/));
+    await expectPgError(client, () => upd(accepted.sendId, `send_count = 2`), GUARD(/finished send .* is never rewritten/)); // 0176
     expect((await upd(accepted.sendId, `delivered_at = clock_timestamp(), updated_at = clock_timestamp()`)).rowCount).toBe(1);
     await expectPgError(client, () => upd(accepted.sendId, `delivered_at = clock_timestamp()`), GUARD(/delivered_at is set once/));
     await expectPgError(client, () => upd(accepted.sendId, `delivered_at = NULL`), GUARD(/delivered_at is set once/));

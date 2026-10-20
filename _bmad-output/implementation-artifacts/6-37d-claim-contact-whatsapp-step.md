@@ -1055,6 +1055,10 @@ closed** (one of its named gaps closed, the rest remain open — read R8's own l
   fourteen-day candidate set. Live reproduction: a recent failure for person A and an unladdered three-hour-old report for B
   start TWO ladders during the quarter-hourly tick; B's origin was supposed to wait for the daily sweep. Carry eligible origin
   IDs or the report cutoff into the shared start and apply it to the actual origin, for both chases.
+  **Regression leg added 2026-10-20:** `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` "R7 — the quarter-hourly
+  start enforces the two-hour window per ORIGIN" — two people on one claim, a fresh report and a 3-hour-old report; RED
+  before the fix (2 ladders), green after (1 now, the second at the next 10:00 sweep) — confirmed by temporarily disabling
+  the fix's two gating lines and re-running.
 - [ ] [Review][Patch] **R8 — MEDIUM: complete the required live acceptance and concurrency proof.**
   [packages/domain/tests/integration/claim/contact-ladder-whatsapp.spec.ts:135] — AC3–AC6 / AC12 / checklist families 2 and 10.
   The new record wrapper hardcodes `chase: 'correction'`, and the new jobs live suite also covers correction only; the distinct
@@ -1135,20 +1139,22 @@ says exactly what closed and what did not — read it before treating family 2 /
   disclosed, roster Row 32 (h)).
 - **R7** — `listNewReportClaims` now returns each claim's full `reminderIds` set (`array_agg` under a `GROUP BY`, keyset
   pagination re-verified sound); `StartsOnly.eligibleOriginRowIds` carries it into `planCorrectionLadders` /
-  `planCertificateLadders`, which skip a chosen origin that is not in that set.
+  `planCertificateLadders`, which skip a chosen origin that is not in that set. A regression leg added 2026-10-20 (two
+  people, one claim, one fresh / one 3-hour-old report) — RED before the fix, green after, confirmed by disabling it.
 - **R8** — see its own line above. ONE true two-connection race added
   (`apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts`); the certificate-chase legs, the late-correlator, the
   20:00→09:00 config-off finish, delivery-first-after-conclusion and other-chase-independence legs are NOT added.
 - **R9** — `listNewReportClaims` now carries the `DELIBERATE` / `RE-EXAMINE when:` block this file's sibling functions use.
 
 **Verification:** `tsc --noEmit` clean on `@twt/domain` and `@twt/jobs`. Migrations 0173/0174 applied on :5433 and checked
-against `information_schema` directly. 345 tests green on :5433, zero regressions, run file-by-file (a combined 4-file run
+against `information_schema` directly. 346 tests green on :5433, zero regressions, run file-by-file (a combined 4-file run
 hit an unrelated cross-file DB-lock-contention hang in `wa-webhook-processor.test.ts`'s `afterAll` — confirmed NOT a
 regression by re-running that file alone, 15/15 green in 460 ms): domain 251/251 (`contact-ladder.test.ts`,
 `claim-contact-whatsapp-basis.test.ts`, `claim-contact-agreement-gate-fence.test.ts`, the claim-contact / contact-ladder-whatsapp
-integration specs, both RLS policy-regression specs); jobs 94/94 across `wa-webhook-processor.test.ts` (15),
-`claim-contact-ladder-live.test.ts` (24), `claim-contact-ladder-whatsapp-live.test.ts` (23, incl. the new R8 race test),
-`claim-contact-ladder-whatsapp.test.ts` (33). Three parallel fresh-context adversarial reviews of this patch's OWN diff
+integration specs, both RLS policy-regression specs); jobs 95/95 across `wa-webhook-processor.test.ts` (15),
+`claim-contact-ladder-live.test.ts` (24), `claim-contact-ladder-whatsapp-live.test.ts` (24, incl. the new R8 race test and
+the new R7 regression leg — confirmed RED by temporarily disabling the fix, then green again), `claim-contact-ladder-whatsapp.test.ts`
+(33). Three parallel fresh-context adversarial reviews of this patch's OWN diff
 (grouped R1+R4, R2+R3+R5, R6+R7+R9) — CONFIRMED-FIXED on all nine, zero new bugs found.
 
 ## Dev Notes
@@ -1538,6 +1544,13 @@ Claude Opus 5.5 (1M context) — `claude-opus-5-5[1m]` — `bmad-dev-story 6.37d
   added (its own Review Findings line says so — stays an open action item). `tsc` clean on domain + jobs; 345 tests green
   on :5433, zero regressions; three parallel fresh-context adversarial reviews of this patch's own diff, all nine
   CONFIRMED-FIXED, zero new bugs. Status stays `in-progress` (R8 unresolved — Review Findings govern).
+
+- v1.7 (2026-10-20) — autonomous follow-up (continuing "apply every patch"): added the R7 regression leg
+  `apps/jobs/tests/claim-contact-ladder-whatsapp-live.test.ts` "R7 — the quarter-hourly start enforces the two-hour window
+  per ORIGIN" that v1.6 had not covered (two people, one claim, one fresh / one 3-hour-old report); confirmed RED against
+  the pre-fix code by temporarily disabling the fix's two gating lines and re-running, then restored and green again.
+  R8 is otherwise unchanged (still PARTIAL — the certificate-chase, late-correlator, 20:00→09:00 and
+  other-chase-independence legs remain open). Status stays `in-progress`.
 
 - v1.0 (2026-10-19) — created by `bmad-create-story 6.37d` at `15acb570`; WS1–WS14 proposed, PQ1–PQ2 candidate; status `ready-for-dev`.
 - v1.1 (2026-10-19) — the create-story's own checklist pass (one fresh-context validator, read-only: 7 HIGH / 12 MEDIUM / 5 LOW, all applied): the STOP key moved to the ladder's `claim_contact_mobile` hash space (⛔ the member login key); the webhook worker's claim branch scoped to the event's Pariwar behind the RLS-bound-role refusal; the quarter-hourly sweep starts ladders only for NEW reports and ⛔ calls `advance`; the 4 h anchor = the origin's `created_at` (⛔ `claimed_at`, re-set on retry); `isClaimant` on both person types (the certificate reader is shaped differently); AC2's fence narrowed to the agreement-state gate; D22 is correction-only and the post-conclusion case decided in WS12; WS12 flagged against `-360` Q1 A; `-355` d3 superseded in part; ADR-0029 / Row 19 / Row 26 notes; grants bind `twt_app` only — triggers are the jobs controls; counsel question 3's two halves; the gate list corrected.

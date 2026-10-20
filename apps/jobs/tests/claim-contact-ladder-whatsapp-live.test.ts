@@ -482,6 +482,34 @@ describe.skipIf(!hasDatabase)('Story 6.37d — the claimant\'s WhatsApp step (li
     });
   });
 
+  // Review R7 (2026-10-20) — a regression leg for the fix itself: the quarter-hourly start's 2-hour recency scan must apply
+  // PER ORIGIN, ⛔ per claim. Two people on the SAME claim, two reports, one fresh (inside the window) and one 3 hours old
+  // (outside it): only the fresh one's ladder may start now; the older one waits for the next 10:00 daily sweep.
+  it('⭐ R7 — the quarter-hourly start enforces the two-hour window per ORIGIN: a fresh report starts its ladder; an older, unladdered report for a DIFFERENT person on the SAME claim waits for the next 10:00 sweep', async () => {
+    const h = harness();
+    const s = await seed({ nomineeMobiles: ['9812345671', '9812345672'] });
+    const origins = await chaseDay(h, s, 10);
+    expect(origins).toHaveLength(2);
+    const [freshOrigin, staleOrigin] = origins;
+    await reportUndelivered(freshOrigin!, s.pariwarId);
+    await reportUndelivered(staleOrigin!, s.pariwarId);
+    // The stale origin's report was RECEIVED three hours ago — outside the quarter-hourly scan's 2-hour window (T4).
+    await pool.query(
+      `UPDATE sms_send_deliveries SET reported_at = now() - interval '3 hours', first_reported_at = now() - interval '3 hours' WHERE send_row_id = $1`,
+      [staleOrigin],
+    );
+    h.setNow(istAt(day(s.day0, 10), '14:30'));
+    await runContactLadderWhatsappSweep(h.wa, boss(h));
+    const started = await pool.query<{ origin_row_id: string }>(`SELECT origin_row_id FROM claim_contact_ladders WHERE claim_case_id = $1`, [s.claimCaseId]);
+    expect(started.rows).toHaveLength(1);
+    expect(started.rows[0]!.origin_row_id).toBe(freshOrigin);
+    // The next day's 10:00 DAILY sweep (⛔ the 2-hour restriction) picks up the stale origin too.
+    h.setNow(istAt(day(s.day0, 11), '10:00'));
+    await runContactLadderSweep(h.wa, boss(h));
+    const both = await pool.query<{ origin_row_id: string }>(`SELECT origin_row_id FROM claim_contact_ladders WHERE claim_case_id = $1`, [s.claimCaseId]);
+    expect(both.rows.map((r) => r.origin_row_id).sort()).toEqual([freshOrigin, staleOrigin].sort());
+  });
+
   // ── AC4 — LD13's start tail runs for the quarter-hourly starts ──────────────────────────────────────────────
 
   it('⭐ three ladders started by quarter-hourly ticks in ONE Pariwar on one IST day raise ONE `contact_ladder.burst:3`', async () => {

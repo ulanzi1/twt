@@ -657,14 +657,14 @@ set to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
   - [x] 3.2 Mint: KEEP the newest-row check; ALSO refuse when `hasActiveOptIn` (any `state = 'ACTIVE'` row).
   - [x] 3.3 `emit-openapi.ts` wa-opt-in descriptions (F23) → `pnpm contracts:emit-openapi`; commit `openapi/v1.yaml`.
   - [x] 3.4 Legs: AC5; AC3's DELETE and admin legs; RE-TITLE `wa-opt-in.spec.ts:132` / `admin-opt-out.spec.ts:194` (they stay green — F18).
-- [ ] **Task 4 — The app (AC6, AC7; LY10; F13a)**
-  - [ ] 4.1 `common.json` (en, hi): delete `expired_*`, add `unconfirmed_*`, change `active_desc` (and `blocked_*` under LY8 (a)) — hand-edit, ⛔ prettier --write
+- [x] **Task 4 — The app (AC6, AC7; LY10; F13a)**
+  - [x] 4.1 `common.json` (en, hi): delete `expired_*`, add `unconfirmed_*`, change `active_desc` (and `blocked_*` under LY8 (a)) — hand-edit, ⛔ prettier --write
     ([[project_prettier_not_enforced]]).
-  - [ ] 4.2 `notifications.tsx`: EXPIRED_24H_WINDOW renders `unconfirmed_*`; FIX the re-fetch loop (T10 — depend on `locale` from
+  - [x] 4.2 `notifications.tsx`: EXPIRED_24H_WINDOW renders `unconfirmed_*`; FIX the re-fetch loop (T10 — depend on `locale` from
     `useLocale()`, ⛔ `t`); header comment `:1-14` updated; the ACTIVE branch already renders the control — ⛔ condition on
     `windowExpiresAt`.
-  - [ ] 4.3 `apps/mobile/tests/unit/wa-notifications-copy-keys.test.ts` (AC6) and `wa-notifications-screen-render.test.ts` (AC7).
-  - [ ] 4.4 friction-budget (F22): append a `**Story 5.12 disposition (no new row — the WhatsApp opt-in screen's words and its
+  - [x] 4.3 `apps/mobile/tests/unit/wa-notifications-copy-keys.test.ts` (AC6) and `wa-notifications-screen-render.test.ts` (AC7).
+  - [x] 4.4 friction-budget (F22): append a `**Story 5.12 disposition (no new row — the WhatsApp opt-in screen's words and its
     always-present withdraw control)**` paragraph to `friction-budget.md` above `## How to declare` — the payer (the member), what it
     protects (`-364` conditions 1–2), that 5.4's row stands; commit it with Task 4 (a gate input — ⛔ a docs-only commit) and run
     `pnpm friction:check`.

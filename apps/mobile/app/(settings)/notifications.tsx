@@ -6,9 +6,15 @@
 //                 opens the wa.me Send-Hello deep-link (pre-filled with the verification phrase).
 //   pending     — "Waiting for your WhatsApp message…" + a re-open-WhatsApp CTA (the inbound-webhook
 //                 worker advances PENDING → ACTIVE out-of-band; this screen reflects it on next read).
-//   active      — a confirmation + a revoke control (independently revocable).
-//   blocked / expired — a dignified line + a "opt in again" retry CTA (a fresh PENDING; no inferred
-//                 re-consent — the member must send a new WhatsApp message).
+//   active      — a confirmation + a revoke control (independently revocable). Story 5.12 (`-364` option A): a yes lasts
+//                 until the member takes it back, so the control renders for EVERY ACTIVE response — ⛔ conditioned on
+//                 `windowExpiresAt` (Meta's free-form window end, ⛔ the opt-in's end).
+//   blocked / unconfirmed — a dignified line + a "turn on again" retry CTA (a fresh PENDING; no inferred
+//                 re-consent — the member must send a new WhatsApp message). EXPIRED_24H_WINDOW now means only "a request
+//                 never confirmed" (Story 5.12, LY3/LY10) — the screen never says "expired" (condition 1).
+//
+// Story 5.12 (F13a) — the load runs ONCE: errors are a flag translated at render, so no callback depends on `t` (`useT()`
+// returns a fresh closure every render — a `[t]` dependency re-fetched on every render, endlessly).
 //
 // Bilingual copy via @twt/i18n (hi/en parity). No AsyncStorage — the state is server-driven; MMKV is the
 // app's local-persistence primitive if any were ever needed ([[project_mmkv_asyncstorage_equivalent]]).
@@ -30,19 +36,19 @@ export default function NotificationSettingsScreen() {
   const [status, setStatus] = useState<WaOptInStatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true)
-    setError(null)
+    setError(false)
     try {
       setStatus(await memberAuth.getWaOptInStatus())
     } catch {
-      setError(t('waNotifications.error'))
+      setError(true)
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [])
 
   useEffect(() => {
     void load()
@@ -51,45 +57,45 @@ export default function NotificationSettingsScreen() {
   /** Mint (or re-use) a PENDING opt-in, then open WhatsApp pre-filled with the verification phrase. */
   const onEnable = useCallback(async (): Promise<void> => {
     setBusy(true)
-    setError(null)
+    setError(false)
     try {
       const res = await memberAuth.requestWaOptIn()
       await Linking.openURL(res.deepLink)
       await load()
     } catch {
-      setError(t('waNotifications.error'))
+      setError(true)
     } finally {
       setBusy(false)
     }
-  }, [load, t])
+  }, [load])
 
   /** Re-open WhatsApp for an outstanding PENDING (re-use its deep-link). */
   const onReopen = useCallback(async (): Promise<void> => {
     if (!status?.deepLink) return
     setBusy(true)
-    setError(null)
+    setError(false)
     try {
       await Linking.openURL(status.deepLink)
     } catch {
       // No app can handle the wa.me URL (e.g. WhatsApp not installed) — surface it rather than failing silently.
-      setError(t('waNotifications.error'))
+      setError(true)
     } finally {
       setBusy(false)
     }
-  }, [status, t])
+  }, [status])
 
   const onRevoke = useCallback(async (): Promise<void> => {
     setBusy(true)
-    setError(null)
+    setError(false)
     try {
       await memberAuth.revokeWaOptIn()
       await load()
     } catch {
-      setError(t('waNotifications.error'))
+      setError(true)
     } finally {
       setBusy(false)
     }
-  }, [load, t])
+  }, [load])
 
   return (
     <ScrollView>
@@ -111,7 +117,7 @@ export default function NotificationSettingsScreen() {
         )}
         {error ? (
           <Text role="alert" color="$red10" testID="wa-opt-in-error">
-            {error}
+            {t('waNotifications.error')}
           </Text>
         ) : null}
       </YStack>
@@ -158,15 +164,16 @@ function OptInBody({ state, available, busy, t, onEnable, onReopen, onRevoke }: 
     )
   }
 
-  // BLOCKED_BY_META / EXPIRED_24H_WINDOW → a dignified line + a fresh opt-in CTA (no inferred re-consent).
+  // BLOCKED_BY_META (Meta 131050 — the member's own opt-out, Story 5.12 LY8) / EXPIRED_24H_WINDOW (a request never
+  // confirmed — LY3) → a dignified line + a fresh opt-in CTA (no inferred re-consent).
   if (state === 'BLOCKED_BY_META' || state === 'EXPIRED_24H_WINDOW') {
     const isBlocked = state === 'BLOCKED_BY_META'
     return (
       <YStack gap="$2" testID="wa-opt-in-retry">
         <Paragraph fontWeight="600">
-          {isBlocked ? t('waNotifications.blocked_title') : t('waNotifications.expired_title')}
+          {isBlocked ? t('waNotifications.blocked_title') : t('waNotifications.unconfirmed_title')}
         </Paragraph>
-        <Paragraph>{isBlocked ? t('waNotifications.blocked_desc') : t('waNotifications.expired_desc')}</Paragraph>
+        <Paragraph>{isBlocked ? t('waNotifications.blocked_desc') : t('waNotifications.unconfirmed_desc')}</Paragraph>
         <Button disabled={busy} onPress={() => void onEnable()} testID="wa-opt-in-enable">
           {t('waNotifications.retry_cta')}
         </Button>

@@ -1286,6 +1286,21 @@ AC-4 diffs COMMITTED history, so `pnpm friction:check` passes trivially until th
 The green result at authoring time is not evidence of anything, and this disposition is the actual
 assessment.
 
+**Story 5.12 disposition (no new row — the WhatsApp opt-in screen's words and its always-present withdraw control; ⛔ no row
+retired):** the member-facing changes are `apps/mobile/app/(settings)/notifications.tsx` and the `waNotifications.*` copy in
+`packages/i18n/locales/{en,hi}/common.json`. The payer is the member who said "yes" to WhatsApp. What it protects is
+`2026-10-19-364`'s conditions 1 and 2 (Trustee-ratified, option A): a yes now lasts until the member takes it back, so (1) the
+screen never tells a member their yes "expired" — `expired_*` are deleted and a request never confirmed reads *"WhatsApp
+notifications are not on"* — and the ACTIVE line now says how long the yes lasts and how to stop it (*"…until you turn them off
+here or reply STOP on WhatsApp"*); (2) the withdraw control ("Turn off WhatsApp notifications") renders for EVERY standing yes —
+it is ⛔ conditioned on Meta's window. Both REMOVE friction (an exit that is always there; ⛔ untrue words); neither adds a step,
+a form or a gate. The screen's endless re-fetch (F13a) is also fixed — a load cost the member paid on every render, ⛔ a friction
+row. Story 5.4's row (`member (opting in to WhatsApp notifications) → explicit consent provenance (AC4) → optional`) STANDS
+unchanged: opting in still takes the same one deliberate WhatsApp message. Zero gratuitous friction introduced; ledger reviewed,
+no new row warranted. The **page-weight baseline is unchanged** (authenticated `apps/mobile` only — `member-app-native` stays a
+no-op). ⚠ The new Hindi is a DRAFT until roster Row 37 (`wa-opt-in-lasting-yes-hindi-reviewed`) closes — a go-live record, ⛔
+a friction one.
+
 ## How to declare (attribution-on-change — AC-4)
 
 When a PR's diff touches a **member-facing form/interaction surface**

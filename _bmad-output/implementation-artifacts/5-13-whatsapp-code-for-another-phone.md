@@ -669,13 +669,13 @@ channel preference is confirmed.
 **PQ — none, unless BigDev chooses WC6 (b) or WC15 (b)** — each a routing note first (template §0), ⛔ built until ruled. Every other WC is
 the author's; WC11 (a) is a TOLD item, ⛔ a question.
 
-### The words (WC8) — en and hi are DRAFTS for BigDev's review at Task 0.2
+### The words (WC8) — APPROVED by BigDev at Task 0.2 (2026-10-21; Debug Log (a))
 
-| Key | en (DRAFT) | hi (DRAFT) |
+| Key | en | hi |
 |---|---|---|
-| `waCode.intro` | TWT can send a code on WhatsApp to your registered number. Open WhatsApp on the phone that has it, then type the code here. | TWT आपके पंजीकृत नंबर पर व्हाट्सएप से एक कोड भेज सकता है। जिस फ़ोन में वह व्हाट्सएप है, उसमें व्हाट्सएप खोलें और कोड यहाँ लिखें। |
+| `waCode.intro` | TWT will send a code on your WhatsApp number. Open WhatsApp to get the code. | TWT आपके व्हाट्सएप नंबर पर एक कोड भेज रहा है। कोड प्राप्त करने के लिए व्हाट्सएप खोलें। |
 | `waCode.send` | Send me a code on WhatsApp | मुझे व्हाट्सएप पर कोड भेजें |
-| `waCode.sent` | We sent a code on WhatsApp to your registered number. It works for a short time only. | हमने आपके पंजीकृत नंबर पर व्हाट्सएप से कोड भेजा है। यह कोड थोड़ी देर ही चलेगा। |
+| `waCode.sent` | We sent a code on your WhatsApp number. Valid for a few minutes. | हमने आपके व्हाट्सएप नंबर पर एक कोड भेजा है। यह कोड कुछ देर के लिए ही वैध है। |
 | `waCode.sent_uncertain` | We may not have been able to send the code. If it arrives on WhatsApp, type it here. | हो सकता है कोड नहीं भेजा जा सका हो। अगर व्हाट्सएप पर कोड आए, तो उसे यहाँ लिखें। |
 | `waCode.input_label` | Code from WhatsApp | व्हाट्सएप से मिला कोड |
 | `waCode.confirm` | Confirm | पुष्टि करें |
@@ -692,8 +692,8 @@ the author's; WC11 (a) is a TOLD item, ⛔ a question.
 The closed-route lines (`send_failed`, `no_more`, `wrong_final` with no code left) are followed by `OtherPhoneDetails`, whose `waOtherPhone.desc`
 already says *"From the phone that has your WhatsApp, send the message below to this number:"* — so ⛔ bridging string is minted.
 `waCode.no_longer_valid` avoids "expired" (5.12's ban is on `waNotifications.*` only, but the meaning is "spent, tried twice or timed out" —
-one line for all three). *"It works for a short time only"* — 10 minutes (WC3); BigDev may prefer *"for 10 minutes"* (no gate forbids
-the digit in `waCode.*` — WC8). `send_failed`'s *"just now"* is true for its causes once WC4's `codeAvailable` keeps unprovisioned
+one line for all three). *"Valid for a few minutes"* — 10 minutes (WC3), ⛔ a digit (WC8's style choice). ⚠ BigDev's wording says *"your WhatsApp number"*
+where the code goes to the REGISTERED number only (I2) — the stated residual in Debug Log (a); ⛔ change the words for it. `send_failed`'s *"just now"* is true for its causes once WC4's `codeAvailable` keeps unprovisioned
 Pariwars off the form — the one exception, a member there who still holds a live code (`liveCode`), opens at the field with the closed
 route and ⛔ send button, so ⛔ "couldn't send" is shown to them before they try. `verify_failed` is shown only after a bounded status re-read finds the request still PENDING (AC9).
 `waCode.send` is shown while the member has ⛔ been told a code may have been sent (only `released` / `refused` sends so far);
@@ -878,7 +878,7 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Preflight, decisions, governance (AC12)**
-  - [ ] 0.1 `git fetch origin`; if `main` moved past the pin, rebase and re-derive F1–F21 (`sed -n` every cite, read past the range). STOP
+  - [x] 0.1 (DONE 2026-10-21 — Debug Log (e)) `git fetch origin`; if `main` moved past the pin, rebase and re-derive F1–F21 (`sed -n` every cite, read past the range). STOP
         and report to BigDev if:
         **S1** the mint gained a member-state guard, or `activateOptIn` / `lockMemberWaYes` / the one-ACTIVE index changed shape;
         **S2** another branch/worktree edits `apps/mobile/app/(signup)/whatsapp.tsx`, `OtherPhoneHint.tsx`, `wa-opt-in/write.ts`,
@@ -889,7 +889,7 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         **S5** a routing note, told item or decision after the pin touches the WhatsApp code (`git log bac71abb..origin/main -- _bmad-output/planning-artifacts .decision-log.md`);
         **S6** the signup step's placement or the member state it sees changed (5.10 SB2 (d) ⇒ `pending-fee`; WC17 rests on it), or
         ADR-0029's re-opt-in sentence was superseded (WC15 rests on it).
-  - [ ] 0.2 Put WC1–WC17 to BigDev — incl. the en + hi words (WC8) — and record the answers VERBATIM in Debug Log (a), with what each
+  - [x] 0.2 (WC1–WC17 ANSWERED 2026-10-21, the WC8 words APPROVED with one residual — Debug Log (a)) Put WC1–WC17 to BigDev — incl. the en + hi words (WC8) — and record the answers VERBATIM in Debug Log (a), with what each
         resolves to. If WC6 (b) or WC15 (b): write the routing note from the template (§0 first; WC15 (b)'s names ADR-0029's re-opt-in
         sentence) and build the (a) option meanwhile. If WC12 (b) or (c): sequence the worker change against 6.37d before Task 4.
   - [ ] 0.3 Author-commit decision (the next free id — re-grep `^### Decision` on `main`, every branch, every worktree), staged in the
@@ -1167,6 +1167,55 @@ version changes; Expo / expo-router / tamagui as pinned.
 
 (a) Task 0.2 answers, verbatim · (b) RED proofs · (c) parity / microcopy / friction / access-wrapper / OpenAPI gate outputs · (d) dev-DB
 side effects · (e) Task 0.1 preflight · (f) the REVOKED / BLOCKED_BY_META writers (Task 1.1)
+
+**(e) Task 0.1 preflight (2026-10-21, before Task 0.3):** `git fetch origin` ⇒ `origin/main` = `bac71abb` (the pin) ⇒ ⛔ rebase, ⛔ re-derive;
+`git diff --name-only bac71abb..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` empty. **S1** ⛔ code moved ⇒
+held. **S2** ⛔ other local or remote branch, and the peer worktree `TWT-6-37e` (`story/6-37e-…`, clean), touches `whatsapp.tsx`,
+`OtherPhoneHint.tsx`, `wa-opt-in/write.ts`, `whatsapp-app.ts`, `wa-template-config-key.ts`, `claim-peer-mesh-wa-reminders.ts` or the
+wa-opt-in API module (`git diff --name-only bac71abb...<ref>` over every ref) ⇒ held. **S3** ⛔ migration after 0177 on any ref or the
+worktree ⇒ the next free is 0178 (taken only at Task 1's commit). **S4** ⛔ `waCode.*` key in either locale. **S5** ⛔ routing note, told
+item or decision after the pin on `origin/main`; ⛔ decision `-376` or later on any ref or the worktree ⇒ the next free id is `-376`.
+**S6** ⛔ moved. ⚠ Found: the 6.37e branch had taken ledger letters `2026-10-21s` (`a85d712f`, 19:11) and `21t` (`b04409ed`, 20:05)
+BEFORE this story's validate commit `33b8da9f` (20:06) also wrote `21s` ⇒ this story's entry re-lettered `21u` (`-366` decision 6 — a
+number belongs to the first commit that takes it, on any branch); the 6.37e session was told by message which letters and numbers 5.13
+takes next (`21u`+, `-376`, Row 39, 0178).
+
+**(a) Task 0.2 — BigDev's answer, verbatim (2026-10-21, in session, after the v1.5 validate):** *"all recommendation accepted for
+WC1–WC17"*. Each WC resolves to its ⭐ option:
+
+| WC | Resolves to |
+|---|---|
+| WC1 | (a) the code sent in the API request, in the five steps (resolve before the claim; ⛔ tx during network calls) |
+| WC2 | (a) a NEW `member_wa_opt_in_codes` table — CHECKs, partial unique, guard trigger, column-limited grant, owner FK, per-verb RLS |
+| WC3 | ⭐ 6 digits, 10 min, ≤ 2 counted sends, 2 tries per code, the 60 s wait; WC3 (a) — `scope` refusals UNCOUNTED + 503 + the closed route |
+| WC4 | (a) `waTemplateConfigKey` + `TEMPLATE_NAME_FORM` moved to `packages/channels` (re-exports at the old homes); the mint gains `codeAvailable` / `codesRemaining` / `liveCode` / `liveCodeDelivery`, bounded at 2 s |
+| WC5 | the verify route in WC5's three steps; `windowExpiresAt: Date \| null`; the `write.ts` pin re-taken |
+| WC6 | (a) the SIGNUP step only — ⛔ routing note |
+| WC7 | ⭐ `OtherPhoneCodeHint` replaces the hint when `codeAvailable \|\| liveCode`; the `useWaCode` hook; ⛔ `oneTimeCode` / `autoComplete` |
+| WC8 | ⭐ the `waCode.*` family, 15 rows — ⚠ the en + hi WORDING itself: see the note below this table |
+| WC9 | ⭐ the four audit actions via `withCompensatingAudit`, `member_app_wa_code` on every line |
+| WC10 | ⭐ the per-member route limit on both routes + the DB caps; per-device / global cap a recorded residual |
+| WC11 | (a) a TOLD item with its five points — written at Task 0.4; "told" only once BigDev sends it |
+| WC12 | (a) a STOP from a PENDING-only member ends nothing; the code typed after it switches WhatsApp on — told to the Panel (WC11 (a) (3)) |
+| WC13 | ⭐ NEW roster row `wa-opt-in-code-template-approved`, legs (a)–(c), cross-referencing Rows 38 (b) / 37 (b) / 38 (c)–(d-i) |
+| WC14 | ⭐ the records as listed (one author-commit decision, epics entry, §3.4 note, ADR-0029 row, roster, friction, four `deferred-work.md` items + two annotations, the told item, the ledger) |
+| WC15 | (a) ⛔ code for a member with any REVOKED / BLOCKED_BY_META row (409 `code_not_offered`) — ⛔ routing note |
+| WC16 | (a) a second code does ⛔ invalidate the first; verify compares against every live code |
+| WC17 | (a) the send refuses unless the member is `pending-kyc` / `pending-fee`; verify records `memberState` (⛔ a refusal) |
+
+PQ — none (WC6 (a) and WC15 (a) chosen ⇒ ⛔ routing note).
+
+**WC8's wording — asked separately (2026-10-21), BigDev's answers verbatim:** to *"Are they approved as written?"* — *"I just edited the
+en+hi, used that."* BigDev had edited `waCode.intro` and `waCode.sent` in the table (en + hi); the other 13 are the drafts, unchanged.
+Three points were then put to BigDev before recording: the Hindi *"वैद्य"* ("a doctor") for *"वैध"* ("valid"); *"your WhatsApp number"*
+where the code goes to the REGISTERED number only (I2 — a member whose WhatsApp is on a DIFFERENT number is told a code went to it); and
+`intro`'s *"will send"* / *"भेज रहा है"* shown BEFORE the member taps Send (I1). BigDev chose *"Your edits, typo only"*: the two strings as
+edited, with only *"वैद्य"* → *"वैध"* and *"for few"* → *"for a few"*. ⇒ The table records the approved text. ⚠ **Residual, recorded (⛔
+fixed):** both strings say "your WhatsApp number" ⛔ "registered number", and `intro` reads as if a code is already coming — words a
+member whose WhatsApp is on another NUMBER can find untrue; carried to the decision entry and the told item's point (4). All 30 strings
+(en + hi) pass the real microcopy rules (`checkTone` / `checkVocabulary` incl. member-only / `checkNumerals`) and the copy test's bans
+(scratch run 2026-10-21; Task 2 re-runs the gates on the committed JSON). WC13 (b): BigDev's approval of the hi is a review by the
+product owner — whether it discharges Row 28's human-review control is recorded at the roster row (Task 0.4), ⛔ assumed here.
 
 ### Completion Notes List
 

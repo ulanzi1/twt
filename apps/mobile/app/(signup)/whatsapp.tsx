@@ -15,16 +15,22 @@
 // [[project_uset_fresh_closure_memo_trap]]).
 //
 // ── Accessibility ──────────────────────────────────────────────────────────────────────────────
-// The box announces its checked state; the overlay is modal to assistive tech; errors are `AnnouncedText kind='error'`; the
-// overlay opening and the `sent` stage are phase changes, spoken through `useAnnounceOnChange` (both platforms).
+// The box announces its checked state; the reminder is a window-level RN `Modal`, so the wizard's progress header and the box
+// behind it are out of reach while it is open (second review D1 (a)); errors are `AnnouncedText kind='error'`. The step's title
+// when the box appears and the reminder's title when it opens are phase changes, spoken through `useAnnounceOnChange` (both
+// platforms). The reminder's heading is named by its visible title FOLLOWED by the instruction — spoken whenever the heading is
+// read, and readable again (⛔ a hint some members switch off, ⛔ a one-time announcement). ⚠ Un-attested on a device: whether focus moving into
+// the Modal's window also reads the heading, so the title is heard twice. The `sent` stage arrives as WhatsApp takes the
+// foreground, so it is spoken when the member is back in TWT (second review P1).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BackHandler, Linking, ScrollView, StyleSheet } from 'react-native'
+import { AccessibilityInfo, AppState, Linking, Modal, ScrollView, StyleSheet } from 'react-native'
 
 import { ApiError } from '@twt/api-client'
 import type { CreateWaOptInResponse } from '@twt/contracts'
 import { useT } from '@twt/i18n/react'
 import { useFocusEffect, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button, H2, Paragraph, Spinner, View, YStack } from 'tamagui'
 
 import { AnnouncedText, useAnnounceOnChange } from '../../components/peer-request/announce'
@@ -34,6 +40,8 @@ import { CALL_TIMEOUT_MS, withTimeout } from '../../lib/with-timeout'
 
 /** A hung status read holds the spinner at most this long (the `CLAIM_ENTRY_READ_TIMEOUT_MS` precedent) — SB3. */
 const STATUS_TIMEOUT_MS = 5_000
+/** If the app never leaves the foreground after WhatsApp "opened", the `sent` stage is spoken after this long instead. */
+const SENT_ANNOUNCE_GRACE_MS = 2_000
 
 type Stage = 'loading' | 'ask' | 'sent'
 /** `request` — the mint failed or timed out; `link` — WhatsApp did not open. */
@@ -44,6 +52,7 @@ type Reminder = 'never' | 'open' | 'shown'
 export default function WhatsappStepScreen() {
   const t = useT()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
 
   const [stage, setStage] = useState<Stage>('loading')
   const [checked, setChecked] = useState(false)
@@ -53,10 +62,14 @@ export default function WhatsappStepScreen() {
   const [minted, setMinted] = useState<CreateWaOptInResponse | null>(null)
   // Refs, ⛔ state: two presses inside one frame both see the pre-update closure (a double tap must make ONE mint).
   const busyRef = useRef(false)
+  // The box's latest tap, for a Continue pressed in the same frame (before `checked` re-renders): the last tap wins.
+  const checkedRef = useRef(false)
   const attempted = useRef(false)
   const reminder = useRef<Reminder>('never')
   const leaving = useRef(false)
   const actionVersion = useRef(0)
+  /** Where the `sent` stage has been spoken: ⛔ yet, only by the grace (the member may not have heard it), or on a return. */
+  const sentSpoken = useRef<'no' | 'grace' | 'return'>('no')
 
   // A request may finish after navigation blurs or unmounts this step. Invalidate its continuation even if the member
   // returns before the response arrives, so an abandoned request cannot open another app or replace the current route.
@@ -90,20 +103,10 @@ export default function WhatsappStepScreen() {
     setReminderOpen(false)
   }, [])
 
-  // Android's back while the reminder is open = "Go back" (closes it; the box stays as it was).
-  useEffect(() => {
-    if (!reminderOpen) return
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      closeReminder()
-      return true
-    })
-    return () => sub.remove()
-  }, [reminderOpen, closeReminder])
-
   const onContinue = useCallback(async (): Promise<void> => {
     if (busyRef.current || leaving.current) return
     if (stage === 'sent' || attempted.current) return goNext()
-    if (!checked) {
+    if (!checkedRef.current) {
       if (reminder.current === 'shown') return goNext()
       reminder.current = 'open'
       setReminderOpen(true)
@@ -142,7 +145,7 @@ export default function WhatsappStepScreen() {
       busyRef.current = false
       setBusy(false)
     }
-  }, [stage, checked, goNext])
+  }, [stage, goNext])
 
   /** Re-open WhatsApp with the FIRST request's link — ⛔ a second mint (SB6). */
   const onReopen = useCallback(async (): Promise<void> => {
@@ -161,8 +164,42 @@ export default function WhatsappStepScreen() {
     }
   }, [minted])
 
+  useAnnounceOnChange(stage === 'ask' ? t('waSignup.title') : null)
   useAnnounceOnChange(reminderOpen ? t('waSignup.popup_title') : null)
-  useAnnounceOnChange(stage === 'sent' ? t('waSignup.sent_title') : null)
+
+  // `setStage('sent')` lands as WhatsApp takes the foreground (Android resolves `openURL` once the intent starts; iOS after the
+  // switch), so an announcement then is lost. Speak it on the member's first return to TWT — or, if the app has not left after
+  // a short grace, then. A grace announcement may itself be lost (a slow phone backgrounds late), so it does ⛔ stop the
+  // return from speaking once more. At most once on a return, per mount. Unlike `notifications.tsx:149` (5.12 P6), which DROPS
+  // an announcement made in the background, this one is DEFERRED to the return. ⚠ Device timing is un-attested.
+  const sentTitle = t('waSignup.sent_title')
+  useEffect(() => {
+    if (stage !== 'sent' || sentSpoken.current === 'return') return
+    // Only a real departure counts: an iOS `inactive` blip (Control Centre, a call banner, Face ID) leaves TWT on screen.
+    let left = AppState.currentState === 'background'
+    // The grace found TWT ⛔ in front (`inactive` — e.g. the app switcher): it waits for the member's return instead.
+    let deferred = false
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'background') left = true
+      else if (next === 'active' && (left || deferred) && sentSpoken.current !== 'return') {
+        sentSpoken.current = 'return'
+        AccessibilityInfo.announceForAccessibility(sentTitle)
+      }
+    })
+    const grace = setTimeout(() => {
+      if (left || sentSpoken.current !== 'no') return
+      if (AppState.currentState !== 'active') {
+        deferred = true
+        return
+      }
+      sentSpoken.current = 'grace'
+      AccessibilityInfo.announceForAccessibility(sentTitle)
+    }, SENT_ANNOUNCE_GRACE_MS)
+    return () => {
+      sub.remove()
+      clearTimeout(grace)
+    }
+  }, [stage, sentTitle])
 
   if (stage === 'loading') {
     return (
@@ -189,12 +226,7 @@ export default function WhatsappStepScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        importantForAccessibility={reminderOpen ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={reminderOpen}
-        testID="wa-signup-content"
-      >
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} testID="wa-signup-content">
         <YStack gap="$4" px="$6" py="$6" bg="$background">
           <H2>{t('waSignup.title')}</H2>
           {stage === 'ask' ? (
@@ -208,10 +240,17 @@ export default function WhatsappStepScreen() {
                 theme={checked ? 'accent' : undefined}
                 chromeless={!checked}
                 justify="flex-start"
+                // Locked while the request is in flight: an untick then could not stop WhatsApp opening (second review P3).
+                disabled={busy}
                 accessibilityRole="checkbox"
                 accessibilityLabel={t('waSignup.box_label')}
-                accessibilityState={{ checked }}
-                onPress={() => setChecked((v) => !v)}
+                accessibilityState={{ checked, disabled: busy }}
+                // The ref as well: `disabled` lands only on the next render, and a tap in that frame must not untick the box.
+                onPress={() => {
+                  if (busyRef.current) return
+                  checkedRef.current = !checkedRef.current
+                  setChecked(checkedRef.current)
+                }}
                 testID="wa-signup-box"
               >
                 {(checked ? '☑  ' : '☐  ') + t('waSignup.box_label')}
@@ -245,25 +284,33 @@ export default function WhatsappStepScreen() {
         </YStack>
       </ScrollView>
 
-      {/* The reminder — a rendered overlay, ⛔ Alert.alert (its cancel button is styled differently on each OS). A SIBLING
-          of the ScrollView, so it covers the screen, ⛔ only the scroll content. BannerHost's shape, copied ⛔ imported. */}
-      {reminderOpen ? (
+      {/* The reminder — a transparent RN `Modal`, ⛔ Alert.alert (its cancel button is styled differently on each OS). A window of
+          its own: it covers the wizard's progress header as well as this screen, assistive tech cannot leave it on either OS,
+          and Android's back is its `onRequestClose` = "Go back" (closes it; the box stays as it was). Second review D1 (a). */}
+      <Modal transparent visible={reminderOpen} animationType="fade" onRequestClose={closeReminder}>
         <View
           testID="wa-signup-reminder"
           justify="center"
           items="center"
           p="$4"
+          // A window of its own reaches under the system bars (edge-to-edge): keep the card clear of them.
+          pt={insets.top + 16}
+          pb={insets.bottom + 16}
           accessibilityViewIsModal
-          // Scrim + stacking: raw styles, as in BannerHost — neither is a themeable Tamagui token here.
-          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 1000 }]}
+          // Scrim: a raw style, as in BannerHost — it is ⛔ a themeable Tamagui token here.
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)' }]}
         >
           <ScrollView
             style={{ maxHeight: '100%', width: '100%', maxWidth: 420, flexGrow: 0 }}
             testID="wa-signup-reminder-scroll"
           >
             <YStack gap="$3" bg="$background" rounded="$4" p="$4">
-              {/* Label the heading explicitly, retaining the two choices as separate accessibility elements. */}
-              <H2 accessible accessibilityLabel={t('waSignup.popup_a11y')} testID="wa-signup-reminder-instruction">
+              {/* Named by its visible title first (second review P4), then the instruction — spoken every time it is read. */}
+              <H2
+                accessible
+                accessibilityLabel={`${t('waSignup.popup_title')} ${t('waSignup.popup_a11y')}`}
+                testID="wa-signup-reminder-instruction"
+              >
                 {t('waSignup.popup_title')}
               </H2>
               <Paragraph>{t('waSignup.popup_body')}</Paragraph>
@@ -293,7 +340,7 @@ export default function WhatsappStepScreen() {
             </YStack>
           </ScrollView>
         </View>
-      ) : null}
+      </Modal>
     </YStack>
   )
 }

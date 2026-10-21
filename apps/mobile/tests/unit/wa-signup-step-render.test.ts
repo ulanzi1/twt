@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 // Story 5.10 (AC1–AC6, AC8, AC12-signup; Decision 2026-10-21-375) — the signup WhatsApp step (`app/(signup)/whatsapp.tsx`)
 // EXECUTED with React DOM and mocked native primitives, inside a REAL `<LocaleProvider>` (⛔ a stubbed `t` —
-// [[feedback_stub_must_call_not_transcribe]]). Harness: `peer-questionnaire-render.test.ts` (BackHandler + `hardwareBack()`, a
+// [[feedback_stub_must_call_not_transcribe]]). Harness: `peer-questionnaire-render.test.ts` (a
 // mutable `Platform.OS`, a checkbox stub mapping `accessibilityState.checked` → `aria-checked`) + `wa-notifications-screen-
 // render.test.ts` (LocaleProvider, mmkv, member-api). Four ways a leg here could pass VACUOUSLY are closed (story T11):
 //   · `useRouter` returns ONE stable `mock.router` (a fresh object per call could not be asserted);
 //   · the `Button` mock RECORDS its full props per `testID`, so the reminder's two buttons are compared on EVERY prop;
 //   · the double tap fires both presses inside ONE `act()` (a mock `<button disabled>` would swallow a second separate click);
 //   · the `Text` mock FORWARDS `selectable`.
+// Second review: `Modal` renders its children only while `visible` and records its props (`mock.modal`), so the reminder's
+// window-level modality and its `onRequestClose` are asserted; `AppState` is mutable (`setAppState`), so the `sent` stage's
+// announcement is pinned to the member's RETURN to TWT.
 // Native layout and a real screen reader still need a device ([[feedback_record_unattested_no_backfill]]).
 import '@testing-library/jest-dom/vitest'
 import { existsSync, readFileSync } from 'node:fs'
@@ -15,6 +18,7 @@ import { join } from 'node:path'
 import { createElement, type ReactNode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ApiError } from '@twt/api-client'
+import { WaOptInStateSchema } from '@twt/contracts'
 import { getCatalog } from '@twt/i18n'
 import { LocaleProvider } from '@twt/i18n/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -26,12 +30,14 @@ const mock = vi.hoisted(() => ({
   alert: vi.fn(),
   announce: vi.fn(),
   router: { replace: vi.fn() },
-  backHandlers: [] as (() => boolean)[],
   os: 'ios' as string,
   buttons: {} as Record<string, Record<string, unknown>>,
   views: {} as Record<string, Record<string, unknown>>,
   focused: true,
   focusListeners: new Set<() => void>(),
+  appState: 'active' as string,
+  appStateHandlers: [] as ((next: string) => void)[],
+  modal: null as Record<string, unknown> | null,
 }))
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
@@ -61,6 +67,7 @@ vi.mock('expo-router', async () => {
   }, [cb])
   return { useRouter: () => mock.router, useFocusEffect }
 })
+vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 48, left: 0, right: 0 }) }))
 vi.mock('react-native', async () => {
   const { createElement } = await import('react')
   return {
@@ -69,20 +76,23 @@ vi.mock('react-native', async () => {
       return createElement('div', { 'data-testid': props.testID }, props.children)
     },
     StyleSheet: { absoluteFill: {} },
+    Modal: (props: { children?: ReactNode; visible?: boolean }) => {
+      mock.modal = props
+      return props.visible ? createElement('div', { 'data-testid': 'rn-modal' }, props.children) : null
+    },
+    AppState: {
+      get currentState() { return mock.appState },
+      addEventListener: (_event: string, handler: (next: string) => void) => {
+        mock.appStateHandlers.push(handler)
+        return { remove: () => { mock.appStateHandlers = mock.appStateHandlers.filter((h) => h !== handler) } }
+      },
+    },
     Linking: { openURL: mock.openURL },
     Alert: { alert: mock.alert },
     AccessibilityInfo: { announceForAccessibility: mock.announce },
     Platform: { get OS() { return mock.os } },
-    BackHandler: {
-      addEventListener: (_event: string, handler: () => boolean) => {
-        mock.backHandlers.push(handler)
-        return { remove: () => { mock.backHandlers = mock.backHandlers.filter((h) => h !== handler) } }
-      },
-    },
   }
 })
-/** Android's hardware back, as the LATEST registered handler sees it. */
-const hardwareBack = () => mock.backHandlers.at(-1)?.() ?? false
 vi.mock('tamagui', async () => {
   const { createElement } = await import('react')
   type Props = {
@@ -142,6 +152,14 @@ const box = () => screen.getByTestId('wa-signup-box')
 const cont = () => screen.getByTestId('wa-signup-continue')
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)) })
 
+/** The app moving to `next` (WhatsApp taking the foreground = 'background'; the member returning = 'active'). */
+function setAppState(next: string) {
+  act(() => {
+    mock.appState = next
+    for (const handler of [...mock.appStateHandlers]) handler(next)
+  })
+}
+
 function setFocused(focused: boolean) {
   act(() => {
     mock.focused = focused
@@ -153,11 +171,13 @@ beforeEach(() => {
   for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.openURL, mock.alert, mock.announce, mock.router.replace]) f.mockReset()
   mock.requestWaOptIn.mockResolvedValue(MINTED)
   mock.openURL.mockResolvedValue(true)
-  mock.backHandlers = []
   mock.os = 'ios'
   mock.buttons = {}
   mock.views = {}
   mock.focused = true
+  mock.appState = 'active'
+  mock.appStateHandlers = []
+  mock.modal = null
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
@@ -205,6 +225,7 @@ describe('AC2 — skipped where there is nothing to offer (SB3)', () => {
     expect(screen.queryByTestId('wa-signup-reminder')).toBeNull()
     expect(screen.getByTestId('wa-signup-loading')).toBeInTheDocument()
     expect(mock.requestWaOptIn).not.toHaveBeenCalled()
+    expect(mock.announce).not.toHaveBeenCalled()
   }
 
   it('WhatsApp not available for the Pariwar ⇒ straight on, showing nothing', async () => {
@@ -240,13 +261,40 @@ describe('AC2 — skipped where there is nothing to offer (SB3)', () => {
   })
 })
 
+describe('AC2 — every other state IS offered the box (second review P6 (a))', () => {
+  const OFFERED = ['PENDING', 'REVOKED', 'BLOCKED_BY_META', 'EXPIRED_24H_WINDOW']
+
+  it('the list is every state but ACTIVE — a new state must be placed here deliberately', () => {
+    expect(WaOptInStateSchema.options.filter((s) => s !== 'ACTIVE').sort()).toEqual([...OFFERED].sort())
+  })
+
+  it.each(OFFERED)('state %s ⇒ the UNTICKED box, ⛔ straight on', async (state) => {
+    mock.getWaOptInStatus.mockResolvedValue(status(state))
+    renderStep()
+    expect(await screen.findByTestId('wa-signup-box')).toHaveAttribute('aria-checked', 'false')
+    expect(mock.router.replace).not.toHaveBeenCalled()
+  })
+
+  it('ACTIVE on a Pariwar where WhatsApp is now off ⇒ straight on', async () => {
+    mock.getWaOptInStatus.mockResolvedValue(status('ACTIVE', false))
+    renderStep()
+    await settle()
+    expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+    expect(screen.queryByTestId('wa-signup-box')).toBeNull()
+  })
+})
+
 describe('AC3 — the reminder, once, even-handed (SB4)', () => {
   it('an unticked Continue shows a rendered modal overlay — ⛔ Alert.alert — with two buttons that differ ONLY in label, handler and testID', async () => {
     await ask()
     fireEvent.click(cont())
     const overlay = screen.getByTestId('wa-signup-reminder')
+    expect(mock.modal).toMatchObject({ transparent: true, visible: true })
+    expect(screen.getByTestId('rn-modal')).toContainElement(overlay)
     expect(overlay).toHaveAttribute('aria-modal', 'true')
-    expect(screen.getByTestId('wa-signup-reminder-instruction')).toHaveAttribute('aria-label', words['waSignup.popup_a11y'])
+    expect(mock.views['wa-signup-reminder-instruction']!.accessibilityHint).toBeUndefined()
+    expect(mock.views['wa-signup-reminder-instruction']!.accessibilityLabel)
+      .toBe(`${words['waSignup.popup_title']} ${words['waSignup.popup_a11y']}`)
     expect(overlay).toHaveTextContent(words['waSignup.popup_title']!)
     expect(overlay).toHaveTextContent(words['waSignup.popup_body']!)
     const back = screen.getByTestId('wa-signup-reminder-back')
@@ -281,6 +329,18 @@ describe('AC3 — the reminder, once, even-handed (SB4)', () => {
     expect(mock.alert).not.toHaveBeenCalled()
   })
 
+  it('"Go back", then the member ticks the box: Continue makes the ONE request and opens WhatsApp', async () => {
+    await ask()
+    fireEvent.click(cont())
+    fireEvent.click(screen.getByTestId('wa-signup-reminder-back'))
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await screen.findByTestId('wa-signup-sent')
+    expect(mock.requestWaOptIn).toHaveBeenCalledTimes(1)
+    expect(mock.openURL).toHaveBeenCalledWith(LINK)
+    expect(mock.router.replace).not.toHaveBeenCalled()
+  })
+
   it('"Continue without WhatsApp" goes on to payment, ⛔ requesting anything (AC4)', async () => {
     await ask()
     fireEvent.click(cont())
@@ -290,17 +350,14 @@ describe('AC3 — the reminder, once, even-handed (SB4)', () => {
     expect(mock.requestWaOptIn).not.toHaveBeenCalled()
   })
 
-  it('Android back while the reminder is open = "Go back": it closes, the box stays unticked, and the listener is removed', async () => {
+  it('Android back while the reminder is open = "Go back" (the Modal\'s onRequestClose): it closes and the box stays unticked', async () => {
     await ask()
-    expect(mock.backHandlers).toHaveLength(0)
     fireEvent.click(cont())
-    expect(mock.backHandlers).toHaveLength(1)
-    let handled = false
-    act(() => { handled = hardwareBack() })
-    expect(handled).toBe(true)
+    expect(mock.modal!.onRequestClose).toBeTypeOf('function')
+    act(() => { (mock.modal!.onRequestClose as () => void)() })
+    expect(mock.modal!.visible).toBe(false)
     expect(screen.queryByTestId('wa-signup-reminder')).toBeNull()
     expect(box()).toHaveAttribute('aria-checked', 'false')
-    expect(mock.backHandlers).toHaveLength(0)
     expect(mock.router.replace).not.toHaveBeenCalled()
   })
 })
@@ -421,6 +478,67 @@ describe('AC6 — every failure still lets the member continue (SB6)', () => {
     expect(mock.router.replace).not.toHaveBeenCalled()
   })
 
+  it('the box is locked while the request is in flight — an untick then cannot be made (second review P3)', async () => {
+    await ask()
+    let resolveMint!: (value: typeof MINTED) => void
+    mock.requestWaOptIn.mockReturnValue(new Promise((resolve) => { resolveMint = resolve }))
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await settle()
+    expect(box()).toBeDisabled()
+    expect(mock.buttons['wa-signup-box']!.accessibilityState).toEqual({ checked: true, disabled: true })
+    fireEvent.click(box())
+    expect(box()).toHaveAttribute('aria-checked', 'true')
+    await act(async () => { resolveMint(MINTED) })
+    expect(await screen.findByTestId('wa-signup-sent')).toBeInTheDocument()
+  })
+
+  it('a box tap in the SAME frame as Continue (before the lock renders) cannot untick it', async () => {
+    await ask()
+    mock.requestWaOptIn.mockReturnValue(new Promise(() => {}))
+    fireEvent.click(box())
+    const b = box()
+    const c = cont()
+    await act(async () => {
+      fireEvent.click(c)
+      fireEvent.click(b)
+    })
+    expect(box()).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('a box UNTICK in the same frame just BEFORE Continue wins: the reminder, ⛔ a request (patch review)', async () => {
+    await ask()
+    fireEvent.click(box())
+    const b = box()
+    const c = cont()
+    await act(async () => {
+      fireEvent.click(b)
+      fireEvent.click(c)
+    })
+    expect(mock.requestWaOptIn).not.toHaveBeenCalled()
+    expect(screen.getByTestId('wa-signup-reminder')).toBeInTheDocument()
+    expect(box()).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('after WhatsApp did not open the box is unlocked again', async () => {
+    mock.openURL.mockRejectedValue(new Error('no handler'))
+    await ask()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await screen.findByRole('alert')
+    expect(box()).not.toBeDisabled()
+  })
+
+  it('after a failed request the box is unlocked again', async () => {
+    mock.requestWaOptIn.mockRejectedValue(new ApiError(500, 'internal', 'boom'))
+    await ask()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await screen.findByRole('alert')
+    expect(box()).not.toBeDisabled()
+    expect(mock.buttons['wa-signup-box']!.accessibilityState).toEqual({ checked: true, disabled: false })
+  })
+
   it('a double tap on an UNTICKED Continue shows the reminder — ⛔ skips it', async () => {
     await ask()
     const b = cont()
@@ -436,44 +554,184 @@ describe('AC6 — every failure still lets the member continue (SB6)', () => {
 describe.each(['ios', 'android'])('AC8 — accessible (Platform.OS = %s)', (os) => {
   beforeEach(() => { mock.os = os })
 
-  it('the box announces its checked state; the reminder opening is spoken once, on both platforms', async () => {
+  it('the box appearing and the reminder opening are each spoken once, on both platforms; the box announces its checked state', async () => {
     await ask()
+    // Second review P5: focus was on the loading spinner, which unmounts — the box's arrival is spoken.
+    expect(mock.announce).toHaveBeenCalledTimes(1)
+    expect(mock.announce).toHaveBeenLastCalledWith(words['waSignup.title'])
     expect(box()).toHaveAttribute('aria-checked', 'false')
     fireEvent.click(box())
     expect(box()).toHaveAttribute('aria-checked', 'true')
     fireEvent.click(box())
-    expect(mock.announce).not.toHaveBeenCalled()
-    fireEvent.click(cont())
-    expect(mock.views['wa-signup-reminder']!.accessibilityViewIsModal).toBe(true)
     expect(mock.announce).toHaveBeenCalledTimes(1)
-    expect(mock.announce).toHaveBeenCalledWith(words['waSignup.popup_title'])
+    fireEvent.click(cont())
+    // Modal to assistive tech on BOTH platforms through the window-level Modal; `accessibilityViewIsModal` is iOS-only
+    // (second review P6 (c)), so it is asserted on the iOS leg alone.
+    expect(mock.modal).toMatchObject({ transparent: true, visible: true })
+    if (os === 'ios') expect(mock.views['wa-signup-reminder']!.accessibilityViewIsModal).toBe(true)
+    expect(mock.announce).toHaveBeenCalledTimes(2)
+    expect(mock.announce).toHaveBeenLastCalledWith(words['waSignup.popup_title'])
   })
 
-  it('hides background controls while the reminder is open and restores them on closing', async () => {
+  it('the reminder is its own window (second review D1 (a)): the screen behind it is outside the Modal; it closes on "Go back"', async () => {
     await ask()
-    const content = () => mock.views['wa-signup-content']!
-    expect(content().importantForAccessibility).toBe('auto')
-    expect(content().accessibilityElementsHidden).toBe(false)
+    expect(mock.modal).toMatchObject({ transparent: true, visible: false })
+    expect(screen.queryByTestId('wa-signup-reminder')).toBeNull()
     fireEvent.click(cont())
-    expect(content().importantForAccessibility).toBe('no-hide-descendants')
-    expect(content().accessibilityElementsHidden).toBe(true)
+    expect(mock.modal).toMatchObject({ transparent: true, visible: true })
+    const modal = screen.getByTestId('rn-modal')
+    expect(modal).toContainElement(screen.getByTestId('wa-signup-reminder'))
+    expect(modal).not.toContainElement(box())
+    expect(modal).not.toContainElement(cont())
+    fireEvent.click(screen.getByTestId('wa-signup-reminder-back'))
+    expect(mock.modal!.visible).toBe(false)
+    expect(screen.queryByTestId('rn-modal')).toBeNull()
+  })
+
+  it('the heading is ONE accessible element named by its visible title FIRST, then the instruction — ⛔ an optional hint (P4 + patch review)', async () => {
+    await ask()
+    fireEvent.click(cont())
     const instruction = mock.views['wa-signup-reminder-instruction']!
     expect(instruction.accessible).toBe(true)
-    expect(instruction.accessibilityLabel).toBe(words['waSignup.popup_a11y'])
-    // The labelled heading must not group the two actions into a single accessibility element.
+    const name = instruction.accessibilityLabel as string
+    expect(name.startsWith(words['waSignup.popup_title']!)).toBe(true)
+    expect(name).toContain(words['waSignup.popup_a11y']!)
+    expect(instruction.accessibilityHint).toBeUndefined()
+    expect(screen.getByTestId('wa-signup-reminder-instruction')).toHaveTextContent(words['waSignup.popup_title']!)
+    // The heading must not group the two actions into a single accessibility element.
     expect(screen.getByTestId('wa-signup-reminder-instruction').querySelector('button')).toBeNull()
     expect(mock.views['wa-signup-reminder']!.accessible).not.toBe(true)
-    fireEvent.click(screen.getByTestId('wa-signup-reminder-back'))
-    expect(content().importantForAccessibility).toBe('auto')
-    expect(content().accessibilityElementsHidden).toBe(false)
   })
 
-  it('the sent stage is spoken once, on both platforms', async () => {
+  // Second review P1: the `sent` stage lands as WhatsApp takes the foreground — it is spoken on the member's RETURN, once.
+  const sentSpoken = () => mock.announce.mock.calls.filter(([text]) => text === words['waSignup.sent_title']).length
+
+  it('openURL settling AFTER the switch (TWT already in the background): ⛔ spoken then; spoken on the return, once', async () => {
+    await ask()
+    mock.openURL.mockImplementation(async () => {
+      mock.appState = 'background'
+      return true
+    })
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await screen.findByTestId('wa-signup-sent')
+    // The DOM can show the stage before its AppState effect has run — flush it before driving AppState (a CI-load flake).
+    await settle()
+    expect(sentSpoken()).toBe(0)
+    setAppState('active')
+    expect(sentSpoken()).toBe(1)
+    setAppState('background')
+    setAppState('active')
+    expect(sentSpoken()).toBe(1)
+  })
+
+  it('openURL settling BEFORE the switch (TWT still active): ⛔ spoken at once; spoken on the return', async () => {
     await ask()
     fireEvent.click(box())
     fireEvent.click(cont())
     await screen.findByTestId('wa-signup-sent')
-    expect(mock.announce.mock.calls.filter(([text]) => text === words['waSignup.sent_title'])).toHaveLength(1)
+    // The DOM can show the stage before its AppState effect has run — flush it before driving AppState (a CI-load flake).
+    await settle()
+    expect(sentSpoken()).toBe(0)
+    setAppState('background')
+    expect(sentSpoken()).toBe(0)
+    setAppState('active')
+    expect(sentSpoken()).toBe(1)
+  })
+
+  it('if TWT never leaves the foreground, it is spoken after the 2 s grace — ⛔ before', async () => {
+    await ask()
+    vi.useFakeTimers()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByTestId('wa-signup-sent')).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_999) })
+    expect(sentSpoken()).toBe(0)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(sentSpoken()).toBe(1)
+  })
+
+  it('a departure before the grace ends stops the grace: ⛔ spoken while in WhatsApp, spoken on the return', async () => {
+    await ask()
+    vi.useFakeTimers()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    setAppState('background')
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    expect(sentSpoken()).toBe(0)
+    setAppState('active')
+    expect(sentSpoken()).toBe(1)
+  })
+
+  it('an iOS `inactive` blip (Control Centre, a call banner) is ⛔ a departure: nothing is spoken for it, and the grace still runs', async () => {
+    await ask()
+    vi.useFakeTimers()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    setAppState('inactive')
+    setAppState('active')
+    expect(sentSpoken()).toBe(0)
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    expect(sentSpoken()).toBe(1)
+  })
+
+  it('TWT still `inactive` when the grace ends (the app switcher): ⛔ spoken then; spoken on the return', async () => {
+    await ask()
+    vi.useFakeTimers()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    setAppState('inactive')
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    expect(sentSpoken()).toBe(0)
+    setAppState('active')
+    expect(sentSpoken()).toBe(1)
+  })
+
+  it("iOS's own order on leaving and coming back (inactive → background → active): spoken once, only when active", async () => {
+    await ask()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await screen.findByTestId('wa-signup-sent')
+    await settle()
+    setAppState('inactive')
+    setAppState('background')
+    setAppState('inactive')
+    expect(sentSpoken()).toBe(0)
+    setAppState('active')
+    expect(sentSpoken()).toBe(1)
+  })
+
+  it('a grace announcement does ⛔ use up the return: a late departure is spoken again on coming back, once', async () => {
+    await ask()
+    vi.useFakeTimers()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    expect(sentSpoken()).toBe(1)
+    setAppState('background')
+    setAppState('active')
+    expect(sentSpoken()).toBe(2)
+    setAppState('background')
+    setAppState('active')
+    expect(sentSpoken()).toBe(2)
+  })
+
+  it('leaving the step during the grace: ⛔ spoken afterwards, and the listener is removed', async () => {
+    await ask()
+    vi.useFakeTimers()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(mock.appStateHandlers).toHaveLength(1)
+    cleanup()
+    expect(mock.appStateHandlers).toHaveLength(0)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(sentSpoken()).toBe(0)
   })
 
   it('an error is an AnnouncedText line: assertive live region on Android, the announce call on iOS — never both', async () => {
@@ -489,7 +747,7 @@ describe.each(['ios', 'android'])('AC8 — accessible (Platform.OS = %s)', (os) 
 })
 
 describe('AC12 — "WhatsApp on another phone?" on the sent stage (SB12)', () => {
-  it('is collapsed, then reveals the number and the phrase from the request\'s response — the phrase SELECTABLE', async () => {
+  it('is collapsed, then reveals the number and the phrase from the request\'s response — each SELECTABLE on its own line', async () => {
     await ask()
     fireEvent.click(box())
     fireEvent.click(cont())
@@ -499,11 +757,27 @@ describe('AC12 — "WhatsApp on another phone?" on the sent stage (SB12)', () =>
     expect(screen.queryByTestId('wa-other-phone-details')).toBeNull()
     fireEvent.click(link)
     const details = screen.getByTestId('wa-other-phone-details')
-    expect(details).toHaveTextContent(words['waOtherPhone.desc']!.replace('{number}', '+91 98765 43210'))
+    expect(details).toHaveTextContent(words['waOtherPhone.desc']!)
     expect(details).toHaveTextContent(words['waOtherPhone.note']!)
-    expect(screen.getByText(words['waOtherPhone.desc']!.replace('{number}', '+91 98765 43210')))
-      .toHaveAttribute('data-selectable', 'true')
+    // Second review D2 (b): the number ALONE on its own selectable line, between the sentence and the phrase.
+    const number = screen.getByTestId('wa-other-phone-number')
+    expect(number).toHaveTextContent(/^\+91 98765 43210$/)
+    expect(number).toHaveAttribute('data-selectable', 'true')
     const phrase = screen.getByTestId('wa-other-phone-phrase')
+    expect(screen.getByText(words['waOtherPhone.desc']!).compareDocumentPosition(number) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy()
+    expect(number.compareDocumentPosition(phrase) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Each value is introduced by its own label line (BigDev), OUTSIDE the selectable value — a copy takes only the value.
+    const numberLabel = screen.getByTestId('wa-other-phone-number-label')
+    const phraseLabel = screen.getByTestId('wa-other-phone-phrase-label')
+    expect(numberLabel).toHaveTextContent(words['waOtherPhone.number_label']!)
+    expect(phraseLabel).toHaveTextContent(words['waOtherPhone.message_label']!)
+    expect(numberLabel).not.toHaveAttribute('data-selectable')
+    expect(phraseLabel).not.toHaveAttribute('data-selectable')
+    expect(numberLabel.compareDocumentPosition(number) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(number.compareDocumentPosition(phraseLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(phraseLabel.compareDocumentPosition(phrase) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(phrase).toHaveTextContent(/^TWT-ABCDEFGH$/)
     expect(phrase).toHaveTextContent('TWT-ABCDEFGH')
     expect(phrase).toHaveAttribute('data-selectable', 'true')
     expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
@@ -540,8 +814,9 @@ describe('Review R2 — a response belongs to the visit that requested it', () =
         })
         expect(mock.openURL).not.toHaveBeenCalled()
         expect(mock.router.replace).not.toHaveBeenCalled()
-        expect(screen.queryByRole('alert')).toBeNull()
         if (departure !== 'unmount') {
+          // After `cleanup()` there is no tree to hold an alert, so this only bites while the step is still mounted.
+          expect(screen.queryByRole('alert')).toBeNull()
           // An abandoned first attempt still counts as the one mint; returning lets the member continue.
           setFocused(true)
           expect(cont()).not.toBeDisabled()
@@ -571,7 +846,10 @@ describe('Review R2 — a response belongs to the visit that requested it', () =
     expect(screen.queryByTestId('wa-signup-sent')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(mock.router.replace).not.toHaveBeenCalled()
-    expect(mock.announce).not.toHaveBeenCalled()
+    // A return to TWT after the abandoned link speaks nothing: the only announcement is the box's arrival.
+    setAppState('background')
+    setAppState('active')
+    expect(mock.announce.mock.calls).toEqual([[words['waSignup.title']]])
   })
 
   it('ignores a late reopen error after blur and refocus', async () => {
@@ -599,5 +877,11 @@ describe('Review R3 — an overflowing reminder can scroll', () => {
     expect(scrolling).toContainElement(screen.getByTestId('wa-signup-reminder-proceed'))
     expect(mock.views['wa-signup-reminder-scroll']!.style).toMatchObject({ maxHeight: '100%', flexGrow: 0 })
     expect(screen.getByTestId('wa-signup-reminder')).toContainElement(scrolling)
+  })
+
+  it('keeps the card clear of the system bars the window-level Modal reaches under (patch review)', async () => {
+    await ask()
+    fireEvent.click(cont())
+    expect(mock.views['wa-signup-reminder']).toMatchObject({ pt: 24 + 16, pb: 48 + 16 })
   })
 })

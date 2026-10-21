@@ -442,9 +442,15 @@ describe('NotificationSettingsScreen — Story 5.10 "WhatsApp on another phone?"
     expect(link).toHaveTextContent('WhatsApp on another phone?')
     expect(screen.queryByTestId('wa-other-phone-details')).toBeNull()
     fireEvent.click(link)
-    expect(screen.getByTestId('wa-other-phone-details')).toHaveTextContent('+91 98765 43210')
-    expect(screen.getByText('From the phone that has your WhatsApp, send this message to +91 98765 43210:'))
-      .toHaveAttribute('data-selectable', 'true')
+    expect(screen.getByTestId('wa-other-phone-details'))
+      .toHaveTextContent('From the phone that has your WhatsApp, send the message below to this number:')
+    // Second review D2 (b): the number ALONE on its own selectable line (iOS copies a selectable Text whole).
+    const number = screen.getByTestId('wa-other-phone-number')
+    expect(number).toHaveTextContent(/^\+91 98765 43210$/)
+    expect(number).toHaveAttribute('data-selectable', 'true')
+    // Each value is introduced by its own label line (BigDev: "add Number: and Message: labels").
+    expect(screen.getByTestId('wa-other-phone-number-label')).toHaveTextContent('Number:')
+    expect(screen.getByTestId('wa-other-phone-phrase-label')).toHaveTextContent('Message:')
     const phrase = screen.getByTestId('wa-other-phone-phrase')
     expect(phrase).toHaveTextContent('TWT-ABCDEFGH')
     expect(phrase).toHaveAttribute('data-selectable', 'true')

@@ -2,11 +2,11 @@
 //
 // A member whose WhatsApp is on a different phone from the one they are using cannot finish through the deep link: it opens
 // WhatsApp on THIS phone, so the message comes from another number and matches nothing. Collapsed until tapped (BigDev: ask
-// "later"), the link reveals the Pariwar's WhatsApp number and the verification phrase as SELECTABLE text, to send by hand from
-// the phone that holds the member's WhatsApp — the member's own message from the registered number still switches it on
-// (ADR-0029, unchanged; the phrase extractor folds case and dash variants). Used by the signup step's `sent` stage (values from
-// the mint response) and the "WhatsApp notifications" screen's waiting state (values from the status response). Renders
-// nothing unless BOTH values are present. Row 5-13 (`-374`) later replaces what the SIGNUP link reveals with a WhatsApp code.
+// "later"), the link reveals the Pariwar's WhatsApp number and the verification phrase, each as its own SELECTABLE line, to
+// send by hand from the phone that holds the member's WhatsApp — the member's own message from the registered number still
+// switches it on (ADR-0029, unchanged; the phrase extractor folds case and dash variants). Used by the signup step's `sent`
+// stage (values from the mint response) and the "WhatsApp notifications" screen's waiting state (values from the status
+// response). Renders nothing unless BOTH values are present. Row 5-13 (`-374`) later replaces what the SIGNUP link reveals with a WhatsApp code.
 
 import { useState } from 'react'
 
@@ -39,7 +39,19 @@ export function OtherPhoneHint({
       </Button>
       {open ? (
         <YStack gap="$2" testID="wa-other-phone-details">
-          <Paragraph selectable>{t('waOtherPhone.desc', { number: displayPhoneNumber })}</Paragraph>
+          <Paragraph>{t('waOtherPhone.desc')}</Paragraph>
+          {/* The number on its OWN selectable line, like the phrase: iOS copies a selectable Text whole, so a number inside
+              the sentence could not be copied alone (second review D2 (b)). Each value carries a label (BigDev: "add Number:
+              and Message: labels") — a SEPARATE line, so copying the value copies only the value. */}
+          <Paragraph color="$colorPress" testID="wa-other-phone-number-label">
+            {t('waOtherPhone.number_label')}
+          </Paragraph>
+          <Text selectable fontWeight="600" fontSize="$6" testID="wa-other-phone-number">
+            {displayPhoneNumber}
+          </Text>
+          <Paragraph color="$colorPress" testID="wa-other-phone-phrase-label">
+            {t('waOtherPhone.message_label')}
+          </Paragraph>
           <Text selectable fontWeight="600" fontSize="$6" testID="wa-other-phone-phrase">
             {verificationPhrase}
           </Text>

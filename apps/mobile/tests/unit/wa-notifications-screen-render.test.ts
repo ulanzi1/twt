@@ -434,7 +434,7 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
 // Story 5.10 (AC12; SB12, `-375` decision 12) — "WhatsApp on another phone?" in the waiting (PENDING) state, from the STATUS
 // response's number + phrase; rendered only when BOTH are present, and in no other state.
 describe('NotificationSettingsScreen — Story 5.10 "WhatsApp on another phone?" (AC12)', () => {
-  it('PENDING: collapsed, then reveals the number and the phrase — the phrase SELECTABLE', async () => {
+  it('PENDING: collapsed, then reveals the SELECTABLE number and phrase', async () => {
     mock.getWaOptInStatus.mockResolvedValue(status('PENDING'))
     renderScreen()
     await screen.findByTestId('wa-opt-in-pending')
@@ -443,6 +443,8 @@ describe('NotificationSettingsScreen — Story 5.10 "WhatsApp on another phone?"
     expect(screen.queryByTestId('wa-other-phone-details')).toBeNull()
     fireEvent.click(link)
     expect(screen.getByTestId('wa-other-phone-details')).toHaveTextContent('+91 98765 43210')
+    expect(screen.getByText('From the phone that has your WhatsApp, send this message to +91 98765 43210:'))
+      .toHaveAttribute('data-selectable', 'true')
     const phrase = screen.getByTestId('wa-other-phone-phrase')
     expect(phrase).toHaveTextContent('TWT-ABCDEFGH')
     expect(phrase).toHaveAttribute('data-selectable', 'true')

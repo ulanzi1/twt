@@ -12,7 +12,9 @@ REBASED 2026-10-21 (v1.4) onto `origin/main` `2f4a4303` — a ledger-only commit
 only) ⇒ the pin stands. `main` took ledger `2026-10-21f` (5.12 LANDED) ⇒ this branch's ledger entries were renumbered `21g` (created) and
 `21h` (v1.3 + row 5-13), commit messages included.
 
-STATUS: review (v1.10 — DEV DONE 2026-10-21 by `bmad-dev-story 5.10`: decision `-375` `ae4fbaf7`, records `9396deac`, code `d336be8e`; ci:local 36/36 on :5433. Earlier: ready-for-dev, created 2026-10-21 via `bmad-create-story 5.10`; v1.3 — SB12 DECIDED in session; v1.4 — VALIDATED (`bmad-create-story
+STATUS: done (v1.11 — CODE REVIEW CLOSED 2026-10-21: R1–R5 fixed, 18 regression cases added; mobile 1172/1172; ci:local 36/36 on :5433 including integration-tests. Changes local and uncommitted.)
+
+PREVIOUS STATUS: review (v1.10 — DEV DONE 2026-10-21 by `bmad-dev-story 5.10`: decision `-375` `ae4fbaf7`, records `9396deac`, code `d336be8e`; ci:local 36/36 on :5433. Earlier: ready-for-dev, created 2026-10-21 via `bmad-create-story 5.10`; v1.3 — SB12 DECIDED in session; v1.4 — VALIDATED (`bmad-create-story
 validate 5.10`, four fresh-context verifiers; BigDev: *"all"*): SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2, several REVISED by v1.4 —
 the member-facing words (SB5), SB2 option (d), SB3 option (c), SB6's resend, SB9 legs (b)–(d); v1.8 — Task 0.2 DONE: BigDev accepted
 EVERY recommendation for SB1–SB11 and PQ1 (Debug Log (a)); PREV = `medical`, NEXT = `'/(signup)/payment'`. Next: Task 0.1 (preflight),
@@ -73,7 +75,7 @@ S = Task 0.1 STOP conditions · PQ = a question for BigDev at Task 0.2.
 
 # Story 5.10: An Unticked "Send Me WhatsApp Messages" Box at Signup — With One Even-Handed Reminder if the Member Leaves It Unticked `[SURFACE]`
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today a new member is offered WhatsApp nowhere in signup. The only way to say yes is a
 > low-prominence control — the dimmed *"WhatsApp notifications"* entry at the bottom of the home tab, which opens
@@ -685,6 +687,82 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
 - [x] **Task 6 — Close the records and the gate (AC11)** (DONE 2026-10-21 — Debug Log (c), (f); ⚠ the PUSH is ⛔ done — held for BigDev's go-ahead) — `ci:local` on :5433 with `DATABASE_URL` set; `tsc` both ways (F20); push with
       `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]); story STATUS line, File List, Change Log; ledger; row → `review`.
 
+### Review Findings
+
+Code review 2026-10-21 (`bmad-code-review 5.10`), target `20fcb479..2215e276`; all three layers completed
+(Blind Hunter, Edge Case Hunter, Acceptance Auditor). **0 decision-needed, 5 patch, 0 defer, 1 dismissed.**
+These are engineering corrections; none needs a Trustee Panel ruling under the routing template's §0.
+
+- [x] [Review][Patch] **R1 · P2 — Make the reminder modal to TalkBack.** [apps/mobile/app/(signup)/whatsapp.tsx:180] —
+      AC8: `accessibilityViewIsModal` is iOS-only; the underlying ScrollView remains in Android's accessibility tree. With the
+      reminder open, TalkBack can still reach and activate its obscured checkbox and Continue. Hide the background descendants
+      from accessibility while the reminder is open and preserve both reminder buttons as separate controls. The existing mock
+      maps the iOS-only prop to `aria-modal` on both OS values, so it cannot detect the native gap. Sources: blind + edge + auditor.
+- [x] [Review][Patch] **R2 · P2 — Ignore a mint response after the member leaves the step.** [apps/mobile/app/(signup)/whatsapp.tsx:111] —
+      The status read has an unmount guard, but the mint does not. Start a request, leave/unmount the step, then let it settle:
+      success still launches WhatsApp; either handled 409 still calls `goNext()` and replaces the current screen with payment.
+      Guard the asynchronous continuation and navigation against departure; test delayed success and both 409 codes after leaving.
+      Source: blind; independently reproduced by the parent for all three outcomes.
+- [x] [Review][Patch] **R3 · P2 — Keep reminder choices reachable when content exceeds the screen.** [apps/mobile/app/(signup)/whatsapp.tsx:234] —
+      I5 / AC3: the centered card is inside a fixed, absolute-fill overlay with no scrolling or height bound. On a short landscape
+      viewport or with enlarged system text, the title, Hindi body and two 56px buttons can exceed the available height, leaving
+      choices clipped with no way to scroll to them. Bound the card to the available height and make its content scrollable while
+      retaining equal button styling. Structural finding; exact device/font combinations remain unverified. Sources: blind + edge.
+- [x] [Review][Patch] **R4 · P2 — Deliver the reminder's labelled accessibility instruction.** [apps/mobile/app/(signup)/whatsapp.tsx:240] —
+      Checklist family 13(a), applied alongside AC8: the container has `accessibilityLabel={t('waSignup.popup_a11y')}` without
+      explicit `accessible={true}`. Put this instruction on a dedicated accessible noninteractive element (or announce it through
+      the existing phase mechanism); do not group the entire button-bearing overlay and swallow its independent choices. Add a
+      native-prop assertion; the current mock forwards every container label regardless of accessibility-element status. Source: auditor.
+- [x] [Review][Patch] **R5 · P3 — Make the destination number selectable as SB12 requires.** [apps/mobile/components/notifications/OtherPhoneHint.tsx:42] —
+      Accepted SB12 says the number and phrase appear as selectable text, but the number is interpolated into a Paragraph without
+      `selectable`; only the phrase is selectable. This affects signup and Settings. Make the number-bearing text selectable and
+      extend the tests beyond the phrase-only AC12 assertion. Sources: edge + auditor.
+
+**Patch disposition (2026-10-21, BigDev: "1" — apply every patch):** R1–R5 are resolved. The final full CI run passed all **36 jobs**,
+including the live integration-tests job on **:5433**; story and sprint row are `done`. Changes remain local and uncommitted. R1 hides the background ScrollView's descendants on Android and iOS while the reminder is open;
+R4 moves its label onto an explicitly accessible heading, leaving both actions independent. R3 puts the card inside a ScrollView
+bounded to the overlay height. R2 invalidates pending action continuations on navigation blur/unmount (including blur then refocus),
+checking the generation before opening WhatsApp, applying errors/stage changes, or navigating; a later Continue still moves on without
+minting again. R5 makes the number-bearing Paragraph selectable in the shared hint. The signup harness now records native view props,
+models navigation focus/blur, and treats `accessibilityViewIsModal` as iOS-only. Eighteen new regression cases bring its suite from
+31 to 49; signup and Settings both assert selectable destination text. The full mobile suite passes **1172/1172**, and mobile
+lint/typecheck pass. Family 1's review gap is now **covered-by-test** by `Review R2 — a response belongs to the visit that requested it`;
+family 13's gaps are now **covered-by-test** by the expanded AC8 background-hiding/explicit-heading checks and the R3 bounded-scroll
+case. The original verdicts below describe the reviewed baseline. Native layout/screen-reader behavior remains unverified on a device.
+
+**Validation:** six existing mobile suites pass, **90/90 tests** (`wa-signup-step-render`, `wa-signup-copy-keys`, `with-timeout`,
+`wa-notifications-screen-render`, `wa-notifications-copy-keys`, `workplace`). The two Story 5.10 AC9 integration cases pass against
+the local dev DB on **:5433** (nine unrelated cases deselected); the first sandboxed attempt was blocked by EPERM, then the permitted
+rerun passed. Those cases create fresh dev-only fixture rows as documented in Debug Log (d). Review-only regression probes live in
+`/private/tmp/twt-5-10-review-tests/` and leave production/test source untouched: delayed success and both 409s after unmount, absent
+Android background hiding, the labelled container's absent explicit accessibility flag, and the unselectable number each expose the
+reported gap. These probes verify behavior/props with mocked native primitives, not a real screen reader. No device validation or
+new full `ci:local` run is claimed.
+
+**Final validation after the patches:** `DATABASE_URL=…127.0.0.1:5433/twt_dev pnpm ci:local` passed **36/36 jobs** on the
+working tree based on `2215e276`, including lint, typecheck, build, mobile **77 files / 1172 tests**, all static gates, and the live
+integration job (domain **6027 passed / 1 skipped**, jobs **1338 passed**, API **2001 passed / 1 skipped**, including all **11** WhatsApp opt-in
+integration cases). Log: `/private/tmp/twt-5-10-review-ci.log`. No production/test source changed during that run; only these review
+records were completed afterwards. The reviewed five findings are checked off above; no decision or deferral remains from this review.
+
+**Dismissed:** the proposed permanently hung `Linking.openURL` failure has no demonstrated production trigger. Installed React
+Native's Android `IntentModule.openURL` resolves/rejects directly after starting the intent; iOS settles from its OS completion
+callback. An arbitrarily never-settling mock alone does not establish the reported P1 defect. No speculative hang finding is carried.
+
+**Load-bearing-invariant lens (touched families only):**
+
+| Family | Verdict and evidence |
+|---|---|
+| 1 — State/guards | **REAL GAP:** R2; a completed request still performs side effects after the screen's lifetime ends. Other loading/mint outcomes are covered by the AC2/AC6 render cases. |
+| 2 — Concurrency/idempotency | **covered-by-test:** one-act double-tap case, unticked double-tap case, and reopen retaining one mint. No worker or DB concurrency path changes. |
+| 3 — Tenant/actor boundaries | **covered-by-construction:** existing authenticated bodyless member endpoint; no caller-supplied tenant/member ID or new mutation route. AC9 proves the actual pending-fee signup session works. |
+| 6 — Projection/snapshot | **covered-by-construction:** explicit number/phrase prop picks from the authenticated response; AC12 cases cover state/null restrictions. |
+| 8 — Audit/attribution | **covered-by-construction:** no server writer changed; the existing audited mint and worker consent/activation transaction remain the writers. |
+| 10 — Closure honesty | **covered-by-construction:** device/counsel/pre-existing limitations disclosed, Row 38 open, row 5-13 explicitly unbuilt; commit history confirms decision alone, then records, then code. |
+| 11 — Policy meaning | **covered-by-construction:** the story states the member meaning; the new condition controls the convenience-channel offer, while payment eligibility is unchanged and covered by AC4's source assertion. |
+| 12 — Cross-member ownership | **covered-by-construction:** no client-supplied resource IDs; displayed values come from the member-scoped mint/status responses. |
+| 13 — Semantic accessibility | **REAL GAP:** R1/R3/R4. Checkbox checked state, phase announcements and error announcements otherwise have AC8 render cases under both OS values. |
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -921,6 +999,7 @@ Modified: `apps/mobile/lib/wizard-steps.ts` · `apps/mobile/app/(signup)/medical
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-21 | 1.11 | CODE REVIEW CLOSED (`bmad-code-review 5.10`, three layers; BigDev: "1"): R1–R5 fixed — Android/iOS background accessibility hiding; explicit accessible reminder heading; bounded scrolling reminder; late-response invalidation on blur/unmount/refocus; selectable number on signup and Settings. Eighteen new regression cases; mobile 1172/1172; full ci:local 36/36 on :5433 including integration-tests. Story and sprint row `review` → `done`. Changes local, uncommitted. |
 | 2026-10-21 | 1.10 | Task 6: `ci:local` 36/36 green on :5433 at `d336be8e` (integration-tests run); tsc both ways; STATUS → `review`; ledger `2026-10-21m`; row 5-10 → `review`. ⛔ pushed (held for BigDev). |
 | 2026-10-21 | 1.9 | DEV (`bmad-dev-story 5.10`): Task 0.1 preflight clean; Decision `2026-10-21-375` committed alone (`ae4fbaf7`); records (`9396deac`, roster Row 38); Tasks 1–5 implemented and tested (`d336be8e`) — every leg proven RED; friction gate basis `row`. Found: typed routes (expo-router 55) do ⛔ guard a `'/(signup)/…'` literal ⇒ a source leg added under AC1; the 5.12 copy-key regex cannot see digit keys ⇒ widened in the new test. |
 | 2026-10-21 | 1.8 | Task 0.2 DONE — BigDev: *"all recommendation accepted for SB1-SB11 and PQ1"*. Debug Log (a) records the answer verbatim and what each SB resolves to; PREV = `medical`, NEXT = `payment` (SB2 (d)); SB9 (d-i); PQ1 no. STATUS line, SB heading and Task 0.2 updated. Next: Task 0.1, then 0.3 (decision, alone) and 0.4 (records). |

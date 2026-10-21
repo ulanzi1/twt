@@ -24,7 +24,7 @@ import { BackHandler, Linking, ScrollView, StyleSheet } from 'react-native'
 import { ApiError } from '@twt/api-client'
 import type { CreateWaOptInResponse } from '@twt/contracts'
 import { useT } from '@twt/i18n/react'
-import { useRouter } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { Button, H2, Paragraph, Spinner, View, YStack } from 'tamagui'
 
 import { AnnouncedText, useAnnounceOnChange } from '../../components/peer-request/announce'
@@ -56,6 +56,11 @@ export default function WhatsappStepScreen() {
   const attempted = useRef(false)
   const reminder = useRef<Reminder>('never')
   const leaving = useRef(false)
+  const actionVersion = useRef(0)
+
+  // A request may finish after navigation blurs or unmounts this step. Invalidate its continuation even if the member
+  // returns before the response arrives, so an abandoned request cannot open another app or replace the current route.
+  useFocusEffect(useCallback(() => () => { actionVersion.current += 1 }, []))
 
   const goNext = useCallback(() => {
     if (leaving.current) return
@@ -96,7 +101,7 @@ export default function WhatsappStepScreen() {
   }, [reminderOpen, closeReminder])
 
   const onContinue = useCallback(async (): Promise<void> => {
-    if (busyRef.current) return
+    if (busyRef.current || leaving.current) return
     if (stage === 'sent' || attempted.current) return goNext()
     if (!checked) {
       if (reminder.current === 'shown') return goNext()
@@ -107,20 +112,26 @@ export default function WhatsappStepScreen() {
     busyRef.current = true
     attempted.current = true
     setBusy(true)
+    const version = ++actionVersion.current
+    const isCurrent = () => actionVersion.current === version && !leaving.current
     try {
       const res = await withTimeout(memberAuth.requestWaOptIn(), CALL_TIMEOUT_MS)
+      if (!isCurrent()) return
       setMinted(res)
       try {
         await Linking.openURL(res.deepLink)
       } catch {
+        if (!isCurrent()) return
         // The request landed but WhatsApp did not open; its PENDING expires on its own. Continue goes on.
         setError('link')
         return
       }
+      if (!isCurrent()) return
       // In the SAME update as the new stage, so the `sent` stage never renders under an old error.
       setError(null)
       setStage('sent')
     } catch (err) {
+      if (!isCurrent()) return
       // Already on, or switched off meanwhile: nothing to ask — straight on.
       if (err instanceof ApiError && (err.code === 'wa_opt_in.already_active' || err.code === 'wa_opt_in.channel_unavailable')) {
         goNext()
@@ -135,14 +146,15 @@ export default function WhatsappStepScreen() {
 
   /** Re-open WhatsApp with the FIRST request's link — ⛔ a second mint (SB6). */
   const onReopen = useCallback(async (): Promise<void> => {
-    if (!minted || busyRef.current) return
+    if (!minted || busyRef.current || leaving.current) return
     busyRef.current = true
     setBusy(true)
     setError(null)
+    const version = ++actionVersion.current
     try {
       await Linking.openURL(minted.deepLink)
     } catch {
-      setError('link')
+      if (actionVersion.current === version && !leaving.current) setError('link')
     } finally {
       busyRef.current = false
       setBusy(false)
@@ -177,7 +189,12 @@ export default function WhatsappStepScreen() {
 
   return (
     <YStack flex={1} bg="$background">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        importantForAccessibility={reminderOpen ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={reminderOpen}
+        testID="wa-signup-content"
+      >
         <YStack gap="$4" px="$6" py="$6" bg="$background">
           <H2>{t('waSignup.title')}</H2>
           {stage === 'ask' ? (
@@ -237,37 +254,44 @@ export default function WhatsappStepScreen() {
           items="center"
           p="$4"
           accessibilityViewIsModal
-          accessibilityLabel={t('waSignup.popup_a11y')}
           // Scrim + stacking: raw styles, as in BannerHost — neither is a themeable Tamagui token here.
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 1000 }]}
         >
-          <YStack gap="$3" bg="$background" rounded="$4" p="$4" width="100%" style={{ maxWidth: 420 }}>
-            <H2>{t('waSignup.popup_title')}</H2>
-            <Paragraph>{t('waSignup.popup_body')}</Paragraph>
-            {/* Two choices of EQUAL weight (SB4): the same component, size and theme — neither is primary. "Go back"
-                closes the reminder and ⛔ ticks the box (I1 — the member ticks it themselves). */}
-            <Button
-              height={56}
-              accessibilityRole="button"
-              accessibilityLabel={t('waSignup.popup_back')}
-              onPress={closeReminder}
-              testID="wa-signup-reminder-back"
-            >
-              {t('waSignup.popup_back')}
-            </Button>
-            <Button
-              height={56}
-              accessibilityRole="button"
-              accessibilityLabel={t('waSignup.popup_proceed')}
-              onPress={() => {
-                closeReminder()
-                goNext()
-              }}
-              testID="wa-signup-reminder-proceed"
-            >
-              {t('waSignup.popup_proceed')}
-            </Button>
-          </YStack>
+          <ScrollView
+            style={{ maxHeight: '100%', width: '100%', maxWidth: 420, flexGrow: 0 }}
+            testID="wa-signup-reminder-scroll"
+          >
+            <YStack gap="$3" bg="$background" rounded="$4" p="$4">
+              {/* Label the heading explicitly, retaining the two choices as separate accessibility elements. */}
+              <H2 accessible accessibilityLabel={t('waSignup.popup_a11y')} testID="wa-signup-reminder-instruction">
+                {t('waSignup.popup_title')}
+              </H2>
+              <Paragraph>{t('waSignup.popup_body')}</Paragraph>
+              {/* Two choices of EQUAL weight (SB4): the same component, size and theme — neither is primary. "Go back"
+                  closes the reminder and ⛔ ticks the box (I1 — the member ticks it themselves). */}
+              <Button
+                height={56}
+                accessibilityRole="button"
+                accessibilityLabel={t('waSignup.popup_back')}
+                onPress={closeReminder}
+                testID="wa-signup-reminder-back"
+              >
+                {t('waSignup.popup_back')}
+              </Button>
+              <Button
+                height={56}
+                accessibilityRole="button"
+                accessibilityLabel={t('waSignup.popup_proceed')}
+                onPress={() => {
+                  closeReminder()
+                  goNext()
+                }}
+                testID="wa-signup-reminder-proceed"
+              >
+                {t('waSignup.popup_proceed')}
+              </Button>
+            </YStack>
+          </ScrollView>
         </View>
       ) : null}
     </YStack>

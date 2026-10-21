@@ -29,17 +29,45 @@ const mock = vi.hoisted(() => ({
   backHandlers: [] as (() => boolean)[],
   os: 'ios' as string,
   buttons: {} as Record<string, Record<string, unknown>>,
+  views: {} as Record<string, Record<string, unknown>>,
+  focused: true,
+  focusListeners: new Set<() => void>(),
 }))
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 vi.mock('../../lib/member-api', () => ({
   memberAuth: { getWaOptInStatus: mock.getWaOptInStatus, requestWaOptIn: mock.requestWaOptIn },
 }))
-vi.mock('expo-router', () => ({ useRouter: () => mock.router }))
+vi.mock('expo-router', async () => {
+  const { useEffect } = await import('react')
+  const useFocusEffect = (cb: () => void | (() => void)) => useEffect(() => {
+    let undo: void | (() => void)
+    let active = false
+    const sync = () => {
+      if (mock.focused && !active) {
+        active = true
+        undo = cb()
+      } else if (!mock.focused && active) {
+        active = false
+        if (undo) undo()
+      }
+    }
+    mock.focusListeners.add(sync)
+    sync()
+    return () => {
+      mock.focusListeners.delete(sync)
+      if (active && undo) undo()
+    }
+  }, [cb])
+  return { useRouter: () => mock.router, useFocusEffect }
+})
 vi.mock('react-native', async () => {
   const { createElement } = await import('react')
   return {
-    ScrollView: ({ children }: { children?: ReactNode }) => createElement('div', null, children),
+    ScrollView: (props: { children?: ReactNode; testID?: string }) => {
+      if (props.testID) mock.views[props.testID] = props
+      return createElement('div', { 'data-testid': props.testID }, props.children)
+    },
     StyleSheet: { absoluteFill: {} },
     Linking: { openURL: mock.openURL },
     Alert: { alert: mock.alert },
@@ -59,17 +87,20 @@ vi.mock('tamagui', async () => {
   const { createElement } = await import('react')
   type Props = {
     children?: ReactNode; testID?: string; accessibilityRole?: string; accessibilityLabel?: string
-    accessibilityLiveRegion?: string; accessibilityViewIsModal?: boolean; selectable?: boolean
+    accessibilityLiveRegion?: string; accessibilityViewIsModal?: boolean; selectable?: boolean; accessible?: boolean
   }
-  const container = ({ children, testID, accessibilityRole, accessibilityLabel, accessibilityLiveRegion, accessibilityViewIsModal, selectable }: Props) =>
-    createElement('div', {
+  const container = (props: Props) => {
+    const { children, testID, accessibilityRole, accessibilityLabel, accessibilityLiveRegion, accessibilityViewIsModal, selectable } = props
+    if (testID) mock.views[testID] = props
+    return createElement('div', {
       'data-testid': testID,
       role: accessibilityRole === 'alert' ? 'alert' : undefined,
       'aria-label': accessibilityLabel,
       'aria-live': accessibilityLiveRegion,
-      'aria-modal': accessibilityViewIsModal ? 'true' : undefined,
+      'aria-modal': mock.os === 'ios' && accessibilityViewIsModal ? 'true' : undefined,
       'data-selectable': selectable ? 'true' : undefined,
     }, children)
+  }
   return {
     YStack: container, Paragraph: container, Text: container, H2: container, View: container,
     Spinner: ({ testID }: { testID?: string }) => createElement('div', { 'data-testid': testID ?? 'spinner' }),
@@ -111,6 +142,13 @@ const box = () => screen.getByTestId('wa-signup-box')
 const cont = () => screen.getByTestId('wa-signup-continue')
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)) })
 
+function setFocused(focused: boolean) {
+  act(() => {
+    mock.focused = focused
+    for (const sync of mock.focusListeners) sync()
+  })
+}
+
 beforeEach(() => {
   for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.openURL, mock.alert, mock.announce, mock.router.replace]) f.mockReset()
   mock.requestWaOptIn.mockResolvedValue(MINTED)
@@ -118,6 +156,8 @@ beforeEach(() => {
   mock.backHandlers = []
   mock.os = 'ios'
   mock.buttons = {}
+  mock.views = {}
+  mock.focused = true
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
@@ -206,7 +246,7 @@ describe('AC3 — the reminder, once, even-handed (SB4)', () => {
     fireEvent.click(cont())
     const overlay = screen.getByTestId('wa-signup-reminder')
     expect(overlay).toHaveAttribute('aria-modal', 'true')
-    expect(overlay).toHaveAttribute('aria-label', words['waSignup.popup_a11y'])
+    expect(screen.getByTestId('wa-signup-reminder-instruction')).toHaveAttribute('aria-label', words['waSignup.popup_a11y'])
     expect(overlay).toHaveTextContent(words['waSignup.popup_title']!)
     expect(overlay).toHaveTextContent(words['waSignup.popup_body']!)
     const back = screen.getByTestId('wa-signup-reminder-back')
@@ -404,9 +444,28 @@ describe.each(['ios', 'android'])('AC8 — accessible (Platform.OS = %s)', (os) 
     fireEvent.click(box())
     expect(mock.announce).not.toHaveBeenCalled()
     fireEvent.click(cont())
-    expect(screen.getByTestId('wa-signup-reminder')).toHaveAttribute('aria-modal', 'true')
+    expect(mock.views['wa-signup-reminder']!.accessibilityViewIsModal).toBe(true)
     expect(mock.announce).toHaveBeenCalledTimes(1)
     expect(mock.announce).toHaveBeenCalledWith(words['waSignup.popup_title'])
+  })
+
+  it('hides background controls while the reminder is open and restores them on closing', async () => {
+    await ask()
+    const content = () => mock.views['wa-signup-content']!
+    expect(content().importantForAccessibility).toBe('auto')
+    expect(content().accessibilityElementsHidden).toBe(false)
+    fireEvent.click(cont())
+    expect(content().importantForAccessibility).toBe('no-hide-descendants')
+    expect(content().accessibilityElementsHidden).toBe(true)
+    const instruction = mock.views['wa-signup-reminder-instruction']!
+    expect(instruction.accessible).toBe(true)
+    expect(instruction.accessibilityLabel).toBe(words['waSignup.popup_a11y'])
+    // The labelled heading must not group the two actions into a single accessibility element.
+    expect(screen.getByTestId('wa-signup-reminder-instruction').querySelector('button')).toBeNull()
+    expect(mock.views['wa-signup-reminder']!.accessible).not.toBe(true)
+    fireEvent.click(screen.getByTestId('wa-signup-reminder-back'))
+    expect(content().importantForAccessibility).toBe('auto')
+    expect(content().accessibilityElementsHidden).toBe(false)
   })
 
   it('the sent stage is spoken once, on both platforms', async () => {
@@ -442,6 +501,8 @@ describe('AC12 — "WhatsApp on another phone?" on the sent stage (SB12)', () =>
     const details = screen.getByTestId('wa-other-phone-details')
     expect(details).toHaveTextContent(words['waOtherPhone.desc']!.replace('{number}', '+91 98765 43210'))
     expect(details).toHaveTextContent(words['waOtherPhone.note']!)
+    expect(screen.getByText(words['waOtherPhone.desc']!.replace('{number}', '+91 98765 43210')))
+      .toHaveAttribute('data-selectable', 'true')
     const phrase = screen.getByTestId('wa-other-phone-phrase')
     expect(phrase).toHaveTextContent('TWT-ABCDEFGH')
     expect(phrase).toHaveAttribute('data-selectable', 'true')
@@ -452,5 +513,91 @@ describe('AC12 — "WhatsApp on another phone?" on the sent stage (SB12)', () =>
   it('is ⛔ shown on the ask stage', async () => {
     await ask()
     expect(screen.queryByTestId('wa-other-phone')).toBeNull()
+  })
+})
+
+describe('Review R2 — a response belongs to the visit that requested it', () => {
+  for (const departure of ['unmount', 'blur', 'blur then refocus'] as const) {
+    it.each(['success', 'wa_opt_in.already_active', 'wa_opt_in.channel_unavailable', 'other error'])(
+      `${departure}: delayed %s cannot open WhatsApp or navigate`, async (outcome) => {
+        await ask()
+        let resolveMint!: (value: typeof MINTED) => void
+        let rejectMint!: (error: unknown) => void
+        mock.requestWaOptIn.mockReturnValue(new Promise((resolve, reject) => {
+          resolveMint = resolve
+          rejectMint = reject
+        }))
+        fireEvent.click(box())
+        fireEvent.click(cont())
+        if (departure === 'unmount') cleanup()
+        else {
+          setFocused(false)
+          if (departure === 'blur then refocus') setFocused(true)
+        }
+        await act(async () => {
+          if (outcome === 'success') resolveMint(MINTED)
+          else rejectMint(new ApiError(outcome === 'other error' ? 500 : 409, outcome, 'failed'))
+        })
+        expect(mock.openURL).not.toHaveBeenCalled()
+        expect(mock.router.replace).not.toHaveBeenCalled()
+        expect(screen.queryByRole('alert')).toBeNull()
+        if (departure !== 'unmount') {
+          // An abandoned first attempt still counts as the one mint; returning lets the member continue.
+          setFocused(true)
+          expect(cont()).not.toBeDisabled()
+          fireEvent.click(cont())
+          expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+          expect(mock.requestWaOptIn).toHaveBeenCalledTimes(1)
+        }
+      },
+    )
+  }
+
+  it.each(['success', 'rejection'])('ignores a late link %s after blur and refocus', async (outcome) => {
+    await ask()
+    let resolveLink!: () => void
+    let rejectLink!: (error: unknown) => void
+    mock.openURL.mockReturnValue(new Promise<void>((resolve, reject) => { resolveLink = resolve; rejectLink = reject }))
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await settle()
+    expect(mock.openURL).toHaveBeenCalledTimes(1)
+    setFocused(false)
+    setFocused(true)
+    await act(async () => {
+      if (outcome === 'success') resolveLink()
+      else rejectLink(new Error('cancelled'))
+    })
+    expect(screen.queryByTestId('wa-signup-sent')).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(mock.router.replace).not.toHaveBeenCalled()
+    expect(mock.announce).not.toHaveBeenCalled()
+  })
+
+  it('ignores a late reopen error after blur and refocus', async () => {
+    await ask()
+    fireEvent.click(box())
+    fireEvent.click(cont())
+    await screen.findByTestId('wa-signup-sent')
+    let rejectLink!: (error: unknown) => void
+    mock.openURL.mockReturnValue(new Promise((_resolve, reject) => { rejectLink = reject }))
+    fireEvent.click(screen.getByTestId('wa-signup-reopen'))
+    setFocused(false)
+    setFocused(true)
+    await act(async () => { rejectLink(new Error('cancelled')) })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(cont()).not.toBeDisabled()
+  })
+})
+
+describe('Review R3 — an overflowing reminder can scroll', () => {
+  it('keeps both choices inside a ScrollView bounded by the available overlay height', async () => {
+    await ask()
+    fireEvent.click(cont())
+    const scrolling = screen.getByTestId('wa-signup-reminder-scroll')
+    expect(scrolling).toContainElement(screen.getByTestId('wa-signup-reminder-back'))
+    expect(scrolling).toContainElement(screen.getByTestId('wa-signup-reminder-proceed'))
+    expect(mock.views['wa-signup-reminder-scroll']!.style).toMatchObject({ maxHeight: '100%', flexGrow: 0 })
+    expect(screen.getByTestId('wa-signup-reminder')).toContainElement(scrolling)
   })
 })

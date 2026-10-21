@@ -39,7 +39,7 @@ export function OtherPhoneHint({
       </Button>
       {open ? (
         <YStack gap="$2" testID="wa-other-phone-details">
-          <Paragraph>{t('waOtherPhone.desc', { number: displayPhoneNumber })}</Paragraph>
+          <Paragraph selectable>{t('waOtherPhone.desc', { number: displayPhoneNumber })}</Paragraph>
           <Text selectable fontWeight="600" fontSize="$6" testID="wa-other-phone-phrase">
             {verificationPhrase}
           </Text>

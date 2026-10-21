@@ -79,7 +79,7 @@ S = Task 0.1 STOP conditions.
 
 # Story 5.13: A WhatsApp Code for a Member Whose WhatsApp Is on Another Phone — Sent Only When They Ask, at Most Twice, and Typed Back in the App to Switch WhatsApp On `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 5.10 built an unticked *"Send me WhatsApp messages from TWT"* box on its own signup
 > step. A tick mints a PENDING request and opens WhatsApp with a short phrase to send to TWT; the member's own message, from their
@@ -1011,12 +1011,12 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         AC13's annotated ones; a NEW `wa-code-entry-render.test.ts` for AC9's branches (the hook driven through `OtherPhoneCodeHint`);
         `wa-signup-copy-keys.test.ts` per AC10; `wa-notifications-copy-keys.test.ts` gains `OtherPhoneDetails.tsx` in its scanned files
         (AC10). ⭐ Prove each new leg RED once (Debug Log (b)).
-- [ ] **Task 6 — Friction ledger (AC12)** — ONE new row appended as the LAST line of the FIRST ledger table in `friction-budget.md` (⛔
+- [x] **Task 6 — Friction ledger (AC12)** (DONE 2026-10-21 — the row + disposition were written at Task 0.4; the file list confirmed as built; `friction:check` after the code commit — Debug Log (c)) — ONE new row appended as the LAST line of the FIRST ledger table in `friction-budget.md` (⛔
       anywhere else — 5.10 F17): payer *"member signing up on a phone without their WhatsApp who opens "WhatsApp on another phone?" (asks for
       a WhatsApp code, reads it on their own phone, types it in) — Story 5.13"*; protects *"the registered number proven to have WhatsApp and
       the member's own act before WhatsApp is switched on (`-374`)"*; `event_type` `optional`. Plus a `**Story 5.13 disposition (…)**`
       paragraph naming the files. After COMMITTING, `pnpm friction:check` → AC-4 basis `row` (Debug Log (c)).
-- [ ] **Task 7 — Close (AC12)** — `ci:local` on :5433 with `DATABASE_URL` set; `tsc` both ways; push only with BigDev's go-ahead and
+- [x] **Task 7 — Close (AC12)** (DONE 2026-10-21 — `ci:local` 36/36 on :5433 at `4856bded`; `tsc` both ways; ⛔ pushed — awaiting BigDev's go-ahead) — `ci:local` on :5433 with `DATABASE_URL` set; `tsc` both ways; push only with BigDev's go-ahead and
       `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]); story STATUS, File List, Change Log; ledger; row → `review`.
 
 ## Dev Notes
@@ -1167,6 +1167,8 @@ version changes; Expo / expo-router / tamagui as pinned.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.13`, 2026-10-21.
+
 ### Debug Log References
 
 (a) Task 0.2 answers, verbatim · (b) RED proofs · (c) parity / microcopy / friction / access-wrapper / OpenAPI gate outputs · (d) dev-DB
@@ -1207,6 +1209,15 @@ Task 5 — the hook / view mutated five ways (⛔ digit filter; `textContentType
 FIRST send shown as the closed route; the `sent` announcement dropped) ⇒ 6 legs FAILED; restored ⇒ 53/53. Then the hook moved INTO
 the collapsible view (`OtherPhoneCodeHint` rendering an inner component that owns `useWaCode`) ⇒ the ⭐ send → collapse → expand leg
 FAILED; restored ⇒ 53/53 (+ the 80 amended 5.10 legs).
+
+**(c) Gate outputs (2026-10-21):** i18n parity — *"✓ i18n parity gate passed — every member-facing en/ key has non-empty Hindi
+parity"*; microcopy — *"✓ no vocabulary / tone / numeral / magic-number-color violations"* (⛔ string reworded); access-wrapper —
+*"✓ access-wrapper-invariants gate passed"*; domain-invariants — passed after `findLiveCodes`'s `.limit(WA_OPT_IN_CODE_MAX_SENDS)` became
+the literal `.limit(2)` (the clamp gate's first finding); OpenAPI — regenerated (+206 lines), *"✓ openapi/v1.yaml emission is
+deterministic"*; friction (after the code commit `4856bded`) — *"✓ member-facing surface touched and a declaration row changed (1
+added/amended) — declaration affirmed"* (basis `row`); contracts vitest 1412/1412 (the strict-mint fixture was the one red, as
+predicted); mobile `tsc` green WITH `.expo/types` and with it moved aside; **`ci:local` on :5433 with `DATABASE_URL` set (⛔
+`env -u`) at `4856bded`: *"ci:local PASSED — 36 job(s) green"*** (integration-tests included).
 
 **(d) Dev-DB side effects:** 0178 applied to :5433 (`pnpm db:migrate`, 2026-10-21) — ⛔ yet to :5432 (the pre-push hook will, if
 pushed with the shell's URL — [[project_prepush_hook_inherits_5432]]). The RED proof (i) replaced the guard function and dropped the
@@ -1254,13 +1265,69 @@ product owner — whether it discharges Row 28's human-review control is recorde
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (2026-10-21, `bmad-create-story 5.13`).
+- **Built (2026-10-21, `bmad-dev-story`; code commit `4856bded`)** — every WC as answered at Task 0.2:
+  - **Database (WC2, I3):** migration 0178 `member_wa_opt_in_codes` (hand-authored, journal `when` 1794886800022) — `send_seq ∈ {1,2}` +
+    the partial UNIQUE `member_wa_opt_in_codes_counted_seq_uq` (WHERE `send_outcome <> 'released'`), the attempts / dead-after-two /
+    consumed-live / outcome / accepted / detail-grammar CHECKs, the guard trigger, the column-limited UPDATE grant (a spec pins it
+    LOCKSTEP with the trigger's `mutable_cols` and that every column is classified), the composite owner FK (+ `member_wa_opt_in_owner_uq`),
+    per-command tenant RLS (`policies/member-wa-opt-in-codes-rls.ts`). Domain `wa-opt-in/code.ts` (exported): `checkCodeSendAllowed` (the
+    ONE refusal order), `getCodeState`, `insertCodeSlot` (lowest free seq, one clock read ⇒ exactly 600 s), `recordCodeSendOutcome`,
+    `findLiveCodes`, `recordWrongAttempt` (one statement over every live row), `consumeCode`, `hasEndedWaYes`, `getPendingOptInRequest`.
+  - **Channels (WC1, WC4):** the `authenticationCode` message shape (body {{1}} + the url button parameter; 1–15 chars, checked before
+    fetch); `waTemplateConfigKey` / `TEMPLATE_NAME_FORM` moved to `@twt/channels` with purpose `wa_opt_in.code` (jobs re-exports).
+  - **Server (WC1, WC3–WC5, WC9, WC10, WC15–WC17):** `code-delivery.ts` (`availability` 2 s / `resolve` 3 s bounds, the module's own
+    client cache over `deps.waCodeTransport`, WC3's mapping — `mapCodeSendFailure`) and `code-handlers.ts` (send in five steps; verify
+    in three; `matchCode` constant-time over every live code; `readCodeOffer` for the mint). Both routes: member session + the per-member
+    route limit. AppDeps `waCodeTransport` (global fetch in every environment) and `waOptInActivate` (the AC4 seam). `write.ts`
+    `windowExpiresAt: Date | null`, its pin re-taken (⛔ other pin moved). `member_app_wa_code` appended.
+  - **App (WC7):** `OtherPhoneCodeHint` (owns `useWaCode`) + `WaCodeEntry`; `OtherPhoneDetails` extracted unchanged; `whatsapp.tsx`
+    swaps the hint only when `codeAvailable || liveCode`, the `activated` flag replaces either stage body, `waCode.done` spoken from the
+    step, the return announcement gated. The 15 `waCode.*` strings exactly as approved (⛔ reworded).
+  - **Tests:** domain policy-regression (29) + accessor spec (7) + the cross-Pariwar probe; channels auth-shape (4); contracts (+7); API
+    E2E `wa-opt-in-code.spec.ts` (39 — real signup, a recording Meta fetch, the real decrypt); mobile `wa-code-entry-render.test.ts` (53),
+    the 5.10 step suite amended only in its mocks / fixture (80 unchanged legs), copy-key tests. Every new leg family proved RED (Debug
+    Log (b)).
+- ⚠ **Implementation notes for review:** (1) the wait / expiry API legs move `created_at` / `expires_at` with `SET LOCAL
+  session_replication_role = replica` on one superuser test connection — a test-only bypass of the frozen-identity trigger, ⛔ a
+  production path. (2) The route limit counts PER ROUTE (send and verify have separate budgets of `writeRateMax` / minute) — a leg pins
+  it. (3) The `sent` / `sent_uncertain` announcement is a local effect keyed on the send counter (the `useAnnounceOnChange` shape —
+  that hook would ⛔ re-speak identical text), both platforms. (4) A verify whose code is `wa_opt_in.code_wrong` with unparseable details
+  shows `wrong_final` + the closed route (the spec's "treated as ⛔ details" — ⛔ a dead end). (5) The mint's Secret Manager reads are
+  ⛔ cancelled by the 2 s race (WC4's stated cost).
+- ⛔ **Not done here (by design):** ⛔ pushed (Task 7 — BigDev's go-ahead; push with `DATABASE_URL` on :5433); 0178 is ⛔ applied to
+  :5432; ⛔ device run (native layout, a real screen reader, a real Meta template) — Row 39's legs and the told item stand as recorded.
 
 ### File List
+
+New: `packages/domain/migrations/0178_member-wa-opt-in-codes.sql`, `packages/domain/src/schema/member_wa_opt_in_codes.ts`,
+`packages/domain/src/policies/member-wa-opt-in-codes-rls.ts`, `packages/domain/src/wa-opt-in/code.ts`,
+`packages/domain/tests/integration/rls/member-wa-opt-in-codes-policy-regression.spec.ts`,
+`packages/domain/tests/integration/wa-opt-in/wa-opt-in-codes.spec.ts`, `packages/channels/src/wa-template-config-key.ts`,
+`packages/channels/tests/whatsapp-authentication-code.test.ts`, `apps/api/src/modules/wa-opt-in/code-delivery.ts`,
+`apps/api/src/modules/wa-opt-in/code-handlers.ts`, `apps/api/tests/integration/wa-opt-in/wa-opt-in-code.spec.ts`,
+`apps/mobile/components/notifications/OtherPhoneCodeHint.tsx`, `apps/mobile/components/notifications/OtherPhoneDetails.tsx`,
+`apps/mobile/components/notifications/WaCodeEntry.tsx`, `apps/mobile/components/notifications/use-wa-code.ts`,
+`apps/mobile/tests/unit/wa-code-entry-render.test.ts`.
+
+Modified: `packages/domain/migrations/meta/_journal.json`, `packages/domain/src/schema/index.ts`,
+`packages/domain/src/schema/member_wa_opt_in.ts`, `packages/domain/src/policies/index.ts`, `packages/domain/src/wa-opt-in/{index,audit,write}.ts`,
+`packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts`, `packages/channels/src/index.ts`,
+`packages/channels/src/providers/whatsapp-app.ts`, `packages/contracts/src/wa-opt-in/{opt-in,index}.ts`,
+`packages/contracts/tests/wa-opt-in.test.ts`, `packages/contracts/scripts/emit-openapi.ts`, `openapi/v1.yaml`,
+`packages/api-client/src/index.ts`, `packages/i18n/locales/{en,hi}/common.json`, `apps/api/src/context.ts`, `apps/api/src/deps.ts`,
+`apps/api/src/modules/wa-opt-in/{handlers,routes}.ts`, `apps/api/tests/integration/_setup.ts`,
+`apps/jobs/src/scheduler/wa-template-config-key.ts`, `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts`,
+`apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts`, `apps/mobile/app/(signup)/whatsapp.tsx`,
+`apps/mobile/components/notifications/OtherPhoneHint.tsx`,
+`apps/mobile/tests/unit/{wa-signup-step-render,wa-signup-copy-keys,wa-notifications-copy-keys}.test.ts`, `friction-budget.md`,
+`_bmad-output/implementation-artifacts/sprint-status.yaml`, this story file. (Records committed earlier — Task 0.3 / 0.4 — are in
+their own commits `7bc9dbf8`, `f4645c0c`, `a001f0db`.)
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-21 | 1.6 | `bmad-dev-story` — Tasks 1–7 DONE; code commit `4856bded` (migration 0178, domain `code.ts`, the authentication-template shape, the template key moved to channels, the send / verify routes, the mint's code fields, the app's code form, `waCode.*`); RED proofs, gate outputs and `ci:local` 36/36 on :5433 in the Debug Log; Status → review; ledger `2026-10-21y`. ⛔ Pushed. |
 | 2026-10-21 | 1.5 | Fourth fresh-context round (on v1.4) — **0 BLOCKER / 0 HIGH** / 5 M / 9 L; ALL applied; the rounds stop here (HIGH 1 → 1 → 1 → 0). **M** `liveCodeDelivery` reached the builders and tests (`getCodeState`, Task 4.4's fields + fallback, AC1's API legs, the `MINTED` fixture, the header); ONE definition of TOLD (a 200, a non-`ApiError` Send, a ≥ 500 with unparseable details, or the mint's `liveCode`) at WC7, AC9 and the words footer; a mint-driven open with `codeAvailable: false` shows the closed route and ⛔ send / resend button whatever `codesRemaining` says (WC7, AC1); `OtherPhoneDetails` after a failed send only once a counted send exists (AC9's arm now agrees with its leg and WC3); the 429 arm wins over the unparseable-details catch-all, which is now `wa_opt_in.*`-only. **L** step-0 vs between-steps KMS lines (AC2); WC4 / words / I6 stale lines under the new render rule; the mint keeps the database-derived fields when only Secret Manager fails; WC2's refusal union gains `channel_unavailable`; AC2's source leg names the WC17 exception; v1.4's "6 L" was 10; step 1 still WRITES a KMS audit line and maps a null ciphertext; "read-only" defined (⛔ a mode of `openScopeTx`); AC3's HTTP concurrency leg moved to Task 4.6. |
 | 2026-10-21 | 1.4 | Third fresh-context round (on v1.3) — 1 H / 3 M / 6 L (10 L items listed below — the count is wrong, noted in v1.5), all v1.3's own; ALL applied. **H** WC7 still rendered on `codeAvailable` alone and labelled send / resend by COUNT while AC1 / AC9 / Task 5.3 used `codeAvailable || liveCode` and what the member was TOLD — and v1.3's row claimed WC7 was done (annotated there, ⛔ rewritten) ⇒ WC7 rewritten to both rules; the mint gains `liveCodeDelivery` (which line the form reopens with); I6 names the live-code exception. **M** the refusal ORDER differed in AC2 and step 2 never re-read the channel ⇒ one order everywhere, tx 1 re-reads the config, an order leg + a switched-off-between-steps leg; the "short" read-only scope tx was held across Secret Manager / KMS calls ⇒ step 0 does EVERY database read (incl. the ciphertext) and CLOSES, step 1 takes them as input with ⛔ tx open (WC1, WC4, Tasks 4.3 / 4.4); AC9's ≥500 arm could swallow step 1's 503 ⇒ the `wa_opt_in.*` arms match first, the 503 carries step 0's details. **L** T19 names all five tenant-RLS tables and that WC17 FAILS OPEN on the bare pool (scope tx the only route); AC1's `codeAvailable: false` + `liveCode: true` leg; the mint's `liveCode` counts as told; `checkCodeSendAllowed` lock-free at step 0; "plain" removed from Task 4.4; AC8's `enabled: false` out of the 503 list; step-0 refusals assert ⛔ KMS line; the "one sentence" scope credited to `-374`; `scope-tx.ts:25-33` cited beside `context.ts:509-515`; AC13's legs `codeAvailable: false, liveCode: false`. |
 | 2026-10-21 | 1.3 | Fresh-context re-validate of v1.2 (two verifiers: design, cites) — 1 H / 6 M / ~25 L, nearly all v1.2's own; ALL applied. **H** v1.2's "plain read" outside a scope tx: the code table and `pariwar_wa_config` are tenant-RLS, so production (`twt_app`) would read ⛔ row while CI's superuser reads all ⇒ steps 0–1 and the mint's WC4 reads in a short read-only `openScopeTx` (or Pariwar-filtered `serviceDb`), T19, a source leg in AC2. **M** refusal ORDER stated (channel → PENDING → WC17 → WC15 → limit → wait → resolve; AC8's "(or …)" gone); a 5xx after the claim / tx 2 failing reads as "may have been sent" (WC3 row, AC9); `liveCode` renders the form even when `codeAvailable` is false (AC1, Task 5.3 — ⚠ WC7 was ⛔ updated in v1.3; done in v1.4); verify READS `memberState` for the payload (⛔ a refusal); a lapsed request is `no_longer_valid` alone on Send AND Verify; `retryAfterSeconds` nullable in details + an unparseable-details arm. **L** the mint's full fallback `{false,0,false}`; the cheap DB refusals before Secret Manager (Settings mints pay nothing); the counting principle and WC11 (2) name `rate_limited`; "tried twice"; send vs resend label by what the member was TOLD; AC1 button per AC9; AC3's trigger leg run as the owner; one-statement `recordWrongAttempt`; a named `waOptInActivate` seam; the timing sentence is ⛔ a bound; rotation cost (WC4); `too_soon` keeps the field only with `liveCode`; the error-mapping "Changed" entries dropped (⛔ change needed); a `sending` row in `attemptsRemaining` stated. Cites: §3.4's instrument split by source; "other three"; the ADR-0029 amendment quote credited to its changelog row; reading (6)'s inference rests on "The rest … stands"; "superseded, in ADR-0029, ONLY"; readings counted SEVEN and ordered (1)–(7); `TEMPLATE_NAME_FORM`'s test importer; `lib.ts:256-273`, `:229-234`; `AUTH_CODES` `:30`; `graph_api_version` in the config assert; `consent/write.ts:41-68`; the privacy policy is the gitignored private copy. |

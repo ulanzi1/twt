@@ -233,7 +233,8 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   built — the no-match branch (`wa-webhook-processor.ts:396-399`) does `console.warn('… matched no PENDING opt-in — surfaced for
   confirmation')` and `continue`s: nothing reaches the member, and the log line overstates it (the code comment at `:397` is accurate). Pre-existing; ⛔ this story's to build
   (recorded in `deferred-work.md`). ⚠ The common real case is a DUAL-SIM phone with WhatsApp on the OTHER SIM's number — the deep link
-  then sends from that number on THIS phone; SB12's "another phone?" label does not name it, so SB5's main words state the condition.
+  then sends from that number on THIS phone; SB12's "another phone?" label does not name it. ⚠ v1.5: BigDev's wording (SB5) leaves the condition OUT of the main words — it
+  is stated only in `waOtherPhone.note`, behind the link; an accepted cost, recorded.
 - **F8b — The phrase can be typed by hand.** `TWT-` + 8 characters from an unambiguous alphabet (no 0/O, 1/I/L), e.g. `TWT-7K2F9QXR`
   (`packages/domain/src/wa-opt-in/phrase.ts:16-40`); the extractor upper-cases the body and folds dash variants
   (`phrase.ts:43-60`), so a hand-typed, lower-case or autocorrected phrase still matches. The mint response carries
@@ -401,10 +402,14 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   is **"TWT"** (F14 — Meta wants the business named; the legal name is pending). The reminder states a FACT and never threatens: under
   R10(B) the app is the channel of record, so ⛔ "you will miss …" — it says the app still has everything. ⭐ v1.4 (validate): the
   words describe WhatsApp as it is BUILT — a fallback when an app notification does not reach the member (F7a), ⛔ "also"; they point
-  to *the home screen, under "WhatsApp notifications"* (F14 — there is ⛔ "Settings"); and the box hint and the sent stage state the
-  registered-number condition in the main text (F8a — the dual-SIM case), ⛔ only behind SB12's link. The box's hint says how to stop
-  (that entry, or STOP) — Meta's opt-out tip and DPDPA §6(4)'s withdrawal ease. *Cost:* the Hindi is a DRAFT until human-reviewed
-  (SB9 (a)); the words are BigDev's to approve at Task 0.2.
+  to *the home screen, under "WhatsApp notifications"* (F14 — there is ⛔ "Settings"); and the box hint and the sent stage say the message is SENT TO TWT
+  (the member sends it; nothing is sent to the member). ⭐ v1.5 (2026-10-21, BigDev, in session): BigDev rewrote the English of six rows
+  (`intro`, `box_hint`, `popup_body`, `sent_desc`, `request_failed`, `link_failed`) — the direction made explicit; the registered-number
+  condition (F8a) is left to `waOtherPhone.note` (behind SB12's link) — an accepted cost; `intro` says TWT *"will send"* (`popup_body`
+  keeps *"can"*) — ⚠ true only once the Pariwar is switched on with approved templates (F7b, SB9 (c)/(d)). The Hindi of those six rows was
+  translated from that English and then reviewed and edited by BigDev in session. The box's hint says how to stop (that entry, or STOP)
+  — Meta's opt-out tip and DPDPA §6(4)'s withdrawal ease. *Cost:* the remaining Hindi is a DRAFT until human-reviewed, and whether
+  BigDev's in-session review discharges SB9 (a) (Row 28's control) is for that roster row to record (⛔ assumed here).
 - **SB6 — After a tick.** ⭐ No waiting and no polling in signup: once WhatsApp opens, the step shows `sent_title` / `sent_desc`, *"Open
   WhatsApp again"* and Continue. ⭐ v1.4: *"Open WhatsApp again"* RE-OPENS the first mint's `deepLink` (kept in state) with ⛔ API call —
   Settings' `onReopen` precedent (F12) — so the resend has no failure branches of its own beyond a `Linking.openURL` rejection
@@ -465,7 +470,7 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   about signing up; whether Settings' link follows is row 5-13's to decide). *Cost:* the member types a short code into WhatsApp (less
   familiar than a code typed into the app); a small edit to the just-reviewed Settings screen (`OptInBody` gains `displayPhoneNumber` /
   `verificationPhrase` props, both `string | null`; the hint renders only when BOTH are non-null — F12, F8b). ⚠ The link's label
-  ("another phone") does not name the dual-SIM case (F8a) — SB5 puts the registered-number condition in the main words.
+  ("another phone") does not name the dual-SIM case (F8a) — v1.5: the condition is stated only in `waOtherPhone.note` (BigDev's wording, SB5).
 - **PQ1 (for BigDev at Task 0.2) —** Is a tick that switches WhatsApp on BY ITSELF (SB1 (b)) wanted at all? ⭐ Recommended: no, not now —
   then nothing goes to the Panel. If yes, it is a routing note (template; §0: it would act on §3.4's wider in-app route against
   ADR-0029's narrower ratified sentence), and SB1 waits.
@@ -475,31 +480,32 @@ mirrors only"*; no clause governs how a channel preference is asked for.
 | Key | en | hi (DRAFT) |
 |---|---|---|
 | `waSignup.title` | WhatsApp messages | व्हाट्सएप संदेश |
-| `waSignup.intro` | When an app notification does not reach you, TWT can send the notice on WhatsApp instead. Everything is always here in the app. | जब ऐप की सूचना आप तक न पहुँचे, तब TWT वह सूचना व्हाट्सएप पर भेज सकता है। सब कुछ हमेशा यहाँ ऐप में रहता है। |
+| `waSignup.intro` | When an app notification does not reach you, TWT will send the notice on WhatsApp instead. You will also find all the notifications in app. | जब ऐप की सूचना आप तक नहीं पहुँचेगी, तब TWT वह सूचना व्हाट्सएप पर भेजेगा। सभी सूचनाएँ आपको ऐप में भी मिलेंगी। |
 | `waSignup.box_label` | Send me WhatsApp messages from TWT | मुझे TWT से व्हाट्सएप संदेश भेजें |
-| `waSignup.box_hint` | If you tick this, WhatsApp opens with a short message ready — send it from the WhatsApp on your registered number to finish. You can turn it off any time on the home screen, under "WhatsApp notifications", or by replying STOP on WhatsApp. | टिक करने पर व्हाट्सएप एक छोटे संदेश के साथ खुलेगा — पूरा करने के लिए इसे अपने पंजीकृत नंबर वाले व्हाट्सएप से भेजें। आप इसे कभी भी होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में, या व्हाट्सएप पर STOP भेजकर बंद कर सकते हैं। |
+| `waSignup.box_hint` | If you tick this, WhatsApp will open with pre-composed short message, that you have to send to TWT to finish WhatsApp registration. You can turn it off any time on the home screen, under "WhatsApp notifications", or by replying STOP on WhatsApp. | टिक करने पर व्हाट्सएप एक पहले से लिखे छोटे संदेश के साथ खुलेगा। व्हाट्सएप पंजीकरण पूरा करने के लिए यह संदेश TWT को भेजें। आप इसे कभी भी होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में, या व्हाट्सएप पर जवाब में STOP भेजकर बंद कर सकते हैं। |
 | `waSignup.popup_title` | Continue without WhatsApp? | व्हाट्सएप के बिना आगे बढ़ें? |
-| `waSignup.popup_body` | If an important notice, such as a payment reminder, cannot reach you as an app notification, TWT can send it on WhatsApp. Everything is always here in the app. | अगर कोई ज़रूरी सूचना, जैसे भुगतान की याद, ऐप की सूचना के रूप में आप तक न पहुँचे, तो TWT उसे व्हाट्सएप पर भेज सकता है। सब कुछ हमेशा यहाँ ऐप में रहता है। |
+| `waSignup.popup_body` | If an important notice, such as a payment reminder, cannot reach you as an app notification, TWT can send it on WhatsApp. You will also find all the notifications in app. | अगर कोई ज़रूरी सूचना, जैसे भुगतान की याद, ऐप की सूचना के रूप में आप तक नहीं पहुँचेगी, तो TWT उसे व्हाट्सएप पर भेज सकता है। सभी सूचनाएँ आपको ऐप में भी मिलेंगी। |
 | `waSignup.popup_back` | Go back and tick the box | वापस जाएँ और बॉक्स पर टिक करें |
 | `waSignup.popup_proceed` | Continue without WhatsApp | व्हाट्सएप के बिना आगे बढ़ें |
 | `waSignup.popup_a11y` | Choose whether to continue without WhatsApp | चुनें कि व्हाट्सएप के बिना आगे बढ़ना है या नहीं |
 | `waSignup.sent_title` | Send the message in WhatsApp | व्हाट्सएप में संदेश भेजें |
-| `waSignup.sent_desc` | Send the message from the WhatsApp on your registered number to turn on WhatsApp messages. You can carry on here. To check that it is on, open "WhatsApp notifications" on the home screen. | व्हाट्सएप संदेश चालू करने के लिए, यह संदेश अपने पंजीकृत नंबर वाले व्हाट्सएप से भेजें। आप यहाँ आगे बढ़ सकते हैं। यह चालू हुआ या नहीं, यह देखने के लिए होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" खोलें। |
+| `waSignup.sent_desc` | Send the message from the WhatsApp to TWT to receive important notifications. You can continue here. | ज़रूरी सूचनाएँ पाने के लिए व्हाट्सएप से यह संदेश TWT को भेजें। आप यहाँ आगे बढ़ सकते हैं। |
 | `waSignup.continue` | Continue | आगे बढ़ें |
 | `waOtherPhone.link` | WhatsApp on another phone? | व्हाट्सएप दूसरे फ़ोन में है? |
 | `waOtherPhone.desc` | From the phone that has your WhatsApp, send this message to {number}: | जिस फ़ोन में आपका व्हाट्सएप है, उससे यह संदेश {number} पर भेजें: |
 | `waOtherPhone.note` | It must come from your registered number. Small or capital letters both work. | यह संदेश आपके पंजीकृत नंबर से ही आना चाहिए। छोटे या बड़े अक्षर, दोनों चलेंगे। |
-| `waSignup.request_failed` | We couldn't set up WhatsApp just now. You can carry on, and turn it on later from the home screen, under "WhatsApp notifications". | अभी व्हाट्सएप चालू नहीं हो सका। आप आगे बढ़ सकते हैं और बाद में होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में इसे चालू कर सकते हैं। |
-| `waSignup.link_failed` | WhatsApp did not open. You can carry on, and turn WhatsApp messages on later from the home screen, under "WhatsApp notifications". | व्हाट्सएप नहीं खुला। आप आगे बढ़ सकते हैं और बाद में होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में व्हाट्सएप संदेश चालू कर सकते हैं। |
+| `waSignup.request_failed` | We couldn't set up WhatsApp just now. You can continue for now, and turn it on later from the home screen, under "WhatsApp notifications". | अभी व्हाट्सएप चालू नहीं हो सका। फ़िलहाल आप आगे बढ़ सकते हैं, और बाद में होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में इसे चालू कर सकते हैं। |
+| `waSignup.link_failed` | WhatsApp did not open. You can continue for now, and turn WhatsApp messages on later from the home screen, under "WhatsApp notifications". | व्हाट्सएप नहीं खुला। फ़िलहाल आप आगे बढ़ सकते हैं, और बाद में होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में व्हाट्सएप संदेश चालू कर सकते हैं। |
 
 Re-used, ⛔ re-minted: `waNotifications.pending_resend` (*"Open WhatsApp again"*). The quoted entry name is
 `waNotifications.entry_label`'s value (en *"WhatsApp notifications"*, hi *"व्हाट्सएप सूचनाएँ"*) — if that label changes, these strings
 change with it. In JSON the inner quotes are escaped (`\"`). ⚠ The factual claims, as FOUND by validate v1.4 (Task 0.1 S3 re-checks
 they still hold): *"such as a payment reminder"* — `deadline_reminder` goes through the push → WhatsApp → SMS ladder (F7a) and is in
 §3.4's UTILITY scope (*"Scope: Meta UTILITY templates only — payment reminder, payout issued, claim accepted, expiry warning, membership
-lapse"*); *"when an app notification does not reach you"* — WhatsApp is the fallback rung, ⛔ a mirror (F7a); *"Everything is always
-here in the app"* — R10(B) (the app is the channel of record) and the in-app surfaces named in F7a; there is ⛔ notification inbox, so
-the words say "here in the app", ⛔ "in your notifications". `continue` is ⛔ in `common.json` (it is `workplace.json`'s), so the step
+lapse"*); *"when an app notification does not reach you"* — WhatsApp is the fallback rung, ⛔ a mirror (F7a); *"You will also find all
+the notifications in app"* (v1.5, BigDev's wording) — R10(B) (the app is the channel of record) and the in-app surfaces named in F7a;
+⚠ there is ⛔ notification inbox, so "notifications" means the notices on their own screens (contribution card, peer-request entry,
+helpdesk), ⛔ a list; *"TWT will send"* (`intro`) — holds only for a switched-on Pariwar with approved templates (F7b, SB9 (c)/(d)). `continue` is ⛔ in `common.json` (it is `workplace.json`'s), so the step
 mints `waSignup.continue`.
 
 ## Acceptance Criteria
@@ -805,6 +811,7 @@ accepts RN `selectable` — ⛔ precedent in `apps/mobile` yet).
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-21 | 1.5 | BigDev, in session, after reading the v1.4 words (*"this word means differently to user"*): the member sends the message TO TWT — six English rows rewritten by BigDev (`intro`, `box_hint`, `popup_body`, `sent_desc`, `request_failed`, `link_failed`); their Hindi translated from that English and then reviewed and edited by BigDev (*"done, commit hindi and english"*). The registered-number condition now lives only in `waOtherPhone.note` (SB5, F8a, SB12 updated); `intro`'s *"will send"* noted against F7b. Microcopy gate: 0 findings (en + hi). |
 | 2026-10-21 | 1.4 | `bmad-create-story validate 5.10` — four fresh-context verifiers (code claims · governance · premise / end-to-end · tests and gates); BigDev: *"all"* (31 findings). Branch rebased onto `2f4a4303` (ledger-only; ledger ids renumbered `21g` / `21h`). ⭐ Premise fixes: WhatsApp is a FALLBACK rung after push, ⛔ a mirror (F7a ⇒ `intro` / `popup_body` reworded); a switched-on Pariwar with no approved template makes a yes REMOVE the SMS fallback (F7b, pre-existing ⇒ `deferred-work.md` + SB9 (d)); §3.4's *"surfaced for member confirmation"* is unbuilt (F8a, pre-existing ⇒ `deferred-work.md`); there is ⛔ "Settings" (F14 ⇒ four strings point to the home screen's *"WhatsApp notifications"*); `available` ⛔ complete (F7c ⇒ SB9 (c)); the dual-SIM case named in the main words; process death mid-WhatsApp strands a pre-KYC member (F5 ⇒ SB2 (d) PROPOSED, recommendation revised; PREV / NEXT names). Also: SB3 (c) and the label cost; SB4's UX Pattern 2 departure; SB6's resend re-opens the first link (no second mint); SB9 (b) re-homed (Row 19 is the claim agreement's only); SB10's reason (three local helpers exist — F12a); §0 reading made precise (the toggle; §3.4's offer words; attribution); announce wrappers (AC8); test legs that bite (AC3 full props, AC6 one-`act()` double tap, stable `useRouter`, `selectable`, `PARAMS`, key-set equality — T11); T10 (`components/banners/*` SHA-pinned); friction row placement + `row` basis (F17, AC11); F5 / F7 / F8b / F8c / F11 / F19 / F19a / F20 corrected; `OtherPhoneHint` in `components/notifications/`. The reworded strings: 0 microcopy findings (en + hi). Routing note `…-5-10-whatsapp-code-for-another-phone.md` (⛔ sent) corrected in the same commit. ⭐ Then a fresh-context review of this pass's OWN diff (1 H / 7 M / 1 L, all applied before commit): F7b's loss was overstated (the per-member SMS is itself dark today — it bites once row 5-11 ships); helpdesk replies are ⛔ on the ladder in production; under SB2 (d) the member is `pending-fee` at the step (F7 / S1 / AC9); SB2 (d)'s cost (two app switches before payment); §0 difference (4) (the offer's place); Meta's opt-in condition (b) quoted in full; `sent_desc` no longer claims the home screen shows the status (en + hi); the note's confirmation route is ⛔ claimed ruling-free; cites `kyc.tsx:102`, `payment.tsx:57`, copy-keys `:34`, `provider-composition.ts:88-91`. Final strings re-checked: 0 microcopy findings. |
 | 2026-10-21 | 1.0 | Created by `bmad-create-story 5.10` (pinned `20fcb479`, branch `story/5-10-signup-whatsapp-opt-in-checkbox` in worktree `.claude/worktrees/5-10`). SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2. ⭐ Recommended design needs no API, contract, domain, worker or migration change. ⛔ validated yet. |
 | 2026-10-21 | 1.3 | BigDev (in session): *"I think we need to send OTP in this case. May be ask later if whatsapp is on another phone."*, then *"2, go ahead"* ⇒ SB12 + AC12 + Task 3.5 / 4.5: a "WhatsApp on another phone?" link reveals the number + phrase (signup `sent` stage and Settings PENDING); F8b (the phrase is hand-typeable; both responses carry it), F8c (another phone; a `wa.me` link resolves with no WhatsApp — T3 / SB6 corrected). The WhatsApp code itself → routing note `…-2026-10-21-5-10-whatsapp-code-for-another-phone.md` (WRITTEN, ⛔ sent) + backlog row `5-13-whatsapp-code-for-another-phone`. |

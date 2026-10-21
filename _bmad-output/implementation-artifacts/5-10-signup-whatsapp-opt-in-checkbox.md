@@ -12,7 +12,7 @@ REBASED 2026-10-21 (v1.4) onto `origin/main` `2f4a4303` — a ledger-only commit
 only) ⇒ the pin stands. `main` took ledger `2026-10-21f` (5.12 LANDED) ⇒ this branch's ledger entries were renumbered `21g` (created) and
 `21h` (v1.3 + row 5-13), commit messages included.
 
-STATUS: ready-for-dev (created 2026-10-21 via `bmad-create-story 5.10`; v1.3 — SB12 DECIDED in session; v1.4 — VALIDATED (`bmad-create-story
+STATUS: review (v1.10 — DEV DONE 2026-10-21 by `bmad-dev-story 5.10`: decision `-375` `ae4fbaf7`, records `9396deac`, code `d336be8e`; ci:local 36/36 on :5433. Earlier: ready-for-dev, created 2026-10-21 via `bmad-create-story 5.10`; v1.3 — SB12 DECIDED in session; v1.4 — VALIDATED (`bmad-create-story
 validate 5.10`, four fresh-context verifiers; BigDev: *"all"*): SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2, several REVISED by v1.4 —
 the member-facing words (SB5), SB2 option (d), SB3 option (c), SB6's resend, SB9 legs (b)–(d); v1.8 — Task 0.2 DONE: BigDev accepted
 EVERY recommendation for SB1–SB11 and PQ1 (Debug Log (a)); PREV = `medical`, NEXT = `'/(signup)/payment'`. Next: Task 0.1 (preflight),
@@ -73,7 +73,7 @@ S = Task 0.1 STOP conditions · PQ = a question for BigDev at Task 0.2.
 
 # Story 5.10: An Unticked "Send Me WhatsApp Messages" Box at Signup — With One Even-Handed Reminder if the Member Leaves It Unticked `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today a new member is offered WhatsApp nowhere in signup. The only way to say yes is a
 > low-prominence control — the dimmed *"WhatsApp notifications"* entry at the bottom of the home tab, which opens
@@ -606,7 +606,7 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight, decisions, governance (AC11)**
+- [x] **Task 0 — Preflight, decisions, governance (AC11)**
   - [x] 0.1 (DONE 2026-10-21 — Debug Log (e)) `git fetch origin`; if `main` moved past the pin, rebase and re-derive F1–F20 (`sed -n` every cite, read past the range). STOP
         and report to BigDev if:
         **S1** the mint gained a member-state guard, or `requireMemberSession` refuses the state PREV leaves the member in (`pending-kyc` under SB2 (a), `pending-fee` under (d) — F7) — SB1 (a) then needs an API change;
@@ -629,34 +629,34 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
         (the bullets unedited); ADR-0029 changelog "annotated" row; roster row `wa-signup-box-hindi-reviewed` (next free Row; Row 37's shape;
         legs (a)–(d) per SB9 as answered); the friction-budget row (Task 5); ledger entry (safe prepend —
         [[project_sprint_status_safe_prepend]]); row `5-10-…` `ready-for-dev → in-progress`.
-- [ ] **Task 1 — The timeout helper (SB10; AC10)**
-  - [ ] 1.1 `apps/mobile/lib/with-timeout.ts`: `CALL_TIMEOUT_MS = 15_000` and `withTimeout<T>(promise, ms)` moved with the body
+- [x] **Task 1 — The timeout helper (SB10; AC10)**
+  - [x] 1.1 `apps/mobile/lib/with-timeout.ts`: `CALL_TIMEOUT_MS = 15_000` and `withTimeout<T>(promise, ms)` moved with the body
         unchanged apart from `export` and a domain-neutral rejection message (the timer cleared on settle); its own unit test.
-  - [ ] 1.2 `notifications.tsx` imports them; remove the local copies; its render + copy-key tests pass unmodified.
-- [ ] **Task 2 — The words (SB5; AC7)**
-  - [ ] 2.1 Add the `waSignup.*` and `waOtherPhone.*` keys (flat dotted keys, F18) to en + hi `common.json` (hi as the DRAFT above,
+  - [x] 1.2 `notifications.tsx` imports them; remove the local copies; its render + copy-key tests pass unmodified.
+- [x] **Task 2 — The words (SB5; AC7)**
+  - [x] 2.1 Add the `waSignup.*` and `waOtherPhone.*` keys (flat dotted keys, F18) to en + hi `common.json` (hi as the DRAFT above,
         marked nowhere in the JSON — the roster row tracks review; inner quotes escaped); hand-format ([[project_prettier_not_enforced]]).
-  - [ ] 2.2 Run the parity check and the microcopy gate; fix wording (⛔ the rule) if it bites.
-- [ ] **Task 3 — The step (SB1–SB4, SB6; AC1–AC6, AC8)**
-  - [ ] 3.1 `lib/wizard-steps.ts`: insert `'whatsapp'` per SB2 (before `'payment'` under (d); after `'tc'` under (a)); a dated comment
+  - [x] 2.2 Run the parity check and the microcopy gate; fix wording (⛔ the rule) if it bites.
+- [x] **Task 3 — The step (SB1–SB4, SB6; AC1–AC6, AC8)**
+  - [x] 3.1 `lib/wizard-steps.ts`: insert `'whatsapp'` per SB2 (before `'payment'` under (d); after `'tc'` under (a)); a dated comment
         line (Story 5.10, the decision id). Amend `tests/unit/workplace.test.ts:41-42`'s order assertion to the seven steps with a dated
         comment (F18a) — ⛔ delete it.
-  - [ ] 3.2 PREV's next-route literal → `router.replace('/(signup)/whatsapp')` (`medical.tsx:54` under (d); `tc.tsx:128` under (a)).
-  - [ ] 3.3 NEW `app/(signup)/whatsapp.tsx`: stages `loading → ask → sent`; the status load (bounded; AC2 branches → NEXT); the
+  - [x] 3.2 PREV's next-route literal → `router.replace('/(signup)/whatsapp')` (`medical.tsx:54` under (d); `tc.tsx:128` under (a)).
+  - [x] 3.3 NEW `app/(signup)/whatsapp.tsx`: stages `loading → ask → sent`; the status load (bounded; AC2 branches → NEXT); the
         checkbox (F4 pattern); Continue with a `useRef` busy guard; the reminder overlay (BannerHost's SHAPE copied, ⛔ imported — T10; a
         SIBLING of the ScrollView; a `shownOnce` flag; a `BackHandler` listener while open); the tick path (`requestWaOptIn` →
         `Linking.openURL`, both caught; codes via `ApiError`; the first mint's `deepLink` kept for *"Open WhatsApp again"*); the one-mint
         rule and outcomes of SB6; errors via `AnnouncedText kind='error'`, the overlay title and `sent` stage via `useAnnounceOnChange`
         (AC8); `STATUS_TIMEOUT_MS = 5_000` for the status read; `const router = useRouter()` (the `tc.tsx:20,68` form). ⚠ `t` NOT in any
         effect's deps — depend on `locale` (T1). Header comment cites the decision id and SB letters.
-  - [ ] 3.4 `_layout.tsx`: refresh the stale order comment with a dated line (F3); code unchanged (SB3 (a)) — under SB3 (c) the count
+  - [x] 3.4 `_layout.tsx`: refresh the stale order comment with a dated line (F3); code unchanged (SB3 (a)) — under SB3 (c) the count
         logic changes too, per the answer.
-  - [ ] 3.5 SB12 / AC12: a small shared component `apps/mobile/components/notifications/OtherPhoneHint.tsx` (beside
+  - [x] 3.5 SB12 / AC12: a small shared component `apps/mobile/components/notifications/OtherPhoneHint.tsx` (beside
         `NotificationSettingsEntry.tsx`; props `displayPhoneNumber`, `verificationPhrase`; collapsed by default; the phrase in a
         `selectable` text) used by `whatsapp.tsx`'s `sent` stage and `notifications.tsx`'s PENDING branch — WIDEN `OptInBody`'s props with
         both values (`string | null`) and render the hint only when BOTH are non-null (F12). Add `waOtherPhone.*` (en + DRAFT hi) in Task 2.
-- [ ] **Task 4 — Tests (AC1–AC10, AC12)**
-  - [ ] 4.1 NEW `apps/mobile/tests/unit/wa-signup-step-render.test.ts` — `.test.ts` with `createElement` (⛔ JSX; F19); jsdom; RTL
+- [x] **Task 4 — Tests (AC1–AC10, AC12)**
+  - [x] 4.1 NEW `apps/mobile/tests/unit/wa-signup-step-render.test.ts` — `.test.ts` with `createElement` (⛔ JSX; F19); jsdom; RTL
         `cleanup`; the real `LocaleProvider`; mocked `lib/mmkv`, `lib/member-api`. Harness from `peer-questionnaire-render.test.ts:35-63`
         (F19): `BackHandler` + `mock.backHandlers` + `hardwareBack()`, a mutable-`OS` `Platform`, the checkbox stub; plus `react-native`
         `Linking` / `Alert` / `AccessibilityInfo` / `StyleSheet: { absoluteFill: {} }`; `expo-router`'s `useRouter: () => mock.router`
@@ -664,17 +664,17 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
         `OtherPhoneHint` import (incl. `View`, `XStack` if used — a missing mocked export throws), whose `Button` RECORDS its full props
         per `testID` (AC3) and whose `Text` forwards `selectable` (AC12); mint rejections are real `ApiError`s. Every AC1–AC6 / AC8 /
         AC12-signup leg; ⭐ prove each leg RED once (break the code, see it fail) and note it in Debug Log (b).
-  - [ ] 4.2 NEW `apps/mobile/tests/unit/wa-signup-copy-keys.test.ts` (real `t()`, both locales, positive control; scans `whatsapp.tsx`
+  - [x] 4.2 NEW `apps/mobile/tests/unit/wa-signup-copy-keys.test.ts` (real `t()`, both locales, positive control; scans `whatsapp.tsx`
         AND `components/notifications/OtherPhoneHint.tsx`; `t(key, PARAMS, …)` with `PARAMS = { number: '+91 98765 43210' }` — the
         `workplace-copy.test.ts:93` precedent; asserts the scanned key set equals the expected list — AC7).
-  - [ ] 4.3 AC9's two live-DB legs in `apps/api/tests/integration/wa-opt-in/wa-opt-in.spec.ts`, seeded through the real signup path
+  - [x] 4.3 AC9's two live-DB legs in `apps/api/tests/integration/wa-opt-in/wa-opt-in.spec.ts`, seeded through the real signup path
         on a fresh Pariwar (F19a).
-  - [ ] 4.4 `lib/with-timeout` unit test (AC10).
-  - [ ] 4.5 AC12 legs: in the new signup render test, and ADDED to `wa-notifications-screen-render.test.ts` — its mocks EXTENDED for every
+  - [x] 4.4 `lib/with-timeout` unit test (AC10).
+  - [x] 4.5 AC12 legs: in the new signup render test, and ADDED to `wa-notifications-screen-render.test.ts` — its mocks EXTENDED for every
         primitive `OtherPhoneHint` imports and its `Text` mock forwarding `selectable` (a mock change, ⛔ a change to any existing leg; F19).
         In `wa-notifications-copy-keys.test.ts`: add `components/notifications/OtherPhoneHint.tsx` to `FILES` and change ONLY the
         `t(key, undefined, …)` call to pass `PARAMS` (F18) — its assertions untouched.
-- [ ] **Task 5 — Friction ledger (F17; AC11)** — ONE new row appended as the LAST line of the FIRST ledger table in `friction-budget.md`
+- [x] **Task 5 — Friction ledger (F17; AC11)** — ONE new row appended as the LAST line of the FIRST ledger table in `friction-budget.md`
       (the contiguous `|` lines under the `| payer | protects | event_type |` header — ⛔ anywhere else; F17) (payer: a new member of a
       Pariwar with WhatsApp on — one more signup screen, and for a member who leaves the box unticked one reminder; protects: a WhatsApp
       yes asked for plainly and never pre-ticked; event_type: `forced` — every such member passes the screen, the 6.36a `workplace`
@@ -682,7 +682,7 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
       optional"* — named in the disposition, ⛔ amended. Plus a "**Story 5.10 disposition (…)**" paragraph naming the files, on the 6.36a
       precedent. After COMMITTING, run `pnpm friction:check`; its AC-4 line must read *"… a declaration row changed (1 added/amended) …"*
       (basis `row`) — record it in Debug Log (c).
-- [ ] **Task 6 — Close the records and the gate (AC11)** — `ci:local` on :5433 with `DATABASE_URL` set; `tsc` both ways (F20); push with
+- [x] **Task 6 — Close the records and the gate (AC11)** (DONE 2026-10-21 — Debug Log (c), (f); ⚠ the PUSH is ⛔ done — held for BigDev's go-ahead) — `ci:local` on :5433 with `DATABASE_URL` set; `tsc` both ways (F20); push with
       `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]); story STATUS line, File List, Change Log; ledger; row → `review`.
 
 ## Dev Notes
@@ -805,6 +805,8 @@ accepts RN `selectable` — ⛔ precedent in `apps/mobile` yet).
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 5.10`, 2026-10-21, worktree `.claude/worktrees/5-10`.
+
 ### Debug Log References
 
 (a) Task 0.2 answers, verbatim · (b) RED proofs · (c) microcopy / parity / friction gate outputs · (d) dev-DB side effects · (e) Task 0.1 preflight
@@ -845,14 +847,82 @@ are four June remote branches of `done` stories 3.5 / 3.6a / 3.6b / 3.9 (1,536�
 **S4** clear — ⛔ `waSignup.*` / `waOtherPhone.*` key in either locale. **S5** clear — ⛔ planning-artifact commit after the pin.
 Numbers at Task 0.3/0.4: next free decision `-375` (highest across every ref `-374`), next free roster Row 38 (highest 37); ⛔ migration.
 
+**(b) RED proofs, 2026-10-21.** Each leg was broken once in the CODE and seen to fail, then restored (a scripted sweep — each mutation
+applied alone, the file restored after):
+- `workplace.test.ts` order assertion amended FIRST → RED (6 steps) → `wizard-steps.ts` → GREEN. `with-timeout.test.ts` RED (module
+  missing) → GREEN.
+- `wa-signup-step-render.test.ts` (31 legs) — 26 mutations of `whatsapp.tsx` / `OtherPhoneHint.tsx` / `medical.tsx`, 25 caught: box pre-ticked (24
+  legs fail); ACTIVE / unavailable not skipped; a failed read showing the ask (2); status bound 15 s; "Go back" ticking the box (2);
+  the proceed button `theme="accent"`, `chromeless`, `variant="outlined"` (the full-props comparison — each 1); the reminder every
+  time; the back listener never removed; "Open WhatsApp again" minting again; no one-mint rule (5); a state-only busy guard (the
+  one-`act()` double tap); the reminder marked `shown` on opening (the unticked double tap); 409 codes not told apart (2); a link
+  failure showing the sent stage; the reminder / sent stage not announced (2 each, both OS); the error as a `status` line (6); the
+  hint open by default; the phrase not `selectable`; the mint bounded at 5 s; the hint on the ask stage (2); PREV routing to payment.
+  ⚠ One SURVIVOR, acted on: a `reminder.current === 'open'` guard in `onContinue` was NOT load-bearing (a second press while the
+  reminder is open only re-opens it) — REMOVED; the unticked double-tap leg is proven by the mutation that would skip it.
+- `wa-signup-copy-keys.test.ts` — a misspelt key (3 fail), a template-literal key (1), a hi key missing (2). ⭐ Its key-set equality
+  caught a real blind spot: the 5.12 precedent's regex `[A-Za-z_]` cannot see `waSignup.popup_a11y` (digits) — widened to `[A-Za-z0-9_]`
+  in the NEW test (the 5.12 test's regex left as it was; none of its keys has a digit).
+- `wa-notifications-screen-render.test.ts` AC12 legs — no hint in PENDING; a hint in ACTIVE; the both-present check removed (2); the
+  phrase not `selectable`: each caught.
+- AC9 (`wa-opt-in.spec.ts`, :5433) — the two legs' seeded configs swapped: both fail.
+
+**(c) Gate outputs, 2026-10-21.** `pnpm --filter @twt/i18n i18n:check-parity`: *"✓ i18n parity gate passed — every member-facing en/
+key has non-empty Hindi parity"*. `pnpm microcopy:check`: *"✓ no vocabulary / tone / numeral / magic-number-color violations in the
+scanned scope"* (on the committed JSON and the new screens); `pnpm microcopy:test` 371/371. `pnpm friction:check` AFTER the code commit
+`d336be8e`: *"✓ member-facing surface touched and a declaration row changed (1 added/amended) — declaration affirmed"* — basis `row`
+(AC11). Mobile `tsc` green WITH typed routes (`.expo/types` generated by `CI=1 npx expo start`) and WITHOUT (moved aside).
+⚠ **Typed routes do ⛔ guard the new literal (found, ⛔ assumed):** under expo-router 55.0.17 a deliberately broken
+`router.replace('/(signup)/zzz-not-a-route')` TYPECHECKS with the generated types — a probe shows `Href` rejects `'zzz'` and `42` but
+accepts any two-segment absolute path (`'/zzz/yyy'`). So the route literals are guarded by a SOURCE leg instead (AC1 "PREV and NEXT":
+`medical.tsx` → `'/(signup)/whatsapp'`, `whatsapp.tsx` → `'/(signup)/payment'`, both route files exist — proven RED).
+
+**(f) Task 6 — `ci:local`, 2026-10-21.** `DATABASE_URL=…127.0.0.1:5433/twt_dev pnpm ci:local` at code commit `d336be8e` (the
+later commit is story / ledger text only): *"ci:local PASSED — 36 job(s) green"*, `integration-tests` RUN (⛔ skipped), friction-budget
+✓, microcopy ✓, i18n-parity ✓; turbo `test` 8m38s. `.expo/types` was moved aside for the run (CI has none). ⛔ pushed: the branch push
+(with `DATABASE_URL` on :5433 — [[project_prepush_hook_inherits_5432]]) waits for BigDev.
+
+**(d) Dev-DB side effects.** AC9's legs ran ONLY on :5433 (`apps/api/.env`, copied into the worktree, git-ignored): each run creates a
+fresh random Pariwar, its `pariwar_wa_config` row, one member through real signup + manual KYC, and (enabled leg) one PENDING
+`member_wa_opt_in` row — committed test rows, ⛔ cleaned up (the house pattern). ⛔ write to :5432. ⛔ migration.
+⚠ AC9 drove the member to `pending-fee` through the REAL `POST /api/v1/member/kyc/manual` (event `member.kyc_manual_fallback`), ⛔ by
+appending `member.kyc_completed` as the AC's wording suggested — the real path is the stronger seed; the state is the same.
+
 ### Completion Notes List
 
+- Governance first: Decision `2026-10-21-375` (author-commit, SB1–SB12 + PQ1 as answered) committed ALONE `ae4fbaf7`; records
+  `9396deac` (epics.md entry, §3.4 dated note, ADR-0029 annotated row, roster Row 38 `wa-signup-box-hindi-reviewed`, friction row +
+  disposition, ledger `2026-10-21l`, row → in-progress). The decision insert went through first try (additive 36/0).
+- Code `d336be8e`: the step `app/(signup)/whatsapp.tsx` (loading → ask → sent; one mint per visit; ref guards; the reminder overlay
+  copied from BannerHost's SHAPE — `components/banners/*` untouched), `OtherPhoneHint.tsx` (signup sent stage + Settings PENDING),
+  `lib/with-timeout.ts` (moved from `notifications.tsx`, behaviour unchanged), `wizard-steps.ts` + `medical.tsx` (PREV) + the
+  `_layout.tsx` comment, 17 strings en + hi taken programmatically from the SB5 table (byte-identical to BigDev's reviewed text).
+  ⛔ change under `apps/api/src`, `packages/contracts/src`, `packages/domain/src`, `apps/jobs/src` or migrations; `payment.tsx` untouched.
+- Tests: 31 step render legs, 5 copy-key legs, 4 helper legs, 6 Settings AC12 legs, 2 live-DB AC9 legs; every leg proven RED (Debug
+  Log (b)). Mobile 77 files / 1154 tests green; mobile + api lint and typecheck green.
+- Not demonstrated on a device: native layout, a real screen reader, a real WhatsApp hand-off ([[feedback_record_unattested_no_backfill]]).
+
 ### File List
+
+Governance / records: `.decision-log.md` · `_bmad-output/planning-artifacts/epics.md` · `_bmad-output/planning-artifacts/architecture.md`
+· `docs/adr/ADR-0029-whatsapp-webhook-ingress-and-opt-in-lifecycle.md` · `docs/launch-gate-inventory/inventory-roster.md` ·
+`friction-budget.md` · `_bmad-output/implementation-artifacts/sprint-status.yaml` · `_bmad-output/implementation-artifacts/5-10-signup-whatsapp-opt-in-checkbox.md`
+
+New: `apps/mobile/app/(signup)/whatsapp.tsx` · `apps/mobile/components/notifications/OtherPhoneHint.tsx` · `apps/mobile/lib/with-timeout.ts`
+· `apps/mobile/tests/unit/wa-signup-step-render.test.ts` · `apps/mobile/tests/unit/wa-signup-copy-keys.test.ts` ·
+`apps/mobile/tests/unit/with-timeout.test.ts`
+
+Modified: `apps/mobile/lib/wizard-steps.ts` · `apps/mobile/app/(signup)/medical.tsx` · `apps/mobile/app/(signup)/_layout.tsx` (comment) ·
+`apps/mobile/app/(settings)/notifications.tsx` · `apps/mobile/tests/unit/workplace.test.ts` ·
+`apps/mobile/tests/unit/wa-notifications-screen-render.test.ts` · `apps/mobile/tests/unit/wa-notifications-copy-keys.test.ts` ·
+`packages/i18n/locales/en/common.json` · `packages/i18n/locales/hi/common.json` · `apps/api/tests/integration/wa-opt-in/wa-opt-in.spec.ts`
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-21 | 1.10 | Task 6: `ci:local` 36/36 green on :5433 at `d336be8e` (integration-tests run); tsc both ways; STATUS → `review`; ledger `2026-10-21m`; row 5-10 → `review`. ⛔ pushed (held for BigDev). |
+| 2026-10-21 | 1.9 | DEV (`bmad-dev-story 5.10`): Task 0.1 preflight clean; Decision `2026-10-21-375` committed alone (`ae4fbaf7`); records (`9396deac`, roster Row 38); Tasks 1–5 implemented and tested (`d336be8e`) — every leg proven RED; friction gate basis `row`. Found: typed routes (expo-router 55) do ⛔ guard a `'/(signup)/…'` literal ⇒ a source leg added under AC1; the 5.12 copy-key regex cannot see digit keys ⇒ widened in the new test. |
 | 2026-10-21 | 1.8 | Task 0.2 DONE — BigDev: *"all recommendation accepted for SB1-SB11 and PQ1"*. Debug Log (a) records the answer verbatim and what each SB resolves to; PREV = `medical`, NEXT = `payment` (SB2 (d)); SB9 (d-i); PQ1 no. STATUS line, SB heading and Task 0.2 updated. Next: Task 0.1, then 0.3 (decision, alone) and 0.4 (records). |
 | 2026-10-21 | 1.7 | The routing note `…-5-10-whatsapp-code-for-another-phone.md` was RULED (BigDev relayed: *"by DR and KB / option A, one code per request and one retry."*) ⇒ Decision `2026-10-21-374` (Trustee-ratified, committed alone `09094409`); BigDev's reading of "one retry" when asked: *"Both"* (two codes per request, two entry attempts per code — ⛔ separately ratified). SB12 records it; 5.10's scope is unchanged (row 5-13 builds the code and swaps the signup link's content). |
 | 2026-10-21 | 1.6 | BigDev reviewed the remaining eleven Hindi rows (`title`, `box_label`, `continue`, `popup_title`, `popup_back`, `popup_proceed`, `popup_a11y`, `sent_title`, `waOtherPhone.link` / `desc` / `note`): *"nothing to change"*. All 17 rows now BigDev-reviewed; the table header and SB5 updated. Whether this discharges roster leg SB9 (a) (Row 28's control) is left to that row. Offered and NOT taken: "to TWT" in `sent_title` / `waOtherPhone.desc`, and "अंग्रेज़ी के" in `waOtherPhone.note`. |

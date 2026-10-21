@@ -14,7 +14,9 @@ only) ⇒ the pin stands. `main` took ledger `2026-10-21f` (5.12 LANDED) ⇒ thi
 
 STATUS: ready-for-dev (created 2026-10-21 via `bmad-create-story 5.10`; v1.3 — SB12 DECIDED in session; v1.4 — VALIDATED (`bmad-create-story
 validate 5.10`, four fresh-context verifiers; BigDev: *"all"*): SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2, several REVISED by v1.4 —
-the member-facing words (SB5), SB2 option (d), SB3 option (c), SB6's resend, SB9 legs (b)–(d)).
+the member-facing words (SB5), SB2 option (d), SB3 option (c), SB6's resend, SB9 legs (b)–(d); v1.8 — Task 0.2 DONE: BigDev accepted
+EVERY recommendation for SB1–SB11 and PQ1 (Debug Log (a)); PREV = `medical`, NEXT = `'/(signup)/payment'`. Next: Task 0.1 (preflight),
+then 0.3 (the author-commit decision, committed alone) and 0.4 (records) before any code).
 
 START CONDITION — MET at the pin: row `5-12-whatsapp-yes-lasts-until-withdrawn` is `done` and ON `main` (a yes now lasts until withdrawn,
 so the box reaches members for as long as their yes stands — the row-5-10 ledger annotation: *"This box's reach follows row 5-12; no
@@ -346,7 +348,7 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   in the background until `.expo/types/router.d.ts` and `expo-env.d.ts` exist, then `pkill -f "expo start --port <n>"`, then
   `pnpm --filter @twt/mobile typecheck`; move `.expo/types` aside and re-run.
 
-## ⚖️ Build decisions SB1–SB11 (⭐ = recommended; PROPOSED — BigDev answers at Task 0.2)
+## ⚖️ Build decisions SB1–SB11 (⭐ = recommended) — ✅ ANSWERED 2026-10-21 at Task 0.2: every ⭐ accepted (Debug Log (a))
 
 - **SB1 — What a tick does.** ⭐ **(a)** Ticked + Continue = the Settings enable control: `requestWaOptIn()` (mint PENDING), then
   `Linking.openURL(deepLink)`; the member's sent message turns WhatsApp on via the unchanged worker path (which writes the consent row and
@@ -615,7 +617,7 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
         home tab's *"WhatsApp notifications"* entry moved / was renamed (F14);
         **S4** a `waSignup.*` key is already taken in either locale (`grep -n '"waSignup\.' packages/i18n/locales/*/common.json`);
         **S5** any routing note or told item after the pin mentions the signup box (`git log 20fcb479..origin/main -- _bmad-output/planning-artifacts`).
-  - [ ] 0.2 Put SB1–SB11 and PQ1 to BigDev — ⭐ incl. the v1.4 revisions: the words (SB5), the placement (SB2 (a) vs (d)), the label
+  - [x] 0.2 (DONE 2026-10-21 — Debug Log (a)) Put SB1–SB11 and PQ1 to BigDev — ⭐ incl. the v1.4 revisions: the words (SB5), the placement (SB2 (a) vs (d)), the label
         cost (SB3 (a) vs (c)), the roster legs (SB9 (b)–(d), and (d-i) vs (d-ii)); record the answers VERBATIM in Debug Log (a), and
         write PREV / NEXT (SB2) at the top of Debug Log (a) — every later Task reads them. If SB1 (b) or PQ1 "yes": STOP — write the
         routing note from the template (§0 first); do not build SB1 until it is ruled.
@@ -807,6 +809,32 @@ accepts RN `selectable` — ⛔ precedent in `apps/mobile` yet).
 
 (a) Task 0.2 answers, verbatim · (b) RED proofs · (c) microcopy / parity / friction gate outputs · (d) dev-DB side effects
 
+**(a) Task 0.2 — answered 2026-10-21 (BigDev, in session), verbatim:** *"all recommendation accepted for SB1-SB11 and PQ1"*.
+
+**PREV = `medical` (`app/(signup)/medical.tsx:54` → `router.replace('/(signup)/whatsapp')`); NEXT = `'/(signup)/payment'`** (SB2 (d)).
+`WIZARD_STEPS` = `['tc', 'kyc', 'workplace', 'nominees', 'medical', 'whatsapp', 'payment']` — the step is *Step 6 of 7*. The member is
+`pending-fee` at the step (F7).
+
+What each answer resolves to (the ⭐ of each SB as it stands at v1.7):
+- **SB1 (a)** — a tick = the existing request (mint PENDING) + open WhatsApp with the message to TWT; the member's sent message turns it on.
+- **SB2 (d)** — the step is immediately BEFORE `payment`.
+- **SB3 (a)** — the step loads the status (5 s bound) and moves straight on when WhatsApp is not offered, the status fails, or the member
+  is already ACTIVE; the label jump (*Step 5 → 7 of 7*) and the empty-step announcement are ACCEPTED costs.
+- **SB4** — the in-screen reminder, once, two equal buttons in BigDev's order; "Go back" never ticks; Android back = "Go back"; UX
+  Patterns 1 (primary-action rule) and 2 (modal discipline) deliberately departed from.
+- **SB5** — the 17 strings as reviewed by BigDev (v1.5 / v1.6).
+- **SB6** — no waiting in signup; ONE mint; "Open WhatsApp again" reopens the first link; every failure lets the member continue.
+- **SB7 (a)** — no change to the "WhatsApp notifications" screen beyond SB12's hint.
+- **SB8 (a)** — nothing new recorded on the server.
+- **SB9** — roster row `wa-signup-box-hindi-reviewed`, legs (a)–(c) and **(d-i)** (every ladder category approved before a Pariwar is
+  switched on); (d-ii) stays with its `deferred-work.md` item.
+- **SB10** — `withTimeout` + `CALL_TIMEOUT_MS` extracted to `apps/mobile/lib/with-timeout.ts`.
+- **SB11** — one author-commit decision, the `epics.md` entry, a dated §3.4 note, an ADR-0029 annotated row, the friction-budget row,
+  the ledger; ⛔ ratified sentence edited.
+- **PQ1 — no**: a tick does ⛔ switch WhatsApp on by itself; nothing goes to the Panel on it.
+
+(SB12 was decided in session earlier — v1.3 — and the WhatsApp code it routed was ruled by `2026-10-21-374`.)
+
 ### Completion Notes List
 
 ### File List
@@ -815,6 +843,7 @@ accepts RN `selectable` — ⛔ precedent in `apps/mobile` yet).
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-21 | 1.8 | Task 0.2 DONE — BigDev: *"all recommendation accepted for SB1-SB11 and PQ1"*. Debug Log (a) records the answer verbatim and what each SB resolves to; PREV = `medical`, NEXT = `payment` (SB2 (d)); SB9 (d-i); PQ1 no. STATUS line, SB heading and Task 0.2 updated. Next: Task 0.1, then 0.3 (decision, alone) and 0.4 (records). |
 | 2026-10-21 | 1.7 | The routing note `…-5-10-whatsapp-code-for-another-phone.md` was RULED (BigDev relayed: *"by DR and KB / option A, one code per request and one retry."*) ⇒ Decision `2026-10-21-374` (Trustee-ratified, committed alone `09094409`); BigDev's reading of "one retry" when asked: *"Both"* (two codes per request, two entry attempts per code — ⛔ separately ratified). SB12 records it; 5.10's scope is unchanged (row 5-13 builds the code and swaps the signup link's content). |
 | 2026-10-21 | 1.6 | BigDev reviewed the remaining eleven Hindi rows (`title`, `box_label`, `continue`, `popup_title`, `popup_back`, `popup_proceed`, `popup_a11y`, `sent_title`, `waOtherPhone.link` / `desc` / `note`): *"nothing to change"*. All 17 rows now BigDev-reviewed; the table header and SB5 updated. Whether this discharges roster leg SB9 (a) (Row 28's control) is left to that row. Offered and NOT taken: "to TWT" in `sent_title` / `waOtherPhone.desc`, and "अंग्रेज़ी के" in `waOtherPhone.note`. |
 | 2026-10-21 | 1.5 | BigDev, in session, after reading the v1.4 words (*"this word means differently to user"*): the member sends the message TO TWT — six English rows rewritten by BigDev (`intro`, `box_hint`, `popup_body`, `sent_desc`, `request_failed`, `link_failed`); their Hindi translated from that English and then reviewed and edited by BigDev (*"done, commit hindi and english"*). The registered-number condition now lives only in `waOtherPhone.note` (SB5, F8a, SB12 updated); `intro`'s *"will send"* noted against F7b. Microcopy gate: 0 findings (en + hi). |

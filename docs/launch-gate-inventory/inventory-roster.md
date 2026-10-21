@@ -680,3 +680,23 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** the Hindi reviewer → (a); Story 0.13 (counsel) or BigDev's acceptance → (b); BigDev → (c). Story 5.12 builds the lasting yes; Row 35 (g) reads BOTH row 5-12 `done` on `main` AND this row.
 - **notes:** "5-12 `done`" ≠ "the Hindi reviewed" (`-373` decision 9). The told item `trustee-panel-told-2026-10-21-5-12-whatsapp-yes-residuals.md` (the lost-STOP and recycled-number limits) is ⛔ a leg here — it is TOLD, ⛔ asked, and its status lives on its own Status line.
+
+## Row 38 — Story 5.10: the signup WhatsApp box can go live (decision-authored, `-375`)
+
+> **Appended 2026-10-21 by Story 5.10 (Task 0.4) under [Decision 2026-10-21-375](../../.decision-log.md#decision-2026-10-21-375)**
+> decision 9 (the next free row — the roster's highest was 37). Like Rows 17–37 the row has no architecture source line; it cites the
+> decision that created it. It blocks no build and no merge — nothing is in production ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 38 — `wa-signup-box-hindi-reviewed`
+
+- **gate_name:** The unticked signup WhatsApp box and its reminder (built by row `5-10-signup-whatsapp-opt-in-checkbox`) can go live — the 5.10 Hindi strings human-reviewed, counsel's DPDP view on the box recorded or its absence accepted, and a Pariwar's WhatsApp switched on in production only when its config is complete and every member-alert category has an approved template
+- **architecture_source_line:** N/A — **decision-authored**: [Decision 2026-10-21-375](../../.decision-log.md#decision-2026-10-21-375) decision 9
+- **owner:** BigDev (gate)
+- **support:** a Hindi reviewer (Row 28's control) — (a); counsel (Story 0.13) — (b); the Pariwar Admin who switches a Pariwar's WhatsApp on — (c), (d-i)
+- **closure_criteria:** ALL FOUR, each recorded as a Decision: **(a)** the Story 5.10 Hindi strings in `packages/i18n/locales/hi/common.json` (every `waSignup.*` and `waOtherPhone.*` key) HUMAN-REVIEWED (Row 28's control pattern) — BigDev reviewed all 17 in session on 2026-10-21 (story v1.5 / v1.6); whether that discharges this leg is recorded here, ⛔ assumed; **(b)** counsel's DPDP view on the box and the reminder — the DPDPA §5 notice (incl. the privacy policy naming WhatsApp / Meta as a channel and processor: the private `privacy-policy.md` / `.hi.md` name neither today) and §6(4) withdrawal ease — recorded, or its absence accepted as a decision (Row 19 is ⛔ its home: `-367` d19 makes Row 19 the home of the CLAIM agreement's notice only); **(c)** before a Pariwar's WhatsApp is switched on in production, its config is COMPLETE — phone number id, access-token secret name, app-secret name, verify-token name — ⛔ only `enabled` + a display number (`available` reads only those two; the webhook rejects every inbound message without the app secret, so every tick would expire); **(d-i)** before the same, every category the member-alert ladder sends has an `approved` UTILITY template for that Pariwar (else the log-only WhatsApp stand-in reports `accepted` and the ladder stops before SMS). (d-ii) — the stand-in no longer counting as `sent` for a switched-on Pariwar — stays with its `deferred-work.md` item (the 5.10 validate section), ⛔ a leg here.
+- **target_date:** (a), (b) before the first production build that shows the step; (c), (d-i) before the first Pariwar's WhatsApp is switched on in production (relative-to-fact).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** the Hindi reviewer → (a); Story 0.13 (counsel) or BigDev's acceptance → (b); BigDev / the Pariwar Admin at switch-on → (c), (d-i). Story 5.10 builds the step; its reach follows row 5-12 (a yes lasts until withdrawn — `-364`).
+- **notes:** "5-10 `done`" ≠ "the Hindi reviewed" (`-375` decision 9). Row 37 (b) — counsel on whether the opt-in wording should say how long a yes lasts — reads on the box's words too; (b) here does ⛔ duplicate it, it adds the DPDP notice / withdrawal question for the box. Day-one output is none: every Pariwar's WhatsApp config defaults to NULL (off), so no member sees the step until an admin turns WhatsApp on.

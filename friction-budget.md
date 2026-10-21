@@ -56,6 +56,7 @@ deliberately accepted.
 | member (allowing the app to check their contacts, or typing a number, to name people who know them) — Story 6.36b: a note in the app BEFORE the system prompt, then the phone's contacts checked against the member list (the matches shown under the names the member saved; a non-member's number ⛔ kept), up to three people ticked and asked, each of whom answers *"Yes, I know them"* / *"No"* in the app; ⛔ any of it without the member choosing to start it | who is asked when no colleague can be (`-310` CF4 A (2) — up to three members the member named, each of whom agreed; CF5 A — the contacts matched, then discarded) | optional |
 | member (seeing ONE reminder card at a time on the home — add your workplace, invite your colleagues, a new workplace: check the people who know you, someone can no longer be asked, a Pariwar Admin's campaign — each with *"Not now"*, which hides it for 30 days on that phone) — Story 6.36c | as few members as possible left with nobody to ask about their death (`-307` §2 item 4; `-330` SW16 (2)–(5) as narrowed by `-342` calls 1–2). ⭐ Shown ONLY when the member can act on it (`-342`), in the app ONLY — ⛔ SMS, push, WhatsApp; ⛔ a word about whether other members are at the workplace | optional |
 | member whose *"my workplace isn't listed"* a Pariwar Admin matched (answering *"We think your workplace is …, … . Is that right?"* — Yes / No, on the home and on the Workplace screen) — Story 6.36c | the member's own authorship of where they work (`-330` SW9 A, I2): a Pariwar Admin's suggestion changes ⛔ nothing until the member says yes, and only then is a posting written. ⭐ *"No"* sends it back for another look; ⛔ a step-up | optional |
+| member of a Pariwar with WhatsApp switched on, at signup (one more screen — an UNTICKED *"Send me WhatsApp messages from TWT"* box just before payment — and, if they leave it unticked, ONE reminder with two equal choices) — Story 5.10 | a WhatsApp yes asked for plainly, on its own screen, ⛔ pre-ticked and ⛔ bundled with the Terms (§3.4 origination rule; `-375`) | forced |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -2784,3 +2785,27 @@ resolver), `components/peer-request/usePeerRequestQueries.ts` (`usePeerRequestBy
 
 ⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]) — they add ⛔ asset and one query hook.
 ⭐ Written for changes UNCOMMITTED at the time of writing; AC-4 reads it once committed ([[project_friction_budget_baseline_ratchet]]).
+
+---
+
+**Story 5.10 disposition (ONE new row — the signup WhatsApp step; ⛔ no row retired, ⛔ row amended):** the story's member-facing
+changes are `apps/mobile/app/(signup)/whatsapp.tsx` (new — the signup step between medical and payment), `lib/wizard-steps.ts` (the
+step inserted) and `app/(signup)/medical.tsx` (its next step), `components/notifications/OtherPhoneHint.tsx` (new — *"WhatsApp on
+another phone?"*), `app/(settings)/notifications.tsx` (that hint in its waiting state; `withTimeout` moved to `lib/with-timeout.ts`),
+`packages/i18n/locales/{en,hi}/common.json` (`waSignup.*`, `waOtherPhone.*`) and their tests.
+
+1. ⭐ **The new row (above).** Payer: a new member of a Pariwar whose WhatsApp is switched on — one more signup screen, and for a member
+   who leaves the box unticked, one reminder (*"Go back and tick the box"* / *"Continue without WhatsApp"*, equal weight). Protects: a
+   WhatsApp yes asked for plainly, never pre-ticked, never bundled with the Terms. `forced`: every such member passes the screen (the
+   6.36a `workplace` precedent) — but it ⛔ never BLOCKS signup: leaving the box unticked is a valid answer, the reminder shows at most
+   once, and a failure of any call moves the member on. A member of a Pariwar with WhatsApp off, or already on, is passed straight
+   through (the label jumps *Step 5 → 7 of 7* — `-375` decision 3's accepted cost).
+2. ⛔ **Not new friction:** the app switch after a tick (WhatsApp opens with a pre-filled message the member sends) is Story 5.4's row
+   *"member (opting in to WhatsApp notifications …) | … | optional"* — the same request, now also offered at signup; ⛔ amended.
+3. ⛔ **Not new friction:** the *"WhatsApp on another phone?"* link is collapsed until tapped and only REMOVES friction for a member
+   whose WhatsApp is on another phone (before it, they could not finish at signup).
+
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); ⛔ demonstrated on a device (the
+step's render tests mount real React with native primitives mocked in jsdom — ⛔ native layout or a real screen reader).
+`apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]).
+⭐ Written for changes UNCOMMITTED at the time of writing; AC-4 reads it once committed.

@@ -2401,6 +2401,28 @@ So that the OTP delivery is regulator-compliant, audit-traceable, and the gating
 **When** the gating decision is made (which actions require step-up — Story 1.9 admin auth + Story 3.2 member auth own this)
 **Then** the gating surfaces call this story's delivery endpoint; the gating logic itself does not change with Epic 5 — Epic 5 only owns *how the OTP gets to the user* and *audit semantics for send/consume pairs*
 
+### Story 5.10: An Unticked "Send Me WhatsApp Messages" Box at Signup — With One Even-Handed Reminder if the Member Leaves It Unticked `[SURFACE]`
+
+> **Added 2026-10-21 (Story 5.10, Task 0.4)** — the row `5-10-signup-whatsapp-opt-in-checkbox` builds architecture §3.4's ratified
+> onboarding offer (*"After mobile-OTP verification, member is offered … "Yes" branch: app opens WhatsApp via deeplink … Member must tap
+> send to complete opt-in."*) as an UNTICKED box on its own signup step, immediately before payment. A tick only asks — the existing
+> opt-in request, then the member's own WhatsApp message turns it on (§3.4's origination rule and ADR-0029's *"ACTIVE only by a matched
+> inbound WhatsApp message"*, both unchanged); left unticked, Continue shows ONE reminder with two equal choices. ⛔ API, contract,
+> domain, worker or migration change. Its build decisions SB1–SB12 are DECIDED by
+> [`-375`](../../.decision-log.md#decision-2026-10-21-375) (author-commit; PQ1 — a tick that switches WhatsApp on by itself — answered
+> no). Go-live: roster Row 38 (`wa-signup-box-hindi-reviewed`). Full ACs: `_bmad-output/implementation-artifacts/5-10-signup-whatsapp-opt-in-checkbox.md`.
+> ⛔ Never a merge fence. (Epic 5's two "9 stories" count lines are left as they stand, as for 5.12.)
+
+As a new member signing up, I want to be asked, plainly and once, whether I want WhatsApp messages from TWT — with nothing ticked for
+me, and a fair choice if I leave it unticked — so that I can switch WhatsApp on in the same sitting I join, or knowingly carry on
+without it, and change my mind later from the home screen's "WhatsApp notifications" or by replying STOP.
+
+**Acceptance Criteria:** see the story file (AC1–AC12) — in short: a separate, unticked box on its own step (never pre-ticked, never
+bundled with the Terms); the step is skipped when the Pariwar's WhatsApp is off, the member is already on, or the status cannot be read
+in 5 s; an unticked Continue shows the reminder once, with "Go back and tick the box" and "Continue without WhatsApp" of equal weight,
+and "Go back" never ticks the box; a tick makes ONE opt-in request and opens WhatsApp; every failure still lets the member continue; a
+"WhatsApp on another phone?" link shows the number and the phrase; the words in en + hi; leaving the box unticked never blocks signup.
+
 ### Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
 
 > **Added 2026-10-21 (Story 5.12, Task 0.4)** — the row `5-12-whatsapp-yes-lasts-until-withdrawn` builds the Trustee Panel's ruling

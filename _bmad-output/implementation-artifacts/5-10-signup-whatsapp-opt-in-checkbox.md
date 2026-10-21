@@ -73,7 +73,7 @@ S = Task 0.1 STOP conditions · PQ = a question for BigDev at Task 0.2.
 
 # Story 5.10: An Unticked "Send Me WhatsApp Messages" Box at Signup — With One Even-Handed Reminder if the Member Leaves It Unticked `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Today a new member is offered WhatsApp nowhere in signup. The only way to say yes is a
 > low-prominence control — the dimmed *"WhatsApp notifications"* entry at the bottom of the home tab, which opens
@@ -607,7 +607,7 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Preflight, decisions, governance (AC11)**
-  - [ ] 0.1 `git fetch origin`; if `main` moved past the pin, rebase and re-derive F1–F20 (`sed -n` every cite, read past the range). STOP
+  - [x] 0.1 (DONE 2026-10-21 — Debug Log (e)) `git fetch origin`; if `main` moved past the pin, rebase and re-derive F1–F20 (`sed -n` every cite, read past the range). STOP
         and report to BigDev if:
         **S1** the mint gained a member-state guard, or `requireMemberSession` refuses the state PREV leaves the member in (`pending-kyc` under SB2 (a), `pending-fee` under (d) — F7) — SB1 (a) then needs an API change;
         **S2** another branch/worktree edits `lib/wizard-steps.ts`, PREV's next route (`tc.tsx` / `medical.tsx`) or `notifications.tsx`
@@ -621,11 +621,11 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
         cost (SB3 (a) vs (c)), the roster legs (SB9 (b)–(d), and (d-i) vs (d-ii)); record the answers VERBATIM in Debug Log (a), and
         write PREV / NEXT (SB2) at the top of Debug Log (a) — every later Task reads them. If SB1 (b) or PQ1 "yes": STOP — write the
         routing note from the template (§0 first); do not build SB1 until it is ruled.
-  - [ ] 0.3 Author-commit decision (the next free id — re-grep `^### Decision` on `main`, every branch, every worktree), staged in the
+  - [x] 0.3 (DONE 2026-10-21 — `2026-10-21-375`, committed alone `ae4fbaf7`) Author-commit decision (the next free id — re-grep `^### Decision` on `main`, every branch, every worktree), staged in the
         scratchpad first ([[project_decision_log_writes_user_inserted]]); carries SB1–SB11 as answered, the §0 reading (matches both
         ratified texts) AND the stated departure from the row-5-10 / `-364` "Not covered" framing (see the header), PQ1's answer, "Supersessions: none", and what it does NOT cover (counsel's view; SB1 (b)). Committed ALONE
         (`governance:` prefix); its SHA written only after.
-  - [ ] 0.4 Records commit: `epics.md` `### Story 5.10` (post-hoc, after 5.9, 5.12's format); §3.4 dated note under the opt-in bullets
+  - [x] 0.4 (DONE 2026-10-21 — Row 38) Records commit: `epics.md` `### Story 5.10` (post-hoc, after 5.9, 5.12's format); §3.4 dated note under the opt-in bullets
         (the bullets unedited); ADR-0029 changelog "annotated" row; roster row `wa-signup-box-hindi-reviewed` (next free Row; Row 37's shape;
         legs (a)–(d) per SB9 as answered); the friction-budget row (Task 5); ledger entry (safe prepend —
         [[project_sprint_status_safe_prepend]]); row `5-10-…` `ready-for-dev → in-progress`.
@@ -807,7 +807,7 @@ accepts RN `selectable` — ⛔ precedent in `apps/mobile` yet).
 
 ### Debug Log References
 
-(a) Task 0.2 answers, verbatim · (b) RED proofs · (c) microcopy / parity / friction gate outputs · (d) dev-DB side effects
+(a) Task 0.2 answers, verbatim · (b) RED proofs · (c) microcopy / parity / friction gate outputs · (d) dev-DB side effects · (e) Task 0.1 preflight
 
 **(a) Task 0.2 — answered 2026-10-21 (BigDev, in session), verbatim:** *"all recommendation accepted for SB1-SB11 and PQ1"*.
 
@@ -834,6 +834,16 @@ What each answer resolves to (the ⭐ of each SB as it stands at v1.7):
 - **PQ1 — no**: a tick does ⛔ switch WhatsApp on by itself; nothing goes to the Panel on it.
 
 (SB12 was decided in session earlier — v1.3 — and the WhatsApp code it routed was ruled by `2026-10-21-374`.)
+
+**(e) Task 0.1 — preflight, 2026-10-21 (dev session):** `git fetch origin`; `origin/main` = `2f4a4303` = the v1.4 re-derivation
+point (an ancestor of HEAD) ⇒ ⛔ rebase, ⛔ re-derivation; `git diff --name-only 20fcb479..origin/main -- packages apps scripts docs/adr
+docs/launch-gate-inventory` empty. **S1** clear — `routes.ts` mint `preHandler: [memberSession]` only; `member-session-guard.ts` has ⛔
+state check. **S2** clear — the only refs touching `wizard-steps.ts` / `tc.tsx` / `medical.tsx` / `notifications.tsx` / `payment.tsx`
+are four June remote branches of `done` stories 3.5 / 3.6a / 3.6b / 3.9 (1,536–1,543 commits behind `main`); ⛔ other worktree.
+**S3** clear — `CANONICAL_CHANNEL_LADDER = ['push', 'whatsapp', 'sms']`; `deadline_reminder` still an alert category in
+`contribution-notify-triggers.ts`; `NotificationSettingsEntry` still on the home tab; `waNotifications.entry_label` unchanged (en + hi).
+**S4** clear — ⛔ `waSignup.*` / `waOtherPhone.*` key in either locale. **S5** clear — ⛔ planning-artifact commit after the pin.
+Numbers at Task 0.3/0.4: next free decision `-375` (highest across every ref `-374`), next free roster Row 38 (highest 37); ⛔ migration.
 
 ### Completion Notes List
 

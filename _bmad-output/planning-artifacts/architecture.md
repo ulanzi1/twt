@@ -2267,6 +2267,11 @@ onboarding:
   the opt-in ACTIVE, a second route beside the user-sent message. At most two codes per request and two entry attempts per code (BigDev's
   reading of the retry, ⛔ separately ratified). Row `5-13-whatsapp-code-for-another-phone` (⛔ yet built). The bullets above are
   unedited.)*
+  *(Dated 2026-10-21, Decision 2026-10-21-375 — author-commit, Story 5.10 (decided; ⛔ yet built): the onboarding offer above is
+  built as an UNTICKED box, *"Send me WhatsApp messages from TWT"*, on its own signup step immediately before payment, shown only when
+  the Pariwar's WhatsApp is available and the member is not already ACTIVE. A tick starts the "Yes" branch above — the existing opt-in
+  request, then the deeplink; the member's own sent message turns it on. Left unticked, Continue shows one reminder with two equal
+  choices. The origination requirement is unchanged: the box is ⛔ itself a route to ACTIVE. The bullets above are unedited.)*
 - **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
   Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
   correction and certificate reminders' delivery ladder — to ONE person only: the

@@ -4,6 +4,34 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: validate of 5-10-signup-whatsapp-opt-in-checkbox.md (2026-10-21)
+
+Both are PRE-EXISTING (Stories 5.3 / 5.4 / 8.8) and ⛔ Story 5.10's to fix; 5.10 is where they were found, and its signup box is what
+would bring members into them in numbers. Neither needs a ruling to identify; the fix for the first carries a choice for BigDev.
+
+- **A switched-on Pariwar with no `approved` WhatsApp template for an alert category stops the ladder before an opted-in member's SMS fallback**
+  [`packages/channels/src/composition/provider-composition.ts` (`resolveApprovedTemplate` → null); `packages/channels/src/providers/
+  index.ts` `createWhatsappProvider`; `providers/fixture-whatsapp.ts`; the member-alert ladder in `apps/jobs/src/scheduler/
+  contribution-notify.ts`] — `resolveWaTarget` checks only the Pariwar's `enabled` + the member's ACTIVE yes; with no approved template
+  for the category the provider deps resolve to null, the log-only fixture is selected, and it reports `accepted` (*"so downstream
+  dispatch behaves as if WA worked"*) ⇒ the push → WhatsApp → SMS ladder stops at WhatsApp and the SMS rung is never reached. Today
+  this removes nothing: the per-member SMS fallback is itself DARK (the item *"Architecture §3.4 fire condition (iii) — the per-member
+  SMS fallback — has ⛔ registrable template"*; `fixture-sms.ts` also reports `accepted`). Once row 5-11 turns it on, an opted-in member
+  — exactly whom ratified §3.4 (iii) sends it to (*"when both WA gates ON and WA delivery returns failure"*) — would never get it. Story 5.10 carries it as a go-live
+  leg (SB9 (d) of roster row `wa-signup-box-hindi-reviewed`: every ladder category approved before a Pariwar is switched on — OR this
+  fix). Fix shape (engineering): a fixture must not count as `sent` for a Pariwar whose WhatsApp is `enabled` (e.g. `skipped_no_target`
+  / a distinct non-terminal outcome) so the ladder advances. ⚠ Also bears on row `5-11-per-member-sms-fallback-fixed-wording`.
+  Trigger: the first Pariwar whose WhatsApp is switched on in production, or the next edit of the WhatsApp provider selection.
+- **§3.4's *"mismatch logged + surfaced for member confirmation"* is only half built** [`apps/jobs/src/wa-webhook-processor.ts`, the
+  no-match branch after `matchPendingOptIn`] — ratified architecture §3.4 (*Inbound message handling*) says an inbound WhatsApp number
+  that does not match the member's mobile on file is *"logged + surfaced for member confirmation"*; the worker only `console.warn`s
+  (its log line reads *"… matched no PENDING opt-in — surfaced for confirmation"* — the log line overstates it; the code comment above it is accurate) and nothing reaches the
+  member. The real cases: a member who sends from a second phone, or from the other SIM of a dual-SIM phone; 48 h later the app tells
+  them *"we did not receive your WhatsApp message"* although it arrived. Story 5.10 (SB12) shows the number + phrase to send from the
+  right phone, and the routing note `trustee-panel-routing-note-2026-10-21-5-10-whatsapp-code-for-another-phone.md` lists building this
+  confirmation as an uncosted third route. Trigger: row `5-13-whatsapp-code-for-another-phone`'s ruling, or the first production
+  WhatsApp opt-in. At minimum, correct the log line's wording when the branch is next edited.
+
 ## Deferred from: code review of 5-12-whatsapp-yes-lasts-until-withdrawn.md (2026-10-21)
 
 - **D1 — A failed Meta 131050 withdrawal is consumed without retry or an identifying alarm**

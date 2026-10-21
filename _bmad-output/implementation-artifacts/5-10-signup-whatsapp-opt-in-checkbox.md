@@ -118,7 +118,7 @@ by replying STOP**.
   unticked never blocks signup. *Proof:* AC1, AC4.
 - **I3 — The member's WhatsApp message turns WhatsApp on.** The box only ASKS (the existing mint → PENDING + WhatsApp hand-off). No new
   writer of `member_wa_opt_in` or `consent_records`; ACTIVE is still reached only by the worker's phrase match. *Proof:* AC5, AC9.
-- **I4 — Even-handed.** The reminder appears at most ONCE per visit to the step, and its two choices are identical in size, theme and
+- **I4 — Even-handed.** The reminder appears at most ONCE, during signup only — never after signup and never on a later app open — and its two choices are identical in size, theme and
   weight; its words state a fact and never threaten (R10(B): the app is the channel of record). *Proof:* AC3, AC7.
 - **I5 — Never a dead end.** Every failure (status unknown, mint refused, WhatsApp not installed, a call that hangs) still lets the
   member continue signup. *Proof:* AC2, AC6.
@@ -166,6 +166,12 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   'member_self', {source:'meta_webhook_inbound'})`, `activateOptIn`). `activateOptIn` accepts PENDING only
   (`packages/domain/src/wa-opt-in/write.ts:196-226`). 6.31's reminder reads `isOptInActive` AND `consentExists` (`read.ts:168-171`) — so a
   yes must carry BOTH rows, which the worker path writes.
+- **F8a — How the number is verified.** The worker matches an inbound message on (Pariwar, the blind index of the SENDER's number,
+  the verification phrase, a PENDING row) — `matchPendingOptIn` (`apps/jobs/src/wa-webhook-processor.ts:370-399`); a sender that is not
+  an Indian mobile is ignored, and a message matching no PENDING is logged with no state change. The PENDING carries the member's
+  REGISTERED mobile's blind index (the mint copies the identity's — `handlers.ts`). ⇒ ACTIVE proves the registered mobile is on
+  WhatsApp AND the member sent from it. A member whose WhatsApp is on a different number cannot be matched; their PENDING expires (F11)
+  and Settings says it was not turned on. This is why SB1 (a) keeps the message step — a tick alone proves neither.
 - **F9 —** Neither `member_wa_opt_in` nor `consent_records` has an origin / ui_context column; `consent_records.consent_payload` (jsonb)
   documents `checkboxTextShown, locale, copyVersion …` (`packages/domain/src/schema/consent_records.ts:245-264`). The claim-contact
   agreement is the precedent for server-resolved evidence copy (`apps/api/src/modules/claims/claim-contact-copy.ts`). Used only if SB8
@@ -241,7 +247,8 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   holds the spinner at most 5 s, ⛔ 15. *Cost (b):* a screen
   telling every member of a WhatsApp-less Pariwar about a channel they cannot have.
 - **SB4 — The reminder (popup).** ⭐ A rendered in-screen overlay (F16 pattern), shown when Continue is pressed with the box UNTICKED,
-  at most ONCE per visit to the step (a second unticked Continue proceeds directly). Two buttons, same component, size, theme and
+  at most ONCE, during signup only (a second unticked Continue on the step proceeds directly). The step is part of the one-time signup
+  wizard and every step moves on by `router.replace`, so a member is never asked again after signup (F5) — Settings never prompts. Two buttons, same component, size, theme and
   `height` — neither is `theme="accent"` — in BigDev's order: *"Go back and tick the box"*, then *"Continue without WhatsApp"*.
   "Go back" closes the overlay and leaves the box UNTICKED (I1) — the member ticks it themselves; the Android back gesture while the overlay is open = "Go back"
   (`BackHandler`, F16 precedent; removed on close/unmount). The overlay renders as a sibling of the ScrollView (F16).
@@ -255,7 +262,7 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   (SB9 (a)).
 - **SB6 — After a tick.** ⭐ No waiting and no polling in signup: once WhatsApp opens, the step shows `sent_title` / `sent_desc`, *"Open
   WhatsApp again"* (re-calls the mint — it re-uses the PENDING — then opens the link) and Continue. Codes are read as
-  `err instanceof ApiError && err.code` (F12). The step makes ONE attempt per visit: after the first ticked Continue, the NEXT Continue
+  `err instanceof ApiError && err.code` (F12). The step makes ONE attempt: after the first ticked Continue, the NEXT Continue
   always goes to `kyc`, never a second mint. Outcomes: 409 `wa_opt_in.already_active` → `kyc` at once (done); 409
   `wa_opt_in.channel_unavailable` → `kyc` at once (switched off meanwhile); any other rejection or a timeout → stay on the ask stage
   showing `request_failed` (*"…turn it on later in Settings"*, ⛔ *"try again"*), Continue → `kyc`; `Linking.openURL` rejects → stay on
@@ -330,7 +337,7 @@ box nor the reminder; while loading it shows a spinner only. *Legs:* one per bra
 **AC3 — The reminder, once, even-handed (I1, I4; SB4).** Given the box is unticked, when Continue is pressed the first time, then a
 rendered overlay (`accessibilityViewIsModal`, ⛔ `Alert.alert`) shows `popup_title`, `popup_body` and two buttons `popup_back` then
 `popup_proceed` with IDENTICAL size / theme / height props (neither `theme="accent"`). "Go back" closes it and the box is STILL UNTICKED;
-a second unticked Continue in the same visit proceeds to `kyc` with no overlay. "Continue without WhatsApp" proceeds to `kyc`. Neither
+a second unticked Continue on the step proceeds to `kyc` with no overlay. "Continue without WhatsApp" proceeds to `kyc`. Neither
 path calls `requestWaOptIn`. *Legs:* overlay renders; the two buttons' props compared equal; go-back leaves `checked === false`;
 second-Continue skips the overlay; proceed routes; `Alert.alert` never called; Android back
 while the overlay is open closes it and the box stays unticked (and the listener is removed after).
@@ -407,7 +414,7 @@ typed routes (F20).
         `tests/unit/workplace.test.ts:41-42`'s order assertion to the seven steps with a dated comment (F18a) — ⛔ delete it.
   - [ ] 3.2 `tc.tsx:128`: `router.replace('/(signup)/whatsapp')`.
   - [ ] 3.3 NEW `app/(signup)/whatsapp.tsx`: stages `loading → ask → sent`; the status load (bounded; AC2 branches → `kyc`); the
-        checkbox (F4 pattern); Continue with a busy guard; the reminder overlay (F16 pattern, a SIBLING of the ScrollView, `shownOnce` per mount, a
+        checkbox (F4 pattern); Continue with a busy guard; the reminder overlay (F16 pattern, a SIBLING of the ScrollView, a `shownOnce` flag, a
         `BackHandler` listener while open); the tick path (`requestWaOptIn` → `Linking.openURL`, both caught; codes via `ApiError`); the
         one-attempt rule and outcomes of SB6; announcements via `announcementPlan`; `STATUS_TIMEOUT_MS = 5_000` for the status read. ⚠ `t` NOT in any effect's deps — depend
         on `locale` (T1). Header comment cites the decision id and SB letters.
@@ -540,4 +547,5 @@ expiry; nothing on pre-checked boxes (the ratified §3.4 rule is stricter). No l
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-21 | 1.0 | Created by `bmad-create-story 5.10` (pinned `20fcb479`, branch `story/5-10-signup-whatsapp-opt-in-checkbox` in worktree `.claude/worktrees/5-10`). SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2. ⭐ Recommended design needs no API, contract, domain, worker or migration change. ⛔ validated yet. |
+| 2026-10-21 | 1.2 | BigDev asked whether the reminder repeats on every app open — it does ⛔: "once per visit" reworded to "once, during signup only — never after signup" (I4, SB4, SB6, AC3, Task 3.3). F8a added: how the number is verified (the sender's blind index + phrase). |
 | 2026-10-21 | 1.1 | Create-story checklist pass (one fresh-context verifier; 1 H / 8 M / 10 L, all applied): `workplace.test.ts` pins the step order (F18a, Task 3.1); scope wording "no change under `…/src`" (AC9's test edit); 409 codes via `ApiError` (F12, SB6); the one-attempt rule after a failed tick + `request_failed` copy; harness extended so prop legs bite (F19, Task 4.1); Android back (SB4, AC3); the §0 departure from the row's framing stated; AC9 re-scoped to the real-signup seed (F19a); friction row `forced`; cites corrected (`notifications.tsx:53`/`:56-70`, `payment.tsx:28`, `tc.tsx:195-217`); 5 s status bound; overlay as a ScrollView sibling; SB9 (b) → Row 19 for §5; epics placement. |

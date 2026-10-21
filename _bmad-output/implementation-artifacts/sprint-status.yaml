@@ -1,3 +1,14 @@
+# last_updated: 2026-10-21g (STORY 5.10 — CREATED by `bmad-create-story 5.10` on branch `story/5-10-signup-whatsapp-opt-in-checkbox`
+# (worktree `.claude/worktrees/5-10` — a peer session shares the main checkout; pinned `20fcb479`, 5.12 on `main` ⇒ the start condition
+# is MET): row `5-10-signup-whatsapp-opt-in-checkbox` `backlog` → `ready-for-dev`; story file `5-10-signup-whatsapp-opt-in-checkbox.md`
+# v1.1 (one fresh-context checklist verifier — 1 H / 8 M / 10 L, all applied). SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2. ⭐ The
+# recommended design (SB1 (a)): a NEW signup step after the Terms, an UNTICKED box; a tick makes the SAME request as the Settings enable
+# control (mint PENDING + open WhatsApp) and the member's own WhatsApp message turns it on — matching BOTH §3.4 and ADR-0029's ratified
+# "ACTIVE only by a matched inbound WhatsApp message"; ⛔ API / contract / domain / worker / migration change. A tick that switches
+# WhatsApp on BY ITSELF would widen ADR-0029 ⇒ kept out as PQ1 (a Panel question only if wanted) — the story states its departure from
+# the row comment's "in-app capture" framing. Counsel's DPDP view on the box is NOT recorded ⇒ carried as a go-live leg of the planned
+# roster row `wa-signup-box-hindi-reviewed` (⛔ backfilled). Owed at Task 0: the author-commit decision (next free id), the epics.md
+# entry, the roster row, a §3.4 dated note + ADR-0029 annotated row. ⛔ Other row moves.)
 # last_updated: 2026-10-21f (STORY 5.12 — LANDED on `main` by fast-forward: `origin/main` = `20fcb479` = the story-branch tip (0 ahead / 0 behind, verified after `git fetch origin`); PR #293 MERGED 2026-10-21T00:31:30Z. CI on #293: every quality job SUCCESS (incl. `test`, `integration-tests`); the one FAILURE, "Mirror release branch push to trustee-controlled location", is pre-existing — it has failed on every `main` push since at least 2026-10-18 (`ed862339`) and is not 5.12's. Row `5-12-whatsapp-yes-lasts-until-withdrawn` stays done. ⛔ Other row moves.)
 # last_updated: 2026-10-21e (STORY 5.12 — the told item `trustee-panel-told-2026-10-21-5-12-whatsapp-yes-residuals.md` is TOLD (BigDev: "panel note has been sent"): its status line; story v1.8. Branch pushed, PR #293 open; landing by fast-forward after CI. Row 5-12 stays done. ⛔ Other row moves.)
 # last_updated: 2026-10-21d (STORY 5.12 — SECOND CODE REVIEW CLOSED (`bmad-code-review 5.12`, whole branch `ec6d826e..5022a43c`, three layers in parallel; BigDev: "B, go ahead in parallel", then "1"): 0 decision / 14 patch / 4 defer / 12 dismissed; a fresh-context review of the patch diff (0 H / 2 M / 11 L) applied before commit. Fixes `b64dd462` + `dea4e5d1` (the WA webhook processor's own 2-connection pool; the settings screen's bounded calls, focus-gated polling, per-source errors, fresh re-reads, announcements; comment / test / record corrections). ci:local on :5433: FAILED 1 job at `b64dd462` (a mobile frame race in the fix), PASSED 36/36 at `dea4e5d1`. W1–W4 → deferred-work (round 2). Row `5-12-whatsapp-yes-lasts-until-withdrawn` stays done; branch unpushed, ⛔ on main. ⛔ Other row moves.)
@@ -20559,7 +20570,11 @@ development_status:
   # 2026-10-17-6-31-how-long-a-whatsapp-yes-lasts.md`, ⛔ sent). Counsel's DPDP view on the capture recorded. ⛔ Story file; ⛔ epics.md entry.
   # ⭐ 2026-10-19 ANNOTATION (the comment above is kept as written): the Panel RULED 6.31's note — `-364` option A, a yes lasts until
   # withdrawn; built by row 5-12. This box's reach follows row 5-12; no Panel ruling is still owed.
-  5-10-signup-whatsapp-opt-in-checkbox: backlog
+  # ⭐ 2026-10-21 (`bmad-create-story 5.10`, ledger `2026-10-21g`): story file `5-10-signup-whatsapp-opt-in-checkbox.md` CREATED
+  # (pinned `20fcb479`; branch `story/5-10-signup-whatsapp-opt-in-checkbox`); SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2; the
+  # epics.md entry is owed at Task 0.4. ⚠ The recommended box ASKS (a PENDING + the member's WhatsApp message), so the "consent row +
+  # `member_wa_opt_in` write" above is the worker's, already built by 5.4 — see the story's §0 departure note. The comment above is kept as written.
+  5-10-signup-whatsapp-opt-in-checkbox: ready-for-dev
   # ⭐ 2026-10-19 ADDED (BigDev, in session: *"Yes, add it"*, asked how a member hears of the pool they are assigned to): the per-member
   # SMS fallback is DARK — every v1 alert template was ONE whole-body variable, ⛔ registrable under TRAI's 30 %-fixed rule (Story 6.34
   # TV6; `sms-dlt-registry.ts`; roster Row 30 note (1)) — so ⛔ alert SMS goes today and a member who misses push / the app misses the

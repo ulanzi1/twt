@@ -223,4 +223,19 @@ describe.skipIf(!hasDatabase)('Story 5.13 — the WhatsApp code accessors (membe
     expect(await consumeCode(tx, { pariwarId: toPariwarId(PARIWAR_B), codeId: bCode })).toBe(false);
     expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: bCode })).toBe(false);
   });
+
+  it('⭐ review P2 — a code that expires WHILE the transaction waits is ⛔ live: the predicate reads the ADVANCING clock (⛔ the frozen now())', async () => {
+    const { client, tx } = getTx();
+    // The transaction is already open (one BEGIN — its now() is frozen here). A code that is live NOW and dies one second later.
+    const m = await seedMember(client);
+    const code = await seedCode(client, m, { seq: 1, agoSeconds: 0, ttlSeconds: 1 });
+    await enterAppScope(client, PARIWAR_A);
+    expect(await findLiveCodes(tx, m)).toHaveLength(1);
+    // The wait — the verify's advisory lock / audit write in production.
+    await client.query('SELECT pg_sleep(1.2)');
+    expect(await findLiveCodes(tx, m)).toHaveLength(0);
+    expect(await getCodeState(tx, m)).toMatchObject({ liveCode: false, liveCodeDelivery: null });
+    expect(await recordWrongAttempt(tx, m)).toMatchObject({ attemptsRemaining: 0, liveCode: false });
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: code })).toBe(false);
+  });
 });

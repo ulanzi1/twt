@@ -79,7 +79,7 @@ S = Task 0.1 STOP conditions.
 
 # Story 5.13: A WhatsApp Code for a Member Whose WhatsApp Is on Another Phone — Sent Only When They Ask, at Most Twice, and Typed Back in the App to Switch WhatsApp On `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 5.10 built an unticked *"Send me WhatsApp messages from TWT"* box on its own signup
 > step. A tick mints a PENDING request and opens WhatsApp with a short phrase to send to TWT; the member's own message, from their
@@ -1023,12 +1023,12 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
 
 Full code review, 2026-10-21, baseline `bac71abb` → `fa8f9b3e`: Blind Hunter, Edge Case Hunter and Acceptance Auditor, independently reviewed and deduplicated. **0 decision-needed, 6 patch (P2), 0 defer, 3 dismissed.** These are engineering corrections; no Panel ruling is required. **Disposition:** BigDev chose option 2, "Leave as action items". All six remain unchecked; no implementation patches applied. Story and sprint status → `in-progress` because the findings remain unresolved.
 
-- [ ] [Review][Patch] **P2 — Restore the form after an in-flight request is invalidated by blur.** Blur increments `version`, but both send and confirm clear rendered `busy` only when `current()` remains true. Returning to the still-mounted screen after the call settles leaves Send/Resend/Confirm disabled indefinitely. Clear lifecycle busy state without accepting stale response data, and test blur → settle → refocus for send and verify. Violates AC9/WC7; invariant family 1. [apps/mobile/components/notifications/use-wa-code.ts:180]
-- [ ] [Review][Patch] **P2 — Keep a send control when an uncertain request is followed by a released retry.** An unknown first send sets `told: true`. A subsequent `code_send_failed` with `codesRemaining: 2, liveCode: false` preserves `told` but hides the field and fallback; `showSend` requires `!told`, while `showResend` only permits counts 1/null. Both controls disappear although two counted sends remain available. Preserve a recovery control for this reachable state, including a `code_resend_too_soon` response with two remaining after a rate-limited release. Violates AC9/I6; invariant family 1. [apps/mobile/components/notifications/use-wa-code.ts:249]
-- [ ] [Review][Patch] **P2 — Preserve the phrase fallback when sending is blocked and the live code dies.** Start with `codeAvailable: false, liveCode: true, codesRemaining: 1`: the mint correctly opens the field plus the number/phrase. A verify response `code_no_longer_valid`, or final `code_wrong`, recomputes `closed` from the remaining count alone and hides that fallback while `sendBlocked` still hides both send controls. Keep the closed route visible whenever sending is blocked and the request itself has not lapsed. Violates AC1/AC9/I6. [apps/mobile/components/notifications/use-wa-code.ts:233]
-- [ ] [Review][Patch] **P2 — Normalize formatted code pastes before limiting their length.** Native `maxLength={6}` truncates `123 456` to `123 45` before `onChangeText` strips spaces, leaving `12345` and a disabled Confirm. Verified in the installed React Native Fabric and legacy iOS input implementations; the jsdom Input mock forwards neither native truncation nor `maxLength`, so its existing paste leg misses this. Keep the six-digit limit after normalization and exercise native-equivalent input handling. Violates AC9's explicit formatted-paste leg; Task 5.4's input-mock requirement. [apps/mobile/components/notifications/WaCodeEntry.tsx:80]
-- [ ] [Review][Patch] **P2 — Announce entry into the resend-wait state.** `rate_limit.exceeded` and `code_resend_too_soon` only set the countdown; `waCode.resend_wait` appears in a plain Paragraph with no live region or announcement. Screen-reader users receive no explanation when their action disables the button. Announce the transition through the shared announcement pattern, without speaking every countdown tick. Violates invariant family 13(d) for AC9-reachable states. [apps/mobile/components/notifications/WaCodeEntry.tsx:110]
-- [ ] [Review][Patch] **P2 — Enforce expiry against the current database clock at consumption.** `liveWhere()` uses PostgreSQL `now()`, which is fixed at transaction start. Verify opens the transaction before waiting for the member advisory lock and audit write; a transaction begun just before code expiry can therefore consume it after the ten-minute deadline. Use the advancing database clock for the final live/consume predicate, keep the SQL predicates consistent, and test an expiry crossed while the transaction waits. Source-validated; the existing expiry leg only starts verification after the code has already expired. Violates WC3's ten-minute lifetime and AC4's expired-code refusal. [packages/domain/src/wa-opt-in/code.ts:330]
+- [x] [Review][Patch] **P2 — Restore the form after an in-flight request is invalidated by blur.** Blur increments `version`, but both send and confirm clear rendered `busy` only when `current()` remains true. Returning to the still-mounted screen after the call settles leaves Send/Resend/Confirm disabled indefinitely. Clear lifecycle busy state without accepting stale response data, and test blur → settle → refocus for send and verify. Violates AC9/WC7; invariant family 1. [apps/mobile/components/notifications/use-wa-code.ts:180]
+- [x] [Review][Patch] **P2 — Keep a send control when an uncertain request is followed by a released retry.** An unknown first send sets `told: true`. A subsequent `code_send_failed` with `codesRemaining: 2, liveCode: false` preserves `told` but hides the field and fallback; `showSend` requires `!told`, while `showResend` only permits counts 1/null. Both controls disappear although two counted sends remain available. Preserve a recovery control for this reachable state, including a `code_resend_too_soon` response with two remaining after a rate-limited release. Violates AC9/I6; invariant family 1. [apps/mobile/components/notifications/use-wa-code.ts:249]
+- [x] [Review][Patch] **P2 — Preserve the phrase fallback when sending is blocked and the live code dies.** Start with `codeAvailable: false, liveCode: true, codesRemaining: 1`: the mint correctly opens the field plus the number/phrase. A verify response `code_no_longer_valid`, or final `code_wrong`, recomputes `closed` from the remaining count alone and hides that fallback while `sendBlocked` still hides both send controls. Keep the closed route visible whenever sending is blocked and the request itself has not lapsed. Violates AC1/AC9/I6. [apps/mobile/components/notifications/use-wa-code.ts:233]
+- [x] [Review][Patch] **P2 — Normalize formatted code pastes before limiting their length.** Native `maxLength={6}` truncates `123 456` to `123 45` before `onChangeText` strips spaces, leaving `12345` and a disabled Confirm. Verified in the installed React Native Fabric and legacy iOS input implementations; the jsdom Input mock forwards neither native truncation nor `maxLength`, so its existing paste leg misses this. Keep the six-digit limit after normalization and exercise native-equivalent input handling. Violates AC9's explicit formatted-paste leg; Task 5.4's input-mock requirement. [apps/mobile/components/notifications/WaCodeEntry.tsx:80]
+- [x] [Review][Patch] **P2 — Announce entry into the resend-wait state.** `rate_limit.exceeded` and `code_resend_too_soon` only set the countdown; `waCode.resend_wait` appears in a plain Paragraph with no live region or announcement. Screen-reader users receive no explanation when their action disables the button. Announce the transition through the shared announcement pattern, without speaking every countdown tick. Violates invariant family 13(d) for AC9-reachable states. [apps/mobile/components/notifications/WaCodeEntry.tsx:110]
+- [x] [Review][Patch] **P2 — Enforce expiry against the current database clock at consumption.** `liveWhere()` uses PostgreSQL `now()`, which is fixed at transaction start. Verify opens the transaction before waiting for the member advisory lock and audit write; a transaction begun just before code expiry can therefore consume it after the ten-minute deadline. Use the advancing database clock for the final live/consume predicate, keep the SQL predicates consistent, and test an expiry crossed while the transaction waits. Source-validated; the existing expiry leg only starts verification after the code has already expired. Violates WC3's ten-minute lifetime and AC4's expired-code refusal. [packages/domain/src/wa-opt-in/code.ts:330]
 
 **Verification:** focused existing suites passed **234/234**: mobile step/render/copy 142, channels authentication shape 4, contracts 13, live domain accessors/RLS 36, live API 39. Live tests ran on :5433 after sandbox network escalation; no migrations or constraint changes were made. Four isolated regression probes in `/private/tmp/twt513-review/wa-code-review.test.ts` reproduced the blur, unknown-send/released-retry, blocked-send fallback, and wait-announcement failures. Native paste handling was traced in installed React Native source; expiry was validated by transaction/predicate inspection. No device accessibility or native-input run is claimed.
 
@@ -1236,11 +1236,30 @@ added/amended) — declaration affirmed"* (basis `row`); contracts vitest 1412/1
 predicted); mobile `tsc` green WITH `.expo/types` and with it moved aside; **`ci:local` on :5433 with `DATABASE_URL` set (⛔
 `env -u`) at `4856bded`: *"ci:local PASSED — 36 job(s) green"*** (integration-tests included).
 
+**(c2) Gate outputs — the review patches (2026-10-21):** `DATABASE_URL=…:5433 pnpm ci:local` ⇒ *"ci:local PASSED — 36 job(s)
+green"* (exit 0) on the working tree that is the v1.8 commit. Mobile vitest 78 files / 1267 tests; mobile `tsc` with AND without
+`.expo/types`; domain `tsc`; eslint on the six touched files — all clean.
+
 **(d) Dev-DB side effects:** 0178 applied to :5433 (`pnpm db:migrate`, 2026-10-21) — ⛔ yet to :5432 (the pre-push hook will, if
 pushed with the shell's URL — [[project_prepush_hook_inherits_5432]]). The RED proof (i) replaced the guard function and dropped the
 index on :5433 for one run, then re-created both from the migration text (the spec's LOCKSTEP leg re-reads the function source).
 
 **(g) WC11 (a) — the told item SENT (2026-10-21):** BigDev, verbatim: *"note for panel has been sent"* ⇒ `trustee-panel-told-2026-10-21-5-13-whatsapp-code-as-built.md` is TOLD (its Status line updated; the text is kept as sent). ⛔ a ruling was asked; ⛔ answer is awaited — if the Panel replies, that reply is recorded here and judged against `-376` (a reply that rules is a new decision, ⛔ an edit of this one).
+
+**(h) Code-review patches — RED proofs (2026-10-21, `bmad-dev-story` review continuation, on `68fcf24c`):** every leg written
+FIRST and run RED against the unpatched code. Domain (live, :5433 with `DATABASE_URL` set): *"a code that expires WHILE the transaction
+waits"* — `findLiveCodes` returned the dead code after `pg_sleep(1.2)` inside one BEGIN (`expected … length of +0 but got 1`). Mobile
+(`wa-code-entry-render.test.ts`): 11 RED — blur→settle→refocus after a send AND after a verify (Send / Confirm stayed disabled), the
+unknown-send-then-released-retry and unknown-send-then-`code_resend_too_soon`-with-2 legs (`Unable to find … wa-code-resend`), both
+blocked-send fallback legs (`code_no_longer_valid` and a final `code_wrong` with 1 left — the number + phrase vanished), the
+native-truncation paste leg plus the two existing field / paste legs (the Input mock now truncates to `maxLength` like React Native, so
+`maxLength={6}` turned "123 456" into "12345"), and both wait-announcement legs. ⚠ Found while writing them: the two unknown-send legs
+were first VACUOUS — the countdown interval had started under REAL timers, so advancing fake timers never ran the 60 s wait out and the
+resend press never fired (one passed with ⛔ fix); rewritten so fake timers start BEFORE the first send (a helper asserts resend is
+enabled before pressing), then both RED for the right reason. The reviewer's four probes (`/private/tmp/twt513-review/`) also pass on the
+patch; that file's stale copy of the field leg still asserts `maxLength: 6` (the intended change). ⚠ Dev-DB note: two exploratory domain
+runs went to **:5432** (the profile's `DATABASE_URL` — an `export` in one shell call does ⛔ persist to the next); they failed at once with
+42P01 (0178 is ⛔ on :5432) inside per-test BEGIN/ROLLBACK — ⛔ migration, ⛔ residue. Every run recorded here is on :5433.
 
 **(a) Task 0.2 — BigDev's answer, verbatim (2026-10-21, in session, after the v1.5 validate):** *"all recommendation accepted for
 WC1–WC17"*. Each WC resolves to its ⭐ option:
@@ -1311,6 +1330,36 @@ product owner — whether it discharges Row 28's human-review control is recorde
   that hook would ⛔ re-speak identical text), both platforms. (4) A verify whose code is `wa_opt_in.code_wrong` with unparseable details
   shows `wrong_final` + the closed route (the spec's "treated as ⛔ details" — ⛔ a dead end). (5) The mint's Secret Manager reads are
   ⛔ cancelled by the 2 s race (WC4's stated cost).
+- **Code-review continuation (2026-10-21, `bmad-dev-story`; story v1.8)** — all six P2 action items patched, each proved RED first
+  (Debug Log (h)):
+  - ✅ Resolved review finding [P2]: restore the form after an in-flight request is invalidated by blur — `use-wa-code.ts` clears
+    `busy` in BOTH `finally` blocks unconditionally (the late DATA is still dropped by the version counter; after unmount the setState is
+    a no-op). Legs: blur → settle → refocus for send and for verify.
+  - ✅ Resolved review finding [P2]: keep a send control when an uncertain request is followed by a released retry — `showResend` is now
+    `sendable && told` (any count left: 1, unknown, or 2 after a told-but-released send). Legs: a released retry and a
+    `code_resend_too_soon` with 2 left after an unknown first send.
+  - ✅ Resolved review finding [P2]: preserve the phrase fallback when sending is blocked and the live code dies — the hook returns
+    `closed: state.closed || state.sendBlocked` (one rule, ⛔ per-arm). Legs: `code_no_longer_valid` and a final `code_wrong` on a
+    `codeAvailable: false` + `liveCode` open.
+  - ✅ Resolved review finding [P2]: normalize formatted code pastes before limiting their length — `WaCodeEntry` drops native
+    `maxLength`; the hook's `setCode` (digits only, `.slice(0, 6)`) is the six-digit limit. The test Input mock now truncates to
+    `maxLength` before `onChangeText` as React Native does. ⚠ **Deviation from the literal text** of WC7 / AC9 (`maxLength={6}`), taken
+    to satisfy AC9's own paste leg (*"a pasted '123 456' becomes '123456'"*) — the two could ⛔ both hold on a device. Cost: typing a
+    7th digit may flash for a frame before the controlled value reverts.
+  - ✅ Resolved review finding [P2]: announce entry into the resend-wait state — a `waitCount` bumped only by `rate_limit.exceeded` and
+    `code_resend_too_soon` (a press answered by a wait ALONE); `WaCodeEntry` speaks `waCode.resend_wait` on it, both platforms (the
+    `sent` line's convention), ⛔ per countdown tick, ⛔ on a 200 with a wait (`sent` already speaks). Legs: once per entry, again on a
+    second entry, ⛔ for a told send.
+  - ✅ Resolved review finding [P2]: enforce expiry against the current database clock at consumption — `liveWhere()` / `liveSql()` and
+    `getCodeState`'s newest-live subquery read `clock_timestamp()` (⛔ `now()`, frozen at BEGIN); `consumed_at` / `invalidated_at` stay
+    `now()` (recorded timestamps, ⛔ a predicate). Leg: a 1 s code, `pg_sleep(1.2)` in the same transaction ⇒ ⛔ found, ⛔ in the state,
+    ⛔ a wrong-attempt target, ⛔ consumed. ⚠ Residual (self-review of the patch): the verify reads `findLiveCodes`, then
+    `getCurrentMemberState` and the audit insert (servicePool) before `consumeCode`, so a correct code that dies IN that gap is now
+    refused at consume (the existing `throw` ⇒ `_rolled_back` + a 500) — newly reachable, since both reads used one frozen `now()`
+    before. The app's default arm re-reads status once ⇒ PENDING ⇒ `verify_failed`, the field kept; a retry gets `code_no_longer_valid`
+    (⛔ dead end). A direct `code_no_longer_valid` for that gap is ⛔ built (no task maps to it).
+  - Verified: mobile 1267/1267 (78 files), domain wa-opt-in + RLS + cross-Pariwar 61/61 and API wa-opt-in 55/55 on :5433, `tsc` mobile
+    both ways + domain, eslint on the touched files — and `ci:local` (Debug Log (c2)).
 - ⛔ **Not done here (by design):** ⛔ pushed (Task 7 — BigDev's go-ahead; push with `DATABASE_URL` on :5433); 0178 is ⛔ applied to
   :5432; ⛔ device run (native layout, a real screen reader, a real Meta template) — Row 39's legs and the told item stand as recorded.
 
@@ -1340,10 +1389,16 @@ Modified: `packages/domain/migrations/meta/_journal.json`, `packages/domain/src/
 `_bmad-output/implementation-artifacts/sprint-status.yaml`, this story file. (Records committed earlier — Task 0.3 / 0.4 — are in
 their own commits `7bc9dbf8`, `f4645c0c`, `a001f0db`.)
 
+Review patches (v1.8): `apps/mobile/components/notifications/{use-wa-code.ts,WaCodeEntry.tsx}`,
+`apps/mobile/tests/unit/wa-code-entry-render.test.ts`, `packages/domain/src/wa-opt-in/code.ts`,
+`packages/domain/tests/integration/wa-opt-in/wa-opt-in-codes.spec.ts`, `_bmad-output/implementation-artifacts/sprint-status.yaml`,
+this story file.
+
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-21 | 1.8 | `bmad-dev-story` review continuation — Addressed code review findings - 6 items resolved (Date: 2026-10-21): blur no longer strands the form busy; a told member keeps "Send another code" whenever a send is left; blocked sending always keeps the number + phrase; native `maxLength` dropped (the hook keeps six — a deviation from WC7 / AC9's literal prop, for AC9's paste leg); entering a resend wait is spoken; code expiry reads `clock_timestamp()`. Each leg RED first (Debug Log (h)). Status in-progress → review; ledger `2026-10-21z`. ⛔ Pushed. |
 | 2026-10-21 | 1.7 | Full `bmad-code-review`: six P2 patch findings recorded under Tasks / Subtasks → Review Findings; no decision-needed or deferred findings, three dismissed. Focused existing suites passed 234/234; four isolated regression probes reproduced failures. BigDev chose option 2, "Leave as action items"; all six remain open, no implementation patches applied. Story and sprint status `review` → `in-progress`. |
 | 2026-10-21 | 1.6 | `bmad-dev-story` — Tasks 1–7 DONE; code commit `4856bded` (migration 0178, domain `code.ts`, the authentication-template shape, the template key moved to channels, the send / verify routes, the mint's code fields, the app's code form, `waCode.*`); RED proofs, gate outputs and `ci:local` 36/36 on :5433 in the Debug Log; Status → review; ledger `2026-10-21y`. ⛔ Pushed. |
 | 2026-10-21 | 1.5 | Fourth fresh-context round (on v1.4) — **0 BLOCKER / 0 HIGH** / 5 M / 9 L; ALL applied; the rounds stop here (HIGH 1 → 1 → 1 → 0). **M** `liveCodeDelivery` reached the builders and tests (`getCodeState`, Task 4.4's fields + fallback, AC1's API legs, the `MINTED` fixture, the header); ONE definition of TOLD (a 200, a non-`ApiError` Send, a ≥ 500 with unparseable details, or the mint's `liveCode`) at WC7, AC9 and the words footer; a mint-driven open with `codeAvailable: false` shows the closed route and ⛔ send / resend button whatever `codesRemaining` says (WC7, AC1); `OtherPhoneDetails` after a failed send only once a counted send exists (AC9's arm now agrees with its leg and WC3); the 429 arm wins over the unparseable-details catch-all, which is now `wa_opt_in.*`-only. **L** step-0 vs between-steps KMS lines (AC2); WC4 / words / I6 stale lines under the new render rule; the mint keeps the database-derived fields when only Secret Manager fails; WC2's refusal union gains `channel_unavailable`; AC2's source leg names the WC17 exception; v1.4's "6 L" was 10; step 1 still WRITES a KMS audit line and maps a null ciphertext; "read-only" defined (⛔ a mode of `openScopeTx`); AC3's HTTP concurrency leg moved to Task 4.6. |

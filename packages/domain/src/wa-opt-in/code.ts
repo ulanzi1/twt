@@ -127,7 +127,7 @@ export async function getCodeState(db: Db, args: { pariwarId: PariwarId; optInId
       (SELECT c2.send_outcome FROM member_wa_opt_in_codes c2
         WHERE c2.pariwar_id = ${args.pariwarId} AND c2.opt_in_id = ${args.optInId}
           AND c2.send_outcome IN ('sending', 'accepted', 'may_have_sent') AND c2.consumed_at IS NULL AND c2.invalidated_at IS NULL
-          AND c2.expires_at > now()
+          AND c2.expires_at > clock_timestamp()
         ORDER BY c2.created_at DESC, c2.send_seq DESC LIMIT 1) AS newest_live_outcome,
       (SELECT ceil(${WA_OPT_IN_CODE_RESEND_WAIT_SECONDS}::numeric - extract(epoch FROM clock_timestamp() - max(c3.created_at)))::int
          FROM member_wa_opt_in_codes c3
@@ -308,7 +308,7 @@ export async function recordWrongAttempt(
 
 /**
  * Consume the matched code (WC5 step 2 — the correct-code `mutate`), atomically: `WHERE consumed_at IS NULL AND invalidated_at IS
- * NULL AND attempts < 2 AND expires_at > now()` (and a live outcome). Returns whether it was consumed (false ⇒ the caller throws
+ * NULL AND attempts < 2 AND expires_at > clock_timestamp()` (and a live outcome). Returns whether it was consumed (false ⇒ the caller throws
  * inside the wrapper — the whole activation rolls back).
  */
 export async function consumeCode(db: Db, args: { pariwarId: PariwarId; codeId: string }): Promise<boolean> {
@@ -320,19 +320,23 @@ export async function consumeCode(db: Db, args: { pariwarId: PariwarId; codeId: 
   return done.length === 1;
 }
 
-/** The live-code predicate (Drizzle) — ⚠ LOCKSTEP with `liveSql()` below. */
+/**
+ * The live-code predicate (Drizzle) — ⚠ LOCKSTEP with `liveSql()` below. Expiry reads `clock_timestamp()` (the ADVANCING clock):
+ * `now()` is frozen at BEGIN, and the verify opens its transaction before waiting on the member lock, so a code could otherwise be
+ * consumed after its ten minutes (code review P2, 2026-10-21).
+ */
 function liveWhere() {
   return and(
     inArray(memberWaOptInCodes.sendOutcome, [...LIVE_OUTCOMES]),
     isNull(memberWaOptInCodes.consumedAt),
     isNull(memberWaOptInCodes.invalidatedAt),
     lt(memberWaOptInCodes.attempts, WA_OPT_IN_CODE_MAX_ATTEMPTS),
-    gt(memberWaOptInCodes.expiresAt, sql`now()`),
+    gt(memberWaOptInCodes.expiresAt, sql`clock_timestamp()`),
   );
 }
 
 /** The live-code predicate (raw SQL, unqualified columns) — ⚠ LOCKSTEP with `liveWhere()` above. */
 function liveSql() {
   return sql`send_outcome IN ('sending', 'accepted', 'may_have_sent') AND consumed_at IS NULL AND invalidated_at IS NULL
-    AND attempts < ${WA_OPT_IN_CODE_MAX_ATTEMPTS} AND expires_at > now()`;
+    AND attempts < ${WA_OPT_IN_CODE_MAX_ATTEMPTS} AND expires_at > clock_timestamp()`;
 }

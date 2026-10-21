@@ -102,7 +102,9 @@ vi.mock('tamagui', async () => {
       if (props.testID) mock.inputs[props.testID] = props
       return createElement('input', {
         value: props.value ?? '', 'data-testid': props.testID, 'aria-label': props.accessibilityLabel,
-        onChange: (e: { target: { value: string } }) => props.onChangeText?.(e.target.value),
+        // Native-equivalent: React Native truncates the incoming text to `maxLength` BEFORE `onChangeText` (code review P2).
+        onChange: (e: { target: { value: string } }) =>
+          props.onChangeText?.(typeof props.maxLength === 'number' ? e.target.value.slice(0, props.maxLength) : e.target.value),
       })
     },
     Button: (props: Record<string, unknown> & { children?: ReactNode; onPress?: () => void; disabled?: boolean; testID?: string;
@@ -250,7 +252,9 @@ describe('AC9 — Send', () => {
     await press('wa-code-send')
     expect(get('wa-code-status')).toHaveTextContent(words['waCode.sent']!)
     const input = mock.inputs['wa-code-input']!
-    expect(input).toMatchObject({ keyboardType: 'number-pad', maxLength: 6, accessibilityLabel: words['waCode.input_label'] })
+    expect(input).toMatchObject({ keyboardType: 'number-pad', accessibilityLabel: words['waCode.input_label'] })
+    // ⛔ native maxLength — it would cut a pasted "123 456" BEFORE the digits-only filter; the hook keeps six (code review P2).
+    expect(input.maxLength).toBeUndefined()
     expect('textContentType' in input).toBe(false)
     expect('autoComplete' in input).toBe(false)
     expect(get('wa-code-confirm')).toBeDisabled()
@@ -582,6 +586,137 @@ describe('AC9 — Verify', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(15_000) })
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })
     expect(alertText()).toBe(words['waCode.verify_failed'])
+  })
+})
+
+describe('code review 2026-10-21 — the six P2 patches (the app\'s five)', () => {
+  const blur = () => act(() => { mock.focused = false; for (const sync of mock.focusListeners) sync() })
+  const refocus = () => act(() => { mock.focused = true; for (const sync of mock.focusListeners) sync() })
+  /** A Send whose answer never parses (⛔ ApiError) ⇒ told, count unknown, a 60 s wait — run out under fake timers (the interval
+   *  must START under them), then resend is pressable. */
+  async function unknownSendThenWaitOut() {
+    mock.sendWaOptInCode.mockRejectedValueOnce(new TypeError('Network request failed'))
+    vi.useFakeTimers()
+    await act(async () => { fireEvent.click(get('wa-code-send')) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(get('wa-code-resend')).toBeDisabled()
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000) })
+    vi.useRealTimers()
+    expect(get('wa-code-resend')).toBeEnabled()
+  }
+
+  it('P2 blur → settle → refocus after a SEND ⇒ the dropped result is ⛔ shown, and Send is ENABLED again (⛔ busy forever)', async () => {
+    let resolve!: (v: unknown) => void
+    mock.sendWaOptInCode.mockReturnValueOnce(new Promise((r) => { resolve = r }))
+    await toSent(OFFER)
+    expand()
+    await act(async () => { fireEvent.click(get('wa-code-send')) })
+    blur()
+    await act(async () => { resolve({ delivery: 'sent', codesRemaining: 1, retryAfterSeconds: 60 }) })
+    await settle()
+    refocus()
+    expect(q('wa-code-status')).toBeNull()
+    expect(get('wa-code-send')).toBeEnabled()
+    mock.sendWaOptInCode.mockResolvedValueOnce({ delivery: 'sent', codesRemaining: 0, retryAfterSeconds: null })
+    await press('wa-code-send')
+    expect(get('wa-code-status')).toHaveTextContent(words['waCode.sent']!)
+  })
+
+  it('P2 blur → settle → refocus after a VERIFY ⇒ the dropped result is ⛔ shown, and Confirm is ENABLED again', async () => {
+    let reject!: (e: unknown) => void
+    mock.verifyWaOptInCode.mockReturnValueOnce(new Promise((_r, j) => { reject = j }))
+    await toSent({ ...OFFER, liveCode: true, codesRemaining: 1, liveCodeDelivery: 'sent' })
+    typeCode('123456')
+    await act(async () => { fireEvent.click(get('wa-code-confirm')) })
+    expect(get('wa-code-confirm')).toBeDisabled()
+    blur()
+    await act(async () => { reject(err(409, 'wa_opt_in.code_wrong', details({ attemptsRemaining: 1, liveCode: true }))) })
+    await settle()
+    refocus()
+    expect(alertText()).toBeNull()
+    expect(get('wa-code-confirm')).toBeEnabled()
+  })
+
+  it('P2 an UNKNOWN first send, then a RELEASED retry (2 left) ⇒ a send control stays (enabled), ⛔ dead end', async () => {
+    await toSent(OFFER)
+    expand()
+    await unknownSendThenWaitOut()
+    expect(get('wa-code-status')).toHaveTextContent(words['waCode.sent_uncertain']!)
+    mock.sendWaOptInCode.mockRejectedValueOnce(err(502, 'wa_opt_in.code_send_failed', details({ codesRemaining: 2, liveCode: false, retryAfterSeconds: null })))
+    await press('wa-code-resend')
+    expect(alertText()).toBe(words['waCode.send_failed'])
+    expect(get('wa-code-resend')).toBeEnabled()
+    expect(q('wa-other-phone-details')).toBeNull()
+  })
+
+  it('P2 an UNKNOWN first send, then code_resend_too_soon with 2 left (a rate-limited release) ⇒ the send control shows, disabled for the wait', async () => {
+    await toSent(OFFER)
+    expand()
+    await unknownSendThenWaitOut()
+    mock.sendWaOptInCode.mockRejectedValueOnce(err(409, 'wa_opt_in.code_resend_too_soon', details({ codesRemaining: 2, liveCode: false, retryAfterSeconds: 30 })))
+    await press('wa-code-resend')
+    expect(get('wa-code-resend')).toBeDisabled()
+    expect(get('wa-code-wait')).toHaveTextContent(words['waCode.resend_wait']!)
+  })
+
+  it.each([
+    ['code_no_longer_valid (1 left)', err(409, 'wa_opt_in.code_no_longer_valid', details({ codesRemaining: 1, liveCode: false })), 'waCode.no_longer_valid'],
+    ['a final code_wrong (1 left)', err(409, 'wa_opt_in.code_wrong', details({ attemptsRemaining: 0, codesRemaining: 1, liveCode: false })), 'waCode.wrong_final'],
+  ])('P2 sending BLOCKED (codeAvailable false) + the live code dies by %s ⇒ the number + phrase STAY (⛔ dead end)', async (_n, e, key) => {
+    await toSent({ ...CLOSED, liveCode: true, codesRemaining: 1, liveCodeDelivery: 'sent' })
+    expect(get('wa-other-phone-number')).toBeInTheDocument()
+    typeCode('123456')
+    mock.verifyWaOptInCode.mockRejectedValueOnce(e)
+    await press('wa-code-confirm')
+    expect(alertText()).toBe(words[key])
+    expect(get('wa-other-phone-number')).toHaveTextContent('+91 98765 43210')
+    expect(get('wa-other-phone-phrase')).toHaveTextContent('TWT-ABCDEFGH')
+    expect(q('wa-code-send')).toBeNull()
+    expect(q('wa-code-resend')).toBeNull()
+  })
+
+  it('P2 a pasted "123 456" survives NATIVE maxLength handling (the mock truncates like React Native) ⇒ "123456", Confirm enabled', async () => {
+    await toSent({ ...OFFER, liveCode: true, codesRemaining: 1, liveCodeDelivery: 'sent' })
+    typeCode('123 456')
+    expect(get('wa-code-input')).toHaveValue('123456')
+    expect(get('wa-code-confirm')).toBeEnabled()
+    typeCode(' 123-456 ')
+    expect(get('wa-code-input')).toHaveValue('123456')
+    typeCode('12345678')
+    expect(get('wa-code-input')).toHaveValue('123456')
+  })
+
+  it.each([
+    ['429 rate_limit.exceeded', err(429, 'rate_limit.exceeded')],
+    ['code_resend_too_soon', err(409, 'wa_opt_in.code_resend_too_soon', details({ codesRemaining: 2, liveCode: false, retryAfterSeconds: 40 }))],
+  ])('P2 entering the wait by %s is SPOKEN once (⛔ each countdown tick); a second entry is spoken again', async (_n, e) => {
+    await toSent(OFFER)
+    expand()
+    const spoken = () => mock.announce.mock.calls.filter(([t]) => t === words['waCode.resend_wait']).length
+    mock.sendWaOptInCode.mockRejectedValueOnce(e)
+    vi.useFakeTimers()
+    await act(async () => { fireEvent.click(get('wa-code-send')) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(get('wa-code-wait')).toHaveTextContent(words['waCode.resend_wait']!)
+    expect(spoken()).toBe(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    expect(get('wa-code-wait')).toBeInTheDocument()
+    expect(spoken()).toBe(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000) })
+    vi.useRealTimers()
+    expect(q('wa-code-wait')).toBeNull()
+    mock.sendWaOptInCode.mockRejectedValueOnce(e)
+    await press('wa-code-send')
+    expect(spoken()).toBe(2)
+  })
+
+  it('P2 a send told WITH a wait (200, retryAfterSeconds) speaks waCode.sent ONLY — ⛔ resend_wait on top', async () => {
+    mock.sendWaOptInCode.mockResolvedValue({ delivery: 'sent', codesRemaining: 1, retryAfterSeconds: 60 })
+    await toSent(OFFER)
+    expand()
+    await press('wa-code-send')
+    expect(get('wa-code-wait')).toBeInTheDocument()
+    expect(mock.announce.mock.calls.filter(([t]) => t === words['waCode.resend_wait'])).toHaveLength(0)
   })
 })
 

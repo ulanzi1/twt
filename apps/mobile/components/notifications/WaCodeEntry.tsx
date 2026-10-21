@@ -1,9 +1,11 @@
 // The WhatsApp-code form's VIEW — Story 5.13 (Task 5.2; AC9, AC10; WC7, WC8; Decision 2026-10-21-376). Props from `useWaCode`
 // (owned by `OtherPhoneCodeHint`, so a collapse hides only this view). Every key is a LITERAL `t('waCode.…')` (the copy test scans
-// for them). The code field takes digits only, six at most, and ⛔ `textContentType="oneTimeCode"` / `autoComplete` — iOS would
-// offer the SMS LOGIN code this phone just received, and one tap spends half the tries (WC7). Errors are `AnnouncedText
-// kind="error"`; `sent` / `sent_uncertain` are spoken on every send the member is told about (keyed on the send counter — the
-// `useAnnounceOnChange` shape, which would ⛔ re-speak the same text twice), on BOTH platforms (a phase change).
+// for them). The code field takes digits only, six at most — the HOOK keeps six, ⛔ native `maxLength` (React Native truncates
+// BEFORE `onChangeText`, so a pasted "123 456" would become "12345" — code review P2) — and ⛔ `textContentType="oneTimeCode"` /
+// `autoComplete` — iOS would offer the SMS LOGIN code this phone just received, and one tap spends half the tries (WC7). Errors
+// are `AnnouncedText kind="error"`; `sent` / `sent_uncertain` are spoken on every send the member is told about (keyed on the send
+// counter — the `useAnnounceOnChange` shape, which would ⛔ re-speak the same text twice), on BOTH platforms (a phase change);
+// `resend_wait` the same way, keyed on the wait counter (a press answered by a wait alone — ⛔ each countdown tick — code review P2).
 
 import { useEffect, useRef } from 'react'
 import { AccessibilityInfo } from 'react-native'
@@ -33,6 +35,13 @@ export function WaCodeEntry({
     spokenFor.current = form.sendCount
     if (sentLine) AccessibilityInfo.announceForAccessibility(sentLine)
   }, [form.sendCount, sentLine])
+  const waitLine = t('waCode.resend_wait')
+  const waitSpokenFor = useRef(form.waitCount)
+  useEffect(() => {
+    if (form.waitCount === waitSpokenFor.current) return
+    waitSpokenFor.current = form.waitCount
+    AccessibilityInfo.announceForAccessibility(waitLine)
+  }, [form.waitCount, waitLine])
 
   const errorText =
     form.line === 'wrong_retry'
@@ -77,7 +86,6 @@ export function WaCodeEntry({
             value={form.code}
             onChangeText={form.setCode}
             keyboardType="number-pad"
-            maxLength={6}
             accessibilityLabel={t('waCode.input_label')}
             testID="wa-code-input"
           />
@@ -109,7 +117,7 @@ export function WaCodeEntry({
       ) : null}
       {waiting && (form.showSend || form.showResend) ? (
         <Paragraph color="$colorPress" testID="wa-code-wait">
-          {t('waCode.resend_wait')}
+          {waitLine}
         </Paragraph>
       ) : null}
       {form.closed && !form.lapsed ? (

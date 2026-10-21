@@ -3,7 +3,8 @@
 // Owned by `OtherPhoneCodeHint` for as long as the signup step's body shows: collapsing the link hides the form's VIEW only, so a
 // sent code, the counts, the countdown, the last line and an in-flight call all survive collapse → expand. ONE call in flight (a
 // ref, ⛔ state — two presses in one frame both see the pre-update closure). Late results are dropped by the hook's OWN version
-// counter, bumped on blur and on unmount (⛔ by a collapse; ⛔ the step's counter, which "Open WhatsApp again" also bumps). Every
+// counter, bumped on blur and on unmount (⛔ by a collapse; ⛔ the step's counter, which "Open WhatsApp again" also bumps) — a late
+// result's DATA is dropped, but `busy` is always cleared, so a refocused form is never stuck disabled (code review P2). Every
 // call is bounded (`withTimeout` — the transport has ⛔ timeout). The wait is a countdown from the server's `retryAfterSeconds`
 // (⛔ the device clock). ⭐ TOLD: the member is told a code MAY have been sent by a 200, a non-`ApiError` Send, an `ApiError` ≥ 500
 // whose code is ⛔ `wa_opt_in.*` with unparseable details, or the mint's `liveCode` — only then is the button "Send another code".
@@ -52,6 +53,8 @@ export interface WaCodeState {
   readonly busy: boolean
   /** Bumped on every send the member is told about — the announcement keys on it (a second `sent` is spoken). */
   readonly sendCount: number
+  /** Bumped when a press is answered with a wait ALONE (`rate_limit.exceeded`, `code_resend_too_soon`) — `resend_wait` is spoken on it. */
+  readonly waitCount: number
 }
 
 export interface WaCode extends WaCodeState {
@@ -77,6 +80,7 @@ export function initialWaCodeState(minted: CreateWaOptInResponse): WaCodeState {
     code: '',
     busy: false,
     sendCount: 0,
+    waitCount: 0,
   }
 }
 
@@ -149,10 +153,10 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
           patch({ line: 'no_longer_valid', lapsed: true, field: false, closed: false })
           return
         case 'wa_opt_in.code_resend_too_soon':
-          setState((s) => ({ ...s, wait: d?.retryAfterSeconds ?? UNKNOWN_WAIT_SECONDS, field: d ? d.liveCode : s.field, codesRemaining: d?.codesRemaining ?? s.codesRemaining, told: s.told || keepField }))
+          setState((s) => ({ ...s, wait: d?.retryAfterSeconds ?? UNKNOWN_WAIT_SECONDS, field: d ? d.liveCode : s.field, codesRemaining: d?.codesRemaining ?? s.codesRemaining, told: s.told || keepField, waitCount: s.waitCount + 1 }))
           return
         case 'rate_limit.exceeded':
-          patch({ wait: UNKNOWN_WAIT_SECONDS })
+          setState((s) => ({ ...s, wait: UNKNOWN_WAIT_SECONDS, waitCount: s.waitCount + 1 }))
           return
         case 'wa_opt_in.code_send_failed':
           if (d === null) break
@@ -177,7 +181,8 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
       patch({ line: 'send_failed', field: keepField, closed: true, sendBlocked: true })
     } finally {
       busyRef.current = false
-      if (current()) patch({ busy: false })
+      // ALWAYS (⛔ `current()`): a blur drops the result, ⛔ the form — after unmount this setState is a no-op.
+      patch({ busy: false })
     }
   }, [patch, onActivated])
 
@@ -238,15 +243,19 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
       }
     } finally {
       busyRef.current = false
-      if (current()) patch({ busy: false })
+      // ALWAYS (⛔ `current()`): a blur drops the result, ⛔ the form — after unmount this setState is a no-op.
+      patch({ busy: false })
     }
   }, [patch, onActivated, state.code])
 
   const sendable = !state.sendBlocked && !state.lapsed && state.codesRemaining !== 0
   return {
     ...state,
+    // Sending blocked ⇒ the closed route ALWAYS (⛔ only when the count reaches 0 — a dead live code must ⛔ strand the member: I6).
+    closed: state.closed || state.sendBlocked,
     showSend: sendable && !state.told,
-    showResend: sendable && state.told && (state.codesRemaining === 1 || state.codesRemaining === null),
+    // Once told, ANY count still left (1, unknown, or 2 after a told-but-released send) keeps "Send another code" (I6 — code review P2).
+    showResend: sendable && state.told,
     canConfirm: state.field && !state.lapsed && state.code.length === 6 && !state.busy,
     setCode,
     send,

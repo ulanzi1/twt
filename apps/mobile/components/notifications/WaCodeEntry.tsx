@@ -5,7 +5,8 @@
 // `autoComplete` — iOS would offer the SMS LOGIN code this phone just received, and one tap spends half the tries (WC7). Errors
 // are `AnnouncedText kind="error"`; `sent` / `sent_uncertain` are spoken on every send the member is told about (keyed on the send
 // counter — the `useAnnounceOnChange` shape, which would ⛔ re-speak the same text twice), on BOTH platforms (a phase change);
-// `resend_wait` the same way, keyed on the wait counter (a press answered by a wait alone — ⛔ each countdown tick — code review P2).
+// `resend_wait` the same way, keyed on the wait counter (a press answered by a wait — ⛔ each countdown tick — code review P2),
+// QUEUED (iOS) so it follows a `send_failed` line spoken in the same render instead of cutting it off (code review round 2).
 
 import { useEffect, useRef } from 'react'
 import { AccessibilityInfo } from 'react-native'
@@ -40,7 +41,7 @@ export function WaCodeEntry({
   useEffect(() => {
     if (form.waitCount === waitSpokenFor.current) return
     waitSpokenFor.current = form.waitCount
-    AccessibilityInfo.announceForAccessibility(waitLine)
+    AccessibilityInfo.announceForAccessibilityWithOptions(waitLine, { queue: true })
   }, [form.waitCount, waitLine])
 
   const errorText =

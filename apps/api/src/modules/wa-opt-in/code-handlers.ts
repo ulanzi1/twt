@@ -302,13 +302,16 @@ export function createWaCodeHandlers(deps: AppDeps, delivery: WaCodeDelivery) {
       let rejected: ConflictError | null = null;
       try {
         // ── Step 1 — every check OUTSIDE any audit wrapper ──────────────────────────────────────────────────────────────
-        await waOptIn.lockMemberWaYes(tx, { pariwarId: ctx.pariwarId, memberId: ctx.memberId });
+        // The lock, then ONE expiry instant for the whole verify (minted only after the lock wait) — the match, the consume and a
+        // wrong attempt all judge the code at it, so a code found live is consumable (⛔ a 500 when it dies across the audit insert
+        // — code review round 2). ONCE per verify.
+        const asOf = await waOptIn.lockMemberWaYesForCodeVerify(tx, { pariwarId: ctx.pariwarId, memberId: ctx.memberId });
         if (await waOptIn.hasActiveOptIn(tx, { pariwarId: ctx.pariwarId, memberId: ctx.memberId })) {
           throw new ConflictError('You are already opted in to WhatsApp notifications', 'wa_opt_in.already_active', codeDetails(null));
         }
         const pending = await waOptIn.getPendingOptInRequest(tx, { pariwarId: ctx.pariwarId, memberId: ctx.memberId });
         if (!pending) throw new ConflictError('There is no open WhatsApp request', 'wa_opt_in.not_pending', codeDetails(null));
-        const theRequest = { pariwarId: ctx.pariwarId, optInId: pending.optInId };
+        const theRequest = { pariwarId: ctx.pariwarId, optInId: pending.optInId, asOf };
         const live = await waOptIn.findLiveCodes(tx, theRequest);
         const matched = matchCode(code, live);
 
@@ -319,7 +322,7 @@ export function createWaCodeHandlers(deps: AppDeps, delivery: WaCodeDelivery) {
           await audit.withCompensatingAudit(deps.servicePool, {
             auditIntent: codeAuditIntent(ctx, { action: 'member.wa_opt_in_activated', afterState: 'ACTIVE', verificationPhrase: pending.verificationPhrase, traceId }),
             mutate: async ({ auditId }) => {
-              if (!(await waOptIn.consumeCode(tx, { pariwarId: ctx.pariwarId, codeId: matched }))) {
+              if (!(await waOptIn.consumeCode(tx, { pariwarId: ctx.pariwarId, codeId: matched, asOf }))) {
                 throw new Error('[wa-code] the matched code was ⛔ live at consume');
               }
               await consent.recordConsent(tx, {

@@ -9,7 +9,7 @@ running — [[feedback_shared_tree_branch_switch]]; re-check before every commit
 Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); the CODE claims below were derived at bac71abb
 (perishable). Re-check before Task 1: `git fetch origin && git diff --name-only bac71abb..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: in-progress (v1.5 — created 2026-10-21 by `bmad-create-story 5.13`, checklist pass applied (3 H / 9 M / 10 L); first
+STATUS: done (v1.9 — code review round 2 applied 2026-10-21/22, the patch diff reviewed twice; Change Log v1.9). Earlier: in-progress (v1.5 — created 2026-10-21 by `bmad-create-story 5.13`, checklist pass applied (3 H / 9 M / 10 L); first
 `bmad-create-story validate` 2026-10-21 (four fresh-context verifiers, 43 findings, ALL applied — Change Log v1.2; fresh-context re-validates of that rewrite, all applied — v1.3, v1.4, v1.5; the fourth found 0 HIGH); WC1–WC17 PROPOSED for
 BigDev at Task 0.2). Code claims re-derived at bac71abb on 2026-10-21 (`git diff --name-only bac71abb..HEAD` = this file + the ledger).
 
@@ -79,7 +79,7 @@ S = Task 0.1 STOP conditions.
 
 # Story 5.13: A WhatsApp Code for a Member Whose WhatsApp Is on Another Phone — Sent Only When They Ask, at Most Twice, and Typed Back in the App to Switch WhatsApp On `[SURFACE]`
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 5.10 built an unticked *"Send me WhatsApp messages from TWT"* box on its own signup
 > step. A tick mints a PENDING request and opens WhatsApp with a short phrase to send to TWT; the member's own message, from their
@@ -565,15 +565,18 @@ channel preference is confirmed.
   a code on WhatsApp"* (`wa-code-send` — shown while the member has ⛔ been TOLD (a 200, a non-`ApiError` Send, an `ApiError` ≥ 500 with unparseable details — AC9 — or the mint's `liveCode: true`) that a code may have been sent: only
   `released` / `refused` sends so far) → (200 `sent`) `waCode.sent`, or
   (200 `uncertain`, or any non-`ApiError` failure on Send — a client timeout or a dropped connection) `waCode.sent_uncertain`, then a code
-  field (`keyboardType="number-pad"`, `maxLength={6}`, `onChangeText` keeping DIGITS only — a pasted "123 456" becomes "123456"; ⛔
+  field (`keyboardType="number-pad"`, `maxLength={6}` [⚠ annotated 2026-10-21, code review: ⛔ the native prop — React Native truncates BEFORE `onChangeText`, so it cut a pasted "123 456" to "12345"; the hook keeps six digits after normalizing, and refuses a digit typed into a full code as the native prop did (round 2)], `onChangeText` keeping DIGITS only — a pasted "123 456" becomes "123456"; ⛔
   `textContentType="oneTimeCode"` / `autoComplete` — iOS would offer the SMS LOGIN code this phone just received, and one tap spends half
   the tries), *"Confirm"* (enabled at 6 digits), *"Send another code"* (`wa-code-resend` — shown once the member was TOLD (as above) and `codesRemaining
-  === 1` or the count is unknown, and ⛔ shown at all when the mint said `codeAvailable: false`; disabled with
+  === 1` or the count is unknown [⚠ annotated 2026-10-21, code review P2: ANY count still left once told — 2 after a told-but-released send — else that state had no send control (I6)], and ⛔ shown at all when the mint said `codeAvailable: false`; disabled with
   `waCode.resend_wait` for `retryAfterSeconds`, counted down from the response — ⛔ the device clock). A correct code → an `activated` flag
   in `whatsapp.tsx` replaces WHICHEVER stage body is showing (`ask` or `sent`) with `waCode.done` (testID `wa-code-done`), clears `error`,
   and is announced FROM `whatsapp.tsx` (the form has unmounted); the `sent` stage's return-to-app announcement (`whatsapp.tsx:176-202`) is
   gated on `!activated`; Continue → payment as before. **The code route is CLOSED** — `code_limit_reached`, `code_unavailable`,
   `code_not_offered`, a send failure with ⛔ code left, a wrong final attempt with ⛔ code left and ⛔ live code, any other `ApiError` —
+  [⚠ annotated 2026-10-22, code review round 2: WIDENED in the code — ANY state with ⛔ code left (0 remaining) shows the route
+  below the field, a live code or ⛔ (a 200 that spent the last code, a `wrong_retry` at 0 left), as the mint's `codeAvailable:
+  false` already did; I6 / AC1 — ⛔ when the request lapsed] —
   ⇒ the form shows its line and, below it, 5.10's number + phrase (`OtherPhoneDetails`, extracted UNCHANGED from `OtherPhoneHint`, which
   keeps rendering it — Settings untouched); the code FIELD stays while a live code exists (`liveCode` in the response or error details).
   *Cost:* the 5.10 phrase becomes a second-line route on signup for provisioned Pariwars; three new components and a hook; the step file
@@ -811,8 +814,8 @@ selects `createFixtureWhatsappProvider` or any adapter that reports success with
 recording transport (a seam that cannot be bypassed: the resolution under test is the production one) AND ⛔ row; a source assertion that
 `code-delivery.ts` and `deps.ts`'s code wiring import ⛔ fixture; mobile — the fallback render.
 
-**AC9 — The code form on the phone (I6; WC3, WC7, WC16).** `useWaCode` + `WaCodeEntry`. **Send** (`wa-code-send` while the member has ⛔ been told a code may have been sent; `wa-code-resend` once the member was TOLD (a 200, a non-`ApiError` Send, an `ApiError` ≥ 500 with unparseable details — AC9 — or the mint's `liveCode: true`), while `codesRemaining === 1` or the count is unknown — and neither button on a
-mint-driven open with `codeAvailable: false`, which shows the closed route instead): 200 `sent` → `waCode.sent` + the field (`keyboardType="number-pad"`, `maxLength={6}`, digits-only
+**AC9 — The code form on the phone (I6; WC3, WC7, WC16).** `useWaCode` + `WaCodeEntry`. **Send** (`wa-code-send` while the member has ⛔ been told a code may have been sent; `wa-code-resend` once the member was TOLD (a 200, a non-`ApiError` Send, an `ApiError` ≥ 500 with unparseable details — AC9 — or the mint's `liveCode: true`), while `codesRemaining === 1` or the count is unknown [⚠ annotated 2026-10-21, code review P2: ANY count still left once told — 2 after a told-but-released send — else that state had no send control (I6)] — and neither button on a
+mint-driven open with `codeAvailable: false`, which shows the closed route instead): 200 `sent` → `waCode.sent` + the field (`keyboardType="number-pad"`, `maxLength={6}` [⚠ annotated 2026-10-21, code review: ⛔ the native prop — React Native truncates BEFORE `onChangeText`, so it cut a pasted "123 456" to "12345"; the hook keeps six digits after normalizing, and refuses a digit typed into a full code as the native prop did (round 2)], digits-only
 `onChangeText`, `accessibilityLabel={t('waCode.input_label')}`, ⛔ `textContentType` / `autoComplete`) + `waCode.confirm` (disabled under
 6 digits); 200 `uncertain` OR any non-`ApiError` failure (a client timeout, a dropped connection) → `waCode.sent_uncertain` + the field (a
 code may still arrive) and — the count now unknown — `wa-code-resend` offered after 60 s, the server's 409 deciding; the resend button
@@ -1021,7 +1024,7 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
 
 ### Review Findings
 
-Full code review, 2026-10-21, baseline `bac71abb` → `fa8f9b3e`: Blind Hunter, Edge Case Hunter and Acceptance Auditor, independently reviewed and deduplicated. **0 decision-needed, 6 patch (P2), 0 defer, 3 dismissed.** These are engineering corrections; no Panel ruling is required. **Disposition:** BigDev chose option 2, "Leave as action items". All six remain unchecked; no implementation patches applied. Story and sprint status → `in-progress` because the findings remain unresolved.
+Full code review, 2026-10-21, baseline `bac71abb` → `fa8f9b3e`: Blind Hunter, Edge Case Hunter and Acceptance Auditor, independently reviewed and deduplicated. **0 decision-needed, 6 patch (P2), 0 defer, 3 dismissed.** These are engineering corrections; no Panel ruling is required. **Disposition:** BigDev chose option 2, "Leave as action items". All six remain unchecked; no implementation patches applied. Story and sprint status → `in-progress` because the findings remain unresolved. [⚠ annotated 2026-10-21: CLOSED. All six were patched in the review continuation `319cf699` (v1.8, Debug Log (h)) and re-checked by round 2 below.]
 
 - [x] [Review][Patch] **P2 — Restore the form after an in-flight request is invalidated by blur.** Blur increments `version`, but both send and confirm clear rendered `busy` only when `current()` remains true. Returning to the still-mounted screen after the call settles leaves Send/Resend/Confirm disabled indefinitely. Clear lifecycle busy state without accepting stale response data, and test blur → settle → refocus for send and verify. Violates AC9/WC7; invariant family 1. [apps/mobile/components/notifications/use-wa-code.ts:180]
 - [x] [Review][Patch] **P2 — Keep a send control when an uncertain request is followed by a released retry.** An unknown first send sets `told: true`. A subsequent `code_send_failed` with `codesRemaining: 2, liveCode: false` preserves `told` but hides the field and fallback; `showSend` requires `!told`, while `showResend` only permits counts 1/null. Both controls disappear although two counted sends remain available. Preserve a recovery control for this reachable state, including a `code_resend_too_soon` response with two remaining after a rate-limited release. Violates AC9/I6; invariant family 1. [apps/mobile/components/notifications/use-wa-code.ts:249]
@@ -1035,6 +1038,66 @@ Full code review, 2026-10-21, baseline `bac71abb` → `fa8f9b3e`: Blind Hunter, 
 **Invariant lens:** families 1 and 13 have the REAL GAP findings above. Families 2/5/7/12 are covered by the concurrent-send/concurrent-verify, sequence-reuse, accessor, owner-FK and direct RLS/constraint tests; 4/8 by consent/audit and rollback tests; 3/6 by the verified-member guard, scope transactions, explicit response field selection and tenant/owner tests; 9 by the documented approved direct-send exception; 10 by the story's disclosed provisioning/device/residual limits. Family 11 is untouched (the convenience-channel predicates do not gate a benefit).
 
 **Dismissed after triage:** cached sender/token rotation requiring restart is explicitly acknowledged in F11; changing a resolved config snapshot mid-request has no specified hot-rotation guarantee; a deliberately throwing injected logger is not a demonstrated production path (the production logger is the fixed `console.warn` wrapper). None was turned into a new governance question or duplicate deferred item.
+
+#### Review round 2 — 2026-10-21, baseline `bac71abb` → `319cf699` (fix diff `fa8f9b3e..319cf699` as primary focus)
+
+Blind Hunter, Edge Case Hunter and Acceptance Auditor, parallel and read-only. **0 decision-needed, 7 patch, 0 defer, 10 dismissed.** **Disposition:** BigDev chose option 1, "Apply every patch". All seven were applied in this review, each test leg RED first (Debug Log (i)). All engineering; §0 gate: no finding changes what a person is told or owed beyond what I6 / AC4 already commit. All six round-1 patches are confirmed to close their findings (each test fails without its fix; mobile unit file 63/63). The findings below are regressions from those patches or gaps next to them.
+
+- [x] [Review][Patch] **MED — The P2-6 fix makes verify's find-then-consume split reachable: a 500 instead of 409 `code_no_longer_valid`.** `findLiveCodes` and `consumeCode` now read two different `clock_timestamp()` values, with `getCurrentMemberState` and the audit intent insert (servicePool, a separate commit) between them. A correct code that expires in that gap hits `throw new Error('… live at consume')`, which writes `member.wa_opt_in_activated` + `_rolled_back` and returns 500. The app then re-reads status and shows `verify_failed`, where AC4 requires 409 `code_no_longer_valid` and AC11 a `code_rejected` line. The wrong-code arm has the same split: `live` is read before the audit wrapper and `recordWrongAttempt` after it, so a code that expires in between returns `code_wrong` with `attemptsRemaining: 0` (`wrong_final`, not `no_longer_valid`). It is disclosed as a residual in Completion Notes, but it has no test and no tracking, and T17 ("Expiry stays `now()`-based") now contradicts the code. Fix: take ONE instant after `lockMemberWaYes` (e.g. `SELECT clock_timestamp()`) and pass it to find, consume, wrong-attempt and `getCodeState` in that verify. P2-6 still holds (the instant is after the lock wait), and one-instant consistency comes back, including `getCodeState`'s `live` count vs. its newest-live subquery. Add an API- or domain-level leg for the gap and amend T17. Invariant family 8 (audit after mutation). [apps/api/src/modules/wa-opt-in/code-handlers.ts:312]
+- [x] [Review][Patch] **MED — After a second code is sent in the same visit (`codesRemaining: 0`), the number + phrase are hidden.** A 200 send sets `closed: false`. With 0 left, `sendable` is false, so neither send control shows, and `closed` only adds `sendBlocked`. The same server state reached through a re-mint shows the closed route (`codeAvailable: false` ⇒ `closed: true`), so the fallback depends on how the member got there. I6: *"every failure after an offer (… both codes spent …) still shows the 5.10 number + phrase"*; AC1 / WC7 put the closed route below the field when both are spent. This is the same class as round-1 P2-3, which was keyed on `sendBlocked` only. Fix: `closed: state.closed || state.sendBlocked || (state.codesRemaining === 0 && !state.lapsed)`, plus a leg (resend → 200 with `codesRemaining: 0` ⇒ the field AND the number + phrase). Invariant family 1, REAL GAP. [apps/mobile/components/notifications/use-wa-code.ts:254]
+- [x] [Review][Patch] **LOW–MED — After the P2-1 fix, a refocused form acts on state a blur dropped.** P2-1 clears `busy` but still drops the result, and the hook stays mounted across blur.
+  - **(a) Verify:** a dropped `code_wrong` (1 try left) leaves the same six digits in the field with Confirm enabled and no `wrong_retry` line. One tap resubmits the known-wrong code and spends the final try, invalidating every live code. The new P2-1 verify test asserts exactly that Confirm is enabled.
+  - **(b) Send:** a dropped 200 leaves `told: false`, `field: false`. The next press gets `code_resend_too_soon` with `liveCode: true`, which opens the field and sets `told` with NO `sent` / `sent_uncertain` line, so only `resend_wait` is spoken. The member never learns a code went out.
+  - Fix: on a dropped verify, also clear `code`. In the `code_resend_too_soon` arm, when `!s.told && keepField`, set `line: 'sent_uncertain'` and bump `sendCount`. Extend both P2-1 legs to assert this. Invariant family 1. [apps/mobile/components/notifications/use-wa-code.ts:244]
+- [x] [Review][Patch] **LOW — With native `maxLength` gone, a digit inserted mid-string at six digits silently drops the last digit.** With `123456` in the field, a cursor after `3` and a `9` typed, the native text becomes `1239456`, and `slice(0, 6)` gives `123945`. Confirm stays enabled, and the wrong code costs a try. Native `maxLength` used to refuse the insert. Fix: when the current code already has six digits and the normalized input is longer, keep the current value (refuse, as native did); otherwise normalize then slice (paste legs unchanged). Add a leg. [apps/mobile/components/notifications/use-wa-code.ts:117]
+- [x] [Review][Patch] **LOW — A 502 `code_send_failed` that carries a wait does not announce the wait.** Meta `rate_limited:*` is released, and `getCodeState` counts it in `retry_after`, so the 502 details carry `retryAfterSeconds` of about 60. The hook patches `wait` but does not bump `waitCount`, so a screen-reader user hears `send_failed` and never learns why the button is disabled. P2-5 was scoped to "a wait ALONE". Fix: bump `waitCount` when `d.retryAfterSeconds > 0` on `code_send_failed`, and add an AC9 rate-limited-release leg asserting it is spoken once. Invariant family 13(d). [apps/mobile/components/notifications/use-wa-code.ts:161]
+- [x] [Review][Patch] **LOW — The P2-6 domain test depends on timing.** It seeds a code with a 1 s TTL, runs `enterAppScope`, then asserts `findLiveCodes` has length 1 BEFORE `pg_sleep(1.2)`. Under a loaded `ci:local` (see the known lock-timeout / oversubscription items), seeding plus scope entry can pass 1 s and fail the pre-sleep assert. Fix: a wider TTL / sleep pair (e.g. 3 s / 3.2 s), or seed `expires_at` relative to a `clock_timestamp()` read right before the first assert. [packages/domain/tests/integration/wa-opt-in/wa-opt-in-codes.spec.ts:231]
+- [x] [Review][Patch] **LOW — Some spec records lag the code.** AC9 (~815) and WC7 (~568) still say `maxLength={6}`; the deviation is recorded in Completion Notes / Change Log v1.8 but not annotated in place. AC9 / WC7's resend condition (`codesRemaining === 1` or unknown) was widened by P2-2 to "any count left once told", with no deviation note. T17 says expiry is `now()`-based. The header comment still reads `STATUS: in-progress (v1.5 …`. Round 1's disposition paragraph still says "All six remain unchecked; no implementation patches applied". Fix: annotate AC9 / WC7 / T17 in place (dated, not rewritten), refresh the header STATUS line, and add a one-line round-1 closure note. [_bmad-output/implementation-artifacts/5-13-whatsapp-code-for-another-phone.md:815]
+
+**Invariant lens (round 2):**
+
+| Family | Verdict |
+|---|---|
+| 1 | REAL GAP (the `codesRemaining: 0` closed route; the dropped-state legs) |
+| 8 | REAL GAP (the find/consume split writes `activated` + `_rolled_back` instead of `code_rejected`) |
+| 13(d) | Partial (the 502 wait) |
+| 2 / 3 / 4 / 5 / 6 / 7 / 12 | Covered by test, as in round 1 |
+| 9 / 10 / 11 | Covered by construction / disclosure |
+
+Family 5 observation: expiry at consume is enforced in the application only; it is not one of I3's named DB rules.
+
+**Patch-diff review (round 2, after "apply all").** A fresh-context, read-only adversarial pass over the uncommitted patch found 0 blocking issues and 5 LOW items. All five were closed before commit:
+- **(1)** The residual of the shared instant is now recorded, here and in the `liveWhere` JSDoc and T17: a code live at `asOf` is consumable after the audit-intent write that follows it, late by at most that write (its pool connect plus the GLOBAL audit-chain lock), never by the member-lock wait. This was accepted over the 500. Round 1's P2-6 is closed for the member-lock wait, ⛔ for the audit write.
+- **(2)** The handler's `asOf` wiring was untested. `asOf` is now REQUIRED on `findLiveCodes` / `consumeCode` / `recordWrongAttempt` (verify is their only caller), so dropping it fails to compile. Covered by construction.
+- **(3)** `setCode` refused a long paste over a full code, where native truncates. The refusal is narrowed to ONE typed character (7 raw characters into a full field), and a pasted whole message is cut to six (new leg).
+- **(4)** The 502-with-a-wait leg ran on iOS only. It now runs on Android too. Note that `queue` is iOS-only in RN 0.83.6, and Android's ordering is ⛔ device-proven.
+- **(5)** The story header was ahead of the body. That is reconciled at close.
+
+**Patch-diff review, second pass (2026-10-22, after the five follow-ups; BigDev: *"run adversarial review on patches applied then open pr"*).** A fresh-context `bmad-review-adversarial-general` pass found 0 HIGH, 2 MED and 8 LOW. All were applied, each leg RED by mutation (Debug Log (i)):
+- **MED (a)** "Read after the lock" was enforced by nothing; a required `asOf` proves only that SOME instant is passed. Now `lockMemberWaYesForCodeVerify` (the lock, then the instant) is the ONLY minter of a `CodeClockInstant` (`readCodeClock` is gone), and the API source test `wa-code-verify-instant.test.ts` pins verify to ONE mint, threaded to the match, the consume and the wrong attempt. This supersedes item (2)'s "covered by construction", which held for the wiring only.
+- **MED (b)** Two more send-error arms opened the field without telling the member: a 502 `code_send_failed` and `code_limit_reached` carrying `liveCode: true` after a blur-dropped send. Every send-error arm that reveals an untold live code now tells it: `sent_uncertain` (*"if it arrives on WhatsApp, type it here"*), spoken on the send counter, ⛔ the wait spoken on top. Legs for both.
+- **LOW** `setCode` still spliced a ≥ 2-character paste dropped mid-code into a full field. The refusal now covers any edit that only ADDS to a full code (the old six still there, in order — a subsequence check). A paste that replaces it is cut to six. Item (3)'s 7-character heuristic is superseded.
+- **LOW** The Android row of the 502 wait leg proved the call count only. It is retitled, and it asserts `queue` on iOS only.
+- **LOW** The residual's bound was understated. It now reads "bounded ONLY by the global audit-chain lock wait (no `lock_timeout`)", covering the reads that follow the instant too (`liveWhere` JSDoc).
+- **LOW** The instant depended on DateStyle (`::text` prints zone abbreviations under non-ISO styles, and `IST` is ambiguous). It is now UTC ISO with microseconds, the repo's `to_char … AT TIME ZONE 'UTC'` idiom.
+- **LOW** WC7's CLOSED list contradicted the widened `closed` at 0 left. It is annotated in place.
+- **LOW** The round-1 domain leg's title claimed "the predicate reads the ADVANCING clock". It is retitled to what it proves.
+- **LOW** Records: Debug Log (i) and Change Log v1.9 are now written.
+- **LOW** T17 now says `retry_after` reads its own clock.
+
+Closure: round-1 P2-6 is closed for the member-lock wait, ⛔ for the audit write (the residual above, accepted).
+
+**Dismissed (10):**
+- the default arm's `sendBlocked` on a transient 503 `code_unavailable` (pre-existing and as specified: WC3 (a), "⛔ send again");
+- a `code_rejected` audit line on a verify with no live code (AC11 requires it);
+- verify not re-checking `channel_unavailable` / WC15 / WC17 (not traced to a spec requirement);
+- released sends bounded only by the route limit (WC3 table; the deferred "no global / per-device cap" item);
+- uncached Secret Manager reads per mint (F11);
+- `mapCodeSendFailure` default / colon tokens (exhaustive union; tokens bound to ≤6 digits);
+- the Hindi `waCode.intro` tense (BigDev's own approved edit);
+- the "Send another code" label at 2 left (the member was told a code may have gone);
+- controlled-input flicker, prose digits and Devanagari digits on a `number-pad` field;
+- `resend_wait`'s static "in a minute" (approved copy).
 
 ## Dev Notes
 
@@ -1075,6 +1138,12 @@ Full code review, 2026-10-21, baseline `bac71abb` → `fa8f9b3e`: Blind Hunter, 
   `sending` row whose message was never sent is stranded for ever (⛔ writer moves it).
 - **T17 — `now()` is the transaction's start** — a request that waited on the lock reads an earlier `now()` than the winner's
   `created_at`; the wait uses `clock_timestamp()` and is clamped (WC3). Expiry stays `now()`-based (one transaction, one instant).
+  [⚠ annotated 2026-10-21, code review: SUPERSEDED in the code. Round 1 (P2): expiry reads `clock_timestamp()`, since a verify
+  that waited on the lock judged expiry at a `now()` from before the wait. Round 2: the verify reads ONE instant right after the
+  lock (`lockMemberWaYesForCodeVerify` — the ONLY minter of the instant, so it cannot precede the lock), and the match, the
+  consume, a wrong attempt and the code state all judge expiry at it. Bare `clock_timestamp()` per statement had let a code die
+  between the match and the consume, giving a 500. Callers that pass no instant judge expiry at `clock_timestamp()` read once per
+  statement (the WAIT, `retry_after`, still reads its own `clock_timestamp()`). Residual: see the `liveWhere` JSDoc.]
 - **T18 — The integration default `resolveChannelSecret` returns `test-secret::<name>`** — it never throws and fails
   `TEMPLATE_NAME_FORM`, so a spec that forgets the override sees `codeAvailable: false` and a 503, and a "no call" leg passes for the
   wrong reason (F13). Override it in every code spec.
@@ -1261,6 +1330,26 @@ patch; that file's stale copy of the field leg still asserts `maxLength: 6` (the
 runs went to **:5432** (the profile's `DATABASE_URL` — an `export` in one shell call does ⛔ persist to the next); they failed at once with
 42P01 (0178 is ⛔ on :5432) inside per-test BEGIN/ROLLBACK — ⛔ migration, ⛔ residue. Every run recorded here is on :5433.
 
+**(i) Code review round 2 — RED proofs and gates (2026-10-21/22, `bmad-code-review`, BigDev option 1 "Apply every patch", then
+*"run adversarial review on patches applied then open pr"*).**
+- **Mobile, against the HEAD (`319cf699`) hook and view:** five legs RED (`Tests 5 failed | 63 passed (68)`):
+  - the dropped verify clearing its code;
+  - the closed route at 0 left;
+  - too-soon telling an untold live code;
+  - a digit typed into a full code;
+  - the 502 wait spoken.
+- **Domain, by mutation** (`instantSql` made to ignore `asOf`): both shared-instant legs RED (`2 failed | 8 passed`).
+- **After the second patch-diff pass, by mutation, each restored after:**
+  - `newlyTold` forced false ⇒ the three told-now legs RED (too-soon, the 502, `code_limit_reached`);
+  - the subsequence check replaced by the 7-character heuristic ⇒ the full-field paste leg RED;
+  - a second `lockMemberWaYesForCodeVerify` at the consume ⇒ the API source leg RED.
+- **Gates:**
+  - mobile `wa-code-entry-render` 71/71, mobile unit 1272/1272 (78 files, before the last two legs);
+  - domain wa-opt-in + RLS 72/72 and API wa-opt-in 55/55 on :5433 (`DATABASE_URL` set explicitly — the profile's is :5432);
+  - `tsc` domain / api / mobile clean; eslint clean on the changed files;
+  - `ci:local` 36/36 on :5433 after the first follow-ups, and again **36/36 on the final tree** (domain 6067 passed / 1 skipped; API 2042 / 1 skipped; jobs 1338; mobile 1275).
+- ⛔ migration and ⛔ schema change: nothing was applied to either database.
+
 **(a) Task 0.2 — BigDev's answer, verbatim (2026-10-21, in session, after the v1.5 validate):** *"all recommendation accepted for
 WC1–WC17"*. Each WC resolves to its ⭐ option:
 
@@ -1394,10 +1483,16 @@ Review patches (v1.8): `apps/mobile/components/notifications/{use-wa-code.ts,WaC
 `packages/domain/tests/integration/wa-opt-in/wa-opt-in-codes.spec.ts`, `_bmad-output/implementation-artifacts/sprint-status.yaml`,
 this story file.
 
+Review round 2 (v1.9): `packages/domain/src/wa-opt-in/code.ts`, `apps/api/src/modules/wa-opt-in/code-handlers.ts`,
+`apps/mobile/components/notifications/{use-wa-code.ts,WaCodeEntry.tsx}`, `apps/mobile/tests/unit/wa-code-entry-render.test.ts`,
+`packages/domain/tests/integration/wa-opt-in/wa-opt-in-codes.spec.ts`; new `apps/api/tests/unit/wa-code-verify-instant.test.ts`;
+`_bmad-output/implementation-artifacts/sprint-status.yaml`, this story file.
+
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-22 | 1.9 | Second `bmad-code-review`, `bac71abb` → `319cf699`, with the round-1 fix diff as the primary focus. All six round-1 patches were confirmed closed. Round 2 found 0 decision-needed / 7 patch / 0 defer / 10 dismissed, and BigDev chose option 1, "Apply every patch". Two patch-diff passes followed (5 LOW, then 2 MED + 8 LOW), all applied. **What changed:** the verify judges expiry at ONE instant minted after the member lock (`lockMemberWaYesForCodeVerify`; `asOf` required), so the match/consume 500 is gone; residual: late by the audit-lock wait. The closed route shows at 0 left. A blur-dropped verify clears its code. Every send-error arm that reveals an untold live code says `sent_uncertain`. A full code refuses inserts. The rate-limited wait is spoken, queued on iOS. The expiry test is no longer timing-fragile. WC7 / AC9 / T17 are annotated in place. RED proofs in Debug Log (i). `ci:local` 36/36 on :5433 on the final tree. Status `review` → `done`; ledger `2026-10-22`. |
 | 2026-10-21 | 1.8 | `bmad-dev-story` review continuation — Addressed code review findings - 6 items resolved (Date: 2026-10-21): blur no longer strands the form busy; a told member keeps "Send another code" whenever a send is left; blocked sending always keeps the number + phrase; native `maxLength` dropped (the hook keeps six — a deviation from WC7 / AC9's literal prop, for AC9's paste leg); entering a resend wait is spoken; code expiry reads `clock_timestamp()`. Each leg RED first (Debug Log (h)). Status in-progress → review; ledger `2026-10-21z`. ⛔ Pushed. |
 | 2026-10-21 | 1.7 | Full `bmad-code-review`: six P2 patch findings recorded under Tasks / Subtasks → Review Findings; no decision-needed or deferred findings, three dismissed. Focused existing suites passed 234/234; four isolated regression probes reproduced failures. BigDev chose option 2, "Leave as action items"; all six remain open, no implementation patches applied. Story and sprint status `review` → `in-progress`. |
 | 2026-10-21 | 1.6 | `bmad-dev-story` — Tasks 1–7 DONE; code commit `4856bded` (migration 0178, domain `code.ts`, the authentication-template shape, the template key moved to channels, the send / verify routes, the mint's code fields, the app's code form, `waCode.*`); RED proofs, gate outputs and `ci:local` 36/36 on :5433 in the Debug Log; Status → review; ledger `2026-10-21y`. ⛔ Pushed. |

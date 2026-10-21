@@ -8,6 +8,7 @@
 
 import { createHash, randomUUID } from 'node:crypto';
 
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import type { MemberLifecycleState } from '../../../src/schema/members.js';
@@ -17,7 +18,9 @@ import {
   consumeCode,
   findLiveCodes,
   getCodeState,
+  type CodeClockInstant,
   insertCodeSlot,
+  lockMemberWaYesForCodeVerify,
   recordCodeSendOutcome,
   recordWrongAttempt,
 } from '../../../src/wa-opt-in/index.js';
@@ -25,6 +28,13 @@ import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integra
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
 
 type Client = ReturnType<typeof getTx>['client'];
+type Tx = ReturnType<typeof getTx>['tx'];
+
+/** The DB clock NOW, as an expiry instant — the plain legs judge at "now" (the verify mints its one instant after the lock). */
+async function clockNow(tx: Tx): Promise<CodeClockInstant> {
+  const r = await tx.execute<{ at: string }>(sql`SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS at`);
+  return r.rows[0]!.at as CodeClockInstant;
+}
 
 const hash = (code: string): string => createHash('sha256').update(code).digest('hex');
 const ON = { enabled: true, displayPhoneNumber: '+91 98100 00000' } as const;
@@ -176,8 +186,8 @@ describe.skipIf(!hasDatabase)('Story 5.13 — the WhatsApp code accessors (membe
     expect(await st(b)).toMatchObject({ codesRemaining: 0, liveCode: true, liveCodeDelivery: 'uncertain' });
     expect(await st(expired)).toMatchObject({ codesRemaining: 1, liveCode: false, liveCodeDelivery: null, retryAfterSeconds: null });
     expect(await st(refused)).toMatchObject({ codesRemaining: 1, liveCode: false, liveCodeDelivery: null, retryAfterSeconds: null });
-    expect(await findLiveCodes(tx, { pariwarId: a.pariwarId, optInId: a.optInId })).toHaveLength(2);
-    expect(await findLiveCodes(tx, expired)).toHaveLength(0);
+    expect(await findLiveCodes(tx, { pariwarId: a.pariwarId, optInId: a.optInId, asOf: await clockNow(tx) })).toHaveLength(2);
+    expect(await findLiveCodes(tx, { ...expired, asOf: await clockNow(tx) })).toHaveLength(0);
   });
 
   it('⭐ recordWrongAttempt — increments EVERY live code, invalidates each at 2; ⛔ live code is a no-op; consumeCode refuses a dead code', async () => {
@@ -186,20 +196,20 @@ describe.skipIf(!hasDatabase)('Story 5.13 — the WhatsApp code accessors (membe
     const c1 = await seedCode(client, m, { seq: 1, code: '111111' });
     const c2 = await seedCode(client, m, { seq: 2, code: '222222' });
     await enterAppScope(client, PARIWAR_A);
-    expect(await recordWrongAttempt(tx, m)).toEqual({ attemptsRemaining: 1, codesRemaining: 0, liveCode: true });
+    expect(await recordWrongAttempt(tx, { ...m, asOf: await clockNow(tx) })).toEqual({ attemptsRemaining: 1, codesRemaining: 0, liveCode: true });
     const after1 = await client.query<{ attempts: number; dead: boolean }>(
       `SELECT attempts, invalidated_at IS NOT NULL AS dead FROM member_wa_opt_in_codes WHERE opt_in_id = $1 ORDER BY send_seq`, [m.optInId],
     );
     expect(after1.rows).toEqual([{ attempts: 1, dead: false }, { attempts: 1, dead: false }]);
-    expect(await recordWrongAttempt(tx, m)).toEqual({ attemptsRemaining: 0, codesRemaining: 0, liveCode: false });
+    expect(await recordWrongAttempt(tx, { ...m, asOf: await clockNow(tx) })).toEqual({ attemptsRemaining: 0, codesRemaining: 0, liveCode: false });
     const after2 = await client.query<{ attempts: number; dead: boolean }>(
       `SELECT attempts, invalidated_at IS NOT NULL AS dead FROM member_wa_opt_in_codes WHERE opt_in_id = $1 ORDER BY send_seq`, [m.optInId],
     );
     expect(after2.rows).toEqual([{ attempts: 2, dead: true }, { attempts: 2, dead: true }]);
     // ⛔ live code ⇒ a no-op (attempts stay 2 — ⛔ a 23514).
-    expect(await recordWrongAttempt(tx, m)).toEqual({ attemptsRemaining: 0, codesRemaining: 0, liveCode: false });
-    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: c1 })).toBe(false);
-    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: c2 })).toBe(false);
+    expect(await recordWrongAttempt(tx, { ...m, asOf: await clockNow(tx) })).toEqual({ attemptsRemaining: 0, codesRemaining: 0, liveCode: false });
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: c1, asOf: await clockNow(tx) })).toBe(false);
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: c2, asOf: await clockNow(tx) })).toBe(false);
   });
 
   it('⭐ consumeCode — atomic: a live code once (a second consume finds ⛔ row); an expired code ⛔; another Pariwar\'s ⛔', async () => {
@@ -216,26 +226,55 @@ describe.skipIf(!hasDatabase)('Story 5.13 — the WhatsApp code accessors (membe
     );
     const bCode = await seedCode(client, { pariwarId: toPariwarId(PARIWAR_B), memberId: bMember, optInId: bOpt.rows[0]!.opt_in_id as MemberWaOptInId }, { seq: 1 });
     await enterAppScope(client, PARIWAR_A);
-    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: live })).toBe(true);
-    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: live })).toBe(false);
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: live, asOf: await clockNow(tx) })).toBe(true);
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: live, asOf: await clockNow(tx) })).toBe(false);
     expect(await getCodeState(tx, m)).toMatchObject({ liveCode: false, codesRemaining: 1 });
-    expect(await consumeCode(tx, { pariwarId: old.pariwarId, codeId: expired })).toBe(false);
-    expect(await consumeCode(tx, { pariwarId: toPariwarId(PARIWAR_B), codeId: bCode })).toBe(false);
-    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: bCode })).toBe(false);
+    expect(await consumeCode(tx, { pariwarId: old.pariwarId, codeId: expired, asOf: await clockNow(tx) })).toBe(false);
+    expect(await consumeCode(tx, { pariwarId: toPariwarId(PARIWAR_B), codeId: bCode, asOf: await clockNow(tx) })).toBe(false);
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: bCode, asOf: await clockNow(tx) })).toBe(false);
   });
 
-  it('⭐ review P2 — a code that expires WHILE the transaction waits is ⛔ live: the predicate reads the ADVANCING clock (⛔ the frozen now())', async () => {
+  it('⭐ review P2 — a code that expires WHILE the transaction waits is ⛔ live at a LATER instant: the DB clock advances inside one transaction (⛔ the frozen now()); getCodeState with ⛔ instant reads it too', async () => {
     const { client, tx } = getTx();
-    // The transaction is already open (one BEGIN — its now() is frozen here). A code that is live NOW and dies one second later.
+    // The transaction is already open (one BEGIN — its now() is frozen here). A code live NOW that dies 3 s later — wide enough that
+    // seeding + scope entry + the first read finish inside it under a loaded ci:local (code review round 2: 1 s was a flake).
     const m = await seedMember(client);
-    const code = await seedCode(client, m, { seq: 1, agoSeconds: 0, ttlSeconds: 1 });
+    const code = await seedCode(client, m, { seq: 1, agoSeconds: 0, ttlSeconds: 3 });
     await enterAppScope(client, PARIWAR_A);
-    expect(await findLiveCodes(tx, m)).toHaveLength(1);
-    // The wait — the verify's advisory lock / audit write in production.
-    await client.query('SELECT pg_sleep(1.2)');
-    expect(await findLiveCodes(tx, m)).toHaveLength(0);
+    expect(await findLiveCodes(tx, { ...m, asOf: await clockNow(tx) })).toHaveLength(1);
+    // The wait — the verify's member lock in production (the instant is read after it — round 2).
+    await client.query('SELECT pg_sleep(3.2)');
+    expect(await findLiveCodes(tx, { ...m, asOf: await clockNow(tx) })).toHaveLength(0);
     expect(await getCodeState(tx, m)).toMatchObject({ liveCode: false, liveCodeDelivery: null });
-    expect(await recordWrongAttempt(tx, m)).toMatchObject({ attemptsRemaining: 0, liveCode: false });
-    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: code })).toBe(false);
+    expect(await recordWrongAttempt(tx, { ...m, asOf: await clockNow(tx) })).toMatchObject({ attemptsRemaining: 0, liveCode: false });
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: code, asOf: await clockNow(tx) })).toBe(false);
+  });
+
+  it('⭐ review round 2 — ONE instant (lockMemberWaYesForCodeVerify) for match, consume and state: a code found live at it stays consumable across expiry', async () => {
+    const { client, tx } = getTx();
+    const m = await seedMember(client);
+    const code = await seedCode(client, m, { seq: 1, agoSeconds: 0, ttlSeconds: 3 });
+    await enterAppScope(client, PARIWAR_A);
+    // The verify mints its instant right after the lock — the code is live at it.
+    const asOf = await lockMemberWaYesForCodeVerify(tx, m);
+    expect(await findLiveCodes(tx, { ...m, asOf })).toHaveLength(1);
+    // The audit insert sits between the match and the consume; the code dies in that gap.
+    await client.query('SELECT pg_sleep(3.2)');
+    // A FRESH instant (read after the death): dead …
+    expect(await findLiveCodes(tx, { ...m, asOf: await clockNow(tx) })).toHaveLength(0);
+    // … with it: the state agrees with the match, and the matched code is consumed (⛔ the 500 at consume).
+    expect(await getCodeState(tx, { ...m, asOf })).toMatchObject({ liveCode: true, liveCodeDelivery: 'sent' });
+    expect(await consumeCode(tx, { pariwarId: m.pariwarId, codeId: code, asOf })).toBe(true);
+  });
+
+  it('⭐ review round 2 — a wrong attempt at the shared instant hits the code the match saw (⛔ attemptsRemaining 0 for a code that only expired)', async () => {
+    const { client, tx } = getTx();
+    const m = await seedMember(client);
+    await seedCode(client, m, { seq: 1, agoSeconds: 0, ttlSeconds: 3 });
+    await enterAppScope(client, PARIWAR_A);
+    const asOf = await lockMemberWaYesForCodeVerify(tx, m);
+    expect(await findLiveCodes(tx, { ...m, asOf })).toHaveLength(1);
+    await client.query('SELECT pg_sleep(3.2)');
+    expect(await recordWrongAttempt(tx, { ...m, asOf })).toMatchObject({ attemptsRemaining: 1, liveCode: true });
   });
 });

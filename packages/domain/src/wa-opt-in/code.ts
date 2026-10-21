@@ -10,13 +10,14 @@
 // constant time (`timingSafeHashCompare`); `findLiveCodes` RETURNS the hashes for that compare. ⛔ Separate file from the
 // sha-pinned `read.ts` / `write.ts` (F14).
 
-import { and, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { type SQL, and, desc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId, MemberWaOptInId, PariwarId } from '../ids/index.js';
 import type { MemberLifecycleState } from '../schema/members.js';
 import { memberWaOptIn } from '../schema/member_wa_opt_in.js';
 import { type WaOptInCodeSendOutcome, memberWaOptInCodes } from '../schema/member_wa_opt_in_codes.js';
+import { lockMemberWaYes } from './write.js';
 
 /** At most TWO counted sends per request (`-374` *"one code per request and one retry"*, BigDev's reading *"Both"*). ⚠ LOCKSTEP with 0178's `send_seq` CHECK. */
 export const WA_OPT_IN_CODE_MAX_SENDS = 2;
@@ -55,6 +56,33 @@ export interface WaOptInCodeState {
    * null when ⛔ further send is possible or ⛔ wait applies.
    */
   readonly retryAfterSeconds: number | null;
+}
+
+/**
+ * ONE database instant — every expiry predicate of one verify reads it (code review round 2, 2026-10-21). `now()` is frozen at
+ * BEGIN, before the member-lock wait (the round-1 P2); a bare `clock_timestamp()` per statement lets the code die BETWEEN the match
+ * and the consume (the audit insert sits between them) ⇒ a 500 where AC4 answers `code_no_longer_valid`. ⭐ Minted ONLY by
+ * `lockMemberWaYesForCodeVerify` — so an instant is always read AFTER the lock, by construction. UTC ISO-8601 with microseconds
+ * (⛔ `::text`, whose zone form follows DateStyle — `IST` is ambiguous), read back as `::timestamptz` exactly.
+ */
+export type CodeClockInstant = string & { readonly __codeClockInstant: true };
+
+/**
+ * ⭐ The verify's lock AND its one expiry instant (WC5 step 1): `lockMemberWaYes`, THEN `clock_timestamp()` — the instant can ⛔
+ * precede the lock wait. Call it ONCE per verify and pass the instant to `findLiveCodes`, `consumeCode` and `recordWrongAttempt`
+ * (their `asOf` is required); a second call would mint a later instant and re-open the match/consume split.
+ */
+export async function lockMemberWaYesForCodeVerify(
+  db: Db,
+  args: { pariwarId: PariwarId; memberId: MemberId },
+): Promise<CodeClockInstant> {
+  await lockMemberWaYes(db, args);
+  const r = await db.execute<{ at: string }>(
+    sql`SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS at`,
+  );
+  const at = r.rows[0]?.at;
+  if (!at) throw new Error('[lockMemberWaYesForCodeVerify] ⛔ clock_timestamp() row');
+  return at as CodeClockInstant;
 }
 
 export interface WaOptInPendingRequest {
@@ -118,16 +146,23 @@ export async function hasEndedWaYes(db: Db, args: { pariwarId: PariwarId; member
   return rows.length > 0;
 }
 
-/** The request's code state (WC3, WC4) — ONE read over the request's rows. */
-export async function getCodeState(db: Db, args: { pariwarId: PariwarId; optInId: MemberWaOptInId }): Promise<WaOptInCodeState> {
+/**
+ * The request's code state (WC3, WC4) — ONE read over the request's rows, its expiry at ONE instant (`t` — the caller's `asOf`,
+ * else this statement's `clock_timestamp()` read once, so the live count and the newest-live subquery ⛔ disagree at the boundary).
+ */
+export async function getCodeState(
+  db: Db,
+  args: { pariwarId: PariwarId; optInId: MemberWaOptInId; asOf?: CodeClockInstant },
+): Promise<WaOptInCodeState> {
   const r = await db.execute<{ counted: number; live: number; newest_live_outcome: string | null; retry_after: number | null }>(sql`
+    WITH t AS (SELECT ${instantSql(args.asOf)} AS at)
     SELECT
       count(*) FILTER (WHERE send_outcome <> 'released')::int AS counted,
-      count(*) FILTER (WHERE ${liveSql()})::int AS live,
+      count(*) FILTER (WHERE ${liveSql(sql`(SELECT at FROM t)`)})::int AS live,
       (SELECT c2.send_outcome FROM member_wa_opt_in_codes c2
         WHERE c2.pariwar_id = ${args.pariwarId} AND c2.opt_in_id = ${args.optInId}
           AND c2.send_outcome IN ('sending', 'accepted', 'may_have_sent') AND c2.consumed_at IS NULL AND c2.invalidated_at IS NULL
-          AND c2.expires_at > clock_timestamp()
+          AND c2.expires_at > (SELECT at FROM t)
         ORDER BY c2.created_at DESC, c2.send_seq DESC LIMIT 1) AS newest_live_outcome,
       (SELECT ceil(${WA_OPT_IN_CODE_RESEND_WAIT_SECONDS}::numeric - extract(epoch FROM clock_timestamp() - max(c3.created_at)))::int
          FROM member_wa_opt_in_codes c3
@@ -266,11 +301,14 @@ export interface LiveCode {
  * invalidated, ⛔ expired — at most two, newest first. RETURNS the hashes; the compare is the caller's (constant time, against
  * EVERY row — ⛔ early exit).
  */
-export async function findLiveCodes(db: Db, args: { pariwarId: PariwarId; optInId: MemberWaOptInId }): Promise<LiveCode[]> {
+export async function findLiveCodes(
+  db: Db,
+  args: { pariwarId: PariwarId; optInId: MemberWaOptInId; asOf: CodeClockInstant },
+): Promise<LiveCode[]> {
   return db
     .select({ codeId: memberWaOptInCodes.codeId, codeHash: memberWaOptInCodes.codeHash, attempts: memberWaOptInCodes.attempts })
     .from(memberWaOptInCodes)
-    .where(and(eq(memberWaOptInCodes.pariwarId, args.pariwarId), eq(memberWaOptInCodes.optInId, args.optInId), liveWhere()))
+    .where(and(eq(memberWaOptInCodes.pariwarId, args.pariwarId), eq(memberWaOptInCodes.optInId, args.optInId), liveWhere(args.asOf)))
     .orderBy(desc(memberWaOptInCodes.createdAt), desc(memberWaOptInCodes.sendSeq))
     .limit(2); // ⚠ = WA_OPT_IN_CODE_MAX_SENDS (a literal for the domain-accessor clamp gate)
 }
@@ -291,7 +329,7 @@ export interface WrongAttemptResult {
  */
 export async function recordWrongAttempt(
   db: Db,
-  args: { pariwarId: PariwarId; optInId: MemberWaOptInId },
+  args: { pariwarId: PariwarId; optInId: MemberWaOptInId; asOf: CodeClockInstant },
 ): Promise<WrongAttemptResult> {
   const updated = await db
     .update(memberWaOptInCodes)
@@ -299,7 +337,7 @@ export async function recordWrongAttempt(
       attempts: sql`${memberWaOptInCodes.attempts} + 1`,
       invalidatedAt: sql`CASE WHEN ${memberWaOptInCodes.attempts} + 1 >= ${WA_OPT_IN_CODE_MAX_ATTEMPTS} THEN now() ELSE ${memberWaOptInCodes.invalidatedAt} END`,
     })
-    .where(and(eq(memberWaOptInCodes.pariwarId, args.pariwarId), eq(memberWaOptInCodes.optInId, args.optInId), liveWhere()))
+    .where(and(eq(memberWaOptInCodes.pariwarId, args.pariwarId), eq(memberWaOptInCodes.optInId, args.optInId), liveWhere(args.asOf)))
     .returning({ attempts: memberWaOptInCodes.attempts });
   const attemptsRemaining = Math.max(0, ...updated.map((u) => WA_OPT_IN_CODE_MAX_ATTEMPTS - u.attempts)) as 0 | 1;
   const state = await getCodeState(db, args);
@@ -308,35 +346,44 @@ export async function recordWrongAttempt(
 
 /**
  * Consume the matched code (WC5 step 2 — the correct-code `mutate`), atomically: `WHERE consumed_at IS NULL AND invalidated_at IS
- * NULL AND attempts < 2 AND expires_at > clock_timestamp()` (and a live outcome). Returns whether it was consumed (false ⇒ the caller throws
- * inside the wrapper — the whole activation rolls back).
+ * NULL AND attempts < 2 AND expires_at > <asOf>` (and a live outcome) — `asOf` the SAME instant the match read, so a code found
+ * live under the lock is consumable (code review round 2). Returns whether it was consumed (false ⇒ the caller throws inside the
+ * wrapper — the whole activation rolls back).
  */
-export async function consumeCode(db: Db, args: { pariwarId: PariwarId; codeId: string }): Promise<boolean> {
+export async function consumeCode(db: Db, args: { pariwarId: PariwarId; codeId: string; asOf: CodeClockInstant }): Promise<boolean> {
   const done = await db
     .update(memberWaOptInCodes)
     .set({ consumedAt: sql`now()` })
-    .where(and(eq(memberWaOptInCodes.pariwarId, args.pariwarId), eq(memberWaOptInCodes.codeId, args.codeId), liveWhere()))
+    .where(and(eq(memberWaOptInCodes.pariwarId, args.pariwarId), eq(memberWaOptInCodes.codeId, args.codeId), liveWhere(args.asOf)))
     .returning({ codeId: memberWaOptInCodes.codeId });
   return done.length === 1;
 }
 
 /**
- * The live-code predicate (Drizzle) — ⚠ LOCKSTEP with `liveSql()` below. Expiry reads `clock_timestamp()` (the ADVANCING clock):
- * `now()` is frozen at BEGIN, and the verify opens its transaction before waiting on the member lock, so a code could otherwise be
- * consumed after its ten minutes (code review P2, 2026-10-21).
+ * The live-code predicate (Drizzle) — ⚠ LOCKSTEP with `liveSql()` below. Expiry is judged at the caller's `asOf` — REQUIRED (the
+ * three verify accessors), so a verify cannot drop it and still compile: ONE instant per verify, minted after the member lock
+ * (`lockMemberWaYesForCodeVerify`). ⛔ `now()`: it is frozen at BEGIN, before the lock wait (code review P2, 2026-10-21).
+ * ⚠ RESIDUAL (round 2, accepted): a code live at `asOf` is still consumable after the reads and the audit-intent write that follow
+ * it — late by that work, which is bounded ONLY by the global audit-chain lock wait (no `lock_timeout` is set) — ⛔ by the
+ * member-lock wait. The alternative was a 500 for a code that died between the match and the consume.
  */
-function liveWhere() {
+function liveWhere(asOf: CodeClockInstant) {
   return and(
     inArray(memberWaOptInCodes.sendOutcome, [...LIVE_OUTCOMES]),
     isNull(memberWaOptInCodes.consumedAt),
     isNull(memberWaOptInCodes.invalidatedAt),
     lt(memberWaOptInCodes.attempts, WA_OPT_IN_CODE_MAX_ATTEMPTS),
-    gt(memberWaOptInCodes.expiresAt, sql`clock_timestamp()`),
+    gt(memberWaOptInCodes.expiresAt, instantSql(asOf)),
   );
 }
 
-/** The live-code predicate (raw SQL, unqualified columns) — ⚠ LOCKSTEP with `liveWhere()` above. */
-function liveSql() {
+/** The live-code predicate (raw SQL, unqualified columns) — ⚠ LOCKSTEP with `liveWhere()` above; `at` is the expiry instant. */
+function liveSql(at: SQL) {
   return sql`send_outcome IN ('sending', 'accepted', 'may_have_sent') AND consumed_at IS NULL AND invalidated_at IS NULL
-    AND attempts < ${WA_OPT_IN_CODE_MAX_ATTEMPTS} AND expires_at > clock_timestamp()`;
+    AND attempts < ${WA_OPT_IN_CODE_MAX_ATTEMPTS} AND expires_at > ${at}`;
+}
+
+/** The expiry instant: the caller's shared `asOf`, else `clock_timestamp()` (⛔ `now()` — see `liveWhere`). */
+function instantSql(asOf?: CodeClockInstant): SQL {
+  return asOf === undefined ? sql`clock_timestamp()` : sql`${asOf}::timestamptz`;
 }

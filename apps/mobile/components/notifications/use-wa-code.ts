@@ -4,7 +4,9 @@
 // sent code, the counts, the countdown, the last line and an in-flight call all survive collapse → expand. ONE call in flight (a
 // ref, ⛔ state — two presses in one frame both see the pre-update closure). Late results are dropped by the hook's OWN version
 // counter, bumped on blur and on unmount (⛔ by a collapse; ⛔ the step's counter, which "Open WhatsApp again" also bumps) — a late
-// result's DATA is dropped, but `busy` is always cleared, so a refocused form is never stuck disabled (code review P2). Every
+// result's DATA is dropped, but `busy` is always cleared, so a refocused form is never stuck disabled (code review P2) — and a
+// dropped VERIFY also clears the code it sent, so a refocused Confirm can ⛔ resubmit a code the server may have just called wrong
+// (code review round 2). Every
 // call is bounded (`withTimeout` — the transport has ⛔ timeout). The wait is a countdown from the server's `retryAfterSeconds`
 // (⛔ the device clock). ⭐ TOLD: the member is told a code MAY have been sent by a 200, a non-`ApiError` Send, an `ApiError` ≥ 500
 // whose code is ⛔ `wa_opt_in.*` with unparseable details, or the mint's `liveCode` — only then is the button "Send another code".
@@ -53,7 +55,10 @@ export interface WaCodeState {
   readonly busy: boolean
   /** Bumped on every send the member is told about — the announcement keys on it (a second `sent` is spoken). */
   readonly sendCount: number
-  /** Bumped when a press is answered with a wait ALONE (`rate_limit.exceeded`, `code_resend_too_soon`) — `resend_wait` is spoken on it. */
+  /**
+   * Bumped when a press is answered with a wait the member is ⛔ otherwise told about (`rate_limit.exceeded`, `code_resend_too_soon`,
+   * a `code_send_failed` carrying `retryAfterSeconds` — code review round 2) — `resend_wait` is spoken on it, queued behind any line.
+   */
   readonly waitCount: number
 }
 
@@ -90,6 +95,13 @@ function detailsOf(err: ApiError): WaOptInCodeErrorDetails | null {
   return parsed.success ? parsed.data : null
 }
 
+/** `inner`'s characters appear in `outer` in order (⛔ necessarily together) — an edit that only added to `inner`. */
+function keepsInOrder(outer: string, inner: string): boolean {
+  let i = 0
+  for (const ch of outer) if (i < inner.length && ch === inner[i]) i += 1
+  return i === inner.length
+}
+
 /** A failure that may have followed a sent code: ⛔ an `ApiError`, or a ≥ 500 whose code is ⛔ ours and whose details do ⛔ parse. */
 function mayHaveSent(err: unknown): boolean {
   if (!(err instanceof ApiError)) return true
@@ -114,7 +126,18 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
     return () => clearInterval(timer)
   }, [waiting])
 
-  const setCode = useCallback((next: string) => patch({ code: next.replace(/\D/g, '').slice(0, 6) }), [patch])
+  // Digits only, six at most — normalized BEFORE the limit (a pasted "123 456"). An edit that only ADDS to a FULL code (the old six
+  // still there, in order — a digit typed or a paste dropped anywhere in it) is refused, as native `maxLength` refuses any insert
+  // at the limit (⛔ slice: it would silently splice a wrong code — code review round 2). An edit that REPLACES it (the field
+  // selected, a whole message pasted over it) is normalized, then cut to six.
+  const setCode = useCallback(
+    (next: string) =>
+      setState((s) => {
+        const digits = next.replace(/\D/g, '')
+        return digits.length > 6 && s.code.length === 6 && keepsInOrder(digits, s.code) ? s : { ...s, code: digits.slice(0, 6) }
+      }),
+    [],
+  )
 
   const send = useCallback(async (): Promise<void> => {
     if (busyRef.current) return
@@ -145,6 +168,10 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
       const e = err as ApiError
       const d = detailsOf(e)
       const keepField = d?.liveCode ?? false
+      // An answer that shows a live code the member was ⛔ told of (a send whose answer a blur dropped): TELL them now —
+      // `sent_uncertain` ("if it arrives on WhatsApp, type it here"), spoken on the send counter; a wait with it is shown, ⛔ spoken
+      // on top (the 200-with-a-wait shape). Every send-error arm that keeps the field (code review round 2).
+      const newlyTold = (s: WaCodeState): boolean => !s.told && keepField
       switch (e.code) {
         case 'wa_opt_in.already_active':
           onActivated()
@@ -153,7 +180,21 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
           patch({ line: 'no_longer_valid', lapsed: true, field: false, closed: false })
           return
         case 'wa_opt_in.code_resend_too_soon':
-          setState((s) => ({ ...s, wait: d?.retryAfterSeconds ?? UNKNOWN_WAIT_SECONDS, field: d ? d.liveCode : s.field, codesRemaining: d?.codesRemaining ?? s.codesRemaining, told: s.told || keepField, waitCount: s.waitCount + 1 }))
+          // A live code the member was ⛔ told of (its send's answer was dropped by a blur): TELL them now — `sent_uncertain`, spoken
+          // on the send counter, the wait shown ⛔ spoken on top (the 200-with-a-wait shape — code review round 2).
+          setState((s) => {
+            const told = newlyTold(s)
+            return {
+              ...s,
+              wait: d?.retryAfterSeconds ?? UNKNOWN_WAIT_SECONDS,
+              field: d ? d.liveCode : s.field,
+              codesRemaining: d?.codesRemaining ?? s.codesRemaining,
+              told: s.told || keepField,
+              line: told ? 'sent_uncertain' : s.line,
+              sendCount: told ? s.sendCount + 1 : s.sendCount,
+              waitCount: told ? s.waitCount : s.waitCount + 1,
+            }
+          })
           return
         case 'rate_limit.exceeded':
           setState((s) => ({ ...s, wait: UNKNOWN_WAIT_SECONDS, waitCount: s.waitCount + 1 }))
@@ -162,16 +203,37 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
           if (d === null) break
           // A released FIRST send (2 left): the line and the send button (after any wait) — ⛔ the number + phrase yet.
           // One left: also the closed route below. ⛔ left: the closed route.
-          patch({
-            line: 'send_failed',
-            codesRemaining: d.codesRemaining,
-            wait: d.retryAfterSeconds ?? 0,
-            field: keepField,
-            closed: d.codesRemaining < 2,
+          // A wait with it (Meta rate-limited the send): `resend_wait` is spoken too, queued behind `send_failed` (code review round 2)
+          // — ⛔ when this answer TELLS the member of a live code (`sent_uncertain` is spoken instead; the wait is shown).
+          setState((s) => {
+            const told = newlyTold(s)
+            return {
+              ...s,
+              line: told ? 'sent_uncertain' : 'send_failed',
+              told: s.told || keepField,
+              sendCount: told ? s.sendCount + 1 : s.sendCount,
+              codesRemaining: d.codesRemaining,
+              wait: d.retryAfterSeconds ?? 0,
+              field: keepField,
+              closed: d.codesRemaining < 2,
+              waitCount: !told && (d.retryAfterSeconds ?? 0) > 0 ? s.waitCount + 1 : s.waitCount,
+            }
           })
           return
         case 'wa_opt_in.code_limit_reached':
-          patch({ line: 'no_more', codesRemaining: 0, field: keepField, closed: true })
+          // ⛔ more sends — the number + phrase below say what is left; an untold live code is told first (`sent_uncertain`).
+          setState((s) => {
+            const told = newlyTold(s)
+            return {
+              ...s,
+              line: told ? 'sent_uncertain' : 'no_more',
+              told: s.told || keepField,
+              sendCount: told ? s.sendCount + 1 : s.sendCount,
+              codesRemaining: 0,
+              field: keepField,
+              closed: true,
+            }
+          })
           return
         default:
           break
@@ -243,16 +305,21 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
       }
     } finally {
       busyRef.current = false
-      // ALWAYS (⛔ `current()`): a blur drops the result, ⛔ the form — after unmount this setState is a no-op.
-      patch({ busy: false })
+      // ALWAYS (⛔ `current()`): a blur drops the result, ⛔ the form — after unmount this setState is a no-op. A DROPPED result also
+      // clears the code it sent (unless the member already typed another) — it may have been wrong, and a second Confirm of the
+      // same digits would spend the last try (code review round 2).
+      const dropped = !current()
+      setState((s) => ({ ...s, busy: false, code: dropped && s.code === code ? '' : s.code }))
     }
   }, [patch, onActivated, state.code])
 
   const sendable = !state.sendBlocked && !state.lapsed && state.codesRemaining !== 0
   return {
     ...state,
-    // Sending blocked ⇒ the closed route ALWAYS (⛔ only when the count reaches 0 — a dead live code must ⛔ strand the member: I6).
-    closed: state.closed || state.sendBlocked,
+    // Sending blocked, or ⛔ count left ⇒ the closed route ALWAYS (I6 — a dead live code must ⛔ strand the member; both codes
+    // spent shows the number + phrase below the field however the member got there — the mint's `codeAvailable: false` does too —
+    // code review round 2). ⛔ once the request lapsed (its phrase lapsed with it).
+    closed: state.closed || state.sendBlocked || (state.codesRemaining === 0 && !state.lapsed),
     showSend: sendable && !state.told,
     // Once told, ANY count still left (1, unknown, or 2 after a told-but-released send) keeps "Send another code" (I6 — code review P2).
     showResend: sendable && state.told,

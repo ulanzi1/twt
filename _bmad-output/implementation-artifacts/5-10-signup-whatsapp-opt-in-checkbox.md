@@ -9,7 +9,7 @@ twt-7d, shares the main checkout — [[feedback_shared_tree_branch_switch]]).
 Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); the CODE claims below were derived at 20fcb479
 (perishable). Re-check before Task 1: `git fetch origin && git diff --name-only 20fcb479..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: ready-for-dev (created 2026-10-21 via `bmad-create-story 5.10`; SB1–SB11 PROPOSED for BigDev at Task 0.2; ⛔ validated yet).
+STATUS: ready-for-dev (created 2026-10-21 via `bmad-create-story 5.10`; v1.3 — SB12 DECIDED in session; SB1–SB11 PROPOSED for BigDev at Task 0.2; ⛔ validated yet).
 
 START CONDITION — MET at the pin: row `5-12-whatsapp-yes-lasts-until-withdrawn` is `done` and ON `main` (a yes now lasts until withdrawn,
 so the box reaches members for as long as their yes stands — the row-5-10 ledger annotation: *"This box's reach follows row 5-12; no
@@ -172,6 +172,16 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   REGISTERED mobile's blind index (the mint copies the identity's — `handlers.ts`). ⇒ ACTIVE proves the registered mobile is on
   WhatsApp AND the member sent from it. A member whose WhatsApp is on a different number cannot be matched; their PENDING expires (F11)
   and Settings says it was not turned on. This is why SB1 (a) keeps the message step — a tick alone proves neither.
+- **F8b — The phrase can be typed by hand.** `TWT-` + 8 characters from an unambiguous alphabet (no 0/O, 1/I/L), e.g. `TWT-7K2F9QXR`
+  (`packages/domain/src/wa-opt-in/phrase.ts:16-40`); the extractor upper-cases the body and folds dash variants
+  (`phrase.ts:43-60`), so a hand-typed, lower-case or autocorrected phrase still matches. The mint response carries
+  `displayPhoneNumber` + `verificationPhrase`, and the status response carries both while PENDING (`packages/contracts/src/wa-opt-in/opt-in.ts`
+  `CreateWaOptInResponse`, `WaOptInStatusResponse`) ⇒ either screen can show them with NO API change. A PENDING lives 48 h
+  (`DEFAULT_PENDING_TTL_SECONDS`, `apps/jobs/src/wa-webhook-processor.ts:54`).
+- **F8c — Signing up on a phone that does not hold the member's WhatsApp.** The deep link opens WhatsApp on THIS phone, so the message
+  comes from another number (no match — F8a) or, with no WhatsApp installed, `https://wa.me/…` opens a browser page and
+  `Linking.openURL` RESOLVES (⛔ rejects) — so `link_failed` does ⛔ catch it. Only WhatsApp's linked-device mode (the member's own account
+  linked on this phone) matches. Before SB12 the only way to finish was to install the app on the other phone and use Settings.
 - **F9 —** Neither `member_wa_opt_in` nor `consent_records` has an origin / ui_context column; `consent_records.consent_payload` (jsonb)
   documents `checkboxTextShown, locale, copyVersion …` (`packages/domain/src/schema/consent_records.ts:245-264`). The claim-contact
   agreement is the precedent for server-resolved evidence copy (`apps/api/src/modules/claims/claim-contact-copy.ts`). Used only if SB8
@@ -265,10 +275,10 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   `err instanceof ApiError && err.code` (F12). The step makes ONE attempt: after the first ticked Continue, the NEXT Continue
   always goes to `kyc`, never a second mint. Outcomes: 409 `wa_opt_in.already_active` → `kyc` at once (done); 409
   `wa_opt_in.channel_unavailable` → `kyc` at once (switched off meanwhile); any other rejection or a timeout → stay on the ask stage
-  showing `request_failed` (*"…turn it on later in Settings"*, ⛔ *"try again"*), Continue → `kyc`; `Linking.openURL` rejects → stay on
+  showing `request_failed` (*"…turn it on later in Settings"*, ⛔ *"try again"*), Continue → `kyc`; `Linking.openURL` rejects (rare — F8c) → stay on
   the ask stage showing `link_failed`, Continue → `kyc` (the PENDING already minted expires — F11). *Cost:* the member does not see, in
   signup, whether their message arrived (Settings shows it — F12); a transient failure is not retried in signup.
-- **SB7 — "The same capture in Settings".** ⭐ **(a)** No change: Settings' enable control already makes the very request the box makes
+- **SB7 — "The same capture in Settings".** (SB12 adds ONE thing to Settings' waiting state; otherwise:) ⭐ **(a)** No change: Settings' enable control already makes the very request the box makes
   (mint + WhatsApp) — recorded as *"already built by 5.4 / 5.12 — no change by 5.10"*, ⛔ "closed by 5.10"
   ([[feedback_closure_language_precision]]). **(b)** Put the box + reminder in Settings too. *Cost (a):* Settings words differ from the
   box's (*"Want WhatsApp notifications? Tap here to enable"*). *Cost (b):* a second surface for one request; a reminder on a screen the
@@ -282,7 +292,7 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   ([[project_fastify_empty_json_body_400]]). ⚠ §3.4's *"recorded with timestamp + the UI context"* governs the in-app-capture ROUTE TO
   ACTIVE — which (a) does not use; the route used is the user-sent message, recorded as today.
 - **SB9 — Go-live.** ⭐ A NEW roster row, KEY `wa-signup-box-hindi-reviewed` (the next free Row at Task 0.4), decision-authored:
-  **(a)** the new hi `waSignup.*` strings HUMAN-REVIEWED (Row 28's control); **(b)** counsel's DPDP view on the box and reminder wording
+  **(a)** the new hi `waSignup.*` and `waOtherPhone.*` strings HUMAN-REVIEWED (Row 28's control); **(b)** counsel's DPDP view on the box and reminder wording
   (§6(4) withdrawal ease; the §5 notice is cross-referenced to roster Row 19 — `-367` d19 names it the home, so ⛔ a parallel counsel
   leg) recorded, or its absence accepted as a decision. Target: before the first production build that
   shows the step. Blocks no build and no merge. *Cost:* one more open row.
@@ -293,6 +303,16 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   entry (post-hoc, 5.12's shape; placed BETWEEN `### Story 5.9` and `### Story 5.12`); a dated note under §3.4's opt-in bullets and an "annotated" ADR-0029 changelog row (*"the onboarding
   offer is built as an unticked signup step that starts the user-sent message; the origination rule is unchanged"*); the friction-budget
   row; the ledger. ⛔ edit any ratified sentence.
+- **SB12 — "WhatsApp on another phone?" (DECIDED IN SESSION 2026-10-21 — BigDev, after F8c: *"I think we need to send OTP in this
+  case. May be ask later if whatsapp is on another phone."*, then, offered (1) phrase + number now / (2) the same plus a Panel note + a
+  new row for a WhatsApp code / (3) wait for a ruling: *"2, go ahead"*).** On the signup step's `sent` stage AND on Settings' PENDING
+  state, a link *"WhatsApp on another phone?"* reveals, as SELECTABLE text, the Pariwar's WhatsApp number and the phrase, with *"From
+  the phone that has your WhatsApp, send this message to this number"* (F8b — no API change; signup uses the mint response, Settings the
+  status fields). The member's own message from the registered number still switches it on (F8a) — within ADR-0029. Hidden until
+  tapped (asked "later", per BigDev). ⛔ a WhatsApp code: that route extends two ratified clauses, so it is the Panel's — routing note
+  `trustee-panel-routing-note-2026-10-21-5-10-whatsapp-code-for-another-phone.md` (WRITTEN, ⛔ sent) and backlog row
+  `5-13-whatsapp-code-for-another-phone`; if ruled in, row 5-13 replaces what this link reveals, on the same link. *Cost:* the member
+  types a short code into WhatsApp (less familiar than a code typed into the app); a small edit to the just-reviewed Settings screen.
 - **PQ1 (for BigDev at Task 0.2) —** Is a tick that switches WhatsApp on BY ITSELF (SB1 (b)) wanted at all? ⭐ Recommended: no, not now —
   then nothing goes to the Panel. If yes, it is a routing note (template; §0: two ratified texts in conflict), and SB1 waits.
 
@@ -312,6 +332,9 @@ mirrors only"*; no clause governs how a channel preference is asked for.
 | `waSignup.sent_title` | Send the message in WhatsApp | व्हाट्सएप में संदेश भेजें |
 | `waSignup.sent_desc` | Tap send in WhatsApp to turn on WhatsApp messages. You can carry on here — Settings shows when it is on. | व्हाट्सएप संदेश चालू करने के लिए व्हाट्सएप में भेजें पर टैप करें। आप यहाँ आगे बढ़ सकते हैं — सेटिंग्स में दिखेगा कि यह कब चालू हुआ। |
 | `waSignup.continue` | Continue | आगे बढ़ें |
+| `waOtherPhone.link` | WhatsApp on another phone? | व्हाट्सएप दूसरे फ़ोन में है? |
+| `waOtherPhone.desc` | From the phone that has your WhatsApp, send this message to {number}: | जिस फ़ोन में आपका व्हाट्सएप है, उससे यह संदेश {number} पर भेजें: |
+| `waOtherPhone.note` | It must come from your registered number. Small or capital letters both work. | यह संदेश आपके पंजीकृत नंबर से ही आना चाहिए। छोटे या बड़े अक्षर, दोनों चलेंगे। |
 | `waSignup.request_failed` | We couldn't set up WhatsApp just now. You can carry on, and turn it on later in Settings. | अभी व्हाट्सएप चालू नहीं हो सका। आप आगे बढ़ सकते हैं और बाद में सेटिंग्स में इसे चालू कर सकते हैं। |
 | `waSignup.link_failed` | WhatsApp did not open. You can carry on, and turn WhatsApp messages on later in Settings. | व्हाट्सएप नहीं खुला। आप आगे बढ़ सकते हैं और बाद में सेटिंग्स में व्हाट्सएप संदेश चालू कर सकते हैं। |
 
@@ -373,13 +396,20 @@ Pariwar) mints a PENDING (200, a `deepLink`) when that Pariwar's WhatsApp is ena
 it is not. *Legs:* the two cases.
 
 **AC10 — Settings unchanged in behaviour (SB7, SB10).** `notifications.tsx` imports `withTimeout` / `CALL_TIMEOUT_MS` from
-`lib/with-timeout.ts`; its existing render test passes unmodified; its UI and copy are unchanged. *Legs:* the existing suite green; a
+`lib/with-timeout.ts`; its existing render-test legs pass unmodified (AC12 ADDS legs); its UI and copy are unchanged apart from AC12. *Legs:* the existing suite green; a
 unit test of `with-timeout.ts` (settles, rejects on timeout, clears its timer).
 
 **AC11 — Records and gates (SB9, SB11).** The decision committed ALONE before any code; the records commit (epics.md entry, §3.4 dated
 note, ADR-0029 annotated row, roster row `wa-signup-box-hindi-reviewed`, friction-budget row, ledger) before code; `ci:local` green on
 :5433 at the final commit with `DATABASE_URL` set (⛔ `env -u` — that SKIPS integration-tests, 5.12 F21); `tsc` run both with and without
 typed routes (F20).
+
+**AC12 — Another phone (SB12).** On the signup step's `sent` stage, and on Settings' PENDING state, a `waOtherPhone.link` control
+(collapsed by default) reveals `waOtherPhone.desc` (with the number), the phrase in a SELECTABLE text element, and `waOtherPhone.note`.
+Signup takes both values from the mint response (no extra call); Settings from the status response. Nothing is shown in any other state.
+No change under `apps/api/src`, `packages/contracts/src`, `packages/domain/src`, `apps/jobs/src` or the migrations. *Legs:* signup —
+collapsed, then revealed with the mocked mint's number + phrase; Settings — revealed in PENDING, absent in ACTIVE / null; the copy-key
+test covers `waOtherPhone.*`.
 
 ## Tasks / Subtasks
 
@@ -419,6 +449,9 @@ typed routes (F20).
         one-attempt rule and outcomes of SB6; announcements via `announcementPlan`; `STATUS_TIMEOUT_MS = 5_000` for the status read. ⚠ `t` NOT in any effect's deps — depend
         on `locale` (T1). Header comment cites the decision id and SB letters.
   - [ ] 3.4 `_layout.tsx`: refresh the stale order comment with a dated line (F3); code unchanged.
+  - [ ] 3.5 SB12 / AC12: a small shared component `apps/mobile/components/wa-opt-in/OtherPhoneHint.tsx` (props: `displayPhoneNumber`,
+        `verificationPhrase`; collapsed by default; the phrase in a `selectable` text) used by `whatsapp.tsx`'s `sent` stage and
+        `notifications.tsx`'s PENDING branch. Add `waOtherPhone.*` (en + DRAFT hi) in Task 2.
 - [ ] **Task 4 — Tests (AC1–AC10)**
   - [ ] 4.1 NEW `apps/mobile/tests/unit/wa-signup-step-render.test.ts` (jsdom; the 5.12 harness: real `LocaleProvider`, mocked
         `lib/mmkv`, `lib/member-api`, `expo-router` incl. `router.replace`, `react-native` `Linking` / `Alert` / `AccessibilityInfo`,
@@ -431,6 +464,8 @@ typed routes (F20).
   - [ ] 4.3 AC9's two live-DB legs in `apps/api/tests/integration/wa-opt-in/wa-opt-in.spec.ts`, seeded through the real signup path
         on a fresh Pariwar (F19a).
   - [ ] 4.4 `lib/with-timeout` unit test (AC10).
+  - [ ] 4.5 AC12 legs: in the new signup render test, and ADDED to `wa-notifications-screen-render.test.ts` (existing legs untouched);
+        `waOtherPhone.*` in both copy-key tests.
 - [ ] **Task 5 — Friction ledger (F17; AC11)** — ONE new row in `friction-budget.md` (payer: a new member of a Pariwar with WhatsApp
       on — one more signup screen, and for a member who leaves the box unticked one reminder; protects: a WhatsApp yes asked for plainly
       and never pre-ticked; event_type: `forced` — every such member passes the screen, the 6.36a `workplace` precedent). The app switch
@@ -447,8 +482,9 @@ typed routes (F20).
   300 ms). Depend on `locale`; test under the REAL `LocaleProvider` ([[project_uset_fresh_closure_memo_trap]]).
 - **T2 — The transport has no timeout** — bound the status read AND the mint (5.12 P1); a `withTimeout` rejection is "failed", so AC2 /
   AC6 apply ([[project_tanstack_refetch_rejoins_hung_fetch]]).
-- **T3 — `Linking.openURL` resolves before WhatsApp's message is sent** and can reject (no WhatsApp) — always catch (5.4 review); never
-  infer the yes from it.
+- **T3 — `Linking.openURL` resolves before WhatsApp's message is sent**, and for the `https://wa.me/…` link it usually RESOLVES even
+  with no WhatsApp installed (a browser opens — F8c); it rejects only when nothing can open the link. Always catch (5.4 review); never
+  infer the yes from it, and never treat a resolve as "WhatsApp opened".
 - **T4 — Clear an error in the SAME update as the new state** (5.12 P4 / `dea4e5d1` — a later-effect clear raced a frame and failed
   `ci:local`).
 - **T5 — "Go back" must NOT tick the box.** Ticking on the member's behalf is a pre-ticked box by another name (I1). AC3 pins it.
@@ -483,8 +519,8 @@ change here.
 
 ### Project structure notes
 
-New: `apps/mobile/app/(signup)/whatsapp.tsx`, `apps/mobile/lib/with-timeout.ts`, two mobile tests + the helper's test. Changed:
-`lib/wizard-steps.ts`, `tests/unit/workplace.test.ts` (the order assertion), `app/(signup)/tc.tsx`, `app/(signup)/_layout.tsx` (comment), `app/(settings)/notifications.tsx` (import),
+New: `apps/mobile/app/(signup)/whatsapp.tsx`, `apps/mobile/lib/with-timeout.ts`, `apps/mobile/components/wa-opt-in/OtherPhoneHint.tsx` (SB12), two mobile tests + the helper's test. Changed:
+`lib/wizard-steps.ts`, `tests/unit/workplace.test.ts` (the order assertion), `app/(signup)/tc.tsx`, `app/(signup)/_layout.tsx` (comment), `app/(settings)/notifications.tsx` (import + SB12's hint in PENDING), `tests/unit/wa-notifications-screen-render.test.ts` (AC12 legs added),
 `packages/i18n/locales/{en,hi}/common.json`, `apps/api/tests/integration/wa-opt-in/wa-opt-in.spec.ts`, `friction-budget.md`, and the
 records. `lib/` (⛔ `app/`) for non-routes — expo-router treats `app/` files as routes.
 
@@ -547,5 +583,6 @@ expiry; nothing on pre-checked boxes (the ratified §3.4 rule is stricter). No l
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-21 | 1.0 | Created by `bmad-create-story 5.10` (pinned `20fcb479`, branch `story/5-10-signup-whatsapp-opt-in-checkbox` in worktree `.claude/worktrees/5-10`). SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2. ⭐ Recommended design needs no API, contract, domain, worker or migration change. ⛔ validated yet. |
+| 2026-10-21 | 1.3 | BigDev (in session): *"I think we need to send OTP in this case. May be ask later if whatsapp is on another phone."*, then *"2, go ahead"* ⇒ SB12 + AC12 + Task 3.5 / 4.5: a "WhatsApp on another phone?" link reveals the number + phrase (signup `sent` stage and Settings PENDING); F8b (the phrase is hand-typeable; both responses carry it), F8c (another phone; a `wa.me` link resolves with no WhatsApp — T3 / SB6 corrected). The WhatsApp code itself → routing note `…-2026-10-21-5-10-whatsapp-code-for-another-phone.md` (WRITTEN, ⛔ sent) + backlog row `5-13-whatsapp-code-for-another-phone`. |
 | 2026-10-21 | 1.2 | BigDev asked whether the reminder repeats on every app open — it does ⛔: "once per visit" reworded to "once, during signup only — never after signup" (I4, SB4, SB6, AC3, Task 3.3). F8a added: how the number is verified (the sender's blind index + phrase). |
 | 2026-10-21 | 1.1 | Create-story checklist pass (one fresh-context verifier; 1 H / 8 M / 10 L, all applied): `workplace.test.ts` pins the step order (F18a, Task 3.1); scope wording "no change under `…/src`" (AC9's test edit); 409 codes via `ApiError` (F12, SB6); the one-attempt rule after a failed tick + `request_failed` copy; harness extended so prop legs bite (F19, Task 4.1); Android back (SB4, AC3); the §0 departure from the row's framing stated; AC9 re-scoped to the real-signup seed (F19a); friction row `forced`; cites corrected (`notifications.tsx:53`/`:56-70`, `payment.tsx:28`, `tc.tsx:195-217`); 5 s status bound; overlay as a ScrollView sibling; SB9 (b) → Row 19 for §5; epics placement. |

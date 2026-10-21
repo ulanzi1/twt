@@ -12,7 +12,11 @@ REBASED 2026-10-21 (v1.4) onto `origin/main` `2f4a4303` — a ledger-only commit
 only) ⇒ the pin stands. `main` took ledger `2026-10-21f` (5.12 LANDED) ⇒ this branch's ledger entries were renumbered `21g` (created) and
 `21h` (v1.3 + row 5-13), commit messages included.
 
-STATUS: done (v1.11 — CODE REVIEW CLOSED 2026-10-21: R1–R5 fixed, 18 regression cases added; mobile 1172/1172; ci:local 36/36 on :5433 including integration-tests. Changes local and uncommitted.)
+STATUS: done (v1.13 — BigDev asked for "Number:" and "Message:" labels on the another-phone hint: two new en + hi strings, each label its own line outside the selectable value; mobile 1203/1203; ci:local 36/36 on :5433. Code committed in `763289ee`, these records in the commit after it.)
+
+STATUS AT v1.12: done (v1.12 — SECOND CODE REVIEW CLOSED 2026-10-21: D1/D2 decided by BigDev, P1–P8 applied, the patch diff reviewed until nothing above P3; one item deferred; mobile 1203/1203; ci:local 36/36 on :5433 including integration-tests. Device screen-reader behaviour un-attested. Committed with v1.13 — code `763289ee`.)
+
+STATUS AT v1.11: done (v1.11 — CODE REVIEW CLOSED 2026-10-21: R1–R5 fixed, 18 regression cases added; mobile 1172/1172; ci:local 36/36 on :5433 including integration-tests. Changes local and uncommitted — true when written; committed afterwards in `f4678800`.)
 
 PREVIOUS STATUS: review (v1.10 — DEV DONE 2026-10-21 by `bmad-dev-story 5.10`: decision `-375` `ae4fbaf7`, records `9396deac`, code `d336be8e`; ci:local 36/36 on :5433. Earlier: ready-for-dev, created 2026-10-21 via `bmad-create-story 5.10`; v1.3 — SB12 DECIDED in session; v1.4 — VALIDATED (`bmad-create-story
 validate 5.10`, four fresh-context verifiers; BigDev: *"all"*): SB1–SB11 + PQ1 PROPOSED for BigDev at Task 0.2, several REVISED by v1.4 —
@@ -395,6 +399,8 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   `height` — neither is `theme="accent"` — in BigDev's order: *"Go back and tick the box"*, then *"Continue without WhatsApp"*.
   "Go back" closes the overlay and leaves the box UNTICKED (I1) — the member ticks it themselves; the Android back gesture while the overlay is open = "Go back"
   (`BackHandler`, F16 precedent; removed on close/unmount). The overlay renders as a sibling of the ScrollView (F16).
+  ⚠ **v1.12 (second review, 2026-10-21) — annotated, ⛔ rewritten:** the overlay is now a transparent RN `Modal` (BigDev: *"D1 = 1"*); Android back is its `onRequestClose`
+  = "Go back" — ⛔ `BackHandler` listener. Everything else above stands (rendered, ⛔ `Alert.alert`, equal buttons, once, Go back ⛔ ticks).
   ⛔ `Alert.alert`. UX Pattern 1 (*"never two primary buttons competing"*) is MET (neither is primary); its *"Primary action is always
   the highest-priority next-step"* is deliberately not applied here — BigDev's equal-weight direction; recorded in the decision. UX
   Pattern 2 (*"Confirmation Modal Discipline"*: *"Only for irreversible actions"*; *"When NOT to use: … state transitions"*; a mobile
@@ -500,7 +506,9 @@ mirrors only"*; no clause governs how a channel preference is asked for.
 | `waSignup.sent_desc` | Send the message from the WhatsApp to TWT to receive important notifications. You can continue here. | ज़रूरी सूचनाएँ पाने के लिए व्हाट्सएप से यह संदेश TWT को भेजें। आप यहाँ आगे बढ़ सकते हैं। |
 | `waSignup.continue` | Continue | आगे बढ़ें |
 | `waOtherPhone.link` | WhatsApp on another phone? | व्हाट्सएप दूसरे फ़ोन में है? |
-| `waOtherPhone.desc` | From the phone that has your WhatsApp, send this message to {number}: | जिस फ़ोन में आपका व्हाट्सएप है, उससे यह संदेश {number} पर भेजें: |
+| `waOtherPhone.desc` | ~~From the phone that has your WhatsApp, send this message to {number}:~~ → **v1.12:** From the phone that has your WhatsApp, send the message below to this number: *(second review D2 (b); BigDev approved in session: "1")* | ~~जिस फ़ोन में आपका व्हाट्सएप है, उससे यह संदेश {number} पर भेजें:~~ → **v1.12:** जिस फ़ोन में आपका व्हाट्सएप है, उससे नीचे दिया गया संदेश इस नंबर पर भेजें: |
+| `waOtherPhone.number_label` | **v1.13 (NEW — BigDev: "add Number: and Message: labels"):** Number: | नंबर: |
+| `waOtherPhone.message_label` | **v1.13 (NEW — BigDev, same):** Message: | संदेश: *(both Hindi labels: BigDev, in session — "Hindi is fine")* |
 | `waOtherPhone.note` | It must come from your registered number. Small or capital letters both work. | यह संदेश आपके पंजीकृत नंबर से ही आना चाहिए। छोटे या बड़े अक्षर, दोनों चलेंगे। |
 | `waSignup.request_failed` | We couldn't set up WhatsApp just now. You can continue for now, and turn it on later from the home screen, under "WhatsApp notifications". | अभी व्हाट्सएप चालू नहीं हो सका। फ़िलहाल आप आगे बढ़ सकते हैं, और बाद में होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में इसे चालू कर सकते हैं। |
 | `waSignup.link_failed` | WhatsApp did not open. You can continue for now, and turn WhatsApp messages on later from the home screen, under "WhatsApp notifications". | व्हाट्सएप नहीं खुला। फ़िलहाल आप आगे बढ़ सकते हैं, और बाद में होम स्क्रीन पर "व्हाट्सएप सूचनाएँ" में व्हाट्सएप संदेश चालू कर सकते हैं। |
@@ -542,6 +550,8 @@ leg asserts `omit(back, ['children','onPress','testID','accessibilityLabel'])` d
 `fontWeight` / `borderColor` / `icon` would pass it); go-back leaves `checked === false`; second-Continue skips the overlay; proceed
 routes; `Alert.alert` never called; Android back while the overlay is open closes it and the box stays unticked (and the listener is
 removed after — `mock.backHandlers` empty).
+⚠ **v1.12 (second review, 2026-10-21) — annotated, ⛔ rewritten:** the overlay is a transparent RN `Modal` (D1 (a)); `accessibilityViewIsModal` stays on its view (iOS). The Android-back
+leg calls the Modal's `onRequestClose` (= "Go back"); there is ⛔ `BackHandler` listener to remove, and the harness registry was deleted.
 
 **AC4 — Unticked never blocks signup (I2).** The member reaches NEXT without ticking, and `payment.tsx`'s `LockInGateStep` is unchanged
 (no `'whatsapp'`). *Legs:* AC3's proceed leg; a source/type assertion or grep note that `LockInGateStep` is byte-unchanged.
@@ -570,12 +580,21 @@ and the test asserts the scanned key set EQUALS the expected list (every `waSign
 used), so a key the regex cannot see fails it; `t()` is called with `PARAMS = { number: '+91 98765 43210' }` (F18 — the resolver throws on
 `{number}` without it); the microcopy gate passes on the new strings; no string tells the member they will miss something without
 WhatsApp, and none names "Settings" (F14). *Legs:* the copy-key test; the parity check; the microcopy gate output in the Debug Log.
+⚠ **v1.12 (second review, 2026-10-21) — annotated, ⛔ rewritten:** `waOtherPhone.desc` no longer carries `{number}` (D2 (b)), so ⛔ key carries a token: `t()` is called with NO params and
+the leg asserts the sentence holds no digit (⛔ the number twice). Microcopy gate re-run on the new words: 0 findings.
 
 **AC8 — Accessible (I4).** The checkbox announces its checked state; the overlay is modal to assistive tech; errors render as
 `AnnouncedText kind='error'` (`components/peer-request/announce.tsx` — a LINE: Android live region OR iOS announce, never both); the
 overlay's title on open and the `sent` stage are PHASE changes with ⛔ live region ⇒ `useAnnounceOnChange` (spoken on BOTH platforms,
 `announce.tsx:18-22`), each once. *Legs:* render-test props + an `AccessibilityInfo.announceForAccessibility` spy, run under both
 `Platform.OS` values (the mutable-`OS` mock, F19).
+⚠ **v1.12 (second review, 2026-10-21) — annotated, ⛔ rewritten:** three engineering deviations (§0: ⛔ the Panel's — nothing a person is told or owed changes). **(1)** "Modal to
+assistive tech" is met by the window-level `Modal` (D1 (a)), which also covers the wizard's progress header. **(2)** The `sent` stage is
+spoken on the member's RETURN to TWT (an `AppState` `background` → `active`), ⛔ at commit — it lands as WhatsApp takes the foreground
+(P1); if TWT has not left after 2 s it is spoken then, and a grace announcement does ⛔ stop ONE more on a later return (a slow phone may
+background after it) — so "each once" becomes "at most twice, once per kind". **(3)** The box's arrival after loading is announced too
+(the step's title — P5). The overlay's title on open is announced as written; the heading is named title-first then `popup_a11y`
+(P4 + patch review). ⚠ Un-attested on a device: focus moving into the Modal, a possible second reading of the title, return timing.
 
 **AC9 — The premise the screen rests on, through the REAL signup path (F7, F19a).** The existing legs (`wa-opt-in.spec.ts:110`, `:150`)
 already prove a projected `pending-kyc` member mints and a disabled config gives 409; this AC's added value is the SEED: a member created
@@ -598,7 +617,8 @@ story disposition was recorded"* (F17); `ci:local` green on :5433 at the final c
 integration-tests, 5.12 F21); `tsc` run both with and without typed routes (F20).
 
 **AC12 — Another phone (SB12).** On the signup step's `sent` stage, and on Settings' PENDING state, a `waOtherPhone.link` control
-(collapsed by default) reveals `waOtherPhone.desc` (with the number), the phrase in a SELECTABLE text element (`selectable`), and
+(collapsed by default) reveals `waOtherPhone.desc` (with the number — ⚠ **v1.12, annotated:** the number now has its OWN selectable line
+after the sentence, `wa-other-phone-number`, and the sentence carries none; D2 (b)), the phrase in a SELECTABLE text element (`selectable`), and
 `waOtherPhone.note`. Signup takes both values from the mint response (no extra call); Settings from the status response, passed into
 `OptInBody` as `displayPhoneNumber` / `verificationPhrase` (both `string | null`); the hint renders only when BOTH are non-null. Nothing is
 shown in any other state. No change under `apps/api/src`, `packages/contracts/src`, `packages/domain/src`, `apps/jobs/src` or the
@@ -646,7 +666,8 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
   - [x] 3.2 PREV's next-route literal → `router.replace('/(signup)/whatsapp')` (`medical.tsx:54` under (d); `tc.tsx:128` under (a)).
   - [x] 3.3 NEW `app/(signup)/whatsapp.tsx`: stages `loading → ask → sent`; the status load (bounded; AC2 branches → NEXT); the
         checkbox (F4 pattern); Continue with a `useRef` busy guard; the reminder overlay (BannerHost's SHAPE copied, ⛔ imported — T10; a
-        SIBLING of the ScrollView; a `shownOnce` flag; a `BackHandler` listener while open); the tick path (`requestWaOptIn` →
+        SIBLING of the ScrollView; a `shownOnce` flag; a `BackHandler` listener while open — ⚠ v1.12: a transparent RN `Modal` with
+        `onRequestClose`, ⛔ `BackHandler`); the tick path (`requestWaOptIn` →
         `Linking.openURL`, both caught; codes via `ApiError`; the first mint's `deepLink` kept for *"Open WhatsApp again"*); the one-mint
         rule and outcomes of SB6; errors via `AnnouncedText kind='error'`, the overlay title and `sent` stage via `useAnnounceOnChange`
         (AC8); `STATUS_TIMEOUT_MS = 5_000` for the status read; `const router = useRouter()` (the `tc.tsx:20,68` form). ⚠ `t` NOT in any
@@ -660,7 +681,8 @@ PENDING when either value is null; the copy-key tests cover `waOtherPhone.*`.
 - [x] **Task 4 — Tests (AC1–AC10, AC12)**
   - [x] 4.1 NEW `apps/mobile/tests/unit/wa-signup-step-render.test.ts` — `.test.ts` with `createElement` (⛔ JSX; F19); jsdom; RTL
         `cleanup`; the real `LocaleProvider`; mocked `lib/mmkv`, `lib/member-api`. Harness from `peer-questionnaire-render.test.ts:35-63`
-        (F19): `BackHandler` + `mock.backHandlers` + `hardwareBack()`, a mutable-`OS` `Platform`, the checkbox stub; plus `react-native`
+        (F19): `BackHandler` + `mock.backHandlers` + `hardwareBack()` (⚠ v1.12: removed — a `Modal` mock recording its props and a
+        mutable `AppState` replace them), a mutable-`OS` `Platform`, the checkbox stub; plus `react-native`
         `Linking` / `Alert` / `AccessibilityInfo` / `StyleSheet: { absoluteFill: {} }`; `expo-router`'s `useRouter: () => mock.router`
         with a STABLE `mock.router = { replace: vi.fn() }` from `vi.hoisted`; `tamagui` exporting every primitive the screen and
         `OtherPhoneHint` import (incl. `View`, `XStack` if used — a missing mocked export throws), whose `Button` RECORDS its full props
@@ -719,7 +741,7 @@ These are engineering corrections; none needs a Trustee Panel ruling under the r
       extend the tests beyond the phrase-only AC12 assertion. Sources: edge + auditor.
 
 **Patch disposition (2026-10-21, BigDev: "1" — apply every patch):** R1–R5 are resolved. The final full CI run passed all **36 jobs**,
-including the live integration-tests job on **:5433**; story and sprint row are `done`. Changes remain local and uncommitted. R1 hides the background ScrollView's descendants on Android and iOS while the reminder is open;
+including the live integration-tests job on **:5433**; story and sprint row are `done`. Changes remain local and uncommitted — true when written; committed afterwards in `f4678800` (the code `ci:local` attested below is that commit's code; only these records changed after the run). R1 hides the background ScrollView's descendants on Android and iOS while the reminder is open;
 R4 moves its label onto an explicitly accessible heading, leaving both actions independent. R3 puts the card inside a ScrollView
 bounded to the overlay height. R2 invalidates pending action continuations on navigation blur/unmount (including blur then refocus),
 checking the generation before opening WhatsApp, applying errors/stage changes, or navigating; a later Continue still moves on without
@@ -728,7 +750,10 @@ models navigation focus/blur, and treats `accessibilityViewIsModal` as iOS-only.
 31 to 49; signup and Settings both assert selectable destination text. The full mobile suite passes **1172/1172**, and mobile
 lint/typecheck pass. Family 1's review gap is now **covered-by-test** by `Review R2 — a response belongs to the visit that requested it`;
 family 13's gaps are now **covered-by-test** by the expanded AC8 background-hiding/explicit-heading checks and the R3 bounded-scroll
-case. The original verdicts below describe the reviewed baseline. Native layout/screen-reader behavior remains unverified on a device.
+case. The original verdicts below describe the reviewed baseline. Native layout/screen-reader behavior remains unverified on a device. ⚠ **v1.12 (second review), annotated:** R1's background hiding was REMOVED — the reminder became a window-level `Modal`
+(D1 (a)), which makes it unnecessary; R4's label became the visible title FOLLOWED by the instruction (P4 + patch review); R5's selectable
+SENTENCE was superseded — the number has its own selectable line and the sentence carries none (D2 (b)). The legs named here were
+rewritten with them.
 
 **Validation:** six existing mobile suites pass, **90/90 tests** (`wa-signup-step-render`, `wa-signup-copy-keys`, `with-timeout`,
 `wa-notifications-screen-render`, `wa-notifications-copy-keys`, `workplace`). The two Story 5.10 AC9 integration cases pass against
@@ -762,6 +787,112 @@ callback. An arbitrarily never-settling mock alone does not establish the report
 | 11 — Policy meaning | **covered-by-construction:** the story states the member meaning; the new condition controls the convenience-channel offer, while payment eligibility is unchanged and covered by AC4's source assertion. |
 | 12 — Cross-member ownership | **covered-by-construction:** no client-supplied resource IDs; displayed values come from the member-scoped mint/status responses. |
 | 13 — Semantic accessibility | **REAL GAP:** R1/R3/R4. Checkbox checked state, phase announcements and error announcements otherwise have AC8 render cases under both OS values. |
+
+#### Second code review 2026-10-21 (`bmad-code-review 5.10`, round 2)
+
+Target `2f4a4303..f4678800` (`apps/` + `packages/`, 16 files, +1318/−27) — the whole story's code as it stands, with the R1–R5 fix
+commit `f4678800` read closely. All three layers completed (Blind Hunter, Edge Case Hunter, Acceptance Auditor).
+**2 decision-needed (both resolved by BigDev ⇒ P7, P8), 6 patch (+2), 1 defer, 11 dismissed.** Panel gate (§0): ⛔ none passes — nothing changes what the Trust discloses or
+owes, or a consent basis; §3.4's *"WA opt-in state may only transition to ACTIVE via a user-initiated interaction … or an explicit
+affirmative consent capture in-app"* — the code MATCHES it (ACTIVE still needs the member's own message). D1/D2 are BigDev's ENGINEERING calls.
+
+- [x] [Review][Decision] **D1 · P2 — RESOLVED 2026-10-21, BigDev: *"D1 = 1"* ⇒ option (a), a transparent RN `Modal` — now patch P7.** ~~The reminder is ⛔ modal over the wizard's progress header, and screen-reader focus is ⛔ moved into it —
+      AC8 (*"the overlay is modal to assistive tech"*), family 13. The overlay is `absoluteFill` inside the SCREEN; `(signup)/_layout.tsx:38-55`
+      renders the "Step 6 of 7" text (a polite live region) ABOVE the `Stack`, outside both the scrim and R1's hidden subtree. iOS
+      `accessibilityViewIsModal` hides only the overlay's siblings (the ScrollView); Android hides only the ScrollView. VoiceOver/TalkBack
+      can still reach the header; focus, which was on the now-hidden Continue, is left undefined (only the title is announced). The tests
+      render the screen without the layout, so cannot see it. Options: **(a)** a transparent RN `Modal` — covers the whole window, native
+      modality on both OS, `onRequestClose` = "Go back" (replaces the `BackHandler` effect); cost: replaces R1's mechanism and the harness
+      must model `Modal`. **(b)** keep the in-screen overlay; lift `reminderOpen` to the signup layout (context) so the header is hidden
+      too, plus an explicit `setAccessibilityFocus` on the heading; cost: layout↔step coupling and a manual focus move. **(c)** accept and
+      record it as a known AC8 gap. Sources: blind + edge. [`apps/mobile/app/(signup)/whatsapp.tsx:250`]~~
+- [x] [Review][Decision] **D2 · P3 — RESOLVED 2026-10-21, BigDev: *"D2 = 2"* ⇒ option (b), `{number}` leaves `waOtherPhone.desc`; the number gets its own selectable line — now patch P8 (new en + hi words need BigDev's review).** ~~R5 made the SENTENCE selectable, ⛔ the number — SB12 / AC12. `waOtherPhone.desc` interpolates
+      `{number}` mid-sentence and `selectable` sits on the whole `Paragraph`; iOS `selectable` `Text` copies the whole block, so the member
+      copies *"From the phone that has your WhatsApp, send this message to +91 …:"*, ⛔ a dialable number (the phrase got its own element;
+      the number did not). Device behaviour un-attested. Options: **(a)** render the number again on its own selectable line under the
+      sentence (no string change; the number shows twice); **(b)** drop `{number}` from `waOtherPhone.desc` (en + hi — BigDev-reviewed
+      copy, so a new review) and render the number on its own selectable line like the phrase; **(c)** accept (Android range-selects).
+      Source: auditor. [`apps/mobile/components/notifications/OtherPhoneHint.tsx:42`]~~
+- [x] [Review][Patch] **P1 · P2 — The `sent` stage is announced as WhatsApp takes the foreground** [`apps/mobile/app/(signup)/whatsapp.tsx:165`] —
+      AC8, family 13(d). `setStage('sent')` runs only after `await Linking.openURL(…)` resolves, so `useAnnounceOnChange(sent_title)` fires
+      while TWT is backgrounded; on return nothing says the screen changed (box gone; "Open WhatsApp again", the hint and Continue appear).
+      The house precedent gates on the foreground — `notifications.tsx:149` (`focused && AppState.currentState === 'active'`, 5.12 P6).
+      Fix: announce `sent_title` when the app returns to `active` with `stage === 'sent'` (and not while backgrounded); test with an
+      `AppState` mock. Sources: blind + edge + auditor.
+- [x] [Review][Patch] **P2 · P2 — The records call `f4678800`'s own changes "local and uncommitted"** [`_bmad-output/implementation-artifacts/5-10-signup-whatsapp-opt-in-checkbox.md:15`] —
+      family 10. The story STATUS line, the R1–R5 disposition (*"Changes remain local and uncommitted"*), Change Log v1.11 and ledger
+      `2026-10-21n` say so, and all were committed IN `f4678800`. The CI attestation (*"the working tree based on `2215e276`"*) names no
+      commit. Fix by ANNOTATION, ⛔ rewrite ([[feedback_supersede_never_reinterpret]]; the 5.12 precedent): *"true when written; committed
+      afterwards in `f4678800`"*, and state that the attested tree is `f4678800`'s code. Source: auditor.
+- [x] [Review][Patch] **P3 · P3 — The box stays tappable while the request is in flight** [`apps/mobile/app/(signup)/whatsapp.tsx:206`] —
+      family 1, I1/I3. Continue is `disabled={busy}`; the box is not. Untick during the ≤ 15 s mint and WhatsApp still opens into `sent`
+      (ACTIVE still needs the member's message, so ⛔ a consent defect). Fix: `disabled={busy}` and `accessibilityState={{ checked, disabled: busy }}`;
+      a test leg. Sources: blind + edge + auditor.
+- [x] [Review][Patch] **P4 · P3 — R4's label replaces what the visible reminder title says** [`apps/mobile/app/(signup)/whatsapp.tsx:266`] —
+      family 13. `<H2 accessible accessibilityLabel={popup_a11y}>` is read *"Choose whether to continue without WhatsApp"* while it shows
+      *"Continue without WhatsApp?"* (spoken name ⊉ visible text — voice-control users). Fix: carry `popup_a11y` as `accessibilityHint` so the
+      name is the visible title and the instruction follows; update the R4 assertion. (Tamagui `H2` already has role `heading`.) Sources: blind + auditor.
+- [x] [Review][Patch] **P5 · P3 — Loading → ask is ⛔ announced** [`apps/mobile/app/(signup)/whatsapp.tsx:164`] — family 13(d). Focus lands
+      on the loading spinner; when the read settles it unmounts and the box appears in silence (the layout's live region speaks only
+      "Step 6 of 7"). Fix: a phase announcement of `waSignup.title` on entering `ask`; spy leg under both OS values. Source: auditor.
+- [x] [Review][Patch] **P6 · P3 — Three test legs that cannot bite** [`apps/mobile/tests/unit/wa-signup-step-render.test.ts:136`] —
+      (a) entry states other than null/ACTIVE (`PENDING`, `REVOKED`, `BLOCKED_BY_META`, `EXPIRED_24H_WINDOW`; and `available:false` +
+      `ACTIVE`) are never rendered — a `state !== null ⇒ skip` regression passes; add an `it.each` over `WaOptInStateSchema`.
+      (b) the R2 unmount leg's `queryByRole('alert')` is null after `cleanup()` whatever the code does (`:532-543`) — keep it for the blur legs only.
+      (c) the Android leg asserts the iOS-only `accessibilityViewIsModal` as if it proved Android modality (`:447`) — say what it pins, or
+      drop it from the Android leg. Sources: blind + edge.
+- [x] [Review][Patch] **P7 · P2 — (from D1 (a)) Render the reminder in a transparent RN `Modal`** [`apps/mobile/app/(signup)/whatsapp.tsx:250`] —
+      `<Modal transparent visible={reminderOpen} onRequestClose={closeReminder} animationType="fade">` holding the same scrim + bounded
+      ScrollView card (R3) and the two equal buttons; Android back = `onRequestClose` = "Go back" (the `BackHandler` effect goes); R1's
+      background hiding becomes redundant and is removed. The harness models `Modal` (render children only while `visible`; expose
+      `onRequestClose`) so AC3 / AC8 / R1 / R3 legs still bite; a leg that the header is covered is by construction (a window-level modal).
+- [x] [Review][Patch] **P8 · P3 — (from D2 (b)) The number on its own selectable line** [`apps/mobile/components/notifications/OtherPhoneHint.tsx:42`] —
+      `waOtherPhone.desc` loses `{number}` (en + hi — new words, BigDev to review before commit); `OtherPhoneHint` renders desc, then the
+      number as its own `selectable` `Text` (testID `wa-other-phone-number`), then the phrase, then the note. Copy-key tests drop `PARAMS`
+      for desc; signup + Settings AC12 legs assert the number element is selectable and holds ONLY the number. The SB5 table row is
+      updated by annotation (old words kept, struck).
+- [x] [Review][Defer] **W1 — A process kill while the member is in WhatsApp (or UPI) strands a `pending-fee` member with ⛔ route to payment** [`apps/mobile/app/(signup)/whatsapp.tsx:122`] — deferred, pre-existing.
+      F5 / SB2 (d)'s ACCEPTED cost (BigDev, Task 0.2): a relaunch opens `(tabs)` and ⛔ path resumes the wizard; `(signup)/payment` is
+      reachable only from it. UPI already had this; 5.10 adds one more app switch before payment. Had ⛔ home in `deferred-work.md`. Source: edge.
+
+**Patch disposition (2026-10-21, BigDev: *"D1 = 1, D2 = 2"*, then *"1"* — apply every patch, the D2 words as proposed):** P1–P8
+applied. ⭐ Then the PATCH diff was itself reviewed ([[feedback_review_the_fix_diff_before_commit]]), three layers per round, until a
+round found nothing above P3:
+- **Patch review A** (of P1–P8): fixed — the 2 s grace could speak into WhatsApp and use up the return; the reminder's title was
+  announced twice once it became a real `Modal`, and its hint is silent for a member who switched hints off; a box tap in the same frame as
+  Continue could still untick it; the card could run under the system bars (`useSafeAreaInsets` on the scrim); the late-link leg's
+  announce check, the backHandlers check and the `{number}` check could not fail; ⛔ leg for the grace skipping after a departure,
+  a box unlocked after "WhatsApp did not open", or an unmount during the grace.
+- **Patch review B**: one P2 — the instruction, moved to a one-time announcement, could be cut off by focus entering the `Modal` and was
+  not readable again ⇒ the heading is named title-first then `popup_a11y` (always spoken, re-readable) and the on-open announcement is the
+  title again (AC8 as written). Also fixed: an iOS `inactive` blip counted as leaving (only `background` does now); a box UNTICK just
+  before Continue in one frame lost to the stale closure (a `checkedRef`, read by Continue); the dead `BackHandler` harness.
+- **Patch review C**: ⭐ nothing above P3 in any layer — the convergence point. Then one last small change from its LOW items (⛔ itself
+  layer-reviewed; each part mutation-proven, Debug Log (b2)): the grace WAITS when TWT is `inactive` (the app switcher) and speaks on the
+  return; only `active` counts as the return; the start uses the same `background` rule; a "Go back, then tick, then Continue makes the
+  one request" leg (a gap that predates this review); the header's "always spoken" softened. LOW items carried, ⛔ fixed: iPad split
+  view (TWT `inactive` beside WhatsApp, never `background`); an unlocked box after a failed attempt does nothing (Continue goes on — SB6's
+  one-mint rule); a tick in the same frame as an unticked Continue lands under the reminder; a refocus without unmount is ⛔ a new visit
+  (unreachable — every step moves on by `replace`).
+**Un-attested on a device (carried, ⛔ faked — [[feedback_record_unattested_no_backfill]]):** focus moving into the `Modal` and whether the
+title is then heard twice; the `sent` announcement's timing on a real return; "Continue without WhatsApp" closing the `Modal` and replacing
+the route in one commit (iOS dismisses after the fade — the step unmounts with it; ⛔ device-checked); the scrim's insets on Android.
+
+**Dismissed (11):** link failure keeps the ask stage with no retry/hint (SB6 / AC6 as accepted — `openURL` rejects only rarely, F8c);
+a mint dropped after blur→refocus (⛔ reachable — every wizard step moves on by `replace`, nothing is pushed over it; the auditor traced
+it); `withTimeout` does not abort a mint that lands late (T2; the PENDING expires — F11); an existing PENDING shown as an unticked offer
+(SB3 / I1; the server re-uses the PENDING); `leaving` never resets (`replace` unmounts the step); the status read is not focus-tied
+(same reachability); the copy's wording and grammar (BigDev's own words, byte-identical to SB5 — BigDev's to change); integration rows
+left in the dev DB (Debug Log (d)); the timeout message changed (no matcher anywhere); the reminder heading lacks a header role (Tamagui
+`H2` sets `role: "heading"`); closing the reminder is not announced (it returns to the same, already-read ask state).
+
+**Load-bearing-invariant lens (touched families, round 2):** 1 — **REAL GAP** P3; otherwise covered-by-test (one mint per visit, R2
+legs, AC2/AC6). 2 — covered-by-test (one-`act()` double tap, unticked double tap, re-open keeps one mint). 3 — covered-by-test (AC9's
+real signup session; no caller-supplied id). 6 — covered-by-construction + test (explicit picks; AC12 null/state legs). 8 —
+covered-by-construction (no server writer touched). 10 — **REAL GAP** P2. 11 — covered-by-construction (the skip predicate decides only
+whether a convenience channel is offered; AC2 legs + AC4's `LockInGateStep` source assert). 12 — covered-by-construction. 13 — (a)
+covered-by-test; (b) untouched; (c) covered-by-construction; (d) **REAL GAP** P1, P5, and D1. Native screen-reader behaviour remains
+unverified on any device.
 
 ## Dev Notes
 
@@ -945,6 +1076,16 @@ applied alone, the file restored after):
   phrase not `selectable`: each caught.
 - AC9 (`wa-opt-in.spec.ts`, :5433) — the two legs' seeded configs swapped: both fail.
 
+**(b2) RED proofs — second code review, 2026-10-21.** Each fix was reverted (a scripted mutation of `whatsapp.tsx` /
+`OtherPhoneHint.tsx`, restored and `cmp`-checked after each) and its legs seen to fail: HEAD's screen + hint against the new legs ⇒ 18 fail
+(P1 ×6, P3 ×2, P4 ×2, P5 ×2, P7 ×4, P8 ×2 incl. Settings); P6 (a) by a `state !== null ⇒ skip` mutation ⇒ 4 fail. Patch review A:
+grace-after-departure ⇒ 2, grace-consumes-the-return ⇒ 2, the box's `busyRef` guard ⇒ 1, insets ⇒ 1, the announced text ⇒ 2,
+listener cleanup ⇒ 2. Patch review B: `inactive`-as-departure ⇒ 2, `checkedRef` (a faithful revert with `checked` back in the deps) ⇒
+exactly the one same-frame leg, the composed label ⇒ 3. Final change: the deferred grace ⇒ 2, `active`-only return ⇒ 2, the Go-back
+order ⇒ 1. Mobile suite after all of it: **77 files / 1203 tests**; mobile `tsc` and `eslint` clean (typed routes ⛔ re-run — no route
+literal changed). `pnpm microcopy:check` on the new `waOtherPhone.desc` (en + hi): *"✓ no vocabulary / tone / numeral /
+magic-number-color violations"*; `pnpm microcopy:test` 371/371.
+
 **(c) Gate outputs, 2026-10-21.** `pnpm --filter @twt/i18n i18n:check-parity`: *"✓ i18n parity gate passed — every member-facing en/
 key has non-empty Hindi parity"*. `pnpm microcopy:check`: *"✓ no vocabulary / tone / numeral / magic-number-color violations in the
 scanned scope"* (on the committed JSON and the new screens); `pnpm microcopy:test` 371/371. `pnpm friction:check` AFTER the code commit
@@ -999,7 +1140,9 @@ Modified: `apps/mobile/lib/wizard-steps.ts` · `apps/mobile/app/(signup)/medical
 
 | Date | Version | Change |
 |---|---|---|
-| 2026-10-21 | 1.11 | CODE REVIEW CLOSED (`bmad-code-review 5.10`, three layers; BigDev: "1"): R1–R5 fixed — Android/iOS background accessibility hiding; explicit accessible reminder heading; bounded scrolling reminder; late-response invalidation on blur/unmount/refocus; selectable number on signup and Settings. Eighteen new regression cases; mobile 1172/1172; full ci:local 36/36 on :5433 including integration-tests. Story and sprint row `review` → `done`. Changes local, uncommitted. |
+| 2026-10-21 | 1.13 | BigDev, after reading the D2 words: *"add Number: and Message: labels"* — `OtherPhoneHint` puts a label line before each value (`waOtherPhone.number_label` *"Number:"* / *"नंबर:"*, `waOtherPhone.message_label` *"Message:"* / *"संदेश:"*), each OUTSIDE the selectable value so a copy takes only the value; `waOtherPhone.desc` unchanged. 17 → 19 `waSignup.*` / `waOtherPhone.*` keys (copy-key test updated). Legs on signup + Settings (labels present, ordered label → value, ⛔ selectable), proven RED by reverting the hint (3 fail). i18n parity and microcopy gates pass; mobile 1203/1203; tsc + lint clean. Roster Row 38 (a) annotated. BigDev on the two Hindi labels: *"Hindi is fine"*. Ledger `2026-10-21p`. ci:local 36/36 on :5433 on this tree. Committed: code `763289ee`, records next. |
+| 2026-10-21 | 1.12 | SECOND CODE REVIEW CLOSED (`bmad-code-review 5.10`, round 2, `2f4a4303..f4678800`, three layers): 2 decision — BigDev *"D1 = 1, D2 = 2"*: the reminder is a transparent RN `Modal` (covers the progress header; `onRequestClose` = Go back); the number gets its own selectable line and leaves `waOtherPhone.desc` (en + hi words approved in session) — 6 patch, 1 defer (process kill mid-app-switch strands `pending-fee` — pre-existing), 11 dismissed; BigDev: *"1"*. Then three patch-review rounds until nothing above P3 (Review Findings). `sent` stage spoken on the return to TWT; box locked in flight (state + ref); heading named title-first then `popup_a11y`; box arrival announced; entry-state legs; safe-area insets on the scrim. Records: "uncommitted" of `f4678800` annotated; SB4/SB5/AC3/AC7/AC8/AC12/Tasks annotated (⛔ rewritten); roster Row 38 (a) annotated. Every new leg proven RED (Debug Log (b2)). Mobile 1203/1203; microcopy 0 findings; ci:local 36/36 on :5433 (a first attempt failed `db:migrate` — a hand-built URL without `sslmode=disable`; a second caught a test-harness flake, fixed). Ledger `2026-10-21o`. Row stays `done`. Committed with v1.13 (code `763289ee`). |
+| 2026-10-21 | 1.11 | CODE REVIEW CLOSED (`bmad-code-review 5.10`, three layers; BigDev: "1"): R1–R5 fixed — Android/iOS background accessibility hiding; explicit accessible reminder heading; bounded scrolling reminder; late-response invalidation on blur/unmount/refocus; selectable number on signup and Settings. Eighteen new regression cases; mobile 1172/1172; full ci:local 36/36 on :5433 including integration-tests. Story and sprint row `review` → `done`. Changes local, uncommitted — true when written; committed afterwards in `f4678800`. |
 | 2026-10-21 | 1.10 | Task 6: `ci:local` 36/36 green on :5433 at `d336be8e` (integration-tests run); tsc both ways; STATUS → `review`; ledger `2026-10-21m`; row 5-10 → `review`. ⛔ pushed (held for BigDev). |
 | 2026-10-21 | 1.9 | DEV (`bmad-dev-story 5.10`): Task 0.1 preflight clean; Decision `2026-10-21-375` committed alone (`ae4fbaf7`); records (`9396deac`, roster Row 38); Tasks 1–5 implemented and tested (`d336be8e`) — every leg proven RED; friction gate basis `row`. Found: typed routes (expo-router 55) do ⛔ guard a `'/(signup)/…'` literal ⇒ a source leg added under AC1; the 5.12 copy-key regex cannot see digit keys ⇒ widened in the new test. |
 | 2026-10-21 | 1.8 | Task 0.2 DONE — BigDev: *"all recommendation accepted for SB1-SB11 and PQ1"*. Debug Log (a) records the answer verbatim and what each SB resolves to; PREV = `medical`, NEXT = `payment` (SB2 (d)); SB9 (d-i); PQ1 no. STATUS line, SB heading and Task 0.2 updated. Next: Task 0.1, then 0.3 (decision, alone) and 0.4 (records). |

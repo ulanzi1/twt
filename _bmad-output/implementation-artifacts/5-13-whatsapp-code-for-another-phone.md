@@ -897,7 +897,8 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         "Supersessions: none", what it does NOT cover. Committed ALONE (`governance:` prefix); its SHA written only after.
   - [x] 0.4 (DONE 2026-10-21 — the records commit after `7bc9dbf8`: epics `### Story 5.13`; the §3.4 note; the ADR-0029 annotated row;
         roster Row 39 `wa-opt-in-code-template-approved`; `deferred-work.md` four items + two annotations; the told item
-        `trustee-panel-told-2026-10-21-5-13-whatsapp-code-as-built.md` WRITTEN, ⛔ told; the friction row (`optional`) + disposition;
+        `trustee-panel-told-2026-10-21-5-13-whatsapp-code-as-built.md` WRITTEN, then TOLD 2026-10-21 (BigDev: *"note for panel has been
+        sent"*); the friction row (`optional`) + disposition;
         ledger `2026-10-21v`; row → in-progress) Records commit: `epics.md` `### Story 5.13` (after 5.12, before `---`; 5.10's format); a §3.4 dated note under the opt-in bullets
         (the bullets unedited); an ADR-0029 changelog "annotated" row; roster row `wa-opt-in-code-template-approved` (next free Row; Row 38's
         shape; legs per WC13 as answered); `deferred-work.md` — a dated note on the mismatch item (*"trigger fired by `-374`; ⛔ built by 5.13
@@ -1169,7 +1170,7 @@ version changes; Expo / expo-router / tamagui as pinned.
 ### Debug Log References
 
 (a) Task 0.2 answers, verbatim · (b) RED proofs · (c) parity / microcopy / friction / access-wrapper / OpenAPI gate outputs · (d) dev-DB
-side effects · (e) Task 0.1 preflight · (f) the REVOKED / BLOCKED_BY_META writers (Task 1.1)
+side effects · (e) Task 0.1 preflight · (f) the REVOKED / BLOCKED_BY_META writers (Task 1.1) · (g) the told item sent
 
 **(e) Task 0.1 preflight (2026-10-21, before Task 0.3):** `git fetch origin` ⇒ `origin/main` = `bac71abb` (the pin) ⇒ ⛔ rebase, ⛔ re-derive;
 `git diff --name-only bac71abb..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` empty. **S1** ⛔ code moved ⇒
@@ -1182,6 +1183,8 @@ item or decision after the pin on `origin/main`; ⛔ decision `-376` or later on
 BEFORE this story's validate commit `33b8da9f` (20:06) also wrote `21s` ⇒ this story's entry re-lettered `21u` (`-366` decision 6 — a
 number belongs to the first commit that takes it, on any branch); the 6.37e session was told by message which letters and numbers 5.13
 takes next (`21u`+, `-376`, Row 39, 0178).
+
+**(g) WC11 (a) — the told item SENT (2026-10-21):** BigDev, verbatim: *"note for panel has been sent"* ⇒ `trustee-panel-told-2026-10-21-5-13-whatsapp-code-as-built.md` is TOLD (its Status line updated; the text is kept as sent). ⛔ a ruling was asked; ⛔ answer is awaited — if the Panel replies, that reply is recorded here and judged against `-376` (a reply that rules is a new decision, ⛔ an edit of this one).
 
 **(a) Task 0.2 — BigDev's answer, verbatim (2026-10-21, in session, after the v1.5 validate):** *"all recommendation accepted for
 WC1–WC17"*. Each WC resolves to its ⭐ option:

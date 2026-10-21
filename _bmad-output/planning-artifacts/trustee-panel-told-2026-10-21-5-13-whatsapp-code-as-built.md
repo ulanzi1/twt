@@ -1,8 +1,8 @@
 # For the Trustee Panel — told, not asked: how the WhatsApp code you allowed will work (Story 5.13, 2026-10-21)
 
 **For:** Dhiraj Rahul · Kalpana Bharti
-**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-10-21 — ⛔ yet TOLD** (it becomes "told" only when BigDev sends it
-and says so — [[feedback_shown_to_panel_means_sent]]). ⛔ a ruling is asked.
+**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-10-21 — TOLD 2026-10-21** (sent to the Panel by BigDev: *"note
+for panel has been sent"*). Kept as sent; ⛔ a ruling was asked.
 **What this is:** for your information. Nothing here asks you to decide anything. It follows your ruling of 21 October (Decision
 `2026-10-21-374`, option A): *"by DR and KB / option A, one code per request and one retry."*
 

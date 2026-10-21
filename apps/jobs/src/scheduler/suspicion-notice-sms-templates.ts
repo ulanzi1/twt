@@ -21,8 +21,10 @@
 // placeholder, ⛔ never a fixture `accepted`. The sweep checks the config FIRST so a gap never uses up a once-ever slot (RB12).
 
 // ⭐ Story 6.34 (TV2 / TV4 / TV13; `-313`, `-314`): each entry DECLARES its variables' TRAI types in `slots`, in text
-// order — `{member}` alphanumeric (≤ 40 — ⚠ a longer or Devanagari name is the open deferred `{member}` item and Row 30
-// (d)'s question), `{date}` alphanumeric (`DD-MM-YYYY`, 10 — ⛔ date type exists; numeric refuses the hyphen), the
+// order — `{member}` alphanumeric (≤ 40 — ⭐ a longer name is sent in the shorter form "Ramesh S." since Story 6.37e,
+// `2026-10-18-359` B — `sms-member-name.ts`; ⚠ the unit, Devanagari and the full stop stay Row 30 (d)'s open question; the
+// literal 40 is pinned EQUAL to the neighbours' slot by `sms-member-name.test.ts`), `{date}` alphanumeric (`DD-MM-YYYY`,
+// 10 — ⛔ date type exists; numeric refuses the hyphen), the
 // helpline cbn (≤ 14). `appeal_notice` carries THREE variables — the sheet records the justification (the last date to
 // appeal is the substance of the notice, `-293` item 1 B). ⛔ A character of any text changed (SmartPing keeps the
 // untyped marker); the marker is the ONE vocabulary's (`@twt/channels`), re-exported for the lockstep test.

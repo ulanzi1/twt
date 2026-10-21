@@ -25,7 +25,9 @@
 //   RB12's race guard (the same checks — a gap ⇒ `held_config`, ⛔ row, ⛔ decrypt, an alarm) → the Pariwar's name mode,
 //   read ONCE in its OWN scope tx (RB5) → the CLAIMING transaction (`beginSuspicionNotice` — the claim-row lock, the
 //   re-check, the recipient, the row) → COMMIT → (⛔ KMS under the lock) the deceased's name (RB5: erased / unresolvable /
-//   none ⇒ `no_target`) → the recipient's number → its keyed hash → the send → compare-and-set.
+//   none ⇒ `no_target`; Story 6.37e, `2026-10-18-359` B: the full name if it fits `{member}`, else the shorter form "Ramesh S.",
+//   else the over-long name goes on and the core refuses it, as before) → the recipient's number → its keyed hash → the send →
+//   compare-and-set.
 //   It throws ONLY on a transient failure (pg-boss retries the SAME job, which re-claims its own row at once).
 // ⚠ AT-LEAST-ONCE (6.19b's): a timeout or crash after a gateway accept may produce a second text — `attempt_count` /
 // `first_detail` record it. ⛔ NOTHING here writes a claim decision, event or state (invariant 7, AC9b).
@@ -59,6 +61,7 @@ import {
 } from './claim-correction-reminders.js';
 import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templates.js';
 import { helplineNotCallbackNumberWarning, sendClaimDltSms, smsPreflightGap } from './claim-dlt-sms-send.js';
+import { smsMemberName } from './sms-member-name.js';
 import {
   SUSPICION_NOTICE_SMS_TEMPLATES,
   formatAppealUntil,
@@ -419,7 +422,9 @@ export async function runSuspicionNoticeChild(
     return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'no_target', reason: begun.recipient.unresolved }));
   }
 
-  // RB5 — `{member}`: the deceased's KYC name, MODE-RESOLVED (`-181`); erased / unresolvable / none ⇒ `no_target`.
+  // RB5 — `{member}`: the deceased's KYC name, MODE-RESOLVED (`-181`); erased / unresolvable / none ⇒ `no_target`. Story 6.37e
+  // (`2026-10-18-359` B): the full name when it fits the slot, else the shorter form ("Ramesh S."); a name that STILL does not fit
+  // goes on UNCHANGED and the send core refuses it (`value_too_long` + alarm — `-359` consequence 1: "the error and alarm stay").
   const profile = (await db((d) => kycDomain.getMemberKycProfile(d, pariwarId, begun.deceasedMemberId))) as
     | Awaited<ReturnType<typeof kycDomain.getMemberKycProfile>>
     | undefined;
@@ -433,6 +438,9 @@ export async function runSuspicionNoticeChild(
   if (storedName === memberDomain.ANONYMIZED_SENTINEL) return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'name', reason: 'erased' }));
   const member = notifications.resolveMemberFacingDeceasedName(mode, storedName);
   if (member === '') return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'name', reason: 'unresolvable' }));
+  const chosen = smsMemberName(member);
+  // ⭐ ONE local feeds BOTH `render` and `values` (MG3 refuses a values / body mismatch).
+  const memberValue = chosen.kind === 'too_long' ? member : chosen.name;
 
   // The recipient's number (null / the erasure sentinel / ⛔ a valid Indian mobile ⇒ `no_target`).
   let e164: string | null;
@@ -459,9 +467,9 @@ export async function runSuspicionNoticeChild(
     template: { text: entry.registeredText, slots: entry.slots },
     pariwarId: pid,
     e164,
-    render: (helpline) => renderSuspicionNoticeSms(message, locale, { member, helpline, ...(date !== undefined ? { date } : {}) }),
+    render: (helpline) => renderSuspicionNoticeSms(message, locale, { member: memberValue, helpline, ...(date !== undefined ? { date } : {}) }),
     // MG3 — the SAME locals the render uses (`date` = `formatAppealUntil(...)`, computed once above).
-    values: (helpline) => ({ member, ...(date !== undefined ? { date } : {}), helpline }),
+    values: (helpline) => ({ member: memberValue, ...(date !== undefined ? { date } : {}), helpline }),
     // ⛔ fail open: this sweep HOLDS (its race guard read the memo just above) — a fault here is the in-flight race.
     preflightFailOpen: false,
     // 6.37b DR3 — the notice row's own id rides as MSG91's `CRQID`.

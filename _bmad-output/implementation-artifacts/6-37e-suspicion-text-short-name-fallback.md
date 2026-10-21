@@ -47,7 +47,7 @@ LETTERS: F = found facts (F1–F17); SN = build decisions (SN1–SN7 — ANSWERE
 
 # Story 6.37e: When the member's full name is too long for a text, the family and the neighbours still get the text — with the first name and the surname's initial
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Four SMS texts name the deceased member in a `{member}` slot of 40 code points: the three
 > suspicion texts (the nominee's refusal notice — `-262` FQ7 B; the closed notice — `-291` Q2 B; the refused person's appeal notice —
@@ -619,13 +619,13 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
         ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML). ⚠ The sheet edit is in `GATE_INPUTS`
         (`docs/launch-gate-inventory/**`) — this is ⛔ a docs-only push: the pre-push hook and `ci.yml` run.
 
-- [ ] **Task 1 — The function (AC1).**
-  - [ ] 1.1 `apps/jobs/src/scheduler/sms-member-name.ts` (SN1 / SN2): module header (the rulings, I1–I4, the F7 equivalence — why the
+- [x] **Task 1 — The function (AC1).**
+  - [x] 1.1 `apps/jobs/src/scheduler/sms-member-name.ts` (SN1 / SN2): module header (the rulings, I1–I4, the F7 equivalence — why the
         RESOLVED name is the input; F16's as-built form), `SmsMemberName`, `smsMemberName` (with SN2's `''` / whitespace guard). Call
         `notifications.resolveMemberFacingDeceasedName('shielded_name', …)` — ⛔ import `splitFirstNameLastInitial` directly, ⛔
         reimplement it. ⚠ The header must ⛔ contain `{#var#}`, `DLT_VAR` or `sms.dlt.template_id.` — DLT rules (ii) / (iii) scan
         COMMENT lines in a non-registry file (only registry rule (i) is code-only).
-  - [ ] 1.2 `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(k), incl. SN3's one-limit leg and the callers' source leg. Add
+  - [x] 1.2 `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(k), incl. SN3's one-limit leg and the callers' source leg. Add
         `apps/jobs/src/scheduler/sms-member-name.ts` to `NOTICE_MODULES` in `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
         as this story's OWN module (the list is FIXED, ⛔ an import walk — its header: *"it reads these four modules only — ⛔ the helpers
         they call"*; `peer-mesh-sms-templates.ts` stays off, as the suspicion child's other helpers do), and in that file's header
@@ -633,35 +633,35 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
         (*"the jobs sweep + child, the shared send core, the sibling registry and the domain's notice module"*) — it is listed as a
         module of the notice path that 6.37e owns, ⛔ as a called helper (AC6).
 
-- [ ] **Task 2 — The neighbours' text (AC3).**
-  - [ ] 2.1 `readDeceasedName` in `claim-peer-mesh-requests.ts`: replace the `fitsDltAlphanumeric` check with `smsMemberName(read.name)`
+- [x] **Task 2 — The neighbours' text (AC3).**
+  - [x] 2.1 `readDeceasedName` in `claim-peer-mesh-requests.ts`: replace the `fitsDltAlphanumeric` check with `smsMemberName(read.name)`
         — `too_long` ⇒ `{ fault: 'name_too_long' }`; `full` / `short` ⇒ `{ name }`. Update the module header's step (4) and the R9
         comment — `readDeceasedName`'s JSDoc *"R9 — the TEXT's name: …, then the SMS `{member}` slot's length
         (`fitsDltAlphanumeric`)"* (`-362`). ⛔ Touch `readMemberFacingDeceasedName` (I5) — its JSDoc included (AC4).
-  - [ ] 2.2 Remove `fitsDltAlphanumeric` from this file's import list — after 2.1 it is unused here (its only code use was
+  - [x] 2.2 Remove `fitsDltAlphanumeric` from this file's import list — after 2.1 it is unused here (its only code use was
         `readDeceasedName`), and `@typescript-eslint/no-unused-vars` is an error (lint fails otherwise); `fitsDltUrl` stays imported;
         the export stays (F6).
-  - [ ] 2.3 The AC3 legs (flip R9; the new one-word leg — each with AC5's assertions as AC5 assigns them; the re-claim leg's
+  - [x] 2.3 The AC3 legs (flip R9; the new one-word leg — each with AC5's assertions as AC5 assigns them; the re-claim leg's
         FIXTURE only, its assertions unchanged);
         update the suite's header line *"`name_too_long` texts ⛔ one"* (F5 (iii) — `-362`: only for a name that still does not fit).
-  - [ ] 2.4 `peer-mesh-sms-templates.ts`'s header (F15): a name longer than the slot is sent in the short form (`-362`); `no_target`
+  - [x] 2.4 `peer-mesh-sms-templates.ts`'s header (F15): a name longer than the slot is sent in the short form (`-362`); `no_target`
         only for one that still does not fit. ⛔ Code change.
 
-- [ ] **Task 3 — The suspicion texts (AC2).**
-  - [ ] 3.1 `runSuspicionNoticeChild`: after `if (member === '') …`, `const chosen = smsMemberName(member)`; send `chosen.name` for
+- [x] **Task 3 — The suspicion texts (AC2).**
+  - [x] 3.1 `runSuspicionNoticeChild`: after `if (member === '') …`, `const chosen = smsMemberName(member)`; send `chosen.name` for
         `full` / `short` and the ORIGINAL `member` for `too_long` (SN4 (a) — the core refuses it as today; ⚠ ⛔ test can tell the
         original from the over-long short form — both end `value_too_long` — so this choice is coverage-only BY DESIGN, AC7). ONE local feeds BOTH `render`
         and `values` (T3). Update the RB5 comment and the module header's child line.
-  - [ ] 3.2 `suspicion-notice-sms-templates.ts`: the header's `{member}` comment (F2) — the long-name half answered by `-359` / this row;
+  - [x] 3.2 `suspicion-notice-sms-templates.ts`: the header's `{member}` comment (F2) — the long-name half answered by `-359` / this row;
         Row 30 (d)'s unit / Devanagari half still open. ⛔ Code change.
-  - [ ] 3.3 The AC2 legs — all three purposes (AC2's fixtures and its four oracle points: date, locale, message by body, imports);
+  - [x] 3.3 The AC2 legs — all three purposes (AC2's fixtures and its four oracle points: date, locale, message by body, imports);
         flip *"6.37 review round 2 P2"*; the distinctive one-word leg; each with AC5's assertions as AC5 assigns them.
 
-- [ ] **Task 4 — Proof (AC4–AC7).** RED runs (Debug Log); `git diff <baseline_commit> -- apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+- [x] **Task 4 — Proof (AC4–AC7).** RED runs (Debug Log); `git diff <baseline_commit> -- apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
       (the front-matter pin, after any 0.1 re-pin) shows `readMemberFacingDeceasedName`'s body and JSDoc unchanged; the AC6
       diff-stat; typecheck; lint; DLT gate; `ci:local` on :5433.
 
-- [ ] **Task 5 — Records and close.** Story Status, Dev Agent Record, File List, Change Log (newest-first); sprint row `in-progress` →
+- [x] **Task 5 — Records and close.** Story Status, Dev Agent Record, File List, Change Log (newest-first); sprint row `in-progress` →
       `review`; ledger. ⛔ "Closed by" until `done` on `main`.
 
 ## Dev Notes
@@ -819,16 +819,95 @@ condition notes; the confirm note says the build continues and go-live waits.
 - 0.4: the records commit — every edit append-only (roster: five `notes:` lines, each new line `startswith` its old line; deferred-work
   25 / 0; DLT sheet 10 / 0 and the `| <n> |` table-row count unchanged at 32; `claim.json` en + hi: only `$comment.suspicion_sms` /
   `$comment.peer_mesh_sms` changed, each new value `startswith` its old one, the three substrings the lockstep tests read kept);
-  `sprint-status.yaml` 21790 → 21795, YAML parses, row 6-37e `in-progress`.
+  `sprint-status.yaml` 21790 → 21795, YAML parses, row 6-37e `in-progress`. Records commit `48a34913`.
+
+**(c) RED proofs (AC7) — each mutant applied by a scratchpad runner that asserts the edit landed exactly once and ALWAYS restores
+the file (the working-tree diff-stat was identical before and after every run).** Unit (`env -u DATABASE_URL pnpm --filter @twt/jobs
+test sms-member-name` — ⛔ `--`; GREEN baseline `Test Files 1 passed (1)`, `Tests 16 passed (16)`):
+- "always `full`" (the fit branch replaced by `return { kind: 'full', name: resolvedName }`) ⇒ RED: (b), (c), (d), (e), (f), (k).
+- "always `short`" ⇒ RED: (a), (d), (e), (f) (first half — a fitting shielded input), (g), (i).
+- a `< 40` boundary mutant (in `fitsDltAlphanumeric`) ⇒ RED: (a), (i).
+- re-collapse a `full` (`resolvedName.split(/\s+/).join(' ')`) ⇒ RED: (g) only.
+- BOTH guard checks removed ⇒ RED: (h), (h′). ONLY the `trim()` check removed ⇒ `Tests 16 passed (16)` — the second check (`short === ''`)
+  carries both legs alone (SN2's belt and braces, proven).
+- a UTF-16 `.length` mutant (in `fitsDltAlphanumeric`) ⇒ RED: (i) only.
+- (j) — its own positive control: a planted `maxLength` 41 fed to the SAME `allEqualTo` comparison returns `false` (asserted in-test).
+- the source leg — its own plants: an import from `../scheduler/sms-member-name.js` and a bare `smsMemberName (name)` call in third
+  files ARE caught; a commented call / import is ⛔; the module itself must be in the walk. Before Tasks 2–3 wired the callers the
+  three source legs were RED (`Tests 3 failed | 13 passed`) — the walk can fail.
+Live (`DATABASE_URL` = :5433; both suites together, GREEN baseline `Tests 105 passed (105)` — 57 suspicion + 48 neighbours):
+- the call removed (TODAY's code — the suspicion child sends `member` as is; the neighbours' step `[...name].length > 40 ⇒
+  name_too_long`) ⇒ RED: the flipped P2, the CLOSED and the APPEAL short-form legs, the flipped R9 (`4 failed | 101 passed`).
+- "always `full`" with ⛔ fit check ⇒ RED: the same four + the neighbours' new ONE-word leg + the AC5b re-claim leg (the name reaches
+  the core ⇒ `value_too_long`, ⛔ `no_target:name_too_long`) (`6 failed | 99 passed`).
+- TRUNCATION (`too_long` ⇒ `short` with `[...name].slice(0, 40)`) ⇒ RED: the suspicion ONE-word leg, the neighbours' ONE-word leg, the
+  AC5b re-claim leg (`3 failed | 102 passed`).
+- Task 3.1's "ORIGINAL `member` for `too_long`" — coverage-only BY DESIGN (the core ends `value_too_long` either way); ⛔ claimed RED.
+- T5: the P2 leg FLIPPED, ⛔ deleted — renamed *"… FLIPPED by 6.37e (`-359` B) …"*; its refusal assertions moved to the new ONE-word
+  leg; its "⛔ the name in an alarm" assertion kept (now over the AC5 blob). The `isolated()` + `allowAppeal` combination WORKED (the
+  CLOSED leg) — ⛔ fallback to the default Pariwar was needed.
+
+**(d) Gates (Task 4).** AC4: `readMemberFacingDeceasedName`'s JSDoc + body byte-identical to `1e22889e` (a scripted block compare:
+`True`, 2363 chars; `git diff 1e22889e` shows hunks only in the module header, the import list and `readDeceasedName`); WR13 *"a name
+that FAILS the SMS fit check is sent IN FULL"* run alone: `1 passed`; `claim-peer-mesh-wa-reminders-live` + `peer-mesh-sms-templates`
+`58 passed`. AC6: `git diff --stat $(git merge-base origin/main HEAD) -- apps packages` = exactly the new module + its test, the two
+schedulers, the two registry headers, the three edited test files and the two `claim.json` files (11 files); `claim-dlt-sms-send.ts`,
+`claim-peer-mesh-wa-reminders.ts` and `packages/domain` untouched (`git diff --quiet`). `pnpm --filter @twt/jobs typecheck` clean;
+`pnpm --filter @twt/jobs lint` clean; the new header has ⛔ `**/`, `{#var#}`, `DLT_VAR` or `sms.dlt.template_id.`; after `git add` of the
+new files, `pnpm dlt-typed-variables:test` 25 passed and `pnpm dlt-typed-variables:check` passed.
+`DATABASE_URL=…:5433 pnpm ci:local` — **PASSED, 36 job(s) green** (incl. `integration-tests`, `friction-budget`, `dlt-typed-variables`),
+exit 0, first run (⛔ re-run). ⚠ During that run ONE comment-only edit was made (a 190-char line in `suspicion-notice-sms-templates.ts`'s
+header rewrapped — the Task 3.2 edit had ended mid-line); after it, `lint` clean, `dlt-typed-variables:check` passed, and
+`suspicion-notice-sms-templates` + `sms-member-name` `74 passed` — said here, ⛔ hidden.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6-37e`, 2026-10-21).
+- 2026-10-22 (`bmad-dev-story 6.37e`) — Task 0: branch rebased onto `1e22889e`; `2026-10-22-377` committed alone (`7cd8a7a4`); the
+  records commit (`48a34913`) incl. the PQ1 / PQ2 confirm note — WRITTEN, ⛔ sent (BigDev sends it; its answer gates go-live, Rows 22 / 27).
+- Task 1: `smsMemberName(resolvedName)` in `apps/jobs/src/scheduler/sms-member-name.ts` — `full` iff `fitsDltAlphanumeric`, else
+  `short` = `notifications.resolveMemberFacingDeceasedName('shielded_name', …)` iff THAT fits, else `too_long`; both empty-name
+  guards run BEFORE the fit (so the second guard alone carries (h) / (h′) — proven). 16 unit legs (AC1 (a)–(k), SN3's one-limit leg
+  with a positive control, the callers' source leg with plants and the I4 "⛔ second fit / shorten" walk). `NOTICE_MODULES` gains the
+  module (five modules; header updated).
+- Task 2: `readDeceasedName` calls `smsMemberName` — `too_long` ⇒ `name_too_long`, else the chosen name; `fitsDltAlphanumeric` dropped
+  from the import (export kept, T7). `readMemberFacingDeceasedName` byte-identical (AC4). Live: R9 FLIPPED (the two-word 41 now sends
+  "AAAAAAAAAAAAAAAAAAAA B." to all five, body through the real `renderPeerMeshRequest`); a NEW one-word leg keeps `no_target:name_too_long`;
+  the AC5b re-claim leg's FIXTURE → `'A'.repeat(41)` (assertions unchanged); the suite header and the registry header updated.
+- Task 3: the suspicion child sends ONE local (`memberValue`) to both `render` and `values` — the chosen name, or the ORIGINAL
+  `member` for `too_long` (the core refuses it as today, SN4). Live: P2 FLIPPED (sends "Ramesh I."), the CLOSED and APPEAL notices'
+  short-form legs (date through the real `formatAppealUntil`), a NEW one-word leg keeping `value_too_long` + alarm. Every new / flipped
+  leg asserts ⛔ distinctive name token (and ⛔ the short form where sent) over `{ enqueued, alarms, rows }`.
+- Task 4: every leg RED under its AC7 mutant (Debug Log (c)); gates (Debug Log (d)).
+- ⛔ Migration, schema, detail vocabulary, registered text, send-core or `packages/domain` source change. Nothing is live (F11).
 
 ### File List
 
+- `.decision-log.md` — `2026-10-22-377` (commit `7cd8a7a4`, alone)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-short-name-confirms.md` — NEW (WRITTEN, ⛔ sent)
+- `_bmad-output/planning-artifacts/epics.md` — `### Story 6.37e`
+- `_bmad-output/implementation-artifacts/deferred-work.md` — two dated notes + a new owed-confirm item
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — row 6-37e, comment, ledgers `2026-10-22d` / `2026-10-22e`
+- `_bmad-output/implementation-artifacts/6-37e-suspicion-text-short-name-fallback.md` — this file
+- `docs/launch-gate-inventory/inventory-roster.md` — Rows 22, 23, 27, 28, 30 dated notes
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md` — three dated prose notes
+- `packages/i18n/locales/en/claim.json`, `packages/i18n/locales/hi/claim.json` — `$comment.suspicion_sms` / `$comment.peer_mesh_sms` appended
+- `apps/jobs/src/scheduler/sms-member-name.ts` — NEW
+- `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+- `apps/jobs/src/scheduler/claim-suspicion-notices.ts`
+- `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts` — header comment only
+- `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts` — header comment only
+- `apps/jobs/tests/sms-member-name.test.ts` — NEW
+- `apps/jobs/tests/claim-suspicion-notices-live.test.ts`
+- `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
+- `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
+
 ## Change Log
 
+- v1.5 (2026-10-22) — `bmad-dev-story 6.37e`: DEV COMPLETE (Tasks 0–5). Rebased onto `1e22889e`; `2026-10-22-377` (`7cd8a7a4`);
+  records + the PQ1 / PQ2 confirm note, WRITTEN, ⛔ sent (`48a34913`); `smsMemberName` and its two callers; AC1–AC3 legs, every new /
+  flipped leg proven RED (Debug Log (c)); gates (Debug Log (d)). Status → review; row 6-37e in-progress → review. Ledgers
+  2026-10-22d, 2026-10-22e.
 - v1.4 (2026-10-22) — `bmad-create-story validate 6.37e` (second pass): three fresh-context verifiers (code claims · rulings,
   records and numbers · edge cases and test feasibility) against `origin/main` = `1e22889e`; 2 H / 9 M / 8 L, all applied (BigDev:
   "all"); go-live gate answered (Debug Log (a2)). HIGH: 5.13 LANDED — NUMBERS rewritten (`-376` / Row 39 / 0178 / its ledger letters

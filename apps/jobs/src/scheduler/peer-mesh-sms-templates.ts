@@ -7,8 +7,9 @@
 // routing note's "TWT:" prefix is dropped (the DLT header names the sender — PM3's author reading).
 //
 // ⭐ THE D33 CARVE-OUT (as 6.24b's): this text NAMES THE MEMBER (`{member}`) because the ruled text does. `{member}` is
-// MODE-RESOLVED (`-181`, `resolveMemberFacingDeceasedName`), ⛔ never hard-coded; an erased / unresolvable name, or one
-// longer than the slot (`fitsDltAlphanumeric`), ⇒ `no_target`, ⛔ never a blank, ⛔ never a truncated name (RB5, R9).
+// MODE-RESOLVED (`-181`, `resolveMemberFacingDeceasedName`), ⛔ never hard-coded; an erased / unresolvable name ⇒ `no_target`,
+// ⛔ never a blank, ⛔ never a truncated name (RB5, R9). ⭐ Story 6.37e (`2026-10-18-362` B): a name longer than the slot is sent in
+// the shorter form ("Ramesh S." — `sms-member-name.ts`); `no_target:name_too_long` only for one that STILL does not fit.
 // ⛔ No deadline word (S4 / T6 — RB16); ⛔ no claim, money, family, nominee, claimant or reporter.
 // ⚠ A missing template id or helpline number fails CLOSED in the shared core (`claim-dlt-sms-send.ts`) — the sweep and
 // the child check the config FIRST so a gap never uses up a once-ever slot (RB12).

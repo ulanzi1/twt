@@ -13,8 +13,9 @@
 //   (3) the due pings — ⛔ any ⇒ `noop` (⛔ name decrypted for nothing — R8's hook enqueues on every no-op SELECT re-run);
 //       a locale-read DB fault in (2) is a RETRY (the sweep skips the Pariwar that run), ⛔ a hold — a MISSING passport is a hold;
 //   (4) R9 — the deceased's NAME, ONCE, outside any claiming transaction: the mode (`-181`), the KYC name, the erased sentinel,
-//       the mode-resolved form and its length (`fitsDltAlphanumeric`) — a fault is CLAIM-WIDE (`no_target:name_<reason>`, ⛔
-//       replaced); a decrypt THROW is a retry (⛔ stored — ⛔ ping begun yet);
+//       the mode-resolved form and its length — Story 6.37e (`2026-10-18-362` B): `smsMemberName` sends the full name when it fits,
+//       else the shielded form ("Ramesh S."); only a name that STILL does not fit is `name_too_long` — a fault is CLAIM-WIDE
+//       (`no_target:name_<reason>`, ⛔ replaced); a decrypt THROW is a retry (⛔ stored — ⛔ ping begun yet);
 //   (5) per due ping, in `ping_id` order (and every replacement the run creates): the CLAIMING transaction
 //       (`beginPeerMeshRequest` — claim → ping locks, R1) → COMMIT → (⛔ KMS under a lock) the neighbour's number →
 //       `normalizeMobile` → its keyed hash → the send → the compare-and-set. An UNUSABLE number is R6 (a second transaction
@@ -76,12 +77,12 @@ import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templat
 import { helplineNotCallbackNumberWarning, sendClaimDltSms, smsPreflightGap } from './claim-dlt-sms-send.js';
 import {
   PEER_MESH_REQUEST_SMS_TEMPLATES,
-  fitsDltAlphanumeric,
   fitsDltUrl,
   peerMeshRequestDltConfigKey,
   renderPeerMeshRequest,
   type PeerMeshRequestSmsLocale,
 } from './peer-mesh-sms-templates.js';
+import { smsMemberName } from './sms-member-name.js';
 import { resolveAppLinksOrigin } from './staff-email-config.js';
 
 /** The text machine's deps — 6.19b's, minus the staff push, plus the app-link base and (tests) the questionnaire registry. */
@@ -515,7 +516,11 @@ export async function readMemberFacingDeceasedName(
   return { name };
 }
 
-/** R9 — the TEXT's name: `readMemberFacingDeceasedName`, then the SMS `{member}` slot's length (`fitsDltAlphanumeric`). */
+/**
+ * R9 — the TEXT's name: `readMemberFacingDeceasedName`, then the SMS `{member}` slot — Story 6.37e (`2026-10-18-362` B):
+ * `smsMemberName` gives the full name when it fits, else the shielded form ("Ramesh S."); `name_too_long` only for a name that
+ * still does not fit (`-311` PM3's "no text", superseded in part). ⛔ Truncated.
+ */
 async function readDeceasedName(
   deps: ClaimPeerMeshRequestDeps,
   pariwarId: ReturnType<typeof ids.pariwarId>,
@@ -524,8 +529,9 @@ async function readDeceasedName(
 ): Promise<NameRead> {
   const read = await readMemberFacingDeceasedName(deps, pariwarId, deceasedMemberId, tag, 'claim-peer-mesh-request');
   if ('fault' in read) return read;
-  if (!fitsDltAlphanumeric(read.name)) return { fault: 'name_too_long' };
-  return read;
+  const chosen = smsMemberName(read.name);
+  if (chosen.kind === 'too_long') return { fault: 'name_too_long' };
+  return { name: chosen.name };
 }
 
 /**

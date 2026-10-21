@@ -25,7 +25,7 @@ import {
   type SmsAppClient,
   type SmsGatewayMessage,
 } from '@twt/channels';
-import { bindScopedDb, claim, encryption, ids, nominee, schema } from '@twt/domain';
+import { bindScopedDb, claim, encryption, ids, nominee, notifications, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -39,7 +39,7 @@ import {
   type ClaimSuspicionNoticeDeps,
   type SuspicionNoticePayload,
 } from '../src/scheduler/claim-suspicion-notices.js';
-import { SUSPICION_NOTICE_SMS_TEMPLATES } from '../src/scheduler/suspicion-notice-sms-templates.js';
+import { SUSPICION_NOTICE_SMS_TEMPLATES, formatAppealUntil, renderSuspicionNoticeSms } from '../src/scheduler/suspicion-notice-sms-templates.js';
 import { cleanupClaims, encryptField, onOwnTx } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -789,23 +789,94 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
     expect(h.alarms.some((a) => a.includes('dlt_template_not_approved:preflight_sms_type_needs_unicode') && a.includes(s))).toBe(true);
   });
 
-  it('⭐ 6.37 review round 2 P2 — a FULL name over the member slot\'s 40 code points ⇒ final `value_too_long` (MG3) STORED + alarm, ⛔ sent', async () => {
-    // Before 6.37 this text was sent as is; F11's DLT cap (40 per variable) means it could ⛔ be delivered either way. Recorded
-    // as Debug Log (o) — the once-ever notice ends `error`, ⛔ a false `accepted`.
+  // ── Story 6.37e (`2026-10-18-359` B) — the shorter name form when the full name does not fit ─────────────────────────
+
+  /** A KYC name over the 40-code-point slot, ≥ 2 words, with a DISTINCTIVE token (AC5's name assertion). */
+  const LONG_NAME = 'Ramesh Kumar Venkatanarayana Subramaniam Iyer';
+  const shortOf = (name: string) => notifications.resolveMemberFacingDeceasedName('shielded_name', name);
+  const memberValueOf = (m: SmsGatewayMessage | undefined) => m?.values.find((v) => v.name === 'member')?.value;
+
+  it('⭐ 6.37 review round 2 P2 — FLIPPED by 6.37e (`-359` B): a FULL name over the member slot\'s 40 code points ⇒ SENT with the shorter form', async () => {
+    // Was: final `value_too_long` + alarm, ⛔ sent (6.37 Debug Log (o)). The refusal assertions moved to the ONE-word leg below.
     const own = isolated();
-    const longName = 'Ramesh Kumar Venkatanarayana Subramaniam Iyer';
-    expect([...longName].length).toBeGreaterThan(40);
-    const d = await seedDeath({ pariwarId: own, kycName: longName });
+    expect([...LONG_NAME].length).toBeGreaterThan(40);
+    const short = shortOf(LONG_NAME);
+    const d = await seedDeath({ pariwarId: own, kycName: LONG_NAME });
     const s = await refusedS(d);
     const h = harness({ allow: [own] });
     await tick(h, [s]);
-    expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({
+    const rows = await rowsOf(s);
+    expect(rows.find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'accepted', detail: null, attempt_count: 1 });
+    const body = renderSuspicionNoticeSms('refusal_notice', 'hi', { member: short, helpline: HELPLINE });
+    const msg = h.sent.find((m) => m.body === body);
+    expect(msg?.to.endsWith(A)).toBe(true);
+    expect(memberValueOf(msg)).toBe(short);
+    expect(h.alarms.filter((a) => a.includes('value_too_long'))).toEqual([]);
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows });
+    expect(blob).not.toContain('Venkatanarayana');
+    expect(blob).not.toContain(short);
+  });
+
+  it('⭐ 6.37e (`-359` B) — the CLOSED notice (`-291` Q2 B) of an over-long name is SENT with the shorter form', async () => {
+    const own = isolated();
+    const short = shortOf(LONG_NAME);
+    const d = await seedDeath({ pariwarId: own, kycName: LONG_NAME });
+    const s = await refusedS(d);
+    const r = await claimOf(d, 'documents_pending');
+    await allowAppeal(d, s);
+    const h = harness({ allow: [own] });
+    await tick(h, [r, s]);
+    const rows = await rowsOf(r);
+    expect(rows.find((x) => x.purpose === 'closed_after_appeal')).toMatchObject({ outcome: 'accepted', detail: null, recipient_version_id: d.v1 });
+    const body = renderSuspicionNoticeSms('closed_notice', 'hi', { member: short, helpline: HELPLINE });
+    const msg = h.sent.find((m) => m.body === body);
+    expect(msg?.to.endsWith(A)).toBe(true);
+    expect(memberValueOf(msg)).toBe(short);
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: [...rows, ...(await rowsOf(s))] });
+    expect(blob).not.toContain('Venkatanarayana');
+    expect(blob).not.toContain(short);
+  });
+
+  it('⭐ 6.37e (`-359` B) — the refused person\'s APPEAL notice (`-293` item 1 B) of an over-long name is SENT with the shorter form AND its date', async () => {
+    const own = isolated();
+    const short = shortOf(LONG_NAME);
+    const d = await seedDeath({ pariwarId: own, kycName: LONG_NAME });
+    const decidedAt = new Date(Date.now() - 5 * DAY);
+    const s = await refusedS(d, { decidedAt });
+    await contact(d, s, { linked: null }); // `contact_locale` 'hi'
+    const h = harness({ allow: [own] });
+    await tick(h, [s]);
+    const rows = await rowsOf(s);
+    expect(rows.find((x) => x.purpose === 'refusal_appeal_notice')).toMatchObject({ outcome: 'accepted', detail: null, recipient_version_id: null });
+    const date = formatAppealUntil(claim.suspicionRefusalAppealUntil(decidedAt));
+    const body = renderSuspicionNoticeSms('appeal_notice', 'hi', { member: short, helpline: HELPLINE, date });
+    const msg = h.sent.find((m) => m.body === body);
+    expect(msg?.to.endsWith(CLAIMANT)).toBe(true);
+    expect(memberValueOf(msg)).toBe(short);
+    expect(msg?.values.find((v) => v.name === 'date')?.value).toBe(date);
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows });
+    expect(blob).not.toContain('Venkatanarayana');
+    expect(blob).not.toContain(short);
+  });
+
+  it('⭐ 6.37e — a ONE-word name over the member slot keeps TODAY\'s outcome: final `value_too_long` (MG3) STORED + alarm, ⛔ sent', async () => {
+    // `-359`'s own accepted cost (*"A one-word name that is itself too long still could not be sent"*) — the P2 assertions, moved.
+    const own = isolated();
+    const oneWord = 'Venkatanarayana'.repeat(3);
+    expect([...oneWord].length).toBeGreaterThan(40);
+    const d = await seedDeath({ pariwarId: own, kycName: oneWord });
+    const s = await refusedS(d);
+    const h = harness({ allow: [own] });
+    await tick(h, [s]);
+    const rows = await rowsOf(s);
+    expect(rows.find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({
       outcome: 'error',
       detail: 'dlt_template_not_approved:value_too_long',
     });
     expect(h.sent).toEqual([]);
     expect(h.alarms.some((a) => a.includes('dlt_template_not_approved:value_too_long') && a.includes(s))).toBe(true);
-    expect(JSON.stringify(h.alarms)).not.toContain('Venkatanarayana');
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows });
+    expect(blob).not.toContain('Venkatanarayana');
   });
 
   it('⭐ 6.37 AC9 (c) / (d) — a PASS proceeds; ONE process memo ⇒ ONE MSG91 read per template however many claims and children (counted)', async () => {

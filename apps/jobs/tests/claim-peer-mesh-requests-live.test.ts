@@ -9,7 +9,9 @@
 //   · AC2 / AC2c — each neighbour texted ONCE with EXACTLY the registered words, the mode-resolved name and the link
 //     `<origin>/peer-request?c=<the row's code>`; the accepted write; a re-run sends ⛔ again; ⛔ at night (re-enqueued at 09:00 IST);
 //   · AC5 / AC5b — a skipped neighbour replaced and the replacement texted; R6 (an erased number) replaced; a decrypt THROW is a
-//     transient (⛔ replaced); `name_too_long` texts ⛔ one; ⛔ new event; ⛔ alarm carries a name, a number or a link code;
+//     transient (⛔ replaced); `name_too_long` texts ⛔ one — since Story 6.37e (`2026-10-18-362` B) only for a name that STILL does
+//     not fit (a longer multi-word name is texted in the shorter form, "Ramesh S."); ⛔ new event; ⛔ alarm carries a name, a number
+//     or a link code;
 //   · the code review's F2 / F3 / F5 / F6 — 20:00 IST crossed mid-run (before a begin; between a begin and the handoff) ⇒ ⛔ sent,
 //     deferred to 09:00; a lease stamped at its begin (⛔ the run's start) ⇒ a second child ⛔ re-claims it; a held claim ⛔ counts
 //     against the sweep's bound; a base whose link cannot fit the `{link}` slot HOLDS.
@@ -24,7 +26,7 @@ import {
   type SmsAppClient,
   type SmsGatewayMessage,
 } from '@twt/channels';
-import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaires, schema } from '@twt/domain';
+import { bindScopedDb, claim, encryption, ids, member as memberDomain, notifications, questionnaires, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -483,8 +485,33 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     await expectIdsOnly(h, w);
   });
 
-  it('R9 — a name longer than the slot ⇒ every ping `no_target:name_too_long`, ⛔ replaced, ⛔ texted, ⛔ alarmed', async () => {
-    const w = await world({ name: 'A'.repeat(20) + ' ' + 'B'.repeat(20) });
+  it('⭐ R9 FLIPPED by 6.37e (`-362` B) — a two-word name longer than the slot ⇒ every neighbour texted with the SHORTER form, ⛔ alarmed', async () => {
+    const name = 'A'.repeat(20) + ' ' + 'B'.repeat(20); // 41 — ⛔ fits; its shielded form does
+    const short = notifications.resolveMemberFacingDeceasedName('shielded_name', name);
+    const w = await world({ locale: 'en', name });
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    const after = await rows(w);
+    expect(after).toHaveLength(5);
+    expect(h.sent).toHaveLength(5);
+    for (const r of after) {
+      expect(r).toMatchObject({ send_outcome: 'accepted', attempt_count: 1, detail: null });
+      const msg = h.sent.find((m) => m.to === w.mobiles.get(r.member_id));
+      expect(msg?.values.find((v) => v.name === 'member')?.value).toBe(short);
+      expect(msg?.body).toBe(renderPeerMeshRequest('en', { member: short, link: `${ORIGIN}/peer-request?c=${r.link_code!}`, helpline: HELPLINE }));
+    }
+    expect(h.alarms).toEqual([]);
+    // AC5 — ⛔ the name, full or short, in a payload, an alarm or a row (built after the last tick).
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await rows(w) });
+    expect(blob).not.toContain('A'.repeat(20));
+    expect(blob).not.toContain('B'.repeat(20));
+    expect(blob).not.toContain(short);
+    await expectIdsOnly(h, w);
+  });
+
+  it('R9 (6.37e) — a ONE-word name longer than the slot keeps TODAY\'s outcome: every ping `no_target:name_too_long`, ⛔ replaced, ⛔ texted, ⛔ alarmed', async () => {
+    const name = 'Venkatanarayana'.repeat(3); // 45 — one word: its shielded form is itself
+    const w = await world({ name });
     const h = harness(w, { registry: [CLEARED] });
     await tick(h, w);
     const after = await rows(w);
@@ -492,6 +519,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(after.every((r) => r.send_outcome === 'no_target' && r.detail === 'no_target:name_too_long')).toBe(true);
     expect(h.sent).toHaveLength(0);
     expect(h.alarms).toEqual([]);
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await rows(w) });
+    expect(blob).not.toContain('Venkatanarayana');
   });
 
   // ── the code review's F2 / F3 / F5 ──────────────────────────────────────────────────────────────────────────
@@ -695,7 +724,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
   });
 
   it('AC5b — a re-claimed row with a NAME fault ⇒ `no_target:name_*` (⛔ replaced) + the "a prior attempt may have sent" alarm', async () => {
-    const w = await world({ selected: 1, name: 'A'.repeat(20) + ' ' + 'B'.repeat(20) });
+    const w = await world({ selected: 1, name: 'A'.repeat(41) }); // 6.37e — ONE word: a two-word name now sends its shorter form
     const p = w.pings[0]!;
     await stall(p.pingId);
     const h = harness(w, { registry: [CLEARED] });

@@ -1,13 +1,13 @@
 // Story 6.24b (Task 5.5; AC9b, invariant 7) — the suspicion notices ⛔ never refuse, close, approve or decide a claim, and
 // ⛔ never emit a claim event. 6.19d's form (`claim-certificate-reminder-no-decision.test.ts`): a runtime spy CANNOT see
 // this (an ESM namespace export is ⛔ interceptable — the sweep calls the domain module-internally), so the fence reads the
-// SOURCE of every module of this story — the jobs sweep + child, the shared send core, the sibling registry and the
-// domain's notice module — and refuses any decision writer's or event emitter's NAME, 6.24a's writers included, AND a
+// SOURCE of every module of this story — the jobs sweep + child, the shared send core, the sibling registry, the
+// domain's notice module and (Story 6.37e) the name fallback `sms-member-name.ts` — and refuses any decision writer's or event emitter's NAME, 6.24a's writers included, AND a
 // WRITE to a decision / event / claim table in the forms this codebase writes (the domain module writes raw SQL — a name
 // fence alone would pass an `INSERT INTO events_log`): raw `INSERT INTO` / `UPDATE [ONLY]` / `DELETE FROM [ONLY]` /
 // `MERGE INTO` / `TRUNCATE`, schema-qualified or quoted, a Drizzle `.insert(` / `.update(` / `.delete(` on the table
 // through ANY namespace, and ANY write whose table is INTERPOLATED (`${…}` — it cannot be checked, so it is refused).
-// ⚠ Its LIMIT, stated (code review round 2): it reads these four modules only — ⛔ the helpers they call (each is that
+// ⚠ Its LIMIT, stated (code review round 2): it reads these five modules only — ⛔ the helpers they call (each is that
 // helper's own story's fence) — and a write hidden behind a string the module builds at runtime is ⛔ seen.
 // Comments stripped: the doc-blocks name them to forbid them.
 // ⭐ POSITIVE CONTROL: the child's claiming transaction IS referenced (⛔ a vacuous fence); a writer PLANTED into a copy of
@@ -30,6 +30,8 @@ const NOTICE_MODULES = [
   'apps/jobs/src/scheduler/claim-dlt-sms-send.ts',
   'apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts',
   'packages/domain/src/claim/suspicion-notice.ts',
+  // Story 6.37e (Task 1.2) — a module of the notice path that 6.37e owns, ⛔ a called helper (`peer-mesh-sms-templates.ts` stays off).
+  'apps/jobs/src/scheduler/sms-member-name.ts',
 ] as const;
 
 /** Every writer that DECIDES (or asks for a decision on) a claim, every claim-event emitter, and 6.24a's writers. */

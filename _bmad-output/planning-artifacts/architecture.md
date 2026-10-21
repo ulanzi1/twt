@@ -2261,6 +2261,12 @@ onboarding:
   *(Dated 2026-10-21, Story 5.12 Task 7.1: the note above is BUILT on the story branch (row
   `5-12-whatsapp-yes-lasts-until-withdrawn` → `review`; ⛔ yet `done` on `main`) — migration 0177's trigger and one-ACTIVE
   index, `endEveryWaYes` on every withdrawal path, the member-only 131050 predicate. The bullets above are unedited.)*
+  *(Dated 2026-10-21, Decision 2026-10-21-374 — Trustee-ratified, option A, "one code per request and one retry": a member who
+  ticks the signup WhatsApp box on a phone that does not hold their WhatsApp may be sent a WhatsApp code (an authentication template)
+  to their registered number — the one kind of message the dual gate admits to a member not yet ACTIVE — and typing it into the app switches
+  the opt-in ACTIVE, a second route beside the user-sent message. At most two codes per request and two entry attempts per code (BigDev's
+  reading of the retry, ⛔ separately ratified). Row `5-13-whatsapp-code-for-another-phone` (⛔ yet built). The bullets above are
+  unedited.)*
 - **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
   Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
   correction and certificate reminders' delivery ladder — to ONE person only: the

@@ -1,7 +1,7 @@
 # Trustee Panel routing note — 2026-10-21 — a WhatsApp code for a member whose WhatsApp is on another phone
 
-> **STATUS: WRITTEN 2026-10-21 — ⛔ NOT SENT.** It becomes "shown to the Panel" only when BigDev sends it
-> ([[feedback_shown_to_panel_means_sent]]). Raised by BigDev during Story 5.10's creation (*"I think we need to send OTP in this case.
+> **STATUS: RULED 2026-10-21 — OPTION A (Decision `2026-10-21-374`, Trustee-ratified).** Written 2026-10-21, corrected the same day
+> before sending, put to the Panel and ruled 2026-10-21. Raised by BigDev during Story 5.10's creation (*"I think we need to send OTP in this case.
 > May be ask later if whatsapp is on another phone."*, then *"2, go ahead"*). Implementation, if ruled in: sprint row
 > `5-13-whatsapp-code-for-another-phone` (backlog).
 
@@ -13,10 +13,23 @@ The engineering (how the code is made, stored, limited and checked) is ours and 
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — 2026-10-21 — OPTION A (Decision `2026-10-21-374`, Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited** as the question **as it was put**.
+> **The ruling, verbatim, as relayed by BigDev:** *"by DR and KB / option A, one code per request and one retry."* — Dhiraj Rahul and
+> Kalpana Bharti.
+>
+> **A — "Allow the code. Only after the member ticks the box and taps "WhatsApp on another phone?"; one code per request, to the
+> registered number only; WhatsApp is switched on when the code is typed back in the app."** Its cost was accepted as put (a WhatsApp
+> message to someone not yet switched on; Meta's charge per code; Meta's approval of a new message type; more to build; counsel not
+> asked), with the Panel's addition *"one retry"*. ⚠ BigDev's reading of "one retry", given in session when asked (⛔ separately
+> ratified): *"Both"* — the code may be sent once more for the same request (at most two codes), and each code may be typed in twice.
+> Built by sprint row `5-13-whatsapp-code-for-another-phone`; Story 5.10 builds the link with the number and phrase meanwhile.
+>
+> **Not covered by this ruling** (the full list is `-374`'s): counsel's view; whether §2.2's *"voice OTP only — no WhatsApp"* was
+> ratified; Meta's template approval and price; the consent record for a code-confirmed yes; the unbuilt *"surfaced for member
+> confirmation"* half of §3.4's mismatch rule. `-374`'s readings (i)–(iv) are the author's, ⛔ ratified.
+>
+> Everything below stays **unedited**, as the question **as it was put**.
 
 ---
 

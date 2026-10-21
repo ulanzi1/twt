@@ -36,8 +36,12 @@ import { Button, H2, Paragraph, Spinner, Text, YStack } from 'tamagui'
 import { memberAuth } from '../../lib/member-api'
 
 type OptInState = WaOptInStatusResponse['state']
-/** `load` — a status read failed; `action` — enable / re-open / withdraw failed (a background refresh keeps it). */
-type ErrorSource = 'load' | 'action' | null
+/**
+ * `load` — a status read failed; `action` — enable / withdraw failed; `link` — WhatsApp did not open. A background refresh
+ * keeps `action` and `link`; a read that changes the body clears `action`, and clears `link` only once the request is no
+ * longer waiting (the member still has to send the message).
+ */
+type ErrorSource = 'load' | 'action' | 'link' | null
 
 /**
  * `foreground` — spinner, clears every error; `background` — joins an in-flight read; `refresh` — no spinner, but waits for
@@ -84,7 +88,10 @@ export default function NotificationSettingsScreen() {
   const [error, setError] = useState<ErrorSource>(null)
   const [focused, setFocused] = useState(false)
   const fetching = useRef<Promise<void> | null>(null)
-  /** The announcement key of the body last shown — `null` until the first read lands. */
+  /**
+   * The announcement key of the body last shown — `null` until the first body has committed and its effect run. The off,
+   * unavailable and never-confirmed bodies share one key, so a move between them neither clears an error nor is announced.
+   */
   const shownKey = useRef<string | null>(null)
 
   const load = useCallback(async (mode: LoadMode = 'foreground'): Promise<void> => {
@@ -95,14 +102,16 @@ export default function NotificationSettingsScreen() {
     while (fetching.current) await fetching.current
     const pending = (async () => {
       if (mode === 'foreground') setLoading(true)
-      setError((current) => (mode !== 'foreground' && current === 'action' ? current : null))
+      setError((current) => (mode !== 'foreground' && (current === 'action' || current === 'link') ? current : null))
       try {
         const next = await withTimeout(memberAuth.getWaOptInStatus(), CALL_TIMEOUT_MS)
         // A read that changes what the screen shows supersedes an earlier action's error (a 409 "already off" now shows
         // off) — in the SAME update, so the new body never renders under the old error.
         const changed = shownKey.current !== null && shownKey.current !== announcementKey(next.state, next.available)
         setStatus(next)
-        if (changed) setError((current) => (current === 'action' ? null : current))
+        if (changed) {
+          setError((current) => (current === 'action' || (current === 'link' && next.state !== 'PENDING') ? null : current))
+        }
       } catch {
         setError((current) => current ?? 'load')
       } finally {
@@ -161,10 +170,17 @@ export default function NotificationSettingsScreen() {
     setError(null)
     try {
       const res = await withTimeout(memberAuth.requestWaOptIn(), CALL_TIMEOUT_MS)
-      await Linking.openURL(res.deepLink)
+      try {
+        await Linking.openURL(res.deepLink)
+      } catch {
+        // The mint landed but WhatsApp did not open: show the waiting request with the error still said.
+        setError('link')
+        void load('refresh')
+        return
+      }
       await load()
     } catch {
-      // The screen may be stale (a 409 — already on) or the mint may have landed before WhatsApp failed to open: re-read.
+      // The screen may be stale (a 409 — already on): re-read.
       setError('action')
       void load('refresh')
     } finally {
@@ -181,7 +197,7 @@ export default function NotificationSettingsScreen() {
       await Linking.openURL(status.deepLink)
     } catch {
       // No app can handle the wa.me URL (e.g. WhatsApp not installed) — surface it rather than failing silently.
-      setError('action')
+      setError('link')
     } finally {
       setBusy(false)
     }

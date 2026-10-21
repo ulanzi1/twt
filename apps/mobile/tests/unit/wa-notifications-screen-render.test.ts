@@ -310,6 +310,8 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
     await act(async () => { finishOld(status(null)) })
     expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(3)
     expect(screen.getByTestId('wa-opt-in-pending')).toBeInTheDocument()
+    // WhatsApp never opened: the waiting body keeps saying so (a body change clears `link` only once it leaves PENDING).
+    expect(screen.getByTestId('wa-opt-in-error')).toBeInTheDocument()
   })
 
   it('⭐ P3 — an action\'s error survives the PENDING poll (WhatsApp would not open)', async () => {
@@ -325,14 +327,39 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
   })
 
   it('⭐ P4 — a withdrawal refused because the yes already ended re-reads: the stale ACTIVE body goes, and so does the error (it is off)', async () => {
-    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE')).mockResolvedValue(status('REVOKED'))
+    let finishReread!: (value: ReturnType<typeof status>) => void
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE'))
+      .mockReturnValueOnce(new Promise((resolve) => { finishReread = resolve }))
     mock.revokeWaOptIn.mockRejectedValue(new Error('409 wa_opt_in.not_active'))
     renderScreen()
     await screen.findByTestId('wa-opt-in-revoke')
     fireEvent.click(screen.getByTestId('wa-opt-in-revoke'))
-    await screen.findByTestId('wa-opt-in-off')
+    // The refusal is said while the re-read is out …
+    await screen.findByTestId('wa-opt-in-error')
+    expect(screen.getByTestId('wa-opt-in-active')).toBeInTheDocument()
     expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(2)
+    // … and the off body supersedes it.
+    await act(async () => { finishReread(status('REVOKED')) })
+    expect(screen.getByTestId('wa-opt-in-off')).toBeInTheDocument()
     expect(screen.queryByTestId('wa-opt-in-error')).toBeNull()
+  })
+
+  it('⭐ P4 (dea4e5d1 review) — ⛔ a single frame shows the off body under the old error (the clear lands with the new status)', async () => {
+    mock.getWaOptInStatus.mockResolvedValueOnce(status('ACTIVE')).mockResolvedValue(status('REVOKED'))
+    mock.revokeWaOptIn.mockRejectedValue(new Error('409 wa_opt_in.not_active'))
+    const { container } = renderScreen()
+    await screen.findByTestId('wa-opt-in-revoke')
+    const seen: string[] = []
+    const observer = new MutationObserver(() => {
+      if (container.querySelector('[data-testid="wa-opt-in-off"]') && container.querySelector('[data-testid="wa-opt-in-error"]')) seen.push('off+error')
+    })
+    observer.observe(container, { subtree: true, childList: true, characterData: true, attributes: true })
+    // ⛔ act() around the re-read: it flushes passive effects before returning and would hide the in-between frame.
+    fireEvent.click(screen.getByTestId('wa-opt-in-revoke'))
+    await screen.findByTestId('wa-opt-in-off')
+    await settle()
+    observer.disconnect()
+    expect(seen).toEqual([])
   })
 
   it('⭐ P5 — a blurred screen neither polls nor refreshes on foreground; focusing it again refreshes', async () => {

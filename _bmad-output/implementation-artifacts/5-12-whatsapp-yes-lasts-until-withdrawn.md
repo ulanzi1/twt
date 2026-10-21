@@ -950,6 +950,13 @@ P13 (a) half applied; the §0 sentence wider than its items; the decision-flow n
 **36 jobs green** (domain 6027 / 1 skipped, API 1999 / 1 skipped, jobs 1338, mobile 1107). Logs:
 `/private/tmp/claude-501/-Users-dev-Developer-projects-TWT/7dfe2766-50dc-451f-a59f-c8d354b1fb0b/scratchpad/ci-local-b64dd462.log` and
 `…/ci-local-dea4e5d1.log` (scratchpad — not repo artifacts). The records commit that follows touches no code.
+**Review of `dea4e5d1` (2026-10-21, BigDev: "review dea4e5d1 first, then push and open PR"; one fresh-context reviewer):** the
+commit is correct (React 19 automatic batching commits `setStatus` + `setError` as one render; a MutationObserver probe saw the
+in-between frame 3/3 before it, 0/3 after). Applied: a frame-watching leg (RED at `dea4e5d1~1`); the P4 leg now shows the
+error under the ACTIVE body before the off body supersedes it; and — pre-existing, the author's call — WhatsApp failing to open
+is its own error source (`link`), kept while the request is still PENDING (it was cleared by the PENDING body; the FRESH leg
+now pins it, RED at `dea4e5d1`). Accepted and commented: the off / unavailable / never-confirmed bodies share one key, so a
+move between them neither clears an error nor is announced. Mobile 1108/1108; the push's pre-push `ci:local` (:5433) is the gate.
 **Second review closure:** P1–P14 fixed; 0 decision-needed; W1–W4 deferred (`deferred-work.md`, round 2); D1 unchanged.
 Status stays `done` (⛔ yet on `main`, ⛔ pushed). Native screen-reader behaviour remains unattested.
 

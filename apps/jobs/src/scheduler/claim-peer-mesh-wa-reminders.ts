@@ -28,7 +28,7 @@
 // a payload, a log line, an alarm or a `detail` — ids only (I7, T11).
 
 import { buildAppLinkUrl } from '@twt/contracts';
-import { classifyDirectWaSendFailure, type WhatsappAppCache, type WhatsappMessagingHandle } from '@twt/channels';
+import { TEMPLATE_NAME_FORM, classifyDirectWaSendFailure, type WhatsappAppCache, type WhatsappMessagingHandle } from '@twt/channels';
 import {
   channelConfig,
   claim as claimDomain,
@@ -160,10 +160,10 @@ export class PeerMeshWaReminderLocaleReadError extends Error {
 }
 
 /**
- * The 0171 form of a Meta template NAME — a value outside it would be refused by the begin's INSERT. Exported (Story 6.37d
- * WS9 — ⛔ a second regex: the claim-contact step checks its template names against THIS one; 0172's CHECK is the same form).
+ * The 0171 form of a Meta template NAME. Story 5.13 (WC4) — MOVED unchanged to `@twt/channels` (with `waTemplateConfigKey`); this
+ * re-export keeps the claim-contact step and its tests byte-unchanged.
  */
-export const TEMPLATE_NAME_FORM = /^[a-z0-9_]{1,512}$/;
+export { TEMPLATE_NAME_FORM };
 
 /**
  * ⭐ WR9 / WR13 — the Pariwar's config, in the order the cheap checks come first. Returns `switch_off` (⛔ offered, ⛔ alarm), a gap

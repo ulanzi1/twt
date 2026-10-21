@@ -164,7 +164,9 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // (endEveryWaYes and the state reads added; isOptInActive's clock and the ACTIVE → EXPIRED edge removed). The rest of the
     // fence stands.
     // 2026-10-21 Story 5.12 review F1: member lock shared by mint/activation/withdrawal; only write.ts re-pinned.
-    ['packages/domain/src/wa-opt-in/write.ts', '003062917b16180eff301435cd8b58bf0b4b5f5a11ae249d427e6e64b0211e7c'],
+    // 2026-10-21 Story 5.13 (WC5, Decision 2026-10-21-376): `ActivateOptInInput.windowExpiresAt` widened to `Date | null` (a
+    // code-confirmed yes opens ⛔ customer-service window) + its JSDoc; only write.ts re-pinned — the rest of the fence stands.
+    ['packages/domain/src/wa-opt-in/write.ts', '01a6a06a066b3f9035ae2fa384a4374ab7cf6c185915cb59c77abe9cd71ba697'],
     ['packages/domain/src/wa-opt-in/read.ts', 'a9c6a82d6de5f4201a7b5c61101628cfd96f6399e917b831ef93e078531ca149'],
     ['packages/domain/src/schema/pariwar_wa_templates.ts', '61c4a6420d56260d7b094c9105a9cdebcd3b312168ebab050e265049c89773bd'],
   ];

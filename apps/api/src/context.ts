@@ -19,7 +19,7 @@ import type {
   StatementScanner,
 } from '@twt/contracts';
 import type { BankIfscLookup } from '@twt/platform-adapters';
-import type { Db, encryption } from '@twt/domain';
+import type { Db, encryption, waOptIn } from '@twt/domain';
 // Value import (Story 8.8, Task 1): the member PII field-class constants relocated to @twt/domain are
 // RE-EXPORTED from here so every existing apps/api importer keeps working unchanged.
 import { encryption as encryptionRuntime } from '@twt/domain';
@@ -27,6 +27,7 @@ import type { JobEnvelope } from '@twt/queue';
 import type { HelpdeskReplyNotifier } from '@twt/jobs';
 
 import type { AuthAuditSink } from './audit/audit-sink.js';
+import type { WaCodeTransport } from './modules/wa-opt-in/code-delivery.js';
 import type { ApiConfig } from './config.js';
 import type { StepUpOtpDeliveryPort } from './modules/auth/shared/step-up-delivery.js';
 import type { TurnstileVerifier } from './modules/auth/shared/turnstile.js';
@@ -539,6 +540,19 @@ export interface AppDeps {
    * constructing the admin call site with it.
    */
   readonly adminStepUpDelivery: StepUpOtpDeliveryPort;
+  /**
+   * Story 5.13 (WC1; AC2, AC8; Decision 2026-10-21-376) — the WhatsApp CODE's transport: the fetch its OWN Meta client cache uses
+   * (`createWhatsappAppCache(fetchImpl, { timeoutSignal })`), the per-send abort signal factory and the diagnostic log (class tokens
+   * only). Every environment wires the global `fetch` — ⛔ a reveal / log adapter (unlike `stepUpDelivery`; I7): an unprovisioned
+   * Pariwar answers 503 + the phrase fallback. Tests inject a RECORDING fetch (the resolution and the request body under test stay
+   * the production ones — ⛔ a fake of the delivery).
+   */
+  readonly waCodeTransport: WaCodeTransport;
+  /**
+   * Story 5.13 (AC4 — a NAMED test seam) — the PENDING → ACTIVE writer the code-confirmed activation calls. Production:
+   * `waOptIn.activateOptIn` (wired in deps.ts); a spec forces its 0-row / failure path (the sweep race cannot be timed).
+   */
+  readonly waOptInActivate: typeof waOptIn.activateOptIn;
   /**
    * Member access-token + signup-continuation JWT signing keypair (Story 3.2,
    * §2.4). Asymmetric (ES256/RS256). Resolved from Secret Manager in prod; an

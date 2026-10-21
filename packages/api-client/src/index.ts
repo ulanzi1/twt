@@ -69,6 +69,8 @@ import {
   CreateWaOptInResponse,
   WaOptInStatusResponse,
   RevokeWaOptInResponse,
+  SendWaOptInCodeResponse,
+  VerifyWaOptInCodeResponse,
   TelegramOptInRequestResponse,
   TelegramOptInStatusResponse,
   RevokeTelegramOptInResponse,
@@ -77,6 +79,8 @@ import {
   type CreateWaOptInResponse as CreateWaOptInResult,
   type WaOptInStatusResponse as WaOptInStatusResult,
   type RevokeWaOptInResponse as RevokeWaOptInResult,
+  type SendWaOptInCodeResponse as SendWaOptInCodeResult,
+  type VerifyWaOptInCodeResponse as VerifyWaOptInCodeResult,
   type TelegramOptInRequestResponse as TelegramOptInRequestResult,
   type TelegramOptInStatusResponse as TelegramOptInStatusResult,
   type RevokeTelegramOptInResponse as RevokeTelegramOptInResult,
@@ -1012,6 +1016,20 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Revoke the member's active WhatsApp opt-in (session; auth). */
     revokeWaOptIn(): Promise<RevokeWaOptInResult> {
       return call(WA_OPT_IN_BASE, RevokeWaOptInResponse, {}, true, 'DELETE');
+    },
+
+    /**
+     * Story 5.13 (WC1) — POST /api/v1/member/wa-opt-in/code: send a WhatsApp code to the member's REGISTERED number. The body is
+     * `{}` (⛔ a number — the server sends to the registered number only; an empty JSON body is a 400 — the api-client always sends
+     * one). Errors carry `WaOptInCodeErrorDetails` on `ApiError.details`.
+     */
+    sendWaOptInCode(): Promise<SendWaOptInCodeResult> {
+      return call(`${WA_OPT_IN_BASE}/code`, SendWaOptInCodeResponse, {}, true);
+    },
+
+    /** Story 5.13 (WC5) — POST /api/v1/member/wa-opt-in/code/verify: type the code back; a correct code switches WhatsApp on. */
+    verifyWaOptInCode(code: string): Promise<VerifyWaOptInCodeResult> {
+      return call(`${WA_OPT_IN_BASE}/code/verify`, VerifyWaOptInCodeResponse, { code }, true);
     },
 
     // ── Telegram opt-in (Story 5.5) ───────────────────────────────────────────

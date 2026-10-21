@@ -12,11 +12,39 @@ import { getCatalog, t } from '@twt/i18n'
 import { describe, expect, it } from 'vitest'
 
 const MOBILE = join(__dirname, '..', '..')
-const FILES = ['app/(signup)/whatsapp.tsx', 'components/notifications/OtherPhoneHint.tsx']
+const FILES = [
+  'app/(signup)/whatsapp.tsx',
+  'components/notifications/OtherPhoneHint.tsx',
+  // Story 5.13 (AC10) — the WhatsApp code's form and the details body extracted from the hint.
+  'components/notifications/OtherPhoneDetails.tsx',
+  'components/notifications/OtherPhoneCodeHint.tsx',
+  'components/notifications/WaCodeEntry.tsx',
+  'components/notifications/use-wa-code.ts',
+]
 const LOCALES = ['en', 'hi'] as const
+
+/** Story 5.13 (WC8) — the 15 `waCode.*` keys, as approved by BigDev at Task 0.2. */
+const WA_CODE = [
+  'waCode.confirm',
+  'waCode.done',
+  'waCode.input_label',
+  'waCode.intro',
+  'waCode.no_longer_valid',
+  'waCode.no_more',
+  'waCode.resend',
+  'waCode.resend_wait',
+  'waCode.send',
+  'waCode.send_failed',
+  'waCode.sent',
+  'waCode.sent_uncertain',
+  'waCode.verify_failed',
+  'waCode.wrong_final',
+  'waCode.wrong_retry',
+]
 
 const EXPECTED = [
   'loading',
+  ...WA_CODE,
   'waNotifications.pending_resend',
   'waOtherPhone.desc',
   'waOtherPhone.link',
@@ -81,11 +109,21 @@ describe('the signup WhatsApp step\'s words (Story 5.10, AC7)', () => {
     expect(fam('hi')).toEqual(fam('en'))
   })
 
+  it('Story 5.13 (AC10) — the scanned `waCode.*` set EQUALS the 15-key family in en, hi equal; ⛔ `{token}`', () => {
+    expect(keys.filter((k) => k.startsWith('waCode.'))).toEqual(WA_CODE)
+    const fam = (locale: 'en' | 'hi') => Object.keys(getCatalog(locale, 'common')!).filter((k) => k.startsWith('waCode.')).sort()
+    expect(fam('en')).toEqual(WA_CODE)
+    expect(fam('hi')).toEqual(fam('en'))
+    for (const locale of LOCALES) {
+      for (const key of WA_CODE) expect(getCatalog(locale, 'common')![key], `${locale}:${key}`).not.toMatch(/[{}]/)
+    }
+  })
+
   it('⛔ a threat, ⛔ "Settings", ⛔ "also gets WhatsApp" — in either locale; the sender is TWT', () => {
     for (const locale of LOCALES) {
       const catalog = getCatalog(locale, 'common')!
       for (const [key, value] of Object.entries(catalog)) {
-        if (!key.startsWith('waSignup.') && !key.startsWith('waOtherPhone.')) continue
+        if (!key.startsWith('waSignup.') && !key.startsWith('waOtherPhone.') && !key.startsWith('waCode.')) continue
         expect(value, `${locale}:${key}`).not.toMatch(/\bmiss|settings|सेटिंग/i)
         expect(value, `${locale}:${key}`).not.toMatch(/also (get|receive|send)/i)
       }

@@ -877,7 +877,7 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight, decisions, governance (AC12)**
+- [x] **Task 0 — Preflight, decisions, governance (AC12)**
   - [x] 0.1 (DONE 2026-10-21 — Debug Log (e)) `git fetch origin`; if `main` moved past the pin, rebase and re-derive F1–F21 (`sed -n` every cite, read past the range). STOP
         and report to BigDev if:
         **S1** the mint gained a member-state guard, or `activateOptIn` / `lockMemberWaYes` / the one-ACTIVE index changed shape;
@@ -907,15 +907,15 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         round-2 W2 (a new consumer — WC14); the WC11 told item with its five points (WRITTEN — ⛔ "told" until sent); the
         friction row (Task 6); ledger entry (safe prepend — [[project_sprint_status_safe_prepend]]); row `5-13-…` `ready-for-dev →
         in-progress` (the create-story commit moved it `backlog → ready-for-dev`).
-- [ ] **Task 1 — The code table (WC2; AC3)**
-  - [ ] 1.1 The next free migration `NNNN_member-wa-opt-in-codes.sql`, HAND-AUTHORED (F5b), + journal entry (`when` > `1794800400021`) +
+- [x] **Task 1 — The code table (WC2; AC3)** (DONE 2026-10-21 — migration 0178; Debug Log (b), (d), (f))
+  - [x] 1.1 The next free migration `NNNN_member-wa-opt-in-codes.sql`, HAND-AUTHORED (F5b), + journal entry (`when` > `1794800400021`) +
         Drizzle schema `packages/domain/src/schema/member_wa_opt_in_codes.ts` (exported from the schema index): columns; the CHECKs, the
         partial unique, the BEFORE UPDATE guard trigger and the column-limited UPDATE grant of WC2 (the grant and the trigger in
         LOCKSTEP); the UNIQUE `(pariwar_id, member_id, opt_in_id)` on `member_wa_opt_in` and the composite owner FK to it, `ON DELETE
         CASCADE` (the 0175 precedent); RLS ENABLE+FORCE with PER-VERB tenant policies on the 0172 pattern + a `packages/domain/src/policies/`
         entry (the `claim-contact-wa-rls.ts` precedent). ⛔ edit an applied migration. `git grep` the writers of `REVOKED` and
         `BLOCKED_BY_META` and record in Debug Log (f) that only an ended yes reaches them (WC15).
-  - [ ] 1.2 `packages/domain/src/wa-opt-in/code.ts` (exported from `wa-opt-in/index.ts`), every function RETURNING a discriminated result
+  - [x] 1.2 `packages/domain/src/wa-opt-in/code.ts` (exported from `wa-opt-in/index.ts`), every function RETURNING a discriminated result
         (⛔ throwing for a refusal — WC2, WC5): `checkCodeSendAllowed(tx, { pariwarId, memberId, memberState, config })` (lock-free at WC1
         step 0 as an advisory check; under the caller's `lockMemberWaYes` at step 2), in WC1's ORDER: channel / ⛔ PENDING / already ACTIVE / `not_signing_up` (WC17 — the state passed in) / `yes_ended_before` (WC15) / limit /
         the WC3 wait → a refusal + `retryAfterSeconds` (`clock_timestamp()`, clamped)), `insertCodeSlot` (`sending`, `send_seq` = the
@@ -929,23 +929,23 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         returns `{attemptsRemaining, codesRemaining, liveCode}` — ⚠ a still-`sending` row is counted in `attemptsRemaining`; if it is
         later released the member was told of a try on a code that never left: accepted, stated), `consumeCode(codeId)` (atomic, `WHERE consumed_at IS NULL AND
         invalidated_at IS NULL AND attempts < 2 AND expires_at > now()`).
-  - [ ] 1.3 Live-DB tests (AC3 — every raw-SQL constraint and guard leg, the seq-ordering leg (the HTTP concurrency leg is Task 4.6's), the RLS
+  - [x] 1.3 Live-DB tests (AC3 — every raw-SQL constraint and guard leg, the seq-ordering leg (the HTTP concurrency leg is Task 4.6's), the RLS
         regression spec in `packages/domain/tests/integration/rls/` + the cross-Pariwar probe).
-- [ ] **Task 2 — The words (WC8; AC10)**
-  - [ ] 2.1 Add the 15 `waCode.*` keys (as answered at 0.2) to en + hi `common.json`; hand-format ([[project_prettier_not_enforced]]).
-  - [ ] 2.2 Parity + microcopy gates; fix wording (⛔ the rule) if they bite — and tell BigDev any reworded string.
-- [ ] **Task 3 — The WhatsApp message and the template key (WC1, WC4; AC7)**
-  - [ ] 3.1 `whatsapp-app.ts`: the `authenticationCode` message shape + `buildRequestBody` button component + the param check; unit tests.
-  - [ ] 3.2 Move `waTemplateConfigKey` (+ its purpose union) and `TEMPLATE_NAME_FORM` to `packages/channels/src/wa-template-config-key.ts`
+- [x] **Task 2 — The words (WC8; AC10)** (DONE 2026-10-21 — Debug Log (c))
+  - [x] 2.1 Add the 15 `waCode.*` keys (as answered at 0.2) to en + hi `common.json`; hand-format ([[project_prettier_not_enforced]]).
+  - [x] 2.2 Parity + microcopy gates; fix wording (⛔ the rule) if they bite — and tell BigDev any reworded string.
+- [x] **Task 3 — The WhatsApp message and the template key (WC1, WC4; AC7)** (DONE 2026-10-21)
+  - [x] 3.1 `whatsapp-app.ts`: the `authenticationCode` message shape + `buildRequestBody` button component + the param check; unit tests.
+  - [x] 3.2 Move `waTemplateConfigKey` (+ its purpose union) and `TEMPLATE_NAME_FORM` to `packages/channels/src/wa-template-config-key.ts`
         (re-exported from the package index); the old homes become one-line re-exports (`apps/jobs/src/scheduler/wa-template-config-key.ts`;
         `TEMPLATE_NAME_FORM` in `claim-peer-mesh-wa-reminders.ts`), so the four importers (F13) are unchanged (⛔ behaviour change); add
         `'wa_opt_in.code'`; the jobs suites green.
-- [ ] **Task 4 — The server (WC1, WC3–WC5, WC9, WC10, WC15–WC17; AC1, AC2, AC4–AC6, AC8, AC11)**
-  - [ ] 4.1 `write.ts`: `windowExpiresAt: Date | null` (JSDoc says why); re-take ONLY its pin in `claim-contact-ladder-whatsapp.test.ts` with
+- [x] **Task 4 — The server (WC1, WC3–WC5, WC9, WC10, WC15–WC17; AC1, AC2, AC4–AC6, AC8, AC11)** (DONE 2026-10-21 — Debug Log (b))
+  - [x] 4.1 `write.ts`: `windowExpiresAt: Date | null` (JSDoc says why); re-take ONLY its pin in `claim-contact-ladder-whatsapp.test.ts` with
         a dated comment (F14). `audit.ts`: append `'member_app_wa_code'` (a TS const tuple — confirm ⛔ exhaustive map over it). Amend the now-stale comments: `packages/contracts/src/wa-opt-in/
         opt-in.ts:55` (*"present (non-null) ONLY while ACTIVE"* — a code-confirmed ACTIVE has it NULL) and the `window_expires_at` column
         comment in `schema/member_wa_opt_in.ts` (a comment-only edit — ⛔ migration).
-  - [ ] 4.2 Contracts: `CreateWaOptInResponse` gains `codeAvailable: z.boolean()`, `codesRemaining: 0|1|2`, `liveCode: z.boolean()`,
+  - [x] 4.2 Contracts: `CreateWaOptInResponse` gains `codeAvailable: z.boolean()`, `codesRemaining: 0|1|2`, `liveCode: z.boolean()`,
         `liveCodeDelivery: z.enum(['sent','uncertain']).nullable()` (WC4);
         NEW `SendWaOptInCodeRequest` (`z.object({}).strict()`), `SendWaOptInCodeResponse` (`{ delivery: z.enum(['sent','uncertain']),
         codesRemaining: 0|1, retryAfterSeconds: number|null }`), `VerifyWaOptInCodeRequest` (`{ code: /^\d{6}$/ }`),
@@ -956,7 +956,7 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         components map (`:426-431`) and both paths (from `:1526`), then regenerate `openapi/v1.yaml`; contracts vitest — the fixture that
         turns red is `packages/contracts/tests/wa-opt-in.test.ts:45-52` (a strict parse without the new fields); update the mobile `MINTED`
         fixture (`wa-signup-step-render.test.ts:132` — fed to a `vi.fn()`, so it never parses: update it for realism, ⛔ expect a red).
-  - [ ] 4.3 `apps/api/src/modules/wa-opt-in/code-delivery.ts` (WC1, WC4): `resolveCodeAvailability(deps, { pariwarId, config })` (config
+  - [x] 4.3 `apps/api/src/modules/wa-opt-in/code-delivery.ts` (WC1, WC4): `resolveCodeAvailability(deps, { pariwarId, config })` (config
         completeness — the config read by the caller's scope tx; the `hi` and `en` template names IN PARALLEL via `deps.resolveChannelSecret`, `TEMPLATE_NAME_FORM`-checked; the
         token, non-blank — ⛔ decrypt) for the mint, and `resolveCodeDelivery(deps, { pariwarId, config, mobileCiphertext })` (the
         same + the decrypt + `+` stripped + `messagingFor(…)` built; ⛔ database handle — both take step 0's reads as input) for the send — each `{ ok: false, reason }` | a plan, each raced against its bound
@@ -967,7 +967,7 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         AppDeps in `apps/api/src/context.ts` (`resolveChannelSecret` is ALREADY there — F13); `deps.ts` wires the global `fetch` + the
         default signal in EVERY environment (⛔ reveal / log adapter); `_setup.ts` injects a RECORDING fetch (requests captured, responses
         scripted per test) and a test `timeoutSignal`, and specs pass a `resolveChannelSecret` override (F13).
-  - [ ] 4.4 `code-handlers.ts` + routes in `routes.ts`: the two routes (member session, the per-member rate limit with `hook: 'preHandler'`,
+  - [x] 4.4 `code-handlers.ts` + routes in `routes.ts`: the two routes (member session, the per-member rate limit with `hook: 'preHandler'`,
         body schemas); the send flow in WC1's five steps — step 0 the read-only scope-tx pre-check (every DB read, then closed);
         step 1 `resolveCodeDelivery` on step 0's config + ciphertext, ⛔ tx open (a failure → 503 with step 0's details, ⛔ row, ⛔ audit,
         ⛔ fetch); step 2 tx 1: lock → re-read the config + `getCurrentMemberState` → `checkCodeSendAllowed` (a refusal → commit nothing, ⛔ audit,
@@ -983,28 +983,28 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
         possible) `resolveCodeAvailability`, compute `codeAvailable` / `codesRemaining` / `liveCode` / `liveCodeDelivery` within the 2 s bound —
         a Secret Manager failure or timeout ⇒ `codeAvailable: false` with the DATABASE-derived three kept; only a failure of the database
         reads themselves ⇒ the whole fallback `{ false, 0, false, null }` (WC4).
-  - [ ] 4.5 `packages/api-client/src/index.ts`: `sendWaOptInCode()` (`call(\`${WA_OPT_IN_BASE}/code\`, SendWaOptInCodeResponse, {}, true)`) and
+  - [x] 4.5 `packages/api-client/src/index.ts`: `sendWaOptInCode()` (`call(\`${WA_OPT_IN_BASE}/code\`, SendWaOptInCodeResponse, {}, true)`) and
         `verifyWaOptInCode(code)` (`…/code/verify`, `{ code }`); the new schemas in its contracts import block (`:69-79`). Mobile reaches them
         through `lib/member-api.ts` (`createMemberAuthClient`) with ⛔ edit there.
-  - [ ] 4.6 Live-DB integration tests (`apps/api/tests/integration/wa-opt-in/wa-opt-in-code.spec.ts`): AC1's API legs, AC2, AC3's HTTP
+  - [x] 4.6 Live-DB integration tests (`apps/api/tests/integration/wa-opt-in/wa-opt-in-code.spec.ts`): AC1's API legs, AC2, AC3's HTTP
         concurrency leg (three concurrent sends ⇒ one counted, two 409 — it needs the route, so it lives here, ⛔ in Task 1.3), AC4, AC5, AC6,
         AC8, AC11, a 429 leg for the route limit; members seeded through the real signup path on a fresh random Pariwar (5.10 AC9's helpers
         / pattern).
-- [ ] **Task 5 — The app (WC7; AC1, AC9, AC13)**
-  - [ ] 5.1 Extract `OtherPhoneDetails` (the details body `OtherPhoneHint.tsx:41-59`, testIDs unchanged) into
+- [x] **Task 5 — The app (WC7; AC1, AC9, AC13)** (DONE 2026-10-21 — Debug Log (b))
+  - [x] 5.1 Extract `OtherPhoneDetails` (the details body `OtherPhoneHint.tsx:41-59`, testIDs unchanged) into
         `components/notifications/OtherPhoneDetails.tsx`; `OtherPhoneHint` renders it (⛔ behaviour change; Settings' RENDER tests
         unmodified); amend `OtherPhoneHint.tsx:9`'s header (row 5-13 now REPLACES it on the signup step only when the code is available).
-  - [ ] 5.2 NEW `components/notifications/use-wa-code.ts` (the `useWaCode` hook: the form's state, the single-flight guard, the countdown,
+  - [x] 5.2 NEW `components/notifications/use-wa-code.ts` (the `useWaCode` hook: the form's state, the single-flight guard, the countdown,
         its OWN action-version counter bumped on blur / unmount — ⛔ on collapse — WC7), `WaCodeEntry.tsx` (the view: props from the hook +
         `displayPhoneNumber`, `verificationPhrase`) and `OtherPhoneCodeHint.tsx` (owns the hook; the link `wa-code-link` collapses the VIEW
         only; opens expanded when `liveCode`) per AC9; the testIDs of WC7; ⚠ `t` in ⛔ effect's deps (T1).
-  - [ ] 5.3 `whatsapp.tsx`: the `sent` stage renders `OtherPhoneCodeHint` when `minted.codeAvailable || minted.liveCode`, else
+  - [x] 5.3 `whatsapp.tsx`: the `sent` stage renders `OtherPhoneCodeHint` when `minted.codeAvailable || minted.liveCode`, else
         `OtherPhoneHint` (unchanged); the `ask` stage renders `OtherPhoneCodeHint` when `error === 'link'` and the same condition holds (⛔
         hint otherwise — 5.10's render); an
         `activated` flag replaces WHICHEVER stage body shows with `waCode.done`, clears `error`, announces `waCode.done` here
         (`useAnnounceOnChange`), and gates the `sent` stage's return announcement (`:176-202`) on `!activated`; header comment updated
         (Story 5.13, the decision id, WC letters).
-  - [ ] 5.4 Tests: extend `wa-signup-step-render.test.ts`'s mocks (`lib/member-api` + `sendWaOptInCode` / `verifyWaOptInCode` /
+  - [x] 5.4 Tests: extend `wa-signup-step-render.test.ts`'s mocks (`lib/member-api` + `sendWaOptInCode` / `verifyWaOptInCode` /
         the existing `getWaOptInStatus` for AC9's re-read; the `MINTED` fixture gains `codeAvailable` / `codesRemaining` / `liveCode` / `liveCodeDelivery`; a
         tamagui `Input` forwarding `value`, `onChangeText`, `keyboardType`, `maxLength`, `accessibilityLabel`, `testID`, and recording any
         `textContentType` / `autoComplete` so AC9 can assert their ABSENCE) — a mock change, ⛔ a change to any existing assertion except
@@ -1183,6 +1183,34 @@ item or decision after the pin on `origin/main`; ⛔ decision `-376` or later on
 BEFORE this story's validate commit `33b8da9f` (20:06) also wrote `21s` ⇒ this story's entry re-lettered `21u` (`-366` decision 6 — a
 number belongs to the first commit that takes it, on any branch); the 6.37e session was told by message which letters and numbers 5.13
 takes next (`21u`+, `-376`, Row 39, 0178).
+
+**(f) Task 1.1 — who writes `REVOKED` / `BLOCKED_BY_META` (2026-10-21, at the pin):** `git grep` over `apps/*/src` + `packages/*/src`:
+`endEveryWaYes` (`write.ts`) moves ONLY a `state = 'ACTIVE'` row (to `REVOKED` — member DELETE, admin opt-out, STOP; to
+`BLOCKED_BY_META` — Meta 131050); `revokeOptIn`'s `REVOKED` / `BLOCKED_BY_META` edges require ACTIVE (`legalFrom`), and its one
+caller (`runWaOptInExpirySweep`) passes `EXPIRED_24H_WINDOW` from PENDING. ⇒ only an ENDED YES reaches those two states (WC15 holds);
+a lapsed PENDING is `EXPIRED_24H_WINDOW`. ⛔ RTBF / erasure path deletes a `member_wa_opt_in` row (its only writers are
+`handlers.ts`, `wa-webhook-processor.ts` and the domain module) — the 0178 `ON DELETE CASCADE` is reached by test cleanups only.
+
+**(b) RED proofs (scripted mutation, restored, re-run green):** Task 1 — (i) on :5433 the guard function replaced by a no-op and
+`member_wa_opt_in_codes_counted_seq_uq` dropped ⇒ 4 legs of the policy-regression spec FAILED (the third-counted-row leg and the
+three trigger legs); both restored from the 0178 text (a scratchpad script splitting the migration on its breakpoints) ⇒ 29/29.
+(ii) `code.ts` mutated three ways at once — `send_seq` = count + 1, the rate-limited release dropped from the wait, a wrong attempt
+hitting seq 1 only ⇒ 3 legs FAILED (the seq rule, the WC3 wait, recordWrongAttempt); file restored from a copy ⇒ 7/7.
+
+Task 3 — on the HEAD `whatsapp-app.ts` (the auth shape absent; two stub exports so the file compiled) the two authentication legs
+FAILED and the byte-pin leg PASSED (so it pins the OLD bodies); restored ⇒ 4/4. Task 4 — five mutations at once (the verify's
+wrong-attempt refusal thrown INSIDE the wrapper — T14; tx 1 without `lockMemberWaYes`; `scope` mapped as counted `refused`; the
+hash compare as `===`; a bare `deps.db` read in the mint) ⇒ 8 legs FAILED (the 131048-on-429 and 401 rows, the three-concurrent-
+sends leg, the three wrong-attempt legs, the two source legs); all three files restored from copies ⇒ 39/39.
+
+Task 5 — the hook / view mutated five ways (⛔ digit filter; `textContentType="oneTimeCode"` added; ⛔ single-flight ref; a released
+FIRST send shown as the closed route; the `sent` announcement dropped) ⇒ 6 legs FAILED; restored ⇒ 53/53. Then the hook moved INTO
+the collapsible view (`OtherPhoneCodeHint` rendering an inner component that owns `useWaCode`) ⇒ the ⭐ send → collapse → expand leg
+FAILED; restored ⇒ 53/53 (+ the 80 amended 5.10 legs).
+
+**(d) Dev-DB side effects:** 0178 applied to :5433 (`pnpm db:migrate`, 2026-10-21) — ⛔ yet to :5432 (the pre-push hook will, if
+pushed with the shell's URL — [[project_prepush_hook_inherits_5432]]). The RED proof (i) replaced the guard function and dropped the
+index on :5433 for one run, then re-created both from the migration text (the spec's LOCKSTEP leg re-reads the function source).
 
 **(g) WC11 (a) — the told item SENT (2026-10-21):** BigDev, verbatim: *"note for panel has been sent"* ⇒ `trustee-panel-told-2026-10-21-5-13-whatsapp-code-as-built.md` is TOLD (its Status line updated; the text is kept as sent). ⛔ a ruling was asked; ⛔ answer is awaited — if the Panel replies, that reply is recorded here and judged against `-376` (a reply that rules is a new decision, ⛔ an edit of this one).
 

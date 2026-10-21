@@ -25,6 +25,11 @@ import type { FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import { ConflictError, UnauthorizedError } from '../../http-errors.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { readCodeOffer } from './code-handlers.js';
+import type { WaCodeDelivery } from './code-delivery.js';
+
+/** The mint's own fields — Story 5.13 (WC4) adds the code fields AFTER the mint commits. */
+type MintedPending = Omit<CreateWaOptInResponse, 'codeAvailable' | 'codesRemaining' | 'liveCode' | 'liveCodeDelivery'>;
 
 /** Build the wa.me Send-Hello deep-link, pre-filled with the verification phrase. */
 export function buildSendHelloDeepLink(displayPhoneNumber: string, verificationPhrase: string): string {
@@ -96,7 +101,7 @@ async function endYesOrConflict(
   }
 }
 
-export function createWaOptInHandlers(deps: AppDeps) {
+export function createWaOptInHandlers(deps: AppDeps, codeDelivery: WaCodeDelivery) {
   /** Narrow the member session context (the guard guarantees it; this is defense-in-depth). */
   function memberCtx(request: FastifyRequest): MemberCtx {
     const memberId = request.requestContext.actorId;
@@ -137,12 +142,17 @@ export function createWaOptInHandlers(deps: AppDeps) {
   }
 
   return {
-    /** POST — mint a PENDING (or re-use an outstanding one) and return the Send-Hello deep-link. */
+    /**
+     * POST — mint a PENDING (or re-use an outstanding one) and return the Send-Hello deep-link. Story 5.13 (WC4): both PENDING paths
+     * ASSIGN `minted` (⛔ a return inside the `try`), so the code fields are read AFTER the `finally` — the PENDING committed, the
+     * lock released — in their own short read-only scope tx, bounded (`readCodeOffer`).
+     */
     async mint(request: FastifyRequest): Promise<CreateWaOptInResponse> {
       const { memberId, pariwarId: pariwarIdStr } = memberCtx(request);
       const pariwarId = ids.pariwarId(pariwarIdStr);
       const memberIdBranded = ids.memberId(memberId);
 
+      let minted: MintedPending | null = null;
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
@@ -170,56 +180,65 @@ export function createWaOptInHandlers(deps: AppDeps) {
         if (existing?.state === 'PENDING') {
           // Re-tap: re-use the outstanding PENDING (re-issue the deep-link; no new transition, no audit).
           ok = true;
-          return {
+          minted = {
             state: 'PENDING',
             displayPhoneNumber,
             deepLink: buildSendHelloDeepLink(displayPhoneNumber, existing.verificationPhrase),
             verificationPhrase: existing.verificationPhrase,
           };
-        }
+        } else {
+          // Fresh mint (none / REVOKED / BLOCKED_BY_META / EXPIRED_24H_WINDOW) — a NEW PENDING + phrase (no
+          // inferred re-consent; AC4). Use the member's stored identity blind index as the match key.
+          const mobileBlindIndex = await waOptIn.getMemberMobileBlindIndex(scopeTx.tx, {
+            pariwarId,
+            memberId: memberIdBranded,
+          });
+          if (!mobileBlindIndex) {
+            throw new ConflictError('No mobile number is on file for this member', 'wa_opt_in.no_mobile');
+          }
 
-        // Fresh mint (none / REVOKED / BLOCKED_BY_META / EXPIRED_24H_WINDOW) — a NEW PENDING + phrase (no
-        // inferred re-consent; AC4). Use the member's stored identity blind index as the match key.
-        const mobileBlindIndex = await waOptIn.getMemberMobileBlindIndex(scopeTx.tx, {
-          pariwarId,
-          memberId: memberIdBranded,
-        });
-        if (!mobileBlindIndex) {
-          throw new ConflictError('No mobile number is on file for this member', 'wa_opt_in.no_mobile');
+          // Audit-or-throw (ADR-0030): the intent line is written FIRST (member_app; before 'none', after
+          // PENDING), committed on its own tx before the mint; on failure (e.g. a concurrent-mint race) a
+          // compensating rolled_back line settles the chain. No verificationPhrase yet (the phrase doesn't
+          // exist until createPendingOptIn mints/regenerates it).
+          minted = await audit.withCompensatingAudit(deps.servicePool, {
+            auditIntent: optInAuditIntent({
+              pariwarId: pariwarIdStr,
+              memberId,
+              action: 'member.wa_opt_in_requested',
+              originatingChannel: 'member_app',
+              beforeState: 'none',
+              afterState: 'PENDING',
+              traceId: request.requestContext.traceId ?? null,
+            }),
+            mutate: async (): Promise<MintedPending> => {
+              const pending = await waOptIn.createPendingOptIn(scopeTx.tx, {
+                pariwarId,
+                memberId: memberIdBranded,
+                mobileBlindIndex,
+              });
+              ok = true;
+              return {
+                state: 'PENDING',
+                displayPhoneNumber,
+                deepLink: buildSendHelloDeepLink(displayPhoneNumber, pending.verificationPhrase),
+                verificationPhrase: pending.verificationPhrase,
+              };
+            },
+          });
         }
-
-        // Audit-or-throw (ADR-0030): the intent line is written FIRST (member_app; before 'none', after
-        // PENDING), committed on its own tx before the mint; on failure (e.g. a concurrent-mint race) a
-        // compensating rolled_back line settles the chain. No verificationPhrase yet (the phrase doesn't
-        // exist until createPendingOptIn mints/regenerates it).
-        return await audit.withCompensatingAudit(deps.servicePool, {
-          auditIntent: optInAuditIntent({
-            pariwarId: pariwarIdStr,
-            memberId,
-            action: 'member.wa_opt_in_requested',
-            originatingChannel: 'member_app',
-            beforeState: 'none',
-            afterState: 'PENDING',
-            traceId: request.requestContext.traceId ?? null,
-          }),
-          mutate: async () => {
-            const pending = await waOptIn.createPendingOptIn(scopeTx.tx, {
-              pariwarId,
-              memberId: memberIdBranded,
-              mobileBlindIndex,
-            });
-            ok = true;
-            return {
-              state: 'PENDING',
-              displayPhoneNumber,
-              deepLink: buildSendHelloDeepLink(displayPhoneNumber, pending.verificationPhrase),
-              verificationPhrase: pending.verificationPhrase,
-            };
-          },
-        });
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
+      if (!minted) throw new Error('[wa-opt-in] the mint produced ⛔ PENDING');
+      // Story 5.13 (WC4) — what "WhatsApp on another phone?" may offer (⛔ a Secret Manager stall past the bound).
+      const codeOffer = await readCodeOffer(deps, codeDelivery, {
+        memberIdStr: memberId,
+        pariwarIdStr,
+        memberId: memberIdBranded,
+        pariwarId,
+      });
+      return { ...minted, ...codeOffer };
     },
 
     /** GET — the member's current opt-in status (drives the toggle + confirmation/retry copy). */

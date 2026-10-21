@@ -56,19 +56,32 @@ interface WhatsappTemplateMessageBase {
 /**
  * The provider-built template message (Meta-agnostic shape; the client turns it into the REST body). EITHER the single
  * `{{1}}` body parameter (the dispatch provider — Q1=A, unchanged) OR — Story 6.31 (WR8), the direct path — `bodyParams`:
- * 1–3 NON-EMPTY values sent as `{{1}}`…`{{n}}` in order (validated BEFORE `fetch` — `WhatsappTemplateParamError`).
+ * 1–3 NON-EMPTY values sent as `{{1}}`…`{{n}}` in order (validated BEFORE `fetch` — `WhatsappTemplateParamError`) OR — Story
+ * 5.13 (WC1), the WhatsApp code — `authenticationCode`: a Meta AUTHENTICATION (copy-code) template, whose code is BOTH the body's
+ * `{{1}}` and the copy-code button's parameter (validated BEFORE `fetch`).
  */
 export type WhatsappTemplateMessage =
   | (WhatsappTemplateMessageBase & {
       /** The single `{{1}}` body parameter — the whitespace-normalized render output (Q1=A). */
       readonly bodyParam: string;
       readonly bodyParams?: never;
+      readonly authenticationCode?: never;
     })
   | (WhatsappTemplateMessageBase & {
       /** Story 6.31 (WR8) — the template's body values in order (1–3, each non-blank). */
       readonly bodyParams: readonly string[];
       readonly bodyParam?: never;
+      readonly authenticationCode?: never;
+    })
+  | (WhatsappTemplateMessageBase & {
+      /** Story 5.13 (WC1) — the one-time code (1–15 characters, ⛔ blank — Meta's authentication-template limit). ⛔ Logged. */
+      readonly authenticationCode: string;
+      readonly bodyParam?: never;
+      readonly bodyParams?: never;
     });
+
+/** Meta's limit on an authentication template's code (Story 5.13 F21). */
+export const WHATSAPP_MAX_AUTHENTICATION_CODE_LENGTH = 15;
 
 /** The most body values a direct send carries (WR8 — the reminder sends three; row 6-37d two). */
 export const WHATSAPP_MAX_BODY_PARAMS = 3;
@@ -177,6 +190,16 @@ export function assertBodyParams(params: unknown): void {
   });
 }
 
+/**
+ * Story 5.13 (WC1; AC7) — validate an authentication code BEFORE the request: a string of 1–15 characters, ⛔ blank. ⛔ The value
+ * in the message (it is the code).
+ */
+export function assertAuthenticationCode(code: unknown): void {
+  if (typeof code !== 'string' || code.trim() === '' || code.length > WHATSAPP_MAX_AUTHENTICATION_CODE_LENGTH) {
+    throw new WhatsappTemplateParamError(`whatsapp-app: an authentication code is 1–${String(WHATSAPP_MAX_AUTHENTICATION_CODE_LENGTH)} non-blank characters`);
+  }
+}
+
 /** Validate the client config BEFORE building — a missing credential fails clear, not as an opaque Meta 400. */
 function assertClientConfig(pariwarId: string, config: WhatsappClientConfig): void {
   if (!config.phoneNumberId || config.phoneNumberId.trim() === '') {
@@ -192,9 +215,26 @@ function assertClientConfig(pariwarId: string, config: WhatsappClientConfig): vo
 
 /**
  * Build the Meta REST request body for a UTILITY template send — the single-body-parameter shape (Q1=A), or one text
- * parameter per `bodyParams` value, in order (Story 6.31, WR8).
+ * parameter per `bodyParams` value, in order (Story 6.31, WR8) — or, Story 5.13 (WC1), an AUTHENTICATION template: the code as
+ * the body `{{1}}` AND as the copy-code button's parameter (`sub_type: 'url'`, `index: '0'` — Meta's copy-code send shape).
  */
 function buildRequestBody(message: WhatsappTemplateMessage): string {
+  if (message.authenticationCode !== undefined) {
+    const code = message.authenticationCode;
+    return JSON.stringify({
+      messaging_product: 'whatsapp',
+      to: message.to,
+      type: 'template',
+      template: {
+        name: message.templateName,
+        language: { code: message.languageCode },
+        components: [
+          { type: 'body', parameters: [{ type: 'text', text: code }] },
+          { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: code }] },
+        ],
+      },
+    });
+  }
   const values = message.bodyParams !== undefined ? message.bodyParams : [message.bodyParam];
   return JSON.stringify({
     messaging_product: 'whatsapp',
@@ -252,6 +292,8 @@ export function createWhatsappAppCache(fetchImpl: FetchLike = globalFetch, optio
           async send(message, sendOptions): Promise<string> {
             // Story 6.31 (WR8) — a direct send's values are checked BEFORE the request (⛔ a call on a bad value).
             if (message.bodyParams !== undefined) assertBodyParams(message.bodyParams);
+            // Story 5.13 (WC1) — the code is checked BEFORE the request too.
+            if (message.authenticationCode !== undefined) assertAuthenticationCode(message.authenticationCode);
             // P8 — an invalid bound would make `AbortSignal.timeout` throw BEFORE the request: a param error, ⛔ "may have sent".
             const timeoutMs = sendOptions?.timeoutMs;
             // ≤ 2^31 − 1: Node clamps a longer timer to 1 ms (an instant abort), and `AbortSignal.timeout` throws past 2^32 − 1.

@@ -54,6 +54,9 @@ export {
   WhatsappTemplateParamError,
   WHATSAPP_MAX_BODY_PARAMS,
   WHATSAPP_PRE_CONNECT_CODES,
+  // Story 5.13 (WC1) — the WhatsApp code's authentication-template shape.
+  assertAuthenticationCode as assertWhatsappAuthenticationCode,
+  WHATSAPP_MAX_AUTHENTICATION_CODE_LENGTH,
   type WhatsappAppCache,
   type WhatsappAppCacheOptions,
   type WhatsappMessagingHandle,
@@ -69,6 +72,8 @@ export {
   rejectionDetail as whatsappRejectionDetail,
   type WhatsappErrorClass,
 } from './providers/whatsapp-errors.js';
+// Story 5.13 (WC4) — the direct-WhatsApp template-name config key family (moved from apps/jobs; its second consumer is apps/api).
+export { TEMPLATE_NAME_FORM, waTemplateConfigKey, type WaTemplatePurpose } from './wa-template-config-key.js';
 // Story 6.31 (WR10) — the DIRECT WhatsApp path's failure classifier (6.31's reminder; row 6-37d reuses it).
 export {
   classifyDirectWaSendFailure,

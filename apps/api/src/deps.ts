@@ -10,7 +10,7 @@
 
 import { createHash } from 'node:crypto';
 
-import { createDb, resolveConnectionString, resolveSecretValue, type Db } from '@twt/domain';
+import { createDb, resolveConnectionString, resolveSecretValue, waOptIn, type Db } from '@twt/domain';
 import { encryption } from '@twt/domain';
 import {
   checkMsg91Template,
@@ -24,6 +24,7 @@ import {
   type Msg91PreflightObservation,
   type Msg91PreflightResult,
   type SmsFetchLike,
+  type FetchLike,
 } from '@twt/channels';
 import { consoleHelpdeskReplyNotifier } from '@twt/jobs';
 import { createCloudflareTurnstileVerifier } from '@twt/edge';
@@ -495,6 +496,11 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
     // ADMIN OTP delivery (Story 5.9, R4) — ALWAYS the reveal/log stub (admin OTP-over-SMS deferred; admins
     // carry email only, no mobile column). No env branch: reveal only outside prod.
     adminStepUpDelivery: createLogStepUpDelivery({ revealForDev: !isProd }),
+    // Story 5.13 (WC1; AC8) — the WhatsApp code's transport: the global fetch + the default per-send signal, in EVERY environment
+    // (⛔ a reveal / log adapter — an unprovisioned Pariwar answers 503 and the app shows the phrase).
+    waCodeTransport: { fetchImpl: (url, init) => fetch(url, init as RequestInit) as unknown as ReturnType<FetchLike> },
+    // Story 5.13 (AC4) — the code-confirmed activation's PENDING → ACTIVE writer (a named seam; production = the domain's).
+    waOptInActivate: waOptIn.activateOptIn,
     // Member access-token + signup-continuation JWT keypair (Story 3.2, §2.4) —
     // Secret Manager in prod; an ephemeral ES256 keypair in dev/CI.
     memberJwt: await resolveMemberJwtKeys(config),

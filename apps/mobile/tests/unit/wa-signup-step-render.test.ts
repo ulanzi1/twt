@@ -26,6 +26,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mock = vi.hoisted(() => ({
   getWaOptInStatus: vi.fn(),
   requestWaOptIn: vi.fn(),
+  // Story 5.13 — the WhatsApp code's two calls (a mock change, ⛔ an assertion change).
+  sendWaOptInCode: vi.fn(),
+  verifyWaOptInCode: vi.fn(),
+  inputs: {} as Record<string, Record<string, unknown>>,
   openURL: vi.fn(),
   alert: vi.fn(),
   announce: vi.fn(),
@@ -42,7 +46,12 @@ const mock = vi.hoisted(() => ({
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 vi.mock('../../lib/member-api', () => ({
-  memberAuth: { getWaOptInStatus: mock.getWaOptInStatus, requestWaOptIn: mock.requestWaOptIn },
+  memberAuth: {
+    getWaOptInStatus: mock.getWaOptInStatus,
+    requestWaOptIn: mock.requestWaOptIn,
+    sendWaOptInCode: mock.sendWaOptInCode,
+    verifyWaOptInCode: mock.verifyWaOptInCode,
+  },
 }))
 vi.mock('expo-router', async () => {
   const { useEffect } = await import('react')
@@ -114,6 +123,17 @@ vi.mock('tamagui', async () => {
   return {
     YStack: container, Paragraph: container, Text: container, H2: container, View: container,
     Spinner: ({ testID }: { testID?: string }) => createElement('div', { 'data-testid': testID ?? 'spinner' }),
+    // Story 5.13 — tamagui `Input` (the app's text input): forwards value / onChangeText / the keyboard props and RECORDS every
+    // prop per testID, so the form's legs can assert `textContentType` / `autoComplete` are ABSENT (T12).
+    Input: (props: Record<string, unknown> & { value?: string; onChangeText?: (v: string) => void; testID?: string; accessibilityLabel?: string;
+      maxLength?: number; keyboardType?: string }) => {
+      if (props.testID) mock.inputs[props.testID] = props
+      return createElement('input', {
+        value: props.value ?? '', 'data-testid': props.testID, 'aria-label': props.accessibilityLabel, maxLength: props.maxLength,
+        inputMode: props.keyboardType === 'number-pad' ? 'numeric' : undefined,
+        onChange: (e: { target: { value: string } }) => props.onChangeText?.(e.target.value),
+      })
+    },
     Button: (props: Record<string, unknown> & { children?: ReactNode; onPress?: () => void; disabled?: boolean; testID?: string;
       accessibilityRole?: string; accessibilityLabel?: string; accessibilityState?: { checked?: boolean } }) => {
       if (props.testID) mock.buttons[props.testID] = props
@@ -129,7 +149,12 @@ import WhatsappStepScreen from '../../app/(signup)/whatsapp'
 
 const NEXT = '/(signup)/payment'
 const LINK = 'https://wa.me/919876543210?text=TWT-ABCDEFGH'
-const MINTED = { state: 'PENDING', displayPhoneNumber: '+91 98765 43210', deepLink: LINK, verificationPhrase: 'TWT-ABCDEFGH' }
+// Story 5.13 (WC4) — the mint's four code fields. ⚠ AC13: the 5.10 legs run with the code route CLOSED
+// (`codeAvailable: false, liveCode: false`), so they keep proving 5.10's hint; the code route's legs are wa-code-entry-render.test.ts.
+const MINTED = {
+  state: 'PENDING', displayPhoneNumber: '+91 98765 43210', deepLink: LINK, verificationPhrase: 'TWT-ABCDEFGH',
+  codeAvailable: false, codesRemaining: 2, liveCode: false, liveCodeDelivery: null,
+}
 /** The REAL en catalog the `<LocaleProvider initialLocale="en">` renders from. */
 const words = getCatalog('en', 'common')!
 
@@ -168,7 +193,9 @@ function setFocused(focused: boolean) {
 }
 
 beforeEach(() => {
-  for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.openURL, mock.alert, mock.announce, mock.router.replace]) f.mockReset()
+  for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.openURL, mock.alert, mock.announce, mock.router.replace,
+    mock.sendWaOptInCode, mock.verifyWaOptInCode]) f.mockReset()
+  mock.inputs = {}
   mock.requestWaOptIn.mockResolvedValue(MINTED)
   mock.openURL.mockResolvedValue(true)
   mock.os = 'ios'

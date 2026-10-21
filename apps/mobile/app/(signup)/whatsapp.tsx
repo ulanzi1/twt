@@ -10,6 +10,12 @@
 //             weight; "Go back" closes it and ⛔ ticks the box; a second unticked Continue goes straight on (I4).
 //   sent    — WhatsApp opened: send the message there; "Open WhatsApp again" re-opens the FIRST link (⛔ second mint); the
 //             "WhatsApp on another phone?" hint (SB12); Continue → payment. ⛔ Waiting or polling here (SB6).
+// Story 5.13 (Decision 2026-10-21-374 option A; build decisions -376 WC6, WC7): when the mint says the code route can work
+// (`codeAvailable || liveCode`), the `sent` stage's hint is REPLACED by `OtherPhoneCodeHint` — a WhatsApp code sent to the
+// registered number and typed back here; otherwise `OtherPhoneHint` renders exactly as 5.10 built it. On the `ask` stage the code
+// link shows ONLY after a mint whose link did ⛔ open (`error === 'link'`, a rare path) under the same condition. A correct code
+// sets `activated`: whichever stage body shows is replaced by `waCode.done`, spoken from HERE (the form has unmounted), and the
+// `sent` stage's return-to-TWT announcement is ⛔ made after it. Continue → payment as before (AC13 — ⛔ form state blocks it).
 // ONE mint per visit: after the first ticked Continue, whatever its outcome, the next Continue goes to payment (SB6). Every
 // failure lets the member continue (I5). `t` is ⛔ in any effect's deps (`useT()` returns a fresh closure every render —
 // [[project_uset_fresh_closure_memo_trap]]).
@@ -34,6 +40,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button, H2, Paragraph, Spinner, View, YStack } from 'tamagui'
 
 import { AnnouncedText, useAnnounceOnChange } from '../../components/peer-request/announce'
+import { OtherPhoneCodeHint } from '../../components/notifications/OtherPhoneCodeHint'
 import { OtherPhoneHint } from '../../components/notifications/OtherPhoneHint'
 import { memberAuth } from '../../lib/member-api'
 import { CALL_TIMEOUT_MS, withTimeout } from '../../lib/with-timeout'
@@ -60,6 +67,9 @@ export default function WhatsappStepScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<StepError>(null)
   const [minted, setMinted] = useState<CreateWaOptInResponse | null>(null)
+  // Story 5.13 — a typed WhatsApp code switched WhatsApp on (the form called back).
+  const [activated, setActivated] = useState(false)
+  const activatedRef = useRef(false)
   // Refs, ⛔ state: two presses inside one frame both see the pre-update closure (a double tap must make ONE mint).
   const busyRef = useRef(false)
   // The box's latest tap, for a Continue pressed in the same frame (before `checked` re-renders): the last tap wins.
@@ -164,8 +174,17 @@ export default function WhatsappStepScreen() {
     }
   }, [minted])
 
-  useAnnounceOnChange(stage === 'ask' ? t('waSignup.title') : null)
+  /** Story 5.13 (WC7) — a correct code: the showing stage body becomes `waCode.done`, any error line clears. */
+  const onActivated = useCallback(() => {
+    activatedRef.current = true
+    setActivated(true)
+    setError(null)
+  }, [])
+
+  useAnnounceOnChange(stage === 'ask' && !activated ? t('waSignup.title') : null)
   useAnnounceOnChange(reminderOpen ? t('waSignup.popup_title') : null)
+  // Story 5.13 — spoken from the step: the form that confirmed the code has unmounted.
+  useAnnounceOnChange(activated ? t('waCode.done') : null)
 
   // `setStage('sent')` lands as WhatsApp takes the foreground (Android resolves `openURL` once the intent starts; iOS after the
   // switch), so an announcement then is lost. Speak it on the member's first return to TWT — or, if the app has not left after
@@ -174,20 +193,21 @@ export default function WhatsappStepScreen() {
   // an announcement made in the background, this one is DEFERRED to the return. ⚠ Device timing is un-attested.
   const sentTitle = t('waSignup.sent_title')
   useEffect(() => {
-    if (stage !== 'sent' || sentSpoken.current === 'return') return
+    // Story 5.13 — ⛔ "send the message in WhatsApp" once a code has switched WhatsApp on.
+    if (stage !== 'sent' || activated || sentSpoken.current === 'return') return
     // Only a real departure counts: an iOS `inactive` blip (Control Centre, a call banner, Face ID) leaves TWT on screen.
     let left = AppState.currentState === 'background'
     // The grace found TWT ⛔ in front (`inactive` — e.g. the app switcher): it waits for the member's return instead.
     let deferred = false
     const sub = AppState.addEventListener('change', (next) => {
       if (next === 'background') left = true
-      else if (next === 'active' && (left || deferred) && sentSpoken.current !== 'return') {
+      else if (next === 'active' && (left || deferred) && sentSpoken.current !== 'return' && !activatedRef.current) {
         sentSpoken.current = 'return'
         AccessibilityInfo.announceForAccessibility(sentTitle)
       }
     })
     const grace = setTimeout(() => {
-      if (left || sentSpoken.current !== 'no') return
+      if (left || sentSpoken.current !== 'no' || activatedRef.current) return
       if (AppState.currentState !== 'active') {
         deferred = true
         return
@@ -199,7 +219,7 @@ export default function WhatsappStepScreen() {
       sub.remove()
       clearTimeout(grace)
     }
-  }, [stage, sentTitle])
+  }, [stage, sentTitle, activated])
 
   if (stage === 'loading') {
     return (
@@ -208,6 +228,10 @@ export default function WhatsappStepScreen() {
       </YStack>
     )
   }
+
+  // Story 5.13 (WC7, AC1) — the code route, only where it can work.
+  const codeRoute = minted !== null && (minted.codeAvailable || minted.liveCode)
+  const codeHint = minted !== null && codeRoute ? <OtherPhoneCodeHint minted={minted} onActivated={onActivated} /> : null
 
   const continueButton = (
     <Button
@@ -229,7 +253,11 @@ export default function WhatsappStepScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} testID="wa-signup-content">
         <YStack gap="$4" px="$6" py="$6" bg="$background">
           <H2>{t('waSignup.title')}</H2>
-          {stage === 'ask' ? (
+          {activated ? (
+            <Paragraph fontWeight="600" testID="wa-code-done">
+              {t('waCode.done')}
+            </Paragraph>
+          ) : stage === 'ask' ? (
             <>
               <Paragraph color="$colorPress" accessibilityRole="text">
                 {t('waSignup.intro')}
@@ -258,6 +286,9 @@ export default function WhatsappStepScreen() {
               <Paragraph color="$colorPress" accessibilityRole="text">
                 {t('waSignup.box_hint')}
               </Paragraph>
+              {/* Story 5.13 — after a mint whose link did ⛔ open (rare: `https://wa.me/…` usually opens a browser), the code route
+                  under the same condition; otherwise this stage renders exactly as 5.10 built it (⛔ hint). */}
+              {error === 'link' ? codeHint : null}
             </>
           ) : (
             <YStack gap="$3" testID="wa-signup-sent">
@@ -272,10 +303,12 @@ export default function WhatsappStepScreen() {
               >
                 {t('waNotifications.pending_resend')}
               </Button>
-              <OtherPhoneHint
-                displayPhoneNumber={minted?.displayPhoneNumber ?? null}
-                verificationPhrase={minted?.verificationPhrase ?? null}
-              />
+              {codeHint ?? (
+                <OtherPhoneHint
+                  displayPhoneNumber={minted?.displayPhoneNumber ?? null}
+                  verificationPhrase={minted?.verificationPhrase ?? null}
+                />
+              )}
             </YStack>
           )}
           {error === 'request' ? <AnnouncedText kind="error" text={t('waSignup.request_failed')} /> : null}

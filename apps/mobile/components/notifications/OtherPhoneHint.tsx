@@ -6,12 +6,17 @@
 // send by hand from the phone that holds the member's WhatsApp — the member's own message from the registered number still
 // switches it on (ADR-0029, unchanged; the phrase extractor folds case and dash variants). Used by the signup step's `sent`
 // stage (values from the mint response) and the "WhatsApp notifications" screen's waiting state (values from the status
-// response). Renders nothing unless BOTH values are present. Row 5-13 (`-374`) later replaces what the SIGNUP link reveals with a WhatsApp code.
+// response). Renders nothing unless BOTH values are present. Story 5.13 (`-374`; Decision 2026-10-21-376 WC7): on the SIGNUP step
+// this hint is REPLACED by `OtherPhoneCodeHint` (a WhatsApp code) ONLY when the mint says the code route can work
+// (`codeAvailable || liveCode`); otherwise — and always on the "WhatsApp notifications" screen — it renders exactly as before. Its
+// details body moved, unchanged, to `OtherPhoneDetails` (the code form's closed route shows it too).
 
 import { useState } from 'react'
 
 import { useT } from '@twt/i18n/react'
-import { Button, Paragraph, Text, YStack } from 'tamagui'
+import { Button, YStack } from 'tamagui'
+
+import { OtherPhoneDetails } from './OtherPhoneDetails'
 
 export function OtherPhoneHint({
   displayPhoneNumber,
@@ -37,27 +42,7 @@ export function OtherPhoneHint({
       >
         {t('waOtherPhone.link')}
       </Button>
-      {open ? (
-        <YStack gap="$2" testID="wa-other-phone-details">
-          <Paragraph>{t('waOtherPhone.desc')}</Paragraph>
-          {/* The number on its OWN selectable line, like the phrase: iOS copies a selectable Text whole, so a number inside
-              the sentence could not be copied alone (second review D2 (b)). Each value carries a label (BigDev: "add Number:
-              and Message: labels") — a SEPARATE line, so copying the value copies only the value. */}
-          <Paragraph color="$colorPress" testID="wa-other-phone-number-label">
-            {t('waOtherPhone.number_label')}
-          </Paragraph>
-          <Text selectable fontWeight="600" fontSize="$6" testID="wa-other-phone-number">
-            {displayPhoneNumber}
-          </Text>
-          <Paragraph color="$colorPress" testID="wa-other-phone-phrase-label">
-            {t('waOtherPhone.message_label')}
-          </Paragraph>
-          <Text selectable fontWeight="600" fontSize="$6" testID="wa-other-phone-phrase">
-            {verificationPhrase}
-          </Text>
-          <Paragraph color="$colorPress">{t('waOtherPhone.note')}</Paragraph>
-        </YStack>
-      ) : null}
+      {open ? <OtherPhoneDetails displayPhoneNumber={displayPhoneNumber} verificationPhrase={verificationPhrase} /> : null}
     </YStack>
   )
 }

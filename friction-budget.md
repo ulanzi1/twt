@@ -2814,7 +2814,7 @@ step's render tests mount real React with native primitives mocked in jsdom — 
 ---
 
 **Story 5.13 disposition (ONE new row — the WhatsApp code on the signup link; ⛔ no row retired, ⛔ row amended):** the story's
-member-facing changes will be `apps/mobile/app/(signup)/whatsapp.tsx` (the link's choice), `components/notifications/
+member-facing changes are `apps/mobile/app/(signup)/whatsapp.tsx` (the link's choice), `components/notifications/
 {OtherPhoneCodeHint,WaCodeEntry,OtherPhoneDetails}.tsx` and `use-wa-code.ts` (new), `components/notifications/OtherPhoneHint.tsx` (the
 details extracted, ⛔ behaviour change), `packages/i18n/locales/{en,hi}/common.json` (`waCode.*`) and their tests.
 
@@ -2827,3 +2827,5 @@ details extracted, ⛔ behaviour change), `packages/i18n/locales/{en,hi}/common.
 ⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
 unchanged and is ⛔ ratcheted. ⭐ Written BEFORE the code exists (Task 0.4); Task 6 confirms the file list and runs `pnpm friction:check`
 after the code commit (AC-4 reads COMMITTED history).
+⭐ Task 6 (2026-10-21) — the file list CONFIRMED against the code as built (the six mobile files above + the two `common.json`; ⛔ other
+member-facing file changed); `pnpm friction:check` runs after the code commit (the story's Debug Log (c)).

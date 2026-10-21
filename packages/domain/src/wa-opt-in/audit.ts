@@ -11,13 +11,18 @@ import { createHash } from 'node:crypto';
 
 import { canonicalJsonStringify } from '../canonical-json.js';
 
-/** The five `originating_channel` values (AC4). system_expiry = time-based sweep (actorId null). */
+/**
+ * The `originating_channel` values (AC4). system_expiry = time-based sweep (actorId null). Story 5.13 (WC5, WC9) APPENDS
+ * `member_app_wa_code` — every WhatsApp-code line (sent / released / rejected / the code-confirmed activation). A TS tuple, ⛔ a DB
+ * enum (the value is hashed into the audit payload, ⛔ stored as a column).
+ */
 export const WA_OPT_IN_ORIGINATING_CHANNELS = [
   'member_app',
   'meta_webhook_inbound',
   'meta_webhook_block',
   'admin_action',
   'system_expiry',
+  'member_app_wa_code',
 ] as const;
 export type WaOptInOriginatingChannel = (typeof WA_OPT_IN_ORIGINATING_CHANNELS)[number];
 

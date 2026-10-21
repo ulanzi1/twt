@@ -15,6 +15,8 @@ const FILES = [
   'components/notifications/NotificationSettingsEntry.tsx',
   // Story 5.10 (SB12): the "WhatsApp on another phone?" hint the screen renders while PENDING.
   'components/notifications/OtherPhoneHint.tsx',
+  // Story 5.13 (Task 5.1) — the hint's details body (the `waOtherPhone.*` keys) moved here unchanged.
+  'components/notifications/OtherPhoneDetails.tsx',
 ]
 const LOCALES = ['en', 'hi'] as const
 

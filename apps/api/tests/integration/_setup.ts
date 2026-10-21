@@ -18,7 +18,8 @@ import type {
   SelfVerifyScreenshotStorage,
   StatementScanner,
 } from '@twt/contracts';
-import { createDb } from '@twt/domain';
+import type { FetchInit } from '@twt/channels';
+import { createDb, waOptIn } from '@twt/domain';
 import {
   type BankIfscLookup,
   createFakeContributionNotePdfRenderer,
@@ -84,6 +85,7 @@ import type {
   PoolFixedAmountChangedHook,
 } from '../../src/modules/pool-fixed-amount/notification-hook.js';
 import type { ToneReviewAuditEvent, ToneReviewAuditSink } from '../../src/modules/tone-review/index.js';
+import type { WaCodeLogLine, WaCodeTransport } from '../../src/modules/wa-opt-in/code-delivery.js';
 import { buildServer } from '../../src/server.js';
 
 export const DATABASE_URL = process.env['DATABASE_URL'];
@@ -292,6 +294,10 @@ export interface TestDepsOverrides {
   newsPublishQueue?: NewsPublishEnqueuer;
   bankIfscLookup?: BankIfscLookup;
   resolveChannelSecret?: (secretName: string) => Promise<string>;
+  /** Story 5.13 — the WhatsApp code's recording transport (default: a fresh `RecordingWaCodeFetch` answering 200 + a wamid). */
+  waCodeFetch?: RecordingWaCodeFetch;
+  /** Story 5.13 (AC4) — the code-confirmed activation's PENDING → ACTIVE writer (default: the domain's `activateOptIn`). */
+  waOptInActivate?: AppDeps['waOptInActivate'];
   /** Story 6.37b (DR1) — MSG91's delivery-report webhook tokens (default: disabled — 403 to everything). */
   smsReportWebhook?: SmsReportWebhookAuth;
   clock?: () => Date;
@@ -322,6 +328,68 @@ export interface TestDeps {
   poolSpawnQueue: CapturingPoolSpawnQueue;
   newsPublishQueue: CapturingNewsPublishQueue;
   bankIfscLookup: InMemoryBankIfscLookup;
+  /** Story 5.13 — every Meta request the WhatsApp code made, scripted responses, the test-controlled abort, the log lines. */
+  waCodeFetch: RecordingWaCodeFetch;
+}
+
+/** One scripted answer of the recording Meta fetch: a response, a rejection (a transport failure), or a hang until aborted. */
+export type WaCodeFetchScript =
+  | { readonly status: number; readonly body: unknown }
+  | { readonly reject: Error }
+  | { readonly hang: true };
+
+/**
+ * ⭐ Story 5.13 (WC1's test seam — the ONLY fake beside the per-spec `resolveChannelSecret` override): a RECORDING `fetchImpl` for
+ * the WhatsApp code's OWN Meta client cache, plus a TEST-CONTROLLED `timeoutSignal` (the real `'timeout'` path — `abortAll()`
+ * fires every signal handed out) and a log capture. Requests are recorded; responses come from `script` (FIFO), else 200 + a
+ * fresh wamid. The resolution, the request body and the classification under test are the production ones.
+ */
+export class RecordingWaCodeFetch {
+  public readonly calls: { url: string; init: FetchInit }[] = [];
+  public readonly logLines: WaCodeLogLine[] = [];
+  private readonly scripts: WaCodeFetchScript[] = [];
+  private readonly controllers: AbortController[] = [];
+  private n = 0;
+
+  /** Queue the next answers (FIFO). */
+  public script(...answers: WaCodeFetchScript[]): void {
+    this.scripts.push(...answers);
+  }
+
+  /** Fire every abort signal handed out so far (the client's `timeoutMs` bound "expires"). */
+  public abortAll(): void {
+    for (const c of this.controllers) c.abort();
+  }
+
+  /** The parsed JSON body of the n-th call. */
+  public bodyOf(i: number): { to: string; template: { name: string; language: { code: string }; components: { type: string; sub_type?: string; index?: string; parameters: { type: string; text: string }[] }[] } } {
+    return JSON.parse(this.calls[i]!.init.body) as never;
+  }
+
+  public readonly transport: WaCodeTransport = {
+    fetchImpl: (url, init) => {
+      this.calls.push({ url, init });
+      const next = this.scripts.shift();
+      if (next && 'reject' in next) return Promise.reject(next.reject);
+      if (next && 'hang' in next) {
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+        });
+      }
+      this.n += 1;
+      const status = next?.status ?? 200;
+      const body = next ? next.body : { messages: [{ id: `wamid.TEST-${String(this.n)}` }] };
+      return Promise.resolve({ ok: status >= 200 && status <= 299, status, json: () => Promise.resolve(body) });
+    },
+    timeoutSignal: () => {
+      const c = new AbortController();
+      this.controllers.push(c);
+      return c.signal;
+    },
+    log: (line) => {
+      this.logLines.push(line);
+    },
+  };
 }
 
 const FALLBACK_URL = 'postgresql://twt_test:twt_test@127.0.0.1:1/twt_unused';
@@ -340,6 +408,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     new CapturingToneReviewAuditSink();
   const stepUpDelivery =
     (overrides.stepUpDelivery as CapturingStepUpDelivery) ?? new CapturingStepUpDelivery();
+  const waCodeFetch = overrides.waCodeFetch ?? new RecordingWaCodeFetch();
   // Story 5.9: admin OTP delivery is a SEPARATE always-stub key (admin OTP-over-SMS deferred). A capturing
   // fake by default so the admin step-up spec asserts against it.
   const adminStepUpDelivery =
@@ -466,6 +535,10 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // signs a webhook computes its HMAC over this same value.
     resolveChannelSecret:
       overrides.resolveChannelSecret ?? (async (name: string): Promise<string> => `test-secret::${name}`),
+    // Story 5.13 — the WhatsApp code's RECORDING transport (⚠ the default `resolveChannelSecret` above FAILS `TEMPLATE_NAME_FORM`,
+    // so a spec that does ⛔ override it sees `codeAvailable: false` — T18) and the activation seam.
+    waCodeTransport: waCodeFetch.transport,
+    waOptInActivate: overrides.waOptInActivate ?? waOptIn.activateOptIn,
     smsReportWebhook: overrides.smsReportWebhook ?? SMS_REPORT_WEBHOOK_DISABLED,
     clock: overrides.clock ?? ((): Date => new Date()),
   };
@@ -491,6 +564,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     poolSpawnQueue,
     newsPublishQueue,
     bankIfscLookup,
+    waCodeFetch,
   };
 }
 

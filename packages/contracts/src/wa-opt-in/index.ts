@@ -7,4 +7,11 @@ export {
   CreateWaOptInResponse,
   WaOptInStatusResponse,
   RevokeWaOptInResponse,
+  // Story 5.13 — the WhatsApp code.
+  WaOptInCodesRemaining,
+  SendWaOptInCodeRequest,
+  SendWaOptInCodeResponse,
+  VerifyWaOptInCodeRequest,
+  VerifyWaOptInCodeResponse,
+  WaOptInCodeErrorDetails,
 } from './opt-in.js';

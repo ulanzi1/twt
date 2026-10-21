@@ -178,9 +178,11 @@ export interface ActivateOptInInput {
   optInId: MemberWaOptInId;
   /**
    * Meta's 24h free-form (customer-service) window end (now + 24h), set on the ACTIVE transition — ⛔ the opt-in's end: since
-   * Story 5.12 (`-364` option A, reading (ii); LY2) a yes lasts until withdrawn and ⛔ thing gates on this column.
+   * Story 5.12 (`-364` option A, reading (ii); LY2) a yes lasts until withdrawn and ⛔ thing gates on this column. Story 5.13
+   * (WC5): `null` when the yes came from a typed WhatsApp CODE — ⛔ inbound message, so ⛔ customer-service window opened (the
+   * honest value; the worker's phrase match still passes its Date).
    */
-  windowExpiresAt: Date;
+  windowExpiresAt: Date | null;
   /** The consent_records row minted on ACTIVE (the registry is canonical; this is a back-reference). */
   consentId: ConsentId;
   /** DB-authoritative match instant override (defaults to DB now()). */

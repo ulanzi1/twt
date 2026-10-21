@@ -8,6 +8,10 @@
 import {
   CreateWaOptInResponse,
   RevokeWaOptInResponse,
+  SendWaOptInCodeRequest,
+  SendWaOptInCodeResponse,
+  VerifyWaOptInCodeRequest,
+  VerifyWaOptInCodeResponse,
   WaOptInStatusResponse,
 } from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
@@ -18,7 +22,10 @@ import type { AppDeps } from '../../context.js';
 import { scopeResolutionHook } from '../../middleware/scope-resolution/index.js';
 import { requireAdminSession } from '../auth/shared/session-guard.js';
 import { requireMemberSession } from '../auth/shared/member-session-guard.js';
+import { perMemberKey, type RouteRateLimit } from '../../plugins/rate-limit/index.js';
 import { requirePermissionHook } from '../rbac/index.js';
+import { createWaCodeDelivery } from './code-delivery.js';
+import { createWaCodeHandlers } from './code-handlers.js';
 import { createWaOptInHandlers } from './handlers.js';
 
 const WA_OPT_IN_TAG = 'wa-opt-in';
@@ -28,9 +35,20 @@ const MEMBER_MODERATE_KEY = 'member.moderate';
 const AdminOptOutParams = z.object({ pariwarId: z.string().uuid(), memberId: z.string().uuid() }).strict();
 
 export function registerWaOptInRoutes(app: FastifyInstance, deps: AppDeps): void {
-  const h = createWaOptInHandlers(deps);
+  // Story 5.13 — ONE WhatsApp-code delivery per app (its own Meta client cache) — the mint's `codeAvailable` and the send share it.
+  const codeDelivery = createWaCodeDelivery(deps);
+  const h = createWaOptInHandlers(deps, codeDelivery);
+  const code = createWaCodeHandlers(deps, codeDelivery);
   const r = app.withTypeProvider<ZodTypeProvider>();
   const memberSession = requireMemberSession(deps);
+  // Story 5.13 (WC10) — the per-member route limit ON TOP of the database caps (`hook: 'preHandler'` so the actor id exists —
+  // [[project_rate_limit_prehandler_hook_order]]).
+  const memberCodeWrite: RouteRateLimit = {
+    max: deps.config.writeRateMax,
+    timeWindow: '1 minute',
+    keyGenerator: perMemberKey,
+    hook: 'preHandler',
+  };
 
   // ── Member opt-in surface (requireMemberSession; token-bearer) ────────────────────────────────────
   r.post(
@@ -56,6 +74,26 @@ export function registerWaOptInRoutes(app: FastifyInstance, deps: AppDeps): void
       preHandler: [memberSession],
     },
     h.revoke,
+  );
+
+  // ── Story 5.13 — the WhatsApp code (signup step; Decision 2026-10-21-374 option A, build decisions -376) ───────────────────
+  r.post(
+    '/api/v1/member/wa-opt-in/code',
+    {
+      schema: { body: SendWaOptInCodeRequest, response: { 200: SendWaOptInCodeResponse }, tags: [WA_OPT_IN_TAG] },
+      config: { rateLimit: memberCodeWrite },
+      preHandler: [memberSession],
+    },
+    code.send,
+  );
+  r.post(
+    '/api/v1/member/wa-opt-in/code/verify',
+    {
+      schema: { body: VerifyWaOptInCodeRequest, response: { 200: VerifyWaOptInCodeResponse }, tags: [WA_OPT_IN_TAG] },
+      config: { rateLimit: memberCodeWrite },
+      preHandler: [memberSession],
+    },
+    code.verify,
   );
 
   // ── Trustee admin_action force opt-out (scoped-admin chain + member.moderate) ──────────────────────

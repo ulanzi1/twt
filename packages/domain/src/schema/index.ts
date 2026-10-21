@@ -160,6 +160,8 @@ export * from './whatsapp_send_status.js';
 // queue `wa_inbound_webhook_events` (raw Meta inbound payloads persisted by the ingress primitive, drained
 // by the apps/jobs worker; tenant-isolated inline RLS).
 export * from './member_wa_opt_in.js';
+// Story 5.13 (0178) — the WhatsApp code for a member whose WhatsApp is on another phone: one row per claimed send (WC2).
+export * from './member_wa_opt_in_codes.js';
 export * from './wa_inbound_webhook_events.js';
 // Story 5.5 — member Telegram opt-in state-machine substrate: `pariwar_telegram_config` (1:1 singleton —
 // the FR-58C v1 `enabled` toggle + bot username + bot-token/webhook-secret-token NAME pointers;

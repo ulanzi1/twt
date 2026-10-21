@@ -9,3 +9,5 @@ export * from './webhook-events.js';
 export * from './phrase.js';
 export * from './audit.js';
 export * from './errors.js';
+// Story 5.13 — the WhatsApp code (member_wa_opt_in_codes, migration 0178).
+export * from './code.js';

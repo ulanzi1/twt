@@ -34,7 +34,7 @@
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS fields camelCase; table plural.
 
-import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { index, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 import type { ConsentId, MemberId, MemberWaOptInId, PariwarId } from '../ids/index.js';
 
@@ -88,7 +88,8 @@ export const memberWaOptIn = pgTable(
     mobileBlindIndex: text('mobile_blind_index').notNull(),
 
     // Meta's 24h free-form (customer-service) window end, set on the ACTIVE transition; NULL while PENDING. ⛔ the opt-in's end —
-    // since Story 5.12 (`-364` reading (ii); LY2) ⛔ thing gates on it (Meta templates are not bound by that window).
+    // since Story 5.12 (`-364` reading (ii); LY2) ⛔ thing gates on it (Meta templates are not bound by that window). Story 5.13
+    // (WC5): NULL on an ACTIVE row too when the yes came from a typed WhatsApp CODE — ⛔ inbound message, so ⛔ window opened.
     windowExpiresAt: timestamp('window_expires_at', { withTimezone: true, mode: 'date' }),
 
     // FK-free link to the consent_records row minted on ACTIVE (the registry is canonical; this is a
@@ -106,6 +107,8 @@ export const memberWaOptIn = pgTable(
     index('member_wa_opt_in_match_idx').on(t.pariwarId, t.mobileBlindIndex, t.state),
     // The member-status read (getOptInForMember + the AC6 resolver gate).
     index('member_wa_opt_in_member_idx').on(t.pariwarId, t.memberId),
+    // Story 5.13 (0178) — the referenced key of `member_wa_opt_in_codes`' composite OWNER FK (trivially unique — `opt_in_id` is the PK).
+    unique('member_wa_opt_in_owner_uq').on(t.pariwarId, t.memberId, t.optInId),
     // + the SQL-only partial UNIQUE indexes and the trigger named in the module header (0044, 0177).
   ],
 );

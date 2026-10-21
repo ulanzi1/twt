@@ -354,6 +354,35 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
     expect((await client.query(`SELECT 1 FROM claim_correction_no_correction_records WHERE note_ciphertext = $1`, [`enc:v1:d27-${PARIWAR_B}`])).rows).toHaveLength(0);
     expect((await client.query(`SELECT 1 FROM claim_correction_no_correction_records WHERE note_ciphertext = $1`, [`enc:v1:d27-${PARIWAR_A}`])).rows).toHaveLength(1);
   });
+
+  // Story 5.13 (Task 1.3; AC3; migration 0178) — the WhatsApp code store: a PENDING opt-in + one code row in each tenant.
+  // ⭐ Probed by the code HASH too (⛔ only the tenant key) — B's hash is ⛔ reachable by any filter, ⛔ updatable.
+  it('member_wa_opt_in_codes (scoped) — A scope sees only A codes, never B (by tenant key and by code hash)', async () => {
+    const { client } = getTx();
+    const hashes: Record<string, string> = {};
+    for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
+      const memberId = randomUUID();
+      const optIn = await client.query<{ opt_in_id: string }>(
+        `INSERT INTO member_wa_opt_in (pariwar_id, member_id, state, verification_phrase, mobile_blind_index)
+         VALUES ($1, $2, 'PENDING', $3, $4) RETURNING opt_in_id`,
+        [pariwar, memberId, `TWT-${randomUUID().slice(0, 8).toUpperCase()}`, `bidx-${memberId}`],
+      );
+      hashes[pariwar] = randomUUID().replace(/-/g, '').padEnd(64, '0');
+      await client.query(
+        `INSERT INTO member_wa_opt_in_codes (pariwar_id, opt_in_id, member_id, send_seq, code_hash, expires_at)
+         VALUES ($1, $2, $3, 1, $4, now() + interval '10 minutes')`,
+        [pariwar, optIn.rows[0]!.opt_in_id, memberId, hashes[pariwar]],
+      );
+    }
+    await enterAppScope(client, PARIWAR_A);
+    const all = await client.query<{ pariwar_id: string }>(`SELECT pariwar_id FROM member_wa_opt_in_codes`);
+    expect(all.rows.length).toBeGreaterThan(0);
+    expect(all.rows.every((r) => r.pariwar_id === PARIWAR_A)).toBe(true);
+    expect((await client.query(`SELECT 1 FROM member_wa_opt_in_codes WHERE pariwar_id = $1`, [PARIWAR_B])).rows).toHaveLength(0);
+    expect((await client.query(`SELECT 1 FROM member_wa_opt_in_codes WHERE code_hash = $1`, [hashes[PARIWAR_B]])).rows).toHaveLength(0);
+    expect((await client.query(`UPDATE member_wa_opt_in_codes SET attempts = 1 WHERE code_hash = $1`, [hashes[PARIWAR_B]])).rowCount).toBe(0);
+    expect((await client.query(`SELECT 1 FROM member_wa_opt_in_codes WHERE code_hash = $1`, [hashes[PARIWAR_A]])).rows).toHaveLength(1);
+  });
 });
 
 describe.skipIf(!hasDatabase)('Pariwar-Passport carve-out (EXPECTED cross-readable exception)', () => {

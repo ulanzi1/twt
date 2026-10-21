@@ -161,9 +161,17 @@ const { DeviceTokenRegisterRequest, DeviceTokenRegisterResponse } = await import
 );
 // Story 5.4 — the member WhatsApp opt-in DTOs (mint PENDING → deep-link + phrase, status, revoke).
 // Member-session-gated; the inbound-webhook worker advances PENDING → ACTIVE out-of-band.
-const { CreateWaOptInResponse, WaOptInStatusResponse, RevokeWaOptInResponse } = await import(
-  '../src/wa-opt-in/index.js'
-);
+// Story 5.13 — the WhatsApp code for a member whose WhatsApp is on another phone (send / verify + the shared error details).
+const {
+  CreateWaOptInResponse,
+  WaOptInStatusResponse,
+  RevokeWaOptInResponse,
+  SendWaOptInCodeRequest,
+  SendWaOptInCodeResponse,
+  VerifyWaOptInCodeRequest,
+  VerifyWaOptInCodeResponse,
+  WaOptInCodeErrorDetails,
+} = await import('../src/wa-opt-in/index.js');
 // Story 5.5 — the member Telegram opt-in DTOs (mint PENDING → t.me `/start` deep-link, status, revoke).
 // Member-session-gated; the tg-webhook-processor worker advances PENDING → ACTIVE out-of-band.
 const { TelegramOptInRequestResponse, TelegramOptInStatusResponse, RevokeTelegramOptInResponse } =
@@ -428,6 +436,12 @@ const waOptInComponents = {
   CreateWaOptInResponse: CreateWaOptInResponse.openapi('CreateWaOptInResponse'),
   WaOptInStatusResponse: WaOptInStatusResponse.openapi('WaOptInStatusResponse'),
   RevokeWaOptInResponse: RevokeWaOptInResponse.openapi('RevokeWaOptInResponse'),
+  // Story 5.13 — the WhatsApp code.
+  SendWaOptInCodeRequest: SendWaOptInCodeRequest.openapi('SendWaOptInCodeRequest'),
+  SendWaOptInCodeResponse: SendWaOptInCodeResponse.openapi('SendWaOptInCodeResponse'),
+  VerifyWaOptInCodeRequest: VerifyWaOptInCodeRequest.openapi('VerifyWaOptInCodeRequest'),
+  VerifyWaOptInCodeResponse: VerifyWaOptInCodeResponse.openapi('VerifyWaOptInCodeResponse'),
+  WaOptInCodeErrorDetails: WaOptInCodeErrorDetails.openapi('WaOptInCodeErrorDetails'),
 } as const;
 for (const [name, schema] of Object.entries(waOptInComponents)) {
   registry.register(name, schema);
@@ -1573,6 +1587,52 @@ registry.registerPath({
     200: { description: 'Opt-in revoked', content: jsonOf(waOptInComponents.RevokeWaOptInResponse) },
     401: waOptInAuth,
     409: errorResponse('Nothing to end: no ACTIVE opt-in and no open whatsapp_opt_in consent'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// Story 5.13 — the WhatsApp code (signup step only; Decision 2026-10-21-374 option A, build decisions -376).
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/wa-opt-in/code',
+  summary: 'Send a WhatsApp code to the member’s registered number (at most two per request)',
+  description:
+    'For a member signing up whose WhatsApp is on another phone: sends a 6-digit code (a Meta authentication ' +
+    'template) to the REGISTERED number only (the body is empty), while the member has a PENDING opt-in, is ' +
+    'still signing up, and has never had a WhatsApp yes ended. At most two counted codes per request, 60 s ' +
+    'apart. 409 refusals (channel_unavailable, not_pending, already_active, code_not_offered, ' +
+    'code_limit_reached, code_resend_too_soon); 502 code_send_failed; 503 code_unavailable (the code route ' +
+    'is not set up). Every error carries WaOptInCodeErrorDetails. Per-member rate limited.',
+  tags: waOptInTags,
+  request: { body: { content: jsonOf(waOptInComponents.SendWaOptInCodeRequest), required: true } },
+  responses: {
+    200: { description: 'Code sent (or it may have been sent)', content: jsonOf(waOptInComponents.SendWaOptInCodeResponse) },
+    400: errorResponse('Request validation failed (the body must be {})'),
+    401: waOptInAuth,
+    409: errorResponse('The code cannot be sent now (see the error code and WaOptInCodeErrorDetails)'),
+    429: errorResponse('Rate limited'),
+    502: errorResponse('The code could not be sent (wa_opt_in.code_send_failed)'),
+    503: errorResponse('The WhatsApp code is not available for this Pariwar (wa_opt_in.code_unavailable)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/wa-opt-in/code/verify',
+  summary: 'Type the WhatsApp code back — a correct code switches WhatsApp messages on',
+  description:
+    'Checks a 6-digit code against every live code of the member’s PENDING request (two tries per code). ' +
+    'Correct: the same whatsapp_opt_in consent row and PENDING → ACTIVE transition as the member’s own ' +
+    'WhatsApp message. 409 wa_opt_in.code_wrong (tries are spent and committed), ' +
+    'wa_opt_in.code_no_longer_valid, wa_opt_in.already_active, wa_opt_in.not_pending, ' +
+    'wa_opt_in.invalid_state. A code never signs the member in. Per-member rate limited.',
+  tags: waOptInTags,
+  request: { body: { content: jsonOf(waOptInComponents.VerifyWaOptInCodeRequest), required: true } },
+  responses: {
+    200: { description: 'WhatsApp switched on', content: jsonOf(waOptInComponents.VerifyWaOptInCodeResponse) },
+    400: errorResponse('Request validation failed (the code is six digits)'),
+    401: waOptInAuth,
+    409: errorResponse('Wrong or no-longer-valid code, or the request is no longer pending'),
+    429: errorResponse('Rate limited'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

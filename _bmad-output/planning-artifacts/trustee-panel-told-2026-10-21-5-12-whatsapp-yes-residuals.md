@@ -1,8 +1,8 @@
 # For the Trustee Panel — told, not asked: two limits of "a yes lasts until the member takes it back" (Story 5.12, 2026-10-21)
 
 **For:** Dhiraj Rahul · Kalpana Bharti
-**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-10-21 — ⛔ yet TOLD** (BigDev sends it; this line is updated only
-when BigDev says it has gone). ⛔ A ruling is asked.
+**Prepared by:** BigDev (Solo Builder) · **Status:** **WRITTEN 2026-10-21 — TOLD 2026-10-21** (sent to the Panel by BigDev: *"panel note
+has been sent"*). Kept as sent; ⛔ a ruling was asked.
 **What this is:** for your information. Nothing here asks you to decide anything. It follows your ruling of 19 October (Decision
 `2026-10-19-364`, option A): *"A yes lasts until the member takes it back (in the app, or by replying STOP), for every WhatsApp message
 from the Trust."*

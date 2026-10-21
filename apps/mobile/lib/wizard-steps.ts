@@ -14,7 +14,12 @@
 //
 // ⭐ Story 6.36a (`2026-10-14-330` SW7): `workplace` — where the member works, and since when — sits AFTER `kyc` and
 // BEFORE `nominees`. REQUIRED, but it ⛔ never blocks a signup (every member can answer it).
+//
+// ⭐ 2026-10-21 — Story 5.10 (`2026-10-21-375` decision 2, SB2 (d)): `whatsapp` — an UNTICKED "Send me WhatsApp messages from
+// TWT" box — sits immediately BEFORE `payment`, after everything that cannot be recovered outside the wizard (KYC, nominees,
+// medical). OPTIONAL: leaving it unticked never blocks a signup, and it is ⛔ a lock-in step (`payment.tsx`'s `LockInGateStep`).
+// A Pariwar without WhatsApp passes straight through it (SB3 (a) — the label jumps *Step 5 → 7 of 7*, an accepted cost).
 
-export const WIZARD_STEPS = ['tc', 'kyc', 'workplace', 'nominees', 'medical', 'payment'] as const
+export const WIZARD_STEPS = ['tc', 'kyc', 'workplace', 'nominees', 'medical', 'whatsapp', 'payment'] as const
 
 export type WizardStep = (typeof WIZARD_STEPS)[number]

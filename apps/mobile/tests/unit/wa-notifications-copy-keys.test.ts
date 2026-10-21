@@ -10,8 +10,15 @@ import { getCatalog, t } from '@twt/i18n'
 import { describe, expect, it } from 'vitest'
 
 const MOBILE = join(__dirname, '..', '..')
-const FILES = ['app/(settings)/notifications.tsx', 'components/notifications/NotificationSettingsEntry.tsx']
+const FILES = [
+  'app/(settings)/notifications.tsx',
+  'components/notifications/NotificationSettingsEntry.tsx',
+  // Story 5.10 (SB12): the "WhatsApp on another phone?" hint the screen renders while PENDING.
+  'components/notifications/OtherPhoneHint.tsx',
+]
 const LOCALES = ['en', 'hi'] as const
+/** Story 5.10: `waOtherPhone.desc` carries `{number}` — the resolver throws on a token with no param. */
+const PARAMS = { number: '+91 98765 43210' }
 
 /** The literal keys passed to `t('…')` in a source file (camelCase segments allowed). */
 function literalKeys(src: string): string[] {
@@ -31,7 +38,7 @@ describe('the waNotifications keys the app uses (Story 5.12, AC6)', () => {
     for (const key of keys) {
       for (const locale of LOCALES) {
         expect(getCatalog(locale, 'common')![key], `${locale}:${key}`).toBeDefined()
-        expect(t(key, undefined, { locale, namespace: 'common' }).length, `${locale}:${key}`).toBeGreaterThan(0)
+        expect(t(key, PARAMS, { locale, namespace: 'common' }).length, `${locale}:${key}`).toBeGreaterThan(0)
       }
     }
   })

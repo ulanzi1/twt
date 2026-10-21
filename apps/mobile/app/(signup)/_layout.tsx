@@ -4,6 +4,9 @@
 // 3.6a assembles it: the new-member entry (from (auth)/otp.tsx after signup_continuation) drops the
 // member into this group, which renders an ordered, resumable step flow with a progress indicator:
 //   tc → kyc → nominees → medical → [payment hand-off]
+// (2026-10-21, Story 5.10 — the line above is stale; the order lives in lib/wizard-steps.ts, today
+//   tc → kyc → workplace → nominees → medical → whatsapp → payment. A skipped `whatsapp` step is not
+//   subtracted from the count: the label jumps Step 5 → 7 of 7 — `-375` decision 3's accepted cost.)
 // The progress header derives the active step from the current route segment (resumable: re-entering
 // any step within the session shows the right position). Headers stay hidden (like (auth)); the
 // shared progress header sits ABOVE the Stack. Payment is a 3.6a PLACEHOLDER — Story 3.6b replaces

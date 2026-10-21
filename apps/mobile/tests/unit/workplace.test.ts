@@ -39,7 +39,8 @@ const answer = (over: Partial<WorkplaceAnswer>): WorkplaceAnswer => ({ ...EMPTY_
 
 describe('the signup step (AC5)', () => {
   it('sits between kyc and nominees, so "Step N of M" counts it', () => {
-    expect([...WIZARD_STEPS]).toEqual(['tc', 'kyc', 'workplace', 'nominees', 'medical', 'payment'])
+    // 2026-10-21 — Story 5.10 (`-375` decision 2) inserted `whatsapp` immediately before `payment`; `workplace` is unmoved.
+    expect([...WIZARD_STEPS]).toEqual(['tc', 'kyc', 'workplace', 'nominees', 'medical', 'whatsapp', 'payment'])
   })
 })
 

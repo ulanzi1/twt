@@ -51,7 +51,8 @@ export default function MedicalScreen() {
           height={56}
           accessibilityRole="button"
           accessibilityLabel={t('medical.done')}
-          onPress={() => router.replace('/(signup)/payment')}
+          // Story 5.10 (`-375` decision 2): the WhatsApp step now sits between medical and payment.
+          onPress={() => router.replace('/(signup)/whatsapp')}
         >
           {t('medical.done')}
         </Button>

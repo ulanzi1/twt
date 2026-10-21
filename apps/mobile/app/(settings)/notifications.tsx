@@ -33,7 +33,10 @@ import type { WaOptInStatusResponse } from '@twt/contracts'
 import { Stack, useFocusEffect } from 'expo-router'
 import { Button, H2, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
+import { OtherPhoneHint } from '../../components/notifications/OtherPhoneHint'
 import { memberAuth } from '../../lib/member-api'
+// Story 5.10 (SB10): the bound moved to the shared helper, behaviour unchanged.
+import { CALL_TIMEOUT_MS, withTimeout } from '../../lib/with-timeout'
 
 type OptInState = WaOptInStatusResponse['state']
 /**
@@ -49,25 +52,7 @@ type ErrorSource = 'load' | 'action' | 'link' | null
  */
 type LoadMode = 'foreground' | 'background' | 'refresh'
 
-/** A call that never settles must not freeze the screen: the api-client transport has no timeout. */
-const CALL_TIMEOUT_MS = 15_000
 const PENDING_POLL_MS = 5000
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('wa-opt-in call timed out')), ms)
-    promise.then(
-      (value) => {
-        clearTimeout(timer)
-        resolve(value)
-      },
-      (err: unknown) => {
-        clearTimeout(timer)
-        reject(err)
-      },
-    )
-  })
-}
 
 /**
  * What a screen reader is told when a later read changes the body: whether the yes is on, waiting, ended by WhatsApp, or not
@@ -230,6 +215,8 @@ export default function NotificationSettingsScreen() {
           <OptInBody
             state={status.state}
             available={status.available}
+            displayPhoneNumber={status.displayPhoneNumber}
+            verificationPhrase={status.verificationPhrase}
             busy={busy}
             t={t}
             onEnable={onEnable}
@@ -250,6 +237,9 @@ export default function NotificationSettingsScreen() {
 interface OptInBodyProps {
   state: OptInState
   available: boolean
+  /** Story 5.10 (SB12): the Pariwar's number and the phrase, for "WhatsApp on another phone?" — shown only while PENDING. */
+  displayPhoneNumber: string | null
+  verificationPhrase: string | null
   busy: boolean
   t: ReturnType<typeof useT>
   onEnable: () => void | Promise<void>
@@ -257,7 +247,17 @@ interface OptInBodyProps {
   onRevoke: () => void | Promise<void>
 }
 
-function OptInBody({ state, available, busy, t, onEnable, onReopen, onRevoke }: OptInBodyProps) {
+function OptInBody({
+  state,
+  available,
+  displayPhoneNumber,
+  verificationPhrase,
+  busy,
+  t,
+  onEnable,
+  onReopen,
+  onRevoke,
+}: OptInBodyProps) {
   if (state === 'ACTIVE') {
     return (
       <YStack gap="$2" testID="wa-opt-in-active">
@@ -288,6 +288,8 @@ function OptInBody({ state, available, busy, t, onEnable, onReopen, onRevoke }: 
         <Button disabled={busy} onPress={() => void onReopen()} testID="wa-opt-in-reopen">
           {t('waNotifications.pending_resend')}
         </Button>
+        {/* Story 5.10 (SB12): renders nothing unless BOTH values are present. */}
+        <OtherPhoneHint displayPhoneNumber={displayPhoneNumber} verificationPhrase={verificationPhrase} />
       </YStack>
     )
   }

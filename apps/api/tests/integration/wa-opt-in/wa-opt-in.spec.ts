@@ -9,6 +9,8 @@
 //     arm ⇒ 409 + a compensating `_rolled_back` line.
 //   · channel unavailable (WA disabled / no number) → 409, no PENDING minted.
 //   · fail-closed — no member session ⇒ 401.
+//   · Story 5.10 (AC9) — a member created through the REAL signup path, then KYC'd to `pending-fee` (the state the signup
+//     WhatsApp step sees), mints when its fresh Pariwar's WhatsApp is on and gets 409 `wa_opt_in.channel_unavailable` when off.
 
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -31,11 +33,13 @@ async function inject(
   t: TestApp,
   method: 'GET' | 'POST' | 'DELETE',
   url: string,
-  opts: { token?: string } = {},
+  opts: { token?: string; payload?: Json } = {},
 ): Promise<{ status: number; body: Json }> {
   const res = await t.app.inject({
     method,
     url,
+    // Story 5.10 (AC9): the real signup path needs a body; the opt-in routes are still sent none.
+    ...(opts.payload ? { payload: opts.payload } : {}),
     headers: {
       origin: 'http://localhost:3001',
       ...(opts.token ? { authorization: `Bearer ${opts.token}` } : {}),
@@ -407,6 +411,83 @@ describe.skipIf(!hasDatabase)('Story 5.12 — member WhatsApp withdrawal ends ev
       expect(await stateOf(t, optInId)).toBe('ACTIVE');
       expect(await auditIds(t, pariwarId, 'member.wa_opt_in_revoked')).toHaveLength(1);
       expect(await auditIds(t, pariwarId, 'member.wa_opt_in_revoked_rolled_back')).toHaveLength(1);
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 5.10 — the premise the signup WhatsApp step rests on, through the REAL signup path (AC9; F7, F19a) ─────────────────────
+// The legs above PROJECT a `pending-kyc` member. Here the member is created by `POST /member/auth/signup/create` (OTP →
+// continuation → create, the `signup-create.spec.ts` helpers copied file-locally) in a FRESH random Pariwar per test (⛔ toggling
+// the shared one — the `termination-access-block.spec.ts` precedent), then KYC'd through `POST /member/kyc/manual` to
+// `pending-fee` — the state the step, placed immediately before payment (`-375` decision 2), really sees. The mint route's only
+// guard is the member session (⛔ a member-state check), so both answers below are the config's.
+
+const AUTH = '/api/v1/member/auth';
+
+function randomMobile(): string {
+  let n = String(6 + Math.floor(Math.random() * 4));
+  for (let i = 0; i < 9; i++) n += Math.floor(Math.random() * 10);
+  return n;
+}
+
+/** OTP → continuation → signup/create → KYC manual fallback; returns the member's own session token, at `pending-fee`. */
+async function signUpToPendingFee(t: TestApp, pariwarId: string, wa: { enabled: boolean }): Promise<string> {
+  await t.deps.pool.query(
+    `INSERT INTO pariwar_wa_config (pariwar_id, enabled, display_phone_number) VALUES ($1, $2, '+91 98765 43210')`,
+    [pariwarId, wa.enabled],
+  );
+  const mobile = randomMobile();
+  const req = await inject(t, 'POST', `${AUTH}/otp/request`, { payload: { mobile } });
+  expect(req.status).toBe(200);
+  const code = t.stepUpDelivery.last?.code as string;
+  const verify = await inject(t, 'POST', `${AUTH}/otp/verify`, { payload: { mobile, otp: code, deviceId: 'device-510' } });
+  expect(verify.body.sessionType).toBe('signup_continuation');
+  const created = await inject(t, 'POST', `${AUTH}/signup/create`, {
+    payload: { mobile, deviceId: 'device-510' },
+    token: verify.body.signupContinuationToken as string,
+  });
+  expect(created.status).toBe(200);
+  expect(created.body.pariwarId).toBe(pariwarId);
+  const session = created.body.accessToken as string;
+  const kyc = await inject(t, 'POST', '/api/v1/member/kyc/manual', {
+    payload: { name: 'Asha Devi', dob: '1990-01-01' },
+    token: session,
+  });
+  expect(kyc.status).toBe(200);
+  expect(kyc.body.lifecycleState).toBe('pending-fee');
+  return session;
+}
+
+describe.skipIf(!hasDatabase)('Story 5.10 — the signup WhatsApp step\'s request, for a member created by real signup (AC9)', () => {
+  it('WhatsApp ON for the Pariwar ⇒ a pending-fee member mints a PENDING (200, a deep link)', async () => {
+    const pariwarId = randomUUID();
+    const t = await createTestApp({ env: { DEFAULT_SIGNUP_PARIWAR_ID: pariwarId } });
+    try {
+      const session = await signUpToPendingFee(t, pariwarId, { enabled: true });
+      const res = await inject(t, 'POST', '/api/v1/member/wa-opt-in', { token: session });
+      expect(res.status).toBe(200);
+      expect(res.body.state).toBe('PENDING');
+      expect(String(res.body.deepLink)).toContain('https://wa.me/919876543210?text=');
+      expect(res.body.displayPhoneNumber).toBe('+91 98765 43210');
+      expect(String(res.body.verificationPhrase)).toMatch(/^TWT-/);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('WhatsApp OFF for the Pariwar ⇒ 409 wa_opt_in.channel_unavailable, ⛔ PENDING minted', async () => {
+    const pariwarId = randomUUID();
+    const t = await createTestApp({ env: { DEFAULT_SIGNUP_PARIWAR_ID: pariwarId } });
+    try {
+      const session = await signUpToPendingFee(t, pariwarId, { enabled: false });
+      const res = await inject(t, 'POST', '/api/v1/member/wa-opt-in', { token: session });
+      expect(res.status).toBe(409);
+      expect((res.body.error as Json).code).toBe('wa_opt_in.channel_unavailable');
+      const status = await inject(t, 'GET', '/api/v1/member/wa-opt-in', { token: session });
+      expect(status.body.available).toBe(false);
+      expect(status.body.state).toBeNull();
     } finally {
       await teardown(t);
     }

@@ -75,8 +75,10 @@ vi.mock('react-native', async () => {
 })
 vi.mock('tamagui', async () => {
   const { createElement } = await import('react')
-  const container = ({ children, testID }: { children?: ReactNode; testID?: string }) =>
-    createElement('div', testID ? { 'data-testid': testID } : null, children)
+  // Story 5.10 (AC12): the container also FORWARDS `selectable` (the "another phone" phrase) — dropping it would let the
+  // selectable leg pass vacuously (story T11).
+  const container = ({ children, testID, selectable }: { children?: ReactNode; testID?: string; selectable?: boolean }) =>
+    createElement('div', { 'data-testid': testID, 'data-selectable': selectable ? 'true' : undefined }, children)
   return {
     YStack: container,
     Paragraph: container,
@@ -426,5 +428,41 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
     expect(line).toHaveTextContent('कुछ गड़बड़ हुई। कृपया फिर से प्रयास करें।')
     await settle()
     expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Story 5.10 (AC12; SB12, `-375` decision 12) — "WhatsApp on another phone?" in the waiting (PENDING) state, from the STATUS
+// response's number + phrase; rendered only when BOTH are present, and in no other state.
+describe('NotificationSettingsScreen — Story 5.10 "WhatsApp on another phone?" (AC12)', () => {
+  it('PENDING: collapsed, then reveals the number and the phrase — the phrase SELECTABLE', async () => {
+    mock.getWaOptInStatus.mockResolvedValue(status('PENDING'))
+    renderScreen()
+    await screen.findByTestId('wa-opt-in-pending')
+    const link = screen.getByTestId('wa-other-phone-link')
+    expect(link).toHaveTextContent('WhatsApp on another phone?')
+    expect(screen.queryByTestId('wa-other-phone-details')).toBeNull()
+    fireEvent.click(link)
+    expect(screen.getByTestId('wa-other-phone-details')).toHaveTextContent('+91 98765 43210')
+    const phrase = screen.getByTestId('wa-other-phone-phrase')
+    expect(phrase).toHaveTextContent('TWT-ABCDEFGH')
+    expect(phrase).toHaveAttribute('data-selectable', 'true')
+    expect(mock.getWaOptInStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['the number', { displayPhoneNumber: null }],
+    ['the phrase', { verificationPhrase: null }],
+  ])('PENDING without %s ⇒ ⛔ hint', async (_name, over) => {
+    mock.getWaOptInStatus.mockResolvedValue({ ...status('PENDING'), ...over })
+    renderScreen()
+    await screen.findByTestId('wa-opt-in-pending')
+    expect(screen.queryByTestId('wa-other-phone')).toBeNull()
+  })
+
+  it.each(['ACTIVE', null, 'EXPIRED_24H_WINDOW'])('state %s ⇒ ⛔ hint', async (state) => {
+    mock.getWaOptInStatus.mockResolvedValue(status(state))
+    renderScreen()
+    await screen.findByTestId(state === 'ACTIVE' ? 'wa-opt-in-active' : state === null ? 'wa-opt-in-off' : 'wa-opt-in-retry')
+    expect(screen.queryByTestId('wa-other-phone')).toBeNull()
   })
 })

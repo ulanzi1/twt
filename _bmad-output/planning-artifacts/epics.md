@@ -3733,6 +3733,30 @@ or after the second text; a delivered WhatsApp ends the follow-up and counts as 
 WhatsApp to that number and is recorded even for a non-member; a claim send never changes anyone's member opt-in; staff see which
 channel got through; ADR-0042's forgery bound restated; no new SMS text, no new DLT template, no call to Meta in any test.
 
+### Story 6.37e: When the Member's Full Name Is Too Long for a Text, the Family and the Neighbours Still Get the Text — With the First Name and the Surname's Initial `[PRIMITIVE]`
+
+> **Added 2026-10-22 (`bmad-create-story 6.37e`; this entry written at its Task 0.4)** — the row `6-37e-suspicion-text-short-name-fallback`
+> was created by [`-359`](../../.decision-log.md#decision-2026-10-18-359) consequence 1 (Trustee-ratified, option B as put — the three
+> suspicion texts) and widened to the neighbours' text by [`-362`](../../.decision-log.md#decision-2026-10-18-362) consequence 1
+> (Trustee-ratified, the same option B — *"ONE fallback function for the four texts"*). Its build decisions SN1–SN7 are DECIDED by
+> [`-377`](../../.decision-log.md#decision-2026-10-22-377) (author-commit, all as recommended): ONE pure function in `apps/jobs` sends
+> the full mode-resolved name when it fits the 40-code-point `{member}` slot, else the Pariwar's existing shielded form ("Ramesh S."),
+> else today's outcome; the WhatsApp reminder keeps the full name ([`-365`](../../.decision-log.md#decision-2026-10-19-365)).
+> PQ1 / PQ2 routed to the Panel as a non-blocking confirm; the answer gates go-live
+> (`trustee-panel-routing-note-2026-10-22-6-37e-short-name-confirms.md` — written, not sent; roster Rows 22 / 27 condition notes).
+> ⛔ Migration, ⛔ schema, ⛔ text change, ⛔ new roster row. Full ACs:
+> `_bmad-output/implementation-artifacts/6-37e-suspicion-text-short-name-fallback.md`. Not a merge fence.
+
+As a family member or neighbour the Trust has promised to text about a member's death or claim, I want the text to reach me even when
+the member's full name is too long for it — naming the member by first name and surname initial — so that a long name never silently
+costs me the text the Panel promised, including the refused person's only notice of the last date to appeal.
+
+**Acceptance Criteria (in brief):** one pure function, called by exactly the two text senders — the full name byte-for-byte whenever it
+fits; else the existing shielded form (⛔ truncation, ⛔ a new splitter); else today's outcome (the suspicion texts refused
+`value_too_long` with an alarm; the neighbours' text `no_target:name_too_long`); all three suspicion texts and the neighbours' text send
+the short form for a long multi-word name; the WhatsApp reminder and its shared name reader unchanged; ⛔ name in any alarm, log line,
+detail or payload; ⛔ migration, schema, detail vocabulary, registered text or send-core change; every flipped or new test proven RED.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

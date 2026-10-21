@@ -81,6 +81,9 @@ shorter per-segment length.
   clause, applied here to EVERY template (the conservative reading). Every template 1–16 passes (lowest: 13–14 — 14 (en) at 39.6 %, 13 (hi) at 43.7 %, Story 6.27c; then 7–12 at 52–62 %).
 - **⛔ Another type for `{member}` / `{date}`** — the claim texts' words are ratified; a type that needs a different text (a date type, a
   shorter name) is a text change and goes back through the §0 gate.
+  ⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* the shorter name form for an over-long name (`-359` / `-362` B —
+  "Ramesh S." only when the full name does not fit) WENT through the §0 gate (the Panel ruled it) and needs ⛔ type or text change —
+  it is a VALUE of the same alphanumeric `{member}` variable. Its full stop is asked at Row 30 (d) with the date's hyphen.
 - ⚠ *"A variable cannot be the last word"* (MSG91's FAQ — secondary, undated): templates 8, 10, 12 and 14 end `… helpline <variable>.` (a
   final full stop) — asked at Row 30 (d).
 - Each registry's unit test runs `checkDltTemplateShape` over every entry; the CI gate `dlt-typed-variables` keeps every variable typed.
@@ -166,6 +169,10 @@ texts do; 1–6 stay name-free (D33 is ⛔ not weakened). (b) **S4 / T6** — �
 `apps/jobs/tests/suspicion-notice-sms-templates.test.ts` proves the real `t()` renders EXACTLY the text below and that this sheet carries
 it. ⚠ The **Hindi** is agent-authored and ⛔ not yet human-reviewed — go-live gate **row 23** (`suspicion-notice-hindi-human-review`); a
 reviewed change means re-registering.
+⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* **(1) the member's name** above is the mode-resolved form WHEN IT FITS the
+40-code-point slot; a name that does not fit is sent in the shorter form — first name and the surname's initial ("Ramesh S.", the
+Pariwar's existing shielded form) — per [`2026-10-18-359`](../../.decision-log.md#decision-2026-10-18-359) B. Only a name that still
+does not fit is refused (`value_too_long` + alarm), ⛔ never truncated. ⛔ Text or type change.
 
 | # | Registered text |
 |---|---|
@@ -194,6 +201,9 @@ EXACTLY the text below and that this sheet carries it. The LANGUAGE is the Pariw
 independent translation (corrected 2026-10-17, 6.27c review round 2; PM3's "never copied" clause superseded by `2026-10-17-344`) — and ⛔
 not yet human-reviewed —
 go-live gate **Row 28** (`peer-mesh-request-hindi-human-review`); a reviewed change means re-registering.
+⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* *"a name longer than 40 characters is ⛔ texted"* above is SUPERSEDED in part by
+[`2026-10-18-362`](../../.decision-log.md#decision-2026-10-18-362) B — such a name is sent in the shorter form ("Ramesh S."), and
+`no_target:name_too_long` remains only for a name that still does not fit; ⛔ never truncated. ⛔ Text or type change.
 
 | # | Registered text |
 |---|---|

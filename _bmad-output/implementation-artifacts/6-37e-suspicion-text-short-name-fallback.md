@@ -1,5 +1,5 @@
 ---
-baseline_commit: bac71abb
+baseline_commit: 1e22889e
 ---
 
 <!--
@@ -47,7 +47,7 @@ LETTERS: F = found facts (F1–F17); SN = build decisions (SN1–SN7 — ANSWERE
 
 # Story 6.37e: When the member's full name is too long for a text, the family and the neighbours still get the text — with the first name and the surname's initial
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Four SMS texts name the deceased member in a `{member}` slot of 40 code points: the three
 > suspicion texts (the nominee's refusal notice — `-262` FQ7 B; the closed notice — `-291` Q2 B; the refused person's appeal notice —
@@ -554,8 +554,8 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; re-pin if `main` moved (`git diff --name-only bac71abb..origin/main -- apps/jobs packages/domain/src/notifications packages/domain/src/kyc packages/domain/src/claim/peer-mesh-wa-reminder.ts`;
+- [x] **Task 0 — governance FIRST (AC0). ⛔ No code.**
+  - [x] 0.1 `git fetch origin`; re-pin if `main` moved (`git diff --name-only bac71abb..origin/main -- apps/jobs packages/domain/src/notifications packages/domain/src/kyc packages/domain/src/claim/peer-mesh-wa-reminder.ts`;
         re-derive any F-fact that moved; update the front-matter `baseline_commit` — AC4 / Task 4 read it; AC6 uses the merge-base); `pnpm install
         --frozen-lockfile --prefer-offline` in this worktree if `node_modules` is absent (F14); re-grep `main`, EVERY branch (`git branch
         -a`) and every worktree (`git worktree list`) for the next free decision id and ledger letter (NUMBERS — at 2026-10-22
@@ -577,7 +577,7 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
   - [x] 0.2 Put SN1–SN7 to BigDev, each with its recommendation and cost; then PQ1 and PQ2 — BigDev's §0 check FIRST (route / tell /
         record as the author's); say F6's WhatsApp-reminder consequence and F17's full-stop question alongside. Record every answer
         VERBATIM (Debug Log (a)).
-  - [ ] 0.3 Write the 6.37e entry (AUTHOR-COMMIT; the shape of `-376`, the newest precedent (`-375` the same, minus PQ): Decision
+  - [x] 0.3 Write the 6.37e entry (AUTHOR-COMMIT; the shape of `-376`, the newest precedent (`-375` the same, minus PQ): Decision
         type / Status / Author / Ratifying trustees: None / §0 gate / Occasion / The decisions / **PQ:** / Supersessions / Does NOT
         cover / Consequences / References). **§0 gate:** SN1–SN7 are the author's (engineering — the notes said so); PQ1 / PQ2 are the
         Panel's (narrowings of a ratified option), routed as a non-blocking confirm. **PQ:** *"PQ1 + PQ2 — routed as ONE non-blocking
@@ -600,7 +600,7 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
         with an honest cost on EVERY option (A = "as built", C = PQ1 (C) / PQ2 (C)), What is at stake (*"Blocked: nothing — go-live
         waits for the answer"*), How much to trust this note, In plain English, Evidence E1–E4 LAST (E4 run before BigDev sends it).
         ⛔ Shown to the Panel until BigDev sends it ([[feedback_shown_to_panel_means_sent]]).
-  - [ ] 0.4 The records commit (one commit, after 0.3) — SN6 (a)'s list: `epics.md` `### Story 6.37e` after 6.37d's entry (the 6.37d
+  - [x] 0.4 The records commit (one commit, after 0.3) — SN6 (a)'s list: `epics.md` `### Story 6.37e` after 6.37d's entry (the 6.37d
         entry's shape — "Added 2026-10-2x (`bmad-create-story 6.37e`)", the rulings, "Full ACs: …", "Not a merge fence.", the user
         story, "Acceptance Criteria (in brief)", and the line *"PQ1 / PQ2 routed to the Panel as a non-blocking confirm; the answer
         gates go-live"*); the confirm NOTE written at 0.3; deferred-work: the 6.37-round-2 suspicion item a dated note *"built by row
@@ -769,6 +769,8 @@ Unicode version — since Unicode 15.1 (GB9c) Devanagari conjuncts cluster as on
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.37e`, 2026-10-22.
+
 ### Debug Log References
 
 **(a) Task 0.2 — BigDev's answers, VERBATIM (2026-10-21, in the `bmad-create-story validate 6.37e` session, after v1.2 `b04409ed`):**
@@ -797,6 +799,27 @@ asked *"Does the Trustee Panel's answer to the PQ1/PQ2 non-blocking confirm gate
 *"Gates go-live (Recommended)"* (the option: *"Matches every earlier confirm (6.36, -295 §8). Add a dated condition note to roster
 Row 22 (suspicion texts) and Row 27 (neighbours' text); no new row. The code still merges freely."*). ⇒ SN6 / Task 0.4 carry the two
 condition notes; the confirm note says the build continues and go-live waits.
+
+**(b) Task 0 — done 2026-10-22 (`bmad-dev-story 6.37e`).**
+- 0.1: `git fetch origin` ⇒ `origin/main` = `1e22889e` (unchanged since v1.4). The re-check diff
+  (`git diff --name-only bac71abb..origin/main -- apps/jobs packages/domain/src/notifications packages/domain/src/kyc
+  packages/domain/src/claim/peer-mesh-wa-reminder.ts`) lists the same three benign files (header note); F1, F2, F4, F7 re-read in code
+  at `1e22889e` — unchanged. `node_modules` present in the worktree (F14). REBASED onto `origin/main`: four steps, each conflicting only
+  in the ledger block at the top of `sprint-status.yaml`, resolved by a scratchpad script that keeps every HEAD line and inserts the
+  branch's lines at their slot (asserting every conflicted line is a `# last_updated:` line): `a85d712f` → `21r` 6.37e before 5.13's
+  `21r` (two `21r` briefly); `b04409ed` → the 6.37e `21r` deleted, `21t` / `21s` before 5.13's `21r`; `11162207` → `21x` before `21w`;
+  `cef06a81` → `22c` on top. Line counts 21783 → 21787 → 21788 → 21789 → 21790 (= main + the branch's net 7); YAML parsed after each
+  step; ONE `21r` line (5.13's). New SHAs `ebb45851` / `5917b2a1` / `cc03000d` / `d8a8c12b`. `baseline_commit` re-pinned `bac71abb` →
+  `1e22889e`. NUMBERS re-grepped over every ref and both worktrees: highest decision `-376` ⇒ `2026-10-22-377`; ledger `22c` taken ⇒ `22d`.
+- 0.3: `2026-10-22-377` staged in the scratchpad, inserted above `-376` (additive only — `git diff --numstat` 39 / 0) and committed
+  ALONE: `7cd8a7a4`. The confirm note `trustee-panel-routing-note-2026-10-22-6-37e-short-name-confirms.md` written from the template
+  (Confirm 1 = PQ1, Confirm 2 = PQ2; the 6.36 confirms note's shape); its E4 commands RUN before commit — every grep hit; the `node`
+  probe printed `45 → K. S.`, `44 → Venkata -.`, `44 → श्री श्री.`, `42 → Venkata S.` on Node v22.22.2 / ICU 78.2 / Unicode 17.0.
+  ⛔ Sent — BigDev sends it.
+- 0.4: the records commit — every edit append-only (roster: five `notes:` lines, each new line `startswith` its old line; deferred-work
+  25 / 0; DLT sheet 10 / 0 and the `| <n> |` table-row count unchanged at 32; `claim.json` en + hi: only `$comment.suspicion_sms` /
+  `$comment.peer_mesh_sms` changed, each new value `startswith` its old one, the three substrings the lockstep tests read kept);
+  `sprint-status.yaml` 21790 → 21795, YAML parses, row 6-37e `in-progress`.
 
 ### Completion Notes List
 

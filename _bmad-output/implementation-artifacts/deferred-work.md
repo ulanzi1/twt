@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Recorded during Story 6.37e dev — owed to the Trustee Panel (2026-10-22)
+
+- **A NON-blocking Panel confirm owed on the shorter name in the texts — PQ1 + PQ2 of row 6-37e
+  ([`-377`](../../.decision-log.md#decision-2026-10-22-377) decision 8).** ⛔ **Not addressed — the note WRITTEN, ⛔ sent:**
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-short-name-confirms.md`. Built AS RULED meanwhile
+  (`-359` / `-362` B): **Confirm 1 (PQ1)** — a long name whose first word is not a first name, or whose last word is not a surname, gets
+  the existing shielded form as is (`"K. S."`, `"Venkata -."`, an invisible initial — ⛔ token cleaning on the member-facing arm);
+  **Confirm 2 (PQ2)** — a MULTI-word name whose short form is still over 40 gets ⛔ text (option B's cost named only a one-word name).
+  ⚠ It GATES GO-LIVE of the long-name texts (BigDev 2026-10-22 — roster Rows 22 / 27 condition notes); it blocks ⛔ build or merge.
+  ⭐ Trigger: BigDev sends the note; ALSO any report of an unrecognised or garbled short name, or a production writer for
+  `shielded_name` (PQ1 (A)'s old trigger, folded in). The Panel's answer is a NEW Trustee-ratified entry; an answer other than "as
+  built" means a later row. ⛔ Discharged until the Panel answers.
+
+---
+
 ## Deferred from: create + validate of 5-13-whatsapp-code-for-another-phone.md (2026-10-21)
 
 Four items. The first two are PRE-EXISTING and whole-WhatsApp (⛔ Story 5.13's to fix — found while reading Meta's docs for it); the last
@@ -474,6 +489,12 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   `-262` FQ7 B, `-293` item 1 B (the appeal date) and `-291` Q2 B texts at the edge. ⭐ ROUTED to the Panel: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-17-6-37-name-too-long-for-the-text.md` (written 2026-10-17,
   ⛔ yet sent). ⭐ Trigger: the Panel's ruling — B (the shielded form when the full name does ⛔ fit) or C / D is a small change in the
   suspicion sweep with its own legs; A closes this item as built. Also rides `-322` C7 (d) / Row 30 (d)'s answer (the unit DLT's 40 counts).
+  - *Dated note, 2026-10-22 (row 6-37e, [`-377`](../../.decision-log.md#decision-2026-10-22-377)):* the *"⛔ yet sent"* above is STALE —
+    the note was SENT and RULED: [`-359`](../../.decision-log.md#decision-2026-10-18-359) (Trustee-ratified, B — the shorter form only
+    when the full name does not fit). BUILT by row 6-37e (`smsMemberName`). ⛔ Closed yet: it becomes **"Closed by 6.37e for every name
+    whose short form fits"** when the row is `done` on `main`. Still ⛔ sent after that: a ONE-word over-long name (`-359`'s own accepted
+    cost) and a MULTI-word name whose short form is still over 40 (PQ2 — carried by the 2026-10-22 owed-confirm item at the top of this
+    file). Row 30 (d)'s unit question is unchanged.
 
 ## Deferred from: dev-story of 6-37-msg91-sms-gateway-adapter (2026-10-17)
 
@@ -803,6 +824,10 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   Row 30 (d) with the unit it counts (UTF-16 / code points vs graphemes) and whether Devanagari / spaces pass (a refusal goes
   back to the Panel — `2026-10-12-322` C7). The shape check counts `{member}` at 40 (templates 7–12 still ≥ 52 % fixed). Trigger
   unchanged.
+  ⭐ (2026-10-22, row 6-37e — [`-377`](../../.decision-log.md#decision-2026-10-22-377)) **PARTLY addressed:** a long MULTI-word name now
+  falls back to the Pariwar's shielded form ("Ramesh S.") when the full name does not fit the 40 — `-359` / `-362` B; truncation was
+  option C, which the Panel did ⛔ choose (`-359`). ⛔ Addressed: the operator's real limit and unit (Row 30 (d) — open), and a name
+  that still does not fit (still refused `value_too_long` + alarm). Trigger unchanged (provisioning templates 7–12, roster Row 22).
 - **6.19b's K4 carries the premise `-297` §2 found false: "`detail` NULL ⇒ nothing was sent"** [`packages/domain/src/claim/correction-reminder-record.ts`
   — `skipCorrectionReminder` / its `expiredAttempt`; `packages/domain/src/claim/certificate-reminder-record.ts` — `skipCertificateReminder`]
   — a `detail` is written ONLY by a transient failure, so a crash between the gateway's accept and the finalise leaves an

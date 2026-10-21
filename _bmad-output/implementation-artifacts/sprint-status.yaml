@@ -1,3 +1,10 @@
+# last_updated: 2026-10-21h (STORY 5.10 v1.3 + NEW row `5-13-whatsapp-code-for-another-phone` (backlog). BigDev, in session, on a member
+# signing up on a phone that does not hold their WhatsApp (the message then comes from the wrong number and matches nothing): *"I think we
+# need to send OTP in this case. May be ask later if whatsapp is on another phone."*, then *"2, go ahead"* ⇒ (1) Story 5.10 SB12: a
+# "WhatsApp on another phone?" link shows the Pariwar's number + the phrase to send from the WhatsApp phone (within ADR-0029; no server
+# change); (2) routing note `trustee-panel-routing-note-2026-10-21-5-10-whatsapp-code-for-another-phone.md` WRITTEN (⛔ sent) — a WhatsApp
+# code to a member not yet switched on extends ADR-0029's "ACTIVE only by a matched inbound WhatsApp message" and §3.4's dual gate /
+# UTILITY-only scope; (3) row 5-13 builds the code ONLY if ruled in. 5.10 waits on nothing. Row 5-10 stays ready-for-dev. ⛔ Other row moves.)
 # last_updated: 2026-10-21g (STORY 5.10 — CREATED by `bmad-create-story 5.10` on branch `story/5-10-signup-whatsapp-opt-in-checkbox`
 # (worktree `.claude/worktrees/5-10` — a peer session shares the main checkout; pinned `20fcb479`, 5.12 on `main` ⇒ the start condition
 # is MET): row `5-10-signup-whatsapp-opt-in-checkbox` `backlog` → `ready-for-dev`; story file `5-10-signup-whatsapp-opt-in-checkbox.md`
@@ -20601,6 +20608,16 @@ development_status:
   # has ⛔ clock; every withdrawal ends EVERY open consent row; STOP always works; the app never says "expired"); migration 0177. The two
   # `-364` items it owns are "Closed by 5.12", effective when this row is `done` on `main`. Go-live: Row 35 (g) + Row 37 (the Hindi).
   5-12-whatsapp-yes-lasts-until-withdrawn: done
+  # ⭐ 2026-10-21 ADDED (BigDev, in session during Story 5.10's creation: *"I think we need to send OTP in this case. May be ask later if
+  # whatsapp is on another phone."*, then *"2, go ahead"*): a member who ticks the signup WhatsApp box on a phone that does not hold
+  # their WhatsApp taps "WhatsApp on another phone?" and receives ONE WhatsApp code on the registered number; typing it in the app
+  # switches WhatsApp on. ⛔ BUILDABLE until the Panel rules on `trustee-panel-routing-note-2026-10-21-5-10-whatsapp-code-for-another-phone.md`
+  # (WRITTEN, ⛔ sent): it extends ADR-0029's ratified "ACTIVE only by a matched inbound WhatsApp message" and §3.4's dual gate and
+  # "UTILITY templates only" scope (a code is Meta's AUTHENTICATION category); it also reads against §2.2's "voice OTP only — no
+  # WhatsApp" (ratification ⛔ confirmed). If ruled in: a Meta authentication template, a send outside the dispatcher, code storage +
+  # attempt limits, and the swap of what Story 5.10's SB12 link shows (5.10 builds the phrase + number meanwhile). If ruled out: this
+  # row is closed as "not built — Panel ruled B". ⛔ Story file; ⛔ epics.md entry.
+  5-13-whatsapp-code-for-another-phone: backlog
   epic-5-retrospective: done
 
   # ==========================================================================

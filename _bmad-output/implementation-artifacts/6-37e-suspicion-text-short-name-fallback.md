@@ -34,7 +34,7 @@ does ⛔ need). LEDGER LETTERS follow the same rule by analogy, and it has alrea
 written as `2026-10-21r` after 5.13's `618bda20` had taken `r` ⇒ re-lettered `2026-10-21s`. This story needs ⛔ migration and ⛔
 roster row (SN6).
 
-LETTERS: F = found facts (F1–F17); SN = build decisions (SN1–SN7 — PROPOSED, ⏳ BigDev at Task 0.2); PQ = candidate Panel questions
+LETTERS: F = found facts (F1–F17); SN = build decisions (SN1–SN7 — ANSWERED 2026-10-21: each recommendation (a), Debug Log (a)); PQ = candidate Panel questions
 (PQ1, PQ2); I = invariants (I1–I6); T = traps (T1–T14). This story's OWN decision entry is called **"the 6.37e entry"** below.
 -->
 
@@ -269,7 +269,7 @@ MSG91 rejects it: these names get ⛔ text either way, BUT today's recorded refu
 spent. A refusal of the RULED form goes BACK to the Panel (as `-322` C7). ⇒ recorded in Row 30 (d)'s note and the 6.37e entry's
 "Does NOT cover" (SN6); ⛔ a code change.
 
-## ⚖️ Build decisions SN1–SN7 (PROPOSED — ⏳ BigDev at Task 0.2)
+## ⚖️ Build decisions SN1–SN7 (ANSWERED 2026-10-21 — BigDev accepted each ⭐ recommendation (a); Debug Log (a))
 
 - **SN1 — Where the ONE function lives.** ⭐ **(a) Recommended:** a new module `apps/jobs/src/scheduler/sms-member-name.ts` — both
   callers are in `apps/jobs`; it imports `fitsDltAlphanumeric` from `peer-mesh-sms-templates.ts` (R9's one predicate stays where it is)
@@ -340,7 +340,7 @@ spent. A refusal of the RULED form goes BACK to the Panel (as `-322` C7). ⇒ re
   before a postposition (probed: *"हमें बताया गया है कि रमेश श्री. का निधन हो गया है।"*, *"Venkata S. के लिए किया गया एक दावा …"*);
   a dated note on each row (SN6). **Cost:** two notes.
 
-## 🏛️ Candidate Panel questions (BigDev's §0 check FIRST at Task 0.2 — route, tell, or record as the author's in the 6.37e entry)
+## 🏛️ Candidate Panel questions (ANSWERED 2026-10-21 — BigDev accepted the recommendation for each: PQ1 (B′), PQ2 (B′); Debug Log (a))
 
 **PQ1 — A long name whose FIRST word is not a first name, or whose LAST word is not a surname.** The built form takes the first
 WORD as the first name and the first grapheme of the last WORD as the initial (F16 — ⛔ token cleaning). Probed:
@@ -482,7 +482,7 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
         --frozen-lockfile --prefer-offline` in this worktree if `node_modules` is absent (F14); re-grep `main`, EVERY branch (`git branch
         -a`) and every worktree (`git worktree list`) for the next free decision id and ledger letter (row 5-13 contests both —
         NUMBERS).
-  - [ ] 0.2 Put SN1–SN7 to BigDev, each with its recommendation and cost; then PQ1 and PQ2 — BigDev's §0 check FIRST (route / tell /
+  - [x] 0.2 Put SN1–SN7 to BigDev, each with its recommendation and cost; then PQ1 and PQ2 — BigDev's §0 check FIRST (route / tell /
         record as the author's); say F6's WhatsApp-reminder consequence and F17's full-stop question alongside. Record every answer
         VERBATIM (Debug Log (a)).
   - [ ] 0.3 Write the 6.37e entry (AUTHOR-COMMIT; the `-375` entry's shape: Decision type / Status / Author / Ratifying trustees: None /
@@ -656,6 +656,27 @@ Unicode version — since Unicode 15.1 (GB9c) Devanagari conjuncts cluster as on
 
 ### Debug Log References
 
+**(a) Task 0.2 — BigDev's answers, VERBATIM (2026-10-21, in the `bmad-create-story validate 6.37e` session, after v1.2 `b04409ed`):**
+*"recommendation accepted for  SN1–SN7 and PQ1 / PQ2"*
+
+What that accepts — each the story's ⭐ recommendation as written at v1.2 (⛔ re-read here):
+- SN1 (a) — the ONE function in a new module `apps/jobs/src/scheduler/sms-member-name.ts`.
+- SN2 (a) — `smsMemberName(resolvedName): SmsMemberName` (`full` / `short` / `too_long`), input the MODE-RESOLVED name, throwing on
+  `''` / whitespace-only input or an empty short form.
+- SN3 (a) — keep the suspicion slot's literal 40; one unit leg pins the two slots' `maxLength` equal to
+  `DLT_TYPE_MAX_LENGTH.alphanumeric`.
+- SN4 (a) — a still-too-long suspicion name goes on to the send core UNCHANGED (`value_too_long` + alarm, as today).
+- SN5 (a) — ⛔ new record that the short form was used.
+- SN6 (a) — ⛔ new roster row; the 6.37e entry + the records commit as SN6 (a) lists them.
+- SN7 (a) — ⛔ Hindi text change; the Rows 23 / 28 reviewer packets gain one short-form render per Hindi text.
+- PQ1 (B′) and PQ2 (B′) — build the existing form as ruled AND route both edges to the Panel as ONE non-blocking confirm note
+  (*"we will build the existing form; tell us if you want otherwise"* — the `-295` §8 / `-296` precedent). ⛔ Blocks the build. The note
+  is WRITTEN at Task 0.3 from the template and is ⛔ shown to the Panel until BigDev sends it
+  ([[feedback_shown_to_panel_means_sent]]); the 6.37e entry records the two edges as routed (non-blocking), ⛔ as the author's.
+- Alongside (told to BigDev with the questions, ⛔ separately answered): F6 (the WhatsApp reminder becomes reachable for long-name
+  claims, with the full name) and F17 (the full stop in `{member}` — Row 30 (d)'s special-character question) — both go into the
+  6.37e entry's "Does NOT cover" / Consequences and SN6's records as written.
+
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6-37e`, 2026-10-21).
@@ -664,6 +685,10 @@ Unicode version — since Unicode 15.1 (GB9c) Devanagari conjuncts cluster as on
 
 ## Change Log
 
+- v1.3 (2026-10-21) — Task 0.2 done: BigDev accepted every recommendation (SN1–SN7 (a); PQ1 / PQ2 (B′) — one non-blocking
+  confirm note, WRITTEN at 0.3, ⛔ sent until BigDev sends it); recorded verbatim in Debug Log (a). Row stays `ready-for-dev` (Task 0.4
+  flips it). ⚠ Since v1.2 the peer row 5-13 has announced it takes `-376`, roster Row 39, migration 0178 and ledger letters u / v / w —
+  this story's entry takes the next free id at its own commit (Task 0.3 re-greps).
 - v1.2 (2026-10-21) — `bmad-create-story validate 6.37e`: four fresh-context verifiers (code claims · rulings and records · edge
   cases · gates and tests), 2 H / 11 M / 12 L, all applied (BigDev: "all"). HIGH: the creation ledger line re-lettered
   `2026-10-21r` → `2026-10-21s` (`r` was taken first by 5.13's `618bda20` — `-366` d6; its "v1.0" → v1.1); the multi-word

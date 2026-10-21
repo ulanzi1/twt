@@ -8,7 +8,8 @@ PINNED: `bac71abb` (2026-10-21 — `main` after `git fetch origin`; `origin/main
 branch `story/6-37e-suspicion-text-short-name-fallback` ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]] —
 a peer session holds the main checkout on `story/5-13-whatsapp-code-for-another-phone`). Two facts, stated separately: (1) the pin is
 an ancestor of this branch (durable); (2) every `apps/` / `packages/` cite below was re-derived at `bac71abb` (perishable — re-check at
-Task 0.1: `git diff --name-only bac71abb..origin/main -- apps/jobs packages/domain/src/notifications packages/domain/src/kyc`).
+Task 0.1: `git diff --name-only bac71abb..origin/main -- apps/jobs packages/domain/src/notifications packages/domain/src/kyc
+packages/domain/src/claim/peer-mesh-wa-reminder.ts`).
 Re-locate by FUNCTION, ⛔ by line number ([[feedback_story_validate_footguns]] #19, #21, #24).
 ⚠ Branches that show as "ahead of main" on these files (`story/6-24b-…`, `story/6-29-…`, `story/6-34-…` and their `origin/` twins) are
 LANDED stories' pre-rebase heads — ⛔ live work. Re-check at 0.1 anyway.
@@ -16,8 +17,9 @@ LANDED stories' pre-rebase heads — ⛔ live work. Re-check at 0.1 anyway.
 §0 GATE (the routing template's, applied FIRST — `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`): the
 BEHAVIOUR is the Panel's and is ALREADY RULED — `2026-10-18-359` (B, the three suspicion texts) and `2026-10-18-362` (B, the neighbours'
 text). Both notes said, as the Panel read them, that *"how a fallback would be built"* / *"how a fallback is built (one function, shared
-with the suspicion texts)"* is ENGINEERING — ⛔ asked. Every SN below is therefore the AUTHOR's. ⚠ ONE candidate question has a
-person-facing half (PQ1 — a name whose first word is an initial or a title) and is FLAGGED for BigDev's own §0 check at Task 0.2.
+with the suspicion texts)"* is ENGINEERING — ⛔ asked. Every SN below is therefore the AUTHOR's. ⚠ TWO candidate questions have a
+person-facing half and are FLAGGED for BigDev's own §0 check at Task 0.2: PQ1 (a long name whose first word is not a first name, or
+whose last word is not a surname) and PQ2 (a multi-word name whose shorter form is STILL too long — a NARROWING of option B as put).
 ⛔ No counsel question.
 
 GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `⚠` a hazard. ⛔ No `file:NNN` into `.decision-log.md`,
@@ -26,10 +28,14 @@ the item's phrase, or the row key.
 
 NUMBERS (`-366` decision 6: *"the number belongs to the first COMMIT that takes it on any branch"*): at creation the next free decision
 id was `-376` and the next free roster row 39 — ⛔ claimed by this file; each is "the next free one" at the commit that takes it (Task
-0.1 / 0.3). This story needs ⛔ migration and ⛔ roster row (SN6).
+0.1 / 0.3). ⚠ CONTESTED: the unmerged peer row 5-13 (`story/5-13-whatsapp-code-for-another-phone`) also plans "the next free
+decision id" — whichever branch COMMITS first takes `-376`; the other takes the next (5-13 also plans a roster row, which this story
+does ⛔ need). LEDGER LETTERS follow the same rule by analogy, and it has already bitten once: this story's creation ledger line was
+written as `2026-10-21r` after 5.13's `618bda20` had taken `r` ⇒ re-lettered `2026-10-21s`. This story needs ⛔ migration and ⛔
+roster row (SN6).
 
-LETTERS: F = found facts (F1–F15); SN = build decisions (SN1–SN7 — PROPOSED, ⏳ BigDev at Task 0.2); PQ = candidate Panel question
-(PQ1); I = invariants (I1–I6); T = traps (T1–T14). This story's OWN decision entry is called **"the 6.37e entry"** below.
+LETTERS: F = found facts (F1–F17); SN = build decisions (SN1–SN7 — PROPOSED, ⏳ BigDev at Task 0.2); PQ = candidate Panel questions
+(PQ1, PQ2); I = invariants (I1–I6); T = traps (T1–T14). This story's OWN decision entry is called **"the 6.37e entry"** below.
 -->
 
 # Story 6.37e: When the member's full name is too long for a text, the family and the neighbours still get the text — with the first name and the surname's initial
@@ -42,8 +48,9 @@ Status: ready-for-dev
 > and then refused by the send core (`dlt_template_not_approved:value_too_long` + an alarm that reaches the logs only); the neighbours'
 > text is never begun for that claim (`no_target:name_too_long`, claim-wide). The Panel ruled B twice: **send it with the shorter name
 > form — first name and the surname's initial ("Ramesh S."), the form a Pariwar can already choose — ONLY when the full name does not
-> fit**; a name that still does not fit keeps today's outcome. This story builds ONE pure function that makes that choice and calls it
-> from the two senders. ⛔ Words change, ⛔ migration, ⛔ schema, ⛔ new outcome.
+> fit**; a name that still does not fit keeps today's outcome (the one-word case is the Panel's stated cost; the multi-word case is
+> PQ2). This story builds ONE pure function that makes that choice and calls it from the two senders. ⛔ Words change, ⛔ migration,
+> ⛔ schema, ⛔ new outcome.
 
 **What already ships and this story READS — rebuild ⛔ none of it:**
 - `notifications.resolveMemberFacingDeceasedName(mode, storedName)` (`packages/domain/src/notifications/pool-identity.ts`) — the
@@ -65,16 +72,16 @@ date to appeal**.
 
 | Source | Key (verbatim, abridged) | Status |
 |---|---|---|
-| `2026-10-18-359` | *"B — Send it with the shorter form of the name, only when the full name does not fit — first name and the initial of the surname (e.g. "Ramesh S."), the form a Pariwar can already choose."* Consequence 1: *"the three suspicion texts fall back to first name + surname initial when the full name exceeds the slot; the error and alarm stay for a name that still does not fit."* Not covered: *"a one-word name that is itself too long (B's own cost — still not sent, as built); how the operators count the length (roster Row 30 (d), unanswered)"* | Trustee-ratified |
-| `2026-10-18-362` | *"B — … first name and the initial of the surname ("Ramesh S."), the same rule you chose for the suspicion texts."* Consequence 1: *"ONE fallback function for the four texts."* Not covered: *"a one-word name that is itself too long (still not sent — today's claim-wide `no_target:name_too_long`)"*. Supersedes `-311` PM3's "no text" reading | Trustee-ratified |
-| `-262` FQ7 B · `-291` Q2 B · `-293` item 1 B | the three suspicion texts; `[member]` = *"the Pariwar's mode-resolved name form (`-181`)"* — NARROWED for an over-long name by `-359` | Trustee-ratified |
+| `2026-10-18-359` | The Panel's answer was the bare letter (*"3. B"*) ⇒ the ruling is option B AS PUT (the 6.37 note's option table), action + outcome + cost: *"**Send it with the shorter form of the name, only when the full name does not fit** — first name and the initial of the surname (e.g. "Ramesh S."), the form a Pariwar can already choose."* For the family: *"The family gets the promised text; for that one text the name is shorter than the Pariwar's usual form."* Cost as put: *"The shorter form says *less* about the person, ⛔ more — but it overrides, for that one text, the form you ratified (the Pariwar's chosen form). A family might find "Ramesh S." less clear. A one-word name that is itself too long still could not be sent (rare). A small piece of work (one function and its tests)."* The entry's OWN consequence 1 (⛔ the Panel's words): *"the three suspicion texts fall back to first name + surname initial when the full name exceeds the slot; the error and alarm stay for a name that still does not fit."* Not covered: *"a one-word name that is itself too long (B's own cost — still not sent, as built); how the operators count the length (roster Row 30 (d), unanswered)"*; and the neighbours' text (OWED there — discharged by `-362`) | Trustee-ratified (option B as put); consequences author-written |
+| `2026-10-18-362` | The Panel's answer was the bare letter (*"for name go with option B."*) ⇒ option B AS PUT (the 6.27c note): *"**Send it with the shorter form of the name, only when the full name does not fit** — first name and the initial of the surname ("Ramesh S."), the same rule you chose for the suspicion texts."* For a neighbour: *"The neighbours get the text with "Ramesh S." instead of the full name."* Cost as put: *"A neighbour may not recognise the member from the shorter name and may skip the questions — or answer about a different Ramesh. A one-word name that is itself too long still could not be sent (rare)."* The entry's consequence 1: *"ONE fallback function for the four texts."* Not covered: *"a one-word name that is itself too long (still not sent — today's claim-wide `no_target:name_too_long`)"* — ⚠ ⛔ consequence covers a multi-word name whose short form is still too long (PQ2). Supersedes `-311` PM3's "no text" reading | Trustee-ratified (option B as put); consequences author-written |
+| `-262` FQ7 B · `-291` Q2 B · `-293` item 1 B | the three suspicion texts — Trustee-ratified. ⚠ `[member]` = *"the Pariwar's mode-resolved name form (`-181`)"* sits under *"Our reading — ⛔ NOT RATIFIED"* in `-293` item 1 and `-291` Q2, and `-262` FQ7 states ⛔ name form; `-359`'s Decision-type line and the 6.37 note's §0 describe the form as ratified — recorded, ⛔ re-read. NARROWED for an over-long name by `-359` | texts Trustee-ratified; the name form "Our reading" |
 | `-303` Q1 A | the neighbours' text, naming `{member}` — NARROWED for an over-long name by `-362` | Trustee-ratified |
-| `-181` cl.1 | *"MODE-RESOLVED"* — the member-facing form from the Pariwar's stored mode; *"share the MODE, ⛔ never the whole function"* (⛔ `resolvePublicMemberName`) | author-commit |
-| `-136` cl.2 | `shielded_name` — *"Ramesh Kumar" → "Ramesh K."*; `splitFirstNameLastInitial()` *"becomes the implementation of the `shielded_name` mode"* | Trustee-ratified (cl.2) |
+| `-181` cl.1 + Context | *"MODE-RESOLVED"* (cl.1) — the member-facing form from the Pariwar's stored mode; *"share the MODE, ⛔ never the whole function"* (its Context section) (⛔ `resolvePublicMemberName`) | author-commit |
+| `-136` cl.2 | ruled in terms: *"Member's legal/KYC name ≠ public-directory presentation of that name."* The example *"Ramesh Kumar" → "Ramesh K."* and *"`splitFirstNameLastInitial()` becomes the implementation of the `shielded_name` mode"* are the entry's own elaboration inside the clause ("⭐ Consequence for the shipped shielding helper") | Trustee-ratified (cl.2's ruled words) |
 | `-345` MG3 · `-346` decision 1 | the send core refuses a value over its slot (`:value_too_long` + alarm); the helpline exempt | author-commit |
-| `-311` PM3 / R9 (Story 6.27c) | `fitsDltAlphanumeric`; `no_target:name_too_long` claim-wide — kept ONLY for a name that still does not fit (`-362`) | author-commit, superseded in part by `-362` |
+| `-311` PM3 · R9 (Story 6.27c's build item) | `-311` PM3 records `no_target:name_too_long` claim-wide — kept ONLY for a name that still does not fit (`-362`); `fitsDltAlphanumeric` is R9, Story 6.27c's item (⛔ named by any decision entry) | author-commit, superseded in part by `-362` |
 | `-365` (Story 6.31) | the neighbours' WhatsApp reminder carries the FULL name: *"`-362` narrows the name for the neighbours' TEXT only, and WhatsApp has ⛔ SMS name slot"* | author-commit |
-| `-322` C7 · roster Row 30 (d) | the operators' count unit and Devanagari / spaces — OPEN; ⛔ changed here | open |
+| `-322` C7 · roster Row 30 (d) | the operators' count unit, Devanagari / spaces and special characters (the date's hyphen — and now the short form's full stop, F17) — ⛔ changed here | C7 author-commit; Row 30 (d) OPEN |
 
 ## ⭐ THE INVARIANTS
 
@@ -84,11 +91,14 @@ fires "just in case". Every existing leg with a fitting name stays green UNCHANG
 **I2 — The short form is the Pariwar's existing shielded form, never a new one.** It is exactly
 `resolveMemberFacingDeceasedName('shielded_name', …)` — first token, space, the first grapheme of the LAST token, a period; a single
 token shown whole. ⛔ Truncation, ⛔ middle-initials, ⛔ a new splitter, ⛔ `resolvePublicMemberName` (its mononym `''` would OMIT the text
-— `-181`'s trap).
+— `-181`'s trap). ⚠ The member-facing arm applies ⛔ `publicNameTokens` (the directory's token cleaning) — so for a few names the
+short form differs from the directory's (F16, PQ1); built AS IS, ⛔ cleaned here.
 
 **I3 — A name that still does not fit keeps TODAY's outcome on each path.** Suspicion texts: the over-long value goes on to the send
 core and ends `dlt_template_not_approved:value_too_long` + alarm (`-359` consequence 1: *"the error and alarm stay"*). Neighbours' text:
-claim-wide `no_target:name_too_long`, ⛔ alarm, as today (`-362` not covered). ⛔ Truncated name ever.
+claim-wide `no_target:name_too_long`, ⛔ alarm, as today (`-362` not covered). ⛔ Truncated name ever. ⚠ For a ONE-word name this is
+the Panel's stated cost; for a MULTI-word name whose short form is still over 40 it is our reading (PQ2) — the code is the same either
+way unless PQ2 is routed and answered otherwise.
 
 **I4 — ONE function for the four texts** (`-362` consequence 1) — pure, no IO, no clock; both senders call it; ⛔ a second fit or
 shorten anywhere.
@@ -103,15 +113,18 @@ reminder keeps the FULL name (`-365`). Only the TEXT's step (`readDeceasedName`)
 
 **This story introduces ⛔ predicate and changes ⛔ predicate that gates a member's (or a family's) access to a benefit.** It changes
 WHICH NAME FORM a text carries, and with it whether a promised text is sent at all for an over-long name — a notification outcome,
-⛔ an eligibility, assignment, payment or claim-decision predicate. ⛔ Claim state, decision, event or money path is touched.
+⛔ an eligibility, assignment, payment or claim-decision predicate. ⛔ Claim state, decision, event or money path is touched. It does
+decide whether a promised notice is sent — including the refused person's only notice of the last date to appeal — and it only ever
+WIDENS sending: it withholds ⛔ text that is sent today.
 
 In the family's terms: ⭐ *"If the member's full name is too long to fit in a text, you still get the text — it names the member by
-their first name and the first letter of their surname, like 'Ramesh S.'; only a single-word name that is itself too long still means
-no text."*
+their first name and the first letter of their surname, like 'Ramesh S.'; only a name that is still too long even in that shorter
+form — in practice one very long single word, or a very long first word — still means no text."*
 
-Its cost to the family (the Panel's, as put): the shorter form may be less clear — and for the neighbours, who must RECOGNISE the
-member to answer, a neighbour may not recognise "Ramesh S." or may answer about a different Ramesh (`-362`'s stated cost). See PQ1 for
-names whose first word is an initial or a title.
+Its cost to the family (the Panel's, as put — verbatim in the table above): the shorter form says less and overrides, for that one
+text, the Pariwar's chosen form; a family might find "Ramesh S." less clear; for the neighbours, who must RECOGNISE the member to
+answer, a neighbour may not recognise the member and may skip the questions — or answer about a different Ramesh. See PQ1 for names
+whose first or last word is not a first name / surname, and F6 for the WhatsApp reminder that now follows a short-form text.
 
 **Niyamavali check:** ⛔ applicable — the Niyamavali (`packages/domain/seed/niyamavali-v1-clauses.sql`) has ⛔ clause on texts,
 notices or name forms (grepped 2026-10-21: no match for "sms", "text message", "notif"), and it is ⛔ ratified
@@ -119,13 +132,19 @@ notices or name forms (grepped 2026-10-21: no match for "sms", "text message", "
 
 ⚠ Checked against `-359` and `-362` VERBATIM (the table above):
 - the short form "only when the full name does not fit" — MATCHES both (I1);
-- "first name and the initial of the surname … the form a Pariwar can already choose" — MATCHES: the built `shielded_name` form (I2);
-- "a one-word name that is itself too long … still not sent" — MATCHES (I3); ⚠ ALSO not sent, by our reading: a multi-word name
-  whose SHORT form is still over 40 (first word + space + initial + period > 40 — a first word of ≥ 38 code points for a one-code-point
-  initial, fewer for a multi-code-point Devanagari initial such as `श्री`) — the same "still does not fit" (`-359` consequence 1:
-  *"the error and alarm stay for a name that still does not fit"*) — MATCHES consequence 1's words; the ruling's example names only the
-  one-word case. Recorded in the 6.37e entry, ⛔ routed (vanishingly rare; the same outcome the Panel accepted for the one-word case).
-- the length "40 characters, counted as code points" (the answer the Panel was given before `-362`) — MATCHES (`fitsDltAlphanumeric`).
+- "first name and the initial of the surname … the form a Pariwar can already choose" — MATCHES the second half (the built
+  `shielded_name` form, I2); ⚠ for a name whose first word is not a first name, or whose last word is not a surname, it NARROWS the
+  first half (PQ1);
+- "A one-word name that is itself too long still could not be sent (rare)" (both options' cost line) — MATCHES (I3);
+- ⚠ a MULTI-word name whose SHORT form is still over 40 (first word + space + initial + period > 40 — a first word of ≥ 38 code
+  points for a one-code-point initial, fewer for a multi-code-point Devanagari initial such as `श्री`; e.g.
+  `'स'.repeat(36) + ' श्रीवास्तव'` 47 → 42) is ALSO not sent, by our reading. That MATCHES `-359` consequence 1's words (*"the error and alarm stay for a
+  name that still does not fit"* — the ENTRY's consequence, ⛔ the Panel's words) but NARROWS option B as put: `-359`'s outcome line is
+  *"The family gets the promised text"* and its cost names only *"A one-word name"*; `-362` has the same cost and ⛔ consequence
+  covering it. Rarity does not change the classification ⇒ **PQ2**, at Task 0.2.
+- the length: what the Panel was told (the 6.27c note) is *"40 characters, counting every letter, space and mark. In Hindi each vowel
+  sign … counts as its own character"*; "counted as code points" is `-362`'s own Status-line wording — both MATCH
+  `fitsDltAlphanumeric`'s `[...s].length`.
 
 ## ⭐ FOUND FACTS (at `bac71abb` — re-check at Task 0.1)
 
@@ -158,19 +177,28 @@ TEXT's step there — ⛔ this function."* The child then uses `(nameRead as { n
 every ping `no_target:name_too_long`, ⛔ replaced, ⛔ texted, ⛔ alarmed"* with `name: 'A'.repeat(20) + ' ' + 'B'.repeat(20)` (41) —
 under this story that SENDS as `"AAAAAAAAAAAAAAAAAAAA B."` ⇒ FLIP; (ii) *"AC5b — a re-claimed row with a NAME fault ⇒ `no_target:name_*`
 (⛔ replaced) + the "a prior attempt may have sent" alarm"* uses the SAME two-word name ⇒ it would send and FAIL — change
-its fixture to a ONE-word over-long name (`'A'.repeat(41)`), ⛔ its assertions.
+its fixture to a ONE-word over-long name (`'A'.repeat(41)`), ⛔ its assertions; (iii) the suite's HEADER comment says
+*"`name_too_long` texts ⛔ one"* — true after this story only for a name that still does not fit (Task 2.3 updates it).
 
 **F6 — The WhatsApp reminder's full-name leg.** `claim-peer-mesh-wa-reminders-live.test.ts` *"WR13 / §0 edge (ii) — a name that FAILS
 the SMS fit check is sent IN FULL"* — MUST stay green UNCHANGED (I5). It imports `fitsDltAlphanumeric` from
-`peer-mesh-sms-templates.js` — ⛔ move or rename that export (T7).
+`peer-mesh-sms-templates.js` — ⛔ move or rename that export (T7). Its pings are SEEDED `accepted` directly, so it never exercises
+the text → reminder chain.
+⚠ **Consequence (⛔ a code change — state it in the 6.37e entry and PQ1):** the reminder's begin returns `not_due` unless the ping was
+accepted (`packages/domain/src/claim/peer-mesh-wa-reminder.ts`: `if (ping.send_outcome !== 'accepted' || ping.link_code === null)
+return { kind: 'not_due' };`; WR2 = 48 h after the text was ACCEPTED). Today every ping of a long-name claim ends
+`no_target:name_too_long` ⇒ ⛔ reminder ever. After this story those pings are `accepted` ⇒ an opted-in neighbour gets the SMS with
+`"Ramesh S."` and, ~48 h later, the WhatsApp reminder with the FULL name (`-365` edge (ii)) — and the link page shows the full name
+too. This is a NEW reach of an existing, ruled behaviour, ⛔ a new behaviour.
 
 **F7 — The short form is computable from the RESOLVED name.** `readMemberFacingDeceasedName` returns only the resolved name (⛔ the
 stored name, ⛔ the mode). Applying `resolveMemberFacingDeceasedName('shielded_name', resolved)`:
 - `full_name` mode: `resolved` = the stored name with whitespace collapsed; `splitFirstNameLastInitial` splits on the same `/\s+/`
   ⇒ the result EQUALS `shielded(stored)` exactly;
-- `shielded_name` mode: `resolved` is already `"Ramesh S."` / a mononym; re-shielding is IDEMPOTENT (verified on Node 22.22.2 / ICU
-  78.2: `"Ramesh S."`, `"रमेश श्री."`, `"K. S."` and a 41-letter mononym all map to themselves) — and a shielded name that is still
-  over 40 stays over 40 ⇒ I3.
+- `shielded_name` mode: `resolved` is already `"Ramesh S."` / a mononym; re-shielding is idempotent for every input tried (Node
+  22.22.2 / ICU 78.2: `"Ramesh S."`, `"रमेश श्री."`, `"K. S."`, a 41-letter mononym, NBSP / tab / U+3000 / ZWSP / emoji-ZWJ / virama
+  cases) EXCEPT a lone Unicode Prepend character as the last token (`"Ramesh ؀."` → `"Ramesh ؀.."`, one code point longer — GB9b does
+  not break before the period). Re-shielding never SHORTENS ⇒ a shielded name that is over 40 stays `too_long` ⇒ I3 holds.
 ⇒ ONE input (the resolved name) serves both senders; ⛔ new parameter on `readMemberFacingDeceasedName`.
 
 **F8 — Worked examples (Node 22.22.2, ICU 78.2, code points).** `"Venkata Satya Narayana Murthy Subrahmanyam"` 42 → `"Venkata S."` 10;
@@ -199,15 +227,47 @@ owed by this story's records: deferred-work's 6.37 round-2 item *"A suspicion te
 length guard against the operator's DLT per-variable limit"* (its trigger is DLT provisioning — PARTLY addressed only); roster Row 27's
 evidence line (1) (still cites PM3's "no text"); `epics.md` has ⛔ `### Story 6.37e` entry.
 
-**F15 — Two more "a long name is ⛔ texted" statements go stale.** `peer-mesh-sms-templates.ts`'s header: *"an erased /
-unresolvable name, or one longer than the slot (`fitsDltAlphanumeric`), ⇒ `no_target`, ⛔ never a blank, ⛔ never a truncated name
-(RB5, R9)"*; and the operator-facing registration sheet `docs/launch-gate-inventory/dlt-template-requests-6-19.md` (templates 13–14
-prose): *"a name longer than 40 characters is ⛔ texted (`no_target:name_too_long`), ⛔ never truncated"*. Both get a correction (Task
-2.4; records — SN6). ⚠ The sheet note must be PROSE: the DLT gate parses table rows matching `| <n> |` in that sheet
-(`scripts/dlt-typed-variables/lib.ts` `SHEET_TEMPLATE_ROW`) — ⛔ a new numbered table row.
+**F14 — At creation the worktree had ⛔ `node_modules`** (installed since, during validation). Without them every `@twt/*` import
+resolves to the MAIN checkout's sources (6.37d Debug Log (b)(1)) — re-check at 0.1 and `pnpm install --frozen-lockfile
+--prefer-offline` in this worktree if absent.
 
-**F14 — The worktree has ⛔ `node_modules`.** Without them every `@twt/*` import resolves to the MAIN checkout's sources (6.37d Debug
-Log (b)(1)) — `pnpm install --frozen-lockfile --prefer-offline` in this worktree FIRST.
+**F15 — More "a long name is ⛔ texted" / "the mode-resolved name" statements go stale.**
+- `peer-mesh-sms-templates.ts`'s header: *"an erased / unresolvable name, or one longer than the slot (`fitsDltAlphanumeric`), ⇒
+  `no_target`, ⛔ never a blank, ⛔ never a truncated name (RB5, R9)"* (Task 2.4).
+- The operator-facing registration sheet `docs/launch-gate-inventory/dlt-template-requests-6-19.md`: (a) templates 13–14 prose:
+  *"a name longer than 40 characters is ⛔ texted (`no_target:name_too_long`), ⛔ never truncated"*; (b) templates 7–12 prose: *"The
+  variables, in order: (1) the member's name in the Pariwar's mode-resolved form (`-181`)"*; (c) the Shape rules: *"⛔ Another type
+  for `{member}` / `{date}` — … a type that needs a different text (a date type, a shorter name) is a text change and goes back
+  through the §0 gate."* — each a dated PROSE note (SN6). ⚠ The DLT gate parses table rows matching `| <n> |` in that sheet
+  (`scripts/dlt-typed-variables/lib.ts` `SHEET_TEMPLATE_ROW`; `apps/jobs/tests/_dlt-template-sheet.ts` `expectRegisteredTextRow`) —
+  ⛔ a new numbered table row; the prose lines are pinned by ⛔ test.
+- `packages/i18n/locales/{en,hi}/claim.json` `$comment.suspicion_sms` and `$comment.peer_mesh_sms`: *"{member} is the Pariwar's
+  mode-resolved member name"* — a dated sentence APPENDED to each `$comment` (SN6; AC6 permits `$comment.*` keys only). ⚠ Two
+  lockstep tests read these values by SUBSTRING: `suspicion-notice-sms-templates.test.ts` (`$comment.suspicion_sms` contains
+  `'NOT YET HUMAN-REVIEWED'`) and `peer-mesh-sms-templates.test.ts` (`$comment.peer_mesh_sms` contains that marker, `'Row 28'` and
+  `'must match the registered DLT content byte for byte'`) ⇒ an appended sentence is safe; ⛔ an edit that removes any of those
+  substrings.
+- `claim-peer-mesh-requests-live.test.ts`'s header line (F5 (iii)).
+
+**F16 — The member-facing shielded arm does ⛔ token cleaning.** `resolveMemberFacingDeceasedName('shielded_name', …)` calls raw
+`splitFirstNameLastInitial` (split on `/\s+/`); `resolvePublicMemberName` first runs `publicNameTokens` (11b.3's allowlist — a token
+counts only if it holds a letter or digit; bidi controls / leading invisibles stripped). Manual KYC accepts
+`z.string().trim().min(1).max(200)` (`packages/contracts/src/kyc/signup.ts`) with ⛔ character-class rule, and `.trim()` / `\s` do ⛔
+strip U+200B–U+200F / U+2060 (Hindi keyboards emit ZWNJ / ZWJ). Probed (input over 40 → this story's short form | the directory's):
+`"Venkata Satya Narayana Murthy Subrahmanyam -"` → `"Venkata -."` | `"Venkata S."`; `"… Subrahmanyam ."` → `"Venkata .."`;
+`"… Subrahmanyam ​Iyer"` → `"Venkata ​."` (an invisible initial); `"… ‮"` → an RLO bidi override in the SMS;
+`"… (Late)"` → `"Venkata (."` in both; a trailing honorific `"… जी"` → `"X जी."`; `"… Jr."` → `"Ramesh J."`. ⇒ built AS IS (I2 —
+⛔ a new splitter; `-181` one member-facing form); it is PQ1's second half and is pinned by AC1 (k).
+
+**F17 — The short form puts a FULL STOP into the alphanumeric `{member}` variable.** Full names normally carry none; the shielded
+form has never travelled in an SMS variable (production is all `full_name`, F10). Row 30 (d) already asks about *"the hyphen in a
+`DD-MM-YYYY` alphanumeric variable (TRAI allows special characters; MSG91 says "no special characters")"* — the full stop is the same
+question. MG3 does ⛔ character-class check, and DLT scrubbing failures arrive ONLY in the delivery report (Row 30 note (6)(d) —
+MSG91's docs, read 2026-10-17; the written answer is still owed). If
+MSG91 rejects it: these names get ⛔ text either way, BUT today's recorded refusal + alarm (suspicion) / recorded
+`no_target:name_too_long` (neighbours) would become a silent non-delivery stored `accepted`, and five neighbours' once-only slots
+spent. A refusal of the RULED form goes BACK to the Panel (as `-322` C7). ⇒ recorded in Row 30 (d)'s note and the 6.37e entry's
+"Does NOT cover" (SN6); ⛔ a code change.
 
 ## ⚖️ Build decisions SN1–SN7 (PROPOSED — ⏳ BigDev at Task 0.2)
 
@@ -223,14 +283,19 @@ Log (b)(1)) — `pnpm install --frozen-lockfile --prefer-offline` in this worktr
   — `full` iff `fitsDltAlphanumeric(resolvedName)`; else `short` iff `fitsDltAlphanumeric(short)` where `short =
   notifications.resolveMemberFacingDeceasedName('shielded_name', resolvedName)`; else `too_long`. Input = the MODE-RESOLVED name (F7).
   ⛔ `''` input (the callers already turned `''` into `name_unresolvable` / `unresolvable` before calling — assert it with a guard that
-  throws, so a future caller cannot silently pass `''`). **Cost:** both slots must be 40 for one predicate to serve both — pinned by a
-  unit leg (SN3). **(b)** Take `(mode, storedName)`. **Cost:** the neighbours' reader would have to return the stored name (a change
+  throws when `resolvedName.trim() === ''` OR the computed short form is `''`, so a future caller cannot silently pass `''` or a
+  whitespace-only name — `' '.repeat(41)` would otherwise give `{ kind: 'short', name: '' }`, a blank `{member}`). **Cost:** both
+  slots must be 40 for one predicate to serve both — pinned by a unit leg (SN3). **(b)** Take `(mode, storedName)`. **Cost:** the neighbours' reader would have to return the stored name (a change
   to 6.31's shared reader — I5).
 
 - **SN3 — One limit, two slots.** ⭐ **(a) Recommended:** keep the suspicion slot's literal 40 (⛔ registry edit — the lockstep tests
   pin it) and add ONE unit leg asserting `SUSPICION_NOTICE_SMS_TEMPLATES[*][*].slots` member `maxLength` ===
   `PEER_MESH_REQUEST_SMS_TEMPLATES[*].slots` member `maxLength` === `DLT_TYPE_MAX_LENGTH.alphanumeric`, so Row 30 (d) changing the
-  limit cannot split them silently. **Cost:** one more leg. **(b)** Change the suspicion `MEMBER` to `DLT_TYPE_MAX_LENGTH.alphanumeric`.
+  limit cannot split them silently. It complements the two lockstep tests that already pin the literal 40
+  (`suspicion-notice-sms-templates.test.ts`, `peer-mesh-sms-templates.test.ts`) by pinning their EQUALITY — which matters for the
+  SUSPICION texts: `fitsDltAlphanumeric` reads the neighbours' `MEMBER.maxLength` (= `DLT_TYPE_MAX_LENGTH.alphanumeric`), so if that
+  constant rose above the suspicion slot's literal 40, a name would pass the shared fit as `full` and then be refused by the
+  suspicion slot (`value_too_long` + alarm, the once-ever slot spent). **Cost:** one more leg. **(b)** Change the suspicion `MEMBER` to `DLT_TYPE_MAX_LENGTH.alphanumeric`.
   **Cost:** a registry edit in a story that promises ⛔ registry change; the lockstep test's literal must follow.
 
 - **SN4 — The suspicion "still too long" case.** ⭐ **(a) Recommended:** pass the over-long mode-resolved name on to the send core
@@ -246,65 +311,130 @@ Log (b)(1)) — `pnpm install --frozen-lockfile --prefer-offline` in this worktr
   on two send tables for a fact nobody reads.
 
 - **SN6 — Records and gates.** ⭐ **(a) Recommended:** ⛔ new roster row (⛔ new go-live leg — the change rides the existing template
-  gates, F11); the 6.37e entry (author-commit) records SN1–SN7 + the PQ1 disposition; the records commit: `epics.md` `### Story 6.37e`
-  (after 6.37d), deferred-work's 6.37-round-2 suspicion item **"Closed by"** (effective when this row is `done` on `main` —
-  [[feedback_closure_language_precision]]), the 6.24b `{member}` item a dated **"partly addressed"** note (the long multi-word name;
-  the operator's limit / unit still open — its trigger unchanged), Row 27 evidence line (1) a dated note (`-362` supersedes PM3's "no
-  text"; `name_too_long` now only for a name that still does not fit), Row 30 (d) a dated note (fewer names affected; the unit question
-  unchanged), the registration sheet's templates 13–14 prose a dated note (F15 — `-362`: the short form when the full name does not
-  fit; `name_too_long` only for a name that still does not fit), the 6-37e sprint comment + ledger. ⛔ Routing note edited. **Cost:** none beyond the writing.
+  gates, F11); the 6.37e entry (author-commit) records SN1–SN7, the PQ1 / PQ2 dispositions, F6's WhatsApp-reminder consequence, F16's
+  as-built form and F17 in "Does NOT cover"; the records commit:
+  - `epics.md` `### Story 6.37e` (after 6.37d);
+  - deferred-work's 6.37-round-2 suspicion item **"Closed by"** (effective when this row is `done` on `main` —
+    [[feedback_closure_language_precision]]);
+  - the 6.24b `{member}` item a dated **"partly addressed"** note (the long multi-word name; truncation was option C, which the Panel
+    did ⛔ choose (`-359`); the operator's limit / unit still open — its trigger unchanged);
+  - if PQ1 is (A): a NEW deferred-work item for PQ1's edge (trigger: any report of an unrecognised or garbled short name, or a writer
+    for `shielded_name`);
+  - Row 27 evidence line (1) a dated note (`-362` supersedes PM3's "no text"; `name_too_long` now only for a name that still does not
+    fit);
+  - Row 30 (d) a dated note: fewer names affected; the unit question unchanged; ⚠ AND *"the full stop of the shorter name form
+    (`-359` / `-362` B — "Ramesh S.") in the alphanumeric `{member}` variable — the same 'special characters' question as the date's
+    hyphen; a refusal of the full stop means the ruled short form cannot be texted and goes BACK to the Panel (as `-322` C7)"* (F17);
+  - Rows 23 / 28 (the Hindi reviews) a dated note each: the reviewer's packet gains one short-form render per Hindi text (SN7);
+  - the registration sheet: dated PROSE notes at templates 7–12, templates 13–14 and the Shape rules (F15 (a)–(c) — `-359` / `-362`:
+    the short form when the full name does not fit, which went through §0 and needs ⛔ type or text change; `name_too_long` only for a
+    name that still does not fit);
+  - `claim.json` (both locales) `$comment.suspicion_sms` / `$comment.peer_mesh_sms` a dated sentence APPENDED (F15 — keep the three
+    substrings the lockstep tests read);
+  - the 6-37e sprint comment + ledger.
+  ⛔ Routing note edited. **Cost:** none beyond the writing.
 
 - **SN7 — Hindi texts.** ⭐ **(a) Recommended:** ⛔ change — the Hindi registered texts carry `{member}` as a variable; the short form
-  is substituted the same way in both locales. ⛔ New Hindi review (Rows 23 / 28 unchanged). **Cost:** none.
+  is substituted the same way in both locales. ⛔ New Hindi review — but the Rows 23 / 28 reviewer's packet gains one short-form
+  render per Hindi text, because the Panel was shown only the Latin "Ramesh S." and the Hindi render puts a Latin full stop straight
+  before a postposition (probed: *"हमें बताया गया है कि रमेश श्री. का निधन हो गया है।"*, *"Venkata S. के लिए किया गया एक दावा …"*);
+  a dated note on each row (SN6). **Cost:** two notes.
 
-## 🏛️ Candidate Panel question (BigDev's §0 check FIRST at Task 0.2 — route, or record as the author's in the 6.37e entry)
+## 🏛️ Candidate Panel questions (BigDev's §0 check FIRST at Task 0.2 — route, tell, or record as the author's in the 6.37e entry)
 
-**PQ1 — A long name whose FIRST word is an initial or a title.** The built form takes the first WORD as the first name. For
-`"K. Venkata Satya Narayana Murthy Subrahmanyam"` (45 — a South-Indian initial-first name) the short form is `"K. S."`; a stored name
-starting with a title (`"Shri …"`, `"श्री …"`) would give `"Shri X."`. The Panel ruled *"first name and the initial of the surname"* and
-*"the form a Pariwar can already choose"* — the built form IS that form, but for these names its first word is not a first name, and
-for the neighbours (who must recognise the member) `"K. S."` says almost nothing in the TEXT. ⚠ Weigh with: the neighbour's link
-page shows the FULL mode-resolved name (`apps/api/src/modules/claims/peer-request-core.ts` `resolvePeerRequestMemberName` →
-`resolveMemberFacingDeceasedName(mode, stored)`), and the WhatsApp reminder carries the full name (`-365`) — the short form is only the
-SMS's; a neighbour who taps the link sees the whole name before answering.
-- **(A) Our reading — build the existing form as ruled; record this edge in the 6.37e entry and `deferred-work.md` (trigger: any
-  report of an unrecognised short name, or a writer for `shielded_name`).** Cost: some long initial-first names get a weak short form;
-  the Panel is ⛔ told unless BigDev chooses to.
-- **(B) Tell the Panel (a "told" item, ⛔ a question).** Cost: one more note for BigDev to send; nothing changes in code.
-- **(C) Route it: skip leading initials / titles to find the first name.** Cost: a NEW name form no Pariwar can choose today — that
-  departs from *"the form a Pariwar can already choose"* and from `-181`'s one form rule (the shielded directory would differ); needs a
-  ruling first.
-⚠ How reachable: only names over 40 code points whose first word is an initial or title; no production data exists to count them.
-For the suspicion texts there is no link page — the short form is all the family sees (the helpline call carries the rest).
-Our reading: **A** — the Panel chose the existing form knowing its stated cost (*"A family might find "Ramesh S." less clear"*); C is a
-new form; but this edge is sharper than "less clear" for the neighbours, so BigDev may prefer B.
+**PQ1 — A long name whose FIRST word is not a first name, or whose LAST word is not a surname.** The built form takes the first
+WORD as the first name and the first grapheme of the last WORD as the initial (F16 — ⛔ token cleaning). Probed:
+- first word an initial or title: `"K. Venkata Satya Narayana Murthy Subrahmanyam"` (45 — a South-Indian initial-first name, where the
+  leading initial is often the house or father's name) → `"K. S."`; `"Shri …"` → `"Shri X."`; ⭐ the class of name the Panel was
+  shown in the 6.27c note (*"श्री राजेन्द्र प्रसाद श्रीवास्तव" = 32 (fits)*) — one just over 40, `"श्री राजेन्द्र प्रसाद नारायण सिंह
+  श्रीवास्तव"` (44), shortens to `"श्री श्री."`, which says nothing;
+- last word not a surname: a trailing honorific `"… जी"` → `"X जी."`; `"… Jr."` → `"Ramesh J."`; a bracketed or punctuation-only token
+  → `"Venkata (."` / `"Venkata -."` / `"Venkata .."`; an invisible character (ZWSP / ZWNJ / bidi mark / word joiner) as or at the start
+  of the last token → a blank-looking or invisible initial, or an RLO bidi override inside the SMS (F16 — the directory's
+  `publicNameTokens` would give `"Venkata S."` for several of these).
+Match / narrow against the ruled sentence *"first name and the initial of the surname (e.g. "Ramesh S."), the form a Pariwar can
+already choose"*: the built form MATCHES the second half and, for these names, NARROWS the first. ⚠ The template's §0 lists *"two
+RATIFIED clauses that conflict, so one of them must give"* as the Panel's — so this edge leans to the Panel. ⚠ Weigh with: the
+neighbour's link page shows the FULL mode-resolved name (`apps/api/src/modules/claims/peer-request-core.ts`
+`resolvePeerRequestMemberName` → `resolveMemberFacingDeceasedName(mode, stored).trim()`), and an opted-in neighbour gets the WhatsApp
+reminder with the full name ~48 h later (F6, `-365`) — the short form is only the SMS's. For the suspicion texts there is ⛔ link page —
+the short form is all the family sees (the helpline call carries the rest).
+- **(A) Build the existing form as ruled; record this edge in the 6.37e entry and `deferred-work.md` (trigger: any report of an
+  unrecognised or garbled short name, or a writer for `shielded_name`).** Cost: some long names get a weak or meaningless short form;
+  the Panel is ⛔ told — the weakest fit with §0's "two ratified clauses that conflict".
+- **(B) Build the existing form AND tell the Panel (a "told" item, ⛔ a question).** Cost: one more note for BigDev to send; nothing
+  changes in code; but the author still decides a narrowing that §0 lists as the Panel's (*"a ratified clause that must be
+  SUPERSEDED, narrowed or extended"*).
+- **(B′) Build the existing form AND route it as a NON-BLOCKING CONFIRM** — *"we will build the existing form; tell us if you want
+  otherwise"* (the `-295` §8 / `-296` short-confirm-note precedent). Code as A; the edge is the Panel's once answered; ⛔ blocks the
+  build (⛔ text is live — F11). Cost: one short question in a note for BigDev to send; if the Panel then wants C, a later row.
+- **(C) Route it: skip leading initials / titles, trailing honorifics and non-letter tokens to find the first name and surname.**
+  Cost: a NEW name form no Pariwar can choose today — it departs from *"the form a Pariwar can already choose"* and from `-181`'s one
+  member-facing form rule; needs a ruling first.
+⚠ How reachable: only names over 40 code points of these shapes; ⛔ production data exists to count them; ⛔ text is live (F11).
+Our reading: **B′** — the code is the same as A (the existing form, as ruled); §0 makes a narrowing of a ratified clause the Panel's
+to answer, ⛔ merely to hear, and a non-blocking confirm asks it without holding the build; C is a new form.
+
+**PQ2 — A MULTI-word name whose shorter form is STILL over 40.** (Policy meaning, the fourth bullet.) Built: ⛔ text — the suspicion
+texts end `value_too_long` + alarm, the neighbours' `no_target:name_too_long`, as today (I3). Match / narrow: MATCHES `-359`
+consequence 1's words (the entry's own); NARROWS option B as put (*"The family gets the promised text"*; cost names only *"A one-word
+name that is itself too long"*); `-362` has ⛔ consequence covering it.
+- **(A) Record as the author's reading in the 6.37e entry.** Cost: a narrowing of a ratified option recorded without the Panel.
+- **(B) Build as in (A) AND tell the Panel — in the same note as PQ1.** Cost: one more line in that note; ⛔ code difference; the
+  author still decides a narrowing (§0).
+- **(B′) Build as in (A) AND route it as a NON-BLOCKING CONFIRM — in the same note as PQ1 (B′).** Cost: one more question in that
+  note; ⛔ code difference; ⛔ blocks the build.
+- **(C) Route it: for such a name, send a further-shortened form.** Cost: a new form (the same objection as PQ1 (C)); needs a ruling.
+⚠ How reachable: a first word of ≥ 38 code points (fewer with a Devanagari conjunct initial) — vanishingly rare. Our reading: **B′**
+(share PQ1's note — the same §0 reason); B or A only if BigDev judges it too small to ask.
 
 ## Acceptance Criteria
 
 Notation: unit legs are pure vitest (`env -u DATABASE_URL`); live legs run on :5433 with `DATABASE_URL` set EXPLICITLY; every send
 through the existing fake gateway (⛔ network); "⛔ sent" asserted with the harness's `sent` array (a zero-length recorder).
 
-1. **AC0 — Governance before code.** Task 0 is done before any `apps/` / `packages/` change: SN1–SN7 answered and recorded VERBATIM;
-   PQ1 through BigDev's §0 (routed, told, or recorded as the author's); the 6.37e entry committed ALONE; the records commit after it.
+1. **AC0 — Governance before code.** Task 0 is done before any `apps/` / `packages/` change (the `claim.json` `$comment` sentences
+   of Task 0.4 excepted — documentation, part of the records commit): SN1–SN7 answered and recorded VERBATIM;
+   PQ1 and PQ2 through BigDev's §0 (routed, told, or recorded as the author's); the 6.37e entry committed ALONE; the records commit
+   after it.
 
-2. **AC1 — The ONE function (SN1 / SN2).** `smsMemberName` exists in ONE place, is pure, and is called by exactly the two text senders
-   (a source leg greps `apps/jobs/src` for its callers: `claim-suspicion-notices.ts` and `claim-peer-mesh-requests.ts` only). Unit legs (the source leg greps for the token `smsMemberName(` outside its own module):
+2. **AC1 — The ONE function (SN1 / SN2).** `smsMemberName` exists in ONE place, is pure, and is called by exactly the two text senders.
+   ⭐ **The source leg** (modelled on `apps/jobs/tests/staff-email-identity-read-fence.test.ts` — ⛔ on the weaker
+   `claim-peer-mesh-wa-reminders.test.ts` AC9 count, which does ⛔ strip comments): walk `apps/jobs/src` recursively (`readdirSync`,
+   skipping `node_modules` / `dist`; keyed by REPO-RELATIVE path, as that fence's `walk()` is), strip comments as that fence does; the
+   set of files whose CODE imports from `./sms-member-name.js` OR contains `\bsmsMemberName\s*\(` must EQUAL exactly
+   `['apps/jobs/src/scheduler/claim-peer-mesh-requests.ts', 'apps/jobs/src/scheduler/claim-suspicion-notices.ts']` (`toEqual`, both
+   present — ⛔ "only"; full paths, ⛔ basenames — a basename would hide a same-named file elsewhere);
+   `apps/jobs/src/scheduler/sms-member-name.ts` is excluded BY that full path (its own `export function smsMemberName(` matches) and
+   must be present in the walk (a rename fails); positive controls: a plant in a third file IS caught, a commented plant is ⛔. Optionally, the same
+   walk gives I4 a check: `\bfitsDltAlphanumeric\s*\(` in code only in `peer-mesh-sms-templates.ts` (its definition) and
+   `sms-member-name.ts`, and `'shielded_name'` only in `sms-member-name.ts` (at `bac71abb`: `fitsDltAlphanumeric(`'s only code use is
+   `readDeceasedName`; `'shielded_name'` appears nowhere in `apps/jobs/src`).
+   Unit legs:
    (a) a 40-code-point multi-word name ⇒ `full`, byte-identical; (b) a 41-code-point multi-word name ⇒ `short` equal to
    `notifications.resolveMemberFacingDeceasedName('shielded_name', name)` (computed, ⛔ transcribed); (c) a Devanagari name over 40 with
    a NON-conjunct surname initial (F9) ⇒ `short`; (d) a one-word name of 41 ⇒ `too_long`; (e) a multi-word name whose short form is
    still over 40 (`'A'.repeat(39) + ' B'`) ⇒ `too_long`; (f) an already-shielded input is returned as `full` (fits) — and, for an
-   over-long one-word shielded input, `too_long` (idempotence, F7); (g) internal double spaces in a fitting name ⇒ the name as passed
-   (the resolver already collapsed it — the function does ⛔ re-collapse a `full`); (h) `''` ⇒ throws; (i) an astral-plane name of 40
-   code points (80 UTF-16 units) ⇒ `full` (code points, ⛔ UTF-16 — the only input that distinguishes the two units; 6.37 review P8's
-   lesson: a leg must be able to fail). (j) SN3's one-limit leg.
+   over-long one-word shielded input, `too_long` (F7); (g) internal double spaces in a fitting name ⇒ the name as passed
+   (the resolver already collapsed it — the function does ⛔ re-collapse a `full`); (h) `''` ⇒ throws; (h′) `' '.repeat(41)` ⇒ throws
+   (SN2's whitespace guard); (i) an astral-plane ONE-WORD name of 40 code points (80 UTF-16 units) ⇒ `full` (code points, ⛔ UTF-16 —
+   the only input that distinguishes the two units; 6.37 review P8's lesson: a leg must be able to fail); (j) SN3's one-limit leg;
+   (k) a 44-code-point name ending in `' -'` (`"Venkata Satya Narayana Murthy Subrahmanyam -"`) ⇒ `short` equal to
+   `resolveMemberFacingDeceasedName('shielded_name', name)` — pins the AS-BUILT form (F16, PQ1), computed, ⛔ transcribed.
 
 3. **AC2 — The three suspicion texts send the short form when the full name does not fit.** Live legs in
    `claim-suspicion-notices-live.test.ts`, for EACH of `suspicion_refusal`, `closed_after_appeal` and `refusal_appeal_notice` (⛔ only
-   the first — the harness already has a fixture for each: `refusedS`, `openAppeal`, `allowAppeal`, `contact`): a `full_name` Pariwar,
+   the first). The harness already builds each: `suspicion_refusal` ← `refusedS`; `closed_after_appeal` ← `claimOf(d,
+   'documents_pending')` (R) + `refusedS` (S) + `allowAppeal(d, S)`, tick `[r, s]` (as the leg *"⭐ (b) R closed BEFORE its own
+   determination …"*); `refusal_appeal_notice` ← `refusedS` + `contact(d, s, { linked: null })` — ⛔ `openAppeal` (a filed appeal
+   SUPPRESSES that notice — leg *"(c) an appeal FILED before the sweep ⇒ ⛔ text, ⛔ row …"*; it is only a building block of
+   `allowAppeal`). Use an `isolated()` Pariwar + `harness({ allow: [own] })` as the P2 leg does. For each: a `full_name` Pariwar,
    a KYC name over 40 with ≥ 2 words and a DISTINCTIVE token (e.g. `Venkatanarayana`) ⇒ outcome `accepted`; the sent member value
    (`m.values.find((v) => v.name === 'member')?.value` — `values` is an ARRAY of `{ name, value }` in slot order) and the body
    carry the short form (expected value computed through `resolveMemberFacingDeceasedName('shielded_name', …)`); the body equals
-   `renderSuspicionNoticeSms(message, locale, { member: short, … })`; the existing "values rebuild the body" oracle sees no miss; the
+   `renderSuspicionNoticeSms(message, locale, { member: short, … })` — `message` is the purpose's MESSAGE, ⛔ the purpose
+   (`suspicion_refusal` → `refusal_notice`, `closed_after_appeal` → `closed_notice`, `refusal_appeal_notice` → `appeal_notice`; the
+   child's `MESSAGE_OF` is ⛔ exported — the test maps it); the existing "values rebuild the body" oracle sees no miss; the
    appeal notice still carries its date. ⭐ The *"6.37 review round 2 P2"* leg is FLIPPED, ⛔ deleted: renamed to say `-359` B, its
    45-code-point name now SENDS as the short form. A one-word over-long name (`'A'.repeat(41)`) keeps TODAY's outcome — final `error`
    `dlt_template_not_approved:value_too_long` + the alarm naming the claim id, ⛔ sent (the old P2 assertions moved to this leg). A
@@ -317,65 +447,93 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
    assertions, moved); the *"AC5b — a re-claimed row with a NAME fault"* leg's fixture changed to `'A'.repeat(41)` with its assertions
    UNCHANGED.
 
-5. **AC4 — The WhatsApp reminder is untouched (I5).** `readMemberFacingDeceasedName` — its JSDoc AND its body — is byte-identical to `bac71abb`
-   (a `git diff` check in the Debug Log; leave the JSDoc: its *"Row 6-37e … edits the TEXT's step there — ⛔ this function"* stays true); *"WR13 / §0 edge (ii) — a name that FAILS the SMS fit check is sent IN FULL"* green UNCHANGED.
+5. **AC4 — The WhatsApp reminder is untouched (I5).** `readMemberFacingDeceasedName` — its JSDoc AND its body — is byte-identical to
+   the front-matter `baseline_commit` (re-pinned at Task 0.1 if `main` moved; a `git diff` check in the Debug Log; leave the JSDoc: its
+   *"Row 6-37e … edits the TEXT's step there — ⛔ this function"* stays true); *"WR13 / §0 edge (ii) — a name that FAILS the SMS fit
+   check is sent IN FULL"* green UNCHANGED.
 
 6. **AC5 — ⛔ A name anywhere but the text (I6).** Every new or flipped leg asserts EXPLICITLY `expect(JSON.stringify(h.alarms)).not.toContain(<the full name's
-   distinctive token>)` AND `.not.toContain(<the short form>)`. ⚠ The peer-mesh suite's `expectIdsOnly` checks only `'Ramesh'` (its
-   default `NAME`) plus numbers and link codes — on an `'A'…`/`'B'…` fixture it proves NOTHING about the name; it does ⛔ satisfy this
-   AC alone. ⛔ New log line carries a name (SN5).
+   distinctive token>)` AND `.not.toContain(<the short form>)`. ⚠ The peer-mesh suite's `expectIdsOnly` checks only the substring
+   `'Ramesh'` (the first word of its default `NAME = 'Ramesh Kumar Sharma'`) plus phone digits and link codes — on an `'A'…`/`'B'…`
+   fixture it proves NOTHING about the name; it does ⛔ satisfy this AC alone. ⛔ New log line carries a name (SN5).
 
 7. **AC6 — Nothing else moves.** ⛔ Migration; ⛔ schema / detail-vocabulary change (`PEER_MESH_REQUEST_NAME_REASONS`, the 0166
-   regex, `suspicionNoticeDetail`); ⛔ `claim.json` / registry TEXT change (the lockstep tests green UNCHANGED); ⛔ send-core change
-   (`claim-dlt-sms-send.ts` byte-identical); ⛔ `packages/domain` source change (per SN1 (a) — re-derive this AC if BigDev picks (b)); ⛔ change to
-   `claim-peer-mesh-wa-reminders.ts`. The `git diff --stat bac71abb..HEAD -- apps packages` lists only: the new module,
-   `claim-suspicion-notices.ts`, `claim-peer-mesh-requests.ts`, `suspicion-notice-sms-templates.ts` and `peer-mesh-sms-templates.ts`
-   (header comments only — F2, F15), and test files.
+   regex, `suspicionNoticeDetail`); ⛔ `claim.json` copy-key VALUE / registry TEXT change (the lockstep tests green UNCHANGED; the
+   `$comment.*` keys excepted — F15, SN6); ⛔ send-core change (`claim-dlt-sms-send.ts` byte-identical); ⛔ `packages/domain` source
+   change (per SN1 (a) — re-derive this AC if BigDev picks (b)); ⛔ change to `claim-peer-mesh-wa-reminders.ts`. The
+   `git diff --stat $(git merge-base origin/main HEAD)..HEAD -- apps packages` (⛔ a literal SHA — a rebase at Task 0.1 would pull in
+   other stories' files) lists only: the new module, `claim-suspicion-notices.ts`, `claim-peer-mesh-requests.ts`,
+   `suspicion-notice-sms-templates.ts` and `peer-mesh-sms-templates.ts` (header comments only — F2, F15), the two `claim.json`
+   files (an appended `$comment` sentence each, Task 0.4), and test files (incl. `claim-suspicion-notice-no-decision.test.ts`'s
+   `NOTICE_MODULES` entry and header — Task 1.2).
 
 8. **AC7 — The proof.** Every flipped / new leg proven RED against the pre-change code (the function stubbed to always return `full` /
    the call removed, the leg run, restored) and recorded by name in the Debug Log — legs that are coverage only SAID so. `pnpm --filter
-   @twt/jobs typecheck` clean; `pnpm dlt-typed-variables:test && pnpm dlt-typed-variables:check` pass (a new src file — `git add` it
-   first); `pnpm ci:local` with `DATABASE_URL` at :5433 green 36/36 (a load timeout re-run ALONE and SAID so —
+   @twt/jobs typecheck` clean; `pnpm --filter @twt/jobs lint` clean; `pnpm dlt-typed-variables:test && pnpm dlt-typed-variables:check`
+   pass (`git add` the new src file first — the gate scans TRACKED files only, so an untracked file is skipped SILENTLY, ⛔ an error);
+   `pnpm ci:local` with `DATABASE_URL` at :5433 green 36/36 (a load timeout re-run ALONE and SAID so —
    [[project_known_livedb_test_failures]]).
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 `git fetch origin`; re-pin if `main` moved (`git diff --name-only bac71abb..origin/main -- apps/jobs packages/domain/src/notifications packages/domain/src/kyc`;
-        re-derive any F-fact that moved); `pnpm install --frozen-lockfile --prefer-offline` in this worktree (F14); re-grep `main`, EVERY
-        branch (`git branch -a`) and every worktree (`git worktree list`) for the next free decision id and ledger letter.
-  - [ ] 0.2 Put SN1–SN7 to BigDev, each with its recommendation and cost; then PQ1 — BigDev's §0 check FIRST (route / tell / record as
-        the author's). Record every answer VERBATIM (Debug Log (a)).
+  - [ ] 0.1 `git fetch origin`; re-pin if `main` moved (`git diff --name-only bac71abb..origin/main -- apps/jobs packages/domain/src/notifications packages/domain/src/kyc packages/domain/src/claim/peer-mesh-wa-reminder.ts`;
+        re-derive any F-fact that moved; update the front-matter `baseline_commit` — AC4 / Task 4 read it; AC6 uses the merge-base); `pnpm install
+        --frozen-lockfile --prefer-offline` in this worktree if `node_modules` is absent (F14); re-grep `main`, EVERY branch (`git branch
+        -a`) and every worktree (`git worktree list`) for the next free decision id and ledger letter (row 5-13 contests both —
+        NUMBERS).
+  - [ ] 0.2 Put SN1–SN7 to BigDev, each with its recommendation and cost; then PQ1 and PQ2 — BigDev's §0 check FIRST (route / tell /
+        record as the author's); say F6's WhatsApp-reminder consequence and F17's full-stop question alongside. Record every answer
+        VERBATIM (Debug Log (a)).
   - [ ] 0.3 Write the 6.37e entry (AUTHOR-COMMIT; the `-375` entry's shape: Decision type / Status / Author / Ratifying trustees: None /
         §0 gate / Occasion / The decisions / Supersessions / Does NOT cover / Consequences / References — "Does NOT cover": a one-word
-        or still-too-long name, Row 30 (d)'s unit and limit, the WhatsApp reminder). It BUILDS `-359` and `-362` (⛔ re-reads them); it records the
-        "short form still too long" reading (Policy meaning) and PQ1's disposition. Stage in the scratchpad; re-grep every branch for the
-        id right before inserting; prepend above the newest `### Decision` ([[project_decision_log_writes_user_inserted]] — try, verify
-        additive-only, ask once if refused); commit ALONE on this branch; write its SHA after the commit, ⛔ before. If PQ1 is B or C,
-        write the told item / routing note from the template (WRITTEN, ⛔ sent — [[feedback_shown_to_panel_means_sent]]).
+        or still-too-long name (PQ2's disposition), Row 30 (d)'s unit, limit and special characters — incl. the short form's full stop
+        (F17: a refusal of it goes BACK to the Panel), the WhatsApp reminder (F6: now reachable for a long-name claim, carrying the full
+        name), F16's as-built form for names with a non-letter or invisible last token). It BUILDS `-359` and `-362` (⛔ re-reads them);
+        it records the "short form still too long" reading as a NARROWING (Policy meaning, PQ2) and PQ1's disposition. Stage in the
+        scratchpad; re-grep every branch for the id right before inserting; prepend above the newest `### Decision`
+        ([[project_decision_log_writes_user_inserted]] — try, verify additive-only, ask once if refused); commit ALONE on this branch;
+        write its SHA after the commit, ⛔ before. If PQ1 or PQ2 is B, B′ or C, write ONE note from the template covering both (a told
+        item for B, a non-blocking confirm for B′, a routing question for C) (WRITTEN, ⛔ sent — [[feedback_shown_to_panel_means_sent]]).
   - [ ] 0.4 The records commit (one commit, after 0.3) — SN6 (a)'s list: `epics.md` `### Story 6.37e` after 6.37d's entry (the 6.37d
         entry's shape — "Added 2026-10-2x (`bmad-create-story 6.37e`)", the rulings, "Full ACs: …", "Not a merge fence.", the user
         story, "Acceptance Criteria (in brief)"); deferred-work: the 6.37-round-2 suspicion item a dated note *"built by row 6-37e —
         Closed by 6.37e when the row is `done` on `main`"* (⛔ "Closed" before then) and the stale *"⛔ yet sent"* corrected by a dated
-        note (the note was SENT and RULED, `-359`), the 6.24b `{member}` item a dated "partly addressed" note; roster Row 27 evidence
-        line (1) and Row 30 (d) dated notes (⛔ a word of either row rewritten); the registration sheet's dated PROSE note (F15 — ⛔ a
-        `| <n> |` table row); the 6-37e sprint comment; row `ready-for-dev` →
-        `in-progress`; ledger ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML).
+        note (the note was SENT and RULED, `-359`), the 6.24b `{member}` item a dated "partly addressed" note (incl. *"truncation was
+        option C — ⛔ chosen (`-359`)"*), PQ1's new item if (A); roster Row 27 evidence line (1), Row 30 (d) (incl. F17's full stop) and
+        Rows 23 / 28 (SN7's short-form renders) dated notes (⛔ a word of any row rewritten); the registration sheet's dated PROSE notes
+        at templates 7–12, 13–14 and the Shape rules (F15 — ⛔ a `| <n> |` table row); `claim.json` (en + hi) `$comment.suspicion_sms` /
+        `$comment.peer_mesh_sms` a dated sentence APPENDED — they are read only by substring (`suspicion-notice-sms-templates.test.ts`
+        `'NOT YET HUMAN-REVIEWED'`; `peer-mesh-sms-templates.test.ts` that marker + `'Row 28'` + `'must match the registered DLT
+        content byte for byte'`) ⇒ keep those three substrings intact, ⛔ an edit that removes any of them (`packages/i18n/tests/*`
+        and `scripts/microcopy/claim.test.ts` skip or do not read these keys); the 6-37e sprint comment; row `ready-for-dev` → `in-progress`; ledger
+        ([[project_sprint_status_safe_prepend]] — guard the size, verify the YAML). ⚠ The sheet edit is a GATE_INPUT
+        (`docs/launch-gate-inventory/**`) — this is ⛔ a docs-only push: the pre-push hook and `ci.yml` run.
 
 - [ ] **Task 1 — The function (AC1).**
   - [ ] 1.1 `apps/jobs/src/scheduler/sms-member-name.ts` (SN1 / SN2): module header (the rulings, I1–I4, the F7 equivalence — why the
-        RESOLVED name is the input), `SmsMemberName`, `smsMemberName`. Call `notifications.resolveMemberFacingDeceasedName('shielded_name',
-        …)` — ⛔ import `splitFirstNameLastInitial` directly, ⛔ reimplement it.
-  - [ ] 1.2 `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(j), incl. SN3's one-limit leg and the callers' source leg. Add
+        RESOLVED name is the input; F16's as-built form), `SmsMemberName`, `smsMemberName` (with SN2's `''` / whitespace guard). Call
+        `notifications.resolveMemberFacingDeceasedName('shielded_name', …)` — ⛔ import `splitFirstNameLastInitial` directly, ⛔
+        reimplement it. ⚠ The header must ⛔ contain `{#var#}`, `DLT_VAR` or `sms.dlt.template_id.` — DLT rules (ii) / (iii) scan
+        COMMENT lines in a non-registry file (only registry rule (i) is code-only).
+  - [ ] 1.2 `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(k), incl. SN3's one-limit leg and the callers' source leg. Add
         `apps/jobs/src/scheduler/sms-member-name.ts` to `NOTICE_MODULES` in `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
-        (it joins the suspicion child's import graph).
+        as this story's OWN module (the list is FIXED, ⛔ an import walk — its header: *"it reads these four modules only — ⛔ the helpers
+        they call"*; `peer-mesh-sms-templates.ts` stays off, as the suspicion child's other helpers do), and in that file's header
+        change "these four modules" → "these five modules" AND add 6.37e's name fallback (`sms-member-name.ts`) to the opening list
+        (*"the jobs sweep + child, the shared send core, the sibling registry and the domain's notice module"*) — it is listed as a
+        module of the notice path that 6.37e owns, ⛔ as a called helper (AC6).
 
 - [ ] **Task 2 — The neighbours' text (AC3).**
   - [ ] 2.1 `readDeceasedName` in `claim-peer-mesh-requests.ts`: replace the `fitsDltAlphanumeric` check with `smsMemberName(read.name)`
         — `too_long` ⇒ `{ fault: 'name_too_long' }`; `full` / `short` ⇒ `{ name }`. Update the module header's step (4) and the R9
-        comment (`-362`). ⛔ Touch `readMemberFacingDeceasedName` (I5) — its JSDoc included (AC4).
-  - [ ] 2.2 Remove `fitsDltAlphanumeric` from this file's import list only if it is now unused HERE — the export stays (F6).
-  - [ ] 2.3 The AC3 legs (flip R9; the new one-word leg; the re-claim leg's fixture).
+        comment — `readDeceasedName`'s JSDoc *"R9 — the TEXT's name: …, then the SMS `{member}` slot's length
+        (`fitsDltAlphanumeric`)"* (`-362`). ⛔ Touch `readMemberFacingDeceasedName` (I5) — its JSDoc included (AC4).
+  - [ ] 2.2 Remove `fitsDltAlphanumeric` from this file's import list — after 2.1 it is unused here (its only code use was
+        `readDeceasedName`), and `@typescript-eslint/no-unused-vars` is an error (lint fails otherwise); `fitsDltUrl` stays imported;
+        the export stays (F6).
+  - [ ] 2.3 The AC3 legs (flip R9; the new one-word leg; the re-claim leg's fixture), each with AC5's two `not.toContain` assertions;
+        update the suite's header line *"`name_too_long` texts ⛔ one"* (F5 (iii) — `-362`: only for a name that still does not fit).
   - [ ] 2.4 `peer-mesh-sms-templates.ts`'s header (F15): a name longer than the slot is sent in the short form (`-362`); `no_target`
         only for one that still does not fit. ⛔ Code change.
 
@@ -385,10 +543,12 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
         and `values` (T3). Update the RB5 comment and the module header's child line.
   - [ ] 3.2 `suspicion-notice-sms-templates.ts`: the header's `{member}` comment (F2) — the long-name half answered by `-359` / this row;
         Row 30 (d)'s unit / Devanagari half still open. ⛔ Code change.
-  - [ ] 3.3 The AC2 legs — all three purposes; flip *"6.37 review round 2 P2"*; the one-word leg.
+  - [ ] 3.3 The AC2 legs — all three purposes (AC2's fixtures); flip *"6.37 review round 2 P2"*; the one-word leg; each with AC5's two
+        `not.toContain` assertions.
 
-- [ ] **Task 4 — Proof (AC4–AC7).** RED runs (Debug Log); `git diff bac71abb -- apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
-      shows `readMemberFacingDeceasedName`'s body unchanged; the AC6 diff-stat; typecheck; DLT gate; `ci:local` on :5433.
+- [ ] **Task 4 — Proof (AC4–AC7).** RED runs (Debug Log); `git diff <baseline_commit> -- apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+      (the front-matter pin, after any 0.1 re-pin) shows `readMemberFacingDeceasedName`'s body and JSDoc unchanged; the AC6
+      diff-stat; typecheck; lint; DLT gate; `ci:local` on :5433.
 
 - [ ] **Task 5 — Records and close.** Story Status, Dev Agent Record, File List, Change Log (newest-first); sprint row `in-progress` →
       `review`; ledger. ⛔ "Closed by" until `done` on `main`.
@@ -430,19 +590,25 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
 | The fit | `fitsDltAlphanumeric` (`peer-mesh-sms-templates.ts`) | a second `[...s].length <= 40` |
 | The refusal of a still-too-long suspicion name | the send core's `checkedValues` (`value_too_long` + alarm) | a pre-send refusal |
 | The neighbours' still-too-long fault | `{ fault: 'name_too_long' }` (existing vocabulary) | a new reason |
-| Live harnesses | `claim-suspicion-notices-live.test.ts` `seedDeath({ kycName })`, `SHIELDED`; `claim-peer-mesh-requests-live.test.ts` `world({ name })`, `expectIdsOnly` | new seeds |
+| Live harnesses | `claim-suspicion-notices-live.test.ts` `seedDeath({ kycName })`, `SHIELDED`, `isolated()`, `claimOf`, `refusedS`, `allowAppeal`, `contact`; `claim-peer-mesh-requests-live.test.ts` `world({ name })`, `expectIdsOnly` | new seeds |
+| The callers' source leg | `apps/jobs/tests/staff-email-identity-read-fence.test.ts` (repo walk, comment strip, exact allowlist, plants) | a raw grep / a count |
 
 ### Testing standards
 
-Vitest. Unit legs DB-free (`env -u DATABASE_URL pnpm --filter @twt/jobs test -- sms-member-name`). Live legs with `DATABASE_URL` at
-:5433. Expected strings computed through the real functions (`resolveMemberFacingDeceasedName`, `renderSuspicionNoticeSms`,
-`renderPeerMeshRequest`) — ⛔ transcribed ([[feedback_stub_must_call_not_transcribe]]). Every new leg must be able to fail (RED run).
+Vitest. Unit legs DB-free: `env -u DATABASE_URL pnpm --filter @twt/jobs test sms-member-name` — ⛔ `--` (with it pnpm passes the
+filter through and vitest runs all 73 files). ⚠ `passWithNoTests` is on (`package.json` and `vitest.config.ts`) ⇒ a filter that
+matches nothing exits 0 — confirm the output reads `Test Files 1 passed (1)` and record that line in the Debug Log. Live legs with
+`DATABASE_URL` at :5433. Expected strings computed through the real functions (`resolveMemberFacingDeceasedName`,
+`renderSuspicionNoticeSms`, `renderPeerMeshRequest`) — ⛔ transcribed ([[feedback_stub_must_call_not_transcribe]]). Every new leg must
+be able to fail (RED run).
 
 ### Project structure notes
 
-One new src file + one new test file in `apps/jobs`; edits to two schedulers and one registry comment. ⛔ `packages/*` source change
-(SN1 (a)). The DLT typed-variables gate scans `apps/*/src/**` — the new file must not contain `DLT_VAR`, `{#var#}` or
-`sms.dlt.template_id.` (it needs none).
+One new src file + one new test file in `apps/jobs`; edits to two schedulers and two registry header comments. ⛔ `packages/*` source
+change (SN1 (a)) — the `claim.json` `$comment` sentences are documentation (SN6). The DLT typed-variables gate scans tracked
+`apps/*/src/**` — the new file must not contain `DLT_VAR`, `{#var#}` or `sms.dlt.template_id.` ⚠ not even in its header comment
+(rules (ii) / (iii) scan comment lines of a non-registry file); the two registry header edits are safe (rules (ii) / (iii) exempt
+registries; rule (i) reads registry CODE lines only).
 
 ### Sequencing
 
@@ -477,6 +643,10 @@ Unicode version — since Unicode 15.1 (GB9c) Devanagari conjuncts cluster as on
 - `apps/jobs/src/scheduler/claim-suspicion-notices.ts` `runSuspicionNoticeChild`; `suspicion-notice-sms-templates.ts`
 - `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` `readMemberFacingDeceasedName`, `readDeceasedName`; `peer-mesh-sms-templates.ts`
 - `apps/jobs/src/scheduler/claim-dlt-sms-send.ts` `checkedValues`
+- `packages/domain/src/claim/peer-mesh-wa-reminder.ts` (the reminder's `accepted` precondition — F6)
+- `packages/domain/src/kyc/public-name.ts` `resolvePublicMemberName` / `publicNameTokens` (the directory's token cleaning — F16, for contrast only)
+- `apps/jobs/tests/staff-email-identity-read-fence.test.ts` (AC1's source-leg model); `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
+- `packages/i18n/locales/{en,hi}/claim.json` `$comment.suspicion_sms`, `$comment.peer_mesh_sms` (F15)
 - `_bmad-output/implementation-artifacts/6-37-msg91-sms-gateway-adapter.md` (P2, Debug Log (o)); `6-27c-peer-mesh-sending-texts-and-links.md` (R9)
 - `docs/launch-gate-inventory/inventory-roster.md` Rows 27, 30 (d), 32 (h) / (i)
 
@@ -494,6 +664,27 @@ Unicode version — since Unicode 15.1 (GB9c) Devanagari conjuncts cluster as on
 
 ## Change Log
 
+- v1.2 (2026-10-21) — `bmad-create-story validate 6.37e`: four fresh-context verifiers (code claims · rulings and records · edge
+  cases · gates and tests), 2 H / 11 M / 12 L, all applied (BigDev: "all"). HIGH: the creation ledger line re-lettered
+  `2026-10-21r` → `2026-10-21s` (`r` was taken first by 5.13's `618bda20` — `-366` d6; its "v1.0" → v1.1); the multi-word
+  "short form still too long" case reclassified from MATCH to a NARROWING of option B as put ⇒ new PQ2, and the family-terms sentence
+  corrected. MEDIUM: option B's outcome and cost lines transcribed verbatim (both rulings were bare letters); `[member]`'s mode-resolved
+  form marked "Our reading" in `-291` / `-293`; PQ1 widened (last word not a surname, invisible characters, "श्री श्री.") with its
+  match / narrow stated and the recommendation moved to B; F16 (⛔ token cleaning in the member-facing shielded arm) + AC1 (k); F17
+  (the full stop in `{member}` — Row 30 (d)); F6's consequence (the WhatsApp reminder becomes reachable for long-name claims); AC2's
+  fixtures (`claimOf` + `allowAppeal`; `openAppeal` suppresses the appeal notice; message ≠ purpose); the unit command (⛔ `--`;
+  `passWithNoTests`); AC1's source leg on the staff-email fence's model; AC4 / AC6 / Task 4 off the literal pin; F15 widened (sheet
+  7–12 + Shape rules, two `claim.json` `$comment`s, the peer-mesh suite header); Task 1.2's `NOTICE_MODULES` reason and header.
+  LOW: SN2's whitespace guard + AC1 (h′); F7's one non-idempotent input; SN7's Hindi renders for Rows 23 / 28; AC1 (i) one word;
+  Task 2.2 definite (lint); AC5 written by Tasks 2.3 / 3.3; the `git add` reason; DLT comment rules; cite precision (`-181` Context,
+  `-136` cl.2's elaboration, R9 = 6.27c's item, `-322` C7 status, the length wording, `-359`'s third not-covered item); the 6.24b
+  note names option C; NUMBERS contested by 5-13; F14, `expectIdsOnly`, SN3; the AI-10-1 "only widens" line. Then ONE fresh-context
+  re-validate of the patch diff (0 H / 4 M / 8 L — all the pass's own, applied before commit): F17's cite is Row 30 note (6)(d), ⛔ Row
+  32; the `$comment` check answered (two lockstep tests read those values by substring ⇒ append, keep the substrings); PQ1 / PQ2 gain
+  (B′) a non-blocking confirm (`-295` §8 / `-296` precedent) and recommend it — a told item would leave the author deciding a
+  narrowing §0 lists as the Panel's; AC1's source leg on full repo paths; SN3's reason (the split hurts the SUSPICION slot); Task 0.1
+  (AC6 uses the merge-base) and the header's re-check paths; the no-decision fence header's module list; AC0 excepts the `$comment`
+  sentences; NUMBERS (5-13 contests the decision id and the ledger letter only; letters by analogy to `-366` d6); `-359`'s *less*.
 - v1.1 (2026-10-21) — one fresh-context checklist verifier (0 H / 3 M / 9 L, all applied): F15 (two more stale "no text" statements —
   the neighbours' registry header, the registration sheet); AC5's explicit name assertions (`expectIdsOnly` checks only "Ramesh");
   PQ1 weighs the full name on the link page; `-136` is Trustee-ratified; `values` is an array; AC4 / Task 2.1 reconciled; AC6 per SN1 (a);

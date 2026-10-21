@@ -4,6 +4,28 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: create + validate of 5-13-whatsapp-code-for-another-phone.md (2026-10-21)
+
+Four items. The first two are PRE-EXISTING and whole-WhatsApp (⛔ Story 5.13's to fix — found while reading Meta's docs for it); the last
+two are 5.13 RESIDUALS, recorded by [`-376`](../../.decision-log.md#decision-2026-10-21-376) decisions 3 and 10.
+
+- **Meta removes Graph API `v21.0` on 2027-01-21 — `pariwar_wa_config.graph_api_version` DEFAULTS to it** [`packages/domain/src/schema/
+  pariwar_wa_config.ts`; every WhatsApp client built from the config] — current is v26.0 (Meta, fetched 2026-10-21). A Pariwar left on the
+  default stops sending on that date. Trigger: before the first Pariwar's WhatsApp is switched on in production, or 2026-12-31, whichever
+  is first.
+- **Meta requires India-billed WhatsApp accounts to move to INR billing by 2026-12-31** [the Trust's WhatsApp Business account — ⛔ code]
+  — an operational deadline Meta published (fetched 2026-10-21); ⛔ recorded anywhere else. Trigger: the Trust's first WhatsApp Business
+  account, or 2026-12-01.
+- **A later "not on WhatsApp" status for a code send is ⛔ correlated to its code row** [`apps/jobs/src/wa-webhook-processor.ts` status
+  branch; `member_wa_opt_in_codes.provider_message_id`] — Meta usually reports 131026 asynchronously; the status webhook writes
+  `whatsapp_send_status` by wamid but only 6.37d's rows are matched, so a member whose number has ⛔ WhatsApp is told "sent" twice
+  (`-376` decision 3's accepted cost). Fix shape: match the wamid to a code row and close the route. Trigger: the first production code
+  send, or the next edit of the status branch.
+- **⛔ global cost cap and ⛔ per-device limit on code sends** [`apps/api/src/modules/wa-opt-in` routes] — §2.2's *"per device, per member,
+  and per IP"* and §2.11's *"global cap"* (auth-OTP rules, read as guidance) are met per member, per IP and per number only (`-376`
+  decision 10). Bounded today by members × 2 codes per 48 h. Trigger: the first production Pariwar with the code route provisioned, or a
+  Meta bill for authentication messages above the rate card's expectation.
+
 ## Deferred from: validate of 5-10-signup-whatsapp-opt-in-checkbox.md (2026-10-21)
 
 Both are PRE-EXISTING (Stories 5.3 / 5.4 / 8.8) and ⛔ Story 5.10's to fix; 5.10 is where they were found, and its signup box is what
@@ -31,6 +53,9 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   right phone, and the routing note `trustee-panel-routing-note-2026-10-21-5-10-whatsapp-code-for-another-phone.md` lists building this
   confirmation as an uncosted third route. Trigger: row `5-13-whatsapp-code-for-another-phone`'s ruling, or the first production
   WhatsApp opt-in. At minimum, correct the log line's wording when the branch is next edited.
+  - ⚠ *Annotated 2026-10-21 (Story 5.13 Task 0.4, [`-376`](../../.decision-log.md#decision-2026-10-21-376)):* the trigger FIRED with
+    `-374`'s ruling; Story 5.13 does ⛔ build the confirmation (`-374` "Not covered"; `-376` "Does NOT cover"). ⛔ closed — re-trigger: the
+    first production WhatsApp opt-in.
 
 ## Deferred from: code review of 5-12-whatsapp-yes-lasts-until-withdrawn.md (2026-10-21)
 
@@ -12039,7 +12064,7 @@ reachable path above is closed for 6.37d's sends; the classifier's own filing st
 ## Deferred from: code review of 5-12-whatsapp-yes-lasts-until-withdrawn.md, round 2 (2026-10-21)
 
 - **W1 — An ambiguous COMMIT failure is compensated as a rollback** (`apps/jobs/src/wa-webhook-processor.ts` `endMemberWaYes`, and every `withCompensatingAudit` caller). COMMIT reaches the server but the client sees a connection reset ⇒ a `_rolled_back` line for a transition that DID happen; a STOP retry then finds nothing to end and writes no new line. A codebase-wide class, reachable at 5.12's new site. Re-trigger: the next change to the audit-or-throw compensation helper.
-- **W2 — The stale-PENDING sweep does not take `lockMemberWaYes`** (`expireOptIn` → `revokeOptIn(deps.db, …)`). A member re-tapping enable near the 48 h TTL gets the outstanding PENDING's deep link; the sweep then expires it and the phrase matches nothing (the screen flips to "unconfirmed"). Pre-existing (mint re-use vs sweep predates 5.12). Re-trigger: the next change to the PENDING TTL or the sweep.
+- **W2 — The stale-PENDING sweep does not take `lockMemberWaYes`** (`expireOptIn` → `revokeOptIn(deps.db, …)`). A member re-tapping enable near the 48 h TTL gets the outstanding PENDING's deep link; the sweep then expires it and the phrase matches nothing (the screen flips to "unconfirmed"). Pre-existing (mint re-use vs sweep predates 5.12). Re-trigger: the next change to the PENDING TTL or the sweep. ⚠ *Annotated 2026-10-21 (Story 5.13 Task 0.4, [`-376`](../../.decision-log.md#decision-2026-10-21-376)) — a new consumer:* a WhatsApp code sent near the PENDING's 48 h lapse can outlive it, and verify then answers `not_pending`; row-level safe (both updates are guarded `WHERE state='PENDING'`). ⛔ closed.
 - **W3 — The worker's under-lock withdrawal snapshot has no live two-connection leg; the exported `waOptIn.revokeOptIn(…, 'REVOKED' | 'BLOCKED_BY_META')` can still move ACTIVE without the lock or the consents.** Covered by construction today (no source caller; STOP / 131050 share the lock key with activation). Re-trigger: any new caller of `revokeOptIn`, or the next change to `endMemberWaYes` — narrow `revokeOptIn` to the PENDING-only edge and add a STOP-vs-activation race leg.
 - **W4 — Deploy order: migration 0177 applied ahead of a pre-5.12 jobs build floods the audit chain.** The old sweep re-lists every past-window ACTIVE each minute; the 0177 trigger refuses each ⇒ a primary + `_rolled_back` line per row (≈ 400 a minute at the 200 cap) until the new build lands. Not in production. Re-trigger: the first deploy that carries 0177 — ship the jobs build with (or before) the migration.
 

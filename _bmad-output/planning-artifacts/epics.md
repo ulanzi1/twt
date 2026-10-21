@@ -2445,6 +2445,29 @@ EXPIRED move; every withdrawal path ends the ACTIVE row and every open `whatsapp
 carries and a STOP that faults is retried then alarmed; only Meta 131050 (a marketing opt-out) ends a yes from Meta's side; the app never
 says "expired"; the claim-contact half of the webhook worker (Story 6.37d) is untouched.
 
+
+### Story 5.13: A WhatsApp Code for a Member Whose WhatsApp Is on Another Phone — Sent Only When They Ask, at Most Twice, and Typed Back in the App to Switch WhatsApp On `[SURFACE]`
+
+> **Added 2026-10-21 (Story 5.13, Task 0.4)** — the row `5-13-whatsapp-code-for-another-phone` builds
+> [`-374`](../../.decision-log.md#decision-2026-10-21-374) (Trustee-ratified, option A, *"one code per request and one retry"*): on the
+> signup step's *"WhatsApp on another phone?"* link, a member may ask TWT to send a 6-digit code on WhatsApp to their REGISTERED number
+> (a Meta authentication template), read it on the phone that holds their WhatsApp, and type it here — a correct code writes the same
+> consent row and ACTIVE row as the member's own WhatsApp message. At most two codes per request, two tries per code, capped by the
+> database; signup only, a member still signing up, and ⛔ a member who switched WhatsApp off before (ADR-0029's re-opt-in sentence
+> stands). Whenever the code route is closed, 5.10's number + phrase return; signup never waits. Its build decisions WC1–WC17 are DECIDED
+> by [`-376`](../../.decision-log.md#decision-2026-10-21-376) (author-commit; PQ none). Go-live: roster Row 39
+> (`wa-opt-in-code-template-approved`). Full ACs: `_bmad-output/implementation-artifacts/5-13-whatsapp-code-for-another-phone.md`. ⛔ Never
+> a merge fence. (Epic 5's two "9 stories" count lines are left as they stand, as for 5.10 and 5.12.)
+
+As a new member signing up on a phone that does not have my WhatsApp, I want to ask TWT to send a code to my registered number on
+WhatsApp, read it on my own phone and type it in here, so that I can switch WhatsApp messages on in the same sitting — and still carry
+on with signup if it does not work.
+
+**Acceptance Criteria:** see the story file (AC1–AC13) — in short: the code is offered only where it can work (provisioned, a code
+left, still signing up, ⛔ a yes ended before); it goes only to the registered number; two codes per request and two tries per code are
+the database's rule; a correct code is the same yes as the member's message; a code is a WhatsApp switch and nothing else, never written
+down in clear; every failure shows the number + phrase and lets the member continue signup.
+
 ---
 
 ## Epic 6: Claim Filing, Peer Verification, Ground Inspection & Internal Appeal

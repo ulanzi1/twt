@@ -2272,6 +2272,12 @@ onboarding:
   the Pariwar's WhatsApp is available and the member is not already ACTIVE. A tick starts the "Yes" branch above — the existing opt-in
   request, then the deeplink; the member's own sent message turns it on. Left unticked, Continue shows one reminder with two equal
   choices. The origination requirement is unchanged: the box is ⛔ itself a route to ACTIVE. The bullets above are unedited.)*
+  *(Dated 2026-10-21, Decision 2026-10-21-376 — author-commit, Story 5.13 (decided; ⛔ yet built): the code route `-374` admitted is
+  built as a request the member makes from the signup step's "WhatsApp on another phone?" link — a 6-digit Meta AUTHENTICATION template
+  sent ONLY to the registered number, at most two codes per request and two tries per code (the database's rule), offered only to a
+  member still signing up who has ⛔ ended a yes before. A correct code writes the same consent row (timestamp + the UI context) and
+  PENDING → ACTIVE transition as the matched inbound message. Gate (a), the per-Pariwar switch, still applies. The bullets above are
+  unedited.)*
 - **Claim-contact exception (Trustee Panel, Decisions 2026-10-17-350 / -351 / -352).**
   Outside the member opt-in flow, WhatsApp may carry messages about a claim — the
   correction and certificate reminders' delivery ladder — to ONE person only: the

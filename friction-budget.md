@@ -57,6 +57,7 @@ deliberately accepted.
 | member (seeing ONE reminder card at a time on the home — add your workplace, invite your colleagues, a new workplace: check the people who know you, someone can no longer be asked, a Pariwar Admin's campaign — each with *"Not now"*, which hides it for 30 days on that phone) — Story 6.36c | as few members as possible left with nobody to ask about their death (`-307` §2 item 4; `-330` SW16 (2)–(5) as narrowed by `-342` calls 1–2). ⭐ Shown ONLY when the member can act on it (`-342`), in the app ONLY — ⛔ SMS, push, WhatsApp; ⛔ a word about whether other members are at the workplace | optional |
 | member whose *"my workplace isn't listed"* a Pariwar Admin matched (answering *"We think your workplace is …, … . Is that right?"* — Yes / No, on the home and on the Workplace screen) — Story 6.36c | the member's own authorship of where they work (`-330` SW9 A, I2): a Pariwar Admin's suggestion changes ⛔ nothing until the member says yes, and only then is a posting written. ⭐ *"No"* sends it back for another look; ⛔ a step-up | optional |
 | member of a Pariwar with WhatsApp switched on, at signup (one more screen — an UNTICKED *"Send me WhatsApp messages from TWT"* box just before payment — and, if they leave it unticked, ONE reminder with two equal choices) — Story 5.10 | a WhatsApp yes asked for plainly, on its own screen, ⛔ pre-ticked and ⛔ bundled with the Terms (§3.4 origination rule; `-375`) | forced |
+| member signing up on a phone without their WhatsApp who opens "WhatsApp on another phone?" (asks for a WhatsApp code, reads it on their own phone, types it in) — Story 5.13 | the registered number proven to have WhatsApp and the member's own act before WhatsApp is switched on (`-374`) | optional |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -2809,3 +2810,20 @@ another phone?"*), `app/(settings)/notifications.tsx` (that hint in its waiting 
 step's render tests mount real React with native primitives mocked in jsdom — ⛔ native layout or a real screen reader).
 `apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]).
 ⭐ Written for changes UNCOMMITTED at the time of writing; AC-4 reads it once committed.
+
+---
+
+**Story 5.13 disposition (ONE new row — the WhatsApp code on the signup link; ⛔ no row retired, ⛔ row amended):** the story's
+member-facing changes will be `apps/mobile/app/(signup)/whatsapp.tsx` (the link's choice), `components/notifications/
+{OtherPhoneCodeHint,WaCodeEntry,OtherPhoneDetails}.tsx` and `use-wa-code.ts` (new), `components/notifications/OtherPhoneHint.tsx` (the
+details extracted, ⛔ behaviour change), `packages/i18n/locales/{en,hi}/common.json` (`waCode.*`) and their tests.
+
+1. ⭐ **The new row (above).** Payer: a member signing up on a phone without their WhatsApp who opens the link and asks for a code — they
+   read it on the other phone and type it in. Protects: the registered number proven to have WhatsApp, and the member's own act, before
+   WhatsApp is switched on. `optional`: the link is collapsed; nobody must open it, and Continue is always there.
+2. ⛔ **Not new friction:** for a member whose Pariwar has ⛔ code route, the link shows 5.10's number + phrase exactly as today (5.10's
+   row stands).
+
+⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
+unchanged and is ⛔ ratcheted. ⭐ Written BEFORE the code exists (Task 0.4); Task 6 confirms the file list and runs `pnpm friction:check`
+after the code commit (AC-4 reads COMMITTED history).

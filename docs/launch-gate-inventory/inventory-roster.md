@@ -700,3 +700,23 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** the Hindi reviewer → (a); Story 0.13 (counsel) or BigDev's acceptance → (b); BigDev / the Pariwar Admin at switch-on → (c), (d-i). Story 5.10 builds the step; its reach follows row 5-12 (a yes lasts until withdrawn — `-364`).
 - **notes:** "5-10 `done`" ≠ "the Hindi reviewed" (`-375` decision 9). Row 37 (b) — counsel on whether the opt-in wording should say how long a yes lasts — reads on the box's words too; (b) here does ⛔ duplicate it, it adds the DPDP notice / withdrawal question for the box. Day-one output is none: every Pariwar's WhatsApp config defaults to NULL (off), so no member sees the step until an admin turns WhatsApp on.
+
+## Row 39 — Story 5.13: the WhatsApp code can go live (decision-authored, `-376`)
+
+> **Appended 2026-10-21 by Story 5.13 (Task 0.4) under [Decision 2026-10-21-376](../../.decision-log.md#decision-2026-10-21-376)**
+> decision 13 (the next free row — the roster's highest was 38). Like Rows 17–38 the row has no architecture source line; it cites the
+> decision that created it. It blocks no build and no merge — nothing is in production ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 39 — `wa-opt-in-code-template-approved`
+
+- **gate_name:** The WhatsApp code for a member whose WhatsApp is on another phone (built by row `5-13-whatsapp-code-for-another-phone`) can go live in a Pariwar — its Meta authentication template approved and its key proven to resolve, the 5.13 Hindi strings human-reviewed, and Meta's India authentication rate recorded
+- **architecture_source_line:** N/A — **decision-authored**: [Decision 2026-10-21-376](../../.decision-log.md#decision-2026-10-21-376) decision 13
+- **owner:** BigDev (gate)
+- **support:** the Pariwar Admin / BigDev with Meta Business Manager access — (a), (c); a Hindi reviewer (Row 28's control) — (b)
+- **closure_criteria:** ALL THREE, each recorded as a Decision: **(a)** per live Pariwar, a Meta AUTHENTICATION copy-code template APPROVED (security recommendation on, `code_expiration_minutes: 10`), its name set under `wa.template.wa_opt_in.code.<hi|en>.<pariwarId>`, and the key PROVEN to resolve in production (Row 35 (b)'s shape — the dotted-name caveat) — or "Meta refuses" recorded; until then the signup link shows 5.10's number + phrase; **(b)** the 15 `waCode.*` Hindi strings in `packages/i18n/locales/hi/common.json` HUMAN-REVIEWED (Row 28's control pattern) — BigDev reviewed and edited them in session on 2026-10-21 (story Debug Log (a)); whether that discharges this leg is recorded here, ⛔ assumed; ⚠ recorded with it: `waCode.intro` / `waCode.sent` say *"your WhatsApp number"* where the code goes to the REGISTERED number only (BigDev kept the wording when asked); **(c)** Meta's India authentication rate recorded from Meta's OWN rate card (`-374` accepted *"Meta charges for each code"*; the figure is unrecorded).
+- **target_date:** (a), (c) before the first Pariwar's code route is provisioned in production; (b) before the first production build that shows the code form (relative-to-fact).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** BigDev / the Pariwar Admin with Meta → (a), (c); the Hindi reviewer → (b). Story 5.13 builds the route; it also sits behind Row 38 (b) (counsel's DPDP view on the box, incl. *"the privacy policy naming WhatsApp / Meta"* — the private `privacy-policy.md` names neither today), Row 37 (b) (counsel on the opt-in wording) and Row 38's switch-on legs (c) / (d-i) — cross-referenced, ⛔ duplicated.
+- **notes:** "5-13 `done`" ≠ "the template approved" (`-376` decision 13). Counsel is ⛔ a leg of THIS row — `-374` accepted *"Counsel has not been asked"*. Day-one output is none: every Pariwar's WhatsApp is off and no Pariwar has an authentication template, so the mint answers `codeAvailable: false` and the signup link shows 5.10's number + phrase exactly as today.

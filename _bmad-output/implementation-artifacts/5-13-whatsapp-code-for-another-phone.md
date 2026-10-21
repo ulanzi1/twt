@@ -9,7 +9,7 @@ running — [[feedback_shared_tree_branch_switch]]; re-check before every commit
 Two facts, kept apart (footgun #24): the pin is an ancestor of HEAD (durable); the CODE claims below were derived at bac71abb
 (perishable). Re-check before Task 1: `git fetch origin && git diff --name-only bac71abb..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`.
 
-STATUS: ready-for-dev (v1.5 — created 2026-10-21 by `bmad-create-story 5.13`, checklist pass applied (3 H / 9 M / 10 L); first
+STATUS: in-progress (v1.5 — created 2026-10-21 by `bmad-create-story 5.13`, checklist pass applied (3 H / 9 M / 10 L); first
 `bmad-create-story validate` 2026-10-21 (four fresh-context verifiers, 43 findings, ALL applied — Change Log v1.2; fresh-context re-validates of that rewrite, all applied — v1.3, v1.4, v1.5; the fourth found 0 HIGH); WC1–WC17 PROPOSED for
 BigDev at Task 0.2). Code claims re-derived at bac71abb on 2026-10-21 (`git diff --name-only bac71abb..HEAD` = this file + the ledger).
 
@@ -79,7 +79,7 @@ S = Task 0.1 STOP conditions.
 
 # Story 5.13: A WhatsApp Code for a Member Whose WhatsApp Is on Another Phone — Sent Only When They Ask, at Most Twice, and Typed Back in the App to Switch WhatsApp On `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 5.10 built an unticked *"Send me WhatsApp messages from TWT"* box on its own signup
 > step. A tick mints a PENDING request and opens WhatsApp with a short phrase to send to TWT; the member's own message, from their
@@ -892,10 +892,13 @@ amended ONLY where the hint changed (the AC12-signup legs run with `codeAvailabl
   - [x] 0.2 (WC1–WC17 ANSWERED 2026-10-21, the WC8 words APPROVED with one residual — Debug Log (a)) Put WC1–WC17 to BigDev — incl. the en + hi words (WC8) — and record the answers VERBATIM in Debug Log (a), with what each
         resolves to. If WC6 (b) or WC15 (b): write the routing note from the template (§0 first; WC15 (b)'s names ADR-0029's re-opt-in
         sentence) and build the (a) option meanwhile. If WC12 (b) or (c): sequence the worker change against 6.37d before Task 4.
-  - [ ] 0.3 Author-commit decision (the next free id — re-grep `^### Decision` on `main`, every branch, every worktree), staged in the
+  - [x] 0.3 (DONE 2026-10-21 — Decision `2026-10-21-376`, committed ALONE `7bc9dbf8`) Author-commit decision (the next free id — re-grep `^### Decision` on `main`, every branch, every worktree), staged in the
         scratchpad first ([[project_decision_log_writes_user_inserted]]); carries WC1–WC17 as answered, the §0 readings (1)–(7),
         "Supersessions: none", what it does NOT cover. Committed ALONE (`governance:` prefix); its SHA written only after.
-  - [ ] 0.4 Records commit: `epics.md` `### Story 5.13` (after 5.12, before `---`; 5.10's format); a §3.4 dated note under the opt-in bullets
+  - [x] 0.4 (DONE 2026-10-21 — the records commit after `7bc9dbf8`: epics `### Story 5.13`; the §3.4 note; the ADR-0029 annotated row;
+        roster Row 39 `wa-opt-in-code-template-approved`; `deferred-work.md` four items + two annotations; the told item
+        `trustee-panel-told-2026-10-21-5-13-whatsapp-code-as-built.md` WRITTEN, ⛔ told; the friction row (`optional`) + disposition;
+        ledger `2026-10-21v`; row → in-progress) Records commit: `epics.md` `### Story 5.13` (after 5.12, before `---`; 5.10's format); a §3.4 dated note under the opt-in bullets
         (the bullets unedited); an ADR-0029 changelog "annotated" row; roster row `wa-opt-in-code-template-approved` (next free Row; Row 38's
         shape; legs per WC13 as answered); `deferred-work.md` — a dated note on the mismatch item (*"trigger fired by `-374`; ⛔ built by 5.13
         — re-trigger: the first production WhatsApp opt-in"*) and the two new items (Graph `v21.0` removal 2027-01-21; INR billing by

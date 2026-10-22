@@ -25,12 +25,12 @@
 //   RB12's race guard (the same checks — a gap ⇒ `held_config`, ⛔ row, ⛔ decrypt, an alarm) → the Pariwar's name mode,
 //   read ONCE in its OWN scope tx (RB5) → the CLAIMING transaction (`beginSuspicionNotice` — the claim-row lock, the
 //   re-check, the recipient, the row) → COMMIT → (⛔ KMS under the lock) the deceased's name (RB5: erased / unresolvable /
-//   none ⇒ `no_target`; Story 6.37e, `2026-10-18-359` B: the full name if it fits `{member}`, else the shorter form "Ramesh S.",
-//   else the over-long name goes on and the core refuses it, as before) → the recipient's number → its keyed hash → the send →
-//   compare-and-set.
+//   none ⇒ `no_target`; Story 6.37e rework, `2026-10-22-379` Q1 A: the name WHOLE up to 60 across two boxes, else the Panel's
+//   shortened form, else the over-long name goes on and the core refuses it, as before) → the recipient's number → its keyed
+//   hash → the send → compare-and-set.
 //   It throws ONLY on a transient failure (pg-boss retries the SAME job, which re-claims its own row at once) — plus, Story 6.37e,
 //   `smsMemberName`'s fixed-message throw for an empty or whitespace-only name: a caller bug, unreachable today (the guard just
-//   above turns `''` into `no_target`), and NOT transient — a retry would throw again until pg-boss gives up (`2026-10-22-377` d2).
+//   above turns `''` into `no_target`), and NOT transient — a retry would throw again until pg-boss gives up (`2026-10-22-380` d2).
 // ⚠ AT-LEAST-ONCE (6.19b's): a timeout or crash after a gateway accept may produce a second text — `attempt_count` /
 // `first_detail` record it. ⛔ NOTHING here writes a claim decision, event or state (invariant 7, AC9b).
 // ⛔ No number, name or address in a payload, a log line or an alarm — ids only.
@@ -424,9 +424,10 @@ export async function runSuspicionNoticeChild(
     return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'no_target', reason: begun.recipient.unresolved }));
   }
 
-  // RB5 — `{member}`: the deceased's KYC name, MODE-RESOLVED (`-181`); erased / unresolvable / none ⇒ `no_target`. Story 6.37e
-  // (`2026-10-18-359` B): the full name when it fits the slot, else the shorter form ("Ramesh S."); a name that STILL does not fit
-  // goes on UNCHANGED and the send core refuses it (`value_too_long` + alarm — `-359` consequence 1: "the error and alarm stay").
+  // RB5 — the name: the deceased's KYC name, MODE-RESOLVED (`-181`); erased / unresolvable / none ⇒ `no_target`. Story 6.37e
+  // rework (`2026-10-22-379` Q1 A): the name WHOLE when it fits 60, else the Panel's shortened form, across the two boxes; a name
+  // that STILL does not fit goes on UNCHANGED as `member1` (`member2` empty) and the send core refuses it before any send
+  // (`value_too_long` + alarm — "no text, as today — the family's text raises an alarm"; `2026-10-22-380` decision 5).
   const profile = (await db((d) => kycDomain.getMemberKycProfile(d, pariwarId, begun.deceasedMemberId))) as
     | Awaited<ReturnType<typeof kycDomain.getMemberKycProfile>>
     | undefined;
@@ -441,8 +442,8 @@ export async function runSuspicionNoticeChild(
   const member = notifications.resolveMemberFacingDeceasedName(mode, storedName);
   if (member === '') return noTarget(claimDomain.suspicionNoticeDetail({ kind: 'name', reason: 'unresolvable' }));
   const chosen = smsMemberName(member);
-  // ⭐ ONE local feeds BOTH `render` and `values` (MG3 refuses a values / body mismatch).
-  const memberValue = chosen.kind === 'too_long' ? member : chosen.name;
+  // ⭐ ONE pair feeds BOTH `render` and `values` (MG3 refuses a values / body mismatch).
+  const [member1, member2] = chosen.kind === 'too_long' ? [member, ''] : chosen.boxes;
 
   // The recipient's number (null / the erasure sentinel / ⛔ a valid Indian mobile ⇒ `no_target`).
   let e164: string | null;
@@ -464,14 +465,22 @@ export async function runSuspicionNoticeChild(
   const locale = begun.locale;
   const date = message === 'appeal_notice' && begun.appealUntil !== null ? formatAppealUntil(begun.appealUntil) : undefined;
   const entry = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
+  // `-379` Q2 A: the appeal-date text carries ⛔ helpline variable — `values` names exactly the template's slots (MG3).
+  const hasHelpline = entry.slots.some((s) => s.name === 'helpline');
   const result = await sendClaimDltSms(deps, {
     dltTemplateIdConfigKey: entry.dltTemplateIdConfigKey,
     template: { text: entry.registeredText, slots: entry.slots },
     pariwarId: pid,
     e164,
-    render: (helpline) => renderSuspicionNoticeSms(message, locale, { member: memberValue, helpline, ...(date !== undefined ? { date } : {}) }),
+    render: (helpline) =>
+      renderSuspicionNoticeSms(message, locale, {
+        member1,
+        member2,
+        ...(hasHelpline ? { helpline } : {}),
+        ...(date !== undefined ? { date } : {}),
+      }),
     // MG3 — the SAME locals the render uses (`date` = `formatAppealUntil(...)`, computed once above).
-    values: (helpline) => ({ member: memberValue, ...(date !== undefined ? { date } : {}), helpline }),
+    values: (helpline) => ({ member1, member2, ...(date !== undefined ? { date } : {}), ...(hasHelpline ? { helpline } : {}) }),
     // ⛔ fail open: this sweep HOLDS (its race guard read the memo just above) — a fault here is the in-flight race.
     preflightFailOpen: false,
     // 6.37b DR3 — the notice row's own id rides as MSG91's `CRQID`.
@@ -480,8 +489,9 @@ export async function runSuspicionNoticeChild(
   // The core's detail is RAW (a gateway `<code>` can be any string — a phone number included): ⛔ stored, alarmed or thrown as is.
   const detail = result.detail === null ? null : claimDomain.suspicionNoticeDetail({ kind: 'send', detail: result.detail });
   if (result.kind === 'transient') return transient(detail!);
-  // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change (⛔ `helplineGap` — it checks presence only).
-  if (result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, `suspicion notice (${p.purpose})`));
+  // Story 6.34 (`-322` C1): sent as today; ONE warning, ⛔ an outcome change (⛔ `helplineGap` — it checks presence only). Story
+  // 6.37e rework (`2026-10-22-380` decision 6): only for a text that PRINTS the number — ⛔ the appeal-date text.
+  if (hasHelpline && result.helplineNotCallbackNumber === true) alarm(helplineNotCallbackNumberWarning(pid, `suspicion notice (${p.purpose})`));
   if (result.outcome !== 'accepted' && result.alarm) {
     alarm(`[jobs] claim-suspicion-notice: ${detail!} for the ${tag} — recorded error (fail-closed)`);
   }

@@ -252,7 +252,8 @@ const GSM7_CHARACTERS = new Set(
 
 /**
  * Whether a text needs a UNICODE template — any character outside GSM-7. The TEXT decides, ⛔ the locale (T11):
- * template 14 is English yet holds an em dash. Iterates code points, so a character outside the BMP counts once.
+ * an English text with one em dash needs it (template 14 held one until Story 6.37e's comma). Iterates code points, so a
+ * character outside the BMP counts once.
  */
 export function needsUnicode(text: string): boolean {
   for (const ch of text) {

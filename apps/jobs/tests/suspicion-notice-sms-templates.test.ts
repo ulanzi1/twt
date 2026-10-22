@@ -3,8 +3,10 @@
 // texts NAME the member because the Panel's ratified words do (the D33 carve-out). For all three messages in both locales:
 // the REAL `t()` (⛔ never a stub) renders EXACTLY the registered text with each variable as `{#var#}`; each variable lands
 // once, in the order of the Panel's words; the request sheet carries the same text and key; the en words are the Panel's,
-// byte for byte (+ `{helpline}`); ⛔ no deadline threat (RB16 — `appeal_notice`'s `{date}` slot alone exempt, asserted with
-// a NON-digit marker); and `$comment.suspicion_sms` carries the NOT-YET-HUMAN-REVIEWED marker in BOTH locales.
+// byte for byte (+ `{helpline}` in the two that keep it); ⛔ no deadline threat (RB16 — `appeal_notice`'s `{date}` slot alone
+// exempt, asserted with a NON-digit marker); and `$comment.suspicion_sms` carries the NOT-YET-HUMAN-REVIEWED marker in BOTH locales.
+// ⭐ Story 6.37e rework (`2026-10-22-379` Q1 A / Q2 A): the name is TWO boxes, `{member1}{member2}` (the shared slots of
+// `sms-member-boxes.ts`); `appeal_notice` carries ⛔ helpline (*"Please call the helpline."*). Every message has three variables.
 // ⭐ Story 6.34 (AC3; TV2 / TV4 / TV13): every entry DECLARES its slots' TRAI types — the shape check passes (incl.
 // `appeal_notice`'s three variables), the slot names are the i18n `{param}`s in order (both locales), a render through
 // the real `t()` keyed by slot NAME places each marker in slot order, and the sheet's row (found by config key) lists the
@@ -13,7 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { checkDltTemplateShape } from '@twt/channels';
+import { checkDltTemplateShape, needsUnicode } from '@twt/channels';
 import { t } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
@@ -26,6 +28,7 @@ import {
   suspicionNoticeDltConfigKey,
   type SuspicionNoticeSmsMessage,
 } from '../src/scheduler/suspicion-notice-sms-templates.js';
+import { MEMBER_BOX_SLOTS } from '../src/scheduler/sms-member-boxes.js';
 
 import { expectRegisteredTextRow, i18nParamNames, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
 
@@ -61,16 +64,18 @@ function assertNoDeadlineThreat(body: string, label: string): void {
   for (const term of HINDI_DEADLINE_TERMS) expect(body, `"${term}" in ${label}`).not.toContain(term);
 }
 
-/** The Panel's words (FQ7 B, `-291` Q2 B, `-293` item 1 B), `[member]` / `[date]` as `{#var#}`, + the helpline slot. */
+/** The Panel's words (FQ7 B, `-291` Q2 B, `-293` item 1 B / `-379` Q2 A), `[member]` as two `{#var#}`, `[date]` as one, + the
+ * helpline slot in the two that keep it. */
 const PANEL_EN: Record<SuspicionNoticeSmsMessage, string> = {
-  refusal_notice: 'A claim for {#var#} could not go ahead. Please call the helpline {#var#}.',
-  closed_notice: 'Your claim for {#var#} has been closed. Please call the helpline {#var#}.',
-  appeal_notice: 'The claim for {#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline {#var#}.',
+  refusal_notice: 'A claim for {#var#}{#var#} could not go ahead. Please call the helpline {#var#}.',
+  closed_notice: 'Your claim for {#var#}{#var#} has been closed. Please call the helpline {#var#}.',
+  appeal_notice: 'The claim for {#var#}{#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline.',
 };
 
 const CASES = SUSPICION_NOTICE_SMS_MESSAGES.flatMap((message) => (['hi', 'en'] as const).map((locale) => ({ message, locale })));
 
-const MEMBER = '\u0001MEMBER\u0001';
+const MEMBER1 = '\u0001MEMBER1\u0001';
+const MEMBER2 = '\u0004MEMBER2\u0004';
 const DATE = '\u0003DATE\u0003';
 const HELP = '\u0002HELPLINE\u0002';
 
@@ -79,19 +84,15 @@ describe('the suspicion notice SMS templates (RB1 — three messages × both loc
     const template = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
     const dated = message === 'appeal_notice';
     // ⭐ DISTINCT markers per variable — one shared token would let a swap pass.
-    const rendered = renderSuspicionNoticeSms(message, locale, { member: MEMBER, helpline: HELP, ...(dated ? { date: DATE } : {}) });
-    expect(rendered.split(MEMBER)).toHaveLength(2);
-    expect(rendered.split(HELP)).toHaveLength(2);
-    // The order of the Panel's words: member, (date,) helpline.
-    expect(rendered.indexOf(MEMBER)).toBeLessThan(rendered.indexOf(HELP));
-    if (dated) {
-      expect(rendered.split(DATE)).toHaveLength(2);
-      expect(rendered.indexOf(MEMBER)).toBeLessThan(rendered.indexOf(DATE));
-      expect(rendered.indexOf(DATE)).toBeLessThan(rendered.indexOf(HELP));
-    }
-    expect(rendered.replace(MEMBER, DLT_VAR).replace(DATE, DLT_VAR).replace(HELP, DLT_VAR)).toBe(template.registeredText);
-    // The slot count — 2, or 3 for `appeal_notice`.
-    expect(template.registeredText.split(DLT_VAR)).toHaveLength(dated ? 4 : 3);
+    const rendered = renderSuspicionNoticeSms(message, locale, dated ? { member1: MEMBER1, member2: MEMBER2, date: DATE } : { member1: MEMBER1, member2: MEMBER2, helpline: HELP });
+    // The two boxes side by side, box 1 first, nothing between them.
+    expect(rendered.split(MEMBER1 + MEMBER2)).toHaveLength(2);
+    const third = dated ? DATE : HELP;
+    expect(rendered.split(third)).toHaveLength(2);
+    expect(rendered.indexOf(MEMBER2)).toBeLessThan(rendered.indexOf(third));
+    expect(rendered.replace(MEMBER1, DLT_VAR).replace(MEMBER2, DLT_VAR).replace(third, DLT_VAR)).toBe(template.registeredText);
+    // The slot count — three variables in every message.
+    expect(template.registeredText.split(DLT_VAR)).toHaveLength(4);
   });
 
   it.each(CASES)('⭐ $message / $locale — the request sheet carries the SAME registered text', ({ message, locale }) => {
@@ -109,17 +110,19 @@ describe('the suspicion notice SMS templates (RB1 — three messages × both loc
     expect(SHEET).toContain(key);
   });
 
-  it.each(SUSPICION_NOTICE_SMS_MESSAGES)('⭐ %s / en — the Panel\'s words, byte for byte (+ `{helpline}`)', (message) => {
+  it.each(SUSPICION_NOTICE_SMS_MESSAGES)('⭐ %s / en — the Panel\'s words, byte for byte (+ `{helpline}` where kept)', (message) => {
     expect(SUSPICION_NOTICE_SMS_TEMPLATES[message].en.registeredText).toBe(PANEL_EN[message]);
   });
 
-  it.each(CASES)('⛔ $message / $locale — every variable filled, the member and helpline carried, ⛔ no deadline threat (RB16)', ({ message, locale }) => {
+  it.each(CASES)('⛔ $message / $locale — every variable filled, the member (and the helpline where kept) carried, ⛔ no deadline threat (RB16)', ({ message, locale }) => {
     // ⭐ `appeal_notice`'s `{date}` is the ONE exemption (the Panel's "until [date]") — rendered with a NON-digit marker so
     // the rest of the body is still held to the deny-list.
-    const body = renderSuspicionNoticeSms(message, locale, { member: 'Ramesh K.', helpline: '+911800123456', date: 'DATEMARK' });
-    expect(body).toContain('Ramesh K.');
-    expect(body).toContain('+911800123456');
-    if (message === 'appeal_notice') expect(body).toContain('DATEMARK');
+    const body = renderSuspicionNoticeSms(message, locale, { member1: 'Ramesh ', member2: 'Kumar', helpline: '+911800123456', date: 'DATEMARK' });
+    expect(body).toContain('Ramesh Kumar');
+    if (message === 'appeal_notice') {
+      expect(body).toContain('DATEMARK');
+      expect(body).not.toContain('+911800123456'); // `-379` Q2 A — ⛔ number in the appeal-date text
+    } else expect(body).toContain('+911800123456');
     expect(body).not.toMatch(/\{\w+\}/);
     assertNoDeadlineThreat(body.replace('+911800123456', 'HELPLINE'), `the ${locale} ${message}`);
   });
@@ -131,22 +134,27 @@ describe('the suspicion notice SMS templates (RB1 — three messages × both loc
     ['Devanagari digits', ' ७'],
     ['an English "within 7 days"', ' Reply within 7 days.'],
   ])('the deny-list is LIVE — the SAME assertion THROWS on %s written into a real Hindi body', (_label, threat) => {
-    const clean = renderSuspicionNoticeSms('appeal_notice', 'hi', { member: 'X', helpline: 'Y', date: 'Z' });
+    const clean = renderSuspicionNoticeSms('appeal_notice', 'hi', { member1: 'X', member2: 'W', date: 'Z' });
     assertNoDeadlineThreat(clean, 'clean');
     expect(() => assertNoDeadlineThreat(`${clean}${threat}`, 'threatened')).toThrow();
   });
 
   it('`appeal_notice` without a date THROWS (⛔ a text with a blank date)', () => {
-    expect(() => renderSuspicionNoticeSms('appeal_notice', 'en', { member: 'X', helpline: 'Y' })).toThrow();
+    expect(() => renderSuspicionNoticeSms('appeal_notice', 'en', { member1: 'X', member2: 'W', helpline: 'Y' })).toThrow();
+  });
+
+  it.each(['refusal_notice', 'closed_notice'] as const)('`%s` without a helpline THROWS (⛔ a text with a blank number)', (message) => {
+    expect(() => renderSuspicionNoticeSms(message, 'en', { member1: 'X', member2: 'W' })).toThrow();
   });
 
   it.each(CASES)('⭐ Story 6.34 — $message / $locale declares typed slots (TV4) and passes the shape check', ({ message, locale }) => {
     const template = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
-    const member = { name: 'member', type: 'alphanumeric', maxLength: 40, label: 'deceased member name' };
     const date = { name: 'date', type: 'alphanumeric', maxLength: 10, label: 'last date to appeal (DD-MM-YYYY)' };
     const helpline = { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' };
-    expect(template.slots).toEqual(message === 'appeal_notice' ? [member, date, helpline] : [member, helpline]);
+    expect(template.slots).toEqual([...MEMBER_BOX_SLOTS, message === 'appeal_notice' ? date : helpline]);
     expect(checkDltTemplateShape(template.registeredText, template.slots)).toEqual([]);
+    // the SMS type follows the TEXT — every Hindi text is Unicode, every English one GSM-7
+    expect(needsUnicode(template.registeredText)).toBe(locale === 'hi');
   });
 
   it.each(CASES)('⭐ Story 6.34 — $message / $locale: the slot names ARE the i18n params, in order (TV13)', ({ message, locale }) => {

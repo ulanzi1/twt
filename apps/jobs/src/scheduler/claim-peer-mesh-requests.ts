@@ -13,8 +13,8 @@
 //   (3) the due pings — ⛔ any ⇒ `noop` (⛔ name decrypted for nothing — R8's hook enqueues on every no-op SELECT re-run);
 //       a locale-read DB fault in (2) is a RETRY (the sweep skips the Pariwar that run), ⛔ a hold — a MISSING passport is a hold;
 //   (4) R9 — the deceased's NAME, ONCE, outside any claiming transaction: the mode (`-181`), the KYC name, the erased sentinel,
-//       the mode-resolved form and its length — Story 6.37e (`2026-10-18-362` B): `smsMemberName` sends the full name when it fits,
-//       else the shielded form ("Ramesh S."); only a name that STILL does not fit is `name_too_long` — a fault is CLAIM-WIDE
+//       the mode-resolved form and its length — Story 6.37e rework (`2026-10-22-379` Q1 A): `smsMemberName` sends the name WHOLE up
+//       to 60 across two boxes, else the Panel's shortened form; only a name that STILL does not fit is `name_too_long` — a fault is CLAIM-WIDE
 //       (`no_target:name_<reason>`, ⛔ replaced); a decrypt THROW is a retry (⛔ stored — ⛔ ping begun yet);
 //   (5) per due ping, in `ping_id` order (and every replacement the run creates): the CLAIMING transaction
 //       (`beginPeerMeshRequest` — claim → ping locks, R1) → COMMIT → (⛔ KMS under a lock) the neighbour's number →
@@ -74,7 +74,7 @@ import {
   type ClaimCorrectionReminderDeps,
 } from './claim-correction-reminders.js';
 import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templates.js';
-import { helplineNotCallbackNumberWarning, sendClaimDltSms, smsPreflightGap } from './claim-dlt-sms-send.js';
+import { sendClaimDltSms, smsPreflightGap } from './claim-dlt-sms-send.js';
 import {
   PEER_MESH_REQUEST_SMS_TEMPLATES,
   fitsDltUrl,
@@ -467,7 +467,7 @@ export type PeerMeshRequestChildResult =
   | { readonly status: 'held_config'; readonly reason: string }
   | { readonly status: 'noop'; readonly reason: string };
 
-type NameRead = { readonly name: string } | { readonly fault: schema.PeerMeshRequestNameReason };
+type NameRead = { readonly boxes: readonly [string, string] } | { readonly fault: schema.PeerMeshRequestNameReason };
 
 /** The member-facing name, or a fault — ⛔ the SMS slot's `name_too_long` (that is the text's own step). */
 export type MemberFacingDeceasedNameRead =
@@ -481,7 +481,7 @@ export type MemberFacingDeceasedNameRead =
  * alarms and errors.
  * ⭐ Story 6.31 (WR13) — SPLIT out of `readDeceasedName` and EXPORTED: the WhatsApp reminder carries the FULL name (§0 edge (ii)) and
  * applies ⛔ SMS fit check; 6.27c's text keeps its fit check in `readDeceasedName` below (⛔ a behaviour change). ⚠ Row 6-37e
- * (`-362`'s short-name fallback) edits the TEXT's step there — ⛔ this function.
+ * (`-379`'s full-name rule — two name boxes, shortened only above 60) edits the TEXT's step there — ⛔ this function.
  */
 export async function readMemberFacingDeceasedName(
   deps: Pick<ClaimPeerMeshRequestDeps, 'pool' | 'encryption' | 'onAlarm'>,
@@ -517,9 +517,9 @@ export async function readMemberFacingDeceasedName(
 }
 
 /**
- * R9 — the TEXT's name: `readMemberFacingDeceasedName`, then the SMS `{member}` slot — Story 6.37e (`2026-10-18-362` B):
- * `smsMemberName` gives the full name when it fits, else the shielded form ("Ramesh S."); `name_too_long` only for a name that
- * still does not fit (`-311` PM3's "no text", superseded in part). ⛔ Truncated.
+ * R9 — the TEXT's name: `readMemberFacingDeceasedName`, then the SMS name boxes — Story 6.37e rework (`2026-10-22-379` Q1 A):
+ * `smsMemberName` gives the name WHOLE up to 60, else the Panel's shortened form, split across the two boxes; `name_too_long`
+ * only for a name that still does not fit (`-311` PM3's "no text", superseded in part). ⛔ Truncated.
  */
 async function readDeceasedName(
   deps: ClaimPeerMeshRequestDeps,
@@ -531,7 +531,7 @@ async function readDeceasedName(
   if ('fault' in read) return read;
   const chosen = smsMemberName(read.name);
   if (chosen.kind === 'too_long') return { fault: 'name_too_long' };
-  return { name: chosen.name };
+  return { boxes: chosen.boxes };
 }
 
 /**
@@ -609,7 +609,6 @@ export async function runPeerMeshRequestChild(
   const nameRead = await readDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag);
   const nameFault = 'fault' in nameRead ? nameRead.fault : null;
   const counts = { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0 };
-  let helplineWarned = false;
   const scoped = <T>(fn: (d: Db) => Promise<T>) => withPariwarScope(deps.pool, pariwarId, fn);
 
   for (let i = 0; i < queue.length; i += 1) {
@@ -710,8 +709,8 @@ export async function runPeerMeshRequestChild(
       continue;
     }
 
-    // ── The send — the registered words, the mode-resolved name, the link (R12 origin), the Pariwar's helpline ──
-    const member = (nameRead as { name: string }).name;
+    // ── The send — the registered words, the name's two boxes, the link (R12 origin) — ⛔ helpline (`-379` Q2 A) ──
+    const [member1, member2] = (nameRead as { boxes: readonly [string, string] }).boxes;
     const link = buildAppLinkUrl(origin, 'peerRequest', begun.linkCode);
     const entry = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
     const result = await sendClaimDltSms(deps, {
@@ -719,9 +718,9 @@ export async function runPeerMeshRequestChild(
       template: { text: entry.registeredText, slots: entry.slots },
       pariwarId: pid,
       e164,
-      render: (helpline) => renderPeerMeshRequest(locale, { member, link, helpline }),
-      // MG3 — the SAME locals the render uses.
-      values: (helpline) => ({ member, link, helpline }),
+      render: () => renderPeerMeshRequest(locale, { member1, member2, link }),
+      // MG3 — the SAME locals the render uses; ⛔ `helpline` — the template has ⛔ such slot (a stray one is `values_mismatch`).
+      values: () => ({ member1, member2, link }),
       // ⛔ fail open: this sweep HOLDS (its race guard read the memo) — a fault here is the in-flight race; P1 stops below.
       preflightFailOpen: false,
       // 6.37b DR3 — the ping row's own id rides as MSG91's `CRQID`.
@@ -755,11 +754,8 @@ export async function runPeerMeshRequestChild(
       }
       continue;
     }
-    // Story 6.34 (`-322` C1): sent as today; ONE warning per child, ⛔ an outcome change.
-    if (result.helplineNotCallbackNumber === true && !helplineWarned) {
-      helplineWarned = true;
-      alarm(helplineNotCallbackNumberWarning(pid, 'peer mesh request'));
-    }
+    // Story 6.34 (`-322` C1)'s not-a-callback-number warning is ⛔ raised here since the 6.37e rework (`2026-10-22-380` decision 6):
+    // the text no longer prints the helpline, so the operator cannot reject it for that number.
     if (result.outcome !== 'accepted' && result.alarm) {
       alarm(`[jobs] claim-peer-mesh-request: ${detail!} for ${ptag} — recorded error (fail-closed)`);
     }

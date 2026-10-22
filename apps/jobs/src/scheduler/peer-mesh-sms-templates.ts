@@ -3,24 +3,30 @@
 // ⛔ never a fourth message there.
 //
 // The once-ever text to each of the five neighbours chosen for a reported death, × `hi` / `en` (two DLT templates —
-// 13–14 of `docs/launch-gate-inventory/dlt-template-requests-6-19.md`). The en words are the Panel's, verbatim; the
-// routing note's "TWT:" prefix is dropped (the DLT header names the sender — PM3's author reading).
+// 13–14 of `docs/launch-gate-inventory/dlt-template-requests-6-19.md`). The en words are the Panel's — `-379` Q2 A's *"…[link],
+// or call us."* (⛔ helpline number; the dash a comma), with *"a few questions"* for *"a few short questions"* (BigDev's words,
+// ratified by `2026-10-22-381` PQ1 A). The routing note's "TWT:" prefix is dropped (the DLT header names the sender — PM3's
+// author reading).
 //
-// ⭐ THE D33 CARVE-OUT (as 6.24b's): this text NAMES THE MEMBER (`{member}`) because the ruled text does. `{member}` is
-// MODE-RESOLVED (`-181`, `resolveMemberFacingDeceasedName`), ⛔ never hard-coded; an erased / unresolvable name ⇒ `no_target`,
-// ⛔ never a blank, ⛔ never a truncated name (RB5, R9). ⭐ Story 6.37e (`2026-10-18-362` B): a name longer than the slot is sent in
-// the shorter form ("Ramesh S." — `sms-member-name.ts`); `no_target:name_too_long` only for one that STILL does not fit.
+// ⭐ THE D33 CARVE-OUT (as 6.24b's): this text NAMES THE MEMBER because the ruled text does. The name is MODE-RESOLVED (`-181`,
+// `resolveMemberFacingDeceasedName`), ⛔ never hard-coded; an erased / unresolvable name ⇒ `no_target`, ⛔ never a blank, ⛔ never
+// a truncated name (RB5, R9). ⭐ Story 6.37e rework (`2026-10-22-379` Q1 A): the name is sent WHOLE up to 60, shortened only above
+// 60 by the Panel's rule (`sms-member-name.ts`); `no_target:name_too_long` only for one that STILL does not fit.
 // ⛔ No deadline word (S4 / T6 — RB16); ⛔ no claim, money, family, nominee, claimant or reporter.
 // ⚠ A missing template id or helpline number fails CLOSED in the shared core (`claim-dlt-sms-send.ts`) — the sweep and
-// the child check the config FIRST so a gap never uses up a once-ever slot (RB12).
+// the child check the config FIRST so a gap never uses up a once-ever slot (RB12). The helpline is still REQUIRED although the
+// text no longer prints it (it says "call us" — `-380` decision 6).
 //
-// ⭐ Story 6.34 (TV4 / TV11 / TV13): registered TYPED from the start — `{member}` alphanumeric (≤ 40 — ⚠ whether the
-// operator counts Devanagari by code point and admits spaces is Row 30 (d)'s open question), `{link}` url (≤ 120), the
-// helpline cbn (≤ 14). THREE variables — the sheet records the justification (the link IS the request: without it the
-// neighbour cannot answer). The marker is the ONE vocabulary's (`@twt/channels`), re-exported for the lockstep test.
+// ⭐ Story 6.34 (TV4 / TV11 / TV13): registered TYPED from the start — the name in TWO alphanumeric boxes side by side,
+// `{member1}{member2}` (≤ 30 each, `sms-member-boxes.ts` — Story 6.37e rework; ⚠ 30 vs 40, whether the operator counts
+// Devanagari by code point and admits spaces are Row 30 (d)'s open question), `{link}` url (≤ 120). THREE variables — the sheet
+// records the justification (the name needs two boxes; the link IS the request: without it the neighbour cannot answer). The
+// marker is the ONE vocabulary's (`@twt/channels`), re-exported for the lockstep test.
 
 import { DLT_TYPE_MAX_LENGTH, DLT_VAR, type DltSlot } from '@twt/channels';
 import { t, type Locale } from '@twt/i18n';
+
+import { MEMBER_BOX_SLOTS } from './sms-member-boxes.js';
 
 export type PeerMeshRequestSmsLocale = Extract<Locale, 'hi' | 'en'>;
 
@@ -37,36 +43,25 @@ export interface PeerMeshRequestSmsTemplate {
   readonly slots: readonly DltSlot[];
 }
 
-/** The three variables of the request. */
+/** The three variables of the request — the name's two boxes and the link. */
 export interface PeerMeshRequestSmsVars {
-  readonly member: string;
+  readonly member1: string;
+  readonly member2: string;
   readonly link: string;
-  readonly helpline: string;
 }
 
 /** The DLT variable token — the form the registered text carries in each slot (the ONE vocabulary's, re-exported). */
 export { DLT_VAR };
 
-const MEMBER: DltSlot = { name: 'member', type: 'alphanumeric', maxLength: DLT_TYPE_MAX_LENGTH.alphanumeric, label: 'deceased member name' };
 const LINK: DltSlot = { name: 'link', type: 'url', maxLength: DLT_TYPE_MAX_LENGTH.url, label: 'app link to the questions' };
-const HELPLINE: DltSlot = { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' };
 
 /** TV4 — the declared variables, in the order of the Panel's words (both locales). */
-const SLOTS: readonly DltSlot[] = [MEMBER, LINK, HELPLINE];
-
-/**
- * R9 — the ONE predicate for whether a value fits the `{member}` slot: its CODE-POINT count is at most the alphanumeric
- * ceiling. Devanagari is in the BMP, so code points = UTF-16 units = what `checkDltTemplateShape` counts. ⚠ If Row 30
- * (d) answers a different limit or unit, this function and the ceiling change in ONE place. ⛔ Never truncate a name.
- */
-export function fitsDltAlphanumeric(value: string): boolean {
-  return [...value].length <= MEMBER.maxLength;
-}
+const SLOTS: readonly DltSlot[] = [...MEMBER_BOX_SLOTS, LINK];
 
 /**
  * The ONE predicate for whether a rendered link fits the `{link}` slot (the url ceiling) — 6.27c review F6: the config check
- * holds an `APP_LINKS_BASE_URL` whose link cannot fit, BEFORE a once-ever slot is begun. Code points, as `fitsDltAlphanumeric`
- * (a link is ASCII, so = UTF-16 units).
+ * holds an `APP_LINKS_BASE_URL` whose link cannot fit, BEFORE a once-ever slot is begun. Code points, as the name's fit
+ * (`sms-member-name.ts`; a link is ASCII, so = UTF-16 units).
  */
 export function fitsDltUrl(value: string): boolean {
   return [...value].length <= LINK.maxLength;
@@ -86,20 +81,21 @@ const entry = (locale: PeerMeshRequestSmsLocale, registeredText: string): PeerMe
 
 // ⚠ The Hindi is the `-303` routing block's Hindi draft with "दो" (two) replaced by "कुछ" (a few) — `-304` Q6 A; Trap 19's "two" is
 // gone, but it is ⛔ an independent translation (6.27c review round 2 P15; PM3's "never copied" clause superseded by
-// `2026-10-17-344`) — ⛔ not yet human-reviewed (go-live gate Row 28).
+// `2026-10-17-344`) — ⛔ not yet human-reviewed (go-live gate Row 28). Story 6.37e rework: the second name box; the dash and the
+// helpline clause become *", या हमें कॉल करें"* (as the English); "छोटे" dropped with the English's "short" (`-381` PQ1 A).
 export const PEER_MESH_REQUEST_SMS_TEMPLATES: Readonly<Record<PeerMeshRequestSmsLocale, PeerMeshRequestSmsTemplate>> = {
   hi: entry(
     'hi',
-    'हमें बताया गया है कि {#var#} का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ छोटे प्रश्नों के उत्तर दें: {#var#} — या हेल्पलाइन {#var#} पर कॉल करें।',
+    'हमें बताया गया है कि {#var#}{#var#} का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ प्रश्नों के उत्तर दें: {#var#}, या हमें कॉल करें।',
   ),
   en: entry(
     'en',
-    'We have been told that {#var#} has died. If you knew them, please answer a few short questions: {#var#} — or call the helpline {#var#}.',
+    'We have been told that {#var#}{#var#} has died. If you knew them, please answer a few questions: {#var#}, or call us.',
   ),
 };
 
 /** Render the request body through the REAL `t()` — the text the gateway byte-matches. A missing param THROWS. */
 export function renderPeerMeshRequest(locale: PeerMeshRequestSmsLocale, vars: PeerMeshRequestSmsVars): string {
   const template = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
-  return t(template.copyKey, { member: vars.member, link: vars.link, helpline: vars.helpline }, { locale, namespace: 'claim' });
+  return t(template.copyKey, { member1: vars.member1, member2: vars.member2, link: vars.link }, { locale, namespace: 'claim' });
 }

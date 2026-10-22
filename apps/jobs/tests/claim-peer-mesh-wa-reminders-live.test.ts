@@ -31,14 +31,15 @@ import {
   type ClaimPeerMeshWaReminderDeps,
   type PeerMeshWaReminderPayload,
 } from '../src/scheduler/claim-peer-mesh-wa-reminders.js';
-import { fitsDltAlphanumeric } from '../src/scheduler/peer-mesh-sms-templates.js';
+import { smsMemberName } from '../src/scheduler/sms-member-name.js';
 import { onOwnTx } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const HELPLINE = '1800123456';
 const NAME = 'Ramesh Kumar Sharma';
-const LONG_NAME = 'Ramesh Kumar Sharma Venkataraghavan Subramaniam Iyer';
+/** The Panel's own example (65) — the SMS would SHORTEN it (`-379` Q1 A); the reminder carries it in full (WR13). */
+const LONG_NAME = 'Kumar Venkata Satya Narayana Murthy Subrahmanyam Swaminathan Iyer';
 const ORIGIN = 'https://links.example.org';
 const TEMPLATE = { hi: 'peer_mesh_reminder_hi_v1', en: 'peer_mesh_reminder_en_v1' } as const;
 const enc = buildJobsEncryptionDeps('claim-peer-mesh-wa-reminder-live-pepper');
@@ -410,8 +411,8 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expectIdsOnly(h, w);
   });
 
-  it('WR13 / §0 edge (ii) — a name that FAILS the SMS fit check is sent IN FULL; an English Pariwar gets the English template', async () => {
-    expect(fitsDltAlphanumeric(LONG_NAME)).toBe(false);
+  it('WR13 / §0 edge (ii) — a name the SMS would SHORTEN is sent IN FULL; an English Pariwar gets the English template', async () => {
+    expect(smsMemberName(LONG_NAME).kind).toBe('shortened'); // the premise — re-fixtured by Story 6.37e's rework (60, ⛔ 40)
     const w = await world({ name: LONG_NAME, locale: 'en' });
     const h = harness(w);
     await tick(h, w);

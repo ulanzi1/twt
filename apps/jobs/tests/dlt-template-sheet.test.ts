@@ -64,8 +64,12 @@ const EVERY_TEMPLATE: ReadonlyArray<{ configKey: string; locale: 'hi' | 'en'; te
   })),
 ];
 
-/** The sheet's cost notes: every Hindi text is Unicode, and so is 14 (en — the em dash); every other English text is GSM. */
-const UNICODE_ENGLISH = new Set(['sms.dlt.template_id.peer_mesh.request.en']);
+/**
+ * The sheet's cost notes: every Hindi text is Unicode; every English text is GSM. EMPTY since Story 6.37e's rework — 14 (en) held
+ * the only non-GSM-7 English character, an em dash, which `2026-10-22-379` Q2 A made a comma. Kept so an English text that needs
+ * Unicode again is named here, deliberately.
+ */
+const UNICODE_ENGLISH = new Set<string>();
 
 describe('the gateway form — every template 1–16 (Story 6.37 AC6)', () => {
   it('covers sixteen distinct sheet rows', () => {

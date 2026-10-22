@@ -9,9 +9,9 @@
 //   · AC2 / AC2c — each neighbour texted ONCE with EXACTLY the registered words, the mode-resolved name and the link
 //     `<origin>/peer-request?c=<the row's code>`; the accepted write; a re-run sends ⛔ again; ⛔ at night (re-enqueued at 09:00 IST);
 //   · AC5 / AC5b — a skipped neighbour replaced and the replacement texted; R6 (an erased number) replaced; a decrypt THROW is a
-//     transient (⛔ replaced); `name_too_long` texts ⛔ one — since Story 6.37e (`2026-10-18-362` B) only for a name that STILL does
-//     not fit (a longer multi-word name is texted in the shorter form, "Ramesh S."); ⛔ new event; ⛔ alarm carries a name, a number
-//     or a link code;
+//     transient (⛔ replaced); `name_too_long` texts ⛔ one — since Story 6.37e's rework (`2026-10-22-379` Q1 A) only for a name that
+//     cannot fit even shortened (a name up to 60 is texted WHOLE across two boxes; above 60 the Panel's shortened form); ⛔ new
+//     event; ⛔ alarm carries a name, a number or a link code; the not-a-callback-number warning is ⛔ raised (⛔ number in the text);
 //   · the code review's F2 / F3 / F5 / F6 — 20:00 IST crossed mid-run (before a begin; between a begin and the handoff) ⇒ ⛔ sent,
 //     deferred to 09:00; a lease stamped at its begin (⛔ the run's start) ⇒ a second child ⛔ re-claims it; a held claim ⛔ counts
 //     against the sweep's bound; a base whose link cannot fit the `{link}` slot HOLDS.
@@ -26,7 +26,7 @@ import {
   type SmsAppClient,
   type SmsGatewayMessage,
 } from '@twt/channels';
-import { bindScopedDb, claim, encryption, ids, member as memberDomain, notifications, questionnaires, schema } from '@twt/domain';
+import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaires, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -41,12 +41,19 @@ import {
   type PeerMeshRequestPayload,
 } from '../src/scheduler/claim-peer-mesh-requests.js';
 import { PEER_MESH_REQUEST_SMS_TEMPLATES, renderPeerMeshRequest } from '../src/scheduler/peer-mesh-sms-templates.js';
+import { smsMemberName } from '../src/scheduler/sms-member-name.js';
 import { onOwnTx } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const HELPLINE = '1800123456';
 const NAME = 'Ramesh Kumar Sharma';
+/** The two boxes the sender puts a name in — computed through the ONE function (⛔ transcribed). */
+function boxesFor(name: string): { member1: string; member2: string } {
+  const out = smsMemberName(name);
+  if (out.kind === 'too_long') throw new Error('fixture does not fit');
+  return { member1: out.boxes[0], member2: out.boxes[1] };
+}
 const ORIGIN = 'https://links.example.org';
 const enc = buildJobsEncryptionDeps('claim-peer-mesh-request-live-pepper');
 /** 11:30 IST — inside the send hours. */
@@ -398,7 +405,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       expect(r.send_updated_at).not.toBeNull();
       const link = `${ORIGIN}/peer-request?c=${r.link_code!}`;
       const msg = h.sent.find((m) => m.to === w.mobiles.get(r.member_id));
-      expect(msg?.body).toBe(renderPeerMeshRequest('en', { member: NAME, link, helpline: HELPLINE }));
+      expect(msg?.body).toBe(renderPeerMeshRequest('en', { ...boxesFor(NAME), link }));
     }
     // a re-run (the sweep, the hook) ⛔ texts anyone again
     await tick(h, w);
@@ -425,7 +432,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     const h = harness(w, { registry: [CLEARED] });
     await tick(h, w);
     const [r] = await rows(w);
-    expect(h.sent[0]?.body).toBe(renderPeerMeshRequest('hi', { member: NAME, link: `${ORIGIN}/peer-request?c=${r!.link_code!}`, helpline: HELPLINE }));
+    expect(h.sent[0]?.body).toBe(renderPeerMeshRequest('hi', { ...boxesFor(NAME), link: `${ORIGIN}/peer-request?c=${r!.link_code!}` }));
   });
 
   it.each([
@@ -485,9 +492,10 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     await expectIdsOnly(h, w);
   });
 
-  it('⭐ R9 FLIPPED by 6.37e (`-362` B) — a two-word name longer than the slot ⇒ every neighbour texted with the SHORTER form, ⛔ alarmed', async () => {
-    const name = 'A'.repeat(20) + ' ' + 'B'.repeat(20); // 41 — ⛔ fits; its shielded form does
-    const short = notifications.resolveMemberFacingDeceasedName('shielded_name', name);
+  it('⭐ R9 FLIPPED by 6.37e\'s rework (`-379` Q1 A) — a 41-code-point name ⇒ every neighbour texted the WHOLE name across two boxes, ⛔ alarmed', async () => {
+    const name = 'A'.repeat(20) + ' ' + 'B'.repeat(20); // 41 — over the old 40; whole under 60
+    const { member1, member2 } = boxesFor(name);
+    expect(member1 + member2).toBe(name);
     const w = await world({ locale: 'en', name });
     const h = harness(w, { registry: [CLEARED] });
     await tick(h, w);
@@ -497,20 +505,42 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     for (const r of after) {
       expect(r).toMatchObject({ send_outcome: 'accepted', attempt_count: 1, detail: null });
       const msg = h.sent.find((m) => m.to === w.mobiles.get(r.member_id));
-      expect(msg?.values.find((v) => v.name === 'member')?.value).toBe(short);
-      expect(msg?.body).toBe(renderPeerMeshRequest('en', { member: short, link: `${ORIGIN}/peer-request?c=${r.link_code!}`, helpline: HELPLINE }));
+      expect(['member1', 'member2'].map((n) => msg?.values.find((v) => v.name === n)?.value)).toEqual([member1, member2]);
+      expect(msg?.values.map((v) => v.name).sort()).toEqual(['link', 'member1', 'member2']); // ⛔ helpline (`-379` Q2 A)
+      expect(msg?.body).toBe(renderPeerMeshRequest('en', { member1, member2, link: `${ORIGIN}/peer-request?c=${r.link_code!}` }));
     }
     expect(h.alarms).toEqual([]);
-    // AC5 — ⛔ the name, full or short, in a payload, an alarm or a row (built after the last tick).
+    // AC6 — ⛔ the name or a box in a payload, an alarm or a row (built after the last tick).
     const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await rows(w) });
-    expect(blob).not.toContain('A'.repeat(20));
-    expect(blob).not.toContain('B'.repeat(20));
-    expect(blob).not.toContain(short);
+    for (const token of ['A'.repeat(19), 'B'.repeat(20), member1, member2]) expect(blob).not.toContain(token);
     await expectIdsOnly(h, w);
   });
 
-  it('R9 (6.37e) — a ONE-word name longer than the slot keeps TODAY\'s outcome: every ping `no_target:name_too_long`, ⛔ replaced, ⛔ texted, ⛔ alarmed', async () => {
-    const name = 'Venkatanarayana'.repeat(3); // 45 — one word: its shielded form is itself
+  it('⭐ 6.37e rework — the Panel\'s 65-letter example ⇒ every neighbour texted "K V Satya … Iyer" (55) across two boxes', async () => {
+    const name = 'Kumar Venkata Satya Narayana Murthy Subrahmanyam Swaminathan Iyer';
+    const out = smsMemberName(name);
+    expect(out).toMatchObject({ kind: 'shortened', name: 'K V Satya Narayana Murthy Subrahmanyam Swaminathan Iyer' });
+    const { member1, member2 } = boxesFor(name);
+    const w = await world({ locale: 'en', name });
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    const after = await rows(w);
+    expect(after).toHaveLength(5);
+    expect(h.sent).toHaveLength(5);
+    for (const r of after) {
+      expect(r).toMatchObject({ send_outcome: 'accepted', detail: null });
+      const msg = h.sent.find((m) => m.to === w.mobiles.get(r.member_id));
+      expect(msg?.body).toBe(renderPeerMeshRequest('en', { member1, member2, link: `${ORIGIN}/peer-request?c=${r.link_code!}` }));
+    }
+    expect(h.alarms).toEqual([]);
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await rows(w) });
+    for (const token of ['Subrahmanyam', 'K V Satya Narayana', member1, member2]) expect(blob).not.toContain(token);
+    await expectIdsOnly(h, w);
+  });
+
+  it('R9 (6.37e) — a ONE-word name that cannot fit even shortened (75) keeps TODAY\'s outcome: every ping `no_target:name_too_long`, ⛔ replaced, ⛔ texted, ⛔ alarmed', async () => {
+    const name = 'Venkatanarayana'.repeat(5); // 75 — one word: ⛔ title, ⛔ earlier word to initial
+    expect(smsMemberName(name)).toEqual({ kind: 'too_long' });
     const w = await world({ name });
     const h = harness(w, { registry: [CLEARED] });
     await tick(h, w);
@@ -724,7 +754,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
   });
 
   it('AC5b — a re-claimed row with a NAME fault ⇒ `no_target:name_*` (⛔ replaced) + the "a prior attempt may have sent" alarm', async () => {
-    const w = await world({ selected: 1, name: 'A'.repeat(41) }); // 6.37e — ONE word: a two-word name now sends its shorter form
+    const w = await world({ selected: 1, name: 'A'.repeat(61) }); // 6.37e rework — ONE word over 60: still cannot fit
     const p = w.pings[0]!;
     await stall(p.pingId);
     const h = harness(w, { registry: [CLEARED] });
@@ -736,12 +766,14 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     await expectIdsOnly(h, w);
   });
 
-  it('AC5b — a helpline that is ⛔ a callback number: SENT, and ONE warning per child (`-322` C1)', async () => {
+  it('AC5b — a helpline that is ⛔ a callback number: SENT, and — FLIPPED by 6.37e\'s rework (`-380` decision 6) — ⛔ warning: the text no longer prints the number', async () => {
     const w = await world({ selected: 2 });
     const h = harness(w, { registry: [CLEARED], helpline: '+91 1800 123' });
     await tick(h, w);
     expect(h.sent).toHaveLength(2);
-    expect(h.alarms.filter((a) => a === helplineNotCallbackNumberWarning(w.pid, 'peer mesh request'))).toHaveLength(1);
+    expect(h.sent.every((m) => !m.body.includes('1800'))).toBe(true);
+    expect(h.alarms.filter((a) => a === helplineNotCallbackNumberWarning(w.pid, 'peer mesh request'))).toEqual([]);
+    expect(h.alarms.filter((a) => a.includes('not a callback number'))).toEqual([]);
     expect((await rows(w)).every((r) => r.send_outcome === 'accepted')).toBe(true);
   });
 

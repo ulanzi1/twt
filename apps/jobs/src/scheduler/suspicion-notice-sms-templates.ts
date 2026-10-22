@@ -7,12 +7,14 @@
 //   · `refusal_notice` — `-262` FQ7 B: to the nominee in place at the death;
 //   · `closed_notice`  — `-291` Q2 B: to the true nominee when an allowed appeal closes her claim;
 //   · `appeal_notice`  — `-293` item 1 B: to the refused person, with the last date to appeal.
-// The en words are the Panel's, verbatim, plus `{helpline}` — the per-Pariwar number 6.19's texts carry
-// (`sms.claim_correction.helpline_number.<pariwarId>`), which supplies the number the Panel told the family to call.
+// The en words are the Panel's, verbatim; `refusal_notice` and `closed_notice` add `{helpline}` — the per-Pariwar number 6.19's
+// texts carry (`sms.claim_correction.helpline_number.<pariwarId>`), which supplies the number the Panel told the family to call.
+// ⭐ Story 6.37e rework (`2026-10-22-379` Q2 A): `appeal_notice` ends *"Please call the helpline."* — `-293` item 1's own words,
+// ⛔ number (the name needs two variables, and a text carries at most three).
 //
 // ⭐ THE D33 CARVE-OUT (recorded in `2026-10-08-295`): these texts NAME THE MEMBER (`{member}`) because the Panel's ratified
 // texts do (FQ7 / Q2 / item 1 — *"A claim for [member] …"*). 6.19's D33 *"⛔ No name"* is ⛔ NOT weakened — it binds 6.19's
-// registry, which stays name-free. `{member}` is MODE-RESOLVED (`-181`, `resolveMemberFacingDeceasedName`), ⛔ never
+// registry, which stays name-free. The name is MODE-RESOLVED (`-181`, `resolveMemberFacingDeceasedName`), ⛔ never
 // hard-coded; an erased / unresolvable name ⇒ `no_target`, ⛔ never a blank (RB5).
 // ⭐ THE S4 / T6 CARVE-OUT (RB16, recorded in `2026-10-08-295`): ⛔ no deadline threat in any of the three — EXCEPT
 // `appeal_notice`'s `{date}` slot, the Panel's ratified *"until [date]"*. The date is the LAST day to appeal (6.24a
@@ -21,17 +23,19 @@
 // placeholder, ⛔ never a fixture `accepted`. The sweep checks the config FIRST so a gap never uses up a once-ever slot (RB12).
 
 // ⭐ Story 6.34 (TV2 / TV4 / TV13; `-313`, `-314`): each entry DECLARES its variables' TRAI types in `slots`, in text
-// order — `{member}` alphanumeric (≤ 40 — ⭐ a longer name is sent in the shorter form "Ramesh S." since Story 6.37e,
-// `2026-10-18-359` B — `sms-member-name.ts`; ⚠ the unit, Devanagari and the full stop stay Row 30 (d)'s open question; the
-// literal 40 is pinned EQUAL to the neighbours' slot by `sms-member-name.test.ts`), `{date}` alphanumeric (`DD-MM-YYYY`,
-// 10 — ⛔ date type exists; numeric refuses the hyphen), the
-// helpline cbn (≤ 14). `appeal_notice` carries THREE variables — the sheet records the justification (the last date to
-// appeal is the substance of the notice, `-293` item 1 B). ⛔ A character of any text changed (SmartPing keeps the
-// untyped marker); the marker is the ONE vocabulary's (`@twt/channels`), re-exported for the lockstep test.
+// order — the member's name in TWO alphanumeric boxes side by side, `{member1}{member2}` (≤ 30 each — Story 6.37e rework,
+// `2026-10-22-379` Q1 A; the slots are `sms-member-boxes.ts`'s, shared with the neighbours' registry; the name and its split
+// are `sms-member-name.ts`'s; ⚠ 30 vs 40, the unit and Devanagari stay Row 30 (d)'s open question), `{date}` alphanumeric
+// (`DD-MM-YYYY`, 10 — ⛔ date type exists; numeric refuses the hyphen), the helpline cbn (≤ 14). Every message carries THREE
+// variables — the sheet records the justification (the name needs two boxes; the helpline is the only action
+// `refusal_notice` / `closed_notice` ask for; the last date to appeal is the substance of `appeal_notice`, `-293` item 1 B).
+// The marker is the ONE vocabulary's (`@twt/channels`), re-exported for the lockstep test.
 
 import { DLT_VAR, type DltSlot } from '@twt/channels';
 import type { cycleCalendar } from '@twt/domain';
 import { t, type Locale } from '@twt/i18n';
+
+import { MEMBER_BOX_SLOTS } from './sms-member-boxes.js';
 
 /** The three messages (RB1). ⚠ ⛔ `SuspicionRefusalNotice` — that identifier is 6.24a's console component. */
 export type SuspicionNoticeSmsMessage = 'refusal_notice' | 'closed_notice' | 'appeal_notice';
@@ -50,25 +54,25 @@ export interface SuspicionNoticeSmsTemplate {
   readonly slots: readonly DltSlot[];
 }
 
-/** The variables of each message — `appeal_notice` alone carries the date. */
+/** The variables of each message — the name's two boxes; `appeal_notice` carries the date and ⛔ helpline, the others the helpline. */
 export interface SuspicionNoticeSmsVars {
-  readonly member: string;
-  readonly helpline: string;
+  readonly member1: string;
+  readonly member2: string;
+  readonly helpline?: string;
   readonly date?: string;
 }
 
 /** The DLT variable token — the form the registered text carries in each slot (the ONE vocabulary's, re-exported). */
 export { DLT_VAR };
 
-const MEMBER: DltSlot = { name: 'member', type: 'alphanumeric', maxLength: 40, label: 'deceased member name' };
 const APPEAL_DATE: DltSlot = { name: 'date', type: 'alphanumeric', maxLength: 10, label: 'last date to appeal (DD-MM-YYYY)' };
 const HELPLINE: DltSlot = { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' };
 
 /** TV4 — the declared variables of each message, in the order of the Panel's words (both locales). */
 const SLOTS: Readonly<Record<SuspicionNoticeSmsMessage, readonly DltSlot[]>> = {
-  refusal_notice: [MEMBER, HELPLINE],
-  closed_notice: [MEMBER, HELPLINE],
-  appeal_notice: [MEMBER, APPEAL_DATE, HELPLINE],
+  refusal_notice: [...MEMBER_BOX_SLOTS, HELPLINE],
+  closed_notice: [...MEMBER_BOX_SLOTS, HELPLINE],
+  appeal_notice: [...MEMBER_BOX_SLOTS, APPEAL_DATE],
 };
 
 /** The Secret Manager name of a message's DLT template id (RB4). */
@@ -88,38 +92,45 @@ export const SUSPICION_NOTICE_SMS_TEMPLATES: Readonly<
   Record<SuspicionNoticeSmsMessage, Readonly<Record<SuspicionNoticeSmsLocale, SuspicionNoticeSmsTemplate>>>
 > = {
   refusal_notice: {
-    hi: entry('refusal_notice', 'hi', '{#var#} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {#var#} पर कॉल करें।'),
-    en: entry('refusal_notice', 'en', 'A claim for {#var#} could not go ahead. Please call the helpline {#var#}.'),
+    hi: entry('refusal_notice', 'hi', '{#var#}{#var#} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {#var#} पर कॉल करें।'),
+    en: entry('refusal_notice', 'en', 'A claim for {#var#}{#var#} could not go ahead. Please call the helpline {#var#}.'),
   },
   closed_notice: {
-    hi: entry('closed_notice', 'hi', '{#var#} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन {#var#} पर कॉल करें।'),
-    en: entry('closed_notice', 'en', 'Your claim for {#var#} has been closed. Please call the helpline {#var#}.'),
+    hi: entry('closed_notice', 'hi', '{#var#}{#var#} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन {#var#} पर कॉल करें।'),
+    en: entry('closed_notice', 'en', 'Your claim for {#var#}{#var#} has been closed. Please call the helpline {#var#}.'),
   },
   appeal_notice: {
     hi: entry(
       'appeal_notice',
       'hi',
-      '{#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन {#var#} पर कॉल करें।',
+      '{#var#}{#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन पर कॉल करें।',
     ),
     en: entry(
       'appeal_notice',
       'en',
-      'The claim for {#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline {#var#}.',
+      'The claim for {#var#}{#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline.',
     ),
   },
 };
 
-/** Render a suspicion notice body through the REAL `t()` — the text the gateway byte-matches. A missing param THROWS. */
+/**
+ * Render a suspicion notice body through the REAL `t()` — the text the gateway byte-matches. A missing param THROWS: the date
+ * for `appeal_notice`, the helpline for the other two. ⚠ `t()` ignores an extra param, so a stray helpline is caught at the
+ * send core's `values` check (`values_mismatch`), ⛔ here.
+ */
 export function renderSuspicionNoticeSms(
   message: SuspicionNoticeSmsMessage,
   locale: SuspicionNoticeSmsLocale,
   vars: SuspicionNoticeSmsVars,
 ): string {
   const template = SUSPICION_NOTICE_SMS_TEMPLATES[message][locale];
-  const params: Record<string, string> = { member: vars.member, helpline: vars.helpline };
+  const params: Record<string, string> = { member1: vars.member1, member2: vars.member2 };
   if (message === 'appeal_notice') {
     if (vars.date === undefined) throw new Error('[suspicion-notice-sms] appeal_notice needs a date');
     params.date = vars.date;
+  } else {
+    if (vars.helpline === undefined) throw new Error(`[suspicion-notice-sms] ${message} needs a helpline`);
+    params.helpline = vars.helpline;
   }
   return t(template.copyKey, params, { locale, namespace: 'claim' });
 }

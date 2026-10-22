@@ -1,9 +1,11 @@
 // The neighbours' WhatsApp REMINDER — the Meta template body per locale (Story 6.31, Task 5.1; WR6, I6; `2026-10-10-303` Q1 A
 // *"with the same words"*, its language by `-310` CF1 A; `2026-10-10-304` Q6 A *"a few"*; `2026-10-17-344` the Hindi).
 //
-// ⭐ THE SAME WORDS (I6, T7): each body is EXACTLY the real `t('peer_mesh_sms.request')` output (`packages/i18n/locales/{en,hi}/
+// ⭐ THE SAME WORDS (I6, T7): each body is EXACTLY the real `t('peer_mesh_wa.reminder')` output (`packages/i18n/locales/{en,hi}/
 // claim.json`) with the member, the link and the helpline replaced by the three Meta body variables, in that order — pinned by a
-// lockstep test calling the REAL `t()`. ⛔ Header, ⛔ footer, ⛔ buttons, ⛔ a "TWT:" prefix (WhatsApp shows the Pariwar's business
+// lockstep test calling the REAL `t()`. ⚠ Story 6.37e rework (`2026-10-22-380` decision 8): that key holds the neighbours' SMS
+// words AS THEY STOOD before `-379` changed the SMS (two name boxes, ⛔ helpline number, a comma, ⛔ "short") — the reminder's words
+// are ⛔ changed (`-379` Not covered), so they live under their own key and no longer follow `peer_mesh_sms.request`. ⛔ Header, ⛔ footer, ⛔ buttons, ⛔ a "TWT:" prefix (WhatsApp shows the Pariwar's business
 // name — PM3's reading). Category UTILITY. If Meta files it as MARKETING or refuses a locale's body, that locale is "Meta refuses"
 // (`-303`): ⛔ reminder in it, the text still goes — ⛔ re-worded here (a wording change is the Panel's; roster Row 35 (b)).
 // ⚠ S1: Meta lists *"Variables cannot be at the start or end of the template"* (2388299, read 2026-10-19). The English body ends
@@ -14,8 +16,8 @@
 export const PEER_MESH_WA_REMINDER_LOCALES = ['en', 'hi'] as const;
 export type PeerMeshWaReminderLocale = (typeof PEER_MESH_WA_REMINDER_LOCALES)[number];
 
-/** The i18n key whose output the bodies equal (the neighbours' text's words — the ruled "same words"). */
-export const PEER_MESH_WA_REMINDER_COPY_KEY = 'peer_mesh_sms.request';
+/** The i18n key whose output the bodies equal (the neighbours' text's words before the 6.37e rework — the ruled "same words"). */
+export const PEER_MESH_WA_REMINDER_COPY_KEY = 'peer_mesh_wa.reminder';
 
 /** The values' order — `{{1}}` the member's FULL name (WR13), `{{2}}` the link, `{{3}}` the Pariwar's helpline. */
 export const PEER_MESH_WA_REMINDER_PARAM_ORDER = ['member', 'link', 'helpline'] as const;

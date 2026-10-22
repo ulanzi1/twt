@@ -4,12 +4,14 @@
 // the order of the Panel's words; the request sheet carries the same text and key; the en words are the Panel's, byte for
 // byte; ⛔ no deadline word (RB16); the slots are typed (6.34 TV4) and named as the i18n params (TV13); the sheet row lists the
 // same types and the MSG91 form; and `$comment.peer_mesh_sms` carries the NOT-YET-HUMAN-REVIEWED marker in BOTH locales.
-// R9 — `fitsDltAlphanumeric` at 40 / 41 code points, Devanagari included.
+// ⭐ Story 6.37e rework (`2026-10-22-379` Q1 A / Q2 A): the name is TWO boxes, `{member1}{member2}` (the shared slots of
+// `sms-member-boxes.ts`); ⛔ helpline (*"…[link], or call us."* — the dash a comma, so the English is GSM-7); "short" dropped
+// (BigDev's words, ratified by `2026-10-22-381` PQ1 A). R9's 40 / 41 legs moved to `sms-member-name.test.ts` (60 / 61, astral included).
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { checkDltTemplateShape } from '@twt/channels';
+import { checkDltTemplateShape, needsUnicode } from '@twt/channels';
 import { t } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
@@ -17,11 +19,11 @@ import {
   DLT_VAR,
   PEER_MESH_REQUEST_SMS_LOCALES,
   PEER_MESH_REQUEST_SMS_TEMPLATES,
-  fitsDltAlphanumeric,
   fitsDltUrl,
   peerMeshRequestDltConfigKey,
   renderPeerMeshRequest,
 } from '../src/scheduler/peer-mesh-sms-templates.js';
+import { MEMBER_BOX_SLOTS } from '../src/scheduler/sms-member-boxes.js';
 
 import { expectRegisteredTextRow, i18nParamNames, msg91Form, sheetRowByConfigKey } from './_dlt-template-sheet.js';
 
@@ -56,26 +58,24 @@ function assertNoDeadlineThreat(body: string, label: string): void {
   for (const term of HINDI_DEADLINE_TERMS) expect(body, `"${term}" in ${label}`).not.toContain(term);
 }
 
-/** The Panel's words (`-303` Q1 A, "two" → "a few" by `-304` Q6 A), `[member]` / `[link]` / `[number]` as `{#var#}`. */
-const PANEL_EN =
-  'We have been told that {#var#} has died. If you knew them, please answer a few short questions: {#var#} — or call the helpline {#var#}.';
+/** The Panel's words (`-379` Q2 A — `-303` Q1 A as amended by `-304` Q6 A and narrowed), `[member]` as two `{#var#}`, `[link]` as
+ * one — EXCEPT "a few questions" for the ratified "a few short questions" (BigDev's words, ratified by `-381` PQ1 A). */
+const PANEL_EN = 'We have been told that {#var#}{#var#} has died. If you knew them, please answer a few questions: {#var#}, or call us.';
 
-const MEMBER = '\u0001MEMBER\u0001';
+const MEMBER1 = '\u0001MEMBER1\u0001';
+const MEMBER2 = '\u0004MEMBER2\u0004';
 const LINK = '\u0003LINK\u0003';
-const HELP = '\u0002HELPLINE\u0002';
 
 describe('the peer mesh request SMS templates (PM3 — one message × both locales)', () => {
   it.each(PEER_MESH_REQUEST_SMS_LOCALES)('⭐ %s — the real t() renders EXACTLY the registered DLT text', (locale) => {
     const template = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
     // ⭐ DISTINCT markers per variable — one shared token would let a swap pass.
-    const rendered = renderPeerMeshRequest(locale, { member: MEMBER, link: LINK, helpline: HELP });
-    expect(rendered.split(MEMBER)).toHaveLength(2);
+    const rendered = renderPeerMeshRequest(locale, { member1: MEMBER1, member2: MEMBER2, link: LINK });
+    // The two boxes side by side, box 1 first, nothing between them; then the link.
+    expect(rendered.split(MEMBER1 + MEMBER2)).toHaveLength(2);
     expect(rendered.split(LINK)).toHaveLength(2);
-    expect(rendered.split(HELP)).toHaveLength(2);
-    // The order of the Panel's words: member, link, helpline.
-    expect(rendered.indexOf(MEMBER)).toBeLessThan(rendered.indexOf(LINK));
-    expect(rendered.indexOf(LINK)).toBeLessThan(rendered.indexOf(HELP));
-    expect(rendered.replace(MEMBER, DLT_VAR).replace(LINK, DLT_VAR).replace(HELP, DLT_VAR)).toBe(template.registeredText);
+    expect(rendered.indexOf(MEMBER2)).toBeLessThan(rendered.indexOf(LINK));
+    expect(rendered.replace(MEMBER1, DLT_VAR).replace(MEMBER2, DLT_VAR).replace(LINK, DLT_VAR)).toBe(template.registeredText);
     expect(template.registeredText.split(DLT_VAR)).toHaveLength(4);
   });
 
@@ -93,9 +93,10 @@ describe('the peer mesh request SMS templates (PM3 — one message × both local
     expect(SHEET).toContain(key);
   });
 
-  it("⭐ en — the Panel's words, byte for byte (⛔ \"TWT:\")", () => {
+  it("⭐ en — the Panel's words, byte for byte (⛔ \"TWT:\", ⛔ the dash, ⛔ the helpline)", () => {
     expect(PEER_MESH_REQUEST_SMS_TEMPLATES.en.registeredText).toBe(PANEL_EN);
     expect(PEER_MESH_REQUEST_SMS_TEMPLATES.en.registeredText).not.toContain('TWT');
+    expect(PEER_MESH_REQUEST_SMS_TEMPLATES.en.registeredText).not.toContain('—');
   });
 
   it('⛔ hi — ⛔ the `-303` routing block\'s "two" (Trap 19): "a few" is कुछ', () => {
@@ -106,18 +107,14 @@ describe('the peer mesh request SMS templates (PM3 — one message × both local
 
   it.each(PEER_MESH_REQUEST_SMS_LOCALES)('⛔ %s — every variable filled, ⛔ no deadline threat (RB16)', (locale) => {
     const body = renderPeerMeshRequest(locale, {
-      member: 'Ramesh K.',
+      member1: 'Ramesh ',
+      member2: 'Kumar',
       link: 'https://example.org/peer-request?c=ABCDEFGHJKLM',
-      helpline: '1800123456',
     });
-    expect(body).toContain('Ramesh K.');
+    expect(body).toContain('Ramesh Kumar');
     expect(body).toContain('https://example.org/peer-request?c=ABCDEFGHJKLM');
-    expect(body).toContain('1800123456');
     expect(body).not.toMatch(/\{\w+\}/);
-    assertNoDeadlineThreat(
-      body.replace('1800123456', 'HELPLINE').replace('https://example.org/peer-request?c=ABCDEFGHJKLM', 'LINK'),
-      `the ${locale} request`,
-    );
+    assertNoDeadlineThreat(body.replace('https://example.org/peer-request?c=ABCDEFGHJKLM', 'LINK'), `the ${locale} request`);
   });
 
   it.each([
@@ -126,19 +123,17 @@ describe('the peer mesh request SMS templates (PM3 — one message × both local
     ['Devanagari digits', ' ७'],
     ['an English "within 7 days"', ' Reply within 7 days.'],
   ])('the deny-list is LIVE — the SAME assertion THROWS on %s written into a real Hindi body', (_label, threat) => {
-    const clean = renderPeerMeshRequest('hi', { member: 'X', link: 'L', helpline: 'Y' });
+    const clean = renderPeerMeshRequest('hi', { member1: 'X', member2: 'W', link: 'L' });
     assertNoDeadlineThreat(clean, 'clean');
     expect(() => assertNoDeadlineThreat(`${clean}${threat}`, 'threatened')).toThrow();
   });
 
   it.each(PEER_MESH_REQUEST_SMS_LOCALES)('⭐ Story 6.34 — %s declares typed slots (TV4) and passes the shape check', (locale) => {
     const template = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
-    expect(template.slots).toEqual([
-      { name: 'member', type: 'alphanumeric', maxLength: 40, label: 'deceased member name' },
-      { name: 'link', type: 'url', maxLength: 120, label: 'app link to the questions' },
-      { name: 'helpline', type: 'cbn', maxLength: 14, label: 'helpline number' },
-    ]);
+    expect(template.slots).toEqual([...MEMBER_BOX_SLOTS, { name: 'link', type: 'url', maxLength: 120, label: 'app link to the questions' }]);
     expect(checkDltTemplateShape(template.registeredText, template.slots)).toEqual([]);
+    // the SMS type follows the TEXT — template 14 (en) lost its em dash, so it is GSM-7; the Hindi is Unicode
+    expect(needsUnicode(template.registeredText)).toBe(locale === 'hi');
   });
 
   it.each(PEER_MESH_REQUEST_SMS_LOCALES)('⭐ Story 6.34 — %s: the slot names ARE the i18n params, in order (TV13)', (locale) => {
@@ -169,26 +164,6 @@ describe('the peer mesh request SMS templates (PM3 — one message × both local
     expect(comment).toContain('NOT YET HUMAN-REVIEWED');
     expect(comment).toContain('Row 28');
     expect(comment).toContain('must match the registered DLT content byte for byte');
-  });
-});
-
-describe('fitsDltAlphanumeric — R9: the `{member}` slot counts CODE POINTS, ≤ 40', () => {
-  it.each([
-    ['40 Latin letters', 'a'.repeat(40), true],
-    ['41 Latin letters', 'a'.repeat(41), false],
-    ['40 Devanagari code points', 'क'.repeat(40), true],
-    ['41 Devanagari code points', 'क'.repeat(41), false],
-    ['a Devanagari name with spaces and matras', 'रमेश कुमार सिंह', true],
-    ['the empty string', '', true],
-  ])('%s ⇒ %s', (_label, value, fits) => {
-    expect(fitsDltAlphanumeric(value)).toBe(fits);
-  });
-
-  it('counts an astral character ONCE (code points, ⛔ UTF-16 units)', () => {
-    const astral = '𝐀'; // U+1D400 — two UTF-16 units
-    expect(astral.length).toBe(2);
-    expect(fitsDltAlphanumeric(astral.repeat(40))).toBe(true);
-    expect(fitsDltAlphanumeric(astral.repeat(41))).toBe(false);
   });
 });
 

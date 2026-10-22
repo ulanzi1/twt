@@ -41,7 +41,7 @@ shorter per-segment length.
 - **Setting up each template in MSG91** (Story 6.37, `2026-10-17-345`; ADR-0041; roster Row 32 (d)) — only AFTER the operator approved
   it on SmartPing: (1) create the template in MSG91 from its *"MSG91 template"* cell, copied exactly; (2) enter its DLT template id (the
   19-digit TE id SmartPing issued) and the sender id mapped to the PE; (3) choose the SMS type from the TEXT, ⛔ the locale — **Unicode
-  for every Hindi template AND for template 14** (its English holds an em dash), Normal for the other English ones; (4) mark the version
+  for every Hindi template**, Normal for every English one (template 14's em dash became a comma — Story 6.37e, `2026-10-22-379` Q2 A); (4) mark the version
   **default**; (5) leave MSG91's URL shortener OFF and put the app-link domain on its *"Skip URL"* list (the adapter also sends
   `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key — ⚠ for the
   two OTP templates (15, 16) only, until row 6-37b (delivery reports) is `done`: ⛔ a claim-text id (1–14) is set before then, even
@@ -72,21 +72,27 @@ shorter per-segment length.
 
 ## Shape rules (TCCCPR 2nd Amendment, 12 Feb 2025; the Feb 2023 and Nov 2025 Directions)
 
-- **At most three variables**; a third only *"in case of exigency"* — with a justification line. **Templates 11–12** carry three: *"the
-  last date to appeal is the substance of the notice — `2026-10-08-293` item 1 B"*. **Templates 13–14** carry three: *"the link IS the
-  request — without it the neighbour cannot reach the questions; the helpline is the ruled alternative for one who cannot open it —
-  `2026-10-10-303` Q1 A"*.
-- **⛔ Two variables side by side** — separated only by a space, a comma or other punctuation — unless both are alphanumeric.
+- **At most three variables**; a third only *"in case of exigency"* — with a justification line. Since Story 6.37e's rework **every one
+  of templates 7–14 carries three, because the name needs two boxes** (`2026-10-22-379` Q1 A — one 30-letter box would cost a long-named
+  member's family the text). **Templates 7–10**: *"the helpline number is the only action the text asks for — `2026-09-28-262` FQ7 B,
+  `2026-10-07-291` Q2 B"*. **Templates 11–12**: *"the last date to appeal is the substance of the notice — `2026-10-07-293` item 1 B"*.
+  **Templates 13–14**: *"the link IS the request — without it the neighbour cannot reach the questions — `2026-10-10-303` Q1 A"*. The
+  helpline number left 11–14 to make room for the second box (`-379` Q2 A).
+- **⛔ Two variables side by side** — separated only by a space, a comma or other punctuation — unless both are alphanumeric. Templates
+  7–14 put the two name boxes side by side with NOTHING between them — both alphanumeric, so allowed (`checkDltTemplateShape` agrees); whether
+  the operator's scrubber and MSG91 accept it (and a value that begins or ends with a space) is roster Row 30 (d) — ⛔ insert a separator:
+  it would change the Panel's words.
 - **≥ 30 % of the template fixed**, counted against every variable at its ceiling — formally a condition of the more-than-three-variables
-  clause, applied here to EVERY template (the conservative reading). Every template 1–16 passes (lowest: 13–14 — 14 (en) at 39.6 %, 13 (hi) at 43.7 %, Story 6.27c; then 7–12 at 52–62 %).
+  clause, applied here to EVERY template (the conservative reading). Every template 1–16 passes (lowest: 13–14 — 14 (en) at 34.7 %, 13 (hi) at 40.0 %; then 7–12 at 44–60 %; 1–6 and 15–16 at 87–91 % —
+  re-derived 2026-10-22 with the checker's own arithmetic for Story 6.37e's two 30-letter boxes).
 - **⛔ Another type for `{member}` / `{date}`** — the claim texts' words are ratified; a type that needs a different text (a date type, a
   shorter name) is a text change and goes back through the §0 gate.
   ⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* the shorter name form for an over-long name (`-359` / `-362` B —
   "Ramesh S." only when the full name does not fit) WENT through the §0 gate (the Panel ruled it) and needs ⛔ type or text change —
   it is a VALUE of the same alphanumeric `{member}` variable. Its full stop is asked at Row 30 (d) with the date's hyphen.
   ⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above edited:* the `-377` note above is SUPERSEDED by [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A — ⛔ "Ramesh S."; the name travels in two 30-letter alphanumeric variables side by side, whole whenever it fits 60, shortened above 60 by the Panel's rule (titles dropped, then initials from the front, ⛔ never the last word); only a name that still does not fit is refused / `no_target:name_too_long`. The rows and rules change with the code.
-- ⚠ *"A variable cannot be the last word"* (MSG91's FAQ — secondary, undated): templates 8, 10, 12 and 14 end `… helpline <variable>.` (a
-  final full stop) — asked at Row 30 (d).
+- ⚠ *"A variable cannot be the last word"* (MSG91's FAQ — secondary, undated): templates 8 and 10 end `… helpline <variable>.` (a
+  final full stop) — asked at Row 30 (d). Since Story 6.37e's rework 12 and 14 end in words (`-379` Q2 A).
 - Each registry's unit test runs `checkDltTemplateShape` over every entry; the CI gate `dlt-typed-variables` keeps every variable typed.
 
 ## ⛔ Not registrable — the five alert categories (Story 6.34 TV6)
@@ -106,14 +112,14 @@ a later story writes fixed wording (en + hi) for each, with its own §0.
 | 4 | Closure notice | en | 6.19b builds (D32); 6.19c sends | `sms.dlt.template_id.claim_correction.closure_notice.en` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | Claim ##reference##: this claim was closed because no correction of the bank details was received. This closure cannot be appealed. A new claim may be filed through the helpline on ##helpline## or the District Admin. |
 | 5 | Replacement-certificate reminder | hi | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.hi` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | दावा ##reference##: आपके परिवार के दावे के लिए ऐसा मृत्यु प्रमाणपत्र चाहिए जिसमें मृत्यु की तिथि स्पष्ट हो। कृपया ऐप से भेजें या हेल्पलाइन ##helpline## पर कॉल करें। आपका दावा अब भी खुला है। |
 | 6 | Replacement-certificate reminder | en | 6.19d | `sms.dlt.template_id.claim_correction.certificate_reminder.en` | 1 alphanumeric (claim reference, ≤ 8) · 2 cbn (helpline number, ≤ 14) | Claim ##reference##: your family's claim still needs a death certificate that clearly shows the date of death. Please send it in the app, or call the helpline on ##helpline##. Your claim is still open. |
-| 7 | Suspicion refusal notice (`-262` FQ7 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | ##member## के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
-| 8 | Suspicion refusal notice (`-262` FQ7 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | A claim for ##member## could not go ahead. Please call the helpline ##helpline##. |
-| 9 | Closure after an allowed appeal (`-291` Q2 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | ##member## के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
-| 10 | Closure after an allowed appeal (`-291` Q2 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 cbn (helpline number, ≤ 14) | Your claim for ##member## has been closed. Please call the helpline ##helpline##. |
-| 11 | The refused person's appeal date (`-293` item 1 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) · 3 cbn (helpline number, ≤ 14) | ##member## के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध ##date## तक अपील की जा सकती है। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
-| 12 | The refused person's appeal date (`-293` item 1 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) · 3 cbn (helpline number, ≤ 14) | The claim for ##member## could not go ahead. It can be appealed until ##date##. Please call the helpline ##helpline##. |
-| 13 | Request to each of the five neighbours (`-303` Q1 A, `-304` Q6 A) | hi | 6.27c | `sms.dlt.template_id.peer_mesh.request.hi` | 1 alphanumeric (deceased member name, ≤ 40) · 2 url (app link to the questions, ≤ 120) · 3 cbn (helpline number, ≤ 14) | हमें बताया गया है कि ##member## का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ छोटे प्रश्नों के उत्तर दें: ##link## — या हेल्पलाइन ##helpline## पर कॉल करें। |
-| 14 | Request to each of the five neighbours (`-303` Q1 A, `-304` Q6 A) | en | 6.27c | `sms.dlt.template_id.peer_mesh.request.en` | 1 alphanumeric (deceased member name, ≤ 40) · 2 url (app link to the questions, ≤ 120) · 3 cbn (helpline number, ≤ 14) | We have been told that ##member## has died. If you knew them, please answer a few short questions: ##link## — or call the helpline ##helpline##. |
+| 7 | Suspicion refusal notice (`-262` FQ7 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.hi` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 cbn (helpline number, ≤ 14) | ##member1####member2## के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
+| 8 | Suspicion refusal notice (`-262` FQ7 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.refusal_notice.en` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 cbn (helpline number, ≤ 14) | A claim for ##member1####member2## could not go ahead. Please call the helpline ##helpline##. |
+| 9 | Closure after an allowed appeal (`-291` Q2 B) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.hi` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 cbn (helpline number, ≤ 14) | ##member1####member2## के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन ##helpline## पर कॉल करें। |
+| 10 | Closure after an allowed appeal (`-291` Q2 B) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.closed_notice.en` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 cbn (helpline number, ≤ 14) | Your claim for ##member1####member2## has been closed. Please call the helpline ##helpline##. |
+| 11 | The refused person's appeal date (`-293` item 1 B, `-379` Q2 A) | hi | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.hi` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) | ##member1####member2## के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध ##date## तक अपील की जा सकती है। कृपया हेल्पलाइन पर कॉल करें। |
+| 12 | The refused person's appeal date (`-293` item 1 B, `-379` Q2 A) | en | 6.24b | `sms.dlt.template_id.suspicion_notice.appeal_notice.en` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 alphanumeric (last date to appeal, `DD-MM-YYYY`, ≤ 10) | The claim for ##member1####member2## could not go ahead. It can be appealed until ##date##. Please call the helpline. |
+| 13 | Request to each of the five neighbours (`-303` Q1 A, `-304` Q6 A, `-379` Q2 A) | hi | 6.27c | `sms.dlt.template_id.peer_mesh.request.hi` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 url (app link to the questions, ≤ 120) | हमें बताया गया है कि ##member1####member2## का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ प्रश्नों के उत्तर दें: ##link##, या हमें कॉल करें। |
+| 14 | Request to each of the five neighbours (`-303` Q1 A, `-304` Q6 A, `-379` Q2 A) | en | 6.27c | `sms.dlt.template_id.peer_mesh.request.en` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 url (app link to the questions, ≤ 120) | We have been told that ##member1####member2## has died. If you knew them, please answer a few questions: ##link##, or call us. |
 | 15 | OTP — login (5 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_login` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT login code. Valid 5 min. Do not share. |
 | 16 | OTP — step-up (3 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_step_up` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT verification code. Valid 3 min. Do not share. |
 
@@ -159,10 +165,14 @@ then is a dev / staging deploy, where these ids stay unset and every send fails 
 that template's approval** — a provider-side template fault after the sweep's config check (`dlt_template_not_approved`, `auth`) is a FINAL
 `error`, and for a once-ever notice that uses up its only slot (`2026-10-08-295` RB12, edge ii).
 
-The en words are the Trustee Panel's, verbatim (`-262` FQ7 B, `-291` Q2 B, `-293` item 1 B), with ONE addition: the Pariwar's helpline
-number after *"Please call the helpline"* — 6.19's per-Pariwar key (`claimCorrectionHelplineConfigKey`), the number the Panel told the
-family to call. The variables, in order: **(1) the member's name** in the Pariwar's mode-resolved form (`-181`); for 11–12 **(2) the last
-date to appeal**, `DD-MM-YYYY`, Latin digits in BOTH locales (RB6); then **the helpline number**.
+The en words are the Trustee Panel's, verbatim (`-262` FQ7 B, `-291` Q2 B, `-293` item 1 B — its *"Please call the helpline."* returned to
+by `2026-10-22-379` Q2 A), with ONE addition in 7–10: the Pariwar's helpline number after *"Please call the helpline"* — 6.19's
+per-Pariwar key (`claimCorrectionHelplineConfigKey`), the number the Panel told the family to call; 11–12 carry ⛔ number (`-379` Q2 A).
+The variables, in order: **(1)–(2) the member's name** in the Pariwar's mode-resolved form (`-181`), across TWO alphanumeric boxes side by
+side, ≤ 30 each — whole whenever it fits 60, shortened above 60 by the Panel's rule (titles dropped, then initials from the front, ⛔ never
+the last word), and a name that still does not fit refused (`value_too_long` + alarm), ⛔ truncated (`-379` Q1 A;
+`apps/jobs/src/scheduler/sms-member-name.ts`); then **(3)** for 7–10 **the helpline number**, for 11–12 **the last date to appeal**,
+`DD-MM-YYYY`, Latin digits in BOTH locales (RB6).
 ⭐ **Two carve-outs from 1–6's rules, recorded in `2026-10-08-295`:** (a) **D33** — 7–12 **name the member**, because the Panel's ratified
 texts do; 1–6 stay name-free (D33 is ⛔ not weakened). (b) **S4 / T6** — ⛔ no deadline threat in 7–12 EXCEPT 11–12's date slot (the Panel's
 *"until [date]"*, RB16). ⛔ No other person is named; ⛔ nobody is accused. The copy is `suspicion_sms.*` in
@@ -179,12 +189,12 @@ does not fit is refused (`value_too_long` + alarm), ⛔ never truncated. ⛔ Tex
 
 | # | Registered text |
 |---|---|
-| 7 | {#var#} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
-| 8 | A claim for {#var#} could not go ahead. Please call the helpline {#var#}. |
-| 9 | {#var#} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
-| 10 | Your claim for {#var#} has been closed. Please call the helpline {#var#}. |
-| 11 | {#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
-| 12 | The claim for {#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline {#var#}. |
+| 7 | {#var#}{#var#} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
+| 8 | A claim for {#var#}{#var#} could not go ahead. Please call the helpline {#var#}. |
+| 9 | {#var#}{#var#} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
+| 10 | Your claim for {#var#}{#var#} has been closed. Please call the helpline {#var#}. |
+| 11 | {#var#}{#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन पर कॉल करें। |
+| 12 | The claim for {#var#}{#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline. |
 
 ## The wording of templates 13–14 (Story 6.27c — the text to register)
 
@@ -192,11 +202,13 @@ does not fit is refused (`value_too_long` + alarm), ⛔ never truncated. ⛔ Tex
 conditions) **— and ⛔ the Hindi 13 until Row 28 closes too** (`peer-mesh-request-hindi-human-review`). ⭐ **Set each id only after the operator confirms that template's approval** — a provider-side template fault after the
 child's config check is a FINAL `error`, and for a once-ever request that uses up that neighbour's only slot (`2026-10-10-311` PM16).
 
-The en words are the Trustee Panel's, verbatim (`-303` Q1 A, *"two"* amended to *"a few"* by `-304` Q6 A); the routing note's *"TWT:"*
-prefix is dropped — the DLT header names the sender (`-311` PM3's author reading). The variables, in order: **(1) the member's name** in
-the Pariwar's mode-resolved form (`-181`) — a name longer than 40 characters is ⛔ texted (`no_target:name_too_long`), ⛔ never truncated;
-**(2) the app link** `https://<domain>/peer-request?c=<code>` (Story 6.30 — the URL-whitelisting section below); **(3) the helpline
-number**. ⭐ The **D33** carve-out applies as for 7–12 (the ruled text names the member); ⛔ no deadline word, ⛔ no claim, money, family,
+The en words are the Trustee Panel's (`-303` Q1 A, *"two"* amended to *"a few"* by `-304` Q6 A, the ending narrowed to *"…[link], or call
+us."* by `2026-10-22-379` Q2 A — ⛔ helpline number, the dash a comma), with *"a few questions"* for the earlier *"a few short
+questions"* (BigDev's words, ratified by `2026-10-22-381` PQ1 A — the TEXT only; the WhatsApp reminder keeps "short"). The routing note's *"TWT:"*
+prefix is dropped — the DLT header names the sender (`-311` PM3's author reading). The variables, in order: **(1)–(2) the member's name**
+in the Pariwar's mode-resolved form (`-181`), across TWO alphanumeric boxes side by side, ≤ 30 each — whole whenever it fits 60, shortened
+above 60 by the Panel's rule; a name that still does not fit is ⛔ texted (`no_target:name_too_long`), ⛔ never truncated (`-379` Q1 A);
+**(3) the app link** `https://<domain>/peer-request?c=<code>` (Story 6.30 — the URL-whitelisting section below). ⭐ The **D33** carve-out applies as for 7–12 (the ruled text names the member); ⛔ no deadline word, ⛔ no claim, money, family,
 nominee, claimant or reporter. The copy is `peer_mesh_sms.request` in `packages/i18n/locales/{en,hi}/claim.json`; the registry is
 `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`, and `apps/jobs/tests/peer-mesh-sms-templates.test.ts` proves the real `t()` renders
 EXACTLY the text below and that this sheet carries it. The LANGUAGE is the Pariwar's default until row 6-35 lets members choose
@@ -212,8 +224,8 @@ go-live gate **Row 28** (`peer-mesh-request-hindi-human-review`); a reviewed cha
 
 | # | Registered text |
 |---|---|
-| 13 | हमें बताया गया है कि {#var#} का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ छोटे प्रश्नों के उत्तर दें: {#var#} — या हेल्पलाइन {#var#} पर कॉल करें। |
-| 14 | We have been told that {#var#} has died. If you knew them, please answer a few short questions: {#var#} — or call the helpline {#var#}. |
+| 13 | हमें बताया गया है कि {#var#}{#var#} का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ प्रश्नों के उत्तर दें: {#var#}, या हमें कॉल करें। |
+| 14 | We have been told that {#var#}{#var#} has died. If you knew them, please answer a few questions: {#var#}, or call us. |
 
 ## The wording of templates 15–16 (Story 5.9 — the OTP; typed by Story 6.34)
 
@@ -263,19 +275,22 @@ characters (**2 GSM segments**), the Hindi 182 characters of Unicode (**3 segmen
 ⭐ **The suspicion notices (templates 7–12, Story 6.24b):** ONE transactional DLT SMS per claim per purpose, **EVER** (the notice table's
 UNIQUE) — a refused claim's notice (7–8) and its refused person's appeal date (11–12), and a closed claim's notice (9–10); refusals are
 rare. ⚠ Delivery is at-least-once (a timeout or crash after a gateway accept may send a second — recorded, ⛔ never hidden). Rendered with
-a 19-character name, a 10-digit helpline number and a 10-character date: 8 and 10 are 88 characters (**1 GSM segment**), 12 is 127
-(**1**); 7 is 101 and 9 is 96 characters of Unicode (**2 segments** each), 11 is 145 (**3**). A longer name can add a segment.
+a 19-character name, a 10-digit helpline number and a 10-character date (re-derived 2026-10-22 for Story 6.37e's rework — the name in two
+boxes, ⛔ number in 11–12): 8 and 10 are 88 characters (**1 GSM segment**), 12 is 116 (**1**); 7 is 101, 9 is 96 and 11 is 134 characters
+of Unicode (**2 segments** each). With a 60-character name (the longest sent whole): 8 and 10 are 129 and 12 is 157 (**1** each); 7 is
+142, 9 is 137 and 11 is 175 (**3** each).
 
 ⭐ **The request to the five neighbours (templates 13–14, Story 6.27c):** ONE transactional DLT SMS per neighbour, **EVER** (a ping's
 send is begun once — the CAS from ⛔ begun), at most five TEXTS per reported death (a neighbour skipped at send time is replaced by the next eligible one — a
-replacement skipped in turn is replaced again — so the TEXTS never exceed the original selection; the ping ROWS may exceed five). Rendered with a 19-character name, a 10-digit helpline number and a 55-character
-link (`https://` + a 19-character domain + `/peer-request?c=` + the 12-character code): ⚠ **BOTH are Unicode** — the ruled English
-contains an em dash (U+2014), outside GSM-7 — so 14 (en) is 198 characters (**3 segments** at 67 per part) and 13 (hi) 219 (**4
-segments**). ⚠ The cost the Panel saw (`-311` PM3: the Hindi *"likely THREE segments"*) was understated for both; the words are ruled, so
-it is recorded here, ⛔ never "fixed" by editing the text (an FYI owed to the Panel — `deferred-work.md`). ⚠ That is the TYPICAL case:
-at the registered ceilings (a 40-character name, a 120-character link) 14 (en) reaches 284 characters (**5 segments**) and 13 (hi) 305
-(**5**); a 40-character name alone makes en 219 (**4**); a short name and domain can bring the Hindi to 3 — so per text **en 3–5,
-hi 3–5 segments** (corrected 2026-10-17, 6.27c review round 2). A shorter domain or name can drop a segment.
+replacement skipped in turn is replaced again — so the TEXTS never exceed the original selection; the ping ROWS may exceed five). Rendered with a 19-character name and a 55-character
+link (`https://` + a 19-character domain + `/peer-request?c=` + the 12-character code) — re-derived 2026-10-22 for Story 6.37e's rework
+(two name boxes; ⛔ helpline; the dash a comma; *"a few questions"*): 14 (en) is now **GSM-7** — the em dash was its only non-GSM-7
+character — 170 characters (**2 segments** at 153 per part); 13 (hi) is 194 characters of Unicode (**3 segments** at 67 per part). With a
+60-character name: en 211 (**2**), hi 235 (**4**); at the registered ceilings (a 60-character name, a 120-character link) en 276 (**2**)
+and hi 300 (**5**) — so per text **en 2, hi 3–5 segments**. ⚠ Before the rework the English was Unicode too (198 characters, **3
+segments** — `-303` Q1 A's em dash), and the Panel was told only the Hindi's *"likely THREE segments"* (`-311` PM3) — the words were
+ruled, so it was recorded, ⛔ "fixed" by editing the text; the FYI is written into the 6.37e PQ1 routing note (`deferred-work.md`, BF24).
+A shorter domain or name can drop a segment.
 
 ## URL whitelisting (Story 6.30, -312 AL3)
 
@@ -326,3 +341,4 @@ copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id o
 | 2026-10-12 | 1–12, 15, 16 | ⭐ Variable TYPES declared for every template (the column to select in SmartPing's tagging section) and the MSG91 `##name##` form (Story 6.34, `2026-10-10-313` TV8, `-314` TV13, `-322` C1 / C3); OTP templates 15–16 added (Transactional, numeric `otp`); where-and-how, types, shape-rules and helpline sections; the five alert categories listed as ⛔ registrable; the cost lines re-derived for a digits-only helpline; the URL bullet answered. ⛔ Still not submitted — Row 30 | Story 6.34 | `dlt-variables.ts`; the three registries |
 | 2026-10-16 | 13–14 | ⭐ Wording, typed `{#var#}` slots (alphanumeric · url · cbn), config keys and the MSG91 form written (Story 6.27c, `2026-10-10-303` Q1 A, `-304` Q6 A, `-311` PM3 / PM16); their three-variable justification, the *"lowest"* line and a cost line (BOTH locales Unicode) added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 13–14 until Row 27 closes**; set each id only after the operator confirms that template's approval | Story 6.27c | `peer-mesh-sms-templates.ts` |
 | 2026-10-17 | 1–16 | ⭐ The rejection procedure written (*"If DLT rejects a template …"*, `2026-10-17-349`): ids stay unset until approved; no claim flow live in production with its template unapproved (Row 30 note (8)); Panel wording (7–14 English) back to the Panel before its id is set. ⛔ Still nothing submitted | BigDev | `2026-10-17-349` |
+| 2026-10-22 | 7–14 | ⭐ Story 6.37e rework (`2026-10-22-379` Q1 A / Q2 A; `2026-10-22-380`): the member's name in TWO alphanumeric variables side by side (`{#var#}{#var#}`, ≤ 30 each; MSG91 `##member1####member2##`); 11–14 lose the helpline variable (11–12 *"Please call the helpline."*, 13–14 *"…, or call us."*); 13–14 *"a few questions"* (BigDev's words — routed as `-380` PQ1, ratified by `-381` PQ1 A); 14 (en) is Normal (GSM-7). The three-variable justifications, the side-by-side, lowest-share and last-word lines, the MSG91 SMS-type step and the cost lines re-derived. ⛔ Still not submitted — nothing to re-register | Story 6.37e | `sms-member-boxes.ts`; `sms-member-name.ts`; the two registries |

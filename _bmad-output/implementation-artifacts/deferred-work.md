@@ -4,6 +4,20 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-37e-suspicion-text-short-name-fallback.md — round 2 of the rework review (2026-10-22)
+
+Branch `story/6-37e-suspicion-text-short-name-fallback` at `17c6a97b`, baseline `1e22889e`. Two items, ⛔ neither closed by the row. (The invisible-only-name finding was raised again and is ⛔ re-filed: the first review's item of the same heading below already carries it.)
+⭐ Also still OPEN, ⛔ closed by the row — the two items of the R1 section just below: templates 8 / 10 / 12 provisioned Normal while carrying name variables, and the told "2 parts" cost, waiting for MSG91's answer.
+
+- **A forced cut can leave a space at the edge of a name box** [`apps/jobs/src/scheduler/sms-member-name.ts` (`toBoxes`, the nearest-offset fallback)].
+  `'A B'` → `['A', ' B']`; 29 A's + space + 29 B's → `['A…A', ' B…B']`; 29 A's + space + 30 B's → `['A…A ', 'B…B']`. If MSG91 or the operator trims a variable value the two words merge and the family sees a corrupted name; the send core's check passes (it compares the local concatenation). `-380` NB3 names only the 59–60-code-point case as forced; the 3-code-point and 58-code-point cases are wider than it says.
+  Carried as an open, un-attested provider question at roster Row 30 (d) (adjacent variables, an empty variable, a leading space). ⛔ **Not addressed.** ⭐ Trigger: MSG91's written answer or a device proof on Row 30 (d); a trim ⇒ shorten or refuse a name whose only cuts touch a space.
+- **`-349` decision 4's standing-delegation trigger has fired, and nothing records that it has** [`.decision-log.md` — `-349` decision 4 and `-381`; the DLT sheet's "7–14, English" row carries the trigger].
+  `-349` decision 4: whether staff may register the nearest wording DLT accepts for templates 7–14 *"is raised at the first DLT rejection or change of templates 7–14's English, together with that case."* The English changed twice (`-379`, BigDev's dropped "short"); `-381` records the delegation "⛔ asked, ⛔ granted" — neither asked nor granted — and PQ1 asked about one word. ⚠ Corrected in round 3 (P7): at `HEAD`, `git grep "standing delegation"` returns FIVE files (the decision log, `6-37b-msg91-delivery-reports.md`, the 6-37e story, the 2026-09-08 enum-mint routing note and the DLT sheet); the sheet's "7–14, English" row carries the TRIGGER (*"A standing delegation … is not in place; it is raised with the first such case, `-349` decision 4"*) — what nothing records is that the case has arrived.
+  ⛔ **Not addressed** — recorded, not planned; whether and when to put it is BigDev's. ⭐ Trigger: the next `trustee-panel-routing-note-*`, or the first DLT rejection.
+
+---
+
 ## Deferred from: rework code review of 6-37e-suspicion-text-short-name-fallback.md — R1 (2026-10-22)
 
 R1 (BigDev: *"14 back to Unicode"*) put template 14 back to UNICODE provisioning (DLT sheet MSG91 setup step (3); roster Row 32 note (11)).
@@ -25,6 +39,17 @@ Two items it leaves OPEN. ⛔ Neither is closed by the row.
   "2 parts" holds for an English-letter name — nothing to correct; close this item. NO ⇒ a short TOLD item (an FYI, ⛔ a question) to the
   Panel with the measured figures. Blocks ⛔ merge and ⛔ registration of 13 / 14. ⚠ Either way the figure holds only for a name in English
   letters — a Devanagari name makes the text Unicode whatever the type.
+  ⚠ *Dated note, 2026-10-22 (code review round 2, P2) — three corrections to the bullet above; ⛔ a word of it rewritten, ⛔ a sent note edited:*
+  **(a)** The `-379` note put the cost the other way round: keeping the DASH costs *"about 3–4 parts instead of 2"*; the comma gives 2 — so "told the
+  dash-to-comma change brings … 3–4" reads backwards. **(b)** ⭐ A SECOND note carries the same figure: the SENT `-381` note
+  (`trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md`) told the Panel *"about 170 letters, 2 parts, in English … the comma you chose today
+  brings it down to 2"* — a told item on the NO branch above must correct BOTH notes. **(c)** The `-379` note's *"arrives in two parts … as it already did"*
+  was wrong when sent: the baseline sheet (`1e22889e`) has template 14 (en) at 198 characters, **3 segments**; the `-381` note states the right baseline,
+  and this records the earlier line as an error. **(d)** Four statements elsewhere stand as written and are read with this item: `-380` Consequence 1
+  (*"template 14 is no longer Unicode"*), roster Row 27's "GSM-7 … 2 segments" note, the BF24 item's **Discharged**, and the "shorter neighbours' link"
+  item's "2 GSM segments" — three of them carry a dated note pointing here (Row 27's also reads `-380` Consequence 1 the same way); the decision-log entry is ⛔ edited.
+  ⚠ *Dated note, 2026-10-22 (6.37e code review round 3, P10) — plain words for BigDev's dated note above:* "Blocks ⛔ merge and ⛔ registration of 13 / 14" reads, in this file's register (⛔ negates the next word), as: it blocks
+  NEITHER the merge NOR the registration of 13 / 14 — `-381` lifted that registration hold, and the wait for MSG91's answer is not a gate. The sentence itself is ⛔ rewritten.
 
 ---
 
@@ -64,6 +89,8 @@ Two items it leaves OPEN. ⛔ Neither is closed by the row.
   variables, the title list, initials from the front, the four texts' new wording and slots) is owed — reopen vs new row is BigDev's.
   ⭐ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)):* the row was REOPENED on its branch (BigDev) and the rework is DECIDED (NB1–NB9) — the BUILD
   is owed by row 6-37e (`in-progress`). ⛔ "Closed" until it is `done` on `main`.
+  ⚠ *Dated note, 2026-10-22 (6.37e code review round 2, P4):* "pointing to the app" above is `-378` NQ2 AS PROPOSED. BigDev removed the app pointer before the note was
+  sent — the note as sent and `-379` Q2 A carry none (roster Rows 22 / 27 and the story record it) — so `-379`'s "RULED as put" is true of the SENT wording, ⛔ of this proposal.
 - **A shorter neighbours' link — decided once the Trust's domain is chosen (BigDev 2026-10-22).** Today's link
   `https://<domain>/peer-request?c=<12-char code>` is ~55 characters ⇒ the neighbours' text (templates 13–14) arrives in 2 GSM
   segments (with NQ2's comma). Options recorded, ⛔ decided: (1) a SHORT app-link host + path used DIRECTLY (e.g. `https://twt.in/p/<code>`,
@@ -71,6 +98,8 @@ Two items it leaves OPEN. ⛔ Neither is closed by the row.
   (2) a TWT-run redirect shortener on a subdomain — REVERSES AL3 (`-312`): a redirect often opens the browser, ⛔ the app. BigDev:
   *"let's keep the long URL for now, message may be delivered in 2 part. Later when we have domain, we decide."* ⛔ Not addressed.
   ⭐ Trigger: roster Row 29 (b) — the domain registered.
+  ⚠ *Dated note, 2026-10-22 (6.37e code review round 2, P2):* "2 GSM segments" holds for an English-letter name only if MSG91 sends an all-GSM-7 text on the
+  UNICODE template 14 as GSM-7 ("Deferred from: rework code review … R1"); until it answers read it as 2–5.
 
 ---
 
@@ -705,6 +734,9 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   ceiling is 60, ⛔ 40. The Hindi 3–5 range stands. The FYI line is WRITTEN into the next note,
   `trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md` (⛔ sent) — ⛔ "shown to the Panel" until BigDev sends it.
   ✅ *Dated note, 2026-10-22 ([`2026-10-22-381`](../../.decision-log.md#decision-2026-10-22-381)):* that note was SENT and answered — the FYI is SHOWN to the Panel. **Discharged.**
+  ⚠ *Dated note, 2026-10-22 (6.37e code review round 2, P2):* **Discharged** is the FYI being SHOWN, ⛔ the figure being fixed — the English "≈ 170 ⇒ 2 segments"
+  holds for an English-letter name only if MSG91 sends an all-GSM-7 text on the UNICODE template 14 as GSM-7; until it answers read it as 2–5
+  ("Deferred from: rework code review … R1", the second bullet).
 
 ## Deferred from: dev-story 6.36c (2026-10-16)
 

@@ -250,6 +250,8 @@ blank.
 |---|---|---|
 | `sms.claim_correction.helpline_number.<pariwarId>` (the Pariwar's id, lower-case) | that Pariwar's helpline number, as printed in the SMS | **that Pariwar's** sends fail closed (`error` + alarm) — ⛔ never another Pariwar's number, ⛔ never a default |
 
+⚠ *Dated note, 2026-10-22 (Story 6.37e code review round 2, P4; [`-379`](../../.decision-log.md#decision-2026-10-22-379) Q2 A, `-380` decision 6):* "as printed in the SMS" is true of templates 1–10 ONLY — templates 11–14 no longer print the number (the appeal-date text says *"Please call the helpline."*; the neighbours' text *"…, or call us."*). The key is STILL required for their sends (`-380` decision 6): a missing key fails CLOSED in the shared send core — the sweep and the child check the config first, so no once-ever slot is spent — although no number would be printed. Provision it for every Pariwar, as for 1–10.
+
 ⭐ **The helpline is a callback-number variable (cbn) — write it DIGITS ONLY** (Story 6.34, `2026-10-12-322` C1): toll-free `1800` /
 `1860` + digits (8–13 in all); a landline `0` + STD code + number; a mobile `91` + 10 digits — ⛔ `+`, ⛔ spaces, ⛔ dashes (a country code
 belongs in fixed text, and these texts' words are ratified). The SAME number must be whitelisted as a CBN CTA with the operator.

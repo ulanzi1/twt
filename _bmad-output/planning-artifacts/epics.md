@@ -3328,6 +3328,10 @@ row 6-32); ⛔ never the medical declaration.
 > `_bmad-output/implementation-artifacts/6-27c-peer-mesh-sending-texts-and-links.md` (the 6.27a file is the record).
 >
 > ⚠ **ANNOTATION 2026-10-14 ([`-332`](../../.decision-log.md#decision-2026-10-14-332)) — ⛔ not rewritten.** Row 6-36 no longer waits for row 6-36c ⇒ 6.27c waits for rows 6-36 AND 6-36c (with 6.27b, 6.27d, 6-30, 6-34).
+>
+> ⚠ **ANNOTATION 2026-10-22 ([`-379`](../../.decision-log.md#decision-2026-10-22-379), [`-380`](../../.decision-log.md#decision-2026-10-22-380), [`-381`](../../.decision-log.md#decision-2026-10-22-381); Story 6.37e) — ⛔ not rewritten.**
+> The neighbours' text this story built NO LONGER carries the helpline number (it ends *"…, or call us."*; the dash became a comma), names the member in TWO variables
+> (the whole name up to 60 letters) and says *"a few questions"*, ⛔ "a few short questions". The user story below records what 6.27c built.
 
 As the Trust, I want each of the five chosen neighbours texted once — naming the member, with a link to the questions and the helpline —
 so that the check with neighbours actually reaches people, and ⛔ no text says more than the Panel ruled.

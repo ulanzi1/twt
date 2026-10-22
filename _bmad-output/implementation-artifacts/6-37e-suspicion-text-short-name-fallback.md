@@ -47,7 +47,14 @@ LETTERS: F = found facts (F1–F17); SN = build decisions (SN1–SN7 — ANSWERE
 
 # Story 6.37e: When the member's full name is too long for a text, the family and the neighbours still get the text — with the first name and the surname's initial
 
-Status: done
+Status: in-progress
+
+> ⛔⛔ **REOPENED 2026-10-22 — THE BEHAVIOUR BELOW IS SUPERSEDED BY [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379)**
+> (Trustee-ratified, Q1 A + Q2 A). The Panel replaced `-359` / `-362` option B ("Ramesh S."): the four texts carry the member's FULL name
+> across TWO 30-letter `{member}` variables (60); only above 60 the listed titles are dropped, then the first words become initials, ⛔
+> never the last word; templates 11–14 lose the helpline variable (11–12 *"Please call the helpline."*, 13–14 *"…[link], or call us."*).
+> The branch is ⛔ landed; it carries `-377` / `-378` / `-379`. **Next: rewrite this story against `-379` (`bmad-create-story 6.37e`, a
+> fresh context), then `bmad-dev-story`.** Everything below this banner is the v1.6 story as built — kept until the rewrite.
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Four SMS texts name the deceased member in a `{member}` slot of 40 code points: the three
 > suspicion texts (the nominee's refusal notice — `-262` FQ7 B; the closed notice — `-291` Q2 B; the refused person's appeal notice —
@@ -1004,6 +1011,10 @@ and (d)'s `36/36` was on the tree before these eight patches.
 
 ## Change Log
 
+- v1.7 (2026-10-22) — **REOPENED** (BigDev: *"go ahead"* — reopen on this branch rather than a new row). The PQ1 / PQ2 confirm note was
+  WITHDRAWN unsent (`-378`; BigDev rejected "K. S."); the replacement note was sent and answered — `-379` (Dhiraj Rahul + Kalpana
+  Bharti: Q1 A, Q2 A) supersedes the "Ramesh S." fallback this story built. Status done → in-progress; row 6-37e done → in-progress.
+  ⛔ Code changed in this version; the story is to be rewritten against `-379` before dev resumes.
 - v1.6 (2026-10-22) — `bmad-code-review 6.37e` (whole branch, `1e22889e` → `55bf7477`): Blind Hunter, Edge Case Hunter and Acceptance
   Auditor in parallel, read-only. **0 decision-needed / 8 patch / 2 defer / 11 dismissed** (Review Findings). BigDev's standing instruction
   *"apply all the patches found, if any decision, I will answer it at last"* — no decision arose; all eight applied: the Hindi examples

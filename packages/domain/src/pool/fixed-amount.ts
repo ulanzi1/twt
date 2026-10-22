@@ -328,14 +328,21 @@ export async function resolveUpcomingFixedAmountChange(
  *  2. The row in force just before F (`F.effectiveFrom − 1ms`, same resolver — zero-width rows never
  *     match, so a moot row is never the predecessor) exists and carries a DIFFERENT amount. Genesis and
  *     a same-amount change → false.
- *  3. NO pool of the Pariwar belongs to a cycle committed in `[F.effectiveFrom, committedAt)`. ⚠ POOLS,
- *     ⛔ never a bare `cycle_freeze_commits` count: a zero-claim commit is writable and spawns no pool,
- *     and counting it would suppress the note before any member paid the new amount. Pools of the SAME
- *     cycle all share `committedAt` (excluded by the half-open range), so they are all "first".
+ *  3. NO pool of the Pariwar HOLDING `poolFixedAmount` belongs to a cycle committed in
+ *     `[F.effectiveFrom, committedAt)`. ⚠ POOLS, ⛔ never a bare `cycle_freeze_commits` count: a
+ *     zero-claim commit is writable and spawns no pool, and counting it would suppress the note before
+ *     any member paid the new amount. Pools of the SAME cycle all share `committedAt` (excluded by the
+ *     half-open range), so they are all "first". ⚠ The AMOUNT condition is load-bearing (Review P1): a
+ *     BACKDATED emergency makes F start BEFORE a pool that was spawned — and still holds — the old amount;
+ *     without it that old-amount pool would count as "an earlier pool at the new amount" and the first
+ *     pool that really is at it would get no note (Decision `-383`: the first pool at the new amount
+ *     carries it). In the ordinary case every pool in the range already holds F's amount.
  *
  * change_type-BLIND: an emergency F gets the note too (Decision `2026-10-22-383`, PQ1 = B — a plain fact
- * after the change). ⚠ Known residue: when a backdated emergency DOES match the snapshot, the predecessor
- * is read from the schedule, not from the member's previous pool. RLS-scoped by the caller (both tables).
+ * after the change). ⚠ Known residue (Review P2 — NOT emergency-only): the predecessor is read from the
+ * SCHEDULE, not from the member's previous pool, so it may not be the amount the member last paid — e.g.
+ * two standard rows with no pool between them (700 from Jan 1, back to 500 from Jan 10; the next pool
+ * holds 500 and still gets the note). RLS-scoped by the caller (both tables).
  * Three O(1)-row reads; runs inside the caller's scope transaction.
  */
 export async function resolveFirstCycleUnderAmount(
@@ -359,6 +366,7 @@ export async function resolveFirstCycleUnderAmount(
       and(
         eq(pools.pariwarId, pariwarId),
         eq(cycleFreezeCommits.pariwarId, pariwarId),
+        eq(pools.fixedAmount, input.poolFixedAmount),
         gte(cycleFreezeCommits.committedAt, inForce.effectiveFrom),
         lt(cycleFreezeCommits.committedAt, input.committedAt),
       ),

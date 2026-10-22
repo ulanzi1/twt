@@ -1391,9 +1391,11 @@ export async function resolveMemberLivePool(
 /**
  * ⭐ Story 8.15 (AC1, D3, D8) — the card's staged fixed-amount transition, or `null`.
  *
- *  · The upcoming change is read AS OF THE LIVE POOL'S `committedAt` (D3), ⛔ not `now`: a change that
- *    took effect inside the live window is still a transition for THIS pool (`next_cycle`, Trap 4) —
- *    read at `now` it would just vanish. `excludeAmount` = the pool's own amount, filtered in SQL (D6).
+ *  · The upcoming change is read AS OF THE LIVE POOL'S `committedAt` (D3), ⛔ not `now`, and feeds the
+ *    DATED stages (`scheduled` / `next_month`). `excludeAmount` = the pool's own amount, filtered in SQL (D6).
+ *  · `next_cycle` (Trap 4) is decided from the amount IN FORCE at `now` (Review D1, Option A), ⛔ not from
+ *    that nearest row: with two changes inside one live window the next cycle carries the LATER one, and
+ *    a backdated emergency (`effective_from ≤ C`) is invisible to the as-of-C read.
  *  · `now` (= `deps.clock()`, D9) only LABELS the stage, consistent with `daysRemaining` on the card.
  *  · Fail-soft PER FIELD (D8): a throw → `null` + a warn, ⛔ never `{ assigned:false }`.
  */
@@ -1406,11 +1408,10 @@ async function resolveAmountTransition(
     const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx, input.pariwarId, input.committedAt, {
       excludeAmount: input.poolFixedAmount,
     });
-    const isFirstCycle = await poolDomain.resolveFirstCycleUnderAmount(tx, input.pariwarId, {
-      committedAt: input.committedAt,
-      poolFixedAmount: input.poolFixedAmount,
-    });
-    const selected = poolDomain.selectFixedAmountTransition({
+    // Review D1 (Option A): the amount IN FORCE at `now` decides `next_cycle` — the next cycle snapshots
+    // whatever is in force at ITS commit, and `upcoming` is only the nearest row after C.
+    const inForceNow = await poolDomain.resolveEffectiveFixedAmountRow(tx, input.pariwarId, input.now);
+    const staged = {
       poolFixedAmount: input.poolFixedAmount,
       poolCommittedAt: input.committedAt,
       now: input.now,
@@ -1418,8 +1419,17 @@ async function resolveAmountTransition(
         upcoming === null
           ? null
           : { effectiveFrom: upcoming.effectiveFrom, fixedAmount: upcoming.fixedAmount, changeType: upcoming.changeType },
-      isFirstCycle,
-    });
+      inForceNow: inForceNow === null ? null : { fixedAmount: inForceNow.fixedAmount },
+    };
+    // Review P3: the first-cycle read (up to three queries) only matters when no upcoming stage wins (D7).
+    const isFirstCycle =
+      poolDomain.selectUpcomingStage(staged) === null
+        ? await poolDomain.resolveFirstCycleUnderAmount(tx, input.pariwarId, {
+            committedAt: input.committedAt,
+            poolFixedAmount: input.poolFixedAmount,
+          })
+        : false;
+    const selected = poolDomain.selectFixedAmountTransition({ ...staged, isFirstCycle });
     return selected === null ? null : toContractAmountTransition(selected);
   } catch (err) {
     request.log.warn({ err }, 'active-contribution: amount-transition read failed — showing no transition line');

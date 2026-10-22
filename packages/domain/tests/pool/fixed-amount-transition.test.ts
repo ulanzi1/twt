@@ -10,19 +10,25 @@ import { describe, expect, it } from 'vitest';
 
 import {
   selectFixedAmountTransition,
+  selectUpcomingStage,
   type FixedAmountTransitionInput,
 } from '../../src/pool/index.js';
 
 const ist = (local: string): Date => new Date(`${local}+05:30`);
 
 // A pool committed 2027-01-10 at ₹500; the change under test is to ₹600 unless a leg says otherwise.
+// `inForceNow` is the amount IN FORCE at `now` (Review D1): ₹500 = nothing has changed since the snapshot.
 const BASE: FixedAmountTransitionInput = {
   poolFixedAmount: 500,
   poolCommittedAt: ist('2027-01-10T09:00:00'),
   now: ist('2027-01-15T12:00:00'),
   upcoming: null,
+  inForceNow: { fixedAmount: 500 },
   isFirstCycle: false,
 };
+
+/** The amount in force at `now` differs from the pool's snapshot — the card's `next_cycle` condition. */
+const inForce = (fixedAmount: number): FixedAmountTransitionInput['inForceNow'] => ({ fixedAmount });
 
 function upcoming(
   effectiveFrom: Date,
@@ -67,10 +73,16 @@ describe('selectFixedAmountTransition — the stages (AC1)', () => {
 
   it('next_cycle: the change took effect AFTER the pool was committed but by now (Trap 4) — no date', () => {
     expect(
-      selectFixedAmountTransition({ ...BASE, upcoming: upcoming(ist('2027-01-12T00:00:00'), 650) }),
+      selectFixedAmountTransition({
+        ...BASE,
+        upcoming: upcoming(ist('2027-01-12T00:00:00'), 650),
+        inForceNow: inForce(650),
+      }),
     ).toEqual({ stage: 'next_cycle', newAmount: 650 });
-    // The boundary: effective EXACTLY at now is in force → next_cycle.
-    expect(selectFixedAmountTransition({ ...BASE, upcoming: upcoming(BASE.now) })?.stage).toBe('next_cycle');
+    // The boundary: effective EXACTLY at now is in force (the resolver is `effective_from ≤ now`) → next_cycle.
+    expect(
+      selectFixedAmountTransition({ ...BASE, upcoming: upcoming(BASE.now), inForceNow: inForce(600) })?.stage,
+    ).toBe('next_cycle');
   });
 
   it('a row at or before the pool commit is never a transition for this pool (the read is anchored at C)', () => {
@@ -164,12 +176,87 @@ describe('selectFixedAmountTransition — D6 / D7', () => {
   });
 
   it.each([
-    ['scheduled', '2027-04-14T00:00:00'],
-    ['next_month', '2027-02-20T00:00:00'],
-    ['next_cycle', '2027-01-12T00:00:00'],
-  ] as const)('D7: an upcoming %s wins over first_cycle — one line only', (stage, eff) => {
-    const out = selectFixedAmountTransition({ ...BASE, isFirstCycle: true, upcoming: upcoming(ist(eff)) });
+    ['scheduled', { upcoming: upcoming(ist('2027-04-14T00:00:00')) }],
+    ['next_month', { upcoming: upcoming(ist('2027-02-20T00:00:00')) }],
+    ['next_cycle', { upcoming: upcoming(ist('2027-01-12T00:00:00')), inForceNow: inForce(600) }],
+  ] as const)('D7: an upcoming %s wins over first_cycle — one line only', (stage, patch) => {
+    const out = selectFixedAmountTransition({ ...BASE, isFirstCycle: true, ...patch });
     expect(out?.stage).toBe(stage);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐ REVIEW D1 (Option A) — `next_cycle` names the amount IN FORCE at `now`, ⛔ not the nearest row
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// The as-of-C read returns only the NEAREST row after C (`LIMIT 1`). Three real sequences fooled it.
+describe('selectFixedAmountTransition — next_cycle names the amount in force NOW (Review D1)', () => {
+  const R2 = ist('2027-01-12T00:00:00'); // C < R2 ≤ now — the NEAREST change after C (what the as-of-C read returns)
+
+  it('TWO changes inside the live window: the line names the LATER one (the amount the next cycle will carry)', () => {
+    // Pool ₹500; ₹600 from R2; ₹700 from R3. The nearest-row read returns R2 (₹600) — the old selector
+    // announced "from the next cycle ₹600" while the next cycle asks ₹700.
+    expect(
+      selectFixedAmountTransition({ ...BASE, upcoming: upcoming(R2, 600), inForceNow: inForce(700) }),
+    ).toEqual({ stage: 'next_cycle', newAmount: 700 });
+  });
+
+  it('a later change that REVERTS to the pool\'s amount: the next cycle is unchanged → nothing is announced', () => {
+    // ₹600 from R2, back to ₹500 from R3. `excludeAmount` drops R3, so the read returns R2 — the old
+    // selector announced a change that was already undone.
+    expect(selectFixedAmountTransition({ ...BASE, upcoming: upcoming(R2, 600), inForceNow: inForce(500) })).toBeNull();
+    // …and the first-cycle note, if it applies, is still reachable (the reverted row is not "upcoming").
+    expect(
+      selectFixedAmountTransition({
+        ...BASE,
+        isFirstCycle: true,
+        upcoming: upcoming(R2, 600),
+        inForceNow: inForce(500),
+      }),
+    ).toEqual({ stage: 'first_cycle' });
+  });
+
+  it('a BACKDATED emergency (effective_from ≤ C) the as-of-C read cannot see → next_cycle from the in-force amount', () => {
+    // Pool ₹500 spawned at C; an emergency ₹600 written later, effective BEFORE C. `gt(effective_from, C)`
+    // misses it (upcoming = null), but ₹600 is in force now and the next cycle will carry it.
+    expect(selectFixedAmountTransition({ ...BASE, upcoming: null, inForceNow: inForce(600) })).toEqual({
+      stage: 'next_cycle',
+      newAmount: 600,
+    });
+  });
+
+  it('negative: the amount in force equals the pool\'s snapshot and nothing is upcoming → null', () => {
+    expect(selectFixedAmountTransition({ ...BASE, upcoming: null, inForceNow: inForce(500) })).toBeNull();
+  });
+
+  it('negative: no in-force row resolved (null) → falls through to the future stages / null', () => {
+    expect(selectFixedAmountTransition({ ...BASE, inForceNow: null })).toBeNull();
+    expect(
+      selectFixedAmountTransition({ ...BASE, inForceNow: null, upcoming: upcoming(ist('2027-02-20T00:00:00')) })?.stage,
+    ).toBe('next_month');
+  });
+
+  it('D7: next_cycle outranks a FUTURE change — one line, naming what is in force now', () => {
+    const out = selectFixedAmountTransition({
+      ...BASE,
+      upcoming: upcoming(ist('2027-02-20T00:00:00'), 800),
+      inForceNow: inForce(600),
+    });
+    expect(out).toEqual({ stage: 'next_cycle', newAmount: 600 });
+  });
+
+  it('a row at or before `now` is never announced as scheduled / next_month — only the in-force amount speaks', () => {
+    // Same amount in force → silent; the row is already accounted for (or moot).
+    expect(selectFixedAmountTransition({ ...BASE, upcoming: upcoming(R2, 650), inForceNow: inForce(500) })).toBeNull();
+  });
+
+  it('selectUpcomingStage never returns first_cycle (Review P3 — the handler skips the first-cycle read when it is non-null)', () => {
+    expect(selectUpcomingStage({ ...BASE })).toBeNull();
+    expect(selectFixedAmountTransition({ ...BASE, isFirstCycle: true })).toEqual({ stage: 'first_cycle' });
+    expect(selectUpcomingStage({ ...BASE, inForceNow: inForce(600) })).toEqual({
+      stage: 'next_cycle',
+      newAmount: 600,
+    });
+    expect(selectUpcomingStage({ ...BASE, upcoming: upcoming(ist('2027-04-14T00:00:00')) })?.stage).toBe('scheduled');
   });
 });
 
@@ -201,6 +288,7 @@ describe('selectFixedAmountTransition — emergency changes (PQ1 = B, Decision 2
       selectFixedAmountTransition({
         ...BASE,
         upcoming: upcoming(ist('2027-01-12T00:00:00'), 650, 'emergency'),
+        inForceNow: inForce(650),
       }),
     ).toEqual({ stage: 'next_cycle', newAmount: 650 });
   });

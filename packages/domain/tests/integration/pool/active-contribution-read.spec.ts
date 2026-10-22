@@ -224,6 +224,28 @@ describe.skipIf(!hasDatabase)('My Pool card read accessors (Story 8.2)', () => {
       expect(await read(tx, p, c, 500)).toBe(false);
     });
 
+    it('Review P1: after a BACKDATED emergency the FIRST pool actually at the new amount still gets the note; the old-amount pool does not count as "earlier"', async () => {
+      const { client, tx } = getTx();
+      const p = randomUUID();
+      // Same shape as the snapshot-guard leg above, plus the two pools that follow it. The emergency
+      // (₹600, effective 04-01) was written AFTER the 04-10 pool spawned at ₹500.
+      await seedRow(tx, p, 1, 500, JAN, APR);
+      await seedRow(tx, p, 2, 600, APR, null, 'emergency');
+      const old = new Date('2026-04-10T06:00:00.000Z'); //     ₹500 — spawned before the emergency was written
+      const first = new Date('2026-04-25T06:00:00.000Z'); //   ₹600 — the first pool that is really at the new amount
+      const second = new Date('2026-04-28T06:00:00.000Z'); //  ₹600 — the next one
+      await seedCycle(tx, p, old, 500);
+      await seedCycle(tx, p, first, 600);
+      await seedCycle(tx, p, second, 600);
+      await enterAppScope(client, p);
+
+      expect(await read(tx, p, old, 500)).toBe(false); //   the snapshot guard
+      // ⛔ Without the `pools.fixed_amount = poolFixedAmount` condition the 04-10 pool sits in
+      // [04-01, 04-25) and suppresses this — the member goes ₹500 → ₹600 with no note.
+      expect(await read(tx, p, first, 600)).toBe(true);
+      expect(await read(tx, p, second, 600)).toBe(false); // the 04-25 pool IS an earlier pool at ₹600
+    });
+
     it('an emergency the pool WAS snapshotted under → true (PQ1 = B: the first-cycle note is a plain fact)', async () => {
       const { client, tx } = getTx();
       const p = randomUUID();

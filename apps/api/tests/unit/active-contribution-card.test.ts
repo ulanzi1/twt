@@ -26,6 +26,9 @@ const resolveUpcomingFixedAmountChange = vi.fn();
 // Story 8.15 — ⚠ MUST be mocked: the `...actual.pool` spread would otherwise run the REAL read against
 // `tx: {}`, throw a TypeError, and the D8 fail-soft would turn every stage leg into a silent `null`.
 const resolveFirstCycleUnderAmount = vi.fn();
+// Review D1 — the amount IN FORCE at `now`; decides `next_cycle`. ⚠ Same trap as above: unmocked, the
+// `...actual.pool` spread runs the REAL read against `tx: {}`, throws, and every stage leg passes as null.
+const resolveEffectiveFixedAmountRow = vi.fn();
 const deriveContributionReference = vi.fn();
 const poolLetterCode = vi.fn();
 const getClaimCase = vi.fn();
@@ -49,6 +52,7 @@ vi.mock('@twt/domain', async (importActual) => {
       reserveNames,
       resolveUpcomingFixedAmountChange,
       resolveFirstCycleUnderAmount,
+      resolveEffectiveFixedAmountRow,
       deriveContributionReference,
       poolLetterCode,
       readPoolPublicToken,
@@ -126,6 +130,8 @@ function wireAssignedLivePoolWithName(): void {
   reserveNames.mockResolvedValue([]); // opted out of curated names → letter-code fallback
   resolveUpcomingFixedAmountChange.mockResolvedValue(null);
   resolveFirstCycleUnderAmount.mockResolvedValue(false);
+  // The amount in force at `now` equals the pool's snapshot: nothing has changed since it spawned.
+  resolveEffectiveFixedAmountRow.mockResolvedValue({ fixedAmount: 310 });
   poolLetterCode.mockReturnValue('F');
   deriveContributionReference.mockReturnValue(DERIVED_TR);
   getClaimCase.mockResolvedValue({ deceasedMemberId: DECEASED_MEMBER_ID });
@@ -288,19 +294,81 @@ describe('activeContribution card — the staged fixed-amount transition (Story 
   it('scheduled — ≥ 2 IST months away: the IST calendar date + the new amount', async () => {
     wire();
     resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-10-05T00:00:00')));
-    expect((await card()).amountTransition).toEqual({ stage: 'scheduled', effectiveOn: '2026-10-05', newAmount: 400 });
+    const c = await card();
+    expect(c.amountTransition).toEqual({ stage: 'scheduled', effectiveOn: '2026-10-05', newAmount: 400 });
+    expect(c.fixedAmount).toBe(310); // the ask stays the snapshot (8.2 D3), never the announced ₹400
   });
 
   it('next_month — the change falls in the next IST calendar month', async () => {
     wire();
     resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-08-10T00:00:00')));
-    expect((await card()).amountTransition).toEqual({ stage: 'next_month', effectiveOn: '2026-08-10', newAmount: 400 });
+    const c = await card();
+    expect(c.amountTransition).toEqual({ stage: 'next_month', effectiveOn: '2026-08-10', newAmount: 400 });
+    expect(c.fixedAmount).toBe(310);
   });
 
   it('next_cycle — the change took effect after this pool was committed (inside the live window)', async () => {
     wire();
     resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-07-18T00:00:00')));
+    resolveEffectiveFixedAmountRow.mockResolvedValue(row(ist('2026-07-18T00:00:00')));
+    const c = await card();
+    expect(c.amountTransition).toEqual({ stage: 'next_cycle', newAmount: 400 });
+    expect(c.fixedAmount).toBe(310);
+  });
+
+  // ── Review D1 (Option A): `next_cycle` names the amount IN FORCE at `now`, ⛔ not the nearest row ──
+  it('D1: TWO changes inside the live window → the line names the LATER (in-force) amount, ⛔ not the nearest row', async () => {
+    wire();
+    // ₹400 from 07-17, ₹500 from 07-19 — both after C (07-15) and before now (07-21). The as-of-C read
+    // returns the nearer ₹400; the next cycle will carry the ₹500 in force now.
+    resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-07-17T00:00:00'), 400));
+    resolveEffectiveFixedAmountRow.mockResolvedValue(row(ist('2026-07-19T00:00:00'), 500));
+    const c = await card();
+    expect(c.amountTransition).toEqual({ stage: 'next_cycle', newAmount: 500 });
+    expect(c.fixedAmount).toBe(310);
+  });
+
+  it('D1: a later change that REVERTS to the pool\'s own amount → nothing is announced', async () => {
+    wire();
+    // ₹400 from 07-17, back to ₹310 from 07-19: the next cycle is unchanged for this member.
+    resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-07-17T00:00:00'), 400));
+    resolveEffectiveFixedAmountRow.mockResolvedValue(row(ist('2026-07-19T00:00:00'), 310));
+    expect((await card()).amountTransition).toBeNull();
+  });
+
+  it('D1: a BACKDATED emergency the as-of-C read cannot see → next_cycle from the in-force amount', async () => {
+    wire();
+    // upcoming (as of C, `gt(effective_from, C)`) is null; an emergency effective BEFORE C is in force now.
+    resolveUpcomingFixedAmountChange.mockResolvedValue(null);
+    resolveEffectiveFixedAmountRow.mockResolvedValue(row(ist('2026-07-10T00:00:00'), 400, 'emergency'));
     expect((await card()).amountTransition).toEqual({ stage: 'next_cycle', newAmount: 400 });
+  });
+
+  it('D1: the in-force amount is read AS OF `now` (the request clock), ⛔ not C', async () => {
+    wire();
+    await card();
+    expect(resolveEffectiveFixedAmountRow).toHaveBeenCalledTimes(1);
+    expect(resolveEffectiveFixedAmountRow).toHaveBeenCalledWith(
+      expect.anything(),
+      PARIWAR_ID,
+      new Date('2026-07-21T00:00:00Z'),
+    );
+  });
+
+  it('P3: the first-cycle read is SKIPPED whenever an upcoming stage already wins (D7) — and runs when none does', async () => {
+    wire();
+    resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-10-05T00:00:00'))); // scheduled wins
+    await card();
+    expect(resolveFirstCycleUnderAmount).not.toHaveBeenCalled();
+
+    wire();
+    resolveEffectiveFixedAmountRow.mockResolvedValue(row(ist('2026-07-18T00:00:00'), 400)); // next_cycle wins
+    await card();
+    expect(resolveFirstCycleUnderAmount).not.toHaveBeenCalled();
+
+    wire(); // nothing upcoming, nothing in force differs → the first-cycle read is needed
+    await card();
+    expect(resolveFirstCycleUnderAmount).toHaveBeenCalledTimes(1);
   });
 
   it('first_cycle — nothing upcoming and this pool is the first at the new amount', async () => {
@@ -356,6 +424,7 @@ describe('activeContribution card — the staged fixed-amount transition (Story 
     await card();
     const firstTransitionRead = Math.min(
       resolveUpcomingFixedAmountChange.mock.invocationCallOrder[0]!,
+      resolveEffectiveFixedAmountRow.mock.invocationCallOrder[0]!,
       resolveFirstCycleUnderAmount.mock.invocationCallOrder[0]!,
     );
     for (const earlier of [

@@ -73,6 +73,26 @@ describe('Story 8.15 — the transition line resolves through the real t()', () 
     expect(amountTransitionCopy(STAGES[3]!.transition, 'en').params).toBeUndefined()
   })
 
+  it('⛔ Decision -383: the stages an EMERGENCY can reach never say "from next month" — en or hi, line or a11y', () => {
+    // An emergency is dated (`scheduled`), "from the next cycle", or the first-pool note — never `next_month`
+    // (the step that implies notice). The selector pins the STAGE; this pins the WORDS, so a copy edit that
+    // slips "next month" into a stage an emergency reaches cannot pass every gate with AC6 as its only catch.
+    const NEXT_MONTH = /next month|अगले महीने/i
+    // Control: the regex bites on the one stage that legitimately says it (a vacuous pattern proves nothing).
+    for (const locale of LOCALES) {
+      const { line, a11y } = resolve(STAGES[1]!.transition, locale)
+      expect(line).toMatch(NEXT_MONTH)
+      expect(a11y).toMatch(NEXT_MONTH)
+    }
+    for (const locale of LOCALES) {
+      for (const { transition } of STAGES.filter((s) => s.transition.stage !== 'next_month')) {
+        const { line, a11y } = resolve(transition, locale)
+        expect(line, `${locale} ${transition.stage} line`).not.toMatch(NEXT_MONTH)
+        expect(a11y, `${locale} ${transition.stage} a11y`).not.toMatch(NEXT_MONTH)
+      }
+    }
+  })
+
   it('{amount} is the bare en-IN figure — the ₹ lives in the copy (a pre-formatted ₹ would ship ₹₹)', () => {
     expect(amountTransitionCopy({ stage: 'next_cycle', newAmount: 125000 }, 'hi').params).toEqual({ amount: '1,25,000' })
   })

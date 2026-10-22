@@ -43,6 +43,12 @@ export interface FixedAmountTransitionInput {
     readonly fixedAmount: number;
     readonly changeType: PoolFixedAmountScheduleRow['changeType'];
   } | null;
+  /**
+   * The amount IN FORCE at `now` (`resolveEffectiveFixedAmountRow` at `now`; `null` = none resolved).
+   * Review D1 (Option A): `next_cycle` is decided from THIS, not from `upcoming` — the next cycle snapshots
+   * whatever is in force when it commits, and `upcoming` is only the NEAREST row after C.
+   */
+  readonly inForceNow: { readonly fixedAmount: number } | null;
   /** The pool is the first cycle under a changed amount (`resolveFirstCycleUnderAmount`, D5). */
   readonly isFirstCycle: boolean;
 }
@@ -55,28 +61,48 @@ function istMonthDistance(now: Date, at: Date): number {
 }
 
 /**
- * The single transition line for the My Pool card, or `null`. Precedence (D7): `next_cycle` >
- * `next_month` > `scheduled` > `first_cycle` > `null` — an upcoming change always wins over the
- * first-cycle note, and at most one stage is returned.
+ * Every stage EXCEPT `first_cycle`, or `null`. Exported so the handler can skip the (up to three-query)
+ * first-cycle read whenever an upcoming stage already wins (Review P3) — the rule itself stays here.
+ *
+ *  · `next_cycle` (Review D1, Option A): the amount IN FORCE at `now` differs from the pool's snapshot,
+ *    so the next cycle will carry it. It names THAT amount. This is the one rule behind three cases the
+ *    nearest-row read got wrong or missed: a change inside the live window (Trap 4), TWO changes inside
+ *    it (the next cycle carries the LATER one), and a BACKDATED emergency written after the pool spawned
+ *    (`effective_from ≤ C`, so the as-of-C read never sees it). If a later change reverts to the pool's
+ *    own amount the next cycle is unchanged and nothing is said.
+ *  · `scheduled` / `next_month`: a FUTURE row (`effective_from > now`) from the as-of-C read.
+ *    A row at or before `now` is already accounted for by `inForceNow` (or is moot), so it is never
+ *    announced here.
  */
-export function selectFixedAmountTransition(input: FixedAmountTransitionInput): FixedAmountTransition | null {
-  const { upcoming } = input;
+export function selectUpcomingStage(
+  input: Omit<FixedAmountTransitionInput, 'isFirstCycle'>,
+): FixedAmountTransition | null {
+  const { upcoming, inForceNow } = input;
+  if (inForceNow !== null && inForceNow.fixedAmount !== input.poolFixedAmount) {
+    return { stage: 'next_cycle', newAmount: inForceNow.fixedAmount };
+  }
   // D6: a "change" to the amount the pool already holds is no change for its member. A row at or
   // before C is not this pool's transition (the read is anchored at C; this guards the input).
   if (
     upcoming !== null &&
     upcoming.fixedAmount !== input.poolFixedAmount &&
-    upcoming.effectiveFrom.getTime() > input.poolCommittedAt.getTime()
+    upcoming.effectiveFrom.getTime() > input.poolCommittedAt.getTime() &&
+    upcoming.effectiveFrom.getTime() > input.now.getTime()
   ) {
-    // C < R ≤ now: in force already, but this pool was spawned before it (Trap 4).
-    if (upcoming.effectiveFrom.getTime() <= input.now.getTime()) {
-      return { stage: 'next_cycle', newAmount: upcoming.fixedAmount };
-    }
     const effectiveOn = istDateOf(upcoming.effectiveFrom);
     if (upcoming.changeType === 'standard' && istMonthDistance(input.now, upcoming.effectiveFrom) === 1) {
       return { stage: 'next_month', effectiveOn, newAmount: upcoming.fixedAmount };
     }
     return { stage: 'scheduled', effectiveOn, newAmount: upcoming.fixedAmount };
   }
-  return input.isFirstCycle ? { stage: 'first_cycle' } : null;
+  return null;
+}
+
+/**
+ * The single transition line for the My Pool card, or `null`. Precedence (D7): `next_cycle` >
+ * `next_month` > `scheduled` > `first_cycle` > `null` — an upcoming change always wins over the
+ * first-cycle note, and at most one stage is returned.
+ */
+export function selectFixedAmountTransition(input: FixedAmountTransitionInput): FixedAmountTransition | null {
+  return selectUpcomingStage(input) ?? (input.isFirstCycle ? { stage: 'first_cycle' } : null);
 }

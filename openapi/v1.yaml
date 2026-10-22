@@ -2186,6 +2186,7 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+          pattern: ^[A-Za-z][A-Za-z.'\u2018\u2019\u02BC\-\u00A0\u2007\u202F ]*$
         dob:
           type: string
           minLength: 1

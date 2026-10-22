@@ -183,4 +183,11 @@ describe('KycManualSubmitRequest contract validation', () => {
       KycManualSubmitRequest.safeParse({ name: 'Asha', dob: '1990', aadhaar: '1234' }).success,
     ).toBe(false);
   });
+
+  // Story 3.3c (`-378` decision 6, `-382`) — the typed name is English-only at input.
+  it('rejects a name not in English letters (3.3c)', () => {
+    for (const name of ['आशा देवी', 'Asha देवी', 'José', 'Asha Devi 2', '   ', 'A'.repeat(201)]) {
+      expect(KycManualSubmitRequest.safeParse({ name, dob: '1990-01-01' }).success, name).toBe(false);
+    }
+  });
 });

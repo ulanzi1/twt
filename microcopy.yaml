@@ -336,6 +336,10 @@ scope:
     - apps/mobile/components/peer-request/*.ts
     - apps/mobile/lib/peer-request.ts
     - apps/mobile/lib/peer-request-api.ts
+    # ⭐ Story 3.3c (KB8, `-382`) — the manual KYC screen (the member's own name, English-only at input) and its pure
+    # message-key module. `kyc.tsx` raises exactly its two pre-existing hex literals (allow-listed below).
+    - apps/mobile/app/(signup)/kyc.tsx
+    - apps/mobile/lib/kyc-manual-name.ts
   # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
   # member surface: the public Niyamavali (apps/public). These globs scan the PURE
   # member copy (the `niyamavali` i18n namespace strings), so the member-register
@@ -645,5 +649,15 @@ allow:
     reason: >-
       Story 6.2's pre-existing error hex — the same app-wide apps/mobile convention as the
       entries above, unchanged by 6.19c. Scoped to this one literal; vocabulary, tone and
+      numeral teeth on this file are untouched. Owed: a token layer for apps/mobile
+      (deferred-work).
+  # ⭐ Story 3.3c (KB8) — the SAME gap, on the manual KYC screen it now enrols. Both literals are Story 3.3b's banners;
+  # 3.3c's new inline message reuses the screen's own `#C0392B` (⛔ `nominee-review.tsx`'s `#B00020`).
+  - file: apps/mobile/app/(signup)/kyc.tsx
+    pattern: '#(C0392B|1E8E3E)\b'
+    reason: >-
+      Story 3.3b's error / notice hexes, reused by 3.3c's inline English-name message — the
+      same app-wide apps/mobile convention as the nominee-review.tsx entry above (its
+      reasoning block applies). Scoped to these two literals only; vocabulary, tone and
       numeral teeth on this file are untouched. Owed: a token layer for apps/mobile
       (deferred-work).

@@ -26,8 +26,10 @@ import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
 import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
+import { AccessibilityInfo } from 'react-native'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
+import { manualNameMessageKey, manualSubmitErrorKey } from '../../lib/kyc-manual-name'
 import { memberAuth } from '../../lib/member-api'
 
 /** The normalized KYC error codes the empathy copy maps one-to-one (kyc.error_*). */
@@ -170,8 +172,18 @@ export default function KycScreen() {
 
   /** Manual path: validate (Pattern 4) → submit → member.kyc_manual_fallback. */
   async function onManualSubmit(): Promise<void> {
-    if (!name.trim()) {
+    const nameKey = manualNameMessageKey(name)
+    if (nameKey === 'kyc.manual_name_required') {
       setError(t('kyc.manual_name_required'))
+      return
+    }
+    // Story 3.3c (`-382`) — ⛔ request for a name not in English letters. The inline message under
+    // the field already says why, so the banner clears (incl. a stale "DigiLocker is unavailable").
+    // Announced on BOTH platforms: the inline alert mounted while typing and does ⛔ re-fire on submit,
+    // and VoiceOver ignores the live region — ⛔ the iOS-only guard nominee-review.tsx needs.
+    if (nameKey === 'kyc.manual_name_english') {
+      setError(null)
+      AccessibilityInfo.announceForAccessibility(t('kyc.manual_name_english'))
       return
     }
     if (!dob.trim()) {
@@ -185,7 +197,10 @@ export default function KycScreen() {
       setStep('done')
       setNotice(t('kyc.done'))
     } catch (e) {
-      setError(e instanceof ApiError ? kycErrorMessage(e.code) : t('kyc.fallback_empathy'))
+      // Story 3.3c — a server refusal of the name's script says so, ⛔ "DigiLocker is unavailable".
+      const nameErrorKey = manualSubmitErrorKey(e)
+      if (nameErrorKey) setError(t(nameErrorKey))
+      else setError(e instanceof ApiError ? kycErrorMessage(e.code) : t('kyc.fallback_empathy'))
     } finally {
       setBusy(false)
     }
@@ -255,6 +270,8 @@ export default function KycScreen() {
   }
 
   if (step === 'manual') {
+    // Story 3.3c (KB3) — the wrong-script message shows INLINE as the member types.
+    const nameNotEnglish = manualNameMessageKey(name) === 'kyc.manual_name_english'
     return (
       <YStack flex={1} justify="center" gap="$4" px="$6" bg="$background">
         <H2>{t('kyc.title')}</H2>
@@ -264,9 +281,22 @@ export default function KycScreen() {
           onChangeText={setName}
           placeholder={t('kyc.manual_name')}
           height={48}
+          maxLength={200}
           accessibilityLabel={t('kyc.manual_name')}
-          accessibilityHint={t('kyc.manual_name_required')}
+          accessibilityHint={
+            nameNotEnglish ? t('kyc.manual_name_english') : t('kyc.manual_name_required')
+          }
         />
+        {nameNotEnglish ? (
+          <Text
+            color="#C0392B"
+            fontSize="$2"
+            accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
+          >
+            {t('kyc.manual_name_english')}
+          </Text>
+        ) : null}
         <Input
           value={dob}
           onChangeText={setDob}

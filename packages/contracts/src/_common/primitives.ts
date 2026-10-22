@@ -93,6 +93,13 @@ export type MobileNumber = z.output<typeof MobileNumber>;
  * ⛔ NOT applied to member KYC names (`domain/src/kyc/name.ts` is deliberately Devanagari-aware, and
  * a KYC name is copied from a government document, not typed) nor to Story 6.5's death-certificate
  * comparison (`claim/parity.ts`, a 20% fuzzy tolerance). cl.9's wider sweep is its own story.
+ *
+ * 📌 Dated note, 2026-10-22 (Story 3.3c; `-378` decision 6, building `-227` cl.1; `-382`): the
+ * paragraph above is superseded IN PART. From Story 3.3c this predicate IS applied to the member's
+ * own name typed in the manual KYC fallback (`KycManualSubmitRequest.name`), input-only. The premise
+ * "a KYC name is copied from a government document, not typed" does ⛔ hold for that path. The
+ * DigiLocker name (`KycProfile.name`) and 6.5's `claim/parity.ts` remain ungated, and
+ * `kyc/name.ts` stays Devanagari-aware for names already stored.
  */
 /**
  * ⚠⚠ THE CHARACTER CLASS INCLUDES THE SHAPES A PHONE KEYBOARD PRODUCES, and that is deliberate
@@ -112,6 +119,10 @@ export type MobileNumber = z.output<typeof MobileNumber>;
  * property anyway: what the person typed is what gets stored, ⛔ never quietly edited.
  * ⚠ Two spellings of one name can therefore coexist. That is harmless HERE and nowhere else would
  * it be: Trap 1 forbids the system comparing two names at all — a human reads them (`-226` cl.5).
+ * 📌 Dated note, 2026-10-22 (Story 3.3c, `-382`): that premise does ⛔ hold for KYC names, which
+ * this predicate now gates on the manual path — `claim/parity.ts` machine-compares the stored KYC
+ * name against the certificate name (moot while OCR returns nothing; the 6.5 half of
+ * `deferred-work.md` (b-4)).
  *
  * ⛔ ACCENTED LATIN LETTERS ARE STILL REFUSED — an explicit decision (BigDev, 2026-09-20), ⛔ not an
  * oversight. `José` does not pass. AC12's words are "Latin letters", but `-227` cl.1's intent is the

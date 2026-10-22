@@ -21,7 +21,7 @@
 
 import { z } from 'zod';
 
-import { Iso8601Datetime } from '../_common/primitives.js';
+import { EnglishScriptName, Iso8601Datetime } from '../_common/primitives.js';
 
 // ── Wire enums (re-declared; value-aligned with domain) ───────────────────────────────
 
@@ -86,10 +86,13 @@ export type KycConfirmRequest = z.output<typeof KycConfirmRequest>;
  * `POST /member/kyc/manual` — the self-declared KYC record. `photo` is an optional base64
  * `data:image/…;base64,…` URI (bounded; NEVER logged — pii-scrape discipline). name/dob are
  * the member's typed values; the record is stored `self_declared` awaiting trustee verify.
+ * Story 3.3c: `name` is English-only at INPUT (`-227` cl.1 / `-378` decision 6, `-382`) — stored
+ * names in any script are ⛔ rewritten, and no output schema here is gated.
  */
 export const KycManualSubmitRequest = z
   .object({
-    name: z.string().trim().min(1).max(200),
+    // Story 3.3c — `-227` cl.1 / `-378` d6: input-only; ⛔ transliteration, ⛔ backfill.
+    name: EnglishScriptName,
     dob: z.string().trim().min(1).max(40),
     photo: z
       .string()

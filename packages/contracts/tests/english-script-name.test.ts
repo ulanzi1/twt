@@ -16,6 +16,9 @@ import {
   ENGLISH_NAME_REGEX,
   EnglishScriptName,
   isEnglishScriptName,
+  KycManualSubmitRequest,
+  KycProfile,
+  KycProfileSummaryResponse,
   NomineeBankAccountEntry,
   NomineeDeclareEntry,
   NomineeDeclareRequest,
@@ -268,5 +271,77 @@ describe('EnglishScriptName — the typographic boundaries', () => {
     ]) {
       expect(isEnglishScriptName(name), JSON.stringify(name)).toBe(EnglishScriptName.safeParse(name).success);
     }
+  });
+});
+
+// ── Story 3.3c — the member's own name typed in the manual KYC fallback (`-378` decision 6, `-382`) ──
+//
+// A THIRD field, gated by its own direct edit — 6.18's two blocks above stay true of 6.18's scope.
+// The gate is on the manual route's REQUEST only: DigiLocker's `KycProfile.name` and the
+// member-facing `KycProfileSummaryResponse.name` stay ungated, so a stored non-Latin name and the
+// RTBF sentinel still read back.
+
+describe('Story 3.3c — KycManualSubmitRequest.name (-378 decision 6)', () => {
+  const manual = (name: string) => ({ name, dob: '1990-01-01' });
+
+  it.each([
+    'Asha Devi',
+    'A. Devi',
+    'R. P. Yadav',
+    "Mary-Anne O'Neill",
+    'D\u2019Souza',
+    'A'.repeat(200),
+  ])('accepts %s', (name) => {
+    expect(KycManualSubmitRequest.safeParse(manual(name)).success).toBe(true);
+  });
+
+  // The SCRIPT legs — the server mutant (back to a plain bounded string) turns exactly these RED.
+  it.each([DEVANAGARI, 'Asha देवी', 'José', 'Asha Devi 2'])('refuses %s (script)', (name) => {
+    const parsed = KycManualSubmitRequest.safeParse(manual(name));
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((i) => [i.path.join('.'), i.message])).toEqual([
+      ['name', 'Please enter the name in English'],
+    ]);
+  });
+
+  // The blank and LENGTH legs — green with or without the script gate, by design.
+  it.each(['', '   ', 'A'.repeat(201)])('refuses a blank or over-long name (%#)', (name) => {
+    expect(KycManualSubmitRequest.safeParse(manual(name)).success).toBe(false);
+  });
+
+  it('trims a leading/trailing-space name and leaves dob / photo as they were', () => {
+    const parsed = KycManualSubmitRequest.parse({
+      name: '  Asha Devi  ',
+      dob: '1990-01-01',
+      photo: 'data:image/jpeg;base64,/9j/4AAQ',
+    });
+    expect(parsed).toEqual({
+      name: 'Asha Devi',
+      dob: '1990-01-01',
+      photo: 'data:image/jpeg;base64,/9j/4AAQ',
+    });
+  });
+});
+
+describe('⛔⛔ Story 3.3c — the KYC OUTPUT schemas stay ungated (a stored name still reads back)', () => {
+  it.each([DEVANAGARI, '[anonymized]'])('KycProfile and KycProfileSummaryResponse accept %s', (name) => {
+    expect(
+      KycProfile.safeParse({
+        aadhaarMaskedId: '1234',
+        name,
+        dob: '1990-01-01',
+        photoUrl: 'ref',
+        verificationStrength: 'aadhaar_kyc',
+      }).success,
+    ).toBe(true);
+    expect(
+      KycProfileSummaryResponse.safeParse({
+        name,
+        dob: '1990-01-01',
+        aadhaarMaskedId: null,
+        verificationStrength: 'self_declared',
+        photoPresent: false,
+      }).success,
+    ).toBe(true);
   });
 });

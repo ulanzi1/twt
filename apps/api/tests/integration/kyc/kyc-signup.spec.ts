@@ -11,7 +11,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { ids, kyc, member as memberDomain } from '@twt/domain';
+import { encryption, ids, kyc, member as memberDomain } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
@@ -198,6 +198,77 @@ describe.skipIf(!hasDatabase)('KYC signup step — E2E with the fixture provider
       expect(prof.rows[0]?.trustee_verified).toBe(false);
       expect(prof.rows[0]?.aadhaar_masked_id).toBeNull();
       expect(prof.rows[0]?.name_ciphertext).not.toContain('Asha'); // Tier-1 encrypted at rest
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // Story 3.3c (AC2; `-378` decision 6, `-382`) — the typed name is English-only at INPUT. Body
+  // validation runs before the member-session preHandler and the handler, so a refusal writes
+  // nothing; the server mutant (a plain bounded string) flips every leg here to a 200 plus a row.
+  it('3.3c AC2: a name not in English letters is refused 400 and stores nothing; English then succeeds', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedPendingKycMember(t);
+
+      for (const name of ['आशा देवी', 'Asha देवी']) {
+        const res = await inject(t, 'POST', '/api/v1/member/kyc/manual', {
+          payload: { name, dob: '1990-01-01' },
+          token: token(t, memberId, pariwarId),
+        });
+        expect(res.status, name).toBe(400);
+        const error = res.body.error as {
+          code: string;
+          details: { issues: { instancePath: string; keyword: string; message: string }[] };
+        };
+        expect(error.code).toBe('request.validation');
+        expect(error.details.issues.map((i) => [i.instancePath, i.keyword, i.message])).toEqual([
+          ['/name', 'invalid_string', 'Please enter the name in English'],
+        ]);
+        expect(JSON.stringify(res.body)).not.toContain(name); // the 400 does not echo the typed name
+      }
+
+      const prof = await t.pool.query(`SELECT 1 FROM member_kyc_profiles WHERE member_id = $1`, [memberId]);
+      expect(prof.rowCount).toBe(0);
+      const st = await t.pool.query<{ state: string }>(`SELECT state FROM members WHERE member_id = $1`, [memberId]);
+      expect(st.rows[0]?.state).toBe('pending-kyc');
+      expect(await eventTypes(t, memberId)).not.toContain('member.kyc_manual_fallback');
+      expect(t.auditSink.ofType('member_kyc.manual')).toHaveLength(0);
+
+      const ok = await inject(t, 'POST', '/api/v1/member/kyc/manual', {
+        payload: { name: 'Asha Devi', dob: '1990-01-01' },
+        token: token(t, memberId, pariwarId),
+      });
+      expect(ok.status).toBe(200);
+      expect(ok.body.lifecycleState).toBe('pending-fee');
+      expect(ok.body.memberKycState).toBe('manual_pending');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // Story 3.3c (AC3) — ⛔ backfill: a name already stored in another script still reads back,
+  // because the gate is on the manual REQUEST only, never on the profile-summary RESPONSE.
+  it('3.3c AC3: a stored Devanagari KYC name still reads back unchanged on profile-summary', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedPendingKycMember(t);
+      const stored = 'आशा देवी';
+      await t.pool.query(
+        `INSERT INTO member_kyc_profiles (member_id, pariwar_id, name_ciphertext, dob_ciphertext, verification_strength, source)
+         VALUES ($1, $2, $3, $4, 'self_declared', 'manual')`,
+        [
+          memberId,
+          pariwarId,
+          await encryption.encryptKycField(stored, pariwarId, t.deps.encryption),
+          await encryption.encryptKycField('1990-01-01', pariwarId, t.deps.encryption),
+        ],
+      );
+      const res = await inject(t, 'GET', '/api/v1/member/kyc/profile-summary', {
+        token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe(stored);
     } finally {
       await teardown(t);
     }

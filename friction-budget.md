@@ -26,6 +26,7 @@ deliberately accepted.
 | ------------------------------------------------ | ------------------------------------------ | ---------- |
 | Sushil (member, UTR-mismatch screenshot upload)  | Reconciliation integrity                   | forced     |
 | relative (manual-KYC fallback)                   | "facilitator" posture                      | forced     |
+| member or relative (typing the member's own name in ENGLISH letters, as on Aadhaar, in the manual-KYC fallback — `-227` cl.1 / `-378` decision 6; INPUT-ONLY, ⛔ retroactive) | the member's name staying the one English name the claim checks compare against (⛔ transliteration at review) | forced |
 | Anita (verifier, over-payment recovery judgment) | Pool Engine                                | forced     |
 | Sunita (nominee bank-statement upload)           | facilitator-not-intermediary trust posture | forced     |
 | member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |
@@ -2829,3 +2830,21 @@ unchanged and is ⛔ ratcheted. ⭐ Written BEFORE the code exists (Task 0.4); T
 after the code commit (AC-4 reads COMMITTED history).
 ⭐ Task 6 (2026-10-21) — the file list CONFIRMED against the code as built (the six mobile files above + the two `common.json`; ⛔ other
 member-facing file changed); `pnpm friction:check` runs after the code commit (the story's Debug Log (c)).
+
+**Story 3.3c disposition (ONE new row — the member's own name typed in English letters in the manual-KYC fallback; ⛔ no row retired,
+⛔ row amended):** the story's member-facing changes are `apps/mobile/app/(signup)/kyc.tsx` (the manual name: label, inline message,
+submit refusal, `maxLength`, error mapping), `apps/mobile/lib/kyc-manual-name.ts` (new, pure) and `packages/i18n/locales/{en,hi}/common.json`
+(`kyc.manual_name`, `kyc.manual_name_required` changed; `kyc.manual_name_english` new), with their tests.
+
+1. ⭐ **The new row (in `## The ledger`, after `relative (manual-KYC fallback)`).** Payer: the member — or the relative helping them —
+   who must now type the member's own name in English letters, exactly as printed on the Aadhaar, where any script was accepted before.
+   Protects: the member's name staying the one English name the claim checks compare against, so ⛔ anyone transliterates at review
+   (`-227` cl.1; `-378` decision 6; build decisions `-382`). `forced`: the manual step cannot complete with a name in another script;
+   DigiLocker (which carries the printed English name) is the other route. Named separately from the 1.16a / 3.3b row because that row
+   covers typing the details at all; this one is the new SCRIPT obligation — 6.18's English-script row sits outside the ledger and the
+   gate never counted it, so this one is declared here, where AC-4 reads it.
+2. ⛔ **Not new friction:** the DigiLocker path, a member who already types English letters (⛔ change but the label's words), and
+   names already stored (⛔ backfill — INPUT-ONLY).
+
+⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
+unchanged and is ⛔ ratcheted. `pnpm friction:check` runs after the code commit (AC-4 reads COMMITTED history).

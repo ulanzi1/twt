@@ -148,6 +148,7 @@ itself ratified wording is arguable, and the note says so.
 
 Decision `2026-08-16-125` cl.3 (`:16721`) applies verbatim: *"choosing between two readings of ratified words
 is not a developer's call"*. ⇒ **PQ1, Task 0.** ⛔ Do not resolve it in code by picking one.
+✅ **Ruled 2026-10-22: B** (Decision `2026-10-22-383`). Build the mapping in PQ1.
 
 ### Trap 6 — The shipped card's `formatDate` follows the DEVICE time zone
 
@@ -424,7 +425,13 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   same card and the unit-test clock. ⛔ No `readDbNow` here: the admin view needs one instant across two
   partitioning reads (`pool-fixed-amount/handlers.ts:213`), and the card's reads are anchored at `C`, a
   stored instant.
-- **PQ1 — the emergency reading (Trap 5). ⛔ OPEN; Task 0.** Author's view, per the routing template's §0
+- **PQ1 — the emergency reading (Trap 5). ✅ RULED 2026-10-22: B** — Decision `2026-10-22-383`, trustee-ratified
+  (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB"* / *"go with option B."*). ⇒ **Build B as
+  written below**: emergency `R` after `now` → `scheduled` (dated, ⛔ never `next_month`, whatever the month
+  distance); emergency `R` with `C < R.effectiveFrom ≤ now` → `next_cycle`; emergency `F` → `first_cycle` under
+  D5's guard. `standardOnly` (D6) is **not** used by the card (keep it out of the options bag unless a test needs
+  it, ⛔ no dead option). The Task 0 hold is discharged. The question as it was put follows, unedited:
+  Author's view, per the routing template's §0
   gate: **it is the Panel's.** It is what the Trust **tells members** about a change made without notice, and it
   is a choice between two readings of ratified words (`-124` cl.2). Default if ruled **A**: the selector returns
   `null` whenever `R` or `F` is `emergency`. This **removes** today's dated line for a future-dated emergency,
@@ -433,7 +440,9 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   sits nearer. If ruled **B**: an emergency `R` with `R.effectiveFrom > now` yields `scheduled` (dated; ⛔ never
   `next_month`, which implies notice); an emergency `R` with `C < R.effectiveFrom ≤ now` (Trap 5 (iii)) yields
   `next_cycle`; an emergency `F` yields `first_cycle` (subject to D5's guard and its recorded residue).
-  ⛔ Case (iii) is part of the question the note asks. Don't settle it by default.
+  ⛔ Case (iii) is part of the question the note asks. Don't settle it by default. The note also offers **C**
+  (only the after-the-fact `first_cycle` note; nothing for (i) or (iii)). ⛔ No interim emergency behaviour
+  ships before the ruling (Task 0).
 
 ## What this story does ⛔ NOT do
 
@@ -454,8 +463,10 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
 
 - [ ] **Task 0 — Governance first (AC0, PQ1). ⛔ STOP GATE for the emergency branch only.**
   - [ ] BigDev applies the routing template's §0 gate to PQ1 (author's view: the Panel's).
-  - [ ] If it is the Panel's: write `_bmad-output/planning-artifacts/trustee-panel-routing-note-YYYY-MM-DD-8-15-emergency-card-copy.md`
-        (recent notes put the topic in the slug) **from the template, every section, in its order**. ⛔ The
+  - [ ] If it is the Panel's: the note is **drafted** at
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-8-15-emergency-card-copy.md`
+        (2026-10-22, ⛔ not sent; its E4 commands were run and every quoted line was found). Re-run E4, adjust
+        "Our reading" if BigDev wishes, then send. It was written **from the template, every section, in its order**. ⛔ The
         template is the only shape; read it, don't work from this list. Its content must include:
         - one plain-English question (*"When the trustees change the contribution in an emergency, should the
           member's card say anything about it — the date it changes, that it changes from the next cycle, or a
@@ -479,6 +490,15 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   - [ ] Tasks 1–6 for **standard** changes may proceed in parallel. ⛔ The emergency legs of Task 2 and Task 6
         land only after the ruling is transcribed (into `.decision-log.md` as a new id if the Panel rules; the
         decision-log write is user-inserted if refused: [[project_decision_log_writes_user_inserted]]).
+  - [x] ✅ **PQ1 ruled B, 2026-10-22** (Decision `2026-10-22-383`, committed `81407920` alone, before its records).
+        BigDev's §0 check: done (the question went to the Panel). The note's ruling block is filled. The hold below
+        is **discharged**: the emergency legs of Tasks 2 and 6 may land, built per PQ1 B.
+  - [x] ⛔ **No interim emergency behaviour** (discharged by `-383`). Until the ruling is transcribed, the story stays `in-progress`:
+        ⛔ no move to `review`, ⛔ no push for review, ⛔ no merge. Neither default is neutral. "Show nothing"
+        is option A, and it removes the dated line the card shows today for a future-dated emergency. "Keep
+        today's line" is close to B. Either would pre-empt the Panel. ⇒ Write the selector's emergency
+        branch **last**, after the ruling. If the standard work finishes first, record that in the Debug Log
+        and wait; ⛔ never ship a placeholder.
 - [ ] **Task 1 — Moot-row fix (AC2).**
   - [ ] `resolveUpcomingFixedAmountChange`: add the `effective_until IS NULL OR effective_until > effective_from`
         conjunct, and the optional `{ excludeAmount, standardOnly }` options bag (D6), both in the WHERE clause.
@@ -640,3 +660,5 @@ gate claim gets teeth (plant → red → restore), with the observed counts reco
 |---|---|---|
 | 2026-10-22 | 1.0 | Created by `bmad-create-story 8-15` in its worktree, off `b883dc15` (== origin/main). Status backlog → ready-for-dev. Found and scoped a reachable pre-existing defect (Trap 1: a superseded change still shows as "upcoming" on the member card and the admin view). Anchored the stages to IST calendar months, because cycles cannot be counted (Trap 2). Added a `next_cycle` stage for the in-window gap (Trap 4). Routed the emergency reading as PQ1 (Trap 5). Authoring only: no code, no gate run. |
 | 2026-10-22 | 1.1 | Validated against the code and the governance record (`checklist.md`, four read-only checkers in parallel). Status stays ready-for-dev. D8 now places the transition reads last (a SQL error aborts the scope tx, so a wrap alone cannot fail soft). D5 adds the snapshot guard and counts pools, not commits. D6 moves the same-amount filter into SQL. AC5 assertions are per stage, with hi teeth on existing patterns. AC0's count is the `epics.md` entries (8.14 has none). PQ1 adds case (iii), the provenance caveat and the routing note's "Our reading". Reuses `istDateOf` and `isRealCalendarDate`. The API test mocks are named, including `contribution-history.test.ts`. Line references corrected. Authoring only: no code, no gate run. |
+| 2026-10-22 | 1.2 | Task 0: no interim emergency behaviour (the story stays `in-progress` until the PQ1 ruling; neither default is neutral). PQ1 routing note drafted (`trustee-panel-routing-note-2026-10-22-8-15-emergency-card-copy.md`, options A / B / C, "Our reading" B; E4 commands run, every quoted line found). ⛔ Not sent; BigDev's §0 check outstanding. Authoring only. |
+| 2026-10-22 | 1.3 | PQ1 RULED **B** by the Panel (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev): Decision `2026-10-22-383`, committed alone (`81407920`). PQ1 marked ruled with the build mapping; Task 0's hold discharged; the note's ruling block filled. Still to land in Task 0's governance commit: the `epics.md` 8.15 entry and both Epic 8 counts (AC0.1–2). Authoring only. |

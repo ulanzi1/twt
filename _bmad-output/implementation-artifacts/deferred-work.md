@@ -14,6 +14,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   of templates 13 / 14 (`-349` decision 2 — roster Row 27 condition note); ⛔ the build or the merge. If the Panel keeps "short", the word
   goes back into both strings and both sheet rows before registration. The note also carries the BF24 cost FYI (below, Story 6.27c's item).
   ⭐ Trigger: BigDev sends the note. ⛔ Discharged until the Panel answers.
+  ✅ *Dated note, 2026-10-22:* **Closed by [`2026-10-22-381`](../../.decision-log.md#decision-2026-10-22-381)** — Trustee-ratified, PQ1 A (*"go with option A. Bigdev words are fine."*): templates 13 / 14
+  say *"a few questions"*; the registration hold is lifted. The WhatsApp reminder and the app screen keep "short" (the cost as put).
 - **A NON-blocking Panel confirm owed on the shorter name in the texts — PQ1 + PQ2 of row 6-37e
   ([`-377`](../../.decision-log.md#decision-2026-10-22-377) decision 8).** ⛔ **Not addressed — the note WRITTEN, ⛔ sent:**
   `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-short-name-confirms.md`. Built AS RULED meanwhile
@@ -678,6 +680,7 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   ceilings, a 60-letter name and a 120-character link); the typical Hindi is ≈ 194 ⇒ **3** (the helpline phrase and "छोटे" gone); the name
   ceiling is 60, ⛔ 40. The Hindi 3–5 range stands. The FYI line is WRITTEN into the next note,
   `trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md` (⛔ sent) — ⛔ "shown to the Panel" until BigDev sends it.
+  ✅ *Dated note, 2026-10-22 ([`2026-10-22-381`](../../.decision-log.md#decision-2026-10-22-381)):* that note was SENT and answered — the FYI is SHOWN to the Panel. **Discharged.**
 
 ## Deferred from: dev-story 6.36c (2026-10-16)
 

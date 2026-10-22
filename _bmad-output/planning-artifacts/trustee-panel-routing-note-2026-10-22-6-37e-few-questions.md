@@ -7,13 +7,20 @@
 > ⭐ **Nothing waits for your answer except registering this one text** with the SMS operators (go-live record Row 27). The build and
 > the other seven texts go ahead.
 > ⚠ **WRITTEN 2026-10-22 — ⛔ sent.** ⛔ Shown to the Panel until BigDev sends it.
+> ✅ **SENT by BigDev and ANSWERED 2026-10-22** — see the ruling below; the line above is kept as written.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — 2026-10-22 ([Decision 2026-10-22-381](../../.decision-log.md#decision-2026-10-22-381))
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti (relayed by BigDev). **Verbatim:** *"by DR and KB"* / *"go with option A. Bigdev
+> words are fine."*
+>
+> - **PQ1 — A:** the neighbours' text says *"please answer a few questions"* (BigDev's words). The WhatsApp reminder and the app screen
+>   keep *"a few short questions"* (the cost as put). The hold on registering templates 13 / 14 is lifted.
+> - The FYI on how long the texts are (below) is now SHOWN to the Panel.
+>
+> ⭐ Everything below is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

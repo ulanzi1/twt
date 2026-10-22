@@ -40,7 +40,7 @@ v1.x's and are read there only. This story's OWN decision entry is called **"the
 
 # Story 6.37e: The member's full name in the claim texts — across two name boxes, shortened only above 60 letters — and the helpline number leaves the appeal-date and neighbours' texts
 
-Status: in-progress
+Status: review
 
 > ⭐ **REWRITTEN 2026-10-22 (v2.0, `bmad-create-story 6.37e`) against [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379)**
 > (Trustee-ratified — Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB — Q1 A, Q2 A"*). The row key keeps its original
@@ -599,36 +599,36 @@ named here, each of which was run (G14).
         the 6-37e sprint comment (a NEW dated line) + row `ready-for-dev` → `in-progress` (this create-story run already moved it `in-progress` → `ready-for-dev`) + the `last_updated: >-` scalar + the ledger line ([[project_sprint_status_safe_prepend]] — read first, guard the size, verify the YAML parses and the row count is unchanged). ⚠ The sheet is in `GATE_INPUTS`
         (`docs/launch-gate-inventory/**`): a push touching it is ⛔ docs-only — the pre-push hook and `ci.yml` run.
 
-- [ ] **Task 1 — The function and its boxes (AC1).**
-  - [ ] 1.1 `apps/jobs/src/scheduler/sms-member-boxes.ts` (NB1): `MEMBER_BOX_MAX`, `MEMBER_NAME_MAX`, `MEMBER_BOX_SLOTS`. Imports only `type DltSlot` (and `DLT_TYPE_MAX_LENGTH` if the file asserts the ceiling) from `@twt/channels`.
-  - [ ] 1.2 Rewrite `apps/jobs/src/scheduler/sms-member-name.ts` (NB2–NB4): module header (the rulings, N1–N5, why the RESOLVED name is the input, the readings), `SmsMemberName`, `smsMemberName`, and the module-private helpers (the title set, `isTitle`, `firstLetter`, the cut). Imports ONLY `./sms-member-boxes.js` — ⛔ `@twt/domain`,
+- [x] **Task 1 — The function and its boxes (AC1).**
+  - [x] 1.1 `apps/jobs/src/scheduler/sms-member-boxes.ts` (NB1): `MEMBER_BOX_MAX`, `MEMBER_NAME_MAX`, `MEMBER_BOX_SLOTS`. Imports only `type DltSlot` (and `DLT_TYPE_MAX_LENGTH` if the file asserts the ceiling) from `@twt/channels`.
+  - [x] 1.2 Rewrite `apps/jobs/src/scheduler/sms-member-name.ts` (NB2–NB4): module header (the rulings, N1–N5, why the RESOLVED name is the input, the readings), `SmsMemberName`, `smsMemberName`, and the module-private helpers (the title set, `isTitle`, `firstLetter`, the cut). Imports ONLY `./sms-member-boxes.js` — ⛔ `@twt/domain`,
         ⛔ `./peer-mesh-sms-templates.js` (the dependency runs registries → boxes ← function; the shared pure function must not depend on one registry). ⚠ The header must ⛔ contain the DLT marker token, `DLT_VAR` or the template-id prefix — rules (ii) / (iii) scan COMMENT lines in a non-registry file; grep the headers of BOTH new files for `**/` too (TR14). Use `Intl.Segmenter` when present, the code-point iterator otherwise (as the domain's `firstGrapheme`).
-  - [ ] 1.3 Rewrite `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(m) and the source leg (KEEP the AST machinery — `callersOf`, `codeFacts`, the plants — and re-aim it as AC1 says; the title-list fact matches a literal whose text CONTAINS `shrimati`). Keep `sms-member-name.ts` in `NOTICE_MODULES` of `claim-suspicion-notice-no-decision.test.ts`; re-run it (it fences decision-writer names and table writes — the module has none, with or without the domain import). ⛔ Add `sms-member-boxes.ts` to that list (constants only).
+  - [x] 1.3 Rewrite `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(m) and the source leg (KEEP the AST machinery — `callersOf`, `codeFacts`, the plants — and re-aim it as AC1 says; the title-list fact matches a literal whose text CONTAINS `shrimati`). Keep `sms-member-name.ts` in `NOTICE_MODULES` of `claim-suspicion-notice-no-decision.test.ts`; re-run it (it fences decision-writer names and table writes — the module has none, with or without the domain import). ⛔ Add `sms-member-boxes.ts` to that list (constants only).
 
-- [ ] **Task 2 — The registries, the copy, the reminder's key and the sheet (AC2, AC5).**
-  - [ ] 2.1 `suspicion-notice-sms-templates.ts`: slots from the boxes file (`[...MEMBER_BOX_SLOTS, HELPLINE]` / `[...MEMBER_BOX_SLOTS, APPEAL_DATE]`), the six registered texts, `SuspicionNoticeSmsVars`, `renderSuspicionNoticeSms`'s params and its throws; rewrite the header's `{member}` sentences (the literal 40 and "Ramesh S." go).
-  - [ ] 2.2 `peer-mesh-sms-templates.ts`: slots `[...MEMBER_BOX_SLOTS, LINK]`, the two registered texts, `PeerMeshRequestSmsVars`, `renderPeerMeshRequest`; REMOVE `fitsDltAlphanumeric` (keep `fitsDltUrl`); rewrite the header (the 40 / "Ramesh S." sentences; the helpline is gone from this text).
-  - [ ] 2.3 `claim.json` en + hi: the four values; FIRST the NEW `peer_mesh_wa.reminder` pair (= the pre-rework `peer_mesh_sms.request`, byte for byte — copy it from `git show 1e22889e:…`, ⛔ retype; do 2.4 next), THEN the four values; `$comment.peer_mesh_wa`; the `$comment` sentences of Task 0.4 if not already there.
-  - [ ] 2.4 `peer-mesh-wa-templates.ts`: `PEER_MESH_WA_REMINDER_COPY_KEY = 'peer_mesh_wa.reminder'` — ⛔ the body, ⛔ the param order, ⛔ the header's other claims (update the sentence "each body is EXACTLY the real `t('peer_mesh_sms.request')` output"). Also the one JSDoc sentence of `needsUnicode` in `packages/channels/src/dlt-variables.ts` (G4 (vi)) — comment only.
-  - [ ] 2.5 The sheet (current-state edits, with the code): the preamble MSG91 step (3) (SMS types); Shape rules (justification lines for 7–14, the side-by-side bullet, the lowest-share line recomputed with the REAL checker over all sixteen, the last-word line: 8 and 10 only); the main-table rows 7–14; the wording prose of 7–12 and 13–14 (*"The variables, in order"*; ⛔ the "longer than 40 characters is not texted" sentence); the `| n |` rows 7–14; the cost paragraphs (G12, recomputed); a Record row; the dated *superseded* notes if Task 0.4 did not place them.
-  - [ ] 2.6 Registry + sheet tests: `suspicion-notice-sms-templates.test.ts` and `peer-mesh-sms-templates.test.ts` — the `PANEL_EN` constants, the markers (`MEMBER1`/`MEMBER2` distinct), the render calls, the slot expectations, the variable-count legs (`split(DLT_VAR)` lengths 4), the "every variable filled" legs (the helpline assertion only where the template carries it), R9's 40 / 41 legs MOVE to AC1 (a)/(j); `dlt-template-sheet.test.ts` (`UNICODE_ENGLISH = new Set<string>()` — TR4); `peer-mesh-wa-templates.test.ts` stays green.
-  - [ ] 2.7 Gates: AC2 (7). `git add` the new file (`sms-member-boxes.ts`; `sms-member-name.ts` is already tracked) BEFORE `pnpm dlt-typed-variables:check`.
+- [x] **Task 2 — The registries, the copy, the reminder's key and the sheet (AC2, AC5).**
+  - [x] 2.1 `suspicion-notice-sms-templates.ts`: slots from the boxes file (`[...MEMBER_BOX_SLOTS, HELPLINE]` / `[...MEMBER_BOX_SLOTS, APPEAL_DATE]`), the six registered texts, `SuspicionNoticeSmsVars`, `renderSuspicionNoticeSms`'s params and its throws; rewrite the header's `{member}` sentences (the literal 40 and "Ramesh S." go).
+  - [x] 2.2 `peer-mesh-sms-templates.ts`: slots `[...MEMBER_BOX_SLOTS, LINK]`, the two registered texts, `PeerMeshRequestSmsVars`, `renderPeerMeshRequest`; REMOVE `fitsDltAlphanumeric` (keep `fitsDltUrl`); rewrite the header (the 40 / "Ramesh S." sentences; the helpline is gone from this text).
+  - [x] 2.3 `claim.json` en + hi: the four values; FIRST the NEW `peer_mesh_wa.reminder` pair (= the pre-rework `peer_mesh_sms.request`, byte for byte — copy it from `git show 1e22889e:…`, ⛔ retype; do 2.4 next), THEN the four values; `$comment.peer_mesh_wa`; the `$comment` sentences of Task 0.4 if not already there.
+  - [x] 2.4 `peer-mesh-wa-templates.ts`: `PEER_MESH_WA_REMINDER_COPY_KEY = 'peer_mesh_wa.reminder'` — ⛔ the body, ⛔ the param order, ⛔ the header's other claims (update the sentence "each body is EXACTLY the real `t('peer_mesh_sms.request')` output"). Also the one JSDoc sentence of `needsUnicode` in `packages/channels/src/dlt-variables.ts` (G4 (vi)) — comment only.
+  - [x] 2.5 The sheet (current-state edits, with the code): the preamble MSG91 step (3) (SMS types); Shape rules (justification lines for 7–14, the side-by-side bullet, the lowest-share line recomputed with the REAL checker over all sixteen, the last-word line: 8 and 10 only); the main-table rows 7–14; the wording prose of 7–12 and 13–14 (*"The variables, in order"*; ⛔ the "longer than 40 characters is not texted" sentence); the `| n |` rows 7–14; the cost paragraphs (G12, recomputed); a Record row; the dated *superseded* notes if Task 0.4 did not place them.
+  - [x] 2.6 Registry + sheet tests: `suspicion-notice-sms-templates.test.ts` and `peer-mesh-sms-templates.test.ts` — the `PANEL_EN` constants, the markers (`MEMBER1`/`MEMBER2` distinct), the render calls, the slot expectations, the variable-count legs (`split(DLT_VAR)` lengths 4), the "every variable filled" legs (the helpline assertion only where the template carries it), R9's 40 / 41 legs MOVE to AC1 (a)/(j); `dlt-template-sheet.test.ts` (`UNICODE_ENGLISH = new Set<string>()` — TR4); `peer-mesh-wa-templates.test.ts` stays green.
+  - [x] 2.7 Gates: AC2 (7). `git add` the new file (`sms-member-boxes.ts`; `sms-member-name.ts` is already tracked) BEFORE `pnpm dlt-typed-variables:check`.
 
-- [ ] **Task 3 — The suspicion sender (AC3).**
-  - [ ] 3.1 `runSuspicionNoticeChild`: after `if (member === '') …`, `const chosen = smsMemberName(member)`; `const [member1, member2] = chosen.kind === 'too_long' ? [member, ''] : chosen.boxes` (NB5); ONE pair feeds BOTH `render` and `values` (TR6): `render: (helpline) => renderSuspicionNoticeSms(message, locale, { member1, member2, … })`, `values: (helpline) => …` with exactly the slot names of the template (TR7). Update the RB5 comment and the module header's child line and its `throws ONLY …` sentence.
-  - [ ] 3.2 The helpline warning (NB6 (b)): log it only when `entry.slots.some((s) => s.name === 'helpline')`; ⛔ `helplineGap` (NB6 (a)).
-  - [ ] 3.3 The AC3 legs; flip the P2 leg (TR5 — flipped, ⛔ deleted; keep its "⛔ the name in an alarm" assertion).
+- [x] **Task 3 — The suspicion sender (AC3).**
+  - [x] 3.1 `runSuspicionNoticeChild`: after `if (member === '') …`, `const chosen = smsMemberName(member)`; `const [member1, member2] = chosen.kind === 'too_long' ? [member, ''] : chosen.boxes` (NB5); ONE pair feeds BOTH `render` and `values` (TR6): `render: (helpline) => renderSuspicionNoticeSms(message, locale, { member1, member2, … })`, `values: (helpline) => …` with exactly the slot names of the template (TR7). Update the RB5 comment and the module header's child line and its `throws ONLY …` sentence.
+  - [x] 3.2 The helpline warning (NB6 (b)): log it only when `entry.slots.some((s) => s.name === 'helpline')`; ⛔ `helplineGap` (NB6 (a)).
+  - [x] 3.3 The AC3 legs; flip the P2 leg (TR5 — flipped, ⛔ deleted; keep its "⛔ the name in an alarm" assertion).
 
-- [ ] **Task 4 — The neighbours' sender (AC4).**
-  - [ ] 4.1 `readDeceasedName`: `smsMemberName(read.name)` — `too_long` ⇒ `{ fault: 'name_too_long' }`, else `{ boxes }`; the `NameRead` type; `fitsDltAlphanumeric` is gone from the imports. ⛔ Touch `readMemberFacingDeceasedName`'s body; re-word only its JSDoc's last sentence (AC5 — comment only).
-  - [ ] 4.2 The send: `member1` / `member2` from `nameRead.boxes`; `values: () => ({ member1, member2, link })` (⛔ `helpline`, TR7); `render` ignores its `helpline` argument; the once-per-child warning only if the template has a helpline slot (NB6 (b)) — i.e. the branch goes (delete it, with its `helplineWarned` flag, if nothing can set it).
-  - [ ] 4.3 The AC4 legs; update the suite header and the module header's step (4).
+- [x] **Task 4 — The neighbours' sender (AC4).**
+  - [x] 4.1 `readDeceasedName`: `smsMemberName(read.name)` — `too_long` ⇒ `{ fault: 'name_too_long' }`, else `{ boxes }`; the `NameRead` type; `fitsDltAlphanumeric` is gone from the imports. ⛔ Touch `readMemberFacingDeceasedName`'s body; re-word only its JSDoc's last sentence (AC5 — comment only).
+  - [x] 4.2 The send: `member1` / `member2` from `nameRead.boxes`; `values: () => ({ member1, member2, link })` (⛔ `helpline`, TR7); `render` ignores its `helpline` argument; the once-per-child warning only if the template has a helpline slot (NB6 (b)) — i.e. the branch goes (delete it, with its `helplineWarned` flag, if nothing can set it).
+  - [x] 4.3 The AC4 legs; update the suite header and the module header's step (4).
 
-- [ ] **Task 5 — The reminder stays (AC5).** `claim-peer-mesh-wa-reminders-live.test.ts` WR13 re-fixtured; the byte-identity checks (`readMemberFacingDeceasedName`, the body, the param order); the lockstep test green.
+- [x] **Task 5 — The reminder stays (AC5).** `claim-peer-mesh-wa-reminders-live.test.ts` WR13 re-fixtured; the byte-identity checks (`readMemberFacingDeceasedName`, the body, the param order); the lockstep test green.
 
-- [ ] **Task 6 — Proof (AC6–AC8).** RED runs (Debug Log); the AC7 diff-stat; the gates; `ci:local` on :5433.
+- [x] **Task 6 — Proof (AC6–AC8).** RED runs (Debug Log); the AC7 diff-stat; the gates; `ci:local` on :5433.
 
-- [ ] **Task 7 — Records and close.** Story Status, Dev Agent Record, File List, Change Log (newest-first); sprint row `ready-for-dev` → `in-progress` (at Task 0.4) → `review`; ledger. ⛔ "Closed by" until `done` on `main`.
+- [x] **Task 7 — Records and close.** Story Status, Dev Agent Record, File List, Change Log (newest-first); sprint row `ready-for-dev` → `in-progress` (at Task 0.4) → `review`; ledger. ⛔ "Closed by" until `done` on `main`.
 
 ## Dev Notes
 
@@ -708,7 +708,7 @@ Node ≥ 22.12 (`package.json` engines; local 22.22.2, ICU 78.2, Unicode 17.0). 
 
 ### Agent Model Used
 
-Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 rewrite), 2026-10-22. The dev model is recorded by `bmad-dev-story` below.
+Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 rewrite), 2026-10-22. Dev: Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.37e`, 2026-10-22.
 
 ### Debug Log References
 
@@ -741,20 +741,81 @@ Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 
   diff `1e22889e..origin/main` EMPTY ⇒ ⛔ rebase, `baseline_commit` stays `1e22889e`; **S1** `git log 1e22889e..origin/main -- .decision-log.md` empty; **S2** no story file added on
   `origin/main`; **S3** the highest decision on every ref is `-379` and the highest ledger letter `22l` (worktrees `TWT` and `…/3-3c-…` clean, at `-376`); **S4** `ListAgents`: no other
   session. `node_modules` present. **Numbers taken:** decision `2026-10-22-380` (commit `17242731`, ALONE, `governance(6.37e): …`; additive-only, 42 lines; every cited id re-grepped by
-  bare number — `-210` corrected to `2026-09-08-210` before insert); ledger `2026-10-22m`. **Records commit:** see the commit after `17242731` (`story(6.37e): records for -380`) — its SHA is
-  written by the next commit, ⛔ before.
-**(c)** RED proofs (AC8) — each mutant applied by a scratch runner that asserts the edit landed exactly once and ALWAYS restores the file; the unit and live runs by name.
-**(d)** Gates — `typecheck`, `lint`, `microcopy:check` / `:test`, `i18n:check`, `dlt-typed-variables:test` / `:check` (after `git add`), `ci:local` on :5433.
-**(e)** AC5 byte-identity — `readMemberFacingDeceasedName` body (and the one re-worded JSDoc sentence shown); `PEER_MESH_WA_REMINDER_BODY`; the scripted compare of `peer_mesh_wa.reminder` against the pre-rework `peer_mesh_sms.request`; the sheet's recomputed costs against G12.
+  bare number — `-210` corrected to `2026-09-08-210` before insert); ledger `2026-10-22m`. **Records commit:** `8e79a863` (`story(6.37e): records for -380`).
+  **(a4) The Panel answered PQ1, 2026-10-22** — BigDev, verbatim: *"by DR and KB"* / *"go with option A. Bigdev words are fine."* ⇒ `2026-10-22-381` (Trustee-ratified,
+  Dhiraj Rahul + Kalpana Bharti; PQ1 A — "a few questions" for the TEXT; the WhatsApp reminder and the app screen keep "short"), committed ALONE `654e1636`; its
+  records `a11233be` (the note's ruling block; deferred-work PQ1 item "Closed by `-381`", BF24 FYI shown; Row 27 condition DISCHARGED; ledger `22n`). Both commits
+  path-limited (`git commit -- <paths>`), so the staged code set stayed out of them. The code commit then re-worded the four current-state lines that said 13 / 14 wait
+  for the answer (registry header + Hindi comment, the registry test's two comments, the sheet's 13–14 prose and Record row) and appended a dated `-381` sentence to
+  `$comment.peer_mesh_sms` (en + hi). **Numbers taken:** `-381`, ledger `22n`; this close's ledger `22o`.
+**(b′) Code commit:** `16b16f22` (Tasks 1–5, one commit — the commit plan). ⭐ Found while running the live suite: the suspicion harness's fake-gateway oracle matched a
+  template by slot COUNT only; with every message now three slots, the appeal notice's values were tried against the refusal template and `substituteDltValues` THREW
+  on the name mismatch ⇒ the core's `unknown:unknown` (6 legs red). Fixed in the HARNESS (match by slot names too) — ⛔ a code change; the sender was right.
+**(c)** RED proofs (AC8) — a scratch runner (scratchpad `mutants.py`, ⛔ committed) applies each mutant (every edit asserted to land EXACTLY once), runs the named legs
+  (`vitest run <file> -t <pattern>`; unit legs without `DATABASE_URL`, live legs on :5433), records RED / GREEN and ALWAYS restores; `git status` + `git diff` compared
+  before / after — IDENTICAL (tree restored). 35 mutant runs (two re-run after a fix, below) — every one RED, by name:
+  `MEMBER_NAME_MAX` 40 → AC1 (a), (m) RED; AC3 45-letter refusal leg RED; AC4 R9 41-letter leg RED · a cut dropping a code point → (b) · a cut at n → (c) · always cut at 30 →
+  (d), (l) · ignore whitespace-adjacency → (d), (l) · ignore the forced-cut fallback → both (d) legs · an initial with a stop → (e) · initials from the LAST word → (e) · no
+  title step / case-sensitive / no trailing-stop strip → (f) titles · drop Kumar too → (f) Kumari leg · title step at ≤ 60 → (g) · the walk includes the last word → (h), (l)
+  ⚠ the FIRST form of this mutant (only the `break` removed) stayed GREEN: it initialises the last word but never re-checks the fit, so its output is identical — an
+  EQUIVALENT mutant; the faithful form (also re-check after the loop) is RED · first code point → (i) · UTF-16 `.length` → (j) · guard removed → (k) · a registry building
+  its own box slot → (m) · `{member1}{member2}` swapped (en refusal copy) → 3 registry legs · helpline left in 11 (hi copy) → 8 legs (the first anchor landed TWICE and was
+  NOT run — re-anchored, then RED) · helpline left in 13 (hi copy) → 7 legs · the dash left in 14 → 2 legs · `UNICODE_ENGLISH` holding 14 → the needsUnicode leg ·
+  no shortening → AC3 65-letter + titles legs, AC4 65-letter leg · truncate to 60 → AC3 one-word leg; AC4 one-word + re-claim legs · always `full` → AC4 one-word + re-claim
+  legs · warning unconditional → AC3 warning leg; AC4 warning leg (the import and the call re-inserted) · reminder key back to `peer_mesh_sms.request` → both WR6 lockstep
+  legs · the fit check applied to the reminder's name → WR13.
+  ⚠ HONEST: "always `full`" turns the AC3 one-word leg RED ONLY through that leg's own premise assertion (`smsMemberName(oneWord)` is `too_long`) — the SENDER's outcome
+  under it is unchanged (`value_too_long` + alarm), so as to the sender that mutant stays coverage-only, as AC8 said. Likewise the AC3 / AC4 "no shortening" legs fail on
+  their computed premise as well as on the send. NB5's "`member1` = the whole name" is coverage-only BY DESIGN (⛔ claimed).
+**(d)** Gates — `pnpm --filter @twt/jobs typecheck` clean; `lint` clean; `microcopy:check` passed; `microcopy:test` 14 files / 371 tests; `i18n:check` exit 0;
+  `dlt-typed-variables:test` 25 / 25; `dlt-typed-variables:check` passed (after `git add`); `@twt/channels` tests 21 files / 446. Unit: `env -u DATABASE_URL pnpm --filter
+  @twt/jobs test sms-member-name` ⇒ `Test Files  1 passed (1)`, 23 tests; the registry / sheet / reminder / no-decision suites 6 files / 159. Live on :5433:
+  `claim-suspicion-notices-live` 59 / 59, `claim-peer-mesh-requests-live` 49 / 49, `claim-peer-mesh-wa-reminders-live` 27 / 27. **`ci:local` with `DATABASE_URL` at
+  :5433: PASSED — 36 job(s) green** (run on the code BEFORE the `-381` follow-through, which changed comments / prose / a `$comment` only; after it the three affected
+  suites (69 tests), `microcopy:check`, `i18n:check`, `dlt-typed-variables:check`, typecheck and lint were re-run green — ⛔ a second full `ci:local`).
+  The sweep (l) reached every outcome > 100 times (6,000 names, seed `0x6375e`).
+**(e)** AC5 byte-identity (scripted against `git show 1e22889e:…`): `readMemberFacingDeceasedName` body IDENTICAL (its JSDoc's last sentence re-worded: *"⚠ Row 6-37e
+  (`-379`'s full-name rule — two name boxes, shortened only above 60) edits the TEXT's step there — ⛔ this function."*); `PEER_MESH_WA_REMINDER_BODY` IDENTICAL;
+  `peer_mesh_wa.reminder` == the pre-rework `peer_mesh_sms.request` in en AND hi (True / True); `git diff 1e22889e -- peer-mesh-wa-templates.ts` = the one constant + header
+  prose; `claim-dlt-sms-send.ts`, `claim-peer-mesh-wa-reminders.ts` and `packages/domain` — EMPTY diff. **Costs** recomputed through the REAL renderers (19-letter name, 10-digit
+  helpline, 10-char date, 55-char link; GSM-7 160 / 153, Unicode 70 / 67): 7 hi 101/2 · 8 en 88/1 · 9 hi 96/2 · 10 en 88/1 · 11 hi 134/2 · 12 en 116/1 · 13 hi 194/3 · 14 en
+  170/2; 60-letter name: 142/3 · 129/1 · 137/3 · 129/1 · 175/3 · 157/1 · 235/4 · 211/2; ceilings: 13 hi 300/5, 14 en 276/2 — EVERY figure equals G12. Fixed shares
+  (the checker's arithmetic): 7 hi 49.3 · 8 en 44.3 · 9 hi 47.5 · 10 en 44.3 · 11 hi 60.0 · 12 en 55.4 · 13 hi 40.0 · 14 en 34.7 (= G3); 1–6 and 15–16 87.2–90.6.
+  AC7: `git diff --stat $(git merge-base origin/main HEAD)..HEAD -- apps packages` lists only AC7's files (`claim-suspicion-notice-no-decision.test.ts` appears from the
+  superseded v1.x build, which added the module to `NOTICE_MODULES` — this rework did not touch it).
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6.37e`, v2.0 rewrite, 2026-10-22).
 - Validated (`bmad-create-story validate 6.37e`, v2.1, 2026-10-22): three fresh-context read-only verifiers (code claims; rulings / records / numbers; edge cases / test feasibility) — 0 H / 9 M / 26 L, all applied; then one fresh-context re-validate of the patch diff (see the Change Log).
+- ✅ Dev complete (`bmad-dev-story 6.37e`, 2026-10-22). Governance first: `-380` (author-commit, NB1–NB9; PQ1 routed at BigDev's word) `17242731` → records `8e79a863` →
+  the Panel answered PQ1 A → `-381` (Trustee-ratified) `654e1636` → records `a11233be` → code `16b16f22` (Tasks 1–5) → this close.
+- Built: `smsMemberName` + `sms-member-boxes.ts` (the name WHOLE up to 60 in two ≤ 30 boxes cut near the middle, ⛔ empty; above 60 titles, then initials from the front,
+  ⛔ the last word; else today's outcome); both registries / the copy / the DLT sheet re-shaped (11–14 ⛔ helpline; 14 GSM-7; "a few questions"); the WhatsApp reminder
+  keeps its words under `peer_mesh_wa.reminder`; the senders feed one box pair to render + values and warn about a non-callback helpline only where it is printed.
+- Tests: 23 unit legs (incl. a 6,000-name seeded sweep and the re-aimed AST fence); registry / sheet legs re-shaped; live legs flipped (P2, R9, the helpline warnings) and
+  added (Panel's example, titles, 75-letter one-word); all 35 AC8 mutant runs RED (one equivalent mutant found and replaced; the AC3 "always full" RED only via its premise — Debug Log (c)). `ci:local` 36 / 36 on :5433.
+- ⚠ For the reviewer: (1) the harness oracle fix (Debug Log (b′)); (2) the AC3 "always full" leg is RED only via its premise (Debug Log (c)); (3) the two new forms of
+  one member (SMS shortened above 60, WhatsApp full) are by design (`-380` decision 8 / `-379` Not covered). ⛔ "Closed by" anywhere until `done` on `main`. Not pushed.
 
 ### File List
 
-*To be filled by `bmad-dev-story`. Expected (AC7): the two modules, `claim-suspicion-notices.ts`, `claim-peer-mesh-requests.ts`, the two registries, `peer-mesh-wa-templates.ts` (one constant), the two `claim.json`, the registration sheet, the roster / deferred-work / epics / sprint-status / `.decision-log.md` records, and the test files AC7 lists.*
+- `apps/jobs/src/scheduler/sms-member-boxes.ts` (new)
+- `apps/jobs/src/scheduler/sms-member-name.ts` (rewritten)
+- `apps/jobs/src/scheduler/claim-suspicion-notices.ts`
+- `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+- `apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts`
+- `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`
+- `apps/jobs/src/scheduler/peer-mesh-wa-templates.ts` (the copy key + header prose)
+- `packages/channels/src/dlt-variables.ts` (one JSDoc sentence)
+- `packages/i18n/locales/en/claim.json`, `packages/i18n/locales/hi/claim.json`
+- `apps/jobs/tests/sms-member-name.test.ts` (rewritten), `suspicion-notice-sms-templates.test.ts`, `peer-mesh-sms-templates.test.ts`, `dlt-template-sheet.test.ts`,
+  `claim-suspicion-notices-live.test.ts`, `claim-peer-mesh-requests-live.test.ts`, `claim-peer-mesh-wa-reminders-live.test.ts`
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md`, `docs/adr/ADR-0041-sms-gateway-msg91.md` (changelog row)
+- `.decision-log.md` (`-380`, `-381`)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md` (new; answered), the 2026-10-17 / 2026-10-18 notes (dated notes),
+  `_bmad-output/planning-artifacts/epics.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`, this story file
 
 ---
 
@@ -998,6 +1059,10 @@ and (d)'s `36/36` was on the tree before these eight patches.
 
 ## Change Log
 
+- v2.3 (2026-10-22) — **Dev complete** (`bmad-dev-story 6.37e`, Claude Opus 5.5). Task 0: preflight clean; BigDev at Task 0.3: *"you know what route to panel,
+  prepare routing note"* ⇒ the dropped "short" became `-380` PQ1 (routed) instead of a told item; `-380` (`17242731`) + records (`8e79a863`); the Panel answered —
+  `-381` Trustee-ratified PQ1 A (`654e1636`) + records (`a11233be`). Tasks 1–5: code `16b16f22`. Task 6: 35 mutant runs RED (Debug Log (c)); gates and `ci:local` 36 / 36
+  on :5433 (Debug Log (d)); AC5 byte-identity and the G3 / G12 figures confirmed (Debug Log (e)). Status → review; row 6-37e in-progress → review; ledger `22o`. Not pushed.
 - v2.2 (2026-10-22) — **Task 0.2 ANSWERED by BigDev** (to the create-story session; recorded VERBATIM in Debug Log (a)): *"NB1-NB9 approved. A small
   modification is done in NB7."* — every NB at its recommendation; BigDev's own edit to NB7 drops the word "short" from templates 13 (hi *"कुछ प्रश्नों"*) and
   14 (en *"a few questions"*). §0 applied: the word is in a Trustee-ratified phrase (`-304` Q6 A; `-379` Q2 A as put) ⇒ raised to BigDev with options;

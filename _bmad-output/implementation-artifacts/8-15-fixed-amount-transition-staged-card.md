@@ -221,6 +221,11 @@ qualifying one. ⛔ Emergency rows: per PQ1.
 upcoming amount (8.2 D3).
 **And** at most **one** transition line renders. If an upcoming change exists while the pool is itself a
 first cycle, the **upcoming** stage wins (D7).
+> ⭐ *Review note 2026-10-22 (D1, Option A) — the AC is not edited:* the `next_cycle` row above is now decided from
+> the amount **in force at `now`** (`resolveEffectiveFixedAmountRow` at `now`), not from `R`: it fires iff that
+> amount differs from `P.fixedAmount`, and names THAT amount. `C < R ≤ now` stays the common case; the rule also
+> covers two changes inside one window (the LATER wins), a reversion (silent), and a backdated emergency
+> (`effective_from ≤ C`). The card's CURRENT amount is unchanged: still `P.fixedAmount` in every stage.
 
 ### AC2 — The moot-row defect is fixed at its source (Trap 1)
 
@@ -260,6 +265,10 @@ carrying an extra key (e.g. `changeType`, or an `effectiveFrom` instant) is **re
 (AI-6-3-carry).
 **And** every consumer of the old field is migrated in the same commit. `git grep upcomingAmountChange`
 returns **zero** hits outside the `_bmad-output/` history.
+> ⭐ *Review note 2026-10-22 (P4) — the AC is not edited:* the literal "zero hits" is **not met, by design**.
+> Four hits remain — a provenance comment, the contracts test that asserts the retired field is **rejected**
+> (2 lines), and the mobile fence that asserts the card no longer references it. None is a consumer, and AC7's
+> fence needs the string, so AC3 and AC7 cannot both hold literally. See Debug Log "AC3 `git grep`".
 
 ### AC4 — The card renders the stage, through the real `t()`, without a second live region
 
@@ -276,6 +285,8 @@ is in the copy). ⛔ No `toHindiNumeral`.
 ⛔ no new colour or accent. It sits where the current line sits, directly under the amount.
 **And** the card's local `formatDate` (`:63-75`) and the `useLocale()` call (`:79`) are **deleted**: both are
 used only by the old line (`:221`), and the new formatter lives in `amountTransitionCopy.ts`. ⛔ No dead helper.
+> ⭐ *Review note 2026-10-22 (P4) — the AC is not edited:* the `useLocale()` call is **KEPT** — the new date
+> formatter still needs `locale` (Debug Log Deviation 3). `formatDate` was deleted as specified.
 **And** `first_cycle` renders the note under the amount. The amount itself renders **unchanged**
 (`formatInr(data.fixedAmount)`).
 **And** `t()` is always called with `NS` (`{ namespace: 'contribution' }`).
@@ -374,6 +385,9 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   contract **explicitly** (footgun #1: domain/contract same-named shape drift). ⛔ Not in `@twt/contracts`:
   unlike the tone band, no push or notification mentions a transition (8.8's reason for moving `toneGradient`
   does not apply). If a later story puts a transition in a push, **that** story moves it.
+  ⭐ *Review note 2026-10-22 (P4):* the input was built as `isFirstCycle: boolean`, not `firstCycle: {isFirst,
+  changeType}` — the change type is not needed once PQ1 = B (Debug Log Deviation 2). Review D1 then added `inForceNow`
+  (the amount in force at `now`), which decides `next_cycle`.
 - **D2 — Calendar months in IST, and the far stage is dated (Trap 2).** `monthDistance = (y_eff*12+m_eff) −
   (y_now*12+m_now)` on `istCalendarDate(...)` parts. `1` → `next_month`. Otherwise (`0` or `≥2`) →
   `scheduled`, with the date. At a 90-day minimum notice a change is ≥ 2 IST months away on the day it is
@@ -381,6 +395,10 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   spec sample copy:** *"3 चक्र बाद"* is replaced by the dated line, because no honest cycle count exists.
 - **D3 — Upcoming is read as of the live pool's `committedAt`; the stage label uses `now`.** This closes Trap 4.
   `resolveUpcomingFixedAmountChange(tx, pariwarId, committedAt, { excludeAmount: pool.fixedAmount })` (D6).
+  ⭐ *Review note 2026-10-22 (D1):* the as-of-`committedAt` read now feeds only the DATED stages (`scheduled` /
+  `next_month`; a row at or before `now` is never announced from it). `next_cycle` no longer reads the nearest
+  row — `LIMIT 1` returned the EARLIER of two in-window changes and could not see a backdated emergency. Trap 4
+  stays closed, by a different read.
 - **D4 — `effectiveOn` is an IST calendar date on the wire**, via the **existing**
   `istDateOf(effectiveFrom)` (`holiday-resolver.ts:178`), ⛔ never an instant (Trap 6), ⛔ never a new helper.
 - **D5 — "First cycle" definition.** Let `F` = `resolveEffectiveFixedAmountRow(tx, p, C)`. `isFirst` iff **all** of:
@@ -401,6 +419,11 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   if a backdated emergency **does** match the pool's snapshot, the predecessor is read from the schedule, not
   from the previous pool, and may not be the amount the member last paid. It is reachable only for emergency
   `F`, so it matters only if PQ1 is ruled B; record it there.
+  ⭐ *Review note 2026-10-22 (P2) — the sentence above is superseded, not corrected:* "reachable only for
+  emergency `F`" is **false** — two STANDARD rows with no pool between them reach it (see the 2026-10-22 note
+  under "Two residues of the 8.15 stage reads" in `deferred-work.md`). Condition 3 also gained
+  `pools.fixed_amount = P.fixedAmount` (Review P1): a backdated emergency otherwise let an old-amount pool
+  suppress the note on the first pool really at the new amount.
 - **D6 — A "change" to the same amount is not a change.** `R.fixedAmount === P.fixedAmount` → no stage (e.g. an
   emergency later reverted by a standard change to the original amount). Nothing changes for the member.
   ⚠ The existing read is `LIMIT 1`, so a post-filter would let a nearer same-amount row **hide** a later real
@@ -409,6 +432,9 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   moot-row conjunct, so the filter lives in one place. The admin view calls it without options (unchanged).
   `standardOnly` exists for PQ1 = A.
 - **D7 — Precedence:** `next_cycle` > `next_month` > `scheduled` > `first_cycle` > `null`. One line only.
+  ⭐ *Review note 2026-10-22 (D1/P3):* unchanged, now with two homes — `selectUpcomingStage` holds every stage
+  except `first_cycle`, and the handler skips the first-cycle read whenever it returns non-null (that read is
+  dead work in that case).
 - **D8 — Fail-soft per field, not per card, and placed LAST.** The two new reads (upcoming + first-cycle) are
   wrapped in one `try`/`catch`. On a throw → `amountTransition: null` + `request.log.warn(...)`, the
   self-verify precedent at `handlers.ts:1531-1539`. ⚠ **A wrap alone is not enough.** `tx` is a real Postgres
@@ -421,6 +447,10 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   `scopeTx.client` passed into `resolveCard`). ⚠ This **narrows** today's behaviour (today a throw in the
   upcoming read blanks the whole card). The story intends that narrowing: a decorative line must not hide the
   contribute CTA.
+  ⭐ *Review note 2026-10-22 (D1/P3) on D8:* the transition reads are now three — upcoming (as of C), the amount in
+  force at `now`, and the first-cycle read (skipped when an upcoming stage wins). All three sit in the same single
+  `try`/`catch`, still the LAST statements in the transaction; the source scan and the call-order leg (which now
+  includes the in-force read) are unchanged in kind.
 - **D9 — Clock.** `deps.clock()` stays the instant for the stage label, consistent with `daysRemaining` on the
   same card and the unit-test clock. ⛔ No `readDbNow` here: the admin view needs one instant across two
   partitioning reads (`pool-fixed-amount/handlers.ts:213`), and the card's reads are anchored at `C`, a
@@ -505,6 +535,8 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   - [x] `resolveUpcomingFixedAmountChange`: add the `effective_until IS NULL OR effective_until > effective_from`
         conjunct, and the optional `{ excludeAmount, standardOnly }` options bag (D6), both in the WHERE clause.
         Update its doc-block (it now names both consumers, the moot-row exclusion and the options).
+        ⭐ *Review note 2026-10-22 (P4):* built as `{ excludeAmount }` only — `standardOnly` existed for PQ1 = A and
+        Decision `-383` chose B (Debug Log Deviation 1); the `standardOnly` leg was therefore not written.
   - [x] Extend test (g) of `pool-fixed-amount.spec.ts` (`:263-343`) per AC2: the case (2) leg read at an `asOf`
         ≥ the test's JS `now`, and the case (1) same-`effective_from` leg. Add a D6 leg (a nearer same-amount
         row doesn't hide a later differing one) and a `standardOnly` leg. Revert-sanity, with observed counts.
@@ -545,6 +577,7 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   - [x] Replace `:215-227` in the card. Delete `formatDate` (`:63-75`) and the `useLocale()` call (`:79`): both
         become dead (AC4). Keep `formatInr`. Add the `accessibilityLabel` from the `_a11y` key (new; the old line
         had none). Update the header comment block (`:18-21` numeral discipline mentions the upcoming-change date).
+        ⭐ *Review note 2026-10-22 (P4):* `useLocale()` was **kept**, not deleted (Debug Log Deviation 3).
   - [x] `api-client` types follow the contract automatically. Confirm `pnpm --filter @twt/mobile typecheck`
         ([[project_mobile_typed_routes_worktree]]: in a worktree without `.expo/types`, `tsc` skips `Href`,
         so this does not prove routes).
@@ -552,6 +585,9 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   - [x] 8 new keys en + hi, sorted. Remove `upcoming_amount` from both.
   - [x] `amount-transition-copy.test.ts` (real `t()`); the microcopy 8.15 block with teeth.
   - [x] Request the non-author tone review. Record the outcome or "outstanding" (AC6).
+        ⭐ *Review note 2026-10-22 (P6):* `[x]` records that it was REQUESTED of BigDev in chat at the end of the
+        dev run — ⛔ not that an artifact exists. The review is **outstanding**; owner and re-trigger are now in
+        `deferred-work.md` ("Story 8.15 AC6 — the non-author human tone review … OUTSTANDING").
 - [x] **Task 7 — Records.**
   - [x] `deferred-work.md`: close the "⭐ Story 7.11 — UX-DR25 …" entry **in its own vocabulary**: "Closed by
         [implementation]" for the standard stages, naming D2's dated-copy deviation, and the emergency half per
@@ -575,7 +611,195 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
 
 ### Review Findings
 
-_(none yet)_
+#### Round 1 — `bmad-code-review` 2026-10-22 against `git diff b883dc15..d6368a5d`
+
+Blind Hunter (code slice only: `apps/ packages/ scripts/`, 1715 diff lines; the records were withheld so it stayed
+blind) + Edge Case Hunter + Acceptance Auditor, parallel, all read-only. 1 `decision-needed`, 7 `patch`,
+0 `defer`, 16 dismissed — enumerated at the end (a bare count is unauditable). `git status --porcelain` was
+empty after all three layers returned (HEAD `d6368a5d`). ⚠ **What was and was not verified:** the reviewer READ
+and TRACED the code behind D1, P1 and P2 (the SQL, the selector, the write path); **no gate was run** by this
+review, and the author's mutant and revert-sanity counts in the Debug Log are the author's claims, not
+reproduced. Panel-routing gate (§0) applied to every finding: none is the Panel's — each is "the code should do X"
+(or a record that should say what is true) with no change to what the Trust owes beyond what `-383` already ruled.
+
+**`decision-needed`**
+
+- [x] [Review][Patch] **D1 — RESOLVED 2026-10-22, BigDev: "D1: A" — now a patch. `next_cycle` can name an amount that is not the next cycle's; and an old-amount pool
+  gets no line after a backdated emergency. The residue entry that routed this to BigDev rests on a false
+  premise.** [`apps/api/src/modules/member-pool/handlers.ts:1400-1425`,
+  `packages/domain/src/pool/fixed-amount-transition.ts:62-74`, `packages/domain/src/pool/fixed-amount.ts:292-320`] —
+  *source: blind + edge + auditor.* ⭐ **TRACED.** The upcoming read is `effective_from ASC LIMIT 1` as of the
+  pool's `committed_at` (C), with `excludeAmount` = the pool's own amount. (i) **Two changes inside one live
+  window** (C < R2 < R3 ≤ now): the read returns R2, the selector says `next_cycle` with R2's amount, but the next
+  cycle snapshots whatever is in force at ITS commit (R3). R3 = 700 → card says ₹600, next cycle asks ₹700. R3
+  reverting to the pool's amount → `excludeAmount` drops R3, the card announces a change that is already undone.
+  (ii) **A backdated emergency E with `effective_from ≤ C`** written after the pool spawned (legal: the bound is the
+  in-force row's `effective_from`, `fixed-amount.ts:157-185`, and option (d) "bound at the latest commit" was
+  "deliberately NOT taken"): `gt(effective_from, C)` misses E and the D5 snapshot guard returns false, so the
+  old-amount pool shows nothing at all although the next cycle will carry E's amount.
+  ⚠ **The record is wrong about when this fires.** `deferred-work.md:12277` and Completion Notes `:679` say
+  *"Both need an emergency inside a 15-day window"*. `scheduleStandardChange` enforces only the 90-day notice floor
+  (no spacing rule in the domain write path — the route layer was not checked), so TWO STANDARD changes scheduled
+  less than a live window apart reach (i) with no emergency at all (a trustee correcting a mis-set change is the
+  obvious road). BigDev's "accept, or patch" call was reserved on that premise.
+  **Options:** **A (recommended) — patch to one rule:** one extra O(1) read of the amount in force at `now`
+  (`resolveEffectiveFixedAmountRow(tx, pariwarId, now)`, still in the LAST-reads block, still fail-soft);
+  `next_cycle` names THAT amount and fires iff it differs from the pool's snapshot. Closes (i) and (ii); D3's
+  as-of-C anchor and the future stages stay. *Cost:* a dated note on D3/D7, a new selector input, ≥ 4 test legs
+  (two-row increase, two-row revert, backdated-emergency old-amount pool, both with revert-sanity). **B — narrow
+  patch:** only stop the wrong amount (when the nearest post-C change is already in force, name the amount in
+  force at `now`, suppress when it equals the pool's). *Cost:* (ii) stays silent for the old-amount pool — the
+  rare case `-383` already accepted and recorded; smaller test surface. **C — accept, correct the record:** no
+  code; replace the false premise with the true one. *Cost:* in that rare sequence a member is told a wrong
+  amount "from the next cycle" until the pool closes — on a money notice, which is exactly what this story exists
+  to prevent.
+  **DECIDED — Option A (BigDev, 2026-10-22, reply "D1: A").** ⭐ The patch is Option A as written: one extra read of
+  the amount in force at `now`, still in the LAST-reads block and still fail-soft; `next_cycle` names that amount
+  and fires iff it differs from the pool's snapshot; D3's as-of-C anchor and the future stages unchanged. Owes: a
+  dated note on D3/D7, the new selector input, ≥ 4 legs with revert-sanity (two-row increase, two-row revert,
+  backdated-emergency old-amount pool, and the unchanged-amount negative), and P2's record correction re-worded to
+  "(b) closed by D1" ([[feedback_closure_language_precision]] — "closed" only once built and tested).
+
+**`patch`**
+
+- [x] [Review][Patch] **P1 — The first pool at the new amount gets NO note after a backdated emergency (violates
+  `-383` ruling 1, third bullet; AC1 `first_cycle`).** [`packages/domain/src/pool/fixed-amount.ts:354-366`] —
+  *source: edge + auditor + blind.* ⭐ **TRACED.** D5 condition 3 counts ANY pool of the Pariwar committed in
+  `[F.effectiveFrom, C)` with no amount condition. Emergency E (600) backdated to 04-01, written after pool P (500)
+  spawned 04-10: P is correctly `false` (snapshot guard), but the NEXT pool P2 (600, 04-25) finds P inside
+  `[04-01, 04-25)` and is also `false` — the member goes ₹500 → ₹600 with no word on the card. `-383`'s told cost
+  was "the case-3 note could compare against the wrong earlier amount; we would guard against it" — a missing
+  note is a different outcome from the one the Panel was told about. **Fix (unambiguous):** add
+  `eq(pools.fixedAmount, input.poolFixedAmount)` to the earlier-pools predicate (in the ordinary case every pool in
+  that range already holds F's amount, so nothing else moves). **Tests:** a P2 leg in
+  `active-contribution-read.spec.ts` (today only P's leg exists, `:213`), with revert-sanity.
+- [x] [Review][Patch] **P2 — Correct the residue records' false premises (closure honesty, checklist family 10).**
+  [`_bmad-output/implementation-artifacts/deferred-work.md:12277`, story `:400-402` and `:679`] — *source: auditor +
+  edge.* (a) *"reachable only for an emergency in force at `committed_at`"* is false: two STANDARD rows with no
+  pool between them (v2 700 from Jan 1, v3 500 from Jan 10, next pool Jan 15 at 500) make the schedule predecessor
+  differ from what the member last paid → `first_cycle` says "the new contribution starts with this cycle" for an
+  unchanged amount. Also reachable for the Pariwar's first-ever pool after a change (spec-conformant by D5, so
+  recorded, not patched). (b) per D1. **Append-only:** a dated note under each, ⛔ no rewrite of the sentences
+  ([[feedback_closure_language_precision]]). Re-word per D1's outcome.
+- [x] [Review][Patch] **P3 — The first-cycle read runs even when its result is discarded.**
+  [`apps/api/src/modules/member-pool/handlers.ts:1409`] — *source: blind.* When the upcoming read returns a row
+  the selector's D7 precedence always wins, and the SQL guarantees such a row passes the selector's own guard
+  (`effective_from > C`, amount ≠ pool's), so `resolveFirstCycleUnderAmount` (up to 3 sequential queries) is dead
+  work on the topmost home card for the whole announce window. Call it only when `upcoming === null`. LOW; fold
+  into D1 if D1 = A.
+- [x] [Review][Patch] **P4 — AC/Task text not annotated for the three recorded deviations.** [story `:261`,
+  `:277`, `:506-510`, `:545`] — *source: auditor.* Disclosed in Debug Log (Deviation 1–3, the AC3 grep note) but the
+  AC3 "zero `git grep upcomingAmountChange`" and AC4 "delete the `useLocale()` call" still read as orders, and
+  Task 1 / Task 5 are `[x]` as written (`standardOnly` not built, `useLocale()` kept, `isFirstCycle: boolean`).
+  AC3 and AC7's fence cannot both hold literally (the fence needs the string). Dated notes under AC3, AC4 and the
+  two Tasks pointing at the Debug Log; ⛔ no rewrite. LOW.
+- [x] [Review][Patch] **P5 — The sprint-status machine ledger does not carry 8.15's ledger letters.**
+  [`_bmad-output/implementation-artifacts/sprint-status.yaml:20364-20365`] — *source: auditor (PLAUSIBLE → read
+  and CONFIRMED by the reviewer).* The `last_updated: >-` block's newest 8.15 line is "created: backlog →
+  ready-for-dev"; aa–ad exist only as header comments while the row says `review`; the 6.37e precedent mirrors
+  each letter into the block (`:20366-20371`). Add one dated line. ⚠ Use the safe-prepend recipe — a naive rewrite
+  truncates ([[project_sprint_status_safe_prepend]]). LOW.
+- [x] [Review][Patch] **P6 — AC6's outstanding tone review has no owner, re-trigger, or hold on `done`.**
+  [story `:554`, `deferred-work.md` 8.15 section] — *source: auditor.* Task 6 is `[x]` on "requested of BigDev at
+  the end of this run" with no artifact; the Epic 8 retro W-5/H-3 held 8.2 from `done` for the same gap. Nothing
+  claims the review done, so AC6 itself is honest — what is missing is who owns it and what re-opens it. Record
+  both. ⭐ **The review itself is BigDev's (en + hi copy, non-author).** LOW.
+- [x] [Review][Patch] **P7 — Two assertions that would let a defect through.**
+  [`apps/api/tests/unit/active-contribution-card.test.ts:311`, `scripts/microcopy/contribution.test.ts`,
+  `apps/mobile/tests/unit/amount-transition-copy.test.ts`] — *source: auditor.* (i) `expect(c.fixedAmount)
+  .toBe(310)` ("the current amount stays the snapshot in every stage") is in the `first_cycle` leg only; the
+  `scheduled`, `next_month`, `next_cycle` legs, which carry a ₹400 upcoming amount, do not assert it. (ii) "Never
+  *from next month* for an emergency" is pinned at STAGE level only: no leg asserts the `scheduled` line (en or hi)
+  lacks "next month" / "अगले महीने", so a copy edit passes every gate and AC6 is the only backstop. Both are
+  one-line legs with revert-sanity. LOW.
+
+**`defer`** — none. (Everything real was caused by this change; nothing here is pre-existing.)
+
+**Dismissed (16)** — each with its reason, so the count can be audited:
+
+1. *blind #1 (HIGH)* — the transition read's safety rests on call order, not a savepoint. **Designed and pinned:**
+   D8 names it, names `underSavepoint` as the alternative, and the order is held by a mock-call-order test AND a
+   source scan; the auditor confirmed `closeScopeTx(commit)` after an aborted tx is safe (PG turns COMMIT into
+   ROLLBACK). Revisit if a later story adds a DB read after step (10).
+2. *blind #2 + edge #8* — `upcomingAmountChange` removed from a `.strict()` contract (deploy skew). **AC3 orders
+   exactly this**; not in production, merge ≠ go-live ([[project_not_in_production_merge_is_not_golive]]).
+3. *blind #3 + edge #7* — contract violation (bad `effectiveOn`/`newAmount`) 500s outside the fail-soft. The map
+   is explicit per stage; `istDateOf` yields a valid date for every realistic instant; the year-9999 shape is
+   UNPROVEN and pathological.
+4. *blind #7* — the moot-row filter changes a shared reader; the removed `upcoming_amount` key may have other
+   consumers. **AC2 orders it** (admin leg asserts `upcoming` null, `schedule` list still shows it); `git grep`
+   finds the key only in the new fence test.
+5. *blind #8* — handler wiring tested only against mocks. The domain reads have live-DB specs
+   (`active-contribution-read.spec.ts`, `pool-fixed-amount.spec.ts`); the mock-spread trap is named and guarded
+   (every stage leg asserts non-null).
+6. *blind #9* — the "last read" source scan is brittle. The project's established pattern, one of two pins
+   (see #1).
+7. *blind #10* — TZ-independence tests may pass vacuously. The `2027-02-28T18:40Z` leg bites any UTC/process-TZ
+   month read under a UTC CI regardless of `process.env.TZ` mutation; the author reports mutant-RED (not
+   reproduced here). The mobile test title's "far WEST" wording is cosmetic.
+8. *blind #11 + edge #5* — "from next month" is shown for a change effective late next month. **The stage is
+   ratified (`-124` cl.1) and D2 anchors it to the IST calendar month**; the amount the member is asked to pay is
+   always the pool's snapshot, so no wrong payment follows. (`next_month` carrying an unrendered `effectiveOn` on
+   the wire is by design: AC3 keeps one shape per dated stage.)
+9. *blind #12* — render-time `throw` on an unknown stage. Unreachable past the strict contract; a server newer than
+   the client is the deploy-skew case of #2.
+10. *blind #13* — `isRealCalendarDate` imported from `claims/contact-ladder.js`; `IsoDate` regex duplicated.
+    **The validated story orders the reuse** (v1.1: "reuse `istDateOf` + `isRealCalendarDate`").
+11. *blind #14* — one `try` covers both reads, so a bug becomes `null` + a warn. That IS D8 (fail-soft for the
+    `amountTransition` field); the log line is the signal.
+12. *blind #15* — ms vs µs precision at the C/R boundary. Needs a schedule row and a commit within the same
+    millisecond; not constructible in practice.
+13. *blind #16* — a11y copy duplicates the visible copy; `$colorPress` for static text; hard-coded
+    `toHaveLength(8)`; Hindi scarcity gap. `$colorPress` is what the replaced line used (baseline `:217`) and what
+    its siblings use; the Hindi gap is pre-existing and acknowledged; the count assertion is the project's
+    key-set pin.
+14. *blind #17* — renumbered step comments, overlong comment lines, decision ids in comments. Hygiene.
+15. *edge #6* — a swallowed self-verify SQL error aborts the tx before the new reads. **UNPROVEN** (needs a
+    SQL-level error in `resolveMemberSelfVerifyState`); the outcome is `null` + a warn — the designed degrade.
+16. *auditor F9* — `-383` says "SHOWN to the Panel" beside a Status line saying full-vs-summary is unrecorded; the
+    story/deferred-work `.decision-log.md:NNNN` cites have drifted by +33. The uncertainty is disclosed in the same
+    entry, a ratified entry is superseded never edited, and a stale line cite is cosmetic
+    ([[feedback_shown_to_panel_means_sent]]).
+
+**Applied — 2026-10-22.** BigDev: "D1: A", then "1" (apply every patch). 8 of 8 patches applied, none skipped.
+
+- **D1 (Option A)** — `selectUpcomingStage` (every stage but `first_cycle`) + a new `inForceNow` input decide
+  `next_cycle` from the amount in force at `now`; the handler reads it (`resolveEffectiveFixedAmountRow` at `now`),
+  last-reads block, same `try`. **P3** folded in: the first-cycle read runs only when `selectUpcomingStage` is null.
+- **P1** — `eq(pools.fixedAmount, input.poolFixedAmount)` in `resolveFirstCycleUnderAmount`'s earlier-pools check.
+- **P2 / P4 / P6** — appended dated notes (deferred-work residue entry, D5, Completion Notes, AC3, AC4, Tasks 1/5/6, D1,
+  D3, D7, D8, the AC1 table); the AC6 owner + re-trigger entry is in `deferred-work.md`. ⛔ No sentence rewritten.
+- **P5** — ledger `2026-10-22ae` + one block line, safe-prepend (parses, 290 rows, 8-15 = `review`, +7 lines).
+- **P7** — `fixedAmount` stays 310 asserted in the `scheduled` / `next_month` / `next_cycle` legs; a real-`t()` leg
+  asserts the emergency-reachable stages never say "next month" / "अगले महीने" (en + hi, line + a11y), with a control
+  that the regex bites on `next_month`.
+
+**Evidence — what was run and what it showed** (the reviewer's runs, this tree):
+
+- **Revert-sanity, each mutant restored byte-identical afterwards:** P1 — without the amount condition the live-DB
+  spec goes **12 → exactly 1 red** (the new P1 leg). D1/P3 — M-a (next_cycle rule off): 7 domain + 4 API legs red;
+  M-b (names the nearest row): 2 domain + 1 API; M-c (first-cycle read never skipped): 1 API; M-d (in-force read as of
+  C, not now): 1 API; M-e (drop the "row is in the future" guard): 2 domain + 1 API. P7(ii) — M-f (en `scheduled`
+  says "next month") and M-g (hi `first_cycle_a11y` says "अगले महीने"): 1 red each.
+- **Final code, targeted:** domain selector (34) + live-DB read spec (12) = 46 passed; API unit
+  (`active-contribution-card` + `contribution-history`) 40 passed; mobile copy test 20 passed.
+- **`pnpm ci:local` on :5433, run twice.** Run 1: 34/36 — `lint` red (⚠ MY mistake: an unused `R3` const in the new
+  test block, fixed) and `integration-tests` red. Run 2: **35/36** — `lint` green; the one red is
+  `apps/jobs/tests/audit/integrity-check.test.ts`, chunk-boundary leg, 20 s timeout. In run 2 the domain integration
+  set was 6111 passed | 1 skipped (6112), contracts 1425, mobile 1295, every gate script green.
+- ⚠ **`ci:local` is NOT green, and this story does not claim it is.** The jobs red is not diagnosed (see the
+  deferred-work entry): it fails in whole-file and turbo runs, passes single-test and in the direct whole-jobs run
+  (1382/1382). No file on this branch is under `apps/jobs` or audit-named — but the author's earlier "36/36" cannot
+  be reproduced on this machine today. ⚠ Because turbo stops at the first failing package, **`@twt/api` integration
+  did not run inside `ci:local`**; it was run separately, whole, against :5433: **2057 passed | 1 skipped | 1 failed**,
+  including `pool-fixed-amount/fixed-amount.spec.ts` (16) and `member-name-form-parity.spec.ts` (14). The one failure,
+  `member-drive-detail.spec.ts` AC4, is a random-token false positive ("vpa" inside `kozeb2jahavpacbvlwer_g`); it
+  passes alone, 13/13. Both are in `deferred-work.md` under "Deferred from: code review of
+  8-15-fixed-amount-transition-staged-card.md (2026-10-22)".
+
+**Not done, deliberately:** Status stays **`review`**, ⛔ not `done`. AC6's non-author tone review is outstanding, the
+Epic 8 retro W-5/H-3 precedent held 8.2 for the same gap, and `deferred-work.md` commits to putting that call to
+BigDev. Nothing is committed or pushed.
 
 ## Dev Notes
 
@@ -668,6 +892,11 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 8.15`, 2026-10-22, in the s
 - **Task 8 verification.** `turbo run typecheck lint` (domain, contracts, api, mobile): 36/36 tasks. `pnpm ci:local` with `DATABASE_URL` set explicitly to **:5433**: **36/36 jobs green**, exit 0, including `integration-tests` (`@twt/domain` 6102 passed / 1 skipped; `@twt/api` 2053 passed / 1 skipped). That run includes `pool-fixed-amount.spec.ts`, `active-contribution-read.spec.ts`, the admin `fixed-amount.spec.ts` and `member-name-form-parity.spec.ts` (the live route). The same four specs were also run on their own against :5433 before the commits: 20/20, 11/11, and 30/30 for the admin + live-route pair. The unit job reported contracts 1425/1425, mobile 1294/1294 (79 files), api-client 35/35; `i18n:check` (forced, uncached), `microcopy:check`, `microcopy:test` 378/378, `friction-budget` and `contracts-determinism` all green. ⚠ **Not pushed**: pushing is the landing step, and it is BigDev's call. If pushed, set `DATABASE_URL` to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
 - **Friction gate** failed first (AC-4 diffs committed history), then passed once the 8.15 disposition block was committed.
 
+- **Review round 1 apply-all (2026-10-22).** Mutants, targeted counts, the two `ci:local` runs (34/36 then 35/36), the
+  separate live API run (2057 / 1 skipped / 1 failed) and the two unrelated reds are enumerated in the Review
+  Findings "Applied" block above — ⛔ not repeated here. One of the two first-run reds was the author's-side fault of
+  this round (an unused const), caught by `lint`, fixed, re-run.
+
 ### Completion Notes List
 
 - Context engine analysis completed. This is a comprehensive developer guide, created 2026-10-22 by bmad-create-story off `b883dc15`.
@@ -677,6 +906,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 8.15`, 2026-10-22, in the s
 - **D8 narrows today's behaviour, deliberately.** A throw in the transition reads used to blank the whole card. It now drops only the line. A decorative line must not hide the contribute CTA.
 - **AC6 — the non-author human tone review is OUTSTANDING.** Nobody other than the author has reviewed the final en + hi transition copy. It was requested of BigDev at the end of this run (2026-10-22); ⛔ the author does not self-attest. The copy under review is the eight `active_contribution.transition.*` keys in both `contribution.json` files.
 - **Residues, routed (not fixed):** see the `deferred-work.md` 8.15 section. (a) D5: when a backdated emergency matches the snapshot, the predecessor comes from the schedule, not the member's previous pool. (b) `next_cycle` names the nearest change after C; two changes inside one live window would name the first. Both need an emergency inside a 15-day window. Owner: this story's code review.
+- ⭐ **Residues — code review 2026-10-22 (appended; the bullet above is unedited).** "Both need an emergency inside a 15-day window" is **false**: two standard changes suffice (`scheduleStandardChange` enforces only the 90-day floor). **(b) is closed** by Review D1 (Option A, BigDev: `next_cycle` names the amount in force at `now`). **(a) is NOT addressed** — it stays an open, accepted residue, reachable with standard rows too; owner BigDev (see `deferred-work.md`).
 - **Records (Task 7).** `deferred-work.md` (the 7.11 entry closed in its own vocabulary, the stale heading noted, Trap 1 "Closed by [edit]", PRD UJ-6 observed with owner + re-trigger); `ux-design-specification.md`, `epics.md` UX-DR25 and Story 8.2's AC: appended dated notes only. `friction-budget.md`: disposition, no new row.
 
 ### File List
@@ -722,3 +952,4 @@ Modified (records):
 | 2026-10-22 | 1.3 | PQ1 RULED **B** by the Panel (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev): Decision `2026-10-22-383`, committed alone (`81407920`). PQ1 marked ruled with the build mapping; Task 0's hold discharged; the note's ruling block filled. Still to land in Task 0's governance commit: the `epics.md` 8.15 entry and both Epic 8 counts (AC0.1–2). Authoring only. |
 | 2026-10-22 | 1.4 | AC0.1–2 done: the `epics.md` `### Story 8.15:` entry (author mint, ⛔ not Panel direction; cites the 7.11 mint, `deferred-work.md`'s 7.11 entry, `-124` cl.1–2; PQ1 ruled table → `-383`), and both Epic 8 counts corrected 12/14 → **16** with the 8.14-has-no-entry observation (17 sprint keys). Task 0 complete. Status stays ready-for-dev. No code. |
 | 2026-10-22 | 1.5 | `bmad-dev-story 8.15`: Tasks 0–8 complete. Status ready-for-dev → in-progress → **review**. Moot-row fix (AC2, admin `upcoming` changes too); pure stage selector + first-cycle read (IST months, `next_cycle`, PQ1 B emergency = dated, never `next_month`); `amountTransition` replaces `upcomingAmountChange`; handler reads last and fail-soft per field; card line through a pure copy module, 8 keys en + hi. Records + friction disposition. `ci:local` 36/36 on :5433. Deviations: no `standardOnly` (PQ1 B), `isFirstCycle: boolean`, `useLocale()` kept. ⚠ AC6 tone review OUTSTANDING. Not pushed. |
+| 2026-10-22 | 1.6 | `bmad-code-review 8-15` round 1 + apply-all: 1 decision (D1, BigDev: Option A) / 7 patch / 0 defer / 16 dismissed. `next_cycle` now names the amount in force at `now` (two in-window changes, a reversion, a backdated emergency); the first pool at a new amount keeps its note after a backdated emergency; the residue premises corrected (append-only); AC6's owner/re-trigger recorded; two test legs. Status stays **review**. `ci:local` 35/36 (one undiagnosed unrelated jobs red), API integration run separately 2057 / 1 skipped / 1 failed (unrelated). Not committed, not pushed. |

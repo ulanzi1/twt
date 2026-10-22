@@ -12312,3 +12312,71 @@ reachable path above is closed for 6.37d's sends; the classifier's own filing st
   cycle will carry the second. Both need an emergency inside a 15-day window.
   **Owner:** Story 8.15's code review (BigDev's call: accept, or patch). **Re-trigger, concrete:**
   `bmad-code-review 8-15`.
+
+  ⭐ **2026-10-22 — Story 8.15 code review round 1 (appended; the entry above is unedited).**
+  ⚠ **The sentence *"Both need an emergency inside a 15-day window"* is FALSE, and the accept-or-patch call
+  was reserved on it.** `scheduleStandardChange` enforces only the 90-day notice floor — there is no spacing
+  rule in the domain write path (the route layer was not checked) — so (b) needs only TWO STANDARD changes
+  scheduled less than a live window apart (a trustee correcting a mis-set change is the obvious road), and
+  (a) is reachable with two standard rows too (₹700 from Jan 1, back to ₹500 from Jan 10, no pool between:
+  the next pool holds ₹500 and still gets "the new contribution starts with this cycle").
+  **(b) — Closed by [implementation], Review D1 (BigDev, 2026-10-22: Option A).** `next_cycle` now names
+  the amount IN FORCE at `now` (`selectUpcomingStage` + the `inForceNow` input; the handler's
+  `resolveAmountTransition` reads it) and fires only when it differs from the pool's snapshot — two changes
+  name the LATER one, a reversion says nothing, and a backdated emergency (`effective_from ≤ C`, which the
+  as-of-C read never sees) now reaches the old-amount pool. Pinned by the "Review D1" block of
+  `fixed-amount-transition.test.ts` and four legs of `active-contribution-card.test.ts`; revert-sanity counts
+  in the story's Review Findings.
+  **(a) — NOT addressed; still an open, accepted residue, now with its true premise.** The `first_cycle`
+  predecessor is read from the schedule, not from the previous pool, so the note can appear on a cycle
+  whose amount equals what the member last paid. It states no amount — only "the new contribution starts
+  with this cycle". Also by design (D5/AC1): the Pariwar's first-ever pool after a change has no earlier
+  pool at all and gets the note. **Owner:** BigDev — accept, or harden (derive "changed" from the previous
+  pool's snapshotted amount; that also changes the first-ever-pool rule and needs D5/AC1 amended).
+  **Re-trigger, concrete:** the first schedule change recorded for a Pariwar before its first pool, or any
+  request to put the previous amount in the `first_cycle` copy (that would turn a wrong claim into a wrong
+  figure).
+  ⭐ **Separate, and closed by the same review — the first pool at a new amount no longer goes unnoticed
+  after a backdated emergency (Review P1). Closed by [edit]:** `resolveFirstCycleUnderAmount` gains
+  `pools.fixed_amount = poolFixedAmount` in its earlier-pools check; pinned by the live-DB leg in
+  `active-contribution-read.spec.ts`, which goes RED without it (Decision `-383`: the first pool at the new
+  amount carries the note).
+
+- **Story 8.15 AC6 — the non-author human tone review of the staged-transition copy is OUTSTANDING (code
+  review P6).** Not closed by anything. The copy is the 8 `active_contribution.transition.*` keys, en + hi
+  (`packages/i18n/locales/{en,hi}/contribution.json`): the four lines and their `_a11y` variants. Decision
+  `-383` adds a specific ask: for the stages an emergency can reach (`scheduled`, `next_cycle`,
+  `first_cycle`) the words must never read as advance warning. The author cannot self-attest
+  ([[feedback_record_unattested_no_backfill]]). **Owner:** BigDev. **Re-trigger, concrete:** BigDev's
+  sign-off — who, when, which keys — written into the story's Completion Notes. Until then Epic 8 retro
+  W-5 / H-3 / AI-8-2 applies (8.2 was held from `done` for exactly this gap), and whether 8.15 may be
+  `done` meanwhile is BigDev's call, put to them at the close of the 8.15 code review. The story's Task 6
+  `[x]` on "Request the non-author tone review" records that it was requested in chat, ⛔ not that an
+  artifact exists.
+
+## Deferred from: code review of 8-15-fixed-amount-transition-staged-card.md (2026-10-22)
+
+Both items below were found by RUNNING the gates, not by the three review layers; neither is caused by Story 8.15
+(no file on its branch is under `apps/jobs`, audit-named, or in the drive-detail path).
+
+- **`apps/api/tests/integration/contributions/member-drive-detail.spec.ts` (11b.17 AC4, `:407`) can fail on a
+  RANDOM public token that happens to contain the letters "vpa".** The leg asserts the whole serialised response,
+  lower-cased, does not contain `vpa` — meant to catch a leaked `vpaCiphertext` / `vpaPresent` key — but the
+  response also carries the pool's random `publicToken`, and one run's token was `kozeb2jahavpacbvlwer_g`. Failed
+  once in the 176-file live API run; passes alone, 13/13. Rare by construction (a 3-letter substring of a ~22-char
+  token), which is exactly why it will recur unannounced. **Suggested fix, not applied:** scan the response's KEYS
+  (or the response with `publicToken` removed) rather than the whole string. **Owner:** BigDev — the next story
+  that touches 11b.17's drive detail, or the next red on this leg. **Re-trigger, concrete:** that red.
+- **`apps/jobs/tests/audit/integrity-check.test.ts` — "chunk-boundary deletion → caught by cross-chunk stitch"
+  times out at 20 s in whole-file and turbo runs on this machine, and its cause is NOT diagnosed.** Observed
+  failing 4 times (2× `pnpm ci:local`, 1× `turbo run test --force --concurrency=1 --filter=@twt/jobs`, 1× the whole
+  spec file under a minimal environment); observed PASSING in ~400 ms in 4 direct whole-file/whole-suite runs
+  (the whole `@twt/jobs` suite alone: 1382/1382) and in 4 single-test (`-t`) runs. It is the known-failures class
+  #2 (a 5 s timeout already raised to 20 s on 2026-06-29), now exceeding the raised limit. `audit_log_entries`
+  held 84,423 rows at the time and other sessions were loading the machine (load average 5–11); neither is
+  shown to be the cause. ⚠ It turns `integration-tests` red, and because turbo stops at the first failing package
+  the `@twt/api` integration specs then DO NOT RUN inside `ci:local` — they must be run separately, as they were
+  for this review (2057 passed / 1 skipped / 1 failed, the failure being the item above). The sanctioned recovery
+  for an over-grown `twt-test-pg` (recreate the container, `[[project_live_db_test_gotchas]]` #4) was ⛔ NOT
+  done: the container is shared by other sessions. **Owner:** BigDev. **Re-trigger, concrete:** the next
+  `ci:local` or pre-push that goes red on this leg; first move is to run it through `turbo` on an idle machine.

@@ -3733,7 +3733,7 @@ or after the second text; a delivered WhatsApp ends the follow-up and counts as 
 WhatsApp to that number and is recorded even for a non-member; a claim send never changes anyone's member opt-in; staff see which
 channel got through; ADR-0042's forgery bound restated; no new SMS text, no new DLT template, no call to Meta in any test.
 
-### Story 6.37e: When the Member's Full Name Is Too Long for a Text, the Family and the Neighbours Still Get the Text — With the First Name and the Surname's Initial `[PRIMITIVE]`
+### Story 6.37e: The Member's Full Name in the Claim Texts — Across Two Name Boxes, Shortened Only Above 60 Letters — and the Helpline Number Leaves the Appeal-Date and Neighbours' Texts `[PRIMITIVE]`
 
 > **Added 2026-10-22 (`bmad-create-story 6.37e`; this entry written at its Task 0.4)** — the row `6-37e-suspicion-text-short-name-fallback`
 > was created by [`-359`](../../.decision-log.md#decision-2026-10-18-359) consequence 1 (Trustee-ratified, option B as put — the three
@@ -3747,15 +3747,27 @@ channel got through; ADR-0042's forgery bound restated; no new SMS text, no new 
 > ⛔ Migration, ⛔ schema, ⛔ text change, ⛔ new roster row. Full ACs:
 > `_bmad-output/implementation-artifacts/6-37e-suspicion-text-short-name-fallback.md`. Not a merge fence.
 
-As a family member or neighbour the Trust has promised to text about a member's death or claim, I want the text to reach me even when
-the member's full name is too long for it — naming the member by first name and surname initial — so that a long name never silently
-costs me the text the Panel promised, including the refused person's only notice of the last date to appeal.
+> ⭐ **REWORKED 2026-10-22 ([`-379`](../../.decision-log.md#decision-2026-10-22-379); build decisions [`-380`](../../.decision-log.md#decision-2026-10-22-380))**
+> — the "Ramesh S." fallback above was SUPERSEDED before it landed (Trustee-ratified `-379` Q1 A / Q2 A; the row reopened on its branch).
+> The name now travels in TWO 30-letter alphanumeric variables side by side (`{member1}{member2}`, 60): sent WHOLE whenever it fits 60;
+> above 60 the listed titles are dropped, then words become initials from the FIRST word, ⛔ never the last word; still too long ⇒
+> today's outcome. Templates 7–10 keep the helpline; 11–12 end *"Please call the helpline."*, 13–14 *"…[link], or call us."* (⛔ number).
+> The WhatsApp reminder keeps its words under its own copy key. NB1–NB9 by `-380` (author-commit); ONE Panel question routed —
+> `-380` PQ1, *"a few questions"* for the ratified *"a few short questions"* (`trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md`,
+> written, not sent; it gates registration of templates 13 / 14, ⛔ the build). ⛔ Migration, ⛔ schema, ⛔ new roster row. The title,
+> user story and in-brief below are rewritten for the rework; the block above is kept as written.
 
-**Acceptance Criteria (in brief):** one pure function, called by exactly the two text senders — the full name byte-for-byte whenever it
-fits; else the existing shielded form (⛔ truncation, ⛔ a new splitter); else today's outcome (the suspicion texts refused
-`value_too_long` with an alarm; the neighbours' text `no_target:name_too_long`); all three suspicion texts and the neighbours' text send
-the short form for a long multi-word name; the WhatsApp reminder and its shared name reader unchanged; ⛔ name in any alarm, log line,
-detail or payload; ⛔ migration, schema, detail vocabulary, registered text or send-core change; every flipped or new test proven RED.
+As a family member, a refused person or a neighbour the Trust has promised to text about a member's death or claim, I want the text to
+carry the member's whole name — and, only for a very long name, a shortened one that keeps the last word of the name — so that I
+recognise whom the text is about, and a long name never silently costs me the text, including the refused person's only notice of the
+last date to appeal.
+
+**Acceptance Criteria (in brief):** one pure function, called by exactly the two text senders — the mode-resolved name byte-for-byte
+whenever it fits 60 code points, split across two ≤ 30 boxes that concatenate to it (⛔ an empty box); above 60 the `-379` rule (titles,
+then initials from the first word, ⛔ the last word); else today's outcome (the suspicion texts refused `value_too_long` with an alarm;
+the neighbours' text `no_target:name_too_long`); the eight registered texts, their slots, the copy and the DLT sheet in lockstep
+(11–14 ⛔ helpline variable); the WhatsApp reminder's words and its name reader unchanged; ⛔ name in any alarm, log line, detail or
+payload; ⛔ migration, schema, detail vocabulary or send-core change; every flipped or new test proven RED.
 
 ---
 

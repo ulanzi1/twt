@@ -18,6 +18,10 @@
 > surname initial). Built by a NEW row `6-37e-suspicion-text-short-name-fallback`. Not covered: a one-word name that is itself too long
 > (still not sent); the operators' count (Row 30 (d)); the neighbours' text — the same question is OWED to you separately, as promised
 > below. Everything below is kept **unedited**, as the question was put.
+>
+> ⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above edited:* option B ("Ramesh S.") is SUPERSEDED by
+> [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A (the full name across two 30-letter boxes; above 60 titles
+> dropped, then initials from the front, ⛔ never the last word). Row `6-37e` builds that rule instead.
 
 ---
 

@@ -6,6 +6,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Recorded during Story 6.37e dev — owed to the Trustee Panel (2026-10-22)
 
+- **PQ1 of row 6-37e's rework — "a few questions" for the ratified "a few short questions" in the neighbours' text (templates 13 / 14)
+  ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380) decision 10).** ⛔ **Not addressed — the note WRITTEN, ⛔ sent:**
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md`. BigDev dropped the word "short" (Task 0.2;
+  *"Build with my words. Panel has already authorized me to make small changes."* — that authorisation is ⛔ in the decision log), then
+  routed it (*"you know what route to panel, prepare routing note"*). Built with BigDev's words meanwhile; the answer GATES REGISTRATION
+  of templates 13 / 14 (`-349` decision 2 — roster Row 27 condition note); ⛔ the build or the merge. If the Panel keeps "short", the word
+  goes back into both strings and both sheet rows before registration. The note also carries the BF24 cost FYI (below, Story 6.27c's item).
+  ⭐ Trigger: BigDev sends the note. ⛔ Discharged until the Panel answers.
 - **A NON-blocking Panel confirm owed on the shorter name in the texts — PQ1 + PQ2 of row 6-37e
   ([`-377`](../../.decision-log.md#decision-2026-10-22-377) decision 8).** ⛔ **Not addressed — the note WRITTEN, ⛔ sent:**
   `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-short-name-confirms.md`. Built AS RULED meanwhile
@@ -28,6 +36,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   ✅ *Dated note, 2026-10-22:* **Closed by [`-379`](../../.decision-log.md#decision-2026-10-22-379)** — the Panel's QUESTION (Q1 A, Q2 A;
   Dhiraj Rahul + Kalpana Bharti). ⚠ The BUILD is ⛔ addressed: row 6-37e's branch still sends "Ramesh S."; the rework (two `{member}`
   variables, the title list, initials from the front, the four texts' new wording and slots) is owed — reopen vs new row is BigDev's.
+  ⭐ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)):* the row was REOPENED on its branch (BigDev) and the rework is DECIDED (NB1–NB9) — the BUILD
+  is owed by row 6-37e (`in-progress`). ⛔ "Closed" until it is `done` on `main`.
 - **A shorter neighbours' link — decided once the Trust's domain is chosen (BigDev 2026-10-22).** Today's link
   `https://<domain>/peer-request?c=<12-char code>` is ~55 characters ⇒ the neighbours' text (templates 13–14) arrives in 2 GSM
   segments (with NQ2's comma). Options recorded, ⛔ decided: (1) a SHORT app-link host + path used DIRECTLY (e.g. `https://twt.in/p/<code>`,
@@ -50,6 +60,8 @@ Hunter. ⛔ Neither is closed by the row.
   one such character fits the 40 and goes out as *"Your claim for  has been closed"*. Reachable only if such a name is entered at signup
   or supplied by the KYC provider — the DigiLocker path (`apps/api/src/modules/kyc/kyc.handlers.ts`) stores `profile.name` with no
   `trim().min(1)` rule at all. ⚠ `sms-member-name.ts`'s header states the blank-send invariant; an invisible-only name defeats it.
+  ⚠ *Re-anchored, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)):* after the rework the fit is `smsMemberName` (60 code points across two boxes, `sms-member-boxes.ts`);
+  the gap is the same — an invisible-only name fits and goes out blank. Trigger unchanged.
   ⛔ Not fixed in `smsMemberName`: a throw would retry-loop; the fix belongs at the input (the contract) or in the resolver's
   unresolvable-name signal (`''`), whose callers already turn it into `no_target`. The directory side already allowlists
   (`publicNameTokens`). Trigger: a signup-name validation story, or any report of a blank name in a text.
@@ -59,6 +71,8 @@ Hunter. ⛔ Neither is closed by the row.
   is refused. Devanagari is affected too, though less: a nukta letter written base-plus-nukta counts 2 in both forms, but the precomposed
   ऩ ऱ ऴ (U+0929, U+0931, U+0934) count 1 in NFC and 2 in NFD. It is part of Row 30 (d)'s unit question (how the operator counts) —
   answer that first. Trigger: Row 30 (d) answered, or names normalised at signup.
+  ⚠ *Re-anchored, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)):* `fitsDltAlphanumeric` and "the 40" are gone — the fit is `smsMemberName` (60 code points; above 60
+  the `-379` shortening). NFC vs NFD now decides between `full` and `shortened` (or `too_long`) at 60 instead of 40; the same question. Trigger unchanged.
 
 ---
 
@@ -387,6 +401,9 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-18-6-27c-neighbours-text-long-name.md`), ⛔ sent. ⚠ 2026-10-18:
   SENT; the Panel asked a question back (the present name length) — answered in the note; ⛔ ruled yet. ✅ **Closed by
   [Decision 2026-10-18-362](../../.decision-log.md#decision-2026-10-18-362)** (option B — built in row `6-37e`).
+  ⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above rewritten:* option B ("Ramesh S.") is SUPERSEDED by
+  [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A — row 6-37e builds the full-name rule instead (two 30-letter
+  boxes; above 60 titles dropped, then initials from the front, ⛔ never the last word). The "Closed by `-362`" stands as the close of the QUESTION.
 - **ADR-0040's production email provider — the Panel's choice, not asked** — ADR-0040 ratified ([Decision
   2026-10-18-358](../../.decision-log.md#decision-2026-10-18-358)) but *"this ADR, when ratified, records which provider is enabled in
   production (the Panel's choice; recommended: SES)"* — the consent sheet asked Ratify / Defer / Reject only. ⭐ Trigger: before roster
@@ -538,6 +555,10 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
     whose short form fits"** when the row is `done` on `main`. Still ⛔ sent after that: a ONE-word over-long name (`-359`'s own accepted
     cost) and a MULTI-word name whose short form is still over 40 (PQ2 — carried by the 2026-10-22 owed-confirm item at the top of this
     file). Row 30 (d)'s unit question is unchanged.
+  - *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380); [`-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A) — ⛔ a word above rewritten:* the
+    "Ramesh S." build named above is SUPERSEDED before it landed. This item becomes **"Closed by 6.37e for every name that fits 60 or that
+    the Panel's rule can shorten"** when row 6-37e is `done` on `main`; still ⛔ sent after that: a name that cannot fit even shortened
+    (a one-word name over 60; a name still over 60 with every earlier word initialled). PQ2 is moot. Row 30 (d)'s unit question is unchanged.
 
 ## Deferred from: dev-story of 6-37-msg91-sms-gateway-adapter (2026-10-17)
 
@@ -652,6 +673,11 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   6.27a PM3 told the Panel only that the HINDI is *"likely THREE segments"*). ⛔ The words are ruled — recorded, ⛔ "fixed" by editing the
   text. ⛔ Recorded as shown until the note goes out ([[feedback_shown_to_panel_means_sent]]). ⭐ Trigger: the next
   `trustee-panel-routing-note-*` written for ANY story — add this line to it.
+  ⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above rewritten:* the figures above are SUPERSEDED in part by row 6-37e's rework
+  (`-379` Q2 A): the English neighbours' text loses its em dash, so it is GSM-7 — ≈ 170 characters ⇒ **2 segments** (276 / 2 at the new
+  ceilings, a 60-letter name and a 120-character link); the typical Hindi is ≈ 194 ⇒ **3** (the helpline phrase and "छोटे" gone); the name
+  ceiling is 60, ⛔ 40. The Hindi 3–5 range stands. The FYI line is WRITTEN into the next note,
+  `trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md` (⛔ sent) — ⛔ "shown to the Panel" until BigDev sends it.
 
 ## Deferred from: dev-story 6.36c (2026-10-16)
 
@@ -873,6 +899,10 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   6-37e is `done` on `main`; until then `main` still refuses a long name. ⛔ Addressed: the operator's real limit and unit (Row 30 (d) —
   open), and a name that still does not fit (still refused `value_too_long` + alarm). Trigger unchanged (provisioning templates 7–12,
   roster Row 22).
+  ⭐ (2026-10-22, [`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380); [`-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A) the "Ramesh S." fallback above is SUPERSEDED: the
+  rework carries the name in TWO 30-letter boxes (60) — whole whenever it fits, above 60 titles dropped then initials from the front, ⛔ never
+  the last word; ⛔ truncation. Still PARTLY addressed and on the branch only until row 6-37e is `done` on `main`; ⛔ addressed: Row 30 (d)
+  (30 or 40 per box, two adjacent variables, the unit) and a name that still does not fit. Trigger unchanged.
 - **6.19b's K4 carries the premise `-297` §2 found false: "`detail` NULL ⇒ nothing was sent"** [`packages/domain/src/claim/correction-reminder-record.ts`
   — `skipCorrectionReminder` / its `expiredAttempt`; `packages/domain/src/claim/certificate-reminder-record.ts` — `skipCertificateReminder`]
   — a `detail` is written ONLY by a transient failure, so a crash between the gateway's accept and the finalise leaves an

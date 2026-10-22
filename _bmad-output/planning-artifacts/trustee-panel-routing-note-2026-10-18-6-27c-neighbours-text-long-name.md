@@ -16,6 +16,10 @@
 > *"for name go with option B."* — **send it with the shorter form of the name (first name + surname initial), only when the full name
 > does not fit.** Built with the suspicion texts in row `6-37e-suspicion-text-short-name-fallback`. Everything below (incl. the Panel's
 > question and our answer, given before the ruling) is kept **unedited**, as the question was put.
+>
+> ⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above edited:* option B ("Ramesh S.") is SUPERSEDED by
+> [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A (the full name across two 30-letter boxes; above 60 titles
+> dropped, then initials from the front, ⛔ never the last word). Row `6-37e` builds that rule instead.
 
 > ### The Panel's question (2026-10-18), and our answer
 >

@@ -84,6 +84,7 @@ shorter per-segment length.
   ⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* the shorter name form for an over-long name (`-359` / `-362` B —
   "Ramesh S." only when the full name does not fit) WENT through the §0 gate (the Panel ruled it) and needs ⛔ type or text change —
   it is a VALUE of the same alphanumeric `{member}` variable. Its full stop is asked at Row 30 (d) with the date's hyphen.
+  ⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above edited:* the `-377` note above is SUPERSEDED by [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A — ⛔ "Ramesh S."; the name travels in two 30-letter alphanumeric variables side by side, whole whenever it fits 60, shortened above 60 by the Panel's rule (titles dropped, then initials from the front, ⛔ never the last word); only a name that still does not fit is refused / `no_target:name_too_long`. The rows and rules change with the code.
 - ⚠ *"A variable cannot be the last word"* (MSG91's FAQ — secondary, undated): templates 8, 10, 12 and 14 end `… helpline <variable>.` (a
   final full stop) — asked at Row 30 (d).
 - Each registry's unit test runs `checkDltTemplateShape` over every entry; the CI gate `dlt-typed-variables` keeps every variable typed.
@@ -174,6 +175,8 @@ reviewed change means re-registering.
 Pariwar's existing shielded form) — per [`2026-10-18-359`](../../.decision-log.md#decision-2026-10-18-359) B. Only a name that still
 does not fit is refused (`value_too_long` + alarm), ⛔ never truncated. ⛔ Text or type change.
 
+⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above edited:* the `-377` note above is SUPERSEDED by [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A — ⛔ "Ramesh S."; the name travels in two 30-letter alphanumeric variables side by side, whole whenever it fits 60, shortened above 60 by the Panel's rule (titles dropped, then initials from the front, ⛔ never the last word); only a name that still does not fit is refused / `no_target:name_too_long`. The rows and rules change with the code.
+
 | # | Registered text |
 |---|---|
 | 7 | {#var#} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {#var#} पर कॉल करें। |
@@ -204,6 +207,8 @@ go-live gate **Row 28** (`peer-mesh-request-hindi-human-review`); a reviewed cha
 ⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* *"a name longer than 40 characters is ⛔ texted"* above is SUPERSEDED in part by
 [`2026-10-18-362`](../../.decision-log.md#decision-2026-10-18-362) B — such a name is sent in the shorter form ("Ramesh S."), and
 `no_target:name_too_long` remains only for a name that still does not fit; ⛔ never truncated. ⛔ Text or type change.
+
+⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above edited:* the `-377` note above is SUPERSEDED by [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A — ⛔ "Ramesh S."; the name travels in two 30-letter alphanumeric variables side by side, whole whenever it fits 60, shortened above 60 by the Panel's rule (titles dropped, then initials from the front, ⛔ never the last word); only a name that still does not fit is refused / `no_target:name_too_long`. The rows and rules change with the code.
 
 | # | Registered text |
 |---|---|

@@ -485,7 +485,9 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
 
         ⛔ Not "shown to the Panel" until it is sent ([[feedback_shown_to_panel_means_sent]]).
   - [ ] If BigDev rules it is theirs: record it as a BigDev author-commit in this file's Decisions section.
-  - [ ] The `governance(8.15):` commit: the `epics.md` entry + both counts (AC0), the routing note if any.
+  - [x] The `governance(8.15):` commits: Decision `-383` alone (`81407920`); then the `epics.md` 8.15 entry (between
+        8.13 and 8.16, `### Story 8.15:`) + both Epic 8 counts corrected to **16** with the 8.14 observation
+        (AC0.1–2), 2026-10-22. The routing note landed with the records (`e5604441`).
         ⛔ No code.
   - [ ] Tasks 1–6 for **standard** changes may proceed in parallel. ⛔ The emergency legs of Task 2 and Task 6
         land only after the ruling is transcribed (into `.decision-log.md` as a new id if the Panel rules; the
@@ -631,7 +633,7 @@ gate claim gets teeth (plant → red → restore), with the observed counts reco
 ### References
 
 - `_bmad-output/planning-artifacts/ux-design-specification.md:985-997` (fixed-amount transition pattern + 2026-08-16 note)
-- `_bmad-output/planning-artifacts/epics.md:425-432` (UX-DR25), `:4115-4136` (Story 8.2 AC + note), `:648` and ~`:7325` (Epic 8 counts), `:4395`/`:4456` (8.16/8.17 entry shape), `:4034-4076` (7.11 entry shape)
+- `_bmad-output/planning-artifacts/epics.md:425-432` (UX-DR25), `:4115-4136` (Story 8.2 AC + note), `:648` and `:7363` (Epic 8 counts, corrected 2026-10-22; `:7325` before the 8.15 entry shifted it), `### Story 8.15:` (this story's entry, `:4395`), `### Story 8.16:` / `### Story 8.17:` (entry shape), `:4034-4076` (7.11 entry shape)
 - `.decision-log.md` — `2026-08-16-124` (cl.1 floor 90 + UX-DR25 ground; cl.2 policy guarantee + "emergency has no stages" `:16784`, provenance row `:16756`; cl.3 §4.2 text; cl.11 rejoin-lock trap; cl.13); `2026-08-16-125` (cl.1 in force; cl.2 emergency over pending standard is legal `:16719`; cl.3 "not a developer's call" `:16721`); `2026-08-16-123` (cl.7, cl.8, cl.9)
 - `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` — glossary `:144`; FR-15 `:474-482`; FR-55 `:874-876`; SM-C4 `:1405`; alert = monthly `:136`; UJ-6 `:100` (stale)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — the "⭐ Story 7.11 — UX-DR25 …" entry (owner = this story); 10.13 AC7(a) FR-55 closure
@@ -662,3 +664,4 @@ gate claim gets teeth (plant → red → restore), with the observed counts reco
 | 2026-10-22 | 1.1 | Validated against the code and the governance record (`checklist.md`, four read-only checkers in parallel). Status stays ready-for-dev. D8 now places the transition reads last (a SQL error aborts the scope tx, so a wrap alone cannot fail soft). D5 adds the snapshot guard and counts pools, not commits. D6 moves the same-amount filter into SQL. AC5 assertions are per stage, with hi teeth on existing patterns. AC0's count is the `epics.md` entries (8.14 has none). PQ1 adds case (iii), the provenance caveat and the routing note's "Our reading". Reuses `istDateOf` and `isRealCalendarDate`. The API test mocks are named, including `contribution-history.test.ts`. Line references corrected. Authoring only: no code, no gate run. |
 | 2026-10-22 | 1.2 | Task 0: no interim emergency behaviour (the story stays `in-progress` until the PQ1 ruling; neither default is neutral). PQ1 routing note drafted (`trustee-panel-routing-note-2026-10-22-8-15-emergency-card-copy.md`, options A / B / C, "Our reading" B; E4 commands run, every quoted line found). ⛔ Not sent; BigDev's §0 check outstanding. Authoring only. |
 | 2026-10-22 | 1.3 | PQ1 RULED **B** by the Panel (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev): Decision `2026-10-22-383`, committed alone (`81407920`). PQ1 marked ruled with the build mapping; Task 0's hold discharged; the note's ruling block filled. Still to land in Task 0's governance commit: the `epics.md` 8.15 entry and both Epic 8 counts (AC0.1–2). Authoring only. |
+| 2026-10-22 | 1.4 | AC0.1–2 done: the `epics.md` `### Story 8.15:` entry (author mint, ⛔ not Panel direction; cites the 7.11 mint, `deferred-work.md`'s 7.11 entry, `-124` cl.1–2; PQ1 ruled table → `-383`), and both Epic 8 counts corrected 12/14 → **16** with the 8.14-has-no-entry observation (17 sprint keys). Task 0 complete. Status stays ready-for-dev. No code. |

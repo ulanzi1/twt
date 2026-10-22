@@ -645,7 +645,7 @@ Channel primitive only — structured `alert` payload + dispatcher + per-Pariwar
 
 ### Epic 8: Sushil's Contribution Loop (Yogdaan Bahi + My Pool + UPI Intent + Contribution Note)
 
-**The defining experience SM-1 measures.** Sushil's surface. Yogdaan Bahi (passbook), My Pool card (home-screen anchor), UPI Intent (90-second loop), Contribution Note PDF (never "receipt"). FR-23 nudge seam *consumer*. Epic 8 closes at yellow pill — green-flip is Epic 9. **14 stories** spanning `[CONSUMER]` (alert state machine, contributor list, notification triggers, calendar timing), `[SURFACE]` (My Pool card, UPI flow, Yogdaan Bahi, PDF, helpline CTA, failure coach, nominee-VPA collection, member-facing name-form alignment), `[GOVERNANCE]` (out-of-band contribution policy, 90s measurement instrumentation). ⚠ **The count was stale at 12 before Story 8.16** — it was not updated when Story 8.13 was added by correct-course 2026-07-21; recounted here as 8.1–8.13 **plus 8.16** (there is no 8.14 or 8.15). Full body and stories in §Epic 8 below.
+**The defining experience SM-1 measures.** Sushil's surface. Yogdaan Bahi (passbook), My Pool card (home-screen anchor), UPI Intent (90-second loop), Contribution Note PDF (never "receipt"). FR-23 nudge seam *consumer*. Epic 8 closes at yellow pill — green-flip is Epic 9. **16 stories** spanning `[CONSUMER]` (alert state machine, contributor list, notification triggers, calendar timing), `[SURFACE]` (My Pool card, UPI flow, Yogdaan Bahi, PDF, helpline CTA, failure coach, nominee-VPA collection, member-facing name-form alignment), `[GOVERNANCE]` (out-of-band contribution policy, 90s measurement instrumentation). ⚠ **The count was stale at 12 before Story 8.16** — it was not updated when Story 8.13 was added by correct-course 2026-07-21; recounted here as 8.1–8.13 **plus 8.16** (there is no 8.14 or 8.15). ⚠ **Recounted 2026-10-22 (Story 8.15): 16 `epics.md` entries** — 8.1–8.13, 8.15, 8.16, 8.17. The *"14"* and the *"no 8.14 or 8.15"* above were stale once 8.17 and 8.15 added their entries. ⚠ **8.14** (*Close-of-Cycle Emitter*, `done`) has a story file and a `sprint-status.yaml` key but **no `epics.md` entry**, so sprint-status carries **17** Epic 8 keys — observed by 8.15, ⛔ not fixed here. Full body and stories in §Epic 8 below.
 
 ---
 
@@ -4419,6 +4419,44 @@ So that the assigned pool's `<UPIIntentButton>` fires a real `upi://pay` and Epi
 
 ---
 
+### Story 8.15: Fixed-Amount Transition — the Staged My Pool Card (UX-DR25) `[SURFACE]`
+
+> **Minted by Story 7.11's author, ⛔ not by Panel direction** (unlike 8.16 and 8.17). Story 7.11 minted `8-15-fixed-amount-transition-staged-card` `backlog` on 2026-08-16 as an **un-ratified author mint**, because its AC9 named Story 8.2 as the owner of the staged card, and 8.2 was already `done`, so that re-trigger could never fire (`deferred-work.md`, the *"⭐ Story 7.11 — UX-DR25's four-stage My Pool card transition is now GUARANTEED BY POLICY, and it is still UNBUILT"* entry). The ground is Decision `2026-08-16-124` clause 1 (the 90-day notice floor, chosen so that the Month−3 stage can fire) and clause 2 (the four-stage pattern restored as a **policy guarantee** for every conforming standard change, ⛔ *"not built here"*). The 7.11 story says *"BigDev may rename, fold or decline it"*; `deferred-work.md` says *"The Panel may…"*. Neither has. This story had **no `epics.md` entry** until it created its own: the **Story 7.11 / 8.16 / 8.17 precedent**. Numbered 8.15 to match the `sprint-status.yaml` key.
+
+As **Sushil, a contributing member** who opens the My Pool card during a live cycle,
+I want the card itself to tell me, calmly and in stages, that the per-pool contribution is going to change,
+So that **a changed amount never surprises me at the moment I pay**, and I never need a banner or an announcement to learn about it.
+
+**Depends on:** Story 7.5 (the fixed-amount schedule + emergency path), Story 7.11 (the 90-day floor), Story 8.2 (the My Pool card + its single un-staged upcoming-amount line, which this story replaces).
+
+**The one question, RULED — not re-opened by this story:**
+
+| Question | Ruling |
+|---|---|
+| PQ1 — what does the card say about an **emergency** change (`-124` cl.2: *"an emergency adjustment still has no stages, because it has no notice"*)? | **B — facts only, never a warning**: the date when set ahead, *"from the next cycle"* when it lands inside an open pool, the note on the first pool at the new amount; ⛔ never *"from next month"*. `2026-10-22-383`, **Trustee-ratified** (Dhiraj Rahul, Kalpana Bharti) |
+
+**Acceptance Criteria** (in full in the story file, `8-15-fixed-amount-transition-staged-card.md`):
+
+**Given** a member whose card is assigned (live pool `P`, cycle committed at `C`)
+**When** the card is served
+**Then** the server resolves exactly one transition stage (`scheduled` (dated) → `next_month` → `next_cycle` → `first_cycle` → none), anchored to **IST calendar months**, and the card renders at most **one** line under the amount
+**And** the card's current amount stays the snapshotted `pools.fixed_amount` in every stage (Story 8.2 D3)
+**And** a change superseded before it took effect (a zero-width schedule row) is never announced, on the member card **or** the admin setter view
+
+**Given** the UX spec's Month−3 sample copy *"3 चक्र बाद"* counts cycles
+**Then** it is replaced by the **date**, because cycles are trustee-committed with no enforced cadence and cannot be counted honestly. A recorded deviation from sample copy, ⛔ not a silent one.
+
+**And** no announcement, banner, push, WhatsApp or SMS: FR-55's broader channel is Story 10.5
+**And** the final en + hi copy carries a recorded **non-author** human tone review, or says plainly that it is outstanding
+
+**Dev Notes / guardrails:**
+- `FIXED_AMOUNT_NOTICE_DAYS`, the emergency path, `closeOpenHead` and spawn snapshotting are **not touched**.
+- This story introduces **no predicate** gating a member's access to a benefit: it changes only what the card tells a member about an amount the Trust has already set.
+
+**FRs:** FR-15 (notice), FR-21 (My Pool card), FR-55 (untouched: the announcement channel). **UX:** UX-DR25. **Decisions:** `2026-08-16-124` cl.1–2 · `2026-08-16-125` cl.2–3 · `2026-10-22-383` (PQ1 B, Trustee-ratified).
+
+---
+
 ### Story 8.16: Member-Facing Pool Identity — Name-Form Alignment (closing the public/member INVERSION) `[SURFACE]`
 
 > **Minted by Panel direction — Decision `2026-09-02-179` clause 3** (*"the public/member inversion gap shall be closed"*). ⚠ This story had **no `epics.md` entry** until it created its own; it existed only in `sprint-status.yaml` and its own story file — the **Story 7.11 precedent** (`epics.md:3041`), whose second half is discharged here so a future `sprint-planning` run cannot drop it. Minted against **Epic 8** — not Epic 11b, which only *surfaced* the inversion — because Epic 8 owns `resolvePoolIdentity` and all four of its consumers (Stories 8.6 / 8.7 / 8.8). Numbered 8.16 (deliberately **not** 8.14) to match the `sprint-status.yaml` key that already existed.
@@ -7349,7 +7387,7 @@ Progress summary:
 - ✅ Epic 5 — 9 stories (payload-immutability-after-dispatch + opt-in reversibility-and-independent-audit)
 - ✅ Epic 6 — 16 stories (canonical-case-identity + signals-advisory-not-adjudicating)
 - ✅ Epic 7 — 11 stories (atomic cycle-freeze + facilitated-recovery)
-- ✅ Epic 8 — 12 stories (reconciliation-confirmed-only-visibility + UTR-attestation-as-member-claim)
+- ✅ Epic 8 — 16 stories (reconciliation-confirmed-only-visibility + UTR-attestation-as-member-claim) — ⚠ count corrected 2026-10-22 (Story 8.15), was 12: 16 `epics.md` entries; 8.14 has none (17 `sprint-status.yaml` keys)
 - ✅ Epic 9 — 12 stories (fursat-cadence operational-posture + monotonic-confirmation + canonical-financial-truth)
 - ✅ Epic 10 — 15 stories (deterministic-audit-replayable-routing-policy + dry-run-parity + governance-boundary)
 - ✅ Epic 11a — 6 stories (4-tier visibility matrix + institutional-transparency framing + anti-enumeration + legitimacy-not-social-graph + obfuscation-defense-in-depth)

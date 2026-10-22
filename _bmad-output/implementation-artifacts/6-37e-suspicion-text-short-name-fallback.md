@@ -28,7 +28,7 @@ phrase or the row key.
 
 NUMBERS (`-366` decision 6: *"the number belongs to the first COMMIT that takes it on any branch"*): ⛔ claimed by this file; each is "the next
 free one" at the commit that takes it (Task 0.1 / 0.3). At authoring, over EVERY ref and the three worktrees (`TWT`, `TWT-6-37e`, and `TWT/.claude/worktrees/3-3c-member-kyc-name-english-only` — a peer row, clean at `1e22889e`): decision `-380` (the highest anywhere
-is `-379`, dated 2026-10-22 — so `2026-10-22-380` if committed today); ledger `2026-10-22j` (this create-story run) and `2026-10-22k` (the v2.1 validate) are TAKEN by the uncommitted `sprint-status.yaml` ⇒ Task 0.4's ledger line is `2026-10-22l`; roster Row 40 and a
+is `-379`, dated 2026-10-22 — so `2026-10-22-380` if committed today); ledger `2026-10-22j` (this create-story run), `2026-10-22k` (the v2.1 validate) and `2026-10-22l` (BigDev's Task 0.2 answers, v2.2) are TAKEN on this branch ⇒ Task 0.4's ledger line is `2026-10-22m`; roster Row 40 and a
 migration — ⛔ either needed. LEDGER LETTERS follow the decision rule by analogy.
 
 LETTERS (⛔ reused from v1.x — footgun #20(c): a bare letter must not mean two things in one file): **N** = invariants (N1–N9); **G** = found
@@ -121,7 +121,7 @@ gateway concatenates), but a box value may then begin with a combining mark — 
 **N7 — ⛔ A name in any alarm, log line, detail or payload** — a box, a fragment or a shortened form included (each is still a name). Ids only.
 
 **N8 — Registered text, copy, slots and the registration sheet move together.** The eight registered texts (AC2) are the Panel's words plus the
-box variable; the real `t()` renders EXACTLY them; the shape check is clean; the sheet's rows, types and MSG91 forms are the same.
+box variable (13 / 14 minus the word "short" — BigDev, Debug Log (a)); the real `t()` renders EXACTLY them; the shape check is clean; the sheet's rows, types and MSG91 forms are the same.
 
 **N9 — The helpline stays in exactly the texts the Panel kept it in (7–10) and never enters 11–14.** A regression guard: a `helpline` value in
 an 11–14 `values` is `values_mismatch` at the core; a missing one in 7–10 is the same.
@@ -143,9 +143,9 @@ as far as needed — never the last word of the name. Only a name that still can
 
 Its cost to the family (the Panel's, as put — verbatim in the table above): each text needs two name boxes, so the appeal-date text and the
 neighbours' text lose the helpline NUMBER — *"A refused person who does not use the app has no number in the text"*; the neighbours *"know the
-helpline"*, and those on WhatsApp get the number two days later. ⚠ Length: the neighbours' English text is **2 SMS parts** — 176 letters for a
-usual name, 217 for a 60-letter one (computed, G12; the Panel was told *"about 175 … up to about 220"*) — and, with the dash gone, GSM-7: 2 parts
-where today's text is 3.
+helpline"*, and those on WhatsApp get the number two days later. ⚠ Length: the neighbours' English text is **2 SMS parts** — 170 letters for a
+usual name, 211 for a 60-letter one (computed, G12, on the words as edited at Task 0.2; the Panel was told *"about 175 … up to about 220"* for the
+ratified words) — and, with the dash gone, GSM-7: 2 parts where today's text is 3.
 
 **Niyamavali check:** ⛔ applicable — grepped 2026-10-22 over `packages/domain/seed/niyamavali-v1-clauses.sql` for `sms`, `text message`,
 `notif`, `name form`, `member name`, `helpline`, `title`: ⛔ match (the `title` hits are the `title_en` column name only; the five "name" hits are comment words — "named", "field-name"); and the
@@ -153,16 +153,18 @@ Niyamavali is ⛔ ratified ([[feedback_niyamavali_rulebook_not_spec]]).
 
 ⚠ Checked against `-379` VERBATIM (the table above): "send the full name whenever it fits 60 letters" — MATCHES N1; the title list and the
 "whole words only" — MATCHES N2 (the case / full-stop matching is NB4's reading of it); "starting from the FIRST word … ⛔ never the last word"
-— MATCHES; "if it still does not fit … ⛔ text, as today" — MATCHES N3; the two helpline-free texts — MATCH word for word (AC2).
+— MATCHES; "if it still does not fit … ⛔ text, as today" — MATCHES N3; the appeal-date text — MATCHES word for word; the neighbours' text — MATCHES except
+the word "short", dropped by BigDev at Task 0.2 (the §0 row below; Debug Log (a)).
 
-## §0 re-run — every edge checked against the ruled words (all MATCH ⇒ ⛔ routing note, ⛔ told item)
+## §0 re-run — every edge checked against the ruled words (all MATCH or the author's, except ONE: the dropped "short" — BigDev's, under an authorisation ⛔ found in the log ⇒ ⛔ routing note; ONE told item before registration, `-349` decision 2)
 
 | Edge | Against the ruled words | Outcome |
 |---|---|---|
+| **"short" dropped from the neighbours' text** (13 hi *"कुछ प्रश्नों"*, 14 en *"a few questions"*) — BigDev's edit at Task 0.2 | `-304` Q6 A ratified *"a few short questions"*; `-379` Q2 A ratified the text AS PUT with it ⇒ a CHANGE of ratified words — the Panel's by the template's §0 | **BigDev's decision, reaffirmed** (*"Build with my words. Panel has already authorized me to make small changes."*); the authorisation's instrument is ⛔ in the decision log (`-210` is enums only; `-349` decision 4 left exactly this delegation un-routed) — BigDev to name it; the rework entry records the statement verbatim as the basis; the final 13 / 14 words are a TOLD item to the Panel before Row 27 registers them (`-349` decision 2: *"nothing is sent with words the Panel has not seen"*) |
 | Titles matched in any letter case and with / without a trailing full stop (Aadhaar names are often UPPER-CASE; "Dr." / "Mr.") | the list is closed and *"whole words only"*; the same words, ⛔ new ones | MATCH — the author's reading of "whole words" (NB4); `-378` decision 2 (b) said it in terms |
 | "first letter" = the first letter-or-digit grapheme (skips a leading "(" or invisible mark); a word with none is left as is | the ruled words say only *"turn words into their first letter"*; *"(a whole letter — never half a Devanagari conjunct)"* is `-378` 2 (c), the author's reading | MATCH — the author's reading of "letter" (NB4 (v)) |
 | The name is the MODE-RESOLVED name (a `shielded_name` Pariwar's "Ramesh S." fits trivially) | `-379` Q1 A says *"the full name"* and is SILENT on the mode; the member-facing form reads the Pariwar's mode by `-181` cl.1 (AUTHOR-commit), which rests on `-136` cl.2's (Trustee-ratified) Pariwar-level public-name control — `-379` (ratified) composed with `-181` (author-commit), ⛔ one re-read | the author's — v1.x overrode the mode for a long name (`-377` SN2, superseded); UNREACHABLE in production (G15: no caller of the mode writer). Listed in the rework entry's *Does NOT cover* so it becomes a told item if a mode writer ever ships |
-| The WhatsApp reminder keeps today's words while the text's words change (the "same words" of `-303` Q1 A / `-365` WR6 no longer literal) | `-379` *Not covered*: *"the WhatsApp reminder (`-365`) — ⛔ changed: full name, with the helpline"*; Q2 A's own cost line says the WhatsApp reminder carries the number | MATCH — the Panel's cost line ASSUMES this; recorded in the 6.37e rework entry (NB8) |
+| The WhatsApp reminder keeps today's words while the text's words change (the "same words" of `-303` Q1 A / `-365` WR6 no longer literal — the helpline, the dash, and now "short") | `-379` *Not covered*: *"the WhatsApp reminder (`-365`) — ⛔ changed: full name, with the helpline"*; Q2 A's own cost line says the WhatsApp reminder carries the number | MATCH — the Panel's cost line ASSUMES this; recorded in the 6.37e rework entry (NB8) |
 | The helpline-presence gate stays on all four texts although 11–14 no longer print the number | not a ratified clause (`-269` §5); the text still says "call the helpline" / "call us" | the author's (NB6) |
 | The Hindi words of 11 and 13 (the helpline phrase removed; the dash a comma) | *"The Hindi texts change the same way; the Hindi reviewers check the words"* (the note) | the author's, flagged to Rows 23 / 28 (NB7) |
 | How the name is cut between the boxes | `-378` §0: *"HOW the name is split … the author's"* | the author's (NB3) |
@@ -199,16 +201,17 @@ once-ever slot (RB12). Under `-379` the appeal-date and neighbours' texts no lon
 (`NON_SEPARATING` matches `''`) are fine when BOTH are alphanumeric; the fixed-share rule counts every slot at its `maxLength` (UTF-16 length of
 the text). Run at authoring on the Panel's words with two 30-letter boxes: **all eight texts clear 30 %** — by the real function on
 8 (en), 12 (en), 13 (hi), 14 (en) (`[]`), and by a re-implementation of its arithmetic on all eight: 7 hi 49.3 %, 8 en 44.3 %, 9 hi 47.5 %,
-10 en 44.3 %, 11 hi 60.0 %, 12 en 55.4 %, **13 hi 40.9 %, 14 en 36.1 % (the lowest)** — floored to one decimal, as the checker's own message
-prints them (`Math.floor(x * 1000) / 10`; 14 en is 36.17 unrounded). (At 40-letter boxes 14 en would be 33.7 % — still clear.) Re-run by the v2.1
-validate with the real function over all eight: every one `[]`. The registry tests re-run the real checker on all eight (AC2).
+10 en 44.3 %, 11 hi 60.0 %, 12 en 55.4 %, **13 hi 40.0 %, 14 en 34.7 % (the lowest)** — floored to one decimal, as the checker's own message
+prints them (`Math.floor(x * 1000) / 10`); 13 / 14 recomputed 2026-10-22 for BigDev's NB7 edit (the word "short" gone: 13 hi fixed 120 of 300, 14 en
+fixed 96 of 276 — before the edit 40.9 % / 36.1 %). (At 40-letter boxes 14 en would be 32.4 % — still clear.) Re-run by the v2.1 validate with the real
+function over all eight (pre-edit texts): every one `[]`. The registry tests re-run the real checker on all eight (AC2).
 
 **G4 — Template 14 (en) stops being Unicode.** `needsUnicode` reads the TEXT: the em dash of the old English neighbours' text was its ONLY
 non-GSM-7 character; with the comma, `needsUnicode(14 en)` is `false` (probed). Several places say otherwise today and must follow: (i)
 `apps/jobs/tests/dlt-template-sheet.test.ts` — `UNICODE_ENGLISH = new Set(['sms.dlt.template_id.peer_mesh.request.en'])`, so its
 *"needsUnicode agrees with the sheet's cost notes"* leg goes RED unless the set is EMPTIED (TR4); (ii) the sheet's *"Setting up each template in
 MSG91"* step (3): *"Unicode for every Hindi template AND for template 14 (its English holds an em dash), Normal for the other English ones"*;
-(iii) the sheet's cost lines (G12); (iv) roster Row 32 (d) (*"UNICODE for every Hindi template AND template 14"* — Task 0.4); (v) `docs/adr/ADR-0041-sms-gateway-msg91.md`, two sentences (*"template 14 (en) carries an em dash"*, *"template 14, are Unicode"*) — ADR-0041 is Trustee-ratified (`-358`), so a dated ANNOTATION in the records commit (the 5.13 / ADR-0029 precedent), ⛔ a rewritten sentence; (vi) the JSDoc of `needsUnicode` in `packages/channels/src/dlt-variables.ts` (*"template 14 is English yet holds an em dash"*) — a COMMENT-ONLY edit, AC7's ONE `packages/channels` exception (Task 2.4); (vii) `packages/channels/tests/sms-preflight.test.ts` — a fixture comment and a leg title (*"template 14's shape (English + an em dash) expects UNICODE"*) that use their OWN fixture text, so the leg stays GREEN and only the prose is stale — LEAVE it (⛔ an AC7 edit; it describes a fixture, ⛔ template 14); (viii) `deferred-work.md`'s BF24 item (the non-blocking Panel FYI on the texts' cost — *"≈ 198 characters rendered ⇒ 3 segments; the Hindi ≈ 219 ⇒ 4 — typical; at the registered ceilings (a 40-character name, a 120-character link) 5 segments each — so per text en 3–5, hi 3–5"*) — its English figures (14 en is GSM-7: 176 / 2, 282 / 2 at the ceilings), its typical Hindi figure (13 hi ≈ 199 ⇒ 3 — the helpline phrase is gone) and its 40-letter ceiling (now 60) are superseded; the Hindi 3–5 RANGE stands (G12: 199 / 3, 240 / 4, 305 / 5): a dated note at Task 0.4. 13 (hi) stays Unicode (Hindi).
+(iii) the sheet's cost lines (G12); (iv) roster Row 32 (d) (*"UNICODE for every Hindi template AND template 14"* — Task 0.4); (v) `docs/adr/ADR-0041-sms-gateway-msg91.md`, two sentences (*"template 14 (en) carries an em dash"*, *"template 14, are Unicode"*) — ADR-0041 is Trustee-ratified (`-358`), so a dated ANNOTATION in the records commit (the 5.13 / ADR-0029 precedent), ⛔ a rewritten sentence; (vi) the JSDoc of `needsUnicode` in `packages/channels/src/dlt-variables.ts` (*"template 14 is English yet holds an em dash"*) — a COMMENT-ONLY edit, AC7's ONE `packages/channels` exception (Task 2.4); (vii) `packages/channels/tests/sms-preflight.test.ts` — a fixture comment and a leg title (*"template 14's shape (English + an em dash) expects UNICODE"*) that use their OWN fixture text, so the leg stays GREEN and only the prose is stale — LEAVE it (⛔ an AC7 edit; it describes a fixture, ⛔ template 14); (viii) `deferred-work.md`'s BF24 item (the non-blocking Panel FYI on the texts' cost — *"≈ 198 characters rendered ⇒ 3 segments; the Hindi ≈ 219 ⇒ 4 — typical; at the registered ceilings (a 40-character name, a 120-character link) 5 segments each — so per text en 3–5, hi 3–5"*) — its English figures (14 en is GSM-7: 170 / 2, 276 / 2 at the ceilings), its typical Hindi figure (13 hi ≈ 194 ⇒ 3 — the helpline phrase and "छोटे" are gone) and its 40-letter ceiling (now 60) are superseded; the Hindi 3–5 RANGE stands (G12: 194 / 3, 235 / 4, 300 / 5): a dated note at Task 0.4. 13 (hi) stays Unicode (Hindi).
 
 **G5 — ⭐⭐ The WhatsApp reminder is DERIVED from the neighbours' text's copy key.** `peer-mesh-wa-templates.ts`:
 `PEER_MESH_WA_REMINDER_COPY_KEY = 'peer_mesh_sms.request'` and `PEER_MESH_WA_REMINDER_BODY` (the Meta body, *"to be registered with Meta exactly
@@ -266,10 +269,11 @@ scans `| n |` rows for a foreign braced tag, and the jobs lockstep tests pin eac
 *"A variable cannot be the last word"* line naming 8, 10, 12 and 14); the *"Setting up each template in MSG91"* SMS-type step; the wording
 sections' *"The variables, in order"* prose; and the cost paragraphs (segments). **Expected new costs** (computed at authoring with the sheet's
 own method — it reproduces the sheet's existing "198 characters / 3 segments" for old 14 en): a 19-letter name, a 10-digit helpline, a
-10-character date, a 55-character link ⇒ **7 hi 101 / 2; 8 en 88 / 1; 9 hi 96 / 2; 10 en 88 / 1; 11 hi 134 / 2; 12 en 116 / 1; 13 hi 199 / 3;
-14 en 176 / 2** (characters / segments; GSM-7 153 per part, Unicode 67); with a 60-letter name ⇒ 7 hi 142 / 3; 8 en 129 / 1; 9 hi 137 / 3;
-10 en 129 / 1; 11 hi 175 / 3; 12 en 157 / 1; 13 hi 240 / 4; 14 en 217 / 2; at the registered ceilings (60-letter name, 120-character link) ⇒
-13 hi 305 / 5 and 14 en 282 / 2 (those two are the 60-letter figures plus 65 more link characters — arithmetic, ⛔ run). The dev re-computes; a mismatch is a finding, ⛔ a number to copy.
+10-character date, a 55-character link ⇒ **7 hi 101 / 2; 8 en 88 / 1; 9 hi 96 / 2; 10 en 88 / 1; 11 hi 134 / 2; 12 en 116 / 1; 13 hi 194 / 3;
+14 en 170 / 2** (characters / segments; GSM-7 153 per part, Unicode 67); with a 60-letter name ⇒ 7 hi 142 / 3; 8 en 129 / 1; 9 hi 137 / 3;
+10 en 129 / 1; 11 hi 175 / 3; 12 en 157 / 1; 13 hi 235 / 4; 14 en 211 / 2; at the registered ceilings (60-letter name, 120-character link) ⇒
+13 hi 300 / 5 and 14 en 276 / 2 (run, 2026-10-22, on the NB7 texts as edited by BigDev — "short" gone: 13 hi and 14 en are 5 and 6 characters shorter than the
+figures the Panel note was built on, 199 / 176; no segment count changes). The dev re-computes; a mismatch is a finding, ⛔ a number to copy.
 
 **G13 — `Intl.Segmenter` is ICU-dependent.** The "first letter" and the cut's grapheme boundaries come from grapheme clusters. On Node 22.22.2
 (ICU 78.2, Unicode 17.0): `श्रीवास्तव` → `["श्री","वा","स्त","व"]`, `शर्मा` → `["श","र्मा"]`; `(Late)` → first letter-bearing grapheme `L`; `​Iyer`
@@ -374,28 +378,32 @@ is `done`; grepped 2026-10-22). Branches that show as "ahead of main" on the reg
   counts warnings only for the sends whose template carries the helpline). **(b′)** keep the warning. **Cost:** a standing alarm about a number
   the text does not contain — and a false statement that operators "will reject these texts".
 
-- **NB7 — The eight registered texts, and the Hindi.** ⭐ **(a) Recommended:** exactly these (en = the Panel's words + the box variable; the
-  helpline addition of 7–10 is the build's, as before). Hindi is the author's (agent-authored, ⛔ human-reviewed — Rows 23 / 28):
+- **NB7 — The eight registered texts, and the Hindi.** ⭐ **(a) ACCEPTED by BigDev 2026-10-22 WITH ONE EDIT (Debug Log (a)):** exactly these (en = the Panel's
+  words + the box variable — EXCEPT 13 / 14, where BigDev dropped the word *"short"* from the ratified *"a few short questions"* (en) / *"कुछ छोटे प्रश्नों"* (hi);
+  the helpline addition of 7–10 is the build's, as before). Hindi is the author's (agent-authored, ⛔ human-reviewed — Rows 23 / 28):
   `7` hi `{#var#}{#var#} के लिए किया गया एक दावा आगे नहीं बढ़ सका। कृपया हेल्पलाइन {#var#} पर कॉल करें।` ·
   `8` en `A claim for {#var#}{#var#} could not go ahead. Please call the helpline {#var#}.` ·
   `9` hi `{#var#}{#var#} के लिए आपका दावा बंद कर दिया गया है। कृपया हेल्पलाइन {#var#} पर कॉल करें।` ·
   `10` en `Your claim for {#var#}{#var#} has been closed. Please call the helpline {#var#}.` ·
   `11` hi `{#var#}{#var#} के लिए किया गया दावा आगे नहीं बढ़ सका। इसके विरुद्ध {#var#} तक अपील की जा सकती है। कृपया हेल्पलाइन पर कॉल करें।` ·
   `12` en `The claim for {#var#}{#var#} could not go ahead. It can be appealed until {#var#}. Please call the helpline.` ·
-  `13` hi `हमें बताया गया है कि {#var#}{#var#} का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ छोटे प्रश्नों के उत्तर दें: {#var#}, या हमें कॉल करें।` ·
-  `14` en `We have been told that {#var#}{#var#} has died. If you knew them, please answer a few short questions: {#var#}, or call us.`
+  `13` hi `हमें बताया गया है कि {#var#}{#var#} का निधन हो गया है। यदि आप उन्हें जानते थे, तो कृपया कुछ प्रश्नों के उत्तर दें: {#var#}, या हमें कॉल करें।` ·
+  `14` en `We have been told that {#var#}{#var#} has died. If you knew them, please answer a few questions: {#var#}, or call us.`
   Slots in order: 7–10 `member1`, `member2`, `helpline` (cbn, ≤ 14); 11–12 `member1`, `member2`, `date` (alphanumeric, ≤ 10); 13–14 `member1`, `member2`,
   `link` (url, ≤ 120). The Hindi changes are minimal: 7 / 9 gain only the second box; 11 loses only the `{helpline}` variable (*"कृपया हेल्पलाइन पर कॉल करें।"* — the postposition पर stays); 13 swaps *"— या हेल्पलाइन {helpline} पर कॉल करें"* for
-  *", या हमें कॉल करें"* (the comma "the same way" as the English). **Cost:** the Hindi reviewers (Rows 23 / 28) re-review three changed sentences; unreviewed
+  *", या हमें कॉल करें"* (the comma "the same way" as the English) AND drops *"छोटे"* (BigDev's edit, with the English). **Cost:** the Hindi reviewers (Rows 23 / 28) re-review three changed sentences; unreviewed
   Hindi is already a go-live gate (not a new one). **(b)** Keep the Hindi dash in 13. **Cost:** the English and Hindi differ in punctuation for no reason.
+  ⚠ The dropped "short": the WhatsApp reminder (NB8) and the app chrome (`peer_request.title` / `peer_request.card_body`, `-311` PM11) still say *"a few short
+  questions"* — ⛔ changed by this story (the reminder's words are the Panel's / `-365`; the chrome is agent copy, out of scope); the SMS alone says *"a few questions"*.
 
 - **NB8 — The WhatsApp reminder keeps today's words under its OWN copy key.** ⭐ **(a) Recommended:** a NEW key pair `peer_mesh_wa.reminder`
   (en + hi) in `claim.json` holding, byte for byte, today's `peer_mesh_sms.request` values (`{member}`, `{link}`, `{helpline}`, the em dash);
   `PEER_MESH_WA_REMINDER_COPY_KEY` points to it; `PEER_MESH_WA_REMINDER_BODY` and the lockstep test are otherwise ⛔ edited (G5); a
   `$comment.peer_mesh_wa` (both locales) says why the reminder no longer shares the text's words (`-379` *Not covered*, Q2 A's cost line,
   `-365` WR6) and that a wording change is the Panel's. The 6.37e rework entry records the divergence from "the same words" of `-303` Q1 A as
-  MATCHING the Panel's own cost line — in terms: *"`-303` Q1 A's 'same words' now holds for the NAME and the substance, ⛔ for the helpline and the
-  dash — entailed by `-379` Q2 A's ratified cost line ('those who chose WhatsApp also get the number in the WhatsApp reminder') and `-379` Not covered"*.
+  MATCHING the Panel's own cost line — in terms: *"`-303` Q1 A's 'same words' now holds for the NAME and the substance, ⛔ for the helpline, the
+  dash and the word 'short' — the first two entailed by `-379` Q2 A's ratified cost line ('those who chose WhatsApp also get the number in the WhatsApp
+  reminder') and `-379` Not covered; the third BigDev's Task 0.2 edit to the SMS alone (Debug Log (a))"*. The reminder keeps *"a few short questions"*.
   **Cost:** the reminder's words are duplicated in the catalogue (deliberately). **(b)** Keep
   `peer_mesh_sms.request` for the reminder and mint a new key for the SMS. **Cost:** the SMS registry's `copyKey`, `$comment.peer_mesh_sms` and
   every reference to the text's key move — a rename across the SMS side for the sake of the exception.
@@ -469,7 +477,8 @@ named here, each of which was run (G14).
    (2) `checkDltTemplateShape(text, slots)` is `[]` for ALL EIGHT (the real checker — ⛔ the scratch re-implementation); `needsUnicode(14 en)` is `false`, the Hindi ones `true`.
    (3) `claim.json` (en + hi): `suspicion_sms.{refusal_notice,closed_notice,appeal_notice}` and `peer_mesh_sms.request` hold the NB7 strings with `{member1}{member2}` / `{helpline}` /
    `{date}` / `{link}`; `i18nParamNames(value)` (`apps/jobs/tests/_dlt-template-sheet.ts`, beside `msg91Form` / `expectRegisteredTextRow` / `sheetRowByConfigKey`) equals `slots.map(s => s.name)` in order; the real `t()` renders EXACTLY the registered text with each slot as the marker. The en 12 and 14 are the Panel's words
-   byte for byte (`-379` Q2 A); 8 and 10 are the Panel's `-262` / `-291` words plus the helpline, with the box variable.
+   byte for byte (`-379` Q2 A) — EXCEPT that 14 (and 13) read *"a few questions"*, the ratified *"a few short questions"* minus "short" (BigDev's Task 0.2 edit, Debug Log (a); the only
+   departure from the ratified words in the eight texts); 8 and 10 are the Panel's `-262` / `-291` words plus the helpline, with the box variable.
    (4) The sheet (Task 2.5): the main-table rows 7–14 (`Variable types`: `1 alphanumeric (… first part, ≤ 30) · 2 alphanumeric (… second part, ≤ 30) · 3 cbn / alphanumeric / url`;
    `MSG91 template`: `msg91Form` — `##member1####member2##`), the `| n |` registered-text rows 7–14, the wording sections' prose, the Shape rules, the MSG91 SMS-type step, the cost
    paragraphs (G12 — the dev's recomputed numbers) and a Record row; the three-variable justification lines now cover 7–10 (the helpline is the only action the text asks for),
@@ -573,10 +582,10 @@ named here, each of which was run (G14).
         (S2) `git log 1e22889e..origin/main --diff-filter=A -- _bmad-output/implementation-artifacts/` adds a story touching the registries or `claim.json`; (S3) another ref or worktree took `-380` or `2026-10-22k`
         (re-grep every ref: `for r in $(git for-each-ref --format='%(refname)' refs/heads refs/remotes); do git show "$r:.decision-log.md" | grep -o '^### Decision 2026-1[0-2]-[0-9]*-[0-9]*'; done | sort -t- -k4 -n | tail -2`);
         (S4) `ListAgents` shows a session on this worktree. `pnpm install --frozen-lockfile --prefer-offline` if `node_modules` is absent in the worktree (without it the `@twt/*` imports fail to resolve in this sibling worktree).
-  - [ ] 0.2 Put NB1–NB9 to BigDev in ONE pass, each with its recommendation and cost (NB3 is the one with a visible trade-off — say what MSG91's dashboard would show; NB7 carries the Hindi sentences for the Rows 23 / 28
-        reviewers; NB8 carries the divergence of the reminder's words from the text's). Record every answer VERBATIM (Debug Log (a)). An answer that is not "recommended" changes the Tasks it names — AC1 (c)/(d) for NB3 (a); AC2 (1) for NB7 (b); AC2 (6) / AC5 for NB8 (b).
+  - [x] 0.2 **ANSWERED 2026-10-22 (Debug Log (a)):** NB1–NB9 at their recommendations; NB7 with BigDev's edit — "short" dropped from 13 / 14 — reaffirmed after the §0 concern. ⚠ Still OPEN for BigDev: the INSTRUMENT of
+        *"Panel has already authorized me to make small changes"* (⛔ in the decision log — Debug Log (a2)); name it at Task 0.3 so the rework entry can cite it, else the entry carries the statement verbatim as the basis.
   - [ ] 0.3 Write the **6.37e rework entry** — an AUTHOR-COMMIT, next free id (`-380`, dated the day it is COMMITTED) — in `.decision-log.md`, the shape of `-378` / `-377`: Decision type / Status / Author / Ratifying trustees: None / §0 gate (the §0 re-run
-        table, all MATCH or the author's; ⛔ counsel question) / Occasion (`-379`) / The decisions (NB1–NB9 as answered; NB4's readings in terms — the case / stop matching, `(Late)` a word, joined initials `MS` / `MR` / `DR` read as titles, the single-space re-join) / **PQ:** none / Supersessions (`-377` SN2, SN3, SN7 replaced; SN1 kept as to HOME, its two import clauses (`fitsDltAlphanumeric`, `@twt/domain`) superseded; SN4, SN5 kept; SN6 kept in substance, its Consequence-1 records list superseded by the records commit; ⛔ a ratified sentence is edited;
+        table — all MATCH or the author's EXCEPT the dropped "short": BigDev's decision, its stated authorisation quoted verbatim and its instrument named or recorded as ⛔ found; the final 13 / 14 words a TOLD item to the Panel before registration, `-349` decision 2 — written from the template, ⛔ a question; ⛔ counsel question) / Occasion (`-379`; BigDev's Task 0.2 answers) / The decisions (NB1–NB9 as answered — NB7 with the edit; NB4's readings in terms — the case / stop matching, `(Late)` a word, joined initials `MS` / `MR` / `DR` read as titles, the single-space re-join) / **PQ:** none (ONE told item) / Supersessions (`-377` SN2, SN3, SN7 replaced; SN1 kept as to HOME, its two import clauses (`fitsDltAlphanumeric`, `@twt/domain`) superseded; SN4, SN5 kept; SN6 kept in substance, its Consequence-1 records list superseded by the records commit; ⛔ a ratified sentence is edited;
         `-359` / `-362` already superseded by `-379`) / **Does NOT cover** (Row 30 (d): 30 vs 40 per box, two alphanumeric variables with nothing between them, an empty variable, a leading / trailing space in a value, a box value that BEGINS with a combining mark (the forced cut inside a cluster — NB3 (b)), a full stop INSIDE a stored name sent whole (N1), Devanagari counting, `##a####b##` in MSG91; a refusal
         of the RULED form returns to the Panel as `-322` C7; a `shielded_name` Pariwar's name under `-379` (`-379` composed with `-181` cl.1's author-commit reading of `-136` cl.2; no production caller of the mode writer — G15; a told item if one ships); the Hindi words — Rows 23 / 28; the WhatsApp reminder's words (`-303` Q1 A's "same words" now the NAME and the substance — NB8); a shorter neighbours' link; English-only capture — row 3-3c; an invisible-only name; NFC vs NFD counting — both already in `deferred-work.md`, re-anchored at Task 0.4) /
         Consequences / References. It BUILDS `-379`; it ⛔ re-reads it. Stage in the scratchpad, re-grep every ref for the id right before inserting, prepend above the newest `### Decision`
@@ -584,7 +593,7 @@ named here, each of which was run (G14).
   - [ ] 0.4 The **records commit** (one commit, after 0.3), every edit append-only: `epics.md` `### Story 6.37e` — the title / user story / "(in brief)" rewritten and a dated *"REWORKED 2026-10-22 (`-379`)"* paragraph naming `-380`; `deferred-work.md` — the
         6.37-round-2 suspicion item and the 6.24b `{member}` item dated notes (*"Closed by 6.37e for every name that fits 60 or that the Panel's rule can shorten, when the row is `done` on `main`; still ⛔ sent: a name that cannot fit"* — ⛔ a bare "Closed"
         ([[feedback_closure_language_precision]]); the owed-Panel item's note that its BUILD is now owed by THIS story; the 6.37c-pack sitting item *"✅ Closed by `-362` (option B — built in row `6-37e`)"* — a dated note: option B SUPERSEDED by `-379`, the build is the full-name rule; the two code-review items (an invisible-only name; NFC vs NFD) — a one-line re-anchor from `fitsDltAlphanumeric` / "the 40" to `smsMemberName` / 60; the BF24 cost-FYI item — superseded in part (G4 (viii): the English figures, the typical Hindi figure and the 40-letter ceiling; the Hindi 3–5 range stands)); the two OLDER routing notes' ruling blocks (`…2026-10-17-6-37-name-too-long-for-the-text.md` *"Built by a NEW row 6-37e…"*, `…2026-10-18-6-27c-neighbours-text-long-name.md` *"Built with the suspicion texts in row 6-37e"*) — a dated note under each: option B SUPERSEDED by `-379` (⛔ a word of the ruling block edited); roster **Rows 22 / 27** (the registered words changed — two boxes; 11–14 lose the helpline; no id was ever provisioned, so ⛔ re-registration is owed; closure
-        criteria unchanged; Row 27's evidence line (1): `name_too_long` now only for a name that cannot fit even shortened), **Rows 23 / 28** (the Hindi reviewers' packet: 7 / 9 gain a box; 11 loses only the `{helpline}` variable (पर stays); 13 ends *", या हमें कॉल करें"*), **Row 30 (d)** (the questions above, plus a box value beginning with a combining mark; the `-377` SHORT-FORM full-stop item is MOOT — initials carry ⛔ stop and a stopped title is dropped — but a full stop INSIDE a stored name of ≤ 60 is now sent WHOLE (N1) and stays (d)'s existing special-character question, reached by MORE names than before; a refusal of the ruled form returns
+        criteria unchanged; Row 27's evidence line (1): `name_too_long` now only for a name that cannot fit even shortened), **Rows 23 / 28** (the Hindi reviewers' packet: 7 / 9 gain a box; 11 loses only the `{helpline}` variable (पर stays); 13 ends *", या हमें कॉल करें"* and drops *"छोटे"*), **Row 27** also carries the told item on 13 / 14's final words (the dropped "short" — shown to the Panel before registration, `-349` decision 2), **Row 30 (d)** (the questions above, plus a box value beginning with a combining mark; the `-377` SHORT-FORM full-stop item is MOOT — initials carry ⛔ stop and a stopped title is dropped — but a full stop INSIDE a stored name of ≤ 60 is now sent WHOLE (N1) and stays (d)'s existing special-character question, reached by MORE names than before; a refusal of the ruled form returns
         to the Panel), **Row 32 (d)** (the MSG91 forms of 7–14 are `##member1####member2##…`; template 14 is created as Normal, ⛔ Unicode), **Row 35** (the reminder's words are deliberately NOT the text's — `-379` *Not covered*), and a dated annotation on `docs/adr/ADR-0041-sms-gateway-msg91.md` (G4 (v)) — each a dated note, ⛔ a word of any row
         rewritten; `claim.json` (en + hi) `$comment.suspicion_sms` / `$comment.peer_mesh_sms` a dated sentence APPENDED (the three lockstep substrings kept; ⚠ the sentence is scanned by `microcopy:check` — G11: no `report` / `user` / `receipt` …); the sheet's THREE `-377` prose notes (after the wording of 7–12, after 13–14, and in the Shape rules) get a dated *superseded* note under each (the table rows and rules change in Task 2.5, with the code);
         the 6-37e sprint comment (a NEW dated line) + row `ready-for-dev` → `in-progress` (this create-story run already moved it `in-progress` → `ready-for-dev`) + the `last_updated: >-` scalar + the ledger line ([[project_sprint_status_safe_prepend]] — read first, guard the size, verify the YAML parses and the row count is unchanged). ⚠ The sheet is in `GATE_INPUTS`
@@ -703,8 +712,25 @@ Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 
 
 ### Debug Log References
 
-*To be filled by `bmad-dev-story`. Reserved letters:*
+*Reserved letters ((b)–(e) to be filled by `bmad-dev-story`):*
 **(a)** Task 0.2 — BigDev's answers to NB1–NB9, VERBATIM (and which Tasks an answer other than "recommended" changes).
+  **(a1) Answered 2026-10-22** (to the create-story session, after v2.1 was committed as `5a8074d2`): *"NB1-NB9 approved. A small modification is done in NB7."*
+  ⇒ NB1–NB9 each at the ⭐ recommendation ((a) for NB1, NB2, NB4–NB9; (b) for NB3), with ONE edit BigDev made directly in NB7's text (the working-tree diff against
+  `5a8074d2`, 2 lines): template **13 (hi)** *"कुछ छोटे प्रश्नों"* → *"कुछ प्रश्नों"*, template **14 (en)** *"a few short questions"* → *"a few questions"* — the word
+  **"short"** dropped from the neighbours' text.
+  **(a2) §0, applied to that edit the same day:** *"a few short questions"* is a Trustee-ratified phrase twice over — `-304` Q6 A (*"The text says 'a few short
+  questions' (amends `-303` Q1 A's 'two')"*) and `-379` Q2 A, which ratified the neighbours' text AS PUT with that word — so the edit CHANGES ratified words
+  (the same class as the dash → comma, which WAS put to the Panel). Put to BigDev with three options (build as ratified + ask; build BigDev's words + the Panel
+  gates registration; withdraw the edit). **BigDev, verbatim:** *"Build with my words. Panel has already authorized me to make small changes."* — a decision
+  reaffirmed after the concern was raised; it is carried as BigDev's. **The record, checked the same day:** `.decision-log.md` holds ⛔ delegation of wording
+  changes to BigDev — `-210` cl.2 delegates ENUM additions *"that change ⛔ no member-facing behaviour"*; `-349` decision 4 names *"a standing delegation —
+  whether staff may register the nearest wording DLT accepts for templates 7–14, with the same meaning"* and says it is ⛔ routed yet. So the authorisation
+  BigDev names is ⛔ found in the log; BigDev is asked to name its instrument (a sitting, a message) so the rework entry can cite it — until then the rework
+  entry records the statement verbatim as the basis, ⛔ as a ruling ([[feedback_record_unattested_no_backfill]]). What the record DOES require either way:
+  `-349` decision 2 — *"the English of templates 7–14 (the Panel's words): the change goes back to the Trustee Panel, through a routing note, BEFORE that
+  template's id is set; nothing is sent with words the Panel has not seen"* ⇒ the final 13 / 14 words are SHOWN to the Panel (a told item, ⛔ a question — the
+  build does not wait) before Row 27 registers them. Changes to this file: NB7 (a), N8, AC2 (3), §0 re-run (a new row and its heading), G3 / G12 / G4 (viii)
+  figures, the Policy-meaning length line, NB8, Task 0.3 / 0.4 — all in v2.2.
 **(b)** Task 0 — the preflight (S1–S4), the rebase if any, the numbers actually taken, the `-380` SHA, the records commit SHA.
 **(c)** RED proofs (AC8) — each mutant applied by a scratch runner that asserts the edit landed exactly once and ALWAYS restores the file; the unit and live runs by name.
 **(d)** Gates — `typecheck`, `lint`, `microcopy:check` / `:test`, `i18n:check`, `dlt-typed-variables:test` / `:check` (after `git add`), `ci:local` on :5433.
@@ -961,6 +987,17 @@ and (d)'s `36/36` was on the tree before these eight patches.
 
 ## Change Log
 
+- v2.2 (2026-10-22) — **Task 0.2 ANSWERED by BigDev** (to the create-story session; recorded VERBATIM in Debug Log (a)): *"NB1-NB9 approved. A small
+  modification is done in NB7."* — every NB at its recommendation; BigDev's own edit to NB7 drops the word "short" from templates 13 (hi *"कुछ प्रश्नों"*) and
+  14 (en *"a few questions"*). §0 applied: the word is in a Trustee-ratified phrase (`-304` Q6 A; `-379` Q2 A as put) ⇒ raised to BigDev with options;
+  BigDev: *"Build with my words. Panel has already authorized me to make small changes."* — carried as BigDev's reaffirmed decision. The decision log was
+  grepped the same day for that authorisation: ⛔ found (`-210` cl.2 delegates enum additions only; `-349` decision 4 names exactly this "nearest wording"
+  delegation for templates 7–14 and leaves it UN-routed) — BigDev is asked to name the instrument at Task 0.3; the rework entry otherwise records the statement
+  verbatim as the basis, and the final 13 / 14 words become a TOLD item to the Panel before Row 27 registers them (`-349` decision 2's own rule). Sites
+  updated: NB7 (a) (accepted-with-edit; the reminder and the app chrome keep "short"), N8, AC2 (3), the §0 re-run heading + a new first row, the WhatsApp row,
+  the Policy-meaning verbatim check and length line (170 / 211), G3 (13 hi 40.0 %, 14 en 34.7 %, 32.4 % at 40-letter boxes), G12 (13 hi 194 / 235 / 300, 14 en
+  170 / 211 / 276 — no segment count changes), G4 (viii), NB8, Task 0.2 (done), Task 0.3 (§0 section, told item), Task 0.4 (Row 28's "छोटे"; Row 27's told
+  item), NUMBERS (`22l` taken here; Task 0.4's is `22m`). Row stays `ready-for-dev` (dev starts at Task 0.1 / 0.3). ⛔ Code; ⛔ number taken. Ledger `2026-10-22l`.
 - v2.1 (2026-10-22) — **VALIDATED** by `bmad-create-story validate 6.37e` against the uncommitted v2.0 (branch tip `ede854dc`, `origin/main` `1e22889e`
   re-fetched — unmoved): three fresh-context read-only verifiers in parallel — code claims (17 mandatory probes, all run), rulings / records / numbers,
   edge cases / test feasibility (a faithful scratch implementation of N1–N5 / NB3 / NB4 run over every AC1 literal and adversarial inputs) — **0 H / 9 M / 26 L,

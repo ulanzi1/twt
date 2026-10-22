@@ -873,6 +873,8 @@ Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 
   - ✅ Resolved review finding [P2]: R2 — AC6 blob assertions on the four legs; 4 leak mutants RED (GREEN against the pre-R2 tests).
   - ✅ Resolved review finding [P3]: R3 — `epics.md` dated ✅ block: PQ1 SENT + ANSWERED (`-381`), the registration hold discharged.
   - `ci:local` 36 / 36 on :5433. ⛔ Code change outside tests. Not committed, not pushed (BigDev's go-ahead).
+  - The told-cost item (after `651ffc53`) — BigDev: *"go with option 1, wait for MSG91's answer"*: ⛔ told item now; the GSM-7-on-UNICODE question
+    joins Row 32 (d)'s written question to MSG91; a told item to the Panel only if MSG91 says no (`deferred-work.md`; Row 32 note (11)).
 
 ### File List
 

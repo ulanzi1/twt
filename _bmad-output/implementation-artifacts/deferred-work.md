@@ -20,6 +20,11 @@ Two items it leaves OPEN. ⛔ Neither is closed by the row.
   sheet's 13–14 cost line, qualified: en 2–5]. The ruled WORDS are unchanged (⛔ a ruling re-read); only the cost the note put is now
   conditional on what MSG91 does with an all-GSM-7 text on a UNICODE template (⛔ known). ⛔ **Not addressed** — whether a told-item
   correction goes to the Panel is BigDev's. ⭐ Trigger: Row 32 (d)'s encoding answer, or BigDev's call on a told item.
+  *Dated note, 2026-10-22 — BigDev: "go with option 1, wait for MSG91's answer":* ⛔ told item now. The question goes to MSG91 with Row 32
+  (d)'s Devanagari-name question: *does a text whose characters are all GSM-7, sent on a UNICODE template, go out as GSM-7?* YES ⇒ the
+  "2 parts" holds for an English-letter name — nothing to correct; close this item. NO ⇒ a short TOLD item (an FYI, ⛔ a question) to the
+  Panel with the measured figures. Blocks ⛔ merge and ⛔ registration of 13 / 14. ⚠ Either way the figure holds only for a name in English
+  letters — a Devanagari name makes the text Unicode whatever the type.
 
 ---
 

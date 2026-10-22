@@ -25,6 +25,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   11–14, pointing to the app) — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-full-name-two-slots.md`,
   ⛔ **Not addressed — WRITTEN, ⛔ sent.** It gates go-live as before (Rows 22 / 27) AND the rework of row 6-37e (`-378` decision 7).
   ⭐ Trigger: BigDev sends the new note.
+- **A shorter neighbours' link — decided once the Trust's domain is chosen (BigDev 2026-10-22).** Today's link
+  `https://<domain>/peer-request?c=<12-char code>` is ~55 characters ⇒ the neighbours' text (templates 13–14) arrives in 2 GSM
+  segments (with NQ2's comma). Options recorded, ⛔ decided: (1) a SHORT app-link host + path used DIRECTLY (e.g. `https://twt.in/p/<code>`,
+  ~29 characters — most texts fit 1 segment; a change to 6.30's app-link path list, the app config and the public page; AL3 stands);
+  (2) a TWT-run redirect shortener on a subdomain — REVERSES AL3 (`-312`): a redirect often opens the browser, ⛔ the app. BigDev:
+  *"let's keep the long URL for now, message may be delivered in 2 part. Later when we have domain, we decide."* ⛔ Not addressed.
+  ⭐ Trigger: roster Row 29 (b) — the domain registered.
 
 ---
 

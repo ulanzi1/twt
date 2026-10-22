@@ -68,10 +68,10 @@ name and as much of the rest as fits.
 
 # Question 2 — the helpline number in four texts
 
-**In one sentence:** to make room for the second name box, the appeal-date text and the neighbours' text would say "the helpline
-number is in the app" instead of carrying the number; do you agree?
+**In one sentence:** to make room for the second name box, the appeal-date text would say just *"Please call the helpline."* and
+the neighbours' text would end *"…, or call us."* — both without the number; do you agree?
 
-**Why it is yours:** you ratified the neighbours' text with *"— or call the helpline [number]"* (`-303`).
+**Why it is yours:** you ratified the neighbours' text with *"[link to the app] — or call the helpline [number]"* (`-303`).
 
 ## The one fact that decides it
 
@@ -87,19 +87,21 @@ The two texts that would be over the limit become:
 
 | Text | Today | Proposed |
 |---|---|---|
-| Appeal date | *"The claim for [member] could not go ahead. It can be appealed until [date]. Please call the helpline [number]."* | *"The claim for [member] could not go ahead. It can be appealed until [date]. Please call the helpline — its number is in the app."* |
-| Neighbours | *"We have been told that [member] has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* | *"We have been told that [member] has died. If you knew them, please answer a few short questions: [link] — or call the helpline (its number is in the app)."* |
+| Appeal date | *"The claim for [member] could not go ahead. It can be appealed until [date]. Please call the helpline [number]."* | *"The claim for [member] could not go ahead. It can be appealed until [date]. Please call the helpline."* |
+| Neighbours | *"We have been told that [member] has died. If you knew them, please answer a few short questions: [link] — or call the helpline [number]."* | *"We have been told that [member] has died. If you knew them, please answer a few short questions: [link], or call us."* |
 
-(The Hindi texts change the same way; the Hindi reviewers check the words.) ⭐ Your own words for the appeal-date text were
-*"Please call the helpline."* with no number (`-293`) — the number was added when we built it.
+(The Hindi texts change the same way; the Hindi reviewers check the words.) ⭐ For the appeal-date text this RETURNS to your own
+words — *"Please call the helpline."*, with no number (`-293`); the number was added when we built it. ⭐ In the neighbours' text the
+dash becomes a comma: a dash is not a standard SMS character and turns the whole English text into the costlier Unicode kind —
+about 3–4 parts instead of 2.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Drop the number from these two texts, point to the app** (our suggestion). | The refused person and the neighbours read "its number is in the app". | Someone who never opens the app has no number in the text. The neighbours who chose WhatsApp still get the number in the WhatsApp reminder two days later; the neighbours' link page is in the app. |
+| **A** | **Drop the number from these two texts** (our suggestion). | The refused person reads your own words, *"Please call the helpline."*; the neighbours read *"or call us"*. | A refused person who does not use the app has no number in the text. The neighbours are members who use the app and know the helpline; those who chose WhatsApp also get the number in the WhatsApp reminder two days later. |
 | **B** | **Keep the number; these two texts keep ONE name box** (30 letters, the same rule shortened to fit). | The number stays. | In these two texts a long name is shortened much harder — e.g. "K V S N M S Swaminathan Iyer" — and the four texts name the member differently. |
 
-**Our reading:** A — **because** the name is what tells a person what the text is about, and the helpline number is one tap away in
-the app.
+**Our reading:** A — **because** the name is what tells a person what the text is about; the appeal-date text keeps your own words,
+and the neighbours are members who already know the helpline.
 
 ---
 
@@ -117,14 +119,17 @@ the app.
 - **Still uncertain:** the operator's answers (go-live record Row 30 (d)) — whether a name box holds 30 or 40 letters (if 40, the full
   name fits up to 80); whether two name boxes may sit side by side with nothing between them; whether the second box may be empty for a
   short name. If the operator refuses two name boxes, this comes back to you.
+- **Length:** the neighbours' text, with its link, arrives in two parts (about 175 letters for a usual name, up to about 220 for a
+  60-letter one) — as it already did; the other texts stay one part in English for most names. A shorter link is decided once the
+  Trust's web address is chosen.
 
 # In plain English
 
 On 2026-10-18 you chose to send a shorter name — "Ramesh S." — when a member's full name is too long for a text. For some real names
 that becomes "K. S.", which tells the family or the neighbours nothing. We now propose to send the FULL name, using two name boxes so
 up to 60 letters fit, and only for a longer name to drop titles like "Shri" and then turn the first words into initials, always keeping
-the family name. Because a text may have at most three boxes, the appeal-date text and the neighbours' text would then say the helpline
-number is in the app instead of showing it.
+the family name. Because a text may have at most three boxes, the appeal-date text would then say just "Please call the helpline." — as you
+first worded it — and the neighbours' text "or call us", without the number.
 
 ---
 ---
@@ -149,7 +154,8 @@ number is in the app instead of showing it.
 ## E2 — What is NOT ratified
 
 - The full name in two name boxes and the shortening rule above 60 (Question 1).
-- The helpline pointer to the app in the appeal-date and neighbours' texts (Question 2).
+- The helpline number dropped from the neighbours' text, its *"or call us"*, and the comma in place of the dash (Question 2). (The
+  appeal-date text's *"Please call the helpline."* is `-293`'s own wording.)
 - The operator's answers (Row 30 (d)).
 - Recorded in `2026-10-22-378` (author-commit): the withdrawal of the earlier note; this note; the English-only capture of member
   names (new row `3-3c-member-kyc-name-english-only`).

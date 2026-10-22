@@ -8,14 +8,20 @@
 > rather than let you play with name."*).
 > ⭐ **The build waits for your answer; go-live waits for it too** (go-live record Rows 22 and 27).
 > ⚠ **WRITTEN 2026-10-22 — ⛔ sent.** ⛔ Shown to the Panel until BigDev sends it.
+> ✅ **SENT by BigDev and ANSWERED 2026-10-22** — see the ruling below; the line above is kept as written.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — 2026-10-22 ([Decision 2026-10-22-379](../../.decision-log.md#decision-2026-10-22-379))
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti (relayed by BigDev). **Verbatim:** *"by DR and KB — Q1 A, Q2 A"*
+>
+> - **Q1 — A:** the full name, across two name boxes (60 letters); only above 60 the listed titles dropped, then the first words
+>   turned into initials, ⛔ never the last word; still too long ⇒ ⛔ text, as today. Supersedes `-359` / `-362` option B.
+> - **Q2 — A:** the appeal-date text ends *"Please call the helpline."*; the neighbours' text ends *"…[link], or call us."* — ⛔
+>   number in either; the two family texts keep the number. Narrows `-303` Q1 A.
+>
+> ⭐ Everything below is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

@@ -25,6 +25,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   11–14, pointing to the app) — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-full-name-two-slots.md`,
   ⛔ **Not addressed — WRITTEN, ⛔ sent.** It gates go-live as before (Rows 22 / 27) AND the rework of row 6-37e (`-378` decision 7).
   ⭐ Trigger: BigDev sends the new note.
+  ✅ *Dated note, 2026-10-22:* **Closed by [`-379`](../../.decision-log.md#decision-2026-10-22-379)** — the Panel's QUESTION (Q1 A, Q2 A;
+  Dhiraj Rahul + Kalpana Bharti). ⚠ The BUILD is ⛔ addressed: row 6-37e's branch still sends "Ramesh S."; the rework (two `{member}`
+  variables, the title list, initials from the front, the four texts' new wording and slots) is owed — reopen vs new row is BigDev's.
 - **A shorter neighbours' link — decided once the Trust's domain is chosen (BigDev 2026-10-22).** Today's link
   `https://<domain>/peer-request?c=<12-char code>` is ~55 characters ⇒ the neighbours' text (templates 13–14) arrives in 2 GSM
   segments (with NQ2's comma). Options recorded, ⛔ decided: (1) a SHORT app-link host + path used DIRECTLY (e.g. `https://twt.in/p/<code>`,

@@ -6,8 +6,9 @@
 > LESS than that sentence promises. Each narrows your ruling at an edge, so each is yours to confirm. **Confirm 1** — a long name whose
 > first word is ⛔ a first name, or whose last word is ⛔ a surname. **Confirm 2** — a long name of several words that is STILL too
 > long even in the shorter form.
-> ⭐ **Confirms, ⛔ not blockers:** the work continues as described below; your answers are needed **before the long-name texts go
-> live** (go-live record Rows 22 and 27). From Story 6.37e's build decisions, recorded as `2026-10-22-377` (BigDev: *"recommendation
+> ⭐ **Confirms, ⛔ not blockers:** the work continues as described below; your answers are needed **before these texts go
+> live** (go-live record Rows 22 and 27 — the record holds a whole text at a time, so each text waits for your answer in full,
+> not only its long-name sends). From Story 6.37e's build decisions, recorded as `2026-10-22-377` (BigDev: *"recommendation
 > accepted for  SN1–SN7 and PQ1 / PQ2"*).
 > ⚠ **WRITTEN 2026-10-22 — ⛔ sent.** ⛔ Shown to the Panel until BigDev sends it.
 
@@ -32,9 +33,12 @@ is not a first name and a surname initial, so it gives less than your words — 
 
 ## The one fact that decides it
 
-⭐ The shorter form the system already has — the one a Pariwar can choose for its directory — does ⛔ know which word is the first
-name or the surname. It takes the **first word** and the first letter of the **last word**. For most names that is "Ramesh S."; for
-some it is not:
+⭐ The shorter form the system already has — the one behind the setting for how a Pariwar's members' names appear (the setting
+exists, but we found nothing in the app that lets a Pariwar switch it on yet; see "Still uncertain" below) — does ⛔ know which word
+is the first name or the surname. It takes the **first word** and the first letter of the **last word**. For most names that is
+"Ramesh S."; for some it is not. ⚠ One difference from the public directory: when the directory picks those two words it first
+throws away any "word" that has no letter or digit in it (a lone "-", an invisible character) and any invisible character at the
+front of a word; the texts do ⛔ do that, because the form used on members' own screens never has. The last two rows below show it.
 
 | The full name (over 40 letters, so it does not fit) | The shorter form sent |
 |---|---|
@@ -44,6 +48,9 @@ some it is not:
 | श्री राजेन्द्र प्रसाद नारायण सिंह श्रीवास्तव | श्री श्री. |
 | … Jr. / … जी (a suffix or honorific last) | Ramesh J. / X जी. |
 | … Subrahmanyam - (a stray mark typed last) | Venkata -. |
+| … Subrahmanyam, then a space and an invisible character (nothing shows on screen) | Venkata  . (a blank where the initial should be) |
+
+⭐ For both of the last two rows the directory would skip the stray mark or the invisible character and show "Venkata S.".
 
 ⭐ Only the TEXT carries the shorter form. A neighbour who opens the link in the text sees the member's FULL name there, and a
 neighbour who has agreed to WhatsApp gets the WhatsApp reminder two days later with the full name. The family's suspicion texts have
@@ -51,13 +58,14 @@ no link — the shorter form is all they see in the text (the helpline call carr
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **As built** — the existing shorter form, for every long name (our suggestion). | A family or neighbour gets the text; for these names it may say "K. S." or "Venkata -.". | Some long names get a weak or meaningless shorter form; a neighbour may not recognise the member from the text alone (the link shows the full name). |
-| **B** | **Look for the real first name and surname** — skip leading initials and titles, trailing suffixes and honorifics, and stray marks. | "K. Venkata … Subrahmanyam" would read "Venkata S.". | A NEW name form that no Pariwar can choose today — the texts would name the member differently from the directory; it can still guess wrong (a South-Indian initial is often the family name); more work, and the build waits for it. |
-| **C** | **No text for these names** — send only when the shorter form is a recognisable first name and surname initial. | These families and neighbours get ⛔ text, as today. | The promised notice is lost for them — including the refused person's only notice of the last date to appeal. |
+| **A** | **As built** — the existing shorter form, for every long name (our suggestion). | A family or neighbour gets the text; for these names it may say "K. S." or "Venkata -.". | Some long names get a weak or meaningless shorter form; a neighbour may not recognise the member from the text alone (the link shows the full name). For a stray mark or an invisible character, the text shows what the directory would not. |
+| **B** | **Look for the real first name and surname** — skip leading initials and titles, trailing suffixes and honorifics, and stray marks. | "K. Venkata … Subrahmanyam" would read "Venkata S.". | Skipping initials, titles, suffixes and honorifics is a NEW name form that no Pariwar can choose today — the texts would then name the member differently from the directory; it can still guess wrong (a South-Indian initial is often the family name); more work, and the build waits for it. (Skipping stray marks and invisible characters alone is not new — the directory already does it.) |
+| **C** | **No text for these names** — send only when the shorter form is a recognisable first name and surname initial. | These families and neighbours get ⛔ text, as today. | The promised notice is lost for them — including the refused person's only notice of the last date to appeal. And "recognisable" has no rule today: we would bring you a proposed rule before building anything. |
 
-**Our reading:** A — **because** it is the form you named (*"the form a Pariwar can already choose"*), it keeps one way of
-shortening a name across the app, and the neighbours see the full name on the link and in the reminder. B is a new form and would need
-its own ruling; C takes away the text you ruled should be sent.
+**Our reading:** A — **because** it is the form you named (*"the form a Pariwar can already choose"*), it is the rule the app's
+screens apply to a member's name when a Pariwar's setting is shielded (apart from the stray-mark difference above), and the
+neighbours see the full name on the link and in the reminder. B's skipping of initials and titles is a new form and would need its own ruling; C takes away the text you
+ruled should be sent.
 
 # Confirm 2 — a long name that is still too long in the shorter form
 
@@ -87,8 +95,11 @@ the only way round it is a cut or a new form.
 # What is at stake right now
 
 - **Live today:** nothing — ⛔ text of these kinds is provisioned with the operator, and the app is ⛔ in production.
-- **Blocked:** nothing — the build continues as described; **go-live waits for your answer** (go-live record Rows 22 and 27).
-- **If nothing is decided:** the texts for long names cannot go live.
+- **Blocked:** nothing in the build, which continues as described. **Go-live waits for your answer:** the go-live record keeps the
+  suspicion texts (Row 22) and the neighbours' text (Row 27) open until you answer. A text is switched on for every
+  name or for none, so the hold cannot be limited to long names — the whole of each of these four texts waits, not only its
+  long-name sends.
+- **If nothing is decided:** none of these four texts can go live.
 
 # How much to trust this note
 
@@ -98,9 +109,21 @@ the only way round it is a cut or a new form.
 - **Corrected in this note:** we first read the several-word, still-too-long case (Confirm 2) as already covered by your ruling; a
   check showed your cost line names only a ONE-word name, so it is asked here. The Hindi example "श्री श्री." depends on the version of
   the text library the server runs: an older one gives "श्री श्." — still meaningless.
+  **Corrected again after a code review on 2026-10-22, before this note was sent** — three things the first draft got wrong:
+  (1) it said the shorter form is the directory's and that option A "keeps one way of shortening a name across the app"; the code
+  shows the directory skips stray marks and invisible characters and the texts do not, so for those names the two already differ
+  — the text above now says so, and the cost of B is split in two; (2) it said only "the texts for long names" wait for your answer,
+  when the go-live record in fact holds the whole of each of the four texts; (3) option C had no rule for "recognisable" — its cost
+  now says so. A second read of those corrections then caught this note contradicting itself — it called the shorter form something
+  a Pariwar "can switch on" and "already" uses while also saying nothing in the app sets it, and it claimed the form appears
+  nowhere else in the app — so the sentences now agree, and the last claim is withdrawn.
 - **Still uncertain:** how many members have such names — ⛔ production data exists to count; whether the operator accepts a full stop
   inside the name (the go-live record's open question about special characters, Row 30 (d)) — if it does ⛔, the shorter form cannot be
-  texted at all and comes back to you.
+  texted at all and comes back to you; whether any Pariwar can choose the shorter form TODAY — the setting exists and has a governed
+  way to change it, but a code search (2026-10-22) found no screen or route in the app that changes it. As the app is built, then,
+  a Pariwar's member names show in full unless the setting was changed outside the app, which we have not checked. Your ruling's
+  phrase "the form a Pariwar can already choose" is true of the system; we found no way for a Pariwar to choose it from the app yet.
+  (The first-name-and-initial pair is not new to the app — a member's own Contribution Note builds it from the name.)
 
 # In plain English
 
@@ -109,8 +132,8 @@ surname, like "Ramesh S.". We have built that using the shorter form the app alr
 first letter of the last word, so for a few names — one that starts with an initial or "Shri", or ends with "Jr." or "जी" — it gives
 something like "K. S.", which says little. And a name whose first word alone is about 38 letters still cannot fit, so — as for a
 one-word name that is too long — no text goes. We suggest keeping both as built: the shorter form is the one you named, the neighbours
-see the full name when they open the link, and the only alternatives are a new way of shortening names or cutting them. Nothing is
-blocked; we need your answer before these texts go live.
+see the full name when they open the link, and the only alternatives are a new way of shortening names or cutting them. Nothing in
+the build is blocked; but these texts cannot go live until you answer, because a text goes live for every name or for none.
 
 ---
 ---
@@ -146,7 +169,10 @@ blocked; we need your answer before these texts go live.
 - The shorter form is `notifications.resolveMemberFacingDeceasedName('shielded_name', name)` (`packages/domain/src/notifications/
   pool-identity.ts`) → `splitFirstNameLastInitial` (`packages/domain/src/kyc/name.ts`): the name split on whitespace; the FIRST token
   and the first grapheme of the LAST token, then a full stop; ⛔ token cleaning (unlike the directory's `resolvePublicMemberName`,
-  which drops tokens with ⛔ letter or digit first).
+  which drops tokens with ⛔ letter or digit first and strips default-ignorable characters at the front of a token —
+  `publicNameTokens`, `packages/domain/src/kyc/public-name.ts`).
+- Whether a Pariwar can choose the mode today: `kyc.setPublicNamePresentationMode` is called only from tests (grep, 2026-10-22); an
+  absent row resolves to `full_name` (`packages/domain/src/kyc/presentation-policy.ts`).
 - The fit is `fitsDltAlphanumeric` (`apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`): code points ≤ 40.
 - Story 6.37e's `smsMemberName` (`apps/jobs/src/scheduler/sms-member-name.ts` — being built with this note) returns the full name if it fits, else the shorter form
   if THAT fits, else `too_long` (suspicion: the send core refuses `value_too_long` + alarm; neighbours: `no_target:name_too_long`).
@@ -166,5 +192,7 @@ grep -n 'export function splitFirstNameLastInitial' -A6 packages/domain/src/kyc/
 grep -n "if (mode === 'shielded_name')" -A12 packages/domain/src/notifications/pool-identity.ts
 grep -n 'export function fitsDltAlphanumeric' -A2 apps/jobs/src/scheduler/peer-mesh-sms-templates.ts
 grep -n 'resolvePeerRequestMemberName' apps/api/src/modules/claims/peer-request-core.ts
+grep -n 'LEADING_IGNORABLE\|HAS_LETTER_OR_DIGIT' packages/domain/src/kyc/public-name.ts      # the directory's token cleaning the texts lack
+grep -rn 'setPublicNamePresentationMode' apps packages --include='*.ts' | grep -v '/tests/' | grep -v '/dist/'   # the definition and one doc comment ONLY — no production caller
 node -e "const s=n=>{const t=n.trim().split(/\s+/);const g=[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(t.at(-1))][0].segment;return t.length>1?t[0]+' '+g+'.':t[0]};for(const n of ['K. Venkata Satya Narayana Murthy Subrahmanyam','Venkata Satya Narayana Murthy Subrahmanyam -','श्री राजेन्द्र प्रसाद नारायण सिंह श्रीवास्तव'])console.log([...n].length,'→',s(n))"
 ```

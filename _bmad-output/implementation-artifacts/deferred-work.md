@@ -13,9 +13,35 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   the existing shielded form as is (`"K. S."`, `"Venkata -."`, an invisible initial — ⛔ token cleaning on the member-facing arm);
   **Confirm 2 (PQ2)** — a MULTI-word name whose short form is still over 40 gets ⛔ text (option B's cost named only a one-word name).
   ⚠ It GATES GO-LIVE of the long-name texts (BigDev 2026-10-22 — roster Rows 22 / 27 condition notes); it blocks ⛔ build or merge.
+  ⚠ *In effect the whole of each text* (code review 2026-10-22): a text goes live for every name or for none, and Rows 22 / 27 stay
+  open — so templates 7–12 / 13–14 are not provisioned — until the Panel answers; the confirm note says so to the Panel.
   ⭐ Trigger: BigDev sends the note; ALSO any report of an unrecognised or garbled short name, or a production writer for
   `shielded_name` (PQ1 (A)'s old trigger, folded in). The Panel's answer is a NEW Trustee-ratified entry; an answer other than "as
   built" means a later row. ⛔ Discharged until the Panel answers.
+
+---
+
+## Deferred from: code review of 6-37e-suspicion-text-short-name-fallback.md (2026-10-22)
+
+Two items, both PRE-EXISTING (the fit predicate and the name resolvers are unchanged by row 6-37e) and found by its Blind Hunter / Edge Case
+Hunter. ⛔ Neither is closed by the row.
+
+- **A stored name made only of invisible characters is sent as a blank `{member}`** [`packages/contracts/src/kyc/signup.ts` (the name is
+  `z.string().trim().min(1).max(200)`); `packages/domain/src/notifications/pool-identity.ts` `resolveMemberFacingDeceasedName` (`full_name`
+  returns the stored name with whitespace collapsed); both text senders]. `smsMemberName` states the blank-send invariant, but its guards
+  (`trim()`, `/\s+/`) share JavaScript's whitespace set, which excludes U+200B, U+2060, U+180E, U+3164, U+2800, U+200C / U+200D and U+00AD —
+  one such character fits the 40 and goes out as *"Your claim for  has been closed"*. Reachable only if such a name is entered at signup
+  or supplied by the KYC provider — the DigiLocker path (`apps/api/src/modules/kyc/kyc.handlers.ts`) stores `profile.name` with no
+  `trim().min(1)` rule at all. ⚠ `sms-member-name.ts`'s header states the blank-send invariant; an invisible-only name defeats it.
+  ⛔ Not fixed in `smsMemberName`: a throw would retry-loop; the fix belongs at the input (the contract) or in the resolver's
+  unresolvable-name signal (`''`), whose callers already turn it into `no_target`. The directory side already allowlists
+  (`publicNameTokens`). Trigger: a signup-name validation story, or any report of a blank name in a text.
+- **The 40-code-point fit counts the name as stored: NFC and NFD of the same visible name decide differently** [`fitsDltAlphanumeric` in
+  `apps/jobs/src/scheduler/peer-mesh-sms-templates.ts`; signup stores the name as typed, no `normalize()`]. `'José ' + 'Ñ'.repeat(35)` is 40
+  code points in NFC (sent in full) and 76 in NFD (sent as `"José Ñ."`); a one-word accented name of 30 letters in NFC but over 40 in NFD
+  is refused. Devanagari is affected too, though less: a nukta letter written base-plus-nukta counts 2 in both forms, but the precomposed
+  ऩ ऱ ऴ (U+0929, U+0931, U+0934) count 1 in NFC and 2 in NFD. It is part of Row 30 (d)'s unit question (how the operator counts) —
+  answer that first. Trigger: Row 30 (d) answered, or names normalised at signup.
 
 ---
 
@@ -824,10 +850,12 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   Row 30 (d) with the unit it counts (UTF-16 / code points vs graphemes) and whether Devanagari / spaces pass (a refusal goes
   back to the Panel — `2026-10-12-322` C7). The shape check counts `{member}` at 40 (templates 7–12 still ≥ 52 % fixed). Trigger
   unchanged.
-  ⭐ (2026-10-22, row 6-37e — [`-377`](../../.decision-log.md#decision-2026-10-22-377)) **PARTLY addressed:** a long MULTI-word name now
-  falls back to the Pariwar's shielded form ("Ramesh S.") when the full name does not fit the 40 — `-359` / `-362` B; truncation was
-  option C, which the Panel did ⛔ choose (`-359`). ⛔ Addressed: the operator's real limit and unit (Row 30 (d) — open), and a name
-  that still does not fit (still refused `value_too_long` + alarm). Trigger unchanged (provisioning templates 7–12, roster Row 22).
+  ⭐ (2026-10-22, row 6-37e — [`-377`](../../.decision-log.md#decision-2026-10-22-377)) **PARTLY addressed — on the branch `story/6-37e-suspicion-text-short-name-fallback`
+  ONLY, ⛔ landed:** a long MULTI-word name falls back there to the Pariwar's shielded form ("Ramesh S.") when the full name does not fit
+  the 40 — `-359` / `-362` B; truncation was option C, which the Panel did ⛔ choose (`-359`). It becomes true of `main` only when row
+  6-37e is `done` on `main`; until then `main` still refuses a long name. ⛔ Addressed: the operator's real limit and unit (Row 30 (d) —
+  open), and a name that still does not fit (still refused `value_too_long` + alarm). Trigger unchanged (provisioning templates 7–12,
+  roster Row 22).
 - **6.19b's K4 carries the premise `-297` §2 found false: "`detail` NULL ⇒ nothing was sent"** [`packages/domain/src/claim/correction-reminder-record.ts`
   — `skipCorrectionReminder` / its `expiredAttempt`; `packages/domain/src/claim/certificate-reminder-record.ts` — `skipCertificateReminder`]
   — a `detail` is written ONLY by a transient failure, so a crash between the gateway's accept and the finalise leaves an

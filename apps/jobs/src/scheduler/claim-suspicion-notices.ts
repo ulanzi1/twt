@@ -28,7 +28,9 @@
 //   none ⇒ `no_target`; Story 6.37e, `2026-10-18-359` B: the full name if it fits `{member}`, else the shorter form "Ramesh S.",
 //   else the over-long name goes on and the core refuses it, as before) → the recipient's number → its keyed hash → the send →
 //   compare-and-set.
-//   It throws ONLY on a transient failure (pg-boss retries the SAME job, which re-claims its own row at once).
+//   It throws ONLY on a transient failure (pg-boss retries the SAME job, which re-claims its own row at once) — plus, Story 6.37e,
+//   `smsMemberName`'s fixed-message throw for an empty or whitespace-only name: a caller bug, unreachable today (the guard just
+//   above turns `''` into `no_target`), and NOT transient — a retry would throw again until pg-boss gives up (`2026-10-22-377` d2).
 // ⚠ AT-LEAST-ONCE (6.19b's): a timeout or crash after a gateway accept may produce a second text — `attempt_count` /
 // `first_detail` record it. ⛔ NOTHING here writes a claim decision, event or state (invariant 7, AC9b).
 // ⛔ No number, name or address in a payload, a log line or an alarm — ids only.

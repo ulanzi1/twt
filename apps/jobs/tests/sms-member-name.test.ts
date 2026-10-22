@@ -1,8 +1,11 @@
 // Story 6.37e (Task 1.2; AC1; `2026-10-18-359` B, `2026-10-18-362` B; `2026-10-22-377` SN1–SN3) — the ONE name choice for the four
 // texts: the full mode-resolved name when it fits the `{member}` slot, else the Pariwar's existing shielded form, else `too_long`.
 // Every expected short form is COMPUTED through the domain's resolver — ⛔ transcribed (F9: a Devanagari conjunct initial depends on
-// the runtime's ICU). The callers' source leg (on `staff-email-identity-read-fence.test.ts`'s model) pins I4: ONE function, called by
-// exactly the two text senders.
+// the runtime's ICU); the three literal pins — (b) 'Ramesh S.', (c) 'सत्यनारायण श.', (k) 'Venkata -.' — carry no conjunct initial, so
+// they are ICU-stable, and they only guard the computed value against a resolver that stops shortening. The callers' source leg
+// pins I4: ONE function, called by exactly the two text senders. It reads the TypeScript AST (as `scripts/*/lib.ts` do) where
+// `staff-email-identity-read-fence.test.ts`, its model, strips comments with a regex — a string such as `'src/*.ts'` opens a fake
+// comment for that regex and hides a later call (Story 6.37e code review, 2026-10-22).
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -10,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { DLT_TYPE_MAX_LENGTH, type DltSlot } from '@twt/channels';
 import { notifications } from '@twt/domain';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import { PEER_MESH_REQUEST_SMS_TEMPLATES } from '../src/scheduler/peer-mesh-sms-templates.js';
@@ -112,7 +116,6 @@ describe('(j) SN3 — the suspicion and neighbours `{member}` slots share ONE li
 // ── The callers' source leg (I4) ───────────────────────────────────────────────────────────────────────────────────────────
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/.*$/gm, '');
 const SOURCE = /\.(?:ts|tsx|mts|cts|js|mjs)$/;
 const MODULE = 'apps/jobs/src/scheduler/sms-member-name.ts';
 const PREDICATE_HOME = 'apps/jobs/src/scheduler/peer-mesh-sms-templates.ts';
@@ -120,10 +123,7 @@ const PREDICATE_HOME = 'apps/jobs/src/scheduler/peer-mesh-sms-templates.ts';
 /** The ONLY files whose code calls or imports the one function — the two text senders. */
 const CALLERS = ['apps/jobs/src/scheduler/claim-peer-mesh-requests.ts', 'apps/jobs/src/scheduler/claim-suspicion-notices.ts'];
 
-const IMPORTS_MODULE = /['"][^'"]*\/sms-member-name(?:\.js)?['"]/;
-const CALLS = /\bsmsMemberName\s*\(/;
-const FITS_CALL = /\bfitsDltAlphanumeric\s*\(/;
-const SHIELDED_MODE = /['"`]shielded_name['"`]/;
+const MODULE_SPECIFIER = /\/sms-member-name(?:\.js)?$/;
 
 function walk(rel: string, out: Map<string, string>): void {
   const abs = path.join(repoRoot, rel);
@@ -135,19 +135,58 @@ function walk(rel: string, out: Map<string, string>): void {
   }
 }
 
-/** ⭐ ONE checker for the real tree and the plants: the files (⛔ the module itself) whose CODE imports or calls it. */
-function callersOf(files: ReadonlyMap<string, string>): string[] {
-  return [...files]
-    .filter(([f]) => f !== MODULE)
-    .filter(([, src]) => {
-      const code = stripComments(src);
-      return IMPORTS_MODULE.test(code) || CALLS.test(code);
-    })
+/** What a file's CODE does. Comments are trivia (never a node) and a string is ONE literal whatever it holds. */
+interface CodeFacts {
+  /** An `import` / `export … from` / `import()` of `sms-member-name`. */
+  readonly importsModule: boolean;
+  /** A call `smsMemberName(…)` or `ns.smsMemberName(…)`. */
+  readonly callsModule: boolean;
+  /** `fitsDltAlphanumeric` called or declared. */
+  readonly fitsPredicate: boolean;
+  /** The string literal `'shielded_name'`. */
+  readonly shieldedLiteral: boolean;
+}
+
+const factsCache = new Map<string, CodeFacts>();
+function codeFacts(src: string): CodeFacts {
+  const cached = factsCache.get(src);
+  if (cached !== undefined) return cached;
+  let importsModule = false;
+  let callsModule = false;
+  let fitsPredicate = false;
+  let shieldedLiteral = false;
+  const calleeName = (e: ts.Expression) => (ts.isIdentifier(e) ? e.text : ts.isPropertyAccessExpression(e) ? e.name.text : undefined);
+  const visit = (n: ts.Node): void => {
+    if ((ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier !== undefined) {
+      if (ts.isStringLiteral(n.moduleSpecifier) && MODULE_SPECIFIER.test(n.moduleSpecifier.text)) importsModule = true;
+    }
+    if (ts.isCallExpression(n)) {
+      const arg = n.arguments[0];
+      if (n.expression.kind === ts.SyntaxKind.ImportKeyword && arg !== undefined && ts.isStringLiteralLike(arg) && MODULE_SPECIFIER.test(arg.text)) {
+        importsModule = true;
+      }
+      const callee = calleeName(n.expression);
+      if (callee === 'smsMemberName') callsModule = true;
+      if (callee === 'fitsDltAlphanumeric') fitsPredicate = true;
+    }
+    if (ts.isFunctionDeclaration(n) && n.name?.text === 'fitsDltAlphanumeric') fitsPredicate = true;
+    if (ts.isStringLiteralLike(n) && n.text === 'shielded_name') shieldedLiteral = true;
+    ts.forEachChild(n, visit);
+  };
+  visit(ts.createSourceFile('probe.ts', src, ts.ScriptTarget.Latest, true));
+  const facts: CodeFacts = { importsModule, callsModule, fitsPredicate, shieldedLiteral };
+  factsCache.set(src, facts);
+  return facts;
+}
+
+/** ⭐ ONE checker for the real tree and the plants: the files (⛔ `skip`) whose CODE shows the fact. */
+const filesWhere = (files: ReadonlyMap<string, string>, pick: (facts: CodeFacts) => boolean, skip?: string): string[] =>
+  [...files]
+    .filter(([f]) => f !== skip)
+    .filter(([, src]) => pick(codeFacts(src)))
     .map(([f]) => f)
     .sort();
-}
-const filesWhoseCode = (files: ReadonlyMap<string, string>, re: RegExp) =>
-  [...files].filter(([, src]) => re.test(stripComments(src))).map(([f]) => f).sort();
+const callersOf = (files: ReadonlyMap<string, string>) => filesWhere(files, (c) => c.importsModule || c.callsModule, MODULE);
 
 describe('I4 — ONE function for the four texts, called by exactly the two text senders (AC1 source leg)', () => {
   const tree = new Map<string, string>();
@@ -158,7 +197,7 @@ describe('I4 — ONE function for the four texts, called by exactly the two text
     expect(callersOf(tree)).toEqual(CALLERS);
   });
 
-  it('⭐ positive controls — a third caller IS caught; a commented call is ⛔', () => {
+  it('⭐ positive controls — a third caller IS caught; a commented call or a string that only NAMES it is ⛔', () => {
     const planted = new Map(tree);
     planted.set('apps/jobs/src/other/third.ts', "import { smsMemberName } from '../scheduler/sms-member-name.js';\n");
     expect(callersOf(planted)).toEqual([...CALLERS, 'apps/jobs/src/other/third.ts'].sort());
@@ -168,10 +207,41 @@ describe('I4 — ONE function for the four texts, called by exactly the two text
     const commented = new Map(tree);
     commented.set('apps/jobs/src/other/fifth.ts', '// smsMemberName(name)\n/* import x from "./sms-member-name.js" */\nexport {};\n');
     expect(callersOf(commented)).toEqual(CALLERS);
+    const named = new Map(tree);
+    named.set('apps/jobs/src/other/sixth.ts', "export const doc = 'smsMemberName(x) from ./sms-member-name.js';\n");
+    expect(callersOf(named)).toEqual(CALLERS);
   });
 
-  it('⛔ a second fit or shorten: `fitsDltAlphanumeric(` is called only in its home and the module; `shielded_name` only in the module', () => {
-    expect(filesWhoseCode(tree, FITS_CALL)).toEqual([MODULE, PREDICATE_HOME].sort());
-    expect(filesWhoseCode(tree, SHIELDED_MODE)).toEqual([MODULE]);
+  it('⭐ positive controls — a call AFTER a string that a comment-stripping regex would take for a comment IS caught (code review 2026-10-22)', () => {
+    const glob = new Map(tree);
+    glob.set('apps/jobs/src/other/seventh.ts', "const g = 'src/*.ts';\nexport const x = smsMemberName(n);\n/** doc */\n");
+    expect(callersOf(glob)).toEqual([...CALLERS, 'apps/jobs/src/other/seventh.ts'].sort());
+    const slashes = new Map(tree);
+    slashes.set('apps/jobs/src/other/eighth.ts', "const s = ' //'; export const y = smsMemberName(n);\n");
+    expect(callersOf(slashes)).toEqual([...CALLERS, 'apps/jobs/src/other/eighth.ts'].sort());
+    const dynamic = new Map(tree);
+    dynamic.set('apps/jobs/src/other/ninth.ts', "export const z = () => import('../scheduler/sms-member-name.js');\n");
+    expect(callersOf(dynamic)).toEqual([...CALLERS, 'apps/jobs/src/other/ninth.ts'].sort());
+  });
+
+  it('⭐ positive controls — a RE-EXPORT and a member call (`deps.smsMemberName(n)`, no import in the file) ARE caught', () => {
+    const reexport = new Map(tree);
+    reexport.set('apps/jobs/src/other/eleventh.ts', "export { smsMemberName } from '../scheduler/sms-member-name.js';\n");
+    expect(callersOf(reexport)).toEqual([...CALLERS, 'apps/jobs/src/other/eleventh.ts'].sort());
+    const member = new Map(tree);
+    member.set('apps/jobs/src/other/twelfth.ts', 'export const w = (deps: { smsMemberName(n: string): unknown }, n: string) => deps.smsMemberName(n);\n');
+    expect(callersOf(member)).toEqual([...CALLERS, 'apps/jobs/src/other/twelfth.ts'].sort());
+  });
+
+  it('⛔ a second fit or shorten: `fitsDltAlphanumeric` is called or declared only in its home and the module; `shielded_name` only in the module', () => {
+    expect(filesWhere(tree, (c) => c.fitsPredicate)).toEqual([MODULE, PREDICATE_HOME].sort());
+    expect(filesWhere(tree, (c) => c.shieldedLiteral)).toEqual([MODULE]);
+  });
+
+  it('⭐ positive control — a second fit or a second `shielded_name` reader IS caught', () => {
+    const planted = new Map(tree);
+    planted.set('apps/jobs/src/other/tenth.ts', "export const ok = (n: string) => fitsDltAlphanumeric(n);\nexport const m = 'shielded_name';\n");
+    expect(filesWhere(planted, (c) => c.fitsPredicate)).toEqual([MODULE, PREDICATE_HOME, 'apps/jobs/src/other/tenth.ts'].sort());
+    expect(filesWhere(planted, (c) => c.shieldedLiteral)).toEqual([MODULE, 'apps/jobs/src/other/tenth.ts'].sort());
   });
 });

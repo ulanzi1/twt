@@ -47,7 +47,7 @@ LETTERS: F = found facts (F1–F17); SN = build decisions (SN1–SN7 — ANSWERE
 
 # Story 6.37e: When the member's full name is too long for a text, the family and the neighbours still get the text — with the first name and the surname's initial
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Four SMS texts name the deceased member in a `{member}` slot of 40 code points: the three
 > suspicion texts (the nominee's refusal notice — `-262` FQ7 B; the closed notice — `-291` Q2 B; the refused person's appeal notice —
@@ -447,7 +447,13 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
    `['apps/jobs/src/scheduler/claim-peer-mesh-requests.ts', 'apps/jobs/src/scheduler/claim-suspicion-notices.ts']` (`toEqual`, both
    present — ⛔ "only"; full paths, ⛔ basenames — a basename would hide a same-named file elsewhere);
    `apps/jobs/src/scheduler/sms-member-name.ts` is excluded BY that full path (its own `export function smsMemberName(` matches) and
-   must be present in the walk (a rename fails); positive controls: a plant in a third file IS caught, a commented plant is ⛔. Optionally, the same
+   must be present in the walk (a rename fails); positive controls: a plant in a third file IS caught, a commented plant is ⛔.
+   ⚠ **AMENDED 2026-10-22 (code review, P-7):** the walk reads the TypeScript AST (`ts.createSourceFile`, as `scripts/*/lib.ts` do),
+   ⛔ strips comments — that fence's regex strip is blinded by a string such as `'src/*.ts'` (a fake comment that hides a LATER call;
+   reproduced). "Imports from `./sms-member-name.js`" = an `import`, an `export … from` or a dynamic `import()`; "contains
+   `\bsmsMemberName\s*\(`" = a call `smsMemberName(…)` or `x.smsMemberName(…)`; a string that only NAMES the function is ⛔ a caller.
+   The plants gain a glob-string plant, a `' //'` plant, a dynamic import, a re-export, a member call and a naming-only string;
+   the I4 "second fit / shorten" check gains its own plant. Optionally, the same
    walk gives I4 a check: `\bfitsDltAlphanumeric\s*\(` in code only in `peer-mesh-sms-templates.ts` (its definition) and
    `sms-member-name.ts`, and `'shielded_name'` only in `sms-member-name.ts` (at `bac71abb` and again at `1e22889e`:
    `fitsDltAlphanumeric(`'s only code use is `readDeceasedName`; `'shielded_name'` appears nowhere in `apps/jobs/src` — re-check at
@@ -543,7 +549,7 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
    | AC1 (h) / (h′) | BOTH checks removed (RED); with ONLY the `trim()` check removed both must stay GREEN — that run proves the second check |
    | AC1 (i) | a UTF-16 `.length` mutant |
    | AC1 (j) | a planted unequal `maxLength` fed to the same comparison — else coverage-only |
-   | AC1 source leg | its own plants (a third file caught, a commented plant ⛔) |
+   | AC1 source leg | its own plants (a third file caught, a commented plant ⛔) — and, since the 2026-10-22 review (P-7), a glob-string / `' //'` / dynamic-import / re-export / member-call plant and a naming-only string ⛔ |
    | Task 3.1's "ORIGINAL `member` for `too_long`" | coverage-only BY DESIGN (unobservable — the core ends `value_too_long` either way) |
 
    `pnpm --filter
@@ -625,7 +631,8 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
         `notifications.resolveMemberFacingDeceasedName('shielded_name', …)` — ⛔ import `splitFirstNameLastInitial` directly, ⛔
         reimplement it. ⚠ The header must ⛔ contain `{#var#}`, `DLT_VAR` or `sms.dlt.template_id.` — DLT rules (ii) / (iii) scan
         COMMENT lines in a non-registry file (only registry rule (i) is code-only).
-  - [x] 1.2 `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(k), incl. SN3's one-limit leg and the callers' source leg. Add
+  - [x] 1.2 `apps/jobs/tests/sms-member-name.test.ts` — AC1 (a)–(k), incl. SN3's one-limit leg and the callers' source leg (an AST
+        read since the 2026-10-22 code review — AC1's amendment, P-7). Add
         `apps/jobs/src/scheduler/sms-member-name.ts` to `NOTICE_MODULES` in `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
         as this story's OWN module (the list is FIXED, ⛔ an import walk — its header: *"it reads these four modules only — ⛔ the helpers
         they call"*; `peer-mesh-sms-templates.ts` stays off, as the suspicion child's other helpers do), and in that file's header
@@ -663,6 +670,83 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
 
 - [x] **Task 5 — Records and close.** Story Status, Dev Agent Record, File List, Change Log (newest-first); sprint row `in-progress` →
       `review`; ledger. ⛔ "Closed by" until `done` on `main`.
+
+### Review Findings
+
+Full code review, 2026-10-22, baseline `1e22889e` → `55bf7477` (the whole branch; 1094 diff lines without this spec — ⛔ chunked, under the
+~3000-line limit): Blind Hunter (diff only), Edge Case Hunter and Acceptance Auditor, parallel and read-only, then triaged and deduplicated.
+**0 decision-needed, 8 patch, 2 defer, 11 dismissed.** **Disposition:** BigDev's standing instruction at invocation — *"apply all the
+patches found, if any decision, I will answer it at last"* — no decision arose, so all eight patches were applied in this review. §0 gate
+(the Panel-routing template's): ⛔ nothing here changes what a person is told, owed or shown — the corrections are to records, to the
+accuracy of a Panel note that is still ⛔ sent, and to one test's reach. The review's changes are committed on the story branch
+(BigDev: *"commit"*); ⛔ pushed.
+
+- [x] [Review][Patch] **P-1 MED — Roster Rows 23 and 28 had each been given the OTHER row's Hindi example sentence** [`docs/launch-gate-inventory/
+  inventory-roster.md` Rows 23, 28] (blind + auditor). Row 23 (`suspicion-notice-hindi-human-review`) cited the neighbours' sentence;
+  Row 28 (`peer-mesh-request-hindi-human-review`) the suspicion sentence — each reviewer's packet would have been built from the wrong
+  text. Swapped, each checked against `hi/claim.json`; Row 28 gains the ICU qualifier; a dated *Corrected* line on both.
+- [x] [Review][Patch] **P-2 MED — The confirm note told the Panel the text's shorter form is "the directory's" and that A "keeps one way of
+  shortening a name across the app"; its own E3 says otherwise** [`trustee-panel-routing-note-2026-10-22-6-37e-short-name-confirms.md`]
+  (blind). Traced: the directory's `publicNameTokens` drops tokens without a letter or digit and strips leading default-ignorables; the
+  member-facing arm (`splitFirstNameLastInitial`) does neither — so for a stray mark or an invisible character the text already differs
+  from the directory (`"Venkata -."` vs `"Venkata S."`), and option B's stray-mark half would make the text AGREE with the directory,
+  not diverge. Fixed: the deciding-fact paragraph, the table (a stray mark and an invisible character now separate rows), A's and B's
+  costs, "Our reading", E3/E4, and "How much to trust" (the corrections are disclosed). ⭐ Also traced and recorded: `setPublicNamePresentationMode` is
+  called only from tests, so nothing in the app lets a Pariwar choose `shielded_name` yet — the ruling's phrase *"the form a Pariwar can
+  already choose"* is true of the system, not (so far as found) of any screen.
+- [x] [Review][Patch] **P-3 MED — The confirm note understated the go-live gate** (blind + auditor). It said *"the texts for long names
+  cannot go live"*; Row 22's testable signal provisions templates 7–12 only when the row closes, Row 27's 13–14, and both condition notes
+  say the row does ⛔ close while the confirm is unanswered — a text goes live for every name or for none, so the WHOLE of each of the four
+  texts waits. The note's header, "Blocked", "If nothing is decided" and "In plain English" now say so; `deferred-work.md`'s owed-confirm
+  item carries the same line. ⚠ The gate's PLACEMENT — condition notes on Rows 22 / 27, ⛔ a new row — is BigDev's ruling (Debug Log
+  (a2)) and is unchanged.
+- [x] [Review][Patch] **P-4 LOW — Confirm 1 option C offered "a recognisable first name and surname initial" with no rule for it** (auditor).
+  Its cost now says so and promises a proposed rule before anything is built.
+- [x] [Review][Patch] **P-5 LOW — The 6.24b `{member}` deferred item read as landed** [`deferred-work.md`] (auditor): *"PARTLY addressed … now
+  falls back"* with no *on `main` only when `done`* qualifier its sibling carries. Scoped to the branch, ⛔ landed.
+- [x] [Review][Patch] **P-6 LOW — The suspicion sweep's header still said the child *"throws ONLY on a transient failure"*** [`claim-suspicion-notices.ts`]
+  (blind). `smsMemberName` adds a fixed-message, non-transient, unreachable-today throw (`-377` decision 2: accepted cost). Header
+  sentence added; verified true against the code (`member === ''` sits directly before the call).
+- [x] [Review][Patch] **P-7 LOW — The I4 source leg could be blinded by a string** [`apps/jobs/tests/sms-member-name.test.ts`] (blind +
+  edge, reproduced): the comment-stripping regex (copied from the staff-email fence) took `'src/*.ts'` for a comment opener and `' //'` for
+  a line comment, hiding a later `smsMemberName(` call. The leg now reads the TypeScript AST (as `scripts/*/lib.ts` do). Plants: glob
+  string, `' //'`, dynamic `import()`, re-export, member call, and a string that only NAMES the function (⛔ a caller); the "second fit /
+  shorten" check gains its own plant. 16 → 19 unit legs. Spec amended (AC1, AC7 table, Task 1.2, reuse map).
+- [x] [Review][Patch] **P-8 LOW — The test header said every expected short form is COMPUTED; legs (b), (c), (k) also pin literals** (blind). Header
+  now says the three literals are ICU-stable (no conjunct initial) and only guard the computed value.
+- [x] [Review][Defer] **Invisible-only name ⇒ a blank `{member}` is sent** [`signup.ts` name rule; `resolveMemberFacingDeceasedName`; DigiLocker
+  path `kyc.handlers.ts`] — deferred, pre-existing (blind + edge). `deferred-work.md`, 2026-10-22.
+- [x] [Review][Defer] **The 40-code-point fit counts the name as stored: NFC vs NFD decide differently** [`fitsDltAlphanumeric`] — deferred,
+  pre-existing; part of Row 30 (d)'s unit question (edge). `deferred-work.md`, 2026-10-22.
+
+**Dismissed (11), with the reason:** (1) an invisible character at the FRONT of the last word gives an invisible initial (edge) — the PQ1 /
+Confirm 1 class (`-377` *Does NOT cover*: "an invisible initial"), built AS RULED by BigDev's B′; the note's table now names it. (2) A refused
+full stop would turn today's loud failures into a silent `accepted` (blind) — disclosed in `-377` and Row 30 (d); a refusal goes back to
+the Panel. (3) The WhatsApp reminder is newly reachable for long-name claims, untested (blind) — disclosed in `-377`; WR13's live test
+already uses a name that fails the SMS fit check. (4) The fit predicate's limit is not pinned to the DLT constant (blind) —
+`MEMBER.maxLength` IS `DLT_TYPE_MAX_LENGTH.alphanumeric`, and leg (j) pins every slot. (5) Locale coverage is thin (blind) — the render is a
+value substitution; the Hindi renders are the Rows 23 / 28 human reviewers'. (6) SN2's *"equals"* is wider than the module's comment
+(blind) — `-377` is ratified text, the impact is negligible. (7) `⛔` as a negation in Panel-facing prose (blind) — house style; the
+answered 2026-10-17 note reads the same and was ruled *"3. B"*. (8) "Dangling references to the story file" (blind) — a false
+positive: the spec was excluded from the diff the Blind Hunter was given. (9) The go-live gate lives only in `notes:` on Rows 22 / 27
+(blind + auditor) — BigDev's ruling, Debug Log (a2); the effect on the Panel note is P-3. (10) The "second shorten" fence is literal-only
+(auditor) — AC1 made it *"Optionally"* and its title says what it checks; a plant was added anyway (P-7). (11) `ci:local 36/36`'s
+mid-run comment edit is not in the commit message (auditor) — disclosed in Debug Log (d).
+
+**Patch-diff pass** (a fresh-context reviewer of the eight patches, read-only): 0 high / 3 med / 5 low, **all applied** — the three
+medium were this review's own: the note contradicted itself (it called the shorter form something a Pariwar "can switch on" and "already"
+uses while also saying nothing in the app sets it), it claimed the form appears *"nowhere else in production"* (the app is ⛔ in
+production, and a member's own Contribution Note builds the same pair), and "the shorter form is part of every send" was false for a short
+name (the real reason: a text goes live for every name or for none). Low: the table's last row lumped different outcomes; the NFC/NFD item
+said a Devanagari nukta letter counts the same either way (ऩ ऱ ऴ are 1 in NFC and 2 in NFD); the invisible-name item's reach omitted the
+DigiLocker path; two `codeFacts` branches (`export … from`, a member call) had no plant (each now RED under a named mutant); AC1 still
+prescribed the regex.
+
+**Invariant lens (AI-6-5), the Auditor's verdicts:** families touched — 2 (idempotency: covered by construction, the function is pure),
+6 (PII minimal: covered by test — the blob `.not.toContain` legs — and by construction, no new log / alarm / detail), 9 (deliberate
+bypass: covered by construction — the override of the Pariwar's chosen form is documented with its `-359` / `-362` rationale), 10
+(closure honesty: the findings above, all closed or carried), 11 (policy meaning: covered by construction, the family-terms sentence
+matches the code, and by the behaviour legs). Untouched: 1, 3, 4, 5, 7, 8, 12, 13. ⛔ A REAL GAP on any touched family.
 
 ## Dev Notes
 
@@ -703,7 +787,7 @@ through the existing fake gateway (⛔ network); "⛔ sent" asserted with the ha
 | The refusal of a still-too-long suspicion name | the send core's `checkedValues` (`value_too_long` + alarm) | a pre-send refusal |
 | The neighbours' still-too-long fault | `{ fault: 'name_too_long' }` (existing vocabulary) | a new reason |
 | Live harnesses | `claim-suspicion-notices-live.test.ts` `seedDeath({ kycName })`, `SHIELDED`, `isolated()`, `claimOf`, `refusedS`, `allowAppeal`, `contact`; `claim-peer-mesh-requests-live.test.ts` `world({ name })`, `expectIdsOnly` | new seeds |
-| The callers' source leg | `apps/jobs/tests/staff-email-identity-read-fence.test.ts` (repo walk, comment strip, exact allowlist, plants) | a raw grep / a count |
+| The callers' source leg | `apps/jobs/tests/staff-email-identity-read-fence.test.ts` (repo walk, comment strip, exact allowlist, plants — ⚠ this story's copy reads the AST instead of stripping comments, AC1 amended P-7) | a raw grep / a count |
 
 ### Testing standards
 
@@ -860,6 +944,22 @@ exit 0, first run (⛔ re-run). ⚠ During that run ONE comment-only edit was ma
 header rewrapped — the Task 3.2 edit had ended mid-line); after it, `lint` clean, `dlt-typed-variables:check` passed, and
 `suspicion-notice-sms-templates` + `sms-member-name` `74 passed` — said here, ⛔ hidden.
 
+**(e) Code review 2026-10-22 — the eight patches (Review Findings P-1…P-8).** RED proof of the NEW test legs (P-7) — each mutant applied to a
+temporary COPY of `sms-member-name.test.ts` (`tests/zz-mutant-…`, deleted after each run; the real file untouched), asserting the edit landed
+exactly once: M1 `callsModule` never true ⇒ 2 legs red (the third-caller / naming-only leg and the glob-string / `' //'` / dynamic-import
+leg); M2 dynamic `import()` ignored ⇒ 1 red; M3 the `'shielded_name'` literal ignored ⇒ 2 red (the second-shorten leg and its plant);
+M4 a string that merely names the function counted as a call ⇒ 1 red (the naming-only plant) — ⚠ the first M4 was mis-placed (inside the
+call branch, so it could not see string nodes) and stayed green; it was redone at the right spot and went red; M5 `export … from` ignored ⇒
+1 red; M6 a member-call callee ignored ⇒ 1 red. The two hole plants (`'src/*.ts'`, `' //'`) were separately reproduced against the OLD regex
+strip by the Edge Case Hunter and the patch-diff reviewer. Old-vs-new regression check (the patch-diff reviewer, all 64 files of
+`apps/jobs/src`): the caller set is identical; the only difference is the module's own declaration, which `callersOf` skips.
+Gates on the final tree: `pnpm --filter @twt/jobs typecheck` and `lint` exit 0; `pnpm dlt-typed-variables:check` exit 0; the four related pure
+unit files `115 passed` (`sms-member-name` 19, `claim-suspicion-notice-no-decision`, `suspicion-notice-sms-templates`,
+`peer-mesh-sms-templates`); the static gates `access-wrapper`, `domain-invariants`, `claim-state`, `claim-canonical-id`,
+`claim-adjudication-human-actor`, `governance-boundary`, `friction`, `kyc-provider`, `microcopy`, `pii` (`:check`) all exit 0.
+⚠ NOT re-run: `ci:local` and the live-DB suites — the only change under `apps/*/src` is a header COMMENT (P-6), the live tests are untouched,
+and (d)'s `36/36` was on the tree before these eight patches.
+
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story 6-37e`, 2026-10-21).
@@ -904,6 +1004,16 @@ header rewrapped — the Task 3.2 edit had ended mid-line); after it, `lint` cle
 
 ## Change Log
 
+- v1.6 (2026-10-22) — `bmad-code-review 6.37e` (whole branch, `1e22889e` → `55bf7477`): Blind Hunter, Edge Case Hunter and Acceptance
+  Auditor in parallel, read-only. **0 decision-needed / 8 patch / 2 defer / 11 dismissed** (Review Findings). BigDev's standing instruction
+  *"apply all the patches found, if any decision, I will answer it at last"* — no decision arose; all eight applied: the Hindi examples
+  transposed between Rows 23 / 28; the PQ1 / PQ2 confirm note's accuracy (the directory's name form is not the text's — stray marks and
+  invisible characters; the go-live hold covers the whole of each text; option C's missing rule; no screen sets `shielded_name` yet); the
+  6.24b deferred item scoped to the branch; the suspicion header's `throws ONLY` sentence; the I4 source leg moved from a comment-stripping
+  regex to the TypeScript AST (16 → 19 unit legs, six mutants RED — Debug Log (e)); the test header's wording. Then a fresh-context
+  review of the patch diff: 0 H / 3 M / 5 L, all applied. Two items deferred to `deferred-work.md` (an invisible-only name; NFC vs NFD).
+  Spec amended: AC1, AC7's table, Task 1.2, the reuse map. Status review → done; row 6-37e review → done. Ledger 2026-10-22f.
+  Committed on the story branch (BigDev: *"commit"*); ⛔ pushed.
 - v1.5 (2026-10-22) — `bmad-dev-story 6.37e`: DEV COMPLETE (Tasks 0–5). Rebased onto `1e22889e`; `2026-10-22-377` (`7cd8a7a4`);
   records + the PQ1 / PQ2 confirm note, WRITTEN, ⛔ sent (`48a34913`); `smsMemberName` and its two callers; AC1–AC3 legs, every new /
   flipped leg proven RED (Debug Log (c)); gates (Debug Log (d)). Status → review; row 6-37e in-progress → review. Ledgers

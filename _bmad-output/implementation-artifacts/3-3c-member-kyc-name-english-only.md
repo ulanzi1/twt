@@ -23,7 +23,7 @@ LETTERS: G = found facts · KB = build decisions · N = invariants · TR = traps
 
 # Story 3.3c: The Member's Own Name Is Typed in English in the Manual KYC Fallback — "in English, as on Aadhaar" `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A member signing up who enters their details manually — offered beside DigiLocker on the
 > choose screen, and again after a DigiLocker failure — types their own name, date of birth (and optionally a photo) on the manual KYC
@@ -479,15 +479,15 @@ Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[
         ([[project_sprint_status_safe_prepend]]), and a dated append to the row comment: its *"Feeds 6.37e's rework"* is moot —
         6.37e landed (`dbd52239`) on a script-agnostic name rule, so 3.3c is independent of it (Sequencing).
 
-- [ ] **Task 1 — The contract (AC1, AC4).**
-  - [ ] 1.1 `packages/contracts/src/kyc/signup.ts`: import `EnglishScriptName` from `../_common/primitives.js`; `name: EnglishScriptName,`;
+- [x] **Task 1 — The contract (AC1, AC4).**
+  - [x] 1.1 `packages/contracts/src/kyc/signup.ts`: import `EnglishScriptName` from `../_common/primitives.js`; `name: EnglishScriptName,`;
         a one-line comment above it (`-227` cl.1 / `-378` d6, input-only, ⛔ backfill). Update the :85-89 doc comment's name line.
         ⛔ Touch `KycProfileSummaryResponse` or any other schema (N2).
-  - [ ] 1.2 `primitives.ts`: AC4's two dated notes — the first INSIDE the first JSDoc block, after the G11 paragraph and before the
+  - [x] 1.2 `primitives.ts`: AC4's two dated notes — the first INSIDE the first JSDoc block, after the G11 paragraph and before the
         closing ` */` at `:96`; the second in the `ENGLISH_NAME_REGEX` block after `:113-114`. ⛔ Edit a word of either existing
         block; ⛔ `**/`.
-  - [ ] 1.3 `pnpm contracts:emit-openapi`; check the `openapi/v1.yaml` diff is ONLY the `pattern` line(s) on this component.
-  - [ ] 1.4 Contract unit legs (AC1): in `packages/contracts/tests/english-script-name.test.ts`, a NEW
+  - [x] 1.3 `pnpm contracts:emit-openapi`; check the `openapi/v1.yaml` diff is ONLY the `pattern` line(s) on this component.
+  - [x] 1.4 Contract unit legs (AC1): in `packages/contracts/tests/english-script-name.test.ts`, a NEW
         `describe('Story 3.3c — KycManualSubmitRequest.name (-378 decision 6)')` block. ⛔ Add to 6.18's blocks — `:68` *"AC12 —
         applied to EXACTLY the two INPUT fields"* and `:87` *"AC12 — the FOUR bound write routes all inherit the gate from the two
         field edits"* stay true of 6.18's scope, and the KYC field is a third, direct edit. Import `KycManualSubmitRequest`,
@@ -496,27 +496,27 @@ Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[
         `'आशा देवी'` and `'[anonymized]'` (⛔ such leg exists today; the existing input-only block `:126-207` tests only
         `NomineeNameCheckResponse`). Extend `apps/api/tests/unit/kyc-signup.test.ts:162-186` with the AC1 refusal legs.
 
-- [ ] **Task 2 — The route, proven over HTTP (AC2, AC3).** ⛔ handler change (G3).
-  - [ ] 2.1 `apps/api/tests/integration/kyc/kyc-signup.spec.ts`: AC2 — Devanagari and mixed names → 400 `request.validation`; assert
+- [x] **Task 2 — The route, proven over HTTP (AC2, AC3).** ⛔ handler change (G3).
+  - [x] 2.1 `apps/api/tests/integration/kyc/kyc-signup.spec.ts`: AC2 — Devanagari and mixed names → 400 `request.validation`; assert
         `details.issues.map(i => [i.instancePath, i.keyword, i.message])` EXACTLY (G14) and record the observed shape in Debug Log (b);
         ⛔ profile row, `SELECT state FROM members` still `pending-kyc`, ⛔ `member.kyc_manual_fallback` in the spec's event-type read,
         ⛔ `t.auditSink.ofType('member_kyc.manual')` — all checked BEFORE the `'Asha Devi'` post; then `'Asha Devi'` → 200 as today.
         (Body validation runs before the `memberSession` preHandler and the handler, so these hold by construction; the server
         mutant flips them to a 200 plus a row.)
-  - [ ] 2.2 AC3 — seed with the spec's own `seedPendingKycMember` (`:29-47`), then plant a Devanagari `member_kyc_profiles` row the way
+  - [x] 2.2 AC3 — seed with the spec's own `seedPendingKycMember` (`:29-47`), then plant a Devanagari `member_kyc_profiles` row the way
         `apps/api/tests/integration/_peer-reply-fixture.ts:31-39` does (raw `INSERT … 'self_declared', 'manual'` with
         `encryption.encryptKycField(name, pariwarId, env.deps.encryption)` — add `encryption` to the spec's `@twt/domain` import;
         `kyc-signup.spec.ts` plants ⛔ profile rows today), and read `/profile-summary` → 200, the name unchanged.
 
-- [ ] **Task 3 — The client (AC5).**
-  - [ ] 3.1 New pure module `apps/mobile/lib/kyc-manual-name.ts` (the 6.21b / 6.18 "pure key-selection function stands in for a render
+- [x] **Task 3 — The client (AC5).**
+  - [x] 3.1 New pure module `apps/mobile/lib/kyc-manual-name.ts` (the 6.21b / 6.18 "pure key-selection function stands in for a render
         harness" pattern): `manualNameMessageKey(name: string): 'kyc.manual_name_required' | 'kyc.manual_name_english' | null` (blank →
         required; non-English → english; else null) and `manualSubmitErrorKey(e: unknown): 'kyc.manual_name_english' | null` (an
         `ApiError` with code `request.validation` and an entry in `details.issues` with `instancePath === '/name'` AND
         `keyword === 'invalid_string'` → english; anything else, `too_big` on `/name` included → `null` = keep today's mapping). Read
         `details` defensively (`unknown` → narrow; a malformed `details` → `null`). Uses `isEnglishScriptName` from `@twt/contracts`
         (N1). (KB4 (b) answered ⇒ omit `manualSubmitErrorKey` and its legs.)
-  - [ ] 3.2 `kyc.tsx` (KB3 / KB4 as answered):
+  - [x] 3.2 `kyc.tsx` (KB3 / KB4 as answered):
         - the name `Input` gains `maxLength={200}`, and its `accessibilityHint` is `t('kyc.manual_name_english')` while the inline
           message shows, else `t('kyc.manual_name_required')` as today;
         - the inline message under the name `Input` when `manualNameMessageKey(name) === 'kyc.manual_name_english'` — the
@@ -531,18 +531,18 @@ Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[
 
         ⛔ Change the DigiLocker paths, `KYC_ERROR_CODES` or `kycErrorMessage`.
 
-- [ ] **Task 4 — Copy (AC5, AC6).** KB2's words (as answered at 0.2) into `packages/i18n/locales/en/common.json` and `…/hi/common.json`
+- [x] **Task 4 — Copy (AC5, AC6).** KB2's words (as answered at 0.2) into `packages/i18n/locales/en/common.json` and `…/hi/common.json`
       — two values changed, one key added after `kyc.manual_name_required`, both files, same position. ⛔ `{param}`.
 
-- [ ] **Task 5 — Tests, the friction declaration and the copy-gate scope (AC5, AC6, AC7).**
-  - [ ] 5.1 `apps/mobile/tests/unit/kyc-manual-name-copy-resolves.test.ts`: both pure functions over AC6's input table with the EXACT
+- [x] **Task 5 — Tests, the friction declaration and the copy-gate scope (AC5, AC6, AC7).**
+  - [x] 5.1 `apps/mobile/tests/unit/kyc-manual-name-copy-resolves.test.ts`: both pure functions over AC6's input table with the EXACT
         expected key asserted per input (`''`, `'   '`, `'आशा देवी'`, `'Asha देवी'`, `'Asha Devi'`, `'D’Souza'`, a 400 `/name`
         `invalid_string` `ApiError`, a 400 `/name` `too_big`, a 400 on `/dob`, a 409 `kyc.not_pending`, a non-ApiError); THEN every
         non-null key resolved through the real `t()` in `en` and `hi` (non-empty; `en` ≠ `hi`); a source check (the 6.18 copy
         test's third leg, `nominee-name-copy-resolves.test.ts:84,93`) — ⚠ that leg asserts the LITERAL `t('<key>')`, which a key returned
         by a function never matches: assert `kyc.tsx` still contains `t('kyc.manual_name')` and imports both `lib/kyc-manual-name` functions,
         and `lib/kyc-manual-name.ts` contains each `'kyc.manual_name_required'` / `'kyc.manual_name_english'` literal. Mock `lib/mmkv` if the import chain needs it ([[project_mobile_vitest_and_expo_install_traps]]).
-  - [ ] 5.2 `apps/mobile/tests/unit/kyc-manual-render.test.ts` (AC5) on the `wa-code-entry-render.test.ts` harness (jsdom + RTL, the
+  - [x] 5.2 `apps/mobile/tests/unit/kyc-manual-render.test.ts` (AC5) on the `wa-code-entry-render.test.ts` harness (jsdom + RTL, the
         real screen under `LocaleProvider`; reuse its `react-native` mock (it supplies `Platform` / `AccessibilityInfo` — assert the
         announce call), its `tamagui` DOM stand-ins and `react-native-safe-area-context`; mock `../../lib/member-api` with
         `memberAuth.kycStatus` (manual enabled) + `kycManualSubmit`, `lib/mmkv`, `expo-router`, AND `expo-web-browser` (`kyc.tsx:28`
@@ -553,21 +553,21 @@ Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[
         `kyc.manual_name_english`, submit never calls `kycManualSubmit`, the announce is called once; an English name + DoB with
         `kycManualSubmit` rejecting an `ApiError` 400 (`/name`, `invalid_string`) → the banner shows `kyc.manual_name_english`. ⚠ `apps/mobile/tsconfig.json`
         excludes `tests/**` — the test is ⛔ typechecked; keep it simple.
-  - [ ] 5.3 `friction-budget.md`: KB5 as answered — the row INSIDE `## The ledger` (after the `relative (manual-KYC fallback)` row) and/or
+  - [x] 5.3 `friction-budget.md`: KB5 as answered — the row INSIDE `## The ledger` (after the `relative (manual-KYC fallback)` row) and/or
         the `**Story 3.3c disposition (…)**` block (the gate's regex: `^\*\*Story\s+(\S+?)\s+disposition\b`).
-  - [ ] 5.4 `microcopy.yaml` (AC6, KB8 as answered): (a) add `apps/mobile/app/(signup)/kyc.tsx` and `apps/mobile/lib/kyc-manual-name.ts`
+  - [x] 5.4 `microcopy.yaml` (AC6, KB8 as answered): (a) add `apps/mobile/app/(signup)/kyc.tsx` and `apps/mobile/lib/kyc-manual-name.ts`
         to `scope.code_globs` beside the 6.18 entries, plus ONE scoped allow-list entry for `kyc.tsx` (`pattern: '#(C0392B|1E8E3E)\b'`,
         a `reason` pointing at the 6.18 reasoning block); any finding on 3.3b's existing lines → Debug Log (c) and ask; or (b) a File
         List line that the gate does ⛔ scan these files.
 
-- [ ] **Task 6 — Proof and gates (AC7)** on the Task 1–5 commit: the three AC7 mutants (record RED → revert → GREEN in Debug Log (c));
+- [x] **Task 6 — Proof and gates (AC7)** on the Task 1–5 commit: the three AC7 mutants (record RED → revert → GREEN in Debug Log (c));
       `pnpm --filter @twt/contracts test`, the api unit suite, the KYC integration spec + `signup-create.spec.ts` + the two `wa-opt-in`
       specs on :5433 (`DATABASE_URL` explicit — [[project_prepush_hook_inherits_5432]]), the mobile unit suite (incl. the 5.1 and 5.2
       files), tsc, eslint,
       `pnpm i18n:check`, `pnpm microcopy:check`, `pnpm friction:test && pnpm friction:check`, `pnpm contracts:check-openapi-determinism`;
       `ci:local` before any push ([[project_known_livedb_test_failures]] — name any pre-existing failure, ⛔ hide it).
 
-- [ ] **Task 7 — Records and close.** Story Status → `review`, Dev Agent Record, File List, Change Log (newest first); sprint row
+- [x] **Task 7 — Records and close.** Story Status → `review`, Dev Agent Record, File List, Change Log (newest first); sprint row
       `in-progress` → `review` + ledger. ⛔ "Closed by" on (b-4)'s member-KYC half until the row is `done` on `main`.
 
 ## Dev Notes
@@ -695,19 +695,78 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-create-story 3.3c` (story v1.0).
   - Task 0.1 preflight: origin/main = `b883dc15` (⛔ drift, ⛔ rebase); S1 ⛔ new decision; S2 ⛔ new story, 6-35 ⛔ landed; S3 newest id
     `-381` everywhere ⇒ `-382`; letters held `v` (8-15, 6-35), `w` (6-36d), `x` (this branch) ⇒ `y`; S4 three peer sessions, all idle.
     Task 0.3 entry `-382` committed alone: `73ad0ad2`.
-- (b) Task 2.1 — the `details.issues` shape as emitted. *(reserved)*
-- (c) Task 6 — mutants RED → reverted → GREEN; any `microcopy:check` finding on 3.3b's existing lines (KB8). *(reserved)*
+- (b) Task 2.1 — the `details.issues` shape as emitted, OBSERVED over HTTP on :5433 (`kyc-signup.spec.ts` "3.3c AC2"): for both
+  `'आशा देवी'` and `'Asha देवी'`, `issues.map(i => [i.instancePath, i.keyword, i.message])` is EXACTLY
+  `[['/name', 'invalid_string', 'Please enter the name in English']]`; the 400 body does ⛔ contain the typed name. G14 / TR4 hold.
+- (c) Task 6 — on code commit `bf7781d1`, each mutant applied, run, reverted (`git checkout --`, tree clean after each):
+  - **M1 server** — `name: z.string().trim().min(1).max(200)` in `signup.ts`: contracts RED on exactly the four SCRIPT legs
+    (`'आशा देवी'`, `'Asha देवी'`, `'José'`, `'Asha Devi 2'`; 4 failed / 31 passed — blank and length legs green by design); api unit
+    RED on "rejects a name not in English letters (3.3c)" (1 / 9); integration RED on "3.3c AC2" (1 / 7 — AC3 stays green, as it
+    must). Reverted → GREEN.
+  - **M2 client** — `isEnglishScriptName` → `() => true` in `lib/kyc-manual-name.ts`: RED on the Devanagari and mixed
+    `manualNameMessageKey` legs, the "keys returned are the keys resolved" leg, and the render test's Devanagari leg (4 / 20).
+    Reverted → GREEN.
+  - **M3 client** — `keyword === 'invalid_string'` dropped (keyed on `/name` alone): RED on exactly the `400 /name too_big` leg
+    (1 / 20). Reverted → GREEN.
+  - **Render test vs the PRE-change `kyc.tsx`** (`bf7781d1~1`): RED on the Devanagari leg and the server-400 leg (2 / 3; the English
+    leg green) — the render legs are ⛔ vacuous. Restored.
+  - **KB8 `microcopy:check` teeth** — with the new `kyc.tsx` allow-list entry removed, the gate fails on EXACTLY three findings, all
+    FM-14 hex: `kyc.tsx` `#C0392B` (3.3b's banner), `#1E8E3E` (3.3b's notice), `#C0392B` (3.3c's inline message). ⛔ vocabulary,
+    tone or numeral finding on 3.3b's existing lines ⇒ nothing to ask. Entry restored → gate green.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created.
+- `bmad-dev-story 3.3c` (Claude Opus 5.5), 2026-10-22. Commits on `story/3-3c-member-kyc-name-english-only`: `73ad0ad2` (`-382`,
+  `.decision-log.md` ALONE) → `2c1ed842` (Task 0.4 records) → `bf7781d1` (Tasks 1–5, one code commit) → the Task 7 records commit.
+- **Built:** `KycManualSubmitRequest.name` is `EnglishScriptName` (6.18's predicate, unchanged); ⛔ handler change — the route's body
+  schema carries it (G3). The emitted OpenAPI gains exactly one `pattern` line. ⛔ output schema, ⛔ DigiLocker, ⛔ `domain`, ⛔
+  migration (N2 / N5; TR1 / TR2 / TR7). `primitives.ts` carries two dated superseding notes; ⛔ word of either block edited; ⛔ `**/`.
+- **Client:** `lib/kyc-manual-name.ts` (pure): `manualNameMessageKey` (blank → required; non-English → english; else `null`) and
+  `manualSubmitErrorKey` (only a `request.validation` with an issue on `/name` + `invalid_string` → english; malformed `details` →
+  `null`). `kyc.tsx`: inline alert (`#C0392B`, `fontSize="$2"`, role alert + assertive) while the name is non-empty and ⛔ English;
+  the `Input`'s hint switches to the same message; `maxLength={200}`; submit order blank → non-English (`setError(null)`, one
+  unguarded `announceForAccessibility`, ⛔ request) → blank DoB → request; the `catch` consults `manualSubmitErrorKey` first. ⛔
+  change to DigiLocker paths, `KYC_ERROR_CODES` or `kycErrorMessage`.
+- **Copy** as BigDev approved (KB2 (a)), both locales; `i18n:check` parity green; the copy test resolves every selected key through
+  the real `t()` in `en` and `hi`.
+- **Gates:** contracts 1428 / 1428; mobile unit 1295 / 1295 (incl. the two new files, 17 + 3); api unit 566 passed / 1 skipped;
+  `kyc-signup` + `signup-create` + two `wa-opt-in` specs 69 / 69 on :5433; typecheck (contracts, api, mobile, i18n) and lint exit 0;
+  `i18n:check`, `microcopy:check`, `friction:test` (38 / 38), `friction:check` (AC-4: 1 row added — affirmed, on the committed
+  history), `contracts:check-openapi-determinism` exit 0.
+  `DATABASE_URL=…:5433 pnpm ci:local` on `bf7781d1`: **36 / 36 jobs green** (incl. `integration-tests`, `microcopy`, `friction-budget`,
+  `schema-diff`, `kyc-provider-boundary`) — ⛔ known live-DB failure surfaced.
+- **Open, ⛔ closed by this story:** `deferred-work.md` (b-4)'s 6.5 half; the 6.37e R1 first bullet (TR6 — 3.3c migrates ⛔ names);
+  a trustee review of manual KYC (G8). Hindi approved by BigDev in session — ⛔ second reader (KB6 (a)). ⛔ pushed, ⛔ landed.
 
 ### File List
 
-*(to be filled by dev-story)*
+- `.decision-log.md` — `2026-10-22-382` (Task 0.3, committed alone)
+- `_bmad-output/planning-artifacts/epics.md` — `### Story 3.3c` + the dated note under 6.18's owed-sweep sentence
+- `_bmad-output/implementation-artifacts/6-18-nominee-holder-name-on-the-verification-console.md` — AC12 dated note
+- `_bmad-output/implementation-artifacts/deferred-work.md` — (b-4) and 6.37e R1 dated notes
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — row, ledger `2026-10-22y` / `z`, row comment
+- `_bmad-output/implementation-artifacts/3-3c-member-kyc-name-english-only.md` — this file
+- `packages/contracts/src/kyc/signup.ts` — `name: EnglishScriptName`; doc comment
+- `packages/contracts/src/_common/primitives.ts` — two dated notes (comment only)
+- `openapi/v1.yaml` — REGENERATED (one `pattern` line)
+- `packages/contracts/tests/english-script-name.test.ts` — the 3.3c `describe` blocks
+- `apps/api/tests/unit/kyc-signup.test.ts` — 3.3c refusal leg
+- `apps/api/tests/integration/kyc/kyc-signup.spec.ts` — AC2, AC3
+- `apps/mobile/app/(signup)/kyc.tsx` — the manual name (KB3 / KB4)
+- `apps/mobile/lib/kyc-manual-name.ts` — NEW
+- `apps/mobile/tests/unit/kyc-manual-name-copy-resolves.test.ts` — NEW
+- `apps/mobile/tests/unit/kyc-manual-render.test.ts` — NEW
+- `packages/i18n/locales/en/common.json`, `packages/i18n/locales/hi/common.json` — two values changed, one key added
+- `friction-budget.md` — one ledger row + the 3.3c disposition
+- `microcopy.yaml` — `kyc.tsx` + `lib/kyc-manual-name.ts` enrolled; one scoped hex entry
 
 ## Change Log
 
+- v1.4 (2026-10-22) — **Implemented** (`bmad-dev-story 3.3c`, Claude Opus 5.5): Tasks 1–7 done; code commit `bf7781d1`; the three
+  AC7 mutants RED → reverted → GREEN (Debug Log (c)); every gate green (Completion Notes). KB2 (a)'s wrong-script message is knowingly
+  approximate for Policy-meaning edge 1 (*"José"* is in English letters yet refused) — BigDev's accepted cost. Status → `review`;
+  sprint row `in-progress` → `review`, ledger `2026-10-22z`. ⛔ pushed.
 - v1.3 (2026-10-22) — **Dev started** (`bmad-dev-story 3.3c`, Claude Opus 5.5): Task 0 done — preflight clean, BigDev's answers
   (Debug Log (a): author's basis; all recommendations), `-382` AUTHOR-COMMIT committed alone (`73ad0ad2`), records commit (epics
   `### Story 3.3c` + 6.18 owed-sweep note; 6.18 AC12 dated note; deferred-work (b-4) and 6.37e R1 dated notes; sprint row →

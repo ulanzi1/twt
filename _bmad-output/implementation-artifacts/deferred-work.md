@@ -18,6 +18,13 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   ⭐ Trigger: BigDev sends the note; ALSO any report of an unrecognised or garbled short name, or a production writer for
   `shielded_name` (PQ1 (A)'s old trigger, folded in). The Panel's answer is a NEW Trustee-ratified entry; an answer other than "as
   built" means a later row. ⛔ Discharged until the Panel answers.
+  ⚠ *Dated note, 2026-10-22 ([`-378`](../../.decision-log.md#decision-2026-10-22-378)):* the confirm note above is **WITHDRAWN, ⛔
+  ever sent** — BigDev rejected the form it recommended (*"better to send whole name rather than let you play with name."*). The item
+  is ⛔ discharged: it is REPLACED by a new owed Panel question — **NQ1** (the full name across two 30-letter variables, 60; above 60
+  the listed titles dropped, then initials from the front, ⛔ never the last word) and **NQ2** (the helpline number leaves templates
+  11–14, pointing to the app) — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-full-name-two-slots.md`,
+  ⛔ **Not addressed — WRITTEN, ⛔ sent.** It gates go-live as before (Rows 22 / 27) AND the rework of row 6-37e (`-378` decision 7).
+  ⭐ Trigger: BigDev sends the new note.
 
 ---
 
@@ -2537,6 +2544,10 @@ death-certificate comparison**, which matches names with a **20% fuzzy tolerance
 transliteration tolerance as *"a noted future consideration"* (`packages/domain/src/claim/parity.ts`)
 — ⭐ **the one place a transliterated name can still pass a machine check silently.**
 ⭐ **Trigger:** *its own story; ⛔ do not sweep it into a story that merely touches a name field.*
+⚠ *Dated note, 2026-10-22 ([`-378`](../../.decision-log.md#decision-2026-10-22-378) decision 6):* the **member KYC names** half now
+has its own row — `3-3c-member-kyc-name-english-only: backlog` (the manual KYC fallback's typed name English-only at input, its label
+*"in English, as on Aadhaar"*; DigiLocker's `Poi@name` is already the English name; ⛔ backfill — ⛔ in production). ⛔ Closed: the
+6.5 death-certificate comparison (`claim/parity.ts`) half is still open here.
 
 ### (c) ⭐⭐ **NEW, FOUND AT 11b.3a** — a **12-digit account number trips the FR-74 naked-PII AADHAAR heuristic**
 

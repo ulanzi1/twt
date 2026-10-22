@@ -1,5 +1,11 @@
 # Trustee Panel routing note — two confirms on the shorter name in the texts
 
+> ⛔⛔ **WITHDRAWN 2026-10-22 — ⛔ EVER SENT, ⛔ EVER SHOWN TO THE PANEL** ([Decision 2026-10-22-378](../../.decision-log.md#decision-2026-10-22-378)
+> decision 1). BigDev, reading it before sending, rejected the form it recommended (*"K. Venkata … Subrahmanyam"* → *"K. S."*):
+> *"better to send whole name rather than let you play with name."* Replaced by
+> `trustee-panel-routing-note-2026-10-22-6-37e-full-name-two-slots.md`. ⛔ Do not send this note. Everything below is kept
+> **unedited**, as written ([[feedback_supersede_never_reinterpret]]).
+
 > **§0 gate — passed (2026-10-22).** You ruled B twice on 2026-10-18 (`-359`, the three suspicion texts; `-362`, the text to the
 > five neighbours): *"Send it with the shorter form of the name, only when the full name does not fit — first name and the initial of
 > the surname ("Ramesh S."), the form a Pariwar can already choose."* Building it found two kinds of name where what we build gives

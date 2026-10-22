@@ -221,3 +221,59 @@ describe('Story 8.9 — the tone/numeral teeth bite the close-of-cycle holiday-a
     expect(checkTone(HI_FILE, dirty, config).length).toBeGreaterThan(0);
   });
 });
+
+// ── Story 8.15 — the staged fixed-amount transition line (UX-DR25) ──────────────────────────────────
+//
+// The line tells a member the per-pool contribution is changing. That is exactly where a careless author
+// reaches for a deadline ("only 3 days left at the old amount!"), an alarm ("URGENT: amount rising") or a
+// retrospective blame ("you should have paid before it rose"). The plants below sit on the REAL
+// transition keys. ⚠ hi has ⛔ no scarcity or panic arm ("केवल 3 दिन बचे" is not flagged), so the Hindi
+// plants use the arms that DO exist: blame (चाहिए था near दान) and fursat-pressure (जल्दी कर / अभी कर).
+
+/** The REAL authored transition copy, re-serialised so `checkTone` scans exactly these keys. */
+function transitionOnly(rel: string): string {
+  const all = JSON.parse(readRepo(rel)) as Record<string, string>;
+  const picked = Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith('active_contribution.transition.')));
+  expect(Object.keys(picked)).toHaveLength(8);
+  return JSON.stringify(picked, null, 2);
+}
+
+describe('Story 8.15 — the tone teeth bite the fixed-amount transition copy', () => {
+  it('a scarcity frame planted on the next_month line → checkTone finds it', () => {
+    const dirty = '{ "active_contribution.transition.next_month": "Only 3 days left at the old amount!" }';
+    const findings = checkTone(EN_FILE, dirty, config);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings[0].kind).toBe('tone');
+  });
+
+  it('a panic frame planted on the scheduled line → checkTone finds it', () => {
+    const dirty = '{ "active_contribution.transition.scheduled": "URGENT: amount rising from {date}" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('an out-of-band blame planted on the first_cycle note → checkTone finds it', () => {
+    const dirty = '{ "active_contribution.transition.first_cycle": "The new amount applies — you should have paid before it rose" }';
+    expect(checkTone(EN_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('[hi] a blame frame (चाहिए था near अंशदान) planted on the next_cycle line → checkTone finds it', () => {
+    const dirty = '{ "active_contribution.transition.next_cycle": "आपको पुराना अंशदान पहले भेजना चाहिए था" }';
+    expect(checkTone(HI_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('[hi] a fursat-pressure frame planted on the next_month line → checkTone finds it', () => {
+    const dirty = '{ "active_contribution.transition.next_month": "अगले महीने से राशि बढ़ेगी — अभी करें भुगतान" }';
+    expect(checkTone(HI_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('[hi] a hurry-imperative planted on the scheduled line → checkTone finds it', () => {
+    const dirty = '{ "active_contribution.transition.scheduled": "{date} से नई राशि — जल्दी करें" }';
+    expect(checkTone(HI_FILE, dirty, config).length).toBeGreaterThan(0);
+  });
+
+  it('the REAL en + hi transition copy is clean (tone), and the hi copy carries no Devanagari digit', () => {
+    expect(checkTone(EN_FILE, transitionOnly(EN_FILE), config)).toEqual([]);
+    expect(checkTone(HI_FILE, transitionOnly(HI_FILE), config)).toEqual([]);
+    expect(checkNumerals(HI_FILE, transitionOnly(HI_FILE), config, { isCeremonial: false })).toEqual([]);
+  });
+});

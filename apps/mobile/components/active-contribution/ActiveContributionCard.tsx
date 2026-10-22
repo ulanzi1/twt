@@ -18,7 +18,8 @@
 // ── Numeral discipline (amendment-A2 / D6) ─────────────────────────────────────────────────────────
 // days-remaining, amount, and the progress counts are OPERATIONAL figures → LATIN numerals even in
 // Hindi (the RenewalStatusWidget posture). `t()` interpolates already-Latin values; the amount uses
-// `en-IN` grouping; the upcoming-change date uses an explicit `-u-nu-latn` override. NEVER toHindiNumeral.
+// `en-IN` grouping; the transition line's date (Story 8.15, `amountTransitionCopy.ts`) uses an explicit
+// `-u-nu-latn` override. NEVER toHindiNumeral.
 //
 // ── Accessibility (AC5) ────────────────────────────────────────────────────────────────────────────
 // Every atom is semantically labeled; the tone-gradient nudge is the card's SINGLE ambient status
@@ -38,6 +39,7 @@ import { CallHelplineCTA } from '../common/CallHelplineCTA'
 import { SelfVerifySurface } from '../self-verify/SelfVerifySurface'
 import { StatusPill } from '../status-pill/StatusPill'
 import { markCtaTap, markLoopPhase } from '../../lib/loop-timing-session'
+import { amountTransitionCopy } from './amountTransitionCopy'
 import { cycleDayFromDaysRemaining, selectToneGradientKey } from './toneGradient'
 import { useActiveContributionQuery } from './useActiveContributionQuery'
 
@@ -57,21 +59,6 @@ const METER_FILL_TOKENS: Record<string, ColorTokens> = {
 /** Format a whole-INR amount as ₹X,XX,XXX — Latin numerals, Indian grouping (amendment-A2 / D6). */
 function formatInr(amountInr: number): string {
   return `₹${amountInr.toLocaleString('en-IN')}`
-}
-
-/** Format an ISO date per locale, ALWAYS in Latin numerals (operational figure; amendment-A2). */
-function formatDate(iso: string, locale: string): string {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso.slice(0, 10)
-  try {
-    return d.toLocaleDateString(locale === 'hi' ? 'hi-IN-u-nu-latn' : 'en-IN', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-  } catch {
-    return iso.slice(0, 10)
-  }
 }
 
 export function ActiveContributionCard() {
@@ -105,6 +92,9 @@ export function ActiveContributionCard() {
   // decided. The form is now decided once, server-side, from the Pariwar's stored presentation mode,
   // so the card, the Yogdaan Bahi, the Contribution Note PDF and the push cannot drift apart.
   const family = data.deceasedDisplayName
+
+  // Story 8.15 — the transition line's keys + params (pure; proven through the real t() in both locales).
+  const transitionCopy = data.amountTransition ? amountTransitionCopy(data.amountTransition, locale) : null
 
   // Tone gradient (AC3) — a PURE function of the server's days-remaining (via day-of-cycle).
   const toneKey = selectToneGradientKey(cycleDayFromDaysRemaining(data.daysRemaining))
@@ -212,17 +202,18 @@ export function ActiveContributionCard() {
         {formatInr(data.fixedAmount)}
       </Text>
 
-      {/* AC6 — the upcoming fixed-amount transition, surfaced gently (no banner; additive context). */}
-      {data.upcomingAmountChange ? (
-        <Text fontFamily="$body" fontSize="$2" color="$colorPress" accessibilityRole="text">
-          {t(
-            'active_contribution.upcoming_amount',
-            {
-              date: formatDate(data.upcomingAmountChange.effectiveFrom, locale),
-              amount: data.upcomingAmountChange.newAmount.toLocaleString('en-IN'),
-            },
-            NS,
-          )}
+      {/* Story 8.15 — the staged fixed-amount transition (UX-DR25), directly under the amount. The SERVER
+          resolved the stage; this line only words it. The card itself carries the news: ⛔ no banner,
+          ⛔ no new accent, and ⛔ NOT a live region (the tone-gradient line stays the single one). */}
+      {transitionCopy ? (
+        <Text
+          fontFamily="$body"
+          fontSize="$2"
+          color="$colorPress"
+          accessibilityRole="text"
+          accessibilityLabel={t(transitionCopy.a11yKey, transitionCopy.params, NS)}
+        >
+          {t(transitionCopy.key, transitionCopy.params, NS)}
         </Text>
       ) : null}
 

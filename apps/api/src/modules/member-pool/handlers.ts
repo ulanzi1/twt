@@ -13,7 +13,7 @@
 //
 // ── Presentation, not lifecycle (D2) — the card resolves nothing client-side ──────────────────────────
 // Eligibility (active + live + assigned), days-remaining, letter-code-vs-name, confirmed count,
-// upcoming amount — ALL computed HERE and returned as a flat card model. The client just renders +
+// the staged fixed-amount transition (Story 8.15) — ALL computed HERE and returned as a flat card model. The client just renders +
 // self-suppresses on `{ assigned:false }`. It reads `alerts.current_state`; it never transitions it.
 //
 // ── Fail-soft (AC1) — every degrade is `{ assigned:false }`, never a 500 ──────────────────────────────
@@ -47,6 +47,7 @@ import {
 } from '@twt/domain';
 import type {
   ActiveContributionCardResponse,
+  AmountTransition,
   ConfirmedContributorRow,
   ContributionHistoryResponse,
   ContributionHistoryRow,
@@ -1387,6 +1388,62 @@ export async function resolveMemberLivePool(
   return null;
 }
 
+/**
+ * ⭐ Story 8.15 (AC1, D3, D8) — the card's staged fixed-amount transition, or `null`.
+ *
+ *  · The upcoming change is read AS OF THE LIVE POOL'S `committedAt` (D3), ⛔ not `now`: a change that
+ *    took effect inside the live window is still a transition for THIS pool (`next_cycle`, Trap 4) —
+ *    read at `now` it would just vanish. `excludeAmount` = the pool's own amount, filtered in SQL (D6).
+ *  · `now` (= `deps.clock()`, D9) only LABELS the stage, consistent with `daysRemaining` on the card.
+ *  · Fail-soft PER FIELD (D8): a throw → `null` + a warn, ⛔ never `{ assigned:false }`.
+ */
+async function resolveAmountTransition(
+  tx: Db,
+  request: FastifyRequest,
+  input: { pariwarId: ResolveCtx['pariwarId']; committedAt: Date; poolFixedAmount: number; now: Date },
+): Promise<AmountTransition | null> {
+  try {
+    const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx, input.pariwarId, input.committedAt, {
+      excludeAmount: input.poolFixedAmount,
+    });
+    const isFirstCycle = await poolDomain.resolveFirstCycleUnderAmount(tx, input.pariwarId, {
+      committedAt: input.committedAt,
+      poolFixedAmount: input.poolFixedAmount,
+    });
+    const selected = poolDomain.selectFixedAmountTransition({
+      poolFixedAmount: input.poolFixedAmount,
+      poolCommittedAt: input.committedAt,
+      now: input.now,
+      upcoming:
+        upcoming === null
+          ? null
+          : { effectiveFrom: upcoming.effectiveFrom, fixedAmount: upcoming.fixedAmount, changeType: upcoming.changeType },
+      isFirstCycle,
+    });
+    return selected === null ? null : toContractAmountTransition(selected);
+  } catch (err) {
+    request.log.warn({ err }, 'active-contribution: amount-transition read failed — showing no transition line');
+    return null;
+  }
+}
+
+/**
+ * The domain stage → the wire, mapped EXPLICITLY per stage (footgun #1: same-named shapes drift). The
+ * contract is `.strict()` and the route serialises through the Zod type provider, so a stray key here is
+ * a 500, ⛔ not the D8 fail-soft — the map must be exact.
+ */
+function toContractAmountTransition(t: poolDomain.FixedAmountTransition): AmountTransition {
+  switch (t.stage) {
+    case 'scheduled':
+    case 'next_month':
+      return { stage: t.stage, effectiveOn: t.effectiveOn, newAmount: t.newAmount };
+    case 'next_cycle':
+      return { stage: 'next_cycle', newAmount: t.newAmount };
+    case 'first_cycle':
+      return { stage: 'first_cycle' };
+  }
+}
+
 /** The pipeline body (AC1-AC6). Throws on any malformed/absent input — the caller fail-softs to absence. */
 async function resolveCard(
   deps: AppDeps,
@@ -1497,11 +1554,7 @@ async function resolveCard(
     return UNASSIGNED;
   }
 
-  // (9) AC6 — the NEXT scheduled fixed-amount change, surfaced gently. The card's CURRENT amount stays
-  //     the SNAPSHOTTED pool.fixedAmount (D3); this is additive future context.
-  const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx, pariwarId, now);
-
-  // (10) The MEMBER'S OWN yellow-pill state (Story 8.4, AC4) — has THIS member self-attested a UTR for this
+  // (9) The MEMBER'S OWN yellow-pill state (Story 8.4, AC4) — has THIS member self-attested a UTR for this
   //      cycle? A per-member self-state (via the member's deterministic tr on the alert stream), NOT an
   //      aggregate: it is DELIBERATELY separate from `progress` (which stays confirmed-only). Yellow never
   //      pollutes the meter (epics.md:2939-2941).
@@ -1512,7 +1565,7 @@ async function resolveCard(
     tr: memberTr,
   });
 
-  // (10a) Story 9.7 (AC1) — the member's OWN unresolved-mismatch state (red). Reuses the self-verify read
+  // (9a) Story 9.7 (AC1) — the member's OWN unresolved-mismatch state (red). Reuses the self-verify read
   //       (member-scoped, D1), so the card flips to <StatusPill status="red"> + links the recovery entry
   //       when the Story 9.4 matcher rejected a found deposit. A mismatch OUTRANKS attested (red is the more
   //       specific, actionable signal); a confirmed member is never `mismatch` (the read supersedes a stale
@@ -1543,6 +1596,20 @@ async function resolveCard(
       ? 'attested'
       : 'none';
 
+  // (10) ⭐ Story 8.15 — the staged fixed-amount transition (UX-DR25). The card's CURRENT amount stays
+  //      the SNAPSHOTTED pool.fixedAmount (8.2 D3); this is context, never the ask.
+  //      ⚠⛔ THESE ARE THE LAST DB READS IN THE TRANSACTION, AND MUST STAY LAST (D8). `tx` is a real
+  //      Postgres transaction: a SQL error here aborts it, and any LATER statement would fail with
+  //      25P02 — blanking the whole card to `{ assigned:false }` despite the wrap. A decorative line
+  //      must never hide the contribute CTA. ⛔ Add no DB read after this; if one is ever needed, run
+  //      these under `underSavepoint` (claims/later-approval-warnings.ts) instead.
+  const amountTransition = await resolveAmountTransition(tx, request, {
+    pariwarId,
+    committedAt,
+    poolFixedAmount: pool.fixedAmount,
+    now,
+  });
+
   return {
     assigned: true,
     // (Story 9.7) The member's own live pool id — carried so the red-card "Fix this" + yellow "Trouble with
@@ -1564,8 +1631,7 @@ async function resolveCard(
     // confirmed count exceeding the roster is an integrity anomaly worth logging rather than rendering
     // a nonsensical "X of Y" with X>Y.
     progress: { confirmedCount: clampedConfirmedCount, rosterSize: pool.rosterSize },
-    upcomingAmountChange:
-      upcoming === null ? null : { effectiveFrom: upcoming.effectiveFrom.toISOString(), newAmount: upcoming.fixedAmount },
+    amountTransition,
     // (AC4 / Story 9.7 AC1) The member's OWN self-state — yellow (attested) or RED (mismatch) — separate
     // from the confirmed-only meter above. `mismatchReason` carries the machine reason-code ONLY when the
     // state is `mismatch` (the surface maps it to dignified empathy copy for the Journey-1 entry), else null.

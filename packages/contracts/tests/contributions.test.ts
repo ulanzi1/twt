@@ -60,7 +60,7 @@ const VALID_ASSIGNED = {
   fixedAmount: 500,
   daysRemaining: 12,
   progress: { confirmedCount: 0, rosterSize: 48 },
-  upcomingAmountChange: null,
+  amountTransition: null,
   // Story 8.4 — the member's OWN yellow-pill state (per-member, NOT an aggregate).
   myContribution: 'none' as const,
   // Story 9.7 — the mismatch reason-code (null unless myContribution === 'mismatch').
@@ -152,12 +152,37 @@ describe('AC1 — self-suppression discriminated union on `assigned`', () => {
     expect(parsed.progress).toEqual({ confirmedCount: 0, rosterSize: 48 });
   });
 
-  it('an assigned card with an upcoming-amount transition (AC6) parses', () => {
-    const withUpcoming = {
+  // ── Story 8.15 (AC3) — the staged transition is a resolved STAGE, never an instant ─────────────────
+  it.each([
+    { stage: 'scheduled', effectiveOn: '2027-07-01', newAmount: 600 },
+    { stage: 'next_month', effectiveOn: '2027-07-01', newAmount: 600 },
+    { stage: 'next_cycle', newAmount: 600 },
+    { stage: 'first_cycle' },
+  ])('an assigned card with amountTransition $stage parses', (amountTransition) => {
+    expect(AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, amountTransition }).success).toBe(true);
+  });
+
+  it.each([
+    // AI-6-3-carry decoys: each is a plausible shape drift `.strict()` must refuse.
+    ['an extra changeType', { stage: 'scheduled', effectiveOn: '2027-07-01', newAmount: 600, changeType: 'emergency' }],
+    ['an effectiveFrom INSTANT beside the date', { stage: 'next_month', effectiveOn: '2027-07-01', newAmount: 600, effectiveFrom: '2027-06-30T18:30:00.000Z' }],
+    ['an instant IN PLACE of the date', { stage: 'scheduled', effectiveOn: '2027-07-01T00:00:00.000Z', newAmount: 600 }],
+    ['an impossible calendar date', { stage: 'scheduled', effectiveOn: '2027-02-30', newAmount: 600 }],
+    ['a date on next_cycle (it has none)', { stage: 'next_cycle', effectiveOn: '2027-07-01', newAmount: 600 }],
+    ['an amount on first_cycle (it renders above the note)', { stage: 'first_cycle', newAmount: 600 }],
+    ['a scheduled stage with no date', { stage: 'scheduled', newAmount: 600 }],
+    ['an unknown stage', { stage: 'month_minus_3', effectiveOn: '2027-07-01', newAmount: 600 }],
+    ['a non-positive amount', { stage: 'next_cycle', newAmount: 0 }],
+  ])('REJECTS amountTransition with %s', (_label, amountTransition) => {
+    expect(AssignedContributionCard.safeParse({ ...VALID_ASSIGNED, amountTransition }).success).toBe(false);
+  });
+
+  it('REJECTS the retired Story 8.2 upcomingAmountChange field (replaced, not kept alongside)', () => {
+    const legacy = {
       ...VALID_ASSIGNED,
       upcomingAmountChange: { effectiveFrom: '2027-07-01T00:00:00.000Z', newAmount: 600 },
     };
-    expect(AssignedContributionCard.safeParse(withUpcoming).success).toBe(true);
+    expect(AssignedContributionCard.safeParse(legacy).success).toBe(false);
   });
 
   it('rejects a payload with no `assigned` discriminator', () => {

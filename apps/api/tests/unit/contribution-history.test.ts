@@ -29,6 +29,9 @@ const getMemberStateAt = vi.fn();
 const listLiveAlertsForPariwar = vi.fn();
 const resolveAssignedPoolWithRosterForMember = vi.fn();
 const resolveUpcomingFixedAmountChange = vi.fn();
+// Story 8.15 — the card's first-cycle read; mocked for the same reason as readPoolPublicToken below
+// (a real read against `tx: {}` would throw — here into the transition's per-field fail-soft).
+const resolveFirstCycleUnderAmount = vi.fn();
 const hasAttestedContribution = vi.fn();
 const listConfirmedContributorsForPool = vi.fn();
 // Story 11b.10 — the card path now reads the drive's PUBLIC ADDRESS server-side (AC4). ⚠ It MUST be
@@ -49,6 +52,7 @@ vi.mock('@twt/domain', async (importActual) => {
       reserveNames,
       resolveAssignedPoolWithRosterForMember,
       resolveUpcomingFixedAmountChange,
+      resolveFirstCycleUnderAmount,
       readPoolPublicToken,
     },
     contribution: {
@@ -470,6 +474,7 @@ describe('D6 — the passbook and the My Pool card render a pool IDENTICALLY (sh
       rosterSize: 48,
     });
     resolveUpcomingFixedAmountChange.mockResolvedValue(null);
+    resolveFirstCycleUnderAmount.mockResolvedValue(false);
     hasAttestedContribution.mockResolvedValue(false);
     // resolveCard now sources the confirmed-count meter from this read (Story 9.5 Task 1a); the D6
     // identity comparison does not depend on the count, so an empty confirmed list keeps the card assigned.

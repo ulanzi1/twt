@@ -9,6 +9,9 @@
 // (the sibling handler in the same module) rather than standing up a live-DB + KMS harness for a
 // single handler-wiring assertion.
 
+import { readFileSync } from 'node:fs';
+
+import { ActiveContributionCardResponse } from '@twt/contracts';
 import type { FastifyRequest } from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +23,9 @@ const getCycleFreezeCommittedAt = vi.fn();
 const resolveAssignedPoolWithRosterForMember = vi.fn();
 const reserveNames = vi.fn();
 const resolveUpcomingFixedAmountChange = vi.fn();
+// Story 8.15 — ⚠ MUST be mocked: the `...actual.pool` spread would otherwise run the REAL read against
+// `tx: {}`, throw a TypeError, and the D8 fail-soft would turn every stage leg into a silent `null`.
+const resolveFirstCycleUnderAmount = vi.fn();
 const deriveContributionReference = vi.fn();
 const poolLetterCode = vi.fn();
 const getClaimCase = vi.fn();
@@ -42,6 +48,7 @@ vi.mock('@twt/domain', async (importActual) => {
       resolveAssignedPoolWithRosterForMember,
       reserveNames,
       resolveUpcomingFixedAmountChange,
+      resolveFirstCycleUnderAmount,
       deriveContributionReference,
       poolLetterCode,
       readPoolPublicToken,
@@ -118,6 +125,7 @@ function wireAssignedLivePoolWithName(): void {
   });
   reserveNames.mockResolvedValue([]); // opted out of curated names → letter-code fallback
   resolveUpcomingFixedAmountChange.mockResolvedValue(null);
+  resolveFirstCycleUnderAmount.mockResolvedValue(false);
   poolLetterCode.mockReturnValue('F');
   deriveContributionReference.mockReturnValue(DERIVED_TR);
   getClaimCase.mockResolvedValue({ deceasedMemberId: DECEASED_MEMBER_ID });
@@ -243,5 +251,136 @@ describe('activeContribution card — the Sahyog Vivran address (Story 11b.10, A
     expect(card.assigned).toBe(false);
     // ⛔ And it is a fail-soft, ⛔ never a 500: a transient read must not break the home screen.
     expect(Object.keys(card)).toEqual(['assigned']);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// ⭐ STORY 8.15 (AC1, AC7, D3, D8) — THE STAGED FIXED-AMOUNT TRANSITION
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Clock 2026-07-21T00:00Z (05:30 IST); the live pool committed 2026-07-15T00:00Z at ₹310.
+describe('activeContribution card — the staged fixed-amount transition (Story 8.15)', () => {
+  const COMMITTED_AT = new Date('2026-07-15T00:00:00Z');
+  const ist = (local: string): Date => new Date(`${local}+05:30`);
+  const row = (effectiveFrom: Date, fixedAmount = 400, changeType: 'standard' | 'emergency' = 'standard') => ({
+    version: 2,
+    fixedAmount,
+    effectiveFrom,
+    effectiveUntil: null,
+    changeType,
+  });
+
+  async function card(): Promise<Record<string, unknown>> {
+    const h = createMemberPoolHandlers(deps());
+    const res = await h.activeContribution(fakeRequest());
+    // The wire shape is the `.strict()` contract — a stray key in the explicit map would fail here.
+    ActiveContributionCardResponse.parse(res);
+    if (!res.assigned) throw new Error('expected an assigned card');
+    return res as unknown as Record<string, unknown>;
+  }
+
+  function wire(): void {
+    vi.clearAllMocks();
+    wireScopeTx();
+    wireAssignedLivePoolWithName();
+    hasAttestedContribution.mockResolvedValue(false);
+  }
+
+  it('scheduled — ≥ 2 IST months away: the IST calendar date + the new amount', async () => {
+    wire();
+    resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-10-05T00:00:00')));
+    expect((await card()).amountTransition).toEqual({ stage: 'scheduled', effectiveOn: '2026-10-05', newAmount: 400 });
+  });
+
+  it('next_month — the change falls in the next IST calendar month', async () => {
+    wire();
+    resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-08-10T00:00:00')));
+    expect((await card()).amountTransition).toEqual({ stage: 'next_month', effectiveOn: '2026-08-10', newAmount: 400 });
+  });
+
+  it('next_cycle — the change took effect after this pool was committed (inside the live window)', async () => {
+    wire();
+    resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-07-18T00:00:00')));
+    expect((await card()).amountTransition).toEqual({ stage: 'next_cycle', newAmount: 400 });
+  });
+
+  it('first_cycle — nothing upcoming and this pool is the first at the new amount', async () => {
+    wire();
+    resolveFirstCycleUnderAmount.mockResolvedValue(true);
+    const c = await card();
+    expect(c.amountTransition).toEqual({ stage: 'first_cycle' });
+    expect(c.fixedAmount).toBe(310); // the amount renders unchanged — the snapshot (8.2 D3)
+  });
+
+  it('PQ1 = B: a future-dated EMERGENCY next month is dated (scheduled), ⛔ never next_month', async () => {
+    wire();
+    resolveUpcomingFixedAmountChange.mockResolvedValue(row(ist('2026-08-10T00:00:00'), 400, 'emergency'));
+    expect((await card()).amountTransition).toEqual({ stage: 'scheduled', effectiveOn: '2026-08-10', newAmount: 400 });
+  });
+
+  it('null when nothing is upcoming and the pool is not a first cycle', async () => {
+    wire();
+    expect((await card()).amountTransition).toBeNull();
+  });
+
+  it('D3/D6: upcoming is read AS OF the pool\'s committedAt (⛔ not now) excluding the pool\'s own amount', async () => {
+    wire();
+    await card();
+    expect(resolveUpcomingFixedAmountChange).toHaveBeenCalledTimes(1);
+    expect(resolveUpcomingFixedAmountChange).toHaveBeenCalledWith(expect.anything(), PARIWAR_ID, COMMITTED_AT, {
+      excludeAmount: 310,
+    });
+    expect(resolveFirstCycleUnderAmount).toHaveBeenCalledWith(expect.anything(), PARIWAR_ID, {
+      committedAt: COMMITTED_AT,
+      poolFixedAmount: 310,
+    });
+  });
+
+  it('D8: a throw in the transition reads → amountTransition null + a warn, ⛔ NOT { assigned: false }', async () => {
+    wire();
+    resolveFirstCycleUnderAmount.mockRejectedValue(new Error('boom'));
+    const h = createMemberPoolHandlers(deps());
+    const req = fakeRequest();
+    const res = await h.activeContribution(req);
+    expect(res).toMatchObject({ assigned: true, amountTransition: null, myContribution: 'none' });
+    expect(req.log.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      expect.stringContaining('amount-transition'),
+    );
+  });
+
+  it('D8: the transition reads run LAST — after every other mocked read in the scope tx', async () => {
+    // A SQL error aborts the scope tx; any read AFTER the transition reads would then fail with 25P02
+    // and blank the whole card. This leg mocks `tx`, so it cannot prove the abort — it proves the ORDER
+    // the abort-safety rests on. The self-verify read (unmocked here) is pinned by the source scan below.
+    wire();
+    await card();
+    const firstTransitionRead = Math.min(
+      resolveUpcomingFixedAmountChange.mock.invocationCallOrder[0]!,
+      resolveFirstCycleUnderAmount.mock.invocationCallOrder[0]!,
+    );
+    for (const earlier of [
+      listConfirmedContributorsForPool,
+      resolvePublicNamePresentationMode,
+      readPoolPublicToken,
+      hasAttestedContribution,
+    ]) {
+      expect(earlier.mock.invocationCallOrder[0]!).toBeLessThan(firstTransitionRead);
+    }
+  });
+
+  it('D8 source scan: resolveAmountTransition is called after the self-verify read and is the last await before the return', () => {
+    const src = readFileSync(new URL('../../src/modules/member-pool/handlers.ts', import.meta.url), 'utf8');
+    const body = src.slice(src.indexOf('async function resolveCard('));
+    const end = body.indexOf('\n}\n');
+    const fn = body.slice(0, end);
+    const selfVerify = fn.indexOf('resolveMemberSelfVerifyState(');
+    const transition = fn.indexOf('await resolveAmountTransition(');
+    const ret = fn.lastIndexOf('return {');
+    expect(selfVerify).toBeGreaterThan(-1);
+    expect(transition).toBeGreaterThan(selfVerify);
+    expect(ret).toBeGreaterThan(transition);
+    // No other `await` between the transition reads and the card's return.
+    const between = fn.slice(transition + 'await resolveAmountTransition('.length, ret);
+    expect(between).not.toMatch(/\bawait\b/);
   });
 });

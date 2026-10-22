@@ -575,9 +575,9 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /**
      * Read the server-authoritative My Pool home-card model — the topmost `<ActiveContributionCard>`.
      * Returns the fully-resolved card (pool shortform + deceased-member family + snapshotted amount +
-     * days-remaining + confirmed-only progress + optional upcoming-amount line) ONLY for an `active`
-     * member assigned to a pool whose cycle alert is `live`; `{ assigned: false }` for every other case
-     * (the widget self-suppresses). Server-authoritative — the client resolves nothing (auth).
+     * days-remaining + confirmed-only progress + the optional staged fixed-amount transition line of
+     * Story 8.15) ONLY for an `active` member assigned to a pool whose cycle alert is `live`;
+     * `{ assigned: false }` for every other case (the widget self-suppresses). Server-authoritative — the client resolves nothing (auth).
      */
     memberActiveContribution(): Promise<ActiveContributionCardResult> {
       return call(

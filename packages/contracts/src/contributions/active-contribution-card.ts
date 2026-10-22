@@ -5,12 +5,13 @@
 // `<ActiveContributionCard>` (the first `[SURFACE]` of Epic 8, the first live consumer of Story
 // 8.1's `alerts.current_state='live'` projection). Presentation only: it reads existing
 // event-derived state (member `active` × `live` alert × assigned pool × claim deceased-member
-// name × snapshotted fixed_amount × days-remaining × confirmed progress); it models NO
-// contribution write/intent lifecycle (those land 9.x — see the directory README).
+// name × snapshotted fixed_amount × days-remaining × confirmed progress × the staged fixed-amount
+// transition of Story 8.15); it models NO contribution write/intent lifecycle (those land 9.x — see
+// the directory README).
 //
 // ── Contracts discipline ──────────────────────────────────────────────────────────────────────────
-// A contracts SOURCE file MUST NOT import `@twt/domain` (the browser-bundle rule). So this uses the
-// `_common` `Iso8601Datetime` primitive + plain `string`/`number`. ALL objects `.strict()` (the
+// A contracts SOURCE file MUST NOT import `@twt/domain` (the browser-bundle rule). So this uses plain
+// `string`/`number` and the `claims/` calendar-date check (Story 8.15). ALL objects `.strict()` (the
 // contributions/ directory README discipline). Consumed via `import type … from '@twt/contracts'`
 // in the SDK + the apps/api handler — NO type-shadowing (README anti-pattern #2).
 //
@@ -34,7 +35,7 @@
 
 import { z } from 'zod';
 
-import { Iso8601Datetime } from '../_common/primitives.js';
+import { isRealCalendarDate } from '../claims/contact-ladder.js';
 import { ContributionMismatchReasonCode } from './self-verify.js';
 import { MyContributionStatus } from './upi-intent.js';
 
@@ -52,19 +53,48 @@ export const ActiveContributionProgress = z
   .strict();
 export type ActiveContributionProgress = z.output<typeof ActiveContributionProgress>;
 
+/** An IST calendar date, `YYYY-MM-DD` — real dates only (`2027-02-30` is rejected). The
+ *  `claims/contact-ladder.ts` `IsoDate` shape; ⛔ never an instant (Story 8.15 Trap 6 — a device outside
+ *  IST would print the day before). */
+const CalendarDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'a calendar date, YYYY-MM-DD')
+  .refine(isRealCalendarDate, 'not a real calendar date');
+
 /**
- * The Story 7.5 fixed-amount UPCOMING transition (AC6) — a future scheduled change surfaced gently
- * in-card ("from [date], contribution becomes ₹X"). `newAmount` is a whole-INR positive integer;
- * `effectiveFrom` is the change's start instant. `null` on the response when no future change exists.
- * The card's CURRENT amount always stays the snapshotted `fixedAmount` (D3) — this is additive context.
+ * ⭐ STORY 8.15 — the staged fixed-amount transition (UX-DR25), RESOLVED SERVER-SIDE into one stage.
+ * Replaces the Story 8.2 `upcomingAmountChange` instant the client used to format (the 8.16 precedent:
+ * one resolved field replacing what the client assembled). `null` = no transition line.
+ *
+ *   · `scheduled`   — "from {date}, the contribution will be ₹{newAmount}" (≥ 2 IST months away, or
+ *                     later this month; also every future-dated EMERGENCY change).
+ *   · `next_month`  — "from next month …" (the change falls in the next IST calendar month; STANDARD
+ *                     changes only — an emergency gives no notice, Decision `2026-10-22-383`).
+ *   · `next_cycle`  — the change is already in force but this pool was spawned before it.
+ *   · `first_cycle` — this pool is the first at the new amount (the amount renders above the note).
+ *
+ * `effectiveOn` is an IST CALENDAR DATE, ⛔ never an instant. `newAmount` is whole INR. The card's
+ * CURRENT amount always stays the snapshotted `fixedAmount` (8.2 D3) — this is context, never the ask.
  */
-export const UpcomingAmountChange = z
-  .object({
-    effectiveFrom: Iso8601Datetime,
-    newAmount: z.number().int().positive(),
-  })
-  .strict();
-export type UpcomingAmountChange = z.output<typeof UpcomingAmountChange>;
+export const AmountTransition = z.discriminatedUnion('stage', [
+  z
+    .object({
+      stage: z.literal('scheduled'),
+      effectiveOn: CalendarDate,
+      newAmount: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      stage: z.literal('next_month'),
+      effectiveOn: CalendarDate,
+      newAmount: z.number().int().positive(),
+    })
+    .strict(),
+  z.object({ stage: z.literal('next_cycle'), newAmount: z.number().int().positive() }).strict(),
+  z.object({ stage: z.literal('first_cycle') }).strict(),
+]);
+export type AmountTransition = z.output<typeof AmountTransition>;
 
 /**
  * The fully-resolved assigned-card model (AC1/AC2/AC4/AC6). Present ONLY when the authenticated
@@ -83,7 +113,7 @@ export type UpcomingAmountChange = z.output<typeof UpcomingAmountChange>;
  *                                 recompute).
  *   · `daysRemaining`           — the server-computed 15-day window count (D5 seam; int ≥0).
  *   · `progress`                — confirmed-only meter data (AC4).
- *   · `upcomingAmountChange`    — the AC6 future-transition line, or `null`.
+ *   · `amountTransition`        — the staged fixed-amount transition line (Story 8.15), or `null`.
  */
 export const AssignedContributionCard = z
   .object({
@@ -140,7 +170,7 @@ export const AssignedContributionCard = z
     fixedAmount: z.number().int().positive(),
     daysRemaining: z.number().int().nonnegative(),
     progress: ActiveContributionProgress,
-    upcomingAmountChange: UpcomingAmountChange.nullable(),
+    amountTransition: AmountTransition.nullable(),
     // (Story 8.4, AC4 / Story 9.7 AC1) The MEMBER'S OWN contribution state — `none` (contribute CTA) →
     // `attested` (yellow pill: told-us-they-paid, still verifying) → `mismatch` (RED: the 9.4 matcher
     // rejected a found deposit; the card flips to <StatusPill status="red"> and links the <SelfVerifySurface>

@@ -4,7 +4,7 @@ baseline_commit: b883dc15
 
 # Story 8.15: Fixed-Amount Transition — the Staged My Pool Card (UX-DR25) `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 <!-- v1.0 2026-10-22 — created by bmad-create-story off `b883dc15` (== origin/main, fetched). Authoring
 pass only: no code written, no gate run, nothing here attested by a test.
@@ -461,9 +461,9 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance first (AC0, PQ1). ⛔ STOP GATE for the emergency branch only.**
-  - [ ] BigDev applies the routing template's §0 gate to PQ1 (author's view: the Panel's).
-  - [ ] If it is the Panel's: the note is **drafted** at
+- [x] **Task 0 — Governance first (AC0, PQ1). ⛔ STOP GATE for the emergency branch only.**
+  - [x] BigDev applies the routing template's §0 gate to PQ1 (author's view: the Panel's).
+  - [x] If it is the Panel's: the note is **drafted** at
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-8-15-emergency-card-copy.md`
         (2026-10-22, ⛔ not sent; its E4 commands were run and every quoted line was found). Re-run E4, adjust
         "Our reading" if BigDev wishes, then send. It was written **from the template, every section, in its order**. ⛔ The
@@ -484,12 +484,12 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
         - evidence **last**.
 
         ⛔ Not "shown to the Panel" until it is sent ([[feedback_shown_to_panel_means_sent]]).
-  - [ ] If BigDev rules it is theirs: record it as a BigDev author-commit in this file's Decisions section.
+  - [x] If BigDev rules it is theirs: record it as a BigDev author-commit in this file's Decisions section.
   - [x] The `governance(8.15):` commits: Decision `-383` alone (`81407920`); then the `epics.md` 8.15 entry (between
         8.13 and 8.16, `### Story 8.15:`) + both Epic 8 counts corrected to **16** with the 8.14 observation
         (AC0.1–2), 2026-10-22. The routing note landed with the records (`e5604441`).
         ⛔ No code.
-  - [ ] Tasks 1–6 for **standard** changes may proceed in parallel. ⛔ The emergency legs of Task 2 and Task 6
+  - [x] Tasks 1–6 for **standard** changes may proceed in parallel. ⛔ The emergency legs of Task 2 and Task 6
         land only after the ruling is transcribed (into `.decision-log.md` as a new id if the Panel rules; the
         decision-log write is user-inserted if refused: [[project_decision_log_writes_user_inserted]]).
   - [x] ✅ **PQ1 ruled B, 2026-10-22** (Decision `2026-10-22-383`, committed `81407920` alone, before its records).
@@ -501,76 +501,76 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
         today's line" is close to B. Either would pre-empt the Panel. ⇒ Write the selector's emergency
         branch **last**, after the ruling. If the standard work finishes first, record that in the Debug Log
         and wait; ⛔ never ship a placeholder.
-- [ ] **Task 1 — Moot-row fix (AC2).**
-  - [ ] `resolveUpcomingFixedAmountChange`: add the `effective_until IS NULL OR effective_until > effective_from`
+- [x] **Task 1 — Moot-row fix (AC2).**
+  - [x] `resolveUpcomingFixedAmountChange`: add the `effective_until IS NULL OR effective_until > effective_from`
         conjunct, and the optional `{ excludeAmount, standardOnly }` options bag (D6), both in the WHERE clause.
         Update its doc-block (it now names both consumers, the moot-row exclusion and the options).
-  - [ ] Extend test (g) of `pool-fixed-amount.spec.ts` (`:263-343`) per AC2: the case (2) leg read at an `asOf`
+  - [x] Extend test (g) of `pool-fixed-amount.spec.ts` (`:263-343`) per AC2: the case (2) leg read at an `asOf`
         ≥ the test's JS `now`, and the case (1) same-`effective_from` leg. Add a D6 leg (a nearer same-amount
         row doesn't hide a later differing one) and a `standardOnly` leg. Revert-sanity, with observed counts.
-  - [ ] Check that `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts:466-490` (admin
+  - [x] Check that `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts:466-490` (admin
         `upcoming`) stays green. Add one admin leg showing that the moot row is absent from `upcoming` and
         present in `schedule`.
-- [ ] **Task 2 — The pure selector + first-cycle read (AC1, D1–D7).**
-  - [ ] `packages/domain/src/pool/fixed-amount-transition.ts` with `selectFixedAmountTransition`; IST parts via
+- [x] **Task 2 — The pure selector + first-cycle read (AC1, D1–D7).**
+  - [x] `packages/domain/src/pool/fixed-amount-transition.ts` with `selectFixedAmountTransition`; IST parts via
         `istCalendarDate` and `istDateOf`, imported from `../cycle-calendar/holiday-resolver.js` (verified: no
         runtime cycle, since `cycle-calendar/` imports nothing from `pool/`; this is the first `pool/` → `cycle-calendar/`
         import, see [[project_type_only_import_cycle_trap]]). Export via `pool/index.ts`
         (`export * from './fixed-amount-transition.js'`; the root exposes it as `pool.*`).
-  - [ ] `resolveFirstCycleUnderAmount(tx, pariwarId, { committedAt, poolFixedAmount })` in `fixed-amount.ts` per
+  - [x] `resolveFirstCycleUnderAmount(tx, pariwarId, { committedAt, poolFixedAmount })` in `fixed-amount.ts` per
         D5: the snapshot guard, the predecessor read, and the **pool-backed** range check (`pools` ⋈
         `cycle_freeze_commits` on `cycle_id = commit_id`, `committed_at` in `[F.effectiveFrom, C)`; `pools_pariwar_id_idx`
         and `cycle_freeze_commits_committed_at_idx` exist; RLS scopes both tables).
-  - [ ] DB-free unit file per AC7 (standard legs now; emergency legs after PQ1).
-- [ ] **Task 3 — Contract (AC3).**
-  - [ ] `AmountTransition` union + `CalendarDate` (regex + `isRealCalendarDate`, AC3); replace the field; header +
+  - [x] DB-free unit file per AC7 (standard legs now; emergency legs after PQ1).
+- [x] **Task 3 — Contract (AC3).**
+  - [x] `AmountTransition` union + `CalendarDate` (regex + `isRealCalendarDate`, AC3); replace the field; header +
         field-list comments; the `api-client` comment at `packages/api-client/src/index.ts:578`.
         (`contributions/README.md` describes the read model in prose and lists no fields: no edit.)
-  - [ ] `contributions.test.ts` fixtures (`:63`, `:158`) + decoy legs, plus an impossible-date leg
+  - [x] `contributions.test.ts` fixtures (`:63`, `:158`) + decoy legs, plus an impossible-date leg
         (`effectiveOn: '2027-02-30'` rejected). Run `pnpm --filter @twt/contracts test`
         ([[project_contracts_tests_outside_tsc]]: fixtures are outside `tsc`, so the test run is the check).
-  - [ ] `pnpm contracts:check-openapi-determinism`. `openapi/v1.yaml` does not carry the member route today, so
+  - [x] `pnpm contracts:check-openapi-determinism`. `openapi/v1.yaml` does not carry the member route today, so
         expect it **byte-identical**; record that, or regenerate and commit if it does change.
-- [ ] **Task 4 — Handler (AC1, D3, D8, D9).**
-  - [ ] **Remove** step (9) from `handlers.ts:1500-1502` and re-add it **after the self-verify `try`/`catch`
+- [x] **Task 4 — Handler (AC1, D3, D8, D9).**
+  - [x] **Remove** step (9) from `handlers.ts:1500-1502` and re-add it **after the self-verify `try`/`catch`
         (`:1531-1539`), as the last DB reads before the `return`** (D8): upcoming at `committedAt` with
         `excludeAmount` (D3/D6); first-cycle read; the selector; explicit map to the contract (must satisfy
         `.strict()` exactly, AC3). Both reads inside **one** fail-soft `try`/`catch` per D8.
-  - [ ] Update the file header line `:16` (*"upcoming amount"*) and the step comments (renumber; say why it is last).
-  - [ ] `active-contribution-card.test.ts` legs per AC7: add `resolveFirstCycleUnderAmount` to the `pool:` mock
+  - [x] Update the file header line `:16` (*"upcoming amount"*) and the step comments (renumber; say why it is last).
+  - [x] `active-contribution-card.test.ts` legs per AC7: add `resolveFirstCycleUnderAmount` to the `pool:` mock
         override; one non-null leg per stage; the `committedAt` + `excludeAmount` argument assertion; the
         fail-soft leg; the read-order assertion. Add the same mock to `contribution-history.test.ts`.
-- [ ] **Task 5 — Mobile (AC4).**
-  - [ ] `amountTransitionCopy.ts` (pure) + an `effectiveOn` formatter (local `Date(y, m-1, d)`).
-  - [ ] Replace `:215-227` in the card. Delete `formatDate` (`:63-75`) and the `useLocale()` call (`:79`): both
+- [x] **Task 5 — Mobile (AC4).**
+  - [x] `amountTransitionCopy.ts` (pure) + an `effectiveOn` formatter (local `Date(y, m-1, d)`).
+  - [x] Replace `:215-227` in the card. Delete `formatDate` (`:63-75`) and the `useLocale()` call (`:79`): both
         become dead (AC4). Keep `formatInr`. Add the `accessibilityLabel` from the `_a11y` key (new; the old line
         had none). Update the header comment block (`:18-21` numeral discipline mentions the upcoming-change date).
-  - [ ] `api-client` types follow the contract automatically. Confirm `pnpm --filter @twt/mobile typecheck`
+  - [x] `api-client` types follow the contract automatically. Confirm `pnpm --filter @twt/mobile typecheck`
         ([[project_mobile_typed_routes_worktree]]: in a worktree without `.expo/types`, `tsc` skips `Href`,
         so this does not prove routes).
-- [ ] **Task 6 — Copy + gates (AC5, AC6).**
-  - [ ] 8 new keys en + hi, sorted. Remove `upcoming_amount` from both.
-  - [ ] `amount-transition-copy.test.ts` (real `t()`); the microcopy 8.15 block with teeth.
-  - [ ] Request the non-author tone review. Record the outcome or "outstanding" (AC6).
-- [ ] **Task 7 — Records.**
-  - [ ] `deferred-work.md`: close the "⭐ Story 7.11 — UX-DR25 …" entry **in its own vocabulary**: "Closed by
+- [x] **Task 6 — Copy + gates (AC5, AC6).**
+  - [x] 8 new keys en + hi, sorted. Remove `upcoming_amount` from both.
+  - [x] `amount-transition-copy.test.ts` (real `t()`); the microcopy 8.15 block with teeth.
+  - [x] Request the non-author tone review. Record the outcome or "outstanding" (AC6).
+- [x] **Task 7 — Records.**
+  - [x] `deferred-work.md`: close the "⭐ Story 7.11 — UX-DR25 …" entry **in its own vocabulary**: "Closed by
         [implementation]" for the standard stages, naming D2's dated-copy deviation, and the emergency half per
         PQ1. Fix its heading's stale *"OWNED BY STORY 8.2"* with an appended dated note, ⛔ not a rewrite. Append
         the Trap 1 moot-row finding as "Closed by [edit]". Add the PRD UJ-6 observation (owner + re-trigger).
-  - [ ] `ux-design-specification.md:987-995`: append a dated note (built by 8.15; stages anchored to IST months;
+  - [x] `ux-design-specification.md:987-995`: append a dated note (built by 8.15; stages anchored to IST months;
         "3 चक्र बाद" replaced by a date and why; the `next_cycle` addition; the emergency ruling). ⛔ No rewrite.
-  - [ ] `epics.md` UX-DR25 (`:425-432`) and Story 8.2's AC (`:4129-4136`): an appended dated note pointing at 8.15.
-  - [ ] Friction budget: run `pnpm friction:check` and record the disposition (the 8.17 Task 6 shape)
+  - [x] `epics.md` UX-DR25 (`:425-432`) and Story 8.2's AC (`:4129-4136`): an appended dated note pointing at 8.15.
+  - [x] Friction budget: run `pnpm friction:check` and record the disposition (the 8.17 Task 6 shape)
         ([[project_friction_budget_baseline_ratchet]]).
-- [ ] **Task 8 — Verify.**
-  - [ ] `npx turbo run typecheck lint --filter=@twt/domain --filter=@twt/contracts --filter=@twt/api --filter=@twt/mobile`
-  - [ ] DB-free: domain pure, api unit, contracts, mobile unit, `pnpm i18n:check`, `pnpm microcopy:check`,
+- [x] **Task 8 — Verify.**
+  - [x] `npx turbo run typecheck lint --filter=@twt/domain --filter=@twt/contracts --filter=@twt/api --filter=@twt/mobile`
+  - [x] DB-free: domain pure, api unit, contracts, mobile unit, `pnpm i18n:check`, `pnpm microcopy:check`,
         `pnpm microcopy:test`.
-  - [ ] Live DB on **:5433**: `DATABASE_URL=postgres://…:5433/… pnpm turbo run test --concurrency=1
+  - [x] Live DB on **:5433**: `DATABASE_URL=postgres://…:5433/… pnpm turbo run test --concurrency=1
         --filter=@twt/domain --filter=@twt/api`. ⚠ A green run without `DATABASE_URL` **skips** integration;
         record pass counts, naming `pool-fixed-amount.spec.ts`, `active-contribution-read.spec.ts`, the admin
         `fixed-amount.spec.ts` and `member-name-form-parity.spec.ts` (the live route, AC7).
-  - [ ] `pnpm ci:local` before push. Push with `DATABASE_URL` set to :5433 explicitly
+  - [x] `pnpm ci:local` before push. Push with `DATABASE_URL` set to :5433 explicitly
         ([[project_prepush_hook_inherits_5432]]). Known reds: [[project_known_livedb_test_failures]].
 
 ### Review Findings
@@ -648,13 +648,69 @@ gate claim gets teeth (plant → red → restore), with the observed counts reco
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 8.15`, 2026-10-22, in the story worktree.
+
 ### Debug Log References
+
+- **Preflight.** `git fetch origin`; `git log HEAD..origin/main` empty (origin/main still `b883dc15`), so nothing under the four watched paths moved. The main checkout was on `main`; all work ran in `.claude/worktrees/8-15-fixed-amount-transition-staged-card`, branch checked before every commit.
+- **Task 0.** Already discharged before this run (v1.3/v1.4: `-383` committed alone in `81407920`, the routing note ruled B, the `epics.md` entry + both counts in `e019024d`). Its remaining boxes are checked on that record: the §0 gate went to the Panel (so the "BigDev rules it is theirs" branch never applied), and Tasks 1–6 ran after the ruling, so no interim emergency behaviour shipped.
+- **Deviation 1 (Task 1, D6): `standardOnly` NOT added.** Task 1 lists `{ excludeAmount, standardOnly }` and a `standardOnly` leg. That option existed only for PQ1 = A; the ruling (B) says *"keep it out of the options bag unless a test needs it, ⛔ no dead option"*. No caller needs it, so the bag is `{ excludeAmount }` only and there is no `standardOnly` leg.
+- **Deviation 2 (D1): the selector input is `isFirstCycle: boolean`**, not `firstCycle: { isFirst, changeType } | null`. Under B the first-cycle note is change-type-blind, so a `changeType` there would be a field nothing reads.
+- **Deviation 3 (AC4): `useLocale()` is KEPT.** AC4 says to delete it because it was "used only by the old line". The new date formatter still needs the locale, so the card calls `useLocale()` once and passes `locale` into `amountTransitionCopy(…)`. `formatDate` is deleted as specified; no dead helper remains.
+- **AC3 `git grep upcomingAmountChange`** outside `_bmad-output/`: **not zero, by design.** Four hits remain, none a consumer: the contract's provenance comment (`active-contribution-card.ts`: "Replaces the Story 8.2 `upcomingAmountChange` …"), the contracts test that asserts the retired field is **rejected** (2 lines), and the mobile fence that asserts the card **no longer references** it. `upcoming_amount` survives only in that fence.
+- **Revert-sanity / mutants (observed counts).**
+  - `pool-fixed-amount.spec.ts` with the moot conjunct removed: **2 red / 18 green**, exactly (g) and (8.15-b). Restored: 20/20.
+  - Admin `fixed-amount.spec.ts` with it removed: **1 red / 15** (the 8.15 leg). Restored: 16/16.
+  - `active-contribution-read.spec.ts`: snapshot guard removed → **1 red** (backdated emergency); commits counted instead of pools → **1 red** (zero-claim commit). Restored: 11/11.
+  - `fixed-amount-transition.test.ts` (26): change-type guard dropped → 1 red; UTC months instead of IST → 5 red; D6 amount guard dropped → 3 red; C guard dropped → 1 red.
+  - `active-contribution-card.test.ts` (17): upcoming read at `now` → 1 red; transition reads moved before the attested read → 2 red (call order + source scan).
+  - `amount-transition-copy.test.ts` (19): planted `{{amount}}` (en next_cycle) → 1 red; planted missing `{date}` (hi next_month) → 1 red; a pre-formatted `₹` param → 5 red. All restored.
+- **Task 8 verification.** `turbo run typecheck lint` (domain, contracts, api, mobile): 36/36 tasks. `pnpm ci:local` with `DATABASE_URL` set explicitly to **:5433**: **36/36 jobs green**, exit 0, including `integration-tests` (`@twt/domain` 6102 passed / 1 skipped; `@twt/api` 2053 passed / 1 skipped). That run includes `pool-fixed-amount.spec.ts`, `active-contribution-read.spec.ts`, the admin `fixed-amount.spec.ts` and `member-name-form-parity.spec.ts` (the live route). The same four specs were also run on their own against :5433 before the commits: 20/20, 11/11, and 30/30 for the admin + live-route pair. The unit job reported contracts 1425/1425, mobile 1294/1294 (79 files), api-client 35/35; `i18n:check` (forced, uncached), `microcopy:check`, `microcopy:test` 378/378, `friction-budget` and `contracts-determinism` all green. ⚠ **Not pushed**: pushing is the landing step, and it is BigDev's call. If pushed, set `DATABASE_URL` to :5433 explicitly ([[project_prepush_hook_inherits_5432]]).
+- **Friction gate** failed first (AC-4 diffs committed history), then passed once the 8.15 disposition block was committed.
 
 ### Completion Notes List
 
 - Context engine analysis completed. This is a comprehensive developer guide, created 2026-10-22 by bmad-create-story off `b883dc15`.
+- **Implemented (AC1–AC5, AC7, AC8).** A pure `selectFixedAmountTransition` (`packages/domain/src/pool/fixed-amount-transition.ts`): IST calendar months of `effective_from` (D2), `next_cycle` for a change inside the live window (Trap 4), D6/D7, and emergency changes dated and ⛔ never `next_month` (PQ1 = B, `-383`). `resolveFirstCycleUnderAmount` (D5): snapshot guard, predecessor via the in-force resolver, pool-backed range check. `resolveUpcomingFixedAmountChange`: moot-row conjunct + `{ excludeAmount }` in SQL. Handler: the transition reads moved to the end of the scope transaction, inside one fail-soft `try`/`catch`, with an explicit per-stage map. Contract: `upcomingAmountChange` replaced by `amountTransition` (`.strict()` union; `effectiveOn` is an IST calendar date). Mobile: a pure `amountTransitionCopy.ts`, the line under the amount with a new `accessibilityLabel`, ⛔ not a live region. 8 new copy keys en + hi; `upcoming_amount` removed.
+- **AC2 — intended behaviour change on a second surface.** The trustee setter view's `upcoming` no longer shows a change superseded before it took effect. Its `schedule` list still does (history). Pinned by the admin `fixed-amount.spec.ts` 8.15 leg.
+- **AC3 consequences, understood rather than discovered.** (a) The route serialises through the Zod type provider, so a stray key in the explicit map is a 500, ⛔ not the D8 fail-soft. The API unit legs parse every response with `ActiveContributionCardResponse.parse`. (b) `api-client` parses with `schema.parse`, so an older app build rejects the new shape and its card self-suppresses. Nothing is in production; accepted. `openapi/v1.yaml` is **byte-identical** (`contracts:check-openapi-determinism` clean; the member route is not in it).
+- **D8 narrows today's behaviour, deliberately.** A throw in the transition reads used to blank the whole card. It now drops only the line. A decorative line must not hide the contribute CTA.
+- **AC6 — the non-author human tone review is OUTSTANDING.** Nobody other than the author has reviewed the final en + hi transition copy. It was requested of BigDev at the end of this run (2026-10-22); ⛔ the author does not self-attest. The copy under review is the eight `active_contribution.transition.*` keys in both `contribution.json` files.
+- **Residues, routed (not fixed):** see the `deferred-work.md` 8.15 section. (a) D5: when a backdated emergency matches the snapshot, the predecessor comes from the schedule, not the member's previous pool. (b) `next_cycle` names the nearest change after C; two changes inside one live window would name the first. Both need an emergency inside a 15-day window. Owner: this story's code review.
+- **Records (Task 7).** `deferred-work.md` (the 7.11 entry closed in its own vocabulary, the stale heading noted, Trap 1 "Closed by [edit]", PRD UJ-6 observed with owner + re-trigger); `ux-design-specification.md`, `epics.md` UX-DR25 and Story 8.2's AC: appended dated notes only. `friction-budget.md`: disposition, no new row.
 
 ### File List
+
+New:
+- `packages/domain/src/pool/fixed-amount-transition.ts`
+- `packages/domain/tests/pool/fixed-amount-transition.test.ts`
+- `apps/mobile/components/active-contribution/amountTransitionCopy.ts`
+- `apps/mobile/tests/unit/amount-transition-copy.test.ts`
+
+Modified (code + tests):
+- `packages/domain/src/pool/fixed-amount.ts`
+- `packages/domain/src/pool/index.ts`
+- `packages/domain/tests/integration/pool/pool-fixed-amount.spec.ts`
+- `packages/domain/tests/integration/pool/active-contribution-read.spec.ts`
+- `packages/contracts/src/contributions/active-contribution-card.ts`
+- `packages/contracts/tests/contributions.test.ts`
+- `packages/api-client/src/index.ts` (comment only)
+- `apps/api/src/modules/member-pool/handlers.ts`
+- `apps/api/tests/unit/active-contribution-card.test.ts`
+- `apps/api/tests/unit/contribution-history.test.ts` (mock only)
+- `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts`
+- `apps/mobile/components/active-contribution/ActiveContributionCard.tsx`
+- `packages/i18n/locales/en/contribution.json`
+- `packages/i18n/locales/hi/contribution.json`
+- `scripts/microcopy/contribution.test.ts`
+
+Modified (records):
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/planning-artifacts/ux-design-specification.md`
+- `_bmad-output/planning-artifacts/epics.md`
+- `friction-budget.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/8-15-fixed-amount-transition-staged-card.md`
 
 ## Change Log
 
@@ -665,3 +721,4 @@ gate claim gets teeth (plant → red → restore), with the observed counts reco
 | 2026-10-22 | 1.2 | Task 0: no interim emergency behaviour (the story stays `in-progress` until the PQ1 ruling; neither default is neutral). PQ1 routing note drafted (`trustee-panel-routing-note-2026-10-22-8-15-emergency-card-copy.md`, options A / B / C, "Our reading" B; E4 commands run, every quoted line found). ⛔ Not sent; BigDev's §0 check outstanding. Authoring only. |
 | 2026-10-22 | 1.3 | PQ1 RULED **B** by the Panel (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev): Decision `2026-10-22-383`, committed alone (`81407920`). PQ1 marked ruled with the build mapping; Task 0's hold discharged; the note's ruling block filled. Still to land in Task 0's governance commit: the `epics.md` 8.15 entry and both Epic 8 counts (AC0.1–2). Authoring only. |
 | 2026-10-22 | 1.4 | AC0.1–2 done: the `epics.md` `### Story 8.15:` entry (author mint, ⛔ not Panel direction; cites the 7.11 mint, `deferred-work.md`'s 7.11 entry, `-124` cl.1–2; PQ1 ruled table → `-383`), and both Epic 8 counts corrected 12/14 → **16** with the 8.14-has-no-entry observation (17 sprint keys). Task 0 complete. Status stays ready-for-dev. No code. |
+| 2026-10-22 | 1.5 | `bmad-dev-story 8.15`: Tasks 0–8 complete. Status ready-for-dev → in-progress → **review**. Moot-row fix (AC2, admin `upcoming` changes too); pure stage selector + first-cycle read (IST months, `next_cycle`, PQ1 B emergency = dated, never `next_month`); `amountTransition` replaces `upcomingAmountChange`; handler reads last and fail-soft per field; card line through a pure copy module, 8 keys en + hi. Records + friction disposition. `ci:local` 36/36 on :5433. Deviations: no `standardOnly` (PQ1 B), `isFirstCycle: boolean`, `useLocale()` kept. ⚠ AC6 tone review OUTSTANDING. Not pushed. |

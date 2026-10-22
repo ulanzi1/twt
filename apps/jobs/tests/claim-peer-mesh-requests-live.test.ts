@@ -763,6 +763,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(after).toHaveLength(1);
     expect(after[0]).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:name_too_long' });
     expect(h.alarms.filter((a) => a.includes(p.pingId) && a.includes('on a re-claim after 1 claimed attempt(s)') && a.includes('may have sent'))).toHaveLength(1);
+    // AC6 (rework review R2) — `expectIdsOnly` checks only 'Ramesh': assert THIS fixture's name is nowhere (built after the last run).
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await rows(w) });
+    expect(blob).not.toContain('A'.repeat(20));
     await expectIdsOnly(h, w);
   });
 
@@ -775,6 +778,11 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(h.alarms.filter((a) => a === helplineNotCallbackNumberWarning(w.pid, 'peer mesh request'))).toEqual([]);
     expect(h.alarms.filter((a) => a.includes('not a callback number'))).toEqual([]);
     expect((await rows(w)).every((r) => r.send_outcome === 'accepted')).toBe(true);
+    // AC6 (rework review R2) — the name and each box only in the text: ⛔ a payload, an alarm or a row (built after the last tick).
+    const { member1, member2 } = boxesFor(NAME);
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await rows(w) });
+    for (const token of [NAME, 'Ramesh', member1, member2]) expect(blob).not.toContain(token);
+    await expectIdsOnly(h, w);
   });
 
   it('AC5b — a recipient-level final `error` (an unclassified gateway failure) is recorded fail-closed and alarmed per ping; the run goes on', async () => {

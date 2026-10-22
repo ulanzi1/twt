@@ -40,8 +40,12 @@ shorter per-segment length.
   equal the DLT-approved content, and row 6-37's adapter sends `{ <name>: value }` from these names.
 - **Setting up each template in MSG91** (Story 6.37, `2026-10-17-345`; ADR-0041; roster Row 32 (d)) — only AFTER the operator approved
   it on SmartPing: (1) create the template in MSG91 from its *"MSG91 template"* cell, copied exactly; (2) enter its DLT template id (the
-  19-digit TE id SmartPing issued) and the sender id mapped to the PE; (3) choose the SMS type from the TEXT, ⛔ the locale — **Unicode
-  for every Hindi template**, Normal for every English one (template 14's em dash became a comma — Story 6.37e, `2026-10-22-379` Q2 A); (4) mark the version
+  19-digit TE id SmartPing issued) and the sender id mapped to the PE; (3) choose the SMS type — **Unicode for every Hindi template
+  AND for template 14**, Normal for the other English ones. ⚠ Template 14's fixed English is GSM-7 since Story 6.37e's rework (its em dash
+  became a comma — `2026-10-22-379` Q2 A), but its NAME values may be Devanagari (a KYC name; row 3-3c is independent) and ⛔ written
+  MSG91 rule or device proof shows a Unicode value delivered intact on a Normal template — so 14 stays Unicode (Story 6.37e code review
+  R1; the pre-flight passes a GSM-7 text on a UNICODE template with the logged note `sms_type_unicode_for_gsm7`). Templates 8, 10 and 12
+  carry the same name variables and stay Normal as before — an OPEN question (roster Row 32 (d); `deferred-work.md`); (4) mark the version
   **default**; (5) leave MSG91's URL shortener OFF and put the app-link domain on its *"Skip URL"* list (the adapter also sends
   `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key — ⚠ for the
   two OTP templates (15, 16) only, until row 6-37b (delivery reports) is `done`: ⛔ a claim-text id (1–14) is set before then, even
@@ -287,7 +291,10 @@ link (`https://` + a 19-character domain + `/peer-request?c=` + the 12-character
 (two name boxes; ⛔ helpline; the dash a comma; *"a few questions"*): 14 (en) is now **GSM-7** — the em dash was its only non-GSM-7
 character — 170 characters (**2 segments** at 153 per part); 13 (hi) is 194 characters of Unicode (**3 segments** at 67 per part). With a
 60-character name: en 211 (**2**), hi 235 (**4**); at the registered ceilings (a 60-character name, a 120-character link) en 276 (**2**)
-and hi 300 (**5**) — so per text **en 2, hi 3–5 segments**. ⚠ Before the rework the English was Unicode too (198 characters, **3
+and hi 300 (**5**) — so per text **en 2, hi 3–5 segments**. ⚠ **Qualified by the code review (R1), 2026-10-22:** the en figures are
+GSM-7 sizes, true ONLY if a text whose characters are all GSM-7 is sent as GSM-7. Template 14 is PROVISIONED Unicode (step (3) above), and
+whether MSG91 sends an all-GSM-7 text on a UNICODE template as GSM-7 is ⛔ known — sent as Unicode, en is 170 (**3**), 211 (**4**), 276
+(**5**) at 67 per part, so per text **en 2–5**; a Devanagari name value makes the text Unicode whatever the type. ⚠ Before the rework the English was Unicode too (198 characters, **3
 segments** — `-303` Q1 A's em dash), and the Panel was told only the Hindi's *"likely THREE segments"* (`-311` PM3) — the words were
 ruled, so it was recorded, ⛔ "fixed" by editing the text; the FYI is written into the 6.37e PQ1 routing note (`deferred-work.md`, BF24).
 A shorter domain or name can drop a segment.
@@ -342,3 +349,4 @@ copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id o
 | 2026-10-16 | 13–14 | ⭐ Wording, typed `{#var#}` slots (alphanumeric · url · cbn), config keys and the MSG91 form written (Story 6.27c, `2026-10-10-303` Q1 A, `-304` Q6 A, `-311` PM3 / PM16); their three-variable justification, the *"lowest"* line and a cost line (BOTH locales Unicode) added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 13–14 until Row 27 closes**; set each id only after the operator confirms that template's approval | Story 6.27c | `peer-mesh-sms-templates.ts` |
 | 2026-10-17 | 1–16 | ⭐ The rejection procedure written (*"If DLT rejects a template …"*, `2026-10-17-349`): ids stay unset until approved; no claim flow live in production with its template unapproved (Row 30 note (8)); Panel wording (7–14 English) back to the Panel before its id is set. ⛔ Still nothing submitted | BigDev | `2026-10-17-349` |
 | 2026-10-22 | 7–14 | ⭐ Story 6.37e rework (`2026-10-22-379` Q1 A / Q2 A; `2026-10-22-380`): the member's name in TWO alphanumeric variables side by side (`{#var#}{#var#}`, ≤ 30 each; MSG91 `##member1####member2##`); 11–14 lose the helpline variable (11–12 *"Please call the helpline."*, 13–14 *"…, or call us."*); 13–14 *"a few questions"* (BigDev's words — routed as `-380` PQ1, ratified by `-381` PQ1 A); 14 (en) is Normal (GSM-7). The three-variable justifications, the side-by-side, lowest-share and last-word lines, the MSG91 SMS-type step and the cost lines re-derived. ⛔ Still not submitted — nothing to re-register | Story 6.37e | `sms-member-boxes.ts`; `sms-member-name.ts`; the two registries |
+| 2026-10-22 | 14 (and 8, 10, 12) | ⭐ Story 6.37e code review R1 (BigDev: *"14 back to Unicode"*): the row above's *"14 (en) is Normal (GSM-7)"* is true of the fixed TEXT only — template 14 is PROVISIONED **Unicode** (MSG91 setup step (3)), because a name value may be Devanagari and ⛔ rule or proof shows a Unicode value delivered intact on a Normal template; the 13–14 cost lines qualified (en 2–5). 8, 10 and 12 stay Normal as before — an OPEN question, recorded in roster Row 32 (d) and `deferred-work.md`, ⛔ decided. No text, slot or code change | Story 6.37e | `sms-preflight.ts` (unchanged — a GSM-7 text on a UNICODE template passes with a note) |

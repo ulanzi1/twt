@@ -385,6 +385,11 @@ describe.skipIf(!hasDatabase)('Story 6.24b — the suspicion notices (live DB, o
       expect(w).not.toContain('+911800123456'); // ⛔ the number itself
     }
     expect((await rowsOf(s)).find((r) => r.purpose === 'suspicion_refusal')).toMatchObject({ outcome: 'accepted', detail: null, attempt_count: 1 });
+    // AC6 (rework review R2) — the name and each box only in the texts: ⛔ a payload, an alarm or a row (built after the last tick).
+    const out = smsMemberName(NAME);
+    if (out.kind === 'too_long') throw new Error('fixture does not fit');
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await rowsOf(s) });
+    for (const token of [NAME, 'Ramesh', ...out.boxes]) expect(blob).not.toContain(token);
   });
 
   it('⭐ (a) ONE row + ONE text to A (…1111), Hindi, the FULL name, the helpline; a second run sends ⛔ nothing; ⛔ plaintext anywhere', async () => {

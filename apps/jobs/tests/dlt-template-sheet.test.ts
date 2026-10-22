@@ -67,7 +67,8 @@ const EVERY_TEMPLATE: ReadonlyArray<{ configKey: string; locale: 'hi' | 'en'; te
 /**
  * The sheet's cost notes: every Hindi text is Unicode; every English text is GSM. EMPTY since Story 6.37e's rework — 14 (en) held
  * the only non-GSM-7 English character, an em dash, which `2026-10-22-379` Q2 A made a comma. Kept so an English text that needs
- * Unicode again is named here, deliberately.
+ * Unicode again is named here, deliberately. ⚠ This is the fixed TEXT's encoding, ⛔ the provisioned `sms_type`: 14 is still
+ * PROVISIONED Unicode (its name values may be Devanagari — the rework code review's R1; the sheet's MSG91 setup step (3)).
  */
 const UNICODE_ENGLISH = new Set<string>();
 

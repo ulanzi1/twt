@@ -419,6 +419,12 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expect(h.sent).toHaveLength(1);
     expect(h.sent[0]!.body.template).toMatchObject({ name: TEMPLATE.en, language: { code: 'en' } });
     expect(h.sent[0]!.body.template.components[0]!.parameters[0]!.text).toBe(LONG_NAME);
+    // AC6 (rework review R2) — the name, its SMS-shortened form and each box only in the message: ⛔ a payload, an alarm or a row.
+    const out = smsMemberName(LONG_NAME);
+    if (out.kind === 'too_long') throw new Error('fixture does not fit');
+    const blob = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, rows: await reminders(w) });
+    for (const token of ['Subrahmanyam', LONG_NAME, out.name, ...out.boxes]) expect(blob).not.toContain(token);
+    expectIdsOnly(h, w);
   });
 
   // ── AC9 — the holds ─────────────────────────────────────────────────────────────────────────────────────────

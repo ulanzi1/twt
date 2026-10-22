@@ -630,6 +630,65 @@ named here, each of which was run (G14).
 
 - [x] **Task 7 — Records and close.** Story Status, Dev Agent Record, File List, Change Log (newest-first); sprint row `ready-for-dev` → `in-progress` (at Task 0.4) → `review`; ledger. ⛔ "Closed by" until `done` on `main`.
 
+
+### Review Findings — 2026-10-22 rework review
+
+Reviewed the complete branch at `55a59859` against `baseline_commit: 1e22889e` (31 files; +3,183 / −261), with Blind Hunter,
+Edge Case Hunter and Acceptance Auditor in parallel. Triaged: **0 decision-needed / 3 patch / 0 defer / 2 dismissed**.
+BigDev chose **2 — Leave as action items**. All three patch findings remain unchecked; no implementation patches applied. Story and sprint row return to `in-progress`. The earlier v1.6 review below remains the record of the superseded build.
+
+- [x] [Review][Patch] **P2 / R1 — Qualify Normal provisioning against Unicode name values.**
+  [`docs/launch-gate-inventory/dlt-template-requests-6-19.md:43`; also roster Row 32 note (10), ADR-0041's rework annotation and the cost claims.]
+  The changed setup step mandates Normal for template 14 because its fixed em dash disappeared. The supported name rule remains script-agnostic;
+  `3-3c` is explicitly independent. A read-only probe through the REAL `smsMemberName`, `renderPeerMeshRequest` and `needsUnicode` with
+  `रमेश कुमार शर्मा` returned `{kind:"full",fixedNeedsUnicode:false,renderedNeedsUnicode:true}`. Preflight checks the registered text with markers;
+  the Flow request carries named values and no encoding override. Therefore GSM-7 fixed text alone does not establish safe Normal provisioning
+  for all supported names. **Actual MSG91 rejection/corruption is unproven**: the gap is the mandatory provisioning rule without Unicode-variable
+  evidence. Before prescribing Normal, obtain a provider/device proof for Unicode name values or retain Unicode-safe provisioning; qualify costs
+  by the rendered character repertoire. Engineering-owned under §0: no wording or name-policy change is needed. Supporting primary provider
+  guidance: [Textlocal's template guide](https://www.textlocal.in/assets/Textlocal_Templates_Guide.pdf) explicitly instructs Unicode DLT registration
+  when English templates carry Unicode dynamic parameters; this supports the risk, not a claim about MSG91 auto-promotion.
+  ✅ *Resolved 2026-10-22 (review continuation; BigDev, asked the scope: *"14 back to Unicode"*):* template 14 is PROVISIONED Unicode again (DLT
+  sheet MSG91 setup step (3) + a Record row; roster Row 32 note (11) supersedes note (10)'s "Normal"; an ADR-0041 changelog row); the 13–14 cost
+  line qualified (en 2–5 segments). MSG91's help pages (read 2026-10-22) state ⛔ rule for a Unicode value on a Normal template — ⛔ proof found.
+  ⛔ Code change: the pre-flight passes a GSM-7 text on a UNICODE template (note `sms_type_unicode_for_gsm7`). OPEN, recorded ⛔ decided
+  (`deferred-work.md`): templates 8 / 10 / 12 (Normal since 6.24b, same name variables); the `-379` note's "2 parts instead of 3–4" cost as
+  told to the Panel is now conditional (a told-item correction is BigDev's call). Debug Log (f).
+
+- [x] [Review][Patch] **P2 / R2 — Complete AC6's fixture-specific privacy assertions on every changed live leg.**
+  [`apps/jobs/tests/claim-peer-mesh-requests-live.test.ts:756`; also its warning leg at 769,
+  `claim-suspicion-notices-live.test.ts:364`, `claim-peer-mesh-wa-reminders-live.test.ts:414`.]
+  The re-claim fixture is now `A` × 61, but its only privacy helper checks `Ramesh` in alarms, so it cannot detect this fixture leaking.
+  The two changed warning legs and re-fixtured WR13 likewise omit AC6's post-run `{enqueued, alarms, rows}` blob assertion. Add checks for
+  the actual distinctive name token and, for sends, the name/shortened form and relevant boxes, preserving the existing behavior assertions.
+  These are acceptance gaps in regression coverage; no actual name leak was observed.
+  ✅ *Resolved 2026-10-22 (review continuation):* the four legs now assert the post-run `{enqueued, alarms, rows}` blob holds ⛔ the fixture's
+  distinctive token, its (shortened) form or any box value (the re-claim leg `'A'.repeat(20)`; the two warning legs `NAME`, `'Ramesh'` and both
+  boxes; WR13 `'Subrahmanyam'`, the name, the SMS-shortened form and both boxes; WR13 also gains `expectIdsOnly`). Four leak mutants (one per leg)
+  RED against the new assertions and GREEN against the pre-R2 tests — the gap was real. Debug Log (f).
+
+- [x] [Review][Patch] **P3 / R3 — Append PQ1's actual discharge to the epic's current rework entry.**
+  [`_bmad-output/planning-artifacts/epics.md:3755`.]
+  The REWORKED block still says the note is written/not sent and blocks registering 13/14, with no later `-381` annotation in the epic.
+  Append the SENT/ANSWERED outcome and discharge from `2026-10-22-381`; preserve the dated original block. The ruling and roster are correct,
+  but a reader of the epic alone is currently directed to an obsolete registration hold.
+  ✅ *Resolved 2026-10-22 (review continuation):* a dated ✅ block after the REWORKED block in `epics.md` — the note SENT and ANSWERED
+  (`-381` PQ1 A), the `-380` registration hold DISCHARGED, Rows 27 / 28 on their own criteria; the REWORKED block kept as written.
+
+**Independent validation:** targeted unit/registry/sheet/no-decision suites **6 files / 159 tests passed**; affected live suites on :5433
+**3 files / 135 tests passed** (suspicion 59, neighbours 49, WhatsApp reminder 27). No production SMS or WhatsApp was sent. Full `ci:local`
+was not repeated during this review. The runtime encoding probe was read-only; external provider behavior was not tested.
+
+**Checklist verdicts, touched families only:** family 6 **REAL GAP** (R2, AC6 coverage); family 10 **covered-by-construction** for qualified
+branch-only closure and recorded operator unknowns, with external operator acceptance **not-constructible-in-this-system** using fake gateways;
+family 11 **covered-by-construction** by the family's policy sentence and the implemented `-379/-380` ordering. R1 adds an unverified encoding
+assumption to the provisioning evidence discipline. Other families do not acquire new behavior in this diff.
+
+**Dismissed:** (1) one-code-point names can use an empty second box, but the existing Row 30(d) gate explicitly still asks about an empty
+variable and limits its avoidance statement to 2+ code points — no new uncovered path; (2) the sent PQ1 note's “other seven texts” phrasing
+is an imprecise historical count, with the actual hold clearly identified as templates 13/14 and already discharged — no actionable current
+scope defect. The story's stale “Panel questions: NONE” / §0 prose is explicitly superseded by Debug Log (a3)/(a4), so it is not another finding.
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -783,6 +842,17 @@ Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 
   (the checker's arithmetic): 7 hi 49.3 · 8 en 44.3 · 9 hi 47.5 · 10 en 44.3 · 11 hi 60.0 · 12 en 55.4 · 13 hi 40.0 · 14 en 34.7 (= G3); 1–6 and 15–16 87.2–90.6.
   AC7: `git diff --stat $(git merge-base origin/main HEAD)..HEAD -- apps packages` lists only AC7's files (`claim-suspicion-notice-no-decision.test.ts` appears from the
   superseded v1.x build, which added the module to `NOTICE_MODULES` — this rework did not touch it).
+**(f)** Review continuation (`bmad-dev-story 6.37e`, 2026-10-22; worktree `TWT-6-37e`, ⛔ other session's tree touched) — R1–R3 of the rework code review.
+  **R2 RED proofs** — a scratch runner (scratchpad `r2-mutants.mjs`, ⛔ committed; each edit asserted to land EXACTLY once; the file ALWAYS restored) leaked a name
+  into an alarm, one mutant per leg: M1 the re-claim name fault (`alarmOf(deps)(read.name)` in `readDeceasedName`'s too-long arm); M2 the peer-mesh send's box 2;
+  M3 the suspicion send's box 2; M4 the WhatsApp reminder's last three words. Against the NEW legs (live, :5433): **4 / 4 RED** (`'AAAA…'`, `'mar Sharma'` ×2,
+  `'Subrahmanyam'`). Against the PRE-R2 test files (`git checkout HEAD --` the three files, then restored from a scratch copy; `git diff --stat` 19 insertions
+  after): **4 / 4 GREEN** — the gap was real. **R1** — MSG91's help pages (searched 2026-10-22) state ⛔ rule for a Unicode value on a Normal template;
+  `packages/channels/src/providers/sms-preflight.ts` passes a GSM-7 text on a UNICODE template with the note `sms_type_unicode_for_gsm7` (⛔ code change).
+  BigDev, asked the scope (14 only / 8–14 / keep Normal behind a proof): *"14 back to Unicode"*. Unicode segment figures for 14 (en) at 67 per part: 170 → 3,
+  211 → 4, 276 → 5. The tests pin the fixed TEXT's encoding (still GSM-7) and are unchanged; one `dlt-template-sheet.test.ts` comment says so.
+  **Gates:** the three live suites 135 / 135 on :5433; unit registry / sheet / name / reminder suites 5 files / 152; `@twt/jobs` `tsc --noEmit` and `eslint` on the
+  touched tests exit 0; **`ci:local` with `DATABASE_URL` at :5433: PASSED — 36 job(s) green** (on the tree with every R1–R3 change).
 
 ### Completion Notes List
 
@@ -797,6 +867,12 @@ Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 
   added (Panel's example, titles, 75-letter one-word); all 35 AC8 mutant runs RED (one equivalent mutant found and replaced; the AC3 "always full" RED only via its premise — Debug Log (c)). `ci:local` 36 / 36 on :5433.
 - ⚠ For the reviewer: (1) the harness oracle fix (Debug Log (b′)); (2) the AC3 "always full" leg is RED only via its premise (Debug Log (c)); (3) the two new forms of
   one member (SMS shortened above 60, WhatsApp full) are by design (`-380` decision 8 / `-379` Not covered). ⛔ "Closed by" anywhere until `done` on `main`. Not pushed.
+- ✅ Review continuation (2026-10-22) — all three rework-review action items resolved:
+  - ✅ Resolved review finding [P2]: R1 — template 14 PROVISIONED Unicode again (BigDev: *"14 back to Unicode"*); sheet step (3), cost line, Record row; roster Row 32 note (11);
+    ADR-0041 changelog row. OPEN (`deferred-work.md`, ⛔ decided): 8 / 10 / 12 on Normal; the `-379` note's told "2 parts" cost now conditional — a told-item correction is BigDev's call.
+  - ✅ Resolved review finding [P2]: R2 — AC6 blob assertions on the four legs; 4 leak mutants RED (GREEN against the pre-R2 tests).
+  - ✅ Resolved review finding [P3]: R3 — `epics.md` dated ✅ block: PQ1 SENT + ANSWERED (`-381`), the registration hold discharged.
+  - `ci:local` 36 / 36 on :5433. ⛔ Code change outside tests. Not committed, not pushed (BigDev's go-ahead).
 
 ### File List
 
@@ -816,6 +892,9 @@ Claude Sonnet 5.5 (`claude-sonnet-5-5`) — `bmad-create-story 6.37e` (the v2.0 
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md` (new; answered), the 2026-10-17 / 2026-10-18 notes (dated notes),
   `_bmad-output/planning-artifacts/epics.md`
 - `_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`, this story file
+- Review continuation (R1–R3): `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`, `claim-suspicion-notices-live.test.ts`, `claim-peer-mesh-wa-reminders-live.test.ts`,
+  `dlt-template-sheet.test.ts` (one comment); `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md` (Row 32 note (11)),
+  `docs/adr/ADR-0041-sms-gateway-msg91.md` (changelog row); `_bmad-output/planning-artifacts/epics.md`; `_bmad-output/implementation-artifacts/deferred-work.md` (a new R1 section)
 
 ---
 
@@ -1058,6 +1137,11 @@ and (d)'s `36/36` was on the tree before these eight patches.
 - `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
 
 ## Change Log
+
+- v2.5 (2026-10-22) — **Review continuation** (`bmad-dev-story 6.37e`, Claude Opus 5.5): addressed code review findings — 3 items resolved (R1 P2, R2 P2, R3 P3).
+  R1: template 14 provisioned Unicode again (BigDev: *"14 back to Unicode"*), records qualified, 8 / 10 / 12 and the told cost recorded OPEN; R2: AC6 blob assertions on
+  four live legs, 4 leak mutants RED (GREEN pre-R2); R3: the epic's PQ1 discharge. `ci:local` 36 / 36 on :5433. Status `in-progress` → `review`. Not committed, not pushed.
+- v2.4 (2026-10-22) — **Rework code review recorded** (`bmad-code-review 6.37e`, `1e22889e` → `55a59859`): three review layers; 0 decision-needed / 3 patch / 0 defer / 2 dismissed. BigDev chose **2 — Leave as action items**. R1–R3 remain unchecked in Review Findings. Independent verification: 159 targeted unit/registry tests and 135 live tests passed; Unicode-name rendering probe confirms fixed/rendered encoding differs, provider delivery unverified. Story Status and sprint row `review` → `in-progress`. No implementation patches, commit or push.
 
 - v2.3 (2026-10-22) — **Dev complete** (`bmad-dev-story 6.37e`, Claude Opus 5.5). Task 0: preflight clean; BigDev at Task 0.3: *"you know what route to panel,
   prepare routing note"* ⇒ the dropped "short" became `-380` PQ1 (routed) instead of a told item; `-380` (`17242731`) + records (`8e79a863`); the Panel answered —

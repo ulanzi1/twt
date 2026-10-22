@@ -4,6 +4,25 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: rework code review of 6-37e-suspicion-text-short-name-fallback.md — R1 (2026-10-22)
+
+R1 (BigDev: *"14 back to Unicode"*) put template 14 back to UNICODE provisioning (DLT sheet MSG91 setup step (3); roster Row 32 note (11)).
+Two items it leaves OPEN. ⛔ Neither is closed by the row.
+
+- **Templates 8, 10 and 12 (en) carry name variables and are provisioned Normal — a Devanagari name value on them is UNPROVEN**
+  [DLT sheet step (3); roster Row 32 (d) / note (11)]. PRE-EXISTING since Story 6.24b (the single `{member}` then; two boxes now). A KYC
+  name may be Devanagari (row 3-3c, English-only member KYC names, is independent and not built), and ⛔ written MSG91 rule or device proof
+  says what a Unicode value does in a Normal template — refused, garbled, or promoted to Unicode (MSG91's help pages, read 2026-10-22, are
+  silent). ⛔ **Not addressed** — ⛔ decided. ⭐ Trigger: MSG91's written answer or a device proof (Row 32 (d)), or row 3-3c `done` with
+  existing names migrated; the answer decides whether 8 / 10 / 12 move to Unicode (and their cost lines with them).
+- **The Panel was told the dash-to-comma change brings the English neighbours' text to "about 3–4 parts instead of 2" — not assured
+  while 14 is provisioned Unicode** [`trustee-panel-routing-note-2026-10-22-6-37e-full-name-two-slots.md` (SENT; ruled `-379` Q2 A); the
+  sheet's 13–14 cost line, qualified: en 2–5]. The ruled WORDS are unchanged (⛔ a ruling re-read); only the cost the note put is now
+  conditional on what MSG91 does with an all-GSM-7 text on a UNICODE template (⛔ known). ⛔ **Not addressed** — whether a told-item
+  correction goes to the Panel is BigDev's. ⭐ Trigger: Row 32 (d)'s encoding answer, or BigDev's call on a told item.
+
+---
+
 ## Recorded during Story 6.37e dev — owed to the Trustee Panel (2026-10-22)
 
 - **PQ1 of row 6-37e's rework — "a few questions" for the ratified "a few short questions" in the neighbours' text (templates 13 / 14)

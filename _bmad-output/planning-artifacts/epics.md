@@ -3757,6 +3757,13 @@ channel got through; ADR-0042's forgery bound restated; no new SMS text, no new 
 > written, not sent; it gates registration of templates 13 / 14, ⛔ the build). ⛔ Migration, ⛔ schema, ⛔ new roster row. The title,
 > user story and in-brief below are rewritten for the rework; the block above is kept as written.
 
+> ✅ **2026-10-22 — PQ1 ANSWERED ([`-381`](../../.decision-log.md#decision-2026-10-22-381), Trustee-ratified — Dhiraj Rahul + Kalpana Bharti,
+> relayed by BigDev).** The note `trustee-panel-routing-note-2026-10-22-6-37e-few-questions.md` was SENT and ANSWERED: PQ1 A — the
+> neighbours' text (templates 13–14) says *"a few questions"* (BigDev's words; amends `-304` Q6 A / `-379` Q2 A for the TEXT only — the
+> WhatsApp reminder and the app screen keep *"a few short questions"*). The `-380` hold on REGISTERING templates 13 / 14 is DISCHARGED;
+> roster Row 27 still closes only on its own criteria, Row 28 on the Hindi review. The REWORKED block above is kept as written (its
+> "written, not sent" was true when it was written). Recorded by the story's code review (R3).
+
 As a family member, a refused person or a neighbour the Trust has promised to text about a member's death or claim, I want the text to
 carry the member's whole name — and, only for a very long name, a shortened one that keeps the last word of the name — so that I
 recognise whom the text is about, and a long name never silently costs me the text, including the refused person's only notice of the

@@ -497,6 +497,11 @@ are and still render, ⭐ which holds precisely because the gate is input-only
 **And** the gate is ⛔ not applied to member KYC names (`domain/src/kyc/name.ts` is deliberately
 Devanagari-aware) or to Story 6.5's death-certificate comparison (`claim/parity.ts`, a 20% fuzzy
 tolerance) — `-227` cl.9's wider sweep is its own story, recorded in Task 0
+  > 📌 *Dated note, 2026-10-22 (Story 3.3c Task 0.4):* superseded IN PART by
+  > [`-382`](../../.decision-log.md#decision-2026-10-22-382) (author-commit, building `-378` decision 6) — from Story 3.3c (row
+  > `3-3c-member-kyc-name-english-only`) the gate IS applied to the member's own name typed in the manual KYC fallback
+  > (`KycManualSubmitRequest.name`), input-only. The DigiLocker name and 6.5's `claim/parity.ts` stay ungated; `kyc/name.ts` stays
+  > Devanagari-aware for stored names. The sentence above is kept as written.
 **And** ⭐ **a verified fact worth stating: ⛔ no existing seed, fixture or test uses a non-Latin
 nominee or holder name** (every fixture is Latin, e.g. `'Asha Devi'`), so this breaks ⛔ no existing
 test

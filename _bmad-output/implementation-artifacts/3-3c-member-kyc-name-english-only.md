@@ -23,7 +23,7 @@ LETTERS: G = found facts · KB = build decisions · N = invariants · TR = traps
 
 # Story 3.3c: The Member's Own Name Is Typed in English in the Manual KYC Fallback — "in English, as on Aadhaar" `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A member signing up who enters their details manually — offered beside DigiLocker on the
 > choose screen, and again after a DigiLocker failure — types their own name, date of birth (and optionally a photo) on the manual KYC
@@ -426,8 +426,8 @@ in the Debug Log, then reverted
 client, the copy and the tests only make sense together — the tree is green only at that boundary). Task 6 proves on that commit;
 Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[feedback_commit_on_story_branch]]); ⛔ main.
 
-- [ ] **Task 0 — governance FIRST (AC0). ⛔ No code.**
-  - [ ] 0.1 Preflight. ⭐ The creation-commit step below is DONE (2026-10-22, at validation: S3 scanned, ledger re-lettered `2026-10-22x`, the two files committed by path as `story(3.3c): created + validated …`) — start at `git fetch origin`. ⚠ The worktree was DIRTY at creation: the story file is untracked and `sprint-status.yaml` carries creation's
+- [x] **Task 0 — governance FIRST (AC0). ⛔ No code.**
+  - [x] 0.1 Preflight. ⭐ The creation-commit step below is DONE (2026-10-22, at validation: S3 scanned, ledger re-lettered `2026-10-22x`, the two files committed by path as `story(3.3c): created + validated …`) — start at `git fetch origin`. ⚠ The worktree was DIRTY at creation: the story file is untracked and `sprint-status.yaml` carries creation's
         uncommitted ledger line (written as `2026-10-22v` — ⛔ free: see NUMBERS) + the row's `ready-for-dev`. FIRST run S3 (below)
         over refs AND worktrees, RE-LETTER creation's ledger line to the next free letter (add "validated v1.1" to it), THEN commit
         those two files alone (`story(3.3c): created — ledger 2026-10-22<letter> …`; `git add` the two paths by name,
@@ -445,13 +445,13 @@ Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[
         for every path in `git worktree list` (at validation, 2026-10-22: 6-35, 6-36d, 8-15 — `8-15` already ahead of `b883dc15`); (S4) `ListAgents`
         shows another session on this worktree. `pnpm install --frozen-lockfile --prefer-offline` if `node_modules` is absent (it is,
         at creation).
-  - [ ] 0.2 **Put to BigDev** (Policy meaning sharp edges FIRST, edge 3's wording included — [[feedback_never_mangle_member_names]]: the
+  - [x] 0.2 **Put to BigDev** (Policy meaning sharp edges FIRST, edge 3's wording included — [[feedback_never_mangle_member_names]]: the
         worst real output before any recommendation), then the basis ("Panel questions: NONE" — FOUND / DECIDED / TOLD and why the
         widening stays the author's), then KB1–KB8 (KB2 with options (a) and (c) side by side; KB6 with both precedents). Record the
         answers VERBATIM in Debug Log (a). If BigDev edits any KB2 word, the edit is theirs — build it; if an edit changes a RATIFIED
         phrase (`-378` d6's *"in English, as on Aadhaar"*), apply the template §0 and say so. If BigDev reads the widening as the
         Panel's, STOP: write the note from the template, ⛔ build.
-  - [ ] 0.3 Write the **3.3c build entry** — an AUTHOR-COMMIT, next free id (dated the day it is COMMITTED) — in `.decision-log.md`,
+  - [x] 0.3 Write the **3.3c build entry** — an AUTHOR-COMMIT, next free id (dated the day it is COMMITTED) — in `.decision-log.md`,
         the shape of `-378` / `-380`: Decision type / Status / Author / Ratifying trustees: None / §0 gate (the basis as KB7 (a)
         states it — `-227`'s "does ⛔ NOT cover" bullet and the 6.19 D9 / `contact.ts` readings quoted verbatim; the widening from
         two names to three said plainly; the Panel TOLD) / Occasion / The decisions (KB1–KB8 as answered; the UX-DR57 / Pattern 6
@@ -465,7 +465,7 @@ Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[
         refused); stage ONLY `.decision-log.md` (`git add .decision-log.md`; `git diff --cached --name-only` must print that one path)
         and commit it ALONE (`governance(3.3c): Decision 2026-10-22-NNN — AUTHOR-COMMIT (BigDev): …` — the `-380` commit shape —
         [[feedback_governance_commits_precede_implementation]]); write its SHA after the commit, ⛔ before.
-  - [ ] 0.4 The **records commit** (after 0.3), every edit append-only: `epics.md` — a new `### Story 3.3c: …` section immediately after
+  - [x] 0.4 The **records commit** (after 0.3), every edit append-only: `epics.md` — a new `### Story 3.3c: …` section immediately after
         `### Story 3.3b` (before `### Story 3.4`), in 6.37e's "Added … (`bmad-create-story 3.3c`; this entry written at its Task 0.4)"
         blockquote shape (row created by `-378` d6; build decisions by the 0.3 entry; ⛔ migration; full ACs → this file; not a merge
         fence) + a dated one-line note under 6.18's *"`-227` cl.9's wider English-name sweep … owes its own story"* pointing to 3.3c for the
@@ -686,7 +686,15 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-create-story 3.3c` (story v1.0).
 
 ### Debug Log References
 
-- (a) Task 0.2 — BigDev's answers to the basis and KB1–KB8, VERBATIM. *(reserved)*
+- (a) Task 0.2 — BigDev's answers to the basis and KB1–KB8, VERBATIM (2026-10-22; shown first: Policy-meaning edges 1–3, then the
+  FOUND / DECIDED / TOLD basis, then KB1–KB8 with KB2 (a) / (c) side by side and both KB6 precedents):
+  - Basis (author's or Panel's?): *"Mine (Recommended)"* ⇒ author-commit; build proceeds.
+  - KB2 (words): *"(a) Plain (Recommended)"* — the three en / hi strings exactly as KB2's table (a); BigDev approved the Hindi (KB6 (a)).
+    Knowingly approximate for Policy-meaning edge 1 (*"José"* is in English letters yet refused) — recorded, accepted.
+  - KB1, KB3, KB4, KB5, KB6, KB7, KB8: *"All (a) (Recommended)"*.
+  - Task 0.1 preflight: origin/main = `b883dc15` (⛔ drift, ⛔ rebase); S1 ⛔ new decision; S2 ⛔ new story, 6-35 ⛔ landed; S3 newest id
+    `-381` everywhere ⇒ `-382`; letters held `v` (8-15, 6-35), `w` (6-36d), `x` (this branch) ⇒ `y`; S4 three peer sessions, all idle.
+    Task 0.3 entry `-382` committed alone: `73ad0ad2`.
 - (b) Task 2.1 — the `details.issues` shape as emitted. *(reserved)*
 - (c) Task 6 — mutants RED → reverted → GREEN; any `microcopy:check` finding on 3.3b's existing lines (KB8). *(reserved)*
 
@@ -700,6 +708,10 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-create-story 3.3c` (story v1.0).
 
 ## Change Log
 
+- v1.3 (2026-10-22) — **Dev started** (`bmad-dev-story 3.3c`, Claude Opus 5.5): Task 0 done — preflight clean, BigDev's answers
+  (Debug Log (a): author's basis; all recommendations), `-382` AUTHOR-COMMIT committed alone (`73ad0ad2`), records commit (epics
+  `### Story 3.3c` + 6.18 owed-sweep note; 6.18 AC12 dated note; deferred-work (b-4) and 6.37e R1 dated notes; sprint row →
+  `in-progress`, ledger `2026-10-22y`, row comment dated). Status → `in-progress`.
 - v1.2 (2026-10-22) — **Re-validated** (one fresh-context read-only verifier against v1.1's own edits): 1 HIGH / 6 MEDIUM / 7 LOW,
   all applied. HIGH: v1.1 said creation "TOOK" ledger letter `v` — `story/8-15-…` had COMMITTED its own `v` and two other worktrees
   hold `v` / `w` ⇒ NUMBERS, Task 0.1 (S3 scan BEFORE the creation commit, re-letter creation's line) and TR10 restated. MEDIUM:

@@ -29,6 +29,9 @@ Two items it leaves OPEN. ⛔ Neither is closed by the row.
   says what a Unicode value does in a Normal template — refused, garbled, or promoted to Unicode (MSG91's help pages, read 2026-10-22, are
   silent). ⛔ **Not addressed** — ⛔ decided. ⭐ Trigger: MSG91's written answer or a device proof (Row 32 (d)), or row 3-3c `done` with
   existing names migrated; the answer decides whether 8 / 10 / 12 move to Unicode (and their cost lines with them).
+  *Dated note, 2026-10-22 (Story 3.3c Task 0.4; [`-382`](../../.decision-log.md#decision-2026-10-22-382)):* "row 3-3c … not built" is
+  now stale — 3.3c is being built (the manual fallback's typed name, English-only at INPUT). It migrates ⛔ stored names (⛔ backfill)
+  and leaves the DigiLocker name ungated, so its `done` does ⛔ fire this trigger by itself. ⛔ Closed; the item stays as written.
 - **The Panel was told the dash-to-comma change brings the English neighbours' text to "about 3–4 parts instead of 2" — not assured
   while 14 is provisioned Unicode** [`trustee-panel-routing-note-2026-10-22-6-37e-full-name-two-slots.md` (SENT; ruled `-379` Q2 A); the
   sheet's 13–14 cost line, qualified: en 2–5]. The ruled WORDS are unchanged (⛔ a ruling re-read); only the cost the note put is now
@@ -2647,6 +2650,9 @@ transliteration tolerance as *"a noted future consideration"* (`packages/domain/
 has its own row — `3-3c-member-kyc-name-english-only: backlog` (the manual KYC fallback's typed name English-only at input, its label
 *"in English, as on Aadhaar"*; DigiLocker's `Poi@name` is already the English name; ⛔ backfill — ⛔ in production). ⛔ Closed: the
 6.5 death-certificate comparison (`claim/parity.ts`) half is still open here.
+⚠ *Dated note, 2026-10-22 (Story 3.3c Task 0.4; [`-382`](../../.decision-log.md#decision-2026-10-22-382)):* the member-KYC half is
+being BUILT by row `3-3c-member-kyc-name-english-only` (in progress, on its story branch — ⛔ on `main`). ⛔ Closed until that row is
+`done` on `main`; the 6.5 half stays open here either way.
 
 ### (c) ⭐⭐ **NEW, FOUND AT 11b.3a** — a **12-digit account number trips the FR-74 naked-PII AADHAAR heuristic**
 

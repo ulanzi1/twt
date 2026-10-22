@@ -1818,6 +1818,29 @@ So that I can complete signup even if DigiLocker is unavailable or I prefer manu
 **When** a VI/low-vision member uses the KYC flow with assistive tech
 **Then** the entire flow is screen-reader-accessible; manual fallback fields have proper ARIA labels and per-field guidance
 
+### Story 3.3c: The Member's Own Name Is Typed in English in the Manual KYC Fallback — "in English, as on Aadhaar" `[SURFACE]`
+
+> **Added 2026-10-22 (`bmad-create-story 3.3c`; this entry written at its Task 0.4)** — the row `3-3c-member-kyc-name-english-only`
+> was created by [`-378`](../../.decision-log.md#decision-2026-10-22-378) decision 6 (author-commit), building
+> [`-227`](../../.decision-log.md#decision-2026-09-20-227) decision 1 (Trustee-ratified, *"Please use English Name everywhere"*), whose
+> scope answer recorded member KYC names as an owed sweep. Its build decisions KB1–KB8 are DECIDED by
+> [`-382`](../../.decision-log.md#decision-2026-10-22-382) (author-commit, all as recommended): `KycManualSubmitRequest.name` becomes
+> `EnglishScriptName` — the predicate Story 6.18 built, unchanged — at INPUT only; the screen's label says *"in English, as on Aadhaar"*
+> and the member is told before submit. `-382` widens `-227`'s scope answer from two names to three on `-378` §0's authority (the Panel
+> told); UX-DR57 is narrowed for this one field. ⛔ Transliteration, ⛔ backfill, ⛔ output schema, ⛔ DigiLocker name, ⛔ migration,
+> ⛔ new roster row; ⛔ Panel question. Full ACs: `_bmad-output/implementation-artifacts/3-3c-member-kyc-name-english-only.md`.
+> Not a merge fence.
+
+As a teacher signing up who enters my details manually instead of through DigiLocker, I want the manual KYC screen to ask for my name in
+English, exactly as it is printed on my Aadhaar, and to tell me plainly — before I submit — when what I typed is not in English letters,
+so that the name the Trust holds for me is the same English name every other part of the system compares against.
+
+**Acceptance Criteria (in brief):** the manual route refuses a non-English name with a 400 `request.validation` and stores nothing; stored
+names in any script still read back unchanged (⛔ backfill); the screen shows an inline English-name message while typing, refuses on
+submit before any request, announces it to screen readers on both platforms, caps the field at 200, and renders a name-script 400 as
+the English-name message (⛔ "DigiLocker is unavailable"); the copy resolves in both locales; the exclusion comments in `primitives.ts`
+are superseded by dated notes; every gate proven RED by a mutant.
+
 ### Story 3.4: Nominee Declaration with 75/25 Split (No KYC, No Bank at Signup) `[SURFACE]`
 
 As a member declaring nominees during signup or via Life Events,
@@ -2952,6 +2975,10 @@ merely intending to.
 > match rule between the accounts and the declared nominees (6.8's D1); it changes ⛔ no public surface;
 > and `-227` cl.9's wider English-name sweep — member KYC names and Story 6.5's death-certificate
 > comparison — is ⛔ **not** in scope and owes its own story.
+>
+> 📌 **2026-10-22 (dated note, Story 3.3c Task 0.4):** the member-KYC half of that sweep is being built by Story 3.3c (row
+> `3-3c-member-kyc-name-english-only`, [`-382`](../../.decision-log.md#decision-2026-10-22-382)) — the manual fallback's typed name only;
+> the DigiLocker name and Story 6.5's death-certificate comparison remain outside it. The sentence above is kept as written.
 
 ---
 

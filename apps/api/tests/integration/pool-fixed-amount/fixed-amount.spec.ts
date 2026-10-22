@@ -490,4 +490,51 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule surface — E2E (:5433)', (
     // never read as the amount in force, which is how it hid inside the undifferentiated history list.
     expect(body.effective_amount).toBeNull();
   });
+
+  it('⭐ Story 8.15 AC2: a change superseded before it took effect leaves `upcoming` — but stays in `schedule` (history)', async () => {
+    const p = freshPariwar();
+    const a = await pariwarAdmin(p, 'Trustee One');
+    const panelMember = await authenticate({ displayName: 'Panel Member' });
+    const panelMember2 = await authenticate({ displayName: 'Panel Member Two' });
+    await grant(panelMember.userId, p, 'trustee_panel');
+    await grant(panelMember2.userId, p, 'pariwar_admin');
+
+    const created = await a.client.inject({
+      method: 'POST',
+      url: scheduleUrl(p),
+      payload: { fixed_amount: 640, effective_from: new Date(Date.now() + 400 * DAY_MS).toISOString() },
+    });
+    expect(created.statusCode).toBe(201);
+    const before = (await a.client.inject({ method: 'GET', url: viewUrl(p) })).json() as {
+      upcoming: { fixed_amount: number } | null;
+    };
+    expect(before.upcoming?.fixed_amount).toBe(640);
+
+    // An emergency effective NOW supersedes the pending ₹640 change (`-125` cl.2) — closeOpenHead
+    // leaves it zero-width, so it can never be in force.
+    await elevate(a.client);
+    const emg = await a.client.inject({
+      method: 'POST',
+      url: emergencyUrl(p),
+      payload: {
+        fixed_amount: 750,
+        effective_from: new Date().toISOString(),
+        documented_reason: 'reserve adequacy — actuarial review',
+        panel_actor_ids: [panelMember.userId, panelMember2.userId],
+      },
+    });
+    expect(emg.statusCode).toBe(201);
+
+    const after = (await a.client.inject({ method: 'GET', url: viewUrl(p) })).json() as {
+      effective_amount: number | null;
+      upcoming: unknown;
+      schedule: Array<{ fixed_amount: number; effective_from: string; effective_until: string | null }>;
+    };
+    expect(after.effective_amount).toBe(750);
+    // ⛔ Before 8.15 this still showed ₹640 as "upcoming" — a change the trustees had cancelled.
+    expect(after.upcoming).toBeNull();
+    const moot = after.schedule.find((e) => e.fixed_amount === 640);
+    expect(moot).toBeDefined();
+    expect(moot!.effective_until).toBe(moot!.effective_from);
+  });
 });

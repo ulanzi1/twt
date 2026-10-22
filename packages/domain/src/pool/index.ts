@@ -38,6 +38,10 @@ export * from './assign.js';
 // the standard (90-day-notice) + emergency-override write paths + the immutable Emergency
 // Adjustment Record + the genesis seed. The typed errors ride pool/errors.ts (already exported).
 export * from './fixed-amount.js';
+// Story 8.15 (Task 2) — the PURE stage selector for the My Pool card's staged fixed-amount transition
+// (UX-DR25): IST calendar months, ⛔ never cycles; emergency changes shown as plain facts only
+// (Decision `2026-10-22-383`). The reads it consumes live in fixed-amount.ts.
+export * from './fixed-amount-transition.js';
 // Story 10.13 (Tasks 4/5) — the emergency attesting panel's ELIGIBILITY predicate
 // (assertFixedAmountPanelAuthorized, the AC3 teeth) + the eligible-attestor DIRECTORY read the
 // picker consumes. Decision `2026-08-16-123` clauses 2-3. The typed error rides pool/errors.ts.

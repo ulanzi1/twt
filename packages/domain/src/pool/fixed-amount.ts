@@ -31,11 +31,12 @@
 // it carries NO hardcoded support-category string branches (it never inspects support_category at all;
 // the amount schedule is category-agnostic). v2 `_daan` activation stays a config change, not an edit here.
 
-import { and, asc, desc, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 
 import { clampLimit } from '../pagination.js';
 import type { Db } from '../db.js';
 import type { PariwarId } from '../ids/index.js';
+import { cycleFreezeCommits } from '../schema/cycle_freeze_commits.js';
 import {
   type PoolFixedAmountEmergencyAttestationRow,
   type PoolFixedAmountPanelMember,
@@ -45,6 +46,7 @@ import {
   type PoolFixedAmountScheduleRow,
   poolFixedAmountSchedule,
 } from '../schema/pool_fixed_amount_schedule.js';
+import { pools } from '../schema/pools.js';
 import {
   PoolFixedAmountAttestationRequiredError,
   PoolFixedAmountEmergencyBackdatedBeforeHeadError,
@@ -263,21 +265,35 @@ export async function getEffectiveFixedAmount(
 }
 
 /**
- * The NEXT scheduled fixed-amount change that has not yet taken effect at `asOf` — the Story 8.2 AC6
- * "upcoming transition" source. Returns the earliest-starting row whose `effective_from` is strictly
- * in the FUTURE (`effective_from > asOf`), ordered `effective_from ASC, version ASC`; `null` when no
- * future change is scheduled. The My Pool card surfaces it gently ("from [date], contribution becomes
- * ₹X") — DISPLAY context only; the card's CURRENT amount stays the pool's SNAPSHOTTED `fixed_amount`
- * (D3), never this future value.
+ * The NEXT scheduled fixed-amount change that has not yet taken effect at `asOf`. Returns the
+ * earliest-starting row whose `effective_from` is strictly in the FUTURE (`effective_from > asOf`),
+ * ordered `effective_from ASC, version ASC`; `null` when no future change is scheduled. Two consumers:
+ * the trustee's setter view (`upcoming`, read at DB now() with no options) and the member's My Pool
+ * card (Story 8.15 — read as of the live pool's `committed_at` with `excludeAmount`, feeding the
+ * staged transition copy). DISPLAY context only; a pool's amount stays its SNAPSHOTTED `fixed_amount`
+ * (8.2 D3), never this future value.
+ *
+ * ⛔ A MOOT row is never upcoming (Story 8.15 AC2). `closeOpenHead` can leave a ZERO-WIDTH window
+ * (`effective_until = effective_from`) — a pending change superseded before it took effect — which can
+ * never be in force. Returning it told a member about a change the trustees had cancelled. The
+ * conjunct `effective_until IS NULL OR effective_until > effective_from` excludes it; the admin
+ * `schedule` LIST still shows it (history, correct).
+ *
+ * `excludeAmount` (Story 8.15 D6): skip rows carrying this amount — a "change" to the amount the
+ * pool already holds is no change for its member. ⚠ It is applied IN THE WHERE CLAUSE, never as a
+ * post-filter: the read is `LIMIT 1`, so a post-filter would let a nearer same-amount row HIDE a later
+ * real change and suppress its notice.
  *
  * This is deliberately DISTINCT from {@link resolveEffectiveFixedAmountRow} (the row effective NOW):
  * a read surface needs to look FORWARD, not resolve the current window. Per-Pariwar (the schedule is
  * a Pariwar-level record, not per-pool); RLS-scoped by the caller. O(1) rows (`ORDER BY … LIMIT 1`).
+ * change_type-BLIND: the returned row carries `changeType` for the caller to read.
  */
 export async function resolveUpcomingFixedAmountChange(
   db: Db,
   pariwarId: PariwarId,
   asOf: Date,
+  options: { readonly excludeAmount?: number } = {},
 ): Promise<PoolFixedAmountScheduleRow | null> {
   const rows = await db
     .select()
@@ -286,11 +302,69 @@ export async function resolveUpcomingFixedAmountChange(
       and(
         eq(poolFixedAmountSchedule.pariwarId, pariwarId),
         gt(poolFixedAmountSchedule.effectiveFrom, asOf),
+        or(
+          isNull(poolFixedAmountSchedule.effectiveUntil),
+          gt(poolFixedAmountSchedule.effectiveUntil, poolFixedAmountSchedule.effectiveFrom),
+        ),
+        options.excludeAmount === undefined
+          ? undefined
+          : ne(poolFixedAmountSchedule.fixedAmount, options.excludeAmount),
       ),
     )
     .orderBy(asc(poolFixedAmountSchedule.effectiveFrom), asc(poolFixedAmountSchedule.version))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * ⭐ Story 8.15 D5 — is the live pool the FIRST cycle committed under a changed amount? Feeds the My
+ * Pool card's `first_cycle` note ("the new contribution starts with this cycle"). `true` iff ALL of:
+ *
+ *  1. The row in force at the pool's `committedAt` (F, by {@link resolveEffectiveFixedAmountRow}) exists
+ *     and carries `poolFixedAmount`. ⚠ The SNAPSHOT GUARD: no FK links a pool to its schedule row, and a
+ *     BACKDATED emergency (`effective_from ≤ committed_at`, legal under `-125` cl.1) written after the
+ *     spawn makes F the emergency while the pool still holds the old amount — without this, a member on
+ *     a ₹500 pool would be told a new contribution starts with it. `pools.fixed_amount` is the only fact.
+ *  2. The row in force just before F (`F.effectiveFrom − 1ms`, same resolver — zero-width rows never
+ *     match, so a moot row is never the predecessor) exists and carries a DIFFERENT amount. Genesis and
+ *     a same-amount change → false.
+ *  3. NO pool of the Pariwar belongs to a cycle committed in `[F.effectiveFrom, committedAt)`. ⚠ POOLS,
+ *     ⛔ never a bare `cycle_freeze_commits` count: a zero-claim commit is writable and spawns no pool,
+ *     and counting it would suppress the note before any member paid the new amount. Pools of the SAME
+ *     cycle all share `committedAt` (excluded by the half-open range), so they are all "first".
+ *
+ * change_type-BLIND: an emergency F gets the note too (Decision `2026-10-22-383`, PQ1 = B — a plain fact
+ * after the change). ⚠ Known residue: when a backdated emergency DOES match the snapshot, the predecessor
+ * is read from the schedule, not from the member's previous pool. RLS-scoped by the caller (both tables).
+ * Three O(1)-row reads; runs inside the caller's scope transaction.
+ */
+export async function resolveFirstCycleUnderAmount(
+  db: Db,
+  pariwarId: PariwarId,
+  input: { readonly committedAt: Date; readonly poolFixedAmount: number },
+): Promise<boolean> {
+  const inForce = await resolveEffectiveFixedAmountRow(db, pariwarId, input.committedAt);
+  if (inForce === null || inForce.fixedAmount !== input.poolFixedAmount) return false;
+  const predecessor = await resolveEffectiveFixedAmountRow(
+    db,
+    pariwarId,
+    new Date(inForce.effectiveFrom.getTime() - 1),
+  );
+  if (predecessor === null || predecessor.fixedAmount === inForce.fixedAmount) return false;
+  const earlier = await db
+    .select({ poolId: pools.poolId })
+    .from(pools)
+    .innerJoin(cycleFreezeCommits, eq(pools.cycleId, cycleFreezeCommits.commitId))
+    .where(
+      and(
+        eq(pools.pariwarId, pariwarId),
+        eq(cycleFreezeCommits.pariwarId, pariwarId),
+        gte(cycleFreezeCommits.committedAt, inForce.effectiveFrom),
+        lt(cycleFreezeCommits.committedAt, input.committedAt),
+      ),
+    )
+    .limit(1);
+  return earlier.length === 0;
 }
 
 // ── head-read helpers (the T&C latestTcVersion / currentOpenTcVersion precedent) ──

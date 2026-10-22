@@ -37,6 +37,7 @@ import {
   PoolFixedAmountNotConfiguredError,
   PoolFixedAmountPanelMemberUnauthorizedError,
   resolveEligibleFixedAmountAttestors,
+  resolveUpcomingFixedAmountChange,
   scheduleStandardChange,
   spawnChildPool,
 } from '../../../src/pool/index.js';
@@ -283,6 +284,8 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
       actorId: 'trustee-actor-1',
     });
     expect(future.effectiveUntil).toBeNull();
+    // Story 8.15 AC2 — BEFORE the emergency, the pending ₹900 change IS the upcoming one.
+    expect((await resolveUpcomingFixedAmountChange(tx, PARIWAR_A, now))?.fixedAmount).toBe(900);
 
     // An emergency fires NOW — its effective_from precedes v2's effective_from.
     const emg = await applyEmergencyOverride(tx, {
@@ -340,6 +343,81 @@ describe.skipIf(!hasDatabase)('fixed-amount schedule (PARIWAR_A scope)', () => {
     // emergency resolves — v1's window no longer reaches that far. Point-in-time resolution was
     // already correct via the effective_from DESC tie-break; this proves the STORED windows agree.
     expect(await getEffectiveFixedAmount(tx, PARIWAR_A, new Date(now.getTime() + DAY_MS))).toBe(750);
+
+    // Story 8.15 AC2 — and the moot ₹900 row is no longer "upcoming" (it was, above, before the
+    // emergency). ⚠ Read at the JS `now` the emergency was applied at, ⛔ never the DB now(): the
+    // transaction began EARLIER, so at DB now() the ₹750 emergency itself is upcoming and this would
+    // fail for the wrong reason.
+    expect(await resolveUpcomingFixedAmountChange(tx, PARIWAR_A, now)).toBeNull();
+  });
+
+  // ── Story 8.15 AC2 / D6 — the UPCOMING read never announces a change that will not happen ──────
+  //
+  // `closeOpenHead` can leave a ZERO-WIDTH row (effective_until = effective_from) in two ways; such a
+  // row can never be in force, so it must never be read as "upcoming" either (Trap 1: the member card
+  // told a member paying ₹750 that the contribution "becomes ₹900" — a change the trustees cancelled).
+  // Case (2) — a pending change superseded by an EARLIER emergency — is asserted at the end of (g).
+
+  it('(8.15-b) case (1): an emergency at the SAME effective_from as a pending change moots it; the emergency is upcoming', async () => {
+    const { client, tx } = getTx();
+    await seedSchedule(tx, 500, new Date('2026-01-01T00:00:00Z'));
+    await enterAppScope(client, PARIWAR_A);
+    const now = new Date();
+    const at = new Date(now.getTime() + 100 * DAY_MS);
+    const standard = await scheduleStandardChange(tx, {
+      pariwarId: PARIWAR_A,
+      fixedAmount: 900,
+      effectiveFrom: at,
+      actorId: 'trustee-actor-1',
+    });
+    // A future-dated emergency at EXACTLY the pending change's effective_from (legal: the bound is >=
+    // the amount in force). closeOpenHead case (1) clamps the ₹900 row to [at, at).
+    const emg = await applyEmergencyOverride(tx, {
+      pariwarId: PARIWAR_A,
+      fixedAmount: 750,
+      effectiveFrom: at,
+      documentedReason: 'reserve adequacy',
+      panel: [
+        { actor_id: 'trustee-a', actor_display: 'Trustee A' },
+        { actor_id: 'trustee-b', actor_display: 'Trustee B' },
+      ],
+      attestedByActor: 'trustee-a',
+      attestedDisplay: 'Trustee A',
+    });
+    expect(emg.schedule.version).toBeGreaterThan(standard.version);
+    // Both rows share effective_from; `version ASC` would pick the moot ₹900 row without the filter.
+    const upcoming = await resolveUpcomingFixedAmountChange(tx, PARIWAR_A, now);
+    expect(upcoming?.version).toBe(emg.schedule.version);
+    expect(upcoming?.fixedAmount).toBe(750);
+  });
+
+  it('(8.15-c) D6 excludeAmount: a NEARER same-amount row does not hide a LATER differing change', async () => {
+    const { client, tx } = getTx();
+    await seedSchedule(tx, 500, new Date('2026-01-01T00:00:00Z'));
+    await enterAppScope(client, PARIWAR_A);
+    const now = new Date();
+    await scheduleStandardChange(tx, {
+      pariwarId: PARIWAR_A,
+      fixedAmount: 600,
+      effectiveFrom: new Date(now.getTime() + 100 * DAY_MS),
+      actorId: 'trustee-actor-1',
+    });
+    await scheduleStandardChange(tx, {
+      pariwarId: PARIWAR_A,
+      fixedAmount: 900,
+      effectiveFrom: new Date(now.getTime() + 200 * DAY_MS),
+      actorId: 'trustee-actor-1',
+    });
+    // No options → the nearest (₹600), exactly as the admin view reads it.
+    expect((await resolveUpcomingFixedAmountChange(tx, PARIWAR_A, now))?.fixedAmount).toBe(600);
+    // A pool already holding ₹600: the ₹600 row is no change for it; the ₹900 one still is.
+    expect(
+      (await resolveUpcomingFixedAmountChange(tx, PARIWAR_A, now, { excludeAmount: 600 }))?.fixedAmount,
+    ).toBe(900);
+    // Excluding an amount nothing carries changes nothing.
+    expect(
+      (await resolveUpcomingFixedAmountChange(tx, PARIWAR_A, now, { excludeAmount: 500 }))?.fixedAmount,
+    ).toBe(600);
   });
 
   it('(f) getEffectiveFixedAmount throws when no entry is effective (fail loud, never a silent default)', async () => {

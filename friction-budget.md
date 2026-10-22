@@ -756,6 +756,32 @@ deployment-wide advisory lock. ⛔ That is a SERIALIZATION cost, ⛔ not member-
 friction, so it warrants no row here — but it is the accepted price of cl.2 and it is
 ⛔ not free.
 
+**Story 8.15 disposition (declaration affirmed, no new row):** the staged fixed-amount
+transition on the My Pool card (`apps/mobile/components/active-contribution/ActiveContributionCard.tsx`,
+the new pure `amountTransitionCopy.ts` + its test, eight `active_contribution.transition.*` keys in both
+locales, `packages/contracts/src/contributions/active-contribution-card.ts`,
+`apps/api/src/modules/member-pool/handlers.ts`, `packages/domain/src/pool/fixed-amount*.ts`) introduces
+**zero new deliberate friction**:
+
+(1) **It is a read-only LINE, not a step.** It replaces the single un-staged *"From {date}, the
+contribution becomes ₹X"* line the card already rendered with one staged line in the same place
+(dated / *"from next month"* / *"from the next cycle"* / the first-cycle note). No form, no gate, no tap,
+no banner, no forced acknowledgement — the member may read it or not, and the contribute CTA is
+untouched. ⚠ It is ⛔ not a live region, so it adds no screen-reader announcement either.
+
+(2) **What it deliberately does NOT add:** ⛔ no announcement banner or push (FR-55's broader-channel
+announcement is Story 10.5's News/Blog console), and ⛔ no acknowledgement of a changed amount before the
+member can pay. A changed amount is told, ⛔ never gated.
+
+(3) **The handler change NARROWS a failure, it adds none:** a failing transition read now degrades to *no
+line* instead of hiding the whole card (8.15 D8) — less member-visible breakage, not more.
+
+Zero gratuitous friction introduced; ledger reviewed, **no new row warranted**. The **page-weight
+baseline is unchanged**: every changed member file is in the authenticated mobile app (`apps/mobile`, EAS
+build a no-op) + `apps/api`/`packages/contracts`/`packages/domain`/`packages/i18n` (excluded from the
+ledger) — the PUBLIC `apps/public` surface the page-weight ceilings bite on is untouched. Do NOT ratchet
+(`[[project_friction_budget_baseline_ratchet]]`).
+
 **Story 8.6 disposition (declaration affirmed, no new row):** the Yogdaan Bahi
 contribution passbook (`apps/mobile/components/yogdaan-bahi/*`, its dedicated screen
 `apps/mobile/app/(contribution)/yogdaan.tsx`, and the home-stack `<YogdaanBahiEntry>`)

@@ -430,6 +430,11 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 > `2026-08-16-124` clause 1 superseded that to 90 so UX-DR25's Month−3 stage stays reachable. Twelve
 > months is **not** a minimum period at all (`2026-08-16-124` clause 3 struck it from Niyamavali §4.2).
 > `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` owns the reconciliation.
+
+> ⭐ **Note appended 2026-10-22 (Story 8.15).** The fixed-amount transition pattern is **built by Story
+> 8.15** (`### Story 8.15:` below): stages anchored to IST calendar months (the far stage is dated, not
+> counted in cycles), a `next_cycle` stage added, and emergency changes shown as plain facts only, ⛔ never
+> "from next month" (Decision `2026-10-22-383`). See `ux-design-specification.md`'s 2026-10-22 note.
 - **UX-DR26: `<UPIIntentButton>`.** Single-tap UPI Intent launch; critical-category touch target (≥56pt).
 - **UX-DR27: `<ContributionTimeline>`.** Member-side status visualization.
 - **UX-DR28: `<SelfVerifySurface>`.** Yellow-stuck recovery surface.
@@ -4160,6 +4165,10 @@ So that I receive contextual nudges without panic-framing or scarcity language.
 > `2026-08-16-124` clause 1 superseded that to 90 so UX-DR25's Month−3 stage stays reachable. Twelve
 > months is **not** a minimum period at all (`2026-08-16-124` clause 3 struck it from Niyamavali §4.2).
 > `7-11-fixed-amount-notice-period-and-fixed-period-reconciliation` owns the reconciliation.
+
+> ⭐ **Note appended 2026-10-22 (Story 8.15).** Story 8.2 shipped this AC as a single un-staged line; the
+> staged pattern is **built by Story 8.15**, which replaces that line (`upcomingAmountChange` →
+> `amountTransition`). This AC body is the historical record and is ⛔ not rewritten.
 
 **Given** the inherited accessibility gate (Story 0.10 P0-2c)
 **When** the card renders for assistive-tech users

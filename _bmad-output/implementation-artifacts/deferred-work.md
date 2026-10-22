@@ -9226,6 +9226,24 @@ this whole correct-course exists to abolish, in story clothing.
   story, or decline it — but the observation is owned by a key that exists in the meantime.
   **Re-trigger, concrete:** *Story 8.15 entering `ready-for-dev`*, or *the first standard fixed-amount
   change actually scheduled in production* — whichever comes first.
+  ⭐ **2026-10-22 — Story 8.15 (appended; the entry above is unedited).** ⚠ **The heading's *"OWNED BY
+  STORY 8.2"* is stale:** the entry's own body moved ownership to `8-15-fixed-amount-transition-staged-card`
+  the same day it was written, and that key is the owner of record.
+  The re-trigger fired (8.15 entered `ready-for-dev` 2026-10-22). **Standard changes: Closed by
+  [implementation]**, Story 8.15 — the card now carries `amountTransition`, resolved server-side
+  (`packages/domain/src/pool/fixed-amount-transition.ts`): **`scheduled`** (dated; ≥ 2 IST months away, or
+  later this month — the Month−3-onwards line, which fires on announcement at the 90-day floor),
+  **`next_month`** (the Month−1 line), **`first_cycle`** (the Month 0 note, on the first pool committed at
+  the new amount), and nothing after (subsequent cycles). One addition the spec does not list:
+  **`next_cycle`**, for a change that takes effect inside an open pool's live window (the old line just
+  vanished there). ⚠ **Recorded deviation from the spec's sample copy:** *"3 चक्र बाद"* is replaced by
+  the **date** — cycles are trustee-committed with no cadence, so no honest cycle count exists (8.15 D2).
+  **The emergency half was routed, not assumed:** Decision `2026-10-22-383` (PQ1 = **B**,
+  trustee-ratified) — an emergency change is shown as plain facts only (dated when set ahead,
+  `next_cycle` inside an open pool, the first-cycle note after), ⛔ **never** *"from next month"*. The
+  sentence above, *"Story 8.2 must build the staged pattern for standard changes only"*, is therefore
+  **superseded by `-383`** for the emergency facts, ⛔ not re-read. ⚠ **Not closed by 8.15:** the
+  non-author human tone review of the copy (AC6) — outstanding at `review`.
 
 - **⭐ Story 10.13 AC7(a) — FR-55's ANNOUNCEMENT half. "Closed by [edit]": Story 10.5's News/Blog
   console IS that workflow.** `prd.md:849` commits that the fixed-amount setter *"drafts the
@@ -12263,3 +12281,34 @@ reachable path above is closed for 6.37d's sends; the classifier's own filing st
 ## Deferred from: code review of 5-10-signup-whatsapp-opt-in-checkbox.md, round 2 (2026-10-21)
 
 - **W1 — A process kill while the member is in another app during signup strands a `pending-fee` member with no route to payment** [`apps/mobile/app/(signup)/whatsapp.tsx:122`; `apps/mobile/app/_layout.tsx:39`] — a cold start opens `(tabs)` and no path resumes the signup wizard; `(signup)/payment` is reachable ONLY from it (Story 5.10 F5). Pre-existing: payment's UPI hand-off already had it; Story 5.10's WhatsApp step (SB2 (d), BigDev-accepted at Task 0.2 as a cost) adds a second app switch before payment. **Re-trigger:** a wizard-resume path (relaunch / `(tabs)` routing a `pending-kyc` or `pending-fee` member back into `(signup)`), or the first report of a member who completed KYC but cannot find payment.
+
+## Story 8.15 — the staged fixed-amount transition (2026-10-22)
+
+- **⭐ Trap 1 — a superseded fixed-amount change was still announced as "upcoming". Closed by [edit],
+  Story 8.15 (AC2).** `closeOpenHead` can leave a **zero-width** schedule row (`effective_until =
+  effective_from`) — a pending change superseded before it took effect (an emergency over a pending
+  standard change, `-125` cl.2; or an emergency at the same `effective_from`). Such a row can never be in
+  force, but `resolveUpcomingFixedAmountChange` filtered only `effective_from > asOf`, so **both** the
+  member card and the trustee's setter view (`pool-fixed-amount/handlers.ts`, `upcoming`) showed a change
+  the trustees had cancelled. The read now adds `effective_until IS NULL OR effective_until >
+  effective_from`. ⚠ **Intended behaviour change on a second surface:** the admin view's `upcoming` no
+  longer shows the moot row; its `schedule` list still does (history, correct). Pinned by
+  `pool-fixed-amount.spec.ts` (g) + (8.15-b) and the admin `fixed-amount.spec.ts` 8.15 leg.
+
+- **PRD UJ-6 still says *"Sets effective date 12 months out"* (`prd.md`, UJ-6) — observed by Story 8.15,
+  ⛔ not fixed here.** The notice floor is **90 days** (`2026-08-16-124` cl.1). UJ-6 is ⛔ not among the
+  lines `-124` cl.10 named, so no ruling covers it; it is a user-journey narrative, not a requirement, and
+  nothing reads it as one. ⛔ Supersede it with a dated note, ⛔ never a rewrite
+  ([[feedback_supersede_never_reinterpret]]).
+  **Owner:** BigDev — the next PRD update pass (`bmad-prd` update). **Re-trigger, concrete:** that pass,
+  or the first story whose AC cites UJ-6 — whichever comes first.
+
+- **Two residues of the 8.15 stage reads, surfaced for its code review.** (a) D5: when a backdated
+  emergency **matches** the pool's snapshot, the `first_cycle` predecessor is read from the schedule,
+  ⛔ not from the member's previous pool, so it may not be the amount the member last paid (reachable only
+  for an emergency in force at `committed_at`; Decision `-383` puts emergency `first_cycle` in scope).
+  (b) `next_cycle` names the **nearest** change after `committed_at`; if two changes both take effect
+  inside one live window (an emergency followed by another), the line names the first, while the next
+  cycle will carry the second. Both need an emergency inside a 15-day window.
+  **Owner:** Story 8.15's code review (BigDev's call: accept, or patch). **Re-trigger, concrete:**
+  `bmad-code-review 8-15`.

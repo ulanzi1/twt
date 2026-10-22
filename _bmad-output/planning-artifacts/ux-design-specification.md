@@ -993,6 +993,19 @@ The principle: calm is default; precision tightens as deadlines approach; never 
 - Month 0 (new amount's first cycle): card renders ₹400 with a brief inline note (*"नया योगदान आज से"*) that disappears after that cycle
 - Subsequent cycles: ₹400 renders normally without commentary
 
+> ⭐ **Note appended 2026-10-22 (Story 8.15 — built).** The pattern above is **built** by
+> `8-15-fixed-amount-transition-staged-card`; the stage is resolved server-side and the card renders one
+> line under the amount (⛔ no banner, ⛔ not a live region). Three differences from the sample copy,
+> recorded rather than silent: **(1)** the stages are anchored to the **IST calendar month** of the change's
+> effective date — distance 1 → *"from next month"*; otherwise (later this month, or ≥ 2 months away) the
+> **dated** line; **(2)** *"3 चक्र बाद"* is replaced by **the date**, because cycles are trustee-committed with
+> no cadence and cannot be counted honestly; **(3)** a **`next_cycle`** line is added for a change that
+> takes effect inside an open pool's 15-day window (*"from the next cycle, the contribution will be ₹X"*).
+> ⚠ **The emergency sentence in the 2026-08-16 note above is superseded by Decision `2026-10-22-383`**
+> (PQ1 = B, trustee-ratified): an emergency change **is** shown, as plain facts only — dated when set ahead,
+> `next_cycle` inside an open pool, the first-cycle note after — and ⛔ **never** *"from next month"*. The
+> final words await the non-author tone review (Story 8.15 AC6).
+
 Calm precision throughout; no announcement banner; the My Pool card itself carries the news. Consistent with "status is always visible" and "no urgency theater" principles. The Trustee Panel's separate announcement workflow (FR-55) handles broader-channel communication to members; the My Pool card carries the in-context information.
 
 **Calendar-aware close-of-cycle timing.** Day 15 (alert close) is mechanically hard per FR-22, but reconciliation tail extends a calendar-aware window beyond it. On normal weeks, matching completes within 1-2 days. On Bihar holiday windows (Chhath Puja, Holi, Diwali, Eid, Republic Day, Independence Day), bank operations slow and nominee statement intake lags; matching tail may extend to 5-7 days post-close.

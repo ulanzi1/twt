@@ -1,6 +1,8 @@
 // The neighbours' WhatsApp REMINDER body ↔ the ruled words — the LOCKSTEP (Story 6.31, Task 5.1; AC5; WR6, I6, T6, T7). In both
-// locales the REAL `t('peer_mesh_sms.request')` (⛔ a stub, ⛔ a hand copy of the JSON — [[feedback_stub_must_call_not_transcribe]])
-// with the three Meta variables as its values renders EXACTLY the body; each variable lands once, in order; ⛔ "TWT"; ⛔ two
+// locales the REAL `t(PEER_MESH_WA_REMINDER_COPY_KEY)` — `peer_mesh_wa.reminder` since Story 6.37e (`2026-10-22-380` decision 8; ⛔ a stub,
+// ⛔ a hand copy of the JSON — [[feedback_stub_must_call_not_transcribe]]) with the three Meta variables as its values renders EXACTLY the
+// body. ⚠ That key holds the neighbours' SMS words AS THEY STOOD before `2026-10-22-379`; the SMS (`peer_mesh_sms.request`) has moved on,
+// so this pins the reminder to ITS OWN key, ⛔ to the SMS. Also: each variable lands once, in order; ⛔ "TWT"; ⛔ two
 // variables adjacent; the Hindi starts and ends with words (S1); the language map is exactly `en` / `hi`; and ⛔ marker of the DLT
 // SMS registry appears in the template file (the dlt-typed-variables gate scans it — F16).
 
@@ -20,7 +22,7 @@ import { waTemplateConfigKey } from '../src/scheduler/wa-template-config-key.js'
 
 const SOURCE = readFileSync(fileURLToPath(new URL('../src/scheduler/peer-mesh-wa-templates.ts', import.meta.url)), 'utf-8');
 
-describe('the WhatsApp reminder body (WR6 — the same words as the text)', () => {
+describe("the WhatsApp reminder body (WR6 — the words of its own key, the SMS's as they stood before -379)", () => {
   it.each(PEER_MESH_WA_REMINDER_LOCALES)('⭐ %s — the REAL t() with {{1}} / {{2}} / {{3}} renders EXACTLY the body', (locale) => {
     const rendered = t(PEER_MESH_WA_REMINDER_COPY_KEY, { member: '{{1}}', link: '{{2}}', helpline: '{{3}}' }, { namespace: 'claim', locale });
     expect(rendered).toBe(PEER_MESH_WA_REMINDER_BODY[locale]);

@@ -105,6 +105,26 @@ describe("smsMemberName — the whole name up to 60, the Panel's shortening abov
     }
   });
 
+  // `-379` Q1 A (2), as ratified — typed from the decision, ⛔ read from the module, so a deleted or mis-keyed entry in `TITLES` is RED
+  // (code review round 2, P1: seven of these were pinned by no test).
+  const RATIFIED_TITLES = ['Shri', 'Sri', 'Smt', 'Shrimati', 'Sushri', 'Dr', 'Late', 'Mr', 'Mrs', 'Ms', 'Ji', 'श्री', 'श्रीमती', 'सुश्री', 'डॉ', 'स्व.', 'स्वर्गीय', 'जी'];
+
+  it.each(RATIFIED_TITLES)(
+    '(f) the ratified title %s is dropped above 60 — in front and in the middle, with or without its full stop, upper-cased where the script has case (⛔ initials needed)',
+    (title) => {
+      const words = ['Abcdefghij', 'Abcdefghij', 'Abcdefghij', 'Abcdefghij', 'Lmnopqrstuvwxy'];
+      const base = words.join(' ');
+      expect(codePoints(base)).toBe(58);
+      const bare = title.replace(/\.$/, '');
+      for (const form of [bare, `${bare}.`, bare.toUpperCase()]) {
+        for (const name of [`${form} ${base}`, [...words.slice(0, 2), form, ...words.slice(2)].join(' ')]) {
+          expect(codePoints(name)).toBeGreaterThan(60);
+          expect(smsMemberName(name)).toEqual({ kind: 'shortened', name: base, boxes: sent(smsMemberName(base)).boxes });
+        }
+      }
+    },
+  );
+
   it('(f) Kumari / Devi / Kumar / Bai are ⛔ titles — early, they become INITIALS; Shrikant / Drake / Jiya are ⛔ titles', () => {
     expect(sent(smsMemberName('Kumari Devi Kumar Bai Abcdefghij Abcdefghij Abcdefghij Lmnopqrstuvw')).name).toBe(
       'K D Kumar Bai Abcdefghij Abcdefghij Abcdefghij Lmnopqrstuvw',
@@ -318,7 +338,7 @@ interface CodeFacts {
   readonly importsModule: boolean;
   /** A call `smsMemberName(…)` or `ns.smsMemberName(…)`. */
   readonly callsModule: boolean;
-  /** `fitsDltAlphanumeric` (the retired 40-letter predicate) called or declared. */
+  /** `fitsDltAlphanumeric` (the retired 40-letter predicate) as an identifier in any position: called, declared, imported / exported, aliased, destructured or a member. */
   readonly fitsPredicate: boolean;
   /** A string literal holding the title list (`shrimati`). */
   readonly titleList: boolean;
@@ -347,9 +367,10 @@ function codeFacts(src: string): CodeFacts {
       }
       const callee = calleeName(n.expression);
       if (callee === 'smsMemberName') callsModule = true;
-      if (callee === 'fitsDltAlphanumeric') fitsPredicate = true;
     }
-    if (ts.isFunctionDeclaration(n) && n.name?.text === 'fitsDltAlphanumeric') fitsPredicate = true;
+    // the retired predicate's name in ANY identifier position — a call, a declaration, an import or export (either side of an `as`), a destructured
+    // binding, a class or object member; a comment is trivia and a string is ONE literal (code review round 3, P11)
+    if (ts.isIdentifier(n) && n.text === 'fitsDltAlphanumeric') fitsPredicate = true;
     if (ts.isStringLiteralLike(n) && n.text.includes('shrimati')) titleList = true;
     if (ts.isIdentifier(n) && n.text === 'MEMBER_NAME_MAX') nameMax = true;
     ts.forEachChild(n, visit);
@@ -434,5 +455,23 @@ describe('N4 — ONE function for the four texts, called by exactly the two text
     commented.set('apps/jobs/src/other/thirteenth.ts', '// fitsDltAlphanumeric(n) — shrimati — MEMBER_NAME_MAX\nexport {};\n');
     expect(filesWhere(commented, (c) => c.fitsPredicate || c.nameMax)).toEqual([BOXES, MODULE].sort());
     expect(filesWhere(commented, (c) => c.titleList)).toEqual([MODULE]);
+    // declared in a form other than a `function` — nothing calls it, so only the declaration shows it (code review round 2, P6)
+    const declared = new Map(tree);
+    declared.set('apps/jobs/src/other/fourteenth.ts', 'export const fitsDltAlphanumeric = (v: string) => v.length <= 40;\n');
+    declared.set('apps/jobs/src/other/fifteenth.ts', 'const f = (v: string) => v.length <= 40;\nexport { f as fitsDltAlphanumeric };\n');
+    expect(filesWhere(declared, (c) => c.fitsPredicate)).toEqual(['apps/jobs/src/other/fifteenth.ts', 'apps/jobs/src/other/fourteenth.ts']);
+    // the name in ANY identifier position — an alias on either side, a destructured binding, a class or an object member (code review round 3, P11);
+    // a string that only NAMES it is one literal and stays ⛔ a hit
+    const named = new Map(tree);
+    const forms: Record<string, string> = {
+      sixteenth: "export { fitsDltAlphanumeric as fits } from '../x';\n",
+      seventeenth: "import { fitsDltAlphanumeric as fit } from '../x';\nexport const y = fit('a');\n",
+      eighteenth: 'declare const deps: Record<string, unknown>;\nconst { fitsDltAlphanumeric } = deps;\nexport {};\n',
+      nineteenth: 'export class K { fitsDltAlphanumeric(v: string) { return v.length <= 40; } }\n',
+      twentieth: 'export const o = { fitsDltAlphanumeric: (v: string) => v.length <= 40 };\n',
+    };
+    for (const [name, src] of Object.entries(forms)) named.set(`apps/jobs/src/other/${name}.ts`, src);
+    named.set('apps/jobs/src/other/only-a-string.ts', 'export const s = "fitsDltAlphanumeric(n)";\n');
+    expect(filesWhere(named, (c) => c.fitsPredicate)).toEqual(Object.keys(forms).map((n) => `apps/jobs/src/other/${n}.ts`).sort());
   });
 });

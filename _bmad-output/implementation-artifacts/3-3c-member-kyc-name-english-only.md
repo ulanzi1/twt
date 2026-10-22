@@ -23,7 +23,7 @@ LETTERS: G = found facts · KB = build decisions · N = invariants · TR = traps
 
 # Story 3.3c: The Member's Own Name Is Typed in English in the Manual KYC Fallback — "in English, as on Aadhaar" `[SURFACE]`
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A member signing up who enters their details manually — offered beside DigiLocker on the
 > choose screen, and again after a DigiLocker failure — types their own name, date of birth (and optionally a photo) on the manual KYC
@@ -570,6 +570,112 @@ Task 7 is a records commit. Branch `story/3-3c-member-kyc-name-english-only` ([[
 - [x] **Task 7 — Records and close.** Story Status → `review`, Dev Agent Record, File List, Change Log (newest first); sprint row
       `in-progress` → `review` + ledger. ⛔ "Closed by" on (b-4)'s member-KYC half until the row is `done` on `main`.
 
+### Review Findings
+
+- [x] [Review][Defer] Manual KYC retains stale validation banners while the member edits [apps/mobile/app/(signup)/kyc.tsx:281] — deferred, pre-existing. Submit a blank name, then type a populated name: the required-name banner remains until another submit. With a non-English name, 3.3c's inline alert also appears. The unchanged `onChangeText={setName}` behavior reproduces on baseline `b883dc15` as well as reviewed tip `d5b0de26`; this is not an English-name gate regression. Carried in `deferred-work.md` under this story's review heading.
+
+**Review record (2026-10-22, `bmad-code-review 3.3c`, Codex):** full branch review, `b883dc15..d5b0de26`
+(20 files, +1,393 / −11), against this story and the load-bearing-invariant checklist. Blind Hunter, Edge Case Hunter and
+Acceptance Auditor ran in parallel, read-only; all layers completed. Three candidate findings → **0 decision-needed / 0 patch /
+1 defer / 2 dismissed**. No new implementation defect or unresolved acceptance violation was substantiated.
+
+- **Dismissed:** native `maxLength={200}` truncates an overlong paste, but that native cap is explicitly required by approved
+  KB4 / AC5 / `-382` decision 4. This review does not replace that approved choice with a different length policy. Native source
+  was inspected; no device test is claimed.
+- **Dismissed:** the render harness mocks Android only, but the actual announcement call is unguarded and satisfies the current
+  both-platform requirement. A hypothetical future platform guard is not a present defect.
+- **Independent verification:** contracts `english-script-name.test.ts` 35/35, API unit `kyc-signup.test.ts` 9/9, mobile
+  `kyc-manual-name-copy-resolves.test.ts` + `kyc-manual-render.test.ts` 20/20. A temporary external jsdom harness additionally
+  reproduced the deferred banner behavior against both baseline and reviewed tip (5/5 including the three existing render legs).
+  Live-DB integration, full `ci:local`, and native-device checks were not rerun in this review; their earlier dev evidence remains
+  in the Completion Notes, not recast as review execution.
+- **Touched checklist families:** 1 (state guards) covered by construction and AC2; 5 (DB backstops) not constructible for a
+  plaintext script check over encrypted names, with permitted stored/DigiLocker exceptions; 6 (read projection) covered by AC3
+  and output-schema contract tests; 10 (closure honesty) covered by the explicit open items and verification limits; 11 (policy
+  meaning) covered by the recorded member-facing sentence, sharp edges and approved `-382`; 13 (accessibility) covered by the
+  render assertions plus the unguarded announcement. No REAL GAP found in a touched family.
+
+Story and sprint row → `done` as the review outcome on this branch. Not committed, pushed or landed by this review. The member-KYC
+half of (b-4) is still not closed until `done` on `main`; its 6.5 half and the 6.37e R1 item remain open.
+
+**Review record (2026-10-22, `bmad-code-review 3.3c`, Claude Sonnet 5):** a second, independent full branch review,
+`b883dc15..d5b0de26`, against this story and the Codex pass above. Blind Hunter, Edge Case Hunter and Acceptance Auditor ran in
+parallel, read-only; all layers completed (Blind: diff only, no project access; Edge: diff + worktree read access; Auditor: diff +
+the committed spec at `HEAD`, read fresh — not the Codex pass's annotations). 20 raw findings → **1 decision-needed / 2 patch / 2
+defer / 14 dismissed** (one blind-hunter pair merged into the one decision-needed item; the auditor found zero AC/invariant/KB
+violations).
+
+- [x] [Review][Patch] (applied) **A `too_big` 400 on `/name` still rendered the exact false message this story exists to kill — just for
+  length instead of script.** `manualSubmitErrorKey` (`apps/mobile/lib/kyc-manual-name.ts:25-34`) returns `null` for any issue that
+  isn't `{instancePath: '/name', keyword: 'invalid_string'}` — by design (KB4(a), TR4): a `too_big` on `/name` must NOT get the
+  English-name message, because an over-long name that IS in English letters would be told to "write it in English letters."
+  Correct as far as it goes — but the `null` fallback in `kyc.tsx`'s catch (`apps/mobile/app/(signup)/kyc.tsx:187-188`) was
+  `kycErrorMessage(e.code)`, and `'request.validation'` is not in `KYC_ERROR_CODES`, so it resolved to `t('kyc.fallback_empathy')` —
+  which IS, verbatim, `"DigiLocker is unavailable — you can enter your details manually and we'll verify them."`
+  (`packages/i18n/locales/en/common.json:42`). That is the exact message G6 names as the pre-existing bug this story fixes for the
+  script case; a too-long name got it too. **Reachability:** the only client-side guard is `maxLength={200}` on the RN `Input`
+  (`kyc.tsx:264`); RN's `maxLength` is known to be inconsistently enforced against a programmatic paste on some platforms, so this
+  was not purely theoretical.
+
+  **BigDev's call (2026-10-22): option 2 — add a dedicated message.** A new `kyc.manual_name_too_long` key, mapped the same way
+  `invalid_string` already is: a `request.validation` issue with `instancePath === '/name' && keyword === 'too_big'` renders it.
+  en *"Your name is too long. Please shorten it to 200 characters or fewer."* / hi *"आपका नाम बहुत लंबा है। कृपया इसे 200 अक्षरों या
+  उससे कम में छोटा करें।"* — BigDev approved both strings as proposed. Reasoning recorded: post-3.3c this leftover message is
+  actively nonsensical (a member already deep in the manual form, past the script and DoB checks, being told DigiLocker is
+  unavailable and to enter manually — which they're already doing) rather than merely unhelpful, and N4's whole point was to stop
+  a name-related 400 from ever showing the DigiLocker message. Same KB6 precedent applies: no new roster row.
+
+- [x] [Review][Patch] (applied) Stray, unrelated boilerplate sentence in the Completion Notes List
+  [`_bmad-output/implementation-artifacts/3-3c-member-kyc-name-english-only.md:719`] — "Ultimate context engine analysis completed -
+  comprehensive developer guide created." has nothing to do with this story (name script, KYC, or anything else here); reads like an
+  un-cleaned template artifact in what is otherwise a carefully kept record. Delete the line.
+
+- [x] [Review][Patch] (applied) The new friction-ledger row breaks the table's own convention
+  [`friction-budget.md:29`] — every other row in `## The ledger` is a short phrase; the new row is a dense multi-clause paragraph
+  with embedded citations and glyphs crammed into one table cell, which risks poor rendering and undermines the table's
+  scannability. The fuller detail already lives in the "Story 3.3c disposition" block right below it — shorten the cell to a short
+  phrase and let the disposition block carry the detail, matching every sibling row.
+
+- [x] [Review][Defer] **The DigiLocker "escape hatch" for Policy-meaning edge 1 is unverified** [G10;
+  `apps/api/src/modules/kyc/providers/digilocker/mapper.ts:69`] — deferred, pre-existing. This story's accepted cost for a member
+  whose Aadhaar English name carries an accent, comma, digit or bracket is "use DigiLocker instead" — but G10 itself records
+  "⛔ Proof in the repo that `Poi@name` is always inside `ENGLISH_NAME_REGEX`," and the fixture provider only ever returns
+  `'Fixture Member'`. If a real Aadhaar English name on file with DigiLocker can itself fail `EnglishScriptName` (unproven either
+  way), the "other route" named for edge 1 may not exist for some of the members it's offered to. Not caused by this diff — DigiLocker
+  has read `Poi@name` unchanged since before 3.3c — and not actionable without a real DigiLocker response sample. Carried in
+  `deferred-work.md` under this story's review heading.
+
+Independently corroborating the Codex pass's one deferred item above (the stale-banner finding): this review's Edge Case Hunter,
+working from the diff and worktree independently, found the same root cause on its own — a member routed into the manual step via
+`offerManualFallback` (stale "DigiLocker is unavailable…" top banner) who then types a non-English name sees that stale banner and
+the new inline alert simultaneously, two live `accessibilityRole="alert"` regions with different text. Two independent passes
+landing on the same pre-existing defect is further reason to treat it as real; no new bullet added here — it stays the one entry
+above.
+
+**Dismissed (14, selected):** the wrong-script message's knowing inaccuracy for accented/punctuated English names (José, "Kumar,
+Ravi") — already BigDev-reviewed and recorded as an accepted cost (KB1, KB2); no fallback path for a member who can't type English
+and won't use DigiLocker — already named as Policy-meaning edge 2 and the friction ledger's payer, a pre-existing structural gap in
+the whole KYC flow, not this diff's to close; skipping a dedicated Hindi-review roster row — an already-made, BigDev-approved
+governance call (KB6), not a code defect; no counsel review sought — a pre-existing, already-tracked program-level gap
+([[project_dpdpa_counsel_engaged_but_unrecorded]]), unrelated to this diff specifically; the render test asserting the `maxLength`
+prop was passed rather than DOM-enforced — the correct and established level of rigor for this jsdom-mock harness, consistent with
+sibling tests; `manualSubmitErrorKey` silently dropping a co-occurring `/dob` issue — not reachable through the app, since the
+client already enforces the same English-script predicate before ever sending a request, so a sent request's `/name` issue of kind
+`invalid_string` alongside another field's issue is not a realistic path; a possible double accessibility announcement (the inline
+live region while typing, plus the explicit `announceForAccessibility` call on submit) — the code's own comment reasons through
+exactly this interaction (live-region re-fire vs. the iOS-only-guard trap TR9/nominee-review.tsx hit) and chooses the unguarded call
+deliberately so an iOS user who submits without having paused on the field still hears the reason; worst case is a mildly redundant
+repeat for an Android user who did pause, not a wrong or missing message; a hypothetical `AccessibilityInfo.announceForAccessibility`
+throw (no native bridge) — undocumented RN failure mode, no established guard-this-call convention elsewhere in the codebase, too
+speculative to action; repeated identical announcements from a member rapid-tapping Submit while the name is still non-English —
+each tap is a distinct user action producing the correct response each time, not a defect; the governance prose's reliance on an
+unmechanized ⛔/⭐/⚠ glyph convention, and the self-referential "stays the author's" `-378` §0 reasoning — both pre-existing,
+project-wide governance mechanisms used across many prior stories, not introduced by or specific to this diff, and not resolvable
+by a code patch; KB8's "ask before fixing" treated as satisfied by listing-without-asking in Debug Log (c) — defensible: the three
+pre-existing hex findings were documented, not silently fixed, and nothing was changed on 3.3b's lines; the Acceptance Auditor's
+own note that Task 1.1's wording implies editing the existing `:85-89` doc sentence while the diff instead appends below it — the
+auditor itself found AC1's actual requirement satisfied either way, a wording mismatch only.
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -716,7 +822,6 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-create-story 3.3c` (story v1.0).
 
 ### Completion Notes List
 
-- Ultimate context engine analysis completed - comprehensive developer guide created.
 - `bmad-dev-story 3.3c` (Claude Opus 5.5), 2026-10-22. Commits on `story/3-3c-member-kyc-name-english-only`: `73ad0ad2` (`-382`,
   `.decision-log.md` ALONE) → `2c1ed842` (Task 0.4 records) → `bf7781d1` (Tasks 1–5, one code commit) → the Task 7 records commit.
 - **Built:** `KycManualSubmitRequest.name` is `EnglishScriptName` (6.18's predicate, unchanged); ⛔ handler change — the route's body
@@ -763,6 +868,9 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-create-story 3.3c` (story v1.0).
 
 ## Change Log
 
+- v1.5 (2026-10-22) — **Code review complete** (`bmad-code-review 3.3c`, Codex): three parallel review layers over
+  `b883dc15..d5b0de26`; 0 decision / 0 patch / 1 pre-existing defer / 2 dismissed. Focused suites 64/64; temporary baseline/current
+  banner reproduction 5/5. No product code changed. Story and sprint row `review` → `done` on the branch; no commit, push or landing.
 - v1.4 (2026-10-22) — **Implemented** (`bmad-dev-story 3.3c`, Claude Opus 5.5): Tasks 1–7 done; code commit `bf7781d1`; the three
   AC7 mutants RED → reverted → GREEN (Debug Log (c)); every gate green (Completion Notes). KB2 (a)'s wrong-script message is knowingly
   approximate for Policy-meaning edge 1 (*"José"* is in English letters yet refused) — BigDev's accepted cost. Status → `review`;

@@ -197,7 +197,8 @@ export default function KycScreen() {
       setStep('done')
       setNotice(t('kyc.done'))
     } catch (e) {
-      // Story 3.3c — a server refusal of the name's script says so, ⛔ "DigiLocker is unavailable".
+      // Story 3.3c — a server refusal of the name's script OR length says so, ⛔ "DigiLocker is
+      // unavailable" (review finding, 2026-10-22: too_big on /name used to fall through to it too).
       const nameErrorKey = manualSubmitErrorKey(e)
       if (nameErrorKey) setError(t(nameErrorKey))
       else setError(e instanceof ApiError ? kycErrorMessage(e.code) : t('kyc.fallback_empathy'))

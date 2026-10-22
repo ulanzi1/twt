@@ -17,19 +17,28 @@ export function manualNameMessageKey(name: string): ManualNameMessageKey | null 
   return null
 }
 
+export type ManualSubmitErrorKey = 'kyc.manual_name_english' | 'kyc.manual_name_too_long'
+
 /**
- * A server refusal of the name's SCRIPT → the English-name message; anything else → `null`, and the
- * screen keeps today's mapping. Keyed on `instancePath` AND `keyword`: a `too_big` on `/name` is an
- * English name over 200, ⛔ a script problem. `details` is read defensively — a malformed one → `null`.
+ * A server refusal of the name's SCRIPT or LENGTH → the matching name message; anything else → `null`,
+ * and the screen keeps today's mapping. Keyed on `instancePath` AND `keyword`, never `instancePath`
+ * alone (G14 / TR4): a `too_big` on `/name` is an English name over 200 — a LENGTH problem, ⛔ a script
+ * one, so it must NOT get the English-script message (that would tell a member whose name IS in
+ * English letters to "write it in English letters"). Before this key existed, a `too_big` on `/name`
+ * fell through to `kyc.fallback_empathy` ("DigiLocker is unavailable…") — the exact false message this
+ * story exists to kill, just for length instead of script (review finding, 2026-10-22). `details` is
+ * read defensively — a malformed one → `null`.
  */
-export function manualSubmitErrorKey(err: unknown): 'kyc.manual_name_english' | null {
+export function manualSubmitErrorKey(err: unknown): ManualSubmitErrorKey | null {
   if (!(err instanceof ApiError) || err.code !== 'request.validation') return null
   const issues = (err.details as { issues?: unknown } | null | undefined)?.issues
   if (!Array.isArray(issues)) return null
-  const scriptRefusal = issues.some((issue: unknown) => {
-    if (typeof issue !== 'object' || issue === null) return false
+  for (const issue of issues) {
+    if (typeof issue !== 'object' || issue === null) continue
     const { instancePath, keyword } = issue as { instancePath?: unknown; keyword?: unknown }
-    return instancePath === '/name' && keyword === 'invalid_string'
-  })
-  return scriptRefusal ? 'kyc.manual_name_english' : null
+    if (instancePath !== '/name') continue
+    if (keyword === 'invalid_string') return 'kyc.manual_name_english'
+    if (keyword === 'too_big') return 'kyc.manual_name_too_long'
+  }
+  return null
 }

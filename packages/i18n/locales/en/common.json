@@ -38,6 +38,7 @@
   "kyc.manual_submit": "Submit my details",
   "kyc.manual_name_required": "Please enter your full name in English, as written on your Aadhaar.",
   "kyc.manual_name_english": "Please write your name in English letters, as it is printed on your Aadhaar.",
+  "kyc.manual_name_too_long": "Your name is too long. Please shorten it to 200 characters or fewer.",
   "kyc.manual_dob_required": "Please enter your date of birth.",
   "kyc.fallback_empathy": "DigiLocker is unavailable — you can enter your details manually and we'll verify them.",
   "kyc.hard_mandatory_block": "Verification through DigiLocker is required to continue. Manual entry is not available right now.",

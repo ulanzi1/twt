@@ -43,11 +43,13 @@ describe('Story 3.3c — manualNameMessageKey: the EXACT key per typed name', ()
   })
 })
 
-describe('Story 3.3c — manualSubmitErrorKey: ONLY a script refusal on /name is the English-name message', () => {
+describe('Story 3.3c — manualSubmitErrorKey: a script refusal → English-name; a length refusal → too-long', () => {
   it.each([
     ['400 /name invalid_string', validation400('/name', 'invalid_string'), 'kyc.manual_name_english'],
-    // ⚠ An English name over 200 is ⛔ a script problem — today's mapping, ⛔ "write it in English".
-    ['400 /name too_big', validation400('/name', 'too_big'), null],
+    // ⚠ An English name over 200 is ⛔ a script problem — its OWN message, ⛔ "write it in English"
+    // (review finding, 2026-10-22: this used to fall through to `kyc.fallback_empathy`,
+    // "DigiLocker is unavailable" — the exact false message this story exists to kill).
+    ['400 /name too_big', validation400('/name', 'too_big'), 'kyc.manual_name_too_long'],
     ['400 /dob too_big', validation400('/dob', 'too_big'), null],
     ['409 kyc.not_pending', new ApiError(409, 'kyc.not_pending', 'not pending'), null],
     ['400 with malformed details', new ApiError(400, 'request.validation', 'bad', { issues: 'nope' }), null],
@@ -58,7 +60,12 @@ describe('Story 3.3c — manualSubmitErrorKey: ONLY a script refusal on /name is
 })
 
 describe('Story 3.3c — every selected key resolves through the REAL t(), both locales', () => {
-  const KEYS = ['kyc.manual_name', 'kyc.manual_name_required', 'kyc.manual_name_english'] as const
+  const KEYS = [
+    'kyc.manual_name',
+    'kyc.manual_name_required',
+    'kyc.manual_name_english',
+    'kyc.manual_name_too_long',
+  ] as const
 
   for (const locale of LOCALES) {
     it(`[${locale}] each key resolves — ⛔ no throw, ⛔ no empty string`, () => {
@@ -79,6 +86,7 @@ describe('Story 3.3c — every selected key resolves through the REAL t(), both 
       manualNameMessageKey(''),
       manualNameMessageKey('आशा देवी'),
       manualSubmitErrorKey(validation400('/name', 'invalid_string')),
+      manualSubmitErrorKey(validation400('/name', 'too_big')),
     ])
     for (const key of returned) expect(KEYS as readonly unknown[]).toContain(key)
   })
@@ -93,5 +101,6 @@ describe('Story 3.3c — every selected key resolves through the REAL t(), both 
     const lib = stripComments(read('apps/mobile/lib/kyc-manual-name.ts'))
     expect(lib).toContain(`'kyc.manual_name_required'`)
     expect(lib).toContain(`'kyc.manual_name_english'`)
+    expect(lib).toContain(`'kyc.manual_name_too_long'`)
   })
 })

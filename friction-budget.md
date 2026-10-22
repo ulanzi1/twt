@@ -26,7 +26,7 @@ deliberately accepted.
 | ------------------------------------------------ | ------------------------------------------ | ---------- |
 | Sushil (member, UTR-mismatch screenshot upload)  | Reconciliation integrity                   | forced     |
 | relative (manual-KYC fallback)                   | "facilitator" posture                      | forced     |
-| member or relative (typing the member's own name in ENGLISH letters, as on Aadhaar, in the manual-KYC fallback — `-227` cl.1 / `-378` decision 6; INPUT-ONLY, ⛔ retroactive) | the member's name staying the one English name the claim checks compare against (⛔ transliteration at review) | forced |
+| member or relative (English-script name, manual-KYC fallback — Story 3.3c disposition below) | one English name the claim checks compare against | forced |
 | Anita (verifier, over-payment recovery judgment) | Pool Engine                                | forced     |
 | Sunita (nominee bank-statement upload)           | facilitator-not-intermediary trust posture | forced     |
 | member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |

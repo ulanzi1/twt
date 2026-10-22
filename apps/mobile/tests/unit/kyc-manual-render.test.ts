@@ -123,4 +123,22 @@ describe('Story 3.3c — the manual KYC name in the real screen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(ENGLISH_MSG)
     expect(screen.getByRole('alert')).not.toHaveTextContent(words['kyc.fallback_empathy']!)
   })
+
+  // Review finding, 2026-10-22: before `kyc.manual_name_too_long` existed, this leg rendered
+  // `kyc.fallback_empathy` ("DigiLocker is unavailable") — the exact false message this story exists
+  // to kill, just for length instead of script.
+  it('a server 400 on /name too_big renders the too-long message — ⛔ the English-script message, ⛔ "DigiLocker is unavailable"', async () => {
+    mock.kycManualSubmit.mockRejectedValue(
+      new ApiError(400, 'request.validation', 'Request failed schema validation', {
+        issues: [{ keyword: 'too_big', instancePath: '/name', schemaPath: '#/name/too_big', params: {}, message: 'x' }],
+      }),
+    )
+    await toManualForm('Asha Devi')
+    await submit()
+    expect(mock.kycManualSubmit).toHaveBeenCalledTimes(1)
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent(words['kyc.manual_name_too_long']!)
+    expect(alert).not.toHaveTextContent(ENGLISH_MSG)
+    expect(alert).not.toHaveTextContent(words['kyc.fallback_empathy']!)
+  })
 })

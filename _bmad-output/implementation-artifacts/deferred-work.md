@@ -4,6 +4,29 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 3-3c-member-kyc-name-english-only.md (2026-10-22)
+
+- **Manual KYC retains stale validation banners while the member edits** [`apps/mobile/app/(signup)/kyc.tsx`, the name field's
+  `onChangeText={setName}` and `onManualSubmit`]. Submit a blank name, then enter a populated name: the required-name banner remains
+  until another submit. With a non-English name, the new inline alert appears beside that stale banner. A temporary external jsdom
+  harness reproduced the retained banner on both baseline `b883dc15` and reviewed tip `d5b0de26`; the baseline has one alert, the
+  branch two. **Deferred, pre-existing:** clearing field errors on edit predates 3.3c and is outside its approved submit behavior
+  (KB3 clears the banner on a non-English submit). No product change made in this review. Revisit when manual-KYC validation/error
+  recovery is next changed; distinguish name errors from unrelated server errors before clearing any banner. Independently
+  corroborated by a second review pass (`bmad-code-review 3.3c`, Claude Sonnet 5, same date): its Edge Case Hunter found the same
+  root cause from the diff + worktree alone, with no knowledge of this entry.
+
+- **The DigiLocker "escape hatch" named for a refused-character member is unverified** [G10;
+  `apps/api/src/modules/kyc/providers/digilocker/mapper.ts:69`]. This story's accepted cost for Policy-meaning edge 1 (a printed
+  Aadhaar English name with an accent, comma, digit or bracket) is "use DigiLocker instead" — but the DigiLocker mapper reads only
+  `Poi@name`, and the repo holds no proof `Poi@name` is always inside `ENGLISH_NAME_REGEX` (the fixture provider only ever returns
+  `'Fixture Member'`). If a real government-sourced English name can itself fail the predicate, the named alternative route may not
+  exist for some of the members it's offered to. **Deferred, pre-existing:** DigiLocker has read `Poi@name` unchanged since before
+  3.3c; not actionable without a real DigiLocker response sample. Revisit if a member reports DigiLocker also refusing their name,
+  or when a non-fixture provider response becomes available to inspect.
+
+---
+
 ## Deferred from: code review of 6-37e-suspicion-text-short-name-fallback.md — round 2 of the rework review (2026-10-22)
 
 Branch `story/6-37e-suspicion-text-short-name-fallback` at `17c6a97b`, baseline `1e22889e`. Two items, ⛔ neither closed by the row. (The invisible-only-name finding was raised again and is ⛔ re-filed: the first review's item of the same heading below already carries it.)

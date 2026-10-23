@@ -1,28 +1,29 @@
 ---
-baseline_commit: 40420410
+baseline_commit: 69e35f73
 ---
 
 <!--
-PINNED: `40420410` = `origin/main` (`git fetch origin` 2026-10-23). Created at `b883dc15` (an ancestor, 7 commits back); the 7 commits are
-3.3c's only — in `apps/` / `packages/` they touch KYC-name files, and of those only `packages/contracts/src/_common/primitives.ts` is cited
-here (G5: `MobileNumber` unchanged). Built in its OWN worktree
+PINNED: `69e35f73` = `origin/main` (`git fetch origin` 2026-10-23, after 8.15 landed; the branch was rebased onto it). Created at `b883dc15`;
+validated at `40420410`. Of the commits since: 3.3c's touch KYC-name files (only `packages/contracts/src/_common/primitives.ts` is cited here
+— G5: `MobileNumber` unchanged); 8.15's touch pool / contribution files only — ⛔ claim, nominee or jobs code moved. Built in its OWN worktree
 `/Users/dev/Developer/projects/TWT/.claude/worktrees/6-36d-exclude-nominees-from-the-five`, branch `story/6-36d-exclude-nominees-from-the-five`
 ([[feedback_commit_on_story_branch]], [[feedback_shared_tree_branch_switch]] — ⛔ switch the main checkout; peer sessions and sibling
 worktrees 6-35 / 8-15 exist). Two facts, stated separately: (1) the pin is an ancestor of this branch (durable); (2) every `apps/` /
-`packages/` claim below was re-derived at `40420410` on 2026-10-23 (perishable — re-check at Task 0.1). Re-locate by FUNCTION, ⛔ by line
-number (a cite can be exact and still sit in the wrong function).
+`packages/` claim below was re-derived at `40420410` on 2026-10-23 and re-checked against `69e35f73` (perishable — re-check at Task 0.1).
+Re-locate by FUNCTION, ⛔ by line number (a cite can be exact and still sit in the wrong function).
 
-STATUS: ready-for-dev (v1.1 — validated by `bmad-create-story validate 6.36d`, 2026-10-23). The build decisions ND1–ND10 are PROPOSED;
-BigDev answers them at Task 0.2, and ONE author-commit records them BEFORE any code ([[feedback_governance_commits_precede_implementation]]).
+STATUS: ready-for-dev (v1.3). Build decisions (2026-10-23): BigDev accepted the recommendation on ND1–ND6, ND8, ND9; ND7 (b) and ND10's
+Panel half are Trustee-ratified by `2026-10-23-384` (BigDev's confirmation of them as build decisions still owed). ONE author-commit records them BEFORE any code (Task 0.3,
+[[feedback_governance_commits_precede_implementation]]); it still needs BigDev's answer on the `-356` reading and his confirmation of
+ND7 / ND10 (Task 0.2).
 
 §0 GATE (the routing template's): which members are asked is the AUTHOR's — the class `-340` §0 states (*"Call 2 removes the people who
 asserted the death from the pool"*; `-341` the same for reporters), each by author-commit, ⛔ routed (and ⛔ told to the Panel since);
-removing a person with a stake in the payout is the analogous class. TWO halves touch §0 bullets and are SPLIT OFF (*"A MIXED QUESTION
-IS TWO QUESTIONS"*): ND10 — *"a LEGAL or consent BASIS for handling someone's data"* (the nominee's mobile used for a new internal
-purpose; `-352` Q2 stated a related ground) — and ND7 — the nominee declaration is a NEW channel by which a family can change who is asked,
-the edge `-331` SC1 A narrowed with a staff warning (`-330` SW20 (ii), ratified in effect). Each is put to the Panel as ONE non-blocking
-question ("build as recommended + confirm" — the `-330` §0 / Row 31 (g) precedent, and `-295` §8 / `-296`): the answers are named in Row 31
-leg (i) and gate GO-LIVE, ⛔ the build, ⛔ the merge.
+removing a person with a stake in the payout is the analogous class. TWO halves touched §0 bullets and were SPLIT OFF to the Panel: ND10
+(*"a LEGAL or consent BASIS for handling someone's data"* — the nominee's mobile used for a new internal purpose) and ND7 (the nominee
+declaration as a NEW channel by which a family can change who is asked — an extension of `-331` SC1 A's staff warning, `-330` SW20 (ii)).
+Both ANSWERED by `2026-10-23-384` (Q1 A, Q2 A). Counsel's WRITTEN confirmation of the data ground stays a GO-LIVE condition (Row 31 (i)),
+⛔ the build, ⛔ the merge.
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never") · ⭐ = action /
 emphasis · ⚠ = hazard.
@@ -30,24 +31,23 @@ emphasis · ⚠ = hazard.
 ADDRESSING RULE: ⛔ file:NNN into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (newest-first files — cite decision id +
 clause, item heading, row key).
 
-NUMBERS (`-366` decision 6: *"the number belongs to the first COMMIT that takes it on any branch"*): ⛔ claimed by this file; each is "the next
-free one" at the commit that takes it. At validation (2026-10-23, every ref and worktree): decisions — `-382` on `main` (3.3c), `-383`
-committed on local `story/8-15-fixed-amount-transition-staged-card` (⛔ on origin) ⇒ next free ≥ `-384`. Migrations — highest
-`0178_member-wa-opt-in-codes` everywhere ⇒ `0179`, ⚠ ALSO planned by row 6-35 (see Sequencing). Ledger letters for `2026-10-22`: `main` to
-`ad` (without `v` / `w` / `aa`); `v`, `aa`–`ae` on 8-15; `ae`, `af` on 6-35; `w` is this story's creation line (uncommitted, in its slot
-between `u` and `x`). `2026-10-23` / `23a` is held UNCOMMITTED by the 8-15 worktree (seen 08:57) ⇒ this validation takes the next free
-letter at its commit (re-grep then). ⛔ A new roster row is needed (ND10 adds leg (i) to Row 31).
+NUMBERS (`-366` decision 6: *"the number belongs to the first COMMIT that takes it on any branch"*): each is "the next free one" at the
+commit that takes it. At the rebase (2026-10-23): decisions — `-383` on `main` (8.15), `-384` on THIS branch (the Panel's ruling) ⇒ the
+author-commit takes ≥ `-385`. Migrations — highest `0178_member-wa-opt-in-codes` everywhere ⇒ `0179`, ⚠ ALSO planned by row 6-35 (see
+Sequencing). Ledger letters: `2026-10-22w` is this story's creation line; `2026-10-23a`–`f` are 8.15's (on `main`); this branch's
+`2026-10-23` lines are `g` (validation), `h` (the note), `i` (the ruling) — re-lettered from `b` / `f` / `g` at the rebase, since 8.15
+landed first; the cleanup takes the next free letter at its commit (`j` when checked — re-grep then). ⛔ Claimed by this file. ⛔ A new roster row is needed (ND10 adds leg (i) to Row 31).
 
-LETTERS: G = found facts (traced to code at the pin) · ND = build decisions (PROPOSED — BigDev answers at Task 0.2) · PQ = Panel questions
-(non-blocking) · TR = traps.
+LETTERS: G = found facts (traced to code at the pin) · ND = build decisions (DECIDED 2026-10-23) · PQ = Panel questions (ANSWERED,
+`-384`) · TR = traps.
 -->
 
 # Story 6.36d: A Member's Nominees Are Never Among the Five Asked About Their Death — Matched by Phone Number at Selection and Again Before Every Message `[PRIMITIVE]`
 
 Status: ready-for-dev
 
-> ⭐ **Next: Task 0** — governance FIRST, ⛔ code. BigDev answers ND1–ND10 (Task 0.2), the author-commit is committed ALONE (Task 0.3), the
-> records commit follows (Task 0.4, incl. the Panel note — written, ⛔ sent by this story), and only then Task 1.
+> ⭐ **Next: Task 0.2's last answer (the `-356` reading), then Task 0.3** — governance FIRST, ⛔ code. ND1–ND10 are decided and the Panel
+> has ruled (`-384`); the author-commit is committed ALONE (Task 0.3), the records commit follows (Task 0.4), and only then Task 1.
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -82,7 +82,7 @@ copy `docs/legal/niyamavali.md`, dated 2026-08-16 — a rulebook, ⛔ ratified, 
 nominees, declared at signup or in Life Events), §6.1 (the nominee or a bereaved relative files), §6.2 (the Trust verifies the event, the
 entitlement and the documents) — ⛔ clause says who is ASKED, so ⛔ conflict on the selection rule. Part 10 (*"processes
 member/nominee/claimant data lawfully, for specified purposes, on a lawful basis"*) bears on the NEW purpose (comparing nominee numbers) —
-that question is carried by ND10 / PQ1, ⛔ settled here. **What the predicate decides:** who is asked — ⛔ what a family is owed. The peer
+the Panel permitted it (`-384` Q1 A); counsel's written confirmation of the ground is a go-live condition (Row 31 (i)). **What the predicate decides:** who is asked — ⛔ what a family is owed. The peer
 mesh is a signal, ⛔ never a gate (`-263` FQ10 A). Its one visible consequence: at a small workplace where
 every colleague is a nominee, the claim can reach "nobody to ask" and the ground inspection carries it (`-330` SW25) — the consequence the
 filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits, eligibility, coverage or consent are touched.
@@ -94,12 +94,13 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
 | `-310` CF4 A | *"The people asked are: the members at the member's workplace … otherwise up to three members the member named who agreed; otherwise nobody … ⛔ Never the district; the family ⛔ never chooses."* — ⛔ exception list | ⭐ TRUSTEE-RATIFIED |
 | `-331` SC1 A | the action: *"staff are told when the member's workplace or the people they named changed in the 90 days before the claim"*; the accepted cost: *"a family that plans ahead can still change who is asked — staff see the warning, and the ground inspection always runs"*; SC1 narrowed CF4 A at *"the family ⛔ never chooses"* (`-331` §0) | ⭐ TRUSTEE-RATIFIED |
 | `-339` RF1 C | carries A as put: *"A change made to the dead member's account after the first filing ⛔ never decides who is asked, on any later claim."*; A's accepted cost: *"A genuine correction made between two claims … is ignored too, and staff are ⛔ not told of it; the ground inspection always runs."* | ⭐ TRUSTEE-RATIFIED — the cut ND1 (b) reuses; ⛔ decides ND1 (A's text and cost are scoped to a LATER claim; `-340` call 1 reads it so: *"a refile asks the same five, minus anyone no longer eligible (SW23 is read at selection time)"*) |
-| `-330` SW20 (ii) — the staff line (ratified in its effect, `-331` Consequence 3) | staff see ONE line when the dead member's latest posting was recorded, or any of their named people was ACCEPTED or REMOVED, in the 90 days before the cut; the shipped copy matches SC1 A's words | AUTHOR-COMMIT, ratified in effect — EXTENDED by ND7 (b), subject to PQ2 |
+| `-330` SW20 (ii) — the staff line (ratified in its effect, `-331` Consequence 3) | staff see ONE line when the dead member's latest posting was recorded, or any of their named people was ACCEPTED or REMOVED, in the 90 days before the cut; the shipped copy matches SC1 A's words | AUTHOR-COMMIT, ratified in effect — EXTENDED to nominee changes by `-384` Q2 A (ND7 (b)) |
 | `-303` Q1 A | *"EACH OF THE FIVE IS TEXTED, NAMING THE MEMBER"* — ⛔ defines who the five are | ⭐ TRUSTEE-RATIFIED |
 | `-356` | *"drop WhatsApp only notification for nominee."*; its NOT-ratified reading (ii): a member nominee's existing member opt-in *"does not count by itself"* | ⭐ TRUSTEE-RATIFIED (ruling); (ii) ⛔ ratified |
 | `-234` V / `-233` | `-234` V: *"allowing nominee change until claim has been filed. However if nominee has been changed after death that nominee claim will be denied"*; our reading (⛔ ratified, `-234` Consequence 1): the lock starts at the first claim; `-233`'s *"After member has died nominee they declared cannot be changed"* is read through it | ⭐ TRUSTEE-RATIFIED (the rulings); the lock-at-first-claim reading ⛔ ratified |
 | `-235` Y / `-239` | `-235` Y: *"A change done before a day of death will be assumed to be done by member, everything else will be discarded."*; `-239`: *"'dated on or after the day of death' by itself enough to treat it as deliberate … System shouldn't refuse the claim, district admin will act upon suspicion and refuse"* | ⭐ TRUSTEE-RATIFIED |
-| `-352` Q2 | the Panel's words: processing the nominee's personal data *"(phone number/email) to reach out is permissible if it is necessary to enforce legal rights, prevent fraud, or fulfill contractual/regulatory obligations"*; its not-covered (a): whether the DPDP Act has that ground *"is for counsel to confirm in writing"* | ⭐ TRUSTEE-RATIFIED — SUPERSEDED IN PART by `-356` (WhatsApp to the nominee); the ground stands as the Panel's statement, its not-covered (a) is counsel's — the ground ND10 / PQ1 asks the Panel to extend |
+| `-352` Q2 | the Panel's words: processing the nominee's personal data *"(phone number/email) to reach out is permissible if it is necessary to enforce legal rights, prevent fraud, or fulfill contractual/regulatory obligations"*; its not-covered (a): whether the DPDP Act has that ground *"is for counsel to confirm in writing"* | ⭐ TRUSTEE-RATIFIED — SUPERSEDED IN PART by `-356` (WhatsApp to the nominee); the ground stands as the Panel's statement, its not-covered (a) is counsel's — EXTENDED to the comparison by `-384` Q1 A |
+| `-384` Q1 A / Q2 A | Q1 A: *"Yes — use the nominee's number for this check."* — cost as put: *"One more use of the nominee's number. Our lawyer has not yet confirmed the legal ground you quoted; nothing goes live until that is done."*; Q2 A: *"Yes — warn staff about nominee changes too."* — cost as put: *"One more reason for the warning to show — including when someone re-saved the nominees without changing them, or declared them at sign-up within those 90 days."* | ⭐ TRUSTEE-RATIFIED (DR + KB, 2026-10-23) — settles ND7 (b) and ND10's Panel half; the exact staff-line words stay the author's |
 | `-263` FQ10 A | *"THE CHECK WITH NEIGHBOURS IS A SIGNAL, ⛔ NOT A GATE"* | ⭐ TRUSTEE-RATIFIED |
 | `-311` PM1 (i) | *"Ineligible members — ⛔ not `active`, or with a claim filed for their own death, or with ⛔ no sendable mobile — are FILTERED when the people are first chosen"*; §0 *"⛔ never a narrowing"* | AUTHOR-COMMIT |
 | `-330` SW19 / SW23 / SW25 (the SW block of the 6.36a story file IS `-330`'s record) | SW19: *"⛔ No decrypt, ⛔ no KMS call in the select job"*; SW23: ONE eligibility predicate, read at selection time (I8's exception), and — under *"⚠ Recorded, ⛔ not changed"* — *"a relative of the deceased is ⛔ not excluded"*; SW25: the zero branch | AUTHOR-COMMIT — SW19 SUPERSEDED IN PART; SW23's recorded residual NARROWED (Task 0.3) |
@@ -116,15 +117,15 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
 |---|---|---|
 | Removing nominees from the pool | `-310` CF4 A names WHERE the five come from; ⛔ text forbids a filter, and every filter since (`-306` §2 claimant, `-311` PM1, SW23, `-340`, `-341`) is an author-commit; `-366` (vii) reads the filters as part of who the five ARE | **MATCH** (author's) |
 | Fewer than five asked | CF4 A itself allows *"otherwise nobody"*; the replacement walk keeps the number at five while the group lasts (`-311` §0: *"⛔ never a narrowing"*) | **MATCH** |
-| WHICH nominee set (ND1) | `-339` RF1 C (carrying A): *"… ⛔ never decides who is asked, on any later claim"* — scoped to a LATER claim; `-340` call 1: *"a refile asks the same five, minus anyone no longer eligible (SW23 is read at selection time)"* | **author's, (a) and (b)** — eligibility conjuncts are read at selection / send time (SW23, I8's exception; `-340` reads `-339` the same way); after the first filing the declaration is locked (G10), so neither option lets a family steer. (b) is RECOMMENDED for one set per claim and replay stability, ⛔ because (a) is the Panel's. ⚠ ND1 (c) "every version ever" would let repeated changes exclude many colleagues ⇒ widens SC1 A's accepted cost ⇒ the Panel's |
-| "The family ⛔ never chooses" | `-234` V lets whoever holds the member's login change nominees after the death until the first filing; `-235` Y / `-239` discard that change only for the PAYOUT. Under ND1 (b) such a change still excludes ≤ 2 colleagues (bounded: ≤ 2 ranks; the replacement keeps five while the group lasts; `-239` makes a change on or after the day of death a ground to refuse). `-331` SC1 A accepted *"a family that plans ahead can still change who is asked"* on the condition *"staff see the warning"* — and its warning covers only *"the member's workplace or the people they named"* | **ND7 (b): build + PQ2 (non-blocking confirm, answered before Row 31 closes — leg (i))** — the exclusion adds a channel to SC1 A's accepted cost (a further NARROWING of CF4 A's *"the family ⛔ never chooses"*); ND7 (b) EXTENDS SC1 A's action / `-330` SW20 (ii)'s trigger and words to cover it — both §0 bullets ("narrowed or extended") ⇒ the Panel ANSWERS (the `-330` §0 / Row 31 (g) precedent: SC1 itself was built non-blocking and answered before Row 31 closed). ND7 (a) leaves the new channel un-warned ⇒ WIDENS SC1 A's cost ⇒ BLOCKING, ⛔ recommended |
-| A KMS fault outlasting the retries (ND6) | CF4 A / `-303` Q1 A ask the five; `-295` §0 classes a loss to *"a provider fault — a delivery failure, ⛔ not a policy narrowing"* | **author's (a delivery failure)** — under ND6 (a)'s last step / (b) nobody is asked though colleagues may exist, alarmed, recorded with its OWN skip reason `nominee_check_unavailable` (⛔ the "no colleague" reason) |
+| WHICH nominee set (ND1) | `-339` RF1 C (carrying A): *"… ⛔ never decides who is asked, on any later claim"* — scoped to a LATER claim; `-340` call 1: *"a refile asks the same five, minus anyone no longer eligible (SW23 is read at selection time)"* | **author's, (a) and (b)** — eligibility conjuncts are read at selection / send time (SW23, I8's exception; `-340` reads `-339` the same way); after the first filing the declaration is locked (G10), so neither option lets a family steer. (b) CHOSEN for one set per claim and replay stability, ⛔ because (a) is the Panel's. ⚠ ND1 (c) "every version ever" would let repeated changes exclude many colleagues ⇒ widens SC1 A's accepted cost ⇒ the Panel's |
+| "The family ⛔ never chooses" | `-234` V lets whoever holds the member's login change nominees after the death until the first filing; `-235` Y / `-239` discard that change only for the PAYOUT. With ND1 (b) such a change still excludes ≤ 2 colleagues (bounded: ≤ 2 ranks; the replacement keeps five while the group lasts; `-239` makes a change on or after the day of death a ground to refuse). `-331` SC1 A accepted *"a family that plans ahead can still change who is asked"* on the condition *"staff see the warning"* — and its warning covers only *"the member's workplace or the people they named"* | **the Panel's — ANSWERED: `-384` Q2 A** — the exclusion adds a channel to SC1 A's accepted cost (a further NARROWING of CF4 A's *"the family ⛔ never chooses"*), and ND7 (b) EXTENDS SC1 A's action / `-330` SW20 (ii)'s trigger and words to cover it; the Panel chose the extension, so SC1 A's condition (*"staff see the warning"*) holds for the new channel |
+| A KMS fault outlasting the retries (ND6) | CF4 A / `-303` Q1 A ask the five; `-295` §0 classes a loss to *"a provider fault — a delivery failure, ⛔ not a policy narrowing"* | **author's (a delivery failure)** — after ND6 (a)'s 24 h of deferral, nobody is asked though colleagues may exist, alarmed, recorded with its OWN skip reason `nominee_check_unavailable` (⛔ the "no colleague" reason) |
 | `-356` / `-366` decision 5 | the exclusion removes the reminder-to-a-nominee case for every nominee whose declared number is their login number; the ND8 residual (a different number) is still texted and, if opted in, reminded — the exposure `-366` (vii) recorded | **MATCH** — RESOLVES IN PART `-366` decision 5's condition |
-| The nominee's mobile used to exclude | ⛔ ratified text on this purpose. `-352` Q2's ground covers processing the number *"to reach out"* to *"prevent fraud"*; comparing it with members' numbers EXTENDS that ground. The roster's basis line (*"nominee information + bank details → the nominee's own Claim Terms"*, roster Row 17's 2026-08-28 amendment, `-160` cl.3 — with its own limit *"⛔ Nobody may cite this amendment as authority that a member's T&C reaches another person's data"*) does ⛔ reach this: a non-claimant nominee has accepted ⛔ Claim Terms at selection | **§0 bullet — SPLIT to ND10 / PQ1** |
+| The nominee's mobile used to exclude | ⛔ ratified text on this purpose. `-352` Q2's ground covers processing the number *"to reach out"* to *"prevent fraud"*; comparing it with members' numbers EXTENDS that ground. The roster's basis line (*"nominee information + bank details → the nominee's own Claim Terms"*, roster Row 17's 2026-08-28 amendment, `-160` cl.3 — with its own limit *"⛔ Nobody may cite this amendment as authority that a member's T&C reaches another person's data"*) does ⛔ reach this: a non-claimant nominee has accepted ⛔ Claim Terms at selection | **the Panel's — ANSWERED: `-384` Q1 A**; counsel's written confirmation of the ground is a go-live condition (Row 31 (i)) |
 | The select job decrypts | `-330` SW19 (author-commit): *"⛔ No decrypt, ⛔ no KMS call in the select job"* | **author's — SUPERSEDED IN PART** by the new entry (ND3), ⛔ re-read |
 | A relative who is a nominee | `-306` §2 item 1 (*"a relative is flagged by …"*) / `-330` SW23's recorded residual (*"a relative of the deceased is ⛔ not excluded"*) — author-commits; ⛔ in CF4 A as put (`-310`) | **author's** — SUPERSEDES IN PART `-306` §2 item 1 and NARROWS SW23's residual: a relative who is a declared nominee (matched by number) is excluded; other relatives stay flagged only; ⛔ ratified clause moves |
 
-## FOUND FACTS (G) — traced at `40420410`
+## FOUND FACTS (G) — traced at `40420410`, re-checked at `69e35f73`
 
 - **G1 — the predicate.** `peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusions)` (`packages/domain/src/claim/peer-mesh-read.ts`;
   `PeerMeshEligibilityExclusions = { readonly deceasedMemberId: MemberId }`). Every column reference inside it is `${m}.…` — callers pass
@@ -248,19 +249,22 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
   written only by `runClaimPeerMeshSelect` ⇒ a select job that fails for good leaves the claim in `documents_pending` until another upload
   re-enqueues it. The final-attempt precedent: `job.retryCount >= job.retryLimit` (6.37c's `finalAttempt`, `claim-certificate-reminders.ts`).
 
-## ⚖️ Build decisions ND1–ND10 (PROPOSED — BigDev answers at Task 0.2)
+## ⚖️ Build decisions ND1–ND10 (DECIDED 2026-10-23)
 
-- **ND1 — WHICH nominee set.** **(b) RECOMMENDED: the deceased's declaration AS RECORDED BEFORE THE FILING CUT** — the same cut the five are
+BigDev, at Task 0.2: *"For ND1–ND6, ND8, ND9 - your recommendation is accepted"*; ND7 (b) and ND10's Panel half by `2026-10-23-384`
+(Trustee-ratified). Each ND states the CHOSEN option; the rejected ones are kept, briefly, as the record the author-commit carries.
+
+- **ND1 — WHICH nominee set.** **CHOSEN (b): the deceased's declaration AS RECORDED BEFORE THE FILING CUT** — the same cut the five are
   chosen by (`-339` RF1 C's first filing, `resolvePeerMeshFilingCut`): `listNomineeDeclarationVersions` → keep `recorded_at < cut.cut` → per
   rank `projectedVersionOfRank` → that version's `mobile_ciphertext` (a `vacated` rank ⇒ nobody). At selection the cut comes from
   `resolvePeerMeshFilingCut`; at send time and at the reminder it is `peerMeshFilingCut(<the anchor claim's created_at>)`, the anchor being the
   selection row's persisted `anchor_claim_case_id` (this claim's own `created_at` when it is NULL — a legacy row). ⇒ ONE set per claim,
   identical at every check. Why: one set per claim, so selection, every send-time re-check, the reminder and replay all read the same
   nominees; it reuses the cut the five are already chosen by. Both (a) and (b) are the author's (§0 row: `-339`'s words are scoped to a
-  LATER claim; `-340` call 1 reads eligibility at selection time). (a) the CURRENT `member_nominees`, read fresh at every check — ⛔
-  recommended: a District Admin correction of the rank's HEAD (from `verification_in_progress` on, G10) moves the set mid-claim, so
-  selection and send would read different sets. (c) every version ever declared — ⛔ recommended: repeated changes could exclude many
-  colleagues (widens SC1 A's accepted cost ⇒ the Panel's). **Residuals of (b), recorded:** a post-filing District Admin correction of a
+  LATER claim; `-340` call 1 reads eligibility at selection time). **Rejected:** (a) the CURRENT `member_nominees`, read fresh at every
+  check — a District Admin correction of the rank's HEAD (from `verification_in_progress` on, G10) moves the set mid-claim, so selection
+  and send would read different sets; (c) every version ever declared — repeated changes could exclude many colleagues (widens SC1 A's
+  accepted cost ⇒ the Panel's). **Residuals of (b), recorded:** a post-filing District Admin correction of a
   mistyped nominee number does ⛔ re-exclude — an author-accepted residual (the nearest ratified analogue is `-339` A's cost, *"a genuine
   correction made between two claims … is ignored too"*, whose scope is a later claim, ⛔ this one); a nominee declared on the filing day
   before filing is ⛔ in the set (SC1 A's "before the filing day").
@@ -283,8 +287,10 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
   locked tx then runs every step as today (lock, probe, guard, deceased check) and uses the indexes; it THROWS a retryable error — the retry
   re-reads — if it reaches the snapshot WITHOUT indexes (the state became `documents_pending` after the pre-read) or if its own
   `resolvePeerMeshFilingCut` anchor differs from the pre-read's (an innocence finding on the anchor, or an earlier sibling claim, committed
-  in between — unreachable today: nothing writes that finding until row 6-22). ⛔ A selection is ever
-  made without the indexes; ⛔ KMS call on a no-op or wrong-state run (6.27c P5's rule, applied to selection). `ClaimPeerMeshDeps` gains a
+  in between — unreachable today: nothing writes that finding until row 6-22). A selection that CHOOSES anyone is ⛔ ever made without
+  the indexes. The ONE selection written without them is ND6's finish — EMPTY (⛔ candidate, ⛔ one asked), skip reason
+  `nominee_check_unavailable` — which reads ⛔ predicate, so the exclusion has nothing to filter. ⛔ KMS call on a no-op or wrong-state run
+  (6.27c P5's rule, applied to selection). `ClaimPeerMeshDeps` gains a
   REQUIRED `encryption` (wired from `jobsEncryption`; the shared type forces it on the window worker and the tests' `windowDeps()` too). This
   SUPERSEDES IN PART `-330` SW19's *"⛔ No decrypt, ⛔ no KMS call in the select job"* for this read only (the anchor stays the filing date).
 - **ND4 — the send-time re-check.** The 6.27c child computes the indexes ONCE per child run (one run = one claim), keyed on the claim's own
@@ -301,12 +307,12 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
   `anchorClaimCaseId` (this claim when NULL) → `getClaimCase` → `peerMeshFilingCut(createdAt)`; a missing selection or anchor row ⇒ throw
   (the child's transient path, ND6) — called inside the same short read as the version read (the request child's existing `scoped` helper
   already has the `InScope` shape).
-- **ND5 — the label.** **(a) RECOMMENDED: a new no-target label `peer_is_nominee`**, labelled after `peer_filed_for_this_death`; a migration
+- **ND5 — the label.** **CHOSEN (a): a new no-target label `peer_is_nominee`**, labelled after `peer_filed_for_this_death`; a migration
   (next free number) widens 0166's two CHECKs and the trigger's replaceable list; every G12 pin moves in lockstep; the R4 test becomes "the
   five labels cover today's predicate". Audience: the District Admin and later approvers only (G12), who already see the declaration ⇒ ⛔
-  new disclosure ([[feedback_withholding_must_be_uniform]]). (b) fold into the fallback `peer_not_eligible` — ⛔ migration, but a known
-  conjunct lands on the "future conjunct" fallback and staff see a vaguer reason. The label is the author's (ND5); ⛔ `-210` cl.2 is needed
-  (that delegation covers the tracking vocabulary).
+  new disclosure ([[feedback_withholding_must_be_uniform]]). **Rejected:** (b) fold into the fallback `peer_not_eligible` — a known
+  conjunct would land on the "future conjunct" fallback and staff would see a vaguer reason. The label is the author's (ND5); ⛔ `-210`
+  cl.2 is needed (that delegation covers the tracking vocabulary).
 - **ND6 — a KMS or envelope fault fails CLOSED, and is ALARMED.** A decrypt or HMAC error (a KMS fault OR an unreadable envelope) never
   becomes `[]`. **Request / reminder child:** ONE ids-only alarm (`[jobs] <label>: peer_mesh_nominee_exclusion failed for claim <id> —
   retrying (⛔ ping begun)`, TR12) then `throw new ClaimCorrectionTransientError(…)` before any begin — exactly as `readMemberFacingDeceasedName`
@@ -317,29 +323,32 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
   and passes `attempt = { retryCount, retryLimit }` (the 6.37c cast `job as Job & { retryCount?: unknown; retryLimit?: unknown }`,
   `registerClaimCertificateReminderWorkers`) as a new optional 4th argument of `runClaimPeerMeshSelect`; absent ⇒ ⛔ the final attempt.
   The final-attempt arm applies ONLY to the nominee-exclusion fault (a throw from `peerMeshNomineeMobileIndexes`) — a final-attempt "claim
-  not found", deceased mismatch or `ClaimStreamConcurrencyError` keeps today's behaviour. On that final attempt:
-  - **(a) RECOMMENDED — defer, then finish.** `boss.send` a fresh select job with `startAfter` 1 h and the same retry policy (the 6.27c
-    defer-to-later shape), with an alarm each cycle; after 24 h of deferral (counted from the first failure, carried in the payload as a
-    non-PII instant) finish as in (b). Cost: a KMS outage delays the neighbour check by up to its length; ⛔ claim is skipped for an outage
-    shorter than 24 h.
-  - **(b) finish as nobody-to-ask at once.** Open the normal locked tx and run lock → probe → state guard → deceased check exactly as today
-    (any of them returning ⇒ ⛔ write); then `resolvePeerMeshFilingCut` and persist a `workplace_named_v1` row with `selectedMemberIds: []`,
-    `candidates: []`, `rankedMemberIds: []`, `anchorClaimCaseId` from the cut, `previousWorkplaceCounted` / the deceased's workplace ids from
-    a deceased-only postings read (split out of `getPeerMeshWorkplaceSnapshot` — it needs ⛔ predicate), `recentChangeBeforeFiling` from its
-    disjuncts (⛔ predicate); `claim.peer_mesh_none_to_ask`; `skipPeerMesh` with a NEW constant `PEER_MESH_SKIP_REASON_NOMINEE_CHECK_UNAVAILABLE
-    = 'nominee_check_unavailable'` — ⛔ the zero-branch constant (it would say "no colleague" when colleagues may exist); plus a second
-    alarm. The claim moves on; nobody who might hold a stake is asked; the ground inspection carries it (`-330` SW25) — a delivery failure,
-    ⛔ a policy narrowing (`-295` §0; the §0 row). Cost: a KMS outage longer than ~15 min (4 retries, 60 s base, backoff) permanently ends the
-    neighbour check for every claim that reached `documents_pending` in it.
-  - **(c) rethrow** and leave the job `failed` — the claim stays in `documents_pending` until another upload (recorded residual); ⛔
-    recommended (the peer mesh becomes a gate on a fault).
-  (a) needs (b)'s finish as its last step, so under (a) both are built.
-- **ND7 — the staff line, and ⛔ other new record.** **(b) RECOMMENDED: a nominee version recorded in `[cut.recentFrom, cut.cut)` also sets
-  `recent_change_before_filing`** (a third disjunct in `getPeerMeshGroupedSnapshot`, a plain EXISTS on `member_nominee_versions` — ⛔
-  decrypt), and the admin copy `peerMesh.recentChangeBeforeFiling` reads *"The member's workplace, the people they named or their nominees
-  changed in the 90 days before the filing used to choose whom to ask."* (en; the admin console has ⛔ hi file). It restores SC1 A's accepted
-  cost condition (*"staff see the warning"*) for the new channel; confirmed by PQ2 (non-blocking). (a) ⛔ staff line — WIDENS SC1 A's cost ⇒
-  the Panel's, ⛔ recommended. Either way: ⛔ `metric_version` bump (the `-340` / `-341` precedent, G14); ⛔ excluded count, ⛔
+  not found", deceased mismatch or `ClaimStreamConcurrencyError` keeps today's behaviour. **CHOSEN (a) — defer, then finish:**
+  - **Defer.** On that final attempt, `boss.send` a fresh select job with `startAfter` 1 h and the same retry policy (the 6.27c
+    defer-to-later shape), with an alarm each cycle, then RETURNS (the job completes; ⛔ rethrow after the re-send). The payload gains ONE
+    non-PII field, the instant of the FIRST nominee-exclusion failure, carried unchanged into every deferred job — absent on the OCR
+    hook's send, so the first re-send sets it to that job's `createdOn` (metadata; ≤ ~15 min before its final attempt). (The select queue's default pg-boss policy puts ⛔
+    uniqueness on `singletonKey`, so the re-send from inside the active job is ⛔ dropped.) Cost: a KMS outage delays the neighbour check by
+    up to its length; ⛔ claim is skipped for an outage shorter than 24 h.
+  - **Finish — once a deferred job's final attempt fails 24 h or more after that first failure.** Open the normal locked tx and run lock →
+    probe → state guard → deceased check exactly as today (any of them returning ⇒ ⛔ write); then `resolvePeerMeshFilingCut` and persist a
+    `workplace_named_v1` row with `selectedMemberIds: []`, `candidates: []`, `rankedMemberIds: []`, `anchorClaimCaseId` from the cut,
+    `previousWorkplaceCounted` / the deceased's workplace ids from a deceased-only postings read (split out of `getPeerMeshWorkplaceSnapshot`
+    — it needs ⛔ predicate), `recentChangeBeforeFiling` from all three disjuncts (posting, named people, ND7's nominee versions — none needs
+    the predicate); `claim.peer_mesh_none_to_ask`; `skipPeerMesh`
+    with a NEW constant `PEER_MESH_SKIP_REASON_NOMINEE_CHECK_UNAVAILABLE = 'nominee_check_unavailable'` — ⛔ the zero-branch constant (it
+    would say "no colleague" when colleagues may exist); plus a second alarm. This is the ONE selection written without indexes (ND3) — it
+    chooses nobody. The claim moves on; nobody who might hold a stake is asked; the ground inspection carries it (`-330` SW25) — a delivery
+    failure, ⛔ a policy narrowing (`-295` §0; the §0 row).
+  - **Rejected:** (b) finish at once on the first final attempt — a KMS outage longer than ~15 min (4 retries, 60 s base, backoff) would
+    permanently end the neighbour check for every claim that reached `documents_pending` in it; (c) rethrow and leave the job `failed` —
+    the claim would stay in `documents_pending` until another upload (the peer mesh becomes a gate on a fault).
+- **ND7 — the staff line, and ⛔ other new record.** **CHOSEN (b) — Trustee-ratified, `-384` Q2 A: a nominee version recorded in
+  `[cut.recentFrom, cut.cut)` also sets `recent_change_before_filing`** (a third disjunct in `getPeerMeshGroupedSnapshot`, a plain EXISTS
+  on `member_nominee_versions` — ⛔ decrypt), and the admin copy `peerMesh.recentChangeBeforeFiling` reads *"The member's workplace, the
+  people they named or their nominees changed in the 90 days before the filing used to choose whom to ask."* (en; the admin console has ⛔
+  hi file; the words are the author's — `-384` ratified the warning, ⛔ its wording). It keeps SC1 A's accepted cost condition (*"staff see
+  the warning"*) for the new channel. **Rejected:** (a) ⛔ staff line (widens SC1 A's cost; the Panel chose Q2 A = ND7 (b)). Also: ⛔ `metric_version` bump (the `-340` / `-341` precedent, G14); ⛔ excluded count, ⛔
   event-payload change; the zero branch keeps `no_workplace_colleague_or_named_person` (G15 — recorded imprecision).
 - **ND8 — residuals RECORDED, ⛔ built.**
   - a nominee whose declared mobile differs from their login mobile (a second phone, a changed number) escapes — still selected, texted
@@ -353,64 +362,42 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
   - the deceased's OTHER relatives stay un-excluded (deferred-work's family item NARROWS to them);
   - a TEXTED ping and the reply path still do ⛔ re-check (6.36 W3); the answer-counting surfaces (`runClaimPeerMeshWindow`'s
     `distinctPeerMeshResponderCount`, the FQ10 warning) do ⛔ re-derive the exclusion — W3's class;
-  - under ND7 (b) the nominee disjunct fires on ANY version recorded in the window — a re-save that changed nothing, or a sign-up
+  - the ND7 nominee disjunct fires on ANY version recorded in the window (the cost `-384` Q2 A accepted) — a re-save that changed nothing, or a sign-up
     declaration — because versions are ⛔ deduplicated (T3, `declaration-history.ts`); the warning over-reports, ⛔ under-reports (the
     posting disjunct already fires on a sign-up posting);
   - the deceased's RTBF turns the nominee ciphertexts (projection AND versions) into sentinels ⇒ nobody is excluded — unreachable for any send (the 6.27c begin's ②
     name fault comes before ③; the reminder finishes `no_target` on the name fault).
 - **ND9 — ⛔ backfill.** Nothing is in production ([[project_not_in_production_merge_is_not_golive]]; re-stated 2026-10-20 and in the
   2026-10-22u ledger); an existing selection is ⛔ re-drawn; an unsent ping is re-checked at send time anyway.
-- **ND10 — the data basis (the split-off §0 half).** **(a) RECOMMENDED: build as designed + PQ1, ONE non-blocking Panel question** (below),
-  PLUS a new leg **(i)** on roster Row 31 (`peer-mesh-selection-data-basis`) — counsel's basis for comparing the deceased's nominee mobiles
-  with members' numbers to keep an interested party out of the check (no number stored or sent), a privacy-policy line, and the Panel's
-  answers to PQ1 and PQ2 (PQ2 only under ND7 (b)). Counsel is asked through ONE instrument: an added question on the existing WRITTEN,
-  unsent `counsel-question-2026-10-18-nominee-contact-basis.md` (Rows 18 / 34), which Row 31 (i) cites. (b) counsel's leg only, ⛔ Panel
-  question — ⛔ recommended: the routing template's §0 lists *"a LEGAL or consent BASIS for handling someone's data"* as the Panel's.
-  Either way it gates GO-LIVE, ⛔ the build or the merge; Row 35 (g) already waits on this row.
+- **ND10 — the data basis (the split-off §0 half).** **CHOSEN (a): the Panel was asked — ANSWERED, `-384` Q1 A** (the nominee numbers may
+  be compared, only for this) — PLUS a new leg **(i)** on roster Row 31 (`peer-mesh-selection-data-basis`): the Panel's answers recorded as
+  `-384`; counsel's WRITTEN basis for comparing the deceased's nominee mobiles with members' numbers to keep an interested party out of the
+  check (no number stored or sent) and a privacy-policy line — both OPEN. Counsel is asked through ONE instrument: an added question on the
+  existing WRITTEN, unsent `counsel-question-2026-10-18-nominee-contact-basis.md` (Rows 18 / 34), which Row 31 (i) cites. It gates GO-LIVE
+  (`-384` Q1's cost as put: *"nothing goes live until that is done"*), ⛔ the build or the merge; Row 35 (g) already waits on this row.
+  **Rejected:** (b) counsel's leg only, ⛔ Panel question (the routing template's §0 lists a legal basis for data as the Panel's).
 
-## 🏛️ Panel questions: TWO, both NON-blocking (one note)
+## 🏛️ Panel questions: ANSWERED — `2026-10-23-384`
 
-> ✅ **2026-10-23 — ANSWERED: [`2026-10-23-384`](../../.decision-log.md#decision-2026-10-23-384), TRUSTEE-RATIFIED (Dhiraj Rahul +
-> Kalpana Bharti, relayed by BigDev: *"by DR and KB"* / *"Q1 A, Q2 A"*).** PQ1 — A (Closed by `-384`): the nominee numbers may be
-> compared, only for this; ⚠ its cost as put makes counsel's WRITTEN confirmation a go-live condition (*"nothing goes live until that is
-> done"*). PQ2 — A (Closed by `-384`): nominee changes in the 90 days before the claim join the staff warning. ⇒ ND7 (b) is RATIFIED (ND7 (a)
-> is ⛔ open); ND10's Panel half is answered (ND10 (b) is moot); the exact staff-line words stay the author's. Everything below in this
-> section is kept as written.
+The two §0 halves (ND10's data use, ND7's staff warning) went to the Panel as ONE note —
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-36d-nominees-not-asked.md` (written 2026-10-23 at BigDev's request,
+sent by BigDev; the question as put is kept unedited there) — and were ANSWERED the same day: **`2026-10-23-384`, TRUSTEE-RATIFIED**
+(Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB"* / *"Q1 A, Q2 A"*).
 
-⭐ 2026-10-23 — WRITTEN EARLY at BigDev's request (*"write the routing note now"*), ahead of Task 0.2:
-`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-36d-nominees-not-asked.md` (⛔ sent). It assumes ND7 (b) and
-ND10 (a); if Task 0.2 answers otherwise, Task 0.4 REVISES it before it is sent (⛔ a second note). The drafts below are kept as written;
-the note is the version to send.
-
-Written from `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md` (its order: plain-English question, THE ONE
-FACT, options with an honest cost on each, evidence LAST) as ONE note; ⛔ sent by this story ("shown to Panel" = sent,
-[[feedback_shown_to_panel_means_sent]]). Each is "build as recommended + confirm"; the answers are named in Row 31 leg (i) and must be in
-before Row 31 closes — they gate GO-LIVE, ⛔ the build or the merge (the `-330` §0 / Row 31 (g) precedent: SC1 itself was built
-non-blocking and answered before Row 31 closed; also `-295` §8 / `-296`). If BigDev answers ND10 (b), PQ1 is dropped; if ND7 (a), PQ2
-becomes a BLOCKING question (it widens a ratified cost). The drafts below are the plain-English questions; Task 0.4 adds THE ONE FACT, and
-the evidence last, per the template (⛔ clause ids in the question itself).
-
-- **PQ1 (ND10)** — *"You said the Trust may use a nominee's phone number to contact them about a claim when that is needed, for example to
-  prevent fraud. We want to also use it for one more thing: to check whether a nominee is also a member, so that a person who would receive
-  the money is never one of the five members asked about the death. The numbers are compared inside the system; no number is kept or sent
-  anywhere. If a person already chosen later turns out to match, staff see 'is a nominee' beside them. Our lawyer has not yet confirmed the
-  ground you quoted, and nothing goes live until that is done.*
-  *A — yes, use it for this check (cost: one more use of the nominee's number).*
-  *B — no (cost: a nominee who is a colleague can be asked about the death and its payout)."*
-- **PQ2 (ND7)** — *"Once this is built, a member's nominees are never among the five asked. That gives one more way to change who is asked:
-  change the nominees before the claim. If the change is made after the death, the claim is refused anyway. You accepted that a family can
-  still change who is asked, with staff warned and the ground inspection always run. We add nominee changes in the 90 days before the claim
-  to that same staff warning.*
-  *A — yes (cost: one more line staff may see, sometimes for a re-save that changed nothing).*
-  *B — no warning for nominee changes (cost: staff are not told of this kind of change).*
-  *C — do not leave nominees out (cost: a nominee who is a colleague is asked about the death)."*
+- **PQ1 — A** (Closed by `-384`): the dead member's nominee numbers may be compared with members' numbers, only to keep a nominee out of
+  the five. ⚠ Its cost as put makes counsel's WRITTEN confirmation of the ground a GO-LIVE condition (*"nothing goes live until that is
+  done"*) — Row 31 (i).
+- **PQ2 — A** (Closed by `-384`): nominee changes in the 90 days before the claim join the staff warning (ND7). The exact words of the
+  line stay the author's.
+- **Not covered by `-384`:** leaving nominees out itself (BigDev's — the author-commit), a nominee who signs in with a different number
+  (ND8), `-356`, any other use of a nominee's number.
 
 ## Acceptance Criteria
 
 Notation: unit legs are pure vitest (`env -u DATABASE_URL`); live legs run on :5433 with `DATABASE_URL` set EXPLICITLY
 (`postgresql://twt_dev_app:devpass@127.0.0.1:5433/twt_dev?sslmode=disable`); `skipIf(!hasDatabase)` skips SILENTLY, so every touched live
 spec is run WITH the DB and its count recorded. Expected values are COMPUTED through the real functions (`mobileBlindIndex`,
-`normalizeMobile`) — ⛔ transcribed. The options named below are the RECOMMENDED ones; each AC states what changes if BigDev picks the other.
+`normalizeMobile`) — ⛔ transcribed. The ACs build the CHOSEN options (ND1–ND10, decided 2026-10-23).
 
 - **AC0 — start and preflight.** Rows 6-36, 6-27c and 6-31 are `done` and on `main` (MET at authoring). Task 0.1's preflight passes; ND1–ND10
   are answered and the author-commit is on the branch before the first code commit.
@@ -427,37 +414,43 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
   call of any kind. Versions whose numbers are all unusable (sentinel / invalid) ⇒ their decrypts run, ⛔ HMAC call, `[]`. A stored number
   with spaces, a `+91`, a `0` prefix or hyphens matches the member's canonical number (G5). A vacated / sentinel / invalid number excludes
   nobody and does ⛔ throw. A KMS error or a malformed envelope THROWS (ND6). Two versions with the same number make ONE HMAC input
-  (de-duplication, asserted by an HMAC call count). (If ND1 (a): step (1) is `getMemberNominees(db, pariwarId, deceasedMemberId)` →
-  `.mobileCiphertext`, and `cut` is dropped.)
+  (de-duplication, asserted by an HMAC call count).
 - **AC3 — selection.** `runClaimPeerMeshSelect` does the ND3 pre-read and computes the indexes before `lockClaimCase`, and passes them to
   `getPeerMeshGroupedSnapshot`; `ClaimPeerMeshDeps.encryption` is REQUIRED and wired in `boot.ts`. A nominee-member is absent from
   `candidate_snapshot`, `selected_member_ids` and `ranked_member_ids` in EVERY group (`workplace_previous`, `workplace_current`, `named`);
   a nominee colleague is replaced by the next-ranked colleague (still five while the group lasts); a workplace group made empty only by the
-  exclusion falls through to the named group (G15); a group made empty everywhere ⇒ `claim.peer_mesh_none_to_ask` exactly as today. A
-  nominee version recorded on or after the cut excludes nobody (ND1 (b)). A no-op re-run (a selection exists) and a wrong-state run make ⛔
-  KMS call. ⛔ KMS call is made while a pool client is checked out by this job. A member of ANOTHER Pariwar holding the same number is
-  unaffected (coverage-only — the reads are Pariwar-scoped).
+  exclusion falls through to the named group (G15); a group made empty everywhere ⇒ the zero branch, `claim.peer_mesh_none_to_ask` with
+  `no_workplace_colleague_or_named_person`, exactly as today. A nominee version recorded on or after the cut excludes nobody (ND1 (b)). A
+  no-op re-run (a selection exists) and a wrong-state run make ⛔ KMS call. ⛔ KMS call is made while a pool client is checked out by this
+  job. Every selection that chooses anyone is made WITH the indexes (ND3). A member of ANOTHER Pariwar holding the same number is unaffected
+  (coverage-only — the reads are Pariwar-scoped).
+  **On a nominee-exclusion fault (ND6 (a)):** ONE ids-only alarm, then the job rethrows — ⛔ selection, ⛔ event; the OCR hook's send
+  carries the child retry policy; the worker is registered with `{ includeMetadata: true }`. On the final attempt the job instead re-sends
+  itself with `startAfter` 1 h, carrying the first-failure instant (alarm each cycle), and returns. Once a deferred job's final attempt fails 24 h or more after
+  that instant, the job FINISHES: an EMPTY `workplace_named_v1` selection (⛔ candidate, ⛔ one asked) with skip reason
+  `nominee_check_unavailable` (⛔ the zero branch's reason), `claim.peer_mesh_none_to_ask`, and a second alarm — the ONE selection written
+  without indexes. A final-attempt fault of any OTHER kind (claim not found, deceased mismatch, `ClaimStreamConcurrencyError`) behaves as
+  today.
 - **AC4 — send time (6.27c).** The child computes the indexes once per run (ND4), after `nothing_due`, outside any tx, with the cut from the
   selection's anchor claim (ND1 (b)), and passes them into `beginPeerMeshRequest` and `finalisePeerMeshNoSendableNumber`. A ping whose member
   BECAME a nominee match after selection (a member who took a nominee's number after the selection was drawn) ⇒ fresh:
-  `no_target:peer_is_nominee` (ND5 (a); `no_target:peer_not_eligible` under ND5 (b)) + a replacement that also skips nominees; re-claimed:
+  `no_target:peer_is_nominee` (ND5) + a replacement that also skips nominees; re-claimed:
   `error` + `exhausted:recheck_peer_ineligible`, as today. A child with nothing due decrypts nothing (P5 kept). A KMS fault ⇒ one alarm +
   `ClaimCorrectionTransientError`, ⛔ ping begun (ND6).
-- **AC5 — the label, in lockstep (ND5 (a) only).** A forward migration (next free number, hand-authored, journal entry — ⛔ `db:generate`)
+- **AC5 — the label, in lockstep (ND5).** A forward migration (next free number, hand-authored, journal entry — ⛔ `db:generate`)
   drops and re-adds both 0166 CHECKs under the SAME names, with the CHECK text written from `PEER_MESH_REQUEST_DETAIL_PATTERN`, and
   `CREATE OR REPLACE FUNCTION claim_peer_mesh_pings_replacement_guard()` with 0166's WHOLE body plus `peer_is_nominee` in the IN-list. The TS
   constant and the regex move together (the regex lists the label at the array's position); the labeller's order is not_active →
   reported_deceased → no_sendable_number → filed_for_this_death → **is_nominee** → fallback; the R4 leg proves the FIVE labels cover the
   predicate; the `it.each` `exclude()` switch gains a `peer_is_nominee` arm (its `begin()` helper takes the indexes per case); every G12 test
   pin passes. (`first_detail` cannot actually receive the label — `skipFresh` does not write it — the CHECK is widened for lockstep only.)
-  ⭐ Under ND5 (b): ⛔ migration, and the R4 leg instead pins that a nominee lands on `peer_not_eligible` deliberately.
 - **AC6 — the reminder (6.31).** `beginPeerMeshWaReminder` receives the indexes (computed once per claim, outside any tx, after the child's
   `nothing_due` return, cut as AC4); a nominee-match ⇒ `skipped_recipient_ineligible`; a KMS fault ⇒ one alarm + `ClaimCorrectionTransientError`,
   ⛔ reminder begun; ⛔ other reminder behaviour changes.
-- **AC7 — the staff line (ND7 (b)).** A nominee version recorded in `[cut.recentFrom, cut.cut)` sets `recent_change_before_filing`; one
+- **AC7 — the staff line (ND7, `-384` Q2 A).** A nominee version recorded in `[cut.recentFrom, cut.cut)` sets `recent_change_before_filing`; one
   recorded before `cut.recentFrom` or on / after `cut.cut` does not; the admin copy reads as ND7 states, and both admin copy pins of the old
   sentence (`apps/admin/tests/neighbours-answers-panel.test.tsx`, `apps/admin/tests/verifier-console.test.tsx`) are updated to the new one;
-  the inspector wire still carries ⛔ flag (`peer-mesh-source-not-on-inspector-wire.test.ts` green). ⭐ Under ND7 (a): ⛔ change here.
+  the inspector wire still carries ⛔ flag (`peer-mesh-source-not-on-inspector-wire.test.ts` green).
 - **AC8 — nothing new leaves the process.** ⛔ index, plaintext or nominee identifier is stored, logged, put in an event payload or a job
   payload; `claim.peer_mesh_none_to_ask` stays `.strict()` and unchanged; ⛔ count of excluded people anywhere; alarms carry ids only (TR12).
 - **AC9 — tests prove it, each new leg RED under a named mutant** (the 6.37e convention: a scratch runner asserts the edit landed exactly
@@ -473,17 +466,20 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
   | M6 `beginPeerMeshWaReminder` passes `[]` to `readPeerMeshRequestEligibility` | the reminder skip leg |
   | M7 `correctionNumberHash` in place of the login blind index | the match leg (wrong hash space) |
   | M8 a KMS error swallowed to `[]` | the fail-closed leg (select job AND request child) |
-  | M8b (ND6 (a) / (b) only) the select job's final attempt rethrows instead of the chosen arm — under ND6 (c) the leg instead pins that the final attempt rethrows and writes ⛔ selection | the final-attempt leg |
+  | M8b the select job's final attempt rethrows instead of re-sending itself (ND6 defer) | the defer leg (a deferred job exists with `startAfter` ≈ 1 h and the first-failure instant; ⛔ selection) |
+  | M8c the finish writes `no_workplace_colleague_or_named_person` in place of `nominee_check_unavailable` | the finish leg (≥ 24 h: an EMPTY selection with `nominee_check_unavailable` + `claim.peer_mesh_none_to_ask`) |
+  | M8d the 24 h test dropped — the first final attempt finishes (rejected ND6 (b)) | the "before 24 h: another deferral, ⛔ selection" leg |
+  | M8e the 24 h test never true — the job defers for ever | the finish leg |
   | M9 the decrypt moved inside the locked tx | the "⛔ client checked out during KMS" leg (fake KMS records `pool.totalCount − pool.idleCount`, baseline measured before the run) |
-  | M10 labeller order swapped (nominee before filed) — ND5 (a) only | the labelling-order leg (a filer who is also a nominee ⇒ `peer_filed_for_this_death`) |
+  | M10 labeller order swapped (nominee before filed) | the labelling-order leg (a filer who is also a nominee ⇒ `peer_filed_for_this_death`) |
   | M11 the 6.27c child passes `[]` to `beginPeerMeshRequest` | the live child leg (a nominee ping ⇒ `no_target:…`, zero SMS sends on a zero-call recorder) |
   | M12 the 6.31 child passes `[]` to `beginPeerMeshWaReminder` | the live reminder-child leg (`skipped_recipient_ineligible`, zero Meta calls) |
   | M13 the nominee read moved before `nothing_due` (request child, then reminder child) | the P5 leg (zero nominee decrypt calls) |
   | M14 the pre-read always computes the indexes | the no-op-re-run leg (zero KMS calls) |
   | M15 `recorded_at < cut.cut` dropped from the ND1 filter | the "version recorded after the cut excludes nobody" leg |
-  | M16 the ND7 disjunct removed (ND7 (b) only) | the staff-line leg |
+  | M16 the ND7 disjunct removed | the staff-line leg |
 
-  The M8 / M13 / M14 legs seed the deceased with ≥ 1 `declared` nominee version recorded BEFORE the cut, with a REAL envelope (G16), and
+  The M8 / M8b–M8e / M13 / M14 legs seed the deceased with ≥ 1 `declared` nominee version recorded BEFORE the cut, with a REAL envelope (G16), and
   assert the counting KMS saw ≥ 1 decrypt in the unmutated positive control — ⛔ an empty-nominee fixture (it makes zero KMS calls with or
   without the mutant, so the leg is vacuous).
 
@@ -496,7 +492,7 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — governance FIRST (AC0)**
-  - [ ] 0.1 Preflight: `git fetch origin`; `git diff --name-only 40420410 origin/main -- apps packages scripts infra` — if non-empty, rebase
+  - [ ] 0.1 Preflight: `git fetch origin`; `git diff --name-only 69e35f73 origin/main -- apps packages scripts infra` — if non-empty, rebase
         and re-verify G1–G17 by FUNCTION; STOP if any of: (S1) the predicate already has a nominee conjunct; (S2) a nominee blind index now
         exists; (S3) a new caller of the predicate exists that G2 does not list; (S4) `member_nominees` / `member_nominee_versions`
         `mobile_ciphertext` changed shape; (S5) row 6-35 is on `main` — re-verify G11 / G13 against its begin inputs and take the next free
@@ -504,30 +500,32 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
         decision id, migration number and ledger letter. (Known: 0119 backfills nothing, by design (`-232`; *"A dev database holding old
         rows is RESET"*); the one writer appends versions with every declare ⇒ a member with no version has no nominee for ND1 (b) —
         recorded, ⛔ fixed; nothing in production.)
-  - [ ] 0.2 BigDev answers ND1–ND10 and the PROPOSED `-356` reading in Task 0.3 — record the answers VERBATIM in the Completion Notes.
-        ⭐ 2026-10-23: ND7 is SETTLED as (b) and ND10's Panel half as (a) by `-384` (Trustee-ratified) — BigDev confirms them, ⛔
-        re-decides them; ND10's counsel leg (Row 31 (i)) remains.
-  - [ ] 0.3 The author-commit: the next free decision id (dated the day it is COMMITTED), *"AUTHOR-COMMIT (BigDev) — STORY 6.36d's BUILD
-        DECISIONS ND1–ND10 …"*, with §0 (the `-340` §0 class; the ND7 and ND10 splits and their non-blocking PQs), the §0 re-run table, ND1–ND10
-        as answered, and:
+  - [ ] 0.2 BigDev's answers, VERBATIM (also in the Completion Notes):
+        - ND1–ND6, ND8, ND9 — 2026-10-23: *"For ND1–ND6, ND8, ND9 - your recommendation is accepted, however fix the ND6/AC3 contradiction,
+          and clean up the stale decision-status language before the first implementation commit."* (both done in v1.3);
+        - ND7 (b) and ND10's Panel half — `2026-10-23-384` (Trustee-ratified, *"by DR and KB"* / *"Q1 A, Q2 A"*);
+        - ⭐ STILL OWED: the PROPOSED `-356` reading (Task 0.3's RECORDS bullet), and BigDev's one-line confirmation of ND7 (b) / ND10 (a)
+          as the author's build decisions (the Panel ruled the questions — `-384` Consequence 1: *"At Task 0.2 BigDev answers the rest"*;
+          Row 31 (i) and the single counsel instrument are ND10's author-side half, named in `-384` Consequences 2–3). Task 0.3 waits on both.
+  - [ ] 0.3 The author-commit: the next free decision id (≥ `-385`, dated the day it is COMMITTED), *"AUTHOR-COMMIT (BigDev) — STORY
+        6.36d's BUILD DECISIONS ND1–ND10 …"*, with §0 (the `-340` §0 class; the ND7 and ND10 halves answered by `-384`), the §0 re-run table,
+        ND1–ND10 as decided (citing `-384` for ND7 and ND10), and:
         - SUPERSEDES IN PART `-330` SW19's *"⛔ No decrypt, ⛔ no KMS call in the select job"* — for the nominee read only; `-330` ⛔ edited;
         - SUPERSEDES IN PART `-306` §2 item 1's *"a relative is flagged by …"* and NARROWS the residual `-330` SW23 records (*"a relative of
           the deceased is ⛔ not excluded"*) — a relative who is a declared nominee (matched by number) is excluded; other relatives stay
           flagged only; ⛔ in CF4 A as put, so ⛔ ratified clause moves;
-        - EXTENDS `-330` SW20 (ii) (ratified in its effect by `-331` Consequence 3) — ND7 (b) only: a nominee version recorded in
-          `[cut.recentFrom, cut.cut)` also sets the staff line, and `peerMesh.recentChangeBeforeFiling` gains "or their nominees" — SUBJECT TO
-          PQ2; `-330` / `-331` ⛔ edited; if the Panel refuses, a dated supersession reverts it before Row 31 closes;
-          ⭐ 2026-10-23: the extension is RATIFIED by `-384` Q2 A — the author-commit CITES `-384` for it (⛔ "subject to PQ2"; the
-          revert branch is moot) and for ND10's use of the nominee numbers (Q1 A);
+        - records that `-384` Q2 A EXTENDED `-330` SW20 (ii) (ratified in its effect by `-331` Consequence 3): a nominee version recorded
+          in `[cut.recentFrom, cut.cut)` also sets the staff line, and `peerMesh.recentChangeBeforeFiling` gains "or their nominees" (the
+          words the author's); and that `-384` Q1 A permits ND10's use of the nominee numbers; `-330` / `-331` ⛔ edited;
         - SUPERSEDES IN PART `-365` MATCH (iii) (as corrected by `-366` decision 5): the reminder's WR2 (ix) re-check now carries the nominee
           conjunct through the shared predicate (ND4 / AC6); MATCH (iii)'s *"carries ⛔ nominee check"* and *"`-356` is never in play"* stay as
           written; `-365` / `-366` ⛔ edited;
         - RESOLVES IN PART `-366` decision 5's condition on `-365` MATCH (iii) — matched-number nominees, once this row is `done` on `main`
           — ⛔ "Closed by"; and RECORDS afresh (`-366`'s "until then" ends with this row): a nominee-member whose login number differs from the
           declared one is still texted and, if opted in, reminded on WhatsApp — whether that reminder is within `-356` (*"drop WhatsApp only
-          notification for nominee"*) is recorded as a READING, ⛔ assumed away. PROPOSED reading (BigDev confirms or replaces it at Task 0.2,
-          with ND1–ND10): it is ⛔ a "notification for nominee" — the reminder goes to them as one of the five, the system ⛔ knowing them as a
-          nominee;
+          notification for nominee"*) is recorded as a READING, ⛔ assumed away. PROPOSED reading (⭐ STILL OWED — BigDev confirms or
+          replaces it at Task 0.2): it is ⛔ a "notification for nominee" — the reminder goes to them as one of the five, the system ⛔
+          knowing them as a nominee;
         - records the ND6 delivery-failure §0 row (`-295` §0).
         Committed ALONE as `governance: …`; its SHA written after, ⛔ before ([[project_decision_log_writes_user_inserted]] — if the write is
         refused, ask once).
@@ -541,9 +539,9 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
           RECORDED)"* (narrows on `done`); and on 6.36's W3 (*"Someone already asked who LATER files for the same death keeps their live
           ask"*): *"trigger read against 6.36d — the reply path is ⛔ touched (ND8); the texted-ping residual now also covers a member who
           becomes a nominee match after being texted; stays OPEN"*;
-        - roster Row 31 — leg **(i)** (counsel's basis + the privacy-policy line for the nominee-number comparison + the Panel's answers to
-          PQ1 AND PQ2 — PQ2 only under ND7 (b)); *"ALL EIGHT"* → *"ALL NINE"* with a dated recount note (the 6.36a (h) precedent);
-          `closure_evidence_link` gains *"(i) — (empty)"*; the owner line splits (i): counsel (Story 0.13) — (i)'s basis; Trustee Panel —
+        - roster Row 31 — leg **(i)** (the Panel's answers, recorded as `-384` — met; counsel's WRITTEN basis + the privacy-policy line for
+          the nominee-number comparison — OPEN); *"ALL EIGHT"* → *"ALL NINE"* with a dated recount note (the 6.36a (h) precedent);
+          `closure_evidence_link` gains *"(i) — Panel half: `2026-10-23-384`; counsel's written basis + privacy-policy line: (empty)"*; the owner line splits (i): counsel (Story 0.13) — (i)'s basis; Trustee Panel —
           (g), (i)'s PQ answers; `architecture_source_line` gains the new decision id for (i); `current_status` notes (i) open;
         - the counsel question — an added question on `counsel-question-2026-10-18-nominee-contact-basis.md` (written, ⛔ sent);
         - roster Row 35 (g) and its `cross_story_discharge_path` (*"rows 5-12 and 6-36d → (g)"*) — dated notes; Row 27's note naming rows
@@ -553,12 +551,7 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
           here);
         - 6.36 story — a dated annotation on AC4 / Trap 2; 6.36a story — a dated annotation on SW19 and SW23; 6.31 story — dated annotations
           on §0 edge (iii) (*"6.31 therefore adds ⛔ nominee check of its own"*), its Row 35 (g) line and its UPSTREAM (⛔ a merge fence) note;
-        - the Panel note (PQ1 + PQ2) — ALREADY WRITTEN 2026-10-23
-          (`trustee-panel-routing-note-2026-10-23-6-36d-nominees-not-asked.md`); here, revise it to match the Task 0.2 answers to ND7 /
-          ND10 (drop Question 1 under ND10 (b); under ND7 (a) Question 2 becomes BLOCKING and its header says so), and fill in the
-          author-commit's decision id in its E2 — ⛔ sent.
-          ⭐ 2026-10-23: SENT and ANSWERED (`-384`, Q1 A / Q2 A) — the note is now a record: ⛔ revise it; Row 31 leg (i) records the Panel's
-          answers as `-384` and keeps counsel's written basis + the privacy-policy line OPEN.
+        - the Panel note — DONE: written, sent and answered 2026-10-23 (`-384`); it is a record now — ⛔ edit it.
 - [ ] **Task 1 — the predicate and the indexes (AC1, AC2)**
   - [ ] 1.1 `nomineeMobileIndexes` (required) on every ND4 type + `peerMeshNomineeMatchSql` + the ND2 conjunct; doc comments extended in the
         house style.
@@ -569,15 +562,16 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
         → both snapshot readers; the retryable throw when the locked tx reaches the snapshot without them. Required `encryption` in
         `ClaimPeerMeshDeps`; wire `jobsEncryption` in `boot.ts`.
   - [ ] 2.2 ND6: the alarm, the retry policy on the OCR hook's send, `{ includeMetadata: true }` on the select `boss.work` and `attempt`
-        threaded into `runClaimPeerMeshSelect`, the final-attempt arm as answered (fires on the nominee-exclusion fault only).
-  - [ ] 2.3 ND7 (b): the nominee-change disjunct in `getPeerMeshGroupedSnapshot`; the admin copy and its two test pins.
+        threaded into `runClaimPeerMeshSelect`; on the nominee-exclusion fault only — the 1 h self re-send carrying the first-failure
+        instant, and the 24 h finish (an EMPTY selection, `nominee_check_unavailable`, `claim.peer_mesh_none_to_ask`, the second alarm).
+  - [ ] 2.3 ND7: the nominee-change disjunct in `getPeerMeshGroupedSnapshot`; the admin copy and its two test pins.
   - [ ] 2.4 The header comment's frozen-file / no-KMS notes amended (dated, citing the new decision).
 - [ ] **Task 3 — send time and the reminder (AC4, AC6)**
   - [ ] 3.1 `readPeerMeshRequestEligibility`: input gains the indexes; a labelling column `is_nominee` (`peerMeshNomineeMatchSql` on `pr_m`);
         the order of AC5.
   - [ ] 3.2 `beginPeerMeshRequest`, `insertPeerMeshReplacementPing`, `finalisePeerMeshNoSendableNumber`, `beginPeerMeshWaReminder` thread
         the indexes; the two children compute them once (after `nothing_due`), outside any tx, with the anchor-claim cut; ND6's alarm + throw.
-- [ ] **Task 4 — the label (AC5; ND5 (a) only — under (b) only the R4 leg changes)** — the migration (dry-run inside `BEGIN … ROLLBACK` on
+- [ ] **Task 4 — the label (AC5)** — the migration (dry-run inside `BEGIN … ROLLBACK` on
       :5433 first; then both DBs), journal, constants, every G12 pin. ⛔ Edit 0166 in place.
 - [ ] **Task 5 — tests (AC9)** — extend `peer-mesh-workplace-snapshot.spec.ts` (SW23 block), `peer-mesh-request.spec.ts`,
       `peer-mesh-wa-reminder.spec.ts`, `apps/jobs/tests/claim-peer-mesh.test.ts`, `claim-peer-mesh-requests-live.test.ts`,
@@ -585,7 +579,7 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
       test-tree callers tsc lists (G2: `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`, the two concurrency specs,
       `claim-peer-mesh.test.ts`'s direct `insertPeerMeshReplacementPing` call and its `deps()` / `windowDeps()` — pass `[]` / `enc`). Real
       envelopes and real indexes where a leg goes through the function (G16, TR8); recorded times placed explicitly
-      ([[project_db_clock_ordering_tests_tie]]). Run M1–M16; record each.
+      ([[project_db_clock_ordering_tests_tie]]). Run M1–M16 (incl. M8b–M8e); record each.
 - [ ] **Task 6 — the gate (AC10)** — `ci:local` on :5433; push only with `DATABASE_URL=…:5433…` explicitly
       ([[project_prepush_hook_inherits_5432]]).
 - [ ] **Task 7 — closing records** — story Status → review, File List, Change Log, the sprint row + ledger line (next free letter).
@@ -593,7 +587,7 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
 
 ## Dev Notes
 
-### Current state of the code this story changes (re-read at `40420410`)
+### Current state of the code this story changes (re-read at `40420410`; unchanged at `69e35f73`)
 
 - `packages/domain/src/claim/peer-mesh-read.ts` — `PeerMeshEligibilityExclusions`, `peerMeshEligibleMemberSql` (G1), `PeerMeshSnapshotInput`,
   the two snapshot readers, `getPeerMeshNamedChangeBeforeFiling` and `getPeerMeshGroupedSnapshot` (G2, G14), `resolvePeerMeshFilingCut` /
@@ -603,20 +597,21 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
   `lockClaimThenPing`, `beginPeerMeshRequest`, `finalisePeerMeshNoSendableNumber` (G11). **Preserve:** lock order (claim then ping,
   `lock_timeout '30s'`), ①→②→③ order, the re-claimed-row `exhausted:recheck_peer_ineligible` path.
 - `packages/domain/src/claim/peer-mesh-wa-reminder.ts` — `beginPeerMeshWaReminder` (G13). **Preserve:** every WR condition and outcome.
-- `apps/jobs/src/claim-peer-mesh.ts` — `ClaimPeerMeshDeps`, `runClaimPeerMeshSelect`, `registerClaimPeerMeshWorkers` (G3, G17).
+- `apps/jobs/src/claim-peer-mesh.ts` — `ClaimPeerMeshDeps`, `runClaimPeerMeshSelect`, `registerClaimPeerMeshWorkers` (G3, G17), and
+  `ClaimPeerMeshSelectPayload` (gains ONE optional non-PII field, the first nominee-exclusion failure instant — ND6).
   **Preserve:** the lock-first order inside the tx, the idempotency probe and the no-op self-heal enqueues, ⛔ swallowing
   `ClaimStreamConcurrencyError`, the post-commit enqueue hooks, the window worker.
 - `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` and `claim-peer-mesh-wa-reminders.ts` — the children (G11, G13). **Preserve:**
   P5 (nothing due ⇒ ⛔ decrypt), the send window, the per-ping tx shape, the name-fault path.
 - `apps/jobs/src/boot.ts` — the select worker registration (wire `encryption: jobsEncryption`) and the OCR hook's select `boss.send` (ND6
   retry policy).
-- `apps/admin/src/modules/claim-verification/i18n-en.ts` — `peerMesh.recentChangeBeforeFiling` (ND7 (b) only).
+- `apps/admin/src/modules/claim-verification/i18n-en.ts` — `peerMesh.recentChangeBeforeFiling` (ND7).
 - `packages/domain/src/schema/claim_peer_mesh_pings.ts` + a new migration (ND5 (a)).
 
 ### Shipped substrate this story READS — rebuild none of it
 
 `resolveCorrectionMobile` (G7), `normalizeMobile` / `mobileBlindIndexMany` / `mobileBlindIndex` (G6), `listNomineeDeclarationVersions` and
-`projectedVersionOfRank` (`nominee/declaration-history.ts`, G10), `getMemberNominees` (ND1 (a) only), `InScope` / `matchContactNumbers` as
+`projectedVersionOfRank` (`nominee/declaration-history.ts`, G10), `InScope` / `matchContactNumbers` as
 the shape (G6), `resolvePeerMeshFilingCut` / `peerMeshFilingCut`, `getClaimCase`, `getPeerMeshSelectionByClaim`, `withPariwarScope`,
 `ClaimCorrectionTransientError` and `readMemberFacingDeceasedName` as the fault pattern (G11), `CHILD_RETRY_LIMIT` /
 `CHILD_RETRY_DELAY_SECONDS`, the test encryption deps used by the 6.27c live test (G16).
@@ -670,8 +665,8 @@ ordering matters.
 ### Project Structure Notes
 
 All SOURCE changes sit in existing modules (`packages/domain/src/claim/`, `apps/jobs/src/`, `packages/domain/migrations/`) plus one admin
-copy line under ND7 (b). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test files change in domain, jobs, ONE api test
-(`peer-request-after-send.spec.ts`, G2) and — under ND7 (b) — the two admin copy pins (`neighbours-answers-panel.test.tsx`,
+copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test files change in domain, jobs, ONE api test
+(`peer-request-after-send.spec.ts`, G2) and the two admin copy pins (`neighbours-answers-panel.test.tsx`,
 `verifier-console.test.tsx`).
 
 ### References
@@ -708,8 +703,19 @@ copy line under ND7 (b). ⛔ api, mobile, contracts or i18n-package SOURCE chang
   extended without being named); every finding applied; `-340` call 1 and `-295` §0 quotes spot-checked.
 
 - 2026-10-23 — The Panel note was written early (BigDev: *"write the routing note now"*), sent by BigDev and ANSWERED: *"by DR and KB"* /
-  *"Q1 A, Q2 A"* ⇒ `2026-10-23-384` (Trustee-ratified), committed alone (`cc0c63bb` — BigDev ran the commit after the tool's commit was
+  *"Q1 A, Q2 A"* ⇒ `2026-10-23-384` (Trustee-ratified), committed alone (`cc0c63bb`, `fd529315` after the rebase onto `69e35f73` — BigDev ran the commit after the tool's commit was
   refused). Records follow in the next commit.
+- 2026-10-23 — Task 0.2, BigDev (verbatim): *"8-15 is closed and landed on main. For ND1–ND6, ND8, ND9 - your recommendation is accepted,
+  however fix the ND6/AC3 contradiction, and clean up the stale decision-status language before the first implementation commit."* Done in
+  v1.3: the branch rebased onto `69e35f73` (8.15 landed; ⛔ claim / nominee / jobs code moved; ledger lines re-lettered `23b`/`23f`/`23g` →
+  `23g`/`23h`/`23i`); the ND6/AC3 contradiction — ND3 (which AC3 builds on) said ⛔ selection is ever made without the indexes, while ND6's
+  chosen arm finishes by writing one, and AC3 carried ⛔ clause for the select job's fault path — fixed: ND3 now says no selection that
+  CHOOSES anyone is made without them, the ONE exception being ND6's EMPTY finish; AC3 gains the fault path (alarm + rethrow, the retry
+  policy, the 1 h self re-send, the 24 h finish with `nominee_check_unavailable`); mutants M8b–M8e split to match. Stale decision-status
+  wording replaced throughout (PROPOSED / RECOMMENDED / non-blocking / subject-to-PQ2 / "under ND… (x)" branches → CHOSEN / Rejected /
+  ANSWERED by `-384`). Then one fresh-context check of the cleanup diff (0 HIGH; 2 MEDIUM, 5 LOW — incl. two #57 losses of the pass's
+  own: BigDev's confirmation of ND7 / ND10 restored as OWED, and "⛔ claimed by this file" restored); all applied. Still owed at Task 0.2:
+  the `-356` reading and BigDev's confirmation of ND7 / ND10.
 
 ### File List
 
@@ -720,3 +726,4 @@ copy line under ND7 (b). ⛔ api, mobile, contracts or i18n-package SOURCE chang
 | 2026-10-22 | 1.0 | Created (`bmad-create-story 6.36d`): G1–G16 found at `b883dc15`; ND1–ND10 PROPOSED for BigDev at Task 0.2; ⛔ Panel question blocking (ND10's basis half split off); row `backlog` → `ready-for-dev`. |
 | 2026-10-23 | 1.1 | Validated (`bmad-create-story validate 6.36d`; four verifiers; BigDev *"all"* on 25 findings; then two fresh-context re-validators of the pass's own text — 6 HIGH, all the pass's own, applied). Re-pinned `40420410`. ND1 recommendation (a) → **(b)**, the `-339` cut (one set per claim; both options the author's — `-339`'s words are scoped to a later claim, `-340` call 1); ND7 gains **(b)** the staff line for nominee changes, EXTENDING `-330` SW20 (ii) (ratified in effect) subject to PQ2; ND10 (a) is now a non-blocking Panel question (`-352` Q2, superseded in part by `-356`), ⛔ a told item — ⇒ TWO non-blocking PQs in one note, both named in Row 31 leg (i); ND6 rewritten (⛔ DLQ exists — G17; alarm + retry policy + `includeMetadata` + a final-attempt arm on the nominee fault only: defer-then-finish / finish with `nominee_check_unavailable` / rethrow; a delivery failure, `-295` §0); ND3 supersedes `-330` SW19 (⛔ "6.36's author rule") and pre-reads so a no-op run calls ⛔ KMS; ND4 REQUIRED on every input type; ND2's `${m}` alias, one match fragment; ND8 residuals; AC2 one function (`InScope` shape); Task 0.3 supersessions / amendment / RESOLVES IN PART; Task 0.4 reference sites; G2 / G4 / G5 / G7 / G10 / G12 / G14 / G16 corrected, G17 added; Sequencing with 6-35; mutants M8b, M11–M16; AC7 (staff line) added, ACs renumbered AC0–AC10 as bullets; Policy meaning made conditional on the declared number and the Niyamavali cite located. |
 | 2026-10-23 | 1.2 | The Panel note written early and ANSWERED — `2026-10-23-384` (Trustee-ratified, DR + KB): Q1 A, Q2 A. ND7 settled as (b), ND10's Panel half as (a); counsel's written basis stays a go-live condition (Row 31 (i)). Dated notes only — ⛔ earlier text edited. Status stays `ready-for-dev`. |
+| 2026-10-23 | 1.3 | Task 0.2: BigDev accepted ND1–ND6, ND8, ND9 as recommended. Rebased onto `69e35f73` and re-pinned. ND6/AC3 contradiction fixed (ND3's "never without the indexes" scoped to selections that choose anyone; AC3 owns the select-job fault path; M8b–M8e). Decision-status cleanup: ND1–ND10 now state CHOSEN / Rejected; the Panel-questions section is the `-384` ruling with a pointer to the note; ACs, Tasks and Dev Notes lose the branches for rejected options. ⛔ Commitment softened (a fresh-context check of the diff restored the two it found). Still owed: the `-356` reading and BigDev's confirmation of ND7 / ND10. |

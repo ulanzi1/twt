@@ -57,6 +57,8 @@ is ⛔ not asked here. Only whether the family is *told*, and what they may *do*
 >   the Trust removes it). Take-downs are discouraged by **soft measures only**: a removal leaves no trace on the page; an
 >   honest notice at sending; a line on the preview screen that now is the time to change it; the helpline offers a smaller fix
 >   first. "Within 7 days" and "an email to the approver" are recorded as standing, pending BigDev's confirmation.
+>   ⭐ **2026-10-23 — `-395`** (BigDev, author-commit): "within 7 days" and "an email to the approver" KEPT; a published memorial
+>   is taken down **only on the nominee's request**; the Panel was informed of `-393`.
 > - **Q4 — A.** Told in the app what was left out and the reason for each part; may change it and send again; ⛔ no appeal.
 > - **Q5 — A.** Kept with the member's record and erased with it; a family's own erasure request through the helpline is a
 >   follow-up.

@@ -1,18 +1,22 @@
 ---
-baseline_commit: d87d047a
+baseline_commit: 1268d47e
 ---
 
 <!--
-PINNED: d87d047a (origin/main, "story(6.35): ledger 2026-10-23v — LANDED on main by fast-forward"). Branch
+PINNED: 1268d47e (origin/main, "story(6.36d): ledger 2026-10-23af — LANDED on main by fast-forward"; re-pinned at v1.3 from
+`d87d047a` — the rebase at Task 0.3 / 0.4, 6.36d landed). Branch
 `story/5-11-per-member-sms-fallback-fixed-wording`, worktree `.claude/worktrees/5-11-per-member-sms-fallback-fixed-wording`.
 
-Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --is-ancestor d87d047a HEAD`; (2) the FOUND FACTS
-are valid iff `git diff --name-only d87d047a..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` is EMPTY
+Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --is-ancestor 1268d47e HEAD`; (2) the FOUND FACTS
+are valid iff `git diff --name-only 1268d47e..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` is EMPTY
 or every changed path is re-checked against the F it touches. Re-run BOTH at Task 0.1 — never assume either. (Both held at the
-v1.1 validation, 2026-10-23.)
+v1.1 validation, 2026-10-23; at v1.3 the 6.36d diff touched five cited files — the line numbers re-taken, Debug Log (e).)
 
-STATUS: 2026-10-23 created (`bmad-create-story 5.11`) → ready-for-dev; v1.1 validated the same day. FS1–FS4, FS7, FS10, FS11,
-FS13–FS16 + PQ1 / PQ2 PROPOSED for BigDev at Task 0.2.
+STATUS: 2026-10-23 created (`bmad-create-story 5.11`) → ready-for-dev; v1.1 validated the same day. v1.2 (same day): Task 0.2
+ANSWERED by BigDev (Debug Log (a)) — FS1 (d), THREE texted notices (the two general notices, pool open and the last day, go to the
+Trust's announcement channels — PQ3); FS16 (b); every other FS as recommended; the words corrected by BigDev (en + hi). PQ1 reshaped
+to the three; PQ2 WITHDRAWN (no text carries a name); PQ3 NEW (the channels). v1.3 (same day): rebased onto `1268d47e`; Task 0.3
+(Decision `-389`, `6db47c17`) and Task 0.4 (the records) DONE; the note SENT by BigDev 2026-10-23 — ⛔ ruled. Next: Task 1.
 
 SCOPE SPLIT (v1.1): this story makes the alert SMS rung HONEST and decides WHAT is sent, to WHOM, in WHICH words; the REAL SEND
 (send record, CRQID kind, per-send MSG91 provider, language, budget, retry window) is row `5-11b-alert-sms-real-send` — its
@@ -40,15 +44,15 @@ branch + every worktree; the roster's highest `### Row`; the DLT sheet's highest
   G2  §3.4 *"after the committed retry window (3 attempts × exponential backoff)"* — the window is 5.11b's FS9; 5.11 keeps
       today's retry profile (FS14) and narrows nothing.
   G3  PRD RA-29 / §4.10 *"Bulk-alert SMS dropped … transactional-fallback-SMS preserved"* and architecture §3.4's *"Not a
-      bulk-alert channel"* — MATCH for FS1 (a) (per member, per message, only on a failed higher rung); lighting the cycle-open
+      bulk-alert channel"* — MATCH for FS1 (d) (per member, per message, only on a failed higher rung); lighting the cycle-open
       BRIDGE would reach every member of a degraded Pariwar ⇒ not in this story (FS10).
   G4  the v1 SMS category set is *"a DERIVED product default"* (BigDev 2026-07-06, `sms-dlt-registry.ts:14-24`), which
-      *"Deliberately EXCLUDED"* `alert_published` as a broadcast. FS1 (a) REVERSES that 2026-07-06 call for ONE message (pool
-      open) — the author's own call, reversed by the author's entry, said so in it; `claim_status_change` / `helpdesk_reply`
+      *"Deliberately EXCLUDED"* `alert_published` as a broadcast. v1.2: FS1 (d) as ANSWERED KEEPS that 2026-07-06 call — no
+      `alert_published` message is texted (FS1 (a) would have reversed it for pool open); `claim_status_change` / `helpdesk_reply`
       stay dark (author-commits).
   G5  the WORDS (FS4): new member-facing copy; no ratified text exists for them (contrast DLT templates 7–14, the Panel's words).
-      Author's, en; Hindi under a review row (the DLT sheet's *"every Hindi text — the author's, under a review row"*) — BUT
-      bounded by G10 / G11.
+      Author's, en; Hindi under a review row (the DLT sheet's *"every Hindi text — the author's, under a review row"*) — v1.2:
+      BigDev reviewed and corrected en + hi in session (Debug Log (a)); G10 / G11 no longer bind a text (no text carries a name).
   G6  `-387` LS11 — *"Every other sender keeps its language … ⭐ Trigger: a story or ruling that sets a language rule for that
       message"* — the alert SMS's language rule is 5.11b's FS5; 5.11 sets none.
   G7  `-385` (Trustee-ratified) — the neighbours' reminder falls back to the Pariwar's language — 5.11b's FS5 analogy.
@@ -63,15 +67,24 @@ branch + every worktree; the roster's highest `### Row`; the DLT sheet's highest
       reversing this entry, ⛔ not optimising."* ⇒ the pool-open SMS CARRIES the name (FS4 (a) MATCH); dropping it (FS4 (b)) is a
       narrowing of `-180` ⇒ the Panel's. ⚠ `-180`'s context told the Panel *"SMS is reached when PUSH FAILS"* — true of the code
       (F4), not of §3.4's plan; PQ1's "Earlier versions / Corrected" section discloses it.
+      v1.2: no text carries the name (FS1 (d)). ⭐ The pool-open CHANNEL post is a consumer of the same identity ⇒ it carries the
+      full name (*"no consumer is excluded"*) — a cost PQ3's note states (a WhatsApp Channel is publicly listed), not a narrowing.
   G11 `2026-10-22-379` Q1 A (Trustee-ratified) — the full name across TWO 30-letter boxes; above 60, titles dropped, then first
       words become initials, never the last word. Its scope is *"THE FOUR TEXTS"* (claim templates 7–14). Applying the same
       rule to the pool-open SMS widens a ratified rule's scope ⇒ PQ2 (one line, the Panel's). Names ≤ 60 letters need no rule.
+      v1.2: MOOT — no text carries a name; PQ2 WITHDRAWN (a channel post has no 60-letter limit).
   G12 Niyamavali R10(B) (PRD `prds/prd-TWT-2026-05-22/prd.md:1255`) — *"Missed information is the member's responsibility —
       official communications are delivered via the channels listed in this clause"* (official channel: the in-app surface;
       Telegram / WhatsApp mirrors); Terms draft v0.2 cl.10 carries the same and *"It is the member's responsibility to check the
       in-app surface."* FS2 (a) MATCHES R10(B) as written; PQ1 asks whether the Trust goes beyond it.
-  NOT covered by any ruling: the reach of the alert SMS for a member without WhatsApp (PQ1); the 60-letter rule outside the claim
-  texts (PQ2); counsel's view on alert SMS (roster leg (f)); the cost per message at 4L (recorded, not ruled).
+      v1.2: BigDev's direction (2026-10-23) that *"all members are supposed to join"* a Trust WhatsApp / Telegram Channel goes
+      beyond a mirror ⇒ PQ3 (the Panel's — a member duty).
+  G13 (v1.2) architecture §3.4's channel list names WhatsApp Business messages to opted-in members, and a Telegram mirror that is
+      per member and *"announcements-only"* (`architecture.md`, "Telegram channel privacy posture"); a Trust BROADCAST channel on
+      either is in neither ⇒ an architecture note (the author's) and a backlog row, both AFTER PQ3 — ⛔ built by 5.11. Found
+      2026-10-23 (secondary sources only): Meta has no official API for posting to a WhatsApp Channel.
+  NOT covered by any ruling: the reach of the alert SMS for a member without WhatsApp (PQ1); the Trust's announcement channels and
+  any duty to join them (PQ3); counsel's view on alert SMS (roster leg (f)); the cost per message at 4L (recorded, not ruled).
 
 GLYPH REGISTER: ⛔ marks a prohibition at the START of a bullet or clause only — inside a sentence this file writes "not" /
 "never" in words. ⭐ = recommended / load-bearing; ⚠ = trap or caveat. `.decision-log.md`, `deferred-work.md` and
@@ -88,8 +101,9 @@ Status: ready-for-dev
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A member the app cannot reach hears nothing by text today: the per-member SMS
 > fallback exists in code but is dark, because every v1 alert SMS was one whole-body variable that TRAI will not register (Story
 > 6.34 TV6). Worse, "dark" is not silent — the rung falls to a log-only stand-in that reports `sent` (F3), and that false `sent`
-> is also what stops the job retrying (F19). This story writes FIXED wording (en + hi) for the five contribution notices a member
-> must act on — first among them **"your pool is open"**, carrying the family's full name as `-180` requires — records it for DLT
+> is also what stops the job retrying (F19). This story writes FIXED wording (en + hi) for the THREE contribution notices about a
+> member's own payment (v1.2, FS1 (d): day 10 *"not recorded yet"*, payment not matched, payment still not confirmed — the general
+> notices, pool open and the last day, go to the Trust's announcement channels, PQ3) — records it for DLT
 > registration, puts it in a message-keyed registry, gives the producers an SMS block, and decides WHO may receive it: as the
 > approved plan reads, a member whose WhatsApp is on and failed (FS2 (a)); it asks the Trustee Panel (PQ1) whether a member WITHOUT
 > WhatsApp should get it too. It makes the rung honest — no alert SMS is reported `sent` without a real send — WITHOUT changing
@@ -102,8 +116,7 @@ Status: ready-for-dev
 > attempt, exactly as it does today; `alert.channel_send` audits for fake SMS sends stop.
 >
 > **What already ships and this story REUSES:** the ladder + cascade (`dispatch.ts`, `cascade.ts`); the DLT vocabulary and shape
-> check (`dlt-variables.ts`); the two name boxes and the 60-letter fitter (`apps/jobs/src/scheduler/sms-member-boxes.ts`
-> `MEMBER_BOX_SLOTS`, `sms-member-name.ts` `smsMemberName` — 6.37e); the per-message × locale registry shape (`peer-mesh-sms-templates.ts`,
+> check (`dlt-variables.ts`); the per-message × locale registry shape (`peer-mesh-sms-templates.ts`,
 > `suspicion-notice-sms-templates.ts`); the DLT sheet's lockstep helpers (`apps/jobs/tests/_dlt-template-sheet.ts`).
 >
 > **What it CHANGES:** a NEW registry `apps/jobs/src/scheduler/contribution-sms-templates.ts` (message × locale, registrable); the
@@ -119,8 +132,8 @@ Status: ready-for-dev
 ## Story
 
 As a **member whose phone the Trust's app cannot reach**,
-I want **a short text message, in my language, when my pool opens, when my contribution is still not recorded, on the cycle's last
-day, and when my payment could not be matched or confirmed**,
+I want **a short text message, in my language, when my contribution is still not recorded, and when my payment could not be
+matched or confirmed** (v1.2: a pool opening and the cycle's last day reach me through the Trust's announcement channels — PQ3),
 so that **I am not left out of a cycle — and the record of what I missed — only because a push notification never arrived**.
 
 (5.11 decides and words these texts and makes the rung honest; 5.11b sends them.)
@@ -177,10 +190,10 @@ pool, its deadline or your payment — and a cycle you miss still counts against
 **Niyamavali check — done, with this result:** no clause names SMS (the Niyamavali, its FR mapping and both amendment drafts); R10(B)
 says *"Missed information is the member's responsibility"* with the in-app surface as the official channel, and Terms v0.2 cl.10
 repeats it ⇒ FS2 (a) is CONSISTENT with the Niyamavali as written, and R10(B) does not presume a member was notified before a missed
-cycle counts. Whether the Trust should go beyond R10(B) for these five notices is PQ1 — the Panel's. (The Niyamavali is a rulebook,
+cycle counts. Whether the Trust should go beyond R10(B) for these three notices (v1.2) is PQ1 — the Panel's. (The Niyamavali is a rulebook,
 not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
 
-## ⭐ FOUND FACTS (at `d87d047a` — re-run each at Task 0.1)
+## ⭐ FOUND FACTS (at `d87d047a`; cites re-taken at `1268d47e` in v1.3 — re-run each at Task 0.1)
 
 **The rung and why it is dark**
 - **F1 —** `CANONICAL_CHANNEL_LADDER = ['push','whatsapp','sms']` (`packages/channels/src/dispatch.ts:34`); `isCategoryEligible` returns
@@ -218,7 +231,7 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
 - **F6 — "pool assignment" is `alert_published`, and SMS eligibility must be per MESSAGE.** The cycle-open notice is one
   `alert_published` per assigned member (`contribution-notify-triggers.ts:8-12`, `:321`); the SAME category carries news
   (`news-publish.ts:161`), surveys (`survey-publish.ts:145`), moderation (`moderation-notify.ts:240`) and a direct push-only staff
-  dispatch (`claim-correction-reminders.ts:607`). The FS1 five map to: pool open → `alert_published` (POOL_BATCH `cycle_open`); day 10,
+  dispatch (`claim-correction-reminders.ts:607`). The FS1 (a) five map to (v1.2: FS1 (d) lights day 10, mismatch and pending-match escalated only): pool open → `alert_published` (POOL_BATCH `cycle_open`); day 10,
   day 14 AND pending-match escalated → `deadline_reminder` (`:389`); mismatch → `contribution_mismatch`, on its OWN queue and worker
   (`:1344`).
 - **F7 — the per-member messages and their copy** (`packages/contracts/src/alerts/contribution-loop-templates.ts`;
@@ -238,10 +251,10 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   `pool_names` has no length CHECK (`migrations/0073_pool-naming.sql`). `{date}` = `DD-MM-YYYY` UTC (`:269-274`). `{family}` =
   `familyLabel` = the mode-resolved deceased name (unbounded). `{amount}` = `formatCurrency(fixedAmount,'en')` (`"₹ 110"`, `"₹ 1,100"`).
 - **F11 — language.** These senders use `deps.locale ?? DEFAULT_LOCALE` (`'hi'`) (`contribution-notify-triggers.ts:678, 1292, 1357`);
-  boot never sets `locale` (`boot.ts:631-641`). `members.preferred_locale` (0179) is read by `getMemberLanguage`
+  boot never sets `locale` (`boot.ts:623-633`). `members.preferred_locale` (0179) is read by `getMemberLanguage`
   (`packages/domain/src/member/preferred-locale.ts:53-71` — returns `{ chosenLocale, pariwarDefaultLocale }`, throws when the passport
-  or the member row is missing), `resolvePeerRequestLocale` (`claim/peer-mesh-request.ts:701-719`), batch SQL in `peer-mesh-request.ts:830, 883`,
-  `peer-mesh-wa-reminder.ts:754-774` and `data-export/assemble.ts:419`. (5.11b's FS5.)
+  or the member row is missing), `resolvePeerRequestLocale` (`claim/peer-mesh-request.ts:725-743`), batch SQL in `peer-mesh-request.ts:854, 907`,
+  `peer-mesh-wa-reminder.ts:758-778` and `data-export/assemble.ts:419`. (5.11b's FS5.)
 
 **Job outcome**
 - **F19 — the fake `sent` is what stops retries.** The child marks every member whose cascade ended without `sent` undelivered: it
@@ -296,7 +309,12 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   cycle** on the common path (pool-open, day 10, day 14), +1 per mismatch / escalated payment. **(b) all nine push messages** — 18
   templates; ≈ 5 texts per cycle for a member who never pays, up to 9. *Cost (b):* ~2× registrations and spend; day 5 / 13 add little.
   **(c) pool-open + day 14 only** — 4 templates. *Cost (c):* a member who never opens the app learns of a missed contribution only on the
-  last day, and never hears of a payment problem.
+  last day, and never hears of a payment problem. **(d) — ✅ ANSWERED (BigDev, 2026-10-23, *"2"*): THREE — the notices about the
+  member's OWN contribution:** day 10 *"not recorded yet"*, payment not matched, payment still not confirmed. Pool open and day 14 are
+  NOT texted: they are general notices, for the Trust's announcement channels (PQ3; ⛔ built here). → **6 templates** (3 × en/hi);
+  `alert_published` stays excluded (G4 kept). *Cost (d):* until the channels exist and PQ3 is ruled, a member the app cannot reach
+  hears of a pool opening and its last day only in the app (and the per-member Telegram mirror, where switched on); at most **1 text
+  per member per cycle** on the common path (day 10), +1 per payment problem.
 - **FS2 — who receives it (I2).** ⭐ **(a) as §3.4 (iii) reads, enforced in code NOW:** eligible only when the WhatsApp TARGET was
   resolved (Pariwar on + member ACTIVE) and the WhatsApp rung did not end `sent` (incl. FS3's not-sent). Everyone else: the SMS rung is
   `skipped_no_target` with detail `sms_fallback_not_eligible`. "WA delivery returns failure" is read as the rung's own result — a later
@@ -326,10 +344,12 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   author's; would replace PQ2 with that question. *Cost (b):* a Panel question for 1 segment saved. **(c) add *", or call the helpline
   {#var#}"*** (cbn, `sms.claim_correction.helpline_number.<pariwarId>`). *Cost (c):* every send fails closed for a Pariwar with no number
   provisioned (none is); a 4th variable on pool-open is not allowed.
+  ✅ **ANSWERED: (a), applied to FS1 (d)'s three texts, in BigDev's corrected words** (below). With pool open not texted, the name
+  boxes, the exigency line and `name_over_60_unruled` fall away (no text has more than 2 variables). The pool-open / last-day words
+  BigDev corrected are KEPT below as the draft for the channel posts (PQ3's row).
 - **FS7 — how the alert carries the SMS.** ⭐ **(a) an OPTIONAL `sms` block on the payload** of the lit producers —
   `{ message: <FS1 key>, values: { <slot>: <string> } }` built where the push copy's params are built (same locals — I1); absent ⇒ the
-  message is not SMS-eligible (FS15). Pool-open's `member1` / `member2` come from `smsMemberName(familyLabel)` — the SAME resolved name the
-  push uses. *Cost (a):* a contracts change — OPTIONAL so no fixture breaks ([[project_contracts_tests_outside_tsc]]); news / survey /
+  message is not SMS-eligible (FS15). (v1.2: pool open is not lit — the `smsMemberName(familyLabel)` clause that stood here is moot.) *Cost (a):* a contracts change — OPTIONAL so no fixture breaks ([[project_contracts_tests_outside_tsc]]); news / survey /
   moderation never carry it (I5). **(b) rebuild the values in the fan-out** from ids. *Cost (b):* a second copy of the pool-label / date /
   name logic that can drift from the push.
 - **FS10 — the degraded-mode bridge.** ⭐ **(a) stays DARK, and while it is dark a bridged send runs the NORMAL ladder** (push → WA →
@@ -341,9 +361,9 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   hourly sweep (non-time-critical) later pushes. **(c) light the bridge with the pool-open text.** *Cost (c):* every member of a degraded
   Pariwar, every cycle — a cost the Panel accepted in 5.8's epic text but never for these words; not in this story.
 - **FS11 — go-live: a NEW roster row, KEY `member-alert-sms-fallback-live`** (the next free Row at Task 0.4; Row 38's shape),
-  decision-authored, covering 5.11 + 5.11b: **(a)** the 10 templates (FS1) registered on SmartPing with their types, APPROVED, and their
+  decision-authored, covering 5.11 + 5.11b: **(a)** the 6 templates (FS1 (d)) registered on SmartPing with their types, APPROVED, and their
   MSG91 template ids set; **(b)** the 5.11 Hindi strings HUMAN-REVIEWED (Row 28's control); **(c)** Row 30 (d)'s provider answers cover these
-  texts (the date's hyphen; a pool name with spaces or Devanagari; two name boxes side by side; an empty second box) — cross-referenced,
+  texts (the date's hyphen; a pool name with spaces or Devanagari) — cross-referenced,
   not duplicated; **(d)** the per-segment price recorded and the per-cycle cost line in the DLT sheet re-derived with it; **(e)** a real
   alert SMS received on a device from staging (Row 32's setup legs; needs 5.11b); **(f)** counsel's view on alert SMS without separate
   consent (TRAI Service-Implicit; DPDP; the privacy notice's channel list) RECORDED — or *"Counsel has not been asked"* recorded as an
@@ -364,8 +384,8 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   push (also true today); the trail says why. **(b) retry like any undelivered member.** *Cost (b):* 5 runs + an hourly re-enqueue per live
   cycle for every unreachable member; pending-match members nudged again; jobs end `failed`.
 - **FS15 — the SMS rung for messages that are NOT lit.** ⭐ **(a) honest everywhere on the alert path:** the fan-out's SMS rung considers
-  a send only when the alert carries an `sms` block (FS7) AND the member is eligible (FS2); every other alert — the four unlit
-  contribution messages, news, survey, moderation — ends the SMS rung `skipped_no_target` / `sms_message_not_lit`, never the fixture. A lit,
+  a send only when the alert carries an `sms` block (FS7) AND the member is eligible (FS2); every other alert — the six unlit
+  contribution messages (pool open among them), news, survey, moderation — ends the SMS rung `skipped_no_target` / `sms_message_not_lit`, never the fixture. A lit,
   eligible member in 5.11 ends `skipped_no_target` / `sms_send_not_wired` (5.11b replaces this with the real send). The category registry
   and its composition path stay in place, all-dark, unused by the alert SMS rung. *Cost (a):* every trail that ends `sms:sent` today
   changes (F18 tests), and fake SMS `alert.channel_send` audits stop — the dev greps consumers of `alert.channel_send` at Task 0.1 and lists
@@ -376,8 +396,14 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   but a DLT text cannot take it as a variable without losing fixed share. *Cost (a):* when the name is fixed, 10 re-registrations (plus the
   claim texts'). **(b) "the app" with no name.** *Cost (b):* a member with several apps may not know which; "TWT:" stays as the prefix
   regardless (the header carries the sender).
+  ✅ **ANSWERED: (b).** BigDev, verbatim: *"FS16 Trust name is already mentioned in SMS header/WhatsApp sender. Mentioning it in SMS
+  would lengthen the text unnecessarily."* "TWT:" stays as the prefix; no text names the app. Cost (a)'s re-registration when the
+  Trust's name is fixed now rests on the "TWT:" prefix alone ([[project_legal_name_pending]]).
 
-### The words (FS4 (a), FS16 (a)) — DRAFT, en author-written, hi ⚠ NOT-YET-HUMAN-REVIEWED
+### The words (FS4 (a), FS16 (b)) — en + hi REVIEWED AND CORRECTED BY BIGDEV (2026-10-23, Debug Log (a))
+
+v1.2: ONLY the three rows marked TEXTED become `sms.*` keys and templates; the two rows marked CHANNEL DRAFT are kept as BigDev's
+words for the channel posts (PQ3's row) and are NOT added to `contribution.json` by 5.11.
 
 Keys go in `packages/i18n/locales/{en,hi}/contribution.json` (flat keys, like `notify.*`) as `sms.<message>`; each `{param}` is a slot
 NAME (TV13). The REGISTERED text is the same string with each `{param}` replaced by `{#var#}`. Config key:
@@ -385,63 +411,67 @@ NAME (TV13). The REGISTERED text is the same string with each `{param}` replaced
 
 | Key | Slots (type, max) | en | hi |
 |---|---|---|---|
-| `sms.pool_open` | `pool` alnum 30 · `member1` / `member2` (`MEMBER_BOX_SLOTS`) | TWT: your pool {pool} is open, in support of {member1}{member2}'s family. Please open the TWT app to contribute when you can. | TWT: आपका पूल {pool} खुल गया है, {member1}{member2} के परिवार के सहयोग हेतु। जब सुविधा हो, TWT ऐप खोलकर योगदान करें। |
-| `sms.deadline_not_recorded` (day 10) | `pool` alnum 30 · `date` alnum 10 | TWT: your contribution to pool {pool} is not recorded yet. This cycle closes on {date}. Please see the TWT app. | TWT: पूल {pool} में आपका योगदान अभी दर्ज नहीं हुआ है। यह चक्र {date} को बंद होगा। कृपया TWT ऐप देखें। |
-| `sms.deadline_last_day` (day 14) | `date` alnum 10 · `pool` alnum 30 | TWT: today, {date}, is the last day of this cycle for pool {pool}. If you are able, please contribute in the TWT app. | TWT: आज, {date}, पूल {pool} के इस चक्र का अंतिम दिन है। यदि संभव हो, तो कृपया TWT ऐप में योगदान करें। |
-| `sms.payment_not_matched` | — (zero slots) | TWT: we could not match your payment yet. We will help you sort it out. Please see the TWT app. | TWT: आपके भुगतान का मिलान अभी नहीं हो पाया है। इसे ठीक करने में हम आपकी मदद करेंगे। कृपया TWT ऐप देखें। |
-| `sms.payment_not_confirmed` (escalated) | `pool` alnum 30 | TWT: we still have not been able to confirm your payment for pool {pool}. Please check or retry in the TWT app. | TWT: पूल {pool} के लिए आपके भुगतान की पुष्टि अब तक नहीं हो पाई है। कृपया TWT ऐप में जाँचें या फिर से प्रयास करें। |
+| CHANNEL DRAFT — `sms.pool_open` | `pool` alnum 30 · `member1` / `member2` (`MEMBER_BOX_SLOTS`) | TWT: your pool {pool} is open, in support of {member1}{member2}'s family. Please open the app to contribute. | TWT: आपका पूल {pool} खुल गया है, {member1}{member2} के परिवार के सहयोग हेतु। सुविधानुसार ऐप खोलकर योगदान करें। |
+| TEXTED — `sms.deadline_not_recorded` (day 10) | `pool` alnum 30 · `date` alnum 10 | TWT: your contribution to pool {pool} is not recorded yet. This cycle closes on {date}. Please contribute. | TWT: पूल {pool} में आपका योगदान अभी दर्ज नहीं हुआ है। यह चक्र {date} को बंद होगा। कृपया योगदान करें। |
+| CHANNEL DRAFT — `sms.deadline_last_day` (day 14) | `date` alnum 10 · `pool` alnum 30 | TWT: today, {date}, is the last day of this cycle for pool {pool}. If you are able, please contribute. | TWT: आज, {date}, पूल {pool} के इस चक्र का अंतिम दिन है। यदि संभव हो, तो कृपया योगदान करें। |
+| TEXTED — `sms.payment_not_matched` | — (zero slots) | TWT: we could not match your payment yet. We will help you sort it out. Please see the app. | TWT: आपके भुगतान का मिलान अभी नहीं हो पाया है। इसे ठीक करने में हम आपकी मदद करेंगे। कृपया ऐप देखें। |
+| TEXTED — `sms.payment_not_confirmed` (escalated) | `pool` alnum 30 | TWT: we still have not been able to confirm your payment for pool {pool}. Please check or retry in the app. | TWT: पूल {pool} के लिए आपके भुगतान की पुष्टि अब तक नहीं हो पाई है। कृपया ऐप में जाँचें या फिर से प्रयास करें। |
 
-⭐ Pre-checked at validation (fixed share = fixed / (fixed + Σ slot max); segments at the LONGEST values, ASCII values; GSM-7 160 /
-153, UCS-2 70 / 67; ⚠ the dev re-runs `checkDltTemplateShape` on the real registry):
+⭐ Recomputed at v1.2 on BigDev's corrected words (fixed share = fixed / (fixed + Σ slot max); segments at the LONGEST values, ASCII
+values; GSM-7 160 / 153, UCS-2 70 / 67; ⚠ the dev re-runs `checkDltTemplateShape` on the real registry):
 
 | Message | fixed share en / hi | en (GSM-7) | hi (UCS-2) |
 |---|---|---|---|
-| pool_open | 52.9 % / 50.5 % | 191 chars → **2** | 182 → **3** |
-| deadline_not_recorded | 71.2 % / 69.0 % | 139 → 1 | 129 → 2 |
-| deadline_last_day | 72.4 % / 69.0 % | 145 → 1 | 129 → 2 |
-| payment_not_matched | 100 % / 100 % | 95 → 1 | 103 → 2 |
-| payment_not_confirmed | 77.8 % / 78.1 % | 135 → 1 | 137 → **3** |
+| deadline_not_recorded | 70.1 % / 68.8 % | 134 chars → 1 | 128 → 2 |
+| payment_not_matched | 100 % / 100 % | 91 → 1 | 99 → 2 |
+| payment_not_confirmed | 77.1 % / 77.4 % | 131 → 1 | 133 → 2 |
+| *(channel draft, not texted)* pool_open | 48.3 % / 48.9 % | 174 → 2 | 176 → 3 |
+| *(channel draft, not texted)* deadline_last_day | 69.2 % / 66.1 % | 130 → 1 | 118 → 2 |
 
-⇒ FS1 (a)'s common path ≈ 4 segments per cycle in en, 7 in hi, per unreached member. ⚠ A Devanagari family name in an en pool-open text
-turns it Unicode (191 → 3 segments) — the pre-flight checks only the registered text; record it in the cost line (Task 5) and Row 30 (d).
+⇒ FS1 (d)'s common path = 1 segment per cycle in en, 2 in hi, per unreached member who has not contributed by day 10; +1 en / +2 hi
+per payment problem. (v1.1's table, on the draft words, had payment_not_confirmed hi at 3; the Devanagari-name caveat is moot — no text
+carries a name.)
 ⚠ `sms.payment_not_matched` has ZERO slots — 6.37's MG12 refuses `values.length === 0` (F3), so it cannot send until 5.11b changes MG12
 to tell "no values supplied" (`undefined`) from "a template with no slots" (`[]`); recorded in the 5.11b carry.
 ⚠ Every text passes `checkDltTemplateShape` and the tone guide (`docs/tone-guide.md`, `docs/tone-review-checklist.md`) — non-coercive, no
 "must", no "penalty", no urgency beyond the push's band. Segment counts go in the DLT sheet's cost line (Task 5).
 
-### PQ1 / PQ2 — for the Trustee Panel (ONE note, written at Task 0.3 from the TEMPLATE; neither blocks the build)
+### PQ1 / PQ3 — for the Trustee Panel (ONE note, `trustee-panel-routing-note-2026-10-23-5-11-sms-for-members-without-whatsapp.md`; neither blocks the build) — v1.2; ✅ SENT by BigDev 2026-10-23, ⛔ ruled
 
-**PQ1, in one sentence:** should a member who has NOT said yes to WhatsApp get a text when the app cannot reach them about their pool,
-its deadline or their payment? **The one fact that decides it:** under the approved plan such a member hears NOTHING outside the app;
-the Niyamavali (R10(B)) makes missed information the member's responsibility, and a cycle they miss counts under R7 and toward R8's
-ninety-percent rule — so the member's cover can turn on a notice they never saw. Options: **A** keep the plan (texts only after a
-WhatsApp failure — consistent with R10(B); cost: almost nobody is ever texted, and the members the app cannot reach are not helped);
-**B** widen to any member the app and WhatsApp could not reach, for FS1's five notices only (cost: a new standing SMS spend at scale, ≈ 4
-en / 7 hi segments per unreached member per cycle; a change to the approved plan, as F7 was); **C** widen for pool-open and last-day only
-(cost: payment problems still unheard). Our reading: **B**. "Earlier versions / Corrected": `-180`'s context told you *"SMS is reached
-when PUSH FAILS"* — that described the code, which texts (falsely, through a stand-in) members the plan excludes; the plan never did.
-Evidence (LAST, per the template): §3.4 + its annotation; RA-29; `-255` F7; epics 5.6 (c) vs §3.4; F4; R10(B) + Terms cl.10; `-375`'s open
-SMS-consent line — consent is NOT asked here (it is counsel's — roster leg (f)). No claim that "most unreachable members lack WhatsApp"
-— there is no evidence for it.
+**PQ1 (reshaped at v1.2), in one sentence:** should a member who has NOT said yes to WhatsApp get a text when the app cannot reach them
+about their OWN contribution — not recorded by day 10, a payment not matched, a payment still not confirmed? **The one fact:** under the
+approved plan such a member hears nothing outside the app about their own contribution, and a missed cycle counts (R7; R8's
+ninety-percent rule); these notices are personal, so no channel post can carry them (§3.4's privacy posture). Options: **A** keep the plan
+(cost: almost nobody is texted); **B** widen for the three (cost: ≈ 1 en / 2 hi segments per unreached member per cycle, +1 / +2 per
+payment problem; a change to the approved plan, as F7 was); **C** day 10 only (cost: payment problems heard only in the app). Our reading:
+**B**. "Earlier versions / Corrected": the two unsent drafts; the `-180` correction (*"SMS is reached when PUSH FAILS"* described the code).
 
-**PQ2, in one sentence:** when the deceased member's name is longer than 60 letters, may the pool-open SMS shorten it by the same rule
-you ruled for the claim texts (`-379` Q1 A)? **The one fact:** `-180` requires the full name on this SMS and `-379`'s rule was ruled for
-four other texts only. Options: **A** yes, the same rule (cost: a long name is shortened in this text too); **B** no — such a member's
-pool-open SMS is not sent (cost: that family's pool members get no text). Our reading: **A**.
+**PQ2 — WITHDRAWN at v1.2.** No text carries the deceased member's name (FS1 (d)); a channel post has no 60-letter limit. The number is
+not reused.
+
+**PQ3 (NEW at v1.2), in one sentence:** the Trust will run a WhatsApp Channel and a Telegram channel for general notices (a pool
+opening, a cycle's last day) — should members be asked to join one, and is joining a request or a requirement? **Source:** BigDev's
+direction, 2026-10-23 (Debug Log (a)). **The one fact:** the Trust cannot see which of its members joined, so it can never check a
+requirement, nor tell a member who missed a post from one who never joined. Options: **A** a request — the app stays the official channel,
+R10(B) unchanged (cost: a member who does not join hears general notices only in the app); **B** a requirement — a new member duty in the
+Terms (cost: it cannot be checked; a member without WhatsApp or Telegram cannot meet it); **C** no channels (cost: a member the app cannot
+reach hears of a pool opening nowhere). Our reading: **A**. Stated, not asked: following `-180` the pool-open post names the family, and
+a WhatsApp Channel is publicly listed (the Panel may narrow `-180` for this place — its call); Meta has no official Channels API (posts by
+hand). Split out: the architecture note a broadcast channel owes (G13, the author's); the channels' build (a backlog row after PQ3).
 
 "Shown to the Panel" only once SENT ([[feedback_shown_to_panel_means_sent]]).
 
 ## Acceptance Criteria
 
 **AC0 — Governance before code (Task 0).** The author-commit decision (FS1–FS4, FS7, FS10, FS11, FS13–FS16 as answered; the §0 readings
-G1–G12; "Supersessions: none" — it REVERSES the author's own 2026-07-06 category exclusion for pool-open, said so; what it does NOT cover,
-incl. everything carried to 5.11b) is committed ALONE before any record or code; the PQ1 / PQ2 note is written from the template and its
+G1–G13; "Supersessions: none" — FS1 (d) KEEPS the author's own 2026-07-06 category exclusion; what it does NOT cover, incl. everything
+carried to 5.11b and the Trust's channels) is committed ALONE before any record or code; the PQ1 / PQ3 note is written from the template and its
 SENT state recorded truthfully; the records commit (epics.md entry, §3.4 annotation, roster row, DLT sheet section, deferred-work
 annotations, the bridge-words row (row `5-11b-alert-sms-real-send` was added at v1.1), ledger) follows
 ([[feedback_governance_commits_precede_implementation]]).
 
 **AC1 — The registry is message-keyed and registrable (I1, I5; FS1, FS4, FS16).** `apps/jobs/src/scheduler/contribution-sms-templates.ts`
-holds one entry per (FS1 message × locale) with `contentTemplate`, `slots` (name slots imported from `MEMBER_BOX_SLOTS`, never redefined),
+holds one entry per (FS1 message × locale) with `contentTemplate`, `slots` (no name slot — FS1 (d)),
 config key `sms.dlt.template_id.contribution.<message>.<locale>`; the file joins `REGISTRY_FILES` in the same change (F16).
 `packages/channels/src/sms-dlt-registry.ts` keeps its five dark category entries (`claim_status_change` / `helpdesk_reply` visibly unlit) and
 gains a dated 5.11 header note (TV6 history kept). Every lit entry passes `checkDltTemplateShape`; the CI gate `dlt-typed-variables`
@@ -469,20 +499,20 @@ completes on its FIRST attempt; the sweep does not re-enqueue; a pending-match m
 detail, never the provider id (F3: the fixture's id equals the real one); the F18 dark-state tests replaced by tests of THIS behaviour (each
 states what it replaced).
 
-**AC5 — Producers, and not a bulk channel (I5; FS7, FS10, FS13).** The five lit producers carry the `sms` block, built from the same locals as
-the push params; pool-open's name boxes come from `smsMemberName(familyLabel)`; the `{pool}` value follows FS13 (curated name only when ≤ 30
-code points and, for en, all GSM-7; else the letter code). News / survey / moderation / staff `alert_published` and the four unlit
-contribution messages carry no `sms` block. A bridged send follows FS10 as answered. *Legs:* one test per producer family; FS13's three
+**AC5 — Producers, and not a bulk channel (I5; FS7, FS10, FS13).** The three lit producers (day 10 and pending-match escalated — POOL_BATCH; mismatch — its own
+worker) carry the `sms` block, built from the same locals as the push params; the `{pool}` value follows FS13 (curated name only when ≤ 30
+code points and, for en, all GSM-7; else the letter code). News / survey / moderation / staff `alert_published` and the six unlit
+contribution messages (pool open among them) carry no `sms` block. A bridged send follows FS10 as answered. *Legs:* one test per producer family; FS13's three
 branches (fits; > 30; non-GSM in en); a bridge test.
 
 **AC6 — Records and gates (FS11).** The roster row `member-alert-sms-fallback-live` exists with legs (a)–(f); the DLT sheet gains the
-templates (next free ordinals), their wording section, types, the pool-open exigency line, MSG91 forms, cost lines (segments en / hi at the
-longest values, the Devanagari-name caveat), a rejection-table line (*"the author's; Hindi under its review row; the name wording is `-180`'s
-— a rejection of the name goes to the Panel"*) and a Record line; the TV6 section and Row 30 note (1) get DATED annotations (not rewritten);
+templates (next free ordinals), their wording section, types, MSG91 forms, cost lines (segments en / hi at the
+longest values), a rejection-table line (*"the author's; en + hi reviewed by BigDev 2026-10-23; a rejection goes back to the author"*) and a Record line; the TV6 section and Row 30 note (1) get DATED annotations (not rewritten);
 deferred-work: the 6.34 TV6 item annotated *"wording built by 5.11; send by 5.11b — Closed by 5.11b on `done`"*, the 5.10-validate ladder item
 per FS3, a NEW bridge item (FS10, naming its row), and the items carried to 5.11b (the 6.37b `correlationId` item; the two 5.6 items — the
-template-id trim and `resolveSmsTarget`'s decrypt try/catch + E.164; LS11's item) annotated *"→ 5.11b"*; and, if PQ1 / PQ2 is unruled at
-`done`, a NEW item carrying each.
+template-id trim and `resolveSmsTarget`'s decrypt try/catch + E.164; LS11's item) annotated *"→ 5.11b"*; and, if PQ1 / PQ3 is unruled at
+`done`, a NEW item carrying each; and a NEW item for the Trust's announcement channels (PQ3 — the two channel-post drafts, G13's
+architecture note, Meta's lack of an official Channels API).
 
 **AC7 — Nothing else moves.** Push and WhatsApp copy, OTP, claim texts 1–14 and their core, `sms-member-name.ts` / `sms-member-boxes.ts`,
 Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :5433.
@@ -497,31 +527,31 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
         (`git worktree list`; ListAgents — [[feedback_shared_tree_branch_switch]]) — sequence per `-366` decision 6; **S3** the DLT sheet's
         ordinals moved; **S4** a Pariwar's WhatsApp is enabled anywhere a deploy reads (FS2 (a) then has reach — tell BigDev); **S5** Row 30
         (d) was answered with a per-variable limit other than 30 (the slot maxima and segment table change).
-  - [ ] 0.2 Put FS1–FS4, FS7, FS10, FS11, FS13–FS16 + the words (en + hi) + PQ1 / PQ2's options to BigDev; record answers VERBATIM in
+  - [x] 0.2 (DONE 2026-10-23 — Debug Log (a)) Put FS1–FS4, FS7, FS10, FS11, FS13–FS16 + the words (en + hi) + PQ1 / PQ2's options to BigDev; record answers VERBATIM in
         Debug Log (a). If the hi is approved in session, roster leg (b) still says *"whether that discharges this leg is recorded here, not
         assumed"*. Do NOT ask the 5.11b carry's FS5 / FS6 / FS8 / FS9 / FS12 here.
-  - [ ] 0.3 Write the PQ1 / PQ2 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first;
+  - [x] 0.3 (DONE 2026-10-23 — Decision `2026-10-23-389` committed ALONE as `6db47c17` after the rebase; the note SENT by BigDev) Write the PQ1 / PQ3 note (PQ2 withdrawn at v1.2; written 2026-10-23, its E4 run — Debug Log (e)) from `trustee-panel-routing-note-TEMPLATE.md` (§0 first;
         `trustee-panel-routing-note-YYYY-MM-DD-5-11-sms-for-members-without-whatsapp.md`), run its E4 commands, record it as not sent until
         BigDev sends it. Stage the author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the
         decision-log write first ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.4 Records commit: `epics.md` `### Story 5.11` between 5.10 and 5.12 (5.10's format; Epic 5's "9 stories" lines left as they stand)
+  - [x] 0.4 (DONE 2026-10-23 — Debug Log (e); the row stays `ready-for-dev` until dev starts, the 6.36d precedent) Records commit: `epics.md` `### Story 5.11` between 5.10 and 5.12 (5.10's format; Epic 5's "9 stories" lines left as they stand)
         and `### Story 5.11b` after it (scope = the carry below); §3.4 dated annotation under the fallback paragraph (FS2 as answered; PQ1
         pending) — never a rewrite; roster row; the FS10 bridge-words row (backlog); deferred-work annotations (AC6); ledger entry by SAFE
         prepend ([[project_sprint_status_safe_prepend]]) + row `ready-for-dev → in-progress`.
 - [ ] **Task 1 — Registry + words (AC1, AC2; FS1, FS4, FS16)**: create `contribution-sms-templates.ts` (shape of `peer-mesh-sms-templates.ts`;
-      name slots from `MEMBER_BOX_SLOTS`); add it to `REGISTRY_FILES`; add `sms.*` en / hi keys + `$comment.sms` in both; exclude `$comment` in
+      three messages, no name slot); add it to `REGISTRY_FILES`; add `sms.*` en / hi keys + `$comment.sms` in both; exclude `$comment` in
       the microcopy test; dated header note on `sms-dlt-registry.ts` (entries unchanged); extend `_dlt-template-sheet.ts` with a contribution
       catalogue.
 - [ ] **Task 2 — Contract + producers (AC5; FS7, FS13)**: optional `sms` block in `packages/contracts/src/alerts/alert.ts` payloads; populate it
-      in the cycle-open, day-10, day-14, pending-escalated (POOL_BATCH) and mismatch (its own worker) builders from the SAME locals as the push
-      params; the FS13 pool-label rule (one helper, tested); `smsMemberName(familyLabel)` for pool-open.
+      in the day-10 and pending-escalated (POOL_BATCH) and mismatch (its own worker) builders from the SAME locals as the push
+      params; the FS13 pool-label rule (one helper, tested).
 - [ ] **Task 3 — Eligibility + WA stand-in (AC3; FS2, FS3)**: the ONE predicate over `ctx.targets.whatsapp` + the WA outcome; the non-accepting
       WA provider in `createContributionProviderResolver` for enabled-but-unbuildable (template / credentials).
 - [ ] **Task 4 — The honest rung + job outcome (AC4, AC5; FS10, FS14, FS15)**: the fan-out's SMS rung decides lit / eligible itself and never
       takes the category resolver's fixture on the alert path; `in_app_only` recorded (no release, no throw) in POOL_BATCH, confirmed and
       mismatch; TRACE every other `fanOutAlert` / `dispatch()` producer (news, survey, moderation, helpdesk fan-out) for what an undelivered member
       does to its job and apply FS14 there (Debug Log (e)); the bridged-path change per FS10.
-- [ ] **Task 5 — Records (AC6; FS11)**: DLT sheet section (types, MSG91 form, exigency line, segment counts computed from the real registry with
+- [ ] **Task 5 — Records (AC6; FS11)**: DLT sheet section (types, MSG91 form, segment counts computed from the real registry with
       the longest values) and Record; roster row text; deferred-work items.
 - [ ] **Task 6 — Tests (AC1–AC7)**: replace F18's dark-state assertions (say what each replaced; confirm whether the `vi.mock` registry tests
       change); every new gate proven RED in Debug Log (b).
@@ -541,7 +571,7 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
   language; LS13's screen promise is what this keeps).
 - **FS6 — the send record.** A new table (one migration, the next free number at time of use — 6-36d committed 0180 in `15937e87`; highest at
   validation 0180), one row per (alert, member), UNIQUE. Choose explicitly: **at-most-once** (a begun row never resends; a crash between accept
-  and write loses a text) or **at-least-once** (the 6.27c precedent, `peer-mesh-request.ts:385-480` / 0156, re-sends on a re-claimed `attempting`
+  and write loses a text) or **at-least-once** (the 6.27c precedent, `peer-mesh-request.ts:399-496` / 0156, re-sends on a re-claimed `attempting`
   row). A row begun AND accepted counts as `sent` on a retry (else the job retries forever); decide whether a `rejected` row may be retried; a
   hash failure after an accept (`dispatch.ts` ~343-348) must not re-send. Discharges 6.37b's *"`correlationId` is optional"* for this path.
 - **The CRQID kind** (e.g. `as`) touches, beyond `SMS_CORRELATION_KINDS` + pattern (`correlation.ts:21`, `:30`) and 0167's
@@ -552,8 +582,8 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
   `CLAIM_SEND_ROW_KINDS` (`claim-dlt-sms-send.ts:148`); `SmsSendRowKind`'s doc (*"the claim-text send kinds"*). Replace CHECKs in the NEW migration,
   never edit 0167 ([[project_live_db_test_gotchas]]). No later migration (0168–0179) touches them.
 - **The per-send provider.** `createSmsDltProvider(deps)` (`providers/sms-dlt.ts:66`) built per send with values; `substituteDltValues`
-  (`dlt-variables.ts:214`); `formatSmsCorrelationId({kind,rowId})` (`correlation.ts:42`); the ONE `smsPreflight` memo — built at `boot.ts:654-668`,
-  AFTER `contributionNotifyDeps` (`:631-641`) and its registration (`:642`), and the fan-out deps lack `smsAppClient` / `resolveConfig` ⇒ a boot
+  (`dlt-variables.ts:214`); `formatSmsCorrelationId({kind,rowId})` (`correlation.ts:42`); the ONE `smsPreflight` memo — built at `boot.ts:646-660`,
+  AFTER `contributionNotifyDeps` (`:623-633`) and its registration (`:634`), and the fan-out deps lack `smsAppClient` / `resolveConfig` ⇒ a boot
   reorder (list `boot.ts`). The claim core `sendClaimDltSms` (`claim-dlt-sms-send.ts:263-383`; `checkedValues` `:199-220` private; helpline
   required `:281, :295`) is CLAIM-shaped and is left alone — call nothing from it that needs the helpline; if a piece is shared, the 5.11b
   decision says so explicitly (5.11 forbids editing it). Seams for the send row, budget and language are injected (F20).
@@ -571,8 +601,10 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
   target, the window has nothing to wait for ⇒ first pass.
 - **FS12 — the 5.6 mirror defects (AI-5-5)**, named: (1) the template id "trim" — superseded on this path by MG4's 24-hex check; (2)
   `resolveSmsTarget`'s missing decrypt try/catch + E.164 check — only HALF addressed by MSG91's `to` validation (the decrypt throw is not).
-  Annotate both *"addressed for the alert path by 5.11b"* as far as true; not closed.
-- **FS4's name rule above 60** (PQ2's answer) and `name_over_60_unruled` — enforced at send.
+  Annotate both *"addressed for the alert path by 5.11b"* as far as true; not closed. ⚠ v1.2 CORRECTION: at the pin `resolveSmsTarget`
+  DOES catch a decrypt failure (`packages/domain/src/notifications/delivery.ts:165-174` — logs, returns no target); only the E.164 check
+  is missing. 5.11b re-checks the deferred-work item's text against the code before annotating it.
+- ~~FS4's name rule above 60~~ — v1.2: MOOT (no text carries a name; PQ2 withdrawn).
 
 ## Dev Notes
 
@@ -587,7 +619,7 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
 - **T5 — The pool name is Hindi** (F10). In an en text it turns the SMS Unicode — FS13.
 - **T6 — The memoized resolver cannot carry values and lives for the process** (F3, F5). Leave it for push / WhatsApp; the SMS rung decides
   lit / eligible itself.
-- **T7 — One 30, one 60.** Import `MEMBER_BOX_SLOTS` / `smsMemberName`; never redefine a name slot or re-implement the fitter (the 6.37e AST fence
+- **T7 — One 30, one 60.** (v1.2: no 5.11 text carries a name; this binds only if one is added.) Import `MEMBER_BOX_SLOTS` / `smsMemberName`; never redefine a name slot or re-implement the fitter (the 6.37e AST fence
   in `sms-member-name.test.ts` watches for a retired helper name).
 - **T8 — Contracts tests run outside tsc** — a REQUIRED field breaks fixtures silently; keep `sms` OPTIONAL.
 - **T9 — A JSDoc with `**cl.3**`-style emphasis closes the comment** ([[project_markdown_emphasis_closes_jsdoc]]).
@@ -595,7 +627,7 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
 - **T11 — Type-only import cycles** between the new registry, `sms-member-*.ts` and the fan-out crash at runtime, invisible to tsc
   ([[project_type_only_import_cycle_trap]]).
 - **T12 — Don't edit a ratified word.** Templates 1–14, their core and the name fitter are out of scope; the DLT sheet's procedure governs a
-  rejection; the pool-open name is `-180`'s (a rejection of it goes to the Panel).
+  rejection; no 5.11 text carries `-180`'s name (v1.2).
 - **T13 — ESLint carve-out globs are cwd-relative** per package ([[project_eslint_config_per_package_cwd]]).
 - **T14 — The mismatch notice runs on its own queue and worker** (F6) — FS7 and FS14 must reach it too.
 
@@ -605,7 +637,7 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
 |---|---|---|
 | shape check, types | `dlt-variables.ts` (`DLT_VAR`, `DltSlot`, `checkDltTemplateShape`) | a new validator |
 | registry shape | `peer-mesh-sms-templates.ts` / `suspicion-notice-sms-templates.ts` | a new shape |
-| name boxes, 60-letter fitter | `sms-member-boxes.ts` `MEMBER_BOX_SLOTS`, `sms-member-name.ts` `smsMemberName` | a second 30 / 60 |
+| name boxes, 60-letter fitter (v1.2: not used by 5.11) | `sms-member-boxes.ts` `MEMBER_BOX_SLOTS`, `sms-member-name.ts` `smsMemberName` | a second 30 / 60 |
 | lockstep tests | `apps/jobs/tests/_dlt-template-sheet.ts` (+ a contribution catalogue) | re-parsing the sheet |
 | WA refusal | a non-accepting provider returning `rejected` | a new cascade outcome |
 | job outcome | `store.recordResult` with the trail | a new table |
@@ -628,7 +660,8 @@ records in `docs/launch-gate-inventory/` and `_bmad-output/`. No pg-touching `@t
 Other open worktrees at the pin: `11b-4-memorial-authorship-…`, `3-3c-member-kyc-name-english-only` (English-only KYC names — would make a
 Devanagari family name rarer in en texts; note it, do not depend on it), `6-36d-exclude-nominees-from-the-five` (edits `peer-mesh-request.ts` and
 holds migration 0180, committed `15937e87`). 5.11 adds no migration and does not touch `peer-mesh-request.ts`, so it does not overlap 6-36d;
-5.11b sequences after it. 6.31's rule that its reminder never goes through `dispatch()` stands — a lit SMS rung would otherwise text the
+5.11b sequences after it. v1.3: 6-36d is `done` and LANDED on `main` (`1268d47e`, migration 0180 included) — this branch is rebased on it;
+5.11b's next free migration is found at its create-story. 6.31's rule that its reminder never goes through `dispatch()` stands — a lit SMS rung would otherwise text the
 neighbours twice.
 
 ### Previous story intelligence
@@ -678,6 +711,57 @@ fast-forward ([[feedback_land_prs_by_fast_forward]]).
 (a) Task 0.2 answers, verbatim · (b) RED proofs · (c) parity / lockstep / CI-gate outputs · (d) dev-DB side effects · (e) Task 0.1 preflight,
 the `alert.channel_send` consumers, the Task 4 producer trace
 
+**(a) Task 0.2 — BigDev's answers, verbatim (2026-10-23, this session).**
+
+1. *"where is FS5 and FS6, I have reviewed the en/hi, file modified with correction. Others approved as recommended, but I have
+   question. Have I mentioned Trust will have a WhatsApp Channel and Telegram Channel where all members are supposed to join, either of
+   them to get the notifications."*
+   - FS5 / FS6 (with FS8, FS9, FS12) are 5.11b's since the v1.1 split; not asked here (Task 0.2's own rule).
+   - The words: BigDev edited the words table in this file (en + hi, all five rows); the edit is the review. Against the v1.1 draft:
+     *"the TWT app"* → *"the app"*; day 10 ends *"Please contribute."* and day 14 *"If you are able, please contribute."* (no app named);
+     the Hindi re-worded throughout. Segments recomputed (the table above).
+   - The channel question was answered from the records (the session's reply, not BigDev's words): none states a WhatsApp Channel or a
+     duty to join; Telegram is FR-73's per-member opt-in mirror, announcements only, *"not official"* under R10(B) / Terms cl.10.
+2. *"2, FS16 Trust name is already mentioned in SMS header/WhatsApp sender. Mentioning it in SMS would lengthen the text
+   unnecessarily."*
+   - *"2"* = the session's option 2, as put: *"Reshape PQ1: channel posts for pool-open and last day, and SMS only for the three personal
+     notices (day 10 and the two payment problems). This needs your decision on the channels first, and may be a Panel question of its
+     own."* ⇒ FS1 (d); BigDev's channel direction (message 1) is the decision it needed; the duty to join is PQ3.
+   - FS16 (b).
+
+**Recorded as answered:** FS1 (d) · FS2 (a) + route PQ1, reshaped to the three · FS3 (a) · FS4 (a), on the three texts, in BigDev's words
+· FS7 (a) (the pool-open name clause moot) · FS10 (a) · FS11 as listed (6 templates; leg (c) without the name-box items) · FS13 (a) ·
+FS14 (a) · FS15 (a) · FS16 (b). PQ2 WITHDRAWN. PQ3 NEW.
+
+**Roster leg (b) — the Hindi review.** BigDev reviewed and corrected the Hindi of all five rows in this session (the file edit,
+2026-10-23). ⭐ Recorded reading: it DISCHARGES leg (b) for the three texted strings AS WORDED HERE — the same shape as `-387` LS14 (b)
+(BigDev approving Hindi drafts) and 8.15 AC6 (BigDev's tone review, en + hi); any later change to a word re-opens it. The session drafted
+the words and BigDev corrected them; if BigDev does not count as a non-author reviewer for that, the leg stays open — BigDev's to say.
+
+**(e) Task 0.1 / 0.3 — partial (2026-10-23).** `git fetch origin`: `origin/main` = `d87d047a` = the pin; this branch is 2 commits ahead
+(`d55d6627`, `4f12ef2b`) ⇒ no rebase needed, found facts unchanged. The routing note's E4 commands were run on the v1.2 note: every one
+matches. Corrected while running them: the `resolveSmsTarget` doc quote spans two lines (`delivery.ts:152-153`), so the grep is
+`'NO opt-in (the member'`; the function catches a decrypt failure (`:165-174`), which corrects the 5.11b carry's FS12 (2). The
+`alert.channel_send` consumer grep and S1–S5 are still owed at Task 0.1 proper.
+
+**(e) cont. — Task 0.3 / 0.4 (2026-10-23, BigDev: *"commit it and note base has moved, I have sent the note to Panel"*).**
+- Rebased onto `origin/main` `1268d47e` (6.36d landed, 19 commits). Two stops, both in `sprint-status.yaml`'s newest-first ledger — both
+  sides kept (6.36d's `23ab`…`23g`, then this row's `23z` / `23w`); YAML parses; `.decision-log.md` merged cleanly (`-389` above `-388`…`-384`).
+- The 6.36d diff touched five files this story cites; each cite re-taken by CONTENT: `boot.ts` (`contributionNotifyDeps` 631-641 → 623-633,
+  registration 642 → 634, `smsPreflight` 654-668 → 646-660); `peer-mesh-request.ts` (`resolvePeerRequestLocale` 701-719 → 725-743, batch SQL
+  830 / 883 → 854 / 907, the at-least-once block 385-480 → 399-496); `peer-mesh-wa-reminder.ts` 754-774 → 758-778; `claim/index.ts` and the
+  roster are cited by name only. No found fact changed in substance.
+- Next free numbers, checked on `main` + every branch + every worktree: decision `-389` (taken by this story); roster Row 40 (taken);
+  ledger letter `ag` (`x` / `aa` are the 11b-4 worktree's).
+- Task 0.3: Decision `2026-10-23-389` committed ALONE (`6db47c17` after the rebase; `59085efe` before it).
+- The note: SENT by BigDev 2026-10-23; its header records it; nothing below the header was edited.
+- Task 0.4 records (one commit): `epics.md` `### Story 5.11` + `### Story 5.11b` (before 5.12); architecture §3.4 dated annotation after the
+  2026-09-28 one; roster Row 40 `member-alert-sms-fallback-live`; deferred-work — a new 5.11 section (the Trust's channels; the bridge
+  words → row `5-8b-degraded-mode-bridge-sms-wording`), dated annotations on the 6.34 TV6 item, the 5.10-validate ladder item (FS3),
+  the `correlationId` item, the two 5.6 items (the decrypt half corrected — FS12 (2)), and `-387` LS11's item; the ledger `2026-10-23ag`
+  (safe prepend), the row's dated comment, 5-11b's comment (five → three), the new backlog row `5-8b-…`. The row stays `ready-for-dev`
+  (Task 0.4's *"→ in-progress"* is taken when dev starts, as 6.36d did); the DLT sheet, the TV6 section and Row 30 note (1) are Task 5's.
+
 ### Completion Notes List
 
 ### File List
@@ -688,3 +772,5 @@ the `alert.channel_send` consumers, the Task 4 producer trace
 |---|---|---|
 | 2026-10-23 | v1.0 | Created by `bmad-create-story 5.11` (pinned `d87d047a`). FS1–FS13 + PQ1 PROPOSED; words drafted (en + hi, hi un-reviewed). |
 | 2026-10-23 | v1.1 | Validated (`bmad-create-story validate 5.11`, four parallel read-only checks; BigDev: *"all"*). Pin and found facts re-checked — no drift. SPLIT: the real send (FS5, FS6, FS8, FS9, FS12, the CRQID kind, MG12's zero-slot change) carried to new row `5-11b-alert-sms-real-send`; 5.11 adds no migration. New: F19 (the fake `sent` holds the retry loop shut) ⇒ FS14 (`in_app_only`, retry profile unchanged); FS15 (honest rung for unlit messages); FS16 (the app's name); G10 `-180` (full name on the cycle-open SMS ⇒ FS4 keeps it, two boxes, amount dropped) and G11 `-379` ⇒ PQ2; G12 R10(B) in the Policy meaning and PQ1; consent moved to counsel (roster leg (f)); FS3's mechanism (a rejecting provider); FS10 runs the normal ladder while the bridge is dark; FS13 letter code for non-GSM names in en; registry moved to `apps/jobs` (`MEMBER_BOX_SLOTS`); cites corrected (F7 nine messages, F11 `getMemberLanguage`, F18, `-345`, `-354`, G1, G3, G4); segment table recomputed; glyph inversions removed. |
+| 2026-10-23 | v1.2 | Task 0.2 ANSWERED (Debug Log (a)). FS1 (d): three texted notices (day 10, payment not matched, payment still not confirmed); pool open and day 14 go to the Trust's announcement channels (BigDev's direction) ⇒ PQ3 NEW (ask or require members to join), G13 NEW (a broadcast channel is not in §3.4); PQ1 reshaped to the three; PQ2 WITHDRAWN (no text carries a name). FS16 (b). Words corrected by BigDev (en + hi) and segments recomputed (common path 1 en / 2 hi). `alert_published` stays excluded (G4 kept). Name boxes, the exigency line and `name_over_60_unruled` dropped from AC1 / AC5 / AC6 / Tasks 1, 2, 5 / T7 / T12. FS12 (2) corrected (`resolveSmsTarget` already catches a decrypt failure). Routing note rewritten — NOT sent. |
+| 2026-10-23 | v1.3 | Rebased onto `origin/main` `1268d47e` (6.36d landed) and re-pinned; five cited files' line numbers re-taken by content (Debug Log (e)). Task 0.3: Decision `2026-10-23-389` committed alone (`6db47c17`). Routing note SENT by BigDev. Task 0.4: the records commit (epics 5.11 + 5.11b, §3.4 annotation, roster Row 40, deferred-work, ledger `2026-10-23ag`, new backlog row `5-8b-degraded-mode-bridge-sms-wording`). Status stays ready-for-dev; next is Task 1. |

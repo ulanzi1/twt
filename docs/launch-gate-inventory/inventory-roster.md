@@ -720,3 +720,24 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** BigDev / the Pariwar Admin with Meta → (a), (c); the Hindi reviewer → (b). Story 5.13 builds the route; it also sits behind Row 38 (b) (counsel's DPDP view on the box, incl. *"the privacy policy naming WhatsApp / Meta"* — the private `privacy-policy.md` names neither today), Row 37 (b) (counsel on the opt-in wording) and Row 38's switch-on legs (c) / (d-i) — cross-referenced, ⛔ duplicated.
 - **notes:** "5-13 `done`" ≠ "the template approved" (`-376` decision 13). Counsel is ⛔ a leg of THIS row — `-374` accepted *"Counsel has not been asked"*. Day-one output is none: every Pariwar's WhatsApp is off and no Pariwar has an authentication template, so the mint answers `codeAvailable: false` and the signup link shows 5.10's number + phrase exactly as today.
+
+## Row 40 — Story 5.11: the per-member alert SMS can go live (decision-authored, `-389`)
+
+> **Appended 2026-10-23 by Story 5.11 (Task 0.4) under [Decision 2026-10-23-389](../../.decision-log.md#decision-2026-10-23-389)**
+> §1 item 7 (FS11 — the next free row; the roster's highest was 39 on `main` and every branch and worktree). Like Rows 17–39 the row has
+> no architecture source line; it cites the decision that created it. It blocks no build and no merge — nothing is in production
+> ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 40 — `member-alert-sms-fallback-live`
+
+- **gate_name:** The per-member alert SMS (built by rows `5-11-per-member-sms-fallback-fixed-wording` and `5-11b-alert-sms-real-send` — three notices about a member's own contribution) can go live — its six DLT templates approved and their ids set, the Hindi reviewed, the provider's answers on these texts recorded, the price per part recorded, a real text received from staging, and counsel's view on consent recorded or its absence accepted
+- **architecture_source_line:** N/A — **decision-authored**: [Decision 2026-10-23-389](../../.decision-log.md#decision-2026-10-23-389) §1 item 7
+- **owner:** BigDev (gate)
+- **support:** BigDev with DLT-portal / MSG91 access — (a), (c), (d); a Hindi reviewer (Row 28's control) — (b); staging (Row 32's setup legs) — (e); counsel (Story 0.13) — (f)
+- **closure_criteria:** ALL SIX, each recorded as a Decision: **(a)** the six templates (`sms.deadline_not_recorded`, `sms.payment_not_matched`, `sms.payment_not_confirmed` × en / hi — Story 5.11's registry) registered on SmartPing with their types, APPROVED, and their MSG91 template ids set under `sms.dlt.template_id.contribution.<message>.<locale>` — ⛔ id set before its template is approved; **(b)** the Story 5.11 Hindi strings HUMAN-REVIEWED (Row 28's control pattern) — BigDev reviewed and corrected en + hi in session on 2026-10-23 (story Debug Log (a)); the story records that as discharging this leg for the three texted strings as worded (`-389` §1 item 12), ⛔ assumed beyond them — any later change to a word re-opens it; **(c)** Row 30 (d)'s provider answers cover these texts (the date's hyphen; a pool name with spaces or Devanagari; a template with no variable) — cross-referenced, ⛔ duplicated; **(d)** the per-segment price recorded and the per-cycle cost line in the DLT sheet re-derived with it; **(e)** a real alert SMS received on a device from staging (needs row 5-11b); **(f)** counsel's view on alert SMS without separate consent (TRAI service-implicit; DPDP; the privacy notice's channel list) RECORDED — or *"Counsel has not been asked"* recorded as an accepted cost by BigDev, ⛔ an answer.
+- **target_date:** (a)–(d), (f) before the first production build in which a contribution notice can be texted; (e) the same, after row 5-11b (relative-to-fact).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** BigDev with the DLT portal / MSG91 → (a), (c), (d); the Hindi reviewer → (b); row 5-11b + staging → (e); Story 0.13 (counsel) or BigDev's acceptance → (f). Reach follows the Panel's PQ1 (sent 2026-10-23): under §3.4 as written only a member whose WhatsApp is on and failed qualifies — and no Pariwar has WhatsApp on (Row 38 (c), (d-i)).
+- **notes:** "5-11 `done`" ≠ "the templates approved" (`-389`). A pool opening and the last day are ⛔ texted (FS1 (d)) — the Trust's announcement channels are ⛔ this row's. Day-one output is none: no template id is set, every Pariwar's WhatsApp is off, and until row 5-11b a lit, eligible member's rung ends `sms_send_not_wired`.

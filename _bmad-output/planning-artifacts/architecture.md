@@ -2330,6 +2330,15 @@ fallback SMS.
 > above and ⛔ not `dispatch()`: it follows the OTP path's precedent (its own template registry, keyed by message × locale), and a
 > missing template id fails **closed**. The sentence above still holds for every `dispatch()` notification.
 
+> ⚠ **ANNOTATION 2026-10-23 (Story `5-11` Task 0.4, `2026-10-23-389` FS2 (a)) — the fallback is built AS WRITTEN. ⭐ Annotated, ⛔ not
+> rewritten.** Story 5.11 lights the fallback for three notices about a member's own contribution (day 10 "not recorded yet", payment
+> not matched, payment still not confirmed) and enforces the "Per-member fallback SMS dispatch" paragraph in code: a text only when the
+> member's WhatsApp target resolved and the WhatsApp rung did not end `sent` (the code had ⛔ such check). Whether a member WITHOUT an
+> active WhatsApp yes may get these three is a Panel question (PQ1, `trustee-panel-routing-note-2026-10-23-5-11-sms-for-members-without-whatsapp.md`,
+> sent 2026-10-23) — ⛔ ruled; a ruling that widens it is recorded here as a further annotation. ⚠ BigDev's direction (2026-10-23) that
+> the Trust runs a WhatsApp Channel and a Telegram channel for general notices (a pool opening, the last day) is ⛔ in this section's
+> channel list; it owes its own annotation or ADR after the Panel's PQ3.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

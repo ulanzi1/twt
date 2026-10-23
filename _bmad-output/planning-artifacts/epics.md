@@ -2453,6 +2453,38 @@ in 5 s; an unticked Continue shows the reminder once, with "Go back and tick the
 and "Go back" never ticks the box; a tick makes ONE opt-in request and opens WhatsApp; every failure still lets the member continue; a
 "WhatsApp on another phone?" link shows the number and the phrase; the words in en + hi; leaving the box unticked never blocks signup.
 
+### Story 5.11: The Per-Member SMS Fallback Gets Fixed, Registrable Wording and an Honest Rung — Three Notices About a Member's Own Contribution `[SURFACE]`
+
+> **Added 2026-10-23 (Story 5.11, Task 0.4)** — the row `5-11-per-member-sms-fallback-fixed-wording` writes FIXED, registrable SMS
+> wording (en + hi, in BigDev's words) for three notices about a member's own contribution — day 10 "not recorded yet", payment not
+> matched, payment still not confirmed — and texts it only as architecture §3.4 (iii) reads (both WhatsApp gates on and WhatsApp
+> failed). It makes the alert SMS rung honest (⛔ a fake "sent") without changing who is retried (a member no rung reached is recorded
+> `in_app_only`). A pool opening and the cycle's last day are ⛔ texted — they are for the Trust's announcement channels. Its build
+> decisions are DECIDED by [`-389`](../../.decision-log.md#decision-2026-10-23-389) (author-commit); two Panel questions are routed
+> and SENT 2026-10-23 (PQ1 — the three to a member without WhatsApp; PQ3 — ask or require members to join the channels). ⛔ Migration.
+> The real send is Story 5.11b. Go-live: roster Row 40 (`member-alert-sms-fallback-live`). Full ACs:
+> `_bmad-output/implementation-artifacts/5-11-per-member-sms-fallback-fixed-wording.md`. ⛔ Never a merge fence. (Epic 5's two "9
+> stories" count lines are left as they stand, as for 5.10 and 5.12.)
+
+As a member whose phone the Trust's app cannot reach, I want a short text message, in my language, when my contribution is still not
+recorded and when my payment could not be matched or confirmed, so that I am not left out of a cycle only because a push notification
+never arrived.
+
+**Acceptance Criteria:** see the story file (AC0–AC7) — in short: a message-keyed registry of six templates (three × en / hi), each
+registrable (≥ 30 % fixed, ≤ 2 variables) and equal to its catalogue string; a text only for a member whose WhatsApp was attempted and
+did not succeed (a PQ1 ruling may widen it — one check); a switched-on Pariwar whose WhatsApp cannot be built refuses instead of faking
+`sent`; no alert SMS is ever reported `sent` without a real send; a member no rung reached is recorded `in_app_only` and the job completes
+as today; news, surveys, moderation and the six other contribution notices carry no SMS; the degraded-mode bridge stays dark.
+
+### Story 5.11b: The Real Alert SMS Send `[CONSUMER]`
+
+> **Added 2026-10-23 (Story 5.11, Task 0.4)** — the row `5-11b-alert-sms-real-send` (added at 5.11's validation — the split) sends
+> Story 5.11's three texts for real: a send record (a migration — at-most- or at-least-once chosen explicitly), a new delivery-report
+> correlation kind, a per-send MSG91 provider behind the one pre-flight, MG12's zero-slot change (the "payment not matched" text has no
+> variable), the member's language (`getMemberLanguage`), a per-member budget, §3.4's retry window, and the 5.6 mirror defects. Its
+> starting facts and build questions: Story 5.11's "Carried to 5.11b" section (FS5, FS6, FS8, FS9, FS12 — answered at ITS create-story,
+> ⛔ by `-389`). Starts when 5.11 is `done`. ⛔ Story file yet.
+
 ### Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
 
 > **Added 2026-10-21 (Story 5.12, Task 0.4)** — the row `5-12-whatsapp-yes-lasts-until-withdrawn` builds the Trustee Panel's ruling

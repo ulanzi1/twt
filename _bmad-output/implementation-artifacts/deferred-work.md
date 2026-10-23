@@ -4,6 +4,28 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Story 5.11 — the per-member SMS fallback's fixed wording (2026-10-23)
+
+Recorded at Story 5.11's Task 0.4 under [`-389`](../../.decision-log.md#decision-2026-10-23-389). Neither is 5.11's to build.
+
+- **The Trust's announcement channels — a WhatsApp Channel and a Telegram channel — are in ⛔ plan** [BigDev's direction, 2026-10-23:
+  *"Trust will have a WhatsApp Channel and Telegram Channel where all members are supposed to join, either of them to get the
+  notifications."*; `-389` G13] — FS1 (d) leaves a pool opening and the cycle's last day OFF SMS on the footing that they go to these
+  channels. Open: (1) the Panel's PQ3 (request or requirement to join — sent 2026-10-23); (2) an architecture annotation or ADR (§3.4's
+  channel list has ⛔ broadcast channel; the built Telegram mirror is per member, opt-in, announcements-only —
+  `packages/domain/src/notifications/delivery.ts:187-201`, `packages/channels/src/dispatch.ts:44-52`); (3) Meta has ⛔ official API to
+  post to a WhatsApp Channel (found 2026-10-23, secondary sources only) ⇒ posts by hand, or an unofficial gateway (a terms risk); a
+  Telegram channel can be posted to by the Bot API; (4) the post carries the deceased family's full name (`-180` Q1, *"no consumer is
+  excluded"*) and a WhatsApp Channel is publicly listed; (5) the words — BigDev's corrected pool-open / last-day texts in Story 5.11's
+  "The words" (CHANNEL DRAFT rows). Until then a member the app cannot reach hears of a pool opening only in the app (and the
+  per-member Telegram mirror, where switched on). ⭐ Trigger: the Panel's PQ3 ruling — then a backlog row.
+- **The degraded-mode cycle-open SMS bridge has ⛔ registrable words** [`-389` FS10 (a); draft
+  `docs/degradation-policy/comms-templates/sms-channel.md`] — the bridge stays DARK; while dark, a bridged send runs the normal ladder
+  (push → WhatsApp → SMS). Homed: row `5-8b-degraded-mode-bridge-sms-wording` (backlog). ⭐ Trigger: that row's create-story, or a
+  Pariwar declared degraded in production.
+
+---
+
 ## Deferred from: code review of 6-36d-exclude-nominees-from-the-five.md (2026-10-23)
 
 Branch `story/6-36d-exclude-nominees-from-the-five` at `52ece667`, diff `origin/main...HEAD` (code only). The nine `patch` findings of the same review (eight applied, one — the rebase — open) are in the story's `### Review Findings`; the seven below were deferred (four from the review, one from the patch review that followed it, two from the third review round), none is a Panel question. ⚠ A "deferred" item here is not "closed" — each names what would reopen it.
@@ -56,6 +78,8 @@ Branch `story/6-36d-exclude-nominees-from-the-five` at `52ece667`, diff `origin/
   *"Panchayat"* are English literals in both; the Shradhanjali tab is hard-coded Hindi), and `-311` PM22's DISPLAY half — a non-chooser
   in a Pariwar whose default is `en` gets English texts that open Hindi screens (LS4 (b); moot while every Pariwar is `hi`).
   ⭐ Trigger: a story or ruling that sets a language rule for that message (or a Pariwar whose `locale_default` is `en`, for PM22).
+  - *Appended 2026-10-23 (Story 5.11 Task 0.4, `-389`):* the three contribution SMS texts row 5-11 words (en + hi) get their language
+    rule at row `5-11b-alert-sms-real-send` (its FS5 — `getMemberLanguage`); 5.11 sets none. The contribution PUSH notices stay as listed.
 
 
 ## Deferred from: code review of 3-3c-member-kyc-name-english-only.md (2026-10-22)
@@ -251,6 +275,9 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   fix). Fix shape (engineering): a fixture must not count as `sent` for a Pariwar whose WhatsApp is `enabled` (e.g. `skipped_no_target`
   / a distinct non-terminal outcome) so the ladder advances. ⚠ Also bears on row `5-11-per-member-sms-fallback-fixed-wording`.
   Trigger: the first Pariwar whose WhatsApp is switched on in production, or the next edit of the WhatsApp provider selection.
+  - *Appended 2026-10-23 (Story 5.11 Task 0.4, `-389` FS3 (a)):* BEING BUILT by row 5-11 — a switched-on Pariwar whose WhatsApp
+    cannot be built (no `approved` template for the category, or a blank credential name / `phoneNumberId`) gets a refusing provider
+    (`rejected`, `wa_template_not_approved` / `wa_credentials_missing`), so the ladder advances. ⭐ Closed by 5.11 on `done` — ⛔ before.
 - **§3.4's *"mismatch logged + surfaced for member confirmation"* is only half built** [`apps/jobs/src/wa-webhook-processor.ts`, the
   no-match branch after `matchPendingOptIn`] — ratified architecture §3.4 (*Inbound message handling*) says an inbound WhatsApp number
   that does not match the member's mobile on file is *"logged + surfaced for member confirmation"*; the worker only `console.warn`s
@@ -605,6 +632,8 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   ⛔ CRQID, and its report lands unmatched (alarmed — `-347` DR6). The alert-SMS path (provider composition) is DARK — ⛔ named
   values today, so ⛔ sendable (MG12) — and could send without a CRQID if it ever binds values. ⭐ Trigger: the story that lights the
   alert-SMS path (Row 30 note (1)) — make the id required there, or record why not. **Deferred.**
+  - *Appended 2026-10-23 (Story 5.11 Task 0.4, `-389`):* → row `5-11b-alert-sms-real-send` (its FS6 — the new CRQID kind); 5.11
+    sends nothing.
 - **Reports in one POST share `received_at`** [`apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts`; the inbox claim's
   `ORDER BY received_at, report_id`] — the tie is broken by the random `report_id`, so which of two same-POST reports for one send
   counts as "first" is arbitrary. MSG91 gives ⛔ order within one POST, so none exists to keep. ⭐ Trigger: a real POST carrying two
@@ -5843,8 +5872,8 @@ _Not code-review findings — forward seams Story 9.7 deliberately RESERVES for 
 
 ## Deferred from: code review of story-5-6-sms-transactional-fallback-3-retry-exp-backoff (2026-07-07)
 
-- **`resolveSmsProviderDeps` doesn't trim the resolved `dltTemplateId` before use.** It blank-checks the resolved value via `.trim() === ''` but then stores/passes the untrimmed string on to the gateway request body. Identical pattern already present in the mirrored `resolveWhatsappProviderDeps`'s `accessTokenSecretName` handling — not a regression introduced by this story. **Re-trigger:** if a whitespace-polluted config value is ever observed causing a DLT template mismatch in production. ⚠ **2026-10-17 (Story 6.37, `-345` MG16 (iii)) — ⛔ addressed:** the alert path stays DARK (TV6); since 6.37 a value-less provider refuses `no_named_values` before the network (MG12), so the untrimmed id cannot reach MSG91 from it. (The claim-text core and the OTP adapter DO trim.) The item stays OPEN.
-- **`resolveSmsTarget` trusts `decryptMobile`'s output uncritically** — no try/catch around a decrypt failure, no E.164 format validation on the successful output before it's forwarded to the gateway. Mirrors the identical unguarded pattern in `resolveWaTarget`, which this function was built to copy — not new. **Re-trigger:** if a corrupted ciphertext or malformed decrypted mobile number is ever observed reaching the SMS gateway. ⚠ **2026-10-17 (Story 6.37, `-345` MG8) — PARTLY addressed:** the MSG91 client now validates every `to` by CALLING `normalizeMobile` and refuses a number it rejects or would rewrite (`invalid_number:format`, ⛔ request); the decrypt try/catch and push / WA are ⛔ addressed and `resolveSmsTarget` sits on the dark dispatch path (MG12). The item stays OPEN.
+- **`resolveSmsProviderDeps` doesn't trim the resolved `dltTemplateId` before use.** It blank-checks the resolved value via `.trim() === ''` but then stores/passes the untrimmed string on to the gateway request body. Identical pattern already present in the mirrored `resolveWhatsappProviderDeps`'s `accessTokenSecretName` handling — not a regression introduced by this story. **Re-trigger:** if a whitespace-polluted config value is ever observed causing a DLT template mismatch in production. ⚠ **2026-10-17 (Story 6.37, `-345` MG16 (iii)) — ⛔ addressed:** the alert path stays DARK (TV6); since 6.37 a value-less provider refuses `no_named_values` before the network (MG12), so the untrimmed id cannot reach MSG91 from it. (The claim-text core and the OTP adapter DO trim.) The item stays OPEN. ⚠ **2026-10-23 (Story 5.11 Task 0.4, `-389`):** → row `5-11b-alert-sms-real-send` (its FS12 (1)) for the alert path; 5.11 sends nothing.
+- **`resolveSmsTarget` trusts `decryptMobile`'s output uncritically** — no try/catch around a decrypt failure, no E.164 format validation on the successful output before it's forwarded to the gateway. Mirrors the identical unguarded pattern in `resolveWaTarget`, which this function was built to copy — not new. **Re-trigger:** if a corrupted ciphertext or malformed decrypted mobile number is ever observed reaching the SMS gateway. ⚠ **2026-10-17 (Story 6.37, `-345` MG8) — PARTLY addressed:** the MSG91 client now validates every `to` by CALLING `normalizeMobile` and refuses a number it rejects or would rewrite (`invalid_number:format`, ⛔ request); the decrypt try/catch and push / WA are ⛔ addressed and `resolveSmsTarget` sits on the dark dispatch path (MG12). The item stays OPEN. ⚠ **2026-10-23 (Story 5.11 Task 0.4, `-389`):** → row `5-11b-alert-sms-real-send` (its FS12 (2)). ⚠ Found while checking: at `d87d047a` `resolveSmsTarget` DOES catch a decrypt failure (`packages/domain/src/notifications/delivery.ts:165-174` — logs, returns no target); only the E.164 check on the decrypted value is missing for SMS. It landed 2026-07-24 with Story 8.8 (`75b8e9b2`), so this item's decrypt half — and 6.37's annotation above calling it unaddressed — was already stale; corrected here by dated note, ⛔ by rewriting either.
 
 ---
 
@@ -12043,6 +12072,10 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   - *Appended 2026-10-19 (Story 6.31's validate, BigDev in session: *"Yes, add it"*):* HOMED — row `5-11-per-member-sms-fallback-fixed-wording`
     (backlog) owns it; stays OPEN until that row is `done`. Its create-story also proposes the fallback for members WITHOUT WhatsApp
     (§3.4 (iii) today requires both WA gates ON).
+  - *Appended 2026-10-23 (Story 5.11 Task 0.4, `-389`):* wording built by row 5-11 for THREE messages (FS1 (d) — day 10, payment not
+    matched, payment still not confirmed), in a message-keyed registry (`apps/jobs/src/scheduler/contribution-sms-templates.ts`); the five
+    category entries stay dark. Send by row `5-11b-alert-sms-real-send`. ⭐ Closed by 5.11b on `done` — ⛔ before. The members WITHOUT
+    WhatsApp: the Panel's PQ1 (sent 2026-10-23).
 - **The data-export delivery OTP says "Valid 3 min" for a code that lives 60** [`apps/api/src/modules/member-data-rights/handlers.ts:659-663`
   delivers with `intent: 'step_up'`; TTL `apps/api/src/config.ts:386`, `member-otp.service.ts:38-43`] — it UNDERSTATES (⛔ refuses anyone: the
   code still works after 3 minutes). Story 6.34 TV9 fixed only the claim handover (a 3-minute code told *"5 min"* — a nominee typing it in

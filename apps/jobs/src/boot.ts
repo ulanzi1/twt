@@ -92,6 +92,7 @@ import {
 import { registerClaimOcrParityWorker } from './claim-ocr-parity.js';
 import {
   DEFAULT_PEER_MESH_WINDOW_SECONDS,
+  CLAIM_PEER_MESH_SELECT_RETRY,
   registerClaimPeerMeshWorkers,
   type ClaimPeerMeshSelectPayload,
 } from './claim-peer-mesh.js';
@@ -538,6 +539,8 @@ async function main(): Promise<void> {
     await boss.createQueue(QUEUE_NAMES.CLAIM_PEER_MESH_REQUEST_SMS);
     await registerClaimPeerMeshWorkers(boss, {
       pool,
+      // Story 6.36d (ND3) — the select job decrypts + hashes the deceased's nominee mobiles (outside any transaction).
+      encryption: jobsEncryption,
       windowSeconds: PEER_MESH_WINDOW_SECONDS,
       // Story 6.12 (R2) — enqueue the shepherd-assign job after the SELECT worker commits
       // claim.peer_mesh_pinged or (Story 6.36) claim.peer_mesh_none_to_ask (→ verification_in_progress).
@@ -578,7 +581,9 @@ async function main(): Promise<void> {
             traceId: input.traceId,
             payload: { claimCaseId: input.claimCaseId, deceasedMemberId: input.deceasedMemberId },
           } satisfies JobEnvelope<ClaimPeerMeshSelectPayload>,
-          { singletonKey: input.claimCaseId },
+          // Story 6.36d (ND6) — the claim children's retry policy (the default was three attempts within seconds, then
+          // `failed`, ⛔ dead-letter queue): a KMS blip in the nominee check is retried, then deferred, before it can end.
+          { singletonKey: input.claimCaseId, ...CLAIM_PEER_MESH_SELECT_RETRY },
         );
       },
     });

@@ -31,9 +31,19 @@
 // DETERMINISM (AC1/AC5; 6.36 I7): selection runs against the SNAPSHOT captured + persisted in the same
 // tx; replay re-runs the ONE dispatch (`runPeerMeshMetric`, via `replayPeerMeshSelection`) on the persisted
 // row alone (never a live re-query). The engine is pure — this job owns only the I/O + orchestration.
+//
+// ⭐ 2026-10-23 — Story 6.36d (`2026-10-23-386` ND3, SUPERSEDING IN PART `2026-10-14-330` SW19's *"⛔ No decrypt, ⛔ no KMS call
+// in the select job"* for the nominee read ONLY): the select job now decrypts the deceased's ≤ 2 NOMINEE mobiles and hashes them
+// into the login space (`claim.peerMeshNomineeMobileIndexes`), so a nominee is never among the five. The KMS work runs with ⛔
+// transaction open — a short UNLOCKED pre-read (state / selection / cut), closed; then KMS; then the locked transaction below
+// (TR3 — the jobs pool is `max: 2`). A no-op or wrong-state run makes ⛔ KMS call. A KMS fault fails CLOSED (ND6): alarm +
+// rethrow under the child retry policy; on the final attempt, a 1 h self re-send; after 24 h of failures, an EMPTY selection
+// (`nominee_check_unavailable`). The anchor stays the filing date (SW19's other half is unchanged). This 6.6 file now also
+// imports the claim children's retry constants (`CHILD_RETRY_*`) and sends its OWN deferred select job — ⛔ another queue.
 
 import {
   claim,
+  type encryption,
   ids,
   schema,
   withPariwarScope,
@@ -45,6 +55,8 @@ import {
   type QueueClient,
 } from '@twt/queue';
 
+import { CHILD_RETRY_DELAY_SECONDS, CHILD_RETRY_LIMIT } from './scheduler/claim-correction-reminders.js';
+
 /** The default response window (FR-39 — 72h to respond before AR-61 fallback). */
 export const DEFAULT_PEER_MESH_WINDOW_SECONDS = 72 * 60 * 60;
 
@@ -54,6 +66,11 @@ export const PEER_MESH_SUFFICIENT_RESPONSES = 3;
 export interface ClaimPeerMeshDeps {
   /** The domain-table pool. withPariwarScope sets the tenant scope per job. */
   readonly pool: import('pg').Pool;
+  /**
+   * ⭐ Story 6.36d (ND3) — the jobs encryption deps (`jobsEncryption`): the deceased's nominee mobiles are decrypted and hashed
+   * into the login blind-index space OUTSIDE any transaction. REQUIRED (the window worker shares this type and ignores it).
+   */
+  readonly encryption: encryption.FieldCryptoDeps;
   /**
    * The response window in seconds (configurable — env-overridable at boot). ONE named
    * constant; do NOT hardcode `72h` inline in two places. Defaults to
@@ -91,6 +108,52 @@ export interface ClaimPeerMeshDeps {
 export interface ClaimPeerMeshSelectPayload {
   readonly claimCaseId: string;
   readonly deceasedMemberId: string;
+  /**
+   * ⭐ Story 6.36d (ND6 (a)) — the instant (ISO) of the FIRST nominee-exclusion failure, carried unchanged into every deferred
+   * re-send. Absent on the OCR hook's send; the first re-send sets it to that job's `createdOn`. ⛔ PII.
+   */
+  readonly nomineeCheckFailingSince?: string;
+}
+
+/** The select job's pg-boss metadata (`includeMetadata`) — `retryCount >= retryLimit` ⇒ the FINAL attempt (6.37c's form). */
+export interface ClaimPeerMeshSelectAttempt {
+  readonly retryCount: number;
+  readonly retryLimit: number;
+  readonly createdOn?: Date;
+}
+
+/** ND6 (a) — a failing nominee check re-sends the select job this long after its final attempt. */
+export const PEER_MESH_NOMINEE_CHECK_DEFER_SECONDS = 60 * 60;
+/** ND6 (a) — once the first failure is this old, a final attempt FINISHES with an empty selection. */
+export const PEER_MESH_NOMINEE_CHECK_GIVE_UP_MS = 24 * 60 * 60 * 1000;
+
+/** ND6 — the select job's retry policy (the claim children's: 4 retries, 60 s base, backoff) — the OCR hook and the re-send. */
+export const CLAIM_PEER_MESH_SELECT_RETRY = {
+  retryLimit: CHILD_RETRY_LIMIT,
+  retryDelay: CHILD_RETRY_DELAY_SECONDS,
+  retryBackoff: true,
+} as const;
+
+/**
+ * ND6 — the nominee check failed (a KMS fault or an unreadable envelope). ids only (TR12) — ⛔ the cause (it is ⛔ carried into
+ * pg-boss's stored output). pg-boss retries the whole job.
+ */
+export class ClaimPeerMeshNomineeCheckError extends Error {
+  constructor(claimCaseId: string) {
+    super(`[jobs] claim-peer-mesh-select: peer_mesh_nominee_exclusion failed for claim ${claimCaseId}`);
+    this.name = 'ClaimPeerMeshNomineeCheckError';
+  }
+}
+
+/**
+ * ND3 — the locked transaction found the claim selectable but has ⛔ nominee indexes for its cut (the state became
+ * `documents_pending` after the pre-read, or the anchor moved). Retryable — the retry pre-reads again. ⛔ A selection.
+ */
+export class ClaimPeerMeshNomineeIndexesStaleError extends Error {
+  constructor(claimCaseId: string) {
+    super(`[jobs] claim-peer-mesh-select: the nominee indexes for claim ${claimCaseId} are missing or stale — retrying`);
+    this.name = 'ClaimPeerMeshNomineeIndexesStaleError';
+  }
 }
 
 /** CLAIM_PEER_MESH_WINDOW payload (wrapped in a JobEnvelope). All fields NON-PII. */
@@ -104,6 +167,8 @@ export interface ClaimPeerMeshSelectResult {
   /** `true` when this run created the selection; `false` on the idempotent no-op path. */
   readonly created: boolean;
   readonly selectedCount: number;
+  /** Story 6.36d (ND6 (a)) — set only when the nominee check failed on a final attempt: re-sent, or finished empty. */
+  readonly nomineeCheck?: 'deferred' | 'unavailable';
 }
 
 function resolveWindowSeconds(deps: ClaimPeerMeshDeps): number {
@@ -167,11 +232,18 @@ async function enqueuePeerMeshWindow(
  * ⚠ A `ClaimStreamConcurrencyError` is ⛔ never swallowed (6.6's "benign append race" SAVEPOINT is GONE): with the lock
  * held ⛔ known appender can race, so one is a real defect — rethrown, and pg-boss retries the whole transaction.
  * Throws on an unrecoverable infrastructure error (missing pariwarId / claim / deceased) so pg-boss retries/DLQs.
+ * ⭐ Story 6.36d (ND3 / ND6) — BEFORE (1): a short UNLOCKED pre-read in its own scope transaction (the claim, the selection, the
+ * state, the deceased, the cut), CLOSED; when the claim is selectable, the deceased's nominee indexes are computed with ⛔
+ * transaction open; the locked transaction then uses them — and THROWS (retryable) when it reaches the snapshot without them
+ * for its own cut. A nominee-check fault: ONE alarm, then the job rethrows — or, on its FINAL attempt (`attempt`, from pg-boss
+ * metadata; absent ⇒ ⛔ final), re-sends itself 1 h later carrying the first-failure instant, and once that instant is 24 h old
+ * FINISHES with an EMPTY selection (`nominee_check_unavailable`). Every other fault keeps today's behaviour.
  */
 export async function runClaimPeerMeshSelect(
   boss: QueueClient,
   deps: ClaimPeerMeshDeps,
   envelope: JobEnvelope<ClaimPeerMeshSelectPayload>,
+  attempt?: ClaimPeerMeshSelectAttempt,
 ): Promise<ClaimPeerMeshSelectResult> {
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
   const now = deps.now ? deps.now() : new Date();
@@ -190,6 +262,68 @@ export async function runClaimPeerMeshSelect(
   const deceasedMemberId = ids.memberId(p.deceasedMemberId);
 
   const windowSeconds = resolveWindowSeconds(deps);
+
+  // (0) ⭐ Story 6.36d (ND3) — the UNLOCKED pre-read, CLOSED before any KMS call. `null` ⇒ ⛔ KMS (a selection exists, the state
+  //     is ⛔ `documents_pending`, the claim is missing, or the payload's deceased is not the claim's — the locked transaction
+  //     below decides each exactly as before).
+  const pre = await withPariwarScope(deps.pool, pariwarId, async (db) => {
+    const c = await claim.getClaimCase(db, brandedPariwarId, claimCaseId);
+    if (!c || c.deceasedMemberId !== deceasedMemberId || c.currentState !== 'documents_pending') return null;
+    if (await claim.getPeerMeshSelectionByClaim(db, brandedPariwarId, claimCaseId)) return null;
+    return claim.resolvePeerMeshFilingCut(db, {
+      pariwarId: brandedPariwarId,
+      deceasedMemberId,
+      claimCaseId,
+      claimCreatedAt: c.createdAt,
+    });
+  });
+  let nomineeMobileIndexes: readonly string[] | null = null;
+  let nomineeCheckUnavailable = false;
+  if (pre !== null) {
+    try {
+      // Its OWN short scope transaction for the version read (closed before KMS) — ⛔ inside the pre-read's callback (TR3).
+      nomineeMobileIndexes = await claim.peerMeshNomineeMobileIndexes({
+        pariwarId: brandedPariwarId,
+        deceasedMemberId,
+        cut: pre,
+        enc: deps.encryption,
+        inScope: (fn) => withPariwarScope(deps.pool, pariwarId, (db) => fn(db)),
+      });
+    } catch {
+      // ND6 — ⛔ never `[]`. ids only (TR12): ⛔ a number, an index, a rank, the cause.
+      const finalAttempt = attempt !== undefined && attempt.retryCount >= attempt.retryLimit;
+      if (!finalAttempt) {
+        alarm(`[jobs] claim-peer-mesh-select: peer_mesh_nominee_exclusion failed for claim ${p.claimCaseId} in Pariwar ${pariwarId} — retrying (⛔ selection)`);
+        throw new ClaimPeerMeshNomineeCheckError(p.claimCaseId);
+      }
+      const firstFailedAt =
+        p.nomineeCheckFailingSince !== undefined ? new Date(p.nomineeCheckFailingSince) : (attempt.createdOn ?? now);
+      if (now.getTime() - firstFailedAt.getTime() < PEER_MESH_NOMINEE_CHECK_GIVE_UP_MS) {
+        // ND6 (a) DEFER — a fresh select job 1 h later, the same retry policy, the first-failure instant carried. The job then
+        // COMPLETES (⛔ rethrow after the re-send — the claim waits in `documents_pending`).
+        alarm(`[jobs] claim-peer-mesh-select: peer_mesh_nominee_exclusion failed for claim ${p.claimCaseId} in Pariwar ${pariwarId} on its final attempt — re-sent in 1 h (⛔ selection)`);
+        await boss.send(
+          QUEUE_NAMES.CLAIM_PEER_MESH_SELECT,
+          {
+            requestId: envelope.requestId,
+            pariwarId: envelope.pariwarId,
+            actorId: envelope.actorId,
+            traceId: envelope.traceId,
+            payload: {
+              claimCaseId: p.claimCaseId,
+              deceasedMemberId: p.deceasedMemberId,
+              nomineeCheckFailingSince: firstFailedAt.toISOString(),
+            },
+          } satisfies JobEnvelope<ClaimPeerMeshSelectPayload>,
+          { ...CLAIM_PEER_MESH_SELECT_RETRY, startAfter: PEER_MESH_NOMINEE_CHECK_DEFER_SECONDS, singletonKey: p.claimCaseId },
+        );
+        return { claimCaseId: p.claimCaseId, created: false, selectedCount: 0, nomineeCheck: 'deferred' };
+      }
+      // ND6 (a) FINISH — 24 h of failures: the locked transaction below writes an EMPTY selection (⛔ candidate, ⛔ one asked).
+      alarm(`[jobs] claim-peer-mesh-select: peer_mesh_nominee_exclusion failed for claim ${p.claimCaseId} in Pariwar ${pariwarId} for 24 h — finishing with ⛔ one asked (nominee_check_unavailable)`);
+      nomineeCheckUnavailable = true;
+    }
+  }
 
   const outcome = await withPariwarScope(deps.pool, pariwarId, async (db, client) => {
     // (1) The claim row, LOCKED — the first statement (AC8).
@@ -244,9 +378,35 @@ export async function runClaimPeerMeshSelect(
       claimCaseId,
       claimCreatedAt: claimRow.createdAt,
     });
-    // No claimant is passed: the predicate itself excludes anyone who reported this death — any claim's claimant, any
-    // intake attempt's filer (`-340` call 2, `-341`).
-    const snapshot = await claim.getPeerMeshGroupedSnapshot(db, { pariwarId: brandedPariwarId, deceasedMemberId, cut });
+    // ⭐ Story 6.36d (ND3 / ND6) — the snapshot: ⛔ candidate on the 24 h finish (it reads ⛔ predicate, so the exclusion has
+    // nothing to filter); otherwise ONLY with indexes computed for THIS cut — else a retryable throw (⛔ a selection without them).
+    let snapshot: claim.PeerMeshGroupedSnapshot;
+    if (nomineeCheckUnavailable) {
+      const input = { pariwarId: brandedPariwarId, deceasedMemberId, cut };
+      const workplace = await claim.getPeerMeshDeceasedWorkplace(db, input);
+      snapshot = {
+        workplace: { ...workplace, candidates: [] },
+        candidates: [],
+        recentChangeBeforeFiling: await claim.getPeerMeshRecentChangeBeforeFiling(db, input, workplace.deceasedLatestPostingAt),
+      };
+    } else {
+      if (
+        nomineeMobileIndexes === null ||
+        pre === null ||
+        pre.anchorClaimCaseId !== cut.anchorClaimCaseId ||
+        pre.cut.getTime() !== cut.cut.getTime()
+      ) {
+        throw new ClaimPeerMeshNomineeIndexesStaleError(p.claimCaseId);
+      }
+      // No claimant is passed: the predicate itself excludes anyone who reported this death — any claim's claimant, any
+      // intake attempt's filer (`-340` call 2, `-341`) — and (6.36d) anyone signing in with a nominee's number.
+      snapshot = await claim.getPeerMeshGroupedSnapshot(db, {
+        pariwarId: brandedPariwarId,
+        deceasedMemberId,
+        cut,
+        nomineeMobileIndexes,
+      });
+    }
     const selection = claim.runPeerMeshMetric({
       metric,
       claimCaseId,
@@ -305,7 +465,10 @@ export async function runClaimPeerMeshSelect(
         db,
         brandedPariwarId,
         claimCaseId,
-        claim.PEER_MESH_SKIP_REASON_NO_WORKPLACE_COLLEAGUE_OR_NAMED_PERSON,
+        // ND6 (a) — its OWN reason: colleagues may exist (⛔ "no colleague").
+        nomineeCheckUnavailable
+          ? claim.PEER_MESH_SKIP_REASON_NOMINEE_CHECK_UNAVAILABLE
+          : claim.PEER_MESH_SKIP_REASON_NO_WORKPLACE_COLLEAGUE_OR_NAMED_PERSON,
       );
       return {
         created: true,
@@ -404,6 +567,11 @@ export async function runClaimPeerMeshSelect(
     '[jobs] claim-peer-mesh-select',
     JSON.stringify({ claimCaseId: p.claimCaseId, created: outcome.created, selectedCount: outcome.selectedCount }),
   );
+  if (nomineeCheckUnavailable && outcome.created) {
+    // ND6 (a) — the SECOND alarm: the empty selection is written (ids only).
+    alarm(`[jobs] claim-peer-mesh-select: claim ${p.claimCaseId} in Pariwar ${pariwarId} moved on with ⛔ one asked (nominee_check_unavailable)`);
+    return { claimCaseId: p.claimCaseId, created: true, selectedCount: 0, nomineeCheck: 'unavailable' };
+  }
   return { claimCaseId: p.claimCaseId, created: outcome.created, selectedCount: outcome.selectedCount };
 }
 
@@ -543,10 +711,21 @@ export async function registerClaimPeerMeshWorkers(
   await boss.createQueue(QUEUE_NAMES.CLAIM_PEER_MESH_SELECT);
   await boss.createQueue(QUEUE_NAMES.CLAIM_PEER_MESH_WINDOW, { policy: 'short' });
 
-  await boss.work(QUEUE_NAMES.CLAIM_PEER_MESH_SELECT, async (jobs: Job[]) => {
+  // ⭐ Story 6.36d (ND6) — `includeMetadata`: the job reads its retry count (the nominee check's final-attempt arm) and its
+  // `createdOn` (the first-failure instant). The 6.37c cast.
+  await boss.work(QUEUE_NAMES.CLAIM_PEER_MESH_SELECT, { includeMetadata: true }, async (jobs: Job[]) => {
     const results: ClaimPeerMeshSelectResult[] = [];
     for (const job of jobs) {
-      results.push(await runClaimPeerMeshSelect(boss, deps, job.data as JobEnvelope<ClaimPeerMeshSelectPayload>));
+      const meta = job as Job & { readonly retryCount?: unknown; readonly retryLimit?: unknown; readonly createdOn?: unknown };
+      const attempt: ClaimPeerMeshSelectAttempt | undefined =
+        typeof meta.retryCount === 'number' && typeof meta.retryLimit === 'number'
+          ? {
+              retryCount: meta.retryCount,
+              retryLimit: meta.retryLimit,
+              ...(meta.createdOn instanceof Date ? { createdOn: meta.createdOn } : {}),
+            }
+          : undefined;
+      results.push(await runClaimPeerMeshSelect(boss, deps, job.data as JobEnvelope<ClaimPeerMeshSelectPayload>, attempt));
     }
     return { processed: results.length, results };
   });

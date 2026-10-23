@@ -21,6 +21,9 @@
 //       the mode-resolved form and its length — Story 6.37e rework (`2026-10-22-379` Q1 A): `smsMemberName` sends the name WHOLE up
 //       to 60 across two boxes, else the Panel's shortened form; only a name that STILL does not fit is `name_too_long` — a fault is CLAIM-WIDE
 //       (`no_target:name_<reason>`, ⛔ replaced); a decrypt THROW is a retry (⛔ stored — ⛔ ping begun yet);
+//   (4b) ⭐ Story 6.36d (`2026-10-23-386` ND4 / ND6) — the deceased's NOMINEE indexes, ONCE, outside any transaction, by the
+//       selection's anchor cut (`readPeerMeshNomineeIndexes`); every begin / replacement re-checks with them, so a neighbour who
+//       became a nominee match after selection is `no_target:peer_is_nominee` and replaced. A fault is a retry (⛔ ping begun);
 //   (5) per due ping, in `ping_id` order (and every replacement the run creates): the CLAIMING transaction
 //       (`beginPeerMeshRequest` — claim → ping locks, R1) → COMMIT → (⛔ KMS under a lock) the neighbour's number →
 //       `normalizeMobile` → its keyed hash → the send → the compare-and-set. An UNUSABLE number is R6 (a second transaction
@@ -637,6 +640,39 @@ export async function readMemberFacingDeceasedName(
 }
 
 /**
+ * ⭐ Story 6.36d (`2026-10-23-386` ND4 / ND6; AC4, AC6) — the deceased's nominee mobiles as login blind indexes, for ONE claim
+ * run: the cut the SELECTION was drawn by (`resolvePeerMeshSelectionFilingCut` — its anchor claim, ND1 (b)), then
+ * `peerMeshNomineeMobileIndexes` — each read in its own short scope transaction, CLOSED before KMS. Called AFTER the child's
+ * `nothing_due` return (6.27c P5 — ⛔ decrypt for nothing). A fault (a KMS error, an unreadable envelope, a missing selection or
+ * anchor) ⇒ ONE ids-only alarm, then `ClaimCorrectionTransientError` before any begin — `readMemberFacingDeceasedName`'s form;
+ * ⛔ ever `[]` (fails CLOSED). Shared by the 6.31 reminder child.
+ */
+export async function readPeerMeshNomineeIndexes(
+  deps: Pick<ClaimPeerMeshRequestDeps, 'pool' | 'encryption' | 'onAlarm'>,
+  pariwarId: ReturnType<typeof ids.pariwarId>,
+  claimRow: { readonly claimCaseId: ReturnType<typeof ids.claimId>; readonly createdAt: Date; readonly deceasedMemberId: ReturnType<typeof ids.memberId> },
+  tag: string,
+  label: string,
+  begunNoun: 'ping' | 'reminder',
+): Promise<readonly string[]> {
+  const scoped = <T>(fn: (d: Db) => Promise<T>) => withPariwarScope(deps.pool, pariwarId, fn);
+  try {
+    const cut = await scoped((db) => claimDomain.resolvePeerMeshSelectionFilingCut(db, pariwarId, claimRow));
+    return await claimDomain.peerMeshNomineeMobileIndexes({
+      pariwarId,
+      deceasedMemberId: claimRow.deceasedMemberId,
+      cut,
+      enc: deps.encryption,
+      inScope: scoped,
+    });
+  } catch {
+    // ids only (TR12) — ⛔ a number, an index, a rank, the cause.
+    alarmOf(deps)(`[jobs] ${label}: peer_mesh_nominee_exclusion failed for ${tag} — retrying (⛔ ${begunNoun} begun)`);
+    throw new ClaimCorrectionTransientError(`[jobs] ${label}: transient peer_mesh_nominee_exclusion for ${tag}`);
+  }
+}
+
+/**
  * R9 — the TEXT's name: `readMemberFacingDeceasedName`, then the SMS name boxes — Story 6.37e rework (`2026-10-22-379` Q1 A):
  * `smsMemberName` gives the name WHOLE up to 60, else the Panel's shortened form, split across the two boxes; `name_too_long`
  * only for a name that still does not fit (`-311` PM3's "no text", superseded in part). ⛔ Truncated.
@@ -728,6 +764,8 @@ export async function runPeerMeshRequestChild(
   // (4) R9 — the name, ONCE, before any claiming transaction.
   const nameRead = await readDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag);
   const nameFault = 'fault' in nameRead ? nameRead.fault : null;
+  // (4b) Story 6.36d (ND4) — the nominee indexes, ONCE, outside any transaction (a fault ⇒ alarm + retry, ⛔ ping begun).
+  const nomineeMobileIndexes = await readPeerMeshNomineeIndexes(deps, pariwarId, claimRow, tag, 'claim-peer-mesh-request', 'ping');
   const counts = { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0, waiting: 0 };
   const scoped = <T>(fn: (d: Db) => Promise<T>) => withPariwarScope(deps.pool, pariwarId, fn);
 
@@ -739,7 +777,7 @@ export async function runPeerMeshRequestChild(
     const beginAt = clock();
     if (!isInPeerRequestSendWindow(beginAt)) return deferToMorning(beginAt, counts);
     const begun = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
-      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now: beginAt, nameFault, unusableLocales }),
+      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now: beginAt, nameFault, unusableLocales, nomineeMobileIndexes }),
     );
     if (begun.kind === 'waiting_template') {
       // 📌 Story 6.35 (LS10 (b), I4) — ⛔ write, ⛔ the other language; the sweep's waiting alarm counts it.
@@ -797,7 +835,7 @@ export async function runPeerMeshRequestChild(
     if (e164 === null) {
       // R6 — a SECOND transaction (claim → ping again): `no_target:no_sendable_number` + the replacement, unless R5.
       const finished = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
-        claimDomain.finalisePeerMeshNoSendableNumber(client, { pariwarId, claimCaseId, pingId, jobId }),
+        claimDomain.finalisePeerMeshNoSendableNumber(client, { pariwarId, claimCaseId, pingId, jobId, nomineeMobileIndexes }),
       );
       if (!finished.moved) {
         alarm(`[jobs] claim-peer-mesh-request: the row of ${ptag} moved on before its no_target finalise`);

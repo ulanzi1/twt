@@ -13,6 +13,9 @@
 //     the loop ENDS), recipient, unknown scope (parked, the loop CONTINUES); no sendable number; a decrypt / hash throw; an erased
 //     name; the sweep's lapsed in-flight finisher and late marking; a finalise that throws after a 200 ⇒ ONE alarm with the wamid;
 //   · AC11 — ⛔ alarm carries the name, a mobile, a link code or a link; ⛔ event, ⛔ claim state, ⛔ ping column, ⛔ selection outcome.
+//   · ⭐ Story 6.36d (`2026-10-23-386` ND4 / ND6; AC6, AC9 — M12, M13): a neighbour who signs in with the number the deceased typed
+//     for a nominee (a REAL envelope, a REAL login index) ⇒ `skipped_recipient_ineligible`, ZERO Meta calls; ⛔ nothing due ⇒ ⛔ KMS
+//     call though a nominee is declared; a KMS fault in the nominee read ⇒ alarm + transient, ⛔ reminder begun.
 
 import { randomUUID } from 'node:crypto';
 
@@ -97,6 +100,8 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
   interface World {
     readonly pid: string;
     readonly claimCaseId: string;
+    /** Story 6.36d — the deceased (whose nominee declaration the legs seed). */
+    readonly deceased: string;
     readonly selectionId: string;
     readonly mobiles: Map<string, string>;
     readonly pings: { pingId: string; memberId: string; linkCode: string }[];
@@ -214,7 +219,49 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       `INSERT INTO pariwar_wa_config (pariwar_id, enabled, phone_number_id, access_token_secret_name) VALUES ($1, $2, $3, $4)`,
       [pid, o.switchOn ?? true, o.phoneNumberId === undefined ? '1234567890' : o.phoneNumberId, o.secretName === undefined ? 'wa.token.test' : o.secretName],
     );
-    return { pid, claimCaseId, selectionId, mobiles, pings };
+    return { pid, claimCaseId, deceased, selectionId, mobiles, pings };
+  }
+
+  /**
+   * Story 6.36d — the deceased declared `typed` (RAW, ⛔ normalised — G5) as a nominee's number, long before the filing (a REAL
+   * envelope, class `member_nominee`); with `signsUpAs`, that neighbour's login index is the REAL index of their own number (TR8).
+   */
+  async function declareNominee(w: World, typed: string, signsUpAs?: string): Promise<void> {
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query('RESET ROLE');
+      if (signsUpAs !== undefined) {
+        await client.query(`UPDATE member_identities SET mobile_blind_index = $2 WHERE member_id = $1`, [
+          signsUpAs,
+          await encryption.mobileBlindIndex(w.mobiles.get(signsUpAs)!, enc),
+        ]);
+      }
+      const ct = encryption.serializeEnvelope(
+        await encryption.encryptTier1(Buffer.from(typed, 'utf-8'), { pariwarId: w.pid, fieldClass: encryption.MEMBER_NOMINEE_FIELD_CLASS }, enc.kms, enc.kekRef),
+      );
+      await client.query(
+        `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
+                                              relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
+         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')`,
+        [w.deceased, w.pid, ct],
+      );
+    });
+  }
+
+  /** A KMS whose calls are counted (6.27c's Proxy form). */
+  function countingKms(): { kms: typeof enc.kms; calls: () => number } {
+    let calls = 0;
+    const kms = new Proxy(enc.kms, {
+      get(target, prop, receiver) {
+        const v = Reflect.get(target, prop, receiver) as unknown;
+        if (typeof v !== 'function') return v;
+        const fn = v as (...a: unknown[]) => unknown;
+        return (...a: unknown[]) => {
+          calls += 1;
+          return fn.apply(target, a);
+        };
+      },
+    });
+    return { kms, calls: () => calls };
   }
 
   // ── the harness ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -909,6 +956,48 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       expect(h.sent).toHaveLength(0);
       expectIdsOnly(h, w);
     }
+  });
+
+  // ── Story 6.36d (`2026-10-23-386` ND4 / ND6; AC6, AC9 — M12, M13) ───────────────────────────────────────────────────────────
+
+  it('⭐ M12 — a neighbour signing in with the number the deceased typed for a nominee ⇒ `skipped_recipient_ineligible`, ZERO Meta calls', async () => {
+    const w = await world({ neighbours: 1 });
+    const n = w.pings[0]!.memberId;
+    // typed RAW: a 0 prefix, spaces (the stored form is ⛔ normalised — G5)
+    await declareNominee(w, `0${w.mobiles.get(n)!.slice(3, 8)} ${w.mobiles.get(n)!.slice(8)}`, n);
+    const h = harness(w);
+    await child(h, w);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'skipped_recipient_ineligible' });
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms).toEqual([]);
+  });
+
+  it('⭐ M13 — ⛔ reminder due ⇒ `nothing_due` with ZERO KMS calls, though the deceased declared a nominee (whose read the due run makes)', async () => {
+    const w = await world({ neighbours: 1 });
+    await declareNominee(w, '9123456780');
+    const h = harness(w);
+    const control = countingKms();
+    await child(harness(w, { encryption: { ...enc, kms: control.kms } }), w);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'accepted' });
+    expect(control.calls()).toBeGreaterThanOrEqual(3); // the name, the nominee (decrypt + HMAC), the neighbour's number …
+    const k = countingKms();
+    expect(await child(harness(w, { encryption: { ...enc, kms: k.kms } }), w)).toEqual({ status: 'noop', reason: 'nothing_due' });
+    expect(k.calls()).toBe(0);
+    expect(h.sent).toHaveLength(0);
+  });
+
+  it('ND6 — a KMS fault in the nominee read ⇒ ONE ids-only alarm + a transient THROW, ⛔ reminder begun, ⛔ sent', async () => {
+    const w = await world({ neighbours: 1 });
+    await declareNominee(w, '9123456780');
+    // the nominee read's HMAC is the run's FIRST `computeHmac` (the neighbour's number is hashed only after a begin)
+    const brokenHmac = { ...enc, kms: { encryptDek: enc.kms.encryptDek.bind(enc.kms), decryptDek: enc.kms.decryptDek.bind(enc.kms), computeHmac: () => Promise.reject(new Error('kms down')) } };
+    const h = harness(w, { encryption: brokenHmac as never });
+    await expect(child(h, w)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(await reminders(w)).toHaveLength(0);
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms).toHaveLength(1);
+    expect(h.alarms[0]).toContain('peer_mesh_nominee_exclusion');
+    expectIdsOnly(h, w);
   });
 
   it('⭐ the sweep FIRST finishes a lapsed in-flight row (past the bound, switch OFF) and marks a parked row past 72 h late — ⛔ send', async () => {

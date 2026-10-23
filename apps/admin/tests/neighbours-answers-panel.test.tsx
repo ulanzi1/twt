@@ -214,7 +214,7 @@ describe('<NeighboursAnswersPanel> — on demand (a PII control)', () => {
     expect(screen.getAllByTestId('peer-mesh-recent-change')).toHaveLength(1);
     // R1: use the same accurate chronology on later approvers' panels, including when RF1 uses an earlier filing.
     expect(screen.getByTestId('peer-mesh-recent-change')).toHaveTextContent(
-      "The member's workplace or the people they named changed in the 90 days before the filing used to choose whom to ask.",
+      "The member's workplace, the people they named or their nominees changed in the 90 days before the filing used to choose whom to ask.",
     );
   });
 

@@ -498,7 +498,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     }
     expect(screen.getByTestId('peer-mesh-recent-change')).toHaveTextContent(
       // R1: RF1 can anchor a refiled claim to an earlier filing; the warning must not date the change to this claim.
-      "The member's workplace or the people they named changed in the 90 days before the filing used to choose whom to ask.",
+      "The member's workplace, the people they named or their nominees changed in the 90 days before the filing used to choose whom to ask.",
     );
     unmount();
     // A 6.6 (`district_cohort_v1`) selection: `source` and the line are `null` ⇒ nothing; `false` ⇒ nothing.

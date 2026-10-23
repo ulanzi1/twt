@@ -129,7 +129,8 @@ export const verifierConsoleEn = {
     // ⭐ Story 6.36 (SW24; `-308`, `-326` BD1 A) — where each person came from (⛔ shown for a 6.6 selection — `null`).
     source: { workplace: 'Chosen from the workplace', named_by_member: 'Named by the member' },
     // ⭐ Story 6.36 (SW20; `-331` SC1 A; `-339` RF1 C) — a refile can use an earlier filing, excluding lifted claims.
-    recentChangeBeforeFiling: "The member's workplace or the people they named changed in the 90 days before the filing used to choose whom to ask.",
+    // ⭐ Story 6.36d (ND7; `2026-10-23-384` Q2 A ratified the warning, ⛔ its wording — the author's): "or their nominees".
+    recentChangeBeforeFiling: "The member's workplace, the people they named or their nominees changed in the 90 days before the filing used to choose whom to ask.",
     callbackMobile: 'May be phoned on',
     // Story 6.27b (`-328` read with `-329`) — the Super Admin sees a texted neighbour's number whatever they answered:
     // ⛔ "may be phoned" beside a "No".

@@ -40,6 +40,13 @@ export const PEER_MESH_SKIP_REASON_NO_ELIGIBLE_CANDIDATES = 'no_eligible_candida
  */
 export const PEER_MESH_SKIP_REASON_NO_WORKPLACE_COLLEAGUE_OR_NAMED_PERSON = 'no_workplace_colleague_or_named_person';
 
+/**
+ * Story 6.36d (`2026-10-23-386` ND6 (a)) — the select job could ⛔ read the deceased's nominee numbers (a KMS fault or an
+ * unreadable envelope) for 24 hours or more: an EMPTY selection is written and the claim GOES ON (`claim.peer_mesh_none_to_ask`;
+ * the ground inspection carries it — a delivery failure, `-295` §0). ⛔ The zero branch's reason — colleagues may exist.
+ */
+export const PEER_MESH_SKIP_REASON_NOMINEE_CHECK_UNAVAILABLE = 'nominee_check_unavailable';
+
 /** Story 6.36 (AC1) — the `workplace_named_v1` record (0163's columns). ⛔ Supplied for a `district_cohort_v1` selection. */
 export interface PeerMeshWorkplaceRecord {
   source: PeerMeshSource | null;

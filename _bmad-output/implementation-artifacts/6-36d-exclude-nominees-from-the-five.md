@@ -43,7 +43,7 @@ LETTERS: G = found facts (traced to code at the pin) · ND = build decisions (DE
 
 # Story 6.36d: A Member's Nominees Are Never Among the Five Asked About Their Death — Matched by Phone Number at Selection and Again Before Every Message `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ⭐ **Next: Task 1 (code)** — re-run Task 0.1's preflight first. Governance is DONE: Task 0.2 (ND1–ND10 decided, the Panel has ruled `-384`,
 > the `-356` reading answered), Task 0.3 (`-386`, committed alone as `bd249a6f`), Task 0.4 (the records); earlier: the author-commit is committed ALONE (Task 0.3), the records commit follows (Task 0.4), and only then Task 1.
@@ -503,8 +503,8 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0)** — 0.2–0.4 done; 0.1's preflight is re-run at the start of Task 1
-  - [ ] 0.1 Preflight: `git fetch origin`; `git diff --name-only 69e35f73 origin/main -- apps packages scripts infra` — if non-empty, rebase
+- [x] **Task 0 — governance FIRST (AC0)** — 0.2–0.4 done; 0.1's preflight is re-run at the start of Task 1
+  - [x] 0.1 Preflight: `git fetch origin`; `git diff --name-only 69e35f73 origin/main -- apps packages scripts infra` — if non-empty, rebase
         and re-verify G1–G17 by FUNCTION; STOP if any of: (S1) the predicate already has a nominee conjunct; (S2) a nominee blind index now
         exists; (S3) a new caller of the predicate exists that G2 does not list; (S4) `member_nominees` / `member_nominee_versions`
         `mobile_ciphertext` changed shape; (S5) row 6-35 is on `main` — re-verify G11 / G13 against its begin inputs and take the next free
@@ -577,28 +577,28 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
           agreement and its OWN Panel question (new processing, outside `-384`), and covers only declarations made after it ships;
         - FOLLOW-UP 2 — DONE 2026-10-23: the `deferred-work.md` item (*"Row 6-36d's nominee match is the ONLY nominee→member link, and it
           degrades the day a member's login number becomes changeable"*) with its trigger on the FUTURE mobile-change story (AR-24).
-- [ ] **Task 1 — the predicate and the indexes (AC1, AC2)**
-  - [ ] 1.1 `nomineeMobileIndexes` (required) on every ND4 type + `peerMeshNomineeMatchSql` + the ND2 conjunct; doc comments extended in the
+- [x] **Task 1 — the predicate and the indexes (AC1, AC2)**
+  - [x] 1.1 `nomineeMobileIndexes` (required) on every ND4 type + `peerMeshNomineeMatchSql` + the ND2 conjunct; doc comments extended in the
         house style.
-  - [ ] 1.2 `peerMeshNomineeMobileIndexes` and `PEER_MESH_NOMINEE_EXCLUSION_AUDIT_PURPOSE` in `packages/domain/src/claim/peer-mesh-nominees.ts`,
+  - [x] 1.2 `peerMeshNomineeMobileIndexes` and `PEER_MESH_NOMINEE_EXCLUSION_AUDIT_PURPOSE` in `packages/domain/src/claim/peer-mesh-nominees.ts`,
         exported through the claim barrel; ⛔ logging of inputs.
-- [ ] **Task 2 — the select job (AC3, AC7)**
-  - [ ] 2.1 The ND3 pre-read (claim, selection, state, cut, ciphertexts), closed, then KMS; pass the indexes into `getPeerMeshGroupedSnapshot`
+- [x] **Task 2 — the select job (AC3, AC7)**
+  - [x] 2.1 The ND3 pre-read (claim, selection, state, cut, ciphertexts), closed, then KMS; pass the indexes into `getPeerMeshGroupedSnapshot`
         → both snapshot readers; the retryable throw when the locked tx reaches the snapshot without them. Required `encryption` in
         `ClaimPeerMeshDeps`; wire `jobsEncryption` in `boot.ts`.
-  - [ ] 2.2 ND6: the alarm, the retry policy on the OCR hook's send, `{ includeMetadata: true }` on the select `boss.work` and `attempt`
+  - [x] 2.2 ND6: the alarm, the retry policy on the OCR hook's send, `{ includeMetadata: true }` on the select `boss.work` and `attempt`
         threaded into `runClaimPeerMeshSelect`; on the nominee-exclusion fault only — the 1 h self re-send carrying the first-failure
         instant, and the 24 h finish (an EMPTY selection, `nominee_check_unavailable`, `claim.peer_mesh_none_to_ask`, the second alarm).
-  - [ ] 2.3 ND7: the nominee-change disjunct in `getPeerMeshGroupedSnapshot`; the admin copy and its two test pins.
-  - [ ] 2.4 The header comment's frozen-file / no-KMS notes amended (dated, citing the new decision).
-- [ ] **Task 3 — send time and the reminder (AC4, AC6)**
-  - [ ] 3.1 `readPeerMeshRequestEligibility`: input gains the indexes; a labelling column `is_nominee` (`peerMeshNomineeMatchSql` on `pr_m`);
+  - [x] 2.3 ND7: the nominee-change disjunct in `getPeerMeshGroupedSnapshot`; the admin copy and its two test pins.
+  - [x] 2.4 The header comment's frozen-file / no-KMS notes amended (dated, citing the new decision).
+- [x] **Task 3 — send time and the reminder (AC4, AC6)**
+  - [x] 3.1 `readPeerMeshRequestEligibility`: input gains the indexes; a labelling column `is_nominee` (`peerMeshNomineeMatchSql` on `pr_m`);
         the order of AC5.
-  - [ ] 3.2 `beginPeerMeshRequest`, `insertPeerMeshReplacementPing`, `finalisePeerMeshNoSendableNumber`, `beginPeerMeshWaReminder` thread
+  - [x] 3.2 `beginPeerMeshRequest`, `insertPeerMeshReplacementPing`, `finalisePeerMeshNoSendableNumber`, `beginPeerMeshWaReminder` thread
         the indexes; the two children compute them once (after `nothing_due`), outside any tx, with the anchor-claim cut; ND6's alarm + throw.
-- [ ] **Task 4 — the label (AC5)** — the migration (dry-run inside `BEGIN … ROLLBACK` on
+- [x] **Task 4 — the label (AC5)** — the migration (dry-run inside `BEGIN … ROLLBACK` on
       :5433 first; then both DBs), journal, constants, every G12 pin. ⛔ Edit 0166 in place.
-- [ ] **Task 5 — tests (AC9)** — extend `peer-mesh-workplace-snapshot.spec.ts` (SW23 block), `peer-mesh-request.spec.ts`,
+- [x] **Task 5 — tests (AC9)** — extend `peer-mesh-workplace-snapshot.spec.ts` (SW23 block), `peer-mesh-request.spec.ts`,
       `peer-mesh-wa-reminder.spec.ts`, `apps/jobs/tests/claim-peer-mesh.test.ts`, `claim-peer-mesh-requests-live.test.ts`,
       `claim-peer-mesh-wa-reminders-live.test.ts`; a unit test for the function's filter / normalise / dedupe / empty / fault paths; and the
       test-tree callers tsc lists (G2: `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`, the two concurrency specs,
@@ -713,7 +713,22 @@ copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36d`, 2026-10-23.
+
 ### Debug Log References
+
+- **Task 0.1 preflight (2026-10-23):** `git fetch origin` — `origin/main` still `69e35f73`; `git diff --name-only 69e35f73 origin/main -- apps packages scripts infra` empty ⇒ ⛔ rebase. S1–S4 clear (the predicate had six conjuncts; ⛔ nominee blind index; G2's readers unchanged — `known-people.ts` names the predicate in a comment only; the two nominee tables unchanged). S5: row 6-35 ⛔ on `main`, BUT it has COMMITTED `0179_member-preferred-locale` on its branch (journal idx 179, `when` …023) ⇒ by `-366` decision 6 this story takes **`0180`** (idx 180, `when` 1795059600024). Highest decision `-387` (6-35's), ledger `23p` held elsewhere ⇒ this branch's ledger line is `2026-10-23q`. `ListAgents`: one peer session (`twt-c8`, busy) — worked only in this worktree.
+- **Migration 0180** — dry-run inside `BEGIN … ROLLBACK` on :5433 first (12 844 existing pings, 0 failing the new pattern; both CHECKs re-added; the guard's body contains `peer_is_nominee`), then `pnpm db:migrate` on :5433 (`__drizzle_migrations` id 183, `created_at` 1795059600024). ⚠ **:5432 NOT applied — held for BigDev:** 6-35's `0179` is applied on :5433 but ⛔ on :5432; drizzle's migrator applies only files whose journal `when` is LATER than the last applied row, so applying `0180` (…024) to :5432 first would make it SILENTLY SKIP 6-35's `0179` (…023) there for good.
+- **Deviations from the story text, recorded (⛔ silently):** (1) ND4 says the children read the anchor cut "inside the same short read as the version read" — built as TWO short scope transactions (the cut, then `peerMeshNomineeMobileIndexes`' own version read), each CLOSED before KMS: the function needs the cut before it opens its read. TR3 holds (M9 / M13 legs). (2) ND6 "then rethrow" — the select job throws a FRESH ids-only `ClaimPeerMeshNomineeCheckError` (⛔ `cause`) in place of the raw KMS / envelope error, so nothing from the fault reaches pg-boss's stored output (AC8). (3) The 24 h finish builds its EMPTY selection through `runPeerMeshMetric` with `candidates: []` (the same dispatch replay uses), so `source` / `rankedMemberIds` match the zero branch exactly. (4) `readPeerMeshNomineeIndexes` (the children's shared wrapper) lives in `claim-peer-mesh-requests.ts` beside `readMemberFacingDeceasedName` and is imported by the reminder child, the 6.31 form.
+- **A test assertion of mine was wrong, fixed:** the alarm legs first asserted `not.toMatch(/[0-9]{7}/)` — a claim / Pariwar UUID can hold a 7-digit run, so it failed on an ids-only alarm. Replaced by the nominee's own digits (`not.toContain('98765')`).
+- **Shared-:5433 contention (⛔ this story):** a peer session held `ALTER TABLE audit_log_entries` while `claim-peer-mesh-requests-live.test.ts`' `afterAll` cleaned up ⇒ `lock_timeout` in the teardown (all 52 legs green) and a leftover Pariwar whose fixed link code `St4lledCode1` broke the AC4 leg on the next run. The leftover Pariwars (`9b279c95-…`, `a4e7907e-…`) were removed with the file's own teardown statement; re-run on a quiet DB: 52 / 52, clean teardown.
+- **AC9 — the mutation run** (scratch runner: each edit asserted to land EXACTLY once, the named leg(s) run on :5433, the file ALWAYS restored; `git diff` clean afterwards). 24 legs, **0 survived**:
+  M1 → snapshot `M1 —` RED, request `peer_is_nominee` (the `it.each` arm) RED · M2 → unit `M2 / M7` RED · M3 → jobs `M3 —` RED · M4 → request `M4 —` RED · M5 → request `M5 —` RED · M6 → reminder `M6 —` RED · M7 → unit `M2 / M7` RED, jobs `M3 —` RED · M8 → jobs `M8 —` RED, request-live `M8 (child)` RED · M8b → `M8b —` RED · M8c → `M8c / M8e` RED · M8d → `M8d —` RED · M8e → `M8c / M8e` RED · M9 → `M9 —` RED · M10 → request `M10 —` RED · M11 → request-live `M11 —` RED · M12 → reminder-live `M12 —` RED · M13 (request child) → request-live `M13 —` RED · M13 (reminder child) → reminder-live `M13 —` RED · M14 → `M14 —` RED · M15 → unit `M15 —` RED (2 legs) · M16 → snapshot `M16 —` RED.
+  The M8 / M8b–M8e / M13 / M14 legs seed a `declared` version recorded BEFORE the cut with a REAL envelope and assert the counting KMS saw ≥ 1 decrypt in the positive control (M3 leg; M13 legs' first run). Coverage-only legs (⛔ mutant): the empty-list SQL leg, vacated / sentinel / invalid, a non-member nominee, the other-Pariwar member, the named-group nominee and the workplace→named fall-through, the five-stay-five leg, the ND3 stale-anchor throw, the retry-policy constant.
+- **Per-file runs on :5433 (DATABASE_URL explicit):** domain unit `peer-mesh-nominees.test.ts` 14 / 14; snapshot spec 34 / 34; request spec 31 / 31 (incl. the `it.each` `peer_is_nominee` arm and the R4 five-label leg); reminder spec 25 / 25; both concurrency specs 3 / 3 + 3 / 3; `peer-mesh-request-detail.test.ts` + the RLS regression spec 62 / 63 (the one failure: below); channels `sms.test.ts` 154 / 154; jobs `claim-peer-mesh.test.ts` 39 / 39; request-live 52 / 52; reminder-live 30 / 30; api `peer-request-after-send.spec.ts` 1 / 1; admin copy pins + inspector wire 83 / 83. tsc (domain, jobs, api, admin) and eslint on every touched file: exit 0.
+- **AC10 — `DATABASE_URL=…:5433… pnpm ci:local` (2026-10-23): FAILED — 34 / 36 jobs green; `test (unit)` and `integration-tests` red.** The failures, each re-run in ISOLATION:
+  (a) `claim-peer-mesh-replies-policy-regression.spec.ts` "the structural CHECKs …" and (b) `peer-mesh-wa-reminder-record.spec.ts` "accepted ⇒ … locale_source …" — both FAIL in isolation too: each pins `locale_source = 'member_choice'` as REFUSED, and row 6-35's `0179` (applied to the shared :5433 by its worktree) admits it. ⛔ This story's code; they stay red on :5433 until 6-35 lands (its own spec edits) or :5433 is rebuilt without `0179`.
+  (c) `import-workplaces.spec.ts` (the CLI leg), (d) `cross-pariwar-leak.spec.ts` (two `runAsCrossTenant` legs), (e) validity-service `determinism.test.ts` (100× threads) — each PASSES in isolation (14 / 14, 20 / 20, 1 / 1): the shared-DB / oversubscription class ([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]]).
 
 ### Completion Notes List
 
@@ -755,7 +770,35 @@ copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test 
   and 6.36's W3; dated annotations on 6.36 (AC4, Trap 2), 6.36a (SW19, SW23) and 6.31 (§0 edge (iii), UPSTREAM); question 6 added to
   `counsel-question-2026-10-18-nominee-contact-basis.md` (⛔ sent); the follow-up row `6-36e-nominee-member-link-at-declaration` (backlog).
 
+- 2026-10-23 — **Tasks 1–5 implemented** (`bmad-dev-story 6.36d`). ONE conjunct on `peerMeshEligibleMemberSql` through ONE fragment (`peerMeshNomineeMatchSql`, also the `is_nominee` label); ONE read of the indexes (`peerMeshNomineeMobileIndexes` — ND1 (b)'s as-of-cut projected versions, decrypt + normalise + de-duplicate, ONE batch HMAC into the login space, ⛔ inside any transaction); the select job pre-reads unlocked, computes the indexes with ⛔ transaction open, and fails CLOSED (ND6: alarm + rethrow under the child retry policy; a 1 h self re-send on the final attempt; an EMPTY `nominee_check_unavailable` selection after 24 h); both send-time children compute the indexes once, after `nothing_due`, by the selection's anchor cut; `peer_is_nominee` in lockstep (constant, pattern, migration `0180`'s two CHECKs and the replacement guard); the staff line's third disjunct and copy (ND7). Every AC9 mutant RED. ⚠ Two items await BigDev before Task 6 can close: `0180` on :5432 (held — it would orphan 6-35's `0179` there), and `ci:local`'s two :5433 failures caused by 6-35's `0179` (Debug Log).
+
 ### File List
+
+Source:
+- `packages/domain/src/claim/peer-mesh-nominees.ts` (new) — `peerMeshNomineeMobileIndexes`, `peerMeshNomineeCiphertextsAsOf`, `resolvePeerMeshSelectionFilingCut`, `PEER_MESH_NOMINEE_EXCLUSION_AUDIT_PURPOSE`
+- `packages/domain/src/claim/index.ts` — barrel export
+- `packages/domain/src/claim/peer-mesh-read.ts` — `nomineeMobileIndexes` on `PeerMeshEligibilityExclusions`; `peerMeshNomineeMatchSql`; the conjunct; `PeerMeshEligibleSnapshotInput`; `getPeerMeshDeceasedWorkplace` (split out); `getPeerMeshNomineeChangeBeforeFiling`, `getPeerMeshRecentChangeBeforeFiling` (ND7)
+- `packages/domain/src/claim/peer-mesh-request.ts` — the indexes threaded; the `is_nominee` label column and order
+- `packages/domain/src/claim/peer-mesh-wa-reminder.ts` — the indexes threaded into WR2 (ix)
+- `packages/domain/src/claim/peer-mesh-persist.ts` — `PEER_MESH_SKIP_REASON_NOMINEE_CHECK_UNAVAILABLE`
+- `packages/domain/src/schema/claim_peer_mesh_pings.ts` — `peer_is_nominee` in the array and the pattern
+- `packages/domain/migrations/0180_peer-mesh-request-peer-is-nominee.sql` (new), `packages/domain/migrations/meta/_journal.json`
+- `apps/jobs/src/claim-peer-mesh.ts` — ND3 pre-read, `encryption` dep, ND6 (alarm / rethrow / defer / finish), `includeMetadata`, the dated header note
+- `apps/jobs/src/boot.ts` — `encryption: jobsEncryption`; the OCR hook's retry policy
+- `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` — `readPeerMeshNomineeIndexes`; the child threads the indexes
+- `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts` — the reminder child threads the indexes
+- `apps/admin/src/modules/claim-verification/i18n-en.ts` — `peerMesh.recentChangeBeforeFiling` (ND7)
+
+Tests:
+- `packages/domain/tests/claim/peer-mesh-nominees.test.ts` (new)
+- `packages/domain/tests/integration/claim/peer-mesh-workplace-snapshot.spec.ts`, `peer-mesh-request.spec.ts`, `peer-mesh-wa-reminder.spec.ts`, `peer-mesh-request-concurrency.spec.ts`, `peer-mesh-wa-reminder-concurrency.spec.ts`
+- `apps/jobs/tests/claim-peer-mesh.test.ts`, `claim-peer-mesh-requests-live.test.ts`, `claim-peer-mesh-wa-reminders-live.test.ts`
+- `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`
+- `apps/admin/tests/neighbours-answers-panel.test.tsx`, `apps/admin/tests/verifier-console.test.tsx`
+
+Records:
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (row `in-progress`; ledger `2026-10-23q`)
+- `_bmad-output/implementation-artifacts/6-36d-exclude-nominees-from-the-five.md`
 
 ## Change Log
 
@@ -767,3 +810,4 @@ copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test 
 | 2026-10-23 | 1.3 | Task 0.2: BigDev accepted ND1–ND6, ND8, ND9 as recommended. Rebased onto `69e35f73` and re-pinned. ND6/AC3 contradiction fixed (ND3's "never without the indexes" scoped to selections that choose anyone; AC3 owns the select-job fault path; M8b–M8e). Decision-status cleanup: ND1–ND10 now state CHOSEN / Rejected; the Panel-questions section is the `-384` ruling with a pointer to the note; ACs, Tasks and Dev Notes lose the branches for rejected options. ⛔ Commitment softened (a fresh-context check of the diff restored the two it found). Still owed: the `-356` reading and BigDev's confirmation of ND7 / ND10. |
 | 2026-10-23 | 1.4 | Task 0.2 complete: ND7 / ND10 confirmed; the `-356` reading answered after an investigation (G18 — the declared number is the only nominee→member link; BigDev accepted the data-model gap + two follow-ups in Task 0.4); ND8's first residual rewritten precisely; the `-340` / `-341` null-claimant finding recorded in `deferred-work.md`. Next: Task 0.3. |
 | 2026-10-23 | 1.5 | Task 0.3 (`-386`, `bd249a6f`) and Task 0.4 (records across epics, roster, deferred-work, three sibling stories, the counsel question; new backlog row 6-36e) done. Governance complete; next is Task 1. |
+| 2026-10-23 | 1.6 | `bmad-dev-story 6.36d`: Status → in-progress; Task 0.1 preflight (migration `0180` — `0179` is row 6-35's); Tasks 1–5 implemented and tested, M1–M16 (M8b–M8e, both M13 halves) all RED. Task 6 open: `ci:local` 34 / 36 (two failures from 6-35's `0179` on the shared :5433, three isolation-green load flakes) and `0180` held on :5432 — both for BigDev. |

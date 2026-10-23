@@ -121,6 +121,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
   interface World {
     readonly pid: string;
     readonly claimCaseId: string;
+    /** Story 6.36d — the deceased (whose nominee declaration the legs seed). */
+    readonly deceased: string;
     readonly selectionId: string;
     /** The stored ranking; the first `selected` are pinged. */
     readonly ranked: string[];
@@ -206,7 +208,30 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
         pings.push({ pingId, memberId: m });
       }
     });
-    return { pid, claimCaseId, selectionId, ranked, mobiles, pings };
+    return { pid, claimCaseId, deceased, selectionId, ranked, mobiles, pings };
+  }
+
+  /**
+   * Story 6.36d — the deceased declared `memberId`'s number as a nominee's, typed RAW (`typed`, ⛔ normalised — G5), recorded long
+   * before the filing (a REAL envelope, class `member_nominee`); and `memberId` signs in with it (a REAL login index — TR8).
+   */
+  async function nomineeIs(w: World, memberId: string, typed: string): Promise<void> {
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query('RESET ROLE');
+      await client.query(`UPDATE member_identities SET mobile_blind_index = $2 WHERE member_id = $1`, [
+        memberId,
+        await encryption.mobileBlindIndex(w.mobiles.get(memberId)!, enc),
+      ]);
+      const ct = encryption.serializeEnvelope(
+        await encryption.encryptTier1(Buffer.from(typed, 'utf-8'), { pariwarId: w.pid, fieldClass: encryption.MEMBER_NOMINEE_FIELD_CLASS }, enc.kms, enc.kekRef),
+      );
+      await client.query(
+        `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
+                                              relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
+         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')`,
+        [w.deceased, w.pid, ct],
+      );
+    });
   }
 
   interface Harness {
@@ -995,6 +1020,62 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     const h = harness(w, { registry: [CLEARED] });
     await tick(h, w);
     expect((await rows(w))[0]?.send_outcome).toBe('accepted');
+    const k = countingKms();
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms: k.kms } };
+    expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).toEqual({ status: 'noop', reason: 'nothing_due' });
+    expect(k.calls()).toBe(0);
+  });
+
+  // ── Story 6.36d (`2026-10-23-386` ND4 / ND6; AC4, AC9 — M8, M11, M13) ───────────────────────────────────────────────────────
+
+  it('⭐ M11 — a neighbour who became a nominee match after selection ⇒ `no_target:peer_is_nominee`, ⛔ texted; the replacement is texted in the SAME run', async () => {
+    const w = await world({ selected: 1 });
+    const nominee = w.pings[0]!;
+    // the deceased typed the number with a 0 prefix and spaces; the neighbour signed up with it (canonical)
+    await nomineeIs(w, nominee.memberId, `0${w.mobiles.get(nominee.memberId)!.slice(3, 8)} ${w.mobiles.get(nominee.memberId)!.slice(8)}`);
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    const after = await rows(w);
+    expect(after.find((r) => r.ping_id === nominee.pingId)).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:peer_is_nominee' });
+    const rep = after.find((r) => r.replaces_ping_id === nominee.pingId)!;
+    expect(rep).toMatchObject({ member_id: w.ranked[1], send_outcome: 'accepted' });
+    expect(h.sent.map((m) => m.to)).toEqual([w.mobiles.get(w.ranked[1]!)!]);
+    expect(h.sent.map((m) => m.to)).not.toContain(w.mobiles.get(nominee.memberId)!);
+    expect(h.alarms).toEqual([]);
+  });
+
+  it('⭐ M8 (child) — a KMS fault in the nominee read ⇒ ONE ids-only alarm + a transient THROW, ⛔ ping begun, ⛔ sent', async () => {
+    const w = await world({ selected: 2 });
+    await nomineeIs(w, w.ranked[4]!, w.mobiles.get(w.ranked[4]!)!);
+    const h = harness(w, { registry: [CLEARED] });
+    // the nominee read's HMAC is the run's FIRST `computeHmac` (the neighbour's number is hashed only after a begin)
+    const kms = new Proxy(enc.kms, {
+      get(target, prop, receiver) {
+        const v = Reflect.get(target, prop, receiver) as unknown;
+        if (typeof v !== 'function') return v;
+        const fn = v as (...a: unknown[]) => unknown;
+        if (prop === 'computeHmac') return () => Promise.reject(Object.assign(new Error('kms unavailable'), { code: 14 }));
+        return fn.bind(target);
+      },
+    });
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms } };
+    await expect(runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect((await rows(w)).every((r) => r.send_outcome === null)).toBe(true);
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms).toHaveLength(1);
+    expect(h.alarms[0]).toContain('peer_mesh_nominee_exclusion');
+    expect(h.alarms[0]).toContain(w.claimCaseId);
+    expect(h.alarms[0]).not.toContain('98765');
+  });
+
+  it('⭐ M13 — a child with ⛔ ping due reads ⛔ nominee (zero KMS calls), though the deceased declared one; with pings due it decrypts it', async () => {
+    const w = await world({ selected: 1 });
+    await nomineeIs(w, w.ranked[4]!, w.mobiles.get(w.ranked[4]!)!);
+    const h = harness(w, { registry: [CLEARED] });
+    const control = countingKms();
+    await runPeerMeshRequestChild({ ...h.deps, encryption: { ...enc, kms: control.kms } }, boss(h), envelopeOf(w), randomUUID());
+    expect((await rows(w))[0]?.send_outcome).toBe('accepted');
+    expect(control.calls()).toBeGreaterThanOrEqual(3); // the name, the nominee (decrypt + HMAC), the neighbour's number …
     const k = countingKms();
     const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms: k.kms } };
     expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).toEqual({ status: 'noop', reason: 'nothing_due' });

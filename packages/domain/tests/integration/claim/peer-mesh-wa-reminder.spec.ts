@@ -13,6 +13,8 @@
 //   · the sweep's due list (each AC2 conjunct, incl. a text REPORTED undelivered still due), the lapsed in-flight finisher (past the
 //     bound, switch OFF), the late marking (parked past `+ 72 h`, on a decided claim too; ⛔ an in-flight row; ⛔ a row created);
 //   · I8 — ⛔ event from any of it.
+//   · ⭐ Story 6.36d (`2026-10-23-386` ND4; AC6, AC9 — M6): a neighbour signing in with one of the deceased's nominee numbers (the
+//     index is INPUT — the seeded `idx-…` string, TR8) ⇒ `skipped_recipient_ineligible`; the same neighbour without it is begun.
 
 import { randomUUID } from 'node:crypto';
 
@@ -180,6 +182,7 @@ const begin = (
     now?: Date;
     nameFault?: 'name_none' | 'name_erased' | 'name_unresolvable' | null;
     templates?: { readonly hi: string | null; readonly en: string | null };
+    nominees?: readonly string[];
   } = {},
 ) =>
   beginPeerMeshWaReminder(getTx().client, {
@@ -190,7 +193,14 @@ const begin = (
     now: o.now ?? new Date(),
     nameFault: o.nameFault ?? null,
     templates: o.templates ?? TEMPLATES,
+    nomineeMobileIndexes: o.nominees ?? [],
   });
+
+/** Story 6.36d — `m`'s login blind index (the seeded `idx-…` string). */
+async function loginIndexOf(m: string): Promise<string> {
+  const r = await getTx().client.query<{ i: string }>(`SELECT mobile_blind_index AS i FROM member_identities WHERE member_id = $1`, [m]);
+  return r.rows[0]!.i;
+}
 
 interface Row {
   reminder_id: string;
@@ -386,6 +396,15 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
       expect(await only(s), outcome).toMatchObject({ send_outcome: outcome, send_started_at: null });
       expect((await begin(s, 0, { jobId: 'job-z' })).kind, outcome).toBe('already_final');
     }
+  });
+
+  it('M6 — Story 6.36d: a neighbour signing in with one of the deceased\'s nominee numbers ⇒ `skipped_recipient_ineligible` (FINISHED); without it ⇒ begun', async () => {
+    const nominee = await seedReminder();
+    const index = await loginIndexOf(nominee.pings[0]!.memberId);
+    expect(await begin(nominee, 0, { nominees: [index] })).toEqual({ kind: 'skipped', outcome: 'skipped_recipient_ineligible' });
+    expect(await only(nominee)).toMatchObject({ send_outcome: 'skipped_recipient_ineligible', send_started_at: null });
+    const other = await seedReminder();
+    expect((await begin(other, 0, { nominees: [`idx-${randomUUID()}`] })).kind).toBe('begun');
   });
 
   it('WR2 (iii) (b) — a STARTED reply (⛔ submitted) still gets the reminder', async () => {

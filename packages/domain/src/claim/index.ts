@@ -134,6 +134,9 @@ export * from './suspicion-notice.js';
 export * from './peer-mesh-request.js';
 // Story 6.31 — the neighbours' WhatsApp reminder: the locked begin, the marker, the finalise / park, the sweep's reads (0171).
 export * from './peer-mesh-wa-reminder.js';
+// Story 6.36d (`2026-10-23-386`) — the deceased's nominee mobiles as login blind indexes (decrypt + HMAC OUTSIDE any tx), and
+// the selection's anchor cut the send-time children read them by.
+export * from './peer-mesh-nominees.js';
 // Story 6.25 (`2026-10-09-299` RE1–RE5, RE8, RE11) — the STAFF EMAIL of a `-239` refusal: the sweep's domain half (selector,
 // give-up, claiming transaction, compare-and-set) and ADR-0040's two identity-data reads (Q1 recipients, Q2 the address ciphertext).
 export * from './suspicion-staff-email.js';

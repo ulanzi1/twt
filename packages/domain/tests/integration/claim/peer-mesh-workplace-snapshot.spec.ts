@@ -21,6 +21,9 @@
 //   · ONE leg under `twt_app` (RLS on) still sees the colleagues and the named people, and resolves the anchor THROUGH
 //     both policies it depends on (`claims`, `claim_nominee_findings` — an innocence finding visible only through the
 //     latter moves the anchor).
+//   · ⭐ Story 6.36d (`2026-10-23-386` ND2 / ND7; AC1, AC3, AC7, AC9 — M1, M16): the nominee conjunct takes the indexes as INPUT,
+//     so these legs pass the seeded member's own `idx-…` string (TR8 — the conjunct is what is tested; the real hash is the
+//     function's unit test and the jobs legs'); the staff line's third disjunct (a nominee version in the 90 days).
 
 import { randomUUID } from 'node:crypto';
 
@@ -178,9 +181,34 @@ async function link(
   return id;
 }
 
-async function snapshot(p: string, deceased: MemberId, o: { cut?: PeerMeshFilingCut } = {}): Promise<PeerMeshGroupedSnapshot> {
+async function snapshot(
+  p: string,
+  deceased: MemberId,
+  o: { cut?: PeerMeshFilingCut; nominees?: readonly string[] } = {},
+): Promise<PeerMeshGroupedSnapshot> {
   const { tx } = getTx();
-  return getPeerMeshGroupedSnapshot(tx, { pariwarId: toPariwarId(p), deceasedMemberId: deceased, cut: o.cut ?? CUT });
+  return getPeerMeshGroupedSnapshot(tx, {
+    pariwarId: toPariwarId(p),
+    deceasedMemberId: deceased,
+    cut: o.cut ?? CUT,
+    nomineeMobileIndexes: o.nominees ?? [],
+  });
+}
+
+/** Story 6.36d — the seeded member's login blind index (a fake `idx-…` string — TR8). */
+async function loginIndex(m: string): Promise<string> {
+  const r = await getTx().client.query<{ i: string }>(`SELECT mobile_blind_index AS i FROM member_identities WHERE member_id = $1`, [m]);
+  return r.rows[0]!.i;
+}
+
+/** Story 6.36d (ND7) — a `declared` nominee version of `deceased` recorded at `at` (fake ciphertexts — ⛔ decrypted here). */
+async function nomineeVersion(p: string, deceased: string, at: Date, rank: 1 | 2 = 1, versionNo = 1): Promise<void> {
+  await getTx().client.query(
+    `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
+                                          relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
+     VALUES ($1, $2, $3, $4, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', 'enc:v1:m', 100, $5, $5)`,
+    [deceased, p, rank, versionNo, at],
+  );
 }
 
 const ids = (s: PeerMeshGroupedSnapshot, group?: string) =>
@@ -595,6 +623,99 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       await attempt(w.p, await member(w.p), otherDeath, 'pending');
       const s = await snapshot(w.p, dead);
       expect(ids(s)).toEqual(sorted(ok, otherDeath));
+    });
+  });
+
+  describe('Story 6.36d — a member\'s nominees are ⛔ among the five (ND2; AC1, AC3)', () => {
+    it('M1 — a colleague signing in with a nominee number is ⛔ a candidate; the others stay; an EMPTY list excludes nobody (valid SQL)', async () => {
+      const w = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      const ok = await colleague(w.p, w.A);
+      const nominee = await colleague(w.p, w.A);
+      await fileClaim(w.p, dead);
+      // TR5 — `= ANY('{}'::text[])` renders and is false ⇒ NOT EXISTS true ⇒ nobody excluded.
+      expect(ids(await snapshot(w.p, dead, { nominees: [] }))).toEqual(sorted(ok, nominee));
+      const s = await snapshot(w.p, dead, { nominees: [await loginIndex(nominee)] });
+      expect(ids(s)).toEqual([ok]);
+      // an index nobody signs in with (a non-member nominee) excludes nobody
+      expect(ids(await snapshot(w.p, dead, { nominees: [`idx-${randomUUID()}`] }))).toEqual(sorted(ok, nominee));
+    });
+
+    it('a nominee in the NAMED group is ⛔ a candidate; a workplace group emptied ONLY by the exclusion falls through to the named group (G15)', async () => {
+      const w = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      const onlyColleague = await colleague(w.p, w.A);
+      const named = await member(w.p);
+      const namedNominee = await member(w.p);
+      await link(w.p, dead, named, 'accepted', { asked: 100, responded: 99 });
+      await link(w.p, dead, namedNominee, 'accepted', { asked: 100, responded: 99 });
+      await fileClaim(w.p, dead);
+      const s = await snapshot(w.p, dead, { nominees: [await loginIndex(onlyColleague), await loginIndex(namedNominee)] });
+      expect(s.candidates).toEqual([{ memberId: named, group: 'named', settled: false }]);
+      const r = rank(randomUUID(), s);
+      expect(r.selectedMemberIds).toEqual([named]);
+    });
+
+    it('the five stay five: six colleagues, one a nominee ⇒ five asked, the nominee ⛔ among them or in the ranking', async () => {
+      const w = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      const six: MemberId[] = [];
+      for (let i = 0; i < 6; i += 1) six.push(await colleague(w.p, w.A));
+      const nominee = six[2]!;
+      await fileClaim(w.p, dead);
+      const r = rank(randomUUID(), await snapshot(w.p, dead, { nominees: [await loginIndex(nominee)] }));
+      expect(r.selectedMemberIds).toHaveLength(5);
+      expect(r.selectedMemberIds).not.toContain(nominee);
+      expect(r.rankedMemberIds ?? []).not.toContain(nominee);
+    });
+
+    it('a member of ANOTHER Pariwar holding the same index is unaffected (coverage-only — the match is per Pariwar)', async () => {
+      const w = await world();
+      const other = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      const c = await colleague(w.p, w.A);
+      const elsewhere = await member(other.p);
+      const shared = await loginIndex(elsewhere);
+      // the same login index in this Pariwar's colleague would be a different person; here the colleague's index differs
+      await fileClaim(w.p, dead);
+      expect(ids(await snapshot(w.p, dead, { nominees: [shared] }))).toEqual([c]);
+    });
+  });
+
+  describe('Story 6.36d — the staff line covers nominee changes (ND7; `-384` Q2 A; AC7)', () => {
+    async function deceasedWithOldPosting() {
+      const w = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      return { w, dead };
+    }
+
+    it('M16 — a nominee version recorded 10 days before the cut sets the line; 100 days before, or on the filing day, does ⛔', async () => {
+      const inside = await deceasedWithOldPosting();
+      await nomineeVersion(inside.w.p, inside.dead, before(10));
+      await fileClaim(inside.w.p, inside.dead);
+      expect((await snapshot(inside.w.p, inside.dead)).recentChangeBeforeFiling).toBe(true);
+
+      const old = await deceasedWithOldPosting();
+      await nomineeVersion(old.w.p, old.dead, before(100));
+      await fileClaim(old.w.p, old.dead);
+      expect((await snapshot(old.w.p, old.dead)).recentChangeBeforeFiling).toBe(false);
+
+      const filingDay = await deceasedWithOldPosting();
+      await nomineeVersion(filingDay.w.p, filingDay.dead, before(-0.05));
+      await fileClaim(filingDay.w.p, filingDay.dead);
+      expect((await snapshot(filingDay.w.p, filingDay.dead)).recentChangeBeforeFiling).toBe(false);
+    });
+
+    it('exactly 90 days before the cut is INSIDE the window', async () => {
+      const { w, dead } = await deceasedWithOldPosting();
+      await nomineeVersion(w.p, dead, before(90));
+      await fileClaim(w.p, dead);
+      expect((await snapshot(w.p, dead)).recentChangeBeforeFiling).toBe(true);
     });
   });
 

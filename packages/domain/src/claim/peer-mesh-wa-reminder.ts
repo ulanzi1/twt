@@ -330,10 +330,12 @@ export async function beginPeerMeshWaReminder(
      * `choosePeerMeshWaReminderTemplate`.
      */
     readonly templates: Readonly<Record<PeerMeshWaReminderLocale, string | null>>;
+    /** Story 6.36d (ND4; AC6) — the deceased's nominee indexes, computed by the caller OUTSIDE any transaction. */
+    readonly nomineeMobileIndexes: readonly string[];
   },
 ): Promise<BeginPeerMeshWaReminderResult> {
   const db = bindScopedDb(client);
-  const { pariwarId, jobId, now, nameFault } = input;
+  const { pariwarId, jobId, now, nameFault, nomineeMobileIndexes } = input;
   const claimCaseId = String(input.claimCaseId).toLowerCase() as ClaimId;
   const pingId = String(input.pingId).toLowerCase() as PeerMeshPingId;
   const { claim, ping, reminder } = await lockClaimPingReminder(client, { pariwarId, claimCaseId, pingId });
@@ -373,11 +375,13 @@ export async function beginPeerMeshWaReminder(
   if ((await peerMeshReplyState(db, pariwarId, pingId)) === 'submitted') return finish('skipped_answered');
   // I5 / WR3 — the ONE opt-in read.
   if (!(await isPeerMeshWaReminderOptedIn(db, { pariwarId, memberId: ping.member_id as MemberId }))) return finish('skipped_not_opted_in');
-  // WR2 (ix) — a neighbour who has since died, left, or filed is ⛔ one of the five.
+  // WR2 (ix) — a neighbour who has since died, left, or filed is ⛔ one of the five; ⭐ Story 6.36d (`-386`) — nor is one who
+  // signs in with one of the deceased's nominee numbers (the shared predicate carries the conjunct).
   const eligibility = await readPeerMeshRequestEligibility(db, {
     pariwarId,
     memberId: ping.member_id as MemberId,
     deceasedMemberId: claim.deceasedMemberId,
+    nomineeMobileIndexes,
   });
   if (!eligibility.eligible) return finish('skipped_recipient_ineligible');
   // WR13 — a claim-wide name fault (an erasure since the text, …) ⇒ finished `no_target`.

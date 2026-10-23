@@ -63,6 +63,7 @@ import {
   isInPeerRequestSendWindow,
   nextPeerRequestSendWindowStart,
   readMemberFacingDeceasedName,
+  readPeerMeshNomineeIndexes,
 } from './claim-peer-mesh-requests.js';
 import { PEER_MESH_WA_REMINDER_LANGUAGE, PEER_MESH_WA_REMINDER_LOCALES, type PeerMeshWaReminderLocale } from './peer-mesh-wa-templates.js';
 import { resolveAppLinksOrigin } from './staff-email-config.js';
@@ -652,6 +653,9 @@ export async function runPeerMeshWaReminderChild(
   const nameRead = await readMemberFacingDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag, 'claim-peer-mesh-wa-reminder');
   const nameFault = 'fault' in nameRead ? nameRead.fault : null;
   const memberName = 'fault' in nameRead ? null : nameRead.name;
+  // (4b) ⭐ Story 6.36d (`2026-10-23-386` ND4; AC6) — the deceased's nominee indexes, ONCE, outside any transaction, by the
+  // selection's anchor cut: WR2 (ix)'s re-check carries the nominee conjunct (a fault ⇒ alarm + retry, ⛔ reminder begun).
+  const nomineeMobileIndexes = await readPeerMeshNomineeIndexes(deps, pariwarId, claimRow, tag, 'claim-peer-mesh-wa-reminder', 'reminder');
   const counts = { accepted: 0, mayHaveSent: 0, rejectedRecipient: 0, parked: 0, skipped: 0, noTarget: 0, passed: 0, transient: 0, waiting: 0, fallback: 0 };
   const templateNames = peerMeshWaReminderTemplateNames(config);
   const sendTimeoutMs = deps.sendTimeoutMs ?? CORRECTION_SEND_TIMEOUT_MS;
@@ -669,6 +673,7 @@ export async function runPeerMeshWaReminderChild(
         now: beginAt,
         nameFault,
         templates: templateNames,
+        nomineeMobileIndexes,
       }),
     );
     if (begun.kind === 'waiting_template') {

@@ -423,6 +423,24 @@ export function peerMeshPreviousWorkplaceCounts(run: PeerMeshPostingRun, filingD
 /** Who must ⛔ be asked, beyond the state / claim / identity rules — keyed on the DEATH (`2026-10-16-340` call 2, `-341`). */
 export interface PeerMeshEligibilityExclusions {
   readonly deceasedMemberId: MemberId;
+  /**
+   * ⭐ Story 6.36d (`2026-10-23-386` ND2 / ND4) — the deceased's nominee mobiles as recorded before the filing cut, hashed into
+   * the LOGIN blind-index space. REQUIRED — ⛔ optional, ⛔ defaulted: the value always comes from `peerMeshNomineeMobileIndexes`
+   * (tests may pass `[]`). An EMPTY list excludes nobody. ⛔ Stored, ⛔ logged.
+   */
+  readonly nomineeMobileIndexes: readonly string[];
+}
+
+/**
+ * ⭐ Story 6.36d (ND2) — `m` signs in with one of the deceased's nominee numbers: its identity row's login blind index is in
+ * `indexes`. The ONE fragment — the predicate uses it NEGATED, the send-time labeller (`is_nominee`) PLAIN, so the two cannot
+ * drift. `m` is the caller's `members` alias (⛔ a literal `m.` — the send-time alias is `pr_m`). An empty list renders
+ * `= ANY('{}'::text[])` — false, so ⛔ match (TR5: `sql.param`, ⛔ a bare array, which Drizzle expands into a parameter list).
+ */
+export function peerMeshNomineeMatchSql(m: SQL, indexes: readonly string[]): SQL {
+  return sql`EXISTS (SELECT 1 FROM member_identities pm_n
+                      WHERE pm_n.pariwar_id = ${m}.pariwar_id AND pm_n.member_id = ${m}.member_id
+                        AND pm_n.mobile_blind_index = ANY(${sql.param([...indexes])}::text[]))`;
 }
 
 /**
@@ -443,8 +461,12 @@ export interface PeerMeshEligibilityExclusions {
  *     carries (ICP (3b), a no-op), AND a filing on a channel that already has a PENDING attempt for this death (ICP (3c)
  *     reuses the first filer's row; the one-pending-per-channel index forbids a second). `-341`'s residual named only
  *     the first; the second is recorded in Story 6.36's fix-diff review.
+ *   · ⭐ Story 6.36d (`2026-10-23-386` ND1 / ND2) — ⛔ anyone who signs in with one of the deceased's NOMINEE numbers as
+ *     recorded before the filing cut (`x.nomineeMobileIndexes`, login blind-index space; {@link peerMeshNomineeMatchSql}).
+ *     A nominee who signed up on ANOTHER number is ⛔ found (ND8 — the data-model gap BigDev accepted).
  * ⚠ Recorded, ⛔ changed: a member under a moderation SUSPENSION stays eligible (6.27a F3); a relative is ⛔ excluded
- * (no family-link data — the deferred item stays open).
+ * (no family-link data — the deferred item stays open) — ⭐ 2026-10-23 (`-386`): NARROWED — a relative who is a declared
+ * nominee, matched by number, is now excluded; other relatives stay eligible.
  */
 export function peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusions): SQL {
   return sql`(${m}.state = 'active'
@@ -460,7 +482,8 @@ export function peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusio
           SELECT 1 FROM intake_attempts pm_ia
            WHERE pm_ia.pariwar_id = ${m}.pariwar_id
              AND pm_ia.deceased_member_id = ${x.deceasedMemberId}
-             AND pm_ia.claimant_actor_id = ${m}.member_id))`;
+             AND pm_ia.claimant_actor_id = ${m}.member_id)
+    AND NOT ${peerMeshNomineeMatchSql(m, x.nomineeMobileIndexes)})`;
 }
 
 // ── The snapshot reads (AC5) ───────────────────────────────────────────────────────────────────────────────────────────
@@ -470,6 +493,9 @@ export interface PeerMeshSnapshotInput {
   readonly deceasedMemberId: MemberId;
   readonly cut: PeerMeshFilingCut;
 }
+
+/** The input of the three readers that go through the predicate (Story 6.36d ND4 — the indexes REQUIRED). */
+export type PeerMeshEligibleSnapshotInput = PeerMeshSnapshotInput & { readonly nomineeMobileIndexes: readonly string[] };
 
 /** The workplace half of the snapshot. */
 export interface PeerMeshWorkplaceSnapshot {
@@ -504,13 +530,15 @@ function toPostingRow(r: PostingSqlRow): PeerMeshPostingRow {
   };
 }
 
+/** The deceased's OWN half of the workplace snapshot — everything but the colleagues (⛔ predicate). */
+export type PeerMeshDeceasedWorkplace = Omit<PeerMeshWorkplaceSnapshot, 'candidates'>;
+
 /**
- * The deceased's postings and the colleagues at their workplace(s), AS OF THE CUT (AC5; SW20–SW22). A candidate is in
- * `workplace_current` / `workplace_previous` when THEIR latest posting before the cut is a *workplace* row at that
- * workplace; `settled` = their run's EARLIEST row was RECORDED 90 days or more before the cut. The read is driven FROM
- * `member_postings` by `(pariwar_id, workplace_id)` (0163's index), then each candidate's postings before the cut.
+ * The deceased's postings AS OF THE CUT, reduced to the workplace record the selection persists (SW21). Reads the DECEASED's
+ * rows only — ⛔ the predicate, ⛔ a colleague. ⭐ Split out of {@link getPeerMeshWorkplaceSnapshot} by Story 6.36d (ND6): the
+ * select job's `nominee_check_unavailable` finish persists this record with ⛔ candidate.
  */
-export async function getPeerMeshWorkplaceSnapshot(db: Db, input: PeerMeshSnapshotInput): Promise<PeerMeshWorkplaceSnapshot> {
+export async function getPeerMeshDeceasedWorkplace(db: Db, input: PeerMeshSnapshotInput): Promise<PeerMeshDeceasedWorkplace> {
   const { pariwarId, deceasedMemberId, cut } = input;
   const own = await db.execute<PostingSqlRow>(sql`
     SELECT p.member_id, p.posting_id, p.workplace_id, p.workplace_request_id, p.is_retirement, p.started_on::text AS started_on, p.created_at
@@ -519,15 +547,29 @@ export async function getPeerMeshWorkplaceSnapshot(db: Db, input: PeerMeshSnapsh
      ORDER BY p.created_at DESC, p.posting_id DESC`);
   const run = derivePeerMeshPostingRun(own.rows.map(toPostingRow));
   const previousWorkplaceCounted = peerMeshPreviousWorkplaceCounts(run, cut.filingDate);
-  const current = run.currentWorkplaceId;
-  const previous = previousWorkplaceCounted ? run.previousWorkplaceId : null;
-  const result = {
-    currentWorkplaceId: current === null ? null : toWorkplaceId(current),
+  return {
+    currentWorkplaceId: run.currentWorkplaceId === null ? null : toWorkplaceId(run.currentWorkplaceId),
     previousWorkplaceId: run.previousWorkplaceId === null ? null : toWorkplaceId(run.previousWorkplaceId),
     previousWorkplaceCounted,
     deceasedLatestPostingAt: run.latestRecordedAt,
   };
-  const workplaces = [current, previous].filter((w): w is string => w !== null);
+}
+
+/**
+ * The deceased's postings and the colleagues at their workplace(s), AS OF THE CUT (AC5; SW20–SW22). A candidate is in
+ * `workplace_current` / `workplace_previous` when THEIR latest posting before the cut is a *workplace* row at that
+ * workplace; `settled` = their run's EARLIEST row was RECORDED 90 days or more before the cut. The read is driven FROM
+ * `member_postings` by `(pariwar_id, workplace_id)` (0163's index), then each candidate's postings before the cut.
+ */
+export async function getPeerMeshWorkplaceSnapshot(
+  db: Db,
+  input: PeerMeshEligibleSnapshotInput,
+): Promise<PeerMeshWorkplaceSnapshot> {
+  const { pariwarId, deceasedMemberId, cut, nomineeMobileIndexes } = input;
+  const result = await getPeerMeshDeceasedWorkplace(db, input);
+  const current = result.currentWorkplaceId;
+  const previous = result.previousWorkplaceCounted ? result.previousWorkplaceId : null;
+  const workplaces = [current, previous].filter((w): w is WorkplaceId => w !== null);
   if (workplaces.length === 0) return { ...result, candidates: [] };
 
   const rows = await db.execute<PostingSqlRow>(sql`
@@ -541,7 +583,7 @@ export async function getPeerMeshWorkplaceSnapshot(db: Db, input: PeerMeshSnapsh
               WHERE w.pariwar_id = ${pariwarId}
                 AND w.workplace_id IN (${sql.join(workplaces.map((w) => sql`${w}::uuid`), sql`, `)})
                 AND w.created_at < ${cut.cut})
-       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId })}
+       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId, nomineeMobileIndexes })}
      ORDER BY p.member_id, p.created_at DESC, p.posting_id DESC`);
 
   const byMember = new Map<string, PeerMeshPostingRow[]>();
@@ -576,7 +618,7 @@ export async function getPeerMeshWorkplaceSnapshot(db: Db, input: PeerMeshSnapsh
  * `responded_at`). A `withdrawn` link ⛔ never counts, whenever it ended (read per link); `declined` / `lapsed` never;
  * an `asked → removed | erased` link has `responded_at` NULL ⇒ ⛔. Through SW23. ≤ 3 by construction (6.36b's backstop).
  */
-export async function getPeerMeshNamedSnapshot(db: Db, input: PeerMeshSnapshotInput): Promise<MemberId[]> {
+export async function getPeerMeshNamedSnapshot(db: Db, input: PeerMeshEligibleSnapshotInput): Promise<MemberId[]> {
   const r = await db.execute<{ named_member_id: string }>(sql`
     SELECT DISTINCT k.named_member_id
       FROM member_known_people k
@@ -586,7 +628,7 @@ export async function getPeerMeshNamedSnapshot(db: Db, input: PeerMeshSnapshotIn
        AND k.responded_at < ${input.cut.cut}
        AND k.state IN ('accepted', 'removed', 'erased')
        AND (k.state = 'accepted' OR k.ended_at >= ${input.cut.cut})
-       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId: input.deceasedMemberId })}
+       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId: input.deceasedMemberId, nomineeMobileIndexes: input.nomineeMobileIndexes })}
      ORDER BY k.named_member_id`);
   return r.rows.map((x) => toMemberId(x.named_member_id));
 }
@@ -615,6 +657,44 @@ export async function getPeerMeshNamedChangeBeforeFiling(db: Db, input: PeerMesh
   return r.rows[0]?.changed === true;
 }
 
+/**
+ * ⭐ Story 6.36d (ND7; `2026-10-23-384` Q2 A — *"Yes — warn staff about nominee changes too."*): `true` when any version of the
+ * deceased's nominee declaration was RECORDED in [cut − 90 days, cut). ⛔ Decrypt, ⛔ predicate. ANY version counts — a re-save
+ * that changed nothing, a sign-up declaration — because versions are ⛔ deduplicated (`declaration-history.ts` T3): the line
+ * over-reports, ⛔ under-reports (the cost Q2 A accepted).
+ */
+export async function getPeerMeshNomineeChangeBeforeFiling(db: Db, input: PeerMeshSnapshotInput): Promise<boolean> {
+  const { cut } = input;
+  const r = await db.execute<{ changed: boolean }>(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM member_nominee_versions v
+       WHERE v.pariwar_id = ${input.pariwarId}
+         AND v.member_id = ${input.deceasedMemberId}
+         AND v.recorded_at >= ${cut.recentFrom} AND v.recorded_at < ${cut.cut}
+    ) AS changed`);
+  return r.rows[0]?.changed === true;
+}
+
+/**
+ * The staff line (`recent_change_before_filing`; SW20 (ii), `-331` SC1 A, extended by `-384` Q2 A): the deceased's latest
+ * posting recorded in [cut − 90 days, cut), OR a named-people change ({@link getPeerMeshNamedChangeBeforeFiling}), OR a
+ * nominee version ({@link getPeerMeshNomineeChangeBeforeFiling}). ⛔ Predicate — the ND6 finish reads it too.
+ */
+export async function getPeerMeshRecentChangeBeforeFiling(
+  db: Db,
+  input: PeerMeshSnapshotInput,
+  deceasedLatestPostingAt: Date | null,
+): Promise<boolean> {
+  const latest = deceasedLatestPostingAt;
+  const postingChanged =
+    latest !== null && latest.getTime() >= input.cut.recentFrom.getTime() && latest.getTime() < input.cut.cut.getTime();
+  return (
+    postingChanged ||
+    (await getPeerMeshNamedChangeBeforeFiling(db, input)) ||
+    (await getPeerMeshNomineeChangeBeforeFiling(db, input))
+  );
+}
+
 /** Everything `workplace_named_v1` reads for one claim (the job persists all of it). */
 export interface PeerMeshGroupedSnapshot {
   readonly workplace: PeerMeshWorkplaceSnapshot;
@@ -628,7 +708,10 @@ export interface PeerMeshGroupedSnapshot {
  * named group is read only when the workplace group is empty, so the replay is unchanged, and the engine's duplicate
  * throw stays reserved for a real join defect.
  */
-export async function getPeerMeshGroupedSnapshot(db: Db, input: PeerMeshSnapshotInput): Promise<PeerMeshGroupedSnapshot> {
+export async function getPeerMeshGroupedSnapshot(
+  db: Db,
+  input: PeerMeshEligibleSnapshotInput,
+): Promise<PeerMeshGroupedSnapshot> {
   const workplace = await getPeerMeshWorkplaceSnapshot(db, input);
   const named = await getPeerMeshNamedSnapshot(db, input);
   const colleagues = new Set<string>(workplace.candidates.map((c) => c.memberId));
@@ -636,9 +719,6 @@ export async function getPeerMeshGroupedSnapshot(db: Db, input: PeerMeshSnapshot
     ...workplace.candidates,
     ...named.filter((m) => !colleagues.has(m)).map((memberId) => ({ memberId, group: 'named' as const, settled: false })),
   ];
-  const latest = workplace.deceasedLatestPostingAt;
-  const postingChanged =
-    latest !== null && latest.getTime() >= input.cut.recentFrom.getTime() && latest.getTime() < input.cut.cut.getTime();
-  const recentChangeBeforeFiling = postingChanged || (await getPeerMeshNamedChangeBeforeFiling(db, input));
+  const recentChangeBeforeFiling = await getPeerMeshRecentChangeBeforeFiling(db, input, workplace.deceasedLatestPostingAt);
   return { workplace, candidates, recentChangeBeforeFiling };
 }

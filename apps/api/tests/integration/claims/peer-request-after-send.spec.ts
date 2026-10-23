@@ -105,6 +105,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the member surface after a send (
         now: new Date(),
         nameFault: null,
         unusableLocales: [],
+        nomineeMobileIndexes: [], // Story 6.36d — the deceased declared ⛔ nominee here
       }),
     );
     expect(begun.kind).toBe('begun');

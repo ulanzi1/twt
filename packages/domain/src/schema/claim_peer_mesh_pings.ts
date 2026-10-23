@@ -62,12 +62,15 @@ export type PeerMeshLocaleSource = (typeof PEER_MESH_LOCALE_SOURCES)[number];
  * Story 6.27c (R3 / R4) — why a NEIGHBOUR could ⛔ be texted (the `no_target:<reason>` a skipped ping records). These — and ONLY
  * these — are REPLACED by the next eligible person of the same group (`-311` PM1 (ii)). ⚠ LOCKSTEP with 0166's
  * `claim_peer_mesh_pings_replacement_guard` and its grammar CHECKs (a spec iterates this array). ⚠ The District Admin sees the
- * code verbatim (the console's `noTargetReason`) — ⛔ a name, number or id in one.
+ * code verbatim (the console's `noTargetReason`) — ⛔ a name, number or id in one. ⭐ Story 6.36d: `peer_is_nominee` added — 0180
+ * widens 0166's CHECKs and the replacement guard's list (LOCKSTEP moved there).
  */
 export const PEER_MESH_REQUEST_REPLACEABLE_REASONS = [
   'peer_not_active',
   'peer_reported_deceased',
   'peer_filed_for_this_death',
+  // ⭐ Story 6.36d (`2026-10-23-386` ND5 (a)) — the neighbour signs in with one of the deceased's nominee numbers (0180).
+  'peer_is_nominee',
   'peer_not_eligible',
   'no_sendable_number',
 ] as const;
@@ -87,12 +90,12 @@ export type PeerMeshRequestNameReason = (typeof PEER_MESH_REQUEST_NAME_REASONS)[
 /**
  * ⭐ Story 6.27c (PM4 [c]) — the GRAMMAR of `detail` / `first_detail`: every value `peerMeshRequestDetail` builds, ⛔ anything else
  * (⛔ a space, ⛔ `+`, ⛔ a run of 7+ digits anywhere — a bare phone number). A gateway `<code>` is `[A-Za-z0-9_.-]{1,64}` (sanitised
- * by the builder). ⚠ LOCKSTEP with 0166's two `*_vocabulary_check` CHECKs (a spec pins the catalog's pattern to this string) and
+ * by the builder). ⚠ LOCKSTEP with 0166's two `*_vocabulary_check` CHECKs (re-added from this string by 0180 — Story 6.36d) (a spec pins the catalog's pattern to this string) and
  * asserted by the writers (`claim/peer-mesh-request.ts`). ⛔ Backslashes — the same string reads the same in a JS `RegExp` and a PG
  * ARE.
  */
 export const PEER_MESH_REQUEST_DETAIL_PATTERN =
-  '^(?!.*[0-9]{7})(no_target:(peer_not_active|peer_reported_deceased|peer_filed_for_this_death|peer_not_eligible|no_sendable_number|name_too_long|name_none|name_erased|name_unresolvable)|superseded:claim_decided|exhausted:(attempting_three_days|recheck_(claim_decided|peer_ineligible))|decrypt_failed:tier1|hash_failed:tier1|config_unavailable:secret_manager|config:(dlt_template_id_missing|helpline_number_missing|sms_gateway_unconfigured|sms_messaging_unavailable|secret_manager_[A-Za-z0-9_]{1,64})|(invalid_number|carrier_reject|rate_limited|api_unavailable|dlt_template_not_approved|auth|unknown):[A-Za-z0-9_.-]{1,64})$';
+  '^(?!.*[0-9]{7})(no_target:(peer_not_active|peer_reported_deceased|peer_filed_for_this_death|peer_is_nominee|peer_not_eligible|no_sendable_number|name_too_long|name_none|name_erased|name_unresolvable)|superseded:claim_decided|exhausted:(attempting_three_days|recheck_(claim_decided|peer_ineligible))|decrypt_failed:tier1|hash_failed:tier1|config_unavailable:secret_manager|config:(dlt_template_id_missing|helpline_number_missing|sms_gateway_unconfigured|sms_messaging_unavailable|secret_manager_[A-Za-z0-9_]{1,64})|(invalid_number|carrier_reject|rate_limited|api_unavailable|dlt_template_not_approved|auth|unknown):[A-Za-z0-9_.-]{1,64})$';
 
 export const claimPeerMeshPings = pgTable(
   'claim_peer_mesh_pings',

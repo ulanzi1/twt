@@ -56,7 +56,7 @@ validate findings (Change Log).
 
 # Story 6.36e: A Member May Mark a Nominee Who Is Also a Member — Found From Their Own Contacts, Told in the App — So That Nominee Is Never Among the Five, Even if They Sign In on a Different Number From the One Declared `[PRIMITIVE]` `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > ✅ **v1.4 (2026-10-24): Task 0.4 DONE — AC0 MET. ⭐ Next: Task 1 (the table).**
 >

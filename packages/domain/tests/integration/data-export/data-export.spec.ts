@@ -153,6 +153,15 @@ describe.skipIf(!hasDatabase)('data_exports store + assemble — RLS + cascade +
     const profile = sections['profile.json'] as { kyc: { name: string; dob: string } | null };
     expect(profile.kyc?.name).toBe(name);
     expect(profile.kyc?.dob).toBe(dob);
+    // Story 6.35 (LS12 (a)) — a member who never chose a language: `null` (⛔ the Pariwar's default inferred).
+    expect((sections['profile.json'] as { preferredLanguage: string | null }).preferredLanguage).toBeNull();
+
+    // …and once they chose one, their choice.
+    await client.query('RESET ROLE');
+    await client.query(`UPDATE members SET preferred_locale = 'en', preferred_locale_set_at = now() WHERE member_id = $1`, [mid]);
+    await enterAppScope(client, PARIWAR_A);
+    const chosen = await assembleMemberExport(tx, { kms, kekRef }, { exportId: randomUUID(), memberId, pariwarId: PARIWAR_A, now: NOW });
+    expect((chosen['profile.json'] as { preferredLanguage: string | null }).preferredLanguage).toBe('en');
 
     // Manifest names all seven files + the schema version.
     const manifest = sections['manifest.json'] as { files: string[]; schemaVersion: number };

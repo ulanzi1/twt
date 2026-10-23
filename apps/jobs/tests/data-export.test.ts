@@ -134,6 +134,9 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
         'payment_receipts.json',
         'profile.json',
       ]);
+      // Story 6.35 (LS12 (a)) — the strict-parsed profile carries the member's chosen language (`null` ⇒ never chose).
+      const profile = JSON.parse(await zip.file('profile.json')!.async('string')) as { preferredLanguage: unknown };
+      expect(profile.preferredLanguage).toBeNull();
     } finally {
       await cleanup(memberId);
     }

@@ -127,6 +127,8 @@ export const ProfileSection = z
     pariwarId: z.string(),
     state: z.string().nullable(),
     lockInDaysAtJoin: z.number().int().nullable(),
+    /** Story 6.35 (LS12 (a)) — the app language the member CHOSE (`members.preferred_locale`); `null` ⇒ never chosen. */
+    preferredLanguage: z.enum(['hi', 'en']).nullable(),
     createdAt: Iso8601Datetime.nullable(),
     identity: z.object({ mobile: z.string() }).strict().nullable(),
     kyc: z

@@ -415,6 +415,8 @@ export async function assembleMemberExport(
     pariwarId,
     state: memberRow?.state ?? null,
     lockInDaysAtJoin: memberRow?.lockInDaysAtJoin ?? null,
+    // Story 6.35 (LS12 (a)) — a choice the Trust keeps about the member is the member's data.
+    preferredLanguage: memberRow?.preferredLocale ?? null,
     createdAt: memberRow?.createdAt.toISOString() ?? null,
     identity: mobile !== null ? { mobile } : null,
     kyc,

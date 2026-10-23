@@ -140,9 +140,11 @@ export interface ClaimOcrParityDeps {
    * Story 6.6 trigger seam: enqueue the peer-mesh SELECT job after the claim reaches
    * `documents_pending` (the "auto-ping 5 nearest" trigger, epics.md:2260). Optional — when
    * unset (e.g. the OCR-only unit/integration tests) no peer-mesh job is enqueued. Wired in
-   * boot.ts to `boss.send(CLAIM_PEER_MESH_SELECT, …, { singletonKey: claim_case_id })` so a
-   * re-run of the OCR job does not double-select. Best-effort: a failure here NEVER fails the
-   * OCR job (the document row + documents_received event already committed).
+   * boot.ts to `enqueueClaimPeerMeshSelect` (claim-peer-mesh.ts — the select job's retry policy,
+   * Story 6.36d ND6); a re-run of the OCR job enqueues another select job, which the select job's
+   * idempotency probe turns into a no-op (the queue is standard-policy, so the `singletonKey` is
+   * inert). Best-effort: a failure here NEVER fails the OCR job (the document row +
+   * documents_received event already committed).
    */
   readonly enqueuePeerMeshSelect?: (input: {
     claimCaseId: string;

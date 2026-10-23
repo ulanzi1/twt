@@ -140,7 +140,8 @@ export const CLAIM_PEER_MESH_SELECT_RETRY = {
  * ND6 (a) — about the longest a select job's own retry chain takes: `CLAIM_PEER_MESH_SELECT_RETRY`'s backoff is pg-boss's EQUAL jitter
  * (each delay is 1×–2× of 60 s × 2^c), so 60 s × (2 + 4 + 8 + 16) = 15–30 min in all, plus 5 min of slack. An attempt that HANGS (a KMS
  * call) stretches the chain toward pg-boss's 15 min expiry — the clamp then errs toward DEFERRING (a later first-failure instant), ⛔ toward
- * finishing early. A jobs-worker outage therefore restarts the 24 h window — deliberate: the claim waits, it is ⛔ abandoned.
+ * finishing early. On the FIRST chain a jobs-worker outage therefore restarts the 24 h window — deliberate: the claim waits, it is ⛔
+ * abandoned. A carried `nomineeCheckFailingSince` is ⛔ clamped (ND6: 24 h after the FIRST failure), so an outage after a deferral counts.
  */
 export const PEER_MESH_NOMINEE_CHECK_RETRY_SPAN_MS = 35 * 60 * 1000;
 
@@ -416,7 +417,8 @@ export async function runClaimPeerMeshSelect(
         return { claimCaseId: p.claimCaseId, created: false, selectedCount: 0, nomineeCheck: 'deferred' };
       }
       // ND6 (a) FINISH — 24 h of failures: the locked transaction below writes an EMPTY selection (⛔ candidate, ⛔ one asked).
-      alarm(`[jobs] claim-peer-mesh-select: peer_mesh_nominee_exclusion failed for claim ${p.claimCaseId} in Pariwar ${pariwarId} for 24 h — finishing with ⛔ one asked (nominee_check_unavailable)`);
+      // This alarm names the ATTEMPT — the transaction can still no-op or throw; the post-commit alarm names the outcome.
+      alarm(`[jobs] claim-peer-mesh-select: peer_mesh_nominee_exclusion failed for claim ${p.claimCaseId} in Pariwar ${pariwarId} for 24 h — attempting the empty selection (nominee_check_unavailable)`);
       nomineeCheckUnavailable = true;
     }
   }

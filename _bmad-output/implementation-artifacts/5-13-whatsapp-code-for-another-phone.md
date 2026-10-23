@@ -489,6 +489,7 @@ channel preference is confirmed.
   homes keep a one-line RE-EXPORT (`apps/jobs/src/scheduler/wa-template-config-key.ts`; `TEMPLATE_NAME_FORM` from
   `claim-peer-mesh-wa-reminders.ts`) so the four importers (F13) and their tests stay byte-unchanged (⛔ pinned — F14); add purpose
   `'wa_opt_in.code'`. Language code `hi` / `en` exactly (the app is always Hindi — [[project_mobile_app_no_language_switch]]). ⛔ resolvable
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 6.3; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* "the app is always Hindi" is stale once row 6-35 is `done` on `main` (the member can pick English); the 5.13 code template still does ⛔ read the choice — the LS11 deferred item. Kept as written.
   name, ⛔ complete config, a token that will not resolve, or a decrypt that fails ⇒ 503 `wa_opt_in.code_unavailable` — ⛔ a log stand-in
   that reports `accepted` (the 5.10 F7b class, I6). ⭐ **The mint tells the app beforehand:** `CreateWaOptInResponse` gains
   `codeAvailable: boolean`, `codesRemaining: 0 | 1 | 2`, `liveCode: boolean` and `liveCodeDelivery: 'sent' | 'uncertain' | null` (the

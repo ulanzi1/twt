@@ -58,7 +58,7 @@ S = Task 0.1 STOP conditions. Decision-entry letters (PM, WR, CF, R, W …) keep
 
 # Story 6.35: The Member Chooses Hindi or English in the App — Saved on the Phone, Recorded on the Server Only When They Change It, and the Neighbours' Text and Its WhatsApp Reminder Then Follow Their Choice `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The member app always shows Hindi: `LocaleProvider` is in-memory state mounted with ⛔
 > initial locale, and ⛔ control anywhere calls `setLocale` (F1). The Panel ruled that the neighbours' text goes in each member's
@@ -838,33 +838,33 @@ reminder template is unusable gets the reminder in their Pariwar's language — 
     story `:176-179` (*"The mobile app always renders `hi`"*) and its TR8 `:704` (*"The en strings are unreachable on mobile until row
     6-35's language switch lands"*); the ledger (the next free letter at the commit — ≥ `2026-10-23o` (v1.4 `k`, v1.5 `l`, 6-36d `m`, v1.6 `n`), or the day's own key; re-grep `main`, every
     branch and worktree). (The 6-35 sprint-row comment was already annotated at creation — ⛔ again.)
-- [ ] **Task 1 — Schema + the one read (AC1, AC3; LS1, LS8, LS9)**
-  - [ ] 1.1 The migration (F16; T1) + journal; `schema/members.ts` (+ dated comment), `schema/claim_peer_mesh_pings.ts` (`locale`
+- [x] **Task 1 — Schema + the one read (AC1, AC3; LS1, LS8, LS9)**
+  - [x] 1.1 The migration (F16; T1) + journal; `schema/members.ts` (+ dated comment), `schema/claim_peer_mesh_pings.ts` (`locale`
     column; `PEER_MESH_LOCALE_SOURCES` widened), `schema/claim_peer_mesh_wa_reminders.ts` (its type imports `PeerMeshLocaleSource`,
     which widens to two values automatically — ⚠ the reminder needs its OWN `PEER_MESH_WA_REMINDER_LOCALE_SOURCES = [...PEER_MESH_LOCALE_SOURCES,
     'pariwar_fallback']` + type, LOCKSTEP with its CHECK, `-385`; the column's `$type<PeerMeshLocaleSource>()` at
     `schema/claim_peer_mesh_wa_reminders.ts:89` moves to the new type). `db:migrate` on :5433; `psql -f` twice.
-  - [ ] 1.2 Domain setter/reader for the member choice — `packages/domain/src/member/preferred-locale.ts`
+  - [x] 1.2 Domain setter/reader for the member choice — `packages/domain/src/member/preferred-locale.ts`
     (`getMemberLanguage(db, { pariwarId, memberId })` ⇒ `{ chosenLocale, pariwarDefaultLocale }`, `setMemberLanguage(db, {…, locale })`
     ⇒ `{ changed: boolean, … }` — `UPDATE … SET preferred_locale = $l, preferred_locale_set_at = now(), updated_at = now() WHERE
     member_id = $m AND pariwar_id = $p AND preferred_locale IS DISTINCT FROM $l RETURNING` (the `custom-fields/member-write.ts:117-121`
     precedent); ⛔ opens a transaction — the caller's scoped `Db`); export via the `member` barrel (`member/index.ts`).
-  - [ ] 1.3 `resolvePeerRequestLocale` per LS8 (explicit predicates; called after step ③); `resolvePariwarDefaultLocale`; `beginFresh` /
+  - [x] 1.3 `resolvePeerRequestLocale` per LS8 (explicit predicates; called after step ③); `resolvePariwarDefaultLocale`; `beginFresh` /
     the re-claim per LS9 (thread `locale` + `source`; a `locale IS NULL` re-claim writes the Pariwar default; return `locale` in `begun`);
     keep `PeerRequestLocaleMissingError`.
-  - [ ] 1.4 Legs (:5433): AC3's resolver (cross-tenant on the jobs handle) and re-claim legs; the freeze, written-once and R15 guard
+  - [x] 1.4 Legs (:5433): AC3's resolver (cross-tenant on the jobs handle) and re-claim legs; the freeze, written-once and R15 guard
     legs; FLIP F14's two specs (dated comments); move `peer-mesh-request.spec.ts:558-559` to the new signature; the setter's `changed` legs.
-- [ ] **Task 2 — The API (AC2; LS2)**
-  - [ ] 2.1 Contracts `member-language/language.ts` + index export + lockstep test (T6).
-  - [ ] 2.2 `apps/api/src/modules/member-language/{routes,handlers}.ts` (the Life Events shape, F10 — with the module's own rate-limit
+- [x] **Task 2 — The API (AC2; LS2)**
+  - [x] 2.1 Contracts `member-language/language.ts` + index export + lockstep test (T6).
+  - [x] 2.2 `apps/api/src/modules/member-language/{routes,handlers}.ts` (the Life Events shape, F10 — with the module's own rate-limit
     const and the audit AFTER commit, LS2) registered where the other member modules are; `'member.language_changed'` added to
     `audit-sink.ts`'s union; domain errors mapped (or a 500 — T7).
-  - [ ] 2.3 `emit-openapi.ts` paths → `pnpm contracts:emit-openapi`; commit `openapi/v1.yaml` (after the rebase — 3.3c changed it).
-  - [ ] 2.4 `packages/api-client`: `memberLanguage()`, `memberLanguageSet(locale)` on the member client (the `member*` naming
+  - [x] 2.3 `emit-openapi.ts` paths → `pnpm contracts:emit-openapi`; commit `openapi/v1.yaml` (after the rebase — 3.3c changed it).
+  - [x] 2.4 `packages/api-client`: `memberLanguage()`, `memberLanguageSet(locale)` on the member client (the `member*` naming
     convention); 8-15 edits a doc comment in the same file (`:575-583`).
-  - [ ] 2.5 AC2's integration legs (`apps/api/tests/integration/member-language/member-language.spec.ts`).
-- [ ] **Task 3 — The senders (AC4, AC5; LS9, LS10)**
-  - [ ] 3.1 TEXT per LS10 (b)'s T-states: compute the run's global `unusableLocales` once (T1 / T2 / TX per locale; TX on the Pariwar's
+  - [x] 2.5 AC2's integration legs (`apps/api/tests/integration/member-language/member-language.spec.ts`).
+- [x] **Task 3 — The senders (AC4, AC5; LS9, LS10)**
+  - [x] 3.1 TEXT per LS10 (b)'s T-states: compute the run's global `unusableLocales` once (T1 / T2 / TX per locale; TX on the Pariwar's
     OWN default locale's key and both-unusable ⇒ hold as today); `listDuePeerMeshRequestClaims` gains `unusableLocales` and excludes
     waiting NULL pings (NULL-safe, explicit `pariwar_id` predicates) AND, in its `attempting` arm, unusable-locale rows while the claim is
     in the window; the park gains its locale arm over EVERY stalled scope, held or not (F25); `beginPeerMeshRequest` returns
@@ -873,7 +873,7 @@ reminder template is unusable gets the reminder in their Pariwar's language — 
     for the alarm, which lists waiting locales with counts. `claim-peer-mesh-requests.ts`: ⛔ `locale` in `PariwarSendConfig`; the child
     takes `locale` from each `begun` result (`:715-721`); update the header lines `:4`, `:10-11`, `:14`, `:39-42` (the sweep's "(1)/(2)")
     that say "the Pariwar's language" (dated).
-  - [ ] 3.2 `peer-mesh-wa-reminder.ts` + `claim-peer-mesh-wa-reminders.ts` (F13): `peerMeshWaReminderConfig` resolves BOTH template
+  - [x] 3.2 `peer-mesh-wa-reminder.ts` + `claim-peer-mesh-wa-reminders.ts` (F13): `peerMeshWaReminderConfig` resolves BOTH template
     names (`templates: Record<'hi'|'en', { name: string } | { gap: string }>` — the gap keeps missing / invalid / unreadable apart for
     the alarm's state code; both gaps ⇒ hold as today; a TX on the DEFAULT's key ⇒ hold as today, on the OTHER key ⇒ that locale a gap
     (LS10 TX row); ⛔ recipient `locale` / `localeSource` in the config — the config carries `pariwarDefaultLocale`
@@ -887,35 +887,35 @@ reminder template is unusable gets the reminder in their Pariwar's language — 
     `config:*` detail (F26); the child counts `waiting` and `fallback` explicitly; `beginPeerMeshWaReminder`'s input `template` → `templates`; the begin calls `resolvePeerRequestLocale(db, { pariwarId,
     memberId: ping.member_id })` after the eligibility read, writes `template_name` / `locale` / `locale_source` of THAT locale (INSERT
     `:354-360`, re-claim `:368-375`), and returns `locale`, `localeSource`, `templateName` in `begun`; the send (`:669-675`) uses `begun.*`.
-  - [ ] 3.3 FLIP `apps/jobs/tests/claim-peer-mesh-wa-reminders.test.ts:73-77` (dated); FLIP the English-Pariwar half of
+  - [x] 3.3 FLIP `apps/jobs/tests/claim-peer-mesh-wa-reminders.test.ts:73-77` (dated); FLIP the English-Pariwar half of
     `claim-peer-mesh-requests-live.test.ts:954` (dated — an `en` Pariwar's Hindi-chooser is now sent); update the reminder begin callers in
     `packages/domain/tests/integration/claim/peer-mesh-wa-reminder.spec.ts` and `…-concurrency.spec.ts`; AC4 / AC5 legs; every existing
     6.27c / 6.31 leg green with fixtures provisioning BOTH locales (T3).
-- [ ] **Task 4 — The app (AC6–AC9, AC15; LS3–LS7, LS13, LS15)**
-  - [ ] 4.1 `lib/app-language.ts` (LS3, LS5) with injectable storage + client; `_layout.tsx` `initialLocale` (+ its `:88-92` comment).
-  - [ ] 4.2 `session-context.tsx`: ONE effect keyed on `session?.memberId` calls `syncAppLanguage` (sign-in and start); ⛔ touch any of
+- [x] **Task 4 — The app (AC6–AC9, AC15; LS3–LS7, LS13, LS15)**
+  - [x] 4.1 `lib/app-language.ts` (LS3, LS5) with injectable storage + client; `_layout.tsx` `initialLocale` (+ its `:88-92` comment).
+  - [x] 4.2 `session-context.tsx`: ONE effect keyed on `session?.memberId` calls `syncAppLanguage` (sign-in and start); ⛔ touch any of
     the three clear paths (LS3 keeps the keys) — a dated comment saying so. ONE new app-level `AppState` → `active` listener for the
     resync (the four screen-scoped listeners stay as they are), reading the current `memberId` from a ref (⛔ a stale closure); the
     serial single-flight PUT and the choice counter live in `lib/app-language.ts` (LS5).
-  - [ ] 4.3 `app/(settings)/language.tsx` (with its `Stack.Screen` title), `components/settings/LanguageSettingsEntry.tsx`, the home-tab
+  - [x] 4.3 `app/(settings)/language.tsx` (with its `Stack.Screen` title), `components/settings/LanguageSettingsEntry.tsx`, the home-tab
     mount, the login switch; `(settings)/_layout.tsx` comment; enrol the new / edited files in `microcopy.yaml` `code_globs` (AC10).
-  - [ ] 4.4 Copy (AC10); the three F20 CODE comments corrected (`code-delivery.ts:40`, `moderation-notify.ts:310`,
+  - [x] 4.4 Copy (AC10); the three F20 CODE comments corrected (`code-delivery.ts:40`, `moderation-notify.ts:310`,
     `contribution-notify-triggers.ts:236`); `(tabs)/_layout.tsx:24-26` KEPT (it anticipates the switch).
-  - [ ] 4.5 Legs: AC6–AC9 (`tests/unit/app-language.test.ts`, `language-screen-render.test.ts`, `language-copy-keys.test.ts`, a login
+  - [x] 4.5 Legs: AC6–AC9 (`tests/unit/app-language.test.ts`, `language-screen-render.test.ts`, `language-copy-keys.test.ts`, a login
     render leg, the three-clear-paths source scan); a route source test — `LanguageSettingsEntry` holds `'/(settings)/language'` and
     `app/(settings)/language.tsx` exists (the `wa-signup-step-render` PREV/NEXT shape; `tsc` accepts any two-segment `Href` —
     [[project_mobile_typed_routes_worktree]]), proven RED.
-  - [ ] 4.6 LS15 per the answer (AC15).
-- [ ] **Task 5 — The export (AC11; LS12)** per the answer.
-- [ ] **Task 6 — Close (AC12, AC14)**
-  - [ ] 6.1 AC12's diff statement in the Debug Log.
-  - [ ] 6.2 `ci:local` on :5433 (AC14); every new leg shown RED against the pre-change code (AC3 re-claim, AC4 split, AC5 per-recipient,
+  - [x] 4.6 LS15 per the answer (AC15).
+- [x] **Task 5 — The export (AC11; LS12)** per the answer.
+- [x] **Task 6 — Close (AC12, AC14)**
+  - [x] 6.1 AC12's diff statement in the Debug Log.
+  - [x] 6.2 `ci:local` on :5433 (AC14); every new leg shown RED against the pre-change code (AC3 re-claim, AC4 split, AC5 per-recipient,
     AC7 switch, AC9) — say so in the Debug Log.
-  - [ ] 6.3 Records that become stale on `done`: 5-10 F15, 6.30's *"always renders Hindi"*, 6.27 PM22 RECORDED line, 6.27c `:35` and
+  - [x] 6.3 Records that become stale on `done`: 5-10 F15, 6.30's *"always renders Hindi"*, 6.27 PM22 RECORDED line, 6.27c `:35` and
     `:731-732`, 5-13 `:491`, `-310`'s reading — dated notes, ⛔ edits; the memory `project_mobile_app_no_language_switch` updated (it will
     be FALSE — incl. its *"The server has no member language preference either"*; also drop its stale *"Panel confirm CF1 owed"* — ruled
     by `-310`) AND its `MEMORY.md` index line (*"always Hindi; row 6-35 adds one"*).
-  - [ ] 6.4 Story Status → `review`; sprint row → `review`; ledger.
+  - [x] 6.4 Story Status → `review`; sprint row → `review`; ledger.
 
 ## Dev Notes
 
@@ -1100,9 +1100,111 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.35`, 2026-10-23.
   6.27c R10 / R11 / Review Defer W8, 6.31 WR7 / WR14, 6.37 AC9, 3-3c G7 (*"always renders `hi`"*) and TR8, the DLT sheet's hold rule and
   language line; the sprint row → `in-progress`; ledger `2026-10-23p` (`o` was taken by 6-36d during this pass). LS12 (a) taken ⇒ ⛔ LS12 (b) item; LS14 (b) ⇒ ⛔ roster row.
 
+**(b) Task 1 — schema + the one read (`c07f64ae`).** Migration `0179_member-preferred-locale` (0179 was free on every branch and
+worktree at its commit; 6-36d later renumbered its own to 0180 — `-366` decision 6); `psql -f` twice green on :5433; `db:migrate` +
+`db:check` green. One addition beyond LS1's text, recorded: a `members_preferred_locale_set_at_check` (the two columns set together or
+neither — the setter's one UPDATE writes both). The guard function's body diffed against 0166's: ONLY `'locale'` added to
+`delivery_cols` and the written-once arm. Legs: the resolver (incl. AC3's cross-Pariwar leg on the superuser handle — T13), fresh /
+re-claim (I5) / pre-6.35 NULL re-claim / `skipped_superseded` legs, the freeze + written-once + R15 + CHECK legs; F14's pins FLIPPED
+with dated comments; the setter's changed / no-write (a BACKDATED `set_at` — T11 inside one transaction) / missing / cross-tenant /
+CHECK legs.
+
+**(c) Task 2 — the API (`0cb287d0`).** RED: the audit moved BEFORE the commit ⇒ exactly the forced-COMMIT-failure leg fails (5 / 6
+pass). `openapi/v1.yaml` re-emitted: the diff beyond the two paths is YAML anchor renumbering (the shared `hi`/`en` enum adds one
+anchor) — deterministic (`contracts:check-openapi-determinism` green).
+
+**(d) Task 3 — the senders (`1c64d4f5`).** S6 as found: the text park is an `UPDATE … FROM` (the target cannot be LEFT JOINed) ⇒ its
+locale arm is a correlated passport read keyed by the row's own `pariwar_id` — ⛔ new column or detail value. With BOTH text locales
+unusable the listing's filter is OFF (`waitUnusable = []`) so every Pariwar holds on its default's gap exactly as before (AC4 (v)).
+Pins flipped (dated): the AC4 hold table now unsets BOTH locales; 6.37 AC9 (a)'s English-Pariwar half HELD → WAITING
+(`heldForConfig: 0`, `waitingForTemplate: 1`); AC9 (d) one pre-flight read PER locale (2); the scripted call indices (the race guard
+reads both locales); the 6.31 hold table unsets BOTH reminder names; 6.37d's AC11 fence re-pins `peer-mesh-wa-reminder.ts` only.
+RED (each mutant reverted, files compared byte-for-byte): the resolver ignoring the member's choice ⇒ 7 text legs (AC4 (i), (ii)×3,
+(iv), (viii), (x)); the begin ignoring `unusableLocales` ⇒ 5; the reminder fallback removed (option B) ⇒ the 3 `-385` legs; a waiting
+reminder marking its claim seen ⇒ the sibling leg. The AC4 (ix) leg first failed with `finalisedStuck: 1` — the fixture's
+`aging_since` was four days old and a park credits only the parked time (existing semantics); re-seeded recent and the clock moved
+four days while parked ⇒ ⛔ given up.
+
+**(e) Task 4 — the app (`aae29012`), built by a delegated agent in this worktree under this session's direction and reviewed here
+before the commit.** AC15's gate HELD: with an outer `LocaleProvider initialLocale="en"`, the contact route renders the `hi`
+`contact.agreement`, the `hi` title / relationship / shell / continue strings, and posts `locale: 'hi'` — leg *"⭐ (1) the agreement
+label, (2) every other string, (3) the request locale — all `hi`, on the SAME render"*; RED against `git show HEAD:…/contact.tsx`
+(the label is the English agreement; a trimmed (3)-only copy ⇒ `"locale": "en"`). AC9's mobile leg: *"a fresh install (empty storage)
+signs in and syncs with server null ⇒ ZERO PUT calls"*. 30 mutant runs RED — `app-language.ts` ×10 (compare-and-clear, the counter
+after the GET, the process id, the Pariwar default displayed, the displayed language PUT (T8), single-flight, the member check,
+another member's pending, storing on a null server value, a stale PUT response adopted — the last first SURVIVED and gained the leg
+"race (i) on the PUT"); screen / login ×12 (each a11y prop, `Stack.Screen`, the announce rule both ways, the no-op guard, the login
+error clear, the endonym); source pins / copy keys ×8; microcopy teeth (each new `#C0392B` allow removed ⇒ exactly that file flagged).
+Interpretations recorded: `syncAppLanguage` takes an optional `currentMemberId` getter (the account-switch drop); `chooseLanguage`
+returns `'saved_on_phone' | 'recorded' | 'not_recorded'`; the alert line stays until a later successful PUT; ⚠ a foreground sync that
+later records the pending choice does ⛔ hide an alert already showing on the language screen (minor — recorded, ⛔ fixed).
+`setLocale` is a `useState` setter (stable), so the session effects do ⛔ re-run per render.
+
+**(f) Task 5 — the export (`0f8bc720`)** and the friction declaration (`bfe5ff0a`): ONE new ledger row — a member who chose English
+reads the claim-contact step in Hindi (LS15 (b)'s accepted cost, `forced`) — and the disposition (the switch itself is optional);
+`friction:check` green.
+
+**(g) Task 6.1 — AC12's diff (vs `69e35f73`, the rebase base).** ⛔ change in `otp-sms-template.ts`, `claim-suspicion-notices.ts`,
+`suspicion-notice.ts`, `claim-contact-ladder*.ts`, `claim-certificate-reminders.ts`, `claim-correction-*.ts`, `news-publish.ts`,
+`survey-publish.ts`, `packages/i18n/src/**`. `code-delivery.ts`, `moderation-notify.ts`, `contribution-notify-triggers.ts`: comment /
+JSDoc lines only (⛔ a code token). `packages/api-client/src/index.ts`: the two methods + their imports only.
+
+**(h) Task 6.2 — AC14, the gate.** ⚠ NOT on :5433, and why: the shared :5433 database carried (1) 6-36d's UNCOMMITTED migration
+0180 (`peer_is_nominee` in the pings' detail CHECKs — this branch's 0166 LOCKSTEP legs then see a vocabulary this branch does ⛔
+have) and (2) an 89.5k-row global audit chain the integrity-check chunk-boundary leg (`chunkSize: 1`) cannot walk inside 20 s; the
+first :5433 run also hit concurrent-load timeouts (admin 14, while another session ran its own `ci:local`). BigDev: *"you can run
+against :5434 as well"* ⇒ the stopped `twt-test-pg-b` container started; its old `twt_dev` would ⛔ migrate (stale rows fail 0165's
+`workplaces_staff_actor_check`), so a FRESH database `twt_6_35` was created there (⛔ the old one touched) and migrated to 0179.
+`DATABASE_URL=…:5434/twt_6_35 pnpm ci:local` at `bfe5ff0a`: a first run under another session's load ⇒ 142 timeouts (admin 81, ⛔
+an admin file on this branch); BigDev: *"other session job is no longer running ci:local so whole resource is for you"* ⇒ re-run:
+EVERY job green (unit included — mobile 1370/1370, contracts 1444, domain unit, jobs unit, api unit) EXCEPT `integration-tests`, whose
+ONLY failure was the 10.23 spec's own safety guard — it refuses any database not named `twt_dev` (`DISPOSABLE_DATABASES`), and turbo
+2's strict env mode does ⛔ pass its `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS` override through; turbo then stopped before `@twt/api`. Run
+directly on the same database: that spec with the override (`twt_6_35` is a throwaway this session created) 3/3, and
+`pnpm turbo run test --force --concurrency=1 --filter=@twt/api` 177 files / 2079 passed + 1 skipped. Integration totals: domain
+6139 + 1 skipped, jobs 1396 + 3 skipped (+ the 10.23 spec 3/3), api 2079 + 1 skipped. Every new leg RED against the pre-change code
+or a mutant — (c), (d), (e). ⚠ For the reviewer: the :5433 LOCKSTEP and integrity-check failures are environmental, ⛔ hidden; they
+recur on :5433 until 6-36d's 0180 lands (or is rolled back there) and the chain is pruned.
+
 ### Completion Notes List
 
+- ✅ AC1 / AC3 — migration 0179 (two `members` columns, the pings' `locale` with its freeze + written-once arm, both `locale_source`
+  CHECKs widened — reminders also `pariwar_fallback`); `resolvePeerRequestLocale` per RECIPIENT; W8's literal gone (W8 is "being
+  built" until `done` on `main`).
+- ✅ AC2 / AC9 — `GET` / `PUT /api/v1/member/language`, audited after commit and only on a change; a GET-only member stays NULL.
+- ✅ AC4 — the text per recipient; a language whose TEXT template is unusable WAITS (⛔ the other language); the Pariwar held only on a
+  non-template gap, its own default's read fault, or both unusable.
+- ✅ AC5 — the reminder per recipient; `-385`'s fallback for a chooser; a reminder with ⛔ usable template at all waits.
+- ✅ AC6–AC8, AC10 — the phone store, the sync (races closed), the screen, the home entry, the login switch, the copy (BigDev's Hindi).
+- ✅ AC11 — `preferredLanguage` in the export. ✅ AC12 — (g). ✅ AC13 — `-387` alone (`def04547`) before records (`d671aba7`) and code.
+- ✅ AC14 — (h): green on a fresh :5434 database, with the one guard-refused spec and the unreached API suite run directly.
+- ✅ AC15 — the claim-contact step pinned to Hindi; the render gate HELD.
+- Open, ⛔ closed by this row: PM22's display half (LS4 (b)) and every other sender's language — the deferred item; the minor
+  alert-line edge in (e); the :5433 environment notes in (h).
+
 ### File List
+
+**New:** `packages/domain/migrations/0179_member-preferred-locale.sql`, `packages/domain/src/member/preferred-locale.ts`,
+`packages/domain/tests/integration/member/preferred-locale.spec.ts`, `packages/contracts/src/member-language/{index,language}.ts`,
+`packages/contracts/tests/member-language.test.ts`, `apps/api/src/modules/member-language/{index,routes,handlers}.ts`,
+`apps/api/tests/integration/member-language/member-language.spec.ts`, `apps/mobile/lib/app-language.ts`,
+`apps/mobile/app/(settings)/language.tsx`, `apps/mobile/components/settings/LanguageSettingsEntry.tsx`,
+`apps/mobile/tests/unit/{app-language,language-screen-render,language-copy-keys,language-source-pins,contact-language-pin-render}.test.ts`.
+
+**Modified (code / tests):** `packages/domain/migrations/meta/_journal.json`, `packages/domain/src/schema/{members,claim_peer_mesh_pings,claim_peer_mesh_wa_reminders}.ts`,
+`packages/domain/src/member/index.ts`, `packages/domain/src/claim/{peer-mesh-request,peer-mesh-wa-reminder}.ts`,
+`packages/domain/src/data-export/assemble.ts`, `packages/domain/tests/integration/claim/{peer-mesh-request,peer-mesh-request-concurrency,peer-mesh-wa-reminder,peer-mesh-wa-reminder-concurrency,peer-mesh-wa-reminder-record}.spec.ts`,
+`packages/domain/tests/integration/rls/claim-peer-mesh-replies-policy-regression.spec.ts`, `packages/domain/tests/integration/data-export/data-export.spec.ts`,
+`packages/contracts/src/{index,data-export/data-export}.ts`, `packages/contracts/scripts/emit-openapi.ts`, `openapi/v1.yaml`,
+`packages/api-client/src/index.ts`, `apps/api/src/{server,audit/audit-sink}.ts`, `apps/api/src/modules/wa-opt-in/code-delivery.ts` (comment),
+`apps/api/tests/integration/claims/peer-request-after-send.spec.ts`, `apps/jobs/src/scheduler/{claim-peer-mesh-requests,claim-peer-mesh-wa-reminders}.ts`,
+`apps/jobs/src/scheduler/{moderation-notify,contribution-notify-triggers}.ts` (comments), `apps/jobs/tests/{claim-peer-mesh-requests-live,claim-peer-mesh-wa-reminders-live,claim-peer-mesh-wa-reminders,claim-contact-ladder-whatsapp,data-export}.test.ts`,
+`apps/mobile/app/{_layout,(auth)/login,(claim)/contact,(tabs)/index,(settings)/_layout}.tsx`, `apps/mobile/lib/session-context.tsx`,
+`packages/i18n/locales/{en,hi}/common.json`, `microcopy.yaml`, `friction-budget.md`.
+
+**Modified (governance / records):** `.decision-log.md` (`-387`; `-385`'s separator restored at the rebase), `_bmad-output/planning-artifacts/epics.md`,
+`_bmad-output/implementation-artifacts/{deferred-work,sprint-status.yaml,6-35-in-app-language-switch,6-27-peer-mesh-sending-replies-and-date-of-death,6-27c-peer-mesh-sending-texts-and-links,6-31-peer-mesh-whatsapp-reminder-at-48-hours,6-37-msg91-sms-gateway-adapter,3-3c-member-kyc-name-english-only,5-10-signup-whatsapp-opt-in-checkbox,5-13-whatsapp-code-for-another-phone,6-30-app-links-open-the-app-from-a-text}.md`,
+`docs/launch-gate-inventory/{inventory-roster,dlt-template-requests-6-19}.md`. Outside the repo: the memory `project_mobile_app_no_language_switch` and its `MEMORY.md` line.
 
 ## Change Log
 
@@ -1116,3 +1218,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.35`, 2026-10-23.
 | 2026-10-23 | 1.5 | The Panel RULED PQ1 — A (relayed by BigDev: *"by DR and KB"* / *"go with option A"*) ⇒ Decision `2026-10-23-385` (Trustee-ratified, committed alone `73183745`): when the reminder cannot go in the member's chosen language it goes in the Pariwar's. LS10 (b′) built as A now (the interim B ⛔ built): the reminder begin falls back for a CHOOSER whose Pariwar's template is usable, `locale_source = 'pariwar_fallback'` on the REMINDERS' CHECK only (LS9 — its own `PEER_MESH_WA_REMINDER_LOCALE_SOURCES`); a reminder waits only when it has ⛔ usable template at all; AC5, Task 3.2, I4, G5, the §0 verdict, the Policy-meaning sentence (bracket settled), Task 0.1 S3 / 0.2 / 0.3 (cites `-385`; next free ≥ `-386`) / 0.4 (Row 35 (b) leg — ruled) and AC13 follow. The note's ruling block filled; everything below it kept as put. ⛔ Code. |
 | 2026-10-23 | 1.6 | A fresh-context re-validate of the v1.4 + v1.5 edits (one read-only verifier, top-down and bottom-up; BigDev "run one more fresh-context check"): 1 CRITICAL / 8 SHOULD / NITs, BigDev "All". Critical: the reminder fallback had ⛔ source for the Pariwar's default — `member_choice` cannot tell a chooser OF the default (waits) from a chooser of the other (falls back) ⇒ the sweep listing, the config and LS8's resolver carry `pariwarDefaultLocale`, and LS10 states the rule in one line. Also: the sweep's `gapOf` memo keeps the template set; the reminder's waiting count is taken before the `seenClaims` short-circuit and gets a NEW alarm line (the sweep has ⛔ per-locale alarm); AC3's type pin split (the resolver two values, a new reminder pin three; `$type` at `:89` moves); a TX on the OTHER reminder key is treated as T1 (BigDev "Treat it as unset"); G2 / G10 / the rulings table carry `-385`; AC13 G1–G11; ledger letters (6-36d took `m` during the pass; v1.6 `n`, next ≥ `o`); `-385` gained a dated correction line (BigDev "Dated correction line" — `-310` CF1 A gives with the rider for the reminder; committed alone `89961ab3`); NITs (policy sentence, LS9, AC5 chooser wording, `LEFT JOIN`, the templates' gap kept, AC15 `onChange`, the `-384`/`-385` log order, LS13). ⛔ Code. |
 | 2026-10-23 | 1.7 | `bmad-dev-story 6.35` — Task 0: rebased onto `origin/main` `69e35f73` (SHA map in Debug Log (a)); F1–F26 re-derived (all hold); S2 fired (6-36d) — BigDev *"Proceed in parallel"*; Task 0.2 answered (direction confirmed, all as recommended, LS14 (b) Hindi approved); Decision `2026-10-23-387` committed alone (`def04547`); records committed. Status → in-progress. |
+| 2026-10-23 | 1.8 | `bmad-dev-story 6.35` — Tasks 1–6 done: code `c07f64ae` (schema + the one read), `0cb287d0` (API), `1c64d4f5` (senders), `aae29012` (app), `0f8bc720` (export), `bfe5ff0a` (friction row); Debug Log (b)–(h) (RED proofs, the :5434 gate and why ⛔ :5433); Task 6.3 dated notes (5-10, 6.30, 6.27c ×2, 5-13; `-310`'s reading ⛔ annotated — a decision entry is ⛔ edited, `-387` §2 records it); memory updated. Status → review. |

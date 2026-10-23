@@ -39,6 +39,7 @@ Status: done
 > ⚠ **Go-live, ⛔ never a merge fence** ([[project_not_in_production_merge_is_not_golive]]): the TEXTS wait for roster Row 27 — ALL EIGHT
 > conditions (a)–(h), incl. (f) counsel's basis for the two health questions (MECHANISED here — AC2b, its tests in AC4) and (h) Row 31 closed (6.36a SW28);
 > the template ids are ⛔ never provisioned until Row 27 closes; a real `https://` link opening the app is Row 29 (e).
+> 📌 *Dated note, 2026-10-23 (Story 6.35 Task 6.3; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 is being built — the text goes in each RECIPIENT's choice, else the Pariwar's default, once it is `done` on `main`. Kept as written.
 
 ## Story
 
@@ -738,6 +739,7 @@ the helpline / name character sets (6.34 C1 "sent as today"; Row 30 (d)); Row 27
   `sms.dlt.template_id.` ONLY in the registry — comments included).
 - ⚠ **Row 6-35** will change ONE read (R10) to *member's choice, else the Pariwar's default* — keep it a single function. ⚠ An `en`-default
   Pariwar sends English texts that open Hindi screens (the app always renders `hi` — [[project_mobile_app_no_language_switch]]); moot for Bihar.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 6.3; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 makes the one read per RECIPIENT (single function kept); the app stays Hindi until the member picks (LS4 (b)), so this display edge stays open for a non-chooser — the deferred item *"Senders that ignore the member's chosen language (row 6-35)"*. Kept as written.
 - ⚠ **Row 6-37 (MSG91, backlog)** sends by slot NAME — the names `member` / `link` / `helpline` and the sheet's MSG91 column are the whole
   anticipation; ⛔ build an adapter.
 - ⚠ **Row 26 (`jobs-db-role`)** — the production jobs login holds ⛔ no claim-table privileges; the new sweep is already listed on the row

@@ -269,6 +269,7 @@ applicable (the Niyamavali does not speak to app links) — and it is ⛔ not ra
   `$comment.*`. A NEW namespace must be registered in `packages/i18n/src/catalog.ts:29-77` (`packages/i18n/tests/catalog-registration.test.ts`
   fails otherwise) and added to `copy_globs`; Hindi parity is enforced (`locales/classification.json` defaults to member-facing). The mobile
   app always renders Hindi until row 6-35 ⇒ "bilingual" on mobile = en + hi keys; on the fallback page = both languages ON the page.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 6.3; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 adds the switch (Hindi until the member picks; English then) — this premise is stale once it is `done` on `main`. Kept as written.
 - **F20 — contracts:** `tsconfig.base.json` — `module: ESNext`, `moduleResolution: Bundler`, `resolveJsonModule: true` (`:13`) ⇒ a JSON
   import needs ⛔ no import attributes; precedent `packages/i18n/src/catalog.ts` (bundled by Metro and by Astro's Vite — `@twt/contracts` is
   in Astro's `ssr.noExternal`). A JSON import widens to `string` ⇒ the `'/peer-request'` literal type is declared by hand and held to the

@@ -295,6 +295,7 @@ mirrors only"*; no clause governs how a channel preference is asked for.
   "WhatsApp notifications"* (SB5).
 - **F15 —** The app is always Hindi (no language switch; `LocaleProvider` in-memory `hi` — [[project_mobile_app_no_language_switch]]). ⇒
   The Hindi strings are what members read; the English is not member-visible today.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 6.3; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 makes the English member-visible for a member who picks it (the app stays Hindi until they do) — stale once 6-35 is `done` on `main`. Kept as written.
 - **F16 —** `BannerHost.tsx:245-280`: overlay (⚠ an `absoluteFill` overlay INSIDE a `ScrollView` covers only the scroll content —
   render it as a SIBLING of the ScrollView) with `accessibilityViewIsModal`, absolute-fill scrim (`zIndex: 1000`), inner
   `accessibilityLiveRegion="polite"`; its comment records the rule *"NOT Alert.alert / alert() / confirm()"*. `Alert.alert` would style a

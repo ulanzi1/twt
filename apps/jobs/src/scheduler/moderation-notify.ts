@@ -352,7 +352,7 @@ export async function runModerationNotify(
     appealId: payload.appealId,
   });
 
-  const { undelivered } = await fanOutAlertToMembers(
+  const { retry } = await fanOutAlertToMembers(
     deps.notify,
     () => alert,
     [payload.memberId],
@@ -360,7 +360,7 @@ export async function runModerationNotify(
     now,
   );
 
-  if (undelivered.length > 0) {
+  if (retry.length > 0) {
     // ⚠ ALARM + THROW, not a quiet return (review follow-up). Returning normally COMPLETES the
     // pg-boss job, so the previous version's own comment — "surfaced so pg-boss's retry has a
     // reason to exist" — described a retry the code structurally could not perform: the notice was
@@ -372,11 +372,14 @@ export async function runModerationNotify(
     // AC8 says a dispatch failure must never fail or roll back the moderation ACTION — and it
     // cannot, because the action committed in apps/api long before this worker ran. Best-effort
     // means the action survives a failed notice, not that a failed notice goes unrecorded.
+    // ⭐ Story 5.11 (FS14 (a)): `retry` holds only a member whose fan-out THREW; a member no rung reached is
+    // `in_app_only` (the notice is on their in-app surface) and is ⛔ retried — as before 5.11, when the fake
+    // `sms:sent` made them "delivered".
     alarm(
-      `[jobs] moderation-notify: notice UNDELIVERED for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) — retrying`,
+      `[jobs] moderation-notify: notice fan-out FAILED for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) — retrying`,
     );
     throw new Error(
-      `[jobs] moderation-notify: undelivered notice for moderation action ${payload.moderationActionId}`,
+      `[jobs] moderation-notify: notice fan-out failed for moderation action ${payload.moderationActionId}`,
     );
   }
   return { notified: true, alertId };

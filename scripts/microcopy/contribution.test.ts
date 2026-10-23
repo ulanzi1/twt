@@ -29,9 +29,17 @@ const config: MicrocopyConfig = parseMicrocopyConfig(readRepo('microcopy.yaml'))
 const EN_FILE = 'packages/i18n/locales/en/contribution.json';
 const HI_FILE = 'packages/i18n/locales/hi/contribution.json';
 
-/** Resolve the real locale strings (values only) — the copy the card renders. */
+/**
+ * Resolve the real locale strings (values only) — the copy the card renders — ⛔ excluding `$comment*` keys.
+ *
+ * ⚠⛔ THE `$comment` EXCLUSION IS LOAD-BEARING (Story 5.11 added the file's first, `$comment.sms`): those keys carry
+ * governance prose that may QUOTE a prohibited word in order to forbid it; they are ⛔ member copy and ⛔ never reach a
+ * screen (the member-drive / claim tests' convention).
+ */
 function resolvedStrings(rel: string): string[] {
-  return Object.values(JSON.parse(readRepo(rel)) as Record<string, string>);
+  return Object.entries(JSON.parse(readRepo(rel)) as Record<string, string>)
+    .filter(([key]) => !key.startsWith('$comment'))
+    .map(([, value]) => value);
 }
 
 // ─── (a) the scarcity / panic tone patterns bite a 15-day nudge phrasing ──────────────────

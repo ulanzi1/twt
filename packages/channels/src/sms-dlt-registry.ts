@@ -39,6 +39,14 @@
 // `dltTemplateIdConfigKey` for any of the five does NOTHING (roster Row 30, deferred-work). Turning the
 // per-member SMS fallback ON needs fixed wording per category (en + hi) — new member-facing copy, a later
 // story with its own §0 — ⛔ "fixed" here by registering text.
+//
+// ── ⭐ Story 5.11 (2026-10-23; `2026-10-23-389` FS1 (d), FS15 (a); reach `2026-10-23-390` Q1 B) — the TV6 note above KEPT ──
+// That later story is 5.11, and the fixed wording does ⛔ live here: it is MESSAGE-keyed, ⛔ category-keyed — three notices
+// about a member's own contribution (day 10, a payment not matched, a payment still not confirmed) — in
+// `apps/jobs/src/scheduler/contribution-sms-templates.ts`, and the alert fan-out's SMS rung reads THAT registry (through the
+// payload's `sms` block), ⛔ this one. These five entries stay DARK and UNUSED by the alert SMS rung; `claim_status_change`
+// (no producer) and `helpdesk_reply` (log-only in production) stay visibly unlit. ⚠ `resolveDltTemplate` and its composition
+// path stay in place, all-dark — provisioning a key below still does NOTHING. The real send is row 5-11b.
 
 import type { AlertCategory } from '@twt/contracts';
 

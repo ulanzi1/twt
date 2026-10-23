@@ -39,7 +39,11 @@ vi.mock('@twt/domain', async (importActual) => {
 });
 
 const fanOutAlertToMembers = vi.fn();
-vi.mock('../src/scheduler/contribution-notify.js', () => ({ fanOutAlertToMembers }));
+// Only the fan-out is replaced; the module's constants (Story 5.11's `RECORDED_RUNG_DETAILS`) stay real.
+vi.mock('../src/scheduler/contribution-notify.js', async (importActual) => ({
+  ...(await importActual<typeof import('../src/scheduler/contribution-notify.js')>()),
+  fanOutAlertToMembers,
+}));
 
 const {
   buildContributionConfirmedAlert,
@@ -159,7 +163,7 @@ beforeEach(() => {
         costSuppressedChannels: [],
         telegramMirrored: false,
       })),
-      undelivered: [],
+      retry: [],
     }),
   );
 });
@@ -307,15 +311,16 @@ describe('AC1 — the child worker: idempotency, batching, and the retry contrac
     expect(claim.mock.calls[0]![0]).toBe(`contribution.notify:${ALERT}:${M1}:day_13`);
   });
 
-  it('an UNDELIVERED member makes the job THROW (pg-boss owns the backoff — D9)', async () => {
+  it('a member whose fan-out FAILED (on `retry`) makes the job THROW (pg-boss owns the backoff — D9)', async () => {
+    // Story 5.11 (FS14): `retry` (was `undelivered`) holds only a member whose fan-out THREW.
     fanOutAlertToMembers.mockResolvedValue({
       results: [{ memberId: M1, delivered: true, deliveredChannel: 'push', trail: [], bridged: false, costSuppressedChannels: [], telegramMirrored: false }],
-      undelivered: [M2],
+      retry: [M2],
     });
 
     await expect(
       runContributionNotifyChild(deps(), envelope(childPayload()) as never),
-    ).rejects.toThrow(/undelivered/);
+    ).rejects.toThrow(/failed/);
 
     // The member who DID deliver is recorded, so the retry re-sends nothing to them…
     expect(recordResult).toHaveBeenCalledTimes(1);
@@ -555,8 +560,9 @@ describe('AC2/D3 — a member who has already ACTED is not nudged, with DISTINCT
       ) as never,
     );
 
+    // Story 5.11 (FS14) added `inAppOnly` — a COUNT of members no rung reached, still counts only.
     expect(Object.keys(result).sort()).toEqual(
-      ['alertId', 'alreadySent', 'attempted', 'delivered', 'kind', 'poolId', 'suppressed'].sort(),
+      ['alertId', 'alreadySent', 'attempted', 'delivered', 'inAppOnly', 'kind', 'poolId', 'suppressed'].sort(),
     );
     expect(result).not.toHaveProperty('confirmedCount');
     expect(result).not.toHaveProperty('confirmedMembers');
@@ -1168,5 +1174,142 @@ describe('the cycle-open parent enqueue is singleton-keyed on the alert', () => 
     );
     expect(send.mock.calls[0]![0]).toBe('contribution.notify.cycle_open');
     expect(send.mock.calls[0]![2]).toMatchObject({ singletonKey: ALERT });
+  });
+});
+
+// ─── Story 5.11 — the three lit producers carry the `sms` block; every other alert carries none ───────
+
+describe('Story 5.11 AC5 / FS7 — the `sms` block rides ONLY the three notices FS1 (d) names', () => {
+  const reminder = (cycleDay: 5 | 10 | 13 | 14, locale: 'hi' | 'en' = 'hi') =>
+    buildDeadlineReminderAlert({
+      alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, cycleDay,
+      deadlineAt: new Date('2026-08-05T00:00:00.000Z'), timeCritical: false, locale, now: NOW,
+    });
+  const smsOf = (alert: Alert): unknown => (alert.payload_data as { sms?: unknown }).sms;
+
+  it('⭐ day 10 — `deadline_not_recorded`, the date the SAME local the push renders, the pool by FS13', () => {
+    const alert = reminder(10);
+    expect(smsOf(alert)).toEqual({ message: 'deadline_not_recorded', values: { pool: 'युधिष्ठिर', date: '05-08-2026' } });
+    // the same local: day 10's push display IS `{date}`
+    expect((alert.payload_data as { deadline_display: string }).deadline_display).toBe('05-08-2026');
+    expect(() => Alert.parse(alert)).not.toThrow();
+  });
+
+  it('FS13 — the en day-10 text names the pool by its LETTER (the curated name is Hindi); the en push keeps the name', () => {
+    const alert = reminder(10, 'en');
+    expect(smsOf(alert)).toEqual({ message: 'deadline_not_recorded', values: { pool: 'A', date: '05-08-2026' } });
+    expect((alert.payload_data as { subject: string }).subject).toContain('युधिष्ठिर');
+  });
+
+  it.each([5, 13, 14] as const)('⛔ day %s — no `sms` block (day 14 is the channels\' — FS1 (d))', (day) => {
+    expect(smsOf(reminder(day))).toBeUndefined();
+    expect(Object.keys(reminder(day).payload_data)).not.toContain('sms');
+  });
+
+  it('⭐ pending match ESCALATED — `payment_not_confirmed`; the SOFT tier carries none', () => {
+    const build = (tier: 'soft' | 'escalated', locale: 'hi' | 'en') =>
+      buildPendingMatchRetryAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, tier, locale, now: NOW });
+    expect(smsOf(build('escalated', 'hi'))).toEqual({ message: 'payment_not_confirmed', values: { pool: 'युधिष्ठिर' } });
+    expect(smsOf(build('escalated', 'en'))).toEqual({ message: 'payment_not_confirmed', values: { pool: 'A' } });
+    expect(smsOf(build('soft', 'hi'))).toBeUndefined();
+    expect(() => Alert.parse(build('escalated', 'en'))).not.toThrow();
+  });
+
+  it.each(['wrong_pool', 'amount_mismatch', 'some_future_reason'])('⭐ mismatch (%s) — ONE text, `payment_not_matched`, no value', (reason) => {
+    const alert = buildContributionMismatchAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, reason, locale: 'hi', now: NOW });
+    expect(smsOf(alert)).toEqual({ message: 'payment_not_matched', values: {} });
+    expect(() => Alert.parse(alert)).not.toThrow();
+  });
+
+  it('⛔ cycle open and contribution confirmed — no `sms` block', () => {
+    const open = buildCycleOpenAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, timeCritical: false, locale: 'hi', now: NOW });
+    const confirmed = buildContributionConfirmedAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, amountPaise: 110000, periodLabel: '2026-07', locale: 'hi', now: NOW });
+    expect(smsOf(open)).toBeUndefined();
+    expect(smsOf(confirmed)).toBeUndefined();
+  });
+
+  it('⛔ I5 — an `alert_published` (cycle open, news, survey, moderation) CANNOT carry the block: the contract refuses it', () => {
+    const open = buildCycleOpenAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, timeCritical: false, locale: 'hi', now: NOW });
+    const planted = { ...open, payload_data: { ...open.payload_data, sms: { message: 'deadline_not_recorded', values: {} } } };
+    expect(Alert.safeParse(planted).success).toBe(false);
+  });
+});
+
+// ─── Story 5.11 FS14 (a) — a member no rung reached is `in_app_only`: recorded, ⛔ released, ⛔ thrown for ─────
+
+describe('Story 5.11 AC4 / FS14 — the retry profile does not change (I4)', () => {
+  const inAppOnly = (memberId: string) => ({
+    memberId,
+    delivered: false,
+    deliveredChannel: null,
+    trail: [
+      { channel: 'push', attempt: 0, outcome: 'rejected', detail: 'transient:messaging/internal-error' },
+      { channel: 'whatsapp', attempt: 0, outcome: 'skipped_no_target' },
+      { channel: 'sms', attempt: 0, outcome: 'skipped_no_target', detail: 'sms_send_not_wired' },
+    ],
+    bridged: false,
+    costSuppressedChannels: [],
+    telegramMirrored: false,
+  });
+
+  it('⭐ POOL_BATCH — a no-app member completes on the FIRST attempt: recorded `in_app_only`, the claim KEPT, no throw', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [inAppOnly(M1), inAppOnly(M2)], retry: [] });
+    const result = await runContributionNotifyChild(deps(), envelope(childPayload()) as never);
+
+    expect(result).toMatchObject({ attempted: 2, delivered: 0, inAppOnly: 2 });
+    expect(release).not.toHaveBeenCalled();
+    expect(recordResult).toHaveBeenCalledTimes(2);
+    // The recorded trail names each rung's reason — the NAMED ones only; a provider's free-text detail is ⛔ persisted.
+    expect(recordResult.mock.calls[0]![1]).toMatchObject({
+      delivered: false,
+      outcome: 'in_app_only',
+      trail: ['push:0:rejected', 'whatsapp:0:skipped_no_target', 'sms:0:skipped_no_target:sms_send_not_wired'],
+    });
+  });
+
+  it('⭐ a pending-match (escalated) member\'s weeks-long claim is KEPT — the sweep does not nudge them again', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [inAppOnly(M1)], retry: [] });
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'pending_match_escalated', memberIds: [M1] })) as never,
+    );
+    expect(release).not.toHaveBeenCalled();
+    expect(recordResult.mock.calls[0]![0]).toBe(`contribution.notify:${ALERT}:${M1}:pending_match_escalated`);
+  });
+
+  it('⭐ contribution CONFIRMED — `in_app_only` recorded, ⛔ thrown; the result says delivered:false honestly', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [inAppOnly(M1)], retry: [] });
+    const result = await runContributionConfirmedNotify(
+      deps(),
+      envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, amountPaise: 110000, periodLabel: '2026-07' }) as never,
+    );
+    expect(result).toMatchObject({ delivered: false, alreadySent: false });
+    expect(release).not.toHaveBeenCalled();
+    expect(recordResult.mock.calls[0]![1]).toMatchObject({ outcome: 'in_app_only' });
+  });
+
+  it('⭐ MISMATCH (its own worker — T14) — `in_app_only` recorded, ⛔ thrown', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [inAppOnly(M1)], retry: [] });
+    const result = await runContributionMismatchNotify(
+      deps(),
+      envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never,
+    );
+    expect(result).toMatchObject({ delivered: false, alreadySent: false });
+    expect(release).not.toHaveBeenCalled();
+    expect(recordResult).toHaveBeenCalledTimes(1);
+  });
+
+  it('a THROWN fan-out is still retried — confirmed and mismatch release the claim and throw', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [], retry: [M1] });
+    await expect(
+      runContributionConfirmedNotify(
+        deps(),
+        envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, amountPaise: 110000, periodLabel: '2026-07' }) as never,
+      ),
+    ).rejects.toThrow(/fan-out failed/);
+    await expect(
+      runContributionMismatchNotify(deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never),
+    ).rejects.toThrow(/fan-out failed/);
+    expect(release).toHaveBeenCalledTimes(2);
   });
 });

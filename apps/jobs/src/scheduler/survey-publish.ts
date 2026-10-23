@@ -60,6 +60,8 @@ function nonPiiRecord(record: MemberFanOutResult | undefined): Record<string, un
   if (!record) return { delivered: false };
   return {
     delivered: record.delivered,
+    // Story 5.11 (FS14 (a)) — a member no rung reached is `in_app_only`, recorded, ⛔ re-sent on a redelivery.
+    outcome: record.delivered ? 'delivered' : 'in_app_only',
     deliveredChannel: record.deliveredChannel,
     bridged: record.bridged,
     costSuppressedChannels: record.costSuppressedChannels,
@@ -211,7 +213,8 @@ export async function runSurveyPublish(
     if (outcome === 'acquired') claimed.push(memberId);
   }
 
-  const undelivered: string[] = [];
+  const failed: string[] = [];
+  let inAppOnly = 0;
   for (const memberId of claimed) {
     const key = surveyMemberKey(alertId, memberId);
     try {
@@ -223,31 +226,29 @@ export async function runSurveyPublish(
       // FR-58 asks for a notification and not for a per-survey channel policy. Every resolved target
       // is used, exactly as the shared composition intends.
       const result = await fanOutAlert(deps.notify, buildSurveyAlert(survey, memberId, now), ctx);
-      if (result.delivered) {
-        await store.recordResult(key, nonPiiRecord(result)).catch((err: unknown) => {
-          alarm(`[jobs] survey-publish: failed to record a member result — ${String(err)}`);
-        });
-      } else {
-        undelivered.push(memberId);
-        // Release rather than record so a later best-effort re-run could still reach this member; a
-        // "delivered" claim must never be recorded for a non-send.
-        await store.release(key).catch((err: unknown) => {
-          alarm(`[jobs] survey-publish: failed to release a member claim — ${String(err)}`);
-        });
-      }
+      // Story 5.11 (FS14 (a)): a member no rung reached is RECORDED `in_app_only` (⛔ released). Before 5.11 the fake
+      // `sms:sent` recorded most such members as delivered (any member with a mobile on file);
+      // this broadcast never retries, so recording rather than releasing changes only what a REDELIVERED job re-sends.
+      if (!result.delivered) inAppOnly += 1;
+      await store.recordResult(key, nonPiiRecord(result)).catch((err: unknown) => {
+        alarm(`[jobs] survey-publish: failed to record a member result — ${String(err)}`);
+      });
     } catch (err) {
-      undelivered.push(memberId);
+      failed.push(memberId);
       await store.release(key).catch(() => {});
       alarm(`[jobs] survey-publish: fan-out failed for member ${memberId} of survey ${survey.surveyId} — ${String(err)}`);
     }
   }
-  if (undelivered.length > 0) {
-    // Best-effort broadcast (v1): a member with no reachable channel is logged, NOT retried forever.
+  if (failed.length > 0) {
+    // Best-effort broadcast (v1): a member whose fan-out failed is logged, NOT retried forever.
     // ⚠ An unreachable member is NOT excluded from the survey — they will still see it on the member
     // surface, because the audience predicate and the delivery channel are different questions.
     alarm(
-      `[jobs] survey-publish: ${undelivered.length}/${memberIds.length} members undelivered for survey ${survey.surveyId} (best-effort broadcast)`,
+      `[jobs] survey-publish: ${failed.length}/${memberIds.length} members' fan-out failed for survey ${survey.surveyId} (best-effort broadcast)`,
     );
+  }
+  if (inAppOnly > 0) {
+    console.info(`[jobs] survey-publish: ${inAppOnly}/${memberIds.length} members reached in the app only for survey ${survey.surveyId}`);
   }
   return { notified: true, memberCount: memberIds.length };
 }

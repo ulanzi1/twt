@@ -23,15 +23,33 @@ import type { audit as auditDomain } from '@twt/domain';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const invalidatePushToken = vi.fn();
+// Story 5.11 — `fanOutAlertToMembers`' own legs need the scope + the per-member target reads faked (DB-free).
+const withPariwarScope = vi.fn();
+const resolvePushTargets = vi.fn();
+const resolveWaTarget = vi.fn();
+const resolveSmsTarget = vi.fn();
+const resolveTelegramTarget = vi.fn();
+const getMemberLastEngagementAt = vi.fn();
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   return {
     ...actual,
-    notifications: { ...actual.notifications, invalidatePushToken },
+    withPariwarScope,
+    deviceToken: { ...actual.deviceToken, getMemberLastEngagementAt },
+    notifications: {
+      ...actual.notifications,
+      invalidatePushToken,
+      resolvePushTargets,
+      resolveWaTarget,
+      resolveSmsTarget,
+      resolveTelegramTarget,
+    },
   };
 });
 
-const { fanOutAlert } = await import('../src/scheduler/contribution-notify.js');
+const { fanOutAlert, fanOutAlertToMembers, isAlertSmsFallbackEligible, SMS_RUNG_DETAIL } = await import(
+  '../src/scheduler/contribution-notify.js'
+);
 type ContributionNotifyDeps = import('../src/scheduler/contribution-notify.js').ContributionNotifyDeps;
 type MemberFanOutContext = import('../src/scheduler/contribution-notify.js').MemberFanOutContext;
 
@@ -203,6 +221,18 @@ function reminderAlert(): Alert {
   } as Alert;
 }
 
+/** Story 5.11 — a LIT notice: day 10's reminder carrying its `sms` block (FS7). */
+function litReminderAlert(): Alert {
+  const base = reminderAlert();
+  return {
+    ...base,
+    payload_data: { ...base.payload_data, sms: { message: 'deadline_not_recorded', values: { pool: 'A', date: '05-08-2026' } } },
+  } as Alert;
+}
+
+const trailOf = (result: { trail: readonly { channel: string; outcome: string; detail?: string }[] }): string[] =>
+  result.trail.map((e) => `${e.channel}:${e.outcome}${e.detail ? `:${e.detail}` : ''}`);
+
 function ctx(overrides: Partial<MemberFanOutContext['targets']> = {}, rest: Partial<MemberFanOutContext> = {}): MemberFanOutContext {
   return {
     targets: {
@@ -239,41 +269,45 @@ describe('AC6 / Decision 3 — stop at the first `sent`', () => {
     expect(h.sms.sendCount()).toBe(0);
   });
 
-  it('push rejects, WA rejects ⇒ delivers on SMS, one attempt per rung, nothing after sms:sent', async () => {
+  // ⭐ Story 5.11 (AC4, F18) — REPLACES "push rejects, WA rejects ⇒ delivers on SMS … nothing after sms:sent": that `sms:sent`
+  // was the log fixture's fake (F3). The ladder still walks every rung once, and the SMS rung now ENDS NOT-SENT with a reason.
+  it('push rejects, WA rejects ⇒ one attempt per rung; an UNLIT alert\'s SMS rung ends `sms_message_not_lit`, ⛔ sent', async () => {
     const h = harness({
       push: makeProvider('fcm', 'push', 'rejected', 'transient:messaging/internal-error'),
       whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
     });
     const result = await fanOutAlert(h.deps, cycleOpenAlert(), ctx());
 
-    expect(result.delivered).toBe(true);
-    expect(result.deliveredChannel).toBe('sms');
-    expect(result.trail.map((e) => `${e.channel}:${e.outcome}`)).toEqual([
-      'push:rejected',
+    expect(result.delivered).toBe(false);
+    expect(result.deliveredChannel).toBeNull();
+    expect(trailOf(result)).toEqual([
+      'push:rejected:transient:messaging/internal-error',
       'whatsapp:rejected',
-      'sms:sent',
+      'sms:skipped_no_target:sms_message_not_lit',
     ]);
     // ONE attempt per rung — `backoffMs: []` means no retries are burned (D9).
     expect(result.trail.every((e) => e.attempt === 0)).toBe(true);
-    expect(h.sms.sendCount()).toBe(1);
-    // The AI-5-2 "stop after SMS" property: nothing is attempted after the successful rung.
-    expect(result.trail[result.trail.length - 1]!.outcome).toBe('sent');
+    expect(h.sms.sendCount()).toBe(0); // I3 — the SMS provider is ⛔ driven
   });
 
-  it('a member with NO WhatsApp target advances to SMS without burning a retry', async () => {
+  // ⭐ Story 5.11 (AC3) — REWRITES the 8.8 leg "a member with NO WhatsApp target advances to SMS" (trail `push:rejected,
+  // whatsapp:skipped_no_target, sms:sent`): as RULED by `2026-10-23-390` Q1 B such a member is ELIGIBLE for a lit notice — the
+  // rung ends `sms_send_not_wired` (the send is row 5-11b), ⛔ sent.
+  it('a member with NO WhatsApp target whose push failed is ELIGIBLE for a lit notice — `sms_send_not_wired`, ⛔ sent', async () => {
     const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
-    const result = await fanOutAlert(h.deps, cycleOpenAlert(), ctx({ whatsapp: null }));
+    const result = await fanOutAlert(h.deps, litReminderAlert(), ctx({ whatsapp: null }));
 
-    expect(result.trail.map((e) => `${e.channel}:${e.outcome}`)).toEqual([
+    expect(trailOf(result)).toEqual([
       'push:rejected',
       'whatsapp:skipped_no_target',
-      'sms:sent',
+      'sms:skipped_no_target:sms_send_not_wired',
     ]);
     expect(h.whatsapp.sendCount()).toBe(0);
-    expect(result.deliveredChannel).toBe('sms');
+    expect(h.sms.sendCount()).toBe(0);
+    expect(result.delivered).toBe(false);
   });
 
-  it('the whole ladder exhausted ⇒ delivered:false (the caller turns that into a pg-boss retry)', async () => {
+  it('the whole ladder exhausted ⇒ delivered:false (Story 5.11: the caller records `in_app_only`, ⛔ retries)', async () => {
     const h = harness({
       push: makeProvider('fcm', 'push', 'rejected'),
       whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
@@ -353,24 +387,35 @@ describe('AC6 — multi-device push is resolved in the COMPOSITION, not in dispa
 // ─── (3) The composition ORDER: bridge first, then cost-optimization ───────────────────────────────
 
 describe('AC6 — degraded-mode bridge FIRST, then cost-optimization', () => {
-  it('a BRIDGED cycle-open sends SMS ONLY — the ladder is skipped and cost-opt is bypassed', async () => {
+  // ⭐ Story 5.11 (FS10 (a), AC5) — REPLACES "a BRIDGED cycle-open sends SMS ONLY — the ladder is skipped": the bridge has ⛔
+  // registered words, so its SMS-only send could only reach the log fixture (a fake `sent`, F21). While it stays dark a bridged
+  // member runs the NORMAL ladder — they at least get the push.
+  it('a BRIDGED cycle-open runs the NORMAL ladder — push delivers; the time-critical alert is never cost-suppressed', async () => {
     const h = harness();
     // `time_critical: true` on an `alert_published` alert IS the resolved cycle-open-SMS-bridge signal
     // (Story 8.1 set it from the degraded-mode read at the cycle-freeze instant).
     const result = await fanOutAlert(
       h.deps,
       cycleOpenAlert({ time_critical: true }),
-      // Recent engagement + the toggle ON would normally suppress the paid channels — the bridge must
-      // override that, which is what makes this the composition-ORDER assertion and not a bridge test.
       ctx({}, { costToggleEnabled: true, lastEngagementAt: new Date('2026-07-23T00:00:00.000Z') }),
     );
 
-    expect(result.bridged).toBe(true);
-    expect(result.deliveredChannel).toBe('sms');
-    expect(h.sms.sendCount()).toBe(1);
-    expect(h.push.sendCount()).toBe(0); // NOT a ladder run — the bridge does not wait for push to fail
-    expect(h.whatsapp.sendCount()).toBe(0);
-    expect(result.costSuppressedChannels).toEqual([]); // cost-opt never even consulted
+    expect(result.bridged).toBe(true); // the request is still reported
+    expect(result.deliveredChannel).toBe('push');
+    expect(h.push.sendCount()).toBe(1);
+    expect(h.sms.sendCount()).toBe(0);
+    expect(result.costSuppressedChannels).toEqual([]); // AR-18 — a time-critical alert is never suppressed
+  });
+
+  it('a BRIDGED member whom push and WhatsApp miss — the SMS rung ends `sms_bridge_not_lit`, ⛔ sent', async () => {
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
+    });
+    const result = await fanOutAlert(h.deps, cycleOpenAlert({ time_critical: true }), ctx());
+    expect(trailOf(result)).toEqual(['push:rejected', 'whatsapp:rejected', 'sms:skipped_no_target:sms_bridge_not_lit']);
+    expect(h.sms.sendCount()).toBe(0);
+    expect(result.delivered).toBe(false);
   });
 
   it('the bridge NEVER widens past cycle-open — a time-critical reminder still runs the ladder', async () => {
@@ -455,21 +500,22 @@ describe('AC6 — the Telegram side-channel fires INDEPENDENTLY of the ladder', 
 // ─── (5) The audit families (AC6) ──────────────────────────────────────────────────────────────────
 
 describe('AC6 — both audit families are written through the frozen port', () => {
-  it('every rung writes its `alert.dispatch` line + a per-channel `alert.channel_send` line', async () => {
+  // Story 5.11 (FS15 (a)) — the SMS rung ⛔ calls `dispatch`, so the FAKE SMS `alert.channel_send` audit line (the fixture's
+  // `sms-dlt`, F3) is gone; push and WhatsApp keep both families. (Was: three dispatch lines, the third `channel=sms`.)
+  it('every DISPATCHED rung writes its `alert.dispatch` line + a per-channel `alert.channel_send` line; ⛔ fake SMS line', async () => {
     const h = harness({
       push: makeProvider('fcm', 'push', 'rejected'),
       whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
     });
-    await fanOutAlert(h.deps, cycleOpenAlert(), ctx());
+    await fanOutAlert(h.deps, litReminderAlert(), ctx());
 
     const dispatchLines = h.auditLines.filter((l) => l.action === 'alert.dispatch');
     const sendLines = h.auditLines.filter((l) => l.action === 'alert.channel_send');
-    // One dispatch call per rung — the necessary consequence of the ratified per-rung composition (D9).
-    expect(dispatchLines).toHaveLength(3);
+    // One dispatch call per dispatched rung — the necessary consequence of the ratified per-rung composition (D9).
+    expect(dispatchLines).toHaveLength(2);
     expect(sendLines.map((l) => l.resourceLocator)).toEqual([
       `alert:${ALERT};channel=push;provider=fcm`,
       `alert:${ALERT};channel=whatsapp;provider=whatsapp-business`,
-      `alert:${ALERT};channel=sms;provider=sms-dlt`,
     ]);
     // AI-4-3(c): the per-channel hash is the keyed HMAC of the RENDERED message, never raw copy.
     expect(sendLines.every((l) => /^[0-9a-f]{64}$/.test(l.requestPayloadHash))).toBe(true);
@@ -496,5 +542,139 @@ describe('the recorded fan-out result is NON-PII (channels + outcomes only)', ()
     expect(serialized).not.toContain('+919999999999');
     expect(serialized).not.toContain('chat-123');
     expect(result.memberId).toBe(MEMBER);
+  });
+});
+
+// ─── (7) Story 5.11 — WHO may receive an alert SMS (I2, as RULED by `-390` Q1 B) and the honest rung (I3) ─────────
+
+describe('Story 5.11 AC3 — the ONE predicate (I2), branch by branch', () => {
+  const base = { lit: true, pushOutcome: 'rejected', whatsappTarget: true, whatsappOutcome: 'rejected' } as const;
+
+  it.each([
+    ['push sent', { ...base, pushOutcome: 'sent' }, false],
+    ['push failed + NO WhatsApp target (Pariwar off / no ACTIVE yes) — the ruled widening', { ...base, whatsappTarget: false, whatsappOutcome: 'skipped_no_target' }, true],
+    ['push failed + WhatsApp failed', base, true],
+    ['push failed + WhatsApp sent', { ...base, whatsappOutcome: 'sent' }, false],
+    ['push skipped (no device) + WhatsApp skipped', { ...base, pushOutcome: 'skipped_no_target', whatsappOutcome: 'skipped_no_target' }, true],
+    ['an UNLIT message, push and WhatsApp failed', { ...base, lit: false }, false],
+  ] as const)('%s ⇒ %s', (_label, input, expected) => {
+    expect(isAlertSmsFallbackEligible(input)).toBe(expected);
+  });
+});
+
+describe('Story 5.11 AC3 / AC4 — the fan-out\'s SMS rung, end to end (⛔ any SMS send)', () => {
+  it('push sent ⇒ the SMS rung is never reached, the provider never driven', async () => {
+    const h = harness();
+    const result = await fanOutAlert(h.deps, litReminderAlert(), ctx());
+    expect(trailOf(result)).toEqual(['push:sent']);
+    expect(h.sms.sendCount()).toBe(0);
+  });
+
+  it('push failed + WhatsApp sent ⇒ no SMS', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
+    const result = await fanOutAlert(h.deps, litReminderAlert(), ctx());
+    expect(trailOf(result)).toEqual(['push:rejected', 'whatsapp:sent']);
+    expect(h.sms.sendCount()).toBe(0);
+  });
+
+  it('push failed + WhatsApp failed ⇒ ELIGIBLE — `sms_send_not_wired`', async () => {
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
+    });
+    const result = await fanOutAlert(h.deps, litReminderAlert(), ctx());
+    expect(trailOf(result).at(-1)).toBe(`sms:skipped_no_target:${SMS_RUNG_DETAIL.notWired}`);
+    expect(h.sms.sendCount()).toBe(0);
+  });
+
+  it('⭐ FS3 — a switched-on Pariwar whose WhatsApp REFUSES (no approved template) ⇒ the ladder ADVANCES, ELIGIBLE', async () => {
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected', 'wa_template_not_approved'),
+    });
+    const result = await fanOutAlert(h.deps, litReminderAlert(), ctx());
+    expect(trailOf(result)).toEqual([
+      'push:rejected',
+      'whatsapp:rejected:wa_template_not_approved',
+      'sms:skipped_no_target:sms_send_not_wired',
+    ]);
+  });
+
+  it('an UNLIT per-member message (contribution confirmed) ⇒ `sms_message_not_lit`', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const confirmed = {
+      ...cycleOpenAlert(),
+      alert_category: 'contribution_confirmed',
+      payload_data: { pool_id: POOL, amount_paise: 110000, period_label: '2026-07 cycle' },
+    } as Alert;
+    const result = await fanOutAlert(h.deps, confirmed, ctx());
+    expect(trailOf(result).at(-1)).toBe('sms:skipped_no_target:sms_message_not_lit');
+  });
+
+  it('a day-5 reminder (same category as day 10, ⛔ `sms` block) ⇒ `sms_message_not_lit` — eligibility is by MESSAGE (T3)', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const result = await fanOutAlert(h.deps, reminderAlert(), ctx());
+    expect(trailOf(result).at(-1)).toBe('sms:skipped_no_target:sms_message_not_lit');
+  });
+
+  it('a lit, eligible member with no mobile on file ⇒ plain `skipped_no_target`', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
+    const result = await fanOutAlert(h.deps, litReminderAlert(), ctx({ whatsapp: null, sms: null }));
+    expect(trailOf(result).at(-1)).toBe('sms:skipped_no_target');
+  });
+
+  it('cost-optimization still suppresses the SMS rung (`cost_optimized`) before any SMS decision', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
+    const result = await fanOutAlert(
+      h.deps,
+      litReminderAlert(),
+      ctx({}, { costToggleEnabled: true, lastEngagementAt: new Date('2026-07-23T00:00:00.000Z') }),
+    );
+    expect(trailOf(result).at(-1)).toBe('sms:skipped_no_target:cost_optimized');
+  });
+
+  it('⭐ I3 — even an SMS provider that WOULD accept (the shipped fixture\'s posture) is never driven on the alert path', async () => {
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
+      sms: makeProvider('sms-dlt', 'sms', 'accepted'),
+    });
+    for (const alert of [litReminderAlert(), reminderAlert(), cycleOpenAlert(), cycleOpenAlert({ time_critical: true })]) {
+      const result = await fanOutAlert(h.deps, alert, ctx());
+      expect(result.trail.some((e) => e.channel === 'sms' && e.outcome === 'sent')).toBe(false);
+      expect(result.delivered).toBe(false);
+    }
+    expect(h.sms.sendCount()).toBe(0);
+  });
+});
+
+// ─── (8) Story 5.11 FS14 (a) — `fanOutAlertToMembers`: only a THROWN fan-out is retried ─────────────────────────
+
+describe('Story 5.11 AC4 / FS14 — `retry` holds only a member whose fan-out threw (I4)', () => {
+  beforeEach(() => {
+    withPariwarScope.mockReset();
+    withPariwarScope.mockImplementation((_pool: unknown, _pariwarId: string, fn: (db: unknown) => unknown) => Promise.resolve(fn({})));
+    resolvePushTargets.mockResolvedValue([TARGETS.push]);
+    resolveWaTarget.mockResolvedValue(null); // no WhatsApp yes — the motivating member
+    resolveSmsTarget.mockResolvedValue(TARGETS.sms);
+    resolveTelegramTarget.mockResolvedValue(null);
+    getMemberLastEngagementAt.mockResolvedValue(null);
+  });
+
+  it('⭐ a member NO rung reached (push failed, no WhatsApp, the SMS rung not wired) is a RESULT — `in_app_only`, ⛔ on `retry`', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
+    const { results, retry } = await fanOutAlertToMembers(h.deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
+    expect(retry).toEqual([]);
+    expect(results).toHaveLength(1);
+    expect(results[0]!.delivered).toBe(false);
+    expect(trailOf(results[0]!).at(-1)).toBe('sms:skipped_no_target:sms_send_not_wired');
+  });
+
+  it('a member whose fan-out THROWS (a target read fails) is on `retry` — the caller still throws so pg-boss retries', async () => {
+    resolvePushTargets.mockRejectedValue(new Error('db blip'));
+    const h = harness();
+    const { results, retry } = await fanOutAlertToMembers(h.deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
+    expect(retry).toEqual([MEMBER]);
+    expect(results).toEqual([]);
   });
 });

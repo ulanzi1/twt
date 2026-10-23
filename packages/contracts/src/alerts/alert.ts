@@ -72,6 +72,30 @@ export const ProvenanceRefs = z
 export type ProvenanceRefs = z.output<typeof ProvenanceRefs>;
 
 /**
+ * The per-member contribution notices that have FIXED, registrable SMS wording — Story 5.11 (FS1 (d), Decision
+ * `2026-10-23-389`): day 10 "not recorded yet", a payment not matched, a payment still not confirmed. Each value is a
+ * message key of the jobs-side registry (`contribution-sms-templates.ts`). ⛔ A pool opening or the last day — those
+ * are for the Trust's announcement channels — and ⛔ any broadcast.
+ */
+export const AlertSmsMessage = z.enum(['deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed']);
+export type AlertSmsMessage = z.output<typeof AlertSmsMessage>;
+
+/**
+ * The OPTIONAL `sms` block a lit producer puts on its payload (Story 5.11, FS7 (a)): which registered message, and
+ * the value of each slot by slot NAME, built from the SAME locals as the push params. Absent ⇒ the message is not
+ * SMS-eligible (FS15 — the fan-out's SMS rung ends `sms_message_not_lit`). Carried only by the two variants a lit
+ * notice rides (`deadline_reminder`, `contribution_mismatch`), so ⛔ a broadcast can carry it (I5). The values are
+ * checked against the registry's slots at send time (row 5-11b), ⛔ here.
+ */
+export const AlertSmsBlock = z
+  .object({
+    message: AlertSmsMessage,
+    values: z.record(z.string().min(1), z.string().min(1)),
+  })
+  .strict();
+export type AlertSmsBlock = z.output<typeof AlertSmsBlock>;
+
+/**
  * The common envelope fields every category shares. Spread into each discriminated-union variant (Zod's
  * `discriminatedUnion` needs the discriminant literal DIRECTLY on each option object, so a shared base
  * object cannot be `.merge()`d without losing the literal — spreading the raw shape keeps it a plain
@@ -117,12 +141,14 @@ export const Alert = z.discriminatedUnion('alert_category', [
   // 10/13/14 cadence reminders carry no pool identity (their `deepLinkTargetForAlert` case falls through to
   // the generic `renewals` landing, unchanged), but the pending-match RETRY reminder (a DISTINCT, non-
   // deadline copy the same category dispatches, AC4) carries the member's own pool so the deep link can
-  // route to `contributions/:pool_id` instead.
+  // route to `contributions/:pool_id` instead. `sms` is OPTIONAL (Story 5.11): only day 10 and the escalated
+  // pending-match retry carry it.
   alertVariant('deadline_reminder', {
     subject: z.string().min(1),
     deadline_at: Iso8601Datetime,
     deadline_display: z.string().min(1),
     pool_id: UuidString.optional(),
+    sms: AlertSmsBlock.optional(),
   }),
   // Epic 8 — contribution recorded.
   alertVariant('contribution_confirmed', {
@@ -136,12 +162,13 @@ export const Alert = z.discriminatedUnion('alert_category', [
   // report at all — the producer fills them only when derivable and omits them otherwise (never fabricated).
   // `body` is the producer-resolved, locale-correct, DIGNIFIED line the push renders (mapped from the machine
   // reason-code, never the raw enum, never "Error/Failed") — the same producer-owns-the-copy pattern as the
-  // confirmed alert's `period_label` (render stays a pure function of the payload).
+  // confirmed alert's `period_label` (render stays a pure function of the payload). `sms` is OPTIONAL (Story 5.11).
   alertVariant('contribution_mismatch', {
     pool_id: UuidString,
     expected_paise: Paise.optional(),
     actual_paise: Paise.optional(),
     body: z.string().min(1).optional(),
+    sms: AlertSmsBlock.optional(),
   }),
   // Epic 6 — claim moved to a new lifecycle state.
   alertVariant('claim_status_change', { claim_id: UuidString, new_status: z.string().min(1) }),

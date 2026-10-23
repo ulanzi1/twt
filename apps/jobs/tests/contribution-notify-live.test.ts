@@ -197,7 +197,10 @@ describe.skipIf(!hasDatabase)('contribution-notify live fan-out — audit famili
     expect(send.requestPayloadHash).not.toBe(unkeyed);
   });
 
-  it('a full cascade writes one dispatch line + one channel_send line PER RUNG, in ladder order', async () => {
+  // ⭐ Story 5.11 (FS15 (a), F18) — was "… one channel_send line PER RUNG" with a third `channel=sms` line at 202: that was the
+  // log fixture's fake send (F3). The SMS rung ⛔ dispatches now, so the DISPATCHED rungs (push, WhatsApp) write their lines
+  // and the SMS rung writes none; the member is undelivered with the reason on the trail.
+  it('a full cascade writes one dispatch line + one channel_send line PER DISPATCHED RUNG, in ladder order; ⛔ fake SMS line', async () => {
     const alertId = randomUUID();
     const pariwarId = randomUUID();
     const providers = {
@@ -208,19 +211,19 @@ describe.skipIf(!hasDatabase)('contribution-notify live fan-out — audit famili
     };
 
     const result = await fanOutAlert(deps(providers), cycleOpenAlert(alertId, pariwarId) as never, ctx as never);
-    expect(result.deliveredChannel).toBe('sms');
+    expect(result.delivered).toBe(false);
+    expect(result.trail.at(-1)).toMatchObject({ channel: 'sms', outcome: 'skipped_no_target', detail: 'sms_message_not_lit' });
 
     const rows = await auditRowsFor(alertId);
-    // Three rungs ⇒ three dispatch lines (the per-rung composition, D9) …
-    expect(rows.filter((r) => r.action === 'alert.dispatch')).toHaveLength(3);
-    // … and one honest channel_send per rung, in canonical ladder order.
+    // Two dispatched rungs ⇒ two dispatch lines (the per-rung composition, D9) …
+    expect(rows.filter((r) => r.action === 'alert.dispatch')).toHaveLength(2);
+    // … and one honest channel_send per dispatched rung, in canonical ladder order.
     const sends = rows.filter((r) => r.action === 'alert.channel_send');
     expect(sends.map((s) => s.resourceLocator)).toEqual([
       `alert:${alertId};channel=push;provider=fcm`,
       `alert:${alertId};channel=whatsapp;provider=whatsapp-business`,
-      `alert:${alertId};channel=sms;provider=sms-dlt`,
     ]);
-    expect(sends.map((s) => s.responseStatus)).toEqual([400, 400, 202]); // rejected/rejected/accepted
+    expect(sends.map((s) => s.responseStatus)).toEqual([400, 400]); // rejected/rejected
   });
 
   it('no persisted audit row carries a delivery ADDRESS', async () => {

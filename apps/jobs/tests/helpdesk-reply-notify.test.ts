@@ -57,7 +57,7 @@ describe('buildHelpdeskReplyAlert', () => {
 describe('createHelpdeskReplyFanOutNotifier — reuses the shipped fan-out', () => {
   /** A pool whose `connect()` is a spy — entering `fanOutAlertToMembers` calls it (via withPariwarScope). */
   function fakePoolWithConnectSpy(): { pool: pg.Pool; connect: ReturnType<typeof vi.fn> } {
-    // connect() rejects — fanOutAlertToMembers catches the per-member error (records undelivered) and
+    // connect() rejects — fanOutAlertToMembers catches the per-member error (puts the member on `retry`) and
     // never rethrows, so the notifier resolves; the spy proves it reached the fan-out for a real member.
     const connect = vi.fn(() => Promise.reject(new Error('connect-not-wired-in-test')));
     return { pool: { connect } as unknown as pg.Pool, connect };

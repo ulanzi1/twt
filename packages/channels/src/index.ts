@@ -254,6 +254,11 @@ export {
   resolveSmsProviderDeps,
   resolvePushProviders,
   createContributionProviderResolver,
+  // Story 5.11 (FS3 (a)) — a switched-on Pariwar that cannot send a category refuses, ⛔ the fixture's `accepted`.
+  WHATSAPP_REFUSAL_DETAIL,
+  resolveFanOutWhatsappProvider,
+  createRefusingWhatsappProvider,
+  type WhatsappRefusalDetail,
   type WhatsappCompositionDeps,
   type TelegramCompositionDeps,
   type SmsCompositionDeps,

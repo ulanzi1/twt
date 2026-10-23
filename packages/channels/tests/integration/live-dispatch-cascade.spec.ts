@@ -194,6 +194,8 @@ describe.skipIf(!hasDatabase)('AI-5-2 live-dispatch cascade + audit interlock (l
     const alert = freshClaimAlert(randomUUID(), randomUUID());
     const push = withSendCounter(rejectingProvider('fcm', 'push'));
     const wa = withSendCounter(rejectingProvider('whatsapp-business', 'whatsapp'));
+    // ⚠ Story 5.11 (I3): this models the cascade PRIMITIVE with a test-composed SMS rung. The production alert fan-out
+    // (`apps/jobs/.../contribution-notify.ts`) ⛔ dispatches SMS since 5.11, so this fixture `sent` is ⛔ production behaviour.
     const sms = withSendCounter(createFixtureSmsProvider()); // shipped ACCEPT rung — reuse over reinvention
     const doubles: Record<Channel, CountingProvider> = {
       push,

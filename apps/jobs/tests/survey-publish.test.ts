@@ -274,8 +274,8 @@ describe.skipIf(!hasDatabase)('runSurveyPublish (live-DB :5433)', () => {
     const key = `survey.publish:${alertId}:${memberId}`;
 
     // Pre-claim + RECORD a result for this member, standing in for a first delivery that SUCCEEDED
-    // (the seeded member has no reachable channel, so a real first run would release rather than
-    // record — pre-recording is how a successful send is simulated without a live provider).
+    // (the seeded member has no reachable channel, so a real first run would record `in_app_only` —
+    // Story 5.11 — pre-recording `delivered` is how a successful send is simulated without a live provider).
     const { idempotency } = await import('@twt/domain');
     const store = idempotency.createKeyedStore(created.pool);
     expect(await store.claim(key, 3600)).toBe('acquired');

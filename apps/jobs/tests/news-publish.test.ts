@@ -211,11 +211,11 @@ describe.skipIf(!hasDatabase)('runNewsPublish (live-DB :5433)', () => {
     // The member has no registered device/contact, so the fixture-level fan-out attempt naturally
     // resolves to `skipped_no_target` on every channel — the ATTEMPT (audience resolution + the
     // per-member resolveMemberDeliveryContext/fanOutAlert path, previously entirely untested) is what
-    // this test proves, not a real delivery. An UNDELIVERED member's idempotency claim is released
-    // (not recorded), so a later re-run safely re-attempts it rather than leaving it stuck forever.
+    // this test proves, not a real delivery. Story 5.11 (FS14 (a)): a member no rung reached is recorded
+    // `in_app_only` — a re-run resolves the same audience and does ⛔ re-send to them.
     const rerun = await runNewsPublish({ notify: fullNotify }, { postId, mode: 'scheduled' }, p);
     expect(rerun.published).toBe(true);
-    expect(rerun.memberCount).toBe(1); // audience resolution is unaffected by the prior (released) claim
+    expect(rerun.memberCount).toBe(1); // audience resolution is unaffected by the prior (recorded) claim
     void memberId; // seeded for FK/membership purposes only — its value isn't separately asserted
   });
 

@@ -41,7 +41,7 @@ import type { SmsAppClient } from '../providers/sms-app.js';
 import type { TelegramAppCache } from '../providers/telegram-app.js';
 import type { WhatsappAppCache } from '../providers/whatsapp-app.js';
 import { resolveDltTemplate } from '../sms-dlt-registry.js';
-import type { Channel, ChannelProvider } from '../provider.js';
+import type { Channel, ChannelProvider, SendResult, SendStatus } from '../provider.js';
 
 type PariwarId = ids.PariwarId;
 
@@ -61,6 +61,16 @@ export interface WhatsappCompositionDeps {
 }
 
 /**
+ * Story 5.11 (FS3 (a), `2026-10-23-389`; deferred-work's 5.10-validate ladder item (d-ii)) — why a Pariwar whose WhatsApp
+ * is SWITCHED ON cannot send this category: no `approved` template, or a blank credential name / `phone_number_id`.
+ */
+export const WHATSAPP_REFUSAL_DETAIL = {
+  templateNotApproved: 'wa_template_not_approved',
+  credentialsMissing: 'wa_credentials_missing',
+} as const;
+export type WhatsappRefusalDetail = (typeof WHATSAPP_REFUSAL_DETAIL)[keyof typeof WHATSAPP_REFUSAL_DETAIL];
+
+/**
  * Resolve the REAL WA provider deps for a (Pariwar, category), or `null` when the channel is not fully
  * provisioned for a live Meta send (⇒ the caller falls back to the fixture). Returns null when: no config
  * row, the admin toggle is off, the credential NAME / phone_number_id is blank, or the category has no
@@ -71,31 +81,70 @@ export async function resolveWhatsappProviderDeps(
   deps: WhatsappCompositionDeps,
   pariwarId: PariwarId,
   alertCategory: string,
-): Promise<{ messaging: ReturnType<WhatsappAppCache['messagingFor']>; template: { name: string; languageCode: string } } | null> {
-  const config = await channelConfig.getWaConfig(deps.db, pariwarId);
+): Promise<WhatsappProviderDeps | null> {
+  const provisioning = await readWhatsappProvisioning(deps.db, pariwarId, alertCategory);
+  return provisioning.state === 'ready' ? buildWhatsappProviderDeps(deps, pariwarId, provisioning) : null;
+}
+
+type WhatsappProviderDeps = {
+  messaging: ReturnType<WhatsappAppCache['messagingFor']>;
+  template: { name: string; languageCode: string };
+};
+
+/**
+ * The ONE read of a (Pariwar, category)'s WhatsApp provisioning — the config row + the approved template. `off` = no row
+ * or the toggle off; `refused` = ENABLED but unsendable (Story 5.11 FS3: blank credential name / phone_number_id, or no
+ * `approved` template — Meta requires a registered one); `ready` = everything a real send needs but the token.
+ */
+async function readWhatsappProvisioning(
+  db: Db,
+  pariwarId: PariwarId,
+  alertCategory: string,
+): Promise<
+  | { readonly state: 'off' }
+  | { readonly state: 'refused'; readonly detail: WhatsappRefusalDetail }
+  | {
+      readonly state: 'ready';
+      readonly accessTokenSecretName: string;
+      readonly phoneNumberId: string;
+      readonly graphApiVersion: string;
+      readonly template: { readonly templateName: string; readonly languageCode: string };
+    }
+> {
+  const config = await channelConfig.getWaConfig(db, pariwarId);
+  if (!config || !config.enabled) return { state: 'off' };
   if (
-    !config ||
-    !config.enabled ||
     !config.accessTokenSecretName ||
     config.accessTokenSecretName.trim() === '' ||
     !config.phoneNumberId ||
     config.phoneNumberId.trim() === ''
   ) {
-    return null;
+    return { state: 'refused', detail: WHATSAPP_REFUSAL_DETAIL.credentialsMissing };
   }
-
-  // A category with no `approved` template is NOT WA-eligible — the real send cannot be built (Meta requires
-  // a registered template). Fall back to the fixture (the caller passes null → createWhatsappProvider).
-  const template = await channelConfig.resolveApprovedTemplate(deps.db, pariwarId, alertCategory);
-  if (!template) return null;
-
-  const accessToken = await deps.resolveSecret(config.accessTokenSecretName);
-  const messaging = deps.appCache.messagingFor(pariwarId, {
+  const template = await channelConfig.resolveApprovedTemplate(db, pariwarId, alertCategory);
+  if (!template) return { state: 'refused', detail: WHATSAPP_REFUSAL_DETAIL.templateNotApproved };
+  return {
+    state: 'ready',
+    accessTokenSecretName: config.accessTokenSecretName,
     phoneNumberId: config.phoneNumberId,
-    accessToken,
     graphApiVersion: config.graphApiVersion,
+    template,
+  };
+}
+
+/** Resolve the token LAST (only once every gate passed) and build the client — never logged. */
+async function buildWhatsappProviderDeps(
+  deps: WhatsappCompositionDeps,
+  pariwarId: PariwarId,
+  ready: Extract<Awaited<ReturnType<typeof readWhatsappProvisioning>>, { state: 'ready' }>,
+): Promise<WhatsappProviderDeps> {
+  const accessToken = await deps.resolveSecret(ready.accessTokenSecretName);
+  const messaging = deps.appCache.messagingFor(pariwarId, {
+    phoneNumberId: ready.phoneNumberId,
+    accessToken,
+    graphApiVersion: ready.graphApiVersion,
   });
-  return { messaging, template: { name: template.templateName, languageCode: template.languageCode } };
+  return { messaging, template: { name: ready.template.templateName, languageCode: ready.template.languageCode } };
 }
 
 /**
@@ -110,6 +159,49 @@ export async function resolveWhatsappProvider(
 ): Promise<ChannelProvider> {
   const providerDeps = await resolveWhatsappProviderDeps(deps, pariwarId, alertCategory);
   return createWhatsappProvider(providerDeps);
+}
+
+/**
+ * The `whatsapp` provider the ALERT FAN-OUT uses (Story 5.11, FS3 (a)): the REAL provider when fully provisioned; a
+ * REFUSING provider (`rejected` + the detail) when the Pariwar's WhatsApp is ENABLED but this category cannot be sent; the
+ * log-only fixture when it is off or absent (its members have no WhatsApp target, so the fixture is never reached). ONE
+ * read of the config + template; an outage propagates (the honesty discipline above). `resolveWhatsappProvider` — the
+ * shared selection other callers use — is unchanged.
+ */
+export async function resolveFanOutWhatsappProvider(
+  deps: WhatsappCompositionDeps,
+  pariwarId: PariwarId,
+  alertCategory: string,
+): Promise<ChannelProvider> {
+  const provisioning = await readWhatsappProvisioning(deps.db, pariwarId, alertCategory);
+  if (provisioning.state === 'refused') return createRefusingWhatsappProvider(provisioning.detail);
+  if (provisioning.state === 'off') return createWhatsappProvider(null);
+  return createWhatsappProvider(await buildWhatsappProviderDeps(deps, pariwarId, provisioning));
+}
+
+/**
+ * A NON-ACCEPTING WhatsApp provider (FS3 (a)): every `send` answers `rejected` with the refusal detail, so the ladder
+ * advances to SMS instead of stopping on the log fixture's `accepted` (F5 — before 5.11 a switched-on Pariwar with no
+ * approved template reported `whatsapp:sent` and ⛔ text could follow). ⛔ No network; ⛔ an address is read.
+ */
+export function createRefusingWhatsappProvider(detail: WhatsappRefusalDetail): ChannelProvider {
+  return {
+    id: 'whatsapp-business',
+    channel: 'whatsapp',
+    scope: 'global',
+    send(): Promise<SendResult> {
+      return Promise.resolve({
+        channel: 'whatsapp',
+        provider: 'whatsapp-business',
+        status: 'rejected',
+        providerMessageId: null,
+        detail,
+      });
+    },
+    getStatus(messageId): Promise<SendStatus> {
+      return Promise.resolve({ providerMessageId: messageId, state: 'unknown' });
+    },
+  };
 }
 
 // ── Telegram composition (relocated from apps/api Story 5.5, Task 8) ───────────────────────────────────────
@@ -306,7 +398,9 @@ export type ProviderRegistry = Readonly<Record<Channel, readonly ChannelProvider
  * `contribution-notify.ts`'s `ProviderRegistryResolver`). It composes ALL FOUR channels for a
  * (pariwarId, category):
  *   · push     → real createPushProviders(messaging) when the global SA secret resolves, else fixture (§4)
- *   · whatsapp → resolveWhatsappProvider (real when the Pariwar's WA config is fully provisioned, else fixture)
+ *   · whatsapp → resolveWhatsappProvider (real when the Pariwar's WA config is fully provisioned, else fixture) —
+ *                ⭐ Story 5.11 (FS3 (a)): a Pariwar whose WA is ENABLED but cannot send this category (no approved template,
+ *                blank credential name / phone_number_id) gets a REFUSING provider (`rejected` + the detail), ⛔ the fixture
  *   · sms      → resolveSmsProvider (real when the global gateway + a registered DLT template are provisioned)
  *   · telegram → resolveTelegramProvider (real when the Pariwar's Telegram config is fully provisioned)
  *
@@ -334,6 +428,9 @@ export type ProviderRegistry = Readonly<Record<Channel, readonly ChannelProvider
  * highest-load moment. Caching the in-flight promise means concurrent callers for the same key share ONE
  * resolution. A REJECTED promise is removed from the map (not left cached) so a transient outage still retries
  * cleanly on the next call — this preserves the existing "a rejected outage is not memoized" guarantee below.
+ *
+ * ⚠ Story 5.11 (FS3): the memo above also holds a refusal — a template approved or a credential set AFTER the first
+ * resolution is seen only after a restart (recorded, ⛔ a TTL added — `-389` FS3 (a)).
  *
  * ── The 5-state honesty invariant (§9a-i) ────────────────────────────────────────────────────────────────────
  * "Not configured" (absent row / disabled / blank NAME / no template / gateway unconfigured) ⇒ fixture per
@@ -373,7 +470,7 @@ export function createContributionProviderResolver(
 
       // WA + Telegram config reads are RLS-scoped — open the resolver's OWN per-Pariwar tenant tx (§6).
       const { whatsapp, telegram } = await deps.withScope(pariwarId, async (db) => {
-        const wa = await resolveWhatsappProvider(
+        const wa = await resolveFanOutWhatsappProvider(
           { db, appCache: deps.whatsappAppCache, resolveSecret: deps.resolveSecret },
           pid,
           category,

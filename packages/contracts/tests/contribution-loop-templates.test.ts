@@ -35,6 +35,7 @@ import {
   PENDING_MATCH_RETRY_TEMPLATE_KEYS,
   PendingMatchRetryPayloadData,
   buildContributionConfirmedPayloadData,
+  buildContributionMismatchPayloadData,
   buildCycleOpenPayloadData,
   buildDeadlineReminderPayloadData,
   buildPendingMatchRetryPayloadData,
@@ -416,4 +417,60 @@ describe('every registry-referenced notify.* key exists in both locale JSON file
       expect(hi[key]!.length).toBeGreaterThan(0);
     });
   }
+});
+
+// ─── Story 5.11 (FS7 (a)) — the OPTIONAL `sms` block ─────────────────────────────────────────────────────────────
+
+describe('Story 5.11 — the optional `sms` block rides only the two variants a lit notice uses', () => {
+  const ENV = {
+    alert_id: '33333333-3333-3333-3333-333333333333',
+    pariwar_id: '11111111-1111-1111-1111-111111111111',
+    member_id: '22222222-2222-2222-2222-222222222222',
+    time_critical: false,
+    provenance_refs: {},
+    created_at: '2026-07-23T00:00:00.000Z',
+    created_by_actor: 'system',
+  };
+  const SMS = { message: 'deadline_not_recorded', values: { pool: 'A', date: '05-08-2026' } } as const;
+
+  it('the builders OMIT the key when no block is passed (⛔ an `sms: undefined` key on the payload)', () => {
+    const d = buildDeadlineReminderPayloadData({ subject: 's', deadlineAt: new Date('2026-08-05T00:00:00.000Z'), deadlineDisplay: 'd' });
+    const m = buildContributionMismatchPayloadData({ poolId: '44444444-4444-4444-4444-444444444444', body: 'b' });
+    expect(Object.keys(d)).not.toContain('sms');
+    expect(Object.keys(m)).not.toContain('sms');
+  });
+
+  it('a passed block is carried on deadline_reminder, the pending-match retry and contribution_mismatch', () => {
+    expect(buildDeadlineReminderPayloadData({ subject: 's', deadlineAt: new Date('2026-08-05T00:00:00.000Z'), deadlineDisplay: 'd', sms: SMS }).sms).toEqual(SMS);
+    expect(
+      buildPendingMatchRetryPayloadData({ subject: 's', display: 'd', poolId: '44444444-4444-4444-4444-444444444444', now: new Date(), sms: { message: 'payment_not_confirmed', values: { pool: 'A' } } }).sms,
+    ).toEqual({ message: 'payment_not_confirmed', values: { pool: 'A' } });
+    expect(
+      buildContributionMismatchPayloadData({ poolId: '44444444-4444-4444-4444-444444444444', body: 'b', sms: { message: 'payment_not_matched', values: {} } }).sms,
+    ).toEqual({ message: 'payment_not_matched', values: {} });
+  });
+
+  it('⛔ a message outside the three, and ⛔ an extra key, are refused (strict)', () => {
+    const base = { subject: 's', deadline_at: '2026-08-05T00:00:00.000Z', deadline_display: 'd' };
+    const parse = (sms: unknown) => Alert.safeParse({ ...ENV, alert_category: 'deadline_reminder', payload_data: { ...base, sms } }).success;
+    expect(parse(SMS)).toBe(true);
+    expect(parse({ message: 'pool_open', values: {} })).toBe(false);
+    expect(parse({ ...SMS, extra: 1 })).toBe(false);
+  });
+
+  it.each(['alert_published', 'contribution_confirmed', 'module_new', 'niyamavali_amended'] as const)(
+    '⛔ I5 — `%s` cannot carry a block',
+    (category) => {
+      const payloads: Record<string, Record<string, unknown>> = {
+        alert_published: { title: 't', body: 'b' },
+        contribution_confirmed: { pool_id: '44444444-4444-4444-4444-444444444444', amount_paise: 1, period_label: 'p' },
+        module_new: { module_id: '44444444-4444-4444-4444-444444444444', module_title: 'm' },
+        niyamavali_amended: { clause_id: 'niy.x', amendment_summary: 's' },
+      };
+      const ok = Alert.safeParse({ ...ENV, alert_category: category, payload_data: payloads[category] }).success;
+      const planted = Alert.safeParse({ ...ENV, alert_category: category, payload_data: { ...payloads[category], sms: SMS } }).success;
+      expect(ok).toBe(true);
+      expect(planted).toBe(false);
+    },
+  );
 });

@@ -5,8 +5,9 @@
 // never sending a real notification: push "accepts" on the fixture and the cascade stops at push, never
 // reaching WhatsApp/SMS. This suite drives the UNCHANGED Story 8.8 `fanOutAlert` with a `resolveProviders`
 // built from PROVIDER DOUBLES ONLY (no network — the AI-5-2 reject-double convention) and proves:
-//   (a) real push `rejected` → WhatsApp attempted → WhatsApp `rejected` → SMS attempted, trail push→whatsapp→sms
-//       in order, SMS TERMINAL (sent ⇒ delivered-on-sms; rejected ⇒ ladder exhausted ⇒ member undelivered);
+//   (a) real push `rejected` → WhatsApp attempted → WhatsApp `rejected` → the SMS rung, trail push→whatsapp→sms
+//       in order, SMS TERMINAL (Story 5.11: the SMS rung ⛔ dispatches — an unlit alert ends `sms_message_not_lit`,
+//       a lit notice's eligible member `sms_send_not_wired`; either way undelivered, ⛔ a fake `sent`);
 //   (b) Telegram is the INDEPENDENT mirror — fires once for an eligible category (alert_published) with a
 //       chat_id and its failure leaves the ladder outcome unchanged; SILENT for a contribution-loop category;
 //   (c) an outage in `resolveProviders` PROPAGATES out of the fan-out (no fixture fallback);
@@ -147,6 +148,26 @@ describe.skipIf(!hasDatabase)('AI-8-3 — full-ladder-advances-on-reject armor (
     };
   }
 
+  /** Story 5.11 — a LIT notice: day 10's reminder carrying its `sms` block (FS7). */
+  function litReminderAlert(alertId: string, pariwarId: string) {
+    return {
+      alert_id: alertId,
+      pariwar_id: pariwarId,
+      member_id: randomUUID(),
+      time_critical: false,
+      provenance_refs: { pool_id: randomUUID() },
+      created_at: '2026-07-25T00:00:00.000Z',
+      created_by_actor: 'system',
+      alert_category: 'deadline_reminder' as const,
+      payload_data: {
+        subject: 'पूल A — आपका योगदान अभी दर्ज नहीं हुआ है',
+        deadline_at: '2026-08-05T00:00:00.000Z',
+        deadline_display: '05-08-2026',
+        sms: { message: 'deadline_not_recorded' as const, values: { pool: 'A', date: '05-08-2026' } },
+      },
+    };
+  }
+
   /** All four channels addressed. Telegram target controlled per test. */
   const ctxWith = (telegram: SendTarget | null) => ({
     targets: { push: [TARGETS.push], whatsapp: TARGETS.whatsapp, sms: TARGETS.sms, telegram },
@@ -154,7 +175,10 @@ describe.skipIf(!hasDatabase)('AI-8-3 — full-ladder-advances-on-reject armor (
     lastEngagementAt: null,
   });
 
-  it('(a) real push rejected → WhatsApp rejected → SMS: the ladder ADVANCES and delivers on SMS, in order', async () => {
+  // ⭐ Story 5.11 (AC4, F18) — was "… → SMS: the ladder ADVANCES and delivers on SMS": that SMS delivery was the provider
+  // double standing in for the log fixture's fake `sent` (F3). The ladder still ADVANCES through every rung; the SMS rung now
+  // decides lit / eligible itself, ⛔ dispatches, and an announcement (unlit) ends `sms_message_not_lit`.
+  it('(a) real push rejected → WhatsApp rejected → the SMS rung: the ladder ADVANCES, in order, and ⛔ fakes a send', async () => {
     const alertId = randomUUID();
     const pariwarId = randomUUID();
     const providers = {
@@ -170,21 +194,22 @@ describe.skipIf(!hasDatabase)('AI-8-3 — full-ladder-advances-on-reject armor (
       ctxWith(null) as never,
     );
 
-    // The whole point: push did NOT short-circuit — the ladder walked to SMS and delivered there.
-    expect(result.deliveredChannel).toBe('sms');
-    expect(result.delivered).toBe(true);
+    // The whole point: push did NOT short-circuit — the ladder walked to the SMS rung.
     expect(result.trail.map((t) => t.channel)).toEqual(['push', 'whatsapp', 'sms']);
-    expect(result.trail.map((t) => t.outcome)).toEqual(['rejected', 'rejected', 'sent']);
+    expect(result.trail.map((t) => t.outcome)).toEqual(['rejected', 'rejected', 'skipped_no_target']);
+    expect(result.trail[2]!.detail).toBe('sms_message_not_lit');
+    // I3 — an SMS provider that WOULD accept is ⛔ reached: nothing is reported sent.
+    expect(result.delivered).toBe(false);
+    expect(result.deliveredChannel).toBeNull();
 
-    // (d) honest audit lines for the three real rungs, in canonical order.
+    // (d) honest audit lines for the two DISPATCHED rungs, in canonical order — ⛔ an SMS line (5.11: the fake one is gone).
     const rows = await auditRowsFor(alertId);
     const sends = rows.filter((r) => r.action === 'alert.channel_send');
     expect(sends.map((s) => s.resourceLocator)).toEqual([
       `alert:${alertId};channel=push;provider=fcm`,
       `alert:${alertId};channel=whatsapp;provider=whatsapp-business`,
-      `alert:${alertId};channel=sms;provider=sms-dlt`,
     ]);
-    expect(sends.map((s) => s.responseStatus)).toEqual([400, 400, 202]); // rejected/rejected/accepted
+    expect(sends.map((s) => s.responseStatus)).toEqual([400, 400]); // rejected/rejected
   });
 
   it('(a-NEGATIVE) the fixture push short-circuits the ladder — the exact regression this armors against', async () => {
@@ -215,26 +240,31 @@ describe.skipIf(!hasDatabase)('AI-8-3 — full-ladder-advances-on-reject armor (
     expect(sends[0]!.resourceLocator).toBe(`alert:${alertId};channel=push;provider=fcm`);
   });
 
-  it('(a) SMS is TERMINAL — a rejected SMS exhausts the ladder ⇒ member undelivered (the caller fails the job)', async () => {
+  // ⭐ Story 5.11 (AC3 / AC4) — was "SMS is TERMINAL — a rejected SMS exhausts the ladder ⇒ undelivered (the caller fails the
+  // job)": the SMS rung no longer dispatches, and an unreached member is `in_app_only` (FS14), ⛔ a failed job. A LIT notice's
+  // eligible member ends `sms_send_not_wired` (the send is row 5-11b).
+  it('(a) SMS is TERMINAL — a LIT notice, push and WhatsApp rejected ⇒ `sms_send_not_wired`, undelivered, ⛔ SMS audit line', async () => {
     const alertId = randomUUID();
     const pariwarId = randomUUID();
     const providers = {
       push: [provider('fcm', 'push', 'rejected'), provider('apns', 'push', 'rejected')],
       whatsapp: [provider('whatsapp-business', 'whatsapp', 'rejected')],
-      sms: [provider('sms-dlt', 'sms', 'rejected')],
+      sms: [provider('sms-dlt', 'sms', 'accepted')],
       telegram: [provider('telegram', 'telegram', 'accepted')],
     };
 
     const result = await fanOutAlert(
       deps(() => Promise.resolve(providers)),
-      announcementAlert(alertId, pariwarId) as never,
+      litReminderAlert(alertId, pariwarId) as never,
       ctxWith(null) as never,
     );
 
     expect(result.delivered).toBe(false);
     expect(result.deliveredChannel).toBeNull();
-    expect(result.trail.map((t) => t.channel)).toEqual(['push', 'whatsapp', 'sms']);
-    expect(result.trail.every((t) => t.outcome === 'rejected')).toBe(true);
+    expect(result.trail.map((t) => `${t.channel}:${t.outcome}`)).toEqual(['push:rejected', 'whatsapp:rejected', 'sms:skipped_no_target']);
+    expect(result.trail[2]!.detail).toBe('sms_send_not_wired');
+    const sends = (await auditRowsFor(alertId)).filter((r) => r.action === 'alert.channel_send');
+    expect(sends.some((s) => s.resourceLocator.includes('channel=sms'))).toBe(false);
   });
 
   it('(b) Telegram is the INDEPENDENT mirror — fires once for an eligible category, its failure unchanged by the ladder', async () => {

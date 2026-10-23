@@ -14,16 +14,24 @@
 //
 // ── The composition, in the ratified order (AC6 / Decision 3 / D9) ──────────────────────────────────
 //   1. `evaluateDegradedModeBridge` FIRST. When it bridges (a cycle-open alert under an active
-//      declaration) we force SMS only and BYPASS BOTH cost-optimization AND the ladder — that is the
-//      AR-20 carve-out to RA-29's no-bulk-SMS rule, not a ladder run (degraded-mode.ts:15-23).
-//   2. Otherwise `evaluateCostOptimization` decides suppression of the two PAID channels. The
+//      declaration) 8.8 forced SMS only and BYPASSED BOTH cost-optimization AND the ladder — the AR-20
+//      carve-out to RA-29's no-bulk-SMS rule (degraded-mode.ts:15-23). ⭐ Story 5.11 (FS10 (a), `-389`):
+//      the bridge has ⛔ registered words, so that SMS-only send could only ever reach the log fixture
+//      (a fake `sent`). While the bridge stays dark a bridged member runs the NORMAL ladder below, and its
+//      SMS rung ends `sms_bridge_not_lit` (the bridge's words are row 5-8b).
+//   2. `evaluateCostOptimization` decides suppression of the two PAID channels. The
 //      mechanism is the one 5.7 specifies: the resolver OMITS the suppressed channels' targets
 //      ("the future live fan-out drives it by omitting the suppressed cost-channels' targets",
 //      cost-optimization.ts:10-11). Push is never suppressible and never suppressed.
-//   3. `runChannelCascade(send, { backoffMs: [], sleep })` — stop at the first `sent`. Each rung is
-//      ONE `dispatch` call with a `DeliveryResolver` narrowed to that single channel, so category
+//   3. `runChannelCascade(send, { backoffMs: [], sleep })` — stop at the first `sent`. Each push / WA
+//      rung is ONE `dispatch` call with a `DeliveryResolver` narrowed to that single channel, so category
 //      eligibility, fcm-vs-apns provider selection, lifecycle suppression, the honest outcome mapping
 //      and BOTH audit families all stay `dispatch`'s job. The composition never re-implements them.
+//      ⭐ The SMS rung is the exception (Story 5.11, I3 / FS15): it ⛔ calls `dispatch`, because the
+//      category resolver's SMS provider is the log fixture for every alert (its registry is all-dark) and
+//      the fixture reports `sent`. The rung decides lit / eligible ITSELF from the payload's `sms` block
+//      and ONE predicate (`isAlertSmsFallbackEligible`), and every non-send names its reason on the trail.
+//      The real send is row 5-11b.
 //   4. The Telegram mirror fires INDEPENDENTLY of the ladder — fire-and-forget, only when
 //      `isCategoryEligible('telegram', category)`. A Telegram failure never changes `delivered` or
 //      `deliveredChannel` (dispatch.ts:44-52 owns the eligibility; cascade.ts owns "Telegram is
@@ -33,8 +41,13 @@
 // `DEFAULT_SMS_BACKOFF_MS` is 30s/5m/30m and `runChannelCascade` sleeps it IN-PROCESS — at 4L members
 // that would hold a worker 35+ minutes per undelivered member. So the ladder runs with `backoffMs: []`
 // (one attempt per rung, no sleeping) and retry-with-backoff is delegated to pg-boss's own job retry:
-// a member whose whole ladder came back undelivered makes the job THROW. `cascade.ts:14-17` anticipates
+// in 8.8 a member whose whole ladder came back undelivered made the job THROW (5.11 narrows it — below). `cascade.ts:14-17` anticipates
 // exactly this ("a plain array so a later DURABLE (pg-boss) adapter is thin").
+//
+// ⭐ Story 5.11 (FS14 (a), F19): a member whose ladder ended without `sent` is ⛔ retried — they are
+// recorded `in_app_only` (the alert is on their in-app surface, the official channel, R10(B)). Before 5.11
+// the fake `sms:sent` made every such member "delivered", so this keeps the retry profile EXACTLY (I4);
+// only a member whose fan-out THREW is retried. Row 5-11b adds the one retryable SMS case.
 //
 // THE AR-19 DEVIATION, STATED NOT HIDDEN: AR-19 reads "push (1 + up to 3 backoff-spaced retries) → WA →
 // SMS", i.e. retries are PER RUNG before advancing. This design retries the WHOLE LADDER. Two
@@ -49,10 +62,10 @@
 // Addresses (device tokens, mobiles, chat ids) are resolved at this composition layer, never logged,
 // and never placed on a job result. The recorded trail is channels + outcomes ONLY.
 
-import type { Alert, AlertCategory } from '@twt/contracts';
+import type { Alert, AlertCategory, AlertSmsBlock } from '@twt/contracts';
 import {
   CANONICAL_CHANNEL_LADDER,
-  DEGRADED_MODE_BRIDGE_CHANNELS,
+  WHATSAPP_REFUSAL_DETAIL,
   auditCostSuppression,
   dispatch,
   evaluateCostOptimization,
@@ -142,7 +155,9 @@ export interface MemberFanOutResult {
   readonly delivered: boolean;
   readonly deliveredChannel: Channel | null;
   readonly trail: readonly CascadeTrailEntry[];
-  /** `true` when the AR-20 degraded-mode SMS bridge fired (ladder + cost-opt both bypassed). */
+  /** `true` when the AR-20 degraded-mode SMS bridge was REQUESTED (a cycle-open under an active declaration).
+   *  Story 5.11 (FS10 (a)): while the bridge is dark the member runs the normal ladder; its SMS rung ends
+   *  `sms_bridge_not_lit`. */
   readonly bridged: boolean;
   /** The paid channels cost-optimization omitted for this member (never includes `push`). */
   readonly costSuppressedChannels: readonly Channel[];
@@ -152,6 +167,60 @@ export interface MemberFanOutResult {
 
 const realSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Story 5.11 (I3; FS2, FS10, FS15) — why an alert's SMS rung ended WITHOUT a send. PII-free; recorded on the trail and in
+ * the member's result. ⛔ A fixture `sent` replaces any of them.
+ */
+export const SMS_RUNG_DETAIL = {
+  /** The alert carries no `sms` block — its message has no registered words (a pool opening, news, …). */
+  notLit: 'sms_message_not_lit',
+  /** Lit, but the member is not eligible under {@link isAlertSmsFallbackEligible}. */
+  notEligible: 'sms_fallback_not_eligible',
+  /** Lit and eligible — the real send is row 5-11b; until then ⛔ text goes. */
+  notWired: 'sms_send_not_wired',
+  /** The degraded-mode bridge was requested; it has ⛔ registered words (FS10 (a)). */
+  bridgeNotLit: 'sms_bridge_not_lit',
+} as const;
+
+/**
+ * The rung details a member's recorded result KEEPS (FS14 (a) — "the trail with each rung's reason"): the named, PII-free
+ * reasons only. A provider's own detail (an error string) is ⛔ persisted.
+ */
+export const RECORDED_RUNG_DETAILS: ReadonlySet<string> = new Set<string>([
+  ...Object.values(SMS_RUNG_DETAIL),
+  ...Object.values(WHATSAPP_REFUSAL_DETAIL),
+  'cost_optimized',
+]);
+
+/**
+ * ⭐ I2 — THE ONE predicate for who may receive an alert SMS, as RULED by `2026-10-23-390` Q1 B (Trustee-ratified): a LIT
+ * message, when the push rung did not end `sent` AND (the member has NO WhatsApp target — the Pariwar's WhatsApp is off or
+ * the member has no ACTIVE yes — OR the WhatsApp rung did not end `sent`, FS3's refusal included). The v1.2 build (`-389`
+ * FS2 (a), architecture §3.4 as written) also required a WhatsApp target; the ruling removed it. "Did not end `sent`" is the
+ * rung's OWN result — a later "undelivered" report from Meta never re-enters the ladder (recorded, ⛔ widened).
+ */
+export function isAlertSmsFallbackEligible(input: {
+  readonly lit: boolean;
+  readonly pushOutcome: ChannelSendOutcome['outcome'] | undefined;
+  readonly whatsappTarget: boolean;
+  readonly whatsappOutcome: ChannelSendOutcome['outcome'] | undefined;
+}): boolean {
+  if (!input.lit) return false;
+  if (input.pushOutcome === 'sent') return false;
+  return !input.whatsappTarget || input.whatsappOutcome !== 'sent';
+}
+
+/** The `sms` block a lit producer put on the payload (FS7) — only the two variants a lit notice rides can carry one. */
+function alertSmsBlock(alert: Alert): AlertSmsBlock | undefined {
+  switch (alert.alert_category) {
+    case 'deadline_reminder':
+    case 'contribution_mismatch':
+      return alert.payload_data.sms;
+    default:
+      return undefined;
+  }
+}
 
 /**
  * Resolve one member's delivery targets + cost-policy inputs (the DB half). Runs under the caller's
@@ -221,8 +290,8 @@ function outcomeForChannel(
  * input is injected, so the whole composition — bridge-before-cost-opt, the single-rung dispatch calls,
  * stop-at-first-`sent`, multi-device push, the independent Telegram mirror — is exercisable with fakes.
  *
- * Returns the NON-PII outcome record. It NEVER throws for a delivery failure: the CALLER decides
- * whether an undelivered member should fail the job (it should — that is how pg-boss owns the backoff).
+ * Returns the NON-PII outcome record. It NEVER throws for a delivery failure. A member no rung reached is
+ * `in_app_only` (Story 5.11, FS14) — the caller records them and does ⛔ retry.
  */
 export async function fanOutAlert(
   deps: ContributionNotifyDeps,
@@ -252,74 +321,79 @@ export async function fanOutAlert(
     return outcomeForChannel(outcome.attempts, channel);
   };
 
-  // ── (1) The AR-20 degraded-mode bridge — evaluated FIRST, and it bypasses the ladder entirely ─────
+  // ── (1) The AR-20 degraded-mode bridge — evaluated FIRST. Story 5.11 (FS10 (a)): while it has ⛔ words, a
+  //        bridged member runs the normal ladder and only the SMS rung's reason records the request. ─────
   const bridge = evaluateDegradedModeBridge({
     category,
     degradedModeActive: degradedModeActiveFor(alert),
   });
 
-  let trail: CascadeTrailEntry[] = [];
-  let delivered = false;
-  let deliveredChannel: Channel | null = null;
-  let costSuppressedChannels: readonly Channel[] = [];
-
-  if (bridge.bridged) {
-    // Force-send SMS to every eligible member regardless of engagement AND regardless of the tier
-    // ladder — it does NOT wait for push/WA to fail; that is the whole point of a bridge during
-    // infrastructure degradation. Cost-optimization is not consulted at all on this path.
-    for (const channel of DEGRADED_MODE_BRIDGE_CHANNELS) {
-      const target = ctx.targets[channel];
-      const attempt = target
-        ? await dispatchOneChannel(channel, target)
-        : ({ outcome: 'skipped_no_target' } as const);
-      trail.push({ channel, attempt: 0, outcome: attempt.outcome });
-      if (attempt.outcome === 'sent') {
-        delivered = true;
-        deliveredChannel = channel;
-      }
-    }
-  } else {
-    // ── (2) Cost-optimization decides suppression of the two PAID channels ─────────────────────────
-    const cost = evaluateCostOptimization({
-      category,
-      timeCritical: alert.time_critical,
-      toggleEnabled: ctx.costToggleEnabled,
-      lastEngagementAt: ctx.lastEngagementAt,
-      now,
+  // ── (2) Cost-optimization decides suppression of the two PAID channels ───────────────────────────
+  // (A bridged alert is time-critical, so cost-optimization never suppresses it — the AR-18 override.)
+  const cost = evaluateCostOptimization({
+    category,
+    timeCritical: alert.time_critical,
+    toggleEnabled: ctx.costToggleEnabled,
+    lastEngagementAt: ctx.lastEngagementAt,
+    now,
+  });
+  const costSuppressedChannels: readonly Channel[] = cost.suppressed ? cost.channels : [];
+  const suppressed = new Set<Channel>(costSuppressedChannels);
+  if (cost.suppressed) {
+    // Best-effort, PII-free: category + timestamps + config numbers only.
+    await auditCostSuppression(deps.audit, {
+      pariwarId: alert.pariwar_id,
+      memberId: alert.member_id,
+      alertId: alert.alert_id,
+      reason: cost.reason,
     });
-    const suppressed = new Set<Channel>(cost.suppressed ? cost.channels : []);
-    if (cost.suppressed) {
-      costSuppressedChannels = cost.channels;
-      // Best-effort, PII-free: category + timestamps + config numbers only.
-      await auditCostSuppression(deps.audit, {
-        pariwarId: alert.pariwar_id,
-        memberId: alert.member_id,
-        alertId: alert.alert_id,
-        reason: cost.reason,
-      });
-    }
-
-    // ── (3) The ladder — one attempt per rung, no in-process sleeping, stop at the first `sent` ────
-    const send = async (channel: Channel): Promise<ChannelSendOutcome> => {
-      // 5.7's specified mechanism: the resolver OMITS a suppressed channel's target, so the rung reads
-      // as `skipped_no_target` and the cascade advances WITHOUT burning a retry (cascade.ts:47-52).
-      if (suppressed.has(channel)) return { outcome: 'skipped_no_target', detail: 'cost_optimized' };
-      if (channel === 'push') return sendPushRung(deps, alert, ctx.targets.push, dispatchOneChannel);
-      const target = ctx.targets[channel];
-      if (!target) return { outcome: 'skipped_no_target' };
-      const attempt = await dispatchOneChannel(channel, target);
-      return { outcome: attempt.outcome, ...(attempt.result?.detail ? { detail: attempt.result.detail } : {}) };
-    };
-
-    const cascade = await runChannelCascade(send, {
-      ladder: CANONICAL_CHANNEL_LADDER,
-      backoffMs: [], // D9 — pg-boss owns retry/backoff; no worker ever sleeps one in-process.
-      sleep,
-    });
-    trail = [...cascade.trail];
-    delivered = cascade.delivered;
-    deliveredChannel = cascade.deliveredChannel;
   }
+
+  // Each rung's own outcome, for the SMS rung's predicate (I2).
+  const rungOutcomes = new Map<Channel, ChannelSendOutcome['outcome']>();
+
+  /** Story 5.11 — the SMS rung decides lit / eligible itself and ⛔ ever calls `dispatch` (I3; FS10, FS15). */
+  const smsRung = (): ChannelSendOutcome => {
+    if (bridge.bridged) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeNotLit };
+    const block = alertSmsBlock(alert);
+    if (!block) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notLit };
+    const eligible = isAlertSmsFallbackEligible({
+      lit: true,
+      pushOutcome: rungOutcomes.get('push'),
+      whatsappTarget: ctx.targets.whatsapp !== null,
+      whatsappOutcome: rungOutcomes.get('whatsapp'),
+    });
+    if (!eligible) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notEligible };
+    if (!ctx.targets.sms) return { outcome: 'skipped_no_target' };
+    return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notWired };
+  };
+
+  // ── (3) The ladder — one attempt per rung, no in-process sleeping, stop at the first `sent` ──────
+  const rung = async (channel: Channel): Promise<ChannelSendOutcome> => {
+    // 5.7's specified mechanism: the resolver OMITS a suppressed channel's target, so the rung reads
+    // as `skipped_no_target` and the cascade advances WITHOUT burning a retry (cascade.ts:47-52).
+    if (suppressed.has(channel)) return { outcome: 'skipped_no_target', detail: 'cost_optimized' };
+    if (channel === 'sms') return smsRung();
+    if (channel === 'push') return sendPushRung(deps, alert, ctx.targets.push, dispatchOneChannel);
+    const target = ctx.targets[channel];
+    if (!target) return { outcome: 'skipped_no_target' };
+    const attempt = await dispatchOneChannel(channel, target);
+    return { outcome: attempt.outcome, ...(attempt.result?.detail ? { detail: attempt.result.detail } : {}) };
+  };
+  const send = async (channel: Channel): Promise<ChannelSendOutcome> => {
+    const result = await rung(channel);
+    rungOutcomes.set(channel, result.outcome);
+    return result;
+  };
+
+  const cascade = await runChannelCascade(send, {
+    ladder: CANONICAL_CHANNEL_LADDER,
+    backoffMs: [], // D9 — pg-boss owns retry/backoff; no worker ever sleeps one in-process.
+    sleep,
+  });
+  const trail = [...cascade.trail];
+  const delivered = cascade.delivered;
+  const deliveredChannel = cascade.deliveredChannel;
 
   // ── (4) The Telegram mirror — INDEPENDENT of the ladder, fire-and-forget ─────────────────────────
   // Eligible for `alert_published` only among this story's three categories (dispatch.ts:44-52), so a
@@ -426,12 +500,16 @@ function alarmOf(deps: ContributionNotifyDeps): (message: string) => void {
 
 /**
  * Run the fan-out for a whole chunk of members under ONE tenant scope. Returns the per-member records
- * plus the ids that ended UNDELIVERED — the caller throws on a non-empty undelivered set so pg-boss
- * retries (D9), while every member who DID deliver is already recorded in the idempotency store and is
- * therefore never re-sent by that retry.
+ * plus the ids to RETRY — the caller throws on a non-empty `retry` set so pg-boss retries (D9), while
+ * every member with a result is recorded in the idempotency store and is therefore never re-sent.
  *
- * A single member's unexpected THROW never aborts the batch: it is alarmed and recorded as undelivered,
- * so one corrupt row cannot cost the other members in the chunk their notification.
+ * ⭐ Story 5.11 (FS14 (a)): `retry` holds ONLY the members whose fan-out THREW. A member whose ladder ended
+ * without `sent` has a result with `delivered: false` — `in_app_only`, recorded, ⛔ retried (I4: before 5.11
+ * the fake `sms:sent` made them "delivered", so nobody retried them either). Row 5-11b adds the one
+ * retryable SMS case.
+ *
+ * A single member's unexpected THROW never aborts the batch: it is alarmed and put on `retry`, so one
+ * corrupt row cannot cost the other members in the chunk their notification.
  */
 export async function fanOutAlertToMembers(
   deps: ContributionNotifyDeps,
@@ -439,29 +517,27 @@ export async function fanOutAlertToMembers(
   memberIds: readonly string[],
   pariwarId: string,
   at: Date,
-): Promise<{ results: MemberFanOutResult[]; undelivered: string[] }> {
+): Promise<{ results: MemberFanOutResult[]; retry: string[] }> {
   const alarm = alarmOf(deps);
   const results: MemberFanOutResult[] = [];
-  const undelivered: string[] = [];
+  const retry: string[] = [];
 
   for (const memberId of memberIds) {
     try {
       const ctx = await withPariwarScope(deps.pool, pariwarId, (db) =>
         resolveMemberDeliveryContext(db, deps.encryption, pariwarId, memberId, at),
       );
-      const result = await fanOutAlert(deps, alertFor(memberId), ctx);
-      results.push(result);
-      if (!result.delivered) undelivered.push(memberId);
+      results.push(await fanOutAlert(deps, alertFor(memberId), ctx));
     } catch (err) {
-      // One member's failure must never cost the rest of the chunk their notification. It IS recorded
-      // as undelivered, so the caller still throws and pg-boss still retries this member.
+      // One member's failure must never cost the rest of the chunk their notification. It IS put on
+      // `retry`, so the caller still throws and pg-boss still retries this member.
       alarm(
         `[jobs] contribution-notify: fan-out failed for one member of pariwar ${pariwarId} — ${String(err)} ` +
-          `(batch continues; the member is recorded undelivered and retried)`,
+          `(batch continues; the member is retried)`,
       );
-      undelivered.push(memberId);
+      retry.push(memberId);
     }
   }
 
-  return { results, undelivered };
+  return { results, retry };
 }

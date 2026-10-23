@@ -82,6 +82,8 @@ function nonPiiRecord(record: MemberFanOutResult | undefined): Record<string, un
   if (!record) return { delivered: false };
   return {
     delivered: record.delivered,
+    // Story 5.11 (FS14 (a)) — a member no rung reached is `in_app_only`, recorded, ⛔ re-sent on a redelivery.
+    outcome: record.delivered ? 'delivered' : 'in_app_only',
     deliveredChannel: record.deliveredChannel,
     bridged: record.bridged,
     costSuppressedChannels: record.costSuppressedChannels,
@@ -232,7 +234,8 @@ export async function runNewsPublish(
     if (outcome === 'acquired') claimed.push(memberId);
   }
 
-  const undelivered: string[] = [];
+  const failed: string[] = [];
+  let inAppOnly = 0;
   for (const memberId of claimed) {
     const key = newsMemberKey(alertId, memberId);
     try {
@@ -246,28 +249,26 @@ export async function runNewsPublish(
       // changing that composition's signature for its other callers.
       const scopedCtx = { ...ctx, targets: restrictTargetsToChannels(ctx.targets, post.channels) };
       const result = await fanOutAlert(deps.notify, buildNewsAlert(post, memberId, now), scopedCtx);
-      if (result.delivered) {
-        await store.recordResult(key, nonPiiRecord(result)).catch((err: unknown) => {
-          alarm(`[jobs] news-publish: failed to record a member result — ${String(err)}`);
-        });
-      } else {
-        undelivered.push(memberId);
-        // Release rather than record so a later best-effort re-run (not auto-retried — see below)
-        // could still reach this member; a "delivered" claim must never be recorded for a non-send.
-        await store.release(key).catch((err: unknown) => {
-          alarm(`[jobs] news-publish: failed to release a member claim — ${String(err)}`);
-        });
-      }
+      // Story 5.11 (FS14 (a)): a member no rung reached is RECORDED `in_app_only` (⛔ released). Before 5.11 the fake
+      // `sms:sent` recorded most such members as delivered (any member with a mobile on file, on a post that selected SMS);
+      // this broadcast never retries, so recording rather than releasing changes only what a REDELIVERED job re-sends.
+      if (!result.delivered) inAppOnly += 1;
+      await store.recordResult(key, nonPiiRecord(result)).catch((err: unknown) => {
+        alarm(`[jobs] news-publish: failed to record a member result — ${String(err)}`);
+      });
     } catch (err) {
-      undelivered.push(memberId);
+      failed.push(memberId);
       await store.release(key).catch(() => {});
       alarm(`[jobs] news-publish: fan-out failed for member ${memberId} of post ${post.postId} — ${String(err)}`);
     }
   }
-  if (undelivered.length > 0) {
-    // Best-effort broadcast (v1): a member with no reachable channel is logged, NOT retried forever
+  if (failed.length > 0) {
+    // Best-effort broadcast (v1): a member whose fan-out failed is logged, NOT retried forever
     // (unlike the contribution loop, a News/Blog announcement is non-critical broadcast copy).
-    alarm(`[jobs] news-publish: ${undelivered.length}/${memberIds.length} members undelivered for post ${post.postId} (best-effort broadcast)`);
+    alarm(`[jobs] news-publish: ${failed.length}/${memberIds.length} members' fan-out failed for post ${post.postId} (best-effort broadcast)`);
+  }
+  if (inAppOnly > 0) {
+    console.info(`[jobs] news-publish: ${inAppOnly}/${memberIds.length} members reached in the app only for post ${post.postId}`);
   }
   return { published: true, memberCount: memberIds.length };
 }

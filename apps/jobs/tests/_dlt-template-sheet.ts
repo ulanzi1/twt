@@ -25,6 +25,16 @@ export const CLAIM_CATALOG: Readonly<Record<'hi' | 'en', Readonly<Record<string,
   ) as Record<string, string>,
 };
 
+/** The raw `contribution.json` catalogues (flat keys) — Story 5.11's `sms.*` notices live here. */
+export const CONTRIBUTION_CATALOG: Readonly<Record<'hi' | 'en', Readonly<Record<string, string>>>> = {
+  hi: JSON.parse(
+    readFileSync(fileURLToPath(new URL('../../../packages/i18n/locales/hi/contribution.json', import.meta.url)), 'utf-8'),
+  ) as Record<string, string>,
+  en: JSON.parse(
+    readFileSync(fileURLToPath(new URL('../../../packages/i18n/locales/en/contribution.json', import.meta.url)), 'utf-8'),
+  ) as Record<string, string>,
+};
+
 /** The `{param}` names an i18n value interpolates, in order (the resolver's own token shape). */
 export function i18nParamNames(value: string): string[] {
   return [...value.matchAll(/\{(\w+)\}/g)].map((m) => m[1] as string);

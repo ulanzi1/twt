@@ -154,10 +154,15 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
   const PINS: readonly (readonly [string, string])[] = [
     ['packages/channels/src/dispatch.ts', '2b4843f022160c63ca57d1bd513f9dcf1e8a62a9498135cb54c7dc2a0a26fc2a'],
     ['packages/channels/src/cascade.ts', '15fe4f84c303eddcc8307c2f3a913a4f2078260356a52c0b0079653141f7a496'],
-    ['packages/channels/src/composition/provider-composition.ts', 'f49834bbb596d385db4d3560a985346206b63b1bcd9ab53675485aac0b90f5a4'],
-    ['apps/jobs/src/scheduler/contribution-notify.ts', '241bc2806c2e79443a9d560571839df9458a6db67288857962773c0b85690d9b'],
+    // 2026-10-23 Story 5.11 (Decisions 2026-10-23-389 FS3 / FS10 / FS14 / FS15, -390 Q1 B): THREE pins re-taken — the alert fan-out's
+    // SMS rung decides lit / eligible itself and ⛔ dispatches (`contribution-notify.ts`); an ENABLED Pariwar that cannot send a
+    // category gets a refusing WhatsApp provider in the FAN-OUT resolver (`provider-composition.ts` — `resolveWhatsappProvider`,
+    // the shared selection, is unchanged); a dated header note (`sms-dlt-registry.ts`, entries unchanged). The claimant's
+    // WhatsApp step (this story's subject) imports none of them and is untouched. The rest of the fence stands.
+    ['packages/channels/src/composition/provider-composition.ts', '41bea7a46d381424d32caf103b5b556006ad40c9c1af8a6a70f9558f65739416'],
+    ['apps/jobs/src/scheduler/contribution-notify.ts', '580c0e36f0b5215e04d0c3a4dffb797290b081f8f2d29fe1c779248c8a62d080'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
-    ['packages/channels/src/sms-dlt-registry.ts', '6df1b22813e239cda40c06f1bc324f3d7f6cb05615f1309e13224efa11c3d792'],
+    ['packages/channels/src/sms-dlt-registry.ts', '3bf86f9b9350602d9d7484b6976a748de42bcd4a9424f9bd3842f7cda66daee5'],
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per
     // RECIPIENT (`templates` in, `waiting_template` / `pariwar_fallback` out) and its sweep listing carries the language codes —
     // only this pin re-taken; the claimant's WhatsApp step (this story's subject) is untouched. The rest of the fence stands.

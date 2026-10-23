@@ -90,6 +90,10 @@ const configuredSms: SmsAppClient = {
 };
 const unconfiguredSms: SmsAppClient = { isConfigured: () => false, messaging: () => { throw new Error('nope'); } };
 
+/** A rendered message + target for driving a provider's `send` (the refusing provider reads neither). */
+const RENDERED = { channel: 'whatsapp', title: null, body: 'x', deepLink: null } as const;
+const TARGET = { channel: 'whatsapp', address: '+919999999999' } as const;
+
 /** A fake per-Pariwar scope — just calls the reader with a throwaway Db (the domain reads are mocked). */
 const okScope = <T>(_pariwarId: string, fn: (db: Db) => Promise<T>): Promise<T> => fn({} as Db);
 
@@ -172,7 +176,9 @@ describe('createContributionProviderResolver — the four-channel assembly (AI-8
       expect(registry.telegram[0]!.scope).toBe('global');
     });
 
-    it('secret MISSING BY DESIGN (blank credential NAME) → WA fixture, token never resolved', async () => {
+    // ⭐ Story 5.11 (FS3 (a)) — was "→ WA fixture": the fixture ACCEPTED, so a switched-on Pariwar with a blank credential
+    // reported `whatsapp:sent` and stopped the ladder (F5). It now REFUSES; the token is still never resolved.
+    it('secret MISSING BY DESIGN on an ENABLED Pariwar (blank credential NAME) → a REFUSING WA provider, token never resolved', async () => {
       getWaConfig.mockResolvedValue({ ...FULL_WA_CONFIG, accessTokenSecretName: '   ' });
       resolveApprovedTemplate.mockResolvedValue({ templateName: 'ann_v1', languageCode: 'en' });
       getTelegramConfig.mockResolvedValue(null);
@@ -180,6 +186,8 @@ describe('createContributionProviderResolver — the four-channel assembly (AI-8
 
       const registry = await createContributionProviderResolver(d)({ pariwarId: PARIWAR, category: CATEGORY });
       expect(registry.whatsapp[0]!.scope).toBe('global');
+      const sent = await registry.whatsapp[0]!.send(RENDERED, TARGET);
+      expect(sent).toMatchObject({ status: 'rejected', detail: 'wa_credentials_missing', providerMessageId: null });
       expect(d.resolveSecret).not.toHaveBeenCalledWith('twt-wa-token');
     });
   });
@@ -280,5 +288,47 @@ describe('createContributionProviderResolver — the four-channel assembly (AI-8
     await resolver({ pariwarId: PARIWAR, category: CATEGORY });
     await resolver({ pariwarId: PARIWAR, category: 'contribution_confirmed' });
     expect(scopeCalls).toBe(2);
+  });
+});
+
+// ── Story 5.11 FS3 (a) — a SWITCHED-ON Pariwar that cannot send a category REFUSES; ⛔ the fixture's `accepted` ──────────
+
+describe('Story 5.11 FS3 — the WhatsApp stand-in stops counting as `sent` for an ENABLED Pariwar', () => {
+  beforeEach(() => {
+    getWaConfig.mockReset();
+    getTelegramConfig.mockReset();
+    resolveApprovedTemplate.mockReset();
+    getTelegramConfig.mockResolvedValue(null);
+  });
+
+  it.each([
+    ['no approved template for the category', FULL_WA_CONFIG, null, 'wa_template_not_approved'],
+    ['a blank phone_number_id', { ...FULL_WA_CONFIG, phoneNumberId: '' }, { templateName: 'ann_v1', languageCode: 'en' }, 'wa_credentials_missing'],
+    ['a null credential NAME', { ...FULL_WA_CONFIG, accessTokenSecretName: null }, { templateName: 'ann_v1', languageCode: 'en' }, 'wa_credentials_missing'],
+  ])('enabled + %s → `rejected` with the detail (the ladder advances)', async (_label, config, template, detail) => {
+    getWaConfig.mockResolvedValue(config);
+    resolveApprovedTemplate.mockResolvedValue(template);
+    const registry = await createContributionProviderResolver(deps())({ pariwarId: PARIWAR, category: CATEGORY });
+    await expect(registry.whatsapp[0]!.send(RENDERED, TARGET)).resolves.toMatchObject({ status: 'rejected', detail });
+  });
+
+  it.each([
+    ['no config row', null],
+    ['the toggle off', { ...FULL_WA_CONFIG, enabled: false }],
+  ])('%s → still the log-only fixture (its members have no WhatsApp target, so it is never reached)', async (_label, config) => {
+    getWaConfig.mockResolvedValue(config);
+    resolveApprovedTemplate.mockResolvedValue(null);
+    const registry = await createContributionProviderResolver(deps())({ pariwarId: PARIWAR, category: CATEGORY });
+    await expect(registry.whatsapp[0]!.send(RENDERED, TARGET)).resolves.toMatchObject({ status: 'accepted' });
+  });
+
+  it('ONE read of the config per (Pariwar, category) — the refusal check is the same read, ⛔ a second one', async () => {
+    getWaConfig.mockResolvedValue(FULL_WA_CONFIG);
+    resolveApprovedTemplate.mockResolvedValue(null);
+    const resolver = createContributionProviderResolver(deps());
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    expect(getWaConfig).toHaveBeenCalledTimes(1);
+    expect(resolveApprovedTemplate).toHaveBeenCalledTimes(1);
   });
 });

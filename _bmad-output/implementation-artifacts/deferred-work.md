@@ -282,6 +282,10 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   - *Appended 2026-10-23 (Story 5.11 Task 0.4, `-389` FS3 (a)):* BEING BUILT by row 5-11 — a switched-on Pariwar whose WhatsApp
     cannot be built (no `approved` template for the category, or a blank credential name / `phoneNumberId`) gets a refusing provider
     (`rejected`, `wa_template_not_approved` / `wa_credentials_missing`), so the ladder advances. ⭐ Closed by 5.11 on `done` — ⛔ before.
+  - *Appended 2026-10-23 (Story 5.11 dev, Task 3):* BUILT on the story branch — the alert fan-out's resolver now takes its WhatsApp
+    provider from `resolveFanOutWhatsappProvider` (`packages/channels/src/composition/provider-composition.ts`; one read of the config +
+    template; `createRefusingWhatsappProvider`); the shared `resolveWhatsappProvider` other callers use is unchanged. The process-lifetime
+    memo also holds a refusal — a template approved later is seen after a restart (`-389` FS3 (a), recorded). Still closed only on `done`.
 - **§3.4's *"mismatch logged + surfaced for member confirmation"* is only half built** [`apps/jobs/src/wa-webhook-processor.ts`, the
   no-match branch after `matchPendingOptIn`] — ratified architecture §3.4 (*Inbound message handling*) says an inbound WhatsApp number
   that does not match the member's mobile on file is *"logged + surfaced for member confirmation"*; the worker only `console.warn`s

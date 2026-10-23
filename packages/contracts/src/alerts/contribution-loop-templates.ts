@@ -19,7 +19,8 @@
 // duplicate it behind a sync-guard test, it MOVED here and
 // `apps/mobile/components/active-contribution/toneGradient.ts` became a thin re-export. Contracts is
 // already a mobile dependency, so no boundary is crossed and no `@twt/domain` leak occurs
-// ([[project_contracts_domain_bundle_boundary]] — this module imports nothing but `zod`). One
+// ([[project_contracts_domain_bundle_boundary]] — this module imports nothing but `zod` and, since Story 5.11, its
+// sibling `./alert.js`'s `AlertSmsBlock`, itself zod-only). One
 // authority beats a guarded duplicate when there is no boundary reason to duplicate.
 //
 // ── OpenAPI posture ────────────────────────────────────────────────────────────────────────────────
@@ -27,6 +28,8 @@
 // byte-identical (the `alerts/` directory posture).
 
 import { z } from 'zod';
+
+import { AlertSmsBlock } from './alert.js';
 
 // ── The 15-day contribution window + cycle-day arithmetic (D5 SEAM) ─────────────────────────────────
 
@@ -269,6 +272,7 @@ export const DeadlineReminderPayloadData = z
     subject: z.string().min(1),
     deadline_at: z.string().datetime(),
     deadline_display: z.string().min(1),
+    sms: AlertSmsBlock.optional(),
   })
   .strict();
 export type DeadlineReminderPayloadData = z.output<typeof DeadlineReminderPayloadData>;
@@ -291,6 +295,7 @@ export const PendingMatchRetryPayloadData = z
     deadline_at: z.string().datetime(),
     deadline_display: z.string().min(1),
     pool_id: z.string().uuid(),
+    sms: AlertSmsBlock.optional(),
   })
   .strict();
 export type PendingMatchRetryPayloadData = z.output<typeof PendingMatchRetryPayloadData>;
@@ -298,19 +303,22 @@ export type PendingMatchRetryPayloadData = z.output<typeof PendingMatchRetryPayl
 /**
  * Build the pending-match RETRY `payload_data` (Story 9.10, AC2/AC3/AC4). `subject` + `display` are the
  * FULLY RESOLVED, locale-correct strings for the tier (never reused day-N deadline copy). `now` is the
- * sweep's send instant — carried only to satisfy the shared `deadline_at` field; never rendered.
+ * sweep's send instant — carried only to satisfy the shared `deadline_at` field; never rendered. `sms` (Story
+ * 5.11) is passed only by the ESCALATED tier; absent ⇒ the key is omitted.
  */
 export function buildPendingMatchRetryPayloadData(input: {
   readonly subject: string;
   readonly display: string;
   readonly poolId: string;
   readonly now: Date;
+  readonly sms?: AlertSmsBlock;
 }): PendingMatchRetryPayloadData {
   return PendingMatchRetryPayloadData.parse({
     subject: input.subject,
     deadline_at: input.now.toISOString(),
     deadline_display: input.display,
     pool_id: input.poolId,
+    ...(input.sms ? { sms: input.sms } : {}),
   });
 }
 
@@ -342,17 +350,19 @@ export function buildCycleOpenPayloadData(input: {
  * Build the deadline-reminder `payload_data` (AC2). `subject` + `deadlineDisplay` are the FULLY
  * RESOLVED per-send-day strings; `deadlineAt` is the machine instant (ISO-8601 with offset) the
  * renderers never format — `deadline_display` exists precisely so the producer owns the wording and
- * the timezone.
+ * the timezone. `sms` (Story 5.11) is passed only on day 10; absent ⇒ the key is omitted.
  */
 export function buildDeadlineReminderPayloadData(input: {
   readonly subject: string;
   readonly deadlineAt: Date;
   readonly deadlineDisplay: string;
+  readonly sms?: AlertSmsBlock;
 }): DeadlineReminderPayloadData {
   return DeadlineReminderPayloadData.parse({
     subject: input.subject,
     deadline_at: input.deadlineAt.toISOString(),
     deadline_display: input.deadlineDisplay,
+    ...(input.sms ? { sms: input.sms } : {}),
   });
 }
 
@@ -385,6 +395,7 @@ export const ContributionMismatchPayloadData = z
   .object({
     pool_id: z.string().uuid(),
     body: z.string().min(1).optional(),
+    sms: AlertSmsBlock.optional(),
   })
   .strict();
 export type ContributionMismatchPayloadData = z.output<typeof ContributionMismatchPayloadData>;
@@ -392,14 +403,16 @@ export type ContributionMismatchPayloadData = z.output<typeof ContributionMismat
 /**
  * Build the contribution-mismatch `payload_data` (Story 9.7). `body` is the FULLY RESOLVED, locale-correct,
  * dignified line (mapped from the reason-code — never the raw enum). `pool_id` resolves the
- * `contributions/:pool_id` deep-link.
+ * `contributions/:pool_id` deep-link. `sms` (Story 5.11) — ONE text for every reason; absent ⇒ omitted.
  */
 export function buildContributionMismatchPayloadData(input: {
   readonly poolId: string;
   readonly body: string;
+  readonly sms?: AlertSmsBlock;
 }): ContributionMismatchPayloadData {
   return ContributionMismatchPayloadData.parse({
     pool_id: input.poolId,
     body: input.body,
+    ...(input.sms ? { sms: input.sms } : {}),
   });
 }

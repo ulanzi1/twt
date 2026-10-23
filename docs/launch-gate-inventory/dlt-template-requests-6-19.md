@@ -110,6 +110,12 @@ shorter per-segment length.
 listed and DARK. ⚠ **Provisioning their ids (`sms.dlt.template_id.<category>`) does NOTHING** — the per-member SMS fallback stays off until
 a later story writes fixed wording (en + hi) for each, with its own §0.
 
+⭐ *Dated note, 2026-10-23 (Story 5.11, [`2026-10-23-389`](../../.decision-log.md#decision-2026-10-23-389); reach [`2026-10-23-390`](../../.decision-log.md#decision-2026-10-23-390) Q1 B) — ⛔ a word above edited:*
+that later story is 5.11, and its fixed wording is keyed by MESSAGE, ⛔ by category — three notices about a member's own contribution,
+templates **17–22** below (`apps/jobs/src/scheduler/contribution-sms-templates.ts`). The five category entries above stay DARK and unused
+by the alert SMS rung; provisioning `sms.dlt.template_id.<category>` still does NOTHING. A pool opening and the last day are ⛔ texted
+(the Trust's announcement channels).
+
 ## The templates owed (1–6: Story 6.19; 7–12: Story 6.24b; 13–14: Story 6.27c; 15–16: the OTP, Story 5.9 — typed by Story 6.34)
 
 | # | Message | Locale | Owning story | Config key (D7) | Variable types — select in SmartPing's tagging section, in order | MSG91 template (`##name##` per variable — TV13) |
@@ -130,10 +136,18 @@ a later story writes fixed wording (en + hi) for each, with its own §0.
 | 14 | Request to each of the five neighbours (`-303` Q1 A, `-304` Q6 A, `-379` Q2 A) | en | 6.27c | `sms.dlt.template_id.peer_mesh.request.en` | 1 alphanumeric (deceased member name — first part, ≤ 30) · 2 alphanumeric (deceased member name — second part, ≤ 30) · 3 url (app link to the questions, ≤ 120) | We have been told that ##member1####member2## has died. If you knew them, please answer a few questions: ##link##, or call us. |
 | 15 | OTP — login (5 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_login` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT login code. Valid 5 min. Do not share. |
 | 16 | OTP — step-up (3 min) | en | 5.9; typed by 6.34 | `sms.dlt.template_id.otp_step_up` | 1 numeric (OTP code, ≤ 6) | ##otp## is your TWT verification code. Valid 3 min. Do not share. |
+| 17 | Contribution not recorded yet — day 10 (`-389` FS1 (d)) | hi | 5.11 | `sms.dlt.template_id.contribution.deadline_not_recorded.hi` | 1 alphanumeric (pool name or letter code, ≤ 30) · 2 alphanumeric (cycle close date, `DD-MM-YYYY`, ≤ 10) | TWT: पूल ##pool## में आपका योगदान अभी दर्ज नहीं हुआ है। यह चक्र ##date## को बंद होगा। कृपया योगदान करें। |
+| 18 | Contribution not recorded yet — day 10 (`-389` FS1 (d)) | en | 5.11 | `sms.dlt.template_id.contribution.deadline_not_recorded.en` | 1 alphanumeric (pool name or letter code, ≤ 30) · 2 alphanumeric (cycle close date, `DD-MM-YYYY`, ≤ 10) | TWT: your contribution to pool ##pool## is not recorded yet. This cycle closes on ##date##. Please contribute. |
+| 19 | Payment not matched — every mismatch reason (`-389` FS1 (d)) | hi | 5.11 | `sms.dlt.template_id.contribution.payment_not_matched.hi` | — (no variable) | TWT: आपके भुगतान का मिलान अभी नहीं हो पाया है। इसे ठीक करने में हम आपकी मदद करेंगे। कृपया ऐप देखें। |
+| 20 | Payment not matched — every mismatch reason (`-389` FS1 (d)) | en | 5.11 | `sms.dlt.template_id.contribution.payment_not_matched.en` | — (no variable) | TWT: we could not match your payment yet. We will help you sort it out. Please see the app. |
+| 21 | Payment still not confirmed — pending match, escalated (`-389` FS1 (d)) | hi | 5.11 | `sms.dlt.template_id.contribution.payment_not_confirmed.hi` | 1 alphanumeric (pool name or letter code, ≤ 30) | TWT: पूल ##pool## के लिए आपके भुगतान की पुष्टि अब तक नहीं हो पाई है। कृपया ऐप में जाँचें या फिर से प्रयास करें। |
+| 22 | Payment still not confirmed — pending match, escalated (`-389` FS1 (d)) | en | 5.11 | `sms.dlt.template_id.contribution.payment_not_confirmed.en` | 1 alphanumeric (pool name or letter code, ≤ 30) | TWT: we still have not been able to confirm your payment for pool ##pool##. Please check or retry in the app. |
 
 ⚠ A template registered before the wording is final must be re-registered if a word changes: the send must match the registered text
 exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them;
 ⭐ **and 7–12's (Story 6.24b, 2026-10-08)** — below those; ⭐ **and 13–14's (Story 6.27c, 2026-10-16)** — below those.
+⭐ *Dated note, 2026-10-23 (Story 5.11):* templates **17–22** (the three contribution notices, `-389` FS1 (d)) were added after 16 — their
+wording is the section after 15–16's. The heading above is kept as written.
 
 ## The wording of templates 1–4 (Story 6.19b — the text to register)
 
@@ -251,6 +265,36 @@ blank.
 | 15 | {#var#} is your TWT login code. Valid 5 min. Do not share. |
 | 16 | {#var#} is your TWT verification code. Valid 3 min. Do not share. |
 
+## The wording of templates 17–22 (Story 5.11 — the text to register)
+
+⛔ **Do not provision the ids of 17–22 until roster Row 40 (`member-alert-sms-fallback-live`) says so** — set each id only after the operator
+confirms that template's approval (`-349` decision 1's shape, applied here by `2026-10-23-389`). Until row 5-11b sends, a set id does
+nothing: a lit, eligible member's SMS rung ends `sms_send_not_wired`.
+
+Three notices about a member's OWN contribution, texted only when the app (and WhatsApp, where used) could not reach the member
+(`2026-10-23-390` Q1 B): **17–18** day 10, the contribution not recorded yet; **19–20** a payment not matched (ONE text for every mismatch
+reason); **21–22** a payment still not confirmed (the pending-match ESCALATED tier). ⛔ A pool opening and the cycle's last day are
+texted — they are for the Trust's announcement channels (`-390` Q2 A; row 5-14). The words are the author's, en + hi reviewed and corrected
+by BigDev on 2026-10-23 (Story 5.11 Debug Log (a); roster Row 40 (b)); *"TWT:"* is the only name (the DLT header carries the sender —
+`-389` FS16 (b)). The variables, in order: **`{pool}`** — the curated pool name when it fits 30 characters and, in an English text, is all
+GSM-7, else the pool's letter code (`-389` FS13 (a): the curated name is the Hindi name, so an English text names the pool by its letter);
+**`{date}`** — the cycle's close date, `DD-MM-YYYY`. ⛔ No text carries a member's name, an amount or a link. ⚠ **19–20 have NO variable**
+— 6.37's adapter refuses a send with no values until row 5-11b changes it. The copy is `sms.*` in
+`packages/i18n/locales/{en,hi}/contribution.json`; the registry is `apps/jobs/src/scheduler/contribution-sms-templates.ts`, and
+`apps/jobs/tests/contribution-sms-templates.test.ts` proves the real `t()` renders EXACTLY the text below and that this sheet carries it.
+Every one passes the shape rules with at most two variables (⛔ an exigency line is owed); the lowest fixed share is 17 (hi) at 68.7 %.
+In MSG91 (setup step (3) above): **Unicode for 17, 19, 21; Normal for 18, 20, 22** — an English value is ASCII by FS13 (the letter code or a
+GSM-7 name; the date). The language each member gets is row 5-11b's.
+
+| # | Registered text |
+|---|---|
+| 17 | TWT: पूल {#var#} में आपका योगदान अभी दर्ज नहीं हुआ है। यह चक्र {#var#} को बंद होगा। कृपया योगदान करें। |
+| 18 | TWT: your contribution to pool {#var#} is not recorded yet. This cycle closes on {#var#}. Please contribute. |
+| 19 | TWT: आपके भुगतान का मिलान अभी नहीं हो पाया है। इसे ठीक करने में हम आपकी मदद करेंगे। कृपया ऐप देखें। |
+| 20 | TWT: we could not match your payment yet. We will help you sort it out. Please see the app. |
+| 21 | TWT: पूल {#var#} के लिए आपके भुगतान की पुष्टि अब तक नहीं हो पाई है। कृपया ऐप में जाँचें या फिर से प्रयास करें। |
+| 22 | TWT: we still have not been able to confirm your payment for pool {#var#}. Please check or retry in the app. |
+
 ## The per-Pariwar helpline number (D33(b), `-269` §5)
 
 | Config key | Holds | Unset ⇒ |
@@ -308,6 +352,15 @@ segments** — `-303` Q1 A's em dash), and the Panel was told only the Hindi's *
 ruled, so it was recorded, ⛔ "fixed" by editing the text; the FYI is written into the 6.37e PQ1 routing note (`deferred-work.md`, BF24).
 A shorter domain or name can drop a segment.
 
+⭐ **The contribution notices (templates 17–22, Story 5.11):** ONE transactional DLT SMS per member per notice, and only to a member the
+app (and WhatsApp, where used) could not reach (`2026-10-23-390` Q1 B) — day 10 at most once per cycle (and only while the member's
+contribution is still not recorded), a payment not matched once per mismatch reason, a payment still not confirmed at most once ever per
+alert. Rendered at the LONGEST values (a 30-character pool value, a 10-character date): 18 (en) is 134 characters (**1 GSM segment**), 17
+(hi) 128 of Unicode (**2 segments**); 20 (en) 91 (**1**), 19 (hi) 99 (**2**); 22 (en) 131 (**1**), 21 (hi) 133 (**2**). With a one-letter
+pool code: 18 is 105, 17 is 99, 22 is 102, 21 is 104 — the same segments. ⇒ per unreached member who has not contributed by day 10, **1 en
+/ 2 hi segments per cycle**, +1 / +2 per payment problem. ⚠ At 4L members the count of unreached members is ⛔ known; the per-segment
+price is ⛔ recorded (roster Row 40 (d)).
+
 ## URL whitelisting (Story 6.30, -312 AL3)
 
 ⭐ Since 1 Oct 2024 (TRAI) an SMS carrying a URL that is ⛔ not whitelisted against the sender's header is REJECTED. Only the FIXED part of
@@ -341,6 +394,7 @@ When STPL / SmartPing rejects a template or asks for different words:
 | 7–14, English | the Trustee Panel's, verbatim | The proposed new words go back to the Panel through a routing note BEFORE the template's id is set. Nothing is sent with words the Panel has not seen. (A standing delegation — registering the nearest accepted wording and reporting afterwards — is not in place; it is raised with the first such case, `-349` decision 4.) |
 | 1–6, 15–16, English | the author's | The author re-words it to DLT's requirement and re-registers it. |
 | every Hindi text | the author's, under a review row | The author re-words it; the new Hindi goes back through its review row (Rows 20, 21, 23, 28) before it is re-registered. |
+| 17–22, English and Hindi | the author's; en + hi reviewed by BigDev 2026-10-23 | A rejection goes back to the author, who re-words it to DLT's requirement; the new words go back through roster Row 40 (b) (a changed word re-opens the review) before it is re-registered. |
 
 In every case: record the rejection, the new words and the approval in the Record below, update the wording section above and the
 copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id only after the operator confirms the approval.
@@ -359,3 +413,4 @@ copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id o
 | 2026-10-17 | 1–16 | ⭐ The rejection procedure written (*"If DLT rejects a template …"*, `2026-10-17-349`): ids stay unset until approved; no claim flow live in production with its template unapproved (Row 30 note (8)); Panel wording (7–14 English) back to the Panel before its id is set. ⛔ Still nothing submitted | BigDev | `2026-10-17-349` |
 | 2026-10-22 | 7–14 | ⭐ Story 6.37e rework (`2026-10-22-379` Q1 A / Q2 A; `2026-10-22-380`): the member's name in TWO alphanumeric variables side by side (`{#var#}{#var#}`, ≤ 30 each; MSG91 `##member1####member2##`); 11–14 lose the helpline variable (11–12 *"Please call the helpline."*, 13–14 *"…, or call us."*); 13–14 *"a few questions"* (BigDev's words — routed as `-380` PQ1, ratified by `-381` PQ1 A); 14 (en) is Normal (GSM-7). The three-variable justifications, the side-by-side, lowest-share and last-word lines, the MSG91 SMS-type step and the cost lines re-derived. ⛔ Still not submitted — nothing to re-register | Story 6.37e | `sms-member-boxes.ts`; `sms-member-name.ts`; the two registries |
 | 2026-10-22 | 14 (and 8, 10, 12) | ⭐ Story 6.37e code review R1 (BigDev: *"14 back to Unicode"*): the row above's *"14 (en) is Normal (GSM-7)"* is true of the fixed TEXT only — template 14 is PROVISIONED **Unicode** (MSG91 setup step (3)), because a name value may be Devanagari and ⛔ rule or proof shows a Unicode value delivered intact on a Normal template; the 13–14 cost lines qualified (en 2–5). 8, 10 and 12 stay Normal as before — an OPEN question, recorded in roster Row 32 (d) and `deferred-work.md`, ⛔ decided. No text, slot or code change | Story 6.37e | `sms-preflight.ts` (unchanged — a GSM-7 text on a UNICODE template passes with a note) |
+| 2026-10-23 | 17–22 | ⭐ Wording, typed `{#var#}` slots (alphanumeric `pool` ≤ 30 · alphanumeric `date` ≤ 10; none on 19–20), config keys `sms.dlt.template_id.contribution.<message>.<locale>` and the MSG91 form written (Story 5.11, `2026-10-23-389` FS1 (d), FS4 (a), FS13 (a), FS16 (b); reach `2026-10-23-390` Q1 B); their cost line, rejection line and the TV6 note added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 17–22 until roster Row 40 says so**; set each id only after the operator confirms that template's approval | Story 5.11 | `contribution-sms-templates.ts` |

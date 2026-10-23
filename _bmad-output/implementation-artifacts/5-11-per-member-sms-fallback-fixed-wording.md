@@ -101,7 +101,7 @@ S = Task 0.1 STOP conditions · PQ = Panel question.
 
 # Story 5.11: The Per-Member SMS Fallback Gets Fixed, Registrable Wording (en + reviewed hi) and an Honest Rung — WHAT Is Texted, to WHOM, in WHICH Words; the Real Send Is 5.11b `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A member the app cannot reach hears nothing by text today: the per-member SMS
 > fallback exists in code but is dark, because every v1 alert SMS was one whole-body variable that TRAI will not register (Story
@@ -537,8 +537,8 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0)**
-  - [ ] 0.1 Preflight: fetch; rebase onto `origin/main`; run the pin checks (header); re-run F1–F11, F16–F24 and the segment table. Grep
+- [x] **Task 0 — Governance (AC0)**
+  - [x] 0.1 (DONE 2026-10-23 — Debug Log (e), dev start) Preflight: fetch; rebase onto `origin/main`; run the pin checks (header); re-run F1–F11, F16–F24 and the segment table. Grep
         consumers of `alert.channel_send` (FS15's cost) and list them in Debug Log (e). **STOP** if: **S1** a ruling on SMS reach exists
         already (grep `^### Decision` for *"transactional-fallback"* / *"SMS"* newer than `-388`); **S2** another worktree edits
         `contribution-notify*.ts`, `provider-composition.ts`, `sms-dlt-registry.ts`, `sms-member-*.ts` or `scripts/dlt-typed-variables/lib.ts`
@@ -556,24 +556,24 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
         and `### Story 5.11b` after it (scope = the carry below); §3.4 dated annotation under the fallback paragraph (FS2 as answered; PQ1
         pending) — never a rewrite; roster row; the FS10 bridge-words row (backlog); deferred-work annotations (AC6); ledger entry by SAFE
         prepend ([[project_sprint_status_safe_prepend]]) + row `ready-for-dev → in-progress`.
-- [ ] **Task 1 — Registry + words (AC1, AC2; FS1, FS4, FS16)**: create `contribution-sms-templates.ts` (shape of `peer-mesh-sms-templates.ts`;
+- [x] **Task 1 — Registry + words (AC1, AC2; FS1, FS4, FS16)**: create `contribution-sms-templates.ts` (shape of `peer-mesh-sms-templates.ts`;
       three messages, no name slot); add it to `REGISTRY_FILES`; add `sms.*` en / hi keys + `$comment.sms` in both; exclude `$comment` in
       the microcopy test; dated header note on `sms-dlt-registry.ts` (entries unchanged); extend `_dlt-template-sheet.ts` with a contribution
       catalogue.
-- [ ] **Task 2 — Contract + producers (AC5; FS7, FS13)**: optional `sms` block in `packages/contracts/src/alerts/alert.ts` payloads; populate it
+- [x] **Task 2 — Contract + producers (AC5; FS7, FS13)**: optional `sms` block in `packages/contracts/src/alerts/alert.ts` payloads; populate it
       in the day-10 and pending-escalated (POOL_BATCH) and mismatch (its own worker) builders from the SAME locals as the push
       params; the FS13 pool-label rule (one helper, tested).
-- [ ] **Task 3 — Eligibility + WA stand-in (AC3; FS2, FS3)**: the ONE predicate as RULED (`-390` Q1 B): push not `sent` AND (no WhatsApp target OR WhatsApp not `sent`); the non-accepting
+- [x] **Task 3 — Eligibility + WA stand-in (AC3; FS2, FS3)**: the ONE predicate as RULED (`-390` Q1 B): push not `sent` AND (no WhatsApp target OR WhatsApp not `sent`); the non-accepting
       WA provider in `createContributionProviderResolver` for enabled-but-unbuildable (template / credentials).
-- [ ] **Task 4 — The honest rung + job outcome (AC4, AC5; FS10, FS14, FS15)**: the fan-out's SMS rung decides lit / eligible itself and never
+- [x] **Task 4 — The honest rung + job outcome (AC4, AC5; FS10, FS14, FS15)**: the fan-out's SMS rung decides lit / eligible itself and never
       takes the category resolver's fixture on the alert path; `in_app_only` recorded (no release, no throw) in POOL_BATCH, confirmed and
       mismatch; TRACE every other `fanOutAlert` / `dispatch()` producer (news, survey, moderation, helpdesk fan-out) for what an undelivered member
       does to its job and apply FS14 there (Debug Log (e)); the bridged-path change per FS10.
-- [ ] **Task 5 — Records (AC6; FS11)**: DLT sheet section (types, MSG91 form, segment counts computed from the real registry with
+- [x] **Task 5 — Records (AC6; FS11)**: DLT sheet section (types, MSG91 form, segment counts computed from the real registry with
       the longest values) and Record; roster row text; deferred-work items.
-- [ ] **Task 6 — Tests (AC1–AC7)**: replace F18's dark-state assertions (say what each replaced; confirm whether the `vi.mock` registry tests
+- [x] **Task 6 — Tests (AC1–AC7)**: replace F18's dark-state assertions (say what each replaced; confirm whether the `vi.mock` registry tests
       change); every new gate proven RED in Debug Log (b).
-- [ ] **Task 7 — Verify**: `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]; known failures —
+- [x] **Task 7 — Verify** (DONE 2026-10-23 — Debug Log (c) cont.; committed on the story branch, ⛔ pushed): `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]; known failures —
       [[project_known_livedb_test_failures]]); review the diff before commit ([[feedback_review_the_fix_diff_before_commit]]); commit on the story
       branch ([[feedback_commit_on_story_branch]]); do not push without BigDev's go-ahead.
 
@@ -724,6 +724,8 @@ fast-forward ([[feedback_land_prs_by_fast_forward]]).
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 5.11`, worktree `.claude/worktrees/5-11-per-member-sms-fallback-fixed-wording`.
+
 ### Debug Log References
 
 (a) Task 0.2 answers, verbatim · (b) RED proofs · (c) parity / lockstep / CI-gate outputs · (d) dev-DB side effects · (e) Task 0.1 preflight,
@@ -784,9 +786,158 @@ matches. Corrected while running them: the `resolveSmsTarget` doc quote spans tw
 (Trustee-ratified), committed ALONE as `cd06cc5d`. Applied at v1.4: I2, AC3, Task 3, FS2, the Policy meaning, the §0 header line, the
 PQ section; the records (note ruling block, §3.4 annotation, Row 40, deferred-work, the channels row, ledger) in one commit after it.
 
+**(e) cont. — Task 0.1 proper, at dev start (2026-10-23).** `git fetch origin`: `origin/main` = `1268d47e` = the pin; `git merge-base
+--is-ancestor 1268d47e HEAD` holds; `git diff --name-only 1268d47e..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory`
+is EMPTY ⇒ every found fact stands (cites re-taken at v1.3). **S1** no decision after `-390` on SMS reach (main + every worktree). **S2**
+`git worktree list` + ListAgents: 11b-4, 3-3c, 6-35 touch none of the 5.11 files; the one peer session was idle. **S3** the DLT sheet's
+highest template was still 16. **S4** nothing enables a Pariwar's WhatsApp (no seed / migration inserts into `pariwar_wa_config`). **S5** Row
+30 (d) unanswered. **`alert.channel_send` consumers:** ONE writer (`packages/channels/src/dispatch.ts:353`); its only readers are tests
+(`apps/jobs/tests/{ai-8-3-ladder-armor-live,contribution-notify-live,contribution-notify}.test.ts`,
+`packages/channels/tests/{dispatch.test.ts,integration/dispatch-audit.spec.ts,integration/live-dispatch-cascade.spec.ts}`) — ⛔ production
+consumer, so FS15's "fake SMS audits stop" breaks no reader. The worktree had no `node_modules`: `pnpm install --frozen-lockfile` (no
+dependency added). Row `ready-for-dev → in-progress`, ledger `2026-10-23ai`.
+
+**(e) cont. — the Task 4 producer trace.** Every caller of `fanOutAlert` / `fanOutAlertToMembers`, and what an unreached member did to its
+job BEFORE 5.11 (with the fake `sms:sent`) and does now:
+- POOL_BATCH child (cycle open, day 5 / 10 / 13 / 14, pending match soft / escalated) — before: undelivered ⇒ release + THROW (never
+  reached in practice: the fake `sent`); now: recorded `in_app_only`, claim KEPT, ⛔ throw; `inAppOnly` counted on the result.
+- CONFIRMED and MISMATCH workers (single member) — same; their result's `delivered` is now honest (`results[0].delivered`).
+- moderation-notify — THROWS on `retry` (a thrown fan-out) only; the alarm text names a FAILED fan-out.
+- helpdesk-reply fan-out notifier — ignores the result (log-only in production, F8); unchanged.
+- news-publish / survey-publish — call `fanOutAlert` per member; ⛔ retry either way (best-effort broadcast). Before: a non-delivered member
+  was RELEASED + counted in an alarm. Now: recorded `in_app_only` (a redelivered job does ⛔ re-send to them) and counted on an info log; the
+  alarm names only a thrown fan-out. (For news, before 5.11 a push-failed member on a post that did NOT select SMS was released — the one set
+  whose redelivery behaviour changes; ⛔ retry path exists for either.)
+- `claim-correction-reminders.ts`'s staff push calls `dispatch()` narrowed to push — ⛔ an SMS rung; untouched.
+
+**(b) RED proofs.** Each new gate was mutated in place, its test file run, and the source restored byte-identical (sha256 checked) —
+by a throwaway session script (⛔ committed), DB-free:
+| Mutant | RED |
+|---|---|
+| M1 the predicate back to FS2 (a) (a WhatsApp target required) | 3 / 37 (`contribution-notify.test.ts`) |
+| M2 the SMS rung dispatches again (the fixture path) | 9 / 37 |
+| M3 the bridge check removed | 1 / 37 |
+| M4 the child throws for `in_app_only` members (FS14 undone) | 2 / 88 (`contribution-notify-triggers.test.ts`) |
+| M5 the recorded trail keeps a provider's free-text detail | 1 / 88 |
+| M6 day 14 texted instead of day 10 | 3 / 88 |
+| M7 FS3 undone — an enabled Pariwar with no approved template gets the fixture | 1 / 17 (`contribution-provider-resolver.test.ts`) |
+| M8 the registry text drifts one word from the catalogue | 4 / 45 (`contribution-sms-templates.test.ts`) |
+| M9 the contract admits `sms` on `alert_published` | 1 / 78 (`packages/contracts/tests/contribution-loop-templates.test.ts`) |
+| M10 FS13 undone — an en text keeps the Devanagari pool name | 1 / 45 |
+| M11 `fanOutAlertToMembers` retries an `in_app_only` member (the 8.8 shape) | 1 / 39 (`contribution-notify.test.ts`) |
+And the sheet lockstep was RED before the sheet rows existed (7 / 45 — the six rows by config key + the section heading).
+
+**(c) Parity / lockstep / gates.** `contribution-sms-templates.test.ts` 45 / 45 (six templates: the real `t()` renders the registered text;
+slots = i18n params, in order; sheet row by config key — ordinal, types, MSG91 form, the Registered-text row; en / hi `sms.*` parity; ⛔
+extra `sms.*` key; `$comment.sms` in both). `pnpm dlt-typed-variables:check` ✓ (the new registry on `REGISTRY_FILES`), its tests 25 / 25.
+`scripts/microcopy` 378 / 378 (tone + numerals over every `contribution.json` string, `sms.*` included; `$comment` keys excluded).
+`checkDltTemplateShape` on the real registry: lowest fixed share 17 (hi) 68.7 %; segments at the longest values en 1 / hi 2 for all three
+(the sheet's cost line). `packages/i18n` 116 / 116.
+
+**(c) cont. — Task 7, `pnpm ci:local` on :5433 (`DATABASE_URL` set to `twt-test-pg`).** 35 / 36 jobs green on the first run, including
+`integration-tests` (`@twt/jobs` 1516 / 1516 with the live legs, `@twt/channels` 452 / 452, `@twt/domain`, `@twt/api` 2080 / 2081 + 1
+skipped) and every invariant gate (`dlt-typed-variables`, `microcopy`, `i18n-parity`, `pii-scrape`, `friction-budget`, …). `test (unit)`
+RED on ONE package this story does not touch: `apps/admin`, 8 / 1263 — three UI files (`approval-warning-reasons-page`,
+`drive-target-page`, `helpline-claim-page`), each ending at ~5 s, the default test timeout. Re-run ALONE: 55 / 55 green. Re-run the unit
+job at `--concurrency=2` (`env -u DATABASE_URL pnpm turbo run test --concurrency=2 --continue`): **37 / 37 tasks green** (`@twt/jobs` 976
+passed + 540 DB-only skipped). Read as the recorded oversubscription tax ([[project_ci_local_concurrency_oversubscription]]), ⛔ a 5.11
+defect — `apps/admin` has no file in this diff. ⚠ A pin re-take of 6.37d's fence was made while the first run was in flight (a stale D9
+comment corrected in `contribution-notify.ts`); the fence file passes on its own (33 / 33) and in the re-run.
+
+**(d) Dev-DB side effects.** The live legs on :5433 (`ai-8-3-ladder-armor-live`, `contribution-notify-live`) write audit rows keyed by a
+fresh per-test alert id — the suites' own convention; ⛔ schema change, ⛔ migration.
+
 ### Completion Notes List
 
+- **Task 1 (AC1, AC2).** NEW `apps/jobs/src/scheduler/contribution-sms-templates.ts` — the three FS1 (d) notices × hi / en (six templates),
+  BigDev's words, `{pool}` alnum ≤ 30 · `{date}` alnum ≤ 10 (none on not-matched), config key
+  `sms.dlt.template_id.contribution.<message>.<locale>`; the message list IS the contract enum `AlertSmsMessage` (one list); FS13's
+  `smsPoolLabel`. Joined `REGISTRY_FILES`. `contribution.json` (en + hi): `sms.*` ×3 + `$comment.sms`. `sms-dlt-registry.ts`: a dated 5.11
+  header note, entries unchanged (all dark). `_dlt-template-sheet.ts` loads `CONTRIBUTION_CATALOG`. The microcopy test now excludes
+  `$comment` keys.
+- **Task 2 (AC5; FS7, FS13).** Contract: `AlertSmsMessage` + `AlertSmsBlock` (strict); `sms` OPTIONAL on `deadline_reminder` and
+  `contribution_mismatch` ONLY — `alert_published` (cycle open, news, survey, moderation, the staff push) structurally cannot carry it (I5);
+  the three payload builders take an optional block and OMIT the key when absent. Producers: day 10 → `deadline_not_recorded`
+  (`params.date`, the push's own local); pending match ESCALATED → `payment_not_confirmed`; every mismatch reason → `payment_not_matched`
+  (`values: {}`). Days 5 / 13 / 14, soft, cycle open, confirmed: none.
+- **Task 3 (AC3; FS2 as RULED by `-390` Q1 B, FS3).** `isAlertSmsFallbackEligible` — lit AND push not `sent` AND (no WhatsApp target OR
+  WhatsApp not `sent`). FS3: the fan-out resolver takes WhatsApp from `resolveFanOutWhatsappProvider` (ONE read of config + template,
+  `readWhatsappProvisioning`); an ENABLED Pariwar with no approved template / a blank credential name or `phone_number_id` gets
+  `createRefusingWhatsappProvider` (`rejected`, `wa_template_not_approved` / `wa_credentials_missing`). The shared `resolveWhatsappProvider`
+  / `resolveWhatsappProviderDeps` keep their behaviour and signature (other callers unaffected).
+- **Task 4 (AC4, AC5; FS10, FS14, FS15).** The SMS rung ⛔ calls `dispatch` (I3 structural): `sms_bridge_not_lit` / `sms_message_not_lit` /
+  `sms_fallback_not_eligible` / plain `skipped_no_target` (no mobile) / `sms_send_not_wired`; `cost_optimized` still first. FS10 (a): a
+  bridged alert runs the normal ladder (`bridged` now means "requested"). FS14 (a): `fanOutAlertToMembers` returns `{ results, retry }` —
+  `retry` = a THROWN fan-out only (renamed from `undelivered`, whose meaning changed); POOL_BATCH / confirmed / mismatch record
+  `in_app_only` (claim kept, ⛔ throw; `inAppOnly` on the child result; confirmed / mismatch return an honest `delivered`); the recorded
+  trail keeps a rung's detail only when it is a NAMED reason (`RECORDED_RUNG_DETAILS`). The trace (Debug Log (e)) applied FS14 to
+  moderation (via `retry`), news and survey (record, ⛔ release).
+- **Task 5 (AC6; FS11).** DLT sheet: rows 17–22 in the main table, *"The wording of templates 17–22"* section, a cost line, a
+  rejection-table line, a Record line, dated notes on the TV6 section and after the main table. Roster: Row 30 note (1) dated annotation
+  (Row 40 already carried (a)–(f) from Task 0.4). deferred-work: the 5.10-validate ladder item annotated BUILT on the branch (still closed
+  only on `done`); the other AC6 annotations were made at Task 0.4.
+- **Task 6 (tests).** Replaced F18 legs, each stating what it replaced: `contribution-notify.test.ts` (*"delivers on SMS"*, the
+  no-WhatsApp `sms:sent` trail — rewritten to ELIGIBLE / `sms_send_not_wired`, the SMS-only bridge, the three-line audit);
+  `ai-8-3-ladder-armor-live.test.ts` (*"delivers on SMS"*, *"a rejected SMS exhausts the ladder"*); `contribution-notify-live.test.ts`
+  (*"one channel_send line PER RUNG"*); `contribution-provider-resolver.test.ts` (*"blank credential NAME → WA fixture"*).
+  `live-dispatch-cascade.spec.ts` models the cascade PRIMITIVE with the fixture as a test double — kept, with a dated comment. The
+  `vi.mock` registry tests (`provider-composition.test.ts`, `contribution-provider-resolver.test.ts`, `apps/api/tests/unit/sms-composition.test.ts`)
+  needed ⛔ change for the registry (the category registry kept its semantics). New legs: the predicate's six branches, the rung end to end
+  (push sent; WA sent; both failed; FS3 refusal; unlit; day 5 by message; no mobile; cost-opt; I3 with an ACCEPTING SMS double),
+  `fanOutAlertToMembers`' `retry` set, the workers' FS14 legs, the producers, the contract, the registry lockstep. Every new gate RED first
+  (Debug Log (b)).
+- ⚠ **6.37d's AC11 fence** (`claim-contact-ladder-whatsapp.test.ts`) pins `provider-composition.ts`, `contribution-notify.ts` and
+  `sms-dlt-registry.ts` by sha256 — the three pins RE-TAKEN with a dated note (the 6.35 / 6.36d / 5.12 precedent); the claimant's WhatsApp
+  step imports none of them. No other test pins a changed file (checked by hash).
+- ⚠ **Deviation from AC2 / I6's wording, recorded:** they ask for a `$comment.sms` *"NOT-YET-HUMAN-REVIEWED"* marker *"until the review leg
+  closes"*, but `-389` §1 item 12 and Row 40 (b) record BigDev's 2026-10-23 review as discharging the leg for these words. The comment says
+  that — *"reviewed and corrected by BigDev on 2026-10-23 … any later change to a word re-opens it"* — and the test asserts it; writing
+  "not yet reviewed" would contradict the record. BigDev's to overrule.
+- **AC7:** no push / WhatsApp copy, OTP, claim text 1–14 or its core, `sms-member-*`, Telegram or cost-optimization file changed (the only
+  other catalogue line touched is `sahyog_vivran.entry_hint`'s trailing comma).
+
 ### File List
+
+New:
+- `apps/jobs/src/scheduler/contribution-sms-templates.ts`
+- `apps/jobs/tests/contribution-sms-templates.test.ts`
+
+Modified — source:
+- `apps/jobs/src/scheduler/contribution-notify.ts`
+- `apps/jobs/src/scheduler/contribution-notify-triggers.ts`
+- `apps/jobs/src/scheduler/moderation-notify.ts`
+- `apps/jobs/src/scheduler/news-publish.ts`
+- `apps/jobs/src/scheduler/survey-publish.ts`
+- `packages/channels/src/composition/provider-composition.ts`
+- `packages/channels/src/index.ts`
+- `packages/channels/src/sms-dlt-registry.ts` (header note only)
+- `packages/contracts/src/alerts/alert.ts`
+- `packages/contracts/src/alerts/contribution-loop-templates.ts`
+- `packages/i18n/locales/en/contribution.json`
+- `packages/i18n/locales/hi/contribution.json`
+- `scripts/dlt-typed-variables/lib.ts`
+
+Modified — tests:
+- `apps/jobs/tests/_dlt-template-sheet.ts`
+- `apps/jobs/tests/ai-8-3-ladder-armor-live.test.ts`
+- `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts` (three pins re-taken)
+- `apps/jobs/tests/contribution-notify-live.test.ts`
+- `apps/jobs/tests/contribution-notify-triggers.test.ts`
+- `apps/jobs/tests/contribution-notify.test.ts`
+- `apps/jobs/tests/helpdesk-reply-notify.test.ts` (comment)
+- `apps/jobs/tests/news-publish.test.ts` (comment)
+- `apps/jobs/tests/survey-publish.test.ts` (comment)
+- `packages/channels/tests/contribution-provider-resolver.test.ts`
+- `packages/channels/tests/integration/live-dispatch-cascade.spec.ts` (comment)
+- `packages/contracts/tests/contribution-loop-templates.test.ts`
+- `scripts/microcopy/contribution.test.ts`
+
+Modified — records:
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`
+- `docs/launch-gate-inventory/inventory-roster.md` (Row 30 note (1))
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/5-11-per-member-sms-fallback-fixed-wording.md`
 
 ## Change Log
 
@@ -797,3 +948,4 @@ PQ section; the records (note ruling block, §3.4 annotation, Row 40, deferred-w
 | 2026-10-23 | v1.2 | Task 0.2 ANSWERED (Debug Log (a)). FS1 (d): three texted notices (day 10, payment not matched, payment still not confirmed); pool open and day 14 go to the Trust's announcement channels (BigDev's direction) ⇒ PQ3 NEW (ask or require members to join), G13 NEW (a broadcast channel is not in §3.4); PQ1 reshaped to the three; PQ2 WITHDRAWN (no text carries a name). FS16 (b). Words corrected by BigDev (en + hi) and segments recomputed (common path 1 en / 2 hi). `alert_published` stays excluded (G4 kept). Name boxes, the exigency line and `name_over_60_unruled` dropped from AC1 / AC5 / AC6 / Tasks 1, 2, 5 / T7 / T12. FS12 (2) corrected (`resolveSmsTarget` already catches a decrypt failure). Routing note rewritten — NOT sent. |
 | 2026-10-23 | v1.3 | Rebased onto `origin/main` `1268d47e` (6.36d landed) and re-pinned; five cited files' line numbers re-taken by content (Debug Log (e)). Task 0.3: Decision `2026-10-23-389` committed alone (`6db47c17`). Routing note SENT by BigDev. Task 0.4: the records commit (epics 5.11 + 5.11b, §3.4 annotation, roster Row 40, deferred-work, ledger `2026-10-23ag`, new backlog row `5-8b-degraded-mode-bridge-sms-wording`). Status stays ready-for-dev; next is Task 1. |
 | 2026-10-23 | v1.4 | THE PANEL RULED (`2026-10-23-390`, Trustee-ratified, DR + KB: *"Q1 B, Q2 A"*). PQ1 B: the eligibility check widens to any member the app (and WhatsApp, where used) could not reach — I2, AC3, Task 3, FS2 updated (the v1.2 `whatsapp !== null` requirement removed). PQ3 A: members asked, not required, to join a Trust channel — new backlog row `5-14-trust-announcement-channels`. Records committed after the decision. Status stays ready-for-dev; next is Task 1. |
+| 2026-10-23 | v1.5 | DEV (`bmad-dev-story 5.11`): Tasks 0.1 and 1–7 DONE. NEW message-keyed registry `contribution-sms-templates.ts` (six templates, BigDev's words) + `sms.*` en / hi; contract `AlertSmsBlock` (optional, `deadline_reminder` / `contribution_mismatch` only); producers on day 10 / pending-match escalated / mismatch; the ONE predicate as RULED (`-390` Q1 B); FS3's refusing WhatsApp provider (one config read); the SMS rung ⛔ dispatches (I3), named reasons on the trail; FS10 bridged ⇒ normal ladder; FS14 `in_app_only` (`fanOutAlertToMembers` → `{ results, retry }`) across POOL_BATCH / confirmed / mismatch / moderation / news / survey; DLT sheet 17–22, Row 30 note (1), deferred-work FS3 BUILT note; F18 tests replaced; 11 mutants RED. `ci:local` green bar `apps/admin` load timeouts (green alone and at concurrency 2). Deviation recorded: `$comment.sms` states BigDev's review (AC2 asked "not yet reviewed"). Status → review. |

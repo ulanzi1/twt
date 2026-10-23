@@ -1018,7 +1018,8 @@ jobs:
   integration-tests:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 20 → 30 (BigDev 2026-10-24): PR #300 ran 19m48s; PR #301 was cancelled at 20m19s with every finished package green.
+    timeout-minutes: 30
     needs: install
     # Live-DB integration tests: events_log RLS policy regression +
     # cross-Pariwar adversarial leak test (Story 1.6) + events_log

@@ -43,7 +43,7 @@ LETTERS: G = found facts (traced to code at the pin) · ND = build decisions (DE
 
 # Story 6.36d: A Member's Nominees Are Never Among the Five Asked About Their Death — Matched by Phone Number at Selection and Again Before Every Message `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 > ⭐ **Next: Task 1 (code)** — re-run Task 0.1's preflight first. Governance is DONE: Task 0.2 (ND1–ND10 decided, the Panel has ruled `-384`,
 > the `-356` reading answered), Task 0.3 (`-386`, committed alone as `bd249a6f`), Task 0.4 (the records); earlier: the author-commit is committed ALONE (Task 0.3), the records commit follows (Task 0.4), and only then Task 1.
@@ -605,9 +605,9 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
       `claim-peer-mesh.test.ts`'s direct `insertPeerMeshReplacementPing` call and its `deps()` / `windowDeps()` — pass `[]` / `enc`). Real
       envelopes and real indexes where a leg goes through the function (G16, TR8); recorded times placed explicitly
       ([[project_db_clock_ordering_tests_tie]]). Run M1–M16 (incl. M8b–M8e); record each.
-- [ ] **Task 6 — the gate (AC10)** — `ci:local` on :5433; push only with `DATABASE_URL=…:5433…` explicitly
+- [x] **Task 6 — the gate (AC10)** — `ci:local` on :5433; push only with `DATABASE_URL=…:5433…` explicitly
       ([[project_prepush_hook_inherits_5432]]).
-- [ ] **Task 7 — closing records** — story Status → review, File List, Change Log, the sprint row + ledger line (next free letter).
+- [x] **Task 7 — closing records** — story Status → review, File List, Change Log, the sprint row + ledger line (next free letter).
       ⛔ "Closed by" on deferred-work / `-366` decision 5 / Row 35 (g) until the row is `done` on `main` ([[feedback_closure_language_precision]]).
 
 ## Dev Notes
@@ -729,6 +729,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36d`, 2026-10-23.
 - **AC10 — `DATABASE_URL=…:5433… pnpm ci:local` (2026-10-23): FAILED — 34 / 36 jobs green; `test (unit)` and `integration-tests` red.** The failures, each re-run in ISOLATION:
   (a) `claim-peer-mesh-replies-policy-regression.spec.ts` "the structural CHECKs …" and (b) `peer-mesh-wa-reminder-record.spec.ts` "accepted ⇒ … locale_source …" — both FAIL in isolation too: each pins `locale_source = 'member_choice'` as REFUSED, and row 6-35's `0179` (applied to the shared :5433 by its worktree) admits it. ⛔ This story's code; they stay red on :5433 until 6-35 lands (its own spec edits) or :5433 is rebuilt without `0179`.
   (c) `import-workplaces.spec.ts` (the CLI leg), (d) `cross-pariwar-leak.spec.ts` (two `runAsCrossTenant` legs), (e) validity-service `determinism.test.ts` (100× threads) — each PASSES in isolation (14 / 14, 20 / 20, 1 / 1): the shared-DB / oversubscription class ([[project_known_livedb_test_failures]], [[project_ci_local_concurrency_oversubscription]]).
+- **BigDev's calls on Task 6 (2026-10-23, verbatim):** :5432 — *"Hold until 6-35 lands (Recommended)"*: `0180` stays OFF :5432; AC10's "both DBs" leg is OWED — whichever of 6-35 / 6-36d lands second applies `0179` then `0180` there, in journal order. The gate — *"Accept with the record (Recommended)"*: AC10 is counted met on the evidence above (34 / 36; the two failures 6-35's `0179`, the three isolation-green), ⛔ a clean 36 / 36. ⚠ Push only with `DATABASE_URL=…:5433…` explicit ([[project_prepush_hook_inherits_5432]]) — :5432 lacks `0180`.
 
 ### Completion Notes List
 
@@ -772,6 +773,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36d`, 2026-10-23.
 
 - 2026-10-23 — **Tasks 1–5 implemented** (`bmad-dev-story 6.36d`). ONE conjunct on `peerMeshEligibleMemberSql` through ONE fragment (`peerMeshNomineeMatchSql`, also the `is_nominee` label); ONE read of the indexes (`peerMeshNomineeMobileIndexes` — ND1 (b)'s as-of-cut projected versions, decrypt + normalise + de-duplicate, ONE batch HMAC into the login space, ⛔ inside any transaction); the select job pre-reads unlocked, computes the indexes with ⛔ transaction open, and fails CLOSED (ND6: alarm + rethrow under the child retry policy; a 1 h self re-send on the final attempt; an EMPTY `nominee_check_unavailable` selection after 24 h); both send-time children compute the indexes once, after `nothing_due`, by the selection's anchor cut; `peer_is_nominee` in lockstep (constant, pattern, migration `0180`'s two CHECKs and the replacement guard); the staff line's third disjunct and copy (ND7). Every AC9 mutant RED. ⚠ Two items await BigDev before Task 6 can close: `0180` on :5432 (held — it would orphan 6-35's `0179` there), and `ci:local`'s two :5433 failures caused by 6-35's `0179` (Debug Log).
 
+- 2026-10-23 — **Task 6 / Task 7.** BigDev: *"Hold until 6-35 lands (Recommended)"* and *"Accept with the record (Recommended)"* (verbatim in the Debug Log). AC10 met on the record (34 / 36 — ⛔ this story's failures); `0180` OWED on :5432 to whichever of 6-35 / 6-36d lands second. Status → review. ⛔ "Closed by" anywhere (deferred-work's family item, `-366` decision 5, Row 35 (g)) until the row is `done` on `main` ([[feedback_closure_language_precision]]). Go-live still waits on Row 31 (i) (counsel's written basis + the privacy-policy line).
+
 ### File List
 
 Source:
@@ -811,3 +814,4 @@ Records:
 | 2026-10-23 | 1.4 | Task 0.2 complete: ND7 / ND10 confirmed; the `-356` reading answered after an investigation (G18 — the declared number is the only nominee→member link; BigDev accepted the data-model gap + two follow-ups in Task 0.4); ND8's first residual rewritten precisely; the `-340` / `-341` null-claimant finding recorded in `deferred-work.md`. Next: Task 0.3. |
 | 2026-10-23 | 1.5 | Task 0.3 (`-386`, `bd249a6f`) and Task 0.4 (records across epics, roster, deferred-work, three sibling stories, the counsel question; new backlog row 6-36e) done. Governance complete; next is Task 1. |
 | 2026-10-23 | 1.6 | `bmad-dev-story 6.36d`: Status → in-progress; Task 0.1 preflight (migration `0180` — `0179` is row 6-35's); Tasks 1–5 implemented and tested, M1–M16 (M8b–M8e, both M13 halves) all RED. Task 6 open: `ci:local` 34 / 36 (two failures from 6-35's `0179` on the shared :5433, three isolation-green load flakes) and `0180` held on :5432 — both for BigDev. |
+| 2026-10-23 | 1.7 | Task 6 closed on BigDev's calls (*"Hold until 6-35 lands"* — `0180` off :5432, owed; *"Accept with the record"* — AC10 counted met at 34 / 36, the record in the Debug Log). Task 7: Status → review; sprint row `in-progress` → `review` (ledger `2026-10-23r`). |

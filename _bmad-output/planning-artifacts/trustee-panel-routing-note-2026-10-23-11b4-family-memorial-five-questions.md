@@ -1,9 +1,11 @@
 # Trustee Panel routing note — 2026-10-23 — Story 11b.4: the family's memorial, five questions and three confirms
 
-> ⚠ **DRAFTED — ⛔ NOT YET SENT.** Written by the agent during `bmad-create-story 11b.4` and revised during
-> `bmad-create-story validate 11b.4` (story v0.3) on branch `story/11b-4-memorial-authorship-surface-family-writes-the-story`,
-> code baseline `d87d047a`. The first draft was named `…-four-questions.md`.
-> ⚠ It is "shown to the Panel" only once BigDev has actually sent it ([[feedback_shown_to_panel_means_sent]]).
+> **Status: ANSWERED 2026-10-23 — Q1 A · Q2 A · Q3 B with a rider · Q4 A · Q5 A · Confirms 1–3 A (Decision `2026-10-23-391`).**
+> Written by the agent during `bmad-create-story 11b.4` and revised during `bmad-create-story validate 11b.4` (story v0.3) on
+> branch `story/11b-4-memorial-authorship-surface-family-writes-the-story`, code baseline `d87d047a`; the first draft was named
+> `…-four-questions.md`. A send copy of the meeting part (⛔ no evidence section) was prepared as a Claude Docs doc; ⚠ whether
+> that copy or this full note was shown is ⛔ not recorded. Answered the same day, relayed by BigDev. Everything below the
+> ruling block is kept UNEDITED, as put.
 
 ---
 
@@ -33,11 +35,31 @@ is ⛔ not asked here. Only whether the family is *told*, and what they may *do*
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — `2026-10-23-391` (Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the questions
-> **as they were put** ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti — relayed by BigDev, 2026-10-23, verbatim:
+> *"by DR and KB / Q1 A, Q2 A, Q3 B / Make sure to inform the family that memorial once published cannot be taken down.
+> However, we will keep the option B for exceptional cases. / Q4 A, Q5 A / Confirm1 A, Confirm2 A, Confirm3 A"*
+>
+> - **Q1 — A.** The nominee gives permission, with their code, each time a memorial is sent from the member's account.
+> - **Q2 — A.** The words and photo appear on the public page as the Trust approved them; the family is told where at
+>   sending and asked ⛔ not to name children; the reviewer leaves out any child's name or a photo showing a child.
+> - **Q3 — B, with a rider.** The family is **told, when they send, that a published memorial cannot be taken down**; they
+>   have ⛔ no take-down of their own; removal through the helpline, by the Trust, is kept **for exceptional cases**.
+>   ⚠ "For exceptional cases" is recorded as the Trust's discretion, ⛔ not a family's right on request — `-391` item 3 asks
+>   BigDev to confirm that reading with the Panel before the public render goes live.
+> - **Q4 — A.** Told in the app what was left out and the reason for each part; may change it and send again; ⛔ no appeal.
+> - **Q5 — A.** Kept with the member's record and erased with it; a family's own erasure request through the helpline is a
+>   follow-up.
+> - **Confirms 1–3 — A.** The Trustee Panel role (and Super Admin) reviews; the four reasons and ⛔ no others; the permission
+>   is kept on each version sent, ⛔ not in the consent register.
+>
+> **Not covered** (as recorded in `-391`): who decides a case is exceptional, on what grounds and how fast; whether the
+> family's notice mentions the exceptional route; the Trust withdrawing its own approval (unaffected); withdrawal before
+> review (unchanged); counsel (⛔ not asked about a permission that cannot be withdrawn after publication, nor about Q5); the
+> draft T&C's "revocable consent" sentence; the helpline paths; kinship rows; everything else in Story 11b.4.
+>
+> ⭐ Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

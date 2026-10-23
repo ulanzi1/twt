@@ -12423,3 +12423,12 @@ Both items below were found by RUNNING the gates, not by the three review layers
   for an over-grown `twt-test-pg` (recreate the container, `[[project_live_db_test_gotchas]]` #4) was ⛔ NOT
   done: the container is shared by other sessions. **Owner:** BigDev. **Re-trigger, concrete:** the next
   `ci:local` or pre-push that goes red on this leg; first move is to run it through `turbo` on an idle machine.
+
+## Deferred from: code review of 6-35-in-app-language-switch.md, second review (2026-10-23)
+
+- **A language PUT that never settles holds the app's serial write slot until restart** (`apps/mobile/lib/app-language.ts:129-174`).
+  The serial queue keeps its slot until the real request settles (the first review's fix against a timed-out write overtaking a
+  later one); the api-client transport has no timeout / abort (`with-timeout.ts`), so a wedged request blocks later choices for that
+  member and another member's flush for the rest of the process (every screen / sync wait still ends at 15 s; pending records stay
+  on disk and flush next process). Pre-existing root cause: the transport. **Re-trigger:** a transport-level timeout / AbortSignal
+  in `packages/api-client`, or a field report of a language choice stuck "not recorded".

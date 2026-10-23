@@ -30,6 +30,11 @@ to `1268d47e` (6.36d landed, `-386`) — Task 0.1's rebase picks it up.
 ⭐ CLARIFIED (v0.5, 2026-10-23): `-392` (Trustee-ratified, clarifies `-391` item 3) — a published memorial is taken down only for
 a genuine reason; the **helpline operator** decides on merit and removes it within 7 days; an email goes to the approver
 (MA18 — built with 11b.4a). ⇒ this story's author-commit takes `-393` or later; ledger `al`.
+⭐ RIDER WITHDRAWN (v0.6, 2026-10-23): `-393` — the Panel withdrew `-391`'s Q3 rider; a family may ask the helpline to take a
+published memorial down (Q3 B as put), discouraged by **soft measures only**: M1 a removal leaves no trace; M2 an honest
+notice at Send; M3′ a preview line (BigDev's words); M4 the helpline offers a smaller fix first. `-392` items 2–3 (genuine
+reason, on merit) superseded; items 4–5 (7 days, email to the approver) standing pending BigDev's confirmation. ⇒ this
+story's author-commit takes `-394` or later; ledger `an` (`am` is taken).
 -->
 
 # Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
@@ -59,17 +64,18 @@ and are routed in **one drafted note**:
 — ⭐ **SENT and RULED: `#decision-2026-10-23-391`** (Trustee-ratified, 2026-10-23). The note also carried **three
 confirms**, all answered **A** (as built): the reviewer is the Trustee Panel role (MA7); the four grounds on which words
 may be left out, and ⛔ no others (MA6); the permission is kept with the words, ⛔ not in the consent register (MA5).
-⚠ **Q3's rider binds AC4:** the permission text shown at Send must tell the family that **a published memorial cannot be
-taken down** (`-391` item 3 (a)) — the Panel discourages take-downs, since a removal may raise questions among members and
-the public (`-392`). A published memorial is taken down only for a **genuine reason** (e.g. a child the Trust did not know
-of, an outsider the family wants taken out): the **helpline operator** decides on merit, removes it **within 7 days**, and an
-**email goes to the approver** (`-392`) — built with the public render, row `11b-4a` (MA18).
+⚠ **Q3 binds AC4 — soft measures only (`-393`, the rider withdrawn):** the Panel discourages take-downs, since a removal
+may raise questions among members and the public (`-392` item 1), but by **soft** measures: the permission text at Send
+says honestly that the family may later ask the helpline to change it or take it down (M2); the preview screen says now is
+the time to change it (M3′); a removal leaves no trace on the page (M1 — row `11b-4a`); the helpline offers a smaller fix
+first and takes it down if the family still wants it, within 7 days, with an email to the approver (M4 + `-392` items 4–5,
+pending BigDev's confirmation) — built with the public render, row `11b-4a` (MA18).
 
 | Q | Plain question | Ruled (`-391`) | Built here as |
 |---|---|---|---|
 | **Q1** | Who may write the memorial and give permission, for the family? | ⭐ **A** — the nominee | Signed in on the deceased's account, sent with the **nominee's handover code** (the only principal that exists) |
 | **Q2** | What of the memorial is shown publicly, and what never is? | ⭐ **A** — as approved, any child left out | The permission wording (AC4) is written on A; publication is ⛔ not in this story (MA1 → 11b.4a) |
-| **Q3** | Can the family take it down after the Trust has decided on it? | ⭐ **B, with a rider** — the family is told a published memorial cannot be taken down; removal only for a genuine reason, decided by the **helpline operator** on merit within 7 days, email to the approver (`-392`) | AC4's wording says so; withdrawal **before review** only (MA9); the Trust may withdraw its own approval (MA16); the operator's take-down is 11b.4a's (MA18) |
+| **Q3** | Can the family take it down after the Trust has decided on it? | ⭐ **B** — the family asks the helpline, the Trust removes it (the rider withdrawn — `-393`); discouraged by soft measures only: no trace (M1), an honest notice (M2), a preview line (M3′), a smaller fix first (M4); within 7 days, email to the approver (`-392` items 4–5, pending confirmation) | AC4 carries M2 and M3′; withdrawal **before review** only (MA9); the Trust may withdraw its own approval (MA16); the operator's take-down is 11b.4a's (MA18) |
 | **Q4** | Is the family told why words were left out, and can they ask again? | ⭐ **A** — told in the app, ⛔ no appeal | Told in the app, may send a new version |
 | **Q5** | How long does the Trust keep what the family sent, and can it be erased? | ⭐ **A** — with the member's record | Kept with the member's record, erased with it (MA15); a family's own erasure request is a helpline follow-up (AC16 (7)) |
 
@@ -84,16 +90,16 @@ own consent | ⛔ No [per-subject gate]"*); `-160` **cl.6** (Trustee-ratified) +
 (e.g., personal attacks on third parties, false accusations, illegal content)"* (`epics.md` `### Story 11b.4`) — three of MA6's reason codes are those grounds; the fourth (a child) follows `-391` Q2 A, and Confirm 2 A ratified all four as the only grounds.
 
 ⭐ **One governance entry is written by THIS story** — Task 1 records **MA1–MA18** (as answered) plus the three
-enum mints and the permission key as ONE author-commit entry (**the next free id** — `-393` or later; `-389`/`-390` are 5.11's, `-391`/`-392` are the Panel's) **before
+enum mints and the permission key as ONE author-commit entry (**the next free id** — `-394` or later; `-389`/`-390` are 5.11's, `-391`–`-393` are the Panel's) **before
 any code**, committed alone ([[feedback_governance_commits_precede_implementation]]). ⚠ The enum mints and the
 permission key are ⛔ **not** covered by the `-210` cl.2 delegation (it covers only tracking vocabularies with ⛔ no
 member-facing or authority effect) — they need that entry, ⛔ not the delegation.
 
 ⚠ **STOP conditions for Task 0.1** — halt and tell BigDev if any of these is true at the fresh `origin/main`:
-1. a decision newer than `-392` cites `-162`, `-196`, `11b.4`, `memorial`, or `family-authored` ([[feedback_story_validate_footguns]] #6, #15);
+1. a decision newer than `-393` cites `-162`, `-196`, `11b.4`, `memorial`, or `family-authored` ([[feedback_story_validate_footguns]] #6, #15);
 2. a story file other than this one, or a new row, owns a family memorial / tribute / parichay (#10);
 3. any file under `packages/domain/src/memorial/`, `apps/api/src/modules/memorial*`, or `apps/mobile/app/(memorial)/` already exists;
-4. the Panel has ruled on this story again after `-392` (then transcribe it FIRST and re-read every AC against it);
+4. the Panel has ruled on this story again after `-393` (then transcribe it FIRST and re-read every AC against it);
 5. a sibling has added a guard to `apps/api/src/modules/withdrawal/handlers.ts` `assertWithdrawable` for a member with a filed claim (then re-read AC16 (9)).
 
 ---
@@ -273,7 +279,7 @@ the words are kept was Q5's — ruled A (`-391`).
 ⭐ **(a) Split.** This row builds authorship → submission → Trust review → outcome to the family. The **public
 render** (matrix fields, `RULED_TIER1_PUBLIC_EXCEPTIONS` entries, the Astro slot, the photo pipeline, take-down)
 moves to a **new row** `11b-4a-family-memorial-public-render`, gated on 11b.5's components (Q2 and Q3 — ruled by `-391`; it builds
-the helpline operator's take-down, `-392` — MA18).
+the helpline operator's take-down, `-393` — MA18).
 **Why:** the render needs Panel rulings this row does ⛔ not (narrative, portrait and kinship are Tier-1 by fact;
 a public Tier-1 field is a ruling, never a code change — `matrix.ts`). The 11b.3 three-way split is the precedent.
 ⚠ Cost: an approved memorial appears nowhere until 11b.4a lands — hence the go-live fence (MA12).
@@ -323,8 +329,8 @@ with that version, and a register row per version would be a second record of th
 nominee-bank D5 ruling and is ⛔ not a general ban (0124 was minted after it) — ⛔ not a ground here either.
 ⚠ **Departure from PRD FR-97, recorded:** FR-97 asks for *"Granular consent records … photo. Revocable."* in the consent
 registry. This permission is outside the registry; it is revocable **before review** by withdrawal (MA9); after
-publication the family can ⛔ not withdraw it — `-391` Q3 (B with the rider): they are told so at Send (AC4); a take-down for a
-genuine reason is the helpline operator's, on merit (`-392`, MA18). ⇒ put to the Panel as Confirm 3 — ⭐ **ratified A (`-391`)**.
+publication it is revocable **through the helpline** (`-391` Q3 B; the rider withdrawn — `-393`): the operator offers a
+smaller fix first and takes it down if the family still wants it (M4, MA18); the family is told so at Send (AC4, M2). ⇒ put to the Panel as Confirm 3 — ⭐ **ratified A (`-391`)**.
 **Who authorised:** the elevation row does ⛔ not record who received the code, so Send resolves the nominee the handover
 code is addressed to **at Send time** (the same branch `sendHandoverOtp` in `claims.service.ts` takes) and stores the
 recipient kind (`'latest' | 'at_death'`) plus the nominee **version** it resolves — the at-death `refusal.versionId`, or
@@ -335,8 +341,8 @@ on the latest path the rank-1 head's `version_id` (PK of `member_nominee_version
 re-inserted on every re-declaration. ⚠ What the record proves, stated for Q1: *"sent from the member's account within
 5 minutes of that nominee's code being typed in there"* (the code itself is valid for 3 minutes — `stepUpOtpTtlMs`; the
 elevation lasts 5 — `stepUpElevatedMs`) — and one elevation serves every `claim_handover` route.
-⭐ v1 wording is written on the rulings — `-391` Q2 A (where it appears; children left out) and Q3's rider (a published
-memorial cannot be taken down); any later change is a new version (v1 is ⛔ never edited).
+⭐ v1 wording is written on the rulings — `-391` Q2 A (where it appears; children left out) and `-393` M2 (the family may
+later ask the helpline to change it or take it down); any later change is a new version (v1 is ⛔ never edited).
 Rejected — (b) a new `consent_type` linked by FK: two records of one act; (c) reuse `sahyog_vivran_publication`: forbidden;
 (d) a separate `memorial_send` step-up context: `sendHandoverOtp` hard-codes `claim_handover` — a new OTP path for a
 5-minute narrowing.
@@ -359,7 +365,7 @@ none of them. The validator constructs `Intl.Segmenter` **lazily inside the func
 pgEnum = **`attacks_someone_named`** (a personal attack on a third party) · **`accuses_someone_of_wrongdoing`** (the
 epic says *false* accusations; a reviewer cannot test truth, so any accusation of wrongdoing counts — a widening put to
 the Panel in Confirm 2 — ratified A, `-391`) · **`against_the_law`** (illegal content) · **`identifies_a_child`** (names or
-shows a child — `-391` Q2 A leaves children out) · ⚠ **⛔ no `family_asked` in this row**: a family's request is decided by the helpline operator (`-392`), whose take-down and its
+shows a child — `-391` Q2 A leaves children out) · ⚠ **⛔ no `family_asked` in this row**: a family's request goes to the helpline operator (`-393`), whose take-down and its
 reason value are 11b.4a's (MA18). **One reason per part** (each omission, the photo) and one for `not_approved`; ⛔ no catch-all value (the epic says
 *"only"*). ⇒ ⭐ the reasons were listed inside Q4 option A and in **Confirm 2** — ⭐ **both ratified A (`-391`)**: these
 four, and ⛔ no others, are the grounds.
@@ -424,7 +430,7 @@ they are ⛔ not used).
 handler logs `> 1`); if that ever changes, the key question re-opens with it. A pending submission may be
 **withdrawn by the family** **only while it is with the Trust**; an approval may be **withdrawn by the Trust** (MA16).
 Both are rows in `memorial_withdrawals` (unique per submission) with `withdrawn_by` (`memorial_withdrawal_actor` pgEnum:
-`family` · `trust`); a Trust row carries one of MA6's four reasons. ⛔ Nothing is published in this row, so post-publication take-down is **11b.4a's**, under `-391` Q3 (⛔ no family take-down; the helpline operator removes it for a genuine reason — `-392`, MA18). Every member
+`family` · `trust`); a Trust row carries one of MA6's four reasons. ⛔ Nothing is published in this row, so post-publication take-down is **11b.4a's**, under `-391` Q3 (⛔ no take-down in the app; the family asks the helpline and the operator takes it down after offering a smaller fix — `-393`, MA18). Every member
 write re-checks that the submission's pool **is the session's resolved drive** — RLS separates Pariwars, ⛔ not
 families. The reviewer may ⛔ not decide a superseded or withdrawn submission (Trap 8).
 
@@ -454,8 +460,8 @@ financial-truth-gate hazard (Trap 5).
 ### MA12 — The go-live fence: a launch-gate row **plus** a server switch, ⛔ not a feature flag
 ⭐ **(a)** Add a row to `docs/launch-gate-inventory/inventory-roster.md`: **Row 40** in the roster's `### Row N — \`slug\``
 block shape (the Row 39 precedent — gate_name, owner, closure_criteria, current_status, …): *"Family memorial authorship
-⛔ not enabled in production until AC4's wording version — written on `-391` and carrying Q3's take-down notice — is in
-force (its `hiReviewed` true), 11b.4a has landed (with `-392`'s operator take-down — MA18), the AC14 tone review is recorded, the Story 0.9 risk (AC16 (8)) is
+⛔ not enabled in production until AC4's wording version — written on `-391`/`-393`, carrying M2 and M3′ — is in
+force (its `hiReviewed` true), 11b.4a has landed (with the operator take-down and the no-trace rule — `-393`, MA18), the AC14 tone review is recorded, the Story 0.9 risk (AC16 (8)) is
 disposed — a conversation held, or BigDev records launching without it — a production producer of `pool.closed` exists
 (MA14), and ≥ 1 person holds `trustee_panel` in the Pariwar."* (The Panel items — Q1, Q2, Q4, Q5 and the three confirms —
 were ruled by `-391` before the row was written; ⛔ none is a criterion.)
@@ -516,7 +522,7 @@ reason copy and the helpline, and may send a new version (MA13); when a newer ve
 member GET carries `earlierApprovalWithdrawn: { reasonCode } | null` beside the newer version's state, so the family is
 told. **Why:** without it, a mistaken approval (a child's
 name the reviewer missed) has ⛔ no cure — one decision per submission, ⛔ no overwrite, ⛔ no new version after approval.
-⚠ It is ⛔ not the route for a family's request (`-392`: the helpline operator decides, on merit — MA18). A family who calls
+⚠ It is ⛔ not the route for a family's request (`-393`: the helpline operator handles it, smaller fix first — MA18). A family who calls
 about a child's name may still prompt the reviewer's own withdrawal on `identifies_a_child` — the Trust acting on Confirm 2's
 grounds (`-391` Not covered: the Trust's own removal is unaffected).
 Rejected — (b) a superseding second decision: breaks "one decision per submission" and the reconstruction story.
@@ -529,14 +535,18 @@ refuse with one neutral `404`. ⚠ The check is a **preHandler registered BEFORE
 memorial route — else a dark surface answers `403 auth.step_up_required` and the app texts the nominee a code first. The
 review routes stay on (they show nothing when nothing can be sent). Rejected — a `feature_flag_versions` flag (MA12 (b)).
 
-### MA18 — The helpline operator's take-down (`-392`): ⭐ built with the public render, row `11b-4a`
-⭐ **(a) In 11b.4a, ⛔ not here.** `-392` gives a published memorial's take-down to the **helpline operator** — on merit, for a
-genuine reason, within 7 days, with an email to the approver. What it acts on is the public page, and ⛔ nothing is public
-until 11b.4a. Its parts, recorded for 11b.4a's trigger (AC16 (1)): a key (e.g. `memorial.takedown`) for `helpline_operator`
-(`roles.ts`; pariwar dimension — prove it live, as Task 2 does for MA7); a `memorial_withdrawals` row with a new
-`memorial_withdrawal_actor` value (`helpline`), a reason value (`family_asked`, minted then) and a required Tier-1 merit note;
-the family's helpdesk ticket as the start of the 7-day clock, with a watch for a request still open after it; and the email to
-the approver — the decision row's `actor_id` (recorded here — Task 2). ⚠ That email needs a **third identity-data read** (the
+### MA18 — The helpline operator's take-down (`-393`, `-392` items 4–5): ⭐ built with the public render, row `11b-4a`
+⭐ **(a) In 11b.4a, ⛔ not here.** A family asks the helpline to take a published memorial down (`-391` Q3 B); the **helpline
+operator** first offers a smaller fix — leave out a sentence or a name, remove only the photo, or a new version (`-393` M4) —
+and, if the family still wants it, takes it down: ⛔ no merit test (`-392` items 2–3 superseded), within 7 days, with an email
+to the approver (`-392` items 4–5, standing pending BigDev's confirmation); and the page then shows ⛔ nothing — ⛔ no marker,
+⛔ no gap, ⛔ no date (`-393` M1). What it acts on is the public page, and ⛔ nothing is public until 11b.4a. Its parts, recorded
+for 11b.4a's trigger (AC16 (1)): a key (e.g. `memorial.takedown`) for `helpline_operator` (`roles.ts`; pariwar dimension —
+prove it live, as Task 2 does for MA7); a `memorial_withdrawals` row with a new `memorial_withdrawal_actor` value
+(`helpline`), a reason value (`family_asked`, minted then) and an optional Tier-1 note; for a smaller fix, the operator
+withdraws the approval and the family sends a new version without the part (MA13) — ⚠ the memorial is down while the new
+version is reviewed, which the operator says; the family's helpdesk ticket as the start of the 7-day clock, with a watch for
+a request still open after it; and the email to the approver — the decision row's `actor_id` (recorded here — Task 2). ⚠ That email needs a **third identity-data read** (the
 approver's address): ADR-0040 admits exactly two, fenced by `apps/jobs/tests/staff-email-identity-read-fence.test.ts` ⇒ a new
 ADR or an ADR-0040 amendment **first**. ⇒ **In this row:** MA16 takes ⛔ no family request; `family_asked` is ⛔ not minted;
 `memorial_withdrawal_actor` stays `family · trust`.
@@ -551,7 +561,7 @@ yet see.
 
 ### AC0 — Governance before code
 **Given** MA1–MA18 as answered at Task 0.2
-**Then** ONE author-commit decision entry (the next free id — `-393` or later) records them, the three pgEnum mints
+**Then** ONE author-commit decision entry (the next free id — `-394` or later) records them, the three pgEnum mints
 (`memorial_review_action`, `memorial_review_reason`, `memorial_withdrawal_actor`), the permission key `memorial.review`
 (catalog 52 → 53), and states the §0 line ("changes no disclosure, no obligation, no basis; supersedes no clause; Q1–Q5
 and the three confirms were ruled by `-391`") — committed **alone**, before any `packages/` or `apps/` change; **and** a
@@ -617,8 +627,15 @@ what the Trust will do with the words and photo; that the Trust reads it first, 
 but never changes the words; that the family is asked ⛔ not to name children, and any child's name the Trust finds is
 left out (`-391` Q2 A — the reviewer has ⛔ no ages, so the copy promises what a reviewer can do); where it will appear
 (the member's Sahyog Vivran page, which anyone with its link can read, as the Trust approved it — `-391` Q2 A); and ⭐
-**that once it appears there it cannot be taken down** (`-391` Q3 rider — ⛔ no promise of a take-down route, ⛔ no
-"you can remove it later"; until it is reviewed the family may still withdraw it — AC8)
+**that if they ever want it changed or taken down they can call the helpline, and that often a small change is enough**
+(`-393` M2 — ⛔ never "cannot be taken down" (the rider is withdrawn); ⛔ no take-down button; until it is reviewed the family
+may still withdraw it in the app — AC8)
+**And** the **preview** screen shows, at its top (⛔ not stacked with the permission text above Send), `-393` M3′ — BigDev's
+words: *"Once published public will see the memorial. If want to make any futher change, this is the right time."* — with
+its final English and Hindi set at the AC14 review (the author's suggested polish: *"Once it is published, anyone may see this
+memorial. If you would like to change anything, now is the best time."* — ⚠ ⛔ never a line implying a later change is
+impossible, which would contradict M2); the key lives in the `memorial` namespace (⛔ not the registry: it is ⛔ not part of
+the permission)
 **And** the client sends **only** `{ authorisationCopyVersion, authorisationLocale }` — the server resolves the
 text and refuses a non-current version with one dignified `409 memorial.authorisation_outdated` (the app reloads the
 text); ⚠ refusing a stale version is **new** behaviour (the member-terms echo is advisory only)
@@ -630,9 +647,9 @@ joins `microcopy.yaml` `scope.code_globs` (AC14)
 **And** ⛔ no checkbox, ⛔ no box on the claim screen, ⛔ no `consent_records` row, ⛔ no reuse of
 `sahyog_vivran_publication` / `in_memoriam_listing`, ⛔ no question about the member's name or the nominee's data
 (`-160` cl.3/cl.6, epic scope fence)
-**And** the v1 wording's doc-comment cites **`-391` Q2 A and Q3's rider** as its basis (MA5), and the AC14 tone review
-checks, in both locales, that the take-down sentence is present and gentle — and that ⛔ nothing elsewhere in the
-namespace offers the family a way to take a published memorial down.
+**And** the v1 wording's doc-comment cites **`-391` Q2 A and `-393` M2** as its basis (MA5), and the AC14 tone review
+checks, in both locales, that the helpline sentence (M2) and the preview line (M3′) are present and gentle — ⛔ no guilt
+(⛔ no "your loved one deserves…"), ⛔ no count of readers, ⛔ no take-down button anywhere in the namespace.
 
 ### AC5 — The family's words are stored verbatim, are reconstructible, and are erasable (the load-bearing invariant)
 **Then** `memorial_submissions.body_ciphertext` and `alt_text_ciphertext` (Tier-1, `piiColumn(1, MEMORIAL_FIELD_CLASS)`)
@@ -741,7 +758,7 @@ with **the family's own original text** — ⛔ never the as-approved text, whic
 photo (`keepPreviousPhoto`, MA8)
 **And** ⛔ no SMS, ⛔ no push, ⛔ no email (Trap 4); the internal note ⛔ never reaches the wire (a contract test)
 **And** the approved copy ⛔ must not claim the memorial is already visible anywhere — it says it **will** appear on
-the Sahyog Vivran page (true only once 11b.4a lands — MA12) — and ⛔ never offers to take it down (`-391` Q3).
+the Sahyog Vivran page (true only once 11b.4a lands — MA12) — with ⛔ no take-down button (a take-down goes through the helpline — `-393`).
 
 ### AC11 — Presenter shared by preview and (later) the public page
 **Then** `@twt/ui` exports pure `memorialParagraphs(body)` (blank-line split, CRLF-aware, ⛔ no trimming of the family's
@@ -791,9 +808,10 @@ passes vacuously).
 
 ### AC16 — Recorded risks, ⛔ not faked
 **Then** `deferred-work.md` gains, under a *"Deferred from: story 11b-4 …"* heading, each with a trigger:
-(1) **public render** → row `11b-4a` (`-391` Q2 A, Q3 B with the rider — ⛔ no family take-down; `-392`: the helpline
-operator's take-down for a genuine reason, on merit, within 7 days, with an email to the approver — MA18's parts incl. the new ADR
-for the approver's address, and `-392`'s Not-covered lines (a declined request, the clock's start, the email's text); matrix fields + Tier-1 exceptions; same presenter with `pre-wrap`; the
+(1) **public render** → row `11b-4a` (`-391` Q2 A, Q3 B — the rider withdrawn by `-393`; the helpline
+operator's take-down after a smaller fix is offered (M4), within 7 days, with an email to the approver (`-392` items 4–5, pending
+confirmation) — MA18's parts incl. the new ADR for the approver's address; **M1: a removed memorial leaves ⛔ no trace on the
+page**; `-393`'s Not-covered lines (counsel on M4, who may ask, the call script) and `-392`'s (the clock's start, the email's text); matrix fields + Tier-1 exceptions; same presenter with `pre-wrap`; the
 latest **approved** version shows while a newer one is with the Trust (MA13);
 `s-maxage=300` take-down latency; the two `apps/public` doc-blocks that read *"the family story (Story 11b.4) — `backlog`"*
 — `apps/public/src/lib/sahyog-vivran-render.ts` and `apps/public/src/pages/sahyog-vivran/[driveToken].astro` — which
@@ -854,10 +872,11 @@ legs run **without** an elevation (proving the switch answers before the step-up
         `handover_nominee_ref` — the memorial-local query).
   - [ ] 0.2 Put MA1–MA18 to BigDev (⭐ = recommended) and record each answer verbatim in the Dev Agent Record.
         ⚠ If MA1 is answered (b), STOP — the story must be re-planned.
-  - [ ] 0.3 The routing note was **sent and ruled** (`-391`, 2026-10-23 — transcribed at v0.4). `-391` item 3's reading
-        was confirmed by `-392` (the helpline operator's take-down). Check ⛔ no later ruling on it (STOP 4).
+  - [ ] 0.3 The routing note was **sent and ruled** (`-391`, 2026-10-23 — transcribed at v0.4). `-391` item 3's rider
+        was clarified (`-392`) then withdrawn (`-393`, soft measures M1–M4). Check ⛔ no later ruling on it (STOP 4), and
+        record whether BigDev confirmed `-392` items 4–5 (7 days; the email to the approver).
 - [ ] **Task 1 — Governance commit, alone** (AC0)
-  - [ ] 1.1 `### Decision <date>-<next free id>` (`-393` or later): **Author-commit (BigDev)** — MA1–MA18 as answered; the three enum
+  - [ ] 1.1 `### Decision <date>-<next free id>` (`-394` or later): **Author-commit (BigDev)** — MA1–MA18 as answered; the three enum
         mints + permission key (with "⛔ not covered by `-210` cl.2"); §0 line; **Not covered:** Q1–Q5 and the three
         confirms (ruled by `-391`). Insert under the `Newest first` separator. If the decision-log write
         is refused, ask BigDev once ([[project_decision_log_writes_user_inserted]]).
@@ -907,8 +926,8 @@ legs run **without** an elevation (proving the switch answers before the step-up
   - [ ] 3.2 `deriveMemorialStatus` (pure, exhaustive `never` arm, seven states); the omission validator in
         `packages/contracts/src/memorial/omissions.ts` (pure; MA6's rules; grapheme boundaries via `Intl.Segmenter`).
   - [ ] 3.3 `MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS` v1, hi + en, `hiReviewed: false`, id
-        `'2026-10-23.v1-pending-hi-review'`, doc-comment citing `-391` Q2 A + Q3's rider; the text says a published
-        memorial cannot be taken down (AC4).
+        `'2026-10-23.v1-pending-hi-review'`, doc-comment citing `-391` Q2 A + `-393` M2; the text carries M2's helpline
+        sentence (AC4). The M3′ preview line is a `memorial` namespace key (AC4).
   - [ ] 3.4 Unit tests: status table; omission edge cases (empty, overlap, touching, unsorted, out of range, a boundary
         inside a surrogate pair **and** inside a Devanagari conjunct / ZWJ sequence, whitespace-only span, a span
         across a blank line, a whole-body omission under `approved_with_omissions`); blank check (a ZWSP-only and a U+3164-only body
@@ -1020,7 +1039,7 @@ legs run **without** an elevation (proving the switch answers before the step-up
 `-159` (D4(b) — the de-authorised drive tick-box; ⛔ not this data class) · `-165` / `-176` (nominee-bank Tier-1;
 11b.3 D-rulings) · `-190`/`-191` (bank coordinates withdrawn) · `-210` (enum delegation — ⛔ does not reach MA6/MA7) ·
 `-223` (⛔ no withheld-name case; ⚠ but it records that ⛔ no drive names the deceased publicly today — the routing note's
-Q2 said so) · `-391` / `-392` (the Panel's answers to this story's note and the Q3 clarification — transcribed throughout, v0.4 / v0.5) · `-178` D8(ii) / `-183` (precedent: the Panel said who holds an authority, the key was then an author act —
+Q2 said so) · `-391` / `-392` / `-393` (the Panel's answers to this story's note, the Q3 clarification, and the rider's withdrawal with soft measures — transcribed throughout, v0.4–v0.6) · `-178` D8(ii) / `-183` (precedent: the Panel said who holds an authority, the key was then an author act —
 hence MA7's confirm).
 
 ### Load-bearing invariant families to self-check
@@ -1075,7 +1094,9 @@ counts over shared fixtures.
 8. **MA14** — ⛔ no production code moves a pool to `closed` today, so the surface stays dark until the Epic 7 window
    scheduler ships (true of every drive surface). Keep the window on the pool's `closed` (⭐), or key it on the
    **cycle** close the UX names (`CloseCycle`)?
-9. **MA18** — build the helpline operator's take-down (`-392`) with the public render in 11b.4a (⭐), or here?
+9. **MA18** — build the helpline operator's take-down (`-393`) with the public render in 11b.4a (⭐), or here?
+10. **`-392` items 4–5** — do "within 7 days" and "an email to the approver" survive the rider's withdrawal (`-393` records
+    them as standing, pending your confirmation)?
 
 ---
 
@@ -1100,3 +1121,4 @@ counts over shared fixtures.
 | 2026-10-23 | v0.3 | Validated (`bmad-create-story validate 11b.4`, four fresh-context verifiers at `d87d047a`; BigDev "all"). Principal stated exactly (sign-in code to the deceased's own number; the nominee's code is the 5-minute write step-up) and "no deadline" bounded by the family still being able to sign in; own `MEMORIAL_DRIVE_POOL_STATES` (`-196` Consequence 2) and the post-close window (MA14); erasable Tier-1 (MA15, the 0092 lesson) + Q5; the Trust may withdraw an approval (MA16); a server switch (MA17, AC19); photo / alt text may be left out, reasons limited to the epic's grounds (MA6); MA5 re-grounded (one record per version of the words; FR-97 departure; nominee recorded); serial writes under the lock (Trap 12); multipart, Idempotency-Key, blank / length rules (Trap 11, AC7); history view for reviewers (AC9); metadata stripped at ingest (MA8); segment-shaped presenter; Trap 7 corrected with a device check; copy gates reach the authorisation registry and mobile files; wiring completed; routing note corrected (Q1's deciding fact, Q2, Q4 option B) and renamed for Q5 + three non-blocking confirms. Then a fresh-context re-validate of these edits (two verifiers) applied before commit: ⛔ no production pool reaches `closed` (surface inert until the Epic 7 window scheduler — MA14, Row 40, AC16 (13), Question 8); erasure reaches a deceased member's record only after a withdrawal or termination, so retention is indefinite in practice (MA15, Q5); the fourth Tier-1 column (withdrawal note) erasable; the nominee recorded by version head; one reason per part left out, `identifies_a_child`, `family_asked`; the switch answers before the step-up gate; the Idempotency claim ordered first; the invisible-character class copied into contracts. A third round fixed: the nominee version read by a memorial-local query (version heads carry ⛔ no id); "trustees" has a Trustee-Lite reading (MA7 / Confirm 1); the Trust may withdraw the chain's latest approval even after a newer version; AC17's edit list; AC7a's hook outcomes; the audit-union split. |
 | 2026-10-23 | v0.4 | The Panel ruled (`-391`, Trustee-ratified — Dhiraj Rahul + Kalpana Bharti): Q1 A, Q2 A, Q3 B with a rider, Q4 A, Q5 A, Confirms 1–3 A. Transcribed: Q table → rulings; AC4's permission text says **a published memorial cannot be taken down** (Q3 rider) and where it appears (Q2 A); registry marker `…v1-pending-hi-review`; MA5/MA6/MA7 confirms ratified; MA16 is the exceptional-case route before publication; Row 40 drops the Panel criteria; AC16 items cite the rulings; this story's author-commit moves to the next free id (`-392`+; `-389`/`-390` are 5.11's). Row stays `ready-for-dev`. |
 | 2026-10-23 | v0.5 | The Panel clarified Q3 (`-392`, Trustee-ratified, relayed by BigDev): take-downs are discouraged; a published memorial is taken down only for a genuine reason, the **helpline operator** decides on merit, removes it within 7 days, and an email goes to the approver. New **MA18** (PROPOSED, ⭐ in 11b.4a): the operator's take-down — key for `helpline_operator`, a `helpline` withdrawal actor, `family_asked` + merit note, the 7-day clock, the approver email (needs a new ADR — ADR-0040's identity-read fence). Here: MA16 takes ⛔ no family request; `family_asked` ⛔ not minted. Author-commit → `-393`+. Row stays `ready-for-dev`. |
+| 2026-10-23 | v0.6 | The Panel withdrew `-391`'s Q3 rider (`-393`, Trustee-ratified, relayed by BigDev) and asked for soft measures; BigDev chose M1 (a removal leaves no trace), M2 (an honest helpline notice at Send), M3′ (a preview line, BigDev's words) and M4 (a smaller fix first). AC4 carries M2 + M3′ (⛔ no "cannot be taken down"); MA5 — revocable after publication through the helpline; MA18 rewritten (⛔ no merit test; `-392` items 4–5 pending confirmation); AC16 (1) carries M1; author-commit → `-394`+. Row stays `ready-for-dev`. |

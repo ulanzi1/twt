@@ -52,6 +52,11 @@ is ⛔ not asked here. Only whether the family is *told*, and what they may *do*
 >   among members and the public; a published memorial is taken down only for a **genuine reason** (e.g. it names a child the
 >   Trust did not know of, or an outsider the family wants taken out) — the **helpline operator** decides on merit, removes it
 >   **within 7 days**, and an **email is sent to the approver**.
+>   ⭐ **Rider withdrawn 2026-10-23 — `-393`** (relayed by BigDev): the family is ⛔ no longer told a published memorial cannot be
+>   taken down, and removal is ⛔ no longer limited to a genuine reason — Q3 **B as put** stands (the family asks the helpline,
+>   the Trust removes it). Take-downs are discouraged by **soft measures only**: a removal leaves no trace on the page; an
+>   honest notice at sending; a line on the preview screen that now is the time to change it; the helpline offers a smaller fix
+>   first. "Within 7 days" and "an email to the approver" are recorded as standing, pending BigDev's confirmation.
 > - **Q4 — A.** Told in the app what was left out and the reason for each part; may change it and send again; ⛔ no appeal.
 > - **Q5 — A.** Kept with the member's record and erased with it; a family's own erasure request through the helpline is a
 >   follow-up.

@@ -51,7 +51,7 @@ diff. New **MA19** (BigDev 2026-10-24: (a) — close the generic step-up route f
 
 # Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -1047,8 +1047,8 @@ nominee-bank and the bank-statement upload.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Re-verify, then get the build decisions answered** (AC0)
-  - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor d87d047a origin/main`; rebase the branch onto
+- [x] **Task 0 — Re-verify, then get the build decisions answered** (AC0)
+  - [x] 0.1 `git fetch origin`; `git merge-base --is-ancestor d87d047a origin/main`; rebase the branch onto
         `origin/main`; `git diff --name-only d87d047a..origin/main -- packages apps scripts` — if any file named in
         this story moved, re-derive its cite. Re-check every NUMBER in the header comment across **all branches and
         worktrees** (`git for-each-ref` + each worktree's working copy). Confirm the
@@ -1057,25 +1057,25 @@ nominee-bank and the bank-statement upload.
         (5.11's — this story uses **Row 41**), migration `0181` (6.36e plans it too — take the next free at commit time), and
         ledger `al` (6.36e's). **Re-letter only the colliding entries**, each to a letter free on **every** branch and worktree
         (next free at v0.9: `2026-10-23aq`; `2026-10-24a` is 6.36e's; this story's v0.9 entry is `2026-10-24b`), keeping their order.
-  - [ ] 0.2 Record **MA1 (a)** and **MA18 (a)** as answered (BigDev 2026-10-23, verbatim: *"I am fine with 11b-4a"*) and
+  - [x] 0.2 Record **MA1 (a)** and **MA18 (a)** as answered (BigDev 2026-10-23, verbatim: *"I am fine with 11b-4a"*) and
         **MA19 (a)** (BigDev 2026-10-24). MA5 (permission kept on the row), MA6 (the four grounds only) and MA7
         (`trustee_panel` reviews) were **ratified** by `-391` Confirms 3 / 2 / 1 — ask BigDev **only their build details**,
         ⛔ never the ratified core. Put the rest (MA2–MA4, MA8–MA17, the AC7 limits) to BigDev (⭐ = recommended) and record
         each answer verbatim in the Dev Agent Record. ⛔ Do not start Task 1 without them.
-  - [ ] 0.3 The routing note was **sent and ruled** (`-391`, 2026-10-23 — transcribed at v0.4). `-391` item 3's rider
+  - [x] 0.3 The routing note was **sent and ruled** (`-391`, 2026-10-23 — transcribed at v0.4). `-391` item 3's rider
         was clarified (`-392`) then withdrawn (`-393`, soft measures M1–M4). Check ⛔ no later ruling on it (STOP 4). `-395`
         (BigDev) kept `-392` items 4–5 and limited a take-down to the nominee's request.
-- [ ] **Task 1 — Governance commit, alone** (AC0)
-  - [ ] 1.1 `### Decision <date>-<next free id>` (`-396` or later): **Author-commit (BigDev)** — MA1–MA19 as answered; the three enum
+- [x] **Task 1 — Governance commit, alone** (AC0)
+  - [x] 1.1 `### Decision <date>-<next free id>` (`-396` or later): **Author-commit (BigDev)** — MA1–MA19 as answered; the three enum
         mints + permission key (with "⛔ not covered by `-210` cl.2"); MA19's closing of the generic step-up route; the `-391`
         item 8 pointer (*"item 8's ⇒ clause derives from item 3's answer; with item 3's rider withdrawn (`-393`), after
         publication the permission is revocable through the helpline on the nominee's request (`-395`)"* — a pointer, ⛔ not a
         re-reading and ⛔ not a supersession, so the §0 *"supersedes no clause"* holds); §0 line; **Not covered:**
         Q1–Q5 and the three confirms (ruled by `-391`, Q3 as amended by `-393` and `-395`). Insert under the `Newest first` separator. If the decision-log write
         is refused, ask BigDev once ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 1.2 Commit **only** `.decision-log.md`: `governance: Decision <id> — AUTHOR-COMMIT (BigDev): 11b.4 build decisions …`.
+  - [x] 1.2 Commit **only** `.decision-log.md`: `governance: Decision <id> — AUTHOR-COMMIT (BigDev): 11b.4 build decisions …`.
         Check `git branch --show-current` first.
-  - [ ] 1.3 Records commit: `epics.md` SECTIONED block on `### Story 11b.4` (MA1 split, MA2 kinship deferral, MA4
+  - [x] 1.3 Records commit: `epics.md` SECTIONED block on `### Story 11b.4` (MA1 split, MA2 kinship deferral, MA4
         emphasis deferral, MA8's new port in place of the epic's *"Story 6.5 `<ClaimDocumentUpload>` pattern"*, MA14's
         post-close window, Trap 3, and the 10.10 correction); the `-162` follow-up `ANNOTATED … by [<that id>]` line (HOMED,
         original wording verbatim — AC0); if MA1(a), add the row `11b-4a-family-memorial-public-render: backlog` after the
@@ -1383,10 +1383,35 @@ counts over shared fixtures.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 11b.4`, 2026-10-24.
+
 ### Debug Log References
+
+- **Task 0.1 (2026-10-24).** `git fetch origin`: `origin/main` = `1268d47e` (unchanged since v0.9); `d87d047a` is an ancestor. Backup
+  `backup/11b-4-pre-rebase-2026-10-24` at the old tip `41ec0862`; rebased 12 docs-only commits — ONE conflict (the `sprint-status.yaml`
+  ledger head), resolved branch-on-top. Verified: for each of the four branch files the sorted `-U0` changed-line set vs `origin/main` equals
+  the set vs the old base (all SAME); YAML strict-parses (291 rows). `d87d047a..origin/main` moved ⛔ no cited file but `0180` + `_journal.json`
+  (as v0.9 recorded). `member_nominee_versions.version_id` is still the PK; `getNomineeVersionHeads` still selects only `{ rank, versionNo, kind }`.
+  **Numbers on every branch + worktree:** decisions — main `-388`; 5.11 working copy `-394` (uncommitted); 6.36e branch `-396` / `-397`
+  (committed) ⇒ this story's author-commit is **`-398`**. Migrations — `0180` on main, ⛔ no `0181` anywhere (6.36e plans it). Journal max
+  `when` `1795059600024`. Catalog `52`. Roster — Row 40 in 5.11's working copy; **Row 41** free. Ledger — `al` also 6.36e's ⇒ this story's
+  `2026-10-23al` re-lettered **`2026-10-23aq`** in place; `2026-10-24c` is 6.36e's ⇒ the dev-start entry is `2026-10-24d`.
+  **STOP checks:** (1) ⛔ no decision newer than `-395` at `origin/main`; ⚠ on the unlanded 6.36e branch, `-397` item 3 cites 11b.4 as sequencing
+  only (*"both plan migration `0181`, and both extend `anonymizeMember` (its table-count pin) and the `AuthAuditEventType` union — whichever
+  lands second renumbers"*) — the same sequencing Task 2.2 / 2.5 already carry; ⛔ not a ruling on this story ⇒ ⛔ not a halt, reported to
+  BigDev. (2) ⛔ no other story owns a family memorial (`-w` grep for `family memorial|tribute|parichay` hits only token names and the P0-5
+  prototype). (3) ⛔ none of the three paths exists. (4) ⛔ no ruling after `-395`. (5)/(6) ⛔ no commit since the pin, and ⛔ no sibling change,
+  to `withdrawal/handlers.ts`, `member-auth.handlers.ts` or `members/auth.ts`. (7) 6.36e has ⛔ no committed or uncommitted `packages`/`apps`
+  change and has ⛔ not landed.
 
 ### Completion Notes List
 
+- **Task 0.2 answers (BigDev, verbatim, 2026-10-24):** MA2–MA4, MA8–MA17 and the build details of MA5 / MA6 / MA7 — *"Accept all
+  (Recommended)"*; the AC7 limits — *"6,000 / 300 (Recommended)"*; MA14 / Question 8 — *"Pool closed/settled (Recommended)"*. Already
+  answered: MA1 (a) and MA18 (a) — *"I am fine with 11b-4a"* (2026-10-23); MA19 (a) — *"(a) Fix in 11b.4 (Recommended)"* (2026-10-24).
+- **Task 1:** `#decision-2026-10-24-398` (author-commit) committed alone (`5b648621`); the records commit adds the `epics.md` SECTIONED
+  block, the `-162` follow-up's HOMED annotation (⛔ not closed), the row `11b-4a-family-memorial-public-render: backlog`, the ledger
+  re-letter and `2026-10-24d`, and moves the row `ready-for-dev → in-progress`.
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story`, 2026-10-23, at `d87d047a`).
 
 ### File List

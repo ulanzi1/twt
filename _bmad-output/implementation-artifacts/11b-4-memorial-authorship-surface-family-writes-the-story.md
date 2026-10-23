@@ -51,7 +51,7 @@ diff. New **MA19** (BigDev 2026-10-24: (a) — close the generic step-up route f
 
 # Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -1081,8 +1081,8 @@ nominee-bank and the bank-statement upload.
         original wording verbatim — AC0); if MA1(a), add the row `11b-4a-family-memorial-public-render: backlog` after the
         11b-4 row; ledger prepend (safe pattern — [[project_sprint_status_safe_prepend]]) + row → `in-progress`; verify
         YAML with a duplicate-key loader and `^last_updated:` count == 1.
-- [ ] **Task 2 — Schema, migration, RBAC, erasure** (AC5, AC9, MA5–MA9, MA15, MA16)
-  - [ ] 2.1 `packages/domain/src/schema/memorial_submissions.ts`, `memorial_review_decisions.ts`,
+- [x] **Task 2 — Schema, migration, RBAC, erasure** (AC5, AC9, MA5–MA9, MA15, MA16)
+  - [x] 2.1 `packages/domain/src/schema/memorial_submissions.ts`, `memorial_review_decisions.ts`,
         `memorial_withdrawals.ts` (+ `schema/index.ts`); pgEnums generated from domain tuples in
         `packages/domain/src/memorial/vocab.ts`. Every table carries `pariwar_id` (RLS). Columns: submissions — `submission_id`
 (PK), `pool_id`, `claim_case_id`, `deceased_member_id`,
@@ -1096,7 +1096,7 @@ nominee-bank and the bank-statement upload.
         `packages/domain/src/encryption/field-classes.ts` (*"single authority … do not re-declare"*); the column is
         identity at the driver, so encrypt/decrypt in the API layer in `apps/api/src/modules/memorial/memorial-crypto.ts`
         (the `claims/claim-contact-crypto.ts` precedent: the crypto port is passed to the domain writer).
-  - [ ] 2.2 Hand-authored `packages/domain/migrations/0181_memorial-authorship.sql` (⚠ `0180` is on main; 6.36e plans `0181`
+  - [x] 2.2 Hand-authored `packages/domain/migrations/0181_memorial-authorship.sql` (⚠ `0180` is on main; 6.36e plans `0181`
         too — if it is committed or applied on :5433 first, take `0182`)
         (idempotent; enums; tables; FKs to `pools`, `claims`, `members`; MA9's two unique indexes + `UNIQUE (pool_id, submission_id)` + the
         composite supersede FK; unique `(submission_id)` on decisions and withdrawals; CHECKs: omissions JSONB array shape (each entry
@@ -1106,12 +1106,12 @@ nominee-bank and the bank-statement upload.
         entry with a `when` later than every journal entry on `origin/main` **and** on every sibling branch and worktree
         (max `1795059600024` at v0.9, on main, 5.11 and 6.36e alike; 6.36e's planned entry will exceed it —
         [[project_sibling_migration_when_order_shared_db]]); ⛔ never `db:generate`.
-  - [ ] 2.3 RLS policies `packages/domain/src/policies/memorial-*-rls.ts` (SELECT, INSERT, and the MA15 UPDATE leg),
+  - [x] 2.3 RLS policies `packages/domain/src/policies/memorial-*-rls.ts` (SELECT, INSERT, and the MA15 UPDATE leg),
         exported from `packages/domain/src/policies/index.ts`.
-  - [ ] 2.4 `memorial.review` in `permissions.ts` (52 → 53, header log), granted to `trustee_panel` in `roles.ts`;
+  - [x] 2.4 `memorial.review` in `permissions.ts` (52 → 53, header log), granted to `trustee_panel` in `roles.ts`;
         update the pinned tests (`packages/domain/tests/rbac/permissions.test.ts` 52→53, 68→69 keys; `roles.test.ts`);
         **prove it is live** for `trustee_panel` on the `pariwar` dimension (MA7).
-  - [ ] 2.5 `anonymizeMember` (`packages/domain/src/member/anonymize.ts`, today `Promise<void>`) scrubs the four ciphertext
+  - [x] 2.5 `anonymizeMember` (`packages/domain/src/member/anonymize.ts`, today `Promise<void>`) scrubs the four ciphertext
         columns for the member's submissions — **unconditionally**, keyed on `deceased_member_id` = the member (⛔ not inside
         the has-claims branch) — and returns `{ memorialPhotoKeys: string[] }`; its two callers
         (`apps/api/src/modules/rtbf/handlers.ts`, `apps/api/src/modules/member-data-rights/handlers.ts`) delete those objects
@@ -1119,32 +1119,32 @@ nominee-bank and the bank-statement upload.
         `packages/domain/tests/member/rtbf-anonymize.test.ts` (the statement count `toHaveLength(26)`, the table set
         `new Set(tables).size).toBe(23)`, and the no-claims `toHaveLength(23)` — the numbers at `1268d47e`) (MA15). ⚠ 6.36e
         raises the same pins: whichever lands second re-takes the counts.
-- [ ] **Task 3 — Domain + the shared validator** (AC1, AC5, AC7–AC9, MA6, MA14)
-  - [ ] 3.1 `packages/domain/src/memorial/{vocab,status,resolve,submission,withdrawal,review,authorisation-copy,errors,index}.ts`;
+- [x] **Task 3 — Domain + the shared validator** (AC1, AC5, AC7–AC9, MA6, MA14)
+  - [x] 3.1 `packages/domain/src/memorial/{vocab,status,resolve,submission,withdrawal,review,authorisation-copy,errors,index}.ts`;
         `export * as memorial` from `packages/domain/src/index.ts` (cf. `nomineeConsole`). `resolveMemorialDrive` over
         its own `MEMORIAL_DRIVE_POOL_STATES` (MA14 — ⛔ no import from `sahyog-vivran-read.ts`), returning the match count.
-  - [ ] 3.2 `deriveMemorialStatus` (pure, exhaustive `never` arm, seven states); the omission validator in
+  - [x] 3.2 `deriveMemorialStatus` (pure, exhaustive `never` arm, seven states); the omission validator in
         `packages/contracts/src/memorial/omissions.ts` (pure; MA6's rules; grapheme boundaries via `Intl.Segmenter`).
-  - [ ] 3.3 `MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS` v1, hi + en, `hiReviewed: false`, id
+  - [x] 3.3 `MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS` v1, hi + en, `hiReviewed: false`, id
         `'2026-10-23.v1-pending-hi-review'`, doc-comment citing `-391` Q2 A + `-393` M2; the text carries M2's helpline
         sentence (AC4). The M3′ preview line is a `memorial` namespace key (AC4).
-  - [ ] 3.4 Unit tests: status table (incl. `null` ⇒ `none`); `earlierApprovalWithdrawn` rule (MA16); omission edge cases
+  - [x] 3.4 Unit tests: status table (incl. `null` ⇒ `none`); `earlierApprovalWithdrawn` rule (MA16); omission edge cases
         (empty, overlap, touching, unsorted, out of range, a boundary inside a surrogate pair **and** inside a Devanagari
         conjunct / ZWJ sequence, whitespace-only span, a span across a blank line, a whole-body omission under
         `approved_with_omissions`) and MA6's action rules (`photoLeftOut` with ⛔ no photo; an `altText` span with
         `photoLeftOut`; omissions / `photoLeftOut` / `reasonCode` on `approved`; omissions on `not_approved`); blank check
         (ZWSP-only, U+3164-only and U+FFA0-only bodies are blank; the class used twice in a row gives the same answer — the
         `/g` trap); verbatim round-trip (Trap 6); registry hi/en non-empty.
-- [ ] **Task 4 — ⭐ The point-of-submission authorisation** (AC4 — `-162` cl.3)
-  - [ ] 4.1 Server resolves the version; refuses non-current with `409 memorial.authorisation_outdated`; writes the
+- [x] **Task 4 — ⭐ The point-of-submission authorisation** (AC4 — `-162` cl.3)
+  - [x] 4.1 Server resolves the version; refuses non-current with `409 memorial.authorisation_outdated`; writes the
         four columns in the submission txn.
-  - [ ] 4.2 Mobile renders the resolved text above Send in the app's current language; sends only version + the
+  - [x] 4.2 Mobile renders the resolved text above Send in the app's current language; sends only version + the
         locale shown.
-  - [ ] 4.3 Tests: no `consent_records` row is written by Send (integration count-delta on the subject, explicit);
+  - [x] 4.3 Tests: no `consent_records` row is written by Send (integration count-delta on the subject, explicit);
         a grep test that ⛔ neither retired enum value appears in any new file; the authorisation and the row commit or
         roll back together.
-- [ ] **Task 5 — API** (AC1, AC6–AC10, AC19, AC20, MA5, MA8, MA11, MA16, MA17, MA19)
-  - [ ] 5.1 `packages/contracts/src/memorial/{dto,omissions,text-classes,photo-storage,index}.ts` (`.strict()` INPUT DTOs; ⛔ no
+- [x] **Task 5 — API** (AC1, AC6–AC10, AC19, AC20, MA5, MA8, MA11, MA16, MA17, MA19)
+  - [x] 5.1 `packages/contracts/src/memorial/{dto,omissions,text-classes,photo-storage,index}.ts` (`.strict()` INPUT DTOs; ⛔ no
         `.max()` on output fields; `memorialState`, ⛔ never `status`; DTO names: `MemorialEntryResponse`,
         `MemorialMemberViewResponse`, `MemorialSendResponse`, `MemorialReviewListItem`, `MemorialReviewDetailResponse`,
         `MemorialReviewDecisionInput`, `MemorialWithdrawApprovalInput`; `text-classes.ts` holds the invisible-character class
@@ -1157,22 +1157,22 @@ nominee-bank and the bank-statement upload.
         `packages/api-client/src/index.ts` (mobile calls go through it; Send via `callMultipart` with the
         `idempotency-key` extra header, as helpdesk `createTicket`); routes in `packages/contracts/scripts/emit-openapi.ts`
         (`ci:local` runs `contracts-determinism`).
-  - [ ] 5.1a Unit tests for `photo-metadata.ts` (MA8): a planted JPEG APP1 EXIF/GPS block gone; an MPF trailer after the
+  - [x] 5.1a Unit tests for `photo-metadata.ts` (MA8): a planted JPEG APP1 EXIF/GPS block gone; an MPF trailer after the
         primary image's EOI (with its own APP1/GPS) dropped; a JPEG whose EXIF carries a thumbnail (`FF D8 … FF D9` inside
         APP1) keeps its full scan data; each PNG chunk MA8 lists gone; a non-image with a `image/jpeg` mimetype →
         `memorial.photo_type`; a truncated / garbage file → `memorial.photo_unreadable` (⛔ never a throw that 500s); the image
         bytes otherwise unchanged.
-  - [ ] 5.2 `apps/api/src/modules/memorial/{index,routes,handlers,memorial-crypto,photo-metadata}.ts` (member: `entry`, GET, Send,
+  - [x] 5.2 `apps/api/src/modules/memorial/{index,routes,handlers,memorial-crypto,photo-metadata}.ts` (member: `entry`, GET, Send,
         withdraw) + `register…Module` **called** in `apps/api/src/server.ts` — the nominee-console route's read guard for
         the GETs; for writes, the MA17 preHandler registered **before** `requireMemberStepUp`, then the
         `Idempotency-Key` claim; multipart per Trap 11 (`readCreateMultipart`'s shape, `fieldSize` ≥ 32 KiB, and
         `valueTruncated` / `fieldnameTruncated` checked on every field part); `keepPreviousPhoto` reads the head's key under
         the lock, and failure cleanup deletes only this request's own `put` (MA8); the nominee-resolution 409 (MA5); the
         withdraw route declares ⛔ no body (AC8).
-  - [ ] 5.3 `apps/api/src/modules/memorial-review/{index,routes,handlers}.ts` (admin: list, detail + history, decision,
+  - [x] 5.3 `apps/api/src/modules/memorial-review/{index,routes,handlers}.ts` (admin: list, detail + history, decision,
         withdraw-approval) + registration — `requirePermissionHook(deps, 'memorial.review', { dimension: 'pariwar' })`;
         Trap 8 ordering; `openScopeTx` inside `mutate`.
-  - [ ] 5.4 Integration specs (`apps/api/tests/integration/memorial/`, the AC18 database, rollback isolation, explicit
+  - [x] 5.4 Integration specs (`apps/api/tests/integration/memorial/`, the AC18 database, rollback isolation, explicit
         values): happy path; the verbatim round-trip **through multipart**; two concurrent Sends → both 201, linear chain;
         the 23505 backstop by an unlocked insert; a replayed `Idempotency-Key` → the first result; Send after `approved`
         → 409; withdraw rules (own decided → 409, foreign → 404, another family's drive in the same Pariwar → 404);
@@ -1189,20 +1189,20 @@ nominee-bank and the bank-statement upload.
         with superseded, withdrawn and decided refusals giving **byte-identical** 404 bodies; withdraw-approval legs — a
         superseded approved submission → 201, a non-approved one → 404, an already-withdrawn one → 404, a missing reason →
         400, and the family's state becomes `approval_withdrawn`.
-  - [ ] 5.5 AC6 dependency-map test with planted-violation teeth (Debug Log).
-  - [ ] 5.6 MA19 / AC20: `DEDICATED_STEP_UP_CONTEXTS` + the guard in `stepUpRequest`
+  - [x] 5.5 AC6 dependency-map test with planted-violation teeth (Debug Log).
+  - [x] 5.6 MA19 / AC20: `DEDICATED_STEP_UP_CONTEXTS` + the guard in `stepUpRequest`
         (`apps/api/src/modules/auth/member/member-auth.handlers.ts`), before any OTP is minted; the AC20 integration test
         (refused, ⛔ no OTP row, ⛔ no SMS, one `member_step_up.failure` line; another context still works; the nominee route
         still unlocks Send) and the pin test; a Completion Notes line for the claims / reconciliation owner.
-- [ ] **Task 6 — Mobile** (AC1–AC4, AC7, AC7a, AC8, AC10–AC13)
-  - [ ] 6.1 Put the entry in its own component `apps/mobile/components/memorial-authorship/MemorialEntry.tsx`, driven by
+- [x] **Task 6 — Mobile** (AC1–AC4, AC7, AC7a, AC8, AC10–AC13)
+  - [x] 6.1 Put the entry in its own component `apps/mobile/components/memorial-authorship/MemorialEntry.tsx`, driven by
         the `entry` probe (AC1), so `apps/mobile/app/(tabs)/index.tsx` gains only `<MemorialEntry />` beside
         `<ClaimProxyFlowEntry />`. Keep 6.35's `apps/mobile/tests/unit/language-source-pins.test.ts` (no `t` in any deps array;
         `<LanguageSettingsEntry />` immediately followed by `<NotificationSettingsEntry />`) and the home-order pins in
         `peer-request.test.ts` / `sahyog-vivran-entry.test.ts` green. ⚠ This worktree has ⛔ no `apps/mobile/.expo/types`, so
         `tsc` does ⛔ not check the `/(memorial)` Href ([[project_mobile_typed_routes_worktree]]) ⇒ a **source-pin test** of
         the entry's `router.push('/(memorial)')` (the `sahyog-vivran-entry.test.ts` shape), ⛔ not a check by hand.
-  - [ ] 6.2 `apps/mobile/app/(memorial)/{_layout,index,write,photo,preview,outcome}.tsx` (`preview.tsx` is the
+  - [x] 6.2 `apps/mobile/app/(memorial)/{_layout,index,write,photo,preview,outcome}.tsx` (`preview.tsx` is the
         preview-and-send screen — ⛔ no `send.tsx`, AC2), registered in `apps/mobile/app/_layout.tsx` (`headerShown: false`);
         `apps/mobile/components/memorial-authorship/`; `apps/mobile/lib/{memorial-api,memorial-draft,memorial-i18n}.ts`
         (`memorial-i18n.ts` on `lib/workplace-i18n.ts`'s `useXT()` shape; `memorial-api.ts` on `lib/claim-api.ts`, with a
@@ -1216,9 +1216,9 @@ nominee-bank and the bank-statement upload.
         may keep the photo (`keepPreviousPhoto`, AC10); the draft is cleared on any 2xx (or a refetch showing the Send landed)
         and kept on every refusal (AC3, AC7); `409 memorial.nominee_unresolved` routes to the helpline with its own
         Pattern-4 key `memorial.send.nominee_unresolved` (MA5).
-  - [ ] 6.3 `@twt/ui` `memorialParagraphs` + `reconstructMemorial` (AC5, AC11) with tests in `packages/ui/tests/`;
+  - [x] 6.3 `@twt/ui` `memorialParagraphs` + `reconstructMemorial` (AC5, AC11) with tests in `packages/ui/tests/`;
         preview == outcome test.
-  - [ ] 6.4 Tests on the jsdom harness (`apps/mobile/tests/unit/language-screen-render.test.ts` precedent: RN mocked,
+  - [x] 6.4 Tests on the jsdom harness (`apps/mobile/tests/unit/language-screen-render.test.ts` precedent: RN mocked,
         `lib/mmkv` mocked, RTL `cleanup`; **add** mocks for `expo-file-system` and `expo-image-picker` — none exists yet):
         draft lib (every-change save, start-again clear, sign-out kept, missing photo, a relative file name restored through
         `Paths.document`, the Idempotency-Key kept until any 2xx, and on resume / `idempotency_in_progress` a refetch that
@@ -1230,42 +1230,42 @@ nominee-bank and the bank-statement upload.
         outcome per state (AC10, incl. the helpline on `approved`, ⛔ no *"Write again"* on `approved`, and *"Write
         again"* beside *Withdraw* on `with_the_trust`); i18n real-`t()` hi/en; the AC14 "no deadline" scan of the `memorial` namespace (frames forbidden,
         reassurance allowed, `$comment` skipped, `"approved by the Trust"` / `"जब तक"` not flagged).
-  - [ ] 6.5 The handover step-up leg (AC7a) via `use-handover-otp.ts`, outcomes decided at render time, the send effect
+  - [x] 6.5 The handover step-up leg (AC7a) via `use-handover-otp.ts`, outcomes decided at render time, the send effect
         keyed on the 403 outcome only (⛔ never on `otp.send`); render tests: the retry keeps the draft + photo + key, a
         second refusal goes to the helpline, the no-nominee case, the send effect fires **once** across re-renders.
-  - [ ] 6.6 Device checks, recorded in the Debug Log **or** recorded ⚠ UN-ATTESTED: Hindi typing with
+  - [x] 6.6 Device checks, recorded in the Debug Log **or** recorded ⚠ UN-ATTESTED: Hindi typing with
         `autoCorrect={false}` (Gboard Hindi + a transliteration keyboard, iOS + Android — Trap 7; a break STOPS for
         BigDev); a rotated portrait and an iPhone HEIC pick arriving upright as JPEG (MA8); TalkBack-Hindi (AC13).
-  - [ ] 6.7 Accessibility (AC13): render tests that every input has a label, refusal text is linked to its field, the
+  - [x] 6.7 Accessibility (AC13): render tests that every input has a label, refusal text is linked to its field, the
         alt-text field's label says it describes the photo for people who cannot see it, focus order follows reading order,
         and touch targets are ≥ 44pt.
-- [ ] **Task 7 — Admin review screen** (AC9, MA16)
-  - [ ] 7.1 `apps/admin/src/modules/memorial-review/` (list + detail with history + decision + withdraw-approval;
+- [x] **Task 7 — Admin review screen** (AC9, MA16)
+  - [x] 7.1 `apps/admin/src/modules/memorial-review/` (list + detail with history + decision + withdraw-approval;
         `i18n-en.ts`) on the `moderation-appeals/ModerationAppealsPage.tsx` queue-and-decision precedent (news-blog for
         wiring); route `apps/admin/src/routes/MemorialReviewRoute.tsx` at `/p/$pariwarId/memorial-reviews` (+
         `/$submissionId`); `apps/admin/src/router.tsx` `createRoute` + route tree; calls in `apps/admin/src/api/client.ts` +
         `hooks.ts`; a **required** `RootLayout.tsx` `<Link>`, shown inside a Pariwar context and ⛔ not key-gated, with the
         page's own *no access* on a 403 (AC9). Sentence-selection aid (`Intl.Segmenter` + `।` / `॥`, a Hindi test); bidi
         controls shown via `MEMORIAL_BIDI_CONTROLS` from `@twt/contracts`; the AC9 textbox test.
-- [ ] **Task 8 — Copy, tone, friction, launch gate** (AC12, AC14, AC15, AC19)
-  - [ ] 8.1 `memorial` namespace hi/en (incl. the handover-code keys, `memorial.preview.before_publish`,
+- [x] **Task 8 — Copy, tone, friction, launch gate** (AC12, AC14, AC15, AC19)
+  - [x] 8.1 `memorial` namespace hi/en (incl. the handover-code keys, `memorial.preview.before_publish`,
         `memorial.intro.prompt` / `_no_name`; the Hindi M3′ avoids *अभी कर…*); `KNOWN_NAMESPACES` **and** the `catalogs` map +
         imports; `microcopy.yaml` copy_globs + code_globs, each new mobile file by name (AC14);
         `scripts/microcopy/memorial.test.ts` with planted teeth **and** the direct scan of the authorisation registry's
         hi/en strings; a test that the namespace holds ⛔ no take-down / remove / delete button key (AC4, AC12).
-  - [ ] 8.2 Tone-review checklist row (column `Artifact reviewed`), ⚠ UN-ATTESTED; it lists checking M2 (addressed to the
+  - [x] 8.2 Tone-review checklist row (column `Artifact reviewed`), ⚠ UN-ATTESTED; it lists checking M2 (addressed to the
         nominee) and M3′ in hi and en (AC4, AC14).
-  - [ ] 8.3 Friction-budget row; commit; then `pnpm friction:check`.
-  - [ ] 8.4 Launch-gate inventory **Row 41** in Row 39's full shape (the `##` heading, the appended quote, the `###` block,
+  - [x] 8.3 Friction-budget row; commit; then `pnpm friction:check`.
+  - [x] 8.4 Launch-gate inventory **Row 41** in Row 39's full shape (the `##` heading, the appended quote, the `###` block,
         `architecture_source_line`) with MA12's criteria (MA12) + the switch-off test (AC19).
-- [ ] **Task 9 — Records** (AC16)
-  - [ ] 9.1 `deferred-work.md` items (1)–(15) + the FOUR-PRODUCERS annotation + the CR-11b.2a-COMBINED-W3 annotation.
-- [ ] **Task 10 — Verify and close** (AC17, AC18)
-  - [ ] 10.1 AC17 diff check (from `git merge-base HEAD origin/main`); eslint per package (per-package cwd); `tsc --noEmit`;
+- [x] **Task 9 — Records** (AC16)
+  - [x] 9.1 `deferred-work.md` items (1)–(15) + the FOUR-PRODUCERS annotation + the CR-11b.2a-COMBINED-W3 annotation.
+- [x] **Task 10 — Verify and close** (AC17, AC18)
+  - [x] 10.1 AC17 diff check (from `git merge-base HEAD origin/main`); eslint per package (per-package cwd); `tsc --noEmit`;
         `pnpm --filter @twt/i18n test`; microcopy; friction; `pnpm ci:local` on the AC18 database — `DATABASE_URL` for :5433
         unless a sibling has applied a migration this branch lacks (6.36e's `0181`), else a fresh database on :5434 — after
         the **last** commit; record the job count.
-  - [ ] 10.2 Story file: File List, Completion Notes (which gates were vacuous), Change Log; row → `review` with a
+  - [x] 10.2 Story file: File List, Completion Notes (which gates were vacuous), Change Log; row → `review` with a
         ledger entry.
 
 ---
@@ -1412,17 +1412,186 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 11b.4`, 2026-10-24.
   DATABASE twt_dev OWNER twt_dev_app` (roles are cluster-level), migrated to `0181`. Idempotency of `0181` was proven on `:5433`
   before the rollback (`psql -f` twice). ⇒ every live-DB leg and `ci:local` in this story run on **`:5434`**.
 
+- **Planted-violation teeth (2026-10-24).** Each new gate/regex has a leg that FAILS on a planted violation, run green on the real
+  tree: the AC6 no-AI-dependency checker (`apps/api/tests/unit/memorial-no-ai-dependency.test.ts` — seven planted SDK names caught,
+  `aide` not); the photo stripper (`memorial-photo-metadata.test.ts` — planted GPS EXIF, an EXIF thumbnail with its own EOI, an MPF
+  trailer with its own GPS, each PNG chunk, a PDF claiming `image/jpeg`, truncation); `scripts/microcopy/memorial.test.ts` — fursat
+  frames in both locales (*"hurry up"*, *"जल्दी कीजिए"*, *"50% complete"*, *"अभी करें"*, *"act now"*), the member_only register, ten
+  deadline frames that FIRE and seven reassurances that do ⛔ not (incl. *"approved by the Trust"*, *"जब तक"*); the take-down-key leg
+  caught the author's own key `outcome.change_or_take_down` on its first run ⇒ renamed `outcome.helpline_for_changes`.
+- **Raw-character finding (2026-10-24).** `\uXXXX` escapes written into three files (the contracts text classes, the contracts test,
+  one API spec) landed as RAW invisible characters; all tests passed, only ESLint caught it; rewritten as escapes and a scan run over
+  every memorial file (memory `project_unicode_escapes_written_raw`).
+- **Task 6.6 device checks — ⚠ UN-ATTESTED** ([[feedback_record_unattested_no_backfill]]): ⛔ device in this session. Owed before
+  Row 41 closes, recorded as deferred-work item (16): Hindi typing with `autoCorrect={false}` (Gboard Hindi + a transliteration
+  keyboard, iOS + Android — Trap 7; a break STOPS for BigDev), a rotated portrait and an iPhone HEIC pick arriving upright as JPEG
+  (MA8), TalkBack-Hindi (AC13).
+
 ### Completion Notes List
 
 - **Task 0.2 answers (BigDev, verbatim, 2026-10-24):** MA2–MA4, MA8–MA17 and the build details of MA5 / MA6 / MA7 — *"Accept all
   (Recommended)"*; the AC7 limits — *"6,000 / 300 (Recommended)"*; MA14 / Question 8 — *"Pool closed/settled (Recommended)"*. Already
   answered: MA1 (a) and MA18 (a) — *"I am fine with 11b-4a"* (2026-10-23); MA19 (a) — *"(a) Fix in 11b.4 (Recommended)"* (2026-10-24).
+- **What was built.** The family memorial's WRITE side, behind the MA17 switch (off by default): migration `0181` (three
+  append-only tables, column-level erasure grants on the four Tier-1 columns, RLS ENABLE + FORCE); `memorial.review` (catalog
+  53, `trustee_panel`); the domain (`resolveMemorialDrive` over its own `MEMORIAL_DRIVE_POOL_STATES`, the derived state, the
+  pool-keyed lock and chain, the v1 permission registry); `@twt/contracts` (vocab by value, text classes + AC7 limits, the
+  pure decision validator, the photo port, DTOs); the `@twt/ui` presenter; the API (member: entry / view / Send / withdraw;
+  review: queue / history / decision / withdraw-approval) with the dependency-free photo-metadata stripper; the mobile
+  `(memorial)` flow and `<MemorialEntry />`; the admin review screen (built by a forked agent in `apps/admin` only, reviewed and
+  re-verified here); the `memorial` copy (hi/en); and the records (tone row ⚠ UN-ATTESTED, friction row, launch-gate Row 41,
+  deferred-work items (1)–(16) + two in-place annotations).
+- ⭐ **To the claims / reconciliation owner (MA19, AC20):** the generic member `POST /api/v1/member/auth/step-up/request` now
+  refuses `claim_handover` (`400 auth.step_up_context_not_allowed`, ⛔ OTP, ⛔ SMS, one `member_step_up.failure` line). Before this,
+  whoever held the deceased's phone could mint the elevation with ⛔ nominee — and it unlocked **every** `claim_handover` route:
+  claim intake, claim documents (`/api/v1/member/claims/:claimCaseId/documents`), nominee-bank (`…/:claimCaseId/nominee-bank`) and
+  the reconciliation bank-statement upload, as well as the memorial Send. The same hole is closed for all of them; the nominee
+  route (`/member/claims/handover-otp{,/verify}`) is untouched and still yields the elevation (proven, AC20).
+- **Deviations / additions, recorded:** (i) the member view carries `driveId` (the pool id) — the phone keys its draft on it
+  (MA3's `<poolId>`; the GET had ⛔ drive id); (ii) `memorial_handover_recipient` / `photo_mime` are `text` + CHECK, ⛔ pgEnums —
+  `-398` mints exactly three; (iii) a photo description sent WITHOUT a photo is refused (`memorial.field_not_allowed`), ⛔ silently
+  dropped; (iv) the copy key `outcome.change_or_take_down` was renamed `outcome.helpline_for_changes` (the no-take-down-key leg);
+  (v) Withdraw also asks the nominee's code on a 403 (AC7a's *"Send (or Withdraw)"*) through `useHandoverGatedAction`; (vi) the
+  admin agent keeps two touching parts with DIFFERENT reasons separate, so the validator refuses them and the form asks for one
+  reason; (vii) 6.36a's `workplace.spec.ts` pin now reads `{ memorialPhotoKeys: [] }` (the new return — its intent unchanged).
+- **Gates (AC18), on the fresh `:5434` database (BigDev):** run 1 at `8b61cc95` — 40/42 jobs; `contracts-determinism` (the
+  yaml predated `driveId`) and `integration-tests` (the 6.36a pin) failed ⇒ fixed in `39a0c4f2`. Run 2 at `39a0c4f2`: **41/42** —
+  integration-tests green (api 2154 / domain 6203 / jobs 1437 passed); `test (unit)` failed on ONE test this story does ⛔ touch
+  (`apps/mobile/tests/unit/wa-signup-step-render.test.ts` *"…each spoken once"* — a spy called 0 times), which passed in run 1,
+  passed 3/3 alone, and passed in a re-run of the unit job's exact command (`env -u DATABASE_URL pnpm turbo run test
+  --concurrency=4`, 37/37 tasks: mobile 1433, admin 1278, contracts 1487, ui 262) ⇒ a concurrency flake, ⚠ ⛔ a clean single
+  42/42 run. **Vacuous or partly vacuous:** `pii-scrape` (⛔ public page touched), `schema-diff` (⛔ payout surface),
+  `sahyog-vivran-financial-truth` (⛔ file named `*sahyog-vivran*` — Trap 5); `friction-budget` was NON-vacuous (a row added,
+  member surface touched); `microcopy` bites the new files (scope pinned by `memorial.test.ts`).
+- **⚠ Open, ⛔ done here:** the Task 6.6 device checks and the AC13 TalkBack-Hindi pass (UN-ATTESTED — deferred-work (16)); the
+  AC14 non-author tone review (Row 41 (c)); everything Row 41 lists. `:5433` holds ⛔ `0181` (rolled back).
 - **Task 1:** `#decision-2026-10-24-398` (author-commit) committed alone (`5b648621`); the records commit adds the `epics.md` SECTIONED
   block, the `-162` follow-up's HOMED annotation (⛔ not closed), the row `11b-4a-family-memorial-public-render: backlog`, the ledger
   re-letter and `2026-10-24d`, and moves the row `ready-for-dev → in-progress`.
 - Ultimate context engine analysis completed — comprehensive developer guide created (`bmad-create-story`, 2026-10-23, at `d87d047a`).
 
 ### File List
+
+**Added**
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-11b4-family-memorial-five-questions.md`
+- `apps/admin/src/modules/memorial-review/MemorialReviewPage.tsx`
+- `apps/admin/src/modules/memorial-review/derive.ts`
+- `apps/admin/src/modules/memorial-review/i18n-en.ts`
+- `apps/admin/src/routes/MemorialReviewRoute.tsx`
+- `apps/admin/tests/memorial-review-nav.test.tsx`
+- `apps/admin/tests/memorial-review.test.tsx`
+- `apps/api/src/modules/auth/member/dedicated-step-up-contexts.ts`
+- `apps/api/src/modules/memorial-review/handlers.ts`
+- `apps/api/src/modules/memorial-review/index.ts`
+- `apps/api/src/modules/memorial-review/routes.ts`
+- `apps/api/src/modules/memorial/erasure.ts`
+- `apps/api/src/modules/memorial/handlers.ts`
+- `apps/api/src/modules/memorial/index.ts`
+- `apps/api/src/modules/memorial/memorial-crypto.ts`
+- `apps/api/src/modules/memorial/photo-metadata.ts`
+- `apps/api/src/modules/memorial/routes.ts`
+- `apps/api/tests/integration/memorial/_fixture.ts`
+- `apps/api/tests/integration/memorial/member-memorial.spec.ts`
+- `apps/api/tests/integration/memorial/memorial-gates.spec.ts`
+- `apps/api/tests/integration/memorial/review-memorial.spec.ts`
+- `apps/api/tests/unit/dedicated-step-up-contexts.test.ts`
+- `apps/api/tests/unit/memorial-no-ai-dependency.test.ts`
+- `apps/api/tests/unit/memorial-photo-metadata.test.ts`
+- `apps/mobile/app/(memorial)/_layout.tsx`
+- `apps/mobile/app/(memorial)/index.tsx`
+- `apps/mobile/app/(memorial)/outcome.tsx`
+- `apps/mobile/app/(memorial)/photo.tsx`
+- `apps/mobile/app/(memorial)/preview.tsx`
+- `apps/mobile/app/(memorial)/write.tsx`
+- `apps/mobile/components/memorial-authorship/HandoverCodePanel.tsx`
+- `apps/mobile/components/memorial-authorship/MemorialEntry.tsx`
+- `apps/mobile/components/memorial-authorship/MemorialHeader.tsx`
+- `apps/mobile/components/memorial-authorship/MemorialText.tsx`
+- `apps/mobile/components/memorial-authorship/memorial-copy.ts`
+- `apps/mobile/components/memorial-authorship/useMemorialQueries.ts`
+- `apps/mobile/lib/memorial-api.ts`
+- `apps/mobile/lib/memorial-draft.ts`
+- `apps/mobile/lib/memorial-i18n.ts`
+- `apps/mobile/lib/use-memorial-send.ts`
+- `apps/mobile/tests/unit/memorial-draft.test.ts`
+- `apps/mobile/tests/unit/memorial-screens-render.test.ts`
+- `apps/mobile/tests/unit/memorial-source-pins.test.ts`
+- `packages/contracts/src/memorial/dto.ts`
+- `packages/contracts/src/memorial/index.ts`
+- `packages/contracts/src/memorial/omissions.ts`
+- `packages/contracts/src/memorial/photo-storage.ts`
+- `packages/contracts/src/memorial/text-classes.ts`
+- `packages/contracts/src/memorial/vocab.ts`
+- `packages/contracts/tests/memorial.test.ts`
+- `packages/domain/migrations/0181_memorial-authorship.sql`
+- `packages/domain/src/memorial/authorisation-copy.ts`
+- `packages/domain/src/memorial/errors.ts`
+- `packages/domain/src/memorial/index.ts`
+- `packages/domain/src/memorial/resolve.ts`
+- `packages/domain/src/memorial/review.ts`
+- `packages/domain/src/memorial/status.ts`
+- `packages/domain/src/memorial/submission.ts`
+- `packages/domain/src/memorial/vocab.ts`
+- `packages/domain/src/memorial/withdrawal.ts`
+- `packages/domain/src/policies/memorial-rls.ts`
+- `packages/domain/src/schema/memorial_review_decisions.ts`
+- `packages/domain/src/schema/memorial_submissions.ts`
+- `packages/domain/src/schema/memorial_withdrawals.ts`
+- `packages/domain/tests/memorial/memorial-status.test.ts`
+- `packages/i18n/locales/en/memorial.json`
+- `packages/i18n/locales/hi/memorial.json`
+- `packages/platform-adapters/src/memorial-photo-storage/gcs.ts`
+- `packages/platform-adapters/src/memorial-photo-storage/in-memory.ts`
+- `packages/platform-adapters/src/memorial-photo-storage/local-fs.ts`
+- `packages/ui/src/memorial/index.ts`
+- `packages/ui/src/memorial/presenter.ts`
+- `packages/ui/tests/memorial/presenter.test.ts`
+- `scripts/microcopy/memorial.test.ts`
+
+**Modified**
+- `.decision-log.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/planning-artifacts/epics.md`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/router.tsx`
+- `apps/admin/src/routes/RootLayout.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/config.ts`
+- `apps/api/src/context.ts`
+- `apps/api/src/deps.ts`
+- `apps/api/src/modules/auth/member/member-auth.handlers.ts`
+- `apps/api/src/modules/member-data-rights/handlers.ts`
+- `apps/api/src/modules/rtbf/handlers.ts`
+- `apps/api/src/server.ts`
+- `apps/api/tests/integration/_setup.ts`
+- `apps/mobile/app/(tabs)/index.tsx`
+- `apps/mobile/app/_layout.tsx`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `docs/tone-review-checklist.md`
+- `friction-budget.md`
+- `microcopy.yaml`
+- `openapi/v1.yaml`
+- `packages/api-client/src/index.ts`
+- `packages/contracts/scripts/emit-openapi.ts`
+- `packages/contracts/src/index.ts`
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/encryption/field-classes.ts`
+- `packages/domain/src/encryption/index.ts`
+- `packages/domain/src/index.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/rbac/roles.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/tests/rbac/roles.test.ts`
+- `packages/i18n/src/catalog.ts`
+- `packages/platform-adapters/src/index.ts`
+- `packages/ui/src/index.ts`
+- `_bmad-output/implementation-artifacts/11b-4-memorial-authorship-surface-family-writes-the-story.md` (this file)
 
 ## Change Log
 
@@ -1437,3 +1606,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 11b.4`, 2026-10-24.
 | 2026-10-23 | v0.7 | `-395` (author-commit, BigDev): a published memorial is taken down only on the **nominee's** request (verified by a call back to the nominee recorded on the submission — MA18); `-392` items 4–5 (within 7 days; email to the approver) KEPT; the Panel informed of `-393`. `-394` is 5.11's ⇒ this story's author-commit → `-396`+. Row stays `ready-for-dev`. |
 | 2026-10-23 | v0.8 | Readiness re-check at `origin/main` `1268d47e`: launch-gate Row 40 is 5.11's (committed) ⇒ this story's row is **Row 41**; migration `0181` also planned by 6.36e (first to commit takes it); ledger `al` collides with 6.36e's (re-letter at the Task 0.1 rebase). BigDev *"I am fine with 11b-4a"* noted against Questions 2 (MA1) and 9 (MA18). Row stays `ready-for-dev`. |
 | 2026-10-24 | v0.9 | Validated (`bmad-create-story validate 11b.4`, four fresh-context verifiers at `origin/main` `1268d47e`; BigDev "all"). **New MA19 / AC20 / Trap 13** (BigDev (a)): the generic member step-up route minted a `claim_handover` elevation with a code to the deceased's own phone — Q1 A was unenforced (also for claim intake and the bank-statement upload); `stepUpRequest` now refuses it. **Phone cache:** every memorial query sets `gcTime: 0` (the persisted MMKV cache would otherwise keep the family's words past sign-out and erasure; CR-11b.2a-COMBINED-W3 (iii) annotated). AC9's refusals are per route (withdraw-approval acts on a superseded approval; the history view reads every version); AC10 shows the helpline on every outcome and *Write again* iff `canSend`; MA5/MA9/MA16 say the **nominee** asks for a take-down; MA18's call-back marked as the author's proposal (`-395` Not covered), the replaced-nominee case open; AC4's M2 addressed to the nominee (`-395` Consequence 1); `-395` item 3 shown to the Panel joins Row 41; AC16 carries the dropped Not-covered lines + counsel risks; `-391` item 8 pointer at Task 1.1. Multipart truncation is silent (`valueTruncated` check); `keepPreviousPhoto` cleanup never deletes a reused object; the nominee-unresolved 409; the stripper checks magic bytes and drops MPF trailers; `anonymizeMember`'s callers + its three pins (6.36e sequencing); `BIDI_CONTROLS` / invisible class (+ U+FFA0) by value in contracts; expo-file-system `File`/`Paths` with a relative name; the Idempotency-Key kept in the draft; AC7a's hook read at render time; admin link required and ungated (moderation-appeals precedent); microcopy files listed by name + the registry scanned directly; the Hindi M3′ clear of `अभी कर`; 6.35's source pins; tamagui inputs, ⛔ no `maxLength`; preview and send one screen; every AC obligation now in a Task (5.1a, 5.6, 6.7 new); named identifiers table; Task 0.2 asks only the open MAs; `0180`/6-36d text updated; stale header history marked. Then a fresh-context re-review of this pass's own diff fixed: the ledger letter (`2026-10-24a` is 6.36e's ⇒ `-24b`); *Write again* also on `with_the_trust` (MA13's `canSend`); the draft's Idempotency-Key cleared on any 2xx, with a refetch on resume and past the 300 s TTL; the nominee resolved **before** the photo `put`, cleanup on any later failure; the MPF cut by walking segments (an EXIF thumbnail holds its own EOI); MA19 lists all four `claim_handover` routes and BigDev's words verbatim; the `-391` item 8 pointer re-grounded (⛔ not a supersession); `-395` "answers `-393`'s *who may ask*" (⛔ "reverses"); W3 trigger (iii) ⛔ not met; `photo_conflict`; `-392`'s declined-request line; five citation fixes. Row stays `ready-for-dev`. |
+| 2026-10-24 | v1.0 | Implemented via `bmad-dev-story 11b.4` (worktree, `origin/main` `1268d47e`): rebased; `-398` author-commit (MA1–MA19, all as recommended) alone; records; migration `0181`, catalog 53, erasure, domain + contracts + presenter, the member + review API with the MA19 step-up guard and the photo stripper, the mobile `(memorial)` flow, the admin review screen, the `memorial` copy, Row 41, deferred-work. Live-DB legs on the fresh `:5434` (BigDev; `:5433` rolled back). `ci:local` 41/42 on `39a0c4f2` + the unit job re-run green (one untouched flake). Status `in-progress → review`. |

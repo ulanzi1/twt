@@ -9,6 +9,7 @@
 > ⚠ **This note DOES hold up the build** (unlike the last one): if you choose Question 1 C, nothing is built. BigDev may decide otherwise.
 > Whatever you answer, go-live also waits on our lawyer's written confirmation and a line in the privacy policy (a new go-live leg, Row 31 (j)).
 > ⚠ **WRITTEN 2026-10-23 — ⛔ sent.** ⛔ Shown to the Panel until BigDev sends it.
+> ✅ **SENT by BigDev and ANSWERED 2026-10-24 — `2026-10-24-396` (Q1 A, Q2 A).** The status lines above are kept as written.
 > ⚠ **Written ahead of BigDev's build answers** (Story 6.36e, Task 0.2). It assumes four of them: the nominee is found from the member's own
 > phone contacts (NE3); only when changing nominees in Life Events, ⛔ at sign-up (NE4); the nominee is told in the app only (NE6); and the
 > mark keeps them out whatever they answer under Question 1 A (NE7) — and, from 2026-10-24, a fifth: each new mark is capped at four a day
@@ -19,10 +20,18 @@
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — `2026-10-24-396` (Trustee-ratified: Dhiraj Rahul, Kalpana Bharti; relayed by BigDev, 2026-10-24)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision
-> id. ⭐ Everything below is then kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
+> **Verbatim, as relayed:** *"by DR and KB"* / *"Q1 A, Q2 A"*
+>
+> - **Question 1 — A.** *"Yes — the mark counts from the moment the member saves it."* The Trust records which member account a marked
+>   nominee is, only to keep that person out of the five asked; the mark counts at once, whatever the nominee answers.
+> - **Question 2 — A.** *"Both."* The member sees which of their contacts are members (under their own saved names); the marked member is
+>   told in the app — never by text, WhatsApp or notification — and the member sees their answer.
+>
+> Go-live still waits on our lawyer's written confirmation and a privacy-policy line (roster Row 31 (j)). The build decisions under it are
+> the author-commit `2026-10-24-397`. ⚠ Whether the trustees saw this note as revised on 2026-10-24 or its 2026-10-23 text, or a summary,
+> is ⛔ recorded. ⭐ Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

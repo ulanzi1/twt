@@ -10,6 +10,11 @@ main checkout; sibling worktrees 3-3c / 5-11 / 6-35 / 11b-4 exist). Two facts, s
 (durable); (2) every `apps/` / `packages/` claim below was traced at `1268d47e` on 2026-10-23 by four read-only research passes and the
 load-bearing ones spot-checked (perishable — re-check at Task 0.1). Re-locate by FUNCTION, ⛔ by line number.
 
+⭐ v1.3 (2026-10-24): TASKS 0.1–0.3 DONE — BigDev *"NE1-NE14 all recommended"*; the Panel RULED Q1 A, Q2 A (*"by DR and KB"*) ⇒
+`2026-10-24-396` (TRUSTEE-RATIFIED, committed alone `44a65afa`) and the author-commit `2026-10-24-397` (committed alone `0f202476`).
+Everything below that says PROPOSED / OWED / ⛔ sent is kept as written at v1.2 — read it with this line. Next: Task 0.4 (records), then
+Task 1. The PQ1 A + PQ2 A row of the rulings → build table applies; every B / C variant is ⛔ built.
+
 STATUS: ready-for-dev (v1.2 — VALIDATED by `bmad-create-story validate 6.36e`, 2026-10-24: four read-only verifiers, 26 consolidated
 findings V1–V26, BigDev *"all"*; the Panel note REVISED with it, still ⛔ sent). NE1–NE14 are PROPOSED — BigDev answers them at Task 0.2; ONE author-commit records them BEFORE any code
 (Task 0.3, [[feedback_governance_commits_precede_implementation]]). TWO Panel questions (PQ1, PQ2) are OWED — the row itself says so
@@ -52,6 +57,9 @@ validate findings (Change Log).
 
 Status: ready-for-dev
 
+> ✅ **v1.3 (2026-10-24): Tasks 0.1–0.3 DONE** (`-396` ruled Q1 A / Q2 A; `-397` NE1–NE14 as recommended). ⭐ **Next: Task 0.4 (the
+> records commit), then Task 1 (code).** The banner below is the v1.2 text, kept.
+>
 > ⭐ **Next: Task 0.1 (preflight), then Task 0.2 — BigDev answers NE1–NE14; the Panel note (PQ1 + PQ2) is WRITTEN (v1.1, revised at
 > v1.2) — revise it again only if the NE answers differ from what it assumes, then BigDev SENDS it.** ⛔ Code until the author-commit
 > (Task 0.3) is committed ALONE and the records (Task 0.4) follow it.
@@ -420,7 +428,11 @@ is stated inline so the dev agent never has to infer it.
   nominee panel. Each would be a new use (`-384`'s *"any other use"*; PQ1) and is
   deferred (deferred-work, Task 0.4).
 
-## 🏛️ Panel questions — WRITTEN 2026-10-23, ⛔ sent (one note, two questions, from the TEMPLATE; sent by BigDev)
+## 🏛️ Panel questions — WRITTEN 2026-10-23, SENT and ANSWERED 2026-10-24: `2026-10-24-396` — PQ1 A, PQ2 A (one note, two questions, from the TEMPLATE)
+
+> ✅ *Dated 2026-10-24 (v1.3): the Panel ruled — *"by DR and KB"* / *"Q1 A, Q2 A"* (relayed by BigDev) — recorded as `2026-10-24-396`
+> (Trustee-ratified; Dhiraj Rahul, Kalpana Bharti) and transcribed into the note's RULED block. PQ1 and PQ2 are Closed by `-396`. The
+> text below is kept as written (the questions as put).*
 
 > *Dated 2026-10-23 (v1.1): the note is WRITTEN at BigDev's request, ahead of Task 0.2 (the 6.36d precedent) — it assumes NE3, NE4, NE6 and NE7 (and, from v1.2, NE5's four-a-day cap)
 > as recommended and is revised before sending if BigDev answers otherwise. Its E1 quotes were checked verbatim and its E4 commands run (all
@@ -591,19 +603,27 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance (AC0)**
-  - [ ] 0.1 Preflight: `git fetch origin`; rebase if `origin/main` moved; re-run G1–G14's greps (a sibling can add a reader of the predicate or
+- [ ] **Task 0 — governance (AC0)** — 0.1–0.3 DONE 2026-10-24; 0.4 OPEN.
+  - [x] 0.1 *(2026-10-24: `git fetch origin` — `origin/main` still `1268d47e` = the pin, ⛔ rebase, so G1–G14 hold at the base; NUMBERS
+        re-taken across every branch and worktree — highest decision `-395` ⇒ `-396` / `-397` taken; ledger `2026-10-24a` this branch's,
+        `2026-10-24b` 11b-4's (committed first, `41ec0862`) ⇒ this records commit `2026-10-24c`; ⛔ `0181` committed anywhere. The 11b.4 overlap re-greps stay OWED at the next rebase onto a moved main.)*
+        Preflight: `git fetch origin`; rebase if `origin/main` moved; re-run G1–G14's greps (a sibling can add a reader of the predicate or
         of the nominee tables — grep `peerMeshNomineeMatchSql`, `nomineeMobileIndexes`, `member_nominee_versions`, `known-people`); re-take the
         NUMBERS (decision ≥ `-396` at v1.2, migration `0181` vs 11b.4's `0181`, ledger letter after `2026-10-24a` at v1.2; this story's `al` creation
         line re-letters at its rebase — 11b-4 committed `al` first); re-grep `nomineeMobileIndexes` (G7's list), `anonymizeMember`'s
         table-count pin and `AuthAuditEventType` (11b.4 touches both).
-  - [ ] 0.2 BigDev answers NE1–NE14 (recorded VERBATIM here and in the Completion Notes), and the V6 alternative (the phone's contact
+  - [x] 0.2 *(2026-10-24 — BigDev, verbatim: *"NE1-NE14 all recommended"* / *"by DR and KB"* / *"Q1 A, Q2 A"*. NE1–NE14 as recommended;
+        the Panel's ruling ⇒ `2026-10-24-396`, transcribed into the note's RULED block. NE6 / NE7 / NE8 / NE10 stand as written for PQ1 A /
+        PQ2 A — ⛔ revision needed. The V6 alternative was ⛔ answered ⇒ ⛔ adopted (the default; ⛔ recommended), carried to
+        deferred-work at 0.4. ⚠ Which text of the note the trustees saw (v1.1 or v1.2, or a summary) is ⛔ recorded.)*
+        BigDev answers NE1–NE14 (recorded VERBATIM here and in the Completion Notes), and the V6 alternative (the phone's contact
         picker on the declared `mobile` field — INSTEAD of, AS WELL AS, or ⛔). The Panel note (PQ1 + PQ2) — ⭐ WRITTEN 2026-10-23 ahead
         of the NE answers (revise it first if they differ from NE3 / NE4 / NE5 / NE6 / NE7) — was written from the
         template (§0 first; E1 quotes re-verified verbatim; E4 commands run) and SENT by BigDev; its ruling transcribed into the note's block
         and into `.decision-log.md` as its own TRUSTEE-RATIFIED entry ([[feedback_shown_to_panel_means_sent]] — "sent" only once it went out).
         Revise NE6 / NE7 / NE8 to the ruling (the PQ1 B variants are already written inline).
-  - [ ] 0.3 The author-commit — the next free decision id, *"AUTHOR-COMMIT (BigDev) — STORY 6.36e's BUILD DECISIONS NE1–NE14 …"*, with §0, the
+  - [x] 0.3 *(2026-10-24 — `2026-10-24-397` committed ALONE as `0f202476`, after `-396` (`44a65afa`); it carries every V8 move below.)*
+        The author-commit — the next free decision id, *"AUTHOR-COMMIT (BigDev) — STORY 6.36e's BUILD DECISIONS NE1–NE14 …"*, with §0, the
         §0 re-run table, NE1–NE14 as decided (citing the Panel ruling for PQ1 / PQ2), and (V8): NARROWS IN PART `-386` ND8, effective once
         row 6-36e is `done` on `main` (for linked declarations saved after it ships); SUPERSEDES IN PART `-386` ND2 — the one conjunct
         matches by number OR by a recorded link, and its rejection's JOINABILITY ground gives way for a declarer-marked link (authority:
@@ -771,6 +791,10 @@ and `locales/classification.json`; `packages/domain/src/ids/index.ts`; `schema/m
   `nomineesStatus()`, `planDeclarationVersions` writing every submitted rank, 0162's answer-window CHECK). The Panel note revised in
   place (still unsent). Then ONE fresh-context re-validator of the pass's own edits: 9 defects (2 HIGH — an AC6 fixture no realistic
   data can build, a records line claiming a sprint-status append not yet made), all applied. ⛔ Code; ⛔ decision id taken.
+- 2026-10-24 — v1.3: Task 0.2 answered — BigDev, verbatim: *"NE1-NE14 all recommended"* / *"by DR and KB"* / *"Q1 A, Q2 A"*. Recorded:
+  `2026-10-24-396` TRUSTEE-RATIFIED (Q1 A, Q2 A; committed alone `44a65afa`); `2026-10-24-397` AUTHOR-COMMIT (NE1–NE14 as recommended;
+  committed alone `0f202476`); the note's RULED block; ledger `2026-10-24c`. The V6 picker alternative ⛔ adopted (⛔ answered; the
+  default). ⛔ Code. Next: Task 0.4.
 
 ### File List
 
@@ -778,6 +802,7 @@ and `locales/classification.json`; `packages/domain/src/ids/index.ts`; `schema/m
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-24 | 1.3 | Tasks 0.1–0.3 DONE: BigDev *"NE1-NE14 all recommended"*; the Panel ruled *"Q1 A, Q2 A"* (*"by DR and KB"*) ⇒ `2026-10-24-396` (Trustee-ratified, `44a65afa`) + `2026-10-24-397` (author-commit, `0f202476`), each committed alone; the note's RULED block filled; the PQ section dated; ledger `2026-10-24c` (`b` is 11b-4's, committed first). Status ready-for-dev; next Task 0.4. |
 | 2026-10-24 | 1.2 | VALIDATED (`bmad-create-story validate 6.36e`; BigDev *"all"*): **V1** NE1's state split into `answer` × `state` (an answered link could never end or erase), `asked_at` explicit / carried, ⛔ 0162's CHECKs; **V2** a metered caller-gated `nominee_link_resolve` counter (4/day) BEFORE the HMAC (the declare was a free membership oracle); **V3** pre-fill + `keep` + edit-confirm, the draft carries the link, TR9 inverted; **V4** NE2's end rules (`FOR UPDATE` every live link, `keep` across ranks, every un-carried link ends, a raced answer is ⛔ lost); **V5** the link gets its OWN read — `NomineeStatusResponse` is read by the claim flow and is NON-PII; **V6** the premise narrowed (family phone, AR-24 unbuilt), the title, the cheaper picker alternative put to BigDev; **V7** a rulings → build table for every PQ outcome (PQ1 B × PQ2 B ≡ C); **V8** SUPERSEDES IN PART `-386` ND2 and Not covered item 1, ND8 "to be narrowed once done"; **V9** NUMBERS (≥ `-396`; `al` is 11b-4's; ≥ `aq`; 11b.4's rtbf count + audit union); **V10** G3's audit order; **V11** caller gate on `kind:'new'` only; **V12** one match per session, own notice, states, `purpose`; **V13** request closes on the declarer's death; **V14** consequence copy both sides; **V15** NE7 by projected version, AC6 legs; **V16** G7's five inline types + fixtures, TR5, stale check; **V17** TR3's reason; **V18** audit locator / context; **V19** wiring (i18n catalog, server.ts, api-client, fence, idempotency, brand, TR13); **V20** route flag, signup end rules; **V21** BEFORE INSERT version check, erase live only; **V22** CF5 "as put" quote, `-356` (ii) unratified, §0 rows for `-234` X / the meter / NE8 B; **V23** AI-10-1 one sentence each predicate, Niyamavali §6.3; **V24** the note's "you recorded this gap" → "our note told you of it"; **V25** export `nomineeLinks: { marked, namedBy }`; **V26** stale / loose text. The Panel note revised (still ⛔ sent). |
 | 2026-10-23 | 1.1 | The Panel note WRITTEN (BigDev: *"yes commit and write the panel note"*): `trustee-panel-routing-note-2026-10-23-6-36e-nominee-member-link.md` — Q1 (record the account; when the answer counts — A / B / C), Q2 (what each side is told — A / B / C); our reading A, A; E1 checked verbatim, E4 run; ⛔ sent. Ledger `2026-10-23am`. |
 | 2026-10-23 | 1.0 | Created (`bmad-create-story 6.36e`): G1–G14, NE1–NE14 PROPOSED, PQ1 / PQ2 OWED, AC0–AC10, Tasks 0–7. Status ready-for-dev; ⛔ code. |

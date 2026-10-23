@@ -48,7 +48,10 @@ import {
   workplaceRequestId as toWorkplaceRequestId,
   type MemberId,
 } from '../../../src/ids/index.js';
+import { peerMeshNomineeLinkedMembersAsOf } from '../../../src/claim/peer-mesh-nominees.js';
 import { removeKnownPerson } from '../../../src/member/known-people.js';
+import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
+import { listNomineeLinksOfVersions } from '../../../src/nominee/member-links.js';
 import { insertMemberPosting } from '../../../src/member/posting.js';
 import { memberModerationActions } from '../../../src/schema/member_moderation_actions.js';
 import type { MemberLifecycleState } from '../../../src/schema/members.js';
@@ -184,14 +187,14 @@ async function link(
 async function snapshot(
   p: string,
   deceased: MemberId,
-  o: { cut?: PeerMeshFilingCut; nominees?: readonly string[] } = {},
+  o: { cut?: PeerMeshFilingCut; nominees?: readonly string[]; linked?: readonly MemberId[] } = {},
 ): Promise<PeerMeshGroupedSnapshot> {
   const { tx } = getTx();
   return getPeerMeshGroupedSnapshot(tx, {
     pariwarId: toPariwarId(p),
     deceasedMemberId: deceased,
     cut: o.cut ?? CUT,
-    nomineeMobileIndexes: o.nominees ?? [],
+    nomineeMatch: { mobileIndexes: o.nominees ?? [], memberIds: o.linked ?? [] },
   });
 }
 
@@ -202,13 +205,48 @@ async function loginIndex(m: string): Promise<string> {
 }
 
 /** Story 6.36d (ND7) — a `declared` nominee version of `deceased` recorded at `at` (fake ciphertexts — ⛔ decrypted here). */
-async function nomineeVersion(p: string, deceased: string, at: Date, rank: 1 | 2 = 1, versionNo = 1): Promise<void> {
-  await getTx().client.query(
+async function nomineeVersion(p: string, deceased: string, at: Date, rank: 1 | 2 = 1, versionNo = 1): Promise<string> {
+  const r = await getTx().client.query<{ version_id: string }>(
     `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
                                           relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
-     VALUES ($1, $2, $3, $4, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', 'enc:v1:m', 100, $5, $5)`,
+     VALUES ($1, $2, $3, $4, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', 'enc:v1:m', 100, $5, $5)
+     RETURNING version_id`,
     [deceased, p, rank, versionNo, at],
   );
+  return r.rows[0]!.version_id;
+}
+
+/**
+ * Story 6.36e — a nominee MEMBER LINK on `versionId`, as the table owner (the declare writes it in production). `answer` /
+ * `ended` / `erased` let a leg FORGE the rows a real save or erasure would leave (each leg's name says when it is forged).
+ */
+async function nomineeLink(
+  p: string,
+  declarer: string,
+  versionId: string,
+  nominee: string,
+  o: { rank?: 1 | 2; answer?: 'confirmed' | 'not_me'; respondedAt?: Date; askedAt?: Date; end?: { at: Date; reason: 'redeclared' | 'removed_by_declarer' | 'erased' }; carriedFrom?: string } = {},
+): Promise<string> {
+  const r = await getTx().client.query<{ link_id: string }>(
+    `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, carried_from_link_id,
+                                       state, answer, asked_at, responded_at, ended_at, end_reason)
+     VALUES ($1, $2, $3, $4, $5, 'contacts', $6, $7, $8, $9, $10, $11, $12) RETURNING link_id`,
+    [
+      p, declarer, versionId, o.rank ?? 1, nominee, o.carriedFrom ?? null,
+      o.end === undefined ? 'live' : o.end.reason === 'erased' ? 'erased' : 'ended',
+      o.answer ?? null, o.askedAt ?? before(200), o.answer === undefined ? null : (o.respondedAt ?? before(150)),
+      o.end?.at ?? null, o.end?.reason ?? null,
+    ],
+  );
+  return r.rows[0]!.link_id;
+}
+
+/** Story 6.36e — the marked members as of the cut, through the REAL reads `peerMeshNomineeMatch` makes (⛔ its KMS half). */
+async function linkedAsOf(p: string, deceased: MemberId, cut: PeerMeshFilingCut = CUT): Promise<MemberId[]> {
+  const { tx } = getTx();
+  const versions = await listNomineeDeclarationVersions(tx, toPariwarId(p), deceased);
+  const links = await listNomineeLinksOfVersions(tx, toPariwarId(p), versions.map((v) => v.versionId));
+  return peerMeshNomineeLinkedMembersAsOf(versions, links, cut.cut);
 }
 
 const ids = (s: PeerMeshGroupedSnapshot, group?: string) =>
@@ -683,6 +721,89 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       // the same login index in this Pariwar's colleague would be a different person; here the colleague's index differs
       await fileClaim(w.p, dead);
       expect(ids(await snapshot(w.p, dead, { nominees: [shared] }))).toEqual([c]);
+    });
+  });
+
+  describe('Story 6.36e — a MARKED nominee is ⛔ among the five, matched by ACCOUNT (NE7; `-396` Q1 A; AC6)', () => {
+    /** A deceased posted at A, two colleagues there; the declaration version recorded `at`. */
+    async function scene(at = before(200)) {
+      const w = await world();
+      const dead = await member(w.p);
+      await post(w.p, dead, { workplace: w.A, at: before(900) });
+      const ok = await colleague(w.p, w.A);
+      const nominee = await colleague(w.p, w.A);
+      const v1 = await nomineeVersion(w.p, dead, at);
+      return { w, dead, ok, nominee, v1 };
+    }
+
+    it('a marked colleague whose login number is ⛔ the declared one is ⛔ a candidate; EMPTY lists exclude nobody (valid SQL)', async () => {
+      const s = await scene();
+      await nomineeLink(s.w.p, s.dead, s.v1, s.nominee);
+      await fileClaim(s.w.p, s.dead);
+      // TR5 — `= ANY('{}'::uuid[])` renders and is false.
+      expect(ids(await snapshot(s.w.p, s.dead, { nominees: [], linked: [] }))).toEqual(sorted(s.ok, s.nominee));
+      const linked = await linkedAsOf(s.w.p, s.dead);
+      expect(linked).toEqual([s.nominee]);
+      // the declared number is someone else's (`idx-…` — nobody signs in with it): the ACCOUNT alone keeps them out
+      expect(ids(await snapshot(s.w.p, s.dead, { nominees: [`idx-${randomUUID()}`], linked }))).toEqual([s.ok]);
+    });
+
+    it('a `not_me` answer given BEFORE the cut still excludes (Q1 A — the mark counts whatever they answer)', async () => {
+      const s = await scene();
+      await nomineeLink(s.w.p, s.dead, s.v1, s.nominee, { answer: 'not_me', respondedAt: before(100) });
+      await fileClaim(s.w.p, s.dead);
+      expect(await linkedAsOf(s.w.p, s.dead)).toEqual([s.nominee]);
+      expect(ids(await snapshot(s.w.p, s.dead, { linked: await linkedAsOf(s.w.p, s.dead) }))).toEqual([s.ok]);
+    });
+
+    it('a link on a version RECORDED AFTER the cut is ⛔ excluded (V15 — the version decides)', async () => {
+      const s = await scene(before(-0.05));
+      await nomineeLink(s.w.p, s.dead, s.v1, s.nominee, { askedAt: before(-0.05) });
+      await fileClaim(s.w.p, s.dead);
+      expect(await linkedAsOf(s.w.p, s.dead)).toEqual([]);
+      expect(ids(await snapshot(s.w.p, s.dead, { linked: await linkedAsOf(s.w.p, s.dead) }))).toEqual(sorted(s.ok, s.nominee));
+    });
+
+    it('a link ENDED before the cut is ⛔ excluded — FORGED: an `erased` row ended before the cut while the nominee stays `active` (a real erasure anonymises one party, which the predicate already excludes)', async () => {
+      const s = await scene();
+      await nomineeLink(s.w.p, s.dead, s.v1, s.nominee, { end: { at: before(5), reason: 'erased' } });
+      await fileClaim(s.w.p, s.dead);
+      expect(await linkedAsOf(s.w.p, s.dead)).toEqual([]);
+      // ended ON or after the cut — it still stood at the cut, so it counts
+      const t = await scene();
+      await nomineeLink(t.w.p, t.dead, t.v1, t.nominee, { end: { at: before(-0.05), reason: 'erased' } });
+      await fileClaim(t.w.p, t.dead);
+      expect(await linkedAsOf(t.w.p, t.dead)).toEqual([t.nominee]);
+    });
+
+    it('a link on a version ⛔ projected at the cut (re-declared WITHOUT the mark) is ⛔ excluded; a CARRIED link on the projected version is', async () => {
+      const s = await scene(before(300));
+      await nomineeLink(s.w.p, s.dead, s.v1, s.nominee, { askedAt: before(300), end: { at: before(200), reason: 'removed_by_declarer' } });
+      await nomineeVersion(s.w.p, s.dead, before(200), 1, 2);
+      await fileClaim(s.w.p, s.dead);
+      expect(await linkedAsOf(s.w.p, s.dead)).toEqual([]);
+
+      const t = await scene(before(300));
+      const kept = await nomineeLink(t.w.p, t.dead, t.v1, t.nominee, { askedAt: before(300), end: { at: before(200), reason: 'redeclared' } });
+      const v2 = await nomineeVersion(t.w.p, t.dead, before(200), 1, 2);
+      await nomineeLink(t.w.p, t.dead, v2, t.nominee, { askedAt: before(300), carriedFrom: kept });
+      await fileClaim(t.w.p, t.dead);
+      expect(await linkedAsOf(t.w.p, t.dead)).toEqual([t.nominee]);
+      expect(ids(await snapshot(t.w.p, t.dead, { linked: await linkedAsOf(t.w.p, t.dead) }))).toEqual([t.ok]);
+    });
+
+    it('the staff line (AC7, Q1 A): an ANSWER inside the window does ⛔ set it; a linked re-save inside it does', async () => {
+      const s = await scene(before(100));
+      await nomineeLink(s.w.p, s.dead, s.v1, s.nominee, { askedAt: before(100), answer: 'confirmed', respondedAt: before(10) });
+      await fileClaim(s.w.p, s.dead);
+      expect((await snapshot(s.w.p, s.dead)).recentChangeBeforeFiling).toBe(false);
+
+      const t = await scene(before(100));
+      const old = await nomineeLink(t.w.p, t.dead, t.v1, t.nominee, { askedAt: before(100), end: { at: before(10), reason: 'redeclared' } });
+      const v2 = await nomineeVersion(t.w.p, t.dead, before(10), 1, 2);
+      await nomineeLink(t.w.p, t.dead, v2, t.nominee, { askedAt: before(100), carriedFrom: old });
+      await fileClaim(t.w.p, t.dead);
+      expect((await snapshot(t.w.p, t.dead)).recentChangeBeforeFiling).toBe(true);
     });
   });
 

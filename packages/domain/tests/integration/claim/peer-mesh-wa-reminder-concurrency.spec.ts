@@ -176,7 +176,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder under two co
   }
 
   const begin = (client: pg.PoolClient, s: { pid: PariwarId; cid: ClaimId; pingId: PeerMeshPingId }, jobId: string) =>
-    beginPeerMeshWaReminder(client, { pariwarId: s.pid, claimCaseId: s.cid, pingId: s.pingId, jobId, now: new Date(), nameFault: null, templates: { hi: null, en: TEMPLATE.name }, nomineeMobileIndexes: [] });
+    beginPeerMeshWaReminder(client, { pariwarId: s.pid, claimCaseId: s.cid, pingId: s.pingId, jobId, now: new Date(), nameFault: null, templates: { hi: null, en: TEMPLATE.name }, nomineeMatch: { mobileIndexes: [], memberIds: [] } });
 
   it('⭐ ONCE EVER — two children begin the SAME ping\'s reminder at once: ONE begins it, the other is `held_by_other`', { timeout: TIMEOUT }, async () => {
     const s = await seed();

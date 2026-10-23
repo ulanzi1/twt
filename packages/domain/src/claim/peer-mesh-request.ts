@@ -44,7 +44,7 @@ import type { PeerMeshSource } from '../schema/claim_peer_mesh_selections.js';
 import { getMemberMobileCiphertext } from '../wa-opt-in/read.js';
 import { answerWindowSql, isClaimInAnswerWindow } from './answer-window.js';
 import { CORRECTION_SEND_LEASE_MS } from './correction-reminder-record.js';
-import { peerMeshEligibleMemberSql, peerMeshNomineeMatchSql } from './peer-mesh-read.js';
+import { type PeerMeshNomineeMatch, peerMeshEligibleMemberSql, peerMeshNomineeMatchSql } from './peer-mesh-read.js';
 import { SUSPICION_NOTICE_SEND_CONFIG_DETAILS, SUSPICION_NOTICE_SMS_ERROR_CLASSES, suspicionNoticeDetail } from './suspicion-notice.js';
 
 /** The sweep's page size cap. */
@@ -165,9 +165,10 @@ export type PeerMeshRequestEligibility =
  * row's labelling columns pick the FIRST matching reason: ⛔ `active` ⇒ `peer_not_active`; named as the deceased by any claim ⇒
  * `peer_reported_deceased`; ⛔ an identity row ⇒ `no_sendable_number`; the claimant of any claim / the filer of any intake attempt
  * for this death (`-340` call 2, `-341`) ⇒ `peer_filed_for_this_death`; ⭐ Story 6.36d (ND5 (a)) signs in with one of the
- * deceased's nominee numbers (`peerMeshNomineeMatchSql` — the gate's OWN fragment, ⛔ re-composed) ⇒ `peer_is_nominee`; none
+ * deceased's nominee numbers, or was MARKED as one (Story 6.36e NE7) (`peerMeshNomineeMatchSql` — the gate's OWN fragment, ⛔
+ * re-composed) ⇒ `peer_is_nominee` (REUSED — ⛔ a new label); none
  * matched (or ⛔ member row) ⇒ `peer_not_eligible` (a future conjunct of the gate ⛔ crashes the send — a test pins that the five
- * labels cover today's predicate). `nomineeMobileIndexes` is REQUIRED (ND4) — from `peerMeshNomineeMobileIndexes`.
+ * labels cover today's predicate). `nomineeMatch` is REQUIRED (ND4) — from `peerMeshNomineeMatch`.
  */
 export async function readPeerMeshRequestEligibility(
   db: Db,
@@ -175,10 +176,10 @@ export async function readPeerMeshRequestEligibility(
     readonly pariwarId: PariwarId;
     readonly memberId: MemberId;
     readonly deceasedMemberId: MemberId;
-    readonly nomineeMobileIndexes: readonly string[];
+    readonly nomineeMatch: PeerMeshNomineeMatch;
   },
 ): Promise<PeerMeshRequestEligibility> {
-  const { pariwarId, memberId, deceasedMemberId, nomineeMobileIndexes } = input;
+  const { pariwarId, memberId, deceasedMemberId, nomineeMatch } = input;
   const m = sql`pr_m`;
   const { rows } = await db.execute<{
     eligible: boolean;
@@ -188,7 +189,7 @@ export async function readPeerMeshRequestEligibility(
     filed: boolean;
     is_nominee: boolean;
   }>(sql`
-    SELECT ${peerMeshEligibleMemberSql(m, { deceasedMemberId, nomineeMobileIndexes })} AS eligible,
+    SELECT ${peerMeshEligibleMemberSql(m, { deceasedMemberId, nomineeMatch })} AS eligible,
            pr_m.state::text <> 'active' AS not_active,
            ${namedByClaimSql(sql`pr_m.pariwar_id`, sql`pr_m.member_id`)} AS reported_deceased,
            NOT EXISTS (SELECT 1 FROM member_identities pr_i WHERE pr_i.pariwar_id = pr_m.pariwar_id AND pr_i.member_id = pr_m.member_id)
@@ -197,7 +198,7 @@ export async function readPeerMeshRequestEligibility(
                        AND pr_c.claimant_actor_id = pr_m.member_id)
             OR EXISTS (SELECT 1 FROM intake_attempts pr_ia WHERE pr_ia.pariwar_id = pr_m.pariwar_id
                           AND pr_ia.deceased_member_id = ${deceasedMemberId} AND pr_ia.claimant_actor_id = pr_m.member_id)) AS filed,
-           ${peerMeshNomineeMatchSql(m, nomineeMobileIndexes)} AS is_nominee
+           ${peerMeshNomineeMatchSql(m, nomineeMatch)} AS is_nominee
       FROM members pr_m
      WHERE pr_m.pariwar_id = ${pariwarId} AND pr_m.member_id = ${memberId}`);
   const r = rows[0];
@@ -219,7 +220,7 @@ export async function readPeerMeshRequestEligibility(
  * ONE predicate. Returns the new `ping_id`, or `null` when the ranking is NULL (`district_cohort_v1`) or ⛔ one is left. The new
  * ping carries the selection's `source` (0163's trigger). ⛔ `persistPeerMeshPingIntents` (it returns a count, ⛔ an id or a link).
  * The caller holds the claim lock (the ONE writer of a claim's pings at send time). ⭐ Story 6.36d (ND4): the walk skips the
- * deceased's nominees too — `nomineeMobileIndexes` REQUIRED.
+ * deceased's nominees too — `nomineeMatch` REQUIRED.
  */
 export async function insertPeerMeshReplacementPing(
   db: Db,
@@ -228,10 +229,10 @@ export async function insertPeerMeshReplacementPing(
     readonly selectionId: PeerMeshSelectionId;
     readonly replacesPingId: PeerMeshPingId;
     readonly deceasedMemberId: MemberId;
-    readonly nomineeMobileIndexes: readonly string[];
+    readonly nomineeMatch: PeerMeshNomineeMatch;
   },
 ): Promise<PeerMeshPingId | null> {
-  const { pariwarId, selectionId, replacesPingId, deceasedMemberId, nomineeMobileIndexes } = input;
+  const { pariwarId, selectionId, replacesPingId, deceasedMemberId, nomineeMatch } = input;
   const { rows } = await db.execute<{ member_id: string; source: PeerMeshSource | null }>(sql`
     SELECT pr_r.member_id, pr_s.source
       FROM claim_peer_mesh_selections pr_s
@@ -239,7 +240,7 @@ export async function insertPeerMeshReplacementPing(
       JOIN members pr_m ON pr_m.pariwar_id = pr_s.pariwar_id AND pr_m.member_id = pr_r.member_id
      WHERE pr_s.pariwar_id = ${pariwarId} AND pr_s.selection_id = ${selectionId}
        AND NOT EXISTS (SELECT 1 FROM claim_peer_mesh_pings pr_x WHERE pr_x.selection_id = pr_s.selection_id AND pr_x.member_id = pr_r.member_id)
-       AND ${peerMeshEligibleMemberSql(sql`pr_m`, { deceasedMemberId, nomineeMobileIndexes })}
+       AND ${peerMeshEligibleMemberSql(sql`pr_m`, { deceasedMemberId, nomineeMatch })}
      ORDER BY pr_r.ord
      LIMIT 1`);
   const next = rows[0];
@@ -373,7 +374,7 @@ function isUniqueViolation(err: unknown, constraint: string): boolean {
  * ⭐ THE CLAIMING TRANSACTION (R1) — on the ONE client of the caller's scope transaction: lock the claim row, then the ping row,
  * re-check under them, and skip / finish / begin the ping. ⛔ Nothing unsealed here — the caller COMMITS, then reads the number
  * and sends. `nameFault` is the CLAIM-WIDE name fault the caller found BEFORE this transaction (R9), or `null`.
- * `nomineeMobileIndexes` — the deceased's nominee indexes the caller computed OUTSIDE any transaction (Story 6.36d ND4).
+ * `nomineeMatch` — the deceased's nominee indexes (computed OUTSIDE any transaction) and marked members (Story 6.36d ND4, 6.36e NE7).
  * ⛔ Never catch a DB error inside this transaction — EXCEPT the link-code collision, retried inside a SAVEPOINT
  * ([[project_domain_limit_clamp_and_savepoint_retry]]).
  */
@@ -391,11 +392,11 @@ export async function beginPeerMeshRequest(
      * whose language is one of them is ⛔ begun: `waiting_template`. REQUIRED (⛔ defaulted) — every caller is found by the compiler.
      */
     readonly unusableLocales: readonly ('hi' | 'en')[];
-    readonly nomineeMobileIndexes: readonly string[];
+    readonly nomineeMatch: PeerMeshNomineeMatch;
   },
 ): Promise<BeginPeerMeshRequestResult> {
   const db = bindScopedDb(client);
-  const { pariwarId, jobId, now, nameFault, nomineeMobileIndexes } = input;
+  const { pariwarId, jobId, now, nameFault, nomineeMatch } = input;
   const claimCaseId = String(input.claimCaseId).toLowerCase() as ClaimId;
   const pingId = String(input.pingId).toLowerCase() as PeerMeshPingId;
   const { claim, ping } = await lockClaimThenPing(client, { pariwarId, claimCaseId, pingId });
@@ -435,7 +436,7 @@ export async function beginPeerMeshRequest(
     pariwarId,
     memberId: ping.member_id as MemberId,
     deceasedMemberId: claim.deceasedMemberId,
-    nomineeMobileIndexes,
+    nomineeMatch,
   });
   if (!eligibility.eligible) {
     if (existing) {
@@ -450,7 +451,7 @@ export async function beginPeerMeshRequest(
       selectionId: ping.selection_id as PeerMeshSelectionId,
       replacesPingId: ping.ping_id as PeerMeshPingId,
       deceasedMemberId: claim.deceasedMemberId,
-      nomineeMobileIndexes,
+      nomineeMatch,
     });
     return { kind: 'no_target', detail, reclaimed: false, attemptCount: 1, replacementPingId };
   }
@@ -622,11 +623,11 @@ export async function finalisePeerMeshNoSendableNumber(
     readonly pingId: PeerMeshPingId;
     readonly jobId: string;
     /** Story 6.36d (ND4) — the replacement skips the deceased's nominees too. */
-    readonly nomineeMobileIndexes: readonly string[];
+    readonly nomineeMatch: PeerMeshNomineeMatch;
   },
 ): Promise<PeerMeshNoSendableNumberResult> {
   const db = bindScopedDb(client);
-  const { pariwarId, jobId, nomineeMobileIndexes } = input;
+  const { pariwarId, jobId, nomineeMatch } = input;
   const claimCaseId = String(input.claimCaseId).toLowerCase() as ClaimId;
   const pingId = String(input.pingId).toLowerCase() as PeerMeshPingId;
   const { claim, ping } = await lockClaimThenPing(client, { pariwarId, claimCaseId, pingId });
@@ -652,7 +653,7 @@ export async function finalisePeerMeshNoSendableNumber(
     selectionId: ping.selection_id as PeerMeshSelectionId,
     replacesPingId: ping.ping_id as PeerMeshPingId,
     deceasedMemberId: claim.deceasedMemberId,
-    nomineeMobileIndexes,
+    nomineeMatch,
   });
   return { moved: true, attemptCount: 1, replacementPingId };
 }

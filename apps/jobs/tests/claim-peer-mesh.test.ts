@@ -1350,7 +1350,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
           selectionId: selection.selectionId,
           replacesPingId: ids.peerMeshPingId(first.rows[0]!.ping_id),
           deceasedMemberId: ids.memberId(seed.deceasedMemberId),
-          nomineeMobileIndexes: [],
+          nomineeMatch: { mobileIndexes: [], memberIds: [] },
         });
       });
       expect(replacementPingId).not.toBeNull();

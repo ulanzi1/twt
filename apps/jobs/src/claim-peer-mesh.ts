@@ -34,7 +34,7 @@
 //
 // ⭐ 2026-10-23 — Story 6.36d (`2026-10-23-386` ND3, SUPERSEDING IN PART `2026-10-14-330` SW19's *"⛔ No decrypt, ⛔ no KMS call
 // in the select job"* for the nominee read ONLY): the select job now decrypts the deceased's ≤ 2 NOMINEE mobiles and hashes them
-// into the login space (`claim.peerMeshNomineeMobileIndexes`), so a nominee is never among the five. The KMS work runs with ⛔
+// into the login space (`claim.peerMeshNomineeMatch`), so a nominee is never among the five. The KMS work runs with ⛔
 // transaction open — a short UNLOCKED pre-read (state / selection / cut), closed; then KMS; then the locked transaction below
 // (TR3 — the jobs pool is `max: 2`). A no-op or wrong-state run makes ⛔ KMS call. A KMS fault fails CLOSED (ND6): alarm +
 // rethrow under the child retry policy; on the final attempt, a 1 h self re-send; after 24 h of failures, an EMPTY selection
@@ -365,12 +365,12 @@ export async function runClaimPeerMeshSelect(
       claimCreatedAt: c.createdAt,
     });
   }).catch(alarmIfLastAttempt);
-  let nomineeMobileIndexes: readonly string[] | null = null;
+  let nomineeMatch: claim.PeerMeshNomineeMatch | null = null;
   let nomineeCheckUnavailable = false;
   if (pre !== null) {
     try {
       // Its OWN short scope transaction for the version read (closed before KMS) — ⛔ inside the pre-read's callback (TR3).
-      nomineeMobileIndexes = await claim.peerMeshNomineeMobileIndexes({
+      nomineeMatch = await claim.peerMeshNomineeMatch({
         pariwarId: brandedPariwarId,
         deceasedMemberId,
         cut: pre,
@@ -489,7 +489,7 @@ export async function runClaimPeerMeshSelect(
       };
     } else {
       if (
-        nomineeMobileIndexes === null ||
+        nomineeMatch === null ||
         pre === null ||
         pre.anchorClaimCaseId !== cut.anchorClaimCaseId ||
         pre.cut.getTime() !== cut.cut.getTime()
@@ -497,12 +497,12 @@ export async function runClaimPeerMeshSelect(
         throw new ClaimPeerMeshNomineeIndexesStaleError(p.claimCaseId);
       }
       // No claimant is passed: the predicate itself excludes anyone who reported this death — any claim's claimant, any
-      // intake attempt's filer (`-340` call 2, `-341`) — and (6.36d) anyone signing in with a nominee's number.
+      // intake attempt's filer (`-340` call 2, `-341`) — and (6.36d) anyone signing in with a nominee's number, (6.36e) anyone marked as one.
       snapshot = await claim.getPeerMeshGroupedSnapshot(db, {
         pariwarId: brandedPariwarId,
         deceasedMemberId,
         cut,
-        nomineeMobileIndexes,
+        nomineeMatch,
       });
     }
     const selection = claim.runPeerMeshMetric({

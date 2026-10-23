@@ -45,6 +45,7 @@ import {
 import { getMemberMobileCiphertext, isPeerMeshWaReminderOptedIn } from '../wa-opt-in/read.js';
 import { answerWindowSql, isClaimInAnswerWindow } from './answer-window.js';
 import { CORRECTION_SEND_LEASE_MS } from './correction-reminder-record.js';
+import type { PeerMeshNomineeMatch } from './peer-mesh-read.js';
 import { peerMeshReplyState } from './peer-mesh-reply.js';
 import { PEER_MESH_REQUEST_PARKED_BY, readPeerMeshRequestEligibility, resolvePeerRequestLocale } from './peer-mesh-request.js';
 
@@ -331,11 +332,11 @@ export async function beginPeerMeshWaReminder(
      */
     readonly templates: Readonly<Record<PeerMeshWaReminderLocale, string | null>>;
     /** Story 6.36d (ND4; AC6) — the deceased's nominee indexes, computed by the caller OUTSIDE any transaction. */
-    readonly nomineeMobileIndexes: readonly string[];
+    readonly nomineeMatch: PeerMeshNomineeMatch;
   },
 ): Promise<BeginPeerMeshWaReminderResult> {
   const db = bindScopedDb(client);
-  const { pariwarId, jobId, now, nameFault, nomineeMobileIndexes } = input;
+  const { pariwarId, jobId, now, nameFault, nomineeMatch } = input;
   const claimCaseId = String(input.claimCaseId).toLowerCase() as ClaimId;
   const pingId = String(input.pingId).toLowerCase() as PeerMeshPingId;
   const { claim, ping, reminder } = await lockClaimPingReminder(client, { pariwarId, claimCaseId, pingId });
@@ -381,7 +382,7 @@ export async function beginPeerMeshWaReminder(
     pariwarId,
     memberId: ping.member_id as MemberId,
     deceasedMemberId: claim.deceasedMemberId,
-    nomineeMobileIndexes,
+    nomineeMatch,
   });
   if (!eligibility.eligible) return finish('skipped_recipient_ineligible');
   // WR13 — a claim-wide name fault (an erasure since the text, …) ⇒ finished `no_target`.

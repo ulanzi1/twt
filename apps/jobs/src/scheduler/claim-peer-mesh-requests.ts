@@ -22,7 +22,7 @@
 //       to 60 across two boxes, else the Panel's shortened form; only a name that STILL does not fit is `name_too_long` — a fault is CLAIM-WIDE
 //       (`no_target:name_<reason>`, ⛔ replaced); a decrypt THROW is a retry (⛔ stored — ⛔ ping begun yet);
 //   (4b) ⭐ Story 6.36d (`2026-10-23-386` ND4 / ND6) — the deceased's NOMINEE indexes, ONCE, outside any transaction, by the
-//       selection's anchor cut (`readPeerMeshNomineeIndexes`); every begin / replacement re-checks with them, so a neighbour who
+//       selection's anchor cut (`readPeerMeshNomineeMatch`); every begin / replacement re-checks with them, so a neighbour who
 //       became a nominee match after selection is `no_target:peer_is_nominee` and replaced. A fault is a retry (⛔ ping begun);
 //   (5) per due ping, in `ping_id` order (and every replacement the run creates): the CLAIMING transaction
 //       (`beginPeerMeshRequest` — claim → ping locks, R1) → COMMIT → (⛔ KMS under a lock) the neighbour's number →
@@ -642,23 +642,23 @@ export async function readMemberFacingDeceasedName(
 /**
  * ⭐ Story 6.36d (`2026-10-23-386` ND4 / ND6; AC4, AC6) — the deceased's nominee mobiles as login blind indexes, for ONE claim
  * run: the cut the SELECTION was drawn by (`resolvePeerMeshSelectionFilingCut` — its anchor claim, ND1 (b)), then
- * `peerMeshNomineeMobileIndexes` — each read in its own short scope transaction, CLOSED before KMS. Called AFTER the child's
+ * `peerMeshNomineeMatch` (Story 6.36e: also the members marked as nominees) — each read in its own short scope transaction, CLOSED before KMS. Called AFTER the child's
  * `nothing_due` return (6.27c P5 — ⛔ decrypt for nothing). A fault (a KMS error, an unreadable envelope, a missing selection or
  * anchor) ⇒ ONE ids-only alarm, then `ClaimCorrectionTransientError` before any begin — `readMemberFacingDeceasedName`'s form;
  * ⛔ ever `[]` (fails CLOSED). Shared by the 6.31 reminder child.
  */
-export async function readPeerMeshNomineeIndexes(
+export async function readPeerMeshNomineeMatch(
   deps: Pick<ClaimPeerMeshRequestDeps, 'pool' | 'encryption' | 'onAlarm'>,
   pariwarId: ReturnType<typeof ids.pariwarId>,
   claimRow: { readonly claimCaseId: ReturnType<typeof ids.claimId>; readonly createdAt: Date; readonly deceasedMemberId: ReturnType<typeof ids.memberId> },
   tag: string,
   label: string,
   begunNoun: 'ping' | 'reminder',
-): Promise<readonly string[]> {
+): Promise<claimDomain.PeerMeshNomineeMatch> {
   const scoped = <T>(fn: (d: Db) => Promise<T>) => withPariwarScope(deps.pool, pariwarId, fn);
   try {
     const cut = await scoped((db) => claimDomain.resolvePeerMeshSelectionFilingCut(db, pariwarId, claimRow));
-    return await claimDomain.peerMeshNomineeMobileIndexes({
+    return await claimDomain.peerMeshNomineeMatch({
       pariwarId,
       deceasedMemberId: claimRow.deceasedMemberId,
       cut,
@@ -765,7 +765,7 @@ export async function runPeerMeshRequestChild(
   const nameRead = await readDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag);
   const nameFault = 'fault' in nameRead ? nameRead.fault : null;
   // (4b) Story 6.36d (ND4) — the nominee indexes, ONCE, outside any transaction (a fault ⇒ alarm + retry, ⛔ ping begun).
-  const nomineeMobileIndexes = await readPeerMeshNomineeIndexes(deps, pariwarId, claimRow, tag, 'claim-peer-mesh-request', 'ping');
+  const nomineeMatch = await readPeerMeshNomineeMatch(deps, pariwarId, claimRow, tag, 'claim-peer-mesh-request', 'ping');
   const counts = { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0, waiting: 0 };
   const scoped = <T>(fn: (d: Db) => Promise<T>) => withPariwarScope(deps.pool, pariwarId, fn);
 
@@ -777,7 +777,7 @@ export async function runPeerMeshRequestChild(
     const beginAt = clock();
     if (!isInPeerRequestSendWindow(beginAt)) return deferToMorning(beginAt, counts);
     const begun = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
-      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now: beginAt, nameFault, unusableLocales, nomineeMobileIndexes }),
+      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now: beginAt, nameFault, unusableLocales, nomineeMatch }),
     );
     if (begun.kind === 'waiting_template') {
       // 📌 Story 6.35 (LS10 (b), I4) — ⛔ write, ⛔ the other language; the sweep's waiting alarm counts it.
@@ -835,7 +835,7 @@ export async function runPeerMeshRequestChild(
     if (e164 === null) {
       // R6 — a SECOND transaction (claim → ping again): `no_target:no_sendable_number` + the replacement, unless R5.
       const finished = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
-        claimDomain.finalisePeerMeshNoSendableNumber(client, { pariwarId, claimCaseId, pingId, jobId, nomineeMobileIndexes }),
+        claimDomain.finalisePeerMeshNoSendableNumber(client, { pariwarId, claimCaseId, pingId, jobId, nomineeMatch }),
       );
       if (!finished.moved) {
         alarm(`[jobs] claim-peer-mesh-request: the row of ${ptag} moved on before its no_target finalise`);

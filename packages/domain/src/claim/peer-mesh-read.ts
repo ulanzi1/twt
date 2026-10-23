@@ -420,27 +420,40 @@ export function peerMeshPreviousWorkplaceCounts(run: PeerMeshPostingRun, filingD
 
 // ── SW23 — the ONE eligibility predicate (AC6) ─────────────────────────────────────────────────────────────────────────
 
+/**
+ * ⭐ Story 6.36e (`2026-10-24-397` NE7) — the deceased's NOMINEES as recorded before the filing cut, in the two forms the
+ * predicate matches: their mobiles hashed into the LOGIN blind-index space (6.36d ND2), and the member accounts the deceased
+ * MARKED on those versions (`member_nominee_links` — matched by ACCOUNT, so a nominee who signs in on another number is still
+ * found). Both come from `peerMeshNomineeMatch` (tests may pass empty lists). ⛔ Stored, ⛔ logged.
+ */
+export interface PeerMeshNomineeMatch {
+  readonly mobileIndexes: readonly string[];
+  readonly memberIds: readonly MemberId[];
+}
+
 /** Who must ⛔ be asked, beyond the state / claim / identity rules — keyed on the DEATH (`2026-10-16-340` call 2, `-341`). */
 export interface PeerMeshEligibilityExclusions {
   readonly deceasedMemberId: MemberId;
   /**
-   * ⭐ Story 6.36d (`2026-10-23-386` ND2 / ND4) — the deceased's nominee mobiles as recorded before the filing cut, hashed into
-   * the LOGIN blind-index space. REQUIRED — ⛔ optional, ⛔ defaulted: the value always comes from `peerMeshNomineeMobileIndexes`
-   * (tests may pass `[]`). An EMPTY list excludes nobody. ⛔ Stored, ⛔ logged.
+   * ⭐ Story 6.36d (`2026-10-23-386` ND2 / ND4), widened by Story 6.36e (NE7) — the deceased's nominees as recorded before the
+   * filing cut. REQUIRED — ⛔ optional, ⛔ defaulted: the value always comes from `peerMeshNomineeMatch`. EMPTY lists exclude
+   * nobody.
    */
-  readonly nomineeMobileIndexes: readonly string[];
+  readonly nomineeMatch: PeerMeshNomineeMatch;
 }
 
 /**
- * ⭐ Story 6.36d (ND2) — `m` signs in with one of the deceased's nominee numbers: its identity row's login blind index is in
- * `indexes`. The ONE fragment — the predicate uses it NEGATED, the send-time labeller (`is_nominee`) PLAIN, so the two cannot
- * drift. `m` is the caller's `members` alias (⛔ a literal `m.` — the send-time alias is `pr_m`). An empty list renders
- * `= ANY('{}'::text[])` — false, so ⛔ match (TR5: `sql.param`, ⛔ a bare array, which Drizzle expands into a parameter list).
+ * ⭐ Story 6.36d (ND2), widened by Story 6.36e (NE7) — `m` is one of the deceased's nominees: its identity row's login blind
+ * index is in `match.mobileIndexes`, OR its member id is one the deceased MARKED (`match.memberIds`). The ONE fragment — the
+ * predicate uses it NEGATED, the send-time labeller (`is_nominee`) PLAIN, so the two cannot drift (TR4). `m` is the caller's
+ * `members` alias (⛔ a literal `m.` — the send-time alias is `pr_m`). Empty lists render `= ANY('{}'::text[])` /
+ * `= ANY('{}'::uuid[])` — false, so ⛔ match (TR5: `sql.param`, ⛔ a bare array, which Drizzle expands into a parameter list).
  */
-export function peerMeshNomineeMatchSql(m: SQL, indexes: readonly string[]): SQL {
-  return sql`EXISTS (SELECT 1 FROM member_identities pm_n
-                      WHERE pm_n.pariwar_id = ${m}.pariwar_id AND pm_n.member_id = ${m}.member_id
-                        AND pm_n.mobile_blind_index = ANY(${sql.param([...indexes])}::text[]))`;
+export function peerMeshNomineeMatchSql(m: SQL, match: PeerMeshNomineeMatch): SQL {
+  return sql`(EXISTS (SELECT 1 FROM member_identities pm_n
+                       WHERE pm_n.pariwar_id = ${m}.pariwar_id AND pm_n.member_id = ${m}.member_id
+                         AND pm_n.mobile_blind_index = ANY(${sql.param([...match.mobileIndexes])}::text[]))
+              OR ${m}.member_id = ANY(${sql.param([...match.memberIds])}::uuid[]))`;
 }
 
 /**
@@ -462,8 +475,10 @@ export function peerMeshNomineeMatchSql(m: SQL, indexes: readonly string[]): SQL
  *     reuses the first filer's row; the one-pending-per-channel index forbids a second). `-341`'s residual named only
  *     the first; the second is recorded in Story 6.36's fix-diff review.
  *   · ⭐ Story 6.36d (`2026-10-23-386` ND1 / ND2) — ⛔ anyone who signs in with one of the deceased's NOMINEE numbers as
- *     recorded before the filing cut (`x.nomineeMobileIndexes`, login blind-index space; {@link peerMeshNomineeMatchSql}).
- *     A nominee who signed up on ANOTHER number is ⛔ found (ND8 — the data-model gap BigDev accepted).
+ *     recorded before the filing cut (`x.nomineeMatch.mobileIndexes`, login blind-index space; {@link peerMeshNomineeMatchSql}).
+ *     A nominee who signed up on ANOTHER number is ⛔ found (ND8 — the data-model gap BigDev accepted) —
+ *   · ⭐ Story 6.36e (`2026-10-24-397` NE7, narrowing ND8 in part) — UNLESS the deceased MARKED them on those versions: ⛔
+ *     anyone in `x.nomineeMatch.memberIds`, whatever they answered (`-396` Q1 A).
  * ⚠ Recorded, ⛔ changed: a member under a moderation SUSPENSION stays eligible (6.27a F3); a relative is ⛔ excluded
  * (no family-link data — the deferred item stays open) — ⭐ 2026-10-23 (`-386`): NARROWED — a relative who is a declared
  * nominee, matched by number, is now excluded; other relatives stay eligible.
@@ -483,7 +498,7 @@ export function peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusio
            WHERE pm_ia.pariwar_id = ${m}.pariwar_id
              AND pm_ia.deceased_member_id = ${x.deceasedMemberId}
              AND pm_ia.claimant_actor_id = ${m}.member_id)
-    AND NOT ${peerMeshNomineeMatchSql(m, x.nomineeMobileIndexes)})`;
+    AND NOT ${peerMeshNomineeMatchSql(m, x.nomineeMatch)})`;
 }
 
 // ── The snapshot reads (AC5) ───────────────────────────────────────────────────────────────────────────────────────────
@@ -494,8 +509,8 @@ export interface PeerMeshSnapshotInput {
   readonly cut: PeerMeshFilingCut;
 }
 
-/** The input of the three readers that go through the predicate (Story 6.36d ND4 — the indexes REQUIRED). */
-export type PeerMeshEligibleSnapshotInput = PeerMeshSnapshotInput & { readonly nomineeMobileIndexes: readonly string[] };
+/** The input of the three readers that go through the predicate (Story 6.36d ND4 / 6.36e NE7 — the match REQUIRED). */
+export type PeerMeshEligibleSnapshotInput = PeerMeshSnapshotInput & { readonly nomineeMatch: PeerMeshNomineeMatch };
 
 /** The workplace half of the snapshot. */
 export interface PeerMeshWorkplaceSnapshot {
@@ -565,7 +580,7 @@ export async function getPeerMeshWorkplaceSnapshot(
   db: Db,
   input: PeerMeshEligibleSnapshotInput,
 ): Promise<PeerMeshWorkplaceSnapshot> {
-  const { pariwarId, deceasedMemberId, cut, nomineeMobileIndexes } = input;
+  const { pariwarId, deceasedMemberId, cut, nomineeMatch } = input;
   const result = await getPeerMeshDeceasedWorkplace(db, input);
   const current = result.currentWorkplaceId;
   const previous = result.previousWorkplaceCounted ? result.previousWorkplaceId : null;
@@ -583,7 +598,7 @@ export async function getPeerMeshWorkplaceSnapshot(
               WHERE w.pariwar_id = ${pariwarId}
                 AND w.workplace_id IN (${sql.join(workplaces.map((w) => sql`${w}::uuid`), sql`, `)})
                 AND w.created_at < ${cut.cut})
-       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId, nomineeMobileIndexes })}
+       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId, nomineeMatch })}
      ORDER BY p.member_id, p.created_at DESC, p.posting_id DESC`);
 
   const byMember = new Map<string, PeerMeshPostingRow[]>();
@@ -628,7 +643,7 @@ export async function getPeerMeshNamedSnapshot(db: Db, input: PeerMeshEligibleSn
        AND k.responded_at < ${input.cut.cut}
        AND k.state IN ('accepted', 'removed', 'erased')
        AND (k.state = 'accepted' OR k.ended_at >= ${input.cut.cut})
-       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId: input.deceasedMemberId, nomineeMobileIndexes: input.nomineeMobileIndexes })}
+       AND ${peerMeshEligibleMemberSql(sql`m`, { deceasedMemberId: input.deceasedMemberId, nomineeMatch: input.nomineeMatch })}
      ORDER BY k.named_member_id`);
   return r.rows.map((x) => toMemberId(x.named_member_id));
 }

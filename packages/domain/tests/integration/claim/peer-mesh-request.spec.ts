@@ -83,6 +83,8 @@ interface Seeded {
   pings: { pingId: PeerMeshPingId; memberId: MemberId }[];
   /** Story 6.36d — the deceased's nominee indexes every begin / finalise / read passes (`exclude(…, 'peer_is_nominee')` adds). */
   nominees: string[];
+  /** Story 6.36e — the members the deceased MARKED as nominees (the begin's INPUT, beside `nominees`). */
+  linked: MemberId[];
 }
 
 /** As the superuser: one active member with an identity row (its ciphertext is a MARKER — ⛔ a real envelope). */
@@ -142,7 +144,7 @@ async function seedRequestClaim(
     pings.push({ pingId, memberId });
   }
   await enterAppScope(client, pid);
-  return { pid, claimCaseId, deceased, selectionId, ranked, pings, nominees: [] };
+  return { pid, claimCaseId, deceased, selectionId, ranked, pings, nominees: [], linked: [] };
 }
 
 /** Story 6.36d — `m`'s login blind index (the seeded `idx-…` string). Runs under the current role (twt_app sees its Pariwar). */
@@ -154,7 +156,7 @@ async function loginIndexOf(m: MemberId): Promise<string> {
 const begin = (
   s: Seeded,
   pingId: PeerMeshPingId,
-  o: { jobId?: string; now?: Date; nameFault?: Parameters<typeof beginPeerMeshRequest>[1]['nameFault']; unusable?: ('hi' | 'en')[]; nominees?: readonly string[] } = {},
+  o: { jobId?: string; now?: Date; nameFault?: Parameters<typeof beginPeerMeshRequest>[1]['nameFault']; unusable?: ('hi' | 'en')[]; nominees?: readonly string[]; linked?: readonly MemberId[] } = {},
 ) =>
   beginPeerMeshRequest(getTx().client, {
     pariwarId: s.pid,
@@ -164,7 +166,7 @@ const begin = (
     now: o.now ?? NOW,
     nameFault: o.nameFault ?? null,
     unusableLocales: o.unusable ?? [],
-    nomineeMobileIndexes: o.nominees ?? s.nominees,
+    nomineeMatch: { mobileIndexes: o.nominees ?? s.nominees, memberIds: o.linked ?? s.linked },
   });
 
 async function pingRow(pingId: string) {
@@ -486,7 +488,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       );
       await enterAppScope(client, s.pid);
       const read = (memberId: MemberId) =>
-        readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId, deceasedMemberId: s.deceased, nomineeMobileIndexes: s.nominees });
+        readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId, deceasedMemberId: s.deceased, nomineeMatch: { mobileIndexes: s.nominees, memberIds: s.linked } });
       for (const [m, reason] of [...cases, [filer, 'peer_filed_for_this_death'] as const]) {
         expect(await read(m), reason).toEqual({ eligible: false, reason });
       }
@@ -510,8 +512,31 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       await exclude(s, m, 'peer_is_nominee');
       const db = bindScopedDb(getTx().client);
       expect(
-        await readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId: m, deceasedMemberId: s.deceased, nomineeMobileIndexes: s.nominees }),
+        await readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId: m, deceasedMemberId: s.deceased, nomineeMatch: { mobileIndexes: s.nominees, memberIds: s.linked } }),
       ).toEqual({ eligible: false, reason: 'peer_filed_for_this_death' });
+    });
+
+    it('Story 6.36e (NE7, AC6) — a MARKED nominee (matched by ACCOUNT, ⛔ by number) is labelled `peer_is_nominee` and ⛔ texted; the label coverage holds', async () => {
+      const s = await seedRequestClaim();
+      const p = s.pings[0]!;
+      s.linked.push(p.memberId as MemberId);
+      const db = bindScopedDb(getTx().client);
+      expect(
+        await readPeerMeshRequestEligibility(db, { pariwarId: s.pid, memberId: p.memberId as MemberId, deceasedMemberId: s.deceased, nomineeMatch: { mobileIndexes: [], memberIds: s.linked } }),
+      ).toEqual({ eligible: false, reason: 'peer_is_nominee' });
+      const r = await begin(s, p.pingId);
+      expect(r).toMatchObject({ kind: 'no_target', detail: 'no_target:peer_is_nominee' });
+      // REPLACED like every other peer reason — the walk skips the marked member too
+      expect((await pingRow((r as { replacementPingId: PeerMeshPingId }).replacementPingId)).member_id).not.toBe(p.memberId);
+    });
+
+    it('Story 6.36e (NE7) — the replacement walk skips a ranked MARKED nominee: the next eligible one is picked', async () => {
+      const s = await seedRequestClaim({ ranked: 8 });
+      s.linked.push(s.ranked[5]!);
+      await exclude(s, s.pings[0]!.memberId, 'peer_not_active');
+      const r = await begin(s, s.pings[0]!.pingId);
+      expect(r).toMatchObject({ kind: 'no_target', detail: 'no_target:peer_not_active' });
+      expect((await pingRow((r as { replacementPingId: PeerMeshPingId }).replacementPingId)).member_id).toBe(s.ranked[6]);
     });
 
     it('M4 — the replacement walk skips a ranked NOMINEE: the next eligible one is picked', async () => {
@@ -579,18 +604,18 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       const s = await seedRequestClaim();
       const [a, b] = s.pings;
       await begin(s, a!.pingId);
-      const first = await finalisePeerMeshNoSendableNumber(getTx().client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: a!.pingId, jobId: JOB, nomineeMobileIndexes: s.nominees });
+      const first = await finalisePeerMeshNoSendableNumber(getTx().client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: a!.pingId, jobId: JOB, nomineeMatch: { mobileIndexes: s.nominees, memberIds: s.linked } });
       expect(first).toMatchObject({ moved: true, attemptCount: 1 });
       expect((await pingRow(first.replacementPingId!)).replaces_ping_id).toBe(a!.pingId);
       await begin(s, b!.pingId);
       await begin(s, b!.pingId); // the own retry — attempt 2
-      const again = await finalisePeerMeshNoSendableNumber(getTx().client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: b!.pingId, jobId: JOB, nomineeMobileIndexes: s.nominees });
+      const again = await finalisePeerMeshNoSendableNumber(getTx().client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: b!.pingId, jobId: JOB, nomineeMatch: { mobileIndexes: s.nominees, memberIds: s.linked } });
       expect(again).toEqual({ moved: true, attemptCount: 2, replacementPingId: null });
       expect(await pingRow(b!.pingId)).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:no_sendable_number' });
       // another job's finalise is a no-op
       const c = s.pings[2]!;
       await begin(s, c.pingId);
-      expect(await finalisePeerMeshNoSendableNumber(getTx().client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: c.pingId, jobId: 'job-z', nomineeMobileIndexes: s.nominees })).toMatchObject({ moved: false });
+      expect(await finalisePeerMeshNoSendableNumber(getTx().client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: c.pingId, jobId: 'job-z', nomineeMatch: { mobileIndexes: s.nominees, memberIds: s.linked } })).toMatchObject({ moved: false });
     });
 
     it('M5 — R6\'s replacement skips a ranked NOMINEE too', async () => {
@@ -603,7 +628,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
         claimCaseId: s.claimCaseId,
         pingId: a.pingId,
         jobId: JOB,
-        nomineeMobileIndexes: s.nominees,
+        nomineeMatch: { mobileIndexes: s.nominees, memberIds: s.linked },
       });
       expect(r).toMatchObject({ moved: true, attemptCount: 1 });
       expect((await pingRow(r.replacementPingId!)).member_id).toBe(s.ranked[6]);
@@ -619,7 +644,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       await client.query(`UPDATE claims SET current_state = 'denied' WHERE claim_case_id = $1`, [s.claimCaseId]);
       await client.query(`SET LOCAL app.claim_state_writer = 'off'`);
       await enterAppScope(client, s.pid);
-      expect(await finalisePeerMeshNoSendableNumber(client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: p.pingId, jobId: JOB, nomineeMobileIndexes: s.nominees })).toEqual({
+      expect(await finalisePeerMeshNoSendableNumber(client, { pariwarId: s.pid, claimCaseId: s.claimCaseId, pingId: p.pingId, jobId: JOB, nomineeMatch: { mobileIndexes: s.nominees, memberIds: s.linked } })).toEqual({
         moved: true,
         attemptCount: 1,
         replacementPingId: null,

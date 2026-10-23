@@ -10,20 +10,24 @@
 // (ND6: the callers fail CLOSED and alarm).
 // ⚠ ND8 — the DATA-MODEL GAP BigDev accepted (G18): a nominee who is a member is found ONLY if the declared number is the number
 // they SIGNED UP with; the system records ⛔ member link for a nominee.
+// ⭐ Story 6.36e (`2026-10-24-397` NE7 — NARROWS ND8 in part): a declarer may now MARK a nominee as a member
+// (`member_nominee_links`, hung off the version). The SAME `inScope` read also takes the links on the as-of-cut versions, so the
+// predicate matches a marked nominee by ACCOUNT as well — DB only, ⛔ KMS for the link half.
 
 import type { Db } from '../db.js';
 import type { FieldCryptoDeps } from '../encryption/field-classes.js';
 import { mobileBlindIndexMany } from '../encryption/member-fields.js';
-import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
+import type { ClaimId, MemberId, NomineeVersionId, PariwarId } from '../ids/index.js';
 import type { InScope } from '../member/known-people.js';
 import {
   listNomineeDeclarationVersions,
   NOMINEE_RANKS,
   projectedVersionOfRank,
 } from '../nominee/declaration-history.js';
+import { listNomineeLinksOfVersions, type NomineeLinkOfVersion } from '../nominee/member-links.js';
 import type { MemberNomineeVersionRow } from '../schema/member_nominee_versions.js';
 import { resolveCorrectionMobile } from './correction-crypto.js';
-import { type PeerMeshFilingCut, getPeerMeshSelectionByClaim, peerMeshFilingCut } from './peer-mesh-read.js';
+import { type PeerMeshFilingCut, type PeerMeshNomineeMatch, getPeerMeshSelectionByClaim, peerMeshFilingCut } from './peer-mesh-read.js';
 import { getClaimCase } from './read.js';
 
 /** The batch HMAC's audit purpose (`AUDIT_PURPOSE` form — the 6.36b house constants' shape). */
@@ -37,36 +41,74 @@ export function peerMeshNomineeCiphertextsAsOf(
   versions: readonly MemberNomineeVersionRow[],
   cut: Date,
 ): string[] {
-  const before = versions.filter((v) => v.recordedAt.getTime() < cut.getTime());
   const out: string[] = [];
+  for (const projected of projectedVersionsAsOf(versions, cut)) {
+    if (projected.mobileCiphertext !== null) out.push(projected.mobileCiphertext);
+  }
+  return out;
+}
+
+/** Per rank, the version projected as of the cut (`recorded_at < cut`, `projectedVersionOfRank`; a `vacated` rank ⇒ none). */
+function projectedVersionsAsOf(versions: readonly MemberNomineeVersionRow[], cut: Date): MemberNomineeVersionRow[] {
+  const before = versions.filter((v) => v.recordedAt.getTime() < cut.getTime());
+  const out: MemberNomineeVersionRow[] = [];
   for (const rank of NOMINEE_RANKS) {
     const ofRank = before.filter((v) => v.rank === rank).sort((a, b) => a.versionNo - b.versionNo);
     const projected = projectedVersionOfRank(ofRank);
     if (projected === null) continue;
-    const ct = ofRank.find((v) => v.versionId === projected)?.mobileCiphertext ?? null;
-    if (ct !== null) out.push(ct);
+    const row = ofRank.find((v) => v.versionId === projected);
+    if (row) out.push(row);
   }
   return out;
 }
 
 /**
- * ⭐ THE ONE read of the nominee indexes (AC2) — the select job and both send-time children call this and nothing else:
- *   (1) `inScope` → every version of the deceased's declaration (its own short transaction, closed on return);
- *   (2) ND1 (b) — the ciphertexts as recorded before `cut.cut`;
+ * ⭐ Story 6.36e NE7 (`-396` Q1 A) — the members the deceased MARKED on the versions projected as of the cut (the SAME walk
+ * as {@link peerMeshNomineeCiphertextsAsOf}), whose link had ⛔ ended before the cut (`ended_at IS NULL OR ended_at >= cut`) —
+ * WHATEVER they answered (`not_me` included: a "not me", true or false, never puts a possible payee back among the five).
+ * ⛔ An `asked_at` test (V15 — a link is written in the same transaction as its version). PURE; de-duplicated.
+ */
+export function peerMeshNomineeLinkedMembersAsOf(
+  versions: readonly MemberNomineeVersionRow[],
+  links: readonly NomineeLinkOfVersion[],
+  cut: Date,
+): MemberId[] {
+  const projected = new Set<string>(projectedVersionsAsOf(versions, cut).map((v) => v.versionId));
+  const out = new Set<MemberId>();
+  for (const l of links) {
+    if (!projected.has(l.versionId)) continue;
+    if (l.endedAt !== null && l.endedAt.getTime() < cut.getTime()) continue;
+    out.add(l.nomineeMemberId);
+  }
+  return [...out];
+}
+
+/**
+ * ⭐ THE ONE read of the nominee match (AC2; Story 6.36e AC6) — the select job and both send-time children call this and
+ * nothing else:
+ *   (1) `inScope` → every version of the deceased's declaration AND every link on them (its own short transaction, closed on
+ *       return — ONE extra SELECT by `version_id`, DB only);
+ *   (2) ND1 (b) — the ciphertexts as recorded before `cut.cut`; NE7 — the members marked on those versions;
  *   (3) OUTSIDE any transaction: decrypt + `normalizeMobile` each (`resolveCorrectionMobile`, class `member_nominee`, the REAL
  *       Pariwar — a sentinel or invalid number ⇒ `null`, dropped), de-duplicate, and ONE batch HMAC into the login space.
- * ⛔ Version before the cut ⇒ `[]` with ⛔ KMS call; all numbers unusable ⇒ their decrypts run, ⛔ HMAC call, `[]`.
- * @throws on a KMS fault or a malformed envelope (ND6 — the caller alarms and fails closed; ⛔ ever `[]`)
+ * ⛔ Version before the cut ⇒ empty lists with ⛔ KMS call; all numbers unusable ⇒ their decrypts run, ⛔ HMAC call, `[]`
+ * indexes (the marked members still returned).
+ * @throws on a KMS fault or a malformed envelope (ND6 — the caller alarms and fails closed; ⛔ ever empty lists)
  */
-export async function peerMeshNomineeMobileIndexes(input: {
+export async function peerMeshNomineeMatch(input: {
   readonly pariwarId: PariwarId;
   readonly deceasedMemberId: MemberId;
   readonly cut: PeerMeshFilingCut;
   readonly enc: FieldCryptoDeps;
   readonly inScope: InScope;
-}): Promise<string[]> {
+}): Promise<PeerMeshNomineeMatch> {
   const { pariwarId, deceasedMemberId, cut, enc, inScope } = input;
-  const versions = await inScope((db) => listNomineeDeclarationVersions(db, pariwarId, deceasedMemberId));
+  const { versions, links } = await inScope(async (db) => {
+    const versions = await listNomineeDeclarationVersions(db, pariwarId, deceasedMemberId);
+    const links = await listNomineeLinksOfVersions(db, pariwarId, versions.map((v) => v.versionId as NomineeVersionId));
+    return { versions, links };
+  });
+  const memberIds = peerMeshNomineeLinkedMembersAsOf(versions, links, cut.cut);
   const ciphertexts = peerMeshNomineeCiphertextsAsOf(versions, cut.cut);
   const canonicals: string[] = [];
   for (const ct of ciphertexts) {
@@ -74,8 +116,9 @@ export async function peerMeshNomineeMobileIndexes(input: {
     if (e164 !== null) canonicals.push(e164);
   }
   const distinct = [...new Set(canonicals)];
-  if (distinct.length === 0) return [];
-  return mobileBlindIndexMany(distinct, enc, { pariwarId, purpose: PEER_MESH_NOMINEE_EXCLUSION_AUDIT_PURPOSE });
+  if (distinct.length === 0) return { mobileIndexes: [], memberIds };
+  const mobileIndexes = await mobileBlindIndexMany(distinct, enc, { pariwarId, purpose: PEER_MESH_NOMINEE_EXCLUSION_AUDIT_PURPOSE });
+  return { mobileIndexes, memberIds };
 }
 
 /**

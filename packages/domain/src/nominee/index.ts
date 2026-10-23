@@ -17,3 +17,7 @@ export * from './declaration-history.js';
 // Story 6.20 (AC12) — the relationship vocabulary (twenty values since Story 6.19a / `-257`; fifteen at
 // 6.20) + the `other`-forecloses predicate.
 export * from './relationship.js';
+// Story 6.36e — the nominee MEMBER LINK (0181): the declare's charge, resolution, lock, plan and apply; the declarer's marks;
+// the marked member's requests and answer; the erasure arm and the export. ⛔ This module never imports from `claim/` (T5),
+// and imports `member/known-people.js` directly (TR13).
+export * from './member-links.js';

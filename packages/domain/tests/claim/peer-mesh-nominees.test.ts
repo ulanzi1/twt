@@ -1,4 +1,6 @@
-// Story 6.36d (Task 5; AC2, AC9 — M2, M7, M15) — `peerMeshNomineeMobileIndexes`, the ONE read of the deceased's nominee indexes:
+// Story 6.36d (Task 5; AC2, AC9 — M2, M7, M15) — `peerMeshNomineeMatch` (6.36d's `peerMeshNomineeMobileIndexes`, renamed by Story
+// 6.36e NE7 — its `mobileIndexes` half is what this file pins; the `memberIds` half is pinned at the end), the ONE read of the
+// deceased's nominee indexes:
 // the ND1 (b) filter (as recorded before the cut, the PROJECTED version per rank), the normalise (a number stored RAW matches the
 // member's canonical login number), the de-duplication, the empty paths (⛔ KMS / ⛔ HMAC), and the fail-closed fault paths.
 // Pure: `inScope` hands back the version rows (the live jobs legs go through the real read). Real envelopes under a counting fake
@@ -12,7 +14,8 @@ import { correctionNumberHash } from '../../src/claim/correction-crypto.js';
 import {
   PEER_MESH_NOMINEE_EXCLUSION_AUDIT_PURPOSE,
   peerMeshNomineeCiphertextsAsOf,
-  peerMeshNomineeMobileIndexes,
+  peerMeshNomineeLinkedMembersAsOf,
+  peerMeshNomineeMatch,
 } from '../../src/claim/peer-mesh-nominees.js';
 import { peerMeshFilingCut } from '../../src/claim/peer-mesh-read.js';
 import { createFakeKmsProvider } from '../../src/encryption/index.js';
@@ -20,8 +23,9 @@ import { encryptTier1, serializeEnvelope } from '../../src/encryption/envelope.j
 import { MEMBER_NOMINEE_FIELD_CLASS, type FieldCryptoDeps } from '../../src/encryption/field-classes.js';
 import type { KmsProvider } from '../../src/encryption/kms-provider.js';
 import { mobileBlindIndex } from '../../src/encryption/member-fields.js';
-import { memberId as toMemberId, pariwarId as toPariwarId } from '../../src/ids/index.js';
+import { type MemberId, memberId as toMemberId, nomineeVersionId, pariwarId as toPariwarId } from '../../src/ids/index.js';
 import type { InScope } from '../../src/member/known-people.js';
+import type { NomineeLinkOfVersion } from '../../src/nominee/member-links.js';
 import type { MemberNomineeVersionRow } from '../../src/schema/member_nominee_versions.js';
 
 const PARIWAR = toPariwarId(randomUUID());
@@ -96,23 +100,28 @@ function version(
 }
 
 /** `inScope` handing back the rows (the read itself is the live legs'). Counts how many scopes were opened; `log` records open / close. */
-function rowsScope(rows: readonly MemberNomineeVersionRow[], log?: string[]): { inScope: InScope; opened: () => number } {
+function rowsScope(
+  rows: readonly MemberNomineeVersionRow[],
+  log?: string[],
+  links: readonly NomineeLinkOfVersion[] = [],
+): { inScope: InScope; opened: () => number } {
   let n = 0;
   const inScope = (async () => {
     n += 1;
     log?.push('scope:open');
     await Promise.resolve();
     log?.push('scope:close');
-    return rows;
+    return { versions: rows, links };
   }) as unknown as InScope;
   return { inScope, opened: () => n };
 }
 
-function run(enc: FieldCryptoDeps, rows: readonly MemberNomineeVersionRow[]): Promise<string[]> {
-  return peerMeshNomineeMobileIndexes({ pariwarId: PARIWAR, deceasedMemberId: DECEASED, cut: CUT, enc, inScope: rowsScope(rows).inScope });
+async function run(enc: FieldCryptoDeps, rows: readonly MemberNomineeVersionRow[]): Promise<string[]> {
+  const match = await peerMeshNomineeMatch({ pariwarId: PARIWAR, deceasedMemberId: DECEASED, cut: CUT, enc, inScope: rowsScope(rows).inScope });
+  return [...match.mobileIndexes];
 }
 
-describe('Story 6.36d — peerMeshNomineeMobileIndexes (AC2)', () => {
+describe('Story 6.36d — peerMeshNomineeMatch, the number half (AC2)', () => {
   it('the audit purpose is a plain lower-case key (blindIndexMany refuses anything else)', () => {
     expect(PEER_MESH_NOMINEE_EXCLUSION_AUDIT_PURPOSE).toMatch(/^[a-z][a-z0-9_]{0,63}$/);
   });
@@ -214,7 +223,7 @@ describe('Story 6.36d — peerMeshNomineeMobileIndexes (AC2)', () => {
     const v = version(1, await seal(enc, '9876543210'), BEFORE);
     log.length = 0; // sealing is the declaration writer's KMS work, ⛔ this function's
     const scope = rowsScope([v], log);
-    await peerMeshNomineeMobileIndexes({ pariwarId: PARIWAR, deceasedMemberId: DECEASED, cut: CUT, enc, inScope: scope.inScope });
+    await peerMeshNomineeMatch({ pariwarId: PARIWAR, deceasedMemberId: DECEASED, cut: CUT, enc, inScope: scope.inScope });
     expect(scope.opened()).toBe(1);
     // the stub resolves when `inScope` is awaited, so this pins "awaited before KMS", ⛔ that a real scope was closed
     expect(log).toEqual(['scope:open', 'scope:close', 'kms:decrypt', 'kms:hmac']); // one nominee ⇒ one decrypt, then ONE batch HMAC
@@ -224,5 +233,65 @@ describe('Story 6.36d — peerMeshNomineeMobileIndexes (AC2)', () => {
     const v1 = version(1, 'enc:a', BEFORE);
     const corr = version(1, 'enc:b', AFTER, { source: 'correction', correctsVersionId: v1.versionId });
     expect(peerMeshNomineeCiphertextsAsOf([v1, corr], CUT.cut)).toEqual(['enc:a']);
+  });
+});
+
+// ── Story 6.36e (Task 2.2; AC6; `2026-10-24-397` NE7) — the MARKED-member half ────────────────────────────────────────────
+describe('Story 6.36e — peerMeshNomineeMatch, the marked-member half (NE7)', () => {
+  const nominee = (): MemberId => toMemberId(randomUUID());
+  const link = (v: MemberNomineeVersionRow, who: MemberId, endedAt: Date | null = null): NomineeLinkOfVersion => ({
+    versionId: nomineeVersionId(v.versionId),
+    nomineeMemberId: who,
+    endedAt,
+  });
+
+  it('a link on the version projected as of the cut counts; a link ended AT or after the cut still counts', () => {
+    const v1 = version(1, 'enc:a', BEFORE);
+    const [a, b] = [nominee(), nominee()];
+    expect(peerMeshNomineeLinkedMembersAsOf([v1], [link(v1, a)], CUT.cut)).toEqual([a]);
+    expect(peerMeshNomineeLinkedMembersAsOf([v1], [link(v1, b, CUT.cut)], CUT.cut)).toEqual([b]);
+    expect(peerMeshNomineeLinkedMembersAsOf([v1], [link(v1, b, AFTER)], CUT.cut)).toEqual([b]);
+  });
+
+  it('a link ended BEFORE the cut is ⛔ counted', () => {
+    const v1 = version(1, 'enc:a', BEFORE);
+    expect(peerMeshNomineeLinkedMembersAsOf([v1], [link(v1, nominee(), new Date(CUT.cut.getTime() - 1))], CUT.cut)).toEqual([]);
+  });
+
+  it('a link on a version RECORDED after the cut is ⛔ counted (V15 — the version decides, ⛔ the link)', () => {
+    const v1 = version(1, 'enc:a', BEFORE);
+    const v2 = version(1, 'enc:b', AFTER);
+    const [a, b] = [nominee(), nominee()];
+    expect(peerMeshNomineeLinkedMembersAsOf([v1, v2], [link(v1, a, AFTER), link(v2, b)], CUT.cut)).toEqual([a]);
+  });
+
+  it('a link on a version ⛔ projected as of the cut (re-declared before it) is ⛔ counted; the carried one is', () => {
+    const v1 = version(1, 'enc:a', new Date(BEFORE.getTime() - 86_400_000));
+    const v2 = version(1, 'enc:a', BEFORE);
+    const [a, b] = [nominee(), nominee()];
+    // `a` was marked on v1 and ended when v2 was saved without carrying it; `b` was marked on v2.
+    expect(peerMeshNomineeLinkedMembersAsOf([v1, v2], [link(v1, a, BEFORE), link(v2, b)], CUT.cut)).toEqual([b]);
+  });
+
+  it('a vacated rank counts ⛔ link; both ranks count; one member is listed once', () => {
+    const r1 = version(1, 'enc:a', BEFORE);
+    const r2v1 = version(2, 'enc:b', new Date(BEFORE.getTime() - 86_400_000));
+    const r2v2 = version(2, null, BEFORE); // the tombstone
+    const a = nominee();
+    expect(peerMeshNomineeLinkedMembersAsOf([r1, r2v1, r2v2], [link(r1, a), link(r2v1, nominee(), BEFORE)], CUT.cut)).toEqual([a]);
+    const r2 = version(2, 'enc:c', BEFORE);
+    const b = nominee();
+    expect(peerMeshNomineeLinkedMembersAsOf([r1, r2], [link(r1, a), link(r2, b)], CUT.cut).sort()).toEqual([a, b].sort());
+  });
+
+  it('the read returns the marked members from the SAME scope — DB only, ⛔ KMS for them; ⛔ number still ⇒ ⛔ HMAC', async () => {
+    const { enc, counts } = countingEnc();
+    const sentinel = version(1, await seal(enc, '0000000000'), BEFORE);
+    const a = nominee();
+    const scope = rowsScope([sentinel], undefined, [link(sentinel, a)]);
+    const got = await peerMeshNomineeMatch({ pariwarId: PARIWAR, deceasedMemberId: DECEASED, cut: CUT, enc, inScope: scope.inScope });
+    expect(got).toEqual({ mobileIndexes: [], memberIds: [a] });
+    expect(scope.opened()).toBe(1);
+    expect(counts.hmac).toBe(0);
   });
 });

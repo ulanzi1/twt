@@ -660,8 +660,8 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
 - [x] **Task 1 — the table (AC1)** *(2026-10-24: migration `0181_member-nominee-links` — ⛔ committed anywhere before; the policy spec 19 / 19 on a FRESH `twt_6_36e` (:5434))* — migration (the NE1 two-axis state, the BEFORE INSERT version check, the `nominee_link_resolve` counter
       CHECK widening) + journal + schema + RLS mirror + `MEMBER_DAILY_COUNTERS` + the `NomineeLinkId` brand + barrels + the policy-regression
       spec (incl. the V1 end / erase legs).
-- [ ] **Task 2 — the domain (AC3, AC6)**
-  - [ ] 2.1 `packages/domain/src/nominee/member-links.ts` — `resolveNomineeLinkTargets` (the `knownPersonEligibleSql` lookup by index, inside
+- [x] **Task 2 — the domain (AC3, AC6)** *(2026-10-24 — domain suite 6,229 / 6,230 then the one red (a fixture's double clock read) fixed and green alone; see Debug Log)*
+  - [x] 2.1 `packages/domain/src/nominee/member-links.ts` — `resolveNomineeLinkTargets` (the `knownPersonEligibleSql` lookup by index, inside
         the caller's tx), `chargeNomineeLinkResolve` (the caller gate + the NE5 counter, its own short tx), `lockLiveNomineeLinks`
         (`FOR UPDATE`, NE2), `writeNomineeLinksForDeclaration` (insert / carry / end per NE2, given the planned versions and the locked
         live links), `listNomineeLinksForMember` (the AC2 links read — ciphertexts only; names decrypted by the handler after commit),
@@ -669,14 +669,14 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
         through the nominee barrel. ⚠ ⛔ import `claim/` from `nominee/` ([[project_type_only_import_cycle_trap]] — the lock lives in
         `claim/` for that reason); import `knownPersonEligibleSql` / `knownPeopleCallerSql` / `namedByClaimSql` from
         `../member/known-people.js` DIRECTLY, ⛔ the member barrel (TR13).
-  - [ ] 2.2 `claim/peer-mesh-nominees.ts` — `peerMeshNomineeMatch` + pure `peerMeshNomineeLinkedMembersAsOf`; `claim/peer-mesh-read.ts` —
+  - [x] 2.2 `claim/peer-mesh-nominees.ts` — `peerMeshNomineeMatch` + pure `peerMeshNomineeLinkedMembersAsOf`; `claim/peer-mesh-read.ts` —
         `PeerMeshNomineeMatch`, the widened fragment, `nomineeMatch` on every ND4 type; `claim/peer-mesh-request.ts` — the labeller and
         the four inline input types (G7); `claim/peer-mesh-wa-reminder.ts` — `beginPeerMeshWaReminder`'s input.
 - [ ] **Task 3 — contracts + API (AC2, AC3, AC4, AC9)** — the declare handler (both routes, the `allowLink` route flag, the charge → HMAC →
       tx order, the signup end rules); the contact-matches `purpose` field; a new module `apps/api/src/modules/nominee-links/` (the AC2 links
       read, the AC4 request list + answer, names-after-commit, per-handler idempotency) REGISTERED in `apps/api/src/server.ts`; audit names
       in the `AuthAuditEventType` union; the number fence's `FILES` list extended; OpenAPI re-emitted; `createMemberNomineeLinksClient`.
-- [ ] **Task 4 — jobs (AC6, AC7)** — `runClaimPeerMeshSelect`, `readPeerMeshNomineeIndexes` (defined in the requests child, imported by the
+- [ ] **Task 4 — jobs (AC6, AC7)** *(2026-10-24: the RENAME half done with Task 2 so every commit builds — `readPeerMeshNomineeIndexes` → `readPeerMeshNomineeMatch`, `nomineeMatch` through the select job and both children, the jobs / api fixtures, and the 6.31 hash fence's `peer-mesh-wa-reminder.ts` pin re-taken (rename-only, dated note). The jobs' live legs remain.)* — `runClaimPeerMeshSelect`, `readPeerMeshNomineeIndexes` (defined in the requests child, imported by the
       reminder child) → the match object; the stale-cut check tests `nomineeMatch === null` (it compares the cut, ⛔ values); every G7
       fixture renamed; test fixtures that seed a REAL login blind index where a leg needs a number ≠ link case (6.36d G16); AC7's staff-line
       legs.
@@ -786,7 +786,33 @@ and `locales/classification.json`; `packages/domain/src/ids/index.ts`; `schema/m
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
+
 ### Debug Log References
+
+- **Test database:** a FRESH `twt_6_36e` on the `:5434` container (`twt-test-pg-b`; `ALTER DATABASE … SET timezone 'UTC'`; the
+  project's migrator, 181 migrations). ⛔ `:5433` — an unmerged `0181` there would make 11b-4's planned `0181` (the same journal
+  `when` step) skip silently ([[project_sibling_migration_when_order_shared_db]]); ⛔ `:5432`.
+- **Task 1:** policy spec 19 / 19; neighbours (6.36b policy, 6.20 history policy, `tests/integration/nominee`) 74 / 74. One spec
+  assertion corrected on the first run: under ANOTHER Pariwar's scope the BEFORE INSERT check refuses (23514 — the version is
+  invisible) BEFORE RLS's WITH CHECK (42501) is reached; pinned as such.
+- **Task 2 mutations (each RED with its line removed, restored after):** the fragment's account half (`OR member_id = ANY(…)`) ⇒ 3
+  snapshot legs + the labeller, replacement-walk and reminder legs RED; `peerMeshNomineeLinkedMembersAsOf`'s ended-before-cut filter
+  ⇒ the forged-erasure leg RED; its projected-version filter ⇒ the recorded-after-cut leg RED.
+- **Task 2 runs:** `peer-mesh-nominees.test.ts` 20 / 20; `member-links.test.ts` (the plan) 9 / 9; `member-links.spec.ts` 14 / 14
+  (first run 4 red — a FIXTURE fault: a second `scene()` seeded members under the first Pariwar's app scope, 42501; fixed by a
+  `RESET ROLE`); `member-links-concurrency.spec.ts` 2 / 2; the peer-mesh snapshot / request / reminder / concurrency specs 126 / 126.
+  Full `@twt/domain` (live, `twt_6_36e`, load ≈ 25–32 from a peer session): **6,228 passed, 1 failed, 1 skipped** — the one red was
+  this story's race spec: its version seed read `clock_timestamp()` TWICE in one INSERT, so under load `effective_at` landed a µs
+  after `recorded_at` (0119's CHECK). Fixed (ONE read); 2 / 2 alone.
+- **Jobs / api on the renamed path:** `claim-peer-mesh.test.ts`, `claim-contact-ladder-whatsapp.test.ts` (the hash fence),
+  `claim-peer-mesh-requests-live`, `claim-peer-mesh-wa-reminders-live`: 190 / 192 — the two reds (`response after the AR-61 outcome
+  resolved…` and `round-2 P4 — the marker's OWN 72-hour recheck…`) each failed at ~20.9 s (the 20 s timeout) under load ≈ 32 and
+  passed ALONE (1 / 1 each); neither touches the nominee path. `peer-request-after-send.spec.ts` 1 / 1. `tsc` clean for
+  `@twt/domain` (src + tests), `apps/jobs`, `apps/api` (`@twt/domain` resolves to SOURCE — ⛔ a stale dist); ESLint exit 0.
+- **Hash fences:** every `createHash('sha256')` pin in `apps/*/tests` and `packages/*/tests` cross-checked against the changed
+  files — ONE hit, `peer-mesh-wa-reminder.ts` in `claim-contact-ladder-whatsapp.test.ts`, re-taken with a dated note (the diff is the
+  `nomineeMatch` rename and its type import only).
 
 ### Completion Notes List
 
@@ -806,8 +832,60 @@ and `locales/classification.json`; `packages/domain/src/ids/index.ts`; `schema/m
   default). ⛔ Code. Next: Task 0.4.
 - 2026-10-24 — v1.4: Task 0.4 DONE (BigDev: *"yes, do it"*) — the records commit, ledger `2026-10-24d` (`a`/`c` this branch's, `b`
   11b-4's). AC0 MET. ⛔ Code. Next: Task 1.
+- 2026-10-24 — DEV (`bmad-dev-story 6.36e`, ledger `2026-10-24e`): row → in-progress. **Task 1** (`c78b8950`): migration
+  `0181_member-nominee-links` exactly as NE1 (answer × state, both written once; the guard; the BEFORE INSERT version check; the live
+  UNIQUE per version; per-command RLS + FORCE, ⛔ DELETE) + `nominee_link_resolve` in `member_daily_counters_counter_check` (LOCKSTEP
+  with `MEMBER_DAILY_COUNTERS`); schema, RLS mirror, `NomineeLinkId`, barrels; an extra `(version_id)` index for the exclusion's read
+  (it must see ENDED rows, which the live UNIQUE does not cover).
+- 2026-10-24 — **Task 2**: `nominee/member-links.ts` — `chargeNomineeLinkResolve` (6.36b's caller gate + the counter, all-or-nothing;
+  6.36b's `chargeMemberCounter` EXPORTED for it — the SAME upsert), `resolveNomineeLinkTargets` (`knownPersonEligibleSql`, imported
+  from `../member/known-people.js` directly — TR13), `lockLiveNomineeLinks` (`FOR UPDATE OF l`, with `onHead` computed BEFORE the
+  save appends), PURE `planNomineeLinks` (NE2's carry / end / insert and the three refusals) + `applyNomineeLinkPlan` (ends dated the
+  save's `recordedAt`; a carry copies the answer and `asked_at` IN SQL, µs kept), `listNomineeLinksForDeclarer` (head versions),
+  `listNomineeLinkRequests` (keyset; ⛔ a dead declarer's), `answerNomineeLinkRequest` (once; `request_closed` / `not_found` /
+  `not_available` — the answerer gate `nomineeLinkAnswererSql`), `eraseNomineeLinks` (live only), `getNomineeLinksForExport`,
+  `listNomineeLinksOfVersions` (the exclusion's read). 6.36d's fragment widened to `PeerMeshNomineeMatch` (numbers OR marked
+  accounts); `nomineeMatch` REQUIRED on every ND4 type; `peerMeshNomineeMatch` reads the links in the SAME `inScope` read (DB only)
+  through pure `peerMeshNomineeLinkedMembersAsOf`; `peer_is_nominee` reused. ⚠ Done WITH Task 2 so the tree builds: Task 4's
+  RENAME half (jobs + fixtures + the hash pin) — Task 4's own legs remain.
 
 ### File List
+
+*(Tasks 1–2 so far; completed at Step 9.)*
+
+- `packages/domain/migrations/0181_member-nominee-links.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/member_nominee_links.ts` (new)
+- `packages/domain/src/policies/member-nominee-links-rls.ts` (new)
+- `packages/domain/src/schema/member_daily_counters.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/nominee/member-links.ts` (new)
+- `packages/domain/src/nominee/index.ts`
+- `packages/domain/src/member/known-people.ts` (`chargeMemberCounter` exported)
+- `packages/domain/src/claim/peer-mesh-nominees.ts`
+- `packages/domain/src/claim/peer-mesh-read.ts`
+- `packages/domain/src/claim/peer-mesh-request.ts`
+- `packages/domain/src/claim/peer-mesh-wa-reminder.ts`
+- `apps/jobs/src/claim-peer-mesh.ts`
+- `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`
+- `apps/jobs/src/scheduler/claim-peer-mesh-wa-reminders.ts`
+- `packages/domain/tests/integration/rls/member-nominee-links-policy-regression.spec.ts` (new)
+- `packages/domain/tests/nominee/member-links.test.ts` (new)
+- `packages/domain/tests/integration/nominee/member-links.spec.ts` (new)
+- `packages/domain/tests/integration/nominee/member-links-concurrency.spec.ts` (new)
+- `packages/domain/tests/claim/peer-mesh-nominees.test.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-workplace-snapshot.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-request.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-request-concurrency.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-wa-reminder.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-wa-reminder-concurrency.spec.ts`
+- `apps/jobs/tests/claim-peer-mesh.test.ts`
+- `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts`
+- `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`
+- `_bmad-output/implementation-artifacts/6-36e-nominee-member-link-at-declaration.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 

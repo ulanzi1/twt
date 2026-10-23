@@ -183,6 +183,7 @@ const begin = (
     nameFault?: 'name_none' | 'name_erased' | 'name_unresolvable' | null;
     templates?: { readonly hi: string | null; readonly en: string | null };
     nominees?: readonly string[];
+    linked?: readonly MemberId[];
   } = {},
 ) =>
   beginPeerMeshWaReminder(getTx().client, {
@@ -193,7 +194,7 @@ const begin = (
     now: o.now ?? new Date(),
     nameFault: o.nameFault ?? null,
     templates: o.templates ?? TEMPLATES,
-    nomineeMobileIndexes: o.nominees ?? [],
+    nomineeMatch: { mobileIndexes: o.nominees ?? [], memberIds: o.linked ?? [] },
   });
 
 /** Story 6.36d — `m`'s login blind index (the seeded `idx-…` string). */
@@ -405,6 +406,13 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     expect(await only(nominee)).toMatchObject({ send_outcome: 'skipped_recipient_ineligible', send_started_at: null });
     const other = await seedReminder();
     expect((await begin(other, 0, { nominees: [`idx-${randomUUID()}`] })).kind).toBe('begun');
+  });
+
+  it('Story 6.36e (NE7, AC6): a neighbour the deceased MARKED as a nominee (by ACCOUNT, ⛔ by number) ⇒ `skipped_recipient_ineligible`; an EMPTY list ⇒ begun', async () => {
+    const marked = await seedReminder();
+    expect(await begin(marked, 0, { linked: [marked.pings[0]!.memberId] })).toEqual({ kind: 'skipped', outcome: 'skipped_recipient_ineligible' });
+    const other = await seedReminder();
+    expect((await begin(other, 0, { linked: [] })).kind).toBe('begun');
   });
 
   it('WR2 (iii) (b) — a STARTED reply (⛔ submitted) still gets the reminder', async () => {

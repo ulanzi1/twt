@@ -151,8 +151,11 @@ export async function lockKnownPeopleNamer(db: Db, namerMemberId: MemberId): Pro
   await db.execute(sql`SELECT member_known_people_lock_namer(${namerMemberId})`);
 }
 
-/** Atomically add `n` to a member's IST-day counter if the result stays ≤ `cap`. `false` ⇒ refused (the row unchanged). */
-async function chargeMemberCounter(
+/**
+ * Atomically add `n` to a member's IST-day counter if the result stays ≤ `cap`. `false` ⇒ refused (the row unchanged).
+ * ⭐ EXPORTED by Story 6.36e — the declare's `nominee_link_resolve` charge (`nominee/member-links.ts`) uses the SAME upsert.
+ */
+export async function chargeMemberCounter(
   db: Db,
   pariwarId: PariwarId,
   memberId: MemberId,

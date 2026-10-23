@@ -657,7 +657,7 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
           alternative;
         - 6.36d story — a dated annotation on ND8 / G18 (⛔ rewritten); 6.36b story — a dated note that its contact matching has a second
           purpose (per PQ2).
-- [ ] **Task 1 — the table (AC1)** — migration (the NE1 two-axis state, the BEFORE INSERT version check, the `nominee_link_resolve` counter
+- [x] **Task 1 — the table (AC1)** *(2026-10-24: migration `0181_member-nominee-links` — ⛔ committed anywhere before; the policy spec 19 / 19 on a FRESH `twt_6_36e` (:5434))* — migration (the NE1 two-axis state, the BEFORE INSERT version check, the `nominee_link_resolve` counter
       CHECK widening) + journal + schema + RLS mirror + `MEMBER_DAILY_COUNTERS` + the `NomineeLinkId` brand + barrels + the policy-regression
       spec (incl. the V1 end / erase legs).
 - [ ] **Task 2 — the domain (AC3, AC6)**

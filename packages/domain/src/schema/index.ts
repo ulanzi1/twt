@@ -83,6 +83,9 @@ export * from './member_nominee_versions.js';
 export * from './nominee_determinations.js';
 export * from './nominee_corrections.js';
 export * from './claim_nominee_findings.js';
+// Story 6.36e (0181) — the nominee MEMBER LINK: which member account a declarer marked as a nominee, hung off the version
+// (answer × state, both written once; ⛔ number, ⛔ name). Read by 6.36d's exclusion only (NE14).
+export * from './member_nominee_links.js';
 // Story 3.5 — member medical disclosure (tenant-isolated; condition codes + free-text Tier-1
 // envelope). Per-disclosure PK (disclosure_id) — APPEND-ONLY history (NOT latest-wins; Epic 4
 // walks the full history); FK cascade to members for RTBF (Story 3.12) + FK to consent_records.

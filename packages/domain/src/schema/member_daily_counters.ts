@@ -12,8 +12,9 @@ import { date, integer, pgTable, primaryKey, text, uuid } from 'drizzle-orm/pg-c
 import type { MemberId, PariwarId } from '../ids/index.js';
 import { members } from './members.js';
 
-/** The member's counters. ⚠ LOCKSTEP with 0162's `member_daily_counters_counter_check`. */
-export const MEMBER_DAILY_COUNTERS = ['contact_match_requests', 'contact_match_numbers', 'known_people_ask'] as const;
+/** The member's counters. ⚠ LOCKSTEP with `member_daily_counters_counter_check` (0162; widened by 0181 with
+ *  `nominee_link_resolve` — Story 6.36e NE5, the declare's number lookup). */
+export const MEMBER_DAILY_COUNTERS = ['contact_match_requests', 'contact_match_numbers', 'known_people_ask', 'nominee_link_resolve'] as const;
 export type MemberDailyCounter = (typeof MEMBER_DAILY_COUNTERS)[number];
 
 /** The Pariwar's counters. ⚠ LOCKSTEP with 0162's `pariwar_daily_counters_counter_check`. */

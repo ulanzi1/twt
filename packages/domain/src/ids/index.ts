@@ -836,3 +836,9 @@ export const knownPersonLinkId = uuidBrand('KnownPersonLinkId');
 export type KnownPeopleCampaignId = Brand<'KnownPeopleCampaignId'>;
 /** Smart constructor: validates UUID shape, returns a branded `KnownPeopleCampaignId`. */
 export const knownPeopleCampaignId = uuidBrand('KnownPeopleCampaignId');
+
+// ── The nominee member link (Story 6.36e, migration 0181) ────────────────────────────────────
+/** Per-row address of a nominee member link (`member_nominee_links.link_id`). */
+export type NomineeLinkId = Brand<'NomineeLinkId'>;
+/** Smart constructor: validates UUID shape, returns a branded `NomineeLinkId`. */
+export const nomineeLinkId = uuidBrand('NomineeLinkId');

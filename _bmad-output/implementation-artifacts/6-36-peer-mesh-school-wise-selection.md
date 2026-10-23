@@ -165,7 +165,7 @@ person asked.
    earliest claim naming the same `deceased_member_id`; option A's own cost: a living member once wrongly reported dead, whose claim
    was refused, would anchor a later real death at that old, false filing — option C, keyed on `-238`'s innocence finding, narrows it); it uses THIS claim's `created_at` (the rule as written — RF1 option
    B) until the Panel rules. The select job decrypts ⛔ nothing and calls ⛔ no KMS (in v1 the certificate's OCR'd date is always empty —
-   6.36a SF17); ⛔ no encryption dependency is added to the job. Tests: a selection made with a certificate row present still cuts at the
+   6.36a SF17); ⛔ no encryption dependency is added to the job. [⭐ *Annotated 2026-10-23 (⛔ a rewrite):* SUPERSEDED IN PART by [`-386`](../../.decision-log.md#decision-2026-10-23-386) (Story 6.36d ND3) — for the nominee read only, the select job gains an encryption dependency and decrypts the deceased's nominee mobiles outside any transaction; the anchor stays the filing date.] Tests: a selection made with a certificate row present still cuts at the
    filing day; a claim created at 23:59 IST cuts at that day's 00:00 IST; a second claim for the same death cuts at ITS OWN filing day
    (the RF1 pin — the leg that flips if the Panel answers A).
    ⭐ (2026-10-16 annotation — `2026-10-16-339` (Trustee-ratified) RULED RF1 **C**: the anchor is the EARLIEST `claims.created_at` among the
@@ -629,7 +629,7 @@ Dismissed:
    (`claim-peer-mesh.ts:221`) and the domain test `packages/domain/tests/claim/peer-mesh.test.ts:25` (asserted at `:73`, `:193-199`); the
    jobs test's replay legs already pass the stored id (`:307`, `:350`) but feed `selectPeerMesh` directly (AC3). ⚠ And v1's `metricId` IS
    the constant (`:102`) — give it a literal id FIRST (AC3).
-2. ⚠ **⛔ no KMS in this job** — the anchor is the filing date (SF17); a later OCR-date anchor is a NEW metric id with its own story.
+2. ⚠ **⛔ no KMS in this job** [⭐ *Annotated 2026-10-23:* superseded in part by [`-386`](../../.decision-log.md#decision-2026-10-23-386) for the nominee read — Story 6.36d] — the anchor is the filing date (SF17); a later OCR-date anchor is a NEW metric id with its own story.
 3. ⚠ **`settled` reads `created_at`; the 90-day previous-workplace test reads `started_on`** — two different clocks for two different
    questions (SW22 vs SW21). Swapping them lets a typed date buy rank.
 4. ⚠ **A "benign" append race is ⛔ benign** — never swallow `ClaimStreamConcurrencyError` in this job (AC8).

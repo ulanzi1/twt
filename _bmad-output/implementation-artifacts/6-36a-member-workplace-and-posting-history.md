@@ -400,7 +400,7 @@ my family picks.**
   under a LITERAL id. The engine gains a grouped form: groups in order — `workplace` (cap 5) then `named_by_member` (cap 3); the FIRST
   group with ≥ 1 eligible person is the selection's SOURCE; ⛔ never a second group to fill up (CF4's option C was rejected); none ⇒ nobody
   (SW25). Supersedes 6.6's D3 (*"without touching the engine"*) — an author decision, BigDev's.
-- **SW19 — the ANCHOR is the FILING date.** ⭐ *Annotated 2026-10-16 (⛔ a rewrite):* SUPERSEDED IN PART by `2026-10-16-339` (Trustee-ratified,
+- **SW19 — the ANCHOR is the FILING date.** ⭐ *Annotated 2026-10-23 (⛔ a rewrite):* *"⛔ No decrypt, ⛔ no KMS call in the select job"* is SUPERSEDED IN PART by [`-386`](../../.decision-log.md#decision-2026-10-23-386) (Story 6.36d ND3) — for the nominee read only. ⭐ *Annotated 2026-10-16 (⛔ a rewrite):* SUPERSEDED IN PART by `2026-10-16-339` (Trustee-ratified,
   RF1 C) — when one death has more than one claim, the filing date is the death's FIRST claim's, unless an investigation found the member
   innocent of that claim (`-238`); built in 6.36's `resolvePeerMeshFilingCut`.
   The claim's filing date (`claims.created_at`, IST) — the only date of the death known when
@@ -444,7 +444,7 @@ my family picks.**
   false for every named candidate). The ranked group is stored, capped deterministically at its first 500 (`ranked_member_ids`, immutable) — the first ≤ cap are asked;
   6.27c replaces a send-time skip with the next in the SAME list (PM1 (ii)). *Alt:* (B) longest time together — start dates are
   self-declared ⇒ the ranking could be bought with a typed date.
-- **SW23 — the filter (PM1 (i)), ONE predicate.** Eligible = `members.state = 'active'` · ⛔ no claim (in any state) naming them as the
+- **SW23 — the filter (PM1 (i)), ONE predicate.** ⭐ *Annotated 2026-10-23 (⛔ a rewrite):* [`-386`](../../.decision-log.md#decision-2026-10-23-386) adds ONE conjunct (a declared nominee, matched by sign-up number, is ⛔ eligible) and NARROWS the recorded residual *"a relative of the deceased is ⛔ not excluded"* — a relative who is a declared nominee is excluded. Eligible = `members.state = 'active'` · ⛔ no claim (in any state) naming them as the
   deceased · an identity row exists (`EXISTS member_identities` — an `active` member always has a normalised mobile: memory *Member always
   has a mobile*; ⛔ no KMS) · ⛔ not the deceased · ⛔ not the claimant (⭐ *annotated 2026-10-16, ⛔ a rewrite:* SUPERSEDED IN PART by `2026-10-16-340` call 2 —
   ⛔ the claimant of ANY claim, in any state, naming this deceased; and by `2026-10-16-341` — ⛔ the filer of ANY intake attempt for it). Exported as ONE domain predicate that 6.27c's send-time re-check MUST

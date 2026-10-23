@@ -45,8 +45,8 @@ LETTERS: G = found facts (traced to code at the pin) · ND = build decisions (DE
 
 Status: ready-for-dev
 
-> ⭐ **Next: Task 0.3** — governance FIRST, ⛔ code. Task 0.2 is complete (ND1–ND10 decided, the Panel has ruled `-384`, the `-356`
-> reading answered); the author-commit is committed ALONE (Task 0.3), the records commit follows (Task 0.4), and only then Task 1.
+> ⭐ **Next: Task 1 (code)** — re-run Task 0.1's preflight first. Governance is DONE: Task 0.2 (ND1–ND10 decided, the Panel has ruled `-384`,
+> the `-356` reading answered), Task 0.3 (`-386`, committed alone as `bd249a6f`), Task 0.4 (the records); earlier: the author-commit is committed ALONE (Task 0.3), the records commit follows (Task 0.4), and only then Task 1.
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -503,7 +503,7 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0)**
+- [ ] **Task 0 — governance FIRST (AC0)** — 0.2–0.4 done; 0.1's preflight is re-run at the start of Task 1
   - [ ] 0.1 Preflight: `git fetch origin`; `git diff --name-only 69e35f73 origin/main -- apps packages scripts infra` — if non-empty, rebase
         and re-verify G1–G17 by FUNCTION; STOP if any of: (S1) the predicate already has a nominee conjunct; (S2) a nominee blind index now
         exists; (S3) a new caller of the predicate exists that G2 does not list; (S4) `member_nominees` / `member_nominee_versions`
@@ -526,7 +526,8 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
           an unmatched nominee is read as ⛔ within `-356`; two follow-ups recorded (Task 0.4). And on the `-340` / `-341` finding:
           *"Verify + record (Recommended)"* — verified and recorded in `deferred-work.md` (2026-10-23).
         ⇒ Task 0.2 is COMPLETE.
-  - [ ] 0.3 The author-commit: the next free decision id (≥ `-385`, dated the day it is COMMITTED), *"AUTHOR-COMMIT (BigDev) — STORY
+  - [x] 0.3 The author-commit: ⭐ DONE — [`2026-10-23-386`](../../.decision-log.md#decision-2026-10-23-386), committed ALONE as `bd249a6f`
+        (`-385` was row 6-35's, committed first). The next free decision id (≥ `-385`, dated the day it is COMMITTED), *"AUTHOR-COMMIT (BigDev) — STORY
         6.36d's BUILD DECISIONS ND1–ND10 …"*, with §0 (the `-340` §0 class; the ND7 and ND10 halves answered by `-384`), the §0 re-run table,
         ND1–ND10 as decided (citing `-384` for ND7 and ND10), and:
         - SUPERSEDES IN PART `-330` SW19's *"⛔ No decrypt, ⛔ no KMS call in the select job"* — for the nominee read only; `-330` ⛔ edited;
@@ -548,7 +549,7 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
         - records the ND6 delivery-failure §0 row (`-295` §0).
         Committed ALONE as `governance: …`; its SHA written after, ⛔ before ([[project_decision_log_writes_user_inserted]] — if the write is
         refused, ask once).
-  - [ ] 0.4 The records commit (append-only, each dated):
+  - [x] 0.4 The records commit (append-only, each dated): ⭐ DONE 2026-10-23 (the commit after `bd249a6f`).
         - `epics.md` — a `### Story 6.36d` entry after Story 6.36, before 6.37, in the `### Story 6.37` form (a blockquote *"⚠ **Added
           <date> (Story 6.36d, Task 0.4)** — the row … was added by BigDev in session (`-365` Occasion: *"Exclude at selection"*), ⛔ by Panel
           ruling, with ⛔ `epics.md` entry (*'owed at its create-story'*)"*), then As the Trust / ACs in brief;
@@ -748,6 +749,12 @@ copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test 
   `-356`, two follow-ups in Task 0.4. A side finding — `-340` / `-341`'s filer conjuncts exclude nobody in v1 (every intake path writes
   `claimant_actor_id` NULL) — verified and recorded in `deferred-work.md` (*"Verify + record (Recommended)"*).
 
+- 2026-10-23 — Task 0.3: [`2026-10-23-386`](../../.decision-log.md#decision-2026-10-23-386) (author-commit, ND1–ND10) committed ALONE as
+  `bd249a6f` (`-385` was taken first by row 6-35). Task 0.4: the records — `epics.md` `### Story 6.36d`; roster Row 31 leg (i) (ALL EIGHT →
+  ALL NINE, its Panel half met by `-384`, counsel's half open) + dated notes on Rows 26 / 27 / 35 (g); `deferred-work.md` — the family item
+  and 6.36's W3; dated annotations on 6.36 (AC4, Trap 2), 6.36a (SW19, SW23) and 6.31 (§0 edge (iii), UPSTREAM); question 6 added to
+  `counsel-question-2026-10-18-nominee-contact-basis.md` (⛔ sent); the follow-up row `6-36e-nominee-member-link-at-declaration` (backlog).
+
 ### File List
 
 ## Change Log
@@ -759,3 +766,4 @@ copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test 
 | 2026-10-23 | 1.2 | The Panel note written early and ANSWERED — `2026-10-23-384` (Trustee-ratified, DR + KB): Q1 A, Q2 A. ND7 settled as (b), ND10's Panel half as (a); counsel's written basis stays a go-live condition (Row 31 (i)). Dated notes only — ⛔ earlier text edited. Status stays `ready-for-dev`. |
 | 2026-10-23 | 1.3 | Task 0.2: BigDev accepted ND1–ND6, ND8, ND9 as recommended. Rebased onto `69e35f73` and re-pinned. ND6/AC3 contradiction fixed (ND3's "never without the indexes" scoped to selections that choose anyone; AC3 owns the select-job fault path; M8b–M8e). Decision-status cleanup: ND1–ND10 now state CHOSEN / Rejected; the Panel-questions section is the `-384` ruling with a pointer to the note; ACs, Tasks and Dev Notes lose the branches for rejected options. ⛔ Commitment softened (a fresh-context check of the diff restored the two it found). Still owed: the `-356` reading and BigDev's confirmation of ND7 / ND10. |
 | 2026-10-23 | 1.4 | Task 0.2 complete: ND7 / ND10 confirmed; the `-356` reading answered after an investigation (G18 — the declared number is the only nominee→member link; BigDev accepted the data-model gap + two follow-ups in Task 0.4); ND8's first residual rewritten precisely; the `-340` / `-341` null-claimant finding recorded in `deferred-work.md`. Next: Task 0.3. |
+| 2026-10-23 | 1.5 | Task 0.3 (`-386`, `bd249a6f`) and Task 0.4 (records across epics, roster, deferred-work, three sibling stories, the counsel question; new backlog row 6-36e) done. Governance complete; next is Task 1. |

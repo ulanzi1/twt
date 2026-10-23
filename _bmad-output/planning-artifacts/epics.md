@@ -3639,6 +3639,26 @@ to 3, otherwise nobody — ⛔ never the district, ⛔ never a fill-up); everyth
 colleagues first, ONE staff line about recent changes; ONE eligibility predicate shared with 6.27c; each person's source on every ping and
 shown to the District Admin and later approvers (⛔ never the inspector); a claim with nobody to ask goes on (`claim.peer_mesh_none_to_ask`).
 
+### Story 6.36d: A Member's Nominees Are Never Among the Five Asked About Their Death — Matched by Phone Number at Selection and Again Before Every Message `[PRIMITIVE]`
+
+> ⚠ **Added 2026-10-23 (Story 6.36d, Task 0.4)** — the row `6-36d-exclude-nominees-from-the-five` was added by BigDev in session on
+> 2026-10-19 (Story 6.31's validate — *"Exclude at selection"*, recorded in [`-365`](../../.decision-log.md#decision-2026-10-19-365)'s
+> Occasion), ⛔ by Panel ruling, with ⛔ `epics.md` entry (*"owed at its create-story"*). Its build decisions are
+> [`-386`](../../.decision-log.md#decision-2026-10-23-386) ND1–ND10 (author-commit); its two §0 halves — the nominee's number compared
+> with members' numbers, and nominee changes in the staff warning — are [`-384`](../../.decision-log.md#decision-2026-10-23-384) Q1 A /
+> Q2 A (Trustee-ratified). Its go-live record is roster Row 31 leg (i) (counsel's written basis). Full ACs:
+> `_bmad-output/implementation-artifacts/6-36d-exclude-nominees-from-the-five.md`. ⛔ A merge fence.
+
+As the Trust, I want the people a member declared as nominees never to be among the members asked about that member's death, so that
+every answer the Trust weighs comes from someone with ⛔ stake in the payout.
+
+**Acceptance Criteria (in brief):** ONE new conjunct on the ONE eligibility predicate — a member whose sign-up number is one of the
+deceased's nominee numbers, as recorded before the filing cut, is ⛔ eligible — at selection, at every send-time re-check and
+replacement, and at the WhatsApp reminder's re-check; the nominee numbers decrypted, normalised and hashed into the login space OUTSIDE
+any transaction, ⛔ stored or logged; a KMS fault fails closed and is alarmed (the select job defers hourly, then after 24 h finishes with
+an empty selection); a new staff label `peer_is_nominee`; nominee changes in the 90 days before the claim join the staff warning. A
+nominee is found ONLY on the number they signed up with (the data-model gap, accepted).
+
 ### Story 6.37: The Texts and Login Codes Are Actually Sent — a MSG91 Adapter Behind the SMS Seam, Sending Each Template's Named Values, With a Pre-flight That Proves Every Template Before a Text Is Spent `[PRIMITIVE]`
 
 > ⚠ **Added 2026-10-17 (Story 6.37, Task 0.4)** — the row `6-37-msg91-sms-gateway-adapter` was added by

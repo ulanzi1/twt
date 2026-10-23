@@ -59,7 +59,10 @@ carries the member's FULL name, ⛔ the text's short form (BigDev: *"(a) Full na
 for the neighbours' TEXT only, and *"only when the full name does not fit"* — WhatsApp has ⛔ SMS name slot, so the full name
 fits; (iii) a NOMINEE of the deceased is to be EXCLUDED FROM THE FIVE at selection — new row
 `6-36d-exclude-nominees-from-the-five` (BigDev 2026-10-19, in session: *"Exclude at selection"*; a nominee has a stake in the
-payout, so their answer is ⛔ an independent one — the same class as `-340` / `-341`'s exclusion of filers). 6.31 therefore adds
+payout, so their answer is ⛔ an independent one — the same class as `-340` / `-341`'s exclusion of filers). [⭐ *Annotated 2026-10-23 (⛔ a
+rewrite):* [`-386`](../../.decision-log.md#decision-2026-10-23-386) SUPERSEDES IN PART `-365` MATCH (iii) — 6.31's WR2 (ix) re-check now carries the nominee conjunct through the shared
+predicate; a nominee on a DIFFERENT number from the declared one is still reminded (BigDev's reading: ⛔ a `-356` "notification for
+nominee").] 6.31 therefore adds
 ⛔ nominee check of its own: once that row ships a nominee is never pinged, so is never reminded and `-356` (*"drop WhatsApp only
 notification for nominee"*) is never in play. ⚠ Until it ships, a nominee-member selected as one of the five would be texted
 (6.27c) and, if opted in, reminded — recorded; ⛔ in production (`-356`'s own not-ratified reading (ii) says a member opt-in does
@@ -1232,7 +1235,8 @@ honours it); two review references (both correct); the dropped-and-re-applied 01
   is unapproved (`-349`, roster Row 30). Independent of row 6-35 (language switch — WR14 reads through the one function it will change).
 - ⭐ UPSTREAM (⛔ a merge fence): row `6-36d-exclude-nominees-from-the-five` (backlog, BigDev 2026-10-19) removes the deceased's
   declared nominees from the five (a mobile match — a nominee row has ⛔ member link); 6.31 relies on it and carries ⛔ nominee
-  check (§0 edge (iii)). Go-live of the reminder should follow it — the roster row's leg (g) notes it.
+  check (§0 edge (iii)). Go-live of the reminder should follow it — the roster row's leg (g) notes it. [⭐ *Annotated 2026-10-23:* row
+  6-36d is decided ([`-386`](../../.decision-log.md#decision-2026-10-23-386); `ready-for-dev`) — it threads the nominee indexes into `beginPeerMeshWaReminder`; Row 35 (g) waits on its `done`.]
 - ⭐ REACH (⛔ a merge fence): row `5-10-signup-whatsapp-opt-in-checkbox` (backlog, BigDev 2026-10-19) adds an UNTICKED signup box
   *"Send me WhatsApp messages from the Trust"* + a popup to go back or proceed — the ratified §3.4 *"explicit affirmative consent
   capture in-app"*; the draft Terms name ⛔ WhatsApp as a contact channel (R10(B): *"convenience mirrors only"*), and `-065`

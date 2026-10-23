@@ -71,3 +71,15 @@ this claim."* — the claimant being the person who files the claim and ticks it
 other means of communication that may appear in future"* from the claimant's agreement. ⛔ Ask question 3's second half; when sending,
 question 3 reads: *"Is the claimant's own reworded agreement — "I agree that the Trust may contact me by text message, WhatsApp, phone
 call or post, about this claim." — a sufficient basis for texts, WhatsApp, calls and post to the claimant?"* (roster Row 36 (b)).
+
+*Dated note, 2026-10-23 (Story 6.36d Task 0.4, Decision `2026-10-23-386` ND10; Decision `2026-10-23-384` Q1 A, Trustee-ratified) —
+still WRITTEN, ⛔ sent:* ADD question 6 when sending — ⛔ change to questions 1–5:
+
+> *6. **Comparing a nominee's number with members' numbers.** When a member dies, the Trust asks up to five of that member's
+> colleagues what they know. To make sure a nominee — who would receive the money — is never one of them, the system compares the
+> dead member's one or two nominee phone numbers with the phone numbers members signed up with. The numbers are compared inside the
+> system and kept nowhere; nothing is sent to the nominee because of it. The Trustee Panel has permitted this use (2026-10-23), on
+> the ground it stated for contacting a nominee ("… prevent fraud …"). On what basis under the DPDP Act may the Trust do this, and
+> does the privacy policy need a line for it?"*
+
+Its answer closes roster Row 31 leg (i)'s counsel half (with the privacy-policy line); nothing in Story 6.36d goes live until then.

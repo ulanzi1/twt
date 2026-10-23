@@ -269,8 +269,9 @@ export async function getEffectiveFixedAmount(
  * earliest-starting row whose `effective_from` is strictly in the FUTURE (`effective_from > asOf`),
  * ordered `effective_from ASC, version ASC`; `null` when no future change is scheduled. Two consumers:
  * the trustee's setter view (`upcoming`, read at DB now() with no options) and the member's My Pool
- * card (Story 8.15 — read as of the live pool's `committed_at` with `excludeAmount`, feeding the
- * staged transition copy). DISPLAY context only; a pool's amount stays its SNAPSHOTTED `fixed_amount`
+ * card (Story 8.15 — read as of `max(committed_at, now)` with `excludeAmount`, feeding the staged
+ * transition copy; Review round 2 RD1 — read as of `committed_at` alone, a row already in force could
+ * be returned here and hide the real future change behind it). DISPLAY context only; a pool's amount stays its SNAPSHOTTED `fixed_amount`
  * (8.2 D3), never this future value.
  *
  * ⛔ A MOOT row is never upcoming (Story 8.15 AC2). `closeOpenHead` can leave a ZERO-WIDTH window

@@ -114,6 +114,56 @@ describe.skipIf(!hasDatabase)('My Pool card read accessors (Story 8.2)', () => {
       );
       expect(none).toBeNull();
     });
+
+    // Story 8.15 Review round 2 RD1 — the card reads at max(C, now), ⛔ not C. A FRESH tenant (see below).
+    it('RD1: a reverted in-window change does not hide a FUTURE change when read at now — it does at C', async () => {
+      const { client, tx } = getTx();
+      const p = randomUUID();
+      const row = (version: number, fixedAmount: number, from: string, until: string | null) => ({
+        pariwarId: ids.pariwarId(p),
+        version,
+        fixedAmount,
+        effectiveFrom: new Date(from),
+        effectiveUntil: until === null ? null : new Date(until),
+        changeType: 'standard' as const,
+        createdByActor: 'trustee-actor-1',
+      });
+      // ₹500; ₹600 from Jan 12; back to ₹500 from Jan 14 (a corrected mis-set change); ₹700 from Apr 20.
+      await tx.insert(schema.poolFixedAmountSchedule).values([
+        row(1, 500, '2027-01-01T00:00:00.000Z', '2027-01-12T00:00:00.000Z'),
+        row(2, 600, '2027-01-12T00:00:00.000Z', '2027-01-14T00:00:00.000Z'),
+        row(3, 500, '2027-01-14T00:00:00.000Z', '2027-04-20T00:00:00.000Z'),
+        row(4, 700, '2027-04-20T00:00:00.000Z', null),
+      ]);
+      await enterAppScope(client, p);
+      const C = new Date('2027-01-10T00:00:00.000Z'); // the live pool, committed at ₹500
+      const now = new Date('2027-01-15T00:00:00.000Z');
+      const pariwarId = ids.pariwarId(p);
+      const select = (upcoming: Awaited<ReturnType<typeof poolDomain.resolveUpcomingFixedAmountChange>>, inForce: number) =>
+        poolDomain.selectFixedAmountTransition({
+          poolFixedAmount: 500,
+          poolCommittedAt: C,
+          now,
+          upcoming,
+          inForceNow: { fixedAmount: inForce },
+          memberNextLivePool: null,
+          isFirstCycle: false,
+        });
+
+      const inForceNow = await poolDomain.resolveEffectiveFixedAmountRow(tx, pariwarId, now);
+      expect(inForceNow?.fixedAmount).toBe(500); // the revert is in force — no next_cycle
+
+      // ⛔ The hazard: read at C, LIMIT 1 returns the past ₹600 row; the selector drops it as past, so
+      // the ₹700 change behind it is never announced.
+      const atC = await poolDomain.resolveUpcomingFixedAmountChange(tx, pariwarId, C, { excludeAmount: 500 });
+      expect(atC?.fixedAmount).toBe(600);
+      expect(select(atC, 500)).toBeNull();
+
+      // ⭐ Read at max(C, now) = now: the ₹700 row, announced dated.
+      const atNow = await poolDomain.resolveUpcomingFixedAmountChange(tx, pariwarId, now, { excludeAmount: 500 });
+      expect(atNow?.fixedAmount).toBe(700);
+      expect(select(atNow, 500)).toEqual({ stage: 'scheduled', effectiveOn: '2027-04-20', newAmount: 700 });
+    });
   });
   // ── Story 8.15 D5 — the first-cycle read ────────────────────────────────────────────────────────
   //

@@ -1303,6 +1303,18 @@ export interface ResolveCtx {
 /** The member's assigned pool in the soonest-closing live cycle (D7) + the window anchor + N. */
 export interface ChosenLivePool {
   readonly committedAt: Date;
+  /**
+   * Story 8.15 (Review round 2 RD2) — the live cycles that sort AFTER this one in the D7 order
+   * (`committed_at`, then `cycle_id`), member-assignment NOT yet checked. Pure — from the candidates already
+   * read, no extra query here. The card reads the member's assignment in them (round 3 RD3): the first one
+   * they are in IS their next cycle, already at its own snapshot, and `next_cycle` names that pool's amount
+   * iff it differs from this one's. ⚠ A cycle the member is NOT in is not their next cycle and never counts
+   * (they could otherwise be never told — not on this card, not on a later one, since D5's first-cycle note
+   * counts other members' pools).
+   */
+  readonly laterLiveCycleIds: ReadonlyArray<
+    Awaited<ReturnType<typeof alertDomain.listLiveAlertsForPariwar>>[number]['cycleId']
+  >;
   readonly poolCount: number;
   readonly cycleId: Awaited<ReturnType<typeof alertDomain.listLiveAlertsForPariwar>>[number]['cycleId'];
   /**
@@ -1360,7 +1372,7 @@ export async function resolveMemberLivePool(
 
   // (5) The member's assigned pool in the soonest-closing cycle they are assigned in. Iterate in
   //     tie-break order and take the FIRST assignment.
-  for (const candidate of candidates) {
+  for (const [index, candidate] of candidates.entries()) {
     let resolution: Awaited<ReturnType<typeof poolDomain.resolveAssignedPoolWithRosterForMember>>;
     try {
       resolution = await poolDomain.resolveAssignedPoolWithRosterForMember(
@@ -1378,6 +1390,7 @@ export async function resolveMemberLivePool(
     if (resolution.assigned) {
       return {
         committedAt: candidate.committedAt,
+        laterLiveCycleIds: candidates.slice(index + 1).map((c) => c.alert.cycleId),
         poolCount: candidate.alert.poolCount,
         cycleId: candidate.alert.cycleId,
         alertId: candidate.alert.alertId,
@@ -1391,26 +1404,62 @@ export async function resolveMemberLivePool(
 /**
  * ⭐ Story 8.15 (AC1, D3, D8) — the card's staged fixed-amount transition, or `null`.
  *
- *  · The upcoming change is read AS OF THE LIVE POOL'S `committedAt` (D3), ⛔ not `now`, and feeds the
- *    DATED stages (`scheduled` / `next_month`). `excludeAmount` = the pool's own amount, filtered in SQL (D6).
- *  · `next_cycle` (Trap 4) is decided from the amount IN FORCE at `now` (Review D1, Option A), ⛔ not from
- *    that nearest row: with two changes inside one live window the next cycle carries the LATER one, and
- *    a backdated emergency (`effective_from ≤ C`) is invisible to the as-of-C read.
- *  · `now` (= `deps.clock()`, D9) only LABELS the stage, consistent with `daysRemaining` on the card.
+ *  · Both reads are anchored at `max(C, now)` (Review round 2 RD1; superseding D3's as-of-C anchor, which
+ *    Review D1 had kept). The upcoming change feeds the DATED stages (`scheduled` / `next_month`); anchored
+ *    at C, the LIMIT-1 read could return a row already in force and HIDE a real future change behind it.
+ *    `excludeAmount` = the pool's own amount, filtered in SQL (D6).
+ *  · `next_cycle` (Trap 4) is decided from the amount IN FORCE at the anchor (Review D1, Option A), ⛔ not
+ *    from the nearest row: with two changes inside one live window the next cycle carries the LATER one,
+ *    and a backdated emergency (`effective_from ≤ C`) is invisible to any read after C. The `max` keeps an
+ *    app clock behind the DB's `committed_at` from resolving the PREVIOUS row. ⭐ When the member is already
+ *    ASSIGNED in a later live cycle, that pool IS their next cycle (rounds 2–3, RD2/RD3): `next_cycle` fires
+ *    iff ITS amount differs from this pool's and names it — never the in-force amount. A later cycle they
+ *    are NOT in never counts. The assignment reads run only when a later live cycle exists, inside this
+ *    same `try`.
+ *  · `now` (= `deps.clock()`, D9) is a DATA anchor, ⛔ not only a label: it splits "in force" from "future"
+ *    — consistent with `daysRemaining` on the card.
  *  · Fail-soft PER FIELD (D8): a throw → `null` + a warn, ⛔ never `{ assigned:false }`.
  */
 async function resolveAmountTransition(
   tx: Db,
   request: FastifyRequest,
-  input: { pariwarId: ResolveCtx['pariwarId']; committedAt: Date; poolFixedAmount: number; now: Date },
+  input: {
+    pariwarId: ResolveCtx['pariwarId'];
+    memberId: ResolveCtx['memberId'];
+    committedAt: Date;
+    poolFixedAmount: number;
+    now: Date;
+    laterLiveCycleIds: ChosenLivePool['laterLiveCycleIds'];
+  },
 ): Promise<AmountTransition | null> {
   try {
-    const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx, input.pariwarId, input.committedAt, {
+    const anchor = new Date(Math.max(input.committedAt.getTime(), input.now.getTime()));
+    const upcoming = await poolDomain.resolveUpcomingFixedAmountChange(tx, input.pariwarId, anchor, {
       excludeAmount: input.poolFixedAmount,
     });
-    // Review D1 (Option A): the amount IN FORCE at `now` decides `next_cycle` — the next cycle snapshots
-    // whatever is in force at ITS commit, and `upcoming` is only the nearest row after C.
-    const inForceNow = await poolDomain.resolveEffectiveFixedAmountRow(tx, input.pariwarId, input.now);
+    // Review D1 (Option A): the amount IN FORCE at the anchor decides `next_cycle` — the next cycle
+    // snapshots whatever is in force at ITS commit, and `upcoming` is only the nearest FUTURE row.
+    const inForceNow = await poolDomain.resolveEffectiveFixedAmountRow(tx, input.pariwarId, anchor);
+    // Review rounds 2–3 (RD2/RD3): the member's OWN next pool, if a later live cycle already holds them —
+    // then "the next cycle" is that pool, at its own snapshot. Read only when a later live cycle exists.
+    // A binding-integrity throw for one later cycle makes the answer UNRESOLVED (no `next_cycle`; dated
+    // stages and the first-cycle note stand) — ⛔ never a blank line; the same per-candidate fail-soft as
+    // step (5). (A SQL error aborts the tx instead: the next read fails and the catch below drops the line.)
+    let memberNextLivePool: { readonly fixedAmount: number } | 'unresolved' | null = null;
+    for (const cycleId of input.laterLiveCycleIds) {
+      let later: Awaited<ReturnType<typeof poolDomain.resolveAssignedPoolWithRosterForMember>>;
+      try {
+        later = await poolDomain.resolveAssignedPoolWithRosterForMember(tx, input.pariwarId, cycleId, input.memberId);
+      } catch (err) {
+        request.log.warn({ err, cycleId }, 'active-contribution: later cycle binding unresolved — no next-cycle line');
+        memberNextLivePool = 'unresolved';
+        break;
+      }
+      if (later.assigned) {
+        memberNextLivePool = { fixedAmount: later.fixedAmount };
+        break;
+      }
+    }
     const staged = {
       poolFixedAmount: input.poolFixedAmount,
       poolCommittedAt: input.committedAt,
@@ -1420,6 +1469,7 @@ async function resolveAmountTransition(
           ? null
           : { effectiveFrom: upcoming.effectiveFrom, fixedAmount: upcoming.fixedAmount, changeType: upcoming.changeType },
       inForceNow: inForceNow === null ? null : { fixedAmount: inForceNow.fixedAmount },
+      memberNextLivePool,
     };
     // Review P3: the first-cycle read (up to three queries) only matters when no upcoming stage wins (D7).
     const isFirstCycle =
@@ -1618,6 +1668,8 @@ async function resolveCard(
     committedAt,
     poolFixedAmount: pool.fixedAmount,
     now,
+    memberId: ctx.memberId,
+    laterLiveCycleIds: chosen.laterLiveCycleIds,
   });
 
   return {

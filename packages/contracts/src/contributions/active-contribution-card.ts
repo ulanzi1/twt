@@ -70,7 +70,10 @@ const CalendarDate = z
  *                     later this month; also every future-dated EMERGENCY change).
  *   · `next_month`  — "from next month …" (the change falls in the next IST calendar month; STANDARD
  *                     changes only — an emergency gives no notice, Decision `2026-10-22-383`).
- *   · `next_cycle`  — the change is already in force but this pool was spawned before it.
+ *   · `next_cycle`  — the amount in force now differs from this pool's snapshot: a change that took effect
+ *                     after the pool was spawned, or a backdated emergency written after it (in force from
+ *                     before C). Names the amount in force now — or, when the member is already in a
+ *                     later live cycle (their next one), THAT pool's amount, and only if it differs.
  *   · `first_cycle` — this pool is the first at the new amount (the amount renders above the note).
  *
  * `effectiveOn` is an IST CALENDAR DATE, ⛔ never an instant. `newAmount` is whole INR. The card's

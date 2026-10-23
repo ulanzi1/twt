@@ -24,6 +24,7 @@ const BASE: FixedAmountTransitionInput = {
   now: ist('2027-01-15T12:00:00'),
   upcoming: null,
   inForceNow: { fixedAmount: 500 },
+  memberNextLivePool: null,
   isFirstCycle: false,
 };
 
@@ -83,6 +84,15 @@ describe('selectFixedAmountTransition — the stages (AC1)', () => {
     expect(
       selectFixedAmountTransition({ ...BASE, upcoming: upcoming(BASE.now), inForceNow: inForce(600) })?.stage,
     ).toBe('next_cycle');
+  });
+
+  // Review round 2 RP1(ii): the leg above takes `next_cycle` from `inForceNow` whatever `upcoming` is, so it
+  // cannot see the `> now` guard. These two isolate it: a row EXACTLY at now is never a dated stage.
+  it('a row EXACTLY at now is never dated: in-force = pool → null; one ms later → dated', () => {
+    expect(selectFixedAmountTransition({ ...BASE, upcoming: upcoming(BASE.now) })).toBeNull();
+    expect(
+      selectFixedAmountTransition({ ...BASE, upcoming: upcoming(new Date(BASE.now.getTime() + 1)) })?.stage,
+    ).toBe('scheduled'); // same IST month as now → dated (distance 0)
   });
 
   it('a row at or before the pool commit is never a transition for this pool (the read is anchored at C)', () => {
@@ -247,6 +257,73 @@ describe('selectFixedAmountTransition — next_cycle names the amount in force N
   it('a row at or before `now` is never announced as scheduled / next_month — only the in-force amount speaks', () => {
     // Same amount in force → silent; the row is already accounted for (or moot).
     expect(selectFixedAmountTransition({ ...BASE, upcoming: upcoming(R2, 650), inForceNow: inForce(500) })).toBeNull();
+  });
+
+  // Review rounds 2–3 (RD2/RD3): when the member is already in a LATER live cycle, THAT pool is their next
+  // cycle, at its own snapshot — the line names its amount, never the in-force one.
+  it('RD3: the member\'s next pool at a NEW amount → next_cycle names IT (the in-force amount may differ)', () => {
+    // Pool ₹500; the member's next pool ₹600; ₹700 in force since that pool was committed.
+    expect(
+      selectFixedAmountTransition({ ...BASE, inForceNow: inForce(700), memberNextLivePool: { fixedAmount: 600 } }),
+    ).toEqual({ stage: 'next_cycle', newAmount: 600 });
+    // The reverse case: the change was reverted (in force = the pool's ₹500), but the next pool was
+    // committed at ₹600 meanwhile — the member's next cycle DOES ask ₹600.
+    expect(
+      selectFixedAmountTransition({ ...BASE, inForceNow: inForce(500), memberNextLivePool: { fixedAmount: 600 } }),
+    ).toEqual({ stage: 'next_cycle', newAmount: 600 });
+  });
+
+  it('RD2/RD3: the member\'s next pool at THIS pool\'s amount → no next_cycle (and only next_cycle goes)', () => {
+    const SAME = { fixedAmount: 500 } as const;
+    expect(selectFixedAmountTransition({ ...BASE, inForceNow: inForce(600), memberNextLivePool: SAME })).toBeNull();
+    // A future change is still announced dated; the first-cycle note still applies to this pool.
+    expect(
+      selectFixedAmountTransition({
+        ...BASE,
+        inForceNow: inForce(600),
+        memberNextLivePool: SAME,
+        upcoming: upcoming(ist('2027-04-14T00:00:00'), 700),
+      }),
+    ).toEqual({ stage: 'scheduled', effectiveOn: '2027-04-14', newAmount: 700 });
+    expect(
+      selectFixedAmountTransition({ ...BASE, inForceNow: inForce(600), memberNextLivePool: SAME, isFirstCycle: true }),
+    ).toEqual({ stage: 'first_cycle' });
+    // Control: no later pool → the same input IS next_cycle, from the in-force amount.
+    expect(selectFixedAmountTransition({ ...BASE, inForceNow: inForce(600) })).toEqual({
+      stage: 'next_cycle',
+      newAmount: 600,
+    });
+  });
+
+  it('RD3: an UNRESOLVED next pool → no next_cycle; a dated stage and the first-cycle note still stand', () => {
+    expect(
+      selectFixedAmountTransition({ ...BASE, inForceNow: inForce(600), memberNextLivePool: 'unresolved' }),
+    ).toBeNull();
+    expect(
+      selectFixedAmountTransition({
+        ...BASE,
+        inForceNow: inForce(600),
+        memberNextLivePool: 'unresolved',
+        upcoming: upcoming(ist('2027-04-14T00:00:00'), 700),
+      })?.stage,
+    ).toBe('scheduled');
+    expect(
+      selectFixedAmountTransition({ ...BASE, memberNextLivePool: 'unresolved', isFirstCycle: true }),
+    ).toEqual({ stage: 'first_cycle' });
+  });
+
+  // Review round 3 (F5): RD1 at selector level. The anchor itself is the handler's (pinned in the API unit
+  // legs); this pins WHY it must be in SQL: given the row a read at C returns (past), the selector says
+  // nothing; given the row a read at max(C, now) returns (future), it announces it dated.
+  it('RD1: the row a read at C returns (past) says nothing; the row a read at max(C, now) returns (future) is dated', () => {
+    const pastFromReadAtC = upcoming(R2, 600); // C < R2 ≤ now, reverted since (in force = the pool's ₹500)
+    const futureFromReadAtNow = upcoming(ist('2027-04-14T00:00:00'), 700);
+    expect(selectFixedAmountTransition({ ...BASE, upcoming: pastFromReadAtC })).toBeNull();
+    expect(selectFixedAmountTransition({ ...BASE, upcoming: futureFromReadAtNow })).toEqual({
+      stage: 'scheduled',
+      effectiveOn: '2027-04-14',
+      newAmount: 700,
+    });
   });
 
   it('selectUpcomingStage never returns first_cycle (Review P3 — the handler skips the first-cycle read when it is non-null)', () => {

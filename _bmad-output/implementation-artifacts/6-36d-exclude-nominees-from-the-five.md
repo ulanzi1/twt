@@ -370,7 +370,12 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
 
 ## 🏛️ Panel questions: TWO, both NON-blocking (one note)
 
-Written at Task 0.4 from `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md` (its order: plain-English question, THE ONE
+⭐ 2026-10-23 — WRITTEN EARLY at BigDev's request (*"write the routing note now"*), ahead of Task 0.2:
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-36d-nominees-not-asked.md` (⛔ sent). It assumes ND7 (b) and
+ND10 (a); if Task 0.2 answers otherwise, Task 0.4 REVISES it before it is sent (⛔ a second note). The drafts below are kept as written;
+the note is the version to send.
+
+Written from `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md` (its order: plain-English question, THE ONE
 FACT, options with an honest cost on each, evidence LAST) as ONE note; ⛔ sent by this story ("shown to Panel" = sent,
 [[feedback_shown_to_panel_means_sent]]). Each is "build as recommended + confirm"; the answers are named in Row 31 leg (i) and must be in
 before Row 31 closes — they gate GO-LIVE, ⛔ the build or the merge (the `-330` §0 / Row 31 (g) precedent: SC1 itself was built
@@ -537,7 +542,10 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
           here);
         - 6.36 story — a dated annotation on AC4 / Trap 2; 6.36a story — a dated annotation on SW19 and SW23; 6.31 story — dated annotations
           on §0 edge (iii) (*"6.31 therefore adds ⛔ nominee check of its own"*), its Row 35 (g) line and its UPSTREAM (⛔ a merge fence) note;
-        - the Panel note (PQ1 + PQ2, per the answers to ND7 / ND10) from the routing template — written, ⛔ sent.
+        - the Panel note (PQ1 + PQ2) — ALREADY WRITTEN 2026-10-23
+          (`trustee-panel-routing-note-2026-10-23-6-36d-nominees-not-asked.md`); here, revise it to match the Task 0.2 answers to ND7 /
+          ND10 (drop Question 1 under ND10 (b); under ND7 (a) Question 2 becomes BLOCKING and its header says so), and fill in the
+          author-commit's decision id in its E2 — ⛔ sent.
 - [ ] **Task 1 — the predicate and the indexes (AC1, AC2)**
   - [ ] 1.1 `nomineeMobileIndexes` (required) on every ND4 type + `peerMeshNomineeMatchSql` + the ND2 conjunct; doc comments extended in the
         house style.

@@ -1278,6 +1278,42 @@ Modified (records):
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `_bmad-output/implementation-artifacts/8-15-fixed-amount-transition-staged-card.md`
 
+### SHA map — rebase onto `origin/main` 2026-10-23 (BigDev: "A, skip ok")
+
+`main` moved while this branch was open (Story 3.3c landed, `origin/main` = `40420410`), and TWT lands by
+fast-forward only, so the branch was rebased LOCALLY before its first push. Every commit was rewritten; the
+records committed before the rebase cite the OLD SHAs and are kept as written. ⭐ Read any SHA in this story,
+in `sprint-status.yaml` or in a commit message through this table. Old tip kept as the local branch
+`backup/8-15-pre-rebase-2026-10-23`.
+
+- **Conflicts:** only the two newest-first ledgers, each resolved by keeping BOTH sides with this branch's
+  entries on top: `.decision-log.md` (`-383` above 3.3c's `-382`) and `sprint-status.yaml` (header and
+  `last_updated` block lines). The conflict context swallowed the `---` separator after `-383`; it was
+  restored INSIDE the `-383` commit (fixup + autosquash before this map was written), so `-383` is still
+  committed alone and byte-identical to its pre-rebase text.
+- **Verified:** for all 27 files the branch touches, the set of changed lines against `origin/main` equals the
+  set against the old base `b883dc15`; no extra file changed; the 13 subjects align one-to-one.
+- ⚠ **Ledger letters collide** (re-lettering was planned for landing; recorded here instead, ⛔ no key edited):
+  this branch's `2026-10-22ac` and `2026-10-22ad` share their keys with 3.3c's entries now below them, and its
+  `2026-10-22ae` with the unmerged `story/6-35-in-app-language-switch`. Tell them apart by the story named in
+  each entry.
+
+| Old (pre-rebase) | New | Subject |
+|---|---|---|
+| `97ace9d8` | `889745cc` | story(8.15): v1.0 — CREATED by bmad-create-story 8-15; row 8-15 backlo… |
+| `731edddd` | `08cd44e0` | story(8.15): v1.1 — VALIDATED by bmad-create-story validate 8-15 (chec… |
+| `81407920` | `8d4fe08c` | governance(8.15): Decision 2026-10-22-383 — TRUSTEE-RATIFIED (Dhiraj R… |
+| `e5604441` | `aac8b232` | story(8.15): v1.2 + v1.3 — PQ1 routing note drafted and RULED B (Decis… |
+| `e019024d` | `1d1c4140` | governance(8.15): epics.md entry + Epic 8 counts (AC0.1–2) — story v1.… |
+| `1020fc58` | `d0753156` | story(8.15): Tasks 1-2 — the moot-row fix (AC2) + the pure transition … |
+| `95f6b6c1` | `b9c6ed3c` | story(8.15): Tasks 3-6 — the amountTransition contract, the handler (r… |
+| `d7d7408b` | `f8c0d731` | story(8.15): Task 7 — records: deferred-work closure + observations, U… |
+| `d6368a5d` | `e3533af3` | story(8.15): dev-story complete — story v1.5, Status → review; ledger … |
+| `d3bfbcfd` | `9d5687c1` | story(8.15): code review round 1 — next_cycle names the amount in forc… |
+| `b7f56276` | `eaecea6b` | story(8.15): records for code review round 1 — story v1.6, Review Find… |
+| `ec041f52` | `2edf45f4` | story(8.15): code review rounds 2–3 — the dated stages read after max(… |
+| `23a659e1` | `7870f943` | story(8.15): records for code review rounds 2–3 — story v1.8 (Round 2,… |
+
 ## Change Log
 
 | Date | Version | Description |
@@ -1291,3 +1327,4 @@ Modified (records):
 | 2026-10-22 | 1.6 | `bmad-code-review 8-15` round 1 + apply-all: 1 decision (D1, BigDev: Option A) / 7 patch / 0 defer / 16 dismissed. `next_cycle` now names the amount in force at `now` (two in-window changes, a reversion, a backdated emergency); the first pool at a new amount keeps its note after a backdated emergency; the residue premises corrected (append-only); AC6's owner/re-trigger recorded; two test legs. Status stays **review**. `ci:local` 35/36 (one undiagnosed unrelated jobs red), API integration run separately 2057 / 1 skipped / 1 failed (unrelated). Not committed, not pushed. |
 | 2026-10-23 | 1.7 | `bmad-code-review 8-15` round 2 + apply-all: 2 decision (RD1, RD2 — BigDev: Option A each) / 5 patch / 0 defer / 4 dismissed. Both transition reads anchored at `max(C, now)` — a reverted in-window change no longer hides a future change (supersedes Option A's "as-of-C anchor unchanged"); no `next_cycle` while the member is assigned in a later live cycle (an adversarial review of the fix caught the first build counting cycles the member is not in — fixed); a throw leg for the in-force read and the exact-at-now boundary; comments and dated notes (D3, D7, D9, PQ1; the `-383` widening also in the UX spec and deferred-work); epics.md's dangling "14"; round 1's "not committed" records corrected by note. Selector 36, API unit 49, live-DB read spec 13; eight mutants RED, one equivalent (recorded). Status stays **review**. `ci:local` not re-run. Not committed, not pushed. |
 | 2026-10-23 | 1.8 | `bmad-code-review 8-15` round 3 (final tree) + apply-all: 1 decision (RD3 — BigDev: A) / 6 patch / 1 defer / 2 dismissed. RD2's suppression could leave a member never told (their later card had no change; D5's note counts other members' pools) — now, when the member is in a later live cycle, `next_cycle` names that pool's amount iff it differs; an unreadable later binding drops only `next_cycle`; RD2 also recorded as a narrowing of `-383`; AC1/AC7/Task 4 and the RD2 decision pointed at their revisions; round 2's "M6 equivalent" corrected; the RD1 selector leg added; a no-op dated row deferred. Selector 39, API unit 52 (whole 592 + 1 skipped), domain pool 351, live-DB read spec 13; ten mutants RED; `ci:local` 35/36 (the known jobs timeout), API integration 2070 | 1 skipped. Status stays **review**. Not committed, not pushed. |
+| 2026-10-23 | 1.9 | Rebased onto `origin/main` (`40420410`) before the first push (BigDev "A, skip ok"); SHA map above (13 commits, old → new); ledger conflicts resolved keeping both sides, branch on top; the `-383` separator restored inside its own commit; ledger-letter collisions recorded. No code or record content changed. |

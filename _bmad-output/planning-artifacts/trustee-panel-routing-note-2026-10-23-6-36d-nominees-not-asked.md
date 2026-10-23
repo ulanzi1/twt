@@ -11,14 +11,22 @@
 > ⚠ **Written ahead of BigDev's build answers** (Story 6.36d, Task 0.2). It assumes two of them — that the warning is extended (the
 > story's ND7 (b)) and that you are asked about the data use (ND10 (a)). If BigDev answers otherwise, this note is revised before it
 > is sent.
+> ✅ **SENT by BigDev and ANSWERED 2026-10-23** — see the ruling below; the lines above are kept as written.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — 2026-10-23 ([Decision 2026-10-23-384](../../.decision-log.md#decision-2026-10-23-384))
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put**
-> ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti (relayed by BigDev). **Verbatim:** *"by DR and KB"* / *"Q1 A, Q2 A"*
+>
+> - **Question 1 — A:** the dead member's nominees' phone numbers may be compared with members' numbers, only to keep a nominee out of
+>   the five asked. The cost as put: one more use of the nominee's number; nothing goes live until our lawyer confirms the ground.
+> - **Question 2 — A:** nominee changes in the 90 days before the claim join the staff warning. The cost as put: the warning also shows
+>   for a re-save that changed nothing, or a sign-up declaration in those 90 days.
+> - **Not covered:** leaving nominees out itself (BigDev's), the exact staff-line words (the author's), whether the Act has the ground
+>   (counsel's, in writing — a go-live condition), a nominee who signs in with a different number.
+>
+> ⭐ Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

@@ -370,6 +370,13 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
 
 ## 🏛️ Panel questions: TWO, both NON-blocking (one note)
 
+> ✅ **2026-10-23 — ANSWERED: [`2026-10-23-384`](../../.decision-log.md#decision-2026-10-23-384), TRUSTEE-RATIFIED (Dhiraj Rahul +
+> Kalpana Bharti, relayed by BigDev: *"by DR and KB"* / *"Q1 A, Q2 A"*).** PQ1 — A (Closed by `-384`): the nominee numbers may be
+> compared, only for this; ⚠ its cost as put makes counsel's WRITTEN confirmation a go-live condition (*"nothing goes live until that is
+> done"*). PQ2 — A (Closed by `-384`): nominee changes in the 90 days before the claim join the staff warning. ⇒ ND7 (b) is RATIFIED (ND7 (a)
+> is ⛔ open); ND10's Panel half is answered (ND10 (b) is moot); the exact staff-line words stay the author's. Everything below in this
+> section is kept as written.
+
 ⭐ 2026-10-23 — WRITTEN EARLY at BigDev's request (*"write the routing note now"*), ahead of Task 0.2:
 `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-36d-nominees-not-asked.md` (⛔ sent). It assumes ND7 (b) and
 ND10 (a); if Task 0.2 answers otherwise, Task 0.4 REVISES it before it is sent (⛔ a second note). The drafts below are kept as written;
@@ -498,6 +505,8 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
         rows is RESET"*); the one writer appends versions with every declare ⇒ a member with no version has no nominee for ND1 (b) —
         recorded, ⛔ fixed; nothing in production.)
   - [ ] 0.2 BigDev answers ND1–ND10 and the PROPOSED `-356` reading in Task 0.3 — record the answers VERBATIM in the Completion Notes.
+        ⭐ 2026-10-23: ND7 is SETTLED as (b) and ND10's Panel half as (a) by `-384` (Trustee-ratified) — BigDev confirms them, ⛔
+        re-decides them; ND10's counsel leg (Row 31 (i)) remains.
   - [ ] 0.3 The author-commit: the next free decision id (dated the day it is COMMITTED), *"AUTHOR-COMMIT (BigDev) — STORY 6.36d's BUILD
         DECISIONS ND1–ND10 …"*, with §0 (the `-340` §0 class; the ND7 and ND10 splits and their non-blocking PQs), the §0 re-run table, ND1–ND10
         as answered, and:
@@ -508,6 +517,8 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
         - EXTENDS `-330` SW20 (ii) (ratified in its effect by `-331` Consequence 3) — ND7 (b) only: a nominee version recorded in
           `[cut.recentFrom, cut.cut)` also sets the staff line, and `peerMesh.recentChangeBeforeFiling` gains "or their nominees" — SUBJECT TO
           PQ2; `-330` / `-331` ⛔ edited; if the Panel refuses, a dated supersession reverts it before Row 31 closes;
+          ⭐ 2026-10-23: the extension is RATIFIED by `-384` Q2 A — the author-commit CITES `-384` for it (⛔ "subject to PQ2"; the
+          revert branch is moot) and for ND10's use of the nominee numbers (Q1 A);
         - SUPERSEDES IN PART `-365` MATCH (iii) (as corrected by `-366` decision 5): the reminder's WR2 (ix) re-check now carries the nominee
           conjunct through the shared predicate (ND4 / AC6); MATCH (iii)'s *"carries ⛔ nominee check"* and *"`-356` is never in play"* stay as
           written; `-365` / `-366` ⛔ edited;
@@ -546,6 +557,8 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
           (`trustee-panel-routing-note-2026-10-23-6-36d-nominees-not-asked.md`); here, revise it to match the Task 0.2 answers to ND7 /
           ND10 (drop Question 1 under ND10 (b); under ND7 (a) Question 2 becomes BLOCKING and its header says so), and fill in the
           author-commit's decision id in its E2 — ⛔ sent.
+          ⭐ 2026-10-23: SENT and ANSWERED (`-384`, Q1 A / Q2 A) — the note is now a record: ⛔ revise it; Row 31 leg (i) records the Panel's
+          answers as `-384` and keeps counsel's written basis + the privacy-policy line OPEN.
 - [ ] **Task 1 — the predicate and the indexes (AC1, AC2)**
   - [ ] 1.1 `nomineeMobileIndexes` (required) on every ND4 type + `peerMeshNomineeMatchSql` + the ND2 conjunct; doc comments extended in the
         house style.
@@ -694,6 +707,10 @@ copy line under ND7 (b). ⛔ api, mobile, contracts or i18n-package SOURCE chang
   a v1.0 residual it had dropped (the nominee replaced between death and filing — restored to ND8), PQ2's missing roster leg, and SW20 (ii)
   extended without being named); every finding applied; `-340` call 1 and `-295` §0 quotes spot-checked.
 
+- 2026-10-23 — The Panel note was written early (BigDev: *"write the routing note now"*), sent by BigDev and ANSWERED: *"by DR and KB"* /
+  *"Q1 A, Q2 A"* ⇒ `2026-10-23-384` (Trustee-ratified), committed alone (`cc0c63bb` — BigDev ran the commit after the tool's commit was
+  refused). Records follow in the next commit.
+
 ### File List
 
 ## Change Log
@@ -702,3 +719,4 @@ copy line under ND7 (b). ⛔ api, mobile, contracts or i18n-package SOURCE chang
 |---|---|---|
 | 2026-10-22 | 1.0 | Created (`bmad-create-story 6.36d`): G1–G16 found at `b883dc15`; ND1–ND10 PROPOSED for BigDev at Task 0.2; ⛔ Panel question blocking (ND10's basis half split off); row `backlog` → `ready-for-dev`. |
 | 2026-10-23 | 1.1 | Validated (`bmad-create-story validate 6.36d`; four verifiers; BigDev *"all"* on 25 findings; then two fresh-context re-validators of the pass's own text — 6 HIGH, all the pass's own, applied). Re-pinned `40420410`. ND1 recommendation (a) → **(b)**, the `-339` cut (one set per claim; both options the author's — `-339`'s words are scoped to a later claim, `-340` call 1); ND7 gains **(b)** the staff line for nominee changes, EXTENDING `-330` SW20 (ii) (ratified in effect) subject to PQ2; ND10 (a) is now a non-blocking Panel question (`-352` Q2, superseded in part by `-356`), ⛔ a told item — ⇒ TWO non-blocking PQs in one note, both named in Row 31 leg (i); ND6 rewritten (⛔ DLQ exists — G17; alarm + retry policy + `includeMetadata` + a final-attempt arm on the nominee fault only: defer-then-finish / finish with `nominee_check_unavailable` / rethrow; a delivery failure, `-295` §0); ND3 supersedes `-330` SW19 (⛔ "6.36's author rule") and pre-reads so a no-op run calls ⛔ KMS; ND4 REQUIRED on every input type; ND2's `${m}` alias, one match fragment; ND8 residuals; AC2 one function (`InScope` shape); Task 0.3 supersessions / amendment / RESOLVES IN PART; Task 0.4 reference sites; G2 / G4 / G5 / G7 / G10 / G12 / G14 / G16 corrected, G17 added; Sequencing with 6-35; mutants M8b, M11–M16; AC7 (staff line) added, ACs renumbered AC0–AC10 as bullets; Policy meaning made conditional on the declared number and the Niyamavali cite located. |
+| 2026-10-23 | 1.2 | The Panel note written early and ANSWERED — `2026-10-23-384` (Trustee-ratified, DR + KB): Q1 A, Q2 A. ND7 settled as (b), ND10's Panel half as (a); counsel's written basis stays a go-live condition (Row 31 (i)). Dated notes only — ⛔ earlier text edited. Status stays `ready-for-dev`. |

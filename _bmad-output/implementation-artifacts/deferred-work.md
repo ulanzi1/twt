@@ -4,6 +4,30 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: validation of 6-36d-exclude-nominees-from-the-five.md — Task 0.2 investigation (2026-10-23)
+
+- **`-340` / `-341`'s filer exclusions exclude NOBODY in v1 — every intake path writes `claimant_actor_id` NULL — RECORDED, ⛔ fixed**
+  [`packages/domain/src/claim/peer-mesh-read.ts` `peerMeshEligibleMemberSql`, the "claimant of any claim" and "filer of any
+  `intake_attempts` row" conjuncts; `apps/api/src/modules/claims/claims.service.ts` `initiateIntake`]. Verified read-only 2026-10-23
+  (BigDev: *"Verify + record (Recommended)"*): the only two intake callers are the member app (`claims.handlers.ts` — passes ⛔
+  `attribution`, so `claimantActorId: input.attribution?.claimantActorId ?? null` ⇒ NULL; the session acts AS the deceased, so the filer's
+  own member identity is never known) and the helpline (`claims.helpline.handlers.ts` — `claimantActorId: null`, explicit); `tryConverge`
+  (`claim/icp.ts`) copies the same value into `intake_attempts.claimant_actor_id`. `IntakeAttribution`'s own doc: *"null under the v1
+  null-claimant policy on BOTH paths"*. ⇒ both conjuncts are always true; `-341`'s worked example (*"The ICP records a pending
+  `intake_attempts` row with `claimant_actor_id = C"*) is ⛔ reachable today. `-340` call 2 / `-341` already say *"a NULL claimant / filer
+  excludes nobody"* — what they do ⛔ say is that EVERY claim is NULL. Partly covered by row 6-36d: a filer who is the deceased's declared
+  nominee, on their sign-up number, is excluded by the nominee match; a filer who is neither stays eligible. **Trigger:** the first story
+  that records a filer's own member identity at intake (or a v2 claimant policy); until then the two conjuncts are dead code — ⛔ remove
+  them (they bind as soon as the column is written).
+- **Row 6-36d's nominee match is the ONLY nominee→member link, and it degrades the day a member's login number becomes changeable —
+  RECORDED, ⛔ built** [6.36d G18 / ND8]. Each member has one number on file (the sign-up number, ⛔ changeable, ⛔ history); a nominee is
+  found only if the deceased typed that number. BigDev accepted the gap for 6.36d (2026-10-23, *"Accept + follow-ups"*). **Trigger:** the
+  future mobile-change story (AR-24, ⛔ built) must decide whether to keep a blind index of a member's previous login numbers (its own
+  retention purpose — a Panel question) or accept that nominees declared under the old number stop matching. The true fix — a nominee's
+  member link captured at declaration — is a separate backlog row (6.36d Task 0.4).
+
+---
+
 ## Story 6.35 — the in-app language switch (2026-10-23)
 
 - **Senders that ignore the member's chosen language (row 6-35)** [[`-387`](../../.decision-log.md#decision-2026-10-23-387) LS11] — Story 6.35 records the member's choice and applies it

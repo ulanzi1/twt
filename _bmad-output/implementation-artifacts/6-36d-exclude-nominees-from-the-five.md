@@ -13,9 +13,8 @@ worktrees 6-35 / 8-15 exist). Two facts, stated separately: (1) the pin is an an
 Re-locate by FUNCTION, ⛔ by line number (a cite can be exact and still sit in the wrong function).
 
 STATUS: ready-for-dev (v1.3). Build decisions (2026-10-23): BigDev accepted the recommendation on ND1–ND6, ND8, ND9; ND7 (b) and ND10's
-Panel half are Trustee-ratified by `2026-10-23-384` (BigDev's confirmation of them as build decisions still owed). ONE author-commit records them BEFORE any code (Task 0.3,
-[[feedback_governance_commits_precede_implementation]]); it still needs BigDev's answer on the `-356` reading and his confirmation of
-ND7 / ND10 (Task 0.2).
+Panel half are Trustee-ratified by `2026-10-23-384` (BigDev confirmed both as build decisions). ONE author-commit records them BEFORE any code (Task 0.3,
+[[feedback_governance_commits_precede_implementation]]). Task 0.2 is complete (incl. the `-356` reading and the accepted data-model gap, G18).
 
 §0 GATE (the routing template's): which members are asked is the AUTHOR's — the class `-340` §0 states (*"Call 2 removes the people who
 asserted the death from the pool"*; `-341` the same for reporters), each by author-commit, ⛔ routed (and ⛔ told to the Panel since);
@@ -46,8 +45,8 @@ LETTERS: G = found facts (traced to code at the pin) · ND = build decisions (DE
 
 Status: ready-for-dev
 
-> ⭐ **Next: Task 0.2's last answer (the `-356` reading), then Task 0.3** — governance FIRST, ⛔ code. ND1–ND10 are decided and the Panel
-> has ruled (`-384`); the author-commit is committed ALONE (Task 0.3), the records commit follows (Task 0.4), and only then Task 1.
+> ⭐ **Next: Task 0.3** — governance FIRST, ⛔ code. Task 0.2 is complete (ND1–ND10 decided, the Panel has ruled `-384`, the `-356`
+> reading answered); the author-commit is committed ALONE (Task 0.3), the records commit follows (Task 0.4), and only then Task 1.
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -248,6 +247,16 @@ filer exclusion already has (G15), unrecorded there. ⛔ A member's own benefits
   comments). The only exits from `documents_pending` are `claim.peer_mesh_pinged` and `claim.peer_mesh_none_to_ask` (`claim/state.ts`), both
   written only by `runClaimPeerMeshSelect` ⇒ a select job that fails for good leaves the claim in `documents_pending` until another upload
   re-enqueues it. The final-attempt precedent: `job.retryCount >= job.retryLimit` (6.37c's `finalAttempt`, `claim-certificate-reminders.ts`).
+- **G18 — the declared number is the ONLY link from a nominee to a member (investigated 2026-10-23 at BigDev's request).** Each member
+  has exactly ONE number on file: `member_identities` (one row per member) is written only at sign-up (`member/identity-write.ts`: *"The
+  signup flow is the SOLE writer"*); the only UPDATE is erasure (`member/anonymize.ts`, ciphertext → sentinel, blind index kept); ⛔
+  history table, ⛔ `member.mobile_changed` event (`-112` 4(b): *"No mobile-change history exists"*); a mobile-change flow is planned
+  (AR-24), ⛔ built. ⛔ Second number anywhere: the WhatsApp opt-in keeps a COPY of the login index; 5.13's code table stores a code hash
+  and sends to the registered number only; KYC holds ⛔ mobile; `members.custom_fields` rejects phone keys; audit lines keep only the
+  last 4 digits. ⛔ Non-phone route: the nominee declaration (`NomineeDeclareEntry`) captures name, relationship, mobile, address and
+  split — ⛔ DOB, ⛔ ID, ⛔ member link; names carry ⛔ blind index (`member/search-read.ts`). ⛔ Existing resolver of "is this nominee a
+  member" (9.1's console acts as the deceased; 6.36b matches the login space only). ⇒ ND2's match IS the complete phone-based route;
+  the residual is a DATA-MODEL gap (ND8), accepted by BigDev.
 
 ## ⚖️ Build decisions ND1–ND10 (DECIDED 2026-10-23)
 
@@ -351,8 +360,11 @@ BigDev, at Task 0.2: *"For ND1–ND6, ND8, ND9 - your recommendation is accepted
   the warning"*) for the new channel. **Rejected:** (a) ⛔ staff line (widens SC1 A's cost; the Panel chose Q2 A = ND7 (b)). Also: ⛔ `metric_version` bump (the `-340` / `-341` precedent, G14); ⛔ excluded count, ⛔
   event-payload change; the zero branch keeps `no_workplace_colleague_or_named_person` (G15 — recorded imprecision).
 - **ND8 — residuals RECORDED, ⛔ built.**
-  - a nominee whose declared mobile differs from their login mobile (a second phone, a changed number) escapes — still selected, texted
-    and, if opted in, reminded (the `-366` (vii) exposure, carried);
+  - ⭐ THE DATA-MODEL GAP (G18; BigDev ACCEPTED it, 2026-10-23): a nominee who is a member is found ONLY if the deceased typed the number
+    that nominee SIGNED UP with. The system records ⛔ member link for a nominee, and each member has exactly ONE number on file — the
+    sign-up number, which ⛔ changes and keeps ⛔ history. A nominee who signed up on another number (a second SIM, a family phone, a typo)
+    escapes — still selected, texted and, if opted in, reminded (the `-366` (vii) exposure, carried; read as ⛔ within `-356`, Task 0.3).
+    The only true fix is a member link captured at declaration (a follow-up row, Task 0.4);
   - a stored number in a 13-digit form (`0091…`, `+91 0…`) normalises to `null` ⇒ ⛔ excluded;
   - a post-filing correction of a nominee number is ⛔ reflected (ND1 (b), an author-accepted residual);
   - a nominee REPLACED between the death and the filing (`-234` V) is ⛔ in the set, though `-235` Y / `-239` may make them the payee — they
@@ -500,13 +512,20 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
         decision id, migration number and ledger letter. (Known: 0119 backfills nothing, by design (`-232`; *"A dev database holding old
         rows is RESET"*); the one writer appends versions with every declare ⇒ a member with no version has no nominee for ND1 (b) —
         recorded, ⛔ fixed; nothing in production.)
-  - [ ] 0.2 BigDev's answers, VERBATIM (also in the Completion Notes):
+  - [x] 0.2 BigDev's answers, VERBATIM (also in the Completion Notes):
         - ND1–ND6, ND8, ND9 — 2026-10-23: *"For ND1–ND6, ND8, ND9 - your recommendation is accepted, however fix the ND6/AC3 contradiction,
           and clean up the stale decision-status language before the first implementation commit."* (both done in v1.3);
         - ND7 (b) and ND10's Panel half — `2026-10-23-384` (Trustee-ratified, *"by DR and KB"* / *"Q1 A, Q2 A"*);
-        - ⭐ STILL OWED: the PROPOSED `-356` reading (Task 0.3's RECORDS bullet), and BigDev's one-line confirmation of ND7 (b) / ND10 (a)
-          as the author's build decisions (the Panel ruled the questions — `-384` Consequence 1: *"At Task 0.2 BigDev answers the rest"*;
-          Row 31 (i) and the single counsel instrument are ND10's author-side half, named in `-384` Consequences 2–3). Task 0.3 waits on both.
+        - ND7 (b) / ND10 (a) as the author's build decisions — 2026-10-23, BigDev: *"Confirm both (Recommended)"* (the Panel ruled the
+          questions, `-384`; Row 31 (i) and the single counsel instrument are ND10's author-side half, named in `-384` Consequences 2–3);
+        - the `-356` reading — BigDev, 2026-10-23 (verbatim): *"I would not accept the residual-risk argument until we establish why the
+          system cannot compare the two numbers.First, investigate whether the nominee's declared number can be resolved to an existing
+          member account. If it can, exclude that account from the five, regardless of whether its login number matches the declared number.
+          If it cannot, document the precise data-model limitation and decide whether it is acceptable."* The investigation (G18): ⛔ other
+          route exists. Then BigDev: *"Accept + follow-ups (Recommended)"* — build as designed; ND8 records the gap precisely; the reminder to
+          an unmatched nominee is read as ⛔ within `-356`; two follow-ups recorded (Task 0.4). And on the `-340` / `-341` finding:
+          *"Verify + record (Recommended)"* — verified and recorded in `deferred-work.md` (2026-10-23).
+        ⇒ Task 0.2 is COMPLETE.
   - [ ] 0.3 The author-commit: the next free decision id (≥ `-385`, dated the day it is COMMITTED), *"AUTHOR-COMMIT (BigDev) — STORY
         6.36d's BUILD DECISIONS ND1–ND10 …"*, with §0 (the `-340` §0 class; the ND7 and ND10 halves answered by `-384`), the §0 re-run table,
         ND1–ND10 as decided (citing `-384` for ND7 and ND10), and:
@@ -523,9 +542,9 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
         - RESOLVES IN PART `-366` decision 5's condition on `-365` MATCH (iii) — matched-number nominees, once this row is `done` on `main`
           — ⛔ "Closed by"; and RECORDS afresh (`-366`'s "until then" ends with this row): a nominee-member whose login number differs from the
           declared one is still texted and, if opted in, reminded on WhatsApp — whether that reminder is within `-356` (*"drop WhatsApp only
-          notification for nominee"*) is recorded as a READING, ⛔ assumed away. PROPOSED reading (⭐ STILL OWED — BigDev confirms or
-          replaces it at Task 0.2): it is ⛔ a "notification for nominee" — the reminder goes to them as one of the five, the system ⛔
-          knowing them as a nominee;
+          notification for nominee"*) is recorded as a READING, ⛔ assumed away. BigDev's reading (Task 0.2): it is ⛔ a "notification for
+          nominee" — the reminder goes to them as one of the five, and the system cannot know them as a nominee (G18: the declared number is
+          the ONLY link, and it does not match their sign-up number);
         - records the ND6 delivery-failure §0 row (`-295` §0).
         Committed ALONE as `governance: …`; its SHA written after, ⛔ before ([[project_decision_log_writes_user_inserted]] — if the write is
         refused, ask once).
@@ -551,7 +570,12 @@ spec is run WITH the DB and its count recorded. Expected values are COMPUTED thr
           here);
         - 6.36 story — a dated annotation on AC4 / Trap 2; 6.36a story — a dated annotation on SW19 and SW23; 6.31 story — dated annotations
           on §0 edge (iii) (*"6.31 therefore adds ⛔ nominee check of its own"*), its Row 35 (g) line and its UPSTREAM (⛔ a merge fence) note;
-        - the Panel note — DONE: written, sent and answered 2026-10-23 (`-384`); it is a record now — ⛔ edit it.
+        - the Panel note — DONE: written, sent and answered 2026-10-23 (`-384`); it is a record now — ⛔ edit it;
+        - FOLLOW-UP 1 (BigDev, *"Accept + follow-ups"*): a NEW `backlog` sprint row for "a nominee's member link captured at declaration"
+          (the member picks the nominee from the members list; the only fix for G18's gap) — with a row note: it needs the nominee's
+          agreement and its OWN Panel question (new processing, outside `-384`), and covers only declarations made after it ships;
+        - FOLLOW-UP 2 — DONE 2026-10-23: the `deferred-work.md` item (*"Row 6-36d's nominee match is the ONLY nominee→member link, and it
+          degrades the day a member's login number becomes changeable"*) with its trigger on the FUTURE mobile-change story (AR-24).
 - [ ] **Task 1 — the predicate and the indexes (AC1, AC2)**
   - [ ] 1.1 `nomineeMobileIndexes` (required) on every ND4 type + `peerMeshNomineeMatchSql` + the ND2 conjunct; doc comments extended in the
         house style.
@@ -717,6 +741,13 @@ copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test 
   own: BigDev's confirmation of ND7 / ND10 restored as OWED, and "⛔ claimed by this file" restored); all applied. Still owed at Task 0.2:
   the `-356` reading and BigDev's confirmation of ND7 / ND10.
 
+- 2026-10-23 — Task 0.2 COMPLETED. ND7 (b) / ND10 (a) confirmed (*"Confirm both (Recommended)"*). The `-356` reading: BigDev would not
+  accept the residual until it was established why the two numbers cannot be compared (verbatim in Task 0.2); a read-only investigation
+  found ⛔ other route (G18, its load-bearing claims spot-checked: the sole writer, the erasure-only UPDATE, `-112` 4(b), the declaration
+  contract); BigDev: *"Accept + follow-ups (Recommended)"* — ND8 rewritten to state the gap precisely, the reminder read as ⛔ within
+  `-356`, two follow-ups in Task 0.4. A side finding — `-340` / `-341`'s filer conjuncts exclude nobody in v1 (every intake path writes
+  `claimant_actor_id` NULL) — verified and recorded in `deferred-work.md` (*"Verify + record (Recommended)"*).
+
 ### File List
 
 ## Change Log
@@ -727,3 +758,4 @@ copy line (ND7). ⛔ api, mobile, contracts or i18n-package SOURCE change. Test 
 | 2026-10-23 | 1.1 | Validated (`bmad-create-story validate 6.36d`; four verifiers; BigDev *"all"* on 25 findings; then two fresh-context re-validators of the pass's own text — 6 HIGH, all the pass's own, applied). Re-pinned `40420410`. ND1 recommendation (a) → **(b)**, the `-339` cut (one set per claim; both options the author's — `-339`'s words are scoped to a later claim, `-340` call 1); ND7 gains **(b)** the staff line for nominee changes, EXTENDING `-330` SW20 (ii) (ratified in effect) subject to PQ2; ND10 (a) is now a non-blocking Panel question (`-352` Q2, superseded in part by `-356`), ⛔ a told item — ⇒ TWO non-blocking PQs in one note, both named in Row 31 leg (i); ND6 rewritten (⛔ DLQ exists — G17; alarm + retry policy + `includeMetadata` + a final-attempt arm on the nominee fault only: defer-then-finish / finish with `nominee_check_unavailable` / rethrow; a delivery failure, `-295` §0); ND3 supersedes `-330` SW19 (⛔ "6.36's author rule") and pre-reads so a no-op run calls ⛔ KMS; ND4 REQUIRED on every input type; ND2's `${m}` alias, one match fragment; ND8 residuals; AC2 one function (`InScope` shape); Task 0.3 supersessions / amendment / RESOLVES IN PART; Task 0.4 reference sites; G2 / G4 / G5 / G7 / G10 / G12 / G14 / G16 corrected, G17 added; Sequencing with 6-35; mutants M8b, M11–M16; AC7 (staff line) added, ACs renumbered AC0–AC10 as bullets; Policy meaning made conditional on the declared number and the Niyamavali cite located. |
 | 2026-10-23 | 1.2 | The Panel note written early and ANSWERED — `2026-10-23-384` (Trustee-ratified, DR + KB): Q1 A, Q2 A. ND7 settled as (b), ND10's Panel half as (a); counsel's written basis stays a go-live condition (Row 31 (i)). Dated notes only — ⛔ earlier text edited. Status stays `ready-for-dev`. |
 | 2026-10-23 | 1.3 | Task 0.2: BigDev accepted ND1–ND6, ND8, ND9 as recommended. Rebased onto `69e35f73` and re-pinned. ND6/AC3 contradiction fixed (ND3's "never without the indexes" scoped to selections that choose anyone; AC3 owns the select-job fault path; M8b–M8e). Decision-status cleanup: ND1–ND10 now state CHOSEN / Rejected; the Panel-questions section is the `-384` ruling with a pointer to the note; ACs, Tasks and Dev Notes lose the branches for rejected options. ⛔ Commitment softened (a fresh-context check of the diff restored the two it found). Still owed: the `-356` reading and BigDev's confirmation of ND7 / ND10. |
+| 2026-10-23 | 1.4 | Task 0.2 complete: ND7 / ND10 confirmed; the `-356` reading answered after an investigation (G18 — the declared number is the only nominee→member link; BigDev accepted the data-model gap + two follow-ups in Task 0.4); ND8's first residual rewritten precisely; the `-340` / `-341` null-claimant finding recorded in `deferred-work.md`. Next: Task 0.3. |

@@ -4,7 +4,7 @@ baseline_commit: b883dc15
 
 # Story 8.15: Fixed-Amount Transition — the Staged My Pool Card (UX-DR25) `[SURFACE]`
 
-Status: review
+Status: done
 
 <!-- v1.0 2026-10-22 — created by bmad-create-story off `b883dc15` (== origin/main, fetched). Authoring
 pass only: no code written, no gate run, nothing here attested by a test.
@@ -1344,3 +1344,4 @@ in `sprint-status.yaml` or in a commit message through this table. Old tip kept 
 | 2026-10-23 | 1.8 | `bmad-code-review 8-15` round 3 (final tree) + apply-all: 1 decision (RD3 — BigDev: A) / 6 patch / 1 defer / 2 dismissed. RD2's suppression could leave a member never told (their later card had no change; D5's note counts other members' pools) — now, when the member is in a later live cycle, `next_cycle` names that pool's amount iff it differs; an unreadable later binding drops only `next_cycle`; RD2 also recorded as a narrowing of `-383`; AC1/AC7/Task 4 and the RD2 decision pointed at their revisions; round 2's "M6 equivalent" corrected; the RD1 selector leg added; a no-op dated row deferred. Selector 39, API unit 52 (whole 592 + 1 skipped), domain pool 351, live-DB read spec 13; ten mutants RED; `ci:local` 35/36 (the known jobs timeout), API integration 2070 | 1 skipped. Status stays **review**. Not committed, not pushed. |
 | 2026-10-23 | 1.9 | Rebased onto `origin/main` (`40420410`) before the first push (BigDev "A, skip ok"); SHA map above (13 commits, old → new); ledger conflicts resolved keeping both sides, branch on top; the `-383` separator restored inside its own commit; ledger-letter collisions recorded. No code or record content changed. |
 | 2026-10-23 | 1.10 | AC6 recorded: BigDev's non-author tone review of the eight transition keys (en + hi) — *"done, hi/contribution.json modified a little, record AC6"*; BigDev's edit: `first_cycle` + `_a11y` gain *"ही"* (*"इसी चक्र से ही लागू है"*); en unchanged. Gates green after the edit (i18n parity, microcopy 378, copy test 20/20, friction). The deferred-work AC6 entry noted Closed by [review]. |
+| 2026-10-23 | 1.11 | Status review → **done** (BigDev: "1, 2, 3, skip ok"), AC6 having been recorded (1.10). Ledger 2026-10-23e; row `8-15-fixed-amount-transition-staged-card` review → done. |

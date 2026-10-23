@@ -1,3 +1,8 @@
+# last_updated: 2026-10-23f (STORY 8.15 — LANDED on main by fast-forward (origin/main = `72d9aadc`; PR #298 merged 2026-10-23T06:05:54Z,
+#   `gh pr view` confirms `state: MERGED`, `mergeCommit.oid` = the pushed branch tip — SHA unchanged after the push; the one rebase
+#   happened locally before the first push, old → new SHAs in the story's "SHA map"). GitHub CI 36/36 green on 72d9aadc before the
+#   fast-forward. Row stays `done`. Not closed by the merge: the deferred no-op-dated-row residue, D5's schedule-predecessor residue,
+#   and round 1's two unrelated test items (jobs integrity-check timeout, drive-detail "vpa" token) — all in `deferred-work.md`. No other row moves.)
 # last_updated: 2026-10-23e (STORY 8.15 — DONE (BigDev: "1, 2, 3, skip ok"); row `8-15-fixed-amount-transition-staged-card` review → done; story Status → done (v1.11).
 #   The one hold — AC6's non-author tone review (Epic 8 retro W-5 / H-3 precedent) — is recorded (2026-10-23d). PR #298: all 36 GitHub checks green on f9c8f36f; landing by fast-forward follows. No other row moves.
 # last_updated: 2026-10-23d (STORY 8.15 — AC6 RECORDED: BigDev's non-author tone review of the eight `active_contribution.transition.*` keys, en + hi — "done, hi/contribution.json modified a little, record AC6"; row `8-15-fixed-amount-transition-staged-card` stays `review` until BigDev says done.

@@ -48,6 +48,10 @@ is ⛔ not asked here. Only whether the family is *told*, and what they may *do*
 >   have ⛔ no take-down of their own; removal through the helpline, by the Trust, is kept **for exceptional cases**.
 >   ⚠ "For exceptional cases" is recorded as the Trust's discretion, ⛔ not a family's right on request — `-391` item 3 asks
 >   BigDev to confirm that reading with the Panel before the public render goes live.
+>   ⭐ **Clarified 2026-10-23 — `-392`** (relayed by BigDev): take-downs are discouraged, since a removal may raise questions
+>   among members and the public; a published memorial is taken down only for a **genuine reason** (e.g. it names a child the
+>   Trust did not know of, or an outsider the family wants taken out) — the **helpline operator** decides on merit, removes it
+>   **within 7 days**, and an **email is sent to the approver**.
 > - **Q4 — A.** Told in the app what was left out and the reason for each part; may change it and send again; ⛔ no appeal.
 > - **Q5 — A.** Kept with the member's record and erased with it; a family's own erasure request through the helpline is a
 >   follow-up.

@@ -9109,6 +9109,8 @@ components:
             - object
             - "null"
           properties:
+            driveId:
+              type: string
             deceasedName:
               type:
                 - string
@@ -9226,6 +9228,7 @@ components:
                 - text
               additionalProperties: false
           required:
+            - driveId
             - deceasedName
             - memorialState
             - submissionId

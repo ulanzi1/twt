@@ -370,7 +370,9 @@ describe.skipIf(!hasDatabase)('Story 6.36a — the workplace module (live DB)', 
       // ⛔ Another member's request.
       expect((await client.query<{ typed_name: string }>(`SELECT typed_name FROM workplace_requests WHERE request_id = $1`, [keptId])).rows[0]!.typed_name).toBe('Someone Else');
       // A second erasure (e.g. a retried RTBF) must ⛔ fail on the already-scrubbed rows.
-      await expect(run()).resolves.toBeUndefined();
+      // ⚠ Story 11b.4 (MA15): `anonymizeMember` now RETURNS the memorial photo keys for its caller to delete after COMMIT —
+      // ⛔ memorial here, so the second run resolves to an empty list (it still must ⛔ fail).
+      await expect(run()).resolves.toEqual({ memorialPhotoKeys: [] });
     });
 
     it('the export lists each posting with its workplace, the not-listed flag and the start date — and every request', async () => {

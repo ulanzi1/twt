@@ -1013,6 +1013,17 @@ uncommitted fix diff + `-388`): 7 findings — 1 P2, 6 P3. BigDev *"1"*: fix six
 live on `:5434/twt_6_35`: domain 69/69, jobs `claim-peer-mesh-requests-live` 62/62. RED observed (mutants restored): bind-at-sign-in
 removed (2 legs), a single-slot account record (1 leg), the budget guard removed (1 leg).
 
+**Pre-push `ci:local` — 2026-10-23, on `:5434/twt_6_35` at `43e70ca6`:** 34/36 jobs green. `test (unit)`: three `@twt/admin`
+ground-inspection tests timed out at the default 5 s under load (⛔ admin file on this branch; 62/62 in isolation). `integration-tests`:
+the 10.23 spec's database-name guard (as at the dev gate; 3/3 with `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS`), so turbo stopped before
+`@twt/api`; domain 6141 + 1 skipped, jobs 1399 + 3 skipped. `@twt/api` run directly: **2 failures in `pariwar-provisioning.spec.ts`
+— a 6.35 DEFECT (test-only):** `peer-request-after-send.spec.ts` (changed by Task 3) seeds a passport with `branding_bundle '{}'` and
+⛔ cleans up, and the provisioning list validates every row against `BrandingBundle` ⇒ 500 on every later run on that database.
+Fixed: the seed is a valid bundle (the `member-language.spec.ts` shape). The two `twt_6_35` rows repaired in place; both specs then
+10/10. ⚠ Shared `:5433` carries ONE such row (`2c70d6c0-…`, 2026-10-23 08:06 UTC — the dev gate's first `:5433` run), so
+`pariwar-provisioning.spec.ts` fails there for every session until it is repaired — BigDev's call (shared database). The two domain
+concurrency specs also seed `'{}'` but delete their rows with a leftover check (⛔ changed).
+
 ## Dev Notes
 
 ### ⚠ TRAPS

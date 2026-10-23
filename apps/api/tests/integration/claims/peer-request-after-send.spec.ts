@@ -48,11 +48,13 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the member surface after a send (
     const neighbour = randomUUID();
     const deceased = ids.memberId(randomUUID());
     const cid = ids.claimId(randomUUID());
-    // 📌 Story 6.35 — the begin resolves the recipient's language (LS8), which reads the passport.
+    // 📌 Story 6.35 — the begin resolves the recipient's language (LS8), which reads the passport. ⚠ This spec leaves its rows
+    // behind (⛔ cleanup), so the passport must satisfy `BrandingBundle`: one `'{}'` row 500s every later
+    // `GET /api/v1/provisioning/pariwars` on the same database (`pariwar-provisioning.spec.ts` — the 6.35 second review).
     await t.pool.query(
       `INSERT INTO pariwar_passport (pariwar_id, display_name_en, display_name_hi, legal_name, branding_bundle, locale_default)
-       VALUES ($1, 'P', 'प', 'T', '{}'::jsonb, 'hi')`,
-      [p],
+       VALUES ($1, 'P', 'प', 'T', $2, 'hi')`,
+      [p, JSON.stringify({ logo_url: 'https://x/l.png', primary_color: '#0A3D62', secondary_color: '#FFFFFF' })],
     );
     await t.pool.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [neighbour, p]);
     await t.pool.query(`INSERT INTO member_identities (member_id, pariwar_id, mobile_ciphertext, mobile_blind_index) VALUES ($1, $2, 'enc:test:x', $3)`, [

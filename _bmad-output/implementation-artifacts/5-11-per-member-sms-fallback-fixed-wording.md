@@ -19,6 +19,9 @@ to the three; PQ2 WITHDRAWN (no text carries a name); PQ3 NEW (the channels). v1
 (Decision `-389`, `6db47c17`) and Task 0.4 (the records) DONE; the note SENT by BigDev 2026-10-23. v1.4 (same day): THE PANEL RULED — Decision `2026-10-23-390`
 (Trustee-ratified, DR + KB: *"Q1 B, Q2 A"*): PQ1 B — the three texts go to any member the app (and WhatsApp, where used) could not
 reach, WhatsApp yes or not (I2 / AC3 / Task 3 follow); PQ3 A — members are ASKED to join a Trust channel. Next: Task 1.
+v1.5–v1.8 (same day, review round 2, P6): dev done (`0684fcb1`, Status review); review round 1 (R1–R5; R1 by BigDev's option 1);
+round 2, a fresh full review (D1–D5, BigDev *"all recommended"*; P1–P12 applied, BigDev *"all"*) — recorded as Decision
+`2026-10-23-394` (supersedes `-389` items 8 and 9). Status in-progress; round 2's fixes uncommitted; ⛔ pushed.
 
 SCOPE SPLIT (v1.1): this story makes the alert SMS rung HONEST and decides WHAT is sent, to WHOM, in WHICH words; the REAL SEND
 (send record, CRQID kind, per-send MSG91 provider, language, budget, retry window) is row `5-11b-alert-sms-real-send` — its
@@ -120,6 +123,9 @@ Status: review
 > with a named reason instead of a fake `sent`; the member is recorded `in_app_only` (FS14) so the job completes on its first
 > attempt, exactly as it does today; `alert.channel_send` audits for fake SMS sends stop.
 >
+> ⚠ *(2026-10-24, round-2 patch review, Q1)* Since R1 / `-394` item 1 that holds for a member the old fixture completed; a member it never reached
+> (no usable mobile, or SMS cost-suppressed) still retries, as before 5.11.
+>
 > **What already ships and this story REUSES:** the ladder + cascade (`dispatch.ts`, `cascade.ts`); the DLT vocabulary and shape
 > check (`dlt-variables.ts`); the per-message × locale registry shape (`peer-mesh-sms-templates.ts`,
 > `suspicion-notice-sms-templates.ts`); the DLT sheet's lockstep helpers (`apps/jobs/tests/_dlt-template-sheet.ts`).
@@ -175,13 +181,19 @@ so that **I am not left out of a cycle — and the record of what I missed — o
 - **I3 — No alert SMS is ever reported `sent` without a real send.** On the alert fan-out path the SMS rung never reaches
   `createFixtureSmsProvider` in production composition — for lit AND non-lit messages (FS15). Every non-send names its reason in the
   trail. The fixture stays for tests only. *Proof:* AC4.
-- **I4 — The retry profile does not change in 5.11.** A member no rung reached is recorded `in_app_only` and not retried — exactly
-  the members who are not retried today (today the fake `sms:sent` stops them). *Proof:* AC4.
+- **I4 — The retry profile does not change in 5.11.** Review R1, BigDev option 1 (2026-10-23): former fixture successes become
+  terminal `in_app_only`; previously retryable failures still retry. In particular, a missing/decrypt-failed SMS target or a
+  cost-suppressed SMS rung never reached the old SMS fixture, so those failures retain their claim-release/retry behavior.
+  FS3's named WA refusals replace former WA fixture successes and remain terminal; the old bridge used SMS only. *Proof:* AC4.  ⭐ *(2026-10-23, review round 2, P6)* Recorded as Decision `2026-10-23-394` item 1 (superseding `-389` item 9). Accepted residual,
+  item 3 (D3 (a)): an SMS-rung dispatch error (a render fault, a KMS HMAC failure) no longer retries a member with a mobile —
+  carried to 5.11b.
 - **I5 — Not a bulk channel.** No broadcast (`news`, `survey`, `moderation`, `module_new`, `niyamavali_amended`, the staff push) and no
   degraded-mode bridged send can reach a lit template. Only the messages FS1 names, only per member, only on a failed higher rung.
   *Proof:* AC5.
 - **I6 — Hindi parity.** Every lit message has en + hi; the catalogues carry a `$comment.sms` NOT-YET-HUMAN-REVIEWED key in BOTH en
   and hi (the `claim.json` convention) until the review leg closes. *Proof:* AC2.
+  ⭐ **Amended 2026-10-23 (review round 2, D5 (a), BigDev *"all recommended"*):** ⛔ NOT-YET-HUMAN-REVIEWED marker — the Hindi
+  review leg is discharged by `-389` item 12, so `$comment.sms` names the REVIEWED state instead (the I6 test asserts that).
 
 ## 📜 Policy meaning (AI-10-1)
 
@@ -342,7 +354,8 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   `wa_template_not_approved` / `wa_credentials_missing` (a provider cannot return `skipped_no_target` — `SendResult` allows only
   `accepted` / `rejected` / `not_implemented`). The cascade advances to SMS; FS14 treats the refusal as terminal. The process-lifetime memo
   stays: a newly approved template is seen after a restart (recorded). (A disabled Pariwar never reaches this path — its WA target is
-  null.) *Cost (a):* touches the WA provider selection (the item's own trigger). **(a′)** as (a) plus a TTL on the memo. *Cost (a′):* one
+  null.) ⚠ *(2026-10-23, review round 2, P6)* — and the OTHER direction: a Pariwar memoized `off` that is switched ON keeps the accepting
+  fixture until a restart, while the member's target is re-read live ⇒ a fake `whatsapp:sent` (deferred-work, round 2 W1). *Cost (a):* touches the WA provider selection (the item's own trigger). **(a′)** as (a) plus a TTL on the memo. *Cost (a′):* one
   more moving part in a shared resolver; not needed while no Pariwar is enabled. **(b) leave it to its item.** *Cost (b):* under FS2 (a)
   the only qualifying members are cut off until every category has an approved template in every Pariwar.
 - **FS4 — the words** (table below). ⭐ **(a) as drafted, WITH the family's full name on pool-open** (`-180` Q1 — G10): pool-open carries
@@ -385,7 +398,9 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   so in practice en texts name the pool by letter and hi texts by name. The push is unchanged. *Cost (a):* an en SMS never shows the
   curated name. **(b)** send the Hindi name in en anyway. *Cost (b):* every en text turns Unicode — 152+ chars ⇒ 3 segments — and the
   pre-flight does not catch it (it checks only the registered text). **(c)** refuse the send `value_too_long`. *Cost (c):* a member
-  silently gets no text because of an admin's naming.
+  silently gets no text because of an admin's naming.  ⭐ **Superseded 2026-10-23 by Decision `2026-10-23-394` item 2 (review round 2, D2 (b)):** the curated name TRIMMED, ≤ 30
+  UTF-16 units (the unit `dlt-variables.ts` counts), and for en basic GSM-7 printable only (⛔ extension table, ⛔ control
+  characters); else the letter code — so the longest text stays 1 en / 2 hi parts.
 - **FS14 — the outcome when no rung reached the member (F19).** ⭐ **(a) a final, recorded outcome `in_app_only`:** when the cascade ends
   without `sent`, the member is recorded (`store.recordResult`, the trail with each rung's reason) and NOT released or thrown for — the
   alert is on their in-app surface, the official channel (R10(B)); the recovery sweep counts them as notified. In 5.11 this is every
@@ -394,6 +409,12 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   mismatch, and — after the Task 4 trace — news / survey / moderation. *Cost (a):* a member whose push token is stale is not retried by
   push (also true today); the trail says why. **(b) retry like any undelivered member.** *Cost (b):* 5 runs + an hourly re-enqueue per live
   cycle for every unreachable member; pending-match members nudged again; jobs end `failed`.
+  **Review R1 clarification, BigDev option 1 (2026-10-23):** the blanket "every non-`sent` member" above was based on the false
+  premise that every member could reach a fixture. Terminal `in_app_only` applies to former fixture successes only. Previous
+  failures without an available SMS target (including cost suppression) still release/retry; FS3's named WA refusals remain
+  terminal because the old WA fixture completed them. News/survey release the previously failed claims for redelivery without
+  adding automatic job retries. This clarification controls I4, AC4 and Task 4; the original answer is retained above.
+  ⭐ *(2026-10-23, review round 2, P6)* Recorded as Decision `2026-10-23-394` item 1 — the supersession of `-389` item 9 this clarification owed.
 - **FS15 — the SMS rung for messages that are NOT lit.** ⭐ **(a) honest everywhere on the alert path:** the fan-out's SMS rung considers
   a send only when the alert carries an `sms` block (FS7) AND the member is eligible (FS2); every other alert — the six unlit
   contribution messages (pool open among them), news, survey, moderation — ends the SMS rung `skipped_no_target` / `sms_message_not_lit`, never the fixture. A lit,
@@ -499,6 +520,8 @@ sheet row (found by config key — `sheetRowByConfigKey`, `expectRegisteredTextR
 its MSG91 `##name##` form; the lockstep test lives in `apps/jobs/tests/`. A `$comment.sms` NOT-YET-HUMAN-REVIEWED key exists in BOTH en and
 hi; `scripts/microcopy/contribution.test.ts` excludes `$comment` keys (as the claim tests do). *Legs:* one lockstep test per template; a
 parity test (every `sms.*` key in both catalogues); a planted-violation leg per new gate (8.8's (b2) precedent), each proven RED first.
+⭐ *Amended 2026-10-23 (review round 2, D5 (a)):* the `$comment.sms` key names the REVIEWED state (`-389` item 12), ⛔ "NOT-YET-HUMAN-REVIEWED".
+The PLANTED leg runs the SAME lockstep function as the real leg (round 2, P10).
 
 **AC3 — Who receives it (I2; FS2 as RULED by `-390` Q1 B, FS3).** For a lit message: a member whose push did not end `sent` is ELIGIBLE
 when they have no WhatsApp target OR their WhatsApp rung did not end `sent` (in 5.11 the eligible rung then ends `sms_send_not_wired`); a
@@ -511,17 +534,22 @@ WhatsApp failed; WhatsApp sent; FS3 refuses ⇒ eligible; unlit ⇒ not eligible
 
 **AC4 — An honest rung and an unchanged retry profile (I3, I4; FS14, FS15).** On the alert fan-out path no production composition reaches
 `createFixtureSmsProvider`; every non-send ends with a named detail (`sms_fallback_not_eligible`, `sms_message_not_lit`, `sms_send_not_wired`,
-`sms_bridge_not_lit`); a member no rung reached is recorded `in_app_only` and the child does NOT throw for them — in POOL_BATCH, confirmed and
+`sms_bridge_not_lit`); a member no rung reached who previously completed through a fixture is recorded `in_app_only` and the child does NOT throw for them — in POOL_BATCH, confirmed and
 mismatch, and in every other producer the Task 4 trace finds; the cycle-open recovery sweep counts them. *Legs:* a no-app member's child
 completes on its FIRST attempt; the sweep does not re-enqueue; a pending-match member's claim is kept; assertions are on the trail's outcome +
 detail, never the provider id (F3: the fixture's id equals the real one); the F18 dark-state tests replaced by tests of THIS behaviour (each
-states what it replaced).
+states what it replaced). **R1 legs (BigDev option 1):** a transient push/WA failure without an available SMS target still
+releases its claim and throws; cost-suppressed SMS retains retries; a later push success clears retry; former SMS fixture
+successes and FS3's former WA fixture successes stay terminal. News/survey preserve release-on-failure for redelivery.
+⭐ *(2026-10-23, review round 2, P6)* Recorded as `-394` item 1; item 3's residual (an SMS-rung dispatch error) accepted and carried to 5.11b.
 
 **AC5 — Producers, and not a bulk channel (I5; FS7, FS10, FS13).** The three lit producers (day 10 and pending-match escalated — POOL_BATCH; mismatch — its own
 worker) carry the `sms` block, built from the same locals as the push params; the `{pool}` value follows FS13 (curated name only when ≤ 30
 code points and, for en, all GSM-7; else the letter code). News / survey / moderation / staff `alert_published` and the six unlit
 contribution messages (pool open among them) carry no `sms` block. A bridged send follows FS10 as answered. *Legs:* one test per producer family; FS13's three
 branches (fits; > 30; non-GSM in en); a bridge test.
+⭐ *(2026-10-24, round-2 patch review, Q1)* FS13 here reads as superseded by `-394` item 2: trimmed, ≤ 30 UTF-16 units, ⛔ a control character in any
+locale, and for en basic GSM-7 only (⛔ extension table). The `sms` block also carries `locale` (round 2, P2).
 
 **AC6 — Records and gates (FS11).** The roster row `member-alert-sms-fallback-live` exists with legs (a)–(f); the DLT sheet gains the
 templates (next free ordinals), their wording section, types, MSG91 forms, cost lines (segments en / hi at the
@@ -576,10 +604,302 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
 - [x] **Task 7 — Verify** (DONE 2026-10-23 — Debug Log (c) cont.; committed on the story branch, ⛔ pushed): `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]; known failures —
       [[project_known_livedb_test_failures]]); review the diff before commit ([[feedback_review_the_fix_diff_before_commit]]); commit on the story
       branch ([[feedback_commit_on_story_branch]]); do not push without BigDev's go-ahead.
+      ⚠ *(2026-10-23, review round 2, P6)* This evidence is for the commit `0684fcb1` — it PREDATES review R1–R5 and round 2's P1–P12 and the patch review's fixes.
+      AC7 re-closes on a fresh `pnpm ci:local` (:5433) over the round-2 tree before its commit.
+      *(Splice corrected 2026-10-24, round-2 patch review Q1.)*
+      ⭐ **AC7 RE-CLOSED 2026-10-24** at `93ad0596` (`8eb8cee0` = `-394`): `pnpm ci:local` with `DATABASE_URL` on :5433 — 35 / 36 on the
+      first run, `integration-tests` GREEN (jobs 1576, domain 6172, api 2081, channels 452); `test (unit)` RED on ONE timeout —
+      `packages/channels/tests/determinism.test.ts` (100 threaded renders, 90 s) under the unit job's load, with admin RTL legs
+      at 5 s, neither touched by this story ([[project_ci_local_concurrency_oversubscription]]); the unit job re-run ALONE with its
+      exact command (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`) — 37 / 37 tasks green. ⇒ 36 / 36 by component.
+
+### Review Findings
+
+Full `bmad-code-review`, 2026-10-23; baseline `1268d47e`, reviewed HEAD `f58962ee`. All three review layers completed
+(Blind Hunter, Edge Case Hunter, Acceptance Auditor). Findings deduplicated: 1 decision-needed, 4 patch, 0 defer;
+the process-lifetime WhatsApp memo concern was dismissed as an explicitly recorded limitation (F5 / FS3).
+
+- [x] [Review][Patch] **R1 [P2] Reconcile I4's unchanged retry profile with FS14's unconditional terminal outcome.**
+  `fanOutAlertToMembers` now puts only thrown fan-outs on `retry` (`apps/jobs/src/scheduler/contribution-notify.ts:530`). At the
+  baseline every result with `delivered: false` was retryable. A member whose SMS target is null (missing mobile ciphertext or a
+  caught decrypt failure) and whose push fails transiently never reached the SMS fixture before this change: their job retried.
+  Now the same result is recorded `in_app_only` and the claim is retained. Thus the code follows FS14's blanket terminal rule,
+  but violates I4 / AC4's claim that exactly the same members retry. Choose either to preserve retries for the previously
+  retryable cases while finalizing former fixture successes, or explicitly accept the broader retry reduction and correct the
+  invariant/records with a regression test. This is a conflict inside the story, not a request to reopen the Panel's SMS reach ruling.
+  **RESOLVED / BUILT (2026-10-23):** BigDev: *"go with option 1"*. `shouldRetryFanOut` preserves previous failures without
+  an available SMS target and keeps former SMS/WA fixture successes terminal. Batch, confirmed, mismatch and moderation
+  retain their retry path; news/survey release previous failures for redelivery. No SMS provider is called. Four new
+  regression cases failed before the fix; 158 focused unit tests and 34 live tests passed after it, plus jobs typecheck
+  and ESLint. The existing claimant-ladder source pin was re-taken for this change. R2–R5 remain open.
+  ⚠ *(2026-10-24, round-2 patch review, Q1)* Recorded as `-394` item 1. Residual accepted by round 2's D3 (a) (`-394` item 3): an SMS-rung dispatch
+  error (render / KMS HMAC) used to retry a member with a mobile and no longer does — carried to 5.11b.
+- [x] [Review][Patch] **R2 [P2] Fall back to the pool letter code for an empty curated name.**
+  [`apps/jobs/src/scheduler/contribution-sms-templates.ts:120`] `smsPoolLabel` accepts `''`, but `AlertSmsBlock` rejects an empty
+  `values.pool`. The existing pool-name write seam and DB permit an empty `display_name_hi`; `resolveCuratedPoolName` passes it
+  through. Reproduced: the day-10 and pending-match escalated builders throw on `sms.values.pool`, while day 5 and soft still
+  build. A dark, optional SMS block must not prevent the push/WhatsApp notice from being built (AC5 / AC7). Use the existing
+  letter-code fallback for the empty name and test both affected producers.
+  **RESOLVED / BUILT (2026-10-23):** `smsPoolLabel` treats an empty or whitespace-only curated name as absent and returns the
+  letter code. Test: `contribution-notify-triggers.test.ts` "R2 — an empty curated name …" (`''` and `'   '`, en + hi, day 10 +
+  escalated, both `Alert.safeParse` clean). Mutant (the `trim()` conjunct removed): 2 RED.
+- [x] [Review][Patch] **R3 [P2] Persist moderation's terminal outcome and named rung reasons.**
+  [`apps/jobs/src/scheduler/moderation-notify.ts:355`] The worker discards `results`, consumes only `retry`, and returns
+  `notified: true`; no path in the module records `in_app_only` or its trail. An exhausted ladder completes without the
+  durable outcome required by AC4 / FS14 / Task 4. Record the result with the PII-free detail allowlist and cover the
+  no-channel case and redelivery.
+  **RESOLVED / BUILT (2026-10-23):** the worker claims `moderation.notify:<pariwar>:<alert>:<member>` in the keyed store (24 h,
+  the broadcast workers' window), records the fan-out result through the shared `serializeFanOutResult`, and releases the
+  claim and throws on an R1 retry, an unexpected throw, a missing result or a recording failure. An already-claimed key
+  skips the fan-out — the same pattern as the confirmed and mismatch notifiers; ⚠ as there, a worker that dies between the
+  claim and the record leaves that notice unsent until the claim expires. ⚠ *Corrected by round 2 (D1 (a) / P11):* nothing
+  re-runs it — so a live claim with no recorded result now ALARMS and THROWS (the job ends `failed`, visible). Tests: `moderation-notify-outcome.test.ts` (8 unit
+  legs: trail recorded with provider free text dropped, delivered recorded, redelivery skip, R1 release + throw, throw /
+  record-failure / missing-result release, missing member not claimed) and `moderation-notify-live.test.ts` (2 legs on
+  :5433: the terminal trail with no mobile in the record and a redelivery that never re-resolves providers; no SMS target ⇒
+  released, nothing recorded). Mutant (`recordResult` removed): 3 RED.
+  ⚠ *(2026-10-24, round-2 patch review, Q1)* Superseded in part by round 2: a RECORDING failure now keeps the claim and completes (P4); an
+  already-claimed key is read with `inspect` — completed ⇒ skip, pending < 15 min ⇒ in flight (throw), older ⇒ taken over and sent
+  (P11, then the patch review's E1 (a)); the result reports `delivered` / `alreadySent` (P5).
+- [x] [Review][Patch] **R4 [P2] Keep the named rung trail in news and survey records.**
+  [`apps/jobs/src/scheduler/news-publish.ts:81`; `apps/jobs/src/scheduler/survey-publish.ts:59`] These serializers now persist
+  `outcome: 'in_app_only'` but omit `trail`, so the new `sms_message_not_lit` and WA refusal reasons are lost. AC4 / FS14
+  requires the recorded outcome with each rung's reason across traced producers. Reuse the contribution serializer's
+  named-detail allowlist and assert the stored records for unreachable members.
+  **RESOLVED / BUILT (2026-10-23):** the three local `nonPiiRecord` copies (triggers, news, survey) are replaced by ONE
+  exported `serializeFanOutResult` in `contribution-notify.ts` carrying the `RECORDED_RUNG_DETAILS`-filtered trail; moderation
+  (R3) uses it too. Tests: the news and survey live suites each add "R4 — persists the SMS non-send reason …" (a member with a
+  mobile on file; the trail ends `sms:0:skipped_no_target:sms_message_not_lit`; no mobile in the record; a redelivery leaves
+  the record unchanged). Mutant (news records without `trail`): 1 RED. The claimant-ladder pin on `contribution-notify.ts`
+  (`319113b7…`) already covers this file state.
+- [x] [Review][Patch] **R5 [P3] Correct the longest-value English segment and cost bounds.**
+  [`docs/launch-gate-inventory/dlt-template-requests-6-19.md:358`] FS13 accepts all GSM-7 names up to 30 code points, including
+  extension-table characters that take two septets. Reproduced through the shipped helper and renderer: a 30-caret pool
+  name is retained, producing day-10 text of 134 characters / 164 septets and pending-confirmation text of 131 characters /
+  161 septets — both TWO segments. The new cost line calls the longest values one segment. Correct the derived bounds and
+  add a regression for GSM-7 extension characters; preserve the approved words and historical decision quotations.
+  **RESOLVED / BUILT (2026-10-23):** the sheet keeps its original figures (now labelled as the default-alphabet / BMP case) and
+  adds a dated "Cost-bound correction" paragraph: en 18 = 164 and 22 = 161 septets (2 segments), 20 stays 1; hi with 30
+  supplementary-plane letters 17 = 158 and 21 = 163 UTF-16 units (3 segments), 19 stays 2. Bounds per unreached member:
+  1–2 en / 2–3 hi for day 10 and an unconfirmed payment, 1 en / 2 hi for a payment not matched. Words, FS13 and the decision
+  quotations unchanged. Test: `sms-segment-cost.test.ts` "Story 5.11 review R5" renders the real strings through
+  `smsPoolLabel` + `renderContributionSms` and pins the sheet's figures (6 legs).
+  ⚠ *(2026-10-24, round-2 patch review, Q1)* Superseded by round 2's D2 (b) / `-394` item 2 (P12): the widened bounds are CLOSED at the source; the
+  sheet's paragraph and the test were rewritten to the restored 1 en / 2 hi, FS13 is superseded, and the test's legs changed.
+
+R2–R5 build verification (2026-10-23): jobs `tsc --noEmit` clean; ESLint clean on every touched file; `apps/jobs` unit run
+with `DATABASE_URL` unset 1005 passed / 544 skipped / 0 failed; twelve focused suites on :5433 (both moderation files, news,
+survey, `contribution-notify-live`, `ai-8-3-ladder-armor-live`, contribution-notify unit + triggers, segment cost, SMS
+templates, the claimant-ladder pin) 295 / 295; `pnpm dlt-typed-variables:check` passed. Mutants restored byte-identical
+(sha256). ⛔ Full `ci:local` not run; the patch diff has ⛔ not yet been through the review layers.
+
+Review verification: the focused jobs, channels and contracts unit suites, contribution microcopy tests and DLT gate tests
+passed; `pnpm dlt-typed-variables:check` passed. The four focused live suites on :5433 passed (34 tests):
+`ai-8-3-ladder-armor-live`, `contribution-notify-live`, `news-publish`, `survey-publish`. Initial live-test sandbox connection
+denials and the DLT runner's IPC denial were rerun successfully outside the sandbox. A throwaway script under `/private/tmp`
+reproduced R2 and R5 without changing production source. Full `ci:local` was not rerun for this review.
+
+### Review Findings — round 2 (fresh full review, R1–R5 included)
+
+Full `bmad-code-review`, 2026-10-23 (BigDev: *"run fresh full story review including fixes"*); diff `1268d47e` → working tree
+(committed `f58962ee` + uncommitted R1–R5 + the two untracked moderation tests), 3334 lines / 33 files; three read-only layers
+in parallel (Blind Hunter, Edge Case Hunter, Acceptance Auditor with the load-bearing-invariant checklist). 42 raw → 5
+decision-needed, 10 patch, 4 defer, 11 dismissed. Panel gate (§0) applied to every decision: none is the Panel's now (D4's
+governance half becomes the Panel's only when cost-optimization gets a live consumer).
+
+- [x] [Review][Decision] **D1 [MED] Moderation: a worker that dies after the claim loses the notice silently (introduced by R3).**
+  `moderation-notify.ts:360` returns `{ notified: true }` for ANY non-`acquired` claim, including a live `pending` row; pg-boss
+  defaults (15 min expiry, 2 retries) redeliver well inside the 24 h TTL, so the retry completes without sending and nothing
+  alarms. Before R3 the worker had no claim (at-least-once). The record's "unsent until the claim expires" understates it —
+  nothing re-runs it. Options: (a) on `already_claimed`, read the result: completed ⇒ skip; pending ⇒ alarm + throw (the job
+  ends `failed` and visible; the notice is still not sent automatically); (b) a claim TTL shorter than pg-boss's expiry so a
+  crashed claim lapses before the retry (cost: the durable outcome record expires within minutes, weakening AC4's record);
+  (c) accept and record. Recommended (a).
+  **RESOLVED (BigDev 2026-10-23, *"all recommended"*): (a)** — becomes patch P11.
+- [x] [Review][Decision] **D2 [MED] The pool label can exceed the SMS cost that was put, and counts length differently from the
+  DLT slot.** `smsPoolLabel` (`contribution-sms-templates.ts:120`) follows `-389` item 8 (FS13 (a)): ≤ 30 CODE POINTS and, for
+  en, GSM-7 — so GSM-7 extension characters (two septets each) and supplementary-plane letters (two UTF-16 units each) pass,
+  giving R5's widened 1–2 en / 2–3 hi segments; `dlt-variables.ts:24` counts a slot's `maxLength` in UTF-16 UNITS, so a 30-letter
+  supplementary name is 60 units in a 30-unit slot. It also checks the trimmed name but returns it untrimmed, and lets a newline
+  (in GSM-7) into an en value. Options: (a) keep FS13 as ratified; only trim; keep R5's widened bounds; (b) supersede FS13 (a)
+  by author-commit: trimmed; en = basic GSM-7 printable only (no extension table, no control characters); length ≤ 30 UTF-16
+  units — the bounds return to exactly 1 en / 2 hi as put, and R5's correction paragraph is rewritten to say so. Recommended (b).
+  Not the Panel's: `-389` "Not covered" leaves the cost at scale unruled.
+  **RESOLVED (BigDev 2026-10-23, *"all recommended"*): (b)** — FS13 (a) superseded in P1's author-commit; becomes patch P12.
+- [x] [Review][Decision] **D3 [MED] I4 residual: an SMS-rung dispatch error used to make the member retry; now it cannot.** Before
+  5.11 the SMS rung went through `dispatch`, so a render fault or a `hashRendered` (KMS HMAC) failure after the fixture ended
+  `error` ⇒ undelivered ⇒ retried. Now the rung ends `sms_send_not_wired` before those steps and `shouldRetryFanOut`
+  (`contribution-notify.ts:530`) treats any available SMS target as terminal — during a KMS outage, members with a mobile are
+  recorded `in_app_only` and their push is not retried. Options: (a) accept and record in I4 / R1 and carry to 5.11b's retry
+  window; (b) model it — retry when the push rung ended `error` and an SMS target exists (cost: also retries a push provider
+  throw that the old fixture masked, i.e. widens the retry set). Recommended (a).
+  **RESOLVED (BigDev 2026-10-23, *"all recommended"*): (a)** — accepted; recorded in P1's author-commit, I4 / R1, and "Carried to 5.11b".
+- [x] [Review][Decision] **D4 [LOW, latent — checklist family 11 REAL GAP] Cost-optimization can suppress a ruled text.** The SMS
+  rung checks `cost_optimized` before the predicate (`contribution-notify.ts:392`), so with the toggle on a member the app could
+  not reach gets no day-10 text — `-390` Q1 B has no such exception, while the ratified ladder makes "WA and SMS the PAID channels
+  subject to cost-optimisation". Unreachable today (`costToggleEnabled: false`; `wa_cost_optimization` "declared, not
+  production-active", `2026-08-01-069`). Options: (a) the three lit messages bypass cost-optimization now (code follows `-390`;
+  cost: decides one side of a two-ratified-clause conflict without the Panel); (b) record it and carry it to the story that
+  ships the cost-optimization admin surface (`-069`'s re-trigger), which must route it to the Panel before enabling the toggle.
+  Recommended (b) — over-routing an unreachable conflict now is a cost.
+  **RESOLVED (BigDev 2026-10-23, *"all recommended"*): (b)** — recorded and carried to `-070`'s cost-optimization re-trigger (P6). ⚠ *(round-2 patch review, Q1)* Corrected from `-069`: the "declared, not
+  production-active" condition and its re-trigger are `-070` item 2's; and the "PAID channels subject to cost-optimisation" line
+  quoted above is `-180`'s DESCRIPTIVE context (what the code does), ⛔ a ruling — the cost-optimization rule's own ratification is
+  unestablished; the activating story must establish it and route to the Panel if it conflicts with `-390`.
+- [x] [Review][Decision] **D5 [LOW] AC2 / I6's `$comment.sms` "NOT-YET-HUMAN-REVIEWED" marker was not written.** The deviation is
+  recorded (Completion Notes, "BigDev's to overrule": the Hindi review leg is discharged by `-389` item 12, so the marker would
+  contradict the record), but AC2 / I6 were never amended and the I6 test asserts the opposite. Options: (a) confirm the
+  deviation — amend AC2 / I6 with a dated note; (b) write the marker. Recommended (a).
+  **RESOLVED (BigDev 2026-10-23, *"all recommended"*): (a)** — the deviation confirmed; AC2 / I6 get a dated amending note (P6).
+- [x] [Review][Patch] **P1 [HIGH] R1 narrows `-389` item 9 with no decision entry.** `-389` item 9: *"a member no rung reached is
+  recorded `in_app_only` and ⛔ thrown for: the job completes as it does today"*; `shouldRetryFanOut` now throws and releases for
+  some of them, recorded only in the story ("This clarification controls I4, AC4 and Task 4"). Write an author-commit decision
+  (next free id) superseding item 9 by BigDev's option 1 (plus D2 / D3 outcomes if they supersede), committed ALONE before the
+  code commit. [`.decision-log.md`]
+- [x] [Review][Patch] **P2 [MED — family 4 REAL GAP] The `sms` block does not carry the locale its values were built for.**
+  `values.pool` depends on the locale (`smsPoolLabel`), producers build with `deps.locale ?? DEFAULT_LOCALE` (`hi`), and 5.11b
+  will choose the language per member — a Devanagari name could land in the en template (Unicode — what FS13 forbids). Add
+  `locale` to `AlertSmsBlock`, set it in the three producers, test it, and carry "send in the block's locale or rebuild" to
+  5.11b. [`packages/contracts/src/alerts/alert.ts:90`; `contribution-notify-triggers.ts:365`, `:407`]
+- [x] [Review][Patch] **P3 [MED — family 9 REAL GAP] The SMS rung skips `dispatch`'s lifecycle-suppression boundary, undocumented.**
+  `dispatch.ts:14-17` makes `dispatch` the single suppression boundary; the rung no longer calls it. Harmless today
+  (`noLifecycleSuppression`, nothing sent) but 5.11b's send from this rung could text a suppressed member. Add a DELIBERATE block
+  with the re-examination trigger and a "Carried to 5.11b" item. [`contribution-notify.ts:373`]
+- [x] [Review][Patch] **P4 [MED] Moderation releases its claim on a record failure, so a sent notice is sent again.** Unlike the
+  contribution, news and survey workers (alarm, keep the claim). Align: alarm on `recordResult` failure, keep the claim, complete.
+  [`moderation-notify.ts:378`]
+- [x] [Review][Patch] **P5 [LOW] Moderation returns `notified: true` when nothing was delivered or the run did nothing.** Report
+  `delivered` / `alreadySent` like the confirmed and mismatch notifiers. [`moderation-notify.ts:360`, `:388`]
+- [x] [Review][Patch] **P6 [MED — family 10 REAL GAP] Records and comments still describe the pre-R1 retry rule.** Test comment
+  `contribution-notify-triggers.test.ts:315` ("holds only a member whose fan-out THREW"); the `contribution-notify.test.ts` text;
+  the news / survey alarm "members' fan-out failed" (now also counts no-target members — reword); Debug Log (e) Task 4 trace and
+  Completion Notes Task 4 (dated annotations, not rewrites); Task 7's tick (its `ci:local` predates R1–R5); the header STATUS
+  comment (stops at v1.4); the File List (missing the moderation tests and `sms-segment-cost.test.ts`; news / survey tests are
+  no longer "(comment)"); the deferred-work TV6 item's PQ1 line (no `-390` annotation); `provider-composition.ts:436`'s
+  "5-state honesty" doc; FS3's memo limitation (name the off → on direction, deferred above).
+- [x] [Review][Patch] **P7 [LOW] The R1 trigger tests pair a fixture whose trail implies an SMS target with `retry: [M1]`.** Use
+  a no-target fixture so the test agrees with `shouldRetryFanOut`. [`contribution-notify-triggers.test.ts:1333`]
+- [x] [Review][Patch] **P8 [LOW] Nothing ties a producer's `sms.values` to the message's slots.** Add a jobs test rendering every
+  producer's block through `renderContributionSms` (missing slot or over-length fails). [`contribution-notify-triggers.test.ts`]
+- [x] [Review][Patch] **P9 [LOW] `serializeFanOutResult(undefined)` persists a record with no `outcome`.** Persist
+  `outcome: 'in_app_only'` to match the caller's count. [`contribution-notify.ts:206`]
+- [x] [Review][Patch] **P10 [LOW] AC2's PLANTED leg cannot fail.** It compares a hand-edited string with the registry and would pass
+  with the lockstep test deleted; make it run the lockstep comparison on a planted registry and expect it to fail.
+  [`apps/jobs/tests/contribution-sms-templates.test.ts:127`]
+- [x] [Review][Patch] **P11 [MED] (from D1 (a)) Moderation: a pending claim with no result alarms and throws.** On
+  `already_claimed`, read the result: completed ⇒ skip; none ⇒ alarm + throw. Unit + live legs. [`moderation-notify.ts:360`]
+- [x] [Review][Patch] **P12 [MED] (from D2 (b)) The pool label never exceeds the cost as put.** `smsPoolLabel`: trimmed; en =
+  basic GSM-7 printable only (no extension table, no control characters); ≤ 30 UTF-16 units; else the letter code. Rewrite R5's
+  sheet paragraph and the R5 test to the restored 1 en / 2 hi bound. [`contribution-sms-templates.ts:120`;
+  `dlt-template-requests-6-19.md`; `sms-segment-cost.test.ts`]
+  **ALL TWELVE APPLIED (2026-10-23, BigDev *"all"*), ⛔ committed.** P1: Decision `2026-10-23-394` written (`-391`–`-393` held by
+  the 11b-4 worktree) — to be committed ALONE before the code. P2: `AlertSmsBlock.locale` (contracts) set by the three producers.
+  P3: the DELIBERATE block on `smsRung` + the 5.11b carry. P4 / P5 / P11: moderation keeps its claim on a recording failure,
+  returns `delivered` / `alreadySent`, and alarms + throws on a claimed-but-unrecorded notice. P6: records and comments above.
+  P7: `noSmsTarget` fixture. P8: the producer-block slot / render test. P9: a missing record serializes `in_app_only` (⚠ reversed by the patch review's Q4: a missing record is RETRIED). P10:
+  `lockstepMismatches`, one function for the real and planted legs. P12: `smsPoolLabel` per `-394` item 2; the sheet and R5 test
+  rewritten to the restored 1 en / 2 hi. Pins re-taken: `provider-composition.ts` (doc only), `contribution-notify.ts`.
+  *Verification:* `tsc` clean (jobs, contracts, channels); ESLint clean; unit with `DATABASE_URL` unset — jobs 1011 / 0 failed,
+  contracts 1452, channels 448; :5433 — twelve jobs suites 302 / 302, channels live cascade + resolver 20 / 20;
+  `dlt-typed-variables:check` and `scripts/microcopy/contribution.test.ts` (34) pass. Mutants RED: P11, P4, P12 ×3 (code points,
+  extension table, untrimmed), P9, P10; restored byte-identical (sha256). ⛔ Full `ci:local` not run; the round-2 patch diff is
+  next through the review layers.
+- [x] [Review][Defer] **W1 WhatsApp off → on inside one process yields a fake `whatsapp:sent`** [`packages/channels/src/composition/provider-composition.ts:178`] — deferred, pre-existing (the memo).
+- [x] [Review][Defer] **W2 `resolveWhatsappProvider`'s other callers still accept the FS3 refused state** [`provider-composition.ts`] — deferred, pre-existing; outside the alert fan-out (I5).
+- [x] [Review][Defer] **W3 The refusing provider is audited under `whatsapp-business`** [`provider-composition.ts:187`] — deferred, pre-existing id class (F3); `ProviderId` is a closed union.
+- [x] [Review][Defer] **W4 Claim-then-crash window in confirmed / mismatch / news / survey** [`contribution-notify-triggers.ts:1305`, `:1371`] — deferred, pre-existing.
+
+Dismissed (11): an empty letter code or date blocking the push (codes are `^[A-Z]+$`, `naming.ts:126`; the date is formatted
+from `deadlineAt`); a contracts import cycle (`alert.ts` imports only zod and primitives); the bridge ⇒ time-critical coupling
+(`evaluateDegradedModeBridge` returns `alert.time_critical`); the eligibility predicate "dead" inside the fan-out (by construction
+— the cascade stops at the first `sent`; it is the single predicate 5.11b reads, unit-tested branch by branch); a lit member with
+no mobile ending `skipped_no_target` with no detail, and the header's "every non-send names its reason" (the outcome is the
+reason, unchanged); a lit notice's transient push failure kept terminal (BigDev's R1 option 1); the refusal memo making members
+terminal until restart (recorded limitation; pre-5.11 the fixture made them "delivered"); the registry being test-only in
+production (by design until 5.11b; P8 adds the producer check); two mismatch reasons sending the same text twice (the sheet's
+stated "once per mismatch reason"). Checklist verdicts (Auditor): family 6 covered-by-test; 7 covered-by-test (the sweep leg by
+construction); 8 covered-by-test; REAL GAPS in 2 (D1), 4 (P2), 9 (P3), 10 (P6), 11 (D4).
+
+### Review Findings — round 2 patch review (the P1–P12 diff)
+
+`bmad-code-review` layers on the round-2 PATCH diff (round-1 tree → round-2 tree, 784 lines, + `-394`) — the fix-diff review
+[[feedback_review_the_fix_diff_before_commit]]; three read-only layers, 2026-10-23/24. 39 raw → 1 decision-needed, 7 patch,
+1 defer, 9 dismissed; ⛔ HIGH. Auditor: P1–P12 do what they say; D1–D5 match; `-394` quotes `-389` verbatim and does ⛔
+reinterpret `-390`; pins match. Panel gate: nothing here is the Panel's.
+
+- [x] [Review][Decision] **E1 [MED] The moderation claim's 24 h lifetime does not fit pg-boss's retry window, so D1 (a) as built
+  cannot recover.** pg-boss 12.19.1 defaults for this queue: 15-min expiry, 2 retries, 0 delay. (i) A dead worker's claim stays
+  `pending` 24 h — all three attempts hit P11 within seconds and the job ends `failed`; the alarm says "retrying" but nothing can
+  succeed until a manual re-run after 24 h. (ii) P4 × P11: a delivered notice whose `recordResult` failed keeps a `pending` claim, so
+  any redelivery alarms "NO recorded result" and fails; after 24 h a re-run re-sends. (iii) A fan-out hung past 15 min is
+  re-dispatched and fails while the first later records. (iv) A completed-but-expired row (before the hourly vacuum) also reads as
+  "unrecorded". The store keeps `created_at` = claim time. Options: (a) add a read-only `inspect(key)` → `{ status, createdAt }` to
+  the keyed store: `completed` (expired or not) ⇒ skip, `alreadySent`; `pending` younger than the 15-min expiry ⇒ in flight ⇒ throw;
+  `pending` older ⇒ a dead claim ⇒ take it over and send (at-least-once, as before R3). Cost: an additive `@twt/domain` API + live
+  legs; a hung fan-out over 15 min, or a failed record, can send twice (the pre-R3 behaviour). (b) a moderation claim TTL shorter
+  than the expiry (~10 min) so a dead claim lapses before the retry. Cost: (iv) still alarms falsely on a manual re-run; the outcome
+  row is vacuumed within ~70 min instead of 24 h. (c) keep it; document (i)–(iv) and correct the alarm text. Cost: a crash loses the
+  notice until someone re-runs it after 24 h. Recommended (a).
+  **RESOLVED (BigDev 2026-10-24, *"apply all"* — taken as the recommended (a), as with round 2's *"all recommended"*; ⛔ an
+  explicit letter):** built — `KeyedStore.inspect` (read-only, additive) and the moderation take-over below.
+- [x] [Review][Patch] **Q1 [MED — family 10] Records that still state superseded or wrong facts.** AC5 and the DLT sheet's wording
+  section (`dlt-template-requests-6-19.md` ~279–286) still state the old FS13; both catalogues' `$comment.sms` too; R3's and R5's
+  "RESOLVED / BUILT" notes describe behaviour round 2 reversed; the Task 7 annotation splices a sentence; the header's "Day-one
+  output" predates R1; D3's note claims an R1 annotation that is missing; the story's D4 resolution cites `-069` for `-070`'s text;
+  D4's "ratified ladder" quote is `-180`'s DESCRIPTIVE context, ⛔ a ruling (the carry must say the cost-optimization rule's own
+  ratification is unestablished); deferred-work's round-2 header says "all four pre-existing" over five bullets; the File List lacks
+  Task 0.4's records; `-394` (uncommitted) cites `-389`'s "Not covered" where `-390` Q1 B's accepted cost is the binding text, and its
+  "none changes what a member is owed" needs item 3's outage retry stated as a reliability change while SMS is dark; a test title
+  ("over 30 code points").
+- [x] [Review][Patch] **Q2 [MED] The news / survey alarm misstates the cause and the recovery.** It names "no rung and no SMS target"
+  (also cost-suppressed SMS and a bridged member without a target) and says "released for redelivery" (no retry is scheduled — a
+  re-run would pick them up). [`news-publish.ts:260`; `survey-publish.ts:239`]
+- [x] [Review][Patch] **Q3 [LOW] A hi pool value may still carry control characters.** `-394` item 2 bans them for en only; extend to
+  every locale (and amend item 2 before its commit) with tests. [`contribution-sms-templates.ts:124`]
+- [x] [Review][Patch] **Q4 [LOW] P9 made a MISSING fan-out record terminal, contradicting moderation's rule.** Callers (POOL_BATCH,
+  confirmed, mismatch) treat a missing record as a retry (release + throw), as moderation does; `serializeFanOutResult` takes a record.
+  Unreachable today. [`contribution-notify.ts:199`; `contribution-notify-triggers.ts:864`, `:1338`, `:1397`]
+- [x] [Review][Patch] **Q5 [LOW] Test legs that are weak or pass for the wrong reason.** The contracts `pool_open` leg (no `locale` —
+  add it); boundary legs for 31 UTF-16 units, a whitespace-only name, and every extension / control character; the P4 leg asserts
+  `recordResult` was called; the P11 live leg releases in `finally`; an in-flight-then-recorded leg (with E1).
+- [x] [Review][Patch] **Q6 [LOW] P10's claim overstates.** `lockstepMismatches` reads the catalogue directly; the real-`t()` leg is
+  separate. Correct AC2's note and the describe title. [`contribution-sms-templates.test.ts`]
+- [x] [Review][Patch] **Q7 [LOW] `ModerationNotifyResult.notified`'s doc is garbled** ("⛔ only for member-not-found" — means
+  "false only for"). [`moderation-notify.ts:108`]
+  **E1 (a) + Q1–Q7 APPLIED (2026-10-24, BigDev *"apply all"*), ⛔ committed.** E1: `inspect(key)` on the keyed store (+ a live
+  spec leg); moderation reads an already-claimed key — completed (even past its TTL) ⇒ skip, `alreadySent`; pending younger than
+  pg-boss's 15-min expiry ⇒ in flight, alarm + throw; older or gone ⇒ released, re-claimed, sent (at-least-once); live legs for
+  in-flight-then-recorded and an abandoned claim taken over. Q1: AC5, the sheet's wording section, both `$comment.sms`, R1 / R3 /
+  R5 notes, Task 7's splice, the Day-one note, D4's citations (`-070`; `-180` descriptive), the deferred-work header, the File List,
+  and `-394` (§0 reasoning, item 2, item 3's nature, Consequences, Author). Q2: the news / survey alarm. Q3: ⛔ a Cc control
+  character in any locale (ZWJ / ZWNJ kept). Q4: a missing record is retried in POOL_BATCH, confirmed and mismatch;
+  `serializeFanOutResult` takes a real record (P9 reversed). Q5–Q7 as written. Pin re-taken: `contribution-notify.ts`.
+  *Verification:* `tsc` clean (domain, jobs, contracts, channels, niyamavali-engine, api); ESLint clean; unit with `DATABASE_URL`
+  unset — jobs 1030 / 0 failed, contracts 1452, channels 448, microcopy 34; :5433 — fourteen jobs suites 360 / 360, the keyed-store
+  spec 9 / 9, channels 20 / 20; `dlt-typed-variables:check` passes. Mutants RED: E1 threshold, E1 completed-skip, Q3, Q4;
+  restored byte-identical. ⛔ Full `ci:local` not run.
+- [x] [Review][Defer] **X1 The push label does not trim a padded curated name; the SMS now does** [`contribution-notify-triggers.ts:251`] — deferred, pre-existing push behaviour.
+
+Dismissed (9): a required `locale` breaking persisted payloads (none is persisted, queued or replayed — alerts are built at fan-out,
+verified by grep); a second hi / en enum (the contracts convention — each module its own); `getResult` returning `undefined`
+(`rows[0]?.result ?? null`); `-394` bundled with code (not committed — it commits alone); the off → on fake `sent` (W1, deferred);
+ESC in an en name (`needsUnicode` is true — it is ⛔ in the GSM-7 set); nothing reading `delivered` / `alreadySent` (the worker
+discards results by design; tests observe them); the sheet's segment counts unpinned (its character counts are pinned and `measure`
+derives segments); P7's trail detail (the fan-out is mocked there).
 
 ## Carried to 5.11b (`5-11b-alert-sms-real-send`) — NOT built or answered here
 
 5.11b's create-story starts from these, re-verified at its own pin. Each was validated against `d87d047a`.
+
+- ⭐ **Added by review round 2 (2026-10-23):**
+  - **The `sms` block's locale (P2).** The block now carries `locale` — the language its VALUES were built for (the producer's,
+    `deps.locale ?? DEFAULT_LOCALE`). FS5 picks the language per member: send in the block's locale or REBUILD the values
+    (`smsPoolLabel` for the chosen locale) — ⛔ put hi values in an en template (a Devanagari name makes it Unicode).
+  - **The lifecycle-suppression boundary (P3).** The SMS rung does not call `dispatch`, so it bypasses `dispatch`'s single
+    suppression boundary (the DELIBERATE block on `smsRung`). The real send must go through `dispatch` or apply the same hook first.
+  - **The retry window re-decides `-394` item 3 (D3 (a)).** While dark, an SMS-rung dispatch error (render / KMS HMAC) no longer
+    retries a member with a mobile; the real send's failures and retry window replace that.
+  - **The WhatsApp memo's off → on direction (deferred-work round 2 W1)** — a fake `whatsapp:sent` until restart.
 
 - **FS5 — the language.** Reuse `getMemberLanguage` (F11 — the neutral read already exists; no extraction from `peer-mesh-request.ts`, so no
   overlap with 6-36d), resolved in `resolveMemberDeliveryContext` into the fan-out context (F20). Fallback: `-387` makes the neighbours' text
@@ -803,6 +1123,10 @@ job BEFORE 5.11 (with the fake `sms:sent`) and does now:
   reached in practice: the fake `sent`); now: recorded `in_app_only`, claim KEPT, ⛔ throw; `inAppOnly` counted on the result.
 - CONFIRMED and MISMATCH workers (single member) — same; their result's `delivered` is now honest (`results[0].delivered`).
 - moderation-notify — THROWS on `retry` (a thrown fan-out) only; the alarm text names a FAILED fan-out.
+  ⚠ *(2026-10-23, review round 2, P6 — this trace predates R1)* Since R1 / `-394` item 1, `retry` also holds a member `shouldRetryFanOut`
+  keeps retryable (no SMS target, or SMS cost-suppressed) — POOL_BATCH / confirmed / mismatch / moderation release + throw for
+  them, news / survey release them for redelivery (their alarm now says so). Moderation records its outcome (R3) and treats a
+  claimed-but-unrecorded notice as a failure (P11).
 - helpdesk-reply fan-out notifier — ignores the result (log-only in production, F8); unchanged.
 - news-publish / survey-publish — call `fanOutAlert` per member; ⛔ retry either way (best-effort broadcast). Before: a non-delivered member
   was RELEASED + counted in an alarm. Now: recorded `in_app_only` (a redelivered job does ⛔ re-send to them) and counted on an info log; the
@@ -872,6 +1196,8 @@ fresh per-test alert id — the suites' own convention; ⛔ schema change, ⛔ m
   `in_app_only` (claim kept, ⛔ throw; `inAppOnly` on the child result; confirmed / mismatch return an honest `delivered`); the recorded
   trail keeps a rung's detail only when it is a NAMED reason (`RECORDED_RUNG_DETAILS`). The trace (Debug Log (e)) applied FS14 to
   moderation (via `retry`), news and survey (record, ⛔ release).
+  ⚠ *(2026-10-23, review round 2, P6)* Superseded in part by R1 / `-394` item 1: `retry` is no longer "a THROWN fan-out only" — see the
+  annotation on Debug Log (e).
 - **Task 5 (AC6; FS11).** DLT sheet: rows 17–22 in the main table, *"The wording of templates 17–22"* section, a cost line, a
   rejection-table line, a Record line, dated notes on the TV6 section and after the main table. Roster: Row 30 note (1) dated annotation
   (Row 40 already carried (a)–(f) from Task 0.4). deferred-work: the 5.10-validate ladder item annotated BUILT on the branch (still closed
@@ -901,8 +1227,11 @@ fresh per-test alert id — the suites' own convention; ⛔ schema change, ⛔ m
 New:
 - `apps/jobs/src/scheduler/contribution-sms-templates.ts`
 - `apps/jobs/tests/contribution-sms-templates.test.ts`
+- `apps/jobs/tests/moderation-notify-outcome.test.ts` (review R3 / round 2)
+- `apps/jobs/tests/moderation-notify-live.test.ts` (review R3 / round 2)
 
 Modified — source:
+- `packages/domain/src/idempotency/keyed-store.ts`, `index.ts` (`inspect` — round-2 patch review E1 (a))
 - `apps/jobs/src/scheduler/contribution-notify.ts`
 - `apps/jobs/src/scheduler/contribution-notify-triggers.ts`
 - `apps/jobs/src/scheduler/moderation-notify.ts`
@@ -922,17 +1251,22 @@ Modified — tests:
 - `apps/jobs/tests/ai-8-3-ladder-armor-live.test.ts`
 - `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts` (three pins re-taken)
 - `apps/jobs/tests/contribution-notify-live.test.ts`
+- `apps/jobs/tests/sms-segment-cost.test.ts` (review R5 / round 2 D2)
 - `apps/jobs/tests/contribution-notify-triggers.test.ts`
 - `apps/jobs/tests/contribution-notify.test.ts`
 - `apps/jobs/tests/helpdesk-reply-notify.test.ts` (comment)
-- `apps/jobs/tests/news-publish.test.ts` (comment)
-- `apps/jobs/tests/survey-publish.test.ts` (comment)
+- `apps/jobs/tests/news-publish.test.ts` (R1 / R4 live legs — review)
+- `apps/jobs/tests/survey-publish.test.ts` (R1 / R4 live legs — review)
 - `packages/channels/tests/contribution-provider-resolver.test.ts`
 - `packages/channels/tests/integration/live-dispatch-cascade.spec.ts` (comment)
 - `packages/contracts/tests/contribution-loop-templates.test.ts`
 - `scripts/microcopy/contribution.test.ts`
 
 Modified — records:
+- `.decision-log.md` (Decisions `-389`, `-390`; review: `-394`)
+- `_bmad-output/planning-artifacts/architecture.md` (§3.4 dated annotation — Task 0.4)
+- `_bmad-output/planning-artifacts/epics.md` (`### Story 5.11`, `### Story 5.11b` — Task 0.4)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-5-11-sms-for-members-without-whatsapp.md` (Task 0.4; ruled `-390`)
 - `docs/launch-gate-inventory/dlt-template-requests-6-19.md`
 - `docs/launch-gate-inventory/inventory-roster.md` (Row 30 note (1))
 - `_bmad-output/implementation-artifacts/deferred-work.md`
@@ -943,6 +1277,11 @@ Modified — records:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-24 | v1.10 | Committed: `8eb8cee0` (Decision `-394`, alone) then `93ad0596` (the review fixes). AC7 re-closed — `ci:local` on :5433 36 / 36 by component (the unit job's one load timeout re-run alone, 37 / 37). Status `in-progress` → `review`. ⛔ pushed. |
+| 2026-10-24 | v1.9 | Round-2 patch review (the P1–P12 diff, three layers): 39 raw → E1 (taken as (a) on BigDev's *"apply all"*), Q1–Q7 APPLIED, X1 deferred, 9 dismissed; ⛔ HIGH. `KeyedStore.inspect` added; moderation takes over an abandoned claim; P9 reversed by Q4; records corrected; `-394` amended before its commit. Status stays `in-progress`; not committed or pushed. |
+| 2026-10-23 | v1.8 | Fresh full review (round 2): 42 raw → D1–D5 (BigDev *"all recommended"*), P1–P12 (BigDev *"all"*) APPLIED, W1–W4 deferred, 11 dismissed. Decision `2026-10-23-394` written (supersedes `-389` items 8, 9; accepts the D3 residual). Status stays `in-progress`; not committed or pushed. |
+| 2026-10-23 | v1.7 | Review R2–R5 BUILT: empty curated pool name falls back to the letter code (R2); moderation records its outcome + named trail in the keyed store and releases on retry (R3); one shared `serializeFanOutResult` keeps the trail in news / survey / triggers (R4); the DLT sheet's cost bounds corrected for GSM-7 extension and supplementary characters, pinned by test (R5). Gates in Review Findings. Status stays `in-progress` pending the patch-diff review; not committed or pushed. |
+| 2026-10-23 | v1.6 | Review R1: BigDev chose option 1, preserve previous retries. `shouldRetryFanOut` distinguishes former fixture successes from previous failures without an available SMS target (including cost suppression), with FS3 WA-refusal and bridge handling. Batch retries and news/survey release-for-redelivery preserved; regression tests, typecheck and ESLint pass. I4 / FS14 / AC4 clarified. Status `review` → `in-progress`; R2–R5 remain open; not committed or pushed. |
 | 2026-10-23 | v1.0 | Created by `bmad-create-story 5.11` (pinned `d87d047a`). FS1–FS13 + PQ1 PROPOSED; words drafted (en + hi, hi un-reviewed). |
 | 2026-10-23 | v1.1 | Validated (`bmad-create-story validate 5.11`, four parallel read-only checks; BigDev: *"all"*). Pin and found facts re-checked — no drift. SPLIT: the real send (FS5, FS6, FS8, FS9, FS12, the CRQID kind, MG12's zero-slot change) carried to new row `5-11b-alert-sms-real-send`; 5.11 adds no migration. New: F19 (the fake `sent` holds the retry loop shut) ⇒ FS14 (`in_app_only`, retry profile unchanged); FS15 (honest rung for unlit messages); FS16 (the app's name); G10 `-180` (full name on the cycle-open SMS ⇒ FS4 keeps it, two boxes, amount dropped) and G11 `-379` ⇒ PQ2; G12 R10(B) in the Policy meaning and PQ1; consent moved to counsel (roster leg (f)); FS3's mechanism (a rejecting provider); FS10 runs the normal ladder while the bridge is dark; FS13 letter code for non-GSM names in en; registry moved to `apps/jobs` (`MEMBER_BOX_SLOTS`); cites corrected (F7 nine messages, F11 `getMemberLanguage`, F18, `-345`, `-354`, G1, G3, G4); segment table recomputed; glyph inversions removed. |
 | 2026-10-23 | v1.2 | Task 0.2 ANSWERED (Debug Log (a)). FS1 (d): three texted notices (day 10, payment not matched, payment still not confirmed); pool open and day 14 go to the Trust's announcement channels (BigDev's direction) ⇒ PQ3 NEW (ask or require members to join), G13 NEW (a broadcast channel is not in §3.4); PQ1 reshaped to the three; PQ2 WITHDRAWN (no text carries a name). FS16 (b). Words corrected by BigDev (en + hi) and segments recomputed (common path 1 en / 2 hi). `alert_published` stays excluded (G4 kept). Name boxes, the exigency line and `name_over_60_unruled` dropped from AC1 / AC5 / AC6 / Tasks 1, 2, 5 / T7 / T12. FS12 (2) corrected (`resolveSmsTarget` already catches a decrypt failure). Routing note rewritten — NOT sent. |

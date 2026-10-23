@@ -4,6 +4,42 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 5-11-per-member-sms-fallback-fixed-wording.md, round-2 patch review (2026-10-24)
+
+- **The push's pool label does not trim a padded curated name; the SMS value now does** (`contribution-notify-triggers.ts:251`,
+  `identity.poolName ?? identity.poolLetterCode`, vs `smsPoolLabel`'s `trim()` under `-394` item 2). Pre-existing push behaviour; a
+  padded name shows differently in the push and the text. Re-trigger: the next story that touches the push label.
+
+## Deferred from: code review of 5-11-per-member-sms-fallback-fixed-wording.md, second full review (2026-10-23)
+
+Fresh full review of the whole story diff (`1268d47e` → working tree, R1–R5 included); three read-only layers. The first four are
+PRE-EXISTING (older than this story's diff) and real; none sends a member anything today. The fifth (D4) is a CARRIED conflict this
+story's ruling exposes. *(Count corrected 2026-10-24, round-2 patch review, Q1.)*
+
+- **WhatsApp off → on inside one process still yields a fake `whatsapp:sent`.** `provider-composition.ts` memoizes the `off`
+  state per (pariwar, category) as `createWhatsappProvider(null)`, the accepting fixture, while `resolveWaTarget`
+  (`packages/domain/src/notifications/delivery.ts`) re-reads `config.enabled` per member. A Pariwar switched ON after the first
+  resolution gives opted-in members a target, the memoized fixture answers `accepted`, and they are recorded `delivered` with
+  nothing sent — the F5 class, in the direction FS3's recorded memo limitation (refused → ready) does not name. Re-trigger: 5.11b
+  (the per-send provider) or the first story that touches the memo.
+- **`resolveWhatsappProvider` (the non-fan-out callers) still returns the accepting fixture for the FS3 "refused" state.** Only
+  the alert fan-out's resolver refuses honestly (I5 scope); the two selections now disagree on whether that state is `sent`.
+- **The FS3 refusing provider is audited under the real `whatsapp-business` provider id.** A config refusal (no network call)
+  writes an `alert.channel_send` line indistinguishable, but for `detail`, from a Meta rejection — the same id problem F3 found
+  for the SMS fixture. `ProviderId` is a closed union, so a distinct id is a cross-package change.
+- **Claim-then-crash window in the single-member and broadcast notifiers.** `runContributionConfirmedNotify`,
+  `runContributionMismatchNotify`, news and survey treat any non-`acquired` claim — including a live `pending` row left by a
+  worker that died before `recordResult` / `release` — as done; a pg-boss redelivery inside the claim TTL completes without
+  sending. Moderation's NEW instance of this (added by R3) is a decision in the story's round-2 findings, not deferred.
+- **Cost-optimization can suppress a ruled text (round 2 D4 (b), BigDev *"all recommended"*) — CARRIED, a REAL GAP (checklist family 11),
+  latent.** The alert fan-out's SMS rung checks `cost_optimized` before `-390`'s predicate, so with the toggle on, a member the app could
+  not reach gets no day-10 text; `-390` Q1 B has no such exception, while the ladder AS BUILT makes WA and SMS "the PAID channels
+  subject to cost-optimisation" (`-180`'s descriptive context — ⛔ a ruling; the cost-optimization rule's own ratification is
+  unestablished, corrected 2026-10-24, round-2 patch review, Q1). Unreachable today (`costToggleEnabled: false`; `wa_cost_optimization` "declared, not production-active" —
+  admitted `-069`, condition ratified `-070` item 2). ⭐ Trigger: the story that ships the per-Pariwar cost-optimization admin surface
+  (`-070`'s re-trigger) — it must establish what (if anything) ratifies cost-optimization for these texts and, if it conflicts with
+  `-390`, ROUTE it to the Panel BEFORE enabling the toggle for the three texts.
+
 ## Story 5.11 — the per-member SMS fallback's fixed wording (2026-10-23)
 
 Recorded at Story 5.11's Task 0.4 under [`-389`](../../.decision-log.md#decision-2026-10-23-389). Neither is 5.11's to build.
@@ -12084,6 +12120,9 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
     matched, payment still not confirmed), in a message-keyed registry (`apps/jobs/src/scheduler/contribution-sms-templates.ts`); the five
     category entries stay dark. Send by row `5-11b-alert-sms-real-send`. ⭐ Closed by 5.11b on `done` — ⛔ before. The members WITHOUT
     WhatsApp: the Panel's PQ1 (sent 2026-10-23).
+  - *Appended 2026-10-23 (Story 5.11 review round 2, P6):* PQ1 RULED — `2026-10-23-390` Q1 B (Trustee-ratified): the three texts go to
+    any member the app (and WhatsApp, where used) could not reach, WhatsApp yes or not; built by row 5-11's predicate. Item still OPEN
+    until 5.11b is `done`.
 - **The data-export delivery OTP says "Valid 3 min" for a code that lives 60** [`apps/api/src/modules/member-data-rights/handlers.ts:659-663`
   delivers with `intent: 'step_up'`; TTL `apps/api/src/config.ts:386`, `member-otp.service.ts:38-43`] — it UNDERSTATES (⛔ refuses anyone: the
   code still works after 3 minutes). Story 6.34 TV9 fixed only the claim handover (a 3-minute code told *"5 min"* — a nominee typing it in

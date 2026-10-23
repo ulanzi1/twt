@@ -12362,6 +12362,11 @@ reachable path above is closed for 6.37d's sends; the classifier's own filing st
   `done` meanwhile is BigDev's call, put to them at the close of the 8.15 code review. The story's Task 6
   `[x]` on "Request the non-author tone review" records that it was requested in chat, ⛔ not that an
   artifact exists.
+  ⭐ **2026-10-23 — Closed by [review] (appended; the entry above is unedited).** BigDev reviewed the eight
+  keys, en + hi, with `-383`'s ask in view: *"done, hi/contribution.json modified a little, record AC6"*. Their
+  edit: `first_cycle` and `first_cycle_a11y` read *"इसी चक्र से ही लागू है"*. The re-trigger's three facts
+  (who, when, which keys) are in the story's Completion Notes ("AC6 — RECORDED"). Whether 8.15 moves to
+  `done` stays BigDev's call.
 
 ## Deferred from: code review of 8-15-fixed-amount-transition-staged-card.md (2026-10-23)
 

@@ -11,7 +11,11 @@
 > ⚠ **WRITTEN 2026-10-23 — ⛔ sent.** ⛔ Shown to the Panel until BigDev sends it.
 > ⚠ **Written ahead of BigDev's build answers** (Story 6.36e, Task 0.2). It assumes four of them: the nominee is found from the member's own
 > phone contacts (NE3); only when changing nominees in Life Events, ⛔ at sign-up (NE4); the nominee is told in the app only (NE6); and the
-> mark keeps them out whatever they answer under Question 1 A (NE7). If BigDev answers otherwise, this note is revised before it is sent.
+> mark keeps them out whatever they answer under Question 1 A (NE7) — and, from 2026-10-24, a fifth: each new mark is capped at four a day
+> (NE5). If BigDev answers otherwise, this note is revised before it is sent.
+> ⚠ **Revised 2026-10-24 (Story 6.36e v1.2, the validate pass), still ⛔ sent:** the one fact no longer says the mark works "whatever
+> number they sign in with"; Q1 A's cost names the stored link; Q1 B names the staff-warning extension; Q2 A's cost names the capped
+> typed lookup; Q2 B's cost names the data-copy conflict; "you recorded this gap" → "our note told you of it". E4 re-run.
 
 ---
 
@@ -35,23 +39,26 @@ ruled on, and the nominee has not agreed to it when the member saves the mark. T
 
 ⭐ Today the Trust can only recognise a nominee by the phone number the member typed for them. If that nominee signs in to TWT on a
 DIFFERENT number — a second SIM, a family phone, a typo — the check you allowed on 23 October misses them, and they can be one of the
-five asked whether the member has died, though they would receive the money. You recorded exactly this gap when you ruled. A mark that
-names the member account closes it, whatever number they sign in with — but only if the mark counts before the nominee answers. A
-nominee who is waiting for the money is also the person with a reason never to answer, or to say "that's not me".
+five asked whether the member has died, though they would receive the money. Our note to you on 23 October told you of exactly this gap,
+and it is recorded beside your ruling. A mark that names the member account closes it wherever the member has the number the nominee
+signs in with (in their contacts, or typed) — even if the number they give for the nominee is a different one. It does not help a
+nominee who signed up on a number the member does not have, such as a family phone saved under a relative's name. And it closes the gap
+only if the mark counts before the nominee answers: a nominee who is waiting for the money is also the person with a reason never to
+answer, or to say "that's not me".
 
 ## What you are choosing between
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Yes — the mark counts from the moment the member saves it.** The nominee is told in the app and answers "Yes, that's me" or "No, that's not me"; the member sees the answer. | A marked nominee is never asked about the death, whatever they answered and whatever number they sign in with. If the answer is "not me", the member can remove the mark or pick again. | A member's account is marked before they have said yes. A wrong pick keeps an uninvolved colleague out of the five until the member fixes it (today a mistyped number does the same). |
-| **B** | **Yes — but the mark counts only once the nominee says "Yes, that's me".** | A nominee who confirms is never asked. Until they confirm — or if they say "not me" — they can still be asked if they sign in on a different number. | The gap stays open for exactly the people with a reason to keep it open: a nominee who never answers, or who says "not me" when it is them. |
-| **C** | **No — do not record member accounts for nominees.** | Nothing changes; nominees are recognised by phone number only. | The gap you recorded on 23 October stays; this follow-up is closed unbuilt. |
+| **A** | **Yes — the mark counts from the moment the member saves it.** The nominee is told in the app and answers "Yes, that's me" or "No, that's not me"; the member sees the answer. | A marked nominee is never asked about the death, whatever they answered and even if they sign in on a different number from the one the member gave. If the answer is "not me", the member can remove the mark or pick again. | A member's account is marked before they have said yes. A wrong pick keeps an uninvolved colleague out of the five until the member fixes it (today a mistyped number does the same). The Trust stores a direct link from a nominee to a member's account — something the phone-number check you allowed deliberately avoided. |
+| **B** | **Yes — but the mark counts only once the nominee says "Yes, that's me".** | A nominee who confirms is never asked. Until they confirm — or if they say "not me" — they can still be asked if they sign in on a different number. Staff are also warned when a nominee ANSWERS in the 90 days before the claim — one more reason for the warning you allowed on 23 October. | The gap stays open for exactly the people with a reason to keep it open: a nominee who never answers, or who says "not me" when it is them. |
+| **C** | **No — do not record member accounts for nominees.** | Nothing changes; nominees are recognised by phone number only. | The gap our 23 October note told you of stays; this follow-up is closed unbuilt. |
 
 **Our reading:** A — **because** the mark is the member's own statement about their own nominee, of the same strength as the number they
 type today (which you already let the Trust use without the nominee's yes), the nominee is still told and can say it is not them, and only
 A cannot be undone by the person it protects against. ⚠ When this follow-up was opened, our own note on it said it *"needs the nominee's
-agreement"*. Option A reads that as "the nominee is told and answers", not "the mark waits for a yes" — we flag the difference so that you
-decide it rather than we assume it. Under every option, nothing goes live until our lawyer confirms the ground in writing.
+agreement"*. Under option A, our decision record would replace those words, citing your ruling, with "the nominee is told and answers" —
+not "the mark waits for a yes". We flag the change so that you decide it rather than we assume it. Under every option, nothing goes live until our lawyer confirms the ground in writing.
 
 ---
 
@@ -74,9 +81,9 @@ close relative who knows they were chosen; but the Trust telling them is still t
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Both.** The member sees which contacts are members (under their own saved names, the same limits as "people who know me"); the marked member is told in the app — never by text, WhatsApp or notification — and the member sees their answer. | The member can mark a nominee in a few taps. The nominee learns they were named and can say it is not them. | One more purpose for the contacts check. A nominee learns they were named; a member learns the nominee's answer. |
-| **B** | **The member sees the matches; the nominee is NOT told** (a silent mark). | The member can mark a nominee; the nominee never knows. | A member's account is marked without their knowledge, and a wrong pick is never reported back. ⚠ Not possible with Question 1 B — a nominee cannot say yes to something they are not told. |
-| **C** | **No contacts check for nominees.** The member types the number their nominee signs in with; the app says only "marked" or "not found". | No list of matches is shown; the member must know the other number. | The member must know a number they may not have. Each typed number is a guess at whether someone is a member — one at a time, but with no "saved name" in between. |
+| **A** | **Both.** The member sees which contacts are members (under their own saved names, the same limits as "people who know me"); the marked member is told in the app — never by text, WhatsApp or notification — and the member sees their answer. | The member can mark a nominee in a few taps. The nominee learns they were named and can say it is not them. | One more purpose for the contacts check. A nominee learns they were named; a member learns the nominee's answer. A member who refuses the contacts check can still pick or type one number, and the app then says whether it can be marked — a "member or not" answer, one number at a time, capped at four a day. |
+| **B** | **The member sees the matches; the nominee is NOT told** (a silent mark). | The member can mark a nominee; the nominee never knows. | A member's account is marked without their knowledge, and a wrong pick is never reported back. A nominee who asks the Trust for a copy of their own data would either learn of the mark, or receive a copy that leaves it out. ⚠ Not possible with Question 1 B — a nominee cannot say yes to something they are not told (B with Question 1 B is the same as Question 1 C). |
+| **C** | **No contacts check for nominees.** The member types the number their nominee signs in with; the app says only "marked" or "not found". | No list of matches is shown; the member must know the other number. | The member must know a number they may not have. Each typed number is a guess at whether someone is a member — one at a time, capped at four a day, but with no "saved name" in between. |
 
 **Our reading:** A — **because** it reuses a check you have already allowed, with the same limits and the same rule that a match is shown
 only under the member's own saved name, and it lets the person who is marked know it and say if it is wrong.
@@ -88,14 +95,14 @@ only under the member's own saved name, and it lets the person who is marked kno
 - **Live today:** nothing — the app is not in production, and this is not built.
 - **Blocked:** the build of this follow-up (row `6-36e-nominee-member-link-at-declaration`) waits for your answer, unless BigDev decides
   otherwise. Nothing else is blocked; the phone-number check you allowed is built and unaffected.
-- **If nothing is decided:** nominees are recognised by phone number only, as today, with the gap you recorded.
+- **If nothing is decided:** nominees are recognised by phone number only, as today, with the gap our 23 October note told you of.
 
 ---
 
 # How much to trust this note
 
-- **Earlier versions of this question:** none sent. The gap was first recorded in your 23 October ruling's "not covered" list and in
-  BigDev's acceptance of it the same day.
+- **Earlier versions of this question:** none sent. The gap was first told to you in our 23 October note ("still uncertain"), recorded
+  in the "not covered" list beside your ruling, and accepted by BigDev the same day.
 - **Corrected in this note:** the follow-up was first written down as *"pick the nominee from the members list"*. There is no members
   list a member can browse or search — members find each other only by the contacts check, and that was deliberate (showing which number
   belongs to which member would let anyone map numbers to members). The note asks about the contacts check instead.
@@ -104,7 +111,8 @@ only under the member's own saved name, and it lets the person who is marked kno
     (not yet sent). The privacy policy lists only a nominee's name and relationship today; it would need a line.
   - The mark helps only when the nominee signs in with a different number from the one the member gives for them — or later, if members
     can change their sign-in number (not built). If the member gives the same number, the existing check already catches them.
-  - A nominee who is not in the member's phone contacts cannot be marked this way.
+  - A nominee who is not in the member's phone contacts cannot be marked this way — unless the member types the number they sign in
+    with. A nominee on a family phone, saved under a relative's name, will usually not be found.
   - The mark is offered only when nominees are changed in Life Events, not at sign-up (a member is not yet active then).
   - The build answers this note assumes are BigDev's, still to be given.
 
@@ -115,7 +123,8 @@ only under the member's own saved name, and it lets the person who is marked kno
 When a member dies, the Trust asks up to five colleagues what they know. Since 23 October, the Trust leaves out a colleague who is one of
 the member's nominees — but it can only spot them by the phone number the member typed. If the nominee signs in to TWT on another
 number, they are missed. We propose letting the member, when changing their nominees, find a nominee who is a TWT member in their own
-phone contacts and mark them; that member is then never asked about the death. Question 1 asks whether the Trust may record that mark,
+phone contacts and mark them; that member is then never asked about the death, even if the number the member gave for them is a
+different one. Question 1 asks whether the Trust may record that mark,
 and whether it should count straight away or only once the nominee says it is them — we suggest straight away, because a nominee waiting
 for money is the one person with a reason never to answer. Question 2 asks what each person may be told — we suggest the member sees
 which contacts are members (as you already allow for "people who know me"), and the nominee is told in the app and can say if it is
@@ -157,7 +166,8 @@ wrong. Nothing goes live until our lawyer confirms the ground.
   build decisions are Story 6.36e's NE1–NE14, to be recorded in an author-commit (not yet taken).
 - The follow-up itself and its wording *"needs the nominee's agreement"* — `2026-10-23-386` Not covered (an AUTHOR-COMMIT): *"a nominee's
   member link captured at declaration — the only fix for the ND8 gap; a follow-up backlog row (Story 6.36d Task 0.4) that needs the
-  nominee's agreement and its OWN Panel question"*. ⛔ The Panel's words — Question 1's option A reads it, B takes it literally.
+  nominee's agreement and its OWN Panel question"*. ⛔ The Panel's words — Question 1's option B takes it literally; under option A the
+  author-commit SUPERSEDES IN PART those words (citing your ruling), ⛔ reads them.
 - How the match is shown — `2026-10-10-309` item 3 (AUTHOR-COMMIT): matches under the member's saved names, *"⛔ never the member's
   registered name (members' mobile numbers are private: showing "this number is member X" would let anyone map numbers to members)"*; the
   named person answers in the app, told first *"[Name] will see your answer."* (`2026-10-14-330` SW10–SW14, AUTHOR-COMMIT).
@@ -174,7 +184,9 @@ wrong. Nothing goes live until our lawyer confirms the ground.
   member saved; set only by a Life Events nominee save (step-up OTP, the existing lock after the first claim);
 - the member's matched contacts come from the existing contacts check (`POST /api/v1/member/known-people/contact-matches`, which returns
   only the POSITIONS of matching numbers, ⛔ an id or a name), with its existing daily and monthly limits;
-- the server resolves the picked number to a member account itself; every reason a mark cannot be made returns the SAME refusal;
+- the server resolves the picked number to a member account itself; every reason a mark cannot be made returns the SAME refusal; each
+  NEW mark (picked, or typed when contacts are refused) is counted BEFORE the lookup — four a day — so the save cannot be used to test
+  numbers for membership freely;
 - the nominee sees a card in the app (⛔ text, WhatsApp or push) and answers once; the member sees *Asked* / *Confirmed — [name]* / *Said it
   is not them* (the registered name only after "Yes, that's me");
 - the one shared eligibility check (`peerMeshEligibleMemberSql`) leaves out a member marked on the nominee version in force before the

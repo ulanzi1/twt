@@ -123,6 +123,8 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     secretName?: string | null;
     /** A neighbour's mobile PLAINTEXT override (index → value), or `'garbage'` for an undecryptable ciphertext. */
     mobileOverride?: Record<number, string>;
+    /** Story 6.36d review — the selection's `anchor_claim_case_id` (a refile's FIRST filing; see `filedEarlier`). */
+    anchorClaimId?: string;
   }
 
   /**
@@ -185,9 +187,9 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       await emit('documents_pending', 'verification_in_progress', 'claim.peer_mesh_pinged', { selected_member_ids: members, metric_id: 'm', metric_version: 1 });
       await client.query(
         `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
-           metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at, source, ranked_member_ids)
-         VALUES ($1, $2, $3, $4, now(), 'm', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', 'workplace', $5::uuid[])`,
-        [selectionId, claimCaseId, pid, deceased, members],
+           metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at, source, ranked_member_ids, anchor_claim_case_id)
+         VALUES ($1, $2, $3, $4, now(), 'm', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', 'workplace', $5::uuid[], $6)`,
+        [selectionId, claimCaseId, pid, deceased, members, o.anchorClaimId ?? null],
       );
     });
     // As the superuser: the texts ACCEPTED (6.27c's record — the reminder only reads it), the opt-ins, the WhatsApp config.
@@ -226,7 +228,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
    * Story 6.36d — the deceased declared `typed` (RAW, ⛔ normalised — G5) as a nominee's number, long before the filing (a REAL
    * envelope, class `member_nominee`); with `signsUpAs`, that neighbour's login index is the REAL index of their own number (TR8).
    */
-  async function declareNominee(w: World, typed: string, signsUpAs?: string): Promise<void> {
+  async function declareNominee(w: World, typed: string, signsUpAs?: string, recordedAt = '2025-01-01T00:00:00Z'): Promise<void> {
     await onOwnTx(pool, w.pid, async (client) => {
       await client.query('RESET ROLE');
       if (signsUpAs !== undefined) {
@@ -241,8 +243,21 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       await client.query(
         `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
                                               relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
-         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')`,
-        [w.deceased, w.pid, ct],
+         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, $4, $4)`,
+        [w.deceased, w.pid, ct, recordedAt],
+      );
+    });
+  }
+
+  /** Story 6.36d review — an EARLIER claim for the same death (a first filing the selection is anchored on), created at `at`. */
+  async function filedEarlier(w: World, claimCaseId: string, at: string): Promise<void> {
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query('RESET ROLE');
+      await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
+      await client.query(
+        `INSERT INTO claims (claim_case_id, pariwar_id, deceased_member_id, intake_channels, current_state, state_event_version, created_at)
+         VALUES ($1, $2, $3, ARRAY['helpline']::claim_intake_channel[], 'denied', 1, $4)`,
+        [claimCaseId, w.pid, w.deceased, at],
       );
     });
   }
@@ -972,18 +987,49 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expect(h.alarms).toEqual([]);
   });
 
+  it('⭐ ND1 (refile) — the reminder draws the nominee set at the selection\'s ANCHOR filing: a declaration recorded AFTER the first filing and BEFORE this claim is ⛔ excluded', async () => {
+    const anchor = randomUUID();
+    const w = await world({ neighbours: 1, anchorClaimId: anchor });
+    await filedEarlier(w, anchor, '2025-01-01T00:00:00Z');
+    const n = w.pings[0]!.memberId;
+    await declareNominee(w, w.mobiles.get(n)!, n, '2025-06-01T00:00:00Z'); // between the first filing and this claim's
+    const h = harness(w);
+    await child(h, w);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'accepted' });
+    expect(h.sent).toHaveLength(1);
+  });
+
+  it('ND1 (refile), control — the SAME declaration with the selection anchored at THIS claim excludes the neighbour (so the leg above bites)', async () => {
+    const w = await world({ neighbours: 1 });
+    const n = w.pings[0]!.memberId;
+    await declareNominee(w, w.mobiles.get(n)!, n, '2025-06-01T00:00:00Z');
+    const h = harness(w);
+    await child(h, w);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'skipped_recipient_ineligible' });
+    expect(h.sent).toHaveLength(0);
+  });
+
   it('⭐ M13 — ⛔ reminder due ⇒ `nothing_due` with ZERO KMS calls, though the deceased declared a nominee (whose read the due run makes)', async () => {
     const w = await world({ neighbours: 1 });
     await declareNominee(w, '9123456780');
-    const h = harness(w);
     const control = countingKms();
-    await child(harness(w, { encryption: { ...enc, kms: control.kms } }), w);
+    const first = harness(w, { encryption: { ...enc, kms: control.kms } });
+    await child(first, w);
     expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'accepted' });
-    expect(control.calls()).toBeGreaterThanOrEqual(3); // the name, the nominee (decrypt + HMAC), the neighbour's number …
+    expect(first.sent).toHaveLength(1);
+    // the positive control: the SAME run in a world that declared ⛔ nominee makes strictly FEWER KMS calls — the difference is
+    // the nominee read (decrypt + HMAC); a bare `>= 3` is reached by the name and the neighbour's number alone
+    const bare = await world({ neighbours: 1 });
+    const bareKms = countingKms();
+    await child(harness(bare, { encryption: { ...enc, kms: bareKms.kms } }), bare);
+    expect((await reminders(bare))[0]).toMatchObject({ send_outcome: 'accepted' }); // the bare run DID the work …
+    expect(bareKms.calls()).toBeGreaterThan(0);
+    expect(control.calls() - bareKms.calls()).toBeGreaterThanOrEqual(2); // … and the nominee read adds its decrypt + HMAC
     const k = countingKms();
-    expect(await child(harness(w, { encryption: { ...enc, kms: k.kms } }), w)).toEqual({ status: 'noop', reason: 'nothing_due' });
+    const due = harness(w, { encryption: { ...enc, kms: k.kms } });
+    expect(await child(due, w)).toEqual({ status: 'noop', reason: 'nothing_due' });
     expect(k.calls()).toBe(0);
-    expect(h.sent).toHaveLength(0);
+    expect(due.sent).toHaveLength(0);
   });
 
   it('ND6 — a KMS fault in the nominee read ⇒ ONE ids-only alarm + a transient THROW, ⛔ reminder begun, ⛔ sent', async () => {

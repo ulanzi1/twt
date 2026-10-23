@@ -312,9 +312,9 @@ export const PeerMeshTranscript = z
     /** ⭐ Story 6.27d (R5) — REQUIRED, possibly empty: the claim's recorded inspector discrepancies (see above). */
     inspectionDiscrepancies: z.array(InspectionDiscrepancyStaffView),
     /**
-     * ⭐ Story 6.36 (SW20; `-331` SC1 A) — the staff line: the member's workplace or the people they named changed in the
-     * 90 days before the filing used for selection (`-339` RF1 C: the first filing not lifted by an innocence finding).
-     * REQUIRED; `null` for a `district_cohort_v1` selection.
+     * ⭐ Story 6.36 (SW20; `-331` SC1 A) — the staff line: the member's workplace, the people they named or (Story 6.36d ND7;
+     * `-384` Q2 A) their nominees changed in the 90 days before the filing used for selection (`-339` RF1 C: the first filing
+     * not lifted by an innocence finding). REQUIRED; `null` for a `district_cohort_v1` selection.
      */
     recentChangeBeforeFiling: z.boolean().nullable(),
   })

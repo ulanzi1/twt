@@ -136,7 +136,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
    * A fresh Pariwar (its passport — `locale`), the deceased (a REAL KYC name envelope), `ranked` active neighbours with REAL mobile
    * envelopes, a claim through the projector to `verification_in_progress`, a selection (the first `selected`) and its pings.
    */
-  async function world(o: { locale?: 'hi' | 'en'; ranked?: number; selected?: number; name?: string } = {}): Promise<World> {
+  async function world(
+    o: { locale?: 'hi' | 'en'; ranked?: number; selected?: number; name?: string; anchorClaimId?: string } = {},
+  ): Promise<World> {
     const pid = randomUUID();
     pariwars.push(pid);
     await pool.query(
@@ -193,9 +195,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       });
       await client.query(
         `INSERT INTO claim_peer_mesh_selections (selection_id, claim_case_id, pariwar_id, deceased_member_id, deceased_created_at, metric_id,
-           metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at, source, ranked_member_ids)
-         VALUES ($1, $2, $3, $4, now(), 'm', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', 'workplace', $6::uuid[])`,
-        [selectionId, claimCaseId, pid, deceased, selected, ranked],
+           metric_version, selected_member_ids, candidate_snapshot, response_window_expires_at, source, ranked_member_ids, anchor_claim_case_id)
+         VALUES ($1, $2, $3, $4, now(), 'm', 1, $5::uuid[], '[]'::jsonb, now() + interval '72 hours', 'workplace', $6::uuid[], $7)`,
+        [selectionId, claimCaseId, pid, deceased, selected, ranked, o.anchorClaimId ?? null],
       );
       for (const m of selected) {
         const pingId = randomUUID();
@@ -215,7 +217,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
    * Story 6.36d — the deceased declared `memberId`'s number as a nominee's, typed RAW (`typed`, ⛔ normalised — G5), recorded long
    * before the filing (a REAL envelope, class `member_nominee`); and `memberId` signs in with it (a REAL login index — TR8).
    */
-  async function nomineeIs(w: World, memberId: string, typed: string): Promise<void> {
+  async function nomineeIs(w: World, memberId: string, typed: string, recordedAt = '2025-01-01T00:00:00Z'): Promise<void> {
     await onOwnTx(pool, w.pid, async (client) => {
       await client.query('RESET ROLE');
       await client.query(`UPDATE member_identities SET mobile_blind_index = $2 WHERE member_id = $1`, [
@@ -228,8 +230,21 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       await client.query(
         `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
                                               relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
-         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')`,
-        [w.deceased, w.pid, ct],
+         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, $4, $4)`,
+        [w.deceased, w.pid, ct, recordedAt],
+      );
+    });
+  }
+
+  /** Story 6.36d review — an EARLIER claim for the same death (a first filing the selection is anchored on), created at `at`. */
+  async function filedEarlier(w: World, claimCaseId: string, at: string): Promise<void> {
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query('RESET ROLE');
+      await client.query(`SET LOCAL app.claim_state_writer = 'on'`);
+      await client.query(
+        `INSERT INTO claims (claim_case_id, pariwar_id, deceased_member_id, intake_channels, current_state, state_event_version, created_at)
+         VALUES ($1, $2, $3, ARRAY['helpline']::claim_intake_channel[], 'denied', 1, $4)`,
+        [claimCaseId, w.pid, w.deceased, at],
       );
     });
   }
@@ -1044,6 +1059,43 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(h.alarms).toEqual([]);
   });
 
+  it('⭐ ND1 (refile) — the children draw the nominee set at the selection\'s ANCHOR filing: a declaration recorded AFTER the first filing and BEFORE this claim is ⛔ excluded at send', async () => {
+    const anchor = randomUUID();
+    const w = await world({ selected: 1, anchorClaimId: anchor });
+    await filedEarlier(w, anchor, '2025-01-01T00:00:00Z');
+    const neighbour = w.pings[0]!;
+    // recorded between the first filing (2025-01) and this claim (created now): the selection never saw it
+    await nomineeIs(w, neighbour.memberId, w.mobiles.get(neighbour.memberId)!, '2025-06-01T00:00:00Z');
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    expect((await rows(w)).find((r) => r.ping_id === neighbour.pingId)).toMatchObject({ send_outcome: 'accepted' });
+    expect(h.sent.map((m) => m.to)).toEqual([w.mobiles.get(neighbour.memberId)!]);
+  });
+
+  it('ND1 (refile), control — the SAME declaration with the selection anchored at THIS claim excludes the neighbour (so the leg above bites)', async () => {
+    const w = await world({ selected: 1 });
+    const neighbour = w.pings[0]!;
+    await nomineeIs(w, neighbour.memberId, w.mobiles.get(neighbour.memberId)!, '2025-06-01T00:00:00Z');
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    expect((await rows(w)).find((r) => r.ping_id === neighbour.pingId)).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:peer_is_nominee' });
+    expect(h.sent.map((m) => m.to)).not.toContain(w.mobiles.get(neighbour.memberId)!);
+  });
+
+  it('ND6 — a selection whose ANCHOR claim is missing ⇒ the child THROWS transient with ONE ids-only alarm, ⛔ ping begun, ⛔ sent', async () => {
+    const w = await world({ selected: 1, anchorClaimId: randomUUID() }); // no such claim (the column has no FK)
+    const h = harness(w, { registry: [CLEARED] });
+    await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID())).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    const after = await rows(w);
+    expect(after).toHaveLength(1);
+    expect(after[0]!.send_outcome).toBeNull();
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms).toHaveLength(1);
+    expect(h.alarms[0]).toContain('peer_mesh_nominee_exclusion');
+    expect(h.alarms[0]).toContain(w.claimCaseId);
+    await expectIdsOnly(h, w);
+  });
+
   it('⭐ M8 (child) — a KMS fault in the nominee read ⇒ ONE ids-only alarm + a transient THROW, ⛔ ping begun, ⛔ sent', async () => {
     const w = await world({ selected: 2 });
     await nomineeIs(w, w.ranked[4]!, w.mobiles.get(w.ranked[4]!)!);
@@ -1060,7 +1112,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     });
     const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms } };
     await expect(runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
-    expect((await rows(w)).every((r) => r.send_outcome === null)).toBe(true);
+    const pings = await rows(w);
+    expect(pings).toHaveLength(2); // ⛔ `every` over an empty list
+    expect(pings.every((r) => r.send_outcome === null)).toBe(true);
     expect(h.sent).toHaveLength(0);
     expect(h.alarms).toHaveLength(1);
     expect(h.alarms[0]).toContain('peer_mesh_nominee_exclusion');
@@ -1075,7 +1129,15 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     const control = countingKms();
     await runPeerMeshRequestChild({ ...h.deps, encryption: { ...enc, kms: control.kms } }, boss(h), envelopeOf(w), randomUUID());
     expect((await rows(w))[0]?.send_outcome).toBe('accepted');
-    expect(control.calls()).toBeGreaterThanOrEqual(3); // the name, the nominee (decrypt + HMAC), the neighbour's number …
+    // the positive control: the SAME run in a world that declared ⛔ nominee makes strictly FEWER KMS calls — the difference is
+    // the nominee read (decrypt + HMAC); a bare `>= 3` is reached by the name and the neighbour's number alone
+    const bare = await world({ selected: 1 });
+    const bareKms = countingKms();
+    const bareHarness = harness(bare, { registry: [CLEARED] });
+    await runPeerMeshRequestChild({ ...bareHarness.deps, encryption: { ...enc, kms: bareKms.kms } }, boss(bareHarness), envelopeOf(bare), randomUUID());
+    expect((await rows(bare))[0]?.send_outcome).toBe('accepted'); // the bare run DID the work …
+    expect(bareKms.calls()).toBeGreaterThan(0);
+    expect(control.calls() - bareKms.calls()).toBeGreaterThanOrEqual(2); // … and the nominee read adds its decrypt + HMAC
     const k = countingKms();
     const deps: ClaimPeerMeshRequestDeps = { ...h.deps, encryption: { ...enc, kms: k.kms } };
     expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).toEqual({ status: 'noop', reason: 'nothing_due' });

@@ -36,7 +36,7 @@ interface Counts {
   hmac: number;
 }
 
-function countingEnc(opts: { failDecrypt?: boolean; failHmac?: boolean } = {}): { enc: FieldCryptoDeps; counts: Counts } {
+function countingEnc(opts: { failDecrypt?: boolean; failHmac?: boolean; log?: string[] } = {}): { enc: FieldCryptoDeps; counts: Counts } {
   const base = createFakeKmsProvider({ kekBytes: new Uint8Array(32).fill(7), hmacKeyBytes: new Uint8Array(32).fill(9) });
   const counts: Counts = { decrypt: 0, hmac: 0 };
   const kms: KmsProvider = {
@@ -44,11 +44,13 @@ function countingEnc(opts: { failDecrypt?: boolean; failHmac?: boolean } = {}): 
     encryptDek: (...a) => base.encryptDek(...a),
     decryptDek: async (...a) => {
       counts.decrypt += 1;
+      opts.log?.push('kms:decrypt');
       if (opts.failDecrypt) throw Object.assign(new Error('kms unavailable'), { code: 14 });
       return base.decryptDek(...a);
     },
     computeHmac: async (...a) => {
       counts.hmac += 1;
+      opts.log?.push('kms:hmac');
       if (opts.failHmac) throw Object.assign(new Error('kms unavailable'), { code: 14 });
       return base.computeHmac(...a);
     },
@@ -93,11 +95,14 @@ function version(
   } as MemberNomineeVersionRow;
 }
 
-/** `inScope` handing back the rows (the read itself is the live legs'). Counts how many scopes were opened. */
-function rowsScope(rows: readonly MemberNomineeVersionRow[]): { inScope: InScope; opened: () => number } {
+/** `inScope` handing back the rows (the read itself is the live legs'). Counts how many scopes were opened; `log` records open / close. */
+function rowsScope(rows: readonly MemberNomineeVersionRow[], log?: string[]): { inScope: InScope; opened: () => number } {
   let n = 0;
   const inScope = (async () => {
     n += 1;
+    log?.push('scope:open');
+    await Promise.resolve();
+    log?.push('scope:close');
     return rows;
   }) as unknown as InScope;
   return { inScope, opened: () => n };
@@ -203,12 +208,16 @@ describe('Story 6.36d — peerMeshNomineeMobileIndexes (AC2)', () => {
     await expect(run(enc, [version(1, 'enc:v1:not-an-envelope', BEFORE)])).rejects.toThrow();
   });
 
-  it('the version read opens ONE scope; KMS runs after it returned', async () => {
-    const { enc } = countingEnc();
+  it('the version read opens ONE scope and CLOSES it before the first KMS call (the live M9 pins it against a real pool)', async () => {
+    const log: string[] = [];
+    const { enc } = countingEnc({ log });
     const v = version(1, await seal(enc, '9876543210'), BEFORE);
-    const scope = rowsScope([v]);
+    log.length = 0; // sealing is the declaration writer's KMS work, ⛔ this function's
+    const scope = rowsScope([v], log);
     await peerMeshNomineeMobileIndexes({ pariwarId: PARIWAR, deceasedMemberId: DECEASED, cut: CUT, enc, inScope: scope.inScope });
     expect(scope.opened()).toBe(1);
+    // the stub resolves when `inScope` is awaited, so this pins "awaited before KMS", ⛔ that a real scope was closed
+    expect(log).toEqual(['scope:open', 'scope:close', 'kms:decrypt', 'kms:hmac']); // one nominee ⇒ one decrypt, then ONE batch HMAC
   });
 
   it('peerMeshNomineeCiphertextsAsOf — a correction recorded after the cut is ⛔ read (the set is fixed per claim)', () => {

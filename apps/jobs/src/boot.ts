@@ -92,9 +92,8 @@ import {
 import { registerClaimOcrParityWorker } from './claim-ocr-parity.js';
 import {
   DEFAULT_PEER_MESH_WINDOW_SECONDS,
-  CLAIM_PEER_MESH_SELECT_RETRY,
+  enqueueClaimPeerMeshSelect,
   registerClaimPeerMeshWorkers,
-  type ClaimPeerMeshSelectPayload,
 } from './claim-peer-mesh.js';
 import {
   registerClaimShepherdAssignWorker,
@@ -571,21 +570,9 @@ async function main(): Promise<void> {
       kekRef: jobsEncryption.kekRef,
       // Story 6.6 trigger seam — enqueue the peer-mesh SELECT job after documents_pending.
       // singletonKey = claim_case_id so an OCR re-run does not double-select.
-      enqueuePeerMeshSelect: async (input) => {
-        await boss.send(
-          QUEUE_NAMES.CLAIM_PEER_MESH_SELECT,
-          {
-            requestId: input.traceId,
-            pariwarId: input.pariwarId,
-            actorId: input.actorId,
-            traceId: input.traceId,
-            payload: { claimCaseId: input.claimCaseId, deceasedMemberId: input.deceasedMemberId },
-          } satisfies JobEnvelope<ClaimPeerMeshSelectPayload>,
-          // Story 6.36d (ND6) — the claim children's retry policy (the default was three attempts within seconds, then
-          // `failed`, ⛔ dead-letter queue): a KMS blip in the nominee check is retried, then deferred, before it can end.
-          { singletonKey: input.claimCaseId, ...CLAIM_PEER_MESH_SELECT_RETRY },
-        );
-      },
+      // Story 6.36d (ND6) — the send carries the claim children's retry policy (the default was three attempts within seconds,
+      // then `failed`, ⛔ dead-letter queue); the helper is where a test can pin it.
+      enqueuePeerMeshSelect: (input) => enqueueClaimPeerMeshSelect(boss, input),
     });
 
     // ── Pool spawn saga (Story 7.3, Task 5) — Class A (cycle-open burst) ──────────

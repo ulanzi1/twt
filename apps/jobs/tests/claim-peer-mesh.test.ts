@@ -44,7 +44,11 @@ import {
   ClaimPeerMeshNomineeIndexesStaleError,
   DEFAULT_PEER_MESH_WINDOW_SECONDS,
   PEER_MESH_NOMINEE_CHECK_DEFER_SECONDS,
+  PEER_MESH_NOMINEE_CHECK_RETRY_SPAN_MS,
+  claimPeerMeshSelectAttemptOf,
+  enqueueClaimPeerMeshSelect,
   extendPeerMeshWindowAndReschedule,
+  nomineeCheckFirstFailureInstant,
   registerClaimPeerMeshWorkers,
   runClaimPeerMeshSelect,
   runClaimPeerMeshWindow,
@@ -950,10 +954,15 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
       const seed = await seedClaim({ colleagues: 7, nomineeIndex: 2 });
       const k = countingKms({ fail: true });
       const { boss, sends } = fakeBoss();
+      const alarms: string[] = [];
       const createdOn = new Date(NOW.getTime() - 15 * 60_000);
       try {
-        const r = await runClaimPeerMeshSelect(boss, deps({ encryption: { ...enc, kms: k.kms } }), selectEnvelope(seed), final(createdOn));
+        const r = await runClaimPeerMeshSelect(boss, deps({ encryption: { ...enc, kms: k.kms }, onAlarm: (m) => alarms.push(m) }), selectEnvelope(seed), final(createdOn));
         expect(r).toEqual({ claimCaseId: seed.claimCaseId, created: false, selectedCount: 0, nomineeCheck: 'deferred' });
+        // ND6 (a) "alarm each cycle": exactly ONE alarm, emitted AFTER the send succeeded, ids only
+        expect(alarms).toHaveLength(1);
+        expect(alarms[0]).toContain('re-sent in 1 h');
+        expect(alarms[0]).toContain(seed.claimCaseId);
         expect(sends).toHaveLength(1);
         expect(sends[0]!.name).toBe(QUEUE_NAMES.CLAIM_PEER_MESH_SELECT);
         expect((sends[0]!.data as JobEnvelope<ClaimPeerMeshSelectPayload>).payload).toEqual({
@@ -988,6 +997,150 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         expect(r.nomineeCheck).toBe('deferred');
         expect((sends[0]!.data as JobEnvelope<ClaimPeerMeshSelectPayload>).payload.nomineeCheckFailingSince).toBe(since);
         expect(await selectionOf(seed)).toBeUndefined();
+      } finally {
+        await cleanup(seed);
+      }
+    });
+
+    it('M8f — a job that sat QUEUED for 30 h and fails only now is DEFERRED, ⛔ finished: the first-failure instant is clamped to one retry span', async () => {
+      const seed = await seedClaim({ colleagues: 7, nomineeIndex: 2 });
+      const k = countingKms({ fail: true });
+      const { boss, sends } = fakeBoss();
+      try {
+        const queuedFor30h = new Date(NOW.getTime() - 30 * 60 * 60_000);
+        const r = await runClaimPeerMeshSelect(boss, deps({ encryption: { ...enc, kms: k.kms } }), selectEnvelope(seed), final(queuedFor30h));
+        expect(r.nomineeCheck).toBe('deferred');
+        expect((sends[0]!.data as JobEnvelope<ClaimPeerMeshSelectPayload>).payload.nomineeCheckFailingSince).toBe(
+          new Date(NOW.getTime() - PEER_MESH_NOMINEE_CHECK_RETRY_SPAN_MS).toISOString(),
+        );
+        expect(await selectionOf(seed)).toBeUndefined();
+        expect(await claimState(seed.claimCaseId)).toBe('documents_pending');
+      } finally {
+        await cleanup(seed);
+      }
+    });
+
+    it('M8g — a carried first-failure instant that is ⛔ the exact ISO form we write (unparsable, or a FINITE-but-ancient V8 parse) is treated as absent: the job DEFERS, ⛔ finishes after one failure', async () => {
+      const seed = await seedClaim({ colleagues: 7, nomineeIndex: 2 });
+      const k = countingKms({ fail: true });
+      const { boss, sends } = fakeBoss();
+      const createdOn = new Date(NOW.getTime() - 15 * 60_000);
+      try {
+        const env = selectEnvelope(seed);
+        // 'garbage' / '' parse to NaN; '0', 'garbage 1', null and a date-only string parse to FINITE dates (1970 / 2000 / 2001 / a day)
+        for (const bad of ['garbage', '', '0', 'garbage 1', '2026-07-09', null]) {
+          sends.length = 0;
+          const corrupt = { ...env, payload: { ...env.payload, nomineeCheckFailingSince: bad as never } };
+          const r = await runClaimPeerMeshSelect(boss, deps({ encryption: { ...enc, kms: k.kms } }), corrupt, final(createdOn));
+          expect(r.nomineeCheck).toBe('deferred');
+          expect((sends[0]!.data as JobEnvelope<ClaimPeerMeshSelectPayload>).payload.nomineeCheckFailingSince).toBe(createdOn.toISOString());
+          expect(await selectionOf(seed)).toBeUndefined();
+        }
+      } finally {
+        await cleanup(seed);
+      }
+    });
+
+    it('M8h — the 1 h re-send THROWING on the final attempt: ONE chain-LOST alarm (ids only), the error rethrown, ⛔ a "re-sent" alarm', async () => {
+      const seed = await seedClaim({ colleagues: 7, nomineeIndex: 2 });
+      const k = countingKms({ fail: true });
+      const alarms: string[] = [];
+      const boom = new Error('queue down');
+      const boss = {
+        async send() {
+          throw boom;
+        },
+      } as unknown as QueueClient;
+      try {
+        await expect(
+          runClaimPeerMeshSelect(boss, deps({ encryption: { ...enc, kms: k.kms }, onAlarm: (m) => alarms.push(m) }), selectEnvelope(seed), final(NOW)),
+        ).rejects.toBe(boom);
+        expect(alarms).toHaveLength(1);
+        expect(alarms[0]).toContain('LOST');
+        expect(alarms[0]).toContain(seed.claimCaseId);
+        expect(alarms[0]).not.toContain('queue down'); // ⛔ the cause (TR12)
+        expect(alarms.join('\n')).not.toContain('re-sent in 1 h');
+        expect(await selectionOf(seed)).toBeUndefined();
+      } finally {
+        await cleanup(seed);
+      }
+    });
+
+    it('M8j — a re-send that CREATES NO JOB (`send` resolves null) is a failed re-send: the chain-LOST alarm, ⛔ a "re-sent" alarm, an error', async () => {
+      const seed = await seedClaim({ colleagues: 7, nomineeIndex: 2 });
+      const k = countingKms({ fail: true });
+      const alarms: string[] = [];
+      const boss = {
+        async send() {
+          return null;
+        },
+      } as unknown as QueueClient;
+      try {
+        await expect(
+          runClaimPeerMeshSelect(boss, deps({ encryption: { ...enc, kms: k.kms }, onAlarm: (m) => alarms.push(m) }), selectEnvelope(seed), final(NOW)),
+        ).rejects.toThrow(/created no job/);
+        expect(alarms).toHaveLength(1);
+        expect(alarms[0]).toContain('LOST');
+        expect(alarms.join('\n')).not.toContain('re-sent in 1 h');
+      } finally {
+        await cleanup(seed);
+      }
+    });
+
+    it('M8k — the PRE-READ failing on the last attempt alarms (ids only) and rethrows; before the last attempt it only rethrows', async () => {
+      const seed = await seedClaim({ colleagues: 3 });
+      const { boss, sends } = fakeBoss();
+      const alarms: string[] = [];
+      const down = new Error('db down');
+      const brokenPool = { connect: () => Promise.reject(down) } as unknown as pg.Pool;
+      try {
+        await expect(
+          runClaimPeerMeshSelect(boss, deps({ pool: brokenPool, onAlarm: (m) => alarms.push(m) }), selectEnvelope(seed), final(NOW)),
+        ).rejects.toBe(down);
+        expect(alarms).toHaveLength(1);
+        expect(alarms[0]).toContain('FAILED on the final attempt');
+        expect(alarms[0]).toContain(seed.claimCaseId);
+        expect(alarms[0]).not.toContain('db down');
+        alarms.length = 0;
+        await expect(
+          runClaimPeerMeshSelect(boss, deps({ pool: brokenPool, onAlarm: (m) => alarms.push(m) }), selectEnvelope(seed), { retryCount: 1, retryLimit: 4 }),
+        ).rejects.toBe(down);
+        expect(alarms).toEqual([]);
+        expect(sends).toHaveLength(0);
+      } finally {
+        await cleanup(seed);
+      }
+    });
+
+    it('M8i — the REGISTERED select worker maps pg-boss metadata onto the attempt (hand-built job objects carrying pg-boss 12.19.1\'s metadata field names — ⛔ a real queue): retryCount = retryLimit defers; fewer rethrows; none rethrows', async () => {
+      const seed = await seedClaim({ colleagues: 7, nomineeIndex: 2 });
+      const k = countingKms({ fail: true });
+      const sends: { name: string; data: unknown; options: unknown }[] = [];
+      const works: { queue: string; options: unknown; handler: (jobs: unknown[]) => Promise<unknown> }[] = [];
+      const boss = {
+        async createQueue() {
+          return undefined;
+        },
+        async work(queue: string, a: unknown, b?: unknown) {
+          works.push(typeof a === 'function' ? { queue, options: undefined, handler: a as never } : { queue, options: a, handler: b as never });
+          return 'worker-id';
+        },
+        async send(name: string, data: unknown, options: unknown) {
+          sends.push({ name, data, options });
+          return 'fake-job-id';
+        },
+      } as unknown as QueueClient;
+      try {
+        await registerClaimPeerMeshWorkers(boss, deps({ encryption: { ...enc, kms: k.kms } }));
+        const select = works.find((w) => w.queue === QUEUE_NAMES.CLAIM_PEER_MESH_SELECT)!;
+        expect(select.options).toEqual({ includeMetadata: true });
+        const job = (meta: Record<string, unknown>) => ({ id: randomUUID(), name: QUEUE_NAMES.CLAIM_PEER_MESH_SELECT, data: selectEnvelope(seed), ...meta });
+        const res = await select.handler([job({ retryCount: 4, retryLimit: 4, createdOn: new Date(NOW.getTime() - 15 * 60_000) })]);
+        expect(res).toMatchObject({ processed: 1, results: [{ nomineeCheck: 'deferred' }] });
+        expect(sends).toHaveLength(1);
+        await expect(select.handler([job({ retryCount: 1, retryLimit: 4 })])).rejects.toBeInstanceOf(ClaimPeerMeshNomineeCheckError);
+        await expect(select.handler([job({})])).rejects.toBeInstanceOf(ClaimPeerMeshNomineeCheckError);
+        expect(sends).toHaveLength(1);
       } finally {
         await cleanup(seed);
       }
@@ -1038,15 +1191,25 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
       }
     });
 
-    it('a final-attempt fault of any OTHER kind behaves as today — a payload deceased mismatch THROWS (⛔ re-send, ⛔ finish)', async () => {
+    it('a final-attempt fault of any OTHER kind is RETHROWN as today — a payload deceased mismatch THROWS (⛔ re-send, ⛔ finish); the only addition is ONE alarm, and only when no retry is left', async () => {
       const seed = await seedClaim({ colleagues: 3 });
       const { boss, sends } = fakeBoss();
+      const alarms: string[] = [];
       try {
         const env = selectEnvelope(seed);
         const wrong = { ...env, payload: { ...env.payload, deceasedMemberId: randomUUID() } };
-        await expect(runClaimPeerMeshSelect(boss, deps(), wrong, final(NOW))).rejects.toThrow(/does not match/);
+        await expect(runClaimPeerMeshSelect(boss, deps({ onAlarm: (m) => alarms.push(m) }), wrong, final(NOW))).rejects.toThrow(/does not match/);
         expect(sends).toHaveLength(0);
         expect(await selectionOf(seed)).toBeUndefined();
+        expect(alarms).toHaveLength(1);
+        expect(alarms[0]).toContain('FAILED on the final attempt');
+        expect(alarms[0]).toContain(seed.claimCaseId);
+        // not the last attempt: pg-boss retries, so nothing is lost and nothing alarms
+        alarms.length = 0;
+        await expect(
+          runClaimPeerMeshSelect(boss, deps({ onAlarm: (m) => alarms.push(m) }), wrong, { retryCount: 1, retryLimit: 4 }),
+        ).rejects.toThrow(/does not match/);
+        expect(alarms).toEqual([]);
       } finally {
         await cleanup(seed);
       }
@@ -1056,12 +1219,14 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
       const seed = await seedClaim({ colleagues: 7, nomineeIndex: 2 });
       const { boss } = fakeBoss();
       let inserted = false;
+      let sideInsert: Promise<void> | undefined;
       const k = countingKms({
         probe: () => {
           if (inserted) return;
           inserted = true;
-          // a separate committed transaction while the nominee read runs (⛔ awaited here — the KMS call proceeds)
-          void (async () => {
+          // a separate committed transaction while the nominee read runs (⛔ awaited HERE — the KMS call proceeds; the proxy
+          // below and the end of the test await it, so a failing insert fails the test instead of an unhandled rejection)
+          sideInsert = (async () => {
             const c = await pool.connect();
             try {
               await c.query('BEGIN');
@@ -1079,7 +1244,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         },
       });
       try {
-        // wait for the side insert to land before the locked transaction reads the anchor
+        // wait for the side insert to COMMIT before the locked transaction reads the anchor (the first KMS call starts it)
         const slowKms = new Proxy(k.kms, {
           get(target, prop, receiver) {
             const v = Reflect.get(target, prop, receiver) as unknown;
@@ -1087,7 +1252,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
             const fn = v as (...a: unknown[]) => Promise<unknown>;
             return async (...a: unknown[]) => {
               const out = await fn.apply(target, a);
-              await new Promise((r) => setTimeout(r, 150));
+              await sideInsert;
               return out;
             };
           },
@@ -1095,6 +1260,7 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         await expect(runClaimPeerMeshSelect(boss, deps({ encryption: { ...enc, kms: slowKms } }), selectEnvelope(seed))).rejects.toBeInstanceOf(
           ClaimPeerMeshNomineeIndexesStaleError,
         );
+        await sideInsert; // awaited, never fire-and-forget: a failed insert fails THIS leg instead of passing it for the wrong reason
         expect(await selectionOf(seed)).toBeUndefined();
         const retry = await runClaimPeerMeshSelect(boss, deps(), selectEnvelope(seed));
         expect(retry.created).toBe(true);
@@ -1607,4 +1773,99 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — window job fires after the de
       await pool.query(`DELETE FROM workplace_import_batches WHERE pariwar_id = $1`, [seed.pariwarId]);
     }
   }, 30_000);
+});
+
+// ── Story 6.36d review patches — NO database: the pure ND6 helpers and the wiring that activates them ─────────────────────────
+// (the live legs above skip silently without DATABASE_URL — the house `env -u DATABASE_URL` run reads only these)
+describe('claim peer-mesh — ND6 helpers and wiring (no DB)', () => {
+  const now = new Date('2026-07-10T12:00:00Z');
+  const SPAN = PEER_MESH_NOMINEE_CHECK_RETRY_SPAN_MS;
+
+  describe('nomineeCheckFirstFailureInstant', () => {
+    it('a parseable carried instant wins — never later than now', () => {
+      const t = new Date(now.getTime() - 23 * 60 * 60_000);
+      expect(nomineeCheckFirstFailureInstant(t.toISOString(), new Date(0), now)).toEqual(t);
+      expect(nomineeCheckFirstFailureInstant(new Date(now.getTime() + DAY).toISOString(), undefined, now)).toEqual(now);
+    });
+
+    it('a carried instant that is ⛔ the exact ISO form we write is absent — NaN AND the finite-but-ancient V8 parses (either would FINISH the job after one failure)', () => {
+      const created = new Date(now.getTime() - 10 * 60_000);
+      // NaN: 'garbage', '', '2026-13-45'. FINITE in V8: '0' (2000), '1' (2001), 'garbage 1' (2001), null / 0 (1970), true (1970), a date-only string
+      for (const bad of ['garbage', '', '2026-13-45', '0', '1', 'garbage 1', '2026-07-09', null, 0, true, {}]) {
+        const at = nomineeCheckFirstFailureInstant(bad, created, now);
+        expect(Number.isFinite(at.getTime())).toBe(true);
+        expect(at).toEqual(created);
+      }
+      // the exact form we write (`toISOString()`) is the only thing that wins
+      const written = new Date(now.getTime() - 3 * 60 * 60_000).toISOString();
+      expect(nomineeCheckFirstFailureInstant(written, created, now)).toEqual(new Date(written));
+    });
+
+    it('absent: createdOn within one retry span stands; older is clamped to one span before now; none, future or invalid ⇒ now', () => {
+      const within = new Date(now.getTime() - SPAN + 1);
+      expect(nomineeCheckFirstFailureInstant(undefined, within, now)).toEqual(within);
+      expect(nomineeCheckFirstFailureInstant(undefined, new Date(now.getTime() - 30 * 60 * 60_000), now)).toEqual(new Date(now.getTime() - SPAN));
+      expect(nomineeCheckFirstFailureInstant(undefined, undefined, now)).toEqual(now);
+      expect(nomineeCheckFirstFailureInstant(undefined, new Date(now.getTime() + 60_000), now)).toEqual(now);
+      expect(nomineeCheckFirstFailureInstant(undefined, new Date(Number.NaN), now)).toEqual(now);
+    });
+
+    it('the retry span covers the longest backoff of the CURRENT select retry policy (equal jitter: each delay ≤ 2 × 60 s × 2^(c-1)) — raising retryLimit / retryDelay fails HERE until the span is revisited', () => {
+      let longest = 0;
+      for (let c = 1; c <= CLAIM_PEER_MESH_SELECT_RETRY.retryLimit; c += 1) longest += CLAIM_PEER_MESH_SELECT_RETRY.retryDelay * 2 ** c * 1000;
+      expect(SPAN).toBeGreaterThanOrEqual(longest);
+    });
+  });
+
+  describe('claimPeerMeshSelectAttemptOf', () => {
+    const job = (extra: Record<string, unknown>) => ({ id: 'j', name: 'q', data: {}, ...extra }) as never;
+
+    it('maps pg-boss metadata onto the attempt; anything else is undefined (⛔ final)', () => {
+      const createdOn = new Date('2026-07-10T00:00:00Z');
+      expect(claimPeerMeshSelectAttemptOf(job({ retryCount: 4, retryLimit: 4, createdOn }))).toEqual({ retryCount: 4, retryLimit: 4, createdOn });
+      expect(claimPeerMeshSelectAttemptOf(job({ retryCount: 1, retryLimit: 4, createdOn: '2026-07-10' }))).toEqual({ retryCount: 1, retryLimit: 4 });
+      expect(claimPeerMeshSelectAttemptOf(job({}))).toBeUndefined();
+      expect(claimPeerMeshSelectAttemptOf(job({ retryCount: '4', retryLimit: 4 }))).toBeUndefined();
+    });
+  });
+
+  // ⚠ coverage-only for ONE mutant: `boot.ts`'s one-line call `enqueuePeerMeshSelect: (input) => enqueueClaimPeerMeshSelect(boss, input)` is
+  // ⛔ exercised (tsc pins its shape; reverting it to an inline `boss.send` without the retry options would stay green here).
+  describe('the select job\'s wiring, up to boot.ts', () => {
+    it('the helper behind the OCR hook\'s send carries the claim children\'s retry policy and a label singletonKey', async () => {
+      const sends: { name: string; data: unknown; options: unknown }[] = [];
+      const boss = {
+        async send(name: string, data: unknown, options: unknown) {
+          sends.push({ name, data, options });
+          return 'fake-job-id';
+        },
+      } as unknown as QueueClient;
+      await enqueueClaimPeerMeshSelect(boss, { claimCaseId: 'c1', deceasedMemberId: 'd1', pariwarId: 'p1', actorId: null, traceId: 't1' });
+      expect(sends).toEqual([
+        {
+          name: QUEUE_NAMES.CLAIM_PEER_MESH_SELECT,
+          data: { requestId: 't1', pariwarId: 'p1', actorId: null, traceId: 't1', payload: { claimCaseId: 'c1', deceasedMemberId: 'd1' } },
+          options: { singletonKey: 'c1', retryLimit: CHILD_RETRY_LIMIT, retryDelay: CHILD_RETRY_DELAY_SECONDS, retryBackoff: true },
+        },
+      ]);
+    });
+
+    it('the SELECT worker is registered with `includeMetadata` — ⛔ without it `attempt` is always undefined and the arms never run', async () => {
+      const works: { queue: string; args: unknown[] }[] = [];
+      const boss = {
+        async createQueue() {
+          return undefined;
+        },
+        async work(queue: string, ...args: unknown[]) {
+          works.push({ queue, args });
+          return 'worker-id';
+        },
+      } as unknown as QueueClient;
+      await registerClaimPeerMeshWorkers(boss, { pool: {} as never, encryption: enc });
+      const select = works.find((w) => w.queue === QUEUE_NAMES.CLAIM_PEER_MESH_SELECT)!;
+      expect(select.args).toHaveLength(2);
+      expect(select.args[0]).toEqual({ includeMetadata: true });
+      expect(typeof select.args[1]).toBe('function');
+    });
+  });
 });

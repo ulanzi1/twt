@@ -262,6 +262,12 @@ import {
   ModerationAppealDetailResponse,
   ModerationAppealDecidedResponse,
   type DecideModerationAppealRequest,
+  MemorialReviewDecisionResponse,
+  MemorialReviewDetailResponse,
+  MemorialReviewListResponse,
+  MemorialWithdrawApprovalResponse,
+  type MemorialReviewDecisionInput,
+  type MemorialWithdrawApprovalInput,
   MemberDirectDeliveryResponse,
   OffPortalErasureResponse,
   OffPortalExportResponse,
@@ -2966,6 +2972,59 @@ export function decideModerationAppeal(
   return apiFetch(
     `${moderationAppealBase(pariwarId)}/${encodeURIComponent(appealId)}/decide`,
     ModerationAppealDecidedResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+// ── Story 11b.4 — the family memorial's REVIEW (the Trustee Panel) ──────────────────────────────────────────────────
+// Every route is gated server-side by `[adminSession, scope, requirePermissionHook('memorial.review', {dimension:
+// 'pariwar'})]` — the client never decides who may review. A Pariwar the staff user holds ⛔ grant in answers the scope
+// middleware's 404 first; a grant without the key answers 403 (the page renders its own "no access"). Every refusal inside
+// a held Pariwar is ONE neutral `404 memorial_review.not_found` (Trap 8). ⛔ There is ⛔ no edit call: a decision carries
+// an act, offsets into the verbatim text and reasons — ⛔ never the family's words.
+
+const memorialReviewBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/memorial-reviews`;
+
+/** The review queue — chain heads, oldest first; `decided` for decided or withdrawn heads. ⛔ Body in the list. */
+export function listMemorialReviews(
+  pariwarId: string,
+  view: 'pending' | 'decided' = 'pending',
+  limit = 50,
+): Promise<z.output<typeof MemorialReviewListResponse>> {
+  return apiFetch(`${memorialReviewBase(pariwarId)}?view=${view}&limit=${limit}`, MemorialReviewListResponse);
+}
+
+/** ONE version and its whole chain (the history view) — the words verbatim, decisions, notes, withdrawals. */
+export function getMemorialReview(
+  pariwarId: string,
+  submissionId: string,
+): Promise<z.output<typeof MemorialReviewDetailResponse>> {
+  return apiFetch(`${memorialReviewBase(pariwarId)}/${encodeURIComponent(submissionId)}`, MemorialReviewDetailResponse);
+}
+
+/** The Trust's ONE decision on a version (MA6). A `400 memorial_review.invalid_omissions` names the problem in `details`. */
+export function decideMemorialReview(
+  pariwarId: string,
+  submissionId: string,
+  body: MemorialReviewDecisionInput,
+): Promise<z.output<typeof MemorialReviewDecisionResponse>> {
+  return apiFetch(
+    `${memorialReviewBase(pariwarId)}/${encodeURIComponent(submissionId)}/decision`,
+    MemorialReviewDecisionResponse,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+/** The Trust withdraws its own approval (MA16) — one of the four reasons; ⛔ never a family's request. */
+export function withdrawMemorialApproval(
+  pariwarId: string,
+  submissionId: string,
+  body: MemorialWithdrawApprovalInput,
+): Promise<z.output<typeof MemorialWithdrawApprovalResponse>> {
+  return apiFetch(
+    `${memorialReviewBase(pariwarId)}/${encodeURIComponent(submissionId)}/withdraw-approval`,
+    MemorialWithdrawApprovalResponse,
     { method: 'POST', body: JSON.stringify(body) },
   );
 }

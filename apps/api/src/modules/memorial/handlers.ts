@@ -378,6 +378,7 @@ export function createMemorialHandlers(deps: AppDeps) {
       const decision = latest?.decision ?? null;
       const withdrawal = latest?.withdrawal ?? null;
       const view: MemorialMemberView = {
+        driveId: resolved.drive.poolId,
         deceasedName: intro.name,
         memorialState: state,
         submissionId: latest?.submission.submissionId ?? null,

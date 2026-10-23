@@ -2052,6 +2052,56 @@ export function useRequestModerationAppealStepUp() {
   return useMutation({ mutationFn: () => api.requestModerationAppealStepUp() });
 }
 
+// ── Story 11b.4 — the family memorial's REVIEW ─────────────────────────────────────────────────────────────────────
+export const memorialReviewsKey = (pariwarId: string, view: 'pending' | 'decided') =>
+  ['memorial-reviews', pariwarId, view] as const;
+export const memorialReviewKey = (pariwarId: string, submissionId: string) =>
+  ['memorial-review', pariwarId, submissionId] as const;
+
+/** The review queue (a 403 ⇒ the page's own "no access" — ⛔ retried). */
+export function useMemorialReviews(pariwarId: string, view: 'pending' | 'decided') {
+  return useQuery({
+    queryKey: memorialReviewsKey(pariwarId, view),
+    queryFn: () => api.listMemorialReviews(pariwarId, view),
+    retry: false,
+  });
+}
+
+/** ONE version and its whole chain — the history view. */
+export function useMemorialReview(pariwarId: string, submissionId: string) {
+  return useQuery({
+    queryKey: memorialReviewKey(pariwarId, submissionId),
+    queryFn: () => api.getMemorialReview(pariwarId, submissionId),
+    retry: false,
+  });
+}
+
+/** Record the ONE decision; the queue and the chain are re-read afterwards. */
+export function useDecideMemorialReview(pariwarId: string, submissionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.decideMemorialReview>[2]) =>
+      api.decideMemorialReview(pariwarId, submissionId, body),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['memorial-reviews', pariwarId] });
+      void qc.invalidateQueries({ queryKey: memorialReviewKey(pariwarId, submissionId) });
+    },
+  });
+}
+
+/** Withdraw the Trust's own approval (MA16); the queue and the chain are re-read afterwards. */
+export function useWithdrawMemorialApproval(pariwarId: string, submissionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.withdrawMemorialApproval>[2]) =>
+      api.withdrawMemorialApproval(pariwarId, submissionId, body),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['memorial-reviews', pariwarId] });
+      void qc.invalidateQueries({ queryKey: memorialReviewKey(pariwarId, submissionId) });
+    },
+  });
+}
+
 // ── Story 6.20 — the nominee declaration HISTORY ─────────────────────────────
 export const nomineeDeclarationKey = (pariwarId: string, claimCaseId: string) =>
   ['nominee-declaration', pariwarId, claimCaseId] as const;

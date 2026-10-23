@@ -48,6 +48,8 @@ export const MemorialAuthorisationDto = z
 
 export const MemorialMemberView = z
   .object({
+    /** The drive the family writes about — the phone keys its draft on it (MA3: `memorial-draft:v1:<memberId>:<driveId>`). */
+    driveId: z.string(),
     /** The deceased's name for the intro, in the Pariwar's presentation mode; `null` ⇒ the no-name key (MA14). */
     deceasedName: z.string().nullable(),
     memorialState: MemorialStateSchema,

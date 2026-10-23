@@ -1,0 +1,103 @@
+// English console-chrome resolver for the family-memorial REVIEW module (Story 11b.4, Task 7 — AC9).
+//
+// The admin console is ENGLISH-FACING — it resolves chrome KEYS locally to English (the news-blog / helpdesk per-module
+// `i18n-en.ts` precedent). ⛔ The family's words are CONTENT, never chrome: they are shown as stored, ⛔ translated,
+// ⛔ resolved through here. The four reasons are the epic's grounds only (`-391` Confirm 2 A) — ⛔ no catch-all.
+
+import type { MemorialReviewReason } from '@twt/contracts';
+
+const EN: Record<string, string> = {
+  'memorial.title': 'Family memorials',
+  'memorial.subtitle':
+    'What a family has written for a member who died, sent with the nominee’s permission. You may approve it, leave out a part (each with its reason), or not approve it — you can never change the family’s words.',
+  'memorial.nav': 'Family memorials',
+  'memorial.view.pending': 'With the Trust',
+  'memorial.view.decided': 'Decided',
+  'memorial.list.empty.pending': 'No memorial is waiting for review.',
+  'memorial.list.empty.decided': 'No decided memorial yet.',
+  'memorial.list.loading': 'Loading memorials…',
+  'memorial.list.error': 'Could not load memorials.',
+  'memorial.list.sent': 'Sent',
+  'memorial.list.member': 'Member who died',
+  'memorial.list.state': 'State',
+  'memorial.list.open': 'Open',
+  'memorial.noAccess': 'You do not have access to family memorials in this Pariwar. Memorials are reviewed by the Trustee Panel.',
+  'memorial.detail.loading': 'Loading…',
+  'memorial.detail.error': 'Could not load this memorial.',
+  'memorial.detail.notFound': 'This memorial could not be found.',
+  'memorial.detail.back': 'Back to the queue',
+  'memorial.detail.history': 'Every version the family sent (oldest first)',
+  'memorial.detail.version': 'Version sent',
+  'memorial.detail.thisVersion': 'This version',
+  'memorial.detail.words': 'The family’s words, as sent',
+  'memorial.detail.unavailable': 'The stored words could not be read right now.',
+  'memorial.detail.photo': 'Photo',
+  'memorial.detail.altText': 'Description of the photo, as sent',
+  'memorial.detail.asApproved': 'As approved',
+  'memorial.detail.omitted': '[left out]',
+  'memorial.detail.photoLeftOut': 'The photo (and its description) was left out.',
+  'memorial.detail.decision': 'Decision',
+  'memorial.detail.decidedBy': 'Decided by',
+  'memorial.detail.internalNote': 'Internal note (never shown to the family)',
+  'memorial.detail.withdrawal': 'Withdrawn',
+  'memorial.detail.withdrawnByFamily': 'Withdrawn by the family before review.',
+  'memorial.detail.withdrawnByTrust': 'The Trust withdrew its approval.',
+  'memorial.detail.permission': 'Permission given at sending',
+  'memorial.detail.bidiNotice': 'Marked ⟦BIDI⟧: a hidden text-direction control in the family’s text. It is shown so you read what is stored.',
+  'memorial.action.approved': 'Approve',
+  'memorial.action.approved_with_omissions': 'Approve, leaving out a part',
+  'memorial.action.not_approved': 'Do not approve',
+  'memorial.decide.title': 'Your decision',
+  'memorial.decide.selectHint':
+    'Choose each sentence to leave out and the reason for it. This is only an aid — the words themselves are never edited.',
+  'memorial.decide.sentencesBody': 'Sentences of the words',
+  'memorial.decide.sentencesAlt': 'Sentences of the photo description',
+  'memorial.decide.leaveOut': 'Leave out',
+  'memorial.decide.reasonFor': 'Reason',
+  'memorial.decide.photoLeftOut': 'Leave out the photo (and its description)',
+  'memorial.decide.reasonCode': 'Reason for not approving',
+  'memorial.decide.chooseReason': 'Choose a reason',
+  'memorial.decide.internalNote': 'Internal note — optional; never shown to the family',
+  'memorial.decide.submit': 'Record decision',
+  'memorial.decide.recorded': 'Decision recorded.',
+  'memorial.decide.invalid': 'These choices cannot be recorded: ',
+  'memorial.decide.error': 'Could not record this decision. Please reload and try again.',
+  'memorial.decide.alreadyDone': 'This version can no longer be decided — it may have been decided, replaced or withdrawn. Reload to see it.',
+  'memorial.withdraw.title': 'Withdraw the Trust’s approval',
+  'memorial.withdraw.hint': 'Only for one of the four reasons below. The family is told the reason and may send a new version.',
+  'memorial.withdraw.reason': 'Reason',
+  'memorial.withdraw.internalNote': 'Internal note — optional; never shown to the family',
+  'memorial.withdraw.submit': 'Withdraw approval',
+  'memorial.withdraw.recorded': 'Approval withdrawn.',
+  'memorial.withdraw.error': 'Could not withdraw this approval. Please reload and try again.',
+  'memorial.state.none': 'Nothing sent',
+  'memorial.state.with_the_trust': 'With the Trust',
+  'memorial.state.approved': 'Approved',
+  'memorial.state.approved_with_omissions': 'Approved, with a part left out',
+  'memorial.state.not_approved': 'Not approved',
+  'memorial.state.withdrawn': 'Withdrawn by the family',
+  'memorial.state.approval_withdrawn': 'Approval withdrawn by the Trust',
+  'memorial.reason.attacks_someone_named': 'A personal attack on someone named',
+  'memorial.reason.accuses_someone_of_wrongdoing': 'Accuses someone of wrongdoing',
+  'memorial.reason.against_the_law': 'Against the law',
+  'memorial.reason.identifies_a_child': 'Names or shows a child',
+  'memorial.problem.action_shape': 'the choices do not match the decision chosen.',
+  'memorial.problem.photo_left_out_without_photo': 'this version has no photo.',
+  'memorial.problem.alt_text_span_with_photo_left_out': 'the photo’s description goes with the photo — leave out one or the other.',
+  'memorial.problem.alt_text_span_without_alt_text': 'this version has no photo description.',
+  'memorial.problem.span_empty': 'a chosen part is empty.',
+  'memorial.problem.span_out_of_range': 'a chosen part is outside the words.',
+  'memorial.problem.span_order': 'two chosen parts touch — give them the same reason so they are left out together.',
+  'memorial.problem.span_not_grapheme_boundary': 'a chosen part splits a letter.',
+  'memorial.problem.span_blank': 'a chosen part has no visible words.',
+  'memorial.problem.span_crosses_paragraph': 'a chosen part crosses a paragraph.',
+  'memorial.problem.nothing_left': 'nothing of the words would be left — choose “Do not approve” instead.',
+};
+
+export function resolveEn(key: string): string {
+  return EN[key] ?? key;
+}
+
+export function reasonLabel(reason: MemorialReviewReason): string {
+  return resolveEn(`memorial.reason.${reason}`);
+}

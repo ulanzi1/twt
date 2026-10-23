@@ -13,8 +13,8 @@
 
 import { memorialParagraphRanges, type MemorialOmission } from '@twt/contracts';
 
-/** The copy key a renderer resolves for a part the Trust left out (`memorial` namespace). */
-export const MEMORIAL_OMITTED_KEY = 'memorial.render.omitted';
+/** The copy key a renderer resolves for a part the Trust left out — in the `memorial` namespace (`render.omitted`). */
+export const MEMORIAL_OMITTED_KEY = 'render.omitted';
 
 export type MemorialSegment =
   | { readonly kind: 'text'; readonly text: string }

@@ -172,6 +172,8 @@ const {
   VerifyWaOptInCodeResponse,
   WaOptInCodeErrorDetails,
 } = await import('../src/wa-opt-in/index.js');
+// Story 6.35 — the member's chosen app language (GET / PUT, member-session-gated).
+const { MemberLanguageSetRequest, MemberLanguageResponse } = await import('../src/member-language/index.js');
 // Story 5.5 — the member Telegram opt-in DTOs (mint PENDING → t.me `/start` deep-link, status, revoke).
 // Member-session-gated; the tg-webhook-processor worker advances PENDING → ACTIVE out-of-band.
 const { TelegramOptInRequestResponse, TelegramOptInStatusResponse, RevokeTelegramOptInResponse } =
@@ -444,6 +446,15 @@ const waOptInComponents = {
   WaOptInCodeErrorDetails: WaOptInCodeErrorDetails.openapi('WaOptInCodeErrorDetails'),
 } as const;
 for (const [name, schema] of Object.entries(waOptInComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 6.35 — the member's chosen app language components.
+const memberLanguageComponents = {
+  MemberLanguageSetRequest: MemberLanguageSetRequest.openapi('MemberLanguageSetRequest'),
+  MemberLanguageResponse: MemberLanguageResponse.openapi('MemberLanguageResponse'),
+} as const;
+for (const [name, schema] of Object.entries(memberLanguageComponents)) {
   registry.register(name, schema);
 }
 
@@ -1587,6 +1598,46 @@ registry.registerPath({
     200: { description: 'Opt-in revoked', content: jsonOf(waOptInComponents.RevokeWaOptInResponse) },
     401: waOptInAuth,
     409: errorResponse('Nothing to end: no ACTIVE opt-in and no open whatsapp_opt_in consent'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 6.35 — the member's chosen app language (member-session-gated; Decision 2026-10-23-387 LS2) ──
+const memberLanguageTags = ['member-language'];
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/language',
+  summary: 'Read the member’s chosen app language and their Pariwar’s default',
+  description:
+    'Returns the member’s own recorded choice (null until their first explicit change in the app) and the Pariwar’s default ' +
+    'language (informational — the app shows Hindi until the member picks). A read ⛔ records anything. 503 when the Pariwar ' +
+    'has no passport; 409 when the session member has no row in the Pariwar.',
+  tags: memberLanguageTags,
+  responses: {
+    200: { description: 'The member’s language', content: jsonOf(memberLanguageComponents.MemberLanguageResponse) },
+    401: errorResponse('Authentication required'),
+    409: errorResponse('The session member has no row in this Pariwar'),
+    503: errorResponse('The Pariwar has no passport (no default language)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/member/language',
+  summary: 'Record the member’s explicit choice of app language',
+  description:
+    'Records the language the member CHOSE in the app — sent ONLY on an explicit change (never on first launch, never from ' +
+    'the device language). The neighbours’ text and its WhatsApp reminder then go in it. Writes and audits ONLY when the ' +
+    'value changes (a repeat is the same state — no Idempotency-Key). Rate-limited per member.',
+  tags: memberLanguageTags,
+  request: { body: { content: jsonOf(memberLanguageComponents.MemberLanguageSetRequest), required: true } },
+  responses: {
+    200: { description: 'The member’s language (as recorded)', content: jsonOf(memberLanguageComponents.MemberLanguageResponse) },
+    400: errorResponse('Request validation failed (an unknown locale or an extra key)'),
+    401: errorResponse('Authentication required'),
+    409: errorResponse('The session member has no row in this Pariwar'),
+    429: errorResponse('Too many changes — retry later'),
+    503: errorResponse('The Pariwar has no passport (no default language)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

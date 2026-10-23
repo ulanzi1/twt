@@ -97,6 +97,9 @@ export * from './channel-config/index.js';
 // lockstep. HTTP endpoints → these DO register in openapi/v1.yaml (the member opt-in routes are the
 // EXPECTED diff for this story).
 export * from './wa-opt-in/index.js';
+// Story 6.35 — the member's chosen app language (GET / PUT /api/v1/member/language). Member-session-gated; registered in
+// openapi/v1.yaml like the wa-opt-in routes.
+export * from './member-language/index.js';
 
 // Story 5.5 — member Telegram opt-in DTOs (member-session-gated opt-in surface) + the telegram_opt_in_state
 // lockstep. HTTP endpoints → these DO register in openapi/v1.yaml (the member opt-in routes are the

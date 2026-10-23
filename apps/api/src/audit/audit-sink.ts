@@ -175,6 +175,9 @@ export type AuthAuditEventType =
   // Story 6.36c (AC4) — the member said *"No"* to a Pariwar Admin's suggested workplace (the request returns to the queue).
   // A *"Yes"* is audited as `member_life_events.posting_updated` (it writes a posting).
   | 'member_life_events.workplace_suggestion_declined'
+  // Story 6.35 (LS2; Decision 2026-10-23-387) — the member CHANGED their app language (`PUT /api/v1/member/language`). Emitted
+  // AFTER the commit and ONLY when the value changed (a repeat of the same choice is ⛔ line). Context: `{ locale }` only (I7).
+  | 'member.language_changed'
   // ── People who know me (Story 6.36b, 6.36a SW10–SW14) ──────────────────────────────────────
   // Resource `member:<id>` (the OTHER member of the link; the caller for a match). Context carries COUNTS and how a person
   // was found ONLY — ⛔ a number, ⛔ a name (I4). A match's KMS line is separate (`kms.compute_hmac`, `contact_match:n=…`).

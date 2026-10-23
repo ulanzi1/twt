@@ -27,6 +27,7 @@ import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
 import { registerKnownPeopleModule } from './modules/known-people/index.js';
 import { registerLifeEventsModule } from './modules/life-events/index.js';
+import { registerMemberLanguageModule } from './modules/member-language/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
@@ -299,6 +300,8 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // step-up gate ('nominee_change' / 'medical_change'); address + posting are NEW append-only writes
   // (NO step-up) emitting the two non-transition markers member.address_updated / member.posting_updated.
   registerLifeEventsModule(app, deps);
+  // Story 6.35 — the member's chosen app language (GET / PUT /api/v1/member/language).
+  registerMemberLanguageModule(app, deps);
   // Story 6.36b — PEOPLE WHO KNOW ME (6.36a SW10–SW14): contact matching (positions only), asking up to three members,
   // the member's list, the requests naming the member, answering and withdrawing. `active` members only.
   registerKnownPeopleModule(app, deps);

@@ -40,6 +40,7 @@ import {
   MedicalDisclosureStatusResponse,
   MemberFullSession,
   MemberLockInStatusResponse,
+  MemberLanguageResponse,
   ActiveContributionCardResponse,
   PoolContributorListResponse,
   NomineeConsoleResponse,
@@ -96,6 +97,8 @@ import {
   type MedicalDiscloseRequest,
   type MedicalDisclosureStatusResponse as MedicalStatusResult,
   type MemberLockInStatusResponse as MemberLockInStatusResult,
+  type MemberLanguageResponse as MemberLanguageResult,
+  type MemberLanguageLocale,
   type ActiveContributionCardResponse as ActiveContributionCardResult,
   type PoolContributorListResponse as PoolContributorListResult,
   type NomineeConsoleResponse as NomineeConsoleResult,
@@ -569,6 +572,19 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
      */
     memberLockInStatus(): Promise<MemberLockInStatusResult> {
       return call(`${MEMBER_HOME_BASE}/lock-in-status`, MemberLockInStatusResponse, undefined, true, 'GET');
+    },
+
+    // ── The member's chosen app language (Story 6.35) ────────────────────────────
+    /** Read the member's recorded app language (`null` until they change it) and their Pariwar's default (auth). ⛔ Records anything. */
+    memberLanguage(): Promise<MemberLanguageResult> {
+      return call(`${MEMBER_HOME_BASE}/language`, MemberLanguageResponse, undefined, true, 'GET');
+    },
+    /**
+     * Record the member's EXPLICIT choice of app language (Story 6.35, I1) — called ONLY after the member picked a language
+     * different from the one shown; ⛔ on first launch, ⛔ from the device language (auth).
+     */
+    memberLanguageSet(locale: MemberLanguageLocale): Promise<MemberLanguageResult> {
+      return call(`${MEMBER_HOME_BASE}/language`, MemberLanguageResponse, { locale }, true, 'PUT');
     },
 
     // ── My Pool card (Story 8.2 — the first Epic-8 SURFACE) ──────────────────────

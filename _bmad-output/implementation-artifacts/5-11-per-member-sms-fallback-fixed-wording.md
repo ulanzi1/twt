@@ -399,8 +399,9 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   curated name. **(b)** send the Hindi name in en anyway. *Cost (b):* every en text turns Unicode — 152+ chars ⇒ 3 segments — and the
   pre-flight does not catch it (it checks only the registered text). **(c)** refuse the send `value_too_long`. *Cost (c):* a member
   silently gets no text because of an admin's naming.  ⭐ **Superseded 2026-10-23 by Decision `2026-10-23-394` item 2 (review round 2, D2 (b)):** the curated name TRIMMED, ≤ 30
-  UTF-16 units (the unit `dlt-variables.ts` counts), and for en basic GSM-7 printable only (⛔ extension table, ⛔ control
-  characters); else the letter code — so the longest text stays 1 en / 2 hi parts.
+  UTF-16 units (the unit `dlt-variables.ts` counts), ⛔ a control character in ANY locale (the patch review's Q3), and for en
+  basic GSM-7 only (⛔ extension table); else the letter code — so the longest text stays 1 en / 2 hi parts. *(Locale scope
+  corrected 2026-10-24, last fix diff F5.)*
 - **FS14 — the outcome when no rung reached the member (F19).** ⭐ **(a) a final, recorded outcome `in_app_only`:** when the cascade ends
   without `sent`, the member is recorded (`store.recordResult`, the trail with each rung's reason) and NOT released or thrown for — the
   alert is on their in-app surface, the official channel (R10(B)); the recovery sweep counts them as notified. In 5.11 this is every
@@ -521,7 +522,8 @@ its MSG91 `##name##` form; the lockstep test lives in `apps/jobs/tests/`. A `$co
 hi; `scripts/microcopy/contribution.test.ts` excludes `$comment` keys (as the claim tests do). *Legs:* one lockstep test per template; a
 parity test (every `sms.*` key in both catalogues); a planted-violation leg per new gate (8.8's (b2) precedent), each proven RED first.
 ⭐ *Amended 2026-10-23 (review round 2, D5 (a)):* the `$comment.sms` key names the REVIEWED state (`-389` item 12), ⛔ "NOT-YET-HUMAN-REVIEWED".
-The PLANTED leg runs the SAME lockstep function as the real leg (round 2, P10).
+The PLANTED leg runs the SAME lockstep function as the "holds for all six" leg (round 2, P10); that function reads the catalogue
+directly — the real-`t()` render is its own leg, which a plant cannot reach (corrected 2026-10-24, last fix diff F5).
 
 **AC3 — Who receives it (I2; FS2 as RULED by `-390` Q1 B, FS3).** For a lit message: a member whose push did not end `sent` is ELIGIBLE
 when they have no WhatsApp target OR their WhatsApp rung did not end `sent` (in 5.11 the eligible rung then ends `sms_send_not_wired`); a
@@ -612,6 +614,16 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
       `packages/channels/tests/determinism.test.ts` (100 threaded renders, 90 s) under the unit job's load, with admin RTL legs
       at 5 s, neither touched by this story ([[project_ci_local_concurrency_oversubscription]]); the unit job re-run ALONE with its
       exact command (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`) — 37 / 37 tasks green. ⇒ 36 / 36 by component.
+      ⚠ **Corrected 2026-10-24 (last fix diff, F3):** "RED on ONE timeout" understated the first run — the log holds the channels
+      determinism timeout AND 14 `@twt/admin` RTL timeouts across 7 files, and turbo ABORTED at 30 / 36 tasks, so the admin, jobs,
+      api, domain and mobile unit tasks never reported in that run. The re-run alone (37 / 37: admin 1263, jobs 1030, mobile 1388)
+      is what closes the unit job. The commit message of `8d53e937` carries the understated wording and is ⛔ rewritten.
+      ⚠ **Second run, 2026-10-24, at `72fd1499`** (after the last fix diff): 34 / 36. `integration-tests` RED on two domain specs
+      (`claim/contact-ladder.spec.ts`, `claim/death-certificate.spec.ts`) — `40P01` seeding `members`, the other process a MIGRATION
+      creating `memorial_submissions` (the 11b-4 worktree's, applied to the SHARED :5433 mid-run — `docker logs twt-test-pg`); the job
+      then aborted before jobs / api. `test (unit)` RED on one mobile render-timing leg (`known-people-find-render.test.ts`, a file
+      this story does not touch). All three pass alone (domain 50 / 50, mobile 52 / 52). 5.11 adds ⛔ migration. ⇒ AC7 re-closes on
+      the pre-push hook's `ci:local` (:5433) at the pushed tip — recorded when it lands.
 
 ### Review Findings
 
@@ -840,8 +852,8 @@ reinterpret `-390`; pins match. Panel gate: nothing here is the Panel's.
   than the expiry (~10 min) so a dead claim lapses before the retry. Cost: (iv) still alarms falsely on a manual re-run; the outcome
   row is vacuumed within ~70 min instead of 24 h. (c) keep it; document (i)–(iv) and correct the alarm text. Cost: a crash loses the
   notice until someone re-runs it after 24 h. Recommended (a).
-  **RESOLVED (BigDev 2026-10-24, *"apply all"* — taken as the recommended (a), as with round 2's *"all recommended"*; ⛔ an
-  explicit letter):** built — `KeyedStore.inspect` (read-only, additive) and the moderation take-over below.
+  **RESOLVED (BigDev 2026-10-24, *"apply all"* — taken as the recommended (a); CONFIRMED by BigDev the same day: *"I got it for E1.
+  No change needed"*):** built — `KeyedStore.inspect` (read-only, additive) and the moderation take-over below.
 - [x] [Review][Patch] **Q1 [MED — family 10] Records that still state superseded or wrong facts.** AC5 and the DLT sheet's wording
   section (`dlt-template-requests-6-19.md` ~279–286) still state the old FS13; both catalogues' `$comment.sms` too; R3's and R5's
   "RESOLVED / BUILT" notes describe behaviour round 2 reversed; the Task 7 annotation splices a sentence; the header's "Day-one
@@ -887,6 +899,59 @@ ESC in an en name (`needsUnicode` is true — it is ⛔ in the GSM-7 set); nothi
 discards results by design; tests observe them); the sheet's segment counts unpinned (its character counts are pinned and `measure`
 derives segments); P7's trail detail (the fan-out is mocked there).
 
+### Review Findings — last fix diff (E1 (a) + Q1–Q7, round-2 tree → `8d53e937`)
+
+Three read-only layers, 2026-10-24 (BigDev: *"shouldn't be story moved to done, after one more review of the last fix diff ?"*; E1
+confirmed by BigDev: *"I got it for E1. No change needed"*). 38 raw → 0 decision-needed, 6 patch, 2 defer, 8 dismissed; ⛔ HIGH
+(Blind Hunter's one HIGH — "a take-over wipes a completed record" — is false: `release` deletes only `pending` rows). Auditor:
+E1 (a) as built matches E1 (a) as written; commit order holds (`-394` alone, then code, then records).
+
+- [x] [Review][Patch] **F1 [MED — family 2] The take-over is three statements, not one.** `inspect` → `release` → `claim` run outside
+  `claim`'s advisory lock, and `release` checks no owner: two take-overs at once can delete each other's fresh claim and both send;
+  a "lost" take-over fails the job even when the other attempt recorded. Add an atomic `KeyedStore.takeOver(key, ttl, staleBefore)`
+  (under the same advisory lock: re-claim ONLY a `pending` row whose `created_at` is older than `staleBefore`); a missing row is a
+  plain `claim`; on losing, re-`inspect` and return `alreadySent` when completed. Live two-connection race leg.
+  [`moderation-notify.ts:374`; `keyed-store.ts`]
+- [x] [Review][Patch] **F2 [MED — family 2] The 15-min threshold is measured from the CLAIM; pg-boss's 900 s expiry from the job START.**
+  At redelivery the claim's age is ≈ 900 s − (time before the claim), so every retry can read "in flight" and the job ends `failed`
+  unsent. Take over at 10 min (900 s minus a 5-min margin for the pre-claim work and the 60 s supervise lag); a redelivery cannot
+  arrive earlier unless two jobs exist (at-least-once, accepted). Boundary legs at exactly the threshold. [`moderation-notify.ts:50`]
+- [x] [Review][Patch] **F3 [MED — family 10] The AC7 record misstates the first `ci:local` run.** It says `test (unit)` was RED on ONE
+  timeout; the log shows the channels determinism timeout AND 14 `@twt/admin` RTL timeouts (7 files), and turbo aborted at 30 / 36
+  tasks, so admin / jobs / api / domain / mobile unit tasks never reported in that run. The re-run alone (37 / 37) stands. Dated
+  correction in Task 7 and the Change Log (`8d53e937`'s message is not rewritten — the correction says so).
+- [x] [Review][Patch] **F4 [LOW] The confirmed and mismatch workers handle a missing result silently** (only the child alarms "no
+  result"); alarm in both and assert the child's alarm. [`contribution-notify-triggers.ts:1336`, `:1397`]
+- [x] [Review][Patch] **F5 [LOW — family 10] Records still wrong after Q1–Q7.** Q6 only partly applied (AC2's note and the describe
+  title unchanged; the JSDoc says the real-`t()` leg is "above" — it is below); FS13's note and the sheet's cost paragraph scope the
+  control-character ban to en; the sheet calls an en value "ASCII" (basic GSM-7 is not ASCII — "Café" passes); "release for
+  redelivery" survives in `shouldRetryFanOut`'s JSDoc and the story; P4's comment's "within 15 min" window; the File List lacks
+  `keyed-store.spec.ts`. `-394` (committed — ⛔ edited) carries errata recorded HERE: item 3's "a member with a mobile" is broader
+  than the real residual (a full KMS outage fails the DECRYPT, so ⛔ SMS target ⇒ retried; the residual is an HMAC / render failure
+  after a successful decrypt — it errs safe); item 1's "release for redelivery" (nothing redelivers — a re-run would); the
+  Author line dates *"apply all"* 2026-10-23 (it was 2026-10-24); "about" / "exactly" 1 en / 2 hi.
+- [x] [Review][Patch] **F6 [LOW] Missing legs:** a direct `serializeFanOutResult` test (P9's was removed by Q4); the "gone ⇒ take over
+  and send" success leg.
+  **F1–F6 APPLIED (2026-10-24, BigDev "1").** F1: `KeyedStore.takeOver(key, ttl, staleBefore)` — one locked statement
+  (re-claims ONLY a `pending` row claimed before `staleBefore`; a gone row is inserted; a completed row is never touched);
+  moderation uses it, and on losing re-reads — completed ⇒ `alreadySent`, else throw. F2: abandoned at 10 min (pg-boss's 900 s
+  minus a 5-min margin); exactly 10 min is in flight in both checks. F3: Task 7's dated correction. F4: confirmed / mismatch alarm
+  "returned no result". F5: the records above (+ `-394` errata recorded in F5's text, ⛔ the entry edited). F6: the direct
+  serializer test and the vanished-claim leg. Pin re-taken: `contribution-notify.ts` (JSDoc only).
+  *Verification:* `tsc` clean (domain, jobs, niyamavali-engine, api); ESLint clean; jobs unit 1032 / 0 failed; :5433 — keyed-store
+  spec 10 / 10 (incl. 6 concurrent take-overs ⇒ ONE winner), twelve jobs suites 324 / 324; `dlt-typed-variables:check` passes.
+  Mutants RED: `takeOver` ignoring staleness, `takeOver` touching a completed row, the threshold back at 15 min, the boundary `>`;
+  restored byte-identical.
+- [x] [Review][Defer] **Y1 A hi pool value may carry U+2028 / U+2029, bidi controls (U+202A–E, U+2066–9), ZWSP, a lone surrogate** [`contribution-sms-templates.ts:113`] — deferred: `-394` item 2 bans control characters (Cc); widening it is a new author-commit; nothing is sent until 5.11b, which must decide it before the real send.
+- [x] [Review][Defer] **Y2 The keyed store has no owner token** [`keyed-store.ts` `recordResult` / `release`] — deferred, pre-existing: a hung original's late `recordResult` can complete a take-over's row with its own outcome (at-least-once, accepted by E1 (a)).
+
+Dismissed (8): a take-over wiping a completed record (`release` is `WHERE status = 'pending'`); the contracts `pool_open` leg's
+`values: {}` (valid — `payment_not_matched` uses it, so the leg isolates the message); `inspect`'s cast and `client.release(err)`
+(the sibling methods' pattern); a backtick passing as GSM-7 (it is ⛔ in the set ⇒ `needsUnicode` ⇒ letter code); moderation's
+at-least-once kept out of `-394` (it restores the pre-R3 delivery semantics — an engineering property); `notified: false` "only for
+member-not-found" (the two returns, verified); a failed `release` burning the retries (alarmed; the row then lapses at its TTL);
+`deps.now` vs the store's wall clock (`deps.now` is unset in production; F2's margin covers host skew).
+
 ## Carried to 5.11b (`5-11b-alert-sms-real-send`) — NOT built or answered here
 
 5.11b's create-story starts from these, re-verified at its own pin. Each was validated against `d87d047a`.
@@ -898,7 +963,9 @@ derives segments); P7's trail detail (the fan-out is mocked there).
   - **The lifecycle-suppression boundary (P3).** The SMS rung does not call `dispatch`, so it bypasses `dispatch`'s single
     suppression boundary (the DELIBERATE block on `smsRung`). The real send must go through `dispatch` or apply the same hook first.
   - **The retry window re-decides `-394` item 3 (D3 (a)).** While dark, an SMS-rung dispatch error (render / KMS HMAC) no longer
-    retries a member with a mobile; the real send's failures and retry window replace that.
+    retries a member with a mobile; the real send's failures and retry window replace that. ⚠ *(2026-10-24, last fix diff F5)*
+    narrower than `-394` item 3 reads: a FULL KMS outage fails the mobile DECRYPT first (⛔ DEK cache), so ⛔ SMS target ⇒ the
+    member IS retried; the residual is an HMAC / render failure after a successful decrypt — it errs on the safe side.
   - **The WhatsApp memo's off → on direction (deferred-work round 2 W1)** — a fake `whatsapp:sent` until restart.
 
 - **FS5 — the language.** Reuse `getMemberLanguage` (F11 — the neutral read already exists; no extraction from `peer-mesh-request.ts`, so no
@@ -1125,8 +1192,9 @@ job BEFORE 5.11 (with the fake `sms:sent`) and does now:
 - moderation-notify — THROWS on `retry` (a thrown fan-out) only; the alarm text names a FAILED fan-out.
   ⚠ *(2026-10-23, review round 2, P6 — this trace predates R1)* Since R1 / `-394` item 1, `retry` also holds a member `shouldRetryFanOut`
   keeps retryable (no SMS target, or SMS cost-suppressed) — POOL_BATCH / confirmed / mismatch / moderation release + throw for
-  them, news / survey release them for redelivery (their alarm now says so). Moderation records its outcome (R3) and treats a
-  claimed-but-unrecorded notice as a failure (P11).
+  them, news / survey release their claims and add ⛔ job retry — a re-run of the job would try them (their alarm says so,
+  Q2). Moderation records its outcome (R3); an already-claimed notice is read with `inspect` — completed ⇒ skip, pending
+  under 10 min ⇒ in flight, older or gone ⇒ an atomic `takeOver` (E1 (a), F1, F2). *(Corrected 2026-10-24, last fix diff F5.)*
 - helpdesk-reply fan-out notifier — ignores the result (log-only in production, F8); unchanged.
 - news-publish / survey-publish — call `fanOutAlert` per member; ⛔ retry either way (best-effort broadcast). Before: a non-delivered member
   was RELEASED + counted in an alarm. Now: recorded `in_app_only` (a redelivered job does ⛔ re-send to them) and counted on an info log; the
@@ -1231,7 +1299,8 @@ New:
 - `apps/jobs/tests/moderation-notify-live.test.ts` (review R3 / round 2)
 
 Modified — source:
-- `packages/domain/src/idempotency/keyed-store.ts`, `index.ts` (`inspect` — round-2 patch review E1 (a))
+- `packages/domain/src/idempotency/keyed-store.ts`, `index.ts` (`inspect` — round-2 patch review E1 (a); `takeOver` — last fix diff F1)
+- `packages/domain/tests/integration/idempotency/keyed-store.spec.ts` (`inspect`, `takeOver` live legs)
 - `apps/jobs/src/scheduler/contribution-notify.ts`
 - `apps/jobs/src/scheduler/contribution-notify-triggers.ts`
 - `apps/jobs/src/scheduler/moderation-notify.ts`
@@ -1277,6 +1346,7 @@ Modified — records:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-24 | v1.11 | Last fix diff reviewed (38 raw → F1–F6 APPLIED, BigDev "1"; Y1, Y2 deferred; 8 dismissed; ⛔ HIGH) and committed (`72fd1499`). E1 (a) CONFIRMED by BigDev. Second `ci:local` 34 / 36 — a sibling worktree's migration deadlocked two domain specs on the shared :5433, one mobile timing leg; all pass alone. Pushing for a PR (BigDev: *"open pr"*) — the pre-push hook's `ci:local` is the AC7 gate. Status stays `review`. |
 | 2026-10-24 | v1.10 | Committed: `8eb8cee0` (Decision `-394`, alone) then `93ad0596` (the review fixes). AC7 re-closed — `ci:local` on :5433 36 / 36 by component (the unit job's one load timeout re-run alone, 37 / 37). Status `in-progress` → `review`. ⛔ pushed. |
 | 2026-10-24 | v1.9 | Round-2 patch review (the P1–P12 diff, three layers): 39 raw → E1 (taken as (a) on BigDev's *"apply all"*), Q1–Q7 APPLIED, X1 deferred, 9 dismissed; ⛔ HIGH. `KeyedStore.inspect` added; moderation takes over an abandoned claim; P9 reversed by Q4; records corrected; `-394` amended before its commit. Status stays `in-progress`; not committed or pushed. |
 | 2026-10-23 | v1.8 | Fresh full review (round 2): 42 raw → D1–D5 (BigDev *"all recommended"*), P1–P12 (BigDev *"all"*) APPLIED, W1–W4 deferred, 11 dismissed. Decision `2026-10-23-394` written (supersedes `-389` items 8, 9; accepts the D3 residual). Status stays `in-progress`; not committed or pushed. |

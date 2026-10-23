@@ -4,6 +4,17 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 5-11-per-member-sms-fallback-fixed-wording.md, last fix diff (2026-10-24)
+
+- **A Hindi pool value may carry line / paragraph separators (U+2028 / U+2029), bidi controls (U+202A–202E, U+2066–2069), ZWSP or a
+  lone surrogate** (`smsPoolLabel`, `apps/jobs/src/scheduler/contribution-sms-templates.ts`). `-394` item 2 bans control characters
+  (Unicode Cc) in any locale and keeps ZWJ / ZWNJ; these others are not Cc. An en value is safe (`needsUnicode`). Nothing is texted
+  until row `5-11b-alert-sms-real-send`, which must decide before its first send whether to widen the rule (a new author-commit) —
+  and whether DLT / MSG91 accept such characters in a variable.
+- **The keyed store has no owner token** (`packages/domain/src/idempotency/keyed-store.ts`, `recordResult` / `release` match on key
+  and status only). A hung original attempt's late `recordResult` can complete a take-over's row with ITS outcome (the moderation
+  take-over, Story 5.11 E1 (a)); at-least-once is accepted there. Re-trigger: a consumer that needs exactly-once across a take-over.
+
 ## Deferred from: code review of 5-11-per-member-sms-fallback-fixed-wording.md, round-2 patch review (2026-10-24)
 
 - **The push's pool label does not trim a padded curated name; the SMS value now does** (`contribution-notify-triggers.ts:251`,

@@ -104,7 +104,7 @@ S = Task 0.1 STOP conditions · PQ = Panel question.
 
 # Story 5.11: The Per-Member SMS Fallback Gets Fixed, Registrable Wording (en + reviewed hi) and an Honest Rung — WHAT Is Texted, to WHOM, in WHICH Words; the Real Send Is 5.11b `[SURFACE]`
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A member the app cannot reach hears nothing by text today: the per-member SMS
 > fallback exists in code but is dark, because every v1 alert SMS was one whole-body variable that TRAI will not register (Story
@@ -624,6 +624,8 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
       then aborted before jobs / api. `test (unit)` RED on one mobile render-timing leg (`known-people-find-render.test.ts`, a file
       this story does not touch). All three pass alone (domain 50 / 50, mobile 52 / 52). 5.11 adds ⛔ migration. ⇒ AC7 re-closes on
       the pre-push hook's `ci:local` (:5433) at the pushed tip — recorded when it lands.
+      ⭐ **AC7 CLOSED 2026-10-24 at `26bf20ac`** — the pre-push hook's `pnpm ci:local` (`DATABASE_URL` on :5433): **36 / 36 green**
+      (integration: domain 6172, jobs 1578, api 2080 + 1 skipped; unit: mobile 1388, admin 1263). Pushed; PR #301 opened.
 
 ### Review Findings
 
@@ -1346,6 +1348,7 @@ Modified — records:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-24 | v1.12 | AC7 CLOSED — pre-push `ci:local` 36 / 36 green at `26bf20ac`; branch pushed, PR #301 opened (BigDev: *"open pr"*). Every review finding resolved, ⛔ open HIGH / MED ⇒ Status `review` → `done` (BigDev: *"shouldn't be story moved to done, after one more review of the last fix diff ?"*). |
 | 2026-10-24 | v1.11 | Last fix diff reviewed (38 raw → F1–F6 APPLIED, BigDev "1"; Y1, Y2 deferred; 8 dismissed; ⛔ HIGH) and committed (`72fd1499`). E1 (a) CONFIRMED by BigDev. Second `ci:local` 34 / 36 — a sibling worktree's migration deadlocked two domain specs on the shared :5433, one mobile timing leg; all pass alone. Pushing for a PR (BigDev: *"open pr"*) — the pre-push hook's `ci:local` is the AC7 gate. Status stays `review`. |
 | 2026-10-24 | v1.10 | Committed: `8eb8cee0` (Decision `-394`, alone) then `93ad0596` (the review fixes). AC7 re-closed — `ci:local` on :5433 36 / 36 by component (the unit job's one load timeout re-run alone, 37 / 37). Status `in-progress` → `review`. ⛔ pushed. |
 | 2026-10-24 | v1.9 | Round-2 patch review (the P1–P12 diff, three layers): 39 raw → E1 (taken as (a) on BigDev's *"apply all"*), Q1–Q7 APPLIED, X1 deferred, 9 dismissed; ⛔ HIGH. `KeyedStore.inspect` added; moderation takes over an abandoned claim; P9 reversed by Q4; records corrected; `-394` amended before its commit. Status stays `in-progress`; not committed or pushed. |

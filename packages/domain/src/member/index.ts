@@ -22,6 +22,8 @@ export * from './identity-write.js';
 export * from './lock-in.js';
 export * from './lock-in-gate.js';
 export * from './overlay.js';
+// Story 6.35 — the member's chosen app language (the ONE writer, behind PUT /api/v1/member/language) + its read.
+export * from './preferred-locale.js';
 // Story 3.9 — Life Events address + posting history accessors (append-only write + latest read).
 export * from './address.js';
 export * from './posting.js';

@@ -13,7 +13,7 @@ import { foreignKey, index, integer, pgTable, text, timestamp, unique, uuid } fr
 import { sql } from 'drizzle-orm';
 
 import type { ClaimId, MemberId, PariwarId, PeerMeshPingId, PeerMeshSelectionId } from '../ids/index.js';
-import { claimPeerMeshPings, type PeerMeshLocaleSource } from './claim_peer_mesh_pings.js';
+import { claimPeerMeshPings, PEER_MESH_LOCALE_SOURCES } from './claim_peer_mesh_pings.js';
 import { claimPeerMeshSelections } from './claim_peer_mesh_selections.js';
 
 /**
@@ -41,6 +41,15 @@ export const PEER_MESH_WA_REMINDER_SENT_OUTCOMES = ['accepted', 'rejected_recipi
 /** The reminder's locales — the ruled words exist in these two (WR6). ⚠ LOCKSTEP with 0171's `locale` CHECK. */
 export const PEER_MESH_WA_REMINDER_LOCALES = ['en', 'hi'] as const;
 export type PeerMeshWaReminderLocale = (typeof PEER_MESH_WA_REMINDER_LOCALES)[number];
+
+/**
+ * Story 6.35 (migration 0179; Decision 2026-10-23-385, Trustee-ratified, PQ1 A) — why the REMINDER's language was chosen: the
+ * text's two (`member_choice`, `pariwar_default`) plus `pariwar_fallback` — the member CHOSE a language whose reminder template is
+ * unusable for their Pariwar, so it went in the Pariwar's language. Reminders ONLY (the pings' CHECK stays two values).
+ * ⚠ LOCKSTEP with 0179's `claim_peer_mesh_wa_reminders_locale_source_check`.
+ */
+export const PEER_MESH_WA_REMINDER_LOCALE_SOURCES = [...PEER_MESH_LOCALE_SOURCES, 'pariwar_fallback'] as const;
+export type PeerMeshWaReminderLocaleSource = (typeof PEER_MESH_WA_REMINDER_LOCALE_SOURCES)[number];
 
 /**
  * ⭐ The GRAMMAR of `detail` / `first_detail` (WR10): the transients (`rate_limited:<code|none>`, `api_unavailable:<status>`,
@@ -85,8 +94,8 @@ export const claimPeerMeshWaReminders = pgTable(
     /** The Meta template NAME the reminder was sent under (WR7's per-Pariwar key). */
     templateName: text('template_name'),
     locale: text('locale').$type<PeerMeshWaReminderLocale>(),
-    /** Why the language was chosen (WR14 — `resolvePeerRequestLocale`, read again at begin). */
-    localeSource: text('locale_source').$type<PeerMeshLocaleSource>(),
+    /** Why the language was chosen (WR14 — `resolvePeerRequestLocale`, read again at begin; `pariwar_fallback` — `-385`). */
+    localeSource: text('locale_source').$type<PeerMeshWaReminderLocaleSource>(),
     sendUpdatedAt: timestamp('send_updated_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
   },

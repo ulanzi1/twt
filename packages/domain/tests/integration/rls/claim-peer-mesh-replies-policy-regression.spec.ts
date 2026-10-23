@@ -166,7 +166,11 @@ describe.skipIf(!hasDatabase)('0156 — the ping delivery record, the replies, t
       expect((await upd(`attempt_count = 1`)).code).toBe('23514');
       expect((await upd(`send_outcome = 'attempting', attempt_count = 1`)).code).toBe('23514');
       expect((await upd(`send_outcome = 'attempting', attempt_count = 1, claimed_at = now(), claimed_by_job = 'sweep:held'`)).code).toBe('23514');
-      expect((await upd(`locale_source = 'member_choice'`)).code).toBe('23514');
+      // 📌 FLIPPED 2026-10-23 (Story 6.35, migration 0179 — W8): `member_choice` is now ADMITTED (the recipient's own choice);
+      // the reminder's `pariwar_fallback` (`-385`) is ⛔ a ping value; anything else still refused.
+      expect((await upd(`locale_source = 'member_choice'`)).code).toBeNull();
+      expect((await upd(`locale_source = 'pariwar_fallback'`)).code).toBe('23514');
+      expect((await upd(`locale_source = 'device'`)).code).toBe('23514');
       expect((await upd(`link_code = 'short'`)).code).toBe('23514');
       expect((await upd(`detail = repeat('x', 201)`)).code).toBe('23514');
       expect((await upd(`send_outcome = 'attempting', attempt_count = 1, claimed_at = now(), claimed_by_job = 'job-1', locale_source = 'pariwar_default', link_code = 'Ab3dEf7hIj9K', aging_since = now()`)).code).toBeNull();

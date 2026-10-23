@@ -41,6 +41,7 @@ import {
   parkHeldPeerMeshRequests,
   peerMeshRequestReclaimCutoff,
   readPeerMeshRequestEligibility,
+  resolvePariwarDefaultLocale,
   resolvePeerRequestByLinkCode,
   resolvePeerRequestLocale,
 } from '../../../src/claim/index.js';
@@ -93,10 +94,19 @@ async function insertMember(client: Client, pid: string, memberId: string, state
  * and whose ranking is STORED (or NULL), then `twt_app` in the Pariwar.
  */
 async function seedRequestClaim(
-  o: { state?: string; ranked?: number; selected?: number; rankedNull?: boolean; source?: 'workplace' | 'named_by_member' | null } = {},
+  o: {
+    state?: string;
+    ranked?: number;
+    selected?: number;
+    rankedNull?: boolean;
+    source?: 'workplace' | 'named_by_member' | null;
+    localeDefault?: 'hi' | 'en';
+  } = {},
 ): Promise<Seeded> {
   const { tx, client } = getTx();
   const pid = toPariwarId(randomUUID());
+  // 📌 Story 6.35 — a fresh begin resolves the recipient's language (LS8), which reads the passport.
+  await seedPassport(tx, pid, { localeDefault: o.localeDefault ?? 'hi' });
   const deceased = toMemberId(randomUUID());
   await insertMember(client, pid, deceased);
   const claimCaseId = toClaimId(await seedClaim(tx, pid, { deceasedMemberId: deceased, currentState: (o.state ?? 'verification_in_progress') as never }));
@@ -148,6 +158,7 @@ async function pingRow(pingId: string) {
     parked_at: Date | null;
     link_code: string | null;
     locale_source: string | null;
+    locale: string | null;
     replaces_ping_id: string | null;
     member_id: string;
     source: string | null;
@@ -169,6 +180,14 @@ async function pingsOf(selectionId: string) {
 async function eventCount(claimCaseId: string): Promise<number> {
   const { rows } = await getTx().client.query<{ n: number }>(`SELECT count(*)::int AS n FROM events_log WHERE stream_id = $1`, [claimCaseId]);
   return rows[0]!.n;
+}
+
+/** As the superuser, briefly: record a member's language choice (Story 6.35 — the API's setter is `member/preferred-locale.ts`). */
+async function chooseLanguage(memberId: string, locale: 'hi' | 'en'): Promise<void> {
+  const { client } = getTx();
+  await client.query('RESET ROLE');
+  await client.query(`UPDATE members SET preferred_locale = $2, preferred_locale_set_at = now() WHERE member_id = $1`, [memberId, locale]);
+  await client.query('SET LOCAL ROLE twt_app');
 }
 
 /** As the superuser, briefly: set columns of a ping directly (a crash-left / parked / stale fixture). */
@@ -537,6 +556,75 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
     });
   });
 
+  describe('📌 Story 6.35 AC3 — the language recorded at the begin (LS9, I5; closes W8)', () => {
+    it('⭐ a fresh begin writes `locale` + `locale_source` FROM the read — the recipient\'s choice, else the Pariwar\'s default', async () => {
+      const s = await seedRequestClaim({ ranked: 2, selected: 2 });
+      const [chooser, plain] = s.pings;
+      await chooseLanguage(chooser!.memberId, 'en');
+      expect(await begin(s, chooser!.pingId)).toMatchObject({ kind: 'begun', locale: 'en' });
+      expect(await begin(s, plain!.pingId)).toMatchObject({ kind: 'begun', locale: 'hi' });
+      expect(await pingRow(chooser!.pingId)).toMatchObject({ locale: 'en', locale_source: 'member_choice' });
+      expect(await pingRow(plain!.pingId)).toMatchObject({ locale: 'hi', locale_source: 'pariwar_default' });
+    });
+
+    it('⭐ I5 — a re-claim REUSES the first locale even after the member changed their choice', async () => {
+      const s = await seedRequestClaim({ ranked: 1, selected: 1 });
+      const p = s.pings[0]!;
+      await chooseLanguage(p.memberId, 'en');
+      expect(await begin(s, p.pingId)).toMatchObject({ kind: 'begun', locale: 'en', attemptCount: 1 });
+      await chooseLanguage(p.memberId, 'hi');
+      expect(await begin(s, p.pingId)).toMatchObject({ kind: 'begun', locale: 'en', attemptCount: 2 });
+      expect(await pingRow(p.pingId)).toMatchObject({ locale: 'en', locale_source: 'member_choice' });
+    });
+
+    it('a re-claim of a pre-6.35 row (`locale IS NULL`) writes the PARIWAR default and keeps `pariwar_default` — ⛔ the member\'s later choice', async () => {
+      const s = await seedRequestClaim({ ranked: 1, selected: 1 });
+      const p = s.pings[0]!;
+      await setPing(
+        p.pingId,
+        `send_outcome = 'attempting', attempt_count = 1, claimed_at = now(), aging_since = now(), claimed_by_job = '${JOB}',
+         locale_source = 'pariwar_default', link_code = 'Pre635Abcdef'`,
+      );
+      await chooseLanguage(p.memberId, 'en');
+      expect(await begin(s, p.pingId)).toMatchObject({ kind: 'begun', locale: 'hi', attemptCount: 2 });
+      expect(await pingRow(p.pingId)).toMatchObject({ locale: 'hi', locale_source: 'pariwar_default' });
+    });
+
+    it('a row finished WITHOUT a begin (`skipped_superseded`) has ⛔ locale — and the CHECK accepts it', async () => {
+      const outOfWindow = CLAIM_LIFECYCLE_STATES.find((st) => !isStateInAnswerWindow(st, false))!;
+      const s = await seedRequestClaim({ state: outOfWindow, ranked: 1, selected: 1 });
+      expect((await begin(s, s.pings[0]!.pingId)).kind).toBe('superseded');
+      expect(await pingRow(s.pings[0]!.pingId)).toMatchObject({ send_outcome: 'skipped_superseded', locale: null, locale_source: null });
+    });
+
+    it('⭐ the DB backstops: a finished row\'s `locale` is frozen; an attempting row\'s non-NULL `locale` is written once; R15 still fires', async () => {
+      const s = await seedRequestClaim({ ranked: 3, selected: 3 });
+      const [done, flying, fresh] = s.pings;
+      const db = bindScopedDb(getTx().client);
+      await begin(s, done!.pingId);
+      expect(await finalisePeerMeshRequest(db, { pariwarId: s.pid, pingId: done!.pingId, jobId: JOB, outcome: 'accepted' })).toBe(true);
+      await begin(s, flying!.pingId);
+      const { client } = getTx();
+      const attempt = async (pingId: string, set: string) => {
+        await client.query('SAVEPOINT g');
+        try {
+          await client.query(`UPDATE claim_peer_mesh_pings SET ${set} WHERE ping_id = $1`, [pingId]);
+          return null;
+        } catch (err) {
+          return (err as { message: string }).message;
+        } finally {
+          await client.query('ROLLBACK TO SAVEPOINT g');
+        }
+      };
+      expect(await attempt(done!.pingId, `locale = 'en'`)).toMatch(/a finished send \(accepted\) is never rewritten/);
+      expect(await attempt(flying!.pingId, `locale = 'en'`)).toMatch(/locale is written once/);
+      expect(await attempt(flying!.pingId, `locale = NULL`)).toMatch(/locale is written once/);
+      expect(await attempt(flying!.pingId, `attempt_count = 0`)).toMatch(/attempt_count never decreases/); // 0166's R15 arm, copied
+      expect(await attempt(fresh!.pingId, `locale = 'fr'`)).toMatch(/claim_peer_mesh_pings_locale_check/);
+      expect(await attempt(flying!.pingId, `locale_source = 'pariwar_fallback'`)).toMatch(/claim_peer_mesh_pings_locale_source_check/);
+    });
+  });
+
   describe('the reads', () => {
     it('the due pings: ⛔ begun and `attempting`, in ping_id order — ⛔ finished ones', async () => {
       const s = await seedRequestClaim();
@@ -549,14 +637,44 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       expect(due).toEqual(expected);
     });
 
-    it('R10 — the locale is the Pariwar\'s default; ⛔ passport throws', async () => {
+    // 📌 Story 6.35 (2026-10-23, AC3) — the ONE read is per RECIPIENT now: `{ pariwarId, memberId }` (was `pariwarId`).
+    it('R10 / 6.35 LS8 — ⛔ choice ⇒ the Pariwar\'s default; a choice ⇒ `member_choice`; ⛔ passport throws; the Pariwar-only read', async () => {
+      const s = await seedRequestClaim({ ranked: 2, selected: 2 });
+      const db = bindScopedDb(getTx().client);
+      const [a, b] = s.pings;
+      expect(await resolvePeerRequestLocale(db, { pariwarId: s.pid, memberId: a!.memberId })).toEqual({
+        locale: 'hi',
+        source: 'pariwar_default',
+        pariwarDefaultLocale: 'hi',
+      });
+      await chooseLanguage(b!.memberId, 'en');
+      expect(await resolvePeerRequestLocale(db, { pariwarId: s.pid, memberId: b!.memberId })).toEqual({
+        locale: 'en',
+        source: 'member_choice',
+        pariwarDefaultLocale: 'hi',
+      });
+      // a member who CHOSE the default is still `member_choice` (the reminder's `-385` rule tells them apart by the default)
+      await chooseLanguage(a!.memberId, 'hi');
+      expect((await resolvePeerRequestLocale(db, { pariwarId: s.pid, memberId: a!.memberId })).source).toBe('member_choice');
+      expect(await resolvePariwarDefaultLocale(db, s.pid)).toBe('hi');
+      await expect(resolvePeerRequestLocale(db, { pariwarId: toPariwarId(randomUUID()), memberId: a!.memberId })).rejects.toBeInstanceOf(
+        PeerRequestLocaleMissingError,
+      );
+      await expect(resolvePariwarDefaultLocale(db, toPariwarId(randomUUID()))).rejects.toBeInstanceOf(PeerRequestLocaleMissingError);
+    });
+
+    it('⭐ 6.35 AC3 / T13 — a member of ANOTHER Pariwar (an `en` choice there) THROWS — on the superuser handle, where RLS masks ⛔ missing predicate', async () => {
       const { tx, client } = getTx();
-      const pid = randomUUID();
-      await seedPassport(tx, pid, { localeDefault: 'hi' });
-      await enterAppScope(client, pid);
+      const s = await seedRequestClaim({ ranked: 1, selected: 1 });
+      const other = toPariwarId(randomUUID());
+      const stranger = toMemberId(randomUUID());
+      await client.query('RESET ROLE'); // the jobs pool is BYPASSRLS — the query's OWN predicates are the only scope (F23)
+      await seedPassport(tx, other, { localeDefault: 'en' });
+      await insertMember(client, other, stranger);
+      await client.query(`UPDATE members SET preferred_locale = 'en', preferred_locale_set_at = now() WHERE member_id = $1`, [stranger]);
       const db = bindScopedDb(client);
-      expect(await resolvePeerRequestLocale(db, toPariwarId(pid))).toEqual({ locale: 'hi', source: 'pariwar_default' });
-      await expect(resolvePeerRequestLocale(db, toPariwarId(randomUUID()))).rejects.toBeInstanceOf(PeerRequestLocaleMissingError);
+      await expect(resolvePeerRequestLocale(db, { pariwarId: s.pid, memberId: stranger })).rejects.toThrow(/not a member of Pariwar/);
+      expect(await resolvePeerRequestLocale(db, { pariwarId: other, memberId: stranger })).toMatchObject({ locale: 'en', source: 'member_choice' });
     });
 
     it('R14 — the by-link answer: the session member\'s TEXTED ping only; everything else ⇒ null', async () => {

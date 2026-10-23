@@ -1247,6 +1247,13 @@
       "when": 1794886800022,
       "tag": "0178_member-wa-opt-in-codes",
       "breakpoints": true
+    },
+    {
+      "idx": 179,
+      "version": "7",
+      "when": 1794973200023,
+      "tag": "0179_member-preferred-locale",
+      "breakpoints": true
     }
   ]
 }

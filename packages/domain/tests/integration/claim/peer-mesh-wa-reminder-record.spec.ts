@@ -213,7 +213,11 @@ describe.skipIf(!hasDatabase)('claim_peer_mesh_wa_reminders — migration 0171 (
     await expectPgError(client, () => insertRow(client, rowOf(p, { ...sent, recipient_number_hash: 'h' })), CHECK('claim_peer_mesh_wa_reminders_accepted_check'));
     await expectPgError(client, () => insertRow(client, rowOf(p, { ...sent, provider_message_id: 'wamid.X' })), CHECK('claim_peer_mesh_wa_reminders_accepted_check'));
     await expectPgError(client, () => insertRow(client, rowOf(p, { locale: 'en_US' })), CHECK('claim_peer_mesh_wa_reminders_locale_check'));
-    await expectPgError(client, () => insertRow(client, rowOf(p, { locale_source: 'member_choice' })), CHECK('claim_peer_mesh_wa_reminders_locale_source_check'));
+    // 📌 FLIPPED 2026-10-23 (Story 6.35, migration 0179 — W8, `-385`): `member_choice` and `pariwar_fallback` are now ADMITTED;
+    // anything else still refused, under the SAME constraint name.
+    await expectAccepted(client, () => insertRow(client, rowOf(p, { locale: 'en', locale_source: 'member_choice' })));
+    await expectAccepted(client, () => insertRow(client, rowOf(p, { locale: 'hi', locale_source: 'pariwar_fallback' })));
+    await expectPgError(client, () => insertRow(client, rowOf(p, { locale_source: 'device' })), CHECK('claim_peer_mesh_wa_reminders_locale_source_check'));
     await expectPgError(client, () => insertRow(client, rowOf(p, { template_name: 'Has Space' })), CHECK('claim_peer_mesh_wa_reminders_template_name_check'));
     await expectAccepted(client, () => insertRow(client, rowOf(p, { locale: 'hi', locale_source: 'pariwar_default', template_name: 'peer_mesh_reminder_hi_v1' })));
   });

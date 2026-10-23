@@ -270,6 +270,12 @@ export type BeginPeerMeshRequestResult =
       readonly mobileCiphertext: string | null;
       readonly linkCode: string;
       readonly attemptCount: number;
+      /**
+       * 📌 Story 6.35 (LS9, I5) — the language THIS ping is sent in: resolved at the FRESH begin (the recipient's choice, else the
+       * Pariwar's default) and written to the row; a RE-CLAIM reuses the row's (a pre-6.35 row's NULL ⇒ the Pariwar's default,
+       * which is what it was sent in). The caller renders the text with it — ⛔ the Pariwar's.
+       */
+      readonly locale: 'hi' | 'en';
     };
 
 interface LockedPing {
@@ -281,6 +287,7 @@ interface LockedPing {
   claimed_at: Date | string | null;
   claimed_by_job: string | null;
   link_code: string | null;
+  locale: string | null;
 }
 
 /** Lock the claim row (`lock_timeout`), then the ping row — the ping must belong to the claim's selection. */
@@ -300,7 +307,8 @@ async function lockClaimThenPing(
   if (!claimRow) throw new Error(`[peer-mesh-request] claim ${claimCaseId} is missing under Pariwar ${pariwarId}`);
   const pingRow = (
     await client.query<LockedPing>(
-      `SELECT p.ping_id, p.selection_id, p.member_id, p.send_outcome, p.attempt_count, p.claimed_at, p.claimed_by_job, p.link_code
+      `SELECT p.ping_id, p.selection_id, p.member_id, p.send_outcome, p.attempt_count, p.claimed_at, p.claimed_by_job, p.link_code,
+              p.locale
          FROM claim_peer_mesh_pings p
          JOIN claim_peer_mesh_selections s ON s.pariwar_id = p.pariwar_id AND s.selection_id = p.selection_id
         WHERE p.pariwar_id = $1 AND p.ping_id = $2 AND s.claim_case_id = $3
@@ -420,6 +428,14 @@ export async function beginPeerMeshRequest(
     return { kind: 'no_target', detail, reclaimed: false, attemptCount: 1, replacementPingId };
   }
 
+  // 📌 Story 6.35 (LS9, I5) — the language, fixed ONCE: a re-claim keeps the row's (⛔ re-resolved — a possible second text
+  // carries the same words; a pre-6.35 row's NULL was sent in the Pariwar's default, so THAT is written, `pariwar_default` kept);
+  // a fresh begin resolves the RECIPIENT's — after ③ proved the member row is in this Pariwar.
+  const rowLocale = ping.locale === 'hi' || ping.locale === 'en' ? ping.locale : null;
+  const resolved: Pick<PeerRequestLocale, 'locale' | 'source'> = existing
+    ? { locale: rowLocale ?? (await resolvePariwarDefaultLocale(db, pariwarId)), source: 'pariwar_default' }
+    : await resolvePeerRequestLocale(db, { pariwarId, memberId: ping.member_id as MemberId });
+
   // ④ begin — or re-claim (own retry at once; a parked row; another job's past the lease).
   let attemptCount: number;
   let linkCode: string;
@@ -434,17 +450,18 @@ export async function beginPeerMeshRequest(
                                    THEN aging_since + GREATEST($2::timestamptz - parked_at, interval '0')
                                    ELSE aging_since END,
                 parked_at = NULL,
-                first_detail = COALESCE(first_detail, detail)
+                first_detail = COALESCE(first_detail, detail),
+                locale = COALESCE(locale, $5)
           WHERE ping_id = $1 AND send_outcome = 'attempting'
           RETURNING attempt_count, link_code`,
-        [ping.ping_id, now, jobId, PEER_MESH_REQUEST_PARKED_BY],
+        [ping.ping_id, now, jobId, PEER_MESH_REQUEST_PARKED_BY, resolved.locale],
       )
     ).rows[0];
     if (!reclaimed) return { kind: 'already_final' };
     attemptCount = reclaimed.attempt_count;
     linkCode = reclaimed.link_code;
   } else {
-    const begun = await beginFresh(client, ping.ping_id, jobId, now);
+    const begun = await beginFresh(client, ping.ping_id, jobId, now, resolved);
     if (begun === null) return { kind: 'already_final' };
     attemptCount = 1;
     linkCode = begun;
@@ -457,11 +474,21 @@ export async function beginPeerMeshRequest(
     mobileCiphertext,
     linkCode,
     attemptCount,
+    locale: resolved.locale,
   };
 }
 
-/** The CAS from NULL into `attempting`, writing the link code ONCE — a `link_code` collision retried with a new code. */
-async function beginFresh(client: pg.PoolClient, pingId: string, jobId: string, now: Date): Promise<string | null> {
+/**
+ * The CAS from NULL into `attempting`, writing the link code ONCE — a `link_code` collision retried with a new code — and the
+ * language with WHY (📌 Story 6.35: FROM the read — closes deferred-work W8's literal).
+ */
+async function beginFresh(
+  client: pg.PoolClient,
+  pingId: string,
+  jobId: string,
+  now: Date,
+  language: Pick<PeerRequestLocale, 'locale' | 'source'>,
+): Promise<string | null> {
   for (let i = 0; i < PEER_MESH_LINK_CODE_ATTEMPTS; i += 1) {
     const code = generatePeerRequestLinkCode();
     await client.query('SAVEPOINT peer_mesh_link_code');
@@ -469,9 +496,9 @@ async function beginFresh(client: pg.PoolClient, pingId: string, jobId: string, 
       const r = await client.query(
         `UPDATE claim_peer_mesh_pings
             SET send_outcome = 'attempting', attempt_count = 1, claimed_at = $2, claimed_by_job = $3, aging_since = clock_timestamp(),
-                locale_source = 'pariwar_default', link_code = $4
+                locale_source = $5, locale = $6, link_code = $4
           WHERE ping_id = $1 AND send_outcome IS NULL`,
-        [pingId, now, jobId, code],
+        [pingId, now, jobId, code, language.source, language.locale],
       );
       await client.query('RELEASE SAVEPOINT peer_mesh_link_code');
       return (r.rowCount ?? 0) > 0 ? code : null;
@@ -617,7 +644,10 @@ export async function listDuePeerMeshRequestPings(
 /** The language a text is sent in, and WHY (PM22 — `locale_source`). */
 export interface PeerRequestLocale {
   readonly locale: 'hi' | 'en';
-  readonly source: 'pariwar_default';
+  /** 📌 Story 6.35 (LS8): `member_choice` — the recipient chose it in the app; else `pariwar_default`. */
+  readonly source: 'pariwar_default' | 'member_choice';
+  /** The recipient's Pariwar's default — the same query (the reminder's `-385` fallback needs it, LS8 v1.6). */
+  readonly pariwarDefaultLocale: 'hi' | 'en';
 }
 
 /**
@@ -632,17 +662,48 @@ export class PeerRequestLocaleMissingError extends Error {
 }
 
 /**
- * ⭐ R10 / PM22 — THE ONE read row 6-35 will change (to *"the member's choice, else the Pariwar's default"*): today the Pariwar's
- * default language (`pariwar_passport.locale_default`, NOT NULL), recorded on begin as `locale_source = 'pariwar_default'`.
+ * The Pariwar's default language (`pariwar_passport.locale_default`, NOT NULL) — for the senders' per-Pariwar CONFIG checks only
+ * (📌 Story 6.35 LS8: the old body of `resolvePeerRequestLocale`). A recipient's language is `resolvePeerRequestLocale`'s.
  * @throws PeerRequestLocaleMissingError  the Pariwar has ⛔ passport — a data gap (the jobs child HOLDS); any other throw is a
  *   failed read (the jobs child retries)
  */
-export async function resolvePeerRequestLocale(db: Db, pariwarId: PariwarId): Promise<PeerRequestLocale> {
+export async function resolvePariwarDefaultLocale(db: Db, pariwarId: PariwarId): Promise<'hi' | 'en'> {
   const { rows } = await db.execute<{ locale_default: string }>(sql`
     SELECT locale_default::text AS locale_default FROM pariwar_passport WHERE pariwar_id = ${pariwarId} LIMIT 1`);
   const locale = rows[0]?.locale_default;
   if (locale !== 'hi' && locale !== 'en') throw new PeerRequestLocaleMissingError(pariwarId);
-  return { locale, source: 'pariwar_default' };
+  return locale;
+}
+
+/**
+ * ⭐ R10 / PM22 — THE ONE read of a recipient's language (📌 Story 6.35, LS8 — `-303` rider, `-310` CF1 A *"then each member's
+ * choice"*): the member's own recorded choice (`members.preferred_locale`) ⇒ `member_choice`; else the Pariwar's default ⇒
+ * `pariwar_default`. ONE query; the member is matched on `pariwar_id` AND `member_id` EXPLICITLY — the jobs pool bypasses RLS
+ * (F23), so the predicate is the only tenant scope.
+ * @throws PeerRequestLocaleMissingError  the Pariwar has ⛔ passport — a data gap (the jobs child HOLDS)
+ * @throws Error  a passport with ⛔ such member in this Pariwar — a DATA fault (⛔ a silent `pariwar_default`); any other throw is a
+ *   failed read
+ */
+export async function resolvePeerRequestLocale(
+  db: Db,
+  input: { readonly pariwarId: PariwarId; readonly memberId: MemberId },
+): Promise<PeerRequestLocale> {
+  const { pariwarId, memberId } = input;
+  const { rows } = await db.execute<{ locale_default: string; member_id: string | null; preferred_locale: string | null }>(sql`
+    SELECT pp.locale_default::text AS locale_default, m.member_id, m.preferred_locale::text AS preferred_locale
+      FROM pariwar_passport pp
+      LEFT JOIN members m ON m.pariwar_id = ${pariwarId} AND m.member_id = ${memberId}
+     WHERE pp.pariwar_id = ${pariwarId}
+     LIMIT 1`);
+  const row = rows[0];
+  const pariwarDefaultLocale = row?.locale_default;
+  if (pariwarDefaultLocale !== 'hi' && pariwarDefaultLocale !== 'en') throw new PeerRequestLocaleMissingError(pariwarId);
+  if (row?.member_id == null) {
+    throw new Error(`[peer-mesh-request] member ${memberId} is not a member of Pariwar ${pariwarId} (language read)`);
+  }
+  const chosen = row.preferred_locale;
+  if (chosen === 'hi' || chosen === 'en') return { locale: chosen, source: 'member_choice', pariwarDefaultLocale };
+  return { locale: pariwarDefaultLocale, source: 'pariwar_default', pariwarDefaultLocale };
 }
 
 /**

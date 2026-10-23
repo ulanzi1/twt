@@ -50,8 +50,12 @@ export const PEER_MESH_SEND_OUTCOMES = [
 ] as const;
 export type PeerMeshSendOutcome = (typeof PEER_MESH_SEND_OUTCOMES)[number];
 
-/** Story 6.27a (PM22) — why the text's language was chosen. ⚠ LOCKSTEP with 0156's `locale_source` CHECK. */
-export const PEER_MESH_LOCALE_SOURCES = ['pariwar_default'] as const;
+/**
+ * Story 6.27a (PM22) — why the text's language was chosen. ⚠ LOCKSTEP with 0156's `locale_source` CHECK — 📌 widened 2026-10-23
+ * by Story 6.35 (migration 0179, Decision 2026-10-23-387 LS9): `member_choice` — the recipient's own choice in the app; else
+ * `pariwar_default`. (The reminder's third value, `pariwar_fallback`, is the reminder's own — `PEER_MESH_WA_REMINDER_LOCALE_SOURCES`.)
+ */
+export const PEER_MESH_LOCALE_SOURCES = ['pariwar_default', 'member_choice'] as const;
 export type PeerMeshLocaleSource = (typeof PEER_MESH_LOCALE_SOURCES)[number];
 
 /**
@@ -137,6 +141,13 @@ export const claimPeerMeshPings = pgTable(
     sendUpdatedAt: timestamp('send_updated_at', { withTimezone: true, mode: 'date' }),
     /** Why the text's language was chosen (PM22). */
     localeSource: text('locale_source').$type<PeerMeshLocaleSource>(),
+    /**
+     * Story 6.35 (migration 0179; LS9, I5) — the language the text was sent in, written at the FRESH begin with `locale_source`;
+     * a re-claim REUSES it (⛔ re-resolved — one attempt, one language). Written once (0179's guard arm) and frozen with the other
+     * delivery columns. NULL on a row ⛔ begun, or finished without a begin (`skipFresh`), or begun by pre-6.35 code (which sent
+     * the Pariwar's default).
+     */
+    locale: text('locale').$type<'hi' | 'en'>(),
     /** The 12-character base62 code in the text's link (PM21 (a)) — written ONCE; ⛔ never logged. */
     linkCode: text('link_code').unique('claim_peer_mesh_pings_link_code_uq'),
 

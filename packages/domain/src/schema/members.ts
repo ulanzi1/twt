@@ -4,6 +4,9 @@
 // lifecycle ANCHOR — NOT the member's profile. PII / KYC / nominee / payment /
 // medical columns are downstream stories' to add (3.2–3.12). Story 3.1 commits
 // ONLY the lifecycle-anchoring shape.
+// 📌 Dated 2026-10-23 (Story 6.35, Decision 2026-10-23-387 LS1 (a)): one member PREFERENCE now lives
+// here too — `preferred_locale` (+ `_set_at`), a non-PII language code. The "anchor, not the profile"
+// line above is kept as written; this bends it for one value instead of adding a one-row table.
 //
 // ── members.state is a READ-OPTIMIZATION CACHE, not the source of truth ───────
 // The source of truth for a member's lifecycle state is the member's `events_log`
@@ -34,6 +37,7 @@ import { bigint, index, jsonb, pgEnum, pgTable, smallint, timestamp, uuid } from
 
 import type { MemberCustomFieldsJson } from '../custom-fields/types.js';
 import type { MemberId, PariwarId } from '../ids/index.js';
+import { localeEnum } from './pariwar_passport.js';
 
 /**
  * The canonical member-lifecycle state list — the ONE spelling authority (AC1).
@@ -135,6 +139,15 @@ export const members = pgTable(
       .notNull()
       .$type<MemberCustomFieldsJson>()
       .default(sql`'{}'::jsonb`),
+
+    // Story 6.35 (LS1 (a), I1) — the language the member CHOSE in the app ('hi' | 'en'), and when.
+    // NULL until their first explicit change: written ONLY by `setMemberLanguage`
+    // (`member/preferred-locale.ts`, behind `PUT /api/v1/member/language`) — ⛔ on first launch,
+    // ⛔ inferred from the device, ⛔ backfilled from the Pariwar's default. Both set together or
+    // neither (migration 0179's `members_preferred_locale_set_at_check`). A plain scoped non-`state`
+    // UPDATE, like `lock_in_days_at_join` above. A locale code is ⛔ PII.
+    preferredLocale: localeEnum('preferred_locale'),
+    preferredLocaleSetAt: timestamp('preferred_locale_set_at', { withTimezone: true, mode: 'date' }),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()

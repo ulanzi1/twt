@@ -215,7 +215,7 @@ async function pariwarConfig(
   let locale: PeerMeshRequestSmsLocale;
   try {
     const pid = ids.pariwarId(pariwarId);
-    locale = (await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePeerRequestLocale(db, pid))).locale;
+    locale = await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePariwarDefaultLocale(db, pid));
   } catch (err) {
     // ⛔ passport row — a DATA gap a retry ⛔ fixes ⇒ HELD; anything else is a failed READ ⇒ a transient (P7)
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return { gap: 'config:locale_unavailable' };

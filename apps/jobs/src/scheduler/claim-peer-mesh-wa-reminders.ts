@@ -187,7 +187,8 @@ export async function peerMeshWaReminderConfig(
   let locale: PeerMeshWaReminderLocale;
   let localeSource: claimDomain.PeerRequestLocale['source'];
   try {
-    ({ locale, source: localeSource } = await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePeerRequestLocale(db, pid)));
+    locale = await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePariwarDefaultLocale(db, pid));
+    localeSource = 'pariwar_default';
   } catch (err) {
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return gap('config:locale_unavailable');
     throw new PeerMeshWaReminderLocaleReadError(err);

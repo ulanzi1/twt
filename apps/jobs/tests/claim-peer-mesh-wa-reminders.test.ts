@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { SmsAppClient, WhatsappAppCache } from '@twt/channels';
-import { claim as claimDomain } from '@twt/domain';
+import { claim as claimDomain, schema } from '@twt/domain';
 import { QUEUE_NAMES } from '@twt/queue';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
@@ -73,7 +73,14 @@ describe('I2 / AC8 — ⛔ the alert path, ⛔ an SMS', () => {
   it('round-2 P6 — `locale_source` is recorded from the read; its type MUST move with 0171\'s CHECK (`IN (\'pariwar_default\')`)', () => {
     // A wider `PeerRequestLocale['source']` (row 6-35) FAILS here — otherwise it would 23514 at every begin; widen the CHECK in the
     // same row, then this leg.
-    expectTypeOf<claimDomain.PeerRequestLocale['source']>().toEqualTypeOf<'pariwar_default'>();
+    // 📌 FLIPPED 2026-10-23 (Story 6.35, AC3): row 6-35 widened it — and 0179 widened both CHECKs in the same row. The RESOLVER
+    // returns two values (it never returns the reminder's fallback).
+    expectTypeOf<claimDomain.PeerRequestLocale['source']>().toEqualTypeOf<'pariwar_default' | 'member_choice'>();
+  });
+  it('📌 Story 6.35 (AC3, `-385`) — the REMINDER\'s `locale_source` is three values, LOCKSTEP with 0179\'s reminders CHECK', () => {
+    expectTypeOf<schema.PeerMeshWaReminderLocaleSource>().toEqualTypeOf<'pariwar_default' | 'member_choice' | 'pariwar_fallback'>();
+    expect(schema.PEER_MESH_WA_REMINDER_LOCALE_SOURCES).toEqual(['pariwar_default', 'member_choice', 'pariwar_fallback']);
+    expect(schema.PEER_MESH_LOCALE_SOURCES).toEqual(['pariwar_default', 'member_choice']);
   });
 });
 

@@ -24,6 +24,9 @@ import { CONTRIBUTION_LOOP_I18N_NAMESPACE } from '@twt/contracts';
 import { DEFAULT_LOCALE, formatCurrency, t, type Locale } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
+import { renderContributionSms, smsPoolLabel } from '../src/scheduler/contribution-sms-templates.js';
+import { SHEET } from './_dlt-template-sheet.js';
+
 // ⚠ The namespace is the THIRD argument's `namespace` field — an OPTIONS OBJECT, not a positional
 // string. It defaults to `common` and THROWS on a missing key, which is how a namespace omission
 // surfaces loudly instead of rendering a raw key. Same shape the producer uses.
@@ -142,5 +145,63 @@ describe('AC5 — the SMS segment cost of the name form, both locales × both al
     expect(AFTER.hi.length).toBeGreaterThan(BEFORE.hi.length);
     expect(AFTER.en.length).toBeGreaterThan(BEFORE.en.length);
     expect(DEFAULT_LOCALE).toBe('hi'); // the launch locale is the UCS-2 one
+  });
+});
+
+describe('Story 5.11 review R5 / round 2 D2 (b) — the pool value never lengthens a text past the cost as put (-394 item 2)', () => {
+  // [message, sheet ordinal en, en units at a 30-letter basic name, sheet ordinal hi, hi units at a 30-unit name]
+  const cases = [
+    ['deadline_not_recorded', 18, 134, 17, 128],
+    ['payment_not_matched', 20, 91, 19, 99],
+    ['payment_not_confirmed', 22, 131, 21, 133],
+  ] as const;
+  /** The sheet's own figure for a template, e.g. `18 (en) is 134` or `17\n(hi) 128` (the sheet wraps lines). */
+  const sheetFigure = (ordinal: number, locale: 'en' | 'hi', units: number): RegExp =>
+    new RegExp(`\\b${String(ordinal)}\\s+\\(${locale}\\)\\s+(?:is\\s+)?${String(units)}\\b`);
+  const render = (message: (typeof cases)[number][0], locale: 'en' | 'hi', poolName: string) =>
+    renderContributionSms(message, locale, { pool: smsPoolLabel({ poolName, poolLetterCode: 'C' }, locale), date: '23-10-2026' });
+
+  it.each(cases)('%s — the longest en value is ONE GSM-7 part; extension and control characters fall back', (message, ordinal, units) => {
+    expect(measure(render(message, 'en', 'A'.repeat(30)))).toEqual({ encoding: 'GSM-7', units, segments: 1 });
+    for (const poolName of ['^'.repeat(30), 'Ganga€', 'Ga\nnga', 'Ganga|1']) {
+      expect(smsPoolLabel({ poolName, poolLetterCode: 'C' }, 'en')).toBe('C');
+    }
+    expect(SHEET).toMatch(sheetFigure(ordinal, 'en', units));
+  });
+
+  it.each(cases)('%s — the longest hi value is TWO parts, counted in UTF-16 units', (message, _en, _enUnits, ordinal, units) => {
+    expect(measure(render(message, 'hi', 'क'.repeat(30)))).toEqual({ encoding: 'UCS-2', units, segments: 2 });
+    // 15 supplementary-plane letters are 30 UTF-16 units — the slot's ceiling; 16 are 32 and fall back to the letter code.
+    expect(measure(render(message, 'hi', '\u{10400}'.repeat(15)))).toEqual({ encoding: 'UCS-2', units, segments: 2 });
+    expect(smsPoolLabel({ poolName: '\u{10400}'.repeat(16), poolLetterCode: 'C' }, 'hi')).toBe('C');
+    expect(SHEET).toMatch(sheetFigure(ordinal, 'hi', units));
+  });
+
+  it('Q5 — the boundaries: 30 UTF-16 units fit, 31 do not; a whitespace-only name is absent', () => {
+    expect(smsPoolLabel({ poolName: 'A'.repeat(30), poolLetterCode: 'C' }, 'en')).toBe('A'.repeat(30));
+    expect(smsPoolLabel({ poolName: 'A'.repeat(31), poolLetterCode: 'C' }, 'en')).toBe('C');
+    expect(smsPoolLabel({ poolName: 'क'.repeat(31), poolLetterCode: 'C' }, 'hi')).toBe('C');
+    expect(smsPoolLabel({ poolName: ' \t ', poolLetterCode: 'C' }, 'hi')).toBe('C');
+    expect(smsPoolLabel({ poolName: null, poolLetterCode: 'C' }, 'hi')).toBe('C');
+  });
+
+  it.each([...'^{}\\[~]|€'])('Q5 — the en GSM-7 extension character %j falls back to the letter code', (ch) => {
+    expect(smsPoolLabel({ poolName: `Ganga${ch}`, poolLetterCode: 'C' }, 'en')).toBe('C');
+  });
+
+  it.each(['\n', '\r', '\f', '\t', '\u001b', '\u0085'])('Q3 — a control character %j falls back in BOTH locales', (ch) => {
+    expect(smsPoolLabel({ poolName: `Ganga${ch}x`, poolLetterCode: 'C' }, 'en')).toBe('C');
+    expect(smsPoolLabel({ poolName: `गंगा${ch}क`, poolLetterCode: 'C' }, 'hi')).toBe('C');
+  });
+
+  it('Q3 — a Devanagari ZWJ / ZWNJ (Cf, ⛔ Cc) is kept in a hi name', () => {
+    for (const joiner of ['\u200d', '\u200c']) {
+      expect(smsPoolLabel({ poolName: `क्${joiner}ष`, poolLetterCode: 'C' }, 'hi')).toBe(`क्${joiner}ष`);
+    }
+  });
+
+  it('a padded curated name is sent trimmed, and its length is measured trimmed', () => {
+    expect(smsPoolLabel({ poolName: ' Ganga ', poolLetterCode: 'C' }, 'en')).toBe('Ganga');
+    expect(smsPoolLabel({ poolName: ` ${'a'.repeat(30)} `, poolLetterCode: 'C' }, 'en')).toBe('a'.repeat(30));
   });
 });

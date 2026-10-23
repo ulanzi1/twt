@@ -277,14 +277,16 @@ reason); **21–22** a payment still not confirmed (the pending-match ESCALATED 
 texted — they are for the Trust's announcement channels (`-390` Q2 A; row 5-14). The words are the author's, en + hi reviewed and corrected
 by BigDev on 2026-10-23 (Story 5.11 Debug Log (a); roster Row 40 (b)); *"TWT:"* is the only name (the DLT header carries the sender —
 `-389` FS16 (b)). The variables, in order: **`{pool}`** — the curated pool name when it fits 30 characters and, in an English text, is all
-GSM-7, else the pool's letter code (`-389` FS13 (a): the curated name is the Hindi name, so an English text names the pool by its letter);
+GSM-7, else the pool's letter code (`-389` FS13 (a): the curated name is the Hindi name, so an English text names the pool by its letter;
+⚠ *superseded 2026-10-23 by `-394` item 2* — trimmed, ≤ 30 UTF-16 units, no control character, and in English basic GSM-7 only, no
+extension characters);
 **`{date}`** — the cycle's close date, `DD-MM-YYYY`. ⛔ No text carries a member's name, an amount or a link. ⚠ **19–20 have NO variable**
 — 6.37's adapter refuses a send with no values until row 5-11b changes it. The copy is `sms.*` in
 `packages/i18n/locales/{en,hi}/contribution.json`; the registry is `apps/jobs/src/scheduler/contribution-sms-templates.ts`, and
 `apps/jobs/tests/contribution-sms-templates.test.ts` proves the real `t()` renders EXACTLY the text below and that this sheet carries it.
 Every one passes the shape rules with at most two variables (⛔ an exigency line is owed); the lowest fixed share is 17 (hi) at 68.7 %.
 In MSG91 (setup step (3) above): **Unicode for 17, 19, 21; Normal for 18, 20, 22** — an English value is ASCII by FS13 (the letter code or a
-GSM-7 name; the date). The language each member gets is row 5-11b's.
+GSM-7 name; the date) — under `-394` item 2, basic GSM-7 only. The language each member gets is row 5-11b's.
 
 | # | Registered text |
 |---|---|
@@ -360,6 +362,14 @@ alert. Rendered at the LONGEST values (a 30-character pool value, a 10-character
 pool code: 18 is 105, 17 is 99, 22 is 102, 21 is 104 — the same segments. ⇒ per unreached member who has not contributed by day 10, **1 en
 / 2 hi segments per cycle**, +1 / +2 per payment problem. ⚠ At 4L members the count of unreached members is ⛔ known; the per-segment
 price is ⛔ recorded (roster Row 40 (d)).
+
+**Cost bound, 2026-10-23 (review R5, then round 2 D2 (b) — Decision `2026-10-23-394` item 2):** R5 found that FS13 as first
+written (≤ 30 code points, "all GSM-7") let a pool value make these texts longer than the figures above — GSM-7 extension
+characters cost two septets (a 30-caret name made 18 = 164 and 22 = 161 septets, two parts) and a supplementary-plane letter costs
+two UTF-16 units (30 of them made 17 = 158 and 21 = 163 units, three parts). ⭐ `-394` item 2 closes that at the source: the pool
+value is the curated name only when trimmed, ≤ 30 UTF-16 units and, for en, basic GSM-7 printable (⛔ extension table, ⛔ control
+characters) — else the letter code. ⇒ The figures above ARE the longest values again: **1 en / 2 hi parts** per notice. The
+approved wording is unchanged. `apps/jobs/tests/sms-segment-cost.test.ts` renders the real strings and pins these figures.
 
 ## URL whitelisting (Story 6.30, -312 AL3)
 

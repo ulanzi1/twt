@@ -47,7 +47,7 @@ vi.mock('@twt/domain', async (importActual) => {
   };
 });
 
-const { fanOutAlert, fanOutAlertToMembers, isAlertSmsFallbackEligible, SMS_RUNG_DETAIL } = await import(
+const { fanOutAlert, fanOutAlertToMembers, isAlertSmsFallbackEligible, shouldRetryFanOut, SMS_RUNG_DETAIL } = await import(
   '../src/scheduler/contribution-notify.js'
 );
 type ContributionNotifyDeps = import('../src/scheduler/contribution-notify.js').ContributionNotifyDeps;
@@ -226,7 +226,7 @@ function litReminderAlert(): Alert {
   const base = reminderAlert();
   return {
     ...base,
-    payload_data: { ...base.payload_data, sms: { message: 'deadline_not_recorded', values: { pool: 'A', date: '05-08-2026' } } },
+    payload_data: { ...base.payload_data, sms: { message: 'deadline_not_recorded', locale: 'en', values: { pool: 'A', date: '05-08-2026' } } },
   } as Alert;
 }
 
@@ -307,7 +307,7 @@ describe('AC6 / Decision 3 — stop at the first `sent`', () => {
     expect(result.delivered).toBe(false);
   });
 
-  it('the whole ladder exhausted ⇒ delivered:false (Story 5.11: the caller records `in_app_only`, ⛔ retries)', async () => {
+  it('the whole ladder exhausted ⇒ delivered:false (Story 5.11: whether the caller retries is `shouldRetryFanOut`\'s — `-394` item 1)', async () => {
     const h = harness({
       push: makeProvider('fcm', 'push', 'rejected'),
       whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
@@ -648,9 +648,9 @@ describe('Story 5.11 AC3 / AC4 — the fan-out\'s SMS rung, end to end (⛔ any 
   });
 });
 
-// ─── (8) Story 5.11 FS14 (a) — `fanOutAlertToMembers`: only a THROWN fan-out is retried ─────────────────────────
+// ─── (8) Story 5.11 FS14 (a), review R1 — preserve the pre-5.11 retry set ─────────────────────────
 
-describe('Story 5.11 AC4 / FS14 — `retry` holds only a member whose fan-out threw (I4)', () => {
+describe('Story 5.11 AC4 / FS14 — former fixture successes are final; previous failures still retry (I4)', () => {
   beforeEach(() => {
     withPariwarScope.mockReset();
     withPariwarScope.mockImplementation((_pool: unknown, _pariwarId: string, fn: (db: unknown) => unknown) => Promise.resolve(fn({})));
@@ -676,5 +676,87 @@ describe('Story 5.11 AC4 / FS14 — `retry` holds only a member whose fan-out th
     const { results, retry } = await fanOutAlertToMembers(h.deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
     expect(retry).toEqual([MEMBER]);
     expect(results).toEqual([]);
+  });
+
+  it.each([
+    ['lit reminder', litReminderAlert],
+    ['unlit reminder', reminderAlert],
+    ['cycle open', cycleOpenAlert],
+  ] as const)('R1 — %s with a transient push failure and no SMS target still retries', async (_label, alertFor) => {
+    resolveSmsTarget.mockResolvedValue(null);
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected', 'transient: unavailable') });
+    const { results, retry } = await fanOutAlertToMembers(h.deps, () => alertFor(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
+    expect(results[0]!.delivered).toBe(false);
+    expect(retry).toEqual([MEMBER]);
+    expect(h.sms.sendCount()).toBe(0);
+  });
+
+  it('R1 — no reachable target preserves the previous retry instead of completing the claim', async () => {
+    resolvePushTargets.mockResolvedValue([]);
+    resolveSmsTarget.mockResolvedValue(null);
+    const h = harness();
+    const { results, retry } = await fanOutAlertToMembers(h.deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
+    expect(results[0]!.delivered).toBe(false);
+    expect(retry).toEqual([MEMBER]);
+  });
+
+  it('R1 — a later successful push removes the no-SMS member from retry', async () => {
+    resolveSmsTarget.mockResolvedValue(null);
+    const h = harness();
+    const { results, retry } = await fanOutAlertToMembers(h.deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
+    expect(results[0]!.deliveredChannel).toBe('push');
+    expect(retry).toEqual([]);
+  });
+
+  it('R1 — a cost-suppressed SMS target still retries; no fixture could previously complete it', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
+    const context = ctx({}, { costToggleEnabled: true, lastEngagementAt: new Date('2026-07-23T00:00:00.000Z') });
+    const result = await fanOutAlert(h.deps, litReminderAlert(), context);
+    expect(result.costSuppressedChannels).toContain('sms');
+    expect(shouldRetryFanOut(result, context)).toBe(true);
+    expect(h.sms.sendCount()).toBe(0);
+  });
+
+  it.each(['wa_template_not_approved', 'wa_credentials_missing'])('R1 — %s without an SMS target stays terminal: the old WA fixture completed it', async (detail) => {
+    resolveWaTarget.mockResolvedValue(TARGETS.whatsapp);
+    resolveSmsTarget.mockResolvedValue(null);
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected', detail),
+    });
+    const { results, retry } = await fanOutAlertToMembers(h.deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
+    expect(results[0]!.delivered).toBe(false);
+    expect(retry).toEqual([]);
+    expect(h.sms.sendCount()).toBe(0);
+  });
+
+  it('R1 — real WhatsApp failure without an SMS target still retries', async () => {
+    resolveWaTarget.mockResolvedValue(TARGETS.whatsapp);
+    resolveSmsTarget.mockResolvedValue(null);
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected', 'transient: unavailable'),
+    });
+    const { retry } = await fanOutAlertToMembers(h.deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'));
+    expect(retry).toEqual([MEMBER]);
+  });
+
+  it('R1 — a bridge without an SMS target still retries even if the normal ladder hits a WA refusal', async () => {
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected', 'wa_template_not_approved'),
+    });
+    const context = ctx({ sms: null });
+    const result = await fanOutAlert(h.deps, cycleOpenAlert({ time_critical: true }), context);
+    expect(result.bridged).toBe(true);
+    expect(shouldRetryFanOut(result, context)).toBe(true);
+  });
+
+  it('R1 — a bridge with an SMS target stays terminal without sending the SMS fixture', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const context = ctx();
+    const result = await fanOutAlert(h.deps, cycleOpenAlert({ time_critical: true }), context);
+    expect(shouldRetryFanOut(result, context)).toBe(false);
+    expect(h.sms.sendCount()).toBe(0);
   });
 });

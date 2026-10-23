@@ -45,6 +45,24 @@ const ORDINAL: Readonly<Record<AlertSmsMessage, Readonly<Record<ContributionSmsL
 /** I1 — a catalogue string as its registered text: each `{param}` becomes the variable marker. */
 const asRegistered = (value: string): string => value.replace(/\{\w+\}/g, DLT_VAR);
 
+/**
+ * THE catalogue ↔ registry lockstep, as one function so the PLANTED leg exercises the same code as the "holds for all six" leg
+ * (review round 2, P10). ⚠ It reads the catalogue JSON DIRECTLY — the real-`t()` render is the separate leg above, which a
+ * plant cannot reach (`t()` reads the shipped catalogue); together they cover I1 (patch review, Q6):
+ * every (message, locale) whose catalogue string does not register as the registry's text, or whose params are not its slots.
+ */
+function lockstepMismatches(catalog: Readonly<Record<'hi' | 'en', Readonly<Record<string, string>>>>): string[] {
+  return ENTRIES.filter(([message, locale]) => {
+    const template = CONTRIBUTION_SMS_TEMPLATES[message][locale];
+    const value = catalog[locale][template.copyKey];
+    return (
+      typeof value !== 'string' ||
+      asRegistered(value) !== template.registeredText ||
+      i18nParamNames(value).join(',') !== template.slots.map((slot) => slot.name).join(',')
+    );
+  }).map(([message, locale]) => `${message}/${locale}`);
+}
+
 describe('AC1 — the registry holds exactly the three notices of FS1 (d), × hi / en', () => {
   it('⭐ the messages are the contract enum — day 10, payment not matched, payment not confirmed — and ⛔ nothing else', () => {
     expect([...CONTRIBUTION_SMS_MESSAGES]).toEqual(['deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed']);
@@ -124,10 +142,18 @@ describe('AC2 — registered text = catalogue text, through the REAL t() (I1)', 
     }
   });
 
-  it('⭐ PLANTED — the lockstep catches a one-word drift between the catalogue and the registry', () => {
+  it('⭐ the lockstep holds for all six templates', () => {
+    expect(lockstepMismatches(CONTRIBUTION_CATALOG)).toEqual([]);
+  });
+
+  it('⭐ PLANTED — the SAME lockstep check catches a one-word drift, and a renamed param, in exactly that template', () => {
     const value = CONTRIBUTION_CATALOG.en['sms.payment_not_confirmed'] as string;
-    const drifted = value.replace('retry', 'try again');
-    expect(asRegistered(drifted)).not.toBe(CONTRIBUTION_SMS_TEMPLATES.payment_not_confirmed.en.registeredText);
+    expect(value).toContain('retry'); // the plant must actually change the text
+    const drifted = { ...CONTRIBUTION_CATALOG, en: { ...CONTRIBUTION_CATALOG.en, 'sms.payment_not_confirmed': value.replace('retry', 'try again') } };
+    expect(lockstepMismatches(drifted)).toEqual(['payment_not_confirmed/en']);
+    const dayTen = CONTRIBUTION_CATALOG.hi['sms.deadline_not_recorded'] as string;
+    const renamed = { ...CONTRIBUTION_CATALOG, hi: { ...CONTRIBUTION_CATALOG.hi, 'sms.deadline_not_recorded': dayTen.replace('{date}', '{day}') } };
+    expect(lockstepMismatches(renamed)).toEqual(['deadline_not_recorded/hi']);
   });
 
   it('I6 — `$comment.sms` is in BOTH catalogues, naming the review state and the byte-for-byte rule', () => {
@@ -182,7 +208,7 @@ describe('FS13 (a) — the {pool} value of a text', () => {
     expect(smsPoolLabel({ poolName: HINDI_NAME, poolLetterCode: 'C' }, 'en')).toBe('C');
   });
 
-  it('a name over 30 code points ⇒ the letter code (30 fits, 31 does not)', () => {
+  it('a name over 30 UTF-16 units ⇒ the letter code (30 fits, 31 does not — `-394` item 2)', () => {
     expect(smsPoolLabel({ poolName: 'a'.repeat(30), poolLetterCode: 'C' }, 'en')).toBe('a'.repeat(30));
     expect(smsPoolLabel({ poolName: 'a'.repeat(31), poolLetterCode: 'C' }, 'en')).toBe('C');
     expect(smsPoolLabel({ poolName: 'अ'.repeat(31), poolLetterCode: 'C' }, 'hi')).toBe('C');

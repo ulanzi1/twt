@@ -33,11 +33,21 @@
 import { createHash } from 'node:crypto';
 
 import { Alert } from '@twt/contracts';
-import { featureFlags, ids, member as memberDomain, withPariwarScope } from '@twt/domain';
+import { featureFlags, idempotency, ids, member as memberDomain, withPariwarScope } from '@twt/domain';
 import { DEFAULT_LOCALE, t, type Locale } from '@twt/i18n';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
 
-import { fanOutAlertToMembers, type ContributionNotifyDeps } from './contribution-notify.js';
+import { fanOutAlertToMembers, serializeFanOutResult, type ContributionNotifyDeps } from './contribution-notify.js';
+
+/** Match the broadcast workers' claim window, covering normal pg-boss redelivery without a new table. */
+const MODERATION_NOTIFY_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
+
+/**
+ * A `pending` claim older than this was ABANDONED (review round 2 patch review, E1 (a)): pg-boss's default job expiry for this
+ * queue (created with no options — `expireInSeconds` 900) has passed, so pg-boss itself has given up on that attempt and
+ * re-dispatched the job. Younger ⇒ another attempt may still be running. Revisit if the queue is ever given its own expiry.
+ */
+const MODERATION_NOTIFY_ABANDONED_CLAIM_SECONDS = 15 * 60;
 
 /** The MEMBER_MODERATION_NOTIFY payload (structurally aligned with apps/api's enqueuer type). */
 export interface ModerationNotifyPayload {
@@ -267,11 +277,16 @@ export function resolveReasonLabel(reasonCode: string, locale: Locale): string {
 }
 
 export interface ModerationNotifyResult {
+  /** The notice was handled for this member — `false` ONLY for `member-not-found`. It does ⛔ say a channel delivered it (`delivered`). */
   readonly notified: boolean;
+  /** A channel delivered the notice (this run, or the recorded earlier run). `false` ⇒ `in_app_only` (review round 2, P5). */
+  readonly delivered?: boolean;
+  /** An earlier run had already recorded this notice; nothing was sent now (review round 2, P5). */
+  readonly alreadySent?: boolean;
   /**
    * Only `member-not-found` is a RETURNED outcome — it is genuinely terminal (an RTBF cascade
-   * between commit and delivery), so retrying could never help. An UNDELIVERED notice throws
-   * instead, because that one is retryable and must not complete the job.
+   * between commit and delivery), so retrying could never help. Previously retryable failures throw;
+   * former fixture successes complete with a durable `in_app_only` record (Story 5.11, R1 / R3).
    */
   readonly reason?: 'member-not-found';
   readonly alertId: string;
@@ -352,37 +367,69 @@ export async function runModerationNotify(
     appealId: payload.appealId,
   });
 
-  const { retry } = await fanOutAlertToMembers(
-    deps.notify,
-    () => alert,
-    [payload.memberId],
-    pariwarId,
-    now,
-  );
+  const store = idempotency.createKeyedStore(deps.notify.pool);
+  const key = `moderation.notify:${pariwarId}:${alertId}:${payload.memberId}`;
+  if (await store.claim(key, MODERATION_NOTIFY_IDEMPOTENCY_TTL_SECONDS) !== 'acquired') {
+    // Review round 2 (D1 (a), then the patch review's E1 (a)): `claim` cannot tell these apart, so read the row.
+    const row = await store.inspect(key);
+    if (row?.status === 'completed') {
+      // Recorded — even past its TTL, before the vacuum. ⛔ Re-send.
+      const prior = row.result as { readonly delivered?: unknown } | null;
+      return { notified: true, delivered: prior?.delivered === true, alreadySent: true, alertId };
+    }
+    if (row && now.getTime() - row.createdAt.getTime() < MODERATION_NOTIFY_ABANDONED_CLAIM_SECONDS * 1000) {
+      // In flight (or a recording that failed moments ago): ⛔ complete as notified — that would lose the notice silently.
+      alarm(
+        `[jobs] moderation-notify: notice for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) is claimed by an attempt still in flight — retrying`,
+      );
+      throw new Error(`[jobs] moderation-notify: notice still in flight for moderation action ${payload.moderationActionId}`);
+    }
+    // ABANDONED — older than pg-boss's own expiry (a worker died between the claim and the record), or gone: take it over
+    // and send. At-least-once, as before R3 added the claim: a fan-out hung past the expiry, a recording that failed, or two
+    // attempts taking over at once can send the notice twice; none can lose it.
+    await store.release(key);
+    if (await store.claim(key, MODERATION_NOTIFY_IDEMPOTENCY_TTL_SECONDS) !== 'acquired') {
+      throw new Error(`[jobs] moderation-notify: lost the take-over of an abandoned claim for moderation action ${payload.moderationActionId}`);
+    }
+    alarm(
+      `[jobs] moderation-notify: took over an ABANDONED claim for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) — sending`,
+    );
+  }
 
-  if (retry.length > 0) {
-    // ⚠ ALARM + THROW, not a quiet return (review follow-up). Returning normally COMPLETES the
-    // pg-boss job, so the previous version's own comment — "surfaced so pg-boss's retry has a
-    // reason to exist" — described a retry the code structurally could not perform: the notice was
-    // lost permanently and invisibly, with no alarm on this arm at all.
-    //
-    // Throwing is what `fanOutAlertToMembers` documents as its contract ("the caller still throws
-    // and pg-boss still retries this member") and what the sibling single-member notifier
-    // (`contribution-notify-triggers.ts`) already does. It does NOT violate AC8's "best-effort":
-    // AC8 says a dispatch failure must never fail or roll back the moderation ACTION — and it
-    // cannot, because the action committed in apps/api long before this worker ran. Best-effort
-    // means the action survives a failed notice, not that a failed notice goes unrecorded.
-    // ⭐ Story 5.11 (FS14 (a)): `retry` holds only a member whose fan-out THREW; a member no rung reached is
-    // `in_app_only` (the notice is on their in-app surface) and is ⛔ retried — as before 5.11, when the fake
-    // `sms:sent` made them "delivered".
+  let result: Awaited<ReturnType<typeof fanOutAlertToMembers>>['results'][number];
+  try {
+    const { results, retry } = await fanOutAlertToMembers(
+      deps.notify,
+      () => alert,
+      [payload.memberId],
+      pariwarId,
+      now,
+    );
+    // R1: a previous failure still releases and throws. R3: terminal outcomes keep the claim and
+    // their PII-free trail, so redelivery cannot silently replace an `in_app_only` record with a send.
+    if (retry.length > 0) {
+      throw new Error(`[jobs] moderation-notify: notice fan-out failed for moderation action ${payload.moderationActionId}`);
+    }
+    const first = results[0];
+    if (!first) throw new Error('[jobs] moderation-notify: fan-out returned no member result');
+    result = first;
+  } catch (err) {
+    await store.release(key).catch((releaseError: unknown) => {
+      alarm(`[jobs] moderation-notify: failed to release the member claim — ${String(releaseError)}`);
+    });
+    // The moderation action already committed in apps/api; only this notice retries.
     alarm(
       `[jobs] moderation-notify: notice fan-out FAILED for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) — retrying`,
     );
-    throw new Error(
-      `[jobs] moderation-notify: notice fan-out failed for moderation action ${payload.moderationActionId}`,
-    );
+    throw err;
   }
-  return { notified: true, alertId };
+  // Review round 2, P4: a recording failure AFTER the fan-out keeps the claim and completes — the contribution, news and
+  // survey workers' rule. Releasing here would re-send a notice that may already have been delivered. The claim stays
+  // `pending`: a redelivery within 15 min reads it as in flight; a later one takes it over and may re-send (E1 (a)).
+  await store.recordResult(key, serializeFanOutResult(result)).catch((err: unknown) => {
+    alarm(`[jobs] moderation-notify: failed to record the member result — ${String(err)}`);
+  });
+  return { notified: true, delivered: result.delivered, alreadySent: false, alertId };
 }
 
 /** Register the MEMBER_MODERATION_NOTIFY consumer (the `registerNewsPublishWorker` shape). */

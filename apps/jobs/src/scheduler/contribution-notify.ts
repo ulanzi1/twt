@@ -44,10 +44,10 @@
 // in 8.8 a member whose whole ladder came back undelivered made the job THROW (5.11 narrows it — below). `cascade.ts:14-17` anticipates
 // exactly this ("a plain array so a later DURABLE (pg-boss) adapter is thin").
 //
-// ⭐ Story 5.11 (FS14 (a), F19): a member whose ladder ended without `sent` is ⛔ retried — they are
-// recorded `in_app_only` (the alert is on their in-app surface, the official channel, R10(B)). Before 5.11
-// the fake `sms:sent` made every such member "delivered", so this keeps the retry profile EXACTLY (I4);
-// only a member whose fan-out THREW is retried. Row 5-11b adds the one retryable SMS case.
+// ⭐ Story 5.11 (FS14 (a), review R1 option 1): former fixture successes are recorded `in_app_only`.
+// A member without an available SMS target never reached that fixture: their previous retry remains,
+// including when cost-optimization omitted SMS. `shouldRetryFanOut` owns this distinction (I4).
+// A thrown fan-out also retries. Row 5-11b adds real SMS failure handling.
 //
 // THE AR-19 DEVIATION, STATED NOT HIDDEN: AR-19 reads "push (1 + up to 3 backoff-spaced retries) → WA →
 // SMS", i.e. retries are PER RUNG before advancing. This design retries the WHOLE LADDER. Two
@@ -193,6 +193,23 @@ export const RECORDED_RUNG_DETAILS: ReadonlySet<string> = new Set<string>([
   'cost_optimized',
 ]);
 
+/** The shared durable projection: channels, outcomes and allowlisted reasons; never contact or provider error text.
+ *  It takes a REAL record: a caller with none retries the member, ⛔ records an outcome (review round 2 patch review, Q4). */
+export function serializeFanOutResult(record: MemberFanOutResult): Record<string, unknown> {
+  return {
+    delivered: record.delivered,
+    outcome: record.delivered ? 'delivered' : 'in_app_only',
+    deliveredChannel: record.deliveredChannel,
+    bridged: record.bridged,
+    costSuppressedChannels: record.costSuppressedChannels,
+    telegramMirrored: record.telegramMirrored,
+    trail: record.trail.map(
+      (entry) => `${entry.channel}:${String(entry.attempt)}:${entry.outcome}` +
+        (entry.detail !== undefined && RECORDED_RUNG_DETAILS.has(entry.detail) ? `:${entry.detail}` : ''),
+    ),
+  };
+}
+
 /**
  * ⭐ I2 — THE ONE predicate for who may receive an alert SMS, as RULED by `2026-10-23-390` Q1 B (Trustee-ratified): a LIT
  * message, when the push rung did not end `sent` AND (the member has NO WhatsApp target — the Pariwar's WhatsApp is off or
@@ -290,8 +307,8 @@ function outcomeForChannel(
  * input is injected, so the whole composition — bridge-before-cost-opt, the single-rung dispatch calls,
  * stop-at-first-`sent`, multi-device push, the independent Telegram mirror — is exercisable with fakes.
  *
- * Returns the NON-PII outcome record. It NEVER throws for a delivery failure. A member no rung reached is
- * `in_app_only` (Story 5.11, FS14) — the caller records them and does ⛔ retry.
+ * Returns the NON-PII outcome record. It NEVER throws for a delivery failure. The caller uses
+ * `shouldRetryFanOut` to distinguish a terminal `in_app_only` result from a previously retryable failure.
  */
 export async function fanOutAlert(
   deps: ContributionNotifyDeps,
@@ -352,7 +369,15 @@ export async function fanOutAlert(
   // Each rung's own outcome, for the SMS rung's predicate (I2).
   const rungOutcomes = new Map<Channel, ChannelSendOutcome['outcome']>();
 
-  /** Story 5.11 — the SMS rung decides lit / eligible itself and ⛔ ever calls `dispatch` (I3; FS10, FS15). */
+  /**
+   * Story 5.11 — the SMS rung decides lit / eligible itself and ⛔ ever calls `dispatch` (I3; FS10, FS15).
+   *
+   * ⚠ DELIBERATE (review round 2, P3 — checklist family 9): by not calling `dispatch`, this rung also bypasses `dispatch`'s
+   * LIFECYCLE-SUPPRESSION boundary (`packages/channels/src/dispatch.ts`, "the single suppression boundary"). Harmless while it
+   * sends nothing (and production wires `noLifecycleSuppression`). ⛔ Row 5-11b must NOT add a send here without restoring
+   * that boundary — send through `dispatch`, or apply the same suppression hook first — or a suppressed member could be
+   * texted. Re-examination trigger: the first real send from this rung (row 5-11b; story "Carried to 5.11b").
+   */
   const smsRung = (): ChannelSendOutcome => {
     if (bridge.bridged) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeNotLit };
     const block = alertSmsBlock(alert);
@@ -499,14 +524,32 @@ function alarmOf(deps: ContributionNotifyDeps): (message: string) => void {
 }
 
 /**
+ * Story 5.11 review R1, option 1 — preserve the previous retry set without driving either fixture.
+ * An available, unsuppressed SMS target previously reached the accepting SMS fixture. FS3's named
+ * WhatsApp refusals previously reached the accepting WA fixture instead; they are also terminal.
+ * The old bridge bypassed WA and cost policy, so only its SMS target could complete that path.
+ * Everyone else whose ladder exhausted still retries, including a missing/decrypt-failed mobile or
+ * cost-suppressed SMS. Broadcast callers release these claims for redelivery without adding job retries.
+ * Revisit when 5.11b wires a real SMS provider and its retry window.
+ */
+export function shouldRetryFanOut(result: MemberFanOutResult, ctx: MemberFanOutContext): boolean {
+  if (result.delivered) return false;
+  if (result.bridged) return ctx.targets.sms === null;
+  if (ctx.targets.sms !== null && !result.costSuppressedChannels.includes('sms')) return false;
+  const refusedWhatsapp = result.trail.some(
+    (entry) => entry.channel === 'whatsapp' && entry.outcome === 'rejected' &&
+      (entry.detail === WHATSAPP_REFUSAL_DETAIL.templateNotApproved || entry.detail === WHATSAPP_REFUSAL_DETAIL.credentialsMissing),
+  );
+  return !refusedWhatsapp;
+}
+
+/**
  * Run the fan-out for a whole chunk of members under ONE tenant scope. Returns the per-member records
- * plus the ids to RETRY — the caller throws on a non-empty `retry` set so pg-boss retries (D9), while
- * every member with a result is recorded in the idempotency store and is therefore never re-sent.
+ * plus the ids to RETRY — the caller throws on a non-empty `retry` set so pg-boss retries (D9).
+ * Only delivered and terminal `in_app_only` members are recorded in the idempotency store.
  *
- * ⭐ Story 5.11 (FS14 (a)): `retry` holds ONLY the members whose fan-out THREW. A member whose ladder ended
- * without `sent` has a result with `delivered: false` — `in_app_only`, recorded, ⛔ retried (I4: before 5.11
- * the fake `sms:sent` made them "delivered", so nobody retried them either). Row 5-11b adds the one
- * retryable SMS case.
+ * ⭐ Story 5.11 (FS14 (a), review R1 option 1): former fixture successes become `in_app_only`;
+ * previously retryable failures remain on `retry`, as determined by `shouldRetryFanOut` (I4).
  *
  * A single member's unexpected THROW never aborts the batch: it is alarmed and put on `retry`, so one
  * corrupt row cannot cost the other members in the chunk their notification.
@@ -527,7 +570,9 @@ export async function fanOutAlertToMembers(
       const ctx = await withPariwarScope(deps.pool, pariwarId, (db) =>
         resolveMemberDeliveryContext(db, deps.encryption, pariwarId, memberId, at),
       );
-      results.push(await fanOutAlert(deps, alertFor(memberId), ctx));
+      const result = await fanOutAlert(deps, alertFor(memberId), ctx);
+      results.push(result);
+      if (shouldRetryFanOut(result, ctx)) retry.push(memberId);
     } catch (err) {
       // One member's failure must never cost the rest of the chunk their notification. It IS put on
       // `retry`, so the caller still throws and pg-boss still retries this member.

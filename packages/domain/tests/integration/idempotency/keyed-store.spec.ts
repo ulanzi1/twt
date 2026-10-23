@@ -181,4 +181,20 @@ describe.skipIf(!hasDatabase)('idempotency keyed store (live DB, own-committing)
     const liveRows = await pool.query('SELECT 1 FROM idempotency_keys WHERE key = $1', [liveKey]);
     expect(liveRows.rowCount).toBe(1);
   });
+
+  it('inspect — reads pending, completed and completed-but-EXPIRED rows as they stand; null when absent (Story 5.11 E1 (a))', async () => {
+    const at = new Date(Date.UTC(2026, 9, 24, 10, 0, 0));
+    let now = at;
+    const store = createKeyedStore(pool, { clock: () => now });
+    const key = track(`test:inspect:${randomUUID()}`);
+    expect(await store.inspect(key)).toBeNull();
+
+    expect(await store.claim(key, 60)).toBe('acquired');
+    expect(await store.inspect(key)).toEqual({ status: 'pending', createdAt: at, expiresAt: new Date(at.getTime() + 60_000), result: null });
+
+    await store.recordResult(key, { delivered: true });
+    now = new Date(at.getTime() + 120_000); // past the TTL: getResult reads it as absent, inspect does not
+    expect(await store.getResult(key)).toBeNull();
+    expect(await store.inspect(key)).toMatchObject({ status: 'completed', createdAt: at, result: { delivered: true } });
+  });
 });

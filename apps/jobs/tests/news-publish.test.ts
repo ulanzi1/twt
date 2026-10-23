@@ -13,7 +13,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { createAuditPort, createRenderedMessageHash } from '@twt/channels';
-import { createDb, encryption, ids, newsBlog, schema, withPariwarScope, type CreatedDb } from '@twt/domain';
+import { createDb, encryption, idempotency, ids, newsBlog, schema, withPariwarScope, type CreatedDb } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { ContributionNotifyDeps } from '../src/scheduler/contribution-notify.js';
@@ -121,7 +121,7 @@ describe.skipIf(!hasDatabase)('runNewsPublish (live-DB :5433)', () => {
 
   /** Insert one real `active` members row directly (the `packages/domain/tests/integration/_helpers.ts`
    *  `seedMember` pattern, self-contained here rather than a cross-package test import). */
-  async function seedActiveMember(pariwarId: string): Promise<string> {
+  async function seedActiveMember(pariwarId: string, withMobile = false): Promise<string> {
     const memberId = randomUUID();
     await withPariwarScope(created.pool, pariwarId, (db) =>
       db.insert(schema.members).values({
@@ -131,10 +131,16 @@ describe.skipIf(!hasDatabase)('runNewsPublish (live-DB :5433)', () => {
         stateEventVersion: 1,
       }),
     );
+    if (withMobile) {
+      const mobileCiphertext = await encryption.encryptMobile('+919999999999', fullNotify.encryption);
+      await withPariwarScope(created.pool, pariwarId, (db) => db.insert(schema.memberIdentities).values({
+        memberId: ids.memberId(memberId), pariwarId: ids.pariwarId(pariwarId), mobileCiphertext, mobileBlindIndex: 'a'.repeat(64),
+      }));
+    }
     return memberId;
   }
 
-  async function seedPost(pariwarId: string, driveTo: 'scheduled' | 'approved' | 'published'): Promise<string> {
+  async function seedPost(pariwarId: string, driveTo: 'scheduled' | 'approved' | 'published', channels: schema.NewsPostRow['channels'] = ['push']): Promise<string> {
     return withPariwarScope(created.pool, pariwarId, async (db) => {
       const draft = await newsBlog.createDraft(db, {
         pariwarId: pariwarId as schema.NewsPostRow['pariwarId'],
@@ -143,7 +149,7 @@ describe.skipIf(!hasDatabase)('runNewsPublish (live-DB :5433)', () => {
         titleHi: 'श',
         bodyMarkdownHi: 'ब',
         audienceScope: 'members-all',
-        channels: ['push'],
+        channels,
         authorActorId: AUTHOR as schema.NewsPostRow['authorActorId'],
       });
       await newsBlog.submitForReview(db, draft.pariwarId, draft.postId, REVIEWER as schema.NewsPostRow['authorActorId']);
@@ -211,12 +217,17 @@ describe.skipIf(!hasDatabase)('runNewsPublish (live-DB :5433)', () => {
     // The member has no registered device/contact, so the fixture-level fan-out attempt naturally
     // resolves to `skipped_no_target` on every channel — the ATTEMPT (audience resolution + the
     // per-member resolveMemberDeliveryContext/fanOutAlert path, previously entirely untested) is what
-    // this test proves, not a real delivery. Story 5.11 (FS14 (a)): a member no rung reached is recorded
-    // `in_app_only` — a re-run resolves the same audience and does ⛔ re-send to them.
+    // this test proves, not a real delivery. Review R1 option 1: no SMS target means no former fixture
+    // success — the claim is RELEASED for redelivery, preserving the pre-5.11 behavior.
+    const store = idempotency.createKeyedStore(created.pool);
+    const key = `news.publish:${deriveNewsAlertId(postId)}:${memberId}`;
+    expect(await store.claim(key, 3600)).toBe('acquired');
+    await store.release(key);
     const rerun = await runNewsPublish({ notify: fullNotify }, { postId, mode: 'scheduled' }, p);
     expect(rerun.published).toBe(true);
-    expect(rerun.memberCount).toBe(1); // audience resolution is unaffected by the prior (recorded) claim
-    void memberId; // seeded for FK/membership purposes only — its value isn't separately asserted
+    expect(rerun.memberCount).toBe(1);
+    expect(await store.claim(key, 3600)).toBe('acquired');
+    await store.release(key);
   });
 
   it('a missing post is a clean not-found no-op', async () => {
@@ -224,5 +235,21 @@ describe.skipIf(!hasDatabase)('runNewsPublish (live-DB :5433)', () => {
     const res = await runNewsPublish({ notify }, { postId: randomUUID(), mode: 'scheduled' }, p);
     expect(res.published).toBe(false);
     expect(res.reason).toBe('not-found');
+  });
+
+  it('R4 — persists the SMS non-send reason and retains the terminal result on redelivery', async () => {
+    const p = randomUUID();
+    const memberId = await seedActiveMember(p, true);
+    const postId = await seedPost(p, 'published', ['sms']);
+    const key = `news.publish:${deriveNewsAlertId(postId)}:${memberId}`;
+    const store = idempotency.createKeyedStore(created.pool);
+    await runNewsPublish({ notify: fullNotify }, { postId, mode: 'immediate' }, p);
+    const recorded = await store.getResult(key);
+    expect(recorded).toMatchObject({ outcome: 'in_app_only', trail: [
+      'push:0:skipped_no_target', 'whatsapp:0:skipped_no_target', 'sms:0:skipped_no_target:sms_message_not_lit',
+    ] });
+    expect(JSON.stringify(recorded)).not.toContain('+919999999999');
+    await runNewsPublish({ notify: fullNotify }, { postId, mode: 'immediate' }, p);
+    expect(await store.getResult(key)).toEqual(recorded);
   });
 });

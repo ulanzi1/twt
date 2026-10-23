@@ -431,7 +431,7 @@ describe('Story 5.11 — the optional `sms` block rides only the two variants a 
     created_at: '2026-07-23T00:00:00.000Z',
     created_by_actor: 'system',
   };
-  const SMS = { message: 'deadline_not_recorded', values: { pool: 'A', date: '05-08-2026' } } as const;
+  const SMS = { message: 'deadline_not_recorded', locale: 'en', values: { pool: 'A', date: '05-08-2026' } } as const;
 
   it('the builders OMIT the key when no block is passed (⛔ an `sms: undefined` key on the payload)', () => {
     const d = buildDeadlineReminderPayloadData({ subject: 's', deadlineAt: new Date('2026-08-05T00:00:00.000Z'), deadlineDisplay: 'd' });
@@ -443,19 +443,22 @@ describe('Story 5.11 — the optional `sms` block rides only the two variants a 
   it('a passed block is carried on deadline_reminder, the pending-match retry and contribution_mismatch', () => {
     expect(buildDeadlineReminderPayloadData({ subject: 's', deadlineAt: new Date('2026-08-05T00:00:00.000Z'), deadlineDisplay: 'd', sms: SMS }).sms).toEqual(SMS);
     expect(
-      buildPendingMatchRetryPayloadData({ subject: 's', display: 'd', poolId: '44444444-4444-4444-4444-444444444444', now: new Date(), sms: { message: 'payment_not_confirmed', values: { pool: 'A' } } }).sms,
-    ).toEqual({ message: 'payment_not_confirmed', values: { pool: 'A' } });
+      buildPendingMatchRetryPayloadData({ subject: 's', display: 'd', poolId: '44444444-4444-4444-4444-444444444444', now: new Date(), sms: { message: 'payment_not_confirmed', locale: 'hi', values: { pool: 'A' } } }).sms,
+    ).toEqual({ message: 'payment_not_confirmed', locale: 'hi', values: { pool: 'A' } });
     expect(
-      buildContributionMismatchPayloadData({ poolId: '44444444-4444-4444-4444-444444444444', body: 'b', sms: { message: 'payment_not_matched', values: {} } }).sms,
-    ).toEqual({ message: 'payment_not_matched', values: {} });
+      buildContributionMismatchPayloadData({ poolId: '44444444-4444-4444-4444-444444444444', body: 'b', sms: { message: 'payment_not_matched', locale: 'hi', values: {} } }).sms,
+    ).toEqual({ message: 'payment_not_matched', locale: 'hi', values: {} });
   });
 
   it('⛔ a message outside the three, and ⛔ an extra key, are refused (strict)', () => {
     const base = { subject: 's', deadline_at: '2026-08-05T00:00:00.000Z', deadline_display: 'd' };
     const parse = (sms: unknown) => Alert.safeParse({ ...ENV, alert_category: 'deadline_reminder', payload_data: { ...base, sms } }).success;
     expect(parse(SMS)).toBe(true);
-    expect(parse({ message: 'pool_open', values: {} })).toBe(false);
+    expect(parse({ message: 'pool_open', locale: 'hi', values: {} })).toBe(false); // a VALID shape but for the message (Q5)
     expect(parse({ ...SMS, extra: 1 })).toBe(false);
+    // review round 2, P2 — the block names the language its values were built for; ⛔ a block without it.
+    expect(parse({ message: SMS.message, values: SMS.values })).toBe(false);
+    expect(parse({ ...SMS, locale: 'fr' })).toBe(false);
   });
 
   it.each(['alert_published', 'contribution_confirmed', 'module_new', 'niyamavali_amended'] as const)(

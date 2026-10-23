@@ -106,18 +106,27 @@ export const CONTRIBUTION_SMS_TEMPLATES: Readonly<
   },
 };
 
+/** GSM-7 characters an en pool value may NOT use beyond the control characters: the extension table (two septets each). */
+const GSM7_EXTENSION = new Set('^{}\\[~]|€');
+
+/** A control character (Unicode Cc — newline, tab, ESC, …) in ANY locale. ⛔ Cf: ZWJ / ZWNJ are legitimate in Devanagari. */
+const CONTROL_CHARACTER = /\p{Cc}/u;
+
 /**
- * FS13 (a) — the `{pool}` value of a text: the curated pool name when it fits the slot (30 code points) AND, for an `en`
- * text, is all GSM-7; otherwise the LETTER CODE. The curated name is always the HINDI name (`resolveCuratedPoolName`), so in
- * practice an en text names the pool by its letter and a hi text by its name — a Devanagari value in an en text would turn
- * the whole SMS Unicode (T5). The push keeps its own label (`poolLabel`).
+ * FS13 as superseded by Decision `2026-10-23-394` item 2 (review round 2, D2 (b)) — the `{pool}` value of a text: the curated
+ * pool name, TRIMMED, when it is non-empty, fits the slot (30 UTF-16 units — the unit `dlt-variables.ts` counts) AND, for an
+ * `en` text, is basic GSM-7 only (⛔ extension table); ⛔ a control character in ANY locale (round-2 patch review, Q3);
+ * otherwise the LETTER CODE. So the text is never longer than the cost as put: 1 en / 2 hi parts. The curated name is always the HINDI name
+ * (`resolveCuratedPoolName`), so in practice an en text names the pool by its letter and a hi text by its name — a Devanagari
+ * value in an en text would turn the whole SMS Unicode (T5). The push keeps its own label (`poolLabel`).
  */
 export function smsPoolLabel(
   identity: { readonly poolName: string | null; readonly poolLetterCode: string },
   locale: ContributionSmsLocale,
 ): string {
-  const name = identity.poolName;
-  if (name !== null && [...name].length <= POOL_SLOT.maxLength && (locale !== 'en' || !needsUnicode(name))) return name;
+  const name = identity.poolName?.trim() ?? '';
+  const fitsLocale = locale !== 'en' || (!needsUnicode(name) && ![...name].some((ch) => GSM7_EXTENSION.has(ch)));
+  if (name !== '' && name.length <= POOL_SLOT.maxLength && !CONTROL_CHARACTER.test(name) && fitsLocale) return name;
   return identity.poolLetterCode;
 }
 

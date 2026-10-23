@@ -430,11 +430,16 @@ export type ProviderRegistry = Readonly<Record<Channel, readonly ChannelProvider
  * cleanly on the next call — this preserves the existing "a rejected outage is not memoized" guarantee below.
  *
  * ⚠ Story 5.11 (FS3): the memo above also holds a refusal — a template approved or a credential set AFTER the first
- * resolution is seen only after a restart (recorded, ⛔ a TTL added — `-389` FS3 (a)).
+ * resolution is seen only after a restart (recorded, ⛔ a TTL added — `-389` FS3 (a)). ⚠ The OTHER direction too (review
+ * round 2, deferred-work W1): a Pariwar memoized `off` keeps the accepting WhatsApp fixture after it is switched ON, while
+ * the member's WhatsApp target is re-read live — an opted-in member is then recorded `delivered` with nothing sent, until
+ * a restart. Pre-existing; carried to row 5-11b.
  *
  * ── The 5-state honesty invariant (§9a-i) ────────────────────────────────────────────────────────────────────
  * "Not configured" (absent row / disabled / blank NAME / no template / gateway unconfigured) ⇒ fixture per
- * channel. A DB outage (the scoped read throws) or a Secret-Manager outage (resolveSecret/resolveConfig/the SA
+ * channel — EXCEPT, for this alert fan-out resolver, a switched-on Pariwar's WhatsApp with a blank NAME or no approved
+ * template: that is the FS3 REFUSING provider (`rejected`, a named detail), ⛔ the fixture (Story 5.11; the other
+ * callers' `resolveWhatsappProvider` still returns the fixture — deferred-work W2). A DB outage (the scoped read throws) or a Secret-Manager outage (resolveSecret/resolveConfig/the SA
  * resolver throws) PROPAGATES out of this resolver — it is not caught — so the pg-boss job fails and retries. A
  * masked outage would fake delivery (the opposite of this program's integrity). NB: because a throw propagates
  * BEFORE the memo is populated, a transient outage is retried cleanly (a rejected value is never cached).

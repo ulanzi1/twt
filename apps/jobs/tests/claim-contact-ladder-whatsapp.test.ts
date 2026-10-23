@@ -159,8 +159,12 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // category gets a refusing WhatsApp provider in the FAN-OUT resolver (`provider-composition.ts` — `resolveWhatsappProvider`,
     // the shared selection, is unchanged); a dated header note (`sms-dlt-registry.ts`, entries unchanged). The claimant's
     // WhatsApp step (this story's subject) imports none of them and is untouched. The rest of the fence stands.
-    ['packages/channels/src/composition/provider-composition.ts', '41bea7a46d381424d32caf103b5b556006ad40c9c1af8a6a70f9558f65739416'],
-    ['apps/jobs/src/scheduler/contribution-notify.ts', '580c0e36f0b5215e04d0c3a4dffb797290b081f8f2d29fe1c779248c8a62d080'],
+    // 2026-10-23 review round 2 (P6): a doc-only note on the memo's off → on direction and the FS3 exception to the 5-state rule.
+    ['packages/channels/src/composition/provider-composition.ts', '8b29d9885baf93964bc66f91c88b97ca3bef55dfec235d7207dd7cee4d9f49fc'],
+    // 2026-10-23 review R1 / R3 / R4, BigDev option 1: preserve prior alert retries and share the
+    // PII-free outcome serializer; the claimant's separate WhatsApp ladder imports neither. Round 2 (P3, P9): the SMS rung's
+    // DELIBERATE lifecycle-boundary note; the patch review (Q4): `serializeFanOutResult` takes a real record.
+    ['apps/jobs/src/scheduler/contribution-notify.ts', '79d2d4cfd9a84c0e466a069cf4f3435b93ab39666dc090613038a6aa5701fb40'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
     ['packages/channels/src/sms-dlt-registry.ts', '3bf86f9b9350602d9d7484b6976a748de42bcd4a9424f9bd3842f7cda66daee5'],
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per

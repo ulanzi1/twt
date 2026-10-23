@@ -75,6 +75,21 @@ export interface KeyedStore {
    * precedent).
    */
   release(key: string): Promise<void>;
+  /**
+   * Read a key's row as it stands — status, when it was claimed (or last reclaimed), its expiry and any result — WHETHER OR
+   * NOT it has expired, or `null` if there is no row. Read-only. For a caller that must tell an IN-FLIGHT claim from an
+   * ABANDONED one (a worker died between `claim` and `recordResult`) or a COMPLETED-but-expired one, which `getResult` and
+   * `claim` both collapse (Story 5.11 review, E1 (a) — the moderation notifier; `created_at` is the injected-clock claim time).
+   */
+  inspect(key: string): Promise<KeyInspection | null>;
+}
+
+/** One key's row, as `inspect` reads it. */
+export interface KeyInspection {
+  readonly status: 'pending' | 'completed';
+  readonly createdAt: Date;
+  readonly expiresAt: Date;
+  readonly result: unknown;
 }
 
 export interface KeyedStoreOptions {
@@ -235,7 +250,26 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
     }
   }
 
-  return { claim, recordResult, getResult, release };
+  async function inspect(key: string): Promise<KeyInspection | null> {
+    assertKey(key);
+    const client = await pool.connect();
+    let releaseErr: unknown;
+    try {
+      const { rows } = await client.query<{ status: 'pending' | 'completed'; created_at: Date; expires_at: Date; result: unknown }>(
+        `SELECT status, created_at, expires_at, result FROM idempotency_keys WHERE key = $1`,
+        [key],
+      );
+      const row = rows[0];
+      return row ? { status: row.status, createdAt: row.created_at, expiresAt: row.expires_at, result: row.result ?? null } : null;
+    } catch (e) {
+      releaseErr = e;
+      throw e;
+    } finally {
+      client.release(releaseErr as Error | undefined);
+    }
+  }
+
+  return { claim, recordResult, getResult, release, inspect };
 }
 
 /**

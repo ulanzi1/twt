@@ -163,7 +163,7 @@ describe.skipIf(!hasDatabase)('AI-8-3 — full-ladder-advances-on-reject armor (
         subject: 'पूल A — आपका योगदान अभी दर्ज नहीं हुआ है',
         deadline_at: '2026-08-05T00:00:00.000Z',
         deadline_display: '05-08-2026',
-        sms: { message: 'deadline_not_recorded' as const, values: { pool: 'A', date: '05-08-2026' } },
+        sms: { message: 'deadline_not_recorded' as const, locale: 'en' as const, values: { pool: 'A', date: '05-08-2026' } },
       },
     };
   }

@@ -64,6 +64,7 @@ const {
   DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS,
   PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS,
 } = await import('../src/scheduler/contribution-notify-triggers.js');
+const { CONTRIBUTION_SMS_TEMPLATES, renderContributionSms } = await import('../src/scheduler/contribution-sms-templates.js');
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
 const ALERT = '33333333-3333-3333-3333-333333333333';
@@ -312,7 +313,8 @@ describe('AC1 — the child worker: idempotency, batching, and the retry contrac
   });
 
   it('a member whose fan-out FAILED (on `retry`) makes the job THROW (pg-boss owns the backoff — D9)', async () => {
-    // Story 5.11 (FS14): `retry` (was `undelivered`) holds only a member whose fan-out THREW.
+    // Story 5.11 (FS14, review R1 option 1 / `-394` item 1): `retry` (was `undelivered`) holds a member whose fan-out THREW
+    // and a member `shouldRetryFanOut` keeps retryable (no available SMS target, or SMS cost-suppressed).
     fanOutAlertToMembers.mockResolvedValue({
       results: [{ memberId: M1, delivered: true, deliveredChannel: 'push', trail: [], bridged: false, costSuppressedChannels: [], telegramMirrored: false }],
       retry: [M2],
@@ -1189,7 +1191,7 @@ describe('Story 5.11 AC5 / FS7 — the `sms` block rides ONLY the three notices 
 
   it('⭐ day 10 — `deadline_not_recorded`, the date the SAME local the push renders, the pool by FS13', () => {
     const alert = reminder(10);
-    expect(smsOf(alert)).toEqual({ message: 'deadline_not_recorded', values: { pool: 'युधिष्ठिर', date: '05-08-2026' } });
+    expect(smsOf(alert)).toEqual({ message: 'deadline_not_recorded', locale: 'hi', values: { pool: 'युधिष्ठिर', date: '05-08-2026' } });
     // the same local: day 10's push display IS `{date}`
     expect((alert.payload_data as { deadline_display: string }).deadline_display).toBe('05-08-2026');
     expect(() => Alert.parse(alert)).not.toThrow();
@@ -1197,8 +1199,45 @@ describe('Story 5.11 AC5 / FS7 — the `sms` block rides ONLY the three notices 
 
   it('FS13 — the en day-10 text names the pool by its LETTER (the curated name is Hindi); the en push keeps the name', () => {
     const alert = reminder(10, 'en');
-    expect(smsOf(alert)).toEqual({ message: 'deadline_not_recorded', values: { pool: 'A', date: '05-08-2026' } });
+    expect(smsOf(alert)).toEqual({ message: 'deadline_not_recorded', locale: 'en', values: { pool: 'A', date: '05-08-2026' } });
     expect((alert.payload_data as { subject: string }).subject).toContain('युधिष्ठिर');
+  });
+
+  it.each(['', '   '])('R2 — an empty curated name %j cannot block day-10 or escalated notifications', (poolName) => {
+    const identity = { ...IDENTITY, poolName };
+    for (const locale of ['en', 'hi'] as const) {
+      const day10 = buildDeadlineReminderAlert({
+        alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity, cycleDay: 10,
+        deadlineAt: new Date('2026-08-05T00:00:00.000Z'), timeCritical: false, locale, now: NOW,
+      });
+      const escalated = buildPendingMatchRetryAlert({
+        alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity, tier: 'escalated', locale, now: NOW,
+      });
+      expect(smsOf(day10)).toMatchObject({ values: { pool: IDENTITY.poolLetterCode } });
+      expect(smsOf(escalated)).toMatchObject({ values: { pool: IDENTITY.poolLetterCode } });
+      expect(Alert.safeParse(day10).success).toBe(true);
+      expect(Alert.safeParse(escalated).success).toBe(true);
+    }
+  });
+
+  it.each(['hi', 'en'] as const)('P8 — every lit producer\'s block (%s) fills exactly its message\'s slots and renders', (locale) => {
+    const longName = { ...IDENTITY, poolName: locale === 'en' ? 'A'.repeat(30) : 'क'.repeat(30) };
+    const blocks = [IDENTITY, longName].flatMap((identity) => [
+      buildDeadlineReminderAlert({
+        alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity, cycleDay: 10,
+        deadlineAt: new Date('2026-08-05T00:00:00.000Z'), timeCritical: false, locale, now: NOW,
+      }),
+      buildPendingMatchRetryAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity, tier: 'escalated', locale, now: NOW }),
+      buildContributionMismatchAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, reason: 'wrong_pool', locale, now: NOW }),
+    ]).map((alert) => smsOf(alert) as { message: keyof typeof CONTRIBUTION_SMS_TEMPLATES; locale: 'hi' | 'en'; values: Record<string, string> });
+    expect(new Set(blocks.map((b) => b.message))).toEqual(new Set(['deadline_not_recorded', 'payment_not_confirmed', 'payment_not_matched']));
+    for (const block of blocks) {
+      expect(block.locale).toBe(locale);
+      const slots = CONTRIBUTION_SMS_TEMPLATES[block.message][block.locale].slots;
+      expect(Object.keys(block.values).sort()).toEqual(slots.map((slot) => slot.name).sort());
+      for (const slot of slots) expect(block.values[slot.name]!.length).toBeLessThanOrEqual(slot.maxLength);
+      expect(() => renderContributionSms(block.message, block.locale, block.values)).not.toThrow();
+    }
   });
 
   it.each([5, 13, 14] as const)('⛔ day %s — no `sms` block (day 14 is the channels\' — FS1 (d))', (day) => {
@@ -1209,15 +1248,15 @@ describe('Story 5.11 AC5 / FS7 — the `sms` block rides ONLY the three notices 
   it('⭐ pending match ESCALATED — `payment_not_confirmed`; the SOFT tier carries none', () => {
     const build = (tier: 'soft' | 'escalated', locale: 'hi' | 'en') =>
       buildPendingMatchRetryAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, tier, locale, now: NOW });
-    expect(smsOf(build('escalated', 'hi'))).toEqual({ message: 'payment_not_confirmed', values: { pool: 'युधिष्ठिर' } });
-    expect(smsOf(build('escalated', 'en'))).toEqual({ message: 'payment_not_confirmed', values: { pool: 'A' } });
+    expect(smsOf(build('escalated', 'hi'))).toEqual({ message: 'payment_not_confirmed', locale: 'hi', values: { pool: 'युधिष्ठिर' } });
+    expect(smsOf(build('escalated', 'en'))).toEqual({ message: 'payment_not_confirmed', locale: 'en', values: { pool: 'A' } });
     expect(smsOf(build('soft', 'hi'))).toBeUndefined();
     expect(() => Alert.parse(build('escalated', 'en'))).not.toThrow();
   });
 
   it.each(['wrong_pool', 'amount_mismatch', 'some_future_reason'])('⭐ mismatch (%s) — ONE text, `payment_not_matched`, no value', (reason) => {
     const alert = buildContributionMismatchAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, reason, locale: 'hi', now: NOW });
-    expect(smsOf(alert)).toEqual({ message: 'payment_not_matched', values: {} });
+    expect(smsOf(alert)).toEqual({ message: 'payment_not_matched', locale: 'hi', values: {} });
     expect(() => Alert.parse(alert)).not.toThrow();
   });
 
@@ -1230,14 +1269,31 @@ describe('Story 5.11 AC5 / FS7 — the `sms` block rides ONLY the three notices 
 
   it('⛔ I5 — an `alert_published` (cycle open, news, survey, moderation) CANNOT carry the block: the contract refuses it', () => {
     const open = buildCycleOpenAlert({ alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, timeCritical: false, locale: 'hi', now: NOW });
-    const planted = { ...open, payload_data: { ...open.payload_data, sms: { message: 'deadline_not_recorded', values: {} } } };
+    // A VALID block (P2: with its locale), so the refusal is the variant's — ⛔ a malformed block's.
+    const block = { message: 'deadline_not_recorded', locale: 'hi', values: { pool: 'A', date: '05-08-2026' } };
+    const planted = { ...open, payload_data: { ...open.payload_data, sms: block } };
     expect(Alert.safeParse(planted).success).toBe(false);
   });
 });
 
-// ─── Story 5.11 FS14 (a) — a member no rung reached is `in_app_only`: recorded, ⛔ released, ⛔ thrown for ─────
+// ─── Story 5.11 FS14 (a) as superseded by `-394` item 1 — former fixture successes are `in_app_only`; prior failures retry ─
 
 describe('Story 5.11 AC4 / FS14 — the retry profile does not change (I4)', () => {
+  /** R1's retryable shape: push failed, and no SMS target — the old SMS fixture was never reached (P7). */
+  const noSmsTarget = (memberId: string) => ({
+    memberId,
+    delivered: false,
+    deliveredChannel: null,
+    trail: [
+      { channel: 'push', attempt: 0, outcome: 'rejected', detail: 'transient:messaging/internal-error' },
+      { channel: 'whatsapp', attempt: 0, outcome: 'skipped_no_target' },
+      { channel: 'sms', attempt: 0, outcome: 'skipped_no_target' },
+    ],
+    bridged: false,
+    costSuppressedChannels: [],
+    telegramMirrored: false,
+  });
+
   const inAppOnly = (memberId: string) => ({
     memberId,
     delivered: false,
@@ -1311,5 +1367,37 @@ describe('Story 5.11 AC4 / FS14 — the retry profile does not change (I4)', () 
       runContributionMismatchNotify(deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never),
     ).rejects.toThrow(/fan-out failed/);
     expect(release).toHaveBeenCalledTimes(2);
+  });
+
+  it('R1 — a no-SMS failure with a result still releases its POOL_BATCH claim and throws', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [noSmsTarget(M1)], retry: [M1] });
+    await expect(runContributionNotifyChild(deps(), envelope(childPayload({ memberIds: [M1] })) as never)).rejects.toThrow(/throwing so pg-boss retries/);
+    expect(release).toHaveBeenCalledWith(`contribution.notify:${ALERT}:${M1}:cycle_open`);
+    expect(recordResult).not.toHaveBeenCalled();
+  });
+
+  it('Q4 — a member the fan-out returned NO result for is retried (released, thrown), ⛔ recorded terminal', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [], retry: [] });
+    await expect(runContributionNotifyChild(deps(), envelope(childPayload({ memberIds: [M1] })) as never)).rejects.toThrow(/throwing so pg-boss retries/);
+    await expect(runContributionConfirmedNotify(
+      deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, amountPaise: 110000, periodLabel: '2026-07' }) as never,
+    )).rejects.toThrow(/fan-out failed/);
+    await expect(runContributionMismatchNotify(
+      deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never,
+    )).rejects.toThrow(/fan-out failed/);
+    expect(release).toHaveBeenCalledTimes(3);
+    expect(recordResult).not.toHaveBeenCalled();
+  });
+
+  it('R1 — resolved no-SMS failures still release and throw in confirmed and mismatch workers', async () => {
+    fanOutAlertToMembers.mockResolvedValue({ results: [noSmsTarget(M1)], retry: [M1] });
+    await expect(runContributionConfirmedNotify(
+      deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, amountPaise: 110000, periodLabel: '2026-07' }) as never,
+    )).rejects.toThrow(/fan-out failed/);
+    await expect(runContributionMismatchNotify(
+      deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never,
+    )).rejects.toThrow(/fan-out failed/);
+    expect(release).toHaveBeenCalledTimes(2);
+    expect(recordResult).not.toHaveBeenCalled();
   });
 });

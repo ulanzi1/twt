@@ -14,7 +14,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { createAuditPort, createRenderedMessageHash } from '@twt/channels';
-import { createDb, encryption, ids, schema, surveys, withPariwarScope, type CreatedDb } from '@twt/domain';
+import { createDb, encryption, idempotency, ids, schema, surveys, withPariwarScope, type CreatedDb } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { ContributionNotifyDeps } from '../src/scheduler/contribution-notify.js';
@@ -150,7 +150,7 @@ describe.skipIf(!hasDatabase)('runSurveyPublish (live-DB :5433)', () => {
   });
 
   /** Insert one real `active` members row directly (the `seedMember` pattern, self-contained here). */
-  async function seedActiveMember(pariwarId: string): Promise<string> {
+  async function seedActiveMember(pariwarId: string, withMobile = false): Promise<string> {
     const memberId = randomUUID();
     await withPariwarScope(created.pool, pariwarId, (db) =>
       db.insert(schema.members).values({
@@ -160,6 +160,12 @@ describe.skipIf(!hasDatabase)('runSurveyPublish (live-DB :5433)', () => {
         stateEventVersion: 1,
       }),
     );
+    if (withMobile) {
+      const mobileCiphertext = await encryption.encryptMobile('+919999999999', fullNotify.encryption);
+      await withPariwarScope(created.pool, pariwarId, (db) => db.insert(schema.memberIdentities).values({
+        memberId: ids.memberId(memberId), pariwarId: ids.pariwarId(pariwarId), mobileCiphertext, mobileBlindIndex: 'a'.repeat(64),
+      }));
+    }
     return memberId;
   }
 
@@ -259,7 +265,14 @@ describe.skipIf(!hasDatabase)('runSurveyPublish (live-DB :5433)', () => {
     // ONE seeded member for a brand-new, non-shared pariwarId — an exact count is safe here (not the
     // accumulating-shared-fixture case [[project_live_db_test_gotchas]] warns about).
     expect(res.memberCount).toBe(1);
-    void memberId; // seeded for membership purposes only — its value isn't separately asserted.
+    // R1: a member with no SMS target never reached the old fixture; keep their claim available for redelivery.
+    const store = idempotency.createKeyedStore(created.pool);
+    const key = `survey.publish:${deriveSurveyAlertId(surveyId)}:${memberId}`;
+    expect(await store.claim(key, 3600)).toBe('acquired');
+    await store.release(key);
+    await runSurveyPublish({ notify: fullNotify, now: () => NOW }, { surveyId }, p);
+    expect(await store.claim(key, 3600)).toBe('acquired');
+    await store.release(key);
   });
 
   // ⭐ THE AC8 CLAIM A STATUS RE-CHECK COULD NOT MAKE. The survey stays `published` across a
@@ -274,9 +287,8 @@ describe.skipIf(!hasDatabase)('runSurveyPublish (live-DB :5433)', () => {
     const key = `survey.publish:${alertId}:${memberId}`;
 
     // Pre-claim + RECORD a result for this member, standing in for a first delivery that SUCCEEDED
-    // (the seeded member has no reachable channel, so a real first run would record `in_app_only` —
-    // Story 5.11 — pre-recording `delivered` is how a successful send is simulated without a live provider).
-    const { idempotency } = await import('@twt/domain');
+    // (the seeded member has no reachable channel, so R1 releases a real first run's claim —
+    // pre-recording `delivered` simulates a successful send without a live provider).
     const store = idempotency.createKeyedStore(created.pool);
     expect(await store.claim(key, 3600)).toBe('acquired');
     await store.recordResult(key, { delivered: true });
@@ -287,5 +299,21 @@ describe.skipIf(!hasDatabase)('runSurveyPublish (live-DB :5433)', () => {
     expect(redelivery.memberCount).toBe(1);
     // And the recorded result is untouched: the redelivery never re-sent, so it never re-recorded.
     expect(await store.getResult(key)).toEqual({ delivered: true });
+  });
+
+  it('R4 — persists the SMS non-send reason and retains the terminal result on redelivery', async () => {
+    const p = randomUUID();
+    const memberId = await seedActiveMember(p, true);
+    const surveyId = await seedSurvey(p, 'published');
+    const key = `survey.publish:${deriveSurveyAlertId(surveyId)}:${memberId}`;
+    const store = idempotency.createKeyedStore(created.pool);
+    await runSurveyPublish({ notify: fullNotify, now: () => NOW }, { surveyId }, p);
+    const recorded = await store.getResult(key);
+    expect(recorded).toMatchObject({ outcome: 'in_app_only', trail: [
+      'push:0:skipped_no_target', 'whatsapp:0:skipped_no_target', 'sms:0:skipped_no_target:sms_message_not_lit',
+    ] });
+    expect(JSON.stringify(recorded)).not.toContain('+919999999999');
+    await runSurveyPublish({ notify: fullNotify, now: () => NOW }, { surveyId }, p);
+    expect(await store.getResult(key)).toEqual(recorded);
   });
 });

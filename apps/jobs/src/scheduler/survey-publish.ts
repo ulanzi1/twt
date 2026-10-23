@@ -37,8 +37,9 @@ import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/
 import {
   fanOutAlert,
   resolveMemberDeliveryContext,
+  serializeFanOutResult,
+  shouldRetryFanOut,
   type ContributionNotifyDeps,
-  type MemberFanOutResult,
 } from './contribution-notify.js';
 
 type SurveyRow = schema.SurveyRow;
@@ -53,21 +54,6 @@ function surveyMemberKey(alertId: string, memberId: string): string {
  *  window or worker-crash-restart gap) so a claim never lapses mid-delivery, unlike the day-N
  *  contribution reminders' short default (those legitimately recur). */
 const SURVEY_PUBLISH_MEMBER_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
-
-/** Strip a fan-out record to the fields safe to persist in the idempotency store — the
- *  `nonPiiRecord` sibling (channels + booleans; ⛔ never an address). */
-function nonPiiRecord(record: MemberFanOutResult | undefined): Record<string, unknown> {
-  if (!record) return { delivered: false };
-  return {
-    delivered: record.delivered,
-    // Story 5.11 (FS14 (a)) — a member no rung reached is `in_app_only`, recorded, ⛔ re-sent on a redelivery.
-    outcome: record.delivered ? 'delivered' : 'in_app_only',
-    deliveredChannel: record.deliveredChannel,
-    bridged: record.bridged,
-    costSuppressedChannels: record.costSuppressedChannels,
-    telegramMirrored: record.telegramMirrored,
-  };
-}
 
 /** The SURVEY_PUBLISH job payload (structurally aligned with apps/api's `SurveyPublishJobPayload`). */
 export interface SurveyPublishPayload {
@@ -226,11 +212,17 @@ export async function runSurveyPublish(
       // FR-58 asks for a notification and not for a per-survey channel policy. Every resolved target
       // is used, exactly as the shared composition intends.
       const result = await fanOutAlert(deps.notify, buildSurveyAlert(survey, memberId, now), ctx);
-      // Story 5.11 (FS14 (a)): a member no rung reached is RECORDED `in_app_only` (⛔ released). Before 5.11 the fake
-      // `sms:sent` recorded most such members as delivered (any member with a mobile on file);
-      // this broadcast never retries, so recording rather than releasing changes only what a REDELIVERED job re-sends.
+      // Review R1 option 1: preserve release-on-failure for redelivery. This best-effort broadcast
+      // adds no job retry; only former fixture successes become terminal `in_app_only` records.
+      if (shouldRetryFanOut(result, ctx)) {
+        failed.push(memberId);
+        await store.release(key).catch((err: unknown) => {
+          alarm(`[jobs] survey-publish: failed to release a member claim — ${String(err)}`);
+        });
+        continue;
+      }
       if (!result.delivered) inAppOnly += 1;
-      await store.recordResult(key, nonPiiRecord(result)).catch((err: unknown) => {
+      await store.recordResult(key, serializeFanOutResult(result)).catch((err: unknown) => {
         alarm(`[jobs] survey-publish: failed to record a member result — ${String(err)}`);
       });
     } catch (err) {
@@ -244,7 +236,7 @@ export async function runSurveyPublish(
     // ⚠ An unreachable member is NOT excluded from the survey — they will still see it on the member
     // surface, because the audience predicate and the delivery channel are different questions.
     alarm(
-      `[jobs] survey-publish: ${failed.length}/${memberIds.length} members' fan-out failed for survey ${survey.surveyId} (best-effort broadcast)`,
+      `[jobs] survey-publish: ${failed.length}/${memberIds.length} members not reached, their claims released — not retried by this job; a re-run of it would try them again (a fan-out error, or unreached and retryable under shouldRetryFanOut — Decision -394 item 1) for survey ${survey.surveyId} (best-effort broadcast)`,
     );
   }
   if (inAppOnly > 0) {

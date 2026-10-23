@@ -40,9 +40,10 @@ import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/
 import {
   fanOutAlert,
   resolveMemberDeliveryContext,
+  serializeFanOutResult,
+  shouldRetryFanOut,
   type ContributionNotifyDeps,
   type MemberDeliveryTargets,
-  type MemberFanOutResult,
 } from './contribution-notify.js';
 
 type NewsPostRow = schema.NewsPostRow;
@@ -73,21 +74,6 @@ function restrictTargetsToChannels(targets: MemberDeliveryTargets, channels: rea
     whatsapp: allowed.has('whatsapp') ? targets.whatsapp : null,
     sms: allowed.has('sms') ? targets.sms : null,
     telegram: allowed.has('telegram') ? targets.telegram : null,
-  };
-}
-
-/** Strip a fan-out record to the fields safe to persist in the idempotency store — the
- *  `contribution-notify-triggers.ts` `nonPiiRecord` sibling (channels + booleans; never an address). */
-function nonPiiRecord(record: MemberFanOutResult | undefined): Record<string, unknown> {
-  if (!record) return { delivered: false };
-  return {
-    delivered: record.delivered,
-    // Story 5.11 (FS14 (a)) — a member no rung reached is `in_app_only`, recorded, ⛔ re-sent on a redelivery.
-    outcome: record.delivered ? 'delivered' : 'in_app_only',
-    deliveredChannel: record.deliveredChannel,
-    bridged: record.bridged,
-    costSuppressedChannels: record.costSuppressedChannels,
-    telegramMirrored: record.telegramMirrored,
   };
 }
 
@@ -249,11 +235,17 @@ export async function runNewsPublish(
       // changing that composition's signature for its other callers.
       const scopedCtx = { ...ctx, targets: restrictTargetsToChannels(ctx.targets, post.channels) };
       const result = await fanOutAlert(deps.notify, buildNewsAlert(post, memberId, now), scopedCtx);
-      // Story 5.11 (FS14 (a)): a member no rung reached is RECORDED `in_app_only` (⛔ released). Before 5.11 the fake
-      // `sms:sent` recorded most such members as delivered (any member with a mobile on file, on a post that selected SMS);
-      // this broadcast never retries, so recording rather than releasing changes only what a REDELIVERED job re-sends.
+      // Review R1 option 1: preserve release-on-failure for redelivery. This best-effort broadcast
+      // adds no job retry; only former fixture successes become terminal `in_app_only` records.
+      if (shouldRetryFanOut(result, scopedCtx)) {
+        failed.push(memberId);
+        await store.release(key).catch((err: unknown) => {
+          alarm(`[jobs] news-publish: failed to release a member claim — ${String(err)}`);
+        });
+        continue;
+      }
       if (!result.delivered) inAppOnly += 1;
-      await store.recordResult(key, nonPiiRecord(result)).catch((err: unknown) => {
+      await store.recordResult(key, serializeFanOutResult(result)).catch((err: unknown) => {
         alarm(`[jobs] news-publish: failed to record a member result — ${String(err)}`);
       });
     } catch (err) {
@@ -265,7 +257,7 @@ export async function runNewsPublish(
   if (failed.length > 0) {
     // Best-effort broadcast (v1): a member whose fan-out failed is logged, NOT retried forever
     // (unlike the contribution loop, a News/Blog announcement is non-critical broadcast copy).
-    alarm(`[jobs] news-publish: ${failed.length}/${memberIds.length} members' fan-out failed for post ${post.postId} (best-effort broadcast)`);
+    alarm(`[jobs] news-publish: ${failed.length}/${memberIds.length} members not reached, their claims released — not retried by this job; a re-run of it would try them again (a fan-out error, or unreached and retryable under shouldRetryFanOut — Decision -394 item 1) for post ${post.postId} (best-effort broadcast)`);
   }
   if (inAppOnly > 0) {
     console.info(`[jobs] news-publish: ${inAppOnly}/${memberIds.length} members reached in the app only for post ${post.postId}`);

@@ -69,10 +69,9 @@ import { DEFAULT_LOCALE, formatCurrency, t, type Locale } from '@twt/i18n';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
 
 import {
-  RECORDED_RUNG_DETAILS,
   fanOutAlertToMembers,
+  serializeFanOutResult,
   type ContributionNotifyDeps,
-  type MemberFanOutResult,
 } from './contribution-notify.js';
 import { smsPoolLabel } from './contribution-sms-templates.js';
 
@@ -368,6 +367,7 @@ export function buildDeadlineReminderAlert(input: {
         ? {
             sms: {
               message: 'deadline_not_recorded',
+              locale,
               values: { pool: smsPoolLabel(input.identity, locale), date: params.date },
             },
           }
@@ -407,7 +407,7 @@ export function buildPendingMatchRetryAlert(input: {
       now: input.now,
       // Story 5.11 (FS1 (d)): ONLY the escalated tier is texted ("still not confirmed"); the soft tier is not.
       ...(tier === 'escalated'
-        ? { sms: { message: 'payment_not_confirmed', values: { pool: smsPoolLabel(input.identity, locale) } } }
+        ? { sms: { message: 'payment_not_confirmed', locale, values: { pool: smsPoolLabel(input.identity, locale) } } }
         : {}),
     }),
   });
@@ -468,7 +468,7 @@ export function buildContributionMismatchAlert(input: {
       poolId: input.poolId,
       body: t(bodyKey, undefined, { locale: input.locale, ...NS }),
       // Story 5.11 (FS1 (d)): ONE text for every reason — it has no variable.
-      sms: { message: 'payment_not_matched', values: {} },
+      sms: { message: 'payment_not_matched', locale: input.locale, values: {} },
     }),
   });
 }
@@ -668,10 +668,9 @@ function memberKey(alertId: string, memberId: string, scope: string): string {
  * join is per pool), builds one `Alert` per member, and fans each out through the live composition.
  *
  * THROWS when any member's fan-out failed, so pg-boss retries with its own bounded exponential
- * backoff (D9). That is safe because every member with a result is recorded in the idempotency store
- * and is skipped on the retry — a retry only re-attempts what actually failed. ⭐ Story 5.11 (FS14 (a)):
- * a member no rung reached is recorded `in_app_only` and ⛔ retried — before 5.11 the fake `sms:sent`
- * recorded the same members as delivered, so the retry profile is unchanged (I4).
+ * backoff (D9). Delivered and terminal `in_app_only` members are recorded and skipped on retry.
+ * Story 5.11 review R1 option 1: former fixture successes become `in_app_only`; failures that
+ * previously retried (including no available SMS target) still release their claim and throw (I4).
  */
 export async function runContributionNotifyChild(
   deps: ContributionNotifyTriggerDeps,
@@ -852,17 +851,23 @@ export async function runContributionNotifyChild(
     const retrySet = new Set(retry);
     for (const memberId of claimed) {
       const key = memberKey(p.alertId, memberId, scope);
-      if (retrySet.has(memberId)) {
+      const record = results.find((r) => r.memberId === memberId);
+      if (retrySet.has(memberId) || !record) {
+        // Review round 2 patch review (Q4): a member with NO result is a defect, ⛔ a terminal outcome — retried, as the
+        // moderation notifier does. Unreachable today (`fanOutAlertToMembers` puts every member in `results` or `retry`).
+        if (!retrySet.has(memberId)) {
+          alarm(`[jobs] contribution-notify-child: the fan-out returned no result for member ${memberId} — retrying`);
+          failed.push(memberId);
+        }
         // Release the claim so the pg-boss retry can re-attempt immediately instead of waiting the TTL.
         await store.release(key).catch((err: unknown) => {
           alarm(`[jobs] contribution-notify-child: failed to release a member claim — ${String(err)}`);
         });
       } else {
-        const record = results.find((r) => r.memberId === memberId);
-        if (record?.delivered) delivered += 1;
+        if (record.delivered) delivered += 1;
         else inAppOnly += 1; // FS14 (a) — recorded, the claim KEPT (a pending-match member is not nudged again)
         await store
-          .recordResult(key, nonPiiRecord(record))
+          .recordResult(key, serializeFanOutResult(record))
           .catch((err: unknown) => {
             alarm(`[jobs] contribution-notify-child: failed to record a member result — ${String(err)}`);
           });
@@ -892,27 +897,6 @@ export async function runContributionNotifyChild(
     );
   }
   return result;
-}
-
-/** Strip a fan-out record to the fields safe to persist in the idempotency store (channels + booleans;
- *  never an address, never a rendered message). Story 5.11 (FS14 (a)): `outcome` names a member no rung
- *  reached `in_app_only`, and a rung's detail is kept ONLY when it is one of the named, PII-free reasons
- *  (`RECORDED_RUNG_DETAILS`) — a provider's free-text detail is ⛔ persisted. */
-function nonPiiRecord(record: MemberFanOutResult | undefined): Record<string, unknown> {
-  if (!record) return { delivered: false };
-  return {
-    delivered: record.delivered,
-    outcome: record.delivered ? 'delivered' : 'in_app_only',
-    deliveredChannel: record.deliveredChannel,
-    bridged: record.bridged,
-    costSuppressedChannels: record.costSuppressedChannels,
-    telegramMirrored: record.telegramMirrored,
-    trail: record.trail.map(
-      (e) =>
-        `${e.channel}:${String(e.attempt)}:${e.outcome}` +
-        (e.detail !== undefined && RECORDED_RUNG_DETAILS.has(e.detail) ? `:${e.detail}` : ''),
-    ),
-  };
 }
 
 /**
@@ -1348,7 +1332,9 @@ export async function runContributionConfirmedNotify(
     now,
   );
 
-  if (retry.length > 0) {
+  const first = results[0];
+  // Q4: a missing result is retried like a failure, ⛔ recorded as a terminal outcome (unreachable today).
+  if (retry.length > 0 || !first) {
     await store.release(key).catch((err: unknown) => {
       alarm(`[jobs] contribution-confirmed-notify: failed to release the member claim — ${String(err)}`);
     });
@@ -1357,10 +1343,10 @@ export async function runContributionConfirmedNotify(
     );
   }
   // Story 5.11 (FS14 (a)) — a member no rung reached is recorded `in_app_only`, ⛔ retried.
-  await store.recordResult(key, nonPiiRecord(results[0])).catch((err: unknown) => {
+  await store.recordResult(key, serializeFanOutResult(first)).catch((err: unknown) => {
     alarm(`[jobs] contribution-confirmed-notify: failed to record the member result — ${String(err)}`);
   });
-  return { alertId: p.alertId, memberId: p.memberId, delivered: results[0]?.delivered === true, alreadySent: false };
+  return { alertId: p.alertId, memberId: p.memberId, delivered: first.delivered, alreadySent: false };
 }
 
 /**
@@ -1407,7 +1393,9 @@ export async function runContributionMismatchNotify(
 
   const { results, retry } = await fanOutAlertToMembers(deps, () => alert, [p.memberId], pariwarId, now);
 
-  if (retry.length > 0) {
+  const first = results[0];
+  // Q4: a missing result is retried like a failure, ⛔ recorded as a terminal outcome (unreachable today).
+  if (retry.length > 0 || !first) {
     await store.release(key).catch((err: unknown) => {
       alarm(`[jobs] contribution-mismatch-notify: failed to release the member claim — ${String(err)}`);
     });
@@ -1416,10 +1404,10 @@ export async function runContributionMismatchNotify(
     );
   }
   // Story 5.11 (FS14 (a)) — a member no rung reached is recorded `in_app_only`, ⛔ retried.
-  await store.recordResult(key, nonPiiRecord(results[0])).catch((err: unknown) => {
+  await store.recordResult(key, serializeFanOutResult(first)).catch((err: unknown) => {
     alarm(`[jobs] contribution-mismatch-notify: failed to record the member result — ${String(err)}`);
   });
-  return { alertId: p.alertId, memberId: p.memberId, delivered: results[0]?.delivered === true, alreadySent: false };
+  return { alertId: p.alertId, memberId: p.memberId, delivered: first.delivered, alreadySent: false };
 }
 
 // ── Registration ────────────────────────────────────────────────────────────────────────────────────

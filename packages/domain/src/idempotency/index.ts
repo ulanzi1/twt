@@ -10,6 +10,7 @@ export {
   createKeyedStore,
   purgeExpiredKeys,
   IdempotencyKeyNotClaimedError,
+  type KeyInspection,
   type KeyedStore,
   type KeyedStoreOptions,
   type ClaimOutcome,

@@ -339,9 +339,6 @@ export async function runClaimPeerMeshSelect(
 
   const windowSeconds = resolveWindowSeconds(deps);
 
-  // (0) ⭐ Story 6.36d (ND3) — the UNLOCKED pre-read, CLOSED before any KMS call. `null` ⇒ ⛔ KMS (a selection exists, the state
-  //     is ⛔ `documents_pending`, the claim is missing, or the payload's deceased is not the claim's — the locked transaction
-  //     below decides each exactly as before).
   // pg-boss has no retry left for this run (absent metadata ⇒ ⛔ final). A failure of the pre-read or of the locked transaction is
   // then the chain's end: ALARMED (ids only, TR12) and rethrown — the behaviour is otherwise unchanged (ND6: any other fault keeps
   // today's behaviour). The post-commit enqueues below catch and alarm for themselves.
@@ -352,6 +349,10 @@ export async function runClaimPeerMeshSelect(
     }
     throw err;
   };
+
+  // (0) ⭐ Story 6.36d (ND3) — the UNLOCKED pre-read, CLOSED before any KMS call. `null` ⇒ ⛔ KMS (a selection exists, the state
+  //     is ⛔ `documents_pending`, the claim is missing, or the payload's deceased is not the claim's — the locked transaction
+  //     below decides each exactly as before).
   const pre = await withPariwarScope(deps.pool, pariwarId, async (db) => {
     const c = await claim.getClaimCase(db, brandedPariwarId, claimCaseId);
     if (!c || c.deceasedMemberId !== deceasedMemberId || c.currentState !== 'documents_pending') return null;
@@ -410,7 +411,7 @@ export async function runClaimPeerMeshSelect(
           alarm(`[jobs] claim-peer-mesh-select: the 1 h re-send FAILED for claim ${p.claimCaseId} in Pariwar ${pariwarId} — the nominee-check chain is LOST, the claim will not be retried`);
           throw err;
         }
-        // AFTER the send — ⛔ before it (the alarm used to say "re-sent" ahead of a send that could still throw).
+        // Emitted only once the send has succeeded: ⛔ "re-sent" ahead of a send that can still throw.
         alarm(`[jobs] claim-peer-mesh-select: peer_mesh_nominee_exclusion failed for claim ${p.claimCaseId} in Pariwar ${pariwarId} on its final attempt — re-sent in 1 h (⛔ selection)`);
         return { claimCaseId: p.claimCaseId, created: false, selectedCount: 0, nomineeCheck: 'deferred' };
       }

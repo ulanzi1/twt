@@ -14,7 +14,7 @@
 //     bound, switch OFF), the late marking (parked past `+ 72 h`, on a decided claim too; ⛔ an in-flight row; ⛔ a row created);
 //   · I8 — ⛔ event from any of it.
 //   · ⭐ Story 6.36d (`2026-10-23-386` ND4; AC6, AC9 — M6): a neighbour signing in with one of the deceased's nominee numbers (the
-//     index is INPUT — the seeded `idx-…` string, TR8) ⇒ `skipped_recipient_ineligible`; the same neighbour without it is begun.
+//     index is INPUT — the seeded `idx-…` string, TR8) ⇒ `skipped_recipient_ineligible`; ANOTHER seeded neighbour without it is begun.
 
 import { randomUUID } from 'node:crypto';
 
@@ -398,7 +398,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     }
   });
 
-  it('M6 — Story 6.36d: a neighbour signing in with one of the deceased\'s nominee numbers ⇒ `skipped_recipient_ineligible` (FINISHED); without it ⇒ begun', async () => {
+  it('M6 — Story 6.36d: a neighbour signing in with one of the deceased\'s nominee numbers ⇒ `skipped_recipient_ineligible` (FINISHED); ANOTHER neighbour without it ⇒ begun', async () => {
     const nominee = await seedReminder();
     const index = await loginIndexOf(nominee.pings[0]!.memberId);
     expect(await begin(nominee, 0, { nominees: [index] })).toEqual({ kind: 'skipped', outcome: 'skipped_recipient_ineligible' });
@@ -723,6 +723,16 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
       templateName: 'peer_mesh_reminder_hi_v1',
     });
     expect((await rows(s))[0]).toMatchObject({ locale: 'hi', locale_source: 'pariwar_fallback', template_name: 'peer_mesh_reminder_hi_v1' });
+  });
+
+  it('⭐ `-387` S2 × `-386` — a NOMINEE whose Pariwar template is unusable is finished `skipped_recipient_ineligible` (WR2 (ix) runs BEFORE the wait); the same neighbour without the nominee WAITS (⛔ row)', async () => {
+    const s = await seedReminder();
+    const templates = { hi: null, en: 'peer_mesh_reminder_en_v1' }; // the Pariwar\'s own (hi) is unusable: the non-chooser WAITS (6.35 AC5)
+    expect(await begin(s, 0, { templates })).toEqual({ kind: 'waiting_template', locale: 'hi' });
+    expect(await rows(s)).toHaveLength(0);
+    const index = await loginIndexOf(s.pings[0]!.memberId);
+    expect(await begin(s, 0, { templates, nominees: [index] })).toEqual({ kind: 'skipped', outcome: 'skipped_recipient_ineligible' });
+    expect(await only(s)).toMatchObject({ send_outcome: 'skipped_recipient_ineligible', send_started_at: null });
   });
 
   it('⭐ 6.35 AC5 — the Pariwar\'s OWN template unusable: a non-chooser WAITS (⛔ row); the English-chooser is sent in `en`', async () => {

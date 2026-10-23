@@ -7,7 +7,7 @@
 //   · AC3 — the window per state × routed (`isStateInAnswerWindow` is the oracle — ⛔ re-composed): out ⇒ `skipped_superseded`;
 //   · R3 / R4 / R2 — each peer reason labelled and replaced ONCE from the STORED ranking, in order (a replacement of a
 //     replacement too); `name_*` and `superseded:*` ⛔ replaced; a NULL ranking / ⛔ one left ⇒ ⛔ replacement; live pings never
-//     exceed the original count; the four labels cover today's predicate;
+//     exceed the original count; the five labels cover today's predicate;
 //   · the re-claimed row (`-297` §2 / `-298` A) — a window or peer failure ⇒ `error` + `exhausted:recheck_*`, ⛔ replaced; a name
 //     fault keeps its reason; R6 on a first attempt ⇒ replaced, on a re-claim ⇒ ⛔ (R5, `-343`);
 //   · the reads — the due pings, the locale, the by-link answer (R14), the sweep's due claims (R16), park / give-up (RN2 / RN3);
@@ -393,7 +393,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
           s.nominees.push(await loginIndexOf(m));
           break;
         case 'peer_not_eligible':
-          // ⛔ plantable: the four specific labels cover every conjunct of today's predicate (asserted below) — this arm is a
+          // ⛔ plantable: the five specific labels cover every conjunct of today's predicate (asserted below) — this arm is a
           // no-op, and the `it.each` below filters it out.
           break;
       }
@@ -529,6 +529,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       expect((await begin(s, p.pingId)).kind).toBe('begun');
       await exclude(s, p.memberId, 'peer_is_nominee');
       expect(await begin(s, p.pingId)).toEqual({ kind: 'expired', detail: 'exhausted:recheck_peer_ineligible' });
+      expect(await pingRow(p.pingId)).toMatchObject({ send_outcome: 'error', detail: 'exhausted:recheck_peer_ineligible' }); // the ROW, as the title says
       expect(await pingsOf(s.selectionId)).toHaveLength(s.pings.length);
     });
   });
@@ -708,6 +709,23 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       // I4 — ⛔ the other language: the waiting chooser is ⛔ ever begun in Hindi; a switch to a usable language sends (AC4 (x))
       await chooseLanguage(chooser!.memberId, 'hi');
       expect(await begin(s, chooser!.pingId, { unusable: ['en'] })).toMatchObject({ kind: 'begun', locale: 'hi' });
+    });
+
+    it('⭐ `-387` S2 × `-386` — a NOMINEE whose language\'s TEXT template is unusable is finished `no_target:peer_is_nominee` and REPLACED (③ runs BEFORE the wait); the same ping without the nominee WAITS', async () => {
+      const s = await seedRequestClaim({ ranked: 8 });
+      const p = s.pings[0]!;
+      await chooseLanguage(p.memberId, 'en');
+      // control (6.35, LS10 (b)): no nominee ⇒ the ping WAITS, nothing written
+      expect(await begin(s, p.pingId, { unusable: ['en'] })).toEqual({ kind: 'waiting_template', locale: 'en' });
+      expect(await pingRow(p.pingId)).toMatchObject({ send_outcome: null, attempt_count: 0, locale: null });
+      // the SAME ping's member now matches a nominee number (6.36d): the five must stay five — finished AND replaced, ⛔ left waiting
+      s.nominees.push(await loginIndexOf(p.memberId as MemberId));
+      const r = await begin(s, p.pingId, { unusable: ['en'] });
+      expect(r).toMatchObject({ kind: 'no_target', detail: 'no_target:peer_is_nominee', reclaimed: false });
+      expect(await pingRow(p.pingId)).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:peer_is_nominee' });
+      const replacement = (r as { replacementPingId: string | null }).replacementPingId;
+      expect(replacement).not.toBeNull();
+      expect((await pingRow(replacement!)).member_id).toBe(s.ranked[5]);
     });
 
     it('⭐ the begin on a RE-CLAIM: the RECORDED locale decides (a parked row stays parked, ⛔ write); a pre-6.35 NULL ⇒ the default', async () => {

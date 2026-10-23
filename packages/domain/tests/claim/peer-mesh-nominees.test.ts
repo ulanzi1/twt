@@ -208,7 +208,7 @@ describe('Story 6.36d — peerMeshNomineeMobileIndexes (AC2)', () => {
     await expect(run(enc, [version(1, 'enc:v1:not-an-envelope', BEFORE)])).rejects.toThrow();
   });
 
-  it('the version read opens ONE scope and CLOSES it before the first KMS call (the live M9 pins it against a real pool)', async () => {
+  it('the version read opens ONE scope and AWAITS it before the first KMS call (a stub proves the order, ⛔ that a real scope closed — the live M9 pins that against a real pool)', async () => {
     const log: string[] = [];
     const { enc } = countingEnc({ log });
     const v = version(1, await seal(enc, '9876543210'), BEFORE);

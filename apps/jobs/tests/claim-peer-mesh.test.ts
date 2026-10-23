@@ -26,6 +26,8 @@
 //     moving between the pre-read and the lock ⇒ a retryable throw, ⛔ selection.
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { bindScopedDb, claim, createDb, encryption, ids, schema, withPariwarScope, type CreatedDb } from '@twt/domain';
 import {
@@ -1829,9 +1831,15 @@ describe('claim peer-mesh — ND6 helpers and wiring (no DB)', () => {
     });
   });
 
-  // ⚠ coverage-only for ONE mutant: `boot.ts`'s one-line call `enqueuePeerMeshSelect: (input) => enqueueClaimPeerMeshSelect(boss, input)` is
-  // ⛔ exercised (tsc pins its shape; reverting it to an inline `boss.send` without the retry options would stay green here).
+  // `boot.ts`'s one-line call is pinned by SOURCE (the repo's precedent for boot.ts one-liners: claim-peer-mesh-wa-reminders.test.ts) —
+  // ⛔ exercised: it is not run here, so a wrong argument at that call is for tsc.
   describe('the select job\'s wiring, up to boot.ts', () => {
+    it('boot.ts hands the OCR hook the retry-carrying helper — ⛔ an inline `boss.send` to the SELECT queue (a source pin)', () => {
+      const boot = readFileSync(fileURLToPath(new URL('../src/boot.ts', import.meta.url)), 'utf-8');
+      expect(boot).toMatch(/enqueuePeerMeshSelect: \(input\) => enqueueClaimPeerMeshSelect\(boss, input\)/);
+      expect(boot).not.toMatch(/QUEUE_NAMES\.CLAIM_PEER_MESH_SELECT/);
+    });
+
     it('the helper behind the OCR hook\'s send carries the claim children\'s retry policy and a label singletonKey', async () => {
       const sends: { name: string; data: unknown; options: unknown }[] = [];
       const boss = {

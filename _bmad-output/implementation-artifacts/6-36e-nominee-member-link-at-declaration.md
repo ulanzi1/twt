@@ -10,9 +10,10 @@ main checkout; sibling worktrees 3-3c / 5-11 / 6-35 / 11b-4 exist). Two facts, s
 (durable); (2) every `apps/` / `packages/` claim below was traced at `1268d47e` on 2026-10-23 by four read-only research passes and the
 load-bearing ones spot-checked (perishable — re-check at Task 0.1). Re-locate by FUNCTION, ⛔ by line number.
 
-STATUS: ready-for-dev (v1.0). NE1–NE14 are PROPOSED — BigDev answers them at Task 0.2; ONE author-commit records them BEFORE any code
+STATUS: ready-for-dev (v1.1). NE1–NE14 are PROPOSED — BigDev answers them at Task 0.2; ONE author-commit records them BEFORE any code
 (Task 0.3, [[feedback_governance_commits_precede_implementation]]). TWO Panel questions (PQ1, PQ2) are OWED — the row itself says so
-(*"Needs the nominee's agreement and its OWN Panel question (new processing, outside `-384`)"*); ⛔ written, ⛔ sent. The code (Task 1+) waits
+(*"Needs the nominee's agreement and its OWN Panel question (new processing, outside `-384`)"*); WRITTEN 2026-10-23 (BigDev: *"yes commit and write the panel note"*) as
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-36e-nominee-member-link.md`, ⛔ sent. The code (Task 1+) waits
 for the ruling (PQ1 option C would mean ⛔ build) unless BigDev rules otherwise at Task 0.2.
 
 §0 GATE (the routing template's): matching nominees by a member link inside the ONE eligibility predicate is the AUTHOR's — the `-340` /
@@ -299,7 +300,11 @@ is stated inline so the dev agent never has to infer it.
   contact ladder, the nominee console, the District Admin's nominee panel. Each would be a new use (`-384`'s *"any other use"*; PQ1) and is
   deferred (deferred-work, Task 0.4).
 
-## 🏛️ Panel questions — OWED (one note, two questions; written at Task 0.2 from the TEMPLATE, sent by BigDev)
+## 🏛️ Panel questions — WRITTEN 2026-10-23, ⛔ sent (one note, two questions, from the TEMPLATE; sent by BigDev)
+
+> *Dated 2026-10-23 (v1.1): the note is WRITTEN at BigDev's request, ahead of Task 0.2 (the 6.36d precedent) — it assumes NE3, NE4, NE6 and NE7
+> as recommended and is revised before sending if BigDev answers otherwise. Its E1 quotes were checked verbatim and its E4 commands run (all
+> as expected; the `git grep` for the new table names is EMPTY). ⛔ Sent — ⛔ shown to the Panel until BigDev sends it.*
 
 Written from `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md` — §0 first, then the plain-English question, THE ONE
 FACT THAT DECIDES IT, options with an honest cost each, evidence LAST — as
@@ -402,7 +407,8 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
   - [ ] 0.1 Preflight: `git fetch origin`; rebase if `origin/main` moved; re-run G1–G14's greps (a sibling can add a reader of the predicate or
         of the nominee tables — grep `peerMeshNomineeMatchSql`, `nomineeMobileIndexes`, `member_nominee_versions`, `known-people`); re-take the
         NUMBERS (decision ≥ `-392`, migration `0181` vs 11b.4's `0181`, ledger letter).
-  - [ ] 0.2 BigDev answers NE1–NE14 (recorded VERBATIM here and in the Completion Notes). Then the Panel note (PQ1 + PQ2) is WRITTEN from the
+  - [ ] 0.2 BigDev answers NE1–NE14 (recorded VERBATIM here and in the Completion Notes). The Panel note (PQ1 + PQ2) — ⭐ WRITTEN 2026-10-23 ahead
+        of the NE answers (revise it first if they differ from NE3 / NE4 / NE6 / NE7) — was written from the
         template (§0 first; E1 quotes re-verified verbatim; E4 commands run) and SENT by BigDev; its ruling transcribed into the note's block
         and into `.decision-log.md` as its own TRUSTEE-RATIFIED entry ([[feedback_shown_to_panel_means_sent]] — "sent" only once it went out).
         Revise NE6 / NE7 / NE8 to the ruling (the PQ1 B variants are already written inline).
@@ -536,4 +542,5 @@ New: `packages/domain/migrations/<NNNN>_member-nominee-links.sql`, `packages/dom
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-23 | 1.1 | The Panel note WRITTEN (BigDev: *"yes commit and write the panel note"*): `trustee-panel-routing-note-2026-10-23-6-36e-nominee-member-link.md` — Q1 (record the account; when the answer counts — A / B / C), Q2 (what each side is told — A / B / C); our reading A, A; E1 checked verbatim, E4 run; ⛔ sent. Ledger `2026-10-23am`. |
 | 2026-10-23 | 1.0 | Created (`bmad-create-story 6.36e`): G1–G14, NE1–NE14 PROPOSED, PQ1 / PQ2 OWED, AC0–AC10, Tasks 0–7. Status ready-for-dev; ⛔ code. |

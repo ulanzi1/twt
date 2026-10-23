@@ -58,7 +58,7 @@ S = Task 0.1 STOP conditions. Decision-entry letters (PM, WR, CF, R, W …) keep
 
 # Story 6.35: The Member Chooses Hindi or English in the App — Saved on the Phone, Recorded on the Server Only When They Change It, and the Neighbours' Text and Its WhatsApp Reminder Then Follow Their Choice `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The member app always shows Hindi: `LocaleProvider` is in-memory state mounted with ⛔
 > initial locale, and ⛔ control anywhere calls `setLocale` (F1). The Panel ruled that the neighbours' text goes in each member's
@@ -795,8 +795,8 @@ reminder template is unusable gets the reminder in their Pariwar's language — 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight, decisions, governance (AC13)**
-  - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` (3.3c and 8.15 landed — `common.json`, `microcopy.yaml`, `openapi/v1.yaml`,
+- [x] **Task 0 — Preflight, decisions, governance (AC13)**
+  - [x] 0.1 `git fetch origin`; rebase onto `origin/main` (3.3c and 8.15 landed — `common.json`, `microcopy.yaml`, `openapi/v1.yaml`,
     `api-client/src/index.ts`; ⚠ the ledger's newest-first blocks conflict — keep both, branch on top, byte-diff the entries); re-run the
     header's baseline diff; re-derive F1–F26 (re-grep each symbol). **STOP** and tell BigDev if:
     **S1** any production database or real member exists, or a Pariwar is no longer held by `config:counsel_basis_pending`
@@ -810,11 +810,11 @@ reminder template is unusable gets the reminder in their Pariwar's language — 
     reminder locale recorded "Meta refuses" is PQ1's case, ⛔ a STOP); **S5** `beginFresh` / `skipFresh` / `finishAttempting` / the
     reminder begin no longer match F12 / F13 / LS9 (the CHECK and re-claim rules rest on it); **S6** the text park, the text listing's
     `attempting` arm or the reminder sweep listing cannot take the locale filter without a new column or detail value (F25, F26).
-  - [ ] 0.2 CONFIRM with BigDev the direction already given (LS4 (b), LS10 (b) with the T-states table, LS15 (b) behind AC15) and put
+  - [x] 0.2 CONFIRM with BigDev the direction already given (LS4 (b), LS10 (b) with the T-states table, LS15 (b) behind AC15) and put
     the REST (LS1–LS3, LS5–LS9, LS11–LS14) in plain language (recommended first, each with its cost); record the answers verbatim. If
     any answer departs from the direction, or the T-states table changes, re-run the §0 GATE table: a narrowing ⇒ the routing note
     (template) and Task 3 waits; still MATCH ⇒ ⛔ note. PQ1 is RULED (`-385`) — ⛔ re-asked; LS10 (b′) is A.
-  - [ ] 0.3 The author-commit decision (next free id ≥ `-386` — `-384` is 6-36d's, `-385` this story's PQ1 ruling; "cites `-385` for
+  - [x] 0.3 The author-commit decision (next free id ≥ `-386` — `-384` is 6-36d's, `-385` this story's PQ1 ruling; "cites `-385` for
     LS10 (b′) A; AMENDS `-365` WR7 and `-345` MG5's peer-mesh half (a
     Pariwar hold → a per-recipient wait, per the T-states); NARROWS `-311` PM22's *"row 6-35 fixes both halves"* (the display half stays
     open — LS4 (b)); supersedes ⛔ ratified text; realises `-305` §2 item 2 and `-310` CF1 A's *"then each member's choice"*; overtakes
@@ -826,7 +826,7 @@ reminder template is unusable gets the reminder in their Pariwar's language — 
     render-test condition and its mixed-language cost; the LS5 Ravi-mode edge; and LS10 (c) for the TEXT as the Panel's, ⛔ taken");
     stage in the scratchpad, try the insert
     ([[project_decision_log_writes_user_inserted]]); commit it ALONE (`governance:` prefix); write its SHA only AFTER the commit.
-  - [ ] 0.4 Records commit: the `epics.md` Story 6.35 entry (Epic 6, after 6.34 (`:3480` at the pin, `:3514` on `main` — re-grep) — the
+  - [x] 0.4 Records commit: the `epics.md` Story 6.35 entry (Epic 6, after 6.34 (`:3480` at the pin, `:3514` on `main` — re-grep) — the
     post-hoc *"> **Added 2026-10-… (Story 6.35, Task 0.4)** —"* format); the LS14 roster row if (a); a dated leg on Row 35 (b) (*"PQ1 —
     the reminder's language when a member's chosen one is refused — RULED A by `-385` (the Pariwar's language); live once Story 6.35 is
     `done` on `main`"*, naming the note);
@@ -1062,7 +1062,43 @@ life-events, audit-sink or data-export file.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.35`, 2026-10-23.
+
 ### Debug Log References
+
+**(a) Task 0 (2026-10-23).**
+- **0.1 — rebase.** `git fetch origin`; `story/6-35-in-app-language-switch` rebased onto `origin/main` `69e35f73` (3.3c + 8.15 landed).
+  Conflicts only in the two newest-first ledgers (`sprint-status.yaml` header + `last_updated` block; `.decision-log.md` at `-385`), both
+  sides kept, branch on top; the keep-both dropped `-385`'s closing `---` — restored INSIDE `-385`'s own commit
+  ([[project_rebase_ledger_conflict_separator]]); the branch's ledger lines and `-385`'s entry byte-identical to before the rebase
+  (diffed). The header's baseline diff `b883dc15..origin/main` lists only 3.3c / 8.15 files — ⛔ peer-mesh, schema, migration,
+  life-events, audit-sink or data-export file. **SHA map** (the rebase rewrote every branch SHA; records written before it keep the old ones):
+  `02c3c9ad`→`25549f59` (v1.0–1.2), `d9fafc71`→`af686936` (v1.3), `14f55e6a`→`d368d3e6` (v1.4), `73183745`→`915158a6` (`-385`),
+  `52f1d2c4`→`84268da0` (v1.5), `89961ab3`→`53ce3f99` (`-385` correction), `a3ff1356`→`f387e177` (v1.6).
+  F1–F26 re-derived by two read-only passes (server; mobile / client / copy): ALL hold; line drift only, and four path corrections —
+  the job files live under `apps/jobs/src/scheduler/`; the audit helper is `apps/api/src/modules/auth/shared/audit.ts`; the settings entry
+  is `components/notifications/NotificationSettingsEntry.tsx`; `call()` is `packages/api-client/src/index.ts:257-302`. Also found: the
+  hi `common.json` `$comment` reads *"AGENT-AUTHORED — a person reviews it before go-live (roster Row 28 …)"* (⛔ the literal *"NOT YET
+  HUMAN-REVIEWED"*); `H3` / `Separator` reach AC15's render through `components/claim/ClaimProxyFlowShell.tsx:10`, ⛔ `contact.tsx`;
+  `createMemberAuthClient` has ⛔ PUT method yet (the only `'PUT'` is the peer-request client's `saveAnswer`); `member-terms.handlers.ts:52-56`
+  is `resolveLocale`, ⛔ the one-body code.
+  **STOP checks:** S1 clear (⛔ production; Row 27 `open`; ⛔ Pariwar seeded `en`). S2 FIRES — `story/6-36d-…` (worktree active; `-386`
+  committed, ⛔ code yet, ⛔ migration taken — 0179 still free) — put to BigDev. S3 clear — `-386` (6-36d, nominees) touches ⛔ language,
+  rider, CF1 or `-385`. S4 clear — DLT 13 (hi) / 14 (en) both listed, ⛔ rejection recorded. S5 clear — `beginFresh` (`:464-485`, the literal
+  `:472`), `skipFresh` (`:316-325`, ⛔ `locale_source`), `finishAttempting`, the reminder begin (re-claim only while `send_started_at IS
+  NULL`, `:373`, rewrites the locale) as F12 / F13 / LS9. S6 clear — the text listing and the reminder sweep listing take a LEFT JOIN +
+  `= ANY(param)`; ⚠ the PARK is an `UPDATE … FROM` (a LEFT JOIN onto the target is not allowed), so its locale arm is a correlated
+  subquery — ⛔ new column or detail value.
+- **0.2 — BigDev's answers (verbatim, 2026-10-23):** the direction (LS4 (b), LS10 (b) with the T-states table, LS15 (b) behind AC15) —
+  *"Confirm all three (Recommended)"*; S2 / 6-36d — *"Proceed in parallel (Recommended)"*; LS1–LS3, LS5–LS9, LS11–LS13 — *"All as
+  recommended"*; LS14 — *"(b) I approve the drafts now"* (the five Hindi strings put: entry *"भाषा / Language"*, title *"भाषा"*, intro
+  *"इस ऐप की भाषा चुनें। ट्रस्ट के कुछ संदेश (SMS और WhatsApp) भी इसी भाषा में आएँगे।"*, error *"आपकी पसंद इस फ़ोन पर सहेज ली गई है, पर अभी
+  आपके खाते में दर्ज नहीं हो सकी। हम फिर कोशिश करेंगे।"*, login hint *"ऐप की भाषा बदलें"*). ⇒ every §0 row MATCH; ⛔ routing note.
+- **0.3 —** Decision `2026-10-23-387` (author-commit), committed ALONE: `def04547`. (`-386` is 6-36d's.)
+- **0.4 —** the records commit (this one): `epics.md` `### Story 6.35`; roster Row 35 (b) dated PQ1 leg; deferred-work — W8 dated
+  (being built, ⛔ Closed) and the LS11 item *"Senders that ignore the member's chosen language (row 6-35)"*; dated notes on 6.27 PM22,
+  6.27c R10 / R11 / Review Defer W8, 6.31 WR7 / WR14, 6.37 AC9, 3-3c G7 (*"always renders `hi`"*) and TR8, the DLT sheet's hold rule and
+  language line; the sprint row → `in-progress`; ledger `2026-10-23p` (`o` was taken by 6-36d during this pass). LS12 (a) taken ⇒ ⛔ LS12 (b) item; LS14 (b) ⇒ ⛔ roster row.
 
 ### Completion Notes List
 
@@ -1079,3 +1115,4 @@ life-events, audit-sink or data-export file.
 | 2026-10-23 | 1.4 | Validated (`bmad-create-story validate 6.35`) against `origin/main` `69e35f73` (3.3c + 8.15 landed; 6-36d's `-384` committed): three fresh-context read-only verifiers (governance / server-domain-jobs / mobile-client), 40 findings, BigDev "All 40", the CRITICALs re-checked against code and the log before editing. Critical: (1) the §0 gate's G5 / G6 were false for a member who picks a language other than their Pariwar's — LS10 (b) would take away their reminder (Meta refuses — Row 35 (b)) and, past the window, their text (T2), narrowing `-303` Q1 A; LS10 (c) narrows the rider ⇒ the Panel's (`-295` §0). BigDev, told the fallback can only be the Pariwar's language and that a wait is brief for the text but permanent for the reminder: *"yes, write it that way"* ⇒ PQ1 routed NON-BLOCKING (note drafted, ⛔ sent; our reading A), the reminder built B until ruled, LS10 (b′), G10 / G11 added, Row 35 (b) gains the leg; (2) the text WAIT for an `attempting` ping rewritten — the park alone does ⛔ stop a re-send (a parked row is re-claimed at once; the park covers held scopes only): park over every scope + the listing's `attempting` arm + the begin check on both paths (F25); (3) the reminder re-claim — `parkPeerMeshWaReminder` needs the marker set and `config:*` is ⛔ a detail ⇒ `waiting_template`, ⛔ write, `skipped_late` past +72 h (F26); (4) AC15 (3) asserts on `claimApi.recordClaimContact`, with the harness spelled out; (5) numbers (≥ `-385`, ledger ≥ `2026-10-23k` — 6-36d took `h`–`j` during the pass; 6-36d committed and rebased onto `main`). Also: TX per locale for the global DLT keys; `wa_template_unreadable` / `wa_template_invalid` (T1′); NULL-safe listing; the text alarm's count read; the reminder SWEEP listing named and `seenClaims`; `:954` precisely + AC4 (iv′); serial single-flight with compare-and-clear; AC8 legs (T8, account switch); `syncAppLanguage` takes `setLocale`; Ravi-mode (the claim flow is the deceased's session; the Nominee Console IS the member app); `consent.tsx` ⛔ pinned + the mixed-language cost; `processId` required; AC2's raw audit sink + the forced-COMMIT precedent; `hook: 'preHandler'`; both-platform announce precedent; T14 `Stack.Screen` / `Platform`; `contact.tsx` enrolment + allow entry; Task 0.3 AMENDS WR7 / MG5 and NARROWS PM22; Policy meaning; G3 / G9 qualifiers; UX `:1127`; stale records (3-3c, MEMORY.md); line refs that moved on `main`; quote attributions. ⛔ Code. |
 | 2026-10-23 | 1.5 | The Panel RULED PQ1 — A (relayed by BigDev: *"by DR and KB"* / *"go with option A"*) ⇒ Decision `2026-10-23-385` (Trustee-ratified, committed alone `73183745`): when the reminder cannot go in the member's chosen language it goes in the Pariwar's. LS10 (b′) built as A now (the interim B ⛔ built): the reminder begin falls back for a CHOOSER whose Pariwar's template is usable, `locale_source = 'pariwar_fallback'` on the REMINDERS' CHECK only (LS9 — its own `PEER_MESH_WA_REMINDER_LOCALE_SOURCES`); a reminder waits only when it has ⛔ usable template at all; AC5, Task 3.2, I4, G5, the §0 verdict, the Policy-meaning sentence (bracket settled), Task 0.1 S3 / 0.2 / 0.3 (cites `-385`; next free ≥ `-386`) / 0.4 (Row 35 (b) leg — ruled) and AC13 follow. The note's ruling block filled; everything below it kept as put. ⛔ Code. |
 | 2026-10-23 | 1.6 | A fresh-context re-validate of the v1.4 + v1.5 edits (one read-only verifier, top-down and bottom-up; BigDev "run one more fresh-context check"): 1 CRITICAL / 8 SHOULD / NITs, BigDev "All". Critical: the reminder fallback had ⛔ source for the Pariwar's default — `member_choice` cannot tell a chooser OF the default (waits) from a chooser of the other (falls back) ⇒ the sweep listing, the config and LS8's resolver carry `pariwarDefaultLocale`, and LS10 states the rule in one line. Also: the sweep's `gapOf` memo keeps the template set; the reminder's waiting count is taken before the `seenClaims` short-circuit and gets a NEW alarm line (the sweep has ⛔ per-locale alarm); AC3's type pin split (the resolver two values, a new reminder pin three; `$type` at `:89` moves); a TX on the OTHER reminder key is treated as T1 (BigDev "Treat it as unset"); G2 / G10 / the rulings table carry `-385`; AC13 G1–G11; ledger letters (6-36d took `m` during the pass; v1.6 `n`, next ≥ `o`); `-385` gained a dated correction line (BigDev "Dated correction line" — `-310` CF1 A gives with the rider for the reminder; committed alone `89961ab3`); NITs (policy sentence, LS9, AC5 chooser wording, `LEFT JOIN`, the templates' gap kept, AC15 `onChange`, the `-384`/`-385` log order, LS13). ⛔ Code. |
+| 2026-10-23 | 1.7 | `bmad-dev-story 6.35` — Task 0: rebased onto `origin/main` `69e35f73` (SHA map in Debug Log (a)); F1–F26 re-derived (all hold); S2 fired (6-36d) — BigDev *"Proceed in parallel"*; Task 0.2 answered (direction confirmed, all as recommended, LS14 (b) Hindi approved); Decision `2026-10-23-387` committed alone (`def04547`); records committed. Status → in-progress. |

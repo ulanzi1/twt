@@ -3536,6 +3536,32 @@ a malformed helpline is sent and warned about on all four claim send paths; the 
 (*"Valid 3 min"* — the code's real life); a CI gate (`dlt-typed-variables`) so ⛔ a variable ships untyped; the registration sheet covers
 every template (types to select, the MSG91 `##name##` form); roster Row 30.
 
+### Story 6.35: The Member Chooses Hindi or English in the App — Saved on the Phone, Recorded on the Server Only When They Change It, and the Neighbours' Text and Its WhatsApp Reminder Then Follow Their Choice `[SURFACE]`
+
+> **Added 2026-10-23 (`bmad-create-story 6.35`, 2026-10-22; this entry written at its Task 0.4)** — the row `6-35-in-app-language-switch`
+> was minted by [`-305`](../../.decision-log.md#decision-2026-10-10-305) §2 item 5 (author-commit), building §2 item 2 (*"saved on the phone and recorded on the
+> server when the member changes it — ⛔ never on first launch"*), the [`-303`](../../.decision-log.md#decision-2026-10-10-303) rider (Trustee-ratified — Hindi to a
+> member whose preferred language is Hindi, English to English) and [`-310`](../../.decision-log.md#decision-2026-10-10-310) CF1 A (Trustee-ratified — *"the
+> Pariwar's language until the setting exists; then each member's choice"*). Its build decisions LS1–LS15 are DECIDED by [`-387`](../../.decision-log.md#decision-2026-10-23-387)
+> (author-commit, all as recommended); its one Panel question (PQ1 — the reminder's language when the member's chosen one cannot be sent)
+> is RULED A by [`-385`](../../.decision-log.md#decision-2026-10-23-385) (Trustee-ratified): the Pariwar's language. The app stays Hindi until the member picks; ⛔ nothing is recorded on
+> first launch; a text whose language's template is unusable WAITS, ⛔ sent in the other language; the claim-contact screen stays Hindi
+> (LS15 (b), behind a render-test gate). FR-68's *"Language switcher in profile"* — the app has ⛔ profile screen, so the switch is a
+> home-tab entry and a line on the login screen. Hindi strings approved by BigDev (`-387` LS14 (b), ⛔ roster row). Full ACs:
+> `_bmad-output/implementation-artifacts/6-35-in-app-language-switch.md`. Not a merge fence.
+
+As a member, I want to choose whether the app speaks to me in Hindi or English, and to have the Trust remember that choice, so that I can
+read every screen in my language, and the text the Trust sends me when I am asked about a neighbour's death (and its WhatsApp reminder)
+comes in the language I chose — while a member who never chooses keeps exactly what they have today.
+
+**Acceptance Criteria (in brief):** `members.preferred_locale` (+ `_set_at`) written ONLY by `PUT /api/v1/member/language` on an explicit
+change (audited after commit, only when changed); a fresh install that never switches makes ZERO PUTs; the phone remembers the language
+(MMKV, kept on sign-out) and the app reconciles at sign-in and on foreground without races; `resolvePeerRequestLocale` returns the
+recipient's choice, else the Pariwar's default, and every ping / reminder records which (`member_choice` / `pariwar_default`; the reminder
+also `pariwar_fallback`) — closing deferred W8; per-recipient template states (a waiting text, a falling-back reminder; both locales
+unusable still holds the Pariwar); the data export gains `preferredLanguage`; the claim-contact screen proven Hindi by an
+agreement-language render test; every new leg RED against the pre-change code.
+
 ### Story 6.36a: Where Each Member Works — a School or an Office Picked From a List at Signup and at Every Transfer, With the Date It Began `[SURFACE]`
 
 > ⚠ **Minted under a Trustee ruling by an author-commit** (source line dated 2026-10-14, Story 6.36a Task 0.4 — ⛔ never a merge fence) —

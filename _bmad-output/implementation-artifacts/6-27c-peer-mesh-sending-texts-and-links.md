@@ -312,12 +312,19 @@ be taken) + `-324` (the R9 arm ratified) · `-310` CF4 A (workplace, else named 
   the constant / predicate change in ONE place (a recorded go-live line, ⛔ a merge fence). ⛔ Never a truncated name.
 - **R10 — the language (MATCHES PM22 / `-310` CF1 A).** NEW `resolvePeerRequestLocale(db, pariwarId) → { locale: 'hi' | 'en', source:
   'pariwar_default' }` in domain — the ONE read row 6-35 will change; recorded on begin as `locale_source = 'pariwar_default'`.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 changes this read to `resolvePeerRequestLocale(db, { pariwarId, memberId })` — the
+  recipient's choice, else the Pariwar's default (`member_choice` / `pariwar_default`), resolved at the fresh begin and written to a new
+  `locale` column (a re-claim reuses it). Still the ONE function. Kept as written.
 - **R11 — the config gaps (MATCHES RB12 / PM16 / PM23 (a); 6.29's shape).** Checked by the SWEEP (once per Pariwar per run ⇒ the scope
   HELD) and by the CHILD before any begin (the race guard ⇒ `held_config`, ⛔ no ping begun): the template id of the Pariwar's locale, the
   helpline, the gateway, any Secret Manager fault (`config:secret_manager`), `APP_LINKS_BASE_URL` invalid for an APP LINK (R12),
   `resolveLiveVersion('peer_mesh', pariwarId)` returning `null` (**`config:questionnaire_unavailable`** — NEW, BF30) or a non-empty
   `pendingCounselBasisKeys` (**`config:counsel_basis_pending`**). ⇒ ⛔ a neighbour is never texted into a questionnaire with a ruled
   question hidden.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* *"the template id of the Pariwar's locale"* — row 6-35 builds the template gap per RECIPIENT
+  (`-387` LS10 (b), the T-states): a recipient whose language's id is unset or fails pre-flight WAITS (⛔ held, ⛔ sent in the other
+  language); the Pariwar is held only on a non-template gap, on its OWN default locale's read fault, or with BOTH locales unusable.
+  Kept as written.
 - **R12 — the app-link origin check (CLOSES deferred-work *"`APP_LINKS_BASE_URL` can disagree with `APP_LINKS_HOST`"*).** NEW
   `resolveAppLinksOrigin(raw)` = `resolveHttpsOrigin(raw)` AND ⛔ any port written in the raw value (an explicit `:443` included — `resolveHttpsOrigin` normalises it
   away, so test the RAW string) AND ⛔ a trailing-dot host; else `null` ⇒
@@ -690,6 +697,7 @@ changes ⛔ what anyone is owed (the story's Policy meaning); D1 touches BigDev'
 - [x] [Review][Defer] **W6 — ⛔ CHECK requires `link_code` on an `attempting` row** [packages/domain/migrations/0166_peer-mesh-request-sending.sql] — deferred, by construction today
 - [x] [Review][Defer] **W7 — A parked ping stops ageing if ⛔ child re-claims it** [packages/domain/src/claim/peer-mesh-request.ts:819] — deferred, pre-existing (the suspicion twin)
 - [x] [Review][Defer] **W8 — `locale_source` is a literal in the begin** [packages/domain/src/claim/peer-mesh-request.ts:696] — deferred, row 6-35
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* being built by row 6-35 (AC3) — ⛔ Closed until it is `done` on `main`.
 - [x] [Review][Accepted] **W9 (from D2 (a)) — F4's reset drops an open questionnaire's unsaved work on a second link** [apps/mobile/components/peer-request/PeerRequestSlot.tsx:43] — ACCEPTED by BigDev (⛔ deferred work — recorded with a trigger): rare (two open requests, the second link tapped mid-answer); saved answers are kept
 - [x] [Review][Defer] **W10 (from the fix-diff review of P1) — A scope-wide send fault the sweep cannot see costs ONE slot per child run** [apps/jobs/src/scheduler/claim-peer-mesh-requests.ts] — deferred, needs a persisted per-Pariwar send hold
 

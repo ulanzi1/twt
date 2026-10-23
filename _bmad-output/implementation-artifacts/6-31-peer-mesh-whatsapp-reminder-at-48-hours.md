@@ -400,6 +400,9 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
   is — ⛔ no sync with Meta); the dotted-name item (F20) is inherited, ⛔ fixed here — the roster row's leg (b) proves the key
   resolves in production.
   (b) widen `pariwar_wa_templates` — ⛔ rejected (frozen `AlertCategory`, F8).
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* the key family is unchanged; *"for the Pariwar's locale"* is AMENDED by `-387` — the config reads
+  BOTH locales' names and the begin picks the RECIPIENT's (a chooser whose language's name is unusable while the Pariwar default's is
+  usable gets the default's — `pariwar_fallback`, [`-385`](../../.decision-log.md#decision-2026-10-23-385)). Built per recipient by 6.35; kept as written.
 - **WR8 — Three values on the wire.** ⭐ ADDITIVE in `packages/channels/src/providers/whatsapp-app.ts`: `WhatsappTemplateMessage`
   becomes a union — the existing `{ bodyParam }` (unchanged, the dispatch provider keeps using it) OR `{ bodyParams: readonly
   string[] }` (1–3 values, each non-empty — row 6-37d sends two) — and `buildRequestBody` emits one `{type:'text', text}` per value
@@ -549,6 +552,8 @@ Niyamavali: ⛔ no clause governs reminders to people asked about a death (⛔ n
 - **WR14 — The language.** ⭐ `resolvePeerRequestLocale` — THE one read (Pariwar default today; row 6-35 changes it in one place) —
   recorded as `locale` + `locale_source`. ⛔ The ping's `locale_source` copied (the language may differ by then only when row 6-35
   ships; reading again is the ruled rule — `-310` CF1 A).
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* built per recipient by 6.35 — the reminder's begin reads the language again for `ping.member_id`
+  (⛔ copied from the ping), as WR14 says; kept as written.
 - **WR15 — The records (Task 0.4).** `epics.md` entry; the NEW roster row `peer-mesh-wa-reminder-template-approved` (WR16 — the
   next free row number); a dated note on roster Row 26 (`jobs-db-role`): the reminder sweep and `claim_peer_mesh_wa_reminders`
   join its list (F21); ANNOTATIONS (⛔ rewrites), each a DATED NOTE placed AFTER the 2026-10-18 `-357` amendment and ⛔ a new

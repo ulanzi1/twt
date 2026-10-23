@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Story 6.35 — the in-app language switch (2026-10-23)
+
+- **Senders that ignore the member's chosen language (row 6-35)** [[`-387`](../../.decision-log.md#decision-2026-10-23-387) LS11] — Story 6.35 records the member's choice and applies it
+  ONLY to the app itself and the two ratified consumers (the neighbours' text and its WhatsApp reminder — `-303` rider, `-310` CF1 A).
+  Every other message keeps its language: the login OTP (English-only — *"OTP DLT templates are English-only"*); suspicion notices (a) /
+  (b) (hard-coded `hi`); the claim-contact family — ladder SMS + its WhatsApp step, certificate / correction reminders, closure — and
+  suspicion (c), all by `claim_contacts.contact_locale` (the FILER's screen language; 6.35 pins the contact screen to Hindi, LS15 (b),
+  so it stays `hi`); moderation notices (`DEFAULT_LOCALE`); contribution / cycle-open notices; news / survey push teasers; the 5.13
+  WhatsApp opt-in code. ⚠ Suspicion (a)/(b) and the claim-contact family may text a NON-member, to whom a member's choice may ⛔ apply.
+  Also left as they are: the app surfaces that do ⛔ switch with the language (the tab titles *"My Pool"* / *"Shradhanjali"* /
+  *"Panchayat"* are English literals in both; the Shradhanjali tab is hard-coded Hindi), and `-311` PM22's DISPLAY half — a non-chooser
+  in a Pariwar whose default is `en` gets English texts that open Hindi screens (LS4 (b); moot while every Pariwar is `hi`).
+  ⭐ Trigger: a story or ruling that sets a language rule for that message (or a Pariwar whose `locale_default` is `en`, for PM22).
+
+
 ## Deferred from: code review of 3-3c-member-kyc-name-english-only.md (2026-10-22)
 
 - **Manual KYC retains stale validation banners while the member edits** [`apps/mobile/app/(signup)/kyc.tsx`, the name field's
@@ -697,6 +712,9 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
 - **W8 — `locale_source` is a literal in the begin, ⛔ threaded from `resolvePeerRequestLocale().source`** [`peer-mesh-request.ts` `beginFresh`;
   `claim-peer-mesh-requests.ts` (`.source` dropped)] — today correct (0156's CHECK admits only `'pariwar_default'`). ⭐ Trigger: row 6-35 —
   thread the source into the begin AND widen 0156's `locale_source` CHECK in the same change.
+  *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* being BUILT by row `6-35-in-app-language-switch` (AC3 — the source
+  threaded from the resolver, both `locale_source` CHECKs widened in the same migration) on its story branch — ⛔ on `main`. ⛔ Closed
+  until that row is `done` on `main`; the item stays as written.
 - **W9 (ACCEPTED, ⛔ deferred) — F4's reset drops an open questionnaire's unsaved work when a second link arrives** [`apps/mobile/components/peer-request/PeerRequestSlot.tsx`
   (the render-time reset on a new `code`)] — the unmount bypasses `PeerQuestionnaire`'s `leaveQuestions` warning and `usePreventRemove`
   ⇒ queued saves and typed-but-unsaved dates are dropped (an in-flight Submit lands; its Thank-you is ⛔ shown). ✅ Accepted by BigDev

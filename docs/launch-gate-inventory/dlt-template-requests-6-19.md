@@ -21,6 +21,10 @@ conditions, incl. counsel's basis and Row 31) **and Row 28** (the Hindi human re
 closes — and ⛔ the Hindi 13 until Row 28 does too** (a reviewed change re-registers it) — unset, the 6.27c sweep HOLDS every Pariwar
 whose language's id is unset (`config:dlt_template_id_missing:<locale>`) and ⛔ no neighbour's slot is used up.
 
+📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* once row 6-35 is `done` on `main` the hold above becomes per
+RECIPIENT (`-387` LS10 (b)): an unset id (or a failed pre-flight) for ONE locale makes only the neighbours whose language it is WAIT —
+⛔ texted in the other language, ⛔ the Pariwar held; both locales unusable still holds the Pariwar. Kept as written.
+
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a
 shorter per-segment length.
 
@@ -223,6 +227,9 @@ go-live gate **Row 28** (`peer-mesh-request-hindi-human-review`); a reviewed cha
 ⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* *"a name longer than 40 characters is ⛔ texted"* above is SUPERSEDED in part by
 [`2026-10-18-362`](../../.decision-log.md#decision-2026-10-18-362) B — such a name is sent in the shorter form ("Ramesh S."), and
 `no_target:name_too_long` remains only for a name that still does not fit; ⛔ never truncated. ⛔ Text or type change.
+
+📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 lets members choose — the language becomes the
+RECIPIENT's choice, else the Pariwar's default, once it is `done` on `main`. Kept as written.
 
 ⚠ *Dated note, 2026-10-22 ([`2026-10-22-380`](../../.decision-log.md#decision-2026-10-22-380)) — ⛔ a word above edited:* the `-377` note above is SUPERSEDED by [`2026-10-22-379`](../../.decision-log.md#decision-2026-10-22-379) Q1 A — ⛔ "Ramesh S."; the name travels in two 30-letter alphanumeric variables side by side, whole whenever it fits 60, shortened above 60 by the Panel's rule (titles dropped, then initials from the front, ⛔ never the last word); only a name that still does not fit is refused / `no_target:name_too_long`. The rows and rules change with the code.
 

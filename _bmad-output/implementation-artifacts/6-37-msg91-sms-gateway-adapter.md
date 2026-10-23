@@ -533,6 +533,9 @@ Niyamavali check: ⛔ not applicable (the Niyamavali does not speak to SMS vendo
     (counted). (e) Peer mesh: a `beforeSend` that answers `defer_window` / `defer_lease` (the window closed, or the lease margin gone, after
     the pre-flight) ⇒ ⛔ `fetch`, the row deferred to the morning / left for the re-claim exactly as today's pre-core branches leave it
     (one leg each; MG16 (i)).
+    📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* (a)'s property is KEPT and EXTENDED by row 6-35 — a broken `en`
+    template holds ⛔ Hindi recipient AND a broken `hi` holds ⛔ English-chooser: the template gap becomes a per-RECIPIENT wait; the live
+    leg's English-Pariwar half (*"and holds the English one"*) flips from HELD to WAITING (dated in that test). Kept as written.
 11. **AC10 — Nothing else moves.** ⛔ migration; ⛔ i18n / registry text / sheet table edits (the sheet's *"Where and how we register"*
     MSG91 bullet gains the setup steps — prose only); ⛔ `ChannelProvider` / `RenderedMessage` / dispatch / cascade / render change —
     proven by an EMPTY `git diff --stat main -- packages/channels/src/{provider,dispatch,cascade,render}.ts` (`channels-determinism` also

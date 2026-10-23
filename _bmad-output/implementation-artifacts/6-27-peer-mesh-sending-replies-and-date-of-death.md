@@ -697,6 +697,10 @@ member's terms:
   change — ⛔ never on first launch) and changes this ONE read to *member's choice, else the Pariwar's default*. Row 6-31's reminder reads the
   same. ⛔ No `member_language_preferences` table in 6.27. ⚠ RECORDED: the app always renders `hi` (F32) — a Pariwar whose default is `en`
   would send English texts that open Hindi screens; moot for Bihar (Hindi) in v1; row 6-35 fixes both halves.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 is being built (⛔ on `main`): it changes the ONE read to the member's choice, else the
+  Pariwar's default, per RECIPIENT — the TEXT half. *"row 6-35 fixes both halves"* is NARROWED by `-387`: the DISPLAY half stays open
+  (the app stays Hindi until the member picks — LS4 (b); a non-chooser in an `en` Pariwar still gets English texts that open Hindi
+  screens — the deferred item *"Senders that ignore the member's chosen language (row 6-35)"*). The paragraph above is kept as written.
 - **PM23 [a] — the questionnaire is DATA, versioned, in a pure domain module** (BigDev: *"these questions are of evolving nature"*; F30).
   (a) **The engine:** `packages/domain/src/questionnaires/` — pg-free, ⛔ no `db` import: the definition shape (pages of 2–3 questions; a
   question = `key` stable across versions, `kind` `single` / `multi` / `date` / `yes_no`, option CODES, `optional` (all but `has_died`),

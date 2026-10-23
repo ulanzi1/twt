@@ -177,6 +177,8 @@ date of birth; after this story it also needs the name to be in English letters.
   `<LocaleProvider>` with ⛔ `initialLocale`; ⛔ `setLocale` call in `apps/mobile`) ⇒ **the Hindi strings are the ones members read
   today.** ⚠ Row `6-35-in-app-language-switch` (backlog, its own worktree) adds a language switch — once it lands the en strings are
   member-facing too, so review both locales as member copy.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 is being built — once `done` on `main` a member who picks
+  English sees the en strings (the app stays Hindi until they pick). Kept as written.
 - **G8 — ⛔ Anyone reviews a manual KYC submission.** ⛔ Code writes `trusteeVerified: true`; ⛔ admin KYC surface exists
   (`deferred-work.md`, "identity collision at signup is unenforced (2026-08-10)", row "Manual KYC"). FR-2's *"trustee-action queue"*
   is unbuilt — recorded, ⛔ this story's.
@@ -703,6 +705,8 @@ auditor itself found AC1's actual requirement satisfied either way, a wording mi
 - **TR7 — ⛔ touch `kyc/name.ts`, `name-render.ts`, `claim/parity.ts`, `anonymize.ts`.** Read-side, the 6.5 half, and RTBF — out of scope (N5).
 - **TR8 — Hindi is what members read today (G7).** The en strings are unreachable on mobile until row 6-35's language switch lands;
   review the hi strings as the primary copy and the en strings as member copy too.
+  📌 *Dated note, 2026-10-23 (Story 6.35 Task 0.4; [`-387`](../../.decision-log.md#decision-2026-10-23-387)):* row 6-35 is being built; the en strings become reachable for a member
+  who picks English once it is `done` on `main`. Kept as written.
 - **TR9 — The 3.3b screen's existing a11y contract** (3.3b AC4: label, per-field guidance, alerts programmatically associated; a WCAG
   AA launch-blocker) must survive: keep `accessibilityLabel` on the `Input`, tie the message to the field through `accessibilityHint`
   (KB3), and remember `accessibilityLiveRegion` is Android-only and fires on MOUNT / text CHANGE — VoiceOver hears the inline message

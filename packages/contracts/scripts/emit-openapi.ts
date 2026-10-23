@@ -4708,6 +4708,154 @@ registry.registerPath({
   },
 });
 
+// ── Story 11b.4 — the family memorial (member writes + the Trust's review) ─────────────────────────────────────────────
+// The family (the Ravi-mode session-as-deceased) writes the memorial and sends it with the NOMINEE's handover code; the
+// Trustee Panel (`memorial.review`) reviews it — approve, leave parts out (each with one of four reasons), or not approve;
+// ⛔ no edit. Member routes sit behind the MA17 server switch (OFF by default — a dark surface answers the neutral 404).
+// ⛔ No public render here (row 11b-4a).
+const {
+  MemorialEntryResponse: MemorialEntryResponseSchema,
+  MemorialMemberViewResponse: MemorialMemberViewResponseSchema,
+  MemorialSendResponse: MemorialSendResponseSchema,
+  MemorialWithdrawResponse: MemorialWithdrawResponseSchema,
+  MemorialReviewListQuery: MemorialReviewListQuerySchema,
+  MemorialReviewListResponse: MemorialReviewListResponseSchema,
+  MemorialReviewDetailResponse: MemorialReviewDetailResponseSchema,
+  MemorialReviewDecisionInput: MemorialReviewDecisionInputSchema,
+  MemorialReviewDecisionResponse: MemorialReviewDecisionResponseSchema,
+  MemorialWithdrawApprovalInput: MemorialWithdrawApprovalInputSchema,
+  MemorialWithdrawApprovalResponse: MemorialWithdrawApprovalResponseSchema,
+} = await import('../src/memorial/index.js');
+const MemorialEntryComponent = MemorialEntryResponseSchema.openapi('MemorialEntry');
+const MemorialMemberViewComponent = MemorialMemberViewResponseSchema.openapi('MemorialMemberView');
+const MemorialSendComponent = MemorialSendResponseSchema.openapi('MemorialSend');
+const MemorialWithdrawComponent = MemorialWithdrawResponseSchema.openapi('MemorialWithdraw');
+const MemorialReviewListComponent = MemorialReviewListResponseSchema.openapi('MemorialReviewList');
+const MemorialReviewDetailComponent = MemorialReviewDetailResponseSchema.openapi('MemorialReviewDetail');
+const MemorialReviewDecisionComponent = MemorialReviewDecisionResponseSchema.openapi('MemorialReviewDecision');
+const MemorialWithdrawApprovalComponent = MemorialWithdrawApprovalResponseSchema.openapi('MemorialWithdrawApproval');
+const MemorialSendFieldsComponent = z
+  .object({
+    body: z.string(),
+    altText: z.string().optional(),
+    authorisationCopyVersion: z.string(),
+    authorisationLocale: z.enum(['hi', 'en']),
+    keepPreviousPhoto: z.enum(['true', 'false']).optional(),
+    photo: z.string().optional(),
+  })
+  .openapi('MemorialSendFields');
+const memorialSubmissionParams = z.object({ pariwarId: z.string().uuid(), submissionId: z.string().uuid() });
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/memorial/entry',
+  summary: "The home screen's memorial entry probe",
+  description: 'Member-session-gated; ⛔ step-up. Decrypts nothing and writes no audit line. `{ memorialEntry: false }` when there is no closed drive for this member, or the surface is dark.',
+  tags: ['memorial'],
+  responses: {
+    200: { description: 'Whether to show the entry', content: jsonOf(MemorialEntryComponent) },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/memorial',
+  summary: "The family's own memorial view",
+  description: "Member-session-gated; ⛔ step-up. The latest version's words VERBATIM, its state, the parts left out with each reason, a 5-minute signed photo URL, and the permission text in both locales. ⛔ The reviewer's internal note. A decrypt failure is a fail-soft 200 (`unavailable`).",
+  tags: ['memorial'],
+  responses: {
+    200: { description: 'The view, or `{ memorial: null }`', content: jsonOf(MemorialMemberViewComponent) },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/memorial/submissions',
+  summary: 'Send a version of the memorial (single-shot multipart)',
+  description: "Behind the server switch, then the member session, then the NOMINEE's handover elevation (`claim_handover`), then a required `Idempotency-Key` HEADER. The permission version shown is echoed and a stale one refused. The photo (JPEG/PNG by magic bytes, ≤ 10 MiB) is metadata-stripped at ingest. 201, or 200 replaying a completed Send.",
+  tags: ['memorial'],
+  request: { body: { content: { 'multipart/form-data': { schema: MemorialSendFieldsComponent } }, required: true } },
+  responses: {
+    200: { description: 'Replayed — a Send with this Idempotency-Key already completed', content: jsonOf(MemorialSendComponent) },
+    201: { description: 'Sent — with the Trust', content: jsonOf(MemorialSendComponent) },
+    400: errorResponse('A field or the photo was refused (memorial.*)'),
+    401: errorResponse('Authentication required'),
+    403: errorResponse("The nominee's handover code is required"),
+    404: errorResponse('Not found (⛔ drive, or the surface is dark)'),
+    409: errorResponse('Already approved / permission text outdated / nominee unresolved / in progress / try again'),
+    429: errorResponse('Rate limit exceeded'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/memorial/submissions/{id}/withdraw',
+  summary: 'Withdraw the latest version while it is with the Trust',
+  description: "Behind the server switch, the member session and the NOMINEE's handover elevation. ⛔ Body.",
+  tags: ['memorial'],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: 'Withdrawn', content: jsonOf(MemorialWithdrawComponent) },
+    401: errorResponse('Authentication required'),
+    403: errorResponse("The nominee's handover code is required"),
+    404: errorResponse('Not found'),
+    409: errorResponse('This version can no longer be withdrawn'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/memorial-reviews',
+  summary: "The Trust's memorial review queue",
+  description: '`memorial.review` (pariwar dimension). Chain heads, oldest first; `?view=decided` for decided or withdrawn heads. ⛔ Body in the list — the deceased\'s name and the sent date only.',
+  tags: ['memorial-review'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), query: MemorialReviewListQuerySchema },
+  responses: {
+    200: { description: 'One page of the queue', content: jsonOf(MemorialReviewListComponent) },
+    403: errorResponse('Missing memorial.review'),
+    404: errorResponse('Pariwar not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/memorial-reviews/{submissionId}',
+  summary: 'A memorial version and its whole chain (the history view)',
+  description: '`memorial.review`. Every version VERBATIM with its decision, omissions, internal notes and withdrawals; 5-minute signed photo URLs.',
+  tags: ['memorial-review'],
+  request: { params: memorialSubmissionParams },
+  responses: {
+    200: { description: 'The version and its chain', content: jsonOf(MemorialReviewDetailComponent) },
+    403: errorResponse('Missing memorial.review'),
+    404: errorResponse('Not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/memorial-reviews/{submissionId}/decision',
+  summary: "The Trust's ONE decision on a memorial version",
+  description: '`memorial.review`. approve · approve with parts left out (spans into the verbatim text, each with one of four reasons) · not approved. ⛔ No field carries the family\'s text (strict).',
+  tags: ['memorial-review'],
+  request: { params: memorialSubmissionParams, body: { content: jsonOf(MemorialReviewDecisionInputSchema), required: true } },
+  responses: {
+    200: { description: 'Decided', content: jsonOf(MemorialReviewDecisionComponent) },
+    400: errorResponse('Invalid input or invalid omissions'),
+    403: errorResponse('Missing memorial.review'),
+    404: errorResponse('Not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/memorial-reviews/{submissionId}/withdraw-approval',
+  summary: "The Trust withdraws its own approval",
+  description: "`memorial.review`. The chain's latest approved, un-withdrawn version, on one of the four reasons.",
+  tags: ['memorial-review'],
+  request: { params: memorialSubmissionParams, body: { content: jsonOf(MemorialWithdrawApprovalInputSchema), required: true } },
+  responses: {
+    200: { description: 'Approval withdrawn', content: jsonOf(MemorialWithdrawApprovalComponent) },
+    400: errorResponse('Invalid input'),
+    403: errorResponse('Missing memorial.review'),
+    404: errorResponse('Not found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

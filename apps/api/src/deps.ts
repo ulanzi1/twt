@@ -73,6 +73,8 @@ import {
   createLocalFsSelfVerifyScreenshotStorage,
   createGcsHelpdeskAttachmentStorage,
   createLocalFsHelpdeskAttachmentStorage,
+  createGcsMemorialPhotoStorage,
+  createLocalFsMemorialPhotoStorage,
 } from '@twt/platform-adapters';
 import { resolveDeployTriggerFromEnv } from './modules/pariwar-provisioning/deploy-trigger.js';
 import { consoleNiyamavaliAmendedHook } from './modules/rules/notification-hook.js';
@@ -607,6 +609,14 @@ export async function createDeps(config: ApiConfig): Promise<AppDeps> {
             : {}),
         })
       : createLocalFsHelpdeskAttachmentStorage(),
+    // ⭐ Story 11b.4 (MA8) — the family memorial's photo store: the live GCS adapter when MEMORIAL_PHOTO_BUCKET is set (a
+    // PRIVATE bucket; ⛔ no Terraform — the helpdesk env-only precedent), else a shared local-disk fake (dev/CI).
+    memorialPhotoStorage: process.env['MEMORIAL_PHOTO_BUCKET']
+      ? createGcsMemorialPhotoStorage({
+          bucketName: process.env['MEMORIAL_PHOTO_BUCKET'],
+          ...(process.env['GOOGLE_CLOUD_PROJECT'] ? { projectId: process.env['GOOGLE_CLOUD_PROJECT'] } : {}),
+        })
+      : createLocalFsMemorialPhotoStorage(),
     // Bank-statement virus-scan seam (Story 9.3, Task 4 / architecture §3.6 "quarantine") — abstraction-
     // first: a no-op/allow-all fake in v1 (no real ClamAV vendor exists yet — the 6.5 `OcrProvider`
     // "no boundary gate until a real vendor" posture). The scan runs BEFORE store+parse in the upload core.

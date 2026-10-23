@@ -29,6 +29,7 @@ import type { FastifyRequest } from 'fastify';
 import type { AppDeps } from '../../context.js';
 import { ConflictError, NotFoundError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
+import { deleteMemorialPhotosAfterErasure } from '../memorial/erasure.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../types.js';
 
@@ -129,6 +130,8 @@ export function createRtbfHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
+      // Story 11b.4 (MA15) — the memorial photo keys `anonymizeMember` returns, deleted AFTER COMMIT (below).
+      let memorialPhotoKeys: readonly string[] = [];
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
@@ -136,7 +139,7 @@ export function createRtbfHandlers(deps: AppDeps) {
 
         // Field-level anonymize every Tier-1 PII column (the inverse of data-export/assemble). Runs
         // under the scope tx; RETAINS mobile_blind_index (AC4) + all non-PII / history rows.
-        await memberDomain.anonymizeMember(scopeTx.tx, enc, { memberId, pariwarId });
+        ({ memorialPhotoKeys } = await memberDomain.anonymizeMember(scopeTx.tx, enc, { memberId, pariwarId }));
 
         // The load-bearing transition. The frozen auditShape-only `.strict()` payload cannot carry
         // any cleared PII (R1). The projector appends the event + projects the state in the same tx.
@@ -188,6 +191,8 @@ export function createRtbfHandlers(deps: AppDeps) {
         throw err;
       } finally {
         await closeScopeTx(scopeTx, ok);
+        // ⭐ Story 11b.4 (MA15) — only once COMMITTED (a failed COMMIT throws out of `closeScopeTx` above).
+        if (ok) await deleteMemorialPhotosAfterErasure(deps, request.log, memorialPhotoKeys);
       }
     },
   };

@@ -14,6 +14,7 @@ import type {
   ClaimDocumentStorage,
   ContributionNotePdfRenderer,
   HelpdeskAttachmentStorage,
+  MemorialPhotoStorage,
   PoolSpawnTriggerPayload,
   SelfVerifyScreenshotStorage,
   StatementScanner,
@@ -643,6 +644,12 @@ export interface AppDeps {
    * bucket env is set; a shared local-fs fake in dev/CI + tests. No `getBytes` (no re-fetch consumer).
    */
   readonly helpdeskAttachmentStorage: HelpdeskAttachmentStorage;
+  /**
+   * ⭐ Story 11b.4 (MA8) — the family memorial's PHOTO object store: Send `put`s the METADATA-STRIPPED bytes here; the
+   * family's own GET and the reviewer's detail mint 5-minute signed URLs (each audited). A NEW port instance (own
+   * `MEMORIAL_PHOTO_BUCKET` + key namespace — ⛔ no Terraform bucket). Live GCS when the env is set, else local-fs.
+   */
+  readonly memorialPhotoStorage: MemorialPhotoStorage;
   /**
    * Bank-statement virus-scan seam (Story 9.3, Task 4 / architecture §3.6 "quarantine") — the upload core
    * scans the bytes BEFORE store+parse; an unclean verdict quarantines (dignified reject + audit line).

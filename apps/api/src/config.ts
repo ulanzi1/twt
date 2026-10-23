@@ -106,6 +106,13 @@ export interface ApiConfig {
   readonly stepUpOtpTtlMs: number;
   /** Elevated-context window after a successful step-up (§2.2 — ~5 min). Reused by member step-up. */
   readonly stepUpElevatedMs: number;
+  /**
+   * ⭐ Story 11b.4 (MA17) — the family memorial's server switch, OFF by default (`MEMORIAL_AUTHORSHIP_ENABLED=1` turns it
+   * on; the `TURNSTILE_FAIL_OPEN` shape). Off ⇒ the entry probe answers `{ memorialEntry: false }`, the member GET
+   * `{ memorial: null }`, and every member write the neutral `404 memorial.not_found` — checked BEFORE the step-up gate.
+   * Its closure is launch-gate Row 41's (MA12): ⛔ turn it on in production before that row closes.
+   */
+  readonly memorialAuthorshipEnabled: boolean;
   /** Member LOGIN-OTP TTL (Story 3.2, §2.2 line 1370 — 5 min, distinct from the 3-min step-up TTL). */
   readonly loginOtpTtlMs: number;
   /**
@@ -409,6 +416,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     lockoutMs: intEnv(env, 'LOCKOUT_MS', 15 * MINUTE),
     stepUpOtpTtlMs: intEnv(env, 'STEP_UP_OTP_TTL_MS', 3 * MINUTE),
     stepUpElevatedMs: intEnv(env, 'STEP_UP_ELEVATED_MS', 5 * MINUTE),
+    memorialAuthorshipEnabled: env['MEMORIAL_AUTHORSHIP_ENABLED'] === '1',
     loginOtpTtlMs: intEnv(env, 'LOGIN_OTP_TTL_MS', 5 * MINUTE),
     dataExportDeliveryOtpTtlMs: intEnv(env, 'DATA_EXPORT_DELIVERY_OTP_TTL_MS', 60 * MINUTE),
     memberAccessTtlMs: intEnv(env, 'MEMBER_ACCESS_TTL_MS', 15 * MINUTE),

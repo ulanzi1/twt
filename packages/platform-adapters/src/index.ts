@@ -79,3 +79,11 @@ export type {
   FakeContributionNotePdfRenderer,
   RecordedContributionNoteRender,
 } from './contribution-note-pdf/fake.js';
+// Story 11b.4 — the family memorial's PHOTO object store (MA8): a NEW port instance (each purpose its own port — the 10.2
+// helpdesk-attachment precedent). Private bucket from `MEMORIAL_PHOTO_BUCKET`, else local-fs; signed URLs only.
+export { createGcsMemorialPhotoStorage } from './memorial-photo-storage/gcs.js';
+export type { GcsMemorialPhotoStorageOpts } from './memorial-photo-storage/gcs.js';
+export { createInMemoryMemorialPhotoStorage } from './memorial-photo-storage/in-memory.js';
+export type { InMemoryMemorialPhotoStorage } from './memorial-photo-storage/in-memory.js';
+export { createLocalFsMemorialPhotoStorage } from './memorial-photo-storage/local-fs.js';
+export type { LocalFsMemorialPhotoStorageOpts } from './memorial-photo-storage/local-fs.js';

@@ -24,6 +24,7 @@ import {
 import { memorialSubmissions } from '../schema/memorial_submissions.js';
 import { latestApprovedIndex } from './status.js';
 import type { MemorialChainLink } from './submission.js';
+import type { MemorialReviewAction, MemorialWithdrawalActor } from './vocab.js';
 
 export type MemorialReviewRoute = 'decision' | 'withdraw_approval' | 'detail';
 
@@ -83,6 +84,9 @@ export interface MemorialReviewQueueRow {
   readonly poolId: PoolId;
   readonly deceasedMemberId: MemberId;
   readonly createdAt: Date;
+  /** The head's state inputs (⛔ content) — so the list shows its derived state. */
+  readonly action: MemorialReviewAction | null;
+  readonly withdrawnBy: MemorialWithdrawalActor | null;
 }
 
 /**
@@ -105,8 +109,10 @@ export async function listMemorialReviewQueue(
     pool_id: string;
     deceased_member_id: string;
     created_at: Date | string;
+    action: MemorialReviewAction | null;
+    withdrawn_by: MemorialWithdrawalActor | null;
   }>(sql`
-    SELECT s.submission_id, s.pool_id, s.deceased_member_id, s.created_at
+    SELECT s.submission_id, s.pool_id, s.deceased_member_id, s.created_at, d.action, w.withdrawn_by
       FROM memorial_submissions s
       LEFT JOIN memorial_review_decisions d ON d.pariwar_id = s.pariwar_id AND d.submission_id = s.submission_id
       LEFT JOIN memorial_withdrawals w ON w.pariwar_id = s.pariwar_id AND w.submission_id = s.submission_id
@@ -122,6 +128,8 @@ export async function listMemorialReviewQueue(
     poolId: row.pool_id as PoolId,
     deceasedMemberId: row.deceased_member_id as MemberId,
     createdAt: row.created_at instanceof Date ? row.created_at : new Date(row.created_at),
+    action: row.action,
+    withdrawnBy: row.withdrawn_by,
   }));
 }
 

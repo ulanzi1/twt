@@ -113,7 +113,8 @@ export type MemorialReviewListResponse = z.output<typeof MemorialReviewListRespo
 export const MemorialReviewListQuery = z
   .object({
     view: z.enum(['pending', 'decided']).optional(),
-    limit: z.coerce.number().int().optional(),
+    // Bounded (FR-91 / Story 1.14 — the forced-pagination guard walks the committed OpenAPI surface).
+    limit: z.coerce.number().int().positive().max(200).optional(),
   })
   .strict();
 

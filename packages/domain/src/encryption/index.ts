@@ -65,6 +65,8 @@ export {
   CLAIM_CONTACT_MOBILE_FIELD_CLASS,
   // Story 6.26a (GI5) — the date-of-death blind-index class (one class for the inspection AND the review).
   DEATH_DATE_INDEX_FIELD_CLASS,
+  // Story 11b.4 (MA5 / MA15) — the family memorial's Tier-1 class (the words, the alt text, the reviewer's notes).
+  MEMORIAL_FIELD_CLASS,
   type FieldCryptoDeps,
 } from './field-classes.js';
 export {

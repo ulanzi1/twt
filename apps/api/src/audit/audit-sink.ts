@@ -709,7 +709,17 @@ export type AuthAuditEventType =
   // Context is NON-PII and deliberately COARSE: which sections resolved for this caller, the total
   // row count, and whether R7 violator detection was available — never a row's label, never a member
   // or claim id. The surface writes nothing, so there is no action/rejection line to pair with it.
-  | 'admin_trustee_lite.read';
+  | 'admin_trustee_lite.read'
+  // ── Story 11b.4 (MA11) — the family memorial's READ lines (the WRITE lines go through `withCompensatingAudit` only) ──
+  //   memorial.member.read  — the family's own GET: one line per read, `fields_decrypted: n` (the words, the alt text,
+  //                           the deceased's name) — ⛔ never the content;
+  //   memorial.review.read  — a reviewer's list page (the names decrypted) or detail (the chain's words and notes): one
+  //                           line per read, `fields_decrypted: n` (the `admin_claim.contact_details_read` shape);
+  //   memorial.photo.url    — each 5-minute signed photo URL issued (family or reviewer).
+  // ⛔ The entry probe writes ⛔ no line (it decrypts nothing — AC1).
+  | 'memorial.member.read'
+  | 'memorial.review.read'
+  | 'memorial.photo.url';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

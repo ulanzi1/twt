@@ -12,7 +12,7 @@
  * `.test()` (`lastIndex`); {@link stripMemorialInvisibles} builds its global copy per call.
  */
 export const MEMORIAL_INVISIBLE_CHARS =
-  /[­͏ᅟᅠ᠎​-‏‪-‮⁠-⁤⁦-⁩⠀ㅤ︀-️﻿ﾠ]/u;
+  /[\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff\uffa0]/u;
 
 /**
  * Bidi embedding / override / isolate controls — a copy BY VALUE of `BIDI_CONTROLS` in
@@ -20,7 +20,7 @@ export const MEMORIAL_INVISIBLE_CHARS =
  * `apps/public/src/lib/sahyog-vivran-message-block.ts`). The admin review screen SHOWS them visibly in the family's text
  * (AC9) — an interior RLO reorders what the reviewer reads. ⛔ No `g` flag (see above).
  */
-export const MEMORIAL_BIDI_CONTROLS = /[‪-‮⁦-⁩]/u;
+export const MEMORIAL_BIDI_CONTROLS = /[\u202a-\u202e\u2066-\u2069]/u;
 /* eslint-enable no-misleading-character-class */
 
 /** A letter, number, punctuation or symbol — what makes text non-blank. */
@@ -28,6 +28,7 @@ const VISIBLE = /[\p{L}\p{N}\p{P}\p{S}]/u;
 
 /** The text with every {@link MEMORIAL_INVISIBLE_CHARS} removed (a derived view — ⛔ never stored). */
 export function stripMemorialInvisibles(text: string): string {
+  // eslint-disable-next-line no-misleading-character-class -- the class above (joiners/selectors listed singly, by design)
   return text.replace(new RegExp(MEMORIAL_INVISIBLE_CHARS.source, 'gu'), '');
 }
 
@@ -38,9 +39,7 @@ export function isMemorialTextBlank(text: string): boolean {
 
 /** Unicode CODE POINTS on the RAW string (⛔ UTF-16 units — a Devanagari or astral text would otherwise count wrong). */
 export function memorialCodePointLength(text: string): number {
-  let n = 0;
-  for (const _ of text) n += 1;
-  return n;
+  return Array.from(text).length;
 }
 
 /** AC7 limits (`-398` §1 item 20; BigDev *"6,000 / 300"*). */

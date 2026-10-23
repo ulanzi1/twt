@@ -49,10 +49,10 @@ describe('blank and length (AC7)', () => {
   it.each([
     ['', true],
     ['   \n\t ', true],
-    ['​​', true], // ZWSP only
-    ['ㅤ', true], // HANGUL FILLER (Lo)
-    ['ﾠ', true], // HALFWIDTH HANGUL FILLER (Lo) — added beyond the source class
-    ['⠀', true],
+    ['\u200b\u200b', true], // ZWSP only
+    ['\u3164', true], // HANGUL FILLER (Lo)
+    ['\uffa0', true], // HALFWIDTH HANGUL FILLER (Lo) — added beyond the source class
+    ['\u2800', true],
     ['.', false],
     ['माँ', false],
     ['❤', false],
@@ -65,8 +65,8 @@ describe('blank and length (AC7)', () => {
   it('the classes carry ⛔ no `g` flag (stateful under .test)', () => {
     expect(MEMORIAL_INVISIBLE_CHARS.global).toBe(false);
     expect(MEMORIAL_BIDI_CONTROLS.global).toBe(false);
-    expect(MEMORIAL_BIDI_CONTROLS.test('a‮b')).toBe(true);
-    expect(MEMORIAL_BIDI_CONTROLS.test('a‮b')).toBe(true);
+    expect(MEMORIAL_BIDI_CONTROLS.test('a\u202eb')).toBe(true);
+    expect(MEMORIAL_BIDI_CONTROLS.test('a\u202eb')).toBe(true);
   });
 
   it('length counts CODE POINTS, ⛔ UTF-16 units', () => {
@@ -172,7 +172,7 @@ describe('validateMemorialDecision (MA6)', () => {
   });
 
   it('refuses a boundary inside a ZWJ sequence', () => {
-    const family = '👨‍👩‍👧';
+    const family = '👨\u200d👩\u200d👧';
     const t = `${family} x`;
     expect(validateMemorialDecision(awo({ omissions: [span(0, 2)] }), { body: t, altText: null, hasPhoto: false })).toEqual({
       ok: false,

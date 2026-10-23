@@ -266,6 +266,11 @@ M11 / M12 legs reach it by `UPDATE member_identities`. The sentence stays as the
   split — ⛔ DOB, ⛔ ID, ⛔ member link; names carry ⛔ blind index (`member/search-read.ts`). ⛔ Existing resolver of "is this nominee a
   member" (9.1's console acts as the deceased; 6.36b matches the login space only). ⇒ ND2's match IS the complete phone-based route;
   the residual is a DATA-MODEL gap (ND8), accepted by BigDev.
+  > ⭐ *Dated annotation, 2026-10-24 (Story 6.36e Task 0.4, `2026-10-24-397` / `2026-10-24-396` Q1 A) — ⛔ rewritten:* the follow-up row
+  > `6-36e-nominee-member-link-at-declaration` is DECIDED (`ready-for-dev`): a member may MARK a nominee who is also a member, found in their
+  > own contacts in Life Events, and the link (`member_nominee_links`, off the declaration version) widens ND2's conjunct to match by
+  > number OR by account. This G18 stays TRUE at `1268d47e` and until 6.36e is `done` on `main`; `-397` NARROWS IN PART `-386` ND8 from then
+  > (for linked declarations only) and SUPERSEDES IN PART ND2's joinability ground.
 
 ## ⚖️ Build decisions ND1–ND10 (DECIDED 2026-10-23)
 
@@ -389,6 +394,9 @@ BigDev, at Task 0.2: *"For ND1–ND6, ND8, ND9 - your recommendation is accepted
     sign-up number, which ⛔ changes and keeps ⛔ history. A nominee who signed up on another number (a second SIM, a family phone, a typo)
     escapes — still selected, texted and, if opted in, reminded (the `-366` (vii) exposure, carried; read as ⛔ within `-356`, Task 0.3).
     The only true fix is a member link captured at declaration (a follow-up row, Task 0.4);
+    ⭐ *(dated 2026-10-24, Story 6.36e Task 0.4 — ⛔ rewritten: that row is decided — `-396` Q1 A / Q2 A, `-397` NE1–NE14; the gap NARROWS
+    for linked declarations once 6.36e is `done`; a nominee whose sign-in number the deceased did ⛔ hold, often a family phone, stays
+    uncovered even then);*
   - a stored number in a 13-digit form (`0091…`, `+91 0…`) normalises to `null` ⇒ ⛔ excluded;
   - a post-filing correction of a nominee number is ⛔ reflected (ND1 (b), an author-accepted residual);
   - a nominee REPLACED between the death and the filing (`-234` V) is ⛔ in the set, though `-235` Y / `-239` may make them the payee — they

@@ -10,6 +10,7 @@ main checkout; sibling worktrees 3-3c / 5-11 / 6-35 / 11b-4 exist). Two facts, s
 (durable); (2) every `apps/` / `packages/` claim below was traced at `1268d47e` on 2026-10-23 by four read-only research passes and the
 load-bearing ones spot-checked (perishable — re-check at Task 0.1). Re-locate by FUNCTION, ⛔ by line number.
 
+⭐ v1.4 (2026-10-24): TASK 0.4 DONE — the records written (ledger `2026-10-24d`); AC0 MET ⇒ Task 1 (code) may start.
 ⭐ v1.3 (2026-10-24): TASKS 0.1–0.3 DONE — BigDev *"NE1-NE14 all recommended"*; the Panel RULED Q1 A, Q2 A (*"by DR and KB"*) ⇒
 `2026-10-24-396` (TRUSTEE-RATIFIED, committed alone `44a65afa`) and the author-commit `2026-10-24-397` (committed alone `0f202476`).
 Everything below that says PROPOSED / OWED / ⛔ sent is kept as written at v1.2 — read it with this line. Next: Task 0.4 (records), then
@@ -57,6 +58,8 @@ validate findings (Change Log).
 
 Status: ready-for-dev
 
+> ✅ **v1.4 (2026-10-24): Task 0.4 DONE — AC0 MET. ⭐ Next: Task 1 (the table).**
+>
 > ✅ **v1.3 (2026-10-24): Tasks 0.1–0.3 DONE** (`-396` ruled Q1 A / Q2 A; `-397` NE1–NE14 as recommended). ⭐ **Next: Task 0.4 (the
 > records commit), then Task 1 (code).** The banner below is the v1.2 text, kept.
 >
@@ -603,7 +606,7 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance (AC0)** — 0.1–0.3 DONE 2026-10-24; 0.4 OPEN.
+- [x] **Task 0 — governance (AC0)** — 0.1–0.3 DONE 2026-10-24; 0.4 DONE 2026-10-24 (ledger `2026-10-24d`). AC0 MET.
   - [x] 0.1 *(2026-10-24: `git fetch origin` — `origin/main` still `1268d47e` = the pin, ⛔ rebase, so G1–G14 hold at the base; NUMBERS
         re-taken across every branch and worktree — highest decision `-395` ⇒ `-396` / `-397` taken; ledger `2026-10-24a` this branch's,
         `2026-10-24b` 11b-4's (committed first, `41ec0862`) ⇒ this records commit `2026-10-24c`; ⛔ `0181` committed anywhere. The 11b.4 overlap re-greps stay OWED at the next rebase onto a moved main.)*
@@ -632,7 +635,13 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
         pick; signup-only declarations unlinked; post-filing corrections; a nominee whose sign-in number the member does ⛔ hold — often a
         family phone (V6); ⛔ login-number change exists, so the AR-24 benefit is prospective). Committed ALONE as `governance: …`; its SHA written
         after ([[project_decision_log_writes_user_inserted]] — if the write is refused, ask once).
-  - [ ] 0.4 The records commit (append-only, each dated):
+  - [x] 0.4 *(2026-10-24, ledger `2026-10-24d` — every record below written, each dated, append-only: `epics.md` `### Story 6.36e`
+        (after 6.36d, before 6.37); roster Row 31 leg (j) (ALL NINE → ALL TEN, recount noted; status, evidence, owner, discharge path)
+        and a Row 26 dated note (`member_nominee_links` joins the nominee tables); counsel question 7 (WRITTEN, ⛔ sent); `deferred-work.md`
+        — dated lines on the family item, the ONLY-link item and the normalisation item, and a NEW section with five items (family-phone
+        residual, the picker alternative, the signup prompt, the other readers, the post-filing correction); dated annotations on 6.36d
+        (G18, ND8) and 6.36b (AC3 — the second purpose); the sprint row's note. ⛔ Rewritten anywhere.)*
+        The records commit (append-only, each dated):
         - `epics.md` — a `### Story 6.36e` entry after Story 6.36d, before 6.37, in 6.36d's form (the *"⚠ Added <date> (Story 6.36e, Task
           0.4)"* blockquote: the row was added by `-386` Not covered / 6.36d Task 0.4, ⛔ by Panel ruling; As a member …; ACs in brief);
         - the sprint row's note (and the `-386` follow-up named done-by-creation, ⛔ "Closed by"); ⚠ the row comment was stale at v1.1
@@ -795,6 +804,8 @@ and `locales/classification.json`; `packages/domain/src/ids/index.ts`; `schema/m
   `2026-10-24-396` TRUSTEE-RATIFIED (Q1 A, Q2 A; committed alone `44a65afa`); `2026-10-24-397` AUTHOR-COMMIT (NE1–NE14 as recommended;
   committed alone `0f202476`); the note's RULED block; ledger `2026-10-24c`. The V6 picker alternative ⛔ adopted (⛔ answered; the
   default). ⛔ Code. Next: Task 0.4.
+- 2026-10-24 — v1.4: Task 0.4 DONE (BigDev: *"yes, do it"*) — the records commit, ledger `2026-10-24d` (`a`/`c` this branch's, `b`
+  11b-4's). AC0 MET. ⛔ Code. Next: Task 1.
 
 ### File List
 
@@ -802,6 +813,7 @@ and `locales/classification.json`; `packages/domain/src/ids/index.ts`; `schema/m
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-24 | 1.4 | Task 0.4 DONE (BigDev *"yes, do it"*): `epics.md` `### Story 6.36e`; roster Row 31 leg (j) (ALL TEN) + Row 26 note; counsel question 7; `deferred-work.md` dated lines + a new section (five items); 6.36d (G18, ND8) and 6.36b (AC3) dated annotations; the sprint row note; ledger `2026-10-24d`. AC0 MET; next Task 1. |
 | 2026-10-24 | 1.3 | Tasks 0.1–0.3 DONE: BigDev *"NE1-NE14 all recommended"*; the Panel ruled *"Q1 A, Q2 A"* (*"by DR and KB"*) ⇒ `2026-10-24-396` (Trustee-ratified, `44a65afa`) + `2026-10-24-397` (author-commit, `0f202476`), each committed alone; the note's RULED block filled; the PQ section dated; ledger `2026-10-24c` (`b` is 11b-4's, committed first). Status ready-for-dev; next Task 0.4. |
 | 2026-10-24 | 1.2 | VALIDATED (`bmad-create-story validate 6.36e`; BigDev *"all"*): **V1** NE1's state split into `answer` × `state` (an answered link could never end or erase), `asked_at` explicit / carried, ⛔ 0162's CHECKs; **V2** a metered caller-gated `nominee_link_resolve` counter (4/day) BEFORE the HMAC (the declare was a free membership oracle); **V3** pre-fill + `keep` + edit-confirm, the draft carries the link, TR9 inverted; **V4** NE2's end rules (`FOR UPDATE` every live link, `keep` across ranks, every un-carried link ends, a raced answer is ⛔ lost); **V5** the link gets its OWN read — `NomineeStatusResponse` is read by the claim flow and is NON-PII; **V6** the premise narrowed (family phone, AR-24 unbuilt), the title, the cheaper picker alternative put to BigDev; **V7** a rulings → build table for every PQ outcome (PQ1 B × PQ2 B ≡ C); **V8** SUPERSEDES IN PART `-386` ND2 and Not covered item 1, ND8 "to be narrowed once done"; **V9** NUMBERS (≥ `-396`; `al` is 11b-4's; ≥ `aq`; 11b.4's rtbf count + audit union); **V10** G3's audit order; **V11** caller gate on `kind:'new'` only; **V12** one match per session, own notice, states, `purpose`; **V13** request closes on the declarer's death; **V14** consequence copy both sides; **V15** NE7 by projected version, AC6 legs; **V16** G7's five inline types + fixtures, TR5, stale check; **V17** TR3's reason; **V18** audit locator / context; **V19** wiring (i18n catalog, server.ts, api-client, fence, idempotency, brand, TR13); **V20** route flag, signup end rules; **V21** BEFORE INSERT version check, erase live only; **V22** CF5 "as put" quote, `-356` (ii) unratified, §0 rows for `-234` X / the meter / NE8 B; **V23** AI-10-1 one sentence each predicate, Niyamavali §6.3; **V24** the note's "you recorded this gap" → "our note told you of it"; **V25** export `nomineeLinks: { marked, namedBy }`; **V26** stale / loose text. The Panel note revised (still ⛔ sent). |
 | 2026-10-23 | 1.1 | The Panel note WRITTEN (BigDev: *"yes commit and write the panel note"*): `trustee-panel-routing-note-2026-10-23-6-36e-nominee-member-link.md` — Q1 (record the account; when the answer counts — A / B / C), Q2 (what each side is told — A / B / C); our reading A, A; E1 checked verbatim, E4 run; ⛔ sent. Ledger `2026-10-23am`. |

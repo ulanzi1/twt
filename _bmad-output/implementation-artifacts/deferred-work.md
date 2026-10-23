@@ -4,6 +4,33 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 6.36e Task 0 — Decisions 2026-10-24-396 / 2026-10-24-397 (2026-10-24)
+
+Recorded at Story 6.36e Task 0.4 (`_bmad-output/implementation-artifacts/6-36e-nominee-member-link-at-declaration.md`), each ⛔ built by it.
+
+- **A nominee whose sign-in number the member does ⛔ hold cannot be marked — often a FAMILY phone — RECORDED, ⛔ built** [6.36e V6,
+  [`-397`](../../.decision-log.md#decision-2026-10-24-397) Not covered]. The mark is found from the member's matched contacts (a family phone is saved under the relative's name) or a
+  number the member types; a nominee who signed up on a number the member does not have stays exactly as under 6.36d (matched only if the
+  declared number equals their sign-up number). ⭐ Trigger: a report of a nominee asked about their member's death, or a design for finding
+  a member by something other than a number.
+- **The phone's own contact picker on the declared nominee `mobile` field — ⛔ adopted** [6.36e V6; ⛔ recommended; BigDev's Task 0.2 answer
+  did ⛔ name it]. It would close the TYPO case with ⛔ new processing and ⛔ Panel question (the number copied, ⛔ typed; ⛔ member lookup). ⭐
+  Trigger: BigDev takes it as its own row, or 6.36d's mistyped-number residual is observed.
+- **A post-activation home prompt to mark a nominee (the 6.36c prompt shape) — deferred** [6.36e NE4 (b)]. A member who declared at sign-up
+  marks a nominee only by re-saving in Life Events (step-up; the staff line fires on the new versions). ⭐ Trigger: measured uptake of the
+  mark, or a prompt-card story.
+- **Every other reader of the nominee member link — ⛔ built** [6.36e NE14]: payout, nominee determination, claim filing, the claim-contact
+  ladder, the nominee console, the District Admin's nominee panel. Each would be a NEW use, outside `-396` Q1 A's *"used ONLY to make sure
+  that person is never one of the five"* ⇒ its own Panel question. ⭐ Trigger: a story that wants to read `member_nominee_links`.
+- **A post-filing staff correction of a LINKED rank leaves the link on the corrected-from version only** [6.36e NE9; corrections are recorded
+  after the `-339` cut, so the as-of-cut exclusion is ⛔ affected]. The declarer's links read lists live links on HEAD versions only, so
+  after such a correction it shows ⛔ mark for that rank while the link stays live (the nominee's request list, which is ⛔ head-filtered,
+  still shows it); the declaration is locked after filing, so ⛔ declare ends it unless an innocence finding unlocks it (NE2 then ends it
+  `redeclared`). ⭐ Trigger: a correction of a linked rank observed, or a story that reads links
+  after filing.
+
+---
+
 ## Deferred from: code review of 5-11-per-member-sms-fallback-fixed-wording.md, last fix diff (2026-10-24)
 
 - **A Hindi pool value may carry line / paragraph separators (U+2028 / U+2029), bidi controls (U+202A–202E, U+2066–2069), ZWSP or a
@@ -84,6 +111,7 @@ Branch `story/6-36d-exclude-nominees-from-the-five` at `52ece667`, diff `origin/
 - **A bare `catch {}` collapses every cause in the nominee check; the alarm cannot say which fault happened, and the send-time children have no terminal arm** [`apps/jobs/src/claim-peer-mesh.ts` the nominee pre-read `catch`; `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` `readPeerMeshNomineeIndexes`]. A KMS outage, a malformed envelope, a DB error and a plain `TypeError` raise the same alarm text. **Deferred:** ND6 / TR12 deliberately keep the cause out of the alarm and out of pg-boss's stored output; and a permanent fault is not reachable at the children — the select job decrypts the same ciphertext set first (`resolvePeerMeshSelectionFilingCut` yields the same cut) and ends in its 24 h empty selection, so the children see only transient KMS faults, which resume when KMS recovers. **Revisit** to add the error CLASS name (ids only, never the message) to the alarm, or if a way for a ciphertext to become undecryptable after the selection is ever introduced (a KEK rotation or destruction).
 - **Alarm volume during a KMS outage** [`apps/jobs/src/claim-peer-mesh.ts`, `apps/jobs/src/scheduler/claim-peer-mesh-requests.ts`]. The select job alarms once per attempt (about 120 per claim over the 24 h window) and each child sweep alarms once per claim; the tests assert "ONE alarm" for a single call, not per incident. A 2 h outage with 200 open claims produces thousands of identical alarms. **Deferred:** ND6 chose "alarm" and the alarm sink has no throttle; tuning belongs with the sink. **Revisit** at the first real KMS outage, or when the alarm sink gains de-duplication.
 - **A declared nominee number that does not normalise is dropped with no alarm or count** [`packages/domain/src/claim/peer-mesh-nominees.ts` the `resolveCorrectionMobile` loop]. Forms such as `0091 98765 43210` or `+91 0 98765…` resolve to `null`, indistinguishable from "no nominee", and match no member. **Deferred:** the residual is already recorded (ND8: the 13-digit forms are not excluded); only the missing count is new, and it is additive observability. **Revisit** with the follow-up row for a nominee's member link at declaration (`6-36e-nominee-member-link-at-declaration`), which is the actual fix for the family.
+  - *Appended 2026-10-24 (Story 6.36e Task 0.4, [`-397`](../../.decision-log.md#decision-2026-10-24-397)):* revisited — 6.36e does ⛔ change the number normalisation or add the count. A LINKED nominee is matched by account, so a declared number that does not normalise no longer hides them; an UNLINKED one is dropped exactly as above. The count stays deferred, OPEN as written.
 - **Smaller coverage gaps** [`apps/jobs/tests/claim-peer-mesh.test.ts`, `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`]: no select-job leg for a failing `computeHmac` or a throwing batch audit hook (the HMAC fault has a unit leg in `peer-mesh-nominees.test.ts`); the two children's "KMS outside any transaction" is not pinned (M9 covers the select job only); no jobs-level leg where every candidate is a nominee (the zero branch with `no_workplace_colleague_or_named_person`, covered by construction; G15 acknowledges the imprecision); M8c does not pin the nominee-version disjunct of the staff line (the snapshot spec's M16 does). **Deferred:** each is covered another way or by construction. **Revisit** if the children's transaction discipline or the zero branch changes.
 - **Nothing re-enqueues a stranded `documents_pending` claim — a final-attempt failure of the select job is ALARMED, never recovered** [`apps/jobs/src/claim-peer-mesh.ts` `runClaimPeerMeshSelect` (the `alarmIfLastAttempt` arms and the 1 h re-send); `apps/jobs/src/boot.ts` the OCR hook is the only other enqueuer]. Found by the patch review (Edge Hunter, two items). (a) A final attempt that fails for a NON-KMS reason — `ClaimPeerMeshNomineeIndexesStaleError` (the first filing or an innocence finding committing between the pre-read and the lock), a `ClaimStreamConcurrencyError`, a deadlock in the 24 h FINISH write, a DB fault in the pre-read — alarms (ids only) and rethrows; the job goes `failed`, no chain exists, and the claim stays `documents_pending` until another upload fires the OCR hook. (b) A final attempt that EXPIRES outside the handler (pg-boss's 15 min default `expireInSeconds`; there is no deadline around the nominee read, and the process may be killed) ends the chain with no deferral and no alarm at all. **Deferred:** ND6 / AC3 pin "any other fault keeps today's behaviour" (the 1 h re-send is for the KMS fault only), the class is pre-existing (any select-job failure after its retries strands the claim the same way), and the cure is a sweep or a deadline — neither is this story's. **Revisit** with the first real stranded claim, or when a sweep of `documents_pending` claims with no selection is built; the deadline would be a `Promise.race` of `peerMeshNomineeMobileIndexes` against a timer well below the job's expiry, so the catch arms (and the 1 h deferral) run instead of the job expiring.
 - **The SMS child has no deferral for a nominee-read fault — the neighbours' texts can slip a day** [`apps/jobs/src/scheduler/claim-peer-mesh-requests.ts` `readPeerMeshNomineeIndexes` / the worker at the end of the file]. Found by the third review round (Edge Hunter, MED). The select job retries, then re-sends itself 1 h later; the SMS child only throws `ClaimCorrectionTransientError`, retries over 15–30 min, then goes `failed` (no dead-letter). The next enqueue is the daily 10:30 IST sweep, so a KMS outage longer than the retries pushes the five neighbours' texts ~23 h — about a third of the 72 h answer window. The reminder child is less exposed (an hourly sweep). **Deferred:** ND6 gave ONLY the select job the deferral and BigDev accepted it; giving the child one would change a ratified build decision. **Revisit** at the first real KMS outage, or with the same sweep / deadline work as the stranded-claim item above; the guard would be a final-attempt branch in the child worker that re-enqueues itself with `startAfter` 1 h (alarming if that send fails), as `claim-peer-mesh.ts` does.
@@ -113,6 +141,10 @@ Branch `story/6-36d-exclude-nominees-from-the-five` at `52ece667`, diff `origin/
   future mobile-change story (AR-24, ⛔ built) must decide whether to keep a blind index of a member's previous login numbers (its own
   retention purpose — a Panel question) or accept that nominees declared under the old number stop matching. The true fix — a nominee's
   member link captured at declaration — is a separate backlog row (6.36d Task 0.4).
+  - *Appended 2026-10-24 (Story 6.36e Task 0.4, [`-397`](../../.decision-log.md#decision-2026-10-24-397)):* that row is decided — `6-36e-nominee-member-link-at-declaration`
+    (`ready-for-dev`; the Panel's `-396` Q1 A / Q2 A). A LINKED declaration matches by member account and SURVIVES a login-number change
+    (AR-24); an unlinked one still degrades as above. On 6.36e's `done` this item NARROWS to unlinked declarations; the AR-24 trigger stands
+    for them. ⛔ "Closed by".
 
 ---
 
@@ -1009,6 +1041,11 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   - *Appended 2026-10-23 (Story 6.36d Task 0.4, [`-386`](../../.decision-log.md#decision-2026-10-23-386)):* row 6-36d is decided (`ready-for-dev`): a declared nominee is excluded only
     when the deceased typed the number that nominee SIGNED UP with (the accepted data-model gap — 6.36d G18). On `done` this item NARROWS to
     the OTHER relatives AND to nominees on a different number; until then it stays OPEN as written.
+  - *Appended 2026-10-24 (Story 6.36e Task 0.4, [`-397`](../../.decision-log.md#decision-2026-10-24-397) / [`-396`](../../.decision-log.md#decision-2026-10-24-396)):* row 6-36e is decided (`ready-for-dev`): a nominee the deceased
+    MARKED as a fellow member (found in their contacts, in Life Events) is excluded by ACCOUNT, whatever number they sign in with. On
+    6.36e's `done` this item NARROWS FURTHER to the OTHER relatives, to nominees declared before 6.36e ships or never marked, and to a
+    marked-impossible nominee whose sign-in number the deceased did ⛔ hold (often a family phone); until then it stays as the 2026-10-23
+    line says.
 - **A live SENSITIVE answer that cannot be DECRYPTED blocks further saves on that reply** [`apps/api/src/modules/claims/peer-request-core.ts`
   `decryptLiveSensitive` → `claim.savePeerAnswer` `PeerRequestStaleError`]. The handler leaves an undecryptable live answer OUT of the map it
   hands the writer, and the writer refuses the save as STALE (409 `peer_request.stale`) rather than act on an unknown (fail-closed — ⛔ a

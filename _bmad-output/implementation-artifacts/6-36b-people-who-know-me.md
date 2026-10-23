@@ -78,6 +78,11 @@ payment reads either. Checked against the Niyamavali: ⛔ no clause governs it.
    `known_people.daily_limit` / `known_people.monthly_limit` / `known_people.busy` (atomic upserts — the `sms_rate_buckets` precedent,
    migration 0049); a list over 1,000 fails the schema ⇒ 400 `request.validation` (`apps/api/src/middleware/error-mapping/index.ts:158-167`)
    whose body carries ⛔ no submitted value (a test).
+   > ⭐ *Dated note, 2026-10-24 (Story 6.36e Task 0.4, `2026-10-24-396` Q2 A — extends `-310` CF5 A) — ⛔ rewritten:* this endpoint gains
+   > a SECOND purpose — finding a nominee who is a member, on the Life Events nominee form (6.36e NE3). The same endpoint, counters and
+   > positions-only answer; the request gains an optional `purpose: 'known_people' | 'nominee_link'` (default `known_people`, so this
+   > story's client is unchanged) that changes only the audit purpose string (`contact_match` vs `contact_match_nominee`). One match per
+   > nominee-form session, so both features share the 3-a-day budget.
    ⭐ *Annotated 2026-10-15 (code review round 2; ⛔ a rewrite):* SUPERSEDED IN PART by `2026-10-15-333` call 2 — a member who is
    `active` OR `active-in-grace` is matched (the directory shows both as *"Active"*).
 5. **AC4 — ⛔ no number anywhere** (I4): a behaviour test plants a run of known numbers in a match request and in an ask, then asserts

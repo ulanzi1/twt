@@ -83,3 +83,18 @@ still WRITTEN, ⛔ sent:* ADD question 6 when sending — ⛔ change to question
 > does the privacy policy need a line for it?"*
 
 Its answer closes roster Row 31 leg (i)'s counsel half (with the privacy-policy line); nothing in Story 6.36d goes live until then.
+
+*Dated note, 2026-10-24 (Story 6.36e Task 0.4, Decision `2026-10-24-397`; Decision `2026-10-24-396` Q1 A / Q2 A, Trustee-ratified) —
+still WRITTEN, ⛔ sent:* ADD question 7 when sending — ⛔ change to questions 1–6:
+
+> *7. **Recording which member account a nominee is.** When a member names their nominees in the app, they may now mark a nominee
+> who is also a member, by finding them among their own phone contacts (the app checks the contacts against the member list, as it
+> already does for "people who know me", and shows only the matches, under the names the member saved). The Trust then records which
+> member's account that nominee is — an internal link holding no number or name — used ONLY to make sure that person is never one of
+> the five colleagues asked about the member's death. The marked member is told in the app that they were named, and can answer
+> "Yes, that's me" or "No, that's not me"; the member who named them sees the answer. The link counts from the moment the member saves
+> it, before the nominee has answered. The Trustee Panel has permitted this (2026-10-24). On what basis under the DPDP Act may the Trust
+> record and use this link, and tell the marked member they were named; must the nominee's agreement come first, or be withdrawable;
+> and what must the privacy policy say (its nominee row lists only "Name, relationship")?"*
+
+Its answer closes roster Row 31 leg (j)'s counsel half (with the privacy-policy line); nothing in Story 6.36e goes live until then.

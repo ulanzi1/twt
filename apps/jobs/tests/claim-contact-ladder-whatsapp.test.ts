@@ -161,7 +161,10 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per
     // RECIPIENT (`templates` in, `waiting_template` / `pariwar_fallback` out) and its sweep listing carries the language codes —
     // only this pin re-taken; the claimant's WhatsApp step (this story's subject) is untouched. The rest of the fence stands.
-    ['packages/domain/src/claim/peer-mesh-wa-reminder.ts', 'b37a0ce5534df73177c43dc259e7f7b6448a77604748fa62173b111464d4bba7'],
+    // 2026-10-23 Story 6.36d (Decision 2026-10-23-386 ND4 / AC6): the same begin also takes the deceased's `nomineeMobileIndexes` (WR2 (ix)'s
+    // re-check carries the nominee conjunct) — only this pin re-taken, a second time on top of 6.35's; the claimant's WhatsApp step is
+    // untouched. The rest of the fence stands.
+    ['packages/domain/src/claim/peer-mesh-wa-reminder.ts', 'ca622a5836b9be835ff7a6e5d931e54045afdc5a96e57a6d235cf437b6c07aa1'],
     ['packages/channels/src/providers/whatsapp-direct-send-outcome.ts', 'e54f8e1df2195ca192c55f2936e27eb62075d6db8cca6954eb2583b92554e3a7'],
     // 2026-10-21 Story 5.12 — `-364` (a yes lasts until withdrawn; every withdrawal ends every yes): these TWO pins re-taken
     // (endEveryWaYes and the state reads added; isOptInActive's clock and the ACTIVE → EXPIRED edge removed). The rest of the

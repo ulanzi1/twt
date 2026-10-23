@@ -741,3 +741,24 @@
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** BigDev with the DLT portal / MSG91 → (a), (c), (d); the Hindi reviewer → (b); row 5-11b + staging → (e); Story 0.13 (counsel) or BigDev's acceptance → (f). Reach follows the Panel's PQ1 (sent 2026-10-23): under §3.4 as written only a member whose WhatsApp is on and failed qualifies — and no Pariwar has WhatsApp on (Row 38 (c), (d-i)).
 - **notes:** ⚠ *Annotated 2026-10-23 ([Decision 2026-10-23-390](../../.decision-log.md#decision-2026-10-23-390), Trustee-ratified, Q1 B):* the reach line in cross_story_discharge_path is SUPERSEDED — any member the app (and WhatsApp, where used) could not reach qualifies, WhatsApp yes or not; so (f) (consent) now covers members who never said yes to any message channel. "5-11 `done`" ≠ "the templates approved" (`-389`). A pool opening and the last day are ⛔ texted (FS1 (d)) — the Trust's announcement channels are ⛔ this row's. Day-one output is none: no template id is set, every Pariwar's WhatsApp is off, and until row 5-11b a lit, eligible member's rung ends `sms_send_not_wired`.
+
+## Row 41 — Story 11b.4: the family memorial may be switched on (decision-authored, `-398`)
+
+> **Appended 2026-10-24 by Story 11b.4 (Task 8.4) under [Decision 2026-10-24-398](../../.decision-log.md#decision-2026-10-24-398)**
+> MA12 (the next free row — the roster's highest on `main` is 39; ⚠ Row 40 is held by Story 5.11's unlanded branch, so this row is 41).
+> Like Rows 17–40 the row has no architecture source line; it cites the decision that created it. It blocks no build and no merge —
+> nothing is in production ([[project_not_in_production_merge_is_not_golive]]).
+
+### Row 41 — `family-memorial-authorship-live`
+
+- **gate_name:** Family memorial authorship (built by row `11b-4-memorial-authorship-surface-family-writes-the-story`) is ⛔ not enabled in production — the server switch `MEMORIAL_AUTHORSHIP_ENABLED` stays OFF — until every criterion below is met.
+- **architecture_source_line:** N/A — **decision-authored**: [Decision 2026-10-24-398](../../.decision-log.md#decision-2026-10-24-398) MA12 / MA17
+- **owner:** BigDev (gate)
+- **support:** a non-author Hindi reviewer — (a), (c); the 11b.4a builder — (b); the Panel — (e); the Epic 7 window-scheduler owner — (f); each Pariwar's admin — (g)
+- **closure_criteria:** ALL, each recorded: **(a)** AC4's permission wording version — written on `-391` / `-393` / `-395`, carrying M2 (addressed to the nominee) and M3′ — is in force with its `hiReviewed` **true** (a NEW version id if the review changes the words); **(b)** row `11b-4a-family-memorial-public-render` has landed, with the helpline operator's take-down on the nominee's request and the no-trace rule (`-393` M1, MA18); **(c)** the AC14 tone review of the `memorial` namespace and the permission text is RECORDED by a non-author (`docs/tone-review-checklist.md`, the 2026-10-24 row); **(d)** the Story 0.9 risk is disposed — a bereaved-family conversation held, or BigDev records launching without it (AC16 (8)); **(e)** `-395` item 3 (only the nominee may ask for a take-down — it answers `-393`'s Not-covered *"who may ask"*) has been shown to the Panel, or BigDev records launching without it; **(f)** a PRODUCTION producer of `pool.closed` exists (MA14 — today ⛔ production code moves a pool to `closed`, so the surface would open nowhere); **(g)** ≥ 1 person holds `trustee_panel` in the Pariwar (else the review queue is unreachable — MA7).
+- **target_date:** before `MEMORIAL_AUTHORSHIP_ENABLED=1` is set in any production environment (relative-to-fact).
+- **current_status:** `open`
+- **closure_evidence_link:** (empty)
+- **missed_target_escalation_log:** (empty)
+- **cross_story_discharge_path:** the row's closure is ENACTED by turning MA17's switch on. (b) is row 11b-4a's (it also owes the new ADR for the approver email — ADR-0040's identity-read fence); (f) is the Epic 7 window scheduler's. The Panel items Q1–Q5 and the three confirms were ruled by `-391` before this row was written — ⛔ none is a criterion.
+- **notes:** "11b-4 `done`" ≠ "the memorial is live". Day-one output is none: the switch is off by default, so the entry probe answers `{ memorialEntry: false }`, the member GET `{ memorial: null }`, and every member write the neutral `404 memorial.not_found` (AC19, proven by `memorial-gates.spec.ts`).

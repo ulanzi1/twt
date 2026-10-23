@@ -4,6 +4,76 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 11b-4-memorial-authorship-surface-family-writes-the-story.md (2026-10-24)
+
+Story 11b.4 builds the family memorial's WRITE side (the nominee writes, sends with their handover code; the Trustee Panel reviews) —
+build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–MA19), on the Panel's [`-391`](../../.decision-log.md#decision-2026-10-23-391) / [`-392`](../../.decision-log.md#decision-2026-10-23-392) / [`-393`](../../.decision-log.md#decision-2026-10-23-393) and BigDev's [`-395`](../../.decision-log.md#decision-2026-10-23-395). Each item carries its trigger.
+
+- **(1) The PUBLIC RENDER → row `11b-4a-family-memorial-public-render`** (`-391` Q2 A — as approved, any child left out; Q3 B — the
+  family asks the helpline, the rider withdrawn by `-393`). It owns: the helpline operator's take-down **on the NOMINEE's request only**
+  (`-395` item 3; how the operator knows the caller is the nominee is ⛔ ruled — a call back to the declared number of the
+  `handover_nominee_ref` version is MA18's **proposal**) after a smaller fix is offered (M4), within 7 days, with an email to the
+  approver (`-392` items 4–5, kept by `-395`) — MA18's parts: a key (e.g. `memorial.takedown`) for `helpline_operator` (prove it live
+  on the pariwar dimension), a `memorial_withdrawals` actor `helpline` and a reason `family_asked` (minted THEN), an optional Tier-1
+  note, the 7-day watch, and the approver email — which needs a THIRD identity-data read (ADR-0040 admits two, fenced by
+  `apps/jobs/tests/staff-email-identity-read-fence.test.ts`) ⇒ a new ADR or an ADR-0040 amendment FIRST; `-395` item 3 shown to the
+  Panel (Row 41 (e)); `-395`'s Not-covered lines (how the operator knows the caller is the nominee; the nominee has died, cannot be
+  reached, or was replaced; the email's text and recipient); ⭐ **M1: a removed memorial leaves ⛔ trace on the page** (⛔ marker,
+  ⛔ gap, ⛔ date); `-393`'s Not-covered lines (counsel on M4, the call script, what the family is told when they keep it) and
+  `-392`'s (the clock's start; the 7 days passing; whether a declined request is answered to the family, and how — live again now
+  that `-395` item 3 turns a non-nominee away; whether the operator's decision is reviewed or appealed; whether "removed" ends the
+  memorial or lets the family send again; the recipient when the approver no longer holds the role or has ⛔ email); the matrix fields
+  + `RULED_TIER1_PUBLIC_EXCEPTIONS` entries (narrative, portrait — Tier-1 by fact; a public Tier-1 field is a ruling, ⛔ a code change);
+  the SAME presenter (`@twt/ui` `reconstructMemorial`) rendered with `white-space: pre-wrap` (HTML collapses the spaces React Native
+  keeps — AC11); the latest **approved** version shows while a newer one is with the Trust (MA13); the `s-maxage=300` take-down latency;
+  and the two `apps/public` doc-blocks that read *"the family story (Story 11b.4) — `backlog`"* — `apps/public/src/lib/sahyog-vivran-render.ts`
+  and `apps/public/src/pages/sahyog-vivran/[driveToken].astro` — which 11b.4's AC17 forbade touching. **Trigger: row 11b-4a's
+  create-story.**
+- **(2) Kinship capture** (epic step (d) — MA2): ⛔ collected; names of living relatives for a purpose not yet ruled. **Trigger: row
+  11b-4a / Story 11b.5 (`<KinshipLattice>`), with its own Panel question on the purpose.**
+- **(3) Emphasis** (epic step (b) — MA4): v1 is paragraphs only. **Trigger: a Story 0.9 conversation or a family request.**
+- **(4) A staff-initiated helpdesk conversation after a refusal** (the epic's *"request specific changes via empathetic helpdesk
+  conversation"*): every non-approved outcome shows the helpline, but ⛔ staff-initiated ticket exists. **Trigger: the next helpdesk story.**
+- **(5) Non-nominee authors** (`-391` Q1 B / C — ⛔ chosen). **Trigger: a Panel question re-opening Q1.**
+- **(6) A formal family appeal** of a decision (`-391` Q4 B — ⛔ chosen; Q4 A: told in the app, may send again). **Trigger: a Panel
+  question re-opening Q4.**
+- **(7) A family's own request to ERASE their words** through the helpline (`-391` Q5 A's follow-up): MA15 erases with the MEMBER's
+  record (and a deceased member's record is ⛔ erased today — `resolveRtbfLegality` admits only withdrawn / terminated); ⛔
+  family-initiated path exists, and the author is ⛔ a data subject of any export route. **Trigger: the first such request, or 11b.4a.**
+- **(8) Story 0.9 UN-ATTESTED** — every Pattern-4 / grief-pacing claim in 11b.4 is ⛔ validated against a family conversation
+  (`_bmad-output/research/p0-2b-bereaved-spouse.md` holds only `_AWAITING_CONVERSATION_CONDUCT_` placeholders). Launch-gate Row 41 (d)
+  carries it ([[feedback_record_unattested_no_backfill]]). **Trigger: the Story 0.9 conversation.**
+- **(9) The family can LOSE the account** — `disabled-T+90` (unbuilt — `state-machine.ts` header) must ⛔ cut the family off; a
+  WITHDRAWAL of the deceased's membership is **unguarded today** (`apps/api/src/modules/withdrawal/handlers.ts` `assertWithdrawable`
+  checks only the member state; after it, `termination-block-seam.ts` denies every session — every Ravi-mode surface ends); and the
+  90-day sign-in lapse (`apps/mobile/lib/session.ts`; 180 days at most — `memberRefreshAbsoluteMs`). ⛔ Fixed here. **Routed to the
+  withdrawal / claims owner. Trigger: the next withdrawal or Ravi-mode story.**
+- **(10) Staff-assisted authoring** on the family's instruction (`-391` Q1 A's follow-up). **Trigger: the first family who cannot use
+  the app.**
+- **(11) `@twt/ui` in `apps/public`** — `apps/public` does ⛔ depend on `@twt/ui` today (epic header C-1), so 11b.4a's reuse of the AC11
+  presenter needs that dependency first. **Trigger: row 11b-4a.**
+- **(12) UX departures, each with its reason** — the entry on HOME rather than in `<NomineeConsole>` (the console resolves only `live`
+  pools — Trap 2; MA14 opens writing after the close); reason COPY instead of a reviewer's free-text *"note"* to the family (⛔ reviewer
+  free text reaches a grieving family unreviewed — MA6); ⛔ SMS / email resume link (UX-DR50/56 — Trap 4; DLT carries only approved
+  text); the handover hook's rate-limit case shown as a failed send (the hook is ⛔ edited — AC17, AC7a); Pattern 5's relative-time
+  *"Saved"* hint and a screen-reader announcement of save state (a static *"Saved on this phone"* line instead — MA3); `<PortraitFrame>`
+  in upload mode (Story 11b.5 is `backlog` — Trap 9). **Trigger: Story 11b.5 / a Story 0.9 conversation.**
+- **(13) ⛔ No production pool reaches `closed`** — the surface is INERT until the Epic 7 window scheduler appends `pool.closed` (MA14;
+  every drive surface shares it). Row 41 (f) carries it. **Trigger: the first non-test producer of `pool.closed`.**
+- **(14) Counsel risks, ⛔ blockers** — `-391`: counsel was ⛔ asked how long words naming living people may be kept (Q5); `-391` /
+  `-393`: the draft T&C *"revocable consent"* sentence flagged for its owner; `-393`: whether M4's conversation keeps withdrawal as easy
+  as giving permission. **Trigger: the next counsel round (Story 0.13).**
+- **(15) The helpdesk create route TRUNCATES an over-long field SILENTLY** (`apps/api/src/modules/helpdesk/member-handlers.ts`
+  `readCreateMultipart`: `@fastify/multipart` passes a text field over `fieldSize` through CUT with `valueTruncated: true` and raises ⛔
+  error; there is ⛔ `FST_FIELD_SIZE_LIMIT` code, so its catch arm is dead — Trap 11). 11b.4's own route refuses it (`400
+  memorial.field_too_long`). **Routed to the helpdesk owner. Trigger: the next helpdesk story.**
+- **(16) The device checks are UN-ATTESTED** (Task 6.6): Hindi typing with `autoCorrect={false}` (Gboard Hindi + a transliteration
+  keyboard, iOS + Android — Trap 7: on Android it sets `TYPE_TEXT_FLAG_NO_SUGGESTIONS`, which may break transliteration — a break
+  STOPS for BigDev); a rotated portrait and an iPhone HEIC pick arriving upright as JPEG (MA8 — the stripper drops the EXIF
+  orientation tag); TalkBack-Hindi (AC13). ⛔ Run in this session (⛔ device). **Trigger: before Row 41 closes.**
+
+---
+
 ## Deferred from: `2026-10-24-401` — the disclosure removal (Story 6.36e, 2026-10-24)
 
 BigDev's principle: ⛔ no screen may tell members that the Trust asks members about a death (it would let a group steer who is asked). Removed from 6.36e's screens (`form.why`, `request.consequence*`). Open, ⛔ done here:
@@ -3349,6 +3419,9 @@ recorded here rather than left for a future reader to re-derive._
     `apps/` returns **ZERO hits**. The epic AC's *"verifier hyperlinks resolving to verifier profile
     pages"* has ⛔ no destination. ⛔ Unowned.
   · **the family story** (Story **11b.4**) — `backlog`.
+    ⚠ ANNOTATED 2026-10-24 (Story 11b.4): the **write side** is built at 11b.4 (the family writes and sends; the Trust reviews) —
+    ⛔ no public read model until row `11b-4a-family-memorial-public-render`. The public page still renders **nothing** for it. ⛔ Not
+    closed, ⛔ not deleted.
   · **the memorial visual components** (Story **11b.5**) — `backlog`.
   · **`<StatCardStrip>`** — **C-3**: ⛔ NO PRODUCER **and** ⛔ NO OWNER; `2026-08-23-154` declined to
     settle it (*"a settled SHAPE is ⛔ not a settled SOURCE"*). ⛔⛔ **Do ⛔ not stub it** — a stub asserts
@@ -10995,6 +11068,10 @@ way to check the sibling honoured it. **2 decision-needed, 12 patch, 2 deferred,
   to Adv. Mohit Agrawal, ⛔ not to a Panel session ([[project_dpdpa_counsel_engaged_but_unrecorded]]);
   (iii) any story adding a **second** member-scoped persisted query, which generalises exposure (b)
   beyond this one surface.
+  ⚠ ANNOTATED 2026-10-24 (Story 11b.4, [`-398`](../../.decision-log.md#decision-2026-10-24-398)): trigger (iii) is ⛔ **not met** by
+  11b.4 — the memorial member GET (the family's words, the deceased's name, a signed photo URL) is member-scoped but EXCLUDED from the
+  persisted cache by `gcTime: 0` on every memorial query (AC1; pinned by `apps/mobile/tests/unit/memorial-source-pins.test.ts`). The
+  item stays **open**, ⛔ not closed.
 
 ⚠⚠ **ONE ITEM IS NOT LISTED HERE BECAUSE IT IS NOT DEFERRABLE — it is an item whose trigger has ALREADY
 FIRED AND WAS SPENT UNRECORDED.** `11b.2 (vi)` (the missing `t()`-through assertion for `@twt/ui`'s ten

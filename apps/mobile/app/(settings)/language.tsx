@@ -3,7 +3,9 @@
 // Two options — the endonyms हिन्दी and English (names, the same in both catalogs) — in a radio group; the current one is
 // checked. Selecting the OTHER one changes the whole app at once (`setLocale` — every `useT()` consumer re-renders), saves
 // it on this phone and, for a signed-in member, records it on the account (`chooseLanguage` — the ONE serial PUT queue,
-// `lib/app-language.ts`). Selecting the current one does nothing (I1: a PUT only on a CHANGE from the language shown).
+// `lib/app-language.ts`). Selecting the current one does nothing (I1: a PUT only on a CHANGE from the language shown) —
+// unless the account, as last read, holds no choice or another one: then the tap records it (Decision 2026-10-23-388,
+// item 1 — e.g. a login-screen choice dropped by an app restart before sign-in).
 // A failed PUT keeps the new language on screen and the pending record (retried at the next start / foreground), and
 // shows ONE inline alert line. Its announcement: iOS only when the line MOUNTS on the failure (TalkBack already speaks a
 // newly shown live region — `(claim)/contact.tsx`); on BOTH platforms when it was already showing and a second PUT fails
@@ -17,7 +19,7 @@ import { useLocale, useT } from '@twt/i18n/react'
 import { Stack } from 'expo-router'
 import { H2, Paragraph, Text, XStack, YStack } from 'tamagui'
 
-import { type AppLanguage, chooseLanguage } from '../../lib/app-language'
+import { type AppLanguage, accountChoiceDiffers, chooseLanguage } from '../../lib/app-language'
 import { useSession } from '../../lib/session-context'
 
 function LanguageOption(props: {
@@ -78,8 +80,8 @@ export default function LanguageScreen(): React.ReactElement {
 
   const choose = useCallback(
     (next: AppLanguage) => {
-      if (next === locale) return
-      setLocale(next)
+      if (next === locale && (memberId === null || !accountChoiceDiffers(memberId, next))) return
+      if (next !== locale) setLocale(next)
       void chooseLanguage(next, memberId, { currentMemberId }).then((outcome) => {
         if (!mountedRef.current) return
         if (outcome !== 'not_recorded') {

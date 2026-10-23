@@ -178,6 +178,26 @@ describe.skipIf(!hasDatabase)('Story 6.35 — the member language routes (E2E, l
     }
   });
 
+  it('the PUT is rate-limited PER MEMBER: the N+1th PUT of one member is 429; another member in the same Pariwar is untouched', async () => {
+    // 6.35 second review — asserted by construction only before: `perMemberKey` + `hook: 'preHandler'` ⇒ the bucket is the
+    // member's actorId, ⛔ the shared IP (the 6.36a `workplace.spec.ts` shape, a LOW ceiling by env override).
+    const t = await createTestApp({ env: { WRITE_RATE_MAX: '2' } });
+    try {
+      const w = await world(t);
+      const other = await seedMember(t, w.pariwarId);
+      const tokOther = signAccessToken(t.app, { memberId: other, pariwarId: w.pariwarId, deviceId: 'test-device' }, ACCESS_TTL_MS);
+      const codes: number[] = [];
+      for (const locale of ['en', 'hi', 'en'] as const) codes.push((await call(t.app, 'PUT', { token: w.tok, payload: { locale } })).status);
+      expect(codes).toEqual([200, 200, 429]);
+      expect((await rowOf(t, w.memberId)).preferred_locale).toBe('hi');
+      expect(changedLines(t)).toHaveLength(2);
+      expect((await call(t.app, 'PUT', { token: tokOther, payload: { locale: 'en' } })).status).toBe(200);
+      expect(t.auditSink.ofType('rate_limit.exceeded').length).toBeGreaterThanOrEqual(1);
+    } finally {
+      await teardown(t);
+    }
+  });
+
   it('⭐ the audit is AFTER the commit — a FAILED COMMIT ⇒ 5xx, ⛔ write and ⛔ audit line', async () => {
     const t = await createTestApp();
     try {

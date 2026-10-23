@@ -729,6 +729,33 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
     expect(await begin(s, 1, { jobId: 'job-b', now: later })).toMatchObject({ kind: 'begun', locale: 'en', localeSource: 'member_choice', attemptCount: 2 });
   });
 
+  it('6.35 AC5, second review — a RE-CLAIM of a chooser whose language is now unusable FALLS BACK (`pariwar_fallback`, the row rewritten)', async () => {
+    const s = await seedReminder({ n: 1 });
+    await chooseLanguage(s.pings[0]!.memberId, 'en', s.pid);
+    expect(await begin(s, 0)).toMatchObject({ kind: 'begun', locale: 'en', localeSource: 'member_choice' });
+    const later = new Date(Date.now() + CORRECTION_SEND_LEASE_MS + 60_000);
+    expect(await begin(s, 0, { jobId: 'job-b', now: later, templates: { hi: 'peer_mesh_reminder_hi_v1', en: null } })).toMatchObject({
+      kind: 'begun',
+      locale: 'hi',
+      localeSource: 'pariwar_fallback',
+      templateName: 'peer_mesh_reminder_hi_v1',
+      attemptCount: 2,
+    });
+    expect((await rows(s))[0]).toMatchObject({ locale: 'hi', locale_source: 'pariwar_fallback', template_name: 'peer_mesh_reminder_hi_v1' });
+  });
+
+  it('6.35 AC5, second review — a RE-CLAIM past `+ 72 h` is finished `skipped_late` BEFORE the template is judged: the same with ⛔ usable template and with one', async () => {
+    // WR5's bound is read first (`!ping.in_time`), so a reminder waiting on its template can ⛔ outlive +72 h; the control leg
+    // shows the template set does ⛔ change the outcome.
+    const lapsed = new Date(Date.now() - CORRECTION_SEND_LEASE_MS - 60_000);
+    for (const templates of [{ hi: null, en: 'peer_mesh_reminder_en_v1' }, TEMPLATES]) {
+      const s = await seedReminder({ n: 1, hoursAgo: 73 });
+      await insertReminderRow(s, 0, { claimed_at: lapsed, aging_since: lapsed });
+      expect(await begin(s, 0, { jobId: 'job-b', templates })).toEqual({ kind: 'skipped', outcome: 'skipped_late' });
+      expect((await rows(s))[0]).toMatchObject({ send_outcome: 'skipped_late' });
+    }
+  });
+
   it('6.35 AC5 — a waiting reminder past `+ 72 h` is finished `skipped_late` by a begin (⛔ sent)', async () => {
     const s = await seedReminder({ n: 1, hoursAgo: 73 });
     expect(await begin(s, 0, { templates: { hi: null, en: 'peer_mesh_reminder_en_v1' } })).toEqual({ kind: 'skipped', outcome: 'skipped_late' });

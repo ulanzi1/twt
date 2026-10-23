@@ -300,7 +300,10 @@ export function isScopeWideSendFault(rawDetail: string | null): boolean {
 export interface PeerMeshRequestSweepResult {
   readonly scannedClaims: number;
   readonly enqueued: number;
-  /** Claims held by a config gap (R11) — ⛔ enqueued, ⛔ ping begun. */
+  /**
+   * Claims held by a config gap (R11) — ⛔ enqueued, ⛔ ping begun. 📌 6.35: includes a held Pariwar's claims whose due pings all
+   * wait on an unusable language (found by the waiting count, ⛔ the listing — so ⛔ counted in `scannedClaims`).
+   */
   readonly heldForConfig: number;
   /** In-flight pings newly parked by a hold (RN2) — ⛔ given up while held. 📌 6.35: or by an unusable locale (they wait). */
   readonly parkedForConfig: number;
@@ -499,6 +502,29 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
     after = page.lastClaimCaseId;
   }
 
+  // 📌 Story 6.35 (LS10 (b)) — the pings WAITING on an unusable language (the count read, because the listing excludes them), per
+  // Pariwar: a HELD Pariwar's are its held claims (AC4 (vi) — "held as today", in the HELD alarm, ⛔ reported as waiting); an
+  // UNREADABLE one's are already alarmed; the rest are the waiting count (6.35 second review). ⛔ Run once the budget is spent
+  // (it reads config for Pariwars the listing never reached) — the budget alarm below says the run was cut short.
+  let waitingForTemplate = 0;
+  const waitingByLocale = new Map<PeerMeshRequestSmsLocale, number>();
+  if (states !== null && waitUnusable.length > 0 && !budgetExhausted) {
+    const heldSet = new Set(heldClaims);
+    for (const w of await claimDomain.countWaitingPeerMeshRequestPings(deps.pool, { now, unusableLocales: waitUnusable, allow })) {
+      const gap = await gapOf(w.pariwarId);
+      if (gap === CONFIG_UNREADABLE) continue;
+      if (gap !== null) {
+        if (!heldSet.has(w.claimCaseId)) {
+          heldSet.add(w.claimCaseId);
+          heldClaims.push(w.claimCaseId);
+        }
+        continue;
+      }
+      waitingByLocale.set(w.locale, (waitingByLocale.get(w.locale) ?? 0) + w.waiting);
+      waitingForTemplate += w.waiting;
+    }
+  }
+
   // (5) ONE end-of-run alarm for every claim a config gap held — the count, the gaps seen and the ids.
   if (heldClaims.length > 0) {
     const gaps = [...new Set([globalGap, ...gapByPariwar.values()].filter((g): g is string => g !== null))].sort();
@@ -509,16 +535,12 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
     );
   }
   // 📌 Story 6.35 (LS10 (b)) — ONE alarm for the texts WAITING on an unusable language: each locale, its state code and its count
-  // (ids-free; the count read, because the listing excludes them). ⛔ Sent in the other language; past the claim's answer window
-  // an unsent one stays unsent (`not_sent`).
-  let waitingForTemplate = 0;
-  if (states !== null && waitUnusable.length > 0) {
-    const waiting = await claimDomain.countWaitingPeerMeshRequestPings(deps.pool, { now, unusableLocales: waitUnusable, allow });
-    const countOf = (l: PeerMeshRequestSmsLocale): number => waiting.find((w) => w.locale === l)?.waiting ?? 0;
-    waitingForTemplate = waitUnusable.reduce((n, l) => n + countOf(l), 0);
+  // (ids-free). ⛔ Sent in the other language; past the claim's answer window an unsent one stays unsent (`not_sent`). ⛔ Raised
+  // when nothing waits (an unprovisioned id with ⛔ recipient in that language is ⛔ a daily alarm).
+  if (states !== null && waitingForTemplate > 0) {
     const parts = waitUnusable.map((l) => {
       const st = states[l];
-      return `${l} — ${st.usable ? 'usable' : st.gap} — ${String(countOf(l))} waiting`;
+      return `${l} — ${st.usable ? 'usable' : st.gap} — ${String(waitingByLocale.get(l) ?? 0)} waiting`;
     });
     alarm(
       `[jobs] claim-peer-mesh-request-sweep: neighbour texts WAITING for their language's text template (${parts.join('; ')}); ` +

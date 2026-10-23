@@ -856,28 +856,30 @@ export async function listDuePeerMeshRequestClaims(
 }
 
 /**
- * 📌 Story 6.35 (LS10 (b)) — the ALARM's count of neighbour texts WAITING for an unusable TEXT template, per locale: un-begun pings in
- * the answer window whose effective locale is unusable, and `attempting` rows past the lease, in the window, whose recorded locale
- * is. Needed because the listing EXCLUDES them. Counts only.
+ * 📌 Story 6.35 (LS10 (b)) — the ALARM's count of neighbour texts WAITING for an unusable TEXT template, per Pariwar, claim and locale:
+ * un-begun pings in the answer window whose effective locale is unusable, and `attempting` rows past the lease, in the window, whose
+ * recorded locale is. Needed because the listing EXCLUDES them. Per Pariwar and claim so the sweep can tell a HELD Pariwar's pings
+ * (its HELD alarm and count — AC4 (vi)) from a waiting one's (6.35 second review).
  *
- * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ── `listDuePeerMeshRequestClaims`' reasoning: it returns a
- * locale and a COUNT (⛔ an id, ⛔ PII); every join names the ping's own `pariwar_id`. RE-EXAMINE when: it returns more than counts,
- * the pool loses BYPASSRLS, or a per-tenant scheduler exists.
+ * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ── `listDuePeerMeshRequestClaims`' reasoning: it returns ids
+ * (the Pariwar's, the claim's — what that listing returns), a locale and a COUNT (⛔ a member, ⛔ PII); every join names the ping's
+ * own `pariwar_id`. RE-EXAMINE when: it returns more than that, the pool loses BYPASSRLS, or a per-tenant scheduler exists.
  */
 export async function countWaitingPeerMeshRequestPings(
   q: Queryable,
   input: { readonly now: Date; readonly unusableLocales: readonly ('hi' | 'en')[]; readonly allow: readonly string[] | null },
-): Promise<{ readonly locale: 'hi' | 'en'; readonly waiting: number }[]> {
+): Promise<{ readonly pariwarId: PariwarId; readonly claimCaseId: ClaimId; readonly locale: 'hi' | 'en'; readonly waiting: number }[]> {
   const unusable = [...input.unusableLocales];
   if (unusable.length === 0) return [];
   const lease = new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS);
   const allow = input.allow === null ? sql`` : sql` AND pr_p.pariwar_id = ANY(${sql.param([...input.allow])}::uuid[])`;
-  const rows = await run<{ locale: string; waiting: number }>(
+  const rows = await run<{ pariwar_id: string; claim_case_id: string; locale: string; waiting: number }>(
     q,
     sql`
-      SELECT w.locale, count(*)::int AS waiting
+      SELECT w.pariwar_id, w.claim_case_id, w.locale, count(*)::int AS waiting
         FROM (
-          SELECT CASE WHEN pr_p.send_outcome IS NULL
+          SELECT pr_p.pariwar_id, pr_s.claim_case_id,
+                 CASE WHEN pr_p.send_outcome IS NULL
                       THEN COALESCE(pr_m.preferred_locale::text, pr_pp.locale_default::text)
                       ELSE COALESCE(pr_p.locale, pr_pp.locale_default::text) END AS locale
             FROM claim_peer_mesh_pings pr_p
@@ -889,10 +891,15 @@ export async function countWaitingPeerMeshRequestPings(
              AND (pr_p.send_outcome IS NULL OR (pr_p.send_outcome = 'attempting' AND pr_p.claimed_at < ${lease}))${allow}
         ) w
        WHERE w.locale = ANY(${sql.param(unusable)}::text[])
-       GROUP BY w.locale
-       ORDER BY w.locale`,
+       GROUP BY w.pariwar_id, w.claim_case_id, w.locale
+       ORDER BY w.pariwar_id, w.claim_case_id, w.locale`,
   );
-  return rows.map((r) => ({ locale: r.locale as 'hi' | 'en', waiting: r.waiting }));
+  return rows.map((r) => ({
+    pariwarId: r.pariwar_id as PariwarId,
+    claimCaseId: r.claim_case_id as ClaimId,
+    locale: r.locale as 'hi' | 'en',
+    waiting: r.waiting,
+  }));
 }
 
 /** RN3 — rows whose (credited) `aging_since` is before this instant and still `attempting` are given up: 00:00 IST of (today − 2). */

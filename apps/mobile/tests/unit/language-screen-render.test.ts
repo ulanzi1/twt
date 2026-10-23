@@ -99,6 +99,7 @@ vi.mock('tamagui', async () => {
 })
 
 import LanguageScreen from '../../app/(settings)/language'
+import { syncAppLanguage } from '../../lib/app-language'
 import LoginScreen from '../../app/(auth)/login'
 
 const PENDING = 'app-language.pending.v1'
@@ -114,12 +115,17 @@ function renderIn(component: () => ReactNode, locale: 'hi' | 'en' = 'hi') {
 
 const settle = () => new Promise((r) => setTimeout(r, 20))
 
+// `lib/app-language.ts` keeps the account's last-read choice per member for the whole module (Decision 2026-10-23-388);
+// a fresh member id per test keeps one test's recorded choice out of the next.
+let seq = 0
+
 beforeEach(() => {
   mock.store.clear()
   for (const f of [mock.memberLanguageSet, mock.memberLanguage, mock.requestOtp, mock.announce, mock.push]) f.mockReset()
   mock.memberLanguageSet.mockImplementation((l: string) => Promise.resolve({ chosenLocale: l, pariwarDefaultLocale: 'hi' }))
   mock.os = 'android'
-  mock.session = { memberId: 'm-1' }
+  seq += 1
+  mock.session = { memberId: `m-${String(seq)}` }
 })
 afterEach(() => {
   cleanup()
@@ -184,6 +190,45 @@ describe('AC7 — the language screen', () => {
     expect(mock.memberLanguageSet).toHaveBeenLastCalledWith('hi')
   })
 
+  it('⭐ -388 item 1 — the account holds NO choice: a tap on the SHOWN language records it, once; before any account read it stays a no-op', async () => {
+    mock.store.set('app-language.v1', 'en')
+    renderIn(LanguageScreen, 'en')
+    fireEvent.click(screen.getByTestId('language-option-en'))
+    await settle()
+    expect(mock.memberLanguageSet).not.toHaveBeenCalled()
+    mock.memberLanguage.mockResolvedValue({ chosenLocale: null, pariwarDefaultLocale: 'hi' })
+    await syncAppLanguage(mock.session!.memberId, { setLocale: vi.fn() })
+    fireEvent.click(screen.getByTestId('language-option-en'))
+    await settle()
+    expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1)
+    expect(mock.memberLanguageSet).toHaveBeenCalledWith('en')
+    expect(pending()).toBeNull()
+    expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-checked', 'true')
+    fireEvent.click(screen.getByTestId('language-option-en'))
+    await settle()
+    expect(mock.memberLanguageSet).toHaveBeenCalledTimes(1)
+  })
+
+  it('-388 item 1 — the account holds the OTHER language after a FAILED switch: a tap on the shown one retries it and clears the alert; then ⛔ PUT', async () => {
+    // The reachable "different value" case: the account read `hi`, the switch to English failed — the screen shows English,
+    // the account still holds Hindi. (A GET adopting a value would itself switch the screen — ⛔ a state to start from.)
+    renderIn(LanguageScreen, 'hi')
+    mock.memberLanguage.mockResolvedValue({ chosenLocale: 'hi', pariwarDefaultLocale: 'hi' })
+    await syncAppLanguage(mock.session!.memberId, { setLocale: vi.fn() })
+    mock.memberLanguageSet.mockRejectedValueOnce(new Error('offline'))
+    fireEvent.click(screen.getByTestId('language-option-en'))
+    expect(await screen.findByTestId('language-not-recorded')).toBeInTheDocument()
+    expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-checked', 'true')
+    fireEvent.click(screen.getByTestId('language-option-en'))
+    await settle()
+    expect(mock.memberLanguageSet.mock.calls).toEqual([['en'], ['en']])
+    expect(screen.queryByTestId('language-not-recorded')).toBeNull()
+    expect(pending()).toBeNull()
+    fireEvent.click(screen.getByTestId('language-option-en'))
+    await settle()
+    expect(mock.memberLanguageSet).toHaveBeenCalledTimes(2)
+  })
+
   for (const os of ['android', 'ios'] as const) {
     it(`⭐ a failed PUT keeps the new language, leaves pending, shows ONE assertive alert line; announce rule (${os})`, async () => {
       mock.os = os
@@ -197,7 +242,7 @@ describe('AC7 — the language screen', () => {
       expect(screen.getAllByRole('alert')).toHaveLength(1)
       expect(screen.getByTestId('language-option-en')).toHaveAttribute('aria-checked', 'true')
       expect(screen.getByTestId('stack-title')).toHaveTextContent('Language')
-      expect(pending()).toMatchObject({ locale: 'en', memberId: 'm-1' })
+      expect(pending()).toMatchObject({ locale: 'en', memberId: mock.session?.memberId })
       // The line MOUNTED on the failure: iOS needs the call; TalkBack already speaks a new live region (⛔ twice).
       expect(mock.announce).toHaveBeenCalledTimes(os === 'ios' ? 1 : 0)
       if (os === 'ios') expect(mock.announce).toHaveBeenLastCalledWith(tr('language.error_not_recorded', 'en'))
@@ -208,7 +253,7 @@ describe('AC7 — the language screen', () => {
       expect(mock.announce).toHaveBeenLastCalledWith(tr('language.error_not_recorded', 'hi'))
       expect(screen.getAllByRole('alert')).toHaveLength(1)
       expect(screen.getByTestId('language-not-recorded')).toHaveTextContent(tr('language.error_not_recorded', 'hi'))
-      expect(pending()).toMatchObject({ locale: 'hi', memberId: 'm-1' })
+      expect(pending()).toMatchObject({ locale: 'hi', memberId: mock.session?.memberId })
     })
   }
 

@@ -65,6 +65,8 @@ import {
   readMemberFacingDeceasedName,
 } from './claim-peer-mesh-requests.js';
 import { PEER_MESH_WA_REMINDER_LANGUAGE, PEER_MESH_WA_REMINDER_LOCALES, type PeerMeshWaReminderLocale } from './peer-mesh-wa-templates.js';
+import { resolveAppLinksOrigin } from './staff-email-config.js';
+import { waTemplateConfigKey } from './wa-template-config-key.js';
 
 /** 📌 Story 6.35 — a config's template states as the begin takes them: the name, or `null` (unusable). */
 export function peerMeshWaReminderTemplateNames(
@@ -77,8 +79,6 @@ export function peerMeshWaReminderTemplateNames(
   }
   return out;
 }
-import { resolveAppLinksOrigin } from './staff-email-config.js';
-import { waTemplateConfigKey } from './wa-template-config-key.js';
 
 /**
  * The reminder's deps — ⭐ I2: ⛔ SMS client of any kind (a type-level absence, pinned by `expectTypeOf`). The ONE WhatsApp client

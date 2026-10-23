@@ -7,9 +7,12 @@
 //   · `app-language.pending.v1` — an explicit change ⛔ yet recorded on the server: `{ locale, memberId, processId }`.
 //     `memberId: null` = made on the login screen, before sign-in; it is sent ONLY for a sign-in in the SAME app process
 //     (`processId`) — a later process drops it, else a login-screen choice would be recorded for whoever signs in next (I1).
+//     The first sign-in's sync re-tags it with that member BEFORE queueing the PUT, so a later member in the same process
+//     never inherits it — when that PUT fails, or when the sign-in's queued PUT never ran (Decision 2026-10-23-388, item 2).
 //
 // ⭐ I1 — the server value changes ONLY through `memberLanguageSet`, and ONLY for a `pending` record, which ONLY
-// `chooseLanguage` writes (after the member picked a language DIFFERENT from the one shown). ⛔ First-launch write,
+// `chooseLanguage` writes (after the member picked a language DIFFERENT from the one shown, or tapped the shown one while
+// the account holds no choice or another — `accountChoiceDiffers`, Decision 2026-10-23-388 item 1). ⛔ First-launch write,
 // ⛔ device-language inference, ⛔ the Pariwar's default adopted as a choice (T8): `syncAppLanguage` never PUTs what it
 // merely DISPLAYS, and never DISPLAYS the Pariwar's default (LS4 (b) — a member who never chose stays in Hindi, I2).
 //
@@ -58,6 +61,9 @@ const PROCESS_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slic
 
 /** Bumped by every `chooseLanguage` — a GET / PUT result that resolves after it moved is dropped. */
 let choiceCounter = 0
+
+/** Each member's account choice as this process last read it (a GET adopted by the sync, or a PUT's response); absent = ⛔ read. */
+const accountChoices = new Map<string, AppLanguage | null>()
 
 const isLanguage = (v: unknown): v is AppLanguage => v === 'hi' || v === 'en'
 
@@ -116,6 +122,32 @@ function sendableFor(pending: Pending, memberId: string): boolean {
   return pending.processId === PROCESS_ID
 }
 
+/** Re-tag a login-screen choice with the member it now belongs to (Decision 2026-10-23-388, item 2). Never throws. */
+function bindPending(storage: SyncStorage, pending: Pending, memberId: string): Pending {
+  if (pending.memberId !== null) return pending
+  const bound = { ...pending, memberId } satisfies Pending
+  try {
+    storage.setItem(APP_LANGUAGE_PENDING_KEY, JSON.stringify(bound))
+    volatilePending.delete(storage)
+  } catch {
+    volatilePending.set(storage, bound)
+  }
+  return bound
+}
+
+/**
+ * Does this member's account, as last read in this process, hold no choice or one other than `locale`? A tap on the shown
+ * language is then recorded (Decision 2026-10-23-388, item 1). ⛔ Read yet ⇒ `false` — the shown language is never sent
+ * on a guess (I1).
+ */
+export function accountChoiceDiffers(memberId: string, locale: AppLanguage): boolean {
+  return accountChoices.has(memberId) && accountChoices.get(memberId) !== locale
+}
+
+function noteAccountChoice(memberId: string, chosen: unknown): void {
+  accountChoices.set(memberId, isLanguage(chosen) ? chosen : null)
+}
+
 type FlushResult =
   | { readonly kind: 'nothing' }
   | { readonly kind: 'failed' }
@@ -145,12 +177,13 @@ function flush(memberId: string, client: AppLanguageClient, storage: SyncStorage
       let first = true
       for (;;) {
         if (!canWrite()) return { kind: 'failed' }
-        const pending = readPending(storage)
-        if (pending === null) return last
+        const read = readPending(storage)
+        if (read === null) return last
         // A foreign member's choice belongs to its own caller. A new login-screen choice also waits for a NEW sign-in;
         // only the initial record of a flush explicitly started at sign-in may have a null member id.
-        if (!sendableFor(pending, memberId) || (!first && pending.memberId === null)) return last
+        if (!sendableFor(read, memberId) || (!first && read.memberId === null)) return last
         first = false
+        const pending = bindPending(storage, read, memberId)
         const counterAtStart = choiceCounter
         let response: MemberLanguageResponse
         try {
@@ -162,6 +195,7 @@ function flush(memberId: string, client: AppLanguageClient, storage: SyncStorage
         // Storage cleanup can fail even though the server accepted the value. Leave one retry record and settle, rather
         // than sending this same record repeatedly until the rate limit stops us.
         if (samePending(readPending(storage), pending)) return { kind: 'failed' }
+        noteAccountChoice(memberId, response.chosenLocale)
         last = { kind: 'recorded', response, counter: counterAtStart }
         // A choice made during the PUT is still pending ⇒ the loop sends it next (serial, ⛔ deduped).
       }
@@ -176,7 +210,8 @@ function flush(memberId: string, client: AppLanguageClient, storage: SyncStorage
 export type ChooseOutcome = 'saved_on_phone' | 'recorded' | 'not_recorded'
 
 /**
- * The member EXPLICITLY picked `locale` — a language DIFFERENT from the one shown (the caller's check; I1). Stores it on
+ * The member EXPLICITLY picked `locale` — a language DIFFERENT from the one shown, or the shown one while
+ * `accountChoiceDiffers` (the caller's check; I1). Stores it on
  * the phone and as `pending`; with a member (`memberId` non-null) records it on the server through the serial queue.
  * `memberId: null` (the login screen) calls ⛔ API. The caller has already shown the language (`setLocale`).
  */
@@ -229,6 +264,10 @@ export async function syncAppLanguage(
   try {
     const pending = readPending(storage)
     if (pending !== null && sendableFor(pending, memberId)) {
+      if (!stillCurrent()) return
+      // A login-screen choice belongs to THIS sign-in from now on — bound before the PUT is queued, so a queued PUT that
+      // never runs (this member signed out first) cannot leave it unbound for the next member (Decision 2026-10-23-388, item 2).
+      bindPending(storage, pending, memberId)
       const r = await withTimeout(flush(memberId, client, storage, stillCurrent), CALL_TIMEOUT_MS)
       if (r.kind === 'recorded' && r.counter === choiceCounter && stillCurrent() && isLanguage(r.response.chosenLocale)) {
         storeLanguage(storage, r.response.chosenLocale)
@@ -241,6 +280,7 @@ export async function syncAppLanguage(
     const counterAtStart = choiceCounter
     const res = await withTimeout(client.memberLanguage(), CALL_TIMEOUT_MS)
     if (choiceCounter !== counterAtStart || !stillCurrent() || readPending(storage) !== null) return
+    noteAccountChoice(memberId, res.chosenLocale)
     if (isLanguage(res.chosenLocale)) {
       storeLanguage(storage, res.chosenLocale)
       opts.setLocale(res.chosenLocale)

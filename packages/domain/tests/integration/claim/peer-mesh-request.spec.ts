@@ -683,7 +683,16 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       expect(await listed([])).toEqual([onlyEn.claimCaseId, mixed.claimCaseId, bare.claimCaseId, enPariwar.claimCaseId].sort());
       expect(await listed(['en'])).toEqual([mixed.claimCaseId, bare.claimCaseId].sort());
       expect(await listed(['hi'])).toEqual([onlyEn.claimCaseId, mixed.claimCaseId, bare.claimCaseId, enPariwar.claimCaseId].sort());
-      expect(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: ['en'], allow })).toEqual([{ locale: 'en', waiting: 3 }]);
+      // per Pariwar and claim (the sweep tells a held Pariwar's pings from a waiting one's): the three waiting `en` pings
+      // (`bare` — ⛔ passport, a NULL locale — is ⛔ counted)
+      const byPariwar = (r: { pariwarId: string }, o: { pariwarId: string }) => r.pariwarId.localeCompare(o.pariwarId);
+      expect([...(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: ['en'], allow }))].sort(byPariwar)).toEqual(
+        [
+          { pariwarId: onlyEn.pid, claimCaseId: onlyEn.claimCaseId, locale: 'en', waiting: 1 },
+          { pariwarId: mixed.pid, claimCaseId: mixed.claimCaseId, locale: 'en', waiting: 1 },
+          { pariwarId: enPariwar.pid, claimCaseId: enPariwar.claimCaseId, locale: 'en', waiting: 1 },
+        ].sort(byPariwar),
+      );
       expect(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: [], allow })).toEqual([]);
     });
 
@@ -700,7 +709,9 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
         (await listDuePeerMeshRequestClaims(client, { now: NOW, after: null, allow, unusableLocales: unusable })).due.length;
       expect(await due([])).toBe(1);
       expect(await due(['en'])).toBe(0);
-      expect(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: ['en'], allow })).toEqual([{ locale: 'en', waiting: 1 }]);
+      expect(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: ['en'], allow })).toEqual([
+        { pariwarId: s.pid, claimCaseId: s.claimCaseId, locale: 'en', waiting: 1 },
+      ]);
       expect(await parkHeldPeerMeshRequests(client, { now: NOW, allow, held: [], unusableLocales: [] })).toEqual([]);
       expect(await parkHeldPeerMeshRequests(client, { now: NOW, allow, held: [], unusableLocales: ['hi'] })).toEqual([]);
       expect(await parkHeldPeerMeshRequests(client, { now: NOW, allow, held: [], unusableLocales: ['en'] })).toEqual([{ pingId: p.pingId, claimCaseId: s.claimCaseId }]);

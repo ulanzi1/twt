@@ -388,6 +388,34 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect((await localeRows(w)).every((r) => r.send_outcome === null)).toBe(true);
   });
 
+  it('6.35 AC4 (vi), second review — the OWN-key fault with ⛔ chooser: the claim is HELD (count + HELD alarm), ⛔ reported as WAITING', async () => {
+    const w = await world({ selected: 2 });
+    const h = harness(w, { registry: [CLEARED], throwOn: 'sms.dlt.template_id.peer_mesh.request.hi' });
+    expect((await tick(h, w)).swept).toMatchObject({ enqueued: 0, heldForConfig: 1, waitingForTemplate: 0 });
+    expect(h.alarms.filter((a) => a.includes('HELD'))).toEqual([expect.stringContaining(w.claimCaseId)]);
+    expect(h.alarms.some((a) => a.includes('WAITING'))).toBe(false);
+    expect((await localeRows(w)).every((r) => r.send_outcome === null)).toBe(true);
+    await expectIdsOnly(h, w);
+  });
+
+  it('6.35 second review — the waiting count is ⛔ run once the budget is spent (⛔ config reads past it; the budget alarm says so)', async () => {
+    const w = await world({ selected: 2 });
+    await choose(w.pings[0]!.memberId, 'en'); // a listed claim, so the listing's budget check runs
+    const h = harness(w, { registry: [CLEARED], throwOn: 'sms.dlt.template_id.peer_mesh.request.hi' });
+    let ms = 0;
+    const deps: ClaimPeerMeshRequestDeps = { ...h.deps, sweepBudgetMs: 0, elapsedClockMs: () => (ms += 1) };
+    expect(await runPeerMeshRequestSweep(deps, boss(h))).toMatchObject({ budgetExhausted: true, heldForConfig: 0, waitingForTemplate: 0 });
+    expect(h.alarms.some((a) => a.includes('budget'))).toBe(true);
+    expect(h.alarms.some((a) => a.includes('WAITING') || a.includes('HELD'))).toBe(false);
+  });
+
+  it('6.35 AC4 (xi), second review — an unusable language with ⛔ recipient in it raises ⛔ WAITING alarm', async () => {
+    const w = await world({ selected: 1 });
+    const h = harness(w, { registry: [CLEARED], config: EN_UNSET });
+    expect((await tick(h, w)).swept).toMatchObject({ enqueued: 1, heldForConfig: 0, waitingForTemplate: 0 });
+    expect(h.alarms.some((a) => a.includes('WAITING'))).toBe(false);
+  });
+
   it('⭐ 6.35 AC4 (vii) — a claim whose ONLY due ping waits is ⛔ enqueued (⛔ child, ⛔ name decrypted)', async () => {
     const w = await world({ selected: 1 });
     await choose(w.pings[0]!.memberId, 'en');

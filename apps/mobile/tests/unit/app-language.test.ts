@@ -451,7 +451,8 @@ describe('review regressions — serial saves and storage failures', () => {
     first.resolve(resp('en'))
     await Promise.all([old, sync])
     expect(c.memberLanguageSet.mock.calls).toEqual([['en']])
-    expect(pendingOf(storage)).toMatchObject({ locale: 'hi', memberId: null })
+    // 📌 Decision 2026-10-23-388 item 2 — the login choice now belongs to B (bound at B's sign-in), ⛔ left for whoever comes next.
+    expect(pendingOf(storage)).toMatchObject({ locale: 'hi', memberId: 'm-b' })
     expect(setLocale).not.toHaveBeenCalled()
   })
 
@@ -598,6 +599,124 @@ describe('review regressions — serial saves and storage failures', () => {
     await m.syncAppLanguage('m-b', { setLocale: vi.fn(), storage, client: c })
     expect(c.memberLanguageSet.mock.calls).toEqual([['en'], ['hi']])
     expect(pendingOf(storage)).toBeNull()
+  })
+})
+
+describe('Decision 2026-10-23-388 — the account\'s choice and the login choice\'s owner', () => {
+  it('item 2 — a login-screen choice is bound to the FIRST member who sends it: A\'s PUT fails, B signs in in the same process ⇒ ⛔ PUT for B', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    c.memberLanguageSet.mockRejectedValueOnce(new Error('offline'))
+    c.memberLanguage.mockResolvedValue(resp(null))
+    await m.chooseLanguage('en', null, { storage, client: c })
+    await m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en']])
+    expect(pendingOf(storage)).toMatchObject({ locale: 'en', memberId: 'm-a' })
+    await m.syncAppLanguage('m-b', { setLocale: vi.fn(), storage, client: c })
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en']])
+    expect(pendingOf(storage)).toBeNull()
+  })
+
+  it('item 2 — bound at SIGN-IN: A\'s sync queued behind an older hung writer, A signs out, B signs in ⇒ ⛔ PUT of the login choice for B', async () => {
+    // The adversarial review of the patches (R1): binding inside the send loop left the record unbound when A's queued
+    // flush gave up (A signed out before the older writer settled), so B's queued flush bound and sent it.
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    let current: string | null = 'm-z'
+    const sessionAtPut: (string | null)[] = []
+    const z = deferred<Resp>()
+    c.memberLanguageSet.mockImplementation((l) => {
+      sessionAtPut.push(current)
+      return Promise.resolve(resp(l))
+    })
+    c.memberLanguageSet.mockImplementationOnce(() => {
+      sessionAtPut.push(current)
+      return z.promise
+    })
+    c.memberLanguage.mockResolvedValue(resp(null))
+    void m.chooseLanguage('hi', 'm-z', { storage, client: c, currentMemberId: () => current })
+    await flushMicrotasks()
+    current = null
+    await m.chooseLanguage('en', null, { storage, client: c })
+    current = 'm-a'
+    const syncA = m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c, currentMemberId: () => current })
+    await flushMicrotasks()
+    expect(pendingOf(storage)).toMatchObject({ locale: 'en', memberId: 'm-a' })
+    current = 'm-b'
+    const syncB = m.syncAppLanguage('m-b', { setLocale: vi.fn(), storage, client: c, currentMemberId: () => current })
+    await flushMicrotasks()
+    z.resolve(resp('hi'))
+    await Promise.all([syncA, syncB])
+    await flushMicrotasks()
+    expect(c.memberLanguageSet.mock.calls).toEqual([['hi']])
+    expect(sessionAtPut).toEqual(['m-z'])
+    expect(pendingOf(storage)).toBeNull()
+  })
+
+  it('item 1 — the account choice is kept PER MEMBER: a late PUT response for A leaves B\'s note alone', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    let current: string | null = 'm-a'
+    const a = deferred<Resp>()
+    c.memberLanguageSet.mockReturnValueOnce(a.promise)
+    void m.chooseLanguage('en', 'm-a', { storage, client: c, currentMemberId: () => current })
+    await flushMicrotasks()
+    current = 'm-b'
+    c.memberLanguage.mockResolvedValueOnce(resp(null))
+    await m.syncAppLanguage('m-b', { setLocale: vi.fn(), storage, client: c, currentMemberId: () => current })
+    expect(m.accountChoiceDiffers('m-b', 'en')).toBe(true)
+    a.resolve(resp('en'))
+    await flushMicrotasks()
+    await flushMicrotasks()
+    expect(m.accountChoiceDiffers('m-b', 'en')).toBe(true)
+    expect(m.accountChoiceDiffers('m-a', 'en')).toBe(false)
+  })
+
+  it('item 2 — the bound record is A\'s: A\'s next sync retries it', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    c.memberLanguageSet.mockRejectedValueOnce(new Error('offline'))
+    await m.chooseLanguage('en', null, { storage, client: c })
+    await m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    await m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en'], ['en']])
+    expect(pendingOf(storage)).toBeNull()
+  })
+
+  it('item 1 — `accountChoiceDiffers`: ⛔ read ⇒ false; a GET of null ⇒ true for both; a GET / PUT of en ⇒ false for en only; per member', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    expect(m.accountChoiceDiffers('m-a', 'en')).toBe(false)
+    c.memberLanguage.mockResolvedValueOnce(resp(null, 'en'))
+    await m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    expect(m.accountChoiceDiffers('m-a', 'en')).toBe(true)
+    expect(m.accountChoiceDiffers('m-a', 'hi')).toBe(true)
+    expect(m.accountChoiceDiffers('m-b', 'en')).toBe(false)
+    expect(await m.chooseLanguage('en', 'm-a', { storage, client: c })).toBe('recorded')
+    expect(m.accountChoiceDiffers('m-a', 'en')).toBe(false)
+    expect(m.accountChoiceDiffers('m-a', 'hi')).toBe(true)
+    c.memberLanguage.mockResolvedValueOnce(resp('hi'))
+    await m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    expect(m.accountChoiceDiffers('m-a', 'hi')).toBe(false)
+  })
+
+  it('item 1 — a GET dropped by a race is ⛔ noted (a choice made while it was in flight)', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    const get = deferred<Resp>()
+    c.memberLanguage.mockReturnValueOnce(get.promise)
+    const sync = m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    await flushMicrotasks()
+    await m.chooseLanguage('en', null, { storage, client: c })
+    get.resolve(resp(null))
+    await sync
+    expect(m.accountChoiceDiffers('m-a', 'en')).toBe(false)
   })
 })
 

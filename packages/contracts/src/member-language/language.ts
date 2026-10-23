@@ -32,7 +32,9 @@ export type MemberLanguageSetRequest = z.output<typeof MemberLanguageSetRequest>
  */
 export const MemberLanguageResponse = z
   .object({
-    chosenLocale: MemberLanguageLocale.nullable(),
+    // An explicit union keeps null in the emitted OpenAPI schema: the nullable-enum emitter otherwise retains an enum
+    // that excludes null even when its `type` admits it.
+    chosenLocale: z.union([MemberLanguageLocale, z.null()]),
     pariwarDefaultLocale: MemberLanguageLocale,
   })
   .strict();

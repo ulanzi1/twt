@@ -2585,10 +2585,11 @@ components:
       type: object
       properties:
         chosenLocale:
-          type:
-            - string
-            - "null"
-          enum: *a10
+          anyOf:
+            - type: string
+              enum: *a10
+            - type: "null"
+            - type: "null"
         pariwarDefaultLocale:
           type: string
           enum: *a10

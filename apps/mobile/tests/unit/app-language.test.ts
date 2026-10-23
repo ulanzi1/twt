@@ -418,6 +418,189 @@ describe('AC8 — syncAppLanguage (LS4 (b), LS5)', () => {
   })
 })
 
+describe('review regressions — serial saves and storage failures', () => {
+  it('a same-account sign-in sends the login choice after its old writer finishes', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    const first = deferred<Resp>()
+    c.memberLanguageSet.mockReturnValueOnce(first.promise)
+    const old = m.chooseLanguage('en', 'm-a', { storage, client: c })
+    await flushMicrotasks()
+    await m.chooseLanguage('hi', null, { storage, client: c })
+    const sync = m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    first.resolve(resp('en'))
+    await Promise.all([old, sync])
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en'], ['hi']])
+    expect(pendingOf(storage)).toBeNull()
+  })
+
+  it('a queued sign-in sync checks the current member before issuing its delayed PUT', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    const first = deferred<Resp>()
+    c.memberLanguageSet.mockReturnValueOnce(first.promise)
+    const old = m.chooseLanguage('en', 'm-a', { storage, client: c })
+    await flushMicrotasks()
+    await m.chooseLanguage('hi', null, { storage, client: c })
+    let current = 'm-b'
+    const setLocale = vi.fn()
+    const sync = m.syncAppLanguage('m-b', { setLocale, storage, client: c, currentMemberId: () => current })
+    current = 'm-c'
+    first.resolve(resp('en'))
+    await Promise.all([old, sync])
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en']])
+    expect(pendingOf(storage)).toMatchObject({ locale: 'hi', memberId: null })
+    expect(setLocale).not.toHaveBeenCalled()
+  })
+
+  it('a queued screen choice also checks the current member before it can use another session\'s token', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    const first = deferred<Resp>()
+    c.memberLanguageSet.mockReturnValueOnce(first.promise)
+    const old = m.chooseLanguage('en', 'm-a', { storage, client: c })
+    await flushMicrotasks()
+    let current = 'm-b'
+    const choice = m.chooseLanguage('hi', 'm-b', { storage, client: c, currentMemberId: () => current })
+    current = 'm-c'
+    first.resolve(resp('en'))
+    await expect(choice).resolves.toBe('not_recorded')
+    await old
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en']])
+    expect(pendingOf(storage)).toMatchObject({ locale: 'hi', memberId: 'm-b' })
+  })
+
+  it('B saves its own pending choice after A finishes, with B\'s client and response', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const a = client()
+    const b = client()
+    const first = deferred<Resp>()
+    a.memberLanguageSet.mockReturnValueOnce(first.promise)
+    const en = m.chooseLanguage('en', 'm-a', { storage, client: a })
+    await flushMicrotasks()
+    const hi = m.chooseLanguage('hi', 'm-b', { storage, client: b })
+    first.resolve(resp('en'))
+    await expect(hi).resolves.toBe('recorded')
+    await en
+    expect(a.memberLanguageSet.mock.calls).toEqual([['en']])
+    expect(b.memberLanguageSet.mock.calls).toEqual([['hi']])
+    expect(pendingOf(storage)).toBeNull()
+  })
+
+  it('a timed-out write keeps its serial slot until it settles; a newer choice commits last', async () => {
+    vi.useFakeTimers()
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    const first = deferred<Resp>()
+    let server: Lang | null = null
+    c.memberLanguageSet.mockImplementationOnce(() => first.promise.then((r) => {
+      server = 'en'
+      return r
+    })).mockImplementation((locale) => {
+      server = locale
+      return Promise.resolve(resp(locale))
+    })
+    const en = m.chooseLanguage('en', 'm-a', { storage, client: c })
+    await vi.advanceTimersByTimeAsync(15_000)
+    await expect(en).resolves.toBe('not_recorded')
+    const hi = m.chooseLanguage('hi', 'm-a', { storage, client: c })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en']])
+    expect(pendingOf(storage)?.locale).toBe('hi')
+    first.resolve(resp('en'))
+    await expect(hi).resolves.toBe('recorded')
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en'], ['hi']])
+    expect(server).toBe('hi')
+    expect(pendingOf(storage)).toBeNull()
+    expect(storage.map.get(LANG)).toBe('hi')
+  })
+
+  it('another member waiting behind a hung write is bounded and keeps its choice for retry', async () => {
+    vi.useFakeTimers()
+    const m = await load()
+    const storage = memStorage()
+    const a = client()
+    const b = client()
+    a.memberLanguageSet.mockReturnValueOnce(new Promise<Resp>(() => undefined))
+    const en = m.chooseLanguage('en', 'm-a', { storage, client: a })
+    await vi.advanceTimersByTimeAsync(0)
+    const hi = m.chooseLanguage('hi', 'm-b', { storage, client: b })
+    await vi.advanceTimersByTimeAsync(15_000)
+    await expect(en).resolves.toBe('not_recorded')
+    await expect(hi).resolves.toBe('not_recorded')
+    expect(b.memberLanguageSet).not.toHaveBeenCalled()
+    expect(pendingOf(storage)).toMatchObject({ locale: 'hi', memberId: 'm-b' })
+  })
+
+  it('a failed pending write reports not_recorded and never submits an older stored choice', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    c.memberLanguageSet.mockRejectedValueOnce(new Error('offline'))
+    await m.chooseLanguage('en', 'm-a', { storage, client: c })
+    c.memberLanguageSet.mockClear()
+    const original = storage.setItem.getMockImplementation()!
+    storage.setItem.mockImplementation((key, value) => {
+      if (key === PENDING) throw new Error('storage unavailable')
+      original(key, value)
+    })
+    await expect(m.chooseLanguage('hi', 'm-a', { storage, client: c })).resolves.toBe('not_recorded')
+    expect(c.memberLanguageSet).not.toHaveBeenCalled()
+    expect(storage.map.get(LANG)).toBe('hi')
+    await m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    expect(c.memberLanguageSet.mock.calls).toEqual([['hi']])
+    expect(pendingOf(storage)).toBeNull()
+  })
+
+  it('an empty pending store whose writes fail cannot report recorded without a PUT', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    storage.setItem.mockImplementation(() => { throw new Error('storage unavailable') })
+    await expect(m.chooseLanguage('en', 'm-a', { storage, client: c })).resolves.toBe('not_recorded')
+    expect(c.memberLanguageSet).not.toHaveBeenCalled()
+  })
+
+  it('failed pending removal stops after one PUT; a later sync can clear the same choice', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    storage.removeItem.mockImplementation(() => { throw new Error('storage unavailable') })
+    c.memberLanguageSet.mockResolvedValueOnce(resp('en')).mockRejectedValue(new Error('rate limit'))
+    await expect(m.chooseLanguage('en', 'm-a', { storage, client: c })).resolves.toBe('not_recorded')
+    expect(c.memberLanguageSet).toHaveBeenCalledTimes(1)
+    expect(pendingOf(storage)?.locale).toBe('en')
+    storage.removeItem.mockImplementation((key) => { storage.map.delete(key) })
+    c.memberLanguageSet.mockResolvedValue(resp('en'))
+    await m.syncAppLanguage('m-a', { setLocale: vi.fn(), storage, client: c })
+    expect(c.memberLanguageSet).toHaveBeenCalledTimes(2)
+    expect(pendingOf(storage)).toBeNull()
+  })
+
+  it('an old member\'s queue leaves a fresh login-screen choice until the next sign-in', async () => {
+    const m = await load()
+    const storage = memStorage()
+    const c = client()
+    const first = deferred<Resp>()
+    c.memberLanguageSet.mockReturnValueOnce(first.promise)
+    const en = m.chooseLanguage('en', 'm-a', { storage, client: c })
+    await flushMicrotasks()
+    await m.chooseLanguage('hi', null, { storage, client: c })
+    first.resolve(resp('en'))
+    await en
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en']])
+    expect(pendingOf(storage)).toMatchObject({ locale: 'hi', memberId: null })
+    await m.syncAppLanguage('m-b', { setLocale: vi.fn(), storage, client: c })
+    expect(c.memberLanguageSet.mock.calls).toEqual([['en'], ['hi']])
+    expect(pendingOf(storage)).toBeNull()
+  })
+})
+
 describe('AC9 — ⛔ never on first launch (I1)', () => {
   it('a fresh install (empty storage) signs in and syncs with server null ⇒ ZERO PUT calls and ⛔ `app-language.v1` written', async () => {
     const m = await load()

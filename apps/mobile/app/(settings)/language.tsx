@@ -63,7 +63,7 @@ function LanguageOption(props: {
 export default function LanguageScreen(): React.ReactElement {
   const t = useT()
   const { locale, setLocale } = useLocale()
-  const { session } = useSession()
+  const { session, currentMemberId } = useSession()
   const memberId = session?.memberId ?? null
   const [notRecorded, setNotRecorded] = useState(false)
   const notRecordedRef = useRef(false)
@@ -80,7 +80,7 @@ export default function LanguageScreen(): React.ReactElement {
     (next: AppLanguage) => {
       if (next === locale) return
       setLocale(next)
-      void chooseLanguage(next, memberId).then((outcome) => {
+      void chooseLanguage(next, memberId, { currentMemberId }).then((outcome) => {
         if (!mountedRef.current) return
         if (outcome !== 'not_recorded') {
           notRecordedRef.current = false
@@ -95,16 +95,17 @@ export default function LanguageScreen(): React.ReactElement {
         if (alreadyShowing || Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(text)
       })
     },
-    [locale, setLocale, memberId],
+    [locale, setLocale, memberId, currentMemberId],
   )
 
   return (
     <ScrollView>
       <Stack.Screen options={{ title: t('language.title') }} />
       <YStack gap="$3" px="$6" py="$6" bg="$background">
-        <H2>{t('language.title')}</H2>
+        <H2 accessible={true} accessibilityRole="header" testID="language-heading">{t('language.title')}</H2>
         <Paragraph color="$colorPress">{t('language.intro')}</Paragraph>
-        <YStack gap="$2" accessibilityRole="radiogroup" accessibilityLabel={t('language.title')} testID="language-options">
+        {/* The heading above is an accessibility element; the group stays ungrouped so each radio remains reachable. */}
+        <YStack gap="$2" accessible={false} accessibilityRole="radiogroup" testID="language-options">
           <LanguageOption
             checked={locale === 'hi'}
             label={t('language.option_hi')}

@@ -200,7 +200,7 @@ describe('(iv) every refused refresh resets the in-app session (N5)', () => {
   })
 
   it('session-context registers setSession(null) for it and unregisters on cleanup', () => {
-    expect(SESSION_CONTEXT).toMatch(/setRefreshRejectedHandler\(\(\) => \{\s*clearPeerRequestsCache\(queryClient\)\s*setSession\(null\)/)
+    expect(SESSION_CONTEXT).toMatch(/setRefreshRejectedHandler\(\(\) => \{\s*memberIdRef\.current = null\s*clearPeerRequestsCache\(queryClient\)\s*setSession\(null\)/)
     expect(SESSION_CONTEXT).toContain('setRefreshRejectedHandler(null)')
   })
 })

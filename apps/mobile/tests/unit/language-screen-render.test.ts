@@ -72,6 +72,7 @@ vi.mock('tamagui', async () => {
     accessibilityLiveRegion?: string
     accessibilityLabel?: string
     accessibilityHint?: string
+    accessible?: boolean
   }
   const attrs = (p: P) => ({
     'data-testid': p.testID,
@@ -81,6 +82,7 @@ vi.mock('tamagui', async () => {
     'aria-live': p.accessibilityLiveRegion,
     'aria-label': p.accessibilityLabel,
     'aria-description': p.accessibilityHint,
+    'data-accessible': p.accessible,
   })
   const container = (p: P) => createElement('div', attrs(p), p.children)
   return {
@@ -128,10 +130,18 @@ describe('AC7 — the language screen', () => {
     renderIn(LanguageScreen, 'hi')
     const group = screen.getByTestId('language-options')
     expect(group).toHaveAttribute('role', 'radiogroup')
+    expect(group).toHaveAttribute('data-accessible', 'false')
+    expect(group).not.toHaveAttribute('aria-label')
+    const heading = screen.getByTestId('language-heading')
+    expect(heading).toHaveAttribute('role', 'header')
+    expect(heading).toHaveAttribute('data-accessible', 'true')
+    expect(heading).toHaveTextContent(tr('language.title', 'hi'))
     const hi = screen.getByTestId('language-option-hi')
     const en = screen.getByTestId('language-option-en')
     expect(hi).toHaveAttribute('role', 'radio')
     expect(en).toHaveAttribute('role', 'radio')
+    expect(hi).toHaveAttribute('data-accessible', 'true')
+    expect(en).toHaveAttribute('data-accessible', 'true')
     expect(hi).toHaveAttribute('aria-checked', 'true')
     expect(en).toHaveAttribute('aria-checked', 'false')
     expect(hi).toHaveAttribute('aria-label', 'हिन्दी')

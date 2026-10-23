@@ -44,6 +44,8 @@ interface SessionContextValue {
   isLoading: boolean
   signIn: (full: MemberFullSession) => Promise<void>
   signOut: () => Promise<void>
+  /** Read at the actual handoff of a queued language write, including after this screen unmounts. */
+  currentMemberId: () => string | null
   /**
    * Story 10.19 (AC5) — set when a background token refresh discovered the member was terminated.
    * The root layout's guard redirects to `/(auth)/terminated` when this is non-null, then clears it.
@@ -84,7 +86,10 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     let active = true
     loadSession()
       .then((s) => {
-        if (active) setSession(s)
+        if (active) {
+          memberIdRef.current = s?.memberId ?? null
+          setSession(s)
+        }
       })
       .finally(() => {
         if (active) setIsLoading(false)
@@ -96,6 +101,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
 
   useEffect(() => {
     setTerminatedDuringRefreshHandler((notice) => {
+      memberIdRef.current = null
       clearPeerRequestsCache(queryClient)
       // The SecureStore side is already cleared by `refreshAccessToken`; this is what makes that
       // clear REACTIVE — without it `session` stays stale in context and the root guard never fires.
@@ -113,6 +119,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     // Story 6.30 AL6 (i) — every refresh refused with a 4xx makes the SecureStore clear reactive too, so the
     // guard sends the member to login FROM the link's screen (and records it as the target).
     setRefreshRejectedHandler(() => {
+      memberIdRef.current = null
       clearPeerRequestsCache(queryClient)
       setSession(null)
       clearKnownPeopleCache(queryClient)
@@ -126,6 +133,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   }, [])
 
   async function signIn(full: MemberFullSession): Promise<void> {
+    // Block queued language writes BEFORE the secure-store bearer changes, not only after React commits the session.
+    memberIdRef.current = null
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
     // Story 6.36c (fix-review) — the dismissal key is namespaced per account (`lib/home-card-dismissals`), so a
@@ -139,10 +148,12 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       pariwarId: full.pariwarId,
     }
     await saveSession(s)
+    memberIdRef.current = s.memberId
     setSession(s)
   }
 
   async function signOut(): Promise<void> {
+    memberIdRef.current = null
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
     clearSavedNames()
@@ -174,6 +185,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
         isLoading,
         signIn,
         signOut,
+        currentMemberId: () => memberIdRef.current,
         terminationNotice,
         clearTerminationNotice: () => setTerminationNotice(null),
       }}

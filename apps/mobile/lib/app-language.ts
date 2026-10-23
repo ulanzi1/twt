@@ -16,8 +16,9 @@
 // Races (LS5): ONE serial PUT queue shared by the screen and the sync (a choice made during a PUT is sent AFTER it); the
 // pending record is cleared only if it still names the locale just recorded (compare-and-clear); a choice counter drops
 // a GET / PUT result that resolves after the member chose again; a sync drops its result when the session's member
-// changed meanwhile. Every call is bounded (`withTimeout`); a network failure is silent (the pending record stays and
-// the next start / foreground retries it). ⛔ AsyncStorage, ⛔ `expo-localization`.
+// changed meanwhile. Every caller's WAIT is bounded (`withTimeout`), but a timed-out network write keeps its queue slot
+// until it settles: a newer write must never overtake it on the server. A network failure is silent (the pending record
+// stays and the next start / foreground retries it). ⛔ AsyncStorage, ⛔ `expo-localization`.
 
 import type { MemberLanguageResponse } from '@twt/contracts'
 
@@ -49,6 +50,9 @@ interface Pending {
   readonly processId: string | null
 }
 
+/** A failed MMKV write must not expose an older pending choice to a later sync in this process. */
+const volatilePending = new WeakMap<SyncStorage, Pending>()
+
 /** This JS process's boot id — minted once, at module load. A `memberId: null` pending from another process is dropped. */
 const PROCESS_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 
@@ -76,6 +80,8 @@ function storeLanguage(storage: SyncStorage, locale: AppLanguage): void {
 }
 
 function readPending(storage: SyncStorage): Pending | null {
+  const volatile = volatilePending.get(storage)
+  if (volatile !== undefined) return volatile
   try {
     const raw = storage.getItem(APP_LANGUAGE_PENDING_KEY)
     if (raw === null) return null
@@ -95,7 +101,10 @@ const samePending = (a: Pending | null, b: Pending): boolean =>
 /** Remove the pending record only if it is still `expected` (a newer choice written meanwhile is kept). */
 function clearPendingIf(storage: SyncStorage, expected: Pending): void {
   try {
-    if (samePending(readPending(storage), expected)) storage.removeItem(APP_LANGUAGE_PENDING_KEY)
+    if (samePending(readPending(storage), expected)) {
+      storage.removeItem(APP_LANGUAGE_PENDING_KEY)
+      volatilePending.delete(storage)
+    }
   } catch {
     // best-effort
   }
@@ -110,42 +119,57 @@ function sendableFor(pending: Pending, memberId: string): boolean {
 type FlushResult =
   | { readonly kind: 'nothing' }
   | { readonly kind: 'failed' }
-  /** `current` — ⛔ choice was made since this PUT began, so its response may be adopted. */
-  | { readonly kind: 'recorded'; readonly response: MemberLanguageResponse; readonly current: boolean }
+  /** The choice generation when the successful PUT began — checked AFTER the caller's await. */
+  | { readonly kind: 'recorded'; readonly response: MemberLanguageResponse; readonly counter: number }
 
-/** The ONE serial PUT queue (LS5 (ii)): while it runs, a second caller joins it; it sends every pending choice in turn. */
-let flushing: Promise<FlushResult> | null = null
+/**
+ * One serial network writer. Only callers for the SAME member/store join its result; another member waits for that writer
+ * to settle, then starts its own flush. The slot belongs to the actual request, never its bounded UI wait.
+ */
+let flushing: { memberId: string; storage: SyncStorage; result: Promise<FlushResult> } | null = null
 
-function flush(memberId: string, client: AppLanguageClient, storage: SyncStorage): Promise<FlushResult> {
-  if (flushing !== null) return flushing
+function flush(memberId: string, client: AppLanguageClient, storage: SyncStorage, canWrite: () => boolean): Promise<FlushResult> {
+  if (!canWrite()) return Promise.resolve({ kind: 'failed' })
+  if (flushing !== null) {
+    // A login choice belongs to THIS sign-in, even when an older writer used the same account. That older writer
+    // deliberately leaves null-member choices alone, so the sign-in must start a fresh flush after it settles.
+    const loginChoice = readPending(storage)?.memberId === null
+    if (flushing.memberId === memberId && flushing.storage === storage && !loginChoice) return flushing.result
+    return flushing.result.then(() => flush(memberId, client, storage, canWrite))
+  }
   const run = (async (): Promise<FlushResult> => {
     // Yield first, so `flushing` is assigned before the loop can finish (and clear it) synchronously.
     await Promise.resolve()
     try {
       let last: FlushResult = { kind: 'nothing' }
+      let first = true
       for (;;) {
+        if (!canWrite()) return { kind: 'failed' }
         const pending = readPending(storage)
         if (pending === null) return last
-        if (!sendableFor(pending, memberId)) {
-          clearPendingIf(storage, pending)
-          return last
-        }
+        // A foreign member's choice belongs to its own caller. A new login-screen choice also waits for a NEW sign-in;
+        // only the initial record of a flush explicitly started at sign-in may have a null member id.
+        if (!sendableFor(pending, memberId) || (!first && pending.memberId === null)) return last
+        first = false
         const counterAtStart = choiceCounter
         let response: MemberLanguageResponse
         try {
-          response = await withTimeout(client.memberLanguageSet(pending.locale), CALL_TIMEOUT_MS)
+          response = await client.memberLanguageSet(pending.locale)
         } catch {
           return { kind: 'failed' }
         }
         clearPendingIf(storage, pending)
-        last = { kind: 'recorded', response, current: choiceCounter === counterAtStart }
+        // Storage cleanup can fail even though the server accepted the value. Leave one retry record and settle, rather
+        // than sending this same record repeatedly until the rate limit stops us.
+        if (samePending(readPending(storage), pending)) return { kind: 'failed' }
+        last = { kind: 'recorded', response, counter: counterAtStart }
         // A choice made during the PUT is still pending ⇒ the loop sends it next (serial, ⛔ deduped).
       }
     } finally {
       flushing = null
     }
   })()
-  flushing = run
+  flushing = { memberId, storage, result: run }
   return run
 }
 
@@ -159,19 +183,26 @@ export type ChooseOutcome = 'saved_on_phone' | 'recorded' | 'not_recorded'
 export function chooseLanguage(
   locale: AppLanguage,
   memberId: string | null,
-  opts: { client?: AppLanguageClient; storage?: SyncStorage } = {},
+  opts: { client?: AppLanguageClient; storage?: SyncStorage; currentMemberId?: () => string | null | undefined } = {},
 ): Promise<ChooseOutcome> {
   const storage = opts.storage ?? mmkvStorage
   choiceCounter += 1
   storeLanguage(storage, locale)
+  const pending = { locale, memberId, processId: PROCESS_ID } satisfies Pending
   try {
-    storage.setItem(APP_LANGUAGE_PENDING_KEY, JSON.stringify({ locale, memberId, processId: PROCESS_ID } satisfies Pending))
+    storage.setItem(APP_LANGUAGE_PENDING_KEY, JSON.stringify(pending))
+    volatilePending.delete(storage)
   } catch {
-    // ⛔ a storage failure never breaks the switch
+    // The switch is already visible, but without a durable pending record we cannot claim the account was updated or
+    // flush an older record as if it were this choice. Keep this one in memory for the next foreground retry.
+    volatilePending.set(storage, pending)
+    return Promise.resolve(memberId === null ? 'saved_on_phone' : 'not_recorded')
   }
   if (memberId === null) return Promise.resolve('saved_on_phone')
-  return flush(memberId, opts.client ?? memberAuth, storage).then((r) =>
-    r.kind === 'failed' ? 'not_recorded' : 'recorded',
+  const canWrite = (): boolean => opts.currentMemberId === undefined || opts.currentMemberId() === memberId
+  return withTimeout(flush(memberId, opts.client ?? memberAuth, storage, canWrite), CALL_TIMEOUT_MS).then(
+    (r) => r.kind === 'recorded' ? 'recorded' : 'not_recorded',
+    () => 'not_recorded',
   )
 }
 
@@ -198,8 +229,8 @@ export async function syncAppLanguage(
   try {
     const pending = readPending(storage)
     if (pending !== null && sendableFor(pending, memberId)) {
-      const r = await flush(memberId, client, storage)
-      if (r.kind === 'recorded' && r.current && stillCurrent() && isLanguage(r.response.chosenLocale)) {
+      const r = await withTimeout(flush(memberId, client, storage, stillCurrent), CALL_TIMEOUT_MS)
+      if (r.kind === 'recorded' && r.counter === choiceCounter && stillCurrent() && isLanguage(r.response.chosenLocale)) {
         storeLanguage(storage, r.response.chosenLocale)
         opts.setLocale(r.response.chosenLocale)
       }

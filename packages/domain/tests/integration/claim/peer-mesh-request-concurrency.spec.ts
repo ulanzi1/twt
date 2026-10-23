@@ -158,7 +158,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text under two c
   }
 
   const begin = (client: pg.PoolClient, s: { pid: PariwarId; cid: ClaimId }, pingId: PeerMeshPingId, jobId: string) =>
-    beginPeerMeshRequest(client, { pariwarId: s.pid, claimCaseId: s.cid, pingId, jobId, now: new Date(), nameFault: null });
+    beginPeerMeshRequest(client, { pariwarId: s.pid, claimCaseId: s.cid, pingId, jobId, now: new Date(), nameFault: null, unusableLocales: [] });
 
   it('⭐ ONCE-EVER — two children begin the SAME ping at once: ONE begins it, the other is `held_by_other`', { timeout: TIMEOUT }, async () => {
     const s = await seed();

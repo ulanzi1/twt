@@ -26,6 +26,7 @@ import {
   PEER_MESH_WA_REMINDER_LATE_BY,
   PEER_MESH_WA_REMINDER_PARKED_BY,
   beginPeerMeshWaReminder,
+  choosePeerMeshWaReminderTemplate,
   finalisePeerMeshWaReminder,
   finishLapsedInFlightPeerMeshWaReminders,
   finishPeerMeshWaReminderNoSendableNumber,
@@ -52,12 +53,14 @@ import {
 } from '../../../src/ids/index.js';
 import { CLAIM_LIFECYCLE_STATES } from '../../../src/schema/claims.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { enterAppScope, seedClaim } from '../_helpers.js';
+import { enterAppScope, seedClaim, seedPassport } from '../_helpers.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 
 const JOB = 'job-a';
 const TEMPLATE = { name: 'peer_mesh_reminder_hi_v1', locale: 'hi', localeSource: 'pariwar_default' } as const;
+/** 📌 Story 6.35 — the Pariwar's two template names (the begin picks the recipient's — LS9 / LS10 (b′)). */
+const TEMPLATES = { hi: TEMPLATE.name, en: 'peer_mesh_reminder_en_v1' } as const;
 const MARGIN_MS = 2 * 60 * 1000;
 const OUT_OF_WINDOW = CLAIM_LIFECYCLE_STATES.find((s) => !isStateInAnswerWindow(s, false))!;
 
@@ -116,11 +119,14 @@ async function seedReminder(
     optedIn?: boolean;
     outcome?: string | null;
     neighbourState?: string;
+    localeDefault?: 'hi' | 'en';
   } = {},
 ): Promise<Seeded> {
   const { tx, client } = getTx();
   await client.query('RESET ROLE');
   const pid = toPariwarId(randomUUID());
+  // 📌 Story 6.35 — the begin resolves the recipient's language (the passport's default when they never chose).
+  await seedPassport(tx, pid, { localeDefault: o.localeDefault ?? 'hi' });
   const deceased = toMemberId(randomUUID());
   await insertMember(client, pid, deceased);
   const claimCaseId = toClaimId(await seedClaim(tx, pid, { deceasedMemberId: deceased, currentState: (o.state ?? 'verification_in_progress') as never }));
@@ -166,7 +172,16 @@ async function seedReminder(
   return { pid, claimCaseId, deceased, selectionId, pings };
 }
 
-const begin = (s: Seeded, i = 0, o: { jobId?: string; now?: Date; nameFault?: 'name_none' | 'name_erased' | 'name_unresolvable' | null } = {}) =>
+const begin = (
+  s: Seeded,
+  i = 0,
+  o: {
+    jobId?: string;
+    now?: Date;
+    nameFault?: 'name_none' | 'name_erased' | 'name_unresolvable' | null;
+    templates?: { readonly hi: string | null; readonly en: string | null };
+  } = {},
+) =>
   beginPeerMeshWaReminder(getTx().client, {
     pariwarId: s.pid,
     claimCaseId: s.claimCaseId,
@@ -174,11 +189,12 @@ const begin = (s: Seeded, i = 0, o: { jobId?: string; now?: Date; nameFault?: 'n
     jobId: o.jobId ?? JOB,
     now: o.now ?? new Date(),
     nameFault: o.nameFault ?? null,
-    template: TEMPLATE,
+    templates: o.templates ?? TEMPLATES,
   });
 
 interface Row {
   reminder_id: string;
+  ping_id: string;
   send_outcome: string;
   attempt_count: number;
   claimed_by_job: string | null;
@@ -640,5 +656,95 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder, the domain 
       expect(await markLatePeerMeshWaReminders(getTx().client, { allow: [late.pid], limit: 2 })).toHaveLength(2);
       expect(await markLatePeerMeshWaReminders(getTx().client, { allow: [late.pid], limit: 2 })).toHaveLength(1);
     });
+  });
+  // ── 📌 Story 6.35 AC5 — the reminder per RECIPIENT; `-385`'s fallback; the wait (LS9, LS10 (b′)) ────────────────────────────
+
+  const chooseLanguage = async (memberId: string, locale: 'hi' | 'en', pid: PariwarId): Promise<void> => {
+    await asSuperuser(getTx().client, async () => {
+      await getTx().client.query(`UPDATE members SET preferred_locale = $2, preferred_locale_set_at = now() WHERE member_id = $1`, [memberId, locale]);
+    });
+    await enterAppScope(getTx().client, pid);
+  };
+
+  it('⭐ 6.35 AC5 — the rule (pure): own ⇒ it; a chooser of the OTHER language ⇒ the default\'s (`pariwar_fallback`); else WAIT', () => {
+    const both = { hi: 'h_v1', en: 'e_v1' };
+    expect(choosePeerMeshWaReminderTemplate({ effective: 'en', source: 'member_choice', pariwarDefaultLocale: 'hi', templates: both })).toEqual({
+      locale: 'en',
+      localeSource: 'member_choice',
+      templateName: 'e_v1',
+    });
+    expect(choosePeerMeshWaReminderTemplate({ effective: 'en', source: 'member_choice', pariwarDefaultLocale: 'hi', templates: { hi: 'h_v1', en: null } })).toEqual({
+      locale: 'hi',
+      localeSource: 'pariwar_fallback',
+      templateName: 'h_v1',
+    });
+    // a non-chooser, and a chooser OF the default, have ⛔ fallback — `member_choice` alone cannot tell them apart (v1.6)
+    expect(choosePeerMeshWaReminderTemplate({ effective: 'hi', source: 'pariwar_default', pariwarDefaultLocale: 'hi', templates: { hi: null, en: 'e_v1' } })).toBeNull();
+    expect(choosePeerMeshWaReminderTemplate({ effective: 'hi', source: 'member_choice', pariwarDefaultLocale: 'hi', templates: { hi: null, en: 'e_v1' } })).toBeNull();
+    expect(choosePeerMeshWaReminderTemplate({ effective: 'en', source: 'member_choice', pariwarDefaultLocale: 'hi', templates: { hi: null, en: null } })).toBeNull();
+  });
+
+  it('⭐ 6.35 AC5 — an English-chooser gets the `en` template and `member_choice`; a non-chooser the Pariwar\'s — each recorded and returned', async () => {
+    const s = await seedReminder({ n: 2 });
+    await chooseLanguage(s.pings[0]!.memberId, 'en', s.pid);
+    expect(await begin(s, 0)).toMatchObject({ kind: 'begun', locale: 'en', localeSource: 'member_choice', templateName: 'peer_mesh_reminder_en_v1' });
+    expect(await begin(s, 1)).toMatchObject({ kind: 'begun', locale: 'hi', localeSource: 'pariwar_default', templateName: 'peer_mesh_reminder_hi_v1' });
+    const byPing = new Map((await rows(s)).map((r) => [r.ping_id, r]));
+    expect(byPing.get(s.pings[0]!.pingId)).toMatchObject({ locale: 'en', locale_source: 'member_choice', template_name: 'peer_mesh_reminder_en_v1' });
+    expect(byPing.get(s.pings[1]!.pingId)).toMatchObject({ locale: 'hi', locale_source: 'pariwar_default', template_name: 'peer_mesh_reminder_hi_v1' });
+  });
+
+  it('⭐ 6.35 AC5 / `-385` — the `en` template unusable: the English-chooser\'s reminder goes with the `hi` template, `pariwar_fallback`', async () => {
+    const s = await seedReminder({ n: 1 });
+    await chooseLanguage(s.pings[0]!.memberId, 'en', s.pid);
+    expect(await begin(s, 0, { templates: { hi: 'peer_mesh_reminder_hi_v1', en: null } })).toMatchObject({
+      kind: 'begun',
+      locale: 'hi',
+      localeSource: 'pariwar_fallback',
+      templateName: 'peer_mesh_reminder_hi_v1',
+    });
+    expect((await rows(s))[0]).toMatchObject({ locale: 'hi', locale_source: 'pariwar_fallback', template_name: 'peer_mesh_reminder_hi_v1' });
+  });
+
+  it('⭐ 6.35 AC5 — the Pariwar\'s OWN template unusable: a non-chooser WAITS (⛔ row); the English-chooser is sent in `en`', async () => {
+    const s = await seedReminder({ n: 2 });
+    await chooseLanguage(s.pings[0]!.memberId, 'en', s.pid);
+    const templates = { hi: null, en: 'peer_mesh_reminder_en_v1' };
+    expect(await begin(s, 1, { templates })).toEqual({ kind: 'waiting_template', locale: 'hi' });
+    expect(await rows(s)).toHaveLength(0);
+    expect(await begin(s, 0, { templates })).toMatchObject({ kind: 'begun', locale: 'en', localeSource: 'member_choice' });
+    expect(await rows(s)).toHaveLength(1);
+  });
+
+  it('6.35 AC5 — a RE-CLAIM (marker NULL) whose language is now unusable: a non-chooser WAITS with ⛔ write; a chooser falls back', async () => {
+    const s = await seedReminder({ n: 2 });
+    expect((await begin(s, 0)).kind).toBe('begun');
+    expect((await begin(s, 1)).kind).toBe('begun');
+    const before = (await rows(s)).find((r) => r.ping_id === s.pings[0]!.pingId)!;
+    const later = new Date(Date.now() + CORRECTION_SEND_LEASE_MS + 60_000);
+    expect(await begin(s, 0, { jobId: 'job-b', now: later, templates: { hi: null, en: 'peer_mesh_reminder_en_v1' } })).toEqual({ kind: 'waiting_template', locale: 'hi' });
+    expect((await rows(s)).find((r) => r.ping_id === s.pings[0]!.pingId)).toEqual(before);
+    // WR14 — read AGAIN at the re-claim: the member chose English since — sent in `en`
+    await chooseLanguage(s.pings[1]!.memberId, 'en', s.pid);
+    expect(await begin(s, 1, { jobId: 'job-b', now: later })).toMatchObject({ kind: 'begun', locale: 'en', localeSource: 'member_choice', attemptCount: 2 });
+  });
+
+  it('6.35 AC5 — a waiting reminder past `+ 72 h` is finished `skipped_late` by a begin (⛔ sent)', async () => {
+    const s = await seedReminder({ n: 1, hoursAgo: 73 });
+    expect(await begin(s, 0, { templates: { hi: null, en: 'peer_mesh_reminder_en_v1' } })).toEqual({ kind: 'skipped', outcome: 'skipped_late' });
+  });
+
+  it('⭐ 6.35 — the sweep listing carries each recipient\'s EFFECTIVE locale, why, and the Pariwar\'s default (⛔ passport ⇒ null)', async () => {
+    const s = await seedReminder({ n: 2 });
+    await chooseLanguage(s.pings[0]!.memberId, 'en', s.pid);
+    await asSuperuser(getTx().client, async () => undefined);
+    const page = await listDuePeerMeshWaReminderPings(getTx().client, { now: new Date(), after: null, allow: [s.pid] });
+    const byPing = new Map(page.due.map((d) => [d.pingId as string, d]));
+    expect(byPing.get(s.pings[0]!.pingId)).toMatchObject({ effectiveLocale: 'en', localeSource: 'member_choice', pariwarDefaultLocale: 'hi' });
+    expect(byPing.get(s.pings[1]!.pingId)).toMatchObject({ effectiveLocale: 'hi', localeSource: 'pariwar_default', pariwarDefaultLocale: 'hi' });
+    await getTx().client.query(`DELETE FROM pariwar_passport WHERE pariwar_id = $1`, [s.pid]);
+    const bare = await listDuePeerMeshWaReminderPings(getTx().client, { now: new Date(), after: null, allow: [s.pid] });
+    expect(bare.due).toHaveLength(2);
+    expect(bare.due.find((d) => (d.pingId as string) === s.pings[1]!.pingId)).toMatchObject({ effectiveLocale: null, pariwarDefaultLocale: null });
   });
 });

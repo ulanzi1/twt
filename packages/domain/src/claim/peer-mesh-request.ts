@@ -262,6 +262,12 @@ export type BeginPeerMeshRequestResult =
     }
   /** A RE-CLAIMED row whose window / peer re-check failed — `error` (`-297` §2; the caller alarms). */
   | { readonly kind: 'expired'; readonly detail: string }
+  /**
+   * 📌 Story 6.35 (LS10 (b), I4) — the recipient's language's TEXT template is unusable this run (unset, failed pre-flight, or its
+   * key unreadable): ⛔ write — the ping stays as it was (NULL, or `attempting` / parked) and WAITS; ⛔ ever sent in the other
+   * language. A later run sends it once the template is usable (or the member picks a usable language before a fresh begin).
+   */
+  | { readonly kind: 'waiting_template'; readonly locale: 'hi' | 'en' }
   | {
       readonly kind: 'begun';
       readonly pingId: PeerMeshPingId;
@@ -367,6 +373,11 @@ export async function beginPeerMeshRequest(
     readonly jobId: string;
     readonly now: Date;
     readonly nameFault: PeerMeshRequestNameReason | null;
+    /**
+     * 📌 Story 6.35 (LS10 (b)) — the locales whose TEXT template is unusable this run (the caller's own race-guard config). A ping
+     * whose language is one of them is ⛔ begun: `waiting_template`. REQUIRED (⛔ defaulted) — every caller is found by the compiler.
+     */
+    readonly unusableLocales: readonly ('hi' | 'en')[];
   },
 ): Promise<BeginPeerMeshRequestResult> {
   const db = bindScopedDb(client);
@@ -435,6 +446,9 @@ export async function beginPeerMeshRequest(
   const resolved: Pick<PeerRequestLocale, 'locale' | 'source'> = existing
     ? { locale: rowLocale ?? (await resolvePariwarDefaultLocale(db, pariwarId)), source: 'pariwar_default' }
     : await resolvePeerRequestLocale(db, { pariwarId, memberId: ping.member_id as MemberId });
+  // 📌 Story 6.35 (LS10 (b)) — after ①–③, before ④: a language whose template is unusable WAITS, on BOTH paths (⛔ write — a parked
+  // row stays parked); ⛔ sent in the other language (I4).
+  if (input.unusableLocales.includes(resolved.locale)) return { kind: 'waiting_template', locale: resolved.locale };
 
   // ④ begin — or re-claim (own retry at once; a parked row; another job's past the lease).
   let attemptCount: number;
@@ -776,16 +790,49 @@ export interface DuePeerMeshRequestPage {
  * — ⛔ PII, ⛔ value from one tenant reaches another; every write that follows runs in the child's own `withPariwarScope`
  * transaction, under RLS, after a locked re-check. `allow` (tests) narrows it. RE-EXAMINE when: the result ever carries more than
  * ids, the read projects PII, a write is added on this pool, the pool loses BYPASSRLS, or a per-tenant scheduler exists.
+ * 📌 2026-10-23 (Story 6.35): with `unusableLocales` it also READS each ping's member choice and its Pariwar's default — joined on the
+ * PING's own `pariwar_id` (⛔ a value of one tenant reaches another) and used only as a filter; the result is still ids only.
  */
 export async function listDuePeerMeshRequestClaims(
   q: Queryable,
-  input: { readonly now: Date; readonly after: string | null; readonly limit?: number; readonly allow: readonly string[] | null },
+  input: {
+    readonly now: Date;
+    readonly after: string | null;
+    readonly limit?: number;
+    readonly allow: readonly string[] | null;
+    /**
+     * 📌 Story 6.35 (LS10 (b)) — the locales whose TEXT template is unusable this run. A ping of one of them WAITS: a NULL ping whose
+     * EFFECTIVE locale (the member's choice, else the Pariwar's default) is in it, and an `attempting` one whose RECORDED locale (a
+     * pre-6.35 row's NULL ⇒ the default it was sent in) is in it while the claim is IN the window, are ⛔ due — so a claim whose
+     * only due pings wait is ⛔ listed, ⛔ enqueued, ⛔ counted against the bound, ⛔ decrypted. NULL-SAFE: a ping with ⛔ passport
+     * and ⛔ choice is still listed (it reaches the `config:locale_unavailable` hold). Past the window an `attempting` one is listed
+     * again — ① finishes it exactly as a held Pariwar's parked row. `[]` ⇒ the listing as before.
+     */
+    readonly unusableLocales?: readonly ('hi' | 'en')[];
+  },
 ): Promise<DuePeerMeshRequestPage> {
   const n = clampLimit(input.limit, { default: PEER_MESH_REQUEST_PAGE_CAP, cap: PEER_MESH_REQUEST_PAGE_CAP });
   const lease = new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS);
   const after = input.after === null ? sql`` : sql` AND pr_c.claim_case_id > ${input.after}::uuid`;
   // ⚠ `sql.param` — a bare array in a Drizzle template is EXPANDED into one parameter per element.
   const allow = input.allow === null ? sql`` : sql` AND pr_c.pariwar_id = ANY(${sql.param([...input.allow])}::uuid[])`;
+  const unusable = [...(input.unusableLocales ?? [])];
+  // Explicit `pariwar_id` predicates on both joins — the pool bypasses RLS (F23).
+  const joins =
+    unusable.length === 0
+      ? sql``
+      : sql`
+                 LEFT JOIN members pr_m ON pr_m.pariwar_id = pr_p.pariwar_id AND pr_m.member_id = pr_p.member_id
+                 LEFT JOIN pariwar_passport pr_pp ON pr_pp.pariwar_id = pr_p.pariwar_id`;
+  const freshWaits =
+    unusable.length === 0
+      ? sql``
+      : sql` AND (COALESCE(pr_m.preferred_locale::text, pr_pp.locale_default::text) = ANY(${sql.param(unusable)}::text[])) IS NOT TRUE`;
+  const flyingWaits =
+    unusable.length === 0
+      ? sql``
+      : sql` AND ((COALESCE(pr_p.locale, pr_pp.locale_default::text) = ANY(${sql.param(unusable)}::text[])) IS NOT TRUE
+                       OR NOT ${answerWindowSql('pr_c')})`;
   const rows = await run<{ pariwar_id: string; claim_case_id: string }>(
     q,
     sql`
@@ -793,10 +840,10 @@ export async function listDuePeerMeshRequestClaims(
         FROM claims pr_c
        WHERE EXISTS (
                SELECT 1 FROM claim_peer_mesh_selections pr_s
-                 JOIN claim_peer_mesh_pings pr_p ON pr_p.pariwar_id = pr_s.pariwar_id AND pr_p.selection_id = pr_s.selection_id
+                 JOIN claim_peer_mesh_pings pr_p ON pr_p.pariwar_id = pr_s.pariwar_id AND pr_p.selection_id = pr_s.selection_id${joins}
                 WHERE pr_s.pariwar_id = pr_c.pariwar_id AND pr_s.claim_case_id = pr_c.claim_case_id
-                  AND ((pr_p.send_outcome IS NULL AND ${answerWindowSql('pr_c')})
-                       OR (pr_p.send_outcome = 'attempting' AND pr_p.claimed_at < ${lease})))${after}${allow}
+                  AND ((pr_p.send_outcome IS NULL AND ${answerWindowSql('pr_c')}${freshWaits})
+                       OR (pr_p.send_outcome = 'attempting' AND pr_p.claimed_at < ${lease}${flyingWaits})))${after}${allow}
        ORDER BY pr_c.claim_case_id
        LIMIT ${sql.raw(String(n))}`,
   );
@@ -806,6 +853,46 @@ export async function listDuePeerMeshRequestClaims(
     lastClaimCaseId: last ? (last.claim_case_id as ClaimId) : null,
     scanned: rows.length,
   };
+}
+
+/**
+ * 📌 Story 6.35 (LS10 (b)) — the ALARM's count of neighbour texts WAITING for an unusable TEXT template, per locale: un-begun pings in
+ * the answer window whose effective locale is unusable, and `attempting` rows past the lease, in the window, whose recorded locale
+ * is. Needed because the listing EXCLUDES them. Counts only.
+ *
+ * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ── `listDuePeerMeshRequestClaims`' reasoning: it returns a
+ * locale and a COUNT (⛔ an id, ⛔ PII); every join names the ping's own `pariwar_id`. RE-EXAMINE when: it returns more than counts,
+ * the pool loses BYPASSRLS, or a per-tenant scheduler exists.
+ */
+export async function countWaitingPeerMeshRequestPings(
+  q: Queryable,
+  input: { readonly now: Date; readonly unusableLocales: readonly ('hi' | 'en')[]; readonly allow: readonly string[] | null },
+): Promise<{ readonly locale: 'hi' | 'en'; readonly waiting: number }[]> {
+  const unusable = [...input.unusableLocales];
+  if (unusable.length === 0) return [];
+  const lease = new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS);
+  const allow = input.allow === null ? sql`` : sql` AND pr_p.pariwar_id = ANY(${sql.param([...input.allow])}::uuid[])`;
+  const rows = await run<{ locale: string; waiting: number }>(
+    q,
+    sql`
+      SELECT w.locale, count(*)::int AS waiting
+        FROM (
+          SELECT CASE WHEN pr_p.send_outcome IS NULL
+                      THEN COALESCE(pr_m.preferred_locale::text, pr_pp.locale_default::text)
+                      ELSE COALESCE(pr_p.locale, pr_pp.locale_default::text) END AS locale
+            FROM claim_peer_mesh_pings pr_p
+            JOIN claim_peer_mesh_selections pr_s ON pr_s.pariwar_id = pr_p.pariwar_id AND pr_s.selection_id = pr_p.selection_id
+            JOIN claims pr_c ON pr_c.pariwar_id = pr_s.pariwar_id AND pr_c.claim_case_id = pr_s.claim_case_id
+            LEFT JOIN members pr_m ON pr_m.pariwar_id = pr_p.pariwar_id AND pr_m.member_id = pr_p.member_id
+            LEFT JOIN pariwar_passport pr_pp ON pr_pp.pariwar_id = pr_p.pariwar_id
+           WHERE ${answerWindowSql('pr_c')}
+             AND (pr_p.send_outcome IS NULL OR (pr_p.send_outcome = 'attempting' AND pr_p.claimed_at < ${lease}))${allow}
+        ) w
+       WHERE w.locale = ANY(${sql.param(unusable)}::text[])
+       GROUP BY w.locale
+       ORDER BY w.locale`,
+  );
+  return rows.map((r) => ({ locale: r.locale as 'hi' | 'en', waiting: r.waiting }));
 }
 
 /** RN3 — rows whose (credited) `aging_since` is before this instant and still `attempting` are given up: 00:00 IST of (today − 2). */
@@ -844,12 +931,26 @@ export async function listStalledPeerMeshRequestScopes(
  * effect (one marker value, the run's instant) read and write ⛔ nothing tenant-derived; a child re-claiming the row concurrently
  * holds the ping lock, so this UPDATE waits and re-evaluates (`claimed_at` inside the lease ⇒ ⛔ parked). RE-EXAMINE when: the
  * statement writes a value derived from another row or tenant, the pool loses BYPASSRLS, or a per-tenant scheduler exists.
+ * 📌 2026-10-23 (Story 6.35): its predicate may now READ the row's OWN Pariwar's default language (`pariwar_passport`, keyed by the
+ * row's `pariwar_id`) — a filter only; the written values are unchanged (one marker, the run's instant).
  */
 export async function parkHeldPeerMeshRequests(
   q: Queryable,
-  input: { readonly now: Date; readonly allow: readonly string[] | null; readonly held: readonly string[] },
+  input: {
+    readonly now: Date;
+    readonly allow: readonly string[] | null;
+    readonly held: readonly string[];
+    /**
+     * 📌 Story 6.35 (LS10 (b)) — ALSO park, in ANY scope (held or not), an `attempting` row whose RECORDED locale (a pre-6.35 row's
+     * NULL ⇒ its Pariwar's default — a correlated read with an explicit `pariwar_id`; the UPDATE target cannot be LEFT JOINed) has
+     * an unusable TEXT template this run: the give-up credits parked time, so a waiting text is ⛔ given up while it waits. (The
+     * park alone does ⛔ stop a re-send — the listing's `attempting` arm and the begin check do.) `[]` ⇒ the park as before.
+     */
+    readonly unusableLocales?: readonly ('hi' | 'en')[];
+  },
 ): Promise<{ readonly pingId: PeerMeshPingId; readonly claimCaseId: ClaimId }[]> {
-  if (input.held.length === 0) return [];
+  const unusable = [...(input.unusableLocales ?? [])];
+  if (input.held.length === 0 && unusable.length === 0) return [];
   const { rows } = await q.query<{ ping_id: string; claim_case_id: string }>(
     `UPDATE claim_peer_mesh_pings p
         SET claimed_by_job = $3, parked_at = $4::timestamptz
@@ -857,7 +958,9 @@ export async function parkHeldPeerMeshRequests(
       WHERE s.pariwar_id = p.pariwar_id AND s.selection_id = p.selection_id
         AND p.send_outcome = 'attempting' AND p.claimed_at < $1 AND p.claimed_by_job <> $3
         AND ($2::uuid[] IS NULL OR p.pariwar_id = ANY($2::uuid[]))
-        AND p.pariwar_id = ANY($5::uuid[])
+        AND (p.pariwar_id = ANY($5::uuid[])
+             OR COALESCE(p.locale, (SELECT pp.locale_default::text FROM pariwar_passport pp WHERE pp.pariwar_id = p.pariwar_id))
+                = ANY($6::text[]))
       RETURNING p.ping_id, s.claim_case_id`,
     [
       new Date(input.now.getTime() - CORRECTION_SEND_LEASE_MS),
@@ -865,6 +968,7 @@ export async function parkHeldPeerMeshRequests(
       PEER_MESH_REQUEST_PARKED_BY,
       input.now,
       input.held.map((x) => String(x).toLowerCase()),
+      unusable,
     ],
   );
   return rows.map((r) => ({ pingId: r.ping_id as PeerMeshPingId, claimCaseId: r.claim_case_id as ClaimId }));

@@ -125,6 +125,12 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder under two co
     const c = await pool.connect();
     try {
       await c.query('BEGIN');
+      // 📌 Story 6.35 — the begin resolves the recipient's language (the passport's default; removed by the cleanup).
+      await c.query(
+        `INSERT INTO pariwar_passport (pariwar_id, display_name_en, display_name_hi, legal_name, branding_bundle, locale_default)
+         VALUES ($1, 'P', 'प', 'T', '{}'::jsonb, 'en')`,
+        [pid],
+      );
       await c.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [neighbour, pid]);
       await c.query(`INSERT INTO member_identities (member_id, pariwar_id, mobile_ciphertext, mobile_blind_index) VALUES ($1, $2, 'enc:test:x', $3)`, [
         neighbour,
@@ -170,7 +176,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder under two co
   }
 
   const begin = (client: pg.PoolClient, s: { pid: PariwarId; cid: ClaimId; pingId: PeerMeshPingId }, jobId: string) =>
-    beginPeerMeshWaReminder(client, { pariwarId: s.pid, claimCaseId: s.cid, pingId: s.pingId, jobId, now: new Date(), nameFault: null, template: TEMPLATE });
+    beginPeerMeshWaReminder(client, { pariwarId: s.pid, claimCaseId: s.cid, pingId: s.pingId, jobId, now: new Date(), nameFault: null, templates: { hi: null, en: TEMPLATE.name } });
 
   it('⭐ ONCE EVER — two children begin the SAME ping\'s reminder at once: ONE begins it, the other is `held_by_other`', { timeout: TIMEOUT }, async () => {
     const s = await seed();

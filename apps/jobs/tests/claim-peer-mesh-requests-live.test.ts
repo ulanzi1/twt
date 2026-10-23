@@ -323,6 +323,140 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     }
   }
 
+  // ── 📌 Story 6.35 AC4 — the language per RECIPIENT and the per-locale WAIT (LS8–LS10 (b), I3 / I4) ──────────────────────────
+
+  /** The member's explicit choice, as the API's setter records it (own-committing). */
+  const choose = (memberId: string, locale: 'hi' | 'en') =>
+    pool.query(`UPDATE members SET preferred_locale = $2, preferred_locale_set_at = now() WHERE member_id = $1`, [memberId, locale]);
+  const localeRows = async (w: World) =>
+    (
+      await pool.query<{ member_id: string; send_outcome: string | null; locale: string | null; locale_source: string | null; link_code: string | null }>(
+        `SELECT member_id, send_outcome, locale, locale_source, link_code FROM claim_peer_mesh_pings WHERE selection_id = $1`,
+        [w.selectionId],
+      )
+    ).rows;
+  const rowOfMember = async (w: World, memberId: string) => (await localeRows(w)).find((r) => r.member_id === memberId)!;
+  const EN_UNSET = { 'sms.dlt.template_id.peer_mesh.request.en': null };
+  const HI_UNSET = { 'sms.dlt.template_id.peer_mesh.request.hi': null };
+
+  it('⭐ 6.35 AC4 (i) — an English-chooser and a non-chooser in a Hindi Pariwar: TWO sends, each in its OWN language, each row says why', async () => {
+    const w = await world({ selected: 2 });
+    const [chooser, plain] = w.pings;
+    await choose(chooser!.memberId, 'en');
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    const c = await rowOfMember(w, chooser!.memberId);
+    const p = await rowOfMember(w, plain!.memberId);
+    expect(c).toMatchObject({ send_outcome: 'accepted', locale: 'en', locale_source: 'member_choice' });
+    expect(p).toMatchObject({ send_outcome: 'accepted', locale: 'hi', locale_source: 'pariwar_default' });
+    const bodyTo = (memberId: string) => h.sent.find((m) => m.to === w.mobiles.get(memberId))!.body;
+    expect(bodyTo(chooser!.memberId)).toBe(renderPeerMeshRequest('en', { ...boxesFor(NAME), link: `${ORIGIN}/peer-request?c=${c.link_code!}` }));
+    expect(bodyTo(plain!.memberId)).toBe(renderPeerMeshRequest('hi', { ...boxesFor(NAME), link: `${ORIGIN}/peer-request?c=${p.link_code!}` }));
+  });
+
+  it.each([
+    ['T1 — the `en` id unset', { config: EN_UNSET }, 'config:dlt_template_id_missing:en'],
+    ['T2 — the `en` pre-flight fails', { preflight: 'en' as const }, 'config:sms_preflight_content_mismatch:sms.dlt.template_id.peer_mesh.request.en'],
+    ['TX — the `en` key unreadable (the OTHER locale\'s)', { throwOn: 'sms.dlt.template_id.peer_mesh.request.en' }, 'config:secret_manager'],
+  ] as const)('⭐ 6.35 AC4 (ii) / (iii) / (vi) — %s: the English-chooser WAITS (⛔ begun, ⛔ a Hindi text — I4); the Hindi neighbour is sent; ⛔ held', async (_l, o, code) => {
+    const w = await world({ selected: 2 });
+    const [chooser, plain] = w.pings;
+    await choose(chooser!.memberId, 'en');
+    const opts: HarnessOpts = { registry: [CLEARED] };
+    if ('config' in o) opts.config = o.config;
+    if ('throwOn' in o) opts.throwOn = o.throwOn;
+    if ('preflight' in o) {
+      opts.preflight = scripted((_n, entry) => (entry.text === PEER_MESH_REQUEST_SMS_TEMPLATES.en.registeredText ? FAULT : PASS));
+    }
+    const h = harness(w, opts);
+    const { swept } = await tick(h, w);
+    expect(swept).toMatchObject({ enqueued: 1, heldForConfig: 0, waitingForTemplate: 1 });
+    expect(await rowOfMember(w, chooser!.memberId)).toMatchObject({ send_outcome: null, locale: null });
+    expect(await rowOfMember(w, plain!.memberId)).toMatchObject({ send_outcome: 'accepted', locale: 'hi' });
+    expect(h.sent.map((m) => m.to)).toEqual([w.mobiles.get(plain!.memberId)]);
+    // AC4 (xi) — ONE waiting alarm: the locale, its state code, the count — ids only
+    expect(h.alarms.filter((a) => a.includes('WAITING'))).toEqual([expect.stringContaining(`en — ${code} — 1 waiting`)]);
+    await expectIdsOnly(h, w);
+  });
+
+  it('⭐ 6.35 AC4 (vi) — TX on the Pariwar\'s OWN default locale\'s key HOLDS it as before (⛔ ping begun)', async () => {
+    const w = await world({ selected: 2 });
+    await choose(w.pings[0]!.memberId, 'en');
+    const h = harness(w, { registry: [CLEARED], throwOn: 'sms.dlt.template_id.peer_mesh.request.hi' });
+    expect(await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID())).toEqual({ status: 'held_config', reason: 'config:secret_manager' });
+    expect((await tick(h, w)).swept).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    expect((await localeRows(w)).every((r) => r.send_outcome === null)).toBe(true);
+  });
+
+  it('⭐ 6.35 AC4 (vii) — a claim whose ONLY due ping waits is ⛔ enqueued (⛔ child, ⛔ name decrypted)', async () => {
+    const w = await world({ selected: 1 });
+    await choose(w.pings[0]!.memberId, 'en');
+    const h = harness(w, { registry: [CLEARED], config: EN_UNSET });
+    const { swept, out } = await tick(h, w);
+    expect(swept).toMatchObject({ enqueued: 0, heldForConfig: 0, waitingForTemplate: 1 });
+    expect(out).toEqual([]);
+    expect((await rows(w))[0]?.send_outcome).toBeNull();
+  });
+
+  it('⭐ 6.35 AC4 (iv) / (iv′) — an ENGLISH Pariwar: `hi` unset ⇒ its English recipients are texted, its Hindi-chooser waits; `en` broken ⇒ a Hindi-chooser is texted', async () => {
+    const w = await world({ locale: 'en', selected: 2 });
+    const [hiChooser, plain] = w.pings;
+    await choose(hiChooser!.memberId, 'hi');
+    await tick(harness(w, { registry: [CLEARED], config: HI_UNSET }), w);
+    expect(await rowOfMember(w, plain!.memberId)).toMatchObject({ send_outcome: 'accepted', locale: 'en', locale_source: 'pariwar_default' });
+    expect(await rowOfMember(w, hiChooser!.memberId)).toMatchObject({ send_outcome: null });
+    // (iv′) — the `en` template breaks instead: the waiting Hindi-chooser is now sent (in Hindi — their choice)
+    await tick(harness(w, { registry: [CLEARED], config: EN_UNSET }), w);
+    expect(await rowOfMember(w, hiChooser!.memberId)).toMatchObject({ send_outcome: 'accepted', locale: 'hi', locale_source: 'member_choice' });
+  });
+
+  it('⭐ 6.35 AC4 (viii) — the begin RACE: the child\'s OWN config finds the recipient\'s locale unusable ⇒ `waiting` (⛔ write)', async () => {
+    const w = await world({ selected: 2 });
+    const [chooser] = w.pings;
+    await choose(chooser!.memberId, 'en');
+    const h = harness(w, { registry: [CLEARED], config: EN_UNSET });
+    const r = await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID());
+    expect(r).toMatchObject({ status: 'done', counts: { accepted: 1, waiting: 1 } });
+    expect(await rowOfMember(w, chooser!.memberId)).toMatchObject({ send_outcome: null, locale: null, link_code: null });
+  });
+
+  it('⭐ 6.35 AC4 (x) — the waiting member switches to a usable language ⇒ the next sweep sends in it', async () => {
+    const w = await world({ selected: 1 });
+    const m = w.pings[0]!.memberId;
+    await choose(m, 'en');
+    const h = harness(w, { registry: [CLEARED], config: EN_UNSET });
+    await tick(h, w);
+    expect((await rows(w))[0]?.send_outcome).toBeNull();
+    await choose(m, 'hi');
+    await tick(h, w);
+    expect(await rowOfMember(w, m)).toMatchObject({ send_outcome: 'accepted', locale: 'hi', locale_source: 'member_choice' });
+  });
+
+  it('⭐ 6.35 AC4 (ix) — an in-flight `en` row past the lease in an UN-held Pariwar is PARKED, ⛔ re-sent in Hindi, ⛔ given up', async () => {
+    const w = await world({ selected: 1 });
+    const p = w.pings[0]!;
+    await choose(p.memberId, 'en');
+    await pool.query(
+      `UPDATE claim_peer_mesh_pings SET send_outcome = 'attempting', attempt_count = 1, claimed_at = $2, claimed_by_job = 'dead-job',
+         aging_since = $3, locale = 'en', locale_source = 'member_choice', link_code = 'Fly635Abcdef' WHERE ping_id = $1`,
+      [p.pingId, new Date(DAYTIME.getTime() - 60 * 60_000), new Date(DAYTIME.getTime() - 60 * 60_000)],
+    );
+    await choose(p.memberId, 'hi'); // a later choice never re-languages an attempt (I5)
+    const h = harness(w, { registry: [CLEARED], config: EN_UNSET });
+    const { swept } = await tick(h, w);
+    expect(swept).toMatchObject({ enqueued: 0, heldForConfig: 0, parkedForConfig: 1, finalisedStuck: 0 });
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', claimed_by_job: claim.PEER_MESH_REQUEST_PARKED_BY });
+    expect(h.sent).toHaveLength(0);
+    // four days later, still waiting: the give-up credits the parked time — ⛔ given up, ⛔ listed, ⛔ re-sent
+    h.setNow(new Date(DAYTIME.getTime() + 4 * DAY));
+    expect((await tick(h, w)).swept).toMatchObject({ enqueued: 0, finalisedStuck: 0 });
+    expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', claimed_by_job: claim.PEER_MESH_REQUEST_PARKED_BY });
+    expect(h.sent).toHaveLength(0);
+    // the template fixed: the parked row is re-claimed and sent in its RECORDED language
+    await tick(harness(w, { registry: [CLEARED] }), w);
+    expect(await rowOfMember(w, p.memberId)).toMatchObject({ send_outcome: 'accepted', locale: 'en' });
+  });
+
   // ── AC2b / AC4 — the holds ──────────────────────────────────────────────────────────────────────────────────
 
   it('⭐ AC2b — the SHIPPED live version (questions awaiting counsel) HOLDS the sweep AND a hook-enqueued child: ⛔ ping begun', async () => {
@@ -348,7 +482,13 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
       { registry: [CLEARED], appLinksBaseUrl: `https://${'a'.repeat(60)}.${'b'.repeat(40)}.org` },
       'config:app_link_too_long',
     ],
-    ['⛔ template id', { registry: [CLEARED], config: { 'sms.dlt.template_id.peer_mesh.request.hi': null } }, 'config:dlt_template_id_missing:hi'],
+    // 📌 2026-10-23 (Story 6.35, LS10 (b)) — ONE locale's id unset no longer holds the Pariwar (its recipients WAIT — the AC4 6.35
+    // legs below); BOTH unset holds it, on the DEFAULT locale's gap (the alarm text as before).
+    [
+      '⛔ template id (both locales)',
+      { registry: [CLEARED], config: { 'sms.dlt.template_id.peer_mesh.request.hi': null, 'sms.dlt.template_id.peer_mesh.request.en': null } },
+      'config:dlt_template_id_missing:hi',
+    ],
     // review round 2 P10 — the rest of R11's list
     ['the gateway unconfigured', { registry: [CLEARED], gatewayConfigured: false }, 'config:sms_gateway_unconfigured'],
     ['a Secret Manager fault', { registry: [CLEARED], throwOn: 'sms.dlt.template_id.' }, 'config:secret_manager'],
@@ -576,7 +716,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(await runPeerMeshRequestChild(deps, boss(h), envelopeOf(w), randomUUID())).toEqual({
       status: 'deferred_quiet_hours',
       startAfter: NEXT_MORNING,
-      counts: { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0 },
+      counts: { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0, waiting: 0 },
     });
     expect(h.sent).toHaveLength(0);
     expect((await rows(w)).every((r) => r.send_outcome === null)).toBe(true);
@@ -959,8 +1099,11 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect((await rows(hi))[0]).toMatchObject({ send_outcome: 'accepted' });
     const en = await world({ locale: 'en', selected: 1 });
     const hEn = harness(en, { registry: [CLEARED], preflight: enBroken });
-    expect((await tick(hEn, en)).swept).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    // 📌 FLIPPED 2026-10-23 (Story 6.35, LS10 (b) — 6.37 AC9 (a)'s property KEPT and EXTENDED): the English Pariwar is ⛔ HELD any
+    // more — its English recipient WAITS (⛔ enqueued, the row stays NULL, the waiting alarm names `en`); see AC4 (iv′) below.
+    expect((await tick(hEn, en)).swept).toMatchObject({ enqueued: 0, heldForConfig: 0, waitingForTemplate: 1 });
     expect((await rows(en))[0]?.send_outcome).toBeNull();
+    expect(hEn.alarms.some((a) => a.includes('WAITING') && a.includes('en — config:sms_preflight_content_mismatch'))).toBe(true);
   });
 
   it('6.37 — a PASS carrying the `sms_type_unicode_for_gsm7` note proceeds (⛔ a fault)', async () => {
@@ -984,13 +1127,16 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     await tick(h, w);
     expect((await rows(w)).filter((r) => r.send_outcome === 'accepted')).toHaveLength(3);
     expect(h.sent).toHaveLength(3);
-    expect(reads).toBe(1);
+    // 📌 2026-10-23 (Story 6.35, LS10 (b)): ONE read PER LOCALE — both locales' templates are checked (a recipient may have chosen
+    // either); still one per template across the sweep, the race guard and every send.
+    expect(reads).toBe(2);
   });
 
   it('⭐ 6.37 AC9 (a2) — a fault first seen IN THE CORE (the in-flight race) ⇒ the final `preflight_<reason>` is stored and P1 STOPS the child', async () => {
     const w = await world({ selected: 2 });
     // call 1 = the child's race guard (passes); call 2 = the core, for the first ping (the template broke in between)
-    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n === 1 ? PASS : FAULT)) });
+    // 📌 2026-10-23 (Story 6.35): the race guard reads BOTH locales (calls 1 hi, 2 en); the core is call 3.
+    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n <= 2 ? PASS : FAULT)) });
     const r = await runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), randomUUID());
     expect(r).toEqual({ status: 'held_config', reason: 'dlt_template_not_approved:preflight_content_mismatch' });
     const after = await rows(w);
@@ -1001,7 +1147,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
 
   it('6.37 AC9 (a2) — a transient with ⛔ usable pass IN THE CORE ⇒ a transient (pg-boss retries), ⛔ sent', async () => {
     const w = await world({ selected: 1 });
-    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n === 1 ? PASS : TRANSIENT)) });
+    // 📌 2026-10-23 (Story 6.35): the race guard reads BOTH locales (calls 1–2); the core is call 3.
+    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n <= 2 ? PASS : TRANSIENT)) });
     await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-t')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
     expect((await rows(w))[0]).toMatchObject({ send_outcome: 'attempting', detail: 'api_unavailable:preflight' });
     expect(h.sent).toHaveLength(0);
@@ -1009,7 +1156,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
 
   it('⭐ 6.37 review round 2 P13 — a pre-flight transient IN THE CORE is scope-wide: the child STOPS (⛔ further ping begun) and throws for a retry', async () => {
     const w = await world({ selected: 2 });
-    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n === 1 ? PASS : TRANSIENT)) });
+    // 📌 2026-10-23 (Story 6.35): the race guard reads BOTH locales (calls 1–2); the core is call 3.
+    const h = harness(w, { registry: [CLEARED], preflight: scripted((n) => (n <= 2 ? PASS : TRANSIENT)) });
     await expect(runPeerMeshRequestChild(h.deps, boss(h), envelopeOf(w), 'job-p13')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
     const after = await rows(w);
     expect(after.filter((x) => x.send_outcome === 'attempting' && x.detail === 'api_unavailable:preflight')).toHaveLength(1);
@@ -1022,7 +1170,8 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     const w = await world({ selected: 1 });
     const holder: { h?: Harness } = {};
     const preflight = scripted((n) => {
-      if (n === 2) holder.h!.setNow(AFTER_CUTOFF); // the core's read is slow — the window closes
+      // 📌 2026-10-23 (Story 6.35): the race guard reads BOTH locales (calls 1–2) — the core's read is call 3.
+      if (n === 3) holder.h!.setNow(AFTER_CUTOFF); // the core's read is slow — the window closes
       return PASS;
     });
     const h = harness(w, { registry: [CLEARED], preflight });
@@ -1038,7 +1187,7 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     const w = await world({ selected: 1 });
     const holder: { h?: Harness } = {};
     const preflight = scripted((n) => {
-      if (n === 2) holder.h!.setNow(new Date(DAYTIME.getTime() + 11 * 60_000));
+      if (n === 3) holder.h!.setNow(new Date(DAYTIME.getTime() + 11 * 60_000)); // 📌 6.35: the core's read is call 3
       return PASS;
     });
     const h = harness(w, { registry: [CLEARED], preflight });

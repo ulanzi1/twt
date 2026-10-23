@@ -40,12 +40,13 @@ import { clampLimit } from '../pagination.js';
 import {
   PEER_MESH_WA_REMINDER_DETAIL_PATTERN,
   type PeerMeshWaReminderLocale,
+  type PeerMeshWaReminderLocaleSource,
 } from '../schema/claim_peer_mesh_wa_reminders.js';
 import { getMemberMobileCiphertext, isPeerMeshWaReminderOptedIn } from '../wa-opt-in/read.js';
 import { answerWindowSql, isClaimInAnswerWindow } from './answer-window.js';
 import { CORRECTION_SEND_LEASE_MS } from './correction-reminder-record.js';
 import { peerMeshReplyState } from './peer-mesh-reply.js';
-import { PEER_MESH_REQUEST_PARKED_BY, type PeerRequestLocale, readPeerMeshRequestEligibility } from './peer-mesh-request.js';
+import { PEER_MESH_REQUEST_PARKED_BY, readPeerMeshRequestEligibility, resolvePeerRequestLocale } from './peer-mesh-request.js';
 
 /** WR4 — the reminder is due this many hours after the text was ACCEPTED (`send_updated_at` of the accepted ping). */
 export const PEER_MESH_WA_REMINDER_DUE_AFTER_HOURS = 48;
@@ -157,6 +158,12 @@ export type BeginPeerMeshWaReminderResult =
       readonly outcome: 'skipped_late' | 'skipped_window_closed' | 'skipped_answered' | 'skipped_not_opted_in' | 'skipped_recipient_ineligible';
     }
   | { readonly kind: 'no_target'; readonly detail: string }
+  /**
+   * 📌 Story 6.35 (LS10 (b′)) — the recipient's language has ⛔ usable reminder template for its Pariwar, and ⛔ fallback applies (their
+   * language IS the Pariwar's default — a non-chooser, or a chooser of the default): ⛔ write (⛔ row on a fresh begin; a re-claim's
+   * row keeps its holder). Past `+ 72 h` it is never due again, or `skipped_late` (the sweep's late marking / a sibling's begin).
+   */
+  | { readonly kind: 'waiting_template'; readonly locale: PeerMeshWaReminderLocale }
   | {
       readonly kind: 'begun';
       readonly reminderId: string;
@@ -168,7 +175,33 @@ export type BeginPeerMeshWaReminderResult =
       readonly attemptCount: number;
       /** The claim time this begin stamped — the marker's lease check counts from it. */
       readonly claimedAt: Date;
+      /** 📌 Story 6.35 (LS9, WR14) — the language this reminder goes in, WHY, and that language's template NAME — as recorded on the row. */
+      readonly locale: PeerMeshWaReminderLocale;
+      readonly localeSource: PeerMeshWaReminderLocaleSource;
+      readonly templateName: string;
     };
+
+/**
+ * 📌 Story 6.35 (LS10 (b′); `2026-10-23-385` PQ1 A) — which template a reminder goes with, from its recipient's language (`effective`
+ * — their choice, else the Pariwar's default), WHY, and the Pariwar's two template names (`null` ⇒ unusable — unset, invalid,
+ * refused by Meta, or the other locale's key unreadable): the recipient's own ⇒ it; else, for a recipient whose language is ⛔ the
+ * Pariwar's default (they CHOSE another), the default's ⇒ `pariwar_fallback`; else WAIT (`null`). Pure — the sweep and the begin
+ * apply the SAME rule.
+ */
+export function choosePeerMeshWaReminderTemplate(input: {
+  readonly effective: PeerMeshWaReminderLocale;
+  readonly source: 'pariwar_default' | 'member_choice';
+  readonly pariwarDefaultLocale: PeerMeshWaReminderLocale;
+  readonly templates: Readonly<Record<PeerMeshWaReminderLocale, string | null>>;
+}): { readonly locale: PeerMeshWaReminderLocale; readonly localeSource: PeerMeshWaReminderLocaleSource; readonly templateName: string } | null {
+  const own = input.templates[input.effective];
+  if (own !== null) return { locale: input.effective, localeSource: input.source, templateName: own };
+  const fallback = input.templates[input.pariwarDefaultLocale];
+  if (input.effective !== input.pariwarDefaultLocale && fallback !== null) {
+    return { locale: input.pariwarDefaultLocale, localeSource: 'pariwar_fallback', templateName: fallback };
+  }
+  return null;
+}
 
 interface LockedPing {
   ping_id: string;
@@ -291,11 +324,16 @@ export async function beginPeerMeshWaReminder(
     readonly jobId: string;
     readonly now: Date;
     readonly nameFault: PeerMeshWaReminderNameFault | null;
-    readonly template: { readonly name: string; readonly locale: PeerMeshWaReminderLocale; readonly localeSource: PeerRequestLocale['source'] };
+    /**
+     * 📌 Story 6.35 (LS9 / LS10 (b′)) — the Pariwar's template NAME per locale from the race guard (`null` ⇒ unusable). The begin
+     * resolves THIS recipient's language under the lock (WR14 — read again, ⛔ copied from the ping) and picks by
+     * `choosePeerMeshWaReminderTemplate`.
+     */
+    readonly templates: Readonly<Record<PeerMeshWaReminderLocale, string | null>>;
   },
 ): Promise<BeginPeerMeshWaReminderResult> {
   const db = bindScopedDb(client);
-  const { pariwarId, jobId, now, nameFault, template } = input;
+  const { pariwarId, jobId, now, nameFault } = input;
   const claimCaseId = String(input.claimCaseId).toLowerCase() as ClaimId;
   const pingId = String(input.pingId).toLowerCase() as PeerMeshPingId;
   const { claim, ping, reminder } = await lockClaimPingReminder(client, { pariwarId, claimCaseId, pingId });
@@ -345,6 +383,17 @@ export async function beginPeerMeshWaReminder(
   // WR13 — a claim-wide name fault (an erasure since the text, …) ⇒ finished `no_target`.
   if (nameFault !== null) return finish('no_target', peerMeshWaReminderDetail({ kind: 'no_target', reason: nameFault }));
 
+  // 📌 Story 6.35 (WR14 per RECIPIENT; LS10 (b′), `-385`) — the recipient's language, read again here (after ⑨ proved the member row
+  // is in this Pariwar), and the template for it — or the Pariwar's, for a chooser — or WAIT (⛔ write).
+  const language = await resolvePeerRequestLocale(db, { pariwarId, memberId: ping.member_id as MemberId });
+  const template = choosePeerMeshWaReminderTemplate({
+    effective: language.locale,
+    source: language.source,
+    pariwarDefaultLocale: language.pariwarDefaultLocale,
+    templates: input.templates,
+  });
+  if (template === null) return { kind: 'waiting_template', locale: language.locale };
+
   // Begin — or re-claim (own retry at once; a parked row; another job's past the lease) — ONLY while the marker is NULL.
   let reminderId: string;
   let attemptCount: number;
@@ -357,7 +406,7 @@ export async function beginPeerMeshWaReminder(
          VALUES ($1, $2, $3, $4, $5, 'attempting', 1, $6, $7, clock_timestamp(), $8, $9, $10)
          ON CONFLICT (ping_id) DO NOTHING
          RETURNING reminder_id`,
-        [ping.ping_id, pariwarId, claimCaseId, ping.selection_id, ping.member_id, now, jobId, template.name, template.locale, template.localeSource],
+        [ping.ping_id, pariwarId, claimCaseId, ping.selection_id, ping.member_id, now, jobId, template.templateName, template.locale, template.localeSource],
       )
     ).rows[0];
     // ⛔ Reachable while this transaction holds the ping lock (every writer takes it first) — defensive.
@@ -372,7 +421,7 @@ export async function beginPeerMeshWaReminder(
                 first_detail = COALESCE(first_detail, detail), template_name = $4, locale = $5, locale_source = $6
           WHERE reminder_id = $1 AND send_outcome = 'attempting' AND send_started_at IS NULL
           RETURNING attempt_count`,
-        [reminder.reminder_id, now, jobId, template.name, template.locale, template.localeSource],
+        [reminder.reminder_id, now, jobId, template.templateName, template.locale, template.localeSource],
       )
     ).rows[0];
     if (!reclaimed) return { kind: 'already_final' };
@@ -388,6 +437,9 @@ export async function beginPeerMeshWaReminder(
     linkCode: ping.link_code,
     attemptCount,
     claimedAt: now,
+    locale: template.locale,
+    localeSource: template.localeSource,
+    templateName: template.templateName,
   };
 }
 
@@ -643,11 +695,19 @@ function dueConjunctsSql(now: Date, opts: { readonly mode: 'sweep' } | { readonl
 
 // ── The sweep's reads and writes — cross-tenant, BYPASSRLS pool ──────────────────────────────────────────────────────────
 
-/** One due ping (ids only). */
+/** One due ping (ids, and — 📌 Story 6.35 — its recipient's language codes). */
 export interface DuePeerMeshWaReminderPing {
   readonly pariwarId: PariwarId;
   readonly claimCaseId: ClaimId;
   readonly pingId: PeerMeshPingId;
+  /**
+   * 📌 Story 6.35 (LS10 (b′)) — the recipient's EFFECTIVE language (their choice, else the Pariwar's default), why, and the default —
+   * so the sweep skips a ping that will WAIT before it costs a child. `null` ⇒ ⛔ passport (the ping still reaches the
+   * `config:locale_unavailable` hold). Language CODES only (⛔ PII).
+   */
+  readonly effectiveLocale: PeerMeshWaReminderLocale | null;
+  readonly localeSource: 'pariwar_default' | 'member_choice';
+  readonly pariwarDefaultLocale: PeerMeshWaReminderLocale | null;
 }
 
 export interface DuePeerMeshWaReminderPage {
@@ -669,6 +729,8 @@ export interface DuePeerMeshWaReminderPage {
  * `withPariwarScope` transaction, under RLS, after a locked re-check. The caller checks `canReadAcrossPariwars` FIRST (an RLS-bound
  * role would see ⛔ row and report "nothing due"). `allow` (tests) narrows it. RE-EXAMINE when: the result ever carries more than
  * ids, the read projects PII, a write is added on this pool, the pool loses BYPASSRLS, or a per-tenant scheduler exists.
+ * 📌 2026-10-23 (Story 6.35): it ALSO returns each ping's recipient's language codes (their choice, else the Pariwar's default) —
+ * joined on the PING's own `pariwar_id` (`members`, `pariwar_passport`); two-letter codes, ⛔ PII, ⛔ another tenant's value.
  */
 export async function listDuePeerMeshWaReminderPings(
   q: Queryable,
@@ -684,21 +746,42 @@ export async function listDuePeerMeshWaReminderPings(
     input.after === null ? sql`` : sql` AND (wr_c.claim_case_id, wr_p.ping_id) > (${input.after.claimCaseId}::uuid, ${input.after.pingId}::uuid)`;
   // ⚠ `sql.param` — a bare array in a Drizzle template is EXPANDED into one parameter per element.
   const allow = input.allow === null ? sql`` : sql` AND wr_c.pariwar_id = ANY(${sql.param([...input.allow])}::uuid[])`;
-  const rows = await run<{ pariwar_id: string; claim_case_id: string; ping_id: string; as_of: Date }>(
+  const rows = await run<{
+    pariwar_id: string;
+    claim_case_id: string;
+    ping_id: string;
+    as_of: Date;
+    preferred_locale: string | null;
+    locale_default: string | null;
+  }>(
     q,
     sql`
-      SELECT wr_c.pariwar_id, wr_c.claim_case_id, wr_p.ping_id, statement_timestamp() AS as_of
+      SELECT wr_c.pariwar_id, wr_c.claim_case_id, wr_p.ping_id, statement_timestamp() AS as_of,
+             wr_m.preferred_locale::text AS preferred_locale, wr_pp.locale_default::text AS locale_default
         FROM claim_peer_mesh_pings wr_p
         JOIN claim_peer_mesh_selections wr_s ON wr_s.pariwar_id = wr_p.pariwar_id AND wr_s.selection_id = wr_p.selection_id
         JOIN claims wr_c ON wr_c.pariwar_id = wr_s.pariwar_id AND wr_c.claim_case_id = wr_s.claim_case_id
         JOIN pariwar_wa_config wr_w ON wr_w.pariwar_id = wr_p.pariwar_id AND wr_w.enabled = true
+        LEFT JOIN members wr_m ON wr_m.pariwar_id = wr_p.pariwar_id AND wr_m.member_id = wr_p.member_id
+        LEFT JOIN pariwar_passport wr_pp ON wr_pp.pariwar_id = wr_p.pariwar_id
        WHERE ${dueConjunctsSql(input.now, { mode: 'sweep' })}${after}${allow}
        ORDER BY wr_c.claim_case_id, wr_p.ping_id
        LIMIT ${sql.raw(String(n))}`,
   );
   const last = rows[rows.length - 1];
   return {
-    due: rows.map((r) => ({ pariwarId: r.pariwar_id as PariwarId, claimCaseId: r.claim_case_id as ClaimId, pingId: r.ping_id as PeerMeshPingId })),
+    due: rows.map((r) => {
+      const chosen = r.preferred_locale === 'hi' || r.preferred_locale === 'en' ? r.preferred_locale : null;
+      const pariwarDefaultLocale = r.locale_default === 'hi' || r.locale_default === 'en' ? r.locale_default : null;
+      return {
+        pariwarId: r.pariwar_id as PariwarId,
+        claimCaseId: r.claim_case_id as ClaimId,
+        pingId: r.ping_id as PeerMeshPingId,
+        effectiveLocale: chosen ?? pariwarDefaultLocale,
+        localeSource: chosen !== null ? ('member_choice' as const) : ('pariwar_default' as const),
+        pariwarDefaultLocale,
+      };
+    }),
     last: last ? { claimCaseId: last.claim_case_id as ClaimId, pingId: last.ping_id as PeerMeshPingId } : null,
     scanned: rows.length,
     asOf: last ? new Date(last.as_of) : null,

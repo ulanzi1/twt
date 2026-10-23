@@ -2,6 +2,10 @@
 // `2026-10-10-304` Q6 A, `2026-10-10-305` §2 item 4, `2026-10-10-311` PM1–PM5, PM14–PM16, PM21, PM22; `2026-10-12-324`;
 // `2026-10-14-330` SW22–SW27; `2026-10-16-343`). The SHAPE of 6.24b / 6.29's `claim-suspicion-notices.ts`, ADAPTED: a CHILD per
 // CLAIM (it sends each of that claim's due pings in turn), a hold per PARIWAR (every config gap here is per Pariwar or global).
+// 📌 2026-10-23 (Story 6.35, Decision 2026-10-23-387 LS8–LS10 (b)): each text goes in its RECIPIENT's language (their choice in the
+// app, else the Pariwar's default — `resolvePeerRequestLocale`, at the begin), and a TEXT-template gap is per LOCALE: the
+// recipients whose language's template is unusable WAIT (⛔ held, ⛔ sent in the other language); the Pariwar is held only on a
+// non-template gap, a read fault on its OWN default locale's key, or with BOTH locales unusable (the default's gap — as before).
 // ⛔ Never `dispatch()` — a DIRECT DLT SMS through the shared core (`sendClaimDltSms`), the sibling registry's words.
 //
 // ── The child (one claim) ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -9,7 +13,8 @@
 //       (checked at the start, AND again at each begin and each provider handoff — the clock read afresh each time);
 //   (2) R11's RACE GUARD — the sweep's checks again (the gateway, `APP_LINKS_BASE_URL` for an app link, the LIVE questionnaire
 //       and ⛔ question of it `'pending'` (AC2b), the template id of the Pariwar's language, the helpline, ANY Secret Manager
-//       fault) BEFORE a ping is begun ⇒ `held_config` + ONE ids-only alarm, ⛔ slot used up;
+//       fault) BEFORE a ping is begun ⇒ `held_config` + ONE ids-only alarm, ⛔ slot used up; 📌 6.35: both locales' template ids
+//       are read — a ping whose language's template is unusable is `waiting_template` at its begin (⛔ write), the others go;
 //   (3) the due pings — ⛔ any ⇒ `noop` (⛔ name decrypted for nothing — R8's hook enqueues on every no-op SELECT re-run);
 //       a locale-read DB fault in (2) is a RETRY (the sweep skips the Pariwar that run), ⛔ a hold — a MISSING passport is a hold;
 //   (4) R9 — the deceased's NAME, ONCE, outside any claiming transaction: the mode (`-181`), the KYC name, the erased sentinel,
@@ -38,6 +43,8 @@
 // ── The sweep, daily 10:30 IST (inside the send hours; after the suspicion sweep's 10:00) ─────────────────────────────────
 //   (1) config per Pariwar FIRST (memoised; a Pariwar whose config cannot be READ this run — a locale-read DB fault — is ⛔
 //   enqueued and its in-flight pings are parked, ONE alarm) → (2) the stalled scopes → the HELD ones' in-flight pings PARKED + ONE alarm →
+//   📌 6.35: each locale's TEXT template state is read ONCE per run (global per locale); in-flight pings in an UNUSABLE locale are
+//   parked in any scope, and the listing skips waiting pings (a claim whose only due pings wait is ⛔ enqueued) → ONE waiting alarm →
 //   (3) the give-up (three IST days of UN-parked time) over the UN-held ones → (4) the paged due claims (R16 — `answerWindowSql`),
 //   ONE child per claim in an un-held Pariwar → (5) ONE end-of-run alarm for the held claims (ids only).
 // ⚠ AT-LEAST-ONCE (6.19b's): a timeout or crash after a gateway accept may produce a second text — `attempt_count` /
@@ -76,6 +83,7 @@ import {
 import { claimCorrectionHelplineConfigKey } from './claim-correction-sms-templates.js';
 import { sendClaimDltSms, smsPreflightGap } from './claim-dlt-sms-send.js';
 import {
+  PEER_MESH_REQUEST_SMS_LOCALES,
   PEER_MESH_REQUEST_SMS_TEMPLATES,
   fitsDltUrl,
   peerMeshRequestDltConfigKey,
@@ -180,9 +188,51 @@ function globalConfigGap(deps: ClaimPeerMeshRequestDeps): string | null {
   return appLinksConfigGap(deps.appLinksBaseUrl);
 }
 
-/** What a ready Pariwar sends in. */
+/**
+ * What a ready Pariwar sends with. 📌 Story 6.35 (LS10 (b)): ⛔ `locale` — each ping is rendered in its OWN (`begun.locale`); the
+ * locales whose TEXT template is unusable this run (the recipients of those WAIT).
+ */
 interface PariwarSendConfig {
-  readonly locale: PeerMeshRequestSmsLocale;
+  readonly unusableLocales: readonly PeerMeshRequestSmsLocale[];
+}
+
+/** 📌 Story 6.35 (LS10 (b), the T-states) — a locale's TEXT template this run: usable (T0), or the gap that makes it unusable. */
+type TextTemplateState =
+  | { readonly usable: true }
+  /** T1 unset (`dlt_template_id_missing:<l>`), T2 a failed pre-flight (its gap), or TX a read fault (`readFault`, `secret_manager`). */
+  | { readonly usable: false; readonly gap: string; readonly readFault: boolean };
+type TextTemplateStates = Readonly<Record<PeerMeshRequestSmsLocale, TextTemplateState>>;
+
+/**
+ * 📌 Story 6.35 (LS10 (b)) — BOTH locales' TEXT template states (the DLT id, then the process pre-flight memo) — GLOBAL per locale
+ * (the id is ⛔ per Pariwar), read ONCE per sweep run and again by each child (its race guard). DLT-REJECTED is ⛔ representable
+ * (an id is never provisioned ⇒ T1); one recorded is a STOP for the story / go-live (S4), ⛔ a state here.
+ */
+async function textTemplateStates(deps: ClaimPeerMeshRequestDeps): Promise<TextTemplateStates> {
+  const out: Partial<Record<PeerMeshRequestSmsLocale, TextTemplateState>> = {};
+  for (const l of PEER_MESH_REQUEST_SMS_LOCALES) {
+    const key = peerMeshRequestDltConfigKey(l);
+    const template = await configSet(deps, key);
+    if (template.state === 'fault') {
+      out[l] = { usable: false, gap: 'config:secret_manager', readFault: true };
+      continue;
+    }
+    if (template.state === 'missing') {
+      out[l] = { usable: false, gap: `config:dlt_template_id_missing:${l}`, readFault: false };
+      continue;
+    }
+    // Story 6.37 (MG5) — the locale's template through the process pre-flight memo. A fault — or a transient with ⛔ usable pass —
+    // makes the locale UNUSABLE (6.35: its recipients wait; 6.37 AC9 (a) kept — a broken `en` never holds a Hindi recipient).
+    const entry = PEER_MESH_REQUEST_SMS_TEMPLATES[l];
+    const preflight = await smsPreflightGap(deps.smsPreflight, { text: entry.registeredText, slots: entry.slots }, key, template.value);
+    out[l] = preflight === null ? { usable: true } : { usable: false, gap: preflight, readFault: false };
+  }
+  return out as TextTemplateStates;
+}
+
+/** The unusable locales of a state set, in `PEER_MESH_REQUEST_SMS_LOCALES` order. */
+function unusableOf(states: TextTemplateStates): PeerMeshRequestSmsLocale[] {
+  return PEER_MESH_REQUEST_SMS_LOCALES.filter((l) => !states[l].usable);
 }
 
 /**
@@ -208,6 +258,7 @@ class PeerRequestLocaleReadError extends Error {
 async function pariwarConfig(
   deps: ClaimPeerMeshRequestDeps,
   pariwarId: string,
+  states: TextTemplateStates,
 ): Promise<{ readonly gap: string } | { readonly gap: null; readonly config: PariwarSendConfig }> {
   const live = questionnaires.resolveLiveVersion('peer_mesh', pariwarId, deps.questionnaireRegistry);
   if (live === null) return { gap: 'config:questionnaire_unavailable' };
@@ -221,19 +272,17 @@ async function pariwarConfig(
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return { gap: 'config:locale_unavailable' };
     throw new PeerRequestLocaleReadError(err);
   }
-  const key = peerMeshRequestDltConfigKey(locale);
-  const template = await configSet(deps, key);
-  if (template.state === 'fault') return { gap: 'config:secret_manager' };
-  if (template.state === 'missing') return { gap: `config:dlt_template_id_missing:${locale}` };
-  // Story 6.37 (MG5) — the Pariwar's OWN locale's template through the process pre-flight memo, ⛔ in `globalConfigGap` (a
-  // broken `en` template would otherwise hold every Hindi Pariwar). A fault — or a transient with ⛔ usable pass — HOLDS.
-  const entry = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
-  const preflight = await smsPreflightGap(deps.smsPreflight, { text: entry.registeredText, slots: entry.slots }, key, template.value);
-  if (preflight !== null) return { gap: preflight };
+  // 📌 Story 6.35 (LS10 (b), the TX row) — a read fault on the Pariwar's OWN default locale's key HOLDS it, as before; on the OTHER
+  // locale's key that locale is merely unusable (its recipients wait) — else a fault on the `en` key would hold every Hindi
+  // Pariwar, what 6.37 AC9 (a) avoided. BOTH locales unusable ⇒ HELD with the default locale's gap (the alarm text as before).
+  const own = states[locale];
+  if (!own.usable && own.readFault) return { gap: own.gap };
+  const unusableLocales = unusableOf(states);
+  if (!own.usable && unusableLocales.length === PEER_MESH_REQUEST_SMS_LOCALES.length) return { gap: own.gap };
   const helpline = await configSet(deps, claimCorrectionHelplineConfigKey(pariwarId));
   if (helpline.state === 'fault') return { gap: 'config:secret_manager' };
   if (helpline.state === 'missing') return { gap: 'config:helpline_number_missing' };
-  return { gap: null, config: { locale } };
+  return { gap: null, config: { unusableLocales } };
 }
 
 /**
@@ -253,8 +302,10 @@ export interface PeerMeshRequestSweepResult {
   readonly enqueued: number;
   /** Claims held by a config gap (R11) — ⛔ enqueued, ⛔ ping begun. */
   readonly heldForConfig: number;
-  /** In-flight pings newly parked by a hold (RN2) — ⛔ given up while held. */
+  /** In-flight pings newly parked by a hold (RN2) — ⛔ given up while held. 📌 6.35: or by an unusable locale (they wait). */
   readonly parkedForConfig: number;
+  /** 📌 Story 6.35 (LS10 (b)) — neighbour texts WAITING for their language's unusable TEXT template (the count read; ⛔ enqueued). */
+  readonly waitingForTemplate: number;
   readonly finalisedStuck: number;
   readonly budgetExhausted: boolean;
 }
@@ -302,7 +353,15 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   const startedMs = clockMs();
   const budgetMs = Math.max(0, deps.sweepBudgetMs ?? DEFAULT_CORRECTION_SWEEP_BUDGET_MS);
   const allow: string[] | null = deps.pariwarAllowlist ? [...deps.pariwarAllowlist] : null;
-  const empty: PeerMeshRequestSweepResult = { scannedClaims: 0, enqueued: 0, heldForConfig: 0, parkedForConfig: 0, finalisedStuck: 0, budgetExhausted: false };
+  const empty: PeerMeshRequestSweepResult = {
+    scannedClaims: 0,
+    enqueued: 0,
+    heldForConfig: 0,
+    parkedForConfig: 0,
+    waitingForTemplate: 0,
+    finalisedStuck: 0,
+    budgetExhausted: false,
+  };
   if (allow !== null && process.env['NODE_ENV'] === 'production') {
     alarm('[jobs] claim-peer-mesh-request-sweep: REFUSED — `pariwarAllowlist` is set while NODE_ENV is production (it is test-only); nothing was swept');
     return empty;
@@ -315,6 +374,12 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   // (1) R11 — the global gaps ONCE per run; the per-Pariwar ones memoised (the SAME memo the main loop reads — one run never
   // both parks and enqueues a Pariwar).
   const globalGap = globalConfigGap(deps);
+  // 📌 Story 6.35 (LS10 (b)) — each locale's TEXT template state, ONCE per run (global per locale). The listing and the park skip /
+  // park the pings of an unusable locale — UNLESS both are unusable: then every Pariwar is HELD on its default's gap, as before,
+  // so the listing is left as it was (the held claims are counted and alarmed there).
+  const states = globalGap === null ? await textTemplateStates(deps) : null;
+  const runUnusable = states === null ? [] : unusableOf(states);
+  const waitUnusable = runUnusable.length === PEER_MESH_REQUEST_SMS_LOCALES.length ? [] : runUnusable;
   const gapByPariwar = new Map<string, string | null>();
   // P7 — a Pariwar whose config could ⛔ be READ this run (the locale read failed): ⛔ held, ⛔ parked, ⛔ enqueued; ONE alarm.
   const unreadable = new Set<string>();
@@ -323,7 +388,7 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
     if (unreadable.has(pariwarId)) return CONFIG_UNREADABLE;
     if (!gapByPariwar.has(pariwarId)) {
       try {
-        gapByPariwar.set(pariwarId, (await pariwarConfig(deps, pariwarId)).gap);
+        gapByPariwar.set(pariwarId, (await pariwarConfig(deps, pariwarId, states!)).gap);
       } catch (err) {
         if (!(err instanceof PeerRequestLocaleReadError)) throw err;
         unreadable.add(pariwarId);
@@ -359,11 +424,17 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
     }
     (gap === null ? unheld : held).push(pariwarId);
   }
-  const parked = await claimDomain.parkHeldPeerMeshRequests(deps.pool, { now, allow, held: [...held, ...parkUnreadable] });
+  const parked = await claimDomain.parkHeldPeerMeshRequests(deps.pool, {
+    now,
+    allow,
+    held: [...held, ...parkUnreadable],
+    unusableLocales: waitUnusable,
+  });
   if (parked.length > 0) {
     alarm(
       `[jobs] claim-peer-mesh-request-sweep: ${String(parked.length)} in-flight neighbour text(s) newly PARKED — their Pariwar is held ` +
-        `by a config gap (or its config could ⛔ be read); ⛔ given up while held, re-tried once it is fixed (claims: ${sampleIds([...new Set(parked.map((p) => p.claimCaseId as string))])})`,
+        `by a config gap (or its config could ⛔ be read), or their language's text template is unusable; ⛔ given up while held, ` +
+        `re-tried once it is fixed (claims: ${sampleIds([...new Set(parked.map((p) => p.claimCaseId as string))])})`,
     );
   }
 
@@ -394,7 +465,7 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   const heldClaims: string[] = [];
   let after: string | null = null;
   sweep: while (!budgetExhausted) {
-    const page = await claimDomain.listDuePeerMeshRequestClaims(deps.pool, { now, after, limit, allow });
+    const page = await claimDomain.listDuePeerMeshRequestClaims(deps.pool, { now, after, limit, allow, unusableLocales: waitUnusable });
     for (const due of page.due) {
       if (clockMs() - startedMs > budgetMs) {
         budgetExhausted = true;
@@ -437,6 +508,23 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
         `(claims: ${sampleIds(heldClaims)})`,
     );
   }
+  // 📌 Story 6.35 (LS10 (b)) — ONE alarm for the texts WAITING on an unusable language: each locale, its state code and its count
+  // (ids-free; the count read, because the listing excludes them). ⛔ Sent in the other language; past the claim's answer window
+  // an unsent one stays unsent (`not_sent`).
+  let waitingForTemplate = 0;
+  if (states !== null && waitUnusable.length > 0) {
+    const waiting = await claimDomain.countWaitingPeerMeshRequestPings(deps.pool, { now, unusableLocales: waitUnusable, allow });
+    const countOf = (l: PeerMeshRequestSmsLocale): number => waiting.find((w) => w.locale === l)?.waiting ?? 0;
+    waitingForTemplate = waitUnusable.reduce((n, l) => n + countOf(l), 0);
+    const parts = waitUnusable.map((l) => {
+      const st = states[l];
+      return `${l} — ${st.usable ? 'usable' : st.gap} — ${String(countOf(l))} waiting`;
+    });
+    alarm(
+      `[jobs] claim-peer-mesh-request-sweep: neighbour texts WAITING for their language's text template (${parts.join('; ')}); ` +
+        `⛔ sent in the other language — they go once it is usable (an unsent one whose answer window closes first stays unsent)`,
+    );
+  }
   if (budgetExhausted && budgetExhaustedDuringScopeScan && scannedClaims === 0) {
     alarm(`[jobs] claim-peer-mesh-request-sweep: ran out of its ${String(Math.round(budgetMs / 60_000))}-minute budget scanning stalled scopes (park phase) — the enqueue scan did ⛔ run today`);
   } else if (budgetExhausted) {
@@ -444,7 +532,15 @@ export async function runPeerMeshRequestSweep(deps: ClaimPeerMeshRequestDeps, bo
   } else if (bounded) {
     alarm(`[jobs] claim-peer-mesh-request-sweep: hit the hard bound of ${String(maxClaims)} claims — the rest were ⛔ NOT swept today`);
   }
-  return { scannedClaims, enqueued, heldForConfig: heldClaims.length, parkedForConfig: parked.length, finalisedStuck: stuck.length, budgetExhausted };
+  return {
+    scannedClaims,
+    enqueued,
+    heldForConfig: heldClaims.length,
+    parkedForConfig: parked.length,
+    waitingForTemplate,
+    finalisedStuck: stuck.length,
+    budgetExhausted,
+  };
 }
 
 // ── The CHILD — one claim ──────────────────────────────────────────────────────────────────────────────────────────
@@ -459,6 +555,8 @@ export interface PeerMeshRequestChildCounts {
   readonly expired: number;
   readonly skipped: number;
   readonly transient: number;
+  /** 📌 Story 6.35 (LS10 (b)) — pings whose language's TEXT template is unusable this run: ⛔ begun (they wait). */
+  readonly waiting: number;
 }
 
 export type PeerMeshRequestChildResult =
@@ -578,7 +676,7 @@ export async function runPeerMeshRequestChild(
   const globalGap = globalConfigGap(deps);
   let pariwarCheck: Awaited<ReturnType<typeof pariwarConfig>>;
   try {
-    pariwarCheck = globalGap === null ? await pariwarConfig(deps, pid) : { gap: globalGap };
+    pariwarCheck = globalGap === null ? await pariwarConfig(deps, pid, await textTemplateStates(deps)) : { gap: globalGap };
   } catch (err) {
     if (!(err instanceof PeerRequestLocaleReadError)) throw err;
     // P7 — a DB fault, ⛔ a config gap: pg-boss retries the SAME job (⛔ ping begun).
@@ -589,7 +687,7 @@ export async function runPeerMeshRequestChild(
     alarm(`[jobs] claim-peer-mesh-request: the neighbour texts of ${tag} are HELD — ${pariwarCheck.gap}; ⛔ ping begun (the next sweep re-selects it)`);
     return { status: 'held_config', reason: pariwarCheck.gap };
   }
-  const { locale } = (pariwarCheck as { config: PariwarSendConfig }).config;
+  const { unusableLocales } = (pariwarCheck as { config: PariwarSendConfig }).config;
   const origin = resolveAppLinksOrigin(deps.appLinksBaseUrl)!;
 
   const claimRow = await withPariwarScope(deps.pool, pariwarId, (db: Db) => claimDomain.getClaimCase(db, pariwarId, claimCaseId));
@@ -608,7 +706,7 @@ export async function runPeerMeshRequestChild(
   // (4) R9 — the name, ONCE, before any claiming transaction.
   const nameRead = await readDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag);
   const nameFault = 'fault' in nameRead ? nameRead.fault : null;
-  const counts = { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0 };
+  const counts = { accepted: 0, finalOther: 0, superseded: 0, noTarget: 0, replaced: 0, expired: 0, skipped: 0, transient: 0, waiting: 0 };
   const scoped = <T>(fn: (d: Db) => Promise<T>) => withPariwarScope(deps.pool, pariwarId, fn);
 
   for (let i = 0; i < queue.length; i += 1) {
@@ -619,8 +717,13 @@ export async function runPeerMeshRequestChild(
     const beginAt = clock();
     if (!isInPeerRequestSendWindow(beginAt)) return deferToMorning(beginAt, counts);
     const begun = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
-      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now: beginAt, nameFault }),
+      claimDomain.beginPeerMeshRequest(client, { pariwarId, claimCaseId, pingId, jobId, now: beginAt, nameFault, unusableLocales }),
     );
+    if (begun.kind === 'waiting_template') {
+      // 📌 Story 6.35 (LS10 (b), I4) — ⛔ write, ⛔ the other language; the sweep's waiting alarm counts it.
+      counts.waiting += 1;
+      continue;
+    }
     if (begun.kind === 'already_final' || begun.kind === 'held_by_other') {
       counts.skipped += 1;
       continue;
@@ -712,6 +815,8 @@ export async function runPeerMeshRequestChild(
     // ── The send — the registered words, the name's two boxes, the link (R12 origin) — ⛔ helpline (`-379` Q2 A) ──
     const [member1, member2] = (nameRead as { boxes: readonly [string, string] }).boxes;
     const link = buildAppLinkUrl(origin, 'peerRequest', begun.linkCode);
+    // 📌 Story 6.35 (LS9, I3 / I5) — THIS ping's language, fixed at its begin (⛔ the Pariwar's).
+    const locale = begun.locale;
     const entry = PEER_MESH_REQUEST_SMS_TEMPLATES[locale];
     const result = await sendClaimDltSms(deps, {
       dltTemplateIdConfigKey: entry.dltTemplateIdConfigKey,

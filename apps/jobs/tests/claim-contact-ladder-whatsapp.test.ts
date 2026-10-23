@@ -158,7 +158,10 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     ['apps/jobs/src/scheduler/contribution-notify.ts', '241bc2806c2e79443a9d560571839df9458a6db67288857962773c0b85690d9b'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
     ['packages/channels/src/sms-dlt-registry.ts', '6df1b22813e239cda40c06f1bc324f3d7f6cb05615f1309e13224efa11c3d792'],
-    ['packages/domain/src/claim/peer-mesh-wa-reminder.ts', 'cf1e8f1f0cec249e2ac66d8e6ae2f47a46794b998dd42a990d7254af0625aaef'],
+    // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per
+    // RECIPIENT (`templates` in, `waiting_template` / `pariwar_fallback` out) and its sweep listing carries the language codes —
+    // only this pin re-taken; the claimant's WhatsApp step (this story's subject) is untouched. The rest of the fence stands.
+    ['packages/domain/src/claim/peer-mesh-wa-reminder.ts', 'b37a0ce5534df73177c43dc259e7f7b6448a77604748fa62173b111464d4bba7'],
     ['packages/channels/src/providers/whatsapp-direct-send-outcome.ts', 'e54f8e1df2195ca192c55f2936e27eb62075d6db8cca6954eb2583b92554e3a7'],
     // 2026-10-21 Story 5.12 — `-364` (a yes lasts until withdrawn; every withdrawal ends every yes): these TWO pins re-taken
     // (endEveryWaYes and the state reads added; isOptInActive's clock and the ACTIVE → EXPIRED edge removed). The rest of the

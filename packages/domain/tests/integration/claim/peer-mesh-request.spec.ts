@@ -30,6 +30,7 @@ import {
   PEER_MESH_REQUEST_PARKED_BY,
   PeerRequestLocaleMissingError,
   beginPeerMeshRequest,
+  countWaitingPeerMeshRequestPings,
   expireExhaustedPeerMeshRequests,
   finalisePeerMeshNoSendableNumber,
   finalisePeerMeshRequest,
@@ -101,12 +102,13 @@ async function seedRequestClaim(
     rankedNull?: boolean;
     source?: 'workplace' | 'named_by_member' | null;
     localeDefault?: 'hi' | 'en';
+    noPassport?: boolean;
   } = {},
 ): Promise<Seeded> {
   const { tx, client } = getTx();
   const pid = toPariwarId(randomUUID());
   // 📌 Story 6.35 — a fresh begin resolves the recipient's language (LS8), which reads the passport.
-  await seedPassport(tx, pid, { localeDefault: o.localeDefault ?? 'hi' });
+  if (!o.noPassport) await seedPassport(tx, pid, { localeDefault: o.localeDefault ?? 'hi' });
   const deceased = toMemberId(randomUUID());
   await insertMember(client, pid, deceased);
   const claimCaseId = toClaimId(await seedClaim(tx, pid, { deceasedMemberId: deceased, currentState: (o.state ?? 'verification_in_progress') as never }));
@@ -137,7 +139,11 @@ async function seedRequestClaim(
   return { pid, claimCaseId, deceased, selectionId, ranked, pings };
 }
 
-const begin = (s: Seeded, pingId: PeerMeshPingId, o: { jobId?: string; now?: Date; nameFault?: Parameters<typeof beginPeerMeshRequest>[1]['nameFault'] } = {}) =>
+const begin = (
+  s: Seeded,
+  pingId: PeerMeshPingId,
+  o: { jobId?: string; now?: Date; nameFault?: Parameters<typeof beginPeerMeshRequest>[1]['nameFault']; unusable?: ('hi' | 'en')[] } = {},
+) =>
   beginPeerMeshRequest(getTx().client, {
     pariwarId: s.pid,
     claimCaseId: s.claimCaseId,
@@ -145,6 +151,7 @@ const begin = (s: Seeded, pingId: PeerMeshPingId, o: { jobId?: string; now?: Dat
     jobId: o.jobId ?? JOB,
     now: o.now ?? NOW,
     nameFault: o.nameFault ?? null,
+    unusableLocales: o.unusable ?? [],
   });
 
 async function pingRow(pingId: string) {
@@ -622,6 +629,93 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (domain, li
       expect(await attempt(flying!.pingId, `attempt_count = 0`)).toMatch(/attempt_count never decreases/); // 0166's R15 arm, copied
       expect(await attempt(fresh!.pingId, `locale = 'fr'`)).toMatch(/claim_peer_mesh_pings_locale_check/);
       expect(await attempt(flying!.pingId, `locale_source = 'pariwar_fallback'`)).toMatch(/claim_peer_mesh_pings_locale_source_check/);
+    });
+  });
+
+  describe('📌 Story 6.35 AC4 — a ping whose language\'s TEXT template is unusable WAITS (LS10 (b), I4)', () => {
+    it('⭐ the begin: `waiting_template` with ⛔ write on a FRESH ping of that language; the other language\'s ping is begun', async () => {
+      const s = await seedRequestClaim({ ranked: 2, selected: 2 });
+      const [chooser, plain] = s.pings;
+      await chooseLanguage(chooser!.memberId, 'en');
+      expect(await begin(s, chooser!.pingId, { unusable: ['en'] })).toEqual({ kind: 'waiting_template', locale: 'en' });
+      expect(await pingRow(chooser!.pingId)).toMatchObject({ send_outcome: null, attempt_count: 0, locale: null, locale_source: null, link_code: null });
+      expect(await begin(s, plain!.pingId, { unusable: ['en'] })).toMatchObject({ kind: 'begun', locale: 'hi' });
+      // I4 — ⛔ the other language: the waiting chooser is ⛔ ever begun in Hindi; a switch to a usable language sends (AC4 (x))
+      await chooseLanguage(chooser!.memberId, 'hi');
+      expect(await begin(s, chooser!.pingId, { unusable: ['en'] })).toMatchObject({ kind: 'begun', locale: 'hi' });
+    });
+
+    it('⭐ the begin on a RE-CLAIM: the RECORDED locale decides (a parked row stays parked, ⛔ write); a pre-6.35 NULL ⇒ the default', async () => {
+      const s = await seedRequestClaim({ ranked: 2, selected: 2 });
+      const [en, legacy] = s.pings;
+      await chooseLanguage(en!.memberId, 'en');
+      expect(await begin(s, en!.pingId)).toMatchObject({ kind: 'begun', locale: 'en' });
+      await setPing(en!.pingId, `claimed_by_job = '${PEER_MESH_REQUEST_PARKED_BY}', parked_at = now()`);
+      const before = await pingRow(en!.pingId);
+      // the member now prefers Hindi — the RECORDED `en` still decides (I5)
+      await chooseLanguage(en!.memberId, 'hi');
+      expect(await begin(s, en!.pingId, { jobId: 'job-b', unusable: ['en'] })).toEqual({ kind: 'waiting_template', locale: 'en' });
+      expect(await pingRow(en!.pingId)).toEqual(before);
+      await setPing(
+        legacy!.pingId,
+        `send_outcome = 'attempting', attempt_count = 1, claimed_at = now(), aging_since = now(), claimed_by_job = '${JOB}',
+         locale_source = 'pariwar_default', link_code = 'Leg635Abcdef'`,
+      );
+      expect(await begin(s, legacy!.pingId, { unusable: ['hi'] })).toEqual({ kind: 'waiting_template', locale: 'hi' });
+      expect((await pingRow(legacy!.pingId)).attempt_count).toBe(1);
+    });
+
+    it('⭐ AC4 (vii) — the listing: a claim whose ONLY due pings wait is ⛔ listed; a mixed claim is; ⛔ passport and ⛔ choice is STILL listed (NULL-safe)', async () => {
+      const { client } = getTx();
+      const onlyEn = await seedRequestClaim({ ranked: 1, selected: 1 });
+      await chooseLanguage(onlyEn.pings[0]!.memberId, 'en');
+      await client.query('RESET ROLE');
+      const mixed = await seedRequestClaim({ ranked: 2, selected: 2 });
+      await chooseLanguage(mixed.pings[0]!.memberId, 'en');
+      await client.query('RESET ROLE');
+      const bare = await seedRequestClaim({ ranked: 1, selected: 1, noPassport: true });
+      await client.query('RESET ROLE');
+      const enPariwar = await seedRequestClaim({ ranked: 1, selected: 1, localeDefault: 'en' });
+      await client.query('RESET ROLE');
+      const allow = [onlyEn.pid, mixed.pid, bare.pid, enPariwar.pid];
+      const listed = async (unusable: ('hi' | 'en')[]) =>
+        (await listDuePeerMeshRequestClaims(client, { now: NOW, after: null, allow, unusableLocales: unusable })).due.map((d) => d.claimCaseId).sort();
+      expect(await listed([])).toEqual([onlyEn.claimCaseId, mixed.claimCaseId, bare.claimCaseId, enPariwar.claimCaseId].sort());
+      expect(await listed(['en'])).toEqual([mixed.claimCaseId, bare.claimCaseId].sort());
+      expect(await listed(['hi'])).toEqual([onlyEn.claimCaseId, mixed.claimCaseId, bare.claimCaseId, enPariwar.claimCaseId].sort());
+      expect(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: ['en'], allow })).toEqual([{ locale: 'en', waiting: 3 }]);
+      expect(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: [], allow })).toEqual([]);
+    });
+
+    it('⭐ AC4 (ix) — an `attempting` row past the lease whose recorded locale is unusable: PARKED in an UN-held scope, ⛔ listed in the window; listed past it', async () => {
+      const { client } = getTx();
+      const s = await seedRequestClaim({ ranked: 1, selected: 1 });
+      const p = s.pings[0]!;
+      await chooseLanguage(p.memberId, 'en');
+      expect(await begin(s, p.pingId)).toMatchObject({ kind: 'begun', locale: 'en' });
+      await setPing(p.pingId, `claimed_at = '${new Date(NOW.getTime() - CORRECTION_SEND_LEASE_MS - 60_000).toISOString()}'`);
+      await client.query('RESET ROLE');
+      const allow = [s.pid];
+      const due = async (unusable: ('hi' | 'en')[]) =>
+        (await listDuePeerMeshRequestClaims(client, { now: NOW, after: null, allow, unusableLocales: unusable })).due.length;
+      expect(await due([])).toBe(1);
+      expect(await due(['en'])).toBe(0);
+      expect(await countWaitingPeerMeshRequestPings(client, { now: NOW, unusableLocales: ['en'], allow })).toEqual([{ locale: 'en', waiting: 1 }]);
+      expect(await parkHeldPeerMeshRequests(client, { now: NOW, allow, held: [], unusableLocales: [] })).toEqual([]);
+      expect(await parkHeldPeerMeshRequests(client, { now: NOW, allow, held: [], unusableLocales: ['hi'] })).toEqual([]);
+      expect(await parkHeldPeerMeshRequests(client, { now: NOW, allow, held: [], unusableLocales: ['en'] })).toEqual([{ pingId: p.pingId, claimCaseId: s.claimCaseId }]);
+      // ⛔ given up while parked: the anchor is credited the parked time
+      expect(await expireExhaustedPeerMeshRequests(client, { cutoff: peerMeshRequestReclaimCutoff(NOW), now: NOW, allow, scopes: [s.pid] })).toEqual([]);
+      // past the window such a row is listed again — ① then finishes it `error` / `recheck:claim_decided` (the held-park precedent)
+      const decided = await seedRequestClaim({ state: 'denied', ranked: 1, selected: 1 });
+      await client.query('RESET ROLE');
+      await client.query(
+        `UPDATE claim_peer_mesh_pings SET send_outcome = 'attempting', attempt_count = 1, claimed_at = $2, claimed_by_job = 'dead-job',
+           aging_since = now(), locale = 'en', locale_source = 'member_choice', link_code = 'Dec635Abcdef' WHERE ping_id = $1`,
+        [decided.pings[0]!.pingId, new Date(NOW.getTime() - CORRECTION_SEND_LEASE_MS - 60_000)],
+      );
+      const pastWindow = await listDuePeerMeshRequestClaims(client, { now: NOW, after: null, allow: [decided.pid], unusableLocales: ['en'] });
+      expect(pastWindow.due.map((d) => d.claimCaseId)).toEqual([decided.claimCaseId]);
     });
   });
 

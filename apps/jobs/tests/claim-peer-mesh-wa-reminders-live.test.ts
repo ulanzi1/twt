@@ -440,7 +440,15 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       { gap: 'config:wa_config_incomplete', world: { phoneNumberId: null } },
       // Round-2 P17 — the gaps that had ⛔ leg: the client's own config throw, a template name outside 0171's form, the helpline read.
       { gap: 'config:wa_config_incomplete', opts: { cache: throwingClient } },
-      { gap: 'config:wa_template_invalid:hi', configOf: (w) => ({ [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: 'Peer-Mesh.Reminder' }) },
+      // 📌 2026-10-23 (Story 6.35, LS10 (b′)) — ONE locale's name unusable no longer holds the Pariwar (a chooser falls back, a
+      // non-chooser waits — the 6.35 legs below); BOTH unusable holds it on the DEFAULT locale's gap, as before.
+      {
+        gap: 'config:wa_template_invalid:hi',
+        configOf: (w) => ({
+          [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: 'Peer-Mesh.Reminder',
+          [`wa.template.peer_mesh.reminder.en.${w.pid}`]: 'Peer-Mesh.Reminder',
+        }),
+      },
       { gap: 'config:helpline_unreadable', opts: { throwOn: 'sms.claim_correction.helpline_number.' } },
       { gap: 'config:wa_secret_unresolved', opts: { secretThrows: true } },
       { gap: 'config:wa_template_missing:hi', opts: { config: {} } },
@@ -456,7 +464,7 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       const config =
         leg.configOf?.(w) ??
         (leg.gap === 'config:wa_template_missing:hi'
-          ? { [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: null }
+          ? { [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: null, [`wa.template.peer_mesh.reminder.en.${w.pid}`]: null } // 📌 6.35 — both
           : leg.gap === 'config:helpline_number_missing'
             ? { [`sms.claim_correction.helpline_number.${w.pid}`]: null }
             : undefined);
@@ -469,6 +477,76 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
       expect(h.sent, leg.gap).toHaveLength(0);
       expectIdsOnly(h, w);
     }
+  });
+
+  // ── 📌 Story 6.35 AC5 — the reminder per RECIPIENT, `-385`'s fallback, the wait (LS9, LS10 (b′)) ─────────────────────────────
+
+  const choose = (memberId: string, locale: 'hi' | 'en') =>
+    pool.query(`UPDATE members SET preferred_locale = $2, preferred_locale_set_at = now() WHERE member_id = $1`, [memberId, locale]);
+  const reminderOf = async (w: World, i: number) =>
+    (
+      await pool.query<{ send_outcome: string; locale: string | null; locale_source: string | null; template_name: string | null }>(
+        `SELECT send_outcome, locale, locale_source, template_name FROM claim_peer_mesh_wa_reminders WHERE ping_id = $1`,
+        [w.pings[i]!.pingId],
+      )
+    ).rows[0];
+  const sentTo = (h: Harness, w: World, i: number) => {
+    const to = w.mobiles.get(w.pings[i]!.memberId)!.replace(/^\+/, '');
+    return h.sent.find((m) => m.body.to === to)?.body.template;
+  };
+
+  it('⭐ 6.35 AC5 — an English-chooser gets the `en` template (`member_choice`); a non-chooser the Pariwar\'s — and a choice made AFTER the text counts (WR14)', async () => {
+    const w = await world({ neighbours: 2 });
+    // the texts went (seeded accepted) in Hindi; the member chose English since — the reminder reads it AGAIN, ⛔ copied from the ping
+    await choose(w.pings[0]!.memberId, 'en');
+    const h = harness(w);
+    await tick(h, w);
+    expect(await reminderOf(w, 0)).toMatchObject({ send_outcome: 'accepted', locale: 'en', locale_source: 'member_choice', template_name: TEMPLATE.en });
+    expect(await reminderOf(w, 1)).toMatchObject({ send_outcome: 'accepted', locale: 'hi', locale_source: 'pariwar_default', template_name: TEMPLATE.hi });
+    expect(sentTo(h, w, 0)).toMatchObject({ name: TEMPLATE.en, language: { code: 'en' } });
+    expect(sentTo(h, w, 1)).toMatchObject({ name: TEMPLATE.hi });
+  });
+
+  it.each([
+    ['unset (or Meta refuses — the same state)', (pid: string) => ({ config: { [`wa.template.peer_mesh.reminder.en.${pid}`]: null } }), 'config:wa_template_missing:en'],
+    ['invalid', (pid: string) => ({ config: { [`wa.template.peer_mesh.reminder.en.${pid}`]: 'Not A Name' } }), 'config:wa_template_invalid:en'],
+    ['unreadable (the OTHER locale\'s key — "Treat it as unset")', () => ({ throwOn: 'wa.template.peer_mesh.reminder.en.' }), 'config:wa_template_unreadable'],
+  ] as const)('⭐ 6.35 AC5 / `-385` — the `en` template %s in a Hindi Pariwar: the English-chooser\'s reminder goes with the `hi` template (`pariwar_fallback`)', async (_l, optsOf, code) => {
+    const w = await world({ neighbours: 2 });
+    await choose(w.pings[0]!.memberId, 'en');
+    const h = harness(w, optsOf(w.pid) as HarnessOpts);
+    const { swept, out } = await tick(h, w);
+    expect(swept).toMatchObject({ enqueued: 1, heldForConfig: 0, fallbackToPariwar: 1, waitingForTemplate: 0 });
+    expect(out).toEqual([expect.objectContaining({ status: 'done', counts: expect.objectContaining({ accepted: 2, fallback: 1 }) })]);
+    expect(await reminderOf(w, 0)).toMatchObject({ send_outcome: 'accepted', locale: 'hi', locale_source: 'pariwar_fallback', template_name: TEMPLATE.hi });
+    expect(sentTo(h, w, 0)).toMatchObject({ name: TEMPLATE.hi, language: { code: 'hi' } });
+    expect(h.alarms.filter((a) => a.includes(`en — ${code} — sent in hi — 1 in the Pariwar's language`) && a.includes(w.pid))).toHaveLength(1);
+    expectIdsOnly(h, w);
+  });
+
+  it('⭐ 6.35 AC5 — the Pariwar\'s OWN (`hi`) template unset, `en` usable: the English-chooser is sent in `en`; the non-chooser WAITS (⛔ enqueued, ⛔ row) while the sibling still goes', async () => {
+    const w = await world({ neighbours: 2 });
+    // the WAITING one sorts FIRST in the keyset — it must ⛔ mark the claim seen, or the sendable sibling is skipped
+    const [first, second] = [...w.pings.keys()].sort((a, b) => w.pings[a]!.pingId.localeCompare(w.pings[b]!.pingId));
+    await choose(w.pings[second!]!.memberId, 'en');
+    const h = harness(w, { config: { [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: null } });
+    const { swept } = await tick(h, w);
+    expect(swept).toMatchObject({ enqueued: 1, heldForConfig: 0, waitingForTemplate: 1 });
+    expect(await reminderOf(w, second!)).toMatchObject({ send_outcome: 'accepted', locale: 'en', locale_source: 'member_choice' });
+    expect(await reminderOf(w, first!)).toBeUndefined();
+    expect(h.alarms.filter((a) => a.includes('hi — config:wa_template_missing:hi — 1 waiting'))).toHaveLength(1);
+    // the child also meets the waiting one (its own read lists it) ⇒ `waiting`, ⛔ row
+    const again = await child(h, w);
+    expect(again).toMatchObject({ status: 'done', counts: expect.objectContaining({ waiting: 1 }) });
+    expect(await reminderOf(w, first!)).toBeUndefined();
+  });
+
+  it('6.35 AC5 — a waiting reminder past `+ 72 h` is ⛔ due any more: ⛔ row, ⛔ sent', async () => {
+    const w = await world({ neighbours: 1, hoursAgo: 73 });
+    const h = harness(w, { config: { [`wa.template.peer_mesh.reminder.hi.${w.pid}`]: null } });
+    expect((await tick(h, w)).swept).toMatchObject({ enqueued: 0 });
+    expect(await reminders(w)).toEqual([]);
+    expect(h.sent).toHaveLength(0);
   });
 
   it('AC10 — a HELD claim is due again once its config gap closes (⛔ only the switch): the next tick sends it', async () => {

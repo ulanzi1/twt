@@ -2,6 +2,9 @@
 // `2026-10-10-303` Q1 A *"plus one WhatsApp reminder after two days (48 hours), with the same words, to those of the five who have ⛔
 // not answered and have chosen WhatsApp messages from the Trust"*; `-305` §2 item 4; `-310` CF1 A; `-311` PM2 / PM7 (g) / Trap 17;
 // `2026-10-19-365`). The SHAPE of 6.27c's `claim-peer-mesh-requests.ts`, ADAPTED: a CHILD per CLAIM, a hold per PARIWAR.
+// 📌 2026-10-23 (Story 6.35, Decision 2026-10-23-387 LS9 / LS10 (b′); `2026-10-23-385` PQ1 A): each reminder goes in its RECIPIENT's
+// language, read again at its begin (WR14); a chooser whose language's template is unusable while the Pariwar default's is usable
+// gets the Pariwar's (`pariwar_fallback`); a reminder with ⛔ usable template at all WAITS (⛔ row); BOTH unusable holds the Pariwar.
 // ⭐ I2 — ONE Meta template sent DIRECTLY through the ONE WhatsApp client cache: ⛔ the alert path (whose WhatsApp→SMS step would send
 // a SECOND text — `-311` PM2), ⛔ an SMS, ⛔ an alert. A failed WhatsApp send ends the reminder; ⛔ nothing falls back. The deps type
 // carries ⛔ SMS client at all.
@@ -12,6 +15,7 @@
 //       (⛔ question awaiting counsel), the language, the WhatsApp config (switch OFF ⇒ `noop`; incomplete ⇒ HOLD), the access token
 //       (`resolveChannelSecret` — any throw HOLDS), the client (`messagingFor` — a config throw HOLDS), the template name for the
 //       language (WR7 — unset / unreadable ⇒ HOLD), the helpline ⇒ `held_config` + ONE ids-only alarm, ⛔ row written;
+//       📌 6.35: BOTH locales' names are read — the Pariwar holds only when its default's key is unreadable or both are unusable;
 //   (3) the due pings — ⛔ any ⇒ `noop` (⛔ name decrypted for nothing);
 //   (4) the deceased's FULL member-facing name, ONCE (WR13 — ⛔ SMS fit check; a fault is claim-wide ⇒ `no_target:name_*`);
 //   (5) per due ping: the CLAIMING transaction (`beginPeerMeshWaReminder` — claim → ping → reminder) → COMMIT → (⛔ KMS under a lock)
@@ -60,7 +64,19 @@ import {
   nextPeerRequestSendWindowStart,
   readMemberFacingDeceasedName,
 } from './claim-peer-mesh-requests.js';
-import { PEER_MESH_WA_REMINDER_LANGUAGE, type PeerMeshWaReminderLocale } from './peer-mesh-wa-templates.js';
+import { PEER_MESH_WA_REMINDER_LANGUAGE, PEER_MESH_WA_REMINDER_LOCALES, type PeerMeshWaReminderLocale } from './peer-mesh-wa-templates.js';
+
+/** 📌 Story 6.35 — a config's template states as the begin takes them: the name, or `null` (unusable). */
+export function peerMeshWaReminderTemplateNames(
+  config: Pick<PeerMeshWaReminderSendConfig, 'templates'>,
+): Record<PeerMeshWaReminderLocale, string | null> {
+  const out = {} as Record<PeerMeshWaReminderLocale, string | null>;
+  for (const l of PEER_MESH_WA_REMINDER_LOCALES) {
+    const t = config.templates[l];
+    out[l] = 'name' in t ? t.name : null;
+  }
+  return out;
+}
 import { resolveAppLinksOrigin } from './staff-email-config.js';
 import { waTemplateConfigKey } from './wa-template-config-key.js';
 
@@ -139,10 +155,13 @@ function sampleIds(list: readonly string[]): string {
 
 /** What a ready Pariwar sends with. ⛔ Logged (the client holds the token). */
 export interface PeerMeshWaReminderSendConfig {
-  readonly locale: PeerMeshWaReminderLocale;
-  /** WR14 — WHY that language (`resolvePeerRequestLocale`'s `source`), recorded on the row as it is read. */
-  readonly localeSource: claimDomain.PeerRequestLocale['source'];
-  readonly templateName: string;
+  /**
+   * 📌 Story 6.35 (LS9, LS10 (b′)) — ⛔ recipient language here: the begin resolves it per reminder. The Pariwar's default (the
+   * fallback, and the both-unusable gap) and BOTH locales' template states — a name, or the gap that makes it unusable (unset /
+   * invalid / the OTHER locale's key unreadable — BigDev 2026-10-23 *"Treat it as unset"*), kept apart for the alarm's state code.
+   */
+  readonly pariwarDefaultLocale: PeerMeshWaReminderLocale;
+  readonly templates: Readonly<Record<PeerMeshWaReminderLocale, { readonly name: string } | { readonly gap: string }>>;
   readonly helpline: string;
   readonly origin: string;
   readonly client: WhatsappMessagingHandle;
@@ -185,10 +204,8 @@ export async function peerMeshWaReminderConfig(
   if (live === null) return gap('config:questionnaire_unavailable');
   if (questionnaires.pendingCounselBasisKeys(live).length > 0) return gap('config:counsel_basis_pending');
   let locale: PeerMeshWaReminderLocale;
-  let localeSource: claimDomain.PeerRequestLocale['source'];
   try {
     locale = await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePariwarDefaultLocale(db, pid));
-    localeSource = 'pariwar_default';
   } catch (err) {
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return gap('config:locale_unavailable');
     throw new PeerMeshWaReminderLocaleReadError(err);
@@ -196,15 +213,27 @@ export async function peerMeshWaReminderConfig(
   const phoneNumberId = wa.phoneNumberId?.trim() ?? '';
   const secretName = wa.accessTokenSecretName?.trim() ?? '';
   if (phoneNumberId === '' || secretName === '') return gap('config:wa_config_incomplete');
-  // WR7 — the approved template's NAME for the language. A THROW (an outage, or the dotted name's INVALID_ARGUMENT) holds the tick.
-  let templateName: string | null;
-  try {
-    templateName = (await deps.resolveConfig(waTemplateConfigKey('peer_mesh.reminder', locale, pariwarId)))?.trim() ?? null;
-  } catch {
-    return gap('config:wa_template_unreadable');
+  // WR7 — the approved template's NAME per language. 📌 Story 6.35 (LS10 (b′)): BOTH are read. A THROW (an outage, or the dotted
+  // name's INVALID_ARGUMENT) on the DEFAULT's key holds the tick as before; on the OTHER's key that locale is merely unusable.
+  // "Meta refuses" is ⛔ a value — the name stays UNSET (Row 35 (b)), the same state.
+  const templates: Partial<Record<PeerMeshWaReminderLocale, { readonly name: string } | { readonly gap: string }>> = {};
+  for (const l of PEER_MESH_WA_REMINDER_LOCALES) {
+    let name: string | null;
+    try {
+      name = (await deps.resolveConfig(waTemplateConfigKey('peer_mesh.reminder', l, pariwarId)))?.trim() ?? null;
+    } catch {
+      if (l === locale) return gap('config:wa_template_unreadable');
+      templates[l] = { gap: 'config:wa_template_unreadable' };
+      continue;
+    }
+    if (name === null || name === '') templates[l] = { gap: `config:wa_template_missing:${l}` };
+    else if (!TEMPLATE_NAME_FORM.test(name)) templates[l] = { gap: `config:wa_template_invalid:${l}` };
+    else templates[l] = { name };
   }
-  if (templateName === null || templateName === '') return gap(`config:wa_template_missing:${locale}`);
-  if (!TEMPLATE_NAME_FORM.test(templateName)) return gap(`config:wa_template_invalid:${locale}`);
+  const ready = templates as Record<PeerMeshWaReminderLocale, { readonly name: string } | { readonly gap: string }>;
+  // BOTH unusable ⇒ HELD with the DEFAULT locale's gap (the alarm text as before).
+  const own = ready[locale];
+  if (PEER_MESH_WA_REMINDER_LOCALES.every((l) => 'gap' in ready[l]) && 'gap' in own) return gap(own.gap);
   let helpline: string | null;
   try {
     helpline = (await deps.resolveConfig(claimCorrectionHelplineConfigKey(pariwarId)))?.trim() ?? null;
@@ -225,7 +254,7 @@ export async function peerMeshWaReminderConfig(
   } catch {
     return gap('config:wa_config_incomplete');
   }
-  return { state: 'ready', config: { locale, localeSource, templateName, helpline, origin, client } };
+  return { state: 'ready', config: { pariwarDefaultLocale: locale, templates: ready, helpline, origin, client } };
 }
 
 // ── The SWEEP ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -241,6 +270,10 @@ export interface PeerMeshWaReminderSweepResult {
   readonly enqueued: number;
   /** Claims held by a config gap — ⛔ enqueued, ⛔ row written. */
   readonly heldForConfig: number;
+  /** 📌 Story 6.35 (LS10 (b′)) — due pings WAITING (⛔ usable template for their language at all) — ⛔ enqueued for them. */
+  readonly waitingForTemplate: number;
+  /** 📌 Story 6.35 (`-385`) — due pings whose reminder will go in the Pariwar's language (a chooser's template unusable). */
+  readonly fallbackToPariwar: number;
   readonly finishedLapsed: number;
   readonly markedLate: number;
   readonly budgetExhausted: boolean;
@@ -304,6 +337,8 @@ export async function runPeerMeshWaReminderSweep(
     scannedPings: 0,
     enqueued: 0,
     heldForConfig: 0,
+    waitingForTemplate: 0,
+    fallbackToPariwar: 0,
     finishedLapsed: 0,
     markedLate: 0,
     budgetExhausted: false,
@@ -367,10 +402,13 @@ export async function runPeerMeshWaReminderSweep(
 
   // (3) the due pings, paged; the config per Pariwar ONCE (memoised); ONE child per claim.
   const gapByPariwar = new Map<string, string | null | typeof CONFIG_UNREADABLE>();
+  // 📌 Story 6.35 — a READY Pariwar's template states and default (the per-ping wait / fallback rule reads them; ⛔ only the gap).
+  const readyByPariwar = new Map<string, PeerMeshWaReminderSendConfig>();
   const gapOf = async (pariwarId: string): Promise<string | null | typeof CONFIG_UNREADABLE> => {
     if (!gapByPariwar.has(pariwarId)) {
       try {
         const c = await peerMeshWaReminderConfig(deps, pariwarId);
+        if (c.state === 'ready') readyByPariwar.set(pariwarId, c.config);
         // A switch turned OFF since the list was read: ⛔ offered (⛔ alarm) — the list's own join already excludes it.
         gapByPariwar.set(pariwarId, c.state === 'gap' ? c.gap : c.state === 'switch_off' ? 'switch_off' : null);
       } catch (err) {
@@ -389,6 +427,9 @@ export async function runPeerMeshWaReminderSweep(
   // R6 — HELD claims grouped by their OWN Pariwar (AC9 / WR12: ONE actionable alarm per held Pariwar per tick, ⛔ one merged
   // alarm naming neither tenant).
   const heldByPariwar = new Map<string, { claims: Set<string>; gaps: Set<string> }>();
+  // 📌 Story 6.35 (LS10 (b′)) — per Pariwar and locale: pings WAITING (with the state code) and pings FALLING BACK (ids-free counts).
+  const languageByPariwar = new Map<string, { waiting: Map<string, number>; fallback: Map<string, number> }>();
+  const bump = (m: Map<string, number>, k: string): void => void m.set(k, (m.get(k) ?? 0) + 1);
   // R4 — resume AT the last tick's bounded stop, not the keyset's head; `resumeAt` trails the loop by one processed item so a
   // re-enter with it as `after` starts exactly AT the item the previous tick stopped on.
   let after: PeerMeshWaReminderCursor | null = resumeCursor;
@@ -403,6 +444,32 @@ export async function runPeerMeshWaReminderSweep(
         }
         scannedPings += 1;
         const dueCursor: PeerMeshWaReminderCursor = { claimCaseId: due.claimCaseId, pingId: due.pingId };
+        // 📌 Story 6.35 (LS10 (b′)) — per PING, BEFORE the `seenClaims` short-circuit: a reminder with ⛔ usable template at all
+        // WAITS — ⛔ enqueued for it, and ⛔ marking its claim seen (a sendable SIBLING ping of the same claim must still go); a
+        // chooser whose language's template is unusable falls back to the Pariwar's (`-385`) and is sendable. The child's begin
+        // re-checks both under the lock. A ping with ⛔ passport (`null` locales) reaches the config's hold below.
+        if (due.effectiveLocale !== null) await gapOf(due.pariwarId); // memoised — fills `readyByPariwar` for a ready Pariwar
+        const ready = readyByPariwar.get(due.pariwarId);
+        if (ready !== undefined && due.effectiveLocale !== null && due.pariwarDefaultLocale !== null) {
+          const counts = languageByPariwar.get(due.pariwarId) ?? { waiting: new Map<string, number>(), fallback: new Map<string, number>() };
+          languageByPariwar.set(due.pariwarId, counts);
+          const choice = claimDomain.choosePeerMeshWaReminderTemplate({
+            effective: due.effectiveLocale,
+            source: due.localeSource,
+            pariwarDefaultLocale: due.pariwarDefaultLocale,
+            templates: peerMeshWaReminderTemplateNames(ready),
+          });
+          if (choice === null) {
+            const own = ready.templates[due.effectiveLocale];
+            bump(counts.waiting, `${due.effectiveLocale} — ${'gap' in own ? own.gap : 'usable'}`);
+            resumeAt = dueCursor;
+            continue;
+          }
+          if (choice.localeSource === 'pariwar_fallback') {
+            const own = ready.templates[due.effectiveLocale];
+            bump(counts.fallback, `${due.effectiveLocale} — ${'gap' in own ? own.gap : 'usable'} — sent in ${choice.locale}`);
+          }
+        }
         if (seenClaims.has(due.claimCaseId)) {
           resumeAt = dueCursor;
           continue;
@@ -451,6 +518,25 @@ export async function runPeerMeshWaReminderSweep(
         `text (claims: ${sampleIds([...held.claims])})`,
     );
   }
+  // 📌 Story 6.35 (LS10 (b′)) — ONE alarm per Pariwar for the reminders WAITING (⛔ usable template at all) and those going in the
+  // Pariwar's language (`-385`): each locale, its state code, the count of pings — ids only.
+  let waitingForTemplate = 0;
+  let fallbackToPariwar = 0;
+  for (const [pariwarId, c] of languageByPariwar) {
+    const w = [...c.waiting].sort(([a], [b]) => a.localeCompare(b));
+    const f = [...c.fallback].sort(([a], [b]) => a.localeCompare(b));
+    waitingForTemplate += w.reduce((n, [, k]) => n + k, 0);
+    fallbackToPariwar += f.reduce((n, [, k]) => n + k, 0);
+    if (w.length === 0 && f.length === 0) continue;
+    const parts = [
+      ...w.map(([k, n]) => `${k} — ${String(n)} waiting`),
+      ...f.map(([k, n]) => `${k} — ${String(n)} in the Pariwar's language`),
+    ];
+    alarm(
+      `[jobs] claim-peer-mesh-wa-reminder-sweep: Pariwar ${pariwarId} — WhatsApp reminders whose language's template is unusable (${parts.join('; ')}); ` +
+        `a waiting one goes once it is fixed, while still inside 72 hours of the text`,
+    );
+  }
   if (budgetExhausted) {
     alarm(`[jobs] claim-peer-mesh-wa-reminder-sweep: ran out of its ${String(Math.round(budgetMs / 60_000))}-minute budget after ${String(scannedPings)} ping(s) — the rest wait for the next tick`);
   } else if (bounded) {
@@ -460,6 +546,8 @@ export async function runPeerMeshWaReminderSweep(
     scannedPings,
     enqueued,
     heldForConfig,
+    waitingForTemplate,
+    fallbackToPariwar,
     finishedLapsed: lapsed.length,
     markedLate: late.length,
     budgetExhausted,
@@ -480,6 +568,10 @@ export interface PeerMeshWaReminderChildCounts {
   readonly noTarget: number;
   readonly passed: number;
   readonly transient: number;
+  /** 📌 Story 6.35 (LS10 (b′)) — reminders WAITING (⛔ usable template for the recipient's language at all — ⛔ write). */
+  readonly waiting: number;
+  /** 📌 Story 6.35 (`-385`) — reminders sent in the Pariwar's language because the chosen one's template was unusable. */
+  readonly fallback: number;
 }
 
 export type PeerMeshWaReminderChildResult =
@@ -560,7 +652,8 @@ export async function runPeerMeshWaReminderChild(
   const nameRead = await readMemberFacingDeceasedName(deps, pariwarId, claimRow.deceasedMemberId, tag, 'claim-peer-mesh-wa-reminder');
   const nameFault = 'fault' in nameRead ? nameRead.fault : null;
   const memberName = 'fault' in nameRead ? null : nameRead.name;
-  const counts = { accepted: 0, mayHaveSent: 0, rejectedRecipient: 0, parked: 0, skipped: 0, noTarget: 0, passed: 0, transient: 0 };
+  const counts = { accepted: 0, mayHaveSent: 0, rejectedRecipient: 0, parked: 0, skipped: 0, noTarget: 0, passed: 0, transient: 0, waiting: 0, fallback: 0 };
+  const templateNames = peerMeshWaReminderTemplateNames(config);
   const sendTimeoutMs = deps.sendTimeoutMs ?? CORRECTION_SEND_TIMEOUT_MS;
 
   for (const pingId of queue) {
@@ -575,9 +668,14 @@ export async function runPeerMeshWaReminderChild(
         jobId,
         now: beginAt,
         nameFault,
-        template: { name: config.templateName, locale: config.locale, localeSource: config.localeSource },
+        templates: templateNames,
       }),
     );
+    if (begun.kind === 'waiting_template') {
+      // 📌 Story 6.35 (LS10 (b′)) — counted EXPLICITLY (the catch-all below would file it under `passed`); ⛔ write.
+      counts.waiting += 1;
+      continue;
+    }
     if (begun.kind === 'skipped') {
       counts.skipped += 1;
       continue;
@@ -592,6 +690,7 @@ export async function runPeerMeshWaReminderChild(
       continue;
     }
     const row = { pariwarId, reminderId: begun.reminderId, jobId };
+    if (begun.localeSource === 'pariwar_fallback') counts.fallback += 1;
     // A `begun` row means the begin found ⛔ name fault (WR13); a regression must ⛔ reach Meta with `undefined` — refused HERE,
     // BEFORE the marker, so the row stays re-claimable (⛔ a false "may have sent").
     if (memberName === null) throw new Error(`[jobs] claim-peer-mesh-wa-reminder: ${ptag} was begun without a member-facing name`);
@@ -670,8 +769,9 @@ export async function runPeerMeshWaReminderChild(
       wamid = await config.client.send(
         {
           to: e164.replace(/^\+/, ''),
-          templateName: config.templateName,
-          languageCode: PEER_MESH_WA_REMINDER_LANGUAGE[config.locale],
+          // 📌 Story 6.35 (LS9) — the template and language THIS begin recorded (the recipient's, or the Pariwar's — `-385`).
+          templateName: begun.templateName,
+          languageCode: PEER_MESH_WA_REMINDER_LANGUAGE[begun.locale],
           bodyParams: [member, link, config.helpline],
         },
         { timeoutMs: sendTimeoutMs },

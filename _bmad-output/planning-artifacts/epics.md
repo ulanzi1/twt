@@ -652,6 +652,8 @@ Channel primitive only — structured `alert` payload + dispatcher + per-Pariwar
 
 **The defining experience SM-1 measures.** Sushil's surface. Yogdaan Bahi (passbook), My Pool card (home-screen anchor), UPI Intent (90-second loop), Contribution Note PDF (never "receipt"). FR-23 nudge seam *consumer*. Epic 8 closes at yellow pill — green-flip is Epic 9. **16 stories** spanning `[CONSUMER]` (alert state machine, contributor list, notification triggers, calendar timing), `[SURFACE]` (My Pool card, UPI flow, Yogdaan Bahi, PDF, helpline CTA, failure coach, nominee-VPA collection, member-facing name-form alignment), `[GOVERNANCE]` (out-of-band contribution policy, 90s measurement instrumentation). ⚠ **The count was stale at 12 before Story 8.16** — it was not updated when Story 8.13 was added by correct-course 2026-07-21; recounted here as 8.1–8.13 **plus 8.16** (there is no 8.14 or 8.15). ⚠ **Recounted 2026-10-22 (Story 8.15): 16 `epics.md` entries** — 8.1–8.13, 8.15, 8.16, 8.17. The *"14"* and the *"no 8.14 or 8.15"* above were stale once 8.17 and 8.15 added their entries. ⚠ **8.14** (*Close-of-Cycle Emitter*, `done`) has a story file and a `sprint-status.yaml` key but **no `epics.md` entry**, so sprint-status carries **17** Epic 8 keys — observed by 8.15, ⛔ not fixed here. Full body and stories in §Epic 8 below.
 
+⚠ *2026-10-23 (Story 8.15 code review round 2): the recount note in the paragraph above refers to a "14" that was replaced in place by "16 stories" in the same edit, so it no longer appears there; the earlier text read "14 stories".*
+
 ---
 
 ### Epic 9: Reconciliation Engine (Nominee Console + Statement Intake + Matcher + Mismatch Triage)

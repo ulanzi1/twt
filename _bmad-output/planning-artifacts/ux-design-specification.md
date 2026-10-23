@@ -1005,6 +1005,13 @@ The principle: calm is default; precision tightens as deadlines approach; never 
 > (PQ1 = B, trustee-ratified): an emergency change **is** shown, as plain facts only — dated when set ahead,
 > `next_cycle` inside an open pool, the first-cycle note after — and ⛔ **never** *"from next month"*. The
 > final words await the non-author tone review (Story 8.15 AC6).
+> ⭐ **2026-10-23 (Story 8.15 code review round 2; the note above is unedited):** item **(3)** is narrower than
+> what is built. *"From the next cycle"* shows whenever the amount in force today differs from the open pool's
+> amount — which also covers an emergency change backdated to before the pool opened — and names today's
+> amount. When the member is already in a later cycle that is open, that cycle is their next one: the line
+> shows only if that pool's amount differs, and names it; a later cycle they are not in does not count.
+> Recorded as engineering refinements of `-383`'s *"landing inside an open pool"* (story 8.15 PQ1 notes);
+> `-383` is unedited.
 
 Calm precision throughout; no announcement banner; the My Pool card itself carries the news. Consistent with "status is always visible" and "no urgency theater" principles. The Trustee Panel's separate announcement workflow (FR-55) handles broader-channel communication to members; the My Pool card carries the in-context information.
 

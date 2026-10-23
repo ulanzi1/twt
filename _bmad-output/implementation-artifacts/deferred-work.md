@@ -9244,6 +9244,15 @@ this whole correct-course exists to abolish, in story clothing.
   sentence above, *"Story 8.2 must build the staged pattern for standard changes only"*, is therefore
   **superseded by `-383`** for the emergency facts, ⛔ not re-read. ⚠ **Not closed by 8.15:** the
   non-author human tone review of the copy (AC6) — outstanding at `review`.
+  ⭐ **2026-10-23 — Story 8.15 code review round 2 (appended; the text above is unedited).** *"`next_cycle`,
+  for a change that takes effect inside an open pool's live window"* is now narrower than what is built.
+  Since round 1's D1 (BigDev "D1: A") `next_cycle` fires whenever the amount in force now differs from the
+  open pool's snapshot — which ALSO covers a backdated emergency (`effective_from` before the pool's commit,
+  written after it spawned) — and names the amount in force now. Since rounds 2–3 (BigDev "RD2: A", then
+  "RD3: A"), when the member is ASSIGNED in a LATER live cycle that pool is their next one: the line fires only
+  if ITS amount differs from the open pool's, and names that amount; a later cycle they are not in never counts.
+  This both widens and narrows `-383` ruling 1 bullet 2's *"landing inside an open pool"* as engineering calls
+  (story PQ1, 2026-10-23 notes); `-383` is unedited.
 
 - **⭐ Story 10.13 AC7(a) — FR-55's ANNOUNCEMENT half. "Closed by [edit]": Story 10.5's News/Blog
   console IS that workflow.** `prd.md:849` commits that the fixed-amount setter *"drafts the
@@ -12353,6 +12362,17 @@ reachable path above is closed for 6.37d's sends; the classifier's own filing st
   `done` meanwhile is BigDev's call, put to them at the close of the 8.15 code review. The story's Task 6
   `[x]` on "Request the non-author tone review" records that it was requested in chat, ⛔ not that an
   artifact exists.
+
+## Deferred from: code review of 8-15-fixed-amount-transition-staged-card.md (2026-10-23)
+
+- **A no-op scheduled row can show as a dated line on an older pool (round 3, blind #3).** When the member is
+  already in a later live cycle whose pool holds the OLDER pool's amount, `next_cycle` is (correctly) not shown,
+  and the dated stages run with `excludeAmount` = the older pool's amount. A scheduled row whose amount EQUALS
+  the amount already in force would then read *"from 5 October, ₹400"* while ₹400 already applies. Needs a
+  trustee to schedule a change to the current amount (legal: same-amount changes are not refused). Never a wrong
+  ask — the card's amount stays the pool's snapshot. **Re-trigger:** the first same-amount standard change
+  scheduled in production, or a story that refuses same-amount changes at write time (which would close it).
+  `packages/domain/src/pool/fixed-amount-transition.ts` (`selectUpcomingStage`).
 
 ## Deferred from: code review of 8-15-fixed-amount-transition-staged-card.md (2026-10-22)
 

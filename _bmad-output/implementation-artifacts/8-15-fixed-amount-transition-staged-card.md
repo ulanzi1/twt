@@ -226,6 +226,11 @@ first cycle, the **upcoming** stage wins (D7).
 > amount differs from `P.fixedAmount`, and names THAT amount. `C < R ≤ now` stays the common case; the rule also
 > covers two changes inside one window (the LATER wins), a reversion (silent), and a backdated emergency
 > (`effective_from ≤ C`). The card's CURRENT amount is unchanged: still `P.fixedAmount` in every stage.
+> ⭐ *Review note 2026-10-23 (rounds 2–3; the AC is not edited):* (a) "Qualifying `R`" is now read after
+> `max(C, now)`, not after `C` (RD1 — anchored at C, a row already in force was returned by the LIMIT-1 read and
+> hid the future row behind it). (b) When the member is already ASSIGNED in a later live cycle, `next_cycle`
+> names THAT pool's amount, iff it differs from `P.fixedAmount`, instead of the in-force amount (RD2/RD3, BigDev
+> "RD2: A" then "RD3: A"); an unreadable later binding gives no `next_cycle` (dated stages stand). See D3, D7.
 
 ### AC2 — The moot-row defect is fixed at its source (Trap 1)
 
@@ -361,6 +366,9 @@ hi transition copy (who, when, what was reviewed), or say plainly that it is **o
   that rests on the read **order** (assert it in a source-scan or by call-order on the mocks).
   `apps/api/tests/unit/contribution-history.test.ts` (`:31`, `:51`, `:472`) also drives `activeContribution`
   with a mocked `@twt/domain`: add the same mock there.
+  ⭐ *Review note 2026-10-23 (round 2 RD1; the AC is not edited):* "called with **`committedAt`**, ⛔ not `now`" is
+  superseded — the upcoming AND in-force reads are called with `max(C, now)`; the API legs "RD1: BOTH reads are
+  anchored at max(C, now)" and "RD1: an app clock BEHIND the DB commit…" pin it. The first-cycle read keeps `C`.
 - **Mobile**: AC5's real-`t()` file, plus a source-scan fence in the `self-verify-surface-render.test.ts` style
   (comment-stripped `readFileSync`; it already scans the card at `:104`). The card no longer references
   `upcomingAmountChange`, `upcoming_amount` or `formatDate`; the transition line's element sets no
@@ -399,6 +407,12 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   `next_month`; a row at or before `now` is never announced from it). `next_cycle` no longer reads the nearest
   row — `LIMIT 1` returned the EARLIER of two in-window changes and could not see a backdated emergency. Trap 4
   stays closed, by a different read.
+  ⭐ *Review note 2026-10-23 (round 2 RD1, BigDev "RD1: A") — the as-of-`committedAt` anchor is SUPERSEDED, and
+  with it Option A's "D3's as-of-C anchor … unchanged":* both reads (upcoming, in-force) are anchored at
+  `max(C, now)`. Kept at C, the `LIMIT 1` read could return a row already in force, which the selector then drops
+  as past — HIDING the real future change behind it (a reverted in-window change followed by a scheduled one). The
+  `max` also keeps an app clock behind the DB's `committed_at` from resolving the PREVIOUS row. The first-cycle
+  read (D5) keeps C.
 - **D4 — `effectiveOn` is an IST calendar date on the wire**, via the **existing**
   `istDateOf(effectiveFrom)` (`holiday-resolver.ts:178`), ⛔ never an instant (Trap 6), ⛔ never a new helper.
 - **D5 — "First cycle" definition.** Let `F` = `resolveEffectiveFixedAmountRow(tx, p, C)`. `isFirst` iff **all** of:
@@ -435,6 +449,26 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   ⭐ *Review note 2026-10-22 (D1/P3):* unchanged, now with two homes — `selectUpcomingStage` holds every stage
   except `first_cycle`, and the handler skips the first-cycle read whenever it returns non-null (that read is
   dead work in that case).
+  ⭐ *Review note 2026-10-23 (round 2 RD2, BigDev "RD2: A"):* `next_cycle` is suppressed while the member is
+  ASSIGNED in a LATER live cycle — that cycle IS their next one, already at its own snapshot, so the line could
+  name an amount it does not carry. "Later" is the D7 order (`committed_at`, then `cycle_id`), so a cycle committed
+  at the same instant that sorts after counts. A later cycle the member is NOT in does not suppress it: it is not
+  their next cycle, and suppressing would leave them never told (no card after this pool closes, and D5's
+  first-cycle note counts other members' pools). Only `next_cycle` is suppressed: a dated stage or the first-cycle
+  note still shows. `resolveMemberLivePool` returns the later cycle ids (`ChosenLivePool.laterLiveCycleIds`, no
+  query); the card reads the member's assignment in them (`resolveAssignedPoolWithRosterForMember`, one read per
+  later live cycle, almost always zero) ONLY when the in-force amount differs from the pool's. ⚠ The accepted cost
+  of Option A: a member who IS in the later cycle hears of the change one window later, even when the later cycle
+  already carries the new amount (the line would then have been true).
+  ⭐ *Review note 2026-10-23 (round 3 RD3, BigDev "RD3: A") — the RD2 rule above is SUPERSEDED, not re-read:* that
+  "accepted cost" was not a delay — a member could be NEVER told: in a later pool already at the new amount, their
+  later card has no change to show, and D5's first-cycle note fails when a cycle they are not in committed at the
+  new amount first. Now, when the member is ASSIGNED in a later live cycle, that pool IS their next cycle:
+  `next_cycle` fires iff ITS snapshot amount differs from this pool's, and names IT (never the in-force amount,
+  which it may not carry — this also covers a reverted change after the next pool was committed). Only when they
+  are in no later live cycle does `next_cycle` follow the in-force amount (Review D1). If a later cycle's binding
+  cannot be read, its answer is UNRESOLVED: no `next_cycle`; dated stages and the first-cycle note stand. The
+  assignment reads run whenever a later live cycle exists (selector input `memberNextLivePool`).
 - **D8 — Fail-soft per field, not per card, and placed LAST.** The two new reads (upcoming + first-cycle) are
   wrapped in one `try`/`catch`. On a throw → `amountTransition: null` + `request.log.warn(...)`, the
   self-verify precedent at `handlers.ts:1531-1539`. ⚠ **A wrap alone is not enough.** `tx` is a real Postgres
@@ -451,10 +485,27 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   force at `now`, and the first-cycle read (skipped when an upcoming stage wins). All three sit in the same single
   `try`/`catch`, still the LAST statements in the transaction; the source scan and the call-order leg (which now
   includes the in-force read) are unchanged in kind.
+  ⭐ *Review note 2026-10-23 (round 2 RD1/RD2) on D8:* the upcoming and in-force reads are now both anchored at
+  `max(C, now)` (not "as of C" / "at `now`" as written above), and RD2 adds the member's assignment in each later
+  live cycle — read only when the in-force amount differs from the pool's. All inside the same single `try`/`catch`,
+  still the LAST statements in the transaction; a throw from any of them → no line, card intact.
+  ⭐ *Review note 2026-10-23 (round 3 RD3):* the later-cycle assignment reads now run whenever a later live cycle
+  exists (not only when the in-force amount differs), and each is caught ON ITS OWN: a binding-integrity throw
+  for one later cycle makes the answer unresolved (no `next_cycle`, a warn naming the `cycleId`) and leaves dated
+  stages and the first-cycle note standing — ⛔ no longer a blank line. A SQL error still aborts the transaction;
+  the next read then fails and the outer catch drops the line (card intact).
 - **D9 — Clock.** `deps.clock()` stays the instant for the stage label, consistent with `daysRemaining` on the
   same card and the unit-test clock. ⛔ No `readDbNow` here: the admin view needs one instant across two
   partitioning reads (`pool-fixed-amount/handlers.ts:213`), and the card's reads are anchored at `C`, a
   stored instant.
+  ⭐ *Review note 2026-10-23 (round 2 RP3) — the premise above no longer holds, the decision stands:* since Review
+  D1 the in-force read is anchored at the request clock, and since RD1 both reads are anchored at `max(C, now)`, so
+  `now` is a DATA anchor, not only a label. `deps.clock()` is kept: both READS share one instant (the anchor), and
+  when `now ≥ C` the selector's `> now` split uses that same instant (the 10.13 consistency point); when the app
+  clock is BEHIND the DB's `committed_at` the anchor is `C`, and the SQL's `> C` subsumes the `> now` guard. The
+  `max` bounds only that behind-skew. ⚠ The opposite skew is NOT bounded: an app clock AHEAD of the DB treats a row
+  whose `effective_from` falls in (DB now, app now] as already in force — a window of the skew's size (seconds),
+  accepted. `readDbNow` was not adopted.
 - **PQ1 — the emergency reading (Trap 5). ✅ RULED 2026-10-22: B** — Decision `2026-10-22-383`, trustee-ratified
   (Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB"* / *"go with option B."*). ⇒ **Build B as
   written below**: emergency `R` after `now` → `scheduled` (dated, ⛔ never `next_month`, whatever the month
@@ -473,6 +524,20 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   ⛔ Case (iii) is part of the question the note asks. Don't settle it by default. The note also offers **C**
   (only the after-the-fact `first_cycle` note; nothing for (i) or (iii)). ⛔ No interim emergency behaviour
   ships before the ruling (Task 0).
+  ⭐ *Review note 2026-10-23 (round 2 RP4) — an ENGINEERING widening of `-383`'s ruled words, recorded so the code
+  does not read as an unexplained divergence:* `-383` ruling 1 bullet 2 says *"landing inside an open pool (after
+  the pool's cycle was committed, on or before today)"*, and Consequence 1 maps `C < R.effectiveFrom ≤ now` →
+  `next_cycle`. Since Review D1 (BigDev "D1: A") `next_cycle` ALSO fires for an emergency with `effective_from ≤ C`
+  written after the pool spawned (the amount in force now differs from the pool's). §0 gate: ⛔ not the Panel's —
+  it discloses nothing new, owes nothing new, and fits ruling 1's headline (plain facts, never a warning).
+  `-383` is unedited. *(Placed after the question as put, which stays unedited above.)*
+  ⭐ *Review note 2026-10-23 (round 3, F1 / RD3) — and an engineering NARROWING of the same words:* for a member
+  already ASSIGNED in a later live cycle, an emergency landing inside the open pool no longer gives this pool
+  "from the next cycle" when their next pool was committed at THIS pool's amount (that line would be false —
+  their next cycle asks the old amount), and when their next pool differs the line names THAT pool's amount
+  rather than "the new amount". Each case says only what the member's next cycle actually asks, and the member
+  is still told: their later card shows `next_cycle` once this pool closes. §0 gate: ⛔ not the Panel's —
+  it removes only a line that would be false and adds no disclosure and no obligation. `-383` is unedited.
 
 ## What this story does ⛔ NOT do
 
@@ -572,6 +637,10 @@ tests stay green, ⛔ unedited except for the contract-fixture field rename.
   - [x] `active-contribution-card.test.ts` legs per AC7: add `resolveFirstCycleUnderAmount` to the `pool:` mock
         override; one non-null leg per stage; the `committedAt` + `excludeAmount` argument assertion; the
         fail-soft leg; the read-order assertion. Add the same mock to `contribution-history.test.ts`.
+        ⭐ *Review note 2026-10-23 (rounds 2–3):* "upcoming at `committedAt`" and "the `committedAt` +
+        `excludeAmount` argument assertion" are superseded by RD1 (`max(C, now)`, asserted by the RD1 legs); the
+        handler also reads the in-force amount (Review D1) and, when a later live cycle exists, the member's
+        assignment in it (RD2/RD3). The checkbox records what Task 4 delivered then, not these orders as written.
 - [x] **Task 5 — Mobile (AC4).**
   - [x] `amountTransitionCopy.ts` (pure) + an `effectiveOn` formatter (local `Date(y, m-1, d)`).
   - [x] Replace `:215-227` in the card. Delete `formatDate` (`:63-75`) and the `useLocale()` call (`:79`): both
@@ -801,6 +870,273 @@ reproduced. Panel-routing gate (§0) applied to every finding: none is the Panel
 Epic 8 retro W-5/H-3 precedent held 8.2 for the same gap, and `deferred-work.md` commits to putting that call to
 BigDev. Nothing is committed or pushed.
 
+#### Round 2 — `bmad-code-review` 2026-10-23 against `git diff b883dc15..b7f56276` (code slice), focus `d6368a5d..b7f56276`
+
+Blind Hunter (code diff only) + Edge Case Hunter + Acceptance Auditor, parallel, read-only; round 1's 16 dismissed
+items handed to the two sighted layers so they were not re-raised. `git status --porcelain` empty before and after
+(HEAD `b7f56276`). 2 `decision-needed`, 5 `patch`, 0 `defer`, 4 dismissed (enumerated below). ⚠ **What was and was not
+verified:** the reviewer READ the SQL of `resolveUpcomingFixedAmountChange` (`fixed-amount.ts:292-317`) and the live-pool
+tie-break (`handlers.ts:1353-1386`) and confirmed RD1 and RD2's mechanism in code; the Auditor re-ran the DB-free
+suites (selector 34, API unit 40, mobile copy 20 — all green, matching the records). **No live-DB spec and no mutant
+was run in this round.** Panel-routing gate (§0) applied: none is the Panel's — each is "the code should do X" or a
+record that should say what is true; RD1/RD2 are BigDev's because they touch a decision BigDev made (D1 = A) or pick
+between two engineering behaviours.
+
+**`decision-needed`**
+
+- [x] [Review][Patch] **RD1 — RESOLVED 2026-10-23, BigDev: "RD1: A" — now a patch. The round-1 patch lets a past row HIDE a real future change (regression of AC1's
+  "a nearer non-qualifying row never hides a later qualifying one").** [`apps/api/src/modules/member-pool/handlers.ts:1408`,
+  `packages/domain/src/pool/fixed-amount-transition.ts:86-91`] — *source: blind + edge + auditor (all three, independently).*
+  ⭐ **TRACED.** The upcoming read is still `effective_from > C … ORDER BY effective_from ASC LIMIT 1` (Option A kept "D3's
+  as-of-C anchor"); the patch's new `effectiveFrom > now` check then drops that ONE row in JS — a post-filter on a
+  LIMIT-1 read, the exact trap D6 moved `excludeAmount` into SQL to avoid. Pool ₹500 committed Jan 10; standard ₹600
+  from Jan 12, standard ₹500 from Jan 14 (a trustee correcting a mis-set change — no spacing rule in
+  `scheduleStandardChange` or the route, verified); standard ₹700 from Apr 20. At now = Jan 15: the read returns the
+  Jan-12 row, `inForceNow` = ₹500 = the pool → no `next_cycle`, the row is ≤ now → dropped ⇒ `null` (and P3 then runs
+  the first-cycle read, which can yield `first_cycle`). The ₹700 change is never announced while this pool is live;
+  the policy-meaning sentence ("told … from the day it is scheduled") is breached. The selector JSDoc ("a row at or
+  before `now` is already accounted for by `inForceNow`") is false here. No test sees it (each leg feeds one row).
+  **Options:** **A (recommended)** — read the dated stages as of `max(C, now)` instead of C; after D1 the C anchor
+  served only Trap 4, which `inForceNow` now covers. Also read `inForceNow` at `max(C, now)`, which closes the
+  clock-skew case (edge F3 / blind #5: a JS clock behind the DB's `committed_at` can make `inForceNow` resolve the
+  PREVIOUS row and announce the old amount "from the next cycle"). *Cost:* amends Option A's "D3's as-of-C anchor …
+  unchanged" (a dated note on D1/D3), updates the D3/D6 call-argument assertions, and owes a revert-plus-future leg
+  at selector-input AND live-DB level with revert-sanity. **B** — keep the C anchor and add `gt(effective_from, now)`
+  in SQL as a second conjunct. *Cost:* same behaviour as A with two anchors to explain; does not close the skew case.
+  **C** — accept and record. *Cost:* a member is not told of a scheduled change for up to a live window, in a sequence
+  that needs a reverted change — rare, but the exact silence this story exists to end.
+  **DECIDED — Option A (BigDev, 2026-10-23, reply "RD1: A, RD2: A").** Now a patch: both reads (`upcoming` and
+  `inForceNow`) anchored at `max(C, now)`; dated note on D1/D3 recording that this supersedes Option A's "as-of-C
+  anchor unchanged"; revert-plus-future legs at selector-input, API and live-DB level, with revert-sanity.
+- [x] [Review][Patch] **RD2 — RESOLVED 2026-10-23, BigDev: "RD2: A" — now a patch. With two cycles live at once, the older pool's `next_cycle` names an amount the next
+  cycle does not carry.** [`apps/api/src/modules/member-pool/handlers.ts:1353-1386`,
+  `packages/domain/src/pool/fixed-amount-transition.ts:81-83`] — *source: edge.* ⭐ **TRACED** (the tie-break is
+  confirmed: the card shows the SOONEST-CLOSING live cycle). C1 committed Jul 1 at ₹500, C2 committed Jul 5 at ₹500,
+  both live (cycles have no cadence; the D7 tie-break exists because overlap happens); a change to ₹600 takes effect
+  Jul 6. The card shows the C1 pool and says "from the next cycle ₹600" — but the next cycle is C2, already live at
+  ₹500. No wrong payment (the ask is the snapshot); the notice is false. Not introduced by the round-1 patch: the
+  pre-patch selector behaved the same; round 1 did not see it. **Options:** **A (recommended)** — when a LATER cycle
+  of the Pariwar is already committed (the handler already holds the live candidates), suppress `next_cycle` on the
+  older pool: silence over a line that may be false; the member's C2 card tells them once C1 closes. *Cost:* in the
+  overlap, a member hears of the change one window later; one handler input + ≥ 2 legs. **B** — compare against the
+  newest committed cycle's snapshot and name THAT when it differs from this pool's. *Cost:* the line's meaning shifts
+  per case; more legs; a third "which amount" rule to explain. **C** — accept and record as residue. *Cost:* a false
+  money notice in an overlap that a large Pariwar will meet.
+  **DECIDED — Option A (BigDev, 2026-10-23, reply "RD1: A, RD2: A").** Now a patch: when a later cycle of the Pariwar
+  is already committed, the older pool's card carries no `next_cycle` line; ≥ 2 legs (overlap → suppressed; no later
+  cycle → unchanged), with revert-sanity.
+  ⭐ *Dated pointer 2026-10-23:* as built, this rule was revised twice — first to count only a later cycle the
+  member is ASSIGNED in (the adversarial review of the fix; BigDev "1"), then, in round 3, to name the member's
+  next pool's amount instead of suppressing (RD3; BigDev "RD3: A"). See D7's notes and Round 3 below.
+
+**`patch`**
+
+- [x] [Review][Patch] **RP1 — Two test gaps in the round-1 patch.** [`apps/api/tests/unit/active-contribution-card.test.ts`,
+  `packages/domain/tests/pool/fixed-amount-transition.test.ts:82-85`] — *source: blind.* (i) No leg makes the NEW read
+  (`resolveEffectiveFixedAmountRow`) throw; the only D8 throw leg rejects `resolveFirstCycleUnderAmount`. Add one:
+  throw → `amountTransition: null`, card still `assigned: true`. (ii) The "effective EXACTLY at now" leg now supplies
+  `inForceNow: inForce(600)`, so `next_cycle` comes from the first branch whatever `upcoming` is — it no longer tests the
+  boundary; the opposite boundary (row exactly at `now`, in-force = pool → `null`) is untested. Add it. Each with
+  revert-sanity.
+- [x] [Review][Patch] **RP2 — Comments that the round-1 patch made false.** [`apps/api/src/modules/member-pool/handlers.ts:1399`,
+  `packages/contracts/src/contributions/active-contribution-card.ts:73`, `packages/domain/src/pool/fixed-amount-transition.ts:5`]
+  — *source: blind + edge + auditor.* "`now` … only LABELS the stage" — it is now a data anchor (`inForceNow` and the
+  `> now` filter). The contract's `next_cycle` ("already in force but this pool was spawned before it") and the file
+  header ("if the change lands inside an open pool") omit the backdated-emergency path, where the change took effect
+  BEFORE C. Correct the code comments.
+- [x] [Review][Patch] **RP3 — D9's premise no longer holds and has no dated note.** [story D9] — *source: auditor.* D9
+  rejects `readDbNow` because "the card's reads are anchored at `C`, a stored instant"; `inForceNow` is now anchored at
+  `deps.clock()`. The two "in force yet?" checks still share one instant, so the 10.13 consistency point stands — the
+  rationale needs a dated note (and RD1-A's `max(C, now)` changes it again). Append-only.
+- [x] [Review][Patch] **RP4 — D1 widens `-383`'s ruled words to the backdated emergency, unrecorded.** [UX-spec 8.15 note
+  item (3), `deferred-work.md` 7.11 closure, story PQ1 build mapping] — *source: auditor.* `-383` ruling 1 bullet 2 reads
+  *"landing inside an open pool (after the pool's cycle was committed, on or before today)"*; Consequence 1 maps
+  `C < R ≤ now` → `next_cycle`. D1 also emits `next_cycle` for an emergency with `effective_from ≤ C` written after the
+  spawn. Gate: ⛔ not the Panel's (it discloses nothing new, owes nothing new, and fits ruling 1's headline "plain
+  facts, never a warning"); already decided by BigDev (D1 = A). Owed: a dated note in each record naming it as an
+  engineering widening of bullet 2 / Consequence 1, so the code does not read as an unexplained divergence. Append-only.
+- [x] [Review][Patch] **RP5 — Two records that are no longer true.** [story `:802` + Change Log 1.6, `sprint-status.yaml`
+  ledger `2026-10-22ae` (header + block line), `_bmad-output/planning-artifacts/epics.md:653`] — *source: auditor.*
+  (a) "Nothing is committed or pushed" / "not committed, not pushed" sit INSIDE commit `b7f56276`, describing code in
+  `d3bfbcfd`. (b) `epics.md`'s Epic 8 line had "14 stories" replaced in place by "16", but the appended recount note
+  still says *"The "14" … above were stale"* — there is no "14" above any more. A dated note under each; ⛔ no rewrite.
+  ⚠ sprint-status via the safe-prepend recipe.
+
+**`defer`** — none.
+
+**Dismissed (4)** — each with its reason:
+
+1. *blind #2* — `next_cycle` names the amount in force at `now`, and D7 lets it outrank a dated change landing before
+   the next commit. Inherent to cycles having no cadence (D2): which amount the next commit carries cannot be known
+   today. The line self-corrects the day the later change takes effect; the ask is always the snapshot. Same shape as
+   round-1 dismissal #8.
+2. *blind #3* — wire compatibility of the `.strict()` rename and the client `throw`: round-1 dismissals #2 and #9; the
+   patch changed none of their facts.
+3. *blind #6* — the P3 skip depends on the precedence staying `upcoming ?? first_cycle`. Today the output never changes
+   (edge traced it); the domain leg "selectUpcomingStage never returns first_cycle" pins the coupling.
+4. *blind #9* — after P1, a pool that really was first at an amount loses its `first_cycle` note once a backdated
+   emergency moves F. That pool then shows `next_cycle` with the emergency's amount, which outranks the note under D7
+   anyway — a true, higher-precedence line, not silence.
+
+**Applied — 2026-10-23.** BigDev: "RD1: A, RD2: A", then "1" (apply every patch). 7 of 7 applied, none skipped.
+
+- **RD1 (Option A)** — `resolveAmountTransition` anchors BOTH reads at `anchor = max(C, now)`
+  (`handlers.ts`); the selector keeps its `> now` / `> C` input guards. Dated note on D3 (supersedes Option A's
+  "as-of-C anchor unchanged"). Tests: API — a revert-plus-future leg (`next_month` ₹700), both reads called at
+  `now`, and an app clock 5 s behind the commit → both reads at C; live-DB — `active-contribution-read.spec.ts`
+  seeds ₹500 / ₹600 Jan 12 / ₹500 Jan 14 / ₹700 Apr 20 and shows the read at C returns the past ₹600 row (selector
+  → `null`, the hazard, in-test) while the read at `now` returns ₹700 (selector → `scheduled` 2027-04-20). The
+  existing API legs no longer mock past rows as "upcoming" (blind #8: combinations the anchored read cannot return).
+- **RD2 (Option A)** — *(as revised after the adversarial pass below)* `ChosenLivePool.laterLiveCycleIds` (the live
+  cycles sorting after the chosen one in the D7 order; pure, no query) → `resolveAmountTransition`, which — only
+  when the in-force amount differs from the pool's — reads the member's assignment in each
+  (`resolveAssignedPoolWithRosterForMember`) and sets the selector input `laterLiveCycle` iff they are in one;
+  `selectUpcomingStage` returns `next_cycle` only when it is false. Dated notes on D7 and D8. Tests: selector
+  (suppressed; a dated stage and the first-cycle note survive; control) and API, with a DISTINCT pool per cycle —
+  in both cycles → `null` and the card is the earlier pool, with a one-cycle control; NOT in the later cycle →
+  `next_cycle` shown; only in the later cycle → that pool is the card, line shown; two cycles at the same instant →
+  the one sorting after counts; a future change still `scheduled`; the assignment read runs only when a
+  `next_cycle` line is in play.
+- **RP1** — API: the in-force read throws → `amountTransition: null`, `assigned: true`, a warn. Selector: a row
+  EXACTLY at `now` with in-force = pool → `null`; 1 ms later → dated.
+- **RP2** — handler JSDoc (`now` is a data anchor), contract `next_cycle` comment, selector file header and input docs.
+- **RP3 / RP4** — dated notes on D9 and PQ1; the `-383` widening also noted in `ux-design-specification.md` (under
+  the 8.15 note) and the 7.11 closure in `deferred-work.md`. ⛔ No sentence rewritten; `-383` unedited.
+- **RP5** — (a) ⚠ *Correction, dated 2026-10-23:* round 1's *"Nothing is committed or pushed"* above, Change Log 1.6
+  and ledger `2026-10-22ae` were written INSIDE commit `b7f56276` (the code they describe is `d3bfbcfd`); they
+  described the tree at writing time. Kept as written. (b) `epics.md`: a dated note as its OWN paragraph after the
+  Epic 8 paragraph (whose line is unchanged) says the "14" it refers to was replaced in place. Ledger `2026-10-23a`
+  + one block line (safe-prepend: parses, 290 rows, 8-15 = `review`, +7 lines).
+
+**Adversarial review of the fix — 2026-10-23** (BigDev asked for it; then "1"). Two read-only layers on the
+uncommitted fix diff — one blind (code diff only), one sighted (code + records). Both found that RD2 as first built
+(`laterLiveCycle` = any live candidate committed strictly later) counted cycles the member is NOT in: such a member
+lost a true "from the next cycle" line and, since D5's first-cycle note counts other members' pools, was never told.
+Option A's stated cost ("hears one window later") had assumed they were in it. **Fixed** as above (assignment read,
+D7 order — which also covers a same-instant tie and a later cycle with no pools). Also fixed: the RD1 API leg passed
+against the bug (its mock ignored the anchor — now anchor-sensitive); the "soonest-closing pool" assertion proved
+nothing (one pool id for both cycles — now distinct); stale comments at `fixed-amount.ts` (the upcoming reader's
+JSDoc) and the selector's `next_cycle` doc; a D8 note; my D9 note over-claimed (corrected: the `max` bounds the
+behind-skew only; the ahead-skew window is accepted); my edits had split two existing lines (PQ1's lead-in and the
+`epics.md` paragraph) — both restored to their HEAD text, the notes placed after them. The RD2 bullet above, the
+D7/D9 notes, this Evidence block and the RD2 sentences in `deferred-work.md`, `ux-design-specification.md` and
+ledger `2026-10-23a` were revised in place — all uncommitted text written this session. **Dismissed:** RD2 also
+withholds a TRUE line when the later cycle already carries the new amount, and a backdated emergency then gets no
+line on the older pool — Option A's accepted delay (the member's later card speaks); with RD2 active, a future change
+back to the pool's own amount is omitted on the older pool (`excludeAmount`) — an omission, never a false line.
+
+**Evidence — what was run and what it showed** (this tree, final code):
+
+- **Targeted:** selector 36 passed (was 34); API unit `active-contribution-card` + `contribution-history` 49 passed
+  (was 40); live-DB `active-contribution-read.spec.ts` 13 passed on :5433 (was 12). Whole suites: API unit 589 passed
+  | 1 skipped; domain `tests/pool` 348 passed. Typecheck green for `@twt/domain`, `@twt/api`, `@twt/contracts`;
+  ESLint clean on the seven changed code files (`handlers.ts`, `active-contribution-card.test.ts`, contract
+  `active-contribution-card.ts`, `fixed-amount-transition.ts`, `fixed-amount.ts`, `fixed-amount-transition.test.ts`,
+  `active-contribution-read.spec.ts`).
+- **Mutants, each file restored byte-identical afterwards (`cmp`):** M1 anchor = C → 2 API red (the anchor leg and
+  the now anchor-sensitive revert-plus-future leg); M2 anchor = `now` without the `max` → 1 API red (clock skew);
+  M3 handler never sets `laterLiveCycle` → 3 API red; M4 selector ignores `laterLiveCycle` → 1 domain + 3 API red;
+  M5 selector drops the `> now` guard → 3 domain red; M7 "later" = strictly later `committed_at` (ties not counted)
+  → 1 API red (the tie leg); M8 assignment ignored (any later cycle suppresses) → 1 API red (the not-in-it leg); M9
+  assignment read always runs → 1 API red. ⚠ **M6** ("later" = every other candidate, earlier ones included)
+  **survives — an equivalent mutant**: the card is the FIRST cycle the member is assigned in, so every earlier
+  candidate is one they are not in (or whose binding errored), and it cannot suppress. The RP1(i) throw leg was not
+  mutated.
+- ⚠ **Not run this round:** `pnpm ci:local`, the mobile suite (no mobile file changed), the API integration suite.
+
+**Not done, deliberately:** Status stays **`review`** — AC6's non-author tone review is still outstanding (round 1's
+reason, unchanged). Not committed, not pushed.
+
+#### Round 3 — `bmad-code-review` 2026-10-23 against `git diff b883dc15` (final tree before commit; round-2 fix as focus)
+
+Blind Hunter (code diff only) + Edge Case Hunter + Acceptance Auditor, parallel, read-only; rounds 1–2 and their
+dismissals handed to the sighted layers. `git status` unchanged by all three. 1 `decision-needed`, 6 `patch`,
+1 `defer`, 2 dismissed. The Auditor re-ran the DB-free counts (36 / 49 / 589+1 / 348 — all matched the round-2
+records); no layer ran a DB test or a mutant. Panel-routing gate (§0): none is the Panel's.
+
+**`decision-needed`**
+
+- [x] [Review][Patch] **RD3 — RESOLVED 2026-10-23, BigDev: "A" — now a patch. RD2 could leave a member NEVER told
+  of a change.** [`apps/api/src/modules/member-pool/handlers.ts` (`resolveAmountTransition`),
+  `packages/domain/src/pool/fixed-amount-transition.ts` (`selectUpcomingStage`)] — *source: blind (HIGH); the
+  reviewer traced it in code.* Member in pool A at ₹310; ₹400 takes effect; cycle X (member NOT in it) commits at
+  ₹400; cycle B (member in it) commits at ₹400. Card A: suppressed (they are in a later cycle). Card B: in force =
+  its ₹400 → no `next_cycle`; first-cycle note → false (X's ₹400 pools sit in `[F, C_B)`). ₹310 → ₹400 with no
+  notice anywhere — for an emergency, against `-383` ruling 1. RD2's suppression ignored what the member's next
+  pool actually asks. The Auditor's "the later pool's card still tells them" holds only without such an X.
+  **Options:** **A (chosen)** — when the member is in a later live cycle, that pool is their next cycle: `next_cycle`
+  iff its amount differs from this pool's, naming IT; with no later pool, the in-force rule. **B** — keep RD2,
+  make D5's earlier-pools check member-scoped. **C** — accept and record.
+
+**`patch`**
+
+- [x] [Review][Patch] **RP6 — One later cycle's binding error blanked the whole line, dated stages included.**
+  [`handlers.ts`, the later-cycle loop] — *source: blind + edge.* Each later read is now caught on its own:
+  unresolved → no `next_cycle`, a warn with the `cycleId`; dated stages and the first-cycle note stand.
+- [x] [Review][Patch] **RP7 — RD2 is also a NARROWING of `-383`'s words, recorded only as a widening.** [story
+  PQ1; `deferred-work.md` 7.11 closure; `ux-design-specification.md` 8.15 note] — *source: auditor.* Dated notes.
+- [x] [Review][Patch] **RP8 — AC1, AC7 and Task 4 still read as orders the code now breaks** ("called with
+  `committedAt`", "upcoming at `committedAt`"). [story AC1, AC7, Task 4] — *source: auditor.* Dated pointers.
+- [x] [Review][Patch] **RP9 — The RD2 "DECIDED" block did not point at its revision.** [story RD2] — *source:
+  auditor.* Dated pointer (the revision rested on BigDev's "1" on the adversarial findings, then on "RD3: A").
+- [x] [Review][Patch] **RP10 — Round 2's "M6 is an equivalent mutant" is FALSE.** [story, Round 2 Evidence] —
+  *source: auditor.* An EARLIER live cycle whose binding throws (step 5 skips it) + the member in a later cycle +
+  an in-force change distinguishes M6 (the re-read throws). ⚠ *Correction, dated 2026-10-23:* the Round 2 Evidence
+  sentence is wrong as written and kept as written. After RD3 the M6 re-read would be caught per cycle and yield
+  `unresolved` (no `next_cycle`) — still observable; no leg pins it (recorded, not built).
+- [x] [Review][Patch] **RP11 — RD1's promised selector-level leg was missing, and the live-DB leg cannot catch a
+  reverted handler anchor.** [`fixed-amount-transition.test.ts`] — *source: auditor.* Added the selector leg ("RD1:
+  the row a read at C returns (past) says nothing; the row a read at max(C, now) returns (future) is dated").
+  ⚠ Recorded, not built: the live-DB leg calls the domain read with explicit `asOf` values and the selector — it
+  proves WHY the anchor matters, not that the handler uses it; the handler's anchor is pinned only by the API legs
+  (M1/M2 below).
+
+**`defer`**
+
+- [x] [Review][Defer] **With the member's next pool at THIS pool's amount, a scheduled row equal to the amount
+  already in force can show as a dated line** (e.g. "from 5 October, ₹400" while ₹400 is already in force) —
+  deferred, needs a trustee to schedule a change to the current amount. [`fixed-amount-transition.ts`
+  `selectUpcomingStage`; `excludeAmount` = the pool's amount] — *source: blind.* Recorded in `deferred-work.md`.
+
+**Dismissed (2):** *blind #4* — one roster-loading read per later live cycle: runs only during an overlap, stops at
+the first assigned cycle, live cycles are few. *blind #5* — mock leakage across legs: `wire()` re-sets every mock the
+RD2/RD3 helpers replace (`mockResolvedValue` overrides `mockImplementation`); the edge layer confirmed it.
+
+**Applied — 2026-10-23.** BigDev: "A" (RD3), after "3 then 2 then open pr".
+
+- **RD3** — selector input `laterLiveCycle: boolean` → `memberNextLivePool: { fixedAmount } | 'unresolved' | null`;
+  `selectUpcomingStage`: `null` → the in-force rule; `{ fixedAmount }` → `next_cycle` iff it differs from the pool's,
+  naming it; `'unresolved'` → no `next_cycle`. Handler: for each later live cycle (D7 order), the member's assignment
+  (`resolveAssignedPoolWithRosterForMember`), first assigned wins; read whenever a later live cycle exists. Contract,
+  handler and selector docs updated; D7, D8, PQ1 notes. Tests — selector: next pool at a new amount (incl. the
+  reverse case), at this pool's amount (only `next_cycle` goes; control), unresolved; API: next pool at ₹400 → named,
+  next pool's amount over the in-force one (and the reverted case), next pool at ₹310 → none (control), NOT in the
+  later cycle → in-force rule, only in the later cycle, same-instant tie, dated line survives, a throwing later
+  binding (dated line stands, warn with `cycleId`; nothing dated → no line), reads only when a later cycle exists.
+- **RP6–RP11** — as listed above.
+
+**Evidence — what was run and what it showed** (this tree, final code):
+
+- **Targeted:** selector 39 passed; API unit `active-contribution-card` + `contribution-history` 52 passed; live-DB
+  `active-contribution-read.spec.ts` 13 passed on :5433. Whole suites: API unit 592 passed | 1 skipped; domain
+  `tests/pool` 351 passed. Typecheck 0 errors in `@twt/domain`, `@twt/api`, `@twt/contracts`; ESLint clean on the
+  seven changed code files.
+- **Mutants, each file restored byte-identical (`cmp`):** R1 next pool's amount ignored (RD2's suppression back) →
+  2 API red; R2 selector names the in-force amount over the next pool's → 1 domain + 1 API red; R3 no per-cycle catch
+  → 1 API red; R4 a throw treated as "not in it" → 1 API red; R5 `'unresolved'` treated as no later pool → 1 domain
+  red; R6 an unassigned later cycle counts → 1 API red; M1 anchor = C → 2 API red; M2 anchor = `now` → 1 API red; M5
+  drop the `> now` guard → 4 domain red; M7 ties not "later" → 1 API red.
+- **`pnpm ci:local` on :5433 (final code): 35/36.** Every gate script, lint, typecheck, build, unit and db-check
+  green; the one red is `integration-tests`, and inside it only `apps/jobs/tests/audit/integrity-check.test.ts` >
+  chunk-boundary deletion, *"Test timed out in 20000ms"* — the SAME leg round 1 recorded (`deferred-work.md`,
+  "Deferred from: code review of 8-15 … (2026-10-22)"); no file on this branch is under `apps/jobs` or audit-named.
+  Integration totals that ran: domain 6117 passed | 1 skipped; jobs 1381 | 1 failed; queue 4; niyamavali-engine 144;
+  events 36; channels 446; validity-service 284. ⚠ turbo stopped at the jobs failure, so **`@twt/api` integration
+  did not run inside `ci:local`**; run separately, whole, against :5433: **2070 passed | 1 skipped, 0 failed**
+  (176 files). The mobile suite was not run (no mobile file changed).
+
+**Not done, deliberately:** Status stays **`review`** — AC6's non-author tone review is still outstanding.
+
 ## Dev Notes
 
 ### Why each stage is the size it is (the arithmetic, so a reviewer need not re-derive it)
@@ -953,3 +1289,5 @@ Modified (records):
 | 2026-10-22 | 1.4 | AC0.1–2 done: the `epics.md` `### Story 8.15:` entry (author mint, ⛔ not Panel direction; cites the 7.11 mint, `deferred-work.md`'s 7.11 entry, `-124` cl.1–2; PQ1 ruled table → `-383`), and both Epic 8 counts corrected 12/14 → **16** with the 8.14-has-no-entry observation (17 sprint keys). Task 0 complete. Status stays ready-for-dev. No code. |
 | 2026-10-22 | 1.5 | `bmad-dev-story 8.15`: Tasks 0–8 complete. Status ready-for-dev → in-progress → **review**. Moot-row fix (AC2, admin `upcoming` changes too); pure stage selector + first-cycle read (IST months, `next_cycle`, PQ1 B emergency = dated, never `next_month`); `amountTransition` replaces `upcomingAmountChange`; handler reads last and fail-soft per field; card line through a pure copy module, 8 keys en + hi. Records + friction disposition. `ci:local` 36/36 on :5433. Deviations: no `standardOnly` (PQ1 B), `isFirstCycle: boolean`, `useLocale()` kept. ⚠ AC6 tone review OUTSTANDING. Not pushed. |
 | 2026-10-22 | 1.6 | `bmad-code-review 8-15` round 1 + apply-all: 1 decision (D1, BigDev: Option A) / 7 patch / 0 defer / 16 dismissed. `next_cycle` now names the amount in force at `now` (two in-window changes, a reversion, a backdated emergency); the first pool at a new amount keeps its note after a backdated emergency; the residue premises corrected (append-only); AC6's owner/re-trigger recorded; two test legs. Status stays **review**. `ci:local` 35/36 (one undiagnosed unrelated jobs red), API integration run separately 2057 / 1 skipped / 1 failed (unrelated). Not committed, not pushed. |
+| 2026-10-23 | 1.7 | `bmad-code-review 8-15` round 2 + apply-all: 2 decision (RD1, RD2 — BigDev: Option A each) / 5 patch / 0 defer / 4 dismissed. Both transition reads anchored at `max(C, now)` — a reverted in-window change no longer hides a future change (supersedes Option A's "as-of-C anchor unchanged"); no `next_cycle` while the member is assigned in a later live cycle (an adversarial review of the fix caught the first build counting cycles the member is not in — fixed); a throw leg for the in-force read and the exact-at-now boundary; comments and dated notes (D3, D7, D9, PQ1; the `-383` widening also in the UX spec and deferred-work); epics.md's dangling "14"; round 1's "not committed" records corrected by note. Selector 36, API unit 49, live-DB read spec 13; eight mutants RED, one equivalent (recorded). Status stays **review**. `ci:local` not re-run. Not committed, not pushed. |
+| 2026-10-23 | 1.8 | `bmad-code-review 8-15` round 3 (final tree) + apply-all: 1 decision (RD3 — BigDev: A) / 6 patch / 1 defer / 2 dismissed. RD2's suppression could leave a member never told (their later card had no change; D5's note counts other members' pools) — now, when the member is in a later live cycle, `next_cycle` names that pool's amount iff it differs; an unreadable later binding drops only `next_cycle`; RD2 also recorded as a narrowing of `-383`; AC1/AC7/Task 4 and the RD2 decision pointed at their revisions; round 2's "M6 equivalent" corrected; the RD1 selector leg added; a no-op dated row deferred. Selector 39, API unit 52 (whole 592 + 1 skipped), domain pool 351, live-DB read spec 13; ten mutants RED; `ci:local` 35/36 (the known jobs timeout), API integration 2070 | 1 skipped. Status stays **review**. Not committed, not pushed. |

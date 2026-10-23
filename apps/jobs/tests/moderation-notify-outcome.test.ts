@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  claim: vi.fn(), recordResult: vi.fn(), release: vi.fn(), getResult: vi.fn(), inspect: vi.fn(), memberExists: vi.fn(), fanOut: vi.fn(),
+  claim: vi.fn(), recordResult: vi.fn(), release: vi.fn(), getResult: vi.fn(), inspect: vi.fn(), takeOver: vi.fn(), memberExists: vi.fn(), fanOut: vi.fn(),
 }));
 
 vi.mock('@twt/domain', async (importActual) => {
@@ -46,6 +46,7 @@ beforeEach(() => {
   mocks.release.mockResolvedValue(undefined);
   mocks.getResult.mockResolvedValue(null);
   mocks.inspect.mockResolvedValue(null);
+  mocks.takeOver.mockResolvedValue('acquired');
   mocks.fanOut.mockResolvedValue({ results: [terminal], retry: [] });
 });
 
@@ -81,42 +82,55 @@ describe('R3 — moderation durable outcomes', () => {
     expect(mocks.recordResult).not.toHaveBeenCalled();
   });
 
-  it('E1 (a) — a pending claim YOUNGER than the 15-min expiry is in flight: alarm + throw, ⛔ take-over, ⛔ send', async () => {
+  const pendingAt = (iso: string) => ({ status: 'pending', createdAt: new Date(iso), expiresAt: new Date('2026-10-24T00:00:00Z'), result: null });
+
+  it.each([
+    ['5 min', '2026-10-22T23:55:00Z'],
+    ['exactly the 10-min threshold', '2026-10-22T23:50:00Z'],
+  ])('E1 (a) / F2 — a pending claim %s old is in flight: alarm + throw, ⛔ take-over, ⛔ send', async (_age, createdAt) => {
     mocks.claim.mockResolvedValue('already_claimed');
-    mocks.inspect.mockResolvedValue({ status: 'pending', createdAt: new Date('2026-10-22T23:50:00Z'), expiresAt: new Date('2026-10-23T23:50:00Z'), result: null });
+    mocks.inspect.mockResolvedValue(pendingAt(createdAt));
     await expect(runModerationNotify(deps, payload, PARIWAR)).rejects.toThrow(/still in flight/);
     expect(deps.onAlarm).toHaveBeenCalledWith(expect.stringContaining('still in flight'));
+    expect(mocks.takeOver).not.toHaveBeenCalled();
     expect(mocks.fanOut).not.toHaveBeenCalled();
-    expect(mocks.release).not.toHaveBeenCalled();
   });
 
-  it('E1 (a) — a pending claim OLDER than the expiry was abandoned: taken over, sent, recorded', async () => {
-    mocks.claim.mockResolvedValueOnce('already_claimed').mockResolvedValueOnce('acquired');
-    mocks.inspect.mockResolvedValue({ status: 'pending', createdAt: new Date('2026-10-22T23:44:59Z'), expiresAt: new Date('2026-10-23T23:44:59Z'), result: null });
+  it('E1 (a) / F1 — a pending claim OLDER than 10 min is taken over ATOMICALLY (stale-before = now − 10 min), sent, recorded', async () => {
+    mocks.claim.mockResolvedValue('already_claimed');
+    mocks.inspect.mockResolvedValue(pendingAt('2026-10-22T23:49:59Z'));
     expect(await runModerationNotify(deps, payload, PARIWAR)).toMatchObject({ notified: true, alreadySent: false });
-    expect(mocks.release).toHaveBeenCalledTimes(1);
+    expect(mocks.takeOver).toHaveBeenCalledWith(expect.stringContaining('moderation.notify:'), 24 * 60 * 60, new Date('2026-10-22T23:50:00Z'));
+    expect(mocks.release).not.toHaveBeenCalled(); // ⛔ the old release-then-claim
     expect(mocks.fanOut).toHaveBeenCalledTimes(1);
     expect(mocks.recordResult).toHaveBeenCalledTimes(1);
     expect(deps.onAlarm).toHaveBeenCalledWith(expect.stringContaining('ABANDONED'));
   });
 
-  it('E1 (a) — losing the take-over race throws (the winner sends)', async () => {
+  it('F6 — a claim that vanished before it was read is re-claimed and sent', async () => {
     mocks.claim.mockResolvedValue('already_claimed');
-    await expect(runModerationNotify(deps, payload, PARIWAR)).rejects.toThrow(/lost the take-over/);
+    expect(await runModerationNotify(deps, payload, PARIWAR)).toMatchObject({ notified: true, alreadySent: false });
+    expect(mocks.takeOver).toHaveBeenCalledTimes(1);
+    expect(mocks.fanOut).toHaveBeenCalledTimes(1);
+    expect(deps.onAlarm).toHaveBeenCalledWith(expect.stringContaining('vanished'));
+  });
+
+  it('F1 — losing the take-over to an attempt that RECORDED reports it alreadySent (⛔ a failed job)', async () => {
+    mocks.claim.mockResolvedValue('already_claimed');
+    mocks.inspect
+      .mockResolvedValueOnce(pendingAt('2026-10-22T23:40:00Z'))
+      .mockResolvedValueOnce({ status: 'completed', createdAt: new Date('2026-10-22T23:40:00Z'), expiresAt: new Date('2026-10-23T23:40:00Z'), result: { delivered: true } });
+    mocks.takeOver.mockResolvedValue('already_claimed');
+    expect(await runModerationNotify(deps, payload, PARIWAR)).toMatchObject({ delivered: true, alreadySent: true });
     expect(mocks.fanOut).not.toHaveBeenCalled();
   });
 
-  it('R1 — a resolved failure on retry releases the claim and throws', async () => {
-    mocks.fanOut.mockResolvedValue({ results: [terminal], retry: [MEMBER] });
-    await expect(runModerationNotify(deps, payload, PARIWAR)).rejects.toThrow(/fan-out failed/);
-    expect(mocks.release).toHaveBeenCalledTimes(1);
-    expect(mocks.recordResult).not.toHaveBeenCalled();
-  });
-
-  it('releases the claim when fan-out throws unexpectedly', async () => {
-    mocks.fanOut.mockRejectedValue(new Error('scope unavailable'));
-    await expect(runModerationNotify(deps, payload, PARIWAR)).rejects.toThrow('scope unavailable');
-    expect(mocks.release).toHaveBeenCalledTimes(1);
+  it('F1 — losing the take-over to a fresh claim throws (the winner sends)', async () => {
+    mocks.claim.mockResolvedValue('already_claimed');
+    mocks.inspect.mockResolvedValueOnce(pendingAt('2026-10-22T23:40:00Z')).mockResolvedValueOnce(pendingAt('2026-10-23T00:00:00Z'));
+    mocks.takeOver.mockResolvedValue('already_claimed');
+    await expect(runModerationNotify(deps, payload, PARIWAR)).rejects.toThrow(/lost the take-over/);
+    expect(mocks.fanOut).not.toHaveBeenCalled();
   });
 
   it('P4 — a recording failure alarms, KEEPS the claim and completes (⛔ re-send), like the sibling workers', async () => {

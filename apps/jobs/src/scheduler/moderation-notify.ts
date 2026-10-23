@@ -42,12 +42,17 @@ import { fanOutAlertToMembers, serializeFanOutResult, type ContributionNotifyDep
 /** Match the broadcast workers' claim window, covering normal pg-boss redelivery without a new table. */
 const MODERATION_NOTIFY_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
 
+/** pg-boss's default job expiry — this queue is created with no options (`expireInSeconds` 900, pg-boss 12). */
+const PG_BOSS_DEFAULT_EXPIRE_SECONDS = 15 * 60;
+
 /**
- * A `pending` claim older than this was ABANDONED (review round 2 patch review, E1 (a)): pg-boss's default job expiry for this
- * queue (created with no options — `expireInSeconds` 900) has passed, so pg-boss itself has given up on that attempt and
- * re-dispatched the job. Younger ⇒ another attempt may still be running. Revisit if the queue is ever given its own expiry.
+ * A `pending` claim older than this was ABANDONED (review round 2 patch review, E1 (a); the last fix diff, F2). pg-boss measures
+ * its expiry from the job's START, the claim is taken a little later (the member check, the termination flag) and the expiry
+ * supervisor runs up to 60 s late — so a redelivery after an expiry sees a claim somewhat YOUNGER than 900 s. A 5-min margin keeps
+ * that redelivery a take-over, ⛔ an "in flight" that burns the retries. Only a second job for the same notice can arrive sooner
+ * (at-least-once, accepted). Revisit if the queue is ever given its own expiry.
  */
-const MODERATION_NOTIFY_ABANDONED_CLAIM_SECONDS = 15 * 60;
+const MODERATION_NOTIFY_ABANDONED_CLAIM_SECONDS = PG_BOSS_DEFAULT_EXPIRE_SECONDS - 5 * 60;
 
 /** The MEMBER_MODERATION_NOTIFY payload (structurally aligned with apps/api's enqueuer type). */
 export interface ModerationNotifyPayload {
@@ -377,22 +382,30 @@ export async function runModerationNotify(
       const prior = row.result as { readonly delivered?: unknown } | null;
       return { notified: true, delivered: prior?.delivered === true, alreadySent: true, alertId };
     }
-    if (row && now.getTime() - row.createdAt.getTime() < MODERATION_NOTIFY_ABANDONED_CLAIM_SECONDS * 1000) {
+    const staleBefore = new Date(now.getTime() - MODERATION_NOTIFY_ABANDONED_CLAIM_SECONDS * 1000);
+    if (row && row.createdAt.getTime() >= staleBefore.getTime()) { // at exactly the threshold: in flight (takeOver needs OLDER)
       // In flight (or a recording that failed moments ago): ⛔ complete as notified — that would lose the notice silently.
       alarm(
         `[jobs] moderation-notify: notice for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) is claimed by an attempt still in flight — retrying`,
       );
       throw new Error(`[jobs] moderation-notify: notice still in flight for moderation action ${payload.moderationActionId}`);
     }
-    // ABANDONED — older than pg-boss's own expiry (a worker died between the claim and the record), or gone: take it over
-    // and send. At-least-once, as before R3 added the claim: a fan-out hung past the expiry, a recording that failed, or two
-    // attempts taking over at once can send the notice twice; none can lose it.
-    await store.release(key);
-    if (await store.claim(key, MODERATION_NOTIFY_IDEMPOTENCY_TTL_SECONDS) !== 'acquired') {
+    // ABANDONED (a worker died between the claim and the record, or a fan-out hung past pg-boss's expiry), or GONE: take it
+    // over and send — in ONE locked statement (F1), so two take-overs cannot both win. At-least-once, as before R3 added the
+    // claim: a hung original that later records, or a recording that failed, can mean the notice is sent twice; none loses it.
+    if (await store.takeOver(key, MODERATION_NOTIFY_IDEMPOTENCY_TTL_SECONDS, staleBefore) !== 'acquired') {
+      // Someone else completed or claimed it in between — read what they left.
+      const after = await store.inspect(key);
+      if (after?.status === 'completed') {
+        const prior = after.result as { readonly delivered?: unknown } | null;
+        return { notified: true, delivered: prior?.delivered === true, alreadySent: true, alertId };
+      }
       throw new Error(`[jobs] moderation-notify: lost the take-over of an abandoned claim for moderation action ${payload.moderationActionId}`);
     }
     alarm(
-      `[jobs] moderation-notify: took over an ABANDONED claim for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) — sending`,
+      row
+        ? `[jobs] moderation-notify: took over an ABANDONED claim for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) — sending`
+        : `[jobs] moderation-notify: the claim for member ${payload.memberId} in pariwar ${pariwarId} (action ${payload.action}) vanished before it was read — re-claimed, sending`,
     );
   }
 
@@ -425,7 +438,7 @@ export async function runModerationNotify(
   }
   // Review round 2, P4: a recording failure AFTER the fan-out keeps the claim and completes — the contribution, news and
   // survey workers' rule. Releasing here would re-send a notice that may already have been delivered. The claim stays
-  // `pending`: a redelivery within 15 min reads it as in flight; a later one takes it over and may re-send (E1 (a)).
+  // `pending`: a redelivery within 10 min of the CLAIM reads it as in flight; a later one takes it over and may re-send (E1 (a)).
   await store.recordResult(key, serializeFanOutResult(result)).catch((err: unknown) => {
     alarm(`[jobs] moderation-notify: failed to record the member result — ${String(err)}`);
   });

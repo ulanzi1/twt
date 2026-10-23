@@ -47,7 +47,7 @@ vi.mock('@twt/domain', async (importActual) => {
   };
 });
 
-const { fanOutAlert, fanOutAlertToMembers, isAlertSmsFallbackEligible, shouldRetryFanOut, SMS_RUNG_DETAIL } = await import(
+const { fanOutAlert, fanOutAlertToMembers, isAlertSmsFallbackEligible, serializeFanOutResult, shouldRetryFanOut, SMS_RUNG_DETAIL } = await import(
   '../src/scheduler/contribution-notify.js'
 );
 type ContributionNotifyDeps = import('../src/scheduler/contribution-notify.js').ContributionNotifyDeps;
@@ -758,5 +758,28 @@ describe('Story 5.11 AC4 / FS14 — former fixture successes are final; previous
     const result = await fanOutAlert(h.deps, cycleOpenAlert({ time_critical: true }), context);
     expect(shouldRetryFanOut(result, context)).toBe(false);
     expect(h.sms.sendCount()).toBe(0);
+  });
+});
+
+describe('F6 — `serializeFanOutResult`, the one durable projection (R4)', () => {
+  const record = {
+    memberId: 'm', delivered: false, deliveredChannel: null, bridged: false, costSuppressedChannels: ['whatsapp'] as never,
+    telegramMirrored: false,
+    trail: [
+      { channel: 'push', attempt: 0, outcome: 'rejected', detail: 'transient: +919999999999 token abc' },
+      { channel: 'whatsapp', attempt: 0, outcome: 'skipped_no_target', detail: 'cost_optimized' },
+      { channel: 'sms', attempt: 0, outcome: 'skipped_no_target', detail: 'sms_send_not_wired' },
+    ],
+  } as never;
+
+  it('maps delivered → outcome, keeps ONLY named rung details, and carries no contact or provider text', () => {
+    const out = serializeFanOutResult(record);
+    expect(out).toEqual({
+      delivered: false, outcome: 'in_app_only', deliveredChannel: null, bridged: false, costSuppressedChannels: ['whatsapp'],
+      telegramMirrored: false,
+      trail: ['push:0:rejected', 'whatsapp:0:skipped_no_target:cost_optimized', 'sms:0:skipped_no_target:sms_send_not_wired'],
+    });
+    expect(JSON.stringify(out)).not.toMatch(/9999|token/);
+    expect(serializeFanOutResult({ ...(record as object), delivered: true, deliveredChannel: 'push' } as never)).toMatchObject({ outcome: 'delivered' });
   });
 });

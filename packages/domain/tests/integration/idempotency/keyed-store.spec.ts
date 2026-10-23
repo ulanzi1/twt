@@ -197,4 +197,30 @@ describe.skipIf(!hasDatabase)('idempotency keyed store (live DB, own-committing)
     expect(await store.getResult(key)).toBeNull();
     expect(await store.inspect(key)).toMatchObject({ status: 'completed', createdAt: at, result: { delivered: true } });
   });
+
+  it('takeOver — ONE winner of N concurrent take-overs of a stale pending row; ⛔ a fresh or completed row; a gone row re-claimed (F1)', async () => {
+    const at = new Date(Date.UTC(2026, 9, 24, 10, 0, 0));
+    const old = createKeyedStore(pool, { clock: () => new Date(at.getTime() - 20 * 60_000) });
+    const store = createKeyedStore(pool, { clock: () => at });
+    const staleBefore = new Date(at.getTime() - 10 * 60_000);
+
+    const stale = track(`test:takeover:stale:${randomUUID()}`);
+    expect(await old.claim(stale, 3600)).toBe('acquired'); // claimed 20 min ago, never recorded
+    const outcomes = await Promise.all(Array.from({ length: 6 }, () => store.takeOver(stale, 3600, staleBefore)));
+    expect(outcomes.filter((o) => o === 'acquired')).toHaveLength(1);
+    expect(await store.inspect(stale)).toMatchObject({ status: 'pending', createdAt: at });
+
+    const fresh = track(`test:takeover:fresh:${randomUUID()}`);
+    expect(await store.claim(fresh, 3600)).toBe('acquired');
+    expect(await store.takeOver(fresh, 3600, staleBefore)).toBe('already_claimed');
+
+    const done = track(`test:takeover:done:${randomUUID()}`);
+    expect(await old.claim(done, 3600)).toBe('acquired');
+    await old.recordResult(done, { delivered: true });
+    expect(await store.takeOver(done, 3600, staleBefore)).toBe('already_claimed');
+    expect(await store.inspect(done)).toMatchObject({ status: 'completed', result: { delivered: true } });
+
+    const gone = track(`test:takeover:gone:${randomUUID()}`);
+    expect(await store.takeOver(gone, 3600, staleBefore)).toBe('acquired');
+  });
 });

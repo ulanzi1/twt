@@ -1333,8 +1333,11 @@ export async function runContributionConfirmedNotify(
   );
 
   const first = results[0];
-  // Q4: a missing result is retried like a failure, ⛔ recorded as a terminal outcome (unreachable today).
+  // Q4: a missing result is retried like a failure, ⛔ recorded as a terminal outcome (unreachable today). F4: and named.
   if (retry.length > 0 || !first) {
+    if (!first && retry.length === 0) {
+      alarm(`[jobs] contribution-confirmed-notify: the fan-out returned no result for member ${p.memberId} — retrying`);
+    }
     await store.release(key).catch((err: unknown) => {
       alarm(`[jobs] contribution-confirmed-notify: failed to release the member claim — ${String(err)}`);
     });
@@ -1394,8 +1397,11 @@ export async function runContributionMismatchNotify(
   const { results, retry } = await fanOutAlertToMembers(deps, () => alert, [p.memberId], pariwarId, now);
 
   const first = results[0];
-  // Q4: a missing result is retried like a failure, ⛔ recorded as a terminal outcome (unreachable today).
+  // Q4: a missing result is retried like a failure, ⛔ recorded as a terminal outcome (unreachable today). F4: and named.
   if (retry.length > 0 || !first) {
+    if (!first && retry.length === 0) {
+      alarm(`[jobs] contribution-mismatch-notify: the fan-out returned no result for member ${p.memberId} — retrying`);
+    }
     await store.release(key).catch((err: unknown) => {
       alarm(`[jobs] contribution-mismatch-notify: failed to release the member claim — ${String(err)}`);
     });

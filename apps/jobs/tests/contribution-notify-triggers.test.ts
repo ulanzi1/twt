@@ -1377,14 +1377,17 @@ describe('Story 5.11 AC4 / FS14 — the retry profile does not change (I4)', () 
   });
 
   it('Q4 — a member the fan-out returned NO result for is retried (released, thrown), ⛔ recorded terminal', async () => {
+    const onAlarm = vi.fn();
     fanOutAlertToMembers.mockResolvedValue({ results: [], retry: [] });
-    await expect(runContributionNotifyChild(deps(), envelope(childPayload({ memberIds: [M1] })) as never)).rejects.toThrow(/throwing so pg-boss retries/);
+    await expect(runContributionNotifyChild(deps({ onAlarm }), envelope(childPayload({ memberIds: [M1] })) as never)).rejects.toThrow(/throwing so pg-boss retries/);
     await expect(runContributionConfirmedNotify(
-      deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, amountPaise: 110000, periodLabel: '2026-07' }) as never,
+      deps({ onAlarm }), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, amountPaise: 110000, periodLabel: '2026-07' }) as never,
     )).rejects.toThrow(/fan-out failed/);
     await expect(runContributionMismatchNotify(
-      deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never,
+      deps({ onAlarm }), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never,
     )).rejects.toThrow(/fan-out failed/);
+    // F4 — each worker NAMES the defect (⛔ indistinguishable from a provider failure).
+    expect(onAlarm.mock.calls.filter(([m]) => String(m).includes('returned no result'))).toHaveLength(3);
     expect(release).toHaveBeenCalledTimes(3);
     expect(recordResult).not.toHaveBeenCalled();
   });

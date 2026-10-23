@@ -285,8 +285,8 @@ extension characters);
 `packages/i18n/locales/{en,hi}/contribution.json`; the registry is `apps/jobs/src/scheduler/contribution-sms-templates.ts`, and
 `apps/jobs/tests/contribution-sms-templates.test.ts` proves the real `t()` renders EXACTLY the text below and that this sheet carries it.
 Every one passes the shape rules with at most two variables (⛔ an exigency line is owed); the lowest fixed share is 17 (hi) at 68.7 %.
-In MSG91 (setup step (3) above): **Unicode for 17, 19, 21; Normal for 18, 20, 22** — an English value is ASCII by FS13 (the letter code or a
-GSM-7 name; the date) — under `-394` item 2, basic GSM-7 only. The language each member gets is row 5-11b's.
+In MSG91 (setup step (3) above): **Unicode for 17, 19, 21; Normal for 18, 20, 22** — an English value is GSM-7 by FS13 (the letter code or a
+GSM-7 name; the date) — under `-394` item 2, basic GSM-7 only (⚠ *corrected 2026-10-24*: "ASCII" was wrong — basic GSM-7 has é, Ä, £). The language each member gets is row 5-11b's.
 
 | # | Registered text |
 |---|---|
@@ -367,8 +367,8 @@ price is ⛔ recorded (roster Row 40 (d)).
 written (≤ 30 code points, "all GSM-7") let a pool value make these texts longer than the figures above — GSM-7 extension
 characters cost two septets (a 30-caret name made 18 = 164 and 22 = 161 septets, two parts) and a supplementary-plane letter costs
 two UTF-16 units (30 of them made 17 = 158 and 21 = 163 units, three parts). ⭐ `-394` item 2 closes that at the source: the pool
-value is the curated name only when trimmed, ≤ 30 UTF-16 units and, for en, basic GSM-7 printable (⛔ extension table, ⛔ control
-characters) — else the letter code. ⇒ The figures above ARE the longest values again: **1 en / 2 hi parts** per notice. The
+value is the curated name only when trimmed, ≤ 30 UTF-16 units, with ⛔ control character (any locale) and, for en, basic GSM-7
+only (⛔ extension table) — else the letter code. ⇒ The figures above ARE the longest values again: **1 en / 2 hi parts** per notice. The
 approved wording is unchanged. `apps/jobs/tests/sms-segment-cost.test.ts` renders the real strings and pins these figures.
 
 ## URL whitelisting (Story 6.30, -312 AL3)

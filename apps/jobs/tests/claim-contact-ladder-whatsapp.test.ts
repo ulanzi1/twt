@@ -163,8 +163,9 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     ['packages/channels/src/composition/provider-composition.ts', '8b29d9885baf93964bc66f91c88b97ca3bef55dfec235d7207dd7cee4d9f49fc'],
     // 2026-10-23 review R1 / R3 / R4, BigDev option 1: preserve prior alert retries and share the
     // PII-free outcome serializer; the claimant's separate WhatsApp ladder imports neither. Round 2 (P3, P9): the SMS rung's
-    // DELIBERATE lifecycle-boundary note; the patch review (Q4): `serializeFanOutResult` takes a real record.
-    ['apps/jobs/src/scheduler/contribution-notify.ts', '79d2d4cfd9a84c0e466a069cf4f3435b93ab39666dc090613038a6aa5701fb40'],
+    // DELIBERATE lifecycle-boundary note; the patch review (Q4): `serializeFanOutResult` takes a real record; the last fix
+    // diff (F5): `shouldRetryFanOut`'s JSDoc no longer says "redelivery".
+    ['apps/jobs/src/scheduler/contribution-notify.ts', '08960e92cf15a0032eb2659ed48bd694b7047b1e40f887fd78d0e55acf1df38c'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
     ['packages/channels/src/sms-dlt-registry.ts', '3bf86f9b9350602d9d7484b6976a748de42bcd4a9424f9bd3842f7cda66daee5'],
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per

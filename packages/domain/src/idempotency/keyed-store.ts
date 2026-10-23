@@ -82,6 +82,13 @@ export interface KeyedStore {
    * `claim` both collapse (Story 5.11 review, E1 (a) — the moderation notifier; `created_at` is the injected-clock claim time).
    */
   inspect(key: string): Promise<KeyInspection | null>;
+  /**
+   * ATOMICALLY take over an ABANDONED claim: under the same per-key advisory lock as `claim`, re-claim `key` for `ttlSeconds`
+   * ONLY if its row is still `pending` and was claimed before `staleBefore` — or insert it if the row is gone. `'acquired'` ⇒
+   * this caller now owns it; `'already_claimed'` ⇒ the row completed, or someone else claimed or took it over since (Story 5.11
+   * review, F1 — two take-overs can never both win, and a COMPLETED row is never touched).
+   */
+  takeOver(key: string, ttlSeconds: number, staleBefore: Date): Promise<ClaimOutcome>;
 }
 
 /** One key's row, as `inspect` reads it. */
@@ -269,7 +276,45 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
     }
   }
 
-  return { claim, recordResult, getResult, release, inspect };
+  async function takeOver(key: string, ttlSeconds: number, staleBefore: Date): Promise<ClaimOutcome> {
+    assertKey(key);
+    if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
+      throw new RangeError('[idempotency] ttlSeconds must be a positive, finite number');
+    }
+    const now = clock();
+    const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // The SAME lock `claim` takes — a take-over and a claim (or two take-overs) of one key are serialized.
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
+      const updated = await client.query(
+        `UPDATE idempotency_keys
+           SET created_at = $2, expires_at = $3, result = NULL, completed_at = NULL
+         WHERE key = $1 AND status = 'pending' AND created_at < $4`,
+        [key, now, expiresAt, staleBefore],
+      );
+      if (updated.rowCount === 1) {
+        await client.query('COMMIT');
+        return 'acquired'; // the abandoned claim is ours now
+      }
+      const inserted = await client.query(
+        `INSERT INTO idempotency_keys (key, status, created_at, expires_at)
+         VALUES ($1, 'pending', $2, $3)
+         ON CONFLICT (key) DO NOTHING`,
+        [key, now, expiresAt],
+      );
+      await client.query('COMMIT');
+      return inserted.rowCount === 1 ? 'acquired' : 'already_claimed'; // gone ⇒ claimed fresh; else completed / fresh
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  return { claim, recordResult, getResult, release, inspect, takeOver };
 }
 
 /**

@@ -47,8 +47,8 @@ const asRegistered = (value: string): string => value.replace(/\{\w+\}/g, DLT_VA
 
 /**
  * THE catalogue ↔ registry lockstep, as one function so the PLANTED leg exercises the same code as the "holds for all six" leg
- * (review round 2, P10). ⚠ It reads the catalogue JSON DIRECTLY — the real-`t()` render is the separate leg above, which a
- * plant cannot reach (`t()` reads the shipped catalogue); together they cover I1 (patch review, Q6):
+ * (review round 2, P10). ⚠ It reads the catalogue JSON DIRECTLY — the real-`t()` render is a separate leg (the first in the AC2
+ * describe below), which a plant cannot reach (`t()` reads the shipped catalogue); together they cover I1 (patch review, Q6; F5):
  * every (message, locale) whose catalogue string does not register as the registry's text, or whose params are not its slots.
  */
 function lockstepMismatches(catalog: Readonly<Record<'hi' | 'en', Readonly<Record<string, string>>>>): string[] {
@@ -108,7 +108,7 @@ describe('AC1 — the registry holds exactly the three notices of FS1 (d), × hi
   });
 });
 
-describe('AC2 — registered text = catalogue text, through the REAL t() (I1)', () => {
+describe('AC2 — registered text = catalogue text (I1): the REAL t() render, and the catalogue lockstep', () => {
   it.each(ENTRIES)('⭐ %s / %s — the real t() renders EXACTLY the registered text', (message, locale) => {
     const template = CONTRIBUTION_SMS_TEMPLATES[message][locale];
     // ⭐ DISTINCT markers per slot — one shared token would let a swap pass.

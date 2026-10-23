@@ -529,7 +529,7 @@ function alarmOf(deps: ContributionNotifyDeps): (message: string) => void {
  * WhatsApp refusals previously reached the accepting WA fixture instead; they are also terminal.
  * The old bridge bypassed WA and cost policy, so only its SMS target could complete that path.
  * Everyone else whose ladder exhausted still retries, including a missing/decrypt-failed mobile or
- * cost-suppressed SMS. Broadcast callers release these claims for redelivery without adding job retries.
+ * cost-suppressed SMS. Broadcast callers release these claims and add NO job retry — a re-run of the job would try them.
  * Revisit when 5.11b wires a real SMS provider and its retry window.
  */
 export function shouldRetryFanOut(result: MemberFanOutResult, ctx: MemberFanOutContext): boolean {

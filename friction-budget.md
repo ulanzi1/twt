@@ -27,6 +27,7 @@ deliberately accepted.
 | Sushil (member, UTR-mismatch screenshot upload)  | Reconciliation integrity                   | forced     |
 | relative (manual-KYC fallback)                   | "facilitator" posture                      | forced     |
 | member or relative (English-script name, manual-KYC fallback — Story 3.3c disposition below) | one English name the claim checks compare against | forced |
+| member or relative who chose English, filing a claim (the claim-contact step stays in Hindi — Story 6.35 disposition below) | the recorded agreement matching the words shown, until a claimant-language rule exists | forced |
 | Anita (verifier, over-payment recovery judgment) | Pool Engine                                | forced     |
 | Sunita (nominee bank-statement upload)           | facilitator-not-intermediary trust posture | forced     |
 | member (mobile + OTP at login; fresh OTP at step-up) | Account & session security (DLT-OTP auth + step-up gate) | forced |
@@ -2874,3 +2875,21 @@ submit refusal, `maxLength`, error mapping), `apps/mobile/lib/kyc-manual-name.ts
 
 ⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
 unchanged and is ⛔ ratcheted. `pnpm friction:check` runs after the code commit (AC-4 reads COMMITTED history).
+
+**Story 6.35 disposition (ONE new row — the claim-contact step stays in Hindi for a member who chose English; ⛔ no row retired, ⛔
+row amended):** the story's member-facing changes are the language screen `apps/mobile/app/(settings)/language.tsx`, its home entry
+`apps/mobile/components/settings/LanguageSettingsEntry.tsx` (mounted in `app/(tabs)/index.tsx`), the login-screen switch
+(`app/(auth)/login.tsx`), the phone store and sync (`lib/app-language.ts`, `lib/session-context.tsx`, `app/_layout.tsx`), the Hindi pin
+on `app/(claim)/contact.tsx`, and seven `language.*` keys in `packages/i18n/locales/{en,hi}/common.json` (Decision `2026-10-23-387`).
+
+1. ⭐ **The new row (in `## The ledger`, after the 3.3c row).** Payer: a member — or the relative filing on the deceased's phone — who
+   chose English in the app and files a claim: the claim-contact step (`(claim)/contact.tsx`) still renders in HINDI (LS15 (b)), so the
+   claim flow is mixed-language for them. Protects: the agreement evidence the server records (`checkboxTextShown`) being the words the
+   person actually SAW, and the Hindi-review gate on WhatsApp agreements keeping its reach, until a story or ruling sets the claimant's
+   language (the deferred item *"Senders that ignore the member's chosen language (row 6-35)"*). `forced`: the step cannot be switched.
+2. ⛔ **Not new friction:** the language switch itself — it is OPTIONAL (a member who never touches it keeps exactly today's Hindi app,
+   I2); the login-screen line and the home entry add one understated control each, ⛔ a step, ⛔ a gate; a failed server record keeps the
+   chosen language on screen and shows ONE line (the choice still works on the phone). ⛔ A forced acknowledgement or prompt is added.
+
+⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
+unchanged and is ⛔ ratcheted.

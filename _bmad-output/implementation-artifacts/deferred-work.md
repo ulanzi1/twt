@@ -19,6 +19,10 @@ Recorded at Story 5.11's Task 0.4 under [`-389`](../../.decision-log.md#decision
   excluded"*) and a WhatsApp Channel is publicly listed; (5) the words — BigDev's corrected pool-open / last-day texts in Story 5.11's
   "The words" (CHANNEL DRAFT rows). Until then a member the app cannot reach hears of a pool opening only in the app (and the
   per-member Telegram mirror, where switched on). ⭐ Trigger: the Panel's PQ3 ruling — then a backlog row.
+  - *Appended 2026-10-23 ([`-390`](../../.decision-log.md#decision-2026-10-23-390), Trustee-ratified, Q2 A):* (1) RULED — members are
+    ASKED, ⛔ required, to join one channel; the app stays the only official channel; R10(B) unchanged; the Panel did ⛔ narrow `-180`
+    for the posts (the family's full name stays). TRIGGER MET ⇒ HOMED: row `5-14-trust-announcement-channels` (backlog) owns (2)–(5) and
+    how a member is asked to join. Stays OPEN until that row is `done`.
 - **The degraded-mode cycle-open SMS bridge has ⛔ registrable words** [`-389` FS10 (a); draft
   `docs/degradation-policy/comms-templates/sms-channel.md`] — the bridge stays DARK; while dark, a bridged send runs the normal ladder
   (push → WhatsApp → SMS). Homed: row `5-8b-degraded-mode-bridge-sms-wording` (backlog). ⭐ Trigger: that row's create-story, or a

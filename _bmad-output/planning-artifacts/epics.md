@@ -2465,6 +2465,10 @@ and "Go back" never ticks the box; a tick makes ONE opt-in request and opens Wha
 > The real send is Story 5.11b. Go-live: roster Row 40 (`member-alert-sms-fallback-live`). Full ACs:
 > `_bmad-output/implementation-artifacts/5-11-per-member-sms-fallback-fixed-wording.md`. ⛔ Never a merge fence. (Epic 5's two "9
 > stories" count lines are left as they stand, as for 5.10 and 5.12.)
+>
+> ⭐ **Ruled 2026-10-23 — [`-390`](../../.decision-log.md#decision-2026-10-23-390) (Trustee-ratified, Q1 B / Q2 A):** the three texts go to
+> ANY member the app (and WhatsApp, where used) could not reach, whether or not they said yes to WhatsApp (§3.4 superseded in part, for
+> these three); members are ASKED to join one of the Trust's channels (row `5-14-trust-announcement-channels`).
 
 As a member whose phone the Trust's app cannot reach, I want a short text message, in my language, when my contribution is still not
 recorded and when my payment could not be matched or confirmed, so that I am not left out of a cycle only because a push notification

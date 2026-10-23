@@ -16,7 +16,9 @@ STATUS: 2026-10-23 created (`bmad-create-story 5.11`) → ready-for-dev; v1.1 va
 ANSWERED by BigDev (Debug Log (a)) — FS1 (d), THREE texted notices (the two general notices, pool open and the last day, go to the
 Trust's announcement channels — PQ3); FS16 (b); every other FS as recommended; the words corrected by BigDev (en + hi). PQ1 reshaped
 to the three; PQ2 WITHDRAWN (no text carries a name); PQ3 NEW (the channels). v1.3 (same day): rebased onto `1268d47e`; Task 0.3
-(Decision `-389`, `6db47c17`) and Task 0.4 (the records) DONE; the note SENT by BigDev 2026-10-23 — ⛔ ruled. Next: Task 1.
+(Decision `-389`, `6db47c17`) and Task 0.4 (the records) DONE; the note SENT by BigDev 2026-10-23. v1.4 (same day): THE PANEL RULED — Decision `2026-10-23-390`
+(Trustee-ratified, DR + KB: *"Q1 B, Q2 A"*): PQ1 B — the three texts go to any member the app (and WhatsApp, where used) could not
+reach, WhatsApp yes or not (I2 / AC3 / Task 3 follow); PQ3 A — members are ASKED to join a Trust channel. Next: Task 1.
 
 SCOPE SPLIT (v1.1): this story makes the alert SMS rung HONEST and decides WHAT is sent, to WHOM, in WHICH words; the REAL SEND
 (send record, CRQID kind, per-send MSG91 provider, language, budget, retry window) is row `5-11b-alert-sms-real-send` — its
@@ -34,6 +36,9 @@ branch + every worktree; the roster's highest `### Row`; the DLT sheet's highest
 `member-alert-sms-fallback-live`.
 
 §0 GATE (trustee-panel-routing-note-TEMPLATE.md) — readings:
+  ⭐ v1.4: BOTH Panel questions RULED by `2026-10-23-390` (Trustee-ratified) — PQ1 B (G1's widening, for the three notices only — §3.4's
+  *"they do not receive transactional-fallback SMS"* superseded in part); PQ3 A (G12 — a request, R10(B) unchanged). The readings below
+  are kept as written at v1.1 / v1.2.
   G1  architecture §3.4 fire condition (iii) *"per-member transactional fallback when both WA gates ON and WA delivery returns
       failure after the committed retry window"* + §3.4 *"Members without active WA opt-in receive only in-app push for non-OTP
       notifications — they do not receive transactional-fallback SMS."* — FS2 (a) MATCH; FS2 (b) WIDENS ⇒ PQ1 (the Panel's).
@@ -78,7 +83,7 @@ branch + every worktree; the roster's highest `### Row`; the DLT sheet's highest
       Telegram / WhatsApp mirrors); Terms draft v0.2 cl.10 carries the same and *"It is the member's responsibility to check the
       in-app surface."* FS2 (a) MATCHES R10(B) as written; PQ1 asks whether the Trust goes beyond it.
       v1.2: BigDev's direction (2026-10-23) that *"all members are supposed to join"* a Trust WhatsApp / Telegram Channel goes
-      beyond a mirror ⇒ PQ3 (the Panel's — a member duty).
+      beyond a mirror ⇒ PQ3 (the Panel's — a member duty). v1.4: RULED A (`-390`) — a request, ⛔ a duty.
   G13 (v1.2) architecture §3.4's channel list names WhatsApp Business messages to opted-in members, and a Telegram mirror that is
       per member and *"announcements-only"* (`architecture.md`, "Telegram channel privacy posture"); a Trust BROADCAST channel on
       either is in neither ⇒ an architecture note (the author's) and a backlog row, both AFTER PQ3 — ⛔ built by 5.11. Found
@@ -105,8 +110,8 @@ Status: ready-for-dev
 > member's own payment (v1.2, FS1 (d): day 10 *"not recorded yet"*, payment not matched, payment still not confirmed — the general
 > notices, pool open and the last day, go to the Trust's announcement channels, PQ3) — records it for DLT
 > registration, puts it in a message-keyed registry, gives the producers an SMS block, and decides WHO may receive it: as the
-> approved plan reads, a member whose WhatsApp is on and failed (FS2 (a)); it asks the Trustee Panel (PQ1) whether a member WITHOUT
-> WhatsApp should get it too. It makes the rung honest — no alert SMS is reported `sent` without a real send — WITHOUT changing
+> approved plan reads, a member whose WhatsApp is on and failed (FS2 (a)); it asked the Trustee Panel (PQ1) whether a member WITHOUT
+> WhatsApp should get it too — ⭐ v1.4: RULED B (`-390`): any member the app (and WhatsApp, where used) could not reach. It makes the rung honest — no alert SMS is reported `sent` without a real send — WITHOUT changing
 > who is retried (FS14). The real send is row `5-11b-alert-sms-real-send`. The degraded-mode bridge stays dark. OTP stays exactly
 > as it is.
 >
@@ -163,10 +168,10 @@ so that **I am not left out of a cycle — and the record of what I missed — o
 - **I1 — Registered text = catalogue text, byte for byte.** Every lit message's registry `contentTemplate` is the `sms.*` string from
   `contribution.json` with each `{param}` as `{#var#}`, checked through the REAL `t()`; the DLT sheet row matches. (Rendering the sent
   body and the value proof are 5.11b's — the same invariant, enforced at send.) *Proof:* AC2.
-- **I2 — Who receives it is ONE named predicate.** `isAlertSmsFallbackEligible` (name the dev's) decides the reach; under FS2 (a) it
-  is true only when `ctx.targets.whatsapp !== null` (read the TARGET — Pariwar on + member ACTIVE — not the outcome, because FS3 also
-  ends the WA rung non-sent) AND the WhatsApp rung did not end `sent`. Widening it after PQ1 is a change to this one function + its
-  tests. *Proof:* AC3.
+- **I2 — Who receives it is ONE named predicate.** `isAlertSmsFallbackEligible` (name the dev's) decides the reach; ⭐ v1.4, as
+  RULED by `-390` Q1 B: true only for a lit message when the push rung did not end `sent` AND (`ctx.targets.whatsapp === null` — no
+  WhatsApp target: Pariwar off or no ACTIVE yes — OR the WhatsApp rung did not end `sent`, FS3's refusal included). (The v1.2 build, FS2
+  (a), also required `ctx.targets.whatsapp !== null`; the ruling removed it.) *Proof:* AC3.
 - **I3 — No alert SMS is ever reported `sent` without a real send.** On the alert fan-out path the SMS rung never reaches
   `createFixtureSmsProvider` in production composition — for lit AND non-lit messages (FS15). Every non-send names its reason in the
   trail. The fixture stays for tests only. *Proof:* AC4.
@@ -190,7 +195,8 @@ pool, its deadline or your payment — and a cycle you miss still counts against
 **Niyamavali check — done, with this result:** no clause names SMS (the Niyamavali, its FR mapping and both amendment drafts); R10(B)
 says *"Missed information is the member's responsibility"* with the in-app surface as the official channel, and Terms v0.2 cl.10
 repeats it ⇒ FS2 (a) is CONSISTENT with the Niyamavali as written, and R10(B) does not presume a member was notified before a missed
-cycle counts. Whether the Trust should go beyond R10(B) for these three notices (v1.2) is PQ1 — the Panel's. (The Niyamavali is a rulebook,
+cycle counts. Whether the Trust should go beyond R10(B) for these three notices (v1.2) is PQ1 — the Panel's; ⭐ v1.4: RULED B (`-390`) — the member's
+terms are the FS2 (b) sentence above. (The Niyamavali is a rulebook,
 not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
 
 ## ⭐ FOUND FACTS (at `d87d047a`; cites re-taken at `1268d47e` in v1.3 — re-run each at Task 0.1)
@@ -324,6 +330,11 @@ not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
   Pariwar has WhatsApp on); the motivating member — no app, no WhatsApp — is NOT reached until the Panel rules. **(b) ship the widening
   now without the Panel.** Not recommended — the Panel's (G1). **(c) keep today's code (no gate).** Not recommended — that IS (b), by
   omission (F4).
+  ⭐ **v1.4 — SUPERSEDED IN PART by `2026-10-23-390` Q1 B (Trustee-ratified).** The build is the ruled widening, made by THIS story (the
+  rule above: *"made by this story if ruled before Task 7"*): a lit message's SMS rung is ELIGIBLE when the push rung did not end `sent`
+  AND (`ctx.targets.whatsapp === null` OR the WhatsApp rung did not end `sent`). A member with no WhatsApp yes is now reached; the FS3
+  refusal still counts as "WhatsApp did not succeed". Cost as ruled: ≈ 1 en / 2 hi segments per unreached member per cycle, +1 / +2 per
+  payment problem; consent stays counsel's (Row 40 (f)).
 - **FS3 — the WhatsApp stand-in stops counting as `sent` for an enabled Pariwar** (deferred-work's (d-ii); Row 38 (d-i) stays as a
   provisioning leg). ⭐ **(a) fix it in the resolver:** in `createContributionProviderResolver` (`provider-composition.ts:375-388`), when
   the Pariwar's WA config is `enabled` but the deps cannot be built — no `approved` template for the category, OR a blank credential
@@ -459,6 +470,11 @@ reach hears of a pool opening nowhere). Our reading: **A**. Stated, not asked: f
 a WhatsApp Channel is publicly listed (the Panel may narrow `-180` for this place — its call); Meta has no official Channels API (posts by
 hand). Split out: the architecture note a broadcast channel owes (G13, the author's); the channels' build (a backlog row after PQ3).
 
+⭐⭐ **v1.4 — RULED by `2026-10-23-390` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti, relayed by BigDev: *"by DR and KB"* / *"Q1 B,
+Q2 A"*).** PQ1 → **B** (the three texts to any member the app and WhatsApp, where used, could not reach). PQ3 → **A** (members are ASKED
+to join one channel; the app stays official; R10(B) unchanged). The Panel did ⛔ narrow `-180` for the pool-open post. The questions
+above are kept as put.
+
 "Shown to the Panel" only once SENT ([[feedback_shown_to_panel_means_sent]]).
 
 ## Acceptance Criteria
@@ -484,12 +500,14 @@ its MSG91 `##name##` form; the lockstep test lives in `apps/jobs/tests/`. A `$co
 hi; `scripts/microcopy/contribution.test.ts` excludes `$comment` keys (as the claim tests do). *Legs:* one lockstep test per template; a
 parity test (every `sms.*` key in both catalogues); a planted-violation leg per new gate (8.8's (b2) precedent), each proven RED first.
 
-**AC3 — Who receives it (I2; FS2, FS3).** Under FS2 as answered: a member with no WhatsApp target gets no SMS (`skipped_no_target` /
-`sms_fallback_not_eligible`); a member whose WhatsApp was attempted and ended non-`sent` is ELIGIBLE (in 5.11 the rung then ends
-`sms_send_not_wired`); a member whose WhatsApp ended `sent` gets no SMS. With FS3 (a), an enabled Pariwar with no approved WA template — and
+**AC3 — Who receives it (I2; FS2 as RULED by `-390` Q1 B, FS3).** For a lit message: a member whose push did not end `sent` is ELIGIBLE
+when they have no WhatsApp target OR their WhatsApp rung did not end `sent` (in 5.11 the eligible rung then ends `sms_send_not_wired`); a
+member whose push or WhatsApp ended `sent` gets no SMS; an unlit message is never eligible (`sms_message_not_lit`). Any other non-eligible
+case ends `skipped_no_target` / `sms_fallback_not_eligible`. With FS3 (a), an enabled Pariwar with no approved WA template — and
 one with a blank credential name / `phoneNumberId` — ends the WA rung `rejected` with the FS3 detail. *Legs:* the
-`contribution-notify.test.ts:263-274` trail is REWRITTEN to the ruled behaviour (not deleted); each branch one test; the predicate reads
-`ctx.targets.whatsapp`, proven by a test where FS3 rejects and the member is still eligible.
+`contribution-notify.test.ts:263-274` trail (a no-WhatsApp member whose push failed) is REWRITTEN to the ruled behaviour — now ELIGIBLE,
+ending `sms_send_not_wired`, never `sent` (not deleted); one test per branch (push sent; push failed + no WhatsApp target; push failed +
+WhatsApp failed; WhatsApp sent; FS3 refuses ⇒ eligible; unlit ⇒ not eligible).
 
 **AC4 — An honest rung and an unchanged retry profile (I3, I4; FS14, FS15).** On the alert fan-out path no production composition reaches
 `createFixtureSmsProvider`; every non-send ends with a named detail (`sms_fallback_not_eligible`, `sms_message_not_lit`, `sms_send_not_wired`,
@@ -545,7 +563,7 @@ Telegram, the cost-optimization toggle: unchanged; `pnpm ci:local` green on :543
 - [ ] **Task 2 — Contract + producers (AC5; FS7, FS13)**: optional `sms` block in `packages/contracts/src/alerts/alert.ts` payloads; populate it
       in the day-10 and pending-escalated (POOL_BATCH) and mismatch (its own worker) builders from the SAME locals as the push
       params; the FS13 pool-label rule (one helper, tested).
-- [ ] **Task 3 — Eligibility + WA stand-in (AC3; FS2, FS3)**: the ONE predicate over `ctx.targets.whatsapp` + the WA outcome; the non-accepting
+- [ ] **Task 3 — Eligibility + WA stand-in (AC3; FS2, FS3)**: the ONE predicate as RULED (`-390` Q1 B): push not `sent` AND (no WhatsApp target OR WhatsApp not `sent`); the non-accepting
       WA provider in `createContributionProviderResolver` for enabled-but-unbuildable (template / credentials).
 - [ ] **Task 4 — The honest rung + job outcome (AC4, AC5; FS10, FS14, FS15)**: the fan-out's SMS rung decides lit / eligible itself and never
       takes the category resolver's fixture on the alert path; `in_app_only` recorded (no release, no throw) in POOL_BATCH, confirmed and
@@ -762,6 +780,10 @@ matches. Corrected while running them: the `resolveSmsTarget` doc quote spans tw
   (safe prepend), the row's dated comment, 5-11b's comment (five → three), the new backlog row `5-8b-…`. The row stays `ready-for-dev`
   (Task 0.4's *"→ in-progress"* is taken when dev starts, as 6.36d did); the DLT sheet, the TV6 section and Row 30 note (1) are Task 5's.
 
+**(f) The Panel's ruling (2026-10-23, relayed by BigDev, verbatim):** *"by DR and KB"* / *"Q1 B, Q2 A"* ⇒ Decision `2026-10-23-390`
+(Trustee-ratified), committed ALONE as `cd06cc5d`. Applied at v1.4: I2, AC3, Task 3, FS2, the Policy meaning, the §0 header line, the
+PQ section; the records (note ruling block, §3.4 annotation, Row 40, deferred-work, the channels row, ledger) in one commit after it.
+
 ### Completion Notes List
 
 ### File List
@@ -774,3 +796,4 @@ matches. Corrected while running them: the `resolveSmsTarget` doc quote spans tw
 | 2026-10-23 | v1.1 | Validated (`bmad-create-story validate 5.11`, four parallel read-only checks; BigDev: *"all"*). Pin and found facts re-checked — no drift. SPLIT: the real send (FS5, FS6, FS8, FS9, FS12, the CRQID kind, MG12's zero-slot change) carried to new row `5-11b-alert-sms-real-send`; 5.11 adds no migration. New: F19 (the fake `sent` holds the retry loop shut) ⇒ FS14 (`in_app_only`, retry profile unchanged); FS15 (honest rung for unlit messages); FS16 (the app's name); G10 `-180` (full name on the cycle-open SMS ⇒ FS4 keeps it, two boxes, amount dropped) and G11 `-379` ⇒ PQ2; G12 R10(B) in the Policy meaning and PQ1; consent moved to counsel (roster leg (f)); FS3's mechanism (a rejecting provider); FS10 runs the normal ladder while the bridge is dark; FS13 letter code for non-GSM names in en; registry moved to `apps/jobs` (`MEMBER_BOX_SLOTS`); cites corrected (F7 nine messages, F11 `getMemberLanguage`, F18, `-345`, `-354`, G1, G3, G4); segment table recomputed; glyph inversions removed. |
 | 2026-10-23 | v1.2 | Task 0.2 ANSWERED (Debug Log (a)). FS1 (d): three texted notices (day 10, payment not matched, payment still not confirmed); pool open and day 14 go to the Trust's announcement channels (BigDev's direction) ⇒ PQ3 NEW (ask or require members to join), G13 NEW (a broadcast channel is not in §3.4); PQ1 reshaped to the three; PQ2 WITHDRAWN (no text carries a name). FS16 (b). Words corrected by BigDev (en + hi) and segments recomputed (common path 1 en / 2 hi). `alert_published` stays excluded (G4 kept). Name boxes, the exigency line and `name_over_60_unruled` dropped from AC1 / AC5 / AC6 / Tasks 1, 2, 5 / T7 / T12. FS12 (2) corrected (`resolveSmsTarget` already catches a decrypt failure). Routing note rewritten — NOT sent. |
 | 2026-10-23 | v1.3 | Rebased onto `origin/main` `1268d47e` (6.36d landed) and re-pinned; five cited files' line numbers re-taken by content (Debug Log (e)). Task 0.3: Decision `2026-10-23-389` committed alone (`6db47c17`). Routing note SENT by BigDev. Task 0.4: the records commit (epics 5.11 + 5.11b, §3.4 annotation, roster Row 40, deferred-work, ledger `2026-10-23ag`, new backlog row `5-8b-degraded-mode-bridge-sms-wording`). Status stays ready-for-dev; next is Task 1. |
+| 2026-10-23 | v1.4 | THE PANEL RULED (`2026-10-23-390`, Trustee-ratified, DR + KB: *"Q1 B, Q2 A"*). PQ1 B: the eligibility check widens to any member the app (and WhatsApp, where used) could not reach — I2, AC3, Task 3, FS2 updated (the v1.2 `whatsapp !== null` requirement removed). PQ3 A: members asked, not required, to join a Trust channel — new backlog row `5-14-trust-announcement-channels`. Records committed after the decision. Status stays ready-for-dev; next is Task 1. |

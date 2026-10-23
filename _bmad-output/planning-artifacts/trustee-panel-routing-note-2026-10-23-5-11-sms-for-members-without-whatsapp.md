@@ -13,16 +13,28 @@
 > - the engineering choices (when a text is retried, how a send is recorded) — being built, not asked.
 > ⭐ **Nothing waits for your answer.** The build follows the approved plan (Question 1, A); a "B" is a small change. No channel is
 > built until you answer Question 2.
+> ✅ **ANSWERED 2026-10-23 — Decision `2026-10-23-390` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti): Question 1 B,
+> Question 2 A.** The ruling is in the block below; everything after it is kept unedited, as put.
 > ✅ **SENT to the Panel by BigDev on 2026-10-23** (BigDev: *"I have sent the note to Panel"*) — this version, unedited. Written on
 > BigDev's answers to Story 5.11's build questions (Task 0.2, 2026-10-23; Decision `2026-10-23-389`): three notices are texted; the two
 > general notices go to the Trust's channels.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — 2026-10-23, Decision `2026-10-23-390` (Trustee-ratified)
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti. **Verbatim, as relayed by BigDev:** *"by DR and KB"* / *"Q1 B, Q2 A"*.
+>
+> - **Question 1 — B.** *"Widen it for these three notices — any member the app (and WhatsApp, where used) could not reach."* A member
+>   with no app notification gets the three texts, whether or not they said yes to WhatsApp. Cost accepted as put (≈ 1 English / 2 Hindi
+>   SMS parts per unreached member per cycle, plus 1 / 2 per payment problem; a change to the approved plan, as F7 was; consent is
+>   counsel's).
+> - **Question 2 — A.** *"A request — members are asked to join one channel; the app stays the official channel; R10(B) is unchanged."*
+>   Cost accepted as put. The Panel did ⛔ ask for the pool-open post to name only the pool — `-180` stands for the posts.
+>
+> **Not covered:** consent (counsel — go-live leg (f)); the price per text; every other notification; how the channels are built and
+> asked for (the author's). ⭐ Everything below is kept **unedited** as the questions **as they were put**
+> ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

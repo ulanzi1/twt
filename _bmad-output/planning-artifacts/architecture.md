@@ -2339,6 +2339,15 @@ fallback SMS.
 > the Trust runs a WhatsApp Channel and a Telegram channel for general notices (a pool opening, the last day) is ⛔ in this section's
 > channel list; it owes its own annotation or ADR after the Panel's PQ3.
 
+> ⚠ **ANNOTATION 2026-10-23 (Story `5-11`, `2026-10-23-390` — Trustee-ratified, Q1 B / Q2 A) — the fallback is WIDENED for three
+> notices. ⭐ Annotated, ⛔ not rewritten.** For the three notices about a member's own contribution only (day 10 "not recorded yet";
+> payment not matched; payment still not confirmed), a member whom the in-app push did not reach — and WhatsApp did not reach, where
+> the member has an active WhatsApp yes — receives the fallback SMS **whether or not they hold an active WA opt-in**. ⇒ the "Per-member
+> fallback SMS dispatch" paragraph's *"Members without active WA opt-in … do not receive transactional-fallback SMS"* is SUPERSEDED IN
+> PART for these three; for every other `dispatch()` notification it holds as written. ⛔ A bulk-alert channel (RA-29) — per member,
+> per message, only on a failed higher rung. The Trust's WhatsApp Channel and Telegram channel are MIRRORS members are ASKED to join
+> (Q2 A — the app stays the only official channel); their place in this section is the author's annotation or ADR, still owed.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

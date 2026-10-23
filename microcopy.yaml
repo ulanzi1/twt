@@ -340,6 +340,15 @@ scope:
     # message-key module. `kyc.tsx` raises exactly its two pre-existing hex literals (allow-listed below).
     - apps/mobile/app/(signup)/kyc.tsx
     - apps/mobile/lib/kyc-manual-name.ts
+    # ⭐ Story 6.35 (AC10; Decision 2026-10-23-387) — the in-app language choice: the screen, its home entry, the phone store /
+    # sync module, the login screen (its new switch) and the claim contact step (LS15 (b) — pinned to Hindi). `login.tsx` and
+    # `contact.tsx` each raise one pre-existing `#C0392B` (allow-listed below). ⛔ `(tabs)/index.tsx`, `_layout.tsx`,
+    # `session-context.tsx` (mount / plumbing only).
+    - apps/mobile/app/(settings)/language.tsx
+    - apps/mobile/components/settings/LanguageSettingsEntry.tsx
+    - apps/mobile/lib/app-language.ts
+    - apps/mobile/app/(auth)/login.tsx
+    - apps/mobile/app/(claim)/contact.tsx
   # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
   # member surface: the public Niyamavali (apps/public). These globs scan the PURE
   # member copy (the `niyamavali` i18n namespace strings), so the member-register
@@ -661,3 +670,19 @@ allow:
       reasoning block applies). Scoped to these two literals only; vocabulary, tone and
       numeral teeth on this file are untouched. Owed: a token layer for apps/mobile
       (deferred-work).
+  # ⭐ Story 6.35 (AC10) — the SAME gap, on the two screens it now enrols. Each literal is pre-existing (login: Story 3.2's
+  # error line; contact: Story 6.19a's phase line), unchanged by 6.35; the new language screen carries ⛔ colour literal.
+  - file: apps/mobile/app/(auth)/login.tsx
+    pattern: '#C0392B\b'
+    reason: >-
+      Story 3.2's pre-existing error hex — the same app-wide apps/mobile convention as the
+      entries above, unchanged by 6.35 (which adds only the language switch). Scoped to this
+      one literal; vocabulary, tone and numeral teeth on this file are untouched. Owed: a
+      token layer for apps/mobile (deferred-work).
+  - file: apps/mobile/app/(claim)/contact.tsx
+    pattern: '#C0392B\b'
+    reason: >-
+      Story 6.19a's pre-existing phase-line error hex — the same app-wide apps/mobile
+      convention as the entries above, unchanged by 6.35 (which only pins the step to Hindi,
+      LS15 (b)). Scoped to this one literal; vocabulary, tone and numeral teeth on this file
+      are untouched. Owed: a token layer for apps/mobile (deferred-work).

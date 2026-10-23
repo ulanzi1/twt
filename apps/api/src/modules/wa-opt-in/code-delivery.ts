@@ -37,7 +37,7 @@ export const CODE_RESOLVE_TIMEOUT_MS = 3_000;
 /** Meta's call (WC1 step 3). */
 export const CODE_SEND_TIMEOUT_MS = 10_000;
 
-/** The template languages, `hi` preferred (the app is always Hindi — [[project_mobile_app_no_language_switch]]). */
+/** The template languages, `hi` preferred. (2026-10-23, row 6-35: the member can now choose the app's language, but this sender does ⛔ read it — the LS11 deferred item "Senders that ignore the member's chosen language (row 6-35)".) */
 const CODE_TEMPLATE_LOCALES = ['hi', 'en'] as const;
 
 /** Why the code route is closed for a Pariwar or a send (a class — ⛔ a name, ⛔ a value). */

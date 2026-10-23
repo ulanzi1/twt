@@ -12,6 +12,7 @@ import { useTheme } from 'tamagui'
 import { SessionProvider, useSession } from '../lib/session-context'
 import { recordLinkTarget } from '../lib/link-target'
 import { markLoopPhase } from '../lib/loop-timing-session'
+import { readStoredLanguage } from '../lib/app-language'
 
 // Devanagari font roles per UX spec lines 712-714 + 1108-1114
 // Display (Tiro Devanagari Hindi): memorial names, claim titles, ceremonial copy
@@ -88,9 +89,12 @@ export default function RootLayout() {
 // Hindi-default (Epic 3 intro line 1575) — LocaleProvider's initialLocale defaults to
 // DEFAULT_LOCALE ('hi'). SessionProvider loads the persisted member session so the
 // auth guard can redirect; both sit outside Tamagui so screens can use useT/useSession.
+// Story 6.35 (2026-10-23, LS3 / T4) — the language the member last chose (or adopted) on THIS phone is read
+// SYNCHRONOUSLY from MMKV here, because `initialLocale` is read on mount only; nothing stored ⇒ `undefined` ⇒ Hindi.
+// A later change goes through `setLocale` (the language screen, the login switch, `syncAppLanguage`).
 const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
-    <LocaleProvider>
+    <LocaleProvider initialLocale={readStoredLanguage() ?? undefined}>
       <SessionProvider>
         <Provider>{children}</Provider>
       </SessionProvider>

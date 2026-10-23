@@ -233,7 +233,7 @@ export interface ContributionNotifyTriggerDeps extends ContributionNotifyDeps {
   /**
    * Send-time locale. `hi` (Hindi-primary, `DEFAULT_LOCALE`) per architectural-freeze row 10 — every
    * member-visible surface defaults Hindi. Overridable so a test can assert the English parity copy.
-   * A per-member locale preference is a later refinement; there is no member locale column today.
+   * (2026-10-23, row 6-35: the member can now choose a language in the app — `members.preferred_locale` — but this sender does ⛔ read it; the LS11 deferred item "Senders that ignore the member's chosen language (row 6-35)".)
    */
   readonly locale?: Locale;
 }

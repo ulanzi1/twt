@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NomineeStatusResponse } from '@twt/contracts'
 import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES } from '@twt/contracts'
 import { ApiError } from '@twt/api-client'
-import { useLocale, useT } from '@twt/i18n/react'
+import { LocaleProvider, useLocale, useT } from '@twt/i18n/react'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
 import { Button, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
@@ -84,7 +84,24 @@ function ChoiceRow(props: {
   )
 }
 
+/**
+ * Story 6.35 (2026-10-23, LS15 (b); Decision 2026-10-23-387) — this step renders in HINDI whatever the app's language:
+ * the route wraps the screen in its OWN `LocaleProvider initialLocale="hi"`, so `useLocale()` and `useClaimT()` / `useT()`
+ * below (and the shell and the helpline button) read the nested provider. The body's `locale` is BOTH the claim's
+ * `contact_locale` (which drives the claim-contact texts) AND the agreement evidence (`checkboxTextShown`) — so it stays the
+ * language SHOWN, `'hi'`, exactly today's behaviour, until a rule sets the claimant's language. ⛔ Pinned alone (that would
+ * record an agreement to Hindi words the member never saw). Proven by `tests/unit/contact-language-pin-render.test.ts`
+ * (AC15). The deferred-work item "Senders that ignore the member's chosen language (row 6-35)" names the trigger.
+ */
 export default function ContactScreen(): React.ReactElement {
+  return (
+    <LocaleProvider initialLocale="hi">
+      <ContactStep />
+    </LocaleProvider>
+  )
+}
+
+function ContactStep(): React.ReactElement {
   const t = useClaimT()
   const tCommon = useT()
   const router = useRouter()

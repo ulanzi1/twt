@@ -4,13 +4,23 @@
 // §2.2 line 1343: resume does not require OTP unless a force-re-OTP signal fires)
 // and exposes signIn / signOut. The root layout's auth guard reads `session` +
 // `isLoading` to redirect unauthenticated users to the login screen.
+//
+// Story 6.35 (2026-10-23, LS3 / LS5) — the app language is reconciled with the member's server record HERE: ONE effect
+// keyed on `session?.memberId` (sign-in AND start with a stored session) and ONE app-level `AppState` → `active`
+// listener (the resync), both calling `syncAppLanguage` (`lib/app-language.ts`). The three member-data clear paths
+// (sign-out and the two refresh handlers below) do NOT clear the language keys (`app-language.v1`, `app-language.pending.v1`):
+// they are a PHONE setting, like the OS language, and are kept DELIBERATELY — a pending choice tagged with another member
+// is dropped by `syncAppLanguage` itself.
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { AppState } from 'react-native'
 
 import type { MemberFullSession } from '@twt/contracts'
+import { useLocale } from '@twt/i18n/react'
 
 import { memberAuth } from './member-api'
+import { syncAppLanguage } from './app-language'
 import { clearLinkTarget } from './link-target'
 import {
   clearSession,
@@ -48,6 +58,27 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   const [session, setSession] = useState<StoredSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [terminationNotice, setTerminationNotice] = useState<TerminationDuringRefresh | null>(null)
+  const { setLocale } = useLocale()
+  // Story 6.35 (LS5) — the session's member NOW, read by the foreground listener and by an in-flight sync (a result for a
+  // member who is no longer signed in is dropped) — ⛔ a stale closure.
+  const memberIdRef = useRef<string | null>(null)
+  const memberId = session?.memberId ?? null
+
+  useEffect(() => {
+    memberIdRef.current = memberId
+    if (memberId === null) return
+    void syncAppLanguage(memberId, { setLocale, currentMemberId: () => memberIdRef.current })
+  }, [memberId, setLocale])
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return
+      const current = memberIdRef.current
+      if (current === null) return
+      void syncAppLanguage(current, { setLocale, currentMemberId: () => memberIdRef.current })
+    })
+    return () => sub.remove()
+  }, [setLocale])
 
   useEffect(() => {
     let active = true

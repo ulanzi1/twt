@@ -12,6 +12,7 @@ import {
   NotificationSettingsEntry,
   TelegramNotificationSettingsEntry,
 } from 'components/notifications/NotificationSettingsEntry'
+import { LanguageSettingsEntry } from 'components/settings/LanguageSettingsEntry'
 import { MembershipStatusEntry } from 'components/member-status/MembershipStatusEntry'
 import { PoolOnboardingSettingsEntry } from 'components/pool-onboarding/PoolOnboardingSettingsEntry'
 import { LockInClockWidget } from 'components/lock-in/LockInClockWidget'
@@ -92,6 +93,8 @@ export default function YogdaanTab() {
             (app/(contribution)/yogdaan) so its FlatList owns the scroll (AC4/D5). This understated entry
             navigates in; the inline home mount (the P0-5 measurement scaffold) is retired. */}
         <YogdaanBahiEntry />
+        {/* Story 6.35 (LS6 (a)) — understated app-language entry ("भाषा / Language"), directly above the notification one. */}
+        <LanguageSettingsEntry />
         {/* Story 5.4 — understated notification-settings (WhatsApp opt-in) entry (a member choice). */}
         <NotificationSettingsEntry />
         {/* Story 5.5 — understated Telegram opt-in entry (a member choice; the mirror side-channel). */}

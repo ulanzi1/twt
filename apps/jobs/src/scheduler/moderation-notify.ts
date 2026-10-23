@@ -307,7 +307,7 @@ export async function runModerationNotify(
     return { notified: false, reason: 'member-not-found', alertId };
   }
 
-  // v1 resolves the DEFAULT locale. Per-member locale preference is not yet on the member record;
+  // v1 resolves the DEFAULT locale. (2026-10-23, row 6-35: the member can now choose a language in the app — `members.preferred_locale` — but this sender does ⛔ read it; the LS11 deferred item "Senders that ignore the member's chosen language (row 6-35)"); it keeps
   // the same seam the cycle-open/news producers carry. Hindi-first is a CATALOG property here.
   const locale: Locale = DEFAULT_LOCALE;
 

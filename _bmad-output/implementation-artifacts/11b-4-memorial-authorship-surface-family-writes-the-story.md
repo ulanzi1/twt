@@ -1404,6 +1404,14 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 11b.4`, 2026-10-24.
   to `withdrawal/handlers.ts`, `member-auth.handlers.ts` or `members/auth.ts`. (7) 6.36e has ⛔ no committed or uncommitted `packages`/`apps`
   change and has ⛔ not landed.
 
+- **Database (2026-10-24, BigDev mid-Task 2: *"use :5434 for db instead of :5433"*).** `0181` had already been applied to
+  `:5433` (Task 2.2, before the message); BigDev chose *"Roll it back"* — the three tables (all empty), the three enums,
+  `memorial_omissions_valid` and the journal row `id 181` dropped in ONE transaction ⇒ `:5433` is back at `0180` (so 6.36e's
+  planned `0181` is ⛔ not skipped there). `:5434` (`twt-test-pg-b`, 0 open connections) was stale at `0162` and failed `0165`
+  (`workplaces_staff_actor_check`, 23514 — leftover rows); BigDev chose *"Recreate it"* — `DROP DATABASE twt_dev` / `CREATE
+  DATABASE twt_dev OWNER twt_dev_app` (roles are cluster-level), migrated to `0181`. Idempotency of `0181` was proven on `:5433`
+  before the rollback (`psql -f` twice). ⇒ every live-DB leg and `ci:local` in this story run on **`:5434`**.
+
 ### Completion Notes List
 
 - **Task 0.2 answers (BigDev, verbatim, 2026-10-24):** MA2–MA4, MA8–MA17 and the build details of MA5 / MA6 / MA7 — *"Accept all

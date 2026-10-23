@@ -43,6 +43,9 @@ import {
   claims,
   memberKnownPeople,
   memberNomineeLinks,
+  memorialReviewDecisions,
+  memorialSubmissions,
+  memorialWithdrawals,
   nomineeDeterminations,
   workplaceRequests,
 } from '../../src/schema/index.js';
@@ -71,11 +74,19 @@ interface Captured {
 /** A mock Drizzle client that records every `update(table).set(obj).where(cond)` chain (DB-free).
  *  ⭐ Story 6.26a (GI13): it also answers the ONE read the anonymizer makes — the deceased's claim ids
  *  (`select(...).from(claims).where(...)`) — with `claimIds`, so the inspection scrub runs. */
-function mockClient(captured: Captured[], claimIds: readonly string[] = [randomUUID()]): Db {
+function mockClient(
+  captured: Captured[],
+  claimIds: readonly string[] = [randomUUID()],
+  // ⭐ Story 11b.4 (MA15): the SECOND read — the family memorial's versions about the member (+ their photo keys).
+  memorials: readonly { submissionId: string; photoObjectKey: string | null }[] = [
+    { submissionId: randomUUID(), photoObjectKey: 'memorial/photo-1.jpg' },
+  ],
+): Db {
   return {
     select() {
       return {
         from(table: unknown) {
+          if (table === memorialSubmissions) return { where: () => Promise.resolve(memorials) };
           if (table !== claims) throw new Error('anonymizeMember: unexpected read');
           return { where: () => Promise.resolve(claimIds.map((claimCaseId) => ({ claimCaseId }))) };
         },
@@ -115,15 +126,18 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return Buffer.from(bytes).toString('utf-8');
   }
 
-  async function run(claimIds?: readonly string[]): Promise<{ captured: Captured[]; pariwar: string }> {
+  async function run(
+    claimIds?: readonly string[],
+    memorials?: readonly { submissionId: string; photoObjectKey: string | null }[],
+  ): Promise<{ captured: Captured[]; pariwar: string; memorialPhotoKeys: string[] }> {
     const captured: Captured[] = [];
     const memberId = toMemberId(randomUUID());
     const pariwar = randomUUID();
-    await anonymizeMember(mockClient(captured, claimIds), { kms, kekRef }, {
+    const { memorialPhotoKeys } = await anonymizeMember(mockClient(captured, claimIds, memorials), { kms, kekRef }, {
       memberId,
       pariwarId: toPariwarId(pariwar),
     });
-    return { captured, pariwar };
+    return { captured, pariwar, memorialPhotoKeys };
   }
 
   function setFor(captured: Captured[], table: unknown): Record<string, unknown> {
@@ -132,7 +146,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the TWENTY-THREE member tables (twenty-six statements), once each except the three documented doubles', async () => {
+  it('updates exactly the TWENTY-SIX member tables (twenty-nine statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -226,9 +240,12 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // ⭐ MOVED AGAIN by Story 6.36e (NE10, AC8): TWENTY-FOUR tables, TWENTY-SEVEN statements. `member_nominee_links` holds ⛔
     // PII (member ids, answers, dates) but every LIVE mark where the member is the declarer OR the nominee must become
     // `erased` (⛔ deleted), so ⛔ marked member is ever left out of the five on an erased person's account. ONE statement.
-    // ⚠ Story 11b.4 also raises this count — whichever lands second re-bases.
+    // ⭐ MOVED AGAIN by Story 11b.4 (MA15, Trap 10): TWENTY-SEVEN tables, THIRTY statements (with 6.36e's). The family memorial ABOUT
+    // the member — `memorial_submissions` (the family's words + the photo's alt text, Tier-1), `memorial_review_decisions`
+    // and `memorial_withdrawals` (the reviewer's internal notes, Tier-1) — keyed on `deceased_member_id`, ONE statement
+    // each, read FIRST and run whatever the member's claims (⛔ inside the has-claims block). Raised, never weakened.
     const { captured } = await run();
-    expect(captured).toHaveLength(27);
+    expect(captured).toHaveLength(30);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -255,6 +272,9 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       workplaceRequests,
       memberKnownPeople,
       memberNomineeLinks,
+      memorialSubmissions,
+      memorialReviewDecisions,
+      memorialWithdrawals,
     ]) {
       expect(tables).toContain(t);
     }
@@ -267,7 +287,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(24); // Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(27); // Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -300,7 +320,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
-    expect(captured).toHaveLength(24); // Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
+    expect(captured).toHaveLength(27); // Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
   });
 
   it('⭐ Story 6.36a (AC9): the typed workplace → NULL and an open request → closed, in ONE statement, ONLY the member\'s rows', async () => {
@@ -581,5 +601,33 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(text).toMatch(/"claim_peer_mesh_reply_answers"\."value_ciphertext" is not null/);
     expect(text).toMatch(/"claim_peer_mesh_reply_answers"\."claim_case_id" in \(/);
     for (const id of claimIds) expect(params).toContain(id);
+  });
+
+  it('⭐ Story 11b.4 (MA15): the family\'s words, the alt text and the reviewer\'s notes → sentinel; the photo keys are RETURNED', async () => {
+    const { captured, pariwar, memorialPhotoKeys } = await run([], [
+      { submissionId: randomUUID(), photoObjectKey: 'memorial/a.jpg' },
+      { submissionId: randomUUID(), photoObjectKey: null },
+    ]);
+    const sub = setFor(captured, memorialSubmissions);
+    expect(await dec(sub.bodyCiphertext, pariwar, 'memorial')).toBe(ANONYMIZED_SENTINEL);
+    // The alt text is optional ⇒ a CASE (replaced only where present).
+    expect(typeof sub.altTextCiphertext).toBe('object');
+    // ⛔ Only the ciphertexts — the authorisation record, the photo key and the chain are kept (0181's column grant).
+    expect(Object.keys(sub).sort()).toEqual(['altTextCiphertext', 'bodyCiphertext']);
+    expect(Object.keys(setFor(captured, memorialReviewDecisions))).toEqual(['internalNoteCiphertext']);
+    expect(Object.keys(setFor(captured, memorialWithdrawals))).toEqual(['internalNoteCiphertext']);
+    expect(await dec(setFor(captured, memorialReviewDecisions).internalNoteCiphertext, pariwar, 'memorial')).toBe(
+      ANONYMIZED_SENTINEL,
+    );
+    expect(memorialPhotoKeys).toEqual(['memorial/a.jpg']);
+  });
+
+  it('⭐ Story 11b.4 (MA15): a member with ⛔ no memorial writes ⛔ no memorial statement and returns ⛔ no key', async () => {
+    const { captured, memorialPhotoKeys } = await run(undefined, []);
+    const tables = captured.map((c) => c.table);
+    expect(tables).not.toContain(memorialSubmissions);
+    expect(tables).not.toContain(memorialReviewDecisions);
+    expect(tables).not.toContain(memorialWithdrawals);
+    expect(memorialPhotoKeys).toEqual([]);
   });
 });

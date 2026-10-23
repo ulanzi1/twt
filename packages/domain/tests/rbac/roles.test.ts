@@ -18,6 +18,7 @@ import {
   seedRoles,
   type SeededRole,
 } from '../../src/rbac/roles.js';
+import { hasPermission } from '../../src/rbac/check.js';
 import { SCOPE_DIMENSIONS } from '../../src/rbac/scope.js';
 
 const SEEDED_ROLES: SeededRole[] = [
@@ -876,5 +877,29 @@ describe('seedRoles — idempotent + deterministic (AC-3)', () => {
     expect(seededAuditor.permissions).toEqual(defaultAuditor.permissions); // same contents
     expect(seededAuditor.permissions).not.toBe(defaultAuditor.permissions); // different instance
     expect(seededAuditor).not.toBe(defaultAuditor); // different bundle object
+  });
+});
+
+describe('Story 11b.4 — `memorial.review` (`2026-10-24-398` MA7; `-391` Confirm 1 A)', () => {
+  const PARIWAR = '11111111-1111-1111-1111-111111111111';
+
+  it('is held by `trustee_panel` and `super_admin` ONLY — ⛔ not the Trustee-Lite `pariwar_admin`', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('memorial.review'))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['super_admin', 'trustee_panel']);
+    expect(bundleForRole('trustee_panel')?.scopeCeiling).toBe('pariwar');
+  });
+
+  it('is LIVE for `trustee_panel` on the `pariwar` dimension (⛔ inert on arrival — footguns #18)', () => {
+    const resource = { pariwarId: PARIWAR, dimension: 'pariwar', value: PARIWAR } as const;
+    const grant = { pariwarId: PARIWAR, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: PARIWAR } as const;
+    expect(hasPermission([grant], 'memorial.review', resource)).toBe(true);
+    // Another Pariwar's Panel grant never reaches this Pariwar's memorials.
+    const other = { ...grant, pariwarId: '22222222-2222-2222-2222-222222222222', scopeValue: '22222222-2222-2222-2222-222222222222' };
+    expect(hasPermission([other], 'memorial.review', resource)).toBe(false);
+    // ⛔ A `pariwar_admin` grant does not satisfy it.
+    expect(hasPermission([{ ...grant, role: 'pariwar_admin' }], 'memorial.review', resource)).toBe(false);
   });
 });

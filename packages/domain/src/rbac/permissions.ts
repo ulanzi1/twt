@@ -767,7 +767,16 @@ export function permissionKey(value: string): PermissionKey {
 // presentation / rule keys; `banner.manage` is a two-person-published text banner (⛔ the campaign's carrier).
 // ⛔ NOT `district_admin`, `state_trustee`, `block_admin` on any (inert in both directions —
 // [[project_rbac_geo_scope_containment]]). `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 52 as const;
+//
+// ⭐ Story 11b.4 (author-commit `2026-10-24-398` MA7; ratified core `-391` Confirm 1 A) — 52 → 53, ONE key (68 → 69):
+// `memorial.review` — pariwar-dimension; `trustee_panel` (+ derived super_admin). The Trustee Panel reads a family's memorial
+// (every version, the history view), approves it, leaves parts out (each with one of MA6's four reasons) or says no, and may
+// withdraw its own approval (MA16). ⛔ There is ⛔ no edit: no act and no input field carries the family's words. REUSE CHECK —
+// ⛔ no existing key fits: `member.moderate` sanctions a MEMBER (the family author is ⛔ not one — Trap 1), `news.manage` is an
+// editor. ⛔ NOT `pariwar_admin` (Confirm 1 chose the Panel role over the Trustee-Lite reading of "trustees"), ⛔ NOT
+// `state_trustee` / `district_admin` (a state/district-ceiling grant is INERT on a pariwar-dimension key —
+// [[project_rbac_geo_scope_containment]]). `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 53 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1344,6 +1353,10 @@ export const SEED_PERMISSION_KEYS = [
   // days, ⛔ overlapping an open one), end, list. It shows a card in the app and sends ⛔ nothing — ⛔ step-up (recorded).
   // pariwar-dimension; `pariwar_admin` (+ derived super_admin).
   'known_people.run_campaign',
+  // Story 11b.4 (`2026-10-24-398` MA7, `-391` Confirm 1 A) — the family memorial's REVIEW: the queue, a version with its whole
+  // chain (the history view), the decision (approve · approve with parts left out · not approved — ⛔ no edit), and the
+  // withdrawal of the Trust's own approval (MA16). pariwar-dimension; `trustee_panel` (+ derived super_admin).
+  'memorial.review',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

@@ -91,6 +91,14 @@ export const CLAIM_CONTACT_MOBILE_FIELD_CLASS = 'claim_contact_mobile';
 export const DEATH_DATE_INDEX_FIELD_CLASS = 'death_date';
 
 /**
+ * ⭐ NEW (Story 11b.4, MA5 / MA15) — the family memorial's Tier-1 field class: the family's words, the photo's alt text
+ * (`memorial_submissions`) and the reviewer's internal notes (`memorial_review_decisions`, `memorial_withdrawals`). Keys
+ * on the deceased member's REAL `pariwarId`; matches `piiColumn(1, MEMORIAL_FIELD_CLASS)`. Declared ONCE here — the
+ * API's `memorial-crypto.ts` and `anonymizeMember`'s scrub both bind it. ⛔ Never re-declare it.
+ */
+export const MEMORIAL_FIELD_CLASS = 'memorial';
+
+/**
  * Envelope-encryption + blind-index key material for the member PII families. Structurally identical
  * to `apps/api`'s `EncryptionDeps` and `apps/jobs`'s `JobsEncryptionDeps` (both are
  * `{ kms, kekRef, hmacKeyRef }` over these same domain types), so BOTH apps pass their own bundle

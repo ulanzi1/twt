@@ -59,6 +59,10 @@ import { claimPeerMeshReplyAnswers } from '../schema/claim_peer_mesh_replies.js'
 import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 import { workplaceRequests } from '../schema/workplace_requests.js';
+import { memorialReviewDecisions } from '../schema/memorial_review_decisions.js';
+import { memorialSubmissions } from '../schema/memorial_submissions.js';
+import { memorialWithdrawals } from '../schema/memorial_withdrawals.js';
+import { MEMORIAL_FIELD_CLASS } from '../encryption/field-classes.js';
 import { eraseKnownPeopleLinks } from './known-people.js';
 // Story 6.36e — the nominee marks' erasure arm, imported DIRECTLY (⛔ the `nominee/` barrel — `member/` ↔ `nominee/` init order).
 import { eraseNomineeLinks } from '../nominee/member-links.js';
@@ -68,6 +72,14 @@ import { eraseNomineeLinks } from '../nominee/member-links.js';
 export interface AnonymizeEncryption {
   readonly kms: KmsProvider;
   readonly kekRef: KmsKeyRef;
+}
+
+/**
+ * ⭐ Story 11b.4 (MA15) — what the CALLER must still do after COMMIT: delete the family memorial's photo objects (storage
+ * is ⛔ transactional, so a delete inside the tx would outlive a rollback). Best-effort, logged by the caller.
+ */
+export interface AnonymizeMemberResult {
+  readonly memorialPhotoKeys: string[];
 }
 
 export interface AnonymizeMemberParams {
@@ -156,8 +168,47 @@ export async function anonymizeMember(
   client: Db,
   enc: AnonymizeEncryption,
   params: AnonymizeMemberParams,
-): Promise<void> {
+): Promise<AnonymizeMemberResult> {
   const { memberId, pariwarId } = params;
+
+  // ── ⭐ Story 11b.4 (MA15, Trap 10) — the FAMILY MEMORIAL about the member, keyed on `deceased_member_id` (= the member —
+  // the Ravi-mode session member is the deceased), UNCONDITIONALLY (⛔ inside the has-claims branch below: the row carries
+  // its own deceased key). Every version's words + alt text → sentinel; the reviewer's internal notes on those versions
+  // (decisions + Trust withdrawals) → sentinel. Only the four Tier-1 columns 0181 grants UPDATE on; every other column (the
+  // acts, reasons, offsets, the authorisation record) is governance history, kept. ⚠ Read the submission ids FIRST, then
+  // `= ANY(...)` — ⛔ never a correlated subquery through the builder ([[project_epic6_drizzle_correlated_subquery_bug]]).
+  // The photo keys are RETURNED: the caller deletes the objects after COMMIT, best-effort (logged, anonymous convention).
+  const memorialRows = await client
+    .select({ submissionId: memorialSubmissions.submissionId, photoObjectKey: memorialSubmissions.photoObjectKey })
+    .from(memorialSubmissions)
+    .where(eq(memorialSubmissions.deceasedMemberId, memberId));
+  const memorialPhotoKeys = memorialRows.flatMap((r) => (r.photoObjectKey === null ? [] : [r.photoObjectKey]));
+  if (memorialRows.length > 0) {
+    const memorialIds = memorialRows.map((r) => r.submissionId);
+    const memorialSentinel = await encSentinel(pariwarId, MEMORIAL_FIELD_CLASS, enc);
+    await client
+      .update(memorialSubmissions)
+      .set({
+        bodyCiphertext: memorialSentinel,
+        altTextCiphertext: sql`CASE WHEN ${memorialSubmissions.altTextCiphertext} IS NULL THEN NULL ELSE ${memorialSentinel} END`,
+      })
+      .where(inArray(memorialSubmissions.submissionId, memorialIds));
+    await client
+      .update(memorialReviewDecisions)
+      .set({ internalNoteCiphertext: memorialSentinel })
+      .where(
+        and(
+          inArray(memorialReviewDecisions.submissionId, memorialIds),
+          isNotNull(memorialReviewDecisions.internalNoteCiphertext),
+        ),
+      );
+    await client
+      .update(memorialWithdrawals)
+      .set({ internalNoteCiphertext: memorialSentinel })
+      .where(
+        and(inArray(memorialWithdrawals.submissionId, memorialIds), isNotNull(memorialWithdrawals.internalNoteCiphertext)),
+      );
+  }
 
   // ── member_identities ── overwrite the displayable mobile; RETAIN mobile_blind_index (AC4). ────────
   await client
@@ -612,4 +663,6 @@ export async function anonymizeMember(
     .where(
       sql`${dataExports.memberId} = ${memberId} AND ${inArray(dataExports.status, ['pending', 'ready'])}`,
     );
+
+  return { memorialPhotoKeys };
 }

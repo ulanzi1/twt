@@ -38,6 +38,10 @@ story's author-commit takes `-394` or later; ledger `an` (`am` is taken).
 ⭐ NOMINEE ONLY (v0.7, 2026-10-23): `-395` (author-commit, BigDev) — a published memorial is taken down **only on the
 nominee's request**; `-392` items 4–5 (within 7 days; an email to the approver) KEPT; the Panel was informed of `-393`.
 `-394` is held by 5.11's worktree (uncommitted) ⇒ this story's author-commit takes `-396` or later; ledger `ao`.
+⭐ RE-CHECKED (v0.8, 2026-10-23, `origin/main` `1268d47e`): launch-gate **Row 40 is 5.11's** (`member-alert-sms-fallback-live`,
+committed on its branch `0684fcb1`) ⇒ this story's row is **Row 41** (free on every branch + worktree). Migration `0181` is
+also PLANNED by 6.36e (worktree `6-36e-…`) — whichever commits first takes it. Ledger: 6.36e committed `al` + `am` ⇒ this
+story's `al` collides — re-letter this story's entries at the Task 0.1 rebase (the 6.36d precedent). Catalog still 52.
 -->
 
 # Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
@@ -50,7 +54,7 @@ Status: ready-for-dev
 negator** (`not` / `no` / `never` / `nothing` / `neither`, or a prohibition verb). A ⛔ placed before a
 positive clause is an **inversion**, not emphasis. Doubling (`⭐⭐`, `⛔⛔`) adds volume only.
 
-## ✅ PREFLIGHT — **STARTABLE for the build. ⛔ NOT launchable** until the public render lands and Row 40 closes (the Panel ruled Q1–Q5 and the confirms — `-391`).
+## ✅ PREFLIGHT — **STARTABLE for the build. ⛔ NOT launchable** until the public render lands and Row 41 closes (the Panel ruled Q1–Q5 and the confirms — `-391`).
 
 ⭐ **Authority.** `#decision-2026-08-28-162` **cl.3** (Trustee-ratified) binds this story by name:
 *"FAMILY-OWNED MATERIAL IS AUTHORISED AT THE POINT OF SUBMISSION … 11b.4 owes the authorisation **in its own
@@ -461,7 +465,7 @@ probe (AC1), ⛔ never from the full read; encrypt **before** the locked transac
 financial-truth-gate hazard (Trap 5).
 
 ### MA12 — The go-live fence: a launch-gate row **plus** a server switch, ⛔ not a feature flag
-⭐ **(a)** Add a row to `docs/launch-gate-inventory/inventory-roster.md`: **Row 40** in the roster's `### Row N — \`slug\``
+⭐ **(a)** Add a row to `docs/launch-gate-inventory/inventory-roster.md`: **Row 41** in the roster's `### Row N — \`slug\``
 block shape (the Row 39 precedent — gate_name, owner, closure_criteria, current_status, …): *"Family memorial authorship
 ⛔ not enabled in production until AC4's wording version — written on `-391`/`-393`, carrying M2 and M3′ — is in
 force (its `hiReviewed` true), 11b.4a has landed (with the operator take-down and the no-trace rule — `-393`, MA18), the AC14 tone review is recorded, the Story 0.9 risk (AC16 (8)) is
@@ -495,7 +499,7 @@ grief pacing.
 `pools.current_state` is `projectPoolState`, whose only non-test caller is `spawn.ts` (`pool.spawned`); ⛔ nothing in
 `apps/*/src` or `packages/*/src` appends `pool.opened_for_contributions`, `pool.closed` or `pool.settled` (the Epic 7
 window scheduler is unbuilt; `schema/pools.ts`: settled rows are *"FIXTURES"*). ⇒ every production pool stays `spawned`,
-so this surface — like every drive surface — opens nowhere until a close producer ships. Row 40 carries it (MA12);
+so this surface — like every drive surface — opens nowhere until a close producer ships. Row 41 carries it (MA12);
 AC16 (13) records it. ⚠ The UX's "post-close" is the **cycle** close (`CloseCycle`); keying the window on the pool's
 own `closed` is this row's reading — asked at Questions (8).
 ⭐ **The intro's name** uses the Pariwar's presentation mode, as every other member surface does (11b.21's chain — the
@@ -530,7 +534,7 @@ about a child's name may still prompt the reviewer's own withdrawal on `identifi
 grounds (`-391` Not covered: the Trust's own removal is unaffected).
 Rejected — (b) a superseding second decision: breaks "one decision per submission" and the reconstruction story.
 
-### MA17 — A server switch keeps the surface dark until Row 40 closes
+### MA17 — A server switch keeps the surface dark until Row 41 closes
 ⭐ **(a)** `MEMORIAL_AUTHORSHIP_ENABLED` in `apps/api/src/config.ts` (`env['MEMORIAL_AUTHORSHIP_ENABLED'] === '1'`, the
 `TURNSTILE_FAIL_OPEN` shape — **off by default**; on in `apps/api/tests/integration/_setup.ts`). Off ⇒ `GET
 /member/memorial/entry` answers `{ memorialEntry: false }`, the member GET answers `{ memorial: null }`, and member writes
@@ -556,7 +560,7 @@ approver's address): ADR-0040 admits exactly two, fenced by `apps/jobs/tests/sta
 ADR or an ADR-0040 amendment **first**. ⇒ **In this row:** MA16 takes ⛔ no family request; `family_asked` is ⛔ not minted;
 `memorial_withdrawal_actor` stays `family · trust`.
 ⚠ Cost: before 11b.4a lands, a family who wants an **approved** memorial taken back for a reason outside the four grounds (an
-outsider named) has ⛔ no path — but ⛔ nothing is shown meanwhile, and Row 40 holds go-live until 11b.4a. Rejected — (b) build
+outsider named) has ⛔ no path — but ⛔ nothing is shown meanwhile, and Row 41 holds go-live until 11b.4a. Rejected — (b) build
 the operator path here: a new key, a new actor value, an ADR for the email and a 7-day watch, all for a memorial ⛔ nobody can
 yet see.
 
@@ -826,7 +830,7 @@ helpdesk conversation** after a refusal; (5) **non-nominee authors** (Q1 B/C —
 (7) **a family's own request to erase their words** through the helpline (`-391` Q5 A's follow-up) — MA15 erases with the member's record; ⛔ no family-initiated
 path exists, and the author is ⛔ not a data subject of any export route; (8) **Story 0.9 un-attested** — every Pattern-4 /
 grief-pacing claim here is **⛔ not validated against a family conversation** (`_bmad-output/research/
-p0-2b-bereaved-spouse.md` holds only `_AWAITING_CONVERSATION_CONDUCT_` placeholders) — Row 40 carries it; (9) **the
+p0-2b-bereaved-spouse.md` holds only `_AWAITING_CONVERSATION_CONDUCT_` placeholders) — Row 41 carries it; (9) **the
 family can lose the account** — `disabled-T+90` (unbuilt) must ⛔ not cut the family off, **and** a withdrawal of the
 deceased's membership is **unguarded today** (`withdrawal/handlers.ts` `assertWithdrawable` checks only the member
 state; after it, `termination-block-seam.ts` denies every session) — routed to the withdrawal / claims owner, ⛔ not fixed
@@ -837,7 +841,7 @@ the entry on home rather than in `<NomineeConsole>`, reason copy instead of a re
 link (UX-DR50/56), and the handover hook's rate-limit case shown as a failed send (AC7a) — each with its reason
 (MA12/Trap 4/MA6/AC17); (13) **⛔ no production pool reaches `closed`** — the
 surface is inert until the Epic 7 window scheduler appends `pool.closed` (MA14; trigger: the first non-test producer of
-`pool.closed`; Row 40 carries it)
+`pool.closed`; Row 41 carries it)
 **And** the existing open item (title verbatim) *"⛔ FOUR PRODUCERS THE EPIC AC NAMES THAT DO ⛔ NOT EXIST — the ruled posture is
 RENDER NOTHING"* is **annotated** (family story: the **write side** built at 11b.4, ⛔ no public read model until 11b.4a;
 render still nothing) — ⛔ not closed, ⛔ not deleted.
@@ -859,8 +863,8 @@ with this branch's journal, otherwise on a fresh DB on **:5434** (the 6.35 prece
 e.g. "N/N"), integration included; the migration applies on the test DB; the Completion Notes say which gates ran
 and which were vacuous; the row moves `in-progress → review` only then.
 
-### AC19 — Dark until Row 40 closes (MA12, MA17)
-**Then** `docs/launch-gate-inventory/inventory-roster.md` gains **Row 40** in the Row 39 block shape with MA12's
+### AC19 — Dark until Row 41 closes (MA12, MA17)
+**Then** `docs/launch-gate-inventory/inventory-roster.md` gains **Row 41** in the Row 39 block shape with MA12's
 closure criteria; `MEMORIAL_AUTHORSHIP_ENABLED` is **off by default** and a test proves, with it off, `entry` →
 `{ memorialEntry: false }`, the member GET → `{ memorial: null }` and each member write → the neutral 404 — the write
 legs run **without** an elevation (proving the switch answers before the step-up gate).
@@ -875,7 +879,9 @@ legs run **without** an elevation (proving the switch answers before the step-up
         this story moved, re-derive its cite. Re-check every NUMBER in the header comment across **all branches and
         worktrees** (`git for-each-ref` + each worktree's working copy). Run the five PREFLIGHT STOP checks. Confirm the
         `member_nominee_versions.version_id` is still the PK and `getNomineeVersionHeads` still omits it (MA5
-        `handover_nominee_ref` — the memorial-local query).
+        `handover_nominee_ref` — the memorial-local query). ⚠ At v0.8 three numbers were contested: Row 40 (5.11's — this story
+        uses **Row 41**), migration `0181` (6.36e plans it too — take the next free at commit time), and ledger `al` (6.36e's —
+        re-letter this story's `2026-10-23` entries after main's at the rebase, keeping their order).
   - [ ] 0.2 Put MA1–MA18 to BigDev (⭐ = recommended) and record each answer verbatim in the Dev Agent Record.
         ⚠ If MA1 is answered (b), STOP — the story must be re-planned.
   - [ ] 0.3 The routing note was **sent and ruled** (`-391`, 2026-10-23 — transcribed at v0.4). `-391` item 3's rider
@@ -1004,7 +1010,7 @@ legs run **without** an elevation (proving the switch answers before the step-up
         imports; `microcopy.yaml` copy_globs + code_globs (AC14); `scripts/microcopy/memorial.test.ts` with planted teeth.
   - [ ] 8.2 Tone-review checklist row, ⚠ UN-ATTESTED.
   - [ ] 8.3 Friction-budget row; commit; then `pnpm friction:check`.
-  - [ ] 8.4 Launch-gate inventory **Row 40** (MA12) + the switch-off test (AC19).
+  - [ ] 8.4 Launch-gate inventory **Row 41** (MA12) + the switch-off test (AC19).
 - [ ] **Task 9 — Records** (AC16)
   - [ ] 9.1 `deferred-work.md` items (1)–(13) + the FOUR-PRODUCERS annotation.
 - [ ] **Task 10 — Verify and close** (AC17, AC18)
@@ -1090,7 +1096,8 @@ counts over shared fixtures.
 
 ### ❓ Questions for BigDev (do ⛔ not block the story; MA1–MA18 are written as defaults)
 1. ~~**Send the routing note?**~~ **Answered** — sent and ruled (`-391`), Q3's residue clarified (`-392`).
-2. **MA1 split** — agree to mint `11b-4a-family-memorial-public-render` at Task 1.3?
+2. **MA1 split** — agree to mint `11b-4a-family-memorial-public-render` at Task 1.3? ⭐ BigDev, 2026-10-23: *"I am fine with
+   11b-4a"* — record it verbatim at Task 0.2.
 3. **MA2 / MA4** — defer kinship (epic step (d)) and emphasis (epic step (b))?
 4. **AC7 limits** — 6,000 code points for the story, 300 for alt text?
 5. **MA13 / MA16** — no new version after `approved`, with the Trust able to withdraw a mistaken approval?
@@ -1100,7 +1107,8 @@ counts over shared fixtures.
 8. **MA14** — ⛔ no production code moves a pool to `closed` today, so the surface stays dark until the Epic 7 window
    scheduler ships (true of every drive surface). Keep the window on the pool's `closed` (⭐), or key it on the
    **cycle** close the UX names (`CloseCycle`)?
-9. **MA18** — build the helpline operator's take-down (`-393`) with the public render in 11b.4a (⭐), or here?
+9. **MA18** — build the helpline operator's take-down (`-393`) with the public render in 11b.4a (⭐), or here? ⭐ BigDev,
+   2026-10-23: *"I am fine with 11b-4a"* — (a), recorded at Task 0.2.
 10. ~~**`-392` items 4–5**~~ **Answered** — kept; and only the nominee may ask (`-395`).
 
 ---
@@ -1128,3 +1136,4 @@ counts over shared fixtures.
 | 2026-10-23 | v0.5 | The Panel clarified Q3 (`-392`, Trustee-ratified, relayed by BigDev): take-downs are discouraged; a published memorial is taken down only for a genuine reason, the **helpline operator** decides on merit, removes it within 7 days, and an email goes to the approver. New **MA18** (PROPOSED, ⭐ in 11b.4a): the operator's take-down — key for `helpline_operator`, a `helpline` withdrawal actor, `family_asked` + merit note, the 7-day clock, the approver email (needs a new ADR — ADR-0040's identity-read fence). Here: MA16 takes ⛔ no family request; `family_asked` ⛔ not minted. Author-commit → `-393`+. Row stays `ready-for-dev`. |
 | 2026-10-23 | v0.6 | The Panel withdrew `-391`'s Q3 rider (`-393`, Trustee-ratified, relayed by BigDev) and asked for soft measures; BigDev chose M1 (a removal leaves no trace), M2 (an honest helpline notice at Send), M3′ (a preview line, BigDev's words) and M4 (a smaller fix first). AC4 carries M2 + M3′ (⛔ no "cannot be taken down"); MA5 — revocable after publication through the helpline; MA18 rewritten (⛔ no merit test; `-392` items 4–5 pending confirmation); AC16 (1) carries M1; author-commit → `-394`+. Row stays `ready-for-dev`. |
 | 2026-10-23 | v0.7 | `-395` (author-commit, BigDev): a published memorial is taken down only on the **nominee's** request (verified by a call back to the nominee recorded on the submission — MA18); `-392` items 4–5 (within 7 days; email to the approver) KEPT; the Panel informed of `-393`. `-394` is 5.11's ⇒ this story's author-commit → `-396`+. Row stays `ready-for-dev`. |
+| 2026-10-23 | v0.8 | Readiness re-check at `origin/main` `1268d47e`: launch-gate Row 40 is 5.11's (committed) ⇒ this story's row is **Row 41**; migration `0181` also planned by 6.36e (first to commit takes it); ledger `al` collides with 6.36e's (re-letter at the Task 0.1 rebase). BigDev *"I am fine with 11b-4a"* noted against Questions 2 (MA1) and 9 (MA18). Row stays `ready-for-dev`. |

@@ -10,7 +10,7 @@ claims below were derived at b883dc15 (perishable). Re-check before Task 1:
 
 STATUS: ready-for-dev (created 2026-10-22 via `bmad-create-story 6.35`; validated 2026-10-22, v1.1 + re-validated v1.2; v1.3 BigDev direction — §0 gate resolved;
 v1.4 validated 2026-10-23 against `origin/main` `69e35f73` — the §0 gate RE-OPENED for ONE non-blocking Panel question, PQ1, the reminder's language
-fallback; routing note DRAFTED, ⛔ sent).
+fallback; v1.5 2026-10-23 — PQ1 RULED A by the Panel, Decision `2026-10-23-385`: the reminder falls back to the Pariwar's language; built now).
 
 START CONDITION — MET at the pin: rows 6-27 (a), 6-27b, 6-27c, 6-27d, 6-30, 6-31, 6-34, 6-37e and 5-12 / 5-13 are `done` on `main`.
 6.35 changes ONE domain read that 6.27c and 6.31 both call (`resolvePeerRequestLocale`) and the two senders' config checks; it
@@ -25,7 +25,7 @@ and edits `schema/claim_peer_mesh_pings.ts`, both begin inputs and both child ca
 NUMBERS (footguns #19 / #42(e)): this file names ⛔ migration number, decision id, roster row number or ledger letter that is not
 yet TAKEN. At the pin `main` held migrations to 0178, decisions to `-381`, roster Rows to 39, ledger `2026-10-22u`. As of
 2026-10-23 (v1.4 validation): `-382` and `-383` are on `main` (3.3c, 8.15 LANDED); `-384` is COMMITTED on `story/6-36d-…`
-(Trustee-ratified, nominees — ⛔ language) ⇒ next free ≥ `-385`; ledger keys `2026-10-23a`–`f` on `main`, `23b` / `23f` / `23g`–`j`
+(Trustee-ratified, nominees — ⛔ language) and `2026-10-23-385` (this story's PQ1 ruling, `73183745`) is on this branch ⇒ next free ≥ `-386`; ledger keys `2026-10-23a`–`f` on `main`, `23b` / `23f` / `23g`–`j`
 on 6-36d (its `b` / `f` collide with `main`'s; it is ACTIVE — `h`–`j` were taken during this validation) ⇒ the next free `2026-10-23` letter ≥ `k` (this pass takes `k`); this branch already holds `2026-10-22ae` / `af`
 (8.15's `eaecea6b` on `main` ALSO used `22ae` — told apart by story name; re-letter at landing per `-366` decision 6); migrations
 still 0178 everywhere, 6-36d's story names 0179; roster Rows still to 39. Each is "the next free one" at the moment of ITS commit —
@@ -39,8 +39,9 @@ and stored is the AUTHOR's (`-305` §2 item 2, author-commit: *"saved on the pho
 it — ⛔ never on first launch"*). v1.3 recorded the gate RESOLVED; ⚠ v1.4 RE-OPENS it for ONE case — see the body section
 "§0 GATE": a member who CHOSE a language whose WhatsApp reminder template is unusable (Meta refuses / unset) gets ⛔ reminder under
 WR6, which narrows `-303` Q1 A's *"plus one WhatsApp reminder"*; sending the Pariwar's language instead narrows the rider ⇒ two
-ratified clauses conflict ⇒ the Panel's. ⭐ ONE NON-BLOCKING question **PQ1** routed (`trustee-panel-routing-note-2026-10-23-6-35-reminder-language-fallback.md`,
-DRAFT, ⛔ sent; our reading A — the Pariwar's language); it gates go-live (Row 35), ⛔ the merge or any Task. Every other item MATCHES
+ratified clauses conflict ⇒ the Panel's. ⭐ ONE NON-BLOCKING question **PQ1** routed (`trustee-panel-routing-note-2026-10-23-6-35-reminder-language-fallback.md`)
+and ⭐ **RULED A** (`2026-10-23-385`, Trustee-ratified, DR + KB, 2026-10-23): the reminder goes in the Pariwar's language when it
+cannot go in the member's chosen one — built now (LS10 (b′) A). Every other item MATCHES
 on BigDev's direction (LS4 (b), LS10 (b) for the TEXT with the T-states as DEFINED, LS15 (b) behind its render-test gate). A Task 0.2
 answer that departs from those, a DLT-rejected text locale (S4), or a change to the T-states table re-opens the rest. ⛔ Kept OUT
 whatever happens: LS10 (c) for the TEXT.
@@ -137,9 +138,12 @@ language's template is the unusable one), and that waiting means a short delay f
 decision 1; T2 is transient) but NEVER for the REMINDER (Meta's refusal is permanent and Row 35 (b) allows go-live with it) — and
 was proposed: the TEXT waits (LS10 (b), unchanged); the REMINDER's fallback is put to the Panel as a NON-BLOCKING question, our
 reading A (the Pariwar's language), gating go-live; Task 3 builds the text wait and keeps the reminder fallback behind the ruling.
-BigDev: *"yes, write it that way"*. ⇒ PQ1 (below), LS10 (b′) for the reminder, the routing note drafted (⛔ sent).
+BigDev: *"yes, write it that way"*. ⇒ PQ1 (below), LS10 (b′) for the reminder, the routing note drafted.
 
-## ⚖️ §0 GATE — ONE NON-BLOCKING PANEL QUESTION (PQ1), THE REST MATCH (the Panel template, `trustee-panel-routing-note-TEMPLATE.md`; each ratified text quoted verbatim)
+**⭐⭐ The Panel's ruling (2026-10-23, relayed by BigDev): *"by DR and KB"* / *"go with option A"*** ⇒ Decision `2026-10-23-385`
+(Trustee-ratified, committed alone `73183745`): PQ1 — A. LS10 (b′) is built as **A**; the interim B is ⛔ built.
+
+## ⚖️ §0 GATE — ONE PANEL QUESTION (PQ1), RULED A BY `-385`; THE REST MATCH (the Panel template, `trustee-panel-routing-note-TEMPLATE.md`; each ratified text quoted verbatim)
 
 > ⚠ **v1.4 (2026-10-23).** v1.3 headed this section "RESOLVED" with every row MATCH. A fresh-context check found G5 / G6 false for
 > ONE group — a member who picks a language whose template is unusable while their Pariwar's is usable (e.g. English in a Hindi
@@ -155,7 +159,7 @@ BigDev: *"yes, write it that way"*. ⇒ PQ1 (below), LS10 (b′) for the reminde
 | G2 | `-310` CF1 A (as put): *"the Pariwar's language until the setting exists; then each member's choice (our suggestion). The WhatsApp reminder at 48 hours follows the same rule."* | Member's choice once made; the reminder reads it again at its own begin (WR14) | MATCH |
 | G3 | (CF1 A is SILENT on a member who never chooses once the setting exists; so is `-305` §2 item 2) | A non-chooser keeps the Pariwar's language — exactly today's (I2) | MATCH — the AUTHOR'S READING (the note's own premise: the Pariwar's default is the best fact we have; a non-chooser has ⛔ recorded preference for G1 to honour), recorded as such in Task 0.3, ⛔ cited as CF1's words. ⚠ CF1 A's interim is *"until the setting exists"*; after that the only text giving a non-chooser the Pariwar default is `-303`'s NOT-ratified reading, never shown to the Panel (`-305` §1 (a)). Moot while every Pariwar's `locale_default` is `hi` — a Pariwar with `en` makes it live (S1). Under LS4 (b) such a Pariwar's non-chooser sees a Hindi app and gets English texts |
 | G4 | `-305` §2 item 2 (author-commit): *"saved on the phone and recorded on the server when the member changes it — ⛔ never on first launch"* | PUT only on an explicit change; a login-screen choice from an earlier app process is dropped (I1, LS5) | MATCH |
-| G5 | `-303` not-covered list (⛔ ruled; ⛔ in the note put to the Panel): *"if Meta refuses, the reminder does ⛔ not go, and the text still does."* — 6.31 WR6: *"⛔ reminder in that locale; the text still goes."* | A recipient whose language's reminder template is unusable (unset or refused — T-states): until PQ1 is ruled, ⛔ reminder (B — the interim build); on PQ1 A, the reminder in the Pariwar's language (LS10 (b′)). Their text is unaffected; every other recipient's reminder goes | ⚠ **RE-OPENED ⇒ PQ1.** MATCH with WR6 (author-commit) — but NEW in effect for a member who picks a language other than their Pariwar's: today the Pariwar-language reminder (CF1 A interim), after 6.35 ⛔ reminder if that language is refused (Row 35 (b) — reachable in production). It rests on `-303`'s not-covered line (never put to the Panel), against Q1 A's reminder (G10). ⇒ the non-blocking PQ1, gating Row 35 |
+| G5 | `-303` not-covered list (⛔ ruled; ⛔ in the note put to the Panel): *"if Meta refuses, the reminder does ⛔ not go, and the text still does."* — 6.31 WR6: *"⛔ reminder in that locale; the text still goes."* | A recipient whose language's reminder template is unusable (unset or refused — T-states) while their Pariwar's is usable: the reminder in the Pariwar's language (LS10 (b′) A, `-385`); a recipient with ⛔ usable template at all (their language IS the Pariwar's, or both unusable) gets ⛔ reminder / the Pariwar held, as today. Their text is unaffected; every other recipient's reminder goes | ⭐ **RULED — `-385` PQ1 A** (2026-10-23): the rider gives for the reminder in this case; MATCH. The analysis that routed it, kept: **RE-OPENED ⇒ PQ1.** MATCH with WR6 (author-commit) — but NEW in effect for a member who picks a language other than their Pariwar's: today the Pariwar-language reminder (CF1 A interim), after 6.35 ⛔ reminder if that language is refused (Row 35 (b) — reachable in production). It rests on `-303`'s not-covered line (never put to the Panel), against Q1 A's reminder (G10). ⇒ the non-blocking PQ1, gating Row 35 |
 | G6 | 6.27c / 6.31 config holds as BUILT (author-commit): a held text past the answer window stays `not_sent`; a held reminder past +72 h gets ⛔ row | TEXT: the same consequences, now scoped to the ONE recipient whose OWN language's template is unusable (T-states); a non-template gap still holds the Pariwar exactly as today | MATCH for the DELAY. The past-window DROP is today's class (`-349` FOUND (a): *"the neighbours' request — held; the neighbours are never asked"*) with a NEW reach: a member of a Pariwar whose own locale is usable. T1 cannot reach production (`-349` decision 1, G11); T2 (a pre-flight fault) can — TOLD in the PQ1 note, ⛔ asked (a fault, ⛔ a policy choice). The REMINDER half is PQ1 (G5) |
 | G7 | `-263` FQ10 A: *"The neighbours can ⛔ never block a claim on their own."* | A waiting text delays a SIGNAL; ⛔ claim state, ⛔ payment path touched | MATCH |
 | G8 | `epics.md` freeze row 10: *"every member-visible string carries Hindi parity; English never primary on member surfaces"* (+ `:540` ADR / SCP rule) | English is shown ONLY to a member who explicitly picked it (LS4 (b)); every string keeps Hindi parity; FR-68 itself requires *"Language switcher in profile"* | MATCH — ⛔ ADR / SCP |
@@ -163,11 +167,10 @@ BigDev: *"yes, write it that way"*. ⇒ PQ1 (below), LS10 (b′) for the reminde
 | G10 | `-303` ruling item 1 (Q1 A): *"EACH OF THE FIVE IS TEXTED, NAMING THE MEMBER … plus one WhatsApp reminder after two days (48 hours), with the same words, to those of the five who have ⛔ not answered and have chosen WhatsApp messages from the Trust"* | TEXT: each of the five is texted, a waiting one once its language is usable (LS10 (b)); REMINDER: per PQ1 | MATCH for the text (the delay; the T2 past-window edge told, G6); the REMINDER is the clause PQ1 B narrows (PQ1 A narrows G1 instead) |
 | G11 | `-349` decision 1: *"no claim flow that sends a text — … the neighbours' request — may run in production while any template it sends is unapproved or its id unset"* | T1 (TEXT, id unset) is a dev / pre-go-live state only | MATCH — it is WHY the text can wait without the Panel |
 
-⇒ **⛔ BLOCKING routing note owed; ONE non-blocking question routed — PQ1** (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-35-reminder-language-fallback.md`,
-DRAFT, ⛔ sent until BigDev sends it — [[feedback_shown_to_panel_means_sent]]): *when a member has chosen a language and the reminder
-cannot go in it, A — the Pariwar's language, or B — ⛔ reminder?* Our reading **A**. It gates go-live (Row 35 (b) gains the leg), ⛔
-the merge, ⛔ any Task: Task 3 builds the per-recipient reminder with B's behaviour for that case (the interim) and A behind the ruling
-(LS10 (b′)). The rest re-opens (a blocking note from the template; Task 3 waits) ONLY if: Task 0.2 departs from LS4 (b) / LS10 (b) for
+⇒ **⛔ BLOCKING routing note owed; ONE non-blocking question routed — PQ1** (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-35-reminder-language-fallback.md`):
+*when a member has chosen a language and the reminder cannot go in it, A — the Pariwar's language, or B — ⛔ reminder?* Our reading
+**A** — ⭐ **RULED A** (`2026-10-23-385`, Trustee-ratified, 2026-10-23). Task 3 builds A (LS10 (b′)); Row 35 (b)'s leg records it
+ruled. The rest re-opens (a blocking note from the template; Task 3 waits) ONLY if: Task 0.2 departs from LS4 (b) / LS10 (b) for
 the TEXT / LS15 (b); the T-states table changes; or S4 fires (a text template is DLT-REJECTED — ⛔ ruling covers a language whose
 neighbour text can never be sent; `-349` is the SMS analogue: a wording change is the Panel's). ⛔ KEPT OUT whatever happens: **LS10 (c)
 for the TEXT** — sending a member who chose English the Hindi TEXT because the English template is unusable — it narrows G1 with ⛔
@@ -191,8 +194,8 @@ need (the text waits only briefly — G6 / G11).
   alone), recorded on the row with WHY (`locale`, `locale_source`).
 - **I4 — ⛔ Wrong-language TEXT.** A recipient whose language's TEXT template is unusable (T1–T3) is ⛔ sent the other language's
   text (LS10 (c) — that would narrow `-303`'s rider); they WAIT (LS10 (b)). *Proof:* AC4 (ii)–(iv) legs: an `en` template unusable ⇒
-  the English-chooser waits, ⛔ a Hindi text to them. ⚠ The REMINDER is ⛔ under I4: until PQ1 is ruled it does ⛔ go in the other
-  language either (B — ⛔ reminder); on PQ1 A it goes in the Pariwar's language and records why (LS10 (b′), AC5).
+  the English-chooser waits, ⛔ a Hindi text to them. ⚠ The REMINDER is ⛔ under I4: by `-385` (PQ1 A) it goes in the Pariwar's
+  language and records why (LS10 (b′), AC5).
 - **I5 — One attempt, one language.** A re-claimed ping (a prior attempt may have sent) re-uses the `locale` recorded at its first
   begin — ⛔ re-resolved — so a possible second text carries the same words; a row begun by pre-6.35 code (`locale IS NULL`) was
   sent in the Pariwar's default, so its re-claim writes THAT (LS9). Backstopped in the database: once written, `locale` cannot
@@ -213,13 +216,12 @@ them, ⛔ a benefit; the family's claim is untouched — `-263` FQ10 A). In the 
 the language the app speaks to you, and the language the Trust texts you in when it asks whether you knew a member who has died —
 picking a language never changes whether, when, or how much any family is paid, or whether you are chosen to be asked. If the Trust
 cannot yet text you in the language you picked, the text waits until it can — it is never sent to you in the other language — but
-if the time to answer has passed by then, it is not sent at all. If the WhatsApp reminder cannot come in your language, it [does
-not come / comes in your Pariwar's language — the Trustees are deciding]."* (LS10 (b) / (b′), G5 / G6, PQ1 — the bracket is
-settled by the ruling, and this sentence is updated with it.) Checked against the Niyamavali: ⛔ clause governs the language of the app or of these texts (⛔ a benefit predicate;
+if the time to answer has passed by then, it is not sent at all. If the WhatsApp reminder cannot come in your language, it comes in
+your Pariwar's language."* (LS10 (b) / (b′), G5 / G6; the reminder half ruled by the Trustees, `-385` PQ1 A.) Checked against the Niyamavali: ⛔ clause governs the language of the app or of these texts (⛔ a benefit predicate;
 the Niyamavali is a rulebook, ⛔ binding — [[feedback_niyamavali_rulebook_not_spec]]). ⚠ LS10's template gate can DELAY — and, past
 the window or +72 h, DROP — neighbour texts / reminders; that is a provisioning gate on a SIGNAL (`-263` FQ10 A: *"The neighbours can ⛔
-never block a claim on their own."*), ⛔ a predicate on a member's benefit. Until PQ1 is ruled, a member who picked English whose
-English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi neighbour does — the member sentence above says so.
+never block a claim on their own."*), ⛔ a predicate on a member's benefit. By `-385`, a member who picked English whose English
+reminder template is unusable gets the reminder in their Pariwar's language — the member sentence above says so.
 
 ## ⭐ FOUND FACTS (at b883dc15 — each re-run at Task 0.1)
 
@@ -496,11 +498,12 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
   `locale_source = 'pariwar_default'` — ⛔ the member's choice (I5; dev/test data only — ⛔ production, S1). Add `locale` to the column
   GRANT (`GRANT UPDATE ("locale")`) and to `claim_peer_mesh_pings_guard_delivery()`'s `delivery_cols`, plus a written-once arm
   (`IF OLD.locale IS NOT NULL AND NEW.locale IS DISTINCT FROM OLD.locale THEN RAISE …` — link_code's shape, 0166 `:101-104`) — `CREATE OR
-  REPLACE` from 0166's FULL body (F15); DROP + re-ADD both `locale_source` CHECKs as `IN ('pariwar_default','member_choice')` under
-  their SAME names (pings, reminders).
+  REPLACE` from 0166's FULL body (F15); DROP + re-ADD both `locale_source` CHECKs under their SAME names — pings `IN
+  ('pariwar_default','member_choice')`, reminders `IN ('pariwar_default','member_choice','pariwar_fallback')` (the third value is
+  `-385`'s fallback, LS10 (b′) — reminders only).
 - **LS10 — A recipient whose language's template is unavailable. ⭐ (b) for the TEXT, with the T-states below as its COMPLETE definition
   (BigDev's direction; §0 G6 MATCH on exactly this definition — a change to the table re-opens the gate); the REMINDER's fallback is
-  (b′) — PQ1, the Panel's, built B until ruled (v1.4, BigDev: *"yes, write it that way"*).** The facts every option rests on: (1) 6.27c's DLT id and pre-flight are GLOBAL per locale
+  (b′) — PQ1, the Panel's: ⭐ RULED A (`-385`) — the Pariwar's language.** The facts every option rests on: (1) 6.27c's DLT id and pre-flight are GLOBAL per locale
   (F12), and 6.37 AC9 (a) deliberately checks only the Pariwar's OWN locale; (2) 6.31's template names are PER Pariwar (F13); (3) a
   hold DROPS as well as delays — past the claim's answer window an unsent text stays unsent (`not_sent`, F12), past +72 h an un-begun
   reminder gets ⛔ row (F13); (4) `-303`'s not-covered list: *"if Meta refuses, the reminder does ⛔ not go, and the text still does"*,
@@ -523,7 +526,7 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
   | **T1 unset** | `sms.dlt.template_id.peer_mesh.request.<l>` missing ⇒ gap `config:dlt_template_id_missing:<l>` (unreachable in production — `-349` decision 1) | `wa.template.peer_mesh.reminder.<l>.<pariwarId>` missing ⇒ gap `config:wa_template_missing:<l>` | that locale's recipients WAIT (below) — the REMINDER per (b′) |
   | **T1′ invalid name** | — | a name set but failing `TEMPLATE_NAME_FORM` ⇒ `config:wa_template_invalid:<l>` (`:206`) | as T1 |
   | **T2 pre-flight failed** | id set, the pre-flight returns its existing gap (a fault, or a transient with ⛔ usable pass — today's rule, `:228-232`) | — (⛔ pre-flight for WhatsApp) | that locale's recipients WAIT |
-  | **T3 refused** | DLT-REJECTED: ⛔ representable in code (the id is simply never provisioned ⇒ looks like T1) — ⚠ ⛔ allowed to persist: S4 STOPS the story / go-live if one is recorded (G-gate re-opens) | Meta refuses (Row 35 (b)): ⭐ MERGED with T1 — the name stays UNSET; ⛔ sentinel value, ⛔ new config key, ⛔ new outcome | as T1 — the REMINDER per (b′) (PQ1): B ⇒ wait; past +72 h ⛔ row (or `skipped_late`, F26) — the recipient gets ⛔ reminder, their text unaffected; A ⇒ the Pariwar's language. The REASON lives in the Row 35 (b) Decision, ⛔ a row |
+  | **T3 refused** | DLT-REJECTED: ⛔ representable in code (the id is simply never provisioned ⇒ looks like T1) — ⚠ ⛔ allowed to persist: S4 STOPS the story / go-live if one is recorded (G-gate re-opens) | Meta refuses (Row 35 (b)): ⭐ MERGED with T1 — the name stays UNSET; ⛔ sentinel value, ⛔ new config key, ⛔ new outcome | as T1 — the REMINDER per (b′) A (`-385`): a chooser whose Pariwar's language is T0 ⇒ the Pariwar's language (`pariwar_fallback`); ⛔ usable template at all ⇒ wait; past +72 h ⛔ row (or `skipped_late`, F26) — ⛔ reminder, their text unaffected. The REASON lives in the Row 35 (b) Decision, ⛔ a row |
   | **TX read fault** | TEXT: the DLT keys are GLOBAL, so a fault on locale l's key ⇒ l is treated as UNUSABLE (WAIT; alarm `config:secret_manager`); a Pariwar is HELD on TX only when its OWN default locale's key faults — else a fault on the `en` key would hold every all-Hindi Pariwar, what 6.37 AC9 (a) avoided (`:224-229`) | REMINDER: `config:wa_template_unreadable` (`:203`) — the read is per Pariwar ⇒ that Pariwar HELD exactly as today | the TEXT row as stated; the REMINDER a NON-template gap ⇒ the Pariwar is HELD exactly as today (park, ⛔ give-up, alarm) |
 
   Other NON-template gaps (`config:counsel_basis_pending`, `config:locale_unavailable`, the helpline, …) hold the Pariwar exactly as
@@ -551,14 +554,17 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
     — a parked row is re-claimed at once by any begin (F25), so the park ALONE does ⛔ stop a re-send; past the window it is listed and ①
     finishes it `error` / `recheck:claim_decided` exactly as a held Pariwar's parked row is today; (3) the begin check above. ⛔ Re-sent
     in another language (I5), ⛔ given up while parked.
+  - REMINDER — first the fallback (`-385`, (b′) A): a recipient whose effective locale is unusable for ITS Pariwar but who CHOSE it
+    (`member_choice`) while the Pariwar default's template is T0 is ⛔ waiting — they are sent with the default's template
+    (`pariwar_fallback`). A reminder WAITS only when it has ⛔ usable template at all: its effective locale IS the Pariwar default's (a
+    non-chooser, or a chooser of the default) and that one is unusable while the other is usable (both unusable ⇒ the Pariwar held).
   - REMINDER, un-begun: the SWEEP's listing `listDuePeerMeshWaReminderPings` (F26) gains `LEFT JOIN members m ON m.pariwar_id =
     wr_p.pariwar_id AND m.member_id = wr_p.member_id` + `pariwar_passport pp ON pp.pariwar_id = wr_p.pariwar_id` and returns
-    `effectiveLocale` (amend its "ids only" DELIBERATE block); for a ping whose locale is unusable for ITS Pariwar the sweep does
+    `effectiveLocale` and `localeSource` (amend its "ids only" DELIBERATE block); for a ping with ⛔ usable template (above) the sweep does
     `resumeAt = dueCursor; continue` and ⛔ adds the claim to `seenClaims` — else a sendable sibling ping of the same claim is skipped;
     the child's begin re-checks and returns `waiting_template` with ⛔ row (the child counts it explicitly — its catch-all would file it
     under `passed`, `:588`). Past +72 h it is never due again ⇒ ⛔ row, or `skipped_late` if a sibling's child begins it first (F26).
-    ⭐ This is (b′)'s **B** (the interim); under **A** the begin picks the Pariwar's language's template instead (below).
-  - REMINDER, a re-claim (marker NULL — nothing sent) whose newly resolved locale is unusable: under B the begin returns
+  - REMINDER, a re-claim (marker NULL — nothing sent) whose newly resolved locale has ⛔ usable template (a chooser falls back, as above): the begin returns
     `waiting_template` with ⛔ write — the row keeps its holder (`sweep:held` or a lapsed lease), the sweep skips it by its effective
     locale each tick, and past +72 h `markLatePeerMeshWaReminders` (`:774-797`, every un-marked `attempting` row) finishes it
     `skipped_late`. ⛔ `parkPeerMeshWaReminder` (it needs the marker SET, F26) and ⛔ a `config:*` detail (the grammar rejects it).
@@ -576,13 +582,12 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
   *Cost (b):* the listing filters (text SQL, reminder sweep-side), a `waiting_template` begin result in both domains, the park's locale
   arm and the listing's `attempting` arm, the count read, the alarm; S6 STOPS the story if the park or a listing cannot take the locale
   filter without a new column or detail value.
-  **(b′) — the REMINDER, PQ1 (the Panel's, NON-BLOCKING; our reading A).** A recipient whose OWN effective locale's reminder template is
-  T1 / T1′ / T3 while the PARIWAR's default locale's is T0: **B (built now — the interim):** WAIT as above ⇒ ⛔ reminder (WR6 as
-  written). **A (built on the ruling):** the begin picks the Pariwar default locale's template name and records `template_name` /
-  `locale` of THAT locale and `locale_source = 'pariwar_fallback'` (a third value on the REMINDERS' `locale_source` CHECK only — the
-  pings' CHECK stays two values; minted in the same migration if the ruling is in before Task 1.1, else its own forward migration),
-  the alarm counts the fallbacks. Both locales unusable ⇒ the Pariwar held as today, under A or B. A non-chooser is untouched (their
-  locale IS the default). ⚠ Under A the reminder (Hindi) and the text (English) differ in language — `-303` Q1 A's *"with the same
+  **(b′) — the REMINDER, PQ1 — ⭐ RULED A (`2026-10-23-385`, Trustee-ratified).** A recipient whose OWN chosen locale's reminder
+  template is T1 / T1′ / T3 while the PARIWAR's default locale's is T0: the begin picks the Pariwar default locale's template name and
+  records `template_name` / `locale` of THAT locale and `locale_source = 'pariwar_fallback'` (a third value on the REMINDERS'
+  `locale_source` CHECK only — the pings' CHECK stays two values; minted in this story's migration, the ruling being in before Task
+  1.1); the end-of-run alarm counts the fallbacks per Pariwar and locale (ids only). Both locales unusable ⇒ the Pariwar held as today.
+  A non-chooser is untouched (their locale IS the default — `-385` not-covered). (Option B — ⛔ reminder — was ⛔ chosen; ⛔ built.) ⚠ Under A the reminder (Hindi) and the text (English) differ in language — `-303` Q1 A's *"with the same
   words"* then holds in substance only (`-380` decision 8 already reads it so — the reminder's name and substance, ⛔ every character)
   — the PQ1 note's option A says so.
   **(c) ⛔ OFFERED for the TEXT — the Panel's:** send the Pariwar's language when the chosen one has ⛔ template (narrows `-303`'s rider,
@@ -657,8 +662,9 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
    written-once arm and GRANT). `beginFresh` writes `locale` + `locale_source` FROM the read (⛔ literal); a re-claim keeps them (leg:
    change the member's choice between attempt 1 and the re-claim ⇒ the re-claim renders the FIRST locale; a re-claim of a row with
    `locale IS NULL` writes the PARIWAR DEFAULT and `pariwar_default` even when the member has since chosen `en`; a `skipped_superseded`
-   row with ⛔ locale is accepted by the CHECK). F14's four pins FLIP deliberately, each with a dated comment (the type pin now
-   `'pariwar_default' | 'member_choice'`; the two specs now ACCEPT `'member_choice'` and still reject `'device'`); F14's broken callers
+   row with ⛔ locale is accepted by the CHECK). F14's four pins FLIP deliberately, each with a dated comment (the reminder type pin
+   now `'pariwar_default' | 'member_choice' | 'pariwar_fallback'`; the two specs now ACCEPT `'member_choice'` — the reminders spec also
+   `'pariwar_fallback'`, the pings spec still REJECTS it — and both still reject `'device'`); F14's broken callers
    (`peer-mesh-request.spec.ts:558-559`) move to the new signature. DB legs: a finished row's `locale` cannot be rewritten (the freeze),
    and an `attempting` row's non-NULL `locale` cannot be changed (the written-once arm — I5's backstop); the R15 attempting-row checks
    of 0166 still fire (the full body was copied).
@@ -683,14 +689,14 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
    the locale is resolved per reminder recipient INSIDE the begin (from `ping.member_id`) and recorded (`locale`, `locale_source`,
    `template_name` of THAT locale); the send uses `begun.*`. Legs: an `en`-choosing neighbour gets the `en` template and `member_choice`;
    the member changes their choice after the text ⇒ the reminder goes in the NEW choice (WR14's "read again" — ⛔ copied from the ping);
-   T1 / T1′ / T3 `en` (name unset or invalid — Meta refuses is the same state) in an `hi` Pariwar, under (b′) **B** (the interim) ⇒ the
-   English-chooser's reminder is ⛔ enqueued and ⛔ begun while the Hindi recipient's is sent, and a sendable SIBLING ping of the same
-   claim is still enqueued (`seenClaims` ⛔ marked by the waiting one); past +72 h the waiting one has ⛔ row, or `skipped_late`; BOTH
-   names unset ⇒ the Pariwar held as today; TX `config:wa_template_unreadable` ⇒ held as today; a re-claim (`send_started_at IS NULL`)
-   whose new locale is unusable ⇒ `waiting_template`, ⛔ write, and past +72 h `markLatePeerMeshWaReminders` finishes it `skipped_late`.
-   ⭐ On a PQ1 **A** ruling, these legs become: the English-chooser's reminder goes with the `hi` template, `locale = 'hi'`,
-   `locale_source = 'pariwar_fallback'`, and the alarm counts the fallback — the B legs flip, dated. ⚠ Until PQ1 is ruled the build is
-   B; Row 35 (b) carries the open ruling.
+   T1 / T1′ / T3 `en` (name unset or invalid — Meta refuses is the same state) in an `hi` Pariwar (`-385`, (b′) A) ⇒ the English-chooser's
+   reminder goes with the `hi` template, `locale = 'hi'`, `locale_source = 'pariwar_fallback'`, and the alarm counts the fallback — RED
+   against a build that waits; T1 `hi` in an `hi` Pariwar with `en` usable ⇒ the English-chooser is sent in `en` (`member_choice`) while
+   a non-chooser's reminder is ⛔ enqueued and ⛔ begun (⛔ usable template — WAIT), and a sendable SIBLING ping of the same claim is still
+   enqueued (`seenClaims` ⛔ marked by the waiting one); past +72 h the waiting one has ⛔ row, or `skipped_late`; BOTH names unset ⇒ the
+   Pariwar held as today; TX `config:wa_template_unreadable` ⇒ held as today; a re-claim (`send_started_at IS NULL`) whose new locale is
+   unusable ⇒ a chooser falls back (`pariwar_fallback`); a non-chooser ⇒ `waiting_template`, ⛔ write, and past +72 h
+   `markLatePeerMeshWaReminders` finishes it `skipped_late`; the pings' CHECK still REJECTS `'pariwar_fallback'`.
 6. **AC6 — The phone remembers (LS3).** `lib/app-language.ts` exports `readStoredLanguage`, `chooseLanguage(locale, memberId|null)`,
    `syncAppLanguage(memberId, { setLocale, client?, storage? })` (the setter passed in — the module cannot call the hook; `client`
    defaults to `memberAuth`, `storage` to `mmkvStorage`); `_layout.tsx` mounts `LocaleProvider` with the stored language. Unit legs (in-memory storage): ⛔ stored
@@ -753,8 +759,9 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
     the T-states table + I4's kept-out Panel option) is committed ALONE before any code; records (epics entry, roster row if LS14 (a),
     deferred items, dated notes) in their own commit. If a re-open condition of the §0 GATE fires (a departing Task 0.2 answer, a
     changed T-states table, S4), the routing note is written from the template and Task 3 waits for the ruling; Tasks 1, 2, 4, 5 may proceed.
-    ⭐ PQ1 (the reminder's fallback language) is NON-BLOCKING: its note is drafted (v1.4), BigDev sends it, the author-commit records it
-    as routed, and Row 35 (b) gains the leg *"PQ1 ruled, and the reminder built to the ruling"* — ⛔ Task waits for it.
+    ⭐ PQ1 (the reminder's fallback language) — RULED A by `2026-10-23-385` (committed alone `73183745`, before Task 0); the
+    author-commit cites it for LS10 (b′), and Row 35 (b) gains the leg *"PQ1 ruled A (`-385`); live once Story 6.35 is `done` on
+    `main`"*.
 14. **AC14 — The gate.** `DATABASE_URL=<:5433> pnpm ci:local` green ([[project_prepush_hook_inherits_5432]],
     [[project_ci_local_double_run_pollution]]); the job count and commit recorded.
 15. **AC15 — The claim-contact language (LS15 (b)) — the AGREEMENT-LANGUAGE RENDER TEST is the gate.** With the app's provider in
@@ -787,8 +794,8 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
     `claim-peer-mesh-requests.ts`, `claim-peer-mesh-wa-reminders.ts`, `peer-mesh-wa-reminder.ts`, `schema/claim_peer_mesh_pings.ts`,
     `_layout.tsx`, `login.tsx`, `(tabs)/index.tsx`, `session-context.tsx`, `(claim)/contact.tsx`, `schema/members.ts`,
     `packages/api-client/src/index.ts` or `common.json` (`git branch -a`, `git worktree list`, ListAgents — 6-36d DOES (Sequencing), 8-15
-    landed the api-client doc comment; [[feedback_shared_tree_branch_switch]]); **S3** a decision after `-384` (6-36d's — nominees,
-    ⛔ language: checked at v1.4) touches language, `-303`'s rider or CF1 — or the Panel has ruled PQ1 (then build its answer);
+    landed the api-client doc comment; [[feedback_shared_tree_branch_switch]]); **S3** a decision after `-385` (this story's PQ1
+    ruling; `-384` is 6-36d's — nominees, ⛔ language: checked at v1.4) touches language, `-303`'s rider, CF1 or `-385`;
     **S4** either template set is NOT both-locale on the DLT sheet / Row 35 (b) any more, or a TEXT locale is recorded DLT-rejected (a
     reminder locale recorded "Meta refuses" is PQ1's case, ⛔ a STOP); **S5** `beginFresh` / `skipFresh` / `finishAttempting` / the
     reminder begin no longer match F12 / F13 / LS9 (the CHECK and re-claim rules rest on it); **S6** the text park, the text listing's
@@ -796,14 +803,13 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
   - [ ] 0.2 CONFIRM with BigDev the direction already given (LS4 (b), LS10 (b) with the T-states table, LS15 (b) behind AC15) and put
     the REST (LS1–LS3, LS5–LS9, LS11–LS14) in plain language (recommended first, each with its cost); record the answers verbatim. If
     any answer departs from the direction, or the T-states table changes, re-run the §0 GATE table: a narrowing ⇒ the routing note
-    (template) and Task 3 waits; still MATCH ⇒ ⛔ note. Ask whether the PQ1 note
-    (`trustee-panel-routing-note-2026-10-23-6-35-reminder-language-fallback.md`) has been SENT; record the answer — ⛔ "shown to the
-    Panel" until it went out ([[feedback_shown_to_panel_means_sent]]).
-  - [ ] 0.3 The author-commit decision (next free id ≥ `-385` — `-384` is 6-36d's; "AMENDS `-365` WR7 and `-345` MG5's peer-mesh half (a
+    (template) and Task 3 waits; still MATCH ⇒ ⛔ note. PQ1 is RULED (`-385`) — ⛔ re-asked; LS10 (b′) is A.
+  - [ ] 0.3 The author-commit decision (next free id ≥ `-386` — `-384` is 6-36d's, `-385` this story's PQ1 ruling; "cites `-385` for
+    LS10 (b′) A; AMENDS `-365` WR7 and `-345` MG5's peer-mesh half (a
     Pariwar hold → a per-recipient wait, per the T-states); NARROWS `-311` PM22's *"row 6-35 fixes both halves"* (the display half stays
     open — LS4 (b)); supersedes ⛔ ratified text; realises `-305` §2 item 2 and `-310` CF1 A's *"then each member's choice"*; overtakes
     `-303`'s not-ratified *"and when they first use the app"* as `-305` already did; records the §0 GATE table G1–G11 with its verdict (⛔
-    blocking note; PQ1 routed, non-blocking, gating Row 35 — the reminder built to B until ruled) and its re-open conditions — G3 as the
+    blocking note; PQ1 routed and RULED A by `-385`) and its re-open conditions — G3 as the
     AUTHOR'S READING (CF1 A is silent on a non-chooser; moot while every Pariwar is `hi`), G5 / G6 as corrected at v1.4, G8 with both
     sides of the freeze-row-10 reading, G9 with `-293`'s not-ratified *"the filer's own choice"*; the T-states table as LS10 (b)'s
     definition; the LS7 bilingual label (a departure from UX `:554`, argued by analogy under `:1126`, `:1127` recorded); LS15 (b)'s
@@ -812,7 +818,8 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
     ([[project_decision_log_writes_user_inserted]]); commit it ALONE (`governance:` prefix); write its SHA only AFTER the commit.
   - [ ] 0.4 Records commit: the `epics.md` Story 6.35 entry (Epic 6, after 6.34 (`:3480` at the pin, `:3514` on `main` — re-grep) — the
     post-hoc *"> **Added 2026-10-… (Story 6.35, Task 0.4)** —"* format); the LS14 roster row if (a); a dated leg on Row 35 (b) (*"PQ1 —
-    the reminder's language when a member's chosen one is refused — ruled, and the reminder built to the ruling"*, naming the note);
+    the reminder's language when a member's chosen one is refused — RULED A by `-385` (the Pariwar's language); live once Story 6.35 is
+    `done` on `main`"*, naming the note);
     deferred-work: W8 marked *"Closed by 6.35 (AC3)"* at EVERY site that cites
     it (deferred-work *"W8 — `locale_source` is a literal…"* and 6.27c Review Defer W8 `:692` — grep *"locale_source. is a literal"*;
     6.27c's totals lines only count it), the LS11 item, LS12 (b) if chosen; dated notes on 6.27 PM22, 6.27c R10 and R11, 6.31 WR14 and
@@ -823,8 +830,9 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
     branch and worktree). (The 6-35 sprint-row comment was already annotated at creation — ⛔ again.)
 - [ ] **Task 1 — Schema + the one read (AC1, AC3; LS1, LS8, LS9)**
   - [ ] 1.1 The migration (F16; T1) + journal; `schema/members.ts` (+ dated comment), `schema/claim_peer_mesh_pings.ts` (`locale`
-    column; `PEER_MESH_LOCALE_SOURCES` widened), `schema/claim_peer_mesh_wa_reminders.ts` comment (its type imports
-    `PeerMeshLocaleSource`, so it widens automatically). `db:migrate` on :5433; `psql -f` twice.
+    column; `PEER_MESH_LOCALE_SOURCES` widened), `schema/claim_peer_mesh_wa_reminders.ts` (its type imports `PeerMeshLocaleSource`,
+    which widens to two values automatically — ⚠ the reminder needs its OWN `PEER_MESH_WA_REMINDER_LOCALE_SOURCES = [...PEER_MESH_LOCALE_SOURCES,
+    'pariwar_fallback']` + type, LOCKSTEP with its CHECK, `-385`). `db:migrate` on :5433; `psql -f` twice.
   - [ ] 1.2 Domain setter/reader for the member choice — `packages/domain/src/member/preferred-locale.ts`
     (`getMemberLanguage(db, { pariwarId, memberId })` ⇒ `{ chosenLocale, pariwarDefaultLocale }`, `setMemberLanguage(db, {…, locale })`
     ⇒ `{ changed: boolean, … }` — `UPDATE … SET preferred_locale = $l, preferred_locale_set_at = now(), updated_at = now() WHERE
@@ -858,10 +866,10 @@ English reminder template is unusable gets ⛔ WhatsApp reminder while a Hindi n
     names (`templates: Record<'hi'|'en', string | null>` — `null` = T1 / T1′ / T3; both `null` ⇒ hold as today; TX
     `config:wa_template_unreadable` ⇒ hold as today; ⛔ `locale` / `localeSource` in the config); the SWEEP's listing
     `listDuePeerMeshWaReminderPings` returns each ping's effective locale and the sweep ⛔ enqueues a waiting one (`resumeAt = dueCursor;
-    continue`, ⛔ `seenClaims`); the begin returns `waiting_template` with ⛔ row (fresh) / ⛔ write (re-claim) for an unusable locale —
-    (b′) **B**, the interim; ⛔ `parkPeerMeshWaReminder`, ⛔ `config:*` detail (F26); the child counts `waiting` explicitly; on a PQ1 **A**
-    ruling, the begin instead takes the Pariwar default locale's name and records `locale_source = 'pariwar_fallback'` (its CHECK value
-    per LS10 (b′)); `beginPeerMeshWaReminder`'s input `template` → `templates`; the begin calls `resolvePeerRequestLocale(db, { pariwarId,
+    continue`, ⛔ `seenClaims`); the begin, for a CHOOSER whose locale is unusable while the Pariwar default's is usable, takes the
+    default's name and records `locale_source = 'pariwar_fallback'` (`-385`, LS10 (b′) A — its CHECK value per LS9), and returns
+    `waiting_template` with ⛔ row (fresh) / ⛔ write (re-claim) only for a ping with ⛔ usable template; ⛔ `parkPeerMeshWaReminder`, ⛔
+    `config:*` detail (F26); the child counts `waiting` and `fallback` explicitly; `beginPeerMeshWaReminder`'s input `template` → `templates`; the begin calls `resolvePeerRequestLocale(db, { pariwarId,
     memberId: ping.member_id })` after the eligibility read, writes `template_name` / `locale` / `locale_source` of THAT locale (INSERT
     `:354-360`, re-claim `:368-375`), and returns `locale`, `localeSource`, `templateName` in `begun`; the send (`:669-675`) uses `begun.*`.
   - [ ] 3.3 FLIP `apps/jobs/tests/claim-peer-mesh-wa-reminders.test.ts:73-77` (dated); FLIP the English-Pariwar half of
@@ -986,7 +994,7 @@ comment lines (F20), the data-export trio (LS12 (a)). ⛔ New package ([[feedbac
   to the first COMMIT that takes it on any branch"*) renumbers it + journal `when`, and re-runs both stories' legs.
 - 3-3c (`40420410`) and 8-15 (`69e35f73`) LANDED — rebase before Task 1; 8-15 touched `packages/api-client/src/index.ts` (a doc comment only).
 - Rows 5-11 (SMS fallback) and the F21 senders read whatever this leaves; LS11's deferred item is their pointer.
-- Go-live: the LS14 row; Row 35 (b)'s PQ1 leg; ⛔ merge fence.
+- Go-live: the LS14 row; Row 35 (b)'s PQ1 leg (ruled A, `-385`); ⛔ merge fence.
 
 ### Previous story intelligence (6.27c, 6.31, 5.12)
 
@@ -1022,7 +1030,7 @@ life-events, audit-sink or data-export file.
   `2026-10-10-310` CF1 A + Our reading, `2026-10-10-311` PM22, `2026-10-19-365` WR14 / WR6, `2026-09-28-263` FQ10 A,
   `2026-10-22-382` KB6; `epics.md` freeze table row 10 (`:555`); 6.37 AC9 (a)
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-10-6-27-confirms.md` (CF1 option A as put)
-- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-35-reminder-language-fallback.md` (PQ1 — DRAFT, ⛔ sent)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-35-reminder-language-fallback.md` (PQ1 — RULED A, `2026-10-23-385`)
 - `.decision-log.md` — `2026-10-08-295` §0, `2026-10-17-349` decision 1 + FOUND (a), `2026-10-22-380` decision 8, `-293`'s reading
 - `_bmad-output/implementation-artifacts/6-27-peer-mesh-sending-replies-and-date-of-death.md` (PM22, F26, F32),
   `6-27c-peer-mesh-sending-texts-and-links.md` (R10, BF14, Review Defer W8), `6-31-peer-mesh-whatsapp-reminder-at-48-hours.md` (WR14, P6),
@@ -1051,3 +1059,4 @@ life-events, audit-sink or data-export file.
 | 2026-10-22 | 1.2 | Re-validated (a fresh-context read-only verifier on the v1.1 edits; BigDev "re-validate once then commit"). Critical: LS10 (b) rewritten so it IS the MATCH §0 (ii) says — both locales resolved, the Pariwar held only on a non-template gap or both unusable, a recipient waits only on their OWN language's gap (`:954`'s English-Pariwar half flips; the refused-vs-unset split needs a config value or merges; the starving-claim cost and a skip / back-off); LS15 (b) no longer pins the submitted `locale` alone (it is also the agreement evidence, `claims.contact.handlers.ts:132-133`) — the contact screen renders in Hindi instead, with (b′) a body split. Also: the hold mechanism corrected (an unsent text stays `not_sent`; an un-begun reminder gets ⛔ row); WR6 "as built" is a Pariwar hold on the refused locale; `-303`'s not-covered clause labelled ⛔ ruled; I1 kept by dropping a null pending from an earlier app process (⭐); freeze row 10 both sides; LS7 a departure from UX `:554` argued under `:1126`; F19 bare `.select()`; the render mock gains `XStack` / `onPress`; six line pointers; W8 closure wording; AC3 cross-Pariwar leg throws; T3; Task 4 header. ⛔ Code. |
 | 2026-10-22 | 1.3 | BigDev's direction (verbatim in the story): the §0 GATE RESOLVED as a G1–G9 table (each ratified text quoted verbatim, each MATCH on the direction) ⇒ ⛔ routing note owed, with named re-open conditions; the LS4 / I2 contradiction resolved by LS4 (b) ⭐ — Hindi until the member picks, the Pariwar default ⛔ displayed — so I2 holds as written (one phone-setting qualifier; PM22's display half recorded open); LS10 (b) ⭐ with the unavailable-template states DEFINED (T0 usable / T1 unset / T2 pre-flight failed / T3 refused — DLT-rejected ⇒ S4 STOP, Meta-refuses merged with unset / TX read fault = a non-template hold), WAIT defined with ⛔ DB write (listing exclusion, `waiting_template` begin result, the park's locale filter, the alarm), AC4 (i)–(xi) / AC5 rewritten; LS15 (b) ⭐ as the interim behaviour behind AC15's agreement-language render test (label = `hi` `contact.agreement`, other strings `hi`, request `locale: 'hi'`, + the existing `claim-contact-copy.test.ts` lockstep) — a failing test STOPS, ⛔ silent fallback; the Policy-meaning member sentence settled; Task 0.2 confirms rather than re-opens. ⛔ Code. |
 | 2026-10-23 | 1.4 | Validated (`bmad-create-story validate 6.35`) against `origin/main` `69e35f73` (3.3c + 8.15 landed; 6-36d's `-384` committed): three fresh-context read-only verifiers (governance / server-domain-jobs / mobile-client), 40 findings, BigDev "All 40", the CRITICALs re-checked against code and the log before editing. Critical: (1) the §0 gate's G5 / G6 were false for a member who picks a language other than their Pariwar's — LS10 (b) would take away their reminder (Meta refuses — Row 35 (b)) and, past the window, their text (T2), narrowing `-303` Q1 A; LS10 (c) narrows the rider ⇒ the Panel's (`-295` §0). BigDev, told the fallback can only be the Pariwar's language and that a wait is brief for the text but permanent for the reminder: *"yes, write it that way"* ⇒ PQ1 routed NON-BLOCKING (note drafted, ⛔ sent; our reading A), the reminder built B until ruled, LS10 (b′), G10 / G11 added, Row 35 (b) gains the leg; (2) the text WAIT for an `attempting` ping rewritten — the park alone does ⛔ stop a re-send (a parked row is re-claimed at once; the park covers held scopes only): park over every scope + the listing's `attempting` arm + the begin check on both paths (F25); (3) the reminder re-claim — `parkPeerMeshWaReminder` needs the marker set and `config:*` is ⛔ a detail ⇒ `waiting_template`, ⛔ write, `skipped_late` past +72 h (F26); (4) AC15 (3) asserts on `claimApi.recordClaimContact`, with the harness spelled out; (5) numbers (≥ `-385`, ledger ≥ `2026-10-23k` — 6-36d took `h`–`j` during the pass; 6-36d committed and rebased onto `main`). Also: TX per locale for the global DLT keys; `wa_template_unreadable` / `wa_template_invalid` (T1′); NULL-safe listing; the text alarm's count read; the reminder SWEEP listing named and `seenClaims`; `:954` precisely + AC4 (iv′); serial single-flight with compare-and-clear; AC8 legs (T8, account switch); `syncAppLanguage` takes `setLocale`; Ravi-mode (the claim flow is the deceased's session; the Nominee Console IS the member app); `consent.tsx` ⛔ pinned + the mixed-language cost; `processId` required; AC2's raw audit sink + the forced-COMMIT precedent; `hook: 'preHandler'`; both-platform announce precedent; T14 `Stack.Screen` / `Platform`; `contact.tsx` enrolment + allow entry; Task 0.3 AMENDS WR7 / MG5 and NARROWS PM22; Policy meaning; G3 / G9 qualifiers; UX `:1127`; stale records (3-3c, MEMORY.md); line refs that moved on `main`; quote attributions. ⛔ Code. |
+| 2026-10-23 | 1.5 | The Panel RULED PQ1 — A (relayed by BigDev: *"by DR and KB"* / *"go with option A"*) ⇒ Decision `2026-10-23-385` (Trustee-ratified, committed alone `73183745`): when the reminder cannot go in the member's chosen language it goes in the Pariwar's. LS10 (b′) built as A now (the interim B ⛔ built): the reminder begin falls back for a CHOOSER whose Pariwar's template is usable, `locale_source = 'pariwar_fallback'` on the REMINDERS' CHECK only (LS9 — its own `PEER_MESH_WA_REMINDER_LOCALE_SOURCES`); a reminder waits only when it has ⛔ usable template at all; AC5, Task 3.2, I4, G5, the §0 verdict, the Policy-meaning sentence (bracket settled), Task 0.1 S3 / 0.2 / 0.3 (cites `-385`; next free ≥ `-386`) / 0.4 (Row 35 (b) leg — ruled) and AC13 follow. The note's ruling block filled; everything below it kept as put. ⛔ Code. |

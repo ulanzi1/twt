@@ -1,9 +1,9 @@
 # Trustee Panel routing note — 2026-10-23 — Story 6.35: the WhatsApp reminder when it cannot go in the member's chosen language
 
-> **Status: DRAFT — ⛔ NOT SENT.** Written at `bmad-create-story validate 6.35` (story v1.4), on BigDev's direction:
-> *"yes, write it that way"* (to: route this to the Panel as a NON-BLOCKING question, our reading A for the reminder, the text
-> waits). ⭐ It gates go-live (roster Row 35), ⛔ the merge. ⛔ Shown to the Panel until BigDev sends it
-> ([[feedback_shown_to_panel_means_sent]]).
+> **Status: ANSWERED 2026-10-23 — RULED A (Decision `2026-10-23-385`).** Written at `bmad-create-story validate 6.35` (story
+> v1.4), on BigDev's direction: *"yes, write it that way"* (to: route this to the Panel as a NON-BLOCKING question, our reading A
+> for the reminder, the text waits). Answered the same day, relayed by BigDev; ⚠ whether the full note or a summary was shown is
+> ⛔ recorded. Everything below the ruling block is kept UNEDITED, as put.
 
 §0 GATE — the Panel's: two RATIFIED clauses conflict in one case, so one of them must give (`-303` Q1 A's one WhatsApp
 reminder to each of the five who has not answered; `-303`'s rider, the member's preferred language). An author-commit cannot
@@ -13,11 +13,18 @@ and told below.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — `2026-10-23-385` (Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti — relayed by BigDev, 2026-10-23: *"by DR and KB"* / *"go with option A"*.
+>
+> **PQ1 — A.** When a member has chosen a language in the app and the two-day WhatsApp reminder cannot go in it, the reminder goes
+> in their Pariwar's language. Option B (no reminder) was ⛔ chosen. The cost as put is accepted: the language rule gives way for
+> this one message; the text still comes in the member's language.
+>
+> **Not covered** (as recorded in `-385`): the text (told, ⛔ asked — it waits); a member who never chose; both languages unusable
+> for a Pariwar; the reminder's words; refused vs not set up (A applies to both); everything else in Story 6.35.
+>
+> ⭐ Everything below is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

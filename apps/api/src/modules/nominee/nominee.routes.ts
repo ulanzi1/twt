@@ -33,7 +33,8 @@ export function registerNomineeRoutes(app: FastifyInstance, deps: AppDeps): void
       },
       preHandler: [memberSession],
     },
-    h.declare,
+    // Story 6.36e (NE4) — the signup route refuses a `memberLink` (400 `nominee.link_not_available`).
+    h.declare({ allowLink: false }),
   );
 
   r.get(

@@ -164,6 +164,8 @@ export function createKnownPeopleHandlers(deps: AppDeps) {
         numbers: body.numbers,
         enc,
         inScope: (fn) => inScope(pariwarId, fn),
+        // Story 6.36e (NE3, V12) — the KMS line's purpose only (`contact_match_nominee`); the SAME counters.
+        purpose: body.purpose,
       });
       if (result.kind === 'refused') throw refusal(result.reason);
       emitAuthAudit(deps, request, 'member_known_people.contacts_matched', {

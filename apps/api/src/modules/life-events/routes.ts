@@ -71,7 +71,8 @@ export function registerLifeEventsRoutes(app: FastifyInstance, deps: AppDeps): v
       },
       preHandler: [memberSession, requireMemberStepUp(deps, 'nominee_change')],
     },
-    nomineeHandlers.declare,
+    // Story 6.36e (NE4) — the ONE route that accepts a nominee's `memberLink`.
+    nomineeHandlers.declare({ allowLink: true }),
   );
 
   // Medical update — step-up gated; re-runs the 3.5 submit SERVICE (append-only; emits member.medical_disclosed).

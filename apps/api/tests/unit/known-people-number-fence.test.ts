@@ -15,6 +15,10 @@
 // numbers are fenced too, the identifier list names `raw`, `entries`, `plaintext(s)`, `canonicals` and `digits`, and
 // rule (3) is new.
 // ⭐ POSITIVE CONTROL: a planted violation of each rule IS caught; a COMMENTED plant is ⛔.
+// ⭐ Story 6.36e (AC9, NE11) — the nominee-link files join the list (the declare handler, the new `nominee-links` module and
+// the domain's `nominee/member-links.ts`), the identifiers name a mark's number (`memberLink`, `newMarks`, `markIndexes`),
+// and rule (1) gains a second set FOR THOSE FILES: ⛔ a name or the OTHER member's id in a sink (an audit line carries
+// `nominee_link:<id>` + `{ rank }` only).
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -33,12 +37,31 @@ const FILES = [
   'packages/domain/src/member/known-people.ts',
   'packages/domain/src/encryption/blind-index.ts',
   'packages/domain/src/encryption/member-fields.ts',
+  'apps/api/src/modules/nominee/nominee.handlers.ts',
+  'apps/api/src/modules/nominee-links/handlers.ts',
+  'apps/api/src/modules/nominee-links/index.ts',
+  'apps/api/src/modules/nominee-links/routes.ts',
+  'packages/domain/src/nominee/member-links.ts',
 ] as const;
+
+/** Story 6.36e — the files whose sinks must ALSO carry ⛔ name and ⛔ other member's id (AC9). */
+const NOMINEE_LINK_FILES: ReadonlySet<string> = new Set([
+  'apps/api/src/modules/nominee/nominee.handlers.ts',
+  'apps/api/src/modules/nominee-links/handlers.ts',
+  'apps/api/src/modules/nominee-links/index.ts',
+  'apps/api/src/modules/nominee-links/routes.ts',
+  'packages/domain/src/nominee/member-links.ts',
+]);
+/**
+ * Identifiers that carry a name or the OTHER member of a link in those files. `name` / `names` count as a BARE identifier
+ * only — `err.name` (an error's class name, the house's one logged field) is ⛔ a person's name.
+ */
+const NAME_OR_OTHER_MEMBER = /\b(nameCiphertext|read|nomineeMemberId|declarerMemberId|otherMemberId|resolved|marks|liveLinks)\b|(?<![\w.$])(names?)\b/;
 
 /** The callees that write a log line, an audit line or an alarm. */
 const SINK_CALL = /\b((?:request\.)?log(?:ger)?\.(?:trace|debug|info|warn|error|fatal)|console\.(?:log|info|warn|error|debug)|emitAuthAudit|auditHook\??\.?|writeAuditEntry|\w*[aA]larm\w*)\s*\(/g;
 /** Identifiers that carry a number (or its HMAC) in these files. */
-const NUMBER_BEARING = /\b(numbers|mobile|canonicals?|normalised|distinct|namedIndex|indexes|body|raw|entries|plaintexts?|digits)\b/;
+const NUMBER_BEARING = /\b(numbers|mobile|canonicals?|normalised|distinct|namedIndex|indexes|body|raw|entries|plaintexts?|digits|memberLink|newMarks|markIndexes)\b/;
 /** A thrown error's construction (rule 3). */
 const ERROR_CALL = /\b(?:new\s+)?(?:[\w$]+\.)*[\w$]*(?:Error|Refused)\s*\(|\bsuper\s*\(/g;
 /** A messaging path (AC6). */
@@ -50,6 +73,10 @@ const SINK_ALLOWLIST: Record<string, number> = {
   'apps/api/src/modules/known-people/handlers.ts:request.log.error': 1,
   'apps/api/src/modules/known-people/names.ts:log.warn': 1,
   'packages/domain/src/encryption/blind-index.ts:auditHook': 2,
+  // Story 6.36e — `member_nominees.declared` + the ONE per-link line (in a loop); the answer's line; the idempotency log.
+  'apps/api/src/modules/nominee/nominee.handlers.ts:emitAuthAudit': 2,
+  'apps/api/src/modules/nominee-links/handlers.ts:emitAuthAudit': 1,
+  'apps/api/src/modules/nominee-links/handlers.ts:request.log.error': 1,
 };
 
 /** The CODE of an argument list — string literals dropped, a template literal reduced to its `${…}` expressions. */
@@ -86,6 +113,8 @@ function check(files: ReadonlyMap<string, string>): { violations: string[]; sink
       const args = argsAt(code, m.index! + m[0].length - 1);
       const hit = NUMBER_BEARING.exec(args);
       if (hit) violations.push(`number-in-sink:${key}:${hit[1]!}`);
+      const who = NOMINEE_LINK_FILES.has(file) ? NAME_OR_OTHER_MEMBER.exec(codeOnly(args)) : null;
+      if (who) violations.push(`name-or-member-in-sink:${key}:${who[1] ?? who[2]!}`);
     }
     const msg = MESSAGING.exec(code);
     if (msg) violations.push(`messaging:${file}:${msg[0]}`);
@@ -138,6 +167,17 @@ describe('⛔ Story 6.36b — no number in a log / audit / alarm; no message sen
     expect(plant(D, "throw new Error('one index per distinct number');")).toEqual([]); // words in a message are ⛔ identifiers
     expect(plant(D, 'throw Error(`bad ${mobile}`);')).toEqual(expect.arrayContaining([expect.stringMatching(/number-in-error:.*:mobile$/)])); // ⛔ `new` needed
     expect(plant(D, "throw new Error(`don't ${raw} won't`);")).toEqual(expect.arrayContaining([expect.stringMatching(/number-in-error:.*:raw$/)]));
+    // Story 6.36e (AC9) — a mark's number, a name, the other member's id in a nominee-link sink
+    const N = 'apps/api/src/modules/nominee/nominee.handlers.ts';
+    const L = 'apps/api/src/modules/nominee-links/handlers.ts';
+    expect(plant(N, "emitAuthAudit(deps, request, 'member_nominee_links.asked', { context: { n: newMarks[0] } });")).toEqual(
+      expect.arrayContaining([`number-in-sink:${N}:emitAuthAudit:newMarks`]),
+    );
+    expect(plant(L, "emitAuthAudit(deps, request, 'member_nominee_links.confirmed', { resourceLocator: `member:${r.nomineeMemberId}` });")).toEqual(
+      expect.arrayContaining([`name-or-member-in-sink:${L}:emitAuthAudit:nomineeMemberId`]),
+    );
+    expect(plant(L, "request.log.error({ who: names.get(x) }, 'x');")).toEqual(expect.arrayContaining([`name-or-member-in-sink:${L}:request.log.error:names`]));
+    expect(plant(H, "request.log.error({ who: names.get(x) }, 'x');")).not.toEqual(expect.arrayContaining([expect.stringMatching(/^name-or-member/)])); // 6.36b's own rule
     expect(plant(H, '// request.log.error({ mobile });')).toEqual([]);
     expect(plant(H, '/* emitAuthAudit(deps, request, x, { context: { numbers } }) */')).toEqual([]);
   });

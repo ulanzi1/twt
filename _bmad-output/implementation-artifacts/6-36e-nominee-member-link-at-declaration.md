@@ -672,7 +672,7 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
   - [x] 2.2 `claim/peer-mesh-nominees.ts` — `peerMeshNomineeMatch` + pure `peerMeshNomineeLinkedMembersAsOf`; `claim/peer-mesh-read.ts` —
         `PeerMeshNomineeMatch`, the widened fragment, `nomineeMatch` on every ND4 type; `claim/peer-mesh-request.ts` — the labeller and
         the four inline input types (G7); `claim/peer-mesh-wa-reminder.ts` — `beginPeerMeshWaReminder`'s input.
-- [ ] **Task 3 — contracts + API (AC2, AC3, AC4, AC9)** — the declare handler (both routes, the `allowLink` route flag, the charge → HMAC →
+- [x] **Task 3 — contracts + API (AC2, AC3, AC4, AC9)** *(2026-10-24 — the API spec 16 / 16 on `twt_6_36e`; two mutants RED; see Debug Log)* — the declare handler (both routes, the `allowLink` route flag, the charge → HMAC →
       tx order, the signup end rules); the contact-matches `purpose` field; a new module `apps/api/src/modules/nominee-links/` (the AC2 links
       read, the AC4 request list + answer, names-after-commit, per-handler idempotency) REGISTERED in `apps/api/src/server.ts`; audit names
       in the `AuthAuditEventType` union; the number fence's `FILES` list extended; OpenAPI re-emitted; `createMemberNomineeLinksClient`.
@@ -814,6 +814,18 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   files — ONE hit, `peer-mesh-wa-reminder.ts` in `claim-contact-ladder-whatsapp.test.ts`, re-taken with a dated note (the diff is the
   `nomineeMatch` rename and its type import only).
 
+- **Task 3 runs (`twt_6_36e`):** the new `nominee-member-link.spec.ts` 16 / 16 (first run 13 / 15 — two TEST faults: the KMS hook
+  also records the declare's field ENCRYPTIONS, so the leg now counts HMAC lines only; and the "unresolvable" loop wrongly listed the
+  declarer's OWN number, an eligible member to any OTHER declarer — the self-mark leg is its own). Mutants (each RED, restored): the
+  signup route's `allowLink` guard off ⇒ the NE4 leg RED; the charge skipped ⇒ the V2 leg RED. Neighbours: `tests/integration/nominee`,
+  `life-events`, `known-people` 71 / 71; `login-wall.spec.ts` 5 / 5; api unit 593 / 593 (the number fence 2 / 2 with its new
+  positive controls); contracts 1,453 / 1,453; api-client 38 / 38; domain known-people 83 / 83. `pnpm contracts:emit-openapi` + the
+  determinism check + the PII scrape green. `tsc` clean for contracts, domain, api, mobile; ESLint (per package) exit 0.
+- **Task 3 — a found ordering, kept as specified:** AC3's order puts the caller gate (step 1) BEFORE the claim lock (step 3), so a
+  declarer a claim names who submits a NEW mark gets the ONE 422 `nominee.link_not_found`, ⛔ the 409 `nominee.locked_claim_filed` —
+  a `keep` or a plain save still gets the 409 (the leg asserts both routes of it). Harmless: the status read already says
+  `locked: true`, so the app shows the locked state before any save.
+
 ### Completion Notes List
 
 - 2026-10-23 — Created by `bmad-create-story 6.36e` (v1.0): four parallel read-only research passes (governance, nominee-declaration code,
@@ -848,10 +860,22 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   accounts); `nomineeMatch` REQUIRED on every ND4 type; `peerMeshNomineeMatch` reads the links in the SAME `inScope` read (DB only)
   through pure `peerMeshNomineeLinkedMembersAsOf`; `peer_is_nominee` reused. ⚠ Done WITH Task 2 so the tree builds: Task 4's
   RENAME half (jobs + fixtures + the hash pin) — Task 4's own legs remain.
+- 2026-10-24 — **Task 3**: contracts — `nominee/member-link.ts` (`NomineeMemberLink` new | keep, the declarer's `NomineeLinksView`, the
+  marked member's `NomineeLinkRequestView` / page / query / params, the answer `yes` | `not_me` ⇒ `confirmed` | `not_me`,
+  `NOMINEE_LINK_ERROR_CODES`), `NomineeDeclareEntry.memberLink` OPTIONAL, the contact-matches `purpose` (domain:
+  `CONTACT_MATCH_NOMINEE_AUDIT_PURPOSE = 'contact_match_nominee'`, the SAME counters). The declare handler: `declare({ allowLink })`
+  (signup `false` — 400 FIRST, ⛔ elevation lookup, charge, KMS or tx; Life Events `true`); the charge in its own scoped tx → normalise
+  + ONE `mobileBlindIndexMany` (purpose `nominee_link_resolve`) OUTSIDE any tx → in the tx after the D3 lock and guards: lock the live
+  links, resolve, PLAN before any write, then apply after `appendMemberDeclarationVersions`; one audit line per link written / ended
+  (`nominee_link:<id>`, `{ rank }`). New module `modules/nominee-links/` (the declarer's read, the requests, the answer with
+  per-handler idempotency — names decrypted AFTER commit through 6.36b's `names.ts`, reused), registered in `server.ts`. Five audit
+  names in `AuthAuditEventType`. The number fence: the 6.36e files listed, the mark's identifiers added, and a SECOND rule for those
+  files (⛔ a name or the other member's id in a sink — `err.name` excepted). OpenAPI re-emitted (the declare entry's `memberLink`;
+  the signup 400). `createMemberNomineeLinksClient` + `contactMatches(numbers, purpose?)`.
 
 ### File List
 
-*(Tasks 1–2 so far; completed at Step 9.)*
+*(Tasks 1–3 so far; completed at Step 9.)*
 
 - `packages/domain/migrations/0181_member-nominee-links.sql` (new)
 - `packages/domain/migrations/meta/_journal.json`
@@ -863,7 +887,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 - `packages/domain/src/ids/index.ts`
 - `packages/domain/src/nominee/member-links.ts` (new)
 - `packages/domain/src/nominee/index.ts`
-- `packages/domain/src/member/known-people.ts` (`chargeMemberCounter` exported)
+- `packages/domain/src/member/known-people.ts` (`chargeMemberCounter` exported; Task 3: the contact-match `purpose`)
 - `packages/domain/src/claim/peer-mesh-nominees.ts`
 - `packages/domain/src/claim/peer-mesh-read.ts`
 - `packages/domain/src/claim/peer-mesh-request.ts`
@@ -884,6 +908,26 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 - `apps/jobs/tests/claim-peer-mesh.test.ts`
 - `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts`
 - `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`
+- `packages/contracts/src/nominee/member-link.ts` (new)
+- `packages/contracts/src/nominee/declaration.ts`
+- `packages/contracts/src/nominee/index.ts`
+- `packages/contracts/src/members/known-people.ts`
+- `packages/contracts/scripts/emit-openapi.ts`
+- `packages/contracts/tests/nominee-member-link.test.ts` (new)
+- `openapi/v1.yaml`
+- `apps/api/src/modules/nominee/nominee.handlers.ts`
+- `apps/api/src/modules/nominee/nominee.routes.ts`
+- `apps/api/src/modules/life-events/routes.ts`
+- `apps/api/src/modules/known-people/handlers.ts`
+- `apps/api/src/modules/nominee-links/handlers.ts` (new)
+- `apps/api/src/modules/nominee-links/routes.ts` (new)
+- `apps/api/src/modules/nominee-links/index.ts` (new)
+- `apps/api/src/server.ts`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/tests/unit/known-people-number-fence.test.ts`
+- `apps/api/tests/integration/nominee/nominee-member-link.spec.ts` (new)
+- `packages/api-client/src/index.ts`
+- `packages/api-client/tests/nominee-links-client.test.ts` (new)
 - `_bmad-output/implementation-artifacts/6-36e-nominee-member-link-at-declaration.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 

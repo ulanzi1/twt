@@ -187,6 +187,14 @@ export type AuthAuditEventType =
   | 'member_known_people.declined'
   | 'member_known_people.removed'
   | 'member_known_people.withdrawn'
+  // ── A nominee who is also a member (Story 6.36e, AC9; `2026-10-24-397` NE11) ──────────────────
+  // Resource `nominee_link:<id>`; context `{ rank }` ONLY — ⛔ a number, ⛔ a name, ⛔ the other member's id. The declare's
+  // three sit beside `member_nominees.declared` (one per link written / ended); the marked member's two on the answer.
+  | 'member_nominee_links.asked'
+  | 'member_nominee_links.carried'
+  | 'member_nominee_links.ended'
+  | 'member_nominee_links.confirmed'
+  | 'member_nominee_links.not_me'
   // ── Member voluntary-withdrawal surface (Story 3.10, FR-6) ───────────────────
   // The withdrawal confirm (member.withdrawal_completed emitted → state withdrawn) + the signup
   // rejoin-lock block. Context is NON-PII: reason_code (bounded enum) + rejoin_permitted_at only —

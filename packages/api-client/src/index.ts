@@ -191,7 +191,13 @@ import {
   KnownPeopleRequestsResponse,
   KnownPeoplePromptsResponse,
   KNOWN_PEOPLE_LIST_LIMIT_MAX,
+  NomineeLinksView,
+  NomineeLinkRequestsResponse,
+  NomineeLinkAnswerResponse,
+  NOMINEE_LINK_REQUESTS_LIMIT_MAX,
+  type KnownPeopleContactMatchRequest,
   type KnownPeopleFoundByWire,
+  type NomineeLinkAnswerRequest,
   type PeerRequestAnswerValue,
 } from '@twt/contracts';
 import type { z } from 'zod';
@@ -1680,8 +1686,12 @@ export function createMemberKnownPeopleClient(opts: MemberAuthClientOptions) {
   const key = (idempotencyKey: string) => ({ 'idempotency-key': idempotencyKey });
 
   return {
-    contactMatches(numbers: readonly string[]): Promise<KnownPeopleContactMatchResponse> {
-      return call(`${base}/contact-matches`, KnownPeopleContactMatchResponse, { numbers }, true, 'POST');
+    /**
+     * Story 6.36e (NE3, V12) — `purpose: 'nominee_link'` when the member matches to find a NOMINEE who is a member (the
+     * server's audit purpose only; the SAME daily budget). Absent ⇒ the body is the 6.36b one, unchanged.
+     */
+    contactMatches(numbers: readonly string[], purpose?: KnownPeopleContactMatchRequest['purpose']): Promise<KnownPeopleContactMatchResponse> {
+      return call(`${base}/contact-matches`, KnownPeopleContactMatchResponse, purpose === undefined ? { numbers } : { numbers, purpose }, true, 'POST');
     },
     ask(mobile: string, foundBy: KnownPeopleFoundByWire, idempotencyKey: string): Promise<KnownPersonAskResponse> {
       return call(base, KnownPersonAskResponse, { mobile, foundBy }, true, 'POST', undefined, key(idempotencyKey));
@@ -1713,4 +1723,34 @@ export function createMemberKnownPeopleClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberKnownPeopleClient = ReturnType<typeof createMemberKnownPeopleClient>;
+
+/**
+ * A NOMINEE WHO IS ALSO A MEMBER — the member client (Story 6.36e, AC2 / AC4). The declarer's marks (Life Events), the marks
+ * naming the member, and their ONE answer (an `Idempotency-Key` HEADER — a retry of the SAME answer reuses its key). The mark
+ * itself rides the nominee declare (`memberLink` on each entry). Every call carries the member bearer.
+ */
+export function createMemberNomineeLinksClient(opts: MemberAuthClientOptions) {
+  const { call } = createApiCallers(opts);
+  const base = '/api/v1/member/nominee-links';
+
+  return {
+    /** The declarer's live marks, one per rank at most (the name only once `confirmed`). */
+    links(opts: { signal?: AbortSignal } = {}): Promise<NomineeLinksView> {
+      return call('/api/v1/member/life-events/nominee-links', NomineeLinksView, undefined, true, 'GET', undefined, undefined, opts.signal);
+    },
+    /** One page of the marks naming the member (open first); pass the previous page's `nextCursor` for the next. */
+    requests(params: { limit?: number; cursor?: string } = {}, opts: { signal?: AbortSignal } = {}): Promise<NomineeLinkRequestsResponse> {
+      const search = new URLSearchParams({ limit: String(params.limit ?? NOMINEE_LINK_REQUESTS_LIMIT_MAX) });
+      if (params.cursor !== undefined) search.set('cursor', params.cursor);
+      return call(`${base}/requests?${search.toString()}`, NomineeLinkRequestsResponse, undefined, true, 'GET', undefined, undefined, opts.signal);
+    },
+    answer(linkId: string, answer: NomineeLinkAnswerRequest['answer'], idempotencyKey: string): Promise<NomineeLinkAnswerResponse> {
+      return call(`${base}/requests/${encodeURIComponent(linkId)}/answer`, NomineeLinkAnswerResponse, { answer }, true, 'POST', undefined, {
+        'idempotency-key': idempotencyKey,
+      });
+    },
+  };
+}
+
+export type MemberNomineeLinksClient = ReturnType<typeof createMemberNomineeLinksClient>;
 export { PeerAnswerEditor, type PeerAnswerEditorSnapshot } from './peer-answer-editor';

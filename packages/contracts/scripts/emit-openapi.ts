@@ -1480,7 +1480,10 @@ registry.registerPath({
   request: { body: { content: jsonOf(nomineeComponents.NomineeDeclareRequest), required: true } },
   responses: {
     200: { description: 'Nominees declared', content: jsonOf(nomineeComponents.NomineeStatusResponse) },
-    400: errorResponse('Request validation failed (0 or >2 nominees, or bad fields)'),
+    400: errorResponse(
+      'Request validation failed (0 or >2 nominees, or bad fields), or a nominee marked as a member ' +
+        '(nominee.link_not_available — Story 6.36e: a mark is set from Life Events only; nothing is written)',
+    ),
     401: nomineeAuth,
     403: errorResponse('A re-declaration requires a fresh nominee_change step-up (auth.step_up_required)'),
     409: errorResponse(

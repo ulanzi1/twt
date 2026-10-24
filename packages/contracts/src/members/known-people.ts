@@ -35,6 +35,9 @@ export const KNOWN_PEOPLE_MAX_LIVE_WIRE = 3;
 export const KnownPeopleContactMatchRequest = z
   .object({
     numbers: z.array(z.string().max(KNOWN_PEOPLE_MATCH_MAX_ENTRY_LENGTH)).min(1).max(KNOWN_PEOPLE_MATCH_MAX_NUMBERS),
+    // Story 6.36e (NE3, V12) — WHY the member matches: `nominee_link` (finding a nominee who is a member) changes ONLY the
+    // KMS audit purpose (`contact_match_nominee`), so the second purpose is visible — the SAME counters. Absent ⇒ `known_people`.
+    purpose: z.enum(['known_people', 'nominee_link']).optional(),
   })
   .strict();
 export type KnownPeopleContactMatchRequest = z.output<typeof KnownPeopleContactMatchRequest>;

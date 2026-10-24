@@ -36,20 +36,36 @@
 //     pre-lock-in re-declares (`pending-kyc` / `pending-fee` / `pending-valid`) stay exempt — a
 //     NARROWING of what the handler used to allow (every non-terminal state), ⛔ not a preservation.
 //     The INITIAL declaration is ⛔ not a "change" and needs no step-up.
+//
+// ── Story 6.36e — a nominee who is also a member (AC3; `2026-10-24-397` NE2, NE4, NE5) ──
+//   · A route FLAG (`declare({ allowLink })`): the signup route refuses ANY `memberLink` (400 `nominee.link_not_available`)
+//     FIRST — before the elevation lookup, any charge, HMAC or transaction — and writes nothing (NE4).
+//   · A `kind:'new'` mark is METERED before any HMAC: its own short scoped tx runs the caller gate and charges ONE
+//     `nominee_link_resolve` unit per new mark (4 a day — NE5, V2); a refusal costs ⛔ KMS call. Then every new mark's
+//     number is normalised and HMAC'd with ONE `mobileBlindIndexMany` call OUTSIDE any transaction (⛔ KMS inside the scope
+//     tx). ⛔ The number is stored, logged, audited or put in an error (the number fence pins this file).
+//   · Inside the declare tx, AFTER the D3 lock and the guards: every LIVE link of the declarer is locked `FOR UPDATE`, the
+//     new marks are resolved through `knownPersonEligibleSql` (DB only), and NE2's plan is made BEFORE any write; the link
+//     rows are written AFTER `appendMemberDeclarationVersions` (they reference its version ids). Both routes apply NE2's
+//     end rules — a save without a mark ENDS the rank's live link (NE4, V20).
+//   · Every unresolvable mark — and a caller the gate refuses — is the SAME 422 `nominee.link_not_found` (TR7).
 
-import type {
-  NomineeDeclareRequest,
-  NomineeStatusResponse,
-  NomineeSummaryEntry,
+import {
+  NOMINEE_LINK_ERROR_CODES as LINK_CODES,
+  type NomineeDeclareRequest,
+  type NomineeStatusResponse,
+  type NomineeSummaryEntry,
 } from '@twt/contracts';
-import { claim as claimDomain, ids, nominee as nomineeDomain, member as memberDomain } from '@twt/domain';
+import { claim as claimDomain, encryption, ids, nominee as nomineeDomain, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import {
+  ApiError,
   BadRequestError,
   ConflictError,
   StepUpRequiredError,
+  TooManyRequestsError,
   UnauthorizedError,
 } from '../../http-errors.js';
 import { hasFreshElevation } from '../auth/member/member-auth.repo.js';
@@ -69,6 +85,20 @@ const PRE_LOCK_IN_STATES = new Set(['pending-kyc', 'pending-fee', 'pending-valid
 
 /** The step-up action context a re-declaration requires (the Life Events route's own gate). */
 const NOMINEE_CHANGE_STEP_UP = 'nominee_change';
+
+/** Story 6.36e (NE4) — whether the route accepts a `memberLink`: Life Events ONLY. */
+export interface NomineeDeclareRouteOptions {
+  readonly allowLink: boolean;
+}
+
+/** The ONE 422 for every unresolvable mark and for a caller the gate refuses (TR7 — ⛔ which, ⛔ why). */
+const linkNotFound = () => new ApiError(422, LINK_CODES.linkNotFound, 'A nominee marked as a member could not be found — remove the mark or pick again');
+
+const LINK_REFUSAL: Record<'not_found' | 'stale' | 'duplicate', () => ApiError> = {
+  not_found: linkNotFound,
+  stale: () => new ConflictError('The nominee marks changed since this screen loaded — reload and save again', LINK_CODES.linkStale),
+  duplicate: () => new ApiError(422, LINK_CODES.linkDuplicate, 'The same member cannot be marked on both nominees'),
+};
 
 export function createNomineeHandlers(deps: AppDeps) {
   const enc = deps.encryption;
@@ -125,7 +155,7 @@ export function createNomineeHandlers(deps: AppDeps) {
      * terminal state (R2); once a claim is filed (Story 6.20 D3, AC2 — `nominee.locked_claim_filed`); and a
      * RE-declaration outside the wizard without a fresh `nominee_change` step-up (D9, AR-24).
      */
-    async declare(request: FastifyRequest): Promise<NomineeStatusResponse> {
+    declare: (route: NomineeDeclareRouteOptions) => async (request: FastifyRequest): Promise<NomineeStatusResponse> => {
       const body = request.body as NomineeDeclareRequest;
       const { memberIdStr, pariwarIdStr } = memberCtx(request);
 
@@ -135,6 +165,44 @@ export function createNomineeHandlers(deps: AppDeps) {
         throw new BadRequestError('Declare 1 or 2 nominees', 'nominee.invalid_count');
       }
       const { split, ranks } = nomineeDomain.deriveNomineeSplit(count);
+
+      // ⭐ Story 6.36e (NE4) — the signup route refuses a mark FIRST: ⛔ elevation lookup, ⛔ charge, ⛔ KMS, ⛔ transaction.
+      if (!route.allowLink && body.nominees.some((n) => n.memberLink !== undefined)) {
+        throw new BadRequestError('A nominee can be marked as a member from Life Events only', LINK_CODES.linkNotAvailable);
+      }
+      const newMarks = body.nominees.flatMap((n, i) => (n.memberLink?.kind === 'new' ? [{ i, mobile: n.memberLink.mobile }] : []));
+      // ⭐ Story 6.36e (NE5, V2) — METER the new marks BEFORE any HMAC, in their OWN short scoped tx (a refusal rolls the
+      // counter back and costs ⛔ KMS call). A `keep` and a save without a mark are ⛔ charged (V11).
+      if (newMarks.length > 0) {
+        const chargeTx = await openScopeTx(deps, pariwarIdStr);
+        let charged = false;
+        try {
+          const r = await nomineeDomain.chargeNomineeLinkResolve(chargeTx.tx, {
+            pariwarId: ids.pariwarId(pariwarIdStr),
+            memberId: ids.memberId(memberIdStr),
+            marks: newMarks.length,
+          });
+          if (!r.ok) {
+            throw r.reason === 'daily_limit'
+              ? new TooManyRequestsError('Daily limit for marking nominees as members reached — try again tomorrow', LINK_CODES.linkDailyLimit)
+              : linkNotFound();
+          }
+          charged = true;
+        } finally {
+          await closeScopeTx(chargeTx, charged);
+        }
+      }
+      // Normalise (an unusable number ⇒ the ONE 422) and HMAC every new mark with ONE batch call OUTSIDE any transaction.
+      const canonicals = newMarks.map((m) => encryption.normalizeMobile(m.mobile));
+      if (canonicals.some((c) => c === null)) throw linkNotFound();
+      const markIndexes = new Map<number, string>();
+      if (newMarks.length > 0) {
+        const indexes = await encryption.mobileBlindIndexMany(canonicals as string[], enc, {
+          pariwarId: pariwarIdStr,
+          purpose: nomineeDomain.NOMINEE_LINK_RESOLVE_AUDIT_PURPOSE,
+        });
+        newMarks.forEach((m, k) => markIndexes.set(m.i, indexes[k]!));
+      }
 
       // ⭐ Story 6.20 (D9) — the `nominee_change` elevation is looked up BEFORE the transaction opens (code
       // review 2026-09-24): looked up inside it, the lookup took a SECOND pooled connection while this one
@@ -195,6 +263,27 @@ export function createNomineeHandlers(deps: AppDeps) {
           throw new StepUpRequiredError(NOMINEE_CHANGE_STEP_UP);
         }
 
+        // ⭐ Story 6.36e (NE2) — lock EVERY live link of this declarer (after the D3 lock, BEFORE this save's versions — so
+        // `onHead` is the head before the save), resolve the new marks (DB only), and PLAN before any write: a refusal
+        // leaves nothing to undo.
+        const liveLinks = await nomineeDomain.lockLiveNomineeLinks(scopeTx.tx, { pariwarId, declarerMemberId: memberId });
+        const resolved = await nomineeDomain.resolveNomineeLinkTargets(scopeTx.tx, {
+          pariwarId,
+          declarerMemberId: memberId,
+          indexes: [...markIndexes.values()],
+        });
+        const linkPlan = nomineeDomain.planNomineeLinks(
+          liveLinks,
+          body.nominees.map((n, i) => {
+            const rank = ranks[i]!.rank;
+            const mark = n.memberLink;
+            if (mark === undefined) return { rank, link: null };
+            if (mark.kind === 'keep') return { rank, link: { kind: 'keep' as const, linkId: mark.linkId } };
+            return { rank, link: { kind: 'new' as const, nomineeMemberId: resolved.get(markIndexes.get(i)!) ?? null, foundBy: mark.foundBy } };
+          }),
+        );
+        if (linkPlan.kind === 'refused') throw LINK_REFUSAL[linkPlan.reason]();
+
         // Encrypt each nominee field under the member's real pariwar context, stamping the
         // server-derived rank + splitPct (the client never supplies a percentage — R4).
         const rows = await Promise.all(
@@ -251,13 +340,22 @@ export function createNomineeHandlers(deps: AppDeps) {
 
         // ⭐ Story 6.20 (AC1) — the history, in the SAME transaction as the projection. ⛔ Nothing is
         // updated or deleted there: the grant and the migration-0119 trigger both refuse it.
-        await nomineeDomain.appendMemberDeclarationVersions(scopeTx.tx, {
+        const versions = await nomineeDomain.appendMemberDeclarationVersions(scopeTx.tx, {
           memberId,
           pariwarId,
           plan,
           nominees: rows,
           recordedAt,
           eventVersion: projected.eventVersion,
+        });
+
+        // ⭐ Story 6.36e (NE2) — the link rows hang off the versions just written; ends are dated `recordedAt`.
+        const links = await nomineeDomain.applyNomineeLinkPlan(scopeTx.tx, {
+          pariwarId,
+          declarerMemberId: memberId,
+          plan: linkPlan,
+          versions,
+          recordedAt,
         });
 
         const result = await buildStatus(scopeTx, pariwarId, memberId);
@@ -274,6 +372,21 @@ export function createNomineeHandlers(deps: AppDeps) {
             versions: plan.map((p) => `${p.rank}:${p.versionNo}:${p.kind}`).join(','),
           },
         });
+        // Story 6.36e (AC9) — one line per link written or ended: `nominee_link:<id>` + `{ rank }` ONLY.
+        for (const [event, written] of [
+          ['member_nominee_links.ended', links.ended],
+          ['member_nominee_links.carried', links.carried],
+          ['member_nominee_links.asked', links.asked],
+        ] as const) {
+          for (const l of written) {
+            emitAuthAudit(deps, request, event, {
+              actorId: memberIdStr,
+              pariwarId: pariwarIdStr,
+              resourceLocator: `nominee_link:${l.linkId}`,
+              context: { rank: l.rank },
+            });
+          }
+        }
         return result;
       } finally {
         await closeScopeTx(scopeTx, ok);

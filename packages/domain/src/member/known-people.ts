@@ -60,6 +60,13 @@ export const KNOWN_PEOPLE_HISTORY_LIMIT = { default: 50, cap: 50 } as const;
 export const KNOWN_PEOPLE_REQUESTS_LIMIT = { default: 50, cap: 50 } as const;
 /** The batch HMAC line's purpose (rides the KMS audit line's row key). */
 export const CONTACT_MATCH_AUDIT_PURPOSE = 'contact_match';
+/**
+ * Story 6.36e (NE3, V12) — the SAME batch line when the member matches to find a NOMINEE who is a member: a second purpose,
+ * logged as its own (⛔ hidden under `contact_match`). The SAME counters (one budget for one disclosure).
+ */
+export const CONTACT_MATCH_NOMINEE_AUDIT_PURPOSE = 'contact_match_nominee';
+/** Why a member matches contacts — the wire's `purpose` (absent ⇒ `known_people`). */
+export type ContactMatchPurpose = 'known_people' | 'nominee_link';
 /** A single ask's HMAC is one number — audited through the SAME batch path, so it carries a purpose too. */
 export const KNOWN_PEOPLE_ASK_AUDIT_PURPOSE = 'known_people_ask';
 
@@ -262,8 +269,10 @@ export async function contactMatchIndexes(
   normalised: NormalisedContactNumbers,
   enc: FieldCryptoDeps,
   callerPariwarId: PariwarId,
+  purpose: ContactMatchPurpose = 'known_people',
 ): Promise<string[]> {
-  return mobileBlindIndexMany(normalised.distinct, enc, { pariwarId: callerPariwarId, purpose: CONTACT_MATCH_AUDIT_PURPOSE });
+  const auditPurpose = purpose === 'nominee_link' ? CONTACT_MATCH_NOMINEE_AUDIT_PURPOSE : CONTACT_MATCH_AUDIT_PURPOSE;
+  return mobileBlindIndexMany(normalised.distinct, enc, { pariwarId: callerPariwarId, purpose: auditPurpose });
 }
 
 /**
@@ -322,6 +331,8 @@ export async function matchContactNumbers(input: {
   numbers: readonly string[];
   enc: FieldCryptoDeps;
   inScope: InScope;
+  /** Story 6.36e — the audit purpose only (⛔ the counters). Absent ⇒ `known_people`. */
+  purpose?: ContactMatchPurpose | undefined;
 }): Promise<MatchContactNumbersResult> {
   const { pariwarId, callerMemberId, numbers, enc, inScope } = input;
   const normalised = normaliseContactNumbers(numbers);
@@ -335,7 +346,7 @@ export async function matchContactNumbers(input: {
     if (err instanceof KnownPeopleChargeRefused) return { kind: 'refused', reason: err.reason };
     throw err;
   }
-  const indexes = await contactMatchIndexes(normalised, enc, pariwarId);
+  const indexes = await contactMatchIndexes(normalised, enc, pariwarId, input.purpose);
   const positions = await inScope((db) => matchedContactPositions(db, { pariwarId, callerMemberId, normalised, indexes }));
   return { kind: 'matched', positions, submitted: numbers.length, checked: normalised.distinct.length };
 }

@@ -28,6 +28,7 @@ import { registerKycModule } from './modules/kyc/index.js';
 import { registerKnownPeopleModule } from './modules/known-people/index.js';
 import { registerLifeEventsModule } from './modules/life-events/index.js';
 import { registerMemberLanguageModule } from './modules/member-language/index.js';
+import { registerNomineeLinksModule } from './modules/nominee-links/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
@@ -305,6 +306,9 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // Story 6.36b — PEOPLE WHO KNOW ME (6.36a SW10–SW14): contact matching (positions only), asking up to three members,
   // the member's list, the requests naming the member, answering and withdrawing. `active` members only.
   registerKnownPeopleModule(app, deps);
+  // Story 6.36e — a nominee who is also a member: the declarer's marks (Life Events) and the marked member's requests +
+  // their ONE answer. The mark itself rides the Life Events nominee declare.
+  registerNomineeLinksModule(app, deps);
   // Story 3.10 — member voluntary-withdrawal surface (FR-6): step-up-gated confirm ('withdrawal'
   // context) → member.withdrawal_completed transition to `withdrawn` (₹110 forfeited; 12-month rejoin
   // lock written; history retained until Story 3.12 anonymizes). Signup rejoin-lock enforcement lives

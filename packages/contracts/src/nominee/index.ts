@@ -8,3 +8,5 @@
 // register real OpenAPI components + paths (see scripts/emit-openapi.ts).
 
 export * from './declaration.js';
+// Story 6.36e — a nominee who is also a member (the mark, the declarer's read, the marked member's requests + answer).
+export * from './member-link.js';

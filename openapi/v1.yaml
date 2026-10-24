@@ -2305,6 +2305,43 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 500
+              memberLink:
+                oneOf:
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                          - new
+                      mobile:
+                        type: string
+                        minLength: 10
+                        maxLength: 20
+                        pattern: ^[+0-9][0-9\s\-()]*$
+                      foundBy:
+                        type: string
+                        enum:
+                          - contacts
+                          - picker
+                          - typed
+                    required:
+                      - kind
+                      - mobile
+                      - foundBy
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                          - keep
+                      linkId:
+                        type: string
+                        format: uuid
+                    required:
+                      - kind
+                      - linkId
+                    additionalProperties: false
             required:
               - name
               - relationship
@@ -10749,7 +10786,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/NomineeStatusResponse"
         "400":
-          description: Request validation failed (0 or >2 nominees, or bad fields)
+          description: "Request validation failed (0 or >2 nominees, or bad fields), or a nominee marked as a member (nominee.link_not_available — Story 6.36e: a mark is set from Life Events only; nothing is written)"
           content:
             application/json:
               schema:

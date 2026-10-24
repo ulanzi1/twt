@@ -22,6 +22,7 @@
 import { z } from 'zod';
 
 import { EnglishScriptName, MobileNumber } from '../_common/primitives.js';
+import { NomineeMemberLink } from './member-link.js';
 
 // ── Wire enum (re-declared; value-aligned with member_nominees.relationship) ───────────
 
@@ -104,6 +105,9 @@ export const NomineeDeclareEntry = z
     relationship: NomineeRelationship,
     mobile: MobileNumber,
     address: z.string().trim().min(1).max(500).optional(),
+    // Story 6.36e (AC2, NE2) — this nominee is ALSO a member: a NEW mark (a number the server resolves) or a KEEP of a live
+    // link. OPTIONAL; the signup route refuses it (400 `nominee.link_not_available` — NE4). INPUT-only.
+    memberLink: NomineeMemberLink.optional(),
   })
   .strict();
 export type NomineeDeclareEntry = z.output<typeof NomineeDeclareEntry>;

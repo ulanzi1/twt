@@ -684,7 +684,7 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
       match per session, the states); the draft carries `memberLink`; the request entry (home placement per AC5); the answer screen;
       `lib/nominee-links-api.ts`; i18n `nominee_link` hi + en registered in `catalog.ts` + `classification.json`, with the real-`t()` test;
       parity.
-- [ ] **Task 6 — erasure + export (AC8)** — `anonymizeMember` arm (live links); `ProfileSection` FIRST (`nomineeLinks: { marked, namedBy }`),
+- [x] **Task 6 — erasure + export (AC8)** *(2026-10-24 — rtbf pin 22 / 22 (raised 26 → 27 statements, 23 → 24 tables); jobs export 4 / 4)* — `anonymizeMember` arm (live links); `ProfileSection` FIRST (`nomineeLinks: { marked, namedBy }`),
       then `assemble.ts`; the jobs export test.
 - [ ] **Task 7 — gates (AC10)** — and the records of the run (Debug Log), the ledger line, File List.
 
@@ -835,6 +835,15 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   the story's English verbatim, WCAG 2.5.3 on the pick button) — the package 122 / 122; `check-parity` green. `router.push`
   targets grepped by hand (TR11): `/(life-events)/nominee-link-find` and `/(life-events)/nominee-link-requests` — both files exist
   (typed routes are absent in a worktree, so `tsc` cannot check an `Href` — [[project_mobile_typed_routes_worktree]]).
+- **Task 6 runs (`twt_6_36e`):** `rtbf-anonymize.test.ts` 22 / 22 — the pin RAISED (27 statements, 24 tables; ⚠ 11b.4 also raises
+  it — whichever lands second re-bases) and a new leg (ONE statement, LIVE only, declarer OR nominee); `eraseNomineeLinks` rewritten
+  in the drizzle BUILDER form (the same SQL) so the pin captures it by table. `apps/jobs/tests/data-export.test.ts` 4 / 4 — a new leg
+  builds a REAL export (the strict parse of every section) for a member with two marks (one confirmed, one asked) who is also marked
+  by another member: the name only on the confirmed mark and on `namedBy`, ⛔ a member id. First run: a FIXTURE fault (fake
+  `enc:v1:n` version ciphertexts — the export decrypts every version), then an ORDER found: one save's marks share `asked_at`, so
+  `getNomineeLinksForExport` fell back to the random link id — now `asked_at, rank, version_no, link_id`. Domain export / rtbf /
+  nominee integration 78 / 78; contracts `nominee-member-link.test.ts` 10 / 10 (the export shape added); OpenAPI re-emitted —
+  unchanged (`ProfileSection` is ⛔ in it).
 - **Task 3 — a found ordering, kept as specified:** AC3's order puts the caller gate (step 1) BEFORE the claim lock (step 3), so a
   declarer a claim names who submits a NEW mark gets the ONE 422 `nominee.link_not_found`, ⛔ the 409 `nominee.locked_claim_filed` —
   a `keep` or a plain save still gets the 409 (the leg asserts both routes of it). Harmless: the status read already says
@@ -886,6 +895,11 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   names in `AuthAuditEventType`. The number fence: the 6.36e files listed, the mark's identifiers added, and a SECOND rule for those
   files (⛔ a name or the other member's id in a sink — `err.name` excepted). OpenAPI re-emitted (the declare entry's `memberLink`;
   the signup 400). `createMemberNomineeLinksClient` + `contactMatches(numbers, purpose?)`.
+- 2026-10-24 — **Task 6**: `anonymizeMember` gains the `eraseNomineeLinks` arm (every LIVE mark where the member is the declarer
+  OR the nominee ⇒ `erased`; an ended mark keeps its end, an answered one its answer). `ProfileSection.nomineeLinks: { marked,
+  namedBy }` in the contract FIRST (G11), then `assemble.ts` (marked: rank, versionNo, state, answer, askedAt, the name only once
+  CONFIRMED; namedBy: state, answer, askedAt, the declarer's name — the request showed it); the presentation mode is now resolved
+  when the member's only other-member names are marks.
 - 2026-10-24 — **Task 4**: the jobs' three live legs (select, request child, reminder child) — a nominee marked by ACCOUNT with a
   declared number nobody signs in with; RED under a `memberIds`-dropping mutant.
 - 2026-10-24 — **Task 5**: `NomineeForm` gains the `link` prop (Life Events ONLY): per slot the mark's label (asked / confirmed —
@@ -905,7 +919,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 
 ### File List
 
-*(Tasks 1–5 so far; completed at Step 9.)*
+*(Tasks 1–6 so far; completed at Step 9.)*
 
 - `packages/domain/migrations/0181_member-nominee-links.sql` (new)
 - `packages/domain/migrations/meta/_journal.json`
@@ -980,6 +994,11 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 - `apps/mobile/app/(tabs)/index.tsx`
 - `apps/mobile/tests/unit/nominee-links-logic.test.ts` (new)
 - `apps/mobile/tests/unit/nominee-form-link-render.test.ts` (new)
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/src/data-export/assemble.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/contracts/src/data-export/data-export.ts`
+- `apps/jobs/tests/data-export.test.ts`
 - `_bmad-output/implementation-artifacts/6-36e-nominee-member-link-at-declaration.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 

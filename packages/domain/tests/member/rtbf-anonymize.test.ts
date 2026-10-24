@@ -42,6 +42,7 @@ import {
   claimGroundInspectionDiscrepancyNotes,
   claims,
   memberKnownPeople,
+  memberNomineeLinks,
   nomineeDeterminations,
   workplaceRequests,
 } from '../../src/schema/index.js';
@@ -221,8 +222,13 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // PII (member ids, states, dates) but its LIVE links must END on either member's erasure (`erased`, ⛔ deleted — the
     // history is kept, the ids opaque), so 6.36 never asks an erased person and a namer's row vanishes. ONE statement: a
     // stale `asked` row is recorded `lapsed` (dated `asked_at + 30 days`), every other live row `erased`.
+    //
+    // ⭐ MOVED AGAIN by Story 6.36e (NE10, AC8): TWENTY-FOUR tables, TWENTY-SEVEN statements. `member_nominee_links` holds ⛔
+    // PII (member ids, answers, dates) but every LIVE mark where the member is the declarer OR the nominee must become
+    // `erased` (⛔ deleted), so ⛔ marked member is ever left out of the five on an erased person's account. ONE statement.
+    // ⚠ Story 11b.4 also raises this count — whichever lands second re-bases.
     const { captured } = await run();
-    expect(captured).toHaveLength(26);
+    expect(captured).toHaveLength(27);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -248,6 +254,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       claimGroundInspectionDiscrepancyNotes,
       workplaceRequests,
       memberKnownPeople,
+      memberNomineeLinks,
     ]) {
       expect(tables).toContain(t);
     }
@@ -260,7 +267,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(23); // Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(24); // Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -293,7 +300,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
-    expect(captured).toHaveLength(23); // Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
+    expect(captured).toHaveLength(24); // Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
   });
 
   it('⭐ Story 6.36a (AC9): the typed workplace → NULL and an open request → closed, in ONE statement, ONLY the member\'s rows', async () => {
@@ -313,6 +320,19 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // ⚠ A final row whose text is already gone is SKIPPED (the guard refuses a write that changes nothing).
     expect(text).toMatch(/"workplace_requests"\."typed_name" IS NOT NULL OR "workplace_requests"\."typed_place" IS NOT NULL OR "workplace_requests"\."state" IN \('pending', 'suggested'\)/);
     expect(params).toContain(pariwar);
+  });
+
+  it('⭐ Story 6.36e (NE10): the nominee marks — ONE statement, LIVE only, declarer OR nominee, `erased` with its reason', async () => {
+    const { captured, pariwar } = await run([]);
+    const found = captured.filter((c) => c.table === memberNomineeLinks);
+    expect(found).toHaveLength(1);
+    expect(Object.keys(found[0]!.set).sort()).toEqual(['endReason', 'endedAt', 'state']);
+    expect(found[0]!.set.state).toBe('erased');
+    expect(found[0]!.set.endReason).toBe('erased');
+    const { sql: text, params } = new PgDialect().sqlToQuery(found[0]!.where as SQL);
+    expect(text).toMatch(/"pariwar_id" = \$1 and \(.*"declarer_member_id" = \$2 or .*"nominee_member_id" = \$3\) and .*"state" = \$4/s);
+    expect(params[0]).toBe(pariwar);
+    expect(params[3]).toBe('live'); // ⛔ an ended mark's write-once end is rewritten (V21)
   });
 
   it('⭐ Story 6.36b (SW17): the known-people links END — ONE statement, a stale ask lapsed, every other live link erased', async () => {

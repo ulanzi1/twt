@@ -18,18 +18,19 @@
 // member barrel (a runtime init cycle `tsc` cannot see). ⛔ And ⛔ never `../claim/` (T5 — the claim lock is composed in the
 // handler).
 
-import { sql, type SQL } from 'drizzle-orm';
+import { and, eq, or, sql, type SQL } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import { memberId as toMemberId, nomineeLinkId, nomineeVersionId, type MemberId, type NomineeLinkId, type NomineeVersionId, type PariwarId } from '../ids/index.js';
 import { chargeMemberCounter, isKnownPeopleCaller, knownPersonEligibleSql, namedByClaimSql } from '../member/known-people.js';
 import { clampLimit } from '../pagination.js';
 import type { MemberNomineeVersionRow } from '../schema/member_nominee_versions.js';
-import type {
-  NomineeLinkAnswer,
-  NomineeLinkEndReason,
-  NomineeLinkFoundBy,
-  NomineeLinkState,
+import {
+  memberNomineeLinks,
+  type NomineeLinkAnswer,
+  type NomineeLinkEndReason,
+  type NomineeLinkFoundBy,
+  type NomineeLinkState,
 } from '../schema/member_nominee_links.js';
 import type { NomineeRank } from './declaration-history.js';
 
@@ -482,11 +483,17 @@ export async function answerNomineeLinkRequest(
  * deleted. An already-ended row keeps its write-once end (V21); an answered row keeps its answer (V1). ONE statement.
  */
 export async function eraseNomineeLinks(db: Db, input: { pariwarId: PariwarId; memberId: MemberId }): Promise<void> {
-  await db.execute(sql`
-    UPDATE member_nominee_links SET state = 'erased', ended_at = clock_timestamp(), end_reason = 'erased'
-     WHERE pariwar_id = ${input.pariwarId}
-       AND (declarer_member_id = ${input.memberId} OR nominee_member_id = ${input.memberId})
-       AND state = 'live'`);
+  // The builder form (⛔ raw SQL) so the rtbf statement pin (`tests/member/rtbf-anonymize.test.ts`) captures it by table.
+  await db
+    .update(memberNomineeLinks)
+    .set({ state: 'erased', endedAt: sql`clock_timestamp()`, endReason: 'erased' })
+    .where(
+      and(
+        eq(memberNomineeLinks.pariwarId, input.pariwarId),
+        or(eq(memberNomineeLinks.declarerMemberId, input.memberId), eq(memberNomineeLinks.nomineeMemberId, input.memberId)),
+        eq(memberNomineeLinks.state, 'live'),
+      ),
+    );
 }
 
 export interface NomineeLinkExportRow {
@@ -519,7 +526,7 @@ export async function getNomineeLinksForExport(
       JOIN member_nominee_versions v ON v.version_id = l.version_id
      WHERE l.pariwar_id = ${input.pariwarId}
        AND (l.declarer_member_id = ${input.memberId} OR l.nominee_member_id = ${input.memberId})
-     ORDER BY l.asked_at, v.version_no, l.link_id`);
+     ORDER BY l.asked_at, l.rank, v.version_no, l.link_id`); // one save's marks share `asked_at`: by rank, ⛔ by a random id
   const marked: NomineeLinkExportRow[] = [];
   const namedBy: NomineeLinkExportRow[] = [];
   for (const row of r.rows) {

@@ -60,6 +60,8 @@ import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
 import { workplaceRequests } from '../schema/workplace_requests.js';
 import { eraseKnownPeopleLinks } from './known-people.js';
+// Story 6.36e — the nominee marks' erasure arm, imported DIRECTLY (⛔ the `nominee/` barrel — `member/` ↔ `nominee/` init order).
+import { eraseNomineeLinks } from '../nominee/member-links.js';
 
 /** The KMS material the sentinel-encrypt uses. The caller (the RTBF handler) threads its `{ kms, kekRef }`
  *  here — the SAME `ExportEncryption` shape assemble.ts uses for the inverse decrypt. */
@@ -598,6 +600,11 @@ export async function anonymizeMember(
   // namer OR named ENDS (`erased`; a stale ask recorded `lapsed`) — ⛔ deleted: 6.36 must ⛔ never ask an erased person,
   // and the namer's row vanishes (6.36a SW14 (3)). ONE statement.
   await eraseKnownPeopleLinks(client, { pariwarId, memberId });
+
+  // ── member_nominee_links (Story 6.36e, NE10, AC8) ── ⛔ PII (ids, answers, dates), but every LIVE mark where the member is
+  // the DECLARER or the NOMINEE becomes `erased` — ⛔ deleted (the history is kept, the ids opaque). An already-ended mark
+  // keeps its write-once end (V21); an answered one keeps its answer (V1). ONE statement.
+  await eraseNomineeLinks(client, { pariwarId, memberId });
 
   await client
     .update(dataExports)

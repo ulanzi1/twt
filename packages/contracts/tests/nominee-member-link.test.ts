@@ -19,6 +19,7 @@ import {
   NomineeLinkRequestsResponse,
   NomineeLinksView,
   NomineeMemberLink,
+  ProfileSection,
 } from '../src/index.js';
 
 const LINK = '44444444-4444-4444-8444-444444444444';
@@ -99,5 +100,24 @@ describe('contact matching `purpose` (NE3, V12)', () => {
     expect(KnownPeopleContactMatchRequest.safeParse({ numbers: ['1'], purpose: 'nominee_link' }).success).toBe(true);
     expect(KnownPeopleContactMatchRequest.safeParse({ numbers: ['1'], purpose: 'known_people' }).success).toBe(true);
     expect(KnownPeopleContactMatchRequest.safeParse({ numbers: ['1'], purpose: 'marketing' }).success).toBe(false);
+  });
+});
+
+describe('the export — `ProfileSection.nomineeLinks` (NE10, V25)', () => {
+  const lists = ProfileSection.shape.nomineeLinks;
+  const mark = { rank: 1, versionNo: 2, state: 'live', answer: 'confirmed', askedAt: AT, name: 'Meena K.' };
+
+  it('`marked` joins `nomineeHistory[]` by (rank, versionNo); every state; the name nullable; strict', () => {
+    for (const state of ['live', 'ended', 'erased']) expect(lists.safeParse({ marked: [{ ...mark, state }], namedBy: [] }).success).toBe(true);
+    expect(lists.safeParse({ marked: [{ ...mark, answer: null, name: null }], namedBy: [] }).success).toBe(true);
+    expect(lists.safeParse({ marked: [{ ...mark, rank: 3 }], namedBy: [] }).success).toBe(false);
+    expect(lists.safeParse({ marked: [{ ...mark, memberId: LINK }], namedBy: [] }).success).toBe(false); // ⛔ a member id
+  });
+
+  it('`namedBy` carries ⛔ rank / version (the declarer\'s declaration is ⛔ the member\'s data); strict; both lists REQUIRED', () => {
+    const by = { state: mark.state, answer: mark.answer, askedAt: mark.askedAt, name: mark.name };
+    expect(lists.safeParse({ marked: [], namedBy: [{ ...by, answer: null }] }).success).toBe(true);
+    expect(lists.safeParse({ marked: [], namedBy: [mark] }).success).toBe(false);
+    expect(lists.safeParse({ marked: [] }).success).toBe(false);
   });
 });

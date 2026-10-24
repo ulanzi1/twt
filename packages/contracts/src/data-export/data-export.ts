@@ -120,6 +120,23 @@ const KnownPeopleNamedByExportLink = z
     message: 'an `ended` request naming the member carries no name and no end date (2026-10-15-334)',
   });
 
+/**
+ * Story 6.36e (NE10, V25) — the nominee MARKS: on `marked[]` each mark the member set on a nominee (every state — a link hangs
+ * off a VERSION, so `(rank, versionNo)` joins it to `nomineeHistory[]`); on `namedBy[]` each mark NAMING the member. `name` is
+ * ONLY what the member already saw: on `marked[]` the marked member's registered name once they CONFIRMED (`-309`), on
+ * `namedBy[]` the declarer's (the request showed it). ⛔ A member id, ⛔ a number.
+ */
+const NomineeLinkExportFields = {
+  state: z.enum(['live', 'ended', 'erased']),
+  answer: z.enum(['confirmed', 'not_me']).nullable(),
+  askedAt: Iso8601Datetime,
+  name: z.string().nullable(),
+};
+const NomineeLinkMarkedExport = z
+  .object({ ...NomineeLinkExportFields, rank: z.union([z.literal(1), z.literal(2)]), versionNo: z.number().int().positive() })
+  .strict();
+const NomineeLinkNamedByExport = z.object(NomineeLinkExportFields).strict();
+
 /** `profile.json` — the member's decrypted identity + declared data (member is the legitimate audience). */
 export const ProfileSection = z
   .object({
@@ -235,6 +252,13 @@ export const ProfileSection = z
       .object({
         named: z.array(KnownPeopleNamedExportLink),
         namedBy: z.array(KnownPeopleNamedByExportLink),
+      })
+      .strict(),
+    /** Story 6.36e (NE10) — the nominee marks the member SET (`marked`) and the ones NAMING them (`namedBy`). */
+    nomineeLinks: z
+      .object({
+        marked: z.array(NomineeLinkMarkedExport),
+        namedBy: z.array(NomineeLinkNamedByExport),
       })
       .strict(),
   })

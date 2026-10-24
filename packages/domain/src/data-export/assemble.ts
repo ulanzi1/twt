@@ -89,6 +89,7 @@ import { workplaces } from '../schema/workplaces.js';
 import { resolvePublicNamePresentationMode } from '../kyc/presentation-policy.js';
 import { ANONYMIZED_SENTINEL } from '../member/anonymize.js';
 import { getKnownPeopleForExport, type KnownPeopleExportRow } from '../member/known-people.js';
+import { getNomineeLinksForExport } from '../nominee/member-links.js';
 import { resolveMemberFacingDeceasedName } from '../notifications/pool-identity.js';
 import { members } from '../schema/members.js';
 import { vyawasthaShulkReceipts } from '../schema/vyawastha_shulk_receipts.js';
@@ -356,8 +357,12 @@ export async function assembleMemberExport(
   // mode): a named person's once they had ACCEPTED (an `asked` or declined link showed only the name the member saved on
   // their phone — ⛔ kept by the Trust); a namer's always (the request showed it). ⛔ No member id, ⛔ no number.
   const knownPeopleLinks = await getKnownPeopleForExport(client, { pariwarId, memberId });
+  // Story 6.36e (NE10) — read here so the presentation mode is resolved for a member whose ONLY other-member names are marks.
+  const nomineeLinkRows = await getNomineeLinksForExport(client, { pariwarId, memberId });
   const presentationMode =
-    knownPeopleLinks.named.length + knownPeopleLinks.namedBy.length === 0 ? null : await resolvePublicNamePresentationMode(client, pariwarId);
+    knownPeopleLinks.named.length + knownPeopleLinks.namedBy.length + nomineeLinkRows.marked.length + nomineeLinkRows.namedBy.length === 0
+      ? null
+      : await resolvePublicNamePresentationMode(client, pariwarId);
   const seenName = async (otherId: string): Promise<string | null> => {
     if (presentationMode === null) return null;
     const [other] = await client.select().from(memberKycProfiles).where(eq(memberKycProfiles.memberId, otherId as MemberId)).limit(1);
@@ -410,6 +415,26 @@ export async function assembleMemberExport(
   }
   const knownPeople = { named, namedBy };
 
+  // ── Story 6.36e (NE10, V25) — the nominee MARKS, each with ONLY the name the member already saw: on `marked` the marked
+  // member's once they CONFIRMED (`-309`), on `namedBy` the declarer's (the request showed it). Every state; ⛔ a member id,
+  // ⛔ a number. `(rank, versionNo)` joins a mark to `nomineeHistory[]`. ONE row at a time (one scoped client — above).
+  const marked = [];
+  for (const l of nomineeLinkRows.marked) {
+    marked.push({
+      rank: l.rank,
+      versionNo: l.versionNo,
+      state: l.state,
+      answer: l.answer,
+      askedAt: l.askedAt.toISOString(),
+      name: l.answer === 'confirmed' ? await seenName(l.otherMemberId) : null,
+    });
+  }
+  const markedBy = [];
+  for (const l of nomineeLinkRows.namedBy) {
+    markedBy.push({ state: l.state, answer: l.answer, askedAt: l.askedAt.toISOString(), name: await seenName(l.otherMemberId) });
+  }
+  const nomineeLinks = { marked, namedBy: markedBy };
+
   const profile = {
     memberId,
     pariwarId,
@@ -447,6 +472,7 @@ export async function assembleMemberExport(
       capturedAt: a.capturedAt.toISOString(),
     })),
     knownPeople,
+    nomineeLinks,
   };
 
   // ── consent_records.json ── full history (grants + revocations); no cap — this is a data-export,

@@ -76,7 +76,7 @@ async function seedDrive(
     claimCaseId,
     currentState: opts.currentState ?? 'closed',
     fixedAmount: opts.fixedAmount ?? 100,
-    poolCanonicalIdentifier: opts.canonicalIdentifier ?? `P-2026-08-${randomUUID().slice(0, 3)}`,
+    poolCanonicalIdentifier: opts.canonicalIdentifier ?? `P-2026-08-${randomUUID().slice(0, 8)}`,
   });
   if (opts.district !== undefined) {
     await seedMemberPosting(tx, pariwarId, deceasedMemberId, opts.district);

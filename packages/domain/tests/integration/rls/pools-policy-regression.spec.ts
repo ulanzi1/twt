@@ -63,7 +63,7 @@ describe.skipIf(!hasDatabase)('pools RLS policy regression', () => {
         cycleId: randomUUID() as never,
         claimCaseId: randomUUID() as never,
         poolIndex: 0,
-        poolCanonicalIdentifier: `P-2026-07-${randomUUID().slice(0, 3)}`,
+        poolCanonicalIdentifier: `P-2026-07-${randomUUID().slice(0, 8)}`,
         supportCategory: 'death_support',
         benefitMechanism: 'pool',
         fixedAmount: 500,

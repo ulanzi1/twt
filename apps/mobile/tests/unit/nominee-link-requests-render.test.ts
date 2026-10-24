@@ -101,6 +101,20 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+describe('the requests screen — ⛔ a word about a death (`2026-10-24-401`)', () => {
+  const DEATH = /death|\bdie[sd]?\b|dead|deceased|not be asked|asked about|vouch/i
+
+  it('an OPEN request and an ANSWERED one say nothing about a death or about being asked — the screen must not describe how the five are chosen', async () => {
+    mock.answer.mockResolvedValue({ linkId: L1, answer: 'confirmed' })
+    render(createElement(NomineeLinkRequestsScreen))
+    expect(screen.getByText(/has named you as their nominee/)).toBeInTheDocument() // the request IS on screen
+    expect(document.body.textContent ?? '').not.toMatch(DEATH)
+    await userEvent.click(yes())
+    expect(await screen.findByText('You said this is you.')).toBeInTheDocument()
+    expect(document.body.textContent ?? '').not.toMatch(DEATH)
+  })
+})
+
 describe('the requests screen — a request the member has just answered', () => {
   it('⭐ shows as ANSWERED at once, with ⛔ Yes / No — although the reload has not landed (`answer` is still null in the data)', async () => {
     mock.answer.mockResolvedValue({ linkId: L1, answer: 'confirmed' })

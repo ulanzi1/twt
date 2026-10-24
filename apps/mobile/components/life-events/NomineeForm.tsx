@@ -252,7 +252,7 @@ export function NomineeForm(props: NomineeFormProps) {
         {mark !== null && mark.kind === 'new' ? (
           <Paragraph accessibilityRole="text">{name ? lt('form.will_ask', { name }) : lt('form.will_ask_no_name')}</Paragraph>
         ) : null}
-        <Paragraph accessibilityRole="text">{lt('form.why')}</Paragraph>
+        {/* ⛔ A line saying WHY a mark matters or what the Trust does with it: it would describe how the five are chosen (`2026-10-24-401`). */}
         {mark !== null && markNeedsQuestion(slot) ? (
           <YStack gap="$2" testID={`nominee-mark-question-${index}`}>
             {/* SHOWN and SPOKEN (family 13(d)): a bare live region is Android-only — `AnnouncedText` speaks it on iOS too. */}

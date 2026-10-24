@@ -21,10 +21,29 @@ const PARAMS: Record<string, Record<string, string | number>> = {
   'find.pick_a11y': { name: 'Meena K.' },
   'request.question': { name: 'Asha D.' },
   'request.will_see': { name: 'Asha D.' },
-  'request.consequence': { name: 'Asha D.' },
 };
 
 describe('nominee_link copy (real t())', () => {
+  // `2026-10-24-401` (BigDev): no member-facing line says — or implies — that the Trust asks members about a death. The lines that did
+  // (`form.why` on the declarer's form, `request.consequence*` on the marked member's screen) described how the five are chosen,
+  // which a group could use to steer it. They are deleted; this pins that nothing like them comes back, in either language.
+  it('⭐ ⛔ no string of the namespace mentions a death or being asked about one (en + hi) — and the three removed keys are gone', () => {
+    const death = {
+      en: /\b(death|dies|died|dead|deceased|passed away|passing|vouch)\b|asked about|asked to confirm/i,
+      hi: /मृत्यु|निधन|देहांत|मौत|मृतक|स्वर्गवास|गुज़र|गुजर/,
+    }
+    for (const locale of ['en', 'hi'] as const) {
+      const catalog = getCatalog(locale, NS) as Record<string, unknown>
+      for (const [key, value] of Object.entries(catalog)) {
+        if (typeof value !== 'string') continue
+        expect(value, `${locale}:${key}`).not.toMatch(death[locale])
+      }
+      for (const removed of ['form.why', 'request.consequence', 'request.consequence_no_name']) {
+        expect(Object.keys(catalog), `${locale}:${removed}`).not.toContain(removed)
+      }
+    }
+  })
+
   it('is registered and member-facing', () => {
     expect(KNOWN_NAMESPACES).toContain(NS);
     expect(getCatalog('en', NS)).toBeDefined();
@@ -52,10 +71,8 @@ describe('nominee_link copy (real t())', () => {
   it('the story\'s English, verbatim (NE6 / AC5 — FINAL)', () => {
     const en = (key: string) => t(key, PARAMS[key], { locale: 'en', namespace: NS });
     expect(en('form.find')).toBe('Is this nominee a TWT member? Find them in your contacts');
-    expect(en('form.why')).toBe('If they sign in with a different number from the one above, this still keeps them out of the people asked about your death.');
     expect(en('request.question')).toBe('Asha D. has named you as their nominee in TWT and marked you as a member. Is that you?');
     expect(en('request.will_see')).toBe('Asha D. will see your answer.');
-    expect(en('request.consequence')).toBe("While this stands, you will not be asked about Asha D.'s death.");
     expect(en('request.yes')).toBe("Yes, that's me");
     expect(en('request.no')).toBe("No, that's not me");
     expect(en('label.asked')).toBe('Asked');

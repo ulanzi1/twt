@@ -1,8 +1,9 @@
 // "Named as a nominee" — the marked member's side (Story 6.36e, Task 5; AC4, AC5; `2026-10-24-397` NE6).
 //
 // Each mark naming the member, newest first, OPEN ones first: *"[Declarer's registered name] has named you as their nominee
-// in TWT and marked you as a member. Is that you?"*, then *"[Name] will see your answer."* and the consequence — *"While this
-// stands, you will not be asked about [Name]'s death."* (V14) — above the two answers. ONE answer (NE6): ⛔ lapse, ⛔ withdraw;
+// in TWT and marked you as a member. Is that you?"*, then *"[Name] will see your answer."* and the name note, above the two answers.
+// ⛔ A line saying what a yes or a no leads to (*"you will not be asked about … death"*, V14): removed by `2026-10-24-401` — the screen
+// must not describe how the five are chosen. ONE answer (NE6): ⛔ lapse, ⛔ withdraw;
 // an answered mark stays listed with what the member said. ⛔ SMS, push or WhatsApp — the app only. Every state (loading,
 // empty, refused, failed) renders OUTSIDE the list ([[project_fabric_flatlist_empty_populated_crash]]); each answer is a
 // per-call `mutateAsync` with its OWN Idempotency-Key, and its outcome is SHOWN AND SPOKEN.
@@ -133,7 +134,6 @@ export default function NomineeLinkRequestsScreen() {
                     <>
                       <Text>{named('request.will_see', r.name)}</Text>
                       <Text>{t('request.name_note')}</Text>
-                      <Text>{named('request.consequence', r.name)}</Text>
                       <XStack gap="$2" flexWrap="wrap">
                         <Button
                           theme="accent"
@@ -161,7 +161,6 @@ export default function NomineeLinkRequestsScreen() {
                   ) : (
                     <>
                       <Text>{shown === 'confirmed' ? t('request.answered_yes') : t('request.answered_no')}</Text>
-                      <Text>{named('request.consequence', r.name)}</Text>
                     </>
                   )}
                 </YStack>

@@ -171,6 +171,21 @@ describe('NomineeForm — the member mark (Story 6.36e, V3)', () => {
     expect(screen.getByTestId('nominee-mark-question-0')).toBeInTheDocument()
   })
 
+  it('⭐ ⛔ the form says nothing about a death or about being asked — with no mark, a new mark and a kept mark (`2026-10-24-401`: it must not describe how the five are chosen)', async () => {
+    const DEATH = /death|\bdie[sd]?\b|dead|deceased|keeps them out|asked about|vouch/i
+    const forms: NomineeFormEntry[][] = [
+      [marked({ memberLink: null })],
+      [marked({ memberLink: { kind: 'new', mobile: '+919876500001', foundBy: 'contacts', savedName: 'Meena', confirmedFor: slotFingerprint({ name: NAME, mobile: MOBILE }) } })],
+      [marked()],
+    ]
+    for (const f of forms) {
+      renderForm({ forms: f })
+      expect(screen.getByTestId('nominee-mark-0')).toBeInTheDocument() // the mark control IS rendered
+      expect(document.body.textContent ?? '').not.toMatch(DEATH)
+      cleanup()
+    }
+  })
+
   it('⭐ rounds 3–4 — after a pick the name EXTENDS silently; a backspace, a replacement and a clearing each ASK (the mark must ⛔ ride onto another person)', async () => {
     const emptyFp = slotFingerprint({ name: '', mobile: MOBILE })
     const pending = (): NomineeFormEntry => ({

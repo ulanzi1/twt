@@ -4,10 +4,14 @@
 // ── Silence (DR12) ─────────────────────────────────────────────────────────────────────────────────────────────
 // Counts the ACCEPTED SMS sends finalised between 7 days and 48 h ago that have ⛔ delivery record AND ⛔ inbox row
 // carrying their CRQID — per send kind (a correction reminder or closure notice — ⛔ a staff push, an FCM id; a
-// certificate reminder; a suspicion notice; a peer-mesh ping by `send_outcome` / `send_updated_at`). Any ⇒ ONE alarm
+// certificate reminder; a suspicion notice; a peer-mesh ping by `send_outcome` / `send_updated_at`; Story 5.11b — an alert SMS
+// send, kind `as`). Any ⇒ ONE alarm
 // `sms_report.silence:<total>` with the per-kind counts: a PAUSED webhook (MSG91 auto-pauses one that fails — F6), an
 // account fault MSG91 never reports (F8), or a dropped CRQID (DR3). ⚠ A phone off for two days can still read as silence
 // — the alarm is a POINTER for a person, ⛔ a state, ⛔ an input to a send. The pull API fallback is OUT (DR12 (b)).
+// ⭐ Story 5.11b (FS22): + the STALE alert sends — `attempting` rows last touched 1 h – 7 days ago (a crash on the job's FINAL
+// attempt leaves a row ⛔ attempt finalises; the correlator gives up at 72 h and the silence count sees only `accepted`). Any ⇒
+// ONE alarm `sms_report.stale_attempting:<n>`.
 //
 // ── The login-code line (DR11) ─────────────────────────────────────────────────────────────────────────────────
 // ONE information line counting the `otp:*` reports settled in the last 24 h by result — ⛔ an id, ⛔ a member. Until
@@ -36,6 +40,8 @@ export interface SmsDeliverySilenceDeps {
 export interface SmsDeliverySilenceSummary {
   readonly silent: Readonly<Record<smsDelivery.SmsSendRowKind, number>>;
   readonly silentTotal: number;
+  /** Story 5.11b — `as` rows left `attempting` 1 h – 7 days ago. */
+  readonly staleAlertSends: number;
   readonly otp: smsDelivery.OtpDeliveryCounts;
 }
 
@@ -49,22 +55,29 @@ export async function runSmsDeliverySilenceCheck(deps: SmsDeliverySilenceDeps): 
   const crossTenant = await smsDelivery.canReadAcrossPariwars(deps.pool);
   // BOTH counts before any line (code review round 2): a failed second query after the alarm would make pg-boss's retry
   // raise the same alarm twice.
-  const silent = crossTenant ? await smsDelivery.countSilentSmsSends(deps.pool, { now }) : { cr: 0, ce: 0, sn: 0, pm: 0 };
+  const silent = crossTenant ? await smsDelivery.countSilentSmsSends(deps.pool, { now }) : { cr: 0, ce: 0, sn: 0, pm: 0, as: 0 };
+  const staleAlertSends = crossTenant ? await smsDelivery.countStaleAlertSmsSends(deps.pool, { now }) : 0;
   const otp = await smsDelivery.countOtpDeliveryReports(deps.pool, { from: new Date(now.getTime() - DAY_MS), to: now });
-  const silentTotal = silent.cr + silent.ce + silent.sn + silent.pm;
+  const silentTotal = silent.cr + silent.ce + silent.sn + silent.pm + silent.as;
   if (!crossTenant) alarm('[jobs] sms-delivery-silence: sms_report.rls_bound_role — ⛔ silence counted');
   if (silentTotal > 0) {
     alarm(
       `[jobs] sms-delivery-silence: sms_report.silence:${silentTotal} — accepted texts 48 h–7 days old with ⛔ delivery report ` +
-        `(cr ${silent.cr}, ce ${silent.ce}, sn ${silent.sn}, pm ${silent.pm}); check MSG91's webhook (paused?), the account ` +
-        `balance and the CRQID (roster Row 33)`,
+        `(cr ${silent.cr}, ce ${silent.ce}, sn ${silent.sn}, pm ${silent.pm}, as ${silent.as}); check MSG91's webhook (paused?), ` +
+        `the account balance and the CRQID (roster Row 33)`,
+    );
+  }
+  if (staleAlertSends > 0) {
+    alarm(
+      `[jobs] sms-delivery-silence: sms_report.stale_attempting:${staleAlertSends} — alert texts begun 1 h–7 days ago and ⛔ ` +
+        `finalised (a crash on a job's final attempt: the gateway may or may not have taken them — ⛔ re-sent)`,
     );
   }
   log(
     `[jobs] sms-delivery: otp delivery: delivered ${otp.delivered}, undelivered ${otp.undelivered}, ` +
       `intermediate ${otp.intermediate}, unknown ${otp.unknown}`,
   );
-  return { silent, silentTotal, otp };
+  return { silent, silentTotal, staleAlertSends, otp };
 }
 
 export async function registerSmsDeliverySilenceCron(

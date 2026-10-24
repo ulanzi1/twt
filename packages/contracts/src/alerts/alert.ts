@@ -89,7 +89,9 @@ export type AlertSmsMessage = z.output<typeof AlertSmsMessage>;
  *
  * `locale` is the language the VALUES were built for (review round 2, P2 — checklist family 4): `{pool}` is the curated
  * name in a hi text and usually the letter code in an en text (FS13, `-394` item 2), so a sender must either send in
- * this locale or rebuild the values — ⛔ put them in the other locale's template (row 5-11b).
+ * this locale or rebuild the values — ⛔ put them in the other locale's template. ⭐ Story 5.11b (FS5 (a), `-404`): it is the
+ * RECIPIENT'S language — the producer resolves each member's own choice, else their Pariwar's default (⛔ the producer's push
+ * locale) — and the sender texts in exactly this locale (⛔ the other one when its template is unusable — I3).
  */
 export const AlertSmsLocale = z.enum(['hi', 'en']);
 export type AlertSmsLocale = z.output<typeof AlertSmsLocale>;

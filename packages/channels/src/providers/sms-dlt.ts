@@ -15,7 +15,9 @@
 // MSG91 substitutes the template's NAMED values into its own copy of the registered text — ⛔ the finished body. The
 // frozen `RenderedMessage` carries ⛔ values, so they are bound in `SmsProviderDeps` per send (the claim-text core
 // builds a provider per send). A provider built WITHOUT values — the dark alert composition (TV6) — refuses locally
-// `dlt_template_not_approved:no_named_values` and ⛔ calls the gateway. The provider NEVER mutates the render output.
+// `dlt_template_not_approved:no_named_values` and ⛔ calls the gateway. ⭐ Story 5.11b (MG12 superseded IN PART, `-404`):
+// `values: []` is a template with NO slot (the "payment not matched" text) and IS sent — only an ABSENT `values` (the category
+// composition path, `resolveSmsProviderDeps`) stays refused. The provider NEVER mutates the render output.
 // The send's correlation id (6.37b DR3 — MSG91's `CRQID`) is bound the same way and only COPIED: the claim-text core
 // validates it before it builds the provider (a bad id is a crash there, ⛔ a final here).
 
@@ -38,7 +40,7 @@ export interface SmsProviderDeps {
   readonly messaging: SmsMessagingHandle;
   /** The resolved gateway template id (MSG91's — held under the template's config key, MG4). */
   readonly dltTemplateId: string;
-  /** The template's named values for THIS send, in slot order (MG3). Absent ⇒ ⛔ sendable (MG12). */
+  /** The template's named values for THIS send, in slot order (MG3). Absent ⇒ ⛔ sendable (MG12); `[]` ⇒ a slot-less template (5.11b). */
   readonly values?: readonly SmsGatewayValue[];
   /** THIS send's correlation id (6.37b DR3), already formatted by the caller — copied into the message as-is. */
   readonly correlationId?: string;
@@ -69,8 +71,9 @@ export function createSmsDltProvider(deps: SmsProviderDeps): ChannelProvider {
     channel: 'sms',
     scope: 'global',
     async send(rendered, target): Promise<SendResult> {
-      if (deps.values === undefined || deps.values.length === 0) {
-        // MG12 — ⛔ named values (the dark alert composition) ⇒ ⛔ sendable through MSG91; refused before the network.
+      if (deps.values === undefined) {
+        // MG12 — ⛔ values bound at all (the dark category composition) ⇒ ⛔ sendable through MSG91; refused before the network.
+        // `[]` is a template with ⛔ slot (Story 5.11b) — sent.
         return {
           channel: 'sms',
           provider: 'sms-dlt',

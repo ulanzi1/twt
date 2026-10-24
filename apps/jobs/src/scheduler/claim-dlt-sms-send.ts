@@ -43,6 +43,7 @@ import {
   type Msg91PreflightMemo,
   type SmsAppClient,
   type SmsGatewayValue,
+  type SmsMessagingHandle,
 } from '@twt/channels';
 import { smsDelivery } from '@twt/domain';
 
@@ -144,17 +145,23 @@ export interface ClaimDltSmsInput {
   readonly correlation: { readonly kind: smsDelivery.SmsSendRowKind; readonly rowId: string };
 }
 
-/** The send-row kinds a claim text may carry (6.37b DR3) — every correlation kind but the OTP's `ot`. */
+/**
+ * The send-row kinds a CLAIM text may carry (6.37b DR3) — the four claim tables'. ⛔ The OTP's `ot`, ⛔ (Story 5.11b) the alert
+ * SMS's `as`: the claim wrapper keeps this list; the generic {@link sendPreparedDltSms} admits every send-row kind.
+ */
 const CLAIM_SEND_ROW_KINDS = ['cr', 'ce', 'sn', 'pm'] as const satisfies readonly smsDelivery.SmsSendRowKind[];
+
+/** Every send-row kind (Story 5.11b FS17 — the generic path): the grammar's kinds but the OTP's `ot`. */
+const SEND_ROW_KINDS: readonly string[] = smsDelivery.SMS_CORRELATION_KINDS.filter((k) => k !== 'ot');
 
 /**
  * 6.37b DR3 — the send's `CRQID`, or a CRASH: ONE line naming the kind (⛔ the id), then the throw. Called first in
- * `sendClaimDltSms`, outside every `try`.
+ * `sendClaimDltSms` / {@link sendPreparedDltSms}, outside every `try`.
  */
-function correlationIdOrCrash(correlation: ClaimDltSmsInput['correlation']): string {
+function correlationIdOrCrash(correlation: ClaimDltSmsInput['correlation'], allowed: readonly string[] = CLAIM_SEND_ROW_KINDS): string {
   try {
-    // A claim text names a send ROW — `ot` (a login code's random id) is ⛔ one, even though it is in the grammar.
-    if (!(CLAIM_SEND_ROW_KINDS as readonly string[]).includes(correlation.kind)) throw new Error('sms correlation: not a send-row kind');
+    // A text names a send ROW — `ot` (a login code's random id) is ⛔ one, even though it is in the grammar.
+    if (!allowed.includes(correlation.kind)) throw new Error('sms correlation: not a send-row kind');
     return smsDelivery.formatSmsCorrelationId(correlation);
   } catch (err) {
     // `correlation?.` — an untyped caller passing ⛔ correlation must still get its ONE line (code review round 2).
@@ -208,7 +215,9 @@ function checkedValues(
   }
   const ordered = template.slots.map((slot) => ({ name: slot.name, value: values[slot.name] as string }));
   if (ordered.some((v) => typeof v.value !== 'string')) return { ok: false, code: 'values_mismatch' };
-  // Code points, as the slot predicates count (`fitsDltAlphanumeric`). ⚠ MSG91's own per-variable cap (S2) is ⛔ settled —
+  // Code points (a variable's cap is in characters). ⚠ `dlt-variables.ts` and the registries' shape checks count UTF-16 units —
+  // the stricter unit, so a value they admit always passes here (Story 5.11b T11; ⛔ "fix" either to the other — the dead
+  // `fitsDltAlphanumeric` reference this line carried named no code). ⚠ MSG91's own per-variable cap (S2) is ⛔ settled —
   // Row 32 (d) confirms it in writing before templates 13 / 14 are provisioned. ⭐ The per-Pariwar HELPLINE is EXEMPT (BigDev,
   // 2026-10-17 — `-322` C1 holds): one over its 14 characters is ⛔ a callback number, so it is SENT as set and the caller's
   // `helplineNotCallbackNumber` warning (which names the 14-character limit) fires — ⛔ refused.
@@ -250,35 +259,75 @@ function withTimeout<T>(pending: Promise<T>, ms: number): Promise<T> {
 }
 
 /**
- * ⭐ SEND ONE CLAIM DLT SMS (a DIRECT DLT SMS to an explicit E.164 number; ⛔ not `dispatch()`, ⛔ not an Alert). Fails
- * CLOSED on a missing DLT template id, an unset helpline number (per Pariwar, `-269` §5) or an unconfigured gateway —
- * `error`, alarm, ⛔ never a fixture `accepted` (T13). The provider never throws (S3): its `rejected` is classified —
- * `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable` (`-269` §4);
- * `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` / `api_unavailable` (and a
- * timeout, and any Secret Manager fault that is ⛔ not a known CONFIG fault — incl. `UNAUTHENTICATED`, a token-refresh
- * blip) → TRANSIENT; a known Secret Manager config fault (`classifySecretManagerFault`: `INVALID_ARGUMENT`,
- * `PERMISSION_DENIED`, `FAILED_PRECONDITION`, `UNIMPLEMENTED`) → `error` + alarm, FINAL (`config:secret_manager_<code>`).
- * Story 6.37: the named values, the malformed id, the pre-flight and `beforeSend` — see the header.
+ * ⭐ Story 5.11b (FS17 (a), `2026-10-25-404`) — a send whose every pre-network check PASSED: the template id (MG4), the rendered
+ * body, the named values proved against it (MG3), the probed messaging handle, and — on a fail-open path — the pre-flight's
+ * warning. ⛔ CRQID, ⛔ row: the caller begins its send row AFTER prepare (a config refusal writes ⛔ row), then
+ * {@link sendPreparedDltSms}.
  */
-export function sendClaimDltSms(
+export interface PreparedDltSms {
+  readonly templateId: string;
+  readonly body: string;
+  readonly values: readonly SmsGatewayValue[];
+  readonly messaging: SmsMessagingHandle;
+  /** The EXTRA value the body was rendered with (the claim path's helpline, trimmed); absent on a path that reads none. */
+  readonly extra?: string;
+  /** MG5 — set when the pre-flight did not pass and the path is fail-open (`api_unavailable:preflight`, `…:preflight_<reason>`). */
+  readonly preflightWarning?: string;
+}
+
+/** A prepare refusal — FINAL, `error`, alarmed (the claim results' shape, so the claim wrapper returns it unchanged). */
+export interface DltSmsRefusal {
+  readonly kind: 'final';
+  readonly outcome: 'error';
+  readonly providerMessageId: null;
+  readonly detail: string;
+  readonly alarm: true;
+}
+
+/** What prepare came to: a refusal, a transient (a Secret Manager blip; a pre-flight transient on a fail-CLOSED path), or the send. */
+export type PrepareDltSmsResult =
+  | DltSmsRefusal
+  | { readonly kind: 'transient'; readonly detail: string }
+  | { readonly kind: 'prepared'; readonly prepared: PreparedDltSms };
+
+/** What prepare needs to know about ONE send. */
+export interface PrepareDltSmsInput<E> {
+  /** The registry entry's Secret Manager name for the template id. */
+  readonly dltTemplateIdConfigKey: string;
+  /** The registry entry — the registered text and its slots (MG3 / MG5). */
+  readonly template: Msg91PreflightEntry;
+  /** Renders the registered body (given the EXTRA value, when the path reads one). A throw is a crash, ⛔ a final. */
+  readonly render: (extra: E) => string;
+  /** The template's named values — closing over the SAME locals `render` uses. A throw is a crash, ⛔ a final. */
+  readonly values: (extra: E) => Readonly<Record<string, string>>;
+  /** MG5 — the path's pre-flight stance (see {@link ClaimDltSmsInput.preflightFailOpen}). */
+  readonly preflightFailOpen: boolean;
+  /**
+   * The claim path's EXTRA config value — the per-Pariwar helpline — read in the SAME `try` straight after the template id and
+   * checked straight after it (blank ⇒ `missingDetail`, final + alarm). Absent ⇒ ⛔ extra (the alert texts — ⛔ helpline).
+   */
+  readonly extra?: { readonly read: () => Promise<string | null>; readonly missingDetail: string };
+  /** The template-id read (Story 5.11b — the alert seam's per-process memo); absent ⇒ `deps.resolveConfig` per send (claim). */
+  readonly resolveTemplateId?: (configKey: string) => Promise<string | null>;
+}
+
+const refusal = (detail: string): DltSmsRefusal => ({ kind: 'final', outcome: 'error', providerMessageId: null, detail, alarm: true });
+
+/**
+ * ⭐ FS17 — PREPARE one DLT SMS: every check BEFORE the network, in the claim core's ORDER (6.19b's — I7): the template id (and
+ * the extra value) resolved → blank id ⇒ `config:dlt_template_id_missing` → blank extra ⇒ its detail → gateway unconfigured →
+ * MG4 → render → MG3 → MG5 pre-flight → the messaging probe. ⛔ CRQID, ⛔ row, ⛔ network but the pre-flight memo's read.
+ * `extra` is passed to `render` / `values` trimmed (`undefined` when the path reads none).
+ */
+export async function prepareDltSms<E extends string | undefined = undefined>(
   deps: ClaimDltSmsDeps,
-  input: ClaimDltSmsInput & { readonly beforeSend: ClaimDltSmsBeforeSend },
-): Promise<ClaimCorrectionSmsResult | ClaimDltSmsDeferred>;
-export function sendClaimDltSms(
-  deps: ClaimDltSmsDeps,
-  input: ClaimDltSmsInput & { readonly beforeSend?: undefined },
-): Promise<ClaimCorrectionSmsResult>;
-export async function sendClaimDltSms(
-  deps: ClaimDltSmsDeps,
-  input: ClaimDltSmsInput,
-): Promise<ClaimCorrectionSmsResult | ClaimDltSmsDeferred> {
-  // 6.37b DR3 / T22 — FIRST, outside every `try`: a bad id is a crash (the row stays `attempting`), ⛔ a final.
-  const correlationId = correlationIdOrCrash(input.correlation);
+  input: PrepareDltSmsInput<E>,
+): Promise<PrepareDltSmsResult> {
   let dltTemplateId: string | null;
-  let helpline: string | null;
+  let extra: string | null | undefined;
   try {
-    dltTemplateId = await deps.resolveConfig(input.dltTemplateIdConfigKey);
-    helpline = await deps.resolveConfig(claimCorrectionHelplineConfigKey(input.pariwarId));
+    dltTemplateId = await (input.resolveTemplateId ?? deps.resolveConfig)(input.dltTemplateIdConfigKey);
+    extra = input.extra === undefined ? undefined : await input.extra.read();
   } catch (err) {
     // `resolveSmsDltConfig` re-throws everything but "not provisioned" (`NOT_FOUND` ⇒ `null`, handled below). Only
     // a KNOWN config fault (`PERMISSION_DENIED`, `INVALID_ARGUMENT`, `FAILED_PRECONDITION`, `UNIMPLEMENTED`) is
@@ -287,31 +336,21 @@ export async function sendClaimDltSms(
     // alarm), which costs one slot, where a wrongly-final code would cost EVERY family's slot that day.
     const fault = classifySecretManagerFault(err);
     if (fault.transient) return { kind: 'transient', detail: 'config_unavailable:secret_manager' };
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: `config:secret_manager_${fault.code}`, alarm: true };
+    return refusal(`config:secret_manager_${fault.code}`);
   }
-  if (dltTemplateId === null || dltTemplateId.trim() === '') {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:dlt_template_id_missing', alarm: true };
+  if (dltTemplateId === null || dltTemplateId.trim() === '') return refusal('config:dlt_template_id_missing');
+  if (input.extra !== undefined && (extra === null || extra === undefined || extra.trim() === '')) {
+    return refusal(input.extra.missingDetail);
   }
-  if (helpline === null || helpline.trim() === '') {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:helpline_number_missing', alarm: true };
-  }
-  if (!deps.smsAppClient.isConfigured()) {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:sms_gateway_unconfigured', alarm: true };
-  }
+  if (!deps.smsAppClient.isConfigured()) return refusal('config:sms_gateway_unconfigured');
   const templateId = dltTemplateId.trim();
   // MG4 — ⛔ MSG91's 24 hex (a pasted DLT TE id, an old fixture value) — FIRST, before the memo (⛔ a `config:` word — I5).
-  if (!isMsg91TemplateId(templateId)) {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'dlt_template_not_approved:template_id_malformed', alarm: true };
-  }
-  const resolvedHelpline = helpline.trim();
-  // `-322` C1 — the flag rides ONLY the provider-handed finals below; ⛔ an outcome, `detail` or body changes.
-  const helplineFlag: HelplineFlag = isDltCallbackNumber(resolvedHelpline) ? {} : { helplineNotCallbackNumber: true };
-  const body = input.render(resolvedHelpline);
+  if (!isMsg91TemplateId(templateId)) return refusal('dlt_template_not_approved:template_id_malformed');
+  const resolvedExtra = (typeof extra === 'string' ? extra.trim() : undefined) as E;
+  const body = input.render(resolvedExtra);
   // MG3 — the named values, proved against the body BEFORE the network (I1 as a runtime guard).
-  const checked = checkedValues(input.template, input.values(resolvedHelpline), body);
-  if (!checked.ok) {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: `dlt_template_not_approved:${checked.code}`, alarm: true };
-  }
+  const checked = checkedValues(input.template, input.values(resolvedExtra), body);
+  if (!checked.ok) return refusal(`dlt_template_not_approved:${checked.code}`);
 
   // MG5 — the process pre-flight memo (a hit is synchronous-fast; a miss reads MSG91 once for every concurrent caller).
   let preflightWarning: string | undefined;
@@ -326,38 +365,62 @@ export async function sendClaimDltSms(
           verdict.reason === 'template_id_malformed' ||
           ((verdict.reason === 'auth' || verdict.reason === 'auth_or_not_found') && deps.smsPreflight.readsWithSendKey);
         if (proven) {
-          const detail = verdict.reason === 'template_id_malformed' ? 'dlt_template_not_approved:template_id_malformed' : 'auth:preflight';
-          return { kind: 'final', outcome: 'error', providerMessageId: null, detail, alarm: true };
+          return refusal(verdict.reason === 'template_id_malformed' ? 'dlt_template_not_approved:template_id_malformed' : 'auth:preflight');
         }
         const detail = `dlt_template_not_approved:preflight_${verdict.reason}`;
-        if (!input.preflightFailOpen) return { kind: 'final', outcome: 'error', providerMessageId: null, detail, alarm: true };
+        if (!input.preflightFailOpen) return refusal(detail);
         preflightWarning = detail;
       }
     }
   }
-  const flag: HelplineFlag = preflightWarning === undefined ? helplineFlag : { ...helplineFlag, preflightWarning };
-
-  let provider: ReturnType<typeof createSmsDltProvider>;
+  let messaging: SmsMessagingHandle;
   try {
-    // ⚠ `messaging()` INSIDE a try: a half-configured client throws here, and that is a config fault, ⛔ a crash.
-    provider = createSmsDltProvider({
-      messaging: deps.smsAppClient.messaging(),
-      dltTemplateId: templateId,
-      values: checked.values,
-      correlationId,
-    });
+    // ⚠ `messaging()` INSIDE a try: a half-configured client throws here, and that is a config fault, ⛔ a crash (probed
+    // here, at the provider build's old position — after the pre-flight, before `beforeSend`).
+    messaging = deps.smsAppClient.messaging();
   } catch {
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:sms_messaging_unavailable', alarm: true };
+    return refusal('config:sms_messaging_unavailable');
   }
+  return {
+    kind: 'prepared',
+    prepared: {
+      templateId,
+      body,
+      values: checked.values,
+      messaging,
+      ...(typeof resolvedExtra === 'string' ? { extra: resolvedExtra } : {}),
+      ...(preflightWarning === undefined ? {} : { preflightWarning }),
+    },
+  };
+}
+
+/**
+ * SEND a prepared text: the provider built per send, `beforeSend` (MG16 (i)), the send under the timeout, the classification.
+ * `correlationId` is ALREADY validated by the caller (outside every `try`). `flag` rides every provider-handed final.
+ */
+async function sendPrepared(
+  deps: Pick<ClaimDltSmsDeps, 'sendTimeoutMs'>,
+  prepared: PreparedDltSms,
+  correlationId: string,
+  e164: string,
+  flag: HelplineFlag,
+  beforeSend: ClaimDltSmsBeforeSend | undefined,
+): Promise<ClaimCorrectionSmsResult | ClaimDltSmsDeferred> {
+  const provider = createSmsDltProvider({
+    messaging: prepared.messaging,
+    dltTemplateId: prepared.templateId,
+    values: prepared.values,
+    correlationId,
+  });
   // MG16 (i) — synchronously, IMMEDIATELY before the send (⛔ an await between this and `provider.send`).
-  if (input.beforeSend !== undefined) {
-    const go = input.beforeSend();
+  if (beforeSend !== undefined) {
+    const go = beforeSend();
     if (go === 'defer_window') return { kind: 'deferred', reason: 'window' };
     if (go === 'defer_lease') return { kind: 'deferred', reason: 'lease' };
   }
   try {
     const result = await withTimeout(
-      provider.send({ channel: 'sms', title: null, body, deepLink: null }, { channel: 'sms', address: input.e164 }),
+      provider.send({ channel: 'sms', title: null, body: prepared.body, deepLink: null }, { channel: 'sms', address: e164 }),
       deps.sendTimeoutMs ?? CORRECTION_SEND_TIMEOUT_MS,
     );
     if (result.status === 'accepted') {
@@ -378,6 +441,71 @@ export async function sendClaimDltSms(
     }
   } catch (err) {
     if (err instanceof SendTimeoutError) return { kind: 'transient', detail: 'api_unavailable:timeout' };
-    return { kind: 'final', outcome: 'error', providerMessageId: null, detail: 'config:sms_messaging_unavailable', alarm: true };
+    return refusal('config:sms_messaging_unavailable');
   }
+}
+
+/**
+ * ⭐ FS17 — SEND a prepared text with ITS send row's CRQID: the CRQID is formatted FIRST, outside every `try` (a bad one is a
+ * crash — ONE `[jobs] sms.bad_correlation:<kind>` line and a throw, ⛔ a final; any send-row kind, `as` included), then the
+ * claim core's send and classification (`transient` = `rate_limited:*` / `api_unavailable:*`, the timeout included — the
+ * CALLER decides which of them may be re-sent). A pre-flight warning rides the finals as `preflightWarning`.
+ */
+export async function sendPreparedDltSms(
+  deps: Pick<ClaimDltSmsDeps, 'sendTimeoutMs'>,
+  prepared: PreparedDltSms,
+  input: { readonly e164: string; readonly correlation: ClaimDltSmsInput['correlation'] },
+): Promise<ClaimCorrectionSmsResult> {
+  const correlationId = correlationIdOrCrash(input.correlation, SEND_ROW_KINDS);
+  const flag: HelplineFlag = prepared.preflightWarning === undefined ? {} : { preflightWarning: prepared.preflightWarning };
+  return (await sendPrepared(deps, prepared, correlationId, input.e164, flag, undefined)) as ClaimCorrectionSmsResult;
+}
+
+/**
+ * ⭐ SEND ONE CLAIM DLT SMS (a DIRECT DLT SMS to an explicit E.164 number; ⛔ not `dispatch()`, ⛔ not an Alert). Fails
+ * CLOSED on a missing DLT template id, an unset helpline number (per Pariwar, `-269` §5) or an unconfigured gateway —
+ * `error`, alarm, ⛔ never a fixture `accepted` (T13). The provider never throws (S3): its `rejected` is classified —
+ * `invalid_number` → `rejected_invalid_number`; `carrier_reject` → `rejected_unreachable` (`-269` §4);
+ * `dlt_template_not_approved` / `auth` / `unknown` → `error` + alarm, FINAL; `rate_limited` / `api_unavailable` (and a
+ * timeout, and any Secret Manager fault that is ⛔ not a known CONFIG fault — incl. `UNAUTHENTICATED`, a token-refresh
+ * blip) → TRANSIENT; a known Secret Manager config fault (`classifySecretManagerFault`: `INVALID_ARGUMENT`,
+ * `PERMISSION_DENIED`, `FAILED_PRECONDITION`, `UNIMPLEMENTED`) → `error` + alarm, FINAL (`config:secret_manager_<code>`).
+ * Story 6.37: the named values, the malformed id, the pre-flight and `beforeSend` — see the header.
+ * ⭐ Story 5.11b (FS17 (a)): the body is {@link prepareDltSms} (the helpline as its EXTRA value) then the send — in the OLD
+ * order with the OLD results (I7): the CRQID first (the claim kinds only), the helpline read in the template id's `try`.
+ */
+export function sendClaimDltSms(
+  deps: ClaimDltSmsDeps,
+  input: ClaimDltSmsInput & { readonly beforeSend: ClaimDltSmsBeforeSend },
+): Promise<ClaimCorrectionSmsResult | ClaimDltSmsDeferred>;
+export function sendClaimDltSms(
+  deps: ClaimDltSmsDeps,
+  input: ClaimDltSmsInput & { readonly beforeSend?: undefined },
+): Promise<ClaimCorrectionSmsResult>;
+export async function sendClaimDltSms(
+  deps: ClaimDltSmsDeps,
+  input: ClaimDltSmsInput,
+): Promise<ClaimCorrectionSmsResult | ClaimDltSmsDeferred> {
+  // 6.37b DR3 / T22 — FIRST, outside every `try`: a bad id is a crash (the row stays `attempting`), ⛔ a final.
+  const correlationId = correlationIdOrCrash(input.correlation);
+  const prep = await prepareDltSms<string>(deps, {
+    dltTemplateIdConfigKey: input.dltTemplateIdConfigKey,
+    template: input.template,
+    render: input.render,
+    values: input.values,
+    preflightFailOpen: input.preflightFailOpen,
+    extra: {
+      read: () => deps.resolveConfig(claimCorrectionHelplineConfigKey(input.pariwarId)),
+      missingDetail: 'config:helpline_number_missing',
+    },
+  });
+  if (prep.kind !== 'prepared') return prep;
+  const { prepared } = prep;
+  // `-322` C1 — the flag rides ONLY the provider-handed finals; ⛔ an outcome, `detail` or body changes. The helpline the
+  // prepare rendered with is the one read here (trimmed, ⛔ blank — prepare refused that).
+  const flag: HelplineFlag = {
+    ...(isDltCallbackNumber(prepared.extra ?? '') ? {} : { helplineNotCallbackNumber: true as const }),
+    ...(prepared.preflightWarning === undefined ? {} : { preflightWarning: prepared.preflightWarning }),
+  };
+  return sendPrepared(deps, prepared, correlationId, input.e164, flag, input.beforeSend);
 }

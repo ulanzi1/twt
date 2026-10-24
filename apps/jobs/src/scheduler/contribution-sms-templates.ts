@@ -14,8 +14,8 @@
 //
 // ⭐ The REGISTERED text is the `contribution.json` `sms.<message>` string with each `{param}` as `{#var#}` (I1) — proven through the
 // REAL `t()` by `apps/jobs/tests/contribution-sms-templates.test.ts`. The template ids stay UNSET until each template is approved
-// (roster Row 40 (a)); the send itself is row `5-11b-alert-sms-real-send` — until then a lit, eligible rung ends
-// `sms_send_not_wired` (`contribution-notify.ts`).
+// (roster Row 40 (a)). ⭐ Story 5.11b sends them (`alert-sms-send.ts`): until an id is set, a lit, eligible rung ends
+// `config:dlt_template_id_missing:<locale>` (`sms_send_not_wired` only where no seam is wired — tests).
 
 import { needsUnicode, type DltSlot } from '@twt/channels';
 import { AlertSmsMessage } from '@twt/contracts';
@@ -63,8 +63,8 @@ const entry = (message: AlertSmsMessage, locale: ContributionSmsLocale, register
   slots: SLOTS[message],
 });
 
-// ⚠ `payment_not_matched` has NO variable: 6.37's MG12 refuses a send with zero values, so it cannot go until row 5-11b tells
-// "no values supplied" from "a template with no slots" (recorded in the 5.11b carry).
+// ⭐ `payment_not_matched` has NO variable: Story 5.11b (MG12 superseded in part, `-404`) tells "no values supplied" (an absent
+// `values` — still refused) from "a template with no slots" (`values: []` — sent).
 export const CONTRIBUTION_SMS_TEMPLATES: Readonly<
   Record<AlertSmsMessage, Readonly<Record<ContributionSmsLocale, ContributionSmsTemplate>>>
 > = {
@@ -109,13 +109,24 @@ export const CONTRIBUTION_SMS_TEMPLATES: Readonly<
 /** GSM-7 characters an en pool value may NOT use beyond the control characters: the extension table (two septets each). */
 const GSM7_EXTENSION = new Set('^{}\\[~]|€');
 
-/** A control character (Unicode Cc — newline, tab, ESC, …) in ANY locale. ⛔ Cf: ZWJ / ZWNJ are legitimate in Devanagari. */
+/** A control character (Unicode Cc — newline, tab, ESC, …) in ANY locale. */
 const CONTROL_CHARACTER = /\p{Cc}/u;
+
+/**
+ * ⭐ Story 5.11b (FS21 (a), `-404` — `-394` item 2 superseded in part) — the INVISIBLE characters a curated name may ⛔ carry into a
+ * text, in ANY locale: a line / paragraph separator (Zl / Zp), a LONE surrogate (Cs — tested with `/\p{Cs}/u`; ⛔
+ * `isWellFormed()`, ES2024, outside `lib: ["ES2022"]`), and any FORMAT character (Cf — a bidi control, ZWSP, a word joiner, a BOM)
+ * EXCEPT ZWNJ U+200C / ZWJ U+200D, which Devanagari shaping needs. Any of them could break DLT matching (Row 30 (d) is
+ * unanswered for such characters) ⇒ the letter code instead.
+ */
+const SEPARATOR_OR_LONE_SURROGATE = /[\p{Zl}\p{Zp}\p{Cs}]/u;
+const FORMAT_CHARACTER_BUT_JOINERS = /(?![\u200C\u200D])\p{Cf}/u;
 
 /**
  * FS13 as superseded by Decision `2026-10-23-394` item 2 (review round 2, D2 (b)) — the `{pool}` value of a text: the curated
  * pool name, TRIMMED, when it is non-empty, fits the slot (30 UTF-16 units — the unit `dlt-variables.ts` counts) AND, for an
- * `en` text, is basic GSM-7 only (⛔ extension table); ⛔ a control character in ANY locale (round-2 patch review, Q3);
+ * `en` text, is basic GSM-7 only (⛔ extension table); ⛔ a control character in ANY locale (round-2 patch review, Q3) — and
+ * (Story 5.11b, FS21) ⛔ any other invisible character but the Devanagari joiners;
  * otherwise the LETTER CODE. So the text is never longer than the cost as put: 1 en / 2 hi parts. The curated name is always the HINDI name
  * (`resolveCuratedPoolName`), so in practice an en text names the pool by its letter and a hi text by its name — a Devanagari
  * value in an en text would turn the whole SMS Unicode (T5). The push keeps its own label (`poolLabel`).
@@ -126,7 +137,8 @@ export function smsPoolLabel(
 ): string {
   const name = identity.poolName?.trim() ?? '';
   const fitsLocale = locale !== 'en' || (!needsUnicode(name) && ![...name].some((ch) => GSM7_EXTENSION.has(ch)));
-  if (name !== '' && name.length <= POOL_SLOT.maxLength && !CONTROL_CHARACTER.test(name) && fitsLocale) return name;
+  const invisible = CONTROL_CHARACTER.test(name) || SEPARATOR_OR_LONE_SURROGATE.test(name) || FORMAT_CHARACTER_BUT_JOINERS.test(name);
+  if (name !== '' && name.length <= POOL_SLOT.maxLength && !invisible && fitsLocale) return name;
   return identity.poolLetterCode;
 }
 

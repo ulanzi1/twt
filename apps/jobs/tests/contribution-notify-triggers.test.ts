@@ -8,6 +8,7 @@
 
 import { Alert, deepLinkTargetForAlert, formatDeepLink } from '@twt/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { QUEUE_NAMES } from '@twt/queue';
 
 const listCycleBindingCandidates = vi.fn();
 const getCycleFreezeCommittedAt = vi.fn();
@@ -19,6 +20,12 @@ const claim = vi.fn();
 const recordResult = vi.fn();
 const release = vi.fn();
 const withPariwarScope = vi.fn();
+// Story 5.11b (FS5 (a)) — the lit kinds' set-based TEXT-language read; every member defaults to `hi` here (the language legs are
+// LIVE — `alert-sms-send-live.test.ts`). A harness stub, ⛔ an assertion change.
+const readMemberTextLanguages = vi.fn(
+  (_db: unknown, input: { memberIds: readonly string[] }): Promise<Map<string, 'hi' | 'en'> | null> =>
+    Promise.resolve(new Map(input.memberIds.map((id) => [id.toLowerCase(), 'hi' as const]))),
+);
 
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
@@ -30,6 +37,7 @@ vi.mock('@twt/domain', async (importActual) => {
     pool: { ...actual.pool, listCycleBindingCandidates, getCycleFreezeCommittedAt },
     notifications: { ...actual.notifications, resolvePoolIdentity },
     kyc: { ...actual.kyc, resolvePublicNamePresentationMode },
+    member: { ...actual.member, readMemberTextLanguages },
     contribution: { ...actual.contribution, listActedMemberIdsForPool, listPendingMatchMembersForPool },
     idempotency: {
       ...actual.idempotency,
@@ -61,6 +69,7 @@ const {
   runContributionNotifyRecoverySweep,
   runDeadlineReminderSweep,
   runPendingMatchRetrySweep,
+  registerContributionNotifyWorkers,
   DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS,
   PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS,
 } = await import('../src/scheduler/contribution-notify-triggers.js');
@@ -1402,5 +1411,118 @@ describe('Story 5.11 AC4 / FS14 — the retry profile does not change (I4)', () 
     )).rejects.toThrow(/fan-out failed/);
     expect(release).toHaveBeenCalledTimes(2);
     expect(recordResult).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Story 5.11b — the producers' text language (FS5 (a)), the attempt and the occasion (FS9), the registrations (AC6) ───────
+
+describe('Story 5.11b — FS5 (a): each member\'s TEXT in their own language; the attempt + occasion down the chain', () => {
+  /** The alert the child built for `memberId` (the `alertFor` it handed the fan-out). */
+  const alertBuiltFor = (memberId: string, call = 0) =>
+    (fanOutAlertToMembers.mock.calls[call]![1] as (m: string) => Alert)(memberId);
+
+  it('⭐ day 10 — a member who chose `en` in a `hi` Pariwar gets the en block (letter code); a non-chooser the default; the PUSH stays hi; ONE read per job', async () => {
+    readMemberTextLanguages.mockResolvedValueOnce(new Map([[M1, 'en' as const], [M2, 'hi' as const]]));
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: [M1, M2] })) as never,
+    );
+    expect(readMemberTextLanguages).toHaveBeenCalledTimes(1);
+    expect(readMemberTextLanguages.mock.calls[0]![1]).toMatchObject({ memberIds: [M1, M2] });
+    const en = alertBuiltFor(M1);
+    const hi = alertBuiltFor(M2);
+    expect((en.payload_data as { sms?: unknown }).sms).toEqual({ message: 'deadline_not_recorded', locale: 'en', values: { pool: 'A', date: '05-08-2026' } });
+    expect((hi.payload_data as { sms?: unknown }).sms).toEqual({ message: 'deadline_not_recorded', locale: 'hi', values: { pool: 'युधिष्ठिर', date: '05-08-2026' } });
+    // The push copy is the producer's locale (hi) for BOTH — LS11 for push unchanged.
+    expect((en.payload_data as { subject: string }).subject).toBe((hi.payload_data as { subject: string }).subject);
+  });
+
+  it('⭐ the escalated tier reads the language too; the soft tier, cycle-open and the other send days ⛔ read it', async () => {
+    readMemberTextLanguages.mockResolvedValueOnce(new Map([[M1, 'en' as const]]));
+    await runContributionNotifyChild(deps(), envelope(childPayload({ kind: 'pending_match_escalated', memberIds: [M1] })) as never);
+    expect((alertBuiltFor(M1).payload_data as { sms?: unknown }).sms).toEqual({ message: 'payment_not_confirmed', locale: 'en', values: { pool: 'A' } });
+    readMemberTextLanguages.mockClear();
+    await runContributionNotifyChild(deps(), envelope(childPayload({ kind: 'pending_match', memberIds: [M1] })) as never);
+    await runContributionNotifyChild(deps(), envelope(childPayload({ memberIds: [M1] })) as never);
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 13, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: [M1] })) as never,
+    );
+    expect(readMemberTextLanguages).not.toHaveBeenCalled();
+  });
+
+  it('⭐ a Pariwar with ⛔ passport row ⇒ every member\'s `sms` block OMITTED and ONE alarm `alert_sms.locale_unresolved` — ⛔ throw, ⛔ guess', async () => {
+    readMemberTextLanguages.mockResolvedValueOnce(null as never);
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(
+      deps({ onAlarm }),
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: [M1, M2] })) as never,
+    );
+    expect((alertBuiltFor(M1).payload_data as { sms?: unknown }).sms).toBeUndefined();
+    expect((alertBuiltFor(M2).payload_data as { sms?: unknown }).sms).toBeUndefined();
+    expect(onAlarm.mock.calls.filter(([m]) => String(m).includes('alert_sms.locale_unresolved'))).toHaveLength(1);
+  });
+
+  it('⭐ MISMATCH — ONE read for its one member; the block in that member\'s language; ⛔ passport ⇒ ⛔ block + one alarm', async () => {
+    readMemberTextLanguages.mockResolvedValueOnce(new Map([[M1, 'en' as const]]));
+    await runContributionMismatchNotify(deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never);
+    expect(readMemberTextLanguages).toHaveBeenCalledTimes(1);
+    const built = (fanOutAlertToMembers.mock.calls[0]![1] as () => Alert)();
+    expect((built.payload_data as { sms?: unknown }).sms).toEqual({ message: 'payment_not_matched', locale: 'en', values: {} });
+    readMemberTextLanguages.mockResolvedValueOnce(null as never);
+    const onAlarm = vi.fn();
+    await runContributionMismatchNotify(deps({ onAlarm }), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M2, reason: 'amount_mismatch' }) as never);
+    const none = (fanOutAlertToMembers.mock.calls[1]![1] as () => Alert)();
+    expect((none.payload_data as { sms?: unknown }).sms).toBeUndefined();
+    expect(onAlarm.mock.calls.filter(([m]) => String(m).includes('alert_sms.locale_unresolved'))).toHaveLength(1);
+  });
+
+  it('⭐ FS9 / F4 — the job\'s attempt and the OCCASION (the keyed store\'s scope) reach the fan-out per CALL; absent job ⇒ ⛔ attempt (final)', async () => {
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: [M1] })) as never,
+      { id: 'job-7', retryCount: 2, retryLimit: 4 },
+    );
+    expect(fanOutAlertToMembers.mock.calls[0]![5]).toEqual({ occasion: 'day_10', jobId: 'job-7', retryCount: 2, retryLimit: 4 });
+    await runContributionMismatchNotify(deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'entry_already_claimed' }) as never);
+    expect(fanOutAlertToMembers.mock.calls[1]![5]).toEqual({ occasion: 'mismatch:entry_already_claimed' });
+  });
+
+  it('F6 — a LIT kind\'s chunk is bounded (16) once a real send is wired; ⛔ wired ⇒ the configured chunk', async () => {
+    const memberIds = Array.from({ length: 40 }, (_, i) => `aaaaaaaa-0000-0000-0000-${String(i).padStart(12, '0')}`);
+    const all = new Map(memberIds.map((m) => [m, 'hi' as const]));
+    readMemberTextLanguages.mockResolvedValueOnce(all).mockResolvedValueOnce(all); // ⛔ a sticky override for later legs
+    const payload = childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds });
+    await runContributionNotifyChild(deps({ alertSms: vi.fn() }), envelope(payload) as never);
+    expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([16, 16, 8]);
+    fanOutAlertToMembers.mockClear();
+    await runContributionNotifyChild(deps(), envelope(payload) as never);
+    expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([40]);
+  });
+});
+
+describe('Story 5.11b AC6 — POOL_BATCH and MISMATCH register with `includeMetadata` (localConcurrency UNCHANGED)', () => {
+  it('⭐ the EXACT options objects, and the registered handlers hand the child its retry count', async () => {
+    const handlers = new Map<string, (jobs: unknown[]) => Promise<unknown>>();
+    const work = vi.fn((name: string, a: unknown, b?: unknown) => {
+      handlers.set(name, (typeof a === 'function' ? a : b) as (jobs: unknown[]) => Promise<unknown>);
+      return Promise.resolve('w');
+    });
+    const fakeBoss = { createQueue: vi.fn(() => Promise.resolve()), schedule: vi.fn(() => Promise.resolve()), work, send: vi.fn() };
+    await registerContributionNotifyWorkers(fakeBoss as never, deps({ childConcurrency: 3 }));
+    expect(work).toHaveBeenCalledWith(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH, { localConcurrency: 3, includeMetadata: true }, expect.any(Function));
+    expect(work).toHaveBeenCalledWith(QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH, { includeMetadata: true }, expect.any(Function));
+    await registerContributionNotifyWorkers(fakeBoss as never, deps());
+    expect(work).toHaveBeenCalledWith(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH, { localConcurrency: 8, includeMetadata: true }, expect.any(Function));
+    // Drive the registered MISMATCH handler with pg-boss metadata.
+    await handlers.get(QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH)!([
+      { id: 'job-9', retryCount: 3, retryLimit: 4, data: envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) },
+    ]);
+    expect(fanOutAlertToMembers.mock.calls.at(-1)![5]).toEqual({ occasion: 'mismatch:wrong_pool', jobId: 'job-9', retryCount: 3, retryLimit: 4 });
+    // Metadata that is ⛔ numbers is absent (⇒ the final attempt).
+    await handlers.get(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH)!([
+      { id: 'job-10', retryCount: 'x', data: envelope(childPayload({ memberIds: [M1] })) },
+    ]);
+    expect(fanOutAlertToMembers.mock.calls.at(-1)![5]).toEqual({ occasion: 'cycle_open', jobId: 'job-10' });
   });
 });

@@ -94,3 +94,33 @@ export async function setMemberLanguage(
     .returning({ memberId: members.memberId });
   return { chosenLocale: input.locale, pariwarDefaultLocale: before.pariwarDefaultLocale, changed: updated.length > 0 };
 }
+
+/**
+ * ⭐ Story 5.11b (FS5 (a), `2026-10-25-404`) — the language each of a Pariwar's members gets their contribution TEXT in: their own
+ * choice, else the Pariwar's default — for a whole member list in ONE set-based query (the POOL_BATCH child runs it inside its
+ * pool-identity scope: ⛔ extra connection, ⛔ a query per member). A listed member with ⛔ `members` row gets the Pariwar's default
+ * (a DELIBERATE departure from `resolvePeerRequestLocale`, which throws). ⛔ Passport row ⇒ `null` (the caller omits every text
+ * and alarms once — ⛔ a guess). ⚠ The `WHERE pp.pariwar_id` is REQUIRED: `pariwar_passport`'s SELECT policy is `USING (true)` and
+ * the jobs pool bypasses RLS — an unfiltered `CROSS JOIN` would yield members × every Pariwar. `members`' key is `member_id`.
+ */
+export async function readMemberTextLanguages(
+  db: Db,
+  input: { readonly pariwarId: PariwarId; readonly memberIds: readonly string[] },
+): Promise<ReadonlyMap<string, MemberLanguage> | null> {
+  if (input.memberIds.length === 0) return new Map();
+  const result = await db.execute<{ member_id: string; locale: string | null }>(sql`
+    SELECT u.id::text AS member_id, COALESCE(m.preferred_locale, pp.locale_default)::text AS locale
+      FROM unnest(${`{${input.memberIds.join(',')}}`}::uuid[]) AS u(id)
+     CROSS JOIN pariwar_passport pp
+      LEFT JOIN members m ON m.pariwar_id = pp.pariwar_id AND m.member_id = u.id
+     WHERE pp.pariwar_id = ${input.pariwarId}
+  `);
+  const rows = result.rows ?? [];
+  if (rows.length === 0) return null;
+  const out = new Map<string, MemberLanguage>();
+  for (const r of rows) {
+    const locale = asLanguage(r.locale);
+    if (locale !== null) out.set(r.member_id.toLowerCase(), locale);
+  }
+  return out;
+}

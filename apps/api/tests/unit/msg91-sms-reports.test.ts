@@ -73,9 +73,10 @@ describe('projectSmsReport — EXACTLY DR2\'s six values (I3)', () => {
     expect(projectSmsReport({ ...FULL, CRQID })!.crqid).toBeNull();
   });
 
-  it('an absent CRQID ⇒ NULL; an `ot…` login-code CRQID is kept', () => {
+  it('an absent CRQID ⇒ NULL; an `ot…` login-code CRQID and (Story 5.11b) an `as…` alert-SMS CRQID are kept', () => {
     expect(projectSmsReport(without(FULL, 'CRQID'))!.crqid).toBeNull();
     expect(projectSmsReport({ ...FULL, CRQID: `ot${CRQID.slice(2)}` })!.crqid).toBe(`ot${CRQID.slice(2)}`);
+    expect(projectSmsReport({ ...FULL, CRQID: `as${CRQID.slice(2)}` })!.crqid).toBe(`as${CRQID.slice(2)}`);
   });
 
   it.each([

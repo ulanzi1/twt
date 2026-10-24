@@ -173,10 +173,19 @@ export async function resolveFanOutWhatsappProvider(
   pariwarId: PariwarId,
   alertCategory: string,
 ): Promise<ChannelProvider> {
+  return (await resolveFanOutWhatsapp(deps, pariwarId, alertCategory)).provider;
+}
+
+/** The fan-out's WhatsApp provider AND the provisioning state it came from (Story 5.11b FS20 — the memo's `off` TTL reads it). */
+async function resolveFanOutWhatsapp(
+  deps: WhatsappCompositionDeps,
+  pariwarId: PariwarId,
+  alertCategory: string,
+): Promise<{ readonly provider: ChannelProvider; readonly state: 'off' | 'refused' | 'ready' }> {
   const provisioning = await readWhatsappProvisioning(deps.db, pariwarId, alertCategory);
-  if (provisioning.state === 'refused') return createRefusingWhatsappProvider(provisioning.detail);
-  if (provisioning.state === 'off') return createWhatsappProvider(null);
-  return createWhatsappProvider(await buildWhatsappProviderDeps(deps, pariwarId, provisioning));
+  if (provisioning.state === 'refused') return { provider: createRefusingWhatsappProvider(provisioning.detail), state: 'refused' };
+  if (provisioning.state === 'off') return { provider: createWhatsappProvider(null), state: 'off' };
+  return { provider: createWhatsappProvider(await buildWhatsappProviderDeps(deps, pariwarId, provisioning)), state: 'ready' };
 }
 
 /**
@@ -388,7 +397,16 @@ export interface ContributionProviderResolverDeps {
   readonly resolveConfig: (configKey: string) => Promise<string | null>;
   /** The GLOBAL Firebase service-account secret NAME (D1). Blank/undefined ⇒ fixture push everywhere. */
   readonly firebaseServiceAccountSecretName?: string | undefined;
+  /** Story 5.11b (FS20) — the clock of the WhatsApp `off` TTL (tests). Defaults to `Date.now`. */
+  readonly nowMs?: () => number;
 }
+
+/**
+ * Story 5.11b (FS20 (a), `-404`) — how long a (Pariwar, category) whose WhatsApp read `off` keeps that answer: a switch-ON is seen
+ * within a minute (⛔ a fake `whatsapp:sent` on the accepting fixture until a restart — deferred-work W1). `ready` / `refused`
+ * stay memoized for the process (a refusal → ready still needs a restart — recorded, unchanged).
+ */
+export const WHATSAPP_OFF_MEMO_TTL_MS = 60_000;
 
 /** The resolver's memoized result — the four-channel provider registry for one (pariwarId, category). */
 export type ProviderRegistry = Readonly<Record<Channel, readonly ChannelProvider[]>>;
@@ -430,10 +448,13 @@ export type ProviderRegistry = Readonly<Record<Channel, readonly ChannelProvider
  * cleanly on the next call — this preserves the existing "a rejected outage is not memoized" guarantee below.
  *
  * ⚠ Story 5.11 (FS3): the memo above also holds a refusal — a template approved or a credential set AFTER the first
- * resolution is seen only after a restart (recorded, ⛔ a TTL added — `-389` FS3 (a)). ⚠ The OTHER direction too (review
- * round 2, deferred-work W1): a Pariwar memoized `off` keeps the accepting WhatsApp fixture after it is switched ON, while
- * the member's WhatsApp target is re-read live — an opted-in member is then recorded `delivered` with nothing sent, until
- * a restart. Pre-existing; carried to row 5-11b.
+ * resolution is seen only after a restart (recorded, ⛔ a TTL added — `-389` FS3 (a)). ⭐ The OTHER direction (review round 2,
+ * deferred-work W1 — a Pariwar memoized `off` kept the accepting WhatsApp fixture after it was switched ON, so an opted-in member
+ * was recorded `delivered` with nothing sent, and — once SMS is real — ⛔ text either) is CLOSED by Story 5.11b (FS20 (a)): the
+ * WhatsApp leg's `off` answer is kept only {@link WHATSAPP_OFF_MEMO_TTL_MS}; after it, the NEXT call re-reads ONLY the WhatsApp
+ * provisioning (its own scoped tx — the push / SMS / Telegram legs and their Secret Manager reads stay memoized) and every
+ * concurrent caller shares that ONE re-read. ⛔ "Never memoize `off`": providers resolve per MEMBER, so it would re-run a DB tx
+ * per member of every (all-`off`) Pariwar.
  *
  * ── The 5-state honesty invariant (§9a-i) ────────────────────────────────────────────────────────────────────
  * "Not configured" (absent row / disabled / blank NAME / no template / gateway unconfigured) ⇒ fixture per
@@ -447,15 +468,43 @@ export type ProviderRegistry = Readonly<Record<Channel, readonly ChannelProvider
 export function createContributionProviderResolver(
   deps: ContributionProviderResolverDeps,
 ): (input: { readonly pariwarId: string; readonly category: string }) => Promise<ProviderRegistry> {
-  const memo = new Map<string, Promise<ProviderRegistry>>();
+  const nowMs = deps.nowMs ?? Date.now;
+  /** Per key: the registry, and — once it resolved WhatsApp `off` — WHEN (FS20; `null` = ready / refused / still resolving). */
+  interface Entry {
+    readonly registry: Promise<ProviderRegistry>;
+    readonly wa: { offAt: number | null };
+  }
+  const memo = new Map<string, Entry>();
 
   return ({ pariwarId, category }) => {
     const key = `${pariwarId} ${category}`;
     const cached = memo.get(key);
-    if (cached) return cached;
-
     const pid = ids.pariwarId(pariwarId);
+    if (cached) {
+      const offAt = cached.wa.offAt;
+      if (offAt === null || nowMs() - offAt < WHATSAPP_OFF_MEMO_TTL_MS) return cached.registry;
+      // FS20 — the `off` answer is stale: re-read ONLY WhatsApp; concurrent callers share this ONE re-read (`offAt` null).
+      const wa: Entry['wa'] = { offAt: null };
+      const refreshed: Entry = {
+        registry: (async (): Promise<ProviderRegistry> => {
+          const base = await cached.registry;
+          const next = await deps.withScope(pariwarId, (db) =>
+            resolveFanOutWhatsapp({ db, appCache: deps.whatsappAppCache, resolveSecret: deps.resolveSecret }, pid, category),
+          );
+          wa.offAt = next.state === 'off' ? nowMs() : null;
+          return { ...base, whatsapp: [next.provider] };
+        })(),
+        wa,
+      };
+      memo.set(key, refreshed);
+      // A failed re-read restores the stale entry, so the NEXT call re-reads again (a rejection is ⛔ memoized).
+      refreshed.registry.catch(() => {
+        if (memo.get(key) === refreshed) memo.set(key, cached);
+      });
+      return refreshed.registry;
+    }
 
+    const wa: Entry['wa'] = { offAt: null };
     const pending = (async (): Promise<ProviderRegistry> => {
       // push + sms read no tenant table — compose them outside the RLS scope.
       const push = await resolvePushProviders(
@@ -475,7 +524,7 @@ export function createContributionProviderResolver(
 
       // WA + Telegram config reads are RLS-scoped — open the resolver's OWN per-Pariwar tenant tx (§6).
       const { whatsapp, telegram } = await deps.withScope(pariwarId, async (db) => {
-        const wa = await resolveFanOutWhatsappProvider(
+        const wa = await resolveFanOutWhatsapp(
           { db, appCache: deps.whatsappAppCache, resolveSecret: deps.resolveSecret },
           pid,
           category,
@@ -486,16 +535,18 @@ export function createContributionProviderResolver(
         );
         return { whatsapp: wa, telegram: tg };
       });
+      wa.offAt = whatsapp.state === 'off' ? nowMs() : null;
 
-      return { push, whatsapp: [whatsapp], sms: [sms], telegram: [telegram] };
+      return { push, whatsapp: [whatsapp.provider], sms: [sms], telegram: [telegram] };
     })();
 
     // Cache the IN-FLIGHT promise immediately — concurrent callers for the same key share this ONE
     // resolution. A rejection removes the entry so the next call re-attempts rather than replaying a
     // cached failure.
-    memo.set(key, pending);
+    const live: Entry = { registry: pending, wa };
+    memo.set(key, live);
     pending.catch(() => {
-      memo.delete(key);
+      if (memo.get(key) === live) memo.delete(key);
     });
     return pending;
   };

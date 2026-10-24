@@ -30,12 +30,14 @@ const H72 = 72 * 60;
 const rid = () => randomUUID().replace(/-/g, '').slice(0, 24);
 const hex = (uuid: string) => uuid.replace(/-/g, '');
 
-type Kind = 'cr' | 'ce' | 'sn' | 'pm';
+type Kind = 'cr' | 'ce' | 'sn' | 'pm' | 'as';
 const TABLE: Record<Kind, { table: string; id: string }> = {
   cr: { table: 'claim_correction_reminders', id: 'reminder_id' },
   ce: { table: 'claim_certificate_reminders', id: 'reminder_id' },
   sn: { table: 'claim_suspicion_notices', id: 'notice_id' },
   pm: { table: 'claim_peer_mesh_pings', id: 'ping_id' },
+  // Story 5.11b (FS22) — the alert SMS send record (0184).
+  as: { table: 'alert_sms_sends', id: 'send_id' },
 };
 
 describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlator (live DB, own-committing)', { timeout: 60_000 }, () => {
@@ -44,6 +46,8 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
   const members: string[] = [];
   const requestIds: string[] = [];
   const sendRows: { kind: Kind; id: string }[] = [];
+  /** Story 5.11b — the alerts the `as` rows hang off (deleted after their rows). */
+  const alertIds: string[] = [];
 
   /** A claim context: its family run, a missing-certificate run, its peer-mesh selection, its unused suspicion purposes. */
   interface ClaimCtx {
@@ -91,9 +95,10 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
   /** A send row of `kind`, as its finaliser would leave it. Returns its uuid. */
   async function sendRow(
     kind: Kind,
-    o: { outcome?: string | null; providerMessageId?: string | null; purpose?: string; updatedAt?: Date; pariwarId?: string; subjectKey?: string } = {},
+    o: { outcome?: string | null; providerMessageId?: string | null; purpose?: string; updatedAt?: Date; pariwarId?: string; subjectKey?: string; detail?: string | null } = {},
   ): Promise<string> {
     const pariwarId = o.pariwarId ?? PARIWAR;
+    if (kind === 'as') return alertSendRow(pariwarId, o);
     let ctx = ctxs.find((c) => c.pariwarId === pariwarId && (kind !== 'sn' || c.snPurposes.length > 0));
     ctx ??= await newClaim(pariwarId);
     const outcome = o.outcome === undefined ? 'accepted' : o.outcome;
@@ -157,6 +162,37 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
     }
     sendRows.push({ kind, id });
     return id;
+  }
+
+  /** Story 5.11b — an alert SMS send row (its own alert; ⛔ a claim), as the seam's finalise would leave it. */
+  async function alertSendRow(
+    pariwarId: string,
+    o: { outcome?: string | null; providerMessageId?: string | null; updatedAt?: Date; detail?: string | null },
+  ): Promise<string> {
+    const outcome = o.outcome ?? 'accepted';
+    const pmid = o.providerMessageId === undefined ? (outcome === 'accepted' ? rid() : null) : o.providerMessageId;
+    const alertId = randomUUID();
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL app.alert_state_writer = 'on'");
+      await c.query(
+        `INSERT INTO alerts (alert_id, cycle_id, pariwar_id, pool_count, current_state, state_event_version, created_by_actor)
+         VALUES ($1, $2, $3, 1, 'live', 3, 'trustee-actor-1')`,
+        [alertId, randomUUID(), pariwarId],
+      );
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+    alertIds.push(alertId);
+    const { rows } = await pool.query<{ send_id: string }>(
+      `INSERT INTO alert_sms_sends (pariwar_id, alert_id, member_id, occasion, message, locale, outcome, detail, provider_message_id, claim_token, updated_at)
+       VALUES ($1, $2, $3, 'day_10', 'deadline_not_recorded', 'hi', $4, $5, $6, 'job:0', $7) RETURNING send_id`,
+      [pariwarId, alertId, randomUUID(), outcome, o.detail ?? null, pmid, o.updatedAt ?? T0],
+    );
+    sendRows.push({ kind: 'as', id: rows[0]!.send_id });
+    return rows[0]!.send_id;
   }
 
   async function pmidOf(kind: Kind, id: string): Promise<string | null> {
@@ -263,6 +299,10 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       // (cleanup of claims and their cascade can take a while — the hook's own timeout is set below)
       if (sendRows.length > 0) await pool.query('DELETE FROM sms_send_deliveries WHERE send_row_id = ANY($1)', [sendRows.map((r) => r.id)]);
       if (requestIds.length > 0) await pool.query('DELETE FROM sms_delivery_report_inbox WHERE request_id = ANY($1)', [requestIds]);
+      if (alertIds.length > 0) {
+        await pool.query('DELETE FROM alert_sms_sends WHERE alert_id = ANY($1)', [alertIds]);
+        await pool.query('DELETE FROM alerts WHERE alert_id = ANY($1)', [alertIds]);
+      }
       await cleanupClaims(pool, claims, members);
     } finally {
       await pool.end();
@@ -366,6 +406,36 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         '[jobs] sms-delivery-correlator: sms_report.second_request_for_one_send:cr (count 1)',
       ]);
       expect(await allDeliveries()).toEqual(before);
+    });
+
+    it('⭐ Story 5.11b (AC1) — an `as` report: `accepted` ⇒ matched (send_kind `as`, under its own Pariwar only); `attempting` ⇒ retried (row 6), then matched once finalised', async () => {
+      const accepted = await sendRow('as');
+      const ra = await inbox({ crqid: `as${hex(accepted)}`, requestId: (await pmidOf('as', accepted))!, status: '1' });
+      const inFlight = await sendRow('as', { outcome: 'attempting' });
+      const req = rid();
+      const rf = await inbox({ crqid: `as${hex(inFlight)}`, requestId: req, status: '1' });
+      await tick(at(1));
+      expect(await inboxRow(ra)).toMatchObject({ match_state: 'matched', match_detail: 'delivered' });
+      expect(await scopedDeliveries('as', accepted, PARIWAR)).toEqual([expect.objectContaining({ send_kind: 'as', delivery_state: 'delivered' })]);
+      expect(await scopedDeliveries('as', accepted, OTHER_PARIWAR)).toEqual([]);
+      expect(await inboxRow(rf)).toMatchObject({ match_state: 'pending' });
+      // the seam's finalise commits (the compare-and-set on its claim token)
+      await pool.query(`UPDATE alert_sms_sends SET outcome = 'accepted', provider_message_id = $2 WHERE send_id = $1`, [inFlight, req]);
+      await tick(at(2));
+      expect(await inboxRow(rf)).toMatchObject({ match_state: 'matched', match_detail: 'delivered' });
+    });
+
+    it.each([
+      ['deferred', 'rate_limited:http_429'],
+      ['error', 'exhausted:outcome_unknown:api_unavailable:timeout'],
+      ['error', 'exhausted:outcome_unknown'],
+    ])('⭐ Story 5.11b (AC1) — a report for an `as` row that is %s (%s) ⇒ other_attempt:as + the second-request alarm; ⛔ delivery', async (outcome, detail) => {
+      const id = await sendRow('as', { outcome, detail });
+      const r = await inbox({ crqid: `as${hex(id)}`, status: '1' });
+      const { alarms } = await tick(at(1));
+      expect(await inboxRow(r)).toMatchObject({ match_state: 'other_attempt', match_detail: 'as' });
+      expect(alarms).toEqual(['[jobs] sms-delivery-correlator: sms_report.second_request_for_one_send:as (count 1)']);
+      expect(await deliveries('as', id)).toEqual([]);
     });
 
     it('(8) ⭐ each kind MATCHED — the cr reminder, the cr closure notice, ce, sn, pm — readable under its OWN Pariwar only', async () => {
@@ -663,7 +733,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         if ('delivered_at' in row) expect(row.delivered_at).toBeNull();
       }
       const writes = rec.statements.filter((s) =>
-        /\b(UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+claim_(correction_reminders|certificate_reminders|suspicion_notices|peer_mesh_pings)\b/i.test(s),
+        /\b(UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+(claim_(correction_reminders|certificate_reminders|suspicion_notices|peer_mesh_pings)|alert_sms_sends)\b/i.test(s),
       );
       expect(writes).toEqual([]);
       expect(rec.statements.some((s) => /FROM claim_correction_reminders WHERE reminder_id/.test(s))).toBe(true); // it DID read
@@ -682,6 +752,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       silent.push({ kind: 'ce', id: await sendRow('ce', { updatedAt: hoursAgo(49) }) });
       silent.push({ kind: 'sn', id: await sendRow('sn', { updatedAt: hoursAgo(49) }) });
       silent.push({ kind: 'pm', id: await sendRow('pm', { updatedAt: hoursAgo(49) }) });
+      silent.push({ kind: 'as', id: await sendRow('as', { updatedAt: hoursAgo(49) }) }); // Story 5.11b (FS22)
       // ⛔ counted:
       const reported = await sendRow('cr', { updatedAt: hoursAgo(50) });
       await inbox({ crqid: `cr${hex(reported)}`, status: '0' }); // ANY report carrying its CRQID (even an unmatched one)
@@ -689,6 +760,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       await sendRow('sn', { updatedAt: hoursAgo(24 * 8) });
       await sendRow('cr', { purpose: 'staff_push', providerMessageId: 'fcm-x', updatedAt: hoursAgo(49) });
       await sendRow('pm', { outcome: 'error', updatedAt: hoursAgo(49) });
+      await sendRow('as', { updatedAt: hoursAgo(47) }); // Story 5.11b — inside 48 h ⇒ ⛔ counted
       const delivered = await sendRow('pm', { updatedAt: hoursAgo(60) });
       await smsDelivery.upsertSmsSendDelivery(pool, {
         pariwarId: PARIWAR,
@@ -704,10 +776,10 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       const alarms: string[] = [];
       const lines: string[] = [];
       const out = await runSmsDeliverySilenceCheck({ pool, now: () => NOW, onAlarm: (m) => alarms.push(m), log: (m) => lines.push(m) });
-      expect(out.silent).toEqual({ cr: 2, ce: 1, sn: 1, pm: 1 });
+      expect(out.silent).toEqual({ cr: 2, ce: 1, sn: 1, pm: 1, as: 1 });
       expect(alarms).toHaveLength(1);
-      expect(alarms[0]).toContain('sms_report.silence:5');
-      expect(alarms[0]).toContain('cr 2, ce 1, sn 1, pm 1');
+      expect(alarms[0]).toContain('sms_report.silence:6');
+      expect(alarms[0]).toContain('cr 2, ce 1, sn 1, pm 1, as 1');
       for (const s of silent) expect(alarms[0]).not.toContain(hex(s.id));
       expect(lines).toHaveLength(1);
     });
@@ -722,6 +794,19 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       const out = await runSmsDeliverySilenceCheck({ pool, now: () => LATE, onAlarm: () => undefined, log: () => undefined });
       expect(out.silent.cr).toBe(1);
       expect(out.silent.ce).toBe(1);
+    });
+
+    it('⭐ Story 5.11b (FS22) — an `as` row left `attempting` 1 h – 7 days ago is counted STALE (ONE alarm, ⛔ an id); inside the hour ⛔', async () => {
+      const STALE_NOW = new Date('2000-08-01T00:00:00.000Z');
+      const hrs = (h: number) => new Date(STALE_NOW.getTime() - h * 3_600_000);
+      const stale = await sendRow('as', { outcome: 'attempting', updatedAt: hrs(2) });
+      await sendRow('as', { outcome: 'attempting', updatedAt: new Date(STALE_NOW.getTime() - 30 * 60_000) });
+      await sendRow('as', { outcome: 'attempting', updatedAt: hrs(24 * 8) });
+      const alarms: string[] = [];
+      const out = await runSmsDeliverySilenceCheck({ pool, now: () => STALE_NOW, onAlarm: (m) => alarms.push(m), log: () => undefined });
+      expect(out.staleAlertSends).toBe(1);
+      expect(alarms).toEqual([expect.stringContaining('sms_report.stale_attempting:1')]);
+      expect(alarms[0]).not.toContain(hex(stale));
     });
 
     it('⛔ silent send ⇒ ⛔ alarm; the login-code line counts `otp:*` settled in the last 24 h by result, ⛔ an id', async () => {

@@ -86,20 +86,27 @@ describe('createSmsDltProvider — send mapping (AC1; 6.37 MG3 / MG12)', () => {
     expect(Object.keys(sent[1]!)).not.toContain('correlationId');
   });
 
-  it('⭐ MG12 — a provider built WITHOUT named values (the dark alert path) refuses `no_named_values` and ⛔ calls the gateway', async () => {
-    for (const values of [undefined, []]) {
-      const send = vi.fn<SmsMessagingHandle['send']>();
-      const provider = createSmsDltProvider({ messaging: { send }, dltTemplateId: TEMPLATE_ID, ...(values ? { values } : {}) });
-      const result = await provider.send(render(claimStatusChange(), 'sms'), TARGET);
-      expect(result).toEqual({
-        channel: 'sms',
-        provider: 'sms-dlt',
-        status: 'rejected',
-        providerMessageId: null,
-        detail: 'dlt_template_not_approved:no_named_values',
-      });
-      expect(send).not.toHaveBeenCalled();
-    }
+  it('⭐ MG12 — a provider built WITHOUT named values (the dark alert composition) refuses `no_named_values` and ⛔ calls the gateway', async () => {
+    const send = vi.fn<SmsMessagingHandle['send']>();
+    const provider = createSmsDltProvider({ messaging: { send }, dltTemplateId: TEMPLATE_ID });
+    const result = await provider.send(render(claimStatusChange(), 'sms'), TARGET);
+    expect(result).toEqual({
+      channel: 'sms',
+      provider: 'sms-dlt',
+      status: 'rejected',
+      providerMessageId: null,
+      detail: 'dlt_template_not_approved:no_named_values',
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('⭐ Story 5.11b (MG12 superseded in part, `-404`) — `values: []` is a template with NO slot (the "payment not matched" text): SENT', async () => {
+    const { handle, sent } = fakeHandle();
+    const provider = createSmsDltProvider({ messaging: handle, dltTemplateId: TEMPLATE_ID, values: [] });
+    const result = await provider.send(render(claimStatusChange(), 'sms'), TARGET);
+    expect(result).toMatchObject({ channel: 'sms', provider: 'sms-dlt', status: 'accepted' });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ templateId: TEMPLATE_ID, values: [] });
   });
 
   it('declares scope global (DLT is platform-level) + getStatus is an honest unknown (reports arrive by webhook — 6.37b, ⛔ a poll)', async () => {
@@ -549,9 +556,14 @@ describe('createSmsAppClient — local refusals, ⛔ request (6.37 AC4; MG4, MG8
     },
   );
 
-  it('⛔ named values ⇒ no_named_values; a value named `mobiles` or a repeated name ⇒ values_mismatch — ⛔ request', async () => {
+  it('⭐ Story 5.11b (MG12, `-404`) — `values: []` (a template with NO slot) is SENT: the recipient carries only `mobiles` and the CRQID', async () => {
+    const fetchImpl = answering(200, { type: 'success', message: 'abc' });
+    expect(await outcome(fetchImpl, { ...message, values: [], correlationId: CRQID })).toBe('accepted:abc');
+    expect(JSON.parse(fetchImpl.mock.calls[0]![1].body).recipients).toEqual([{ mobiles: message.to.slice(1), CRQID }]);
+  });
+
+  it('a value named `mobiles` or a repeated name ⇒ values_mismatch — ⛔ request', async () => {
     const fetchImpl = vi.fn<SmsFetchLike>();
-    expect(await outcome(fetchImpl, { ...message, values: [] })).toBe('dlt_template_not_approved:no_named_values');
     expect(await outcome(fetchImpl, { ...message, values: [{ name: 'mobiles', value: '919999999999' }] })).toBe(
       'dlt_template_not_approved:values_mismatch',
     );
@@ -587,8 +599,8 @@ describe('createSmsAppClient — local refusals, ⛔ request (6.37 AC4; MG4, MG8
     },
   );
 
-  it('6.37b DR3 / DR11 — every kind in the grammar is sent, an OTP `ot…` included', async () => {
-    for (const kind of ['cr', 'ce', 'sn', 'pm', 'ot']) {
+  it('6.37b DR3 / DR11 — every kind in the grammar is sent, an OTP `ot…` and (Story 5.11b) an alert SMS `as…` included', async () => {
+    for (const kind of ['cr', 'ce', 'sn', 'pm', 'as', 'ot']) {
       const fetchImpl = answering(200, { type: 'success', message: 'abc' });
       const correlationId = `${kind}${CRQID.slice(2)}`;
       await createSmsAppClient(config, fetchImpl).messaging().send({ ...message, correlationId });

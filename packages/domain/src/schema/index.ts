@@ -62,6 +62,8 @@ export * from './sms_rate_buckets.js';
 // Story 6.37b — MSG91's delivery reports: the global report inbox + the per-send delivery record (migration 0167).
 export * from './sms_delivery_report_inbox.js';
 export * from './sms_send_deliveries.js';
+// Story 5.11b — the alert SMS send record (migration 0184): at most one text per (alert, member, occasion), CRQID kind `as`.
+export * from './alert_sms_sends.js';
 // Story 3.3a — DigiLocker KYC provider substrate. `digilocker_public_certs` is a GLOBAL
 // issuer-cert cache (no tenant dimension; member-auth carve-out posture);
 // `kyc_transactions` is tenant-isolated provider OAuth/PKCE state (stores NO eAadhaar PII).

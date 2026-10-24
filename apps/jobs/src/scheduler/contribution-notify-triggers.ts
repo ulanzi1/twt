@@ -60,6 +60,7 @@ import {
   // import, adding no package edge (this module already imports four other namespaces from it) and no
   // module-init cycle.
   kyc as kycDomain,
+  member as memberDomain,
   notifications,
   pool as poolDomain,
   withPariwarScope,
@@ -68,12 +69,13 @@ import {
 import { DEFAULT_LOCALE, formatCurrency, t, type Locale } from '@twt/i18n';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
 
+import type { FanOutCall } from './alert-sms-details.js';
 import {
   fanOutAlertToMembers,
   serializeFanOutResult,
   type ContributionNotifyDeps,
 } from './contribution-notify.js';
-import { smsPoolLabel } from './contribution-sms-templates.js';
+import { smsPoolLabel, type ContributionSmsLocale } from './contribution-sms-templates.js';
 
 // ── Operational knobs (named config values, never inline magic numbers) ─────────────────────────────
 
@@ -97,6 +99,14 @@ export const DEFAULT_RECOVERY_SWEEP_ALERT_LIMIT = 500;
 
 /** Members per child-worker chunk. The unit of progress inside one pool's roster. */
 export const DEFAULT_MEMBER_CHUNK_SIZE = 200;
+
+/**
+ * Story 5.11b (F6) — the chunk for a LIT kind (day 10, the escalated pending match) once a REAL SMS send is wired. Members are
+ * claimed per chunk BEFORE their sequential fan-out, under the 300 s claim TTL; a lit member's SMS can take ~10 s (the send
+ * timeout) + begin + finalise on top of push and WhatsApp, so a 200-member chunk could outlive its claims (the send ROW still
+ * stops a second TEXT, ⛔ a second push). 16 × ~15 s ≈ 240 s stays inside the TTL.
+ */
+export const LIT_KIND_MEMBER_CHUNK_SIZE = 16;
 
 /** CONTRIBUTION_NOTIFY_POOL_BATCH child jobs processed concurrently in this process — the same
  *  `localConcurrency` mechanism `registerCycleSpawnWorkers` uses (cycle-spawn.ts:36/381). */
@@ -237,6 +247,8 @@ export interface ContributionNotifyTriggerDeps extends ContributionNotifyDeps {
    * Send-time locale. `hi` (Hindi-primary, `DEFAULT_LOCALE`) per architectural-freeze row 10 — every
    * member-visible surface defaults Hindi. Overridable so a test can assert the English parity copy.
    * (2026-10-23, row 6-35: the member can now choose a language in the app — `members.preferred_locale` — but this sender does ⛔ read it; the LS11 deferred item "Senders that ignore the member's chosen language (row 6-35)".)
+   * ⭐ Story 5.11b (FS5 (a)): true for the PUSH only now — the three TEXTS go in each member's own language
+   * (`readMemberTextLanguages`), so a member who chose English may get a Hindi push and an English text (recorded).
    */
   readonly locale?: Locale;
 }
@@ -345,9 +357,15 @@ export function buildDeadlineReminderAlert(input: {
   readonly deadlineAt: Date;
   readonly timeCritical: boolean;
   readonly locale: Locale;
+  /**
+   * Story 5.11b (FS5 (a)) — the language of the day-10 TEXT: the member's (`readMemberTextLanguages`). Absent ⇒ `locale`;
+   * `null` ⇒ ⛔ text (the Pariwar has ⛔ passport — the language is unresolvable; ⛔ a guess).
+   */
+  readonly smsLocale?: ContributionSmsLocale | null;
   readonly now: Date;
 }): Alert {
   const { locale, cycleDay } = input;
+  const smsLocale = input.smsLocale === undefined ? locale : input.smsLocale;
   const keys = CONTRIBUTION_LOOP_TEMPLATE_KEYS[cycleDay];
   const params = {
     pool: poolLabel(input.identity),
@@ -363,12 +381,13 @@ export function buildDeadlineReminderAlert(input: {
       deadlineAt: input.deadlineAt,
       deadlineDisplay: t(keys.displayKey, params, { locale, ...NS }),
       // Story 5.11 (FS1 (d), FS7 (a)): ONLY day 10 is texted — the date is the push's own `params.date`; the pool label is FS13's.
-      ...(cycleDay === 10
+      // Story 5.11b (FS5 (a)): in the member's language — the pool value rebuilt for it (the date is locale-free).
+      ...(cycleDay === 10 && smsLocale !== null
         ? {
             sms: {
               message: 'deadline_not_recorded',
-              locale,
-              values: { pool: smsPoolLabel(input.identity, locale), date: params.date },
+              locale: smsLocale,
+              values: { pool: smsPoolLabel(input.identity, smsLocale), date: params.date },
             },
           }
         : {}),
@@ -392,9 +411,12 @@ export function buildPendingMatchRetryAlert(input: {
   readonly identity: notifications.ResolvedPoolIdentity;
   readonly tier: PendingMatchRetryTier;
   readonly locale: Locale;
+  /** Story 5.11b (FS5 (a)) — the escalated TEXT's language (see `buildDeadlineReminderAlert`). Absent ⇒ `locale`; `null` ⇒ ⛔ text. */
+  readonly smsLocale?: ContributionSmsLocale | null;
   readonly now: Date;
 }): Alert {
   const { locale, tier } = input;
+  const smsLocale = input.smsLocale === undefined ? locale : input.smsLocale;
   const keys = PENDING_MATCH_RETRY_TEMPLATE_KEYS[tier];
   const params = { pool: poolLabel(input.identity) };
   return Alert.parse({
@@ -406,8 +428,8 @@ export function buildPendingMatchRetryAlert(input: {
       poolId: input.poolId,
       now: input.now,
       // Story 5.11 (FS1 (d)): ONLY the escalated tier is texted ("still not confirmed"); the soft tier is not.
-      ...(tier === 'escalated'
-        ? { sms: { message: 'payment_not_confirmed', locale, values: { pool: smsPoolLabel(input.identity, locale) } } }
+      ...(tier === 'escalated' && smsLocale !== null
+        ? { sms: { message: 'payment_not_confirmed', locale: smsLocale, values: { pool: smsPoolLabel(input.identity, smsLocale) } } }
         : {}),
     }),
   });
@@ -453,8 +475,11 @@ export function buildContributionMismatchAlert(input: {
   readonly poolId: string;
   readonly reason: string;
   readonly locale: Locale;
+  /** Story 5.11b (FS5 (a)) — the TEXT's language (see `buildDeadlineReminderAlert`). Absent ⇒ `locale`; `null` ⇒ ⛔ text. */
+  readonly smsLocale?: ContributionSmsLocale | null;
   readonly now: Date;
 }): Alert {
+  const smsLocale = input.smsLocale === undefined ? input.locale : input.smsLocale;
   const bodyKey =
     input.reason === 'wrong_pool'
       ? CONTRIBUTION_MISMATCH_TEMPLATE_KEYS.wrong_pool
@@ -467,8 +492,8 @@ export function buildContributionMismatchAlert(input: {
     payload_data: buildContributionMismatchPayloadData({
       poolId: input.poolId,
       body: t(bodyKey, undefined, { locale: input.locale, ...NS }),
-      // Story 5.11 (FS1 (d)): ONE text for every reason — it has no variable.
-      sms: { message: 'payment_not_matched', locale: input.locale, values: {} },
+      // Story 5.11 (FS1 (d)): ONE text for every reason — it has no variable (Story 5.11b: in the member's language).
+      ...(smsLocale !== null ? { sms: { message: 'payment_not_matched' as const, locale: smsLocale, values: {} } } : {}),
     }),
   });
 }
@@ -675,6 +700,8 @@ function memberKey(alertId: string, memberId: string, scope: string): string {
 export async function runContributionNotifyChild(
   deps: ContributionNotifyTriggerDeps,
   envelopeIn: JobEnvelope<ContributionNotifyChildPayload>,
+  /** Story 5.11b (FS9) — the pg-boss job (its id and, with `includeMetadata`, its retry count). Absent ⇒ the final attempt. */
+  job?: NotifyJobAttempt,
 ): Promise<ContributionNotifyChildResult> {
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
   const { pariwarId } = envelopeIn;
@@ -696,7 +723,11 @@ export async function runContributionNotifyChild(
 
   const now = deps.now?.() ?? new Date();
   const locale = deps.locale ?? DEFAULT_LOCALE;
-  const chunkSize = Math.max(1, deps.memberChunkSize ?? DEFAULT_MEMBER_CHUNK_SIZE);
+  // Story 5.11b (FS5) — the two LIT kinds of this worker (day 10, the escalated tier): their TEXT goes in each member's language.
+  const litKind = (p.kind === 'deadline_reminder' && p.cycleDay === 10) || p.kind === 'pending_match_escalated';
+  // Story 5.11b (F6) — a lit kind's chunk stays inside the claim TTL once a real send is wired.
+  const baseChunk = Math.max(1, deps.memberChunkSize ?? DEFAULT_MEMBER_CHUNK_SIZE);
+  const chunkSize = litKind && deps.alertSms !== undefined ? Math.min(baseChunk, LIT_KIND_MEMBER_CHUNK_SIZE) : baseChunk;
   // Per-kind TTL (Story 9.10 AC3 — "the once-ever nuance"): the two pending-match tiers durability-need a
   // weeks-scale claim, never the day-N reminders' 300s default (which would lapse — and get vacuumed —
   // well before the next HOURLY sweep tick, re-nudging the member every hour).
@@ -724,7 +755,12 @@ export async function runContributionNotifyChild(
   // `resolvePoolIdentity` itself returning null — without this flag both alarms fire, and the SECOND
   // (generic) one overwrites the specific "presentation-mode read failed" cause with a misleading one.
   let presentationModeFailed = false;
+  // Story 5.11b (FS5 (a)) — the members' TEXT languages, read in THIS scope (⛔ extra connection); `null` ⇒ ⛔ passport.
+  let textLanguages: ReadonlyMap<string, ContributionSmsLocale> | null = new Map();
   const identity = await withPariwarScope(deps.pool, pariwarId, async (db: Db) => {
+    if (litKind) {
+      textLanguages = await memberDomain.readMemberTextLanguages(db, { pariwarId: ids.pariwarId(pariwarId), memberIds: p.memberIds });
+    }
     // ⭐ REVIEW FIX (8.16) — this read must degrade the SAME way `resolvePoolIdentity` degrades every
     // OTHER unresolvable input on this path (decrypt, letter code, curated name): skip THIS pool's
     // notification, never let a transient read throw the whole child job. Without this, a DB blip on
@@ -767,6 +803,19 @@ export async function runContributionNotifyChild(
     return { alertId: p.alertId, poolId: p.poolId, kind: p.kind, attempted: 0, delivered: 0, inAppOnly: 0, suppressed: 0, alreadySent: 0 };
   }
 
+  if (litKind && textLanguages === null) {
+    // ⛔ a guess: every member's text is omitted for this job (the rung ends `sms_message_not_lit`; the push is unchanged).
+    alarm(
+      `[jobs] contribution-notify-child: alert_sms.locale_unresolved — pariwar ${pariwarId} has ⛔ passport row; ⛔ text for ` +
+        `alert ${p.alertId} pool ${p.poolId} (the push still goes)`,
+    );
+  }
+  const smsLocaleOf = (memberId: string): ContributionSmsLocale | null => {
+    const languages = textLanguages as ReadonlyMap<string, ContributionSmsLocale> | null;
+    if (languages === null) return null;
+    return languages.get(memberId.toLowerCase()) ?? null;
+  };
+
   // (AC2 / D3) Reminder suppression — a member who has already ACTED is not nudged. Resolved per POOL
   // in ONE batched read, never per member at 4L scale.
   const suppressedMembers =
@@ -798,6 +847,7 @@ export async function runContributionNotifyChild(
         deadlineAt,
         timeCritical: p.timeCritical,
         locale,
+        ...(litKind ? { smsLocale: smsLocaleOf(memberId) } : {}),
         now,
       });
     }
@@ -810,6 +860,7 @@ export async function runContributionNotifyChild(
         identity,
         tier: p.kind === 'pending_match' ? 'soft' : 'escalated',
         locale,
+        ...(litKind ? { smsLocale: smsLocaleOf(memberId) } : {}),
         now,
       });
     }
@@ -846,7 +897,7 @@ export async function runContributionNotifyChild(
     if (claimed.length === 0) continue;
 
     attempted += claimed.length;
-    const { results, retry } = await fanOutAlertToMembers(deps, alertFor, claimed, pariwarId, now);
+    const { results, retry } = await fanOutAlertToMembers(deps, alertFor, claimed, pariwarId, now, fanOutCall(job, scope));
 
     const retrySet = new Set(retry);
     for (const memberId of claimed) {
@@ -1365,6 +1416,8 @@ export async function runContributionConfirmedNotify(
 export async function runContributionMismatchNotify(
   deps: ContributionNotifyTriggerDeps,
   envelopeIn: JobEnvelope<ContributionMismatchNotifyPayload>,
+  /** Story 5.11b (FS9) — the pg-boss job (its id and, with `includeMetadata`, its retry count). Absent ⇒ the final attempt. */
+  job?: NotifyJobAttempt,
 ): Promise<{ alertId: string; memberId: string; delivered: boolean; alreadySent: boolean }> {
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
   const { pariwarId } = envelopeIn;
@@ -1378,10 +1431,29 @@ export async function runContributionMismatchNotify(
   const locale = deps.locale ?? DEFAULT_LOCALE;
   const store = idempotency.createKeyedStore(deps.pool);
   const ttl = deps.memberIdempotencyTtlSeconds ?? DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS;
-  const key = memberKey(p.alertId, p.memberId, `mismatch:${p.reason}`);
+  const scope = `mismatch:${p.reason}`;
+  const key = memberKey(p.alertId, p.memberId, scope);
 
   if ((await store.claim(key, ttl)) !== 'acquired') {
     return { alertId: p.alertId, memberId: p.memberId, delivered: false, alreadySent: true };
+  }
+
+  // Story 5.11b (FS5 (a)) — the member's TEXT language, ONE query; ⛔ passport ⇒ ⛔ text and one alarm (the push still goes).
+  let smsLocale: ContributionSmsLocale | null;
+  try {
+    const languages = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
+      memberDomain.readMemberTextLanguages(db, { pariwarId: ids.pariwarId(pariwarId), memberIds: [p.memberId] }),
+    );
+    if (languages === null) {
+      alarm(
+        `[jobs] contribution-mismatch-notify: alert_sms.locale_unresolved — pariwar ${pariwarId} has ⛔ passport row; ⛔ text for ` +
+          `alert ${p.alertId} (the push still goes)`,
+      );
+    }
+    smsLocale = languages?.get(p.memberId.toLowerCase()) ?? null;
+  } catch (err) {
+    await store.release(key).catch(() => undefined);
+    throw err;
   }
 
   const alert = buildContributionMismatchAlert({
@@ -1391,10 +1463,11 @@ export async function runContributionMismatchNotify(
     poolId: p.poolId,
     reason: p.reason,
     locale,
+    smsLocale,
     now,
   });
 
-  const { results, retry } = await fanOutAlertToMembers(deps, () => alert, [p.memberId], pariwarId, now);
+  const { results, retry } = await fanOutAlertToMembers(deps, () => alert, [p.memberId], pariwarId, now, fanOutCall(job, scope));
 
   const first = results[0];
   // Q4: a missing result is retried like a failure, ⛔ recorded as a terminal outcome (unreachable today). F4: and named.
@@ -1414,6 +1487,35 @@ export async function runContributionMismatchNotify(
     alarm(`[jobs] contribution-mismatch-notify: failed to record the member result — ${String(err)}`);
   });
   return { alertId: p.alertId, memberId: p.memberId, delivered: first.delivered, alreadySent: false };
+}
+
+// ── The job attempt (Story 5.11b, FS9) ─────────────────────────────────────────────────────────────────
+
+/** A pg-boss job's id and — registered with `includeMetadata` — its retry count / limit (type-guarded). */
+export interface NotifyJobAttempt {
+  readonly id?: string;
+  readonly retryCount?: number;
+  readonly retryLimit?: number;
+}
+
+/** The `claim-contact-ladder-whatsapp.ts` type guard: a field that is ⛔ a number is absent (⇒ the final attempt). */
+function jobAttemptOf(job: Job): NotifyJobAttempt {
+  const meta = job as Job & { readonly retryCount?: unknown; readonly retryLimit?: unknown };
+  return {
+    ...(typeof job.id === 'string' ? { id: job.id } : {}),
+    ...(typeof meta.retryCount === 'number' && typeof meta.retryLimit === 'number'
+      ? { retryCount: meta.retryCount, retryLimit: meta.retryLimit }
+      : {}),
+  };
+}
+
+/** The fan-out's per-call parameters: the attempt and the OCCASION (the keyed store's scope — F4). */
+function fanOutCall(job: NotifyJobAttempt | undefined, occasion: string): FanOutCall {
+  return {
+    occasion,
+    ...(job?.id !== undefined ? { jobId: job.id } : {}),
+    ...(job?.retryCount !== undefined && job.retryLimit !== undefined ? { retryCount: job.retryCount, retryLimit: job.retryLimit } : {}),
+  };
 }
 
 // ── Registration ────────────────────────────────────────────────────────────────────────────────────
@@ -1438,14 +1540,15 @@ export async function registerContributionNotifyWorkers(
   // children processed concurrently in this process rather than one pool at a time. Without it, a
   // cycle-open fan-out across ~50 pools runs fully serially, which is exactly what the §5.12 5-minute
   // time-to-fan-out budget cannot afford.
+  // Story 5.11b (FS9) — `includeMetadata`: the child reads its retry count (§3.4's window; the final attempt records what never cleared).
   await boss.work(
     QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH,
-    { localConcurrency: deps.childConcurrency ?? DEFAULT_POOL_BATCH_LOCAL_CONCURRENCY },
+    { localConcurrency: deps.childConcurrency ?? DEFAULT_POOL_BATCH_LOCAL_CONCURRENCY, includeMetadata: true },
     async (jobs: Job[]) => {
       const results: ContributionNotifyChildResult[] = [];
       for (const job of jobs) {
         results.push(
-          await runContributionNotifyChild(deps, job.data as JobEnvelope<ContributionNotifyChildPayload>),
+          await runContributionNotifyChild(deps, job.data as JobEnvelope<ContributionNotifyChildPayload>, jobAttemptOf(job)),
         );
       }
       return { processed: results.length, results };
@@ -1485,11 +1588,11 @@ export async function registerContributionNotifyWorkers(
   // The Story 9.7 mismatch seam: a queue + a worker, with NO cron and NO recovery sweep (FR-30/FR-32).
   // The Story 9.4 matcher's own 4h recovery sweep re-runs the mismatch path, so a dropped notify heals.
   await boss.createQueue(QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH);
-  await boss.work(QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH, async (jobs: Job[]) => {
+  await boss.work(QUEUE_NAMES.CONTRIBUTION_NOTIFY_MISMATCH, { includeMetadata: true }, async (jobs: Job[]) => {
     const results = [];
     for (const job of jobs) {
       results.push(
-        await runContributionMismatchNotify(deps, job.data as JobEnvelope<ContributionMismatchNotifyPayload>),
+        await runContributionMismatchNotify(deps, job.data as JobEnvelope<ContributionMismatchNotifyPayload>, jobAttemptOf(job)),
       );
     }
     return { processed: results.length, results };

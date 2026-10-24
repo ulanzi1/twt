@@ -274,6 +274,87 @@ describe('createContributionProviderResolver — the four-channel assembly (AI-8
     expect(d.resolveConfig).toHaveBeenCalledTimes(1);
   });
 
+  // ── Story 5.11b (FS20 (a), `-404`) — the WhatsApp leg's `off` is memoized ONLY 60 s (deferred-work W1 closed) ──────────────
+
+  it('⭐ FS20 — `off` → switched ON is seen after the TTL (injected clock); across 100 members only WhatsApp is re-read, ONCE', async () => {
+    getWaConfig.mockResolvedValue(null); // ⛔ row ⇒ `off`
+    getTelegramConfig.mockResolvedValue(FULL_TG_CONFIG);
+    let scopeCalls = 0;
+    const withScope = <T>(_p: string, fn: (db: Db) => Promise<T>): Promise<T> => {
+      scopeCalls += 1;
+      return fn({} as Db);
+    };
+    let clock = 1_000_000;
+    const d = deps({ withScope, nowMs: () => clock });
+    const resolver = createContributionProviderResolver(d);
+
+    const first = await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    expect(first.whatsapp[0]!.scope).not.toBe('per-pariwar'); // the fixture (off)
+    // 100 members inside the minute — ⛔ re-read at all.
+    for (let i = 0; i < 100; i += 1) await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    expect(scopeCalls).toBe(1);
+
+    // The Pariwar switches WhatsApp ON; 60 s later the next 100 members share ONE WhatsApp re-read.
+    getWaConfig.mockResolvedValue(FULL_WA_CONFIG);
+    resolveApprovedTemplate.mockResolvedValue({ templateName: 'ann_v1', languageCode: 'en' });
+    clock += 60_000;
+    const after = await Promise.all(Array.from({ length: 100 }, () => resolver({ pariwarId: PARIWAR, category: CATEGORY })));
+    expect(after.every((r) => r.whatsapp[0]!.scope === 'per-pariwar')).toBe(true);
+    expect(scopeCalls).toBe(2);
+    expect(getWaConfig).toHaveBeenCalledTimes(2);
+    expect(getTelegramConfig).toHaveBeenCalledTimes(1); // the Telegram leg stays memoized
+    expect(d.resolveSecret).toHaveBeenCalledTimes(3); // fb-sa + tg token at first, the wa token at the switch-on — ⛔ per member
+    expect(d.resolveConfig).toHaveBeenCalledTimes(1); // the SMS leg stays memoized
+    expect(after[0]!.push).toBe(first.push);
+    // `ready` is now kept for the process: much later, ⛔ re-read.
+    clock += 3_600_000;
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    expect(scopeCalls).toBe(2);
+  });
+
+  it('⭐ FS20 — still `off` after the TTL ⇒ re-read once, and the new `off` is kept another minute; a failed re-read is ⛔ memoized', async () => {
+    getWaConfig.mockResolvedValue({ ...FULL_WA_CONFIG, enabled: false });
+    getTelegramConfig.mockResolvedValue(FULL_TG_CONFIG);
+    let scopeCalls = 0;
+    let fail = false;
+    const withScope = <T>(_p: string, fn: (db: Db) => Promise<T>): Promise<T> => {
+      scopeCalls += 1;
+      return fail ? (Promise.reject(new Error('transient db outage')) as Promise<T>) : fn({} as Db);
+    };
+    let clock = 0;
+    const resolver = createContributionProviderResolver(deps({ withScope, nowMs: () => clock }));
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    clock += 60_000;
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    expect(scopeCalls).toBe(2);
+    clock += 59_999;
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    expect(scopeCalls).toBe(2);
+    clock += 1;
+    fail = true;
+    await expect(resolver({ pariwarId: PARIWAR, category: CATEGORY })).rejects.toThrow(/outage/);
+    fail = false;
+    expect((await resolver({ pariwarId: PARIWAR, category: CATEGORY })).whatsapp[0]!.scope).not.toBe('per-pariwar');
+    expect(scopeCalls).toBe(4);
+  });
+
+  it('⭐ FS20 — a `refused` WhatsApp (enabled, ⛔ approved template) stays memoized for the process (refused → ready needs a restart)', async () => {
+    getWaConfig.mockResolvedValue(FULL_WA_CONFIG);
+    resolveApprovedTemplate.mockResolvedValue(null);
+    getTelegramConfig.mockResolvedValue(FULL_TG_CONFIG);
+    let scopeCalls = 0;
+    const withScope = <T>(_p: string, fn: (db: Db) => Promise<T>): Promise<T> => {
+      scopeCalls += 1;
+      return fn({} as Db);
+    };
+    let clock = 0;
+    const resolver = createContributionProviderResolver(deps({ withScope, nowMs: () => clock }));
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    clock += 3_600_000;
+    await resolver({ pariwarId: PARIWAR, category: CATEGORY });
+    expect(scopeCalls).toBe(1);
+  });
+
   it('a DIFFERENT (pariwarId, category) is a distinct memo entry (re-reads)', async () => {
     getWaConfig.mockResolvedValue(FULL_WA_CONFIG);
     resolveApprovedTemplate.mockResolvedValue({ templateName: 'ann_v1', languageCode: 'en' });

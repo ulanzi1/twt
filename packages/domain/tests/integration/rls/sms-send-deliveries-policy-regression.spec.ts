@@ -178,6 +178,8 @@ describe.skipIf(!hasDatabase)('sms_send_deliveries — migration 0167 + RLS poli
 
   it.each<[string, Record<string, unknown>, Record<string, unknown>]>([
     ['sms_send_deliveries_send_kind_check', { send_kind: 'ot' }, { send_kind: 'sn' }],
+    // Story 5.11b (0184) — an alert SMS send's record.
+    ['sms_send_deliveries_send_kind_check', { send_kind: 'xx' }, { send_kind: 'as' }],
     ['sms_send_deliveries_delivery_state_check', { delivery_state: 'intermediate' }, { delivery_state: 'undelivered' }],
     ['sms_send_deliveries_request_id_check', { request_id: 'a-b' }, { request_id: 'A'.repeat(64) }],
     ['sms_send_deliveries_status_code_check', { status_code: '1000' }, { status_code: '25' }],

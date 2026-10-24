@@ -46,7 +46,7 @@ export interface SmsGatewayMessage {
   readonly to: string;
   /** MSG91's template id (24 hex) — held under the template's existing config key (MG4). */
   readonly templateId: string;
-  /** The template's named values, in slot order — what MSG91 actually substitutes. ⛔ Empty (MG12). */
+  /** The template's named values, in slot order — what MSG91 actually substitutes. `[]` ⇒ a template with ⛔ slot (Story 5.11b). */
   readonly values: readonly SmsGatewayValue[];
   /**
    * The text the caller rendered through the real `t()` — the ORACLE the values were checked against. ⛔ Sent,
@@ -327,12 +327,15 @@ function buildFlowBody(
 /** The recipient keys a template value may ⛔ take — the number, and the correlation id (6.37b DR3). */
 const RESERVED_RECIPIENT_KEYS: ReadonlySet<string> = new Set(['mobiles', 'CRQID']);
 
-/** Refuse a message before the network when it cannot be what MSG91 should send (MG4, MG8, MG12). */
+/**
+ * Refuse a message before the network when it cannot be what MSG91 should send (MG4, MG8). ⭐ Story 5.11b (MG12 superseded IN
+ * PART, `-404`): ⛔ `length === 0` refusal — `values` is a REQUIRED field here, so "no values supplied" cannot reach this client;
+ * an EMPTY list is a template with ⛔ slot. The dark path's guard is the provider's `values === undefined` (sms-dlt.ts).
+ */
 function localRefusal(message: SmsGatewayMessage): SmsLocalRefusal | null {
   if (!isMsg91TemplateId(message.templateId)) {
     return { errorClass: 'dlt_template_not_approved', code: 'template_id_malformed' };
   }
-  if (message.values.length === 0) return { errorClass: 'dlt_template_not_approved', code: 'no_named_values' };
   const names = new Set<string>();
   for (const { name } of message.values) {
     // `mobiles` and `CRQID` are the recipient's own fields — a value of either name would overwrite the number or the

@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { SMS_REPORT_MATCH_STATES } from '../../../src/schema/sms_delivery_report_inbox.js';
+import { SMS_CORRELATION_ID_PATTERN } from '../../../src/sms-delivery/correlation.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppRoleNoScope, enterAppScope } from '../_helpers.js';
 
@@ -201,12 +202,22 @@ describe.skipIf(!hasDatabase)('sms_delivery_report_inbox — migration 0167 + RL
     expect([...rows[0]!.def.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]!).sort()).toEqual([...SMS_REPORT_MATCH_STATES].sort());
   });
 
+  it('⭐ LOCKSTEP (Story 5.11b) — the CRQID CHECK carries EXACTLY `SMS_CORRELATION_ID_PATTERN.source` (DR3\'s one SQL copy)', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ def: string }>(
+      `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'sms_delivery_report_inbox_crqid_check'`,
+    );
+    expect(rows[0]!.def.match(/~ '(.*)'::text/)?.[1]).toBe(SMS_CORRELATION_ID_PATTERN.source);
+  });
+
   const SETTLED = { match_state: 'matched', match_detail: 'delivered', settled_at: '2026-10-17T05:00:00.000Z' };
   it.each<[string, Record<string, unknown>, Record<string, unknown>]>([
     ['sms_delivery_report_inbox_request_id_check', { request_id: 'a-b' }, { request_id: 'A'.repeat(64) }],
     ['sms_delivery_report_inbox_request_id_check', { request_id: '' }, { request_id: 'a' }],
     ['sms_delivery_report_inbox_crqid_check', { crqid: '0' }, { crqid: null }],
     ['sms_delivery_report_inbox_crqid_check', { crqid: `CR${CRQID.slice(2)}` }, { crqid: `ot${CRQID.slice(2)}` }],
+    // Story 5.11b (0184) — the alert SMS kind `as`; ⛔ a kind outside the grammar.
+    ['sms_delivery_report_inbox_crqid_check', { crqid: `xx${CRQID.slice(2)}` }, { crqid: `as${CRQID.slice(2)}` }],
     ['sms_delivery_report_inbox_status_code_check', { status_code: 'x' }, { status_code: '25' }],
     ['sms_delivery_report_inbox_event_name_check', { event_name: 'a b' }, { event_name: 'On_Report' }],
     ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: 'x'.repeat(201) }, { failure_reason: 'x'.repeat(200) }],

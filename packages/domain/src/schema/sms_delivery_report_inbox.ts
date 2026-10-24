@@ -44,7 +44,7 @@ export const smsDeliveryReportInbox = pgTable(
     index('sms_delivery_report_inbox_settled_idx').on(t.settledAt).where(sql`"match_state" <> 'pending'`),
     index('sms_delivery_report_inbox_crqid_idx').on(t.crqid).where(sql`"crqid" IS NOT NULL`),
     check('sms_delivery_report_inbox_request_id_check', sql`${t.requestId} ~ '^[A-Za-z0-9]{1,64}$'`),
-    check('sms_delivery_report_inbox_crqid_check', sql`${t.crqid} IS NULL OR ${t.crqid} ~ '^(cr|ce|sn|pm|ot)[0-9a-f]{32}$'`),
+    check('sms_delivery_report_inbox_crqid_check', sql`${t.crqid} IS NULL OR ${t.crqid} ~ '^(cr|ce|sn|pm|as|ot)[0-9a-f]{32}$'`), // 0184 — `as`
     check('sms_delivery_report_inbox_status_code_check', sql`${t.statusCode} IS NULL OR ${t.statusCode} ~ '^[0-9]{1,3}$'`),
     check('sms_delivery_report_inbox_event_name_check', sql`${t.eventName} IS NULL OR ${t.eventName} ~ '^[A-Za-z_]{1,32}$'`),
     check(

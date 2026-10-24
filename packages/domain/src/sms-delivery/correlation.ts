@@ -8,26 +8,27 @@
 //   ce — a claim certificate reminder row
 //   sn — a claim suspicion notice row
 //   pm — a peer-mesh ping row
+//   as — an alert SMS send row (Story 5.11b, FS22 — the three contribution texts; `alert_sms_sends`)
 //   ot — a login / step-up code (a random id, ⛔ a row — DR11)
 //
 // 34 characters, alphanumeric: inside BOTH of MSG91's documented limits (80 with `_ . -`, and the legacy 52
-// alphanumeric — F7). This file is the ONE TypeScript copy of the grammar; migration 0167's CHECKs are its one
-// sanctioned SQL mirror. It lives in `@twt/domain` (⛔ `@twt/channels`) because domain cannot import channels and the
+// alphanumeric — F7). This file is the ONE TypeScript copy of the grammar; migration 0167's CHECKs (replaced by 0184 to admit
+// `as`) are its one sanctioned SQL mirror. It lives in `@twt/domain` (⛔ `@twt/channels`) because domain cannot import channels and the
 // delivery-report accessors need it; channels, api and jobs import it from here.
 
 import { UUID_REGEX } from '../db.js';
 
 /** The send kinds a correlation id can name (DR3). */
-export const SMS_CORRELATION_KINDS = ['cr', 'ce', 'sn', 'pm', 'ot'] as const;
+export const SMS_CORRELATION_KINDS = ['cr', 'ce', 'sn', 'pm', 'as', 'ot'] as const;
 
 /** One send kind. */
 export type SmsCorrelationKind = (typeof SMS_CORRELATION_KINDS)[number];
 
-/** The claim-text send kinds — every kind backed by a send ROW (`ot` is not). */
+/** The send kinds backed by a send ROW (`ot` is not) — the four claim texts and the alert SMS (`as`). */
 export type SmsSendRowKind = Exclude<SmsCorrelationKind, 'ot'>;
 
 /** The grammar (DR3): a kind + 32 lower-case hex. */
-export const SMS_CORRELATION_ID_PATTERN = /^(cr|ce|sn|pm|ot)[0-9a-f]{32}$/;
+export const SMS_CORRELATION_ID_PATTERN = /^(cr|ce|sn|pm|as|ot)[0-9a-f]{32}$/;
 
 /** A parsed correlation id: the kind and the row id in its dashed, lower-case uuid form. */
 export interface SmsCorrelation {

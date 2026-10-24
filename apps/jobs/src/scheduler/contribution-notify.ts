@@ -27,11 +27,13 @@
 //      rung is ONE `dispatch` call with a `DeliveryResolver` narrowed to that single channel, so category
 //      eligibility, fcm-vs-apns provider selection, lifecycle suppression, the honest outcome mapping
 //      and BOTH audit families all stay `dispatch`'s job. The composition never re-implements them.
-//      ⭐ The SMS rung is the exception (Story 5.11, I3 / FS15): it ⛔ calls `dispatch`, because the
-//      category resolver's SMS provider is the log fixture for every alert (its registry is all-dark) and
-//      the fixture reports `sent`. The rung decides lit / eligible ITSELF from the payload's `sms` block
-//      and ONE predicate (`isAlertSmsFallbackEligible`), and every non-send names its reason on the trail.
-//      The real send is row 5-11b.
+//      ⭐ The SMS rung is the exception (Story 5.11, I3 / FS15): it ⛔ dispatches through the category
+//      resolver's SMS provider (the log fixture for every alert — its registry is all-dark — reports `sent`).
+//      The rung decides lit / eligible ITSELF from the payload's `sms` block and ONE predicate
+//      (`isAlertSmsFallbackEligible`), and every non-send names its reason on the trail. ⭐ Story 5.11b
+//      (FS18 (a), `-404`): a lit, eligible member with an SMS target is then texted by the INJECTED
+//      `alertSms` seam (`alert-sms-send.ts`), which sends THROUGH `dispatch` (a one-send provider in a
+//      per-call registry) — the lifecycle-suppression hook on these deps reaches EVERY rung (I4).
 //   4. The Telegram mirror fires INDEPENDENTLY of the ladder — fire-and-forget, only when
 //      `isCategoryEligible('telegram', category)`. A Telegram failure never changes `delivered` or
 //      `deliveredChannel` (dispatch.ts:44-52 owns the eligibility; cascade.ts owns "Telegram is
@@ -47,7 +49,9 @@
 // ⭐ Story 5.11 (FS14 (a), review R1 option 1): former fixture successes are recorded `in_app_only`.
 // A member without an available SMS target never reached that fixture: their previous retry remains,
 // including when cost-optimization omitted SMS. `shouldRetryFanOut` owns this distinction (I4).
-// A thrown fan-out also retries. Row 5-11b adds real SMS failure handling.
+// A thrown fan-out also retries. ⭐ Story 5.11b (FS9 (a)): a REAL send adds its own retry classes — §3.4's
+// WhatsApp window, `rate_limited`, a send in flight, the send state unavailable, a Secret Manager transient —
+// each retried until the final attempt (`alert-sms-details.ts`); every other member's rule is unchanged.
 //
 // THE AR-19 DEVIATION, STATED NOT HIDDEN: AR-19 reads "push (1 + up to 3 backoff-spaced retries) → WA →
 // SMS", i.e. retries are PER RUNG before advancing. This design retries the WHOLE LADDER. Two
@@ -78,6 +82,7 @@ import {
   type Channel,
   type ChannelProvider,
   type ChannelSendOutcome,
+  type LifecycleSuppressionHook,
   type RenderedMessageHash,
   type SendResult,
   type SendTarget,
@@ -91,6 +96,11 @@ import {
   type encryption as encryptionTypes,
 } from '@twt/domain';
 import type pg from 'pg';
+
+import { ALERT_SMS_RETRYABLE_DETAILS, ALERT_SMS_RUNG_DETAIL, isFinalFanOutAttempt, type FanOutCall } from './alert-sms-details.js';
+// ⚠ TYPE-ONLY (T12 — [[project_type_only_import_cycle_trap]]): the seam imports VALUES from the claim core and the registry;
+// this file must ⛔ take a value edge into it. The seam is INJECTED (`deps.alertSms`), built in boot.
+import type { AlertSmsSender } from './alert-sms-send.js';
 
 /** The encryption material the delivery resolvers + the rendered-message HMAC need. Structurally the
  *  jobs-side `JobsEncryptionDeps` (`{ kms, kekRef, hmacKeyRef }`) — passed straight through. */
@@ -127,6 +137,19 @@ export interface ContributionNotifyDeps {
   readonly sleep?: (ms: number) => Promise<void>;
   /** Failure alarm sink — a console stub by default. Never receives an address. */
   readonly onAlarm?: (message: string) => void;
+  /**
+   * Story 5.11b (I4; FS18 (a)) — `dispatch`'s lifecycle-suppression hook, passed to EVERY rung's dispatch (push, WhatsApp, SMS
+   * and the Telegram mirror). Absent ⇒ `dispatch`'s own `noLifecycleSuppression` (production today — the member-state read
+   * model is ⛔ built).
+   */
+  readonly suppression?: LifecycleSuppressionHook;
+  /**
+   * Story 5.11b (FS19) — the REAL alert SMS send (`createAlertSmsSender`, built in boot — ALWAYS; an unconfigured gateway ends the
+   * rung `config:sms_gateway_unconfigured`). Absent ⇒ a lit, eligible member's rung ends `sms_send_not_wired` (tests only). Shared by
+   * news / survey / moderation, which carry
+   * ⛔ `sms` block and so never reach it (I6).
+   */
+  readonly alertSms?: AlertSmsSender;
 }
 
 /** The member's resolved delivery targets, one entry per channel. `push` is an ARRAY: a member may have
@@ -177,7 +200,7 @@ export const SMS_RUNG_DETAIL = {
   notLit: 'sms_message_not_lit',
   /** Lit, but the member is not eligible under {@link isAlertSmsFallbackEligible}. */
   notEligible: 'sms_fallback_not_eligible',
-  /** Lit and eligible — the real send is row 5-11b; until then ⛔ text goes. */
+  /** Lit and eligible, but ⛔ `alertSms` seam is wired (Story 5.11b: tests, a jobs process without a gateway) — ⛔ text goes. */
   notWired: 'sms_send_not_wired',
   /** The degraded-mode bridge was requested; it has ⛔ registered words (FS10 (a)). */
   bridgeNotLit: 'sms_bridge_not_lit',
@@ -189,6 +212,8 @@ export const SMS_RUNG_DETAIL = {
  */
 export const RECORDED_RUNG_DETAILS: ReadonlySet<string> = new Set<string>([
   ...Object.values(SMS_RUNG_DETAIL),
+  // Story 5.11b (AC4) — the real send's named outcomes, EXACT literals (⛔ a provider's `<class>:<code>`).
+  ...Object.values(ALERT_SMS_RUNG_DETAIL),
   ...Object.values(WHATSAPP_REFUSAL_DETAIL),
   'cost_optimized',
 ]);
@@ -314,6 +339,8 @@ export async function fanOutAlert(
   deps: ContributionNotifyDeps,
   alert: Alert,
   ctx: MemberFanOutContext,
+  /** Story 5.11b (FS9) — this job attempt and the occasion, per CALL (T7). Absent ⇒ the final attempt (F3b's callers). */
+  call?: FanOutCall,
 ): Promise<MemberFanOutResult> {
   const now = deps.now?.() ?? new Date();
   const sleep = deps.sleep ?? realSleep;
@@ -334,6 +361,8 @@ export async function fanOutAlert(
       resolveDelivery: () => Promise.resolve({ [channel]: target }),
       hashRendered: deps.hashRendered,
       audit: deps.audit,
+      // Story 5.11b (I4) — the ONE suppression boundary, on every rung.
+      ...(deps.suppression ? { suppression: deps.suppression } : {}),
     });
     return outcomeForChannel(outcome.attempts, channel);
   };
@@ -370,15 +399,15 @@ export async function fanOutAlert(
   const rungOutcomes = new Map<Channel, ChannelSendOutcome['outcome']>();
 
   /**
-   * Story 5.11 — the SMS rung decides lit / eligible itself and ⛔ ever calls `dispatch` (I3; FS10, FS15).
+   * Story 5.11 — the SMS rung decides lit / eligible itself and ⛔ dispatches through the category resolver's SMS provider (I3;
+   * FS10, FS15).
    *
-   * ⚠ DELIBERATE (review round 2, P3 — checklist family 9): by not calling `dispatch`, this rung also bypasses `dispatch`'s
-   * LIFECYCLE-SUPPRESSION boundary (`packages/channels/src/dispatch.ts`, "the single suppression boundary"). Harmless while it
-   * sends nothing (and production wires `noLifecycleSuppression`). ⛔ Row 5-11b must NOT add a send here without restoring
-   * that boundary — send through `dispatch`, or apply the same suppression hook first — or a suppressed member could be
-   * texted. Re-examination trigger: the first real send from this rung (row 5-11b; story "Carried to 5.11b").
+   * ⭐ Story 5.11b (I4; FS18 (a)) — the boundary 5.11's review (round 2, P3) left DELIBERATELY open is RESTORED: the real send
+   * (`deps.alertSms`) goes THROUGH `dispatch` — a one-send provider in a per-call registry — carrying `deps.suppression`, the SAME
+   * hook every other rung's dispatch carries, so a suppressed member is ⛔ texted and gets ⛔ send row. The decisions BEFORE the
+   * seam (bridge, lit, eligible, a target) are 5.11's, byte for byte.
    */
-  const smsRung = (): ChannelSendOutcome => {
+  const smsRung = async (): Promise<ChannelSendOutcome> => {
     if (bridge.bridged) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeNotLit };
     const block = alertSmsBlock(alert);
     if (!block) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notLit };
@@ -390,7 +419,21 @@ export async function fanOutAlert(
     });
     if (!eligible) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notEligible };
     if (!ctx.targets.sms) return { outcome: 'skipped_no_target' };
-    return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notWired };
+    if (!deps.alertSms) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notWired };
+    return deps.alertSms({
+      alert,
+      block,
+      target: ctx.targets.sms,
+      ...(call ? { call } : {}),
+      // FS9 (a) — the Pariwar uses WhatsApp for this member (FS3's refusal included) and that rung did not end `sent`.
+      whatsappTried: ctx.targets.whatsapp !== null && rungOutcomes.get('whatsapp') !== 'sent',
+      dispatch: {
+        ...(providers ? { providers } : {}),
+        hashRendered: deps.hashRendered,
+        audit: deps.audit,
+        ...(deps.suppression ? { suppression: deps.suppression } : {}),
+      },
+    });
   };
 
   // ── (3) The ladder — one attempt per rung, no in-process sleeping, stop at the first `sent` ──────
@@ -530,10 +573,15 @@ function alarmOf(deps: ContributionNotifyDeps): (message: string) => void {
  * The old bridge bypassed WA and cost policy, so only its SMS target could complete that path.
  * Everyone else whose ladder exhausted still retries, including a missing/decrypt-failed mobile or
  * cost-suppressed SMS. Broadcast callers release these claims and add NO job retry — a re-run of the job would try them.
- * Revisit when 5.11b wires a real SMS provider and its retry window.
+ * ⭐ Story 5.11b (FS9 (a)) — a REAL send's retry classes (`ALERT_SMS_RETRYABLE_DETAILS`: §3.4's WhatsApp window, `rate_limited`,
+ * a send in flight, the send state unavailable, a Secret Manager transient) put the member back on the retry set until the
+ * FINAL attempt, where they are recorded `in_app_only`. Every other result follows the rule above, byte for byte (`call` absent
+ * ⇒ the final attempt — F3b's callers, which carry ⛔ `sms` block, never reach a seam detail).
  */
-export function shouldRetryFanOut(result: MemberFanOutResult, ctx: MemberFanOutContext): boolean {
+export function shouldRetryFanOut(result: MemberFanOutResult, ctx: MemberFanOutContext, call?: FanOutCall): boolean {
   if (result.delivered) return false;
+  const smsDetail = result.trail.find((entry) => entry.channel === 'sms')?.detail;
+  if (smsDetail !== undefined && ALERT_SMS_RETRYABLE_DETAILS.has(smsDetail)) return !isFinalFanOutAttempt(call);
   if (result.bridged) return ctx.targets.sms === null;
   if (ctx.targets.sms !== null && !result.costSuppressedChannels.includes('sms')) return false;
   const refusedWhatsapp = result.trail.some(
@@ -560,6 +608,8 @@ export async function fanOutAlertToMembers(
   memberIds: readonly string[],
   pariwarId: string,
   at: Date,
+  /** Story 5.11b (FS9) — the job attempt and the occasion, per CALL (T7). Absent ⇒ the final attempt (F3b's callers). */
+  call?: FanOutCall,
 ): Promise<{ results: MemberFanOutResult[]; retry: string[] }> {
   const alarm = alarmOf(deps);
   const results: MemberFanOutResult[] = [];
@@ -570,9 +620,9 @@ export async function fanOutAlertToMembers(
       const ctx = await withPariwarScope(deps.pool, pariwarId, (db) =>
         resolveMemberDeliveryContext(db, deps.encryption, pariwarId, memberId, at),
       );
-      const result = await fanOutAlert(deps, alertFor(memberId), ctx);
+      const result = await fanOutAlert(deps, alertFor(memberId), ctx, call);
       results.push(result);
-      if (shouldRetryFanOut(result, ctx)) retry.push(memberId);
+      if (shouldRetryFanOut(result, ctx, call)) retry.push(memberId);
     } catch (err) {
       // One member's failure must never cost the rest of the chunk their notification. It IS put on
       // `retry`, so the caller still throws and pg-boss still retries this member.

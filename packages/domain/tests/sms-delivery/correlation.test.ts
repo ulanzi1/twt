@@ -75,9 +75,10 @@ describe('parseSmsCorrelationId', () => {
     expect(isSmsCorrelationId(value)).toBe(false);
   });
 
-  it('accepts exactly the grammar ^(cr|ce|sn|pm|ot)[0-9a-f]{32}$', () => {
-    expect(SMS_CORRELATION_ID_PATTERN.source).toBe('^(cr|ce|sn|pm|ot)[0-9a-f]{32}$');
+  it('accepts exactly the grammar ^(cr|ce|sn|pm|as|ot)[0-9a-f]{32}$ (Story 5.11b — `as`, the alert SMS)', () => {
+    expect(SMS_CORRELATION_ID_PATTERN.source).toBe('^(cr|ce|sn|pm|as|ot)[0-9a-f]{32}$');
     expect(isSmsCorrelationId(`ot${HEX}`)).toBe(true);
+    expect(parseSmsCorrelationId(`as${HEX}`)).toEqual({ kind: 'as', rowId: ROW.toLowerCase() });
   });
 });
 

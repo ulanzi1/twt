@@ -9,8 +9,8 @@ import { check, index, integer, pgTable, primaryKey, text, timestamp, uuid } fro
 
 import type { PariwarId } from '../ids/index.js';
 
-/** DR5 — the send kinds a delivery record names. ⚠ LOCKSTEP with `sms_send_deliveries_send_kind_check` (0167). */
-export const SMS_SEND_KINDS = ['cr', 'ce', 'sn', 'pm'] as const;
+/** DR5 — the send kinds a delivery record names. ⚠ LOCKSTEP with `sms_send_deliveries_send_kind_check` (0167; 0184 adds `as`). */
+export const SMS_SEND_KINDS = ['cr', 'ce', 'sn', 'pm', 'as'] as const;
 
 /** DR4 / DR5 — a send's recorded delivery state. ⚠ LOCKSTEP with `sms_send_deliveries_delivery_state_check` (0167). */
 export const SMS_DELIVERY_STATES = ['delivered', 'undelivered'] as const;
@@ -19,9 +19,9 @@ export type SmsDeliveryState = (typeof SMS_DELIVERY_STATES)[number];
 export const smsSendDeliveries = pgTable(
   'sms_send_deliveries',
   {
-    /** `cr` | `ce` | `sn` | `pm` — the send table, by KIND (DR3). */
+    /** `cr` | `ce` | `sn` | `pm` | `as` — the send table, by KIND (DR3; `as` Story 5.11b). */
     sendKind: text('send_kind').notNull().$type<(typeof SMS_SEND_KINDS)[number]>(),
-    /** The send row's uuid (⛔ FK — a kind-discriminated id across four tables; DR5). */
+    /** The send row's uuid (⛔ FK — a kind-discriminated id across five tables; DR5). */
     sendRowId: uuid('send_row_id').notNull(),
     pariwarId: uuid('pariwar_id').notNull().$type<PariwarId>(),
     /** The request id of the FIRST matching report (= the row's recorded `provider_message_id` — DR6 row 8). */
@@ -38,7 +38,7 @@ export const smsSendDeliveries = pgTable(
   (t) => [
     primaryKey({ name: 'sms_send_deliveries_pk', columns: [t.sendKind, t.sendRowId] }),
     index('sms_send_deliveries_pariwar_idx').on(t.pariwarId),
-    check('sms_send_deliveries_send_kind_check', sql`${t.sendKind} IN ('cr', 'ce', 'sn', 'pm')`),
+    check('sms_send_deliveries_send_kind_check', sql`${t.sendKind} IN ('cr', 'ce', 'sn', 'pm', 'as')`),
     check('sms_send_deliveries_delivery_state_check', sql`${t.deliveryState} IN ('delivered', 'undelivered')`),
     check('sms_send_deliveries_request_id_check', sql`${t.requestId} ~ '^[A-Za-z0-9]{1,64}$'`),
     check('sms_send_deliveries_status_code_check', sql`${t.statusCode} ~ '^[0-9]{1,3}$'`),

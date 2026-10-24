@@ -113,7 +113,7 @@ conditions. G = §0 readings (above).
 
 # Story 5.11b: The Real Alert SMS Send — the Three Contribution Texts Actually Go, Once, in the Member's Language, After WhatsApp's Window, Under a Flood Guard `[CONSUMER]`
 
-Status: ready-for-dev
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Story 5.11 decided that a member the app (and WhatsApp, where used) cannot reach gets a
 > text for three notices about their own contribution — day 10 *"not recorded yet"*, payment not matched, payment still not confirmed
@@ -730,7 +730,7 @@ rewrite. `pnpm ci:local` green on :5433.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0)**
+- [x] **Task 0 — Governance (AC0)**
   - [x] 0.1 Preflight: `git fetch origin`; rebase onto `origin/main`; run the pin checks (header). Re-run F1–F21 (every cite by CONTENT).
         Re-count FS8's product (mismatch reasons × concurrent live alerts per member) and record it. Prove whether the `alerts` row is
         committed before any fan-out (FS6's FK). List consumers of `alert.channel_send` (FS18 adds real SMS lines). **STOP** if: **S1** a
@@ -749,37 +749,37 @@ rewrite. `pnpm ci:local` green on :5433.
         TRAI-hours question); DLT sheet notes (all three sentences); §3.4 annotation; `epics.md` `### Story 5.11b` dated note *"story file
         created"* + the two departures (AC0); ledger by SAFE prepend ([[project_sprint_status_safe_prepend]]) + row
         `ready-for-dev → in-progress`.
-- [ ] **Task 1 — Migration + domain (AC1; FS6, FS22)**: the table (schema file + barrel + `policies/<table>-rls.ts` + its `policies/index.ts`
+- [x] **Task 1 — Migration + domain (AC1; FS6, FS22)**: the table (schema file + barrel + `policies/<table>-rls.ts` + its `policies/index.ts`
       export), the `occasion` CHECK, the CHECK replacements, `correlation.ts` (kinds + the hard-coded pattern) + mirrors; domain functions
       lookup (read-only) / begin (one tx, INSERT … ON CONFLICT or CAS `deferred → attempting`, + FS8's consumption if any, on the scope's
       `db`) / finalise (CAS on `attempting` + `claim_token`) / finalise-stale; `LOOKUP.as`; `countSilentSmsSends` + the stale-`attempting`
       count + `sms-delivery-silence.ts`; correlator review for `as` (Rows 6 / 7); `anonymize.ts` "nothing to scrub" line; RLS spec; the
       concurrency spec. `pnpm db:migrate` on :5433 before the live tests ([[project_prepush_hook_inherits_5432]]).
-- [ ] **Task 2 — Send core + MG12 (AC2, AC7; FS17, FS12)**: `prepareDltSms` / `sendPreparedDltSms` split INSIDE `claim-dlt-sms-send.ts`;
+- [x] **Task 2 — Send core + MG12 (AC2, AC7; FS17, FS12)**: `prepareDltSms` / `sendPreparedDltSms` split INSIDE `claim-dlt-sms-send.ts`;
       `sendClaimDltSms` delegates in the old order (claim tests unedited; every imported symbol still exported here); `fitsDltAlphanumeric`
       reference fixed; `registeredText → text` mapping; MG12 in `sms-dlt.ts` (`undefined` refused, `[]` allowed) and `sms-app.ts` (drop
       `length === 0`); the template-id memo.
-- [ ] **Task 3 — The rung (AC2–AC4, AC6; FS6, FS8, FS9, FS18)**: `suppression?` on `ContributionNotifyDeps`, passed by `dispatchOneChannel`
+- [x] **Task 3 — The rung (AC2–AC4, AC6; FS6, FS8, FS9, FS18)**: `suppression?` on `ContributionNotifyDeps`, passed by `dispatchOneChannel`
       to every dispatch; the `alertSms` seam in the header's ORDER (prepare → lookup → wait → begin → one-send provider through `dispatch` →
       finalise) that NEVER throws; the outcome → detail map with exact literals; `RECORDED_RUNG_DETAILS`; `shouldRetryFanOut`'s new
       retryable classes; the OPTIONAL attempt + job-id parameters down `runContributionNotifyChild` → `fanOutAlertToMembers` →
       `fanOutAlert` (F3b's callers untouched); `includeMetadata` on POOL_BATCH and MISMATCH; the claim-TTL bound for lit kinds (F6) or its
       recorded residual. Replace the DELIBERATE block's text with what now holds (I4). ⛔ edit the predicate; ⛔ edit `dispatch.ts` /
       `cascade.ts`.
-- [ ] **Task 4 — Producers' language (AC5; FS5)**: the builders' `smsLocale` input; the set-based language read (lit kinds only, inside the
+- [x] **Task 4 — Producers' language (AC5; FS5)**: the builders' `smsLocale` input; the set-based language read (lit kinds only, inside the
       identity scope) in the POOL_BATCH child and the MISMATCH worker; the no-passport rule. Doc-only updates that would otherwise lie:
       `AlertSmsBlock`'s `locale` comment (`packages/contracts/src/alerts/alert.ts:90-92` — now "the RECIPIENT'S language", ⛔ "the
       producer's"); the MG12 caveat in `contribution-sms-templates.ts:66-67`; the `ContributionNotifyTriggerDeps.locale` comment
       (`:236-241`, "does ⛔ read `members.preferred_locale`" — true for push only now).
-- [ ] **Task 5 — Boot + WhatsApp memo + pool value (AC8; FS19, FS20, FS21, FS8 vacuum if any)**: the pre-flight moved up; the seam wired;
+- [x] **Task 5 — Boot + WhatsApp memo + pool value (AC8; FS19, FS20, FS21, FS8 vacuum if any)**: the pre-flight moved up; the seam wired;
       the vacuum on its job (if FS8 keeps a counter); the per-channel memo with WhatsApp `off` on a TTL; `smsPoolLabel`'s wider ban
       (`/\p{Cs}/u`, ⛔ `isWellFormed`).
-- [ ] **Task 6 — Records (AC8)** — whatever Task 0.4 could not write before the code (e.g. File-List-dependent notes).
-- [ ] **Task 7 — Tests (AC1–AC8)**: replace every `sms_send_not_wired` expectation that now sends (list below, Dev Notes) — each
+- [x] **Task 6 — Records (AC8)** — whatever Task 0.4 could not write before the code (e.g. File-List-dependent notes).
+- [x] **Task 7 — Tests (AC1–AC8)**: replace every `sms_send_not_wired` expectation that now sends (list below, Dev Notes) — each
       replaced test states what it replaced; keep the legs where the seam is absent; every new gate proven RED first (Debug Log (b)); the
       sha256 fence (`claim-contact-ladder-whatsapp.test.ts:153-194`) re-taken for `contribution-notify.ts` and `provider-composition.ts`
       with a dated note (5.11's precedent) — `dispatch.ts` / `cascade.ts` stay byte-identical (an edit there is a third re-take, ⛔ planned).
-- [ ] **Task 8 — Verify**: `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_known_livedb_test_failures]] — #13, #14, #15 can block
+- [x] **Task 8 — Verify**: `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_known_livedb_test_failures]] — #13, #14, #15 can block
       the push; sibling worktrees share :5433 — a deadlock or a foreign migration mid-run is re-run alone, recorded); review the diff before
       commit ([[feedback_review_the_fix_diff_before_commit]]); commit on the story branch ([[feedback_commit_on_story_branch]]); ⛔ push
       without BigDev's go-ahead (when pushing, `DATABASE_URL` on :5433 explicitly — the pre-push hook inherits :5432).
@@ -945,6 +945,8 @@ new dated question — answered in writing, never assumed from docs (footgun #53
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 5.11b`, 2026-10-25.
+
 ### Debug Log References
 
 **(a) Task 0.1 and Task 0.2 (2026-10-25).**
@@ -967,9 +969,100 @@ new dated question — answered in writing, never assumed from docs (footgun #53
   `ready-for-dev` the same way); `bmad-dev-story 5.11b` moves it. The push-past-claim-TTL item (F6) waits for Task 3 (bounded or
   recorded then).
 
+**(b) Dev (`bmad-dev-story 5.11b`, 2026-10-25).**
+- Preflight: `git fetch origin` — `origin/main` = `0e9b261d` = the pin; the pin is an ancestor; the found-facts diff is EMPTY. Row
+  `ready-for-dev → in-progress` (ledger entry at completion — [[project_sprint_status_ledger]]).
+- ⭐ LIVE DB — a SEPARATE fresh database `twt_dev_511b` on the :5433 container (`CREATE DATABASE`, then `pnpm db:migrate`: 182
+  migrations incl. 0184). The shared `twt_dev` on :5433 has 0180 as its newest applied migration (main's 0181 and 11b-4's 0181 / 0182
+  unapplied); applying 0184 (`when` 1795405200028) there would make drizzle skip 11b-4's renumbered 0182 / 0183 for good
+  ([[project_sibling_migration_when_order_shared_db]]). ⛔ Applied to `twt_dev` (:5433) or :5432. Every live leg and `ci:local` ran on
+  `twt_dev_511b`. ⚠ Whoever lands second applies the siblings in journal order.
+- Migration NUMBER 0184 (idx 184, `when` 1795405200028) — 0182 / 0183 are 11b-4's at its renumber (`-366` decision 6).
+- Mutants, every one RED, every source restored sha256-identical: M1 `beginAlertSmsSend` as read-then-insert ⇒ the concurrency race
+  leg RED; M2 `WHATSAPP_OFF_MEMO_TTL_MS = Infinity` (the old process-lifetime `off`) ⇒ both FS20 legs RED; M3 FS21 — the eight new
+  `smsPoolLabel` legs RED before the source change (the Cc leg already held); MG12 — both new `sms.test.ts` legs RED before the
+  change; seam (`alert-sms-send-live.test.ts`): M4 no send record (lookup skipped, begin always new) ⇒ 20 RED; M5 the seam's dispatch
+  without `suppression` ⇒ the I4 leg RED; M6 `api_unavailable` re-sendable ⇒ the 4 G14 legs RED; M7 a refusal alarm per member ⇒ 3 RED;
+  M8 (a throw at lookup) was EQUIVALENT — the outer catch maps it identically — so replaced by M8′ (the outer catch removed) against a
+  NEW leg (a lifecycle hook that rejects inside the SMS dispatch) ⇒ RED; M9 `readMemberTextLanguages` without `WHERE pp.pariwar_id` ⇒
+  the language spec RED; the AST pin's revert-sanity leg is in the suite itself.
+- Found while building: (1) in the `deferred` re-claim race the loser waits in its INSERT (the speculative check waits on the tuple the
+  winner's uncommitted compare-and-set holds), ⛔ the UPDATE — the concurrency leg admits either statement; (2) a MSG91 gateway code
+  `421` classifies as `auth`, ⛔ `carrier_reject` — the carrier leg uses a classified local refusal; (3) the trigger unit suite's
+  `@twt/domain` mock hands a fake scoped `db`, so the new language read is stubbed there (a harness stub, ⛔ an assertion change).
+- ⚠ DEVIATIONS, recorded: (a) AC5's "POOL_BATCH and MISMATCH, LIVE" legs are SPLIT — the set-based read LIVE as `twt_app` with a
+  one-statement assertion (`member-text-languages.spec.ts`), the producers' use of it in the trigger unit suite (⛔ live harness resolves
+  a pool identity end to end) — deferred-work item, trigger named; (b) AC8's AST hashes are taken from `git show 0e9b261d:` at
+  authoring time and PINNED (⛔ a `git show` at test time — CI's checkout need not hold the pin); (c) the 5.11 "Flip" tests in
+  `contribution-notify.test.ts` / `ai-8-3-ladder-armor-live.test.ts` stay UNCHANGED — they run with the seam ABSENT and still hold; their
+  seam-wired siblings are `alert-sms-send-live.test.ts`; (d) F6 is BOUNDED (`LIT_KIND_MEMBER_CHUNK_SIZE` = 16 for lit kinds once the seam
+  is wired), ⛔ recorded as open; (e) AC7 — `claim-contact-ladder-whatsapp.test.ts` IS edited: Task 7's sha256 fence re-take (its two
+  pins), ⛔ an assertion; every other claim test in T17's list is byte-unchanged.
+
+- `ci:local` on `twt_dev_511b` (2026-10-25): 35 / 36 jobs green; the one red (`integration-tests`) was ONE file —
+  `restoration-discipline-production-path-live.test.ts`'s 10.23 gate REFUSING a database not named `twt_dev` (⛔ a code failure; its
+  own message names the override for a disposable DB) — and turbo then skipped `@twt/api`. Re-run: that file with
+  `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS=1` (the DB is this story's throwaway) 3 / 3; `@twt/api` integration 2105 passed / 1 skipped;
+  domain 6279, channels 457, jobs 1675 (+ the 3), events / queue / niyamavali-engine / validity-service green. After two doc-comment
+  fixes made post-run (one in the fenced `contribution-notify.ts` — its pin re-taken a second time): `@twt/jobs` typecheck + lint and
+  the six touched suites (316 tests) green.
+
 ### Completion Notes List
 
+- ⭐ The rung SENDS. A lit, eligible member with an SMS target goes prepare → read-only lookup → §3.4's window → `dispatch` with a
+  one-send provider (begin, gateway, finalise) — `alert-sms-send.ts`, injected on `ContributionNotifyDeps.alertSms` and built in boot
+  (FS19). The seam never throws; every non-send is an exact allow-listed literal (`alert-sms-details.ts`, a leaf module — T12).
+- I1 — `alert_sms_sends` (0184): one row per (alert, member, occasion), the occasion CHECKed to six literals (FS8 (d)'s structural flood
+  guard — ⛔ counter), FORCE RLS, per-command policies, EXACT column grants, ⛔ DELETE, a freeze trigger; only `rate_limited` leaves a row
+  `deferred` for a re-send; every `api_unavailable:*` / `unknown:*` and a stale lease (2 min) is FINAL `exhausted:outcome_unknown…` +
+  alarm. The CRQID kind `as` (FS22): 0167's two CHECKs replaced, `LOOKUP.as`, the silence count joins `as`, a stale-`attempting` count.
+- I4 — `suppression?` on the deps reaches EVERY rung's dispatch (push, WhatsApp, SMS, the Telegram mirror); a suppressed member gets
+  ⛔ row and ⛔ call. `dispatch.ts` / `cascade.ts` byte-identical.
+- FS17 — the claim core split INSIDE `claim-dlt-sms-send.ts` (`prepareDltSms` / `sendPreparedDltSms`; `sendClaimDltSms` delegates in
+  the old order) — 17 claim test files (503 tests) pass UNEDITED; the dead `fitsDltAlphanumeric` reference is gone. MG12: `values: []`
+  sends, an absent `values` stays refused (provider), the client's `length === 0` refusal dropped.
+- FS5 — the producers read each member's TEXT language in ONE set-based query (`readMemberTextLanguages`, inside the pool-identity
+  scope; MISMATCH: one query); ⛔ passport ⇒ ⛔ text + one alarm; the push keeps the producer's locale. FS9 — `includeMetadata` on
+  POOL_BATCH and MISMATCH; the attempt, job id and occasion go down the chain PER CALL; a WhatsApp-tried member is texted from attempt 2
+  or on the final attempt. F6 bounded (16 per chunk for lit kinds once wired).
+- FS20 — the fan-out resolver keeps a WhatsApp `off` only 60 s (W1 closed); FS21 — `smsPoolLabel` refuses Zl / Zp / Cs and every Cf
+  but ZWNJ / ZWJ.
+- Day one is unchanged in effect: ⛔ template id is set (Row 40 (a)) ⇒ `config:dlt_template_id_missing:<locale>`, ⛔ row, one alarm per
+  key per 5 min. ⚠ DEPLOY ORDER (Row 40 note): migration → api → jobs.
+- ⛔ Pushed. ⚠ 0184 is applied ONLY to `twt_dev_511b` (⛔ `twt_dev` on :5433, ⛔ :5432) — see Debug Log (b).
+
 ### File List
+
+**New** — `packages/domain/migrations/0184_alert-sms-sends.sql`; `packages/domain/src/schema/alert_sms_sends.ts`;
+`packages/domain/src/policies/alert-sms-send-rls.ts`; `packages/domain/src/sms-delivery/alert-sms-sends.ts`;
+`apps/jobs/src/scheduler/alert-sms-details.ts`; `apps/jobs/src/scheduler/alert-sms-send.ts`;
+`packages/domain/tests/integration/rls/alert-sms-sends-policy-regression.spec.ts`;
+`packages/domain/tests/integration/sms-delivery/alert-sms-sends-concurrency.spec.ts`;
+`packages/domain/tests/integration/member/member-text-languages.spec.ts`; `apps/jobs/tests/alert-sms-send.test.ts`;
+`apps/jobs/tests/alert-sms-send-live.test.ts`.
+
+**Modified (source)** — `packages/domain/migrations/meta/_journal.json`; `packages/domain/src/schema/index.ts`;
+`packages/domain/src/policies/index.ts`; `packages/domain/src/schema/sms_send_deliveries.ts`;
+`packages/domain/src/schema/sms_delivery_report_inbox.ts`; `packages/domain/src/sms-delivery/correlation.ts`;
+`packages/domain/src/sms-delivery/reports.ts`; `packages/domain/src/sms-delivery/index.ts`; `packages/domain/src/member/anonymize.ts`
+(comment); `packages/domain/src/member/preferred-locale.ts`; `packages/channels/src/providers/sms-dlt.ts`;
+`packages/channels/src/providers/sms-app.ts`; `packages/channels/src/composition/provider-composition.ts`;
+`packages/contracts/src/alerts/alert.ts` (comment); `apps/jobs/src/scheduler/claim-dlt-sms-send.ts`;
+`apps/jobs/src/scheduler/contribution-notify.ts`; `apps/jobs/src/scheduler/contribution-notify-triggers.ts`;
+`apps/jobs/src/scheduler/contribution-sms-templates.ts`; `apps/jobs/src/sms-delivery-silence.ts`;
+`apps/jobs/src/sms-delivery-correlator.ts` (comment); `apps/jobs/src/boot.ts`.
+
+**Modified (tests)** — `packages/domain/tests/sms-delivery/correlation.test.ts`;
+`packages/domain/tests/integration/rls/sms-delivery-report-inbox-policy-regression.spec.ts`;
+`packages/domain/tests/integration/rls/sms-send-deliveries-policy-regression.spec.ts`; `packages/channels/tests/sms.test.ts` (the
+MG12 loop split); `packages/channels/tests/contribution-provider-resolver.test.ts`; `apps/api/tests/unit/msg91-sms-reports.test.ts`;
+`apps/jobs/tests/sms-delivery-correlator-live.test.ts`; `apps/jobs/tests/sms-delivery-correlator.test.ts`;
+`apps/jobs/tests/contribution-sms-templates.test.ts`; `apps/jobs/tests/contribution-notify-triggers.test.ts` (a harness stub for the
+language read + new legs — ⛔ an existing assertion changed); `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts` (the sha256 fence
+re-take of `contribution-notify.ts` and `provider-composition.ts` — the one AC7-list file edited, ⛔ an assertion).
+
+**Records** — `_bmad-output/implementation-artifacts/5-11b-alert-sms-real-send.md`; `_bmad-output/implementation-artifacts/deferred-work.md`;
+`_bmad-output/implementation-artifacts/sprint-status.yaml`.
 
 ## Change Log
 
@@ -978,3 +1071,4 @@ new dated question — answered in writing, never assumed from docs (footgun #53
 | 2026-10-24 | v1.0 | Created (`bmad-create-story 5.11b`, worktree `.claude/worktrees/5-11b-alert-sms-real-send`, pinned `6c4c1e47`); four read-only verifiers re-checked 5.11's carry at the pin. CORRECTED: the send record's key includes the occasion (F4 — the alert id is per cycle); a second MG12 refusal in the MSG91 client (F8); the claim core's unconditional helpline (F9). FS5, FS6, FS8, FS9, FS12, FS17–FS23 PROPOSED; ⛔ Panel question at the recommended options. Ultimate context engine analysis completed - comprehensive developer guide created. |
 | 2026-10-25 | v1.1 | Validated (`bmad-create-story validate 5.11b`; four read-only checks — code claims · governance · end-to-end design · tests and gates; BigDev: "all"). Branch rebased onto `origin/main` `0e9b261d` (6.36e landed) and re-pinned; F14 / F17 / F21 re-taken (RTBF pin now 27). ⭐ Design: only `rate_limited` is re-sent — every `api_unavailable:*` may hide an accept ⇒ final (FS6 (a″) offers the at-least-once alternative, G14); a found `attempting` row inside a 2-min lease is IN FLIGHT, ⛔ a crash (claim token `${job.id}:${retryCount}`); the core splits into prepare / send so config refusals write no row; begin + budget in ONE scope tx and the seam never throws; only real sends go through `dispatch`, with `suppression` on the deps for every rung; FS20 memoizes per channel (`off` on a 60 s TTL — never-memoize would re-read secrets per member); FS8 recommends (d), a structural cap (the `occasion` CHECK), since a 24 h / 10 bucket fails its own rule. Governance: `-347` dated 2026-10-17; G2 states its two author readings; G3 / G9 / G12 corrected; G13–G15 added; FS9 (a′) is the Panel's; AC0's supersession list completed. Tests: the change / stay lists corrected; RLS, concurrency, boot-pin, AST source-pin and `twt_app` legs specified; fences T16–T18. Numbers: decision `-404`, migration `0184`+. A fresh-context review of this revision's own diff then fixed: BEGIN runs INSIDE `dispatch` (a suppressed member gets no row); FS5's query filters `pp.pariwar_id` and joins `members.member_id`; the claim wrapper keeps `correlationIdOrCrash` first; the messaging probe, proven vs unproven pre-flight details and `unknown:*` mapped; FS8 (d)'s one-text-per-occasion across pools stated; the glyph register. |
 | 2026-10-25 | v1.2 | Answered (Task 0.2): BigDev — *"all recommendation accepted for FS1-FS23"* — every ⭐ option of FS5, FS6, FS8, FS9, FS12, FS17–FS23. Task 0.1 done (no drift; S1–S5 clear; FS8's count; FS6's FK proven). Decision `2026-10-25-404` committed ALONE (`447c91e0`). Next: Task 0.4. |
+| 2026-10-25 | v1.3 | Developed (`bmad-dev-story 5.11b`): Tasks 1–8. Migration 0184 (`alert_sms_sends` + the CRQID kind `as`); the claim core split (prepare / send) with every claim test unedited; MG12 for slot-less templates; the real send seam through `dispatch` (suppression on every rung), at most once, §3.4's window, the per-member text language, FS20 / FS21; 9 mutants RED. `ci:local` on a fresh isolated DB green but for one file's DB-name gate (re-run with its override — green). Status → review. ⛔ Pushed. |

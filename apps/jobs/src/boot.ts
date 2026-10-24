@@ -121,6 +121,7 @@ import {
   registerReconciliationMatchWorkers,
 } from './matcher/matcher-worker.js';
 import { buildContributionProviderResolver, resolveChannelSecret, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
+import { createAlertSmsSender } from './scheduler/alert-sms-send.js';
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
@@ -620,26 +621,6 @@ async function main(): Promise<void> {
     // secret-missing ⇒ fixture; DB/Secret-Manager OUTAGE ⇒ reject → pg-boss retry) lives inside the resolver.
     const contributionProviders = await buildContributionProviderResolver({ pool });
     contributionProvidersTeardown = contributionProviders.teardown;
-    const contributionNotifyDeps = {
-      pool,
-      serviceDb: db,
-      encryption: jobsEncryption,
-      audit: createAuditPort(pool),
-      hashRendered: createRenderedMessageHash({
-        kms: jobsEncryption.kms,
-        hmacKeyRef: jobsEncryption.hmacKeyRef,
-      }),
-      resolveProviders: contributionProviders.resolveProviders,
-    };
-    await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
-
-    // ── Claim-correction reminders (Story 6.19b) — Class C (the daily 10:00 IST sweep) + Class B (the children) ──
-    // Registered BESIDE the contribution-notify workers: it reuses the SAME BYPASSRLS pool, the SAME jobs KMS deps
-    // (the nominee / claimant mobile decrypt + the number hash), THE one global SMS gateway client (exposed by
-    // buildContributionProviderResolver — ⛔ never a second client) and the SAME `dispatch()` seams for the admin
-    // push. ⚠ The family SMS is a DIRECT DLT send that FAILS CLOSED on a missing template id, an unset per-Pariwar
-    // helpline number or an unconfigured gateway (T13) — ⛔ never the fixture that reports `accepted`. ⚠ The admin push
-    // is INERT on day one (⛔ no admin client registers a device token).
     // ⭐ Story 6.37 (MG5) — the ONE process MSG91 pre-flight memo every claim text reads (the send core, and the suspicion /
     // peer-mesh holds): every send runs in a pg-boss CHILD, so ⛔ a per-run memo could reach it. A pass is reused 1 h, a fault
     // 5 min (`2026-10-17-345`), a transient 60 s (`-346`). ⛔ Built while the gateway is unconfigured (the sweeps already hold on that).
@@ -659,6 +640,38 @@ async function main(): Promise<void> {
           readsWithSendKey: contributionProviders.smsPreflightReadsWithSendKey,
         }
       : undefined;
+    // ⭐ Story 5.11b (FS19) — built ABOVE the contribution deps (it needs only `contributionProviders`): the alert SMS seam reads
+    // the SAME memo (fail open — G15).
+    const contributionNotifyDeps = {
+      pool,
+      serviceDb: db,
+      encryption: jobsEncryption,
+      audit: createAuditPort(pool),
+      hashRendered: createRenderedMessageHash({
+        kms: jobsEncryption.kms,
+        hmacKeyRef: jobsEncryption.hmacKeyRef,
+      }),
+      resolveProviders: contributionProviders.resolveProviders,
+      // ⭐ Story 5.11b (FS19) — the REAL alert SMS send (the three contribution texts, `-390` Q1 B). Day one: ⛔ template id is set
+      // (roster Row 40 (a)), so an eligible member's rung ends `config:dlt_template_id_missing:<locale>` — ⛔ row, ONE alarm per
+      // key per 5 min. An unconfigured gateway ⇒ `config:sms_gateway_unconfigured`. News / survey / moderation share these deps
+      // and never reach it (⛔ `sms` block — I6).
+      alertSms: createAlertSmsSender({
+        pool,
+        smsAppClient: contributionProviders.smsAppClient,
+        resolveConfig: resolveSmsDltConfig,
+        ...(smsPreflight !== undefined ? { smsPreflight } : {}),
+      }),
+    };
+    await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
+
+    // ── Claim-correction reminders (Story 6.19b) — Class C (the daily 10:00 IST sweep) + Class B (the children) ──
+    // Registered BESIDE the contribution-notify workers: it reuses the SAME BYPASSRLS pool, the SAME jobs KMS deps
+    // (the nominee / claimant mobile decrypt + the number hash), THE one global SMS gateway client (exposed by
+    // buildContributionProviderResolver — ⛔ never a second client) and the SAME `dispatch()` seams for the admin
+    // push. ⚠ The family SMS is a DIRECT DLT send that FAILS CLOSED on a missing template id, an unset per-Pariwar
+    // helpline number or an unconfigured gateway (T13) — ⛔ never the fixture that reports `accepted`. ⚠ The admin push
+    // is INERT on day one (⛔ no admin client registers a device token).
     const claimCorrectionDeps = {
       pool,
       encryption: jobsEncryption,

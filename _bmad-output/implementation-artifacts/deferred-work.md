@@ -16,6 +16,12 @@ Recorded at Story 5.11b's Task 0.4 under [`-404`](../../.decision-log.md#decisio
 - **Alert SMS send records are ⛔ in the data export** [`-404` FS6 (a)] — like every send table (`data-export/assemble.ts` exports
   none). The record holds ids, the message key, locale, outcome and the provider id; ⛔ number. ⭐ Trigger: the story that adds any SMS
   send history to the member's export, or counsel's view on it (roster Row 40 (f) is the nearest open leg).
+- **[BOUNDED at dev, 2026-10-25 — ⛔ open] The push past the 300 s claim TTL (F6)** — a lit kind's chunk is `LIT_KIND_MEMBER_CHUNK_SIZE`
+  (16) once the real send is wired (`contribution-notify-triggers.ts`), so 16 members × ~15 s stay inside the claim TTL; the send
+  ROW still stops a second TEXT whatever the chunk. Recorded so the item is ⛔ re-raised.
+- **The members' text language is read LIVE in a domain spec, and the producers' use of it in the trigger unit suite** (AC5's legs) —
+  ⛔ a live POOL_BATCH / MISMATCH run (⛔ live harness resolves a pool identity end to end). ⭐ Trigger: the first live POOL_BATCH
+  harness (any story) — add a leg that an `en` chooser's text is `en` there.
 
 ---
 

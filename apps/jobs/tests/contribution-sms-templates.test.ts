@@ -218,6 +218,34 @@ describe('FS13 (a) — the {pool} value of a text', () => {
     expect(smsPoolLabel({ poolName: null, poolLetterCode: 'C' }, 'hi')).toBe('C');
   });
 
+  // Story 5.11b (FS21 (a), `-404` — `-394` item 2 superseded in part): built with `String.fromCodePoint` so ⛔ invisible character
+  // sits raw in this file.
+  const ch = (cp: number): string => String.fromCodePoint(cp);
+  it.each([
+    ['ZWSP U+200B (Cf)', 0x200b],
+    ['LRM U+200E (Cf, bidi)', 0x200e],
+    ['RLO U+202E (Cf, bidi override)', 0x202e],
+    ['WORD JOINER U+2060 (Cf)', 0x2060],
+    ['BOM U+FEFF (Cf)', 0xfeff],
+    ['LINE SEPARATOR U+2028 (Zl)', 0x2028],
+    ['PARAGRAPH SEPARATOR U+2029 (Zp)', 0x2029],
+    ['a control U+0007 (Cc)', 0x07],
+  ])('⭐ FS21 — a curated name carrying %s ⇒ the LETTER CODE, in both locales', (_label, cp) => {
+    expect(smsPoolLabel({ poolName: `अर्${ch(cp)}जुन`, poolLetterCode: 'C' }, 'hi')).toBe('C');
+    expect(smsPoolLabel({ poolName: `Arj${ch(cp)}un`, poolLetterCode: 'C' }, 'en')).toBe('C');
+  });
+
+  it('⭐ FS21 — ZWNJ U+200C and ZWJ U+200D (Devanagari shaping) are KEPT in a hi name', () => {
+    const shaped = `क्${ch(0x200d)}ष${ch(0x200c)}त्र`;
+    expect(smsPoolLabel({ poolName: shaped, poolLetterCode: 'C' }, 'hi')).toBe(shaped);
+  });
+
+  it('⭐ FS21 — a LONE surrogate (either half) ⇒ the letter code; a well-formed astral character is ⛔ refused for it', () => {
+    expect(smsPoolLabel({ poolName: `Arj${String.fromCharCode(0xd800)}un`, poolLetterCode: 'C' }, 'hi')).toBe('C');
+    expect(smsPoolLabel({ poolName: `Arj${String.fromCharCode(0xdc00)}un`, poolLetterCode: 'C' }, 'hi')).toBe('C');
+    expect(smsPoolLabel({ poolName: `अर्जुन${ch(0x1f64f)}`, poolLetterCode: 'C' }, 'hi')).toBe(`अर्जुन${ch(0x1f64f)}`);
+  });
+
   it('the push copy is untouched — `notify.*` still renders the curated name in an en push', () => {
     const subject = t('notify.pending_match.escalated.subject', { pool: HINDI_NAME }, { locale: 'en', namespace: 'contribution' });
     expect(subject).toContain(HINDI_NAME);

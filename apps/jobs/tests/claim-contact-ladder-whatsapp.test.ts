@@ -160,12 +160,18 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // the shared selection, is unchanged); a dated header note (`sms-dlt-registry.ts`, entries unchanged). The claimant's
     // WhatsApp step (this story's subject) imports none of them and is untouched. The rest of the fence stands.
     // 2026-10-23 review round 2 (P6): a doc-only note on the memo's off → on direction and the FS3 exception to the 5-state rule.
-    ['packages/channels/src/composition/provider-composition.ts', '8b29d9885baf93964bc66f91c88b97ca3bef55dfec235d7207dd7cee4d9f49fc'],
+    // 2026-10-25 Story 5.11b (Decision 2026-10-25-404 FS20 (a)): the fan-out resolver's memo keeps a WhatsApp `off` only 60 s (the
+    // off → on direction above, CLOSED) — `resolveFanOutWhatsappProvider`'s answer and `resolveWhatsappProvider` are unchanged.
+    // The claimant's WhatsApp step imports neither path. Only this pin and the next re-taken; `dispatch.ts` / `cascade.ts` stand.
+    ['packages/channels/src/composition/provider-composition.ts', '63dd17275477fd27fa369d4b51faeeebab7f2a842f1cee5ce1147ea6854c89c8'],
     // 2026-10-23 review R1 / R3 / R4, BigDev option 1: preserve prior alert retries and share the
     // PII-free outcome serializer; the claimant's separate WhatsApp ladder imports neither. Round 2 (P3, P9): the SMS rung's
     // DELIBERATE lifecycle-boundary note; the patch review (Q4): `serializeFanOutResult` takes a real record; the last fix
     // diff (F5): `shouldRetryFanOut`'s JSDoc no longer says "redelivery".
-    ['apps/jobs/src/scheduler/contribution-notify.ts', '08960e92cf15a0032eb2659ed48bd694b7047b1e40f887fd78d0e55acf1df38c'],
+    // 2026-10-25 Story 5.11b (Decision 2026-10-25-404 FS9 (a), FS18 (a), FS19): the SMS rung calls the INJECTED real send (through
+    // `dispatch`), `suppression` reaches every rung, the real send's retry classes and recorded details; the predicate and
+    // `alertSmsBlock` are byte-unchanged (AST-pinned in `alert-sms-send.test.ts`). The claimant's WhatsApp ladder imports none of it.
+    ['apps/jobs/src/scheduler/contribution-notify.ts', 'f1f942c9ae62031084639dcafd73141b648dab709cd50ff6747d9a0ba0ab0c88'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
     ['packages/channels/src/sms-dlt-registry.ts', '3bf86f9b9350602d9d7484b6976a748de42bcd4a9424f9bd3842f7cda66daee5'],
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per

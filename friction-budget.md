@@ -58,6 +58,7 @@ deliberately accepted.
 | member (allowing the app to check their contacts, or typing a number, to name people who know them) — Story 6.36b: a note in the app BEFORE the system prompt, then the phone's contacts checked against the member list (the matches shown under the names the member saved; a non-member's number ⛔ kept), up to three people ticked and asked, each of whom answers *"Yes, I know them"* / *"No"* in the app; ⛔ any of it without the member choosing to start it | who is asked when no colleague can be (`-310` CF4 A (2) — up to three members the member named, each of whom agreed; CF5 A — the contacts matched, then discarded) | optional |
 | member (seeing ONE reminder card at a time on the home — add your workplace, invite your colleagues, a new workplace: check the people who know you, someone can no longer be asked, a Pariwar Admin's campaign — each with *"Not now"*, which hides it for 30 days on that phone) — Story 6.36c | as few members as possible left with nobody to ask about their death (`-307` §2 item 4; `-330` SW16 (2)–(5) as narrowed by `-342` calls 1–2). ⭐ Shown ONLY when the member can act on it (`-342`), in the app ONLY — ⛔ SMS, push, WhatsApp; ⛔ a word about whether other members are at the workplace | optional |
 | member whose *"my workplace isn't listed"* a Pariwar Admin matched (answering *"We think your workplace is …, … . Is that right?"* — Yes / No, on the home and on the Workplace screen) — Story 6.36c | the member's own authorship of where they work (`-330` SW9 A, I2): a Pariwar Admin's suggestion changes ⛔ nothing until the member says yes, and only then is a posting written. ⭐ *"No"* sends it back for another look; ⛔ a step-up | optional |
+| member (marking a nominee who is also a member, on the Life Events nominee screen — Story 6.36e: *"Is this nominee a TWT member? Find them in your contacts"* → a note in the app BEFORE the system prompt, ONE contact check per form session, one tap on the match — or the iOS picker / a typed number; and, when they edit a marked nominee's name or mobile, *"Is this still …? Keep the mark / Remove it"* before the save) and the member MARKED (answering *"Yes, that's me"* / *"No, that's not me"* in the app) | that the people the Trust asks about a member's death are ⛔ the member's own nominee, even when the nominee signs in with a different number from the one declared (`2026-10-24-396` Q1 A / Q2 A; `-397` NE2–NE7) | optional |
 | member of a Pariwar with WhatsApp switched on, at signup (one more screen — an UNTICKED *"Send me WhatsApp messages from TWT"* box just before payment — and, if they leave it unticked, ONE reminder with two equal choices) — Story 5.10 | a WhatsApp yes asked for plainly, on its own screen, ⛔ pre-ticked and ⛔ bundled with the Terms (§3.4 origination rule; `-375`) | forced |
 | member signing up on a phone without their WhatsApp who opens "WhatsApp on another phone?" (asks for a WhatsApp code, reads it on their own phone, types it in) — Story 5.13 | the registered number proven to have WhatsApp and the member's own act before WhatsApp is switched on (`-374`) | optional |
 
@@ -2893,3 +2894,29 @@ on `app/(claim)/contact.tsx`, and seven `language.*` keys in `packages/i18n/loca
 
 ⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
 unchanged and is ⛔ ratcheted.
+
+**Story 6.36e disposition (ONE new row — marking a nominee who is also a member; ⛔ no row retired, ⛔ row amended):** the story's
+member-facing changes are `apps/mobile/app/(life-events)/nominees.tsx` and `components/life-events/NomineeForm.tsx` (the mark per nominee —
+Life Events ONLY; the signup screen passes ⛔ it), the NEW `app/(life-events)/nominee-link-find.tsx` and `nominee-link-requests.tsx`,
+`components/nominee-links/` (new — the home card and the notice-strip item beside 6.36b's), `lib/nominee-links*.ts`,
+`lib/nominee-link-i18n.ts`, `lib/session-context.tsx` (the caches cleared), `app/(tabs)/index.tsx` and
+`components/panchayat/PanchayatNoticeboard.tsx` (the entry mounted), the `nominee_link` copy (en + hi), and their tests.
+
+1. ⭐ **The new row.** Payer: a member who CHOOSES to mark a nominee as a member. Protects: the five the Trust asks about a reported death
+   leaving out the deceased's own nominee by ACCOUNT as well as by number (NE7). **`optional`** — ⛔ nothing in signup or the member loop
+   requires it; a member who never marks anyone saves exactly as before. The design pays the LEAST friction the rulings allow: 6.36b's
+   contact matching REUSED (one note, one system prompt, ONE match per form session for both nominees — the shared daily budget), a
+   kept mark is carried on every re-save WITHOUT asking the nominee again, and the ONE extra question — *"Is this still …?"* — appears
+   ONLY when a marked nominee's name or mobile is edited (a swap must ⛔ silently carry a mark onto the wrong person — V3).
+2. ⭐ **The marked member's side** — *"[Name] has named you as their nominee in TWT and marked you as a member. Is that you?"* with
+   *"[Name] will see your answer."* and *"While this stands, you will not be asked about [Name]'s death."* ABOVE the two answers. ⛔ SMS,
+   push or WhatsApp — the card appears ONLY while a mark naming the member is open. Answering is `optional`: an unanswered mark still
+   counts (PQ1 A), ⛔ lapses, ⛔ blocks anything.
+3. ⚠ **Who may find a member:** an `active` member ⛔ named by a claim (the 6.36b caller rule); the find control is HIDDEN for anyone else,
+   while a kept mark still shows and is still kept (V11). New marks are metered (4 a day) — a refusal a normal member ⛔ meets.
+4. ⚠ **The Hindi copy is agent-drafted and awaits BigDev's approval** (NE6) — ⛔ a merge blocker for review, a go-live item.
+
+⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]); ⛔ demonstrated on a device — the form's mark state has a jsdom
+render test (`nominee-form-link-render`) and the pure logic its unit tests; native layout and a real screen reader still need a device.
+`apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted. `pnpm friction:check` runs after the commit
+(AC-4 reads COMMITTED history).

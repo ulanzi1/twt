@@ -102,10 +102,17 @@ describe('known_people copy (real t())', () => {
     );
   });
 
+  it('the two lines that said a named person "can no longer be asked" say "no longer available" (`2026-10-24-403`, en + hi)', () => {
+    expect(t('card.replace_title', undefined, { locale: 'en', namespace: NS })).toBe('Someone who knows you is no longer available — add someone else.');
+    expect(t('label.unavailable', undefined, { locale: 'en', namespace: NS })).toBe('No longer available');
+    expect(t('card.replace_title', undefined, { locale: 'hi', namespace: NS })).toBe('आपको जानने वाला कोई व्यक्ति अब उपलब्ध नहीं है — किसी और को जोड़ें।');
+    expect(t('label.unavailable', undefined, { locale: 'hi', namespace: NS })).toBe('अब उपलब्ध नहीं');
+  });
+
   it('⭐ ⛔ no string of the namespace says that colleagues are asked first, that these people are the fallback, or that members are asked about a death (en + hi)', () => {
     const order = {
-      en: /colleagues? can be asked|asks these people|if none of your colleagues|\b(death|dies|died|dead|deceased|passed away|vouch)\b/i,
-      hi: /सहकर्मी[^।]*पूछ|मृत्यु|निधन|देहांत|मौत|मृतक|स्वर्गवास/,
+      en: /colleagues? can be asked|asks these people|if none of your colleagues|no longer be asked|\b(death|dies|died|dead|deceased|passed away|vouch)\b/i,
+      hi: /सहकर्मी[^।]*पूछ|पूछा नहीं जा सकता|नहीं पूछा जा सकता|मृत्यु|निधन|देहांत|मौत|मृतक|स्वर्गवास/,
     };
     for (const locale of ['en', 'hi'] as const) {
       const catalog = getCatalog(locale, NS) as Record<string, unknown>;

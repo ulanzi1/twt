@@ -13,7 +13,7 @@
   "label.asked": "Asked — waiting for an answer",
   "label.accepted": "Accepted",
   "label.not_accepted": "Not accepted",
-  "label.unavailable": "Can no longer be asked",
+  "label.unavailable": "No longer available",
   "action.remove": "Remove",
   "action.remove_a11y": "Remove {name} from the people who know you",
   "action.find": "Find members in my contacts",
@@ -98,7 +98,7 @@
   "card.campaign_title": "Add people who know you",
   "card.campaign_body": "Name up to three members who know you.",
   "card.transfer_title": "You have a new workplace — check the people who know you.",
-  "card.replace_title": "Someone who knows you can no longer be asked — add someone else.",
+  "card.replace_title": "Someone who knows you is no longer available — add someone else.",
   "card.open": "Open",
   "card.dismiss": "Not now"
 }

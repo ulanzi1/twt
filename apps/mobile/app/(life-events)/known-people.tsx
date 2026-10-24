@@ -3,7 +3,7 @@
 // TWO sections:
 //   · the people the member NAMED — each row under the name the member SAVED (an `asked` link — kept only on this phone)
 //     or the registered name (once `accepted`); *"Not accepted"* for 30 days after a decline, a withdrawal or a lapse;
-//     *"Can no longer be asked"* (⛔ named, ⛔ why). Remove (the person is ⛔ told). *"Find members in my contacts"* while
+//     *"No longer available"* (⛔ named, ⛔ why; `2026-10-24-403`). Remove (the person is ⛔ told). *"Find members in my contacts"* while
 //     a slot is free;
 //   · the requests NAMING the member — *"[Name] has named you as someone who knows them. Do you know him/her?"* with
 //     *"[Name] will see your answer."* ABOVE the answers; an accepted one stays here with *"I don't know them"* and

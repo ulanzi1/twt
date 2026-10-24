@@ -14,6 +14,8 @@
 //     save is still refused. Before, the question lived in component state and the mark rode onto a different person;
 //   · ⭐ round 3 — the refusal "Answer the question … first" is ⛔ stored text: it shows only while a question is still open (an
 //     edit reverted, a slot removed ⇒ gone); a name REPLACED or CLEARED after a pick asks, a typo fixed by a backspace does ⛔;
+//   · device run 2026-10-24 — every control of the member mark (*Find…*, *Pick a different member*, *Remove mark*, *Keep the mark*,
+//     *Remove it*) is at least 48 dp (they were 36 dp on the emulator);
 //   · a slot the form ADDS carries ⛔ mark (`memberLink: null`) — ⛔ `undefined`, which a reload gives the rank's OLD mark;
 //   · the copy goes through the REAL `t()` — a token the form forgets to supply THROWS here, as it would on a phone;
 //   · the SIGNUP form (⛔ `link` prop) sends ⛔ mark even from slots that carry one, and shows ⛔ control;
@@ -44,8 +46,8 @@ vi.mock('tamagui', async () => {
     Spinner: () => createElement('span', null, 'spinner'),
     Input: ({ value, onChangeText, accessibilityLabel }: { value: string; onChangeText: (v: string) => void; accessibilityLabel?: string }) =>
       createElement('input', { value, 'aria-label': accessibilityLabel, onChange: (e: { target: { value: string } }) => onChangeText(e.target.value) }),
-    Button: ({ children, onPress, disabled, accessibilityLabel }: { children: React.ReactNode; onPress?: () => void; disabled?: boolean; accessibilityLabel?: string }) =>
-      createElement('button', { onClick: onPress, disabled, 'aria-label': accessibilityLabel }, children),
+    Button: ({ children, onPress, disabled, accessibilityLabel, height }: { children: React.ReactNode; onPress?: () => void; disabled?: boolean; accessibilityLabel?: string; height?: number }) =>
+      createElement('button', { onClick: onPress, disabled, 'aria-label': accessibilityLabel, 'data-height': height }, children),
   }
 })
 
@@ -237,6 +239,19 @@ describe('NomineeForm — the member mark (Story 6.36e, V3)', () => {
     await userEvent.clear(name())
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('nominees.name_required')
+  })
+
+  it('device run — every control of the member mark is at least 48 dp: Find (no mark), Pick a different / Remove mark (a mark), Keep the mark / Remove it (the question)', async () => {
+    const heightOf = (name: RegExp) => Number(screen.getByRole('button', { name }).getAttribute('data-height')) // an unsized button has no attribute: 0
+    renderForm({ forms: [marked({ memberLink: null })] })
+    expect(heightOf(/^Is this nominee a TWT member\?/)).toBeGreaterThanOrEqual(48)
+    cleanup()
+    renderForm()
+    expect(heightOf(/^Pick a different member/)).toBeGreaterThanOrEqual(48)
+    expect(heightOf(/^Remove mark/)).toBeGreaterThanOrEqual(48)
+    await userEvent.type(screen.getByRole('textbox', { name: 'nominees.name' }), 'x') // opens the question
+    expect(heightOf(/^Keep the mark/)).toBeGreaterThanOrEqual(48)
+    expect(heightOf(/^Remove it/)).toBeGreaterThanOrEqual(48)
   })
 
   it('⭐ round 4 — the refusal does ⛔ COME BACK when a later edit reopens the question: it belongs to the Save that produced it', async () => {

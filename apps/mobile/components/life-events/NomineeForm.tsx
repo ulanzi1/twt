@@ -219,6 +219,8 @@ export function NomineeForm(props: NomineeFormProps) {
   /**
    * Story 6.36e — one slot's member mark: its label, *Remove mark*, the find entry, and the open edit question. A render
    * FUNCTION, ⛔ a component declared in here (a new component type each render would remount its buttons — focus lost).
+   * Every control here is 48 dp tall (device run 2026-10-24: they were 36 dp, like the relationship chips): *Keep the mark* /
+   * *Remove it* answer a question about WHO a mark is for, and the members who read it are not young.
    */
   function markControl(index: number, slot: NomineeFormEntry): React.ReactElement | null {
     const link = props.link!
@@ -256,10 +258,10 @@ export function NomineeForm(props: NomineeFormProps) {
             {/* SHOWN and SPOKEN (family 13(d)): a bare live region is Android-only — `AnnouncedText` speaks it on iOS too. */}
             <AnnouncedText text={name ? lt('edit.question', { name }) : lt('edit.question_no_name')} color="$color" />
             <XStack gap="$2">
-              <Button size="$3" accessibilityRole="button" accessibilityLabel={labelled(lt('edit.keep'))} onPress={() => keepMark(index)}>
+              <Button height={48} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.keep'))} onPress={() => keepMark(index)}>
                 {lt('edit.keep')}
               </Button>
-              <Button size="$3" accessibilityRole="button" accessibilityLabel={labelled(lt('edit.remove'))} onPress={() => removeMark(index)}>
+              <Button height={48} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.remove'))} onPress={() => removeMark(index)}>
                 {lt('edit.remove')}
               </Button>
             </XStack>
@@ -268,7 +270,7 @@ export function NomineeForm(props: NomineeFormProps) {
         <XStack gap="$2" flexWrap="wrap">
           {link.canFind ? (
             <Button
-              size="$3"
+              height={48}
               chromeless
               accessibilityRole="button"
               accessibilityLabel={labelled(mark === null ? lt('form.find') : lt('form.find_again'))}
@@ -278,7 +280,7 @@ export function NomineeForm(props: NomineeFormProps) {
             </Button>
           ) : null}
           {mark !== null ? (
-            <Button size="$3" chromeless accessibilityRole="button" accessibilityLabel={labelled(lt('form.remove'))} onPress={() => removeMark(index)}>
+            <Button height={48} chromeless accessibilityRole="button" accessibilityLabel={labelled(lt('form.remove'))} onPress={() => removeMark(index)}>
               {lt('form.remove')}
             </Button>
           ) : null}

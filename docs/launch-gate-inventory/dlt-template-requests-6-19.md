@@ -269,7 +269,9 @@ blank.
 
 ⛔ **Do not provision the ids of 17–22 until roster Row 40 (`member-alert-sms-fallback-live`) says so** — set each id only after the operator
 confirms that template's approval (`-349` decision 1's shape, applied here by `2026-10-23-389`). Until row 5-11b sends, a set id does
-nothing: a lit, eligible member's SMS rung ends `sms_send_not_wired`.
+nothing: a lit, eligible member's SMS rung ends `sms_send_not_wired`. ⚠ *Annotated 2026-10-25 (Story 5.11b, [`2026-10-25-404`](../../.decision-log.md#decision-2026-10-25-404)):* row 5-11b's send is
+DECIDED — once it lands, a set id SENDS a real text, so this "does nothing" no longer holds; set an id only per Row 40 (a), and only after
+the deploy order Row 40 records (migration → api → jobs).
 
 Three notices about a member's OWN contribution, texted only when the app (and WhatsApp, where used) could not reach the member
 (`2026-10-23-390` Q1 B): **17–18** day 10, the contribution not recorded yet; **19–20** a payment not matched (ONE text for every mismatch
@@ -281,12 +283,14 @@ GSM-7, else the pool's letter code (`-389` FS13 (a): the curated name is the Hin
 ⚠ *superseded 2026-10-23 by `-394` item 2* — trimmed, ≤ 30 UTF-16 units, no control character, and in English basic GSM-7 only, no
 extension characters);
 **`{date}`** — the cycle's close date, `DD-MM-YYYY`. ⛔ No text carries a member's name, an amount or a link. ⚠ **19–20 have NO variable**
-— 6.37's adapter refuses a send with no values until row 5-11b changes it. The copy is `sms.*` in
+— 6.37's adapter refuses a send with no values until row 5-11b changes it (⚠ *annotated 2026-10-25,* [`2026-10-25-404`](../../.decision-log.md#decision-2026-10-25-404) *§2:* 5.11b makes a
+zero-variable template sendable on this path — `values: []` — while a send with NO values field stays refused). The copy is `sms.*` in
 `packages/i18n/locales/{en,hi}/contribution.json`; the registry is `apps/jobs/src/scheduler/contribution-sms-templates.ts`, and
 `apps/jobs/tests/contribution-sms-templates.test.ts` proves the real `t()` renders EXACTLY the text below and that this sheet carries it.
 Every one passes the shape rules with at most two variables (⛔ an exigency line is owed); the lowest fixed share is 17 (hi) at 68.7 %.
 In MSG91 (setup step (3) above): **Unicode for 17, 19, 21; Normal for 18, 20, 22** — an English value is GSM-7 by FS13 (the letter code or a
-GSM-7 name; the date) — under `-394` item 2, basic GSM-7 only (⚠ *corrected 2026-10-24*: "ASCII" was wrong — basic GSM-7 has é, Ä, £). The language each member gets is row 5-11b's.
+GSM-7 name; the date) — under `-394` item 2, basic GSM-7 only (⚠ *corrected 2026-10-24*: "ASCII" was wrong — basic GSM-7 has é, Ä, £). The language each member gets is row 5-11b's (⚠ *annotated 2026-10-25,* [`2026-10-25-404`](../../.decision-log.md#decision-2026-10-25-404) *FS5 (a):* the member's chosen language, else the
+Pariwar's; never the other one — so each message needs BOTH its en and hi ids).
 
 | # | Registered text |
 |---|---|

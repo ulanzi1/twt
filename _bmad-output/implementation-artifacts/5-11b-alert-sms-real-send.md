@@ -12,8 +12,9 @@ or every changed path is re-checked against the F it touches. Re-run BOTH at Tas
 F14 / F17's lines and F21's RTBF pin — all re-taken below; no file the story edits changed.)
 
 STATUS: 2026-10-24 created (`bmad-create-story 5.11b`) → ready-for-dev. 2026-10-25 VALIDATED (v1.1, four read-only checks: code claims ·
-governance · end-to-end design · tests and gates). FS5, FS6, FS8, FS9, FS12 (carried from 5.11) and FS17–FS23 (new) are PROPOSED;
-BigDev answers them at Task 0.2. ⛔ code before Task 0.3's decision is committed.
+governance · end-to-end design · tests and gates). 2026-10-25 ANSWERED (v1.2): BigDev accepted every ⭐ option of FS5, FS6, FS8,
+FS9, FS12, FS17–FS23 (Debug Log (a)); Task 0.1 done; Task 0.3's decision `2026-10-25-404` committed ALONE (`447c91e0`); Task 0.4's records
+committed next (the row stays `ready-for-dev` until `bmad-dev-story 5.11b` starts — 5.11's precedent). Next: Task 1.
 
 WHAT 5.11 LEFT: Story 5.11 (`done`, landed `7489a296`) decided WHAT is texted (three notices × hi / en, templates 17–22), to WHOM
 (`-390` Q1 B), in WHICH words, and made the rung HONEST: a lit, eligible member ends `skipped_no_target` / `sms_send_not_wired`.
@@ -397,7 +398,7 @@ reason. (The Niyamavali is a rulebook, not a ratified spec — [[feedback_niyama
   for FORCE / grants; ⛔ data-export coverage gate) — the per-table registrations ARE the gate. The access-wrapper AST scan's roots
   (`check.ts:66-103`) exclude `apps/jobs` and `packages/domain/src/sms-delivery` — ⛔ claim it covers the seam.
 
-## ⚖️ Build decisions (⭐ = recommended) — PROPOSED for BigDev at Task 0.2
+## ⚖️ Build decisions (⭐ = recommended) — ANSWERED 2026-10-25: every ⭐ option ACCEPTED (Decision `2026-10-25-404`)
 
 - **FS5 — the language of the text (G3, G4, G13).** ⭐ **(a) the member's language, resolved AT THE PRODUCER, never the other one:**
   for the three LIT kinds only (day 10, escalated, mismatch — ⛔ cycle-open / confirmed / news / survey / moderation), the POOL_BATCH
@@ -422,8 +423,9 @@ reason. (The Niyamavali is a rulebook, not a ratified spec — [[feedback_niyama
   shape). Not recommended — the trade-off the Panel decided itself for the reminder ⇒ the Panel's BY ANALOGY (G3).
 
 - **FS6 — the send record (I1, G14).** ⭐ **(a) a new table, AT-MOST-ONCE:** `alert_sms_sends` (name the dev's), one row per
-  `(alert_id, member_id, occasion)` UNIQUE, `alert_id` FK → `alerts` ONLY IF Task 0.1 proves the `alerts` row is committed before
-  any fan-out reads it (the row is PROJECTOR-written — [[project_alert_primitive_substrate]]; else no FK, recorded), `occasion` CHECKed to the six literals (`day_10`,
+  `(alert_id, member_id, occasion)` UNIQUE, `alert_id` FK → `alerts` (Task 0.1, 2026-10-25: PROVEN — the deadline, pending-match and
+  matcher paths all read their alert FROM `alerts`, so the PROJECTOR-written row — [[project_alert_primitive_substrate]] — is committed
+  before any fan-out), `occasion` CHECKed to the six literals (`day_10`,
   `pending_match_escalated`, `mismatch:wrong_pool`, `mismatch:amount_mismatch`, `mismatch:entry_already_claimed`,
   `mismatch:sender_vpa_mismatch` — `EMITTABLE_MISMATCH_REASONS`, `matcher-worker.ts:63-68`; the producer builds the scope from a raw
   payload string, `contribution-notify-triggers.ts:1381`, so the CHECK is the boundary), `send_id uuid` PK (the CRQID row id),
@@ -474,8 +476,10 @@ reason. (The Niyamavali is a rulebook, not a ratified spec — [[feedback_niyama
   texts. The count: occasions per (alert, member) = `day_10` + `pending_match_escalated` + one per mismatch reason (4 emittable,
   `matcher-worker.ts:63-68`; `sender_vpa_mismatch` is never produced in v1) = 6 (5 in v1); ⛔ code bounds the concurrent live alerts a
   member is in (`domain/src/alert/read.ts:19`) — with two live cycles, 12 > 10; and `checkAndConsumeSmsBudget` ALWAYS increments and is a
-  FIXED window resetting at 05:30 IST (F16) ⇒ a cap of 10 per 24 h FAILS the rule. Task 0.1 re-counts and records the product.
-  ⭐ **(d) a structural cap, ⛔ counter:** FS6's `occasion` CHECK (six literals) + the UNIQUE key (+ the `alert_id` FK where Task 0.1 allows it) cap the texts at 6 per
+  FIXED window resetting at 05:30 IST (F16) ⇒ a cap of 10 per 24 h FAILS the rule. Task 0.1 (2026-10-25) count: 6 occasions per (alert, member) (5 in v1); one alert per cycle
+  (`alerts.cycle_id` UNIQUE, 0078); a member is in EXACTLY one pool per cycle (`pool/errors.ts:467` — two is an integrity error) ⇒ the
+  pool caveat below is not reachable; concurrent live cycles per member are unbounded in code ⇒ (d), which is per cycle, is unaffected.
+  ⭐ **(d) a structural cap, ⛔ counter:** FS6's `occasion` CHECK (six literals) + the UNIQUE key (+ the `alert_id` FK — Task 0.1 allows it) cap the texts at 6 per
   member per REAL cycle BY CONSTRUCTION; ⛔ bucket, ⛔ vacuum, ⛔ narrowing of `-390`. *Cost (d):* no guard against a bug that loops over
   many REAL alerts (e.g. an alert minted per tick) — the silence and send counts are the only signal. ⚠ The bound holds only because the
   occasion carries NO pool: day-10 / escalated jobs run per POOL (singletonKey `${alertId}:${poolId}${scope}`, triggers `:579`) and the
@@ -727,7 +731,7 @@ rewrite. `pnpm ci:local` green on :5433.
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance (AC0)**
-  - [ ] 0.1 Preflight: `git fetch origin`; rebase onto `origin/main`; run the pin checks (header). Re-run F1–F21 (every cite by CONTENT).
+  - [x] 0.1 Preflight: `git fetch origin`; rebase onto `origin/main`; run the pin checks (header). Re-run F1–F21 (every cite by CONTENT).
         Re-count FS8's product (mismatch reasons × concurrent live alerts per member) and record it. Prove whether the `alerts` row is
         committed before any fan-out (FS6's FK). List consumers of `alert.channel_send` (FS18 adds real SMS lines). **STOP** if: **S1** a
         ruling on alert-SMS language, budget, window or quiet hours exists after `-403` (grep `^### Decision` on main + every branch +
@@ -737,11 +741,11 @@ rewrite. `pnpm ci:local` green on :5433.
         enabled anywhere a deploy reads (FS9 then bites at once — tell BigDev); **S4** any `sms.dlt.template_id.contribution.*` id is set
         anywhere (G9 — it must not be before Row 40 (a)); **S5** Row 30 (d) was answered with a limit or charset rule that changes FS21 or
         the slot maxima.
-  - [ ] 0.2 Put FS5, FS6, FS8, FS9, FS12, FS17–FS23 to BigDev; record answers VERBATIM in Debug Log (a). A bare option letter means the
+  - [x] 0.2 Put FS5, FS6, FS8, FS9, FS12, FS17–FS23 to BigDev; record answers VERBATIM in Debug Log (a). A bare option letter means the
         option's outcome AND its cost line (footgun #45). Offer G13's non-blocking confirm.
-  - [ ] 0.3 Stage the author-commit decision (AC0's contents; next free id at commit — re-check every worktree) in the scratchpad; commit it
+  - [x] 0.3 Stage the author-commit decision (AC0's contents; next free id at commit — re-check every worktree) in the scratchpad; commit it
         ALONE (`governance:` prefix) — try the decision-log write first ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.4 Records commit (AC8's record half): deferred-work annotations + new items; roster Row 40 note (incl. the deploy order and the
+  - [x] 0.4 Records commit (AC8's record half): deferred-work annotations + new items; roster Row 40 note (incl. the deploy order and the
         TRAI-hours question); DLT sheet notes (all three sentences); §3.4 annotation; `epics.md` `### Story 5.11b` dated note *"story file
         created"* + the two departures (AC0); ledger by SAFE prepend ([[project_sprint_status_safe_prepend]]) + row
         `ready-for-dev → in-progress`.
@@ -943,6 +947,26 @@ new dated question — answered in writing, never assumed from docs (footgun #53
 
 ### Debug Log References
 
+**(a) Task 0.1 and Task 0.2 (2026-10-25).**
+- Task 0.1: `git fetch origin` — `origin/main` = `0e9b261d` = the pin; the pin is an ancestor of HEAD; the found-facts diff
+  `0e9b261d..origin/main` is EMPTY. S1 clear (⛔ decision after `-403` on any ref or worktree; `-395`…`-403` touch no alert-SMS scope);
+  S2 clear (⛔ open branch or worktree — 11b-4, 6-36f, 3-3c — edits an S2 file, committed or not); S3 clear (⛔ WhatsApp enablement in
+  `infra/`); S4 clear (`template_id.contribution` appears only in the registry and its test); S5 clear (Row 30 (d)'s evidence is empty).
+  FS8's count and FS6's FK: recorded at FS8 / FS6. `alert.channel_send` has ⛔ consumer outside `dispatch.ts:353`.
+- Task 0.2, BigDev verbatim: *"all recommendation accepted for FS1-FS23"*. Read as every ⭐ option of FS5, FS6, FS8, FS9, FS12,
+  FS17–FS23 with its outcome AND its cost line (footgun #45) — FS5 (a), FS6 (a), FS8 (d), FS9 (a), FS12 ⭐, FS17 (a), FS18 (a), FS19 ⭐,
+  FS20 (a), FS21 (a), FS22 `as`, FS23 (a); G13 as stated (a non-blocking confirm goes with the next Panel note). FS1–FS4, FS7, FS10, FS11,
+  FS13–FS16 are Story 5.11's (`-389`) — ⛔ re-decided.
+- Task 0.3: Decision `2026-10-25-404` (author-commit) committed ALONE as `447c91e0` (the decision-log write was accepted).
+- Task 0.4 (the records commit, after `447c91e0`): deferred-work — a new section "Story 5.11b — the real alert SMS send" (quiet hours,
+  FS23; the data export, FS6) and dated annotations on the 6.34 TV6 item, the 6.37b `correlationId` item, the two 5.6 items (FS12), LS11's
+  item (its *"FS5 — `getMemberLanguage`"* corrected), the WhatsApp off → on item (FS20) and the Hindi pool-value item (FS21); roster Row 40
+  dated note (deploy order; both languages' ids; the TRAI-hours question; Row 32's legs); the DLT sheet's three stale sentences annotated;
+  architecture §3.4 dated annotation (after the `-390` one); `epics.md` `### Story 5.11b` dated note (the two departures); the ledger.
+  ⚠ DEVIATION, recorded: Task 0.4's *"row `ready-for-dev → in-progress`"* is NOT done — dev has not started (5.11's Task 0.4 kept its row
+  `ready-for-dev` the same way); `bmad-dev-story 5.11b` moves it. The push-past-claim-TTL item (F6) waits for Task 3 (bounded or
+  recorded then).
+
 ### Completion Notes List
 
 ### File List
@@ -953,3 +977,4 @@ new dated question — answered in writing, never assumed from docs (footgun #53
 |---|---|---|
 | 2026-10-24 | v1.0 | Created (`bmad-create-story 5.11b`, worktree `.claude/worktrees/5-11b-alert-sms-real-send`, pinned `6c4c1e47`); four read-only verifiers re-checked 5.11's carry at the pin. CORRECTED: the send record's key includes the occasion (F4 — the alert id is per cycle); a second MG12 refusal in the MSG91 client (F8); the claim core's unconditional helpline (F9). FS5, FS6, FS8, FS9, FS12, FS17–FS23 PROPOSED; ⛔ Panel question at the recommended options. Ultimate context engine analysis completed - comprehensive developer guide created. |
 | 2026-10-25 | v1.1 | Validated (`bmad-create-story validate 5.11b`; four read-only checks — code claims · governance · end-to-end design · tests and gates; BigDev: "all"). Branch rebased onto `origin/main` `0e9b261d` (6.36e landed) and re-pinned; F14 / F17 / F21 re-taken (RTBF pin now 27). ⭐ Design: only `rate_limited` is re-sent — every `api_unavailable:*` may hide an accept ⇒ final (FS6 (a″) offers the at-least-once alternative, G14); a found `attempting` row inside a 2-min lease is IN FLIGHT, ⛔ a crash (claim token `${job.id}:${retryCount}`); the core splits into prepare / send so config refusals write no row; begin + budget in ONE scope tx and the seam never throws; only real sends go through `dispatch`, with `suppression` on the deps for every rung; FS20 memoizes per channel (`off` on a 60 s TTL — never-memoize would re-read secrets per member); FS8 recommends (d), a structural cap (the `occasion` CHECK), since a 24 h / 10 bucket fails its own rule. Governance: `-347` dated 2026-10-17; G2 states its two author readings; G3 / G9 / G12 corrected; G13–G15 added; FS9 (a′) is the Panel's; AC0's supersession list completed. Tests: the change / stay lists corrected; RLS, concurrency, boot-pin, AST source-pin and `twt_app` legs specified; fences T16–T18. Numbers: decision `-404`, migration `0184`+. A fresh-context review of this revision's own diff then fixed: BEGIN runs INSIDE `dispatch` (a suppressed member gets no row); FS5's query filters `pp.pariwar_id` and joins `members.member_id`; the claim wrapper keeps `correlationIdOrCrash` first; the messaging probe, proven vs unproven pre-flight details and `unknown:*` mapped; FS8 (d)'s one-text-per-occasion across pools stated; the glyph register. |
+| 2026-10-25 | v1.2 | Answered (Task 0.2): BigDev — *"all recommendation accepted for FS1-FS23"* — every ⭐ option of FS5, FS6, FS8, FS9, FS12, FS17–FS23. Task 0.1 done (no drift; S1–S5 clear; FS8's count; FS6's FK proven). Decision `2026-10-25-404` committed ALONE (`447c91e0`). Next: Task 0.4. |

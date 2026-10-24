@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Story 5.11b — the real alert SMS send (2026-10-25)
+
+Recorded at Story 5.11b's Task 0.4 under [`-404`](../../.decision-log.md#decision-2026-10-25-404). Neither is 5.11b's to build.
+
+- **Quiet hours for the three contribution texts — ⛔ any** [`-404` FS23 (a)] — the texts go at any hour: the day-10 sweep runs at
+  09:30 IST, an escalation lands ≥ 24 h after the member's own payment attempt, a mismatch follows the member's own payment, and the push
+  already arrives at any hour. The Panel has ruled send hours only for CLAIM messages (`-250` #5; `-368` Q1 A). Whether TRAI / DLT rules
+  restrict service SMS by hour is a written question on roster Row 40, ⛔ assumed. ⭐ Trigger: a member complaint, a ruling, or a
+  written answer that hours are restricted.
+- **Alert SMS send records are ⛔ in the data export** [`-404` FS6 (a)] — like every send table (`data-export/assemble.ts` exports
+  none). The record holds ids, the message key, locale, outcome and the provider id; ⛔ number. ⭐ Trigger: the story that adds any SMS
+  send history to the member's export, or counsel's view on it (roster Row 40 (f) is the nearest open leg).
+
+---
+
 ## Deferred from: code review of 11b-4-memorial-authorship-surface-family-writes-the-story.md — third pass (2026-10-24)
 
 Third pass over the uncommitted fix-round delta (HEAD `21284bff` + working tree); the story's `### Review Findings` "Third pass" holds the full record (T1–T18, and the fix-diff review V1–V17). These are DEFERRED — not closed, not addressed by a fix — EXCEPT W14, CLOSED by migration 0182 (the row-held Send key), and T14, being CLOSED by Z1 (a read-back by key after an ambiguous COMMIT); the final review added Z7–Z13. Each names its trigger.
@@ -217,6 +232,9 @@ Recorded at Story 6.36e Task 0.4 (`_bmad-output/implementation-artifacts/6-36e-n
   (Unicode Cc) in any locale and keeps ZWJ / ZWNJ; these others are not Cc. An en value is safe (`needsUnicode`). Nothing is texted
   until row `5-11b-alert-sms-real-send`, which must decide before its first send whether to widen the rule (a new author-commit) —
   and whether DLT / MSG91 accept such characters in a variable.
+  - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* DECIDED — FS21 (a): before the first send `smsPoolLabel` falls back to the letter code on `\p{Cc}`, U+2028 / U+2029, any `\p{Cf}`
+    except ZWNJ / ZWJ, or a lone surrogate (`/\p{Cs}/u`) — supersedes `-394` item 2 in part. Whether DLT / MSG91 accept the remaining
+    characters stays roster Row 30 (d). Closes on 5.11b `done`.
 - **The keyed store has no owner token** (`packages/domain/src/idempotency/keyed-store.ts`, `recordResult` / `release` match on key
   and status only). A hung original attempt's late `recordResult` can complete a take-over's row with ITS outcome (the moderation
   take-over, Story 5.11 E1 (a)); at-least-once is accepted there. Re-trigger: a consumer that needs exactly-once across a take-over.
@@ -239,6 +257,9 @@ story's ruling exposes. *(Count corrected 2026-10-24, round-2 patch review, Q1.)
   resolution gives opted-in members a target, the memoized fixture answers `accepted`, and they are recorded `delivered` with
   nothing sent — the F5 class, in the direction FS3's recorded memo limitation (refused → ready) does not name. Re-trigger: 5.11b
   (the per-send provider) or the first story that touches the memo.
+  - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* DECIDED — FS20 (a): the fan-out memo goes per channel; WhatsApp `ready` / `refused` for the process, `off` for 60 s — a
+    switch-on is seen within a minute (never memoizing `off` would re-read secrets per member). Refused → ready still needs a restart.
+    Closes on 5.11b `done`.
 - **`resolveWhatsappProvider` (the non-fan-out callers) still returns the accepting fixture for the FS3 "refused" state.** Only
   the alert fan-out's resolver refuses honestly (I5 scope); the two selections now disagree on whether that state is `sent`.
 - **The FS3 refusing provider is audited under the real `whatsapp-business` provider id.** A config refusal (no network call)
@@ -342,6 +363,9 @@ Branch `story/6-36d-exclude-nominees-from-the-five` at `52ece667`, diff `origin/
   ⭐ Trigger: a story or ruling that sets a language rule for that message (or a Pariwar whose `locale_default` is `en`, for PM22).
   - *Appended 2026-10-23 (Story 5.11 Task 0.4, `-389`):* the three contribution SMS texts row 5-11 words (en + hi) get their language
     rule at row `5-11b-alert-sms-real-send` (its FS5 — `getMemberLanguage`); 5.11 sets none. The contribution PUSH notices stay as listed.
+    - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* ⚠ CORRECTED — 5.11b's FS5 (a) does ⛔ use `getMemberLanguage`: the member's language is read set-based at the
+    PRODUCER (`COALESCE(preferred_locale, locale_default)`), and a text whose language's template is unusable is ⛔ sent in the other
+    language. Discharged FOR THE THREE TEXTS on 5.11b `done`; their push and WhatsApp stay as listed.
 
 
 ## Deferred from: code review of 3-3c-member-kyc-name-english-only.md (2026-10-22)
@@ -900,6 +924,8 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   alert-SMS path (Row 30 note (1)) — make the id required there, or record why not. **Deferred.**
   - *Appended 2026-10-23 (Story 5.11 Task 0.4, `-389`):* → row `5-11b-alert-sms-real-send` (its FS6 — the new CRQID kind); 5.11
     sends nothing.
+    - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* FS6 (a) / FS22: the alert seam ALWAYS passes a CRQID of the new kind `as`; the provider's optional field is
+    ⛔ changed (its other callers). Discharged for the alert path on 5.11b `done`.
 - **Reports in one POST share `received_at`** [`apps/api/src/modules/channel-webhooks/msg91-sms-reports.ts`; the inbox claim's
   `ORDER BY received_at, report_id`] — the tie is broken by the random `report_id`, so which of two same-POST reports for one send
   counts as "first" is arbitrary. MSG91 gives ⛔ order within one POST, so none exists to keep. ⭐ Trigger: a real POST carrying two
@@ -6147,7 +6173,12 @@ _Not code-review findings — forward seams Story 9.7 deliberately RESERVES for 
 ## Deferred from: code review of story-5-6-sms-transactional-fallback-3-retry-exp-backoff (2026-07-07)
 
 - **`resolveSmsProviderDeps` doesn't trim the resolved `dltTemplateId` before use.** It blank-checks the resolved value via `.trim() === ''` but then stores/passes the untrimmed string on to the gateway request body. Identical pattern already present in the mirrored `resolveWhatsappProviderDeps`'s `accessTokenSecretName` handling — not a regression introduced by this story. **Re-trigger:** if a whitespace-polluted config value is ever observed causing a DLT template mismatch in production. ⚠ **2026-10-17 (Story 6.37, `-345` MG16 (iii)) — ⛔ addressed:** the alert path stays DARK (TV6); since 6.37 a value-less provider refuses `no_named_values` before the network (MG12), so the untrimmed id cannot reach MSG91 from it. (The claim-text core and the OTP adapter DO trim.) The item stays OPEN. ⚠ **2026-10-23 (Story 5.11 Task 0.4, `-389`):** → row `5-11b-alert-sms-real-send` (its FS12 (1)) for the alert path; 5.11 sends nothing.
+  - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* addressed for the ALERT path by 5.11b (FS12): MG4's 24-hex check refuses an untrimmed id
+    (`template_id_malformed`); `resolveSmsProviderDeps` is ⛔ changed. ⛔ Closed.
 - **`resolveSmsTarget` trusts `decryptMobile`'s output uncritically** — no try/catch around a decrypt failure, no E.164 format validation on the successful output before it's forwarded to the gateway. Mirrors the identical unguarded pattern in `resolveWaTarget`, which this function was built to copy — not new. **Re-trigger:** if a corrupted ciphertext or malformed decrypted mobile number is ever observed reaching the SMS gateway. ⚠ **2026-10-17 (Story 6.37, `-345` MG8) — PARTLY addressed:** the MSG91 client now validates every `to` by CALLING `normalizeMobile` and refuses a number it rejects or would rewrite (`invalid_number:format`, ⛔ request); the decrypt try/catch and push / WA are ⛔ addressed and `resolveSmsTarget` sits on the dark dispatch path (MG12). The item stays OPEN. ⚠ **2026-10-23 (Story 5.11 Task 0.4, `-389`):** → row `5-11b-alert-sms-real-send` (its FS12 (2)). ⚠ Found while checking: at `d87d047a` `resolveSmsTarget` DOES catch a decrypt failure (`packages/domain/src/notifications/delivery.ts:165-174` — logs, returns no target); only the E.164 check on the decrypted value is missing for SMS. It landed 2026-07-24 with Story 8.8 (`75b8e9b2`), so this item's decrypt half — and 6.37's annotation above calling it unaddressed — was already stale; corrected here by dated note, ⛔ by rewriting either.
+  - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* addressed for the ALERT path by 5.11b (FS12): the decrypt IS caught (corrected, 5.11 v1.2); the
+    missing E.164 check is covered on this path by the MSG91 client (`invalid_number:format` ⇒ `rejected_invalid_number`, terminal).
+    `resolveSmsTarget` is ⛔ edited. ⛔ Closed.
 
 ---
 
@@ -12357,6 +12388,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   - *Appended 2026-10-23 (Story 5.11 review round 2, P6):* PQ1 RULED — `2026-10-23-390` Q1 B (Trustee-ratified): the three texts go to
     any member the app (and WhatsApp, where used) could not reach, WhatsApp yes or not; built by row 5-11's predicate. Item still OPEN
     until 5.11b is `done`.
+    - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* the real send is DECIDED (FS5–FS23); still OPEN until 5.11b is `done`.
 - **The data-export delivery OTP says "Valid 3 min" for a code that lives 60** [`apps/api/src/modules/member-data-rights/handlers.ts:659-663`
   delivers with `intent: 'step_up'`; TTL `apps/api/src/config.ts:386`, `member-otp.service.ts:38-43`] — it UNDERSTATES (⛔ refuses anyone: the
   code still works after 3 minutes). Story 6.34 TV9 fixed only the claim handover (a 3-minute code told *"5 min"* — a nominee typing it in

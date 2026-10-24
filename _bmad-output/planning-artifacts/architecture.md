@@ -2348,6 +2348,16 @@ fallback SMS.
 > per message, only on a failed higher rung. The Trust's WhatsApp Channel and Telegram channel are MIRRORS members are ASKED to join
 > (Q2 A — the app stays the only official channel); their place in this section is the author's annotation or ADR, still owed.
 
+> ⚠ **ANNOTATION 2026-10-25 (Story `5-11b` Task 0.4, `2026-10-25-404` — author-commit) — the fallback SENDS, as decided. ⭐ Annotated, ⛔ not
+> rewritten.** For the three notices above: (1) **the window** — a member with an active WhatsApp target whose WhatsApp rung did not end
+> `sent` is texted on the pool job's third attempt (or its final one); a member with no WhatsApp target is texted on the first pass. Two
+> AUTHOR READINGS of *"WA delivery returns undelivered after the committed retry window (3 attempts × exponential backoff)"*, stated:
+> one job run = one WhatsApp attempt (a job retry re-runs the ladder; a WhatsApp `sent` is never re-sent), and "undelivered" = the
+> WhatsApp rung did not end `sent` (⛔ a delivery report). The window's duration (≈ 3–6 min) is ⛔ ratified. (2) **the language** — the
+> member's chosen language, else the Pariwar's; ⛔ the other one when a template is unusable. (3) **the guard** — at most one text per
+> (alert, member, occasion) by a durable send record (at-most-once; a gateway answer that may hide an accept is final, ⛔ re-sent), six
+> occasions per cycle. Every other `dispatch()` notification is unchanged.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

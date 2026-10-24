@@ -2488,6 +2488,13 @@ as today; news, surveys, moderation and the six other contribution notices carry
 > variable), the member's language (`getMemberLanguage`), a per-member budget, §3.4's retry window, and the 5.6 mirror defects. Its
 > starting facts and build questions: Story 5.11's "Carried to 5.11b" section (FS5, FS6, FS8, FS9, FS12 — answered at ITS create-story,
 > ⛔ by `-389`). Starts when 5.11 is `done`. ⛔ Story file yet.
+>
+> **⭐ Dated note 2026-10-25 (Story 5.11b, Task 0.4)** — story file created
+> (`_bmad-output/implementation-artifacts/5-11b-alert-sms-real-send.md`, v1.2); its build decisions FS5–FS23 are DECIDED by
+> [`-404`](../../.decision-log.md#decision-2026-10-25-404) (author-commit; ⛔ Panel question). Two DEPARTURES from the summary above,
+> recorded, ⛔ edited: the member's language is read set-based AT THE PRODUCER (`COALESCE(preferred_locale, locale_default)`), ⛔ by
+> `getMemberLanguage`; and there is ⛔ per-member budget — a STRUCTURAL flood guard instead (at most one text per (alert, member,
+> occasion), six occasions per cycle). The send record is AT-MOST-ONCE. Go-live: roster Row 40. ⛔ Never a merge fence.
 
 ### Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
 

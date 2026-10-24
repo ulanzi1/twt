@@ -170,7 +170,17 @@ export type NomineeLinkPlan =
  * on both ranks after resolution (two keeps of one link, a keep and a new on one member, two news on one member) ⇒
  * `duplicate`. Every live link NOT carried ENDS: `redeclared` when its rank is vacated or given another mark, or when it sat
  * on a version that was not its rank's head (a correction, an innocence-finding unlock); `removed_by_declarer` when its rank
- * is re-saved WITHOUT a mark. A `keep` does ⛔ re-run eligibility (the target was eligible when marked).
+ * is re-saved WITHOUT a mark. A `keep` does ⛔ re-run eligibility (the target was eligible when marked). A `new` mark of a member
+ * already live on ANY rank is planned as a carry of that link, to the rank it is submitted on (code review 2026-10-24: a
+ * re-pick, a retried save or a move between ranks must ⛔ re-ask a member who answered).
+ *
+ * ⚠ DELIBERATE (checklist family 9): a `keep` does ⛔ re-run {@link knownPersonEligibleSql} — the target was eligible when the
+ * mark was made (NE5), and a mark on a member who has SINCE become ineligible (withdrawn, erased, reported dead) costs
+ * nothing: such a member is never among the five anyway, and the mark ends with the next save that drops it. Re-examine if
+ * the eligibility predicate ever gains a condition that must UN-mark a member the moment it turns false. What a `keep` can
+ * reveal is bounded by the link it names: a link that has ended (the member was erased, the declarer removed it) is `stale`
+ * — a 409 `link_stale`, the same answer whoever ended it — while a link still live answers the same 200 whatever the target
+ * member is today.
  */
 export function planNomineeLinks(
   live: readonly LiveNomineeLink[],
@@ -187,7 +197,16 @@ export function planNomineeLinks(
   for (const s of submitted) {
     if (s.link === null) continue;
     if (s.link.kind === 'new') {
-      inserts.push({ rank: s.rank, nomineeMemberId: s.link.nomineeMemberId!, carriedFrom: null, foundBy: s.link.foundBy });
+      // A `new` mark of a member ALREADY live (a re-pick, a retried save whose response was lost, or the mark moved to the other
+      // rank) is a CARRY: ending the answered link and asking again would drop their answer. A member is live on AT MOST one rank
+      // (a second link would have been refused as a `duplicate` by the save that made it), so one lookup finds the link. ⚠ The quota unit is
+      // ⛔ saved by it — the metering transaction charged it BEFORE the plan (it must, to bound the lookup that resolved this very
+      // member). ⚠ Cost, recorded (NE2 note): re-picking a member who ANSWERED gives their answer back and asks nobody — to
+      // ask again, remove the mark, save, and mark again. Two `new` marks of one member still plan two carries of ONE link ⇒ `duplicate`.
+      const marked = s.link.nomineeMemberId!;
+      const liveMember = live.find((l) => l.nomineeMemberId === marked);
+      if (liveMember !== undefined) inserts.push({ rank: s.rank, nomineeMemberId: liveMember.nomineeMemberId, carriedFrom: liveMember, foundBy: null });
+      else inserts.push({ rank: s.rank, nomineeMemberId: marked, carriedFrom: null, foundBy: s.link.foundBy });
     } else {
       const from = liveById.get(s.link.linkId.toLowerCase())!;
       inserts.push({ rank: s.rank, nomineeMemberId: from.nomineeMemberId, carriedFrom: from, foundBy: null });
@@ -496,23 +515,92 @@ export async function eraseNomineeLinks(db: Db, input: { pariwarId: PariwarId; m
     );
 }
 
+/** What the export says of a link's state: `live` or `ended` — an ERASED link reads `ended` (`2026-10-24-399` call 1 ← `-333` call 3(a)). */
+export type NomineeLinkExportState = Exclude<NomineeLinkState, 'erased'>;
+
 export interface NomineeLinkExportRow {
   readonly rank: NomineeRank;
   /** The version the link hangs off — joinable to the export's `nomineeHistory[]` by `(rank, versionNo)`. */
   readonly versionNo: number;
-  readonly state: NomineeLinkState;
+  readonly state: NomineeLinkExportState;
   readonly answer: NomineeLinkAnswer | null;
   readonly askedAt: Date;
   /** The OTHER member of the link (the marked member for `marked`, the declarer for `namedBy`) — the name source. */
   readonly otherMemberId: MemberId;
+  /** `true` ⇒ the member already SAW the other member's name, so the export may carry it (`2026-10-24-399` calls 2 and 3). */
+  readonly nameSeen: boolean;
 }
 
-/** The data export's two lists (NE10): the marks the member MADE (every row, any state) and the marks NAMING them. */
+/** One link row as the export read selects it — before {@link shapeNomineeLinkExport} applies what the member already saw. */
+export interface RawNomineeLinkExportRow {
+  readonly linkId: string;
+  readonly carriedFromLinkId: string | null;
+  readonly rank: NomineeRank;
+  readonly versionNo: number;
+  readonly state: NomineeLinkState;
+  readonly answer: NomineeLinkAnswer | null;
+  readonly askedAt: Date;
+  /** `true` ⇒ the member is the DECLARER (the row belongs on `marked`); `false` ⇒ the member is the marked one (`namedBy`). */
+  readonly asDeclarer: boolean;
+  readonly otherMemberId: MemberId;
+  /**
+   * `state = 'live'` AND no claim names the declarer AND the EXPORTING member can still be shown the request
+   * ({@link nomineeLinkAnswererSql} — a member who has since lapsed is listed ⛔ any request) — exactly the rows
+   * {@link listNomineeLinkRequests} shows the marked member. ⚠ So for a lapsed member a still-LIVE mark reads `ended`, with no
+   * name, until they renew (`-399` call 2's principal clause read literally — the enumerated rows do not name a lapsed viewer;
+   * BigDev, code review round 3: "keep and say it").
+   */
+  readonly listed: boolean;
+}
+
+/**
+ * ⭐ `2026-10-24-399` (extends `-333` call 3(a) and `-334` call 1 to 6.36e's lists) — the export says ⛔ more about the OTHER
+ * member than the app showed. PURE.
+ *   · BOTH lists: an erased link reads `ended`, never `erased`.
+ *   · `marked` (the declarer's own marks, one row per version — their own acts): the marked member's name only once they
+ *     CONFIRMED (`-309`); every other fact stays.
+ *   · `namedBy` (the marks naming the member): the declarer's name ONLY on a row the app lists to them (`listed`); a link
+ *     the declarer removed or corrected, one an erasure ended, a live one whose declarer a claim names, and a live one the
+ *     exporting member can no longer be shown (a lapsed membership — it reads `live`, with the name, once they renew) read
+ *     `ended` with ⛔ name; the member's own facts (`answer`, `askedAt`) stay. A mark CARRIED through re-saves is ONE row — the
+ *     chain's head, which carries the chain's `asked_at` — so the member cannot count the declarer's re-saves.
+ * ⚠ Residual on `marked`, RULED for 6.36b by `2026-10-15-335` call 2 (BigDev, option A): an erased OTHER member's stored name
+ * is the sentinel, so a confirmed `marked` row of an erased nominee has no name where a removed one has — the export still
+ * does not SAY "erased". That ruling does not reach the `namedBy` strip: there the name is dropped on purpose, by `-399`
+ * call 2 (BigDev's own extension of `-333` / `-334`), and the cost it records is that a name the member may have seen while
+ * the mark was live is not in the export.
+ */
+export function shapeNomineeLinkExport(rows: readonly RawNomineeLinkExportRow[]): { marked: NomineeLinkExportRow[]; namedBy: NomineeLinkExportRow[] } {
+  const readState = (state: NomineeLinkState): NomineeLinkExportState => (state === 'erased' ? 'ended' : state);
+  const marked: NomineeLinkExportRow[] = [];
+  const namedBy: NomineeLinkExportRow[] = [];
+  const named = rows.filter((r) => !r.asDeclarer);
+  const carriedOn = new Set(named.flatMap((r) => (r.carriedFromLinkId === null ? [] : [r.carriedFromLinkId])));
+  for (const r of rows) {
+    const common = { rank: r.rank, versionNo: r.versionNo, answer: r.answer, askedAt: r.askedAt, otherMemberId: r.otherMemberId };
+    if (r.asDeclarer) {
+      marked.push({ ...common, state: readState(r.state), nameSeen: r.answer === 'confirmed' });
+    } else if (!carriedOn.has(r.linkId)) {
+      // `listed` is the app's whole rule and already implies `live`; the state check is belt and braces — a name must never ride
+      // on a row that does not read `live`, and a row that reads `live` must be one the app lists.
+      const shown = r.listed && r.state === 'live';
+      namedBy.push({ ...common, state: shown ? 'live' : 'ended', nameSeen: shown });
+    }
+  }
+  return { marked, namedBy };
+}
+
+/** The data export's two lists (NE10): the marks the member MADE (every row, any state) and the marks NAMING them — shaped by {@link shapeNomineeLinkExport}. */
 export async function getNomineeLinksForExport(
   db: Db,
   input: { pariwarId: PariwarId; memberId: MemberId },
 ): Promise<{ marked: NomineeLinkExportRow[]; namedBy: NomineeLinkExportRow[] }> {
+  // `listed` is the app's rule for the request list, ONE more time: a live link, its declarer ⛔ named by a claim, and the READER still
+  // an answerer (`active` / `active-in-grace`, ⛔ named by a claim). A lapsed reader's live marks therefore read `ended` here, with no
+  // name, until they renew (`-399` call 2's principal clause, read literally) — see {@link shapeNomineeLinkExport}.
   const r = await db.execute<{
+    link_id: string;
+    carried_from_link_id: string | null;
     rank: number;
     version_no: number;
     state: NomineeLinkState;
@@ -520,26 +608,32 @@ export async function getNomineeLinksForExport(
     asked_at: Date | string;
     declarer_member_id: string;
     nominee_member_id: string;
+    listed: boolean;
   }>(sql`
-    SELECT l.rank, v.version_no, l.state, l.answer, l.asked_at, l.declarer_member_id, l.nominee_member_id
+    SELECT l.link_id, l.carried_from_link_id, l.rank, v.version_no, l.state, l.answer, l.asked_at, l.declarer_member_id, l.nominee_member_id,
+           (l.state = 'live' AND NOT ${namedByClaimSql(sql`l.pariwar_id`, sql`l.declarer_member_id`)}
+            AND EXISTS (SELECT 1 FROM members vm WHERE vm.pariwar_id = l.pariwar_id AND vm.member_id = ${input.memberId}
+                          AND ${nomineeLinkAnswererSql(sql`vm`)})) AS listed
       FROM member_nominee_links l
       JOIN member_nominee_versions v ON v.version_id = l.version_id
      WHERE l.pariwar_id = ${input.pariwarId}
        AND (l.declarer_member_id = ${input.memberId} OR l.nominee_member_id = ${input.memberId})
      ORDER BY l.asked_at, l.rank, v.version_no, l.link_id`); // one save's marks share `asked_at`: by rank, ⛔ by a random id
-  const marked: NomineeLinkExportRow[] = [];
-  const namedBy: NomineeLinkExportRow[] = [];
-  for (const row of r.rows) {
-    const asDeclarer = row.declarer_member_id === input.memberId;
-    const out: NomineeLinkExportRow = {
-      rank: row.rank as NomineeRank,
-      versionNo: row.version_no,
-      state: row.state,
-      answer: row.answer,
-      askedAt: asDate(row.asked_at),
-      otherMemberId: toMemberId(asDeclarer ? row.nominee_member_id : row.declarer_member_id),
-    };
-    (asDeclarer ? marked : namedBy).push(out);
-  }
-  return { marked, namedBy };
+  return shapeNomineeLinkExport(
+    r.rows.map((row) => {
+      const asDeclarer = row.declarer_member_id === input.memberId;
+      return {
+        linkId: row.link_id,
+        carriedFromLinkId: row.carried_from_link_id,
+        rank: row.rank as NomineeRank,
+        versionNo: row.version_no,
+        state: row.state,
+        answer: row.answer,
+        askedAt: asDate(row.asked_at),
+        asDeclarer,
+        otherMemberId: toMemberId(asDeclarer ? row.nominee_member_id : row.declarer_member_id),
+        listed: row.listed === true,
+      };
+    }),
+  );
 }

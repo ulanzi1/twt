@@ -13,6 +13,7 @@ import { KNOWN_NAMESPACES, classifyNamespace, getCatalog, t } from '../src/index
 const NS = 'nominee_link';
 const PARAMS: Record<string, Record<string, string | number>> = {
   'form.marked': { name: 'Meena K.' },
+  'form.will_ask': { name: 'Meena K.' },
   'label.confirmed': { name: 'Meena K.' },
   'edit.question': { name: 'Meena K.' },
   'note.body': { trust_name: 'Example Trust' },
@@ -66,6 +67,55 @@ describe('nominee_link copy (real t())', () => {
     expect(en('edit.remove')).toBe('Remove it');
     expect(en('form.remove')).toBe('Remove mark');
     expect(en('find.no_matches')).toBe('None of your contacts is a member — the number you gave above is still checked.');
+  });
+
+  it('the entry disclosure does ⛔ say "nobody is told" of a flow in which the marked member IS told (`-396` Q2 A; code review 2026-10-24)', () => {
+    for (const locale of ['en', 'hi'] as const) {
+      for (const key of ['note.body', 'note.body_no_name']) {
+        const out = t(key, key === 'note.body' ? PARAMS['note.body'] : undefined, { locale, namespace: NS });
+        // the check itself tells nobody …
+        expect(out, `${locale}:${key}`).toMatch(locale === 'en' ? /nobody is told that you checked/ : /आपने जाँच की है यह किसी को नहीं बताया जाता/);
+        // … and the flow's consequence is said in the same breath: they are asked in the app and see the declarer's name
+        expect(out, `${locale}:${key}`).toMatch(locale === 'en' ? /they will be asked in the app and will see your name/ : /उनसे ऐप में पूछा जाएगा और वे आपका नाम देखेंगे/);
+        expect(out, `${locale}:${key}`).not.toMatch(locale === 'en' ? /nobody is told\.$/ : /किसी को बताया नहीं जाता।$/);
+      }
+    }
+    // the declarer is told BEFORE saving, per mark, and the marked member is told what a "yes" shows
+    // … and says so honestly for a member who has ALREADY answered THIS mark (a carry — nobody is asked again), ⛔ more: a member
+    // whose earlier mark ENDED is asked again, so the line must not promise "unless they have already answered" in general
+    expect(t('form.will_ask', PARAMS['form.will_ask'], { locale: 'en', namespace: NS })).toBe(
+      'When you save, Meena K. will be asked in the app and will see your name. A member who has already answered this same mark is not asked again.',
+    );
+    expect(t('form.will_ask_no_name', undefined, { locale: 'en', namespace: NS })).toContain('A member who has already answered this same mark is not asked again.');
+    // Hindi carries the SAME qualifier (a clause that names "this same mark" — ⛔ the old blanket "if they have answered before")
+    for (const key of ['form.will_ask', 'form.will_ask_no_name']) {
+      const hi = t(key, key === 'form.will_ask' ? PARAMS['form.will_ask'] : undefined, { locale: 'hi', namespace: NS });
+      expect(hi, key).toContain('इसी चिह्न का जवाब पहले दे दिया है');
+      expect(hi, key).not.toContain('अगर वे पहले जवाब नहीं दे चुके हैं');
+    }
+    // the entry note says the act the flow performs: the NOMINEE is marked as a member (⛔ "mark someone as your nominee")
+    expect(t('note.body', PARAMS['note.body'], { locale: 'en', namespace: NS })).toContain('If you then mark your nominee as a member, they will be asked');
+    expect(t('note.body_no_name', undefined, { locale: 'en', namespace: NS })).not.toContain('mark someone as your nominee')
+    expect(t('note.body_no_name', undefined, { locale: 'en', namespace: NS })).toContain('If you then mark your nominee as a member, they will be asked')
+    // Hindi names the same act (the NOMINEE is marked as a member), ⛔ "mark someone as your nominee"
+    for (const key of ['note.body', 'note.body_no_name']) {
+      const hi = t(key, key === 'note.body' ? PARAMS['note.body'] : undefined, { locale: 'hi', namespace: NS })
+      expect(hi, key).toContain('अपने नामित व्यक्ति को सदस्य के रूप में चिह्नित करते हैं')
+      expect(hi, key).not.toContain('किसी को अपना नामित व्यक्ति चिह्नित करते हैं')
+    }
+    // the answers screen's "changed" line says the reload is UNDER WAY (the row's own line is `request.closed`)
+    expect(t('request.changed', undefined, { locale: 'en', namespace: NS })).toBe('This request has changed. The list is being reloaded.')
+    expect(t('request.changed', undefined, { locale: 'hi', namespace: NS })).toBe('यह अनुरोध बदल गया है। सूची फिर से लोड की जा रही है।');
+    expect(t('request.name_note', undefined, { locale: 'en', namespace: NS })).toBe('If you say yes, they will also see your name as the Trust has it.');
+  });
+
+  it('the empty state names the right act (named as a nominee AND marked as a member) — ⛔ "marked you as a member" alone', () => {
+    expect(t('request.empty', undefined, { locale: 'en', namespace: NS })).toBe('No member has named you as a nominee and marked you as a member.');
+  });
+
+  it('a single contact reads in the singular (`find.matches_count_one` — ⛔ "1 of your contacts are members")', () => {
+    expect(t('find.matches_count_one', undefined, { locale: 'en', namespace: NS })).toBe('1 of your contacts is a member.');
+    expect(t('find.matches_count', { count: 2 }, { locale: 'en', namespace: NS })).toBe('2 of your contacts are members.');
   });
 
   it('WCAG 2.5.3 — the pick button\'s accessible name BEGINS with its visible text (the saved name)', () => {

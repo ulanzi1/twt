@@ -363,7 +363,7 @@ export async function assembleMemberExport(
     knownPeopleLinks.named.length + knownPeopleLinks.namedBy.length + nomineeLinkRows.marked.length + nomineeLinkRows.namedBy.length === 0
       ? null
       : await resolvePublicNamePresentationMode(client, pariwarId);
-  const seenName = async (otherId: string): Promise<string | null> => {
+  const readSeenName = async (otherId: string): Promise<string | null> => {
     if (presentationMode === null) return null;
     const [other] = await client.select().from(memberKycProfiles).where(eq(memberKycProfiles.memberId, otherId as MemberId)).limit(1);
     if (other === undefined || other.nameCiphertext === null) return null;
@@ -376,6 +376,16 @@ export async function assembleMemberExport(
     if (stored === ANONYMIZED_SENTINEL) return null;
     const shown = resolveMemberFacingDeceasedName(presentationMode, stored).trim();
     return shown === '' ? null : shown;
+  };
+  // ONE read per other member: a mark carried through re-saves, or the same person on several lists, names them once.
+  const seenNames = new Map<string, Promise<string | null>>();
+  const seenName = (otherId: string): Promise<string | null> => {
+    let known = seenNames.get(otherId);
+    if (known === undefined) {
+      known = readSeenName(otherId);
+      seenNames.set(otherId, known);
+    }
+    return known;
   };
   // ⭐ `2026-10-15-333` call 3 — the export says ⛔ more about the OTHER member than the app showed: (a) a link the other
   // member's erasure ended reads `ended` on BOTH lists (⛔ `erased` — the app's row simply vanishes, SW14 (3)); (b) the
@@ -415,9 +425,12 @@ export async function assembleMemberExport(
   }
   const knownPeople = { named, namedBy };
 
-  // ── Story 6.36e (NE10, V25) — the nominee MARKS, each with ONLY the name the member already saw: on `marked` the marked
-  // member's once they CONFIRMED (`-309`), on `namedBy` the declarer's (the request showed it). Every state; ⛔ a member id,
-  // ⛔ a number. `(rank, versionNo)` joins a mark to `nomineeHistory[]`. ONE row at a time (one scoped client — above).
+  // ── Story 6.36e (NE10, V25) — the nominee MARKS, each with ONLY the name the member already saw. ⭐ `2026-10-24-399` (extends
+  // `-333` call 3(a) and `-334` call 1 to these lists): `getNomineeLinksForExport` has already read an ERASED link as `ended`,
+  // marked a name SEEN only where the app showed it (the marked member's once they CONFIRMED; the declarer's only on a `live`
+  // mark whose declarer no claim names), and collapsed a mark carried through re-saves to ONE `namedBy` row — so this block
+  // only resolves the names it was told the member saw. ⛔ a member id, ⛔ a number. `(rank, versionNo)` joins a mark to
+  // `nomineeHistory[]`. ONE row at a time (one scoped client — above).
   const marked = [];
   for (const l of nomineeLinkRows.marked) {
     marked.push({
@@ -426,12 +439,19 @@ export async function assembleMemberExport(
       state: l.state,
       answer: l.answer,
       askedAt: l.askedAt.toISOString(),
-      name: l.answer === 'confirmed' ? await seenName(l.otherMemberId) : null,
+      name: l.nameSeen ? await seenName(l.otherMemberId) : null,
     });
   }
+  // `namedBy`: a name rides only on a row the app lists to this member (`nameSeen`); a lapsed member's rows all read `ended`, no
+  // name, until they renew (`-399` call 2 — see `shapeNomineeLinkExport`).
   const markedBy = [];
   for (const l of nomineeLinkRows.namedBy) {
-    markedBy.push({ state: l.state, answer: l.answer, askedAt: l.askedAt.toISOString(), name: await seenName(l.otherMemberId) });
+    markedBy.push({
+      state: l.state,
+      answer: l.answer,
+      askedAt: l.askedAt.toISOString(),
+      name: l.nameSeen ? await seenName(l.otherMemberId) : null,
+    });
   }
   const nomineeLinks = { marked, namedBy: markedBy };
 

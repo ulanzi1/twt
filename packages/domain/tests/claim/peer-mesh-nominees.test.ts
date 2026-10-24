@@ -269,8 +269,9 @@ describe('Story 6.36e — peerMeshNomineeMatch, the marked-member half (NE7)', (
     const v1 = version(1, 'enc:a', new Date(BEFORE.getTime() - 86_400_000));
     const v2 = version(1, 'enc:a', BEFORE);
     const [a, b] = [nominee(), nominee()];
-    // `a` was marked on v1 and ended when v2 was saved without carrying it; `b` was marked on v2.
-    expect(peerMeshNomineeLinkedMembersAsOf([v1, v2], [link(v1, a, BEFORE), link(v2, b)], CUT.cut)).toEqual([b]);
+    // `a`'s link is left LIVE on the superseded v1 (`endedAt: null` — ⛔ `BEFORE`, which the `endedAt < cut` check would exclude on
+    // its own and leave this leg green without the projection filter); `b` was marked on v2, the version projected at the cut.
+    expect(peerMeshNomineeLinkedMembersAsOf([v1, v2], [link(v1, a), link(v2, b)], CUT.cut)).toEqual([b]);
   });
 
   it('a vacated rank counts ⛔ link; both ranks count; one member is listed once', () => {
@@ -278,7 +279,8 @@ describe('Story 6.36e — peerMeshNomineeMatch, the marked-member half (NE7)', (
     const r2v1 = version(2, 'enc:b', new Date(BEFORE.getTime() - 86_400_000));
     const r2v2 = version(2, null, BEFORE); // the tombstone
     const a = nominee();
-    expect(peerMeshNomineeLinkedMembersAsOf([r1, r2v1, r2v2], [link(r1, a), link(r2v1, nominee(), BEFORE)], CUT.cut)).toEqual([a]);
+    // (the vacated rank's link is `endedAt: null` — see above: only the projection can exclude it)
+    expect(peerMeshNomineeLinkedMembersAsOf([r1, r2v1, r2v2], [link(r1, a), link(r2v1, nominee())], CUT.cut)).toEqual([a]);
     const r2 = version(2, 'enc:c', BEFORE);
     const b = nominee();
     expect(peerMeshNomineeLinkedMembersAsOf([r1, r2], [link(r1, a), link(r2, b)], CUT.cut).sort()).toEqual([a, b].sort());

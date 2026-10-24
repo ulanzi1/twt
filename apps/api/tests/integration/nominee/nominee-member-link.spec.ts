@@ -25,7 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { kmsEventToAuditInput } from '../../../src/audit/audit-log-sink.js';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
-import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { signAccessToken, signPariwarSelect, signSignupContinuation } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
@@ -367,9 +367,14 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     const graceful = await declarer(p, 'active-in-grace');
     const eligible = nextMobile();
     await member(p, { mobile: eligible, name: 'Fine' });
+    kmsLines.length = 0;
     const gate = await call('POST', LIFE_EVENTS, { tok: token(graceful, p), payload: body(mark(eligible)) });
     expect(gate.status).toBe(422);
     bodies.push(sameBody(gate));
+    // NE5 / TR14 — the gate refuses BEFORE the HMAC: ⛔ HMAC line. THIS is what proves the order. The counter assertion proves
+    // only that a refused charge leaves ⛔ row (it rolls back whatever its position — it cannot go RED if the HMAC moved earlier).
+    expect(hmacLines()).toEqual([]);
+    expect((await t.pool.query(`SELECT 1 FROM member_daily_counters WHERE member_id = $1 AND counter = 'nominee_link_resolve'`, [graceful])).rows).toEqual([]);
     for (const b of bodies) expect(b).toEqual({ code: CODES.linkNotFound, message: bodies[0]!['message'] });
   });
 
@@ -390,6 +395,39 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     expect(code(fifth)).toBe(CODES.linkDailyLimit);
     expect(kmsLines).toEqual([]); // ⛔ ANY KMS call — the refusal comes before the HMAC and the encryption
     expect((await t.pool.query(`SELECT count FROM member_daily_counters WHERE member_id = $1 AND counter = 'nominee_link_resolve'`, [d])).rows).toEqual([{ count: 4 }]);
+  });
+
+  it('AC3 / code review 2026-10-24 — the refusals that need no lookup spend ⛔ budget: an unusable number, a missing step-up, a locked declaration; the OTP retry charges ONCE', async () => {
+    const p = randomUUID();
+    const d = await declarer(p);
+    const mobile = nextMobile();
+    await member(p, { mobile, name: 'One' });
+    const tok = token(d, p);
+    const counter = async () => (await t.pool.query(`SELECT count FROM member_daily_counters WHERE member_id = $1 AND counter = 'nominee_link_resolve'`, [d])).rows;
+    // an unusable number ⇒ the ONE 422, decided BEFORE the charge
+    const junk = await call('POST', LIFE_EVENTS, { tok, payload: body(mark('0000000000')) });
+    expect(junk.status).toBe(422);
+    expect(code(junk)).toBe(CODES.linkNotFound);
+    expect(await counter()).toEqual([]);
+    // the first-ever declaration needs no step-up; every later save is a re-declaration that does
+    expect((await call('POST', LIFE_EVENTS, { tok, payload: body(null) })).status).toBe(200);
+    await t.pool.query(`DELETE FROM member_step_up_elevations WHERE member_id = $1`, [d]);
+    kmsLines.length = 0;
+    const stepUp = await call('POST', LIFE_EVENTS, { tok, payload: body(mark(mobile)) });
+    expect(stepUp.status).toBe(403);
+    expect(code(stepUp)).toBe('auth.step_up_required');
+    expect(await counter()).toEqual([]); // ⛔ charged — the OTP retry below is the FIRST charge
+    expect(hmacLines()).toEqual([]);
+    expect(await links(d)).toEqual([]);
+    await memberAuthRepo.insertElevation(t.deps.pool, { memberId: d, actionContext: 'nominee_change', elevatedUntil: new Date(Date.now() + 10 * 60 * 1000) });
+    expect((await call('POST', LIFE_EVENTS, { tok, payload: body(mark(mobile)) })).status).toBe(200);
+    expect(await counter()).toEqual([{ count: 1 }]); // ONE mark, charged ONCE across the step-up round trip
+    // a claim has locked the declaration ⇒ 409, ⛔ charged
+    await fileClaim(p, d);
+    const locked = await call('POST', LIFE_EVENTS, { tok, payload: body(mark(mobile)) });
+    expect(locked.status).toBe(409);
+    expect(code(locked)).toBe('nominee.locked_claim_filed');
+    expect(await counter()).toEqual([{ count: 1 }]);
   });
 
   it('AC3 / V11 — an `active-in-grace` declarer\'s KEEP and plain re-save succeed (⛔ gated)', async () => {
@@ -560,6 +598,94 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
   });
 
   // ── AC2 / NE3 — contact matching for a nominee ─────────────────────────────────────────────────────────────────────
+
+  it('family 12(a) — a `keep` naming ANOTHER declarer\'s real live link ⇒ 409 `nominee.link_stale`; ⛔ write; the other\'s link untouched', async () => {
+    const p = randomUUID();
+    const [d1, d2] = [await declarer(p), await declarer(p)];
+    const mobile = nextMobile();
+    await member(p, { mobile, name: 'One' });
+    expect((await call('POST', LIFE_EVENTS, { tok: token(d1, p), payload: body(mark(mobile)) })).status).toBe(200);
+    const theirs = (await live(d1))[0]!;
+    const before = await links(d1);
+    const r = await call('POST', LIFE_EVENTS, { tok: token(d2, p), payload: body(keep(theirs.link_id)) });
+    expect(r.status).toBe(409);
+    expect(code(r)).toBe(CODES.linkStale);
+    expect(await links(d2)).toEqual([]);
+    expect(await links(d1)).toEqual(before); // ⛔ carried, ⛔ ended
+  });
+
+  it('family 3 — the answer route denies a missing token, a token of the WRONG KIND, a non-member principal and ANOTHER Pariwar\'s member; the link stays open', async () => {
+    const p = randomUUID();
+    const q = randomUUID(); // another Pariwar, with its own active member
+    const d = await declarer(p);
+    await member(p, { id: d, mobile: nextMobile(), name: 'Declarer Devi' });
+    const mobile = nextMobile();
+    await member(p, { mobile, name: 'Meena Kumari' });
+    const outsider = await member(q, { mobile: nextMobile(), name: 'Elsewhere' });
+    expect((await call('POST', LIFE_EVENTS, { tok: token(d, p), payload: body(mark(mobile)) })).status).toBe(200);
+    const linkId = (await live(d))[0]!.link_id;
+    const url = `${REQUESTS}/${linkId}/answer`;
+    const wrongKinds = [
+      signSignupContinuation(t.app, { mobileBlindIndex: `idx-${randomUUID()}`, jti: randomUUID() }, ACCESS_TTL_MS),
+      signPariwarSelect(t.app, { mobileBlindIndex: `idx-${randomUUID()}`, deviceId: 'test-device', jti: randomUUID() }, ACCESS_TTL_MS),
+    ];
+    expect((await call('POST', url, { payload: { answer: 'yes' }, key: randomUUID() })).status).toBe(401);
+    for (const tok of wrongKinds) expect((await call('POST', url, { tok, payload: { answer: 'yes' }, key: randomUUID() })).status).toBe(401);
+    // a session for a member that is not a member of this Pariwar's roster at all ⇒ the ONE 403
+    const ghost = await call('POST', url, { tok: token(randomUUID(), p), payload: { answer: 'yes' }, key: randomUUID() });
+    expect(ghost.status).toBe(403);
+    expect(code(ghost)).toBe(CODES.notAvailable);
+    // an ACTIVE member of ANOTHER Pariwar passes the gate there, and finds nothing here
+    const cross = await call('POST', url, { tok: token(outsider, q), payload: { answer: 'yes' }, key: randomUUID() });
+    expect(cross.status).toBe(404);
+    expect(code(cross)).toBe(CODES.notFound);
+    expect((await call('GET', REQUESTS, { tok: token(outsider, q) })).body).toMatchObject({ items: [] });
+    expect(await live(d)).toMatchObject([{ link_id: linkId, answer: null }]); // ⛔ answered by any of them
+  });
+
+  it('family 11 — a marked member in renewal GRACE sees the request and can answer it (the answerer gate admits `active-in-grace`)', async () => {
+    const p = randomUUID();
+    const d = await declarer(p);
+    await member(p, { id: d, mobile: nextMobile(), name: 'Declarer Devi' });
+    const mobile = nextMobile();
+    const b = await member(p, { state: 'active-in-grace', mobile, name: 'Meena Kumari' });
+    expect((await call('POST', LIFE_EVENTS, { tok: token(d, p), payload: body(mark(mobile)) })).status).toBe(200); // eligible to be marked
+    const linkId = (await live(d))[0]!.link_id;
+    const tokB = token(b, p);
+    expect((await call('GET', REQUESTS, { tok: tokB })).body).toMatchObject({ items: [{ linkId, answer: null }] });
+    const yes = await call('POST', `${REQUESTS}/${linkId}/answer`, { tok: tokB, payload: { answer: 'yes' }, key: randomUUID() });
+    expect(yes).toMatchObject({ status: 200, body: { linkId, answer: 'confirmed' } });
+  });
+
+  it('family 2 — TWO connections: two answers to one link ⇒ exactly one 200 and one 409, ONE answer written; two concurrent saves of one mark ⇒ one live link', async () => {
+    const p = randomUUID();
+    const d = await declarer(p);
+    await member(p, { id: d, mobile: nextMobile(), name: 'Declarer Devi' });
+    const mobile = nextMobile();
+    const b = await member(p, { mobile, name: 'Meena Kumari' });
+    const tokD = token(d, p);
+    // two saves of the SAME mark at once: serialised by the D3 lock; the second sees the first's link and CARRIES it
+    const saves = await Promise.all([call('POST', LIFE_EVENTS, { tok: tokD, payload: body(mark(mobile)) }), call('POST', LIFE_EVENTS, { tok: tokD, payload: body(mark(mobile)) })]);
+    expect(saves.map((r) => r.status)).toEqual([200, 200]);
+    expect(await live(d)).toHaveLength(1);
+    // … and the second one CARRIED the first's link (`planNomineeLinks`: a `new` mark of the member already live on that rank) —
+    // ⛔ ended it and asked again: under the old planner BOTH rows have no `carried_from_link_id` and this fails
+    const both = await links(d);
+    expect(both).toHaveLength(2);
+    expect(both.filter((l) => l.carried_from_link_id !== null)).toHaveLength(1);
+    expect(both.filter((l) => l.state === 'ended')).toMatchObject([{ end_reason: 'redeclared' }]);
+    const linkId = (await live(d))[0]!.link_id;
+    const tokB = token(b, p);
+    const answers = await Promise.all([
+      call('POST', `${REQUESTS}/${linkId}/answer`, { tok: tokB, payload: { answer: 'yes' }, key: randomUUID() }),
+      call('POST', `${REQUESTS}/${linkId}/answer`, { tok: tokB, payload: { answer: 'not_me' }, key: randomUUID() }),
+    ]);
+    expect(answers.map((r) => r.status).sort()).toEqual([200, 409]);
+    const winner = answers.find((r) => r.status === 200)!;
+    const loser = answers.find((r) => r.status === 409)!;
+    expect(code(loser)).toBe(CODES.requestClosed);
+    expect((await live(d))[0]!.answer).toBe(winner.body['answer'] === 'confirmed' ? 'confirmed' : 'not_me');
+  });
 
   it('NE3 / V12 — contact matching with `purpose: nominee_link` logs its OWN KMS purpose; the SAME daily counter as 6.36b', async () => {
     const p = randomUUID();

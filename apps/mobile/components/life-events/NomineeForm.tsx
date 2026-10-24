@@ -16,7 +16,9 @@
 // confirmed — the registered name / said it is not them) and is re-sent as a `keep`; *Remove mark* sends ⛔ mark (the live
 // one ENDS); the find screen sets a new one. Editing a marked slot's name or mobile asks *"Is this still …?"* BEFORE the
 // save — a swap of the two nominees must ⛔ silently carry a mark onto the wrong person (V3). The marks ride the slot state,
-// so the parent's draft keeps them.
+// so the parent's draft keeps them — and so does the QUESTION: it is DERIVED from the mark (`markNeedsQuestion` — the slot no
+// longer matches what the mark was confirmed for), ⛔ held in this component, because a remount (a pick on the other slot, a
+// stale reload, a resumed draft) used to reset it (code review 2026-10-24).
 
 import { useState } from 'react'
 // Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
@@ -36,7 +38,8 @@ import { useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { useNomineeLinkT } from '../../lib/nominee-link-i18n'
-import { markName, markToSubmit, type FormMark, type NomineeRank } from '../../lib/nominee-links'
+import { acceptMark, completeMarkName, markName, markNeedsQuestion, markToSubmit, type FormMark, type NomineeRank } from '../../lib/nominee-links'
+import { AnnouncedText } from '../peer-request/announce'
 
 /**
  * The nominee-relationship value set — the Trustee-ratified TWENTY (`2026-09-27-257`, Story 6.19a
@@ -100,6 +103,18 @@ export function NomineeForm(props: NomineeFormProps) {
   const t = useT()
   const lt = useNomineeLinkT()
   const [inlineError, setInlineError] = useState<string | null>(null)
+  // A sequence, so a REPEATED identical refusal is spoken again (the `AnnouncedText` key — see the error line below).
+  const [errorSeq, setErrorSeq] = useState(0)
+  const fail = (text: string): void => {
+    setInlineError(text)
+    setAnswerFirst(false)
+    setErrorSeq((n) => n + 1)
+  }
+  // "Answer the question about the member mark first" is ⛔ stored as text: it is SHOWN only while a question is still open (a
+  // refusal that outlived the question — the edit reverted, the slot removed — stood red and spoken over a form that was fine).
+  const [answerFirst, setAnswerFirst] = useState(false)
+  // Story 6.36e — a status the form SPEAKS (a mark removed): the buttons vanish with it, so a screen reader needs the words.
+  const [notice, setNotice] = useState<{ text: string; seq: number } | null>(null)
   // `initialForms` restores a persisted draft (Life Events save-and-resume). It is read ONCE here;
   // the parent forces a fresh read of a later-arriving draft by remounting via a changed `key` prop
   // (so this stays a simple uncontrolled form rather than syncing props→state on every render).
@@ -108,33 +123,48 @@ export function NomineeForm(props: NomineeFormProps) {
   )
 
   const hasSecond = forms.length === 2
-  // Story 6.36e — per slot: an OPEN "Is this still …?" question (a marked slot's name or mobile was edited).
-  const [questions, setQuestions] = useState<readonly boolean[]>([false, false])
-  const ask = (index: number, open: boolean) => setQuestions((q) => q.map((v, i) => (i === index ? open : v)))
-
   function commit(next: NomineeFormEntry[]): void {
+    // "Answer the question … first" belongs to the Save that produced it: ANY edit, *Keep the mark* or *Remove it* ends it — it must
+    // ⛔ come back, unspoken-for, when a later edit reopens the question.
+    setAnswerFirst(false)
     setForms(next)
     props.onFormsChange?.(next)
     props.onEdit?.()
   }
 
   function patch(index: number, field: 'name' | 'relationship' | 'mobile' | 'address', value: string): void {
-    if (props.link && (field === 'name' || field === 'mobile') && forms[index]?.memberLink) ask(index, true)
-    commit(forms.map((f, i) => (i === index ? { ...f, [field]: value } : f)))
+    setNotice(null) // "Mark removed." said what happened — ⛔ left standing once the member edits on
+    commit(
+      forms.map((f, i) => {
+        if (i !== index) return f
+        const next = { ...f, [field]: value }
+        // A pick made on a slot with no name is COMPLETED by the name typed next — ⛔ asked about (see `completeMarkName`).
+        return field === 'name' ? completeMarkName(f, next) : next
+      }),
+    )
   }
 
   /** Story 6.36e — *Remove mark* (or *Remove it* on the question): the slot carries ⛔ mark; a live one ENDS at save. */
   function removeMark(index: number): void {
-    ask(index, false)
+    setInlineError(null)
+    setNotice({ text: lt('form.removed'), seq: Date.now() })
     commit(forms.map((f, i) => (i === index ? { ...f, memberLink: null } : f)))
   }
 
+  /** Story 6.36e — *Keep the mark*: the member said it is still the same person; the mark is confirmed for the slot as it is. */
+  function keepMark(index: number): void {
+    setInlineError(null)
+    setNotice({ text: lt('form.kept'), seq: Date.now() }) // the question closes with ⛔ words otherwise — SPOKEN, like a removal
+    commit(forms.map((f, i) => (i === index ? acceptMark(f) : f)))
+  }
+
   function addSecond(): void {
-    if (forms.length === 1) commit([...forms, { ...EMPTY }])
+    // Life Events: a slot the form ADDS carries `null` (⛔ mark) — ⛔ `undefined`, which a reload would read as "a draft from
+    // before this story" and give the rank's OLD live mark to the new person (code review 2026-10-24).
+    if (forms.length === 1) commit([...forms, props.link ? { ...EMPTY, memberLink: null } : { ...EMPTY }])
   }
 
   function removeSecond(): void {
-    ask(1, false)
     commit(forms.slice(0, 1))
   }
 
@@ -158,15 +188,18 @@ export function NomineeForm(props: NomineeFormProps) {
     // channel carries submit/transport failures. Both surface in the single alert region below.
     const validationError = firstValidationError()
     if (validationError) {
-      setInlineError(validationError)
+      fail(validationError)
       return
     }
     // Story 6.36e (V3) — ⛔ a save while a mark's "Is this still …?" is unanswered.
-    if (props.link && questions.some((open, i) => open && i < forms.length)) {
-      setInlineError(lt('edit.answer_first'))
+    if (props.link && forms.some(markNeedsQuestion)) {
+      setInlineError(null)
+      setAnswerFirst(true)
+      setErrorSeq((n) => n + 1)
       return
     }
     setInlineError(null)
+    setAnswerFirst(false)
     const nominees: NomineeSubmitEntry[] = forms.map((f) => {
       const memberLink = props.link ? markToSubmit(f.memberLink) : undefined
       return {
@@ -180,17 +213,22 @@ export function NomineeForm(props: NomineeFormProps) {
     props.onSubmit(nominees)
   }
 
-  const shownError = inlineError ?? props.error
+  const questionOpen = !!props.link && forms.some(markNeedsQuestion)
+  const shownError = inlineError ?? (answerFirst && questionOpen ? lt('edit.answer_first') : null) ?? props.error
 
   /**
    * Story 6.36e — one slot's member mark: its label, *Remove mark*, the find entry, and the open edit question. A render
    * FUNCTION, ⛔ a component declared in here (a new component type each render would remount its buttons — focus lost).
    */
-  function markControl(index: number, mark: FormMark | null): React.ReactElement | null {
+  function markControl(index: number, slot: NomineeFormEntry): React.ReactElement | null {
     const link = props.link!
+    const mark: FormMark | null = slot.memberLink ?? null
     if (mark === null && !link.canFind) return null
     const name = mark ? markName(mark) : null
     const rank = (index + 1) as NomineeRank
+    // Two slots share these words: each button also says WHICH nominee (it begins with its visible text — WCAG 2.5.3).
+    const which = index === 0 ? t('nominees.primary_label') : t('nominees.secondary_label')
+    const labelled = (text: string) => `${text} — ${which}`
     return (
       <YStack gap="$2" testID={`nominee-mark-${index}`}>
         {mark === null ? null : (
@@ -209,17 +247,19 @@ export function NomineeForm(props: NomineeFormProps) {
             {mark.kind === 'keep' && mark.label === 'not_me' ? <Text accessibilityRole="text">{lt('label.not_me_note')}</Text> : null}
           </>
         )}
+        {mark !== null && mark.kind === 'new' ? (
+          <Paragraph accessibilityRole="text">{name ? lt('form.will_ask', { name }) : lt('form.will_ask_no_name')}</Paragraph>
+        ) : null}
         <Paragraph accessibilityRole="text">{lt('form.why')}</Paragraph>
-        {mark !== null && questions[index] ? (
+        {mark !== null && markNeedsQuestion(slot) ? (
           <YStack gap="$2" testID={`nominee-mark-question-${index}`}>
-            <Text accessibilityRole="text" accessibilityLiveRegion="polite">
-              {name ? lt('edit.question', { name }) : lt('edit.question_no_name')}
-            </Text>
+            {/* SHOWN and SPOKEN (family 13(d)): a bare live region is Android-only — `AnnouncedText` speaks it on iOS too. */}
+            <AnnouncedText text={name ? lt('edit.question', { name }) : lt('edit.question_no_name')} color="$color" />
             <XStack gap="$2">
-              <Button size="$3" accessibilityRole="button" accessibilityLabel={lt('edit.keep')} onPress={() => ask(index, false)}>
+              <Button size="$3" accessibilityRole="button" accessibilityLabel={labelled(lt('edit.keep'))} onPress={() => keepMark(index)}>
                 {lt('edit.keep')}
               </Button>
-              <Button size="$3" accessibilityRole="button" accessibilityLabel={lt('edit.remove')} onPress={() => removeMark(index)}>
+              <Button size="$3" accessibilityRole="button" accessibilityLabel={labelled(lt('edit.remove'))} onPress={() => removeMark(index)}>
                 {lt('edit.remove')}
               </Button>
             </XStack>
@@ -231,14 +271,14 @@ export function NomineeForm(props: NomineeFormProps) {
               size="$3"
               chromeless
               accessibilityRole="button"
-              accessibilityLabel={mark === null ? lt('form.find') : lt('form.find_again')}
+              accessibilityLabel={labelled(mark === null ? lt('form.find') : lt('form.find_again'))}
               onPress={() => link.onFind(rank)}
             >
               {mark === null ? lt('form.find') : lt('form.find_again')}
             </Button>
           ) : null}
           {mark !== null ? (
-            <Button size="$3" chromeless accessibilityRole="button" accessibilityLabel={lt('form.remove')} onPress={() => removeMark(index)}>
+            <Button size="$3" chromeless accessibilityRole="button" accessibilityLabel={labelled(lt('form.remove'))} onPress={() => removeMark(index)}>
               {lt('form.remove')}
             </Button>
           ) : null}
@@ -324,7 +364,7 @@ export function NomineeForm(props: NomineeFormProps) {
             accessibilityHint={t('nominees.address_help')}
           />
 
-          {props.link ? markControl(index, f.memberLink ?? null) : null}
+          {props.link ? markControl(index, f) : null}
         </YStack>
       ))}
 
@@ -356,10 +396,17 @@ export function NomineeForm(props: NomineeFormProps) {
 
       {props.footer}
 
+      {props.link && notice ? <AnnouncedText key={notice.seq} text={notice.text} color="$color" /> : null}
+
       {shownError ? (
-        <Text color="#C0392B" accessibilityRole="alert" accessibilityLiveRegion="assertive">
-          {shownError}
-        </Text>
+        props.link ? (
+          // Life Events: SHOWN and SPOKEN on iOS too (a bare `alert` role / live region is Android-only — `announce.tsx`).
+          <AnnouncedText key={`${errorSeq}:${shownError}`} text={shownError} kind="error" color="#C0392B" />
+        ) : (
+          <Text color="#C0392B" accessibilityRole="alert" accessibilityLiveRegion="assertive">
+            {shownError}
+          </Text>
+        )
       ) : null}
 
       <Button

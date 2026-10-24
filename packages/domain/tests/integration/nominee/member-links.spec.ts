@@ -13,7 +13,9 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { memberId as toMemberId, pariwarId as toPariwarId, type MemberId, type NomineeLinkId, type PariwarId } from '../../../src/ids/index.js';
-import { readDatabaseClock } from '../../../src/nominee/declaration-history.js';
+import { peerMeshNomineeLinkedMembersAsOf } from '../../../src/claim/peer-mesh-nominees.js';
+import { peerMeshFilingCut } from '../../../src/claim/peer-mesh-read.js';
+import { listNomineeDeclarationVersions, readDatabaseClock } from '../../../src/nominee/declaration-history.js';
 import {
   NOMINEE_LINK_RESOLVES_PER_DAY,
   NomineeLinkCursorInvalidError,
@@ -312,6 +314,50 @@ describe.skipIf(!hasDatabase)('Story 6.36e — the nominee member link, the doma
       expect(await row(r.applied.asked[0]!.linkId)).toMatchObject({ state: 'erased' });
     });
 
+    it('the writer-to-reader seam (code review 2026-10-24): what `applyNomineeLinkPlan` WRITES is what the exclusion READS — a live mark and a carried one count; one a re-save dropped does not', async () => {
+      const { p, a, b } = await scene();
+      const { tx } = getTx();
+      // the cut of a filing TOMORROW — every save below is before it, so the version AND the link's real `ended_at` (the save's
+      // instant, stamped by the writer) decide the read; the forged-row legs of the snapshot spec cover a link ended AT the cut
+      const cut = peerMeshFilingCut(new Date(Date.now() + 2 * 86_400_000)).cut;
+      const readers = async () => {
+        const versions = await listNomineeDeclarationVersions(tx, p, a);
+        return peerMeshNomineeLinkedMembersAsOf(versions, await listNomineeLinksOfVersions(tx, p, versions.map((v) => v.versionId as never)), cut);
+      };
+      expect(await readers()).toEqual([]); // nothing written yet
+      const first = await save(p, a, [mark(b)]);
+      if (first.kind !== 'applied') throw new Error(first.reason);
+      expect(await readers()).toEqual([b]); // the live mark
+      const kept = await save(p, a, [{ kind: 'keep', linkId: first.applied.asked[0]!.linkId }]);
+      if (kept.kind !== 'applied') throw new Error(kept.reason);
+      expect(await readers()).toEqual([b]); // carried onto the new head version: still ONE member, ⛔ twice
+      // THE WRITER'S STAMP (what the forged-row legs of the snapshot spec cannot show): the old link ends AT the save's instant
+      expect((await row(first.applied.asked[0]!.linkId))['ended_at']).toEqual(kept.recordedAt);
+      const dropped = await save(p, a, [null]);
+      if (dropped.kind !== 'applied') throw new Error(dropped.reason);
+      // ⚠ this last read is decided by the VERSION PROJECTION (the dropped link sits on a superseded version — it would be
+      // excluded whatever its `ended_at` said); the stamp is asserted on its own below
+      expect(await readers()).toEqual([]);
+      expect(await row(kept.applied.carried[0]!.linkId)).toMatchObject({ state: 'ended', end_reason: 'removed_by_declarer' });
+      expect((await row(kept.applied.carried[0]!.linkId))['ended_at']).toEqual(dropped.recordedAt);
+    });
+
+    it('a retried save (or a re-pick) of the SAME member on the same rank keeps their answer and `asked_at` — ⛔ re-asked (code review 2026-10-24)', async () => {
+      const { p, a, b } = await scene();
+      const first = await save(p, a, [mark(b)]);
+      if (first.kind !== 'applied') throw new Error(first.reason);
+      const original = first.applied.asked[0]!.linkId;
+      await answerNomineeLinkRequest(getTx().tx, { pariwarId: p, nomineeMemberId: b, linkId: original, answer: 'confirmed' });
+      const again = await save(p, a, [mark(b)]); // the SAME body once more — a `new` mark of the member already live on rank 1
+      if (again.kind !== 'applied') throw new Error(again.reason);
+      expect(again.applied.asked).toEqual([]);
+      expect(again.applied.carried).toHaveLength(1);
+      expect(await row(original)).toMatchObject({ state: 'ended', end_reason: 'redeclared' });
+      const carried = await row(again.applied.carried[0]!.linkId);
+      expect(carried).toMatchObject({ state: 'live', answer: 'confirmed', carried_from_link_id: original });
+      expect(carried['asked_at']).toEqual((await row(original))['asked_at']);
+    });
+
     it('the export: `marked` (every row, joinable by `(rank, versionNo)`) for the declarer, `namedBy` for the marked member', async () => {
       const { p, a, b } = await scene();
       const first = await save(p, a, [mark(b)]);
@@ -327,10 +373,125 @@ describe.skipIf(!hasDatabase)('Story 6.36e — the nominee member link, the doma
       ]);
       const theirs = await getNomineeLinksForExport(tx, { pariwarId: p, memberId: b });
       expect(theirs.marked).toEqual([]);
-      expect(theirs.namedBy.map((m) => [m.state, m.otherMemberId])).toEqual([
-        ['ended', a],
-        ['live', a],
-      ]);
+      // `2026-10-24-399` call 3 — the mark carried by the re-save is ONE row for the marked member (not `ended` + `live`)
+      expect(theirs.namedBy.map((m) => [m.state, m.nameSeen, m.otherMemberId])).toEqual([['live', true, a]]);
+    });
+
+    it('the export names the declarer only to a member who can still be SHOWN the request (`-399` call 2): a nominee who has since LAPSED gets ⛔ name — and the same row reads `live`, with it, once they renew', async () => {
+      await getTx().client.query('RESET ROLE'); // seeds as the owner, ⛔ under an earlier scope
+      const p = toPariwarId(randomUUID());
+      const a = await member(p);
+      const lapsed = await member(p, 'lapsed-unpaid'); // marked while active in real life; the writer takes the id as given
+      const active = await member(p);
+      await enterAppScope(getTx().client, p);
+      const { tx } = getTx();
+      const first = await save(p, a.id, [mark(lapsed.id), mark(active.id)]);
+      if (first.kind !== 'applied') throw new Error(first.reason);
+      // the declarer's link to each is `live` and no claim names them — only the VIEWER differs
+      expect((await getNomineeLinksForExport(tx, { pariwarId: p, memberId: lapsed.id })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['ended', false]]);
+      expect((await getNomineeLinksForExport(tx, { pariwarId: p, memberId: active.id })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['live', true]]);
+      // the link itself is still `live` (it keeps them out of the five — `-396` Q1 A); only the READER decides what the export says
+      expect((await row(first.applied.asked[0]!.linkId))['state']).toBe('live');
+      // RENEWAL: the same link, read by the same member, now lists — `live`, with the declarer's name
+      await asOwner(p, async () => {
+        await getTx().client.query(`SET LOCAL app.member_state_writer = 'on'`); // the projector's guard (0018) — a seed, ⛔ a product path
+        await getTx().client.query(`UPDATE members SET state = 'active' WHERE member_id = $1`, [lapsed.id]);
+        await getTx().client.query(`SET LOCAL app.member_state_writer = 'off'`);
+      });
+      expect((await getNomineeLinksForExport(tx, { pariwarId: p, memberId: lapsed.id })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['live', true]]);
+    });
+
+    it('the export\'s `nameSeen` rows are EXACTLY the rows the app lists to the marked member (the SQL `listed` is a copy of `listNomineeLinkRequests`\'s predicate)', async () => {
+      const { p, a, b } = await scene();
+      await getTx().client.query('RESET ROLE');
+      const [removed, claimNamed, chained, erased] = [await member(p), await member(p), await member(p), await member(p)];
+      await enterAppScope(getTx().client, p);
+      const { tx } = getTx();
+      const listed = await save(p, a, [mark(b)]); // live, listed
+      const r1 = await save(p, removed.id, [mark(b)]);
+      const r2 = await save(p, removed.id, [null]); // removed
+      const c1 = await save(p, claimNamed.id, [mark(b)]); // live, but its declarer is named by a claim (below)
+      const k1 = await save(p, chained.id, [mark(b)]); // a chain of three: mark, keep, keep
+      if (listed.kind !== 'applied' || r1.kind !== 'applied' || r2.kind !== 'applied' || c1.kind !== 'applied' || k1.kind !== 'applied') throw new Error('seed');
+      const k2 = await save(p, chained.id, [{ kind: 'keep', linkId: k1.applied.asked[0]!.linkId }]);
+      if (k2.kind !== 'applied') throw new Error(k2.reason);
+      const k3 = await save(p, chained.id, [{ kind: 'keep', linkId: k2.applied.carried[0]!.linkId }]);
+      if (k3.kind !== 'applied') throw new Error(k3.reason);
+      const e1 = await save(p, erased.id, [mark(b)]);
+      if (e1.kind !== 'applied') throw new Error(e1.reason);
+      await eraseNomineeLinks(tx, { pariwarId: p, memberId: erased.id });
+      await asOwner(p, () => seedClaim(getTx().tx, p, { deceasedMemberId: claimNamed.id }));
+
+      const shown = (await listNomineeLinkRequests(tx, { pariwarId: p, nomineeMemberId: b })).items.map((i) => i.declarerMemberId as string).sort();
+      const exported = (await getNomineeLinksForExport(tx, { pariwarId: p, memberId: b })).namedBy;
+      expect(shown).toEqual([a as string, chained.id as string].sort()); // the sanity half: the list shows the plain live mark and the chain's head
+      expect(exported.filter((m) => m.nameSeen).map((m) => m.otherMemberId as string).sort()).toEqual(shown);
+      // one row per declarer (the chain collapsed to ONE), the rest read `ended`
+      expect(exported).toHaveLength(5);
+      expect(exported.filter((m) => !m.nameSeen).every((m) => m.state === 'ended')).toBe(true);
+    });
+
+    it('the export says no more than the app showed (`2026-10-24-399`): a removed mark, an erased declarer and a claim-named declarer read `ended` with no name; an erased nominee reads `ended`', async () => {
+      const { tx } = getTx();
+      // a mark the declarer REMOVED before the marked member ever opened the app
+      const removed = await scene();
+      const r1 = await save(removed.p, removed.a, [mark(removed.b)]);
+      if (r1.kind !== 'applied') throw new Error(r1.reason);
+      const r2 = await save(removed.p, removed.a, [null]);
+      if (r2.kind !== 'applied') throw new Error(r2.reason);
+      expect((await row(r1.applied.asked[0]!.linkId))['end_reason']).toBe('removed_by_declarer');
+      expect((await getNomineeLinksForExport(tx, { pariwarId: removed.p, memberId: removed.b })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['ended', false]]);
+
+      // a LIVE mark whose declarer a claim names (the list hides it — V13)
+      const dead = await scene();
+      const d1 = await save(dead.p, dead.a, [mark(dead.b)]);
+      if (d1.kind !== 'applied') throw new Error(d1.reason);
+      expect((await getNomineeLinksForExport(tx, { pariwarId: dead.p, memberId: dead.b })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['live', true]]);
+      await asOwner(dead.p, () => seedClaim(getTx().tx, dead.p, { deceasedMemberId: dead.a }));
+      expect((await row(d1.applied.asked[0]!.linkId))['state']).toBe('live');
+      expect((await getNomineeLinksForExport(tx, { pariwarId: dead.p, memberId: dead.b })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['ended', false]]);
+
+      // the DECLARER erased ⇒ the marked member's export reads `ended`, no name (the answer they gave stays)
+      const gone = await scene();
+      const g1 = await save(gone.p, gone.a, [mark(gone.b)]);
+      if (g1.kind !== 'applied') throw new Error(g1.reason);
+      await answerNomineeLinkRequest(tx, { pariwarId: gone.p, nomineeMemberId: gone.b, linkId: g1.applied.asked[0]!.linkId, answer: 'confirmed' });
+      await eraseNomineeLinks(tx, { pariwarId: gone.p, memberId: gone.a });
+      expect((await row(g1.applied.asked[0]!.linkId))['state']).toBe('erased');
+      expect((await getNomineeLinksForExport(tx, { pariwarId: gone.p, memberId: gone.b })).namedBy.map((m) => [m.state, m.answer, m.nameSeen])).toEqual([['ended', 'confirmed', false]]);
+
+      // the NOMINEE erased ⇒ the DECLARER's `marked[]` reads `ended` (⛔ `erased`); the answer stays, and so does the declarer's own row
+      const nomineeGone = await scene();
+      const n1 = await save(nomineeGone.p, nomineeGone.a, [mark(nomineeGone.b)]);
+      if (n1.kind !== 'applied') throw new Error(n1.reason);
+      await answerNomineeLinkRequest(tx, { pariwarId: nomineeGone.p, nomineeMemberId: nomineeGone.b, linkId: n1.applied.asked[0]!.linkId, answer: 'confirmed' });
+      await eraseNomineeLinks(tx, { pariwarId: nomineeGone.p, memberId: nomineeGone.b });
+      expect((await row(n1.applied.asked[0]!.linkId))['state']).toBe('erased');
+      expect((await getNomineeLinksForExport(tx, { pariwarId: nomineeGone.p, memberId: nomineeGone.a })).marked.map((m) => [m.rank, m.versionNo, m.state, m.answer])).toEqual([[1, 1, 'ended', 'confirmed']]);
+
+      // a nominee a claim NAMES cannot be shown the request either (`nomineeLinkAnswererSql`) — their mark reads `ended`, ⛔ name
+      const named = await scene();
+      const m1 = await save(named.p, named.a, [mark(named.b)]);
+      if (m1.kind !== 'applied') throw new Error(m1.reason);
+      expect((await getNomineeLinksForExport(tx, { pariwarId: named.p, memberId: named.b })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['live', true]]);
+      await asOwner(named.p, () => seedClaim(getTx().tx, named.p, { deceasedMemberId: named.b }));
+      expect((await getNomineeLinksForExport(tx, { pariwarId: named.p, memberId: named.b })).namedBy.map((m) => [m.state, m.nameSeen])).toEqual([['ended', false]]);
+    });
+
+    it('a mark MOVED to the other rank keeps the member\'s answer and `asked_at` — ⛔ re-asked (code review round 3)', async () => {
+      const { p, a, b } = await scene();
+      const first = await save(p, a, [mark(b), null]);
+      if (first.kind !== 'applied') throw new Error(first.reason);
+      const original = first.applied.asked[0]!.linkId;
+      await answerNomineeLinkRequest(getTx().tx, { pariwarId: p, nomineeMemberId: b, linkId: original, answer: 'confirmed' });
+      const moved = await save(p, a, [null, mark(b)]); // rank 1 vacated, the same member marked afresh on rank 2
+      if (moved.kind !== 'applied') throw new Error(moved.reason);
+      expect(moved.applied.asked).toEqual([]);
+      expect(moved.applied.carried).toHaveLength(1);
+      expect(await row(original)).toMatchObject({ state: 'ended', end_reason: 'redeclared' });
+      const carried = await row(moved.applied.carried[0]!.linkId)
+      expect(carried).toMatchObject({ state: 'live', rank: 2, answer: 'confirmed', carried_from_link_id: original })
+      expect(carried['asked_at']).toEqual((await row(original))['asked_at']) // the date they were first asked travels with the answer;
     });
   });
 });

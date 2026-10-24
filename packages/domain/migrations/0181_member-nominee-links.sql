@@ -19,7 +19,7 @@
 -- ⚠ FKs: `version_id` → versions is NO ACTION (TR3): versions are deleted only by the `members` cascade, which also cascades
 -- the link through `declarer_member_id`, and NO ACTION is checked at statement end. ⛔ SET NULL — it would UPDATE the link,
 -- which the guard refuses. Member FKs are SINGLE-COLUMN (6.36a SF14) and `member_nominee_versions` has ⛔ composite UNIQUE a
--- composite FK would need ⇒ the version's rank / declarer / Pariwar are checked by the BEFORE INSERT function (4).
+-- composite FK would need ⇒ the version's rank / declarer / Pariwar are checked by the BEFORE INSERT function (3).
 -- Statement order: CREATE → FKs → CHECKs → GRANT → ENABLE → FORCE → POLICY → indexes → functions → triggers (0119, 0162).
 -- Per-command policies; ⛔ no DELETE grant or policy, ⛔ never `FOR ALL`.
 

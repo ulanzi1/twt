@@ -4,11 +4,15 @@
 // strings (the 6.36b rule). A 4xx is ⛔ retried. The requests list keeps the server's DENIAL (`nominee_link.not_available`)
 // AS DATA, so it stands until the next successful fetch (6.36b fix-diff review E1). The answer is a per-call `mutateAsync`
 // ([[project_tanstack_mutate_callbacks_latest_only]]) with its own Idempotency-Key.
+// ⭐ Code review 2026-10-24: every read is BOUNDED by 6.36b's `withReadTimeout` (the API client has no transport timeout, and a
+// stalled marks read would hold the whole nominee form on a spinner); a timeout is ⛔ retried; and the answer's `onSettled` does
+// ⛔ RETURN the invalidate (`mutateAsync` awaits what `onSettled` returns — a stalled refetch left the buttons busy forever).
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@twt/api-client'
 
-import { DENIED_NOMINEE_LINK_REQUESTS_PAGE } from '../../lib/nominee-links'
+import { KnownPeopleReadTimeout, withReadTimeout } from '../known-people/useKnownPeopleQueries'
+import { DENIED_NOMINEE_LINK_REQUESTS_PAGE, withRequestAnswered, type RequestPagesData } from '../../lib/nominee-links'
 import { nomineeLinksApi } from '../../lib/nominee-links-api'
 import { useSession } from '../../lib/session-context'
 import { NOMINEE_LINKS_CACHE_OPTIONS, NOMINEE_LINKS_MUTATION_OPTIONS, nomineeLinkRequestsKey, nomineeLinksKey } from './nominee-links-cache'
@@ -20,8 +24,9 @@ function useIds() {
   return { pariwarId, memberId, ready: typeof pariwarId === 'string' && typeof memberId === 'string' }
 }
 
-/** ⛔ A 4xx is retried (a refusal settles at once); anything else twice. */
+/** ⛔ A 4xx is retried (a refusal settles at once); ⛔ a timeout (it would only wait as long again); anything else twice. */
 export function retryNomineeLinks(failureCount: number, error: unknown): boolean {
+  if (error instanceof KnownPeopleReadTimeout) return false
   if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false
   return failureCount < 2
 }
@@ -37,7 +42,7 @@ export function useNomineeLinksQuery(opts: { enabled?: boolean } = {}) {
   return useQuery({
     ...NOMINEE_LINKS_CACHE_OPTIONS,
     queryKey: nomineeLinksKey(pariwarId, memberId),
-    queryFn: ({ signal }) => nomineeLinksApi.links({ signal }),
+    queryFn: ({ signal }) => withReadTimeout(signal, (s) => nomineeLinksApi.links({ signal: s })),
     enabled: ready && opts.enabled !== false,
     retry: retryNomineeLinks,
   })
@@ -59,7 +64,9 @@ export function useNomineeLinkRequestsQuery() {
     ...NOMINEE_LINKS_CACHE_OPTIONS,
     queryKey: nomineeLinkRequestsKey(pariwarId, memberId),
     queryFn: ({ pageParam, signal }) =>
-      fetchNomineeLinkRequestsPage(() => nomineeLinksApi.requests(pageParam !== undefined ? { cursor: pageParam } : {}, { signal })),
+      fetchNomineeLinkRequestsPage(() =>
+        withReadTimeout(signal, (s) => nomineeLinksApi.requests(pageParam !== undefined ? { cursor: pageParam } : {}, { signal: s })),
+      ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: ready,
@@ -74,6 +81,13 @@ export function useNomineeLinkAnswer() {
   return useMutation({
     ...NOMINEE_LINKS_MUTATION_OPTIONS,
     mutationFn: (v: { linkId: string; answer: 'yes' | 'not_me'; idempotencyKey: string }) => nomineeLinksApi.answer(v.linkId, v.answer, v.idempotencyKey),
-    onSettled: () => qc.invalidateQueries({ queryKey: nomineeLinkRequestsKey(pariwarId, memberId) }),
+    // The cached row is marked answered the moment the server confirms it (the home card reads the same cache) …
+    onSuccess: (res) => {
+      qc.setQueryData(nomineeLinkRequestsKey(pariwarId, memberId), (old: unknown) => withRequestAnswered(old as RequestPagesData | undefined, res.linkId, res.answer))
+    },
+    // … ⛔ returned: the refetch runs on in the background, the outcome is shown at once.
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: nomineeLinkRequestsKey(pariwarId, memberId) })
+    },
   })
 }

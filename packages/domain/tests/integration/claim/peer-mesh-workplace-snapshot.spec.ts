@@ -792,7 +792,7 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       expect(ids(await snapshot(t.w.p, t.dead, { linked: await linkedAsOf(t.w.p, t.dead) }))).toEqual([t.ok]);
     });
 
-    it('the staff line (AC7, Q1 A): an ANSWER inside the window does ⛔ set it; a linked re-save inside it does', async () => {
+    it('the staff line (AC7, Q1 A): an ANSWER inside the window does ⛔ set it; a re-save of a linked mark does — through the VERSION it writes; a link row ALONE does ⛔', async () => {
       const s = await scene(before(100));
       await nomineeLink(s.w.p, s.dead, s.v1, s.nominee, { askedAt: before(100), answer: 'confirmed', respondedAt: before(10) });
       await fileClaim(s.w.p, s.dead);
@@ -803,7 +803,14 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
       const v2 = await nomineeVersion(t.w.p, t.dead, before(10), 1, 2);
       await nomineeLink(t.w.p, t.dead, v2, t.nominee, { askedAt: before(100), carriedFrom: old });
       await fileClaim(t.w.p, t.dead);
-      expect((await snapshot(t.w.p, t.dead)).recentChangeBeforeFiling).toBe(true);
+      expect((await snapshot(t.w.p, t.dead)).recentChangeBeforeFiling).toBe(true); // 6.36d's disjunct: the new VERSION, ⛔ the link
+
+      // The line reads VERSIONS, ⛔ links (code review 2026-10-24: the leg above is true with no link code at all — the re-save
+      // writes a version): a link row asked INSIDE the window on a version recorded before it, with ⛔ save, sets nothing.
+      const u = await scene(before(100));
+      await nomineeLink(u.w.p, u.dead, u.v1, u.nominee, { askedAt: before(10) });
+      await fileClaim(u.w.p, u.dead);
+      expect((await snapshot(u.w.p, u.dead)).recentChangeBeforeFiling).toBe(false);
     });
   });
 

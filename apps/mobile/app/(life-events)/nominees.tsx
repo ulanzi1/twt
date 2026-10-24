@@ -10,6 +10,14 @@
 // restores the same way (TR9). The find screen hands its pick back through memory (`takeNomineeLinkPick`, on focus) and the
 // keyed form remounts with it. A 409 `nominee.link_stale` reloads the marks and asks for the save again. Each mark refusal
 // is its own `nominee_link.*` message.
+// Code review 2026-10-24: the DRAFT is stored redacted (⛔ another member's registered name, ⛔ the name a contact was saved
+// under — `redactForDraft`; the marks are re-read on restore); the form is gated on the marks being KNOWN (`links.data`), ⛔ on
+// `isLoading` (a disabled query is neither loading nor errored — and a form without them ends every live mark); a failed marks
+// read says so with a Retry that stays mounted while it runs (TanStack v5 resets an errored query to pending); a 409 reload
+// that FAILED says it did not reload; the pick is SPOKEN (the form remounts, so focus resets).
+// Round 3 (2026-10-24): the pick line stores the NAME and is translated at render (a language change re-words it), is cleared by
+// every remount that is ⛔ a pick (a stale reload, *Continue draft* — it would otherwise describe a slot that is gone), and sits
+// inside the screen's gutter.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
@@ -31,13 +39,16 @@ import { clearDraft, loadDraft, saveDraft } from '../../components/life-events/d
 import { useStepUpGate } from '../../components/life-events/useStepUpGate'
 import { useSession } from '../../lib/session-context'
 import { useKnownPeoplePromptsQuery } from '../../components/known-people/useKnownPeopleQueries'
+import { AnnouncedText } from '../../components/peer-request/announce'
 import { errorCodeOf, useNomineeLinksQuery } from '../../components/nominee-links/useNomineeLinkQueries'
 import { useNomineeLinkT } from '../../lib/nominee-link-i18n'
 import {
   applyPick,
   clearNomineeLinkSession,
   freshSlotCount,
+  markName,
   reconcileMarks,
+  redactForDraft,
   saveRefusalCopyKey,
   takeNomineeLinkPick,
   type NomineeRank,
@@ -67,12 +78,24 @@ export default function LifeEventsNomineesScreen() {
   const canFind = prompts.data?.canNamePeople === true
   const latestForms = useRef<NomineeFormEntry[] | null>(null)
   const [formKey, setFormKey] = useState(0)
+  // The pick, SPOKEN (the form remounts with it, so focus resets and the new label alone is silent); a failed marks read's Retry.
+  const [pickNotice, setPickNotice] = useState<{ name: string | null; seq: number } | null>(null)
+  const [retrying, setRetrying] = useState(false)
+  async function retryLinks(): Promise<void> {
+    setRetrying(true)
+    try {
+      await links.refetch()
+    } finally {
+      setRetrying(false)
+    }
+  }
   /** Remount the keyed form with `forms` (a draft continued, a pick, a stale reload) — and keep the draft in step. */
   function remountWith(forms: NomineeFormEntry[]): void {
+    setPickNotice(null) // a pick sets it AFTER this; every other remount replaces the slots it described
     latestForms.current = forms
     setInitialForms(forms)
     setFormKey((k) => k + 1)
-    saveDraft(memberId, DRAFT_KEY, forms)
+    saveDraft(memberId, DRAFT_KEY, redactForDraft(forms))
   }
   /** The slots a fresh form starts with: EMPTY, each carrying its rank's live mark as a `keep`. */
   const freshForms = (): NomineeFormEntry[] =>
@@ -84,7 +107,9 @@ export default function LifeEventsNomineesScreen() {
       if (pick === null) return
       const base = latestForms.current ?? initialForms ?? freshForms()
       if (pick.rank > base.length) return
-      remountWith(applyPick(base, pick.rank, pick.mark))
+      const applied = applyPick(base, pick.rank, pick.mark)
+      remountWith(applied)
+      setPickNotice({ name: markName(pick.mark), seq: Date.now() })
       // reads the latest slots through the ref; re-created when the slots it falls back to change
     }, [initialForms, links.data]),
   )
@@ -153,7 +178,12 @@ export default function LifeEventsNomineesScreen() {
     }
     if (code === 'nominee.link_stale') {
       const fresh = await links.refetch()
-      if (fresh.data) remountWith(reconcileMarks(latestForms.current ?? initialForms ?? freshForms(), fresh.data.links))
+      // A FAILED reload keeps the old data (TanStack): ⛔ claim "reloaded" over it — say it did not.
+      if (fresh.isError || fresh.data === undefined) {
+        setError(lt('save.stale_not_reloaded'))
+        return
+      }
+      remountWith(reconcileMarks(latestForms.current ?? initialForms ?? freshForms(), fresh.data.links))
     }
     setError(lt(key))
   }
@@ -224,7 +254,8 @@ export default function LifeEventsNomineesScreen() {
 
   // ⭐ Until the status read answers, ⛔ no editable form (code review 2026-09-24): it used to flash the
   // form — the very "form that 409s on submit" the locked state exists to avoid.
-  if (status.isLoading || links.isLoading) {
+  const marksKnown = links.data !== undefined
+  if (status.isLoading || (!marksKnown && !links.isError && !retrying)) {
     return (
       <>
         <Stack.Screen options={{ title: t('lifeEvents.nominees_label') }} />
@@ -285,22 +316,35 @@ export default function LifeEventsNomineesScreen() {
           </YStack>
         ) : null}
         {/* Story 6.36e — ⛔ a form without the marks read: a save would end every live mark. Said, with a Retry. */}
-        {links.isError ? (
+        {!marksKnown ? (
           <YStack px="$6" pt="$6" gap="$2" testID="nominee-links-error">
-            <Text accessibilityRole="alert" accessibilityLiveRegion="polite">
-              {lt('error.load')}
-            </Text>
-            <Button chromeless height={40} accessibilityRole="button" accessibilityLabel={lt('retry')} onPress={() => void links.refetch()}>
-              {lt('retry')}
+            {/* Keyed by the last failure: the line stays mounted through a retry, so a SECOND failure is spoken again. */}
+            <AnnouncedText key={links.errorUpdatedAt} text={lt('error.load')} kind="error" color="#C0392B" />
+            {/* Stays MOUNTED while the retry runs (v5 resets the errored query to pending) — focus is ⛔ dropped. */}
+            <Button
+              chromeless
+              height={40}
+              disabled={retrying}
+              accessibilityRole="button"
+              accessibilityLabel={lt('retry')}
+              accessibilityState={{ disabled: retrying, busy: retrying }}
+              onPress={() => void retryLinks()}
+            >
+              {retrying ? <Spinner /> : lt('retry')}
             </Button>
           </YStack>
         ) : null}
-        {resumeAvailable && !links.isError ? (
+        {resumeAvailable && marksKnown ? (
           <YStack px="$6" pt="$6">
             <SaveAndResumeAffordance onContinue={onContinueDraft} onStartFresh={onStartFresh} />
           </YStack>
         ) : null}
-        {links.isError ? null : (
+        {pickNotice ? (
+          <YStack px="$6" pt="$4">
+            <AnnouncedText key={pickNotice.seq} text={pickNotice.name ? lt('form.marked', { name: pickNotice.name }) : lt('form.marked_no_name')} color="$color" />
+          </YStack>
+        ) : null}
+        {!marksKnown ? null : (
         <NomineeForm
           key={`form-${formKey}`}
           title={t('lifeEvents.nominees_label')}
@@ -312,9 +356,12 @@ export default function LifeEventsNomineesScreen() {
           initialForms={initialForms ?? freshForms()}
           onFormsChange={(forms) => {
             latestForms.current = forms
-            saveDraft(memberId, DRAFT_KEY, forms)
+            saveDraft(memberId, DRAFT_KEY, redactForDraft(forms))
           }}
-          onEdit={() => setError(null)}
+          onEdit={() => {
+            setError(null)
+            setPickNotice(null) // the line said what the pick did — ⛔ left standing once the form changes
+          }}
           footer={stepUpFooter}
           link={{
             canFind,

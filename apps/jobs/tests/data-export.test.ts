@@ -196,7 +196,7 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
   it('⭐ Story 6.36e (NE10, AC8) — a member who MARKED nominees and is MARKED by another: the strict-parsed profile carries `nomineeLinks` on BOTH sides, a name only where the member saw one', async () => {
     const enc = fakeEncryption();
     const { memberId, pariwarId, exportId } = await seedPendingExport();
-    const [confirmedB, askedD, declarerC] = [randomUUID(), randomUUID(), randomUUID()];
+    const [confirmedB, askedD, declarerC, erasedE, removedF, chainG, erasedH] = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()];
     try {
       await withPariwarScope(pool, pariwarId, async (_tx, client) => {
         const name = (v: string) => encryption.encryptKycField(v, pariwarId, { ...enc, hmacKeyRef: enc.kekRef })
@@ -204,6 +204,10 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
           [confirmedB, 'Meena Kumari'],
           [askedD, 'Sita Devi'],
           [declarerC, 'Ravi Kumar'],
+          [erasedE, 'Geeta Rani'],
+          [removedF, 'Farah Khan'],
+          [chainG, 'Gopal Das'],
+          [erasedH, '[anonymized]'], // an ERASED nominee: their stored name IS the sentinel (`anonymizeMember`)
         ] as const) {
           await client.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [id, pariwarId]);
           await client.query(
@@ -217,14 +221,14 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
           encryption.serializeEnvelope(
             await encryption.encryptTier1(Buffer.from(v, 'utf-8'), { pariwarId, fieldClass: encryption.MEMBER_NOMINEE_FIELD_CLASS }, enc.kms, enc.kekRef),
           )
-        const version = async (member: string, rank: number) =>
+        const version = async (member: string, rank: number, versionNo = 1, recordedAt = '2026-01-01T00:00:00Z') =>
           (
             await client.query<{ version_id: string }>(
               `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
                                                     relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
-               VALUES ($1, $2, $3, 1, gen_random_uuid(), 'declared', 'member', $4, 'spouse', $5, $6, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')
+               VALUES ($1, $2, $3, $7, gen_random_uuid(), 'declared', 'member', $4, 'spouse', $5, $6, $8::timestamptz, $8::timestamptz)
                RETURNING version_id`,
-              [member, pariwarId, rank, await nomineeField('Nominee Name'), await nomineeField('9876543210'), rank === 1 ? 75 : 25],
+              [member, pariwarId, rank, await nomineeField('Nominee Name'), await nomineeField('9876543210'), rank === 1 ? 75 : 25, versionNo, recordedAt],
             )
           ).rows[0]!.version_id
         const link = (declarer: string, versionId: string, rank: number, nominee: string, confirmed: boolean) =>
@@ -236,6 +240,37 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
         await link(memberId, await version(memberId, 1), 1, confirmedB, true)
         await link(memberId, await version(memberId, 2), 2, askedD, false)
         await link(declarerC, await version(declarerC, 1), 1, memberId, false)
+        // `2026-10-24-399` — a declarer whose ERASURE ended a mark naming the member: it exports as `ended`, ⛔ `erased`, ⛔ name
+        await client.query(
+          `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, asked_at, state, ended_at, end_reason)
+           VALUES ($1, $2, $3, 1, $4, 'contacts', '2025-12-01T00:00:00Z', 'erased', '2026-01-03T00:00:00Z', 'erased')`,
+          [pariwarId, erasedE, await version(erasedE, 1), memberId],
+        )
+        // A mark the declarer REMOVED within minutes: the member's app never listed it — `ended`, ⛔ name, the word ⛔ `removed`.
+        await client.query(
+          `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, asked_at, state, ended_at, end_reason)
+           VALUES ($1, $2, $3, 1, $4, 'contacts', '2025-11-01T00:00:00Z', 'ended', '2025-11-01T00:05:00Z', 'removed_by_declarer')`,
+          [pariwarId, removedF, await version(removedF, 1), memberId],
+        )
+        // A mark CARRIED through a re-save (v1 ended `redeclared`, v2 live, `asked_at` copied): ONE row for the member — ⛔ the
+        // declarer's re-save count — and, being listed, the declarer's name.
+        const g1 = await client.query<{ link_id: string }>(
+          `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, asked_at, state, ended_at, end_reason)
+           VALUES ($1, $2, $3, 1, $4, 'contacts', '2025-10-01T00:00:00Z', 'ended', '2025-10-02T00:00:00Z', 'redeclared') RETURNING link_id`,
+          [pariwarId, chainG, await version(chainG, 1, 1, '2025-10-01T00:00:00Z'), memberId],
+        )
+        await client.query(
+          `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, carried_from_link_id, asked_at)
+           VALUES ($1, $2, $3, 1, $4, 'contacts', $5, '2025-10-01T00:00:00Z')`,
+          [pariwarId, chainG, await version(chainG, 1, 2, '2025-10-02T00:00:00Z'), memberId, g1.rows[0]!.link_id],
+        )
+        // The member's OWN mark of a nominee who then ERASED their account (a confirmed answer): `ended` — ⛔ `erased` — and, the
+        // stored name being the sentinel, none (the residual `-335` call 2 accepted for 6.36b, extended by `-399`).
+        await client.query(
+          `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, answer, asked_at, responded_at, state, ended_at, end_reason)
+           VALUES ($1, $2, $3, 1, $4, 'contacts', 'confirmed', '2026-01-05T00:00:00Z', '2026-01-05T01:00:00Z', 'erased', '2026-01-06T00:00:00Z', 'erased')`,
+          [pariwarId, memberId, await version(memberId, 1, 2, '2026-01-05T00:00:00Z'), erasedH],
+        )
       });
       const envelope: JobEnvelope<{ exportId: string }> = { requestId: randomUUID(), pariwarId, actorId: memberId, traceId: randomUUID(), payload: { exportId } };
       // the build STRICT-parses every section against its contract (`ProfileSection` included) — a shape drift fails here
@@ -249,16 +284,27 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
       expect(marked.map((m) => [m.rank, m.versionNo, m.state, m.answer])).toEqual([
         [1, 1, 'live', 'confirmed'],
         [2, 1, 'live', null],
+        [1, 2, 'ended', 'confirmed'], // the erased NOMINEE: `ended`, ⛔ `erased`
       ]);
       expect(marked[0]!.name).toMatch(/^Meena/); // confirmed ⇒ the registered name the member was shown
       expect(marked[1]!.name).toBeNull(); // ⛔ confirmed ⇒ ⛔ name (`-309`)
-      expect(namedBy).toHaveLength(1);
-      expect(namedBy[0]).toMatchObject({ state: 'live', answer: null });
-      expect(namedBy[0]!.name).toMatch(/^Ravi/); // the declarer's name — the request showed it
+      expect(marked[2]!.name).toBeNull(); // the stored name is the sentinel — the residual `-335` call 2 accepted
+      // oldest ask first: the carried chain (ONE row), the removed mark, the erased declarer, the live one
+      expect(namedBy.map((m) => [m.state, m.answer])).toEqual([
+        ['live', null], // chainG — v1 `redeclared` + v2 live ⇒ ONE row, the head, listed
+        ['ended', null], // removedF — removed within minutes
+        ['ended', null], // erasedE — the declarer's erasure
+        ['live', null], // declarerC
+      ]);
+      expect(namedBy.map((m) => m.name)).toEqual([expect.stringMatching(/^Gopal/), null, null, expect.stringMatching(/^Ravi/)]);
       const json = JSON.stringify(profile.nomineeLinks);
-      for (const id of [confirmedB, askedD, declarerC]) expect(json).not.toContain(id); // ⛔ a member id
+      expect(json).not.toContain('erased');
+      expect(json).not.toContain('removed');
+      expect(json).not.toContain('redeclared');
+      for (const who of ['Geeta', 'Farah', 'anonymized']) expect(json).not.toContain(who);
+      for (const id of [confirmedB, askedD, declarerC, erasedE, removedF, chainG, erasedH]) expect(json).not.toContain(id); // ⛔ a member id
     } finally {
-      await pool.query(`DELETE FROM members WHERE member_id = ANY($1::uuid[])`, [[memberId, confirmedB, askedD, declarerC]]);
+      await pool.query(`DELETE FROM members WHERE member_id = ANY($1::uuid[])`, [[memberId, confirmedB, askedD, declarerC, erasedE, removedF, chainG, erasedH]]);
     }
   });
   // Live-DB suite timeout: these tests run several sequential live-DB round-trips (setup +

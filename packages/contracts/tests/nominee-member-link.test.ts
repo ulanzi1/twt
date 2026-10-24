@@ -107,8 +107,9 @@ describe('the export — `ProfileSection.nomineeLinks` (NE10, V25)', () => {
   const lists = ProfileSection.shape.nomineeLinks;
   const mark = { rank: 1, versionNo: 2, state: 'live', answer: 'confirmed', askedAt: AT, name: 'Meena K.' };
 
-  it('`marked` joins `nomineeHistory[]` by (rank, versionNo); every state; the name nullable; strict', () => {
-    for (const state of ['live', 'ended', 'erased']) expect(lists.safeParse({ marked: [{ ...mark, state }], namedBy: [] }).success).toBe(true);
+  it('`marked` joins `nomineeHistory[]` by (rank, versionNo); `live` | `ended` — ⛔ `erased` (2026-10-24-399); the name nullable; strict', () => {
+    for (const state of ['live', 'ended']) expect(lists.safeParse({ marked: [{ ...mark, state }], namedBy: [] }).success).toBe(true);
+    expect(lists.safeParse({ marked: [{ ...mark, state: 'erased' }], namedBy: [] }).success).toBe(false); // an erasure is ⛔ a state the export says
     expect(lists.safeParse({ marked: [{ ...mark, answer: null, name: null }], namedBy: [] }).success).toBe(true);
     expect(lists.safeParse({ marked: [{ ...mark, rank: 3 }], namedBy: [] }).success).toBe(false);
     expect(lists.safeParse({ marked: [{ ...mark, memberId: LINK }], namedBy: [] }).success).toBe(false); // ⛔ a member id
@@ -117,6 +118,10 @@ describe('the export — `ProfileSection.nomineeLinks` (NE10, V25)', () => {
   it('`namedBy` carries ⛔ rank / version (the declarer\'s declaration is ⛔ the member\'s data); strict; both lists REQUIRED', () => {
     const by = { state: mark.state, answer: mark.answer, askedAt: mark.askedAt, name: mark.name };
     expect(lists.safeParse({ marked: [], namedBy: [{ ...by, answer: null }] }).success).toBe(true);
+    // `2026-10-24-399` — an `ended` mark naming the member carries ⛔ the declarer's name (they never saw it listed); `erased` is not a state
+    expect(lists.safeParse({ marked: [], namedBy: [{ ...by, state: 'ended', name: null }] }).success).toBe(true);
+    expect(lists.safeParse({ marked: [], namedBy: [{ ...by, state: 'ended' }] }).success).toBe(false);
+    expect(lists.safeParse({ marked: [], namedBy: [{ ...by, state: 'erased', name: null }] }).success).toBe(false);
     expect(lists.safeParse({ marked: [], namedBy: [mark] }).success).toBe(false);
     expect(lists.safeParse({ marked: [] }).success).toBe(false);
   });

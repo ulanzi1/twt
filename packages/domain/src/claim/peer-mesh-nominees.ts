@@ -9,7 +9,7 @@
 // event or job payload — an index, a plaintext or a rank (AC8). A KMS fault or an unreadable envelope THROWS — ⛔ never `[]`
 // (ND6: the callers fail CLOSED and alarm).
 // ⚠ ND8 — the DATA-MODEL GAP BigDev accepted (G18): a nominee who is a member is found ONLY if the declared number is the number
-// they SIGNED UP with; the system records ⛔ member link for a nominee.
+// they SIGNED UP with; the system records ⛔ member link for a nominee. (As built in 6.36d — Story 6.36e, below, narrows it.)
 // ⭐ Story 6.36e (`2026-10-24-397` NE7 — NARROWS ND8 in part): a declarer may now MARK a nominee as a member
 // (`member_nominee_links`, hung off the version). The SAME `inScope` read also takes the links on the as-of-cut versions, so the
 // predicate matches a marked nominee by ACCOUNT as well — DB only, ⛔ KMS for the link half.

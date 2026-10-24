@@ -124,10 +124,19 @@ const KnownPeopleNamedByExportLink = z
  * Story 6.36e (NE10, V25) — the nominee MARKS: on `marked[]` each mark the member set on a nominee (every state — a link hangs
  * off a VERSION, so `(rank, versionNo)` joins it to `nomineeHistory[]`); on `namedBy[]` each mark NAMING the member. `name` is
  * ONLY what the member already saw: on `marked[]` the marked member's registered name once they CONFIRMED (`-309`), on
- * `namedBy[]` the declarer's (the request showed it). ⛔ A member id, ⛔ a number.
+ * `namedBy[]` the declarer's — and only on a row the app LISTS to them: a `live` mark whose declarer no claim names, read by a
+ * member the app can still show the request to (an `active` or `active-in-grace` membership, ⛔ named by a claim).
+ * ⭐ `2026-10-24-399` (extends `-333` call 3(a) and `-334` call 1): an ERASED link reads `ended` on both lists (`erased` is not
+ * a state the export says); a `namedBy[]` row that is `ended` carries ⛔ name; a mark carried through re-saves is ONE row.
+ * ⚠ So a member whose membership has LAPSED exports a mark that still names them as `ended`, with no name, until they renew —
+ * then it reads `live`, with the name (`-399` call 2's principal clause — *"only on a row the app lists to the marked member"* —
+ * read literally; its enumerated rows do not name a lapsed viewer. BigDev, code review round 3: keep it, and say it).
+ * ⛔ A member id, ⛔ a number.
  */
 const NomineeLinkExportFields = {
-  state: z.enum(['live', 'ended', 'erased']),
+  // By VALUE: the contracts cannot import the domain. `apps/api/tests/unit/nominee-link-twins.test.ts` pins both enums to the
+  // domain's tuples (the export reads the domain's `erased` as `ended`), so a state added there fails a test, ⛔ the whole export.
+  state: z.enum(['live', 'ended']),
   answer: z.enum(['confirmed', 'not_me']).nullable(),
   askedAt: Iso8601Datetime,
   name: z.string().nullable(),
@@ -135,7 +144,12 @@ const NomineeLinkExportFields = {
 const NomineeLinkMarkedExport = z
   .object({ ...NomineeLinkExportFields, rank: z.union([z.literal(1), z.literal(2)]), versionNo: z.number().int().positive() })
   .strict();
-const NomineeLinkNamedByExport = z.object(NomineeLinkExportFields).strict();
+const NomineeLinkNamedByExport = z
+  .object(NomineeLinkExportFields)
+  .strict()
+  .refine((l) => l.state !== 'ended' || l.name === null, {
+    message: 'an `ended` mark naming the member carries no name (2026-10-24-399, extending 2026-10-15-334)',
+  });
 
 /** `profile.json` — the member's decrypted identity + declared data (member is the legitimate audience). */
 export const ProfileSection = z

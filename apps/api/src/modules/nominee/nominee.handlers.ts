@@ -40,10 +40,12 @@
 // ── Story 6.36e — a nominee who is also a member (AC3; `2026-10-24-397` NE2, NE4, NE5) ──
 //   · A route FLAG (`declare({ allowLink })`): the signup route refuses ANY `memberLink` (400 `nominee.link_not_available`)
 //     FIRST — before the elevation lookup, any charge, HMAC or transaction — and writes nothing (NE4).
-//   · A `kind:'new'` mark is METERED before any HMAC: its own short scoped tx runs the caller gate and charges ONE
-//     `nominee_link_resolve` unit per new mark (4 a day — NE5, V2); a refusal costs ⛔ KMS call. Then every new mark's
-//     number is normalised and HMAC'd with ONE `mobileBlindIndexMany` call OUTSIDE any transaction (⛔ KMS inside the scope
-//     tx). ⛔ The number is stored, logged, audited or put in an error (the number fence pins this file).
+//   · A `kind:'new'` mark is METERED before any HMAC: every new mark's number is normalised first (an unusable one ⇒ the ONE
+//     422, ⛔ charge); then its own short scoped tx asks the cheap refusals (a claim-locked declaration, a terminal state, a
+//     missing step-up — code review 2026-10-24: ⛔ charged, so the OTP retry does not charge twice), runs the caller gate and
+//     charges ONE `nominee_link_resolve` unit per new mark (4 a day — NE5, V2); a refusal costs ⛔ KMS call. Then every new
+//     mark's number is HMAC'd with ONE `mobileBlindIndexMany` call OUTSIDE any transaction (⛔ KMS inside the scope tx).
+//     ⛔ The number is stored, logged, audited or put in an error (the number fence pins this file).
 //   · Inside the declare tx, AFTER the D3 lock and the guards: every LIVE link of the declarer is locked `FOR UPDATE`, the
 //     new marks are resolved through `knownPersonEligibleSql` (DB only), and NE2's plan is made BEFORE any write; the link
 //     rows are written AFTER `appendMemberDeclarationVersions` (they reference its version ids). Both routes apply NE2's
@@ -170,41 +172,15 @@ export function createNomineeHandlers(deps: AppDeps) {
       if (!route.allowLink && body.nominees.some((n) => n.memberLink !== undefined)) {
         throw new BadRequestError('A nominee can be marked as a member from Life Events only', LINK_CODES.linkNotAvailable);
       }
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
       const newMarks = body.nominees.flatMap((n, i) => (n.memberLink?.kind === 'new' ? [{ i, mobile: n.memberLink.mobile }] : []));
-      // ⭐ Story 6.36e (NE5, V2) — METER the new marks BEFORE any HMAC, in their OWN short scoped tx (a refusal rolls the
-      // counter back and costs ⛔ KMS call). A `keep` and a save without a mark are ⛔ charged (V11).
-      if (newMarks.length > 0) {
-        const chargeTx = await openScopeTx(deps, pariwarIdStr);
-        let charged = false;
-        try {
-          const r = await nomineeDomain.chargeNomineeLinkResolve(chargeTx.tx, {
-            pariwarId: ids.pariwarId(pariwarIdStr),
-            memberId: ids.memberId(memberIdStr),
-            marks: newMarks.length,
-          });
-          if (!r.ok) {
-            throw r.reason === 'daily_limit'
-              ? new TooManyRequestsError('Daily limit for marking nominees as members reached — try again tomorrow', LINK_CODES.linkDailyLimit)
-              : linkNotFound();
-          }
-          charged = true;
-        } finally {
-          await closeScopeTx(chargeTx, charged);
-        }
-      }
-      // Normalise (an unusable number ⇒ the ONE 422) and HMAC every new mark with ONE batch call OUTSIDE any transaction.
+      // Normalise (an unusable number ⇒ the ONE 422) BEFORE anything is charged (code review 2026-10-24): a number the Trust cannot
+      // even read never reaches a lookup, so it costs the member nothing of the day's budget.
       const canonicals = newMarks.map((m) => encryption.normalizeMobile(m.mobile));
       if (canonicals.some((c) => c === null)) throw linkNotFound();
-      const markIndexes = new Map<number, string>();
-      if (newMarks.length > 0) {
-        const indexes = await encryption.mobileBlindIndexMany(canonicals as string[], enc, {
-          pariwarId: pariwarIdStr,
-          purpose: nomineeDomain.NOMINEE_LINK_RESOLVE_AUDIT_PURPOSE,
-        });
-        newMarks.forEach((m, k) => markIndexes.set(m.i, indexes[k]!));
-      }
 
-      // ⭐ Story 6.20 (D9) — the `nominee_change` elevation is looked up BEFORE the transaction opens (code
+      // ⭐ Story 6.20 (D9) — the `nominee_change` elevation is looked up BEFORE any transaction opens (code
       // review 2026-09-24): looked up inside it, the lookup took a SECOND pooled connection while this one
       // held the D3 advisory lock — N concurrent re-declares could starve the pool with every lock held.
       // Whether it is NEEDED is still decided inside the transaction, below. A lookup failure is P24's
@@ -221,17 +197,20 @@ export function createNomineeHandlers(deps: AppDeps) {
         elevationFresh = false;
       }
 
-      const scopeTx = await openScopeTx(deps, pariwarIdStr);
-      let ok = false;
-      try {
-        const memberId = ids.memberId(memberIdStr);
-        const pariwarId = ids.pariwarId(pariwarIdStr);
-
+      /**
+       * The refusals that need NO lookup and NO KMS, in the order they were always taken: the D3 lock FIRST (no other lock
+       * before it), a claim-locked declaration, a terminal state, a re-declaration without a fresh step-up. Runs in BOTH
+       * transactions — ⭐ code review 2026-10-24: the metering transaction asks them BEFORE it charges, so a save that is
+       * going to be refused for one of them (and the step-up round trip: a first POST that answers 403, then the OTP retry)
+       * ⛔ spends the day's `nominee_link_resolve` budget; the main transaction asks them again, authoritatively. Returns the
+       * lifecycle state the declare projects from.
+       */
+      const guardDeclare = async (tx: ScopeTx): Promise<Awaited<ReturnType<typeof memberDomain.getMemberStateAt>>> => {
         // ⭐ Story 6.20 (D3, AC2) — the intake advisory lock FIRST (no other lock before it), then the
         // claim-filed check. An intake that won the lock has already minted its claim row, and this
         // edit refuses; an edit that won commits before the claim — legitimately "before the claim".
         try {
-          await claimDomain.lockNomineeDeclarationForEdit(scopeTx.client, pariwarId, memberId);
+          await claimDomain.lockNomineeDeclarationForEdit(tx.client, pariwarId, memberId);
         } catch (err) {
           if (err instanceof claimDomain.NomineeDeclarationLockedError) {
             throw new ConflictError(
@@ -245,7 +224,7 @@ export function createNomineeHandlers(deps: AppDeps) {
         // Guard: a member in a terminal state cannot re-declare nominees (R2). Pre-lock-in
         // states (pending-kyc/pending-fee/pending-valid) and active states are all allowed —
         // nominees may legitimately be declared before or after KYC within the wizard.
-        const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, deps.clock());
+        const state = await memberDomain.getMemberStateAt(tx.tx, memberId, deps.clock());
         if (TERMINAL_STATES.has(state)) {
           throw new ConflictError(
             'Member is in a terminal state — nominees cannot be declared',
@@ -257,11 +236,52 @@ export function createNomineeHandlers(deps: AppDeps) {
         // step-up on BOTH routes (AR-24). Checked here, ⛔ not as a static preHandler, because whether
         // this submit is a CHANGE is only known inside the transaction.
         const isRedeclaration =
-          (await nomineeDomain.hasNomineeDeclarationVersion(scopeTx.tx, pariwarId, memberId)) ||
-          (await nomineeDomain.getMemberNominees(scopeTx.tx, pariwarId, memberId)).length > 0;
+          (await nomineeDomain.hasNomineeDeclarationVersion(tx.tx, pariwarId, memberId)) ||
+          (await nomineeDomain.getMemberNominees(tx.tx, pariwarId, memberId)).length > 0;
         if (isRedeclaration && !PRE_LOCK_IN_STATES.has(state) && !elevationFresh) {
           throw new StepUpRequiredError(NOMINEE_CHANGE_STEP_UP);
         }
+        return state;
+      };
+
+      // ⭐ Story 6.36e (NE5, V2) — METER the new marks BEFORE any HMAC, in their OWN short scoped tx (a refusal rolls the
+      // counter back and costs ⛔ KMS call). A `keep` and a save without a mark are ⛔ charged (V11). ⭐ Code review 2026-10-24:
+      // the cheap refusals above run FIRST in this same transaction — a locked declaration, a terminal state or a missing
+      // step-up (the OTP retry would otherwise charge twice) ⇒ ⛔ charge.
+      if (newMarks.length > 0) {
+        const chargeTx = await openScopeTx(deps, pariwarIdStr);
+        let charged = false;
+        try {
+          await guardDeclare(chargeTx);
+          const r = await nomineeDomain.chargeNomineeLinkResolve(chargeTx.tx, {
+            pariwarId,
+            memberId,
+            marks: newMarks.length,
+          });
+          if (!r.ok) {
+            throw r.reason === 'daily_limit'
+              ? new TooManyRequestsError('Daily limit for marking nominees as members reached — try again tomorrow', LINK_CODES.linkDailyLimit)
+              : linkNotFound();
+          }
+          charged = true;
+        } finally {
+          await closeScopeTx(chargeTx, charged);
+        }
+      }
+      // HMAC every new mark with ONE batch call OUTSIDE any transaction.
+      const markIndexes = new Map<number, string>();
+      if (newMarks.length > 0) {
+        const indexes = await encryption.mobileBlindIndexMany(canonicals as string[], enc, {
+          pariwarId: pariwarIdStr,
+          purpose: nomineeDomain.NOMINEE_LINK_RESOLVE_AUDIT_PURPOSE,
+        });
+        newMarks.forEach((m, k) => markIndexes.set(m.i, indexes[k]!));
+      }
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const state = await guardDeclare(scopeTx);
 
         // ⭐ Story 6.36e (NE2) — lock EVERY live link of this declarer (after the D3 lock, BEFORE this save's versions — so
         // `onHead` is the head before the save), resolve the new marks (DB only), and PLAN before any write: a refusal

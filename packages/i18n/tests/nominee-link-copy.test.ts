@@ -29,7 +29,7 @@ describe('nominee_link copy (real t())', () => {
   // which a group could use to steer it. They are deleted; this pins that nothing like them comes back, in either language.
   it('⭐ ⛔ no string of the namespace mentions a death or being asked about one (en + hi) — and the three removed keys are gone', () => {
     const death = {
-      en: /\b(death|dies|died|dead|deceased|passed away|passing|vouch)\b|asked about|asked to confirm/i,
+      en: /\b(death|dies|died|dead|deceased|passed away|passing|vouch)\b|asked about/i,
       hi: /मृत्यु|निधन|देहांत|मौत|मृतक|स्वर्गवास|गुज़र|गुजर/,
     }
     for (const locale of ['en', 'hi'] as const) {
@@ -75,7 +75,7 @@ describe('nominee_link copy (real t())', () => {
     expect(en('request.will_see')).toBe('Asha D. will see your answer.');
     expect(en('request.yes')).toBe("Yes, that's me");
     expect(en('request.no')).toBe("No, that's not me");
-    expect(en('label.asked')).toBe('Asked');
+    expect(en('label.asked')).toBe('Waiting for their answer'); // ⛔ "Asked" — it begged "asked what?"
     expect(en('label.confirmed')).toBe('Confirmed — Meena K.');
     expect(en('label.not_me')).toBe('Said it is not them');
     expect(en('label.not_me_note')).toBe('The mark still counts until you remove it or pick again.');
@@ -93,7 +93,7 @@ describe('nominee_link copy (real t())', () => {
         // the check itself tells nobody …
         expect(out, `${locale}:${key}`).toMatch(locale === 'en' ? /nobody is told that you checked/ : /आपने जाँच की है यह किसी को नहीं बताया जाता/);
         // … and the flow's consequence is said in the same breath: they are asked in the app and see the declarer's name
-        expect(out, `${locale}:${key}`).toMatch(locale === 'en' ? /they will be asked in the app and will see your name/ : /उनसे ऐप में पूछा जाएगा और वे आपका नाम देखेंगे/);
+        expect(out, `${locale}:${key}`).toMatch(locale === 'en' ? /they will see your name and be asked in the app to confirm that it is them/ : /वे आपका नाम देखेंगे और ऐप में उनसे पुष्टि करने के लिए कहा जाएगा कि यह वही हैं/);
         expect(out, `${locale}:${key}`).not.toMatch(locale === 'en' ? /nobody is told\.$/ : /किसी को बताया नहीं जाता।$/);
       }
     }
@@ -101,9 +101,9 @@ describe('nominee_link copy (real t())', () => {
     // … and says so honestly for a member who has ALREADY answered THIS mark (a carry — nobody is asked again), ⛔ more: a member
     // whose earlier mark ENDED is asked again, so the line must not promise "unless they have already answered" in general
     expect(t('form.will_ask', PARAMS['form.will_ask'], { locale: 'en', namespace: NS })).toBe(
-      'When you save, Meena K. will be asked in the app and will see your name. A member who has already answered this same mark is not asked again.',
+      'When you save, Meena K. will see your name in the app and be asked to confirm it is them. A member who has already answered this same mark is not asked to confirm again.',
     );
-    expect(t('form.will_ask_no_name', undefined, { locale: 'en', namespace: NS })).toContain('A member who has already answered this same mark is not asked again.');
+    expect(t('form.will_ask_no_name', undefined, { locale: 'en', namespace: NS })).toContain('A member who has already answered this same mark is not asked to confirm again.');
     // Hindi carries the SAME qualifier (a clause that names "this same mark" — ⛔ the old blanket "if they have answered before")
     for (const key of ['form.will_ask', 'form.will_ask_no_name']) {
       const hi = t(key, key === 'form.will_ask' ? PARAMS['form.will_ask'] : undefined, { locale: 'hi', namespace: NS });
@@ -111,9 +111,9 @@ describe('nominee_link copy (real t())', () => {
       expect(hi, key).not.toContain('अगर वे पहले जवाब नहीं दे चुके हैं');
     }
     // the entry note says the act the flow performs: the NOMINEE is marked as a member (⛔ "mark someone as your nominee")
-    expect(t('note.body', PARAMS['note.body'], { locale: 'en', namespace: NS })).toContain('If you then mark your nominee as a member, they will be asked');
+    expect(t('note.body', PARAMS['note.body'], { locale: 'en', namespace: NS })).toContain('If you then mark your nominee as a member, they will see your name and be asked in the app to confirm that it is them.');
     expect(t('note.body_no_name', undefined, { locale: 'en', namespace: NS })).not.toContain('mark someone as your nominee')
-    expect(t('note.body_no_name', undefined, { locale: 'en', namespace: NS })).toContain('If you then mark your nominee as a member, they will be asked')
+    expect(t('note.body_no_name', undefined, { locale: 'en', namespace: NS })).toContain('If you then mark your nominee as a member, they will see your name and be asked in the app to confirm that it is them.')
     // Hindi names the same act (the NOMINEE is marked as a member), ⛔ "mark someone as your nominee"
     for (const key of ['note.body', 'note.body_no_name']) {
       const hi = t(key, key === 'note.body' ? PARAMS['note.body'] : undefined, { locale: 'hi', namespace: NS })

@@ -316,7 +316,7 @@ describe('NomineeForm — the member mark (Story 6.36e, V3)', () => {
       forms: [marked({ memberLink: { kind: 'new', mobile: '+919876500001', foundBy: 'contacts', savedName: 'Meena', confirmedFor: slotFingerprint({ name: NAME, mobile: MOBILE }) } })],
     })
     expect(screen.getByText('Marked as a member: Meena')).toBeInTheDocument()
-    expect(screen.getByText('When you save, Meena will be asked in the app and will see your name. A member who has already answered this same mark is not asked again.')).toBeInTheDocument()
+    expect(screen.getByText('When you save, Meena will see your name in the app and be asked to confirm it is them. A member who has already answered this same mark is not asked to confirm again.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSubmit.mock.calls[0]![0][0].memberLink).toEqual({ kind: 'new', mobile: '+919876500001', foundBy: 'contacts' })
   })

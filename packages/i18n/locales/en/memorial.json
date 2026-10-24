@@ -83,7 +83,7 @@
   "outcome.not_approved": "The Trust could not approve these words.",
   "outcome.approval_withdrawn": "The Trust has withdrawn its approval of your words.",
   "outcome.earlier_approval_withdrawn": "The Trust withdrew its approval of an earlier version.",
-  "outcome.earlier_approval_stands": "The version the Trust approved earlier still stands. If you would like to change it, you can write a new version for the Trust to look at, or the nominee can call the helpline.",
+  "outcome.earlier_approval_stands": "The version the Trust approved earlier still stands. If you would like to change it, you can write a new version for the Trust to look at, or call the helpline.",
   "outcome.earlier_approval_stands_helpline_only": "The version the Trust approved earlier still stands. To change it, the nominee can call the helpline.",
   "outcome.reason": "The reason: {reason}",
   "outcome.helpline_for_changes": "If you, the nominee, ever want it changed or taken down, please call the helpline.",

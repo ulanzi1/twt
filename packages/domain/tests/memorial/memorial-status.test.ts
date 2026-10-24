@@ -30,6 +30,7 @@ import {
 /** The permission-text versions by id — v1 is SUPERSEDED by v2 (R1) but stays in the registry: a sent row names its version. */
 const PERMISSION_V1 = '2026-10-23.v1-pending-hi-review';
 const PERMISSION_V2 = '2026-10-24.v2-pending-hi-review';
+const PERMISSION_V3 = '2026-10-25.v3-pending-hi-review';
 
 let seq = 0;
 function link(
@@ -165,12 +166,14 @@ describe('decideMemorialSend (AC7 order under the lock)', () => {
     });
   });
 
-  it('refuses the SUPERSEDED v1 id — a phone that still shows v1 must read v2 first (R1)', () => {
-    expect(decideMemorialSend([], { ...current, authorisationCopyVersion: PERMISSION_V1 })).toEqual({
-      ok: false,
-      refusal: 'authorisation_outdated',
-    });
-    expect(decideMemorialSend([], { ...current, authorisationCopyVersion: PERMISSION_V2 }).ok).toBe(true);
+  it('refuses the SUPERSEDED v1 and v2 ids — a phone that still shows either must read v3 first (R1, the 2026-10-25 Hindi review)', () => {
+    for (const old of [PERMISSION_V1, PERMISSION_V2]) {
+      expect(decideMemorialSend([], { ...current, authorisationCopyVersion: old }), old).toEqual({
+        ok: false,
+        refusal: 'authorisation_outdated',
+      });
+    }
+    expect(decideMemorialSend([], { ...current, authorisationCopyVersion: PERMISSION_V3 }).ok).toBe(true);
     // The id v1 carried is still a KNOWN id (a row sent under it names it) — only the current one is accepted.
     expect(memorialAuthorisationVersion(PERMISSION_V1)).toBeDefined();
     expect(PERMISSION_V1).not.toBe(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION);
@@ -251,9 +254,11 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     }
   });
 
-  it('the current id is v2: it carries the go-live marker and is unreviewed; v1 is superseded but still resolves', () => {
-    expect(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION).toBe(PERMISSION_V2);
-    expect(Object.keys(MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS)).toEqual([PERMISSION_V1, PERMISSION_V2]);
+  it('the current id is v3: it carries the go-live marker and is unreviewed; v1 and v2 are superseded but still resolve', () => {
+    expect(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION).toBe(PERMISSION_V3);
+    expect(Object.keys(MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS)).toEqual([PERMISSION_V1, PERMISSION_V2, PERMISSION_V3]);
+    // v3's changed sentence is BigDev's own wording — its Hindi needs a reviewer who is not its author (AC14).
+    expect(memorialAuthorisationVersion(PERMISSION_V3)?.hiReviewed).toBe(false);
     expect(memorialAuthorisationVersion(PERMISSION_V2)?.hiReviewed).toBe(false);
     // A row sent while v1 was current still names v1 — it must keep resolving to the words that row was shown.
     expect(memorialAuthorisationVersion(PERMISSION_V1)?.hiReviewed).toBe(false);
@@ -261,8 +266,8 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     expect(memorialAuthorisationVersion(42)).toBeUndefined();
     expect(currentMemorialAuthorisation().copyVersion).toBe(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION);
     expect(currentMemorialAuthorisation().text).toEqual({
-      hi: memorialAuthorisationVersion(PERMISSION_V2)!.hi,
-      en: memorialAuthorisationVersion(PERMISSION_V2)!.en,
+      hi: memorialAuthorisationVersion(PERMISSION_V3)!.hi,
+      en: memorialAuthorisationVersion(PERMISSION_V3)!.en,
     });
   });
 
@@ -280,9 +285,36 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     expect(sha(v1.hi)).toBe('f601534575c012dd2159d66abf1612d37291c5632e58f25351bf4e4584b56b17');
   });
 
+  it('v2 is word for word what was committed (`19068923`) — the Hindi review minted v3 instead of editing it', () => {
+    const sha = (s: string): string => createHash('sha256').update(s, 'utf8').digest('hex');
+    const v2 = memorialAuthorisationVersion(PERMISSION_V2)!;
+    expect(sha(v2.en)).toBe('472bb192d4af8efba33cf646a55e509cfff386362dae97901b82b46777a632b0');
+    expect(sha(v2.hi)).toBe('1593d94499e50b7f0e1dbb55f2d9674d44b0fb5b18b1e1d02caa1dac064b9039');
+  });
+
+  // The Hindi review (BigDev, 2026-10-25) accepted v2 and changed ONE sentence, adjusted at BigDev's choice "1".
+  describe('v3 is v2 with ONE sentence changed: the Trust reads the words before anyone else does', () => {
+    const v2 = memorialAuthorisationVersion(PERMISSION_V2)!;
+    const v3 = memorialAuthorisationVersion(PERMISSION_V3)!;
+    it('en and hi: exactly that sentence replaced, nothing else', () => {
+      expect(v3.en).toBe(v2.en.replace('The Trust will read them first.', 'The Trust will read them before anyone else does.'));
+      expect(v3.hi).toBe(v2.hi.replace('ट्रस्ट पहले इन्हें पढ़ेगा।', 'किसी और के देखने से पहले ट्रस्ट इनका अवलोकन करेगा।'));
+      expect(v3.en).not.toBe(v2.en);
+      expect(v3.hi).not.toBe(v2.hi);
+    });
+    it('promises no single review and no contrast it does not have; the page stays THIS member\'s', () => {
+      expect(v3.en).not.toMatch(/\bhowever\b|\bonce\b/i);
+      expect(v3.hi).not.toMatch(/हालाँकि|एक बार/);
+      expect(v3.hi).not.toMatch(/ ।/);
+      expect(v3.hi).toContain('इस सदस्य के सहयोग विवरण पेज');
+      expect(v3.en).toContain("this member's Sahyog Vivran page");
+    });
+  });
+
   it.each([
     [PERMISSION_V1, 'v1'],
     [PERMISSION_V2, 'v2'],
+    [PERMISSION_V3, 'v3'],
   ])('%s carries M2 addressed to the nominee in both locales (`-393` M2, `-395` item 3) and never says "cannot be taken down"', (id) => {
     const v = memorialAuthorisationVersion(id)!;
     expect(v.en).toMatch(/you, the nominee, ever want it changed or taken down, you can call the helpline/);

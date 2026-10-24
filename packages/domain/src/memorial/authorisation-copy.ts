@@ -64,6 +64,7 @@ export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string,
       'फ़ोन कर सकते हैं। अक्सर एक छोटा-सा बदलाव काफ़ी होता है।',
     hiReviewed: false,
   },
+  // v2 — SUPERSEDED by v3 (the Hindi review, 2026-10-25); kept word for word because a submission row cites its version.
   // v2 — v1 plus TWO sentences: only the nominee can ask for a take-down (R1, `-395` item 3), before the gentle close; and,
   // after it, the Trust may still withdraw its own approval on MA16's four grounds (T1, placed by V7). ⚠ Agent-drafted; the
   // Hindi has not yet been reviewed by a person (AC14, Row 41 (a)) — a review that changes the words mints v3, never an
@@ -92,10 +93,41 @@ export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string,
       'कानून के विरुद्ध हो सकता है, या किसी बच्चे का नाम हो या कोई बच्चा दिखता हो।',
     hiReviewed: false,
   },
+  // v3 — the Hindi review (BigDev, 2026-10-25: "hindi reviewed. It's fine.") accepted v2's words in both locales and changed
+  // ONE sentence: v2's "The Trust will read them first." / "ट्रस्ट पहले इन्हें पढ़ेगा।" → that the Trust reads them before
+  // anyone else does. BigDev's edit ("However, the Trust will review once." / "हालाँकि सबसे पहले ट्रस्ट इसे एक बार अवलोकन
+  // करेगा ।") was adjusted at BigDev's choice ("1"): ⛔ "however" (nothing before it is a contrast), ⛔ "once" (every new
+  // version is read again, and the Trust may later withdraw its approval — the last sentence), "इसका / इनका … अवलोकन" for
+  // "इसे … अवलोकन", no space before "।", and "इस सदस्य के" kept singular to match "this member's". Everything else is v2,
+  // character for character. ⚠ `hiReviewed: false` — BigDev reviewed v2's Hindi, but this changed sentence is now
+  // BigDev's own wording, so its Hindi and tone need a reviewer who is ⛔ not its author (AC14; `tone-review-checklist.md`
+  // "Who may review"). v2 is SUPERSEDED (a Send naming it is refused `memorial.authorisation_outdated`) and kept word for
+  // word — test rows cite it.
+  '2026-10-25.v3-pending-hi-review': {
+    en:
+      'When you press Send, you, as the nominee, give the Trust permission to show these words, and the photo if you added one, ' +
+      "on this member's Sahyog Vivran page, which anyone with its link can read. The Trust will read them before anyone else " +
+      'does. It may leave out a sentence or the photo, and will tell you why, but it will never change your words. Please do ' +
+      "not name any children; if the Trust finds a child's name, it will leave it out. If you, the nominee, ever want it " +
+      'changed or taken down, you can call the helpline. Only the nominee can ask for it to be taken down; the helpline will ' +
+      "not remove it at anyone else's request. Often a small change is enough. The Trust itself may still withdraw its " +
+      'approval, but only if something in the words or the photo speaks against a person by name, says that someone did ' +
+      'something wrong, may be against the law, or names or shows a child.',
+    hi:
+      'भेजें दबाने पर आप, नॉमिनी के रूप में, ट्रस्ट को यह अनुमति देते हैं कि ये शब्द, और अगर आपने फ़ोटो जोड़ी है तो वह भी, इस सदस्य ' +
+      'के सहयोग विवरण पेज पर दिखाए जाएँ, जिसे उसका लिंक रखने वाला कोई भी पढ़ सकता है। किसी और के देखने से पहले ट्रस्ट इनका ' +
+      'अवलोकन करेगा। वह कोई वाक्य या फ़ोटो छोड़ सकता है, और आपको इसका कारण बताएगा, पर आपके शब्द कभी नहीं बदलेगा। कृपया किसी ' +
+      'बच्चे का नाम न लिखें; अगर ट्रस्ट को किसी बच्चे का नाम मिलता है, तो वह उसे छोड़ देगा। अगर आप, नॉमिनी, कभी इसमें बदलाव ' +
+      'चाहें या इसे हटवाना चाहें, तो हेल्पलाइन पर फ़ोन कर सकते हैं। इसे हटवाने का अनुरोध केवल नॉमिनी ही कर सकते हैं; किसी और के ' +
+      'कहने पर हेल्पलाइन इसे नहीं हटाएगी। अक्सर एक छोटा-सा बदलाव काफ़ी होता है। ट्रस्ट स्वयं फिर भी अपनी स्वीकृति वापस ले सकता ' +
+      'है, पर केवल तब, जब शब्दों या फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ ' +
+      'गलत किया, कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है, या किसी बच्चे का नाम हो या कोई बच्चा दिखता हो।',
+    hiReviewed: false,
+  },
 };
 
-/** The version every NEW submission must have been shown (and echo). v1 is superseded — see its entry above. */
-export const MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION = '2026-10-24.v2-pending-hi-review';
+/** The version every NEW submission must have been shown (and echo). v1 and v2 are superseded — see their entries above. */
+export const MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION = '2026-10-25.v3-pending-hi-review';
 
 /** The version a recorded id names — `undefined` for an id this registry does not know. */
 export function memorialAuthorisationVersion(copyVersion: unknown): MemorialAuthorisationVersion | undefined {

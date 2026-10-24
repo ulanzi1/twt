@@ -15,6 +15,7 @@ import type {
   ClaimDocumentStorage,
   ContributionNotePdfRenderer,
   HelpdeskAttachmentStorage,
+  MemorialPhotoStorage,
   SelfVerifyScreenshotStorage,
   StatementScanner,
 } from '@twt/contracts';
@@ -27,6 +28,7 @@ import {
   createInMemoryBankStatementStorage,
   createInMemoryClaimDocumentStorage,
   createInMemoryHelpdeskAttachmentStorage,
+  createInMemoryMemorialPhotoStorage,
   createInMemorySelfVerifyScreenshotStorage,
   createNoOpStatementScanner,
   type FakeContributionNotePdfRenderer,
@@ -34,6 +36,7 @@ import {
   type InMemoryBankStatementStorage,
   type InMemoryClaimDocumentStorage,
   type InMemoryHelpdeskAttachmentStorage,
+  type InMemoryMemorialPhotoStorage,
   type InMemorySelfVerifyScreenshotStorage,
 } from '@twt/platform-adapters';
 import type pg from 'pg';
@@ -114,6 +117,9 @@ const TEST_ENV: NodeJS.ProcessEnv = {
   READ_RATE_MAX: '100000',
   SEARCH_RATE_MAX: '100000',
   WRITE_RATE_MAX: '100000',
+  // Story 11b.4 (MA17) — the family memorial's server switch is ON in the suite (OFF by default in production);
+  // `memorial-switch-off.spec.ts` turns it off locally to prove AC19.
+  MEMORIAL_AUTHORSHIP_ENABLED: '1',
 };
 
 export function testConfig(extra: NodeJS.ProcessEnv = {}): ApiConfig {
@@ -287,6 +293,7 @@ export interface TestDepsOverrides {
   bankStatementStorage?: BankStatementStorage;
   selfVerifyScreenshotStorage?: SelfVerifyScreenshotStorage;
   helpdeskAttachmentStorage?: HelpdeskAttachmentStorage;
+  memorialPhotoStorage?: MemorialPhotoStorage;
   statementScanner?: StatementScanner;
   contributionNotePdfRenderer?: ContributionNotePdfRenderer;
   claimOcrParityQueue?: ClaimOcrParityEnqueuer;
@@ -322,6 +329,7 @@ export interface TestDeps {
   bankStatementStorage: InMemoryBankStatementStorage;
   selfVerifyScreenshotStorage: InMemorySelfVerifyScreenshotStorage;
   helpdeskAttachmentStorage: InMemoryHelpdeskAttachmentStorage;
+  memorialPhotoStorage: InMemoryMemorialPhotoStorage;
   statementScanner: StatementScanner;
   contributionNotePdfRenderer: FakeContributionNotePdfRenderer;
   claimOcrParityQueue: CapturingClaimOcrParityQueue;
@@ -432,6 +440,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
   const helpdeskAttachmentStorage =
     (overrides.helpdeskAttachmentStorage as InMemoryHelpdeskAttachmentStorage) ??
     createInMemoryHelpdeskAttachmentStorage();
+  const memorialPhotoStorage =
+    (overrides.memorialPhotoStorage as InMemoryMemorialPhotoStorage) ?? createInMemoryMemorialPhotoStorage();
   const statementScanner = overrides.statementScanner ?? createNoOpStatementScanner();
   const claimOcrParityQueue =
     (overrides.claimOcrParityQueue as CapturingClaimOcrParityQueue) ??
@@ -516,6 +526,8 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     // Helpdesk-attachment object store (Story 10.2) — in-memory store so the member ticket-filing spec
     // asserts the uploaded bytes were `put` (and that a rejected upload never reaches storage).
     helpdeskAttachmentStorage,
+    // Story 11b.4 (MA8) — the family memorial's photo store: in-memory, so the Send spec asserts the STRIPPED bytes.
+    memorialPhotoStorage,
     statementScanner,
     contributionNotePdfRenderer,
     // Claim OCR + parity queue (Story 6.5) — capturing fake so the upload spec asserts the job was
@@ -558,6 +570,7 @@ export function buildTestDeps(overrides: TestDepsOverrides = {}): TestDeps {
     bankStatementStorage,
     selfVerifyScreenshotStorage,
     helpdeskAttachmentStorage,
+    memorialPhotoStorage,
     statementScanner,
     contributionNotePdfRenderer,
     claimOcrParityQueue,

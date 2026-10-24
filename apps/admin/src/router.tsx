@@ -50,6 +50,7 @@ import { FixedAmountRoute } from './routes/FixedAmountRoute.js';
 import { ReconciliationReviewRoute } from './routes/ReconciliationReviewRoute.js';
 import { TrusteeLiteRoute } from './routes/TrusteeLiteRoute.js';
 import { ModerationAppealsRoute } from './routes/ModerationAppealsRoute.js';
+import { MemorialReviewDetailRoute, MemorialReviewRoute } from './routes/MemorialReviewRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
@@ -380,6 +381,21 @@ const moderationAppealsRoute = createRoute({
   component: ModerationAppealsRoute,
 });
 
+// Story 11b.4 — the Trustee Panel's review of a family's memorial (AC9): the queue (pending / decided) and one version with
+// its whole chain. ⚠ Reachable from the nav inside a Pariwar context — `trustee_panel` holds ⛔ helpdesk capability, so no
+// other queue would surface a memorial waiting for review.
+const memorialReviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/memorial-reviews',
+  component: MemorialReviewRoute,
+});
+
+const memorialReviewDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/memorial-reviews/$submissionId',
+  component: MemorialReviewDetailRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -422,6 +438,8 @@ const routeTree = rootRoute.addChildren([
   reconciliationReviewRoute,
   trusteeLiteRoute,
   moderationAppealsRoute,
+  memorialReviewRoute,
+  memorialReviewDetailRoute,
 ]);
 
 export const router = createRouter({ routeTree });

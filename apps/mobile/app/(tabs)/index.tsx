@@ -5,6 +5,7 @@ import { ActiveContributionCard } from 'components/active-contribution/ActiveCon
 import { ViewContributorsEntry } from 'components/contributor-list/ViewContributorsEntry'
 import { SahyogVivranEntry } from 'components/sahyog-vivran/SahyogVivranEntry'
 import { ClaimProxyFlowEntry } from 'components/claim/ClaimProxyFlowEntry'
+import { MemorialEntry } from 'components/memorial-authorship/MemorialEntry'
 import { ClaimPointOfContactEntry } from 'components/claim/ClaimPointOfContactEntry'
 import { DataExportEntry } from 'components/data-export/DataExportEntry'
 import { LifeEventsEntry } from 'components/life-events/LifeEventsEntry'
@@ -87,6 +88,8 @@ export default function YogdaanTab() {
         {/* Story 6.2 — Ravi-mode claim-filing entry (understated; opens the (claim) proxy flow). The
             ONLY entry surface in 6.2 (the helpline deep-link handover is Story 6.3). */}
         <ClaimProxyFlowEntry />
+        {/* Story 11b.4 — the family memorial entry (shown ONLY when the `entry` probe says there is a closed drive). */}
+        <MemorialEntry />
         {/* Story 6.12 — the persistent post-filing point-of-contact entry (self-suppresses when the member
             has no filed claim on record). Re-opens the named-human shepherd view (R3). */}
         <ClaimPointOfContactEntry />

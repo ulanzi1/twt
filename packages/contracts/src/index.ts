@@ -158,6 +158,9 @@ export * from './contributions/index.js';
 // the validated-nominee gate + pool identity + the server-computed staff-takeover verdict. Presentation
 // only — NO statement/matcher/pill data (those land 9.2/9.4/9.6). Member-read openapi posture (no `.openapi()`).
 export * from './nominee-console/index.js';
+// Story 11b.4 — the family memorial (writing, sending, the Trust's review): vocabularies by value, the shared text classes
+// and decision validator, the photo port, and the member + review DTOs (`#decision-2026-10-24-398`).
+export * from './memorial/index.js';
 
 // Story 9.2 — the FIRST reconciliation contract: the parser normalization-output SUMMARY
 // (ParseResultSummary) the 9.3 <BankStatementUpload> surface renders (counts + provenance,

@@ -6504,6 +6504,16 @@ So that public transparency exists for trust legitimacy while member-only sensit
 
 ### Story 11b.4: MemorialAuthorshipSurface — Family Writes the Story + Family-Authorship-Preserved Invariant `[SURFACE]`
 
+> ⭐⛔ **SECTIONED 2026-10-24 (Story 11b.4 Task 1.3, before the first line of code) — by [Decision 2026-10-24-398](../../.decision-log.md#decision-2026-10-24-398) (author-commit, BigDev), on the Panel's rulings [`-391`](../../.decision-log.md#decision-2026-10-23-391) / [`-393`](../../.decision-log.md#decision-2026-10-23-393) / [`-395`](../../.decision-log.md#decision-2026-10-23-395).** This section already existed; this block records how the story file (`11b-4-memorial-authorship-surface-family-writes-the-story.md`) builds it. ⛔ The ACs below are ⛔ not edited.
+>
+> - **MA1 split:** this row builds writing → sending → the Trust's review → the outcome in the app. The **public render** (step (e)'s publication, the Sahyog Vivran slot, the public photo pipeline, the take-down) is the new row **`11b-4a-family-memorial-public-render`** (`backlog`), gated on Story 11b.5's components.
+> - **MA2:** step (d) — kinship details — is ⛔ not collected in this row (deferred, recorded in `deferred-work.md`).
+> - **MA4:** step (b)'s *"emphasis"* is deferred, recorded; v1 formatting is paragraphs only (a blank line), ⛔ no markup.
+> - **MA8:** step (c)'s *"Story 6.5 `<ClaimDocumentUpload>` pattern"* is replaced by a **new per-purpose port** `MemorialPhotoStorage` (the helpdesk-attachment precedent); one optional private photo, metadata stripped at ingest.
+> - **MA14:** writing opens **after the collection closes** — the drive's pool `closed` or `settled` (the UX's *"post-close authorship"*), keyed on the pool's own state.
+> - **Trap 3:** the text box always starts **empty** — ⛔ never *"HQ pre-populated"* (invariant (e)).
+> - **The 10.10 correction:** *"moderation queue per Story 10.10"* points at **member** suspend/terminate/restore; ⛔ none moderates content. ⇒ this story builds its **own** append-only review record, reviewed by `trustee_panel` (key `memorial.review`) — ⛔ never `MODERATION_ACTIONS` or `member.moderate`.
+
 > ⭐⛔ **BINDING CONSTRAINT ADDED 2026-08-28 — [Decision 2026-08-28-162](../../.decision-log.md#decision-2026-08-28-162) clause 3. ⚠ This story now OWES an authorisation it did not previously carry, and it must reach the ACs and Tasks list, ⛔ not sit as a note ([[feedback_spec_edits_must_propagate_to_tasks]]).**
 >
 > The claim-time publication consent boxes **(b) `sahyog_vivran_publication`** and **(c) `in_memoriam_listing`** are **RETIRED** — ⛔ **not re-scoped, ⛔ not re-worded**. They previously stood in as a prospective, claim-time consent covering family-authored memorial content.

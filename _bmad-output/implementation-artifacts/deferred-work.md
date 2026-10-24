@@ -4,6 +4,128 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-4-memorial-authorship-surface-family-writes-the-story.md — third pass (2026-10-24)
+
+Third pass over the uncommitted fix-round delta (HEAD `21284bff` + working tree); the story's `### Review Findings` "Third pass" holds the full record (T1–T18, and the fix-diff review V1–V17). These are DEFERRED — not closed, not addressed by a fix — EXCEPT W14, CLOSED by migration 0182 (the row-held Send key), and T14, being CLOSED by Z1 (a read-back by key after an ambiguous COMMIT); the final review added Z7–Z13. Each names its trigger.
+
+- **T14 — A COMMIT whose acknowledgement is lost reads as "not committed"** (*the same defect as R31 (b) — V15*) ⭐ *(2026-10-24: with the key on the row, a same-key retry now REPLAYS that row — with its photo gone — instead of writing a second version; the fix is now a cheap read-back by `(pool_id, idempotency_key)` before deleting the photo.)* ⭐ *(**CLOSED 2026-10-24 by the final review, Z1** — the read-back is built: own row ⇒ committed, photo kept; none ⇒ rollback; read-back failed ⇒ 500 with the photo kept.)* (`apps/api/src/modules/memorial/handlers.ts`, the Send catch): the photo the committed row references is deleted and the claim released, so a retry can insert a second version. Latent — needs a connection loss exactly at COMMIT; the same shape as every `withCompensatingAudit` caller. T3's mobile landed check narrows the duplicate half. **Trigger:** a report, or a house-wide fix for ambiguous COMMIT outcomes.
+- **T15 — Offset paging on the memorial review queue can SKIP a row (not only repeat one), and "Load more" fails past offset 10,000** (`MemorialReviewPage.tsx` `distinctItems`, `hooks.ts` `getNextPageParam`, the contract's `offset ≤ 10000`). Disclosed in the AC9 R14 amendment. **Trigger:** concurrent reviewers on one Pariwar, or > 10,000 rows — then a keyset cursor.
+- **T16 — The idempotency replay ignores the payload** — R6 protects only a client that drops its key when the draft changes. House shape (every keyed store). **Trigger:** a second memorial client (web), or a request-hash column in `idempotency_keys`.
+- **T17 — `memorialSendLanded` checks "different", not "newer"** (`apps/mobile/lib/memorial-draft.ts`): a submission sent from a SECOND phone in the same Ravi-mode session makes the intro clear this phone's unsent draft and photo copy. **Trigger:** a report, or multi-device member sessions.
+- **T18 — Two "earlier version" sentences can show together with no version named** (`apps/mobile/app/(memorial)/outcome.tsx`; v1 approved-with-omissions stands, v2's approval withdrawn by the Trust, v3 withdrawn by the family). Folded into the non-author Hindi / tone review (both lines UN-ATTESTED; Row 41 (a) / (c)). **Trigger:** that review.
+- **V16 — The reworded `outcome.earlier_approval_stands` mixes its address** ⭐ *(**SETTLED 2026-10-25** by BigDev's Hindi-review edit: "or call the helpline", en + hi — the line now needs a non-author tone / Hindi check, Row 41 (a).)* ("you can write a new version … or the nominee can call the helpline"; other lines use "If you, the nominee"). Folded into the non-author Hindi / tone review (UN-ATTESTED). **Trigger:** that review.
+- **V17 — The sticky "refused after a verified code" state is per mounted Preview:** Change the words → Photo → a NEW Preview starts clean, so a 403 there sends one more SMS (`apps/mobile/app/(memorial)/preview.tsx`). The per-screen scope is the `certificate-replacement.tsx` precedent and the helpline is shown with the refusal. **Trigger:** a report of repeated codes, or a server-side cap on handover codes per pool.
+- **W13 — Storage-full residue of V9:** while a screen's saves keep failing, the Preview reads and sends the OLDER stored words (the R6 key drop also failed); `lastSaveFailed` stays set after space frees; a key whose mint write failed is not kept, so a lost answer can lead to a second version (`apps/mobile/app/(memorial)/{write,photo,preview}.tsx`, `lib/memorial-draft.ts`). The honest fix is a visible "could not save on this phone" state — new copy. **Trigger:** a report, or the first device check on a full phone (Row 41 (h)). ⭐ *(Final review, X8 (c): also — the photo screen deletes a stored copy BEFORE the patch that drops its file name, so under storage full the stored draft can name a deleted file and lose a chosen "keep previous photo". Z3 (a key kept in memory when its save fails) narrows the key half.)*
+- **X8 — (a) `cancelQueries` on the shared view key, (b) `lastPostedAt` stamped before a long upload:** MOOT — both were deleted with the row-held key and the handover state machine (Y round). (c) joins W13 above.
+- **W14 — The phone's key-age measures (T3, V3, W1) only narrow the duplicate-version window; the server is where it closes.** A key kept across retries outlives the 300 s claim (`MEMORIAL_SEND_IDEMPOTENCY_TTL_SECONDS`); the house shape is a long TTL (24 h, the `contributions/personal-event-handlers.ts` family) or a 409 carrying the claim's age. ⚠ *(Corrected 2026-10-24: `personal-event-handlers.ts` uses 300 s; the 24 h claims are `life-events`, `member-data-rights`, `drive-target`, `claims.peer-request`, `claims.contact-call`. ⭐ Being DISCHARGED in this story: BigDev chose to move the Send's idempotency onto the submission row (migration 0182) — see the story's "BigDev's choice on the X round" note.)* Held with R31 (a) as a design choice; three rounds of phone-side fixes are the evidence. **Trigger:** as R31 (a).
+- **Z7 — The Send replay body always says `with_the_trust`** whatever has happened to the replayed version since (withdrawn, decided, superseded). Latent: the phone ignores the body. **Trigger:** a second client that reads it.
+- **Z8 — Keys from before migration 0182 do not replay** (no backfill): an older build keeping a key whose Send committed would insert a second version after deploy. Latent — nothing is in production. **Trigger:** a deploy over live memorial data.
+- **Z9 — SAVEPOINT error handling in `insertMemorialSubmission`:** a failing `ROLLBACK TO SAVEPOINT` masks the original error; a failing `RELEASE` after a successful insert becomes a 500. Latent (a broken connection). **Trigger:** a report.
+- **Z10 — The Send replay ignores the payload** (T16, unchanged): a same-key Send with different content is a silent 200; correctness rests on R6. **Trigger:** as T16.
+- **Z11 — After a successful Withdraw the button is enabled again at once** (the refresh is not awaited); a second press answers `not_withdrawable`. **Trigger:** a report.
+- **Z12 — Brittle / weak memorial tests:** the vacuous "any fetchQuery sets gcTime: 0" pin, the exact-regex SMS-effect pin, a race test expecting `[201, 200]` in fixed order. **Trigger:** the next edit of those files.
+- **Z13 — The intro's landed branch passes `loading` as a constant `true`**, so after the first-load bound it flips to "missing" with an active Retry while navigating. **Trigger:** a report.
+- **Z14 — Two "Send a new code" presses before a re-render** can spend 2 of the 3 resends (2 SMS) — no identity guard on `resend` (`apps/mobile/lib/handover-gate.ts`). Within the cap. **Trigger:** a report.
+- **Z15 — The Send's "unknown" outcome** (the read-back after a throwing COMMIT failed) keeps a photo that nothing references if the row did not land (R24's orphan class), and its intent line stands beside a 500 (a later same-key insert writes a second create intent). **Trigger:** as R24 / Row 41 (k).
+- **Z16 — The read-back can time out (5 s)** behind other same-pool Sends holding the pool lock across their audit write ⇒ a spurious 500. **Trigger:** Send latency / contention telemetry.
+- **Z17 — `send-commit.spec.ts` gaps:** the original tx still holding the lock while the read-back waits; the lock-timeout outcome; the `after_failed_commit` replay. **Trigger:** the next edit of the read-back.
+- **Z18 — A hung OTP request** (no transport timeout) leaves the code panel on a spinner with no resend — only the helpline. **Trigger:** a report, or a transport timeout on the OTP client.
+- **Z19 — "Send a new code" shows straight after an OTP 429** (indistinguishable from a failed send, AC16 (12)), so all 3 resends can be spent against the rate limit. **Trigger:** as AC16 (12).
+- **Z20 — An edit A → B → A** restores the content signature, so `retry_pending` survives although R6 dropped the key (a possible identical second version; its 403 ⇒ refused). **Trigger:** a report.
+
+---
+
+## Deferred from: code review of 11b-4-memorial-authorship-surface-family-writes-the-story.md (2026-10-24)
+
+Three-layer review (HEAD `21284bff`); the story's `### Review Findings` holds the full record (R1–R33). These eleven are DEFERRED — not closed, not addressed by a fix. Each names its trigger.
+
+- **R23 — Erasure completeness for a memorial about an erased member** (LATENT, not reachable on a product path today). Missing: erased-subject guards on Send / `decide` / `withdrawApproval` and the pending queue (a decision on a version whose words are the erasure sentinel is accepted, and a fresh Tier-1 internal note written after the scrub is never scrubbed); `lockMemorialPool` inside `anonymizeMember` (a Send committing between its `select` and the erasure COMMIT is neither scrubbed nor in `memorialPhotoKeys`); a retry for a failed post-commit photo delete (a second erasure is refused 409, `photo_object_key` is never nulled); the reviewer `detail` still signing a URL for a deleted object. Why deferred: both erasure callers gate on `resolveRtbfLegality` (`rtbf/handlers.ts:103`, `member-data-rights/handlers.ts:1175`) — legal only for a `withdrawn` lifecycle state or an overlay-`terminated` member, and death is neither (story MA15: "the words are kept indefinitely"). The peer repro that reproduces it calls `anonymizeMember` directly. **Trigger:** the family-erasure follow-up (story AC16 (7)) or any change that admits erasure of a deceased member. Not proven unreachable for a deceased member who is also overlay-terminated.
+- **R24 — Orphaned memorial photo after a process crash between `put` and COMMIT.** No row holds the key, so erasure cannot find it and nothing sweeps it. Needs a bucket lifecycle rule or a reconcile job. (The thrown-`put` / lost-acknowledgement arm is fixed in R3.) **Trigger:** before `MEMORIAL_AUTHORSHIP_ENABLED=1` in production (Row 41). ⭐ *(2026-10-24, third review pass, T13 (a): Row 41 did not carry this trigger — it now does, as criterion **(k)**.)*
+- **R25 — `MEMORIAL_PHOTO_BUCKET` unset falls back to a container-local disk store** (`apps/api/src/deps.ts:612-620`; `signedReadUrl` then returns `file://...`). Pre-existing house pattern: the claim-document, bank-statement, self-verify and helpdesk stores use the same env-else-local-fake wiring. Mitigated for this surface by adding the bucket to Row 41 (R21). **Trigger:** a boot-time production guard for ALL of these stores, as one change.
+- **R26 — Review list / detail cost:** one KMS decrypt per row (N+1, up to 200) and per version, run serially, each with an audit line; a decrypt + two audit lines on every mobile screen mount (`staleTime: 0` is required by the no-persistence rule); no cap on versions per pool. **Trigger:** measured latency once the surface has real volume.
+- **R27 — `Intl.Segmenter` grapheme boundaries may differ between the admin browser and the API's Node** (ICU / Unicode version; Devanagari conjunct rules, GB9c), so the pre-check and the server can disagree. **Trigger:** compare `process.versions.icu` / `unicode` of the production Node build with the supported admin browsers.
+- **R28 — A second `closed` / `settled` pool for the same deceased makes `resolveMemorialDrive` pivot to the newer pool,** hiding the first memorial and its draft key from the family (`packages/domain/src/memorial/resolve.ts:45-69`; warn-logged only). **Trigger:** a live check that a second pool for one deceased can exist.
+- **R29 — Cross-table state rules and cross-tenant FKs are handler-enforced, not schema-enforced:** a `trust` withdrawal needs a prior approving decision, a decision and a withdrawal exclude each other, and `pool_id` / `deceased_member_id` are single-column FKs (only the claim FK is composite); the Withdraw route writes an audit intent for any id before ownership is checked. Every writer takes the advisory lock and passes scoped ids. **Trigger:** a second writer of these tables.
+- **R30 — The counter copy says "letters" while the limit counts code points** (`packages/i18n/locales/en/memorial.json:22`; a Devanagari word differs by roughly 1.5–2x). Folded into the non-author Hindi / tone review (AC14 — UN-ATTESTED; Row 41 (a) / (c)). **Trigger:** that review.
+- **R31 — R3 residuals the Send fix does not close** (`apps/api/src/modules/memorial/handlers.ts`, `MEMORIAL_SEND_IDEMPOTENCY_TTL_SECONDS = 300`). (a) Past the 300 s claim TTL a still-pending claim reads as expired, so a retry with the same key is ACQUIRED and inserts a second version, and the mobile `memorialSendLanded` check never runs — the 409 recovery works only inside the TTL. The house shape for a client that persists its key across retries is a 24 h TTL (the `contributions/personal-event-handlers.ts` family); AC3 and AC7 were written around 300 s, so aligning it is a design choice. (b) A COMMIT whose acknowledgement is lost makes `closeScopeTx` throw, `committed` stays false, and the photo is deleted for a row that may exist (the same class as R3; needs a read-back). (c) If the first `recordResult` landed but the client saw an error, the retry answers 500 although the result is recorded; a later retry replays 200 (harmless). **Trigger:** retry telemetry once the surface has traffic, or the first reported duplicate version. ⭐ *(2026-10-24, third review pass, T3: (a) is NARROWED on the phone — a kept key older than the 300 s TTL is checked against a refetched view before it is reused, and a young key is kept on a 409 — ⛔ not closed on the server: a client that skips the check still re-acquires an expired pending claim.)* ⭐ *(Fix-diff review, V15: (c) is CLOSED by T4 — a committed Send whose result cannot be recorded, or whose first record's acknowledgement is lost, now answers 201 (`send-commit.spec.ts`, the T4 `lost-ack` leg). (b) is the same defect as the third pass's deferred **T14** — one item, recorded twice; read T14 for its current state. Still open here: (a) on the server.)* ⭐ *(2026-10-24, the row-held Send key (migration 0182, BigDev): **(a) DISCHARGED** — the key lives on the submission row, so a retry replays at any age and nothing is left pending; **(c) MOOT** — the keyed store is no longer used for the Send; **(b) stays open as T14**.)*
+- **R32 — Plain family text is no longer isolated from the omitted-part marker next to it** (`packages/ui/src/memorial/bidi.ts` fast path, R13 round 2). Only text that holds a stateful direction control is now wrapped in FSI…PDI. The Unicode neutral / weak-type rules (UAX#9 W and N) can still resolve a trailing `।`, `.` or digit of a RIGHT-TO-LEFT-script quote (Urdu, Arabic) across the boundary to the next run, so that punctuation may display on the wrong side of the marker. The shipped locales are en and hi (both left-to-right), so no tested text can show it. **Trigger:** a right-to-left locale, or a reviewer / family reporting a pasted RTL quote beside a marker; the fix is to isolate every segment again (the pre-fast-path behaviour) once the device checks (Row 41 (h)) show the isolate renders cleanly.
+- **R33 — The Photo screen's `releasePicked` can delete a photo copy that a Send is still uploading** (`apps/mobile/app/(memorial)/photo.tsx`). The Send hook now ties itself to its screen (second review pass, S1): back is consumed while sending and a newer draft is never cleared. What remains is a family who leaves the Preview through "Save and come back" while the POST is still running and quickly re-enters the writing flow to Photo and picks another photo or continues without one — `releasePicked` deletes the file the earlier upload is reading, the upload fails and the family is told to try again. **Trigger:** the first report, or an app-wide registry of in-flight uploads.
+
+---
+
+## Deferred from: story 11b-4-memorial-authorship-surface-family-writes-the-story.md (2026-10-24)
+
+Story 11b.4 builds the family memorial's WRITE side (the nominee writes, sends with their handover code; the Trustee Panel reviews) —
+build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–MA19), on the Panel's [`-391`](../../.decision-log.md#decision-2026-10-23-391) / [`-392`](../../.decision-log.md#decision-2026-10-23-392) / [`-393`](../../.decision-log.md#decision-2026-10-23-393) and BigDev's [`-395`](../../.decision-log.md#decision-2026-10-23-395). Each item carries its trigger.
+
+- **(1) The PUBLIC RENDER → row `11b-4a-family-memorial-public-render`** (`-391` Q2 A — as approved, any child left out; Q3 B — the
+  family asks the helpline, the rider withdrawn by `-393`). It owns: the helpline operator's take-down **on the NOMINEE's request only**
+  (`-395` item 3; how the operator knows the caller is the nominee is ⛔ ruled — a call back to the declared number of the
+  `handover_nominee_ref` version is MA18's **proposal**) after a smaller fix is offered (M4), within 7 days, with an email to the
+  approver (`-392` items 4–5, kept by `-395`) — MA18's parts: a key (e.g. `memorial.takedown`) for `helpline_operator` (prove it live
+  on the pariwar dimension), a `memorial_withdrawals` actor `helpline` and a reason `family_asked` (minted THEN), an optional Tier-1
+  note, the 7-day watch, and the approver email — which needs a THIRD identity-data read (ADR-0040 admits two, fenced by
+  `apps/jobs/tests/staff-email-identity-read-fence.test.ts`) ⇒ a new ADR or an ADR-0040 amendment FIRST; `-395` item 3 shown to the
+  Panel (Row 41 (e)); `-395`'s Not-covered lines (how the operator knows the caller is the nominee; the nominee has died, cannot be
+  reached, or was replaced; the email's text and recipient); ⭐ **M1: a removed memorial leaves ⛔ trace on the page** (⛔ marker,
+  ⛔ gap, ⛔ date); `-393`'s Not-covered lines (counsel on M4, the call script, what the family is told when they keep it) and
+  `-392`'s (the clock's start; the 7 days passing; whether a declined request is answered to the family, and how — live again now
+  that `-395` item 3 turns a non-nominee away; whether the operator's decision is reviewed or appealed; whether "removed" ends the
+  memorial or lets the family send again; the recipient when the approver no longer holds the role or has ⛔ email); the matrix fields
+  + `RULED_TIER1_PUBLIC_EXCEPTIONS` entries (narrative, portrait — Tier-1 by fact; a public Tier-1 field is a ruling, ⛔ a code change);
+  the SAME presenter (`@twt/ui` `reconstructMemorial`) rendered with `white-space: pre-wrap` (HTML collapses the spaces React Native
+  keeps — AC11); the latest **approved** version shows while a newer one is with the Trust (MA13); the omitted-part `reason` that
+  `reconstructMemorial` now carries on each marker (code review 2026-10-24, R10) is for the FAMILY's own screen and the Trust's — **the public
+  render must ⛔ never serialise it** (why a part was left out is exactly what the public page must not show); the public render also needs the
+  `isolateMemorialBidi` helper (`@twt/ui`) for family text holding a direction control (R13); the `s-maxage=300` take-down latency;
+  and the two `apps/public` doc-blocks that read *"the family story (Story 11b.4) — `backlog`"* — `apps/public/src/lib/sahyog-vivran-render.ts`
+  and `apps/public/src/pages/sahyog-vivran/[driveToken].astro` — which 11b.4's AC17 forbade touching. **Trigger: row 11b-4a's
+  create-story.**
+- **(2) Kinship capture** (epic step (d) — MA2): ⛔ collected; names of living relatives for a purpose not yet ruled. **Trigger: row
+  11b-4a / Story 11b.5 (`<KinshipLattice>`), with its own Panel question on the purpose.**
+- **(3) Emphasis** (epic step (b) — MA4): v1 is paragraphs only. **Trigger: a Story 0.9 conversation or a family request.**
+- **(4) A staff-initiated helpdesk conversation after a refusal** (the epic's *"request specific changes via empathetic helpdesk
+  conversation"*): every non-approved outcome shows the helpline, but ⛔ staff-initiated ticket exists. **Trigger: the next helpdesk story.**
+- **(5) Non-nominee authors** (`-391` Q1 B / C — ⛔ chosen). **Trigger: a Panel question re-opening Q1.**
+- **(6) A formal family appeal** of a decision (`-391` Q4 B — ⛔ chosen; Q4 A: told in the app, may send again). **Trigger: a Panel
+  question re-opening Q4.**
+- **(7) A family's own request to ERASE their words** through the helpline (`-391` Q5 A's follow-up): MA15 erases with the MEMBER's
+  record (and a deceased member's record is ⛔ erased today — `resolveRtbfLegality` admits only withdrawn / terminated); ⛔
+  family-initiated path exists, and the author is ⛔ a data subject of any export route. **Trigger: the first such request, or 11b.4a.**
+- **(8) Story 0.9 UN-ATTESTED** — every Pattern-4 / grief-pacing claim in 11b.4 is ⛔ validated against a family conversation
+  (`_bmad-output/research/p0-2b-bereaved-spouse.md` holds only `_AWAITING_CONVERSATION_CONDUCT_` placeholders). Launch-gate Row 41 (d)
+  carries it ([[feedback_record_unattested_no_backfill]]). **Trigger: the Story 0.9 conversation.**
+- **(9) The family can LOSE the account** — `disabled-T+90` (unbuilt — `state-machine.ts` header) must ⛔ cut the family off; a
+  WITHDRAWAL of the deceased's membership is **unguarded today** (`apps/api/src/modules/withdrawal/handlers.ts` `assertWithdrawable`
+  checks only the member state; after it, `termination-block-seam.ts` denies every session — every Ravi-mode surface ends); and the
+  90-day sign-in lapse (`apps/mobile/lib/session.ts`; 180 days at most — `memberRefreshAbsoluteMs`). ⛔ Fixed here. **Routed to the
+  withdrawal / claims owner. Trigger: the next withdrawal or Ravi-mode story.**
+- **(10) Staff-assisted authoring** on the family's instruction (`-391` Q1 A's follow-up). **Trigger: the first family who cannot use
+  the app.**
+- **(11) `@twt/ui` in `apps/public`** — `apps/public` does ⛔ depend on `@twt/ui` today (epic header C-1), so 11b.4a's reuse of the AC11
+  presenter needs that dependency first. **Trigger: row 11b-4a.**
+- **(12) UX departures, each with its reason** — the entry on HOME rather than in `<NomineeConsole>` (the console resolves only `live`
+  pools — Trap 2; MA14 opens writing after the close); reason COPY instead of a reviewer's free-text *"note"* to the family (⛔ reviewer
+  free text reaches a grieving family unreviewed — MA6); ⛔ SMS / email resume link (UX-DR50/56 — Trap 4; DLT carries only approved
+  text); the handover hook's rate-limit case shown as a failed send (the hook is ⛔ edited — AC17, AC7a); Pattern 5's relative-time
+  *"Saved"* hint and a screen-reader announcement of save state (a static *"Saved on this phone"* line instead — MA3); `<PortraitFrame>`
+  in upload mode (Story 11b.5 is `backlog` — Trap 9). **Trigger: Story 11b.5 / a Story 0.9 conversation.**
+- **(13) ⛔ No production pool reaches `closed`** — the surface is INERT until the Epic 7 window scheduler appends `pool.closed` (MA14;
+  every drive surface shares it). Row 41 (f) carries it. **Trigger: the first non-test producer of `pool.closed`.**
+- **(14) Counsel risks, ⛔ blockers** — `-391`: counsel was ⛔ asked how long words naming living people may be kept (Q5); `-391` /
+  `-393`: the draft T&C *"revocable consent"* sentence flagged for its owner; `-393`: whether M4's conversation keeps withdrawal as easy
+  as giving permission. **Trigger: the next counsel round (Story 0.13).**
+- **(15) The helpdesk create route TRUNCATES an over-long field SILENTLY** (`apps/api/src/modules/helpdesk/member-handlers.ts`
+  `readCreateMultipart`: `@fastify/multipart` passes a text field over `fieldSize` through CUT with `valueTruncated: true` and raises ⛔
+  error; there is ⛔ `FST_FIELD_SIZE_LIMIT` code, so its catch arm is dead — Trap 11). 11b.4's own route refuses it (`400
+  memorial.field_too_long`). **Routed to the helpdesk owner. Trigger: the next helpdesk story.**
+- **(16) The device checks are UN-ATTESTED** (Task 6.6): Hindi typing with `autoCorrect={false}` (Gboard Hindi + a transliteration
+  keyboard, iOS + Android — Trap 7: on Android it sets `TYPE_TEXT_FLAG_NO_SUGGESTIONS`, which may break transliteration — a break
+  STOPS for BigDev); a rotated portrait and an iPhone HEIC pick arriving upright as JPEG (MA8 — the stripper drops the EXIF
+  orientation tag); TalkBack-Hindi (AC13). ⛔ Run in this session (⛔ device). **Trigger: before Row 41 closes.**
+
+---
+
 ## Deferred from: `2026-10-24-401` — the disclosure removal (Story 6.36e, 2026-10-24)
 
 BigDev's principle: ⛔ no screen may tell members that the Trust asks members about a death (it would let a group steer who is asked). Removed from 6.36e's screens (`form.why`, `request.consequence*`). Open, ⛔ done here:
@@ -3349,6 +3471,9 @@ recorded here rather than left for a future reader to re-derive._
     `apps/` returns **ZERO hits**. The epic AC's *"verifier hyperlinks resolving to verifier profile
     pages"* has ⛔ no destination. ⛔ Unowned.
   · **the family story** (Story **11b.4**) — `backlog`.
+    ⚠ ANNOTATED 2026-10-24 (Story 11b.4): the **write side** is built at 11b.4 (the family writes and sends; the Trust reviews) —
+    ⛔ no public read model until row `11b-4a-family-memorial-public-render`. The public page still renders **nothing** for it. ⛔ Not
+    closed, ⛔ not deleted.
   · **the memorial visual components** (Story **11b.5**) — `backlog`.
   · **`<StatCardStrip>`** — **C-3**: ⛔ NO PRODUCER **and** ⛔ NO OWNER; `2026-08-23-154` declined to
     settle it (*"a settled SHAPE is ⛔ not a settled SOURCE"*). ⛔⛔ **Do ⛔ not stub it** — a stub asserts
@@ -10995,6 +11120,10 @@ way to check the sibling honoured it. **2 decision-needed, 12 patch, 2 deferred,
   to Adv. Mohit Agrawal, ⛔ not to a Panel session ([[project_dpdpa_counsel_engaged_but_unrecorded]]);
   (iii) any story adding a **second** member-scoped persisted query, which generalises exposure (b)
   beyond this one surface.
+  ⚠ ANNOTATED 2026-10-24 (Story 11b.4, [`-398`](../../.decision-log.md#decision-2026-10-24-398)): trigger (iii) is ⛔ **not met** by
+  11b.4 — the memorial member GET (the family's words, the deceased's name, a signed photo URL) is member-scoped but EXCLUDED from the
+  persisted cache by `gcTime: 0` on every memorial query (AC1; pinned by `apps/mobile/tests/unit/memorial-source-pins.test.ts`). The
+  item stays **open**, ⛔ not closed.
 
 ⚠⚠ **ONE ITEM IS NOT LISTED HERE BECAUSE IT IS NOT DEFERRABLE — it is an item whose trigger has ALREADY
 FIRED AND WAS SPENT UNRECORDED.** `11b.2 (vi)` (the missing `t()`-through assertion for `@twt/ui`'s ten

@@ -78,6 +78,8 @@ const MEMBER_MODERATE = permissionKey('member.moderate');
 /** Story 10.19 — restore-from-TERMINATED, held by `trustee_panel` ALONE (Niyamavali §8.4). */
 const MEMBER_RESTORE_TERMINATED = permissionKey('member.restore_terminated');
 const MEMBER_MODERATION_APPEAL_DECIDE = permissionKey('member.decide_moderation_appeal');
+/** Story 11b.4 (`2026-10-24-398` MA7, `-391` Confirm 1 A) — the family memorial's review, held by `trustee_panel`. */
+const MEMORIAL_REVIEW = permissionKey('memorial.review');
 // Story 10.21 — the off-portal DPDPA data-rights FULFILMENT key (pariwar-dimension). Filing a request
 // (`helpdesk.create`) and EXECUTING it on a member with no session are different authorities, so this is
 // a distinct key held by `pariwar_admin` ONLY. ⛔ NOT `helpline_operator` (files, does not execute),
@@ -842,6 +844,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       MEMBER_MODERATION_APPEAL_DECIDE,
       POOL_FIXED_AMOUNT_SET,
       POOL_FIXED_AMOUNT_EMERGENCY,
+      // ⭐ Story 11b.4 (`2026-10-24-398` MA7) — the family memorial's review. The Trustee Panel is the standing reviewer
+      // of every memorial (`-391` Confirm 1 A: *"moderation by trustees"* read as this role, ⛔ the Trustee-Lite
+      // `pariwar_admin`). Live by the ceiling above: a `pariwar` ceiling satisfies the pariwar-dimension check.
+      MEMORIAL_REVIEW,
     ],
     scopeCeiling: 'pariwar',
   },

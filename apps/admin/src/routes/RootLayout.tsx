@@ -15,6 +15,7 @@ import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
 import { certificateRemindersEn } from '../modules/certificate-reminders/i18n-en.js';
 import { approvalWarningReasonsEn } from '../modules/approval-warning-reasons/i18n-en.js';
+import { resolveEn as memorialReviewEn } from '../modules/memorial-review/i18n-en.js';
 import { workplaceRequestsEn, workplacesEn } from '../modules/workplaces/i18n-en.js';
 
 function TopBar(): ReactElement {
@@ -151,6 +152,19 @@ function TopBar(): ReactElement {
               Story 6.25's email, which links to it) and the queue is the only way to FIND a correction
               waiting at step 2 (code review 2026-09-24: both were reachable only by a typed URL). The
               server's key check is the boundary; each page shows its own "no access" state. */}
+          {/* Story 11b.4 (AC9) — the Trustee Panel's family-memorial queue. ⭐ REQUIRED and ⛔ key-gated: a Pariwar grant
+              is ⛔ in `nationalGrants`, so a key-gated link would show only to `super_admin` (the trustee link's precedent).
+              The server's `memorial.review` check is the boundary; the page shows its own "no access" on a 403. */}
+          {pariwarId && (
+            <Link
+              to="/p/$pariwarId/memorial-reviews"
+              params={{ pariwarId }}
+              className="text-sm underline"
+              data-testid="nav-memorial-reviews"
+            >
+              {memorialReviewEn('memorial.nav')}
+            </Link>
+          )}
           {pariwarId && (
             <Link
               to="/p/$pariwarId/nominee-corrections"

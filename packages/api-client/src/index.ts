@@ -9,6 +9,10 @@
 // The full OpenAPI→client codegen stays deferred (DD-7).
 
 import {
+  MemorialEntryResponse,
+  MemorialMemberViewResponse,
+  MemorialSendResponse,
+  MemorialWithdrawResponse,
   HelpdeskAttachmentUrlResponse,
   HelpdeskCategoryListResponse,
   MemberTicketDetailResponse,
@@ -1754,3 +1758,36 @@ export function createMemberNomineeLinksClient(opts: MemberAuthClientOptions) {
 
 export type MemberNomineeLinksClient = ReturnType<typeof createMemberNomineeLinksClient>;
 export { PeerAnswerEditor, type PeerAnswerEditorSnapshot } from './peer-answer-editor';
+
+/**
+ * ⭐ Story 11b.4 — the family memorial's MEMBER client (the Ravi-mode session-as-deceased). A SEPARATE factory sharing only
+ * the `call` / `callMultipart` machinery (the helpdesk precedent). Every refusal surfaces as `ApiError`; the app keys on
+ * `error.code` (`memorial.*`) for its Pattern-4 copy, and on `auth.step_up_required` to run the NOMINEE's handover code
+ * (`use-handover-otp.ts` — ⛔ never `useStepUpGate`) and retry once.
+ */
+export function createMemberMemorialClient(opts: MemberAuthClientOptions) {
+  const { call, callMultipart } = createApiCallers(opts);
+  const base = '/api/v1/member/memorial';
+  return {
+    /** The home probe — ⛔ decrypt on the server; `{ memorialEntry: false }` when there is nothing to write about. */
+    entry(): Promise<MemorialEntryResponse> {
+      return call(`${base}/entry`, MemorialEntryResponse, undefined, true, 'GET');
+    },
+    /** The family's own view — `{ memorial: null }` when there is no drive (or the surface is dark). */
+    view(): Promise<MemorialMemberViewResponse> {
+      return call(base, MemorialMemberViewResponse, undefined, true, 'GET');
+    },
+    /**
+     * Send (multipart): the fields `body`, `altText`, `authorisationCopyVersion`, `authorisationLocale`, `keepPreviousPhoto`
+     * and an optional `photo` file (RN: `{ uri, name, type }`). `idempotencyKey` rides a HEADER — a retry with the SAME key
+     * replays the first result (200) instead of creating a second version.
+     */
+    send(form: FormData, opts2: { idempotencyKey: string }): Promise<MemorialSendResponse> {
+      return callMultipart(`${base}/submissions`, MemorialSendResponse, form, { 'idempotency-key': opts2.idempotencyKey });
+    },
+    /** Withdraw the latest version while it is with the Trust. ⛔ No body: `'{}'` (a bodyless JSON POST is a Fastify 400). */
+    withdraw(submissionId: string): Promise<MemorialWithdrawResponse> {
+      return call(`${base}/submissions/${encodeURIComponent(submissionId)}/withdraw`, MemorialWithdrawResponse, {}, true, 'POST');
+    },
+  };
+}

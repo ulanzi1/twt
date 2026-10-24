@@ -1165,7 +1165,7 @@ components:
             - type: "null"
         status:
           type: string
-          enum: &a59
+          enum: &a62
             - draft
             - in_review
             - signed_off
@@ -9093,6 +9093,454 @@ components:
       required:
         - otp
       additionalProperties: false
+    MemorialEntry:
+      type: object
+      properties:
+        memorialEntry:
+          type: boolean
+      required:
+        - memorialEntry
+      additionalProperties: false
+    MemorialMemberView:
+      type: object
+      properties:
+        memorial:
+          type:
+            - object
+            - "null"
+          properties:
+            driveId:
+              type: string
+            deceasedName:
+              type:
+                - string
+                - "null"
+            memorialState:
+              type: string
+              enum: &a59
+                - none
+                - with_the_trust
+                - approved
+                - approved_with_omissions
+                - not_approved
+                - withdrawn
+                - approval_withdrawn
+            submissionId:
+              type:
+                - string
+                - "null"
+            idempotencyKey:
+              type:
+                - string
+                - "null"
+            body:
+              type:
+                - string
+                - "null"
+            altText:
+              type:
+                - string
+                - "null"
+            unavailable:
+              type:
+                - string
+                - "null"
+              enum:
+                - memorial.unavailable_now
+            hasPhoto:
+              type: boolean
+            photoUrl:
+              type:
+                - string
+                - "null"
+            omissions:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    enum: &a60
+                      - body
+                      - altText
+                  start:
+                    type: integer
+                  end:
+                    type: integer
+                  reason:
+                    type: string
+                    enum: &a58
+                      - attacks_someone_named
+                      - accuses_someone_of_wrongdoing
+                      - against_the_law
+                      - identifies_a_child
+                required:
+                  - field
+                  - start
+                  - end
+                  - reason
+                additionalProperties: false
+            photoLeftOut:
+              type:
+                - object
+                - "null"
+              properties:
+                reason:
+                  type: string
+                  enum: *a58
+              required:
+                - reason
+              additionalProperties: false
+            reasonCode:
+              type:
+                - string
+                - "null"
+              enum: *a58
+            earlierApprovalWithdrawn:
+              type:
+                - object
+                - "null"
+              properties:
+                reasonCode:
+                  type: string
+                  enum: *a58
+              required:
+                - reasonCode
+              additionalProperties: false
+            earlierApprovalStands:
+              type: boolean
+            canSend:
+              type: boolean
+            canWithdraw:
+              type: boolean
+            authorisation:
+              type: object
+              properties:
+                copyVersion:
+                  type: string
+                text:
+                  type: object
+                  properties:
+                    hi:
+                      type: string
+                    en:
+                      type: string
+                  required:
+                    - hi
+                    - en
+                  additionalProperties: false
+              required:
+                - copyVersion
+                - text
+              additionalProperties: false
+          required:
+            - driveId
+            - deceasedName
+            - memorialState
+            - submissionId
+            - idempotencyKey
+            - body
+            - altText
+            - unavailable
+            - hasPhoto
+            - photoUrl
+            - omissions
+            - photoLeftOut
+            - reasonCode
+            - earlierApprovalWithdrawn
+            - earlierApprovalStands
+            - canSend
+            - canWithdraw
+            - authorisation
+          additionalProperties: false
+      required:
+        - memorial
+      additionalProperties: false
+    MemorialSend:
+      type: object
+      properties:
+        submissionId:
+          type: string
+        memorialState:
+          type: string
+          enum:
+            - with_the_trust
+      required:
+        - submissionId
+        - memorialState
+      additionalProperties: false
+    MemorialSendFields:
+      type: object
+      properties:
+        body:
+          type: string
+        altText:
+          type: string
+        authorisationCopyVersion:
+          type: string
+        authorisationLocale:
+          type: string
+          enum:
+            - hi
+            - en
+        keepPreviousPhoto:
+          type: string
+          enum:
+            - "true"
+            - "false"
+        photo:
+          type: string
+      required:
+        - body
+        - authorisationCopyVersion
+        - authorisationLocale
+    MemorialWithdraw:
+      type: object
+      properties:
+        memorialState:
+          type: string
+          enum:
+            - withdrawn
+      required:
+        - memorialState
+      additionalProperties: false
+    MemorialReviewList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              submissionId:
+                type: string
+              deceasedName:
+                type:
+                  - string
+                  - "null"
+              sentAt:
+                type: string
+              decidedAt:
+                type:
+                  - string
+                  - "null"
+                format: date-time
+              memorialState:
+                type: string
+                enum: *a59
+            required:
+              - submissionId
+              - deceasedName
+              - sentAt
+              - decidedAt
+              - memorialState
+            additionalProperties: false
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - hasMore
+      additionalProperties: false
+    MemorialReviewDetail:
+      type: object
+      properties:
+        submissionId:
+          type: string
+        deceasedName:
+          type:
+            - string
+            - "null"
+        memorialState:
+          type: string
+          enum: *a59
+        chain:
+          type: array
+          items:
+            type: object
+            properties:
+              submissionId:
+                type: string
+              sentAt:
+                type: string
+              body:
+                type:
+                  - string
+                  - "null"
+              altText:
+                type:
+                  - string
+                  - "null"
+              unavailable:
+                type:
+                  - string
+                  - "null"
+                enum:
+                  - memorial.unavailable_now
+              hasPhoto:
+                type: boolean
+              photoUrl:
+                type:
+                  - string
+                  - "null"
+              authorisationCopyVersion:
+                type: string
+              authorisationLocale:
+                type: string
+                enum:
+                  - hi
+                  - en
+              handoverRecipient:
+                type: string
+                enum:
+                  - latest
+                  - at_death
+              decision:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  action:
+                    type: string
+                    enum: &a84
+                      - approved
+                      - approved_with_omissions
+                      - not_approved
+                  omissions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          enum: *a60
+                        start:
+                          type: integer
+                        end:
+                          type: integer
+                        reason:
+                          type: string
+                          enum: *a58
+                      required:
+                        - field
+                        - start
+                        - end
+                        - reason
+                      additionalProperties: false
+                  photoLeftOutReason:
+                    type:
+                      - string
+                      - "null"
+                    enum: *a58
+                  reasonCode:
+                    type:
+                      - string
+                      - "null"
+                    enum: *a58
+                  internalNote:
+                    type:
+                      - string
+                      - "null"
+                  actorDisplay:
+                    type: string
+                  decidedAt:
+                    type: string
+                required:
+                  - action
+                  - omissions
+                  - photoLeftOutReason
+                  - reasonCode
+                  - internalNote
+                  - actorDisplay
+                  - decidedAt
+                additionalProperties: false
+              withdrawal:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  withdrawnBy:
+                    type: string
+                    enum:
+                      - family
+                      - trust
+                  reasonCode:
+                    type:
+                      - string
+                      - "null"
+                    enum: *a58
+                  internalNote:
+                    type:
+                      - string
+                      - "null"
+                  actorDisplay:
+                    type:
+                      - string
+                      - "null"
+                  withdrawnAt:
+                    type: string
+                required:
+                  - withdrawnBy
+                  - reasonCode
+                  - internalNote
+                  - actorDisplay
+                  - withdrawnAt
+                additionalProperties: false
+            required:
+              - submissionId
+              - sentAt
+              - body
+              - altText
+              - unavailable
+              - hasPhoto
+              - photoUrl
+              - authorisationCopyVersion
+              - authorisationLocale
+              - handoverRecipient
+              - decision
+              - withdrawal
+            additionalProperties: false
+        canDecide:
+          type: boolean
+        canWithdrawApproval:
+          type: boolean
+        withdrawApprovalTargetId:
+          type:
+            - string
+            - "null"
+      required:
+        - submissionId
+        - deceasedName
+        - memorialState
+        - chain
+        - canDecide
+        - canWithdrawApproval
+        - withdrawApprovalTargetId
+      additionalProperties: false
+    MemorialReviewDecision:
+      type: object
+      properties:
+        submissionId:
+          type: string
+        memorialState:
+          type: string
+          enum: *a59
+      required:
+        - submissionId
+        - memorialState
+      additionalProperties: false
+    MemorialWithdrawApproval:
+      type: object
+      properties:
+        submissionId:
+          type: string
+        memorialState:
+          type: string
+          enum:
+            - approval_withdrawn
+      required:
+        - submissionId
+        - memorialState
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:
@@ -9701,7 +10149,7 @@ paths:
     get:
       summary: List the Niyamavali registry (latest version per clause)
       description: Returns the chain-head (latest version) of every clause in the Pariwar, newest-first (forced-paginated). Requires niyamavali.amend at pariwar scope.
-      tags: &a58
+      tags: &a61
         - niyamavali
       parameters:
         - schema:
@@ -9742,7 +10190,7 @@ paths:
     get:
       summary: Version history of a clause (oldest → newest)
       description: Returns the most-recent `limit` version rows of a clause_id (forced-paginated, Story 1.14). Requires niyamavali.amend at pariwar scope.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -9793,7 +10241,7 @@ paths:
     get:
       summary: List the amendment ledger (time-ordered)
       description: Returns the niyamavali_amendments ledger newest-first (the De4 (pariwar_id, created_at) index). Requires niyamavali.amend at pariwar scope.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -9833,7 +10281,7 @@ paths:
     get:
       summary: List clause drafts (optionally by lifecycle state)
       description: Returns drafts for the Pariwar, newest-first, optionally filtered by status (e.g. in_review to find drafts awaiting sign-off). Requires niyamavali.amend.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -9850,7 +10298,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a59
+            enum: *a62
           required: false
           name: status
           in: query
@@ -9878,7 +10326,7 @@ paths:
     post:
       summary: Create a clause draft (create or amend)
       description: Creates a server-persisted draft (the non-author reviewer loads the exact pending content). Body is a discriminated union on operation. Requires niyamavali.amend.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -9927,7 +10375,7 @@ paths:
     get:
       summary: Load a single clause draft
       description: Returns the draft (incl. the pending payload) — the mechanism by which a NON-AUTHOR reviewer loads the exact content to review (AC1d). Requires niyamavali.amend or niyamavali.review.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -9969,7 +10417,7 @@ paths:
     put:
       summary: Edit a clause draft (resets the tone-review sign-off)
       description: Patches a non-published draft. ANY edit resets the draft to `draft` and clears a prior tone-review sign-off (content-bound, AC1d). Requires niyamavali.amend.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -10030,7 +10478,7 @@ paths:
     get:
       summary: Preview the draft diff (structured + rendered)
       description: Returns BOTH the structured-payload diff (computePayloadDiff vs the current published version, or {} for a create) AND a rendered display-field diff (AC1c). Requires niyamavali.amend or niyamavali.review.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -10073,7 +10521,7 @@ paths:
     post:
       summary: Submit a draft for tone-review
       description: Transitions a draft → in_review, routing it to a non-author reviewer. Requires niyamavali.amend.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -10122,7 +10570,7 @@ paths:
     post:
       summary: Record a non-author tone-review sign-off
       description: A reviewer (niyamavali.review) records a sign-off bound to the exact reviewed payload. Rejects a self-review (author === reviewer) with 409. Emits the Story 2.2 tone_review.signoff audit line.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -10183,7 +10631,7 @@ paths:
     post:
       summary: Publish a clause draft (audit-logged, tone-review-gated)
       description: Mints the immutable clause_versions row + a single audit line carrying the diff hash + reviewer + clause_id + clause_version_id (AC2), then fires the member-notification hook (AC3 placeholder). Gated on a recorded non-author, content-current tone-review sign-off — without one, 409 tone_review.required (AC4). Requires niyamavali.amend.
-      tags: *a58
+      tags: *a61
       parameters:
         - schema:
             type: string
@@ -10232,7 +10680,7 @@ paths:
     post:
       summary: Create a T&C version (audit-logged)
       description: "Creates a version-pinned T&C: renders body_html_rendered from bodyMarkdown at write time (sanitized), pins the supplied clause versions (each validated to exist in the Pariwar), defaults legal_review_status → pending, and writes a single audit line first (audit-or-throw). Requires tc.publish at pariwar scope."
-      tags: &a60
+      tags: &a63
         - terms-and-conditions
       parameters:
         - schema:
@@ -10288,7 +10736,7 @@ paths:
     post:
       summary: Approve a T&C version (audit-logged)
       description: "Marks a T&C approved: sets legal_reviewer_actor_id = the acting trustee, flips legal_review_status → approved, and supersedes the prior currently-effective version (set effective_until + status → superseded). Audit-or-throw. The superseded version stays queryable by tc_version_id. Requires tc.approve."
-      tags: *a60
+      tags: *a63
       parameters:
         - schema:
             type: string
@@ -10348,7 +10796,7 @@ paths:
   /api/v1/member/auth/otp/request:
     post:
       summary: Member login — request a mobile OTP (enumeration-safe, per-phone throttled)
-      tags: &a61
+      tags: &a64
         - member-auth
       requestBody:
         required: true
@@ -10378,7 +10826,7 @@ paths:
   /api/v1/member/auth/otp/verify:
     post:
       summary: Member login — verify OTP → full session / pariwar-select / signup-continuation
-      tags: *a61
+      tags: *a64
       requestBody:
         required: true
         content:
@@ -10419,7 +10867,7 @@ paths:
   /api/v1/member/auth/otp/select-pariwar:
     post:
       summary: Member login — pick a Pariwar scope (multi-membership) → full session
-      tags: *a61
+      tags: *a64
       requestBody:
         required: true
         content:
@@ -10448,7 +10896,7 @@ paths:
   /api/v1/member/auth/token/refresh:
     post:
       summary: Member session — rotate the refresh token (reuse detection)
-      tags: *a61
+      tags: *a64
       requestBody:
         required: true
         content:
@@ -10477,7 +10925,7 @@ paths:
   /api/v1/member/auth/step-up/request:
     post:
       summary: Member step-up — request an OTP for a gated action
-      tags: *a61
+      tags: *a64
       requestBody:
         required: true
         content:
@@ -10506,7 +10954,7 @@ paths:
   /api/v1/member/auth/step-up/verify:
     post:
       summary: Member step-up — verify the OTP → elevate for the action_context
-      tags: *a61
+      tags: *a64
       requestBody:
         required: true
         content:
@@ -10535,7 +10983,7 @@ paths:
   /api/v1/member/auth/signup/create:
     post:
       summary: First signup — create the member from the signup-continuation seam → full session
-      tags: *a61
+      tags: *a64
       requestBody:
         required: true
         content:
@@ -10577,7 +11025,7 @@ paths:
     post:
       summary: Signup KYC — begin a DigiLocker pull (returns the authorization redirect)
       description: Resolves the active KYC provider and begins a DigiLocker authorization-code flow for the authenticated member (must be pending-kyc), returning the authorizationUrl the client opens + the transactionId the callback correlates. Requires a member session.
-      tags: &a62
+      tags: &a65
         - member-kyc
       responses:
         "200":
@@ -10608,7 +11056,7 @@ paths:
     post:
       summary: DigiLocker OAuth callback (PUBLIC; state-correlated) — verify + pull the profile
       description: The OAuth redirect target DigiLocker sends the browser to with ?state&code. PUBLIC (no member JWT) — correlated by the unguessable state, which resolves the kyc_transaction (member_id + pariwar_id). Verifies the eAadhaar signature, pulls the profile, and persists it awaiting member confirmation. On provider failure returns the normalized KYC error so the client can branch to the manual fallback (AC2).
-      tags: *a62
+      tags: *a65
       requestBody:
         required: true
         content:
@@ -10650,7 +11098,7 @@ paths:
     post:
       summary: Signup KYC — confirm the verified DigiLocker profile (emits member.kyc_completed)
       description: "Confirms a verified DigiLocker profile: emits member.kyc_completed via the projector (pending-kyc → pending-fee) + an audit line. Idempotent (a re-confirm emits no second event). Requires a member session."
-      tags: *a62
+      tags: *a65
       requestBody:
         required: true
         content:
@@ -10692,7 +11140,7 @@ paths:
     post:
       summary: Signup KYC — manual fallback (emits member.kyc_manual_fallback)
       description: Stores a self-declared KYC record (name/dob/optional photo, Tier-1 encrypted; verification_strength=self_declared, trustee_verified=false) and emits member.kyc_manual_fallback (pending-kyc → pending-fee). The AC2 fallback target. Requires a member session.
-      tags: *a62
+      tags: *a65
       requestBody:
         required: true
         content:
@@ -10728,7 +11176,7 @@ paths:
     get:
       summary: Signup KYC — decrypt and return the stored KYC profile for member confirmation
       description: "Returns the decrypted stored KYC profile for the authenticated member: name, dob, masked-Aadhaar (last-4 only), verificationStrength, and photoPresent flag (never the raw photo bytes — Tier-1 discipline). Called by the mobile confirm screen after the DigiLocker callback has persisted the profile. Requires a member session."
-      tags: *a62
+      tags: *a65
       responses:
         "200":
           description: KYC profile summary
@@ -10752,7 +11200,7 @@ paths:
     get:
       summary: Signup KYC — the step entry/poll read (transaction + member KYC + manual-enabled seam)
       description: Returns the current DigiLocker transaction status (when a flow is in flight), the member's KYC standing, the lifecycle state, and the FR-58C manualFallbackEnabled seam flag (false → the UI hides the manual CTA + shows the hard-mandatory copy block). Requires a member session.
-      tags: *a62
+      tags: *a65
       responses:
         "200":
           description: KYC status
@@ -10770,7 +11218,7 @@ paths:
     post:
       summary: Signup nominees — declare 1–2 nominees (emits member.nominees_declared)
       description: Declares 1 or 2 nominees (name/relationship/mobile + optional address; Tier-1 encrypted) with a SERVER-derived 75/25 split when two are declared (100% for one) — the client cannot override the split. Replaces the CURRENT projection, and — Story 6.20 — APPENDS one version per submitted rank (plus a tombstone for a dropped rank) to the append-only declaration history; the earlier declaration is ⛔ never destroyed. Emits member.nominees_declared (a non-PII audit marker; count + split + the version numbers written) on the member stream. NO nominee Aadhaar/KYC and NO nominee bank/IFSC are collected at signup (claim-time only, Epic 6). Requires a member session; a RE-declaration outside the signup wizard also requires a fresh nominee_change step-up (AR-24). Refused once any claim has been filed for the member (the lock at the first claim).
-      tags: &a63
+      tags: &a66
         - member-nominee
       requestBody:
         required: true
@@ -10812,7 +11260,7 @@ paths:
     get:
       summary: Signup nominees — the current effective declaration (NO PII echo-back)
       description: "Returns the member's current nominee declaration as NON-PII summaries: rank, relationship, the server-stamped splitPct, and presence flags for the encrypted fields. NEVER the raw name/mobile/address bytes (Tier-1 echo-back discipline). Requires a member session."
-      tags: *a63
+      tags: *a66
       responses:
         "200":
           description: Current nominee declaration
@@ -10830,7 +11278,7 @@ paths:
     post:
       summary: Register the member device push token (FCM/APNs) on app open
       description: Registers the current device's FCM (Android) / APNs (iOS) push token for the authenticated member (the Story 3.2 app-open consumer). The token is Tier-1-encrypted at rest + blind-indexed; the upsert is idempotent and marks the member’s OTHER same-platform tokens stale (app-open rebuild). Requires a member session. The token is NEVER echoed back (Tier-1 discipline).
-      tags: &a64
+      tags: &a67
         - device-token
       requestBody:
         required: true
@@ -10861,7 +11309,7 @@ paths:
     post:
       summary: Register the admin device push token (FCM/APNs) on admin auth
       description: Registers the current device's FCM (Android) / APNs (iOS) push token for the authenticated admin (the Story 1.9 admin-auth consumer). Admin identity is global — the token keys on the admin-global namespace. Same idempotent upsert + app-open rebuild as the member endpoint. Requires an admin session. The token is NEVER echoed back (Tier-1 discipline).
-      tags: *a64
+      tags: *a67
       requestBody:
         required: true
         content:
@@ -10891,7 +11339,7 @@ paths:
     post:
       summary: Mint (or re-use) a PENDING WhatsApp opt-in → Send-Hello deep-link + verification phrase
       description: Mints a PENDING opt-in for the authenticated member with a unique verification phrase, and returns the Pariwar’s WA Business number + a wa.me Send-Hello deep-link pre-filled with that phrase. A re-tap re-uses the outstanding PENDING. 409 when the Pariwar has WA disabled / no number. The member sends the message; the inbound-webhook worker advances the opt-in to ACTIVE.
-      tags: &a65
+      tags: &a68
         - wa-opt-in
       responses:
         "200":
@@ -10915,7 +11363,7 @@ paths:
     get:
       summary: Read the member’s current WhatsApp opt-in status
       description: "Returns the member’s current opt-in state (null when never opted in) + whether the toggle is available (WA enabled + number) + the deep-link/phrase (PENDING) or, while ACTIVE, Meta’s free-form window end (windowExpiresAt — not the opt-in’s end: an ACTIVE opt-in lasts until withdrawn)."
-      tags: *a65
+      tags: *a68
       responses:
         "200":
           description: Opt-in status
@@ -10932,7 +11380,7 @@ paths:
     delete:
       summary: Revoke the member’s active WhatsApp opt-in (independently revocable)
       description: "Member-initiated withdrawal — ends every WhatsApp yes the member gave: the ACTIVE opt-in (if any) is revoked and every open whatsapp_opt_in consent row is revoked, disabling WA delivery immediately and touching ONLY the whatsapp_opt_in consent. 409 only when there is nothing to end: no ACTIVE opt-in and no open whatsapp_opt_in consent. Re-opt-in requires a new WhatsApp message (no inferred re-consent)."
-      tags: *a65
+      tags: *a68
       responses:
         "200":
           description: Opt-in revoked
@@ -10956,7 +11404,7 @@ paths:
     get:
       summary: Read the member’s chosen app language and their Pariwar’s default
       description: Returns the member’s own recorded choice (null until their first explicit change in the app) and the Pariwar’s default language (informational — the app shows Hindi until the member picks). A read ⛔ records anything. 503 when the Pariwar has no passport; 409 when the session member has no row in the Pariwar.
-      tags: &a66
+      tags: &a69
         - member-language
       responses:
         "200":
@@ -10986,7 +11434,7 @@ paths:
     put:
       summary: Record the member’s explicit choice of app language
       description: Records the language the member CHOSE in the app — sent ONLY on an explicit change (never on first launch, never from the device language). The neighbours’ text and its WhatsApp reminder then go in it. Writes and audits ONLY when the value changes (a repeat is the same state — no Idempotency-Key). Rate-limited per member.
-      tags: *a66
+      tags: *a69
       requestBody:
         required: true
         content:
@@ -11034,7 +11482,7 @@ paths:
     post:
       summary: Send a WhatsApp code to the member’s registered number (at most two per request)
       description: "For a member signing up whose WhatsApp is on another phone: sends a 6-digit code (a Meta authentication template) to the REGISTERED number only (the body is empty), while the member has a PENDING opt-in, is still signing up, and has never had a WhatsApp yes ended. At most two counted codes per request, 60 s apart. 409 refusals (channel_unavailable, not_pending, already_active, code_not_offered, code_limit_reached, code_resend_too_soon); 502 code_send_failed; 503 code_unavailable (the code route is not set up). Every error carries WaOptInCodeErrorDetails. Per-member rate limited."
-      tags: *a65
+      tags: *a68
       requestBody:
         required: true
         content:
@@ -11088,7 +11536,7 @@ paths:
     post:
       summary: Type the WhatsApp code back — a correct code switches WhatsApp messages on
       description: "Checks a 6-digit code against every live code of the member’s PENDING request (two tries per code). Correct: the same whatsapp_opt_in consent row and PENDING → ACTIVE transition as the member’s own WhatsApp message. 409 wa_opt_in.code_wrong (tries are spent and committed), wa_opt_in.code_no_longer_valid, wa_opt_in.already_active, wa_opt_in.not_pending, wa_opt_in.invalid_state. A code never signs the member in. Per-member rate limited."
-      tags: *a65
+      tags: *a68
       requestBody:
         required: true
         content:
@@ -11130,7 +11578,7 @@ paths:
     post:
       summary: Trustee force opt-out of a member’s WhatsApp opt-in (admin_action)
       description: "Scoped-admin force opt-out of a member’s WhatsApp opt-in (trustee defensibility) — ends every yes the member gave (the ACTIVE opt-in, if any, and every open whatsapp_opt_in consent row). Gated by the existing member.moderate permission [requireAdminSession, scopeResolutionHook, requirePermissionHook(member.moderate)] — 401 no session, 403 no permission. 409 only when there is nothing to end: no ACTIVE opt-in and no open whatsapp_opt_in consent."
-      tags: *a65
+      tags: *a68
       parameters:
         - schema:
             type: string
@@ -11173,7 +11621,7 @@ paths:
     post:
       summary: Mint (or re-use) a PENDING Telegram opt-in → t.me `/start` deep-link
       description: Mints a PENDING opt-in for the authenticated member with a unique verification code, and returns a https://t.me/<bot>?start=<code> deep-link. Tapping it opens the bot and sends `/start <code>`. A re-tap re-uses the outstanding PENDING. 409 when the Pariwar has Telegram disabled / no bot. The bot `/start` is matched by the tg-webhook-processor worker, which advances the opt-in to ACTIVE.
-      tags: &a67
+      tags: &a70
         - telegram-opt-in
       responses:
         "200":
@@ -11197,7 +11645,7 @@ paths:
     get:
       summary: Read the member’s current Telegram opt-in status
       description: Returns the member’s current opt-in state (null when never opted in) + whether the toggle is available (Telegram enabled + bot) + the `/start` deep-link (PENDING only).
-      tags: *a67
+      tags: *a70
       responses:
         "200":
           description: Opt-in status
@@ -11215,7 +11663,7 @@ paths:
     post:
       summary: Revoke the member’s active Telegram opt-in (independently revocable)
       description: Member-initiated revocation of an ACTIVE opt-in — disables Telegram delivery immediately, touching ONLY the telegram_opt_in consent. 409 when there is no ACTIVE opt-in. Re-opt-in requires a new bot `/start` interaction (no inferred re-consent).
-      tags: *a67
+      tags: *a70
       responses:
         "200":
           description: Opt-in revoked
@@ -11469,7 +11917,7 @@ paths:
     get:
       summary: Read the per-Pariwar WhatsApp Business config (toggle, number, credential NAME, graph version)
       description: Returns the Pariwar's WA Business config singleton (zero-config defaults when none exists yet). The access-token field is a Secret-Manager NAME (a pointer), never the token value. Requires pariwar.configure_channels at pariwar scope.
-      tags: &a68
+      tags: &a71
         - channel-config
       parameters:
         - schema:
@@ -11500,7 +11948,7 @@ paths:
     put:
       summary: Upsert the per-Pariwar WhatsApp Business config (audited)
       description: Upserts the Pariwar's WA Business config singleton (the FR-72 admin toggle + number + credential NAME + graph version). Audited via the hash-chain writer; the resolved token value never appears. Requires pariwar.configure_channels at pariwar scope.
-      tags: *a68
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -11543,7 +11991,7 @@ paths:
     get:
       summary: List the per-category WhatsApp UTILITY template mapping
       description: Returns the Pariwar's per-(alert_category) UTILITY template mapping (name, language, approval status). A category with no `approved` row is not WA-eligible. Requires pariwar.configure_channels.
-      tags: *a68
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -11573,7 +12021,7 @@ paths:
     put:
       summary: Upsert one category’s WhatsApp UTILITY template mapping (audited)
       description: Upserts one (alert_category) → UTILITY template mapping (Meta-registered name + language + approval status). Audited. Requires pariwar.configure_channels at pariwar scope.
-      tags: *a68
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -11622,7 +12070,7 @@ paths:
     get:
       summary: Read the per-Pariwar Telegram Bot config (zero-config defaults when unprovisioned)
       description: Returns the Telegram config singleton (the FR-58C v1 `enabled` flag, bot username, + the bot-token / webhook-secret-token Secret-Manager NAME pointers — never the values). Requires pariwar.configure_channels.
-      tags: *a68
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -11652,7 +12100,7 @@ paths:
     put:
       summary: Upsert the per-Pariwar Telegram Bot config (audited)
       description: Upserts the Telegram config singleton (the FR-58C v1 `enabled` flag, bot username, + the two Secret-Manager NAME pointers — the resolved token values NEVER appear here or in the audit). Audited. Requires pariwar.configure_channels at pariwar scope.
-      tags: *a68
+      tags: *a71
       parameters:
         - schema:
             type: string
@@ -11695,7 +12143,7 @@ paths:
     post:
       summary: Declare degraded mode (the AR-20 cycle-open SMS bridge; audited)
       description: Declares degraded mode for the Pariwar so the cycle-open SMS bridge can force SMS for cycle-open (alert_published) alerts, bypassing cost-optimization. Auto-revokes any currently-active declaration (single-active-per-Pariwar). effectiveFrom cannot be backdated (NO BACKDATING). Audited. Requires pariwar.declare_degraded_mode at pariwar scope.
-      tags: &a69
+      tags: &a72
         - degraded-mode
       parameters:
         - schema:
@@ -11739,7 +12187,7 @@ paths:
     post:
       summary: Manually revoke a degraded-mode declaration (idempotent; audited)
       description: Revokes the identified declaration (a state transition, not a delete). Idempotent — revoking an already-revoked/expired row is a no-op. Audited. Requires pariwar.declare_degraded_mode at pariwar scope.
-      tags: *a69
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -11776,7 +12224,7 @@ paths:
     get:
       summary: Read the currently-active degraded-mode declaration (the banner read)
       description: Returns the currently-active degraded-mode declaration for the Pariwar, or null when none is active. "Active" is computed (revoked_at IS NULL AND effective_from<=now AND (expires_at IS NULL OR expires_at>now)). Requires pariwar.declare_degraded_mode at pariwar scope.
-      tags: *a69
+      tags: *a72
       parameters:
         - schema:
             type: string
@@ -11807,7 +12255,7 @@ paths:
     get:
       summary: Read the Pariwar's directory-publication kill-switch state
       description: "Returns whether the Pariwar's public Member Directory is published, plus the last-changing admin display name, rationale and timestamp. `configured: false` means no row was ever written (the default-enabled posture) and is reported EXPLICITLY — an unconfigured Pariwar and a deliberately re-enabled one are different facts. Requires pariwar.manage_directory_publication at pariwar scope."
-      tags: &a70
+      tags: &a73
         - directory-publication
       parameters:
         - schema:
@@ -11838,7 +12286,7 @@ paths:
     put:
       summary: Flip the Pariwar's directory-publication kill switch (rationale required; audited)
       description: "Publishes or unpublishes the Pariwar's public Member Directory. Moves in BOTH directions. A non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when absent. The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never accepted from the caller. Writes a §1.5 hash-chain audit line covering the same transaction as the state change. The effect is NOT instantaneous on the public surface: /members is edge-cached with s-maxage=300, so warm PoPs keep serving the prior state, per page number, until those entries expire. Requires pariwar.manage_directory_publication at pariwar scope."
-      tags: *a70
+      tags: *a73
       parameters:
         - schema:
             type: string
@@ -11887,7 +12335,7 @@ paths:
     get:
       summary: Read the Pariwar's nominee-bank masking schedule
       description: "Returns the masking setting recorded for the Pariwar's nominee bank details, plus the last-changing admin display name, rationale, effective-from instant and schedule version. `configured: false` means NO schedule row was ever written, which under Decision 2026-09-02-179 cl.1 (D8-default) resolves FAIL-OPEN. That is reported EXPLICITLY: an unconfigured Pariwar and a Trust that deliberately chose a long window are different facts. ⚠ As of Story 11b.11 (`2026-09-04-190` cl.1) this setting has NO PUBLIC CONSUMER — the public Sahyog Vivran page no longer renders nominee bank coordinates at all, so this schedule governs nothing currently visible; it is retained dormant, not live. Requires pariwar.manage_nominee_bank_masking at pariwar scope."
-      tags: &a71
+      tags: &a74
         - nominee-bank-masking
       parameters:
         - schema:
@@ -11918,7 +12366,7 @@ paths:
     put:
       summary: Set the Pariwar's nominee-bank masking schedule (rationale required; audited)
       description: "Sets how long the Pariwar's nominee bank details stay publicly visible after a Sahyog Drive closes — 2026-08-28-160 cl.10(c)'s three settings: 0 days (mask immediately), N days, or permanent masking. Moves in EVERY direction: cl.10(c) requires the knob stay reversible and re-configurable, and there is no \"already masked, cannot unmask\" branch. The prior window is CLOSED and a new one opened, so every superseded window survives as a governance trail. A non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when absent. The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never accepted from the caller, and the effective-from instant is the SERVER's — a caller-supplied one would allow back-dating a window. Writes a §1.5 hash-chain audit line covering the same transaction as the change. ⚠ As of Story 11b.11 (`2026-09-04-190` cl.1) this schedule has NO PUBLIC CONSUMER: the public Sahyog Vivran page never renders nominee bank coordinates, masked or otherwise, so a change here is not reflected on any public surface — it is retained dormant pending a future consumer. Requires pariwar.manage_nominee_bank_masking at pariwar scope."
-      tags: *a71
+      tags: *a74
       parameters:
         - schema:
             type: string
@@ -11967,7 +12415,7 @@ paths:
     get:
       summary: Read the Pariwar's drive target
       description: "Returns the whole-rupee target recorded for the Pariwar's Sahyog Drives, plus the last-changing admin display name, rationale, effective-from instant and schedule version. `configured: false` means NO target has ever been set — a different fact from a Pariwar that set a small target, which is why it is reported explicitly rather than inferred from a null. NOTE (2026-09-07): this description previously said `configured: false` renders as NO progress bar at all. That is SUPERSEDED and is recorded rather than removed — the public bar's denominator is the pool's assignee count, so a roster always exists and the bar always renders (Decision 2026-09-07-204 cl.1). The successor rule is narrower: no public reveal means no expected figure, and that turns on the visibility record, not on this flag. The `version` returned here MUST be echoed back as `expectedVersion` on the next PUT (Decision 2026-09-05-201 cl.4/cl.5). The target is NOT shown to members or the public in any state (Decision 2026-09-04-190 cl.7(b)); revealing it is a separate, super_admin-only act on a separate resource. Requires pariwar.manage_drive_target at pariwar scope."
-      tags: &a72
+      tags: &a75
         - drive-target
       parameters:
         - schema:
@@ -12004,7 +12452,7 @@ paths:
     put:
       summary: Set the Pariwar's drive target (rationale + expectedVersion required; audited)
       description: "Sets the whole-rupee figure the Pariwar's drives aim to raise. The prior target is CLOSED and a new one opened, so every superseded target survives as a governance trail. The target must be a whole number of rupees, STRICTLY GREATER THAN ZERO (0 is a different state from \"no target set\", which is the absence of a schedule row) and within the data-sanity ceiling. NOTE (2026-09-07): TWO statements previously here are SUPERSEDED and are recorded rather than removed. (1) \"the SAME target for every drive in the Pariwar (Decision 2026-09-04-189 cl.2(d))\" — the public expected figure is now DERIVED per drive from that pool's assignee count and fixed amount, so cl.2(d) is superseded as to the VALUE (Decision 2026-09-07-204 cl.2). (2) \"Story 11b.14 divides by it, so 0 is a division by zero\" — the public progress bar measures contributors and never divides by this target (cl.1). This schedule consequently has NO public consumer; it is retained, not deleted, and must not be described as a live control until it has one. A non-empty rationale is REQUIRED and is rejected at the contract boundary with a 400 when absent. `expectedVersion` is REQUIRED and nullable (null = \"I believe this Pariwar has no target yet\"): a mismatch means someone else changed the target since you read it, and returns 409 rather than silently overwriting their change with your rationale attached. An optional `Idempotency-Key` header is evaluated BEFORE that version check — never after: reversed, a legitimate retry after a timeout would carry a stale version and be told \"someone else changed this\" when the someone was itself. The acting admin's display name is resolved SERVER-SIDE from users.display_name and is never accepted from the caller, and the effective-from instant is the SERVER's. Writes a §1.5 hash-chain audit line, written on a separate service connection and paired with a compensating entry if the change fails — NOT in the same transaction as the change itself. The line's id is recorded on the written row as its audit anchor. SETTING IS NEVER REVEALING: a newly set target stays hidden from members and the public until a super_admin reveals it on the separate visibility resource. Requires pariwar.manage_drive_target at pariwar scope."
-      tags: *a72
+      tags: *a75
       parameters:
         - schema:
             type: string
@@ -12071,7 +12519,7 @@ paths:
     get:
       summary: Read the Pariwar's drive-target reveal switches (super_admin only)
       description: "Returns the two INDEPENDENT reveal switches — reveal-to-members and reveal-to-public — plus the last-changing admin display name, rationale and update instant. `configured: false` means no reveal decision has ever been recorded, which resolves HIDDEN FROM EVERYONE (Decision 2026-09-04-190 cl.7(b)) — a fail-CLOSED default, and the operator is told which state they are looking at because \"nobody chose this\" and \"the Trust decided to hide it\" are different facts. This is a SEPARATE RESOURCE under a SEPARATE KEY on purpose: a pariwar_admin holds the target write key and is denied HERE, so the switches are visible only to a super_admin without any handler branching on the caller's role. Requires pariwar.manage_drive_target_visibility at pariwar scope (super_admin ONLY)."
-      tags: *a72
+      tags: *a75
       parameters:
         - schema:
             type: string
@@ -12107,7 +12555,7 @@ paths:
     put:
       summary: Set the Pariwar's drive-target reveal switches (super_admin only; audited)
       description: "Decides whether the Pariwar's drive target may be shown to members and/or to the unauthenticated public — a DISCLOSURE act, reserved to the Trust by Decision 2026-09-04-190 cl.7(c). The two switches are INDEPENDENT, not levels: three of the four combinations are accepted, and revealing to members without revealing publicly is the ordinary case. THE ONE REFUSED COMBINATION is public-revealed while members are hidden, which would show the unauthenticated internet more than a member of the Pariwar the figure belongs to (Decision 2026-09-04-189 cl.3); it returns 422 and is also refused by a database CHECK. A non-empty rationale is REQUIRED. This request CANNOT carry a target — a reveal can never change what is being revealed. Writes a §1.5 hash-chain audit line. Requires pariwar.manage_drive_target_visibility at pariwar scope (super_admin ONLY)."
-      tags: *a72
+      tags: *a75
       parameters:
         - schema:
             type: string
@@ -12174,7 +12622,7 @@ paths:
     post:
       summary: Signup medical disclosure — submit IMA disclosures + concealment-denial ack
       description: Submits 0..N IMA-listed conditions (zero is valid — most members disclose nothing) + the optional free-text additional context (both Tier-1 encrypted) with a MANDATORY concealment-denial acknowledgment (server rejects acknowledged !== true). Records a consent (medical_disclosure_ack, referencing niy.concealment.r14) via the audit-or-throw chain, APPENDS a disclosure row (append-only history — Epic 4 walks the full history), and emits member.medical_disclosed (a non-PII marker; count + ima_list_version + ack only). Requires a member session (no step-up at signup — Life Events adds it in 3.9).
-      tags: &a73
+      tags: &a76
         - member-medical
       requestBody:
         required: true
@@ -12210,7 +12658,7 @@ paths:
     get:
       summary: Signup medical disclosure — the latest disclosure status (NO PII echo-back)
       description: Returns the member's latest medical disclosure as a NON-PII summary (disclosedAt, imaListVersion, conditionCount, a presence flag for the free-text, ackLocale) + the total history count. NEVER the raw condition codes / free-text bytes (Tier-1 echo-back discipline). Requires a member session.
-      tags: *a73
+      tags: *a76
       responses:
         "200":
           description: Latest disclosure + history count
@@ -12228,7 +12676,7 @@ paths:
     get:
       summary: Signup medical disclosure — the IMA catalog + concealment-ack copy
       description: Returns the resolved IMA condition catalog (version = the niy.medical.ima-list clause_version_id + bilingual conditions) plus the concealment-ack copy (ackText.en / ackText.hi from niy.concealment.r14) the screen renders. Returns 503 when the registry is unprovisioned for the Pariwar (either clause absent). Requires a member session.
-      tags: *a73
+      tags: *a76
       responses:
         "200":
           description: IMA catalog + ack copy
@@ -12252,7 +12700,7 @@ paths:
     get:
       summary: Signup T&C — the current effective Terms & Conditions for the member’s Pariwar
       description: "Returns the current effective T&C version for the member’s Pariwar: the tcVersionId, the effective-from instant, the PRECOMPUTED sanitized HTML body (rendered once at write time — the screen emits it verbatim, no markdown render at read), and the echoed locale. Returns 503 when no effective T&C is provisioned for the Pariwar (a server-side gap, not a client error — the screen renders a graceful unavailable state). Requires a member session."
-      tags: &a74
+      tags: &a77
         - member-terms
       responses:
         "200":
@@ -12277,7 +12725,7 @@ paths:
     post:
       summary: Signup T&C — accept the current effective T&C (records a tc_acceptance consent)
       description: Records a tc_acceptance consent_records entry (consent_artifact_ref = the resolved tcVersionId, granted_via_actor = member_self) via the audit-or-throw chain (write the audit line FIRST, thread its id into recordConsent, all inside one member scope-tx; a compensating audit line is emitted on rollback). The effective version is resolved SERVER-SIDE (the client tcVersionId is an advisory staleness signal); if no effective T&C is resolvable the accept fails atomically (409, no orphan consent/audit). Requires a member session.
-      tags: *a74
+      tags: *a77
       requestBody:
         required: true
         content:
@@ -12313,7 +12761,7 @@ paths:
     post:
       summary: Signup fee — build the ₹110 Vyawastha Shulk UPI Intent URL
       description: Returns a SERVER-constructed UPI Intent URL (upi://pay?pa={trust VPA}&am={110}&cu=INR&tn=signup-shulk-{memberId}&tr=signup-{memberId}-{nonce}) — the VPA + amount are resolved server-side from config (never client-supplied). Echoes the `tr` idempotency nonce for the confirm step. 503 when the trust VPA is unconfigured (a server gap). Requires a member session.
-      tags: &a75
+      tags: &a78
         - member-vyawastha-shulk
       responses:
         "200":
@@ -12338,7 +12786,7 @@ paths:
     post:
       summary: Signup fee — self-attest the UTR → persist the receipt + the GATED lock-in transition
       description: Persists a vyawastha_shulk_receipts row ALWAYS (AR-67 indefinite retention; idempotent on the `tr` — a re-confirm returns the existing receipt without a second insert or re-emit). Captures the optional 6-digit Reference Code (D2 port seam — stored, NOT validated). Then evaluates the 5-condition lock-in gate (KYC + nominees + medical + T&C + the receipt); emits member.vyawastha_shulk_paid (pending-fee → lock-in) + member.lock_in_entered (with the FR-8 lock_in_days_at_join snapshot) ONLY when all five hold — otherwise the receipt persists, no event fires, and `outstanding` names the incomplete step(s). 503 lock_in.policy_unavailable when the gate passes but niy.lock-in.policy is unprovisioned (receipt kept; idempotent re-confirm completes once provisioned). Requires a member session.
-      tags: *a75
+      tags: *a78
       requestBody:
         required: true
         content:
@@ -12380,7 +12828,7 @@ paths:
     get:
       summary: Signup fee — the member’s paid / lock-in status
       description: Returns whether the member has paid (a receipt exists), the latest receipt’s validThrough, whether lock-in has been entered, and any still-outstanding pre-payment steps. Requires a member session.
-      tags: *a75
+      tags: *a78
       responses:
         "200":
           description: Paid / lock-in status
@@ -12398,7 +12846,7 @@ paths:
     get:
       summary: Renewal — the canonical FR-12A vyawastha_shulk_status payload
       description: "Returns the renewal/validity status Epic 4’s Validity Service (FR-12A) consumes: paid_through (latest receipt valid_through), days_until_lapse (ceil-clamped days to the valid_through + 91d grace-end/lapse boundary), in_renewal_grace (true iff the member’s state is active-in-grace), and grace_remaining_days. Computed live per request → within the ≤60s freshness invariant. Requires a member session."
-      tags: *a75
+      tags: *a78
       responses:
         "200":
           description: Renewal/validity status
@@ -12416,7 +12864,7 @@ paths:
     post:
       summary: Renewal — build the annual ₹ Vyawastha Shulk UPI Intent URL
       description: Identical to the signup intent (server-authoritative VPA + amount from config; `tr` idempotency nonce) but with a renewal `tn` grammar (renewal-shulk-{memberId}-{year}). Requires a member session. 503 when the trust VPA is unconfigured.
-      tags: *a75
+      tags: *a78
       responses:
         "200":
           description: UPI Intent URL + tr
@@ -12440,7 +12888,7 @@ paths:
     post:
       summary: Renewal — self-attest the UTR → persist the receipt + emit the renewal event
       description: "Persists a vyawastha_shulk_receipts row (server-stamped valid_through = now + 365d; idempotent on the `tr`) and emits member.vyawastha_shulk_paid (kind: renewal) in the same scope-tx. A renewing member is already post-lock-in, so there is NO lock-in gate and renewal NEVER re-applies lock-in (the reducer routes active-in-grace/lapsed-unpaid → active, and is identity from active). 409 when the member is in a terminal/pre-active state (renewal requires a post-lock-in member). Requires a member session."
-      tags: *a75
+      tags: *a78
       requestBody:
         required: true
         content:
@@ -13540,7 +13988,7 @@ paths:
     post:
       summary: Request a report export (scope-respecting, PII-masked; enqueues an async build)
       description: Authorizes the actor against the report template's own permission key at their resolved scope, inserts a pending report_exports row (idempotent per (actor, report_type, params_hash)), and enqueues a REPORT_EXPORT_BUILD job. The build runs off the request path; poll GET :id for status. Requires the template's permission key at the actor's scope (e.g. member.export_roster).
-      tags: &a76
+      tags: &a79
         - reports
       parameters:
         - schema:
@@ -13589,7 +14037,7 @@ paths:
     get:
       summary: List the actor's own report exports (newest-first, bounded)
       description: Returns the requestor's OWN report_exports rows only (actor-scoped, not tenant-wide), newest-first. Backs the admin console's export list so a page refresh does not lose knowledge of in-flight/ready exports.
-      tags: *a76
+      tags: *a79
       parameters:
         - schema:
             type: string
@@ -13614,7 +14062,7 @@ paths:
     get:
       summary: Poll a report export's status (pending → ready|failed)
       description: Returns the export's lifecycle metadata (status + timestamps + row count + a NON-PII failure code). NO artifact field — the bytes are streamed by the download route. 404 when not the requestor's export.
-      tags: *a76
+      tags: *a79
       parameters:
         - schema:
             type: string
@@ -13657,7 +14105,7 @@ paths:
     get:
       summary: Download a ready report export (one-time, 24h, authenticated stream)
       description: "Streams the envelope-decrypted artifact as text/csv or application/json (the format is the export's own). One-time: guards in order owned → not-consumed (410) → not-expired-status (410) → failed (409 `reports.build_failed`) → ready (409 `reports.not_ready`) → not-expired-window (410); consumed_at is stamped before streaming (a concurrent double-download loses → 410). The two 409 cases carry DISTINCT error codes so a client can tell a permanent build failure from a transient still-building state. NO response schema — the artifact bytes are streamed, never JSON-embedded (the R1 rule)."
-      tags: *a76
+      tags: *a79
       parameters:
         - schema:
             type: string
@@ -13708,7 +14156,7 @@ paths:
     get:
       summary: The cross-tenant feature-flag catalog (complete; no secret flags) — pariwar_admin+ or super_admin
       description: Returns EVERY registered flag resolved against the CROSS-TENANT tier — the global row if one is in force, else the code default. The listing is registry-driven, not row-driven, so a flag that has never been flipped still appears. Requires feature_flag.view, satisfied by holding it in ANY of the actor's own Pariwars (pariwar_admin+) or by a global grant (super_admin) — the catalog's data does not vary by tenant, so this is prd.md:892's "visible to Pariwar Admin role and above" read literally. GET /api/v1/p/{pariwarId}/feature-flags additionally shows each flag's effective resolution for one specific tenant, including any governing global row.
-      tags: &a77
+      tags: &a80
         - feature-flags
       responses:
         "200":
@@ -13733,7 +14181,7 @@ paths:
     post:
       summary: Flip a feature flag GLOBALLY (creates a new cross-tenant immutable version) — super_admin only
       description: "Publishes the next version row for this flag with `pariwar_id: null` — the cross-tenant tier that governs every Pariwar without its own override at once. Strictly higher-privilege than the catalog read (Decision 7's read/write key split), so this is super_admin-only regardless of who can view the catalog. Same immutability, rationale, and 409-on-race semantics as the per-Pariwar flip. Send an optional `Idempotency-Key` header to make a retried flip safe. NOTE: `effective_from` may not be in the future — scheduled flips are not supported."
-      tags: *a77
+      tags: *a80
       parameters:
         - schema:
             type: string
@@ -13793,7 +14241,7 @@ paths:
     get:
       summary: This Pariwar's effective feature flags (complete, with global-vs-override provenance)
       description: "Returns EVERY registered flag resolved for this tenant: its own override if one is in force, else the global row, else the code default — with `source` naming which tier answered. Requires feature_flag.view at the pariwar dimension."
-      tags: *a77
+      tags: *a80
       parameters:
         - schema:
             type: string
@@ -13824,7 +14272,7 @@ paths:
     get:
       summary: A flag's version history (newest first)
       description: The persisted immutable version rows governing this flag for this tenant (its own overrides plus the global rows). Version 1 is never listed — it is the code default, not a row. Requires feature_flag.view.
-      tags: *a77
+      tags: *a80
       parameters:
         - schema:
             type: string
@@ -13865,7 +14313,7 @@ paths:
     post:
       summary: Flip a feature flag for this Pariwar (creates a new immutable version)
       description: "Publishes the next version row for this flag in this tenant's scope. Prior rows are NEVER mutated (only their superseded_by_version forward-pointer), so historical flag states stay queryable for replay. `rationale` is REQUIRED and non-empty — FR-58C requires every flag change be audit-logged with actor + rationale, and a §1.5 hash-chain audit line is written on every flip. A concurrent double-flip loses the unique-constraint race and gets 409. Requires feature_flag.flip (narrower than feature_flag.view by design). Send an optional `Idempotency-Key` header to make a retried flip safe: a replay with the same key returns the original response instead of creating a second identical version. NOTE: `effective_from` may not be in the future — a flip takes effect immediately and scheduled flips are not supported."
-      tags: *a77
+      tags: *a80
       parameters:
         - schema:
             type: string
@@ -13931,7 +14379,7 @@ paths:
     get:
       summary: List the Pariwar's banners (newest-first, paginated, derived-display-state filterable)
       description: The `display_state` filter is a DERIVED state (draft | scheduled | live | expired | retracted) computed from the stored status plus the valid_from/valid_until window against the server's clock — it is never a stored column. `valid_from` is inclusive and `valid_until` exclusive.
-      tags: &a78
+      tags: &a81
         - banners
       parameters:
         - schema:
@@ -13962,7 +14410,7 @@ paths:
     post:
       summary: Create a banner draft
       description: Copy may be incomplete on a draft; all four copy fields become mandatory at publish. A popup MUST be dismissible (422 otherwise — enforced again by a DB CHECK), and the window must be non-empty (422 otherwise — likewise). A non-dismissible `banner` IS permitted.
-      tags: *a78
+      tags: *a81
       parameters:
         - schema:
             type: string
@@ -14010,7 +14458,7 @@ paths:
   /api/v1/p/{pariwarId}/banners/{bannerId}:
     get:
       summary: Read a single banner (admin)
-      tags: *a78
+      tags: *a81
       parameters:
         - schema:
             type: string
@@ -14052,7 +14500,7 @@ paths:
     patch:
       summary: Edit a banner (one unified edit; the server content hash decides whether a re-review is required)
       description: The server recomputes a content hash over the four member-visible copy fields. If the hash is UNCHANGED (e.g. extending valid_until, flipping display_once_per_member) the edit applies with no re-review and no revision bump, and every existing member dismissal stands. If the hash CHANGED on a PUBLISHED banner, a fresh NON-AUTHOR tone-review sign-off is required (409 otherwise), `revision` is bumped, and every prior dismissal stops suppressing — so the banner re-appears for members who had dismissed the earlier copy. On a draft, copy edits are free. A retracted banner is terminal and rejects every edit (409).
-      tags: *a78
+      tags: *a81
       parameters:
         - schema:
             type: string
@@ -14119,7 +14567,7 @@ paths:
     post:
       summary: Publish a banner draft (draft → published)
       description: "Publishing does NOT make the banner visible by itself — visibility is the read-time window. A published banner whose valid_from is in the future reads as `scheduled` and becomes visible when the clock passes it, with nothing running. Requires all four copy fields (422 otherwise) and a NON-AUTHOR tone-review sign-off: the publishing actor becomes the reviewer, so the banner's own author cannot publish it (409)."
-      tags: *a78
+      tags: *a81
       parameters:
         - schema:
             type: string
@@ -14180,7 +14628,7 @@ paths:
     post:
       summary: Retract a banner (draft → retracted as a discard, or published → retracted to pull it down)
       description: Terminal — a retracted banner is never member-visible again regardless of its window, and there is no un-retract.
-      tags: *a78
+      tags: *a81
       parameters:
         - schema:
             type: string
@@ -14235,7 +14683,7 @@ paths:
     get:
       summary: The member's currently visible banner + popup (RESOLVED server-side)
       description: "Returns AT MOST ONE banner and AT MOST ONE popup. Both may be present at once — the two display modes are independent lanes, so a popup never suppresses the strip. When several banners of one mode are simultaneously visible, the winner is chosen by a total, replayable order: severity (critical > warning > info), then valid_from descending, then banner_id ascending. Resolution happens on the server so every client agrees. Member-session-gated (no RBAC key); a `pariwarId` that does not match the member's own JWT is a 404, not a 403."
-      tags: *a78
+      tags: *a81
       parameters:
         - schema:
             type: string
@@ -14266,7 +14714,7 @@ paths:
     post:
       summary: Record the member's acknowledgement of a banner (dismissed, or an automatic display-once `shown`)
       description: "Persists server-side so a reinstall or a second device cannot resurrect a dismissed banner. The acted-on revision is read from the banner row, never client-supplied. IDEMPOTENT: a replayed dismiss is a clean no-op returning success, and the recorded revision only ever advances, so a stale replay cannot un-suppress a banner. A later copy revision re-surfaces the banner for members who had dismissed the earlier one."
-      tags: *a78
+      tags: *a81
       parameters:
         - schema:
             type: string
@@ -14315,7 +14763,7 @@ paths:
     get:
       summary: List the Pariwar's surveys (newest-first, paginated, derived-display-state filterable)
       description: The `display_state` filter is a DERIVED state (draft | scheduled | open | expired | closed) computed from the stored status plus the valid_from/valid_until window against the server's clock — it is never a stored column. `valid_from` is inclusive and `valid_until` exclusive.
-      tags: &a79
+      tags: &a82
         - surveys
       parameters:
         - schema:
@@ -14346,7 +14794,7 @@ paths:
     post:
       summary: Create a survey draft
       description: "Copy and questions may be incomplete on a draft; all four copy fields and at least one question become mandatory at publish. The window must be non-empty (422 otherwise — enforced again by a DB CHECK). The audience scope must be one that can resolve: `public` is REJECTED (422) because a survey has no unauthenticated respondent, and `role`/`cohort` are rejected because no member attribute exists to resolve them against."
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14394,7 +14842,7 @@ paths:
   /api/v1/p/{pariwarId}/surveys/{surveyId}:
     get:
       summary: Read a single survey (admin)
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14436,7 +14884,7 @@ paths:
     patch:
       summary: Edit a survey (a published survey may only have its valid_until EXTENDED)
       description: "On a DRAFT every field applies, re-validated. On a PUBLISHED survey the questionnaire, the response_threshold, the audience and the copy are FROZEN — a request touching any of them is a 409 naming the frozen field. The reason is that a response is an answer TO A QUESTION: change the question and every stored answer silently becomes an answer to something nobody asked. To ask something different, close this survey and publish a new one. The ONLY permitted post-publish mutation is EXTENDING valid_until; a shortening is a 422 pointing at `close`, which is the transition that exists for stopping collection. A closed survey is terminal and rejects every edit (409)."
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14503,7 +14951,7 @@ paths:
     post:
       summary: Publish a survey draft (draft → published)
       description: "Publishing does NOT open the survey by itself — openness is the read-time window. A published survey whose valid_from is in the future reads as `scheduled` and opens when the clock passes it, with nothing running. Requires all four copy fields and at least one question (422 otherwise) and a NON-AUTHOR tone-review sign-off: the publishing actor becomes the reviewer, so the survey's own author cannot publish it (409). The sign-off's content hash covers the copy AND the questionnaire, and since both are frozen from this moment it is a ONE-SHOT binding. Publishing also enqueues a member notification fan-out; a fan-out failure never rolls back the publish — the survey is published and the notification is retried."
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14564,7 +15012,7 @@ paths:
     post:
       summary: Close a survey (draft → closed as a discard, or published → closed to stop collecting)
       description: "TERMINAL — there is no reopen, deliberately: reopening would resume collecting answers into an aggregate an admin has already read and may have already quoted. To ask again, publish a new survey. Closing does not delete responses; a closed survey's aggregate stays readable."
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14619,7 +15067,7 @@ paths:
     get:
       summary: The survey's aggregate results (counts only — never who answered)
       description: 'Returns per-option selection counts for every choice question (every declared option appears, including at zero, so "nobody chose this" is distinguishable from "this option does not exist"), the total response count, and `threshold_met`. NO field in this response can carry a member identifier. `threshold_met` is INFORMATIONAL and tri-state: null when no threshold was authored (which must not render as "not met"), and even when set it gates nothing — a survey informs a decision and never makes one.'
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14662,7 +15110,7 @@ paths:
     get:
       summary: The free-text answers to one question, UNATTRIBUTED
       description: "Returns `{answer_text, submitted_at}` and nothing else: no member id, no row id, no question echo and no ordinal — a stable per-respondent ordinal would let two reads of two different questions be aligned row-for-row, reconstructing one member's whole submission. Ordered by submitted_at with no identifying tie-break, so answers submitted in the same instant have an unstable relative order across reads; that is the correct trade. Reading this writes an audit line carrying the survey id and the audited question, never the answer content and never a count either (the audit payload field is a one-way hash). Free-text answers are member-authored personal data and have no export path in v1."
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14711,7 +15159,7 @@ paths:
     get:
       summary: The member's open, in-audience surveys
       description: "Returns every survey that is open at the server's clock and whose audience contains this member, each carrying an `answered` flag. Surveys the member has ALREADY answered are returned with `answered: true` rather than filtered out — a member who answered yesterday must see that they did, not an empty list. Member-session-gated (no RBAC key); a `pariwarId` that does not match the member's own JWT is a 404, not a 403."
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14755,7 +15203,7 @@ paths:
     post:
       summary: Submit the member's response (ONE per member, final)
       description: "An idempotent INSERT, not an upsert: a second submission by the same member is a 409, and submission is FINAL. A member who submitted by mistake raises a helpdesk ticket — a human path that already exists and leaves a record. A replay carrying the SAME Idempotency-Key returns the original 201. Requires a Turnstile token and is rate-limited per member. Answering a survey that is not open at the server's clock is a 409: expiry is enforced on the write path, not merely hidden from the read. Every answer is validated against the survey's own questions, and a rejection names the offending question_id."
-      tags: *a79
+      tags: *a82
       parameters:
         - schema:
             type: string
@@ -14822,7 +15270,7 @@ paths:
     post:
       summary: "Suspend a member (moderation overlay: none → suspended)"
       description: "Records a suspension against the member with a registry reason code and a MANDATORY free-text rationale (stored Tier-1 encrypted; it never appears on any response, event payload or audit line). Moderation is an event-derived OVERLAY orthogonal to the member lifecycle — `members.state` is NOT touched. The member stops being covered for support (`is_valid` becomes false, which is the entire enforcement surface: pool assignment and claim eligibility inherit it), every session is revoked, and the member is notified. The member can STILL sign in — deliberately, so they can read the explanation and reach the appeal path. Step-up required (`member_moderation_suspend`)."
-      tags: &a80
+      tags: &a83
         - member-moderation
       parameters:
         - schema:
@@ -14884,7 +15332,7 @@ paths:
     post:
       summary: "Terminate a member (moderation overlay: suspended → terminated)"
       description: "Legal ONLY from `suspended` — FR-56 routes termination THROUGH suspension, so the harshest, rejoin-locking action can never be a single click; terminating an unmoderated member is a 409. Sets a 12-month rejoin lock (FR-6): a signup under the same identity is refused until `rejoin_permitted_at`. Revokes every session and notifies the member, who can still sign in. Step-up required (`member_moderation_terminate`) — an elevation minted for suspend or restore does NOT satisfy it."
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -14945,7 +15393,7 @@ paths:
     post:
       summary: "Restore a member (moderation overlay: suspended | terminated → none)"
       description: Clears the moderation standing. The member is covered for support again (`is_valid` returns to true) and any 12-month rejoin lock is lifted — the signup guard reads the CURRENT standing, not the presence of a historical termination. Restore does NOT re-mint sessions; the member simply signs in normally. Uses the RESTORE reason-code family (a moderation code is a 422 here). Step-up required (`member_moderation_restore`).
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15006,7 +15454,7 @@ paths:
     get:
       summary: A member's current moderation standing + paginated history
       description: The standing is DERIVED by folding the member's moderation events — it is never a stored column. `legal_actions` is computed server-side from the same legality reducer the write path uses, so a console can drive button enablement without re-implementing any rule. ⚠ Neither the standing nor any history entry carries the rationale or its ciphertext.
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15062,7 +15510,7 @@ paths:
     get:
       summary: Decrypt ONE moderation action's free-text rationale
       description: 'The single exception to "the rationale never leaves the DB": a per-action, decrypt-on-demand read behind the same `member.moderate` gate as every other field on this surface — never a list, and no separate capability. Fail-soft on a CORRUPT/ROTATED STORED ENVELOPE: `rationale` is `null` rather than a 500. A KMS/key-service outage is deliberately NOT collapsed into that null — it returns 503, so an auditor can never mistake "temporarily undecryptable" for "no rationale was ever recorded".'
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15117,7 +15565,7 @@ paths:
     post:
       summary: Append a SUPPORTING ground to an existing moderation decision
       description: A LATER FINDING ATTACHES; it never rewrites (AC9). Records an append-only supporting ground against an existing decision, optionally superseding an earlier supporting ground — the PRIMARY ground is not reachable here and can never be superseded or replaced (structurally immutable by construction). Step-up gated (`member_moderation_append_ground`), a FOURTH context distinct from suspend/terminate/restore, so an elevation minted for one of those three can never be spent on appending a finding, and vice versa.
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15190,7 +15638,7 @@ paths:
     get:
       summary: The Pariwar's currently-moderated members
       description: "Members whose CURRENT standing is `suspended` or `terminated`, newest-action-first, paginated. Restored members drop out. Carries no rationale. NOTE: moderation items carry NO deadline and NO severity — a consumer cannot sort them by deadline-proximity."
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15234,7 +15682,7 @@ paths:
     get:
       summary: The full frozen moderation reason-code registry
       description: "All 10 codes (7 moderation grounds + 3 restore grounds), always — not paginated (Decision 3: the registry is code-level and frozen, never a per-Pariwar-growing list). The ONE source both the server's `appliesTo` 422 and the admin dropdown read."
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15265,7 +15713,7 @@ paths:
     get:
       summary: The member's own appeal context (member, in-portal)
       description: "What the member's appeal screen needs to render itself honestly, in one read: which moderation acts they may appeal RIGHT NOW (already filtered to acts with no open appeal, so the screen can show the one-open-at-a-time state without first earning a 409), plus their own appeals newest-first. ⚠ This read exists because the validity payload derives moderation standing from `specialFlags` and carries NO moderation-action id, while §8.8 identifies an appeal BY the act's §8.6 record. ⛔ The alternative — letting the server infer the act from the member's current standing — was rejected: an inferred subject on a governance write is the shape that lets a member appeal something other than what they were shown. ⛔ Carries no Tier-1 text."
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15295,7 +15743,7 @@ paths:
     post:
       summary: File an appeal against a moderation act (member, in-portal)
       description: "The MEMBER's own act under Niyamavali §8.8. Member-session gated; Turnstile (`x-turnstile-token`) and `Idempotency-Key` ride HEADERS, not the body. The member is the SESSION — there is no `member_id` field, deliberately. Appealable from suspension OR termination, with NO deadline (§8.8: \"no time limit runs against a member's right to appeal\"). Only ONE appeal against a given moderation act may be open at a time, but the right is NOT exhausted: once an appeal is determined a further appeal against the same act may be filed. Filing has NO SUSPENSIVE EFFECT — a suspended member remains suspended and a terminated member's access does not return. The grounds are stored Tier-1 encrypted and never appear on this response, on any event payload, or on any audit line."
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15356,7 +15804,7 @@ paths:
     post:
       summary: Record a member's appeal taken by helpline (operator, off-portal)
       description: "THE ARM THAT SURVIVES THE END OF AUTHENTICATED ACCESS. §8.8: \"the right to appeal does not depend on the access that termination removes.\" With `termination_access_block` enabled a terminated member holds no session at all, and this is the only route left to them. Gated on `helpdesk.create` — ⛔ NOT on `member.data_rights` (filing an appeal is not executing a DPDPA right) and ⛔ NOT on `member.moderate` (which would let the authority that sanctions a member also file their appeal). `helpdesk_ticket_id` is REQUIRED here and enforced by a DB CHECK: the ruling places the off-portal process ON a helpdesk ticket. The operator RECORDS the act; the event attributes it to the MEMBER, because the appeal is the member's own."
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15411,7 +15859,7 @@ paths:
     get:
       summary: The open moderation-appeal queue (Trustee Panel)
       description: "THE SURFACE ON WHICH A FILED APPEAL IS ACTUALLY FOUND. This is not a convenience read: the Trustee Panel holds NO helpdesk capability at all and helpdesk `routed_to_role` is advisory and inert, so no operator queue can ever surface an appeal to the Panel. Without this list an appeal would be reachable only by direct link — a complete record nobody can find. Open appeals in the caller's scope, oldest filing first. ⛔ Carries NO Tier-1 text."
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15449,7 +15897,7 @@ paths:
     get:
       summary: One moderation appeal, with both Tier-1 fields decrypted
       description: The single-item decrypt-on-demand read — the ONLY surface that ever carries the member's grounds or the adjudicator's reasoned outcome, behind the same gate as the determination (the `ModerationRationale` precedent). `grounds` / `reasoned_outcome` are null on a corrupt or rotated envelope (a per-row fact); a key-service outage answers 503 instead, so an unreachable KMS can never masquerade as a member who appealed and said nothing.
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15498,7 +15946,7 @@ paths:
     post:
       summary: Determine a moderation appeal (Trustee Panel)
       description: 'Records the §8.8 determination: `upheld` or `allowed`, and NOTHING ELSE — there is deliberately no third "varied" outcome, because a lesser sanction is a FRESH moderation act with its own ground, its own record and its own right of appeal. A REASONED OUTCOME is mandatory (stored Tier-1; never on an event payload or an audit line). Gated on `member.decide_moderation_appeal` — a SEPARATE key from `member.moderate`, because `member.moderate` is held by both pariwar_admin and the Trustee Panel and so cannot distinguish the appellate authority from the deciding one. Step-up required (`member_moderation_appeal`). ⭐ HOLDING THE KEY IS NOT SUFFICIENT: §8.8 requires the appeal be heard by a Panel member who did not take part in the act appealed against, and that exclusion is enforced server-side before any write as a 409. ⛔ AN `allowed` OUTCOME DOES NOT RESTORE THE MEMBER. It DIRECTS a restore; the restore is a subsequent, separately-attributed act through the moderation write path with its own Decision Note and the Panel-exclusive `member.restore_terminated` check. `directs_restore` on the response is a signal, not a report.'
-      tags: *a80
+      tags: *a83
       parameters:
         - schema:
             type: string
@@ -15990,4 +16438,399 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PublicDirectoryResponse"
+  /api/v1/member/memorial/entry:
+    get:
+      summary: The home screen's memorial entry probe
+      description: "Member-session-gated; ⛔ step-up. Decrypts nothing and writes no audit line. `{ memorialEntry: false }` when there is no closed drive for this member, or the surface is dark."
+      tags:
+        - memorial
+      responses:
+        "200":
+          description: Whether to show the entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialEntry"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/memorial:
+    get:
+      summary: The family's own memorial view
+      description: Member-session-gated; ⛔ step-up. The latest version's words VERBATIM, its state, the parts left out with each reason, a 5-minute signed photo URL, and the permission text in both locales. ⛔ The reviewer's internal note. A decrypt failure is a fail-soft 200 (`unavailable`).
+      tags:
+        - memorial
+      responses:
+        "200":
+          description: "The view, or `{ memorial: null }`"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialMemberView"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/memorial/submissions:
+    post:
+      summary: Send a version of the memorial (single-shot multipart)
+      description: "Behind the server switch, then the member session, then the NOMINEE's handover elevation (`claim_handover`), then a required `Idempotency-Key` HEADER (1–128 characters of `[A-Za-z0-9_-]`, else `400 memorial.idempotency_key_required`). The key is stored ON the version it writes (unique per drive): a Send whose key already wrote a version — at any age, including one that was still in flight and is waited for — answers 200 with that version's body and writes nothing. The permission version shown is echoed and a stale one refused. The photo (JPEG/PNG by magic bytes, ≤ 10 MiB) is metadata-stripped at ingest. 201, or the 200 replay."
+      tags:
+        - memorial
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/MemorialSendFields"
+      responses:
+        "200":
+          description: Replayed — this Idempotency-Key already wrote a version (the same body as its 201, at any age; nothing is written)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialSend"
+        "201":
+          description: Sent — with the Trust
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialSend"
+        "400":
+          description: A field or the photo was refused (memorial.*)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The nominee's handover code is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found (⛔ drive, or the surface is dark)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already approved / permission text outdated / nominee unresolved / try again
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/member/memorial/submissions/{id}/withdraw:
+    post:
+      summary: Withdraw the latest version while it is with the Trust
+      description: Behind the server switch, the member session and the NOMINEE's handover elevation. ⛔ Body.
+      tags:
+        - memorial
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialWithdraw"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: The nominee's handover code is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: This version can no longer be withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/memorial-reviews:
+    get:
+      summary: The Trust's memorial review queue
+      description: "`memorial.review` (pariwar dimension). Chain heads: pending ones oldest first; `?view=decided` for decided or withdrawn heads, most recently decided (or withdrawn) first — each item's `decidedAt` is that decision (or withdrawal) time, the one the decided view is ordered by, and is `null` in the pending view. `limit` and `offset` page the list and `hasMore` says whether another page follows. ⛔ No body in the list — the deceased's name, the sent date and the decided date only."
+      tags:
+        - memorial-review
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            enum:
+              - pending
+              - decided
+          required: false
+          name: view
+          in: query
+        - schema:
+            type: integer
+            exclusiveMinimum: 0
+            maximum: 200
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type:
+              - integer
+              - "null"
+            minimum: 0
+            maximum: 10000
+          required: false
+          name: offset
+          in: query
+      responses:
+        "200":
+          description: One page of the queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialReviewList"
+        "403":
+          description: Missing memorial.review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Pariwar not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/memorial-reviews/{submissionId}:
+    get:
+      summary: A memorial version and its whole chain (the history view)
+      description: "`memorial.review`. Every version VERBATIM with its decision, omissions, internal notes and withdrawals; 5-minute signed photo URLs."
+      tags:
+        - memorial-review
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: submissionId
+          in: path
+      responses:
+        "200":
+          description: The version and its chain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialReviewDetail"
+        "403":
+          description: Missing memorial.review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/memorial-reviews/{submissionId}/decision:
+    post:
+      summary: The Trust's ONE decision on a memorial version
+      description: "`memorial.review`. approve · approve with parts left out (spans into the verbatim text, each with one of four reasons) · not approved. ⛔ No field carries the family's text (strict)."
+      tags:
+        - memorial-review
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: submissionId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: *a84
+                omissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                        enum: *a60
+                      start:
+                        type: integer
+                        minimum: 0
+                      end:
+                        type: integer
+                        minimum: 1
+                      reason:
+                        type: string
+                        enum: *a58
+                    required:
+                      - field
+                      - start
+                      - end
+                      - reason
+                    additionalProperties: false
+                  maxItems: 200
+                photoLeftOut:
+                  type: object
+                  properties:
+                    reason:
+                      type: string
+                      enum: *a58
+                  required:
+                    - reason
+                  additionalProperties: false
+                reasonCode:
+                  type: string
+                  enum: *a58
+                internalNote:
+                  type: string
+                  minLength: 1
+                  maxLength: 4000
+              required:
+                - action
+              additionalProperties: false
+      responses:
+        "200":
+          description: Decided
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialReviewDecision"
+        "400":
+          description: Invalid input or invalid omissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Missing memorial.review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/memorial-reviews/{submissionId}/withdraw-approval:
+    post:
+      summary: The Trust withdraws its own approval
+      description: "`memorial.review`. The chain's latest approved, un-withdrawn version, on one of the four reasons."
+      tags:
+        - memorial-review
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: submissionId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reasonCode:
+                  type: string
+                  enum: *a58
+                internalNote:
+                  type: string
+                  minLength: 1
+                  maxLength: 4000
+              required:
+                - reasonCode
+              additionalProperties: false
+      responses:
+        "200":
+          description: Approval withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemorialWithdrawApproval"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Missing memorial.review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 webhooks: {}

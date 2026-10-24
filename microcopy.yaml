@@ -357,6 +357,31 @@ scope:
   # `.tsx`) stay OUT of copy_globs — `member_only` terms are ubiquitous code
   # identifiers there (false-positive storm); they belong in code_globs with
   # member_only OFF. The register grows surface-by-surface as Epic 11a/11b land.
+    # ⭐ Story 11b.4 (AC14) — the family memorial's MOBILE files, each BY NAME (the existing mobile entries list files one by
+    # one), and the permission REGISTRY — its hi/en strings are member-facing text the nominee reads above Send, so the
+    # register and every tone rule (`fursat-pressure` included) must bite it. ⚠ code_globs SKIP `member_only` terms ⇒
+    # `scripts/microcopy/memorial.test.ts` ALSO runs the full register + `checkTone` + the no-deadline scan directly over
+    # the registry's strings ([[feedback_gate_scope_semantic_coverage]]: a green scan over a newly-scanned file proves nothing).
+    - apps/mobile/app/(memorial)/_layout.tsx
+    - apps/mobile/app/(memorial)/index.tsx
+    - apps/mobile/app/(memorial)/write.tsx
+    - apps/mobile/app/(memorial)/photo.tsx
+    - apps/mobile/app/(memorial)/preview.tsx
+    - apps/mobile/app/(memorial)/outcome.tsx
+    - apps/mobile/components/memorial-authorship/MemorialEntry.tsx
+    - apps/mobile/components/memorial-authorship/MemorialHeader.tsx
+    - apps/mobile/components/memorial-authorship/MemorialText.tsx
+    - apps/mobile/components/memorial-authorship/HandoverCodePanel.tsx
+    - apps/mobile/components/memorial-authorship/memorial-copy.ts
+    - apps/mobile/components/memorial-authorship/MemorialKeptPhoto.tsx
+    - apps/mobile/components/memorial-authorship/MemorialViewMissing.tsx
+    - apps/mobile/components/memorial-authorship/useMemorialAnnounce.ts
+    - apps/mobile/components/memorial-authorship/useMemorialQueries.ts
+    - apps/mobile/lib/memorial-draft.ts
+    - apps/mobile/lib/memorial-i18n.ts
+    - apps/mobile/lib/memorial-api.ts
+    - apps/mobile/lib/use-memorial-send.ts
+    - packages/domain/src/memorial/authorisation-copy.ts
   copy_globs:
     - packages/i18n/locales/hi/niyamavali.json
     - packages/i18n/locales/en/niyamavali.json
@@ -414,6 +439,11 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over a newly-scanned file proves nothing).
     - packages/i18n/locales/hi/nominee-console.json
     - packages/i18n/locales/en/nominee-console.json
+    # ⭐ Story 11b.4 (AC14) — the family memorial's `memorial` namespace (the nominee writes, for the family): grief-paced —
+    # every tone rule bites it, `fursat-pressure` above all. Teeth proven in scripts/microcopy/memorial.test.ts. ⛔ The
+    # family's OWN words are never in scope (invariant (f)): they are data, ⛔ copy.
+    - packages/i18n/locales/hi/memorial.json
+    - packages/i18n/locales/en/memorial.json
     # Story 11a.2 — the `members` namespace strings (the public /members Member Directory
     # shell: the not-yet-published empty state + the FR-91 pagination controls + the
     # 400-shaped invalid-page state). ⛔ The register grows surface-by-surface BY BEING

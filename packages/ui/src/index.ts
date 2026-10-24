@@ -41,3 +41,9 @@ export * from './noticeboard/index.js';
 // hang a pill on); name PARTS only, never joined (the contributor name FORM is UNRULED and routed to the
 // Trustee Panel); per-ROW, never per-list — virtualization is a render-layer property. Pure logic only.
 export * from './contribution-list/index.js';
+
+// Story 11b.4 — the framework-agnostic family-memorial presenter (pure): the family's VERBATIM words as paragraphs, and the
+// reconstruction of what the family wrote vs. what the Trust left out, as SEGMENTS with copy keys (⛔ a string — an
+// omission can never be confused with something the family typed). Shared by the mobile preview and outcome screens, and
+// by row 11b-4a's public render later (with `white-space: pre-wrap`). Pure logic only.
+export * from './memorial/index.js';

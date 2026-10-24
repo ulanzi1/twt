@@ -33,6 +33,8 @@ import { registerMedicalModule } from './modules/medical/index.js';
 import { registerMemberHomeModule } from './modules/member-home/index.js';
 import { registerMemberPoolModule } from './modules/member-pool/index.js';
 import { registerNomineeConsoleModule } from './modules/nominee-console/index.js';
+import { registerMemorialModule } from './modules/memorial/index.js';
+import { registerMemorialReviewModule } from './modules/memorial-review/index.js';
 import { registerReconciliationModule } from './modules/reconciliation/index.js';
 import { registerReconciliationReviewModule } from './modules/reconciliation-review/index.js';
 import { registerSelfVerifyModule } from './modules/self-verify/index.js';
@@ -206,6 +208,11 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // the server-computed staff-takeover-by-day-N verdict. Member-session-gated; NO write path / event /
   // schema change. Composes the built 8.3/8.11 surfaces client-side; the 9.3 upload + 9.6 pill are seams.
   registerNomineeConsoleModule(app, deps);
+  // Story 11b.4 — the family memorial: the family (Ravi-mode session-as-deceased) writes it and sends it with the nominee's
+  // handover code (member routes, behind the MA17 switch), and the Trustee Panel reviews it (`memorial.review`). ⛔ No
+  // public render here (row 11b-4a).
+  registerMemorialModule(app, deps);
+  registerMemorialReviewModule(app, deps);
   // Story 9.3 — the FIRST reconciliation SURFACE + transport (the transport Story 9.2 deferred): the
   // <BankStatementUpload> dual upload endpoints (member Ravi-mode + staff claim.file) that run
   // parseStatement inline over the uploaded buffer, store the raw blob (Tier-1, AR-45-wrapped), virus-scan,

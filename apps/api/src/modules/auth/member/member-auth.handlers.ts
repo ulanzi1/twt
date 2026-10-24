@@ -28,13 +28,14 @@ import { ids, member as memberDomain } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../../context.js';
-import { ForbiddenError, UnauthorizedError } from '../../../http-errors.js';
+import { BadRequestError, ForbiddenError, UnauthorizedError } from '../../../http-errors.js';
 import { PARIWAR_SELECT_TYP } from '../../../plugins/jwt/index.js';
 import type { PariwarSelectClaims } from '../../../plugins/jwt/index.js';
 import { emitAuthAudit } from '../shared/audit.js';
 import { hmacOtpAuditCorrelation } from '../shared/otp.js';
 import { maskMobile, mobileBlindIndex, normalizeMobile } from '../shared/mobile-index.js';
 import type { StepUpDeliveryResult, StepUpOtpDelivery } from '../shared/step-up-delivery.js';
+import { isDedicatedStepUpContext } from './dedicated-step-up-contexts.js';
 import * as authService from './member-auth.service.js';
 import * as repo from './member-auth.repo.js';
 import * as otpService from './member-otp.service.js';
@@ -507,6 +508,21 @@ export function createMemberAuthHandlers(deps: AppDeps) {
       const memberId = request.requestContext.actorId;
       if (!memberId) throw new UnauthorizedError('Authentication required', 'auth.session_required');
       const body = request.body as MemberStepUpRequestRequest;
+      // ⭐ Story 11b.4 (MA19, Trap 13) — BEFORE any OTP is minted or sent: a context whose code goes to someone other than
+      // the session member (`claim_handover` — the NOMINEE) is minted ONLY by its own sender. ⛔ No OTP row, ⛔ no SMS; one
+      // failure line. Closes the hole for every `claim_handover` route (claim intake, documents, nominee-bank, the
+      // bank-statement upload, the memorial Send). ⛔ `stepUpVerify` is untouched.
+      if (isDedicatedStepUpContext(body.actionContext)) {
+        emitAuthAudit(deps, request, 'member_step_up.failure', {
+          actorId: memberId,
+          pariwarId: request.requestContext.pariwarId ?? null,
+          context: { action_context: body.actionContext, reason: 'context_not_allowed' },
+        });
+        throw new BadRequestError(
+          'This step is confirmed with a code sent to the nominee',
+          'auth.step_up_context_not_allowed',
+        );
+      }
       const blindIndex = await repo.getMemberMobileBlindIndex(deps.servicePool, memberId);
       if (!blindIndex) throw new UnauthorizedError('Authentication required', 'auth.session_required');
       const { code, otpHash, expiresAt } = await otpService.requestOtp(deps, 'step_up', blindIndex, {

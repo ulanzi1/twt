@@ -68,6 +68,7 @@ import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import * as memberAuthRepo from '../auth/member/member-auth.repo.js';
 import * as otpService from '../auth/member/member-otp.service.js';
 import { decryptExportArtifact } from '../data-export/data-export-crypto.js';
+import { deleteMemorialPhotosAfterErasure } from '../memorial/erasure.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 
 /** Local SHA-256 hex over a canonical string (the helpdesk-handler idiom — a sha256Hex helper in a
@@ -1143,6 +1144,8 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
 
       const scopeTx = await openScopeTxClaimed(pariwarIdStr, idemKey);
       let ok = false;
+      // Story 11b.4 (MA15) — the memorial photo keys `anonymizeMember` returns, deleted AFTER COMMIT (below).
+      let memorialPhotoKeys: readonly string[] = [];
       // ⚠ CODE-REVIEW FIX — was `string`, which widened `legality.fromState`'s precise
       // `MemberLifecycleState` into an unconstrained wire string on
       // `OffPortalErasureResponse.from_state`.
@@ -1206,7 +1209,7 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
           mutate: async () => {
         // Field-level scrub of every Tier-1 PII column — AND, since Story 10.21, the member's
         // `data_exports` dossier (AC11), in this same transaction.
-        await memberDomain.anonymizeMember(scopeTx.tx, enc, { memberId, pariwarId });
+        ({ memorialPhotoKeys } = await memberDomain.anonymizeMember(scopeTx.tx, enc, { memberId, pariwarId }));
 
         await memberDomain.projectMemberState(scopeTx.client, {
           memberId,
@@ -1254,6 +1257,8 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         } finally {
           if (!committed) await releaseIdempotency(idemKey);
         }
+        // ⭐ Story 11b.4 (MA15) — the memorial photos, only once COMMITTED; best-effort, logged.
+        if (committed) await deleteMemorialPhotosAfterErasure(deps, request.log, memorialPhotoKeys);
       }
 
       return {

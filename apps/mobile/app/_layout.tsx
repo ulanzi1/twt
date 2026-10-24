@@ -232,6 +232,15 @@ function RootLayoutNav() {
           }}
         />
 
+        {/* Story 11b.4 — the family memorial route group (the nominee writes for the family; each screen owns its sticky
+            "Save and come back" header). Reached ONLY from <MemorialEntry /> on home. */}
+        <Stack.Screen
+          name="(memorial)"
+          options={{
+            headerShown: false,
+          }}
+        />
+
         {/* Story 10.2 — the member helpdesk route group (file + view support tickets). The
             tickets/:ticketId deep-link destination (the pre-wired helpdesk_reply target). */}
         <Stack.Screen

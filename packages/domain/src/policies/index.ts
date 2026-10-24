@@ -265,3 +265,6 @@ export * from './claim-suspicion-notice-rls.js';
 // Story 6.25 (0152) — the staff email record. Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`; INSERT and UPDATE narrowed by
 // its migration's column grants.
 export * from './claim-suspicion-staff-email-rls.js';
+// Story 11b.4 (0182) — the family memorial's three tables. Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`; each UPDATE
+// leg is narrowed by 0182's column-level grant to the Tier-1 ciphertext columns (MA15 — the RTBF scrub only).
+export * from './memorial-rls.js';

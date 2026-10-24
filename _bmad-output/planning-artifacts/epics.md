@@ -3718,6 +3718,23 @@ whatever the nominee answered, at selection, every re-check and the reminder (`p
 sides; ⛔ other reader of the link (payout, claim filing, contact). ⛔ Backfill. Residual: a nominee whose sign-in number the member does ⛔
 hold (often a family phone) stays uncovered.
 
+### Story 6.36f: A Member Changes or Removes a Nominee Mark Without Retyping the Nominees — the Server Keeps the Details `[SURFACE]`
+
+> ⚠ **Added 2026-10-24** from Story 6.36e's device run (BigDev: *"C: server keeps the details"*, chosen over B — prefill from the record — and A — keep as is).
+> ⛔ By Panel ruling (no new disclosure: the details never leave the server); ⛔ a decision-log entry (a build direction, written into this
+> story's decisions at its create-story). The row is `6-36f-nominee-mark-only-save` (`backlog`). Context: Story 6.36e `### Review Findings` / `**Device run, second pass**`; 3.9's *"the Life Events form starts EMPTY"* (the nominees status carries ⛔ PII).
+
+As a member who has marked a nominee who is also a member, I want to change or remove a mark without retyping every nominee's name, relationship and
+mobile, so that a mark-only change cannot silently replace a declared nominee's details with a typing slip.
+
+**Acceptance Criteria (in brief):** the Life Events form offers a marks-only save — the phone sends each rank's mark (`keep` / `new` / none) and ⛔
+the nominees' details; the SERVER re-uses the details of the declaration as recorded (the head per rank), runs the same guards as a full save (the
+D3 lock, a claim-named declarer, the terminal states, the `nominee_change` step-up, the 4-a-day meter for new marks) and the same `planNomineeLinks`
+rules, and ⛔ returns any detail to the device; ⛔ a change to a name, relationship, mobile or address (a full save, as today); ⛔ prefill. Open design
+questions for create-story: a NEW version per rank carrying the SAME ciphertext vs hanging the new link off the existing head version (it moves the
+export's `(rank, versionNo)` join and the `onHead` end rule); what the declaration history shows for a marks-only version; the form's UX (a separate
+"change marks only" path vs detecting untouched slots). ⛔ A new disclosure; ⛔ backfill.
+
 ### Story 6.37: The Texts and Login Codes Are Actually Sent — a MSG91 Adapter Behind the SMS Seam, Sending Each Template's Named Values, With a Pre-flight That Proves Every Template Before a Text Is Spent `[PRIMITIVE]`
 
 > ⚠ **Added 2026-10-17 (Story 6.37, Task 0.4)** — the row `6-37-msg91-sms-gateway-adapter` was added by

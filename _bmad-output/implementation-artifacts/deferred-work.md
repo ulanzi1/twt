@@ -4,6 +4,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: the 6.36e device run (Android emulator, 2026-10-24)
+
+- **The member-mark controls are 36 dp tall** [apps/mobile/components/life-events/NomineeForm.tsx `markControl` — *Find them in your contacts*, *Pick a different member*, *Remove mark*, *Keep the mark*, *Remove it*: `size="$3"`]. Seen in the accessibility tree: 347 × 36 dp, against 44–56 dp for the form's other buttons (the relationship chips are 36 dp too — 3.9's convention). *Keep the mark* / *Remove it* answer a question about WHO a mark is for; for older members a larger target is the safe default. **Recommendation: patch to `height={48}`** (the find screen's controls already are) — a small change with a render test on `data-height`; deferred only because the device run was a look, ⛔ a fix round. Trigger: BigDev's word, or the next accessibility pass.
+- **A dev client built before `expo-contacts` fails every contacts screen** ("Cannot find native module 'ExpoContacts'") — rebuild (`expo prebuild` / `expo run:android`) on any device or emulator that predates 6.36b. ⛔ A code fault.
+- **Not covered by the device run:** iOS / VoiceOver, TalkBack's spoken output, the contacts-permission denied path, iOS limited access, the daily-limit refusal, a second nominee and a rank move, the draft save-and-resume, a real phone in a real hand.
+
 ## Deferred from: fix-diff review, round 3, of 6-36e-nominee-member-link-at-declaration.md (2026-10-24)
 
 The whole patch diff again (both rounds' patches), two chunks × three layers. Twenty-one `patch` items (one began as a decision, resolved to "keep and document") are in the story's `#### Fix-diff review — round 3`; these five are not patched by it.

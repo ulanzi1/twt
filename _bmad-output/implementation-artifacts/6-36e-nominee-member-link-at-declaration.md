@@ -1397,6 +1397,7 @@ i18n copy test, `member-links.spec.ts`); `deferred-work.md`: the supersession it
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-24 | 1.20 | LANDED on main by fast-forward (BigDev: *"land it"*): `origin/main` `6c4c1e47` → `ec6de2b8`, PR #302 MERGED, the branch tip's SHA unchanged. Status stays `review` — roster Row 31 (j) (counsel's written basis + a privacy-policy line) still gates go-live; iOS / VoiceOver uncovered. |
 | 2026-10-24 | 1.19 | HINDI APPROVED for the four lines `-402` / `-403` changed (BigDev: *"your Hindi draft is fine. Use it."*, no edit); the follow-up push passed the hook (`ci:local` 36 / 36 at `92fb4365`). Every Hindi string the story touches is now approved. Status stays `review`. |
 | 2026-10-24 | 1.18 | PR #302 OPENED (`ci:local` 36 / 36 green at `21eecf3e`); **6.36b screen + `label.not_me_note` decided** (BigDev): `2026-10-24-402` (the intro says what each named person is asked + a generic purpose; ⛔ the order; `label.not_me_note` an action prompt) and `-403` (two lines → "no longer available"), each committed alone before its copy; pins + a `known_people` guard (en + hi). New Hindi awaits BigDev. Status stays `review`. |
 | 2026-10-24 | 1.17 | HINDI APPROVED (BigDev: *"1, open pr"*): the reviewed Hindi `nominee_link` copy is recorded as approved — the open item *"the Hindi AWAITS BigDev's approval"* is closed. PR opened (see the ledger). Status stays `review`. |

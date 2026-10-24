@@ -137,11 +137,11 @@ describe('the find screen — a check that found someone', () => {
     expect(btn('Choose a contact')).toBeInTheDocument()
   })
 
-  it('the screen SAYS the count in the right number — "1 of your contacts is a member." / "2 of your contacts are members." (`find.matches_count_one` is selected by the caller)', async () => {
+  it('the screen SAYS the count in the right number — "1 of your contacts is a TWT member." / "2 of your contacts are TWT members." (`find.matches_count_one` is selected by the caller)', async () => {
     render(createElement(NomineeLinkFindScreen))
     await userEvent.click(btn('Continue'))
     await screen.findByRole('button', { name: /^Meena from school/ })
-    expect(mock.announce).toHaveBeenCalledWith('1 of your contacts is a member.')
+    expect(mock.announce).toHaveBeenCalledWith('1 of your contacts is a TWT member.')
     cleanup()
     clearNomineeLinkSession()
     const second = { key: '+919876500002', savedName: 'Ravi from work', number: '+919876500002' }
@@ -150,7 +150,7 @@ describe('the find screen — a check that found someone', () => {
     render(createElement(NomineeLinkFindScreen))
     await userEvent.click(btn('Continue'))
     await screen.findByRole('button', { name: /^Ravi from work/ })
-    expect(mock.announce).toHaveBeenCalledWith('2 of your contacts are members.')
+    expect(mock.announce).toHaveBeenCalledWith('2 of your contacts are TWT members.')
   })
 
   it.each([['full', 2], ['limited', 3]] as const)('every control on the matches is at least 48 dp (%s access) — the way for a nominee on an unsaved number, and iOS *Share more*, included', async (access, count) => {

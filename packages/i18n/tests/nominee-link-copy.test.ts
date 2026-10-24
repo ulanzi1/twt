@@ -131,8 +131,11 @@ describe('nominee_link copy (real t())', () => {
   });
 
   it('a single contact reads in the singular (`find.matches_count_one` — ⛔ "1 of your contacts are members")', () => {
-    expect(t('find.matches_count_one', undefined, { locale: 'en', namespace: NS })).toBe('1 of your contacts is a member.');
-    expect(t('find.matches_count', { count: 2 }, { locale: 'en', namespace: NS })).toBe('2 of your contacts are members.');
+    expect(t('find.matches_count_one', undefined, { locale: 'en', namespace: NS })).toBe('1 of your contacts is a TWT member.');
+    expect(t('find.matches_count', { count: 2 }, { locale: 'en', namespace: NS })).toBe('2 of your contacts are TWT members.');
+    // BigDev's Hindi review (2026-10-24): "TWT के सदस्य" — the contact is a member of TWT, ⛔ just "a member"
+    expect(t('find.matches_count_one', undefined, { locale: 'hi', namespace: NS })).toBe('आपका 1 संपर्क TWT का सदस्य है।');
+    expect(t('find.matches_count', { count: 2 }, { locale: 'hi', namespace: NS })).toBe('आपके 2 संपर्क TWT के सदस्य हैं।');
   });
 
   it('WCAG 2.5.3 — the pick button\'s accessible name BEGINS with its visible text (the saved name)', () => {

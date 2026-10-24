@@ -6,7 +6,16 @@
 // + acknowledge are pessimistic/server-confirmed mutations (§4.2) that invalidate
 // the history so the banner + table re-derive from fresh server state.
 
-import { keepPreviousData, QueryClient, useIsMutating, useMutation, useQuery, useQueryClient, type Query } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  QueryClient,
+  useInfiniteQuery,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type Query,
+} from '@tanstack/react-query';
 import { useCallback } from 'react';
 import type {
   DecideModerationAppealRequest,
@@ -2058,11 +2067,18 @@ export const memorialReviewsKey = (pariwarId: string, view: 'pending' | 'decided
 export const memorialReviewKey = (pariwarId: string, submissionId: string) =>
   ['memorial-review', pariwarId, submissionId] as const;
 
-/** The review queue (a 403 ⇒ the page's own "no access" — ⛔ retried). */
+/**
+ * The review queue, one page at a time (a 403 ⇒ the page's own "no access" — never retried). "Load more" appends the next page
+ * at `offset` = the rows already loaded, while the last page said `hasMore`; the Decided view is ordered by DECISION time
+ * (the head's decision or withdrawal), newest first (R14, T7), so a version sent long ago but decided today is on the
+ * first page, and older decisions are reached by paging.
+ */
 export function useMemorialReviews(pariwarId: string, view: 'pending' | 'decided') {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: memorialReviewsKey(pariwarId, view),
-    queryFn: () => api.listMemorialReviews(pariwarId, view),
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => api.listMemorialReviews(pariwarId, view, api.MEMORIAL_REVIEW_PAGE_SIZE, pageParam),
+    getNextPageParam: (last, all) => (last.hasMore ? all.reduce((n, p) => n + p.items.length, 0) : undefined),
     retry: false,
   });
 }
@@ -2076,7 +2092,10 @@ export function useMemorialReview(pariwarId: string, submissionId: string) {
   });
 }
 
-/** Record the ONE decision; the queue and the chain are re-read afterwards. */
+/**
+ * Record the ONE decision; the queue and EVERY cached chain of the Pariwar are re-read afterwards (a decision on one
+ * version changes what its sibling versions' pages may offer).
+ */
 export function useDecideMemorialReview(pariwarId: string, submissionId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -2084,20 +2103,24 @@ export function useDecideMemorialReview(pariwarId: string, submissionId: string)
       api.decideMemorialReview(pariwarId, submissionId, body),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ['memorial-reviews', pariwarId] });
-      void qc.invalidateQueries({ queryKey: memorialReviewKey(pariwarId, submissionId) });
+      void qc.invalidateQueries({ queryKey: ['memorial-review', pariwarId] });
     },
   });
 }
 
-/** Withdraw the Trust's own approval (MA16); the queue and the chain are re-read afterwards. */
-export function useWithdrawMemorialApproval(pariwarId: string, submissionId: string) {
+/**
+ * Withdraw the Trust's own approval (MA16). The approval withdrawn belongs to the chain's latest APPROVED version
+ * (`targetSubmissionId` — the detail's `withdrawApprovalTargetId`), ⛔ not necessarily the version the page has open (R9:
+ * with v1 approved and v2 pending, the cure is offered on v2 and posts to v1). The queue and every cached chain are re-read.
+ */
+export function useWithdrawMemorialApproval(pariwarId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof api.withdrawMemorialApproval>[2]) =>
-      api.withdrawMemorialApproval(pariwarId, submissionId, body),
+    mutationFn: (v: { targetSubmissionId: string; body: Parameters<typeof api.withdrawMemorialApproval>[2] }) =>
+      api.withdrawMemorialApproval(pariwarId, v.targetSubmissionId, v.body),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ['memorial-reviews', pariwarId] });
-      void qc.invalidateQueries({ queryKey: memorialReviewKey(pariwarId, submissionId) });
+      void qc.invalidateQueries({ queryKey: ['memorial-review', pariwarId] });
     },
   });
 }

@@ -113,3 +113,16 @@ export function deriveEarlierApprovalWithdrawn(
   }
   return null;
 }
+
+/**
+ * `earlierApprovalStands` on the member GET (R2): true IFF the chain has a CURRENTLY approved version
+ * (`latestApprovedIndex` — approved or approved-with-omissions, ⛔ no withdrawal) AND a newer version exists after it. The
+ * state is derived from the latest version alone, so when that newest version is withdrawn or not approved the screen
+ * would say so about a memorial that the older approval still holds (MA13: the latest APPROVED version is the one the page
+ * shows). Independent of `earlierApprovalWithdrawn` (an even older approval can stand while a middle one was withdrawn).
+ * `chain` is oldest → newest.
+ */
+export function deriveEarlierApprovalStands(chain: readonly MemorialChainLinkState[]): boolean {
+  const approved = latestApprovedIndex(chain);
+  return approved >= 0 && approved < chain.length - 1;
+}

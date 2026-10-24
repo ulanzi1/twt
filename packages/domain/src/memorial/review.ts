@@ -56,6 +56,16 @@ export function memorialReviewTargetIndex(
   }
 }
 
+/**
+ * PURE — the submission id the Trust may withdraw approval of in this chain (MA16): the latest approved, un-withdrawn
+ * version, whatever newer versions follow it; `null` if none. The same version `memorialReviewTargetIndex(…,
+ * 'withdraw_approval')` accepts, so the detail response can name it from ANY version of the chain the reviewer opens.
+ */
+export function memorialWithdrawApprovalTargetId(chain: readonly MemorialChainLink[]): string | null {
+  const index = latestApprovedIndex(chain);
+  return index < 0 ? null : chain[index]!.submission.submissionId;
+}
+
 /** The pool a submission belongs to, in THIS Pariwar (RLS + an explicit predicate), or `null`. */
 export async function readMemorialSubmissionPool(
   db: Db,
@@ -84,35 +94,64 @@ export interface MemorialReviewQueueRow {
   readonly poolId: PoolId;
   readonly deceasedMemberId: MemberId;
   readonly createdAt: Date;
+  /**
+   * When the head was decided — `GREATEST(decided_at, withdrawn_at)`, the SAME expression the `decided` view is ordered
+   * by (review T7 / V12), so the list shows the time it is sorted by; `null` for a `pending` head.
+   */
+  readonly decidedAt: Date | null;
   /** The head's state inputs (⛔ content) — so the list shows its derived state. */
   readonly action: MemorialReviewAction | null;
   readonly withdrawnBy: MemorialWithdrawalActor | null;
 }
 
 /**
- * The review queue — chain HEADS only (a superseded version is reached through its chain), oldest first:
- *   · `pending` — the head carries ⛔ no decision and ⛔ no withdrawal (`with_the_trust`);
- *   · `decided` — the head carries a decision or a withdrawal.
+ * The review queue — chain HEADS only (a superseded version is reached through its chain):
+ *   · `pending` — the head carries ⛔ no decision and ⛔ no withdrawal (`with_the_trust`), OLDEST first (the longest wait on top);
+ *   · `decided` — the head carries a decision or a withdrawal, ordered by WHEN IT WAS DECIDED, newest first (review T7 —
+ *     ⛔ not by the sent date: a version sent months ago and decided today must be on top, and the pending view hands
+ *     reviewers the OLDEST sends first, so sent-date order would sink exactly the decisions just made). The time is the
+ *     head's `decided_at` or `withdrawn_at`, whichever is later (`GREATEST` skips a NULL): a family withdrawal has only
+ *     the latter; a Trust withdrawal of an approval (MA16) follows its decision, and the withdrawal is what decided the
+ *     state shown. Tie-break `submission_id DESC`.
+ * Paged by `offset`; one extra row is fetched to answer `hasMore` and is dropped from `rows` (`rows.length <= limit`).
  * ⛔ No body in the list (the caller decrypts only the deceased's name). Raw SQL with explicit aliases — ⛔ a correlated
  * subquery through the builder ([[project_epic6_drizzle_correlated_subquery_bug]]).
  */
 export async function listMemorialReviewQueue(
   db: Db,
-  { pariwarId, view, limit }: { readonly pariwarId: PariwarId; readonly view: MemorialReviewQueueView; readonly limit: number },
-): Promise<MemorialReviewQueueRow[]> {
+  {
+    pariwarId,
+    view,
+    limit,
+    offset = 0,
+  }: {
+    readonly pariwarId: PariwarId;
+    readonly view: MemorialReviewQueueView;
+    readonly limit: number;
+    readonly offset?: number;
+  },
+): Promise<{ readonly rows: MemorialReviewQueueRow[]; readonly hasMore: boolean }> {
   const state =
     view === 'pending'
       ? sql`d.submission_id IS NULL AND w.submission_id IS NULL`
       : sql`(d.submission_id IS NOT NULL OR w.submission_id IS NOT NULL)`;
+  const order =
+    view === 'pending'
+      ? sql`s.created_at ASC, s.submission_id ASC`
+      : sql`GREATEST(d.decided_at, w.withdrawn_at) DESC, s.submission_id DESC`; // the SELECT's `decided_at` (V12)
+  const pageSize = Math.max(1, Math.floor(limit));
+  const skip = Math.max(0, Math.floor(offset));
   const r = await db.execute<{
     submission_id: string;
     pool_id: string;
     deceased_member_id: string;
     created_at: Date | string;
+    decided_at: Date | string | null;
     action: MemorialReviewAction | null;
     withdrawn_by: MemorialWithdrawalActor | null;
   }>(sql`
-    SELECT s.submission_id, s.pool_id, s.deceased_member_id, s.created_at, d.action, w.withdrawn_by
+    SELECT s.submission_id, s.pool_id, s.deceased_member_id, s.created_at,
+           GREATEST(d.decided_at, w.withdrawn_at) AS decided_at, d.action, w.withdrawn_by
       FROM memorial_submissions s
       LEFT JOIN memorial_review_decisions d ON d.pariwar_id = s.pariwar_id AND d.submission_id = s.submission_id
       LEFT JOIN memorial_withdrawals w ON w.pariwar_id = s.pariwar_id AND w.submission_id = s.submission_id
@@ -121,15 +160,16 @@ export async function listMemorialReviewQueue(
              SELECT 1 FROM memorial_submissions nxt
               WHERE nxt.pariwar_id = s.pariwar_id AND nxt.supersedes_submission_id = s.submission_id)
        AND ${state}
-     ORDER BY s.created_at ASC, s.submission_id ASC
-     LIMIT ${limit}`);
-  return r.rows.map((row) => ({
+     ORDER BY ${order}
+     LIMIT ${pageSize + 1} OFFSET ${skip}`);
+  const rows = r.rows.slice(0, pageSize).map((row) => ({
     submissionId: row.submission_id,
     poolId: row.pool_id as PoolId,
     deceasedMemberId: row.deceased_member_id as MemberId,
     createdAt: row.created_at instanceof Date ? row.created_at : new Date(row.created_at),
+    decidedAt: row.decided_at === null ? null : row.decided_at instanceof Date ? row.decided_at : new Date(row.decided_at),
     action: row.action,
     withdrawnBy: row.withdrawn_by,
   }));
+  return { rows, hasMore: r.rows.length > pageSize };
 }
-

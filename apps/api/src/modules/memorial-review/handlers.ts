@@ -119,18 +119,28 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
   }
 
   return {
-    /** GET /api/v1/p/:pariwarId/memorial-reviews[?view=decided] — chain heads, oldest first, ⛔ body. */
+    /**
+     * GET /api/v1/p/:pariwarId/memorial-reviews[?view=decided&limit=&offset=] — chain heads, no body; `pending` oldest
+     * (sent) first, `decided` most recently DECIDED first (the head's decision / withdrawal time — review T7), paged by
+     * `offset` with `hasMore`.
+     */
     async list(request: FastifyRequest): Promise<MemorialReviewListResponse> {
       const who = staffCtx(request);
-      const q = request.query as { view?: 'pending' | 'decided'; limit?: number };
+      const q = request.query as { view?: 'pending' | 'decided'; limit?: number; offset?: number };
       const view = q.view ?? 'pending';
       const pariwarId = ids.pariwarId(who.pariwarIdStr);
       const tx = await openScopeTx(deps, who.pariwarIdStr);
       let ok = false;
       let rows: memorial.MemorialReviewQueueRow[];
+      let hasMore: boolean;
       const names = new Map<string, string | null>();
       try {
-        rows = await memorial.listMemorialReviewQueue(tx.tx, { pariwarId, view, limit: clampLimit(q.limit, LIST_LIMIT) });
+        ({ rows, hasMore } = await memorial.listMemorialReviewQueue(tx.tx, {
+          pariwarId,
+          view,
+          limit: clampLimit(q.limit, LIST_LIMIT),
+          offset: q.offset ?? 0,
+        }));
         for (const r of rows) {
           if (!names.has(r.deceasedMemberId)) {
             names.set(r.deceasedMemberId, (await kycDomain.getMemberKycProfile(tx.tx, pariwarId, r.deceasedMemberId))?.nameCiphertext ?? null);
@@ -150,7 +160,7 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
       emitAuthAudit(deps, request, 'memorial.review.read', {
         actorId: who.actorId,
         pariwarId: who.pariwarIdStr,
-        context: { view, rows: rows.length, fields_decrypted: decrypted },
+        context: { view, rows: rows.length, offset: q.offset ?? 0, fields_decrypted: decrypted },
         resourceLocator: 'memorial-review:list',
       });
       return {
@@ -158,11 +168,14 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
           submissionId: r.submissionId,
           deceasedName: resolved.get(r.deceasedMemberId) ?? null,
           sentAt: r.createdAt.toISOString(),
+          // The time the decided view is ordered by (review V12 — T7 sorted by a time the table never showed); `null` pending.
+          decidedAt: r.decidedAt === null ? null : r.decidedAt.toISOString(),
           memorialState: memorial.deriveMemorialStatus({
             decision: r.action === null ? null : { action: r.action },
             withdrawal: r.withdrawnBy === null ? null : { withdrawnBy: r.withdrawnBy, reasonCode: null },
           }),
         })),
+        hasMore,
       };
     },
 
@@ -237,13 +250,17 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
         context: { submission_id: submissionId, versions: chain.length, fields_decrypted: decrypted },
         resourceLocator: `memorial:${submissionId}`,
       });
+      // MA16 — the chain's withdraw target is named from ANY version opened: with v1 approved and v2 pending / declined the
+      // head is what the queue links to, and v1 is the version the Trust withdraws (`withdraw-approval` validates it).
+      const withdrawApprovalTargetId = memorial.memorialWithdrawApprovalTargetId(chain);
       return {
         submissionId,
         deceasedName,
         memorialState: memorial.memorialChainState(chain),
         chain: versions,
         canDecide: memorial.memorialReviewTargetIndex(chain, submissionId, 'decision') !== null,
-        canWithdrawApproval: memorial.memorialReviewTargetIndex(chain, submissionId, 'withdraw_approval') !== null,
+        canWithdrawApproval: withdrawApprovalTargetId !== null,
+        withdrawApprovalTargetId,
       };
     },
 

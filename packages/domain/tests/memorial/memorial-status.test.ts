@@ -1,9 +1,12 @@
 // Story 11b.4 — the memorial's DERIVED state and the pure decisions taken under the lock (MA9 / MA10 / MA13 / MA16, Trap 8,
 // AC4, AC8, AC9). DB-free.
 
+import { createHash } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
 import {
+  MEMORIAL_REVIEW_REASONS,
   MEMORIAL_STATES,
   MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION,
   MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS,
@@ -23,6 +26,10 @@ import {
   type MemorialReviewReason,
   type MemorialWithdrawalActor,
 } from '../../src/memorial/index.js';
+
+/** The permission-text versions by id — v1 is SUPERSEDED by v2 (R1) but stays in the registry: a sent row names its version. */
+const PERMISSION_V1 = '2026-10-23.v1-pending-hi-review';
+const PERMISSION_V2 = '2026-10-24.v2-pending-hi-review';
 
 let seq = 0;
 function link(
@@ -158,6 +165,17 @@ describe('decideMemorialSend (AC7 order under the lock)', () => {
     });
   });
 
+  it('refuses the SUPERSEDED v1 id — a phone that still shows v1 must read v2 first (R1)', () => {
+    expect(decideMemorialSend([], { ...current, authorisationCopyVersion: PERMISSION_V1 })).toEqual({
+      ok: false,
+      refusal: 'authorisation_outdated',
+    });
+    expect(decideMemorialSend([], { ...current, authorisationCopyVersion: PERMISSION_V2 }).ok).toBe(true);
+    // The id v1 carried is still a KNOWN id (a row sent under it names it) — only the current one is accepted.
+    expect(memorialAuthorisationVersion(PERMISSION_V1)).toBeDefined();
+    expect(PERMISSION_V1).not.toBe(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION);
+  });
+
   it('keepPreviousPhoto reads the HEAD\'s photo; ⛔ a head with no photo → no_previous_photo (MA8)', () => {
     const withPhoto = link({ photo: true, action: 'not_approved' });
     const decision = decideMemorialSend([withPhoto], { ...current, keepPreviousPhoto: true });
@@ -233,21 +251,133 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     }
   });
 
-  it('the current id carries the go-live marker and is unreviewed', () => {
-    expect(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION).toBe('2026-10-23.v1-pending-hi-review');
-    expect(memorialAuthorisationVersion(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION)?.hiReviewed).toBe(false);
+  it('the current id is v2: it carries the go-live marker and is unreviewed; v1 is superseded but still resolves', () => {
+    expect(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION).toBe(PERMISSION_V2);
+    expect(Object.keys(MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS)).toEqual([PERMISSION_V1, PERMISSION_V2]);
+    expect(memorialAuthorisationVersion(PERMISSION_V2)?.hiReviewed).toBe(false);
+    // A row sent while v1 was current still names v1 — it must keep resolving to the words that row was shown.
+    expect(memorialAuthorisationVersion(PERMISSION_V1)?.hiReviewed).toBe(false);
     expect(memorialAuthorisationVersion('nope')).toBeUndefined();
     expect(memorialAuthorisationVersion(42)).toBeUndefined();
     expect(currentMemorialAuthorisation().copyVersion).toBe(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION);
+    expect(currentMemorialAuthorisation().text).toEqual({
+      hi: memorialAuthorisationVersion(PERMISSION_V2)!.hi,
+      en: memorialAuthorisationVersion(PERMISSION_V2)!.en,
+    });
   });
 
-  it('v1 carries M2 addressed to the nominee in both locales (`-393` M2, `-395` item 3) and ⛔ "cannot be taken down"', () => {
-    const v = currentMemorialAuthorisation().text;
+  it('an id carries the go-live marker for exactly as long as its Hindi is unreviewed, and the ids are well-formed', () => {
+    for (const [id, v] of Object.entries(MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS)) {
+      expect(id, id).toMatch(/^\d{4}-\d{2}-\d{2}\.v\d+(-pending-hi-review)?$/);
+      expect(id.endsWith('-pending-hi-review'), id).toBe(!v.hiReviewed);
+    }
+  });
+
+  it('v1 is word for word what a row sent under it was shown — a change to the words mints a NEW version (R1)', () => {
+    const sha = (s: string): string => createHash('sha256').update(s, 'utf8').digest('hex');
+    const v1 = memorialAuthorisationVersion(PERMISSION_V1)!;
+    expect(sha(v1.en)).toBe('67dea01e43cb20d13b22f684f0ffb572840f33cde88ccd30719b3355dc632cc4');
+    expect(sha(v1.hi)).toBe('f601534575c012dd2159d66abf1612d37291c5632e58f25351bf4e4584b56b17');
+  });
+
+  it.each([
+    [PERMISSION_V1, 'v1'],
+    [PERMISSION_V2, 'v2'],
+  ])('%s carries M2 addressed to the nominee in both locales (`-393` M2, `-395` item 3) and never says "cannot be taken down"', (id) => {
+    const v = memorialAuthorisationVersion(id)!;
     expect(v.en).toMatch(/you, the nominee, ever want it changed or taken down, you can call the helpline/);
     expect(v.hi).toMatch(/आप, नॉमिनी, कभी इसमें बदलाव चाहें या इसे हटवाना चाहें, तो हेल्पलाइन/);
     expect(v.en).not.toMatch(/cannot be taken down/i);
     // `-391` Q2 A — where it appears, and children left out.
     expect(v.en).toMatch(/Sahyog Vivran page/);
     expect(v.en).toMatch(/child's name, it will leave it out/);
+    // The fursat register (`microcopy.yaml` `fursat-pressure`): no Hindi imperative "अभी कर…".
+    expect(v.hi).not.toMatch(/अभी\s*कर/);
+  });
+
+  // R1 (BigDev DECIDED B, 2026-10-24) — AC4 asks M2 to say PLAINLY that a take-down is asked for by the nominee; v1 addressed
+  // the nominee but never said a request from anyone else is not acted on (`-395` item 3).
+  describe('v2 says plainly that ONLY the nominee can ask for a take-down (R1)', () => {
+    const v1 = memorialAuthorisationVersion(PERMISSION_V1)!;
+    const v2 = memorialAuthorisationVersion(PERMISSION_V2)!;
+    const NEW_EN = "Only the nominee can ask for it to be taken down; the helpline will not remove it at anyone else's request.";
+    const NEW_HI = 'इसे हटवाने का अनुरोध केवल नॉमिनी ही कर सकते हैं; किसी और के कहने पर हेल्पलाइन इसे नहीं हटाएगी';
+    // T1 (third review pass, BigDev DECIDED B, 2026-10-24) — added IN v2 (never shown, Hindi unreviewed; ⛔ no v3): the Trust
+    // may still withdraw its OWN approval (MA16), on the four `MEMORIAL_REVIEW_REASONS` only (`-391` Confirm 2 A), worded
+    // as the family's `reason.*` copy words them — else a relative's call that prompts the reviewer's own withdrawal reads
+    // as the sentence above broken. V7 (third pass's fix-diff review) moved it AFTER the gentle close, so the close stays
+    // beside the helpline / take-down sentences (AC4 M2) and never reads as a remedy for the Trust's grounds.
+    const TRUST_EN =
+      'The Trust itself may still withdraw its approval, but only if something in the words or the photo speaks against a ' +
+      'person by name, says that someone did something wrong, may be against the law, or names or shows a child.';
+    const TRUST_HI =
+      'ट्रस्ट स्वयं फिर भी अपनी स्वीकृति वापस ले सकता है, पर केवल तब, जब शब्दों या फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम ' +
+      'लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ गलत किया, कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है, या किसी बच्चे ' +
+      'का नाम हो या कोई बच्चा दिखता हो';
+
+    it('both sentences are in both locales of v2 …', () => {
+      expect(v2.en).toContain(NEW_EN);
+      expect(v2.hi).toContain(NEW_HI + '।');
+      expect(v2.en).toContain(TRUST_EN);
+      expect(v2.hi).toContain(TRUST_HI + '।');
+    });
+
+    it('… and not in v1, whose words are unchanged', () => {
+      expect(v1.en).not.toMatch(/Only the nominee/);
+      expect(v1.hi).not.toContain('केवल नॉमिनी ही कर सकते हैं');
+      expect(v1.en).not.toMatch(/withdraw its approval/);
+      expect(v1.hi).not.toContain('स्वीकृति वापस');
+    });
+
+    it('v2 is v1 with the nominee-only sentence right after the helpline sentence and the Trust sentence AFTER the close — nothing else moved (V7)', () => {
+      expect(v2.en).toBe(`${v1.en.replace('you can call the helpline. ', `you can call the helpline. ${NEW_EN} `)} ${TRUST_EN}`);
+      const sentences = v1.hi.split('। ');
+      expect(sentences.at(-2)).toMatch(/हेल्पलाइन पर/);
+      expect(sentences.at(-1)).toBe('अक्सर एक छोटा-सा बदलाव काफ़ी होता है।');
+      expect(v2.hi).toBe(`${[...sentences.slice(0, -1), NEW_HI, sentences.at(-1)!].join('। ')} ${TRUST_HI}।`);
+    });
+
+    // One phrase per MA16 ground, keyed by its `MEMORIAL_REVIEW_REASONS` code (`-391` Confirm 2 A: "these four, and no
+    // others") — a fifth reason, or a renamed one, fails here until the Trust sentence is worded for it (V7).
+    const GROUND_EN: Readonly<Record<MemorialReviewReason, string>> = {
+      attacks_someone_named: 'speaks against a person by name',
+      accuses_someone_of_wrongdoing: 'says that someone did something wrong',
+      against_the_law: 'may be against the law',
+      identifies_a_child: 'names or shows a child',
+    };
+    const GROUND_HI: Readonly<Record<MemorialReviewReason, string>> = {
+      attacks_someone_named: 'किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो',
+      accuses_someone_of_wrongdoing: 'यह कहा गया हो कि किसी ने कुछ गलत किया',
+      against_the_law: 'कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है',
+      identifies_a_child: 'किसी बच्चे का नाम हो या कोई बच्चा दिखता हो',
+    };
+
+    it.each([
+      ['en', GROUND_EN, () => v2.en, TRUST_EN],
+      ['hi', GROUND_HI, () => v2.hi, TRUST_HI],
+    ] as const)('%s: the Trust sentence names ONE phrase per `MEMORIAL_REVIEW_REASONS` code — the map\'s keys ARE the reasons', (_locale, grounds, text, trust) => {
+      expect(Object.keys(grounds).sort()).toEqual([...MEMORIAL_REVIEW_REASONS].sort());
+      for (const code of MEMORIAL_REVIEW_REASONS) {
+        expect(trust, code).toContain(grounds[code]);
+        expect(text(), code).toContain(grounds[code]);
+      }
+      // Each phrase only once: four grounds, none repeated.
+      for (const phrase of Object.values(grounds)) expect(trust.split(phrase).length - 1, phrase).toBe(1);
+    });
+
+    it('the Trust sentence names MA16 grounds ONLY — no fifth (no family request, `-393`/MA18)', () => {
+      expect(TRUST_EN).toMatch(/\bonly if\b/);
+      expect(TRUST_EN).not.toMatch(/\b(ask|asks|asked|request)\b/i);
+      expect(TRUST_HI).toContain('केवल तब');
+      expect(TRUST_HI).not.toMatch(/अनुरोध|कहने पर/);
+    });
+
+    it('the gentle close follows the take-down sentences directly and the Trust sentence comes LAST (V7); no "cannot"', () => {
+      expect(v2.en).toContain(`${NEW_EN} Often a small change is enough. ${TRUST_EN}`);
+      expect(v2.en.endsWith(TRUST_EN)).toBe(true);
+      expect(v2.en).not.toMatch(/\bcannot\b/i);
+      expect(v2.hi).toContain(`${NEW_HI}। अक्सर एक छोटा-सा बदलाव काफ़ी होता है। ${TRUST_HI}।`);
+      expect(v2.hi.endsWith(`${TRUST_HI}।`)).toBe(true);
+    });
   });
 });

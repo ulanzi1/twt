@@ -3,13 +3,17 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { memorial } from '@twt/domain';
+import { MEMORIAL_PHOTO_MAX_BYTES } from '@twt/contracts';
+import { idempotency, memorial } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { decryptMemorialField } from '../../../src/modules/memorial/memorial-crypto.js';
+import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 import {
   CURRENT_VERSION,
+  beginUnlockedSubmission,
+  errorWithoutRequestId,
   handover,
   jpegWithGps,
   memberInject,
@@ -70,6 +74,7 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
       deceasedName: 'Shanti Devi',
       memorialState: 'none',
       submissionId: null,
+      idempotencyKey: null, // Z2 — nothing sent
       body: null,
       canSend: true,
       canWithdraw: false,
@@ -180,6 +185,9 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
     ['a PDF claiming image/jpeg', [...sendFields({ altText: 'x' }), { kind: 'file', name: 'photo', filename: 'a.jpg', contentType: 'image/jpeg', bytes: Buffer.from('%PDF-1.7') }], 400, 'memorial.photo_type'],
     ['keepPreviousPhoto WITH a photo', [...sendFields({ altText: 'x', keepPreviousPhoto: 'true' }), { kind: 'file', name: 'photo', filename: 'a.jpg', contentType: 'image/jpeg', bytes: jpegWithGps() }], 400, 'memorial.photo_conflict'],
     ['keepPreviousPhoto with ⛔ previous photo', sendFields({ altText: 'x', keepPreviousPhoto: 'true' }), 400, 'memorial.no_previous_photo'],
+    // 300 code points is the limit (MEMORIAL_ALT_TEXT_MAX_CODE_POINTS); a Devanagari letter is ONE code point, 301 is over.
+    ['alt text over the limit', [...sendFields({ altText: 'क'.repeat(301) }), { kind: 'file', name: 'photo', filename: 'a.jpg', contentType: 'image/jpeg', bytes: jpegWithGps() }], 400, 'memorial.alt_text_too_long'],
+    ['a photo over the size limit', [...sendFields({ altText: 'x' }), { kind: 'file', name: 'photo', filename: 'a.jpg', contentType: 'image/jpeg', bytes: Buffer.alloc(MEMORIAL_PHOTO_MAX_BYTES + 1024, 0xff) }], 400, 'memorial.photo_too_large'],
   ] as const)('refuses %s', async (_name, parts, status, code) => {
     const w = await seedMemorialWorld(t);
     await handover(t, w);
@@ -209,6 +217,40 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
     expect(replay.status).toBe(200);
     expect(replay.body).toEqual(first.body);
     expect(await submissions(w)).toHaveLength(1);
+  });
+
+  it('Z2: the member GET carries the LATEST version\'s Send key — the first key, then the superseding Send\'s; null for a pre-0182 latest row', async () => {
+    const w = await seedMemorialWorld(t);
+    await handover(t, w);
+    const first = randomUUID();
+    const a = await send(t, w, sendFields({ body: 'पहला' }), { key: first });
+    expect(a.status).toBe(201);
+    expect(await view(w)).toMatchObject({ submissionId: a.body.submissionId, idempotencyKey: first });
+    // The same key again is the replay — the view still names that key.
+    expect((await send(t, w, sendFields({ body: 'पहला' }), { key: first })).status).toBe(200);
+    expect((await view(w))!.idempotencyKey).toBe(first);
+    const second = randomUUID();
+    const b = await send(t, w, sendFields({ body: 'दूसरा' }), { key: second });
+    expect(b.status).toBe(201);
+    expect(await view(w)).toMatchObject({ submissionId: b.body.submissionId, idempotencyKey: second });
+    // A latest row with ⛔ key (the pre-0182 shape) ⇒ null, ⛔ the earlier version's key.
+    const legacy = await beginUnlockedSubmission(t, w, { supersedes: b.body.submissionId as string, idempotencyKey: null });
+    await legacy.commit();
+    expect(await view(w)).toMatchObject({ submissionId: legacy.submissionId, idempotencyKey: null });
+  });
+
+  it('0182: the shared keyed store is no longer consulted — a key left CLAIMED there (the old in-flight shape) does not block the Send (201, ⛔ 409 idempotency_in_progress); the key rides the row instead', async () => {
+    const w = await seedMemorialWorld(t);
+    await handover(t, w);
+    const key = randomUUID();
+    // The old mechanism's claim with no result recorded (its key shape was `memorial.send:<pariwar>:<member>:<key>`).
+    const store = idempotency.createKeyedStore(t.pool);
+    expect(await store.claim(`memorial.send:${w.pariwarId}:${w.memberId}:${key}`, 300)).toBe('acquired');
+    const r = await send(t, w, sendFields(), { key });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+    expect(await rows(t, `SELECT 1 FROM memorial_submissions WHERE pool_id = $1 AND idempotency_key = $2`, [w.poolId, key])).toHaveLength(1);
+    // And the handler never touched the keyed store: the claim above is still the bare pending one (⛔ recorded, ⛔ released).
+    expect(await rows(t, `SELECT status FROM idempotency_keys WHERE key = $1`, [`memorial.send:${w.pariwarId}:${w.memberId}:${key}`])).toEqual([{ status: 'pending' }]);
   });
 
   it('MA5: ⛔ resolvable nominee → 409 memorial.nominee_unresolved, before any put', async () => {
@@ -282,7 +324,9 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
     expect(audit.map((a) => a.action)).toContain('memorial.submission.withdraw');
   });
 
-  it('AC8: an earlier (superseded) version → 409 not_withdrawable; another family\'s id → the neutral 404', async () => {
+  // ⚠ Each `seedMemorialWorld` is its OWN Pariwar, so this "another family's id" leg is separated by RLS alone — the same-Pariwar
+  // leg (where only the chain-membership check can stop it) is the next test.
+  it('AC8: an earlier (superseded) version → 409 not_withdrawable; an id in ANOTHER PARIWAR (RLS) → the neutral 404', async () => {
     const w = await seedMemorialWorld(t);
     const other = await seedMemorialWorld(t);
     await handover(t, w);
@@ -298,6 +342,49 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
     const r2 = await memberInject(t, 'POST', `/api/v1/member/memorial/submissions/${theirs!.submission_id}/withdraw`, { payload: {}, token: w.token });
     expect(r2.status).toBe(404);
     expect(r2.body).toMatchObject({ error: { code: 'memorial.not_found' } });
+  });
+
+  it('⭐ AC8 / family 12 (a): ANOTHER FAMILY\'S id in the SAME Pariwar → the neutral 404 — the chain-membership check stops it, not RLS', async () => {
+    const w = await seedMemorialWorld(t);
+    // A second deceased member, claim and drive INSIDE THE SAME PARIWAR: RLS (keyed on pariwar_id) cannot tell the two families apart.
+    const other = await seedMemorialWorld(t, { intoPariwar: w.pariwarId });
+    expect(other.pariwarId).toBe(w.pariwarId);
+    expect(other.memberId).not.toBe(w.memberId);
+    expect(other.poolId).not.toBe(w.poolId);
+    await handover(t, w);
+    await handover(t, other);
+    expect((await send(t, w, sendFields({ body: 'ours' }))).status).toBe(201);
+    expect((await send(t, other, sendFields({ body: 'theirs' }))).status).toBe(201);
+    const [theirs] = await rows<{ submission_id: string }>(t, `SELECT submission_id FROM memorial_submissions WHERE deceased_member_id = $1`, [other.memberId]);
+    const withdrawUrl = `/api/v1/member/memorial/submissions/${theirs!.submission_id}/withdraw`;
+
+    // The premise: from inside THIS family's Pariwar scope — the scope the Withdraw handler itself runs in — the other family's
+    // version IS visible. So a 404 below is not RLS hiding the row.
+    const scopeTx = await openScopeTx(t.deps, w.pariwarId);
+    try {
+      const seen = await scopeTx.client.query(`SELECT submission_id FROM memorial_submissions WHERE submission_id = $1`, [theirs!.submission_id]);
+      expect(seen.rowCount).toBe(1);
+    } finally {
+      await closeScopeTx(scopeTx, false);
+    }
+
+    // ⚠ A regression to catch: `decideFamilyWithdraw`'s `index < 0 → 'not_found'` (packages/domain/src/memorial/withdrawal.ts), or
+    // any change that looks the id up on the Pariwar instead of the SESSION drive's chain, turns this into a withdrawal of the
+    // other family's version (200) or a different code. RLS cannot save it: both families share the Pariwar.
+    const r = await memberInject(t, 'POST', withdrawUrl, { payload: {}, token: w.token });
+    expect(r.status).toBe(404);
+    expect(r.body).toMatchObject({ error: { code: 'memorial.not_found', message: 'Not found' } });
+    // Indistinguishable from an id that does not exist (the byte-identical neutral body, minus the per-request id).
+    const unknown = await memberInject(t, 'POST', `/api/v1/member/memorial/submissions/${randomUUID()}/withdraw`, { payload: {}, token: w.token });
+    expect(errorWithoutRequestId(r.body.error)).toEqual(errorWithoutRequestId(unknown.body.error));
+
+    // Nothing happened to the other family's version: no withdrawal row, still with the Trust and withdrawable by THEM.
+    expect(await rows(t, `SELECT 1 FROM memorial_withdrawals WHERE submission_id = $1`, [theirs!.submission_id])).toEqual([]);
+    expect(await view(other)).toMatchObject({ memorialState: 'with_the_trust', canWithdraw: true });
+    // And ours is untouched too.
+    expect(await view(w)).toMatchObject({ memorialState: 'with_the_trust', body: 'ours' });
+    // Control: the OWNING family can withdraw it (so the 404 above is the ownership check, not a dead route).
+    expect((await memberInject(t, 'POST', withdrawUrl, { payload: {}, token: other.token })).status).toBe(200);
   });
 
   it('AC1: a words decrypt failure → the fail-soft 200 (unavailable), canSend and canWithdraw false', async () => {

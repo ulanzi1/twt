@@ -1,8 +1,10 @@
 // Story 11b.4 (AC1) — the family memorial's queries.
 //
-// ⚠⛔ EVERY memorial query sets `gcTime: 0`: `components/Provider.tsx` writes every successful query to UNENCRYPTED MMKV
+// ⚠ EVERY memorial query sets `gcTime: 0`: `components/Provider.tsx` writes every successful query to UNENCRYPTED MMKV
 // for 7 days EXCEPT one whose hook sets `gcTime: 0` (*"NEVER PERSIST THIS"*). Without it the family's words, the deceased's
-// name and a signed photo URL would survive sign-out and the erasure (CR-11b.2a-COMBINED-W3 trigger (iii) — ⛔ met here).
+// name and a signed photo URL would survive sign-out and the erasure. Because every memorial query sets it, trigger (iii)
+// of `deferred-work.md` CR-11b.2a-COMBINED-W3 (a second member-scoped PERSISTED query) is not met by this surface — the
+// item stays open, as its AC16 annotation says.
 // Plus `staleTime: 0` (the default 1 h would show `with_the_trust` long after the Trust decided) and invalidation after
 // Send / Withdraw (the `useMemberDriveDetailQuery.ts` precedent).
 

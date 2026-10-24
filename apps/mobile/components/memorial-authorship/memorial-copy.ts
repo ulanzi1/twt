@@ -30,6 +30,10 @@ export function memorialSendRefusalKey(code: string): string {
       return 'send.nominee_unresolved'
     case 'memorial.try_again':
       return 'send.try_again'
+    // Y — defensive: only an OLDER server answers this (the key now lives on the submission row). The key is kept (a Send
+    // never drops it on a refusal), so the next press replays or lands under it.
+    case 'memorial.idempotency_in_progress':
+      return 'send.try_again'
     default:
       return 'send.generic'
   }

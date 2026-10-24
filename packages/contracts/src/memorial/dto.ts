@@ -55,6 +55,12 @@ export const MemorialMemberView = z
     memorialState: MemorialStateSchema,
     /** The latest version's id (`null` when nothing was sent). */
     submissionId: z.string().nullable(),
+    /**
+     * The `Idempotency-Key` of the Send that wrote the LATEST version (0182 — the key lives on the row); `null` when nothing
+     * was sent or the latest version predates 0182. The family's OWN random client id (⛔ PII): the phone's resume check
+     * reads "landed" as "this equals the key I kept" (review Z2). ⛔ Never on the review (admin) DTOs.
+     */
+    idempotencyKey: z.string().nullable(),
     /** The latest version's words, VERBATIM; `null` when nothing was sent or the decrypt failed (fail-soft). */
     body: z.string().nullable(),
     altText: z.string().nullable(),
@@ -70,6 +76,11 @@ export const MemorialMemberView = z
     reasonCode: MemorialReviewReasonSchema.nullable(),
     /** MA16 — an OLDER approval the Trust withdrew while a newer version is current. */
     earlierApprovalWithdrawn: z.object({ reasonCode: MemorialReviewReasonSchema }).strict().nullable(),
+    /**
+     * An OLDER version the Trust approved (and has not withdrawn) still stands while a newer version is current — so a
+     * "withdrawn" / "not approved" newest version does not take the memorial down. Derived from `latestApprovedIndex`.
+     */
+    earlierApprovalStands: z.boolean(),
     canSend: z.boolean(),
     canWithdraw: z.boolean(),
     authorisation: MemorialAuthorisationDto,
@@ -104,12 +115,23 @@ export const MemorialReviewListItem = z
     /** The deceased's name (staff display), or `null` (erased, KMS outage). */
     deceasedName: z.string().nullable(),
     sentAt: z.string(),
+    /**
+     * When the head was decided (review V12) — the time the `decided` view is ORDERED by (review T7): the head's
+     * decision or withdrawal time, whichever is later. ISO-8601; `null` in the `pending` view (nothing decided yet).
+     */
+    decidedAt: z.string().datetime().nullable(),
     memorialState: MemorialStateSchema,
   })
   .strict();
 export type MemorialReviewListItem = z.output<typeof MemorialReviewListItem>;
 
-export const MemorialReviewListResponse = z.object({ items: z.array(MemorialReviewListItem) }).strict();
+export const MemorialReviewListResponse = z
+  .object({
+    items: z.array(MemorialReviewListItem),
+    /** More rows exist past this page (the server fetched `limit + 1`) — the next page is `offset + items.length`. */
+    hasMore: z.boolean(),
+  })
+  .strict();
 export type MemorialReviewListResponse = z.output<typeof MemorialReviewListResponse>;
 
 export const MemorialReviewListQuery = z
@@ -117,6 +139,8 @@ export const MemorialReviewListQuery = z
     view: z.enum(['pending', 'decided']).optional(),
     // Bounded (FR-91 / Story 1.14 — the forced-pagination guard walks the committed OpenAPI surface).
     limit: z.coerce.number().int().positive().max(200).optional(),
+    /** Rows to skip — `pending` is oldest sent first, `decided` most recently decided first. Bounded: deep paging is not a use case here. */
+    offset: z.coerce.number().int().nonnegative().max(10000).optional(),
   })
   .strict();
 
@@ -171,7 +195,13 @@ export const MemorialReviewDetailResponse = z
     chain: z.array(MemorialReviewVersion),
     /** What the reviewer may do with THIS version now. */
     canDecide: z.boolean(),
+    /** `withdrawApprovalTargetId !== null` — true for ANY version of a chain that has a currently approved version (MA16). */
     canWithdrawApproval: z.boolean(),
+    /**
+     * The chain's latest approved, not-withdrawn version — the one the Trust may withdraw "whatever newer versions follow
+     * it" (MA16); `null` when none. The admin posts `withdraw-approval` to THIS id, from whichever version it has open.
+     */
+    withdrawApprovalTargetId: z.string().nullable(),
   })
   .strict();
 export type MemorialReviewDetailResponse = z.output<typeof MemorialReviewDetailResponse>;

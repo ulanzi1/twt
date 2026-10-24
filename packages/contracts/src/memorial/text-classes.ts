@@ -15,12 +15,15 @@ export const MEMORIAL_INVISIBLE_CHARS =
   /[\u00ad\u034f\u115f\u1160\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\u2800\u3164\ufe00-\ufe0f\ufeff\uffa0]/u;
 
 /**
- * Bidi embedding / override / isolate controls — a copy BY VALUE of `BIDI_CONTROLS` in
+ * Bidi embedding / override / isolate controls — the embedding / override / isolate range of `BIDI_CONTROLS` in
  * `apps/api/src/modules/kyc/name-render.ts` (module-private; a by-value copy also lives in
- * `apps/public/src/lib/sahyog-vivran-message-block.ts`). The admin review screen SHOWS them visibly in the family's text
- * (AC9) — an interior RLO reorders what the reviewer reads. ⛔ No `g` flag (see above).
+ * `apps/public/src/lib/sahyog-vivran-message-block.ts`), **plus the three direction MARKS** that source lacks: U+200E (LRM),
+ * U+200F (RLM) and U+061C (ALM). A mark is invisible and moves the punctuation beside it, so the reviewer must see it too.
+ * The admin review screen SHOWS every one visibly in the family's text (AC9) — an interior RLO reorders what the reviewer
+ * reads. ⚠ A DISPLAY class only: blank-detection reads {@link MEMORIAL_INVISIBLE_CHARS} (which already lists U+200E /
+ * U+200F), ⛔ not this one, so widening it changes ⛔ no validation outcome. ⛔ No `g` flag (see above).
  */
-export const MEMORIAL_BIDI_CONTROLS = /[\u202a-\u202e\u2066-\u2069]/u;
+export const MEMORIAL_BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
 /* eslint-enable no-misleading-character-class */
 
 /** A letter, number, punctuation or symbol — what makes text non-blank. */

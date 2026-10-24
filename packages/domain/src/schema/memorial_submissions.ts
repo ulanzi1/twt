@@ -19,6 +19,12 @@
 //     VERBATIM (Trap 6 — ⛔ no trim, ⛔ no normalisation); encrypted in the API layer (`memorial-crypto.ts`).
 //   · photo_object_key → an opaque storage key, ⛔ never on the wire; the bytes are metadata-stripped at ingest (MA8).
 //   · handover_nominee_ref → the `member_nominee_versions.version_id` the handover code was addressed to (an id, ⛔ PII).
+//   · idempotency_key → the phone's `Idempotency-Key` for the Send that wrote this row (a random client id, ⛔ PII).
+//
+// ── The Send's idempotency lives ON the row (migration 0182 — the Y-server round, BigDev 2026-10-24) ──────────────────
+// `UNIQUE (pool_id, idempotency_key) WHERE idempotency_key IS NOT NULL`, written in the insert's own transaction under
+// the pool lock: a same-key retry finds this row and replays it at ANY age, and a crash rolls the key back with the row
+// (⛔ a pending claim, ⛔ a TTL). NULL only for rows written before 0182. ⛔ No UPDATE grant — immutable once written.
 
 import { sql } from 'drizzle-orm';
 import { check, foreignKey, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
@@ -55,6 +61,9 @@ export const memorialSubmissions = pgTable(
     authorisationLocale: localeEnum('authorisation_locale').notNull(),
     handoverRecipient: text('handover_recipient').$type<MemorialHandoverRecipient>().notNull(),
     handoverNomineeRef: uuid('handover_nominee_ref').notNull(),
+    // 0182 — the Send's Idempotency-Key (shape: `MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN`, `memorial/vocab.ts` — LOCKSTEP
+    // with the CHECK). Nullable for the pre-0182 rows only; `insertMemorialSubmission` always writes it.
+    idempotencyKey: text('idempotency_key'),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()
       .default(sql`clock_timestamp()`),
@@ -66,6 +75,9 @@ export const memorialSubmissions = pgTable(
     uniqueIndex('memorial_submissions_pool_root_uq')
       .on(t.poolId)
       .where(sql`supersedes_submission_id IS NULL`),
+    uniqueIndex('memorial_submissions_pool_idempotency_key_uq')
+      .on(t.poolId, t.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
     foreignKey({
       name: 'memorial_submissions_supersedes_fk',
       columns: [t.poolId, t.supersedesSubmissionId],
@@ -88,6 +100,10 @@ export const memorialSubmissions = pgTable(
     check('memorial_submissions_photo_pair_check', sql`(photo_object_key IS NULL) = (photo_mime IS NULL)`),
     check('memorial_submissions_handover_recipient_check', sql`handover_recipient IN ('latest', 'at_death')`),
     check('memorial_submissions_copy_version_check', sql`length(btrim(authorisation_copy_version)) > 0`),
+    check(
+      'memorial_submissions_idempotency_key_check',
+      sql`idempotency_key IS NULL OR idempotency_key ~ '^[A-Za-z0-9_-]{1,128}$'`,
+    ),
   ],
 );
 

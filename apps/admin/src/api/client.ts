@@ -2986,13 +2986,23 @@ export function decideModerationAppeal(
 const memorialReviewBase = (pariwarId: string): string =>
   `/api/v1/p/${encodeURIComponent(pariwarId)}/memorial-reviews`;
 
-/** The review queue — chain heads, oldest first; `decided` for decided or withdrawn heads. ⛔ Body in the list. */
+/** The queue's page size — the "Load more" step reads it too, so the two cannot drift apart. */
+export const MEMORIAL_REVIEW_PAGE_SIZE = 50;
+
+/**
+ * The review queue — chain heads; `pending` oldest first, `decided` (decided or withdrawn heads) NEWEST first. One page of
+ * `limit` rows from `offset`; the response's `hasMore` says whether another page exists. The list carries no body.
+ */
 export function listMemorialReviews(
   pariwarId: string,
   view: 'pending' | 'decided' = 'pending',
-  limit = 50,
+  limit = MEMORIAL_REVIEW_PAGE_SIZE,
+  offset = 0,
 ): Promise<z.output<typeof MemorialReviewListResponse>> {
-  return apiFetch(`${memorialReviewBase(pariwarId)}?view=${view}&limit=${limit}`, MemorialReviewListResponse);
+  return apiFetch(
+    `${memorialReviewBase(pariwarId)}?view=${view}&limit=${limit}&offset=${offset}`,
+    MemorialReviewListResponse,
+  );
 }
 
 /** ONE version and its whole chain (the history view) — the words verbatim, decisions, notes, withdrawals. */

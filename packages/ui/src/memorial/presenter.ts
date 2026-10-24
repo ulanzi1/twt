@@ -11,14 +11,18 @@
 // something the family typed. ⛔ No copy here: `@twt/ui`'s dependencies are exactly `{ "@twt/contracts" }` (the
 // `status-pill/i18n-keys.ts` precedent) — the surface resolves the key.
 
-import { memorialParagraphRanges, type MemorialOmission } from '@twt/contracts';
+import { memorialParagraphRanges, type MemorialOmission, type MemorialReviewReason } from '@twt/contracts';
 
 /** The copy key a renderer resolves for a part the Trust left out — in the `memorial` namespace (`render.omitted`). */
 export const MEMORIAL_OMITTED_KEY = 'render.omitted';
 
+// `-391` Q4 A (R10): the family is told, FOR EACH PART, which reason applies — so the marker carries its OWN reason (the
+// admin renderer reads only `kind`, so adding the field is compatible there).
+// ⚠ `reason` is for the family's OWN screen (and the Trust's): it must not be serialised on the PUBLIC render (row 11b-4a) —
+// the public page shows the marker only, never why a part was left out.
 export type MemorialSegment =
   | { readonly kind: 'text'; readonly text: string }
-  | { readonly kind: 'omitted'; readonly key: typeof MEMORIAL_OMITTED_KEY };
+  | { readonly kind: 'omitted'; readonly key: typeof MEMORIAL_OMITTED_KEY; readonly reason: MemorialReviewReason };
 
 export interface MemorialParagraph {
   readonly segments: readonly MemorialSegment[];
@@ -39,7 +43,7 @@ function paragraphsWith(text: string, spans: readonly MemorialOmission[]): Memor
       const start = Math.max(s.start, p.start);
       const end = Math.min(s.end, p.end);
       if (start > at) segments.push({ kind: 'text', text: text.slice(at, start) });
-      segments.push({ kind: 'omitted', key: MEMORIAL_OMITTED_KEY });
+      segments.push({ kind: 'omitted', key: MEMORIAL_OMITTED_KEY, reason: s.reason });
       at = end;
     }
     if (at < p.end) segments.push({ kind: 'text', text: text.slice(at, p.end) });
@@ -51,6 +55,8 @@ export interface MemorialDecisionForRender {
   readonly omissions: readonly MemorialOmission[];
   /** The photo (and its alt text) was left out. */
   readonly photoLeftOut: boolean;
+  // T12 (b) — ⛔ no photo REASON here: the surface reads it from its own source (the member view's `photoLeftOut.reason`,
+  // the review DTO's `photoLeftOutReason`), so there is exactly ONE place a screen takes it from.
 }
 
 export interface ReconstructedMemorial {
@@ -64,6 +70,16 @@ export interface ReconstructedMemorial {
     readonly asApproved: readonly MemorialParagraph[] | null;
   } | null;
   readonly photoLeftOut: boolean;
+}
+
+/**
+ * The reason of EVERY part left out in `paragraphs`, in reading order, ONE entry per marker (duplicates kept — two parts
+ * left out for the same reason are two parts). R10: the surface pairs each reason with its own part (never a de-duplicated set).
+ */
+export function memorialOmittedReasons(paragraphs: readonly MemorialParagraph[]): MemorialReviewReason[] {
+  const out: MemorialReviewReason[] = [];
+  for (const p of paragraphs) for (const s of p.segments) if (s.kind === 'omitted') out.push(s.reason);
+  return out;
 }
 
 /**

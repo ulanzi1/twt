@@ -9129,6 +9129,10 @@ components:
               type:
                 - string
                 - "null"
+            idempotencyKey:
+              type:
+                - string
+                - "null"
             body:
               type:
                 - string
@@ -9203,6 +9207,8 @@ components:
               required:
                 - reasonCode
               additionalProperties: false
+            earlierApprovalStands:
+              type: boolean
             canSend:
               type: boolean
             canWithdraw:
@@ -9232,6 +9238,7 @@ components:
             - deceasedName
             - memorialState
             - submissionId
+            - idempotencyKey
             - body
             - altText
             - unavailable
@@ -9241,6 +9248,7 @@ components:
             - photoLeftOut
             - reasonCode
             - earlierApprovalWithdrawn
+            - earlierApprovalStands
             - canSend
             - canWithdraw
             - authorisation
@@ -9312,6 +9320,11 @@ components:
                   - "null"
               sentAt:
                 type: string
+              decidedAt:
+                type:
+                  - string
+                  - "null"
+                format: date-time
               memorialState:
                 type: string
                 enum: *a59
@@ -9319,10 +9332,14 @@ components:
               - submissionId
               - deceasedName
               - sentAt
+              - decidedAt
               - memorialState
             additionalProperties: false
+        hasMore:
+          type: boolean
       required:
         - items
+        - hasMore
       additionalProperties: false
     MemorialReviewDetail:
       type: object
@@ -9486,6 +9503,10 @@ components:
           type: boolean
         canWithdrawApproval:
           type: boolean
+        withdrawApprovalTargetId:
+          type:
+            - string
+            - "null"
       required:
         - submissionId
         - deceasedName
@@ -9493,6 +9514,7 @@ components:
         - chain
         - canDecide
         - canWithdrawApproval
+        - withdrawApprovalTargetId
       additionalProperties: false
     MemorialReviewDecision:
       type: object
@@ -16457,7 +16479,7 @@ paths:
   /api/v1/member/memorial/submissions:
     post:
       summary: Send a version of the memorial (single-shot multipart)
-      description: Behind the server switch, then the member session, then the NOMINEE's handover elevation (`claim_handover`), then a required `Idempotency-Key` HEADER. The permission version shown is echoed and a stale one refused. The photo (JPEG/PNG by magic bytes, ≤ 10 MiB) is metadata-stripped at ingest. 201, or 200 replaying a completed Send.
+      description: "Behind the server switch, then the member session, then the NOMINEE's handover elevation (`claim_handover`), then a required `Idempotency-Key` HEADER (1–128 characters of `[A-Za-z0-9_-]`, else `400 memorial.idempotency_key_required`). The key is stored ON the version it writes (unique per drive): a Send whose key already wrote a version — at any age, including one that was still in flight and is waited for — answers 200 with that version's body and writes nothing. The permission version shown is echoed and a stale one refused. The photo (JPEG/PNG by magic bytes, ≤ 10 MiB) is metadata-stripped at ingest. 201, or the 200 replay."
       tags:
         - memorial
       requestBody:
@@ -16468,7 +16490,7 @@ paths:
               $ref: "#/components/schemas/MemorialSendFields"
       responses:
         "200":
-          description: Replayed — a Send with this Idempotency-Key already completed
+          description: Replayed — this Idempotency-Key already wrote a version (the same body as its 201, at any age; nothing is written)
           content:
             application/json:
               schema:
@@ -16504,7 +16526,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Already approved / permission text outdated / nominee unresolved / in progress / try again
+          description: Already approved / permission text outdated / nominee unresolved / try again
           content:
             application/json:
               schema:
@@ -16562,7 +16584,7 @@ paths:
   /api/v1/p/{pariwarId}/memorial-reviews:
     get:
       summary: The Trust's memorial review queue
-      description: "`memorial.review` (pariwar dimension). Chain heads, oldest first; `?view=decided` for decided or withdrawn heads. ⛔ Body in the list — the deceased's name and the sent date only."
+      description: "`memorial.review` (pariwar dimension). Chain heads: pending ones oldest first; `?view=decided` for decided or withdrawn heads, most recently decided (or withdrawn) first — each item's `decidedAt` is that decision (or withdrawal) time, the one the decided view is ordered by, and is `null` in the pending view. `limit` and `offset` page the list and `hasMore` says whether another page follows. ⛔ No body in the list — the deceased's name, the sent date and the decided date only."
       tags:
         - memorial-review
       parameters:
@@ -16586,6 +16608,15 @@ paths:
             maximum: 200
           required: false
           name: limit
+          in: query
+        - schema:
+            type:
+              - integer
+              - "null"
+            minimum: 0
+            maximum: 10000
+          required: false
+          name: offset
           in: query
       responses:
         "200":

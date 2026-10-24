@@ -100,8 +100,10 @@ export type BidiVisibleSegment = { readonly kind: 'text'; readonly text: string 
 
 /**
  * The family's text with every bidi control made VISIBLE (AC9): a hidden RLO / LRI … reorders what the reviewer reads, so
- * each is split out as its own marker segment (e.g. `U+202E`). ⛔ A display transform only — the stored words are
- * untouched.
+ * each is split out as its own marker segment (e.g. `U+202E`). A display transform only — the stored words are never
+ * touched. EVERY rendering of the family's text on the review screen goes through here (the stored block, the sentence
+ * picker, the as-approved text, the omission quote, the photo's alt) — one helper, so a control cannot hide in the one
+ * place that forgot it.
  */
 export function bidiVisible(text: string): BidiVisibleSegment[] {
   const out: BidiVisibleSegment[] = [];
@@ -117,4 +119,20 @@ export function bidiVisible(text: string): BidiVisibleSegment[] {
   }
   if (run !== '') out.push({ kind: 'text', text: run });
   return out;
+}
+
+/** How one control reads on the screen — ONE spelling, shared by the marker element and the flat string. */
+export function bidiMarkerText(codePoint: string): string {
+  return `⟦BIDI ${codePoint}⟧`;
+}
+
+/**
+ * {@link bidiVisible} flattened to one string, each control spelled out by {@link bidiMarkerText} — for the places that
+ * cannot hold markup (an `alt` attribute: a broken image shows its alt text raw). It stays routed through `bidiVisible`,
+ * the one helper — a second scan would be a second place to forget a control.
+ */
+export function bidiVisibleString(text: string): string {
+  return bidiVisible(text)
+    .map((s) => (s.kind === 'text' ? s.text : bidiMarkerText(s.codePoint)))
+    .join('');
 }

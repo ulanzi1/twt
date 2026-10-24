@@ -15,6 +15,9 @@ import {
   MEMORIAL_WITHDRAWAL_ACTORS,
   MemorialMemberView,
   MemorialReviewDecisionInput,
+  MemorialReviewDetailResponse,
+  MemorialReviewListQuery,
+  MemorialReviewListResponse,
   MemorialWithdrawApprovalInput,
   isMemorialTextBlank,
   memorialCodePointLength,
@@ -206,6 +209,84 @@ describe('validateMemorialDecision (MA6)', () => {
     });
     expect(validateMemorialDecision(awo({ omissions: [span(0, 3, 'altText')] }), subject)).toEqual({ ok: true });
   });
+
+  describe('alt_text_nothing_left (R12 — the photo and its description go together)', () => {
+    const alt = subject.altText;
+    const whole = span(0, alt.length, 'altText');
+
+    it('leaving out ALL of the alt text while the photo stays is refused — the cure is photoLeftOut', () => {
+      expect(validateMemorialDecision(awo({ omissions: [whole] }), subject)).toEqual({ ok: false, problem: 'alt_text_nothing_left' });
+      // Several spans that together leave only whitespace are the same thing.
+      const two = { body, altText: 'एक दो', hasPhoto: true };
+      expect(validateMemorialDecision(awo({ omissions: [span(0, 2, 'altText'), span(3, 5, 'altText')] }), two)).toEqual({
+        ok: false,
+        problem: 'alt_text_nothing_left',
+      });
+      // The cure the problem names.
+      expect(validateMemorialDecision(awo({ photoLeftOut: { reason: 'identifies_a_child' } }), subject)).toEqual({ ok: true });
+    });
+
+    it('the whole alt text WITH photoLeftOut is already refused by the alt-text-with-photo-left-out rule', () => {
+      expect(validateMemorialDecision(awo({ omissions: [whole], photoLeftOut: { reason: 'identifies_a_child' } }), subject)).toEqual({
+        ok: false,
+        problem: 'alt_text_span_with_photo_left_out',
+      });
+    });
+
+    it('a PARTIAL alt-text omission is fine, alone or beside a body omission', () => {
+      const at = alt.indexOf('की');
+      expect(validateMemorialDecision(awo({ omissions: [span(at, at + 2, 'altText')] }), subject)).toEqual({ ok: true });
+      expect(validateMemorialDecision(awo({ omissions: [span(first, firstEnd), span(at, at + 2, 'altText')] }), subject)).toEqual({ ok: true });
+    });
+
+    it('a body that is emptied is still reported as nothing_left (the body is checked first)', () => {
+      const t = 'केवल यह';
+      expect(
+        validateMemorialDecision(awo({ omissions: [span(0, t.length), span(0, alt.length, 'altText')] }), { body: t, altText: alt, hasPhoto: true }),
+      ).toEqual({ ok: false, problem: 'nothing_left' });
+    });
+  });
+});
+
+describe('the review list and detail wire shapes (R9 / R14)', () => {
+  it('the list query bounds `offset` (0 – 10000) and `limit`; both arrive as strings off the URL', () => {
+    expect(MemorialReviewListQuery.safeParse({ view: 'decided', limit: '50', offset: '100' }).success).toBe(true);
+    expect(MemorialReviewListQuery.safeParse({ offset: '0' }).success).toBe(true);
+    expect(MemorialReviewListQuery.safeParse({ offset: '10000' }).success).toBe(true);
+    for (const bad of ['-1', '10001', '1.5', 'abc']) {
+      expect(MemorialReviewListQuery.safeParse({ offset: bad }).success, `offset=${bad}`).toBe(false);
+    }
+    expect(MemorialReviewListQuery.safeParse({ limit: '201' }).success).toBe(false);
+    expect(MemorialReviewListQuery.safeParse({ cursor: 'x' }).success).toBe(false);
+  });
+
+  it('the list response carries `hasMore` (required, strict)', () => {
+    expect(MemorialReviewListResponse.safeParse({ items: [], hasMore: false }).success).toBe(true);
+    expect(MemorialReviewListResponse.safeParse({ items: [] }).success).toBe(false);
+    expect(MemorialReviewListResponse.safeParse({ items: [], hasMore: true, nextCursor: 'x' }).success).toBe(false);
+  });
+
+  it('each list item carries `decidedAt` — REQUIRED, an ISO date-time or `null` (review V12)', () => {
+    const item = { submissionId: 's', deceasedName: null, sentAt: '2026-10-20T10:00:00.000Z', memorialState: 'approved' };
+    const parse = (decidedAt?: unknown) =>
+      MemorialReviewListResponse.safeParse({ items: [decidedAt === undefined ? item : { ...item, decidedAt }], hasMore: false }).success;
+    expect(parse('2026-10-24T09:30:00.000Z')).toBe(true);
+    expect(parse(null)).toBe(true); // the pending view
+    expect(parse()).toBe(false); // ⛔ omitted
+    for (const bad of ['', 'yesterday', '2026-10-24', 0]) expect(parse(bad), String(bad)).toBe(false);
+  });
+
+  it('the detail response names the withdraw target, and the member view says whether an earlier approval stands (strict)', () => {
+    expect(Object.keys(MemorialReviewDetailResponse.shape)).toEqual(
+      expect.arrayContaining(['canDecide', 'canWithdrawApproval', 'withdrawApprovalTargetId']),
+    );
+    expect(Object.keys(MemorialMemberView.shape)).toEqual(expect.arrayContaining(['earlierApprovalWithdrawn', 'earlierApprovalStands']));
+    expect(MemorialMemberView.shape.earlierApprovalStands.safeParse(true).success).toBe(true);
+    expect(MemorialMemberView.shape.earlierApprovalStands.safeParse(null).success).toBe(false);
+    expect(MemorialReviewDetailResponse.shape.withdrawApprovalTargetId.safeParse(null).success).toBe(true);
+    expect(MemorialReviewDetailResponse.shape.withdrawApprovalTargetId.safeParse('0b1c1d34-0000-4000-8000-000000000001').success).toBe(true);
+    expect(MemorialReviewDetailResponse.shape.withdrawApprovalTargetId.safeParse(undefined).success).toBe(false);
+  });
 });
 
 describe('the no-edit invariant is ABSENCE (AC6)', () => {
@@ -225,5 +306,24 @@ describe('the no-edit invariant is ABSENCE (AC6)', () => {
       expect(keys).not.toContain(forbidden);
     }
     expect(keys).toContain('memorialState');
+  });
+});
+
+describe('the latest Send key — on the MEMBER view only (review Z2, 0182)', () => {
+  it('the member view carries `idempotencyKey`: a string or null, ⛔ omitted', () => {
+    const shape = MemorialMemberView.shape.idempotencyKey;
+    expect(shape.safeParse('k_0123-abc').success).toBe(true);
+    expect(shape.safeParse(null).success).toBe(true); // nothing sent, or a pre-0182 row
+    expect(shape.safeParse(undefined).success).toBe(false);
+  });
+
+  it('⛔ no review (admin) DTO names it', () => {
+    const reviewKeys = [
+      ...Object.keys(MemorialReviewDetailResponse.shape),
+      ...Object.keys(MemorialReviewDetailResponse.shape.chain.element.shape),
+      ...Object.keys(MemorialReviewListResponse.shape.items.element.shape),
+    ];
+    expect(reviewKeys).toContain('submissionId'); // the walk reached the shapes
+    expect(reviewKeys).not.toContain('idempotencyKey');
   });
 });

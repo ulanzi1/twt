@@ -7,6 +7,13 @@
 // that only an UNLOCKED insert can reach (23505 → `409 memorial.try_again`). ⛔ No `FOR UPDATE`: the first Send has ⛔ no
 // chain-head row to lock, and the invariant spans three tables — only the pool-keyed advisory lock covers both.
 // ⚠ ⛔ No KMS call while holding the lock (footguns #56(b)): encrypt BEFORE the transaction, decrypt AFTER it.
+//
+// ⭐ The Send's idempotency lives ON the row (migration 0182, BigDev 2026-10-24 "Key on the row"): the phone's
+// `Idempotency-Key` is a column of the version, `UNIQUE (pool_id, idempotency_key)`, written by the insert itself. Under the
+// lock the writer looks the key up FIRST (`readMemorialSubmissionByIdempotencyKey`) — found ⇒ a replay of that row, at any
+// age; a concurrent same-key Send waits on the lock and then finds it. `insertMemorialSubmission` turns a 23505 (an
+// UNLOCKED writer reached the index first) into a replay when a row with this key is now there, under a SAVEPOINT so the
+// caller's transaction stays usable for the re-read.
 
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 
@@ -145,11 +152,68 @@ export function decideMemorialSend(
   return { ok: true, supersedesSubmissionId: head?.submissionId ?? null, keptPhoto };
 }
 
-/** Insert ONE version (the authorisation columns in the SAME row — indivisible, AC4). Returns the new row. */
+/** The version a Send with this `Idempotency-Key` wrote in this pool, or `null` (0182 — the replay lookup). Tenant-scoped. */
+export async function readMemorialSubmissionByIdempotencyKey(
+  db: Db,
+  {
+    pariwarId,
+    poolId,
+    idempotencyKey,
+  }: { readonly pariwarId: PariwarId; readonly poolId: PoolId; readonly idempotencyKey: string },
+): Promise<MemorialSubmissionRow | null> {
+  const [row] = await db
+    .select()
+    .from(memorialSubmissions)
+    .where(
+      and(
+        eq(memorialSubmissions.pariwarId, pariwarId),
+        eq(memorialSubmissions.poolId, poolId),
+        eq(memorialSubmissions.idempotencyKey, idempotencyKey),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/** What `insertMemorialSubmission` did: wrote a NEW version, or found the one this key already wrote (a replay). */
+export type MemorialSubmissionWrite =
+  | { readonly kind: 'inserted'; readonly row: MemorialSubmissionRow }
+  | { readonly kind: 'replay'; readonly row: MemorialSubmissionRow };
+
+/** A Postgres unique-violation on the direct code OR `err.cause.code` (drizzle wraps the pg error). */
+function isUniqueViolation(err: unknown): boolean {
+  if (err === null || typeof err !== 'object') return false;
+  const direct = (err as { code?: unknown }).code;
+  const cause = (err as { cause?: { code?: unknown } }).cause?.code;
+  return direct === '23505' || cause === '23505';
+}
+
+/**
+ * Insert ONE version (the authorisation columns AND the Send's Idempotency-Key in the SAME row — indivisible, AC4 / 0182).
+ * Runs inside the caller's locked scope tx, under a SAVEPOINT: a 23505 rolls back to it (the caller's tx stays usable — ⛔
+ * `db.transaction()`, which would COMMIT the caller's tx early) and the key is re-read — a row with this key is now there
+ * (an UNLOCKED writer with the same key won the index) ⇒ `{ kind: 'replay' }`; none (another index fired — the chain's
+ * `supersedes_uq` / `pool_root_uq`) ⇒ the 23505 is rethrown for the caller's `409 memorial.try_again`.
+ */
 export async function insertMemorialSubmission(
   db: Db,
-  values: Omit<MemorialSubmissionInsert, 'submissionId' | 'createdAt'>,
-): Promise<MemorialSubmissionRow> {
-  const [row] = await db.insert(memorialSubmissions).values(values).returning();
-  return row!;
+  values: Omit<MemorialSubmissionInsert, 'submissionId' | 'createdAt' | 'idempotencyKey'> & { readonly idempotencyKey: string },
+): Promise<MemorialSubmissionWrite> {
+  await db.execute(sql`SAVEPOINT memorial_submission_insert`);
+  try {
+    const [row] = await db.insert(memorialSubmissions).values(values).returning();
+    await db.execute(sql`RELEASE SAVEPOINT memorial_submission_insert`);
+    return { kind: 'inserted', row: row! };
+  } catch (err) {
+    await db.execute(sql`ROLLBACK TO SAVEPOINT memorial_submission_insert`);
+    if (isUniqueViolation(err)) {
+      const existing = await readMemorialSubmissionByIdempotencyKey(db, {
+        pariwarId: values.pariwarId,
+        poolId: values.poolId,
+        idempotencyKey: values.idempotencyKey,
+      });
+      if (existing !== null) return { kind: 'replay', row: existing };
+    }
+    throw err;
+  }
 }

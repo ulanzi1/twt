@@ -47,3 +47,15 @@ export interface MemorialOmission {
   readonly end: number;
   readonly reason: MemorialReviewReason;
 }
+
+/**
+ * The shape of a Send's `Idempotency-Key` (migration 0182 — the key is stored ON the submission row, so it is bounded and
+ * plain): 1–128 characters of `[A-Za-z0-9_-]` — a UUID (the phone's `newIdempotencyKey()`), a ULID or a nanoid. ⚠ LOCKSTEP
+ * with the `memorial_submissions_idempotency_key_check` CHECK. ⛔ No `g` flag (a global regex is stateful under `.test()`).
+ */
+export const MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+/** True iff `key` is a storable Send Idempotency-Key (the handler refuses anything else with `400 memorial.idempotency_key_required`). */
+export function isMemorialSendIdempotencyKey(key: string): boolean {
+  return MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN.test(key);
+}

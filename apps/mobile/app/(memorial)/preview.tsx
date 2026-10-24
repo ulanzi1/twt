@@ -4,9 +4,25 @@
 // through the SHARED presenter (`@twt/ui` — preview == outcome == the later public page). ⭐ IMMEDIATELY ABOVE Send, the
 // permission the SERVER returned (`-162` cl.3 — given AT SEND, in this surface), in the language the app is showing; the
 // client sends ONLY `{ authorisationCopyVersion, authorisationLocale }`. ⛔ Checkbox, ⛔ take-down button.
+// R5 — a refusal is SPOKEN, not only drawn (its container keeps the Android live region; iOS is told through
+// `announceForAccessibility`). The container carries no `accessibilityLabel`: it is not an accessibility element, and
+// grouping it would hide the helpline button inside it from focus.
+// R8 — when the family chose *"Use the photo I sent before"* the preview shows THAT photo (or says it will be used); a
+// picked photo is shown only when it is the one the Send will carry (`keepPreviousPhoto` wins, as in `attempt()`).
+// P1 (d) — the words shown are ALWAYS the words `attempt()` will send: the draft is re-read every time this screen comes back
+// into focus (403 → the code is asked for → "Change the words" → edit → back to this still-mounted screen would otherwise
+// show the old words above a Send button that sends the new ones). The edit buttons stay on in that state.
+// T6 — after a landed Send the memorial STACK is reset to the outcome (`dismissAll` to the group's first screen, then
+// `replace` it): back must not reach a Write or Photo screen still showing the words that were just sent (a keystroke there
+// would re-create a draft from them). A Send that landed while this screen was behind another one sends the family to the
+// outcome when it comes back to the front (`use-memorial-send.ts`, `outcomeOwed`).
+// Y — Send is enabled exactly when the handover state machine allows a press (`handover-gate.ts`): ⛔ not while a request
+// runs, ⛔ not while the nominee's code is asked for, checked or retried; the code panel stays up through its check and its
+// retry (Confirm off then — X3).
 
+import { useCallback, useRef, useState } from 'react'
 import { Image, ScrollView } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { Button, H2, H3, Paragraph, YStack } from 'tamagui'
 
 import type { MemorialMemberView } from '@twt/contracts'
@@ -16,28 +32,43 @@ import { reconstructMemorial } from '@twt/ui'
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
 import { HandoverCodePanel } from '../../components/memorial-authorship/HandoverCodePanel'
 import { MemorialHeader } from '../../components/memorial-authorship/MemorialHeader'
+import { MemorialKeptPhoto } from '../../components/memorial-authorship/MemorialKeptPhoto'
 import { MemorialText } from '../../components/memorial-authorship/MemorialText'
+import { MemorialViewMissing } from '../../components/memorial-authorship/MemorialViewMissing'
+import { useMemorialAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import { loadMemorialDraft, memorialPhotoUri } from '../../lib/memorial-draft'
 import { useMemorialT } from '../../lib/memorial-i18n'
 import { useSession } from '../../lib/session-context'
 import { useMemorialSend } from '../../lib/use-memorial-send'
 
-export default function MemorialPreviewScreen(): React.ReactElement | null {
+export default function MemorialPreviewScreen(): React.ReactElement {
   const t = useMemorialT()
   const router = useRouter()
   const { locale } = useLocale()
   const { session } = useSession()
-  const view = useMemorialViewQuery().data?.memorial ?? null
+  const query = useMemorialViewQuery()
+  const view = query.data?.memorial ?? null
   const memberId = session?.memberId ?? null
-  if (!view || !memberId) return null
+  if (!view || !memberId)
+    return (
+      <MemorialViewMissing
+        loading={query.isPending}
+        fetching={query.isError && query.isFetching}
+        onRetry={() => query.refetch()}
+      />
+    )
   return (
     <Preview
       view={view}
       memberId={memberId}
       locale={locale === 'en' ? 'en' : 'hi'}
       t={t}
-      onSent={() => router.replace('/(memorial)/outcome')}
+      onRefetchView={() => void query.refetch()}
+      onSent={() => {
+        if (router.canDismiss()) router.dismissAll()
+        router.replace('/(memorial)/outcome')
+      }}
       onChangeWords={() => router.push('/(memorial)/write')}
       onChangePhoto={() => router.push('/(memorial)/photo')}
     />
@@ -49,16 +80,36 @@ function Preview(props: {
   readonly memberId: string
   readonly locale: 'hi' | 'en'
   readonly t: (key: string, params?: Record<string, string>) => string
+  readonly onRefetchView: () => void
   readonly onSent: () => void
   readonly onChangeWords: () => void
   readonly onChangePhoto: () => void
 }): React.ReactElement {
   const { view, memberId, locale, t } = props
+  // A render on every return to this screen — the draft below is read from the phone's storage on every render.
+  const [, setFocusTick] = useState(0)
+  const firstFocus = useRef(true)
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false // the first focus IS the mount: that render already read the draft
+        return
+      }
+      setFocusTick((n) => n + 1)
+    }, []),
+  )
   const draft = loadMemorialDraft(memberId, view.driveId)
   const sender = useMemorialSend({ memberId, view, locale, onSent: props.onSent })
-  const photoUri = memorialPhotoUri(draft.photoFileName)
+  const keepingPrevious = draft.keepPreviousPhoto === true
+  // The photo the Send will CARRY as a file: `attempt()` attaches the picked file only when keepPreviousPhoto is not set.
+  const photoUri = keepingPrevious ? null : memorialPhotoUri(draft.photoFileName)
   const rendered = reconstructMemorial({ body: draft.body ?? '', altText: draft.altText ?? null }, null)
-  const busy = sender.phase === 'sending' || sender.handover.busy
+  // The edit buttons are off while a request is in flight or the typed code is being checked (an edit would drop the kept
+  // Idempotency-Key — R6 — under a request that is still running). They stay ON while the code is asked for (P1 (d)).
+  const editsLocked = sender.inFlight || sender.phase === 'verifying'
+  const refusalText = sender.refusalKey !== null ? t(sender.refusalKey) : null
+  // A refusal is an error the family must act on: the plan says `assertive` (never a hard-coded value).
+  const refusalLive = useMemorialAnnounce(refusalText, { hasLiveRegion: true, kind: 'error' })
 
   return (
     <YStack flex={1}>
@@ -72,28 +123,40 @@ function Preview(props: {
           <H2 accessibilityRole="header">{t('preview.title')}</H2>
           <MemorialText paragraphs={rendered.asApproved} testID="memorial-preview-text" />
           {photoUri !== null ? (
-            <Image source={{ uri: photoUri }} style={{ width: '100%', height: 240 }} resizeMode="contain" accessibilityLabel={draft.altText ?? t('photo.chosen_a11y')} />
+            <Image
+              accessible
+              accessibilityRole="image"
+              source={{ uri: photoUri }}
+              style={{ width: '100%', height: 240 }}
+              resizeMode="contain"
+              accessibilityLabel={draft.altText ?? t('photo.chosen_a11y')}
+            />
           ) : null}
-          {rendered.altText !== null && (photoUri !== null || draft.keepPreviousPhoto) ? (
+          {keepingPrevious ? <MemorialKeptPhoto photoUrl={view.photoUrl} onUrlFailed={props.onRefetchView} /> : null}
+          {rendered.altText !== null && (photoUri !== null || keepingPrevious) ? (
             <YStack gap="$1">
               <H3>{t('preview.photo_alt_heading')}</H3>
               <MemorialText paragraphs={rendered.altText.original} />
             </YStack>
           ) : null}
-          <Button style={{ minHeight: 44 }} accessibilityRole="button" onPress={props.onChangeWords}>
+          <Button style={{ minHeight: 44 }} accessibilityRole="button" disabled={editsLocked} onPress={props.onChangeWords}>
             {t('preview.change_words')}
           </Button>
-          <Button style={{ minHeight: 44 }} accessibilityRole="button" onPress={props.onChangePhoto}>
+          <Button style={{ minHeight: 44 }} accessibilityRole="button" disabled={editsLocked} onPress={props.onChangePhoto}>
             {t('preview.change_photo')}
           </Button>
 
-          {sender.phase === 'need_code' ? (
-            <HandoverCodePanel state={sender.handover} onConfirm={(code) => void sender.confirmCode(code)} />
+          {sender.codeAsked ? (
+            <HandoverCodePanel
+              state={sender.handover}
+              onConfirm={(code) => void sender.confirmCode(code)}
+              onResend={() => sender.resendCode()}
+            />
           ) : null}
 
           {sender.refusalKey !== null ? (
-            <YStack gap="$2" testID="memorial-refusal" accessibilityLiveRegion="polite" accessibilityLabel={t('send.error_a11y')}>
-              <Paragraph theme="yellow">{t(sender.refusalKey)}</Paragraph>
+            <YStack gap="$2" testID="memorial-refusal" accessibilityLiveRegion={refusalLive}>
+              <Paragraph theme="yellow">{refusalText}</Paragraph>
               <CallHelplineCTA />
             </YStack>
           ) : null}
@@ -107,10 +170,10 @@ function Preview(props: {
             testID="memorial-send"
             style={{ minHeight: 44 }}
             accessibilityRole="button"
-            disabled={busy || sender.phase === 'need_code'}
+            disabled={!sender.canSend}
             onPress={() => void sender.send()}
           >
-            {busy ? t('preview.sending') : t('preview.send')}
+            {sender.inFlight ? t('preview.sending') : t('preview.send')}
           </Button>
         </YStack>
       </ScrollView>

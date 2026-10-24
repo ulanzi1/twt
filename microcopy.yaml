@@ -373,6 +373,9 @@ scope:
     - apps/mobile/components/memorial-authorship/MemorialText.tsx
     - apps/mobile/components/memorial-authorship/HandoverCodePanel.tsx
     - apps/mobile/components/memorial-authorship/memorial-copy.ts
+    - apps/mobile/components/memorial-authorship/MemorialKeptPhoto.tsx
+    - apps/mobile/components/memorial-authorship/MemorialViewMissing.tsx
+    - apps/mobile/components/memorial-authorship/useMemorialAnnounce.ts
     - apps/mobile/components/memorial-authorship/useMemorialQueries.ts
     - apps/mobile/lib/memorial-draft.ts
     - apps/mobile/lib/memorial-i18n.ts

@@ -3,63 +3,41 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { validateMemorialDecision, type MemorialDecisionProblem } from '@twt/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
-import { buildServer } from '../../../src/server.js';
-import { buildTestDeps, hasDatabase, makeClient, type TestApp, type TestDeps } from '../_setup.js';
-import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
-import { handover, jpegWithGps, memberInject, rows, seedMemorialWorld, send, sendFields, type MemorialWorld } from './_fixture.js';
+import { hasDatabase, type TestApp } from '../_setup.js';
+import {
+  createReviewHarness,
+  errorWithoutRequestId,
+  handover,
+  jpegWithGps,
+  memberInject,
+  rows,
+  seedMemorialWorld,
+  send,
+  sendFields,
+  type MemorialWorld,
+  type ReviewHarness,
+  type StaffClient,
+} from './_fixture.js';
 
-type Client = ReturnType<typeof makeClient>;
+type Client = StaffClient;
 
 describe.skipIf(!hasDatabase)('memorial — the Trust\'s review (live DB)', () => {
-  let td: TestDeps;
+  let h: ReviewHarness;
   let t: TestApp;
-  let fakeWebauthn: FakeWebAuthnProvider;
-  const createdUserIds: string[] = [];
 
   beforeAll(async () => {
-    fakeWebauthn = new FakeWebAuthnProvider();
-    td = buildTestDeps({ webauthn: fakeWebauthn });
-    t = { ...td, app: await buildServer(td.deps) };
+    h = await createReviewHarness();
+    t = h.t;
   });
 
   afterAll(async () => {
-    await t.app.close();
-    const c = await td.pool.connect();
-    try {
-      if (createdUserIds.length > 0) {
-        await c.query(`DELETE FROM admin_sessions WHERE sess ->> 'userId' = ANY($1)`, [createdUserIds]);
-        await c.query(`DELETE FROM role_grants WHERE user_id = ANY($1)`, [createdUserIds]);
-      }
-    } finally {
-      c.release();
-    }
-    await td.pool.end();
+    await h.close();
   });
 
-  async function staff(pariwarId: string, role: string | null, displayName = 'Panel Member'): Promise<Client> {
-    const email = `memorial-${randomUUID()}@example.test`;
-    const password = 'CorrectHorseBatteryStaple9';
-    const userId = await service.createAdminAccount(td.deps, { email, password, displayName });
-    createdUserIds.push(userId);
-    const credentialId = `cred-${userId}`;
-    fakeWebauthn.nextRegistration = { verified: true, credential: { id: credentialId, publicKey: 'pk', counter: 0 } };
-    fakeWebauthn.nextAuthentication = { verified: true, newCounter: 1 };
-    const client = makeClient(t.app);
-    const token = service.mintEnrollmentToken(td.deps, userId);
-    await client.inject({ method: 'POST', url: '/api/v1/auth/passkey/register/options', payload: { enrollmentToken: token } });
-    await client.inject({ method: 'POST', url: '/api/v1/auth/passkey/register/verify', payload: { response: { id: 'b' }, enrollmentToken: token } });
-    await client.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password } });
-    await client.inject({ method: 'POST', url: '/api/v1/auth/passkey/authenticate/options', payload: {} });
-    const verify = await client.inject({ method: 'POST', url: '/api/v1/auth/passkey/authenticate/verify', payload: { response: { id: credentialId } } });
-    expect(verify.statusCode).toBe(200);
-    if (role !== null) {
-      await rows(t, `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value) VALUES ($1, $2, $3, 'pariwar', $4)`, [userId, pariwarId, role, pariwarId]);
-    }
-    return client;
-  }
+  const staff = (pariwarId: string, role: string | null, displayName = 'Panel Member'): Promise<Client> => h.staff(pariwarId, role, displayName);
 
   async function sentWorld(body = 'माँ बहुत अच्छी थीं। रमेश ने धोखा दिया।\n\nहम उन्हें याद करते हैं।', photo = false) {
     const w = await seedMemorialWorld(t);
@@ -84,7 +62,8 @@ describe.skipIf(!hasDatabase)('memorial — the Trust\'s review (live DB)', () =
     const r = await panel.inject({ method: 'GET', url: base(w) });
     expect(r.statusCode).toBe(200);
     const items = r.json<{ items: Array<Record<string, unknown>> }>().items;
-    expect(items).toEqual([{ submissionId: id, deceasedName: 'Shanti Devi', sentAt: expect.any(String), memorialState: 'with_the_trust' }]);
+    // `decidedAt` is `null` in the pending view (review V12 — nothing is decided yet).
+    expect(items).toEqual([{ submissionId: id, deceasedName: 'Shanti Devi', sentAt: expect.any(String), decidedAt: null, memorialState: 'with_the_trust' }]);
     expect(r.body).not.toContain(body.slice(0, 5));
     expect(t.auditSink.events.slice(before).filter((e) => e.type === 'memorial.review.read')).toHaveLength(1);
     // ?view=decided is empty until a decision.
@@ -152,6 +131,43 @@ describe.skipIf(!hasDatabase)('memorial — the Trust\'s review (live DB)', () =
     expect(photoless.json()).toMatchObject({ error: { code: 'memorial_review.invalid_omissions' } });
   });
 
+  // Review T10 (e): the admin's refusal sentence (R19) reads `error.details.problem`, so the refusal must carry the
+  // VALIDATOR's own problem code — pinned literally per case, and cross-checked against `validateMemorialDecision` on the
+  // same input so the API and the validator cannot drift apart.
+  it('MA6 / R19: each invalid_omissions refusal carries details.problem = the validator\'s problem code', async () => {
+    const { w, id, body } = await sentWorld();
+    const panel = await staff(w.pariwarId, 'trustee_panel');
+    const second = body.indexOf('हम');
+    const cases: Array<[MemorialDecisionProblem, Record<string, unknown>]> = [
+      ['span_crosses_paragraph', { action: 'approved_with_omissions', omissions: [{ field: 'body', start: 0, end: body.length, reason: 'against_the_law' }] }],
+      ['photo_left_out_without_photo', { action: 'approved_with_omissions', photoLeftOut: { reason: 'identifies_a_child' } }],
+      ['span_out_of_range', { action: 'approved_with_omissions', omissions: [{ field: 'body', start: 0, end: body.length + 3, reason: 'against_the_law' }] }],
+      ['span_empty', { action: 'approved_with_omissions', omissions: [{ field: 'body', start: 4, end: 4, reason: 'against_the_law' }] }],
+      [
+        'span_order',
+        {
+          action: 'approved_with_omissions',
+          omissions: [
+            { field: 'body', start: second, end: second + 2, reason: 'against_the_law' },
+            { field: 'body', start: 0, end: 3, reason: 'against_the_law' },
+          ],
+        },
+      ],
+      ['alt_text_span_without_alt_text', { action: 'approved_with_omissions', omissions: [{ field: 'altText', start: 0, end: 1, reason: 'identifies_a_child' }] }],
+    ];
+    for (const [problem, payload] of cases) {
+      const r = await post(panel, `${base(w)}/${id}/decision`, payload);
+      expect(r.statusCode, problem).toBe(400);
+      expect(r.json(), problem).toMatchObject({ error: { code: 'memorial_review.invalid_omissions', details: { problem } } });
+      expect(validateMemorialDecision(payload as unknown as Parameters<typeof validateMemorialDecision>[0], { body, altText: null, hasPhoto: false }), problem).toEqual({
+        ok: false,
+        problem,
+      });
+    }
+    // Nothing was decided by any of them.
+    expect(await rows(t, `SELECT 1 FROM memorial_review_decisions WHERE submission_id = $1`, [id])).toEqual([]);
+  });
+
   it('MA6: leave out the photo (and its alt text) on a version with one', async () => {
     const { w, id } = await sentWorld('शब्द।', true);
     const panel = await staff(w.pariwarId, 'trustee_panel');
@@ -184,9 +200,8 @@ describe.skipIf(!hasDatabase)('memorial — the Trust\'s review (live DB)', () =
     for (const target of [superseded, head, strangerId, randomUUID()]) {
       const r = await post(panel, `${base(w)}/${target}/decision`, { action: 'approved' });
       expect(r.statusCode).toBe(404);
-      const parsed = r.json<{ error: { code: string; message: string } }>();
-      expect(parsed.error.code).toBe('memorial_review.not_found');
-      bodies.push(JSON.stringify({ code: parsed.error.code, message: parsed.error.message }));
+      expect(r.json<{ error: { code: string } }>().error.code).toBe('memorial_review.not_found');
+      bodies.push(neutralBody(r)); // the WHOLE body (minus the request id), not just { code, message }
     }
     expect(new Set(bodies).size).toBe(1);
     // A family-withdrawn version is refused the same way.
@@ -249,5 +264,104 @@ describe.skipIf(!hasDatabase)('memorial — the Trust\'s review (live DB)', () =
     const items = (await panel.inject({ method: 'GET', url: `${base(w)}?view=decided` })).json<{ items: Array<{ submissionId: string; memorialState: string }> }>().items;
     expect(items).toEqual([expect.objectContaining({ submissionId: id, memorialState: 'not_approved' })]);
     expect(await memberView(w)).toMatchObject({ memorialState: 'not_approved', reasonCode: 'attacks_someone_named', canSend: true });
+  });
+
+  it('AC9: a SUPERSEDED version is excluded from the pending queue — a chain of two versions lists only the head', async () => {
+    const { w, id } = await sentWorld();
+    const panel = await staff(w.pariwarId, 'trustee_panel');
+    expect((await send(t, w, sendFields({ body: 'दूसरा संस्करण' }))).status).toBe(201);
+    const head = (await rows<{ submission_id: string }>(t, `SELECT submission_id FROM memorial_submissions WHERE pariwar_id = $1 ORDER BY created_at DESC LIMIT 1`, [w.pariwarId]))[0]!.submission_id;
+    expect(head).not.toBe(id);
+    const pending = (await panel.inject({ method: 'GET', url: base(w) })).json<{ items: Array<{ submissionId: string }> }>().items;
+    expect(pending.map((i) => i.submissionId)).toEqual([head]);
+    // The superseded one is not "decided" either (it carries no decision and no withdrawal) — and is still reachable through its chain.
+    expect((await panel.inject({ method: 'GET', url: `${base(w)}?view=decided` })).json<{ items: unknown[] }>().items).toEqual([]);
+    const detail = (await panel.inject({ method: 'GET', url: `${base(w)}/${id}` })).json<{ chain: Array<{ submissionId: string }> }>();
+    expect(detail.chain.map((v) => v.submissionId)).toEqual([id, head]);
+  });
+
+  // ── Trap 8 — the oracle sets, PER ROUTE (Task 5.4) ───────────────────────────────────────────────────────────────────
+
+  /** The ENTIRE response body of a refusal, minus the per-request id — what a prober can see. */
+  const neutralBody = (res: { statusCode: number; json: <T>() => T }): string => {
+    return JSON.stringify({ status: res.statusCode, error: errorWithoutRequestId(res.json<{ error?: unknown }>().error) });
+  };
+
+  it('⭐ Trap 8: detail, decision and withdraw-approval — an unknown id, an out-of-scope id and every other refusal answer ONE byte-identical 404 body', async () => {
+    const { w, id: v1 } = await sentWorld();
+    const stranger = await sentWorld(); // another Pariwar's version
+    const panel = await staff(w.pariwarId, 'trustee_panel');
+    const bodies: Array<[string, string]> = [];
+    const refuse = async (label: string, leaf: 'decision' | 'withdraw-approval' | 'detail', id: string) => {
+      const res =
+        leaf === 'detail'
+          ? await panel.inject({ method: 'GET', url: `${base(w)}/${id}` })
+          : await post(panel, `${base(w)}/${id}/${leaf}`, leaf === 'decision' ? { action: 'approved' } : { reasonCode: 'against_the_law' });
+      expect(res.statusCode, `${leaf} ${label}`).toBe(404);
+      expect(res.json<{ error: { code: string } }>().error.code, `${leaf} ${label}`).toBe('memorial_review.not_found');
+      bodies.push([`${leaf} ${label}`, neutralBody(res)]);
+    };
+
+    // unknown / out-of-scope — on all three routes.
+    for (const leaf of ['detail', 'decision', 'withdraw-approval'] as const) {
+      await refuse('unknown id', leaf, randomUUID());
+      await refuse('another Pariwar\'s id', leaf, stranger.id);
+    }
+    // withdraw-approval on a version that is NOT the chain's latest approved (it is still pending).
+    await refuse('not approved (pending)', 'withdraw-approval', v1);
+    // decided: approve v1, then a second decision is refused; withdraw its approval, then a second withdrawal is refused.
+    expect((await post(panel, `${base(w)}/${v1}/decision`, { action: 'approved' })).statusCode).toBe(200);
+    await refuse('already decided', 'decision', v1);
+    expect((await post(panel, `${base(w)}/${v1}/withdraw-approval`, { reasonCode: 'identifies_a_child' })).statusCode).toBe(200);
+    await refuse('already withdrawn', 'decision', v1);
+    await refuse('already withdrawn', 'withdraw-approval', v1);
+    // superseded: a new version; the old one can no longer be decided.
+    expect((await send(t, w, sendFields({ body: 'नया संस्करण' }))).status).toBe(201);
+    await refuse('superseded', 'decision', v1);
+
+    // ONE body for every refusal on every route — not "one code": the whole thing a prober can read.
+    const distinct = new Set(bodies.map(([, body]) => body));
+    expect([...distinct], JSON.stringify(bodies, null, 1)).toHaveLength(1);
+    expect(JSON.parse([...distinct][0]!)).toEqual({ status: 404, error: { code: 'memorial_review.not_found', message: 'Not found' } });
+  });
+
+  // ── MA6 — a span in the ALT TEXT (Task 5.4) ──────────────────────────────────────────────────────────────────────────
+
+  it('MA6: a span in the ALT TEXT — validated against the alt text (not the body), stored, and told to the family; the photo stays', async () => {
+    const w = await seedMemorialWorld(t);
+    await handover(t, w);
+    const altText = 'A photo of Maa at the village home';
+    const body = 'माँ बहुत अच्छी थीं और हमें बहुत याद आती हैं। उनकी हर बात हमारे साथ है।';
+    expect(
+      (await send(t, w, [...sendFields({ body, altText }), { kind: 'file', name: 'photo', filename: 'm.jpg', contentType: 'image/jpeg', bytes: jpegWithGps() }])).status,
+    ).toBe(201);
+    const id = (await rows<{ submission_id: string }>(t, `SELECT submission_id FROM memorial_submissions WHERE pariwar_id = $1`, [w.pariwarId]))[0]!.submission_id;
+    const panel = await staff(w.pariwarId, 'trustee_panel');
+    expect(body.length).toBeGreaterThan(altText.length);
+    // The offsets are checked against the field they name: an alt-text span that would fit the (longer) BODY is refused.
+    const beyond = await post(panel, `${base(w)}/${id}/decision`, {
+      action: 'approved_with_omissions',
+      omissions: [{ field: 'altText', start: 0, end: altText.length + 5, reason: 'identifies_a_child' }],
+    });
+    expect(beyond.statusCode).toBe(400);
+    expect(beyond.json()).toMatchObject({ error: { code: 'memorial_review.invalid_omissions' } });
+    expect(await rows(t, `SELECT 1 FROM memorial_review_decisions WHERE submission_id = $1`, [id])).toEqual([]);
+    // A valid alt-text span (leaving the rest of the description and the photo in place).
+    const start = altText.indexOf('at the village home');
+    const ok = await post(panel, `${base(w)}/${id}/decision`, {
+      action: 'approved_with_omissions',
+      omissions: [{ field: 'altText', start, end: altText.length, reason: 'identifies_a_child' }],
+    });
+    expect(ok.statusCode, ok.body).toBe(200);
+    const [stored] = await rows<{ omissions: unknown; photo_left_out_reason: string | null }>(t, `SELECT omissions, photo_left_out_reason FROM memorial_review_decisions WHERE submission_id = $1`, [id]);
+    expect(stored).toEqual({ omissions: [{ field: 'altText', start, end: altText.length, reason: 'identifies_a_child' }], photo_left_out_reason: null });
+    // The family is told, in its own words' coordinates; the photo is still there and the description it was sent with is verbatim.
+    expect(await memberView(w)).toMatchObject({
+      memorialState: 'approved_with_omissions',
+      altText,
+      hasPhoto: true,
+      photoLeftOut: null,
+      omissions: [{ field: 'altText', start, end: altText.length, reason: 'identifies_a_child' }],
+    });
   });
 });

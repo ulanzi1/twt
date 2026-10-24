@@ -1,5 +1,5 @@
 // Story 11b.4 (AC9) — the family-memorial queue is REACHABLE from the admin nav inside a Pariwar context, and the link is
-// ⛔ key-gated (a Pariwar grant is ⛔ in `nationalGrants` — a gated link would show only to `super_admin`). The server's
+// NOT key-gated (a Pariwar grant is not in `nationalGrants` — a gated link would show only to `super_admin`). The server's
 // `memorial.review` check is the boundary; the page shows its own "no access" on a 403.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -45,7 +45,13 @@ describe('the family-memorial queue in the admin nav (AC9)', () => {
   it('outside a Pariwar: absent', async () => {
     params = {};
     setup();
-    await screen.findByText('Sign out').catch(() => undefined);
+    // Wait POSITIVELY for the layout's final state — the signed-in bar ("Sign out") renders only once the session has
+    // resolved — so the absence below is read from a rendered nav, not from an empty first paint. (This wait used to be
+    // swallowed with `.catch(() => undefined)`: the test could never fail on it.)
+    expect(await screen.findByText('Sign out')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument();
+    // Both waits above are positive, so this absence is read from a nav that has rendered in its signed-in state with no
+    // Pariwar in the route params. (That the harness CAN show the link is the test above, with the same layout and a Pariwar.)
     expect(screen.queryByTestId('nav-memorial-reviews')).toBeNull();
   });
 });

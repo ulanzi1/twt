@@ -20,6 +20,7 @@ import {
   type MemorialDecisionCandidate,
   type MemorialReviewAction,
   type MemorialReviewDecisionInput,
+  type MemorialReviewListItem,
   type MemorialReviewReason,
   type MemorialReviewVersion,
   type MemorialState,
@@ -34,8 +35,19 @@ import {
   useMemorialReviews,
   useWithdrawMemorialApproval,
 } from '../../api/hooks.js';
-import { bidiVisible, buildOmissions, memorialSentenceRanges, type SelectedPart, type TextRange } from './derive.js';
-import { reasonLabel, resolveEn as t } from './i18n-en.js';
+import {
+  bidiMarkerText,
+  bidiVisible,
+  bidiVisibleString,
+  buildOmissions,
+  memorialSentenceRanges,
+  type SelectedPart,
+  type TextRange,
+} from './derive.js';
+import { problemSentence, reasonLabel, resolveEn as t, withdrawAnswer } from './i18n-en.js';
+
+type DecideMutation = ReturnType<typeof useDecideMemorialReview>;
+type WithdrawMutation = ReturnType<typeof useWithdrawMemorialApproval>;
 
 function isForbidden(err: unknown): boolean {
   return err instanceof ApiError && err.status === 403;
@@ -53,19 +65,57 @@ function stateLabel(state: MemorialState): string {
   return t(`memorial.state.${state}`);
 }
 
-/** The family's text as stored, every bidi control shown as a visible marker (AC9). */
-function StoredText({ text, testId }: { text: string; testId?: string }): ReactElement {
+/**
+ * The word before a Decided-tab row's date (W9) — by the row's state: a family withdrawal is ⛔ a decision, and neither is the
+ * Trust withdrawing its approval (that date is the withdrawal's — the T7 order uses the later of the two times).
+ */
+function decidedDateLabel(state: MemorialState): string {
+  switch (state) {
+    case 'withdrawn':
+      return t('memorial.list.withdrawn');
+    case 'approval_withdrawn':
+      return t('memorial.list.approvalWithdrawn');
+    // `none` / `with_the_trust` carry no `decidedAt`, so the line is never drawn for them.
+    case 'approved':
+    case 'approved_with_omissions':
+    case 'not_approved':
+    case 'none':
+    case 'with_the_trust':
+      return t('memorial.list.decided');
+    // X7 — a state a newer server adds (the wire is not re-validated here) falls back to the neutral "Decided", ⛔ an empty
+    // label or `undefined` beside the date.
+    default:
+      return t('memorial.list.decided');
+  }
+}
+
+/**
+ * ANY of the family's words, inline, with every hidden bidi control shown as a visible marker (AC9). ⭐ The ONE way this
+ * screen renders reviewer-read family text — the stored block, the sentence picker's labels (where the reviewer chooses what
+ * to cut), the as-approved text and the omission quote all come through here, so an unterminated RLO cannot reorder what
+ * the reviewer reads at the moment of decision (R13).
+ */
+function VisibleText({ text }: { text: string }): ReactElement {
   return (
-    <p className="whitespace-pre-wrap rounded border bg-white p-3" data-testid={testId}>
+    <>
       {bidiVisible(text).map((s, i) =>
         s.kind === 'text' ? (
           <span key={i}>{s.text}</span>
         ) : (
           <mark key={i} title={s.codePoint} data-testid="memorial-bidi-marker">
-            ⟦BIDI {s.codePoint}⟧
+            {bidiMarkerText(s.codePoint)}
           </mark>
         ),
       )}
+    </>
+  );
+}
+
+/** The family's text as stored, every bidi control shown as a visible marker (AC9). */
+function StoredText({ text, testId }: { text: string; testId?: string }): ReactElement {
+  return (
+    <p className="whitespace-pre-wrap rounded border bg-white p-3" data-testid={testId}>
+      <VisibleText text={text} />
     </p>
   );
 }
@@ -76,12 +126,19 @@ function AsApproved({ paragraphs }: { paragraphs: readonly MemorialParagraph[] }
       {paragraphs.map((p, i) => (
         <p key={i} className="mb-2">
           {p.segments.map((s, j) =>
-            s.kind === 'text' ? <span key={j}>{s.text}</span> : <em key={j}>{t('memorial.detail.omitted')}</em>,
+            s.kind === 'text' ? <VisibleText key={j} text={s.text} /> : <em key={j}>{t('memorial.detail.omitted')}</em>,
           )}
         </p>
       ))}
     </div>
   );
+}
+
+/** The queue's rows, each chain head once — an offset page can repeat a row when a new decision lands between two loads. */
+function distinctItems(pages: readonly { readonly items: readonly MemorialReviewListItem[] }[] | undefined): MemorialReviewListItem[] {
+  const seen = new Map<string, MemorialReviewListItem>();
+  for (const page of pages ?? []) for (const item of page.items) if (!seen.has(item.submissionId)) seen.set(item.submissionId, item);
+  return [...seen.values()];
 }
 
 // ── The queue ──────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -93,6 +150,7 @@ export interface MemorialReviewListPageProps {
 export function MemorialReviewListPage({ pariwarId }: MemorialReviewListPageProps): ReactElement {
   const [view, setView] = useState<'pending' | 'decided'>('pending');
   const list = useMemorialReviews(pariwarId, view);
+  const items = distinctItems(list.data?.pages);
 
   if (isForbidden(list.error)) return <NoAccess />;
 
@@ -119,12 +177,12 @@ export function MemorialReviewListPage({ pariwarId }: MemorialReviewListPageProp
 
       {list.isLoading && <p role="status">{t('memorial.list.loading')}</p>}
       {list.isError && !isForbidden(list.error) && <p role="status">{t('memorial.list.error')}</p>}
-      {list.data && list.data.items.length === 0 && (
+      {list.data && items.length === 0 && (
         <p role="status" data-testid="memorial-queue-empty">
           {t(`memorial.list.empty.${view}`)}
         </p>
       )}
-      {list.data && list.data.items.length > 0 && (
+      {list.data && items.length > 0 && (
         <table className="w-full text-sm" data-testid="memorial-queue-table">
           <caption className="sr-only">{t('memorial.title')}</caption>
           <thead>
@@ -136,9 +194,18 @@ export function MemorialReviewListPage({ pariwarId }: MemorialReviewListPageProp
             </tr>
           </thead>
           <tbody>
-            {list.data.items.map((item) => (
+            {items.map((item) => (
               <tr key={item.submissionId} data-testid={`memorial-row-${item.submissionId}`}>
-                <td>{new Date(item.sentAt).toLocaleDateString('en-IN')}</td>
+                <td>
+                  {new Date(item.sentAt).toLocaleDateString('en-IN')}
+                  {/* V12 — the Decided tab is ORDERED by the decision time (T7), so the row shows it; a pending row has none.
+                      W9 — labelled by state: "Decided" / "Withdrawn" / "Approval withdrawn". */}
+                  {view === 'decided' && item.decidedAt !== null && (
+                    <span className="block text-xs opacity-70" data-testid="memorial-row-decided">
+                      {decidedDateLabel(item.memorialState)} {new Date(item.decidedAt).toLocaleDateString('en-IN')}
+                    </span>
+                  )}
+                </td>
                 <td>{item.deceasedName ?? '—'}</td>
                 <td>{stateLabel(item.memorialState)}</td>
                 <td>
@@ -155,6 +222,19 @@ export function MemorialReviewListPage({ pariwarId }: MemorialReviewListPageProp
           </tbody>
         </table>
       )}
+      {/* A failed "Load more" leaves the query in `error` WITH its pages, so the line above already says so — and the rows
+          already loaded stay on screen. */}
+      {list.hasNextPage && (
+        <button
+          type="button"
+          className="self-start rounded border px-4 py-2"
+          data-testid="memorial-load-more"
+          disabled={list.isFetchingNextPage}
+          onClick={() => void list.fetchNextPage()}
+        >
+          {list.isFetchingNextPage ? t('memorial.list.loadingMore') : t('memorial.list.loadMore')}
+        </button>
+      )}
     </section>
   );
 }
@@ -166,10 +246,88 @@ export interface MemorialReviewDetailPageProps {
   submissionId: string;
 }
 
-export function MemorialReviewDetailPage({ pariwarId, submissionId }: MemorialReviewDetailPageProps): ReactElement {
+/** Keyed on the opened version, so a decision's or withdrawal's confirmation never follows the reviewer to another version. */
+export function MemorialReviewDetailPage(props: MemorialReviewDetailPageProps): ReactElement {
+  return <MemorialReviewDetail key={props.submissionId} {...props} />;
+}
+
+/** "Version 2 of 3 · Sent 21/10/2026, 3:30:00 pm" — which version of the chain, by its place in it (oldest first). */
+function versionLabel(chain: readonly MemorialReviewVersion[], index: number): string {
+  const v = chain[index]!;
+  return `${t('memorial.detail.versionNo')} ${index + 1} ${t('memorial.detail.versionOf')} ${chain.length} · ${t('memorial.detail.version')} ${new Date(v.sentAt).toLocaleString('en-IN')}`;
+}
+
+/**
+ * What the two actions answered. ⭐ It lives on the PAGE, ⛔ not inside either form: the refetch after a success flips
+ * `canDecide` / `canWithdrawApproval`, the form unmounts, and a confirmation (or a "no longer open" refusal) held inside it
+ * would vanish before the reviewer read it (R19). The status region is always in the DOM, so a screen reader announces
+ * what appears in it.
+ *
+ * ⭐ A withdrawal's answer NAMES the version it was about (its place in `chain`, from the mutation's own `variables`). The
+ * mutation is the page's, so its last answer outlives the form that raised it — and with two approved versions the form
+ * beside it can already be the NEXT one (v2's approval withdrawn ⇒ the target moves to v1; or v2's failed because another
+ * reviewer got there first, and the refetch moved the target to v1). An answer with no version in it would read as being
+ * about the form next to it.
+ *
+ * ⭐ Only the LATEST action's answer shows (T12 (c)): with v1 approved and v2 open, both forms are on the page, and each
+ * mutation keeps its last answer — so a failed decision's alert would stay beside a later successful withdrawal (or the
+ * other way round). Starting either action resets the OTHER mutation first (the forms' `onStart`) — ⛔ but only when that
+ * other one FAILED: resetting a pending mutation drops its answer when it arrives and unlocks its form for a second submit,
+ * so while EITHER is pending, BOTH forms' submit buttons are disabled (`actionPending`) (V6); and resetting a SUCCEEDED one
+ * unlocks its form before the refetch shows the new state — a second decision on a decided version, or a second withdrawal
+ * of the same approval (W8). A success's confirmation is still true, so it stays beside the next action's answer; and the
+ * decision form's lock is the page's own `decidedFor` (as the withdrawal's is `doneForThisTarget`), ⛔ the mutation's state.
+ */
+function ActionFeedback({
+  decide,
+  withdraw,
+  chain,
+}: {
+  decide: DecideMutation;
+  withdraw: WithdrawMutation;
+  chain: readonly MemorialReviewVersion[];
+}): ReactElement {
+  const withdrawnAt = chain.findIndex((v) => v.submissionId === withdraw.variables?.targetSubmissionId);
+  const withdrawnVersionNo = withdrawnAt < 0 ? null : withdrawnAt + 1;
+  const decideErr = decide.error;
+  const goneAway = decideErr instanceof ApiError && decideErr.status === 404;
+  const invalidOnServer = decideErr instanceof ApiError && decideErr.code === 'memorial_review.invalid_omissions';
+  const serverProblem =
+    invalidOnServer && typeof decideErr.details === 'object' && decideErr.details !== null
+      ? (decideErr.details as { problem?: unknown }).problem
+      : undefined;
+  return (
+    <div data-testid="memorial-feedback">
+      <div role="status" data-testid="memorial-feedback-status">
+        {decide.isSuccess && <p>{t('memorial.decide.recorded')}</p>}
+        {withdraw.isSuccess && <p>{withdrawAnswer('recorded', withdrawnVersionNo)}</p>}
+      </div>
+      {goneAway && <p role="alert">{t('memorial.decide.alreadyDone')}</p>}
+      {invalidOnServer && <p role="alert">{problemSentence(serverProblem)}</p>}
+      {decide.isError && !goneAway && !invalidOnServer && <p role="alert">{t('memorial.decide.error')}</p>}
+      {withdraw.isError && <p role="alert">{withdrawAnswer('error', withdrawnVersionNo)}</p>}
+    </div>
+  );
+}
+
+function MemorialReviewDetail({ pariwarId, submissionId }: MemorialReviewDetailPageProps): ReactElement {
   const detail = useMemorialReview(pariwarId, submissionId);
+  // The mutations are held HERE (see {@link ActionFeedback}); the forms only start them.
+  const decide = useDecideMemorialReview(pariwarId, submissionId);
+  const withdraw = useWithdrawMemorialApproval(pariwarId);
+  // V6 — one action at a time: while either is in flight, neither form can submit (see {@link ActionFeedback}).
+  const actionPending = decide.isPending || withdraw.isPending;
+  // W8 — the version a decision SUCCEEDED for. Set from the decision's own success and ⛔ cleared by anything, so the form
+  // stays locked until the refetch removes it (`canDecide` false) — whatever happens to the mutation's state meanwhile.
+  const [decidedFor, setDecidedFor] = useState<string | null>(null);
 
   if (isForbidden(detail.error)) return <NoAccess />;
+
+  const data = detail.data;
+  // MA16 — the approval to withdraw is the chain's latest APPROVED version, which may be an EARLIER one than the version
+  // open here (v1 approved, v2 pending): the form names it and posts to IT (R9).
+  const withdrawTargetId = data !== undefined && data.canWithdrawApproval ? data.withdrawApprovalTargetId : null;
+  const withdrawTargetAt = data !== undefined && withdrawTargetId !== null ? data.chain.findIndex((v) => v.submissionId === withdrawTargetId) : -1;
 
   return (
     <section aria-label={t('memorial.title')} data-testid="memorial-review-detail" className="flex flex-col gap-5">
@@ -182,25 +340,62 @@ export function MemorialReviewDetailPage({ pariwarId, submissionId }: MemorialRe
           {detail.error instanceof ApiError && detail.error.status === 404 ? t('memorial.detail.notFound') : t('memorial.detail.error')}
         </p>
       )}
-      {detail.data && (
+      {data && (
         <>
           <header>
-            <h1 className="text-xl font-bold">{detail.data.deceasedName ?? t('memorial.title')}</h1>
-            <p className="text-sm opacity-70">{stateLabel(detail.data.memorialState)}</p>
+            <h1 className="text-xl font-bold">{data.deceasedName ?? t('memorial.title')}</h1>
+            <p className="text-sm opacity-70">{stateLabel(data.memorialState)}</p>
           </header>
           <h2 className="font-bold">{t('memorial.detail.history')}</h2>
-          {detail.data.chain.map((v) => (
-            <VersionCard key={v.submissionId} version={v} current={v.submissionId === submissionId} />
+          {data.chain.map((v, i) => (
+            <VersionCard key={v.submissionId} version={v} current={v.submissionId === submissionId} label={versionLabel(data.chain, i)} />
           ))}
-          {detail.data.canDecide && <DecisionForm pariwarId={pariwarId} version={detail.data.chain.find((v) => v.submissionId === submissionId)!} />}
-          {detail.data.canWithdrawApproval && <WithdrawApprovalForm pariwarId={pariwarId} submissionId={submissionId} />}
+          <ActionFeedback decide={decide} withdraw={withdraw} chain={data.chain} />
+          {data.canDecide && (
+            <DecisionForm
+              version={data.chain.find((v) => v.submissionId === submissionId)!}
+              decide={decide}
+              actionPending={actionPending}
+              decided={decidedFor === submissionId}
+              onDecided={() => setDecidedFor(submissionId)}
+              onStart={() => {
+                // Only a FAILED withdrawal's answer is cleared — ⛔ a pending one (V6) or a succeeded one (W8).
+                if (withdraw.isError) withdraw.reset();
+              }}
+            />
+          )}
+          {/* Keyed on the target: after a withdrawal the chain's latest approved version can become an EARLIER one (v1 and v2
+              both approved; v2's is withdrawn, the target flips to v1). The form for the new target must start fresh — its
+              own empty reason and note, not the ones typed for the version just withdrawn. */}
+          {withdrawTargetId !== null && (
+            <WithdrawApprovalForm
+              key={withdrawTargetId}
+              targetSubmissionId={withdrawTargetId}
+              targetLabel={withdrawTargetAt < 0 ? null : versionLabel(data.chain, withdrawTargetAt)}
+              withdraw={withdraw}
+              actionPending={actionPending}
+              onStart={() => {
+                // Only a FAILED decision's answer is cleared — ⛔ a pending one (V6) or a succeeded one (W8).
+                if (decide.isError) decide.reset();
+              }}
+            />
+          )}
         </>
       )}
     </section>
   );
 }
 
-function VersionCard({ version: v, current }: { version: MemorialReviewVersion; current: boolean }): ReactElement {
+function VersionCard({
+  version: v,
+  current,
+  label,
+}: {
+  version: MemorialReviewVersion;
+  current: boolean;
+  /** "Version 2 of 3 · Sent …" — the version's place in the chain, so the reviewer can tell which one an action names. */
+  label: string;
+}): ReactElement {
   const decided =
     v.body !== null && v.decision !== null && v.decision.action === 'approved_with_omissions'
       ? reconstructMemorial(
@@ -216,7 +411,7 @@ function VersionCard({ version: v, current }: { version: MemorialReviewVersion; 
       aria-current={current ? 'true' : undefined}
     >
       <p className="text-sm opacity-70">
-        {t('memorial.detail.version')} {new Date(v.sentAt).toLocaleString('en-IN')}
+        {label}
         {current && <strong> — {t('memorial.detail.thisVersion')}</strong>}
       </p>
       <h3 className="mt-2 font-bold">{t('memorial.detail.words')}</h3>
@@ -224,7 +419,10 @@ function VersionCard({ version: v, current }: { version: MemorialReviewVersion; 
       {v.hasPhoto && (
         <>
           <h3 className="mt-2 font-bold">{t('memorial.detail.photo')}</h3>
-          {v.photoUrl !== null && <img src={v.photoUrl} alt={v.altText ?? ''} className="max-h-64 rounded" />}
+          {/* A broken image shows its alt text RAW — so the alt goes through the same helper (R13). */}
+          {v.photoUrl !== null && (
+            <img src={v.photoUrl} alt={v.altText === null ? '' : bidiVisibleString(v.altText)} className="max-h-64 rounded" />
+          )}
           {v.altText !== null && (
             <>
               <h4 className="text-sm font-bold">{t('memorial.detail.altText')}</h4>
@@ -246,8 +444,8 @@ function VersionCard({ version: v, current }: { version: MemorialReviewVersion; 
               {v.decision.omissions.map((o) => {
                 const source = o.field === 'body' ? v.body : v.altText;
                 return (
-                  <li key={`${o.field}:${o.start}`}>
-                    “{source?.slice(o.start, o.end) ?? '…'}” — {reasonLabel(o.reason)}
+                  <li key={`${o.field}:${o.start}`} data-testid="memorial-omission">
+                    “{source === null ? '…' : <VisibleText text={source.slice(o.start, o.end)} />}” — {reasonLabel(o.reason)}
                   </li>
                 );
               })}
@@ -353,7 +551,9 @@ function SentencePicker({
               <label>
                 <input type="checkbox" checked={choice.checked} onChange={(e) => onChoose(key, { ...choice, checked: e.target.checked })} />{' '}
                 <span className="sr-only">{t('memorial.decide.leaveOut')}: </span>
-                <span className="whitespace-pre-wrap">{text.slice(r.start, r.end)}</span>
+                <span className="whitespace-pre-wrap">
+                  <VisibleText text={text.slice(r.start, r.end)} />
+                </span>
               </label>
               {choice.checked && (
                 <ReasonSelect
@@ -371,8 +571,27 @@ function SentencePicker({
   );
 }
 
-function DecisionForm({ pariwarId, version: v }: { pariwarId: string; version: MemorialReviewVersion }): ReactElement {
-  const decide = useDecideMemorialReview(pariwarId, v.submissionId);
+/**
+ * The mutation is the PAGE's ({@link ActionFeedback}): this form only starts it, and its answer is shown outside it.
+ * `onStart` runs just before the decision is posted (the page clears the withdrawal's last answer if it FAILED — T12 (c),
+ * V6, W8); `actionPending` is true while EITHER action is in flight, and locks the submit. `onDecided` tells the page the
+ * decision succeeded; `decided` (the page's `decidedFor` is this version) then keeps the submit locked (W8).
+ */
+function DecisionForm({
+  version: v,
+  decide,
+  actionPending,
+  decided,
+  onDecided,
+  onStart,
+}: {
+  version: MemorialReviewVersion;
+  decide: DecideMutation;
+  actionPending: boolean;
+  decided: boolean;
+  onDecided: () => void;
+  onStart: () => void;
+}): ReactElement {
   const [action, setAction] = useState<MemorialReviewAction>('approved');
   const [choices, setChoices] = useState<Map<string, SentenceChoice>>(new Map());
   const [photoOut, setPhotoOut] = useState<SentenceChoice>({ checked: false, reason: '' });
@@ -425,7 +644,7 @@ function DecisionForm({ pariwarId, version: v }: { pariwarId: string; version: M
     // Pre-check with the SAME validator the server runs (a UI aid — the server is the boundary).
     const verdict = validateMemorialDecision(candidate, { body, altText: v.altText, hasPhoto: v.hasPhoto });
     if (!verdict.ok) {
-      setProblem(t('memorial.decide.invalid') + t(`memorial.problem.${verdict.problem}`));
+      setProblem(problemSentence(verdict.problem));
       return;
     }
     const payload: MemorialReviewDecisionInput = {
@@ -435,12 +654,10 @@ function DecisionForm({ pariwarId, version: v }: { pariwarId: string; version: M
       ...(candidate.reasonCode ? { reasonCode: candidate.reasonCode } : {}),
       ...(internalNote.trim() !== '' ? { internalNote } : {}),
     };
-    decide.mutate(payload);
+    onStart();
+    // The callback is the PAGE's mutation observer's (the page stays mounted when this form unmounts on the refetch).
+    decide.mutate(payload, { onSuccess: onDecided });
   };
-
-  const err = decide.error;
-  const goneAway = err instanceof ApiError && err.status === 404;
-  const invalidOnServer = err instanceof ApiError && err.code === 'memorial_review.invalid_omissions';
 
   return (
     <section aria-label={t('memorial.decide.title')} data-testid="memorial-decision-form" className="rounded border p-4">
@@ -509,12 +726,8 @@ function DecisionForm({ pariwarId, version: v }: { pariwarId: string; version: M
           {problem}
         </p>
       )}
-      {goneAway && <p role="alert">{t('memorial.decide.alreadyDone')}</p>}
-      {invalidOnServer && <p role="alert">{t('memorial.decide.invalid')}</p>}
-      {decide.isError && !goneAway && !invalidOnServer && <p role="alert">{t('memorial.decide.error')}</p>}
-      {decide.isSuccess && <p role="status">{t('memorial.decide.recorded')}</p>}
 
-      <button type="button" className="mt-3 rounded border px-4 py-2" disabled={decide.isPending} onClick={submit}>
+      <button type="button" className="mt-3 rounded border px-4 py-2" disabled={actionPending || decided} onClick={submit}>
         {t('memorial.decide.submit')}
       </button>
     </section>
@@ -523,29 +736,58 @@ function DecisionForm({ pariwarId, version: v }: { pariwarId: string; version: M
 
 // ── The Trust withdraws its own approval (MA16) ──────────────────────────────────────────────────────────────────────
 
-function WithdrawApprovalForm({ pariwarId, submissionId }: { pariwarId: string; submissionId: string }): ReactElement {
-  const withdraw = useWithdrawMemorialApproval(pariwarId, submissionId);
+/**
+ * Posts to `targetSubmissionId` — the chain's latest APPROVED version, ⛔ not the version the page has open — and says which
+ * version that is, so the reviewer never withdraws an approval they cannot see (R9). The mutation is the PAGE's
+ * ({@link ActionFeedback}); this form only starts it. `onStart` runs just before the withdrawal is posted (the page clears
+ * the decision's last answer if it FAILED — T12 (c), V6, W8); `actionPending` is true while EITHER action is in flight,
+ * and locks the submit.
+ */
+function WithdrawApprovalForm({
+  targetSubmissionId,
+  targetLabel,
+  withdraw,
+  actionPending,
+  onStart,
+}: {
+  targetSubmissionId: string;
+  /** "Version 1 of 2 · Sent …" for the version being withdrawn; `null` if it is not in the chain (never expected). */
+  targetLabel: string | null;
+  withdraw: WithdrawMutation;
+  actionPending: boolean;
+  onStart: () => void;
+}): ReactElement {
   const [reason, setReason] = useState<MemorialReviewReason | ''>('');
   // ⛔ Starts EMPTY.
   const [internalNote, setInternalNote] = useState('');
+  // The page's mutation remembers its LAST call. Done is done only for THIS target: once the chain's target has moved on to
+  // an earlier approved version, the success of the previous withdrawal must not lock the new one.
+  const doneForThisTarget = withdraw.isSuccess && withdraw.variables?.targetSubmissionId === targetSubmissionId;
   return (
     <section aria-label={t('memorial.withdraw.title')} data-testid="memorial-withdraw-form" className="rounded border p-4">
       <h2 className="font-bold">{t('memorial.withdraw.title')}</h2>
+      {targetLabel !== null && (
+        <p className="text-sm font-bold" data-testid="memorial-withdraw-target">
+          {t('memorial.withdraw.target')} {targetLabel}
+        </p>
+      )}
       <p className="text-sm opacity-70">{t('memorial.withdraw.hint')}</p>
       <ReasonSelect id="reason-withdraw" label={t('memorial.withdraw.reason')} value={reason} onChange={setReason} />
       <label className="mt-3 block">
         {t('memorial.withdraw.internalNote')}
         <textarea className="mt-1 w-full rounded border p-2" rows={3} value={internalNote} onChange={(e) => setInternalNote(e.target.value)} />
       </label>
-      {withdraw.isError && <p role="alert">{t('memorial.withdraw.error')}</p>}
-      {withdraw.isSuccess && <p role="status">{t('memorial.withdraw.recorded')}</p>}
       <button
         type="button"
         className="mt-3 rounded border px-4 py-2"
-        disabled={reason === '' || withdraw.isPending}
+        disabled={reason === '' || actionPending || doneForThisTarget}
         onClick={() => {
           if (reason === '') return;
-          withdraw.mutate({ reasonCode: reason, ...(internalNote.trim() !== '' ? { internalNote } : {}) });
+          onStart();
+          withdraw.mutate({
+            targetSubmissionId,
+            body: { reasonCode: reason, ...(internalNote.trim() !== '' ? { internalNote } : {}) },
+          });
         }}
       >
         {t('memorial.withdraw.submit')}

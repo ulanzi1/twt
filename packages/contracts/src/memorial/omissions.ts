@@ -14,7 +14,9 @@
 // The act's rules: `approved` takes ⛔ none of omissions / photoLeftOut / reasonCode; `approved_with_omissions` needs ≥ 1
 // omission or `photoLeftOut`, and ⛔ no reasonCode; `not_approved` needs a reasonCode and ⛔ no omissions or photoLeftOut.
 // Also refused: `photoLeftOut` with ⛔ no photo; an `altText` span together with `photoLeftOut` (the photo and its alt text
-// go together); an `altText` span with ⛔ no alt text.
+// go together); an `altText` span with ⛔ no alt text; `altText` spans that leave ⛔ no visible character of the description
+// while the photo stays (`alt_text_nothing_left` — the cure is `photoLeftOut`, which takes the photo and its description
+// together).
 
 import { isMemorialTextBlank, memorialParagraphRanges } from './text-classes.js';
 import type { MemorialOmission, MemorialOmissionField, MemorialReviewAction, MemorialReviewReason } from './vocab.js';
@@ -43,7 +45,8 @@ export type MemorialDecisionProblem =
   | 'span_not_grapheme_boundary'
   | 'span_blank'
   | 'span_crosses_paragraph'
-  | 'nothing_left';
+  | 'nothing_left'
+  | 'alt_text_nothing_left';
 
 export type MemorialDecisionValidation = { readonly ok: true } | { readonly ok: false; readonly problem: MemorialDecisionProblem };
 
@@ -141,5 +144,10 @@ export function validateMemorialDecision(
     if (altProblem !== null) return fail(altProblem);
   }
   if (bodySpans.length > 0 && isMemorialTextBlank(remaining(subject.body, bodySpans))) return fail('nothing_left');
+  // The photo stays (`photoLeftOut` was refused above for any alt-text span), so its description may not be emptied:
+  // "alt text required with a photo" — to drop the description the Trust leaves the photo out, which takes both.
+  if (subject.altText !== null && altSpans.length > 0 && isMemorialTextBlank(remaining(subject.altText, altSpans))) {
+    return fail('alt_text_nothing_left');
+  }
   return { ok: true };
 }

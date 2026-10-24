@@ -38,22 +38,32 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
 -- 0 ≤ start < end; `reason` one of the four. ⚠ LOCKSTEP with `memorial/vocab.ts`. The SEMANTIC rules (grapheme boundaries,
 -- ordering, the text's length) are the pure validator's (`@twt/contracts` `validateMemorialDecision`) — the DB cannot see
 -- the plaintext.
+-- ⚠ NULL-safe and ORDER-safe (review R18): a JSON-null `field` / `reason` made `NULL NOT IN (...)` NULL, so an OR chain never
+-- refused it; and SQL does not order the terms of an OR, so a cast could run before its regex guard. Each rule is a `WHEN`
+-- (evaluated in order, the first refusal wins), the type of `field` / `reason` is checked BEFORE the value, and the offsets are
+-- compared as `numeric` (no `bigint` overflow on a long digit string). Each offset is CAPPED at 2147483647 (2^31 - 1, the largest
+-- 32-bit signed integer — a memorial is at most 6,000 code points, so the cap is far above any real offset): without it a
+-- 23-digit or `1e400` offset was admitted, where the earlier `bigint` cast refused anything above 2^63.
 CREATE OR REPLACE FUNCTION memorial_omissions_valid(v jsonb) RETURNS boolean
   LANGUAGE sql IMMUTABLE AS $$
   SELECT CASE
-    WHEN jsonb_typeof(v) <> 'array' THEN false
+    WHEN v IS NULL OR jsonb_typeof(v) <> 'array' THEN false
     ELSE NOT EXISTS (
       SELECT 1 FROM jsonb_array_elements(v) e
-       WHERE jsonb_typeof(e) <> 'object'
-          OR (SELECT count(*) FROM jsonb_object_keys(e)) <> 4
-          OR NOT (e ? 'field' AND e ? 'start' AND e ? 'end' AND e ? 'reason')
-          OR e->>'field' NOT IN ('body', 'altText')
-          OR jsonb_typeof(e->'start') <> 'number'
-          OR jsonb_typeof(e->'end') <> 'number'
-          OR (e->>'start') !~ '^[0-9]+$'
-          OR (e->>'end') !~ '^[0-9]+$'
-          OR (e->>'start')::bigint >= (e->>'end')::bigint
-          OR e->>'reason' NOT IN ('attacks_someone_named', 'accuses_someone_of_wrongdoing', 'against_the_law', 'identifies_a_child') )
+       WHERE NOT (
+         CASE
+           WHEN jsonb_typeof(e) IS DISTINCT FROM 'object' THEN false
+           WHEN (SELECT count(*) FROM jsonb_object_keys(e)) <> 4 THEN false
+           WHEN NOT (e ? 'field' AND e ? 'start' AND e ? 'end' AND e ? 'reason') THEN false
+           WHEN jsonb_typeof(e->'field') IS DISTINCT FROM 'string' OR jsonb_typeof(e->'reason') IS DISTINCT FROM 'string' THEN false
+           WHEN jsonb_typeof(e->'start') IS DISTINCT FROM 'number' OR jsonb_typeof(e->'end') IS DISTINCT FROM 'number' THEN false
+           WHEN (e->>'start') !~ '^[0-9]+$' OR (e->>'end') !~ '^[0-9]+$' THEN false
+           WHEN (e->>'start')::numeric > 2147483647 OR (e->>'end')::numeric > 2147483647 THEN false
+           WHEN (e->>'start')::numeric >= (e->>'end')::numeric THEN false
+           WHEN e->>'field' NOT IN ('body', 'altText') THEN false
+           WHEN e->>'reason' NOT IN ('attacks_someone_named', 'accuses_someone_of_wrongdoing', 'against_the_law', 'identifies_a_child') THEN false
+           ELSE true
+         END ) )
   END;
 $$;--> statement-breakpoint
 

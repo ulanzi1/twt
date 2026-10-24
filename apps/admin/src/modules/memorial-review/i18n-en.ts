@@ -4,7 +4,7 @@
 // `i18n-en.ts` precedent). ⛔ The family's words are CONTENT, never chrome: they are shown as stored, ⛔ translated,
 // ⛔ resolved through here. The four reasons are the epic's grounds only (`-391` Confirm 2 A) — ⛔ no catch-all.
 
-import type { MemorialReviewReason } from '@twt/contracts';
+import type { MemorialDecisionProblem, MemorialReviewReason } from '@twt/contracts';
 
 const EN: Record<string, string> = {
   'memorial.title': 'Family memorials',
@@ -18,16 +18,24 @@ const EN: Record<string, string> = {
   'memorial.list.loading': 'Loading memorials…',
   'memorial.list.error': 'Could not load memorials.',
   'memorial.list.sent': 'Sent',
+  // The Decided tab's date line, by the row's state (W9): a family withdrawal and a withdrawn approval are ⛔ decisions.
+  'memorial.list.decided': 'Decided',
+  'memorial.list.withdrawn': 'Withdrawn',
+  'memorial.list.approvalWithdrawn': 'Approval withdrawn',
   'memorial.list.member': 'Member who died',
   'memorial.list.state': 'State',
   'memorial.list.open': 'Open',
+  'memorial.list.loadMore': 'Load more',
+  'memorial.list.loadingMore': 'Loading more…',
   'memorial.noAccess': 'You do not have access to family memorials in this Pariwar. Memorials are reviewed by the Trustee Panel.',
   'memorial.detail.loading': 'Loading…',
   'memorial.detail.error': 'Could not load this memorial.',
   'memorial.detail.notFound': 'This memorial could not be found.',
   'memorial.detail.back': 'Back to the queue',
   'memorial.detail.history': 'Every version the family sent (oldest first)',
-  'memorial.detail.version': 'Version sent',
+  'memorial.detail.versionNo': 'Version',
+  'memorial.detail.versionOf': 'of',
+  'memorial.detail.version': 'Sent',
   'memorial.detail.thisVersion': 'This version',
   'memorial.detail.words': 'The family’s words, as sent',
   'memorial.detail.unavailable': 'The stored words could not be read right now.',
@@ -60,16 +68,22 @@ const EN: Record<string, string> = {
   'memorial.decide.internalNote': 'Internal note — optional; never shown to the family',
   'memorial.decide.submit': 'Record decision',
   'memorial.decide.recorded': 'Decision recorded.',
-  'memorial.decide.invalid': 'These choices cannot be recorded: ',
   'memorial.decide.error': 'Could not record this decision. Please reload and try again.',
   'memorial.decide.alreadyDone': 'This version can no longer be decided — it may have been decided, replaced or withdrawn. Reload to see it.',
   'memorial.withdraw.title': 'Withdraw the Trust’s approval',
   'memorial.withdraw.hint': 'Only for one of the four reasons below. The family is told the reason and may send a new version.',
+  'memorial.withdraw.target': 'This withdraws the approval of',
   'memorial.withdraw.reason': 'Reason',
   'memorial.withdraw.internalNote': 'Internal note — optional; never shown to the family',
   'memorial.withdraw.submit': 'Withdraw approval',
+  // The two answers of a withdrawal NAME the version they are about ("{n}"): the page can hold the answer for one version
+  // beside the form for the next (v1 and v2 both approved — the target moves to v1 once v2's is gone), so an answer that
+  // named no version could be read as being about the form beside it. The un-numbered texts are the fallback for a version
+  // that is not in the chain (never expected).
   'memorial.withdraw.recorded': 'Approval withdrawn.',
+  'memorial.withdraw.recordedFor': 'Approval of Version {n} withdrawn.',
   'memorial.withdraw.error': 'Could not withdraw this approval. Please reload and try again.',
+  'memorial.withdraw.errorFor': 'Could not withdraw the approval of Version {n}. Please reload and try again.',
   'memorial.state.none': 'Nothing sent',
   'memorial.state.with_the_trust': 'With the Trust',
   'memorial.state.approved': 'Approved',
@@ -81,21 +95,50 @@ const EN: Record<string, string> = {
   'memorial.reason.accuses_someone_of_wrongdoing': 'Accuses someone of wrongdoing',
   'memorial.reason.against_the_law': 'Against the law',
   'memorial.reason.identifies_a_child': 'Names or shows a child',
-  'memorial.problem.action_shape': 'the choices do not match the decision chosen.',
-  'memorial.problem.photo_left_out_without_photo': 'this version has no photo.',
-  'memorial.problem.alt_text_span_with_photo_left_out': 'the photo’s description goes with the photo — leave out one or the other.',
-  'memorial.problem.alt_text_span_without_alt_text': 'this version has no photo description.',
-  'memorial.problem.span_empty': 'a chosen part is empty.',
-  'memorial.problem.span_out_of_range': 'a chosen part is outside the words.',
-  'memorial.problem.span_order': 'two chosen parts touch — give them the same reason so they are left out together.',
-  'memorial.problem.span_not_grapheme_boundary': 'a chosen part splits a letter.',
-  'memorial.problem.span_blank': 'a chosen part has no visible words.',
-  'memorial.problem.span_crosses_paragraph': 'a chosen part crosses a paragraph.',
-  'memorial.problem.nothing_left': 'nothing of the words would be left — choose “Do not approve” instead.',
 };
+
+/**
+ * Why a decision's choices cannot be recorded — ONE complete sentence per problem the shared validator can name (the
+ * browser pre-check and the server's `400 memorial_review.invalid_omissions` carry the same `MemorialDecisionProblem`).
+ * `Record<MemorialDecisionProblem, …>`: a problem added to the contract does not compile here until it has its sentence.
+ * ⚠ Each stands ALONE — ⛔ no lead-in to join it to, so ⛔ no dangling colon.
+ */
+const PROBLEM_SENTENCES: Record<MemorialDecisionProblem, string> = {
+  action_shape: 'The choices do not match the decision you chose. Check them and try again.',
+  photo_left_out_without_photo: 'This version has no photo, so there is no photo to leave out.',
+  alt_text_span_with_photo_left_out:
+    'The photo’s description goes with the photo. Leave out the photo, or parts of its description, but not both.',
+  alt_text_span_without_alt_text: 'This version has no photo description, so no part of one can be left out.',
+  span_empty: 'A chosen part is empty. Choose a sentence that has words in it.',
+  span_out_of_range: 'A chosen part is outside the family’s words. Reload the page and choose again.',
+  span_order: 'Two chosen parts touch. Give them the same reason so they are left out together.',
+  span_not_grapheme_boundary: 'A chosen part cuts through a letter. Choose whole sentences.',
+  span_blank: 'A chosen part has no visible words. Choose a sentence that has words in it.',
+  span_crosses_paragraph: 'A chosen part runs across a paragraph break. Choose parts that sit inside one paragraph.',
+  nothing_left: 'Nothing of the words would be left. Choose “Do not approve” instead.',
+  alt_text_nothing_left:
+    'Nothing of the photo’s description would be left while the photo stays. Leave out the photo instead — it takes its description with it.',
+};
+
+/** A problem this build does not know (a newer server) — still a complete sentence, never a lead-in with nothing after it. */
+const PROBLEM_UNKNOWN = 'These choices could not be recorded. Reload the page, check them and try again.';
+
+/** The sentence for a `MemorialDecisionProblem`; anything else (missing, unknown, not a string) gets the generic one. */
+export function problemSentence(problem: unknown): string {
+  return typeof problem === 'string' && Object.prototype.hasOwnProperty.call(PROBLEM_SENTENCES, problem)
+    ? PROBLEM_SENTENCES[problem as MemorialDecisionProblem]
+    : PROBLEM_UNKNOWN;
+}
 
 export function resolveEn(key: string): string {
   return EN[key] ?? key;
+}
+
+/** What a withdrawal answered, naming the version (1-based place in the chain) it was about; `null` ⇒ the un-numbered text. */
+export function withdrawAnswer(kind: 'recorded' | 'error', versionNo: number | null): string {
+  return versionNo === null
+    ? resolveEn(`memorial.withdraw.${kind}`)
+    : resolveEn(`memorial.withdraw.${kind}For`).replace('{n}', String(versionNo));
 }
 
 export function reasonLabel(reason: MemorialReviewReason): string {

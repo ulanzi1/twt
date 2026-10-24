@@ -78,7 +78,7 @@ describe('nominee_link copy (real t())', () => {
     expect(en('label.asked')).toBe('Waiting for their answer'); // ⛔ "Asked" — it begged "asked what?"
     expect(en('label.confirmed')).toBe('Confirmed — Meena K.');
     expect(en('label.not_me')).toBe('Said it is not them');
-    expect(en('label.not_me_note')).toBe('The mark still counts until you remove it or pick again.');
+    expect(en('label.not_me_note')).toBe('If this is the wrong person, remove the mark or pick again.'); // `-402`: an action prompt — ⛔ "the mark counts"
     expect(en('edit.question')).toBe('Is this still Meena K.?');
     expect(en('edit.keep')).toBe('Keep the mark');
     expect(en('edit.remove')).toBe('Remove it');

@@ -3,7 +3,7 @@
   "title": "People who know me",
   "life_events_label": "People who know me",
   "life_events_desc": "Up to three members who know you well",
-  "intro": "Name up to three members who know you well. If none of your colleagues can be asked, the Trust asks these people instead. Each person must agree first.",
+  "intro": "Name up to three members who know you well. Each person will first be asked whether they know you. The Trust may contact them to check on your wellbeing if it cannot reach you directly.",
   "list.heading": "People you have named",
   "list.empty": "You have not named anyone yet.",
   "list.free_slots": "You can name {count} more.",

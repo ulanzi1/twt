@@ -13,7 +13,7 @@
   "label.confirmed": "Confirmed — {name}",
   "label.confirmed_no_name": "Confirmed",
   "label.not_me": "Said it is not them",
-  "label.not_me_note": "The mark still counts until you remove it or pick again.",
+  "label.not_me_note": "If this is the wrong person, remove the mark or pick again.",
   "edit.question": "Is this still {name}?",
   "edit.question_no_name": "Is this still the member you marked?",
   "edit.keep": "Keep the mark",

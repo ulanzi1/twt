@@ -90,4 +90,29 @@ describe('known_people copy (real t())', () => {
       expect(json).not.toMatch(/Welfare Trust|Shikshak Parivar|शिक्षक परिवार/);
     }
   });
+
+  // `2026-10-24-402` (BigDev): the "people who know you" screen says WHAT each named person is asked and a GENERIC purpose — ⛔ the
+  // order in which the Trust asks people (colleagues first, these people only when none can be), ⛔ "agree" with nothing said to agree to.
+  it('⭐ the intro says what each named person is asked and states a generic purpose (en + hi), verbatim', () => {
+    expect(t('intro', undefined, { locale: 'en', namespace: NS })).toBe(
+      'Name up to three members who know you well. Each person will first be asked whether they know you. The Trust may contact them to check on your wellbeing if it cannot reach you directly.',
+    );
+    expect(t('intro', undefined, { locale: 'hi', namespace: NS })).toBe(
+      'ऐसे तीन तक सदस्यों के नाम दें जो आपको अच्छी तरह जानते हैं। हर व्यक्ति से पहले पूछा जाएगा कि क्या वे आपको जानते हैं। अगर ट्रस्ट आपसे सीधे संपर्क न कर पाए, तो वह आपका हालचाल जानने के लिए उनसे संपर्क कर सकता है।',
+    );
+  });
+
+  it('⭐ ⛔ no string of the namespace says that colleagues are asked first, that these people are the fallback, or that members are asked about a death (en + hi)', () => {
+    const order = {
+      en: /colleagues? can be asked|asks these people|if none of your colleagues|\b(death|dies|died|dead|deceased|passed away|vouch)\b/i,
+      hi: /सहकर्मी[^।]*पूछ|मृत्यु|निधन|देहांत|मौत|मृतक|स्वर्गवास/,
+    };
+    for (const locale of ['en', 'hi'] as const) {
+      const catalog = getCatalog(locale, NS) as Record<string, unknown>;
+      for (const [key, value] of Object.entries(catalog)) {
+        if (typeof value !== 'string' || key.startsWith('$')) continue; // `$comment…` keys are developer notes, ⛔ shown to a member
+        expect(value, `${locale}:${key}`).not.toMatch(order[locale]);
+      }
+    }
+  });
 });

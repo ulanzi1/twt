@@ -344,7 +344,7 @@ describe('NomineeForm — the member mark (Story 6.36e, V3)', () => {
       forms: [marked({ memberLink: { kind: 'keep', linkId: L1, label: 'not_me', name: null, confirmedFor: slotFingerprint({ name: NAME, mobile: MOBILE }) } }), marked({ memberLink: null })],
     })
     expect(screen.getByText('Said it is not them')).toBeInTheDocument()
-    expect(screen.getByText('The mark still counts until you remove it or pick again.')).toBeInTheDocument()
+    expect(screen.getByText('If this is the wrong person, remove the mark or pick again.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /^Is this nominee a TWT member\?/ }))
     expect(onFind).toHaveBeenCalledWith(2)
   })

@@ -4,6 +4,46 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: fix-diff review, round 3, of 6-36e-nominee-member-link-at-declaration.md (2026-10-24)
+
+The whole patch diff again (both rounds' patches), two chunks × three layers. Twenty-one `patch` items (one began as a decision, resolved to "keep and document") are in the story's `#### Fix-diff review — round 3`; these five are not patched by it.
+
+- *[Round 4, 2026-10-24: re-raised by the Edge hunter as a retry that spends a second check. A round-4 patch shares the RAW call per set of numbers and stores its result in the session, so a retry attaches to it or finds its matches — the double charge goes; the wasted request (and the abort signal in the shared client) stays deferred, below.]*
+- **`contactMatches` takes no abort signal, so the read bound ABANDONS a metered POST** [packages/api-client/src/index.ts, apps/mobile/app/(life-events)/nominee-link-find.tsx]. The server still spends the check and writes the audit line; the response is dropped. Threading a signal changes the shared 6.36b client. Trigger: a slow-network report, or when the client gains signals.
+- **A concurrent double-submit of a first-ever declaration can charge twice across a step-up** [apps/api/src/modules/nominee/nominee.handlers.ts `declare`]. Both charge transactions see "not a re-declaration"; the first main transaction commits a version; the second then needs a step-up. The charge cannot move into the main transaction without putting the HMAC inside the lock. Two overlapping POSTs only.
+- **The `new` ⇒ carry rule changed NE2 by dated story notes only** [`-397` NE2]. Since round 3 it is ANY rank, not only the same one: a re-pick, a retried save or a MOVE of the mark between ranks carries the live link (the answer and `asked_at` stay; nobody is asked again) — and the pre-save line no longer promises "…unless they have already answered" in general. A process choice for BigDev: a `-400`-style author-commit would record "a `new` mark of a member already live is a carry to the rank it is submitted on, and the pre-save line says so" (NE3 / NE5 were changed the same way).
+- **A draft keeps a picked contact's number in unencrypted storage until saved or discarded** [apps/mobile/lib/nominee-links.ts `redactForDraft`]. AC5's design; the member's own phone; ⛔ a Panel question. Persisting a pick as "no mark" would cost a second contacts check to resume. Revisit with the privacy-policy line (roster Row 31 (j)).
+- **Several `AnnouncedText` announcements can fire in the same commit on iOS** [apps/mobile/app/(life-events)/nominees.tsx]. SUSPECTED; needs a VoiceOver run.
+
+---
+
+## Deferred from: fix-diff review of 6-36e-nominee-member-link-at-declaration.md (2026-10-24)
+
+Round 2 — the patch diff `git diff HEAD` (+ 3 untracked tests) over `ae0f3249`. Seventeen `patch` items are in the story's `### Review Findings`; these three are not patched by it.
+
+- **A restored draft shows a `new` mark without its name** [apps/mobile/app/(life-events)/nominees.tsx `onContinueDraft`]. The price of not storing the name a contact was saved under; the number is kept. Revisit if a resumed pick is ever mistaken (a masked-number hint is the obvious aid).
+- **`reconcileMarks` keeps `null` for both "removed" and "no mark existed"** [apps/mobile/lib/nominee-links.ts]. A draft resumed after a mark appeared from another device sends no mark and the server ends it. Pre-existing; SUSPECTED, needs a second device.
+- **No test reads the audit sink for a carried `new` mark** [apps/api/tests/integration/nominee/nominee-member-link.spec.ts]. Covered by construction (the handler loops `links.carried`); add with the "audit before COMMIT" item.
+
+---
+
+## Deferred from: code review of 6-36e-nominee-member-link-at-declaration.md (2026-10-24)
+
+Branch `story/6-36e-nominee-member-link-at-declaration` at `dc7a8aeb`, diff `1268d47e..dc7a8aeb`. The decision and the sixteen `patch` items are in the story's `### Review Findings` (all applied 2026-10-24); these ten are not patched by it.
+
+- **Audit lines are emitted before the COMMIT that can still fail** [apps/api/src/modules/nominee/nominee.handlers.ts `declare`]. 6.20's structure (`member_nominees.declared` after `ok = true`, before `closeScopeTx`); NE11 / V10 sanction it; 6.36e extends it to the link lines, and the rollback test asserts rows, not the audit sink. Trigger: emit after commit, as the answer handler does.
+- **The answer's Idempotency-Key is not bound to the link or the answer, is unbounded, and is minted per tap** [apps/api/src/modules/nominee-links/handlers.ts `idempotent`; apps/mobile/app/(life-events)/nominee-link-requests.tsx]. Inherited from 6.36b (same shape in `known-people/handlers.ts`); the shipped client cannot reuse a key; a lost-response retry answers 409 `request_closed` for a saved answer. Fix once for both features.
+- **`openapi/v1.yaml` omits the Life Events declare, the three nominee-links routes and the new codes** [openapi/v1.yaml]. House practice (6.36b's known-people routes are absent too); `forced-pagination.spec.ts` therefore cannot see the new collection GET.
+- **NE9's recorded residual has a screen consequence** [packages/domain/src/nominee/member-links.ts `listNomineeLinksForDeclarer`]. A link left on a non-head version after a post-filing correction is hidden from the declarer's screen but still answerable, still excluding, and silently ended by a later re-save with no mark. Add it to NE9's record.
+- **No DB backstop for one live link per (declarer, rank) / (declarer, nominee) or for a same-Pariwar nominee** [packages/domain/migrations/0181_member-nominee-links.sql]. NE1 does not specify one; the only writer is `applyNomineeLinkPlan` under the D3 lock. Trigger: a second writer.
+- **The OTP retry re-submits the `pending` payload** [apps/mobile/app/(life-events)/nominees.tsx `onSubmit` / `onVerifyOtp`]. A pick or edit made after the first Save is dropped; an edit skips the V3 gate. Pre-existing pattern; more exposed now that Find navigates away from the form.
+- **The find screen is reachable by deep link without the form** [apps/mobile/app/(life-events)/nominee-link-find.tsx `choose`; apps/mobile/lib/nominee-links.ts `pendingPick`]. A lingering pick is applied at the next form focus. SUSPECTED, not traced.
+- **The Hindi `nominee_link` copy awaits BigDev's approval; no device attestation** [packages/i18n/locales/hi/nominee_link.json]. Disclosed in the catalog `$comment` and the Completion Notes; go-live conditions.
+- **The jobs role's grants on the nominee tables (G12)** [roster Row 26]. Already recorded; the live proof is a go-live step.
+- **The find screen's matched contacts render as an unvirtualised list of up to 1,000 buttons** [apps/mobile/app/(life-events)/nominee-link-find.tsx]. Found by the review, never measured. 6.36b's find screen uses a `FlashList`; converting restructures this screen from a `ScrollView` into a flex column (the empty states stay outside the list) and cannot be checked without a device, so it was NOT shipped blind when the patches were applied. Trigger: a device run on a low-end Android with a large address book.
+
+---
+
 ## Deferred from: Story 6.36e Task 0 — Decisions 2026-10-24-396 / 2026-10-24-397 (2026-10-24)
 
 Recorded at Story 6.36e Task 0.4 (`_bmad-output/implementation-artifacts/6-36e-nominee-member-link-at-declaration.md`), each ⛔ built by it.

@@ -236,6 +236,31 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     });
   }
 
+  /**
+   * Story 6.36e — the deceased declared a number NOBODY signs in with and MARKED `memberId`'s account as that nominee (a live
+   * link on the version, answered `answer`) — the account is the only match (NE7).
+   */
+  async function markedNomineeIs(w: World, memberId: string, answer: 'confirmed' | 'not_me' | null = null): Promise<void> {
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query('RESET ROLE');
+      const ct = encryption.serializeEnvelope(
+        await encryption.encryptTier1(Buffer.from('+91 90000 11111', 'utf-8'), { pariwarId: w.pid, fieldClass: encryption.MEMBER_NOMINEE_FIELD_CLASS }, enc.kms, enc.kekRef),
+      );
+      const v = await client.query<{ version_id: string }>(
+        `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
+                                              relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
+         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+         RETURNING version_id`,
+        [w.deceased, w.pid, ct],
+      );
+      await client.query(
+        `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, answer, asked_at, responded_at)
+         VALUES ($1, $2, $3, 1, $4, 'contacts', $5::text, '2025-01-01T00:00:00Z', CASE WHEN $5::text IS NULL THEN NULL ELSE '2025-01-02T00:00:00Z'::timestamptz END)`,
+        [w.pid, w.deceased, v.rows[0]!.version_id, memberId, answer],
+      );
+    });
+  }
+
   /** Story 6.36d review — an EARLIER claim for the same death (a first filing the selection is anchored on), created at `at`. */
   async function filedEarlier(w: World, claimCaseId: string, at: string): Promise<void> {
     await onOwnTx(pool, w.pid, async (client) => {
@@ -1056,6 +1081,19 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(rep).toMatchObject({ member_id: w.ranked[1], send_outcome: 'accepted' });
     expect(h.sent.map((m) => m.to)).toEqual([w.mobiles.get(w.ranked[1]!)!]);
     expect(h.sent.map((m) => m.to)).not.toContain(w.mobiles.get(nominee.memberId)!);
+    expect(h.alarms).toEqual([]);
+  });
+
+  it('⭐ 6.36e (NE7) — a neighbour the deceased MARKED as a nominee (answered `not_me`; login number ≠ the declared one) ⇒ `no_target:peer_is_nominee`, ⛔ texted; the replacement is texted', async () => {
+    const w = await world({ selected: 1 });
+    const marked = w.pings[0]!;
+    await markedNomineeIs(w, marked.memberId, 'not_me');
+    const h = harness(w, { registry: [CLEARED] });
+    await tick(h, w);
+    const after = await rows(w);
+    expect(after.find((r) => r.ping_id === marked.pingId)).toMatchObject({ send_outcome: 'no_target', detail: 'no_target:peer_is_nominee' });
+    expect(after.find((r) => r.replaces_ping_id === marked.pingId)).toMatchObject({ member_id: w.ranked[1], send_outcome: 'accepted' });
+    expect(h.sent.map((m) => m.to)).toEqual([w.mobiles.get(w.ranked[1]!)!]);
     expect(h.alarms).toEqual([]);
   });
 

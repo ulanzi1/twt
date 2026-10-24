@@ -676,7 +676,7 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
       tx order, the signup end rules); the contact-matches `purpose` field; a new module `apps/api/src/modules/nominee-links/` (the AC2 links
       read, the AC4 request list + answer, names-after-commit, per-handler idempotency) REGISTERED in `apps/api/src/server.ts`; audit names
       in the `AuthAuditEventType` union; the number fence's `FILES` list extended; OpenAPI re-emitted; `createMemberNomineeLinksClient`.
-- [ ] **Task 4 — jobs (AC6, AC7)** *(2026-10-24: the RENAME half done with Task 2 so every commit builds — `readPeerMeshNomineeIndexes` → `readPeerMeshNomineeMatch`, `nomineeMatch` through the select job and both children, the jobs / api fixtures, and the 6.31 hash fence's `peer-mesh-wa-reminder.ts` pin re-taken (rename-only, dated note). The jobs' live legs remain.)* — `runClaimPeerMeshSelect`, `readPeerMeshNomineeIndexes` (defined in the requests child, imported by the
+- [x] **Task 4 — jobs (AC6, AC7)** *(2026-10-24: DONE — the three jobs live legs (select, request child, reminder child) 3 / 3 and RED under the `memberIds` mutant; the AC6 / AC7 domain legs landed with Task 2. Earlier: the RENAME half done with Task 2 so every commit builds — `readPeerMeshNomineeIndexes` → `readPeerMeshNomineeMatch`, `nomineeMatch` through the select job and both children, the jobs / api fixtures, and the 6.31 hash fence's `peer-mesh-wa-reminder.ts` pin re-taken (rename-only, dated note). The jobs' live legs remain.)* — `runClaimPeerMeshSelect`, `readPeerMeshNomineeIndexes` (defined in the requests child, imported by the
       reminder child) → the match object; the stale-cut check tests `nomineeMatch === null` (it compares the cut, ⛔ values); every G7
       fixture renamed; test fixtures that seed a REAL login blind index where a leg needs a number ≠ link case (6.36d G16); AC7's staff-line
       legs.
@@ -821,6 +821,12 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   `life-events`, `known-people` 71 / 71; `login-wall.spec.ts` 5 / 5; api unit 593 / 593 (the number fence 2 / 2 with its new
   positive controls); contracts 1,453 / 1,453; api-client 38 / 38; domain known-people 83 / 83. `pnpm contracts:emit-openapi` + the
   determinism check + the PII scrape green. `tsc` clean for contracts, domain, api, mobile; ESLint (per package) exit 0.
+- **Task 4 runs (`twt_6_36e`):** three new jobs legs — the SELECT job (a marked colleague, ⛔ ranked; a `not_me`-answered mark still
+  excludes — PQ1 A; the same world with ⛔ mark ranks them: the positive control), the REQUEST child (`no_target:peer_is_nominee` and
+  the replacement texted), the REMINDER child (`skipped_recipient_ineligible`, zero Meta calls) — each with the declared number one
+  NOBODY signs in with, so the account is the only match. Mutant: `peerMeshNomineeMatch` returning ⛔ `memberIds` ⇒ all three RED
+  (restored). The four peer-mesh jobs files in full: 195 / 195 (the two earlier load timeouts green under lower load). `tsc` +
+  ESLint clean for `apps/jobs`. AC7's two staff-line legs are in `peer-mesh-workplace-snapshot.spec.ts` (Task 2).
 - **Task 3 — a found ordering, kept as specified:** AC3's order puts the caller gate (step 1) BEFORE the claim lock (step 3), so a
   declarer a claim names who submits a NEW mark gets the ONE 422 `nominee.link_not_found`, ⛔ the 409 `nominee.locked_claim_filed` —
   a `keep` or a plain save still gets the 409 (the leg asserts both routes of it). Harmless: the status read already says
@@ -875,7 +881,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 
 ### File List
 
-*(Tasks 1–3 so far; completed at Step 9.)*
+*(Tasks 1–4 so far; completed at Step 9.)*
 
 - `packages/domain/migrations/0181_member-nominee-links.sql` (new)
 - `packages/domain/migrations/meta/_journal.json`
@@ -905,7 +911,9 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 - `packages/domain/tests/integration/claim/peer-mesh-request-concurrency.spec.ts`
 - `packages/domain/tests/integration/claim/peer-mesh-wa-reminder.spec.ts`
 - `packages/domain/tests/integration/claim/peer-mesh-wa-reminder-concurrency.spec.ts`
-- `apps/jobs/tests/claim-peer-mesh.test.ts`
+- `apps/jobs/tests/claim-peer-mesh.test.ts` (Task 4: the select leg)
+- `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
+- `apps/jobs/tests/claim-peer-mesh-wa-reminders-live.test.ts`
 - `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts`
 - `apps/api/tests/integration/claims/peer-request-after-send.spec.ts`
 - `packages/contracts/src/nominee/member-link.ts` (new)

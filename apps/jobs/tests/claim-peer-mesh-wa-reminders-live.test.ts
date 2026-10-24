@@ -249,6 +249,28 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     });
   }
 
+  /** Story 6.36e — the deceased declared a number NOBODY signs in with and MARKED `memberId`'s account as that nominee (NE7). */
+  async function markNominee(w: World, memberId: string): Promise<void> {
+    await onOwnTx(pool, w.pid, async (client) => {
+      await client.query('RESET ROLE');
+      const ct = encryption.serializeEnvelope(
+        await encryption.encryptTier1(Buffer.from('+91 90000 11111', 'utf-8'), { pariwarId: w.pid, fieldClass: encryption.MEMBER_NOMINEE_FIELD_CLASS }, enc.kms, enc.kekRef),
+      );
+      const v = await client.query<{ version_id: string }>(
+        `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
+                                              relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
+         VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+         RETURNING version_id`,
+        [w.deceased, w.pid, ct],
+      );
+      await client.query(
+        `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, asked_at)
+         VALUES ($1, $2, $3, 1, $4, 'typed', '2025-01-01T00:00:00Z')`,
+        [w.pid, w.deceased, v.rows[0]!.version_id, memberId],
+      );
+    });
+  }
+
   /** Story 6.36d review — an EARLIER claim for the same death (a first filing the selection is anchored on), created at `at`. */
   async function filedEarlier(w: World, claimCaseId: string, at: string): Promise<void> {
     await onOwnTx(pool, w.pid, async (client) => {
@@ -980,6 +1002,16 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     const n = w.pings[0]!.memberId;
     // typed RAW: a 0 prefix, spaces (the stored form is ⛔ normalised — G5)
     await declareNominee(w, `0${w.mobiles.get(n)!.slice(3, 8)} ${w.mobiles.get(n)!.slice(8)}`, n);
+    const h = harness(w);
+    await child(h, w);
+    expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'skipped_recipient_ineligible' });
+    expect(h.sent).toHaveLength(0);
+    expect(h.alarms).toEqual([]);
+  });
+
+  it('⭐ 6.36e (NE7) — a neighbour the deceased MARKED as a nominee (login number ≠ the declared one) ⇒ `skipped_recipient_ineligible`, ZERO Meta calls', async () => {
+    const w = await world({ neighbours: 1 });
+    await markNominee(w, w.pings[0]!.memberId);
     const h = harness(w);
     await child(h, w);
     expect((await reminders(w))[0]).toMatchObject({ send_outcome: 'skipped_recipient_ineligible' });

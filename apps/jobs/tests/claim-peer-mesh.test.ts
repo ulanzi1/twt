@@ -96,15 +96,36 @@ function countingKms(o: { fail?: boolean; probe?: () => void } = {}): { kms: typ
 }
 
 /** A REAL `declared` nominee version of `deceased` (the declaration writer's envelope — class `member_nominee`, the real Pariwar). */
-async function declareNominee(client: pg.PoolClient, pariwarId: string, deceased: string, typed: string, at: string | Date): Promise<void> {
+async function declareNominee(client: pg.PoolClient, pariwarId: string, deceased: string, typed: string, at: string | Date): Promise<string> {
   const ct = encryption.serializeEnvelope(
     await encryption.encryptTier1(Buffer.from(typed, 'utf-8'), { pariwarId, fieldClass: encryption.MEMBER_NOMINEE_FIELD_CLASS }, enc.kms, enc.kekRef),
   );
-  await client.query(
+  const r = await client.query<{ version_id: string }>(
     `INSERT INTO member_nominee_versions (member_id, pariwar_id, rank, version_no, declaration_id, kind, source, name_ciphertext,
                                           relationship, mobile_ciphertext, split_pct, recorded_at, effective_at)
-     VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, $4, $4)`,
+     VALUES ($1, $2, 1, 1, gen_random_uuid(), 'declared', 'member', 'enc:v1:n', 'spouse', $3, 100, $4, $4)
+     RETURNING version_id`,
     [deceased, pariwarId, ct, at],
+  );
+  return r.rows[0]!.version_id;
+}
+
+/**
+ * Story 6.36e — the deceased MARKED `nomineeMemberId` as that nominee's member account (a live link on `versionId`), with an
+ * optional answer. The declared NUMBER is one nobody signs in with — the account is the only match (NE7).
+ */
+async function markNominee(
+  client: pg.PoolClient,
+  pariwarId: string,
+  deceased: string,
+  versionId: string,
+  nomineeMemberId: string,
+  answer: 'confirmed' | 'not_me' | null = null,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO member_nominee_links (pariwar_id, declarer_member_id, version_id, rank, nominee_member_id, found_by, answer, asked_at, responded_at)
+     VALUES ($1, $2, $3, 1, $4, 'contacts', $5::text, $6, CASE WHEN $5::text IS NULL THEN NULL ELSE $6::timestamptz + interval '1 day' END)`,
+    [pariwarId, deceased, versionId, nomineeMemberId, answer, LONG_AGO],
   );
 }
 
@@ -242,6 +263,9 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
       deceasedPostedAt?: string | Date;
       /** Story 6.36d — this colleague signs up with `NOMINEE_SIGNUP` (a REAL login index), and the deceased declares it (raw). */
       nomineeIndex?: number;
+      /** Story 6.36e — the deceased declares an UNUSED number and MARKS this colleague's account (answered `linkAnswer`). */
+      linkedIndex?: number;
+      linkAnswer?: 'confirmed' | 'not_me' | null;
     } = {},
   ): Promise<Seed> {
     const pariwarId = randomUUID();
@@ -280,6 +304,10 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
           await encryption.mobileBlindIndex(NOMINEE_SIGNUP, enc),
         ]);
         await declareNominee(client, pariwarId, deceasedMemberId, NOMINEE_TYPED, LONG_AGO);
+      }
+      if (o.linkedIndex !== undefined) {
+        const versionId = await declareNominee(client, pariwarId, deceasedMemberId, NOMINEE_TYPED, LONG_AGO);
+        await markNominee(client, pariwarId, deceasedMemberId, versionId, colleagueIds[o.linkedIndex]!, o.linkAnswer ?? null);
       }
       for (const n of namedIds) {
         await insertMember(client, pariwarId, n);
@@ -886,6 +914,28 @@ describe.skipIf(!hasDatabase)('claim peer-mesh — live DB (:5433)', () => {
         expect(row.rows[0].j).not.toContain('98765');
       } finally {
         await cleanup(seed);
+      }
+    });
+
+    // ── Story 6.36e (`2026-10-24-397` NE7; AC6) — the MARKED account, whatever the number ──────────────────────────────────
+    it('⭐ 6.36e — a colleague the deceased MARKED as a nominee (login number ≠ the declared one) is ⛔ ranked; with ⛔ mark they are', async () => {
+      const marked = await seedClaim({ colleagues: 6, linkedIndex: 2 });
+      const notMe = await seedClaim({ colleagues: 6, linkedIndex: 2, linkAnswer: 'not_me' });
+      const control = await seedClaim({ colleagues: 6 });
+      const { boss } = fakeBoss();
+      try {
+        for (const seed of [marked, notMe]) {
+          await runClaimPeerMeshSelect(boss, deps(), selectEnvelope(seed));
+          const sel = (await selectionOf(seed))!;
+          expect(sel.rankedMemberIds).toHaveLength(5);
+          expect(sel.rankedMemberIds).not.toContain(nomineeOf(seed)); // PQ1 A — a `not_me` answer still counts
+          expect(JSON.stringify(sel.candidateSnapshot)).not.toContain(nomineeOf(seed));
+        }
+        // the positive control: the SAME world with ⛔ mark ranks all six, colleague 2 among them
+        await runClaimPeerMeshSelect(boss, deps(), selectEnvelope(control));
+        expect((await selectionOf(control))!.rankedMemberIds).toContain(nomineeOf(control));
+      } finally {
+        for (const seed of [marked, notMe, control]) await cleanup(seed);
       }
     });
 

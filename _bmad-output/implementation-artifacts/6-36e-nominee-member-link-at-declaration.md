@@ -56,7 +56,7 @@ validate findings (Change Log).
 
 # Story 6.36e: A Member May Mark a Nominee Who Is Also a Member — Found From Their Own Contacts, Told in the App — So That Nominee Is Never Among the Five, Even if They Sign In on a Different Number From the One Declared `[PRIMITIVE]` `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > ✅ **v1.4 (2026-10-24): Task 0.4 DONE — AC0 MET. ⭐ Next: Task 1 (the table).**
 >
@@ -686,7 +686,7 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
       parity.
 - [x] **Task 6 — erasure + export (AC8)** *(2026-10-24 — rtbf pin 22 / 22 (raised 26 → 27 statements, 23 → 24 tables); jobs export 4 / 4)* — `anonymizeMember` arm (live links); `ProfileSection` FIRST (`nomineeLinks: { marked, namedBy }`),
       then `assemble.ts`; the jobs export test.
-- [ ] **Task 7 — gates (AC10)** — and the records of the run (Debug Log), the ledger line, File List.
+- [x] **Task 7 — gates (AC10)** *(2026-10-24 — `ci:local` on `twt_6_36e` (:5434): 34 / 36 jobs first run; the two reds resolved — see Debug Log)* — and the records of the run (Debug Log), the ledger line, File List.
 
 ### Review Findings
 
@@ -844,6 +844,18 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   `getNomineeLinksForExport` fell back to the random link id — now `asked_at, rank, version_no, link_id`. Domain export / rtbf /
   nominee integration 78 / 78; contracts `nominee-member-link.test.ts` 10 / 10 (the export shape added); OpenAPI re-emitted —
   unchanged (`ProfileSection` is ⛔ in it).
+- **Task 7 — `ci:local`** (`DATABASE_URL` = `twt_6_36e` on `:5434` — ⛔ `:5432`, ⛔ the shared `:5433`; load ≈ 3): **34 / 36 jobs
+  green** (lint, typecheck, build, unit, i18n-parity, pii-scrape, schema-diff, contracts-determinism and every invariant gate). The
+  TWO reds, named ([[project_known_livedb_test_failures]] — ⛔ hidden):
+  1. `friction-budget` — the mobile files changed with ⛔ declaration in `friction-budget.md`: a REAL gap of this story. Fixed — ONE new
+     `optional` row (marking a nominee who is also a member) + the Story 6.36e disposition block (6.36b's shape), committed;
+     `pnpm friction:check` green after the commit (AC-4 reads committed history).
+  2. `integration-tests` — ONE file, `apps/jobs/tests/restoration-discipline-production-path-live.test.ts`, REFUSED to run: its gate
+     allows only a database named `twt_dev` (it writes to an append-only table). `twt_6_36e` is this story's own DISPOSABLE database, so
+     the gate's documented override (`TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS=1`) was set for that ONE file: 3 / 3. ⛔ A code fault. Turbo
+     stopped the run there, so the API package's live suite had ⛔ run — run on its own: **2,096 passed, 1 skipped**. The rest of
+     integration: domain **6,230 / 6,231** (1 skipped), jobs 1,438 (+ the 3 above), channels 446, validity-service 284,
+     niyamavali-engine 144, events 36, queue 4. Unit (the same run): contracts 1,455, mobile 1,407, admin 1,263, public 748, …
 - **Task 3 — a found ordering, kept as specified:** AC3's order puts the caller gate (step 1) BEFORE the claim lock (step 3), so a
   declarer a claim names who submits a NEW mark gets the ONE 422 `nominee.link_not_found`, ⛔ the 409 `nominee.locked_claim_filed` —
   a `keep` or a plain save still gets the 409 (the leg asserts both routes of it). Harmless: the status read already says
@@ -895,6 +907,12 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   names in `AuthAuditEventType`. The number fence: the 6.36e files listed, the mark's identifiers added, and a SECOND rule for those
   files (⛔ a name or the other member's id in a sink — `err.name` excepted). OpenAPI re-emitted (the declare entry's `memberLink`;
   the signup 400). `createMemberNomineeLinksClient` + `contactMatches(numbers, purpose?)`.
+- 2026-10-24 — **Task 7 / Step 9**: `ci:local` 34 / 36, the two reds resolved (the friction declaration added; the restoration gate's
+  disposable-database override for this story's own database, and the API live suite run on its own) — Debug Log. Status → `review`
+  (ledger `2026-10-24g` — `f` is 11b-4's). ⚠ **Open for review, ⛔ hidden:** (1) the Hindi `nominee_link` copy AWAITS BigDev's approval;
+  (2) go-live waits on roster Row 31 (j) (counsel in writing) — ⛔ a merge blocker; (3) ⛔ demonstrated on a device (jsdom render tests
+  only); (4) a declarer a claim names who submits a NEW mark gets the 422, ⛔ the 409 (Task 3's found ordering); (5) 11b.4 also raises the
+  rtbf pin and extends the audit union — whichever lands second re-bases.
 - 2026-10-24 — **Task 6**: `anonymizeMember` gains the `eraseNomineeLinks` arm (every LIVE mark where the member is the declarer
   OR the nominee ⇒ `erased`; an ended mark keeps its end, an answered one its answer). `ProfileSection.nomineeLinks: { marked,
   namedBy }` in the contract FIRST (G11), then `assemble.ts` (marked: rank, versionNo, state, answer, askedAt, the name only once
@@ -919,7 +937,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 
 ### File List
 
-*(Tasks 1–6 so far; completed at Step 9.)*
+*(Complete at Step 9, 2026-10-24. Every path is relative to the repo root.)*
 
 - `packages/domain/migrations/0181_member-nominee-links.sql` (new)
 - `packages/domain/migrations/meta/_journal.json`
@@ -999,6 +1017,18 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 - `packages/domain/tests/member/rtbf-anonymize.test.ts`
 - `packages/contracts/src/data-export/data-export.ts`
 - `apps/jobs/tests/data-export.test.ts`
+- `friction-budget.md` (Task 7 — the new row + the Story 6.36e disposition)
+
+*Task 0 (governance, before dev — ledgers `2026-10-23al` … `2026-10-24d`):*
+
+- `.decision-log.md` (`2026-10-24-396`, `2026-10-24-397`)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-23-6-36e-nominee-member-link.md` (new)
+- `_bmad-output/planning-artifacts/epics.md`
+- `_bmad-output/planning-artifacts/counsel-question-2026-10-18-nominee-contact-basis.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/6-36b-people-who-know-me.md`
+- `_bmad-output/implementation-artifacts/6-36d-exclude-nominees-from-the-five.md`
+- `docs/launch-gate-inventory/inventory-roster.md`
 - `_bmad-output/implementation-artifacts/6-36e-nominee-member-link-at-declaration.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
@@ -1006,6 +1036,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-24 | 1.5 | DEV COMPLETE (`bmad-dev-story 6.36e`): Tasks 1–7 — migration `0181_member-nominee-links`; the domain (NE2 plan / carry / end, the metered resolution, the answer, erase, export; 6.36d's fragment matches by number OR marked account); contracts + API (the declare's `allowLink` route flag and order, the `nominee-links` module, audit names, the fence, OpenAPI, the client); the jobs' live legs; mobile (the form's mark, the find and requests screens, the home / notice-strip entry, `nominee_link` en + hi — the Hindi AWAITS BigDev); erasure + export; the friction declaration. `ci:local` 34 / 36 then both reds resolved (Debug Log). Status → `review`. |
 | 2026-10-24 | 1.4 | Task 0.4 DONE (BigDev *"yes, do it"*): `epics.md` `### Story 6.36e`; roster Row 31 leg (j) (ALL TEN) + Row 26 note; counsel question 7; `deferred-work.md` dated lines + a new section (five items); 6.36d (G18, ND8) and 6.36b (AC3) dated annotations; the sprint row note; ledger `2026-10-24d`. AC0 MET; next Task 1. |
 | 2026-10-24 | 1.3 | Tasks 0.1–0.3 DONE: BigDev *"NE1-NE14 all recommended"*; the Panel ruled *"Q1 A, Q2 A"* (*"by DR and KB"*) ⇒ `2026-10-24-396` (Trustee-ratified, `44a65afa`) + `2026-10-24-397` (author-commit, `0f202476`), each committed alone; the note's RULED block filled; the PQ section dated; ledger `2026-10-24c` (`b` is 11b-4's, committed first). Status ready-for-dev; next Task 0.4. |
 | 2026-10-24 | 1.2 | VALIDATED (`bmad-create-story validate 6.36e`; BigDev *"all"*): **V1** NE1's state split into `answer` × `state` (an answered link could never end or erase), `asked_at` explicit / carried, ⛔ 0162's CHECKs; **V2** a metered caller-gated `nominee_link_resolve` counter (4/day) BEFORE the HMAC (the declare was a free membership oracle); **V3** pre-fill + `keep` + edit-confirm, the draft carries the link, TR9 inverted; **V4** NE2's end rules (`FOR UPDATE` every live link, `keep` across ranks, every un-carried link ends, a raced answer is ⛔ lost); **V5** the link gets its OWN read — `NomineeStatusResponse` is read by the claim flow and is NON-PII; **V6** the premise narrowed (family phone, AR-24 unbuilt), the title, the cheaper picker alternative put to BigDev; **V7** a rulings → build table for every PQ outcome (PQ1 B × PQ2 B ≡ C); **V8** SUPERSEDES IN PART `-386` ND2 and Not covered item 1, ND8 "to be narrowed once done"; **V9** NUMBERS (≥ `-396`; `al` is 11b-4's; ≥ `aq`; 11b.4's rtbf count + audit union); **V10** G3's audit order; **V11** caller gate on `kind:'new'` only; **V12** one match per session, own notice, states, `purpose`; **V13** request closes on the declarer's death; **V14** consequence copy both sides; **V15** NE7 by projected version, AC6 legs; **V16** G7's five inline types + fixtures, TR5, stale check; **V17** TR3's reason; **V18** audit locator / context; **V19** wiring (i18n catalog, server.ts, api-client, fence, idempotency, brand, TR13); **V20** route flag, signup end rules; **V21** BEFORE INSERT version check, erase live only; **V22** CF5 "as put" quote, `-356` (ii) unratified, §0 rows for `-234` X / the meter / NE8 B; **V23** AI-10-1 one sentence each predicate, Niyamavali §6.3; **V24** the note's "you recorded this gap" → "our note told you of it"; **V25** export `nomineeLinks: { marked, namedBy }`; **V26** stale / loose text. The Panel note revised (still ⛔ sent). |

@@ -34,6 +34,7 @@ import {
 import { clearAllMemberDrafts } from '../components/life-events/draft-store'
 import { clearPeerRequestsCache } from '../components/peer-request/peer-request-cache'
 import { clearKnownPeopleCache } from '../components/known-people/known-people-cache'
+import { clearNomineeLinksCache } from '../components/nominee-links/nominee-links-cache'
 import { clearAnswerKeys } from '../components/workplace/suggestion-answer-key-cache'
 import { clearSavedNames } from './known-people-saved-names'
 import { clearHomeCardDismissals, clearSessionSuggestionDismissals } from './home-card-dismissals'
@@ -108,6 +109,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       setSession(null)
       // Story 6.36b — the people-who-know-me lists (other members' names) and the names the member SAVED on this phone.
       clearKnownPeopleCache(queryClient)
+      // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
+      clearNomineeLinksCache(queryClient)
       clearSavedNames()
       // Story 6.36c (fix-review) — the home cards' dismissals are now namespaced per account (`lib/home-card-dismissals`),
       // so they no longer need clearing here: this handler (registered once, at mount) cannot reliably name the OLD
@@ -123,6 +126,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       clearPeerRequestsCache(queryClient)
       setSession(null)
       clearKnownPeopleCache(queryClient)
+      // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
+      clearNomineeLinksCache(queryClient)
       clearSavedNames()
       // Story 6.36c (fix-review) — see the comment above: the namespaced dismissal key makes this clear unnecessary.
     })
@@ -137,6 +142,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     memberIdRef.current = null
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
+    // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
+    clearNomineeLinksCache(queryClient)
     // Story 6.36c (fix-review) — the dismissal key is namespaced per account (`lib/home-card-dismissals`), so a
     // DIFFERENT account's dismissals are already isolated from this one; clearing here would ALSO lose a same-account
     // sign-out/sign-in's own dismissals, which is exactly the bug this fixed.
@@ -156,6 +163,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     memberIdRef.current = null
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
+    // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
+    clearNomineeLinksCache(queryClient)
     clearSavedNames()
     // Story 6.36c (fix-review) — sign-out IS a reliable point to name the account (`session` is still in scope, below),
     // so its dismissals are cleared here for privacy/cleanup on a shared device.

@@ -11,6 +11,7 @@ import { bannerDismissalKey } from '../banners/copy'
 import { useDismissBannerMutation, useMemberBannersQuery } from '../banners/useMemberBannersQuery'
 import { PeerRequestEntry } from '../peer-request/PeerRequestEntry'
 import { KnownPeopleRequestEntry } from '../known-people/KnownPeopleRequestEntry'
+import { NomineeLinkRequestEntry } from '../nominee-links/NomineeLinkRequestEntry'
 import { PollsEntry } from '../polls/PollsEntry'
 import { PinnedItem } from './PinnedItem'
 import { toNoticeboardBannerNotice } from './banner-notice'
@@ -217,6 +218,8 @@ function Section({
           <PeerRequestEntry />
           <PollsEntry />
           <KnownPeopleRequestEntry />
+          {/* Story 6.36e (AC5) — a mark naming the member, beside the people request (a delegated sibling, ⛔ a banner row). */}
+          <NomineeLinkRequestEntry />
         </>
       )
 

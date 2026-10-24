@@ -680,7 +680,7 @@ known reds named, ⛔ hidden ([[project_known_livedb_test_failures]]).
       reminder child) → the match object; the stale-cut check tests `nomineeMatch === null` (it compares the cut, ⛔ values); every G7
       fixture renamed; test fixtures that seed a REAL login blind index where a leg needs a number ≠ link case (6.36d G16); AC7's staff-line
       legs.
-- [ ] **Task 5 — mobile (AC5)** — `NomineeForm` link control + prop + pre-fill / `keep` / edit-confirm; the find screen (own notice, one
+- [x] **Task 5 — mobile (AC5)** *(2026-10-24 — mobile 1,407 / 1,407; i18n 122 / 122 + parity; ⚠ the Hindi AWAITS BigDev's approval — see Completion Notes)* — `NomineeForm` link control + prop + pre-fill / `keep` / edit-confirm; the find screen (own notice, one
       match per session, the states); the draft carries `memberLink`; the request entry (home placement per AC5); the answer screen;
       `lib/nominee-links-api.ts`; i18n `nominee_link` hi + en registered in `catalog.ts` + `classification.json`, with the real-`t()` test;
       parity.
@@ -827,6 +827,14 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   NOBODY signs in with, so the account is the only match. Mutant: `peerMeshNomineeMatch` returning ⛔ `memberIds` ⇒ all three RED
   (restored). The four peer-mesh jobs files in full: 195 / 195 (the two earlier load timeouts green under lower load). `tsc` +
   ESLint clean for `apps/jobs`. AC7's two staff-line legs are in `peer-mesh-workplace-snapshot.spec.ts` (Task 2).
+- **Task 5 runs:** `nominee-links-logic.test.ts` 11 / 11 (TR9's old draft ⇒ `keep`, the stale keep, the swap, the refusal keys,
+  the entry's denial, the session memory); `nominee-form-link-render.test.ts` 8 / 8 (jsdom; RTL `cleanup`; `lib/mmkv` mocked) — an
+  unedited re-save sends `keep`, *Remove mark* sends none, an edited slot ASKS first (the save refused until answered), the signup
+  form sends ⛔ mark. Mutant: the form's "answer first" guard off ⇒ the edit leg RED (restored). The whole mobile suite 1,407 /
+  1,407; `tsc` + ESLint clean. i18n: `nominee-link-copy.test.ts` (the real `t()`: registered, member-facing, every key en + hi,
+  the story's English verbatim, WCAG 2.5.3 on the pick button) — the package 122 / 122; `check-parity` green. `router.push`
+  targets grepped by hand (TR11): `/(life-events)/nominee-link-find` and `/(life-events)/nominee-link-requests` — both files exist
+  (typed routes are absent in a worktree, so `tsc` cannot check an `Href` — [[project_mobile_typed_routes_worktree]]).
 - **Task 3 — a found ordering, kept as specified:** AC3's order puts the caller gate (step 1) BEFORE the claim lock (step 3), so a
   declarer a claim names who submits a NEW mark gets the ONE 422 `nominee.link_not_found`, ⛔ the 409 `nominee.locked_claim_filed` —
   a `keep` or a plain save still gets the 409 (the leg asserts both routes of it). Harmless: the status read already says
@@ -878,10 +886,26 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
   names in `AuthAuditEventType`. The number fence: the 6.36e files listed, the mark's identifiers added, and a SECOND rule for those
   files (⛔ a name or the other member's id in a sink — `err.name` excepted). OpenAPI re-emitted (the declare entry's `memberLink`;
   the signup 400). `createMemberNomineeLinksClient` + `contactMatches(numbers, purpose?)`.
+- 2026-10-24 — **Task 4**: the jobs' three live legs (select, request child, reminder child) — a nominee marked by ACCOUNT with a
+  declared number nobody signs in with; RED under a `memberIds`-dropping mutant.
+- 2026-10-24 — **Task 5**: `NomineeForm` gains the `link` prop (Life Events ONLY): per slot the mark's label (asked / confirmed —
+  the registered name / said it is not them + *"The mark still counts…"*), *Remove mark*, *Find* (hidden unless the caller may —
+  `canNamePeople`, the SAME caller predicate as the match endpoint; V11), the G8 sentence, and *"Is this still …?"* on a marked
+  slot's name / mobile edit (the save waits for the answer). The Life Events screen waits for the marks read (⛔ a form that would
+  END every mark; a failed read shows Retry ⛔ the form), starts each slot with its rank's live mark as a `keep`, restores an OLD
+  draft the same way (TR9), applies the find screen's pick on focus (an in-memory handoff — the keyed form remounts), maps each
+  mark refusal to its own copy, and reloads the marks on a 409 stale. The NEW find screen `nominee-link-find` (its own notice; ONE
+  match per form session held in memory, `purpose: 'nominee_link'`; iOS picker / Android typed; every state outside any list; ⛔
+  invite list). The requests screen `nominee-link-requests` (the question, *"[Name] will see your answer."*, the consequence —
+  V14 — and the two answers; ONE answer, a per-call `mutateAsync`, outcomes SHOWN AND SPOKEN). `NomineeLinkRequestEntry` on home
+  (after the people card, before the prompt cards) and in the notice strip. `lib/nominee-links-api.ts`; the query keys under
+  `['nominee-links', …]` with `gcTime: 0`, cleared on every account change. The `nominee_link` namespace (en + hi) registered in
+  `catalog.ts` and classified member-facing. ⚠ **The Hindi is agent-drafted and AWAITS BigDev's approval** (NE6's rule, the 6.35
+  LS14 precedent) — ⛔ approved by this run.
 
 ### File List
 
-*(Tasks 1–4 so far; completed at Step 9.)*
+*(Tasks 1–5 so far; completed at Step 9.)*
 
 - `packages/domain/migrations/0181_member-nominee-links.sql` (new)
 - `packages/domain/migrations/meta/_journal.json`
@@ -936,6 +960,26 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36e`, 2026-10-24.
 - `apps/api/tests/integration/nominee/nominee-member-link.spec.ts` (new)
 - `packages/api-client/src/index.ts`
 - `packages/api-client/tests/nominee-links-client.test.ts` (new)
+- `packages/i18n/locales/en/nominee_link.json` (new)
+- `packages/i18n/locales/hi/nominee_link.json` (new)
+- `packages/i18n/src/catalog.ts`
+- `packages/i18n/locales/classification.json`
+- `packages/i18n/tests/nominee-link-copy.test.ts` (new)
+- `apps/mobile/lib/nominee-links.ts` (new)
+- `apps/mobile/lib/nominee-links-api.ts` (new)
+- `apps/mobile/lib/nominee-link-i18n.ts` (new)
+- `apps/mobile/lib/session-context.tsx`
+- `apps/mobile/components/nominee-links/nominee-links-cache.ts` (new)
+- `apps/mobile/components/nominee-links/useNomineeLinkQueries.ts` (new)
+- `apps/mobile/components/nominee-links/NomineeLinkRequestEntry.tsx` (new)
+- `apps/mobile/components/life-events/NomineeForm.tsx`
+- `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx`
+- `apps/mobile/app/(life-events)/nominees.tsx`
+- `apps/mobile/app/(life-events)/nominee-link-find.tsx` (new)
+- `apps/mobile/app/(life-events)/nominee-link-requests.tsx` (new)
+- `apps/mobile/app/(tabs)/index.tsx`
+- `apps/mobile/tests/unit/nominee-links-logic.test.ts` (new)
+- `apps/mobile/tests/unit/nominee-form-link-render.test.ts` (new)
 - `_bmad-output/implementation-artifacts/6-36e-nominee-member-link-at-declaration.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 

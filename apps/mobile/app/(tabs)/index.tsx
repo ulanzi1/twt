@@ -21,6 +21,7 @@ import { WithdrawalEntry } from 'components/withdrawal/WithdrawalEntry'
 import { YogdaanBahiEntry } from 'components/yogdaan-bahi/YogdaanBahiEntry'
 import { PeerRequestEntry } from 'components/peer-request/PeerRequestEntry'
 import { KnownPeopleRequestEntry } from 'components/known-people/KnownPeopleRequestEntry'
+import { NomineeLinkRequestEntry } from 'components/nominee-links/NomineeLinkRequestEntry'
 import { HomePromptCards } from 'components/home/HomePromptCards'
 
 // Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
@@ -72,6 +73,10 @@ export default function YogdaanTab() {
         {/* Story 6.36b (AC6) — "Someone has named you": renders NOTHING unless a request naming the member is open, and
             only for an `active` member (the server's ONE 403 leaves it empty). In the app only — ⛔ SMS, push, WhatsApp. */}
         <KnownPeopleRequestEntry />
+        {/* Story 6.36e (AC5, NE6) — "Someone has named you as their nominee": renders NOTHING unless a mark naming the member
+            is open, and only for a member who may answer. AFTER the people card, BEFORE the prompt cards (My Pool stays
+            topmost). In the app only — ⛔ SMS, push, WhatsApp. */}
+        <NomineeLinkRequestEntry />
         {/* Story 6.36c (AC6; RV7) — the reminder cards: ONE at a time (a suggested workplace, add your workplace, someone can
             no longer be asked, a new workplace, a campaign, invite your colleagues). Self-suppresses on load / error / no
             card; BELOW the My Pool card (Story 8.2 keeps it topmost). In the app only — ⛔ SMS, push, WhatsApp. */}

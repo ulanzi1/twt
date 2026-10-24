@@ -10,6 +10,13 @@
 // `initialForms` restores it. `footer` slots parent-owned content (e.g. the step-up OTP input or the
 // signup reassurance blocks) directly above the submit CTA. Bilingual + accessible (the (signup)
 // screen's a11y posture: labels + hints, announced split + validation).
+//
+// Story 6.36e (AC5; `2026-10-24-397` NE2–NE4) — `link` (Life Events ONLY — the signup screen passes ⛔ it, and the signup
+// route refuses a mark): each slot may carry a MARK — "this nominee is also a member". A kept mark shows its label (asked /
+// confirmed — the registered name / said it is not them) and is re-sent as a `keep`; *Remove mark* sends ⛔ mark (the live
+// one ENDS); the find screen sets a new one. Editing a marked slot's name or mobile asks *"Is this still …?"* BEFORE the
+// save — a swap of the two nominees must ⛔ silently carry a mark onto the wrong person (V3). The marks ride the slot state,
+// so the parent's draft keeps them.
 
 import { useState } from 'react'
 // Story 6.18 (AC12) — the SHARED English-script predicate from `@twt/contracts`.
@@ -24,8 +31,12 @@ import {
   isEnglishScriptName,
 } from '@twt/contracts'
 
+import type { NomineeMemberLink } from '@twt/contracts'
 import { useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
+
+import { useNomineeLinkT } from '../../lib/nominee-link-i18n'
+import { markName, markToSubmit, type FormMark, type NomineeRank } from '../../lib/nominee-links'
 
 /**
  * The nominee-relationship value set — the Trustee-ratified TWENTY (`2026-09-27-257`, Story 6.19a
@@ -48,6 +59,8 @@ export interface NomineeFormEntry {
   relationship: Relationship | ''
   mobile: string
   address: string
+  /** Story 6.36e — the slot's member mark (`null` — removed / none; ABSENT — a draft from before the mark existed). */
+  memberLink?: FormMark | null
 }
 
 /** The server-bound nominee shape the parent submits (optional address omitted when blank). */
@@ -56,6 +69,7 @@ export interface NomineeSubmitEntry {
   relationship: Relationship
   mobile: string
   address?: string
+  memberLink?: NomineeMemberLink
 }
 
 const EMPTY: NomineeFormEntry = { name: '', relationship: '', mobile: '', address: '' }
@@ -75,10 +89,16 @@ export interface NomineeFormProps {
   footer?: React.ReactNode
   /** Clears the parent-supplied error on any edit. */
   onEdit?: () => void
+  /**
+   * Story 6.36e — the member-mark control (Life Events ONLY). `canFind` — the caller may FIND a member (an `active` member,
+   * ⛔ named by a claim — V11); a kept mark shows and can be removed either way. `onFind` opens the find screen for a rank.
+   */
+  link?: { readonly canFind: boolean; readonly onFind: (rank: NomineeRank) => void }
 }
 
 export function NomineeForm(props: NomineeFormProps) {
   const t = useT()
+  const lt = useNomineeLinkT()
   const [inlineError, setInlineError] = useState<string | null>(null)
   // `initialForms` restores a persisted draft (Life Events save-and-resume). It is read ONCE here;
   // the parent forces a fresh read of a later-arriving draft by remounting via a changed `key` prop
@@ -88,6 +108,9 @@ export function NomineeForm(props: NomineeFormProps) {
   )
 
   const hasSecond = forms.length === 2
+  // Story 6.36e — per slot: an OPEN "Is this still …?" question (a marked slot's name or mobile was edited).
+  const [questions, setQuestions] = useState<readonly boolean[]>([false, false])
+  const ask = (index: number, open: boolean) => setQuestions((q) => q.map((v, i) => (i === index ? open : v)))
 
   function commit(next: NomineeFormEntry[]): void {
     setForms(next)
@@ -95,8 +118,15 @@ export function NomineeForm(props: NomineeFormProps) {
     props.onEdit?.()
   }
 
-  function patch(index: number, field: keyof NomineeFormEntry, value: string): void {
+  function patch(index: number, field: 'name' | 'relationship' | 'mobile' | 'address', value: string): void {
+    if (props.link && (field === 'name' || field === 'mobile') && forms[index]?.memberLink) ask(index, true)
     commit(forms.map((f, i) => (i === index ? { ...f, [field]: value } : f)))
+  }
+
+  /** Story 6.36e — *Remove mark* (or *Remove it* on the question): the slot carries ⛔ mark; a live one ENDS at save. */
+  function removeMark(index: number): void {
+    ask(index, false)
+    commit(forms.map((f, i) => (i === index ? { ...f, memberLink: null } : f)))
   }
 
   function addSecond(): void {
@@ -104,6 +134,7 @@ export function NomineeForm(props: NomineeFormProps) {
   }
 
   function removeSecond(): void {
+    ask(1, false)
     commit(forms.slice(0, 1))
   }
 
@@ -130,17 +161,91 @@ export function NomineeForm(props: NomineeFormProps) {
       setInlineError(validationError)
       return
     }
+    // Story 6.36e (V3) — ⛔ a save while a mark's "Is this still …?" is unanswered.
+    if (props.link && questions.some((open, i) => open && i < forms.length)) {
+      setInlineError(lt('edit.answer_first'))
+      return
+    }
     setInlineError(null)
-    const nominees: NomineeSubmitEntry[] = forms.map((f) => ({
-      name: f.name.trim(),
-      relationship: f.relationship as Relationship,
-      mobile: f.mobile.trim(),
-      ...(f.address.trim() ? { address: f.address.trim() } : {}),
-    }))
+    const nominees: NomineeSubmitEntry[] = forms.map((f) => {
+      const memberLink = props.link ? markToSubmit(f.memberLink) : undefined
+      return {
+        name: f.name.trim(),
+        relationship: f.relationship as Relationship,
+        mobile: f.mobile.trim(),
+        ...(f.address.trim() ? { address: f.address.trim() } : {}),
+        ...(memberLink ? { memberLink } : {}),
+      }
+    })
     props.onSubmit(nominees)
   }
 
   const shownError = inlineError ?? props.error
+
+  /**
+   * Story 6.36e — one slot's member mark: its label, *Remove mark*, the find entry, and the open edit question. A render
+   * FUNCTION, ⛔ a component declared in here (a new component type each render would remount its buttons — focus lost).
+   */
+  function markControl(index: number, mark: FormMark | null): React.ReactElement | null {
+    const link = props.link!
+    if (mark === null && !link.canFind) return null
+    const name = mark ? markName(mark) : null
+    const rank = (index + 1) as NomineeRank
+    return (
+      <YStack gap="$2" testID={`nominee-mark-${index}`}>
+        {mark === null ? null : (
+          <>
+            <Text accessibilityRole="text">
+              {mark.kind === 'new'
+                ? name
+                  ? lt('form.marked', { name })
+                  : lt('form.marked_no_name')
+                : mark.label === 'confirmed'
+                  ? name
+                    ? lt('label.confirmed', { name })
+                    : lt('label.confirmed_no_name')
+                  : lt(`label.${mark.label}`)}
+            </Text>
+            {mark.kind === 'keep' && mark.label === 'not_me' ? <Text accessibilityRole="text">{lt('label.not_me_note')}</Text> : null}
+          </>
+        )}
+        <Paragraph accessibilityRole="text">{lt('form.why')}</Paragraph>
+        {mark !== null && questions[index] ? (
+          <YStack gap="$2" testID={`nominee-mark-question-${index}`}>
+            <Text accessibilityRole="text" accessibilityLiveRegion="polite">
+              {name ? lt('edit.question', { name }) : lt('edit.question_no_name')}
+            </Text>
+            <XStack gap="$2">
+              <Button size="$3" accessibilityRole="button" accessibilityLabel={lt('edit.keep')} onPress={() => ask(index, false)}>
+                {lt('edit.keep')}
+              </Button>
+              <Button size="$3" accessibilityRole="button" accessibilityLabel={lt('edit.remove')} onPress={() => removeMark(index)}>
+                {lt('edit.remove')}
+              </Button>
+            </XStack>
+          </YStack>
+        ) : null}
+        <XStack gap="$2" flexWrap="wrap">
+          {link.canFind ? (
+            <Button
+              size="$3"
+              chromeless
+              accessibilityRole="button"
+              accessibilityLabel={mark === null ? lt('form.find') : lt('form.find_again')}
+              onPress={() => link.onFind(rank)}
+            >
+              {mark === null ? lt('form.find') : lt('form.find_again')}
+            </Button>
+          ) : null}
+          {mark !== null ? (
+            <Button size="$3" chromeless accessibilityRole="button" accessibilityLabel={lt('form.remove')} onPress={() => removeMark(index)}>
+              {lt('form.remove')}
+            </Button>
+          ) : null}
+        </XStack>
+      </YStack>
+    )
+  }
 
   return (
     <YStack gap="$4" px="$6" py="$6" bg="$background">
@@ -218,6 +323,8 @@ export function NomineeForm(props: NomineeFormProps) {
             accessibilityLabel={t('nominees.address')}
             accessibilityHint={t('nominees.address_help')}
           />
+
+          {props.link ? markControl(index, f.memberLink ?? null) : null}
         </YStack>
       ))}
 

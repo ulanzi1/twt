@@ -4,6 +4,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: `2026-10-24-401` — the disclosure removal (Story 6.36e, 2026-10-24)
+
+BigDev's principle: ⛔ no screen may tell members that the Trust asks members about a death (it would let a group steer who is asked). Removed from 6.36e's screens (`form.why`, `request.consequence*`). Open, ⛔ done here:
+- **Story 6.36b's shipped `known_people.intro`** — *"Name up to three members who know you well. If none of your colleagues can be asked, the Trust asks these people instead. Each person must agree first."* — tells every member that colleagues are asked, and the ORDER (colleagues, then named people). The same concern under an earlier ruling; BigDev's call whether to supersede it (the named person must still be told what they are agreeing to — the consent step is the reason the sentence exists). Hindi equivalent too.
+- **The public privacy-policy line owed by roster Row 31 (j)** must state the PURPOSE of recording the link; ⛔ describing the process. Input for counsel: state it generically (for example, so that a nominee is kept separate from the verification of the member's own claim).
+- **`label.not_me_note`** (*"The mark still counts until you remove it or pick again."*) says the mark counts, ⛔ for what — kept; BigDev's call.
+- ⚠ **Numbering:** `2026-10-24-401` was taken because the 11b-4 worktree holds `-398` and `-400`; the author-commit this file proposes for NE2's any-rank carry (`-400`-style, below) takes the next free number at its own commit.
+
+---
+
 ## Deferred from: the 6.36e device run (Android emulator, 2026-10-24)
 
 - **[PATCHED 2026-10-24 (BigDev: *"1 and 2"*) — the five controls are `height={48}`; a render test asserts it per control; two mutants RED. The text below is the finding.]** **The member-mark controls are 36 dp tall** [apps/mobile/components/life-events/NomineeForm.tsx `markControl` — *Find them in your contacts*, *Pick a different member*, *Remove mark*, *Keep the mark*, *Remove it*: `size="$3"`]. Seen in the accessibility tree: 347 × 36 dp, against 44–56 dp for the form's other buttons (the relationship chips are 36 dp too — 3.9's convention). *Keep the mark* / *Remove it* answer a question about WHO a mark is for; for older members a larger target is the safe default. **Recommendation: patch to `height={48}`** (the find screen's controls already are) — a small change with a render test on `data-height`; deferred only because the device run was a look, ⛔ a fix round. Trigger: BigDev's word, or the next accessibility pass.

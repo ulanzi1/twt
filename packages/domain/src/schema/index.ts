@@ -477,7 +477,7 @@ export * from './pariwar_custom_field_definitions.js';
 // byte-identical, by construction (ADR-0038 / Decision 2026-08-12-102). ⛔ An authorization INPUT,
 // not reference data: tenant RLS + the adversarial cross-Pariwar must-return-0 set.
 export * from './geo_tree_versions.js';
-// Story 11b.4 (0181) — the family memorial: every version as sent (+ the permission given at Send — MA5), the Trust's ONE
+// Story 11b.4 (0182) — the family memorial: every version as sent (+ the permission given at Send — MA5), the Trust's ONE
 // decision per version (MA6), and withdrawals (family before review; the Trust's own approval — MA16). Append-only save the
 // column-level erasure grants on the four Tier-1 ciphertext columns (MA15). Tenant-isolated (RLS on `pariwar_id`).
 export * from './memorial_submissions.js';

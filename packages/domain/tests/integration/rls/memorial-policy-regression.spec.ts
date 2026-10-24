@@ -1,4 +1,4 @@
-// Migration 0181 — the family memorial's three tables: `memorial_submissions`, `memorial_review_decisions`,
+// Migration 0182 — the family memorial's three tables: `memorial_submissions`, `memorial_review_decisions`,
 // `memorial_withdrawals` (Story 11b.4, review R4 / R18; AI-6-5 family 5 — AC5, MA9, MA15).
 //
 // Until this spec the tables were exercised only THROUGH the API (three integration specs) and a mocked RTBF test: a dropped
@@ -12,14 +12,14 @@
 //     scrub in scope and reaches no other tenant's row.
 //   · the foreign keys — the composite supersede FK (the chain stays inside ONE pool), `supersedes_uq` (linear), the pool's
 //     single root, the pool / claim / deceased-member FKs, and the decisions' / withdrawals' composite FK to the submission.
-//   · every CHECK (eleven: five on the submissions — 0182 adds the Send key's shape — four on the decisions, two on the
+//   · every CHECK (eleven: five on the submissions — 0183 adds the Send key's shape — four on the decisions, two on the
 //     withdrawals), each with a violating row that names the ONE constraint it trips, and a legal row of the same shape
 //     that still inserts — plus the JSON-null spans `memorial_omissions_valid` once passed (R18).
 //   · the column grants — a sweep of EVERY column: UPDATE is admitted on the four ciphertext columns and refused (42501) on
 //     all the others; ⛔ no DELETE.
 //   · a LIVE scrub as `twt_app` under FORCE RLS — rows updated > 0 and the ciphertext really changed, for all four columns,
 //     directly AND through the real `anonymizeMember`.
-//   · migration 0182 — the Send's `idempotency_key` ON the row: the partial UNIQUE index per pool (the replay's lookup and the
+//   · migration 0183 — the Send's `idempotency_key` ON the row: the partial UNIQUE index per pool (the replay's lookup and the
 //     backstop an unlocked writer reaches), its shape CHECK, and the column grant (INSERT via the table grant; ⛔ UPDATE).
 //
 // Live DB only — skips when DATABASE_URL is unset. Per-test BEGIN/ROLLBACK (setupLiveDb). Seeds run as the Docker superuser
@@ -209,7 +209,7 @@ function expectCheck(o: Outcome, constraint: string): void {
   expectConstraint(o, constraint);
 }
 
-describe.skipIf(!hasDatabase)('0181 — the family memorial tables: RLS, FKs, CHECKs, grants, the live scrub', { timeout: 30000 }, () => {
+describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CHECKs, grants, the live scrub', { timeout: 30000 }, () => {
   setupLiveDb();
 
   describe('structure', () => {
@@ -262,7 +262,7 @@ describe.skipIf(!hasDatabase)('0181 — the family memorial tables: RLS, FKs, CH
       expect(rows.map((r) => r.attname)).toEqual(SCRUBBABLE[table]);
     });
 
-    it('(c2) 0182 — the app role may INSERT and SELECT `idempotency_key` (the table grant covers the new column) but ⛔ UPDATE it: the key is immutable once written', async () => {
+    it('(c2) 0183 — the app role may INSERT and SELECT `idempotency_key` (the table grant covers the new column) but ⛔ UPDATE it: the key is immutable once written', async () => {
       const { client } = getTx();
       const col = async (p: string) =>
         (await client.query<{ ok: boolean }>(`SELECT has_column_privilege('twt_app', 'memorial_submissions', 'idempotency_key', $1) AS ok`, [p])).rows[0]!.ok;
@@ -296,7 +296,7 @@ describe.skipIf(!hasDatabase)('0181 — the family memorial tables: RLS, FKs, CH
       expect(def('memorial_submissions_pool_root_uq')).toMatch(/UNIQUE INDEX .*\(pool_id\) WHERE \(supersedes_submission_id IS NULL\)/);
       expect(def('memorial_submissions_pariwar_created_idx')).toContain('(pariwar_id, created_at)');
       expect(def('memorial_submissions_deceased_idx')).toContain('(deceased_member_id)');
-      // 0182 — one version per (pool, Send key); partial, so the pre-0182 rows (NULL) never collide.
+      // 0183 — one version per (pool, Send key); partial, so the pre-0183 rows (NULL) never collide.
       expect(def('memorial_submissions_pool_idempotency_key_uq')).toMatch(
         /UNIQUE INDEX .*\(pool_id, idempotency_key\) WHERE \(idempotency_key IS NOT NULL\)/,
       );
@@ -463,7 +463,7 @@ describe.skipIf(!hasDatabase)('0181 — the family memorial tables: RLS, FKs, CH
       expect((await ins(client, SUBMISSIONS, submissionRow(w, { supersedes_submission_id: w.versions[1] }))).code).toBeNull();
     });
 
-    it('(l2) 0182 pool_idempotency_key_uq: a Send key writes ONE version per pool — a second row with the same key is 23505 on the index; the same key in ANOTHER pool, and any number of NULL keys (the pre-0182 rows), still insert', async () => {
+    it('(l2) 0183 pool_idempotency_key_uq: a Send key writes ONE version per pool — a second row with the same key is 23505 on the index; the same key in ANOTHER pool, and any number of NULL keys (the pre-0183 rows), still insert', async () => {
       const { client } = getTx();
       const w = await seedWorld(PARIWAR_A, 1);
       const other = await seedWorld(PARIWAR_A);
@@ -544,7 +544,7 @@ describe.skipIf(!hasDatabase)('0181 — the family memorial tables: RLS, FKs, CH
   });
 
   describe('the CHECK constraints (each violating row names the ONE constraint it trips)', () => {
-    it('(p) memorial_submissions: photo mime, photo pair, handover recipient, copy version, the Send key\'s shape (0182)', async () => {
+    it('(p) memorial_submissions: photo mime, photo pair, handover recipient, copy version, the Send key\'s shape (0183)', async () => {
       const { client } = getTx();
       const w = await seedWorld(PARIWAR_A);
       await enterAppScope(client, PARIWAR_A);
@@ -561,7 +561,7 @@ describe.skipIf(!hasDatabase)('0181 — the family memorial tables: RLS, FKs, CH
       expectCheck(await put({ handover_recipient: 'someone' }), 'memorial_submissions_handover_recipient_check');
       expectCheck(await put({ authorisation_copy_version: '   ' }), 'memorial_submissions_copy_version_check');
       expectCheck(await put({ authorisation_copy_version: '' }), 'memorial_submissions_copy_version_check');
-      // 0182 — the Send key's shape (LOCKSTEP with `MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN`): non-empty, ≤ 128, [A-Za-z0-9_-].
+      // 0183 — the Send key's shape (LOCKSTEP with `MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN`): non-empty, ≤ 128, [A-Za-z0-9_-].
       for (const bad of ['', ' ', 'x'.repeat(129), 'has space', 'with.dot', 'semi;colon', 'ü']) {
         expectCheck(await put({ idempotency_key: bad }), 'memorial_submissions_idempotency_key_check');
       }

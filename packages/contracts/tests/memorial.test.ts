@@ -309,11 +309,11 @@ describe('the no-edit invariant is ABSENCE (AC6)', () => {
   });
 });
 
-describe('the latest Send key — on the MEMBER view only (review Z2, 0182)', () => {
+describe('the latest Send key — on the MEMBER view only (review Z2, 0183)', () => {
   it('the member view carries `idempotencyKey`: a string or null, ⛔ omitted', () => {
     const shape = MemorialMemberView.shape.idempotencyKey;
     expect(shape.safeParse('k_0123-abc').success).toBe(true);
-    expect(shape.safeParse(null).success).toBe(true); // nothing sent, or a pre-0182 row
+    expect(shape.safeParse(null).success).toBe(true); // nothing sent, or a pre-0183 row
     expect(shape.safeParse(undefined).success).toBe(false);
   });
 

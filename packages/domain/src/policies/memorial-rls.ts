@@ -1,6 +1,6 @@
-// RLS policy declarations for the family memorial's three tables — Story 11b.4, migration 0181 (MA9 / MA15).
+// RLS policy declarations for the family memorial's three tables — Story 11b.4, migration 0182 (MA9 / MA15).
 // SELECT + INSERT + UPDATE on each, PER-COMMAND (⛔ never `FOR ALL`; ⛔ no DELETE leg — a version, a decision and a
-// withdrawal are ⛔ never deleted). Each UPDATE leg is narrowed by 0181's column-level grant to the Tier-1 ciphertext
+// withdrawal are ⛔ never deleted). Each UPDATE leg is narrowed by 0182's column-level grant to the Tier-1 ciphertext
 // columns ONLY and is load-bearing: without it `anonymizeMember`'s scrub silently updates 0 rows under FORCE
 // (`2026-10-04-279` A12).
 

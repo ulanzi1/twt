@@ -8,7 +8,7 @@
 // chain-head row to lock, and the invariant spans three tables — only the pool-keyed advisory lock covers both.
 // ⚠ ⛔ No KMS call while holding the lock (footguns #56(b)): encrypt BEFORE the transaction, decrypt AFTER it.
 //
-// ⭐ The Send's idempotency lives ON the row (migration 0182, BigDev 2026-10-24 "Key on the row"): the phone's
+// ⭐ The Send's idempotency lives ON the row (migration 0183, BigDev 2026-10-24 "Key on the row"): the phone's
 // `Idempotency-Key` is a column of the version, `UNIQUE (pool_id, idempotency_key)`, written by the insert itself. Under the
 // lock the writer looks the key up FIRST (`readMemorialSubmissionByIdempotencyKey`) — found ⇒ a replay of that row, at any
 // age; a concurrent same-key Send waits on the lock and then finds it. `insertMemorialSubmission` turns a 23505 (an
@@ -152,7 +152,7 @@ export function decideMemorialSend(
   return { ok: true, supersedesSubmissionId: head?.submissionId ?? null, keptPhoto };
 }
 
-/** The version a Send with this `Idempotency-Key` wrote in this pool, or `null` (0182 — the replay lookup). Tenant-scoped. */
+/** The version a Send with this `Idempotency-Key` wrote in this pool, or `null` (0183 — the replay lookup). Tenant-scoped. */
 export async function readMemorialSubmissionByIdempotencyKey(
   db: Db,
   {
@@ -189,7 +189,7 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 /**
- * Insert ONE version (the authorisation columns AND the Send's Idempotency-Key in the SAME row — indivisible, AC4 / 0182).
+ * Insert ONE version (the authorisation columns AND the Send's Idempotency-Key in the SAME row — indivisible, AC4 / 0183).
  * Runs inside the caller's locked scope tx, under a SAVEPOINT: a 23505 rolls back to it (the caller's tx stays usable — ⛔
  * `db.transaction()`, which would COMMIT the caller's tx early) and the key is re-read — a row with this key is now there
  * (an UNLOCKED writer with the same key won the index) ⇒ `{ kind: 'replay' }`; none (another index fired — the chain's

@@ -1,4 +1,4 @@
-// Story 11b.4 — the Send's commit safety and its idempotency, which lives ON the submission row (migration 0182; the Y-server
+// Story 11b.4 — the Send's commit safety and its idempotency, which lives ON the submission row (migration 0183; the Y-server
 // round, BigDev 2026-10-24 "Key on the row").
 //
 // Review R3: the Send's catch must not undo a version that has ALREADY committed, and a `put` that stored the object and then
@@ -33,7 +33,7 @@ import {
   type Part,
 } from './_fixture.js';
 
-describe.skipIf(!hasDatabase)('memorial — Send commit safety and the row-keyed replay (R3, 0182, live DB)', () => {
+describe.skipIf(!hasDatabase)('memorial — Send commit safety and the row-keyed replay (R3, 0183, live DB)', () => {
   let t: TestApp;
 
   beforeAll(async () => {

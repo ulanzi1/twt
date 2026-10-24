@@ -174,7 +174,7 @@ export function memorialSendKey(memberId: string, driveId: string, unsavedKey: s
  * The intro, on resume with a kept key (AC3, Z2): the latest version's OWN key (`view.idempotencyKey`) equals the kept key ⇒
  * THIS Send landed (an app kill, or a lost answer, after the commit) — the outcome is shown WITHOUT sending again (a resend
  * would replay, but only after the step-up: a 403 would text the nominee just to learn what the view already says). Any other
- * latest version — older, from another phone, from before 0182 (`null`) — is ⛔ this Send: the kept draft stays.
+ * latest version — older, from another phone, from before 0183 (`null`) — is ⛔ this Send: the kept draft stays.
  */
 export function memorialSendLanded(pending: MemorialPendingSend, latestIdempotencyKeyNow: string | null): boolean {
   return typeof pending.idempotencyKey === 'string' && pending.idempotencyKey !== '' && latestIdempotencyKeyNow === pending.idempotencyKey

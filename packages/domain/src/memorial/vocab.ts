@@ -49,7 +49,7 @@ export interface MemorialOmission {
 }
 
 /**
- * The shape of a Send's `Idempotency-Key` (migration 0182 — the key is stored ON the submission row, so it is bounded and
+ * The shape of a Send's `Idempotency-Key` (migration 0183 — the key is stored ON the submission row, so it is bounded and
  * plain): 1–128 characters of `[A-Za-z0-9_-]` — a UUID (the phone's `newIdempotencyKey()`), a ULID or a nanoid. ⚠ LOCKSTEP
  * with the `memorial_submissions_idempotency_key_check` CHECK. ⛔ No `g` flag (a global regex is stateful under `.test()`).
  */

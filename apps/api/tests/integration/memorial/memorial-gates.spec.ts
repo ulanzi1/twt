@@ -104,7 +104,7 @@ describe.skipIf(!hasDatabase)('memorial — the edges (switch ON)', () => {
     expect(t.memorialPhotoStorage.store.has(sub!.photo_object_key)).toBe(true);
 
     // The Trust's two Tier-1 notes about that version, through the REAL handlers: a decision with an internal note, then the
-    // Trust's withdrawal of its own approval (MA16) with another. Without them the scrub of 0181's other two columns was never run.
+    // Trust's withdrawal of its own approval (MA16) with another. Without them the scrub of 0182's other two columns was never run.
     const panel = await h.staff(w.pariwarId, 'trustee_panel');
     const decisionNote = 'reviewer\'s note on the decision — पहला';
     const withdrawalNote = 'reviewer\'s note on the withdrawal — दूसरा';
@@ -217,7 +217,7 @@ describe.skipIf(!hasDatabase)('memorial — the edges (switch ON)', () => {
 
     // (0) T10 (c) — the leg with teeth: the row AND its four permission columns ARE written inside the Send's transaction
     // (the real insert runs and returns them), then the transaction fails before COMMIT. Nothing may be left: no row, no
-    // permission, the photo this request put removed, and — since 0182 the key rides the row — the key rolled back with it
+    // permission, the photo this request put removed, and — since 0183 the key rides the row — the key rolled back with it
     // (the same key then sends a NEW version, 201, ⛔ a replay of a row that never committed).
     const realInsert = memorial.insertMemorialSubmission;
     let writtenInTx: Awaited<ReturnType<typeof realInsert>>['row'] | null = null;

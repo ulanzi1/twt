@@ -52,7 +52,7 @@ const ROOTS: readonly Root[] = [
   { label: 'packages/domain/src/memorial', paths: () => [abs('packages', 'domain', 'src', 'memorial')] },
   { label: 'packages/domain/src/schema/memorial_*', paths: () => childrenStartingWith(abs('packages', 'domain', 'src', 'schema'), 'memorial_') },
   { label: 'packages/domain/src/policies/memorial-*', paths: () => childrenStartingWith(abs('packages', 'domain', 'src', 'policies'), 'memorial-') },
-  { label: 'packages/domain/migrations/0181_memorial-authorship.sql', paths: () => [abs('packages', 'domain', 'migrations', '0181_memorial-authorship.sql')] },
+  { label: 'packages/domain/migrations/0182_memorial-authorship.sql', paths: () => [abs('packages', 'domain', 'migrations', '0182_memorial-authorship.sql')] },
   { label: 'packages/contracts/src/memorial', paths: () => [abs('packages', 'contracts', 'src', 'memorial')] },
   { label: 'apps/api/src/modules/memorial*', paths: () => childrenStartingWith(abs('apps', 'api', 'src', 'modules'), 'memorial') },
   { label: 'packages/i18n/locales/*/memorial.json', paths: memorialCatalogues },
@@ -118,7 +118,7 @@ describe('Story 11b.4 Task 4.3 — the retired consent values appear in no memor
   it('the scan covers a real surface — the memorial module sources, the catalogues and the migration', () => {
     const names = real.map((f) => f.path);
     expect(real.length).toBeGreaterThan(40);
-    expect(names).toContain('packages/domain/migrations/0181_memorial-authorship.sql');
+    expect(names).toContain('packages/domain/migrations/0182_memorial-authorship.sql');
     expect(names).toContain('packages/i18n/locales/en/memorial.json');
     expect(names).toContain('packages/i18n/locales/hi/memorial.json');
     expect(names.some((n) => n.startsWith('apps/api/src/modules/memorial/'))).toBe(true);

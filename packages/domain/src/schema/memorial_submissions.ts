@@ -1,4 +1,4 @@
-// `memorial_submissions` — every version of the family's memorial, as sent (Story 11b.4, migration 0181;
+// `memorial_submissions` — every version of the family's memorial, as sent (Story 11b.4, migration 0182;
 // `#decision-2026-10-24-398` MA5 / MA8 / MA9 / MA15).
 //
 // ── One row per Send ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -21,10 +21,10 @@
 //   · handover_nominee_ref → the `member_nominee_versions.version_id` the handover code was addressed to (an id, ⛔ PII).
 //   · idempotency_key → the phone's `Idempotency-Key` for the Send that wrote this row (a random client id, ⛔ PII).
 //
-// ── The Send's idempotency lives ON the row (migration 0182 — the Y-server round, BigDev 2026-10-24) ──────────────────
+// ── The Send's idempotency lives ON the row (migration 0183 — the Y-server round, BigDev 2026-10-24) ──────────────────
 // `UNIQUE (pool_id, idempotency_key) WHERE idempotency_key IS NOT NULL`, written in the insert's own transaction under
 // the pool lock: a same-key retry finds this row and replays it at ANY age, and a crash rolls the key back with the row
-// (⛔ a pending claim, ⛔ a TTL). NULL only for rows written before 0182. ⛔ No UPDATE grant — immutable once written.
+// (⛔ a pending claim, ⛔ a TTL). NULL only for rows written before 0183. ⛔ No UPDATE grant — immutable once written.
 
 import { sql } from 'drizzle-orm';
 import { check, foreignKey, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
@@ -61,8 +61,8 @@ export const memorialSubmissions = pgTable(
     authorisationLocale: localeEnum('authorisation_locale').notNull(),
     handoverRecipient: text('handover_recipient').$type<MemorialHandoverRecipient>().notNull(),
     handoverNomineeRef: uuid('handover_nominee_ref').notNull(),
-    // 0182 — the Send's Idempotency-Key (shape: `MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN`, `memorial/vocab.ts` — LOCKSTEP
-    // with the CHECK). Nullable for the pre-0182 rows only; `insertMemorialSubmission` always writes it.
+    // 0183 — the Send's Idempotency-Key (shape: `MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN`, `memorial/vocab.ts` — LOCKSTEP
+    // with the CHECK). Nullable for the pre-0183 rows only; `insertMemorialSubmission` always writes it.
     idempotencyKey: text('idempotency_key'),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
       .notNull()

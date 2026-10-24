@@ -1,4 +1,4 @@
-// `memorial_withdrawals` — a memorial version taken back (Story 11b.4, migration 0181; `#decision-2026-10-24-398` MA9 /
+// `memorial_withdrawals` — a memorial version taken back (Story 11b.4, migration 0182; `#decision-2026-10-24-398` MA9 /
 // MA15 / MA16).
 //
 // ONE row per submission (the PK), under the pool-keyed advisory lock (MA9):

@@ -56,8 +56,8 @@ export const MemorialMemberView = z
     /** The latest version's id (`null` when nothing was sent). */
     submissionId: z.string().nullable(),
     /**
-     * The `Idempotency-Key` of the Send that wrote the LATEST version (0182 — the key lives on the row); `null` when nothing
-     * was sent or the latest version predates 0182. The family's OWN random client id (⛔ PII): the phone's resume check
+     * The `Idempotency-Key` of the Send that wrote the LATEST version (0183 — the key lives on the row); `null` when nothing
+     * was sent or the latest version predates 0183. The family's OWN random client id (⛔ PII): the phone's resume check
      * reads "landed" as "this equals the key I kept" (review Z2). ⛔ Never on the review (admin) DTOs.
      */
     idempotencyKey: z.string().nullable(),

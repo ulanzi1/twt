@@ -1,4 +1,4 @@
-// `memorial_review_decisions` — the Trust's ONE decision on a memorial version (Story 11b.4, migration 0181;
+// `memorial_review_decisions` — the Trust's ONE decision on a memorial version (Story 11b.4, migration 0182;
 // `#decision-2026-10-24-398` MA6 / MA7 / MA15).
 //
 // ONE row per submission (the PK), written once under the pool-keyed advisory lock (MA9). A wrong decision is cured by

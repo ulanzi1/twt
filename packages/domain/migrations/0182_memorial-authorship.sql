@@ -1,4 +1,4 @@
--- Migration 0181 — THE FAMILY MEMORIAL: every version as sent, the Trust's one decision per version, and withdrawals
+-- Migration 0182 — THE FAMILY MEMORIAL: every version as sent, the Trust's one decision per version, and withdrawals
 -- (Story 11b.4; build decisions in Decision 2026-10-24-398, author-commit — MA5 / MA6 / MA9 / MA15 / MA16; the Panel's
 -- rulings `-391` / `-393` / `-395`). Hand-authored — ⛔ never regenerate (`db:generate` diffs against the 0020 snapshot;
 -- the migrator skips by the journal `when`). Idempotent: `psql -f` twice succeeds (each type in a `duplicate_object`

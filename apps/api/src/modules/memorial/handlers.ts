@@ -8,7 +8,7 @@
 // on a DERIVED view) and authorised AT SEND, in this surface (`-162` cl.3 — AC4): the permission columns ride the SAME row,
 // written in the SAME transaction.
 //
-// Send's order (AC7, as amended by the Y-server round — migration 0182, BigDev 2026-10-24 "Key on the row"): session →
+// Send's order (AC7, as amended by the Y-server round — migration 0183, BigDev 2026-10-24 "Key on the row"): session →
 // step-up → the `Idempotency-Key` header (required, and of the storable shape) → parse (Trap 11) → resolve the drive AND look
 // the key up in that pool (found ⇒ the REPLAY, 200, before anything is validated, uploaded or audited) → validate → resolve
 // the nominee the handover code was addressed to (MA5; ⛔ none ⇒ 409, before any `put`) → strip the photo's metadata and
@@ -81,7 +81,7 @@ export const MEMORIAL_SUBMISSION_CREATE_ACTION = 'memorial.submission.create';
 export const MEMORIAL_SUBMISSION_WITHDRAW_ACTION = 'memorial.submission.withdraw';
 
 /**
- * A Send whose `Idempotency-Key` already wrote a version in this pool (0182) — thrown out of the locked section so the
+ * A Send whose `Idempotency-Key` already wrote a version in this pool (0183) — thrown out of the locked section so the
  * one cleanup path deletes the photo THIS request `put` (the replayed row references its own), then answered as the 200
  * replay. ⛔ Never reaches the client as an error.
  */
@@ -481,7 +481,7 @@ export function createMemorialHandlers(deps: AppDeps) {
       const pariwarId = ids.pariwarId(ctx.pariwarIdStr);
       const memberId = ids.memberId(ctx.memberIdStr);
 
-      // (1) The Idempotency-Key — required, and of the shape the row stores (0182's CHECK; a longer or odd key could only be a
+      // (1) The Idempotency-Key — required, and of the shape the row stores (0183's CHECK; a longer or odd key could only be a
       //     client bug, so it is refused with the same code rather than a new one the app has no copy for).
       const rawKey = request.headers['idempotency-key'];
       const key = (Array.isArray(rawKey) ? rawKey[0] : rawKey)?.trim();

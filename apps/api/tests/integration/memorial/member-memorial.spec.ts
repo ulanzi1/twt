@@ -219,7 +219,7 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
     expect(await submissions(w)).toHaveLength(1);
   });
 
-  it('Z2: the member GET carries the LATEST version\'s Send key — the first key, then the superseding Send\'s; null for a pre-0182 latest row', async () => {
+  it('Z2: the member GET carries the LATEST version\'s Send key — the first key, then the superseding Send\'s; null for a pre-0183 latest row', async () => {
     const w = await seedMemorialWorld(t);
     await handover(t, w);
     const first = randomUUID();
@@ -233,13 +233,13 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
     const b = await send(t, w, sendFields({ body: 'दूसरा' }), { key: second });
     expect(b.status).toBe(201);
     expect(await view(w)).toMatchObject({ submissionId: b.body.submissionId, idempotencyKey: second });
-    // A latest row with ⛔ key (the pre-0182 shape) ⇒ null, ⛔ the earlier version's key.
+    // A latest row with ⛔ key (the pre-0183 shape) ⇒ null, ⛔ the earlier version's key.
     const legacy = await beginUnlockedSubmission(t, w, { supersedes: b.body.submissionId as string, idempotencyKey: null });
     await legacy.commit();
     expect(await view(w)).toMatchObject({ submissionId: legacy.submissionId, idempotencyKey: null });
   });
 
-  it('0182: the shared keyed store is no longer consulted — a key left CLAIMED there (the old in-flight shape) does not block the Send (201, ⛔ 409 idempotency_in_progress); the key rides the row instead', async () => {
+  it('0183: the shared keyed store is no longer consulted — a key left CLAIMED there (the old in-flight shape) does not block the Send (201, ⛔ 409 idempotency_in_progress); the key rides the row instead', async () => {
     const w = await seedMemorialWorld(t);
     await handover(t, w);
     const key = randomUUID();

@@ -1,4 +1,4 @@
--- Migration 0182 — THE MEMORIAL SEND'S IDEMPOTENCY KEY LIVES ON THE SUBMISSION ROW (Story 11b.4, the Y-server round —
+-- Migration 0183 — THE MEMORIAL SEND'S IDEMPOTENCY KEY LIVES ON THE SUBMISSION ROW (Story 11b.4, the Y-server round —
 -- BigDev 2026-10-24 "Key on the row"; review R31 (a) / W14). Hand-authored — ⛔ never regenerate (`db:generate` diffs
 -- against the 0020 snapshot; the migrator skips by the journal `when`). Idempotent: `psql -f` twice succeeds
 -- (`ADD COLUMN IF NOT EXISTS`, the CHECK in a `duplicate_object` guard, `CREATE UNIQUE INDEX IF NOT EXISTS`).
@@ -17,7 +17,7 @@
 -- the RTBF scrub leaves it alone; and it is not a ciphertext column, so the CHECK is safe on the scrub's UPDATE (the key
 -- never changes).
 --
--- Grants: the table-level `GRANT SELECT, INSERT ... TO twt_app` (0181) already covers a new column — a table privilege
+-- Grants: the table-level `GRANT SELECT, INSERT ... TO twt_app` (0182) already covers a new column — a table privilege
 -- applies to every column, present and future. ⛔ No UPDATE grant: the column-level `GRANT UPDATE (body_ciphertext,
 -- alt_text_ciphertext)` stays the ONLY update path (MA15), so the key is immutable once written. RLS is unchanged (the
 -- policies are row predicates on `pariwar_id`).
@@ -29,5 +29,5 @@ DO $$ BEGIN
   ALTER TABLE "memorial_submissions" ADD CONSTRAINT "memorial_submissions_idempotency_key_check"
     CHECK (idempotency_key IS NULL OR idempotency_key ~ '^[A-Za-z0-9_-]{1,128}$');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
--- ONE version per (pool, key): the replay's lookup and the backstop. Partial — the pre-0182 rows (NULL) never collide.
+-- ONE version per (pool, key): the replay's lookup and the backstop. Partial — the pre-0183 rows (NULL) never collide.
 CREATE UNIQUE INDEX IF NOT EXISTS "memorial_submissions_pool_idempotency_key_uq" ON "memorial_submissions" USING btree ("pool_id", "idempotency_key") WHERE idempotency_key IS NOT NULL;

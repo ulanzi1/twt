@@ -8,7 +8,7 @@
 export const MEMORIAL_MEMBER_ERROR_CODES = [
   'memorial.not_found',
   // Missing, or not of the storable shape (`MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN`). ⛔ `memorial.idempotency_in_progress`:
-  // retired by migration 0182 (the key lives on the submission row — a same-key Send in flight waits on the pool lock and
+  // retired by migration 0183 (the key lives on the submission row — a same-key Send in flight waits on the pool lock and
   // then replays, so there is no "in progress" answer).
   'memorial.idempotency_key_required',
   'memorial.field_not_allowed',

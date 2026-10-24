@@ -14,7 +14,7 @@
 // The last tests drive the `23505 → 409 memorial.try_again` mapping through the REAL handler: an UNLOCKED writer (a second
 // connection inserting without the advisory lock) holds an open transaction; the Send, which cannot see the uncommitted row,
 // parks on the unique index and loses with a 23505 when the writer commits (Trap 12: the unique indexes are the BACKSTOP an
-// unlocked insert can reach). Since 0182 the Send's Idempotency-Key rides the row: when the unlocked writer's row carries the
+// unlocked insert can reach). Since 0183 the Send's Idempotency-Key rides the row: when the unlocked writer's row carries the
 // SAME key, the 23505 is re-read under a SAVEPOINT and becomes the 200 replay of that row instead of the 409.
 
 import { randomUUID } from 'node:crypto';
@@ -236,7 +236,7 @@ describe.skipIf(!hasDatabase)('memorial — races, proven live (two connections,
     expect(links.map((l) => l.supersedes_submission_id)).toEqual([null, id, links[1]!.submission_id]);
   });
 
-  it('AC3 (0182): a REPLAY of a Send whose first attempt is still in flight (parked on the lock) WAITS behind it on the lock, then replays it — 201 then 200 with the FIRST result; ⛔ 409, ⛔ a second version', async () => {
+  it('AC3 (0183): a REPLAY of a Send whose first attempt is still in flight (parked on the lock) WAITS behind it on the lock, then replays it — 201 then 200 with the FIRST result; ⛔ 409, ⛔ a second version', async () => {
     const { w, id } = await sentMemorialWorld(t);
     const panel = await h.staff(w.pariwarId, 'trustee_panel');
     // A not-approved first version lets the family send again.
@@ -308,7 +308,7 @@ describe.skipIf(!hasDatabase)('memorial — races, proven live (two connections,
     expect(links[1]!.supersedes_submission_id).toBe(id);
   });
 
-  it('⭐ Trap 12 × 0182: an UNLOCKED writer\'s uncommitted version carrying the SAME Idempotency-Key → the parked Send\'s 23505 finds the key on the now-committed row and REPLAYS it (200, the writer\'s id); this request\'s photo is deleted; ⛔ a second version', async () => {
+  it('⭐ Trap 12 × 0183: an UNLOCKED writer\'s uncommitted version carrying the SAME Idempotency-Key → the parked Send\'s 23505 finds the key on the now-committed row and REPLAYS it (200, the writer\'s id); this request\'s photo is deleted; ⛔ a second version', async () => {
     const { w, id } = await sentMemorialWorld(t);
     expect((await familyWithdraw(w, id)()).status).toBe(200);
     const key = randomUUID();
@@ -335,7 +335,7 @@ describe.skipIf(!hasDatabase)('memorial — races, proven live (two connections,
     expect(t.memorialPhotoStorage.store.size).toBe(objectsBefore);
   });
 
-  it('Trap 12 × 0182 (control): when that same-key unlocked writer ROLLS BACK, the parked Send inserts its own version (201) — the key is its own again', async () => {
+  it('Trap 12 × 0183 (control): when that same-key unlocked writer ROLLS BACK, the parked Send inserts its own version (201) — the key is its own again', async () => {
     const { w, id } = await sentMemorialWorld(t);
     expect((await familyWithdraw(w, id)()).status).toBe(200);
     const key = randomUUID();

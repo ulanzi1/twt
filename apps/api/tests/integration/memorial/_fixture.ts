@@ -338,7 +338,7 @@ export async function holdPoolLock(t: TestApp, poolId: string): Promise<PoolLock
  * An UNLOCKED writer: a second connection that inserts a version WITHOUT taking the advisory lock and keeps its transaction
  * open. A Send that reads the chain (it cannot see the uncommitted row), then inserts, parks on the unique index until this
  * writer finishes — then loses with a `23505`: the backstop path (Trap 12) driven through the real handler. With
- * `idempotencyKey` the writer's row carries that Send key (0182) — the Send's 23505 then finds the key on a row and replays it.
+ * `idempotencyKey` the writer's row carries that Send key (0183) — the Send's 23505 then finds the key on a row and replays it.
  */
 export async function beginUnlockedSubmission(
   t: TestApp,

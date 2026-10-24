@@ -612,7 +612,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(await dec(sub.bodyCiphertext, pariwar, 'memorial')).toBe(ANONYMIZED_SENTINEL);
     // The alt text is optional ⇒ a CASE (replaced only where present).
     expect(typeof sub.altTextCiphertext).toBe('object');
-    // ⛔ Only the ciphertexts — the authorisation record, the photo key and the chain are kept (0181's column grant).
+    // ⛔ Only the ciphertexts — the authorisation record, the photo key and the chain are kept (0182's column grant).
     expect(Object.keys(sub).sort()).toEqual(['altTextCiphertext', 'bodyCiphertext']);
     expect(Object.keys(setFor(captured, memorialReviewDecisions))).toEqual(['internalNoteCiphertext']);
     expect(Object.keys(setFor(captured, memorialWithdrawals))).toEqual(['internalNoteCiphertext']);

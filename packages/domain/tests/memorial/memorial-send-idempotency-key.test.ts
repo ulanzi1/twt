@@ -1,4 +1,4 @@
-// Story 11b.4, migration 0182 — the Send's Idempotency-Key lives ON the submission row. Pure legs (no database):
+// Story 11b.4, migration 0183 — the Send's Idempotency-Key lives ON the submission row. Pure legs (no database):
 //   · the key's shape (`isMemorialSendIdempotencyKey`) and its LOCKSTEP with the migration's CHECK;
 //   · `insertMemorialSubmission`'s SAVEPOINT + 23505 handling, against a recording fake `Db`: a unique violation (direct or
 //     drizzle-wrapped `cause.code`) whose key is now on a row ⇒ the replay; one whose key is on no row (another index fired) ⇒
@@ -21,7 +21,7 @@ import {
   isMemorialSendIdempotencyKey,
 } from '../../src/memorial/index.js';
 
-describe('the Send key shape (0182)', () => {
+describe('the Send key shape (0183)', () => {
   it('admits a UUID, a ULID, a nanoid and exactly 128 characters; refuses blank, 129 characters, whitespace and other punctuation', () => {
     for (const ok of ['0f8c2b1e-6d3a-4c1b-9a7e-2d5f8b3c4a1e', '01HZX5V3K8Q9R7T6Y5W4E3D2C1', 'V1StGXR8_Z5jdHi6B-myT', 'a', `${'A'.repeat(64)}${'z9_-'.repeat(16)}`]) {
       expect(isMemorialSendIdempotencyKey(ok), ok).toBe(true);
@@ -39,7 +39,7 @@ describe('the Send key shape (0182)', () => {
 
   it('LOCKSTEP: the migration\'s CHECK carries exactly the handler\'s pattern', () => {
     const migration = readFileSync(
-      fileURLToPath(new URL('../../migrations/0182_memorial-send-idempotency-key.sql', import.meta.url)),
+      fileURLToPath(new URL('../../migrations/0183_memorial-send-idempotency-key.sql', import.meta.url)),
       'utf8',
     );
     expect(migration).toContain(`idempotency_key ~ '${MEMORIAL_SEND_IDEMPOTENCY_KEY_PATTERN.source}'`);
@@ -109,7 +109,7 @@ const SAVEPOINT = 'SAVEPOINT memorial_submission_insert';
 const RELEASE = 'RELEASE SAVEPOINT memorial_submission_insert';
 const ROLLBACK_TO = 'ROLLBACK TO SAVEPOINT memorial_submission_insert';
 
-describe('insertMemorialSubmission — the SAVEPOINT and the 23505 replay (0182)', () => {
+describe('insertMemorialSubmission — the SAVEPOINT and the 23505 replay (0183)', () => {
   it('a clean insert: SAVEPOINT → INSERT → RELEASE, { kind: inserted }, ⛔ a re-read', async () => {
     const f = fakeDb({ insert: { row: { submissionId: 'new' } }, reread: null });
     const out = await insertMemorialSubmission(f.db, values);

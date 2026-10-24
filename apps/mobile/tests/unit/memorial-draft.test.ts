@@ -205,7 +205,7 @@ describe('the memorial draft (MA3)', () => {
     const pending = { idempotencyKey: 'k-kept' }
     expect(memorialSendLanded(pending, 'k-kept')).toBe(true)
     expect(memorialSendLanded(pending, 'k-another-send')).toBe(false) // an earlier version (or another phone's)
-    expect(memorialSendLanded(pending, null)).toBe(false) // nothing sent, or a version from before 0182
+    expect(memorialSendLanded(pending, null)).toBe(false) // nothing sent, or a version from before 0183
     // An older build's record (the submission id beside the key) is read tolerantly: only the key counts.
     const old = { idempotencyKey: 'k-kept', latestSubmissionIdAtSend: 's-1' } as unknown as Parameters<typeof memorialSendLanded>[0]
     expect(memorialSendLanded(old, 'k-kept')).toBe(true)

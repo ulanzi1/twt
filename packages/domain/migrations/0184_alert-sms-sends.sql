@@ -1,9 +1,10 @@
 -- Migration 0184 — the ALERT SMS send record (Story 5.11b, Task 1; `2026-10-25-404` FS6 (a), FS8 (d), FS22; AC1). Hand-authored —
--- ⛔ never regenerate (`db:generate` diffs against the 0020 snapshot). NUMBER: 0182 / 0183 are held by the 11b-4 branch's
--- renumbering (`-366` decision 6); the `when` sits above every sibling journal entry (a later `when` applied first makes drizzle
--- skip the other — [[project_sibling_migration_when_order_shared_db]]).
--- ⚠ 2026-10-25 REVIEW NOTE: 0182 / 0183 have since LANDED on origin/main (11b.4, `when` 1795232400026 / 1795318800027 — both BELOW this file's
--- 1795405200028), so the ordering holds once this branch is rebased. A database that applied 0184 BEFORE 0182 / 0183 would skip them.
+-- ⛔ never regenerate (`db:generate` diffs against the 0020 snapshot). NUMBER: 0182 / 0183 belong to 11b.4 (`-366` decision 6); the
+-- `when` sits above every sibling journal entry (a later `when` applied first makes drizzle skip the other —
+-- [[project_sibling_migration_when_order_shared_db]]).
+-- ⚠ 2026-10-25 REVIEW NOTE: 0182 / 0183 LANDED on origin/main (11b.4, `when` 1795232400026 / 1795318800027 — both BELOW this file's
+-- 1795405200028); this branch was REBASED onto `69d7d27a` that day and the journal reads idx 182, 183, 184 with `when` strictly
+-- increasing. A database that applied 0184 BEFORE 0182 / 0183 would skip them — recreate any such database.
 --
 -- ⭐ WHAT IT IS. ONE row per (alert, member, OCCASION) — the three contribution texts `-390` Q1 B owes a member the app (and
 -- WhatsApp, where used) could not reach. The OCCASION is the keyed store's own scope (`day_10`, `pending_match_escalated`,

@@ -2357,6 +2357,16 @@ fallback SMS.
 > member's chosen language, else the Pariwar's; ⛔ the other one when a template is unusable. (3) **the guard** — at most one text per
 > (alert, member, occasion) by a durable send record (at-most-once; a gateway answer that may hide an accept is final, ⛔ re-sent), six
 > occasions per cycle. Every other `dispatch()` notification is unchanged.
+>
+> ⭐ **Dated note 2026-10-25 (code review of Story 5.11b — a correction by ANNOTATION, ⛔ a rewrite).** Four sentences above read more
+> narrowly than the code does: (a) *"the pool job's third attempt"* — the MISMATCH job is windowed the same way (both registered with
+> `includeMetadata`); (b) *"six occasions per cycle"* — SIX is the CHECK's cap, FIVE are emittable in v1 (`sender_vpa_mismatch` is
+> never produced); (c) *"Every other `dispatch()` notification is unchanged"* — in effect, yes (a message without an `sms` block never
+> reaches the seam), but the shared fan-out gains two things every category carries: the optional `suppression` pass-through to each
+> rung's dispatch (⛔ injected in production — see roster Row 40 (g)) and FS20's WhatsApp memo (an `off` answer is re-read after 60 s, so
+> a Pariwar switching WhatsApp on is seen within a minute — news, survey and moderation share it); (d) *"3 attempts"* — AR-19 (`epics.md`)
+> reads *"3 retries × exponential backoff"*, i.e. FOUR attempts; the story follows THIS section's count and states both (G2). The
+> difference is one retry minutes apart, the author's call, ⛔ the Panel's.
 
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 

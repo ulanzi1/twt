@@ -271,7 +271,7 @@ blank.
 confirms that template's approval (`-349` decision 1's shape, applied here by `2026-10-23-389`). Until row 5-11b sends, a set id does
 nothing: a lit, eligible member's SMS rung ends `sms_send_not_wired`. ⚠ *Annotated 2026-10-25 (Story 5.11b, [`2026-10-25-404`](../../.decision-log.md#decision-2026-10-25-404)):* row 5-11b's send is
 DECIDED — once it lands, a set id SENDS a real text, so this "does nothing" no longer holds; set an id only per Row 40 (a), and only after
-the deploy order Row 40 records (migration → api → jobs).
+the deploy order Row 40 records (migration → api → jobs). ⚠ *Annotated 2026-10-25 (code review of Story 5.11b):* the send is now BUILT — on branch `story/5-11b-alert-sms-real-send`, in review, ⛔ merged; the "DECIDED" above is the state at Task 0.4. Row 40 now has a leg (g) (the lifecycle-suppression hook) that also gates the first real send, an id is seen by the sender within 5 minutes of being set, and a template that is unset or malformed raises ONE recurring alarm per key per 5 minutes while an eligible member exists.
 
 Three notices about a member's OWN contribution, texted only when the app (and WhatsApp, where used) could not reach the member
 (`2026-10-23-390` Q1 B): **17–18** day 10, the contribution not recorded yet; **19–20** a payment not matched (ONE text for every mismatch

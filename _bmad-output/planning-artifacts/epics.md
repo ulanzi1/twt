@@ -2495,6 +2495,12 @@ as today; news, surveys, moderation and the six other contribution notices carry
 > recorded, ⛔ edited: the member's language is read set-based AT THE PRODUCER (`COALESCE(preferred_locale, locale_default)`), ⛔ by
 > `getMemberLanguage`; and there is ⛔ per-member budget — a STRUCTURAL flood guard instead (at most one text per (alert, member,
 > occasion), six occasions per cycle). The send record is AT-MOST-ONCE. Go-live: roster Row 40. ⛔ Never a merge fence.
+>
+> **⭐ Dated note 2026-10-25 (code review of Story 5.11b, by annotation — ⛔ the note above edited):** *"six occasions per cycle"* is the
+> CHECK's cap; FIVE are emittable in v1 (`sender_vpa_mismatch` is never produced). The story was BUILT and reviewed the same day (branch
+> `story/5-11b-alert-sms-real-send`, ⛔ merged); BigDev's four review decisions (a `deferred` row older than 30 min is given up, the
+> stale-`attempting` alarm has no age cap, a gateway-wide fault stays terminal, Row 40 gains a suppression-hook leg) are recorded in the
+> story's `### Review Findings`.
 
 ### Story 5.12: A Member's WhatsApp "Yes" Lasts Until the Member Takes It Back — the App Stops Saying "Expired", the Withdraw Control Always Shows, STOP Always Works, and a Withdrawal Ends Every Earlier Yes `[SURFACE]`
 

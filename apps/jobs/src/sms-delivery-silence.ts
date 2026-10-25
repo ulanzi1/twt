@@ -9,9 +9,10 @@
 // `sms_report.silence:<total>` with the per-kind counts: a PAUSED webhook (MSG91 auto-pauses one that fails — F6), an
 // account fault MSG91 never reports (F8), or a dropped CRQID (DR3). ⚠ A phone off for two days can still read as silence
 // — the alarm is a POINTER for a person, ⛔ a state, ⛔ an input to a send. The pull API fallback is OUT (DR12 (b)).
-// ⭐ Story 5.11b (FS22): + the STALE alert sends — `attempting` rows last touched 1 h – 7 days ago (a crash on the job's FINAL
-// attempt leaves a row ⛔ attempt finalises; the correlator gives up at 72 h and the silence count sees only `accepted`). Any ⇒
-// ONE alarm `sms_report.stale_attempting:<n>`.
+// ⭐ Story 5.11b (FS22): + the STALE alert sends — `attempting` rows last touched MORE than 1 h ago, at ANY age (a crash on the
+// job's FINAL attempt leaves a row ⛔ attempt finalises; the correlator gives up at 72 h and the silence count sees only
+// `accepted`). Any ⇒ ONE alarm `sms_report.stale_attempting:<n>`, repeated on every daily run until a person clears the rows
+// (code-review decision C1-D2 (a), 2026-10-25 — an upper bound would let a stuck row go silent; the runbook is roster Row 40's).
 //
 // ── The login-code line (DR11) ─────────────────────────────────────────────────────────────────────────────────
 // ONE information line counting the `otp:*` reports settled in the last 24 h by result — ⛔ an id, ⛔ a member. Until
@@ -40,7 +41,7 @@ export interface SmsDeliverySilenceDeps {
 export interface SmsDeliverySilenceSummary {
   readonly silent: Readonly<Record<smsDelivery.SmsSendRowKind, number>>;
   readonly silentTotal: number;
-  /** Story 5.11b — `as` rows left `attempting` 1 h – 7 days ago. */
+  /** Story 5.11b — `as` rows left `attempting` MORE than 1 h ago (any age — decision C1-D2 (a)). */
   readonly staleAlertSends: number;
   readonly otp: smsDelivery.OtpDeliveryCounts;
 }
@@ -69,8 +70,9 @@ export async function runSmsDeliverySilenceCheck(deps: SmsDeliverySilenceDeps): 
   }
   if (staleAlertSends > 0) {
     alarm(
-      `[jobs] sms-delivery-silence: sms_report.stale_attempting:${staleAlertSends} — alert texts begun 1 h–7 days ago and ⛔ ` +
-        `finalised (a crash on a job's final attempt: the gateway may or may not have taken them — ⛔ re-sent)`,
+      `[jobs] sms-delivery-silence: sms_report.stale_attempting:${staleAlertSends} — alert texts begun more than 1 h ago and ⛔ ` +
+        `finalised (a crash on a job's final attempt: the gateway may or may not have taken them — ⛔ re-sent; ` +
+        `clear each with an owner-role UPDATE to error / exhausted:outcome_unknown — roster Row 40)`,
     );
   }
   log(

@@ -104,7 +104,10 @@ export const DEFAULT_MEMBER_CHUNK_SIZE = 200;
  * Story 5.11b (F6) — the chunk for a LIT kind (day 10, the escalated pending match) once a REAL SMS send is wired. Members are
  * claimed per chunk BEFORE their sequential fan-out, under the 300 s claim TTL; a lit member's SMS can take ~10 s (the send
  * timeout) + begin + finalise on top of push and WhatsApp, so a 200-member chunk could outlive its claims (the send ROW still
- * stops a second TEXT, ⛔ a second push). 16 × ~15 s ≈ 240 s stays inside the TTL.
+ * stops a second TEXT, ⛔ a second push). 16 × ~15 s ≈ 240 s stays inside the TTL — ⚠ for TYPICAL latency only (code review 2026-10-25,
+ * C2-P12). The WORST case per member is ~40-50 s (the 10 s send + three finalise tries at up to 10 s each + push + WhatsApp), so 16
+ * members can outlive the 300 s claim TTL: a lapsed claim risks a duplicate PUSH, never a second text. F6 stays OPEN (deferred-work).
+ * Escalated tier: its keyed-store TTL is 30 days, so the chunk is moot there; MISMATCH is single-member.
  */
 export const LIT_KIND_MEMBER_CHUNK_SIZE = 16;
 

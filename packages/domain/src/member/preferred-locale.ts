@@ -4,8 +4,9 @@
 // `members.preferred_locale` / `preferred_locale_set_at`, and its ONLY caller is `PUT /api/v1/member/language`, which the app
 // calls ONLY after an explicit change. ⛔ first-launch write, ⛔ device inference, ⛔ "adopt the Pariwar default", ⛔ backfill.
 //
-// Both functions run on the CALLER's scoped `Db` (the API's `openScopeTx`, `twt_app` under RLS) and open ⛔ transaction. The
-// predicates name `pariwar_id` explicitly anyway (the `custom-fields/member-write.ts` precedent) — ⛔ reliance on RLS alone.
+// `getMemberLanguage` / `setMemberLanguage` run on the CALLER's scoped `Db` (the API's `openScopeTx`, `twt_app` under RLS) and open
+// ⛔ transaction. The predicates name `pariwar_id` explicitly anyway (the `custom-fields/member-write.ts` precedent) — ⛔ reliance on
+// RLS alone. `readMemberTextLanguages` (Story 5.11b) is the THIRD function: a set-based READ run in the jobs pool's pariwar scope.
 // The senders' read of the choice is `claim/peer-mesh-request.ts` `resolvePeerRequestLocale` (the jobs pool bypasses RLS).
 
 import { and, eq, sql } from 'drizzle-orm';

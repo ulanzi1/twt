@@ -171,7 +171,10 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // 2026-10-25 Story 5.11b (Decision 2026-10-25-404 FS9 (a), FS18 (a), FS19): the SMS rung calls the INJECTED real send (through
     // `dispatch`), `suppression` reaches every rung, the real send's retry classes and recorded details; the predicate and
     // `alertSmsBlock` are byte-unchanged (AST-pinned in `alert-sms-send.test.ts`). The claimant's WhatsApp ladder imports none of it.
-    ['apps/jobs/src/scheduler/contribution-notify.ts', 'f1f942c9ae62031084639dcafd73141b648dab709cd50ff6747d9a0ba0ab0c88'],
+    // 2026-10-25 Story 5.11b CODE REVIEW (patch-diff review, Auditor #1): COMMENT-ONLY edits to the file (the suppression hook is "WIRED, not
+    // yet enforced — boot injects NO hook"; the matched code is byte-identical) — only this pin re-taken, again. The claimant's WhatsApp
+    // ladder imports none of it.
+    ['apps/jobs/src/scheduler/contribution-notify.ts', '960a2cbc61a52de4410139b1a4c33205031c702b886037e3d14871fe7fe16346'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
     ['packages/channels/src/sms-dlt-registry.ts', '3bf86f9b9350602d9d7484b6976a748de42bcd4a9424f9bd3842f7cda66daee5'],
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per

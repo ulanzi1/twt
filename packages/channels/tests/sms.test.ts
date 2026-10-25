@@ -103,10 +103,13 @@ describe('createSmsDltProvider — send mapping (AC1; 6.37 MG3 / MG12)', () => {
   it('⭐ Story 5.11b (MG12 superseded in part, `-404`) — `values: []` is a template with NO slot (the "payment not matched" text): SENT', async () => {
     const { handle, sent } = fakeHandle();
     const provider = createSmsDltProvider({ messaging: handle, dltTemplateId: TEMPLATE_ID, values: [] });
-    const result = await provider.send(render(claimStatusChange(), 'sms'), TARGET);
+    // Review C3-P25: a genuinely SLOT-LESS message (the old leg rendered a slotted claim-status text). The provider never inspects the body
+    // — "does the body match the registered text" is the claim core's `checkedValues` (MG3), proved live; here only the `[]` ⇒ SENT contract.
+    const slotLess = { channel: 'sms' as const, title: null, body: 'A text with no variable — nothing to substitute.', deepLink: null };
+    const result = await provider.send(slotLess, TARGET);
     expect(result).toMatchObject({ channel: 'sms', provider: 'sms-dlt', status: 'accepted' });
     expect(sent).toHaveLength(1);
-    expect(sent[0]).toMatchObject({ templateId: TEMPLATE_ID, values: [] });
+    expect(sent[0]).toMatchObject({ templateId: TEMPLATE_ID, values: [], body: slotLess.body });
   });
 
   it('declares scope global (DLT is platform-level) + getStatus is an honest unknown (reports arrive by webhook — 6.37b, ⛔ a poll)', async () => {

@@ -222,7 +222,7 @@ const LOOKUP: Record<SmsSendRowKind, string> = {
  *
  * DELIBERATE (code review round 2): a CROSS-TENANT read with ⛔ Pariwar scope — the report names a send, and the send row is
  * where its Pariwar is learned. It needs a role that bypasses RLS (jobs' service pool today — F21). Under an RLS-bound role
- * (roster Row 26's leading option: `SET LOCAL ROLE twt_app`) the four send tables return ⛔ row and this returns null
+ * (roster Row 26's leading option: `SET LOCAL ROLE twt_app`) the five send tables return ⛔ row and this returns null
  * EXACTLY as for a missing send — every report would retry 72 h and settle `unmatched:no_row` with ⛔ error. The jobs
  * correlator therefore checks {@link canReadAcrossPariwars} first and refuses to run. Re-examine when Row 26 closes.
  */

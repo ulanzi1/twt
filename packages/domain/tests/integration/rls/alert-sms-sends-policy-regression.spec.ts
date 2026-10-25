@@ -185,7 +185,9 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
     await enterAppScope(client, PARIWAR_A);
     expect((await client.query(`UPDATE ${TABLE} SET updated_at = now() WHERE send_id = $1`, [b.sendId])).rowCount).toBe(0);
     expect((await client.query(`UPDATE ${TABLE} SET updated_at = now() WHERE send_id = $1`, [a.sendId])).rowCount).toBe(1);
-    for (const set of [`pariwar_id = '${PARIWAR_B}'`, 'alert_id = alert_id', 'member_id = member_id', `occasion = 'day_10'`, `message = message`, `locale = 'en'`, 'created_at = now()', 'send_id = send_id']) {
+    // The IDENTITY is (pariwar, alert, member, occasion) + send_id + created_at. `message` / `locale` are NOT identity: the re-claim
+    // re-sets them (review 2026-10-25, C1-P1) — see 'a re-claim records THIS attempt's language' below.
+    for (const set of [`pariwar_id = '${PARIWAR_B}'`, 'alert_id = alert_id', 'member_id = member_id', `occasion = 'day_10'`, 'created_at = now()', 'send_id = send_id']) {
       await expectPgError(client, () => client.query(`UPDATE ${TABLE} SET ${set} WHERE send_id = $1`, [a.sendId]), DENIED);
     }
     const { rows } = await client.query<{ qual: string | null; with_check: string | null }>(
@@ -202,7 +204,7 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
       ['alert_id', 'claim_token', 'locale', 'member_id', 'message', 'occasion', 'outcome', 'pariwar_id'].sort(),
     );
     expect(await grantedColumns(client, 'UPDATE')).toEqual(
-      ['attempt_count', 'claim_token', 'detail', 'outcome', 'provider_message_id', 'updated_at'].sort(),
+      ['attempt_count', 'claim_token', 'detail', 'locale', 'message', 'outcome', 'provider_message_id', 'updated_at'].sort(),
     );
     const { rows } = await client.query<{ privilege_type: string }>(
       `SELECT privilege_type FROM information_schema.table_privileges WHERE table_name = $1 AND grantee = 'twt_app' ORDER BY privilege_type`,
@@ -383,6 +385,25 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
       expect(await beginAlertSmsSend(client, { ...key, ...meta, claimToken: 'job:2' })).toEqual({ kind: 'taken' });
     });
 
+    it("⭐ a re-claim records THIS attempt's language and message (the member may have switched since the `rate_limited` attempt) — review C1-P1", async () => {
+      const { client } = getTx();
+      const key = await freshKey(client);
+      const begun = await beginAlertSmsSend(client, { ...key, ...meta, claimToken: 'job:0' });
+      if (begun.kind !== 'begun') throw new Error('unreachable');
+      expect(
+        await finaliseAlertSmsSend(client, { pariwarId: PARIWAR_A, sendId: begun.sendId, claimToken: 'job:0', outcome: 'deferred', detail: 'rate_limited:http_429' }),
+      ).toBe(true);
+      // attempt 2 sends ANOTHER message in ANOTHER language (hi → en): the row must say so.
+      const again = await beginAlertSmsSend(client, { ...key, message: 'payment_not_confirmed', locale: 'en', claimToken: 'job:1' });
+      expect(again).toEqual({ kind: 'begun', sendId: begun.sendId, attemptCount: 2 });
+      const { rows } = await client.query<{ message: string; locale: string }>(`SELECT message, locale FROM ${TABLE} WHERE send_id = $1`, [begun.sendId]);
+      expect(rows).toEqual([{ message: 'payment_not_confirmed', locale: 'en' }]);
+      // ⛔ a FINISHED row is never re-claimed, so it never changes language.
+      expect(await finaliseAlertSmsSend(client, { pariwarId: PARIWAR_A, sendId: begun.sendId, claimToken: 'job:1', outcome: 'accepted', detail: null, providerMessageId: 'abc123' })).toBe(true);
+      expect(await beginAlertSmsSend(client, { ...key, ...meta, claimToken: 'job:2' })).toEqual({ kind: 'taken' });
+      expect((await client.query<{ locale: string }>(`SELECT locale FROM ${TABLE} WHERE send_id = $1`, [begun.sendId])).rows).toEqual([{ locale: 'en' }]);
+    });
+
     it('attempting → final (rejected) ⇒ the lookup is `final`; a detail outside the grammar is refused BEFORE the statement', async () => {
       const { client } = getTx();
       const key = await freshKey(client);
@@ -432,17 +453,43 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
       expect(await lookupAlertSmsSend(client, key)).toEqual({ kind: 'final', sendId: begun.sendId, outcome: 'error', detail: 'exhausted:rate_limited:x' });
     });
 
-    it('FS22 — the stale count: `attempting` 1 h – 7 days before `now` (a year-2000 clock, so only this test\'s row counts)', async () => {
+    it('FS22 — the stale count: `attempting` MORE than 1 h before `now`, ⛔ an upper bound (decision C1-D2 (a): a year-2000 clock, so only this test\'s row counts)', async () => {
       const { client } = getTx();
       const s = await seedSend(client, PARIWAR_A);
       const now = new Date('2000-01-10T00:00:00.000Z');
-      expect(await countStaleAlertSmsSends(client, { now })).toBe(0);
+      // ⚠ With NO upper bound the count is GLOBAL over every old `attempting` row — including COMMITTED ones from the other live suites
+      // (the correlator suite seeds year-2000 rows). So: a BASELINE first, then deltas (an absolute `toBe(1)` would be flaky).
+      const base = await countStaleAlertSmsSends(client, { now }); // the seeded row is present-day: ⛔ counted
       await client.query(`UPDATE ${TABLE} SET updated_at = '2000-01-09T22:00:00Z' WHERE send_id = $1`, [s.sendId]);
-      expect(await countStaleAlertSmsSends(client, { now })).toBe(1);
+      expect(await countStaleAlertSmsSends(client, { now })).toBe(base + 1);
       await client.query(`UPDATE ${TABLE} SET updated_at = '2000-01-09T23:30:00Z' WHERE send_id = $1`, [s.sendId]);
-      expect(await countStaleAlertSmsSends(client, { now })).toBe(0); // inside the hour
+      expect(await countStaleAlertSmsSends(client, { now })).toBe(base); // inside the hour
       await client.query(`UPDATE ${TABLE} SET updated_at = '2000-01-01T00:00:00Z' WHERE send_id = $1`, [s.sendId]);
-      expect(await countStaleAlertSmsSends(client, { now })).toBe(0); // older than 7 days
+      expect(await countStaleAlertSmsSends(client, { now })).toBe(base + 1); // 9 days: STILL stuck, STILL counted — a cap would let it go silent
+      await client.query(`UPDATE ${TABLE} SET updated_at = '1999-06-01T00:00:00Z' WHERE send_id = $1`, [s.sendId]);
+      expect(await countStaleAlertSmsSends(client, { now })).toBe(base + 1); // months
+      // The RUNBOOK's step (roster Row 40, annotation): an owner-role UPDATE ends the stuck row, and the daily alarm stops counting it —
+      // with no upper bound this UPDATE is the ONLY way a stuck row stops alarming (patch-diff review #18).
+      await client.query(`UPDATE ${TABLE} SET outcome = 'error', detail = 'exhausted:outcome_unknown' WHERE send_id = $1`, [s.sendId]);
+      expect(await countStaleAlertSmsSends(client, { now })).toBe(base);
+    });
+
+    it('⭐ decision C1-D1 (b) — a `deferred` row is re-sendable only while YOUNG: 29 min ⇒ `deferred`, 31 min ⇒ `deferred_expired`; the give-up then freezes it `exhausted:rate_limited:expired`', async () => {
+      const { client } = getTx();
+      const key = await freshKey(client);
+      const begun = await beginAlertSmsSend(client, { ...key, ...meta, claimToken: 'job:0' });
+      if (begun.kind !== 'begun') throw new Error('unreachable');
+      await finaliseAlertSmsSend(client, { pariwarId: PARIWAR_A, sendId: begun.sendId, claimToken: 'job:0', outcome: 'deferred', detail: 'rate_limited:http_429' });
+      await client.query(`UPDATE ${TABLE} SET updated_at = clock_timestamp() - interval '29 minutes' WHERE send_id = $1`, [begun.sendId]);
+      expect(await lookupAlertSmsSend(client, key)).toEqual({ kind: 'deferred', sendId: begun.sendId, detail: 'rate_limited:http_429' });
+      await client.query(`UPDATE ${TABLE} SET updated_at = clock_timestamp() - interval '31 minutes' WHERE send_id = $1`, [begun.sendId]);
+      expect(await lookupAlertSmsSend(client, key)).toEqual({ kind: 'deferred_expired', sendId: begun.sendId, detail: 'rate_limited:http_429' });
+      // an EXPIRED row is given up — and a give-up by an attempt that lost the race (the row already moved) reports `false`
+      expect(await giveUpDeferredAlertSmsSend(client, { pariwarId: PARIWAR_A, sendId: begun.sendId, detail: 'exhausted:rate_limited:expired' })).toBe(true);
+      expect(await giveUpDeferredAlertSmsSend(client, { pariwarId: PARIWAR_A, sendId: begun.sendId, detail: 'exhausted:rate_limited:expired' })).toBe(false);
+      expect(await lookupAlertSmsSend(client, key)).toEqual({ kind: 'final', sendId: begun.sendId, outcome: 'error', detail: 'exhausted:rate_limited:expired' });
+      // ⛔ a begin on the frozen row
+      expect(await beginAlertSmsSend(client, { ...key, ...meta, claimToken: 'job:1' })).toEqual({ kind: 'taken' });
     });
   });
 });

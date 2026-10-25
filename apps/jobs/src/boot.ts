@@ -656,6 +656,9 @@ async function main(): Promise<void> {
       // (roster Row 40 (a)), so an eligible member's rung ends `config:dlt_template_id_missing:<locale>` — ⛔ row, ONE alarm per
       // key per 5 min. An unconfigured gateway ⇒ `config:sms_gateway_unconfigured`. News / survey / moderation share these deps
       // and never reach it (⛔ `sms` block — I6).
+      // ⚠ NO `suppression` hook is injected here — for ANY rung, and it never was: production runs dispatch's `noLifecycleSuppression`
+      // (a frozen / bereaved member is not held back from push, WhatsApp or this SMS). RE-TRIGGER: the member-state read model lands ⇒
+      // add `suppression:` to these deps + a boot pin (code review 2026-10-25, C2-D4; roster Row 40).
       alertSms: createAlertSmsSender({
         pool,
         smsAppClient: contributionProviders.smsAppClient,

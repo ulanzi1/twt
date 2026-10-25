@@ -402,10 +402,13 @@ export async function fanOutAlert(
    * Story 5.11 — the SMS rung decides lit / eligible itself and ⛔ dispatches through the category resolver's SMS provider (I3;
    * FS10, FS15).
    *
-   * ⭐ Story 5.11b (I4; FS18 (a)) — the boundary 5.11's review (round 2, P3) left DELIBERATELY open is RESTORED: the real send
-   * (`deps.alertSms`) goes THROUGH `dispatch` — a one-send provider in a per-call registry — carrying `deps.suppression`, the SAME
-   * hook every other rung's dispatch carries, so a suppressed member is ⛔ texted and gets ⛔ send row. The decisions BEFORE the
-   * seam (bridge, lit, eligible, a target) are 5.11's, byte for byte.
+   * ⭐ Story 5.11b (I4; FS18 (a)) — the boundary 5.11's review (round 2, P3) left DELIBERATELY open is WIRED, not yet enforced: the
+   * real send (`deps.alertSms`) goes THROUGH `dispatch` — a one-send provider in a per-call registry — carrying `deps.suppression`,
+   * the SAME hook every other rung's dispatch carries, so a member that hook suppresses is ⛔ texted and gets ⛔ send row.
+   * ⚠ Code review 2026-10-25 (C2-D4, C4-P1): `apps/jobs/src/boot.ts` injects NO hook — it never did (0 occurrences at the pre-5.11b
+   * base) — so production runs `noLifecycleSuppression` for push, WhatsApp AND this SMS until the member-state read model exists.
+   * RE-TRIGGER: that read model lands ⇒ inject it into `contributionNotifyDeps` in boot.ts and add a boot pin. The decisions BEFORE
+   * the seam (bridge, lit, eligible, a target) are 5.11's, byte for byte.
    */
   const smsRung = async (): Promise<ChannelSendOutcome> => {
     if (bridge.bridged) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeNotLit };

@@ -72,7 +72,7 @@ export const alertSmsSends = pgTable(
     memberId: uuid('member_id').notNull().$type<MemberId>(),
     occasion: text('occasion').notNull().$type<AlertSmsSendOccasion>(),
     message: text('message').notNull().$type<AlertSmsSendMessage>(),
-    /** The language the text was sent in — the member's (FS5 (a)). */
+    /** The language the text was sent in — the member's (FS5 (a)); a `deferred → attempting` re-claim re-sets it to THIS attempt's. */
     locale: text('locale').notNull().$type<AlertSmsSendLocale>(),
     outcome: text('outcome').notNull().$type<AlertSmsSendOutcome>(),
     /** `<class>:<code>` or `exhausted:…` — {@link ALERT_SMS_SEND_DETAIL_PATTERN}. ⛔ Never PII, ⛔ provider free text. */

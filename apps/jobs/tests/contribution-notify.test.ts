@@ -783,3 +783,83 @@ describe('F6 — `serializeFanOutResult`, the one durable projection (R4)', () =
     expect(serializeFanOutResult({ ...(record as object), delivered: true, deliveredChannel: 'push' } as never)).toMatchObject({ outcome: 'delivered' });
   });
 });
+
+// ─── (9) Story 5.11b code review 2026-10-25 — the hops the live suite cannot see (C3-P2, C3-P23) ──────────────────────
+
+describe('Story 5.11b review C3-P2 — `call` reaches the SMS seam AND the retry rule THROUGH fanOutAlertToMembers', () => {
+  beforeEach(() => {
+    withPariwarScope.mockReset();
+    withPariwarScope.mockImplementation((_pool: unknown, _pariwarId: string, fn: (db: unknown) => unknown) => Promise.resolve(fn({})));
+    resolvePushTargets.mockResolvedValue([TARGETS.push]);
+    resolveWaTarget.mockResolvedValue(null);
+    resolveSmsTarget.mockResolvedValue(TARGETS.sms);
+    resolveTelegramTarget.mockResolvedValue(null);
+    getMemberLastEngagementAt.mockResolvedValue(null);
+  });
+
+  it('⭐ the per-job `call` (the occasion, the attempt, the job id) is handed to the seam; a `rate_limited` rung is on `retry` BEFORE the final attempt and ⛔ on it', async () => {
+    // Every live leg drives `fanOutAlert` directly, so dropping `call` at `fanOutAlert(deps, alertFor(m), ctx, call)` or at
+    // `shouldRetryFanOut(result, ctx, call)` kept the whole suite green — and refused every real text ("no known occasion").
+    const seen: unknown[] = [];
+    const alertSms = vi.fn((input: { call?: unknown }) => {
+      seen.push(input.call);
+      return Promise.resolve({ outcome: 'rejected' as const, detail: 'rate_limited' });
+    });
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
+    const deps = { ...h.deps, alertSms } as unknown as ContributionNotifyDeps;
+    const at = new Date('2026-07-23T00:00:00.000Z');
+    const early = { occasion: 'day_10', jobId: 'job-1', retryCount: 1, retryLimit: 4 };
+    const first = await fanOutAlertToMembers(deps, () => litReminderAlert(), [MEMBER], PARIWAR, at, early);
+    expect(seen[0]).toEqual(early);
+    expect(first.retry).toEqual([MEMBER]);
+    const last = { ...early, retryCount: 4 };
+    const second = await fanOutAlertToMembers(deps, () => litReminderAlert(), [MEMBER], PARIWAR, at, last);
+    expect(seen[1]).toEqual(last);
+    expect(second.retry).toEqual([]); // the final attempt: recorded `in_app_only`, ⛔ retried
+    expect(alertSms).toHaveBeenCalledTimes(2);
+  });
+
+  it('a TERMINAL rung from the seam is ⛔ on `retry` at any attempt', async () => {
+    const alertSms = vi.fn(() => Promise.resolve({ outcome: 'rejected' as const, detail: 'exhausted:rate_limited' }));
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected') });
+    const deps = { ...h.deps, alertSms } as unknown as ContributionNotifyDeps;
+    const out = await fanOutAlertToMembers(deps, () => litReminderAlert(), [MEMBER], PARIWAR, new Date('2026-07-23T00:00:00.000Z'), {
+      occasion: 'day_10',
+      jobId: 'sweep',
+      retryCount: 0,
+      retryLimit: 4,
+    });
+    expect(out.retry).toEqual([]);
+  });
+});
+
+describe('Story 5.11b review C3-P23 — ONE suppressing hook holds EVERY rung (DB-free)', () => {
+  beforeEach(() => {
+    withPariwarScope.mockReset();
+    withPariwarScope.mockImplementation((_pool: unknown, _pariwarId: string, fn: (db: unknown) => unknown) => Promise.resolve(fn({})));
+  });
+
+  it('⭐ a hook that suppresses ⇒ the push, WhatsApp and Telegram providers are called ZERO times, and the SAME hook (by identity) is handed to the SMS seam — the live suite proves the seam then ⛔ sends', async () => {
+    const h = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
+      sms: makeProvider('sms-dlt', 'sms', 'rejected'),
+      telegram: makeProvider('telegram', 'telegram', 'rejected'),
+    });
+    const hook = () => Promise.resolve({ suppressed: true as const, reason: 'frozen', channels: 'all' as const });
+    const alertSms = vi
+      .fn<(input: { dispatch: { suppression?: unknown } }) => Promise<{ outcome: 'suppressed' }>>()
+      .mockResolvedValue({ outcome: 'suppressed' });
+    const deps = { ...h.deps, alertSms, suppression: hook } as unknown as ContributionNotifyDeps;
+    await fanOutAlert(
+      deps,
+      litReminderAlert(),
+      { targets: { push: [TARGETS.push], whatsapp: TARGETS.whatsapp, sms: TARGETS.sms, telegram: TARGETS.telegram }, costToggleEnabled: false, lastEngagementAt: null } as MemberFanOutContext,
+      { occasion: 'day_10', jobId: 'j', retryCount: 0, retryLimit: 4 },
+    );
+    // A hook passed only to the push rung's dispatch would let WhatsApp or Telegram send.
+    expect(h.push.sendCount() + h.whatsapp.sendCount() + h.telegram.sendCount()).toBe(0);
+    expect(alertSms).toHaveBeenCalledTimes(1);
+    expect(alertSms.mock.calls[0]![0].dispatch.suppression).toBe(hook);
+  });
+});

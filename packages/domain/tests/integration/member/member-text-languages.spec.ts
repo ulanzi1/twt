@@ -5,6 +5,7 @@
 //   · ⛔ passport row ⇒ `null` (the caller omits every text — ⛔ a guess);
 //   · ⭐ ONE statement for the whole list (a query-count assertion), and ANOTHER Pariwar's passport never multiplies the rows
 //     (the `WHERE pp.pariwar_id` — `pariwar_passport`'s SELECT policy is `USING (true)`).
+//   · review 2026-10-25 (C1-P3): the last leg runs with RLS BYPASSED (the jobs pool's role), so the function's own predicates are the only guard.
 
 import { randomUUID } from 'node:crypto';
 
@@ -97,5 +98,33 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the members\' TEXT language (doma
       counter.restore();
     }
     expect(await readMemberTextLanguages(bindScopedDb(client), { pariwarId: toPariwarId(pid), memberIds: [m!] })).toEqual(new Map([[m, 'en']]));
+  });
+
+  // Review 2026-10-25 (C1-P3). The tests above run as `twt_app` under RLS, so a FOREIGN member's row is hidden by RLS before the
+  // function's own predicates matter — but production's jobs pool BYPASSES RLS (the function names `pariwar_id` explicitly for exactly
+  // that reason). This leg therefore runs as the SUPERUSER (RLS bypassed, no scope entered) so the two predicates are the ONLY guard:
+  //   · `WHERE pp.pariwar_id` — foreign passports seeded BEFORE and AFTER the listed one, with a DIFFERENT default, so a mutant that
+  //     drops it yields a foreign row after the own row whatever the scan order (the Map keeps the LAST row per member);
+  //   · `m.pariwar_id = pp.pariwar_id` — a member of ANOTHER Pariwar, listed by id, who chose `hi` while this Pariwar's default is `en`.
+  it("⭐ (RLS bypassed) an `hi` chooser in an `en` Pariwar ⇒ hi; a FOREIGN member listed by id ⇒ THIS Pariwar's default, ⛔ their own choice; foreign passports before AND after never change an answer", async () => {
+    const { tx, client } = getTx();
+    const pid = randomUUID();
+    const otherPid = randomUUID();
+    await seedPassport(tx, randomUUID(), { localeDefault: 'hi' }); // foreign, seeded BEFORE
+    await seedPassport(tx, pid, { localeDefault: 'en' });
+    await seedPassport(tx, otherPid, { localeDefault: 'hi' }); // foreign, seeded AFTER
+    const [hiChooser, nonChooser] = await seedMembers(client, pid, ['hi', null]);
+    const [foreignHiChooser] = await seedMembers(client, otherPid, ['hi']);
+    const got = await readMemberTextLanguages(bindScopedDb(client), {
+      pariwarId: toPariwarId(pid),
+      memberIds: [hiChooser!, nonChooser!, foreignHiChooser!],
+    });
+    expect(got).toEqual(
+      new Map([
+        [hiChooser, 'hi'],
+        [nonChooser, 'en'],
+        [foreignHiChooser, 'en'],
+      ]),
+    );
   });
 });

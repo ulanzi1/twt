@@ -28,6 +28,17 @@ export const ALERT_SMS_RUNG_DETAIL = {
   gatewayTemplate: 'dlt_template_not_approved:gateway',
   /** The gateway MAY have taken it (every `api_unavailable:*`, `unknown:*`), a stale lease, a render failure — ⛔ re-sent. */
   outcomeUnknown: 'exhausted:outcome_unknown',
+  /**
+   * Review 2026-10-25 (C2-P1): a FOUND final `exhausted:rate_limited:*` row — the gateway DEFINITELY did not take it, and the row is
+   * frozen. ⛔ the retryable word `rate_limited` (that put a member back on the retry set for a text that can never be re-sent).
+   */
+  rateLimitedFinal: 'exhausted:rate_limited',
+  /**
+   * Review 2026-10-25 (C2-P14): NOTHING was attempted — an occasion outside the six, a prepare refusal the seam has no word for, a
+   * throw inside prepare that is not the render. A code or config fault, ALARMED, terminal. ⛔ `exhausted:outcome_unknown`, which
+   * says "the gateway MAY have taken it" (a genuine render failure keeps that word — AC4 lists it there).
+   */
+  notAttempted: 'sms_not_attempted',
   // ── The RETRY set (FS9) — on the FINAL attempt each is recorded `in_app_only` with this detail ──
   /** §3.4's window: a member with a WhatsApp target whose WhatsApp did not end `sent`, before the third attempt. */
   awaitingWaWindow: 'sms_awaiting_wa_window',

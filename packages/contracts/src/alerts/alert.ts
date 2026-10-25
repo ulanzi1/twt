@@ -85,7 +85,7 @@ export type AlertSmsMessage = z.output<typeof AlertSmsMessage>;
  * the value of each slot by slot NAME, built from the SAME locals as the push params. Absent ⇒ the message is not
  * SMS-eligible (FS15 — the fan-out's SMS rung ends `sms_message_not_lit`). Carried only by the two variants a lit
  * notice rides (`deadline_reminder`, `contribution_mismatch`), so ⛔ a broadcast can carry it (I5). The values are
- * checked against the registry's slots at send time (row 5-11b), ⛔ here.
+ * checked against the registry's slots at send time (Story 5.11b — the alert SMS seam's prepare step), ⛔ here.
  *
  * `locale` is the language the VALUES were built for (review round 2, P2 — checklist family 4): `{pool}` is the curated
  * name in a hi text and usually the letter code in an en text (FS13, `-394` item 2), so a sender must either send in

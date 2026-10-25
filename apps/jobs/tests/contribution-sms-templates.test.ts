@@ -235,6 +235,12 @@ describe('FS13 (a) — the {pool} value of a text', () => {
     expect(smsPoolLabel({ poolName: `Arj${ch(cp)}un`, poolLetterCode: 'C' }, 'en')).toBe('C');
   });
 
+  it('⭐ review C3-P24 — a clean Latin name IS returned for `en` (so the `⇒ C` legs above are not a constant function), and an ASTRAL format character (U+E0041, a tag character: Cf in a surrogate PAIR) is refused for `hi` — a filter that looked at UTF-16 units would pass it', () => {
+    expect(smsPoolLabel({ poolName: 'Arjun', poolLetterCode: 'C' }, 'en')).toBe('Arjun');
+    expect(smsPoolLabel({ poolName: `अर्जुन${ch(0xe0041)}`, poolLetterCode: 'C' }, 'hi')).toBe('C');
+    // (In `en` the new rule is unobservable BY DESIGN: every Zl / Zp / Cf character is non-GSM-7, so the older GSM-7 filter already refuses it.)
+  });
+
   it('⭐ FS21 — ZWNJ U+200C and ZWJ U+200D (Devanagari shaping) are KEPT in a hi name', () => {
     const shaped = `क्${ch(0x200d)}ष${ch(0x200c)}त्र`;
     expect(smsPoolLabel({ poolName: shaped, poolLetterCode: 'C' }, 'hi')).toBe(shaped);

@@ -59,8 +59,11 @@ export const DEFAULT_MATCH_CLAIM_TTL_SECONDS = 300;
  * a not-yet-reconciled attestation is pending (yellow), never a premature red. `sender_vpa_mismatch` is a
  * forward seam the matcher never produces in v1 (the D3 arm is off) — included so the set is the honest
  * "found-and-rejected" superset the day that arm lights.
+ *
+ * Exported (Story 5.11b review, C2-P5): the alert SMS send record's OCCASIONS include one `mismatch:<reason>` per entry here
+ * (`ALERT_SMS_SEND_OCCASIONS`, 0184's CHECK) — a test pins the two lists together.
  */
-const EMITTABLE_MISMATCH_REASONS: ReadonlySet<reconciliation.MatchMismatchReason> = new Set([
+export const EMITTABLE_MISMATCH_REASONS: ReadonlySet<reconciliation.MatchMismatchReason> = new Set([
   'wrong_pool',
   'amount_mismatch',
   'sender_vpa_mismatch',

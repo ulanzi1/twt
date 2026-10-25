@@ -74,6 +74,8 @@ const {
   PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS,
 } = await import('../src/scheduler/contribution-notify-triggers.js');
 const { CONTRIBUTION_SMS_TEMPLATES, renderContributionSms } = await import('../src/scheduler/contribution-sms-templates.js');
+const { EMITTABLE_MISMATCH_REASONS } = await import('../src/matcher/matcher-worker.js');
+const { schema } = await import('@twt/domain'); // after the mocks (the mock factory above closes over top-level variables)
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
 const ALERT = '33333333-3333-3333-3333-333333333333';
@@ -1435,6 +1437,8 @@ describe('Story 5.11b — FS5 (a): each member\'s TEXT in their own language; th
     expect((hi.payload_data as { sms?: unknown }).sms).toEqual({ message: 'deadline_not_recorded', locale: 'hi', values: { pool: 'युधिष्ठिर', date: '05-08-2026' } });
     // The push copy is the producer's locale (hi) for BOTH — LS11 for push unchanged.
     expect((en.payload_data as { subject: string }).subject).toBe((hi.payload_data as { subject: string }).subject);
+    // Review C3-P26: …and it IS Hindi — an equality between two pushes passes if BOTH switched to English.
+    expect((en.payload_data as { subject: string }).subject).toMatch(/\p{Script=Devanagari}/u);
   });
 
   it('⭐ the escalated tier reads the language too; the soft tier, cycle-open and the other send days ⛔ read it', async () => {
@@ -1491,6 +1495,8 @@ describe('Story 5.11b — FS5 (a): each member\'s TEXT in their own language; th
   it('F6 — a LIT kind\'s chunk is bounded (16) once a real send is wired; ⛔ wired ⇒ the configured chunk', async () => {
     const memberIds = Array.from({ length: 40 }, (_, i) => `aaaaaaaa-0000-0000-0000-${String(i).padStart(12, '0')}`);
     const all = new Map(memberIds.map((m) => [m, 'hi' as const]));
+    // Two once-values for the TWO runs below — BOTH runs read the languages (the read is ⛔ gated on the seam), so neither leaks into a later
+    // leg (`vi.clearAllMocks()` does not clear a once-queue — review C3-P26 checked this).
     readMemberTextLanguages.mockResolvedValueOnce(all).mockResolvedValueOnce(all); // ⛔ a sticky override for later legs
     const payload = childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds });
     await runContributionNotifyChild(deps({ alertSms: vi.fn() }), envelope(payload) as never);
@@ -1524,5 +1530,85 @@ describe('Story 5.11b AC6 — POOL_BATCH and MISMATCH register with `includeMeta
       { id: 'job-10', retryCount: 'x', data: envelope(childPayload({ memberIds: [M1] })) },
     ]);
     expect(fanOutAlertToMembers.mock.calls.at(-1)![5]).toEqual({ occasion: 'cycle_open', jobId: 'job-10' });
+  });
+});
+
+describe('Story 5.11b review 2026-10-25 — the producers\' occasions, the chunk bound and the registration edges (C3-P18, C3-P22)', () => {
+  it('⭐ the OCCASION each producer hands the fan-out is a member of the send record\'s list — day 10, the ESCALATED tier and EVERY reason the matcher emits (the escalated tier\'s was never asserted)', async () => {
+    const call = { id: 'j', retryCount: 0, retryLimit: 4 };
+    await runContributionNotifyChild(
+      deps(),
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: [M1] })) as never,
+      call,
+    );
+    await runContributionNotifyChild(deps(), envelope(childPayload({ kind: 'pending_match_escalated', memberIds: [M1] })) as never, call);
+    for (const reason of EMITTABLE_MISMATCH_REASONS) {
+      await runContributionMismatchNotify(deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason }) as never);
+    }
+    const occasions = fanOutAlertToMembers.mock.calls.map((c) => (c[5] as { occasion?: string }).occasion);
+    expect(occasions).toEqual(['day_10', 'pending_match_escalated', ...[...EMITTABLE_MISMATCH_REASONS].map((r) => `mismatch:${r}`)]);
+    for (const o of occasions) expect(schema.ALERT_SMS_SEND_OCCASIONS as readonly string[]).toContain(o);
+  });
+
+  it('F6 — the LIT chunk is min(configured, 16): a SMALLER configured chunk wins; a NON-lit kind is ⛔ bounded even with the seam wired', async () => {
+    const memberIds = Array.from({ length: 40 }, (_, i) => `aaaaaaaa-0000-0000-0000-${String(i).padStart(12, '0')}`);
+    readMemberTextLanguages.mockResolvedValueOnce(new Map(memberIds.map((m) => [m, 'hi' as const])));
+    await runContributionNotifyChild(
+      deps({ alertSms: vi.fn(), memberChunkSize: 5 }),
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds })) as never,
+    );
+    expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([5, 5, 5, 5, 5, 5, 5, 5]);
+    fanOutAlertToMembers.mockClear();
+    await runContributionNotifyChild(deps({ alertSms: vi.fn() }), envelope(childPayload({ memberIds })) as never); // cycle_open: not lit
+    expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([40]);
+  });
+
+  it('⭐ a member the language map OMITS gets ⛔ `sms` block (their push is unaffected); only the whole-Pariwar `null` alarms (the as-built behaviour — deferred C2-W6)', async () => {
+    readMemberTextLanguages.mockResolvedValueOnce(new Map([[M1, 'en' as const]]));
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(
+      deps({ onAlarm }),
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: [M1, M2] })) as never,
+    );
+    const alertFor = fanOutAlertToMembers.mock.calls[0]![1] as (m: string) => Alert;
+    // M1's block is the right one — `toBeDefined()` alone passes for ANY block (the wrong message, the wrong language).
+    expect((alertFor(M1).payload_data as { sms?: unknown }).sms).toMatchObject({ message: 'deadline_not_recorded', locale: 'en' });
+    expect((alertFor(M2).payload_data as { sms?: unknown }).sms).toBeUndefined();
+    expect((alertFor(M2).payload_data as { subject?: unknown }).subject).toBeDefined(); // the push copy is there
+    expect(onAlarm.mock.calls.filter(([m]) => String(m).includes('alert_sms.locale_unresolved'))).toHaveLength(0);
+  });
+
+  it('⭐ a text-language read that REJECTS fails the child (so pg-boss retries the whole pool — a transient read is retried, ⛔ dropped); in MISMATCH the member\'s claim is RELEASED first', async () => {
+    readMemberTextLanguages.mockRejectedValueOnce(new Error('db blip'));
+    await expect(
+      runContributionNotifyChild(
+        deps(),
+        envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: [M1] })) as never,
+      ),
+    ).rejects.toThrow('db blip');
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    readMemberTextLanguages.mockRejectedValueOnce(new Error('db blip'));
+    await expect(
+      runContributionMismatchNotify(deps(), envelope({ alertId: ALERT, poolId: POOL_A, memberId: M1, reason: 'wrong_pool' }) as never),
+    ).rejects.toThrow('db blip');
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+  });
+
+  it('⭐ a numeric `retryCount` with NO `retryLimit` (and a `retryLimit` with no `retryCount`) is ⛔ half-trusted: the registered handler passes NO attempt (⇒ the fan-out treats it as the final attempt)', async () => {
+    const handlers = new Map<string, (jobs: unknown[]) => Promise<unknown>>();
+    const work = vi.fn((name: string, a: unknown, b?: unknown) => {
+      handlers.set(name, (typeof a === 'function' ? a : b) as (jobs: unknown[]) => Promise<unknown>);
+      return Promise.resolve('w');
+    });
+    const fakeBoss = { createQueue: vi.fn(() => Promise.resolve()), schedule: vi.fn(() => Promise.resolve()), work, send: vi.fn() };
+    await registerContributionNotifyWorkers(fakeBoss as never, deps());
+    await handlers.get(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH)!([{ id: 'job-11', retryCount: 2, data: envelope(childPayload({ memberIds: [M1] })) }]);
+    // `toStrictEqual` (not `toEqual`, which treats `{ retryLimit: undefined }` as a missing key). Two guards each keep a half-formed attempt out —
+    // `jobAttemptOf` here and the child's own `retryCount !== undefined && retryLimit !== undefined` — so mutating ONE of them is an EQUIVALENT
+    // mutant (checked 2026-10-25); this leg pins the END-TO-END contract: a half attempt ⛔ reaches the fan-out.
+    expect(fanOutAlertToMembers.mock.calls.at(-1)![5]).toStrictEqual({ occasion: 'cycle_open', jobId: 'job-11' });
+    await handlers.get(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH)!([{ id: 'job-12', retryLimit: 4, data: envelope(childPayload({ memberIds: [M1] })) }]);
+    expect(fanOutAlertToMembers.mock.calls.at(-1)![5]).toStrictEqual({ occasion: 'cycle_open', jobId: 'job-12' });
   });
 });

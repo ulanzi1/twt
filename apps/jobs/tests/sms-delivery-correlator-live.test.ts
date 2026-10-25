@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 
 import { smsDelivery } from '@twt/domain';
 import pg from 'pg';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { runSmsDeliveryCorrelatorTick } from '../src/sms-delivery-correlator.js';
@@ -290,6 +290,12 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
   beforeAll(async () => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 6 });
     vi.stubGlobal('fetch', globalFetch);
+  });
+
+  // The silence and stale counts are GLOBAL: an `as` row this file left behind (the I2 leg's old `attempting` one) would colour every later
+  // leg's alarms. Clear them between tests (patch-diff review #10) — the legs below can then assert their alarms EXACTLY again.
+  afterEach(async () => {
+    if (alertIds.length > 0) await pool.query('DELETE FROM alert_sms_sends WHERE alert_id = ANY($1)', [alertIds]);
   });
 
   afterAll(async () => {
@@ -710,6 +716,9 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         { kind: 'sn' as const, id: await sendRow('sn') },
         { kind: 'pm' as const, id: await sendRow('pm') },
         { kind: 'cr' as const, id: await sendRow('cr', { outcome: 'error' }) },
+        // Review C3-P17: the widened write regex below names `alert_sms_sends`, but no `as` row was ever correlated here — it matched nothing.
+        { kind: 'as' as const, id: await sendRow('as') },
+        { kind: 'as' as const, id: await sendRow('as', { outcome: 'attempting' }) },
       ];
       const snapshot = async () => {
         const out: string[] = [];
@@ -761,6 +770,22 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       await sendRow('cr', { purpose: 'staff_push', providerMessageId: 'fcm-x', updatedAt: hoursAgo(49) });
       await sendRow('pm', { outcome: 'error', updatedAt: hoursAgo(49) });
       await sendRow('as', { updatedAt: hoursAgo(47) }); // Story 5.11b — inside 48 h ⇒ ⛔ counted
+      // Review C3-P17 — the `as` subquery's OWN exclusions (the sibling kinds each had them; `as` had only the 47 h row):
+      await sendRow('as', { updatedAt: hoursAgo(24 * 8) }); // older than 7 days
+      await sendRow('as', { outcome: 'error', updatedAt: hoursAgo(49) }); // not accepted
+      const asReported = await sendRow('as', { updatedAt: hoursAgo(50) });
+      await inbox({ crqid: `as${hex(asReported)}`, status: '0' }); // a report carrying its CRQID (even an unmatched one)
+      const asDelivered = await sendRow('as', { updatedAt: hoursAgo(60) });
+      await smsDelivery.upsertSmsSendDelivery(pool, {
+        pariwarId: PARIWAR,
+        kind: 'as',
+        rowId: asDelivered,
+        requestId: (await pmidOf('as', asDelivered))!,
+        state: 'delivered',
+        statusCode: '1',
+        failureReason: null,
+        receivedAt: T0,
+      });
       const delivered = await sendRow('pm', { updatedAt: hoursAgo(60) });
       await smsDelivery.upsertSmsSendDelivery(pool, {
         pariwarId: PARIWAR,
@@ -777,7 +802,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       const lines: string[] = [];
       const out = await runSmsDeliverySilenceCheck({ pool, now: () => NOW, onAlarm: (m) => alarms.push(m), log: (m) => lines.push(m) });
       expect(out.silent).toEqual({ cr: 2, ce: 1, sn: 1, pm: 1, as: 1 });
-      expect(alarms).toHaveLength(1);
+      expect(alarms).toHaveLength(1); // EXACTLY the silence alarm — the `afterEach` leaves no stale `attempting` row to add another
       expect(alarms[0]).toContain('sms_report.silence:6');
       expect(alarms[0]).toContain('cr 2, ce 1, sn 1, pm 1, as 1');
       for (const s of silent) expect(alarms[0]).not.toContain(hex(s.id));
@@ -796,17 +821,55 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       expect(out.silent.ce).toBe(1);
     });
 
-    it('⭐ Story 5.11b (FS22) — an `as` row left `attempting` 1 h – 7 days ago is counted STALE (ONE alarm, ⛔ an id); inside the hour ⛔', async () => {
+    it('⭐ Story 5.11b (FS22; decision C1-D2 (a)) — an `as` row left `attempting` MORE than 1 h ago is counted STALE at ANY age (an 8-day-old one too — ⛔ a cap that lets it go silent); ONE alarm, ⛔ an id; inside the hour ⛔', async () => {
       const STALE_NOW = new Date('2000-08-01T00:00:00.000Z');
       const hrs = (h: number) => new Date(STALE_NOW.getTime() - h * 3_600_000);
+      // The count is GLOBAL and unbounded, so other tests' old `attempting` rows are in it: a BASELINE first, then deltas.
+      const base = await smsDelivery.countStaleAlertSmsSends(pool, { now: STALE_NOW });
       const stale = await sendRow('as', { outcome: 'attempting', updatedAt: hrs(2) });
-      await sendRow('as', { outcome: 'attempting', updatedAt: new Date(STALE_NOW.getTime() - 30 * 60_000) });
-      await sendRow('as', { outcome: 'attempting', updatedAt: hrs(24 * 8) });
+      await sendRow('as', { outcome: 'attempting', updatedAt: new Date(STALE_NOW.getTime() - 30 * 60_000) }); // inside the hour ⛔
+      await sendRow('as', { outcome: 'attempting', updatedAt: hrs(24 * 8) }); // the old 7-day cap excluded this one
       const alarms: string[] = [];
       const out = await runSmsDeliverySilenceCheck({ pool, now: () => STALE_NOW, onAlarm: (m) => alarms.push(m), log: () => undefined });
-      expect(out.staleAlertSends).toBe(1);
-      expect(alarms).toEqual([expect.stringContaining('sms_report.stale_attempting:1')]);
-      expect(alarms[0]).not.toContain(hex(stale));
+      expect(out.staleAlertSends).toBe(base + 2);
+      const staleAlarms = alarms.filter((a) => a.includes('stale_attempting'));
+      expect(staleAlarms).toEqual([expect.stringContaining(`sms_report.stale_attempting:${base + 2}`)]);
+      expect(staleAlarms[0]).not.toContain(hex(stale));
+    });
+
+    it('⭐ review C3-P17 — the stale count\'s 1 h edge is EXACT (1 h + 1 s counted, 1 h − 1 s ⛔) and only `attempting` rows count (an `accepted`, `error` or `deferred` row 2 h old ⛔)', async () => {
+      // The count is GLOBAL and has no upper bound (decision C1-D2 (a)): a BASELINE first, then deltas.
+      const EDGE_NOW = new Date('2000-09-01T00:00:00.000Z');
+      const ago = (ms: number) => new Date(EDGE_NOW.getTime() - ms);
+      const H = 3_600_000;
+      const base = await smsDelivery.countStaleAlertSmsSends(pool, { now: EDGE_NOW });
+      await sendRow('as', { outcome: 'attempting', updatedAt: ago(H + 1000) }); // counted
+      await sendRow('as', { outcome: 'attempting', updatedAt: ago(H - 1000) }); // inside the hour ⇒ ⛔
+      for (const outcome of ['accepted', 'error', 'deferred']) await sendRow('as', { outcome, updatedAt: ago(2 * H) });
+      const alarms: string[] = [];
+      const out = await runSmsDeliverySilenceCheck({ pool, now: () => EDGE_NOW, onAlarm: (m) => alarms.push(m), log: () => undefined });
+      expect(out.staleAlertSends).toBe(base + 1);
+      expect(alarms.filter((a) => a.includes('stale_attempting'))).toHaveLength(1);
+    });
+
+    it('⭐ review C3-P17 — a FAILING stale count raises ⛔ alarm and the check THROWS (both counts are taken before any line, so a retry cannot double-alarm)', async () => {
+      const FAIL_NOW = new Date('2000-10-01T00:00:00.000Z');
+      await sendRow('as', { updatedAt: new Date(FAIL_NOW.getTime() - 49 * 3_600_000) }); // a SILENT send: the silence count would alarm
+      const failing = new Proxy(pool, {
+        get(target, prop) {
+          if (prop === 'query') {
+            return (text: unknown, ...rest: unknown[]) =>
+              typeof text === 'string' && /FROM alert_sms_sends/.test(text) && /outcome = 'attempting'/.test(text)
+                ? Promise.reject(new Error('stale count down'))
+                : (target.query as (...a: unknown[]) => unknown).call(target, text, ...rest);
+          }
+          const v = Reflect.get(target, prop, target) as unknown;
+          return typeof v === 'function' ? (v as (...a: unknown[]) => unknown).bind(target) : v;
+        },
+      });
+      const alarms: string[] = [];
+      await expect(runSmsDeliverySilenceCheck({ pool: failing, now: () => FAIL_NOW, onAlarm: (m) => alarms.push(m), log: () => undefined })).rejects.toThrow('stale count down');
+      expect(alarms).toEqual([]); // the silence alarm would have fired had the counts not both been taken first
     });
 
     it('⛔ silent send ⇒ ⛔ alarm; the login-code line counts `otp:*` settled in the last 24 h by result, ⛔ an id', async () => {

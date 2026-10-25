@@ -35,6 +35,7 @@ export {
   type SmsSendRowFacts,
 } from './reports.js';
 export {
+  ALERT_SMS_DEFERRED_MAX_AGE_MS,
   ALERT_SMS_SEND_LEASE_MS,
   ALERT_SMS_SEND_STALE_AFTER_MS,
   beginAlertSmsSend,

@@ -2921,3 +2921,27 @@ Life Events ONLY; the signup screen passes ⛔ it), the NEW `app/(life-events)/n
 render test (`nominee-form-link-render`) and the pure logic its unit tests; native layout and a real screen reader still need a device.
 `apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted. `pnpm friction:check` runs after the commit
 (AC-4 reads COMMITTED history).
+
+**Story 6.36f disposition (declaration affirmed — ⛔ new row, ⛔ row retired, ⛔ row amended; friction REMOVED from row 61's optional path):**
+the story's member-facing changes are `apps/mobile/app/(life-events)/nominees.tsx` (an entry card and a MARKS-ONLY mode on the same
+screen), the NEW `components/life-events/NomineeMarkControl.tsx` (the mark control EXTRACTED from `NomineeForm.tsx` — the form renders it
+unchanged), `lib/nominee-links.ts` (the mode's pure logic), the ten `marks.*` / `save.marks_*` keys of the `nominee_link` copy (en + hi,
+approved by BigDev 2026-10-26) and their tests.
+
+1. ⭐ **Why ⛔ new row.** Row 61 (marking a nominee who is also a member — `optional`) already covers WHO pays and WHAT it protects. This
+   story takes friction AWAY from that path: before it, changing or removing ONE mark meant retyping every nominee's name,
+   relationship and mobile (6.36e's device run: the first save was refused for the UNCHANGED nominee). Now *"Only changing a member
+   mark? Do it here without typing your nominees again."* opens a screen of the marks alone; the server keeps the details
+   (`2026-10-26-407` MK1–MK12). ⛔ A new step, prompt or wait is added to any flow: the full form is unchanged and stays the only way
+   to change a name, relationship, mobile, address or the number of nominees.
+2. ⚠ **What the member still meets** — all inherited from row 61 / AR-24, ⛔ new: the `nominee_change` step-up OTP (the Life Events
+   save's own gate), the 4-a-day lookup meter for a NEW mark, the pre-save line telling the member the marked person will be asked
+   (`-396` Q2 A). Two refusals are new and gate only this PATH, ⛔ the declaration: *"Your nominees changed since you opened this
+   screen …"* (the marks reload; save again) and *"Save your nominees first …"* (back to the form).
+3. ⚠ **The entry card is hidden** when there is nothing to do (⛔ saved declaration, a rank without a version — pre-0119 data, locked,
+   or an `active-in-grace` member with ⛔ mark who may not find one) — ⛔ an offer that ends in a refusal.
+
+⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]); ⛔ demonstrated on a device yet — the mode has a jsdom
+render test that executes `nominees.tsx` (`nominee-marks-mode-render`) and the pure logic its unit tests; native layout, TalkBack and
+VoiceOver still need a device (AC7's device run). `apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔
+ratcheted. `pnpm friction:check` runs after the commit (AC-4 reads COMMITTED history).

@@ -5,6 +5,7 @@
 //
 // Routes (all member-session; the answer takes an `Idempotency-Key`):
 //   POST /api/v1/member/life-events/nominees                      — the declare: each entry MAY carry a `memberLink`
+//   POST /api/v1/member/life-events/nominees/marks                — the MARKS-ONLY save (Story 6.36f): the server copies the details
 //   GET  /api/v1/member/life-events/nominee-links                 — the declarer's marks (one per rank at most)
 //   GET  /api/v1/member/nominee-links/requests                    — the marks naming the member
 //   POST /api/v1/member/nominee-links/requests/:linkId/answer     — "Yes, that's me" / "No, that's not me"
@@ -18,6 +19,7 @@ import { z } from 'zod';
 
 import { Cursor } from '../_common/pagination.js';
 import { MobileNumber } from '../_common/primitives.js';
+import { NomineeRelationship } from './relationship.js';
 
 /** How the nominee-member was found (NE3) — the 6.36b values. */
 export const NomineeLinkFoundByWire = z.enum(['contacts', 'picker', 'typed']);
@@ -55,9 +57,57 @@ export const NomineeLinkView = z
   .strict();
 export type NomineeLinkView = z.output<typeof NomineeLinkView>;
 
-/** `GET /api/v1/member/life-events/nominee-links` — the declarer's marks, rank-ordered (0–2). */
-export const NomineeLinksView = z.object({ links: z.array(NomineeLinkView).max(2) }).strict();
+/**
+ * One occupied rank's BASIS for a marks-only save (Story 6.36f MK3, `2026-10-26-407`): the `versionNo` of the rank's PROJECTED
+ * version (⛔ the max `version_no` — G5) and its relationship. An integer and a relationship already on the status read, about the
+ * declarer's OWN declaration — ⛔ new personal data. A rank whose projection row has ⛔ version row (pre-0119 data) is ABSENT.
+ */
+export const NomineeMarksRankView = z
+  .object({
+    rank: z.union([z.literal(1), z.literal(2)]),
+    versionNo: z.number().int().positive(),
+    relationship: NomineeRelationship,
+  })
+  .strict();
+export type NomineeMarksRankView = z.output<typeof NomineeMarksRankView>;
+
+/**
+ * `GET /api/v1/member/life-events/nominee-links` — the declarer's marks, rank-ordered (0–2), and (Story 6.36f MK3) each occupied
+ * rank's basis, read FIRST in the same transaction, so a save between the two reads leaves `ranks` stale ⇒ `marks_stale`.
+ */
+export const NomineeLinksView = z
+  .object({ ranks: z.array(NomineeMarksRankView).max(2), links: z.array(NomineeLinkView).max(2) })
+  .strict();
 export type NomineeLinksView = z.output<typeof NomineeLinksView>;
+
+// ── The marks-only save (Story 6.36f MK1, `2026-10-26-407`) ─────────────────────────────────
+
+/**
+ * One rank's mark: the `versionNo` the phone saw for it (MK3 — a mismatch ⇒ 409 `nominee.marks_stale`) and the mark — `new` /
+ * `keep` (6.36e's union, REUSED) or `null` (no mark; a live one ENDS). ⛔ A field for the nominee's DETAILS: the server copies them.
+ */
+export const NomineeMarksSaveEntry = z
+  .object({
+    rank: z.union([z.literal(1), z.literal(2)]),
+    versionNo: z.number().int().positive(),
+    memberLink: NomineeMemberLink.nullable(),
+  })
+  .strict();
+export type NomineeMarksSaveEntry = z.output<typeof NomineeMarksSaveEntry>;
+
+/**
+ * `POST /api/v1/member/life-events/nominees/marks` — one entry per occupied rank (1–2), each keyed by its `rank` FIELD (⛔ its array
+ * position — TR11); a rank twice is refused. The set of ranks must EQUAL the declaration's (checked on the server ⇒ `marks_stale`).
+ */
+export const NomineeMarksSaveRequest = z
+  .object({ marks: z.array(NomineeMarksSaveEntry).min(1).max(2) })
+  .strict()
+  .superRefine((body, ctx) => {
+    if (new Set(body.marks.map((m) => m.rank)).size !== body.marks.length) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['marks'], message: 'each rank at most once' });
+    }
+  });
+export type NomineeMarksSaveRequest = z.output<typeof NomineeMarksSaveRequest>;
 
 // ── The marked member's side (AC4) ───────────────────────────────────────────────────────────
 
@@ -124,6 +174,9 @@ export const NOMINEE_LINK_ERROR_CODES = {
   linkDuplicate: 'nominee.link_duplicate',
   linkStale: 'nominee.link_stale',
   linkDailyLimit: 'nominee.link_daily_limit',
+  // Story 6.36f (MK3) — the marks-only save's two refusals; the full form stays open in both cases.
+  marksStale: 'nominee.marks_stale',
+  marksNoDeclaration: 'nominee.marks_no_declaration',
   notAvailable: 'nominee_link.not_available',
   notFound: 'nominee_link.not_found',
   requestClosed: 'nominee_link.request_closed',

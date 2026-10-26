@@ -54,7 +54,7 @@ describe('the read bound is WIRED into both reads (a read that never settles fai
       api.links.mockReset()
       api.requests.mockReset()
       const never = () => new Promise(() => undefined)
-      api.links.mockImplementation(which === 'links' ? never : () => Promise.resolve({ links: [] }))
+      api.links.mockImplementation(which === 'links' ? never : () => Promise.resolve({ ranks: [], links: [] }))
       api.requests.mockImplementation(which === 'requests' ? never : () => Promise.resolve(page))
       const { result } = renderHook(() => (which === 'links' ? useNomineeLinksQuery() : useNomineeLinkRequestsQuery()), { wrapper })
       await vi.advanceTimersByTimeAsync(KNOWN_PEOPLE_READ_TIMEOUT_MS / 2)

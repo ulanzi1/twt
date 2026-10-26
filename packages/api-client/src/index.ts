@@ -129,6 +129,7 @@ import {
   type MemberTermsAcceptResponse as MemberTermsAcceptResult,
   type MemberTermsLocale,
   type NomineeDeclareRequest,
+  type NomineeMarksSaveRequest,
   type NomineeStatusResponse as NomineeStatusResult,
   type VyawasthaShulkConfirmRequest,
   type VyawasthaShulkConfirmResponse as VyawasthaShulkConfirmResult,
@@ -893,6 +894,14 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Life Events nominee update — re-runs the declare service behind a step-up gate (auth). */
     lifeEventsUpdateNominees(input: NomineeDeclareRequest): Promise<NomineeStatusResult> {
       return call(`${LIFE_EVENTS_BASE}/nominees`, NomineeStatusResponse, input, true);
+    },
+
+    /**
+     * Story 6.36f (MK1) — the MARKS-ONLY nominee save: each rank's mark + the `versionNo` the phone saw; the server copies the
+     * stored details (⛔ a detail in the body). The same step-up gate as `lifeEventsUpdateNominees` (auth).
+     */
+    lifeEventsUpdateNomineeMarks(input: NomineeMarksSaveRequest): Promise<NomineeStatusResult> {
+      return call(`${LIFE_EVENTS_BASE}/nominees/marks`, NomineeStatusResponse, input, true);
     },
 
     /** Life Events medical update — re-runs the submit service (append-only) behind a step-up gate (auth). */

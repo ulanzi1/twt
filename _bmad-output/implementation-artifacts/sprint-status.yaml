@@ -21317,7 +21317,7 @@ development_status:
   # ⭐ 2026-10-26 (ledger `2026-10-26e`): Task 0 DONE — BigDev "MK1–MK12 all as recommended", MK9 en + hi final; Decision `2026-10-26-407`
   # committed alone (`a1053c0b`; supersedes in part `-241` D2 for the marks-only save only). Validated v1.1 changed the plan above: a marks-only
   # MODE inside `nominees.tsx` (⛔ a separate route), decision `-407` (⛔ `-404`). Next: Task 1. ⛔ Code yet.
-  6-36f-nominee-mark-only-save: ready-for-dev
+  6-36f-nominee-mark-only-save: in-progress
   # ⭐ 2026-10-10 ADDED by `2026-10-10-306` (BigDev: "Selection must be school wise …"): each member's SCHOOL (a stable school code + name)
   # and posting start date captured at signup and on every transfer (a new posting — history kept); a NEW peer-mesh metric: members posted
   # at the deceased member's school, plus the previous school when the current posting began within 90 days; ⛔ never the district; fewer

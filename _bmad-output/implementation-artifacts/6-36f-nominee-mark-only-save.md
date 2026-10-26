@@ -536,7 +536,7 @@ least).
         re-declarations); NEW items: the mixed save (MK10); the erasure race for BOTH save paths (MK2); the sprint row's note.
         **DONE 2026-10-26** (the commit after `a1053c0b`): the epics dated note; ten dated lines in `deferred-work.md` and its new
         section `## Story 6.36f — a marks-only nominee save (2026-10-26)` (two items); the sprint row note + ledger `2026-10-26e`.
-- [ ] **Task 1 — contracts + client (AC1)** — `NomineeMarksSaveRequest`, `NomineeLinksView.ranks` (`{ rank, versionNo, relationship }`),
+- [x] **Task 1 — contracts + client (AC1)** — `NomineeMarksSaveRequest`, `NomineeLinksView.ranks` (`{ rank, versionNo, relationship }`),
       the two codes in `NOMINEE_LINK_ERROR_CODES`, `lifeEventsUpdateNomineeMarks`, the links-read parse, contracts tests + the fixture
       sweep; `pnpm contracts:check-openapi-determinism` green with ⛔ OpenAPI change.
 - [ ] **Task 2 — domain (AC2, AC3)**

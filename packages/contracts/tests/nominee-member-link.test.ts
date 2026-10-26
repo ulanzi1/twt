@@ -18,6 +18,8 @@ import {
   NomineeLinkRequestsQuery,
   NomineeLinkRequestsResponse,
   NomineeLinksView,
+  NOMINEE_LINK_ERROR_CODES,
+  NomineeMarksSaveRequest,
   NomineeMemberLink,
   ProfileSection,
 } from '../src/index.js';
@@ -56,12 +58,27 @@ describe('NomineeDeclareEntry.memberLink (AC2, NE2)', () => {
 describe('the declarer read and the marked member side (AC2, AC4)', () => {
   it('NomineeLinksView — rank 1 | 2, three labels, the name nullable, at most two; strict', () => {
     const link = { rank: 1, linkId: LINK, label: 'asked', name: null };
-    expect(NomineeLinksView.safeParse({ links: [link, { ...link, rank: 2, label: 'confirmed', name: 'Asha Devi' }] }).success).toBe(true);
-    expect(NomineeLinksView.safeParse({ links: [{ ...link, label: 'not_me' }] }).success).toBe(true);
-    expect(NomineeLinksView.safeParse({ links: [{ ...link, rank: 3 }] }).success).toBe(false);
-    expect(NomineeLinksView.safeParse({ links: [{ ...link, label: 'declined' }] }).success).toBe(false);
-    expect(NomineeLinksView.safeParse({ links: [link, link, link] }).success).toBe(false);
-    expect(NomineeLinksView.safeParse({ links: [{ ...link, memberId: LINK }] }).success).toBe(false);
+    const ranks: unknown[] = [];
+    expect(NomineeLinksView.safeParse({ ranks, links: [link, { ...link, rank: 2, label: 'confirmed', name: 'Asha Devi' }] }).success).toBe(true);
+    expect(NomineeLinksView.safeParse({ ranks, links: [{ ...link, label: 'not_me' }] }).success).toBe(true);
+    expect(NomineeLinksView.safeParse({ ranks, links: [{ ...link, rank: 3 }] }).success).toBe(false);
+    expect(NomineeLinksView.safeParse({ ranks, links: [{ ...link, label: 'declined' }] }).success).toBe(false);
+    expect(NomineeLinksView.safeParse({ ranks, links: [link, link, link] }).success).toBe(false);
+    expect(NomineeLinksView.safeParse({ ranks, links: [{ ...link, memberId: LINK }] }).success).toBe(false);
+  });
+
+  it('NomineeLinksView.ranks (6.36f MK3) — REQUIRED; rank + projected versionNo + relationship; ⛔ a detail; at most two; strict', () => {
+    const rank = { rank: 1, versionNo: 3, relationship: 'spouse' };
+    expect(NomineeLinksView.safeParse({ ranks: [rank, { ...rank, rank: 2, versionNo: 1, relationship: 'son' }], links: [] }).success).toBe(true);
+    expect(NomineeLinksView.safeParse({ links: [] }).success).toBe(false); // ⚠ an installed pre-6.36f build's server shape fails (MK10)
+    expect(NomineeLinksView.safeParse({ ranks: [{ ...rank, versionNo: 0 }], links: [] }).success).toBe(false);
+    expect(NomineeLinksView.safeParse({ ranks: [{ ...rank, versionNo: 1.5 }], links: [] }).success).toBe(false);
+    expect(NomineeLinksView.safeParse({ ranks: [{ ...rank, relationship: 'friend' }], links: [] }).success).toBe(false);
+    expect(NomineeLinksView.safeParse({ ranks: [{ ...rank, rank: 3 }], links: [] }).success).toBe(false);
+    expect(NomineeLinksView.safeParse({ ranks: [rank, rank, rank], links: [] }).success).toBe(false);
+    for (const extra of [{ name: 'Asha Devi' }, { mobile: '9876543210' }, { splitPct: 100 }, { versionId: LINK }]) {
+      expect(NomineeLinksView.safeParse({ ranks: [{ ...rank, ...extra }], links: [] }).success, JSON.stringify(extra)).toBe(false);
+    }
   });
 
   it('NomineeLinkRequestsResponse — open (answer null) and answered; the page fields required; strict', () => {
@@ -91,6 +108,41 @@ describe('the declarer read and the marked member side (AC2, AC4)', () => {
     expect(NomineeLinkAnswerResponse.safeParse({ linkId: LINK, answer: 'confirmed' }).success).toBe(true);
     expect(NomineeLinkAnswerResponse.safeParse({ linkId: LINK, answer: 'yes' }).success).toBe(false);
     expect(NomineeLinkParams.safeParse({ linkId: 'x' }).success).toBe(false);
+  });
+});
+
+describe('NomineeMarksSaveRequest (6.36f MK1) — marks only; ⛔ a detail can be sent', () => {
+  const mark = (over: Record<string, unknown> = {}) => ({ rank: 1, versionNo: 2, memberLink: null, ...over });
+
+  it('one or two ranks, each with its versionNo and a mark — new / keep / null (none)', () => {
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark()] }).success).toBe(true);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark({ memberLink: { kind: 'keep', linkId: LINK } })] }).success).toBe(true);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark({ memberLink: { kind: 'new', mobile: '9876543210', foundBy: 'picker' } })] }).success).toBe(true);
+    // the ranks in REVERSED order parse — the server keys by the `rank` field (TR11)
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark({ rank: 2 }), mark({ rank: 1 })] }).success).toBe(true);
+  });
+
+  it('refuses a rank twice, ⛔ marks, three marks, a missing versionNo or mark, a bad rank / versionNo', () => {
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark(), mark()] }).success).toBe(false);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [] }).success).toBe(false);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark(), mark({ rank: 2 }), mark({ rank: 2 })] }).success).toBe(false);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [{ rank: 1, memberLink: null }] }).success).toBe(false);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [{ rank: 1, versionNo: 1 }] }).success).toBe(false);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark({ rank: 3 })] }).success).toBe(false);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark({ versionNo: 0 })] }).success).toBe(false);
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark({ memberLink: { kind: 'member', linkId: LINK } })] }).success).toBe(false);
+  });
+
+  it('`.strict()` everywhere — a name / relationship / mobile / address / split key is REFUSED (the details cannot change)', () => {
+    for (const extra of [{ name: 'Asha Devi' }, { relationship: 'spouse' }, { mobile: '9876543210' }, { address: 'x' }, { splitPct: 75 }]) {
+      expect(NomineeMarksSaveRequest.safeParse({ marks: [mark(extra)] }).success, JSON.stringify(extra)).toBe(false);
+    }
+    expect(NomineeMarksSaveRequest.safeParse({ marks: [mark()], nominees: [] }).success).toBe(false);
+  });
+
+  it('the two refusal codes', () => {
+    expect(NOMINEE_LINK_ERROR_CODES.marksStale).toBe('nominee.marks_stale');
+    expect(NOMINEE_LINK_ERROR_CODES.marksNoDeclaration).toBe('nominee.marks_no_declaration');
   });
 });
 

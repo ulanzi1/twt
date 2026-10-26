@@ -10,7 +10,14 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { memberId as toMemberId, nomineeLinkId, nomineeVersionId, type MemberId } from '../../src/ids/index.js';
-import { type LiveNomineeLink, type RawNomineeLinkExportRow, planNomineeLinks, shapeNomineeLinkExport } from '../../src/nominee/member-links.js';
+import {
+  type LiveNomineeLink,
+  type NomineeLinkPlan,
+  type RawNomineeLinkExportRow,
+  isUnchangedMarksPlan,
+  planNomineeLinks,
+  shapeNomineeLinkExport,
+} from '../../src/nominee/member-links.js';
 
 const who = (): MemberId => toMemberId(randomUUID());
 
@@ -254,5 +261,66 @@ describe('Story 6.36e code review — shapeNomineeLinkExport (`2026-10-24-399`, 
   it('a member on BOTH sides of different links gets each in its own list', () => {
     const out = shapeNomineeLinkExport([raw({ linkId: 'x', asDeclarer: true }), raw({ linkId: 'y', asDeclarer: false })]);
     expect([out.marked.length, out.namedBy.length]).toEqual([1, 1]);
+  });
+});
+
+// Story 6.36f (Task 2.3; MK5, `2026-10-26-407`) — `isUnchangedMarksPlan`: a marks-only save that only carries each live link onto
+// its OWN rank (on its rank's head) and asks nobody new writes NOTHING. Every other plan is a change.
+describe('Story 6.36f — isUnchangedMarksPlan (MK5)', () => {
+  const plan = (l: readonly LiveNomineeLink[], submitted: Parameters<typeof planNomineeLinks>[1]) => {
+    const p = planNomineeLinks(l, submitted);
+    if (p.kind !== 'plan') throw new Error(`refused: ${p.reason}`);
+    return [l, p] as const;
+  };
+
+  it('a `keep` on its own rank ⇒ unchanged', () => {
+    const one = live(1);
+    expect(isUnchangedMarksPlan(...plan([one], [{ rank: 1, link: { kind: 'keep', linkId: one.linkId } }, { rank: 2, link: null }]))).toBe(true);
+  });
+
+  it('a same-rank `new` re-pick of the member live there ⇒ unchanged (a carry — nobody re-asked)', () => {
+    const one = live(1);
+    expect(isUnchangedMarksPlan(...plan([one], [{ rank: 1, link: { kind: 'new', nomineeMemberId: one.nomineeMemberId, foundBy: 'picker' } }]))).toBe(true);
+  });
+
+  it('⛔ live link and every rank "none" ⇒ unchanged', () => {
+    expect(isUnchangedMarksPlan(...plan([], [{ rank: 1, link: null }, { rank: 2, link: null }]))).toBe(true);
+  });
+
+  it('a removal ⇒ changed (the live link is not carried)', () => {
+    const one = live(1);
+    expect(isUnchangedMarksPlan(...plan([one], [{ rank: 1, link: null }]))).toBe(false);
+  });
+
+  it('a NEW mark ⇒ changed (somebody is asked)', () => {
+    expect(isUnchangedMarksPlan(...plan([], [{ rank: 1, link: { kind: 'new', nomineeMemberId: who(), foundBy: 'typed' } }]))).toBe(false);
+  });
+
+  it('a swap (two `new` picks of the members live on the other rank) ⇒ changed — each carried to ANOTHER rank', () => {
+    const one = live(1);
+    const two = live(2);
+    const [l, p] = plan([one, two], [
+      { rank: 1, link: { kind: 'new', nomineeMemberId: two.nomineeMemberId, foundBy: 'picker' } },
+      { rank: 2, link: { kind: 'new', nomineeMemberId: one.nomineeMemberId, foundBy: 'picker' } },
+    ]);
+    expect(p.inserts.every((i) => i.carriedFrom !== null)).toBe(true); // both carried …
+    expect(isUnchangedMarksPlan(l, p)).toBe(false); // … but onto the other rank
+  });
+
+  it('a carry of an `onHead = false` link (MK11) ⇒ changed — it must be re-hung on a fresh head version, or the member loops', () => {
+    const off = live(1, { onHead: false });
+    expect(isUnchangedMarksPlan(...plan([off], [{ rank: 1, link: { kind: 'keep', linkId: off.linkId } }]))).toBe(false);
+  });
+
+  it('a `keep` beside a removal ⇒ changed', () => {
+    const one = live(1);
+    const two = live(2);
+    expect(isUnchangedMarksPlan(...plan([one, two], [{ rank: 1, link: { kind: 'keep', linkId: one.linkId } }, { rank: 2, link: null }]))).toBe(false);
+  });
+
+  it('a live link that the plan neither carries nor ends cannot be "unchanged" (a hand-made plan)', () => {
+    const one = live(1);
+    const handMade: Extract<NomineeLinkPlan, { kind: 'plan' }> = { kind: 'plan', inserts: [], ends: [] };
+    expect(isUnchangedMarksPlan([one], handMade)).toBe(false);
   });
 });

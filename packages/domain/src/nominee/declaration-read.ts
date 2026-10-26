@@ -22,10 +22,15 @@ export async function getMemberNominees(
   db: Db,
   pariwarId: PariwarId,
   memberId: MemberId,
+  opts: { readonly forUpdate?: boolean } = {},
 ): Promise<MemberNomineeRow[]> {
-  return db
+  const q = db
     .select()
     .from(memberNominees)
     .where(and(eq(memberNominees.pariwarId, pariwarId), eq(memberNominees.memberId, memberId)))
     .orderBy(asc(memberNominees.rank));
+  // Story 6.36f (MK2) — the marks-only save COPIES these rows' ciphertext into its new versions: inside its tx, after the D3
+  // lock, it reads them `FOR UPDATE` so a concurrent writer of the projection that does ⛔ take D3 (the erasure scrub, a staff
+  // correction — G2) waits for the copy instead of changing a row under it.
+  return opts.forUpdate === true ? q.for('update') : q;
 }

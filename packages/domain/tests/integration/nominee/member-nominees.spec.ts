@@ -16,7 +16,15 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { memberId as toMemberId } from '../../../src/ids/index.js';
-import { getMemberNominees, replaceMemberNominees } from '../../../src/nominee/index.js';
+import {
+  appendMemberDeclarationVersions,
+  getMemberNominees,
+  getNomineeVersionHeads,
+  getProjectedNomineeVersions,
+  planDeclarationVersions,
+  readDatabaseClock,
+  replaceMemberNominees,
+} from '../../../src/nominee/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember } from '../_helpers.js';
@@ -159,5 +167,63 @@ describe.skipIf(!hasDatabase)('member_nominees — latest-wins replace + RLS + F
       .from(schema.memberNominees)
       .where(eq(schema.memberNominees.memberId, toMemberId(mid)));
     expect(after).toEqual([]);
+  });
+});
+
+// Story 6.36f (Task 2.1 / 2.2; MK2, MK3, `2026-10-26-407`) — the marks-only save's two reads: the projection read `FOR UPDATE`
+// (a row lock the erasure scrub / a staff correction wait on), and each rank's PROJECTED `versionNo` + relationship (its basis).
+describe.skipIf(!hasDatabase)('Story 6.36f — the marks-only save\'s reads (:5433)', () => {
+  setupLiveDb();
+
+  const row = (rank: 1 | 2, tag: string, splitPct: number, relationship = 'spouse') => ({
+    rank,
+    nameCiphertext: `enc:v1:name-${tag}`,
+    relationship,
+    mobileCiphertext: `enc:v1:mob-${tag}`,
+    addressCiphertext: null,
+    splitPct,
+  });
+
+  async function declare(tx: Parameters<typeof replaceMemberNominees>[0], memberId: ReturnType<typeof toMemberId>, rows: ReturnType<typeof row>[]) {
+    const plan = planDeclarationVersions(await getNomineeVersionHeads(tx, PARIWAR_A, memberId), rows.map((r) => r.rank));
+    await replaceMemberNominees(tx, { memberId, pariwarId: PARIWAR_A, nominees: rows });
+    await appendMemberDeclarationVersions(tx, { memberId, pariwarId: PARIWAR_A, plan, nominees: rows, recordedAt: await readDatabaseClock(tx), eventVersion: null });
+  }
+
+  it('getProjectedNomineeVersions carries each rank\'s PROJECTED versionNo + relationship (rank 1 at v2, rank 2 at v1)', async () => {
+    const { tx, client } = getTx();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid });
+    await enterAppScope(client, PARIWAR_A);
+    const memberId = toMemberId(mid);
+    await declare(tx, memberId, [row(1, 'a', 100)]);
+    await declare(tx, memberId, [row(1, 'a2', 75, 'mother'), row(2, 'b', 25, 'son')]);
+    const projected = await getProjectedNomineeVersions(tx, PARIWAR_A, memberId);
+    expect(projected.map(({ rank, versionNo, relationship }) => ({ rank, versionNo, relationship }))).toEqual([
+      { rank: 1, versionNo: 2, relationship: 'mother' },
+      { rank: 2, versionNo: 1, relationship: 'son' },
+    ]);
+    // ⛔ ciphertext on the returned shape
+    expect(Object.keys(projected[0]!).sort()).toEqual(['rank', 'relationship', 'versionId', 'versionNo']);
+  });
+
+  it('getMemberNominees({ forUpdate: true }) returns the same rows AND holds a row lock on member_nominees (a plain read does ⛔)', async () => {
+    const { tx, client } = getTx();
+    const mid = randomUUID();
+    await seedMember(tx, PARIWAR_A, { memberId: mid });
+    await enterAppScope(client, PARIWAR_A);
+    const memberId = toMemberId(mid);
+    await declare(tx, memberId, [row(1, 'a', 75), row(2, 'b', 25)]);
+    const lockMode = async () => {
+      const r = await client.query<{ mode: string }>(
+        `SELECT mode FROM pg_locks WHERE pid = pg_backend_pid() AND locktype = 'relation' AND relation = 'member_nominees'::regclass`,
+      );
+      return r.rows.map((x) => x.mode).sort();
+    };
+    const plain = await getMemberNominees(tx, PARIWAR_A, memberId);
+    expect(await lockMode()).not.toContain('RowShareLock');
+    const locked = await getMemberNominees(tx, PARIWAR_A, memberId, { forUpdate: true });
+    expect(locked).toEqual(plain);
+    expect(await lockMode()).toContain('RowShareLock');
   });
 });

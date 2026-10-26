@@ -540,14 +540,14 @@ least).
       the two codes in `NOMINEE_LINK_ERROR_CODES`, `lifeEventsUpdateNomineeMarks`, the links-read parse, contracts tests + the fixture
       sweep; `pnpm contracts:check-openapi-determinism` green with ⛔ OpenAPI change.
 - [ ] **Task 2 — domain (AC2, AC3)**
-  - [ ] 2.1 The copy source: REUSE `getMemberNominees` (`nominee/declaration-read.ts`), with a `FOR UPDATE` variant or option for the
+  - [x] 2.1 The copy source: REUSE `getMemberNominees` (`nominee/declaration-read.ts`), with a `FOR UPDATE` variant or option for the
         main tx (MK2); ⛔ new projection read. Inside the caller's tx, ⛔ KMS.
   - [ ] 2.2 EXTEND `getProjectedNomineeVersions` (`declaration-history.ts`) to return `versionNo` beside `versionId` (its 2 production calls,
         both in `claim-contact-persist.ts`, and 4 test callers read only `.versionId` — they keep compiling and passing); add `relationship` for the links read (or join
         it from the projection). The links read's `ranks` is read by the links handler BEFORE `listNomineeLinksForDeclarer`, in that
         handler's same `inScope` READ COMMITTED tx (MK3's read order; a read outside it loses the RLS scope), with a leg that goes RED
         when the order is reversed.
-  - [ ] 2.3 A pure `isUnchangedMarksPlan(live, plan)` (MK5's predicate, incl. the `onHead` conjunct) beside `planNomineeLinks`, with unit
+  - [x] 2.3 A pure `isUnchangedMarksPlan(live, plan)` (MK5's predicate, incl. the `onHead` conjunct) beside `planNomineeLinks`, with unit
         tests in `member-links.test.ts` (a `keep` on its own rank ⇒ unchanged; a same-rank `new` re-pick ⇒ unchanged; a removal ⇒
         changed; a swap ⇒ changed; a carry of an `onHead = false` link ⇒ changed). `planNomineeLinks` itself ⛔ changed.
 - [ ] **Task 3 — API (AC2, AC3, AC4, AC5)** — extract `declare`'s shared parts (guards + basis, the metering tx, the HMAC batch, the

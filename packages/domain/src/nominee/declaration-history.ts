@@ -146,6 +146,10 @@ export async function getNomineeVersionsByIds(
 export interface ProjectedNomineeVersion {
   readonly rank: NomineeRank;
   readonly versionId: NomineeVersionId;
+  /** Story 6.36f (MK3) — the projected version's `version_no`: a marks-only save's BASIS (⛔ the max `version_no` — G5). */
+  readonly versionNo: number;
+  /** Story 6.36f (MK3) — its relationship (plain Tier-3 text, already on the status read); ⛔ a ciphertext is returned. */
+  readonly relationship: string;
 }
 
 /**
@@ -189,7 +193,11 @@ export async function getProjectedNomineeVersions(
   const out: ProjectedNomineeVersion[] = [];
   for (const rank of NOMINEE_RANKS) {
     const versionId = projectedVersionOfRank(rows.filter((r) => r.rank === rank));
-    if (versionId !== null) out.push({ rank, versionId });
+    if (versionId === null) continue;
+    const v = rows.find((r) => r.versionId === versionId)!;
+    // a `declared` version always carries its relationship (0119's kind_coherence CHECK) — fail closed if it ever does not
+    if (v.relationship === null) throw new Error(`[declaration-history] projected rank ${rank} has no relationship`);
+    out.push({ rank, versionId, versionNo: v.versionNo, relationship: v.relationship });
   }
   return out;
 }

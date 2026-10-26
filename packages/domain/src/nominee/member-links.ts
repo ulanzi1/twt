@@ -227,6 +227,21 @@ export function planNomineeLinks(
   return { kind: 'plan', inserts, ends };
 }
 
+/**
+ * Story 6.36f (MK5, `2026-10-26-407`) — PURE. Does a MARKS-ONLY save's plan change nothing? True when EVERY insert carries a live
+ * link onto its OWN rank from that rank's head (`onHead`), and EVERY live link is carried — the save asks nobody, moves no mark
+ * and ends nothing for good; the handler then writes ⛔ version, ⛔ event, ⛔ audit line (versions written for nothing would trip
+ * the staff warning for nothing). Decidable from `(live, plan)` alone ONCE the caller has checked that the submitted ranks equal
+ * the projection's (MK3). End reasons tell nothing (a carried link also ends `redeclared`). The `onHead` conjunct: a link the
+ * links read hides (MK11 — it sits off the head) must be re-hung on a fresh head version, or a re-pick loops on "nothing changed".
+ * ⚠ A deliberate departure from 6.20 T3's "⛔ no dedup", for the marks-only save only (`-407` supersedes `-241` D2 in part).
+ */
+export function isUnchangedMarksPlan(live: readonly LiveNomineeLink[], plan: Extract<NomineeLinkPlan, { kind: 'plan' }>): boolean {
+  const sameRankCarries = plan.inserts.every((i) => i.carriedFrom !== null && i.carriedFrom.rank === i.rank && i.carriedFrom.onHead);
+  const carried = new Set(plan.inserts.map((i) => i.carriedFrom?.linkId as string | undefined));
+  return sameRankCarries && live.every((l) => carried.has(l.linkId));
+}
+
 /** What a declare wrote — for its audit lines (ids and ranks only). */
 export interface AppliedNomineeLinks {
   readonly asked: readonly { readonly linkId: NomineeLinkId; readonly rank: NomineeRank }[];

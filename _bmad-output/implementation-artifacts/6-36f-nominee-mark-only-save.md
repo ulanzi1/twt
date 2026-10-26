@@ -39,7 +39,7 @@ LETTERS: G = found facts (traced at the pin) · MK = build decisions (PROPOSED) 
 
 # Story 6.36f: A Member Changes or Removes a Nominee Mark Without Retyping the Nominees — the Server Keeps the Details `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 > ⭐ **Next: Task 1 (contracts + client).** Task 0 is DONE (2026-10-26): MK1–MK12 as recommended, MK9 en + hi final, Decision
 > `2026-10-26-407` committed alone (`a1053c0b`), the records after it. AC0 is met; code may start.
@@ -562,8 +562,11 @@ least).
       `buildMarksBody` in `lib/nominee-links.ts`; the entry card + marks mode in `nominees.tsx` (the pick into the marks record, the
       step-up save, the refusals, the announce, `invalidateAndLeave`, back to the form); the client call; the copy (en + hi draft,
       single-brace tokens, `PARAMS`; BigDev approves the Hindi); the tests.
-- [ ] **Task 5 — gates + records (AC7)** — the `friction-budget.md` disposition block COMMITTED, then `pnpm friction:check`; `ci:local`;
+- [x] **Task 5 — gates + records (AC7)** — the `friction-budget.md` disposition block COMMITTED, then `pnpm friction:check`; `ci:local`;
       the device run (fresh build; TalkBack lines); the Debug Log (each new guard's mutation RED); the ledger line; File List.
+      *(2026-10-26 — disposition `efe6246d` then friction:check green; ci:local 35 / 36 + the two integration reds run down (Completion
+      Notes); Debug Log, File List, ledger `2026-10-26g`. ⚠ The DEVICE RUN is ⛔ done — OWED: BigDev chose "Review now, device later";
+      a go-live item, as 6.36e's was. ⛔ iOS / VoiceOver either.)*
 
 ## Dev Notes
 
@@ -659,7 +662,32 @@ number-fence test, `friction-budget.md`. ⛔ New route file; ⛔ OpenAPI change;
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36f`, 2026-10-26, in the story's own worktree.
+
 ### Debug Log References
+
+- **Test database.** `:5432` ⛔ touched. A dedicated `twt_6_36f` was created on the `twt-test-pg` container (`:5433`) and migrated
+  (185 migrations — `0000`…`0185`; ⛔ new migration). Every live-DB run below is against it.
+- **Mutation checks (each guard removed ⇒ its leg RED, then restored byte-for-byte):** API (`nominee-marks-save.spec.ts`, 20 legs) —
+  M1 the `versionNo` comparison (2 RED); M2 the basis check in the METERING tx (1 RED — the stale save was charged); M3 the MK5
+  short-circuit (1 RED); M4 keying the marks by array index instead of `rank` (1 RED — the reversed body, TR11); M5 the split
+  assertion (1 RED); M6 `marks_saved` → `declared` (1 RED); M7 the "projection rank with ⛔ version row" refusal (2 RED); M8 the
+  rank-set equality (1 RED). The links read's order reversed ⇒ the source pin RED (2). Domain — `FOR UPDATE` removed from
+  `getMemberNominees` ⇒ the `pg_locks` leg RED. Mobile (`nominee-marks-mode-render`, 9 legs) — P1 the marks-mode pick branch, P2 the
+  *Marks saved.* announce, P3 *Save marks* enabled while nothing differs (2 RED), P4 the restart after `marks_stale`, P5 the card for a
+  member who may ⛔ find and has ⛔ mark — each RED.
+- ⚠ **One guard with ⛔ RED leg:** the lifecycle-state RE-READ inside `checkMarksBasis` (MK2 — an erasure that does ⛔ take D3 may commit
+  while the save waits on the projection's row lock). `guardDeclare` refuses a terminal member first, so only a two-connection race
+  reaches it; ⛔ written. Recorded, ⛔ claimed tested.
+- **A fixture flake found and fixed (⛔ a code defect):** the MK11 leg's hand-seeded correction called `clock_timestamp()` twice, so
+  `effective_at` could land microseconds after `recorded_at` and trip `member_nominee_versions_effective_not_after_recorded_check`
+  (failed once in a combined run, passed 3 + 3 + 5 times alone). Fixed with one instant (`(SELECT clock_timestamp() AS at) c`).
+- **The 6.36e spec (`nominee-member-link.spec.ts`) was edited — TR7's red flag, explained:** its 5 links-read assertions gained the
+  new REQUIRED `ranks` (AC1's fixture sweep — the strict `NomineeLinksView`); ⛔ assertion about the declare changed; 21 / 21.
+  `nominee-declare.spec.ts`, `nominee-lock.spec.ts`, `life-events.spec.ts` and the number fence ran UNCHANGED (23 / 23; 2 / 2).
+- **The number fence (TR12):** `SINK_ALLOWLIST`'s `nominee.handlers.ts:emitAuthAudit` stays **2** — the shared write sequence has ONE
+  save-line call (`.declared` or `.marks_saved`, by parameter) and the per-link loop; only a comment was added. ⛔ Identifier rule
+  widened; ⛔ new fenced file (the extracted helpers stay in `nominee.handlers.ts`).
 
 ### Completion Notes List
 
@@ -681,8 +709,89 @@ number-fence test, `friction-budget.md`. ⛔ New route file; ⛔ OpenAPI change;
   D2 for the marks-only save only); the records commit follows it (epics dated note; ten dated lines + a new two-item section in
   `deferred-work.md` — the `-407` text does ⛔ restate the any-rank carry, so that item's proposed author-commit stays open; the sprint
   row note; ledger `2026-10-26e`). AC0 met.
+- 2026-10-26 — **DEV (`bmad-dev-story 6.36f`), Tasks 1–5.** Row `ready-for-dev` → `in-progress` (Task 1's commit). What was BUILT:
+  - **Task 1 (`6cc8e8c9`) — contracts + client.** `NomineeMarksSaveRequest` (`{ marks: { rank, versionNo, memberLink | null }[] }`, 1–2,
+    ranks unique by `superRefine`, every object `.strict()` — a name / relationship / mobile / address / split key is refused);
+    `NomineeLinksView.ranks` REQUIRED (`{ rank, versionNo, relationship }`); `marksStale` / `marksNoDeclaration` in
+    `NOMINEE_LINK_ERROR_CODES`; `memberAuth.lifeEventsUpdateNomineeMarks`. ⚠ Deviation, recorded: the relationship enum MOVED to a new
+    `contracts/src/nominee/relationship.ts` (re-exported unchanged by `declaration.ts`) — `member-link.ts` needs it and
+    `declaration.ts` already imports `member-link.ts`, so importing back would be a runtime init cycle. ⛔ OpenAPI change
+    (`contracts:check-openapi-determinism` green, `openapi/v1.yaml` untouched).
+  - **Task 2 (`ed40951f`) — domain.** `getMemberNominees(…, { forUpdate })`; `getProjectedNomineeVersions` returns `versionNo` +
+    `relationship` (its callers read `.versionId` only — unchanged); the pure `isUnchangedMarksPlan` (MK5, incl. the `onHead`
+    conjunct) with nine unit legs. `planNomineeLinks` ⛔ changed.
+  - **Task 3 (`2808b69f`) — API.** `declare`'s steps MOVED (⛔ rewritten — TR7) into shared functions in `nominee.handlers.ts`, keyed by
+    rank: `lookUpElevation`, `guardDeclare`, `normaliseNewMarks`, `meterNewMarks` (its `beforeCharge` hook carries the basis check),
+    `indexNewMarks`, `planDeclarationLinks`, `writeDeclaration` (returns the status + an `emitAudit` the caller runs AFTER `ok = true`).
+    The new `marks` handler: sort by rank → normalise → elevation → metering tx (`guardDeclare` + `checkMarksBasis` before the charge)
+    → ONE HMAC batch → main tx (`guardDeclare`, `checkMarksBasis` — projection `FOR UPDATE`, projected `versionNo`, terminal re-read;
+    the link plan; MK5 ⇒ 200 with ⛔ write; the split derived and ASSERTED; the stored ciphertext copied byte for byte) → audit
+    `member_nominees.marks_saved`. Route `POST /api/v1/member/life-events/nominees/marks` (the Life Events save's preHandlers). The
+    links read returns `ranks` read FIRST in its one transaction (a source-order pin). Tests: `nominee-marks-save.spec.ts` (20 legs —
+    AC2's list, AC3's copy + readers through the route, AC5's event / audit, MK11 named as DOCUMENTING today's behaviour), the 6.36f AC4
+    leg in `claims/nominee-declaration.spec.ts` (the marks-only version deep-equals a full re-save-with-identical-details version on the
+    timeline AND the snapshots, warnings included; ⛔ ciphertext on either response), `nominee-links-read-order.test.ts`.
+  - **Task 4 (`dad02d44`) — mobile.** `NomineeMarkControl.tsx` (the control EXTRACTED; the form's render tests and draft pins pass
+    UNCHANGED); `lib/nominee-links.ts` + `initialMarks` / `marksDiffer` / `buildMarksBody` / `applyMarksPick` / `marksEntryVisible` and
+    the two refusal keys; `nominees.tsx` — the entry card, marks mode (the form unmounted; the pick through the SAME focus effect, read
+    via a ref so its pinned dependency list is unchanged; *Save marks* disabled until a mark differs, its hint shown; the step-up guard
+    + the inline footer; the refusals; *Marks saved.* announced before `invalidateAndLeave()`; "Change names or numbers instead"
+    remounts the form from `freshForms()`; ⛔ `saveDraft` — the pins still count 2). The ten MK9 keys copied into en + hi
+    PROGRAMMATICALLY from the approved table (⛔ retyped), pinned verbatim by a test; `marks.slot` in `PARAMS`; the `-401` guard green.
+  - **Task 5 — gates.** The friction disposition committed (`efe6246d`) BEFORE `pnpm friction:check` (green — "declaration affirmed with
+    no new row"). **`ci:local`** on the committed tree (`efe6246d`) against `twt_6_36f` (`:5433`; ⛔ `:5432`): **35 / 36 jobs green**
+    (every static job incl. lint, typecheck, build, unit, i18n-parity, friction-budget, contracts-determinism, pii-scrape). The 36th,
+    `integration-tests`: domain 423 files / 6,444 passed, channels 457, events 36, niyamavali-engine 144, validity-service 284; jobs
+    78 / 80 files (1,780 passed, 1 failed) — two reds, NEITHER a 6.36f file, each run down: (1) `restoration-discipline-production-path-live`
+    refuses any database not named `twt_dev` (the 10.23 gate — the same red 6.36e met); with its documented
+    `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS=1` on this session's disposable database: 3 / 3. (2) `audit/integrity-check` "head-truncation"
+    DELETEs the database's GENESIS audit row; in the fresh `twt_6_36f` that row is a `claim.contact_recorded` line written by the
+    domain `claim-contact` spec this session ran FIRST (Task 2), and a `consent_records` row references it (FK violation). On the
+    long-lived `twt_dev` the genesis has ⛔ such reference. Proof of innocence: a SECOND fresh database (`twt_6_36f_probe`, created,
+    migrated, the spec run alone — 11 / 11 — then DROPPED). A pre-existing fresh-database ordering hazard in that test, ⛔ fixed here.
+    turbo stops at the first failed package, so `@twt/api` and `@twt/queue` were run on their own afterwards: api 192 files / 2,310
+    passed, queue 4 / 4.
+  - **NOT done (stated, ⛔ hidden):** the AC7 DEVICE RUN (a fresh Android build; remove / swap / add a mark; TalkBack *"Mark removed."* and
+    *"Marks saved."*) — ⛔ run in this session; iOS / VoiceOver ⛔ covered. `deferred-work.md` *"No test reads the audit sink for a
+    carried `new` mark"* is ⛔ closed (the swap leg asserts the carries, the counter and the HMAC line, ⛔ the `carried` audit lines).
+    The erasure race (MK2) stays recorded, ⛔ fixed (MK10).
 
 ### File List
+
+Code + tests (Tasks 1–4):
+
+- `packages/contracts/src/nominee/member-link.ts` — `NomineeMarksSaveEntry` / `NomineeMarksSaveRequest`, `NomineeMarksRankView`, `NomineeLinksView.ranks`, two error codes
+- `packages/contracts/src/nominee/relationship.ts` — NEW: the relationship enum, moved (no cycle)
+- `packages/contracts/src/nominee/declaration.ts` — re-exports the moved enum
+- `packages/contracts/tests/nominee-member-link.test.ts`
+- `packages/api-client/src/index.ts` — `lifeEventsUpdateNomineeMarks`
+- `packages/api-client/tests/nominee-links-client.test.ts`
+- `packages/domain/src/nominee/declaration-read.ts` — `forUpdate` option
+- `packages/domain/src/nominee/declaration-history.ts` — `ProjectedNomineeVersion.versionNo` / `relationship`
+- `packages/domain/src/nominee/member-links.ts` — `isUnchangedMarksPlan`
+- `packages/domain/tests/nominee/member-links.test.ts`
+- `packages/domain/tests/integration/nominee/member-nominees.spec.ts`
+- `apps/api/src/modules/nominee/nominee.handlers.ts` — the shared steps + the `marks` handler
+- `apps/api/src/modules/life-events/routes.ts` — the `/nominees/marks` route
+- `apps/api/src/modules/nominee-links/handlers.ts` — `ranks` on the links read
+- `apps/api/src/audit/audit-sink.ts` — `member_nominees.marks_saved`
+- `apps/api/tests/integration/nominee/nominee-marks-save.spec.ts` — NEW
+- `apps/api/tests/integration/nominee/nominee-member-link.spec.ts` — `ranks` on 5 links-read assertions
+- `apps/api/tests/integration/claims/nominee-declaration.spec.ts` — the 6.36f AC4 leg
+- `apps/api/tests/unit/nominee-links-read-order.test.ts` — NEW
+- `apps/api/tests/unit/known-people-number-fence.test.ts` — a comment only
+- `apps/mobile/components/life-events/NomineeMarkControl.tsx` — NEW (extracted)
+- `apps/mobile/components/life-events/NomineeForm.tsx` — renders the shared control
+- `apps/mobile/app/(life-events)/nominees.tsx` — the entry card + marks mode
+- `apps/mobile/lib/nominee-links.ts` — the mode's pure logic + two refusal keys
+- `apps/mobile/tests/unit/nominee-links-logic.test.ts`
+- `apps/mobile/tests/unit/nominee-links-hooks.test.ts` — `ranks` in the mocked read
+- `apps/mobile/tests/unit/nominee-marks-mode-render.test.ts` — NEW
+- `packages/i18n/locales/en/nominee_link.json`, `packages/i18n/locales/hi/nominee_link.json` — the ten MK9 keys
+- `packages/i18n/tests/nominee-link-copy.test.ts` — `PARAMS` + the verbatim pin
+
+Records (Task 5): `friction-budget.md` (the disposition), `_bmad-output/implementation-artifacts/sprint-status.yaml` (the row + a
+ledger line), this story file. ⛔ Migration; ⛔ `openapi/v1.yaml`.
 
 ## Change Log
 
@@ -690,3 +799,4 @@ number-fence test, `friction-budget.md`. ⛔ New route file; ⛔ OpenAPI change;
 |---|---|---|
 | 2026-10-24 | 1.0 | Created (`bmad-create-story 6.36f`, BigDev: *"6.36f on it's branch"*) on `story/6-36f-nominee-mark-only-save` in its own worktree; MK1–MK12 PROPOSED; ⛔ code. Ledger `2026-10-24w`. |
 | 2026-10-26 | 1.1 | Validated (`bmad-create-story validate 6.36f`, BigDev *"all"*) against `origin/main` `b3b1e8e9`: MK2 / MK3 / MK4 / MK5 / MK8 / MK9 / MK11 / MK12 revised, AC1–AC7 and Tasks 0–5 aligned, TR11–TR13 added; MK8 now a mode inside `nominees.tsx`. Row stays `ready-for-dev`; ⛔ code. Ledger `2026-10-26d`. |
+| 2026-10-26 | 1.2 | DEV (`bmad-dev-story 6.36f`): Tasks 1–5 — contracts + client (`6cc8e8c9`), domain (`ed40951f`), API — `declare`'s steps shared, the marks route, the links read's `ranks` (`2808b69f`), mobile — the marks-only mode, the extracted mark control, the MK9 copy (`dad02d44`), the friction disposition (`efe6246d`); ci:local 35 / 36 with both integration reds run down (⛔ 6.36f's); mutations RED. ⚠ The AC7 device run is OWED (BigDev: "Review now, device later"). Row `ready-for-dev` → `in-progress` → `review`. Ledger `2026-10-26g`. |

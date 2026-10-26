@@ -3748,6 +3748,12 @@ questions for create-story: a NEW version per rank carrying the SAME ciphertext 
 export's `(rank, versionNo)` join and the `onHead` end rule); what the declaration history shows for a marks-only version; the form's UX (a separate
 "change marks only" path vs detecting untouched slots). ⛔ A new disclosure; ⛔ backfill.
 
+> ⚠ **Dated note, 2026-10-26 (Story 6.36f Task 0.4):** the build decisions are DECIDED by [`-407`](../../.decision-log.md#decision-2026-10-26-407) (AUTHOR-COMMIT, BigDev: *"MK1–MK12 all
+> as recommended."*), which also answers this entry's *"⛔ a decision-log entry"*. Its three open design questions: a NEW version per rank carrying
+> the SAME ciphertext (MK2); ⛔ label — a marks-only version reads exactly like a re-save with identical details (MK6); a marks-only MODE inside the
+> Life Events nominee screen, ⛔ a separate route (MK8). *"the head per rank"* is read as the PROJECTED version (MK11 — narrows the wording, ⛔
+> contradicts it). `-407` supersedes in part `-241` D2 (*"⛔ no dedup"*) for the marks-only save only. The row is `ready-for-dev`. ⛔ Text above edited.
+
 ### Story 6.37: The Texts and Login Codes Are Actually Sent — a MSG91 Adapter Behind the SMS Seam, Sending Each Template's Named Values, With a Pre-flight That Proves Every Template Before a Text Is Spent `[PRIMITIVE]`
 
 > ⚠ **Added 2026-10-17 (Story 6.37, Task 0.4)** — the row `6-37-msg91-sms-gateway-adapter` was added by

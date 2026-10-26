@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Story 6.36f — a marks-only nominee save (2026-10-26)
+
+Recorded at Story 6.36f's Task 0.4, under [`-407`](../../.decision-log.md#decision-2026-10-26-407).
+
+- **A MIXED nominee save — one rank's details retyped, the other rank's kept by the server — ⛔ built** [`-407` MK10; apps/api/src/modules/nominee/nominee.handlers.ts]. Today a member changes a name, relationship, mobile or address only by a full save that retypes EVERY nominee; 6.36f's marks-only save changes marks only. A mixed save needs a body that says, per rank, "keep the stored details" — which MK8 (c) rejected for the full form (an empty slot is ambiguous). Revisit if members report retyping the untouched nominee.
+- **The erasure race — a nominee save can leave real ciphertext for an `anonymized` member** [`-407` Consequence 5; packages/domain/src/member/anonymize.ts — its callers in `member-data-rights/handlers.ts` / `rtbf/handlers.ts` take `rtbfAdvisoryLockKey`; the nominee saves take only the D3 lock]. RTBF is legal from `withdrawn` OR a moderation `terminated` overlay (`member/rtbf-legality.ts`), so the lifecycle state can still be `active` and `guardDeclare` lets a save through. If the scrub's statements take their snapshot before the save commits, they skip the projection rows and versions the save inserts. Pre-existing for the FULL save (body data); sharper for the marks-only COPY (it re-writes the stored ciphertext). Fix options: take the RTBF lock after D3 in the shared write sequence (⛔ cycle: nothing takes RTBF then D3), or make the scrub take D3 first. ⛔ Fixed in 6.36f (⛔ new lock inside a handler four review rounds hardened).
+
+---
+
 ## Story 5.11b — the real alert SMS send (2026-10-25)
 
 Recorded at Story 5.11b's Task 0.4 (items 1–2), at dev (items 3–4) and by the code review of 2026-10-25 (items 5–7), under [`-404`](../../.decision-log.md#decision-2026-10-25-404). Items 1–2 and 5–7 are ⛔ 5.11b's to build; item 3 is BOUNDED and still OPEN (not a deferral that closes); item 4 is a test-harness gap.
@@ -184,6 +193,7 @@ BigDev's principle: ⛔ no screen may tell members that the Trust asks members a
 - **A dev client built before `expo-contacts` fails every contacts screen** ("Cannot find native module 'ExpoContacts'") — rebuild (`expo prebuild` / `expo run:android`) on any device or emulator that predates 6.36b. ⛔ A code fault.
 - **Not covered by the device run — UPDATED after the second pass (2026-10-24):** now covered — the permission-denied path, both daily limits, a second nominee, a swap of the two marks, the draft save-and-resume and four TalkBack utterances. STILL not covered: iOS / VoiceOver (only the Command Line Tools are installed — ⛔ Xcode, ⛔ `simctl`; needs an Xcode install or a real iPhone), iOS limited access, TalkBack on the requests screen / in Hindi / a full swipe-through reading order, a real phone in a real hand.
 - **Seen on the second pass, ⛔ patched:** (a) "Mark kept." stays in small type above the next refusal until the member edits (cosmetic); (b) the re-declaration form starts EMPTY (3.9 G14): changing or removing ONE mark means retyping every nominee's name, relationship and mobile — pre-existing, but the marks make it likelier. **DECIDED 2026-10-24 (BigDev: *"C: server keeps the details"*) ⇒ Story 6.36f `6-36f-nominee-mark-only-save` (`backlog`; an `epics.md` entry; `bmad-create-story 6.36f` owed): a marks-only save the server fulfils from the existing encrypted details — ⛔ personal data to the phone, ⛔ retyping. Option B (prefill from the record — a Tier-1 read to the device) was ⛔ chosen: it needs a privacy ruling.**
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* item (b) is HOMED in Story 6.36f — a marks-only save the server fulfils from the stored details (MK1–MK12). ⛔ Closed until row `6-36f-nominee-mark-only-save` is `done` on main. Item (a) is untouched.
 
 ## Deferred from: fix-diff review, round 3, of 6-36e-nominee-member-link-at-declaration.md (2026-10-24)
 
@@ -193,6 +203,7 @@ The whole patch diff again (both rounds' patches), two chunks × three layers. T
 - **`contactMatches` takes no abort signal, so the read bound ABANDONS a metered POST** [packages/api-client/src/index.ts, apps/mobile/app/(life-events)/nominee-link-find.tsx]. The server still spends the check and writes the audit line; the response is dropped. Threading a signal changes the shared 6.36b client. Trigger: a slow-network report, or when the client gains signals.
 - **A concurrent double-submit of a first-ever declaration can charge twice across a step-up** [apps/api/src/modules/nominee/nominee.handlers.ts `declare`]. Both charge transactions see "not a re-declaration"; the first main transaction commits a version; the second then needs a step-up. The charge cannot move into the main transaction without putting the HMAC inside the lock. Two overlapping POSTs only.
 - **The `new` ⇒ carry rule changed NE2 by dated story notes only** [`-397` NE2]. Since round 3 it is ANY rank, not only the same one: a re-pick, a retried save or a MOVE of the mark between ranks carries the live link (the answer and `asked_at` stay; nobody is asked again) — and the pre-save line no longer promises "…unless they have already answered" in general. A process choice for BigDev: a `-400`-style author-commit would record "a `new` mark of a member already live is a carry to the rank it is submitted on, and the pre-save line says so" (NE3 / NE5 were changed the same way).
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* Story 6.36f relies on the any-rank carry — a swap of two marks is two `new` picks, both CARRIED (MK8), and MK5's "changes nothing" plan is all carries onto their own rank. `-407` relies on the rule but does ⛔ restate it, so the author-commit this item proposes is still BigDev's choice — and 6.36f now depends on it. ⛔ Closed.
 - **A draft keeps a picked contact's number in unencrypted storage until saved or discarded** [apps/mobile/lib/nominee-links.ts `redactForDraft`]. AC5's design; the member's own phone; ⛔ a Panel question. Persisting a pick as "no mark" would cost a second contacts check to resume. Revisit with the privacy-policy line (roster Row 31 (j)).
 - **Several `AnnouncedText` announcements can fire in the same commit on iOS** [apps/mobile/app/(life-events)/nominees.tsx]. SUSPECTED; needs a VoiceOver run.
 
@@ -205,6 +216,7 @@ Round 2 — the patch diff `git diff HEAD` (+ 3 untracked tests) over `ae0f3249`
 - **A restored draft shows a `new` mark without its name** [apps/mobile/app/(life-events)/nominees.tsx `onContinueDraft`]. The price of not storing the name a contact was saved under; the number is kept. Revisit if a resumed pick is ever mistaken (a masked-number hint is the obvious aid).
 - **`reconcileMarks` keeps `null` for both "removed" and "no mark existed"** [apps/mobile/lib/nominee-links.ts]. A draft resumed after a mark appeared from another device sends no mark and the server ends it. Pre-existing; SUSPECTED, needs a second device.
 - **No test reads the audit sink for a carried `new` mark** [apps/api/tests/integration/nominee/nominee-member-link.spec.ts]. Covered by construction (the handler loops `links.carried`); add with the "audit before COMMIT" item.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* Story 6.36f's AC5 audit legs drive a swap (two carried `new` marks) and may close this. ⛔ Closed until a 6.36f leg reads the sink for a carried `new`.
 
 ---
 
@@ -213,12 +225,17 @@ Round 2 — the patch diff `git diff HEAD` (+ 3 untracked tests) over `ae0f3249`
 Branch `story/6-36e-nominee-member-link-at-declaration` at `dc7a8aeb`, diff `1268d47e..dc7a8aeb`. The decision and the sixteen `patch` items are in the story's `### Review Findings` (all applied 2026-10-24); these ten are not patched by it.
 
 - **Audit lines are emitted before the COMMIT that can still fail** [apps/api/src/modules/nominee/nominee.handlers.ts `declare`]. 6.20's structure (`member_nominees.declared` after `ok = true`, before `closeScopeTx`); NE11 / V10 sanction it; 6.36e extends it to the link lines, and the rollback test asserts rows, not the audit sink. Trigger: emit after commit, as the answer handler does.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* `-407` MK7 adds `member_nominees.marks_saved` on the same pattern (inside the `try`, guarded by `ok`, before the COMMIT); this item now covers it too. ⛔ Closed.
 - **The answer's Idempotency-Key is not bound to the link or the answer, is unbounded, and is minted per tap** [apps/api/src/modules/nominee-links/handlers.ts `idempotent`; apps/mobile/app/(life-events)/nominee-link-requests.tsx]. Inherited from 6.36b (same shape in `known-people/handlers.ts`); the shipped client cannot reuse a key; a lost-response retry answers 409 `request_closed` for a saved answer. Fix once for both features.
 - **`openapi/v1.yaml` omits the Life Events declare, the three nominee-links routes and the new codes** [openapi/v1.yaml]. House practice (6.36b's known-people routes are absent too); `forced-pagination.spec.ts` therefore cannot see the new collection GET.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* the marks route `POST /api/v1/member/life-events/nominees/marks` and its two codes are omitted too (6.36f AC1: ⛔ OpenAPI change). ⛔ Closed.
 - **NE9's recorded residual has a screen consequence** [packages/domain/src/nominee/member-links.ts `listNomineeLinksForDeclarer`]. A link left on a non-head version after a post-filing correction is hidden from the declarer's screen but still answerable, still excluding, and silently ended by a later re-save with no mark. Add it to NE9's record.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* the marks path INHERITS this (`-407` MK11): its copy and basis use the PROJECTED version; MK5's `onHead` conjunct keeps a re-pick of a hidden link from looping; a 6.36f test DOCUMENTS today's behaviour, named as such. ⛔ Fixed.
 - **No DB backstop for one live link per (declarer, rank) / (declarer, nominee) or for a same-Pariwar nominee** [packages/domain/migrations/0181_member-nominee-links.sql]. NE1 does not specify one; the only writer is `applyNomineeLinkPlan` under the D3 lock. Trigger: a second writer.
 - **The OTP retry re-submits the `pending` payload** [apps/mobile/app/(life-events)/nominees.tsx `onSubmit` / `onVerifyOtp`]. A pick or edit made after the first Save is dropped; an edit skips the V3 gate. Pre-existing pattern; more exposed now that Find navigates away from the form.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* Story 6.36f's marks mode reuses `verifyAndRetry` with its own `pending` marks body — the same shape, the same residual. ⛔ Closed.
 - **The find screen is reachable by deep link without the form** [apps/mobile/app/(life-events)/nominee-link-find.tsx `choose`; apps/mobile/lib/nominee-links.ts `pendingPick`]. A lingering pick is applied at the next form focus. SUSPECTED, not traced.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* the pick gains a second consumer in the same screen — 6.36f's marks mode (`-407` MK8); the module-global pick and the unmount clear are unchanged. ⛔ Closed.
 - **[HINDI REVIEWED 2026-10-24 by BigDev — all 78 strings read; 2 Hindi + 2 English edits applied (`find.matches_count*`: "TWT के सदस्य" / "TWT members"); the other 74 Hindi strings kept as drafted; recorded as REVIEWED, then **APPROVED by BigDev the same day ("1" — mark the Hindi approved)**. The device run (2026-10-24) saw the strings render without truncation.]** **The Hindi `nominee_link` copy awaits BigDev's approval; no device attestation** [packages/i18n/locales/hi/nominee_link.json]. Disclosed in the catalog `$comment` and the Completion Notes; go-live conditions.
 - **The jobs role's grants on the nominee tables (G12)** [roster Row 26]. Already recorded; the live proof is a go-live step.
 - **The find screen's matched contacts render as an unvirtualised list of up to 1,000 buttons** [apps/mobile/app/(life-events)/nominee-link-find.tsx]. Found by the review, never measured. 6.36b's find screen uses a `FlashList`; converting restructures this screen from a `ScrollView` into a flex column (the empty states stay outside the list) and cannot be checked without a device, so it was NOT shipped blind when the patches were applied. Trigger: a device run on a low-end Android with a large address book.
@@ -240,6 +257,7 @@ Recorded at Story 6.36e Task 0.4 (`_bmad-output/implementation-artifacts/6-36e-n
 - **A post-activation home prompt to mark a nominee (the 6.36c prompt shape) — deferred** [6.36e NE4 (b)]. A member who declared at sign-up
   marks a nominee only by re-saving in Life Events (step-up; the staff line fires on the new versions). ⭐ Trigger: measured uptake of the
   mark, or a prompt-card story.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* Story 6.36f removes the retype for a RE-declaration only (the marks-only save); a member who declared at signup still marks a nominee only from Life Events. This item stays open as written.
 - **Every other reader of the nominee member link — ⛔ built** [6.36e NE14]: payout, nominee determination, claim filing, the claim-contact
   ladder, the nominee console, the District Admin's nominee panel. Each would be a NEW use, outside `-396` Q1 A's *"used ONLY to make sure
   that person is never one of the five"* ⇒ its own Panel question. ⭐ Trigger: a story that wants to read `member_nominee_links`.
@@ -249,6 +267,7 @@ Recorded at Story 6.36e Task 0.4 (`_bmad-output/implementation-artifacts/6-36e-n
   still shows it); the declaration is locked after filing, so ⛔ declare ends it unless an innocence finding unlocks it (NE2 then ends it
   `redeclared`). ⭐ Trigger: a correction of a linked rank observed, or a story that reads links
   after filing.
+  - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* the marks path INHERITS this (`-407` MK11) — reachable for a save only after an innocence unlock, which has ⛔ production caller today. ⛔ Fixed.
 
 ---
 

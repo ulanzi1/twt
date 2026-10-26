@@ -41,8 +41,8 @@ LETTERS: G = found facts (traced at the pin) · MK = build decisions (PROPOSED) 
 
 Status: ready-for-dev
 
-> ⭐ **Next: Task 0.1 (preflight + the rebase onto `origin/main`), then Task 0.2 — BigDev answers MK1–MK12 and finalises the English
-> copy (MK9).** ⛔ Code until the author-commit (Task 0.3) is committed ALONE and the records (Task 0.4) follow it.
+> ⭐ **Next: Task 1 (contracts + client).** Task 0 is DONE (2026-10-26): MK1–MK12 as recommended, MK9 en + hi final, Decision
+> `2026-10-26-407` committed alone (`a1053c0b`), the records after it. AC0 is met; code may start.
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -379,14 +379,25 @@ Each carries the recommendation first.
 - **MK9 — the copy. RECOMMEND:** new keys in the `nominee_link` namespace — flat dotted keys, SINGLE-brace tokens (`{name}`; the
   resolver's `TOKEN = /\{(\w+)\}/g`, and `t()` throws on an unsupplied token) — en + hi; parity; a real-`t()` test
   ([[feedback_stub_must_call_not_transcribe]]); the `-401` absence test (`packages/i18n/tests/nominee-link-copy.test.ts`) then covers
-  them, so ⛔ word of a death, and `marks.slot` joins its `PARAMS` map. PROPOSED English, which BigDev finalises at Task 0.2:
-  `marks.entry` *"Only changing a member mark? Do it here without typing your nominees again."* · `marks.title` *"Member marks"* ·
-  `marks.intro` *"Your nominees' names, numbers and shares stay exactly as you saved them. Here you can only mark, change or remove which
-  nominee is a TWT member."* · `marks.slot` *"{nominee} · {relationship}"* · `marks.save` *"Save marks"* · `marks.saved` *"Marks
-  saved."* · `marks.nothing_changed` *"Change a mark first."* (the disabled Save's hint) · `marks.back_to_form` *"Change names or numbers
-  instead"* · `save.marks_stale` *"Your nominees changed since you opened this screen. Check the marks again, then save."* ·
-  `save.marks_no_declaration` *"Save your nominees first, then you can mark a member."*. The Hindi is drafted by the dev and approved by
-  BigDev before the PR (the 6.35 LS14 / 6.36e precedent).
+  them, so ⛔ word of a death, and `marks.slot` joins its `PARAMS` map. **FINAL — English AND Hindi approved by BigDev 2026-10-26
+  (*"reviewed hi/en, it's fine, record it"*, on the side-by-side sheet, ⛔ edit).** Copy them into `packages/i18n/locales/{en,hi}/nominee_link.json`
+  VERBATIM at Task 4; ⛔ rewording without a new approval:
+
+  | Key | English | Hindi |
+  |---|---|---|
+  | `marks.entry` | Only changing a member mark? Do it here without typing your nominees again. | सिर्फ़ सदस्य-चिह्न बदलना है? अपने नामित व्यक्तियों को दोबारा टाइप किए बिना यहाँ बदलें। |
+  | `marks.title` | Member marks | सदस्य-चिह्न |
+  | `marks.intro` | Your nominees' names, numbers and shares stay exactly as you saved them. Here you can only mark, change or remove which nominee is a TWT member. | आपके नामित व्यक्तियों के नाम, नंबर और हिस्से ठीक वैसे ही रहेंगे जैसे आपने सहेजे थे। यहाँ आप सिर्फ़ यह चिह्नित कर सकते हैं, बदल सकते हैं या हटा सकते हैं कि कौन-सा नामित व्यक्ति TWT का सदस्य है। |
+  | `marks.slot` | {nominee} · {relationship} | {nominee} · {relationship} |
+  | `marks.save` | Save marks | चिह्न सहेजें |
+  | `marks.saved` | Marks saved. | चिह्न सहेज दिए गए। |
+  | `marks.nothing_changed` (the disabled Save's hint) | Change a mark first. | पहले कोई चिह्न बदलें। |
+  | `marks.back_to_form` | Change names or numbers instead | इसके बजाय नाम या नंबर बदलें |
+  | `save.marks_stale` | Your nominees changed since you opened this screen. Check the marks again, then save. | यह स्क्रीन खोलने के बाद आपके नामित व्यक्ति बदल गए। चिह्न दोबारा जाँचें, फिर सहेजें। |
+  | `save.marks_no_declaration` | Save your nominees first, then you can mark a member. | पहले अपने नामित व्यक्तियों को सहेजें, फिर आप किसी सदस्य को चिह्नित कर सकते हैं। |
+
+  `{nominee}` ← `nominees.primary_label` / `nominees.secondary_label`; `{relationship}` ← `nominees.relationship_*`. The Hindi approval
+  is already given ⇒ AC7's "Hindi approved before the PR" is MET for these ten keys (any further key needs its own approval).
 - **MK10 — scope. RECOMMEND:** marks ONLY. ⛔ change to a name, relationship, mobile, address, split or the number of nominees; ⛔ vacating a
   rank; ⛔ signup; ⛔ prefill (option B); ⛔ backfill; ⛔ migration; ⛔ new disclosure; ⛔ new reader of the mark — incl. ⛔ reader that
   carries or compares version ciphertexts (MK6); ⛔ "move mark" control (MK8 (d)); ⛔ fix for the erasure race (MK2). A MIXED save (one
@@ -495,19 +506,24 @@ least).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance (AC0)**
-  - [ ] 0.1 Preflight: `git fetch origin`; REBASE onto `origin/main` (the branch is behind; ledgers branch-on-top, `---` separators kept,
+- [x] **Task 0 — governance (AC0)**
+  - [x] 0.1 Preflight: `git fetch origin`; REBASE onto `origin/main` (the branch is behind; ledgers branch-on-top, `---` separators kept,
         `2026-10-24w` / `2026-10-26d` kept as written unless a collision); re-run G1–G12's greps (`planNomineeLinks`, `guardDeclare`,
         `replaceMemberNominees`, `encContext`, `listNomineeLinksForDeclarer`, `getProjectedNomineeVersions`, `NomineeLinksView`, the fence's
         three lists); re-take the NUMBERS (decision ≥ `-407`; the next free ledger letter of the date of writing); confirm ⛔ migration is
-        needed under the answers.
-  - [ ] 0.2 BigDev answers MK1–MK12, recorded VERBATIM here and in the Completion Notes, and finalises MK9's English.
-  - [ ] 0.3 The author-commit: the next free decision id, *"AUTHOR-COMMIT (BigDev) — STORY 6.36f: A MARKS-ONLY NOMINEE SAVE — THE SERVER
+        needed under the answers. **DONE 2026-10-26:** fetched; rebased onto `origin/main` `b3b1e8e9` (one ledger conflict,
+        branch-on-top); G1–G12 re-traced there at the validate pass; decision `-407`; ⛔ migration.
+  - [x] 0.2 BigDev answers MK1–MK12, recorded VERBATIM here and in the Completion Notes, and finalises MK9's English.
+        **Answered 2026-10-26 (BigDev): *"MK1–MK12 all as recommended."*** MK9's English AND Hindi FINAL (BigDev: *"reviewed hi/en,
+        it's fine, record it"* — the side-by-side sheet, ⛔ edit); recorded in MK9's table.
+  - [x] 0.3 The author-commit: the next free decision id, *"AUTHOR-COMMIT (BigDev) — STORY 6.36f: A MARKS-ONLY NOMINEE SAVE — THE SERVER
         COPIES THE STORED DETAILS …"*, with the Occasion (*"C: server keeps the details"*, chosen over A / B, 6.36e device run), §0, MK1–MK12
         as decided, Not covered (MK10's list; the MK11 residual), Consequences (⛔ migration; ⛔ the Panel; ⛔ roster change, Row 31 (j)
         inherited; the RECORDED COSTS of MK12: §0 row 4, MK5 vs 6.20 T3, MK6's at-rest marker, MK2's erasure race). Committed ALONE as
         `governance: …`; its SHA written after ([[project_decision_log_writes_user_inserted]] — if the write is refused, ask once).
-  - [ ] 0.4 The records commit (append-only, each dated): `epics.md` `### Story 6.36f` — a dated note (the decision id; the three open
+        **DONE 2026-10-26: Decision `2026-10-26-407`, committed ALONE as `a1053c0b`** — it also SUPERSEDES IN PART `-241` D2 (*"⛔
+        no dedup"*) for the marks-only save only, when it changes no mark (MK5), with a dated pointer under `-241` in the same commit.
+  - [x] 0.4 The records commit (append-only, each dated): `epics.md` `### Story 6.36f` — a dated note (the decision id; the three open
         questions decided by MK2 / MK6 / MK8; *"the head per rank"* read as the projected version, MK11); `deferred-work.md` (under
         `## Deferred from: the 6.36e device run (Android emulator, 2026-10-24)` and the 6.36e sections) — a dated line on item (b)
         (*"homed in 6.36f, ⛔ closed until row `done` on main"*, [[feedback_closure_language_precision]]); dated lines (⛔ new items) on
@@ -518,6 +534,8 @@ least).
         Life Events declare …"* (now also the marks route), *"No test reads the audit sink for a carried `new` mark"* (AC5's audit legs may
         close it — say so only once they do), NE4 (b) *"A post-activation home prompt"* (left as is; 6.36f removes the retype only for
         re-declarations); NEW items: the mixed save (MK10); the erasure race for BOTH save paths (MK2); the sprint row's note.
+        **DONE 2026-10-26** (the commit after `a1053c0b`): the epics dated note; ten dated lines in `deferred-work.md` and its new
+        section `## Story 6.36f — a marks-only nominee save (2026-10-26)` (two items); the sprint row note + ledger `2026-10-26e`.
 - [ ] **Task 1 — contracts + client (AC1)** — `NomineeMarksSaveRequest`, `NomineeLinksView.ranks` (`{ rank, versionNo, relationship }`),
       the two codes in `NOMINEE_LINK_ERROR_CODES`, `lifeEventsUpdateNomineeMarks`, the links-read parse, contracts tests + the fixture
       sweep; `pnpm contracts:check-openapi-determinism` green with ⛔ OpenAPI change.
@@ -657,6 +675,12 @@ number-fence test, `friction-budget.md`. ⛔ New route file; ⛔ OpenAPI change;
   the friction-budget declaration; the `form.will_ask*` line; reader legs moved to API integration; AC4's endpoint and deep-equal; the
   ratified quotes made verbatim (`-234` V / X, `-239`, `-396` Not covered in full) and `-397` §0 / §2 cited for the staff warning; the
   deferred-work items named. Still ⛔ code; ⛔ decision id taken.
+- 2026-10-26 — Task 0.2 DONE: BigDev: *"MK1–MK12 all as recommended."*; MK9's English and Hindi approved as drafted (*"reviewed hi/en,
+  it's fine, record it"*), recorded in MK9's table. ⛔ Author-commit yet (Task 0.3 next).
+- 2026-10-26 — Tasks 0.3 + 0.4 DONE: Decision `2026-10-26-407` committed ALONE as `a1053c0b` (MK1–MK12 + MK9; supersedes in part `-241`
+  D2 for the marks-only save only); the records commit follows it (epics dated note; ten dated lines + a new two-item section in
+  `deferred-work.md` — the `-407` text does ⛔ restate the any-rank carry, so that item's proposed author-commit stays open; the sprint
+  row note; ledger `2026-10-26e`). AC0 met.
 
 ### File List
 

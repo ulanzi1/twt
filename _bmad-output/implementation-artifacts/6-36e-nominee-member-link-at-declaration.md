@@ -371,6 +371,7 @@ is stated inline so the dev agent never has to infer it.
   (the moved mark keeps the answer and `asked_at`). ⚠ NE2's "ends `redeclared` when its rank is … given a `new` link" is changed by
   this and by the same-rank note above BY DATED NOTE ONLY — no decision-log entry; `deferred-work.md` (round 3) carries the
   author-commit `-400` it would need.*
+  *Dated 2026-10-26: this rule is now a DECISION — [`-408`](../../.decision-log.md#decision-2026-10-26-408) (AUTHOR-COMMIT, extends `-397` NE2); ⛔ word above edited.*
 - **NE3 — how the member finds the nominee. RECOMMEND:** 6.36b's contact matching, REUSED AS IS — the same endpoint
   (`POST /api/v1/member/known-people/contact-matches`), the same counters and audit purpose (one budget for one disclosure), the same
   phone-side helpers (`lib/known-people-contacts.ts`, `lib/known-people.ts`), with the iOS picker / Android typed-number fallback. On the

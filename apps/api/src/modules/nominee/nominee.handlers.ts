@@ -55,6 +55,9 @@
 import {
   NOMINEE_LINK_ERROR_CODES as LINK_CODES,
   type NomineeDeclareRequest,
+  type NomineeMarksSaveEntry,
+  type NomineeMarksSaveRequest,
+  type NomineeMemberLink,
   type NomineeStatusResponse,
   type NomineeSummaryEntry,
 } from '@twt/contracts';
@@ -95,6 +98,15 @@ export interface NomineeDeclareRouteOptions {
 
 /** The ONE 422 for every unresolvable mark and for a caller the gate refuses (TR7 — ⛔ which, ⛔ why). */
 const linkNotFound = () => new ApiError(422, LINK_CODES.linkNotFound, 'A nominee marked as a member could not be found — remove the mark or pick again');
+
+/** One submitted rank's mark, KEYED BY RANK (Story 6.36f, MK4 / TR11) — `null` = no mark (a live one on the rank ends). */
+interface SubmittedMark {
+  readonly rank: nomineeDomain.NomineeRank;
+  readonly mark: NomineeMemberLink | null;
+}
+
+/** A member in a terminal state (R2) — `guardDeclare`, and the marks-only basis re-read (6.36f MK2). */
+const memberTerminal = () => new ConflictError('Member is in a terminal state — nominees cannot be declared', 'nominee.member_terminal');
 
 const LINK_REFUSAL: Record<'not_found' | 'stale' | 'duplicate', () => ApiError> = {
   not_found: linkNotFound,
@@ -148,6 +160,310 @@ export function createNomineeHandlers(deps: AppDeps) {
     return { nominees: rows.map(toSummary), locked };
   }
 
+  /**
+   * Story 6.20 (D9) — the `nominee_change` elevation is looked up BEFORE any transaction opens (code review 2026-09-24):
+   * looked up inside it, the lookup took a SECOND pooled connection while this one held the D3 advisory lock — N concurrent
+   * re-declares could starve the pool with every lock held. Whether it is NEEDED is still decided inside the transaction
+   * (`guardDeclare`). A lookup failure is P24's posture: step-up-required.
+   * ⚠ DELIBERATE (code review 2026-09-24b, family 9): the freshness is judged at REQUEST time, ⛔ not after the D3 lock wait —
+   * an elevation that expires while this request waits on the lock still authorises the write. Accepted: the window is bounded
+   * by the lock wait (seconds), the lookup does ⛔ not consume the elevation (no double use), and the alternative is the pool
+   * starvation above. Re-examine if the lock wait can ever approach the elevation's lifetime.
+   */
+  async function lookUpElevation(memberIdStr: string): Promise<boolean> {
+    try {
+      return await hasFreshElevation(deps.pool, memberIdStr, NOMINEE_CHANGE_STEP_UP, deps.clock());
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * The refusals that need NO lookup and NO KMS, in the order they were always taken: the D3 lock FIRST (no other lock
+   * before it), a claim-locked declaration, a terminal state, a re-declaration without a fresh step-up. Runs in BOTH
+   * transactions — ⭐ code review 2026-10-24: the metering transaction asks them BEFORE it charges, so a save that is
+   * going to be refused for one of them (and the step-up round trip: a first POST that answers 403, then the OTP retry)
+   * ⛔ spends the day's `nominee_link_resolve` budget; the main transaction asks them again, authoritatively. Returns the
+   * lifecycle state the declare projects from. Story 6.36f (MK4) — ONE guard, shared by the full save and the marks-only save.
+   */
+  async function guardDeclare(
+    tx: ScopeTx,
+    who: { memberId: ids.MemberId; pariwarId: ids.PariwarId; elevationFresh: boolean },
+  ): Promise<Awaited<ReturnType<typeof memberDomain.getMemberStateAt>>> {
+    const { memberId, pariwarId, elevationFresh } = who;
+    // ⭐ Story 6.20 (D3, AC2) — the intake advisory lock FIRST (no other lock before it), then the
+    // claim-filed check. An intake that won the lock has already minted its claim row, and this
+    // edit refuses; an edit that won commits before the claim — legitimately "before the claim".
+    try {
+      await claimDomain.lockNomineeDeclarationForEdit(tx.client, pariwarId, memberId);
+    } catch (err) {
+      if (err instanceof claimDomain.NomineeDeclarationLockedError) {
+        throw new ConflictError(
+          'A claim has been filed — the nominee declaration can no longer be changed. A genuine mistake can be corrected through the helpline.',
+          'nominee.locked_claim_filed',
+        );
+      }
+      throw err;
+    }
+
+    // Guard: a member in a terminal state cannot re-declare nominees (R2). Pre-lock-in
+    // states (pending-kyc/pending-fee/pending-valid) and active states are all allowed —
+    // nominees may legitimately be declared before or after KYC within the wizard.
+    const state = await memberDomain.getMemberStateAt(tx.tx, memberId, deps.clock());
+    if (TERMINAL_STATES.has(state)) {
+      throw memberTerminal();
+    }
+
+    // ⭐ Story 6.20 (D9) — a RE-declaration outside the wizard needs a fresh `nominee_change`
+    // step-up on BOTH routes (AR-24). Checked here, ⛔ not as a static preHandler, because whether
+    // this submit is a CHANGE is only known inside the transaction.
+    const isRedeclaration =
+      (await nomineeDomain.hasNomineeDeclarationVersion(tx.tx, pariwarId, memberId)) ||
+      (await nomineeDomain.getMemberNominees(tx.tx, pariwarId, memberId)).length > 0;
+    if (isRedeclaration && !PRE_LOCK_IN_STATES.has(state) && !elevationFresh) {
+      throw new StepUpRequiredError(NOMINEE_CHANGE_STEP_UP);
+    }
+    return state;
+  }
+
+  /**
+   * Normalise every `new` mark's number (an unusable one ⇒ the ONE 422) BEFORE anything is charged (code review 2026-10-24): a
+   * number the Trust cannot even read never reaches a lookup, so it costs the member nothing of the day's budget. Keyed by RANK
+   * (Story 6.36f, TR11).
+   */
+  function normaliseNewMarks(submitted: readonly SubmittedMark[]): { rank: nomineeDomain.NomineeRank; canonical: string }[] {
+    const out: { rank: nomineeDomain.NomineeRank; canonical: string }[] = [];
+    for (const s of submitted) {
+      if (s.mark?.kind !== 'new') continue;
+      const canonical = encryption.normalizeMobile(s.mark.mobile);
+      if (canonical === null) throw linkNotFound();
+      out.push({ rank: s.rank, canonical });
+    }
+    return out;
+  }
+
+  /**
+   * ⭐ Story 6.36e (NE5, V2) — METER the new marks BEFORE any HMAC, in their OWN short scoped tx (a refusal rolls the counter
+   * back and costs ⛔ KMS call). A `keep` and a save without a mark are ⛔ charged (V11). ⭐ Code review 2026-10-24: the cheap
+   * refusals (`beforeCharge` — `guardDeclare`, and for a marks-only save the MK3 basis check) run FIRST in this same
+   * transaction — a locked declaration, a terminal state, a missing step-up (the OTP retry would otherwise charge twice) or a
+   * stale basis ⇒ ⛔ charge.
+   */
+  async function meterNewMarks(
+    who: { memberId: ids.MemberId; pariwarId: ids.PariwarId; pariwarIdStr: string },
+    marks: number,
+    beforeCharge: (tx: ScopeTx) => Promise<unknown>,
+  ): Promise<void> {
+    if (marks === 0) return;
+    const chargeTx = await openScopeTx(deps, who.pariwarIdStr);
+    let charged = false;
+    try {
+      await beforeCharge(chargeTx);
+      const r = await nomineeDomain.chargeNomineeLinkResolve(chargeTx.tx, {
+        pariwarId: who.pariwarId,
+        memberId: who.memberId,
+        marks,
+      });
+      if (!r.ok) {
+        throw r.reason === 'daily_limit'
+          ? new TooManyRequestsError('Daily limit for marking nominees as members reached — try again tomorrow', LINK_CODES.linkDailyLimit)
+          : linkNotFound();
+      }
+      charged = true;
+    } finally {
+      await closeScopeTx(chargeTx, charged);
+    }
+  }
+
+  /** HMAC every new mark with ONE batch call OUTSIDE any transaction. Keyed by RANK. */
+  async function indexNewMarks(pariwarIdStr: string, canonicals: readonly { rank: nomineeDomain.NomineeRank; canonical: string }[]): Promise<Map<nomineeDomain.NomineeRank, string>> {
+    const markIndexes = new Map<nomineeDomain.NomineeRank, string>();
+    if (canonicals.length > 0) {
+      const indexes = await encryption.mobileBlindIndexMany(
+        canonicals.map((c) => c.canonical),
+        enc,
+        { pariwarId: pariwarIdStr, purpose: nomineeDomain.NOMINEE_LINK_RESOLVE_AUDIT_PURPOSE },
+      );
+      canonicals.forEach((c, k) => markIndexes.set(c.rank, indexes[k]!));
+    }
+    return markIndexes;
+  }
+
+  /**
+   * ⭐ Story 6.36e (NE2) — lock EVERY live link of this declarer (after the D3 lock, BEFORE this save's versions — so `onHead` is
+   * the head before the save), resolve the new marks (DB only), and PLAN before any write: a refusal leaves nothing to undo.
+   * Story 6.36f (MK4, TR11) — `submitted` is KEYED BY RANK; the full save builds it from its index-derived ranks, the marks-only
+   * save from the body's `rank` field.
+   */
+  async function planDeclarationLinks(
+    scopeTx: ScopeTx,
+    who: { memberId: ids.MemberId; pariwarId: ids.PariwarId },
+    submitted: readonly SubmittedMark[],
+    markIndexes: ReadonlyMap<nomineeDomain.NomineeRank, string>,
+  ): Promise<{ liveLinks: nomineeDomain.LiveNomineeLink[]; linkPlan: Extract<nomineeDomain.NomineeLinkPlan, { kind: 'plan' }> }> {
+    const liveLinks = await nomineeDomain.lockLiveNomineeLinks(scopeTx.tx, { pariwarId: who.pariwarId, declarerMemberId: who.memberId });
+    const resolved = await nomineeDomain.resolveNomineeLinkTargets(scopeTx.tx, {
+      pariwarId: who.pariwarId,
+      declarerMemberId: who.memberId,
+      indexes: [...markIndexes.values()],
+    });
+    const linkPlan = nomineeDomain.planNomineeLinks(
+      liveLinks,
+      submitted.map(({ rank, mark }) => {
+        if (mark === null) return { rank, link: null };
+        if (mark.kind === 'keep') return { rank, link: { kind: 'keep' as const, linkId: mark.linkId } };
+        return { rank, link: { kind: 'new' as const, nomineeMemberId: resolved.get(markIndexes.get(rank)!) ?? null, foundBy: mark.foundBy } };
+      }),
+    );
+    if (linkPlan.kind === 'refused') throw LINK_REFUSAL[linkPlan.reason]();
+    return { liveLinks, linkPlan };
+  }
+
+  /**
+   * The WRITE sequence of a declaration save — shared by the full save (rows encrypted from the body) and the marks-only save
+   * (rows COPIED from the projection — Story 6.36f MK2): the clock, the version plan, the projection, the event, the versions,
+   * the links, the status. Returns the status and the audit lines to emit — the caller sets `ok` FIRST, then emits (an audit
+   * line never fires for a save that rolled back).
+   */
+  async function writeDeclaration(
+    scopeTx: ScopeTx,
+    request: FastifyRequest,
+    input: {
+      memberId: ids.MemberId;
+      pariwarId: ids.PariwarId;
+      memberIdStr: string;
+      pariwarIdStr: string;
+      state: Awaited<ReturnType<typeof memberDomain.getMemberStateAt>>;
+      split: ReturnType<typeof nomineeDomain.deriveNomineeSplit>['split'];
+      rows: readonly nomineeDomain.NomineeRowInput[];
+      linkPlan: Extract<nomineeDomain.NomineeLinkPlan, { kind: 'plan' }>;
+      auditAction: 'member_nominees.declared' | 'member_nominees.marks_saved';
+    },
+  ): Promise<{ result: NomineeStatusResponse; emitAudit: () => void }> {
+    const { memberId, pariwarId, memberIdStr, pariwarIdStr, state, split, rows } = input;
+    const count = rows.length;
+
+    // ⭐ Story 6.20 (D2) — the database wall clock, taken AFTER the lock, is BOTH `recorded_at` and
+    // `effective_at` of every version this declare writes. Then the plan: one version per submitted
+    // rank (⛔ no dedup — T3) and a tombstone for a rank this submit dropped (T9).
+    const recordedAt = await nomineeDomain.readDatabaseClock(scopeTx.tx);
+    const plan = nomineeDomain.planDeclarationVersions(
+      await nomineeDomain.getNomineeVersionHeads(scopeTx.tx, pariwarId, memberId),
+      rows.map((r) => r.rank as nomineeDomain.NomineeRank),
+    );
+
+    await nomineeDomain.replaceMemberNominees(scopeTx.tx, {
+      memberId,
+      pariwarId,
+      nominees: [...rows],
+    });
+
+    // Non-transition marker: from_state === to_state (R5). The reducer treats
+    // member.nominees_declared as identity; this records the MOMENT on the stream with the
+    // NON-PII audit (count + split only — R1). A re-declaration emits a NEW event (AC5).
+    // Story 6.20 (AC1) — plus the OPTIONAL non-PII `source` + per-rank `versions` written.
+    const projected = await memberDomain.projectMemberState(scopeTx.client, {
+      memberId,
+      pariwarId,
+      eventType: 'member.nominees_declared',
+      payload: {
+        from_state: state,
+        to_state: state,
+        trigger: 'nominee_declaration',
+        actor: 'member',
+        nominee_count: count as 1 | 2,
+        split,
+        source: 'member',
+        versions: plan.map((p) => ({ rank: p.rank, version_no: p.versionNo, kind: p.kind })),
+      },
+      actorId: memberIdStr,
+    });
+
+    // ⭐ Story 6.20 (AC1) — the history, in the SAME transaction as the projection. ⛔ Nothing is
+    // updated or deleted there: the grant and the migration-0119 trigger both refuse it.
+    const versions = await nomineeDomain.appendMemberDeclarationVersions(scopeTx.tx, {
+      memberId,
+      pariwarId,
+      plan,
+      nominees: rows,
+      recordedAt,
+      eventVersion: projected.eventVersion,
+    });
+
+    // ⭐ Story 6.36e (NE2) — the link rows hang off the versions just written; ends are dated `recordedAt`.
+    const links = await nomineeDomain.applyNomineeLinkPlan(scopeTx.tx, {
+      pariwarId,
+      declarerMemberId: memberId,
+      plan: input.linkPlan,
+      versions,
+      recordedAt,
+    });
+
+    const result = await buildStatus(scopeTx, pariwarId, memberId);
+    // Emit audit only after buildStatus succeeds and ok is set: if buildStatus throws,
+    // closeScopeTx rolls back the tx but the audit would have already fired.
+    const emitAudit = () => {
+      // Story 6.36f (MK7) — a marks-only save says `member_nominees.marks_saved`: the SERVER, ⛔ the member, supplied the details.
+      emitAuthAudit(deps, request, input.auditAction, {
+        actorId: memberIdStr,
+        pariwarId: pariwarIdStr,
+        // Story 6.20 — the version numbers written (non-PII), so the audit line joins the history.
+        context: {
+          nominee_count: count,
+          split,
+          versions: plan.map((p) => `${p.rank}:${p.versionNo}:${p.kind}`).join(','),
+        },
+      });
+      // Story 6.36e (AC9) — one line per link written or ended: `nominee_link:<id>` + `{ rank }` ONLY.
+      for (const [event, written] of [
+        ['member_nominee_links.ended', links.ended],
+        ['member_nominee_links.carried', links.carried],
+        ['member_nominee_links.asked', links.asked],
+      ] as const) {
+        for (const l of written) {
+          emitAuthAudit(deps, request, event, {
+            actorId: memberIdStr,
+            pariwarId: pariwarIdStr,
+            resourceLocator: `nominee_link:${l.linkId}`,
+            context: { rank: l.rank },
+          });
+        }
+      }
+    };
+    return { result, emitAudit };
+  }
+
+  /**
+   * Story 6.36f (MK2, MK3) — the marks-only save's BASIS, read after `guardDeclare` (the D3 lock held): the projection rows
+   * `FOR UPDATE` (the copy source — a writer of the projection that does ⛔ take D3 waits for the copy), THEN each rank's
+   * PROJECTED `versionNo` (a correction committed before the lock shows up as stale), THEN the lifecycle state again (an erasure
+   * that does ⛔ take D3 may have committed while this tx waited on the row lock). Refusals: ⛔ projection row, or a projection
+   * rank with ⛔ version row (pre-0119 data — fail closed; a full save writes the versions) ⇒ 409 `marks_no_declaration`; the
+   * submitted ranks ≠ the projection's, or a `versionNo` ≠ the projected one ⇒ 409 `marks_stale`. Runs in BOTH transactions
+   * (the metering tx: a stale save is ⛔ charged). Returns the projection rows, rank-ordered.
+   */
+  async function checkMarksBasis(
+    tx: ScopeTx,
+    who: { memberId: ids.MemberId; pariwarId: ids.PariwarId },
+    marks: readonly NomineeMarksSaveEntry[],
+  ): Promise<Awaited<ReturnType<typeof nomineeDomain.getMemberNominees>>> {
+    const projection = await nomineeDomain.getMemberNominees(tx.tx, who.pariwarId, who.memberId, { forUpdate: true });
+    const projected = await nomineeDomain.getProjectedNomineeVersions(tx.tx, who.pariwarId, who.memberId);
+    if (TERMINAL_STATES.has(await memberDomain.getMemberStateAt(tx.tx, who.memberId, deps.clock()))) throw memberTerminal();
+    const noDeclaration = () =>
+      new ConflictError('There is no saved nominee declaration to keep — save your nominees first', LINK_CODES.marksNoDeclaration);
+    if (projection.length === 0) throw noDeclaration();
+    if (projection.some((row) => !projected.some((v) => v.rank === row.rank))) throw noDeclaration();
+    const stale = () => new ConflictError('Your nominees changed since this screen loaded — check the marks and save again', LINK_CODES.marksStale);
+    if (marks.length !== projection.length) throw stale();
+    for (const row of projection) {
+      const mark = marks.find((m) => m.rank === row.rank);
+      const version = projected.find((v) => v.rank === row.rank)!;
+      if (mark === undefined || mark.versionNo !== version.versionNo) throw stale();
+    }
+    return projection;
+  }
+
   return {
     /**
      * POST /api/v1/member/nominees — declare 1–2 nominees → emit `member.nominees_declared`, append one
@@ -174,135 +490,21 @@ export function createNomineeHandlers(deps: AppDeps) {
       }
       const memberId = ids.memberId(memberIdStr);
       const pariwarId = ids.pariwarId(pariwarIdStr);
-      const newMarks = body.nominees.flatMap((n, i) => (n.memberLink?.kind === 'new' ? [{ i, mobile: n.memberLink.mobile }] : []));
-      // Normalise (an unusable number ⇒ the ONE 422) BEFORE anything is charged (code review 2026-10-24): a number the Trust cannot
-      // even read never reaches a lookup, so it costs the member nothing of the day's budget.
-      const canonicals = newMarks.map((m) => encryption.normalizeMobile(m.mobile));
-      if (canonicals.some((c) => c === null)) throw linkNotFound();
+      // Each entry's rank is its ARRAY INDEX (`deriveNomineeSplit`'s `ranks[i]`); the shared pipeline is keyed by rank (6.36f).
+      const submitted: SubmittedMark[] = body.nominees.map((n, i) => ({ rank: ranks[i]!.rank as nomineeDomain.NomineeRank, mark: n.memberLink ?? null }));
+      const canonicals = normaliseNewMarks(submitted);
 
-      // ⭐ Story 6.20 (D9) — the `nominee_change` elevation is looked up BEFORE any transaction opens (code
-      // review 2026-09-24): looked up inside it, the lookup took a SECOND pooled connection while this one
-      // held the D3 advisory lock — N concurrent re-declares could starve the pool with every lock held.
-      // Whether it is NEEDED is still decided inside the transaction, below. A lookup failure is P24's
-      // posture: step-up-required.
-      // ⚠ DELIBERATE (code review 2026-09-24b, family 9): the freshness is judged at REQUEST time, ⛔ not
-      // after the D3 lock wait — an elevation that expires while this request waits on the lock still
-      // authorises the write. Accepted: the window is bounded by the lock wait (seconds), the lookup does
-      // ⛔ not consume the elevation (no double use), and the alternative is the pool starvation above.
-      // Re-examine if the lock wait can ever approach the elevation's lifetime.
-      let elevationFresh = false;
-      try {
-        elevationFresh = await hasFreshElevation(deps.pool, memberIdStr, NOMINEE_CHANGE_STEP_UP, deps.clock());
-      } catch {
-        elevationFresh = false;
-      }
+      const elevationFresh = await lookUpElevation(memberIdStr);
+      const who = { memberId, pariwarId, pariwarIdStr, elevationFresh };
 
-      /**
-       * The refusals that need NO lookup and NO KMS, in the order they were always taken: the D3 lock FIRST (no other lock
-       * before it), a claim-locked declaration, a terminal state, a re-declaration without a fresh step-up. Runs in BOTH
-       * transactions — ⭐ code review 2026-10-24: the metering transaction asks them BEFORE it charges, so a save that is
-       * going to be refused for one of them (and the step-up round trip: a first POST that answers 403, then the OTP retry)
-       * ⛔ spends the day's `nominee_link_resolve` budget; the main transaction asks them again, authoritatively. Returns the
-       * lifecycle state the declare projects from.
-       */
-      const guardDeclare = async (tx: ScopeTx): Promise<Awaited<ReturnType<typeof memberDomain.getMemberStateAt>>> => {
-        // ⭐ Story 6.20 (D3, AC2) — the intake advisory lock FIRST (no other lock before it), then the
-        // claim-filed check. An intake that won the lock has already minted its claim row, and this
-        // edit refuses; an edit that won commits before the claim — legitimately "before the claim".
-        try {
-          await claimDomain.lockNomineeDeclarationForEdit(tx.client, pariwarId, memberId);
-        } catch (err) {
-          if (err instanceof claimDomain.NomineeDeclarationLockedError) {
-            throw new ConflictError(
-              'A claim has been filed — the nominee declaration can no longer be changed. A genuine mistake can be corrected through the helpline.',
-              'nominee.locked_claim_filed',
-            );
-          }
-          throw err;
-        }
-
-        // Guard: a member in a terminal state cannot re-declare nominees (R2). Pre-lock-in
-        // states (pending-kyc/pending-fee/pending-valid) and active states are all allowed —
-        // nominees may legitimately be declared before or after KYC within the wizard.
-        const state = await memberDomain.getMemberStateAt(tx.tx, memberId, deps.clock());
-        if (TERMINAL_STATES.has(state)) {
-          throw new ConflictError(
-            'Member is in a terminal state — nominees cannot be declared',
-            'nominee.member_terminal',
-          );
-        }
-
-        // ⭐ Story 6.20 (D9) — a RE-declaration outside the wizard needs a fresh `nominee_change`
-        // step-up on BOTH routes (AR-24). Checked here, ⛔ not as a static preHandler, because whether
-        // this submit is a CHANGE is only known inside the transaction.
-        const isRedeclaration =
-          (await nomineeDomain.hasNomineeDeclarationVersion(tx.tx, pariwarId, memberId)) ||
-          (await nomineeDomain.getMemberNominees(tx.tx, pariwarId, memberId)).length > 0;
-        if (isRedeclaration && !PRE_LOCK_IN_STATES.has(state) && !elevationFresh) {
-          throw new StepUpRequiredError(NOMINEE_CHANGE_STEP_UP);
-        }
-        return state;
-      };
-
-      // ⭐ Story 6.36e (NE5, V2) — METER the new marks BEFORE any HMAC, in their OWN short scoped tx (a refusal rolls the
-      // counter back and costs ⛔ KMS call). A `keep` and a save without a mark are ⛔ charged (V11). ⭐ Code review 2026-10-24:
-      // the cheap refusals above run FIRST in this same transaction — a locked declaration, a terminal state or a missing
-      // step-up (the OTP retry would otherwise charge twice) ⇒ ⛔ charge.
-      if (newMarks.length > 0) {
-        const chargeTx = await openScopeTx(deps, pariwarIdStr);
-        let charged = false;
-        try {
-          await guardDeclare(chargeTx);
-          const r = await nomineeDomain.chargeNomineeLinkResolve(chargeTx.tx, {
-            pariwarId,
-            memberId,
-            marks: newMarks.length,
-          });
-          if (!r.ok) {
-            throw r.reason === 'daily_limit'
-              ? new TooManyRequestsError('Daily limit for marking nominees as members reached — try again tomorrow', LINK_CODES.linkDailyLimit)
-              : linkNotFound();
-          }
-          charged = true;
-        } finally {
-          await closeScopeTx(chargeTx, charged);
-        }
-      }
-      // HMAC every new mark with ONE batch call OUTSIDE any transaction.
-      const markIndexes = new Map<number, string>();
-      if (newMarks.length > 0) {
-        const indexes = await encryption.mobileBlindIndexMany(canonicals as string[], enc, {
-          pariwarId: pariwarIdStr,
-          purpose: nomineeDomain.NOMINEE_LINK_RESOLVE_AUDIT_PURPOSE,
-        });
-        newMarks.forEach((m, k) => markIndexes.set(m.i, indexes[k]!));
-      }
+      await meterNewMarks(who, canonicals.length, (tx) => guardDeclare(tx, who));
+      const markIndexes = await indexNewMarks(pariwarIdStr, canonicals);
 
       const scopeTx = await openScopeTx(deps, pariwarIdStr);
       let ok = false;
       try {
-        const state = await guardDeclare(scopeTx);
-
-        // ⭐ Story 6.36e (NE2) — lock EVERY live link of this declarer (after the D3 lock, BEFORE this save's versions — so
-        // `onHead` is the head before the save), resolve the new marks (DB only), and PLAN before any write: a refusal
-        // leaves nothing to undo.
-        const liveLinks = await nomineeDomain.lockLiveNomineeLinks(scopeTx.tx, { pariwarId, declarerMemberId: memberId });
-        const resolved = await nomineeDomain.resolveNomineeLinkTargets(scopeTx.tx, {
-          pariwarId,
-          declarerMemberId: memberId,
-          indexes: [...markIndexes.values()],
-        });
-        const linkPlan = nomineeDomain.planNomineeLinks(
-          liveLinks,
-          body.nominees.map((n, i) => {
-            const rank = ranks[i]!.rank;
-            const mark = n.memberLink;
-            if (mark === undefined) return { rank, link: null };
-            if (mark.kind === 'keep') return { rank, link: { kind: 'keep' as const, linkId: mark.linkId } };
-            return { rank, link: { kind: 'new' as const, nomineeMemberId: resolved.get(markIndexes.get(i)!) ?? null, foundBy: mark.foundBy } };
-          }),
-        );
-        if (linkPlan.kind === 'refused') throw LINK_REFUSAL[linkPlan.reason]();
+        const state = await guardDeclare(scopeTx, who);
+        const { linkPlan } = await planDeclarationLinks(scopeTx, who, submitted, markIndexes);
 
         // Encrypt each nominee field under the member's real pariwar context, stamping the
         // server-derived rank + splitPct (the client never supplies a percentage — R4).
@@ -322,91 +524,96 @@ export function createNomineeHandlers(deps: AppDeps) {
           }),
         );
 
-        // ⭐ Story 6.20 (D2) — the database wall clock, taken AFTER the lock, is BOTH `recorded_at` and
-        // `effective_at` of every version this declare writes. Then the plan: one version per submitted
-        // rank (⛔ no dedup — T3) and a tombstone for a rank this submit dropped (T9).
-        const recordedAt = await nomineeDomain.readDatabaseClock(scopeTx.tx);
-        const plan = nomineeDomain.planDeclarationVersions(
-          await nomineeDomain.getNomineeVersionHeads(scopeTx.tx, pariwarId, memberId),
-          rows.map((r) => r.rank),
-        );
-
-        await nomineeDomain.replaceMemberNominees(scopeTx.tx, {
+        const { result, emitAudit } = await writeDeclaration(scopeTx, request, {
           memberId,
           pariwarId,
-          nominees: rows,
+          memberIdStr,
+          pariwarIdStr,
+          state,
+          split,
+          rows,
+          linkPlan,
+          auditAction: 'member_nominees.declared',
         });
-
-        // Non-transition marker: from_state === to_state (R5). The reducer treats
-        // member.nominees_declared as identity; this records the MOMENT on the stream with the
-        // NON-PII audit (count + split only — R1). A re-declaration emits a NEW event (AC5).
-        // Story 6.20 (AC1) — plus the OPTIONAL non-PII `source` + per-rank `versions` written.
-        const projected = await memberDomain.projectMemberState(scopeTx.client, {
-          memberId,
-          pariwarId,
-          eventType: 'member.nominees_declared',
-          payload: {
-            from_state: state,
-            to_state: state,
-            trigger: 'nominee_declaration',
-            actor: 'member',
-            nominee_count: count as 1 | 2,
-            split,
-            source: 'member',
-            versions: plan.map((p) => ({ rank: p.rank, version_no: p.versionNo, kind: p.kind })),
-          },
-          actorId: memberIdStr,
-        });
-
-        // ⭐ Story 6.20 (AC1) — the history, in the SAME transaction as the projection. ⛔ Nothing is
-        // updated or deleted there: the grant and the migration-0119 trigger both refuse it.
-        const versions = await nomineeDomain.appendMemberDeclarationVersions(scopeTx.tx, {
-          memberId,
-          pariwarId,
-          plan,
-          nominees: rows,
-          recordedAt,
-          eventVersion: projected.eventVersion,
-        });
-
-        // ⭐ Story 6.36e (NE2) — the link rows hang off the versions just written; ends are dated `recordedAt`.
-        const links = await nomineeDomain.applyNomineeLinkPlan(scopeTx.tx, {
-          pariwarId,
-          declarerMemberId: memberId,
-          plan: linkPlan,
-          versions,
-          recordedAt,
-        });
-
-        const result = await buildStatus(scopeTx, pariwarId, memberId);
         ok = true;
-        // Emit audit only after buildStatus succeeds and ok is set: if buildStatus throws,
-        // closeScopeTx rolls back the tx but the audit would have already fired.
-        emitAuthAudit(deps, request, 'member_nominees.declared', {
-          actorId: memberIdStr,
-          pariwarId: pariwarIdStr,
-          // Story 6.20 — the version numbers written (non-PII), so the audit line joins the history.
-          context: {
-            nominee_count: count,
-            split,
-            versions: plan.map((p) => `${p.rank}:${p.versionNo}:${p.kind}`).join(','),
-          },
-        });
-        // Story 6.36e (AC9) — one line per link written or ended: `nominee_link:<id>` + `{ rank }` ONLY.
-        for (const [event, written] of [
-          ['member_nominee_links.ended', links.ended],
-          ['member_nominee_links.carried', links.carried],
-          ['member_nominee_links.asked', links.asked],
-        ] as const) {
-          for (const l of written) {
-            emitAuthAudit(deps, request, event, {
-              actorId: memberIdStr,
-              pariwarId: pariwarIdStr,
-              resourceLocator: `nominee_link:${l.linkId}`,
-              context: { rank: l.rank },
-            });
-          }
+        emitAudit();
+        return result;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    },
+
+    /**
+     * Story 6.36f (MK1–MK7, `2026-10-26-407`) — POST /api/v1/member/life-events/nominees/marks — the MARKS-ONLY save. The body
+     * carries each rank's mark and the `versionNo` the phone saw (⛔ a detail); the server COPIES each rank's stored ciphertext
+     * byte for byte into a new `declared` / `member` version (⛔ KMS for the details — G3), through the SAME guard, meter, HMAC,
+     * link plan and write sequence as the full save (MK4). A save that changes no mark writes nothing (MK5).
+     */
+    async marks(request: FastifyRequest): Promise<NomineeStatusResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      // TR11 — keyed by the `rank` FIELD, ⛔ the array position; a rank twice is refused here as well as by the contract.
+      const entries = [...(request.body as NomineeMarksSaveRequest).marks].sort((a, b) => a.rank - b.rank);
+      if (entries.length < 1 || entries.length > 2 || new Set(entries.map((m) => m.rank)).size !== entries.length) {
+        throw new BadRequestError('Send each nominee rank at most once', 'nominee.invalid_count');
+      }
+      const memberId = ids.memberId(memberIdStr);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const submitted: SubmittedMark[] = entries.map((m) => ({ rank: m.rank, mark: m.memberLink }));
+      const canonicals = normaliseNewMarks(submitted);
+
+      const elevationFresh = await lookUpElevation(memberIdStr);
+      const who = { memberId, pariwarId, pariwarIdStr, elevationFresh };
+
+      // MK3 / TR5 — the basis is checked in the metering tx BEFORE the charge: a stale save costs ⛔ unit and ⛔ KMS call.
+      await meterNewMarks(who, canonicals.length, async (tx) => {
+        await guardDeclare(tx, who);
+        await checkMarksBasis(tx, who, entries);
+      });
+      const markIndexes = await indexNewMarks(pariwarIdStr, canonicals);
+
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        const state = await guardDeclare(scopeTx, who);
+        const projection = await checkMarksBasis(scopeTx, who, entries);
+        const { liveLinks, linkPlan } = await planDeclarationLinks(scopeTx, who, submitted, markIndexes);
+
+        // MK5 — nothing changes (every live link carried onto its own rank, nobody asked) ⇒ ⛔ version, ⛔ event, ⛔ audit line.
+        if (nomineeDomain.isUnchangedMarksPlan(liveLinks, linkPlan)) {
+          const result = await buildStatus(scopeTx, pariwarId, memberId);
+          ok = true;
+          return result;
         }
+
+        // MK2 — the split is DERIVED from the projection's count and ASSERTED equal to each row's (`member_nominees.split_pct` has
+        // ⛔ CHECK): a mismatch fails closed (500, ⛔ write), so the event's split and the rows' come from one source.
+        const { split, ranks } = nomineeDomain.deriveNomineeSplit(projection.length);
+        if (projection.some((row, i) => row.rank !== ranks[i]!.rank || row.splitPct !== ranks[i]!.splitPct)) {
+          throw new Error('[nominee-marks] the stored split disagrees with the derived split — refusing to copy');
+        }
+        // MK2 / G3 — the stored ciphertext, BYTE FOR BYTE (NULL stays NULL); ⛔ encrypt, ⛔ decrypt.
+        const rows = projection.map((row) => ({
+          rank: row.rank,
+          splitPct: row.splitPct,
+          relationship: row.relationship,
+          nameCiphertext: row.nameCiphertext,
+          mobileCiphertext: row.mobileCiphertext,
+          addressCiphertext: row.addressCiphertext,
+        }));
+
+        const { result, emitAudit } = await writeDeclaration(scopeTx, request, {
+          memberId,
+          pariwarId,
+          memberIdStr,
+          pariwarIdStr,
+          state,
+          split,
+          rows,
+          linkPlan,
+          auditAction: 'member_nominees.marks_saved',
+        });
+        ok = true;
+        emitAudit();
         return result;
       } finally {
         await closeScopeTx(scopeTx, ok);

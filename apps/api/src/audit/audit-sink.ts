@@ -96,6 +96,9 @@ export type AuthAuditEventType =
   // NEVER nominee name/mobile/address. Emitted once per declare (and re-declare via 3.9).
   //   declared — 1–2 nominees were declared with a server-derived 75/25 (or sole) split.
   | 'member_nominees.declared'
+  // Story 6.36f (MK7, `2026-10-26-407`) — a MARKS-ONLY save: the SERVER copied the stored details (⛔ the member typed them).
+  // IN PLACE OF `member_nominees.declared` for that save; the same context `{ nominee_count, split, versions }`.
+  | 'member_nominees.marks_saved'
   // Story 3.5 — signup medical disclosure. NON-PII context only (ima_list_version +
   // condition_count); NEVER the selected condition codes / free-text additional context.
   // Emitted once per submit (and re-submit via 3.9 — append-only history).

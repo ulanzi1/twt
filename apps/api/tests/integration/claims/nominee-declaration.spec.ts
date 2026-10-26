@@ -19,7 +19,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { claim, cycleCalendar, ids, member as memberDomain, nominee } from '@twt/domain';
+import { claim, cycleCalendar, encryption, ids, member as memberDomain, nominee } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // ⭐ Story 6.27b code review round 2 (X6) — the hide read behind the withheld staff notes, failing ON DEMAND with a real SQL
@@ -1036,5 +1036,84 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the nominee declaration surface �
     // ⛔ Not the District Admin's to read (the raise key), and ⛔ not without a session.
     expect((await da.client.inject({ method: 'GET', url: url(w.pariwarId, w.memberId) })).statusCode).toBe(403);
     expect((await makeClient(app).inject({ method: 'GET', url: url(w.pariwarId, w.memberId) })).statusCode).toBe(401);
+  });
+
+  // ── Story 6.36f (AC4; MK6, `2026-10-26-407`) — a MARKS-ONLY version reads EXACTLY like a full re-save with identical details ──
+  it('⭐ 6.36f AC4 / MK6 — on the timeline and the snapshots a marks-only version DEEP-EQUALS a full re-save-with-identical-details version (warnings included); ⛔ ciphertext; ⛔ label', async () => {
+    const pariwarId = randomUUID();
+    const district = `D-${randomUUID().slice(0, 8)}`;
+    const memberId = randomUUID();
+    const claimCaseId = randomUUID();
+    const pid = ids.pariwarId(pariwarId);
+    const mid = ids.memberId(memberId);
+    // A REAL member walked to `active` (the declare reads the stream), with a posting district and a fresh `nominee_change` elevation.
+    await inScope(pariwarId, async (s) => {
+      const step = (eventType: string, payload: Json, actorId: string | null = memberId) =>
+        memberDomain.projectMemberState(s.client, { memberId: mid, pariwarId: pid, eventType: eventType as never, payload: payload as never, actorId });
+      await step('member.signup_initiated', { from_state: null, to_state: 'pending-kyc', trigger: 'signup', actor: 'member' });
+      await step('member.kyc_manual_fallback', { from_state: 'pending-kyc', to_state: 'pending-fee', trigger: 'kyc_manual', actor: 'member', reason: 'manual_fallback' });
+      await step('member.vyawastha_shulk_paid', { from_state: 'pending-fee', to_state: 'lock-in', trigger: 'payment', actor: 'member', utr: 'TEST-UTR-636F-AC4', amount_inr: 1000 });
+      await step('member.lock_in_expired', { from_state: 'lock-in', to_state: 'active', trigger: 'lock_in_expiry', actor: 'system', kyc_verified: true }, null);
+      await s.client.query(`INSERT INTO member_postings (member_id, pariwar_id, district, is_retirement, created_at) VALUES ($1, $2, $3, false, now())`, [memberId, pariwarId, district]);
+    });
+    await memberAuthRepo.insertElevation(deps.pool, { memberId, actionContext: 'nominee_change', elevatedUntil: new Date(Date.now() + 10 * 60 * 1000) });
+    // A second member to MARK (a real identity row — the mark resolves by its blind index).
+    const markedId = randomUUID();
+    const markedMobile = `9${String(Date.now()).slice(-9)}`;
+    await td.pool.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [markedId, pariwarId]);
+    await td.pool.query(`INSERT INTO member_identities (member_id, pariwar_id, mobile_ciphertext, mobile_blind_index) VALUES ($1, $2, $3, $4)`, [
+      markedId,
+      pariwarId,
+      await encryption.encryptMobile(encryption.normalizeMobile(markedMobile)!, deps.encryption),
+      await encryption.mobileBlindIndex(encryption.normalizeMobile(markedMobile)!, deps.encryption),
+    ]);
+    const tok = signAccessToken(app, { memberId, pariwarId, deviceId: 'test-device' }, 15 * 60 * 1000);
+    const member = makeClient(app);
+    const post = (url: string, payload: Json) =>
+      member.inject({ method: 'POST', url, payload, headers: { authorization: `Bearer ${tok}` } });
+    const nominee1 = { name: 'Asha Devi', relationship: 'spouse', mobile: '9876543210' };
+    // v1 — the first declaration; v2 — a FULL re-save with IDENTICAL details (+ a mark); v3 — the MARKS-ONLY save removing the mark.
+    expect((await post('/api/v1/member/life-events/nominees', { nominees: [nominee1] })).statusCode).toBe(200);
+    const full = await post('/api/v1/member/life-events/nominees', { nominees: [{ ...nominee1, memberLink: { kind: 'new', mobile: markedMobile, foundBy: 'picker' } }] });
+    expect(full.statusCode, full.body).toBe(200);
+    const marks = await post('/api/v1/member/life-events/nominees/marks', { marks: [{ rank: 1, versionNo: 2, memberLink: null }] });
+    expect(marks.statusCode, marks.body).toBe(200);
+    // THEN the claim (a filed claim locks the declaration) — the `world()` chain, with an accepted certificate.
+    await inScope(pariwarId, async (s) => {
+      const emit = (from: string | null, to: string, eventType: string, extra: Json = {}) =>
+        claim.projectClaimState(s.client, {
+          claimCaseId: ids.claimId(claimCaseId),
+          pariwarId: pid,
+          deceasedMemberId: mid,
+          intakeChannels: ['helpline'],
+          claimantActorId: null,
+          eventType: eventType as never,
+          payload: { from_state: from, to_state: to, trigger: 'seed', actor: 'system', ...extra } as never,
+          actorId: null,
+        });
+      await emit(null, 'intake_pending', 'claim.intake_initiated', { deceased_member_id: memberId, intake_channel: 'helpline', claimant_actor_id: null });
+      await emit('intake_pending', 'intake_converged', 'claim.intake_converged');
+      await emit('intake_converged', 'documents_pending', 'claim.documents_received');
+      await emit('documents_pending', 'verification_in_progress', 'claim.peer_mesh_pinged', { selected_member_ids: [randomUUID()], metric_id: 'district_cohort_v1', metric_version: 1 });
+      await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
+      await ensureAcceptedDeathCertificate(deps, s, pariwarId, claimCaseId, { date: CERT });
+    });
+    const { client } = await actor(pariwarId, 'district_admin', 'district', district, 'Anita (District Admin)');
+    const res = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/nominee-declaration` });
+    expect(res.statusCode).toBe(200);
+    const snaps = await client.inject({ method: 'GET', url: `${base(pariwarId, claimCaseId)}/nominee-declaration/snapshots` });
+    expect(snaps.statusCode).toBe(200);
+    for (const body of [res.body, snaps.body]) expect(body).not.toMatch(/enc:v\d/); // ⛔ a ciphertext on either response
+    const versions = (res.json() as { versions: Json[] }).versions;
+    const no = (n: number) => versions.find((v) => v['version_no'] === n)!;
+    const omit = (v: Json, keys: readonly string[]) => Object.fromEntries(Object.entries(v).filter(([k]) => !keys.includes(k)));
+    const strip = (v: Json) => omit(v, ['version_id', 'version_no', 'recorded_at', 'effective_at']);
+    expect(versions).toHaveLength(3);
+    expect(strip(no(3))).toEqual(strip(no(2))); // the marks-only v3 ≡ the full re-save v2, warnings included
+    expect(no(3)).toMatchObject({ kind: 'declared', source: 'member', correction_label: null, corrects_version_id: null });
+    const snapshots = (snaps.json() as { snapshots: Json[] }).snapshots;
+    const snap = (versionId: unknown) => omit(snapshots.find((x) => x['version_id'] === versionId)!, ['version_id']);
+    expect(snap(no(3)['version_id'])).toEqual(snap(no(2)['version_id']));
+    expect(snap(no(3)['version_id'])).toMatchObject({ name: { state: 'readable', value: 'Asha Devi' } });
   });
 });

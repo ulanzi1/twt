@@ -539,10 +539,10 @@ least).
 - [x] **Task 1 — contracts + client (AC1)** — `NomineeMarksSaveRequest`, `NomineeLinksView.ranks` (`{ rank, versionNo, relationship }`),
       the two codes in `NOMINEE_LINK_ERROR_CODES`, `lifeEventsUpdateNomineeMarks`, the links-read parse, contracts tests + the fixture
       sweep; `pnpm contracts:check-openapi-determinism` green with ⛔ OpenAPI change.
-- [ ] **Task 2 — domain (AC2, AC3)**
+- [x] **Task 2 — domain (AC2, AC3)**
   - [x] 2.1 The copy source: REUSE `getMemberNominees` (`nominee/declaration-read.ts`), with a `FOR UPDATE` variant or option for the
         main tx (MK2); ⛔ new projection read. Inside the caller's tx, ⛔ KMS.
-  - [ ] 2.2 EXTEND `getProjectedNomineeVersions` (`declaration-history.ts`) to return `versionNo` beside `versionId` (its 2 production calls,
+  - [x] 2.2 EXTEND `getProjectedNomineeVersions` (`declaration-history.ts`) to return `versionNo` beside `versionId` (its 2 production calls,
         both in `claim-contact-persist.ts`, and 4 test callers read only `.versionId` — they keep compiling and passing); add `relationship` for the links read (or join
         it from the projection). The links read's `ranks` is read by the links handler BEFORE `listNomineeLinksForDeclarer`, in that
         handler's same `inScope` READ COMMITTED tx (MK3's read order; a read outside it loses the RLS scope), with a leg that goes RED
@@ -550,7 +550,7 @@ least).
   - [x] 2.3 A pure `isUnchangedMarksPlan(live, plan)` (MK5's predicate, incl. the `onHead` conjunct) beside `planNomineeLinks`, with unit
         tests in `member-links.test.ts` (a `keep` on its own rank ⇒ unchanged; a same-rank `new` re-pick ⇒ unchanged; a removal ⇒
         changed; a swap ⇒ changed; a carry of an `onHead = false` link ⇒ changed). `planNomineeLinks` itself ⛔ changed.
-- [ ] **Task 3 — API (AC2, AC3, AC4, AC5)** — extract `declare`'s shared parts (guards + basis, the metering tx, the HMAC batch, the
+- [x] **Task 3 — API (AC2, AC3, AC4, AC5)** — extract `declare`'s shared parts (guards + basis, the metering tx, the HMAC batch, the
       main-tx link pipeline, the write sequence) INTO `nominee.handlers.ts` so both handlers call them, keyed by rank (MK4, TR11); the
       marks handler (the MK2 read order, the split assertion, MK5) + route; the audit literal; the links read handler's `ranks`; the
       number fence's three lists; the AC2 legs; the AC3 reader legs (staff warning, exclusion before / after the cut, export, rtbf scrub

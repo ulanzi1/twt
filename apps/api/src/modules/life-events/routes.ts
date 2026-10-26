@@ -27,6 +27,7 @@ import {
   MedicalDiscloseRequest,
   MedicalDisclosureStatusResponse,
   NomineeDeclareRequest,
+  NomineeMarksSaveRequest,
   NomineeStatusResponse,
   PostingHistoryQuery,
   PostingHistoryResponse,
@@ -73,6 +74,21 @@ export function registerLifeEventsRoutes(app: FastifyInstance, deps: AppDeps): v
     },
     // Story 6.36e (NE4) — the ONE route that accepts a nominee's `memberLink`.
     nomineeHandlers.declare({ allowLink: true }),
+  );
+
+  // Story 6.36f (MK1, `2026-10-26-407`) — the MARKS-ONLY nominee save: the same preHandlers as the save above; the body carries
+  // each rank's mark + the version the phone saw (⛔ a detail); the server copies the stored details.
+  r.post(
+    `${LIFE_EVENTS_BASE}/nominees/marks`,
+    {
+      schema: {
+        body: NomineeMarksSaveRequest,
+        response: { 200: NomineeStatusResponse },
+        tags: [LIFE_EVENTS_TAG],
+      },
+      preHandler: [memberSession, requireMemberStepUp(deps, 'nominee_change')],
+    },
+    nomineeHandlers.marks,
   );
 
   // Medical update — step-up gated; re-runs the 3.5 submit SERVICE (append-only; emits member.medical_disclosed).

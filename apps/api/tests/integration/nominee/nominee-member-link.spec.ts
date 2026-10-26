@@ -243,7 +243,7 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     expect(asked).toHaveLength(1);
     expect(asked[0]!.resourceLocator).toBe(`nominee_link:${rows[0]!.link_id}`);
     expect(asked[0]!.context).toEqual({ rank: 1 });
-    expect((await call('GET', LINKS, { tok })).body).toEqual({ links: [{ rank: 1, linkId: rows[0]!.link_id, label: 'asked', name: null }] });
+    expect((await call('GET', LINKS, { tok })).body).toEqual({ ranks: [{ rank: 1, versionNo: 1, relationship: 'spouse' }], links: [{ rank: 1, linkId: rows[0]!.link_id, label: 'asked', name: null }] });
   });
 
   it('AC3 — a KEEP on the same rank carries the answer, `responded_at` and `asked_at` (⛔ re-asked); the old row ends `redeclared`', async () => {
@@ -269,6 +269,7 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     expect(t.auditSink.ofType('member_nominee_links.ended').map((e) => e.resourceLocator)).toEqual([`nominee_link:${old.link_id}`]);
     expect(t.auditSink.ofType('member_nominee_links.asked')).toEqual([]);
     expect((await call('GET', LINKS, { tok })).body).toEqual({
+      ranks: [{ rank: 1, versionNo: 2, relationship: 'spouse' }],
       links: [{ rank: 1, linkId: carried.link_id, label: 'confirmed', name: await shown(p, 'Meena Kumari') }],
     });
   });
@@ -314,7 +315,7 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     expect(all.find((l) => l.link_id === r1)).toMatchObject({ state: 'ended', end_reason: 'removed_by_declarer', answer: 'confirmed' });
     expect(all.find((l) => l.link_id === r2)).toMatchObject({ state: 'ended', end_reason: 'redeclared' });
     expect(await live(d)).toEqual([]);
-    expect((await call('GET', LINKS, { tok })).body).toEqual({ links: [] });
+    expect((await call('GET', LINKS, { tok })).body).toEqual({ ranks: [{ rank: 1, versionNo: 2, relationship: 'spouse' }], links: [] });
   });
 
   it('AC3 — a STALE keep ⇒ 409 `nominee.link_stale`; the same member on both ranks ⇒ 422 `nominee.link_duplicate`; ⛔ write either way', async () => {
@@ -538,7 +539,7 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     const second = await call('POST', `${REQUESTS}/${linkId}/answer`, { tok: tokB, payload: { answer: 'not_me' }, key: randomUUID() });
     expect(second.status).toBe(409);
     expect(code(second)).toBe(CODES.requestClosed);
-    expect((await call('GET', LINKS, { tok: token(d, p) })).body).toEqual({ links: [{ rank: 1, linkId, label: 'confirmed', name: await shown(p, 'Meena Kumari') }] });
+    expect((await call('GET', LINKS, { tok: token(d, p) })).body).toEqual({ ranks: [{ rank: 1, versionNo: 1, relationship: 'spouse' }], links: [{ rank: 1, linkId, label: 'confirmed', name: await shown(p, 'Meena Kumari') }] });
     expect((await call('GET', REQUESTS, { tok: tokB })).body).toMatchObject({ items: [{ linkId, answer: 'confirmed' }] });
   });
 
@@ -567,6 +568,7 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     expect(bad.status).toBe(400);
     expect(code(bad)).toBe(CODES.cursorInvalid);
     expect((await call('GET', LINKS, { tok: token(d, p) })).body).toEqual({
+      ranks: [{ rank: 1, versionNo: 1, relationship: 'spouse' }, { rank: 2, versionNo: 1, relationship: 'son' }],
       links: [
         { rank: 1, linkId: r1, label: 'not_me', name: null },
         { rank: 2, linkId: r2, label: 'asked', name: null },

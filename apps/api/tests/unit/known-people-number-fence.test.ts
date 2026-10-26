@@ -74,6 +74,7 @@ const SINK_ALLOWLIST: Record<string, number> = {
   'apps/api/src/modules/known-people/names.ts:log.warn': 1,
   'packages/domain/src/encryption/blind-index.ts:auditHook': 2,
   // Story 6.36e — `member_nominees.declared` + the ONE per-link line (in a loop); the answer's line; the idempotency log.
+  // Story 6.36f (MK7) — still 2: the shared write sequence's ONE save line (`.declared` or `.marks_saved`, by parameter) + the loop.
   'apps/api/src/modules/nominee/nominee.handlers.ts:emitAuthAudit': 2,
   'apps/api/src/modules/nominee-links/handlers.ts:emitAuthAudit': 1,
   'apps/api/src/modules/nominee-links/handlers.ts:request.log.error': 1,

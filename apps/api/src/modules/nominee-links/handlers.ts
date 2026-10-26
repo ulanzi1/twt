@@ -25,6 +25,7 @@ import {
   type NomineeLinkRequestsQuery,
   type NomineeLinkRequestsResponse,
   type NomineeLinksView,
+  type NomineeMarksRankView,
 } from '@twt/contracts';
 import { idempotency, ids, nominee as nomineeDomain, type Db } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -117,13 +118,18 @@ export function createNomineeLinksHandlers(deps: AppDeps) {
     /** GET /api/v1/member/life-events/nominee-links — the declarer's live marks (the name only once `confirmed`). */
     async links(request: FastifyRequest): Promise<NomineeLinksView> {
       const { memberId, pariwarId } = memberCtx(request);
-      const { marks, read } = await inScope(pariwarId, async (tx) => {
+      const { ranks, marks, read } = await inScope(pariwarId, async (tx) => {
+        // ⭐ Story 6.36f (MK3) — the basis FIRST, then the marks, in this ONE READ COMMITTED tx: a save that commits between the
+        // two reads leaves `ranks` stale, so the marks-only save is refused `marks_stale` — a mark added between the reads can
+        // ⛔ be removed unseen. Reversed, a fresh `ranks` could sit beside stale `links`. (A source-order test pins this.)
+        const ranks = await nomineeDomain.getProjectedNomineeVersions(tx, pariwarId, memberId);
         const marks = await nomineeDomain.listNomineeLinksForDeclarer(tx, { pariwarId, declarerMemberId: memberId });
         const confirmed = marks.flatMap((m) => (m.label === 'confirmed' ? [m.nomineeMemberId] : []));
-        return { marks, read: await readNameCiphertexts(tx, pariwarId, confirmed) };
+        return { ranks, marks, read: await readNameCiphertexts(tx, pariwarId, confirmed) };
       });
       const names = await decryptNames(read, pariwarId, enc, request.log);
       return {
+        ranks: ranks.map((v) => ({ rank: v.rank, versionNo: v.versionNo, relationship: v.relationship as NomineeMarksRankView['relationship'] })),
         links: marks.map((m) => ({
           rank: m.rank,
           linkId: m.linkId,

@@ -10,12 +10,14 @@
 //     mark carries `confirmedFor`, the {@link slotFingerprint} of the slot it was last confirmed for; the question is open
 //     whenever the slot no longer matches it. It rides the draft and the remount with the mark itself;
 //   · the server's refusal codes → copy keys (the find screen's, the save's);
-//   · whether the home / notice-strip request entry shows.
+//   · whether the home / notice-strip request entry shows;
+//   · Story 6.36f (MK8, `2026-10-26-407`) — the MARKS-ONLY mode: its record (one entry per occupied rank), "a mark differs", the
+//     body it sends (each rank's mark + the `versionNo` the phone saw — ⛔ a detail), the pick, and when its entry card shows.
 // And ONE in-memory handoff (⛔ MMKV, ⛔ a query cache): the find screen's matched contacts, held for the FORM SESSION (one
 // match call serves both ranks — NE3; dropped when the form unmounts), the member's pick, handed back to the form, and the ONE
 // metered match call in flight per set of numbers (a second caller with the same numbers attaches to it — `shareNomineeLinkCheck`).
 
-import type { NomineeLinkView, NomineeMemberLink } from '@twt/contracts'
+import type { NomineeLinkView, NomineeMarksRankView, NomineeMarksSaveRequest, NomineeMemberLink } from '@twt/contracts'
 
 import type { ContactEntry } from './known-people'
 
@@ -224,9 +226,75 @@ export function saveRefusalCopyKey(code: string | undefined): string | null {
       return 'save.stale'
     case 'nominee.link_daily_limit':
       return 'save.daily_limit'
+    // Story 6.36f (MK3) — the marks-only save's two refusals
+    case 'nominee.marks_stale':
+      return 'save.marks_stale'
+    case 'nominee.marks_no_declaration':
+      return 'save.marks_no_declaration'
     default:
       return null
   }
+}
+
+// ── The marks-only mode (Story 6.36f, MK8) ──────────────────────────────────────────────────────────────────────────────
+
+/** Marks mode's state: one entry per occupied rank (the links read's `ranks`) — its mark, or `null` (none). */
+export type MarksRecord = Readonly<Partial<Record<NomineeRank, FormMark | null>>>
+
+/**
+ * The record marks mode starts from: per rank of `ranks` (each has a basis — MK3), its LIVE mark as a `keep`, else `null`. ⛔ The V3
+ * question in marks mode (⛔ editable details), so `confirmedFor` is the empty slot's — it never asks.
+ */
+export function initialMarks(view: { readonly ranks: readonly NomineeMarksRankView[]; readonly links: readonly NomineeLinkView[] }): MarksRecord {
+  const out: Partial<Record<NomineeRank, FormMark | null>> = {}
+  for (const r of view.ranks) {
+    const live = view.links.find((l) => l.rank === r.rank)
+    out[r.rank] = live ? keepOf(live, EMPTY_SLOT) : null
+  }
+  return out
+}
+
+/** The same mark — ⛔ a mark and ⛔ a mark; one `keep` of one link (case folded). A `new` pick is always a change. */
+function sameMark(a: FormMark | null | undefined, b: FormMark | null | undefined): boolean {
+  if (!a || !b) return !a && !b
+  return a.kind === 'keep' && b.kind === 'keep' && a.linkId.toLowerCase() === b.linkId.toLowerCase()
+}
+
+/** *Save marks* stays disabled until a mark differs from the one the mode started from (MK5 — ⛔ a save that changes nothing). */
+export function marksDiffer(initial: MarksRecord, current: MarksRecord): boolean {
+  return ([1, 2] as const).some((rank) => !sameMark(initial[rank], current[rank]))
+}
+
+/**
+ * The marks-only body (MK1): one entry per rank of the basis, its OWN `rank` (⛔ an array position — TR11) and the `versionNo` the
+ * phone saw (MK3 — a stale one ⇒ 409 `marks_stale`); the mark or `null`. ⛔ A name, relationship, mobile or address leaves the phone.
+ */
+export function buildMarksBody(ranks: readonly NomineeMarksRankView[], record: MarksRecord): NomineeMarksSaveRequest {
+  return { marks: ranks.map((r) => ({ rank: r.rank, versionNo: r.versionNo, memberLink: markToSubmit(record[r.rank]) ?? null })) }
+}
+
+/** The find screen's pick, in marks mode: ON its rank's entry, as picked (⛔ `applyPick` — slot-shaped); ⛔ entry ⇒ dropped. */
+export function applyMarksPick(record: MarksRecord, rank: NomineeRank, mark: FormMark): MarksRecord {
+  if (!(rank in record)) return record
+  return { ...record, [rank]: mark }
+}
+
+/**
+ * Whether the marks-only entry card shows (MK8): a SAVED declaration (`nominees` > 0) whose every rank has a basis (`ranks` ===
+ * `nominees` — MK3), the status read ⛔ failed, ⛔ locked, and something to do — a live mark to change or remove, OR the member may
+ * find one (`canNamePeople`; an `active-in-grace` member with ⛔ mark gets ⛔ card).
+ */
+export function marksEntryVisible(q: {
+  readonly nominees: number | undefined
+  readonly statusError: boolean
+  readonly locked: boolean
+  readonly ranks: number | undefined
+  readonly liveMarks: number
+  readonly canFind: boolean
+}): boolean {
+  if (q.nominees === undefined || q.nominees === 0 || q.statusError || q.locked) return false
+  if (q.ranks !== q.nominees) return false
+  return q.liveMarks > 0 || q.canFind
 }
 
 /** A refusal of the answer → its copy key. */

@@ -18,6 +18,15 @@
 // Round 3 (2026-10-24): the pick line stores the NAME and is translated at render (a language change re-words it), is cleared by
 // every remount that is ⛔ a pick (a stale reload, *Continue draft* — it would otherwise describe a slot that is gone), and sits
 // inside the screen's gutter.
+//
+// Story 6.36f (MK8, `2026-10-26-407`) — a MARKS-ONLY mode on this screen (⛔ a route): an entry card above the form (a saved
+// declaration whose every rank has a basis, ⛔ locked, and a live mark or the right to find one) switches the screen to one block
+// per rank — its label + relationship from the links read's `ranks` (⛔ the cached status read) and the SAME mark control the form
+// renders. The form is UNMOUNTED meanwhile (⛔ a stale form or draft beneath it). *Save marks* sends each rank's mark + the version
+// the phone saw (⛔ a detail — the server copies them), through the same step-up gate and footer; it stays disabled until a mark
+// differs. The find screen's pick lands on the marks record (the same focus effect). ⛔ A draft is written in marks mode (nothing is
+// typed; a picked number is held in memory only). A 409 `marks_stale` / `link_stale` reloads the marks and asks again;
+// `marks_no_declaration` returns to the form; *Marks saved.* is announced on both platforms before the screen leaves.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
@@ -26,6 +35,7 @@ import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Stack, useFocusEffect, useRouter } from 'expo-router'
+import type { NomineeMarksSaveRequest } from '@twt/contracts'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
@@ -34,6 +44,7 @@ import {
   type NomineeFormEntry,
   type NomineeSubmitEntry,
 } from '../../components/life-events/NomineeForm'
+import { NomineeMarkControl } from '../../components/life-events/NomineeMarkControl'
 import { SaveAndResumeAffordance } from '../../components/life-events/SaveAndResumeAffordance'
 import { clearDraft, loadDraft, saveDraft } from '../../components/life-events/draft-store'
 import { useStepUpGate } from '../../components/life-events/useStepUpGate'
@@ -43,14 +54,20 @@ import { AnnouncedText } from '../../components/peer-request/announce'
 import { errorCodeOf, useNomineeLinksQuery } from '../../components/nominee-links/useNomineeLinkQueries'
 import { useNomineeLinkT } from '../../lib/nominee-link-i18n'
 import {
+  applyMarksPick,
   applyPick,
+  buildMarksBody,
   clearNomineeLinkSession,
   freshSlotCount,
+  initialMarks,
   markName,
+  marksDiffer,
+  marksEntryVisible,
   reconcileMarks,
   redactForDraft,
   saveRefusalCopyKey,
   takeNomineeLinkPick,
+  type MarksRecord,
   type NomineeRank,
 } from '../../lib/nominee-links'
 
@@ -97,6 +114,16 @@ export default function LifeEventsNomineesScreen() {
     setFormKey((k) => k + 1)
     saveDraft(memberId, DRAFT_KEY, redactForDraft(forms))
   }
+  // Story 6.36f (MK8) — the marks-only mode: its record (one entry per rank), the record it started from (⛔ a save until a mark
+  // differs), its own spoken notice and refusal line, and the body the OTP retry re-sends. The focus effect reads the MODE through
+  // a ref (its dependency list stays the slots it falls back to).
+  const [marksMode, setMarksMode] = useState(false)
+  const marksModeRef = useRef(false)
+  const [marks, setMarks] = useState<MarksRecord>({})
+  const [marksStart, setMarksStart] = useState<MarksRecord>({})
+  const [marksNotice, setMarksNotice] = useState<{ text: string; seq: number } | null>(null)
+  const [marksError, setMarksError] = useState<{ text: string; seq: number } | null>(null)
+  const [pendingMarks, setPendingMarks] = useState<NomineeMarksSaveRequest | null>(null)
   /** The slots a fresh form starts with: EMPTY, each carrying its rank's live mark as a `keep`. */
   const freshForms = (): NomineeFormEntry[] =>
     reconcileMarks(Array.from({ length: freshSlotCount(links.data?.links ?? []) }, () => ({ ...EMPTY_FORM })), links.data?.links ?? [])
@@ -105,6 +132,13 @@ export default function LifeEventsNomineesScreen() {
     useCallback(() => {
       const pick = takeNomineeLinkPick()
       if (pick === null) return
+      // Story 6.36f (MK8) — in marks mode the pick lands on the marks record (⛔ `applyPick`, which is slot-shaped).
+      if (marksModeRef.current) {
+        setMarks((m) => applyMarksPick(m, pick.rank, pick.mark))
+        setMarksError(null)
+        setPickNotice({ name: markName(pick.mark), seq: Date.now() })
+        return
+      }
       const base = latestForms.current ?? initialForms ?? freshForms()
       if (pick.rank > base.length) return
       const applied = applyPick(base, pick.rank, pick.mark)
@@ -203,6 +237,113 @@ export default function LifeEventsNomineesScreen() {
     }
   }
 
+  // ── Story 6.36f (MK8) — the marks-only mode ──────────────────────────────────────────────────────────────────────────────
+  /** Start (or restart) the mode from the links read: every rank's live mark, ⛔ a change yet. */
+  function startMarks(view: NonNullable<typeof links.data>): void {
+    const start = initialMarks(view)
+    setMarksStart(start)
+    setMarks(start)
+  }
+
+  function enterMarksMode(): void {
+    if (links.data === undefined) return
+    stepUp.reset()
+    setError(null)
+    setPickNotice(null)
+    setMarksNotice(null)
+    setMarksError(null)
+    startMarks(links.data)
+    marksModeRef.current = true
+    setMarksMode(true)
+    // The tapped card vanishes with the form — ⛔ in silence (the page-change rule, `announce.tsx`).
+    AccessibilityInfo.announceForAccessibility(lt('marks.title'))
+  }
+
+  /** "Change names or numbers instead" — back to the FULL form, remounted fresh (⛔ a draft written). */
+  function backToForm(): void {
+    stepUp.reset()
+    marksModeRef.current = false
+    setMarksMode(false)
+    setMarksNotice(null)
+    setMarksError(null)
+    setPendingMarks(null)
+    setPickNotice(null)
+    latestForms.current = null
+    setInitialForms(undefined)
+    setFormKey((k) => k + 1)
+  }
+
+  const showMarksError = (text: string): void => setMarksError({ text, seq: Date.now() })
+
+  /** A 200: SAY it on both platforms (a live region unmounted by `router.back()` is never read), then leave as a full save does. */
+  async function marksSaved(): Promise<void> {
+    AccessibilityInfo.announceForAccessibility(lt('marks.saved'))
+    await invalidateAndLeave()
+  }
+
+  async function onSaveMarks(): Promise<void> {
+    if (links.data === undefined) return
+    const body = buildMarksBody(links.data.ranks, marks)
+    setBusy(true)
+    setMarksError(null)
+    setPendingMarks(body)
+    try {
+      const result = await stepUp.guard(() => memberAuth.lifeEventsUpdateNomineeMarks(body))
+      // undefined ⇒ step-up was requested; the OTP input is now shown (do NOT leave yet).
+      if (result !== undefined) await marksSaved()
+    } catch (err) {
+      await onMarksRefused(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onVerifyMarksOtp(): Promise<void> {
+    if (!pendingMarks) return
+    setBusy(true)
+    setMarksError(null)
+    try {
+      await stepUp.verifyAndRetry(() => memberAuth.lifeEventsUpdateNomineeMarks(pendingMarks))
+      await marksSaved()
+    } catch (err) {
+      await onMarksRefused(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** A marks-only refusal: the lock; ⛔ declaration ⇒ the form; a stale basis or mark ⇒ reload the marks and ask again. */
+  async function onMarksRefused(err: unknown): Promise<void> {
+    const code = errorCodeOf(err)
+    if (code === 'nominee.locked_claim_filed') {
+      lockOnSubmit()
+      return
+    }
+    if (code === 'nominee.marks_no_declaration') {
+      backToForm()
+      setError(lt('save.marks_no_declaration'))
+      return
+    }
+    const key = saveRefusalCopyKey(code)
+    if (key === null) {
+      showMarksError(t('lifeEvents.error_generic'))
+      return
+    }
+    if (code === 'nominee.marks_stale' || code === 'nominee.link_stale') {
+      void queryClient.invalidateQueries({ queryKey: ['member', 'nominees'] })
+      const fresh = await links.refetch()
+      // A FAILED reload keeps the old data (TanStack): ⛔ claim "reloaded" over it — say it did not.
+      if (fresh.isError || fresh.data === undefined) {
+        showMarksError(lt('save.stale_not_reloaded'))
+        return
+      }
+      setPickNotice(null)
+      setMarksNotice(null)
+      startMarks(fresh.data)
+    }
+    showMarksError(lt(key))
+  }
+
   function onContinueDraft(): void {
     const draft = loadDraft<NomineeFormEntry[]>(memberId, DRAFT_KEY)
     // Story 6.36e (TR9) — a draft's slots against the marks read: one written before this story (⛔ `memberLink`) takes the
@@ -236,7 +377,7 @@ export default function LifeEventsNomineesScreen() {
         disabled={busy || !stepUp.otp.trim()}
         accessibilityRole="button"
         accessibilityLabel={t('auth.verify')}
-        onPress={onVerifyOtp}
+        onPress={marksMode ? onVerifyMarksOtp : onVerifyOtp}
       >
         {busy ? <Spinner /> : t('auth.verify')}
       </Button>
@@ -293,6 +434,81 @@ export default function LifeEventsNomineesScreen() {
     )
   }
 
+  if (marksMode && links.data !== undefined) {
+    const view = links.data
+    const changed = marksDiffer(marksStart, marks)
+    /** *Remove mark* on a rank: ⛔ mark (a live one ENDS at save) — and SAY so (the button vanishes with it). */
+    const removeRankMark = (rank: NomineeRank) => {
+      setMarks((m) => ({ ...m, [rank]: null }))
+      setPickNotice(null)
+      setMarksError(null)
+      setMarksNotice({ text: lt('form.removed'), seq: Date.now() })
+    }
+    return (
+      <>
+        <Stack.Screen options={{ title: t('lifeEvents.nominees_label') }} />
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <YStack gap="$4" px="$6" py="$6" bg="$background" testID="nominee-marks-mode">
+            <H2 accessibilityRole="header">{lt('marks.title')}</H2>
+            <Paragraph accessibilityRole="text">{lt('marks.intro')}</Paragraph>
+            {pickNotice ? (
+              <AnnouncedText key={pickNotice.seq} text={pickNotice.name ? lt('form.marked', { name: pickNotice.name }) : lt('form.marked_no_name')} color="$color" />
+            ) : null}
+            {/* One block per rank of the BASIS (⛔ the cached status read, which may be stale — MK3). */}
+            {view.ranks.map((r) => (
+              <YStack key={r.rank} gap="$3" testID={`nominee-marks-rank-${r.rank}`}>
+                <Text fontWeight="600" accessibilityRole="header">
+                  {lt('marks.slot', {
+                    nominee: r.rank === 1 ? t('nominees.primary_label') : t('nominees.secondary_label'),
+                    relationship: t(`nominees.relationship_${r.relationship}`),
+                  })}
+                </Text>
+                <NomineeMarkControl
+                  index={r.rank - 1}
+                  mark={marks[r.rank] ?? null}
+                  canFind={canFind}
+                  questionOpen={false}
+                  onFind={() => router.push({ pathname: '/(life-events)/nominee-link-find', params: { rank: String(r.rank) } })}
+                  onRemove={() => removeRankMark(r.rank)}
+                  onKeep={() => setMarksNotice({ text: lt('form.kept'), seq: Date.now() })}
+                />
+              </YStack>
+            ))}
+            {/* The mode's OWN notice — OUTSIDE the blocks (the control carries ⛔ notice): the removed button takes focus with it. */}
+            {marksNotice ? <AnnouncedText key={marksNotice.seq} text={marksNotice.text} color="$color" /> : null}
+            {stepUpFooter}
+            {marksError ? <AnnouncedText key={marksError.seq} text={marksError.text} kind="error" color="#C0392B" /> : null}
+            <Button
+              theme="accent"
+              height={56}
+              disabled={busy || !changed}
+              accessibilityRole="button"
+              accessibilityLabel={lt('marks.save')}
+              accessibilityHint={changed ? undefined : lt('marks.nothing_changed')}
+              accessibilityState={{ disabled: busy || !changed, busy }}
+              onPress={() => void onSaveMarks()}
+            >
+              {busy ? <Spinner /> : lt('marks.save')}
+            </Button>
+            {changed ? null : <Paragraph accessibilityRole="text">{lt('marks.nothing_changed')}</Paragraph>}
+            <Button chromeless height={48} accessibilityRole="button" accessibilityLabel={lt('marks.back_to_form')} onPress={backToForm}>
+              {lt('marks.back_to_form')}
+            </Button>
+          </YStack>
+        </ScrollView>
+      </>
+    )
+  }
+
+  const marksEntry = marksEntryVisible({
+    nominees: status.data?.nominees.length,
+    statusError: status.isError,
+    locked,
+    ranks: links.data?.ranks.length,
+    liveMarks: links.data?.links.length ?? 0,
+    canFind,
+  })
+
   return (
     <>
       <Stack.Screen options={{ title: t('lifeEvents.nominees_label') }} />
@@ -337,6 +553,15 @@ export default function LifeEventsNomineesScreen() {
         {resumeAvailable && marksKnown ? (
           <YStack px="$6" pt="$6">
             <SaveAndResumeAffordance onContinue={onContinueDraft} onStartFresh={onStartFresh} />
+          </YStack>
+        ) : null}
+        {/* Story 6.36f (MK8) — changing a mark ⛔ needs the nominees typed again. */}
+        {marksEntry ? (
+          <YStack px="$6" pt="$4" gap="$2" testID="nominee-marks-entry">
+            <Paragraph accessibilityRole="text">{lt('marks.entry')}</Paragraph>
+            <Button height={48} accessibilityRole="button" accessibilityLabel={lt('marks.title')} onPress={enterMarksMode}>
+              {lt('marks.title')}
+            </Button>
           </YStack>
         ) : null}
         {pickNotice ? (

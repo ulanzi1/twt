@@ -21,6 +21,8 @@ const PARAMS: Record<string, Record<string, string | number>> = {
   'find.pick_a11y': { name: 'Meena K.' },
   'request.question': { name: 'Asha D.' },
   'request.will_see': { name: 'Asha D.' },
+  // Story 6.36f (MK9) — the marks-only mode's block heading
+  'marks.slot': { nominee: 'Primary nominee', relationship: 'Spouse' },
 };
 
 describe('nominee_link copy (real t())', () => {
@@ -150,5 +152,27 @@ describe('nominee_link copy (real t())', () => {
     }
     expect(t('note.body', PARAMS['note.body'], { locale: 'en', namespace: NS })).toContain('to check whether your nominee is a TWT member'.replace(/^to/, 'To'));
     expect(t('note.body', PARAMS['note.body'], { locale: 'en', namespace: NS })).not.toMatch(/colleague/i);
+  });
+
+  it('Story 6.36f (MK9) — the marks-only copy, en AND hi VERBATIM as BigDev approved them (2026-10-26, ⛔ edit without a new approval)', () => {
+    const approved: [string, string, string][] = [
+      ["marks.entry", "Only changing a member mark? Do it here without typing your nominees again.", "सिर्फ़ सदस्य-चिह्न बदलना है? अपने नामित व्यक्तियों को दोबारा टाइप किए बिना यहाँ बदलें।"],
+      ["marks.title", "Member marks", "सदस्य-चिह्न"],
+      ["marks.intro", "Your nominees' names, numbers and shares stay exactly as you saved them. Here you can only mark, change or remove which nominee is a TWT member.", "आपके नामित व्यक्तियों के नाम, नंबर और हिस्से ठीक वैसे ही रहेंगे जैसे आपने सहेजे थे। यहाँ आप सिर्फ़ यह चिह्नित कर सकते हैं, बदल सकते हैं या हटा सकते हैं कि कौन-सा नामित व्यक्ति TWT का सदस्य है।"],
+      ["marks.slot", "{nominee} · {relationship}", "{nominee} · {relationship}"],
+      ["marks.save", "Save marks", "चिह्न सहेजें"],
+      ["marks.saved", "Marks saved.", "चिह्न सहेज दिए गए।"],
+      ["marks.nothing_changed", "Change a mark first.", "पहले कोई चिह्न बदलें।"],
+      ["marks.back_to_form", "Change names or numbers instead", "इसके बजाय नाम या नंबर बदलें"],
+      ["save.marks_stale", "Your nominees changed since you opened this screen. Check the marks again, then save.", "यह स्क्रीन खोलने के बाद आपके नामित व्यक्ति बदल गए। चिह्न दोबारा जाँचें, फिर सहेजें।"],
+      ["save.marks_no_declaration", "Save your nominees first, then you can mark a member.", "पहले अपने नामित व्यक्तियों को सहेजें, फिर आप किसी सदस्य को चिह्नित कर सकते हैं।"],
+    ];
+    for (const [key, en, hi] of approved) {
+      const params = key === 'marks.slot' ? { nominee: '{nominee}', relationship: '{relationship}' } : undefined;
+      expect(t(key, params, { locale: 'en', namespace: NS }), key).toBe(en);
+      expect(t(key, params, { locale: 'hi', namespace: NS }), key).toBe(hi);
+    }
+    // the block heading is built from the nominee label and the relationship label, nothing else
+    expect(t('marks.slot', PARAMS['marks.slot'], { locale: 'en', namespace: NS })).toBe('Primary nominee · Spouse');
   });
 });

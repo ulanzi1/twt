@@ -17,7 +17,9 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   acceptMark,
   answerRefusalCopyKey,
+  applyMarksPick,
   applyPick,
+  buildMarksBody,
   clearNomineeLinkSession,
   completeMarkName,
   confirmMark,
@@ -26,7 +28,10 @@ import {
   flattenNomineeLinkPages,
   freshSlotCount,
   handNomineeLinkPick,
+  initialMarks,
   markNeedsQuestion,
+  marksDiffer,
+  marksEntryVisible,
   markToSubmit,
   NEEDS_CONFIRMATION,
   nomineeLinkEntryVisible,
@@ -414,5 +419,76 @@ describe('a request row shows the answer the server RECORDED (fix-diff review 20
     expect(out.pageParams).toEqual(data.pageParams) // the rest of the cache shape is untouched
     expect(data.pages[0]!.items[1]!.answer).toBeNull() // ⛔ mutated in place
     expect(withRequestAnswered(undefined, 'b', 'confirmed')).toBeUndefined()
+  })
+})
+
+// Story 6.36f (Task 4; MK3, MK5, MK8; `2026-10-26-407`) — the marks-only MODE's pure logic: the record it starts from, "a mark
+// differs", the body it sends (each entry its own `rank` + the `versionNo` the phone saw), the pick, and when the entry card shows.
+describe('Story 6.36f — the marks-only mode', () => {
+  const ranks = [
+    { rank: 1 as const, versionNo: 3, relationship: 'spouse' as const },
+    { rank: 2 as const, versionNo: 1, relationship: 'son' as const },
+  ]
+  const pickNew = (mobile: string): FormMark => ({ kind: 'new', mobile, foundBy: 'picker', savedName: 'Meena' })
+
+  it('initialMarks — one entry per occupied rank: its live mark as a `keep`, else `null` (⛔ an entry for a rank without a basis)', () => {
+    const rec = initialMarks({ ranks, links: [link(2, L2, 'confirmed', 'Ravi K.')] })
+    expect(rec[1]).toBeNull()
+    expect(rec[2]).toMatchObject({ kind: 'keep', linkId: L2, label: 'confirmed', name: 'Ravi K.' })
+    expect(Object.keys(initialMarks({ ranks: [ranks[0]!], links: [link(2, L2)] }))).toEqual(['1'])
+  })
+
+  it('marksDiffer — an UNTOUCHED record cannot save; a removal, a new pick and a different keep each differ', () => {
+    const start = initialMarks({ ranks, links: [link(1, L1)] })
+    expect(marksDiffer(start, start)).toBe(false)
+    expect(marksDiffer(start, { ...start })).toBe(false)
+    expect(marksDiffer(start, { ...start, 1: { kind: 'keep', linkId: L1.toUpperCase(), label: 'asked', name: null } })).toBe(false)
+    expect(marksDiffer(start, { ...start, 1: null })).toBe(true)
+    expect(marksDiffer(start, { ...start, 2: pickNew('9876543210') })).toBe(true)
+    expect(marksDiffer(start, { ...start, 1: { kind: 'keep', linkId: L2, label: 'asked', name: null } })).toBe(true)
+  })
+
+  it('buildMarksBody — each entry carries its OWN rank and the versionNo the phone saw; a removal sends `memberLink: null`; ⛔ a detail', () => {
+    const body = buildMarksBody(ranks, { 1: null, 2: { kind: 'keep', linkId: L2, label: 'asked', name: 'shown only' } })
+    expect(body).toEqual({
+      marks: [
+        { rank: 1, versionNo: 3, memberLink: null },
+        { rank: 2, versionNo: 1, memberLink: { kind: 'keep', linkId: L2 } },
+      ],
+    })
+    expect(JSON.stringify(body)).not.toMatch(/shown only|spouse|son/) // ⛔ a name or relationship leaves the phone
+  })
+
+  it('a SWAP is two `new` picks (⛔ a "move" control) — the body sends two `new`s, each on its own rank', () => {
+    const body = buildMarksBody(ranks, { 1: pickNew('9000000002'), 2: pickNew('9000000001') })
+    expect(body.marks.map((m) => [m.rank, m.memberLink?.kind, m.memberLink?.kind === 'new' ? m.memberLink.mobile : null])).toEqual([
+      [1, 'new', '9000000002'],
+      [2, 'new', '9000000001'],
+    ])
+  })
+
+  it('applyMarksPick — the pick lands on its rank\'s entry (⛔ slot-shaped: ⛔ a mobile filled, ⛔ a name window); a rank without an entry is dropped', () => {
+    const start = initialMarks({ ranks: [ranks[0]!], links: [] })
+    const picked = applyMarksPick(start, 1, pickNew('9876543210'))
+    expect(picked[1]).toEqual(pickNew('9876543210'))
+    expect(applyMarksPick(start, 2, pickNew('9876543210'))).toBe(start)
+  })
+
+  it('marksEntryVisible — ONLY with a saved declaration, every rank a basis, ⛔ locked, ⛔ a failed status, and (a live mark OR may find)', () => {
+    const ok = { nominees: 2, statusError: false, locked: false, ranks: 2, liveMarks: 0, canFind: true }
+    expect(marksEntryVisible(ok)).toBe(true)
+    expect(marksEntryVisible({ ...ok, canFind: false, liveMarks: 1 })).toBe(true)
+    expect(marksEntryVisible({ ...ok, canFind: false })).toBe(false) // an `active-in-grace` member with ⛔ mark
+    expect(marksEntryVisible({ ...ok, nominees: 0, ranks: 0 })).toBe(false)
+    expect(marksEntryVisible({ ...ok, nominees: undefined })).toBe(false)
+    expect(marksEntryVisible({ ...ok, ranks: 1 })).toBe(false) // a rank with ⛔ basis (pre-0119 data)
+    expect(marksEntryVisible({ ...ok, ranks: undefined })).toBe(false)
+    expect(marksEntryVisible({ ...ok, locked: true })).toBe(false)
+    expect(marksEntryVisible({ ...ok, statusError: true })).toBe(false)
+  })
+
+  it('the two refusals have their own words', () => {
+    expect(saveRefusalCopyKey('nominee.marks_stale')).toBe('save.marks_stale')
+    expect(saveRefusalCopyKey('nominee.marks_no_declaration')).toBe('save.marks_no_declaration')
   })
 })

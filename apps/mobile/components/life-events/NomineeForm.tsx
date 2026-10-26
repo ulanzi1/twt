@@ -11,6 +11,9 @@
 // signup reassurance blocks) directly above the submit CTA. Bilingual + accessible (the (signup)
 // screen's a11y posture: labels + hints, announced split + validation).
 //
+// Story 6.36f (MK8) — the per-slot mark control now lives in `NomineeMarkControl.tsx` (shared with the marks-only mode); this
+// form keeps its state, the V3 question's derivation and the spoken notice.
+//
 // Story 6.36e (AC5; `2026-10-24-397` NE2–NE4) — `link` (Life Events ONLY — the signup screen passes ⛔ it, and the signup
 // route refuses a mark): each slot may carry a MARK — "this nominee is also a member". A kept mark shows its label (asked /
 // confirmed — the registered name / said it is not them) and is re-sent as a `keep`; *Remove mark* sends ⛔ mark (the live
@@ -38,8 +41,9 @@ import { useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { useNomineeLinkT } from '../../lib/nominee-link-i18n'
-import { acceptMark, completeMarkName, markName, markNeedsQuestion, markToSubmit, type FormMark, type NomineeRank } from '../../lib/nominee-links'
+import { acceptMark, completeMarkName, markNeedsQuestion, markToSubmit, type FormMark, type NomineeRank } from '../../lib/nominee-links'
 import { AnnouncedText } from '../peer-request/announce'
+import { NomineeMarkControl } from './NomineeMarkControl'
 
 /**
  * The nominee-relationship value set — the Trustee-ratified TWENTY (`2026-09-27-257`, Story 6.19a
@@ -216,79 +220,6 @@ export function NomineeForm(props: NomineeFormProps) {
   const questionOpen = !!props.link && forms.some(markNeedsQuestion)
   const shownError = inlineError ?? (answerFirst && questionOpen ? lt('edit.answer_first') : null) ?? props.error
 
-  /**
-   * Story 6.36e — one slot's member mark: its label, *Remove mark*, the find entry, and the open edit question. A render
-   * FUNCTION, ⛔ a component declared in here (a new component type each render would remount its buttons — focus lost).
-   * Every control here is 48 dp tall (device run 2026-10-24: they were 36 dp, like the relationship chips): *Keep the mark* /
-   * *Remove it* answer a question about WHO a mark is for, and the members who read it are not young.
-   */
-  function markControl(index: number, slot: NomineeFormEntry): React.ReactElement | null {
-    const link = props.link!
-    const mark: FormMark | null = slot.memberLink ?? null
-    if (mark === null && !link.canFind) return null
-    const name = mark ? markName(mark) : null
-    const rank = (index + 1) as NomineeRank
-    // Two slots share these words: each button also says WHICH nominee (it begins with its visible text — WCAG 2.5.3).
-    const which = index === 0 ? t('nominees.primary_label') : t('nominees.secondary_label')
-    const labelled = (text: string) => `${text} — ${which}`
-    return (
-      <YStack gap="$2" testID={`nominee-mark-${index}`}>
-        {mark === null ? null : (
-          <>
-            <Text accessibilityRole="text">
-              {mark.kind === 'new'
-                ? name
-                  ? lt('form.marked', { name })
-                  : lt('form.marked_no_name')
-                : mark.label === 'confirmed'
-                  ? name
-                    ? lt('label.confirmed', { name })
-                    : lt('label.confirmed_no_name')
-                  : lt(`label.${mark.label}`)}
-            </Text>
-            {mark.kind === 'keep' && mark.label === 'not_me' ? <Text accessibilityRole="text">{lt('label.not_me_note')}</Text> : null}
-          </>
-        )}
-        {mark !== null && mark.kind === 'new' ? (
-          <Paragraph accessibilityRole="text">{name ? lt('form.will_ask', { name }) : lt('form.will_ask_no_name')}</Paragraph>
-        ) : null}
-        {/* ⛔ A line saying WHY a mark matters or what the Trust does with it: it would describe how the five are chosen (`2026-10-24-401`). */}
-        {mark !== null && markNeedsQuestion(slot) ? (
-          <YStack gap="$2" testID={`nominee-mark-question-${index}`}>
-            {/* SHOWN and SPOKEN (family 13(d)): a bare live region is Android-only — `AnnouncedText` speaks it on iOS too. */}
-            <AnnouncedText text={name ? lt('edit.question', { name }) : lt('edit.question_no_name')} color="$color" />
-            <XStack gap="$2">
-              <Button height={48} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.keep'))} onPress={() => keepMark(index)}>
-                {lt('edit.keep')}
-              </Button>
-              <Button height={48} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.remove'))} onPress={() => removeMark(index)}>
-                {lt('edit.remove')}
-              </Button>
-            </XStack>
-          </YStack>
-        ) : null}
-        <XStack gap="$2" flexWrap="wrap">
-          {link.canFind ? (
-            <Button
-              height={48}
-              chromeless
-              accessibilityRole="button"
-              accessibilityLabel={labelled(mark === null ? lt('form.find') : lt('form.find_again'))}
-              onPress={() => link.onFind(rank)}
-            >
-              {mark === null ? lt('form.find') : lt('form.find_again')}
-            </Button>
-          ) : null}
-          {mark !== null ? (
-            <Button height={48} chromeless accessibilityRole="button" accessibilityLabel={labelled(lt('form.remove'))} onPress={() => removeMark(index)}>
-              {lt('form.remove')}
-            </Button>
-          ) : null}
-        </XStack>
-      </YStack>
-    )
-  }
-
   return (
     <YStack gap="$4" px="$6" py="$6" bg="$background">
       <H2 accessibilityRole="header">{props.title}</H2>
@@ -366,7 +297,18 @@ export function NomineeForm(props: NomineeFormProps) {
             accessibilityHint={t('nominees.address_help')}
           />
 
-          {props.link ? markControl(index, f) : null}
+          {/* Story 6.36e — the slot's member mark; Story 6.36f (MK8) — ONE control shared with the marks-only mode. */}
+          {props.link ? (
+            <NomineeMarkControl
+              index={index}
+              mark={f.memberLink ?? null}
+              canFind={props.link.canFind}
+              questionOpen={markNeedsQuestion(f)}
+              onFind={() => props.link!.onFind((index + 1) as NomineeRank)}
+              onRemove={() => removeMark(index)}
+              onKeep={() => keepMark(index)}
+            />
+          ) : null}
         </YStack>
       ))}
 

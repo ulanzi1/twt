@@ -558,7 +558,7 @@ least).
       behaviour (a correction of an older version + an innocence unlock ⇒ the links read hides the live link and a full save ends it
       `redeclared`). Re-run `nominee-member-link.spec.ts`, `nominee-declare.spec.ts`, `life-events.spec.ts` UNCHANGED as the
       extraction's regression proof; `apps/jobs/tests/data-export.test.ts` UNCHANGED.
-- [ ] **Task 4 — mobile (AC6)** — the shared mark control (props per MK8, the `form.will_ask*` line); the pure `marksDiffer` /
+- [x] **Task 4 — mobile (AC6)** — the shared mark control (props per MK8, the `form.will_ask*` line); the pure `marksDiffer` /
       `buildMarksBody` in `lib/nominee-links.ts`; the entry card + marks mode in `nominees.tsx` (the pick into the marks record, the
       step-up save, the refusals, the announce, `invalidateAndLeave`, back to the form); the client call; the copy (en + hi draft,
       single-brace tokens, `PARAMS`; BigDev approves the Hindi); the tests.

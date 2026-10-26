@@ -14,6 +14,11 @@
 // Append-only enforcement is structural — the migration that creates this
 // table also installs BEFORE UPDATE / DELETE / TRUNCATE triggers that
 // RAISE EXCEPTION (see migrations/0001_events-log.sql hand-supplemented body).
+// Hand-authored migration 0185 adds contribution_acted_pool_member_idx and contribution_reversed_pool_reference_idx,
+// backed by generated contribution_pool_id / contribution_member_id / contribution_reversed_event_id columns. These
+// are private lookup metadata used by contribution/read.ts, intentionally omitted from the canonical event row below:
+// adding derived database fields to $inferSelect would change EventRow, replay fixtures and strict wire contracts.
+// The dedicated contribution-suppression-index-policy-regression spec verifies the database-only additions.
 // The application layer (@twt/events) provides no UPDATE / DELETE paths.
 
 import { sql } from 'drizzle-orm';

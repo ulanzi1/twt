@@ -17,7 +17,7 @@ import pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { setPariwarScope } from '../../../src/db.js';
-import { beginAlertSmsSend, finaliseAlertSmsSend, type AlertSmsSendKey } from '../../../src/sms-delivery/index.js';
+import { beginAlertSmsSend, finaliseAlertSmsSend, giveUpDeferredAlertSmsSend, lookupAlertSmsSend, type AlertSmsSendKey } from '../../../src/sms-delivery/index.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -216,4 +216,107 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the alert SMS send record\'s begi
     expect(outB).toEqual({ ok: true, value: { kind: 'taken' } });
     expect(await rowsOf(key)).toEqual([{ outcome: 'attempting', attempt_count: 2, claim_token: 'job-a:1', provider_message_id: null }]);
   });
+
+  async function deferredNearExpiry() {
+    const key = await freshKey();
+    const seed = await openTx(key.pariwarId);
+    const begun = await beginAlertSmsSend(seed.client, { ...key, ...meta, claimToken: 'seed:0' });
+    if (begun.kind !== 'begun') throw new Error('seed did not begin');
+    await finaliseAlertSmsSend(seed.client, { pariwarId: key.pariwarId, sendId: begun.sendId, claimToken: 'seed:0', outcome: 'deferred', detail: 'rate_limited:http_429' });
+    await seed.commit();
+    return { key, sendId: begun.sendId };
+  }
+
+  it('AP-P3 — begin locks an attempting row after an earlier deferred observation, blocking a concurrent 429 finalise until its guarded update finishes', { timeout: TIMEOUT }, async () => {
+    const { key, sendId } = await deferredNearExpiry();
+    const a = await openTx(key.pariwarId);
+    expect((await lookupAlertSmsSend(a.client, key)).kind).toBe('deferred');
+    const b = await openTx(key.pariwarId);
+    expect(await beginAlertSmsSend(b.client, { ...key, ...meta, claimToken: 'b:1' })).toMatchObject({ kind: 'begun', attemptCount: 2 });
+    await b.commit();
+    // Stop A exactly after its lock SELECT, before its UPDATE. Always release the latch on assertion failure.
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    let locked!: () => void;
+    const reached = new Promise<void>(resolve => { locked = resolve; });
+    let selected = -1;
+    const wrapped: Parameters<typeof beginAlertSmsSend>[0] = { query: (async (text: string, values?: unknown[]) => {
+      const result = await a.client.query(text, values);
+      if (text.includes('SELECT send_id FROM alert_sms_sends')) {
+        selected = result.rows.length;
+        locked();
+        await gate;
+      }
+      return result;
+    }) as pg.PoolClient['query'] };
+    const fromA = track(beginAlertSmsSend(wrapped, { ...key, ...meta, claimToken: 'a:1' }));
+    try {
+      await reached;
+      expect(selected).toBe(1);
+      const fin = await openTx(key.pariwarId);
+      const finalised = track(finaliseAlertSmsSend(fin.client, { pariwarId: key.pariwarId, sendId, claimToken: 'b:1', outcome: 'deferred', detail: 'rate_limited:http_429' }));
+      expect(await waitingOn(fin.backendPid)).toMatch(/^UPDATE alert_sms_sends/);
+      release();
+      expect(await fromA.settled).toEqual({ ok: true, value: { kind: 'taken' } });
+      await a.commit();
+      expect(await finalised.settled).toEqual({ ok: true, value: true });
+      await fin.commit();
+      expect(await rowsOf(key)).toEqual([{ outcome: 'deferred', attempt_count: 2, claim_token: 'b:1', provider_message_id: null }]);
+    } finally {
+      release();
+      await fromA.settled;
+      await a.rollback();
+    }
+  });
+
+  it('FD-P2 — a fresh lookup cannot authorize reclaim after the row expires', { timeout: TIMEOUT }, async () => {
+    const { key } = await deferredNearExpiry();
+    const tx = await openTx(key.pariwarId);
+    expect((await lookupAlertSmsSend(tx.client, key)).kind).toBe('deferred');
+    // Age the committed row between the advisory lookup and the actual mutation.
+    await pool.query("UPDATE alert_sms_sends SET updated_at = clock_timestamp() - interval '31 minutes' WHERE alert_id = $1", [key.alertId]);
+    expect(await beginAlertSmsSend(tx.client, { ...key, ...meta, claimToken: 'late:1' })).toEqual({ kind: 'taken' });
+    await tx.commit();
+    expect(await rowsOf(key)).toEqual([{ outcome: 'deferred', attempt_count: 1, claim_token: 'seed:0', provider_message_id: null }]);
+  });
+
+  it('FD-P2 — freshness is judged AFTER waiting on a row lock even when the blocker makes no update', { timeout: TIMEOUT }, async () => {
+    const { key } = await deferredNearExpiry();
+    await pool.query("UPDATE alert_sms_sends SET updated_at = clock_timestamp() - interval '30 minutes' + interval '2 seconds' WHERE alert_id = $1", [key.alertId]);
+    const blocker = await openTx(key.pariwarId);
+    await blocker.client.query('SELECT send_id FROM alert_sms_sends WHERE alert_id = $1 FOR UPDATE', [key.alertId]);
+    const waiter = await openTx(key.pariwarId);
+    expect((await lookupAlertSmsSend(waiter.client, key)).kind).toBe('deferred');
+    const begun = track(beginAlertSmsSend(waiter.client, { ...key, ...meta, claimToken: 'waiter:1' }));
+    // This proves the lock wait; the later DB sleep advances the AGE boundary, not the concurrency assertion.
+    expect(await waitingOn(waiter.backendPid)).toMatch(/SELECT send_id FROM alert_sms_sends .*FOR UPDATE/);
+    await pool.query("SELECT pg_sleep(GREATEST(0, EXTRACT(EPOCH FROM updated_at + interval '30 minutes' - clock_timestamp())) + 0.05) FROM alert_sms_sends WHERE alert_id = $1", [key.alertId]);
+    await blocker.commit();
+    expect(await begun.settled).toEqual({ ok: true, value: { kind: 'taken' } });
+    await waiter.commit();
+    expect(await rowsOf(key)).toEqual([{ outcome: 'deferred', attempt_count: 1, claim_token: 'seed:0', provider_message_id: null }]);
+  });
+
+  it('FD-P3 — an expired observation cannot freeze a newly rate-limited attempt', { timeout: TIMEOUT }, async () => {
+    const { key, sendId } = await deferredNearExpiry();
+    await pool.query("UPDATE alert_sms_sends SET updated_at = clock_timestamp() - interval '30 minutes' + interval '2 seconds' WHERE alert_id = $1", [key.alertId]);
+    const retry = await openTx(key.pariwarId);
+    expect(await beginAlertSmsSend(retry.client, { ...key, ...meta, claimToken: 'new:1' })).toMatchObject({ kind: 'begun', attemptCount: 2 });
+    // The old committed deferred tuple remains visible while retry's new attempt is uncommitted.
+    await pool.query("SELECT pg_sleep(GREATEST(0, EXTRACT(EPOCH FROM updated_at + interval '30 minutes' - clock_timestamp())) + 0.05) FROM alert_sms_sends WHERE alert_id = $1", [key.alertId]);
+    const observer = await openTx(key.pariwarId);
+    expect((await lookupAlertSmsSend(observer.client, key)).kind).toBe('deferred_expired');
+    await finaliseAlertSmsSend(retry.client, { pariwarId: key.pariwarId, sendId, claimToken: 'new:1', outcome: 'deferred', detail: 'rate_limited:http_429' });
+    // Start the give-up while it still has to wait on the other worker's row.
+    const gaveUp = track(giveUpDeferredAlertSmsSend(observer.client, { pariwarId: key.pariwarId, sendId, detail: 'exhausted:rate_limited:expired', onlyIfExpired: true }));
+    expect(await waitingOn(observer.backendPid)).toMatch(/SELECT send_id FROM alert_sms_sends .*FOR UPDATE/);
+    await retry.commit();
+    expect(await gaveUp.settled).toEqual({ ok: true, value: false });
+    expect((await lookupAlertSmsSend(observer.client, key)).kind).toBe('deferred');
+    // Expiry is conditional, but the separate final-attempt give-up still intentionally closes a young row.
+    expect(await giveUpDeferredAlertSmsSend(observer.client, { pariwarId: key.pariwarId, sendId, detail: 'exhausted:config_unavailable:secret_manager' })).toBe(true);
+    await observer.commit();
+    expect(await rowsOf(key)).toEqual([{ outcome: 'error', attempt_count: 2, claim_token: 'new:1', provider_message_id: null }]);
+  });
+
 });

@@ -24,6 +24,8 @@
 // pg-boss; a single job for the whole cycle would blow the visibility timeout. Both triggers share ONE
 // child queue (the payload's `kind` selects the copy + the idempotency scope), so there is one fan-out
 // path to reason about, not two.
+// FD-P1: the SMS-producing kinds (day 10 / escalated pending match) instead enqueue bounded eight-member jobs, each with
+// its own retry clock. The registered handler also splits legacy full-roster jobs before any sends.
 //
 // ── Idempotency ─────────────────────────────────────────────────────────────────────────────────────
 // Every member send is claimed in the Story 1.12 keyed store on `(alert_id, member_id, scope)` — scope
@@ -68,6 +70,7 @@ import {
 } from '@twt/domain';
 import { DEFAULT_LOCALE, formatCurrency, t, type Locale } from '@twt/i18n';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
+import { createHash } from 'node:crypto';
 
 import type { FanOutCall } from './alert-sms-details.js';
 import {
@@ -100,16 +103,14 @@ export const DEFAULT_RECOVERY_SWEEP_ALERT_LIMIT = 500;
 /** Members per child-worker chunk. The unit of progress inside one pool's roster. */
 export const DEFAULT_MEMBER_CHUNK_SIZE = 200;
 
-/**
- * Story 5.11b (F6) — the chunk for a LIT kind (day 10, the escalated pending match) once a REAL SMS send is wired. Members are
- * claimed per chunk BEFORE their sequential fan-out, under the 300 s claim TTL; a lit member's SMS can take ~10 s (the send
- * timeout) + begin + finalise on top of push and WhatsApp, so a 200-member chunk could outlive its claims (the send ROW still
- * stops a second TEXT, ⛔ a second push). 16 × ~15 s ≈ 240 s stays inside the TTL — ⚠ for TYPICAL latency only (code review 2026-10-25,
- * C2-P12). The WORST case per member is ~40-50 s (the 10 s send + three finalise tries at up to 10 s each + push + WhatsApp), so 16
- * members can outlive the 300 s claim TTL: a lapsed claim risks a duplicate PUSH, never a second text. F6 stays OPEN (deferred-work).
- * Escalated tier: its keyed-store TTL is 30 days, so the chunk is moot there; MISMATCH is single-member.
- */
-export const LIT_KIND_MEMBER_CHUNK_SIZE = 16;
+/** FD-P1 — the ACTUAL retry unit for SMS-producing pool jobs. Splitting only the in-handler claim loop does not bound a retry's
+ * wait behind the rest of its pool. Eight members leave room for finalise retries as well as the gateway / connection waits;
+ * the 30-minute row age limit still applies to outages and queue delays. Non-SMS pool jobs retain their existing payloads.
+ * Story 5.11b (F6): it is also the lit kind's claim CHUNK — members are claimed per chunk BEFORE their sequential fan-out, under
+ * the 300 s claim TTL. The WORST case per member is ~40-50 s (the 10 s send + three finalise tries at up to 10 s each + push +
+ * WhatsApp), so even 8 members (~320-400 s) can outlive the TTL: a lapsed claim risks a duplicate PUSH, never a second text (the send
+ * ROW stops that). F6 stays OPEN (deferred-work). Review 2026-10-26, R4-P10: the old 16-member chunk was inert once jobs held <= 8. */
+export const LIT_KIND_JOB_MEMBER_LIMIT = 8;
 
 /** CONTRIBUTION_NOTIFY_POOL_BATCH child jobs processed concurrently in this process — the same
  *  `localConcurrency` mechanism `registerCycleSpawnWorkers` uses (cycle-spawn.ts:36/381). */
@@ -589,30 +590,69 @@ export async function enqueueContributionMismatchNotification(
   );
 }
 
+/** A single pool job is `send`; a split pool's bounded jobs go in ONE atomic `insert` (R4-P2). */
+type PoolBatchEnqueueBoss = Pick<QueueClient, 'send' | 'insert'>;
+
 async function enqueuePoolBatch(
-  boss: Pick<QueueClient, 'send'>,
+  boss: PoolBatchEnqueueBoss,
   ctx: NotifyEnqueueContext,
   payload: ContributionNotifyChildPayload,
-): Promise<void> {
+  sourceJobId?: string,
+): Promise<number> {
   const scope =
     payload.kind === 'deadline_reminder'
       ? `:d${String(payload.cycleDay)}`
       : payload.kind === 'pending_match' || payload.kind === 'pending_match_escalated'
         ? `:${payload.kind}`
         : '';
-  await boss.send(
+  const lit = isLitPoolPayload(payload);
+  const batches = lit && payload.memberIds.length > LIT_KIND_JOB_MEMBER_LIMIT
+    ? Array.from({ length: Math.ceil(payload.memberIds.length / LIT_KIND_JOB_MEMBER_LIMIT) }, (_, i) => ({
+        ...payload,
+        memberIds: payload.memberIds.slice(i * LIT_KIND_JOB_MEMBER_LIMIT, (i + 1) * LIT_KIND_JOB_MEMBER_LIMIT),
+      }))
+    : [payload];
+  const jobs = batches.map((batch) => {
+    // singletonKey is only a label on this STANDARD queue. Legacy conversion needs a durable primary-key conflict,
+    // including after a prefix child completes. Scope the deterministic id to the source job so later sweep intents
+    // retain independent retries. Include the roster and tenant to distinguish every conversion's children.
+    const rosterKey = lit ? `:members:${createHash('sha256').update(batch.memberIds.join(',')).digest('hex')}` : '';
+    const digest = sourceJobId === undefined ? undefined : createHash('sha256')
+      .update(JSON.stringify(['contribution-notify-split-v1', sourceJobId, ctx.pariwarId, payload.alertId, payload.poolId, scope, batch.memberIds]))
+      .digest('hex');
+    const childId = digest === undefined ? undefined
+      : `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-8${digest.slice(17, 20)}-${digest.slice(20, 32)}`;
+    return {
+      data: { ...ctx, payload: batch } satisfies JobEnvelope<ContributionNotifyChildPayload>,
+      options: {
+        ...(childId === undefined ? {} : { id: childId }),
+        singletonKey: `${payload.alertId}:${payload.poolId}${scope}${rosterKey}`,
+        // D9 — the DURABLE half of AR-19's retry-with-backoff. Stated explicitly at the enqueue site
+        // rather than inheriting an unstated default: the in-process cascade runs `backoffMs: []`, so
+        // ALL backoff lives here.
+        retryLimit: CHILD_RETRY_LIMIT,
+        retryDelay: CHILD_RETRY_DELAY_SECONDS,
+        retryBackoff: true,
+      },
+    };
+  });
+  if (jobs.length === 1) {
+    await boss.send(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH, jobs[0]!.data, jobs[0]!.options);
+    return 1;
+  }
+  // Review 2026-10-26 (R4-P2): a split pool is enqueued in ONE `insert` statement — all of its bounded jobs or none, in one
+  // round trip. Sequential sends could keep a prefix and lose the rest of a cycle-day that never recurs, while the caller's
+  // alarm said the whole pool failed. pg-boss inserts with `ON CONFLICT DO NOTHING`, so a deterministic (legacy) id still
+  // cannot recreate a child that exists.
+  await boss.insert(
     QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH,
-    { ...ctx, payload } satisfies JobEnvelope<ContributionNotifyChildPayload>,
-    {
-      singletonKey: `${payload.alertId}:${payload.poolId}${scope}`,
-      // D9 — the DURABLE half of AR-19's retry-with-backoff. Stated explicitly at the enqueue site
-      // rather than inheriting an unstated default: the in-process cascade runs `backoffMs: []`, so
-      // ALL backoff lives here.
-      retryLimit: CHILD_RETRY_LIMIT,
-      retryDelay: CHILD_RETRY_DELAY_SECONDS,
-      retryBackoff: true,
-    },
+    jobs.map((job) => ({ ...job.options, data: job.data })),
   );
+  return batches.length;
+}
+
+function isLitPoolPayload(payload: ContributionNotifyChildPayload): boolean {
+  return (payload.kind === 'deadline_reminder' && payload.cycleDay === 10) || payload.kind === 'pending_match_escalated';
 }
 
 // ── Task 5: the cycle-open parent ───────────────────────────────────────────────────────────────────
@@ -621,12 +661,14 @@ async function enqueuePoolBatch(
  * The CYCLE_OPEN parent worker. Pages the cycle's pools from the LATEST PERSISTED assignment snapshot
  * (`listCycleBindingCandidates` — promoted to an export by this story; writing a second "latest
  * snapshot per pool" derivation is the drift `contribution-binding.ts` explicitly guards against) and
- * fans out ONE child per pool. Re-running is safe: children are singleton-keyed and every member send
- * is idempotent.
+ * fans out ONE child per pool (a lit kind's pool: its bounded jobs, in one atomic insert). Re-running never sends a member a
+ * second TEXT (the alert SMS send row) and the keyed-store claim guards the push while it holds — a lapsed claim risks a duplicate
+ * PUSH (F6). ⛔ because of `singletonKey`, which is only a label on this STANDARD queue and dedupes nothing (review 2026-10-26,
+ * R4-P5; narrow review of R4).
  */
 export async function runContributionNotifyParent(
   deps: ContributionNotifyTriggerDeps,
-  boss: Pick<QueueClient, 'send'>,
+  boss: PoolBatchEnqueueBoss,
   envelopeIn: JobEnvelope<ContributionNotifyParentPayload>,
 ): Promise<{ alertId: string; poolCount: number; membersQueued: number }> {
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
@@ -727,10 +769,16 @@ export async function runContributionNotifyChild(
   const now = deps.now?.() ?? new Date();
   const locale = deps.locale ?? DEFAULT_LOCALE;
   // Story 5.11b (FS5) — the two LIT kinds of this worker (day 10, the escalated tier): their TEXT goes in each member's language.
-  const litKind = (p.kind === 'deadline_reminder' && p.cycleDay === 10) || p.kind === 'pending_match_escalated';
-  // Story 5.11b (F6) — a lit kind's chunk stays inside the claim TTL once a real send is wired.
+  const litKind = isLitPoolPayload(p);
+  if (litKind && deps.alertSms !== undefined && p.memberIds.length > LIT_KIND_JOB_MEMBER_LIMIT) {
+    const message = `[jobs] contribution-notify-child: oversized SMS job for alert ${p.alertId} pool ${p.poolId} must be split before fan-out`;
+    alarm(message);
+    throw new Error(message);
+  }
+  // Story 5.11b (F6) — a lit kind's claim chunk is its job bound (8) once a real send is wired; at the worst case it can still
+  // outlive the 300 s claim TTL (a duplicate PUSH, never a second text — see LIT_KIND_JOB_MEMBER_LIMIT).
   const baseChunk = Math.max(1, deps.memberChunkSize ?? DEFAULT_MEMBER_CHUNK_SIZE);
-  const chunkSize = litKind && deps.alertSms !== undefined ? Math.min(baseChunk, LIT_KIND_MEMBER_CHUNK_SIZE) : baseChunk;
+  const chunkSize = litKind && deps.alertSms !== undefined ? Math.min(baseChunk, LIT_KIND_JOB_MEMBER_LIMIT) : baseChunk;
   // Per-kind TTL (Story 9.10 AC3 — "the once-ever nuance"): the two pending-match tiers durability-need a
   // weeks-scale claim, never the day-N reminders' 300s default (which would lapse — and get vacuumed —
   // well before the next HOURLY sweep tick, re-nudging the member every hour).
@@ -741,17 +789,18 @@ export async function runContributionNotifyChild(
   const store = idempotency.createKeyedStore(deps.pool);
   const scope = idempotencyScope(p);
 
-  // The pool's member-facing identity — resolved ONCE per pool. `null` means the claim / KYC profile /
+  // The pool's member-facing identity — resolved ONCE per child job. FD-P1's bounded SMS jobs repeat this read per batch;
+  // non-SMS jobs still carry the whole pool. `null` means the claim / KYC profile /
   // name is unresolvable: a push naming no family is a DEFECTIVE artifact and inventing a placeholder
   // would be worse, so this pool is skipped LOUDLY rather than sent blank.
   //
   // ⭐ STORY 8.16 — THE PRESENTATION MODE IS READ HERE, ONCE PER POOL, AND PASSED IN. It is NEVER read
   // inside the resolver (`2026-09-02-181` cl.2). Both reads share this ONE `withPariwarScope` round
   // trip, and both alert builders below close over the single resolved `identity` — so the mode read
-  // count tracks POOLS, never the per-assigned-member fan-out this worker then performs.
+  // count tracks child jobs, never the individual members in this worker's fan-out.
   //
   // ⚠⛔ THE ONE THING NOT TO "OPTIMISE": do not move the mode read below the member chunking loop.
-  // It is per-PARIWAR, and a read down there would multiply by the roster.
+  // It is one per-PARIWAR read per job; moving it into that loop would multiply it by the job's chunks.
   // ⭐ REVIEW FIX (8.16, round 2) — tracked OUTSIDE the callback so the generic "pool identity
   // unresolvable" alarm below fires at most ONCE per failure, never twice for the SAME cause. A bare
   // `return null` from the catch below is indistinguishable, at the `if (!identity)` check, from
@@ -819,8 +868,9 @@ export async function runContributionNotifyChild(
     return languages.get(memberId.toLowerCase()) ?? null;
   };
 
-  // (AC2 / D3) Reminder suppression — a member who has already ACTED is not nudged. Resolved per POOL
-  // in ONE batched read, never per member at 4L scale.
+  // (AC2 / D3) Reminder suppression — a member who has already ACTED is not nudged. Resolved per JOB in
+  // ONE batched read, never per member at 4L scale: a whole-pool job reads its pool, a bounded (lit) job
+  // reads only its own <= 8 members (AP-P2; R4-P1).
   const suppressedMembers =
     p.kind === 'deadline_reminder'
       ? await resolveReminderSuppressions(deps, pariwarId, p)
@@ -969,16 +1019,22 @@ async function resolveReminderSuppressions(
   p: ContributionNotifyChildPayload,
 ): Promise<Map<string, ReminderSuppressionReason>> {
   const suppressed = new Map<string, ReminderSuppressionReason>();
+  // Review 2026-10-26 (R4-P1): ONLY a bounded day-10 job narrows the read to its members (this read runs for
+  // `deadline_reminder` only). A day 5 / 13 / 14 job carries the WHOLE roster — up to 4L in one pool — so it reads the pool
+  // unfiltered, as before AP-P2.
+  const bounded = isLitPoolPayload(p) && p.memberIds.length <= LIT_KIND_JOB_MEMBER_LIMIT;
   const acted = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
     contributionDomain.listActedMemberIdsForPool(db, {
       pariwarId: ids.pariwarId(pariwarId),
       alertId: ids.alertId(p.alertId),
       poolId: ids.poolId(p.poolId),
+      ...(bounded ? { memberIds: p.memberIds } : {}),
     }),
   );
   // `confirmed` wins when a member is in BOTH sets — it is the stronger, later fact.
-  for (const memberId of acted.attested) suppressed.set(memberId, 'already_attested');
-  for (const memberId of acted.confirmed) suppressed.set(memberId, 'already_confirmed');
+  const members = new Set(p.memberIds);
+  for (const memberId of acted.attested) if (members.has(memberId)) suppressed.set(memberId, 'already_attested');
+  for (const memberId of acted.confirmed) if (members.has(memberId)) suppressed.set(memberId, 'already_confirmed');
   return suppressed;
 }
 
@@ -1100,7 +1156,7 @@ export async function runContributionNotifyRecoverySweep(
  */
 export async function runDeadlineReminderSweep(
   deps: ContributionNotifyTriggerDeps,
-  boss: Pick<QueueClient, 'send'>,
+  boss: PoolBatchEnqueueBoss,
 ): Promise<{ scanned: number; enqueuedPools: number }> {
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
   const now = deps.now?.() ?? new Date();
@@ -1173,9 +1229,11 @@ export async function runDeadlineReminderSweep(
           });
           enqueuedPools += 1;
         } catch (err) {
-          // ONE pool's enqueue failing must never cost its SIBLING pools this tick's reminder — each
-          // pool-batch is independently singleton-keyed on `${alertId}:${poolId}:d${cycleDay}`, and this
-          // exact cycle-day never recurs, so a whole-alert catch would silently lose that pool's reminder.
+          // ONE pool's enqueue failing must never cost its SIBLING pools this tick's reminder — each pool is
+          // enqueued on its own (a split day-10 pool in ONE atomic insert, so a failure here PROBABLY enqueued none
+          // of its jobs — an insert that committed and then lost its reply is the exception; R4-P2), and this exact
+          // cycle-day never recurs, so a whole-alert catch would silently lose that pool's reminder. (`singletonKey`
+          // is only a label on this standard queue — R4-P5.)
           alarm(
             `[jobs] deadline-reminder-sweep: failed to enqueue reminders for alert ${row.alert_id} pool ` +
               `${candidate.poolId} — ${String(err)}`,
@@ -1227,7 +1285,7 @@ export async function runDeadlineReminderSweep(
  */
 export async function runPendingMatchRetrySweep(
   deps: ContributionNotifyTriggerDeps,
-  boss: Pick<QueueClient, 'send'>,
+  boss: PoolBatchEnqueueBoss,
 ): Promise<{ scanned: number; enqueuedBatches: number }> {
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
   const now = deps.now?.() ?? new Date();
@@ -1289,7 +1347,7 @@ export async function runPendingMatchRetrySweep(
           ];
           for (const batch of tierBatches) {
             if (batch.memberIds.length === 0) continue;
-            await enqueuePoolBatch(boss, ctx, {
+            enqueuedBatches += await enqueuePoolBatch(boss, ctx, {
               kind: batch.kind,
               alertId: row.alert_id,
               cycleId: row.cycle_id,
@@ -1303,7 +1361,6 @@ export async function runPendingMatchRetrySweep(
               // NEVER time-critical (AC6) — a retry nudge must never trip the AR-20 degraded-mode bridge.
               timeCritical: false,
             });
-            enqueuedBatches += 1;
           }
         } catch (err) {
           // ONE pool's enqueue failing must never cost its SIBLING pools this tick's reminder.
@@ -1550,11 +1607,47 @@ export async function registerContributionNotifyWorkers(
     async (jobs: Job[]) => {
       const results: ContributionNotifyChildResult[] = [];
       for (const job of jobs) {
+        const envelope = job.data as JobEnvelope<ContributionNotifyChildPayload>;
+        // Upgrade queued pre-fix payloads as well. Never process their full roster and recreate the retry-age bug.
+        // Only finish the old job after ALL bounded children were enqueued — in ONE atomic insert (R4-P2), so a failure enqueued
+        // none of them; a retry inserts the same deterministic IDs (`ON CONFLICT DO NOTHING`).
+        if (isLitPoolPayload(envelope.payload) && envelope.payload.memberIds.length > LIT_KIND_JOB_MEMBER_LIMIT) {
+          const alarm = deps.onAlarm ?? ((message: string): void => console.warn(message));
+          if (!envelope.pariwarId) {
+            const message = '[jobs] contribution-notify-child: missing pariwarId while splitting a queued job';
+            alarm(message);
+            throw new Error(message);
+          }
+          if (!job.id) {
+            const message = '[jobs] contribution-notify-child: missing source job id while splitting a queued job — recovery required';
+            alarm(message);
+            throw new Error(message);
+          }
+          try {
+            await enqueuePoolBatch(boss, { ...envelope, pariwarId: envelope.pariwarId }, envelope.payload, job.id);
+          } catch (err) {
+            // pg-boss records handler failure without an error emit (T8). Do not promise another attempt on exhaustion
+            // or incomplete metadata. The insert is atomic (R4-P2), so PROBABLY none of the bounded jobs was enqueued — but an
+            // insert can commit and then lose its reply. Recovery re-drives the SAME source job id: its deterministic child ids
+            // make that `ON CONFLICT DO NOTHING`. A resubmission under a NEW id would mint a second set of children (a duplicate
+            // push for every member; the send row still stops a second text).
+            const attempt = jobAttemptOf(job);
+            const redrive = `inspect the queue for children of source job ${String(job.id)}, then re-drive THAT job id (⛔ a new one)`;
+            const recovery = attempt.retryCount === undefined || attempt.retryLimit === undefined
+              ? `retry status unknown; probably no bounded job was enqueued — ${redrive} if it is not retried — recovery required`
+              : attempt.retryCount >= attempt.retryLimit
+                ? `no retry remains; probably no bounded job was enqueued — ${redrive} — recovery required`
+                : 'retrying';
+            alarm(`[jobs] contribution-notify-child: failed to split queued job ${job.id} alert ${envelope.payload.alertId} pool ${envelope.payload.poolId} — ${recovery}`);
+            throw err;
+          }
+          continue;
+        }
         results.push(
-          await runContributionNotifyChild(deps, job.data as JobEnvelope<ContributionNotifyChildPayload>, jobAttemptOf(job)),
+          await runContributionNotifyChild(deps, envelope, jobAttemptOf(job)),
         );
       }
-      return { processed: results.length, results };
+      return { processed: jobs.length, results };
     },
   );
 

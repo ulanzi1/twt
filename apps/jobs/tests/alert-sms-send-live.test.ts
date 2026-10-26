@@ -1128,7 +1128,7 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       expect(JSON.stringify(r.alarms)).not.toContain('9876543210');
     });
 
-    it('⭐ an UNPROVEN pre-flight fault (the memo\'s key is not the send key) and a TRANSIENT one are SENT (fail open) with ONE "SENT despite the pre-flight" alarm, the row `accepted` (MG5 extended; C3-P7)', async () => {
+    it('⭐ an UNPROVEN pre-flight fault (the memo\'s key is not the send key) and a TRANSIENT one are SENT (fail open) with ONE prospective pre-flight warning, the row `accepted` (MG5 extended; C3-P7)', async () => {
       for (const verdict of [{ ok: false, transient: false, reason: 'auth' }, { ok: false, transient: true }]) {
         const k = await freshAlert();
         const readsWithSendKey = verdict.transient === true; // for the non-transient verdict the key is NOT the send key ⇒ unproven
@@ -1137,11 +1137,24 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
         expect(sms(result)).toMatchObject({ outcome: 'sent' });
         expect(r.calls).toHaveLength(1);
         expect(await rowsOf(k.alertId)).toEqual([expect.objectContaining({ outcome: 'accepted' })]);
-        const warned = r.alarms.filter((a) => a.includes('SENT despite the pre-flight'));
+        const warned = r.alarms.filter((a) => a.includes('pre-flight unproven'));
         expect(warned).toHaveLength(1);
         // Review C2-P7: the warning must not claim that NO text is sent — one WAS.
         expect(warned[0]).not.toContain('no text is sent to any member');
       }
+    });
+
+    it.each(['waiting', 'suppressed', 'sent'] as const)('FD-P4 — an unproven preflight warning is prospective when the text is %s', async (mode) => {
+      const k = await freshAlert();
+      const r = rig({ suppress: mode === 'suppressed', smsPreflight: { memo: { get: () => Promise.resolve({ ok: false, transient: true }) } as never, readsWithSendKey: true } });
+      const result = await fanOutAlert(r.deps, day10(k), ctx({ whatsapp: mode === 'waiting' }), { occasion: 'day_10', jobId: 'j', retryCount: 0, retryLimit: 4 });
+      expect(r.calls).toHaveLength(mode === 'sent' ? 1 : 0);
+      expect(sms(result)?.outcome).toBe(mode === 'sent' ? 'sent' : mode === 'suppressed' ? 'suppressed' : 'skipped_no_target');
+      const warnings = r.alarms.filter(a => a.includes('pre-flight unproven'));
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('sending is permitted');
+      expect(warnings[0]).not.toMatch(/WAS sent|SENT despite/);
+      expect(await rowsOf(k.alertId)).toHaveLength(mode === 'sent' ? 1 : 0);
     });
 
     it('⭐ C2-P7 — a per-member VALUE refusal does not claim that "no text is sent to any member"; a config refusal does', async () => {

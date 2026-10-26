@@ -190,6 +190,13 @@ describe.skipIf(!hasDatabase)(
         poolId: toPoolId(poolId),
       });
       expect(acted.confirmed).not.toContain(memberB);
+      const scoped = await listActedMemberIdsForPool(tx, {
+        pariwarId: PARIWAR_A,
+        alertId: toAlertId(randomUUID()),
+        poolId: toPoolId(poolId),
+        memberIds: [memberB],
+      });
+      expect(scoped).toEqual({ confirmed: [], attested: [] });
     });
   },
 );

@@ -44,7 +44,7 @@ import {
 } from '../../../src/ids/index.js';
 import { eventsLog } from '../../../src/schema/events_log.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedAlert } from '../_helpers.js';
+import { PARIWAR_A, PARIWAR_B, enterAppScope, seedAlert } from '../_helpers.js';
 
 /** Seed a `contribution.confirmed` with an EXPLICIT event id (so a reversal can name it). Returns the id. */
 async function seedConfirmed(
@@ -103,6 +103,35 @@ const CYCLE = () => toCycleId(randomUUID());
 
 describe.skipIf(!hasDatabase)('reversal-consumer reads — confirm → reverse → re-confirm (PARIWAR_A scope)', { timeout: 20000 }, () => {
   setupLiveDb();
+
+  it('AP-P2 — a bounded suppression read follows confirmation references across declared members, preserves re-confirmation and yellow, and excludes other members', async () => {
+    const { client, tx } = getTx();
+    const poolId = randomUUID();
+    const alertId = randomUUID();
+    const [reversed, reconfirmed, live, outside] = Array.from({ length: 4 }, () => randomUUID()) as [string, string, string, string];
+    const c1 = await seedConfirmed(tx, PARIWAR_A, poolId, reversed);
+    const c2 = await seedConfirmed(tx, PARIWAR_A, poolId, reconfirmed);
+    await seedConfirmed(tx, PARIWAR_A, poolId, reconfirmed);
+    const cLive = await seedConfirmed(tx, PARIWAR_A, poolId, live);
+    await seedConfirmed(tx, PARIWAR_A, poolId, outside);
+    // Deliberately misleading memberIds: the event-id chain remains authoritative.
+    await seedReversal(tx, PARIWAR_A, { poolId, memberId: outside, reversedConfirmedEventId: c1 });
+    await seedReversal(tx, PARIWAR_A, { poolId, memberId: outside, reversedConfirmedEventId: c2 });
+    await seedReversal(tx, PARIWAR_A, { poolId, memberId: live, reversedConfirmedEventId: randomUUID() });
+    // A wrong pool or tenant cannot reverse this confirmation even if it names its id.
+    await seedReversal(tx, PARIWAR_A, { poolId: randomUUID(), memberId: live, reversedConfirmedEventId: cLive });
+    await seedReversal(tx, PARIWAR_B, { poolId, memberId: live, reversedConfirmedEventId: cLive });
+    await enterAppScope(client, PARIWAR_A);
+    await seedAttestation(client, PARIWAR_A, { alertId, poolId, memberId: reversed, utr: '123456789012' });
+    await seedAttestation(client, PARIWAR_A, { alertId, poolId, memberId: outside, utr: '223456789012' });
+    await seedAttestation(client, PARIWAR_A, { alertId: randomUUID(), poolId, memberId: live, utr: '323456789012' });
+    const input = { pariwarId: PARIWAR_A, poolId: toPoolId(poolId), alertId: toAlertId(alertId) };
+    expect(await listActedMemberIdsForPool(tx, { ...input, memberIds: [reversed, reconfirmed, live] }))
+      .toEqual({ confirmed: [reconfirmed, live].sort(), attested: [reversed] });
+    expect(await listActedMemberIdsForPool(tx, input))
+      .toEqual({ confirmed: [reconfirmed, live, outside].sort(), attested: [reversed, outside].sort() });
+    expect(await listActedMemberIdsForPool(tx, { ...input, memberIds: [] })).toEqual({ confirmed: [], attested: [] });
+  });
 
   it('THE CHAIN (contributor list): confirmed lists the member; reversal drops them; a fresh confirmation re-lists', async () => {
     const { client, tx } = getTx();

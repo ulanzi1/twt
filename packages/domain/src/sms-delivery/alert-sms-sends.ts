@@ -41,10 +41,10 @@ export const ALERT_SMS_SEND_STALE_AFTER_MS = 3_600_000;
  * Code-review decision C1-D1 (b), 2026-10-25 — a `deferred` row (the gateway answered `rate_limited`: DEFINITELY not taken) is
  * re-sendable only while it is YOUNG. Older than this, a later job — a sweep re-enqueue, a lost job's redelivery — would send a STALE
  * text (FS9: "⛔ left `deferred`, or a later re-enqueue would send a stale text"), and seven final-attempt exits leave such a row behind.
- * The lookup reports it `deferred_expired` and the seam gives it up. The longest LEGITIMATE gap between a `rate_limited` answer and the
- * job's next attempt is the last pg-boss retry delay at full jitter — pg-boss 12 waits `delay × (2^(n+1)/2 + 2^(n+1)/2 × random())`, so
- * 60 s × 2^3 × 2 = 16 min at the last of four retries — plus up to one chunk of members' send time on either side (≤ 8 min at the
- * worst case per member). `alert-sms-send.test.ts` pins this constant at ≥ their sum (24 min): a worst case, ⛔ a typical gap.
+ * The lookup reports it `deferred_expired` and the seam gives it up. FD-P1: lit pool jobs now carry at most EIGHT members, with
+ * independent retries; an internal claim chunk was never a retry boundary. The last pg-boss backoff is up to 16 min, leaving
+ * 14 min for the bounded job's work and scheduling. This is an age limit, not a guarantee against arbitrarily slow dependencies
+ * or queue starvation. Reclaim and expiry both lock the row before rechecking its age on the database clock (FD-P2 / FD-P3).
  */
 export const ALERT_SMS_DEFERRED_MAX_AGE_MS = 30 * 60_000;
 
@@ -160,6 +160,17 @@ export async function beginAlertSmsSend(
   );
   const fresh = inserted.rows[0];
   if (fresh !== undefined) return { kind: 'begun', sendId: fresh.send_id, attemptCount: fresh.attempt_count };
+  // Acquire the row BEFORE evaluating freshness. An UPDATE predicate alone can be evaluated before waiting on a row lock;
+  // when the blocker only held SELECT FOR UPDATE, no new tuple forces PostgreSQL to re-evaluate that predicate afterward.
+  // This is the caller's transaction, so this lock is retained through the following UPDATE (never through the gateway call).
+  // Lock by identity even if a competitor has moved it to attempting; filtering by outcome could skip the lock, then
+  // let its later 429 finalise make the UPDATE eligible without a lock held during the freshness check (AP-P3).
+  await q.query(
+    `SELECT send_id FROM alert_sms_sends
+      WHERE pariwar_id = $1 AND alert_id = $2 AND member_id = $3 AND occasion = $4
+      FOR UPDATE`,
+    [input.pariwarId, input.alertId, input.memberId, input.occasion],
+  );
   const reclaimed = await q.query<{ send_id: string; attempt_count: number }>(
     // `message` / `locale` are re-set here (review 2026-10-25, C1-P1): the member may have changed language since the `rate_limited`
     // attempt, and this row is the ONLY record of the language the text was sent in.
@@ -167,8 +178,9 @@ export async function beginAlertSmsSend(
         SET outcome = 'attempting', claim_token = $5, attempt_count = attempt_count + 1,
             message = $6, locale = $7, updated_at = clock_timestamp()
       WHERE pariwar_id = $1 AND alert_id = $2 AND member_id = $3 AND occasion = $4 AND outcome = 'deferred'
+        AND updated_at >= clock_timestamp() - ($8::int * interval '1 millisecond')
       RETURNING send_id, attempt_count`,
-    [input.pariwarId, input.alertId, input.memberId, input.occasion, input.claimToken, input.message, input.locale],
+    [input.pariwarId, input.alertId, input.memberId, input.occasion, input.claimToken, input.message, input.locale, ALERT_SMS_DEFERRED_MAX_AGE_MS],
   );
   const again = reclaimed.rows[0];
   return again === undefined ? { kind: 'taken' } : { kind: 'begun', sendId: again.send_id, attemptCount: again.attempt_count };
@@ -215,15 +227,24 @@ export async function finaliseAlertSmsSend(
  */
 export async function giveUpDeferredAlertSmsSend(
   q: Queryable,
-  input: { readonly pariwarId: string; readonly sendId: string; readonly detail: string },
+  input: { readonly pariwarId: string; readonly sendId: string; readonly detail: string; readonly onlyIfExpired?: true },
 ): Promise<boolean> {
   assertDetail(input.detail);
   // A give-up is FINAL: its detail is an `exhausted:<…>` one (FS9, review C1-P2) — ⛔ a bare class that reads as a live answer.
   if (!input.detail.startsWith('exhausted:')) throw new Error('giveUpDeferredAlertSmsSend: the detail must be an exhausted:<…> one');
+  if (input.onlyIfExpired) {
+    // The lookup's expired observation may name an earlier attempt. Lock first, then judge the CURRENT attempt's age;
+    // another worker may have reclaimed and rate-limited it again. Final-attempt give-up deliberately has no age guard.
+    await q.query(
+      `SELECT send_id FROM alert_sms_sends WHERE pariwar_id = $1 AND send_id = $2 AND outcome = 'deferred' FOR UPDATE`,
+      [input.pariwarId, input.sendId],
+    );
+  }
   const { rowCount } = await q.query(
     `UPDATE alert_sms_sends SET outcome = 'error', detail = $3, updated_at = clock_timestamp()
-      WHERE pariwar_id = $1 AND send_id = $2 AND outcome = 'deferred'`,
-    [input.pariwarId, input.sendId, input.detail],
+      WHERE pariwar_id = $1 AND send_id = $2 AND outcome = 'deferred'
+      ${input.onlyIfExpired ? "AND updated_at < clock_timestamp() - ($4::int * interval '1 millisecond')" : ''}`,
+    [input.pariwarId, input.sendId, input.detail, ...(input.onlyIfExpired ? [ALERT_SMS_DEFERRED_MAX_AGE_MS] : [])],
   );
   return (rowCount ?? 0) > 0;
 }

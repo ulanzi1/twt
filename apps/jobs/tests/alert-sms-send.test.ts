@@ -28,6 +28,7 @@ import {
   createTtlMemo,
   refusalRungDetail,
   settle,
+  settleUndispatched,
 } from '../src/scheduler/alert-sms-send.js';
 import { CORRECTION_SEND_TIMEOUT_MS, prepareDltSms, sendClaimDltSms, sendPreparedDltSms } from '../src/scheduler/claim-dlt-sms-send.js';
 import {
@@ -37,7 +38,7 @@ import {
   type MemberFanOutContext,
   type MemberFanOutResult,
 } from '../src/scheduler/contribution-notify.js';
-import { CHILD_RETRY_DELAY_SECONDS, CHILD_RETRY_LIMIT, LIT_KIND_MEMBER_CHUNK_SIZE } from '../src/scheduler/contribution-notify-triggers.js';
+import { CHILD_RETRY_DELAY_SECONDS, CHILD_RETRY_LIMIT, LIT_KIND_JOB_MEMBER_LIMIT } from '../src/scheduler/contribution-notify-triggers.js';
 import { CONTRIBUTION_SMS_TEMPLATES } from '../src/scheduler/contribution-sms-templates.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -378,17 +379,17 @@ describe('review 2026-10-25 — the 2-minute LEASE is pinned to the in-flight bo
     expect(smsDelivery.ALERT_SMS_SEND_LEASE_MS).toBeGreaterThanOrEqual(2 * inFlight);
   });
 
-  it('⭐ decision C1-D1 (b) — the `deferred` age bound is exactly 30 minutes and clears the LONGEST legitimate retry gap: the last pg-boss retry delay at FULL jitter (16 min) plus one whole chunk of members at their worst-case time (8 min)', () => {
+  it('FD-P1 — the 30-minute limit budgets the ACTUAL eight-member retry job, including SMS finalise retries', () => {
     // pg-boss 12 (`plans.js`, retryBackoff): delay = retryDelay × (2^(rc+1)/2 + 2^(rc+1)/2 × random()) with rc = 0 … limit−1 — i.e. the delay
     // DOUBLES per retry AND is jittered ×1…×2, so the LAST gap is base × 2^(limit−1) × 2 (⛔ the 8 min "base × 2^(limit−1)" the first cut pinned).
     const longestBackoffMs = CHILD_RETRY_DELAY_SECONDS * 1000 * 2 ** (CHILD_RETRY_LIMIT - 1) * 2;
     expect(longestBackoffMs).toBe(16 * 60_000);
-    // The row's age runs from ITS finalise in job N to its lookup in job N+1, so a member late in a chunk of job N and early in job N+1 adds
-    // up to a chunk's time: each member at worst waits out the gateway timeout and two slow connections (the lookup and the begin).
-    const memberWorstMs = CORRECTION_SEND_TIMEOUT_MS + 2 * DEFAULT_POOL_CONNECTION_TIMEOUT_MS;
-    const chunkMs = LIT_KIND_MEMBER_CHUNK_SIZE * memberWorstMs;
-    expect(chunkMs).toBe(8 * 60_000);
-    expect(smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS).toBeGreaterThanOrEqual(longestBackoffMs + chunkMs);
+    // Bounded SMS work only: query execution, other providers and queue delays are not guaranteed latencies.
+    // Scheduling tests separately prove the whole job, rather than just an internal claim chunk, has this member bound.
+    const memberMs = CORRECTION_SEND_TIMEOUT_MS + (2 + ALERT_SMS_FINALISE_BACKOFF_MS.length + 1) * DEFAULT_POOL_CONNECTION_TIMEOUT_MS
+      + ALERT_SMS_FINALISE_BACKOFF_MS.reduce((a, b) => a + b, 0);
+    expect(LIT_KIND_JOB_MEMBER_LIMIT).toBe(8);
+    expect(smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS).toBeGreaterThan(longestBackoffMs + LIT_KIND_JOB_MEMBER_LIMIT * memberMs);
     expect(smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS).toBe(30 * 60_000);
   });
 });
@@ -476,5 +477,68 @@ describe('review 2026-10-25 — AC4\'s recorded literals, pinned INDEPENDENTLY o
     expect([...ALERT_SMS_RETRYABLE_DETAILS].sort()).toEqual(
       ['config_unavailable:secret_manager', 'rate_limited', 'sms_awaiting_wa_window', 'sms_send_in_flight', 'sms_send_state_unavailable'].sort(),
     );
+  });
+});
+
+describe('R4-P7 — dispatch that never reached the one-send provider', () => {
+  it('a suppressed attempt passes through, unalarmed (the lifecycle boundary — I4)', () => {
+    expect(settleUndispatched({ outcome: 'suppressed', reason: 'frozen' })).toEqual({ rung: { outcome: 'suppressed' } });
+  });
+
+  it.each([
+    [{ outcome: 'error', reason: 'immutability_violation: Cannot assign to read only property' }, 'error:immutability_violation'],
+    [{ outcome: 'error', reason: 'provider: no sms provider for +91…' }, 'error:provider'],
+    [{ outcome: 'skipped_no_target' }, 'skipped_no_target'],
+    [undefined, 'no sms attempt'],
+  ])('%j is a named, terminal `sms_not_attempted` with a fault CLASS to alarm on — ⛔ a detail-less rung recorded `in_app_only` in silence', (attempt, fault) => {
+    const settled = settleUndispatched(attempt);
+    expect(settled.rung).toEqual({ outcome: 'error', detail: ALERT_SMS_RUNG_DETAIL.notAttempted });
+    // The CLASS only — ⛔ the reason's free text (it can carry a value), the C2-P9 rule.
+    expect(settled.fault).toBe(fault);
+    expect(ALERT_SMS_RETRYABLE_DETAILS.has(settled.rung.detail!)).toBe(false);
+  });
+});
+
+describe('R4-P9 — an unavailable send record alarms ONCE per fault class per window, ⛔ per member', () => {
+  it('two members on a dead pool ⇒ both `sms_send_state_unavailable` (retried), ONE alarm naming the fault class; a new window alarms again', async () => {
+    let clock = 0;
+    const refused = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:1'), { code: 'ECONNREFUSED' });
+    const pool = { connect: vi.fn(() => Promise.reject(refused)), query: vi.fn(() => Promise.reject(refused)) } as never;
+    const alarms: string[] = [];
+    const send = createAlertSmsSender({
+      pool, smsAppClient: gateway().client, resolveConfig: () => Promise.resolve(TEMPLATE_ID), onAlarm: (m) => alarms.push(m), nowMs: () => clock,
+    });
+    const member = (memberId: string) => send({
+      alert: {
+        alert_id: '33333333-3333-3333-3333-333333333333', pariwar_id: '11111111-1111-1111-1111-111111111111', member_id: memberId,
+        alert_category: 'contribution_mismatch',
+      } as unknown as Alert,
+      block: { message: 'payment_not_matched', locale: 'en', values: {} },
+      target: { channel: 'sms', address: '+919876543210' },
+      call: { occasion: 'mismatch:wrong_pool' },
+      whatsappTried: false,
+      dispatch: { hashRendered: () => Promise.resolve('h'), audit: () => Promise.resolve() },
+    });
+    for (const m of ['22222222-2222-2222-2222-222222222222', '44444444-4444-4444-4444-444444444444']) {
+      expect(await member(m)).toEqual({ outcome: 'error', detail: ALERT_SMS_RUNG_DETAIL.stateUnavailable });
+    }
+    const stateAlarms = () => alarms.filter((a) => a.includes(ALERT_SMS_RUNG_DETAIL.stateUnavailable));
+    expect(stateAlarms()).toHaveLength(1);
+    expect(stateAlarms()[0]).toContain('code:ECONNREFUSED');
+    expect(stateAlarms()[0]).not.toContain('connect ECONNREFUSED');
+    clock += ALERT_SMS_TEMPLATE_ID_TTL_MS;
+    await member('55555555-5555-5555-5555-555555555555');
+    expect(stateAlarms()).toHaveLength(2);
+    // Keyed per Pariwar (narrow review of R4): another Pariwar's fault inside the same window is ⛔ masked.
+    await send({
+      alert: { alert_id: '66666666-6666-6666-6666-666666666666', pariwar_id: '77777777-7777-7777-7777-777777777777', member_id: '22222222-2222-2222-2222-222222222222', alert_category: 'contribution_mismatch' } as unknown as Alert,
+      block: { message: 'payment_not_matched', locale: 'en', values: {} },
+      target: { channel: 'sms', address: '+919876543210' },
+      call: { occasion: 'mismatch:wrong_pool' },
+      whatsappTried: false,
+      dispatch: { hashRendered: () => Promise.resolve('h'), audit: () => Promise.resolve() },
+    });
+    expect(stateAlarms()).toHaveLength(3);
+    expect(stateAlarms()[2]).toContain('77777777-7777-7777-7777-777777777777');
   });
 });

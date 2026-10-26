@@ -70,6 +70,7 @@ const {
   runDeadlineReminderSweep,
   runPendingMatchRetrySweep,
   registerContributionNotifyWorkers,
+  LIT_KIND_JOB_MEMBER_LIMIT,
   DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS,
   PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS,
 } = await import('../src/scheduler/contribution-notify-triggers.js');
@@ -192,7 +193,7 @@ describe('AC1 — the cycle-open parent fans out ONE child per pool (D6 batching
 
     const result = await runContributionNotifyParent(
       deps(),
-      { send },
+      { send, insert: vi.fn() },
       envelope({ alertId: ALERT, cycleId: CYCLE, timeCritical: false }),
     );
 
@@ -211,7 +212,7 @@ describe('AC1 — the cycle-open parent fans out ONE child per pool (D6 batching
 
     await runContributionNotifyParent(
       deps(),
-      { send },
+      { send, insert: vi.fn() },
       envelope({ alertId: ALERT, cycleId: CYCLE, timeCritical: true }),
     );
 
@@ -223,7 +224,7 @@ describe('AC1 — the cycle-open parent fans out ONE child per pool (D6 batching
     const send = vi.fn();
     const result = await runContributionNotifyParent(
       deps(),
-      { send },
+      { send, insert: vi.fn() },
       envelope({ alertId: ALERT, cycleId: CYCLE, timeCritical: false }),
     );
     expect(result.poolCount).toBe(0);
@@ -234,7 +235,7 @@ describe('AC1 — the cycle-open parent fans out ONE child per pool (D6 batching
     await expect(
       runContributionNotifyParent(
         deps(),
-        { send: vi.fn() },
+        { send: vi.fn(), insert: vi.fn() },
         { ...envelope({ alertId: ALERT, cycleId: CYCLE, timeCritical: false }), pariwarId: null },
       ),
     ).rejects.toThrow(/missing pariwarId/);
@@ -608,7 +609,7 @@ describe('AC2 — the daily sweep fires ONLY on cycle-days 5 / 10 / 13 / 14', ()
   ] as const) {
     it(`cycle-day ${String(day)} → enqueues the pool batch`, async () => {
       const send = vi.fn().mockResolvedValue(undefined);
-      const result = await runDeadlineReminderSweep(sweepDeps(committedAt, new Date(iso)), { send });
+      const result = await runDeadlineReminderSweep(sweepDeps(committedAt, new Date(iso)), { send, insert: vi.fn() });
       expect(result.enqueuedPools).toBe(1);
       expect(send.mock.calls[0]![1].payload).toMatchObject({
         kind: 'deadline_reminder',
@@ -617,7 +618,7 @@ describe('AC2 — the daily sweep fires ONLY on cycle-days 5 / 10 / 13 / 14', ()
         timeCritical: false,
       });
       expect(send.mock.calls[0]![2]).toMatchObject({
-        singletonKey: `${ALERT}:${POOL_A}:d${String(day)}`,
+        singletonKey: day === 10 ? expect.stringMatching(new RegExp(`^${ALERT}:${POOL_A}:d10:members:[a-f0-9]{64}$`)) : `${ALERT}:${POOL_A}:d${String(day)}`,
       });
     });
   }
@@ -630,7 +631,7 @@ describe('AC2 — the daily sweep fires ONLY on cycle-days 5 / 10 / 13 / 14', ()
   ] as const) {
     it(`cycle-day ${String(day)} → enqueues NOTHING (a non-cadence day is silent)`, async () => {
       const send = vi.fn();
-      const result = await runDeadlineReminderSweep(sweepDeps(committedAt, new Date(iso)), { send });
+      const result = await runDeadlineReminderSweep(sweepDeps(committedAt, new Date(iso)), { send, insert: vi.fn() });
       expect(result.enqueuedPools).toBe(0);
       expect(send).not.toHaveBeenCalled();
     });
@@ -648,7 +649,7 @@ describe('AC2 — the daily sweep fires ONLY on cycle-days 5 / 10 / 13 / 14', ()
           Promise.resolve({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }),
       },
     });
-    await runDeadlineReminderSweep(d, { send });
+    await runDeadlineReminderSweep(d, { send, insert: vi.fn() });
     expect(send).not.toHaveBeenCalled();
     expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('no cycle-freeze commit'));
   });
@@ -673,7 +674,7 @@ describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by ti
 
   it('scans BOTH live and closed alerts (the reconciliation-tail bound, unlike the live-only deadline sweep)', async () => {
     const queryFn = vi.fn().mockResolvedValue({ rows: [] });
-    await runPendingMatchRetrySweep(deps({ pool: { query: queryFn } }), { send: vi.fn() });
+    await runPendingMatchRetrySweep(deps({ pool: { query: queryFn } }), { send: vi.fn(), insert: vi.fn() });
     expect(queryFn.mock.calls[0]![0]).toMatch(/current_state IN \('live', 'closed'\)/);
   });
 
@@ -682,7 +683,7 @@ describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by ti
       { memberId: M1, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 5 * 60 * 60 * 1000) },
     ]);
     const send = vi.fn().mockResolvedValue(undefined);
-    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send, insert: vi.fn() });
 
     expect(result.enqueuedBatches).toBe(1);
     expect(send).toHaveBeenCalledTimes(1);
@@ -698,7 +699,7 @@ describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by ti
       { memberId: M1, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 30 * 60 * 60 * 1000) },
     ]);
     const send = vi.fn().mockResolvedValue(undefined);
-    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send, insert: vi.fn() });
 
     expect(result.enqueuedBatches).toBe(1);
     expect(send.mock.calls[0]![1].payload).toMatchObject({ kind: 'pending_match_escalated', memberIds: [M1] });
@@ -709,7 +710,7 @@ describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by ti
       { memberId: M1, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 60 * 60 * 1000) },
     ]);
     const send = vi.fn();
-    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send, insert: vi.fn() });
     expect(result.enqueuedBatches).toBe(0);
     expect(send).not.toHaveBeenCalled();
   });
@@ -720,7 +721,7 @@ describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by ti
       { memberId: M2, oldestUnresolvedAttestedAt: new Date(NOW_SWEEP.getTime() - 30 * 60 * 60 * 1000) }, // escalated
     ]);
     const send = vi.fn().mockResolvedValue(undefined);
-    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send, insert: vi.fn() });
 
     expect(result.enqueuedBatches).toBe(2);
     const kinds = send.mock.calls.map((c) => (c[1] as { payload: { kind: string } }).payload.kind).sort();
@@ -730,7 +731,7 @@ describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by ti
   it('a pool with no pending-match members enqueues nothing (no query for tiers)', async () => {
     listPendingMatchMembersForPool.mockResolvedValue([]);
     const send = vi.fn();
-    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send });
+    const result = await runPendingMatchRetrySweep(sweepDeps(NOW_SWEEP), { send, insert: vi.fn() });
     expect(result.enqueuedBatches).toBe(0);
     expect(send).not.toHaveBeenCalled();
   });
@@ -745,7 +746,7 @@ describe('Story 9.10 AC2/AC5/AC6 — the pending-match retry sweep buckets by ti
     });
     const onAlarm = vi.fn();
     const send = vi.fn().mockResolvedValue(undefined);
-    const result = await runPendingMatchRetrySweep(deps({ now: () => NOW_SWEEP, onAlarm, pool: { query: () => Promise.resolve({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }) } }), { send });
+    const result = await runPendingMatchRetrySweep(deps({ now: () => NOW_SWEEP, onAlarm, pool: { query: () => Promise.resolve({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }) } }), { send, insert: vi.fn() });
 
     expect(result.enqueuedBatches).toBe(1);
     expect(send.mock.calls[0]![1].payload).toMatchObject({ poolId: POOL_B });
@@ -1492,16 +1493,17 @@ describe('Story 5.11b — FS5 (a): each member\'s TEXT in their own language; th
     expect(fanOutAlertToMembers.mock.calls[1]![5]).toEqual({ occasion: 'mismatch:entry_already_claimed' });
   });
 
-  it('F6 — a LIT kind\'s chunk is bounded (16) once a real send is wired; ⛔ wired ⇒ the configured chunk', async () => {
+  it('FD-P1 — a direct oversized SMS job is refused before reads, claims or sends; an unwired caller keeps its old batching', async () => {
     const memberIds = Array.from({ length: 40 }, (_, i) => `aaaaaaaa-0000-0000-0000-${String(i).padStart(12, '0')}`);
     const all = new Map(memberIds.map((m) => [m, 'hi' as const]));
-    // Two once-values for the TWO runs below — BOTH runs read the languages (the read is ⛔ gated on the seam), so neither leaks into a later
-    // leg (`vi.clearAllMocks()` does not clear a once-queue — review C3-P26 checked this).
-    readMemberTextLanguages.mockResolvedValueOnce(all).mockResolvedValueOnce(all); // ⛔ a sticky override for later legs
     const payload = childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds });
-    await runContributionNotifyChild(deps({ alertSms: vi.fn() }), envelope(payload) as never);
-    expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([16, 16, 8]);
-    fanOutAlertToMembers.mockClear();
+    const onAlarm = vi.fn();
+    await expect(runContributionNotifyChild(deps({ alertSms: vi.fn(), onAlarm }), envelope(payload) as never)).rejects.toThrow('must be split before fan-out');
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('oversized SMS job'));
+    expect(readMemberTextLanguages).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    readMemberTextLanguages.mockResolvedValueOnce(all);
     await runContributionNotifyChild(deps(), envelope(payload) as never);
     expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([40]);
   });
@@ -1555,9 +1557,9 @@ describe('Story 5.11b review 2026-10-25 — the producers\' occasions, the chunk
     readMemberTextLanguages.mockResolvedValueOnce(new Map(memberIds.map((m) => [m, 'hi' as const])));
     await runContributionNotifyChild(
       deps({ alertSms: vi.fn(), memberChunkSize: 5 }),
-      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds })) as never,
+      envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, deadlineAtIso: '2026-08-05T00:00:00.000Z', memberIds: memberIds.slice(0, 8) })) as never,
     );
-    expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([5, 5, 5, 5, 5, 5, 5, 5]);
+    expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([5, 3]);
     fanOutAlertToMembers.mockClear();
     await runContributionNotifyChild(deps({ alertSms: vi.fn() }), envelope(childPayload({ memberIds })) as never); // cycle_open: not lit
     expect(fanOutAlertToMembers.mock.calls.map((c) => (c[2] as string[]).length)).toEqual([40]);
@@ -1611,4 +1613,184 @@ describe('Story 5.11b review 2026-10-25 — the producers\' occasions, the chunk
     await handlers.get(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH)!([{ id: 'job-12', retryLimit: 4, data: envelope(childPayload({ memberIds: [M1] })) }]);
     expect(fanOutAlertToMembers.mock.calls.at(-1)![5]).toStrictEqual({ occasion: 'cycle_open', jobId: 'job-12' });
   });
+});
+
+
+describe('FD-P1 — SMS pool jobs have bounded, independently retried payloads', () => {
+  const members = Array.from({ length: 97 }, (_, i) => `aaaaaaaa-0000-0000-0000-${String(i + 1).padStart(12, '0')}`);
+  async function workers() {
+    const handlers = new Map<string, (jobs: unknown[]) => Promise<unknown>>();
+    const boss = {
+      createQueue: vi.fn(async () => undefined), schedule: vi.fn(async () => undefined),
+      work: vi.fn(async (name: string, a: unknown, b?: unknown) => { handlers.set(name, (typeof a === 'function' ? a : b) as never); return 'w'; }),
+      send: vi.fn(async () => 'child'),
+      insert: vi.fn<(name: string, jobs: unknown[]) => Promise<string[] | null>>(async () => null),
+    };
+    const onAlarm = vi.fn();
+    await registerContributionNotifyWorkers(boss as never, deps({ alertSms: vi.fn(), onAlarm }));
+    return { boss, onAlarm, run: handlers.get(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH)! };
+  }
+  type Inserted = { id?: string; singletonKey: string; retryLimit: number; retryDelay: number; retryBackoff: boolean; data: ReturnType<typeof envelope<ReturnType<typeof childPayload>>> };
+  /** R4-P2 — a split pool's bounded jobs are ONE `insert` call; its jobs, in order. */
+  const insertedJobs = (insert: { mock: { calls: unknown[][] } }, call = 0): Inserted[] => insert.mock.calls[call]![1] as Inserted[];
+
+  it.each(['deadline_reminder', 'pending_match_escalated'])('splits a queued full-pool %s job; a failed member does not wait for the rest of the pool', async (kind) => {
+    const { boss, run } = await workers();
+    const payload = childPayload({ kind, cycleDay: 10, memberIds: members });
+    expect(await run([{ id: 'old-pool-job', retryCount: 0, retryLimit: 4, data: envelope(payload) }])).toEqual({ processed: 1, results: [] });
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+    // R4-P2 — ONE atomic insert of every bounded job, ⛔ a send per job.
+    expect(boss.send).not.toHaveBeenCalled();
+    expect(boss.insert).toHaveBeenCalledTimes(1);
+    expect(boss.insert.mock.calls[0]![0]).toBe(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH);
+    const jobs = insertedJobs(boss.insert);
+    const batches = jobs.map(j => j.data);
+    expect(batches).toHaveLength(13);
+    expect(batches.flatMap(b => b.payload.memberIds)).toEqual(members);
+    for (const [i, batch] of batches.entries()) {
+      expect(batch.payload.memberIds.length).toBeLessThanOrEqual(LIT_KIND_JOB_MEMBER_LIMIT);
+      expect(batch).toMatchObject({ pariwarId: PARIWAR, requestId: 'req-1', payload: { kind, alertId: ALERT } });
+      expect(jobs[i]).toMatchObject({ retryLimit: 4, retryDelay: 60, retryBackoff: true });
+    }
+    const defaultFanOut = fanOutAlertToMembers.getMockImplementation()!;
+    fanOutAlertToMembers.mockImplementation(async (...args) => {
+      const answer = await defaultFanOut(...args);
+      return { ...answer, retry: [members[0]] };
+    });
+    await expect(run([{ id: 'bounded-job', retryCount: 3, retryLimit: 4, data: batches[0] }])).rejects.toThrow('1 member(s) failed');
+    expect(fanOutAlertToMembers.mock.calls.flatMap(c => c[2])).toEqual(members.slice(0, 8));
+    expect(fanOutAlertToMembers.mock.calls[0]![5]).toMatchObject({ jobId: 'bounded-job', retryCount: 3, retryLimit: 4 });
+  });
+
+  it('normal day-10 and escalated sweeps enqueue bounded jobs; other reminder days retain one pool job', async () => {
+    getCycleFreezeCommittedAt.mockResolvedValue(new Date('2026-07-01T00:00:00.000Z'));
+    listCycleBindingCandidates.mockResolvedValue([candidate(POOL_A, 0, members)]);
+    const sweepDeps = (now: Date) => deps({ now: () => now, pool: { query: async () => ({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }) } });
+    const send = vi.fn(async () => 'child');
+    const insert = vi.fn<(name: string, jobs: unknown[]) => Promise<string[] | null>>(async () => null);
+    await runDeadlineReminderSweep(sweepDeps(new Date('2026-07-11T00:00:00.000Z')), { send, insert } as never);
+    expect(send).not.toHaveBeenCalled();
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insertedJobs(insert)).toHaveLength(13);
+    const day10Keys = insertedJobs(insert).map(j => j.singletonKey);
+    expect(new Set(day10Keys).size).toBe(13);
+    insert.mockClear();
+    await runDeadlineReminderSweep(sweepDeps(new Date('2026-07-06T00:00:00.000Z')), { send, insert } as never);
+    expect(insert).not.toHaveBeenCalled();
+    expect(send.mock.calls).toHaveLength(1);
+    expect(((send.mock.calls[0] as unknown[])[1] as { payload: { memberIds: string[] } }).payload.memberIds).toEqual(members);
+    send.mockClear();
+    listPendingMatchMembersForPool.mockResolvedValue(members.map(memberId => ({ memberId, oldestUnresolvedAttestedAt: new Date('2026-07-01T00:00:00.000Z') })));
+    await runPendingMatchRetrySweep(sweepDeps(new Date('2026-07-03T00:00:00.000Z')), { send, insert } as never);
+    expect(send).not.toHaveBeenCalled();
+    expect(insertedJobs(insert)).toHaveLength(13);
+    for (const j of insertedJobs(insert)) expect(j.data.payload.memberIds.length).toBeLessThanOrEqual(8);
+  });
+
+  it('R4-P2 — a split pool whose insert fails enqueues NONE of its jobs, alarms that pool, and its sibling pool is still enqueued', async () => {
+    getCycleFreezeCommittedAt.mockResolvedValue(new Date('2026-07-01T00:00:00.000Z'));
+    listCycleBindingCandidates.mockResolvedValue([candidate(POOL_A, 0, members), candidate(POOL_B, 1, members)]);
+    const onAlarm = vi.fn();
+    const d = deps({ now: () => new Date('2026-07-11T00:00:00.000Z'), onAlarm, pool: { query: async () => ({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }) } });
+    const send = vi.fn(async () => 'child');
+    const insert = vi.fn<(name: string, jobs: unknown[]) => Promise<string[] | null>>(async () => null).mockRejectedValueOnce(new Error('queue unavailable'));
+    const result = await runDeadlineReminderSweep(d, { send, insert } as never);
+    expect(send).not.toHaveBeenCalled();
+    // Pool A's ONE insert failed as a whole; pool B's succeeded — ⛔ a prefix of pool A's jobs (the old sequential sends).
+    expect(insert).toHaveBeenCalledTimes(2);
+    expect(insertedJobs(insert, 0).every(j => j.data.payload.poolId === POOL_A)).toBe(true);
+    expect(insertedJobs(insert, 1).every(j => j.data.payload.poolId === POOL_B)).toBe(true);
+    expect(result.enqueuedPools).toBe(1);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining(`failed to enqueue reminders for alert ${ALERT} pool ${POOL_A}`));
+  });
+
+  it('AP-P1 / R4-P2 — a failed split insert retries with the same child IDs; different rosters and source jobs have distinct IDs', async () => {
+    const { boss, onAlarm, run } = await workers();
+    const job = { id: 'old', data: envelope(childPayload({ kind: 'pending_match_escalated', memberIds: members })) };
+    boss.insert.mockRejectedValueOnce(new Error('queue unavailable'));
+    await expect(run([job])).rejects.toThrow('queue unavailable');
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('failed to split queued job old alert'));
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    const firstKeys = insertedJobs(boss.insert).map(j => j.id);
+    // R4-P11: the ids must EXIST — `toEqual` alone also passes when both attempts carry `undefined`.
+    expect(firstKeys).toHaveLength(13);
+    for (const id of firstKeys) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(new Set(firstKeys).size).toBe(13);
+    boss.insert.mockClear();
+    await run([job]);
+    const allKeys = insertedJobs(boss.insert).map(j => j.id);
+    expect(allKeys).toEqual(firstKeys);
+    boss.insert.mockClear();
+    await run([{ ...job, data: envelope({ ...job.data.payload, memberIds: [M2, ...members.slice(1)] }) }]);
+    expect(insertedJobs(boss.insert)[0]!.id).not.toBe(allKeys[0]);
+    boss.insert.mockClear();
+    await run([{ ...job, id: 'different-parent' }]);
+    expect(insertedJobs(boss.insert)[0]!.id).not.toBe(allKeys[0]);
+  });
+
+  it('AP-P2 — 97 acted members across 13 jobs are counted once and each read is scoped to its payload', async () => {
+    const { boss, run } = await workers();
+    await run([{ id: 'old', data: envelope(childPayload({ kind: 'deadline_reminder', cycleDay: 10, memberIds: members })) }]);
+    // Deliberately return the old whole-pool shape to pin the caller's defensive intersection too.
+    listActedMemberIdsForPool.mockResolvedValue({ confirmed: members, attested: members });
+    let suppressed = 0;
+    for (const { data: batch } of insertedJobs(boss.insert)) {
+      const result = await runContributionNotifyChild(deps(), batch as never);
+      suppressed += result.suppressed;
+      expect(listActedMemberIdsForPool.mock.calls.at(-1)![1]).toMatchObject({ memberIds: batch.payload.memberIds });
+    }
+    expect(suppressed).toBe(97);
+    expect(listActedMemberIdsForPool).toHaveBeenCalledTimes(13);
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['deadline_reminder day 5', { kind: 'deadline_reminder', cycleDay: 5 }],
+    ['deadline_reminder day 13', { kind: 'deadline_reminder', cycleDay: 13 }],
+    ['deadline_reminder day 14', { kind: 'deadline_reminder', cycleDay: 14 }],
+  ])('R4-P1 — a whole-pool %s job reads its pool UNFILTERED (⛔ its roster as bind parameters — 4L in one pool would exceed 65,535)', async (_label, kind) => {
+    const roster = Array.from({ length: 40_000 }, (_, i) => `bbbbbbbb-0000-0000-0000-${String(i + 1).padStart(12, '0')}`);
+    listActedMemberIdsForPool.mockResolvedValue({ confirmed: [roster[0]!], attested: [] });
+    const result = await runContributionNotifyChild(deps(), envelope(childPayload({ ...kind, memberIds: roster })) as never);
+    expect(listActedMemberIdsForPool).toHaveBeenCalledTimes(1);
+    expect(listActedMemberIdsForPool.mock.calls[0]![1]).not.toHaveProperty('memberIds');
+    expect(result.suppressed).toBe(1);
+  });
+
+  it.each([
+    [{ retryCount: 0, retryLimit: 4 }, 'retrying'],
+    [{ retryCount: 4, retryLimit: 4 }, 'no retry remains'],
+    [{}, 'retry status unknown'],
+    [{ retryCount: 1 }, 'retry status unknown'],
+    [{ retryLimit: 4 }, 'retry status unknown'],
+  ])('AP-P4 — split failure describes the remaining attempts truthfully: %j', async (attempt, expected) => {
+    const { boss, onAlarm, run } = await workers();
+    const failure = new Error('queue unavailable');
+    boss.insert.mockRejectedValueOnce(failure);
+    await expect(run([{ id: 'source', ...attempt, data: envelope(childPayload({ kind: 'pending_match_escalated', memberIds: members })) }])).rejects.toBe(failure);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining(expected));
+    if (expected !== 'retrying') {
+      expect(onAlarm.mock.calls[0]![0]).toContain('recovery required');
+      expect(onAlarm.mock.calls[0]![0]).not.toContain('retrying');
+    }
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+  });
+
+  it('AP-P1 — missing source id refuses conversion before any child is enqueued', async () => {
+    const { boss, run } = await workers();
+    await expect(run([{ data: envelope(childPayload({ kind: 'pending_match_escalated', memberIds: members })) }])).rejects.toThrow('missing source job id');
+    expect(boss.send).not.toHaveBeenCalled();
+    expect(boss.insert).not.toHaveBeenCalled();
+  });
+
+  it('a legacy job without tenant context alarms and fails before enqueueing or sending', async () => {
+    const { boss, onAlarm, run } = await workers();
+    await expect(run([{ id: 'bad', data: { ...envelope(childPayload({ kind: 'pending_match_escalated', memberIds: members })), pariwarId: null } }])).rejects.toThrow('missing pariwarId');
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('missing pariwarId'));
+    expect(boss.send).not.toHaveBeenCalled();
+    expect(boss.insert).not.toHaveBeenCalled();
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+  });
+
 });

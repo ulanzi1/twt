@@ -41,6 +41,7 @@
 // public render (Epic 11b) is where it actually bites (not member-session-gated). Do NOT build the cache here.
 
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { unionAll } from 'drizzle-orm/pg-core';
 
 import type { Db } from '../db.js';
 import type { AlertId, CycleFreezeCommitId, MemberId, PariwarId, PoolId } from '../ids/index.js';
@@ -310,10 +311,17 @@ export interface ActedMemberIdsForPool {
   readonly attested: readonly string[];
 }
 
+/** The bounded read's subquery alias and its column — named once so the correlated reversal lookup can qualify them. */
+const SELECTED_CONFIRMATIONS = 'selected_confirmations';
+const SELECTED_CONFIRMATION_ID = 'confirmed_event_id';
+
 /**
  * List, per pool, the members who have already acted — the input to Story 8.8's deadline-reminder
- * SUPPRESSION decision (AC2 / D3). ONE batched read per pool; at 4L scale a per-member round-trip is
- * not viable.
+ * SUPPRESSION decision (AC2 / D3). ONE batched read per caller roster; optional memberIds limits
+ * bounded notification jobs to their own members instead of rereading the whole pool per child.
+ * ⚠ `memberIds` is for BOUNDED rosters only (review 2026-10-26, R4-P1): it is bound as ONE `text[]` parameter
+ * (never a parameter per id — 65,535 is PostgreSQL's ceiling), but a whole-pool caller (up to 4L in one pool) omits
+ * it and reads the pool unfiltered.
  *
  * ── This read is a COURTESY signal, never a promotion (the load-bearing invariant) ──────────────────
  * Suppressing a *reminder* for an attested member is a decision about whether to interrupt them. It is
@@ -334,17 +342,47 @@ export async function listActedMemberIdsForPool(
     pariwarId,
     alertId,
     poolId,
-  }: { readonly pariwarId: PariwarId; readonly alertId: AlertId; readonly poolId: PoolId },
+    memberIds,
+  }: { readonly pariwarId: PariwarId; readonly alertId: AlertId; readonly poolId: PoolId; readonly memberIds?: readonly string[] },
 ): Promise<ActedMemberIdsForPool> {
-  const rows = await db
-    .select({
+  if (memberIds?.length === 0) return { confirmed: [], attested: [] };
+  // Migration 0185's private generated columns stay out of the canonical event row / wire contract. Plain column
+  // comparisons are leakproof under RLS, unlike JSON extraction predicates on expression indexes.
+  const poolColumn = sql<string>`${eventsLog}."contribution_pool_id"`;
+  const memberColumn = sql<string>`${eventsLog}."contribution_member_id"`;
+  const reversalColumn = sql<string>`${eventsLog}."contribution_reversed_event_id"`;
+  const memberFilter = memberIds === undefined ? undefined
+    : sql`${memberColumn} = ANY(${sql.param([...memberIds])}::text[])`;
+  // A reversal belongs to the confirmation it references, regardless of its declared memberId.
+  // Keep both reads in one SQL statement/snapshot. Migration 0185 indexes the member and reference paths.
+  const selectedConfirmations = db.select({ id: sql<string>`${eventsLog.eventId}::text`.as(SELECTED_CONFIRMATION_ID) }).from(eventsLog).where(and(
+      eq(eventsLog.pariwarId, pariwarId),
+      eq(poolColumn, poolId),
+      eq(eventsLog.eventType, CONFIRMED_EVENT_TYPE),
+      memberFilter,
+    )).as(SELECTED_CONFIRMATIONS);
+  const selectRows = () => db.select({
       eventType: eventsLog.eventType,
       eventId: eventsLog.eventId,
-      memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`,
-      reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`,
+      memberId: sql<string | null>`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_MEMBER_KEY}`.as('acted_member_id'),
+      reversedConfirmedEventId: sql<string | null>`${eventsLog.payload} ->> ${REVERSED_CONFIRMED_EVENT_ID_KEY}`.as('reversed_confirmed_event_id'),
     })
-    .from(eventsLog)
-    .where(
+    .from(eventsLog);
+  const tenantPoolFilter = and(eq(eventsLog.pariwarId, pariwarId),
+    eq(poolColumn, poolId));
+  // Parameterize each reversal lookup by a selected confirmation's ID. OFFSET 0 keeps this lateral lookup from being
+  // flattened into a whole-pool semi-join; text equality on the generated column can use the full index under RLS.
+  // Drizzle omits numeric 0 as falsy. Its SQL builder supports an SQL offset, while this version's public type only
+  // accepts number/Placeholder. Keep the literal fence (covered by the real-role EXPLAIN regression) via this local cast.
+  const reversals = selectRows().where(and(tenantPoolFilter,
+    eq(eventsLog.eventType, RECONCILIATION_CONFIRMATION_REVERSED_EVENT_TYPE),
+    // Review 2026-10-26 (R4-P6): QUALIFIED by the subquery alias. Drizzle renders `selectedConfirmations.id` as a bare
+    // "confirmed_event_id", which would silently bind to an `events_log` column of that name if one were ever added (a
+    // self-comparison — [[project_epic6_drizzle_correlated_subquery_bug]]).
+    sql`${reversalColumn} = ${sql.identifier(SELECTED_CONFIRMATIONS)}.${sql.identifier(SELECTED_CONFIRMATION_ID)}`,
+  )).offset(sql`0` as unknown as number).as('selected_reversals');
+  // The disjoint event types cannot duplicate rows; UNION ALL retains one statement's snapshot.
+  const rows = memberIds === undefined ? await selectRows().where(
       and(
         eq(eventsLog.pariwarId, pariwarId),
         sql`${eventsLog.payload} ->> ${CONFIRMED_PAYLOAD_POOL_KEY} = ${poolId}`,
@@ -362,6 +400,14 @@ export async function listActedMemberIdsForPool(
           ),
         ),
       ),
+    ) : await unionAll(
+      selectRows().where(and(tenantPoolFilter, memberFilter, or(
+        eq(eventsLog.eventType, CONFIRMED_EVENT_TYPE),
+        and(eq(eventsLog.eventType, ATTESTED_EVENT_TYPE), eq(eventsLog.streamId, alertId)),
+      ))),
+      db.select({ eventType: reversals.eventType, eventId: reversals.eventId, memberId: reversals.memberId,
+        reversedConfirmedEventId: reversals.reversedConfirmedEventId })
+        .from(selectedConfirmations).innerJoinLateral(reversals, sql`true`),
     );
 
   // The `confirmed` set honors the SAME reversal backing-out as the contributor list (one shared

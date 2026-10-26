@@ -289,6 +289,23 @@ function foundFinalRung(found: { readonly outcome: string; readonly detail: stri
 /** Thrown by the one-send provider when begin did ⛔ give this attempt the row — dispatch records `error`, ⛔ `alert.channel_send`. */
 class AlertSmsNotBegun extends Error {}
 
+/**
+ * The SMS attempt when dispatch ⛔ reached the one-send provider. `suppressed` (the lifecycle boundary — I4) passes through. Review
+ * 2026-10-26 (R4-P7): anything else — a render immutability violation, a provider-selection error, a missing attempt (a code fault) —
+ * is ⛔ a suppression: a named, ALARMED, terminal word, ⛔ a detail-less rung that the retry rule would record `in_app_only` in silence.
+ * @internal exported for `alert-sms-send.test.ts` only — the seam's own render / registry cannot produce these through a real call.
+ */
+export function settleUndispatched(attempt: { readonly outcome: string; readonly reason?: string } | undefined): {
+  readonly rung: ChannelSendOutcome;
+  /** The fault CLASS to alarm on (dispatch's outcome word, and the reason's leading `<kind>:` token) — ⛔ the reason's free text. */
+  readonly fault?: string;
+} {
+  if (attempt?.outcome === 'suppressed') return { rung: outcome('suppressed') };
+  const reasonKind = attempt?.reason?.match(/^([a-z_]+):/)?.[1];
+  const fault = attempt === undefined ? 'no sms attempt' : `${attempt.outcome}${reasonKind ? `:${reasonKind}` : ''}`;
+  return { rung: outcome('error', ALERT_SMS_RUNG_DETAIL.notAttempted), fault };
+}
+
 /** Build the seam (one per jobs process — boot.ts; the memos live as long as it does). */
 export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
   const nowMs = deps.nowMs ?? Date.now;
@@ -395,9 +412,9 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
       if (prepared.preflightWarning !== undefined) {
         alarmRefusalOnce(
           template.dltTemplateIdConfigKey,
-          `SENT despite the pre-flight (${prepared.preflightWarning})`,
+          `pre-flight unproven (${prepared.preflightWarning})`,
           where,
-          'the text WAS sent — the pre-flight is unproven (fail open); a PROVEN fault would have refused it (roster Row 32)',
+          'sending is permitted (fail open); the window, suppression and send record still decide whether a text is attempted (roster Row 32)',
         );
       }
 
@@ -464,9 +481,14 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
       });
       const after = state as typeof state;
       if (after === undefined) {
-        // The provider was ⛔ called: suppressed (the lifecycle boundary — I4) or otherwise skipped. ⛔ row was written.
-        const attempt = outcomeOf.attempts.find((a) => a.channel === 'sms');
-        return outcome(attempt?.outcome ?? 'error');
+        // The provider was ⛔ called. ⛔ row was written. Suppressed (the lifecycle boundary — I4) is the expected case.
+        const undispatched = settleUndispatched(outcomeOf.attempts.find((a) => a.channel === 'sms'));
+        if (undispatched.fault !== undefined) {
+          // A code fault reaches every member alike — ONE alarm per (class, Pariwar) per window, ⛔ per member (narrow review of R4).
+          alarmRefusalOnce(`dispatch [${undispatched.fault}] pariwar ${pariwarId}`, ALERT_SMS_RUNG_DETAIL.notAttempted, where,
+            'dispatch did not reach the SMS provider — a code fault; the text is not sent (terminal)');
+        }
+        return undispatched.rung;
       }
       if (after.kind === 'taken') {
         // Another attempt began it between the lookup and begin — read it as found (FS6 step 2).
@@ -523,7 +545,17 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
 
     // ── helpers (closures over the call) ──
     function stateUnavailable(): ChannelSendOutcome {
-      alarm(`the send record could not be read or begun (${ALERT_SMS_RUNG_DETAIL.stateUnavailable}) [${lastFault}]`);
+      // Review 2026-10-26 (R4-P9): ONE alarm per fault CLASS per memo window, ⛔ one per member per attempt — a pool / DB outage
+      // reaches every member of every job alike (the C2-P8 shape; the class is C2-P9's SQLSTATE / name, ⛔ the message).
+      // Keyed per Pariwar too (narrow review of R4): a deterministic fault in one Pariwar is ⛔ masked by another's alarm.
+      alarmRefusalOnce(
+        `the send record [${lastFault}] pariwar ${pariwarId}`,
+        ALERT_SMS_RUNG_DETAIL.stateUnavailable,
+        where,
+        final
+          ? 'it could not be read or begun on the FINAL attempt — the text is not sent (recorded in_app_only; a DB / pool fault)'
+          : 'it could not be read or begun; the text is retried while attempts remain (a DB / pool fault)',
+      );
       return outcome('error', ALERT_SMS_RUNG_DETAIL.stateUnavailable);
     }
 
@@ -554,7 +586,7 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
           let gaveUp: boolean;
           try {
             gaveUp = await withPariwarScope(deps.pool, pariwarId, (_db, client) =>
-              smsDelivery.giveUpDeferredAlertSmsSend(client, { pariwarId, sendId: found.sendId, detail: 'exhausted:rate_limited:expired' }),
+              smsDelivery.giveUpDeferredAlertSmsSend(client, { pariwarId, sendId: found.sendId, detail: 'exhausted:rate_limited:expired', onlyIfExpired: true }),
             );
           } catch (err) {
             noteFault(err);

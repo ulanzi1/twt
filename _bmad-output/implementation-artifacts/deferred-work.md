@@ -21,6 +21,7 @@ Recorded at Story 5.11b's Task 0.4 (items 1–2), at dev (items 3–4) and by th
   (16) once the real send is wired (`contribution-notify-triggers.ts`), so 16 members × ~15 s stay inside the claim TTL; the send
   ROW still stops a second TEXT whatever the chunk. Recorded so the item is ⛔ re-raised.
   - *Appended 2026-10-25 (code review of 5.11b, C4-P12):* ⚠ "bounded" holds for TYPICAL latency only. The WORST case per member is ~40–50 s (the 10 s send + three finalise tries at up to 10 s each + push + WhatsApp), so 16 members can take 640–800 s — past the 300 s claim TTL (F6: the TTL MUST exceed the worst-case per-member fan-out). What stays true: a lapsed claim risks a duplicate PUSH, ⛔ a second text (the send row stops it). Day 10 only — the escalated tier's keyed-store TTL is 30 days (the chunk is moot there) and MISMATCH is single-member. ⭐ Re-trigger unchanged, plus: a duplicate-push report on day 10.
+  - *Appended 2026-10-26 (fourth code review of 5.11b, R4-P10):* `LIT_KIND_MEMBER_CHUNK_SIZE` (16) is REMOVED — inert since FD-P1 bounded every lit job to `LIT_KIND_JOB_MEMBER_LIMIT` (8), which is now also the claim chunk. 8 members at the ~40–50 s worst case is ~320–400 s, still past the 300 s claim TTL: the item stays ⛔ OPEN as stated (a duplicate PUSH, ⛔ a second text).
 - **The members' text language is read LIVE in a domain spec, and the producers' use of it in the trigger unit suite** (AC5's legs) —
   ⛔ a live POOL_BATCH / MISMATCH run (⛔ live harness resolves a pool identity end to end). ⭐ Trigger: the first live POOL_BATCH
   harness (any story) — add a leg that an `en` chooser's text is `en` there.
@@ -261,6 +262,9 @@ Recorded at Story 6.36e Task 0.4 (`_bmad-output/implementation-artifacts/6-36e-n
   - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* DECIDED — FS21 (a): before the first send `smsPoolLabel` falls back to the letter code on `\p{Cc}`, U+2028 / U+2029, any `\p{Cf}`
     except ZWNJ / ZWJ, or a lone surrogate (`/\p{Cs}/u`) — supersedes `-394` item 2 in part. Whether DLT / MSG91 accept the remaining
     characters stays roster Row 30 (d). Closes on 5.11b `done`.
+  - *Appended 2026-10-26 (fourth code review of 5.11b, R4-P4):* **Closed by 5.11b** — FS21 (a) is BUILT: `smsPoolLabel` falls back to the
+    letter code on `\p{Cc}`, Zl / Zp, a lone surrogate and any `\p{Cf}` but ZWNJ / ZWJ (`contribution-sms-templates.ts:113-123`; legs in
+    `contribution-sms-templates.test.ts`). The DLT / MSG91 acceptance question stays roster Row 30 (d), ⛔ closed here.
 - **The keyed store has no owner token** (`packages/domain/src/idempotency/keyed-store.ts`, `recordResult` / `release` match on key
   and status only). A hung original attempt's late `recordResult` can complete a take-over's row with ITS outcome (the moderation
   take-over, Story 5.11 E1 (a)); at-least-once is accepted there. Re-trigger: a consumer that needs exactly-once across a take-over.
@@ -286,6 +290,11 @@ story's ruling exposes. *(Count corrected 2026-10-24, round-2 patch review, Q1.)
   - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* DECIDED — FS20 (a): the fan-out memo goes per channel; WhatsApp `ready` / `refused` for the process, `off` for 60 s — a
     switch-on is seen within a minute (never memoizing `off` would re-read secrets per member). Refused → ready still needs a restart.
     Closes on 5.11b `done`.
+  - *Appended 2026-10-26 (fourth code review of 5.11b, R4-P4):* **Closed by 5.11b** (narrowed, ⛔ eliminated) — FS20 (a) is BUILT:
+    `WHATSAPP_OFF_MEMO_TTL_MS = 60_000` (`provider-composition.ts:409`); a switch-on is seen within ≤ 60 s (leg "⭐ FS20 — `off` → switched
+    ON is seen after the TTL", `contribution-provider-resolver.test.ts:279`). For up to 60 s a just-enabled Pariwar's opted-in members can
+    still be recorded against the `off` fixture; refused → ready still needs a restart. The two bullets below (non-fan-out resolver;
+    refusing-provider audit id) are ⛔ closed by this.
 - **`resolveWhatsappProvider` (the non-fan-out callers) still returns the accepting fixture for the FS3 "refused" state.** Only
   the alert fan-out's resolver refuses honestly (I5 scope); the two selections now disagree on whether that state is `sent`.
 - **The FS3 refusing provider is audited under the real `whatsapp-business` provider id.** A config refusal (no network call)
@@ -12416,6 +12425,11 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
     any member the app (and WhatsApp, where used) could not reach, WhatsApp yes or not; built by row 5-11's predicate. Item still OPEN
     until 5.11b is `done`.
     - *Appended 2026-10-25 (Story 5.11b Task 0.4, [`-404`](../../.decision-log.md#decision-2026-10-25-404)):* the real send is DECIDED (FS5–FS23); still OPEN until 5.11b is `done`.
+    - *Appended 2026-10-26 (fourth code review of 5.11b, R4-P4 — AC8 / C4-P19):* **Closed by 5.11b** — the three texts are SENT for real
+      (`apps/jobs/src/scheduler/alert-sms-send.ts`, the `alert_sms_sends` record, migrations 0184 / 0185), to the `-390` Q1 B predicate,
+      after WhatsApp's window, once per (alert, member, occasion). The five per-category entries stay dark as stated above (⛔ closed
+      here — provisioning their template ids still does nothing). "Done" ≠ live: no text goes until the DLT templates are approved and
+      provisioned (roster Row 30 / Row 40).
 - **The data-export delivery OTP says "Valid 3 min" for a code that lives 60** [`apps/api/src/modules/member-data-rights/handlers.ts:659-663`
   delivers with `intent: 'step_up'`; TTL `apps/api/src/config.ts:386`, `member-otp.service.ts:38-43`] — it UNDERSTATES (⛔ refuses anyone: the
   code still works after 3 minutes). Story 6.34 TV9 fixed only the claim handover (a 3-minute code told *"5 min"* — a nominee typing it in
@@ -12871,3 +12885,7 @@ Chunked review (domain substrate · send seam · tests · records), diff pinned 
 - **The at-most-once core runs only when `DATABASE_URL` is set** (C3-W2): `describe.skipIf(!hasDatabase)`; repo convention, the domain specs are DB-gated too. **Re-trigger:** a CI shard that runs without a database.
 - **The 30-minute `deferred` bound leaves 6 minutes of margin at the WORST case** (PD-W1, from the patch-diff review of the patches; decision C1-D1 (b)): the longest legitimate gap is pg-boss 12's last retry delay at full jitter (60 s × 2³ × 2 = 16 min) plus up to one child chunk of members' send time (16 × 30 s = 8 min, assuming every member waits out the gateway timeout and two slow connections) = 24 min. The first cut of the pin said "≥ 2× 8 min" from a wrong model. A text the bound drops is given up `exhausted:rate_limited:expired` and ALARMED (one per memo window, naming the first). **Re-trigger:** the first `exhausted:rate_limited:expired` alarm in production, or measured per-member latencies showing a chunk past ~14 minutes.
 - **The `crashed` state (a malformed CRQID before the gateway call) has no test** (PD-W2): `state.kind === 'crashed'` leaves the row `attempting` for the lease rule and alarms; reaching it needs a send row whose id is not a UUID, which the table cannot hold. Unreachable through the real tables; kept as the seam's never-throws guard. **Re-trigger:** a change to the CRQID format or the `as` row id type.
+
+## Deferred from: code review of 5-11b-alert-sms-real-send (2026-10-26)
+
+- **R4-W1 — Per-child-job pool identity decrypt is not shared across the bounded jobs of one pool.** Since FD-P1 every bounded (≤ 8-member) day-10 / pending-match child job runs `resolvePoolIdentity` → `decryptKycField` → `kms.decryptDek` + an audit line (`apps/jobs/src/scheduler/contribution-notify-triggers.ts:823`; `packages/domain/src/encryption/envelope.ts:92-93`): ~1,000 KMS calls for an 8,000-member pool where there was 1, repeated hourly by the escalated sweep for pending members. Deferred: sharing it (a process memo of decrypted PII, or carrying the identity in the payload) is a design choice beyond the review; the cost is disclosed by R4-P3. Re-trigger: KMS cost / latency or audit volume at scale, or the KMS global-lock trap (D10-1.5).

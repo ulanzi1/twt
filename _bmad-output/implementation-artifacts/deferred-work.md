@@ -238,8 +238,10 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
   and the two `apps/public` doc-blocks that read *"the family story (Story 11b.4) — `backlog`"* — `apps/public/src/lib/sahyog-vivran-render.ts`
   and `apps/public/src/pages/sahyog-vivran/[driveToken].astro` — which 11b.4's AC17 forbade touching. **Trigger: row 11b-4a's
   create-story.**
+  ⭐ *(2026-10-27) HOMED in 11b.4a — `11b-4a-family-memorial-public-render.md`, Decision `2026-10-27-412`; `-395`'s Not-covered lines ruled by `2026-10-27-411`; the reason `family_asked` and the Tier-1 note are ⛔ not minted (`-412` §3.2). Closes when 11b.4a is `done` on main. ⛔ Not closed yet, ⛔ not deleted.*
 - **(2) Kinship capture** (epic step (d) — MA2): ⛔ collected; names of living relatives for a purpose not yet ruled. **Trigger: row
   11b-4a / Story 11b.5 (`<KinshipLattice>`), with its own Panel question on the purpose.**
+  ⭐ *(2026-10-27) Trigger reached at 11b.4a; carried as 11b.4a item (6) (still 11b.5's / a Panel purpose question), ⛔ not closed.*
 - **(3) Emphasis** (epic step (b) — MA4): v1 is paragraphs only. **Trigger: a Story 0.9 conversation or a family request.**
 - **(4) A staff-initiated helpdesk conversation after a refusal** (the epic's *"request specific changes via empathetic helpdesk
   conversation"*): every non-approved outcome shows the helpline, but ⛔ staff-initiated ticket exists. **Trigger: the next helpdesk story.**
@@ -249,6 +251,7 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
 - **(7) A family's own request to ERASE their words** through the helpline (`-391` Q5 A's follow-up): MA15 erases with the MEMBER's
   record (and a deceased member's record is ⛔ erased today — `resolveRtbfLegality` admits only withdrawn / terminated); ⛔
   family-initiated path exists, and the author is ⛔ a data subject of any export route. **Trigger: the first such request, or 11b.4a.**
+  ⭐ *(2026-10-27) Trigger reached at 11b.4a; carried as 11b.4a item (7) (⛔ not built there), ⛔ not closed.*
 - **(8) Story 0.9 UN-ATTESTED** — every Pattern-4 / grief-pacing claim in 11b.4 is ⛔ validated against a family conversation
   (`_bmad-output/research/p0-2b-bereaved-spouse.md` holds only `_AWAITING_CONVERSATION_CONDUCT_` placeholders). Launch-gate Row 41 (d)
   carries it ([[feedback_record_unattested_no_backfill]]). **Trigger: the Story 0.9 conversation.**
@@ -261,6 +264,7 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
   the app.**
 - **(11) `@twt/ui` in `apps/public`** — `apps/public` does ⛔ depend on `@twt/ui` today (epic header C-1), so 11b.4a's reuse of the AC11
   presenter needs that dependency first. **Trigger: row 11b-4a.**
+  ⭐ *(2026-10-27) HOMED in 11b.4a — and answered differently: after `2026-10-27-411` item 3 (no marker) the API joins the kept words, so `apps/public` needs ⛔ no `@twt/ui` (11b.4a Trap 16); `apps/api` takes `@twt/ui` as a runtime dependency instead. Closes when 11b.4a is `done` on main.*
 - **(12) UX departures, each with its reason** — the entry on HOME rather than in `<NomineeConsole>` (the console resolves only `live`
   pools — Trap 2; MA14 opens writing after the close); reason COPY instead of a reviewer's free-text *"note"* to the family (⛔ reviewer
   free text reaches a grieving family unreviewed — MA6); ⛔ SMS / email resume link (UX-DR50/56 — Trap 4; DLT carries only approved
@@ -3664,7 +3668,9 @@ recorded here rather than left for a future reader to re-derive._
     ⚠ ANNOTATED 2026-10-24 (Story 11b.4): the **write side** is built at 11b.4 (the family writes and sends; the Trust reviews) —
     ⛔ no public read model until row `11b-4a-family-memorial-public-render`. The public page still renders **nothing** for it. ⛔ Not
     closed, ⛔ not deleted.
+    ⭐ ANNOTATED 2026-10-27 (Story 11b.4a, `2026-10-27-412`): the public render is built by row `11b-4a-family-memorial-public-render` (dark until Row 41). Closes when 11b.4a is `done` on main.
   · **the memorial visual components** (Story **11b.5**) — `backlog`.
+    ⭐ ANNOTATED 2026-10-27 (Story 11b.4a MP1, `2026-10-27-412`): the family memorial no longer waits on 11b.5 — 11b.4a renders it with plain markup that 11b.5 later refactors into its components. ⛔ Not closed (11b.5 is still `backlog`).
   · **`<StatCardStrip>`** — **C-3**: ⛔ NO PRODUCER **and** ⛔ NO OWNER; `2026-08-23-154` declined to
     settle it (*"a settled SHAPE is ⛔ not a settled SOURCE"*). ⛔⛔ **Do ⛔ not stub it** — a stub asserts
     an aggregate that nothing computes.

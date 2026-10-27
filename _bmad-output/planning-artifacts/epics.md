@@ -6565,6 +6565,8 @@ So that my words for my loved one remain mine.
 **When** the authorship flow renders for grief-paced sessions
 **Then** the flow is unhurried; no "your draft is incomplete" pressure; no deadlines for memorial completion; family can choose to skip memorial authorship entirely (the Sahyog Vivran surface still renders with system-default factual content)
 
+> ⭐ *Dated note (2026-10-27, Story 11b.4a — row `11b-4a-family-memorial-public-render`, Decision `2026-10-27-412`):* the public render of this story's approved memorial is built by 11b.4a — on the public Sahyog Vivran page only, ⛔ not waiting for Story 11b.5's components (MP1 SUPERSEDES IN PART `-398` MA1's *"gated on 11b.5's components"*); a part the Trust left out is ⛔ not marked on the public page — the words on either side are joined (`2026-10-27-411` item 3, Trustee-ratified), while the family's own screen keeps its marks; the photo on its own re-checked route, re-encoded without metadata; the helpline operator's take-down at the nominee's request (MP6–MP9, the no-trace rule `-393` M1); the approver email (ADR-0043). ⛔ No word above is edited.
+
 ### Story 11b.5: Memorial Visual Components — MemorialRecord + PortraitFrame + KinshipLattice `[PRIMITIVE]`
 
 As any Sahyog Vivran or In Memoriam surface displaying memorial content,
@@ -6579,6 +6581,8 @@ So that memorial-surface rendering is consistent + dignified across consumer sur
 **And** `<PortraitFrame>` renders the deceased member's photo (consent-gated; family-uploaded per Story 11b.4) in a dignified frame — culturally-appropriate Hindi-context visual treatment (validated against Story 0.9)
 **And** `<KinshipLattice>` renders optional kinship relationships (parent / spouse / child / sibling of deceased) when family provides them in Story 11b.4 — visualization is respectful structural diagram, NOT social-network-style graph (inheriting Story 11a.3 legitimacy-not-social-graph invariant)
 **And** all three components are matrix-tier respecting + Hindi-first per Story 2.1; accessibility per Story 0.10
+
+> ⭐ *Dated note (2026-10-27, Story 11b.4a, Decision `2026-10-27-412` MP1):* the public Sahyog Vivran page already renders the family memorial with plain markup (`apps/public/src/components/FamilyMemorial.astro` — the UX FuneralFrame as nested wrappers, 2 px ink border, 4:5); this story's `<PortraitFrame>` / `<MemorialRecord>` ACs now REFACTOR that markup into the components rather than create the first render. ⛔ No word above is edited.
 
 ### Story 11b.6: In Memoriam Roll + Consent-Governed-Revocable Invariant `[SURFACE]`
 

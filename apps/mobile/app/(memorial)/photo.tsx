@@ -8,8 +8,10 @@
 // has neither at first render), and every handler reads the draft fresh from the phone's storage.
 // T6 — and RE-read every time the screen comes back to the front, so a Photo screen left behind a newer one in the stack
 // never saves its stale copy of the draft over the newer words, alt text or photo choice.
-// T8 — the alt-text counter stays a POLITE status; crossing INTO over the limit is announced ONCE (the plan's error kind);
-// while over, the over-limit line is LINKED to the alt-text box through its hint (the handover-code precedent).
+// T8 — crossing INTO over the limit is announced ONCE (the plan's error kind); while over, the over-limit line is LINKED to
+// the alt-text box through its hint (the handover-code precedent). ⭐ TalkBack device session 2026-10-27 (T2): the alt-text
+// counter is ⛔ a live region any more (Write's counter, even polite, was spoken on most keystrokes) — a plain line.
+// T1 (the same session) — the screen's heading is SPOKEN on arrival (the stack has no title).
 // V8 — alt text ALREADY over the limit when the draft is loaded is not announced: only a crossing after the draft is read.
 // V9 (a) — while this screen's last save FAILED (full storage), the focus re-read is skipped: the screen's state is newer
 // than the stored draft, and must not be replaced by it. W5 — and a change made then is merged into the SCREEN's state;
@@ -28,9 +30,9 @@ import { MemorialHeader } from '../../components/memorial-authorship/MemorialHea
 import { MemorialKeptPhoto } from '../../components/memorial-authorship/MemorialKeptPhoto'
 import { MemorialViewMissing } from '../../components/memorial-authorship/MemorialViewMissing'
 import {
-  memorialLiveRegion,
   useMemorialAnnounce,
   useMemorialOverLimitAnnounce,
+  useMemorialScreenAnnounce,
 } from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import {
@@ -84,6 +86,7 @@ export default function MemorialPhotoScreen(): React.ReactElement {
       ? t('photo.alt_over_limit', { count: String(-altRemaining) })
       : null
   useMemorialOverLimitAnnounce(altOverText, loaded !== null)
+  useMemorialScreenAnnounce(view && memberId ? t('photo.title') : null)
   // W7 — a Retry TAP shows progress until its fetch settles (a flag inside `MemorialViewMissing`, whatever the last result);
   // `loading` here is only the FIRST load (`isPending`) — a background refetch (`isFetching`) must not flip the line (V11).
   if (!view || !memberId)
@@ -136,9 +139,8 @@ export default function MemorialPhotoScreen(): React.ReactElement {
   // A file name kept in the draft whose file is gone degrades to "no photo" with a gentle line (not an error).
   const photoMissing = !keepingPrevious && draft.photoFileName !== undefined && photoUri === null
   const withPhoto = photoUri !== null || keepingPrevious
-  // Over the limit the counter line says "shorten it by about N" (S8), not "room for about N more" — and it stays a POLITE
-  // status: the crossing is announced once by the hook above (T8).
-  const altCounterLive = memorialLiveRegion('status')
+  // Over the limit the counter line says "shorten it by about N" (S8), not "room for about N more" — a plain line (T2): the
+  // crossing is announced once by the hook above (T8).
 
   async function pick(): Promise<void> {
     setNotice(null)
@@ -216,7 +218,7 @@ export default function MemorialPhotoScreen(): React.ReactElement {
                 accessibilityHint={altOverText !== null ? `${altOverText} ${t('photo.alt_hint')}` : t('photo.alt_hint')}
                 {...(Platform.OS === 'ios' ? { accessibilityLanguage: locale === 'hi' ? 'hi-IN' : 'en-IN' } : {})}
               />
-              <Paragraph size="$2" accessibilityLiveRegion={altCounterLive} testID="memorial-alt-counter">
+              <Paragraph size="$2" testID="memorial-alt-counter">
                 {altOverText ?? t('photo.alt_remaining', { count: String(altRemaining) })}
               </Paragraph>
             </YStack>

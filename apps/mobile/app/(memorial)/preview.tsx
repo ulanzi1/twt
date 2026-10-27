@@ -35,7 +35,7 @@ import { MemorialHeader } from '../../components/memorial-authorship/MemorialHea
 import { MemorialKeptPhoto } from '../../components/memorial-authorship/MemorialKeptPhoto'
 import { MemorialText } from '../../components/memorial-authorship/MemorialText'
 import { MemorialViewMissing } from '../../components/memorial-authorship/MemorialViewMissing'
-import { useMemorialAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
+import { useMemorialAnnounce, useMemorialScreenAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import { loadMemorialDraft, memorialPhotoUri } from '../../lib/memorial-draft'
 import { useMemorialT } from '../../lib/memorial-i18n'
@@ -86,6 +86,8 @@ function Preview(props: {
   readonly onChangePhoto: () => void
 }): React.ReactElement {
   const { view, memberId, locale, t } = props
+  // T1 (TalkBack device session 2026-10-27) — the heading is SPOKEN on arrival and on every return (the stack has no title).
+  useMemorialScreenAnnounce(t('preview.title'))
   // A render on every return to this screen — the draft below is read from the phone's storage on every render.
   const [, setFocusTick] = useState(0)
   const firstFocus = useRef(true)

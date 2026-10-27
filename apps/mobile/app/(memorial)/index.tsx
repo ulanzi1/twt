@@ -14,6 +14,7 @@ import { Button, H2, Paragraph, XStack, YStack } from 'tamagui'
 
 import { MemorialHeader } from '../../components/memorial-authorship/MemorialHeader'
 import { MemorialViewMissing } from '../../components/memorial-authorship/MemorialViewMissing'
+import { useMemorialScreenAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import {
   clearMemorialDraft,
@@ -43,6 +44,12 @@ export default function MemorialIntroScreen(): React.ReactElement {
     }
   }, [landed])
 
+  // T1 (TalkBack device session 2026-10-27) — the question is the screen's heading: SPOKEN on arrival (the stack has no title).
+  const prompt =
+    view === null ? null : view.deceasedName === null ? t('intro.prompt_no_name') : t('intro.prompt', { name: view.deceasedName })
+  const asksPrompt = view !== null && memberId !== null && !landed && (view.memorialState === 'none' || memorialDraftHasContent(draft))
+  useMemorialScreenAnnounce(asksPrompt ? prompt : null)
+
   // P3 — the intro cannot know whether a draft is still on this phone (its key needs `view.driveId`), and after a Send has
   // landed the draft is cleared: so it makes NO claim about the phone (the `outcome` variant of the line).
   if (!view || !memberId)
@@ -70,7 +77,6 @@ export default function MemorialIntroScreen(): React.ReactElement {
       </YStack>
     )
   }
-  const prompt = view.deceasedName === null ? t('intro.prompt_no_name') : t('intro.prompt', { name: view.deceasedName })
   return (
     <YStack flex={1}>
       <MemorialHeader showSaved={hasDraft} />

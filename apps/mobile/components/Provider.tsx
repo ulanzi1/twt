@@ -1,8 +1,6 @@
 import { useColorScheme } from 'react-native'
 import { TamaguiProvider, type TamaguiProviderProps } from 'tamagui'
-import { ToastProvider, ToastViewport } from '@tamagui/toast'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
-import { CurrentToast } from './CurrentToast'
 import { config } from '../tamagui.config'
 import { persister, queryClient } from '../lib/query-client'
 import { removeRetiredPoolContributorsCache } from './contributor-list/pool-contributors-cache'
@@ -50,18 +48,9 @@ export function Provider({
         defaultTheme={colorScheme === 'dark' ? 'dark' : 'light'}
         {...rest}
       >
-        <ToastProvider
-          swipeDirection="horizontal"
-          duration={6000}
-          native={[
-            // uncomment the next line to do native toasts on mobile. NOTE: it'll require you making a dev build and won't work with Expo Go
-            // 'mobile'
-          ]}
-        >
-          {children}
-          <CurrentToast />
-          <ToastViewport top="$8" left={0} right={0} />
-        </ToastProvider>
+        {/* ⛔ The Tamagui starter's toast (TalkBack device session 2026-10-27, T3): nothing ever showed one, and its empty viewport
+            put an English "Notifications (F8)" in every screen's reading order — TalkBack landed on it after the memorial Send. */}
+        {children}
       </TamaguiProvider>
     </PersistQueryClientProvider>
   )

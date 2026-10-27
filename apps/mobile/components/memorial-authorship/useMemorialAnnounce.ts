@@ -10,10 +10,14 @@
 // The live-region VALUE is never hard-coded on a line either: the plan decides it by `kind` (an error the family must act
 // on is `assertive`, a status line `polite`), and this hook RETURNS it for the line it announces — the line's element
 // passes the returned value as its `accessibilityLiveRegion`. `memorialLiveRegion(kind)` is the same value for a line that
-// is not announced through the hook (a counter that updates as the family types).
+// is not announced through the hook.
+// TalkBack device session 2026-10-27 (T1): the `(memorial)` stack hides its native header, so a screen has NO title for the
+// screen reader to read on arrival — the intro, Write and Preview opened in SILENCE (the photo step was read only because
+// TalkBack happened to move focus there). `useMemorialScreenAnnounce` speaks the screen's heading on arrival.
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { AccessibilityInfo, Platform } from 'react-native'
+import { useFocusEffect } from 'expo-router'
 
 import { announcementPlan, type AnnouncementKind } from '../../lib/death-certificate-announce'
 
@@ -46,6 +50,34 @@ export function useMemorialAnnounce(
     AccessibilityInfo.announceForAccessibility(text)
   }, [text, hasLiveRegion, kind])
   return memorialLiveRegion(kind)
+}
+
+/**
+ * T1 (TalkBack device session 2026-10-27) — a memorial screen's ARRIVAL: its heading is spoken on BOTH platforms (a page change
+ * has no live region beside it — the `useAnnounceOnChange` rule), once each time the screen gains focus (coming back to it is a
+ * page change too), or as soon as the heading is known (the intro's name arrives with the view). `null` ⇒ nothing (the screen
+ * shows something else). Keyed on the TEXT through a ref, never on `t` ([[project_uset_fresh_closure_memo_trap]]).
+ */
+export function useMemorialScreenAnnounce(heading: string | null): void {
+  const latest = useRef(heading)
+  latest.current = heading
+  const focused = useRef(false)
+  const spoken = useRef(false)
+  useFocusEffect(
+    useCallback(() => {
+      focused.current = true
+      spoken.current = latest.current !== null
+      if (latest.current !== null) AccessibilityInfo.announceForAccessibility(latest.current)
+      return () => {
+        focused.current = false
+      }
+    }, []),
+  )
+  useEffect(() => {
+    if (!focused.current || spoken.current || heading === null) return
+    spoken.current = true
+    AccessibilityInfo.announceForAccessibility(heading)
+  }, [heading])
 }
 
 /**

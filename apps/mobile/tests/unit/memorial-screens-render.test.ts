@@ -594,7 +594,22 @@ describe('AC12 — real t() for every interpolated key, in hi and en', () => {
 
 const ALL_LOCALES = ['hi', 'en'] as const
 type Locale = (typeof ALL_LOCALES)[number]
-const announced = (): string[] => mock.announce.mock.calls.map((c) => String(c[0]))
+/**
+ * TalkBack device session 2026-10-27 (T1) — every memorial screen but the outcome SPEAKS its heading on arrival
+ * (`useMemorialScreenAnnounce`). `announced()` is everything ELSE that was spoken, so the "silent" legs below keep asserting what
+ * they did (no refusal, no notice, no over-limit line); `arrivals()` is the arrival announcements alone (the T1 legs).
+ */
+const ARRIVAL_KEYS = ['write.title', 'photo.title', 'preview.title', 'intro.prompt_no_name'] as const
+const isArrival = (text: string): boolean =>
+  ALL_LOCALES.some(
+    (l) =>
+      ARRIVAL_KEYS.some((k) => tr(k, l) === text) ||
+      ((mock.view as MemorialMemberView | null)?.deceasedName != null &&
+        tr('intro.prompt', l, { name: (mock.view as MemorialMemberView).deceasedName! }) === text),
+  )
+const spokenAll = (): string[] => mock.announce.mock.calls.map((c) => String(c[0]))
+const announced = (): string[] => spokenAll().filter((x) => !isArrival(x))
+const arrivals = (): string[] => spokenAll().filter(isArrival)
 const rerenderIn = (r: ReturnType<typeof renderIn>, component: () => ReactNode, locale: Locale = 'hi') =>
   r.rerender(createElement(LocaleProvider, { initialLocale: locale }, createElement(component)))
 const cpoint = (n: number): string => String.fromCodePoint(n)
@@ -739,7 +754,7 @@ describe('R5 — the Send refusal, the nominee-code states, the notice and the W
       mock.view = withTheTrust()
       mock.withdraw.mockResolvedValue({ memorialState: 'withdrawn' })
       const r = renderIn(MemorialOutcomeScreen, 'en')
-      expect(mock.announce).not.toHaveBeenCalled() // the screen reader reads the screen itself on arrival
+      expect(announced()).toEqual([]) // the screen reader reads the screen itself on arrival
       fireEvent.click(screen.getByTestId('memorial-withdraw'))
       await settle()
       expect(mock.withdraw).toHaveBeenCalledWith('s-1')
@@ -780,7 +795,7 @@ describe('R5 — the Send refusal, the nominee-code states, the notice and the W
   // rather than hold the same literal, is proven by the "P4" block below, with a plan that answers distinguishable values.
   // T10 (a) — "real" is literal: with `planValues` null the mocked module DELEGATES to the actual `announcementPlan`
   // (`vi.importActual`), so this test fails if the plan's values change (it used to run against a copy of them).
-  it('with the real plan: the refusal is assertive and the write counter polite, on iOS and Android', async () => {
+  it('with the real plan: the refusal is assertive, and the write counter is ⛔ a live region (T2), on iOS and Android', async () => {
     const actual = await vi.importActual<typeof import('../../lib/death-certificate-announce')>('../../lib/death-certificate-announce')
     expect(mock.planValues).toBeNull()
     for (const os of ['ios', 'android'] as const) {
@@ -796,7 +811,7 @@ describe('R5 — the Send refusal, the nominee-code states, the notice and the W
       expect(screen.getByTestId('memorial-refusal')).toHaveAttribute('aria-live', 'assertive')
       cleanup()
       renderIn(MemorialWriteScreen, 'en')
-      expect(screen.getByText(tr('write.remaining', 'en', { count: '5996' }))).toHaveAttribute('aria-live', 'polite')
+      expect(screen.getByText(tr('write.remaining', 'en', { count: '5996' }))).not.toHaveAttribute('aria-live') // T2 — ⛔ a live region
       cleanup()
     }
   })
@@ -1663,7 +1678,7 @@ describe('AC8 — Withdraw while with the Trust', () => {
     await settle()
     expect(mock.invalidate).toHaveBeenCalled()
     expect(screen.queryByTestId('memorial-notice')).toBeNull()
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
   })
 
   it('any other refusal ⇒ the gentle generic line, and the outcome is refetched', async () => {
@@ -1724,7 +1739,7 @@ describe('R20 — no view ⇒ the header, a gentle line, a retry and the helplin
     expect(screen.getByTestId('memorial-view-missing-line')).toHaveAttribute('aria-live', 'polite') // a status, not an error
     expect(screen.queryByTestId('memorial-view-missing-retry')).toBeNull()
     expect(screen.getByTestId('helpline-cta')).toBeInTheDocument()
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
   })
 
   // The phone-safety wording of the draft-safety sentence (`view_missing.body`) — en and hi. The regexes must MATCH it (else
@@ -2229,19 +2244,19 @@ describe('P4 — every live region on the memorial screens takes the VALUE the a
     expect(screen.getByText(tr('handover.still_refused', 'en'))).toHaveAttribute('aria-live', 'plan-error')
   })
 
-  it('the counters (a STATUS under and over the limit — T8: the crossing is announced, not the counter) and the photo notices', async () => {
+  it('the counters (⛔ a live region under or over the limit — T2; T8: the crossing is announced, not the counter) and the photo notices', async () => {
     renderIn(MemorialWriteScreen, 'en')
-    expect(screen.getByTestId('memorial-body-counter')).toHaveAttribute('aria-live', 'plan-status')
+    expect(screen.getByTestId('memorial-body-counter')).not.toHaveAttribute('aria-live')
     fireEvent.change(screen.getByTestId('memorial-body'), { target: { value: 'क'.repeat(6001) } })
-    expect(screen.getByTestId('memorial-body-counter')).toHaveAttribute('aria-live', 'plan-status')
+    expect(screen.getByTestId('memorial-body-counter')).not.toHaveAttribute('aria-live')
     cleanup()
 
     mock.files.add('file:///docs/p.jpg')
     saveMemorialDraft('m-1', 'pool-1', { photoFileName: 'p.jpg', photoMime: 'image/jpeg', altText: 'विवरण' })
     renderIn(MemorialPhotoScreen, 'en')
-    expect(screen.getByTestId('memorial-alt-counter')).toHaveAttribute('aria-live', 'plan-status')
+    expect(screen.getByTestId('memorial-alt-counter')).not.toHaveAttribute('aria-live')
     fireEvent.change(screen.getByTestId('memorial-alt-text'), { target: { value: 'क'.repeat(301) } })
-    expect(screen.getByTestId('memorial-alt-counter')).toHaveAttribute('aria-live', 'plan-status')
+    expect(screen.getByTestId('memorial-alt-counter')).not.toHaveAttribute('aria-live')
     cleanup()
 
     mock.store.clear() // no photo picked any more: the button reads "Choose a photo"
@@ -2305,7 +2320,7 @@ describe('P5 — the "earlier version still stands" sentence is SPOKEN when it a
   it('without the flag only the state line is spoken; on arrival nothing is', () => {
     mock.view = view({ memorialState: 'withdrawn', submissionId: 's-2', body: 'x', canSend: true, earlierApprovalStands: true })
     const r = renderIn(MemorialOutcomeScreen, 'en')
-    expect(mock.announce).not.toHaveBeenCalled() // present on arrival: the screen reader reads the screen itself
+    expect(announced()).toEqual([]) // present on arrival: the screen reader reads the screen itself
     mock.view = view({ memorialState: 'withdrawn', submissionId: 's-2', body: 'x', canSend: true, earlierApprovalStands: false })
     rerenderIn(r, MemorialOutcomeScreen, 'en')
     expect(announced().join(' ')).not.toContain(tr('outcome.earlier_approval_stands', 'en'))
@@ -2339,58 +2354,58 @@ describe('P6 — the photo screen\'s notices and the alt-text counter', () => {
     await settle()
     expect(screen.getByTestId('memorial-photo-notice')).toHaveTextContent(tr('send.photo_unreadable', 'en'))
     expect(screen.getByTestId('memorial-photo-notice')).toHaveAttribute('aria-live', 'assertive')
-    expect(mock.announce).not.toHaveBeenCalled() // iOS-only: TalkBack speaks the live region itself
+    expect(announced()).toEqual([]) // iOS-only: TalkBack speaks the live region itself
     expect(loadMemorialDraft('m-1', 'pool-1').photoFileName).toBeUndefined() // nothing half-saved
   })
 
-  it('the alt-text counter is a status (polite) under the limit — and is not announced as the family types', () => {
+  it('the alt-text counter is a plain line under the limit (⛔ a live region — T2) — and is not announced as the family types', () => {
     mock.files.add('file:///docs/p.jpg')
     saveMemorialDraft('m-1', 'pool-1', { photoFileName: 'p.jpg', photoMime: 'image/jpeg', altText: 'विवरण' })
     renderIn(MemorialPhotoScreen, 'en')
     const counter = screen.getByTestId('memorial-alt-counter')
     expect(counter).toHaveTextContent(tr('photo.alt_remaining', 'en', { count: '295' }))
-    expect(counter).toHaveAttribute('aria-live', 'polite')
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(counter).not.toHaveAttribute('aria-live')
+    expect(announced()).toEqual([])
   })
 })
 
-describe('P8 / T8 — the counters stay POLITE; crossing INTO over the limit is announced ONCE (an error); the line is LINKED to its box', () => {
-  it.each(ALL_LOCALES.flatMap((l) => (['ios', 'android'] as const).map((os) => [l, os] as const)))('%s / %s write: polite throughout; the crossing is spoken once (not per keystroke), and again after coming back under', (locale, os) => {
+describe('P8 / T8 / T2 — the counters are ⛔ live regions; crossing INTO over the limit is announced ONCE (an error); the line is LINKED to its box', () => {
+  it.each(ALL_LOCALES.flatMap((l) => (['ios', 'android'] as const).map((os) => [l, os] as const)))('%s / %s write: ⛔ a live region throughout (T2); the crossing is spoken once (not per keystroke), and again after coming back under', (locale, os) => {
     mock.os = os
     renderIn(MemorialWriteScreen, locale)
     const counter = () => screen.getByTestId('memorial-body-counter')
     const type = (n: number) => fireEvent.change(screen.getByTestId('memorial-body'), { target: { value: 'क'.repeat(n) } })
     expect(counter()).toHaveTextContent(tr('write.remaining', locale, { count: '6000' }))
-    expect(counter()).toHaveAttribute('aria-live', 'polite')
+    expect(counter()).not.toHaveAttribute('aria-live')
     type(6000)
     expect(counter()).toHaveTextContent(tr('write.remaining', locale, { count: '0' }))
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
     type(6003)
     expect(counter()).toHaveTextContent(tr('write.over_limit', locale, { count: '3' }))
-    expect(counter()).toHaveAttribute('aria-live', 'polite') // ⛔ assertive on every keystroke
+    expect(counter()).not.toHaveAttribute('aria-live') // ⛔ assertive on every keystroke
     expect(announced()).toEqual([tr('write.over_limit', locale, { count: '3' })]) // the crossing, as an error, once
     type(6004)
     type(6009)
     expect(counter()).toHaveTextContent(tr('write.over_limit', locale, { count: '9' }))
     expect(announced()).toHaveLength(1) // typing further past the limit is not re-announced
     type(10)
-    expect(counter()).toHaveAttribute('aria-live', 'polite') // back under the limit
+    expect(counter()).not.toHaveAttribute('aria-live') // back under the limit
     expect(announced()).toHaveLength(1)
     type(6001)
     expect(announced()).toEqual([tr('write.over_limit', locale, { count: '3' }), tr('write.over_limit', locale, { count: '1' })])
   })
 
-  it.each(ALL_LOCALES)('%s photo: the alt-text counter has its own over-limit line (never "room for 0 more"), stays polite, and the crossing is spoken once', (locale) => {
+  it.each(ALL_LOCALES)('%s photo: the alt-text counter has its own over-limit line (never "room for 0 more"), is ⛔ a live region (T2), and the crossing is spoken once', (locale) => {
     mock.files.add('file:///docs/p.jpg')
     saveMemorialDraft('m-1', 'pool-1', { photoFileName: 'p.jpg', photoMime: 'image/jpeg', altText: 'क'.repeat(300) })
     renderIn(MemorialPhotoScreen, locale)
     const counter = () => screen.getByTestId('memorial-alt-counter')
     expect(counter()).toHaveTextContent(tr('photo.alt_remaining', locale, { count: '0' }))
-    expect(counter()).toHaveAttribute('aria-live', 'polite')
+    expect(counter()).not.toHaveAttribute('aria-live')
     fireEvent.change(screen.getByTestId('memorial-alt-text'), { target: { value: 'क'.repeat(302) } })
     expect(counter()).toHaveTextContent(tr('photo.alt_over_limit', locale, { count: '2' }))
     expect(counter()).not.toHaveTextContent(tr('photo.alt_remaining', locale, { count: '0' }))
-    expect(counter()).toHaveAttribute('aria-live', 'polite')
+    expect(counter()).not.toHaveAttribute('aria-live')
     fireEvent.change(screen.getByTestId('memorial-alt-text'), { target: { value: 'क'.repeat(305) } })
     expect(announced()).toEqual([tr('photo.alt_over_limit', locale, { count: '2' })])
     expect(tr('photo.alt_over_limit', locale, { count: '7' })).toContain('7')
@@ -2400,7 +2415,7 @@ describe('P8 / T8 — the counters stay POLITE; crossing INTO over the limit is 
     mock.planValues = { error: 'plan-error', status: 'plan-status' }
     renderIn(MemorialWriteScreen, 'en')
     fireEvent.change(screen.getByTestId('memorial-body'), { target: { value: 'क'.repeat(6001) } })
-    expect(screen.getByTestId('memorial-body-counter')).toHaveAttribute('aria-live', 'plan-status')
+    expect(screen.getByTestId('memorial-body-counter')).not.toHaveAttribute('aria-live')
     expect(announced()).toEqual([tr('write.over_limit', 'en', { count: '1' })])
   })
 })
@@ -2695,11 +2710,11 @@ describe('V8 — an over-limit state the screen STARTS in is not announced; only
     renderIn(MemorialWriteScreen, locale)
     const type = (n: number) => fireEvent.change(screen.getByTestId('memorial-body'), { target: { value: 'क'.repeat(n) } })
     expect(screen.getByTestId('memorial-body-counter')).toHaveTextContent(tr('write.over_limit', locale, { count: '3' }))
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
     type(6005)
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
     type(10)
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
     type(6001)
     expect(announced()).toEqual([tr('write.over_limit', locale, { count: '1' })])
   })
@@ -2708,7 +2723,7 @@ describe('V8 — an over-limit state the screen STARTS in is not announced; only
     saveMemorialDraft('m-1', 'pool-1', { body: 'क'.repeat(6002) })
     renderIn(MemorialWriteScreen, 'en')
     renderIn(MemorialWriteScreen, 'en')
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
   })
 
   it('photo: alt text already over the limit at load ⇒ silent; back under and over again ⇒ ONE announcement', () => {
@@ -2718,7 +2733,7 @@ describe('V8 — an over-limit state the screen STARTS in is not announced; only
     const type = (n: number) => fireEvent.change(screen.getByTestId('memorial-alt-text'), { target: { value: 'क'.repeat(n) } })
     expect(screen.getByTestId('memorial-alt-counter')).toHaveTextContent(tr('photo.alt_over_limit', 'en', { count: '2' }))
     type(305)
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
     type(10)
     type(301)
     expect(announced()).toEqual([tr('photo.alt_over_limit', 'en', { count: '1' })])
@@ -2925,7 +2940,7 @@ describe('W12 — a draft RESTORED over the limit is silent at mount, and the bo
     const over = tr('write.over_limit', locale, { count: '4' })
     expect(String(lastInput('memorial-body').accessibilityHint).startsWith(over)).toBe(true)
     expect(String(lastInput('memorial-body').accessibilityHint)).toContain(tr('write.hint', locale))
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
   })
 
   it.each(ALL_LOCALES)('%s photo', (locale) => {
@@ -2935,7 +2950,7 @@ describe('W12 — a draft RESTORED over the limit is silent at mount, and the bo
     const over = tr('photo.alt_over_limit', locale, { count: '3' })
     expect(String(lastInput('memorial-alt-text').accessibilityHint).startsWith(over)).toBe(true)
     expect(String(lastInput('memorial-alt-text').accessibilityHint)).toContain(tr('photo.alt_hint', locale))
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
   })
 })
 
@@ -3197,13 +3212,13 @@ describe('X7 (family 13 (d)) — after a Retry tap, the loading line is SPOKEN o
     expect(screen.getByTestId('memorial-view-missing-line')).toHaveTextContent(tr('view_missing.loading', 'en'))
     expect(screen.getByTestId('memorial-view-missing-line')).toHaveAttribute('aria-live', 'polite')
     if (os === 'ios') expect(announced()).toEqual([tr('view_missing.loading', 'en')])
-    else expect(mock.announce).not.toHaveBeenCalled()
+    else expect(announced()).toEqual([])
   })
 
   it('the FIRST load\'s line is still not announced (the screen reader reads the screen on arrival)', () => {
     mock.viewState = 'loading'
     renderIn(MemorialWriteScreen, 'en')
-    expect(mock.announce).not.toHaveBeenCalled()
+    expect(announced()).toEqual([])
   })
 })
 
@@ -3517,5 +3532,62 @@ describe('Z4 (b) — the code-verified retry got NO answer, then the words were 
     expect(document.body.textContent).not.toContain(tr('handover.still_refused', 'en'))
     expect(screen.getByTestId('memorial-handover')).toBeInTheDocument()
     expect(mock.otpSend).toHaveBeenCalledTimes(2)
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// TalkBack device session (2026-10-27) — T1: the stack hides its header, so each screen SPEAKS its heading on arrival
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+describe('T1 — a memorial screen speaks its heading on arrival (on the device the intro, Write and Preview opened in silence)', () => {
+  it.each(
+    ALL_LOCALES.flatMap((l) =>
+      (['ios', 'android'] as const).flatMap((os) =>
+        ([
+          ['write', MemorialWriteScreen, 'write.title'],
+          ['photo', MemorialPhotoScreen, 'photo.title'],
+          ['preview', MemorialPreviewScreen, 'preview.title'],
+        ] as const).map(([name, Screen, key]) => [l, os, name, Screen, key] as const),
+      ),
+    ),
+  )('%s / %s %s: the heading, ONCE, on BOTH platforms (a page change has no live region beside it)', (locale, os, _n, Screen, key) => {
+    mock.os = os
+    saveMemorialDraft('m-1', 'pool-1', { body: 'शब्द' })
+    renderIn(Screen, locale)
+    expect(arrivals()).toEqual([tr(key, locale)])
+  })
+
+  it.each(ALL_LOCALES)('%s intro: the question WITH the name is the arrival', (locale) => {
+    renderIn(MemorialIntroScreen, locale)
+    expect(arrivals()).toEqual([tr('intro.prompt', locale, { name: 'शांति देवी' })])
+  })
+
+  it('the intro whose view arrives AFTER the screen gained focus speaks the question then — once', () => {
+    mock.viewState = 'loading'
+    const r = renderIn(MemorialIntroScreen, 'en')
+    expect(arrivals()).toEqual([])
+    mock.viewState = 'data'
+    rerenderIn(r, MemorialIntroScreen, 'en')
+    rerenderIn(r, MemorialIntroScreen, 'en')
+    expect(arrivals()).toEqual([tr('intro.prompt', 'en', { name: 'शांति देवी' })])
+  })
+
+  it('coming BACK to a screen is a page change too: spoken again on the next focus, ⛔ while it stays focused', () => {
+    saveMemorialDraft('m-1', 'pool-1', { body: 'शब्द' })
+    const r = renderIn(MemorialWriteScreen, 'en')
+    rerenderIn(r, MemorialWriteScreen, 'en')
+    expect(arrivals()).toEqual([tr('write.title', 'en')])
+    blurScreens()
+    focusScreens()
+    expect(arrivals()).toEqual([tr('write.title', 'en'), tr('write.title', 'en')])
+  })
+
+  it('the intro that shows something else (sent before, no draft) speaks ⛔ question; the outcome speaks ⛔ arrival of its own', () => {
+    mock.view = view({ memorialState: 'with_the_trust', submissionId: 's-1', body: 'x', canWithdraw: true })
+    renderIn(MemorialIntroScreen, 'en')
+    expect(arrivals()).toEqual([])
+    cleanup()
+    renderIn(MemorialOutcomeScreen, 'en')
+    expect(spokenAll()).toEqual([]) // its arrival after a Send is spoken by the Send (R5); on arrival the reader reads it
   })
 })

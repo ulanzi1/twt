@@ -8,9 +8,12 @@
 // has not been loaded yet.
 // T6 — and RE-read every time the screen comes back to the front: Preview → "Change the words" pushes a SECOND Write, so a
 // first Write left behind it would otherwise show (and, on a keystroke, save) the words from before the edit.
-// T8 — the counter is a POLITE status line as the family types; crossing INTO over the limit is announced ONCE (the plan's
-// error kind, through `useMemorialAnnounce`), never on every keystroke past it; and while over, the over-limit line is
-// LINKED to the box — the box's own hint reads it (React Native has no `aria-describedby`; the handover-code precedent).
+// T8 — crossing INTO over the limit is announced ONCE (the plan's error kind, through `useMemorialAnnounce`), never on every
+// keystroke past it; and while over, the over-limit line is LINKED to the box — the box's own hint reads it (React Native has
+// no `aria-describedby`; the handover-code precedent). ⭐ TalkBack device session 2026-10-27 (T2, the Row 41 (h) check T8
+// owed): the counter is ⛔ a live region any more — even POLITE, TalkBack spoke it 9 times in 26 typed characters, cutting into
+// the family's own words. It is a plain line, read in its place; the crossing announcement is the only thing spoken.
+// T1 (the same session) — the screen's heading is SPOKEN on arrival (the stack has no title).
 // V8 — a draft that is ALREADY over the limit when it is loaded (restored, or a pushed second Write) is not announced: only a
 // crossing the family makes after the draft is read.
 // V9 (a) — while this screen's last save FAILED (full storage), the stored draft is older than the box: the focus re-read is
@@ -26,7 +29,7 @@ import { useLocale } from '@twt/i18n/react'
 
 import { MemorialHeader } from '../../components/memorial-authorship/MemorialHeader'
 import { MemorialViewMissing } from '../../components/memorial-authorship/MemorialViewMissing'
-import { memorialLiveRegion, useMemorialOverLimitAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
+import { useMemorialOverLimitAnnounce, useMemorialScreenAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import { loadMemorialDraft, saveMemorialDraft } from '../../lib/memorial-draft'
 import { useMemorialT } from '../../lib/memorial-i18n'
@@ -64,6 +67,7 @@ export default function MemorialWriteScreen(): React.ReactElement {
   const remaining = MEMORIAL_BODY_MAX_CODE_POINTS - memorialCodePointLength(body)
   const overText = remaining < 0 ? t('write.over_limit', { count: String(-remaining) }) : null
   useMemorialOverLimitAnnounce(overText, saved !== null)
+  useMemorialScreenAnnounce(view && memberId ? t('write.title') : null)
   // W7 — a Retry TAP shows progress until its fetch settles (a flag inside `MemorialViewMissing`, whatever the last result);
   // `loading` here is only the FIRST load (`isPending`) — a background refetch (`isFetching`) must not flip the line (V11).
   if (!view || !memberId)
@@ -80,8 +84,6 @@ export default function MemorialWriteScreen(): React.ReactElement {
     setSaved(next)
     lastSaveFailed.current = !saveMemorialDraft(memberId, view.driveId, { body: next }).saved
   }
-  // T8 — POLITE always (a status as the family types); the crossing is announced once by the hook above.
-  const counterLive = memorialLiveRegion('status')
   // The family's own ORIGINAL text — offered only when they sent before and the box is empty.
   const original = view.body !== null && saved !== null && body === '' && view.memorialState !== 'none' ? view.body : null
 
@@ -115,8 +117,8 @@ export default function MemorialWriteScreen(): React.ReactElement {
             accessibilityHint={overText !== null ? `${overText} ${t('write.hint')}` : t('write.hint')}
             {...(Platform.OS === 'ios' ? { accessibilityLanguage: locale === 'hi' ? 'hi-IN' : 'en-IN' } : {})}
           />
-          {/* Over the limit the line says so (S8); it stays a polite status — the crossing itself is announced once (T8). */}
-          <Paragraph size="$2" accessibilityLiveRegion={counterLive} testID="memorial-body-counter">
+          {/* Over the limit the line says so (S8); ⛔ a live region (T2) — the crossing itself is announced once (T8). */}
+          <Paragraph size="$2" testID="memorial-body-counter">
             {overText ?? t('write.remaining', { count: String(remaining) })}
           </Paragraph>
           <Paragraph size="$2">{t('draft.kept_on_phone')}</Paragraph>

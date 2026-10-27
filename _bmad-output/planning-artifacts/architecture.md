@@ -3103,6 +3103,11 @@ definitions live in the shared platform-adapter layer.
   at the architecture layer; specific edge transform provider committed in an
   implementation ADR.
 - Astro Image component on the public site; Expo Image on native.
+- ⚠ *Dated note (2026-10-27, Story 11b.4a — `#decision-2026-10-27-412` MP5): the FIRST public image — the family memorial's photo
+  on the Sahyog Vivran page — is ONE re-encoded variant (`sharp`, fit 960 × 1200, sRGB, JPEG q82, every metadata segment removed)
+  served by the API behind a proxied plain `<img loading="lazy">`, re-checked on every uncached request. ⛔ It is ⛔ not the responsive
+  pipeline above (⛔ no per-device variants, ⛔ no format negotiation, ⛔ no edge transform) and ⛔ not the Astro Image component — a
+  recorded departure; the implementation ADR this section names is still owed. ⛔ No word above is edited.*
 
 ##### 4.11.3 Performance instrumentation
 

@@ -4,6 +4,55 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 11b-4a-family-memorial-public-render.md (2026-10-27)
+
+Story 11b.4a renders the family's approved memorial on the public Sahyog Vivran page (the words joined across any part the Trust
+left out — ⛔ no marker, `-411` item 3; the photo on its own re-checked route, re-encoded without metadata) and builds the
+helpline's take-down at the nominee's request with the approver email — build decisions
+[`-412`](../../.decision-log.md#decision-2026-10-27-412) (MP1–MP14), on the Panel's
+[`-411`](../../.decision-log.md#decision-2026-10-27-411) (PQ1 A, PQ2 A, PC1 B, PC2–PC5 A). ⛔ Nothing is live: the switch stays off
+until launch-gate Row 41 closes (its new criteria (l)–(q)).
+
+- **(1) RULED — `-411` item 1 (PQ1 A):** when the nominee who sent the memorial has died, cannot be reached or has been replaced,
+  ⛔ no one in the family can have it taken down (save that the CURRENT nominee may send a new version over an
+  `approved_with_omissions` memorial, which replaces it once approved). A ratified, accepted cost — recorded, ⛔ no Trigger.
+- **(2) RULED — `-411` item 2 (PQ2 A):** the words and photo appear as approved even though the page names ⛔ no member yet (the
+  family's own words may name them). ⛔ No Trigger.
+- **(3) RULED — `-411` items 3–7:** ⛔ no marker where a part was left out (PC1 B); the nominee may write again after a take-down
+  (PC2 A); ⛔ no substitute recipient for an approver who has left (PC3 A); the photo's description is public (PC4 A); the
+  member-sees-more floor does ⛔ not reach the family's words (PC5 A). ⛔ No Trigger.
+- **(4) Edge latency.** Once an edge cache exists a take-down stays visible for up to about 5 minutes (`s-maxage=300`) — ⛔ no purge,
+  ⛔ no surrogate keys. **Trigger: the edge cache rule (Row 41 (p)).**
+- **(5) A new approved photo can sit beside the new words for ~5 minutes** (the photo route has ⛔ no per-version URL — MP4).
+  **Trigger: Row 41 (p).**
+- **(6) Kinship** (11b.4 item (2)) — still 11b.5's, with its own Panel question on the purpose. **Trigger: Story 11b.5.**
+- **(7) A family's own erasure request** for their words (11b.4 item (7)) — ⛔ not built here. **Trigger: the first such request.**
+- **(8) Architecture §4.11.2's responsive media pipeline and the Astro Image component** stay unbuilt: ONE variant behind a proxied
+  plain `<img>` (MP5; the dated note in `architecture.md`). **Trigger: the implementation ADR §4.11.2 names, or a second public image.**
+- **(9) Story 11b.5 refactors this markup** (`FamilyMemorial.astro`) into `<MemorialRecord>` / `<PortraitFrame>` (MP1).
+  **Trigger: Story 11b.5.**
+- **(10) Story 0.9 UN-ATTESTED** — the frame's look and the section's place are ⛔ not validated against a bereaved-family
+  conversation (as for 11b.4). **Trigger: the Story 0.9 conversation.**
+- **(11) Counsel:** `-393` M4 and "only the nominee" against the privacy policy's *"withdrawal is as easy as giving it"* (carried from
+  `-393` / `-395`). **Trigger: counsel's next review of the memorial texts.**
+- **(12) `sharp` CPU and memory per photo request** (~200 MB peak at 50 MP), bounded ONLY by `limits.search` until an edge cache
+  exists. **Trigger: Row 41 (p), or a measured CPU incident.**
+- **(13) ⛔ No edge cache and ⛔ no Traefik route for `/sahyog-vivran/*`** (inherits the 6.30 F5 mismatch) — Row 41 (p), (q).
+  ⚠ And the `apps/api` runtime image copies ⛔ no `node_modules` (a *"PR-1 placeholder"*) — `sharp` cannot load there until it does
+  (Row 41 (n)). **Trigger: the first Dokploy deploy of the API.**
+- **(14) `-392` Not covered — whether the operator's decision is reviewed or can be appealed:** moot for the take-down (⛔ no merit
+  decision after `-393` (ii)); for `kept` / `superseded` ⛔ no review exists — recorded. **Trigger: a Panel question.**
+- **(15) `-393` Not covered — the call script and what the family is told when they keep it:** the script is the approved operator
+  copy (AC14); what a family is told on `kept` is ⛔ not built (⛔ no family-facing notice — the call is the telling).
+  **Trigger: a Story 0.9 / helpline review.**
+- **(16) The MP8 (b) narrowing of `-393` M4** for a clean-approved memorial (every smaller fix passes through a take-down) — accepted
+  by the Panel (`-411` item 4, PC2 A). ⛔ No Trigger.
+- **(17) The v3 permission text says the Trust *"will never change your words"*, while the page now joins the words across an
+  unmarked cut** (`-411` item 3 accepted *"as if the family had written it that way"*). Carried to counsel with (11).
+  **Trigger: as (11).**
+
+---
+
 ## TalkBack device session (2026-10-27) — results, the fixes, and what stays open
 
 Android emulator `Pixel_9` (Android 15), TalkBack 15, the app in **Hindi**; `main` at `bab88287`, then the fixes on

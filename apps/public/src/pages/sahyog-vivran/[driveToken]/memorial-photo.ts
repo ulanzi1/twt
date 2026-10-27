@@ -9,7 +9,9 @@
 // take-down, a photo left out). An upstream FAULT is ⛔ not a 404: 503 + `Retry-After` + `no-store`, the page's outage rule.
 // ⚠⛔ THIS ENDPOINT'S ONLY GUARDS ARE ITS OWN TESTS: `scripts/sahyog-vivran-financial-truth` scans it only because it is listed in
 // `SCAN_FILES` BY HAND (its directory scan is ⛔ not recursive), and the pii-scrape route coverage loads `.astro` files only
-// (`packages/contracts/scripts/check-pii-scrape.ts`) ⇒ `tests/memorial-photo-endpoint.test.ts` is the header check.
+// (`packages/contracts/scripts/check-pii-scrape.ts`) ⇒ the HEADER check is the AC4 leg of the DB-gated, built-server
+// `tests/integration/public-pages/family-memorial-render.spec.ts` (the headers it builds, ⛔ no query string or cookie forwarded,
+// the empty 404, the 503) — ⚠ it skips without a database; `tests/family-memorial-source.test.ts` only scans this file for `set:html`.
 
 import type { APIRoute } from 'astro';
 

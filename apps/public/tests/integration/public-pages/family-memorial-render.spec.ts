@@ -105,8 +105,10 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
       try {
         ready = (await fetch(`${origin}/sahyog-vivran/probe`)).status < 500;
       } catch {
-        await new Promise((r) => setTimeout(r, 250));
+        ready = false;
       }
+      // ⭐ Back off on a 5xx too — a server that answers 500 while it boots would otherwise burn all 80 tries in a tight loop.
+      if (!ready) await new Promise((r) => setTimeout(r, 250));
     }
     // ⛔ Fail LOUD — a server that never came up must ⛔ not read as six unrelated failures.
     if (!ready) throw new Error(`the built server did not come up at ${origin}: ${stderr.slice(0, 2000)}`);
@@ -130,12 +132,17 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     const { status, html } = await page();
     expect(status).toBe(200);
     const b = bodyOf(html);
-    const section = b.slice(b.indexOf('aria-labelledby="sv-family-memorial-heading"'));
+    const sectionAt = b.indexOf('aria-labelledby="sv-family-memorial-heading"');
+    // ⚠ PRESENCE FIRST: `indexOf` is -1 for an absent marker, and `slice(-1)` / `-1 < n` both PASS vacuously on it.
+    expect(sectionAt, 'the memorial section is on the page').toBeGreaterThan(-1);
+    const section = b.slice(sectionAt);
     expect(section.length).toBeLessThan(b.length);
     expect(b).toContain('In the family&#39;s words');
     // ⭐ The ORDER: the facts group, THEN the memorial, THEN the contributor list.
-    expect(b.indexOf('Drive details')).toBeLessThan(b.indexOf('sv-family-memorial-heading'));
-    expect(b.indexOf('sv-family-memorial-heading')).toBeLessThan(b.indexOf('sv-contributors-heading'));
+    const at = { facts: b.indexOf('Drive details'), memorial: b.indexOf('sv-family-memorial-heading'), contributors: b.indexOf('sv-contributors-heading') };
+    for (const [name, i] of Object.entries(at)) expect(i, `the ${name} marker is on the page`).toBeGreaterThan(-1);
+    expect(at.facts).toBeLessThan(at.memorial);
+    expect(at.memorial).toBeLessThan(at.contributors);
     // ⭐ Each paragraph: `dir="auto"`, `white-space: pre-wrap`, the text as given (the double space, the single newline, the
     // isolates and the override — ⛔ escaped into markup, ⛔ collapsed, ⛔ re-ordered).
     const paragraphs = [...section.matchAll(/<p([^>]*)>([\s\S]*?)<\/p>/g)].slice(0, 2);
@@ -187,6 +194,18 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     expect(before.html).not.toContain('sv-family-memorial-heading');
     expect(after.status).toBe(before.status);
     expect(after.html).toBe(before.html);
+  });
+
+  it('⭐ R22 / Trap 9 — a memorial with NOTHING in it (`words: []`, no photo) draws ⛔ no heading — and the section IS drawn the moment it holds words', async () => {
+    memorialState = { words: WORDS, photo: null };
+    const withWords = await page();
+    expect(withWords.html).toContain('sv-family-memorial-heading'); // non-vacuity: the same request shape DOES draw it
+    memorialState = { words: [], photo: null };
+    const empty = await page();
+    memorialState = null;
+    expect(empty.status).toBe(200);
+    expect(empty.html).not.toContain('sv-family-memorial-heading');
+    expect(empty.html).not.toContain('In the family&#39;s words');
   });
 
   it('⭐ AC4 — the photo endpoint: `image/jpeg`, the page\'s cache posture, nosniff; its OWN headers (⛔ the upstream\'s); ⛔ the query string, ⛔ the cookie', async () => {

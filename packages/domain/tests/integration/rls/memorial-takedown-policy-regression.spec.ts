@@ -395,6 +395,26 @@ describe.skipIf(!hasDatabase)('0187 — the memorial take-down tables: RLS, FKs,
         'memorial_takedown_approver_emails_request_recipient_uq',
       );
     });
+
+    it('(l2) the outbox, as the superuser: attempt count ≥ 1, an over-long `detail` / `first_detail`, an off-vocabulary `first_detail` — each violating row names the ONE constraint it trips', async () => {
+      const { client } = getTx();
+      const a = await seedWorld(PARIWAR_A);
+      // ⚠ NO `enterAppScope`: `attempt_count` and `first_detail` are ⛔ in `twt_app`'s INSERT column set (probe (c)) — under the app role these
+      // rows would stop at 42501, before their CHECK. The superuser path is 6.25's (its probes insert the same columns).
+      expectCheck(await ins(client, EMAILS, emailRow(a, { attempt_count: 0 })), 'memorial_takedown_approver_emails_attempt_count_check');
+      // PG checks CHECKs in NAME order: the length CHECKs precede the vocabulary ones ⇒ an over-long value reports length; a short
+      // off-vocabulary one reports the vocabulary (the `detail` vocabulary probes are in (l)).
+      expectCheck(await ins(client, EMAILS, emailRow(a, { detail: 'x'.repeat(201) })), 'memorial_takedown_approver_emails_detail_length_check');
+      expectCheck(await ins(client, EMAILS, emailRow(a, { first_detail: 'x'.repeat(201) })), 'memorial_takedown_approver_emails_first_detail_length_check');
+      expectCheck(
+        await ins(client, EMAILS, emailRow(a, { first_detail: 'Message rejected: a@b.in' })),
+        'memorial_takedown_approver_emails_first_detail_vocabulary_check',
+      );
+      expectCheck(await ins(client, EMAILS, emailRow(a, { first_detail: 'no_pariwar_admin' })), 'memorial_takedown_approver_emails_first_detail_vocabulary_check');
+      // Legal rows of the same shape: a second attempt that kept its first detail, the longest names the grammar admits.
+      await insOk(client, EMAILS, emailRow(a, { attempt_count: 2, first_detail: 'transient:timeout', detail: 'held:AccountSuspendedException' }));
+      await insOk(client, EMAILS, emailRow(a, { detail: `rejected:599:${'A'.repeat(64)}`, first_detail: `held:${'b'.repeat(64)}` }));
+    });
   });
 
   describe('the outbox trigger (0153 / 0154 mirrored)', () => {

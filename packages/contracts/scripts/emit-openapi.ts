@@ -4882,14 +4882,14 @@ registry.registerPath({
   description:
     'Public. The photo of the version the page shows (the latest approval with no withdrawal), only when the Trust kept it, ' +
     're-encoded as one JPEG (≤ 960 × 1200, sRGB, every metadata segment removed). `Cache-Control: public, max-age=60, ' +
-    's-maxage=300`. Every refusal — the switch off, the publication kill switch, an unknown token, no shown memorial, the photo ' +
-    'left out, an erased member, a missing object — is the same empty 404 as an unknown token; a KMS outage is 503 no-store.',
+    's-maxage=300`. Every refusal — the switch off, the publication kill switch, an unknown token, a drive that is not shown, no ' +
+    'shown memorial, the photo left out, an erased member, a missing object, a storage fault, an image that cannot be re-encoded — ' +
+    'is the same empty 404 as an unknown token. The route decrypts nothing, so it has no KMS-outage arm.',
   tags: ['public-pages'],
   request: { params: z.object({ pariwarId: z.string().uuid(), driveToken: z.string().min(1).max(128) }) },
   responses: {
     200: { description: 'The photo', content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } } } },
     404: { description: 'Not found (empty body)' },
-    503: { description: 'Temporarily unavailable' },
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 const takedownPariwar = z.object({ pariwarId: z.string().uuid() });
@@ -4938,16 +4938,17 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/memorial-takedowns/drives/{poolId}/requests',
   summary: "Record the nominee's take-down request (after calling them back)",
   description:
-    '`memorial.takedown`; `Idempotency-Key`. `calledBack: true` and when the nominee first asked (⛔ in the future, ⛔ more than 7 ' +
-    'days ago). One open request per drive.',
+    '`memorial.takedown`; `Idempotency-Key`. `calledBack: true`, when the nominee first asked (⛔ in the future, ⛔ more than 7 ' +
+    'days ago) and `shownSubmissionId` — the version the operator was looking at; if another is shown by the time of the write the ' +
+    'answer is 409 `memorial_takedown.shown_changed` and nothing is recorded. One open request per drive.',
   tags: ['memorial-takedown'],
   request: { params: takedownPariwar.extend({ poolId: z.string().uuid() }), body: { content: jsonOf(MemorialTakedownRequestInputSchema), required: true } },
   responses: {
     201: { description: 'Recorded', content: jsonOf(MemorialTakedownRequestComponent) },
-    400: errorResponse('Invalid input'),
+    400: errorResponse('Invalid input · memorial_takedown.first_contact_out_of_range'),
     403: errorResponse('Missing memorial.takedown'),
     404: errorResponse('memorial_takedown.not_found'),
-    409: errorResponse('memorial_takedown.request_open'),
+    409: errorResponse('memorial_takedown.request_open · memorial_takedown.shown_changed'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 registry.registerPath({

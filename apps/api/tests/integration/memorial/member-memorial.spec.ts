@@ -24,6 +24,15 @@ import {
   type MemorialWorld,
 } from './_fixture.js';
 
+/** `jpegWithGps()` with its frame header (SOF0) declaring `width × height` — the Send's stripper reads the header, ⛔ it never decodes. */
+function jpegDeclaring(width: number, height: number): Buffer {
+  const b = Buffer.from(jpegWithGps());
+  const sof = b.indexOf(Buffer.from([0xff, 0xc0]));
+  b.writeUInt16BE(height, sof + 5);
+  b.writeUInt16BE(width, sof + 7);
+  return b;
+}
+
 describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
   let t: TestApp;
 
@@ -188,6 +197,9 @@ describe.skipIf(!hasDatabase)('memorial — member routes (live DB)', () => {
     // 300 code points is the limit (MEMORIAL_ALT_TEXT_MAX_CODE_POINTS); a Devanagari letter is ONE code point, 301 is over.
     ['alt text over the limit', [...sendFields({ altText: 'क'.repeat(301) }), { kind: 'file', name: 'photo', filename: 'a.jpg', contentType: 'image/jpeg', bytes: jpegWithGps() }], 400, 'memorial.alt_text_too_long'],
     ['a photo over the size limit', [...sendFields({ altText: 'x' }), { kind: 'file', name: 'photo', filename: 'a.jpg', contentType: 'image/jpeg', bytes: Buffer.alloc(MEMORIAL_PHOTO_MAX_BYTES + 1024, 0xff) }], 400, 'memorial.photo_too_large'],
+    // R14 — the pixels, ⛔ not only the bytes: 10 000 × 5 001 is one row over MEMORIAL_PHOTO_MAX_PIXELS (50 000 000), and a stored photo
+    // the public route's decode refuses would be advertised on the page and 404 forever.
+    ['a photo over the pixel limit', [...sendFields({ altText: 'x' }), { kind: 'file', name: 'photo', filename: 'a.jpg', contentType: 'image/jpeg', bytes: jpegDeclaring(10_000, 5_001) }], 400, 'memorial.photo_too_large'],
   ] as const)('refuses %s', async (_name, parts, status, code) => {
     const w = await seedMemorialWorld(t);
     await handover(t, w);

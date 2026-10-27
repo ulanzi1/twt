@@ -6,7 +6,7 @@
 // the Pariwar, ⛔ no email (⛔ no further identity read), silent at zero. It takes ⛔ nothing down: `-393` M4 — the nominee may
 // choose to keep the memorial, so day 7 is a prompt to the operator, ⛔ never an automatic act.
 // The read is CROSS-TENANT on the BYPASSRLS service pool — the domain's `countOverdueMemorialTakedownRequests` carries the written
-// defence. ⚠ The queue name is a module constant HERE — owed to `@twt/queue`'s `QUEUE_NAMES` (DD-3), with the approver email's.
+// defence. The queue name lives in `@twt/queue`'s `QUEUE_NAMES` (the registry — DD-3); the constant below is a local alias for it.
 
 import { memorial } from '@twt/domain';
 import { QUEUE_NAMES, type Job, type QueueClient } from '@twt/queue';

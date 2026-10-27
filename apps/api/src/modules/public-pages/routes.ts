@@ -411,8 +411,10 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
   );
 
   // ── Story 11b.4a — the family memorial's PHOTO, the same surface's data (MP4 / MP5) ───────────────────────────────────────
-  // ⭐ IT JOINS {@link SAHYOG_VIVRAN_APPLICABLE_CONTROLS} (the story's Question 8): the same named SEARCH tier (control 1), the
-  // same unguessable address (control 7), `noindex` via the global hook, the server-side Tier-1 boundary (the object key
+  // ⭐ ITS WRITTEN DEFENCE IS {@link SAHYOG_VIVRAN_APPLICABLE_CONTROLS}, BY DOCUMENTATION ONLY (the story's Question 8; departure (c)):
+  // that set is a list of controls with ⛔ no list of routes, so nothing in code or in a test binds this route to it — the same
+  // named SEARCH tier (control 1) is wired in the `config` below, the rest is claimed here and in the `login-wall.spec.ts`
+  // entry: the same unguessable address (control 7), `noindex` via the global hook, the server-side Tier-1 boundary (the object key
   // ⛔ never leaves the API) and ⛔ no onward affordance. ⚠ Controls 2 and 3 (page size, horizon) bind nothing here — ONE photo per
   // drive, ⛔ no `page`, ⛔ no `limit` — and the strict EMPTY query makes every parameter a 400 (⛔ no cache-buster).
   // ⛔ NEVER the page handler's flow (Trap 19): ⛔ no contributor read, ⛔ no appeal-reversal audit.

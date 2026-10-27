@@ -38,6 +38,17 @@ const NON_LIST_GET_ALLOWLIST = new Set<string>([
   '/api/v1/p/{pariwarId}/moderation/reason-codes',
 ]);
 
+// ⚠ NOT on this list, on purpose — Story 11b.4a's take-down reads (review R17):
+//   · GET /api/v1/p/{pariwarId}/memorial-takedowns/requests  → `{ requests }`
+//   · GET /api/v1/p/{pariwarId}/memorial-takedowns/members/{memberId}/drives → `{ drives }`
+// The detector below flags a top-level array or an `{ items[] }` body ONLY, so it never examines these two named-array bodies (nor
+// the ~55 other `{ <name>: [] }` GET bodies — a probe of the live route table found 57) — an allowlist entry here would be INERT.
+// What bounds them is elsewhere: `requests` is the domain read's own `clampLimit`ed `.limit()` (200; the domain-accessor-invariants
+// gate refuses an unclamped one) — one open request per drive keeps a real Pariwar's list in single digits, and past the bound the
+// LEAST urgent requests (latest due date) fall off the list while the overdue watch still counts every one. `drives` is bounded by
+// the data (the closed pools of ONE deceased member that carry a shown memorial) and is not clamped: its `DISTINCT ON` orders by pool
+// id, so a `LIMIT` would cut by id, not by age. If the detector ever learns named-array bodies, these two are the reasons to carry over.
+
 interface OpenApiParam {
   readonly name?: string;
   readonly in?: string;

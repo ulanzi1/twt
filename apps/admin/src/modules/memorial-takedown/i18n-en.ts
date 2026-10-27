@@ -19,11 +19,17 @@ const EN: Record<string, string> = {
   'takedown.lookup.drives': 'Drives with a memorial on the page',
   'takedown.lookup.noDrives': 'This member has no memorial on any Sahyog Vivran page.',
   'takedown.lookup.openRequest': 'A request is open',
+  'takedown.lookup.drivesLoading': 'Loading this member’s drives…',
+  'takedown.lookup.drivesError': 'Could not load this member’s drives. Please try again.',
   'takedown.open.title': 'Open requests, oldest first',
+  'takedown.open.loading': 'Loading the open requests…',
+  'takedown.open.error': 'Could not load the open requests. Please reload.',
   'takedown.open.empty': 'No request is open.',
   'takedown.open.due': 'Due',
   'takedown.open.overdue': 'Overdue',
   'takedown.open.firstContact': 'Nominee first asked',
+  'takedown.open.drive': 'Drive',
+  'takedown.open.status': 'Status',
   'takedown.drive.loading': 'Loading the drive…',
   'takedown.drive.notFound': 'There is no memorial to take down on this drive.',
   'takedown.drive.error': 'Could not load this drive. Please reload.',
@@ -34,6 +40,7 @@ const EN: Record<string, string> = {
   'takedown.callBack.title': 'Call this nominee back',
   'takedown.callBack.body': 'Only this nominee — the one who sent the memorial on the page — can ask for it to be taken down. Anyone else who calls: listen, and ask them to have the nominee call.',
   'takedown.callBack.unreadable': 'Not readable just now',
+  'takedown.script.title': 'Before you take it down',
   'takedown.script.intro':
     'Before you take it down, ask what is troubling them. Offer what is smaller than removal: leaving out a sentence or a name, removing only the photo, or sending a new version.',
   'takedown.script.send_now':
@@ -47,13 +54,16 @@ const EN: Record<string, string> = {
   'takedown.record.calledBack': 'I called the nominee back on this number and they asked for it',
   'takedown.record.firstContact': 'When the nominee first asked (the 7 days run from here)',
   'takedown.record.submit': 'Record the request',
+  'takedown.record.retry': 'Try again',
   'takedown.record.recorded': 'Request recorded.',
   'takedown.requests.title': 'Requests',
   'takedown.requests.open': 'Open',
+  'takedown.requests.received': 'Recorded',
   'takedown.requests.decidedLate': 'decided after the due date',
   'takedown.outcome.taken_down': 'Taken down',
   'takedown.outcome.kept': 'Kept',
   'takedown.outcome.superseded': 'Superseded',
+  'takedown.decide.title': 'Decide the request',
   'takedown.action.takeDown': 'Take it down',
   'takedown.action.confirmTakeDown': 'Confirm: take it down',
   'takedown.action.kept': 'The nominee chose to keep it',
@@ -61,8 +71,11 @@ const EN: Record<string, string> = {
   'takedown.action.cancel': 'Cancel',
   'takedown.stepUp.needed': 'Taking a memorial down needs a fresh verification.',
   'takedown.stepUp.send': 'Send me a code',
+  'takedown.stepUp.sent': 'Code sent. Enter it below.',
+  'takedown.stepUp.sendError': 'Could not send a code just now. Please try again.',
   'takedown.stepUp.code': 'Code',
   'takedown.stepUp.verify': 'Verify',
+  'takedown.stepUp.verifyError': 'Could not verify that code. Check it, or send a new code, and try again.',
   'takedown.decided': 'Recorded.',
   'error.memorial_takedown.not_found': 'There is no memorial to take down on this drive any more.',
   'error.memorial_takedown.request_open': 'This drive already has an open request.',
@@ -71,6 +84,8 @@ const EN: Record<string, string> = {
     'The memorial on the page is no longer the one this nominee asked about. Close the request as changed, and ask the nominee of the version now shown to call.',
   'error.memorial_takedown.shown_unchanged': 'The memorial on the page has not changed, so the request cannot be closed as changed.',
   'error.memorial_takedown.first_contact_out_of_range': 'The nominee’s first contact must be in the last 7 days, and not in the future.',
+  'error.record.shown_changed':
+    'The memorial on the page changed while you were on the call, so nothing was recorded. Reload this drive, check who the nominee is now, and call them back before recording.',
   'error.unknown': 'Could not record this. Please reload and try again.',
 };
 
@@ -81,4 +96,9 @@ export function resolveEn(key: string): string {
 /** A refusal's plain-English sentence by its code; anything this build does not know gets the generic sentence. */
 export function errorSentence(code: string | undefined): string {
   return code !== undefined && Object.prototype.hasOwnProperty.call(EN, `error.${code}`) ? EN[`error.${code}`]! : EN['error.unknown']!;
+}
+
+/** The record form's refusals: `errorSentence`, except `shown_changed`, which at record time has no request to close. */
+export function recordErrorSentence(code: string | undefined): string {
+  return code === 'memorial_takedown.shown_changed' ? EN['error.record.shown_changed']! : errorSentence(code);
 }

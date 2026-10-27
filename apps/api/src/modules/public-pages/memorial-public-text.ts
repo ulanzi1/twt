@@ -1,7 +1,8 @@
 // The family memorial's PUBLIC text — Story 11b.4a, MP3 (b) (`2026-10-27-411` item 3, PC1 B, Trustee-ratified: *"⛔ No marker:
 // the words on either side are simply joined."*; the join rule is OURS — `-411` Not covered: *"how the words are joined across
-// a cut … the build's"*). ONE consumer (the public page handler) ⇒ it lives here, ⛔ not in `@twt/ui`
-// ([[feedback_no_premature_package]]).
+// a cut … the build's"*). TWO consumers, both in `apps/api` — the public page (`memorial-public-read.ts`) and the helpline's
+// take-down drive view (`memorial-takedown/handlers.ts`, which shows "the words as the page shows them", so the two share this
+// join and cannot drift) ⇒ it lives here, ⛔ not in `@twt/ui` ([[feedback_no_premature_package]]).
 //
 // ⭐ INPUT: the presenter's `asApproved` paragraphs (`reconstructMemorial` — the SAME reconstruction the family's screen and
 // the Trust's review read) plus the text of each cut in reading order (`memorialCutTexts`). The cut texts are used ONLY to
@@ -15,7 +16,7 @@
 // ⛔ No `reason`, ⛔ no key, ⛔ no marker, ⛔ no position: the output is plain strings.
 
 import type { MemorialOmission } from '@twt/contracts';
-import { isolateMemorialBidi, type MemorialParagraph } from '@twt/ui';
+import { isolateMemorialBidi, reconstructMemorial, type MemorialParagraph } from '@twt/ui';
 
 const LINE_BREAK = /[\r\n\u2028\u2029]/u;
 const TRAILING_WS = /\s+$/u;
@@ -79,4 +80,25 @@ export function joinKeptSegments(paragraphs: readonly MemorialParagraph[], cutTe
     out.push(pieces.map((x) => x.sep + isolateMemorialBidi(x.text)).join(''));
   }
   return out;
+}
+
+/**
+ * ⭐ The words and the photo's description EXACTLY as the public page shows them, from the decrypted body and alt text and the Trust's
+ * omissions: reconstruct, take each field's cut texts, join. The ONE orchestration both consumers call, so "the words as the page shows
+ * them" cannot drift between the page and the helpline's drive view. `altText` is `null` when there is no description to show (none was
+ * written, or the presenter has none as approved); each caller decides what that reads as (the page's wire says `''`).
+ */
+export function publicMemorialText(input: {
+  readonly body: string;
+  readonly altText: string | null;
+  readonly omissions: readonly MemorialOmission[];
+}): { readonly words: string[]; readonly altText: string | null } {
+  const { body, altText, omissions } = input;
+  const rec = reconstructMemorial({ body, altText }, { omissions, photoLeftOut: false });
+  const words = joinKeptSegments(rec.asApproved, memorialCutTexts(body, omissions.filter((o) => o.field === 'body')));
+  const description =
+    altText === null || rec.altText?.asApproved == null
+      ? null
+      : joinKeptSegments(rec.altText.asApproved, memorialCutTexts(altText, omissions.filter((o) => o.field === 'altText'))).join(' ');
+  return { words, altText: description };
 }

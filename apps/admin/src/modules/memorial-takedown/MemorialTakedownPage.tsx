@@ -11,7 +11,7 @@
 // exists anywhere else in the console.
 
 import { Link } from '@tanstack/react-router';
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
@@ -26,7 +26,7 @@ import {
   useVerifyStepUp,
 } from '../../api/hooks.js';
 import { openRequestOf, operatorScript, requestStatus, toLocalInput } from './derive.js';
-import { errorSentence, resolveEn as t } from './i18n-en.js';
+import { errorSentence, recordErrorSentence, resolveEn as t } from './i18n-en.js';
 
 function isNoAccess(err: unknown): boolean {
   return err instanceof ApiError && err.status === 403;
@@ -96,6 +96,8 @@ export function MemorialTakedownListPage({ pariwarId }: { pariwarId: string }): 
           ))}
         </ul>
       )}
+      {memberId !== null && drives.isLoading && <p role="status">{t('takedown.lookup.drivesLoading')}</p>}
+      {memberId !== null && drives.isError && <p role="alert">{t('takedown.lookup.drivesError')}</p>}
       {memberId !== null && drives.data && (
         <section aria-label={t('takedown.lookup.drives')}>
           <h2 className="font-bold">{t('takedown.lookup.drives')}</h2>
@@ -118,16 +120,18 @@ export function MemorialTakedownListPage({ pariwarId }: { pariwarId: string }): 
 
       <section aria-label={t('takedown.open.title')}>
         <h2 className="font-bold">{t('takedown.open.title')}</h2>
+        {open.isLoading && <p role="status">{t('takedown.open.loading')}</p>}
+        {open.isError && <p role="alert">{t('takedown.open.error')}</p>}
         {open.data && open.data.requests.length === 0 && <p role="status">{t('takedown.open.empty')}</p>}
         {open.data && open.data.requests.length > 0 && (
           <table className="w-full text-sm" data-testid="takedown-open-table">
             <caption className="sr-only">{t('takedown.open.title')}</caption>
             <thead>
               <tr>
-                <th scope="col" className="text-left">Drive</th>
+                <th scope="col" className="text-left">{t('takedown.open.drive')}</th>
                 <th scope="col" className="text-left">{t('takedown.open.firstContact')}</th>
                 <th scope="col" className="text-left">{t('takedown.open.due')}</th>
-                <th scope="col" className="text-left" />
+                <th scope="col" className="text-left">{t('takedown.open.status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -159,7 +163,9 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
   const decide = useDecideMemorialTakedown(pariwarId, poolId);
   const stepUp = useRequestMemorialTakedownStepUp();
   const verify = useVerifyStepUp();
-  const [calledBack, setCalledBack] = useState(false);
+  // The call-back attestation is a claim about ONE nominee and ONE shown version (`-395` item 3): it records WHAT was ticked for, so
+  // a refetch that swaps either leaves the box unticked instead of carrying the old call over to a person who was never called.
+  const [calledBackFor, setCalledBackFor] = useState<string | null>(null);
   const [firstContact, setFirstContact] = useState(() => toLocalInput(new Date()));
   const [confirming, setConfirming] = useState(false);
   const [otp, setOtp] = useState('');
@@ -167,21 +173,67 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
   const recordKey = useRef(newIdempotencyKey());
   const decideKey = useRef<{ outcome: string; key: string } | null>(null);
 
+  // ⭐ The form's per-attempt state — the tick, the first-contact time and the Idempotency-Key — belongs to ONE scope: the shown
+  // version, the number to call, and how many requests the drive holds (review RS1). When the scope changes it starts over. Without
+  // this a tick came back after a swap and swap-back; the form returned PRE-TICKED once an open request had been decided; a record
+  // whose answer was lost (it had committed) left its key behind, so the NEXT call-back went out under it and the server replayed the
+  // stored 201 of the OLD request for up to 24 h; and the 7-day clock's start survived a change of nominee.
+  const requestCount = drive.data?.requests.length ?? null;
+  const formScope = drive.data
+    ? `${drive.data.shown?.submissionId ?? ''}|${drive.data.nomineeToCallBack?.mobile ?? ''}|${drive.data.requests.length}`
+    : null;
+  useEffect(() => {
+    if (formScope === null) return;
+    setCalledBackFor(null);
+    setFirstContact(toLocalInput(new Date()));
+    recordKey.current = newIdempotencyKey();
+  }, [formScope]);
+  // A record's REFUSAL is cleared when the drive's requests change (an open request appeared or was decided), not when the version
+  // changes: after a `shown_changed` the operator must still read why the form changed, and "Request recorded." must outlive the refetch.
+  useEffect(() => {
+    if (record.isError) record.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on a change of the request count only; `record.reset` is stable
+  }, [requestCount]);
+
   if (drive.isLoading) return <p role="status">{t('takedown.drive.loading')}</p>;
   if (isNoAccess(drive.error)) return <NoAccess />;
   if (codeOf(drive.error) === 'memorial_takedown.not_found') return <p role="status">{t('takedown.drive.notFound')}</p>;
-  if (drive.isError || !drive.data) return <p role="alert">{t('takedown.drive.error')}</p>;
+  if (!drive.data) return <p role="alert">{t('takedown.drive.error')}</p>;
   const d = drive.data;
   const open = openRequestOf(d);
   const script = operatorScript(d);
 
   const decideWith = (outcome: 'taken_down' | 'kept' | 'superseded') => {
     if (open === null) return;
+    // A new attempt starts clean (review RS2): a step-up left unverified must not announce "Code sent" or keep its code and its error
+    // for the NEXT prompt and "Request recorded." must not stand beside this decision; the confirm step is disarmed when the decision lands.
+    stepUp.reset();
+    verify.reset();
+    setOtp('');
+    record.reset();
     if (decideKey.current === null || decideKey.current.outcome !== outcome) decideKey.current = { outcome, key: newIdempotencyKey() };
-    decide.mutate({ requestId: open.requestId, body: { outcome }, idempotencyKey: decideKey.current.key });
+    decide.mutate(
+      { requestId: open.requestId, body: { outcome }, idempotencyKey: decideKey.current.key },
+      { onSuccess: () => setConfirming(false) },
+    );
   };
   const decideCode = codeOf(decide.error);
   const needsStepUp = decideCode === 'auth.step_up_required';
+  // ⛔ No number on screen ⇒ no attestation that it was called (`-395` item 3): the record form needs the nominee's mobile READ.
+  const mobileToCallBack = d.nomineeToCallBack?.mobile ?? null;
+  // The version this operator is looking at: the record carries it, and the server refuses (409) if another is shown by then.
+  const shownSubmissionId = d.shown?.submissionId ?? null;
+  const attestationKey = shownSubmissionId !== null && mobileToCallBack !== null ? `${shownSubmissionId}|${mobileToCallBack}` : null;
+  const calledBack = attestationKey !== null && calledBackFor === attestationKey;
+  // ONE persistent live region, ⛔ inside no conditional section: the decide section unmounts once the refetch shows the request
+  // decided, and a status inside it would go with it. Latest act first; `stepUp.isSuccess` only counts while the prompt shows.
+  const status = decide.isSuccess
+    ? t('takedown.decided')
+    : needsStepUp && stepUp.isSuccess
+      ? t('takedown.stepUp.sent')
+      : record.isSuccess
+        ? t('takedown.record.recorded')
+        : '';
 
   return (
     <section aria-label={t('takedown.title')} data-testid="takedown-drive" className="flex flex-col gap-5">
@@ -193,6 +245,12 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
         </p>
         <h1 className="text-xl font-bold">{d.poolCanonicalIdentifier}</h1>
       </header>
+
+      <p role="status" data-testid="takedown-status" className={status === '' ? 'sr-only' : undefined}>
+        {status}
+      </p>
+      {/* A failed REFRESH keeps the page (review RS3): the old drive stays, and the operator is told it may be out of date. */}
+      {drive.isError && <p role="alert" data-testid="takedown-refresh-error">{t('takedown.drive.error')}</p>}
 
       {d.shown === null ? (
         <p role="status">{t('takedown.drive.notOnPage')}</p>
@@ -230,28 +288,51 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
 
       {/* ⭐ AC11 — the smaller-fix script, BEFORE any take-down control (`-393` M4; MP8 (b)). */}
       {script.length > 0 && (
-        <section aria-label="Before you take it down" data-testid="takedown-script" className="rounded border p-3">
+        <section aria-label={t('takedown.script.title')} data-testid="takedown-script" className="rounded border p-3">
           {script.map((line, i) => (
             <p key={i}>{line}</p>
           ))}
         </section>
       )}
 
-      {d.shown !== null && open === null && (
+      {d.shown !== null && open === null && mobileToCallBack === null && (
+        <section aria-label={t('takedown.record.title')} data-testid="takedown-record-unavailable">
+          <h2 className="font-bold">{t('takedown.record.title')}</h2>
+          <p>{t('takedown.callBack.unreadable')}</p>
+          {/* The passive refetch is off (it would re-read and re-audit on every focus), so the way back is the operator's own click. */}
+          {d.nomineeToCallBack !== null && (
+            <button type="button" className="rounded border px-3 py-1" disabled={drive.isFetching} onClick={() => void drive.refetch()}>
+              {t('takedown.record.retry')}
+            </button>
+          )}
+        </section>
+      )}
+
+      {shownSubmissionId !== null && open === null && mobileToCallBack !== null && (
         <form
           data-testid="takedown-record"
           onSubmit={(e) => {
             e.preventDefault();
             if (!calledBack) return;
+            decide.reset(); // the last decision's "Recorded." must not stand while this record is pending or fails
             record.mutate(
-              { body: { calledBack: true, firstContactAt: new Date(firstContact).toISOString() }, idempotencyKey: recordKey.current },
-              { onSuccess: () => (recordKey.current = newIdempotencyKey()) },
+              {
+                body: { calledBack: true, firstContactAt: new Date(firstContact).toISOString(), shownSubmissionId },
+                idempotencyKey: recordKey.current,
+              },
+              {
+                onSuccess: () => {
+                  recordKey.current = newIdempotencyKey();
+                  setCalledBackFor(null);
+                  setFirstContact(toLocalInput(new Date()));
+                },
+              },
             );
           }}
         >
           <h2 className="font-bold">{t('takedown.record.title')}</h2>
           <label className="block">
-            <input type="checkbox" checked={calledBack} onChange={(e) => setCalledBack(e.target.checked)} required />{' '}
+            <input type="checkbox" checked={calledBack} onChange={(e) => setCalledBackFor(e.target.checked ? attestationKey : null)} required />{' '}
             {t('takedown.record.calledBack')}
           </label>
           <label className="mt-2 block">
@@ -267,12 +348,12 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
           <button type="submit" className="mt-2 rounded border px-3 py-1" disabled={!calledBack || record.isPending}>
             {t('takedown.record.submit')}
           </button>
-          {record.isError && <p role="alert">{errorSentence(codeOf(record.error))}</p>}
+          {record.isError && <p role="alert">{recordErrorSentence(codeOf(record.error))}</p>}
         </form>
       )}
 
       {open !== null && (
-        <section aria-label="Decide the request" data-testid="takedown-decide">
+        <section aria-label={t('takedown.decide.title')} data-testid="takedown-decide">
           {d.shown !== null && !confirming && (
             <button type="button" className="rounded border px-3 py-1" data-testid="takedown-take-down" onClick={() => setConfirming(true)}>
               {t('takedown.action.takeDown')}
@@ -301,7 +382,13 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
             <div role="alert" data-testid="takedown-step-up">
               <p>
                 {t('takedown.stepUp.needed')}{' '}
-                <button type="button" onClick={() => stepUp.mutate()}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    verify.reset();
+                    stepUp.mutate();
+                  }}
+                >
                   {t('takedown.stepUp.send')}
                 </button>
               </p>
@@ -317,8 +404,9 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
               </button>
             </div>
           )}
+          {needsStepUp && stepUp.isError && <p role="alert">{t('takedown.stepUp.sendError')}</p>}
+          {needsStepUp && verify.isError && <p role="alert">{t('takedown.stepUp.verifyError')}</p>}
           {decide.isError && !needsStepUp && <p role="alert">{errorSentence(decideCode)}</p>}
-          {decide.data && <p role="status">{t('takedown.decided')}</p>}
         </section>
       )}
 
@@ -328,6 +416,10 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
           {d.requests.map((r) => (
             <li key={r.requestId} data-testid={`takedown-request-${r.requestId}`}>
               {new Date(r.firstContactAt).toLocaleString('en-IN')} — {requestStatus(r)}
+              <span className="block text-sm opacity-70">
+                {t('takedown.requests.received')} {new Date(r.receivedAt).toLocaleString('en-IN')} · {t('takedown.open.due')}{' '}
+                {new Date(r.dueAt).toLocaleString('en-IN')}
+              </span>
             </li>
           ))}
         </ul>

@@ -38,7 +38,7 @@ export function MemorialTakedownRoute(): ReactElement {
   const { pariwarId } = useParams({ from: '/p/$pariwarId/memorial-takedowns' });
   return (
     <MemorialTakedownGateView status={status}>
-      <MemorialTakedownListPage pariwarId={pariwarId} />
+      <MemorialTakedownListPage key={pariwarId} pariwarId={pariwarId} />
     </MemorialTakedownGateView>
   );
 }
@@ -48,7 +48,8 @@ export function MemorialTakedownDriveRoute(): ReactElement {
   const { pariwarId, poolId } = useParams({ from: '/p/$pariwarId/memorial-takedowns/$poolId' });
   return (
     <MemorialTakedownGateView status={status}>
-      <MemorialTakedownDrivePage pariwarId={pariwarId} poolId={poolId} />
+      {/* `key` — the page's state (the ticked attestation, the OTP, the Idempotency-Keys) belongs to ONE drive. */}
+      <MemorialTakedownDrivePage key={`${pariwarId}:${poolId}`} pariwarId={pariwarId} poolId={poolId} />
     </MemorialTakedownGateView>
   );
 }

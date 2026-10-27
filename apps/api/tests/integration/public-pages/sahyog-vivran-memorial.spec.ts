@@ -5,9 +5,10 @@
 // Live DB only — skips when DATABASE_URL is unset. Fresh Pariwar per world (⛔ never PARIWAR_A).
 
 import { randomUUID } from 'node:crypto';
+import { Writable } from 'node:stream';
 
 import type { MemorialOmission } from '@twt/contracts';
-import { ids, member as memberDomain, memorial } from '@twt/domain';
+import { encryption, ids, member as memberDomain, memorial } from '@twt/domain';
 import { reconstructMemorial } from '@twt/ui';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -33,6 +34,33 @@ const PHOTO = (w: MemorialWorld, token: string) => `${PAGE(w, token)}/memorial-p
 /** Trap 9 — the headers that may differ between two otherwise identical responses. */
 const VOLATILE = /^(date|x-request-id|x-ratelimit-.*|connection|keep-alive)$/i;
 const stableHeaders = (h: Record<string, unknown>) => Object.fromEntries(Object.entries(h).filter(([k]) => !VOLATILE.test(k)).sort());
+
+interface Answer {
+  readonly statusCode: number;
+  readonly rawPayload: Buffer;
+  readonly headers: Record<string, unknown>;
+}
+
+/** Trap 9 — a refusal IS an unknown token's answer: status, BODY BYTES (empty, and equal) and headers minus the volatile ones. */
+function expectUnknownTokenAnswer(r: Answer, unknown: Answer): void {
+  expect(unknown.statusCode).toBe(404);
+  expect(unknown.rawPayload.length).toBe(0);
+  expect(r.statusCode).toBe(404);
+  expect(r.rawPayload.equals(unknown.rawPayload)).toBe(true);
+  expect(stableHeaders(r.headers)).toEqual(stableHeaders(unknown.headers));
+}
+
+/** A `logStream` that keeps every line pino writes, parsed — for the "exactly one `error` log" leg. */
+function captureLogs() {
+  const lines: Record<string, unknown>[] = [];
+  const stream = new Writable({
+    write(chunk: Buffer, _enc, done) {
+      for (const line of chunk.toString('utf-8').split('\n')) if (line.trim() !== '') lines.push(JSON.parse(line) as Record<string, unknown>);
+      done();
+    },
+  });
+  return { stream, errors: () => lines.filter((l) => typeof l['level'] === 'number' && l['level'] >= 50) };
+}
 
 const BODY = 'माँ हमेशा मुस्कुराती थीं। रमेश ने उन्हें धोखा दिया। वे सबकी मदद करती थीं।\n\nहम उन्हें रोज़ याद करते हैं।';
 const LEFT_OUT = 'रमेश ने उन्हें धोखा दिया।';
@@ -81,7 +109,8 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the publi
   const approveWithOmissions = (w: MemorialWorld, id: string) =>
     decide(w, id, { action: 'approved_with_omissions', omissions: [span(BODY, LEFT_OUT, 'body'), span(ALT, ALT_LEFT_OUT, 'altText')] });
 
-  async function takeDown(w: MemorialWorld): Promise<void> {
+  /** The helpline's take-down, through the real domain writers: `shownSubmissionId` is the version the operator was looking at (R1). */
+  async function takeDown(w: MemorialWorld, shownSubmissionId: string): Promise<void> {
     const operator = randomUUID();
     const scopeTx = await openScopeTx(t.deps, w.pariwarId);
     let ok = false;
@@ -90,6 +119,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the publi
       const req = await memorial.recordMemorialTakedownRequest(scopeTx.tx, {
         pariwarId,
         poolId: ids.poolId(w.poolId),
+        shownSubmissionId,
         firstContactAt: new Date(Date.now() - 3600_000),
         actorId: ids.userId(operator),
         actorDisplay: 'Helpline Operator',
@@ -149,7 +179,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the publi
     expect(photoMiddle.statusCode).toBe(200);
     expect(photoMiddle.headers['content-type']).toBe('image/jpeg');
 
-    await takeDown(w);
+    await takeDown(w, id);
 
     // ⭐ AC5 — ⛔ no trace: status, body bytes and headers (Trap 9's exclusions) equal the render BEFORE anything was written.
     const after = await page(w, token);
@@ -180,27 +210,39 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the publi
     await handover(t, w);
     await decide(w, await sendVersion(w), { action: 'approved' });
     expect(memorialOf(await page(w, token))).not.toBeNull();
+    const unknownPhoto = await t.app.inject({ method: 'GET', url: PHOTO(w, 'no-such-token-at-all') });
+    expect((await t.app.inject({ method: 'GET', url: PHOTO(w, token) })).statusCode).toBe(200); // non-vacuity: it serves while the switch is on
     const off = await createTestApp({ env: { MEMORIAL_AUTHORSHIP_ENABLED: '0' } });
     try {
       const r = await off.app.inject({ method: 'GET', url: PAGE(w, token) });
       expect(r.statusCode).toBe(200);
       expect((r.json() as { drive: { familyMemorial: unknown } }).drive.familyMemorial).toBeNull();
-      expect((await off.app.inject({ method: 'GET', url: PHOTO(w, token) })).statusCode).toBe(404);
+      // ⭐ Trap 9 — the photo's refusal is an unknown token's answer on status, BODY BYTES and headers, ⛔ not on status alone.
+      expectUnknownTokenAnswer(await off.app.inject({ method: 'GET', url: PHOTO(w, token) }), unknownPhoto);
     } finally {
       await teardown(off);
     }
   });
 
-  it('AC1 — a BAD ENVELOPE omits the memorial and keeps the page (200); a KMS OUTAGE refuses the page (the outage state)', async () => {
+  it('AC1 — a KMS OUTAGE refuses the page (the API answers 500; `apps/public` renders its 503 outage view); a BAD ENVELOPE omits the memorial, keeps the page (200) and logs ONE `error`', async () => {
     const w = await seedMemorialWorld(t);
     const token = await tokenOf(w);
     await handover(t, w);
     const id = await sendVersion(w);
     await decide(w, id, { action: 'approved' });
+    // Non-vacuity: with KMS working the page carries the memorial (else a 500 or a null below proves nothing).
+    expect(memorialOf(await page(w, token))).not.toBeNull();
 
+    // ⚠ The API's status is 500 (`internal.error` — an unclassified throw, the same as the deceased-name and contributor outage legs
+    // in `sahyog-vivran.spec.ts`); the "503" is the PUBLIC APP's view for any non-2xx. The seeded world has no authorised name and no
+    // contributor, so the first `decryptDek` of the request is the MEMORIAL's body — asserted below by its AAD, ⛔ not assumed.
     const outage = vi.spyOn(t.deps.encryption.kms, 'decryptDek').mockRejectedValueOnce(Object.assign(new Error('14 UNAVAILABLE: kms'), { code: 14 }));
     try {
-      expect((await page(w, token)).statusCode).toBe(500);
+      const refused = await page(w, token);
+      expect(refused.statusCode).toBe(500);
+      expect(refused.json()).toMatchObject({ error: { code: 'internal.error' } });
+      expect(outage).toHaveBeenCalledTimes(1);
+      expect(Buffer.from(outage.mock.calls[0]![2]).toString('utf-8')).toContain(`"fieldClass":"${encryption.MEMORIAL_FIELD_CLASS}"`);
     } finally {
       outage.mockRestore();
     }
@@ -209,6 +251,20 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the publi
     const r = await page(w, token);
     expect(r.statusCode).toBe(200);
     expect(memorialOf(r)).toBeNull();
+
+    // ⭐ AC1 — "ONE `error` log": the harness app keeps no log, so the same request goes through an app that does.
+    const logs = captureLogs();
+    const logged = await createTestApp({ logStream: logs.stream });
+    try {
+      const again = await logged.app.inject({ method: 'GET', url: PAGE(w, token) });
+      expect(again.statusCode).toBe(200);
+      expect(memorialOf(again)).toBeNull();
+      const errors = logs.errors();
+      expect(errors).toHaveLength(1);
+      expect(String(errors[0]!['msg'])).toContain('family memorial decrypt failed');
+    } finally {
+      await teardown(logged);
+    }
   });
 
   it('⭐ AC13 / Trap 4 — after ERASURE the page carries ⛔ no memorial (the sentinel decrypts SUCCESSFULLY) and the photo 404s', async () => {
@@ -218,6 +274,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the publi
     await decide(w, await sendVersion(w), { action: 'approved' });
     expect(memorialOf(await page(w, token))).not.toBeNull();
     expect((await t.app.inject({ method: 'GET', url: PHOTO(w, token) })).statusCode).toBe(200);
+    const unknownPhoto = await t.app.inject({ method: 'GET', url: PHOTO(w, 'no-such-token-at-all') });
 
     const scopeTx = await openScopeTx(t.deps, w.pariwarId);
     let ok = false;
@@ -238,6 +295,8 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the publi
     expect(r.statusCode).toBe(200);
     expect(memorialOf(r)).toBeNull();
     expect(r.body).not.toContain(memberDomain.ANONYMIZED_SENTINEL);
-    expect((await t.app.inject({ method: 'GET', url: PHOTO(w, token) })).statusCode).toBe(404);
+    // The stored OBJECT is still there (this leg erases through the domain, ⛔ not the API's best-effort delete) — so the 404 is the
+    // erasure PREDICATE, and it is an unknown token's answer on status, BODY BYTES and headers.
+    expectUnknownTokenAnswer(await t.app.inject({ method: 'GET', url: PHOTO(w, token) }), unknownPhoto);
   });
 });

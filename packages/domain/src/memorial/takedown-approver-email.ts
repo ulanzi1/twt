@@ -8,11 +8,15 @@
 // (`memorial_withdrawals.takedown_request_id`) — usually one person; each is told only of an approval they made. `-411` item 5
 // (PC3 A): an approver who has left is ⛔ not emailed and ⛔ no one else is told in their place.
 //
-// ⭐ THE TRIGGER is a request whose outcome is `taken_down` and that holds ⛔ no outbox row at all — ⛔ no row is written by the
-// take-down itself. ⭐ THE RECIPIENTS are the approvers passing Q3 (`memorialApproverEligibleSql`) — the SAME fragment in the
-// selector and the re-check; when ⛔ none passes, the `(request, NULL)` pair writes ONE request-level `no_target` row (MP11 —
-// 0187's `…_no_target_recipient_check`, copied unchanged). ⭐ A request holding ANY outbox row is ⛔ never due again (so ⛔ no late
-// email beside a `no_target`); only its `attempting` rows are re-derived.
+// ⭐ THE TRIGGER is a request whose outcome is `taken_down` — ⛔ no row is written by the take-down itself. ⭐ THE RECIPIENTS are the
+// approvers passing Q3 (`memorialApproverEligibleSql`) — the SAME fragment in the selector and the re-check. ⭐ THE GATE IS PER
+// (request, recipient): an eligible approver is due while THEIR pair holds ⛔ no row and the request holds ⛔ no `no_target` row, so
+// a sweep that stops between two approvers of one request (the pair bound, the budget, a failed enqueue, a crash, a page boundary)
+// loses ⛔ neither. When ⛔ none passes, the `(request, NULL)` pair writes ONE request-level `no_target` row (MP11 — 0187's
+// `…_no_target_recipient_check`, copied unchanged), and only a request holding ⛔ no row at all gets one. ⭐ A request holding the
+// `no_target` row is ⛔ never due again (so ⛔ no late email beside it) and a pair holding a row is ⛔ never due twice; only an
+// `attempting` row is re-derived. ⚠ Review R2 (2026-10-27): this read "a request holding ANY outbox row is never due again" —
+// written when ONE approver was emailed — and lost every sibling approver the sweep had not yet reached.
 // ⭐ THE DEDUP IS THE TABLE + A REQUEST-KEYED LOCK. ⚠ ⛔ Not a row lock: `twt_app` holds ⛔ no UPDATE grant on
 // `memorial_takedown_requests` (append-only, 0187), and `FOR UPDATE` needs one ⇒ the claiming transaction takes
 // `pg_advisory_xact_lock(hashtext('memorial-takedown-email:' || request_id))` — ⛔ not the memorial POOL lock (the email need not wait
@@ -152,9 +156,9 @@ export interface DueMemorialTakedownApproverEmailPage {
 }
 
 /**
- * ⭐ The due (request, recipient) pairs, one keyset page. Three disjoint branches:
- *   (1) every ELIGIBLE approver of a `taken_down` request that holds ⛔ no outbox row at all;
- *   (2) the `(request, NULL)` pair when such a request has ⛔ no eligible approver (MP11);
+ * ⭐ The due (request, recipient) pairs, one keyset page. Three disjoint branches (so each pair appears ONCE across the pages):
+ *   (1) every ELIGIBLE approver of a `taken_down` request whose OWN pair holds ⛔ no row, while the request holds ⛔ no `no_target` row;
+ *   (2) the `(request, NULL)` pair when a `taken_down` request holds ⛔ no row at all and has ⛔ no eligible approver (MP11);
  *   (3) every pair with an `attempting` row — the predicate BYPASSED, so its locked re-check finishes it.
  *
  * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ──
@@ -183,9 +187,18 @@ export async function selectDueMemorialTakedownApproverEmails(
         : sql` WHERE (mt_due.request_id > ${input.after.requestId}::uuid
                  OR (mt_due.request_id = ${input.after.requestId}::uuid
                      AND mt_due.recipient_user_id > ${input.after.recipientUserId}::uuid))`;
-  const dueRequest = sql`
+  const takenDown = sql`
     EXISTS (SELECT 1 FROM memorial_takedown_outcomes mt_o
-             WHERE mt_o.pariwar_id = mt_r.pariwar_id AND mt_o.request_id = mt_r.request_id AND mt_o.outcome = 'taken_down')
+             WHERE mt_o.pariwar_id = mt_r.pariwar_id AND mt_o.request_id = mt_r.request_id AND mt_o.outcome = 'taken_down')`;
+  // (1) PER PAIR — ⛔ no row for THIS (request, approver) and ⛔ no request-level `no_target` row (MP11: ⛔ no late email beside it).
+  const pairDue = sql`
+    ${takenDown}
+    AND NOT EXISTS (SELECT 1 FROM memorial_takedown_approver_emails mt_pair
+                     WHERE mt_pair.pariwar_id = mt_r.pariwar_id AND mt_pair.request_id = mt_r.request_id
+                       AND (mt_pair.recipient_user_id = mt_ap.actor_id OR mt_pair.outcome = 'no_target'))`;
+  // (2) PER REQUEST — the `(request, NULL)` pair is due only while the request holds ⛔ no row at all.
+  const noTargetDue = sql`
+    ${takenDown}
     AND NOT EXISTS (SELECT 1 FROM memorial_takedown_approver_emails mt_any
                      WHERE mt_any.pariwar_id = mt_r.pariwar_id AND mt_any.request_id = mt_r.request_id)`;
   const rows = await run<{ pariwar_id: string; request_id: string; recipient_user_id: string | null; has_attempting: boolean }>(
@@ -196,12 +209,12 @@ export async function selectDueMemorialTakedownApproverEmails(
           SELECT mt_r.pariwar_id, mt_r.request_id, mt_ap.actor_id AS recipient_user_id, false AS has_attempting
             FROM memorial_takedown_requests mt_r
             CROSS JOIN LATERAL ${approvers} mt_ap
-           WHERE ${dueRequest}${allowR}
+           WHERE ${pairDue}${allowR}
              AND ${eligible}
           UNION ALL
           SELECT mt_r.pariwar_id, mt_r.request_id, NULL::uuid AS recipient_user_id, false AS has_attempting
             FROM memorial_takedown_requests mt_r
-           WHERE ${dueRequest}${allowR}
+           WHERE ${noTargetDue}${allowR}
              AND NOT EXISTS (SELECT 1 FROM ${approvers} mt_ap WHERE ${eligible})
           UNION ALL
           SELECT mt_a.pariwar_id, mt_a.request_id, mt_a.recipient_user_id, true AS has_attempting
@@ -338,12 +351,17 @@ async function recheck(
   if (!outcome?.taken_down) return 'not_taken_down';
   const approvers = approversSql(sql`${pariwarId}::uuid`, sql`${requestId}::uuid`);
   if (recipientUserId !== null) {
-    const [row] = await run<{ eligible: boolean }>(
+    // The selector's per-pair gate again, under the lock: ⛔ a late email beside the request's `no_target` row (MP11).
+    const [row] = await run<{ eligible: boolean; no_target: boolean }>(
       client,
       sql`SELECT EXISTS (SELECT 1 FROM ${approvers} mt_ap
-                          WHERE mt_ap.actor_id = ${recipientUserId}::uuid AND ${memorialApproverEligibleSql(sql`mt_ap.actor_id`)}) AS eligible`,
+                          WHERE mt_ap.actor_id = ${recipientUserId}::uuid AND ${memorialApproverEligibleSql(sql`mt_ap.actor_id`)}) AS eligible,
+                 EXISTS (SELECT 1 FROM memorial_takedown_approver_emails mt_nt
+                          WHERE mt_nt.pariwar_id = ${pariwarId}::uuid AND mt_nt.request_id = ${requestId}::uuid
+                            AND mt_nt.outcome = 'no_target') AS no_target`,
     );
-    return row?.eligible ? null : 'recipient_not_eligible';
+    if (!row?.eligible) return 'recipient_not_eligible';
+    return row.no_target ? 'request_has_rows' : null;
   }
   const [row] = await run<{ anyone: boolean; any_row: boolean }>(
     client,

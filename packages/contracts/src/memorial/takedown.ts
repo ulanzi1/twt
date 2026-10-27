@@ -28,6 +28,7 @@ export const MEMORIAL_TAKEDOWN_ERROR_CODES = [
   'memorial_takedown.not_found',
   'memorial_takedown.request_open',
   'memorial_takedown.already_decided',
+  // 409 — on the outcome (`taken_down`) AND on the request record: the version on the page is not the one the request is about.
   'memorial_takedown.shown_changed',
   'memorial_takedown.shown_unchanged',
   // 400 — the nominee's first contact is in the future or more than 7 days before the recording (MP14 (b)).
@@ -138,14 +139,20 @@ export type MemorialTakedownOpenRequestsResponse = z.output<typeof MemorialTaked
 // ── AC6 / AC7 — the writes ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * `POST …/drives/:poolId/requests` — the operator ticks that they called the nominee back (MP7: anything but `true` is a 400)
- * and enters when the nominee FIRST asked (MP14 (b): ⛔ not in the future, ⛔ not more than 7 days ago — the handler's 400, 0187's CHECK
- * the backstop). ⛔ No note, ⛔ no reason (`.strict()`).
+ * `POST …/drives/:poolId/requests` — the operator ticks that they called the nominee back (MP7: anything but `true` is a 400),
+ * enters when the nominee FIRST asked (MP14 (b): ⛔ not in the future, ⛔ not more than 7 days ago — the handler's 400, 0187's CHECK
+ * the backstop) and echoes the version they were LOOKING AT. ⛔ No note, ⛔ no reason (`.strict()`).
  */
 export const MemorialTakedownRequestInput = z
   .object({
     calledBack: z.literal(true),
     firstContactAt: z.string().datetime({ offset: true }),
+    /**
+     * MP8 (c), review R1 (BigDev, option A) — the drive view's `shown.submissionId`, echoed back. The call-back was to THAT
+     * version's nominee (MP7), so the request is recorded only while it is still the version on the page — else
+     * `409 memorial_takedown.shown_changed` (checked UNDER the pool lock, as `decide` does) and nothing is written.
+     */
+    shownSubmissionId: z.string().uuid(),
   })
   .strict();
 export type MemorialTakedownRequestInput = z.output<typeof MemorialTakedownRequestInput>;

@@ -27,7 +27,6 @@ import {
   type MemorialTakedownRequestView,
 } from '@twt/contracts';
 import { audit, canonicalJsonStringify, idempotency, ids, member as memberDomain, memorial } from '@twt/domain';
-import { reconstructMemorial } from '@twt/ui';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -43,7 +42,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { decryptMemorialField } from '../memorial/memorial-crypto.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { decryptNomineeField } from '../nominee/nominee-crypto.js';
-import { joinKeptSegments, memorialCutTexts } from '../public-pages/memorial-public-text.js';
+import { publicMemorialText } from '../public-pages/memorial-public-text.js';
 
 export const MEMORIAL_TAKEDOWN_REQUEST_RECORD_ACTION = 'memorial.takedown.request_record';
 export const MEMORIAL_TAKEDOWN_DECIDE_ACTION = 'memorial.takedown.decide';
@@ -197,11 +196,10 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
         let words: string[] | null = null;
         let altText: string | null = null;
         if (body !== null) {
-          const rec = reconstructMemorial({ body, altText: alt }, { omissions, photoLeftOut: false });
-          words = joinKeptSegments(rec.asApproved, memorialCutTexts(body, omissions.filter((o) => o.field === 'body')));
-          if (alt !== null && rec.altText?.asApproved != null) {
-            altText = joinKeptSegments(rec.altText.asApproved, memorialCutTexts(alt, omissions.filter((o) => o.field === 'altText'))).join(' ');
-          }
+          // The SAME function the public page calls — "the words as the page shows them" cannot drift (R5).
+          const text = publicMemorialText({ body, altText: alt, omissions });
+          words = text.words;
+          altText = text.altText;
         }
         let photoUrl: string | null = null;
         if (photoKept) {
@@ -253,7 +251,11 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
       };
     },
 
-    /** GET …/memorial-takedowns/requests?open=true — AC10: the OPEN requests, oldest first, `overdue` derived. */
+    /**
+     * GET …/memorial-takedowns/requests?open=true — AC10: the OPEN requests, oldest first, `overdue` derived. ⚠ BOUNDED (review R17):
+     * the domain read clamps the page (one open request per drive keeps it far below the bound), and past it the LEAST urgent
+     * requests are the ones that fall off — see `listOpenMemorialTakedownRequests`.
+     */
     async openRequests(request: FastifyRequest): Promise<MemorialTakedownOpenRequestsResponse> {
       const who = staffCtx(request);
       const tx = await openScopeTx(deps, who.pariwarIdStr);
@@ -280,22 +282,26 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
 
     /**
      * POST …/memorial-takedowns/drives/:poolId/requests — AC6: record the nominee's request after the call-back (MP7). The 7 days
-     * run from the nominee's FIRST contact (MP14 (b)): ⛔ not in the future, ⛔ not more than 7 days ago — else 400.
+     * run from the nominee's FIRST contact (MP14 (b)): ⛔ not in the future, ⛔ not more than 7 days ago — else 400. ⭐ The body
+     * echoes the version the operator was LOOKING AT (`shownSubmissionId`): the domain compares it with the chain re-read under
+     * the pool lock, and a version approved since is `409 shown_changed` with nothing written (review R1, MP8 (c)).
      */
     async recordRequest(request: FastifyRequest): Promise<MemorialTakedownRequestResponse> {
       const who = staffCtx(request);
       const { poolId } = request.params as { poolId: string };
       const input = request.body as MemorialTakedownRequestInput;
       const firstContactAt = new Date(input.firstContactAt);
-      const now = deps.clock().getTime();
-      if (!(firstContactAt.getTime() <= now) || firstContactAt.getTime() < now - FIRST_CONTACT_WINDOW_MS) {
-        throw new BadRequestError(
-          "The nominee's first contact must be in the last 7 days, and not in the future",
-          'memorial_takedown.first_contact_out_of_range',
-        );
-      }
       const pariwarId = ids.pariwarId(who.pariwarIdStr);
       return withIdempotency(request, `memorial-takedown:request:${who.pariwarIdStr}:${poolId}`, async () => {
+        // ⭐ INSIDE the run (review R16): a retry of a request that was recorded returns the STORED 201 before the window is
+        // evaluated — the key lives 24 h, so a first contact that was inside the 7 days at the first call can have aged out by the retry.
+        const now = deps.clock().getTime();
+        if (!(firstContactAt.getTime() <= now) || firstContactAt.getTime() < now - FIRST_CONTACT_WINDOW_MS) {
+          throw new BadRequestError(
+            "The nominee's first contact must be in the last 7 days, and not in the future",
+            'memorial_takedown.first_contact_out_of_range',
+          );
+        }
         const display = await operatorDisplay(who.actorId);
         return audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
@@ -304,9 +310,16 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
             actorRole: null,
             action: MEMORIAL_TAKEDOWN_REQUEST_RECORD_ACTION,
             resourceLocator: `memorial-pool:${poolId}`,
-            // ⭐ BOTH timestamps are in the audit line (MP14 (b) — the operator-entered one is contained by it).
+            // ⚠ The operator-entered `first_contact_at` is ONLY inside `requestPayloadHash` — a hash, ⛔ not a readable field of the
+            // line; `received_at` is the request ROW's (DB clock) and is ⛔ hashed here. Both are stored on the append-only request row
+            // (MP14 (b) as amended, review RR12). The version the operator was shown (R1) is hashed beside it.
             requestPayloadHash: sha256Hex(
-              canonicalJsonStringify({ pool_id: poolId, first_contact_at: firstContactAt.toISOString(), verified_by: 'called_back' }),
+              canonicalJsonStringify({
+                pool_id: poolId,
+                shown_submission_id: input.shownSubmissionId,
+                first_contact_at: firstContactAt.toISOString(),
+                verified_by: 'called_back',
+              }),
             ),
             traceId: request.requestContext.traceId ?? null,
           },
@@ -317,13 +330,23 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
               const out = await memorial.recordMemorialTakedownRequest(tx.tx, {
                 pariwarId,
                 poolId: ids.poolId(poolId),
+                shownSubmissionId: input.shownSubmissionId,
                 firstContactAt,
                 actorId: ids.userId(who.actorId),
                 actorDisplay: display,
               });
               if (!out.ok) {
-                if (out.refusal === 'not_found') throw takedownNotFound();
-                throw new ConflictError('This drive already has an open take-down request', 'memorial_takedown.request_open');
+                switch (out.refusal) {
+                  case 'not_found':
+                    throw takedownNotFound();
+                  case 'shown_changed':
+                    throw new ConflictError(
+                      'The memorial on the page is no longer the one you were looking at — reload the drive and call back the nominee named there',
+                      'memorial_takedown.shown_changed',
+                    );
+                  case 'request_open':
+                    throw new ConflictError('This drive already has an open take-down request', 'memorial_takedown.request_open');
+                }
               }
               txOk = true;
               return { requestId: out.request.requestId, poolId, dueAt: out.request.dueAt.toISOString() };

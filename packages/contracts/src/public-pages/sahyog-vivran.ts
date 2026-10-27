@@ -195,6 +195,31 @@ export const PublicSahyogVivranAppealReversal = z
 export type PublicSahyogVivranAppealReversal = z.output<typeof PublicSahyogVivranAppealReversal>;
 
 /**
+ * ⭐⭐ THE FAMILY MEMORIAL — Story 11b.4a (`2026-10-23-391` item 2, Trustee-ratified: *"The words and photo appear on the public
+ * page, as the Trust approved them"*; `2026-10-27-411` item 3 (PC1 B): a part the Trust left out is ⛔ NOT marked — the words on
+ * either side are joined; item 6 (PC4 A): the photo's description appears with it).
+ *
+ * ⭐ FINISHED STRINGS ONLY (MP3 (b)): the API cuts the left-out spans, isolates each kept piece's direction controls and joins
+ * them — so ⛔ no `omitted` segment, ⛔ no `reason`, ⛔ no `key`, ⛔ no `kind`, ⛔ not even the POSITION of a cut reaches the wire.
+ * `.strict()` makes any of those keys a parse failure (Trap 3). ⛔ No `submissionId`, ⛔ no `objectKey`, ⛔ no `url`, ⛔ no
+ * `approvedAt`, ⛔ no `approver`: the photo is served by its own route (`/sahyog-vivran/{token}/memorial-photo`), so the object
+ * key ⛔ never leaves the API (MP4).
+ *   · `words` — one entry per paragraph that still holds kept text (a paragraph cut whole is dropped — ⛔ no empty gap).
+ *   · `photo` — `null` when ⛔ no photo was sent or the Trust left it out; `altText` the family's description as approved (all of
+ *     it left out ⇒ `""`).
+ * ⚠ `null` on the parent — the switch is off, ⛔ no approved version stands, it was taken down, the member was erased, or ⛔ nothing
+ * is left to show (every word left out and ⛔ no photo: `{ words: [], photo: null }` is ⛔ never sent) — and the page then renders
+ * NOTHING: the same bytes as a drive whose family never wrote (`-393` M1 — ⛔ no trace).
+ */
+export const PublicSahyogVivranFamilyMemorial = z
+  .object({
+    words: z.array(z.string().min(1)),
+    photo: z.object({ altText: z.string() }).strict().nullable(),
+  })
+  .strict();
+export type PublicSahyogVivranFamilyMemorial = z.output<typeof PublicSahyogVivranFamilyMemorial>;
+
+/**
  * ⭐⭐ THE PROHIBITED KEYS — THE CONFIRMED-ONLY INVARIANT ENCODED AS A **SHAPE** (AC4).
  *
  * Exported so the shape test asserts the prohibition rather than restating it, mirroring
@@ -209,30 +234,6 @@ export type PublicSahyogVivranAppealReversal = z.output<typeof PublicSahyogVivra
  * also matches the matrix field id (`drive_status`) on both surfaces, so the divergence costs
  * nothing. ⛔ Do not "harmonise" it back.
  */
-/**
- * ⭐⭐ THE FAMILY MEMORIAL — Story 11b.4a (`2026-10-23-391` item 2, Trustee-ratified: *"The words and photo appear on the public
- * page, as the Trust approved them"*; `2026-10-27-411` item 3 (PC1 B): a part the Trust left out is ⛔ NOT marked — the words on
- * either side are joined; item 6 (PC4 A): the photo's description appears with it).
- *
- * ⭐ FINISHED STRINGS ONLY (MP3 (b)): the API cuts the left-out spans, isolates each kept piece's direction controls and joins
- * them — so ⛔ no `omitted` segment, ⛔ no `reason`, ⛔ no `key`, ⛔ no `kind`, ⛔ not even the POSITION of a cut reaches the wire.
- * `.strict()` makes any of those keys a parse failure (Trap 3). ⛔ No `submissionId`, ⛔ no `objectKey`, ⛔ no `url`, ⛔ no
- * `approvedAt`, ⛔ no `approver`: the photo is served by its own route (`/sahyog-vivran/{token}/memorial-photo`), so the object
- * key ⛔ never leaves the API (MP4).
- *   · `words` — one entry per paragraph that still holds kept text (a paragraph cut whole is dropped — ⛔ no empty gap).
- *   · `photo` — `null` when ⛔ no photo was sent or the Trust left it out; `altText` the family's description as approved (all of
- *     it left out ⇒ `""`).
- * ⚠ `null` on the parent — the switch is off, ⛔ no approved version stands, it was taken down, or the member was erased — and
- * the page then renders NOTHING: the same bytes as a drive whose family never wrote (`-393` M1 — ⛔ no trace).
- */
-export const PublicSahyogVivranFamilyMemorial = z
-  .object({
-    words: z.array(z.string().min(1)),
-    photo: z.object({ altText: z.string() }).strict().nullable(),
-  })
-  .strict();
-export type PublicSahyogVivranFamilyMemorial = z.output<typeof PublicSahyogVivranFamilyMemorial>;
-
 export const SAHYOG_VIVRAN_PROHIBITED_KEYS = [
   'status',
   'yellow',

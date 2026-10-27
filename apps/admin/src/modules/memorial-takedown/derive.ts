@@ -7,7 +7,8 @@ import { resolveEn as t } from './i18n-en.js';
 
 /**
  * The operator's smaller-fix script, in order (AC11 / AC14 — `-393` M4): the offer, the branch the chain is in (MP8 (b)), and
- * who sends a new version (the CURRENT nominee — named when they are ⛔ not the nominee who asked). `[]` when ⛔ nothing is shown.
+ * who sends a new version (the CURRENT nominee — named when they are ⛔ not the nominee who asked; an unreadable name reads as
+ * the callBack panel's "not readable" text, ⛔ never the generic line that drops the caution). `[]` when ⛔ nothing is shown.
  */
 export function operatorScript(drive: Pick<MemorialTakedownDriveResponse, 'smallerFix' | 'currentNominee'>): string[] {
   if (drive.smallerFix === null) return [];
@@ -15,9 +16,9 @@ export function operatorScript(drive: Pick<MemorialTakedownDriveResponse, 'small
   const c = drive.currentNominee;
   if (c !== null) {
     lines.push(
-      c.isNomineeToCallBack || c.name === null
+      c.isNomineeToCallBack
         ? t('takedown.script.currentNominee')
-        : t('takedown.script.currentNomineeOther').replace('{name}', c.name),
+        : t('takedown.script.currentNomineeOther').replace('{name}', () => c.name ?? t('takedown.callBack.unreadable')),
     );
   }
   return lines;

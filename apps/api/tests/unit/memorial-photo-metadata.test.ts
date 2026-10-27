@@ -5,9 +5,14 @@
 
 import zlib from 'node:zlib';
 
+import { memorial } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
-import { stripMemorialPhotoMetadata, type PhotoStripStats } from '../../src/modules/memorial/photo-metadata.js';
+import {
+  MEMORIAL_PHOTO_MAX_PIXELS,
+  stripMemorialPhotoMetadata,
+  type PhotoStripStats,
+} from '../../src/modules/memorial/photo-metadata.js';
 
 const ascii = (s: string): number[] => [...s].map((c) => c.charCodeAt(0));
 const seg = (marker: number, payload: number[]): number[] => {
@@ -77,7 +82,7 @@ describe('stripMemorialPhotoMetadata — PNG', () => {
     const n = data.length;
     return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff, ...ascii(type), ...data, 0, 0, 0, 0];
   };
-  const IHDR = chunk('IHDR', new Array<number>(13).fill(0));
+  const IHDR = chunk('IHDR', [0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0]); // 1 × 1 — a zero dimension is no PNG header (RR4)
   const IDAT = chunk('IDAT', [1, 2, 3, 4]);
   const IEND = chunk('IEND', []);
 
@@ -284,7 +289,7 @@ describe('stripMemorialPhotoMetadata — PNG: a structure check and an ALLOW-lis
     const n = data.length;
     return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff, ...ascii(type), ...data, 0, 0, 0, 0];
   };
-  const IHDR = chunk('IHDR', new Array<number>(13).fill(0));
+  const IHDR = chunk('IHDR', [0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0]); // 1 × 1 — a zero dimension is no PNG header (RR4)
   const IDAT = chunk('IDAT', [1, 2, 3, 4]);
   const IEND = chunk('IEND', []);
   const unreadable = { ok: false, problem: 'photo_unreadable' } as const;
@@ -373,5 +378,96 @@ describe('stripMemorialPhotoMetadata — PNG: a structure check and an ALLOW-lis
     const dirtyOut = stripMemorialPhotoMetadata(new Uint8Array(dirty));
     expect(dirtyOut.ok && Buffer.compare(Buffer.from(dirtyOut.bytes), clean)).toBe(0);
     expect(zlib.inflateSync(pixels)).toEqual(Buffer.from([0, 10, 20, 0, 30, 40]));
+  });
+});
+
+// ── R14 — the declared PIXELS are bounded at ingest, by the SAME number the public route's decode is bounded by ──────────
+
+describe('stripMemorialPhotoMetadata — a photo over MEMORIAL_PHOTO_MAX_PIXELS is refused at Send (R14)', () => {
+  const tooLarge = { ok: false, problem: 'photo_too_large' } as const;
+  const sof = (marker: number, width: number, height: number): number[] =>
+    seg(marker, [8, (height >> 8) & 0xff, height & 0xff, (width >> 8) & 0xff, width & 0xff, 1, 1, 0x11, 0]);
+  const jpegOf = (frame: number[]): Uint8Array => jpeg(APP0, DQT, frame, SOS, SCAN, EOI);
+
+  const SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  const chunk = (type: string, data: number[]): number[] => {
+    const n = data.length;
+    return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff, ...ascii(type), ...data, 0, 0, 0, 0];
+  };
+  const u32 = (v: number): number[] => [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
+  const pngOf = (width: number, height: number): Uint8Array =>
+    new Uint8Array([...SIG, ...chunk('IHDR', [...u32(width), ...u32(height), 8, 2, 0, 0, 0]), ...chunk('IDAT', [1, 2, 3, 4]), ...chunk('IEND', [])]);
+
+  it('the limit is the one the public route decodes under (50 MP) — and 10 000 × 5 000 is EXACTLY at it', () => {
+    expect(MEMORIAL_PHOTO_MAX_PIXELS).toBe(50_000_000);
+    expect(10_000 * 5_000).toBe(MEMORIAL_PHOTO_MAX_PIXELS);
+  });
+
+  it.each([
+    ['a baseline JPEG (SOF0)', 0xc0],
+    ['a progressive JPEG (SOF2)', 0xc2],
+  ])('%s: exactly at the limit is accepted, one row over is photo_too_large', (_n, marker) => {
+    expect(stripMemorialPhotoMetadata(jpegOf(sof(marker, 10_000, 5_000))).ok).toBe(true);
+    expect(stripMemorialPhotoMetadata(jpegOf(sof(marker, 10_000, 5_001)))).toEqual(tooLarge);
+    expect(stripMemorialPhotoMetadata(jpegOf(sof(marker, 5_001, 10_000)))).toEqual(tooLarge);
+  });
+
+  it('a JPEG at the format\'s own maximum (65 535 × 65 535) is photo_too_large, ⛔ not a wrapped-around small product', () => {
+    expect(stripMemorialPhotoMetadata(jpegOf(sof(0xc0, 65_535, 65_535)))).toEqual(tooLarge);
+  });
+
+  it('a PNG: exactly at the limit is accepted, one row over is photo_too_large (either orientation)', () => {
+    expect(stripMemorialPhotoMetadata(pngOf(10_000, 5_000)).ok).toBe(true);
+    expect(stripMemorialPhotoMetadata(pngOf(10_000, 5_001))).toEqual(tooLarge);
+    expect(stripMemorialPhotoMetadata(pngOf(5_001, 10_000))).toEqual(tooLarge);
+  });
+
+  const unreadable = { ok: false, problem: 'photo_unreadable' } as const;
+
+  it.each([
+    ['a JPEG frame with a WIDTH of 0', 0xc0, 0, 600],
+    ['a JPEG frame with a HEIGHT of 0', 0xc0, 800, 0],
+    ['a progressive JPEG frame of 0 × 0', 0xc2, 0, 0],
+  ])('%s is photo_unreadable — its product is 0, so the pixel bound would otherwise let it through (RR4)', (_n, marker, width, height) => {
+    expect(stripMemorialPhotoMetadata(jpegOf(sof(marker, width, height)))).toEqual(unreadable);
+  });
+
+  it.each([
+    ['7 bytes — no component count at all', [8, 0, 1, 0, 1]],
+    ['8 bytes — a component count and nothing after it', [8, 0, 1, 0, 1, 1]],
+    ['9 bytes', [8, 0, 1, 0, 1, 1, 1]],
+    ['10 bytes — a component cut short', [8, 0, 1, 0, 1, 1, 1, 0x11]],
+    ['11 bytes but a component count of 0', [8, 0, 1, 0, 1, 0, 0, 0, 0]],
+  ])('a JPEG frame of %s is photo_unreadable, ⛔ skipped past the bound (RR4, RS4 — `sharp` refuses these)', (_n, payload) => {
+    expect(stripMemorialPhotoMetadata(jpegOf(seg(0xc0, payload)))).toEqual(unreadable);
+  });
+
+  it('control: the smallest VALID frame (11 bytes, one component) is still accepted', () => {
+    expect(stripMemorialPhotoMetadata(jpegOf(seg(0xc0, [8, 0, 1, 0, 1, 1, 1, 0x11, 0]))).ok).toBe(true);
+  });
+
+  it.each([
+    ['a PNG with a WIDTH of 0', 0, 600],
+    ['a PNG with a HEIGHT of 0', 800, 0],
+  ])('%s is photo_unreadable (RR4)', (_n, width, height) => {
+    expect(stripMemorialPhotoMetadata(pngOf(width, height))).toEqual(unreadable);
+  });
+
+  it('a PNG far past 2^53 pixels (2^31 × 2^31) is still photo_too_large', () => {
+    expect(stripMemorialPhotoMetadata(pngOf(2 ** 31 - 1, 2 ** 31 - 1))).toEqual(tooLarge);
+  });
+
+  it('an ordinary phone photo (4000 × 3000, 12 MP) passes, with the metadata stripped as before', () => {
+    const r = stripMemorialPhotoMetadata(jpeg(APP0, APP1_EXIF, DQT, sof(0xc0, 4_000, 3_000), SOS, SCAN, EOI));
+    expect(r.ok).toBe(true);
+    expect(r.ok && contains(r.bytes, ascii('GPS'))).toBe(false);
+    expect(stripMemorialPhotoMetadata(pngOf(4_000, 3_000)).ok).toBe(true);
+  });
+
+  it('the refusal is the EXISTING wire vocabulary (`memorial.photo_too_large`) — ⛔ no new code is minted', () => {
+    const r = stripMemorialPhotoMetadata(pngOf(10_000, 5_001));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(memorial.MEMORIAL_MEMBER_ERROR_CODES as readonly string[]).toContain(`memorial.${r.problem}`);
   });
 });

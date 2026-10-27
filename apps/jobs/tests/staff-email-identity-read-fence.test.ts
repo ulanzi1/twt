@@ -17,8 +17,10 @@
 // plant is ⛔ caught. A new reader or caller is a NEW ADR, ⛔ an allowlist edit.
 // ⭐ WIDENED BY ADR-0043 (Story 11b.4a, `2026-10-27-412` MP10 (b) / MP11 — the memorial take-down approver email), entry by entry:
 //   · Q3 (`packages/domain/src/memorial/takedown-approver-email-read.ts`) joins the reader allowlist AND gets projection rules of its
-//     OWN (exactly ONE `SELECT 1 FROM admin_credentials`; every `mt_ac.` column is `user_id`) — rule (2) checks only Q1/Q2's
-//     module, so a new module would otherwise escape the projection checks;
+//     OWN (exactly ONE `SELECT 1 FROM admin_credentials`; the table is named ONCE and ⛔ joined; every column reached through ANY
+//     alias of it — or the table's own name — is `user_id`) — rule (2) checks only Q1/Q2's module, so a new module would
+//     otherwise escape the projection checks; ⚠ the first cut matched `SELECT … FROM admin_credentials` and the alias `mt_ac.`
+//     only, so a `JOIN admin_credentials ac` projection was invisible (code review R27 (c));
 //   · the take-down child joins the `decryptAdminEmail` allowlist;
 //   · (5) NEW — every caller of Q2 (`readAdminEmailCiphertext`) is on an EXACT allowlist: ADR-0040 said *"called only by the
 //     staff-email child"* and ADR-0043 admits ONE more; a third is a new ADR.
@@ -41,6 +43,8 @@ const Q_MODULE = 'packages/domain/src/claim/staff-email-identity-read.ts';
 /** ADR-0043 — Q3, the memorial take-down approver's eligibility read. */
 const Q3_MODULE = 'packages/domain/src/memorial/takedown-approver-email-read.ts';
 const READ_Q2 = /\breadAdminEmailCiphertext\b/;
+/** The alias a statement gives the table (`admin_credentials ac`, `admin_credentials AS ac`) — ⛔ a keyword that merely follows it. */
+const CREDENTIALS_ALIAS = /\badmin_credentials\s+(?:AS\s+)?(?!(?:WHERE|ON|USING|JOIN|INNER|LEFT|RIGHT|FULL|CROSS|GROUP|ORDER|LIMIT|AND|OR)\b)([A-Za-z_]\w*)/gi;
 
 /** The ONLY files whose code names the admin credentials table (ADR-0009's repo + the schema family + ADR-0040's Q1 / Q2). */
 const IDENTITY_ALLOWLIST = [
@@ -121,7 +125,7 @@ function violationsOf(files: ReadonlyMap<string, string>): string[] {
   // (5) ADR-0043 — Q2's callers.
   const q2Callers = [...files].filter(([, src]) => READ_Q2.test(stripComments(src))).map(([f]) => f).sort();
   for (const f of q2Callers) if (!Q2_CALLER_ALLOWLIST.includes(f)) out.push(`q2-caller:${f}`);
-  // ADR-0043 — Q3's OWN projection rules: exactly ONE `SELECT 1 FROM admin_credentials`, every `mt_ac.` column `user_id`.
+  // ADR-0043 — Q3's OWN projection rules: exactly ONE `SELECT 1 FROM admin_credentials`, every column of it (any alias) `user_id`.
   const q3 = files.get(Q3_MODULE);
   if (q3 === undefined) {
     out.push(`missing:${Q3_MODULE}`);
@@ -130,7 +134,12 @@ function violationsOf(files: ReadonlyMap<string, string>): string[] {
     const projections = [...code.matchAll(/\bSELECT\s+((?:(?!\bSELECT\b)[\s\S])*?)\s+FROM\s+admin_credentials\b/g)].map((m) => m[1]!.replace(/\s+/g, ' ').trim());
     for (const p of projections) if (p !== '1') out.push(`q3-projection:${p}`);
     if (projections.length !== 1) out.push('q3-projection:count');
-    for (const m of code.matchAll(/\bmt_ac\.(\w+)/g)) if (m[1] !== 'user_id') out.push(`q3-column:${m[1]!}`);
+    // R27 (c) — the table is named ONCE (the `SELECT 1 FROM` above): a JOIN, a comma-join or a drizzle table object is a second mention;
+    // and a column through ANY alias of it, or through the table's own name, is `user_id` or a violation (`alias.*` included).
+    if ((code.match(new RegExp(IDENTITY_TABLE.source, 'g')) ?? []).length !== 1) out.push('q3-reference:count');
+    if (/\bJOIN\s+admin_credentials\b/i.test(code)) out.push('q3-join');
+    const qualifiers = new Set(['admin_credentials', 'mt_ac', ...[...code.matchAll(CREDENTIALS_ALIAS)].map((m) => m[1]!)]);
+    for (const q of qualifiers) for (const m of code.matchAll(new RegExp(`\\b${q}\\.(\\w+|\\*)`, 'g'))) if (m[1] !== 'user_id') out.push(`q3-column:${m[1]!}`);
   }
   const q = files.get(Q_MODULE);
   if (q === undefined) {
@@ -209,6 +218,21 @@ describe('⛔ ADR-0040 — the identity-data read paths are EXACTLY the allowlis
     );
     expect(plant(Q3_MODULE, 'sql`AND mt_ac.failed_attempts = 0`;')).toContain('q3-column:failed_attempts');
     expect(plant(Q3_MODULE, "sql`AND EXISTS (SELECT 1 FROM admin_credentials mt_ac WHERE mt_ac.user_id = $1)`;")).toContain('q3-projection:count');
+    // R27 (c) — ⛔ invisible to the FROM-only / `mt_ac.`-only first cut: a JOIN projection under another alias, any alias in a FROM, the
+    // table's own name as the qualifier, `alias.*`, and the drizzle table object.
+    expect(plant(Q3_MODULE, 'sql`SELECT ac.email_ciphertext FROM users u JOIN admin_credentials ac ON ac.user_id = u.id`;')).toEqual(
+      expect.arrayContaining(['q3-join', 'q3-reference:count', 'q3-column:email_ciphertext']),
+    );
+    expect(plant(Q3_MODULE, 'sql`SELECT ac.* FROM users u JOIN admin_credentials AS ac ON ac.user_id = u.id`;')).toEqual(
+      expect.arrayContaining(['q3-join', 'q3-column:*']),
+    );
+    expect(plant(Q3_MODULE, 'sql`SELECT 1 FROM admin_credentials zz WHERE zz.password_hash IS NOT NULL`;')).toEqual(
+      expect.arrayContaining(['q3-column:password_hash', 'q3-reference:count', 'q3-projection:count']),
+    );
+    expect(plant(Q3_MODULE, 'sql`SELECT admin_credentials.email_ciphertext FROM users, admin_credentials`;')).toEqual(
+      expect.arrayContaining(['q3-column:email_ciphertext', 'q3-reference:count']),
+    );
+    expect(plant(Q3_MODULE, 'db.select().from(schema.adminCredentials);')).toContain('q3-reference:count');
     // A COMMENTED plant is ⛔ caught (the doc-blocks name what they forbid).
     expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', '// SELECT user_id FROM admin_credentials; decryptAdminEmail(x)')).toEqual([]);
   });

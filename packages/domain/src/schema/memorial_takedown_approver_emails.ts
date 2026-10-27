@@ -75,6 +75,15 @@ export const memorialTakedownApproverEmails = pgTable(
       'memorial_takedown_approver_emails_first_detail_length_check',
       sql`${t.firstDetail} IS NULL OR char_length(${t.firstDetail}) <= 200`,
     ),
+    // 0187 — the vocabulary (+ a BEFORE UPDATE trigger freezing a finished row; ⛔ expressible here).
+    check(
+      'memorial_takedown_approver_emails_detail_vocabulary_check',
+      sql`${t.detail} IS NULL OR ${t.detail} ~ ${sql.raw(`'${MEMORIAL_TAKEDOWN_APPROVER_EMAIL_DETAIL_PATTERN}'`)}`,
+    ),
+    check(
+      'memorial_takedown_approver_emails_first_detail_vocabulary_check',
+      sql`${t.firstDetail} IS NULL OR ${t.firstDetail} ~ ${sql.raw(`'${MEMORIAL_TAKEDOWN_APPROVER_EMAIL_DETAIL_PATTERN}'`)}`,
+    ),
     check(
       'memorial_takedown_approver_emails_parked_check',
       sql`${t.outcome} <> 'attempting' OR ((${t.claimedByJob} = 'sweep:held') = (${t.parkedAt} IS NOT NULL))`,

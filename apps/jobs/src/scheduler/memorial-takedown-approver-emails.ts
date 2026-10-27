@@ -184,7 +184,10 @@ export async function runMemorialTakedownApproverEmailSweep(
         );
         enqueued += 1;
       } catch (err) {
-        alarm(`${ALARM}-sweep: failed to enqueue the email for request ${due.requestId} (recipient ${due.recipientUserId ?? 'none'}) — ${err instanceof Error ? err.name : 'error'}`);
+        alarm(
+          `${ALARM}-sweep: failed to enqueue the email for request ${due.requestId} (recipient ${due.recipientUserId ?? 'none'}) — ` +
+            `${err instanceof Error ? err.name : 'error'}; the next sweep derives it again`,
+        );
       }
     }
     if (page.scanned < Math.min(limit, memorial.MEMORIAL_TAKEDOWN_APPROVER_EMAIL_PAGE_CAP) || page.last === null) break;
@@ -199,6 +202,8 @@ export async function runMemorialTakedownApproverEmailSweep(
         `(requests: ${sampleIds([...new Set(held)])})`,
     );
   }
+  // ⭐ "The rest wait for the next tick" is TRUE because the selector gates PER (request, recipient): a pair this run did not reach holds
+  // ⛔ no row and is derived again — it was FALSE while one sibling's row hid its whole request (review R2).
   if (budgetExhausted) {
     alarm(`${ALARM}-sweep: ran out of its ${String(Math.round(budgetMs / 60_000))}-minute budget after ${String(scannedPairs)} pair(s) — the rest wait for the next tick`);
   } else if (bounded) {

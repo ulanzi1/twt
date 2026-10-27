@@ -20,6 +20,7 @@ import type pg from 'pg';
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId, PoolId, UserId } from '../ids/index.js';
+import { clampLimit } from '../pagination.js';
 import { memberNomineeVersions } from '../schema/member_nominee_versions.js';
 import { members } from '../schema/members.js';
 import { memorialSubmissions } from '../schema/memorial_submissions.js';
@@ -185,20 +186,25 @@ export async function readMemorialTakedownDrive(
 
 export type RecordMemorialTakedownRequestResult =
   | { readonly ok: true; readonly request: MemorialTakedownRequestRow }
-  | { readonly ok: false; readonly refusal: 'not_found' | 'request_open' };
+  | { readonly ok: false; readonly refusal: 'not_found' | 'shown_changed' | 'request_open' };
 
 /**
  * ⭐ Record a request the operator verified by calling the nominee back (MP7) — UNDER THE POOL LOCK, in the caller's scope
- * transaction. Refused: ⛔ no shown memorial or an erased deceased (`not_found` — the neutral 404); an open request for the drive
- * already (`request_open` — "one open request per drive" lives HERE, ⛔ not in an index: openness is the outcome table's).
- * `due_at` is computed by the DB from `first_contact_at` (0187's CHECK: `+ 168 hours`). The 7-day bound on `firstContactAt` is
- * the caller's 400 FIRST and 0187's CHECK as the backstop.
+ * transaction. Refused: ⛔ no shown memorial or an erased deceased (`not_found` — the neutral 404); the version on the page is
+ * ⛔ the one the operator was looking at (`shown_changed` — R1: the call-back was to THAT version's nominee, so the request is
+ * never snapshotted against a newer one, exactly as `decide` refuses a `taken_down` on a changed version, MP8 (c)); an open
+ * request for the drive already (`request_open` — "one open request per drive" lives HERE, ⛔ not in an index: openness is the
+ * outcome table's). `shownSubmissionId` is compared with the chain RE-READ under the lock, so a version approved between the
+ * operator's drive view and this write is seen. `due_at` is computed by the DB from `first_contact_at` (0187's CHECK:
+ * `+ 168 hours`). The 7-day bound on `firstContactAt` is the caller's 400 FIRST and 0187's CHECK as the backstop.
  */
 export async function recordMemorialTakedownRequest(
   db: Db,
   input: {
     readonly pariwarId: PariwarId;
     readonly poolId: PoolId;
+    /** The version the operator was LOOKING AT when they called the nominee back — the drive view's `shown.submissionId`. */
+    readonly shownSubmissionId: string;
     readonly firstContactAt: Date;
     readonly actorId: UserId;
     readonly actorDisplay: string;
@@ -210,6 +216,7 @@ export async function recordMemorialTakedownRequest(
   const shown = shownMemorialLink(chain);
   if (shown === null) return { ok: false, refusal: 'not_found' };
   if (await isDeceasedErased(db, pariwarId, shown.submission.deceasedMemberId)) return { ok: false, refusal: 'not_found' };
+  if (shown.submission.submissionId !== input.shownSubmissionId) return { ok: false, refusal: 'shown_changed' };
   const requests = await readMemorialTakedownRequests(db, { pariwarId, poolId });
   if (requests.some((r) => r.outcome === null)) return { ok: false, refusal: 'request_open' };
   const [request] = await db
@@ -333,15 +340,38 @@ export interface OpenMemorialTakedownRequest {
   readonly poolCanonicalIdentifier: string;
 }
 
-/** Every OPEN request of the Pariwar, OLDEST FIRST (by `due_at`, i.e. by the nominee's first contact). Tenant-scoped. */
+/**
+ * The open-request list's page size (review R17) — a FIXED bound, ⛔ no caller-supplied page (the screen is a work list, ⛔ not a
+ * browser). One open request per drive keeps a real Pariwar's list in single digits; the bound is the backstop.
+ */
+const OPEN_REQUESTS_LIMIT = { default: 200, cap: 200 } as const;
+
+/**
+ * Every OPEN request of the Pariwar, OLDEST FIRST (by `due_at`, i.e. by the nominee's first contact), at most
+ * `OPEN_REQUESTS_LIMIT`. Tenant-scoped. ⭐ An ERASED deceased's request is ⛔ listed (R15, AC13): erasure already removes the
+ * memorial from the page and its drive view is the neutral 404, so the request is moot. ⚠ Excluded ONLY when the deceased member's
+ * row EXISTS and is anonymized — ⛔ never merely because the row is missing (the foreign key makes that impossible, and a list that
+ * under-counts over a shape it cannot name reads as "nothing is open"). The joins are 1:1 (a request names ONE submission, which
+ * names ONE deceased member), so ⛔ no row fans out.
+ * ⚠ TRUNCATION COST: past the bound the LEAST urgent requests (latest `due_at`) fall off the list — each is still reachable
+ * through its drive (the member lookup), and the overdue watch below counts every one (it is ⛔ clamped).
+ */
 export async function listOpenMemorialTakedownRequests(
   db: Db,
-  { pariwarId }: { readonly pariwarId: PariwarId },
+  { pariwarId, limit }: { readonly pariwarId: PariwarId; readonly limit?: number | undefined },
 ): Promise<OpenMemorialTakedownRequest[]> {
   const rows = await db
     .select({ request: memorialTakedownRequests, poolCanonicalIdentifier: pools.poolCanonicalIdentifier })
     .from(memorialTakedownRequests)
     .innerJoin(pools, and(eq(pools.pariwarId, memorialTakedownRequests.pariwarId), eq(pools.poolId, memorialTakedownRequests.poolId)))
+    .innerJoin(
+      memorialSubmissions,
+      and(
+        eq(memorialSubmissions.pariwarId, memorialTakedownRequests.pariwarId),
+        eq(memorialSubmissions.submissionId, memorialTakedownRequests.submissionId),
+      ),
+    )
+    .leftJoin(members, and(eq(members.pariwarId, memorialSubmissions.pariwarId), eq(members.memberId, memorialSubmissions.deceasedMemberId)))
     .leftJoin(
       memorialTakedownOutcomes,
       and(
@@ -349,8 +379,9 @@ export async function listOpenMemorialTakedownRequests(
         eq(memorialTakedownOutcomes.requestId, memorialTakedownRequests.requestId),
       ),
     )
-    .where(and(eq(memorialTakedownRequests.pariwarId, pariwarId), isNull(memorialTakedownOutcomes.requestId)))
-    .orderBy(asc(memorialTakedownRequests.dueAt), asc(memorialTakedownRequests.requestId));
+    .where(and(eq(memorialTakedownRequests.pariwarId, pariwarId), isNull(memorialTakedownOutcomes.requestId), sql`${members.state} IS DISTINCT FROM 'anonymized'`))
+    .orderBy(asc(memorialTakedownRequests.dueAt), asc(memorialTakedownRequests.requestId))
+    .limit(clampLimit(limit, OPEN_REQUESTS_LIMIT));
   return rows;
 }
 
@@ -363,7 +394,9 @@ type Queryable = Pick<pg.Pool, 'query'> | Pick<pg.PoolClient, 'query'>;
 
 /**
  * MP14 — the count of OPEN requests past `due_at`, per Pariwar with ≥ 1 (the daily watch's `warn` line). ⛔ No ids beyond the
- * Pariwar, ⛔ no names.
+ * Pariwar, ⛔ no names. ⭐ An ERASED deceased's request is ⛔ counted (R15, AC13 — the same rule as the open list above): the
+ * `NOT EXISTS` is an anti-join on the request's own submission and that submission's deceased member — it drops a request only
+ * when that member EXISTS and is anonymized (⛔ a missing row never hides one) — so ⛔ no row fans out.
  *
  * ── DELIBERATE: a CROSS-TENANT READ on the BYPASSRLS pool (family 9) ──
  * The watch has ⛔ no tenant to start from; it returns `(pariwar_id, count)` only — ⛔ no PII, ⛔ no value from one tenant reaches
@@ -379,6 +412,12 @@ export async function countOverdueMemorialTakedownRequests(
        FROM memorial_takedown_requests r
       WHERE r.due_at < $1
         AND NOT EXISTS (SELECT 1 FROM memorial_takedown_outcomes o WHERE o.pariwar_id = r.pariwar_id AND o.request_id = r.request_id)
+        AND NOT EXISTS (
+          SELECT 1
+            FROM memorial_submissions s
+            JOIN members m ON m.pariwar_id = s.pariwar_id AND m.member_id = s.deceased_member_id
+           WHERE s.pariwar_id = r.pariwar_id AND s.submission_id = r.submission_id AND m.state = 'anonymized'
+        )
         AND ($2::uuid[] IS NULL OR r.pariwar_id = ANY($2::uuid[]))
       GROUP BY r.pariwar_id
       ORDER BY r.pariwar_id`,

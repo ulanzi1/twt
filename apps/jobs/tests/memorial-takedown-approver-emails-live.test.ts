@@ -75,11 +75,11 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the take-down approver email (li
     return p;
   };
 
-  /** A staff user + (optionally) credentials holding a REAL admin-email envelope. */
-  async function approver(o: { status?: 'active' | 'suspended' | 'disabled'; credentials?: boolean } = {}): Promise<{ id: string; address: string }> {
+  /** A staff user + (optionally) credentials holding a REAL admin-email envelope (`address`: the STORED value — default a unique one). */
+  async function approver(o: { status?: 'active' | 'suspended' | 'disabled'; credentials?: boolean; address?: string } = {}): Promise<{ id: string; address: string }> {
     const id = randomUUID();
     users.push(id);
-    const address = `approver-${id.slice(0, 8)}@trust.example`;
+    const address = o.address ?? `approver-${id.slice(0, 8)}@trust.example`;
     await pool.query(`INSERT INTO users (id, identity_type, status, display_name) VALUES ($1, 'admin', $2, 'Panel Member')`, [id, o.status ?? 'active']);
     if (o.credentials !== false) {
       const ct = await encryption.encryptTier1(Buffer.from(address, 'utf-8'), encryption.ADMIN_EMAIL_ENCRYPTION_CONTEXT, enc.kms, enc.kekRef);
@@ -139,6 +139,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the take-down approver email (li
       const req = await memorial.recordMemorialTakedownRequest(db, {
         pariwarId: ids.pariwarId(pariwarId),
         poolId: ids.poolId(poolId),
+        shownSubmissionId: prev!, // the version on the page = the newest approved one (R1: the record names it)
         firstContactAt: new Date(Date.now() - 3_600_000),
         actorId: op,
         actorDisplay: 'Helpline Operator',
@@ -205,6 +206,13 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the take-down approver email (li
     );
     return rows;
   }
+  async function attemptsOf(requestId: string) {
+    const { rows } = await pool.query<{ recipient_user_id: string | null; attempt_count: number; first_detail: string | null; claimed_by_job: string | null }>(
+      `SELECT recipient_user_id, attempt_count, first_detail, claimed_by_job FROM memorial_takedown_approver_emails WHERE request_id = $1 ORDER BY recipient_user_id NULLS FIRST`,
+      [requestId],
+    );
+    return rows;
+  }
   const envelope = (pariwarId: string, requestId: string, recipientUserId: string | null): JobEnvelope<MemorialTakedownApproverEmailPayload> => ({
     pariwarId,
     requestId: 'r',
@@ -258,7 +266,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the take-down approver email (li
     expect(await rowsOf(r)).toEqual([{ recipient_user_id: null, outcome: 'no_target', detail: 'no_approver', may_have_sent: false }]);
     expect(h.errors).toEqual([{ event: 'memorial.takedown.approver_unreachable', fields: { pariwarId: P, requestId: r } }]);
     expect(h.client.sent).toEqual([]);
-    // ⭐ A request holding ANY row is ⛔ never due again — even once the approver is back.
+    // ⭐ A request holding the `no_target` row is ⛔ never due again — even once the approver is back.
     await pool.query(`UPDATE users SET status = 'active' WHERE id = $1`, [gone.id]);
     expect(await tick(h)).toEqual([]);
     expect(h.errors).toHaveLength(1);
@@ -332,5 +340,239 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the take-down approver email (li
     const h = harness([P]);
     expect(await tick(h)).toEqual([]);
     expect(await rowsOf(r)).toEqual([]);
+  });
+
+  // ── R2 — the gate is PER (request, recipient): a sweep that stops between two approvers loses ⛔ neither ───────────────────────
+
+  it('⭐ R2 — a sweep that STOPS between two approvers of one request (the pair bound, the budget) ⇒ the next tick emails the rest: each approver exactly once, ⛔ a third email', async () => {
+    for (const stop of ['pairs', 'budget'] as const) {
+      const P = isolated();
+      const a = await approver();
+      const b = await approver();
+      const r = await takenDown(P, [a.id, b.id]);
+      const h = harness([P]);
+      const full = h.deps;
+      let t = 0;
+      h.deps = stop === 'pairs' ? { ...full, maxPairs: 1 } : { ...full, sweepBudgetMs: 1000, elapsedClockMs: () => (t += 600) };
+      const first = await tick(h);
+      expect(first, stop).toEqual([{ status: 'sent', outcome: 'accepted' }]);
+      expect(h.alarms.some((m) => m.includes(stop === 'pairs' ? 'hard bound of 1 pairs' : 'ran out of its') && m.includes('the rest wait for the next tick')), stop).toBe(true);
+      expect(h.client.sent, stop).toHaveLength(1);
+      expect(await rowsOf(r), stop).toHaveLength(1);
+      // The next, UNBOUNDED tick derives the sibling — ⭐ the old "any row hides the request" rule never did.
+      h.deps = full;
+      expect(await tick(h), stop).toEqual([{ status: 'sent', outcome: 'accepted' }]);
+      expect(h.client.sent.map((m) => m.to).sort(), stop).toEqual([a.address, b.address].sort());
+      expect((await rowsOf(r)).map((x) => [x.recipient_user_id, x.outcome]).sort(), stop).toEqual([[a.id, 'accepted'], [b.id, 'accepted']].sort());
+      // ⛔ A third email: both pairs hold a row.
+      expect(await tick(h), stop).toEqual([]);
+      expect(h.client.sent, stop).toHaveLength(2);
+    }
+  });
+
+  it('⭐ a MIXED pair — one approver reachable, one left ⇒ the reachable one is emailed ONCE; ⛔ a `no_target` row, ⛔ the unreachable-approver line, ⛔ a row for the one who left', async () => {
+    const P = isolated();
+    const a = await approver();
+    const gone = await approver({ status: 'suspended' });
+    const r = await takenDown(P, [gone.id, a.id]);
+    const h = harness([P]);
+    expect(await tick(h)).toEqual([{ status: 'sent', outcome: 'accepted' }]);
+    expect(h.client.sent.map((m) => m.to)).toEqual([a.address]);
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'accepted', detail: null, may_have_sent: false }]);
+    expect(h.errors).toEqual([]);
+    expect(await tick(h)).toEqual([]);
+  });
+
+  // ── Once ever, at-least-once recorded (6.25's AC4, on this outbox) ────────────────────────────────────────────────────────
+
+  it('⭐ N concurrent children for ONE pair ⇒ ONE send, ONE `accepted` row (attempt 1)', async () => {
+    const P = isolated();
+    const a = await approver();
+    const r = await takenDown(P, [a.id]);
+    const h = harness([P]);
+    const results = await Promise.all(Array.from({ length: 4 }, () => runMemorialTakedownApproverEmailChild(h.deps, envelope(P, r, a.id), randomUUID())));
+    expect(results.filter((x) => x.status === 'sent')).toHaveLength(1);
+    expect(results.filter((x) => x.status === 'skipped')).toHaveLength(3);
+    expect(h.client.sent).toHaveLength(1);
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'accepted', detail: null, may_have_sent: false }]);
+    expect(await attemptsOf(r)).toMatchObject([{ attempt_count: 1 }]);
+  });
+
+  it('a crash-left `attempting` row past the 30-min lease is re-claimed by the next sweep (attempt 2, first_detail kept); within it ⇒ held_by_other', async () => {
+    const P = isolated();
+    const a = await approver();
+    const r = await takenDown(P, [a.id]);
+    const h = harness([P]);
+    const now = new Date();
+    h.setNow(now);
+    await pool.query(
+      `INSERT INTO memorial_takedown_approver_emails (pariwar_id, request_id, recipient_user_id, outcome, claimed_at, claimed_by_job, detail)
+       VALUES ($1, $2, $3, 'attempting', $4, 'crashed', 'transient:TooManyRequestsException')`,
+      [P, r, a.id, new Date(now.getTime() - memorial.MEMORIAL_TAKEDOWN_APPROVER_EMAIL_LEASE_MS + MIN)],
+    );
+    expect(await tick(h)).toEqual([{ status: 'skipped', reason: 'held_by_other' }]);
+    expect(h.client.sent).toEqual([]);
+    h.setNow(new Date(now.getTime() + 2 * MIN));
+    expect(await tick(h)).toEqual([{ status: 'sent', outcome: 'accepted' }]);
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'accepted', detail: null, may_have_sent: false }]);
+    expect(await attemptsOf(r)).toMatchObject([{ attempt_count: 2, first_detail: 'transient:TooManyRequestsException' }]);
+    expect(h.client.sent).toHaveLength(1);
+    expect(h.alarms.filter((m) => m.includes('may have sent'))).toEqual([]);
+  });
+
+  it('⭐ the give-up — an `attempting` row past 3 IST days AND the lease ⇒ `error` + ONE alarm "may have sent"; a row inside the lease is ⛔ given up', async () => {
+    const P = isolated();
+    const [old, live] = [await approver(), await approver()];
+    const r = await takenDown(P, [old.id, live.id]);
+    const h = harness([P]);
+    const now = new Date();
+    h.setNow(now);
+    const created = new Date(memorial.memorialTakedownApproverEmailReclaimCutoff(now).getTime() - MIN);
+    await pool.query(
+      `INSERT INTO memorial_takedown_approver_emails (pariwar_id, request_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail, aging_since)
+       VALUES ($1, $2, $3, 'attempting', $4, 'old', $6, 'held:SendingPausedException', $6),
+              ($1, $2, $5, 'attempting', $7, 'live', $6, 'held:SendingPausedException', $6)`,
+      [P, r, old.id, new Date(now.getTime() - memorial.MEMORIAL_TAKEDOWN_APPROVER_EMAIL_LEASE_MS - MIN), live.id, created, new Date(now.getTime() - MIN)],
+    );
+    expect(await sweep(h)).toMatchObject({ finalisedStuck: 1 });
+    const rows = await rowsOf(r);
+    expect(rows.find((x) => x.recipient_user_id === old.id)).toMatchObject({ outcome: 'error', detail: 'exhausted:attempting_three_days', may_have_sent: true });
+    expect(rows.find((x) => x.recipient_user_id === live.id)).toMatchObject({ outcome: 'attempting' });
+    expect(h.alarms.filter((m) => m.includes('gave up') && m.includes('may have sent'))).toHaveLength(1);
+    expect(h.client.sent).toEqual([]);
+  });
+
+  it('⭐ a HOLD past the give-up horizon ⇒ the in-flight row is PARKED, ⛔ given up; fixed ⇒ re-claimed AT ONCE and sent', async () => {
+    const P = isolated();
+    const a = await approver();
+    const r = await takenDown(P, [a.id]);
+    const h = harness([P]);
+    const now = new Date();
+    h.setNow(now);
+    // A row in flight since BEFORE the give-up horizon whose child is gone (a held fault, then the channel went down).
+    await pool.query(
+      `INSERT INTO memorial_takedown_approver_emails (pariwar_id, request_id, recipient_user_id, outcome, claimed_at, claimed_by_job, created_at, detail, aging_since)
+       VALUES ($1, $2, $3, 'attempting', $4, 'gone', $5, 'held:SendingPausedException', $5)`,
+      [P, r, a.id, new Date(now.getTime() - 2 * memorial.MEMORIAL_TAKEDOWN_APPROVER_EMAIL_LEASE_MS), new Date(memorial.memorialTakedownApproverEmailReclaimCutoff(now).getTime() - MIN)],
+    );
+    h.client.state.preflight = { ok: false, detail: 'preflight:sending_disabled' };
+    await tick(h);
+    expect(await rowsOf(r)).toMatchObject([{ outcome: 'attempting', detail: 'held:SendingPausedException' }]);
+    expect(await attemptsOf(r)).toMatchObject([{ claimed_by_job: memorial.MEMORIAL_TAKEDOWN_APPROVER_EMAIL_PARKED_BY }]);
+    expect(h.alarms.filter((m) => m.includes('gave up'))).toEqual([]);
+    expect(h.alarms.filter((m) => m.includes('HELD'))).toEqual([expect.stringContaining('1 in-flight row(s) newly parked')]);
+    // Still held a day later ⇒ still parked, still ⛔ given up (⛔ re-parked — the alarm counts only NEW parks).
+    h.setNow(new Date(now.getTime() + 24 * 60 * MIN));
+    h.alarms.length = 0;
+    await tick(h);
+    expect(await attemptsOf(r)).toMatchObject([{ claimed_by_job: memorial.MEMORIAL_TAKEDOWN_APPROVER_EMAIL_PARKED_BY }]);
+    expect(h.alarms.filter((m) => m.includes('gave up'))).toEqual([]);
+    expect(h.alarms.filter((m) => m.includes('HELD'))).toEqual([expect.stringContaining('0 in-flight row(s) newly parked')]);
+    // Fixed ⇒ the very next tick re-claims the parked row (⛔ lease wait) and sends.
+    h.client.state.preflight = { ok: true };
+    h.setNow(new Date(now.getTime() + 24 * 60 * MIN + 15 * MIN));
+    await tick(h);
+    expect(h.client.sent.map((m) => m.to)).toEqual([a.address]);
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'accepted', detail: null, may_have_sent: false }]);
+    expect(await attemptsOf(r)).toMatchObject([{ attempt_count: 2, first_detail: 'held:SendingPausedException' }]);
+    expect(h.alarms.filter((m) => m.includes('gave up'))).toEqual([]);
+  });
+
+  // ── The terminal and the pre-call classes ─────────────────────────────────────────────────────────────────────────────────
+
+  it('a provider `rejected` (a recorded recipient-specific name) ⇒ the ONLY final failure: `rejected` + ONE alarm; ⛔ re-derived', async () => {
+    const P = isolated();
+    const a = await approver();
+    const r = await takenDown(P, [a.id]);
+    const h = harness([P]);
+    h.client.state.respond = () => ({ kind: 'final', outcome: 'rejected', detail: 'rejected:400:TM_4001.SM_113' });
+    expect(await tick(h)).toEqual([{ status: 'sent', outcome: 'rejected' }]);
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'rejected', detail: 'rejected:400:TM_4001.SM_113', may_have_sent: false }]);
+    expect(h.alarms.filter((m) => m.includes('REJECTED') && m.includes(r))).toHaveLength(1);
+    expect(await tick(h)).toEqual([]);
+    expect(h.client.sent).toHaveLength(1);
+  });
+
+  it('⭐ ⛔ address after `begun` ⇒ `error` / `error:no_address` | `error:invalid_address` + alarm; ⛔ an address in rows, alarms or logs', async () => {
+    const logs: string[] = [];
+    const spies = (['log', 'info', 'warn', 'error'] as const).map((k) => vi.spyOn(console, k).mockImplementation((...x: unknown[]) => void logs.push(JSON.stringify(x))));
+    // (`h.errors` is the `onError` sink, which the sweep feeds ONLY for a `no_target` request — empty here, so collecting it would prove nothing.)
+    const seen: { alarms: string[]; rows: unknown[] } = { alarms: [], rows: [] };
+    try {
+      for (const [address, d] of [['   ', 'error:no_address'], ['x"<approver.leak@trust.example>', 'error:invalid_address']] as const) {
+        const P = isolated();
+        const x = await approver({ address });
+        const r = await takenDown(P, [x.id]);
+        const h = harness([P]);
+        expect(await tick(h), d).toEqual([{ status: 'error', detail: d }]);
+        expect(await rowsOf(r), d).toEqual([{ recipient_user_id: x.id, outcome: 'error', detail: d, may_have_sent: false }]);
+        expect(h.alarms.filter((m) => m.includes(r) && m.includes(d)), d).toHaveLength(1);
+        expect(h.client.sent, d).toEqual([]);
+        // A final `error` is ⛔ re-derived.
+        expect(await tick(h), d).toEqual([]);
+        seen.alarms.push(...h.alarms);
+        seen.rows.push(...(await rowsOf(r)));
+      }
+    } finally {
+      for (const s of spies) s.mockRestore();
+    }
+    expect(JSON.stringify({ ...seen, logs })).not.toContain('approver.leak');
+  });
+
+  it('⭐ a DECRYPT failure (before the provider call) stays `attempting`, is alarmed ONCE across two attempts, ⛔ may-have-sent; repaired ⇒ the same job sends', async () => {
+    const P = isolated();
+    const a = await approver();
+    const r = await takenDown(P, [a.id]);
+    const h = harness([P]);
+    const job = 'job-own';
+    await pool.query(`UPDATE admin_credentials SET email_ciphertext = 'enc:v1:not-an-envelope' WHERE user_id = $1`, [a.id]);
+    for (let i = 0; i < 2; i += 1) {
+      await sweep(h);
+      await expect(runMemorialTakedownApproverEmailChild(h.deps, h.enqueued[0]!.data, job)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    }
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'attempting', detail: 'transient:decrypt_failed', may_have_sent: false }]);
+    // A decrypt failure can be DETERMINISTIC (a wrong KEK) ⇒ alarmed like a HELD fault: ONCE across the two attempts.
+    expect(h.alarms.filter((m) => m.includes(r) && m.includes('transient:decrypt_failed'))).toHaveLength(1);
+    expect(h.client.sent).toEqual([]);
+    const ct = await encryption.encryptTier1(Buffer.from(a.address, 'utf-8'), encryption.ADMIN_EMAIL_ENCRYPTION_CONTEXT, enc.kms, enc.kekRef);
+    await pool.query(`UPDATE admin_credentials SET email_ciphertext = $2 WHERE user_id = $1`, [a.id, encryption.serializeEnvelope(ct)]);
+    expect(await runMemorialTakedownApproverEmailChild(h.deps, h.enqueued[0]!.data, job)).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'accepted', detail: null, may_have_sent: false }]);
+    expect(h.alarms.filter((m) => m.includes(r) && m.includes('may have sent'))).toEqual([]);
+  });
+
+  it('a Q2 READ failure (a DB blip) stays `attempting` (`transient:read_failed`) and is ⛔ alarmed — a read that failed has not been a held fault', async () => {
+    const P = isolated();
+    const a = await approver();
+    const r = await takenDown(P, [a.id]);
+    const h = harness([P]);
+    await sweep(h);
+    const env = h.enqueued[0]!.data;
+    // Q2's read fails — a pool whose clients reject that ONE statement (restored on release). 6.25's wrapper, as it stands.
+    const failing = Object.create(pool) as pg.Pool;
+    // ⚠ The child reaches the DB through `connect` only (withPariwarScope); a `pool.query` path would bypass the wrapper — fail LOUDLY.
+    (failing as { query: unknown }).query = () => Promise.reject(new Error('the failing-pool wrapper only supports connect()'));
+    failing.connect = (async () => {
+      const c = await pool.connect();
+      const realQuery = c.query.bind(c);
+      const realRelease = c.release.bind(c);
+      (c as { query: unknown }).query = (q: unknown, ...rest: unknown[]) => {
+        const text = typeof q === 'string' ? q : ((q as { text?: string } | null)?.text ?? '');
+        return text.includes('se_q2.email_ciphertext') ? Promise.reject(new Error('read failed (test)')) : (realQuery as (...a: unknown[]) => unknown)(q, ...rest);
+      };
+      (c as { release: unknown }).release = (...a: unknown[]) => {
+        (c as { query: unknown }).query = realQuery;
+        (c as { release: unknown }).release = realRelease;
+        return (realRelease as (...x: unknown[]) => void)(...a);
+      };
+      return c;
+    }) as never;
+    const alarmsBefore = h.alarms.length;
+    for (let i = 0; i < 2; i += 1) {
+      await expect(runMemorialTakedownApproverEmailChild({ ...h.deps, pool: failing }, env, 'job-q')).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    }
+    expect(await rowsOf(r)).toEqual([{ recipient_user_id: a.id, outcome: 'attempting', detail: 'transient:read_failed', may_have_sent: false }]);
+    expect(h.alarms.slice(alarmsBefore)).toEqual([]); // ⛔ alarm of ANY shape for a read failure
+    expect(h.client.sent).toEqual([]);
   });
 });

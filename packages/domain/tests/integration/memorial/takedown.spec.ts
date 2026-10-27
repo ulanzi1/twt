@@ -23,9 +23,11 @@ import {
   memorialWithdrawApprovalTargetId,
   readMemorialChain,
   readMemorialTakedownDrive,
+  readMemorialTakedownRequests,
   readPublicMemorial,
   readPublicMemorialPhotoTarget,
   recordMemorialTakedownRequest,
+  shownMemorialLink,
 } from '../../../src/memorial/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppScope, seedClaim, seedMember, seedPool, seedUser } from '../_helpers.js';
@@ -123,10 +125,17 @@ const ago = (hours: number): Date => {
   return d;
 };
 
-async function record(d: Drive) {
-  return recordMemorialTakedownRequest(getTx().tx, {
+/**
+ * Record a request the way the operator's screen does: against the version the drive view SHOWS right now (R1) — `over`
+ * names another one (the version the operator was looking at when a newer one landed).
+ */
+async function record(d: Drive, over: { readonly shownSubmissionId?: string } = {}) {
+  const { tx } = getTx();
+  const shown = shownMemorialLink(await readMemorialChain(tx, d));
+  return recordMemorialTakedownRequest(tx, {
     pariwarId: d.pariwarId,
     poolId: d.poolId,
+    shownSubmissionId: over.shownSubmissionId ?? shown?.submission.submissionId ?? d.versions.at(-1)!,
     firstContactAt: ago(30),
     actorId: d.operator,
     actorDisplay: 'Helpline Operator',
@@ -262,12 +271,45 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the memorial take-down (domain, 
       const { tx, client } = getTx();
       await enterAppScope(client, d.pariwarId);
       expect(await decide(d, randomUUID(), 'kept')).toEqual({ ok: false, refusal: 'not_found' });
-      const rd = await recordMemorialTakedownRequest(tx, { pariwarId: d.pariwarId, poolId: d.poolId, firstContactAt: ago(10), actorId: d.operator, actorDisplay: 'Op' });
-      const re = await recordMemorialTakedownRequest(tx, { pariwarId: e.pariwarId, poolId: e.poolId, firstContactAt: ago(40), actorId: e.operator, actorDisplay: 'Op' });
+      const rd = await recordMemorialTakedownRequest(tx, { pariwarId: d.pariwarId, poolId: d.poolId, shownSubmissionId: d.versions[0]!, firstContactAt: ago(10), actorId: d.operator, actorDisplay: 'Op' });
+      const re = await recordMemorialTakedownRequest(tx, { pariwarId: e.pariwarId, poolId: e.poolId, shownSubmissionId: e.versions[0]!, firstContactAt: ago(40), actorId: e.operator, actorDisplay: 'Op' });
       if (!rd.ok || !re.ok) throw new Error('record');
       const open = await listOpenMemorialTakedownRequests(tx, { pariwarId: d.pariwarId });
       expect(open.map((o) => o.request.requestId)).toEqual([re.request.requestId, rd.request.requestId]);
       expect(open[0]!.poolCanonicalIdentifier).toBe(`P-2026-09-${e.poolId.slice(0, 8)}`);
+    });
+
+    it('R1 / MP8 (c): a request is bound to the version the operator was LOOKING AT — a version approved since is `shown_changed` and ⛔ writes a row; the version now shown records', async () => {
+      const d = await seedDrive(['A-omit']);
+      const { tx, client } = getTx();
+      await enterAppScope(client, d.pariwarId);
+      const looked = d.versions[0]!;
+      // The drive view showed v1 (and its nominee). Before the record lands a newer version is approved — under ANOTHER nominee
+      // (`appendVersion` mints a fresh `handover_nominee_ref` for each).
+      await client.query('RESET ROLE');
+      const v2 = await appendVersion(d, 'A', { createdAt: new Date(Date.now() + 60_000) });
+      await enterAppScope(client, d.pariwarId);
+      expect((await readPublicMemorial(tx, d))?.submissionId).toBe(v2);
+      expect(await record(d, { shownSubmissionId: looked })).toEqual({ ok: false, refusal: 'shown_changed' });
+      expect(await record(d, { shownSubmissionId: randomUUID() })).toEqual({ ok: false, refusal: 'shown_changed' });
+      expect(await readMemorialTakedownRequests(tx, d)).toEqual([]);
+      const ok = await record(d, { shownSubmissionId: v2 });
+      expect(ok.ok && ok.request.submissionId).toBe(v2);
+      expect(await readMemorialTakedownRequests(tx, d)).toHaveLength(1);
+    });
+
+    it('R17 — the open list is CLAMPED and keeps oldest-due first: `limit: 1` returns the oldest only, and a non-positive limit never reaches Postgres as "no limit"', async () => {
+      const d = await seedDrive(['A']);
+      const e = await seedDrive(['A'], { pariwarId: d.pariwarId });
+      const { tx, client } = getTx();
+      await enterAppScope(client, d.pariwarId);
+      const rd = await recordMemorialTakedownRequest(tx, { pariwarId: d.pariwarId, poolId: d.poolId, shownSubmissionId: d.versions[0]!, firstContactAt: ago(10), actorId: d.operator, actorDisplay: 'Op' });
+      const re = await recordMemorialTakedownRequest(tx, { pariwarId: e.pariwarId, poolId: e.poolId, shownSubmissionId: e.versions[0]!, firstContactAt: ago(40), actorId: e.operator, actorDisplay: 'Op' });
+      if (!rd.ok || !re.ok) throw new Error('record');
+      const ids = async (limit?: number) => (await listOpenMemorialTakedownRequests(tx, { pariwarId: d.pariwarId, limit })).map((o) => o.request.requestId);
+      expect(await ids()).toEqual([re.request.requestId, rd.request.requestId]);
+      expect(await ids(1)).toEqual([re.request.requestId]);
+      expect(await ids(-1)).toEqual([re.request.requestId]);
     });
 
     it('MP14 — the overdue count per Pariwar (cross-tenant) counts OPEN requests past `due_at` only', async () => {
@@ -317,6 +359,39 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the memorial take-down (domain, 
       expect(await readMemorialTakedownDrive(tx, d)).toBeNull();
       expect(await record(d)).toEqual({ ok: false, refusal: 'not_found' });
       expect(await readPublicMemorialPhotoTarget(tx, d.pariwarId, d.publicToken)).toBeNull();
+    });
+
+    it('R15 / AC13 — an ERASED deceased\'s OPEN request is ⛔ listed and ⛔ counted overdue; a live deceased\'s beside it still is (the control)', async () => {
+      const live = await seedDrive(['A']);
+      const gone = await seedDrive(['A'], { pariwarId: live.pariwarId });
+      const { tx, client } = getTx();
+      // As the superuser: each deceased's request recorded 9 days ago, first contact 10 days ago ⇒ OPEN and due 3 days ago.
+      const open = async (d: Drive): Promise<string> => {
+        const r = randomUUID();
+        await client.query(
+          `INSERT INTO memorial_takedown_requests (request_id, pariwar_id, pool_id, submission_id, handover_nominee_ref, verified_by, first_contact_at, received_at, due_at, actor_id, actor_display)
+           VALUES ($1, $2, $3, $4, $5, 'called_back', $6, $7, $6::timestamptz + interval '168 hours', $8, 'Op')`,
+          [r, d.pariwarId, d.poolId, d.versions[0], randomUUID(), ago(240), ago(216), d.operator],
+        );
+        return r;
+      };
+      const liveRequest = await open(live);
+      const goneRequest = await open(gone);
+      const overdue = () => countOverdueMemorialTakedownRequests(client, { now: new Date(), allow: [live.pariwarId] });
+      const listed = async () => {
+        await enterAppScope(client, live.pariwarId);
+        const out = (await listOpenMemorialTakedownRequests(tx, { pariwarId: live.pariwarId })).map((o) => o.request.requestId);
+        await client.query('RESET ROLE');
+        return out;
+      };
+      // BEFORE the erasure both are counted and listed — so what changes below is the erasure's doing, ⛔ the fixture's.
+      expect(await overdue()).toEqual([{ pariwarId: live.pariwarId, count: 2 }]);
+      expect((await listed()).sort()).toEqual([liveRequest, goneRequest].sort());
+
+      await tx.execute(sql.raw("SET LOCAL app.member_state_writer = 'on'"));
+      await client.query(`UPDATE members SET state = 'anonymized' WHERE member_id = $1`, [gone.memberId]);
+      expect(await overdue()).toEqual([{ pariwarId: live.pariwarId, count: 1 }]);
+      expect(await listed()).toEqual([liveRequest]);
     });
   });
 

@@ -24,8 +24,9 @@
 //   · *"verifier hyperlinks resolving to verifier profile pages"* — ⛔ NO SUCH PAGE EXISTS anywhere
 //     in the repo. The AC's hyperlink has ⛔ no destination.
 //   · the family story (Story **11b.4**) — `backlog`.
-//     ⭐ DISCHARGED 2026-10-27 (Story 11b.4a, `2026-10-27-412`): the family's memorial now renders on this page (the API's
-//     `familyMemorial`; `FamilyMemorial.astro`), dark until launch-gate Row 41 closes. The line above is kept as the record.
+//     ⭐ HOMED 2026-10-27 (Story 11b.4a, `2026-10-27-412`): the family's memorial now renders on this page (the API's
+//     `familyMemorial`; `FamilyMemorial.astro`), dark until launch-gate Row 41 closes; closes when 11b.4a is `done` on main.
+//     The line above is kept as the record.
 //   · the memorial visual components (Story **11b.5**) — `backlog`.
 //   · `<StatCardStrip>` — **C-3**: ⛔ no producer AND ⛔ no owner.
 // ⭐ THE RULED POSTURE IS 11a.5's THIRD PATH, and C-4 SURVIVED `2026-08-28-160` untouched: *"render

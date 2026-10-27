@@ -70,9 +70,10 @@ export interface SahyogVivranApplicableControl {
  * ⚠ And 11b.3b **EXTENDS** what 11b.3a wrote rather than replacing it: 11b.3a restored PII-BEARING,
  * 11b.3b restores PAGINATED. ⛔ Neither may drop the other's property.
  */
-// ⭐ 2026-10-27 (Story 11b.4a, `2026-10-27-412` — the story's Question 8): the family memorial's PHOTO route
-// (`…/sahyog-vivran/:driveToken/memorial-photo`) JOINS this set — the same surface's data, the same kill switch, the same
-// named tier and the same unguessable address. ⚠ Ordinals 2 and 3 bind nothing on it (ONE photo per drive; ⛔ no page, ⛔ no
+// ⭐ 2026-10-27 (Story 11b.4a, `2026-10-27-412` — the story's Question 8; departure (c)): the family memorial's PHOTO route
+// (`…/sahyog-vivran/:driveToken/memorial-photo`) is DEFENDED IN WRITING by this set — the same surface's data, the same kill
+// switch, the same named tier and the same unguessable address — BY DOCUMENTATION ONLY: the set lists controls, ⛔ not routes, so
+// nothing here (or in a test) binds that route to it. ⚠ Ordinals 2 and 3 bind nothing on it (ONE photo per drive; ⛔ no page, ⛔ no
 // limit). ⛔ No entry is added: the set describes the surface, and its length assertion is unchanged.
 export const SAHYOG_VIVRAN_APPLICABLE_CONTROLS: readonly SahyogVivranApplicableControl[] = [
   {

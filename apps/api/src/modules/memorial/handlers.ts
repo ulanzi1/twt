@@ -532,7 +532,11 @@ export function createMemorialHandlers(deps: AppDeps) {
         const r = stripMemorialPhotoMetadata(new Uint8Array(photo.bytes));
         if (!r.ok) {
           throw new BadRequestError(
-            r.problem === 'photo_type' ? 'Please choose a JPEG or PNG photo' : 'The photo could not be read',
+            r.problem === 'photo_type'
+              ? 'Please choose a JPEG or PNG photo'
+              : r.problem === 'photo_too_large'
+                ? 'The photo is too large'
+                : 'The photo could not be read',
             `memorial.${r.problem}`,
           );
         }

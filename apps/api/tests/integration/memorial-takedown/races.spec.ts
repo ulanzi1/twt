@@ -74,19 +74,20 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — take-down races at the pool lock
     expect((await op.inject({ method: 'POST', url: '/api/v1/auth/step-up/verify', payload: { otp: t.adminStepUpDelivery.last?.code as string } })).statusCode).toBe(200);
     let requestId: string | null = null;
     if (opts.request !== false) {
-      const rec = await recordRequest(op, w)();
+      const rec = await recordRequest(op, w, v1)();
       expect(rec.status, JSON.stringify(rec.body)).toBe(201);
       requestId = rec.body.requestId as string;
     }
     return { w, v1, panel, op, requestId };
   }
 
-  const recordRequest = (op: StaffClient, w: MemorialWorld) => () =>
+  /** The call-back recorded against `shown` — the version the operator was LOOKING AT (R1). */
+  const recordRequest = (op: StaffClient, w: MemorialWorld, shown: string) => () =>
     reply(
       op.inject({
         method: 'POST',
         url: `/api/v1/p/${w.pariwarId}/memorial-takedowns/drives/${w.poolId}/requests`,
-        payload: { calledBack: true, firstContactAt: new Date(Date.now() - 60_000).toISOString() },
+        payload: { calledBack: true, firstContactAt: new Date(Date.now() - 60_000).toISOString(), shownSubmissionId: shown },
       }),
     );
   const takeDown = (x: World) => () =>
@@ -233,11 +234,58 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — take-down races at the pool lock
 
   it('two request records for one drive, queued together — 201 then 409 request_open; ONE request', async () => {
     const x = await world({ request: false });
-    const r = await race(x.w, recordRequest(x.op, x.w), recordRequest(x.op, x.w));
+    const r = await race(x.w, recordRequest(x.op, x.w, x.v1), recordRequest(x.op, x.w, x.v1));
     expect(r.first.status, JSON.stringify(r.first.body)).toBe(201);
     expect(r.second.status).toBe(409);
     expect(code(r.second)).toBe('memorial_takedown.request_open');
     const n = await rows<{ n: string }>(t, `SELECT count(*)::text AS n FROM memorial_takedown_requests WHERE pool_id = $1`, [x.w.poolId]);
+    expect(n[0]!.n).toBe('1');
+  });
+
+  // ── request record × the Trust's decision on a newer version (R1 — the call-back is bound to the version the operator SAW) ──
+
+  const requestRows = (x: World) =>
+    rows<{ submission_id: string }>(t, `SELECT submission_id FROM memorial_takedown_requests WHERE pool_id = $1`, [x.w.poolId]);
+
+  it('request record × review decision — the DECISION first (v2 approved while the operator was looking at v1): the record is 409 shown_changed; ⛔ no request written', async () => {
+    const x = await world({ request: false });
+    const v2 = await withPending(x);
+    const r = await race(x.w, decide(x, v2), recordRequest(x.op, x.w, x.v1));
+    expect(r.first.status, JSON.stringify(r.first.body)).toBe(200);
+    expect(r.second.status, JSON.stringify(r.second.body)).toBe(409);
+    expect(code(r.second)).toBe('memorial_takedown.shown_changed');
+    expect(await requestRows(x)).toEqual([]);
+  });
+
+  it('request record × review decision — the RECORD first: 201 against v1 (still the one on the page), then the decision lands; the request keeps v1, ⛔ v2', async () => {
+    const x = await world({ request: false });
+    const v2 = await withPending(x);
+    const r = await race(x.w, recordRequest(x.op, x.w, x.v1), decide(x, v2));
+    expect(r.first.status, JSON.stringify(r.first.body)).toBe(201);
+    expect(r.second.status, JSON.stringify(r.second.body)).toBe(200);
+    expect(await requestRows(x)).toEqual([{ submission_id: x.v1 }]);
+  });
+
+  // ── an Idempotency-Key still IN PROGRESS ─────────────────────────────────────────────────────────────────────────────
+
+  it('an `Idempotency-Key` still IN PROGRESS (its first request parked on the pool lock) answers the second 409 idempotency_in_progress; ONE outcome once the first finishes', async () => {
+    const x = await world();
+    const url = `/api/v1/p/${x.w.pariwarId}/memorial-takedowns/requests/${x.requestId!}/outcome`;
+    const keep = () => reply(x.op.inject({ method: 'POST', url, payload: { outcome: 'kept' }, headers: { 'idempotency-key': `inflight-${x.requestId!}` } }));
+    const lock = await holdPoolLock(t, x.w.poolId);
+    try {
+      const first = keep();
+      // The first has CLAIMED its key before it takes the lock — so a request parked on the lock is an in-flight one.
+      await lock.waitForWaiters(1);
+      const second = await keep();
+      expect(second.status, JSON.stringify(second.body)).toBe(409);
+      expect(code(second)).toBe('memorial_takedown.idempotency_in_progress');
+      await lock.release();
+      expect((await first).status).toBe(200);
+    } finally {
+      await lock.abort();
+    }
+    const n = await rows<{ n: string }>(t, `SELECT count(*)::text AS n FROM memorial_takedown_outcomes WHERE request_id = $1`, [x.requestId]);
     expect(n[0]!.n).toBe('1');
   });
 });

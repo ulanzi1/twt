@@ -3,22 +3,23 @@
 //
 // ⭐ `null` (the page carries ⛔ no memorial) iff: the memorial switch is off (MP13); `latestApprovedIndex === -1` (⛔ never keyed
 // on the head's state); the words or the photo's description decrypt to the ERASURE SENTINEL (Trap 4 — `anonymizeMember`
-// encrypts it, so the decrypt SUCCEEDS); or a decrypt fails with a bad envelope (one `error` log; the PAGE stays). ⚠ A KMS
-// OUTAGE is ⛔ not a bad envelope: it RE-THROWS to the page's 503 outage state (the deceased-name precedent — an outage
-// published as a quiet omission would be edge-cached as "no memorial").
+// encrypts it, so the decrypt SUCCEEDS); a decrypt fails with a bad envelope (one `error` log; the PAGE stays); or — the FIFTH,
+// silent (review R22) — NOTHING IS LEFT TO SHOW: the Trust left out every word and there is ⛔ no photo (none sent, or left out),
+// i.e. `{ words: [], photo: null }`, which would draw a memorial with nothing in it. ⚠ A KMS OUTAGE is ⛔ not a bad envelope: it
+// RE-THROWS to the page's outage state (the API answers 500; `apps/public` renders its 503 view — the deceased-name precedent;
+// an outage published as a quiet omission would be edge-cached as "no memorial").
 // ⭐ Read inside the page handler's EXISTING public scope transaction (⛔ never a second one); ⛔ no advisory lock is taken, so
 // the decrypt may run inside it (the page's own deceased-name decrypt does).
 // The decrypted words ⛔ never reach a log line.
 
 import type { PublicSahyogVivranFamilyMemorial } from '@twt/contracts';
 import { memorial, member as memberDomain, type Db, type ids } from '@twt/domain';
-import { reconstructMemorial } from '@twt/ui';
 import type { FastifyBaseLogger } from 'fastify';
 
 import type { AppDeps, EncryptionDeps } from '../../context.js';
 import { KmsOutageError } from '../kyc/name-render.js';
 import { decryptMemorialField } from '../memorial/memorial-crypto.js';
-import { joinKeptSegments, memorialCutTexts } from './memorial-public-text.js';
+import { publicMemorialText } from './memorial-public-text.js';
 
 export async function resolvePublicFamilyMemorial(
   deps: Pick<AppDeps, 'config'>,
@@ -58,19 +59,9 @@ export async function resolvePublicFamilyMemorial(
     return null;
   }
 
-  const bodySpans = shown.omissions.filter((o) => o.field === 'body');
-  const altSpans = shown.omissions.filter((o) => o.field === 'altText');
-  const rec = reconstructMemorial({ body, altText }, { omissions: shown.omissions, photoLeftOut: false });
-  const words = joinKeptSegments(rec.asApproved, memorialCutTexts(body, bodySpans));
-  const photo =
-    shown.photo === null
-      ? null
-      : {
-          altText:
-            altText === null || rec.altText?.asApproved == null
-              ? ''
-              : joinKeptSegments(rec.altText.asApproved, memorialCutTexts(altText, altSpans)).join(' '),
-        };
+  const text = publicMemorialText({ body, altText, omissions: shown.omissions });
+  const words = text.words;
+  const photo = shown.photo === null ? null : { altText: text.altText ?? '' };
   if (words.length === 0 && photo === null) return null;
   return { words, photo };
 }

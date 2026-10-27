@@ -29,13 +29,26 @@
 //   (iii) A truncated or malformed file ⇒ `photo_unreadable` (⛔ never a throw that 500s). The kept ranges are copied
 //        into ONE buffer as they close (contiguous ranges coalesce): the cost is bounded by the input's size and does not
 //        grow with the number of its segments (a 10 MiB run of 2-byte markers once held millions of `subarray` views).
+//   (iv) PIXELS, ⛔ not just bytes (review R14): a frame header (JPEG SOFn) or IHDR (PNG) that declares more than
+//        `MEMORIAL_PHOTO_MAX_PIXELS` ⇒ `photo_too_large` (the existing wire code — ⛔ no new value); one that declares an EMPTY
+//        image (a width or a height of 0) or a frame too short to hold its size ⇒ `photo_unreadable` (`sharp` refuses both, review
+//        RR4). The public photo route's `sharp` decode is bounded by the SAME number, so no photo accepted here is refused for its
+//        SIZE — otherwise a 10 MiB file under the byte cap but over the pixel cap is stored, advertised with its alt text, and
+//        404s forever. ⚠ That is a bound on the DECLARED size, ⛔ not a promise that the page can serve the photo: this module
+//        reads structure and never decodes, so a file whose entropy data `sharp` refuses is still stored (deferred, RR20).
 //
 // ⚠ Orientation is an EXIF tag and is dropped with APP1: the phone picker re-encodes at `quality: 0.8`, which is expected
 // to bake rotation in — ⚠ UNVERIFIED until the Task 6.6 device check (a rotated portrait; an iPhone HEIC original).
 
 export type StrippedPhoto =
   | { readonly ok: true; readonly bytes: Uint8Array; readonly mime: 'image/jpeg' | 'image/png' }
-  | { readonly ok: false; readonly problem: 'photo_type' | 'photo_unreadable' };
+  | { readonly ok: false; readonly problem: 'photo_type' | 'photo_unreadable' | 'photo_too_large' };
+
+/**
+ * The most pixels (width × height) a memorial photo may declare — the ONE number: `MEMORIAL_PHOTO_VARIANT.limitInputPixels`
+ * (the public route's `sharp` decode bound) is this constant, ⛔ not a second literal that could drift below what ingest admits.
+ */
+export const MEMORIAL_PHOTO_MAX_PIXELS = 50_000_000;
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 /**
@@ -68,6 +81,7 @@ function isPng(b: Uint8Array): boolean {
 }
 
 const UNREADABLE = { ok: false, problem: 'photo_unreadable' } as const;
+const TOO_LARGE = { ok: false, problem: 'photo_too_large' } as const;
 
 /** A range this short is copied by a plain loop (a `subarray` view per tiny range is what made the cost per-segment). */
 const SMALL_RANGE = 64;
@@ -196,7 +210,18 @@ function stripJpeg(b: Uint8Array, stats: PhotoStripStats | undefined): StrippedP
     if (length < 2) return UNREADABLE;
     const segEnd = pos + 2 + length;
     if (segEnd > b.length) return UNREADABLE;
-    if (isJpegFrameMarker(marker)) sawFrame = true;
+    if (isJpegFrameMarker(marker)) {
+      sawFrame = true;
+      // SOFn payload: precision (1), height (2), width (2), Nf (1), then 3 bytes per component. A valid frame has at least one
+      // component, so its `length` (which counts its own 2 bytes) is at least 2 + 1 + 2 + 2 + 1 + 3 = 11; `sharp` refuses a shorter
+      // one ("Bogus marker length") and an empty image ("Empty JPEG image") — both checked against `sharp` (review RS4). This reads the
+      // declared size, ⛔ a decode.
+      if (length < 11) return UNREADABLE;
+      const height = (b[pos + 5]! << 8) | b[pos + 6]!;
+      const width = (b[pos + 7]! << 8) | b[pos + 8]!;
+      if (b[pos + 9] === 0 || width === 0 || height === 0) return UNREADABLE;
+      if (width * height > MEMORIAL_PHOTO_MAX_PIXELS) return TOO_LARGE;
+    }
     if (marker === 0xda && !sawFrame) return UNREADABLE; // a scan before any frame header
     // An allow-list: the coding segments, the colour data (ICC APP2, Adobe APP14) and the bare JFIF header; EXIF / XMP /
     // MPF / FlashPix / COM / JPGn / reserved are dropped.
@@ -251,6 +276,10 @@ function stripPng(b: Uint8Array, stats: PhotoStripStats | undefined): StrippedPh
     if (first) {
       // The header chunk comes first and is always 13 bytes long.
       if (type !== 'IHDR' || length !== 13) return UNREADABLE;
+      const width = view.getUint32(pos + 8);
+      const height = view.getUint32(pos + 12);
+      if (width === 0 || height === 0) return UNREADABLE; // the PNG spec forbids a zero dimension
+      if (width * height > MEMORIAL_PHOTO_MAX_PIXELS) return TOO_LARGE;
       first = false;
     }
     if (type === 'IDAT') sawImageData = true;

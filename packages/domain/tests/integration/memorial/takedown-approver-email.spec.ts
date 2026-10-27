@@ -12,8 +12,10 @@ import type { MemberId, PariwarId, PoolId, UserId } from '../../../src/ids/index
 import {
   MEMORIAL_TAKEDOWN_APPROVER_EMAIL_PARKED_BY,
   MEMORIAL_TAKEDOWN_APPROVER_EMAIL_RECHECK_REASONS,
+  type MemorialTakedownApproverEmailCursor,
   beginMemorialTakedownApproverEmail,
   decideMemorialTakedown,
+  finaliseMemorialTakedownApproverEmail,
   isMemorialTakedownApproverEmailDetail,
   memorialTakedownApproverEmailDetail,
   recordMemorialTakedownRequest,
@@ -27,6 +29,8 @@ type Client = ReturnType<typeof getTx>['client'];
 
 let minute = 0;
 const at = (): Date => new Date(Date.parse('2026-09-01T00:00:00Z') + (minute += 1) * 60_000);
+/** Postgres orders `uuid` bytewise — for lower-case hex, the same as this string order. */
+const byId = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /** As the superuser: a staff user, optionally with admin credentials (the ONLY place the address is held). */
 async function staff(client: Client, o: { status?: 'active' | 'suspended' | 'disabled'; credentials?: boolean } = {}): Promise<UserId> {
@@ -85,6 +89,7 @@ async function takeDown(w: World, outcome: 'taken_down' | 'kept' = 'taken_down')
   const req = await recordMemorialTakedownRequest(tx, {
     pariwarId: w.pariwarId,
     poolId: w.poolId,
+    shownSubmissionId: w.versions[w.versions.length - 1]!, // the version on the page = the newest approved one (R1: the record names it)
     firstContactAt: new Date(Date.now() - 3_600_000),
     actorId: operator,
     actorDisplay: 'Helpline Operator',
@@ -144,7 +149,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the take-down approver email (do
     expect(await due([w.pariwarId, kept.pariwarId])).toEqual([[r, u1, false], [r, u2, false]].sort((a, b) => String(a[1]).localeCompare(String(b[1]))));
   });
 
-  it('⭐ MP11 — ⛔ no eligible approver ⇒ the `(request, NULL)` pair; once ANY row exists the request is ⛔ never due again (only an `attempting` row is re-derived)', async () => {
+  it('⭐ MP11 — ⛔ no eligible approver ⇒ the `(request, NULL)` pair; once the `no_target` row exists the request is ⛔ never due again', async () => {
     const { client } = getTx();
     const gone = await staff(client, { status: 'disabled' });
     const w = await drive([gone]);
@@ -158,6 +163,88 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the take-down approver email (do
     // A second NULL child ⇒ `already_final`, ⛔ no second row.
     expect((await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: null, jobId: 'j2', now: new Date() })).kind).toBe('already_final');
     expect(await outbox(r)).toHaveLength(1);
+  });
+
+  it('⭐ R2 — the gate is PER (request, recipient): u1 holds a row, u2 holds none ⇒ u2 is STILL due; u1 is due only while its row is `attempting`; each is begun once', async () => {
+    const { client, tx } = getTx();
+    const u1 = await staff(client);
+    const u2 = await staff(client);
+    const w = await drive([u1, u2]);
+    const r = await takeDown(w);
+    const both = [[r, u1, false], [r, u2, false]];
+    expect(await due([w.pariwarId])).toEqual(expect.arrayContaining(both));
+    // The sweep reached ONLY u1 (the pair bound, the budget, a failed enqueue, a crash): its child claimed the pair.
+    const b1 = await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: u1, jobId: 'j1', now: new Date() });
+    expect(b1.kind).toBe('begun');
+    const mid = await due([w.pariwarId]);
+    expect(mid).toHaveLength(2);
+    expect(mid).toEqual(expect.arrayContaining([[r, u1, true], [r, u2, false]]));
+    // u1's child finishes: u1 is ⛔ due again, u2 STILL is.
+    if (b1.kind === 'begun') {
+      await finaliseMemorialTakedownApproverEmail(tx, { pariwarId: w.pariwarId, noticeId: b1.noticeId, jobId: 'j1', outcome: 'accepted', providerMessageId: 'm1' });
+    }
+    expect(await due([w.pariwarId])).toEqual([[r, u2, false]]);
+    const b2 = await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: u2, jobId: 'j2', now: new Date() });
+    expect(b2.kind).toBe('begun');
+    if (b2.kind === 'begun') {
+      await finaliseMemorialTakedownApproverEmail(tx, { pariwarId: w.pariwarId, noticeId: b2.noticeId, jobId: 'j2', outcome: 'accepted', providerMessageId: 'm2' });
+    }
+    // Both told ONCE: nothing is due, and a re-delivered child begins neither pair again.
+    expect(await due([w.pariwarId])).toEqual([]);
+    for (const u of [u1, u2]) {
+      expect((await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: u, jobId: 'j3', now: new Date() })).kind).toBe('already_final');
+    }
+    expect((await outbox(r)).map((x) => [x.recipient_user_id, x.outcome]).sort((a, b) => byId(String(a[0]), String(b[0])))).toEqual(
+      [[u1, 'accepted'], [u2, 'accepted']].sort((a, b) => byId(String(a[0]), String(b[0]))),
+    );
+  });
+
+  it('⭐ R2 — one request\'s two approvers split across two KEYSET pages, the first pair\'s child running in between ⇒ BOTH are emailed, each exactly once', async () => {
+    const { client, tx } = getTx();
+    const [p1, p2] = [await staff(client), await staff(client)].sort(byId);
+    const w = await drive([p1!, p2!]);
+    const r = await takeDown(w);
+    const page = (after: MemorialTakedownApproverEmailCursor | null) => selectDueMemorialTakedownApproverEmails(client, { after, limit: 1, allow: [w.pariwarId] });
+    const first = await page(null);
+    expect(first.due.map((d) => d.recipientUserId)).toEqual([p1]);
+    // The sweep enqueues p1; ITS child runs (claims, then finishes) before the sweep asks for the next page.
+    const b1 = await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: p1!, jobId: 'j1', now: new Date() });
+    expect(b1.kind).toBe('begun');
+    if (b1.kind === 'begun') {
+      await finaliseMemorialTakedownApproverEmail(tx, { pariwarId: w.pariwarId, noticeId: b1.noticeId, jobId: 'j1', outcome: 'accepted', providerMessageId: 'm1' });
+    }
+    // Page 2 resumes AFTER the cursor: p2's pair holds ⛔ row and its request holds ⛔ `no_target` ⇒ it is still there (the v0.4 rule hid it).
+    const second = await page(first.last);
+    expect(second.due.map((d) => [d.recipientUserId, d.hasAttemptingRow])).toEqual([[p2, false]]);
+    const b2 = await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: p2!, jobId: 'j2', now: new Date() });
+    expect(b2.kind).toBe('begun');
+    if (b2.kind === 'begun') {
+      await finaliseMemorialTakedownApproverEmail(tx, { pariwarId: w.pariwarId, noticeId: b2.noticeId, jobId: 'j2', outcome: 'accepted', providerMessageId: 'm2' });
+    }
+    // Nothing more is due on ANY page, and each approver has exactly one finished row.
+    expect((await page(second.last)).due).toEqual([]);
+    expect(await due([w.pariwarId])).toEqual([]);
+    expect((await outbox(r)).map((x) => [x.recipient_user_id, x.outcome])).toEqual([[p1, 'accepted'], [p2, 'accepted']]);
+  });
+
+  it('⭐ MP11 — a request holding the `no_target` row is ⛔ never due again, not even once its approvers are eligible again: the selector AND the locked re-check', async () => {
+    const { client } = getTx();
+    const u1 = await staff(client, { status: 'disabled' });
+    const u2 = await staff(client, { status: 'suspended' });
+    const w = await drive([u1, u2]);
+    const r = await takeDown(w);
+    expect(await due([w.pariwarId])).toEqual([[r, null, false]]);
+    expect((await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: null, jobId: 'j1', now: new Date() })).kind).toBe('no_target');
+    await client.query(`UPDATE users SET status = 'active' WHERE id = ANY($1::uuid[])`, [[u1, u2]]);
+    // Eligible now — and ⛔ emailed: no late email beside a `no_target`.
+    expect(await due([w.pariwarId])).toEqual([]);
+    for (const u of [u1, u2]) {
+      expect(await beginMemorialTakedownApproverEmail(client, { pariwarId: w.pariwarId, requestId: r, recipientUserId: u, jobId: 'j2', now: new Date() })).toEqual({
+        kind: 'not_due',
+        reason: 'request_has_rows',
+      });
+    }
+    expect(await outbox(r)).toEqual([{ recipient_user_id: null, outcome: 'no_target', detail: 'no_approver', claimed_by_job: null }]);
   });
 
   it('the claiming transaction: `begun` (an attempting row) → `held_by_other` for another job inside the lease; the selector re-derives the attempting pair', async () => {

@@ -2144,9 +2144,22 @@ export function useOpenMemorialTakedownRequests(pariwarId: string) {
   return useQuery({ queryKey: memorialTakedownOpenKey(pariwarId), queryFn: () => api.listOpenMemorialTakedownRequests(pariwarId), retry: false });
 }
 
-/** The drive view (audited server-side on each read). */
+/**
+ * The drive view (audited server-side on each read).
+ *
+ * ⭐ EXPLICITLY OPTED OUT OF BACKGROUND REFETCHING (the `useNomineeNameCheck` trap): every fetch DECRYPTS the nominee's name and
+ * mobile and the family's words and writes a `memorial.takedown.read` line, and the operator is on a phone call, switching
+ * windows. On the client defaults a window focus would re-read it — an audit line nobody performed. ⛔ Do not remove these two
+ * flags; staleness is handled by the invalidation after a write.
+ */
 export function useMemorialTakedownDrive(pariwarId: string, poolId: string) {
-  return useQuery({ queryKey: memorialTakedownDriveKey(pariwarId, poolId), queryFn: () => api.getMemorialTakedownDrive(pariwarId, poolId), retry: false });
+  return useQuery({
+    queryKey: memorialTakedownDriveKey(pariwarId, poolId),
+    queryFn: () => api.getMemorialTakedownDrive(pariwarId, poolId),
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 }
 
 /** Record the nominee's request; the drive and the open list are re-read afterwards. The key is minted by the caller per attempt. */

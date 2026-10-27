@@ -19,6 +19,7 @@ import {
   MemorialReviewDetailResponse,
   MemorialReviewListQuery,
   MemorialReviewListResponse,
+  MemorialTakedownRequestInput,
   MemorialWithdrawApprovalInput,
   isMemorialTextBlank,
   memorialCodePointLength,
@@ -331,5 +332,26 @@ describe('the latest Send key — on the MEMBER view only (review Z2, 0183)', ()
     ];
     expect(reviewKeys).toContain('submissionId'); // the walk reached the shapes
     expect(reviewKeys).not.toContain('idempotencyKey');
+  });
+});
+
+describe('the take-down request body names the version the operator was looking at (Story 11b.4a, review R1)', () => {
+  const body = {
+    calledBack: true,
+    firstContactAt: '2026-10-27T10:00:00.000Z',
+    shownSubmissionId: '3f0c9b52-6d1e-4a4b-9c55-0a1b2c3d4e5f',
+  };
+
+  it('accepts the full body', () => {
+    expect(MemorialTakedownRequestInput.safeParse(body).success).toBe(true);
+  });
+
+  it.each([
+    ['no shownSubmissionId', { calledBack: true, firstContactAt: body.firstContactAt }],
+    ['a shownSubmissionId that is not a UUID', { ...body, shownSubmissionId: 'the-one-on-the-page' }],
+    ['calledBack: false', { ...body, calledBack: false }],
+    ['a note (⛔ no reason is ever input)', { ...body, note: 'why they asked' }],
+  ])('refuses %s', (_name, candidate) => {
+    expect(MemorialTakedownRequestInput.safeParse(candidate).success).toBe(false);
   });
 });

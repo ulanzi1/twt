@@ -286,7 +286,8 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // emergency control that defaults to ENABLED). ⛔ Allowlisting the route closes nothing.
   'GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken',
   // ⭐⭐ STORY 11b.4a — THE FAMILY MEMORIAL'S PHOTO on the same surface (`2026-10-23-391` item 2; `2026-10-27-412` MP4 / MP5).
-  // ⭐ ITS WRITTEN DEFENCE IS THE SAME CONSTANT — it JOINS `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (the story's Question 8): the
+  // ⭐ ITS WRITTEN DEFENCE IS THE SAME CONSTANT — `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (the story's Question 8; departure (c)),
+  // BY DOCUMENTATION ONLY (the set lists controls, ⛔ not routes, so nothing binds this route to it): the
   // named SEARCH tier, UNMODIFIED; the unguessable address (the photo is reached ONLY through the drive's opaque token); the
   // global `noindex` hook; the server-side Tier-1 boundary (the bytes are read and re-encoded in the API — the object key,
   // a signed URL and a public bucket ACL ⛔ never reach a caller); ⛔ no onward affordance. ⚠ Controls 2 and 3 bind nothing

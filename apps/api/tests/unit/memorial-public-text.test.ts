@@ -7,7 +7,7 @@ import type { MemorialOmission } from '@twt/contracts';
 import { reconstructMemorial } from '@twt/ui';
 import { describe, expect, it } from 'vitest';
 
-import { joinKeptSegments, memorialCutTexts } from '../../src/modules/public-pages/memorial-public-text.js';
+import { joinKeptSegments, memorialCutTexts, publicMemorialText } from '../../src/modules/public-pages/memorial-public-text.js';
 
 /** The public strings for `body` with the parts `[a, b)` left out — through the REAL presenter. */
 function publicWords(body: string, cuts: readonly (readonly [number, number])[]): string[] {
@@ -82,5 +82,30 @@ describe('joinKeptSegments — the join rule (MP3 (b))', () => {
     expect(out).not.toContain('CUT ME');
     // Plain text carries ⛔ no invisible control.
     expect(publicWords('Plain words. Cut. More.', [[13, 17]])[0]).toBe('Plain words. More.');
+  });
+});
+
+describe('publicMemorialText — the ONE orchestration the page and the helpline drive view share (review R5)', () => {
+  const cut = (field: 'body' | 'altText', [start, end]: readonly [number, number]): MemorialOmission => ({ field, start, end, reason: 'against_the_law' });
+
+  it('the words are the joined public words — the same strings `publicWords` builds by hand through the presenter', () => {
+    const body = 'He loved the school and  the bad man   and his students.\n\nSecond paragraph.';
+    const omissions = [cut('body', at(body, 'the bad man'))];
+    expect(publicMemorialText({ body, altText: null, omissions }).words).toEqual(publicWords(body, [at(body, 'the bad man')]));
+  });
+
+  it('the description is cut and joined on its OWN spans — a body cut never moves it, and an alt-text cut never reaches the words', () => {
+    const body = 'Kept words about the man here.';
+    const alt = 'A teacher with the secret name smiling';
+    const out = publicMemorialText({ body, altText: alt, omissions: [cut('altText', at(alt, 'the secret name'))] });
+    expect(out.words).toEqual([body]);
+    expect(out.altText).toBe('A teacher with smiling');
+    const bodyOnly = publicMemorialText({ body, altText: alt, omissions: [cut('body', at(body, 'about the man'))] });
+    expect(bodyOnly.words).toEqual(['Kept words here.']);
+    expect(bodyOnly.altText).toBe(alt);
+  });
+
+  it('⛔ no description written ⇒ `null` — the caller decides what that reads as (the page\'s wire says an empty string)', () => {
+    expect(publicMemorialText({ body: 'Words.', altText: null, omissions: [] }).altText).toBeNull();
   });
 });

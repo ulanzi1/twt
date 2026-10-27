@@ -52,6 +52,16 @@ injected swipe scrolls — a person swiping is still the real check.
   6.36f's device run).
 - **⛔ Covered:** the photo picker and its alt-text field (the emulator's gallery is empty); Hindi-script typing (adb types Latin
   only); a rotated portrait / HEIC; a real swipe-through; iOS / VoiceOver (⛔ Xcode, ⛔ iPhone).
+- **The branch's code review (2026-10-27, one read-only layer; ⛔ P1 / P2).** Fixed (`f8e156f6`): all eight claim steps carry the
+  name (`-409` amended — the banner had switched step to step); a `shielded_name` leg proves the Pariwar form; a stale counter
+  comment; re-render guards on Photo / Preview. **Recorded, ⛔ fixed:**
+  - *The claim entry swaps its sentence in place* — the no-name wording first, the named one when the read answers (same meaning,
+    the same *No* action; TalkBack is ⛔ told it changed). Holding the spinner for the read would need a bound (reads have ⛔ transport
+    timeout — [[project_tanstack_refetch_rejoins_hung_fetch]]). Revisit if a family finds it confusing.
+  - *The memorial specs have ⛔ `shielded_name` leg* (the claims read has one now; the resolver is shared).
+  - *`memorial-a11y-scan`'s floor (≥ 10 live regions in ≥ 5 files) is now met EXACTLY* — the next removed live region fails it for
+    a reason unrelated to its rule; lower the floor or count differently when that happens.
+  - *`@tamagui/toast` stays in `apps/mobile/package.json`* with ⛔ importer (removing it changes the lockfile — a separate chore).
 
 ## Deferred from: code review of 6-36f-nominee-mark-only-save.md — second full review (2026-10-27)
 

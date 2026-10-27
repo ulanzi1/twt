@@ -2964,7 +2964,8 @@ spoken, the counter silent while typing, focus after Send on the outcome heading
 ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted.
 
 **Story 409-claim-name disposition (declaration affirmed — ⛔ new row, ⛔ row retired, ⛔ row amended; `2026-10-27-409`):** the
-claim-filing screens (`app/(claim)/index.tsx`, `handover-otp.tsx`, `relationship.tsx`, `nominee-review.tsx`) now name the member
+claim-filing screens (`app/(claim)/index.tsx`, `handover-otp.tsx`, `relationship.tsx`, `nominee-review.tsx` — and, after the
+branch review, `consent.tsx`, `document.tsx`, `contact.tsx`, `acknowledgement.tsx`: all eight, `-409` amended) now name the member
 — *"क्या आप Shanti Devi के परिजन हैं?"* in place of *"… आपके परिजन के परिजन …"* — through a new READ (`lib/use-claim-member-name.ts`,
 GET `/api/v1/member/claims/member-name`). ⛔ Step, prompt, wait or field is added: the read runs beside the entry gate, the screens
 show the existing fallback until it answers, and a failure keeps the fallback (the flow is ⛔ blocked). ⛔ Payer meets anything new.

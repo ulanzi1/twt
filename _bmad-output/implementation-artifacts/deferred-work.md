@@ -36,6 +36,11 @@ injected swipe scrolls — a person swiping is still the real check.
   relationship.tsx — `t('member_fallback')`]. It always reads *"Are you family of your family member?"* / *"क्या आप आपके परिजन के
   परिजन हैं?"*, and the button *"No — continue as your family member"*. **BigDev's wording call** (show the name, or a sentence that
   needs none); ⛔ a Panel question unless showing the name is a disclosure question — not assessed here.
+  - *Closed by [`2026-10-27-409`](../../.decision-log.md#decision-2026-10-27-409) (BigDev: "Go with real name"; built `a6f25dd5`):*
+    the claim screens take the member's registered name (Pariwar form) — on the emulator *"क्या आप Shanti Devi के परिजन हैं?"*.
+    §0 was assessed there: MATCH, narrower than `-180` ⇒ ⛔ the Panel's. **STILL OPEN:** when the name is `null` (no KYC, erased,
+    a KMS outage) the sentence still reads *"… your family member …"* — a no-name wording for `entry.question` / `entry.no` is
+    BigDev's copy call (draft: *"Are you a family member of the person this phone belongs to?"* / *"No — this is my own phone"*).
 - **The photo step's heading is now spoken TWICE** (the T1 announce at once, TalkBack's own focus read ~5 s later). Kept for
   consistency (a repeat beats the silence elsewhere); a focus-moving alternative is unexplored.
 - **Stale focus after navigation (pre-existing):** after a page change TalkBack sometimes re-reads an element of the screen BELOW —

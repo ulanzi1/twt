@@ -2579,6 +2579,13 @@ heading, one `<p>` per paragraph and (with a photo) a three-element frame, plus 
 photo-like image → **21 501 bytes** (900 × 1200); full-frame noise, the worst case for JPEG → **147 903 bytes** — both under the
 story's ~250 KB expectation. ⚠ Until an edge cache exists every request re-encodes it (`deferred-work.md`, 11b.4a; Row 41 (p)).
 
+⭐ **THE DYNAMIC HTML, MEASURED (the code review's fix round, 2026-10-27 — AC15):** a real `astro build` of `apps/public` served against a
+stub API, `/sahyog-vivran/<token>?lang=en` fetched four times. A drive with ⛔ no memorial: **6 655 B** of HTML. Words only: **+536 B**
+(153 B of that is the words themselves). Photo only: **+633 B**. Words and photo: **+926 B** — about **773 B of fixed markup** (the section,
+its heading, the paragraph wrappers, the frame and the `<img>`) plus the family's own words, which add their UTF-8 bytes (≤ 6 000
+characters, 11b.4 AC7). ⛔ No CSS is added (the static `page_weight_bytes` stayed **11 471** and `js_bundle_bytes` **0**). The figures use the
+English heading and a short Devanagari fixture.
+
 ⭐ **This disposition was written AFTER the implementation commits existed** (`813c26e9`, `ea1f03e0`, `eeb11b16`, `8d18a529`, `f7b74a2a`) — AC-4 diffs **COMMITTED**
 history, so a declaration written first passes **vacuously**. ⚠ `pnpm friction:check` was run on that history FIRST and **FAILED**
 (AC-4: member-facing surface touched, `friction-budget.md` unchanged); this block is what that failure answers.

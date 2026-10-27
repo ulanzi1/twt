@@ -4,6 +4,76 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-4a-family-memorial-public-render.md — third pass, the second fix round (2026-10-27)
+
+Re-review of the second fix round (13 files, 527 lines). One item deferred; RW-numbers are the story's third-pass numbers. Not closed.
+
+- **RW1 — "Try again" on the unreadable-nominee panel** [`apps/admin/src/modules/memorial-takedown/MemorialTakedownPage.tsx`]. Its outcome is not announced, focus
+  falls to the body when the panel unmounts on a successful retry, and every click is a real read and an audit line, with no cooldown. Each click is the operator's own
+  act, which is what the audit line records. **Trigger: Story 11b.8's accessibility audit (UX-DR70), together with RR18.**
+
+---
+
+## Deferred from: code review of 11b-4a-family-memorial-public-render.md — second pass, the fix round (2026-10-27)
+
+Re-review of the uncommitted fix round (`ea28cbe8` + 50 code files). Eight items deferred; RR-numbers are the story's second-pass numbers. None is closed.
+
+- **RR14 — `memberDrives` is unclamped** [`packages/domain/src/memorial/takedown.ts`]. Its `DISTINCT ON` orders by pool id, so a LIMIT would cut by id, not
+  age. Bounded by the member's pools that carry a shown memorial. **Trigger: a member with many such pools, or a measured slow lookup.**
+- **RR15 — the forced-pagination guard cannot see named arrays** [`apps/api/tests/integration/forced-pagination.spec.ts`]. `{requests}`, `{drives}` and 57
+  other `{name: []}` GET bodies are invisible to it. **Trigger: a rewrite of the guard to read response SCHEMAS, or the next unbounded named-array list.**
+- **RR16 — the open-request list truncates silently at 200** [`OPEN_REQUESTS_LIMIT`]. No indicator in the response or the screen. The overdue watch is
+  unclamped and counts every request. **Trigger: a Pariwar approaching 200 open requests, or the list gaining filters.**
+- **RR17 — the step-up prompt unmounts while the retried take-down runs** (R7's residual) [`MemorialTakedownPage.tsx` `needsStepUp`]. **Trigger: the first
+  operator report that the prompt vanished, or a rework of the step-up component.**
+- **RR18 — focus falls to the body when the record form or the decide section unmounts** (family 13) [`MemorialTakedownPage.tsx`]. The status region
+  announces the result but does not move focus. **Trigger: Story 11b.8's accessibility audit (UX-DR70).**
+- **RR19 — the unreadable-name fallback in the operator script is a capitalised label inside a sentence** [`derive.ts`, `i18n-en.ts`]. A dedicated
+  sentence is new operator copy. **Trigger: BigDev's approval of that copy (AC14).**
+- **RR20 — a photo the stripper accepts but `sharp` refuses 404s forever** [`apps/api/src/modules/memorial/photo-metadata.ts`]. The stripper checks
+  structure and size, never decodability. **Trigger: the first such photo, or a decode check at Send (Row 41 (o)).**
+- **RR21 — an upper-case `shownSubmissionId` from a non-UI client gets a false 409** [`packages/contracts/src/memorial/takedown.ts`]. Fails safe; the
+  only client echoes the server's lower-case value. **Trigger: the first non-UI client of the record route.**
+
+---
+
+## Deferred from: code review of 11b-4a-family-memorial-public-render.md (2026-10-27)
+
+Review of `4e57fa42..ea28cbe8` (nine read-only layers over three chunks; the full findings, R1 (the decision, DECIDED A) and the patches R2–R28 (R24 was retracted)
+are in the story's Review Findings). Eight items below were deferred. None is closed; R-numbers are the story's.
+
+- **R29 — a NUL byte in `driveToken` answers 500, not the empty 404** [`packages/contracts/src/public-pages/sahyog-vivran.ts:649`; lookup
+  `eq(pools.publicToken, driveToken)`]. The shared param `z.string().trim().min(1).max(64)` admits `%00`, and `pools.public_token` is `text`,
+  which cannot hold NUL, so the query throws. Pre-existing on the page route (same param, same lookup); the new photo route inherits it.
+  Inference — not run; no test plants a NUL. It reveals nothing about whether a drive exists. **Trigger: the next public-pages hardening —
+  fix once in the shared param, with a leg on both routes.**
+- **R30 — the nullable-enum OpenAPI shape** [`openapi/v1.yaml:9628-9634`, `packages/contracts/scripts/emit-openapi.ts`]. `smallerFix` is
+  `type: [string, "null"]` with an `enum` that omits null, so a strict validator rejects a legitimate null; the generator emits this shape at
+  four sites. **Trigger: the first generated-client consumer of the admin API, or any change to `emit-openapi.ts`.**
+- **R31 — the `no_target` unreachable-approver log follows the commit** [`apps/jobs/src/scheduler/memorial-takedown-approver-emails.ts:259-266`].
+  A crash between commit and log loses the only signal (the durable `no_target` row remains). Mirrors 6.25's shape. **Trigger: the first missed
+  alert, or a `logged_at` column on 6.25's table too.**
+- **R32 — a static `import sharp` in `apps/api/src/modules/public-pages/handlers.ts`.** If the native binary is missing the API fails to boot
+  with the memorial switch OFF; a lazy import would confine it to one route. Inference. Moot until the API image has `node_modules` (item
+  (13) of the 11b.4a section below). **Trigger: Row 41 (n) — the first Dokploy deploy of the API.**
+- **R33 — `isNomineeToCallBack` compares nominee VERSION ids, not people** [`apps/api/src/modules/memorial-takedown/handlers.ts:232`]. If
+  re-saving the same person's declaration mints a new `member_nominee_versions` row, the operator script says "not the person who asked" about
+  the person who asked. Spec-literal (MP8 (b) compares versions); an inference. **Trigger: a trace of the nominee-declaration versioning, or
+  the first operator confusion.**
+- **R34 — `lockMemorialPool` is taken before the pariwar-scoped read in `recordMemorialTakedownRequest`** [`packages/domain/src/memorial/takedown.ts`].
+  The lock key is global (`hashtext('memorial:'||pool_id)`), so an operator who knows a foreign pool UUID can briefly hold that tenant's lock
+  before the 404; `decide` reads first. Low impact; unverified whether the 11b.4 writers share the ordering. **Trigger: the next change to
+  the memorial lock.**
+- **R35 — GCS `download()` 404 is read as "object missing" even when the BUCKET is missing or misnamed**
+  [`packages/platform-adapters/src/memorial-photo-storage/gcs.ts:67-77`]. A misconfigured bucket serves a silent 404 for every photo.
+  Operations-visible (no photo ever loads). **Trigger: the first real photo bucket (Row 41), or a boot-time bucket check.**
+- **R36 — a same-millisecond tie at the take-down boundary** [`packages/domain/src/memorial/status.ts:98`]. `createdAt.getTime() > newestTakedown`
+  compares millisecond-truncated `Date`s, so a re-send committing in the same millisecond as the take-down would read `taken_down`. No
+  fixture exercises the tie (the re-send fixtures use `Date.now() + 60_000`). Inference on reachability. **Trigger: a flaky race leg, or
+  compare at microsecond precision in SQL when the chain state is next touched.**
+
+---
+
 ## Deferred from: story 11b-4a-family-memorial-public-render.md (2026-10-27)
 
 Story 11b.4a renders the family's approved memorial on the public Sahyog Vivran page (the words joined across any part the Trust

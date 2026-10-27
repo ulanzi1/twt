@@ -2,9 +2,10 @@
 // Story 6.36f (Task 4; AC6; MK8, MK9; `2026-10-26-407`) — the NOMINEES SCREEN's marks-only mode, EXECUTED with React DOM and mocked
 // native primitives (the 6.36e render-harness shape). MOCKED: `react-native` (+ `announceForAccessibility`), `tamagui` (plain
 // elements), `expo-router` (the focus effect runs on mount and on demand), `@twt/i18n/react` (the common `useT` echoes keys), the
-// API wrapper, the step-up gate (it runs the call), the draft store, the session, the two query hooks, `lib/mmkv`. REAL: the
-// `nominee_link` translator (`t()` — a forgotten token THROWS), `AnnouncedText`, `lib/nominee-links.ts`, the shared mark control,
-// TanStack Query (the status read). Layout, TalkBack and VoiceOver still need a device ([[feedback_record_unattested_no_backfill]]):
+// API wrapper (+ its step-up request / verify), the draft store (an in-memory map), the resume affordance (one *Continue draft*
+// button), the session, the two query hooks, `lib/mmkv`. REAL: the `nominee_link` translator (`t()` — a forgotten token THROWS),
+// `AnnouncedText`, `lib/nominee-links.ts`, the shared mark control, the step-up gate (code review 2026-10-27, S4 — it was mocked to
+// run the call, so the OTP footer never rendered), TanStack Query (the status read). Layout, TalkBack and VoiceOver still need a device ([[feedback_record_unattested_no_backfill]]):
 //   · the entry card shows ONLY for a saved declaration with a basis per rank and (a live mark OR the right to find) — ⛔ for an
 //     `active-in-grace` member with ⛔ mark; tapping it UNMOUNTS the form;
 //   · marks mode: one block per rank — label + relationship from `ranks` — with its current mark; *Save marks* disabled until a mark
@@ -15,12 +16,13 @@
 //   · "Change names or numbers instead" remounts the full form.
 import '@testing-library/jest-dom/vitest'
 import { createElement } from 'react'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ApiError } from '@twt/api-client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const L1 = '11111111-1111-4111-8111-111111111111'
 const L2 = '22222222-2222-4222-8222-222222222222'
 const RANKS = [
   { rank: 1, versionNo: 3, relationship: 'spouse' },
@@ -34,6 +36,12 @@ const mock = vi.hoisted(() => ({
   saveDraft: vi.fn(),
   status: vi.fn(),
   saveMarks: vi.fn(),
+  saveFull: vi.fn(),
+  stepUpRequest: vi.fn(),
+  stepUpVerify: vi.fn(),
+  drafts: new Map<string, unknown>(),
+  setLinks: null as null | ((next: { ranks: unknown[]; links: unknown[] }) => void),
+  refetchFails: false,
   focus: null as null | (() => void),
   canFind: true,
   links: null as null | { ranks: unknown[]; links: unknown[] },
@@ -67,13 +75,23 @@ vi.mock('../../lib/nominee-link-i18n', async () => {
   return { useNomineeLinkT: () => (key: string, params?: Record<string, string | number>) => t(key, params, { locale: 'en', namespace: 'nominee_link' }) }
 })
 vi.mock('../../lib/member-api', () => ({
-  memberAuth: { nomineesStatus: mock.status, lifeEventsUpdateNomineeMarks: mock.saveMarks, lifeEventsUpdateNominees: vi.fn() },
+  memberAuth: {
+    nomineesStatus: mock.status,
+    lifeEventsUpdateNomineeMarks: mock.saveMarks,
+    lifeEventsUpdateNominees: mock.saveFull,
+    stepUpRequest: mock.stepUpRequest,
+    stepUpVerify: mock.stepUpVerify,
+  },
 }))
-vi.mock('../../components/life-events/useStepUpGate', () => ({
-  useStepUpGate: () => ({ needsOtp: false, otp: '', setOtp: vi.fn(), reset: vi.fn(), guard: (fn: () => Promise<unknown>) => fn(), verifyAndRetry: (fn: () => Promise<unknown>) => fn() }),
+vi.mock('../../components/life-events/draft-store', () => ({
+  loadDraft: (_member: string, key: string) => mock.drafts.get(key) ?? null,
+  saveDraft: mock.saveDraft,
+  clearDraft: (_member: string, key: string) => void mock.drafts.delete(key),
 }))
-vi.mock('../../components/life-events/draft-store', () => ({ loadDraft: () => null, saveDraft: mock.saveDraft, clearDraft: vi.fn() }))
-vi.mock('../../components/life-events/SaveAndResumeAffordance', () => ({ SaveAndResumeAffordance: () => null }))
+vi.mock('../../components/life-events/SaveAndResumeAffordance', async () => {
+  const { createElement } = await import('react')
+  return { SaveAndResumeAffordance: ({ onContinue }: { onContinue: () => void }) => createElement('button', { onClick: onContinue }, 'Continue draft') }
+})
 vi.mock('../../lib/session-context', () => ({ useSession: () => ({ session: { memberId: 'm', pariwarId: 'p' }, isLoading: false }) }))
 vi.mock('../../components/known-people/useKnownPeopleQueries', () => ({ useKnownPeoplePromptsQuery: () => ({ data: { canNamePeople: mock.canFind } }) }))
 vi.mock('../../components/nominee-links/useNomineeLinkQueries', async (importActual) => {
@@ -83,6 +101,7 @@ vi.mock('../../components/nominee-links/useNomineeLinkQueries', async (importAct
     errorCodeOf: actual.errorCodeOf,
     useNomineeLinksQuery: () => {
       const [data, setData] = useState(mock.links)
+      mock.setLinks = setData // a refetch the screen did ⛔ ask for (S3)
       return {
         data,
         isError: false,
@@ -90,6 +109,7 @@ vi.mock('../../components/nominee-links/useNomineeLinkQueries', async (importAct
         refetch: async () => {
           mock.refetches += 1
           if (mock.refetchWait) await mock.refetchWait
+          if (mock.refetchFails) return { data, isError: true } // TanStack keeps the old data on a failed refetch
           const next = mock.nextLinks ?? data
           setData(next)
           return { data: next, isError: false }
@@ -144,6 +164,10 @@ beforeEach(() => {
   mock.nextLinks = null
   mock.refetches = 0
   mock.refetchWait = null
+  mock.refetchFails = false
+  mock.drafts.clear()
+  mock.saveDraft.mockImplementation((_member: string, key: string, value: unknown) => void mock.drafts.set(key, value))
+  mock.stepUpVerify.mockResolvedValue(undefined)
   mock.status.mockResolvedValue(status(2))
   mock.saveMarks.mockResolvedValue(status(2))
 })
@@ -340,5 +364,154 @@ describe('Story 6.36f — marks mode', () => {
     expect(find).toHaveAttribute('data-own-text', 'true')
     expect(find).toHaveTextContent('Is this nominee a TWT member? Find them in your contacts')
     expect(Number(find.getAttribute('data-height'))).toBeGreaterThanOrEqual(48)
+  })
+})
+
+// ── Code review 2026-10-27 (second full review) — S1–S4 ──────────────────────────────────────────────────────────────────────
+describe('Story 6.36f — code review 2026-10-27', () => {
+  const TWO_MARKS = { ranks: RANKS, links: [{ rank: 1, linkId: L1, label: 'confirmed', name: 'Asha D.' }, { rank: 2, linkId: L2, label: 'confirmed', name: 'Ravi K.' }] }
+
+  it('S1 — "Change names or numbers instead" offers *Continue draft* again for what was typed before the switch (the form still remounts fresh)', async () => {
+    renderScreen()
+    await userEvent.type((await screen.findAllByRole('textbox', { name: 'nominees.name' }))[0]!, 'Asha')
+    expect(screen.queryByRole('button', { name: 'Continue draft' })).toBeNull()
+    await userEvent.click(btn('Member marks'))
+    await userEvent.click(btn('Change names or numbers instead'))
+    expect(screen.getAllByRole('textbox', { name: 'nominees.name' })[0]).toHaveValue('') // MK8: remounted from `freshForms()`
+    await userEvent.click(btn('Continue draft'))
+    expect(screen.getAllByRole('textbox', { name: 'nominees.name' })[0]).toHaveValue('Asha')
+  })
+
+  it('S1 — a marks save still CLEARS the stored draft (MK8 — the SAME `invalidateAndLeave()`)', async () => {
+    renderScreen()
+    await userEvent.type((await screen.findAllByRole('textbox', { name: 'nominees.name' }))[0]!, 'Asha')
+    expect(mock.drafts.has('nominees')).toBe(true)
+    await userEvent.click(btn('Member marks'))
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    await waitFor(() => expect(mock.back).toHaveBeenCalledTimes(1))
+    expect(mock.drafts.has('nominees')).toBe(false)
+  })
+
+  it('S1 — ⛔ *Continue draft* after the switch when ⛔ named draft is stored', async () => {
+    await openMarks()
+    await userEvent.click(btn('Change names or numbers instead'))
+    expect(btn('nominees.submit')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Continue draft' })).toBeNull()
+  })
+
+  it('S2 — every mark control is disabled while the save runs: a removal is ⛔ spoken-but-unsent, and ⛔ find screen opens under the save', async () => {
+    let finishSave!: (value: unknown) => void
+    mock.saveMarks.mockImplementationOnce(() => new Promise((resolve) => { finishSave = resolve }))
+    mock.links = TWO_MARKS
+    await openMarks()
+    await userEvent.click(within(screen.getByTestId('nominee-mark-1')).getByRole('button', { name: /^Remove mark/ }))
+    await userEvent.click(btn('Save marks'))
+    for (const b of within(screen.getByTestId('nominee-marks-mode')).getAllByRole('button', { name: /— nominees\.(primary|secondary)_label$/ })) {
+      expect(b).toBeDisabled()
+    }
+    await userEvent.click(within(screen.getByTestId('nominee-mark-0')).getByRole('button', { name: /^Remove mark/ }))
+    await userEvent.click(within(screen.getByTestId('nominee-mark-0')).getByRole('button', { name: /^Pick a different member/ }))
+    expect(mock.announce.mock.calls.filter(([x]) => x === 'Mark removed.')).toHaveLength(1)
+    expect(mock.push).not.toHaveBeenCalled()
+    await act(async () => finishSave(status(2)))
+    await waitFor(() => expect(mock.back).toHaveBeenCalledTimes(1))
+    expect(mock.saveMarks).toHaveBeenCalledWith({
+      marks: [
+        { rank: 1, versionNo: 3, memberLink: { kind: 'keep', linkId: L1 } },
+        { rank: 2, versionNo: 1, memberLink: null },
+      ],
+    })
+  })
+
+  it('S2 — the controls come back after a refusal', async () => {
+    mock.saveMarks.mockRejectedValueOnce(new ApiError(422, 'nominee.link_not_found', 'x'))
+    mock.links = TWO_MARKS
+    await openMarks()
+    await userEvent.click(within(screen.getByTestId('nominee-mark-1')).getByRole('button', { name: /^Remove mark/ }))
+    await userEvent.click(btn('Save marks'))
+    await waitFor(() => expect(within(screen.getByTestId('nominee-mark-0')).getByRole('button', { name: /^Remove mark/ })).toBeEnabled())
+  })
+
+  it('S2 — a pick for a rank the basis does ⛔ have is dropped SILENTLY (⛔ "Marked as a member" for nothing)', async () => {
+    mock.status.mockResolvedValue(status(1))
+    mock.links = { ranks: [RANKS[0]], links: [] }
+    await openMarks()
+    handNomineeLinkPick(2, { kind: 'new', mobile: '9876500003', foundBy: 'typed' })
+    act(() => mock.focus!())
+    expect(mock.announce).not.toHaveBeenCalledWith('Marked as a member')
+    expect(btn('Save marks')).toBeDisabled()
+  })
+
+  it('S3 — the entry card is disabled while a FULL save runs', async () => {
+    let finishFull!: (value: unknown) => void
+    mock.saveFull.mockImplementationOnce(() => new Promise((resolve) => { finishFull = resolve }))
+    mock.links = { ranks: RANKS, links: [] }
+    renderScreen()
+    await userEvent.type(await screen.findByRole('textbox', { name: 'nominees.name' }), 'Asha')
+    await userEvent.click(btn('nominees.relationship_spouse'))
+    await userEvent.type(screen.getByRole('textbox', { name: 'nominees.mobile' }), '9876500009')
+    await userEvent.click(btn('nominees.submit'))
+    await waitFor(() => expect(mock.saveFull).toHaveBeenCalled())
+    expect(btn('Member marks')).toBeDisabled()
+    await userEvent.click(btn('Member marks'))
+    expect(screen.queryByTestId('nominee-marks-mode')).toBeNull()
+    await act(async () => finishFull(status(1)))
+    await waitFor(() => expect(mock.back).toHaveBeenCalledTimes(1))
+  })
+
+  it('S3 — the mode keeps the BASIS it started from: a later links refetch ⛔ re-pairs its `versionNo`s with the older record', async () => {
+    await openMarks()
+    act(() => mock.setLinks!({ ranks: [{ rank: 1, versionNo: 9, relationship: 'mother' }, { rank: 2, versionNo: 9, relationship: 'son' }], links: [] }))
+    expect(screen.getByTestId('nominee-marks-rank-1')).toHaveTextContent('nominees.relationship_spouse') // still the started basis
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    await waitFor(() => expect(mock.saveMarks).toHaveBeenCalled())
+    expect(mock.saveMarks.mock.calls[0]![0]).toEqual({
+      marks: [
+        { rank: 1, versionNo: 3, memberLink: null },
+        { rank: 2, versionNo: 1, memberLink: null },
+      ],
+    })
+  })
+
+  it('S4 — a step-up in marks mode: the footer\'s Verify re-sends the SAME marks body (⛔ the full save) and leaves', async () => {
+    mock.saveMarks.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'x'))
+    await openMarks()
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    await userEvent.type(await screen.findByRole('textbox', { name: 'lifeEvents.step_up_required' }), '123456')
+    await userEvent.click(btn('auth.verify'))
+    await waitFor(() => expect(mock.back).toHaveBeenCalledTimes(1))
+    expect(mock.stepUpRequest).toHaveBeenCalledWith('nominee_change')
+    expect(mock.stepUpVerify).toHaveBeenCalledWith('123456')
+    expect(mock.saveMarks).toHaveBeenCalledTimes(2)
+    expect(mock.saveMarks.mock.calls[1]![0]).toEqual(mock.saveMarks.mock.calls[0]![0])
+    expect(mock.saveFull).not.toHaveBeenCalled()
+    expect(mock.announce).toHaveBeenCalledWith('Marks saved.')
+  })
+
+  it('S4 — a 409 `locked_claim_filed` in marks mode shows the LOCKED state', async () => {
+    mock.saveMarks.mockRejectedValue(new ApiError(409, 'nominee.locked_claim_filed', 'x'))
+    await openMarks()
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    expect(await screen.findByTestId('nominees-locked')).toBeInTheDocument()
+    expect(mock.back).not.toHaveBeenCalled()
+  })
+
+  it('S4 — a 409 `link_stale` in marks mode reloads the marks, starts over and says so; a FAILED reload says it did not reload', async () => {
+    mock.saveMarks.mockRejectedValue(new ApiError(409, 'nominee.link_stale', 'x'))
+    await openMarks()
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    expect(await screen.findByText('Your member marks changed since this screen opened. They have been reloaded — please save again.')).toBeInTheDocument()
+    expect(mock.refetches).toBe(1)
+    expect(btn('Save marks')).toBeDisabled() // started over from the reload
+    mock.refetchFails = true
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    expect(await screen.findByText('Your member marks changed since this screen opened, but they could not be reloaded. Check your connection and save again.')).toBeInTheDocument()
+    expect(btn('Save marks')).toBeEnabled() // ⛔ restarted over the old data — the member's change is still there
   })
 })

@@ -11,6 +11,10 @@
 // one-line cut read "…Find them i…" / "…संप…"; the label is long in both languages). It renders its OWN `Text`: `Button` wraps a
 // string child in a Text whose variant sets `ellipsis: true` (⇒ one line), and `ellipsis={false}` maps to nothing — tried, still cut.
 // Each button's accessible name begins with its visible text, then says WHICH nominee (two slots share the words — WCAG 2.5.3).
+// `disabled` (code review 2026-10-27, S2): marks mode passes its save's `busy` — a mark changed while the save REQUEST runs was
+// SPOKEN but ⛔ sent, and a find screen opened then was the one the save's `router.back()` closed. ⚠ While the step-up code prompt
+// shows, the controls are live again and *Verify* re-sends the body of the first press — the deferred R4 item (the shared OTP
+// retry), ⛔ closed here. The full form passes ⛔ it (unchanged).
 
 import { useT } from '@twt/i18n/react'
 import { Button, Paragraph, Text, XStack, YStack } from 'tamagui'
@@ -30,6 +34,8 @@ export interface NomineeMarkControlProps {
   readonly onFind: () => void
   readonly onRemove: () => void
   readonly onKeep: () => void
+  /** Every button is disabled (marks mode, while its save runs). */
+  readonly disabled?: boolean
 }
 
 export function NomineeMarkControl(props: NomineeMarkControlProps): React.ReactElement | null {
@@ -40,6 +46,8 @@ export function NomineeMarkControl(props: NomineeMarkControlProps): React.ReactE
   const name = mark ? markName(mark) : null
   const which = index === 0 ? t('nominees.primary_label') : t('nominees.secondary_label')
   const labelled = (text: string) => `${text} — ${which}`
+  const disabled = props.disabled === true
+  const a11yState = disabled ? { disabled: true } : undefined
   return (
     <YStack gap="$2" testID={`nominee-mark-${index}`}>
       {mark === null ? null : (
@@ -67,10 +75,10 @@ export function NomineeMarkControl(props: NomineeMarkControlProps): React.ReactE
           {/* SHOWN and SPOKEN (family 13(d)): a bare live region is Android-only — `AnnouncedText` speaks it on iOS too. */}
           <AnnouncedText text={name ? lt('edit.question', { name }) : lt('edit.question_no_name')} color="$color" />
           <XStack gap="$2">
-            <Button height={48} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.keep'))} onPress={props.onKeep}>
+            <Button height={48} disabled={disabled} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.keep'))} accessibilityState={a11yState} onPress={props.onKeep}>
               {lt('edit.keep')}
             </Button>
-            <Button height={48} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.remove'))} onPress={props.onRemove}>
+            <Button height={48} disabled={disabled} accessibilityRole="button" accessibilityLabel={labelled(lt('edit.remove'))} accessibilityState={a11yState} onPress={props.onRemove}>
               {lt('edit.remove')}
             </Button>
           </XStack>
@@ -84,8 +92,10 @@ export function NomineeMarkControl(props: NomineeMarkControlProps): React.ReactE
             py="$2"
             noTextWrap
             chromeless
+            disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={labelled(mark === null ? lt('form.find') : lt('form.find_again'))}
+            accessibilityState={a11yState}
             onPress={props.onFind}
           >
             <Text shrink={1} text="center">
@@ -94,7 +104,7 @@ export function NomineeMarkControl(props: NomineeMarkControlProps): React.ReactE
           </Button>
         ) : null}
         {mark !== null ? (
-          <Button height={48} chromeless accessibilityRole="button" accessibilityLabel={labelled(lt('form.remove'))} onPress={props.onRemove}>
+          <Button height={48} chromeless disabled={disabled} accessibilityRole="button" accessibilityLabel={labelled(lt('form.remove'))} accessibilityState={a11yState} onPress={props.onRemove}>
             {lt('form.remove')}
           </Button>
         ) : null}

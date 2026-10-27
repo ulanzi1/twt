@@ -27,6 +27,9 @@
 // differs. The find screen's pick lands on the marks record (the same focus effect). ⛔ A draft is written in marks mode (nothing is
 // typed; a picked number is held in memory only). A 409 `marks_stale` / `link_stale` reloads the marks and asks again;
 // `marks_no_declaration` returns to the form; *Marks saved.* is announced on both platforms before the screen leaves.
+// Code review 2026-10-27 (S1–S3): the mode keeps the BASIS it started from (the body's `versionNo`s are the ones the member saw —
+// a later refetch of the links read ⛔ re-pairs them with an older record); the entry card and every mark control are disabled while
+// a save runs; *Change names or numbers instead* offers *Continue draft* again when a named draft is stored.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
@@ -35,7 +38,7 @@ import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Stack, useFocusEffect, useRouter } from 'expo-router'
-import type { NomineeMarksSaveRequest } from '@twt/contracts'
+import type { NomineeMarksRankView, NomineeMarksSaveRequest } from '@twt/contracts'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
@@ -124,6 +127,9 @@ export default function LifeEventsNomineesScreen() {
   const ltRef = useRef(lt)
   ltRef.current = lt
   const [marks, setMarks] = useState<MarksRecord>({})
+  // The ranks the mode started from (S3) — rendered, and sent as the body's `versionNo`s; the ref is the focus effect's view of it.
+  const [marksBasis, setMarksBasis] = useState<readonly NomineeMarksRankView[]>([])
+  const marksBasisRef = useRef<readonly NomineeMarksRankView[]>([])
   const [marksStart, setMarksStart] = useState<MarksRecord>({})
   const [marksNotice, setMarksNotice] = useState<{ text: string; seq: number } | null>(null)
   const [marksError, setMarksError] = useState<{ text: string; seq: number } | null>(null)
@@ -139,6 +145,8 @@ export default function LifeEventsNomineesScreen() {
       // Story 6.36f (MK8) — in marks mode the pick lands on the marks record (⛔ `applyPick`, which is slot-shaped). It is SPOKEN
       // only: the picked rank's own label already SHOWS it, and a second line above rank 1 read as rank 1's (device run D2).
       if (marksModeRef.current) {
+        // A rank the basis does ⛔ have (a reload while the find screen was open): dropped — and ⛔ spoken as if it landed.
+        if (!marksBasisRef.current.some((r) => r.rank === pick.rank)) return
         setMarks((m) => applyMarksPick(m, pick.rank, pick.mark))
         setMarksError(null)
         const name = markName(pick.mark)
@@ -177,9 +185,14 @@ export default function LifeEventsNomineesScreen() {
     // `t` is a fresh closure each render (`useT()`) — keyed on `locked` only, or it re-announced every render.
   }, [locked])
 
-  useEffect(() => {
+  /** A stored draft with a name in it — *Continue draft* is offered for it. */
+  function hasNamedDraft(): boolean {
     const draft = loadDraft<NomineeFormEntry[]>(memberId, DRAFT_KEY)
-    if (draft && draft.length > 0 && draft.some((f) => f.name.trim())) setResumeAvailable(true)
+    return draft !== null && draft.length > 0 && draft.some((f) => f.name.trim() !== '')
+  }
+
+  useEffect(() => {
+    if (hasNamedDraft()) setResumeAvailable(true)
   }, [memberId])
 
   async function invalidateAndLeave(): Promise<void> {
@@ -247,6 +260,8 @@ export default function LifeEventsNomineesScreen() {
   /** Start (or restart) the mode from the links read: every rank's live mark, ⛔ a change yet. */
   function startMarks(view: NonNullable<typeof links.data>): void {
     const start = initialMarks(view)
+    marksBasisRef.current = view.ranks
+    setMarksBasis(view.ranks)
     setMarksStart(start)
     setMarks(start)
   }
@@ -265,7 +280,9 @@ export default function LifeEventsNomineesScreen() {
     AccessibilityInfo.announceForAccessibility(lt('marks.title'))
   }
 
-  /** "Change names or numbers instead" — back to the FULL form, remounted fresh (⛔ a draft written). */
+  /** "Change names or numbers instead" — back to the FULL form, remounted fresh (⛔ a draft written); a named draft stored before
+   *  the switch is offered again as *Continue draft* (S1 — ⛔ offered, the next keystroke silently overwrote it; typing BEFORE
+   *  tapping it still replaces it, as on first load). */
   function backToForm(): void {
     stepUp.reset()
     marksModeRef.current = false
@@ -277,6 +294,7 @@ export default function LifeEventsNomineesScreen() {
     latestForms.current = null
     setInitialForms(undefined)
     setFormKey((k) => k + 1)
+    setResumeAvailable(hasNamedDraft())
   }
 
   const showMarksError = (text: string): void => setMarksError({ text, seq: Date.now() })
@@ -294,8 +312,7 @@ export default function LifeEventsNomineesScreen() {
   }
 
   async function onSaveMarks(): Promise<void> {
-    if (links.data === undefined) return
-    const body = buildMarksBody(links.data.ranks, marks)
+    const body = buildMarksBody(marksBasis, marks)
     setBusy(true)
     setMarksError(null)
     // *"Mark removed."* / *"Mark kept."* said what the member DID — ⛔ left standing under the spinner and the step-up prompt.
@@ -448,7 +465,6 @@ export default function LifeEventsNomineesScreen() {
   }
 
   if (marksMode && links.data !== undefined) {
-    const view = links.data
     const changed = marksDiffer(marksStart, marks)
     /** *Remove mark* on a rank: ⛔ mark (a live one ENDS at save) — and SAY so (the button vanishes with it). */
     const removeRankMark = (rank: NomineeRank) => {
@@ -463,8 +479,8 @@ export default function LifeEventsNomineesScreen() {
           <YStack gap="$4" px="$6" py="$6" bg="$background" testID="nominee-marks-mode">
             <H2 accessibilityRole="header">{lt('marks.title')}</H2>
             <Paragraph accessibilityRole="text">{lt('marks.intro')}</Paragraph>
-            {/* One block per rank of the BASIS (⛔ the cached status read, which may be stale — MK3). */}
-            {view.ranks.map((r) => (
+            {/* One block per rank of the BASIS the mode started from (⛔ the cached status read, which may be stale — MK3). */}
+            {marksBasis.map((r) => (
               <YStack key={r.rank} gap="$3" testID={`nominee-marks-rank-${r.rank}`}>
                 <Text fontWeight="600" accessibilityRole="header">
                   {lt('marks.slot', {
@@ -477,6 +493,7 @@ export default function LifeEventsNomineesScreen() {
                   mark={marks[r.rank] ?? null}
                   canFind={canFind}
                   questionOpen={false}
+                  disabled={busy}
                   onFind={() => router.push({ pathname: '/(life-events)/nominee-link-find', params: { rank: String(r.rank) } })}
                   onRemove={() => removeRankMark(r.rank)}
                   onKeep={() => sayMarksNotice(lt('form.kept'))}
@@ -572,7 +589,14 @@ export default function LifeEventsNomineesScreen() {
         {marksEntry ? (
           <YStack px="$6" pt="$4" gap="$2" testID="nominee-marks-entry">
             <Paragraph accessibilityRole="text">{lt('marks.entry')}</Paragraph>
-            <Button height={48} accessibilityRole="button" accessibilityLabel={lt('marks.title')} onPress={enterMarksMode}>
+            <Button
+              height={48}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel={lt('marks.title')}
+              accessibilityState={{ disabled: busy }}
+              onPress={enterMarksMode}
+            >
               {lt('marks.title')}
             </Button>
           </YStack>

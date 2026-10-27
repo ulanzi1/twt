@@ -2125,6 +2125,61 @@ export function useWithdrawMemorialApproval(pariwarId: string) {
   });
 }
 
+// ── Story 11b.4a — the helpline's TAKE-DOWN ─────────────────────────────────────────────────────────────────────────────
+export const memorialTakedownDriveKey = (pariwarId: string, poolId: string) => ['memorial-takedown-drive', pariwarId, poolId] as const;
+export const memorialTakedownOpenKey = (pariwarId: string) => ['memorial-takedown-open', pariwarId] as const;
+
+/** A deceased member's drives with a memorial on the page — fetched once a member is chosen (a 403 ⇒ no access, never retried). */
+export function useMemberMemorialTakedownDrives(pariwarId: string, memberId: string | null) {
+  return useQuery({
+    queryKey: ['memorial-takedown-member', pariwarId, memberId ?? ''],
+    queryFn: () => api.listMemberMemorialTakedownDrives(pariwarId, memberId as string),
+    enabled: memberId !== null,
+    retry: false,
+  });
+}
+
+/** The open requests, oldest first (a 403 ⇒ the page's own "no access" — never retried). */
+export function useOpenMemorialTakedownRequests(pariwarId: string) {
+  return useQuery({ queryKey: memorialTakedownOpenKey(pariwarId), queryFn: () => api.listOpenMemorialTakedownRequests(pariwarId), retry: false });
+}
+
+/** The drive view (audited server-side on each read). */
+export function useMemorialTakedownDrive(pariwarId: string, poolId: string) {
+  return useQuery({ queryKey: memorialTakedownDriveKey(pariwarId, poolId), queryFn: () => api.getMemorialTakedownDrive(pariwarId, poolId), retry: false });
+}
+
+/** Record the nominee's request; the drive and the open list are re-read afterwards. The key is minted by the caller per attempt. */
+export function useRecordMemorialTakedownRequest(pariwarId: string, poolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { body: Parameters<typeof api.recordMemorialTakedownRequest>[2]; idempotencyKey: string }) =>
+      api.recordMemorialTakedownRequest(pariwarId, poolId, v.body, v.idempotencyKey),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: memorialTakedownDriveKey(pariwarId, poolId) });
+      void qc.invalidateQueries({ queryKey: memorialTakedownOpenKey(pariwarId) });
+    },
+  });
+}
+
+/** Decide a request. A 403 `auth.step_up_required` (a take-down only) is the elevation SIGNAL; 409s are told apart by code. */
+export function useDecideMemorialTakedown(pariwarId: string, poolId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { requestId: string; body: Parameters<typeof api.decideMemorialTakedown>[2]; idempotencyKey: string }) =>
+      api.decideMemorialTakedown(pariwarId, v.requestId, v.body, v.idempotencyKey),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: memorialTakedownDriveKey(pariwarId, poolId) });
+      void qc.invalidateQueries({ queryKey: memorialTakedownOpenKey(pariwarId) });
+    },
+  });
+}
+
+/** Request the step-up OTP for the take-down context. ⛔ Never a literal — always via the client helper. */
+export function useRequestMemorialTakedownStepUp() {
+  return useMutation({ mutationFn: () => api.requestMemorialTakedownStepUp() });
+}
+
 // ── Story 6.20 — the nominee declaration HISTORY ─────────────────────────────
 export const nomineeDeclarationKey = (pariwarId: string, claimCaseId: string) =>
   ['nominee-declaration', pariwarId, claimCaseId] as const;

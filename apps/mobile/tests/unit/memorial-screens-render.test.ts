@@ -574,6 +574,47 @@ describe('AC10 — the outcome, gently, in the app', () => {
   })
 })
 
+// ─── Story 11b.4a (AC8) — the take-down, and the reworded "left out" line (`2026-10-27-411` item 3) ─────────────────────────
+
+describe('Story 11b.4a AC8 — `taken_down` and the reworded `approved_with_omissions` line, through real t()', () => {
+  it.each(['hi', 'en'] as const)('%s: taken_down ⇒ its line, ⛔ no reason line, ⛔ no Withdraw, Write again (canSend), the helpline', (locale) => {
+    mock.view = view({ memorialState: 'taken_down', submissionId: 's-1', body: 'x', reasonCode: null, canSend: true, canWithdraw: false })
+    renderIn(MemorialOutcomeScreen, locale)
+    expect(screen.getByTestId('memorial-outcome-taken_down')).toBeInTheDocument()
+    expect(document.body.textContent).toContain(tr('outcome.taken_down', locale))
+    // ⛔ No reason rides beside it (the member GET sends `reasonCode: null` — 11b.4a MP9), and the line is ⛔ not a Trust act.
+    expect(document.body.textContent).not.toContain(tr('outcome.reason', locale, { reason: '' }).trim())
+    expect(document.body.textContent).not.toContain(tr('outcome.approval_withdrawn', locale))
+    expect(screen.queryByTestId('memorial-withdraw')).toBeNull()
+    expect(screen.getByTestId('memorial-write-again')).toBeInTheDocument()
+    expect(document.body.textContent).toContain(tr('outcome.helpline', locale))
+  })
+
+  it('the taken_down copy names the nominee and says it may be written again — ⛔ never "removed by the Trust", "deleted" or "immediately"', () => {
+    const en = tr('outcome.taken_down', 'en')
+    expect(en).toMatch(/nominee/i)
+    expect(en).toMatch(/write again/i)
+    for (const banned of [/removed by the Trust/i, /deleted/i, /immediate/i]) expect(en).not.toMatch(banned)
+    expect(tr('outcome.taken_down', 'hi')).toMatch(/नॉमिनी/)
+  })
+
+  it.each(['hi', 'en'] as const)('%s: approved_with_omissions ⇒ the REWORDED line — the page shows ⛔ no mark where the part was', (locale) => {
+    mock.view = view({
+      memorialState: 'approved_with_omissions',
+      submissionId: 's-1',
+      body: 'एक दो',
+      omissions: [{ field: 'body', start: 2, end: 4, reason: 'attacks_someone_named' }],
+      canSend: true,
+    })
+    renderIn(MemorialOutcomeScreen, locale)
+    const line = tr('outcome.approved_with_omissions', locale)
+    expect(document.body.textContent).toContain(line)
+    // ⛔ The old sentence ("…will appear … like this") is gone in BOTH languages.
+    expect(line).not.toMatch(/like this|इस तरह दिखेंगे/)
+    expect(line).toMatch(locale === 'en' ? /nothing marks where it was/ : /कोई निशान नहीं/)
+  })
+})
+
 describe('AC12 — real t() for every interpolated key, in hi and en', () => {
   it.each(['hi', 'en'] as const)('%s', (locale) => {
     expect(tr('intro.prompt', locale, { name: 'Shanti' })).toContain('Shanti')

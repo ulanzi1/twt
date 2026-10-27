@@ -259,6 +259,8 @@ describe('the queue', () => {
     ['not_approved', 'Decided'],
     ['withdrawn', 'Withdrawn'],
     ['approval_withdrawn', 'Approval withdrawn'],
+    // Story 11b.4a (AC12) — a head the helpline took down (the date is the withdrawal's).
+    ['taken_down', 'Taken down'],
   ] as const)('a %s row\'s date line reads "%s <date>"', async (memorialState, label) => {
     const decidedAt = '2026-10-23T09:00:00.000Z';
     vi.mocked(api.listMemorialReviews).mockImplementation(async (_pariwar, view) =>
@@ -388,6 +390,28 @@ describe('one version and its decision', () => {
     expect(screen.getByTestId('memorial-as-approved')).toHaveTextContent('[left out]');
     expect(screen.getByTestId('memorial-withdrawal')).toHaveTextContent('The Trust withdrew its approval.');
     expect(screen.queryByTestId('memorial-decision-form')).toBeNull();
+  });
+
+  // ⭐ Story 11b.4a (AC12, Trap 15) — a `helpline` withdrawal reads as the helpline's take-down, WITH its time — ⛔ never "The Trust
+  // withdrew its approval." (the two-way ternary this map replaced read exactly that, and nothing failed to compile).
+  it('a helpline withdrawal reads "Taken down at the nominee\'s request · {time}", and the state reads taken down', async () => {
+    const withdrawnAt = '2026-10-27T10:00:00.000Z';
+    vi.mocked(api.getMemorialReview).mockResolvedValue(
+      detail({
+        memorialState: 'taken_down',
+        canDecide: false,
+        chain: [
+          approvedVersion({
+            withdrawal: { withdrawnBy: 'helpline', reasonCode: null, internalNote: null, actorDisplay: 'Helpline Operator', withdrawnAt },
+          }),
+        ],
+      }),
+    );
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const line = await screen.findByTestId('memorial-withdrawal');
+    expect(line).toHaveTextContent(`Taken down at the nominee’s request · ${new Date(withdrawnAt).toLocaleString('en-IN')}`);
+    expect(line).not.toHaveTextContent('The Trust withdrew its approval.');
+    expect(screen.getAllByText('Taken down at the nominee’s request').length).toBeGreaterThan(0);
   });
 
   it('a bidi control in the family\'s text is shown as a visible marker', async () => {

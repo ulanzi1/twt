@@ -444,6 +444,9 @@ scope:
     # family's OWN words are never in scope (invariant (f)): they are data, ⛔ copy.
     - packages/i18n/locales/hi/memorial.json
     - packages/i18n/locales/en/memorial.json
+    # ⭐ 2026-10-27 (Story 11b.4a, AC14) — covered by the two lines above, ⛔ no new entry: the NEW `outcome.taken_down` (the
+    # take-down at the nominee's request) and the REWORDED `outcome.approved_with_omissions` (`-411` item 3 — the page marks ⛔ no
+    # cut). UN-ATTESTED Hindi — see `docs/tone-review-checklist.md`.
     # Story 11a.2 — the `members` namespace strings (the public /members Member Directory
     # shell: the not-yet-published empty state + the FR-91 pagination controls + the
     # 400-shaped invalid-page state). ⛔ The register grows surface-by-surface BY BEING
@@ -518,6 +521,8 @@ scope:
     # ([[feedback_gate_scope_semantic_coverage]]: a green scan over newly-scanned files proves nothing).
     - packages/i18n/locales/hi/sahyog-vivran.json
     - packages/i18n/locales/en/sahyog-vivran.json
+    # ⭐ 2026-10-27 (Story 11b.4a, AC14) — covered by the two lines above, ⛔ no new entry: the NEW `family_memorial.heading`. The
+    # operator take-down copy (`apps/admin/src/modules/memorial-takedown/i18n-en.ts`) rides the `apps/admin/src/**` globs.
     # Story 11b.15 — the `member-drive-list` namespace (the member app's FOURTH TAB: every Sahyog
     # Drive the member's Pariwar has run). ⛔ NOT a forward-compat widening: this story LANDS real
     # member-facing copy in a NEW namespace, and every other member-copy namespace in this repo is

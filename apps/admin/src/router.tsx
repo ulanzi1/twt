@@ -51,6 +51,7 @@ import { ReconciliationReviewRoute } from './routes/ReconciliationReviewRoute.js
 import { TrusteeLiteRoute } from './routes/TrusteeLiteRoute.js';
 import { ModerationAppealsRoute } from './routes/ModerationAppealsRoute.js';
 import { MemorialReviewDetailRoute, MemorialReviewRoute } from './routes/MemorialReviewRoute.js';
+import { MemorialTakedownDriveRoute, MemorialTakedownRoute } from './routes/MemorialTakedownRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
@@ -396,6 +397,20 @@ const memorialReviewDetailRoute = createRoute({
   component: MemorialReviewDetailRoute,
 });
 
+// Story 11b.4a — the helpline's take-down of a family memorial at the nominee's request (AC11): the lookup by registered
+// mobile + the open requests, and one drive (the call-back, the smaller-fix script, the take-down).
+const memorialTakedownRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/memorial-takedowns',
+  component: MemorialTakedownRoute,
+});
+
+const memorialTakedownDriveRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/memorial-takedowns/$poolId',
+  component: MemorialTakedownDriveRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -440,6 +455,8 @@ const routeTree = rootRoute.addChildren([
   moderationAppealsRoute,
   memorialReviewRoute,
   memorialReviewDetailRoute,
+  memorialTakedownRoute,
+  memorialTakedownDriveRoute,
 ]);
 
 export const router = createRouter({ routeTree });

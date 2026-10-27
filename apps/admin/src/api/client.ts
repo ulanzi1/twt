@@ -268,6 +268,14 @@ import {
   MemorialWithdrawApprovalResponse,
   type MemorialReviewDecisionInput,
   type MemorialWithdrawApprovalInput,
+  MEMORIAL_TAKEDOWN_STEP_UP_CONTEXT,
+  MemorialTakedownDriveResponse,
+  MemorialTakedownMemberDrivesResponse,
+  MemorialTakedownOpenRequestsResponse,
+  MemorialTakedownOutcomeResponse,
+  MemorialTakedownRequestResponse,
+  type MemorialTakedownOutcomeInput,
+  type MemorialTakedownRequestInput,
   MemberDirectDeliveryResponse,
   OffPortalErasureResponse,
   OffPortalExportResponse,
@@ -3036,6 +3044,77 @@ export function withdrawMemorialApproval(
     `${memorialReviewBase(pariwarId)}/${encodeURIComponent(submissionId)}/withdraw-approval`,
     MemorialWithdrawApprovalResponse,
     { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+// ── Story 11b.4a — the helpline's TAKE-DOWN of a family memorial at the nominee's request ──────────────────────────────
+// Every route is gated server-side by `[adminSession, scope, requirePermissionHook('memorial.takedown', {dimension:
+// 'pariwar'})]` (`helpline_operator` + derived `super_admin`) — the client never decides who may take a memorial down; a 403
+// renders the page's own "no access". The OUTCOME route additionally requires the admin step-up `memorial_takedown` for
+// `{ outcome: 'taken_down' }` ONLY.
+// ⛔ NEVER a retyped literal on the OTP side — it uses the SAME imported constant (`MEMORIAL_TAKEDOWN_STEP_UP_CONTEXT`) — `requireStepUp` compares a BARE
+// STRING with no allow-list, so a literal typed here would elevate the session under a context that can ⛔ never satisfy the gate
+// (10.21's recorded footgun). `requestMemorialTakedownStepUp` exists so no caller is tempted to pass a literal.
+
+const memorialTakedownBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/memorial-takedowns`;
+
+/** Request the step-up OTP for the take-down context. ⛔ Never a literal — always via this helper. */
+export function requestMemorialTakedownStepUp(): Promise<StepUpRequestResult> {
+  return requestStepUp(MEMORIAL_TAKEDOWN_STEP_UP_CONTEXT);
+}
+
+/** MP12 — a deceased member's drives that carry a memorial on the page (`[]` for none, or an erased member). */
+export function listMemberMemorialTakedownDrives(
+  pariwarId: string,
+  memberId: string,
+): Promise<z.output<typeof MemorialTakedownMemberDrivesResponse>> {
+  return apiFetch(
+    `${memorialTakedownBase(pariwarId)}/members/${encodeURIComponent(memberId)}/drives`,
+    MemorialTakedownMemberDrivesResponse,
+  );
+}
+
+/** The drive view — the words as the page shows them, the photo, the nominee to call back, the requests. Audited. */
+export function getMemorialTakedownDrive(
+  pariwarId: string,
+  poolId: string,
+): Promise<z.output<typeof MemorialTakedownDriveResponse>> {
+  return apiFetch(`${memorialTakedownBase(pariwarId)}/drives/${encodeURIComponent(poolId)}`, MemorialTakedownDriveResponse);
+}
+
+/** The OPEN requests, oldest first, each with `overdue`. */
+export function listOpenMemorialTakedownRequests(
+  pariwarId: string,
+): Promise<z.output<typeof MemorialTakedownOpenRequestsResponse>> {
+  return apiFetch(`${memorialTakedownBase(pariwarId)}/requests?open=true`, MemorialTakedownOpenRequestsResponse);
+}
+
+/** Record the nominee's request after the call-back (`calledBack: true`). `Idempotency-Key`: one per user-initiated attempt. */
+export function recordMemorialTakedownRequest(
+  pariwarId: string,
+  poolId: string,
+  body: MemorialTakedownRequestInput,
+  idempotencyKey: string,
+): Promise<z.output<typeof MemorialTakedownRequestResponse>> {
+  return apiFetch(`${memorialTakedownBase(pariwarId)}/drives/${encodeURIComponent(poolId)}/requests`, MemorialTakedownRequestResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Decide a request: `taken_down` (step-up), `kept`, `superseded`. A 403 `auth.step_up_required` is the elevation SIGNAL. */
+export function decideMemorialTakedown(
+  pariwarId: string,
+  requestId: string,
+  body: MemorialTakedownOutcomeInput,
+  idempotencyKey: string,
+): Promise<z.output<typeof MemorialTakedownOutcomeResponse>> {
+  return apiFetch(
+    `${memorialTakedownBase(pariwarId)}/requests/${encodeURIComponent(requestId)}/outcome`,
+    MemorialTakedownOutcomeResponse,
+    { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(body) },
   );
 }
 

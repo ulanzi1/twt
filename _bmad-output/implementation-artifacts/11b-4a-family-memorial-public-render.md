@@ -747,7 +747,7 @@ leg in `takedown.spec.ts`) **And** the outcome screen renders ONE new flat key `
 page, and may be written again whenever they wish — beside the existing `outcome.write_again` and `outcome.helpline` (proposed
 text: AC14) **And** the existing `outcome.approved_with_omissions` line (*"The Trust approved your words and left out a part. They will appear
 on the member's Sahyog Vivran page like this."*), shown above a rendering WITH the marks, is reworded (en + hi) so it no longer
-claims the page looks like the marked rendering (`-411` item 3) — wording per Question 10, with a render test using real `t()`
+claims the page looks like the marked rendering (`-411` item 3) — the APPROVED wording (Question 10, AC14), with a render test using real `t()`
 **And** ⛔ no copy says "removed by the Trust", "deleted" or "immediately" **And** a new Send after `taken_down`
 works exactly as after `approval_withdrawn` (an integration leg in `takedown.spec.ts`).
 
@@ -805,7 +805,7 @@ touches staff `actor_display` — confirmed at v0.4).
 
 ### AC14 — Copy
 **Given** the new keys (`sahyog-vivran:family_memorial.heading`, `memorial:outcome.taken_down`, the admin English strings)
-**Then** each exists in en + hi where the surface is bilingual (the `sahyog-vivran` and `memorial` namespaces are already
+**Then** each exists in en + hi where the surface is bilingual (and the reworded `memorial:outcome.approved_with_omissions`; the `sahyog-vivran` and `memorial` namespaces are already
 registered — `catalog.ts`, `KNOWN_NAMESPACES` — ⛔ no registration change), covered by `microcopy.yaml` (read the **list**,
 ⛔ never the header) **And** `docs/tone-review-checklist.md` gains rows marked **UN-ATTESTED** (incl. the reworded `outcome.approved_with_omissions`) (the author's Hindi is ⛔ not a
 review) **And** text — APPROVED by BigDev 2026-10-27 (*"all as recommended"*); `-412` records it; Task 9 changes it only with BigDev's say:
@@ -820,6 +820,10 @@ review) **And** text — APPROVED by BigDev 2026-10-27 (*"all as recommended"*);
   · **clean approved:** *"A new version can be sent only after this one is taken down, so the memorial will be off the page
   while the Trust reviews the new one."* — then *"A new version is sent by the current nominee{, {name}, who is not the person who
   asked}."* and, on the button's confirm: *"It leaves the page within about 5 minutes."*
+- `outcome.approved_with_omissions` (REWORDED — Question 10, approved 2026-10-27) — en *"The Trust approved your words and left out
+  a part, marked below. On the member's Sahyog Vivran page the part left out is simply not there — nothing marks where it was."*;
+  hi *"ट्रस्ट ने आपके शब्द एक अंश छोड़कर स्वीकार किए; छोड़ा गया अंश नीचे दिखाया गया है। सदस्य के सहयोग विवरण पेज पर वह अंश बस नहीं
+  होगा — वहाँ कोई निशान नहीं होगा।"* (replaces 11b.4's *"… They will appear on the member's Sahyog Vivran page like this."*).
 
 ### AC15 — Friction and weight
 **Given** `friction-budget.md` / `friction-budget.yaml` (`member-public-web`) **Then** the page's added weight (HTML + CSS) and
@@ -1096,7 +1100,7 @@ cookie reaches the endpoint.
    under the same kill switch and rate limit), or stays outside it with a written reason?
 9. ✅ ANSWERED 2026-10-27 — the note was SENT and the Panel answered (`-411`). (Was: ⏳ open — no recommendation given.) The routing note (T1, PQ1, PQ2, PC1–PC5) — send it now (it also discharges 11b.4's Row 41 (e) through T1), or hold it until the
    build is reviewed?
-10. ⏳ OPEN — the family's outcome line after `-411` item 3 (PC1 B). Today `outcome.approved_with_omissions` says *"The Trust approved
+10. ✅ ANSWERED 2026-10-27 — *"approve Question 10 as proposed"* (the Hindi still needs a non-author check — AC14). The family's outcome line after `-411` item 3 (PC1 B). Today `outcome.approved_with_omissions` says *"The Trust approved
     your words and left out a part. They will appear on the member's Sahyog Vivran page like this."* above a rendering WITH the
     marks — no longer true of the page. Proposed (UN-ATTESTED Hindi): en *"The Trust approved your words and left out a part, marked
     below. On the member's Sahyog Vivran page the part left out is simply not there — nothing marks where it was."*; hi *"ट्रस्ट ने
@@ -1123,6 +1127,7 @@ cookie reaches the endpoint.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-27 | v0.8 | BigDev approved Question 10 as proposed (*"approve Question 10 as proposed"*): the reworded `outcome.approved_with_omissions` (en + hi) is in AC14's approved copy; AC8 points at it; the Hindi carries an UN-ATTESTED tone-review row like the rest. All Task 0.2 questions are answered ⇒ `bmad-dev-story 11b.4a` may start at Task 1 (`-412`, ADR-0043). |
 | 2026-10-27 | v0.7 | ⚖️ **The Panel ruled** (DR + KB, relayed by BigDev): *"PQ1 - A / PQ2 - A / PC1 - B / PC2 - A / PC3 - A / PC4 - A / PC5 -A"* — transcribed as `2026-10-27-411` (Trustee-ratified, committed alone, `2cf8127e`); this story's own author-commit is RENUMBERED `-412` (every body reference; the Change Log rows above keep `-411` as written). **PC1 B reverses MP3 (a):** the public page carries ⛔ no marker — the API keeps the text segments, isolates each, and joins them (`joinKeptSegments`, the join rule ours); the wire is `{ words: string[], photo: { altText: string } | null }`; `apps/public` no longer needs `@twt/ui` (Trap 16); Traps 3/5/8, AC2/AC3, Tasks 4.1/5.2/6.1/6.2/6.5 rewritten; the alt text cites `-411` item 6; Trap 17 cites `-411` item 7. The family outcome line `outcome.approved_with_omissions` becomes inaccurate ⇒ AC8 / Task 9.1 / Question 10 (wording owed by BigDev). AC16 (1)–(3) RULED; (17) added (permission text vs unmarked joins, to counsel). Row 41 (e) MET; AC19 (m) met. Question 9 answered (sent). |
 | 2026-10-27 | v0.6 | BigDev answered Questions 2–8: *"all as recommended"* — copy approved (MP10 email, AC14 heading, `outcome.taken_down`, operator script); MP7 nominee mobile on the take-down screen; PC5 / PC4 built as recommended and asked; Trap 7 departure and MP8 (b) narrowing accepted; the photo route joins `SAHYOG_VIVRAN_APPLICABLE_CONTROLS`. Question 9 (when to send the note) had ⛔ no recommendation and stays open with BigDev. The routing note's header updated (Questions 4/5/7 settled ⇒ PC5/PC4/PC2 final). Task 0.2 is complete for the build ⇒ Task 1 may start. |
 | 2026-10-27 | v0.5 | BigDev answered Question 1: *"MP1-MP13 as recommended, email every approver."*; asked why MP14 (b) was not recommended (it MATCHES `-392` item 4; v0.4 had labelled (a) a departure but kept its star — a miss, stated to BigDev); then *"yes, go with option (b) for MP14, prepare the routing note"*. Recorded: MP10 (b) (every approver of every withdrawn approval — our reading of "the approver"); MP14 (b) (`first_contact_at` + bounds + `due_at = first_contact_at + 7 days`; threaded into Task 2.2, AC6, Task 4.2, the route table, Named identifiers); G6/PC3 lose the clock question. The routing note is DRAFTED (Task 1.3) — `trustee-panel-routing-note-2026-10-27-11b4a-family-memorial-public-render.md`: T1, PQ1 (recommends B — the current nominee when the original has died or been replaced), PQ2 (recommends A — the 2026-10-23 note already stated no page names the member), PC1–PC5; ⛔ not sent; its E4 commands run (two patterns fixed for bold markup). Questions 2–9 open. |

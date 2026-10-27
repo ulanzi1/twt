@@ -41,6 +41,7 @@ injected swipe scrolls — a person swiping is still the real check.
     §0 was assessed there: MATCH, narrower than `-180` ⇒ ⛔ the Panel's. **STILL OPEN:** when the name is `null` (no KYC, erased,
     a KMS outage) the sentence still reads *"… your family member …"* — a no-name wording for `entry.question` / `entry.no` is
     BigDev's copy call (draft: *"Are you a family member of the person this phone belongs to?"* / *"No — this is my own phone"*).
+  - *Closed by [`2026-10-27-410`](../../.decision-log.md#decision-2026-10-27-410) (BigDev: "use your draft wording"): the no-name sentence is `entry.question_no_name` / `entry.no_no_name` (en + hi); checked on the emulator both ways. T4 is CLOSED.*
 - **The photo step's heading is now spoken TWICE** (the T1 announce at once, TalkBack's own focus read ~5 s later). Kept for
   consistency (a repeat beats the silence elsewhere); a focus-moving alternative is unexplored.
 - **Stale focus after navigation (pre-existing):** after a page change TalkBack sometimes re-reads an element of the screen BELOW —

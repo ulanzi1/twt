@@ -945,6 +945,36 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36f`, 2026-10-26, in the 
   gate refusing a database not named `twt_dev` (turbo strips `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS`; the same red as `efe6246d`'s run and
   6.36e's); alone with the override: 3 / 3. turbo then stopped before `@twt/api`'s live run; run alone: 192 files / 2,313 passed, 1 skipped. ⛔ NOT a single
   36 / 36 invocation.
+- **DEVICE-RUN FINDINGS D1–D4 FIXED 2026-10-27 (BigDev: *"fix all, drop the throwaway databases"*) — `b543e703`.** Each test
+  written RED first; each fix removed ⇒ its test RED again (restored byte-for-byte); each re-checked on the emulator (the installed
+  dev client, a fresh Metro bundle, the real API on `twt_6_36f_device` started with `DATABASE_URL` on the command):
+  - **D1 — the repeated *"Mark removed."*:** the first fix (clear the notice when a save starts) was NOT enough — on the device it was
+    still re-read at the press. Proven at the press, ⛔ at the response: with the API STOPPED, *Save marks* ⇒ *"Mark removed."* at
+    09:32:39.46, then the network-error alert at 39.59 (⛔ response, ⛔ navigation). Cause: an Android live region re-read by TalkBack on
+    the press's re-render, whether the line stayed or was cleared (the second run also re-read the stale OTP prompt's live region).
+    Fix: marks mode's *"Mark removed."* / *"Mark kept."* are plain visible text, SPOKEN ONCE by `announceForAccessibility` when set
+    (`sayMarksNotice`), and the line still leaves when a save starts. Device: remove ⇒ *"Mark removed."* (once); press ⇒ only the
+    step-up prompt; verify ⇒ *"Marks saved."*, *"Life events"*. Test: `device run D1` (⛔ `data-live`, ONE announce through the press).
+  - **D2 — the pick notice above rank 1:** in marks mode a pick is SPOKEN only (`announceForAccessibility`, through `ltRef` — the
+    memoized focus effect would otherwise keep the language it was made in); the picked rank's own label is its one visible line.
+    Device (Hindi, rank 2): TalkBack *"सदस्य के रूप में चिह्नित"* then the screen title; the screen's ONLY such line is under rank 2.
+    The full form's notice is UNCHANGED (it sits above the form's title — a page-level line). Test: `device run D2`.
+  - **D3 — *Find…* cut to one line:** `ellipsis={false}` was tried FIRST and was INERT on the device (Tamagui's `Text` maps only
+    `ellipsis: true`; `Button`'s wrapper Text sets it through a variant) — its prop-pinning test had passed: green proved nothing. Fix:
+    `noTextWrap` + the control's own `<Text shrink={1} text="center">`, `height="auto"`, `minH={48}`, `py="$2"`. Device: the Hindi label
+    wraps to two lines, whole. Shared control ⇒ the full form's *Find…* too. Test: `device run D3` (own Text, ≥ 48 dp); both render
+    harnesses' Button mocks read `minH ?? height` as the guaranteed height.
+  - **D4 — the "index" header:** `app/(life-events)/index.tsx` sets `Stack.Screen` `title: t('lifeEvents.title')` (every sibling in
+    the group already titles itself; ⛔ new copy). Device: *"Life events"* / *"जीवन की घटनाएँ"*, and TalkBack speaks it. Test: NEW
+    `life-events-index-title.test.ts`.
+  - **Also seen on the device (⛔ this story's code):** the 5th mark of the day refused ON THE DEVICE — 429, the limit line shown and
+    spoken, the counter unchanged at 4 (a refused save is ⛔ charged); to re-test D1 the disposable database's counter row was then
+    DELETED (a throwaway database; recorded). The claim-intake screen's header reads *"(claim)"* — the same untitled-route class as D4
+    in the `(claim)` group — NOT fixed here (outside 6.36f; BigDev's call). Residual: TalkBack's log shows ORDER, ⛔ whether its live
+    TTS would cut the pick's announcement short with the screen title.
+  - **Checks:** mobile 100 files / 2,049 passed; `tsc` and ESLint (`apps/mobile`) clean; `git diff --check`; `friction:check` passed
+    on the committed fix (the 6.36f disposition). The full `ci:local` was ⛔ re-run (the delta is `apps/mobile` only; `b2fdb223`'s run
+    stands for the rest). **Databases:** `twt_6_36f_ci` and `twt_6_36f_device` DROPPED; `twt_6_36f` (the dev session's) kept.
 
 ### File List
 
@@ -983,6 +1013,15 @@ Code + tests (Tasks 1–4):
 Records (Task 5): `friction-budget.md` (the disposition), `_bmad-output/implementation-artifacts/sprint-status.yaml` (the row + a
 ledger line), this story file. ⛔ Migration; ⛔ `openapi/v1.yaml`.
 
+Device-run fixes D1–D4 (2026-10-27, `b543e703`):
+
+- `apps/mobile/app/(life-events)/nominees.tsx` — `sayMarksNotice` (one-shot, ⛔ live region); the marks-mode pick spoken only (`ltRef`)
+- `apps/mobile/components/life-events/NomineeMarkControl.tsx` — *Find…* renders its own wrapping Text, `minH={48}`
+- `apps/mobile/app/(life-events)/index.tsx` — the header title
+- `apps/mobile/tests/unit/nominee-marks-mode-render.test.ts` — D1–D3 legs; the mock's `data-live`, `minH`, own-Text attributes
+- `apps/mobile/tests/unit/nominee-form-link-render.test.ts` — the mock reads `minH ?? height`
+- `apps/mobile/tests/unit/life-events-index-title.test.ts` — NEW (D4)
+
 AC7 device run (2026-10-27): this story file (Completion Notes, Change Log, Status) and `sprint-status.yaml` (the row + ledger
 `2026-10-27a`). ⛔ Code change — the seed spec was temporary and deleted; the worktree's gitignored `apps/api/.env` /
 `apps/mobile/.env` and `apps/mobile/android/` (prebuild output) are local only.
@@ -996,3 +1035,4 @@ AC7 device run (2026-10-27): this story file (Completion Notes, Change Log, Stat
 | 2026-10-26 | 1.2 | DEV (`bmad-dev-story 6.36f`): Tasks 1–5 — contracts + client (`6cc8e8c9`), domain (`ed40951f`), API — `declare`'s steps shared, the marks route, the links read's `ranks` (`2808b69f`), mobile — the marks-only mode, the extracted mark control, the MK9 copy (`dad02d44`), the friction disposition (`efe6246d`); ci:local 35 / 36 with both integration reds run down (⛔ 6.36f's); mutations RED. ⚠ The AC7 device run is OWED (BigDev: "Review now, device later"). Row `ready-for-dev` → `in-progress` → `review`. Ledger `2026-10-26g`. |
 | 2026-10-27 | 1.3 | Full code review: 0 decisions, 3 patches applied (R1 busy mode switch; R2 live post-row-lock terminal race; R3 actor/tenant/ownership denials), 3 inherited deferrals retained, 3 candidates dismissed. Final 77 mobile + 23 live API tests, touched-package typecheck/lint and whitespace checks passed; R1/R2 mutation checks failed as required and guards restored. Three parallel fix-diff review layers found no actionable issue. AC7 device work remains owed; story/sprint `review` → `in-progress` under the unresolved-work rule. Uncommitted, not pushed. Ledger `2026-10-27`. |
 | 2026-10-27 | 1.4 | AC7 DEVICE RUN DONE (`bmad-dev-story 6.36f`; BigDev: *"Run device now"*): a fresh Android build of `b2fdb223` on `Pixel_9`, the real API on a disposable `twt_6_36f_device`; add (pre-save line, step-up), swap (two carries) and remove each saved and checked in the DB (ciphertexts byte-identical, counter 4, three `marks_saved`); TalkBack *"Mark removed."* / *"Marks saved."*; Hindi renders. Four findings recorded, ⛔ patched (a repeated *"Mark removed."* at save; the pick notice above rank 1; the pre-existing truncated *Find…* label; the pre-existing *"index"* header). A setup slip wrote one junk signup into `:5432` `twt_dev` (recorded, ⛔ deleted). `ci:local` on `b2fdb223` 35 / 36 + the 10.23 gate alone 3 / 3 + `@twt/api` live alone 2,313. Status `in-progress` → `review`; ledger `2026-10-27a`. |
+| 2026-10-27 | 1.5 | DEVICE-RUN FINDINGS D1–D4 FIXED (BigDev: *"fix all, drop the throwaway databases"*), `b543e703`: one-shot marks notices (⛔ live region — the first fix, clearing at save, was disproved on the device), the marks-mode pick spoken only, *Find…* wraps (own Text; `ellipsis={false}` disproved on the device), the Life events header title. Each test RED first, each mutant RED, each re-checked on the emulator. Mobile 2,049; tsc / ESLint / friction:check green. Throwaway databases dropped. `(claim)` header seen, ⛔ fixed. Status stays `review`; ledger `2026-10-27b`. |

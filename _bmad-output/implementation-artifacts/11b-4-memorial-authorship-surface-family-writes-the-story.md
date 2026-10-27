@@ -974,6 +974,10 @@ holds ⛔ no take-down / remove / delete button key (a test, AC4)
 **Then** WCAG 2.1 AA on the mobile flow: labels on every input, error text linked to its field, alt-text field
 labelled as describing the photo for people who cannot see it, focus order follows reading order, 44pt targets,
 TalkBack-Hindi pass recorded **or** recorded as outstanding ([[feedback_record_unattested_no_backfill]]).
+*Dated note, 2026-10-27 (the TalkBack device session — `deferred-work.md`, its section):* the TalkBack-Hindi pass is RECORDED for the
+whole flow except the photo picker / alt-text field. Three fixes followed (`66e201a5`): each screen speaks its heading on arrival
+(T1); the two counters are ⛔ live regions any more (T2 — **amends T8**: even polite, the Write counter was spoken 9 times in 26
+typed characters; the crossing announcement stays); the starter toast's *"Notifications (F8)"* removed (T3).
 
 ### AC14 — Copy review is RECORDED, ⛔ not assumed
 **Then** `microcopy.yaml` `scope.copy_globs` gains the `memorial` locale files and `scope.code_globs` gains **each new mobile
@@ -1876,3 +1880,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 11b.4`, 2026-10-24.
 | 2026-10-25 | v1.6 | Hindi review by BigDev: the agent's Hindi accepted; the permission text's edited sentence minted `2026-10-25.v3-pending-hi-review` (`-405`; v2 kept and pinned); `outcome.earlier_approval_stands` reworded (V16 settled). The non-author check of BigDev's own lines and the AC14 tone review remain owed (Row 41 (a) / (c)). Status stays `done`. |
 | 2026-10-25 | v1.7 | Rebased onto `main` (6.36e landed): the memorial migrations renumbered `0182` / `0183`; a flaky 11b.1 spec fixed (pool identifier suffix 3 → 8 hex). Status stays `done`; `ci:local` re-run on the rebased tree before the PR. |
 | 2026-10-25 | v1.8 | LANDED on `main` by fast-forward (`0e9b261d` → `f5e0e3ab`); PR #303 merged with GitHub CI 36 / 36 green; pre-push `ci:local` 36 / 36 on a fresh database. The surface stays OFF until Row 41 closes. |
+| 2026-10-27 | v1.9 | TalkBack device session (Hindi, Android emulator): the AC13 pass RECORDED (⛔ the photo picker / alt text); fixes `66e201a5` on `fix/talkback-session-2026-10-27` — T1 arrival headings spoken, T2 counters off live regions (amends T8), T3 the starter toast removed; each re-checked on the emulator. Still open: Hindi-script typing, rotated / HEIC, VoiceOver. Records in `deferred-work.md`. Ledger `2026-10-27e`. |

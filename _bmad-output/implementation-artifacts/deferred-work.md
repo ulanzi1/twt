@@ -4,6 +4,49 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## TalkBack device session (2026-10-27) — results, the fixes, and what stays open
+
+Android emulator `Pixel_9` (Android 15), TalkBack 15, the app in **Hindi**; `main` at `bab88287`, then the fixes on
+`fix/talkback-session-2026-10-27`. The real API (`KMS_TEST_MODE=fake`, the test pepper, `MEMORIAL_AUTHORSHIP_ENABLED=1`) on a
+THROWAWAY `twt_dev` (`:5441`, migrated); the seed was two temporary specs, each run once and DELETED (⛔ committed). Speech was
+captured from the log with the TTS engine disabled (every utterance logs as *"TTS is not ready … {text:…}"*); driven by `adb input`
+taps. ⚠ `uiautomator dump` bumps TalkBack off and on — no dump was taken while TalkBack was capturing.
+
+**Attested (heard):** 6.36f S1 — the *Continue draft* banner is spoken ONCE on return from marks mode and ⛔ re-read on two later
+presses or on the form's Save (only the validation error). 6.36e — the requests screen as the marked member: the title on open;
+*"हाँ, यह मैं हूँ"* ⇒ *"आपका जवाब सहेज लिया गया है।"* once; ⛔ re-read on back. 11b.4 — the write box reads its label, *"Editing … Edit
+box"* and its guidance; the nominee's code request, the Send result and the Withdraw are each spoken once. The Life events header
+reads *"जीवन की घटनाएँ"* (6.36f D4).
+
+**Derived, ⛔ heard:** reading order (the accessibility tree, TalkBack off): logical on the requests screen and all five memorial
+screens (the permission directly above *ट्रस्ट को भेजें*). TalkBack's keyboard navigation ignored injected keys (four variants) and an
+injected swipe scrolls — a person swiping is still the real check.
+
+**Fixed (`66e201a5`; disposition `b752da79`), each test RED first, each mutant RED, each re-checked on the emulator:**
+- **T1 — the memorial intro, Write and Preview opened in SILENCE** (the stack hides its header: ⛔ title to read). Each memorial
+  screen now speaks its heading on arrival (`useMemorialScreenAnnounce`). Re-check: all three spoken.
+- **T2 — the Write counter, a polite live region (11b.4 T8), was spoken 9 times in 26 typed characters.** Both counters are plain
+  lines; the over-limit crossing is still announced once. Re-check: 0 counter utterances in 26 characters. (The check T8 itself
+  owed — Row 41 (h).)
+- **T3 — an English "Notifications (F8)"** (the unused Tamagui starter toast's viewport) sat in every reading order; TalkBack
+  landed on it after the memorial Send. Removed. Re-check: focus after Send lands on the outcome heading.
+
+**Open:**
+- **T4 — the claim-entry question never has the name** [apps/mobile/app/(claim)/index.tsx, handover-otp.tsx, nominee-review.tsx,
+  relationship.tsx — `t('member_fallback')`]. It always reads *"Are you family of your family member?"* / *"क्या आप आपके परिजन के
+  परिजन हैं?"*, and the button *"No — continue as your family member"*. **BigDev's wording call** (show the name, or a sentence that
+  needs none); ⛔ a Panel question unless showing the name is a disclosure question — not assessed here.
+- **The photo step's heading is now spoken TWICE** (the T1 announce at once, TalkBack's own focus read ~5 s later). Kept for
+  consistency (a repeat beats the silence elsewhere); a focus-moving alternative is unexplored.
+- **Stale focus after navigation (pre-existing):** after a page change TalkBack sometimes re-reads an element of the screen BELOW —
+  the write box from the photo step, the photo heading from Preview, the used one-time code (*"870262. Edit box"*) after Send.
+- **Observations, ⛔ findings:** a relationship button is spoken twice on a tap and its selected state is ⛔ heard (the log may omit
+  state cues — check by swiping); the memorial outcome keeps *"सहेजें और बाद में आएँ"* after the words were sent; the intro shown to a
+  family who sent before (no draft) still opens silently (it shows only a button to the outcome); the `(claim)` header (seen at
+  6.36f's device run).
+- **⛔ Covered:** the photo picker and its alt-text field (the emulator's gallery is empty); Hindi-script typing (adb types Latin
+  only); a rotated portrait / HEIC; a real swipe-through; iOS / VoiceOver (⛔ Xcode, ⛔ iPhone).
+
 ## Deferred from: code review of 6-36f-nominee-mark-only-save.md — second full review (2026-10-27)
 
 Full review of `b3b1e8e9..69a99c70` (apps + packages). One finding deferred, pre-existing, and one un-attested risk from the fix-diff
@@ -20,6 +63,8 @@ review; the patch and decision items (S1–S6) are in the story's Review Finding
   return from marks mode for a member who typed a name. The 6.36f device run's D1 showed TalkBack re-reading a live region at a later
   press. ⛔ Checked on a device; ⛔ claimed fine. Check with TalkBack on the next Android run; if it re-reads, give the banner the D1
   treatment (shown + one `announceForAccessibility`).
+  - *Closed by the TalkBack device session 2026-10-27 (section above):* spoken ONCE on return; ⛔ re-read on two later presses or on
+    the form's Save. ⛔ VoiceOver.
 
 ---
 
@@ -219,6 +264,9 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
   keyboard, iOS + Android — Trap 7: on Android it sets `TYPE_TEXT_FLAG_NO_SUGGESTIONS`, which may break transliteration — a break
   STOPS for BigDev); a rotated portrait and an iPhone HEIC pick arriving upright as JPEG (MA8 — the stripper drops the EXIF
   orientation tag); TalkBack-Hindi (AC13). ⛔ Run in this session (⛔ device). **Trigger: before Row 41 closes.**
+  - *2026-10-27 (the TalkBack device session, section at the top):* **TalkBack-Hindi DONE** on the intro, Write, Photo (⛔ a photo
+    picked), Preview, the nominee's code, Send, the outcome and Withdraw — three findings fixed (T1–T3, `66e201a5`). STILL
+    UN-ATTESTED: the photo picker and the alt-text field under TalkBack, Hindi-script typing, the rotated / HEIC pick, VoiceOver.
 
 ---
 
@@ -236,7 +284,7 @@ BigDev's principle: ⛔ no screen may tell members that the Trust asks members a
 
 - **[PATCHED 2026-10-24 (BigDev: *"1 and 2"*) — the five controls are `height={48}`; a render test asserts it per control; two mutants RED. The text below is the finding.]** **The member-mark controls are 36 dp tall** [apps/mobile/components/life-events/NomineeForm.tsx `markControl` — *Find them in your contacts*, *Pick a different member*, *Remove mark*, *Keep the mark*, *Remove it*: `size="$3"`]. Seen in the accessibility tree: 347 × 36 dp, against 44–56 dp for the form's other buttons (the relationship chips are 36 dp too — 3.9's convention). *Keep the mark* / *Remove it* answer a question about WHO a mark is for; for older members a larger target is the safe default. **Recommendation: patch to `height={48}`** (the find screen's controls already are) — a small change with a render test on `data-height`; deferred only because the device run was a look, ⛔ a fix round. Trigger: BigDev's word, or the next accessibility pass.
 - **A dev client built before `expo-contacts` fails every contacts screen** ("Cannot find native module 'ExpoContacts'") — rebuild (`expo prebuild` / `expo run:android`) on any device or emulator that predates 6.36b. ⛔ A code fault.
-- **Not covered by the device run — UPDATED after the second pass (2026-10-24):** now covered — the permission-denied path, both daily limits, a second nominee, a swap of the two marks, the draft save-and-resume and four TalkBack utterances. STILL not covered: iOS / VoiceOver (only the Command Line Tools are installed — ⛔ Xcode, ⛔ `simctl`; needs an Xcode install or a real iPhone), iOS limited access, TalkBack on the requests screen / in Hindi / a full swipe-through reading order, a real phone in a real hand.
+- **Not covered by the device run — UPDATED after the second pass (2026-10-24):** now covered — the permission-denied path, both daily limits, a second nominee, a swap of the two marks, the draft save-and-resume and four TalkBack utterances. STILL not covered: iOS / VoiceOver (only the Command Line Tools are installed — ⛔ Xcode, ⛔ `simctl`; needs an Xcode install or a real iPhone), iOS limited access, TalkBack on the requests screen / in Hindi / a full swipe-through reading order, a real phone in a real hand. *(2026-10-27, the TalkBack device session at the top: the requests screen and Hindi now HEARD; the swipe-through reading order DERIVED from the accessibility tree, ⛔ heard; iOS and a real phone still open.)*
 - **Seen on the second pass, ⛔ patched:** (a) "Mark kept." stays in small type above the next refusal until the member edits (cosmetic); (b) the re-declaration form starts EMPTY (3.9 G14): changing or removing ONE mark means retyping every nominee's name, relationship and mobile — pre-existing, but the marks make it likelier. **DECIDED 2026-10-24 (BigDev: *"C: server keeps the details"*) ⇒ Story 6.36f `6-36f-nominee-mark-only-save` (`backlog`; an `epics.md` entry; `bmad-create-story 6.36f` owed): a marks-only save the server fulfils from the existing encrypted details — ⛔ personal data to the phone, ⛔ retyping. Option B (prefill from the record — a Tier-1 read to the device) was ⛔ chosen: it needs a privacy ruling.**
   - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* item (b) is HOMED in Story 6.36f — a marks-only save the server fulfils from the stored details (MK1–MK12). ⛔ Closed until row `6-36f-nominee-mark-only-save` is `done` on main. Item (a) is untouched.
 

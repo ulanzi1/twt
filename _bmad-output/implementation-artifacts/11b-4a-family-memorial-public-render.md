@@ -36,7 +36,7 @@ it does NOT). ⛔ Never copy text from those sites; quote the 11b.4 story file, 
 
 # Story 11b.4a: The Family Memorial on the Public Sahyog Vivran Page — Render, Photo, and the Helpline Take-Down `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -963,12 +963,12 @@ CONSTRAINT` has ⛔ no `IF NOT EXISTS`). GRANT SELECT, INSERT only; ENABLE + FOR
   - [x] 9.3 i18n catalogs (namespaces already registered — ⛔ no `catalog.ts` change), `microcopy.yaml` lists, tone-review rows (UN-ATTESTED).
   - **Done when:** the mobile render test and the admin tests pass; a two-way ternary mutant turns the review-detail test RED.
 - [x] **Task 10 — Budgets (AC15)** — measure, record, commit the friction disposition; then `pnpm friction:check`.
-- [ ] **Task 11 — Records (AC16, AC19)**
-  - [ ] 11.1 `deferred-work.md`: AC16 items (1)–(16) as a new `11b.4a` section; the discharge annotations of AC16 at every reference site.
-  - [ ] 11.2 Row 41: (b) met by the landing commit (dated); (l)–(q) added ((m) recorded as met by `-411`); (j) annotated; ((e) was annotated MET on 2026-10-27 with `-411`'s records).
-  - [ ] 11.3 Story: Completion Notes, File List, Change Log.
-  - [ ] 11.4 Architecture §4.11.2 dated annotation (MP5's single variant behind a proxied plain `<img>`, ⛔ not the Astro Image component; the ADR still owed).
-- [ ] **Task 12 — Verify and close (AC17, AC18)** — AC17's `git diff` check (empty); commit; `pnpm ci:local` 36 / 36 on a fresh `twt_dev` in its own container; only then `review` → (after code review) `done`.
+- [x] **Task 11 — Records (AC16, AC19)**
+  - [x] 11.1 `deferred-work.md`: AC16 items (1)–(16) as a new `11b.4a` section; the discharge annotations of AC16 at every reference site.
+  - [x] 11.2 Row 41: (b) met by the landing commit (dated); (l)–(q) added ((m) recorded as met by `-411`); (j) annotated; ((e) was annotated MET on 2026-10-27 with `-411`'s records).
+  - [x] 11.3 Story: Completion Notes, File List, Change Log.
+  - [x] 11.4 Architecture §4.11.2 dated annotation (MP5's single variant behind a proxied plain `<img>`, ⛔ not the Astro Image component; the ADR still owed).
+- [x] **Task 12 — Verify and close (AC17, AC18)** — AC17's `git diff` check (empty); commit; `pnpm ci:local` 36 / 36 on a fresh `twt_dev` in its own container; only then `review` → (after code review) `done`.
 
 ---
 
@@ -1113,13 +1113,176 @@ cookie reaches the endpoint.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 11b-4a`, 2026-10-27; Tasks 8 and 9 built by two forked agents with disjoint
+file ownership (⛔ no commits of their own), reviewed and committed by the main session.
+
 ### Debug Log References
 
+- `ci:local` **36 / 36** at `990187b6` on a FRESH `twt_dev` in its own container (`twt-11b4a-pg`, :5447). The first run (35 / 36)
+  failed `ai-10-5-coverage-guard`: the new built-server render spec made `apps/public` DB-gated and the live-DB job did not run
+  it ⇒ `@twt/public` joined the integration filter in `ci-local.sh` AND `ci.yml` (`990187b6`), then the fresh re-run passed.
+- Full `apps/api` suite (before Task 8): 2358 / 2360 — one 20 s timeout in `claims/verifier-console.spec.ts` under full-suite
+  load (26 / 26 alone; the known contention class, ⛔ this story).
+- Vitest 2's bundled Vite cannot host Astro 6's plugins ⇒ ⛔ no `.astro` container harness; the render assertions run against the
+  BUILT server instead (Astro `build()` into `node_modules/.cache`, real HTTP) — which is also the built-image proof (Trap 16).
+- Raw-invisible trap hit once (`\u2028/\u2029` landed raw inside a regex literal) — caught by the transform error, rewritten
+  as escapes; every new file with bidi fixtures scanned afterwards.
+
 ### Completion Notes List
+- ⭐ **Built (2026-10-27, `bmad-dev-story 11b-4a`):** governance first — `-412` alone (`3d42b98a`, + dated pointers under `-398` MA1
+  and `-393` M4), ADR-0043 drafted + index row (`35c39dcf`), Row 41 (l)–(q) + the (j) annotation, epics notes, deferred-work
+  discharge annotations (`fb3be64b`); then code: `0186` (`helpline`, alone — Trap 6) + `0187` (requests / outcomes / the 6.25-shaped
+  approver outbox; the `helpline` CHECK pair via `::text`), the chain-level `deriveMemorialChainState` at all three call sites
+  (Trap 18), the public read + the narrow photo read (Trap 19), the take-down domain (withdraw-all — Trap 1; MP8 (c));
+  `familyMemorial` on the wire (finished strings — `-411` item 3) with its three ruled matrix pairs; the API page read + the join
+  rule (`joinKeptSegments`, ours) + the photo route (`sharp@0.34.5`, ⛔ metadata); `apps/public` guard + `FamilyMemorial.astro` +
+  the photo proxy; the take-down API (`memorial.takedown`, catalog 54); the approver email + overdue watch (ADR-0043 fence);
+  the operator screens; the family outcome copy.
+- **Mutants shown RED (each restored):** head-only chain state (`[A-omit, family-withdrawn]`); shown-only take-down (`[A-omit, A]`);
+  a dropped new CHECK (name pin + named probe); a removed exception pair (matrix parse); a leaked reason (Trap 3 raw-body leg);
+  a head-keyed public read (`[A-omit, pending]`); `withMetadata()` (both AC4 legs); the guard check after the early return; a
+  rendered marker (built-server no-marker leg); the take-down without the pool lock (race leg); a two-way withdrawal ternary
+  (admin review detail); Q3 moved to an un-named module (fence); Q3 dropped from the selector (MP10 (b) / MP11 legs).
+- **Departures, stated:** (a) the photo-route claim lock is an ADVISORY lock per request, ⛔ `FOR UPDATE` — `twt_app` holds ⛔ no
+  UPDATE on `memorial_takedown_requests`; (b) the overdue watch runs daily at 09:00 IST (the story named no time); (c) the photo
+  route JOINS `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` by documentation — ⛔ no eighth entry (ordinals 2/3 bind nothing on it);
+  (d) `joinKeptSegments` takes the cut TEXTS beside `asApproved` (the presenter's `omitted` segment carries ⛔ no text, and the
+  join rule needs to know whether a cut held a line break) — the cut text ⛔ never leaves the module; (e) the drive view stays
+  readable after a take-down while it has requests (so a decided request can be seen), 404 only with ⛔ no shown memorial AND ⛔ no
+  request, or erased; (f) a `memorial_takedown.first_contact_out_of_range` 400 code added to the closed list.
+- **Measured (AC15):** static page weight 11 471 unchanged; photo variant 21 501 B (photo-like 3000×4000) / 147 903 B (full-noise
+  worst case). Friction: ONE new row (the take-down's call-back), disposition committed after the implementation (`f017a4a4`).
+- ⚠ **Owed at landing / not claimed here:** Row 41 (b) is marked met by the LANDING commit (⛔ not this branch); the Hindi of the
+  new copy is the author's (tone-review rows UN-ATTESTED); Row 41 (l), (n)–(q) stay open by design — the switch stays off.
 - Ultimate context engine analysis completed — comprehensive developer guide created (2026-10-27, `bmad-create-story 11b.4a`, four read-only research agents at `bab88287`).
 - Re-validated 2026-10-27 at `4e57fa42` (`bmad-create-story validate 11b.4a`, four read-only verifiers: code claims, governance, design reachability, internal consistency); 40 findings, BigDev "all" — see v0.4.
 
 ### File List
+**New (42):**
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-27-11b4a-family-memorial-public-render.md`
+- `apps/admin/src/modules/memorial-takedown/MemorialTakedownPage.tsx`
+- `apps/admin/src/modules/memorial-takedown/derive.ts`
+- `apps/admin/src/modules/memorial-takedown/i18n-en.ts`
+- `apps/admin/src/routes/MemorialTakedownRoute.tsx`
+- `apps/admin/tests/memorial-takedown.test.tsx`
+- `apps/api/src/modules/memorial-takedown/handlers.ts`
+- `apps/api/src/modules/memorial-takedown/index.ts`
+- `apps/api/src/modules/memorial-takedown/routes.ts`
+- `apps/api/src/modules/public-pages/memorial-photo-variant.ts`
+- `apps/api/src/modules/public-pages/memorial-public-read.ts`
+- `apps/api/src/modules/public-pages/memorial-public-text.ts`
+- `apps/api/tests/integration/memorial-takedown/actor-denial.spec.ts`
+- `apps/api/tests/integration/memorial-takedown/races.spec.ts`
+- `apps/api/tests/integration/memorial-takedown/takedown.spec.ts`
+- `apps/api/tests/integration/public-pages/sahyog-vivran-memorial-photo.spec.ts`
+- `apps/api/tests/integration/public-pages/sahyog-vivran-memorial.spec.ts`
+- `apps/api/tests/unit/memorial-public-text.test.ts`
+- `apps/jobs/src/scheduler/memorial-takedown-approver-emails.ts`
+- `apps/jobs/src/scheduler/memorial-takedown-overdue.ts`
+- `apps/jobs/tests/memorial-takedown-approver-emails-live.test.ts`
+- `apps/jobs/tests/memorial-takedown-overdue.test.ts`
+- `apps/public/src/components/FamilyMemorial.astro`
+- `apps/public/src/pages/sahyog-vivran/[driveToken]/memorial-photo.ts`
+- `apps/public/tests/family-memorial-source.test.ts`
+- `apps/public/tests/integration/public-pages/family-memorial-render.spec.ts`
+- `docs/adr/ADR-0043-memorial-takedown-approver-email.md`
+- `packages/contracts/src/memorial/takedown.ts`
+- `packages/domain/migrations/0186_memorial-withdrawal-actor-helpline.sql`
+- `packages/domain/migrations/0187_memorial-takedown.sql`
+- `packages/domain/src/memorial/public-read.ts`
+- `packages/domain/src/memorial/takedown-approver-email-read.ts`
+- `packages/domain/src/memorial/takedown-approver-email.ts`
+- `packages/domain/src/memorial/takedown.ts`
+- `packages/domain/src/policies/memorial-takedown-rls.ts`
+- `packages/domain/src/schema/memorial_takedown_approver_emails.ts`
+- `packages/domain/src/schema/memorial_takedown_requests.ts`
+- `packages/domain/tests/integration/memorial/takedown-approver-email.spec.ts`
+- `packages/domain/tests/integration/memorial/takedown.spec.ts`
+- `packages/domain/tests/integration/rls/memorial-takedown-policy-regression.spec.ts`
+- `packages/domain/tests/memorial/memorial-takedown-chain.test.ts`
+- `packages/platform-adapters/tests/memorial-photo-storage/get-bytes.test.ts`
+
+**Modified (78):**
+- `.decision-log.md`
+- `.github/workflows/ci.yml`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/planning-artifacts/architecture.md`
+- `_bmad-output/planning-artifacts/epics.md`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/memorial-review/MemorialReviewPage.tsx`
+- `apps/admin/src/modules/memorial-review/i18n-en.ts`
+- `apps/admin/src/router.tsx`
+- `apps/admin/src/routes/RootLayout.tsx`
+- `apps/admin/tests/memorial-review.test.tsx`
+- `apps/api/package.json`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/modules/memorial-review/handlers.ts`
+- `apps/api/src/modules/memorial/handlers.ts`
+- `apps/api/src/modules/public-pages/handlers.ts`
+- `apps/api/src/modules/public-pages/routes.ts`
+- `apps/api/src/modules/public-pages/sahyog-vivran-controls.ts`
+- `apps/api/src/server.ts`
+- `apps/api/tests/integration/login-wall.spec.ts`
+- `apps/api/tests/integration/public-pages/rate-limit-key.spec.ts`
+- `apps/api/tests/integration/public-pages/sahyog-vivran.spec.ts`
+- `apps/jobs/src/boot.ts`
+- `apps/jobs/tests/staff-email-identity-read-fence.test.ts`
+- `apps/mobile/app/(memorial)/outcome.tsx`
+- `apps/mobile/tests/unit/memorial-screens-render.test.ts`
+- `apps/public/src/lib/sahyog-vivran-render.ts`
+- `apps/public/src/lib/sahyog-vivran.server.ts`
+- `apps/public/src/lib/surface-fields.ts`
+- `apps/public/src/pages/sahyog-vivran/[driveToken].astro`
+- `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+- `apps/public/tests/member-drive-detail-field-floor.test.ts`
+- `apps/public/tests/sahyog-serves.test.ts`
+- `apps/public/tests/sahyog-vivran-client.test.ts`
+- `apps/public/tests/sahyog-vivran-copy.test.ts`
+- `apps/public/tests/sahyog-vivran-render.test.ts`
+- `docs/knowledge-transfer/adr-index.md`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `docs/tone-review-checklist.md`
+- `friction-budget.md`
+- `microcopy.yaml`
+- `openapi/v1.yaml`
+- `packages/contracts/public-pages/public-vs-private-matrix.yaml`
+- `packages/contracts/scripts/emit-openapi.ts`
+- `packages/contracts/src/memorial/index.ts`
+- `packages/contracts/src/memorial/photo-storage.ts`
+- `packages/contracts/src/memorial/vocab.ts`
+- `packages/contracts/src/public-pages/matrix.ts`
+- `packages/contracts/src/public-pages/sahyog-vivran.ts`
+- `packages/contracts/tests/memorial.test.ts`
+- `packages/contracts/tests/public-pages-sahyog-vivran.test.ts`
+- `packages/contracts/tests/public-pages.test.ts`
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/memorial/index.ts`
+- `packages/domain/src/memorial/status.ts`
+- `packages/domain/src/memorial/submission.ts`
+- `packages/domain/src/memorial/vocab.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/rbac/roles.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/schema/memorial_withdrawals.ts`
+- `packages/domain/tests/integration/rls/memorial-policy-regression.spec.ts`
+- `packages/domain/tests/memorial/memorial-status.test.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/tests/rbac/roles.test.ts`
+- `packages/i18n/locales/en/memorial.json`
+- `packages/i18n/locales/en/sahyog-vivran.json`
+- `packages/i18n/locales/hi/memorial.json`
+- `packages/i18n/locales/hi/sahyog-vivran.json`
+- `packages/platform-adapters/src/memorial-photo-storage/gcs.ts`
+- `packages/platform-adapters/src/memorial-photo-storage/in-memory.ts`
+- `packages/platform-adapters/src/memorial-photo-storage/local-fs.ts`
+- `packages/queue/src/index.ts`
+- `pnpm-lock.yaml`
+- `scripts/ci-local.sh`
+- `scripts/sahyog-vivran-financial-truth/check.ts`
+- `_bmad-output/implementation-artifacts/11b-4a-family-memorial-public-render.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ---
 
@@ -1127,6 +1290,7 @@ cookie reaches the endpoint.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-27 | v1.0 | **Implemented** (`bmad-dev-story 11b-4a`): Tasks 0–12 complete; `-412` + ADR-0043 first; 0186/0187; the chain-level state; the public render (joined words, ⛔ marker), the photo route (`sharp`, ⛔ metadata), the take-down API + screens, the approver email + overdue watch, the family copy; friction row + disposition; deferred-work 11b.4a section; `@twt/public` joins the live-DB CI job. `ci:local` 36 / 36 at `990187b6` on a fresh `twt_dev`. Status → `review`. |
 | 2026-10-27 | v0.8 | BigDev approved Question 10 as proposed (*"approve Question 10 as proposed"*): the reworded `outcome.approved_with_omissions` (en + hi) is in AC14's approved copy; AC8 points at it; the Hindi carries an UN-ATTESTED tone-review row like the rest. All Task 0.2 questions are answered ⇒ `bmad-dev-story 11b.4a` may start at Task 1 (`-412`, ADR-0043). |
 | 2026-10-27 | v0.7 | ⚖️ **The Panel ruled** (DR + KB, relayed by BigDev): *"PQ1 - A / PQ2 - A / PC1 - B / PC2 - A / PC3 - A / PC4 - A / PC5 -A"* — transcribed as `2026-10-27-411` (Trustee-ratified, committed alone, `2cf8127e`); this story's own author-commit is RENUMBERED `-412` (every body reference; the Change Log rows above keep `-411` as written). **PC1 B reverses MP3 (a):** the public page carries ⛔ no marker — the API keeps the text segments, isolates each, and joins them (`joinKeptSegments`, the join rule ours); the wire is `{ words: string[], photo: { altText: string } | null }`; `apps/public` no longer needs `@twt/ui` (Trap 16); Traps 3/5/8, AC2/AC3, Tasks 4.1/5.2/6.1/6.2/6.5 rewritten; the alt text cites `-411` item 6; Trap 17 cites `-411` item 7. The family outcome line `outcome.approved_with_omissions` becomes inaccurate ⇒ AC8 / Task 9.1 / Question 10 (wording owed by BigDev). AC16 (1)–(3) RULED; (17) added (permission text vs unmarked joins, to counsel). Row 41 (e) MET; AC19 (m) met. Question 9 answered (sent). |
 | 2026-10-27 | v0.6 | BigDev answered Questions 2–8: *"all as recommended"* — copy approved (MP10 email, AC14 heading, `outcome.taken_down`, operator script); MP7 nominee mobile on the take-down screen; PC5 / PC4 built as recommended and asked; Trap 7 departure and MP8 (b) narrowing accepted; the photo route joins `SAHYOG_VIVRAN_APPLICABLE_CONTROLS`. Question 9 (when to send the note) had ⛔ no recommendation and stays open with BigDev. The routing note's header updated (Questions 4/5/7 settled ⇒ PC5/PC4/PC2 final). Task 0.2 is complete for the build ⇒ Task 1 may start. |

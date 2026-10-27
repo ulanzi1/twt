@@ -2,7 +2,8 @@
 // ⛔ email — Trap 4). Refetched on mount (the Trust may have decided since).
 //   · approved → the text as approved + "it will appear on the Sahyog Vivran page" (⛔ "is visible" — 11b.4a renders it);
 //   · approved_with_omissions → the text with each left-out part marked (+ "the photo was left out") and the reasons;
-//   · not_approved / approval_withdrawn → the reason; withdrawn → a calm line; with_the_trust → a calm line + Withdraw.
+//   · not_approved / approval_withdrawn → the reason; withdrawn → a calm line; with_the_trust → a calm line + Withdraw;
+//   · taken_down (Story 11b.4a MP9) → taken down at the nominee's request, off the page, may write again (⛔ no reason beside it).
 // ⭐ EVERY outcome shows the helpline (for `approved`: the NOMINEE calls it to change or take it down — `-393` M2, `-395`;
 // ⛔ take-down button). *"Write again"* shows IFF `canSend` (⛔ on `approved`); on `with_the_trust` it sits beside Withdraw,
 // with a line that a new version replaces the one with the Trust. It opens an EMPTY box (Trap 3) — the write screen offers
@@ -143,6 +144,7 @@ function Outcome({
           {state === 'approved_with_omissions' ? <Paragraph>{t('outcome.approved_with_omissions')}</Paragraph> : null}
           {state === 'not_approved' ? <Paragraph>{t('outcome.not_approved')}</Paragraph> : null}
           {state === 'approval_withdrawn' ? <Paragraph>{t('outcome.approval_withdrawn')}</Paragraph> : null}
+          {state === 'taken_down' ? <Paragraph>{t('outcome.taken_down')}</Paragraph> : null}
           {state === 'not_approved' || state === 'approval_withdrawn' ? <Paragraph>{reason(view.reasonCode)}</Paragraph> : null}
           {earlierStands ? (
             <Paragraph testID="memorial-earlier-stands">{t(earlierStandsKey)}</Paragraph>

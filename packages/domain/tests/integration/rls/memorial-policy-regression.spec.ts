@@ -12,8 +12,8 @@
 //     scrub in scope and reaches no other tenant's row.
 //   · the foreign keys — the composite supersede FK (the chain stays inside ONE pool), `supersedes_uq` (linear), the pool's
 //     single root, the pool / claim / deceased-member FKs, and the decisions' / withdrawals' composite FK to the submission.
-//   · every CHECK (eleven: five on the submissions — 0183 adds the Send key's shape — four on the decisions, two on the
-//     withdrawals), each with a violating row that names the ONE constraint it trips, and a legal row of the same shape
+//   · every CHECK (thirteen: five on the submissions — 0183 adds the Send key's shape — four on the decisions, four on the
+//     withdrawals — 0187 adds the `helpline` pair, Story 11b.4a Trap 7), each with a violating row that names the ONE constraint it trips, and a legal row of the same shape
 //     that still inserts — plus the JSON-null spans `memorial_omissions_valid` once passed (R18).
 //   · the column grants — a sweep of EVERY column: UPDATE is admitted on the four ciphertext columns and refused (42501) on
 //     all the others; ⛔ no DELETE.
@@ -300,7 +300,7 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       expect(def('memorial_submissions_pool_idempotency_key_uq')).toMatch(
         /UNIQUE INDEX .*\(pool_id, idempotency_key\) WHERE \(idempotency_key IS NOT NULL\)/,
       );
-      // The eleven named CHECKs are all there (a dropped one fails here before it fails in a probe below).
+      // The thirteen named CHECKs are all there (0187 — Story 11b.4a — adds the withdrawals' `helpline` pair) (a dropped one fails here before it fails in a probe below).
       const checks = await client.query<{ conname: string }>(
         `SELECT conname FROM pg_constraint WHERE contype = 'c' AND conrelid = ANY (ARRAY['memorial_submissions'::regclass, 'memorial_review_decisions'::regclass, 'memorial_withdrawals'::regclass]) ORDER BY conname`,
       );
@@ -315,7 +315,9 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
         'memorial_submissions_photo_mime_check',
         'memorial_submissions_photo_pair_check',
         'memorial_withdrawals_actor_display_check',
+        'memorial_withdrawals_helpline_no_note_check',
         'memorial_withdrawals_reason_iff_trust',
+        'memorial_withdrawals_takedown_request_iff_helpline',
       ]);
     });
   });
@@ -682,10 +684,18 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       expect((await ins(client, DECISIONS, decisionRow(PARIWAR_A, w.versions[0]!, { action: 'approved_with_omissions', omissions: span(2147483647) }))).code).toBeNull();
     });
 
-    it('(t) memorial_withdrawals: the Trust names a reason and a display name; a family withdrawal carries neither', async () => {
+    it('(t) memorial_withdrawals: the Trust names a reason and a display name; a family withdrawal carries neither; a helpline one (0187) a display name and its request, ⛔ no reason, ⛔ no note', async () => {
       const { client } = getTx();
       const w = await seedWorld(PARIWAR_A, 8);
       const free = [...w.versions];
+      // Story 11b.4a — a take-down request on the last version (as the superuser, before scope).
+      const requestId = randomUUID();
+      await client.query(
+        `INSERT INTO memorial_takedown_requests (request_id, pariwar_id, pool_id, submission_id, handover_nominee_ref, verified_by, first_contact_at, due_at, actor_id, actor_display)
+         VALUES ($1, $2, $3, $4, $5, 'called_back', now() - interval '1 day', now() - interval '1 day' + interval '168 hours', $6, 'Helpline Operator')`,
+        [requestId, PARIWAR_A, w.poolId, w.versions[7], randomUUID(), randomUUID()],
+      );
+      const helpline = { withdrawn_by: 'helpline', reason_code: null, actor_display: 'Helpline Operator', takedown_request_id: requestId };
       await enterAppScope(client, PARIWAR_A);
       const put = (over: Record<string, unknown>): Promise<Outcome> => ins(client, WITHDRAWALS, withdrawalRow(PARIWAR_A, free[0]!, over));
       const take = (over: Record<string, unknown>): Promise<Outcome> => ins(client, WITHDRAWALS, withdrawalRow(PARIWAR_A, free.shift()!, over));
@@ -696,6 +706,22 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       expectCheck(await put({ withdrawn_by: 'trust', reason_code: 'against_the_law', actor_display: null }), 'memorial_withdrawals_actor_display_check');
       expectCheck(await put({ withdrawn_by: 'family', reason_code: null, actor_display: 'Someone' }), 'memorial_withdrawals_actor_display_check');
       expectCheck(await put({ withdrawn_by: 'trust', reason_code: 'against_the_law', actor_display: '   ' }), 'memorial_withdrawals_actor_display_check');
+      // 0187 (Story 11b.4a): a `helpline` withdrawal carries the operator's display name, ⛔ no reason (Trap 7 — the reason enum is
+      // the reviewer's), ⛔ no note, and points at its request — and ONLY a `helpline` one may.
+      expectCheck(await put({ ...helpline, actor_display: null }), 'memorial_withdrawals_actor_display_check');
+      expectCheck(await put({ ...helpline, reason_code: 'against_the_law' }), 'memorial_withdrawals_reason_iff_trust');
+      expectCheck(await put({ ...helpline, takedown_request_id: null }), 'memorial_withdrawals_takedown_request_iff_helpline');
+      expectCheck(await put({ withdrawn_by: 'family', takedown_request_id: requestId }), 'memorial_withdrawals_takedown_request_iff_helpline');
+      expectCheck(
+        await put({ withdrawn_by: 'trust', reason_code: 'against_the_law', actor_display: 'Panel Member', takedown_request_id: requestId }),
+        'memorial_withdrawals_takedown_request_iff_helpline',
+      );
+      expectCheck(await put({ ...helpline, internal_note_ciphertext: 'enc:v1:n' }), 'memorial_withdrawals_helpline_no_note_check');
+      // The request FK is composite on (pariwar, request): an unknown request is refused.
+      const orphan = await put({ ...helpline, takedown_request_id: randomUUID() });
+      expect(orphan.code).toBe('23503');
+      expectConstraint(orphan, 'memorial_withdrawals_takedown_request_fk');
+      expect((await take(helpline)).code).toBeNull();
       expect((await take({ withdrawn_by: 'family' })).code).toBeNull();
       expect((await take({ withdrawn_by: 'trust', reason_code: 'accuses_someone_of_wrongdoing', actor_display: 'Panel Member', internal_note_ciphertext: 'enc:v1:n' })).code).toBeNull();
     });

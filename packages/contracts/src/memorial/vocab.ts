@@ -17,7 +17,8 @@ export const MEMORIAL_REVIEW_REASONS = [
 ] as const;
 export type MemorialReviewReason = (typeof MEMORIAL_REVIEW_REASONS)[number];
 
-export const MEMORIAL_WITHDRAWAL_ACTORS = ['family', 'trust'] as const;
+/** `helpline` — Story 11b.4a's take-down at the nominee's request (`-412` §2). */
+export const MEMORIAL_WITHDRAWAL_ACTORS = ['family', 'trust', 'helpline'] as const;
 export type MemorialWithdrawalActor = (typeof MEMORIAL_WITHDRAWAL_ACTORS)[number];
 
 export const MEMORIAL_OMISSION_FIELDS = ['body', 'altText'] as const;
@@ -32,6 +33,8 @@ export const MEMORIAL_STATES = [
   'not_approved',
   'withdrawn',
   'approval_withdrawn',
+  // Story 11b.4a (`-412` MP9) — taken down by the helpline at the nominee's request.
+  'taken_down',
 ] as const;
 export type MemorialState = (typeof MEMORIAL_STATES)[number];
 

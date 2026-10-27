@@ -24,6 +24,7 @@ import {
   type MemorialReviewReason,
   type MemorialReviewVersion,
   type MemorialState,
+  type MemorialWithdrawalActor,
 } from '@twt/contracts';
 import { reconstructMemorial, type MemorialParagraph } from '@twt/ui';
 import { useState, type ReactElement } from 'react';
@@ -61,6 +62,25 @@ function NoAccess(): ReactElement {
   );
 }
 
+/**
+ * Who withdrew a version — a TOTAL map (Story 11b.4a Trap 15): a two-way ternary read a `helpline` take-down as *"The Trust
+ * withdrew its approval."* and nothing failed to compile. The take-down line carries its time (AC12).
+ */
+function withdrawalLine(w: { readonly withdrawnBy: MemorialWithdrawalActor; readonly withdrawnAt: string }): string {
+  switch (w.withdrawnBy) {
+    case 'family':
+      return t('memorial.detail.withdrawnByFamily');
+    case 'trust':
+      return t('memorial.detail.withdrawnByTrust');
+    case 'helpline':
+      return `${t('memorial.detail.withdrawnByHelpline')} · ${new Date(w.withdrawnAt).toLocaleString('en-IN')}`;
+    default: {
+      const exhaustive: never = w.withdrawnBy;
+      return String(exhaustive);
+    }
+  }
+}
+
 function stateLabel(state: MemorialState): string {
   return t(`memorial.state.${state}`);
 }
@@ -75,6 +95,9 @@ function decidedDateLabel(state: MemorialState): string {
       return t('memorial.list.withdrawn');
     case 'approval_withdrawn':
       return t('memorial.list.approvalWithdrawn');
+    // Story 11b.4a — the helpline's take-down at the nominee's request (the date is the withdrawal's).
+    case 'taken_down':
+      return t('memorial.list.takenDown');
     // `none` / `with_the_trust` carry no `decidedAt`, so the line is never drawn for them.
     case 'approved':
     case 'approved_with_omissions':
@@ -476,7 +499,7 @@ function VersionCard({
         <div className="mt-3" data-testid="memorial-withdrawal">
           <h3 className="font-bold">{t('memorial.detail.withdrawal')}</h3>
           <p>
-            {v.withdrawal.withdrawnBy === 'family' ? t('memorial.detail.withdrawnByFamily') : t('memorial.detail.withdrawnByTrust')}
+            {withdrawalLine(v.withdrawal)}
             {v.withdrawal.reasonCode !== null && <> — {reasonLabel(v.withdrawal.reasonCode)}</>}
           </p>
           {v.withdrawal.actorDisplay !== null && <p className="text-sm opacity-70">{v.withdrawal.actorDisplay}</p>}

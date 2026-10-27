@@ -9125,6 +9125,7 @@ components:
                 - not_approved
                 - withdrawn
                 - approval_withdrawn
+                - taken_down
             submissionId:
               type:
                 - string
@@ -9463,6 +9464,7 @@ components:
                     enum:
                       - family
                       - trust
+                      - helpline
                   reasonCode:
                     type:
                       - string

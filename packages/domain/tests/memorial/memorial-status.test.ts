@@ -56,7 +56,7 @@ function link(
   };
 }
 
-describe('deriveMemorialStatus — seven states (MA10)', () => {
+describe('deriveMemorialStatus — eight states (MA10; Story 11b.4a adds `taken_down`)', () => {
   it.each([
     [null, 'none'],
     [link(), 'with_the_trust'],
@@ -65,6 +65,9 @@ describe('deriveMemorialStatus — seven states (MA10)', () => {
     [link({ action: 'not_approved' }), 'not_approved'],
     [link({ withdrawnBy: 'family' }), 'withdrawn'],
     [link({ action: 'approved', withdrawnBy: 'trust' }), 'approval_withdrawn'],
+    // Story 11b.4a — the per-LINK mapping of a `helpline` withdrawal (the family's state is the CHAIN rule — Trap 18).
+    [link({ action: 'approved', withdrawnBy: 'helpline' }), 'taken_down'],
+    [link({ withdrawnBy: 'helpline' }), 'taken_down'],
   ] as const)('%# → %s', (latest, expected) => {
     expect(deriveMemorialStatus(latest)).toBe(expected);
   });
@@ -78,10 +81,11 @@ describe('deriveMemorialStatus — seven states (MA10)', () => {
       'not_approved',
       'withdrawn',
       'approval_withdrawn',
+      'taken_down',
     ]);
   });
 
-  it('canSend is every state but a clean `approved` (MA13); canWithdraw only `with_the_trust` (MA9)', () => {
+  it('canSend is every state but a clean `approved` (MA13) — `taken_down` included (11b.4a MP9); canWithdraw only `with_the_trust` (MA9)', () => {
     for (const s of MEMORIAL_STATES) {
       expect(memorialCanSend(s)).toBe(s !== 'approved');
       expect(memorialCanWithdraw(s)).toBe(s === 'with_the_trust');

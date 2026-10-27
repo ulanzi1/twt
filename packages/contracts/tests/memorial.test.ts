@@ -37,14 +37,17 @@ describe('vocabularies — by value, EQUAL to the domain tuples that generate th
     expect([...wire]).toEqual([...domain]);
   });
 
-  it('the four grounds and ⛔ no catch-all, ⛔ no family_asked (MA6, MA18)', () => {
+  it('the four grounds and ⛔ no catch-all, ⛔ no family_asked (MA6, MA18; Story 11b.4a Trap 7)', () => {
     expect([...MEMORIAL_REVIEW_REASONS]).toEqual([
       'attacks_someone_named',
       'accuses_someone_of_wrongdoing',
       'against_the_law',
       'identifies_a_child',
     ]);
-    expect([...MEMORIAL_WITHDRAWAL_ACTORS]).not.toContain('helpline');
+    // ⚠ INVERTED 2026-10-27 (Story 11b.4a, `-412` §2): `helpline` IS now minted — the take-down at the nominee's request. It
+    // carries ⛔ no reason, so the reviewer's four grounds stay exactly four and `family_asked` is ⛔ still not minted.
+    expect([...MEMORIAL_WITHDRAWAL_ACTORS]).toEqual(['family', 'trust', 'helpline']);
+    expect([...MEMORIAL_REVIEW_REASONS]).not.toContain('family_asked');
   });
 });
 

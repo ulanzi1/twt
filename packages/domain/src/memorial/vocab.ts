@@ -24,9 +24,27 @@ export const MEMORIAL_REVIEW_REASONS = [
 ] as const;
 export type MemorialReviewReason = (typeof MEMORIAL_REVIEW_REASONS)[number];
 
-/** Who withdrew a version (MA9 / MA16). ⛔ `helpline` is 11b.4a's (MA18) — ⛔ not minted here. */
-export const MEMORIAL_WITHDRAWAL_ACTORS = ['family', 'trust'] as const;
+/**
+ * Who withdrew a version (MA9 / MA16). `helpline` — the operator's take-down at the nominee's request (Story 11b.4a,
+ * `#decision-2026-10-27-412` §2, migration 0186): ⛔ no reason (the reason enum is the reviewer's — Trap 7), ⛔ no note; the row
+ * points at its request (`takedown_request_id`).
+ */
+export const MEMORIAL_WITHDRAWAL_ACTORS = ['family', 'trust', 'helpline'] as const;
 export type MemorialWithdrawalActor = (typeof MEMORIAL_WITHDRAWAL_ACTORS)[number];
+
+/**
+ * How a take-down request ended (Story 11b.4a MP8, `-412` §2, migration 0187): `taken_down` (every un-withdrawn version gets a
+ * `helpline` withdrawal), `kept` (the nominee chose to keep it, or the smaller fix is a new Send — nothing public changes),
+ * `superseded` (the shown version changed between the request and the outcome — MP8 (c)).
+ */
+export const MEMORIAL_TAKEDOWN_OUTCOMES = ['taken_down', 'kept', 'superseded'] as const;
+export type MemorialTakedownOutcome = (typeof MEMORIAL_TAKEDOWN_OUTCOMES)[number];
+
+/** How the operator knew the caller was the nominee (MP7) — the one method today; ⚠ LOCKSTEP with 0187's CHECK. */
+export const MEMORIAL_TAKEDOWN_VERIFIED_BY = 'called_back' as const;
+
+/** MP14 (b) — the 7 days run from the nominee's first contact (0187 stores `due_at = first_contact_at + 168 hours`). */
+export const MEMORIAL_TAKEDOWN_DUE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Which nominee the handover code was addressed to at Send (MA5 — the branch `sendHandoverOtp` takes). */
 export const MEMORIAL_HANDOVER_RECIPIENTS = ['latest', 'at_death'] as const;

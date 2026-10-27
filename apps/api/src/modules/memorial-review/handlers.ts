@@ -256,7 +256,7 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
       return {
         submissionId,
         deceasedName,
-        memorialState: memorial.memorialChainState(chain),
+        memorialState: memorial.deriveMemorialChainState(chain), // Story 11b.4a — the chain rule (Trap 18)
         chain: versions,
         canDecide: memorial.memorialReviewTargetIndex(chain, submissionId, 'decision') !== null,
         canWithdrawApproval: withdrawApprovalTargetId !== null,

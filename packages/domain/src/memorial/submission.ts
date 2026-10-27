@@ -28,7 +28,7 @@ import {
 } from '../schema/memorial_submissions.js';
 import { memorialWithdrawals, type MemorialWithdrawalRow } from '../schema/memorial_withdrawals.js';
 import { MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION } from './authorisation-copy.js';
-import { deriveMemorialStatus, memorialCanSend, type MemorialState } from './status.js';
+import { deriveMemorialChainState, memorialCanSend } from './status.js';
 import type { MemorialPhotoMime } from './vocab.js';
 
 /** One version of the memorial with its (at most one) decision and (at most one) withdrawal. */
@@ -86,10 +86,6 @@ export async function readMemorialChain(
   }));
 }
 
-/** The state of a chain (its latest version's). */
-export function memorialChainState(chain: readonly MemorialChainLink[]): MemorialState {
-  return deriveMemorialStatus(chain.length === 0 ? null : chain[chain.length - 1]!);
-}
 
 /**
  * MA5 — the rank-1 head of the deceased's nominee declaration history: the latest `member_nominee_versions.version_id`
@@ -137,7 +133,7 @@ export function decideMemorialSend(
   chain: readonly MemorialChainLink[],
   input: { readonly authorisationCopyVersion: string; readonly keepPreviousPhoto: boolean },
 ): MemorialSendDecision {
-  if (!memorialCanSend(memorialChainState(chain))) return { ok: false, refusal: 'already_reviewed' };
+  if (!memorialCanSend(deriveMemorialChainState(chain))) return { ok: false, refusal: 'already_reviewed' };
   if (input.authorisationCopyVersion !== MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION) {
     return { ok: false, refusal: 'authorisation_outdated' };
   }

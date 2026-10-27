@@ -378,7 +378,9 @@ export function createMemorialHandlers(deps: AppDeps) {
       const intro = await resolveMemberFacingName(deps, request, { pariwarId, ciphertext: nameCiphertext, presentationMode }, 'memorial');
       if (intro.decrypted) fieldsDecrypted += 1;
 
-      const state = memorial.memorialChainState(chain);
+      // Story 11b.4a (Trap 18) — the CHAIN's state: `taken_down` is ⛔ never read off the head alone.
+      const state = memorial.deriveMemorialChainState(chain);
+      const takenDown = state === 'taken_down';
       const latest = chain.length === 0 ? null : chain[chain.length - 1]!;
       let body: string | null = null;
       let altText: string | null = null;
@@ -426,9 +428,10 @@ export function createMemorialHandlers(deps: AppDeps) {
         photoUrl,
         omissions: decision?.omissions.map((o) => ({ field: o.field, start: o.start, end: o.end, reason: o.reason })) ?? [],
         photoLeftOut: decision?.photoLeftOutReason ? { reason: decision.photoLeftOutReason } : null,
-        reasonCode: withdrawal?.withdrawnBy === 'trust' ? withdrawal.reasonCode : (decision?.reasonCode ?? null),
-        earlierApprovalWithdrawn: memorial.deriveEarlierApprovalWithdrawn(chain),
-        earlierApprovalStands: memorial.deriveEarlierApprovalStands(chain),
+        // Under `taken_down` (11b.4a MP9) ⛔ no Trust reason rides beside it — the head may carry an older `trust` withdrawal.
+        reasonCode: takenDown ? null : withdrawal?.withdrawnBy === 'trust' ? withdrawal.reasonCode : (decision?.reasonCode ?? null),
+        earlierApprovalWithdrawn: takenDown ? null : memorial.deriveEarlierApprovalWithdrawn(chain),
+        earlierApprovalStands: takenDown ? false : memorial.deriveEarlierApprovalStands(chain),
         canSend: unavailable === null && memorial.memorialCanSend(state),
         canWithdraw: unavailable === null && memorial.memorialCanWithdraw(state),
         authorisation: memorial.currentMemorialAuthorisation(),

@@ -485,3 +485,7 @@ export * from './geo_tree_versions.js';
 export * from './memorial_submissions.js';
 export * from './memorial_review_decisions.js';
 export * from './memorial_withdrawals.js';
+// Story 11b.4a (0186 / 0187) — the helpline's take-down at the nominee's request (requests, outcomes) and the approver email
+// outbox (6.25's shape — ADR-0043). `memorial_withdrawals` gains the `helpline` actor and `takedown_request_id`.
+export * from './memorial_takedown_requests.js';
+export * from './memorial_takedown_approver_emails.js';

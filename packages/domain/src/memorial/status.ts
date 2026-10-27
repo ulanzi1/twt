@@ -14,6 +14,9 @@ export const MEMORIAL_STATES = [
   'not_approved',
   'withdrawn',
   'approval_withdrawn',
+  // Story 11b.4a (`-412` MP9) — taken down by the helpline at the nominee's request; a CHAIN property
+  // (`deriveMemorialChainState`), ⛔ never read off the head alone (Trap 18).
+  'taken_down',
 ] as const;
 export type MemorialState = (typeof MEMORIAL_STATES)[number];
 
@@ -24,9 +27,11 @@ export interface MemorialChainLinkState {
 }
 
 /**
- * The state of the chain's LATEST version (`null` ⇒ `none` — nothing was ever sent).
+ * The state of ONE version (`null` ⇒ `none` — nothing was ever sent). Per-row — the review list's head state; the FAMILY's
+ * state is `deriveMemorialChainState` (Trap 18).
  *   · a `family` withdrawal ⇒ `withdrawn` (only reachable before a decision — MA9);
  *   · a `trust` withdrawal ⇒ `approval_withdrawn` (only reachable after an approval — MA16);
+ *   · a `helpline` withdrawal ⇒ `taken_down` (Story 11b.4a — the take-down withdraws every un-withdrawn version, MP8 (a));
  *   · a decision ⇒ its act;
  *   · otherwise ⇒ `with_the_trust`.
  */
@@ -39,6 +44,8 @@ export function deriveMemorialStatus(latest: MemorialChainLinkState | null): Mem
         return 'withdrawn';
       case 'trust':
         return 'approval_withdrawn';
+      case 'helpline':
+        return 'taken_down';
       default: {
         const exhaustive: never = by;
         throw new Error(`deriveMemorialStatus: unknown withdrawal actor ${String(exhaustive)}`);
@@ -61,8 +68,40 @@ export function deriveMemorialStatus(latest: MemorialChainLinkState | null): Mem
   return 'with_the_trust';
 }
 
+/** A version's link with the two timestamps the chain-level state reads (both `clock_timestamp()` — 0182). */
+export interface MemorialChainLinkTimed extends MemorialChainLinkState {
+  readonly submission: { readonly createdAt: Date };
+  readonly withdrawal:
+    | {
+        readonly withdrawnBy: MemorialWithdrawalActor;
+        readonly reasonCode: MemorialReviewReason | null;
+        readonly withdrawnAt: Date;
+      }
+    | null;
+}
+
 /**
- * May the family send a (new) version? (MA13 (a).) Every state but a clean `approved`: after `approved` nothing of
+ * ⭐ THE FAMILY'S STATE — a CHAIN rule (Story 11b.4a MP9, Trap 18). `taken_down` iff the chain carries a `helpline` withdrawal
+ * and ⛔ no version was created after the newest one (`created_at > withdrawn_at`); otherwise the head's own state, as before.
+ * ⚠ A head-only rule is wrong: in `[A-omit, family-withdrawn]` the head is ALREADY withdrawn, so the take-down adds ⛔ no row to
+ * it — yet the memorial was taken down. Sound under the pool lock: every writer inserts after `lockMemorialPool`, so a version
+ * sent after a take-down has `created_at > withdrawn_at`. `chain` is oldest → newest.
+ */
+export function deriveMemorialChainState(chain: readonly MemorialChainLinkTimed[]): MemorialState {
+  if (chain.length === 0) return 'none';
+  let newestTakedown: number | null = null;
+  for (const link of chain) {
+    if (link.withdrawal?.withdrawnBy !== 'helpline') continue;
+    const at = link.withdrawal.withdrawnAt.getTime();
+    if (newestTakedown === null || at > newestTakedown) newestTakedown = at;
+  }
+  if (newestTakedown !== null && !chain.some((l) => l.submission.createdAt.getTime() > newestTakedown!)) return 'taken_down';
+  return deriveMemorialStatus(chain[chain.length - 1]!);
+}
+
+/**
+ * May the family send a (new) version? (MA13 (a).) Every state but a clean `approved` — `taken_down` included (Story 11b.4a
+ * MP9, `-411` item 4: after a take-down the nominee may write again whenever they wish). Every state but a clean `approved`: after `approved` nothing of
  * theirs was cut, and changing a version the Trust approved belongs with what is published (11b.4a) — the family is
  * pointed to the helpline, and a mistaken approval is cured by the Trust withdrawing it (MA16). Enforced ON THE SERVER
  * under the lock (`409 memorial.already_reviewed`), ⛔ only in the app.
@@ -71,7 +110,7 @@ export function memorialCanSend(state: MemorialState): boolean {
   return state !== 'approved';
 }
 
-/** May the family withdraw the latest version? Only while it is with the Trust (MA9). */
+/** May the family withdraw the latest version? Only while it is with the Trust (MA9) — ⛔ never after a take-down. */
 export function memorialCanWithdraw(state: MemorialState): boolean {
   return state === 'with_the_trust';
 }

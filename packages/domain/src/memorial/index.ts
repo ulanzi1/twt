@@ -9,3 +9,5 @@ export * from './withdrawal.js';
 export * from './review.js';
 export * from './authorisation-copy.js';
 export * from './errors.js';
+export * from './public-read.js';
+export * from './takedown.js';

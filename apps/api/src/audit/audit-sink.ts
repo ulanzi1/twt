@@ -723,7 +723,11 @@ export type AuthAuditEventType =
   // ⛔ The entry probe writes ⛔ no line (it decrypts nothing — AC1).
   | 'memorial.member.read'
   | 'memorial.review.read'
-  | 'memorial.photo.url';
+  | 'memorial.photo.url'
+  // ── Story 11b.4a (`2026-10-27-412` MP7) — the helpline's take-down DRIVE VIEW: one line per read, `fields_decrypted: n`
+  //    (the words, the description, the recorded nominee's name and mobile, the current nominee's name) — ⛔ never the content.
+  //    The two WRITES (`memorial.takedown.request_record`, `memorial.takedown.decide`) go through `withCompensatingAudit` only.
+  | 'memorial.takedown.read';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

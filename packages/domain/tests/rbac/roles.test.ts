@@ -903,3 +903,26 @@ describe('Story 11b.4 — `memorial.review` (`2026-10-24-398` MA7; `-391` Confir
     expect(hasPermission([{ ...grant, role: 'pariwar_admin' }], 'memorial.review', resource)).toBe(false);
   });
 });
+
+describe('Story 11b.4a — `memorial.takedown` (`2026-10-27-412` MP6)', () => {
+  const PARIWAR = '11111111-1111-1111-1111-111111111111';
+
+  it('is held by `helpline_operator` and `super_admin` ONLY — ⛔ not the Panel, ⛔ not `pariwar_admin`', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('memorial.takedown'))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['helpline_operator', 'super_admin']);
+    expect(bundleForRole('helpline_operator')?.scopeCeiling).toBe('pariwar');
+  });
+
+  it('is LIVE for `helpline_operator` on the `pariwar` dimension (⛔ inert on arrival — footguns #18); ⛔ for `trustee_panel` / `pariwar_admin`', () => {
+    const resource = { pariwarId: PARIWAR, dimension: 'pariwar', value: PARIWAR } as const;
+    const grant = { pariwarId: PARIWAR, role: 'helpline_operator', scopeDimension: 'pariwar', scopeValue: PARIWAR } as const;
+    expect(hasPermission([grant], 'memorial.takedown', resource)).toBe(true);
+    const other = { ...grant, pariwarId: '22222222-2222-2222-2222-222222222222', scopeValue: '22222222-2222-2222-2222-222222222222' };
+    expect(hasPermission([other], 'memorial.takedown', resource)).toBe(false);
+    expect(hasPermission([{ ...grant, role: 'trustee_panel' }], 'memorial.takedown', resource)).toBe(false);
+    expect(hasPermission([{ ...grant, role: 'pariwar_admin' }], 'memorial.takedown', resource)).toBe(false);
+  });
+});

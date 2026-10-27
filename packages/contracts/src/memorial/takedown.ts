@@ -30,6 +30,8 @@ export const MEMORIAL_TAKEDOWN_ERROR_CODES = [
   'memorial_takedown.already_decided',
   'memorial_takedown.shown_changed',
   'memorial_takedown.shown_unchanged',
+  // 400 — the nominee's first contact is in the future or more than 7 days before the recording (MP14 (b)).
+  'memorial_takedown.first_contact_out_of_range',
 ] as const;
 export type MemorialTakedownErrorCode = (typeof MEMORIAL_TAKEDOWN_ERROR_CODES)[number];
 

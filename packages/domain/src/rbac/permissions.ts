@@ -776,7 +776,16 @@ export function permissionKey(value: string): PermissionKey {
 // editor. ⛔ NOT `pariwar_admin` (Confirm 1 chose the Panel role over the Trustee-Lite reading of "trustees"), ⛔ NOT
 // `state_trustee` / `district_admin` (a state/district-ceiling grant is INERT on a pariwar-dimension key —
 // [[project_rbac_geo_scope_containment]]). `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 53 as const;
+//
+// ⭐ Story 11b.4a (author-commit `2026-10-27-412` §2 — MP6; ⛔ not covered by the `-210` cl.2 delegation) — 53 → 54, ONE key
+// (69 → 70): `memorial.takedown` — pariwar-dimension; `helpline_operator` (+ derived super_admin). The helpline records a
+// nominee's take-down request AFTER calling them back (MP7) and decides it: `taken_down` withdraws every un-withdrawn version
+// (admin step-up `memorial_takedown`), `kept` / `superseded` change nothing public. ⚠ A DEPARTURE from the 10.21 pattern
+// (`-107` cl.1b: *"The Helpdesk Operator may intake / verify / route but may NOT execute"* — a DPDPA data-rights ruling), on
+// the authority of `-392` item 4 (Trustee-ratified, kept by `-395`): *"removed within 7 days, by the helpline operator"*.
+// REUSE CHECK — ⛔ no existing key fits: `memorial.review` is the Trust's act (the Panel), `claim.manage_dpdpa_consent` revokes
+// a consent row, `helpdesk.respond` writes a ticket. `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 54 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1357,6 +1366,11 @@ export const SEED_PERMISSION_KEYS = [
   // chain (the history view), the decision (approve · approve with parts left out · not approved — ⛔ no edit), and the
   // withdrawal of the Trust's own approval (MA16). pariwar-dimension; `trustee_panel` (+ derived super_admin).
   'memorial.review',
+  // Story 11b.4a (`2026-10-27-412` MP6) — the helpline's TAKE-DOWN of a family memorial at the nominee's request: a deceased
+  // member's drives with a memorial, the drive view (the recorded nominee's name and mobile — call them back, MP7), the open
+  // requests, record a request, decide it (`taken_down` step-up-gated). pariwar-dimension; `helpline_operator` (+ derived
+  // super_admin).
+  'memorial.takedown',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

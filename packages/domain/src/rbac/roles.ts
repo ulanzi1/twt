@@ -80,6 +80,8 @@ const MEMBER_RESTORE_TERMINATED = permissionKey('member.restore_terminated');
 const MEMBER_MODERATION_APPEAL_DECIDE = permissionKey('member.decide_moderation_appeal');
 /** Story 11b.4 (`2026-10-24-398` MA7, `-391` Confirm 1 A) — the family memorial's review, held by `trustee_panel`. */
 const MEMORIAL_REVIEW = permissionKey('memorial.review');
+// Story 11b.4a (`2026-10-27-412` MP6) — the helpline's take-down of a family memorial at the nominee's request.
+const MEMORIAL_TAKEDOWN = permissionKey('memorial.takedown');
 // Story 10.21 — the off-portal DPDPA data-rights FULFILMENT key (pariwar-dimension). Filing a request
 // (`helpdesk.create`) and EXECUTING it on a member with no session are different authorities, so this is
 // a distinct key held by `pariwar_admin` ONLY. ⛔ NOT `helpline_operator` (files, does not execute),
@@ -748,6 +750,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // responder; a `pariwar` scopeCeiling satisfies the pariwar-dimension check. Filing (HELPDESK_CREATE) +
       // responding (HELPDESK_RESPOND) are distinct keys — the operator holds both.
       HELPDESK_RESPOND,
+      // ⭐ Story 11b.4a (`2026-10-27-412` MP6) — the TAKE-DOWN of a family memorial at the nominee's request (`-392` item 4,
+      // Trustee-ratified: *"removed within 7 days, by the helpline operator"*). ⚠ An EXECUTE grant — a named departure from the
+      // 10.21 pattern (`-107` cl.1b); the 6.9 D7 precedent above (CLAIM_MANAGE_DPDPA_CONSENT). Live by the `pariwar` ceiling.
+      MEMORIAL_TAKEDOWN,
     ],
     scopeCeiling: 'pariwar',
   },

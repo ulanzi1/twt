@@ -35,6 +35,7 @@ import { registerMemberPoolModule } from './modules/member-pool/index.js';
 import { registerNomineeConsoleModule } from './modules/nominee-console/index.js';
 import { registerMemorialModule } from './modules/memorial/index.js';
 import { registerMemorialReviewModule } from './modules/memorial-review/index.js';
+import { registerMemorialTakedownModule } from './modules/memorial-takedown/index.js';
 import { registerReconciliationModule } from './modules/reconciliation/index.js';
 import { registerReconciliationReviewModule } from './modules/reconciliation-review/index.js';
 import { registerSelfVerifyModule } from './modules/self-verify/index.js';
@@ -213,6 +214,8 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // public render here (row 11b-4a).
   registerMemorialModule(app, deps);
   registerMemorialReviewModule(app, deps);
+  // Story 11b.4a — the helpline's take-down at the nominee's request (`memorial.takedown`; ⛔ behind the memorial switch — MP13).
+  registerMemorialTakedownModule(app, deps);
   // Story 9.3 — the FIRST reconciliation SURFACE + transport (the transport Story 9.2 deferred): the
   // <BankStatementUpload> dual upload endpoints (member Ravi-mode + staff claim.file) that run
   // parseStatement inline over the uploaded buffer, store the raw blob (Tier-1, AR-45-wrapped), virus-scan,

@@ -32,7 +32,7 @@ import {
 import { memorialWithdrawals } from '../schema/memorial_withdrawals.js';
 import { pools } from '../schema/pools.js';
 import { shownMemorialLink } from './public-read.js';
-import { lockMemorialPool, readMemorialChain, type MemorialChainLink } from './submission.js';
+import { lockMemorialPool, readLatestPrimaryNomineeVersionId, readMemorialChain, type MemorialChainLink } from './submission.js';
 import { MEMORIAL_TAKEDOWN_VERIFIED_BY, type MemorialTakedownOutcome } from './vocab.js';
 
 /** A request with its outcome (`null` while open). */
@@ -125,6 +125,11 @@ export interface MemorialTakedownDriveRead {
   readonly shown: MemorialChainLink | null;
   /** The nominee recorded on the SHOWN version (MP7) — ciphertexts AS STORED; `null` when ⛔ nothing is shown or the row is gone. */
   readonly shownNominee: { readonly nameCiphertext: string | null; readonly mobileCiphertext: string | null } | null;
+  /**
+   * The deceased's CURRENT rank-1 nominee version (who sends any new version — their `claim_handover` step-up, MP8 (b)), with
+   * its name ciphertext; `null` when ⛔ none resolves.
+   */
+  readonly currentNominee: { readonly versionId: string; readonly nameCiphertext: string | null } | null;
   readonly requests: readonly MemorialTakedownRequestWithOutcome[];
 }
 
@@ -148,26 +153,30 @@ export async function readMemorialTakedownDrive(
     .from(pools)
     .where(and(eq(pools.pariwarId, pariwarId), eq(pools.poolId, poolId)))
     .limit(1);
-  let shownNominee: MemorialTakedownDriveRead['shownNominee'] = null;
-  if (shown !== null) {
-    const [nominee] = await db
-      .select({ nameCiphertext: memberNomineeVersions.nameCiphertext, mobileCiphertext: memberNomineeVersions.mobileCiphertext })
-      .from(memberNomineeVersions)
-      .where(
-        and(
-          eq(memberNomineeVersions.pariwarId, pariwarId),
-          sql`${memberNomineeVersions.versionId} = ${shown.submission.handoverNomineeRef}::uuid`,
-        ),
-      )
-      .limit(1);
-    shownNominee = nominee ?? null;
-  }
+  const versionRow = async (versionId: string) =>
+    (
+      await db
+        .select({ nameCiphertext: memberNomineeVersions.nameCiphertext, mobileCiphertext: memberNomineeVersions.mobileCiphertext })
+        .from(memberNomineeVersions)
+        .where(and(eq(memberNomineeVersions.pariwarId, pariwarId), sql`${memberNomineeVersions.versionId} = ${versionId}::uuid`))
+        .limit(1)
+    )[0] ?? null;
+  const shownNominee = shown === null ? null : await versionRow(shown.submission.handoverNomineeRef);
+  const currentVersionId = await readLatestPrimaryNomineeVersionId(db, {
+    pariwarId,
+    memberId: chain[0]!.submission.deceasedMemberId as MemberId,
+  });
+  const currentNominee =
+    currentVersionId === null
+      ? null
+      : { versionId: currentVersionId, nameCiphertext: (await versionRow(currentVersionId))?.nameCiphertext ?? null };
   return {
     poolId,
     poolCanonicalIdentifier: pool?.poolCanonicalIdentifier ?? '',
     chain,
     shown,
     shownNominee,
+    currentNominee,
     requests,
   };
 }

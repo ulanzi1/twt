@@ -14,6 +14,7 @@ import {
   memorialCanSend,
   memorialCanWithdraw,
   memorialWithdrawApprovalTargetId,
+  type MemorialChainLink,
   type MemorialChainLinkTimed,
   type MemorialReviewAction,
   type MemorialWithdrawalActor,
@@ -66,7 +67,8 @@ describe('AC7 — every reachable chain shape, before and after a take-down (Tra
     const after = takeDown(before);
     // ⭐ Nothing is left for the page: every approval now carries a withdrawal.
     expect(latestApprovedIndex(after)).toBe(-1);
-    expect(memorialWithdrawApprovalTargetId(after)).toBeNull();
+    // The withdraw-approval target reads only the decisions and withdrawals — the full row type is ⛔ not needed here.
+    expect(memorialWithdrawApprovalTargetId(after as unknown as MemorialChainLink[])).toBeNull();
     expect(deriveEarlierApprovalStands(after)).toBe(false);
     // ⭐ The family's state is `taken_down` in EVERY shape — whatever the head's own row says.
     const state = deriveMemorialChainState(after);

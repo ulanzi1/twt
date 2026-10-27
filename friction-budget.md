@@ -62,6 +62,7 @@ deliberately accepted.
 | member of a Pariwar with WhatsApp switched on, at signup (one more screen — an UNTICKED *"Send me WhatsApp messages from TWT"* box just before payment — and, if they leave it unticked, ONE reminder with two equal choices) — Story 5.10 | a WhatsApp yes asked for plainly, on its own screen, ⛔ pre-ticked and ⛔ bundled with the Terms (§3.4 origination rule; `-375`) | forced |
 | member signing up on a phone without their WhatsApp who opens "WhatsApp on another phone?" (asks for a WhatsApp code, reads it on their own phone, types it in) — Story 5.13 | the registered number proven to have WhatsApp and the member's own act before WhatsApp is switched on (`-374`) | optional |
 | family (the nominee, writing the memorial — the code sent to the NOMINEE's phone is asked at Send, and the words go to the Trust for review before they can appear; Story 11b.4) | the family's words reach the page as they wrote them, and only with their permission (`-162` cl.3; `-398` MA5 / MA6) | optional |
+| family (the nominee who sent the memorial, asking for it to be TAKEN DOWN — ⛔ no button in the app: they phone the helpline and are CALLED BACK on the number recorded for them before anything is recorded; only that nominee may ask; and when the Trust approved the memorial exactly as written, a smaller change needs the take-down first, so it is off the page while the new version is reviewed; Story 11b.4a) | only the nominee who gave the permission withdraws it (`-395` item 3, `-411` item 1), verified by a call-back (`-412` MP7); a smaller fix is the family's own new version, ⛔ never an operator's edit (`-412` MP8 (b), accepted by `-411` item 4) | forced |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -2548,6 +2549,39 @@ plaintext MMKV. ⛔ If a later review classes a cold-start wait as friction, tha
 ⭐ `pnpm friction:check` was run AFTER the implementation commit existed — AC-4 diffs **COMMITTED**
 history, so a pre-commit run passes vacuously (the 11b.20 lesson). The result is recorded in the story's
 Dev Agent Record.
+
+---
+
+**Story 11b.4a disposition (ONE NEW ROW — the take-down; ⛔ no row retired, ⛔ no row amended):** Story 11b.4a renders the family's
+approved memorial on the PUBLIC per-drive Sahyog Vivran page (`apps/public/src/pages/sahyog-vivran/[driveToken].astro`,
+`apps/public/src/components/FamilyMemorial.astro`, the photo endpoint `…/[driveToken]/memorial-photo.ts`), adds the helpline's
+take-down at the nominee's request, and re-words / adds two lines on the family's outcome screen
+(`apps/mobile/app/(memorial)/outcome.tsx` — `outcome.taken_down`, the reworded `outcome.approved_with_omissions`).
+
+⭐⭐ **THE NEW ROW IS THE TAKE-DOWN, AND IT IS A REAL, FORCED STEP.** UX Stance #2 / AR-60 declare **friction** — a step a person is
+**made to take**. A family who wants the memorial removed cannot do it in the app: the nominee who sent it phones the helpline,
+is called back on the number recorded for them, and only then is the request recorded (`-412` MP7). Anyone else who calls is
+listened to and asked to have the nominee call (`-395` item 3; `-411` item 1 — ⛔ no one else even when that nominee has died or
+been replaced, a cost the Panel accepted). And for a memorial the Trust approved exactly as written, every smaller fix passes
+through the take-down (`-412` MP8 (b), accepted by `-411` item 4). ⇒ the payer is the family, the protected thing is that only the
+person who gave the permission takes it back, and the step is forced — there is ⛔ no other route.
+
+⛔ **WHAT ADDS ⛔ NO FRICTION (and so ⛔ no row):** the public page's memorial section is READ, ⛔ never acted on — ⛔ no field, ⛔ no
+control, ⛔ no confirmation, ⛔ no `<script>`; the photo loads lazily from the page's own route. The family's outcome screen gains
+one sentence for `taken_down` and re-words one (a part left out is ⛔ not marked on the page — `-411` item 3); ⛔ no new step.
+
+⚠ **THE MEASURABLE COST, STATED RATHER THAN OMITTED:** `pnpm friction:check` on this branch reports
+`member-public-web.js_bundle_bytes` **0** ≤ ceiling 153 600 and `member-public-web.page_weight_bytes` **11 471** ≤ ceiling 512 000
+— byte-identical to the 11b.14 / 11b.22 figure: the section ships ⛔ no extracted CSS (its frame rides inline styles and existing
+utilities). ⚠ That metric counts STATIC client assets only; the memorial's DYNAMIC HTML is ⛔ not measured by it — a section is a
+heading, one `<p>` per paragraph and (with a photo) a three-element frame, plus the family's own words (at most 6 000 characters —
+11b.4 AC7). ⭐ The PHOTO is one re-encoded JPEG (fit 960 × 1200, q82, ⛔ no metadata), measured on two 3000 × 4000 fixtures: a
+photo-like image → **21 501 bytes** (900 × 1200); full-frame noise, the worst case for JPEG → **147 903 bytes** — both under the
+story's ~250 KB expectation. ⚠ Until an edge cache exists every request re-encodes it (`deferred-work.md`, 11b.4a; Row 41 (p)).
+
+⭐ **This disposition was written AFTER the implementation commits existed** (`813c26e9`, `ea1f03e0`, `eeb11b16`, `8d18a529`, `f7b74a2a`) — AC-4 diffs **COMMITTED**
+history, so a declaration written first passes **vacuously**. ⚠ `pnpm friction:check` was run on that history FIRST and **FAILED**
+(AC-4: member-facing surface touched, `friction-budget.md` unchanged); this block is what that failure answers.
 
 ---
 

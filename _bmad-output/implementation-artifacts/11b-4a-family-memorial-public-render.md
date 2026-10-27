@@ -962,7 +962,7 @@ CONSTRAINT` has ⛔ no `IF NOT EXISTS`). GRANT SELECT, INSERT only; ENABLE + FOR
   - [x] 9.2 Admin: `apps/admin/src/modules/memorial-takedown/*`; routes in `apps/admin/src/router.tsx` + `apps/admin/src/routes/MemorialTakedownRoute.tsx`; `RootLayout.tsx` link when `pariwarId` is set (⛔ not key-gated — AC11); `apps/admin/src/api/{client,hooks}.ts` (the step-up OTP caller imports `MEMORIAL_TAKEDOWN_STEP_UP_CONTEXT`); the drive screen's script by branch, the current-nominee line, *"decided after the due date"*; the review detail line *"Taken down at the nominee's request · {time}"* (AC12). Tests: the script renders before the button in both branches, a 403 renders the no-access state, the review detail line renders for a `helpline` row.
   - [x] 9.3 i18n catalogs (namespaces already registered — ⛔ no `catalog.ts` change), `microcopy.yaml` lists, tone-review rows (UN-ATTESTED).
   - **Done when:** the mobile render test and the admin tests pass; a two-way ternary mutant turns the review-detail test RED.
-- [ ] **Task 10 — Budgets (AC15)** — measure, record, commit the friction disposition; then `pnpm friction:check`.
+- [x] **Task 10 — Budgets (AC15)** — measure, record, commit the friction disposition; then `pnpm friction:check`.
 - [ ] **Task 11 — Records (AC16, AC19)**
   - [ ] 11.1 `deferred-work.md`: AC16 items (1)–(16) as a new `11b.4a` section; the discharge annotations of AC16 at every reference site.
   - [ ] 11.2 Row 41: (b) met by the landing commit (dated); (l)–(q) added ((m) recorded as met by `-411`); (j) annotated; ((e) was annotated MET on 2026-10-27 with `-411`'s records).

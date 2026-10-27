@@ -131,6 +131,8 @@ import { enqueuePeerMeshRequestChild, registerClaimPeerMeshRequestWorkers } from
 import { registerClaimPeerMeshWaReminderWorkers } from './scheduler/claim-peer-mesh-wa-reminders.js';
 import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
 import { registerClaimSuspicionStaffEmailWorkers } from './scheduler/claim-suspicion-staff-emails.js';
+import { registerMemorialTakedownApproverEmailWorkers } from './scheduler/memorial-takedown-approver-emails.js';
+import { registerMemorialTakedownOverdueWorker } from './scheduler/memorial-takedown-overdue.js';
 import { buildStaffEmailClient } from './scheduler/staff-email-config.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
 import { consoleShepherdAssignedNotificationHook } from './shepherd-notification-hook.js';
@@ -752,6 +754,10 @@ async function main(): Promise<void> {
       { pool, encryption: jobsEncryption, staffEmail: staffEmail.client, adminAppOrigin: process.env['ADMIN_APP_ORIGIN'] },
       { bootAlarm: staffEmail.bootAlarm },
     );
+    // Story 11b.4a (Task 8 — `2026-10-27-412` MP10 (b) / MP11; ADR-0043) — the memorial take-down's APPROVER EMAIL, on the SAME
+    // staff email client (its boot alarm was raised once above), and the daily overdue WATCH (MP14 (b) — one `warn` per Pariwar).
+    await registerMemorialTakedownApproverEmailWorkers(boss, { pool, encryption: jobsEncryption, staffEmail: staffEmail.client });
+    await registerMemorialTakedownOverdueWorker(boss, { pool });
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME
     // contribution-notify deps (BYPASSRLS pool + member Tier-1 crypto) for the shipped

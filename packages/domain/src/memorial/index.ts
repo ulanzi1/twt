@@ -11,3 +11,6 @@ export * from './authorisation-copy.js';
 export * from './errors.js';
 export * from './public-read.js';
 export * from './takedown.js';
+// Story 11b.4a (Task 8 — ADR-0043) — the take-down approver email: Q3 (the eligibility read) and the 6.25-shaped outbox.
+export * from './takedown-approver-email-read.js';
+export * from './takedown-approver-email.js';

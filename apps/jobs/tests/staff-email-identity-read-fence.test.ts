@@ -15,6 +15,13 @@
 //       helper's name.
 // ⭐ POSITIVE CONTROL: one planted violation per rule, into a COPY of the scanned tree, IS caught by the same checker; a commented
 // plant is ⛔ caught. A new reader or caller is a NEW ADR, ⛔ an allowlist edit.
+// ⭐ WIDENED BY ADR-0043 (Story 11b.4a, `2026-10-27-412` MP10 (b) / MP11 — the memorial take-down approver email), entry by entry:
+//   · Q3 (`packages/domain/src/memorial/takedown-approver-email-read.ts`) joins the reader allowlist AND gets projection rules of its
+//     OWN (exactly ONE `SELECT 1 FROM admin_credentials`; every `mt_ac.` column is `user_id`) — rule (2) checks only Q1/Q2's
+//     module, so a new module would otherwise escape the projection checks;
+//   · the take-down child joins the `decryptAdminEmail` allowlist;
+//   · (5) NEW — every caller of Q2 (`readAdminEmailCiphertext`) is on an EXACT allowlist: ADR-0040 said *"called only by the
+//     staff-email child"* and ADR-0043 admits ONE more; a third is a new ADR.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -31,6 +38,9 @@ const DECRYPT = /\bdecryptAdminEmail\b/;
 // as a string literal next to `fieldClass`. ⚠ A context assembled from an UNNAMED literal elsewhere is out of a source fence's reach.
 const ADMIN_EMAIL_CONTEXT = /\bADMIN_EMAIL_ENCRYPTION_CONTEXT\b|\bADMIN_EMAIL_FIELD_CLASS\b|['"]?fieldClass['"]?\s*:\s*['"`]admin_email['"`]/;
 const Q_MODULE = 'packages/domain/src/claim/staff-email-identity-read.ts';
+/** ADR-0043 — Q3, the memorial take-down approver's eligibility read. */
+const Q3_MODULE = 'packages/domain/src/memorial/takedown-approver-email-read.ts';
+const READ_Q2 = /\breadAdminEmailCiphertext\b/;
 
 /** The ONLY files whose code names the admin credentials table (ADR-0009's repo + the schema family + ADR-0040's Q1 / Q2). */
 const IDENTITY_ALLOWLIST = [
@@ -39,6 +49,8 @@ const IDENTITY_ALLOWLIST = [
   'packages/domain/src/schema/index.ts',
   'packages/domain/src/policies/identity-auth-rls.ts',
   Q_MODULE,
+  // ADR-0043 — Q3 (the take-down approver's eligibility: `users.status` + `EXISTS admin_credentials` for ONE user_id).
+  Q3_MODULE,
 ].sort();
 
 /** The ONLY files whose code names `decryptAdminEmail` (its definition, the barrel, the API delegation, the 6.25 child). */
@@ -47,6 +59,16 @@ const DECRYPT_ALLOWLIST = [
   'packages/domain/src/encryption/index.ts',
   'apps/api/src/modules/auth/shared/email-index.ts',
   'apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts',
+  // ADR-0043 — the memorial take-down approver-email child (decrypts AFTER its claiming commit, in memory only).
+  'apps/jobs/src/scheduler/memorial-takedown-approver-emails.ts',
+].sort();
+
+/** (5) ADR-0043 — the ONLY files whose code names Q2 (`readAdminEmailCiphertext`): its definition and its TWO callers. */
+const Q2_CALLER_ALLOWLIST = [
+  Q_MODULE,
+  'apps/jobs/src/scheduler/claim-suspicion-staff-emails.ts',
+  // ADR-0043 — the SECOND caller ADR-0040's Q2 admits.
+  'apps/jobs/src/scheduler/memorial-takedown-approver-emails.ts',
 ].sort();
 
 /** The ONLY files that name the admin email's context (its definition + barrel, the API's re-export, write path + request scope). */
@@ -96,6 +118,20 @@ function violationsOf(files: ReadonlyMap<string, string>): string[] {
   for (const f of callers) if (!DECRYPT_ALLOWLIST.includes(f)) out.push(`decrypt-caller:${f}`);
   const contextUsers = [...files].filter(([, src]) => ADMIN_EMAIL_CONTEXT.test(stripComments(src))).map(([f]) => f).sort();
   for (const f of contextUsers) if (!CONTEXT_ALLOWLIST.includes(f)) out.push(`admin-email-context:${f}`);
+  // (5) ADR-0043 — Q2's callers.
+  const q2Callers = [...files].filter(([, src]) => READ_Q2.test(stripComments(src))).map(([f]) => f).sort();
+  for (const f of q2Callers) if (!Q2_CALLER_ALLOWLIST.includes(f)) out.push(`q2-caller:${f}`);
+  // ADR-0043 — Q3's OWN projection rules: exactly ONE `SELECT 1 FROM admin_credentials`, every `mt_ac.` column `user_id`.
+  const q3 = files.get(Q3_MODULE);
+  if (q3 === undefined) {
+    out.push(`missing:${Q3_MODULE}`);
+  } else {
+    const code = stripComments(q3);
+    const projections = [...code.matchAll(/\bSELECT\s+((?:(?!\bSELECT\b)[\s\S])*?)\s+FROM\s+admin_credentials\b/g)].map((m) => m[1]!.replace(/\s+/g, ' ').trim());
+    for (const p of projections) if (p !== '1') out.push(`q3-projection:${p}`);
+    if (projections.length !== 1) out.push('q3-projection:count');
+    for (const m of code.matchAll(/\bmt_ac\.(\w+)/g)) if (m[1] !== 'user_id') out.push(`q3-column:${m[1]!}`);
+  }
   const q = files.get(Q_MODULE);
   if (q === undefined) {
     out.push(`missing:${Q_MODULE}`);
@@ -121,6 +157,9 @@ describe('⛔ ADR-0040 — the identity-data read paths are EXACTLY the allowlis
     expect(callers).toEqual(DECRYPT_ALLOWLIST);
     const contextUsers = [...tree].filter(([, s]) => ADMIN_EMAIL_CONTEXT.test(stripComments(s))).map(([f]) => f).sort();
     expect(contextUsers).toEqual(CONTEXT_ALLOWLIST);
+    // ADR-0043 — the Q2 caller list is EXACT too.
+    const q2Callers = [...tree].filter(([, s]) => READ_Q2.test(stripComments(s))).map(([f]) => f).sort();
+    expect(q2Callers).toEqual(Q2_CALLER_ALLOWLIST);
   });
 
   it('⭐ POSITIVE CONTROL — one plant per rule IS caught; a COMMENTED plant is ⛔', () => {
@@ -161,6 +200,15 @@ describe('⛔ ADR-0040 — the identity-data read paths are EXACTLY the allowlis
     for (const p of ['const f = encryption?.ADMIN_EMAIL_FIELD_CLASS;', "const f = encryption['ADMIN_EMAIL_FIELD_CLASS'];", 'const { ADMIN_EMAIL_FIELD_CLASS: F } = encryption;', "const c = { 'fieldClass': 'admin_email' };"]) {
       expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', p), p).toContain('admin-email-context:apps/jobs/src/scheduler/staff-email-config.ts');
     }
+    // ADR-0043 — (5) a third Q2 caller; Q3 projecting an identity column, reaching for a credentials column, or reading twice.
+    expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', 'await claimDomain.readAdminEmailCiphertext(db, userId);')).toContain(
+      'q2-caller:apps/jobs/src/scheduler/staff-email-config.ts',
+    );
+    expect(plant(Q3_MODULE, "sql`SELECT mt_ac.email_ciphertext FROM admin_credentials mt_ac`;")).toEqual(
+      expect.arrayContaining(['q3-projection:mt_ac.email_ciphertext', 'q3-column:email_ciphertext', 'q3-projection:count']),
+    );
+    expect(plant(Q3_MODULE, 'sql`AND mt_ac.failed_attempts = 0`;')).toContain('q3-column:failed_attempts');
+    expect(plant(Q3_MODULE, "sql`AND EXISTS (SELECT 1 FROM admin_credentials mt_ac WHERE mt_ac.user_id = $1)`;")).toContain('q3-projection:count');
     // A COMMENTED plant is ⛔ caught (the doc-blocks name what they forbid).
     expect(plant('apps/jobs/src/scheduler/staff-email-config.ts', '// SELECT user_id FROM admin_credentials; decryptAdminEmail(x)')).toEqual([]);
   });

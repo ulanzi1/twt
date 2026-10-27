@@ -8,3 +8,4 @@ export * from './text-classes.js';
 export * from './omissions.js';
 export * from './photo-storage.js';
 export * from './dto.js';
+export * from './takedown.js';

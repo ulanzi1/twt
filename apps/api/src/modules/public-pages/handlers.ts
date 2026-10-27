@@ -60,6 +60,7 @@ import {
   ids,
   kyc,
   member as memberDomain,
+  memorial,
   pool as poolDomain,
 } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -74,6 +75,8 @@ import {
 } from '../kyc/name-render.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { evaluateDirectoryAbuse, loadDirectoryAbuseRules } from './abuse-rules.js';
+import { memorialPhotoVariant } from './memorial-photo-variant.js';
+import { resolvePublicFamilyMemorial } from './memorial-public-read.js';
 
 /** Rows served when the caller asks for no page size. Mirrors `apps/public`'s own default. */
 // ⭐ IMPORTED, ⛔ not a third bare `25`. See the constant's own doc-block in @twt/contracts.
@@ -88,6 +91,7 @@ export interface PublicPagesHandlers {
    * collection GETs above cannot — an empty collection is `{items:[],total:0}`, ⛔ never a 404.
    */
   sahyogVivran(request: FastifyRequest, reply: FastifyReply): Promise<PublicSahyogVivranResponse | void>;
+  sahyogVivranMemorialPhoto(request: FastifyRequest, reply: FastifyReply): Promise<void>;
 }
 
 export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
@@ -1184,6 +1188,16 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
         // ⚠⛔ ⛔ NOTHING about WHY a name is withheld crosses the wire (cl.3/cl.4(c)).
         const items: PublicSahyogVivranContributor[] = resolvedContributors;
 
+        // ⭐⭐ STORY 11b.4a — THE FAMILY'S MEMORIAL (`-391` item 2; `-411` items 2, 3, 6), read in THIS scope transaction
+        // (⛔ never a second one). `null` for the switch off, ⛔ no approved version standing, a take-down, an erased member or a
+        // bad envelope — the SAME bytes as a drive whose family never wrote (`-393` M1). A KMS outage re-throws (503).
+        const familyMemorial = await resolvePublicFamilyMemorial(deps, request.log, scopeTx.tx, {
+          pariwarId,
+          pariwarIdStr,
+          poolId: ids.poolId(drive.poolId),
+          encryption: outageAwareEncryption,
+        });
+
         ok = true;
         return {
           items,
@@ -1239,11 +1253,70 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
             // row IDENTITY, ⛔ not a priority and ⛔ not a nominee rank (Story 9.9's re-scope). The
             // order is `#1` then `#2` because that is the substrate's order, ⛔ not a preference.
             nomineeBankAccounts,
+            familyMemorial,
           },
         };
       } finally {
         await closeScopeTx(scopeTx, ok);
       }
+    },
+
+    /**
+     * ⭐⭐ STORY 11b.4a — THE FAMILY MEMORIAL'S PHOTO (MP4 / MP5; `-391` item 2). Its OWN route, so a take-down, the switch and the
+     * kill switch reach the photo on every uncached request (⛔ never a signed URL embedded in an edge-cached page — it would outlive them —
+     * Trap 2).
+     * ⚠⛔ **⛔ NEVER THE PAGE HANDLER'S FLOW (Trap 19):** ⛔ no contributor read and ⛔ no appeal-reversal disclosure audit (a global
+     * advisory lock — *"⛔ Do not widen this to log every request"*). It resolves token → pool through the NARROW domain read
+     * (`readPublicMemorialPhotoTarget` — the page's own `SAHYOG_VIVRAN_VISIBLE_POOL_STATES`, imported), under the SAME kill
+     * switch, and checks erasure WITHOUT a decrypt (`members.state = 'anonymized'` — every erasure path projects it).
+     * ⭐ EVERY REFUSAL IS THE PAGE'S OWN EMPTY 404 (Trap 9) — the switch off, the kill switch, an unknown token, ⛔ no shown memorial,
+     * the photo left out, an erased member, a missing object, a storage fault, an image `sharp` refuses — byte-identical to an
+     * unknown token. ⛔ Never the memorial module's JSON `memorialNotFound()`. (⛔ No decrypt here ⇒ ⛔ no KMS-outage 503 arm.)
+     */
+    async sahyogVivranMemorialPhoto(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+      const { pariwarId: pariwarIdStr, driveToken } = request.params as PublicSahyogVivranParams;
+      const refuse = (): void => {
+        void reply.status(404).send();
+      };
+      // MP13 — the one lever; checked before any read.
+      if (!deps.config.memorialAuthorshipEnabled) return refuse();
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      let target: { readonly objectKey: string; readonly mime: string } | null = null;
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      try {
+        // The SAME per-Pariwar kill switch as the page (`-160` cl.4(e)).
+        const publicationEnabled = await memberDomain.resolveDirectoryPublicationEnabled(scopeTx.tx, pariwarId);
+        if (publicationEnabled) target = await memorial.readPublicMemorialPhotoTarget(scopeTx.tx, pariwarId, driveToken);
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+      if (target === null) return refuse();
+
+      let stored: Uint8Array | null;
+      try {
+        stored = await deps.memorialPhotoStorage.getBytes(target.objectKey);
+      } catch (err) {
+        // The object key is ⛔ never logged (it names the Pariwar and the version).
+        request.log.error({ errorName: err instanceof Error ? err.name : typeof err }, 'sahyog-vivran: memorial photo read failed — 404');
+        return refuse();
+      }
+      if (stored === null) return refuse();
+      let jpeg: Buffer;
+      try {
+        jpeg = await memorialPhotoVariant(stored);
+      } catch (err) {
+        request.log.error({ errorName: err instanceof Error ? err.name : typeof err }, 'sahyog-vivran: memorial photo re-encode failed — 404');
+        return refuse();
+      }
+      // The page's cache posture (⛔ no cache-buster, ⛔ no query string — each would mint shared-cache keys); ⛔ no Set-Cookie.
+      void reply
+        .status(200)
+        .header('Content-Type', 'image/jpeg')
+        .header('Cache-Control', 'public, max-age=60, s-maxage=300')
+        .header('X-Content-Type-Options', 'nosniff')
+        .send(jpeg);
     },
   };
 }

@@ -24,6 +24,8 @@
 //   · *"verifier hyperlinks resolving to verifier profile pages"* — ⛔ NO SUCH PAGE EXISTS anywhere
 //     in the repo. The AC's hyperlink has ⛔ no destination.
 //   · the family story (Story **11b.4**) — `backlog`.
+//     ⭐ DISCHARGED 2026-10-27 (Story 11b.4a, `2026-10-27-412`): the family's memorial now renders on this page (the API's
+//     `familyMemorial`; `FamilyMemorial.astro`), dark until launch-gate Row 41 closes. The line above is kept as the record.
 //   · the memorial visual components (Story **11b.5**) — `backlog`.
 //   · `<StatCardStrip>` — **C-3**: ⛔ no producer AND ⛔ no owner.
 // ⭐ THE RULED POSTURE IS 11a.5's THIRD PATH, and C-4 SURVIVED `2026-08-28-160` untouched: *"render
@@ -470,6 +472,17 @@ export function buildSahyogVivranView(
       // ⭐ Story 11b.3a. ⛔ The order is the substrate's (`#1` then `#2`) — ⛔ never a preference,
       // and ⛔ never re-sorted here: the two are EQUAL payment destinations (Story 9.9).
       nomineeAccounts: drive.nomineeBankAccounts.map((a) => nomineeAccountRow(a)),
+      // ⭐⭐ Story 11b.4a — the family memorial, PASSED THROUGH: the API already cut the left-out parts, joined the words and
+      // isolated their direction controls (MP3 (b), `-411` item 3 — ⛔ no marker). ⛔ This layer does ⛔ not re-join, re-split,
+      // trim or abbreviate the family's text, and ⛔ never synthesises a description for the photo.
+      familyMemorial:
+        drive.familyMemorial === null
+          ? null
+          : {
+              familyMemorialWords: drive.familyMemorial.words,
+              familyMemorialPhoto: drive.familyMemorial.photo !== null,
+              familyMemorialPhotoAltText: drive.familyMemorial.photo === null ? null : drive.familyMemorial.photo.altText,
+            },
     },
   };
 }
@@ -533,6 +546,8 @@ export function buildSahyogVivranOutageView(): SahyogVivranView {
       // FIELD SET is unaffected — the per-row ids come from a representative shape, so an outage
       // page declares the SAME set a rendered one does (`surface-fields.ts`).
       nomineeAccounts: [],
+      // ⛔ Nothing is known on this arm — ⛔ never a memorial on an outage page.
+      familyMemorial: null,
     },
   };
 }

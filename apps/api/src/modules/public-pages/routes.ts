@@ -409,4 +409,25 @@ export function registerPublicPagesRoutes(app: FastifyInstance, deps: AppDeps): 
     },
     h.sahyogVivran,
   );
+
+  // ── Story 11b.4a — the family memorial's PHOTO, the same surface's data (MP4 / MP5) ───────────────────────────────────────
+  // ⭐ IT JOINS {@link SAHYOG_VIVRAN_APPLICABLE_CONTROLS} (the story's Question 8): the same named SEARCH tier (control 1), the
+  // same unguessable address (control 7), `noindex` via the global hook, the server-side Tier-1 boundary (the object key
+  // ⛔ never leaves the API) and ⛔ no onward affordance. ⚠ Controls 2 and 3 (page size, horizon) bind nothing here — ONE photo per
+  // drive, ⛔ no `page`, ⛔ no `limit` — and the strict EMPTY query makes every parameter a 400 (⛔ no cache-buster).
+  // ⛔ NEVER the page handler's flow (Trap 19): ⛔ no contributor read, ⛔ no appeal-reversal audit.
+  r.get(
+    '/api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken/memorial-photo',
+    {
+      schema: {
+        params: PublicSahyogVivranParams,
+        querystring: z.object({}).strict(),
+        // ⚠ ⛔ NO `404` ENTRY and ⛔ no `200` schema: an EMPTY 404 (Trap 9) and raw JPEG bytes.
+        tags: [PUBLIC_PAGES_TAG],
+      },
+      // UNMODIFIED — the SAME named tier as the page. Changing it is a decision (`2026-09-02-183` cl.5), ⛔ not a tuning knob.
+      config: { rateLimit: limits.search },
+    },
+    h.sahyogVivranMemorialPhoto,
+  );
 }

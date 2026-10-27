@@ -24,6 +24,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   SAHYOG_DRIVE_ROW_FIELD_IDS,
+  SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS,
   SAHYOG_VIVRAN_FIELD_IDS,
   SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS,
 } from '../src/lib/surface-fields';
@@ -74,11 +75,31 @@ const MEMBER_COUNTERPART: Record<string, readonly string[]> = {
   nominee_account_holder_name: ['nomineeName', 'nomineeAccounts'],
 };
 
+/**
+ * ⭐⭐ Story 11b.4a — THE FAMILY'S MEMORIAL IS A DIFFERENT DATA CLASS, and the floor does ⛔ not reach it: RULED by
+ * `2026-10-27-411` item 7 (PC5 A, Trustee-ratified) — *"The rule does ⛔ not reach the family's words: they are the family's
+ * writing, not the drive's information."* — reading `2026-09-04-195` cl.1, which bounds `-189` cl.3 to *"the drive data class —
+ * the nominee/bank fields and the drive record"*, although the page serves the memorial INSIDE `drive`.
+ * ⚠⛔ **AN EXCLUSION, ⛔ NOT A GAP** — ⛔ never the `[]` rows below (those are a recorded `-189` SHORTFALL and `declaredGaps` is an
+ * exact set of three). The three ids ARE spread into the floor (so they can ⛔ not escape it silently) and are then SUBTRACTED
+ * here, by name, each citing its ruling; the set is pinned to exactly these three.
+ */
+const DATA_CLASS_EXCLUDED: Readonly<Record<string, string>> = {
+  family_memorial_words: '2026-09-04-195 cl.1 + 2026-10-27-411 item 7',
+  family_memorial_photo: '2026-09-04-195 cl.1 + 2026-10-27-411 item 7',
+  family_memorial_photo_alt_text: '2026-09-04-195 cl.1 + 2026-10-27-411 item 7',
+};
+
 /** The public DETAIL floor, READ FROM THE LIVE MAPS. `null` entries are selectors/containers, ⛔ not fields. */
 const PUBLIC_DETAIL_FIELD_IDS: string[] = [
   ...Object.values(SAHYOG_VIVRAN_FIELD_IDS),
   ...Object.values(SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS),
+  // ⭐ Story 11b.4a — spread IN, so a memorial id can ⛔ never escape this test; excluded below BY NAME (`DATA_CLASS_EXCLUDED`).
+  ...Object.values(SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS),
 ].filter((id): id is string => id !== null);
+
+/** The floor the member detail must meet: every public DETAIL id but the ruled data-class exclusions. */
+const FLOOR_FIELD_IDS: string[] = PUBLIC_DETAIL_FIELD_IDS.filter((id) => DATA_CLASS_EXCLUDED[id] === undefined);
 
 /** The member response's own keys, READ FROM THE LIVE CONTRACT. */
 const MEMBER_KEYS = new Set(Object.keys(MemberDriveDetailResponse.shape));
@@ -109,7 +130,7 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
   });
 
   it('⭐⭐ EVERY public DETAIL field id has a DECLARED member counterpart — ⛔ no id may be unmapped', () => {
-    const unmapped = PUBLIC_DETAIL_FIELD_IDS.filter((id) => MEMBER_COUNTERPART[id] === undefined);
+    const unmapped = FLOOR_FIELD_IDS.filter((id) => MEMBER_COUNTERPART[id] === undefined);
     expect(
       unmapped,
       'the public Sahyog Vivran page grew field id(s) with ⛔ no member counterpart — the member now ' +
@@ -134,7 +155,7 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
     // ⭐ The converse guard. A stale row would silently keep a REMOVED public field alive as a member
     // obligation, and the next author would carry a floor the Panel had already lowered.
     const stale = Object.keys(MEMBER_COUNTERPART).filter(
-      (id) => !PUBLIC_DETAIL_FIELD_IDS.includes(id),
+      (id) => !FLOOR_FIELD_IDS.includes(id),
     );
     expect(stale, `MEMBER_COUNTERPART names id(s) the public detail no longer renders: ${stale.join(', ')}`).toEqual([]);
   });
@@ -249,5 +270,21 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
       'appeal_reversal_at',
       'appeal_reversal_stage',
     ]);
+  });
+
+  it('⭐⭐ Story 11b.4a — the family memorial is a RULED DATA-CLASS EXCLUSION (`-411` item 7), ⛔ not a gap: exactly three ids, spread in, subtracted by name', () => {
+    // ⭐ Non-vacuity: the three ids ARE in the public detail set (spread from the live element map) …
+    for (const id of Object.keys(DATA_CLASS_EXCLUDED)) expect(PUBLIC_DETAIL_FIELD_IDS).toContain(id);
+    // … they are EXACTLY the memorial map's ids — a fourth memorial id can ⛔ not ride the exclusion …
+    expect(Object.keys(DATA_CLASS_EXCLUDED).sort()).toEqual(
+      Object.values(SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS).filter((id): id is string => id !== null).sort(),
+    );
+    // … each cites the ruling, ⛔ none sits in MEMBER_COUNTERPART (that would record it as a gap or a counterpart) …
+    for (const [id, cite] of Object.entries(DATA_CLASS_EXCLUDED)) {
+      expect(cite).toContain('2026-10-27-411 item 7');
+      expect(MEMBER_COUNTERPART[id]).toBeUndefined();
+    }
+    // … and ⛔ nothing else is excluded: the floor is the public detail minus exactly these three.
+    expect(PUBLIC_DETAIL_FIELD_IDS.length - FLOOR_FIELD_IDS.length).toBe(3);
   });
 });

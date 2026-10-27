@@ -61,5 +61,18 @@ export function createGcsMemorialPhotoStorage(
       const bucket = await getBucket();
       await bucket.file(key).delete({ ignoreNotFound: true });
     },
+
+    // Story 11b.4a (MP4) — `download()` REJECTS a missing object with a 404 `ApiError` (`ignoreNotFound` is a DELETE option,
+    // ⛔ not a read one) ⇒ caught HERE and answered `null`; any other fault re-throws (the route logs it and 404s).
+    async getBytes(key) {
+      const bucket = await getBucket();
+      try {
+        const [buf] = await bucket.file(key).download();
+        return new Uint8Array(buf);
+      } catch (err) {
+        if ((err as { code?: unknown }).code === 404) return null;
+        throw err;
+      }
+    },
   };
 }

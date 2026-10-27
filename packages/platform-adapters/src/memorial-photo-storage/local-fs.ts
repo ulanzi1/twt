@@ -2,7 +2,7 @@
 // (the helpdesk-attachment precedent): a shared root under the OS temp dir, atomic writes, a `.meta.json` sidecar.
 
 import { randomUUID } from 'node:crypto';
-import { mkdir, rename, rm, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, normalize, resolve } from 'node:path';
 
@@ -62,6 +62,17 @@ export function createLocalFsMemorialPhotoStorage(
         if ((err as { code?: string }).code !== 'ENOENT') throw err;
       });
       await rm(metaPath(objectPath), { force: true });
+    },
+
+    // Story 11b.4a (MP4) — `null` on ENOENT; any other fault re-throws.
+    async getBytes(key) {
+      const objectPath = resolveObjectPath(key);
+      try {
+        return new Uint8Array(await readFile(objectPath));
+      } catch (err) {
+        if ((err as { code?: string }).code === 'ENOENT') return null;
+        throw err;
+      }
     },
   };
 }

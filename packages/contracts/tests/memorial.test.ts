@@ -12,6 +12,7 @@ import {
   MEMORIAL_REVIEW_ACTIONS,
   MEMORIAL_REVIEW_REASONS,
   MEMORIAL_STATES,
+  MEMORIAL_TAKEDOWN_OUTCOMES,
   MEMORIAL_WITHDRAWAL_ACTORS,
   MemorialMemberView,
   MemorialReviewDecisionInput,
@@ -33,6 +34,8 @@ describe('vocabularies — by value, EQUAL to the domain tuples that generate th
     [MEMORIAL_WITHDRAWAL_ACTORS, domainMemorial.MEMORIAL_WITHDRAWAL_ACTORS],
     [MEMORIAL_OMISSION_FIELDS, domainMemorial.MEMORIAL_OMISSION_FIELDS],
     [MEMORIAL_STATES, domainMemorial.MEMORIAL_STATES],
+    // Story 11b.4a — the take-down outcomes (the domain tuple generates `memorial_takedown_outcome`).
+    [MEMORIAL_TAKEDOWN_OUTCOMES, domainMemorial.MEMORIAL_TAKEDOWN_OUTCOMES],
   ])('%#', (wire, domain) => {
     expect([...wire]).toEqual([...domain]);
   });

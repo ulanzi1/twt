@@ -104,7 +104,7 @@ describe('Directory rate-limit KEY (Trap 2, hermetic — no DB)', () => {
   // ═════════════════════════════════════════════════════════════════════════════════════════════
   // ⛔⛔ STORY 11b.10, TRAP 5 (AC5) — THE TIER IS ⛔ NOT THIS STORY'S TO TOUCH
   // ═════════════════════════════════════════════════════════════════════════════════════════════
-  it('⛔ ALL THREE public-pages routes still carry `limits.search` — UNCHANGED, both directions', () => {
+  it('⛔ ALL FOUR public-pages routes carry `limits.search` — UNCHANGED, both directions (Story 11b.4a adds the memorial photo on the SAME tier)', () => {
     // ⭐ WHY THIS IS ASSERTED BY A STORY THAT DELIBERATELY CHANGED NOTHING HERE: the Panel directed
     // option **(c)** — make the address unguessable — and ⛔ NOT option (b), which was the
     // rate-limit change (`2026-09-03-184` cl.5). 11b.3a's **AC2** rules that tightening this tier as
@@ -123,7 +123,9 @@ describe('Directory rate-limit KEY (Trap 2, hermetic — no DB)', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^\s*\/\/.*$/gm, '');
     const registrations = routes.match(/config: \{ rateLimit: limits\.search \}/g) ?? [];
-    expect(registrations).toHaveLength(3);
+    // ⭐ 2026-10-27 (Story 11b.4a) — was 3: the family memorial's PHOTO route joins the Sahyog Vivran surface on the SAME named
+    // tier (`2026-10-27-412`, the story's Question 8). ⛔ No route here carries any other tier.
+    expect(registrations).toHaveLength(4);
     // ⛔ And ⛔ no other tier, ⛔ no inline ceiling, ⛔ no hand-rolled keyGenerator on this module.
     expect(routes).not.toContain('limits.read');
     expect(routes).not.toContain('keyGenerator');

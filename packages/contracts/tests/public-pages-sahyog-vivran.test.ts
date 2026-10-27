@@ -33,6 +33,8 @@ const ENTRY = {
   // ⭐ Story 11b.3a. ⚠ `[]` in the BASE fixture on purpose — a claim whose bank details were never
   // collected is the 6.8 AC3 absence signal and must parse, and the two arms get their own cases.
   nomineeBankAccounts: [],
+  // ⭐ Story 11b.4a — `null` in the BASE fixture: a drive whose family never wrote (or whose memorial is down) is ordinary.
+  familyMemorial: null,
 };
 
 /**
@@ -489,6 +491,39 @@ describe('the response is ONE DRIVE + a BOUNDED PAGE of its contributors', () =>
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 // ⭐⭐ STORY 11b.3a — THE NOMINEE BANK ACCOUNTS. AC4 IS A SHAPE, ⛔ NOT A CONVENTION.
 // ══════════════════════════════════════════════════════════════════════════════════════════════
+describe('⭐⭐ familyMemorial — FINISHED STRINGS ONLY (Story 11b.4a; `-411` item 3 — ⛔ no marker; Trap 3)', () => {
+  const MEMORIAL = { words: ['पहला अनुच्छेद', 'Second paragraph'], photo: { altText: 'Our father at the well' } };
+
+  it('accepts the words and a photo, a memorial with ⛔ no photo, and an empty description (all of it left out)', () => {
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: MEMORIAL }).success).toBe(true);
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, photo: null } }).success).toBe(true);
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, photo: { altText: '' } } }).success).toBe(true);
+  });
+
+  it('⛔ the key is REQUIRED (`null`, ⛔ absent) — a drive with no memorial says so with `null`', () => {
+    const without: Record<string, unknown> = { ...ENTRY };
+    delete without['familyMemorial'];
+    expect(PublicSahyogVivranEntry.safeParse(without).success).toBe(false);
+  });
+
+  it.each(['kind', 'segments', 'omitted', 'reason', 'key', 'submissionId', 'objectKey', 'url', 'approvedAt', 'approver', 'status'])(
+    '⛔⛔ rejects `%s` on the memorial — ⛔ not even the position of a cut, ⛔ no key, ⛔ no URL leaves the API',
+    (key) => {
+      expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, [key]: 'x' } }).success).toBe(false);
+    },
+  );
+
+  it.each(['url', 'objectKey', 'reason', 'mime'])('⛔ rejects `%s` on the photo', (key) => {
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, photo: { altText: 'a', [key]: 'x' } } }).success).toBe(false);
+  });
+
+  it('⛔ rejects a SEGMENT array where a paragraph string belongs (the 11b.4 presenter shape must ⛔ reach the wire), and an empty paragraph (a visible gap)', () => {
+    const segmented = { ...MEMORIAL, words: [[{ kind: 'text', text: 'a' }, { kind: 'omitted', key: 'render.omitted' }]] };
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: segmented }).success).toBe(false);
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, words: [''] } }).success).toBe(false);
+  });
+});
+
 describe('PublicSahyogVivranNomineeAccount — ⭐⛔ the COORDINATES ARE UNREPRESENTABLE (11b.11)', () => {
   it('accepts the two EQUAL accounts, each carrying the name and nothing else', () => {
     expect(

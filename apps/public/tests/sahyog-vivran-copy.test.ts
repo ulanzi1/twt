@@ -30,6 +30,9 @@ const KEYS = [
   'page.title',
   'page.intro',
   'facts.group_label',
+  // ⭐ Story 11b.4a — the family memorial section's heading. ⚠ `t()` THROWS on a miss: an unresolvable heading would 500 the
+  // whole page the first time a memorial is shown. (⛔ No `memorial:render.omitted` — `-411` item 3: ⛔ no marker on the page.)
+  'family_memorial.heading',
   // ⭐ Story 11b.3b (Task 2 unit 2) — the `<dt>` for the deceased member's name. ⚠ The VALUE is
   // inert today (⛔ no publication basis), ⛔ but the LABEL still has to resolve: `t()` THROWS on a
   // missing key, so an unresolvable `<dt>` is a 500 on the whole page the moment the first Pariwar

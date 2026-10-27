@@ -25,5 +25,9 @@ export function createInMemoryMemorialPhotoStorage(): InMemoryMemorialPhotoStora
     async delete(key) {
       store.delete(key);
     },
+    // Story 11b.4a (MP4) — `null` for a key that was never put (or was deleted).
+    async getBytes(key) {
+      return store.get(key)?.bytes ?? null;
+    },
   };
 }

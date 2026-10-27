@@ -535,6 +535,9 @@ describe.skipIf(!hasDatabase)('public Sahyog Vivran route (:5433)', { timeout: 3
         'deceasedMemberName',
         'district',
         'driveStatus',
+        // ⭐ Story 11b.4a — the family's memorial (`-391` item 2). ⚠ Present on EVERY response, `null` when ⛔ none is shown
+        // (and with the switch off, as here) — ⛔ never conditionally omitted.
+        'familyMemorial',
         'fundingOutcome',
         // ⭐ Story 11b.3a. ⚠ Present on EVERY response, `[]` when the claim's bank details were
         // never collected — ⛔ never conditionally omitted, which would make the key set vary by

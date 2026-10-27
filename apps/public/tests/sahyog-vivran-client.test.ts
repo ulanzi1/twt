@@ -15,7 +15,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { buildForwardedFor, fetchSahyogVivran } from '../src/lib/sahyog-vivran.server.js';
+import { buildForwardedFor, fetchSahyogVivran, fetchSahyogVivranMemorialPhoto } from '../src/lib/sahyog-vivran.server.js';
 
 const OK_BODY = {
   drive: {
@@ -44,6 +44,8 @@ const OK_BODY = {
     // `isSahyogVivranResponse` never checking them at all. ⛔ Do not drop them again.
     deceasedMemberName: 'Rajesh Kumar Sharma',
     amountRaisedInr: 13700,
+    // ⭐ Story 11b.4a — a memorial WITH a photo, so the guard's positive arm is exercised by a real value.
+    familyMemorial: { words: ['पहला अनुच्छेद', 'Second paragraph'], photo: { altText: 'माँ' } },
   },
   // ⭐⭐ Story 11b.3b (Task 3, AC4) — the paginated contributor envelope, ALONGSIDE `drive`,
   // ⛔ never inside it.
@@ -386,5 +388,64 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
     stubFetch(() => json({ ...OK_BODY, total: -1 }));
     const res = await fetchSahyogVivran({ driveToken: 'P-1', forwardedFor: null });
     expect(res).toEqual({ ok: false, reason: 'bad_response' });
+  });
+});
+
+describe('⭐⭐ Story 11b.4a — `familyMemorial` at the SSR boundary (Trap 5)', () => {
+  it('ACCEPTS a memorial with a photo, one without, and `null`', async () => {
+    for (const familyMemorial of [OK_BODY.drive.familyMemorial, { words: ['a'], photo: null }, { words: [], photo: { altText: '' } }, null]) {
+      stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, familyMemorial } }));
+      expect((await fetchSahyogVivran({ driveToken: 't', forwardedFor: null })).ok, JSON.stringify(familyMemorial)).toBe(true);
+    }
+  });
+
+  it('⛔⛔ REJECTS a malformed memorial WITH `appealReversal: null` — the guard checks it BEFORE the appeal block\'s early return', async () => {
+    expect(OK_BODY.drive.appealReversal).toBeNull();
+    const malformed: unknown[] = [
+      undefined,
+      'words',
+      { words: 'a paragraph', photo: null },
+      { words: [''], photo: null },
+      { words: [['segment']], photo: null },
+      { words: ['a'], photo: null, reason: 'attacks_someone_named' },
+      { words: ['a'], photo: null, segments: [] },
+      { words: ['a'], photo: { altText: 'x', url: 'https://bucket/photo.jpg' } },
+      { words: ['a'], photo: { altText: 1 } },
+      { words: ['a'] },
+    ];
+    for (const familyMemorial of malformed) {
+      const drive: Record<string, unknown> = { ...OK_BODY.drive, familyMemorial };
+      if (familyMemorial === undefined) delete drive['familyMemorial'];
+      stubFetch(() => json({ ...OK_BODY, drive }));
+      expect(await fetchSahyogVivran({ driveToken: 't', forwardedFor: null }), JSON.stringify(familyMemorial)).toEqual({
+        ok: false,
+        reason: 'bad_response',
+      });
+    }
+  });
+});
+
+describe('⭐ Story 11b.4a — fetchSahyogVivranMemorialPhoto (the photo proxy\'s upstream read)', () => {
+  it('calls the photo route with ⛔ no query string and ⛔ no header but `X-Forwarded-For`', async () => {
+    const { calls } = stubFetch(() => new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), { status: 200, headers: { 'content-type': 'image/jpeg' } }));
+    const r = await fetchSahyogVivranMemorialPhoto({ driveToken: 'tok/../x', forwardedFor: '203.0.113.9' });
+    expect(r.ok).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url.pathname).toMatch(/\/public-pages\/sahyog-vivran\/tok%2F\.\.%2Fx\/memorial-photo$/);
+    expect(calls[0]!.url.search).toBe('');
+    expect(Object.keys(calls[0]!.init.headers as Record<string, string>).sort()).toEqual(['accept', 'x-forwarded-for']);
+  });
+
+  it('a 404 is `not_found`; a 5xx, a wrong content type, or a network fault is `unavailable` (⛔ never throws)', async () => {
+    stubFetch(() => new Response(null, { status: 404 }));
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 't', forwardedFor: null })).toEqual({ ok: false, reason: 'not_found' });
+    stubFetch(() => new Response(null, { status: 500 }));
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 't', forwardedFor: null })).toEqual({ ok: false, reason: 'unavailable' });
+    stubFetch(() => new Response('<html>', { status: 200, headers: { 'content-type': 'text/html' } }));
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 't', forwardedFor: null })).toEqual({ ok: false, reason: 'unavailable' });
+    stubFetch(() => {
+      throw new TypeError('fetch failed');
+    });
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 't', forwardedFor: null })).toEqual({ ok: false, reason: 'unavailable' });
   });
 });

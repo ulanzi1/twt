@@ -510,6 +510,14 @@ export const PublicVsPrivateMatrixSchema = z
       // ⚠ ANNOTATED 2026-09-19 — ✅ DISCHARGED by Story 11b.21 (`2026-09-19-224`): the member list now
       // renders the MODE-RESOLVED name at parity with the public page. The paragraph above is the record.
       ['sahyog-vivran.contributor_name', '2026-09-02-174'],
+      // ── ⭐⭐ STORY 11b.4a — THE FAMILY'S MEMORIAL (`2026-10-27-412`) ─────────────────────────────────
+      // ⭐ Declared in the SAME COMMIT as their YAML field blocks. Each pair cites its OWN authority (`2026-09-07-205` cl.2): the
+      // words and the photo `2026-10-23-391` item 2 (Trustee-ratified — *"The words and photo appear on the public page, as the
+      // Trust approved them"*); the photo's DESCRIPTION is a third field neither names, ruled public by `2026-10-27-411` item 6
+      // (PC4 A, Trustee-ratified). ⚠ The page shows the words with ⛔ no marker where a part was left out (`-411` item 3).
+      ['sahyog-vivran.family_memorial_words', '2026-10-23-391 item 2'],
+      ['sahyog-vivran.family_memorial_photo', '2026-10-23-391 item 2'],
+      ['sahyog-vivran.family_memorial_photo_alt_text', '2026-10-27-411 item 6'],
     ]);
 
     const exceptions = data.surfaces.flatMap((surface) =>

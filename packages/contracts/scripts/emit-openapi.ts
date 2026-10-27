@@ -4856,6 +4856,118 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 11b.4a — the family memorial's public photo, and the helpline's take-down at the nominee's request ───────────────
+// The photo is served by its OWN public route (MP4) — re-checked on every uncached request, re-encoded without metadata (MP5),
+// the page's empty 404 for every refusal. The take-down routes are `memorial.takedown` (helpline_operator); only the
+// `taken_down` outcome needs the `memorial_takedown` admin step-up. ⛔ No take-down route obeys the memorial switch (MP13).
+const {
+  MemorialTakedownMemberDrivesResponse: MemorialTakedownMemberDrivesResponseSchema,
+  MemorialTakedownDriveResponse: MemorialTakedownDriveResponseSchema,
+  MemorialTakedownRequestListQuery: MemorialTakedownRequestListQuerySchema,
+  MemorialTakedownOpenRequestsResponse: MemorialTakedownOpenRequestsResponseSchema,
+  MemorialTakedownRequestInput: MemorialTakedownRequestInputSchema,
+  MemorialTakedownRequestResponse: MemorialTakedownRequestResponseSchema,
+  MemorialTakedownOutcomeInput: MemorialTakedownOutcomeInputSchema,
+  MemorialTakedownOutcomeResponse: MemorialTakedownOutcomeResponseSchema,
+} = await import('../src/memorial/index.js');
+const MemorialTakedownMemberDrivesComponent = MemorialTakedownMemberDrivesResponseSchema.openapi('MemorialTakedownMemberDrives');
+const MemorialTakedownDriveComponent = MemorialTakedownDriveResponseSchema.openapi('MemorialTakedownDrive');
+const MemorialTakedownOpenRequestsComponent = MemorialTakedownOpenRequestsResponseSchema.openapi('MemorialTakedownOpenRequests');
+const MemorialTakedownRequestComponent = MemorialTakedownRequestResponseSchema.openapi('MemorialTakedownRequest');
+const MemorialTakedownOutcomeComponent = MemorialTakedownOutcomeResponseSchema.openapi('MemorialTakedownOutcome');
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/public-pages/sahyog-vivran/{driveToken}/memorial-photo',
+  summary: "The family memorial's photo on a Sahyog Vivran page",
+  description:
+    'Public. The photo of the version the page shows (the latest approval with no withdrawal), only when the Trust kept it, ' +
+    're-encoded as one JPEG (≤ 960 × 1200, sRGB, every metadata segment removed). `Cache-Control: public, max-age=60, ' +
+    's-maxage=300`. Every refusal — the switch off, the publication kill switch, an unknown token, no shown memorial, the photo ' +
+    'left out, an erased member, a missing object — is the same empty 404 as an unknown token; a KMS outage is 503 no-store.',
+  tags: ['public-pages'],
+  request: { params: z.object({ pariwarId: z.string().uuid(), driveToken: z.string().min(1).max(128) }) },
+  responses: {
+    200: { description: 'The photo', content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } } } },
+    404: { description: 'Not found (empty body)' },
+    503: { description: 'Temporarily unavailable' },
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+const takedownPariwar = z.object({ pariwarId: z.string().uuid() });
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/memorial-takedowns/members/{memberId}/drives',
+  summary: "A deceased member's drives with a memorial on the page (MP12)",
+  description: '`memorial.takedown`. Found from the member search by registered mobile. `[]` for none, or for an erased member.',
+  tags: ['memorial-takedown'],
+  request: { params: takedownPariwar.extend({ memberId: z.string().uuid() }) },
+  responses: {
+    200: { description: 'The drives', content: jsonOf(MemorialTakedownMemberDrivesComponent) },
+    403: errorResponse('Missing memorial.takedown'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/memorial-takedowns/drives/{poolId}',
+  summary: 'The take-down view of one drive',
+  description:
+    '`memorial.takedown`. The words as the page shows them, the photo (5-minute signed URL), the nominee recorded on the shown ' +
+    'version (name and mobile — call them back, MP7), how a smaller fix is done, and the requests. Writes one ' +
+    '`memorial.takedown.read` audit line.',
+  tags: ['memorial-takedown'],
+  request: { params: takedownPariwar.extend({ poolId: z.string().uuid() }) },
+  responses: {
+    200: { description: 'The drive', content: jsonOf(MemorialTakedownDriveComponent) },
+    403: errorResponse('Missing memorial.takedown'),
+    404: errorResponse('memorial_takedown.not_found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/memorial-takedowns/requests',
+  summary: 'The open take-down requests, oldest first',
+  description: '`memorial.takedown`. `?open=true`. Each carries `overdue` (open past its due date — 7 days from the nominee\'s first contact).',
+  tags: ['memorial-takedown'],
+  request: { params: takedownPariwar, query: MemorialTakedownRequestListQuerySchema },
+  responses: {
+    200: { description: 'The open requests', content: jsonOf(MemorialTakedownOpenRequestsComponent) },
+    403: errorResponse('Missing memorial.takedown'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/memorial-takedowns/drives/{poolId}/requests',
+  summary: "Record the nominee's take-down request (after calling them back)",
+  description:
+    '`memorial.takedown`; `Idempotency-Key`. `calledBack: true` and when the nominee first asked (⛔ in the future, ⛔ more than 7 ' +
+    'days ago). One open request per drive.',
+  tags: ['memorial-takedown'],
+  request: { params: takedownPariwar.extend({ poolId: z.string().uuid() }), body: { content: jsonOf(MemorialTakedownRequestInputSchema), required: true } },
+  responses: {
+    201: { description: 'Recorded', content: jsonOf(MemorialTakedownRequestComponent) },
+    400: errorResponse('Invalid input'),
+    403: errorResponse('Missing memorial.takedown'),
+    404: errorResponse('memorial_takedown.not_found'),
+    409: errorResponse('memorial_takedown.request_open'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/memorial-takedowns/requests/{requestId}/outcome',
+  summary: 'Decide a take-down request',
+  description:
+    '`memorial.takedown`; `Idempotency-Key`. `taken_down` (admin step-up `memorial_takedown`) withdraws every un-withdrawn ' +
+    'version — it leaves the page within about 5 minutes once an edge cache exists; `kept` and `superseded` change nothing public.',
+  tags: ['memorial-takedown'],
+  request: { params: takedownPariwar.extend({ requestId: z.string().uuid() }), body: { content: jsonOf(MemorialTakedownOutcomeInputSchema), required: true } },
+  responses: {
+    200: { description: 'Decided', content: jsonOf(MemorialTakedownOutcomeComponent) },
+    400: errorResponse('Invalid input'),
+    403: errorResponse('Missing memorial.takedown, or the step-up'),
+    404: errorResponse('memorial_takedown.not_found'),
+    409: errorResponse('memorial_takedown.already_decided · shown_changed · shown_unchanged'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

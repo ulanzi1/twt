@@ -74,6 +74,8 @@ const vivranDrive = (driveStatus: string) => ({
   fundingOutcome: driveStatus === 'live' ? null : 'fully_funded',
   appealReversal: null,
   nomineeBankAccounts: [{ accountRank: 1, accountHolderName: 'A Holder' }],
+  // ⭐ Story 11b.4a — the wire now carries the family memorial (`null` here: the ordinary state).
+  familyMemorial: null,
   // ⭐⭐ STORY 11b.3b's TWO DRIVE-LEVEL FIELDS — ⛔ the fixture must model a REAL API row, same
   // discipline as `driveRow` above (Review finding, 2026-09-15: this fixture was never updated for
   // either, which masked `isSahyogVivranResponse` never checking them at all).

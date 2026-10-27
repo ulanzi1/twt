@@ -202,6 +202,25 @@ export async function fetchSahyogVivran(
  * these values, and a bare `string` check lets an unknown token reach a `default:` branch that throws
  * INSIDE the render, defeating this module's own "⛔ NEVER THROWS" guarantee one function later.
  */
+/**
+ * ⭐ Story 11b.4a — `familyMemorial` is `null`, or EXACTLY `{ words: string[] (each non-empty), photo: null | { altText: string } }`
+ * with ⛔ no other key at either level (the wire's `.strict()`, restated because this guard otherwise passes unknown keys — a
+ * `reason`, a `segments` array or a URL reaching the render would be the leak Trap 3 forbids).
+ */
+function isFamilyMemorial(v: unknown): boolean {
+  if (v === null) return true;
+  if (typeof v !== 'object' || Array.isArray(v)) return false;
+  const m = v as Record<string, unknown>;
+  if (Object.keys(m).sort().join(',') !== 'photo,words') return false;
+  if (!Array.isArray(m['words'])) return false;
+  for (const w of m['words']) if (typeof w !== 'string' || w.length === 0) return false;
+  const photo = m['photo'];
+  if (photo === null) return true;
+  if (typeof photo !== 'object' || Array.isArray(photo)) return false;
+  const p = photo as Record<string, unknown>;
+  return Object.keys(p).join(',') === 'altText' && typeof p['altText'] === 'string';
+}
+
 function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranResponse {
   if (typeof body !== 'object' || body === null) return false;
   const b = body as Record<string, unknown>;
@@ -311,6 +330,11 @@ function isSahyogVivranResponse(body: unknown): body is PublicSahyogVivranRespon
     }
   }
 
+  // ⭐⭐ STORY 11b.4a — THE FAMILY MEMORIAL, CHECKED EXACTLY and ⚠ BEFORE the appeal block's early `return true` (Trap 5): this
+  // guard does ⛔ not reject unknown keys, so an unvalidated `familyMemorial` would reach the render unchecked on every drive
+  // that was never reversed — most of them.
+  if (!isFamilyMemorial(r['familyMemorial'])) return false;
+
   const rev = r['appealReversal'];
   if (rev === null) return true;
   if (typeof rev !== 'object') return false;
@@ -387,4 +411,46 @@ function isNomineeBankAccounts(value: unknown): boolean {
     if (holder !== null && (typeof holder !== 'string' || holder.length === 0)) return false;
   }
   return true;
+}
+
+// ── Story 11b.4a — the family memorial's PHOTO (MP4) ─────────────────────────────────────────────────────────────────────
+
+/** The photo read's own budget — a re-encode of up to 10 MiB upstream takes longer than the page's JSON. */
+const PHOTO_REQUEST_TIMEOUT_MS = 8000;
+
+export type SahyogVivranMemorialPhotoResult =
+  | { readonly ok: true; readonly bytes: ArrayBuffer }
+  /** `not_found` — the API's empty 404 (every refusal); `unavailable` — anything else (a 5xx, a timeout, a wrong type). */
+  | { readonly ok: false; readonly reason: 'not_found' | 'unavailable' };
+
+/**
+ * Fetch the memorial photo of one drive from the API (`…/sahyog-vivran/:driveToken/memorial-photo`).
+ * ⛔ NEVER THROWS. ⛔ No query string is ever forwarded (a cache-buster would mint shared-cache keys — the 11b.3b reason) and ⛔ no
+ * request header but `X-Forwarded-For` (the SAME `Astro.clientAddress` rule as the page — `buildForwardedFor`). The caller builds
+ * its OWN response headers and ⛔ never forwards the upstream ones.
+ */
+export async function fetchSahyogVivranMemorialPhoto(opts: {
+  readonly driveToken: string;
+  readonly forwardedFor: string | null;
+}): Promise<SahyogVivranMemorialPhotoResult> {
+  const url = new URL(
+    `/api/v1/p/${ACTIVE_PARIWAR_ID}/public-pages/sahyog-vivran/${encodeURIComponent(opts.driveToken)}/memorial-photo`,
+    API_ORIGIN,
+  );
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PHOTO_REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { accept: 'image/jpeg', ...(opts.forwardedFor !== null ? { 'x-forwarded-for': opts.forwardedFor } : {}) },
+      signal: controller.signal,
+    });
+    if (res.status === 404) return { ok: false, reason: 'not_found' };
+    if (!res.ok || res.headers.get('content-type') !== 'image/jpeg') return { ok: false, reason: 'unavailable' };
+    return { ok: true, bytes: await res.arrayBuffer() };
+  } catch {
+    return { ok: false, reason: 'unavailable' };
+  } finally {
+    clearTimeout(timer);
+  }
 }

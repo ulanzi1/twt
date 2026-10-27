@@ -285,6 +285,18 @@ const PUBLIC_ALLOWLIST = new Set<string>([
   // counsel/Panel process — ⛔ not a code mechanism, and ⛔ never the publication kill switch (an
   // emergency control that defaults to ENABLED). ⛔ Allowlisting the route closes nothing.
   'GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken',
+  // ⭐⭐ STORY 11b.4a — THE FAMILY MEMORIAL'S PHOTO on the same surface (`2026-10-23-391` item 2; `2026-10-27-412` MP4 / MP5).
+  // ⭐ ITS WRITTEN DEFENCE IS THE SAME CONSTANT — it JOINS `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (the story's Question 8): the
+  // named SEARCH tier, UNMODIFIED; the unguessable address (the photo is reached ONLY through the drive's opaque token); the
+  // global `noindex` hook; the server-side Tier-1 boundary (the bytes are read and re-encoded in the API — the object key,
+  // a signed URL and a public bucket ACL ⛔ never reach a caller); ⛔ no onward affordance. ⚠ Controls 2 and 3 bind nothing
+  // here — ONE photo per drive, ⛔ no `page`, ⛔ no `limit` — and the strict EMPTY query makes every parameter a 400.
+  // ⭐ IT RE-CHECKS THE PAGE'S PREDICATE ON EVERY UNCACHED REQUEST (the memorial switch, the publication kill switch, the
+  // shown version, the Trust's photo decision, erasure) — which is how a take-down reaches the photo — and every refusal is
+  // the page's EMPTY 404, byte-identical to an unknown token. It reads ⛔ no contributor and writes ⛔ no audit line (Trap 19).
+  // ⚠ ITS PRICE, carried: ⛔ no edge cache exists yet (Row 41 (p)), so every request costs a chain read, a storage read of up
+  // to 10 MiB and a `sharp` decode — bounded ONLY by `limits.search`.
+  'GET /api/v1/p/:pariwarId/public-pages/sahyog-vivran/:driveToken/memorial-photo',
   // Developer-convenience OpenAPI doc (read-only, no data).
   'GET /docs/json',
   // Story 5.4 — the WhatsApp inbound-webhook ingress (§3.11) is PUBLIC by design: Meta is unauthenticated,

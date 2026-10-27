@@ -25,7 +25,8 @@
 // in the same commit. ⛔ Do not "fill the gap" here.
 //
 // ⛔⛔ AND FOUR PRODUCERS THE EPIC AC NAMES DO ⛔ NOT EXIST — verifier profile pages (⛔ zero hits in
-// the repo), the family story (11b.4, `backlog`), the memorial components (11b.5, `backlog`) and
+// the repo), the family story (11b.4, `backlog` — ⭐ DISCHARGED 2026-10-27 by Story 11b.4a: the family's memorial renders below,
+// dark until Row 41), the memorial components (11b.5, `backlog`) and
 // `<StatCardStrip>` (C-3, ⛔ no producer AND ⛔ no owner). ⭐ The ruled posture is 11a.5's third path
 // and C-4 SURVIVED `-160` untouched: *render nothing when empty* — ⛔ never a fabricated row, ⛔ never
 // a "coming soon" placeholder. ⚠ *A silent section is the CORRECT state, ⛔ not a bug to close
@@ -77,6 +78,7 @@ import { formatCurrency, getLocale, isLocale, t } from '@twt/i18n';
 import type { Locale } from '@twt/i18n';
 import { passport } from '@twt/domain';
 
+import FamilyMemorial from '../../components/FamilyMemorial.astro';
 import MatrixField from '../../components/MatrixField.astro';
 import PublicShell from '../../layouts/PublicShell.astro';
 import { getDb } from '../../lib/db.server.js';
@@ -595,6 +597,19 @@ const messageBlockCopy =
             </div>
           </dl>
         </section>
+
+        {/*
+          ⭐⭐ STORY 11b.4a — THE FAMILY'S MEMORIAL (`2026-10-23-391` item 2; `2026-10-27-411` items 2, 3, 6), after the drive's
+          facts and before the contributor list. `null` ⇒ NOTHING renders — the same HTML as a drive whose family never wrote
+          (`-393` M1: ⛔ no "removed" marker, ⛔ no gap, ⛔ no date). Its photo is the page's OWN route, re-checked per request.
+        */}
+        {model.familyMemorial !== null && (
+          <FamilyMemorial
+            memorial={model.familyMemorial}
+            heading={tr('family_memorial.heading')}
+            photoSrc={`/sahyog-vivran/${encodeURIComponent(driveToken)}/memorial-photo`}
+          />
+        )}
 
         {/*
           ⭐⭐ THE STAGE EXPLAINER — `2026-09-04-192` cl.3's INFO AFFORDANCE (Story 11b.12 AC3).

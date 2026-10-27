@@ -132,6 +132,13 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // green scan as evidence the control set is correct; `login-wall.spec.ts` asserts that.
   // ⛔ `renderPath: false`: it renders nothing.
   { path: 'apps/api/src/modules/public-pages/sahyog-vivran-controls.ts', renderPath: false },
+  // ⭐ STORY 11b.4a — THE SCOPE TAX, PAID BY HAND. The family memorial adds a route file UNDER the page folder, and ⚠ this gate's
+  // `wholeDirs` walk is ⛔ NOT recursive ⇒ `[driveToken]/memorial-photo.ts` would ⛔ never be seen by the safeguard. ⇒ listed here,
+  // with the memorial's render component and the API's memorial read (both on this page's read path, ⛔ named like it).
+  // ⛔ None carries an amount operand or an event type; scanning them buys that a future edit ⛔ cannot introduce one unnoticed.
+  { path: 'apps/public/src/pages/sahyog-vivran/[driveToken]/memorial-photo.ts', renderPath: true },
+  { path: 'apps/public/src/components/FamilyMemorial.astro', renderPath: true },
+  { path: 'apps/api/src/modules/public-pages/memorial-public-read.ts', renderPath: false },
 ];
 
 /**

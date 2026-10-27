@@ -1344,6 +1344,64 @@ surfaces:
             ⛔ `sahyog-vivran` ONLY, and ⛔ ONLY contributors CONFIRMED on this drive's pool. It
             reaches ⛔ no other surface and ⛔ no authenticated tier. ⛔ It authorises ⛔ no ranking,
             ⛔ no per-contributor total and ⛔ no sort by amount — the list is ⛔ never a leaderboard.
+      # ── ⭐⭐ STORY 11b.4a — THE FAMILY'S MEMORIAL (`2026-10-27-412`; declared in the SAME commit as their
+      #    `RULED_TIER1_PUBLIC_EXCEPTIONS` pairs — the `-173` follow-up's §11 timing rule) ──────────────────────
+      - id: family_memorial_words
+        tier: public
+        pii_tier: 1
+        description: >-
+          ⭐ The family's own words about the member who died, written by the nominee and sent with
+          their handover code (Story 11b.4), AS THE TRUST APPROVED THEM — one version per drive, the
+          latest approval with ⛔ no withdrawal. ⭐ A part the Trust left out is ⛔ NOT marked: the
+          words on either side are joined (`2026-10-27-411` item 3, PC1 B) — ⛔ no marker, ⛔ no
+          reason, ⛔ not even the position of a cut reaches the wire. ⚠ The words MAY name the member
+          (`-411` item 2, PQ2 A) though the page's own name field (`deceased_member_name`) stays behind
+          its clause gate. ⛔ Never in `<head>`, Open Graph, a share card or a sitemap (the permission
+          names ONE place). Dark until launch-gate Row 41 closes (`MEMORIAL_AUTHORSHIP_ENABLED`).
+        tier1_public_exception:
+          decision: '2026-10-23-391 item 2'
+          rationale: >-
+            ⭐ The Trustee Panel ruled (`2026-10-23-391` item 2, Q2 A): *"The words and photo appear on
+            the public page, as the Trust approved them."* The basis is the nominee's permission given
+            AT SENDING (`2026-08-28-162` cl.3 — family-owned material is authorised at the point of
+            submission), recorded on every submission row; the page READS it and ⛔ never asks again.
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY — the permission text names *"this member's Sahyog Vivran page,
+            which anyone with its link can read"* ⇒ ⛔ not In Memoriam (11b.6), ⛔ not `/sahyog`, ⛔ not
+            the member app's drive detail. Taken down at the nominee's request it leaves ⛔ no trace
+            (`-393` M1).
+      - id: family_memorial_photo
+        tier: public
+        pii_tier: 1
+        description: >-
+          ⭐ The family's photo of the member, if one was sent and the Trust did ⛔ not leave it out —
+          served by its OWN route (`/sahyog-vivran/[driveToken]/memorial-photo`), re-encoded without
+          metadata and re-checked on every uncached request (MP4 / MP5), ⛔ never a signed URL in the
+          page and ⛔ never the stored object key.
+        tier1_public_exception:
+          decision: '2026-10-23-391 item 2'
+          rationale: >-
+            ⭐ The same ruling as the words (`2026-10-23-391` item 2): *"The words and photo appear on
+            the public page, as the Trust approved them."*
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY (and its photo route). ⛔ Never in `og:image` or any link preview —
+            a preview copies the photo to another company's servers.
+      - id: family_memorial_photo_alt_text
+        tier: public
+        pii_tier: 1
+        description: >-
+          ⭐ The family's description of their photo (its alt text), as the Trust approved it — a
+          part left out is joined the same way as the words. ⛔ Never synthesised by the page.
+        tier1_public_exception:
+          decision: '2026-10-27-411 item 6'
+          rationale: >-
+            ⭐ A THIRD field neither `-391` item 2 (*"The words and photo"*) nor the permission text
+            (*"these words, and the photo if you added one"*) names — so it carries its OWN authority
+            (`2026-09-07-205` cl.2: each pair needs its own): `2026-10-27-411` item 6 (PC4 A,
+            Trustee-ratified) — *"The description appears with the photo, as the Trust approved it —
+            it is the family's own words about their photo."*
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY, ⛔ only with a photo that is shown.
 
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each

@@ -509,7 +509,7 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
   // ⭐ The IDENTITY discipline is unchanged and is what matters: the assertion still names every
   // pair with its decision id, so a withdrawn exception silently reappearing — or an entry landing
   // with ⛔ no ruling behind it — still FAILS here.
-  it('carries EXACTLY the six ruled Tier-1 public exceptions, each attributed to its decision', () => {
+  it('carries EXACTLY the nine ruled Tier-1 public exceptions, each attributed to its decision', () => {
     const exceptions = committed().surfaces.flatMap((s) =>
       s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
     );
@@ -525,6 +525,11 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
       // ⭐ Story 11b.3b — the two named identities on the drive page. ⛔ Each on its OWN ruling.
       'sahyog-vivran.contributor_name@2026-09-02-174',
       'sahyog-vivran.deceased_member_name@2026-09-02-173',
+      // ⭐ Story 11b.4a — the family's memorial: the words and photo on `-391` item 2, the photo's description on its OWN
+      // ruling (`-411` item 6, PC4 A — a third field neither the ruling nor the permission text names).
+      'sahyog-vivran.family_memorial_photo@2026-10-23-391 item 2',
+      'sahyog-vivran.family_memorial_photo_alt_text@2026-10-27-411 item 6',
+      'sahyog-vivran.family_memorial_words@2026-10-23-391 item 2',
       'sahyog-vivran.nominee_account_holder_name@2026-09-04-190 cl.2',
     ]);
     for (const e of exceptions) expect(e.f.pii_tier).toBe(1);
@@ -539,6 +544,7 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
     // ⭐ NOR DID 11b.3a's FOUR, and for exactly the same reason: an `escalations:` entry records a
     // tier MOVE (from → to) for a field ALREADY declared, and a field being declared for the FIRST
     // time has no honest `from` tier. ⇒ exception blocks 2 → 6, escalation_count 1 → 1.
+    // ⭐ NOR DID 11b.4a's THREE (the family memorial — first declarations): exception blocks 6 → 9, escalation_count 1 → 1.
     expect(committed().escalation_count).toBe(1);
     expect(committed().escalations).toHaveLength(1);
     expect(committed().escalations[0]?.surface).toBe('member-directory');

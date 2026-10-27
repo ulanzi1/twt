@@ -624,6 +624,28 @@ export interface SahyogVivranRenderModel {
    * the per-row ids are derived from a representative shape, ⛔ never from `nomineeAccounts[0]`.
    */
   readonly nomineeAccounts: readonly SahyogVivranNomineeAccountRow[];
+  /**
+   * ⭐⭐ Story 11b.4a — THE FAMILY'S MEMORIAL (`2026-10-23-391` item 2; `2026-10-27-411` items 2, 3, 6), or `null` (⛔ none shown —
+   * and the page then renders NOTHING: the same HTML as a drive whose family never wrote, `-393` M1).
+   * ⚠⛔ A CONTAINER KEY with ⛔ no tier of its own — the three classified fields are the element's, mapped in
+   * {@link SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS} and derived from a representative SHAPE (the `nomineeAccounts` precedent), so
+   * a page with ⛔ no memorial still DECLARES them.
+   */
+  readonly familyMemorial: SahyogVivranFamilyMemorialView | null;
+}
+
+/**
+ * ⭐ Story 11b.4a — the memorial as the page renders it: the words, already JOINED and bidi-isolated by the API (⛔ no marker
+ * where a part was left out — `-411` item 3), and the photo's presence + description. ⛔ No URL here: the photo's `src` is the
+ * page's own `/sahyog-vivran/{token}/memorial-photo`, built at the page.
+ */
+export interface SahyogVivranFamilyMemorialView {
+  /** One string per paragraph, rendered `white-space: pre-wrap`, `dir="auto"`, AS GIVEN. */
+  readonly familyMemorialWords: readonly string[];
+  /** A photo is shown (the Trust kept it); its bytes are served by its own route. */
+  readonly familyMemorialPhoto: boolean;
+  /** The family's description of the photo, as approved (`''` when all of it was left out). `null` ⇔ ⛔ no photo. */
+  readonly familyMemorialPhotoAltText: string | null;
 }
 
 /**
@@ -719,6 +741,27 @@ export const SAHYOG_VIVRAN_FIELD_IDS: FieldIdMapping<SahyogVivranRenderModel> = 
   // rendered fact about someone.
   contributors: null,
   contributorTotal: null,
+  // ⭐ Story 11b.4a — the CONTAINER (⛔ no tier of its own); its three ids are the element map's below.
+  familyMemorial: null,
+};
+
+/**
+ * ⭐ Story 11b.4a — the family memorial's THREE classified fields, each Tier-1 at `public` with its OWN ruled exception (the words
+ * and photo `2026-10-23-391` item 2; the description `2026-10-27-411` item 6), declared in `public-vs-private-matrix.yaml` in the
+ * same commit as their `RULED_TIER1_PUBLIC_EXCEPTIONS` pairs. ⛔ Renaming or dropping one without the declaration makes
+ * `deriveFieldIds` throw — the gate working.
+ */
+export const SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS: FieldIdMapping<SahyogVivranFamilyMemorialView> = {
+  familyMemorialWords: 'family_memorial_words',
+  familyMemorialPhoto: 'family_memorial_photo',
+  familyMemorialPhotoAltText: 'family_memorial_photo_alt_text',
+};
+
+/** The representative SHAPE the memorial's ids are derived from — ⛔ never `model.familyMemorial` (it is usually `null`). */
+const SAHYOG_VIVRAN_FAMILY_MEMORIAL_SHAPE: SahyogVivranFamilyMemorialView = {
+  familyMemorialWords: [],
+  familyMemorialPhoto: false,
+  familyMemorialPhotoAltText: null,
 };
 
 /**
@@ -839,5 +882,7 @@ export function sahyogVivranSurfaceFieldIds(model: SahyogVivranRenderModel): str
     SAHYOG_VIVRAN_CONTRIBUTOR_SHAPE,
     SAHYOG_VIVRAN_CONTRIBUTOR_FIELD_IDS,
   );
-  return [...new Set([...shell, ...accountIds, ...contributorIds])].sort();
+  // ⭐ Story 11b.4a — from the SHAPE, for the same reason: a drive with ⛔ no memorial still declares the three ids.
+  const memorialIds = deriveFieldIds(SAHYOG_VIVRAN_FAMILY_MEMORIAL_SHAPE, SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS);
+  return [...new Set([...shell, ...accountIds, ...contributorIds, ...memorialIds])].sort();
 }

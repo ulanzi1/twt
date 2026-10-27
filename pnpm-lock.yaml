@@ -213,6 +213,9 @@ importers:
       '@twt/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
+      '@twt/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@twt/validity-service':
         specifier: workspace:*
         version: link:../../packages/validity-service
@@ -228,6 +231,9 @@ importers:
       pg:
         specifier: ^8.13.0
         version: 8.21.0
+      sharp:
+        specifier: 0.34.5
+        version: 0.34.5
       xml-crypto:
         specifier: 6.1.2
         version: 6.1.2
@@ -238,9 +244,6 @@ importers:
       '@twt/eslint-config-twt':
         specifier: workspace:*
         version: link:../../packages/eslint-config-twt
-      '@twt/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.20
@@ -12231,8 +12234,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@img/colour@1.1.0':
-    optional: true
+  '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.34.5':
     optionalDependencies:
@@ -15145,6 +15147,14 @@ snapshots:
       '@vitest/utils': 3.2.6
       chai: 5.3.3
       tinyrainbow: 2.0.0
+
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.20)(lightningcss@1.32.0)(terser@5.48.0))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@22.19.20)(lightningcss@1.32.0)(terser@5.48.0)
 
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@25.9.2)(lightningcss@1.32.0)(terser@5.48.0))':
     dependencies:
@@ -19959,7 +19969,6 @@ snapshots:
       '@img/sharp-win32-arm64': 0.34.5
       '@img/sharp-win32-ia32': 0.34.5
       '@img/sharp-win32-x64': 0.34.5
-    optional: true
 
   shebang-command@2.0.0:
     dependencies:
@@ -20745,7 +20754,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.19.20)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.48.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@25.9.2)(lightningcss@1.32.0)(terser@5.48.0))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.20)(lightningcss@1.32.0)(terser@5.48.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

@@ -110,6 +110,8 @@ const SETTLED: PublicSahyogVivranResponse = {
     amountRaisedInr: 137000,
     fundingOutcome: 'fully_funded',
     appealReversal: null,
+    // ⭐ Story 11b.4a — ⛔ no memorial on the primary fixture (the ordinary day-one state); the memorial has its own legs.
+    familyMemorial: null,
     nomineeBankAccounts: [],
   },
   // ⭐ Story 11b.3b (Task 3) — the contributor PAGE and the SET SIZE.
@@ -258,6 +260,8 @@ describe('buildSahyogVivranView — the settled drive', () => {
     // holder's name lives on the account row. ⭐ The ruled deceased name is now a shell key, so the
     // leg asserts the EXACT set rather than emptiness: ⛔ a second, undeclared name key still fails.
     expect(keys.filter((k) => /name/i.test(k))).toEqual(['deceasedMemberName']);
+    // ⭐ Story 11b.4a — the ONLY memorial-shaped key on the shell is the container.
+    expect(keys.filter((k) => /memorial/i.test(k))).toEqual(['familyMemorial']);
     // ⛔⛔ AND ⛔ NO PER-CONTRIBUTOR AMOUNT, RANK OR ROW KEY ON THE ROWS — 11b.1 **AC5** forbids
     // leaderboards, rankings, gamification and social-performance metrics, and `D10-rowkey`(a)
     // (`2026-09-02-177` cl.3) rules there is ⛔ NO row key. ⭐ Asserted over the ROW's own keys, so a
@@ -530,6 +534,11 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
       'district',
       'drive_closed_at',
       'drive_status',
+      // ⭐ Story 11b.4a — the family memorial's three ids (`-391` item 2; `-411` item 6), derived from the SHAPE: this fixture
+      // carries ⛔ no memorial, and the surface still DECLARES them.
+      'family_memorial_photo',
+      'family_memorial_photo_alt_text',
+      'family_memorial_words',
       'nominee_account_holder_name',
       'pool_canonical_identifier',
       'pool_letter_code',
@@ -557,6 +566,8 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
       'apiUnavailable',
       'contributorTotal',
       'contributors',
+      // ⭐ Story 11b.4a — a THIRD container: its element carries the three memorial ids.
+      'familyMemorial',
       'isCollecting',
       'nomineeAccounts',
       'wasReversedByAppeal',

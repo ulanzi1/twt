@@ -134,7 +134,9 @@ if [ -n "${DATABASE_URL:-}" ]; then
   # ⛔ This is NOT the `test (unit)` oversubscription cap that the AI-10-5 split disposition excluded as a
   # recorded tax — that one is a PERFORMANCE knob and stays at 4 above. These two settings are different
   # things; conflating them is what left this divergence in place. Ruled by BigDev 2026-08-23.
-  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --concurrency=1 --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels"
+  # ⭐ Story 11b.4a — `@twt/public` joins: its built-server render spec (`family-memorial-render.spec.ts`) reads the Pariwar
+  # passport from Postgres, so it is DB-gated; without this filter it would run NOWHERE (the guard above caught it).
+  run "integration-tests" "pnpm db:migrate && pnpm turbo run test --force --concurrency=1 --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels --filter=@twt/public"
 else
   SKIPPED+=("integration-tests — set DATABASE_URL (twt-test-pg on :5433) to enable")
 fi

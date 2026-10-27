@@ -1088,4 +1088,4 @@ jobs:
         # `scripts/ci-local.sh:74` has carried this cap since the Epic-7 oversubscription fix; it was
         # never mirrored here, so the local pre-push mirror could not reproduce the failure. Keep the
         # two invocations in sync — a cap of 4 is NOT equivalent, it merely lowers the failure rate.
-        run: pnpm turbo run test --concurrency=1 --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels
+        run: pnpm turbo run test --concurrency=1 --filter=@twt/domain --filter=@twt/events --filter=@twt/jobs --filter=@twt/api --filter=@twt/queue --filter=@twt/niyamavali-engine --filter=@twt/validity-service --filter=@twt/channels --filter=@twt/public

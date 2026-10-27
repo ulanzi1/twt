@@ -16,6 +16,8 @@ client) and `anonymize.ts` (memorial scrub; now returns `AnonymizeMemberResult`)
 BEHIND main ⇒ rebase at Task 0.1 BEFORE the author-commit.
 Re-locate by FUNCTION, ⛔ by line number.
 
+STATUS NOTE (2026-10-27, second code review S5): the STATUS paragraph below is the v1.1 snapshot, kept as written — MK1–MK12 were
+ANSWERED 2026-10-26 (`-407`; `-408` after it), and the live status is the `Status:` line under the title.
 STATUS: ready-for-dev (v1.1 — validated). MK1–MK12 are PROPOSED — BigDev answers them at Task 0.2; ONE author-commit records them BEFORE
 any code (Task 0.3, [[feedback_governance_commits_precede_implementation]]). ⛔ Panel question (§0 below — the details never leave the
 server, ⛔ new data, ⛔ new reader of the mark).
@@ -34,20 +36,24 @@ Ledger letters — this creation commit took `2026-10-24w` (⛔ used on main, so
 11b.4 precedent; mind the `---` separators when keeping both sides); main's latest is `2026-10-26c`; the validate pass took `2026-10-26d`;
 every later line takes the next free letter OF ITS OWN DATE.
 
-LETTERS: G = found facts (traced at the pin) · MK = build decisions (PROPOSED) · TR = traps.
+LETTERS: G = found facts (traced at the pin) · MK = build decisions (PROPOSED at v1.1; ANSWERED 2026-10-26) · TR = traps.
 -->
 
 # Story 6.36f: A Member Changes or Removes a Nominee Mark Without Retyping the Nominees — the Server Keeps the Details `[SURFACE]`
 
-Status: review
+Status: done
 
-> **Current, 2026-10-27:** all three code-review patches are applied and verified. The code-review
+> **Current, 2026-10-27 (second code review, after v1.5):** status `done` (v1.6 — the review closed). The AC7 device run is DONE (Android `Pixel_9`, fresh
+> build of `b2fdb223` — v1.4) and its findings D1–D4 are fixed (`b543e703` — v1.5); ⛔ iOS / VoiceOver. The second full review's
+> S1–S6 are applied in the working tree (⛔ committed, ⛔ pushed); S7 and R4–R6 stay deferred. ⛔ Go-live approval is claimed.
+
+> *(Superseded the same day by v1.4 / v1.5 and the note above — kept as written:)* **Current, 2026-10-27:** all three code-review patches are applied and verified. The code-review
 > workflow keeps this story `in-progress` while the required AC7 device run and the recorded P2
 > deferrals remain outstanding. Device validation stays deferred under “Review now, device later”;
 > no device completion, go-live approval, commit or push is claimed. The earlier Task 1 pointer below
 > is historical; implementation has already completed.
 
-> ⭐ **Next: Task 1 (contracts + client).** Task 0 is DONE (2026-10-26): MK1–MK12 as recommended, MK9 en + hi final, Decision
+> *(Historical — Tasks 1–5, the reviews and the device run are done; see the Change Log:)* ⭐ **Next: Task 1 (contracts + client).** Task 0 is DONE (2026-10-26): MK1–MK12 as recommended, MK9 en + hi final, Decision
 > `2026-10-26-407` committed alone (`a1053c0b`), the records after it. AC0 is met; code may start.
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
@@ -94,6 +100,7 @@ specified purposes"*) is ⛔ engaged afresh: the copied ciphertext is the same d
 | `-384` Q2 A + `-397` §0 / §2 | `-384`: *"Yes — warn staff about nominee changes too."*; `-397` §2: *"**RECORDS** that `-384` Q2 A's staff warning already covers a link set or ended (a declaration save writes versions)"* | ⭐ TRUSTEE-RATIFIED (`-384`) + AUTHOR-COMMIT (`-397`) — a marks-only save trips the warning exactly as 6.36e's full re-save for a mark change does; ⛔ a new trigger (MK2) |
 | `-396` Q1 A / Q2 A; Not covered | Q1 A *"Yes — the mark counts from the moment the member saves it."*; Q2 A *"Both."* — the marked member is told in the app (in-app only, consistent with `-356`); Not covered: *"any other use of the mark — payout, nominee determination, claim filing, contact, staff screens"* | ⭐ TRUSTEE-RATIFIED — unchanged; Q2 A binds MK8 (the pre-save `form.will_ask*` line, the marked member's in-app ask); Not covered binds MK6 (⛔ staff label, ⛔ ciphertext comparison) |
 | `-397` NE2 / NE5 / NE7 / NE8 / NE11 / NE14 | a link is set *"Only by a declaration save, in the same tx as its versions"*; the 4-a-day meter; the exclusion as of the cut; ⛔ staff-line change; audit by `nominee_link:<id>`; ⛔ other reader (paraphrases, except NE2) | AUTHOR-COMMIT — REUSED; MK2 keeps NE2's *"same tx as its versions"* literally true |
+| `-408` (2026-10-26, row added by the second code review S5) | *"a `new` mark of a member already live on any rank is a carry"* (extends `-397` NE2) | AUTHOR-COMMIT — committed alone as `24f6e175`; MK5's "nothing changed" and MK8's swap (two `new` picks, both carried) rely on it |
 | `-399` call 3 | *"The declarer's OWN `marked[]` rows stay one per version (they join `nomineeHistory[]` by `(rank, versionNo)` …)"* | AUTHOR-COMMIT — MK2 keeps it (a new version per marks-only save) |
 | `-401` | ⛔ screen says that the Trust asks members about a death; a test pins it over the `nominee_link` namespace | AUTHOR-COMMIT — binds MK9's copy |
 | `-235` Y / `-239` (a) / (b) | (a) *"'dated on or after the day of death' by itself enough to treat it as deliberate. That should raise the suspicion. System shouldn't refuse the claim, district admin will act upon suspicion and refuse"*; (b) *"Member's true nominee has to start over and produce original death certificate."* | ⭐ TRUSTEE-RATIFIED — a marks-only version is a member-source version and is classified like one (§0 row 4; MK2 / MK6) |
@@ -253,6 +260,10 @@ Checked edge by edge:
 
 ## ⚖️ Build decisions MK1–MK12 (PROPOSED — BigDev answers at Task 0.2)
 
+> **Answered 2026-10-26** (dated note, second code review S5): *"MK1–MK12 all as recommended"* — Decision `2026-10-26-407`
+> (`a1053c0b`). The any-rank carry MK5 and MK8's swap rely on is Decision `2026-10-26-408` (`24f6e175`). MK8 carries a dated
+> amendment (2026-10-27) for the device-run fixes D1 / D3.
+
 Each carries the recommendation first.
 
 - **MK1 — the request. RECOMMEND (a): a NEW route `POST /api/v1/member/life-events/nominees/marks`** (preHandler `[memberSession,
@@ -382,6 +393,14 @@ Each carries the recommendation first.
   session `nominees.tsx` clears on unmount, and it would need a copy of the inline step-up footer. (c) Detecting untouched slots in the
   full form: an empty slot is ambiguous (unchanged, or not yet typed), and a mixed typed / untouched save is the partly-typed save MK10
   excludes. (d) A "move mark" control: a new copy key and tests for a rare action that two picks already do.
+  **Amended 2026-10-27** (dated note, second code review S6; the device run's D1 / D3, BigDev *"fix all"*, `b543e703`): (i) the
+  marks-mode notice *"Mark removed."* / *"Mark kept."* is a plain `<Text>` SHOWN plus ONE `announceForAccessibility` — ⛔
+  `AnnouncedText key={seq}`: TalkBack re-read its live region at the *Save marks* press, cleared or not (D1); the notice clears when
+  the save starts. (ii) *"The full form is otherwise UNCHANGED"* now excepts the shared control's *Find…* — at least 48 dp, wrapping,
+  its own Text (`noTextWrap`) — in BOTH the form and marks mode (D3: the one-line label was cut). (iii) Code review 2026-10-27 S1–S3:
+  the mode keeps the basis `ranks` it started from; the controls and the entry card are disabled while a save runs; *Change names or
+  numbers instead* re-offers *Continue draft* for a named stored draft. ⛔ A Panel question; ⛔ a new decision-log entry
+  (implementation mechanism under `-407`).
 - **MK9 — the copy. RECOMMEND:** new keys in the `nominee_link` namespace — flat dotted keys, SINGLE-brace tokens (`{name}`; the
   resolver's `TOKEN = /\{(\w+)\}/g`, and `t()` throws on an unsupplied token) — en + hi; parity; a real-`t()` test
   ([[feedback_stub_must_call_not_transcribe]]); the `-401` absence test (`packages/i18n/tests/nominee-link-copy.test.ts`) then covers
@@ -501,6 +520,10 @@ rank's `versionNo`; a swap sends two `new`s; each entry carries its own `rank`. 
 `memorial-screens-render.test.ts` pattern): marks mode renders each rank's label + relationship from `ranks` and its current mark; a 409
 `marks_stale` refetches. RTL `cleanup` and `lib/mmkv` mocked ([[project_mobile_vitest_and_expo_install_traps]]); any list renders its
 empty / error state OUTSIDE the list ([[project_fabric_flatlist_empty_populated_crash]]).
+*Amended 2026-10-27 (second code review S6 — see MK8's dated note):* the marks notice is asserted SPOKEN ONCE and ⛔ a live region
+(the D1 leg), ⛔ through `AnnouncedText`; `nominee-form-link-render.test.ts` stays green with ONE edit — its Button mock reads
+`minH ?? height` (D3's *Find…*) — ⛔ "UNCHANGED". The OTP retry and the `locked_claim_filed` / `link_stale` / failed-reload refusals
+in marks mode now have render legs (S4).
 
 **AC7 — the gates.** `tsc`, ESLint, i18n parity, `pnpm friction:check` green with a `**Story 6.36f disposition (…)**` block in
 `friction-budget.md` committed BEFORE the check (any `apps/mobile/**` change triggers the declaration facet; AC-4 reads COMMITTED history —
@@ -572,7 +595,8 @@ least).
       the device run (fresh build; TalkBack lines); the Debug Log (each new guard's mutation RED); the ledger line; File List.
       *(2026-10-26 — disposition `efe6246d` then friction:check green; ci:local 35 / 36 + the two integration reds run down (Completion
       Notes); Debug Log, File List, ledger `2026-10-26g`. ⚠ The DEVICE RUN is ⛔ done — OWED: BigDev chose "Review now, device later";
-      a go-live item, as 6.36e's was. ⛔ iOS / VoiceOver either.)*
+      a go-live item, as 6.36e's was. ⛔ iOS / VoiceOver either.)* *(2026-10-27 — the device run is DONE on `b2fdb223` (v1.4); its
+      findings D1–D4 fixed in `b543e703` (v1.5). ⛔ iOS / VoiceOver still.)*
 
 ### Review Findings
 
@@ -705,6 +729,122 @@ the pre-patch review; this dated record supplies their subsequent disposition.
   unresolved-work rule. This records remaining AC7/deferral work, not an unfixed R1–R3 patch. No other
   sprint row changes. Changes remain uncommitted in the story worktree.
 
+#### Second full code review — 2026-10-27, `b3b1e8e9..69a99c70` (apps + packages, 33 files, +2,721 / -350)
+
+BigDev chose the WHOLE branch (option B), ⛔ only the unreviewed `b543e703`. Three parallel read-only layers (Blind Hunter on the
+diff alone; Edge Case Hunter with project access; Acceptance Auditor with this file and the load-bearing-invariant checklist); no
+layer failed. Every surviving finding was re-traced by hand at the branch tip. Result: **1 decision-needed, 5 patch, 1 defer,
+12 dismissed**. No code or test changed by this review; ⛔ committed.
+
+- [ ] [Review][Decision] **S1 / P3 — marks mode loses unsaved full-form typing** — Source: blind + edge. The draft is written
+  on every keystroke (`onFormsChange` → `saveDraft`). (a) Type in the full form → *Member marks* → *Change names or numbers
+  instead*: `backToForm()` remounts from `freshForms()` (as MK8 says) but `resumeAvailable` stays `false` (it is set only on
+  mount), so *Continue draft* is ⛔ offered and the next keystroke overwrites the stored draft. (b) An earlier session's unsaved
+  draft is on offer; a marks save's `invalidateAndLeave()` runs `clearDraft` (as MK8 says — "the SAME `invalidateAndLeave()`").
+  Both behaviours follow MK8's text; the loss of typed details is the cost. BigDev's call (engineering/UX — ⛔ a Panel question
+  under §0: nothing a person is shown or owed changes). Options: (1) RECOMMENDED — after `backToForm()` re-offer *Continue
+  draft* when a named draft exists (MK8 unchanged: the form still remounts fresh); leave (b) as MK8 says. (2) (1) + a marks save
+  ⛔ clears the draft (amends MK8's "SAME `invalidateAndLeave()`"). (3) Keep as built; record the cost under MK8.
+  **Resolved 2026-10-27 (BigDev): option 1** ⇒ patch S1 below.
+- [x] [Review][Patch] **S1 / P3 — re-offer *Continue draft* after "Change names or numbers instead"** [apps/mobile/app/(life-events)/nominees.tsx:269]
+  — `backToForm()` sets `resumeAvailable` when a stored draft has a name (the mount effect's test); the form still remounts from
+  `freshForms()` (MK8 unchanged); a marks save still clears the draft (MK8 unchanged). Render leg: type → marks → back ⇒ the
+  *Continue draft* affordance shows and restores the typed slots.
+- [x] [Review][Patch] **S2 / P2 — Find / Remove / Keep stay live while a marks save is in flight** [apps/mobile/app/(life-events)/nominees.tsx:475]
+  — Source: edge (+ blind's dropped-pick line). `NomineeMarkControl` has ⛔ `disabled`/`busy`; R1 disabled only the back-to-form
+  button. (A) Save → Remove the other rank during the request: *"Mark removed."* is SPOKEN, the body sent omits it, the 200
+  says *"Marks saved."* and the screen leaves — a removal the member heard confirmed is silently dropped (checklist family 13(d)
+  REAL GAP). (B) Save → *Find…*: the find screen opens on top and `marksSaved()`'s `router.back()` closes the FIND screen, ⛔
+  the nominees screen, leaving marks mode on a start record the refetch has outdated. Fix: disable the controls while `busy` in
+  marks mode (a prop on the shared control; the full form passes nothing ⇒ unchanged), and announce a pick only when
+  `applyMarksPick` actually applied it (nominees.tsx:146). Render legs with a deferred save promise.
+- [x] [Review][Patch] **S3 / P3 — the marks entry card is tappable during a FULL save, and the marks body reads the LIVE
+  `ranks`** [apps/mobile/app/(life-events)/nominees.tsx:575, :298] — Source: edge + blind. The entry button has ⛔
+  `disabled={busy}` (the reverse of R1). Tap Save on the form, then *Member marks*: `enterMarksMode()` calls `stepUp.reset()`
+  under the in-flight `guard`; a 403 then shows the OTP footer wired to `onVerifyMarksOtp` with `pendingMarks === null` (Verify
+  does nothing); a refusal's `setError` lands on the unrendered form; a `link_stale` refusal refetches `links` (so
+  `buildMarksBody(links.data.ranks, marks)` pairs FRESH `versionNo`s with the OLD start record — the MK3 "removed unseen" guard
+  bypassed); a 200 leaves the screen mid-edit. Today this is the only path that refreshes `links.data` under marks mode
+  (`refetchOnWindowFocus: false`, one consumer, `gcTime: 0` with the observer mounted). Fix: `disabled={busy}` on the entry
+  card, and snapshot the basis `ranks` with the marks in `startMarks()` — render and build the body from that snapshot (MK3's
+  "the `versionNo` the phone saw").
+- [x] [Review][Patch] **S4 / P3 — marks mode's OTP retry and two of its refusals have no test** [apps/mobile/tests/unit/nominee-marks-mode-render.test.ts]
+  — Source: auditor; AC6 (*"the step-up guard and retry; the refusal copy"*). The harness always mocks `needsOtp: false` /
+  `verifyAndRetry: fn => fn()`, so `onVerifyMarksOtp` and the footer's `marksMode ? onVerifyMarksOtp : onVerifyOtp` switch
+  never run — swapping the switch leaves every test green. `locked_claim_filed` (→ the locked state), `link_stale` (→ refetch +
+  `save.stale`) and a failed reload (→ `save.stale_not_reloaded`) in marks mode are untested. Add the legs; each RED against a
+  mutant.
+- [x] [Review][Patch] **S5 / P2 — the story's status pointers contradict its record; `-408` is never named** [_bmad-output/implementation-artifacts/6-36f-nominee-mark-only-save.md]
+  — Source: auditor (+ this session's own check). Checklist family 10 REAL GAP (triaged at AC severity). The "Current,
+  2026-10-27" banner still says `in-progress`, device validation "stays deferred", "no device completion … commit or push is
+  claimed" — v1.4 / v1.5 record the device run DONE and the status `review`; *"⭐ Next: Task 1"*; the header's "STATUS:
+  ready-for-dev … MK1–MK12 are PROPOSED" and the MK heading's "(PROPOSED …)"; Task 5's "The DEVICE RUN is ⛔ done — OWED"; the
+  Debug Log's "⛔ RED leg … re-read ⛔ written" (superseded by R2's live leg). Separately, the Completion Note *"`-407` does ⛔
+  restate the any-rank carry, so that item's proposed author-commit stays open"* was closed by `-408` (`24f6e175`; deferred-work
+  says "Closed by `-408`"), on which MK5 / MK8's swap rely — the story never names `-408`. Fix: dated notes forward on each stale
+  pointer (⛔ rewrite the history), a `-408` reference + Change Log row.
+- [x] [Review][Patch] **S6 / P3 — the device-run fixes D1 / D3 depart from MK8 / AC6 as written, unamended** [_bmad-output/implementation-artifacts/6-36f-nominee-mark-only-save.md]
+  — Source: auditor. `-407`: *"the story's text is the record"*. (a) MK8 / AC6 require *"Mark removed."* / *"Mark kept."* through
+  `AnnouncedText key={seq}`; the code now uses a plain `<Text>` + one `announceForAccessibility` (D1; the D1 leg asserts ⛔ live
+  region). (b) MK8 *"The full form is otherwise UNCHANGED"* / AC6 `nominee-form-link-render.test.ts` *"UNCHANGED"*: D3 changed the
+  shared control's *Find…* (own Text, `noTextWrap`, `minH={48}`), so the full form's changed too, and that test's Button mock was
+  edited. Both proven on the device under BigDev's *"fix all"*. Fix: a dated amendment on MK8 and AC6 citing D1 / D3 and
+  `b543e703` (an implementation mechanism — ⛔ a Panel question, ⛔ a new decision-log entry).
+- [x] [Review][Defer] **S7 / P3 — a save's `router.back()` closes whatever screen is on top** [apps/mobile/app/(life-events)/nominees.tsx:185] — deferred,
+  pre-existing. `invalidateAndLeave()` calls `router.back()` with ⛔ mounted/focused check; hardware back or swipe-back during
+  an in-flight save (full OR marks) then pops the screen BELOW. The full form's *Find…* is also live while `busy`. Inherited from
+  6.20 / 6.36e; S2 closes the marks-mode control path only.
+
+**Dismissed (12), with the reason:** the links read's `ranks` on a `.strict()` contract breaks pre-6.36f installs (accepted in
+MK10; ⛔ in production) · the marker event's `from_state`/`to_state` read before the row-lock wait (the reducer treats
+`nominees_declared` as identity; the declare has the same READ COMMITTED window; terminal is re-read) · the `relationship` cast and
+the new `has no relationship` throw (the status read uses the same cast; 0119's kind-coherence CHECK) · the OTP retry sends the
+frozen body (R4, deferred) · marks mode falling back to the form with the ref set (`links.data` cannot go undefined while the
+observer is mounted, short of sign-out) · a deadlock with the erasure scrub / staff correction (the scrub locks
+`member_nominees` before versions, the same order; a correction needs a claim, which `guardDeclare` refuses) · the new audit
+literal needs a migration (the sink is a structured log, ⛔ DB enum) · a no-op `new` re-pick spends a lookup unit (recorded in
+MK5) · a lost-response retry shows `marks_stale` (recorded in MK5) · four "weak" assertions (the strict-parse leg fails if the
+parse goes lax; the source-order test is by design; R2's live leg supersedes the `pg_locks` one; the 400 leg asserts no version)
+· AC5 name/id absence by construction (the `carried` audit gap already disclosed) · Task 3's "UNCHANGED" vs AC1 (explained in the
+Debug Log).
+
+**Checklist verdicts (touched families):** 1 covered-by-test (`guardDeclare` legs; R2 live re-read) · 2 covered-by-test /
+construction (charge-race leg; R2; D3 lock) · 3 covered-by-test (R3) · 4 covered-by-test (AC5 event-keys leg) · 5
+covered-by-construction (⛔ migration; the split assertion tested) · 6 covered-by-test (field-picked `ranks`; AC3 copy; AC4
+deep-equal) · 8 covered-by-test (`marks_saved`), R6 deferred · 9 covered-by-construction · **10 REAL GAP (S5)** · 11
+covered-by-construction · 12 covered-by-test (R3; stale / extra-rank legs) · **13 REAL GAP (S2 A)**; R5 remains deferred.
+
+#### Second review — patches applied and verified, 2026-10-27 (BigDev: S1 *"1"*; the patches *"1"* — apply every patch)
+
+- **Code (S1–S3):** `nominees.tsx` — `hasNamedDraft()` shared by the mount effect and `backToForm()`; the basis `ranks` snapshotted in
+  `startMarks()` (state + a ref for the memoized focus effect) and used for the blocks and `buildMarksBody`; `disabled={busy}` on the
+  entry card and on each marks-mode `NomineeMarkControl`; a pick for a rank outside the basis is dropped ⛔ spoken.
+  `NomineeMarkControl.tsx` — an optional `disabled` (every button + `accessibilityState`); the full form passes ⛔ it.
+- **Tests (S1–S4):** `nominee-marks-mode-render.test.ts` — the REAL `useStepUpGate` (its `stepUpRequest` / `stepUpVerify` mocked), an
+  in-memory draft store (`clearDraft` deletes), a *Continue draft* affordance; eleven new legs: S1 ×3 (re-offer and restore; ⛔ offer with
+  ⛔ named draft; a marks save still clears the draft), S2 ×3 (controls disabled in flight — the body ⛔ carries the in-flight removal and
+  ⛔ find screen opens; the controls return after a refusal; a dropped pick ⛔ spoken), S3 ×2 (entry card disabled during a full save;
+  the started basis survives a links refetch), S4 ×3 (OTP Verify re-sends the SAME marks body, ⛔ the full save; `locked_claim_filed` ⇒
+  the locked state; `link_stale` ⇒ reload + `save.stale`, a failed reload ⇒ `save.stale_not_reloaded` with the change kept).
+- **Mutations — each RED, each restored:** M1 ⛔ `setResumeAvailable(hasNamedDraft())` in `backToForm`; M2 ⛔ `disabled={busy}` on the
+  marks controls; M3 ⛔ the basis check on a pick; M4 ⛔ `disabled={busy}` on the entry card; M5 body + blocks from the live
+  `links.data.ranks`; M6 the footer's Verify wired to `onVerifyOtp`.
+- **Gates:** `apps/mobile` vitest 100 files / 2,060 (2,049 + 11); `tsc --noEmit` and ESLint on the touched files exit 0; `pnpm
+  friction:check` green (the 6.36f disposition already committed); `git diff --check` clean; ⛔ invisible characters. ⛔ `ci:local` re-run
+  (an `apps/mobile`-only delta, the `-27b` precedent). ⛔ Device run for S1–S3.
+- **Fix-diff review** (one read-only adversarial layer with project access): ⛔ P1, ⛔ new defect. Its P2 — while the step-up code prompt
+  shows, the controls are live again and *Verify* re-sends the first press's body — IS the deferred R4 (BigDev's recorded scope; ⛔
+  reopened); S2's header comment was overclaiming and now says so. Its P3s: the test draft store ⛔ modelled a clear (fixed — `clearDraft`
+  deletes, plus the "marks save clears the draft" leg); S1's comment overclaimed (fixed — typing BEFORE tapping *Continue draft* still
+  replaces the draft, as on first load); ⚠ un-attested — the *Continue draft* banner's polite live region now reappears after every
+  return from marks mode for a member who typed a name, and TalkBack may re-read it on a later press (the D1 behaviour): a device check
+  is OWED, carried as a risk ([[feedback_record_unattested_no_backfill]]), ⛔ claimed.
+- **Records (S5, S6):** dated notes forward — the status comment, both banners, the MK heading (answered; `-407` / `-408`), a `-408` row
+  in the rulings table, Task 5's device note, the Debug Log's RED-leg line, the `-407` Completion Note; MK8 and AC6 amended for D1 / D3
+  (+ S1–S3). ⛔ History rewritten.
+- **Status:** `review` → `done` (every decision and patch resolved; S7 and R4–R6 deferred; ⛔ HIGH/MEDIUM open). ⛔ Committed, ⛔ pushed;
+  ledger `2026-10-27c`. `done` ≠ landed, ≠ live.
+
 ## Dev Notes
 
 ### Current state of the code this story changes (traced at `0e9b261d`)
@@ -815,7 +955,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36f`, 2026-10-26, in the 
   member who may ⛔ find and has ⛔ mark — each RED.
 - ⚠ **One guard with ⛔ RED leg:** the lifecycle-state RE-READ inside `checkMarksBasis` (MK2 — an erasure that does ⛔ take D3 may commit
   while the save waits on the projection's row lock). `guardDeclare` refuses a terminal member first, so only a two-connection race
-  reaches it; ⛔ written. Recorded, ⛔ claimed tested.
+  reaches it; ⛔ written. Recorded, ⛔ claimed tested. *(2026-10-27 — superseded: the first review's R2 added the two-connection
+  leg; see Review Findings R2.)*
 - **A fixture flake found and fixed (⛔ a code defect):** the MK11 leg's hand-seeded correction called `clock_timestamp()` twice, so
   `effective_at` could land microseconds after `recorded_at` and trip `member_nominee_versions_effective_not_after_recorded_check`
   (failed once in a combined run, passed 3 + 3 + 5 times alone). Fixed with one instant (`(SELECT clock_timestamp() AS at) c`).
@@ -845,7 +986,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36f`, 2026-10-26, in the 
 - 2026-10-26 — Tasks 0.3 + 0.4 DONE: Decision `2026-10-26-407` committed ALONE as `a1053c0b` (MK1–MK12 + MK9; supersedes in part `-241`
   D2 for the marks-only save only); the records commit follows it (epics dated note; ten dated lines + a new two-item section in
   `deferred-work.md` — the `-407` text does ⛔ restate the any-rank carry, so that item's proposed author-commit stays open; the sprint
-  row note; ledger `2026-10-26e`). AC0 met.
+  row note; ledger `2026-10-26e`). AC0 met. *(2026-10-27 — that item was CLOSED by Decision `2026-10-26-408`, committed alone as
+  `24f6e175`, records `e761099d`, ledger `2026-10-26f`.)*
 - 2026-10-26 — **DEV (`bmad-dev-story 6.36f`), Tasks 1–5.** Row `ready-for-dev` → `in-progress` (Task 1's commit). What was BUILT:
   - **Task 1 (`6cc8e8c9`) — contracts + client.** `NomineeMarksSaveRequest` (`{ marks: { rank, versionNo, memberLink | null }[] }`, 1–2,
     ranks unique by `superRefine`, every object `.strict()` — a name / relationship / mobile / address / split key is refused);
@@ -1026,6 +1168,13 @@ Device-run fixes D1–D4 (2026-10-27, `b543e703`):
 - `apps/mobile/tests/unit/nominee-form-link-render.test.ts` — the mock reads `minH ?? height`
 - `apps/mobile/tests/unit/life-events-index-title.test.ts` — NEW (D4)
 
+Second code review S1–S6 (2026-10-27, ⛔ committed):
+
+- `apps/mobile/app/(life-events)/nominees.tsx` — `hasNamedDraft()`; the snapshotted basis; `disabled={busy}` on the entry card and the marks controls
+- `apps/mobile/components/life-events/NomineeMarkControl.tsx` — the optional `disabled`
+- `apps/mobile/tests/unit/nominee-marks-mode-render.test.ts` — the real step-up gate, the draft-store map, eleven S1–S4 legs
+- `_bmad-output/implementation-artifacts/deferred-work.md` — S7; this story file; `sprint-status.yaml` (the row + ledger `2026-10-27c`)
+
 AC7 device run (2026-10-27): this story file (Completion Notes, Change Log, Status) and `sprint-status.yaml` (the row + ledger
 `2026-10-27a`). ⛔ Code change — the seed spec was temporary and deleted; the worktree's gitignored `apps/api/.env` /
 `apps/mobile/.env` and `apps/mobile/android/` (prebuild output) are local only.
@@ -1040,3 +1189,4 @@ AC7 device run (2026-10-27): this story file (Completion Notes, Change Log, Stat
 | 2026-10-27 | 1.3 | Full code review: 0 decisions, 3 patches applied (R1 busy mode switch; R2 live post-row-lock terminal race; R3 actor/tenant/ownership denials), 3 inherited deferrals retained, 3 candidates dismissed. Final 77 mobile + 23 live API tests, touched-package typecheck/lint and whitespace checks passed; R1/R2 mutation checks failed as required and guards restored. Three parallel fix-diff review layers found no actionable issue. AC7 device work remains owed; story/sprint `review` → `in-progress` under the unresolved-work rule. Uncommitted, not pushed. Ledger `2026-10-27`. |
 | 2026-10-27 | 1.4 | AC7 DEVICE RUN DONE (`bmad-dev-story 6.36f`; BigDev: *"Run device now"*): a fresh Android build of `b2fdb223` on `Pixel_9`, the real API on a disposable `twt_6_36f_device`; add (pre-save line, step-up), swap (two carries) and remove each saved and checked in the DB (ciphertexts byte-identical, counter 4, three `marks_saved`); TalkBack *"Mark removed."* / *"Marks saved."*; Hindi renders. Four findings recorded, ⛔ patched (a repeated *"Mark removed."* at save; the pick notice above rank 1; the pre-existing truncated *Find…* label; the pre-existing *"index"* header). A setup slip wrote one junk signup into `:5432` `twt_dev` (recorded, ⛔ deleted). `ci:local` on `b2fdb223` 35 / 36 + the 10.23 gate alone 3 / 3 + `@twt/api` live alone 2,313. Status `in-progress` → `review`; ledger `2026-10-27a`. |
 | 2026-10-27 | 1.5 | DEVICE-RUN FINDINGS D1–D4 FIXED (BigDev: *"fix all, drop the throwaway databases"*), `b543e703`: one-shot marks notices (⛔ live region — the first fix, clearing at save, was disproved on the device), the marks-mode pick spoken only, *Find…* wraps (own Text; `ellipsis={false}` disproved on the device), the Life events header title. Each test RED first, each mutant RED, each re-checked on the emulator. Mobile 2,049; tsc / ESLint / friction:check green. Throwaway databases dropped. `(claim)` header seen, ⛔ fixed. Status stays `review`; ledger `2026-10-27b`. |
+| 2026-10-27 | 1.6 | SECOND FULL CODE REVIEW (`bmad-code-review 6.36f`, BigDev: the WHOLE branch, option B), `b3b1e8e9..69a99c70` apps + packages: 1 decision (S1, BigDev *"1"* — re-offer *Continue draft*), 6 patches applied (S1 draft re-offer; S2 marks controls disabled while saving + a dropped pick ⛔ spoken; S3 entry card disabled during a full save + the started basis kept; S4 OTP-retry / locked / `link_stale` / failed-reload legs; S5 stale status pointers + `-408`; S6 MK8 / AC6 amended for D1 / D3), 1 deferred (S7), 12 dismissed. Mobile 2,060; each fix's mutant RED; tsc / ESLint / friction:check green. Fix-diff review: ⛔ new defect (its P2 is R4, kept deferred); a TalkBack re-check of the *Continue draft* banner is OWED. Status `review` → `done`. ⛔ Committed, ⛔ pushed. Ledger `2026-10-27c`. |

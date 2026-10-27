@@ -4,6 +4,25 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-36f-nominee-mark-only-save.md — second full review (2026-10-27)
+
+Full review of `b3b1e8e9..69a99c70` (apps + packages). One finding deferred, pre-existing, and one un-attested risk from the fix-diff
+review; the patch and decision items (S1–S6) are in the story's Review Findings, applied 2026-10-27. Neither item below is closed.
+
+- **S7 / P3 — a nominee save's `router.back()` closes whatever screen is on top**
+  [apps/mobile/app/(life-events)/nominees.tsx `invalidateAndLeave`]. `router.back()` runs with no mounted / focused check, so a
+  hardware back or swipe-back while a save (full OR marks) is in flight makes the resolved save pop the screen BELOW the nominees
+  screen. The full form's *Find…* is also live while `busy`, so a pick screen opened mid-save is the one closed. Inherited from
+  6.20 / 6.36e; the story's S2 patch closes only the marks-mode control path. Revisit with a shared "leave once, only if still
+  focused" helper for the Life Events save screens.
+- **Un-attested risk (fix-diff review) — the *Continue draft* banner re-read by TalkBack**
+  [apps/mobile/components/life-events/SaveAndResumeAffordance.tsx]. S1 now shows the banner (a polite live region) after every
+  return from marks mode for a member who typed a name. The 6.36f device run's D1 showed TalkBack re-reading a live region at a later
+  press. ⛔ Checked on a device; ⛔ claimed fine. Check with TalkBack on the next Android run; if it re-reads, give the banner the D1
+  treatment (shown + one `announceForAccessibility`).
+
+---
+
 ## Deferred from: code review of 6-36f-nominee-mark-only-save.md (2026-10-26)
 
 Full review of `b3b1e8e9..bf8312ce`. Three new patch items are recorded in that story's Review Findings;

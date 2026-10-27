@@ -17,7 +17,7 @@ This story renders ⛔ no deceased name (Trap 14), so it never calls the name ch
 ⚠ No `file:NNN` pointer in this file points into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (all
 newest-first). Cite those by decision id / clause / item / row key only.
 ⭐ NUMBERS at the pin (re-check ALL of them at Task 0.1 across every branch AND every worktree):
-  next decision id `-411` (HEAD `-410` on main) · next migration `0186` (HEAD `0185_contribution-suppression-batch-indexes`) ·
+  next decision id `-412` (HEAD `-411` on this branch — `-411` is the PANEL'S RULING on this story's routing note; `-410` on main) · next migration `0186` (HEAD `0185_contribution-suppression-batch-indexes`) ·
   `PERMISSION_CATALOG_VERSION` `53` (69 keys) · next ADR `ADR-0043` (HEAD `ADR-0042`, none higher on any ref; ADR index
   Total 154) · launch-gate: this story CLOSES Row 41 (b) and ADDS criteria (l)–(q) to Row 41 (no new row; (a)–(k) are taken) ·
   ledger: this story's creation entry is `2026-10-27i`; main's `-27j` cites the creation commit by its PRE-rebase SHA
@@ -65,15 +65,15 @@ and ⛔ never asks again.
 
 | # | Question (stripped of citations) | §0 verdict | Where it goes |
 |---|---|---|---|
-| G1 | Build the render before Story 11b.5's components exist? | **Ours** (sequencing; nobody sees a difference) | MP1 → `-411` |
+| G1 | Build the render before Story 11b.5's components exist? | **Ours** (sequencing; nobody sees a difference) | MP1 → `-412` |
 | G2 | When the nominee who sent it has died, cannot be reached, or has been replaced, who can have the memorial taken down? | **Panel's** — what the Trust owes a family | **T1** (told: `-395` answers the question `-393` left open with what (ii) did ⛔ not choose — measure 6) then **PQ1**; built as `-395` literally until ruled |
 | G3 | The family's words may name the member who died, and the photo shows their face — but no drive page shows the member's name today. Do the words still appear? | **Panel's** — what the Trust discloses about a person | **PQ2**; built as `-391` Q2 A ("as approved") until ruled |
-| G4 | Does the public page mark where the Trust left a part out? | **Panel's to confirm** — disclosure | **PC1**; built as MP3 (marked) |
+| G4 | Does the public page mark where the Trust left a part out? | **Panel's to confirm** — disclosure | **PC1** — ⚖️ RULED **B** (`-411` item 3): ⛔ no marker — MP3 (b) |
 | G5 | After a take-down, may the nominee send a new version? And when the Trust approved the memorial exactly as sent, a "smaller fix" means taking it down first | **Panel's to confirm** — what is owed; the second half narrows `-393` M4 in part | **PC2**; built as MP9 (yes — 11b.4 MA13: after a withdrawal the family may send again; `-392` Not covered) and MP8 (split by shape) |
 | G6 | When do the 7 days start; who gets the email when the approver has left? | Split: the clock's start **MATCHES** `-392` item 4 (*"the family's request reaching the helpline"*) under MP14 (b) — **ours**, ⛔ not asked; who is told when an approver has left is **Panel's to confirm** (**PC3**); the email's mechanics are **ours** (MP10/MP11) | PC3 + MP10/MP11/MP14 |
-| G7 | How is a part left out *after* publication (`-393` M4's "smaller fix")? | **Ours** — `-393` Not covered: *"the mechanism is the build's"* | MP8 → `-411` |
-| G8 | How does the operator know the caller is the nominee? | **Ours** — `-395` Not covered: *"the build's"* | MP7 → `-411` |
-| G9 | How the photo is served, resized and cleaned | **Ours** | MP4/MP5 → `-411` |
+| G7 | How is a part left out *after* publication (`-393` M4's "smaller fix")? | **Ours** — `-393` Not covered: *"the mechanism is the build's"* | MP8 → `-412` |
+| G8 | How does the operator know the caller is the nominee? | **Ours** — `-395` Not covered: *"the build's"* | MP7 → `-412` |
+| G9 | How the photo is served, resized and cleaned | **Ours** | MP4/MP5 → `-412` |
 | G10 | The approver's email address is staff identity data | **An ADR** — ADR-0040 admits exactly two read paths, *"a third is a new ADR"* | **ADR-0043** (Task 1) |
 | G11 | The family's description of the photo (its alt text) appears with it on the public page | **Panel's to confirm** — `-391` item 2 rules *"The words and photo"*; the v3 permission text names *"these words, and the photo if you added one"*; `RULED_TIER1_PUBLIC_EXCEPTIONS`: *"ADDING TO THIS LIST IS A RULING"* | **PC4**; built as admitted (AC2) until ruled — dark until Row 41 |
 | G12 | A member must see MORE than the public (`-189` cl.3, TR) — does that reach the family's words, which the member app does ⛔ not show? | **Panel's to confirm** — `-195` cl.1 binds it to *"the drive data class — the nominee/bank fields and the drive record"*, and `familyMemorial` is served inside `drive` | **PC5**; built on the exclusion reading (Trap 17) until ruled |
@@ -82,11 +82,25 @@ and ⛔ never asks again.
 ⛔ None of it blocks the BUILD; all of it is a go-live criterion on Row 41 (AC19). It discharges Row 41 (e) (*"`-395` item 3
 shown to the Panel"*) only once sent **and** only because it shows item 3 itself (T1) — PQ1 alone is item 3's open edge, ⛔ not item 3.
 
+> ## ✅ THE PANEL RULED — `2026-10-27-411` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti, relayed by BigDev 2026-10-27)
+> *"by DR and KB / PQ1 - A / PQ2 - A / PC1 - B / PC2 - A / PC3 - A / PC4 - A / PC5 -A"* — the note was SENT and answered;
+> ⛔ no reply to T1 is recorded (shown ⇒ Row 41 (e) MET).
+> - **PQ1 A** — only the nominee who sent it; ⛔ no one else if that nominee has died or been replaced (built — MP6–MP8).
+> - **PQ2 A** — words and photo as approved, though the page names ⛔ no member yet (built).
+> - **PC1 B** — ⚠⚠ **a part the Trust left out is ⛔ NOT marked on the public page; the words on either side are joined.** This
+>   REVERSES MP3 (a): the wire carries ⛔ no `omitted` segment, the page renders ⛔ no `render.omitted` copy, and `apps/public` no
+>   longer needs `@twt/ui` (MP3, Traps 3, 5, 8, 16; AC2, AC3; Tasks 4.1, 5.2, 6.1, 6.2, 6.5 — all rewritten below). ⚠ The family's
+>   outcome sentence *"They will appear on the member's Sahyog Vivran page like this."* (shown above a rendering WITH the marks)
+>   becomes inaccurate ⇒ AC8 / Task 9.1 / Question 10 (wording owed by BigDev).
+> - **PC2 A, PC3 A, PC4 A, PC5 A** — built as described (write again; ⛔ no substitute recipient; the alt text public on `-411` item 6;
+>   the member-sees-more floor does ⛔ not reach the family's words, `-411` item 7).
+> ⇒ Every "PQx / PCx asks the Panel" below is now ANSWERED by `-411`; this story's own author-commit is `-412`.
+
 **STOP conditions — check at Task 0.1; any one ⇒ stop and ask BigDev:**
 1. `origin/main` moved past `4e57fa42` and touched any file in *What already EXISTS* ⇒ re-read it before trusting this file
    (fired and disposed at v0.4 for `bab88287..4e57fa42` — header).
 2. A decision newer than `-410` touches `memorial`, `-391`…`-398`, `-400`, `-405`, `sahyog-vivran`, the matrix, or `helpline_operator`.
-3. Migration `0186` or decision `-411` or `ADR-0043` is taken on any branch or worktree ⇒ re-number everywhere in this file.
+3. Migration `0186` or decision `-412` or `ADR-0043` is taken on any branch or worktree ⇒ re-number everywhere in this file.
 4. Story 11b.5 has moved off `backlog` ⇒ MP1 re-opens (its components may now exist).
 5. The 11b.4 permission text (`MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION`) moved past `2026-10-25.v3-pending-hi-review`, or
    any version's text no longer says *"on this member's Sahyog Vivran page, which anyone with its link can read"* ⇒ the
@@ -114,8 +128,8 @@ and the approver is told.
 
 This story introduces **two** predicates and changes **one** that decide what a family gets. In the family's terms:
 
-1. **Publication.** *"Once the Trust approves your memorial, your words — less any part the Trust left out, which is marked
-   — and your photo appear on your member's Sahyog Vivran page for anyone who has its link, and stay there until a newer
+1. **Publication.** *"Once the Trust approves your memorial, your words — less any part the Trust left out, with ⛔ no mark where it was
+   (`-411` item 3) — and your photo appear on your member's Sahyog Vivran page for anyone who has its link, and stay there until a newer
    version you send is approved, your nominee asks the helpline to take it down, or the Trust withdraws its approval on one
    of its four grounds. The Trust can also switch memorials off for a time, and if your member's data is erased the memorial
    goes with it."*
@@ -151,8 +165,7 @@ This story introduces **two** predicates and changes **one** that decide what a 
    - ⚠ This amends the 11b.4 sentence recorded at Row 41 (j) (*"once the Trust has approved your memorial exactly as you sent
      it, you cannot send another version in the app; the helpline is how you ask for a change"*) — after this story the
      helpline route can end in a new version. Task 1.4 adds a dated annotation to Row 41 (j).
-   - **Checked against the Niyamavali:** silent on re-submission of family content. Result: **no conflict**. ⇒ **PC2** asks
-     the Panel to confirm.
+   - **Checked against the Niyamavali:** silent on re-submission of family content. Result: **no conflict**. ⇒ ⚖️ confirmed by the Panel — `-411` item 4 (PC2 A).
 
 Scope: ⛔ no contribution, assignment, claim or payout predicate is read or written. The family's own predicates (above) are
 in scope per the 11b.4 / Row 41 (j) precedent.
@@ -220,8 +233,8 @@ exists at all — Infra row — so every request is "uncached" until Row 41 (p) 
 
 ### Trap 3 — ⚠ The left-out text and its reason must ⛔ never leave the API
 `reconstructMemorial` keeps the `reason` on every `omitted` segment (for the family's screen, 11b.4 R10). ⇒ ⭐ the API cuts the
-spans and serialises segments as `{kind:'text',text} | {kind:'omitted'}` only; the DTO is `.strict()` so a `reason` or
-`key` key is a parse failure, and a test asserts no left-out substring appears anywhere in the response body — on a fixture
+spans and serialises ONLY joined strings (MP3 (b) — ⛔ no `omitted` segment, so ⛔ not even the POSITION of a cut leaves the API);
+the DTO is `.strict()` so a `reason`, `key`, `kind`, `segments` or `omitted` key is a parse failure, and a test asserts no left-out substring appears anywhere in the response body — on a fixture
 that **holds** an omission (in the words **and** the alt text), with the kept text asserted **present** first (else the
 absence proves nothing). **→ Task 5.2, 5.4.**
 
@@ -248,14 +261,14 @@ Adding `familyMemorial` and the three matrix ids breaks, **by design**:
 5. `packages/contracts/tests/public-pages.test.ts` — *"carries EXACTLY the six ruled Tier-1 public exceptions"* (an identity
    array of `surface.field@decision`; ⇒ nine); its `escalation_count` stays 1;
 6. `apps/public/tests/sahyog-vivran-copy.test.ts` — `KEYS` (*"EVERY key `[driveToken].astro` resolves"*) gains
-   `family_memorial.heading` (and the component's `memorial:render.omitted`, if the test scans components);
+   `family_memorial.heading` (⛔ no `memorial:render.omitted` — PC1 B);
 7. `apps/public/src/lib/surface-fields.ts` — a source map, ⛔ not a test: `SAHYOG_VIVRAN_FIELD_IDS`; `deriveFieldIds` **throws**
    on an unmapped key.
 
 ⚠⚠ And the guard `isSahyogVivranResponse` (`sahyog-vivran.server.ts`) does ⛔ **not** reject unknown keys — an unvalidated
 `familyMemorial` would reach the render unchecked — and it `return true`s early at `if (rev === null) return true;` (the
 `appealReversal` block), so any check placed after that block is SKIPPED whenever `appealReversal` is null (the usual case). ⇒ ⭐
-validate `familyMemorial` with literal sets (`kind ∈ {'text','omitted'}`, arrays of paragraphs, `photo` null-or-object) placed
+validate `familyMemorial` exactly (`words` an array of strings; `photo` null or `{ altText: string }`; ⛔ no other key) placed
 **before** the `appealReversal` block; a test feeds a malformed `familyMemorial` with `appealReversal: null` and expects
 `bad_response`. ⭐ Update each pin as an identity array, ⛔ never a count. ⚠ Also pinned: the eleven CHECK names in
 `packages/domain/tests/integration/rls/memorial-policy-regression.spec.ts` (0187 adds two — Trap 7's pair; Task 2.3), the `memorialState` and
@@ -273,14 +286,14 @@ and ⛔ no others"*, Trustee-ratified). ⇒ ⭐ a `helpline` withdrawal carries 
 `family_asked` is ⛔ **not minted**. The withdrawal points at its request instead (`takedown_request_id`, MP6). ⚠ The sprint
 ledger's 2026-10-23 line *"`family_asked` + merit note"* is STALE (`-393` superseded "on merit"). ⚠ This **departs from 11b.4
 MA18's parts list** (*"a reason value (`family_asked`, minted then) and an optional Tier-1 note"*; *"for a smaller fix, the operator
-withdraws the approval"*) — `-411` names the departure; ⛔ never drop 11b.4 MA18's text silently. (`-398` item 18, MA18 (a), rules only
+withdraws the approval"*) — `-412` names the departure; ⛔ never drop 11b.4 MA18's text silently. (`-398` item 18, MA18 (a), rules only
 *"the helpline operator's take-down is 11b.4a's, ⛔ not built here; `family_asked` is ⛔ not minted; `memorial_withdrawal_actor`
 stays `family · trust`"* — the parts list is 11b.4's proposal, ⛔ not ruled text.) ⚠ A `helpline` row also writes `internal_note_ciphertext` (a Tier-1,
 UPDATE-granted column on `memorial_withdrawals`) as **NULL** — a CHECK in `0187`. **→ Task 1.1, 2.2.**
 
 ### Trap 8 — ⚠ HTML is ⛔ not React Native
 HTML collapses the spaces and single newlines `<Text>` keeps ⇒ ⭐ `white-space: pre-wrap` on each paragraph (11b.4 AC11).
-⛔ Never `set:html`; Astro `{}` interpolation only. ⭐ `isolateMemorialBidi` on each text segment; `dir="auto"` per paragraph;
+⛔ Never `set:html`; Astro `{}` interpolation only. ⭐ `isolateMemorialBidi` is applied by the API to each kept segment BEFORE the join (MP3 (b)) — the page renders the finished string; `dir="auto"` per paragraph;
 ⛔ no `lang` attribute on the family's text (its language is ⛔ not recorded — `authorisation_locale` is the permission's).
 **→ Task 6.2, 6.5.**
 
@@ -343,7 +356,10 @@ the derivation (Trap 18), the mobile `outcome.tsx` copy, the admin display, and 
 `helpline` row would silently read *"The Trust withdrew its approval."* and ⛔ nothing fails to compile — make it a total map.
 The same file's `decidedDateLabel` and `i18n-en.ts`'s `memorial.state.*` map also need `taken_down`. **→ Task 3.0.**
 
-### Trap 16 — ⚠ `@twt/ui` is only a devDependency of `apps/api` — and a plain dependency CRASHES `apps/public`'s image
+### Trap 16 — ⚠ `@twt/ui` is only a devDependency of `apps/api` — and (were it ever added) a plain dependency CRASHES `apps/public`'s image
+⭐ **After `-411` item 3 (PC1 B), `apps/public` does ⛔ NOT need `@twt/ui`**: the API sends finished strings, so the page needs neither
+`isolateMemorialBidi` nor `render.omitted` ⇒ ⛔ do not add it (the `noExternal` warning below stays for whichever later story does —
+11b.5).
 The public handler calls `reconstructMemorial` at runtime ⇒ ⭐ move `@twt/ui` to `apps/api`'s `dependencies`, and add it to
 `apps/public` (11b.4 deferred item (11), epics C-1: *"`apps/public` adds `@twt/ui` as a dependency; `@twt/ui`'s dependency list
 stays exactly `@twt/contracts`"*). ⚠⚠ In `apps/public` that is ⛔ not enough: `astro.config.mjs` bundles workspace packages via
@@ -364,12 +380,11 @@ content is a different data class (epics 11b.6: *"a different data class on a di
 does ⛔ not reach it. ⚠ That reading is THIN on one point: `-195` cl.1 bounded `-189` cl.3 as *"a DATA-CLASS-SPECIFIC INVARIANT,
 ⛔ NOT a universal rule over every surface pair ⇒ it binds the drive data class — the nominee/bank fields and the drive record"*,
 and `familyMemorial` is served INSIDE `drive` (AC1) — and the floor test's own failure text reads *"the member now sees LESS than
-the public on the drive data class"*. ⇒ ⭐ the build proceeds on the exclusion reading (dark until Row 41 (m)) and **PC5** asks the
-Panel whether a family-authored field served inside `drive` falls within *"the drive record"*; `-411` records the reading.
-(Alternative: move `familyMemorial` to a top-level sibling of `drive` — Question 4.)
+the public on the drive data class"*. ⇒ ⚖️ **RULED by `2026-10-27-411` item 7 (PC5 A)**: the floor does ⛔ not reach the family's words, although they are served inside
+`drive`. (Question 4 kept the field inside `drive`.)
 **How the test records it** — ⚠ ⛔ NOT the appeal-lineage form: those `[]` rows are declared *"a GAP — not an exclusion"*
 (`declaredGaps`, an exact set of three) — mapping the memorial ids that way would record a `-189` shortfall. ⇒ ⭐ a separate,
-asserted exclusion block (e.g. `DATA_CLASS_EXCLUDED`, each id citing `-195` cl.1 + `-411`), with `declaredGaps` **unchanged**.
+asserted exclusion block (e.g. `DATA_CLASS_EXCLUDED`, each id citing `-195` cl.1 + `2026-10-27-411` item 7), with `declaredGaps` **unchanged**.
 ⚠ The mechanics: `FieldIdMapping` maps one model key to one id or `null`, so `familyMemorial` maps to `null` (the container) and
 the three ids live in a separate element map (the `nomineeAccounts` / `SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS` precedent) —
 and `PUBLIC_DETAIL_FIELD_IDS` in the floor test (which today spreads only `SAHYOG_VIVRAN_FIELD_IDS` and
@@ -401,7 +416,7 @@ request. ⇒ ⭐ the photo route resolves token → pool through a NARROW domain
 
 ---
 
-## ⚖️ Build decisions MP1–MP14 (ANSWERED by BigDev 2026-10-27 — MP1–MP13 as recommended except MP10 → (b); MP14 → (b); to be recorded as `-411` at Task 1.1)
+## ⚖️ Build decisions MP1–MP14 (ANSWERED by BigDev 2026-10-27 — MP1–MP13 as recommended except MP10 → (b); MP14 → (b); to be recorded as `-412` at Task 1.1)
 
 ### MP1 — Build the render now, without waiting for Story 11b.5
 ⭐ **(a) Build it in `apps/public` now** from the 11b.4 presenter, with the portrait as the UX's nested-wrapper frame
@@ -425,14 +440,26 @@ outage state); only a bad envelope omits the memorial. ⚠ **Cost:** one body + 
 by `limits.search`** until an edge cache exists (⛔ none does — Infra row; Row 41 (p)). The photo route checks erasure without a
 decrypt where Task 0.1 (j) allows (Trap 4).
 
-### MP3 — The words: the API cuts, the page marks
-⭐ **(a)** The API runs `reconstructMemorial` and returns `asApproved` with each `omitted` segment stripped to `{kind:'omitted'}`;
+### MP3 — The words: the API cuts and JOINS — ⚖️ RULED by `-411` item 3 (PC1 B); the build's (a) below is SUPERSEDED
+⭐ **(b) — RULED.** The API runs `reconstructMemorial`, keeps only the `text` segments of `asApproved`, applies
+`isolateMemorialBidi` to EACH kept segment (11b.4 R13 — a cut can leave an unbalanced direction control on either side), and joins
+them into ONE string per paragraph with the **join rule** (ours — `-411` Not covered: *"how the words are joined … the build's"*):
+at each cut, trim the whitespace at the end of the text before it and at the start of the text after it, then insert one `\n` if
+the removed stretch (the cut plus the trimmed whitespace) held a line break, else one space; nothing is inserted at a paragraph's
+start or end; a paragraph left with ⛔ no kept text is DROPPED (⛔ no empty `<p>` — that would be a visible gap). The alt text the
+same way, into one string (all of it left out ⇒ `""` ⇒ `alt=""`). A pure function `joinKeptSegments` in
+`apps/api/src/modules/public-pages/memorial-public-text.ts` (ONE consumer — ⛔ not in `@twt/ui`, [[feedback_no_premature_package]]),
+unit-tested on: a mid-sentence cut, a cut at a paragraph's start/end, a cut spanning a line break, adjacent cuts, a whole
+paragraph cut, a hostile-bidi segment beside a cut. ⚠ **Cost (accepted by the Panel):** *"The page would show the Trust's edit as
+if the family had written it that way, and would differ from what the family saw before sending."* — a recorded departure from
+UX *"preview matches public output exactly"* and from epics 11b.4's *"explicit notation"*, on the Panel's authority.
+*Superseded — the build had proposed:* **(a)** The API runs `reconstructMemorial` and returns `asApproved` with each `omitted` segment stripped to `{kind:'omitted'}`;
 the page renders an omitted segment as the **same copy key the family saw** (`memorial` namespace `render.omitted` —
 *"[a part left out by the Trust]"*; ⛔ no second string is minted). **Why:** the family-authorship invariant (epics 11b.4: *"a future
 reviewer can always reconstruct what the family originally wrote vs. what moderation removed"*; *"redact specific harmful
 sentences with explicit notation"*) — silently joining the words around a cut would put the Trust's edit in the family's
 mouth; and UX *"preview matches public output exactly"*. ⚠ **Cost:** a reader sees that something was left out, which may
-raise the questions `-393` M1 wants to avoid for take-downs ⇒ **PC1**. Rejected — (b) no marker.
+raise the questions `-393` M1 wants to avoid for take-downs ⇒ **PC1**. *(Rejected at the time — (b) no marker; the Panel then chose (b).)*
 
 ### MP4 — The photo: its own route, re-checked every time
 ⭐ **(a)** `GET /sahyog-vivran/[driveToken]/memorial-photo` in `apps/public` (an Astro `APIRoute`, the `.well-known/*.ts`
@@ -488,7 +515,7 @@ asked for it"* (the request row stores `verified_by = 'called_back'` — a one-v
 else is listened to (`-393` M4) and asked to have the nominee call. ⚠ **Cost:** a nominee who has changed their number
 cannot be verified ⇒ PQ1's ground. ⭐ **Not a new disclosure to the role:** `helpline_operator` already holds `claim.view_nominee_name_check`, which reads every
 nominee version's name, mobile and address on `GET /api/v1/p/:pariwarId/admin/claims/:claimCaseId/nominee-declaration/snapshots`
-(`claims.nominee-declaration.handlers.ts`). It is new only in **context** (outside a claim) — `-411` says so.
+(`claims.nominee-declaration.handlers.ts`). It is new only in **context** (outside a claim) — `-412` says so.
 Rejected — (b) an OTP to the nominee's number (a new SMS template, DLT approval — roster Rows 30/40; a heavier lever for the
 same proof).
 
@@ -505,7 +532,7 @@ It splits by the chain's state (`memorialCanSend(deriveMemorialChainState(chain)
 - **the head IS a clean `approved`**: 11b.4 MA13 refuses a new Send (`409 memorial.already_reviewed`) ⇒ the smaller fix needs
   the take-down first, and the memorial is **down** while the new version waits for review — the operator says so before
   acting. ⚠ This **narrows `-393` M4 in part** (M4 offers fixes *"smaller than removal"*; here each one passes through a removal)
-  ⇒ `-411` records it with a dated pointer under `-393`, and **PC2** tells the Panel.
+  ⇒ `-412` records it with a dated pointer under `-393`; the Panel ACCEPTED it (`-411` item 4, PC2 A).
 ⚠ In both branches the new version is sent by the **current** nominee (a Send needs their `claim_handover` step-up), who may
 differ from the nominee who asked — the operator's script says so.
 ⭐ **(c) The window between request and outcome.** The outcome re-reads the chain under the lock. If `latestApprovedIndex === -1`
@@ -524,8 +551,7 @@ Rejected — (d) the operator edits the omissions of the shown version (a new gr
 ⭐ **(a)** The family's state is `taken_down`; `memorialCanSend` is **true** (11b.4 MA13 — after a withdrawal the family may send
 again; `-392` Not covered: *"whether "removed" ends the memorial or lets the family send a new version — Story 11b.4 MA13 lets them
 send again after a Trust withdrawal"* — a removal is ⛔ not a ban); the outcome screen says, in the Pattern 4 register, that the memorial was taken down at the
-nominee's request, that it is no longer on the page, and that the nominee may write again whenever they wish. ⇒ **PC2** asks the
-Panel to confirm. **Derivation:** `taken_down` when the chain carries a `helpline` withdrawal and ⛔ no version was created after
+nominee's request, that it is no longer on the page, and that the nominee may write again whenever they wish. ⇒ ⚖️ confirmed — `-411` item 4 (PC2 A). **Derivation:** `taken_down` when the chain carries a `helpline` withdrawal and ⛔ no version was created after
 the newest one (`created_at > withdrawn_at`); otherwise the head's own state as today — a CHAIN rule (Trap 18), in the new
 `deriveMemorialChainState`. `memorialCanWithdraw(taken_down)` is false. Under `taken_down` the member view sends `reasonCode:
 null`, `earlierApprovalWithdrawn: null`, `earlierApprovalStands: false`. The admin review queue's **pending** view excludes
@@ -539,7 +565,7 @@ holds ⛔ no outbox row at all: one `(request, approver)` pair per **eligible** 
 `(request, NULL)` (6.25's claim-level pair). **The recipients — MP10 (b), ANSWERED by BigDev 2026-10-27 (*"email every
 approver"*):** the distinct `actor_id`s of the approval decisions on **every approved version the take-down withdrew** (Trap 1 —
 usually one person). `-392` item 5 says *"the approver — the person who approved the memorial (the decision's recorded actor)"*,
-singular ⇒ `-411` records the plural as **our reading**; each person is told only about an approval they made themselves, so ⛔ no
+singular ⇒ `-412` records the plural as **our reading**; each person is told only about an approval they made themselves, so ⛔ no
 one new learns anything. (Rejected — (a) only the approver of the shown version.) Per due pair the sweep enqueues one child (`retryLimit: CHILD_RETRY_LIMIT` = 4, as 6.25 — ⛔ never `retries: 0`).
 The **child's claiming transaction** (the `beginSuspicionStaffEmail` shape) re-checks under `withPariwarScope`: a recipient child
 inserts the row born claimed (`attempting`, `0152`'s `attempting_claimed` CHECK), or — if the approver is no longer eligible on
@@ -607,13 +633,14 @@ choose to keep it). ⚠ **Cost:** a request the operator forgets to record has �
 ## Acceptance Criteria
 
 ### AC0 — Governance before code
-**Given** the build decisions above **When** Task 0.2 has BigDev's answers **Then** Decision `-411` (AUTHOR-COMMIT) records
+**Given** the build decisions above **When** Task 0.2 has BigDev's answers **Then** Decision `-412` (AUTHOR-COMMIT) records
 MP1–MP14 as answered, the mints of MP6, the supersession in part of `-398` MA1 (MP1), the departure from the 10.21 pattern
 (`-107` cl.1b, MP6), the narrowing in part of `-393` M4 (MP8 (b)), MP14 (b)'s clock matching `-392` item 4, MP10 (b)'s recipient reading, and the
 readings named in Task 1.1 — committed **alone**, before any code ([[feedback_governance_commits_precede_implementation]]) **And**
 `docs/adr/ADR-0043-…md` is drafted (`Status: drafted`) and its `adr-index.md` row added in the same commit as its reconciliation
-note **And** the routing note (T1, PQ1, PQ2, PC1–PC5) exists under `_bmad-output/planning-artifacts/`, ⛔ not sent **And** Row 41
-gains its new criteria (AC19) **And** ⛔ no `-411` text quotes `deferred-work.md` item (1) or the `0152` header (header ⚠ GLYPH
+note **And** the routing note (T1, PQ1, PQ2, PC1–PC5) exists under `_bmad-output/planning-artifacts/` and is ANSWERED — `2026-10-27-411`
+(Trustee-ratified, committed alone before this story's records) **And** Row 41
+gains its new criteria (AC19) **And** ⛔ no `-412` text quotes `deferred-work.md` item (1) or the `0152` header (header ⚠ GLYPH
 INVERSIONS UPSTREAM).
 
 ### AC1 — The public read
@@ -625,18 +652,17 @@ second one **And** a bad envelope omits the memorial and keeps the page with one
 outage state (`withKmsOutageClassification` — the deceased-name precedent).
 
 ### AC2 — The wire and the matrix
-**Given** the contract **Then** `familyMemorial` is `.strict()`: `{ words: Paragraph[], photo: { altText: Paragraph[] } | null }`
-where `Paragraph = { segments: ({ kind: 'text', text: string } | { kind: 'omitted' })[] }` **And** ⛔ no key named `status`,
-`reason`, `key`, `submissionId`, `objectKey`, `url`, `approvedAt`, `approver` exists anywhere in it **And** the matrix
+**Given** the contract **Then** `familyMemorial` is `.strict()`: `{ words: string[], photo: { altText: string } | null }` — each
+`words` entry one paragraph of kept text joined per MP3 (b) (`-411` item 3) **And** ⛔ no key named `status`, `kind`, `segments`,
+`omitted`, `reason`, `key`, `submissionId`, `objectKey`, `url`, `approvedAt`, `approver` exists anywhere in it **And** the matrix
 `sahyog-vivran` surface declares `family_memorial_words`, `family_memorial_photo`, `family_memorial_photo_alt_text` at
 `pii_tier: 1`, `tier: public`, each with its mandatory `tier1_public_exception: { decision, rationale, scope }` block (the matrix
 parse fails without it — `packages/contracts/src/public-pages/matrix.ts`) **And** `RULED_TIER1_PUBLIC_EXCEPTIONS` gains exactly
-those three `(sahyog-vivran, field)` pairs, each citing `2026-10-23-391` item 2 (each pair needs its own authority — `-205`
-cl.2), in the **same commit** as the field declarations (the `-173` follow-up's §11 timing rule) — ⚠ item 2 rules *"The words and
+those three `(sahyog-vivran, field)` pairs — the words and the photo citing `2026-10-23-391` item 2, the alt text citing
+`2026-10-27-411` item 6 (each pair needs its own authority — `-205` cl.2), in the **same commit** as the field declarations (the `-173` follow-up's §11 timing rule) — ⚠ item 2 rules *"The words and
 photo"* and the v3 permission text names *"these words, and the photo if you added one"*; the **alt text** is a third field
-neither names. It is built as admitted (dark until Row 41) on the reading that it is the family's own words about their photo,
-recorded in `-411`, and **PC4** asks the Panel — the allow-list is ⛔ not widened on an author's reading alone (*"ADDING TO
-THIS LIST IS A RULING"*) **And** every pin of Trap 5 is updated as an identity array.
+neither names — ⚖️ RULED public by `2026-10-27-411` item 6 (PC4 A), so the allow-list widens on a ruling (*"ADDING TO THIS LIST
+IS A RULING"*) **And** every pin of Trap 5 is updated as an identity array.
 
 ### AC3 — The render
 **Given** a non-null `familyMemorial` **When** the page renders **Then** the section and the figure are gated on the matrix
@@ -644,13 +670,15 @@ visibility of each of the three ids for `viewerContext="public"` (the same path 
 `[driveToken].astro` renders through it; ⛔ never markup that bypasses the matrix, which would make the ids decorative) **And** a
 `<section aria-labelledby>` headed by the new copy key
 `family_memorial.heading` sits after the drive header and before the contributor list **And** each paragraph is a `<p dir="auto"
-style="white-space: pre-wrap">` (or a class carrying exactly that) whose text segments pass through `isolateMemorialBidi` and whose
-omitted segments render the `memorial:render.omitted` copy **And** ⛔ no `set:html` exists in any `apps/public` file this story
+style="white-space: pre-wrap">` (or a class carrying exactly that) rendering one `familyMemorial.words` string as given (already isolated and joined by the API — MP3 (b)) **And** ⛔ no
+`render.omitted` copy, element or class marks a cut anywhere on the page (`-411` item 3; a test on a fixture with an omission)
+**And** ⛔ no `set:html` exists in any `apps/public` file this story
 touches (an AST/regex source test whose file list is asserted non-empty and to include `FamilyMemorial.astro`) **And** the photo is `<figure><div><div><img src="/sahyog-vivran/{token}/memorial-photo"
-alt="{alt text as approved: text segments joined, each omitted segment as the resolved `render.omitted` string}" loading="lazy" decoding="async"></div></div></figure>` with the UX frame (2 px ink border,
+alt="{`photo.altText` as given}" loading="lazy" decoding="async"></div></div></figure>` with the UX frame (2 px ink border,
 6 pt inner pad, 4:5) from `@twt/tokens` CSS variables **And** ⛔ no memorial text, alt text or photo URL appears in `<head>`
-(Trap 12) **And** the deceased's name is ⛔ not added by this section (Trap 14) **And** a test proves the public segments equal
-`reconstructMemorial(…).asApproved` with `reason`/`key` stripped, for the same input (preview == outcome == public).
+(Trap 12) **And** the deceased's name is ⛔ not added by this section (Trap 14) **And** a test proves the public strings equal
+`joinKeptSegments(reconstructMemorial(…).asApproved)` for the same input, and that ⛔ no left-out substring and ⛔ no marker
+appears (the family's screen keeps its marks — 11b.4 R10 — and now DIFFERS from the page, by `-411` item 3).
 
 ### AC4 — The photo route
 **Given** MP4/MP5 **Then** the route answers `200 image/jpeg` only under MP2's predicate with a photo the Trust kept, else the
@@ -717,7 +745,10 @@ leg in `takedown.spec.ts`) **And** the outcome screen renders ONE new flat key `
 `outcome.approval_withdrawn`, …; ⛔ no `.*` children) in en + hi, with real `t()` in a render test
 ([[feedback_stub_must_call_not_transcribe]]), saying the words were taken down at the nominee's request, are no longer on the
 page, and may be written again whenever they wish — beside the existing `outcome.write_again` and `outcome.helpline` (proposed
-text: AC14) **And** ⛔ no copy says "removed by the Trust", "deleted" or "immediately" **And** a new Send after `taken_down`
+text: AC14) **And** the existing `outcome.approved_with_omissions` line (*"The Trust approved your words and left out a part. They will appear
+on the member's Sahyog Vivran page like this."*), shown above a rendering WITH the marks, is reworded (en + hi) so it no longer
+claims the page looks like the marked rendering (`-411` item 3) — wording per Question 10, with a render test using real `t()`
+**And** ⛔ no copy says "removed by the Trust", "deleted" or "immediately" **And** a new Send after `taken_down`
 works exactly as after `approval_withdrawn` (an integration leg in `takedown.spec.ts`).
 
 ### AC9 — The approver email
@@ -776,8 +807,8 @@ touches staff `actor_display` — confirmed at v0.4).
 **Given** the new keys (`sahyog-vivran:family_memorial.heading`, `memorial:outcome.taken_down`, the admin English strings)
 **Then** each exists in en + hi where the surface is bilingual (the `sahyog-vivran` and `memorial` namespaces are already
 registered — `catalog.ts`, `KNOWN_NAMESPACES` — ⛔ no registration change), covered by `microcopy.yaml` (read the **list**,
-⛔ never the header) **And** `docs/tone-review-checklist.md` gains rows marked **UN-ATTESTED** (the author's Hindi is ⛔ not a
-review) **And** text — APPROVED by BigDev 2026-10-27 (*"all as recommended"*); `-411` records it; Task 9 changes it only with BigDev's say:
+⛔ never the header) **And** `docs/tone-review-checklist.md` gains rows marked **UN-ATTESTED** (incl. the reworded `outcome.approved_with_omissions`) (the author's Hindi is ⛔ not a
+review) **And** text — APPROVED by BigDev 2026-10-27 (*"all as recommended"*); `-412` records it; Task 9 changes it only with BigDev's say:
 - `family_memorial.heading` — hi *"परिवार के शब्द"*, en *"In the family's words"*.
 - `outcome.taken_down` — en *"At the nominee's request, the helpline has taken your words down. They are no longer on the
   member's Sahyog Vivran page. You can write again whenever you wish."*; hi *"नॉमिनी के अनुरोध पर हेल्पलाइन ने आपके शब्द हटा
@@ -796,8 +827,9 @@ the photo's typical size (≤ ~250 KB at MP5's settings, measured on the fixture
 `friction:check` (it diffs from the merge-base — [[project_friction_budget_baseline_ratchet]]).
 
 ### AC16 — Recorded risks and deferrals (each in `deferred-work.md` with a Trigger)
-(1) T1 + PQ1 unanswered — nominee died / unreachable / replaced ⇒ ⛔ no family take-down (except the current nominee's new
-version over an `approved_with_omissions` memorial). (2) PQ2 unanswered. (3) PC1–PC5 unanswered. (4) Edge latency ~5 min once a
+(1) RULED — `-411` item 1 (PQ1 A): nominee died / unreachable / replaced ⇒ ⛔ no family take-down (except the current nominee's new
+version over an `approved_with_omissions` memorial) — a ratified, accepted cost; recorded with ⛔ no Trigger. (2) RULED — `-411` item 2
+(PQ2 A). (3) RULED — `-411` items 3–7 (PC1 B; PC2–PC5 A). (4) Edge latency ~5 min once a
 cache exists, ⛔ no purge. (5) A new approved photo can sit beside the new words for ~5 min (MP4). (6) Kinship (11b.4 item (2)) —
 still 11b.5's / a Panel purpose question. (7) A family's own erasure request (11b.4 item (7)) — ⛔ not built. (8) The architecture
 §4.11.2 responsive pipeline and Astro Image component (MP5). (9) 11b.5 refactor of this markup (MP1). (10) Story 0.9 visual
@@ -808,7 +840,9 @@ validation un-attested. (11) Counsel: `-393` M4 + nominee-only against the priva
 decision after `-393` (ii)); open for `kept` / `superseded` (no review; recorded). (15) `-393` Not covered: *"the operator's call
 script, and what the family is told when they decide to keep it"* — the script is AC14's proposal; what a family is told on
 `kept` is ⛔ not built (no family-facing notice; the call is the telling). (16) The MP8 (b) narrowing of `-393` M4 for a
-clean-approved memorial (PC2). ⭐ And **discharge**, ⛔ never delete — at **every** reference site of each item (grep the item's
+clean-approved memorial — accepted by the Panel (`-411` item 4, PC2 A). (17) The v3 permission text says the Trust *"will never
+change your words"*, while the page now joins the words across an unmarked cut (`-411` item 3 accepted *"as if the family had
+written it that way"*) — carried to counsel with (11). ⭐ And **discharge**, ⛔ never delete — at **every** reference site of each item (grep the item's
 letter and its distinctive phrase across the whole file): 11b.4 section items (1) and (11) → *"HOMED in 11b.4a — closes when
 11b.4a is `done` on main"*; 11b.4 items (2) and (7) (Triggers name *"row 11b-4a"* / *"11b.4a"*) → *"trigger reached at 11b.4a;
 carried as 11b.4a items (6)/(7), ⛔ not closed"*; the 11b.3 RENDER-NOTHING producers line for the family story → annotated, and its
@@ -830,7 +864,7 @@ that run.
 ### AC19 — Dark until Row 41 closes
 **Given** the merge **Then** ⛔ nothing becomes visible: the switch stays off (Row 41) **And** Row 41 (b) is marked met by this
 story's landing commit **And** Row 41 gains: (l) ADR-0043 ratified; (m) the routing note sent, PQ1/PQ2 answered and PC1–PC5
-confirmed — or BigDev records launching without them; (n) `sharp` loads in the `apps/api` runtime image (`node:22-alpine` ⇒
+confirmed — ✅ MET 2026-10-27 by `2026-10-27-411` (record it as met when adding it); (n) `sharp` loads in the `apps/api` runtime image (`node:22-alpine` ⇒
 `@img/sharp-linuxmusl-x64`) — meaningful only once the runtime stage carries its dependencies (today it copies ⛔ none; a Dokploy
 deploy check); (o) a real-device check of the public page (Hindi + English text, a hostile-bidi fixture, a rotated phone photo,
 TalkBack/VoiceOver reading the section); (p) an edge cache rule covering the page and `/sahyog-vivran/*/memorial-photo` (the path
@@ -860,11 +894,11 @@ Each code Task (1–9) ends with **Done when** — the named test(s), each shown
     ⭐ **Answered 2026-10-27 (Question 1):** *"MP1-MP13 as recommended, email every approver."* then *"yes, go with option (b) for MP14, prepare the routing note"* ⇒ MP1–MP9, MP11–MP13 (a); **MP10 (b)**; **MP14 (b)**. The routing note is DRAFTED (Task 1.3), ⛔ not sent. **Open:** Questions 2–9.
     ⭐ **Answered 2026-10-27 (Questions 2–8):** *"all as recommended"* ⇒ the copy of MP10 and AC14 APPROVED as proposed; MP7's nominee name + mobile on the take-down screen; PC5 built on the exclusion reading (`familyMemorial` stays inside `drive`); PC4 the alt text admitted and asked; the departure from 11b.4 MA18's parts list accepted; MP8 (b)'s narrowing accepted (told in PC2); the photo route JOINS `SAHYOG_VIVRAN_APPLICABLE_CONTROLS`. **Open:** Question 9 only (when BigDev sends the note) — ⛔ it does not block Task 1.
 - [ ] **Task 1 — Governance commits (AC0)**
-  - [ ] 1.1 Decision `-411` (AUTHOR-COMMIT), committed **alone**: the answers; the mints (MP6, incl. `superseded`); `-398` MA1 superseded in part (MP1) with a dated pointer under `-398`; the departure from the 10.21 pattern (`-107` cl.1b verbatim, MP6; the 6.9 D7 precedent); MP7's context note; the departure from 11b.4 MA18's parts (Trap 7); MP8 (b)'s narrowing in part of `-393` M4 with a dated pointer under `-393`; MP14 (b) — the clock from the nominee's first contact, matching `-392` item 4 (MP14 (a) rejected as a departure); MP10 (b) — every approver of every approved version the take-down withdrew, our reading of `-392` item 5's *"the approver"*; the Trap 17 reading of `-189` cl.3 / `-195` cl.1 (pending PC5); the alt-text reading of `-391` item 2 (pending PC4); the photo route joins `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (Question 8).
+  - [ ] 1.1 Decision `-412` (AUTHOR-COMMIT; `-411` is the Panel's ruling, already committed), committed **alone**: MP3 SUPERSEDED by `-411` item 3 (PC1 B) and the join rule (ours); the answers; the mints (MP6, incl. `superseded`); `-398` MA1 superseded in part (MP1) with a dated pointer under `-398`; the departure from the 10.21 pattern (`-107` cl.1b verbatim, MP6; the 6.9 D7 precedent); MP7's context note; the departure from 11b.4 MA18's parts (Trap 7); MP8 (b)'s narrowing in part of `-393` M4 with a dated pointer under `-393`; MP14 (b) — the clock from the nominee's first contact, matching `-392` item 4 (MP14 (a) rejected as a departure); MP10 (b) — every approver of every approved version the take-down withdrew, our reading of `-392` item 5's *"the approver"*; the Trap 17 reading — now RULED by `-411` item 7; the alt text — now RULED by `-411` item 6; the photo route joins `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (Question 8).
   - [ ] 1.2 `docs/adr/ADR-0043-memorial-takedown-approver-email.md` (`_adr-template.md`): amends ADR-0040's amendment to admit (Q2) a second caller — the memorial take-down approver-email child, for the recipient set MP10 settles — and (Q3) the approver eligibility read (`users.status`, `EXISTS admin_credentials` for ONE `user_id`, ⛔ no identity column projected); the fence's projection rules extended to Q3's module (AC9); everything else in ADR-0040 unchanged; *"a fourth is a new ADR"*. `adr-index.md` row + reconciliation note (Total 154 → 155; re-count, ⛔ never add) in the same commit. `Status: drafted`.
-  - [ ] 1.3 ⭐ DRAFTED 2026-10-27 at BigDev's request (during validate, before Task 1): `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-27-11b4a-family-memorial-public-render.md` — at Task 1, re-check it against the final `-411` and Questions 2–9's answers (PC2, PC4, PC5 depend on Questions 7, 5, 4), then hand it to BigDev; ⛔ not sent by the agent. Shape: from the TEMPLATE, in the template's order: **T1** (told — `-395` item 3 answers `-393`'s open *"who may ask"* with what (ii) did ⛔ not choose as a soft measure (6); quote both lines; ⛔ never call it a reversal), then **PQ1**, **PQ2**, **PC1–PC5** (PC2 includes MP8 (b)'s narrowing; PC3 who is told when an approver has left — the clock matches item 4, ⛔ not asked; PC4 the alt text; PC5 the member-sees-more floor); ⛔ not sent.
+  - [x] 1.3 ✅ DONE 2026-10-27 — SENT by BigDev and ANSWERED: `2026-10-27-411` (ruling block in the note). Was: ⭐ DRAFTED 2026-10-27 at BigDev's request (during validate, before Task 1): `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-27-11b4a-family-memorial-public-render.md` — at Task 1, re-check it against the final `-412` and Questions 2–9's answers (PC2, PC4, PC5 depend on Questions 7, 5, 4), then hand it to BigDev; ⛔ not sent by the agent. Shape: from the TEMPLATE, in the template's order: **T1** (told — `-395` item 3 answers `-393`'s open *"who may ask"* with what (ii) did ⛔ not choose as a soft measure (6); quote both lines; ⛔ never call it a reversal), then **PQ1**, **PQ2**, **PC1–PC5** (PC2 includes MP8 (b)'s narrowing; PC3 who is told when an approver has left — the clock matches item 4, ⛔ not asked; PC4 the alt text; PC5 the member-sees-more floor); ⛔ not sent.
   - [ ] 1.4 Records: `epics.md` dated notes under `### Story 11b.4` (MP1 supersession; 11b.4a's scope) **and** `### Story 11b.5` (its `<PortraitFrame>` AC now refactors this story's markup — MP1); Row 41 new criteria (l)–(q) and the (j) annotation (AC19); `deferred-work.md` annotations (AC16) — dated lines, ⛔ never rewrites.
-  - **Done when:** `-411` is a commit touching only `.decision-log.md`; ADR-0043 + index in one commit; the note exists unsent.
+  - **Done when:** `-412` is a commit touching only `.decision-log.md`; ADR-0043 + index in one commit; the note exists unsent.
 - [ ] **Task 2 — Schema (AC6, AC7, AC9)**
   - [ ] 2.1 `0186_memorial-withdrawal-actor-helpline.sql`: `ALTER TYPE "memorial_withdrawal_actor" ADD VALUE IF NOT EXISTS 'helpline';` **alone** (Trap 6 header copied from `0150`).
   - [ ] 2.2 `0187_memorial-takedown.sql`: enum `memorial_takedown_outcome` (`taken_down`, `kept`, `superseded`); `memorial_takedown_requests` (request_id PK, pariwar_id, pool_id, submission_id + FK (pariwar_id, submission_id), handover_nominee_ref, verified_by CHECK = 'called_back', first_contact_at (operator-entered; CHECK `first_contact_at <= received_at AND first_contact_at >= received_at - interval '7 days'` — MP14 (b)), received_at `clock_timestamp()`, due_at (= first_contact_at + 7 days; CHECK), actor_id, actor_display non-blank; ⛔ no partial unique index can express "open" (openness lives in the outcomes table) ⇒ "one open request per drive" is enforced under the pool lock in the handler, with a race test); `memorial_takedown_outcomes` (request_id PK + FK, outcome, decided_at, actor_id, actor_display); `memorial_takedown_approver_emails` (mirror `0152` **unchanged in its CHECKs** — incl. `…_no_target_recipient_check` and `attempting_claimed` — keyed on `request_id`, with `0152`'s unique-index shape; MP10/MP11); `memorial_withdrawals.takedown_request_id` + a **composite** FK `(pariwar_id, takedown_request_id)` (the house pattern) + CHECK `(withdrawn_by::text = 'helpline') = (takedown_request_id IS NOT NULL)` + CHECK `withdrawn_by::text <> 'helpline' OR internal_note_ciphertext IS NULL` (Trap 7);
@@ -881,26 +915,26 @@ CONSTRAINT` has ⛔ no `IF NOT EXISTS`). GRANT SELECT, INSERT only; ENABLE + FOR
   - [ ] 3.4 Unit + domain tests: the AC7 chain-shape table (incl. `[N, A]`, `[A-omit, A(T), pending]`, `[A(T)]` ⇒ not found, `[H, F′]` ⇒ `withdrawn`); the review detail's `memorialState` is `taken_down` for `[A-omit, family-withdrawn]` after a take-down; derivation of `taken_down` incl. a Send after it; `latestApprovedIndex === -1` after a take-down; the pending queue excludes and the withdraw-approval target skips a `helpline` head (AC12). Fixtures seed across **separate transactions** ([[project_db_clock_ordering_tests_tie]]).
   - **Done when:** the chain table passes and a mutant `deriveMemorialChainState` that reads only the head turns `[A-omit, family-withdrawn]` RED; `memorial.test.ts` and the OpenAPI determinism check pass in the same commit.
 - [ ] **Task 4 — Contracts (AC2, AC6–AC8)**
-  - [ ] 4.1 `familyMemorial` schema in `public-pages/sahyog-vivran.ts` (`.strict()` all the way down); prohibited-key test incl. `reason`, `key`, `submissionId`, `url` (`MemorialStateSchema` moved to 3.0).
+  - [ ] 4.1 `familyMemorial` schema in `public-pages/sahyog-vivran.ts` — `{ words: string[], photo: { altText: string } | null }`, `.strict()` (MP3 (b)); prohibited-key test incl. `kind`, `segments`, `omitted`, `reason`, `key`, `submissionId`, `url` (`MemorialStateSchema` moved to 3.0).
   - [ ] 4.2 Take-down DTOs (`packages/contracts/src/memorial/takedown.ts`): member drives, drive view, open-request list (with derived `overdue`), request input `{ calledBack: z.literal(true), firstContactAt: <ISO timestamp> }` (MP14 (b)), outcome input `{ outcome: 'taken_down' | 'kept' | 'superseded' }`, error codes (`memorial_takedown.not_found`, `.request_open`, `.already_decided`, `.shown_changed`, `.shown_unchanged`); `MEMORIAL_TAKEDOWN_STEP_UP_CONTEXT`.
-  - [ ] 4.3 Matrix YAML (each id with its `tier1_public_exception` block) + `RULED_TIER1_PUBLIC_EXCEPTIONS` (+3, citing `2026-10-23-391` item 2) — **same commit**, with `public-pages.test.ts`'s identity array (six → nine); register the take-down paths in `packages/contracts/scripts/emit-openapi.ts` and regenerate `openapi/v1.yaml` (`pnpm contracts:emit-openapi`; `pnpm contracts:check-openapi-determinism`).
+  - [ ] 4.3 Matrix YAML (each id with its `tier1_public_exception` block) + `RULED_TIER1_PUBLIC_EXCEPTIONS` (+3: words + photo citing `2026-10-23-391` item 2, alt text citing `2026-10-27-411` item 6) — **same commit**, with `public-pages.test.ts`'s identity array (six → nine); register the take-down paths in `packages/contracts/scripts/emit-openapi.ts` and regenerate `openapi/v1.yaml` (`pnpm contracts:emit-openapi`; `pnpm contracts:check-openapi-determinism`).
   - **Done when:** contracts tests pass; removing one exception pair turns the matrix parse RED.
 - [ ] **Task 5 — The public API (AC1, AC4, AC5, AC13)**
   - [ ] 5.1 `apps/api` dependencies: `@twt/ui` to `dependencies`; `sharp@0.34.5` (MP5; `@img/sharp-linuxmusl-x64` is already locked).
-  - [ ] 5.2 `public-pages/handlers.ts` (`sahyogVivran`): after the drive read, `readPublicMemorial` → decrypt body + alt (`withKmsOutageClassification`) → sentinel check (Trap 4) → `reconstructMemorial` → strip → `familyMemorial`; behind MP13.
+  - [ ] 5.2 `public-pages/handlers.ts` (`sahyogVivran`): after the drive read, `readPublicMemorial` → decrypt body + alt (`withKmsOutageClassification`) → sentinel check (Trap 4) → `reconstructMemorial` → `joinKeptSegments` (MP3 (b): keep text segments, isolate each, join; new `memorial-public-text.ts` + its unit test) → `familyMemorial`; behind MP13.
   - [ ] 5.3 New route `…/sahyog-vivran/:driveToken/memorial-photo` in `public-pages/routes.ts` (same `limits.search` rate limit, same kill switch, the in-handler empty 404 for every refusal — Trap 9; the narrow read — Trap 19, ⛔ never the page handler's flow, ⛔ no appeal-reversal audit); `getBytes` on the port + three adapters (GCS catches `download()`'s 404 ⇒ `null`); the MP5 transform in `apps/api/src/modules/public-pages/memorial-photo-variant.ts`; the route joins `PUBLIC_ALLOWLIST` in `apps/api/tests/integration/login-wall.spec.ts` with its written defence; it JOINS `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (`sahyog-vivran-controls.ts`) — Question 8, answered.
   - [ ] 5.4 Integration specs: `public-pages/sahyog-vivran-memorial.spec.ts` (AC1 states incl. the bad-envelope and KMS-outage legs, AC3 equality, Trap 3's no-left-out-substring on a fixture holding omissions, the AC5 API diff with its middle-state assertion, AC13), `public-pages/sahyog-vivran-memorial-photo.spec.ts` (AC4: the JPEG-marker walk on PNG + ICC-JPEG fixtures stored **through the Send ingest path**; output dimensions = stored dimensions scaled, ⛔ no rotation; size ≤ 1200 px; headers; 404 parity per Trap 9's exclusions; no appeal-reversal audit line). Update the Trap 5 pins.
   - **Done when:** both specs pass; a mutant that stops stripping `reason` (Trap 3), one that keys on the head state (AC1), and one that calls `withMetadata()` (AC4) each turn a named leg RED.
 - [ ] **Task 6 — The public page (AC3, AC4, AC5; Traps 12, 16, 17)**
-  - [ ] 6.1 `apps/public/package.json` + `@twt/ui` **and** `'@twt/ui'` in `vite.ssr.noExternal` (`astro.config.mjs` — Trap 16); `isSahyogVivranResponse` validates `familyMemorial` **before** the `appealReversal` block (Trap 5); `buildSahyogVivranView` gains the memorial view model; `surface-fields.ts`: `familyMemorial: null` + a new element map of the 3 ids; `member-drive-detail-field-floor.test.ts`: `PUBLIC_DETAIL_FIELD_IDS` spreads the new map, and the 3 ids sit in a separate asserted exclusion block (`DATA_CLASS_EXCLUDED`, citing `-195` cl.1 + `-411`) that the counterpart test subtracts, pinned to exactly those 3 ids; `declaredGaps` unchanged (Trap 17); `sahyog-vivran-copy.test.ts` `KEYS` + `family_memorial.heading`.
-  - [ ] 6.2 `apps/public/src/components/FamilyMemorial.astro` (section, paragraphs, figure — each gated through the matrix as `<MatrixField>` does); place it in `[driveToken].astro`; update the two stale doc-blocks (`sahyog-vivran-render.ts`, `[driveToken].astro` — *"the family story (11b.4, `backlog`)"*).
+  - [ ] 6.1 ⛔ NO `@twt/ui` in `apps/public` (Trap 16 — after `-411` item 3 the page renders finished strings); `isSahyogVivranResponse` validates `familyMemorial` **before** the `appealReversal` block (Trap 5); `buildSahyogVivranView` gains the memorial view model; `surface-fields.ts`: `familyMemorial: null` + a new element map of the 3 ids; `member-drive-detail-field-floor.test.ts`: `PUBLIC_DETAIL_FIELD_IDS` spreads the new map, and the 3 ids sit in a separate asserted exclusion block (`DATA_CLASS_EXCLUDED`, citing `-195` cl.1 + `2026-10-27-411` item 7) that the counterpart test subtracts, pinned to exactly those 3 ids; `declaredGaps` unchanged (Trap 17); `sahyog-vivran-copy.test.ts` `KEYS` + `family_memorial.heading`.
+  - [ ] 6.2 `apps/public/src/components/FamilyMemorial.astro` (section, one `<p>` per `words` string, figure; ⛔ no marker — each gated through the matrix as `<MatrixField>` does); place it in `[driveToken].astro`; update the two stale doc-blocks (`sahyog-vivran-render.ts`, `[driveToken].astro` — *"the family story (11b.4, `backlog`)"*).
   - [ ] 6.3 `apps/public/src/pages/sahyog-vivran/[driveToken]/memorial-photo.ts` (APIRoute proxy: forwards ⛔ no query string, only `X-Forwarded-For`; builds its own response headers).
   - [ ] 6.4 Add every new `*sahyog-vivran*` / `pages/sahyog-vivran/**` file to the financial-truth `SCAN_FILES` **by hand** in the same
     commit — ⚠ its `wholeDirs` scan is ⛔ not recursive and ⛔ never sees `pages/sahyog-vivran/[driveToken]/memorial-photo.ts`;
     and the pii-scrape route coverage loads `.astro` only (`packages/contracts/scripts/check-pii-scrape.ts`) ⇒ AC4's own header
     test is the photo endpoint's only guard — say so in the endpoint's doc-block.
-  - [ ] 6.5 Tests: render (pre-wrap, `dir="auto"`, marker copy, bidi on a hostile fixture, the ⛔-no-`set:html` source scan with a non-empty file list incl. `FamilyMemorial.astro`, `<head>` clean after asserting the body carries the text and photo URL — Trap 12); the guard leg (malformed `familyMemorial` + `appealReversal: null` ⇒ `bad_response`); the AC5 HTML diff with its middle-state assertion; `scrape-test.spec.ts` (both pins, +3 tier-1 ids); the built-image proof: `pnpm --filter @twt/public build` then `node apps/public/dist/server/entry.mjs` renders a memorial fixture.
-  - **Done when:** the render, guard and floor tests pass; removing `@twt/ui` from `noExternal` fails the built-image proof.
+  - [ ] 6.5 Tests: render (pre-wrap, `dir="auto"`, marker copy, bidi on a hostile fixture, the ⛔-no-`set:html` source scan with a non-empty file list incl. `FamilyMemorial.astro`, `<head>` clean after asserting the body carries the text and photo URL — Trap 12); the guard leg (malformed `familyMemorial` + `appealReversal: null` ⇒ `bad_response`); the AC5 HTML diff with its middle-state assertion; `scrape-test.spec.ts` (both pins, +3 tier-1 ids); the built-image proof: `pnpm --filter @twt/public build` then `node apps/public/dist/server/entry.mjs` renders a memorial fixture (still worth it — a new component and a new endpoint); a fixture with an omission renders ⛔ no marker text, element or class.
+  - **Done when:** the render, guard and floor tests pass; a mutant that renders a marker fails the no-marker leg.
 - [ ] **Task 7 — Take-down API (AC6, AC7, AC12, AC13)**
   - [ ] 7.1 `memorial.takedown` key (`permissions.ts`, catalog 54 / 70; `permissions.test.ts`), grant (`roles.ts`; `roles.test.ts`); step-up context `memorial_takedown` (the contracts constant, 4.2).
   - [ ] 7.2 `apps/api/src/modules/memorial-takedown/{index,routes,handlers}.ts`, registered in `apps/api/src/server.ts` (beside `registerMemorialReviewModule`). Routes (all under `/api/v1/p/:pariwarId`, key `memorial.takedown`; idempotent writes via `idempotency.createKeyedStore(deps.pool)` per [[project_idempotent_write_handler_shape]] (COMMIT then record); 23505 inside a SAVEPOINT ([[project_domain_limit_clamp_and_savepoint_retry]])):
@@ -920,14 +954,14 @@ CONSTRAINT` has ⛔ no `IF NOT EXISTS`). GRANT SELECT, INSERT only; ENABLE + FOR
   - [ ] 8.3 Fence test allow-lists widened with `ADR-0043` comments, and its projection rules extended to Q3's module (AC9); sweep specs — approver email: eligible, `no_target` (approver ineligible at selection ⇒ one NULL-recipient row + the error log; the request is then never re-derived), fresh-pair re-check fails ⇒ ⛔ no row, claimed-then-ineligible ⇒ `error`, transient, held, idempotent re-run; overdue: one `warn` per Pariwar with ≥ 1, ⛔ no ids beyond the Pariwar, silent at zero.
   - **Done when:** the fence and both sweep specs pass; moving Q3 into an un-named module turns the fence RED.
 - [ ] **Task 9 — Family + admin surfaces (AC8, AC11, AC12, AC14)**
-  - [ ] 9.1 Mobile: the `taken_down` copy (landed in 3.0) — render test with real `t()` (en + hi); `memorial-source-pins.test.ts` if it enumerates states. (`memorial-copy.ts` holds Send refusals only.)
+  - [ ] 9.1 Mobile: the `taken_down` copy (landed in 3.0) — render test with real `t()` (en + hi); the reworded `outcome.approved_with_omissions` (en + hi, Question 10's wording; AC8) with its render test; `memorial-source-pins.test.ts` if it enumerates states. (`memorial-copy.ts` holds Send refusals only.)
   - [ ] 9.2 Admin: `apps/admin/src/modules/memorial-takedown/*`; routes in `apps/admin/src/router.tsx` + `apps/admin/src/routes/MemorialTakedownRoute.tsx`; `RootLayout.tsx` link when `pariwarId` is set (⛔ not key-gated — AC11); `apps/admin/src/api/{client,hooks}.ts` (the step-up OTP caller imports `MEMORIAL_TAKEDOWN_STEP_UP_CONTEXT`); the drive screen's script by branch, the current-nominee line, *"decided after the due date"*; the review detail line *"Taken down at the nominee's request · {time}"* (AC12). Tests: the script renders before the button in both branches, a 403 renders the no-access state, the review detail line renders for a `helpline` row.
   - [ ] 9.3 i18n catalogs (namespaces already registered — ⛔ no `catalog.ts` change), `microcopy.yaml` lists, tone-review rows (UN-ATTESTED).
   - **Done when:** the mobile render test and the admin tests pass; a two-way ternary mutant turns the review-detail test RED.
 - [ ] **Task 10 — Budgets (AC15)** — measure, record, commit the friction disposition; then `pnpm friction:check`.
 - [ ] **Task 11 — Records (AC16, AC19)**
   - [ ] 11.1 `deferred-work.md`: AC16 items (1)–(16) as a new `11b.4a` section; the discharge annotations of AC16 at every reference site.
-  - [ ] 11.2 Row 41: (b) met by the landing commit (dated); (l)–(q) added; (j) annotated.
+  - [ ] 11.2 Row 41: (b) met by the landing commit (dated); (l)–(q) added ((m) recorded as met by `-411`); (j) annotated; ((e) was annotated MET on 2026-10-27 with `-411`'s records).
   - [ ] 11.3 Story: Completion Notes, File List, Change Log.
   - [ ] 11.4 Architecture §4.11.2 dated annotation (MP5's single variant behind a proxied plain `<img>`, ⛔ not the Astro Image component; the ADR still owed).
 - [ ] **Task 12 — Verify and close (AC17, AC18)** — AC17's `git diff` check (empty); commit; `pnpm ci:local` 36 / 36 on a fresh `twt_dev` in its own container; only then `review` → (after code review) `done`.
@@ -1013,7 +1047,7 @@ cookie reaches the endpoint.
 **NEW** — `packages/domain/migrations/0186_memorial-withdrawal-actor-helpline.sql`, `0187_memorial-takedown.sql` (+ `meta/_journal.json`)
 · `packages/domain/src/schema/memorial_takedown_*.ts` + the `policies/` module · `packages/domain/src/memorial/{public-read,takedown,takedown-approver-email-read}.ts`
 · `packages/domain/tests/integration/rls/memorial-takedown-policy-regression.spec.ts` · `packages/contracts/src/memorial/takedown.ts`
-· `apps/api/src/modules/memorial-takedown/{index,routes,handlers}.ts` · `apps/api/src/modules/public-pages/memorial-photo-variant.ts`
+· `apps/api/src/modules/memorial-takedown/{index,routes,handlers}.ts` · `apps/api/src/modules/public-pages/{memorial-photo-variant,memorial-public-text}.ts`
 · `apps/api/tests/integration/public-pages/sahyog-vivran-memorial{,-photo}.spec.ts` · `apps/api/tests/integration/memorial-takedown/{takedown,actor-denial,races}.spec.ts`
 · `apps/public/src/components/FamilyMemorial.astro` · `apps/public/src/pages/sahyog-vivran/[driveToken]/memorial-photo.ts`
 · `apps/jobs/src/scheduler/memorial-takedown-{approver-emails,overdue}.ts` (+ specs) · `apps/admin/src/modules/memorial-takedown/*`
@@ -1023,8 +1057,7 @@ cookie reaches the endpoint.
 `packages/contracts/src/memorial/{vocab,dto}.ts` · `packages/contracts/src/public-pages/{sahyog-vivran,matrix}.ts` + the matrix YAML ·
 `packages/contracts/scripts/emit-openapi.ts` + `openapi/v1.yaml` · `packages/domain/src/rbac/{permissions,roles}.ts` ·
 `apps/api/src/modules/public-pages/{routes,handlers}.ts` · `apps/api/src/modules/memorial/handlers.ts` (member GET under
-`taken_down`) · `apps/api/src/server.ts` · `apps/api/src/audit/audit-sink.ts` · `apps/api/package.json` · `apps/public/package.json` +
-`astro.config.mjs` · `apps/public/src/lib/{sahyog-vivran.server,sahyog-vivran-render,surface-fields}.ts` · `[driveToken].astro` ·
+`taken_down`) · `apps/api/src/server.ts` · `apps/api/src/audit/audit-sink.ts` · `apps/api/package.json` · `apps/public/src/lib/{sahyog-vivran.server,sahyog-vivran-render,surface-fields}.ts` · `[driveToken].astro` ·
 `apps/jobs/src/boot.ts` · `apps/mobile/app/(memorial)/outcome.tsx` · `packages/i18n/locales/{hi,en}/{memorial,sahyog-vivran}.json` ·
 `apps/admin/src/{router.tsx,RootLayout.tsx,api/client.ts,api/hooks.ts}` + `modules/memorial-review/{MemorialReviewPage.tsx,i18n-en.ts}` ·
 `scripts/sahyog-vivran-financial-truth/check.ts` (`SCAN_FILES`) · the Trap 5 pins · the two RLS specs · the fence test ·
@@ -1061,8 +1094,14 @@ cookie reaches the endpoint.
    `-393` M4, told to the Panel in PC2)?
 8. ✅ ANSWERED 2026-10-27 — as recommended (*"all as recommended"*). Task 5.3 — the photo route joins `SAHYOG_VIVRAN_APPLICABLE_CONTROLS` (recommended: yes — it serves the same surface's data
    under the same kill switch and rate limit), or stays outside it with a written reason?
-9. ⏳ OPEN — ⛔ no recommendation was given, so "all as recommended" does ⛔ not answer it. The routing note (T1, PQ1, PQ2, PC1–PC5) — send it now (it also discharges 11b.4's Row 41 (e) through T1), or hold it until the
+9. ✅ ANSWERED 2026-10-27 — the note was SENT and the Panel answered (`-411`). (Was: ⏳ open — no recommendation given.) The routing note (T1, PQ1, PQ2, PC1–PC5) — send it now (it also discharges 11b.4's Row 41 (e) through T1), or hold it until the
    build is reviewed?
+10. ⏳ OPEN — the family's outcome line after `-411` item 3 (PC1 B). Today `outcome.approved_with_omissions` says *"The Trust approved
+    your words and left out a part. They will appear on the member's Sahyog Vivran page like this."* above a rendering WITH the
+    marks — no longer true of the page. Proposed (UN-ATTESTED Hindi): en *"The Trust approved your words and left out a part, marked
+    below. On the member's Sahyog Vivran page the part left out is simply not there — nothing marks where it was."*; hi *"ट्रस्ट ने
+    आपके शब्द एक अंश छोड़कर स्वीकार किए; छोड़ा गया अंश नीचे दिखाया गया है। सदस्य के सहयोग विवरण पेज पर वह अंश बस नहीं होगा —
+    वहाँ कोई निशान नहीं होगा।"* Approve, or your words?
 
 ---
 
@@ -1084,6 +1123,7 @@ cookie reaches the endpoint.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-27 | v0.7 | ⚖️ **The Panel ruled** (DR + KB, relayed by BigDev): *"PQ1 - A / PQ2 - A / PC1 - B / PC2 - A / PC3 - A / PC4 - A / PC5 -A"* — transcribed as `2026-10-27-411` (Trustee-ratified, committed alone, `2cf8127e`); this story's own author-commit is RENUMBERED `-412` (every body reference; the Change Log rows above keep `-411` as written). **PC1 B reverses MP3 (a):** the public page carries ⛔ no marker — the API keeps the text segments, isolates each, and joins them (`joinKeptSegments`, the join rule ours); the wire is `{ words: string[], photo: { altText: string } | null }`; `apps/public` no longer needs `@twt/ui` (Trap 16); Traps 3/5/8, AC2/AC3, Tasks 4.1/5.2/6.1/6.2/6.5 rewritten; the alt text cites `-411` item 6; Trap 17 cites `-411` item 7. The family outcome line `outcome.approved_with_omissions` becomes inaccurate ⇒ AC8 / Task 9.1 / Question 10 (wording owed by BigDev). AC16 (1)–(3) RULED; (17) added (permission text vs unmarked joins, to counsel). Row 41 (e) MET; AC19 (m) met. Question 9 answered (sent). |
 | 2026-10-27 | v0.6 | BigDev answered Questions 2–8: *"all as recommended"* — copy approved (MP10 email, AC14 heading, `outcome.taken_down`, operator script); MP7 nominee mobile on the take-down screen; PC5 / PC4 built as recommended and asked; Trap 7 departure and MP8 (b) narrowing accepted; the photo route joins `SAHYOG_VIVRAN_APPLICABLE_CONTROLS`. Question 9 (when to send the note) had ⛔ no recommendation and stays open with BigDev. The routing note's header updated (Questions 4/5/7 settled ⇒ PC5/PC4/PC2 final). Task 0.2 is complete for the build ⇒ Task 1 may start. |
 | 2026-10-27 | v0.5 | BigDev answered Question 1: *"MP1-MP13 as recommended, email every approver."*; asked why MP14 (b) was not recommended (it MATCHES `-392` item 4; v0.4 had labelled (a) a departure but kept its star — a miss, stated to BigDev); then *"yes, go with option (b) for MP14, prepare the routing note"*. Recorded: MP10 (b) (every approver of every withdrawn approval — our reading of "the approver"); MP14 (b) (`first_contact_at` + bounds + `due_at = first_contact_at + 7 days`; threaded into Task 2.2, AC6, Task 4.2, the route table, Named identifiers); G6/PC3 lose the clock question. The routing note is DRAFTED (Task 1.3) — `trustee-panel-routing-note-2026-10-27-11b4a-family-memorial-public-render.md`: T1, PQ1 (recommends B — the current nominee when the original has died or been replaced), PQ2 (recommends A — the 2026-10-23 note already stated no page names the member), PC1–PC5; ⛔ not sent; its E4 commands run (two patterns fixed for bold markup). Questions 2–9 open. |
 | 2026-10-27 | v0.4 | Re-validated at `4e57fa42` after the rebase (four read-only verifiers; 40 findings, BigDev "all"; each HIGH re-checked by hand against code or log). Header re-pinned (STOP 1/2 fired on the TalkBack landing and disposed; ledger next `-27k`; `dacbf424` → `598a321d`). Governance: T1 added (`-395` item 3 answers `-393`'s open "who may ask" with what (ii) did not choose — Row 41 (e) needs item 3 itself shown); PC4 (alt text) and PC5 (the member-sees-more floor) added; MP14 named a departure from `-392` item 4; MP8 split by chain shape, the clean-approved case named a narrowing in part of `-393` M4; `-107` cl.1b quoted verbatim and re-scoped ("departs from the 10.21 pattern"; 6.9 D7 cited); G5/MP9 re-cited to 11b.4 MA13 + `-392` Not covered; Policy meaning corrected (consequence sentence: a current nominee can replace an `approved_with_omissions` memorial; predicate 3 added; Niyamavali §6.5 / Part 10 quoted; the E2 record cited, ⛔ not `-391`/`-393`). Design: MP10/MP11 now copy `0152`'s CHECKs unchanged (v0.2's "true mirror" with a per-recipient `no_target` could ⛔ not be built; `retries: 0` was false — the limit is 4; rows are born in the child's claim) and email ONE approver; MP8 (c) + `superseded` + `409 shown_changed` define the request→outcome window; Trap 18 (state is head-derived; a chain-level `deriveMemorialChainState`); Trap 19 (the photo route's narrow read — ⛔ no appeal-reversal audit); Trap 16 (`@twt/ui` needs `vite.ssr.noExternal`; the API runtime image is a placeholder on `node:22-alpine`); ⛔ no edge cache / Traefik route ⇒ Row 41 (p), (q); Trap 9's header exclusions and in-handler 404; erased memorials hidden from the take-down screens; AC11 link ⛔ not key-gated. Code: Trap 5 rewritten (seven pin sites; `isSahyogVivranResponse` passes unknown keys and returns early on a null `appealReversal`); Trap 17 mechanics (`PUBLIC_DETAIL_FIELD_IDS` spread; an exclusion block, ⛔ not the GAP form); `getBytes` null departs from the claim precedent; matrix `tier1_public_exception` blocks; flat `outcome.taken_down`; AC17 empty diff (the states export already exists). Structure: Task 3.0 carries the whole Trap 15 set + OpenAPI; a route table in Task 7.2; every AC clause mapped to a Task; "Done when" mutant lines; a Trap → Task line on every Trap; Project Structure Notes; Questions renumbered 1–9; four glyph inversions fixed. **Then the pass's own diff was re-validated** (one fresh read-only verifier): 2 HIGH / 4 MEDIUM / 11 LOW, all the pass's own, all applied — `memorialChainState` has a THIRD caller (the review detail); Trap 17 / G12 had quoted the `-189` sentence `-195` cl.1 answered the other way (now quotes the binding sentence); MP11 re-shaped to 6.25's selector-derived `(request, NULL)` pair with "due only while no outbox row"; T1 is "answers the question `-393` left open", ⛔ not a reversal; Row 41 (m) gates PC1–PC5 too; the floor test subtracts `DATA_CLASS_EXCLUDED`; `superseded` needs a changed shown version (`409 shown_unchanged`); plus name/quote/attribution fixes (`resolveHandoverNominee`, the Cloudflare and Traefik quotes, 6.9 D5a, the erasure-path wording). |

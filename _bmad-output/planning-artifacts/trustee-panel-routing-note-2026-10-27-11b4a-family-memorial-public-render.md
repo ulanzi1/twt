@@ -1,10 +1,9 @@
 # Trustee Panel routing note — 2026-10-27 — Story 11b.4a: the family's memorial on the public page, and taking it down — one thing to tell you, two questions, five confirms
 
-> **Status: DRAFTED, ⛔ NOT SENT.** Written by the agent at BigDev's request on 2026-10-27, during `bmad-create-story validate
-> 11b.4a` (story v0.5), on branch `story/11b-4a-family-memorial-public-render`, code baseline `4e57fa42`. ⭐ BigDev sends it; the
-> agent ⛔ never does. ✅ BigDev answered the story's Questions 2–8 on 2026-10-27 (*"all as recommended"*), so **PC5**, **PC4** and
-> **PC2** stand as written; the note is FINAL for sending. ⚠ Nothing here has been shown to the Panel until it is sent
-> ([[feedback_shown_to_panel_means_sent]]).
+> **Status: ANSWERED 2026-10-27 — PQ1 A · PQ2 A · PC1 B · PC2 A · PC3 A · PC4 A · PC5 A (Decision `2026-10-27-411`).**
+> Drafted by the agent at BigDev's request on 2026-10-27 during `bmad-create-story validate 11b.4a` (story v0.5, final at v0.6),
+> on branch `story/11b-4a-family-memorial-public-render`, code baseline `4e57fa42`. Sent by BigDev and answered the same day;
+> ⚠ whether this full note or a shorter copy was shown is ⛔ not recorded. Everything below the ruling block is kept UNEDITED, as put.
 
 ---
 
@@ -35,11 +34,28 @@ first reaches the helpline, which is exactly how your 2026-10-23 answer reads. *
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — `2026-10-27-411` (Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put**
-> ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti — relayed by BigDev, 2026-10-27, verbatim:
+> *"by DR and KB / PQ1 - A / PQ2 - A / PC1 - B / PC2 - A / PC3 - A / PC4 - A / PC5 -A"*
+>
+> - **T1** — shown; ⛔ no reply recorded (none was asked for). `-395` item 3 stands as BigDev's author-commit.
+> - **PQ1 — A.** Only the nominee who sent it can have it taken down; if that nominee has died or been replaced, ⛔ no one can. The
+>   Trust can still withdraw its own approval on its four grounds.
+> - **PQ2 — A.** The words and photo appear as the Trust approved them, including the member's name if the family wrote it.
+> - **PC1 — B.** ⛔ No marker on the public page: the words on either side of a part the Trust left out are simply joined. (The
+>   family's own screen still shows what was left out and why.)
+> - **PC2 — A.** The nominee may write again after a take-down; for a memorial approved exactly as written, a smaller fix means a
+>   take-down first.
+> - **PC3 — A.** ⛔ No one is emailed in place of an approver who has left.
+> - **PC4 — A.** The photo's description appears with it.
+> - **PC5 — A.** "A member must see more than the public" does ⛔ not reach the family's words.
+>
+> **Not covered** (as recorded in `-411`): how the words are joined across a cut (the build's); the family's outcome sentence *"They
+> will appear on the member's Sahyog Vivran page like this."*, now inaccurate for a memorial with a part left out (wording BigDev's);
+> Story 11b.4a's build decisions (its `-412`); the 7 days' start and the email mechanism; counsel; kinship; a family's own erasure.
+>
+> ⭐ Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

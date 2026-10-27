@@ -29,6 +29,7 @@ import { Button, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { loadClaimDraft, saveClaimDraft, type ClaimDocumentStage } from '../../lib/claim-draft'
 import { useSession } from '../../lib/session-context'
 import { useDeathCertificateUpload, type CertificateMarkerWriteContext } from '../../lib/use-death-certificate-upload'
@@ -40,7 +41,8 @@ export default function DocumentScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
   const { session } = useSession()
-  const name = t('member_fallback')
+  // `2026-10-27-409` (amended) — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
+  const name = useClaimMemberName()
   const memberId = session?.memberId
   const draft = memberId ? loadClaimDraft(memberId) : {}
   const claimCaseId = draft.claimCaseId

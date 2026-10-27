@@ -3572,6 +3572,17 @@ describe('T1 — a memorial screen speaks its heading on arrival (on the device 
     expect(arrivals()).toEqual([tr('intro.prompt', 'en', { name: 'शांति देवी' })])
   })
 
+  it.each([
+    ['photo', MemorialPhotoScreen, 'photo.title'],
+    ['preview', MemorialPreviewScreen, 'preview.title'],
+  ] as const)('%s: ⛔ re-announced on a re-render while it stays focused', (_n, Screen, key) => {
+    saveMemorialDraft('m-1', 'pool-1', { body: 'शब्द' })
+    const r = renderIn(Screen, 'en')
+    rerenderIn(r, Screen, 'en')
+    rerenderIn(r, Screen, 'en')
+    expect(arrivals()).toEqual([tr(key, 'en')])
+  })
+
   it('coming BACK to a screen is a page change too: spoken again on the next focus, ⛔ while it stays focused', () => {
     saveMemorialDraft('m-1', 'pool-1', { body: 'शब्द' })
     const r = renderIn(MemorialWriteScreen, 'en')

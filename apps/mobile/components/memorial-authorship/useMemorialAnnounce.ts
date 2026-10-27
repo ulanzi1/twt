@@ -84,8 +84,8 @@ export function useMemorialScreenAnnounce(heading: string | null): void {
  * T8 — a length counter that goes OVER the limit: the crossing is announced ONCE, as an error (the plan's `error` kind), on
  * both platforms — ⛔ on every keystroke past the limit (an assertive counter interrupted TalkBack on every character). The
  * text announced is the over-limit line AT THE CROSSING; it is held while the text stays over, and released when it comes
- * back under, so the next crossing is announced again. The counter line itself stays a POLITE status (its own live region).
- * ⚠ On Android the polite counter also reads the new line at that moment (once, at the crossing) — device check, Row 41 (h).
+ * back under, so the next crossing is announced again. The counter line itself is ⛔ a live region (T2, the TalkBack device
+ * session 2026-10-27 — the Row 41 (h) check: even polite, it was spoken on most keystrokes), so this is the ONLY thing spoken.
  * V8 — the INITIAL state is ⛔ a crossing: the first state seen once `ready` (the screen has read its saved draft — a draft
  * restored already over the limit, or a pushed second Write showing it) is taken as the baseline and NOT announced (the
  * screen reader reads the screen on arrival; the box's hint carries the line). Only a crossing after that is announced.

@@ -7,10 +7,11 @@
 import { randomUUID } from 'node:crypto';
 import { Writable } from 'node:stream';
 
-import { encryption, member as memberDomain } from '@twt/domain';
+import { encryption, ids, kyc, member as memberDomain } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ROUTE = '/api/v1/member/claims/member-name';
@@ -66,6 +67,29 @@ describe.skipIf(!hasDatabase)('2026-10-27-409 — the claim screens\' member nam
     expect(lines[0]!.context).toEqual({ fields_decrypted: 1, named: true });
     expect(JSON.stringify(t.auditSink.events)).not.toContain('Shanti');
     expect(logLines.join('')).not.toContain('Shanti');
+  });
+
+  it('the Pariwar\'s FORM (`-181` cl.1): a `shielded_name` Pariwar gets the shielded name, through the governed mode writer', async () => {
+    const p = randomUUID();
+    const m = await member(p, 'Shanti Devi');
+    const scopeTx = await openScopeTx(t.deps, p);
+    try {
+      await kyc.setPublicNamePresentationMode(scopeTx.tx, {
+        pariwarId: ids.pariwarId(p),
+        mode: 'shielded_name',
+        changedByActor: null,
+        changedByDisplay: null,
+        rationale: 'test fixture — the claim screens follow the Pariwar form (-409 / -181 cl.1)',
+        auditId: randomUUID(),
+      });
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+    const r = await read(token(m, p));
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ name: 'Shanti D.' }); // the member-pool card's form (`member-name-form-parity`: 'Rajesh S.')
   });
 
   it('⛔ KYC profile ⇒ { name: null } (the screens keep member_fallback), ⛔ a decrypt', async () => {

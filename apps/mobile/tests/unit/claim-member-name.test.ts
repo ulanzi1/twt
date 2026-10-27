@@ -6,7 +6,7 @@
 // hook — ⛔ `t('member_fallback')` left as the name; the entry uses its own no-name wording (`-410`, real t(), hi + en).
 // The screens on a device: the TalkBack session's re-check.
 import '@testing-library/jest-dom/vitest'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createElement } from 'react'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
@@ -83,9 +83,17 @@ describe('useClaimMemberName (`2026-10-27-409`)', () => {
 describe('the claim screens take the name from the hook (`-409`); the entry has its OWN no-name wording (`-410`)', () => {
   const src = (file: string) => readFileSync(resolve(__dirname, `../../app/(claim)/${file}.tsx`), 'utf8').replace(/\/\/.*$/gm, '')
 
-  it.each(['handover-otp', 'relationship', 'nominee-review'])('(claim)/%s.tsx — `{name}` from useClaimMemberName', (file) => {
+  // `-409` amended: ALL the flow's steps (the banner read on every step must not switch between the name and the generic).
+  it.each(['handover-otp', 'relationship', 'consent', 'document', 'nominee-review', 'contact', 'acknowledgement'])('(claim)/%s.tsx — `{name}` from useClaimMemberName', (file) => {
     expect(src(file)).toMatch(/const name = useClaimMemberName\(\)/)
     expect(src(file)).not.toMatch(/t\('member_fallback'\)/)
+  })
+
+  it('⛔ claim screen passes `member_fallback` itself (a directory scan — a NEW step must take the hook too)', () => {
+    const dir = resolve(__dirname, '../../app/(claim)')
+    for (const f of readdirSync(dir).filter((n) => n.endsWith('.tsx'))) {
+      expect(readFileSync(resolve(dir, f), 'utf8').replace(/\/\/.*$/gm, ''), f).not.toMatch(/t\('member_fallback'\)/)
+    }
   })
 
   it('(claim)/index.tsx — the registered name, else entry.question_no_name / entry.no_no_name (⛔ member_fallback in the sentence)', () => {

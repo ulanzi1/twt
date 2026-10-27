@@ -13,6 +13,7 @@ import { Button, H2, Paragraph, YStack } from 'tamagui'
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
 import { ShepherdContactCard } from '../../components/claim/ShepherdContactCard'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { clearClaimDraft, loadClaimDraft } from '../../lib/claim-draft'
 import { setFiledClaimCaseId } from '../../lib/filed-claim'
 import { useSession } from '../../lib/session-context'
@@ -21,7 +22,8 @@ export default function AcknowledgementScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
   const { session } = useSession()
-  const name = t('member_fallback')
+  // `2026-10-27-409` (amended) — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
+  const name = useClaimMemberName()
   const [claimCaseId, setClaimCaseId] = useState<string | undefined>(undefined)
 
   // The flow is complete — capture the filed claim id (R3: keep the point-of-contact view re-reachable)

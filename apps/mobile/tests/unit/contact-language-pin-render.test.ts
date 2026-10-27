@@ -9,15 +9,19 @@
 // `checkboxTextShown` is the text the member SAW. RED against the pre-change file (it renders English and submits `'en'`).
 // The `wa-notifications-screen-render` scaffold EXTENDED (AC15's harness): tamagui `XStack` / `Input` / `H3` / `Separator`
 // with the a11y props forwarded; `Platform.OS` (else `announce()` throws after the POST); `useRouter`; `expo-linking`.
+// `2026-10-27-409` (amended): the step takes the member's name through a query — the render gets a `QueryClientProvider` and the
+// name read answers `null`, so the banner keeps the `member_fallback` this test pins (the named path: `claim-member-name.test.ts`).
 import '@testing-library/jest-dom/vitest'
 import { createElement, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { t } from '@twt/i18n'
 import { LocaleProvider, useLocale } from '@twt/i18n/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mock = vi.hoisted(() => ({
   recordClaimContact: vi.fn(),
+  getMemberName: vi.fn(),
   nomineesStatus: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
@@ -29,7 +33,7 @@ vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: 
 vi.mock('../../lib/session-context', () => ({ useSession: () => ({ session: { memberId: 'm-1' } }) }))
 vi.mock('../../lib/claim-draft', () => ({ loadClaimDraft: () => ({ claimCaseId: 'c-1' }), saveClaimDraft: () => undefined }))
 vi.mock('../../lib/member-api', () => ({ memberAuth: { nomineesStatus: mock.nomineesStatus } }))
-vi.mock('../../lib/claim-api', () => ({ claimApi: { recordClaimContact: mock.recordClaimContact } }))
+vi.mock('../../lib/claim-api', () => ({ claimApi: { recordClaimContact: mock.recordClaimContact, getMemberName: mock.getMemberName } }))
 vi.mock('expo-linking', () => ({ openURL: mock.openURL }))
 vi.mock('expo-router', async () => {
   const { useEffect } = await import('react')
@@ -101,6 +105,7 @@ beforeEach(() => {
     locked: false,
   })
   mock.recordClaimContact.mockResolvedValue({})
+  mock.getMemberName.mockResolvedValue({ name: null })
 })
 afterEach(() => {
   cleanup()
@@ -108,7 +113,7 @@ afterEach(() => {
 
 describe('AC15 — the contact step renders and records Hindi while the app is in English (LS15 (b))', () => {
   it('⭐ (1) the agreement label, (2) every other string, (3) the request locale — all `hi`, on the SAME render', async () => {
-    render(createElement(LocaleProvider, { initialLocale: 'en' }, createElement(AppLocaleProbe), createElement(ContactScreen)))
+    render(createElement(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) }, createElement(LocaleProvider, { initialLocale: 'en' }, createElement(AppLocaleProbe), createElement(ContactScreen))))
     expect(screen.getByTestId('app-locale')).toHaveTextContent('en')
     await screen.findByTestId('contact-address-1')
 

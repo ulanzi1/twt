@@ -30,6 +30,7 @@ import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
 import { claimApi } from '../../lib/claim-api'
 import { type ClaimantChoice, type ClaimantNomineeRelationshipCode, buildMemberContactBody } from '../../lib/claim-contact'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { loadClaimDraft, saveClaimDraft } from '../../lib/claim-draft'
 import { memberAuth } from '../../lib/member-api'
 import { useSession } from '../../lib/session-context'
@@ -107,7 +108,8 @@ function ContactStep(): React.ReactElement {
   const router = useRouter()
   const { locale } = useLocale()
   const { session } = useSession()
-  const name = t('member_fallback')
+  // `2026-10-27-409` (amended) — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
+  const name = useClaimMemberName()
   const memberId = session?.memberId
   const claimCaseId = memberId ? loadClaimDraft(memberId).claimCaseId : undefined
 

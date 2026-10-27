@@ -2945,3 +2945,20 @@ approved by BigDev 2026-10-26) and their tests.
 render test that executes `nominees.tsx` (`nominee-marks-mode-render`) and the pure logic its unit tests; native layout, TalkBack and
 VoiceOver still need a device (AC7's device run). `apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔
 ratcheted. `pnpm friction:check` runs after the commit (AC-4 reads COMMITTED history).
+
+**Story 11b.4-talkback disposition (declaration affirmed — ⛔ new row, ⛔ row retired, ⛔ row amended; the TalkBack device session's
+fixes, 2026-10-27, branch `fix/talkback-session-2026-10-27`):** the member-facing changes are the four `(memorial)` screens
+(`index.tsx`, `write.tsx`, `photo.tsx`, `preview.tsx`), `components/memorial-authorship/useMemorialAnnounce.ts` and
+`components/Provider.tsx` (+ the starter's `CurrentToast.tsx`, deleted).
+
+1. ⭐ **Why ⛔ new row.** ⛔ Step, prompt, wait or field is added or removed on any flow. The changes are what a SCREEN READER says:
+   each memorial screen now speaks its heading on arrival (T1 — the intro, Write and Preview opened in silence); the two length
+   counters are ⛔ live regions any more (T2 — the Write counter was spoken 9 times in 26 typed characters); an English
+   "Notifications (F8)" no longer sits in every screen's reading order (T3 — the unused starter toast). Each REMOVES noise or
+   silence for a member using TalkBack; ⛔ a payer meets anything new.
+2. ⚠ **What stays** — the memorial's own steps (the nominee's code at Send, the permission above Send) are unchanged; the over-limit
+   crossing is still announced once (11b.4 T8).
+
+Demonstrated on the Android emulator (TalkBack 15, Hindi; speech from the log with the TTS engine disabled): the three arrivals
+spoken, the counter silent while typing, focus after Send on the outcome heading. ⛔ VoiceOver (no Xcode / iPhone). `apps/public` is
+⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted.

@@ -15,12 +15,14 @@ import { Button, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { useHandoverOtp } from '../../lib/use-handover-otp'
 
 export default function HandoverOtpScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
-  const name = t('member_fallback')
+  // `2026-10-27-409` — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
+  const name = useClaimMemberName()
   const [code, setCode] = useState('')
   const { masked, noNominee, error, busy, send, verify } = useHandoverOtp()
 

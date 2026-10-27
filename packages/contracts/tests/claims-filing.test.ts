@@ -14,6 +14,7 @@ import {
   ClaimIntakeInitiateRequest,
   ClaimIntakeInitiateResponse,
   ClaimLifecycleState,
+  ClaimMemberNameResponse,
   ClaimantRelationship,
   HandoverOtpRequest,
   HandoverOtpResponse,
@@ -37,6 +38,15 @@ describe('Claim-filing DTOs (strict + shapes)', () => {
     assertStrict(HandoverOtpVerifyResponse);
     assertStrict(ClaimIntakeInitiateRequest);
     assertStrict(ClaimIntakeInitiateResponse);
+    assertStrict(ClaimMemberNameResponse);
+  });
+
+  it('`2026-10-27-409` — ClaimMemberNameResponse: a name or null; ⛔ an empty name, ⛔ any other field', () => {
+    expect(ClaimMemberNameResponse.parse({ name: 'Shanti Devi' })).toEqual({ name: 'Shanti Devi' });
+    expect(ClaimMemberNameResponse.parse({ name: null })).toEqual({ name: null });
+    expect(ClaimMemberNameResponse.safeParse({ name: '' }).success).toBe(false);
+    expect(ClaimMemberNameResponse.safeParse({}).success).toBe(false);
+    expect(ClaimMemberNameResponse.safeParse({ name: 'x', memberId: 'm' }).success).toBe(false);
   });
 
   it('ClaimIntakeInitiateRequest accepts a relationship', () => {

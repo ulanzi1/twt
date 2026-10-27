@@ -55,10 +55,8 @@ import {
   claim,
   ids,
   kyc as kycDomain,
-  member as memberDomain,
   memorial,
   nominee as nomineeDomain,
-  notifications,
   type Db,
 } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -68,8 +66,7 @@ import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from
 import type { ScopeTx } from '../../types.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { normalizeMobile } from '../auth/shared/mobile-index.js';
-import { decryptKycField } from '../kyc/kyc-crypto.js';
-import { KmsOutageError, normalisePublicName, withKmsOutageClassification } from '../kyc/name-render.js';
+import { resolveMemberFacingName } from '../kyc/member-facing-name.js';
 import { resolvePoolNamePresentationModeForRequest } from '../member-pool/pool-identity.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { decryptNomineeField } from '../nominee/nominee-crypto.js';
@@ -285,43 +282,7 @@ async function resolveHandoverNominee(
   return canonical === null ? { ok: false } : { ok: true, recipient: 'latest', nomineeRef: read.versionId };
 }
 
-/**
- * The deceased's name for the intro (MA14) — the 11b.21 chain (decrypt → `publicNameTokens` →
- * `resolveMemberFacingDeceasedName(presentationMode, …)` → `normalisePublicName`), FAIL-SOFT: a KMS outage, a null name or
- * the erasure sentinel ⇒ `null` (the no-name key), ⛔ never a 500. ⚠ A deliberate difference from 11b.21, which re-throws
- * `KmsOutageError`: here the outage degrades the intro's NAME only (the words fail soft separately).
- */
-async function resolveIntroName(
-  deps: AppDeps,
-  request: FastifyRequest,
-  args: {
-    readonly pariwarId: ids.PariwarId;
-    readonly ciphertext: string | null;
-    readonly presentationMode: Awaited<ReturnType<typeof resolvePoolNamePresentationModeForRequest>>;
-  },
-): Promise<{ readonly name: string | null; readonly decrypted: boolean }> {
-  if (args.ciphertext === null) return { name: null, decrypted: false };
-  let stored: string;
-  try {
-    stored = await decryptKycField(args.ciphertext, args.pariwarId, withKmsOutageClassification(deps.encryption));
-  } catch (err) {
-    request.log.warn(
-      { errorName: err instanceof Error ? err.name : typeof err, outage: err instanceof KmsOutageError },
-      'memorial: deceased name decrypt failed — the no-name intro',
-    );
-    return { name: null, decrypted: false };
-  }
-  if (stored === memberDomain.ANONYMIZED_SENTINEL) return { name: null, decrypted: true };
-  try {
-    const name = normalisePublicName(
-      notifications.resolveMemberFacingDeceasedName(args.presentationMode, kycDomain.publicNameTokens(stored).join(' ')),
-    );
-    return { name, decrypted: true };
-  } catch (err) {
-    request.log.warn({ errorName: err instanceof Error ? err.name : typeof err }, 'memorial: deceased name resolution failed');
-    return { name: null, decrypted: true };
-  }
-}
+// The deceased's name for the intro (MA14) — the shared resolver (`../kyc/member-facing-name.ts`, moved there by `2026-10-27-409`).
 
 export function createMemorialHandlers(deps: AppDeps) {
   function memberCtx(request: FastifyRequest): { memberIdStr: string; pariwarIdStr: string } {
@@ -414,7 +375,7 @@ export function createMemorialHandlers(deps: AppDeps) {
 
       // ── Decrypt AFTER the transaction (⛔ KMS inside a tx). ─────────────────────────────────────────────────────────
       let fieldsDecrypted = 0;
-      const intro = await resolveIntroName(deps, request, { pariwarId, ciphertext: nameCiphertext, presentationMode });
+      const intro = await resolveMemberFacingName(deps, request, { pariwarId, ciphertext: nameCiphertext, presentationMode }, 'memorial');
       if (intro.decrypted) fieldsDecrypted += 1;
 
       const state = memorial.memorialChainState(chain);

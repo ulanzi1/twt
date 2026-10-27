@@ -14,6 +14,7 @@ import {
   ClaimDocumentUploadResponse,
   ClaimIntakeInitiateRequest,
   ClaimIntakeInitiateResponse,
+  ClaimMemberNameResponse,
   HandoverOtpRequest,
   HandoverOtpResponse,
   HandoverOtpVerifyRequest,
@@ -81,6 +82,16 @@ export function registerClaimsRoutes(app: FastifyInstance, deps: AppDeps): void 
   const memberSession = requireMemberSession(deps);
   const sendThrottle = memberClaimHandoverSendThrottle(deps);
   const verifyThrottle = memberClaimHandoverVerifyThrottle(deps);
+
+  // `2026-10-27-409` — the session member's registered name for the claim screens (⛔ a parameter: the session's own member).
+  r.get(
+    '/api/v1/member/claims/member-name',
+    {
+      schema: { response: { 200: ClaimMemberNameResponse }, tags: [CLAIM_TAG] },
+      preHandler: [memberSession],
+    },
+    h.memberName,
+  );
 
   r.post(
     '/api/v1/member/claims/handover-otp',

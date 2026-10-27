@@ -108,6 +108,14 @@ export type HandoverOtpVerifyRequest = z.output<typeof HandoverOtpVerifyRequest>
 export const HandoverOtpVerifyResponse = z.object({ verified: z.boolean() }).strict();
 export type HandoverOtpVerifyResponse = z.output<typeof HandoverOtpVerifyResponse>;
 
+/**
+ * `GET /member/claims/member-name` (`2026-10-27-409`) — the SESSION member's registered name for the claim-filing screens, in
+ * the Pariwar's member-facing form (`2026-09-02-181` cl.1). `null` ⇒ no name to show (no KYC profile, erased, or the name could
+ * not be read just now) — the screens keep their `member_fallback` copy. ⛔ Any other field.
+ */
+export const ClaimMemberNameResponse = z.object({ name: z.string().min(1).nullable() }).strict();
+export type ClaimMemberNameResponse = z.output<typeof ClaimMemberNameResponse>;
+
 // ── intake (AC3) ───────────────────────────────────────────────────────────────────────
 
 /**

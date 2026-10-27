@@ -2962,3 +2962,11 @@ fixes, 2026-10-27, branch `fix/talkback-session-2026-10-27`):** the member-facin
 Demonstrated on the Android emulator (TalkBack 15, Hindi; speech from the log with the TTS engine disabled): the three arrivals
 spoken, the counter silent while typing, focus after Send on the outcome heading. ⛔ VoiceOver (no Xcode / iPhone). `apps/public` is
 ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted.
+
+**Story 409-claim-name disposition (declaration affirmed — ⛔ new row, ⛔ row retired, ⛔ row amended; `2026-10-27-409`):** the
+claim-filing screens (`app/(claim)/index.tsx`, `handover-otp.tsx`, `relationship.tsx`, `nominee-review.tsx`) now name the member
+— *"क्या आप Shanti Devi के परिजन हैं?"* in place of *"… आपके परिजन के परिजन …"* — through a new READ (`lib/use-claim-member-name.ts`,
+GET `/api/v1/member/claims/member-name`). ⛔ Step, prompt, wait or field is added: the read runs beside the entry gate, the screens
+show the existing fallback until it answers, and a failure keeps the fallback (the flow is ⛔ blocked). ⛔ Payer meets anything new.
+Demonstrated on the Android emulator (Hindi): the entry question, the *No* button and the handover heading carry the name; one read
+serves the stack. `apps/public` is ⛔ touched.

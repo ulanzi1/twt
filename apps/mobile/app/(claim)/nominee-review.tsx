@@ -35,6 +35,7 @@ import { CallHelplineCTA } from '../../components/claim/CallHelplineCTA'
 import { claimApi } from '../../lib/claim-api'
 import { memberAuth } from '../../lib/member-api'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { loadClaimDraft, saveClaimDraft } from '../../lib/claim-draft'
 import { IFSC_RE } from '../../lib/nominee-bank-ifsc'
 import { VPA_RE } from '../../lib/nominee-bank-vpa'
@@ -71,7 +72,8 @@ export default function NomineeReviewScreen(): React.ReactElement {
   const tCommon = useT()
   const router = useRouter()
   const { session } = useSession()
-  const name = t('member_fallback')
+  // `2026-10-27-409` — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
+  const name = useClaimMemberName()
   const memberId = session?.memberId
   const claimCaseId = memberId ? loadClaimDraft(memberId).claimCaseId : undefined
 

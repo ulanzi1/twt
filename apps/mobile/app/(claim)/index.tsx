@@ -20,6 +20,7 @@ import { Button, H2, Paragraph, Spinner, YStack } from 'tamagui'
 import { resolveClaimEntryDecision } from '../../lib/claim-entry-gate'
 import { loadClaimDraft } from '../../lib/claim-draft'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { nextClaimStep } from '../../lib/claim-steps'
 import { fetchClaimEntryReadOutcome } from '../../lib/fetch-claim-entry-outcome'
 import { getFiledClaimCaseId } from '../../lib/filed-claim'
@@ -29,7 +30,8 @@ export default function ClaimEntryScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
   const { session, isLoading: sessionLoading } = useSession()
-  const name = t('member_fallback')
+  // `2026-10-27-409` — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
+  const name = useClaimMemberName()
 
   // `-249` §2 (B2, narrowed) — a filed claim on record whose fresh D1 read says `claim_live: true`
   // skips straight to the shepherd screen; one CLOSED for no response that still needs a re-file confirmation goes to

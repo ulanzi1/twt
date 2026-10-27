@@ -151,10 +151,12 @@ import {
   type RtbfStatusResponse as RtbfStatusResult,
   HandoverOtpResponse,
   HandoverOtpVerifyResponse,
+  ClaimMemberNameResponse,
   ClaimIntakeInitiateResponse,
   ClaimDocumentUploadResponse,
   type HandoverOtpResponse as HandoverOtpResult,
   type HandoverOtpVerifyResponse as HandoverOtpVerifyResult,
+  type ClaimMemberNameResponse as ClaimMemberNameResult,
   type ClaimIntakeInitiateRequest,
   type ClaimIntakeInitiateResponse as ClaimIntakeInitiateResult,
   type ClaimDocumentUploadResponse as ClaimDocumentUploadResult,
@@ -1126,6 +1128,11 @@ export function createMemberClaimClient(opts: MemberAuthClientOptions) {
     /** Verify the submitted handover-trust OTP → establish handover-trust (session; auth). */
     verifyHandoverOtp(code: string): Promise<HandoverOtpVerifyResult> {
       return call(`${CLAIMS_BASE}/handover-otp/verify`, HandoverOtpVerifyResponse, { code }, true);
+    },
+
+    /** The session member's registered name for the claim-filing screens, or `null` (`2026-10-27-409`; session; auth). */
+    getMemberName(): Promise<ClaimMemberNameResult> {
+      return call(`${CLAIMS_BASE}/member-name`, ClaimMemberNameResponse, undefined, true, 'GET');
     },
 
     /** Relationship-confirm → mint claim_case_id + emit claim.intake_initiated (session; auth). */

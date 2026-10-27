@@ -21,6 +21,7 @@ import { boundClaimEntryRead, mayRecordClosedClaimPointer } from '../../lib/clai
 import { fetchClaimEntryReadOutcome } from '../../lib/fetch-claim-entry-outcome'
 import { getFiledClaimCaseId, setFiledClaimCaseId } from '../../lib/filed-claim'
 import { useClaimT } from '../../lib/claim-i18n'
+import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { loadClaimDraft, saveClaimDraft } from '../../lib/claim-draft'
 import { REFILE_REQUIRES_CONFIRMATION_CODE } from '../../lib/refile-helpline-copy'
 import { useSession } from '../../lib/session-context'
@@ -32,7 +33,8 @@ export default function RelationshipScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
   const { session } = useSession()
-  const name = t('member_fallback')
+  // `2026-10-27-409` — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
+  const name = useClaimMemberName()
   // Resume: restore a previously-picked relationship instead of always starting unselected (AC6).
   const [relationship, setRelationship] = useState<Relationship | null>(
     () => (session?.memberId && loadClaimDraft(session.memberId).relationship) || null,

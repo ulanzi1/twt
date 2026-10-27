@@ -252,6 +252,7 @@ export type AuthAuditEventType =
   //   intake_failed        — the intake attempt threw (neither created nor an idempotent hit);
   //                          recorded so a failed account-freeze attempt is never audit-silent.
   | 'member_claim.handover_otp_send'
+  | 'member_claim.member_name_read'
   | 'member_claim.handover_otp_consume'
   | 'member_claim.handover_otp_failure'
   | 'member_claim.intake_initiated'

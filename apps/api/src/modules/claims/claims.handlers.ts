@@ -4,7 +4,8 @@
 //   · requestHandoverOtp — send the handover-trust OTP to the nominee's mobile (AC2) — the latest nominee, or the
 //                          at-death one while a `-239` suspicion refusal stands (Story 6.24b RF9);
 //   · verifyHandoverOtp  — verify it → record the `claim_handover` elevation (AC2);
-//   · initiateIntake     — relationship-confirm → mint + freeze, idempotently (AC3).
+//   · initiateIntake     — relationship-confirm → mint + freeze, idempotently (AC3);
+//   · memberName         — the session member's registered name for the claim screens (`2026-10-27-409`).
 //
 // ── Scope-tx discipline (the nominee.handlers.ts template) ─────────────────────────────
 // `requireMemberSession` sets `request.requestContext.{actorId,pariwarId}` but opens NO tx;
@@ -23,17 +24,20 @@ import { randomUUID } from 'node:crypto';
 import type {
   ClaimIntakeInitiateRequest,
   ClaimIntakeInitiateResponse,
+  ClaimMemberNameResponse,
   HandoverOtpResponse,
   HandoverOtpVerifyRequest,
   HandoverOtpVerifyResponse,
 } from '@twt/contracts';
-import { ids } from '@twt/domain';
+import { ids, kyc as kycDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { StepUpRequiredError, UnauthorizedError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { hmacOtpAuditCorrelation } from '../auth/shared/otp.js';
+import { resolveMemberFacingName, type MemberFacingNameMode } from '../kyc/member-facing-name.js';
+import { resolvePoolNamePresentationModeForRequest } from '../member-pool/pool-identity.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import {
   CLAIM_HANDOVER_ACTION_CONTEXT,
@@ -56,6 +60,41 @@ export function createClaimsHandlers(deps: AppDeps) {
   }
 
   return {
+    /**
+     * GET /api/v1/member/claims/member-name (`2026-10-27-409`) — the SESSION member's registered name for the claim-filing
+     * screens, in the Pariwar's member-facing form (`-181` cl.1; the memorial intro's resolver, shared). ⛔ A parameter: the
+     * session's own member only. FAIL-SOFT `{ name: null }` (no KYC profile, the erasure sentinel, a KMS outage) — the
+     * screens keep `member_fallback`. The ciphertext and the mode are read in the tx; the decrypt runs AFTER it (⛔ KMS in a tx).
+     * The audit line carries counts only (⛔ the name).
+     */
+    async memberName(request: FastifyRequest): Promise<ClaimMemberNameResponse> {
+      const { memberIdStr, pariwarIdStr } = memberCtx(request);
+      const pariwarId = ids.pariwarId(pariwarIdStr);
+      const scopeTx = await openScopeTx(deps, pariwarIdStr);
+      let ok = false;
+      let ciphertext: string | null = null;
+      let presentationMode: MemberFacingNameMode | null = null;
+      try {
+        ciphertext = (await kycDomain.getMemberKycProfile(scopeTx.tx, pariwarId, ids.memberId(memberIdStr)))?.nameCiphertext ?? null;
+        presentationMode = await resolvePoolNamePresentationModeForRequest(scopeTx.tx, pariwarId);
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+      const { name, decrypted } = await resolveMemberFacingName(
+        deps,
+        request,
+        { pariwarId, ciphertext, presentationMode: presentationMode! },
+        'claims member-name',
+      );
+      emitAuthAudit(deps, request, 'member_claim.member_name_read', {
+        actorId: memberIdStr,
+        pariwarId: pariwarIdStr,
+        context: { fields_decrypted: decrypted ? 1 : 0, named: name !== null },
+      });
+      return { name };
+    },
+
     /**
      * POST /api/v1/member/claims/handover-otp — send the handover-trust OTP to the deceased's
      * primary nominee's declared mobile — or, while a `-239` suspicion refusal stands for the death, to the

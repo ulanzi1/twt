@@ -7,8 +7,10 @@
 // rendered OUTSIDE this control.
 // A component declared at MODULE level (a stable type — its buttons keep focus across renders; ⛔ declared inside a parent's render).
 // Every control is 48 dp tall (device run 2026-10-24: they were 36 dp): *Keep the mark* / *Remove it* answer a question about WHO a
-// mark is for, and the members who read it are not young. Each button's accessible name begins with its visible text, then says
-// WHICH nominee (two slots share the words — WCAG 2.5.3).
+// mark is for, and the members who read it are not young. *Find…* is AT LEAST 48 dp and WRAPS (6.36f device run 2026-10-27: its
+// one-line cut read "…Find them i…" / "…संप…"; the label is long in both languages). It renders its OWN `Text`: `Button` wraps a
+// string child in a Text whose variant sets `ellipsis: true` (⇒ one line), and `ellipsis={false}` maps to nothing — tried, still cut.
+// Each button's accessible name begins with its visible text, then says WHICH nominee (two slots share the words — WCAG 2.5.3).
 
 import { useT } from '@twt/i18n/react'
 import { Button, Paragraph, Text, XStack, YStack } from 'tamagui'
@@ -77,13 +79,18 @@ export function NomineeMarkControl(props: NomineeMarkControlProps): React.ReactE
       <XStack gap="$2" flexWrap="wrap">
         {props.canFind ? (
           <Button
-            height={48}
+            height="auto"
+            minH={48}
+            py="$2"
+            noTextWrap
             chromeless
             accessibilityRole="button"
             accessibilityLabel={labelled(mark === null ? lt('form.find') : lt('form.find_again'))}
             onPress={props.onFind}
           >
-            {mark === null ? lt('form.find') : lt('form.find_again')}
+            <Text shrink={1} text="center">
+              {mark === null ? lt('form.find') : lt('form.find_again')}
+            </Text>
           </Button>
         ) : null}
         {mark !== null ? (

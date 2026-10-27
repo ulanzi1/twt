@@ -7,7 +7,7 @@
 // Accessibility: cards are role=button with label + hint; the status line is announced.
 
 import { useT } from '@twt/i18n/react'
-import { useRouter, type Href } from 'expo-router'
+import { Stack, useRouter, type Href } from 'expo-router'
 import { ScrollView } from 'react-native'
 import { Button, H2, Paragraph, Text, YStack } from 'tamagui'
 
@@ -63,6 +63,8 @@ export default function LifeEventsIndexScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      {/* The group's plain `<Stack />` names an untitled route by its file — the header read "index" (6.36f device run). */}
+      <Stack.Screen options={{ title: t('lifeEvents.title') }} />
       <YStack gap="$4" px="$6" py="$6" bg="$background">
         <H2 accessibilityRole="header">{t('lifeEvents.title')}</H2>
         <Paragraph color="$colorPress" accessibilityRole="text">

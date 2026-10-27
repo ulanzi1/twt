@@ -103,15 +103,18 @@ vi.mock('../../lib/known-people-api', () => ({ knownPeopleApi: {} }))
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 vi.mock('tamagui', async () => {
   const { createElement } = await import('react')
-  const container = ({ children, accessibilityRole, testID }: { children?: React.ReactNode; accessibilityRole?: string; testID?: string }) =>
-    createElement('div', { role: accessibilityRole === 'alert' ? 'alert' : undefined, 'data-testid': testID }, children)
+  // `data-live` ⇒ an Android live region (TalkBack re-reads one when the screen re-renders — the device run's D1).
+  const container = ({ children, accessibilityRole, testID, accessibilityLiveRegion }: { children?: React.ReactNode; accessibilityRole?: string; testID?: string; accessibilityLiveRegion?: string }) =>
+    createElement('div', { role: accessibilityRole === 'alert' ? 'alert' : undefined, 'data-testid': testID, 'data-live': accessibilityLiveRegion }, children)
   return {
     H2: container, Paragraph: container, Text: container, XStack: container, YStack: container,
     Spinner: () => createElement('span', null, 'spinner'),
     Input: ({ value, onChangeText, accessibilityLabel }: { value: string; onChangeText: (v: string) => void; accessibilityLabel?: string }) =>
       createElement('input', { value, 'aria-label': accessibilityLabel, onChange: (e: { target: { value: string } }) => onChangeText(e.target.value) }),
-    Button: ({ children, onPress, disabled, accessibilityLabel, height }: { children: React.ReactNode; onPress?: () => void; disabled?: boolean; accessibilityLabel?: string; height?: number }) =>
-      createElement('button', { onClick: onPress, disabled, 'aria-label': accessibilityLabel, 'data-height': height }, children),
+    // `data-height` is the GUARANTEED height (a `minH` where the button may grow); `data-own-text` ⇒ the caller renders the label's
+    // Text (`noTextWrap`) — Tamagui's own wrapper Text is one line.
+    Button: ({ children, onPress, disabled, accessibilityLabel, height, minH, noTextWrap }: { children: React.ReactNode; onPress?: () => void; disabled?: boolean; accessibilityLabel?: string; height?: number | string; minH?: number; noTextWrap?: boolean }) =>
+      createElement('button', { onClick: onPress, disabled, 'aria-label': accessibilityLabel, 'data-height': minH ?? height, 'data-own-text': noTextWrap ? 'true' : undefined }, children),
   }
 })
 
@@ -297,5 +300,45 @@ describe('Story 6.36f — marks mode', () => {
     await userEvent.click(btn('Change names or numbers instead'))
     expect(btn('nominees.submit')).toBeInTheDocument()
     expect(mock.back).not.toHaveBeenCalled()
+  })
+
+  // ── The AC7 device run's findings (2026-10-27) ──────────────────────────────────────────────────────────────────────
+  it('device run D1 — *"Mark removed."* is SPOKEN ONCE, ⛔ a live region (TalkBack re-read one at the *Save marks* press, cleared or not), and leaves when the save starts', async () => {
+    let finishSave!: (value: unknown) => void
+    mock.saveMarks.mockImplementationOnce(() => new Promise((resolve) => { finishSave = resolve }))
+    await openMarks()
+    await userEvent.click(btn(/^Remove mark/))
+    const removed = screen.getByText('Mark removed.')
+    expect(removed).not.toHaveAttribute('data-live')
+    expect(mock.announce.mock.calls.filter(([x]) => x === 'Mark removed.')).toHaveLength(1)
+    await userEvent.click(btn('Save marks'))
+    expect(screen.queryByText('Mark removed.')).toBeNull()
+    expect(mock.announce.mock.calls.filter(([x]) => x === 'Mark removed.')).toHaveLength(1)
+    await act(async () => finishSave(status(2)))
+    await waitFor(() => expect(mock.back).toHaveBeenCalledTimes(1))
+  })
+
+  it('device run D2 — a pick is SPOKEN, ⛔ shown above rank 1: its only visible line is the picked rank\'s own label; each pick speaks', async () => {
+    await openMarks()
+    handNomineeLinkPick(2, { kind: 'new', mobile: '9876500003', foundBy: 'typed' })
+    act(() => mock.focus!())
+    const lines = screen.getAllByText('Marked as a member')
+    expect(lines).toHaveLength(1)
+    expect(screen.getByTestId('nominee-marks-rank-2')).toContainElement(lines[0]!)
+    expect(mock.announce).toHaveBeenCalledWith('Marked as a member')
+    mock.announce.mockClear()
+    handNomineeLinkPick(1, { kind: 'new', mobile: '9876500002', foundBy: 'typed' }) // the SAME words, a second pick
+    act(() => mock.focus!())
+    expect(mock.announce).toHaveBeenCalledWith('Marked as a member')
+    expect(screen.getByTestId('nominee-marks-rank-1')).toHaveTextContent('Marked as a member')
+  })
+
+  it('device run D3 — *Find…* renders its OWN label Text (Tamagui\'s wrapper is one line; `ellipsis={false}` was inert on the device) and keeps its 48 dp floor', async () => {
+    mock.links = { ranks: RANKS, links: [] }
+    await openMarks()
+    const find = btn(/^Is this nominee a TWT member\? Find them in your contacts — nominees.secondary_label/)
+    expect(find).toHaveAttribute('data-own-text', 'true')
+    expect(find).toHaveTextContent('Is this nominee a TWT member? Find them in your contacts')
+    expect(Number(find.getAttribute('data-height'))).toBeGreaterThanOrEqual(48)
   })
 })

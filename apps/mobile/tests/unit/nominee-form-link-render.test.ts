@@ -46,8 +46,9 @@ vi.mock('tamagui', async () => {
     Spinner: () => createElement('span', null, 'spinner'),
     Input: ({ value, onChangeText, accessibilityLabel }: { value: string; onChangeText: (v: string) => void; accessibilityLabel?: string }) =>
       createElement('input', { value, 'aria-label': accessibilityLabel, onChange: (e: { target: { value: string } }) => onChangeText(e.target.value) }),
-    Button: ({ children, onPress, disabled, accessibilityLabel, height }: { children: React.ReactNode; onPress?: () => void; disabled?: boolean; accessibilityLabel?: string; height?: number }) =>
-      createElement('button', { onClick: onPress, disabled, 'aria-label': accessibilityLabel, 'data-height': height }, children),
+    // `data-height` is the GUARANTEED height (a `minH` where the button may grow — *Find…* wraps since the 6.36f device run).
+    Button: ({ children, onPress, disabled, accessibilityLabel, height, minH }: { children: React.ReactNode; onPress?: () => void; disabled?: boolean; accessibilityLabel?: string; height?: number | string; minH?: number }) =>
+      createElement('button', { onClick: onPress, disabled, 'aria-label': accessibilityLabel, 'data-height': minH ?? height }, children),
   }
 })
 

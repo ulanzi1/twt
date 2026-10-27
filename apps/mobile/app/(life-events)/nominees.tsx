@@ -119,6 +119,10 @@ export default function LifeEventsNomineesScreen() {
   // a ref (its dependency list stays the slots it falls back to).
   const [marksMode, setMarksMode] = useState(false)
   const marksModeRef = useRef(false)
+  // The memoized focus effect speaks a pick through the CURRENT translator (`lt` is a fresh closure per render — a captured one
+  // would keep the language the callback was made in).
+  const ltRef = useRef(lt)
+  ltRef.current = lt
   const [marks, setMarks] = useState<MarksRecord>({})
   const [marksStart, setMarksStart] = useState<MarksRecord>({})
   const [marksNotice, setMarksNotice] = useState<{ text: string; seq: number } | null>(null)
@@ -132,11 +136,13 @@ export default function LifeEventsNomineesScreen() {
     useCallback(() => {
       const pick = takeNomineeLinkPick()
       if (pick === null) return
-      // Story 6.36f (MK8) — in marks mode the pick lands on the marks record (⛔ `applyPick`, which is slot-shaped).
+      // Story 6.36f (MK8) — in marks mode the pick lands on the marks record (⛔ `applyPick`, which is slot-shaped). It is SPOKEN
+      // only: the picked rank's own label already SHOWS it, and a second line above rank 1 read as rank 1's (device run D2).
       if (marksModeRef.current) {
         setMarks((m) => applyMarksPick(m, pick.rank, pick.mark))
         setMarksError(null)
-        setPickNotice({ name: markName(pick.mark), seq: Date.now() })
+        const name = markName(pick.mark)
+        AccessibilityInfo.announceForAccessibility(name ? ltRef.current('form.marked', { name }) : ltRef.current('form.marked_no_name'))
         return
       }
       const base = latestForms.current ?? initialForms ?? freshForms()
@@ -274,6 +280,12 @@ export default function LifeEventsNomineesScreen() {
   }
 
   const showMarksError = (text: string): void => setMarksError({ text, seq: Date.now() })
+  /** *"Mark removed."* / *"Mark kept."*: SHOWN, and SPOKEN ONCE here — ⛔ a live region, which TalkBack re-read at the *Save marks*
+   *  press (device run D1, 2026-10-27: re-read whether the line stayed or was cleared). */
+  function sayMarksNotice(text: string): void {
+    setMarksNotice({ text, seq: Date.now() })
+    AccessibilityInfo.announceForAccessibility(text)
+  }
 
   /** A 200: SAY it on both platforms (a live region unmounted by `router.back()` is never read), then leave as a full save does. */
   async function marksSaved(): Promise<void> {
@@ -286,6 +298,8 @@ export default function LifeEventsNomineesScreen() {
     const body = buildMarksBody(links.data.ranks, marks)
     setBusy(true)
     setMarksError(null)
+    // *"Mark removed."* / *"Mark kept."* said what the member DID — ⛔ left standing under the spinner and the step-up prompt.
+    setMarksNotice(null)
     setPendingMarks(body)
     try {
       const result = await stepUp.guard(() => memberAuth.lifeEventsUpdateNomineeMarks(body))
@@ -337,7 +351,6 @@ export default function LifeEventsNomineesScreen() {
         showMarksError(lt('save.stale_not_reloaded'))
         return
       }
-      setPickNotice(null)
       setMarksNotice(null)
       startMarks(fresh.data)
     }
@@ -440,9 +453,8 @@ export default function LifeEventsNomineesScreen() {
     /** *Remove mark* on a rank: ⛔ mark (a live one ENDS at save) — and SAY so (the button vanishes with it). */
     const removeRankMark = (rank: NomineeRank) => {
       setMarks((m) => ({ ...m, [rank]: null }))
-      setPickNotice(null)
       setMarksError(null)
-      setMarksNotice({ text: lt('form.removed'), seq: Date.now() })
+      sayMarksNotice(lt('form.removed'))
     }
     return (
       <>
@@ -451,9 +463,6 @@ export default function LifeEventsNomineesScreen() {
           <YStack gap="$4" px="$6" py="$6" bg="$background" testID="nominee-marks-mode">
             <H2 accessibilityRole="header">{lt('marks.title')}</H2>
             <Paragraph accessibilityRole="text">{lt('marks.intro')}</Paragraph>
-            {pickNotice ? (
-              <AnnouncedText key={pickNotice.seq} text={pickNotice.name ? lt('form.marked', { name: pickNotice.name }) : lt('form.marked_no_name')} color="$color" />
-            ) : null}
             {/* One block per rank of the BASIS (⛔ the cached status read, which may be stale — MK3). */}
             {view.ranks.map((r) => (
               <YStack key={r.rank} gap="$3" testID={`nominee-marks-rank-${r.rank}`}>
@@ -470,12 +479,16 @@ export default function LifeEventsNomineesScreen() {
                   questionOpen={false}
                   onFind={() => router.push({ pathname: '/(life-events)/nominee-link-find', params: { rank: String(r.rank) } })}
                   onRemove={() => removeRankMark(r.rank)}
-                  onKeep={() => setMarksNotice({ text: lt('form.kept'), seq: Date.now() })}
+                  onKeep={() => sayMarksNotice(lt('form.kept'))}
                 />
               </YStack>
             ))}
             {/* The mode's OWN notice — OUTSIDE the blocks (the control carries ⛔ notice): the removed button takes focus with it. */}
-            {marksNotice ? <AnnouncedText key={marksNotice.seq} text={marksNotice.text} color="$color" /> : null}
+            {marksNotice ? (
+              <Text key={marksNotice.seq} fontSize="$2" color="$color" accessibilityRole="text">
+                {marksNotice.text}
+              </Text>
+            ) : null}
             {stepUpFooter}
             {marksError ? <AnnouncedText key={marksError.seq} text={marksError.text} kind="error" color="#C0392B" /> : null}
             <Button

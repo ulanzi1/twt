@@ -2,8 +2,8 @@
 
 > **Status: DRAFTED, ⛔ NOT SENT.** Written by the agent at BigDev's request on 2026-10-27, during `bmad-create-story validate
 > 11b.4a` (story v0.5), on branch `story/11b-4a-family-memorial-public-render`, code baseline `4e57fa42`. ⭐ BigDev sends it; the
-> agent ⛔ never does. ⚠ Three of BigDev's own answers are still open (story Questions 4, 5 and 7); they could change **PC5**,
-> **PC4** and **PC2** below — re-read those three before sending. ⚠ Nothing here has been shown to the Panel until it is sent
+> agent ⛔ never does. ✅ BigDev answered the story's Questions 2–8 on 2026-10-27 (*"all as recommended"*), so **PC5**, **PC4** and
+> **PC2** stand as written; the note is FINAL for sending. ⚠ Nothing here has been shown to the Panel until it is sent
 > ([[feedback_shown_to_panel_means_sent]]).
 
 ---

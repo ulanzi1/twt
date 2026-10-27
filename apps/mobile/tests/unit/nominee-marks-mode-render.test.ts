@@ -39,6 +39,7 @@ const mock = vi.hoisted(() => ({
   links: null as null | { ranks: unknown[]; links: unknown[] },
   nextLinks: null as null | { ranks: unknown[]; links: unknown[] },
   refetches: 0,
+  refetchWait: null as null | Promise<void>,
 }))
 
 vi.mock('react-native', async () => {
@@ -88,6 +89,7 @@ vi.mock('../../components/nominee-links/useNomineeLinkQueries', async (importAct
         errorUpdatedAt: 0,
         refetch: async () => {
           mock.refetches += 1
+          if (mock.refetchWait) await mock.refetchWait
           const next = mock.nextLinks ?? data
           setData(next)
           return { data: next, isError: false }
@@ -138,6 +140,7 @@ beforeEach(() => {
   mock.links = { ranks: RANKS, links: [{ rank: 2, linkId: L2, label: 'confirmed', name: 'Ravi K.' }] }
   mock.nextLinks = null
   mock.refetches = 0
+  mock.refetchWait = null
   mock.status.mockResolvedValue(status(2))
   mock.saveMarks.mockResolvedValue(status(2))
 })
@@ -258,5 +261,41 @@ describe('Story 6.36f — marks mode', () => {
     expect(btn('nominees.submit')).toBeInTheDocument()
     expect(screen.queryByTestId('nominee-marks-mode')).toBeNull()
     expect(mock.saveDraft).not.toHaveBeenCalled()
+  })
+
+  it('R1 — cannot return to the full form during a marks save or its success refetch', async () => {
+    let finishSave!: (value: unknown) => void
+    let finishRefetch!: () => void
+    mock.saveMarks.mockImplementationOnce(() => new Promise((resolve) => { finishSave = resolve }))
+    mock.refetchWait = new Promise<void>((resolve) => { finishRefetch = resolve })
+    await openMarks()
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    expect(btn('Change names or numbers instead')).toBeDisabled()
+    await userEvent.click(btn('Change names or numbers instead'))
+    expect(screen.queryByRole('button', { name: 'nominees.submit' })).toBeNull()
+    expect(mock.saveDraft).not.toHaveBeenCalled()
+
+    await act(async () => finishSave(status(2)))
+    await waitFor(() => expect(mock.refetches).toBe(1))
+    expect(btn('Change names or numbers instead')).toBeDisabled()
+    expect(mock.back).not.toHaveBeenCalled()
+    await act(async () => finishRefetch())
+    await waitFor(() => expect(mock.back).toHaveBeenCalledTimes(1))
+    expect(mock.saveDraft).not.toHaveBeenCalled()
+  })
+
+  it('R1 — returning to the full form becomes available again after a save refusal', async () => {
+    let refuseSave!: (reason: unknown) => void
+    mock.saveMarks.mockImplementationOnce(() => new Promise((_resolve, reject) => { refuseSave = reject }))
+    await openMarks()
+    await userEvent.click(btn(/^Remove mark/))
+    await userEvent.click(btn('Save marks'))
+    expect(btn('Change names or numbers instead')).toBeDisabled()
+    await act(async () => refuseSave(new ApiError(422, 'nominee.link_not_found', 'x')))
+    await waitFor(() => expect(btn('Change names or numbers instead')).toBeEnabled())
+    await userEvent.click(btn('Change names or numbers instead'))
+    expect(btn('nominees.submit')).toBeInTheDocument()
+    expect(mock.back).not.toHaveBeenCalled()
   })
 })

@@ -4,6 +4,32 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-36f-nominee-mark-only-save.md (2026-10-26)
+
+Full review of `b3b1e8e9..bf8312ce`. Three new patch items are recorded in that story's Review Findings;
+these three findings remain deferred, pre-existing. No implementation change or closure is claimed.
+
+- **R4 / P2 — OTP verification sends the earlier pending marks despite later visible edits**
+  [apps/mobile/app/(life-events)/nominees.tsx `onVerifyMarksOtp`]. An executed temporary render harness
+  confirms that a replacement picked while OTP is visible is omitted from the verified request. This
+  is the existing item **“The OTP retry re-submits the `pending` payload”**, whose 6.36f Task 0.4
+  annotation already explicitly includes marks mode. Preserve that deferral; revisit with the shared
+  step-up interaction. No new Panel question.
+- **R5 / P2 — the shared OTP prompt is unannounced on iOS**
+  [apps/mobile/app/(life-events)/nominees.tsx `stepUpFooter`]. A bare `accessibilityLiveRegion` is the
+  only prompt announcement; no iOS announce/focus path exists. The footer is unchanged in this respect
+  from `b3b1e8e9` and inherited by marks mode. Checklist family 13(d): REAL GAP, not covered by the
+  always-`needsOtp: false` render mock. Revisit with shared step-up accessibility work; use the existing
+  `AnnouncedText`/phase announcement pattern and an OTP-visible render leg. No device observation claimed.
+- **R6 / P2 — pre-COMMIT audit may survive a rolled-back marks save**
+  [apps/api/src/modules/nominee/nominee.handlers.ts `marks` / `writeDeclaration`]. Reconfirmed the
+  existing **“Audit lines are emitted before the COMMIT that can still fail”** item and its 6.36f Task
+  0.4 annotation. A failed deferred constraint rolls back rows after audit emission. MK7 explicitly
+  retains this ordering; the review does not reopen or close it. Revisit with the shared post-commit
+  audit work; the rollback test should then assert the audit sink too.
+
+---
+
 ## Story 6.36f — a marks-only nominee save (2026-10-26)
 
 Recorded at Story 6.36f's Task 0.4, under [`-407`](../../.decision-log.md#decision-2026-10-26-407).

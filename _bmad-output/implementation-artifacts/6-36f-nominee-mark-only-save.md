@@ -39,7 +39,13 @@ LETTERS: G = found facts (traced at the pin) · MK = build decisions (PROPOSED) 
 
 # Story 6.36f: A Member Changes or Removes a Nominee Mark Without Retyping the Nominees — the Server Keeps the Details `[SURFACE]`
 
-Status: review
+Status: in-progress
+
+> **Current, 2026-10-27:** all three code-review patches are applied and verified. The code-review
+> workflow keeps this story `in-progress` while the required AC7 device run and the recorded P2
+> deferrals remain outstanding. Device validation stays deferred under “Review now, device later”;
+> no device completion, go-live approval, commit or push is claimed. The earlier Task 1 pointer below
+> is historical; implementation has already completed.
 
 > ⭐ **Next: Task 1 (contracts + client).** Task 0 is DONE (2026-10-26): MK1–MK12 as recommended, MK9 en + hi final, Decision
 > `2026-10-26-407` committed alone (`a1053c0b`), the records after it. AC0 is met; code may start.
@@ -568,6 +574,137 @@ least).
       Notes); Debug Log, File List, ledger `2026-10-26g`. ⚠ The DEVICE RUN is ⛔ done — OWED: BigDev chose "Review now, device later";
       a go-live item, as 6.36e's was. ⛔ iOS / VoiceOver either.)*
 
+### Review Findings
+
+Full code review, 2026-10-26, of `b3b1e8e9..bf8312ce` (37 files, +3,397 / -348). The creation pin
+`0e9b261d` also includes inherited main changes; the reviewed base is the story's post-rebase parent.
+Blind Hunter, Edge Case Hunter and Acceptance Auditor completed in parallel. The blind layer read only an
+apps/packages diff artifact; the other layers could trace project source. No review layer failed.
+Result: **0 decision-needed, 3 patch, 3 defer, 3 dismissed**. No application code changed by this review.
+
+- [x] [Review][Patch] **R1 / P2 — prevent switching modes while a marks save is pending**
+  [apps/mobile/app/(life-events)/nominees.tsx:494]. Source: blind + edge; AC6 / MK8. The back-to-form
+  button ignores `busy`. With a delayed save, the member can return to the form and type a nominee;
+  the old marks request then succeeds and `marksSaved()` calls `invalidateAndLeave()`, clearing that
+  newly written draft and navigating away. Disable the mode switch during the request and its completion
+  work, or otherwise prevent an abandoned operation from clearing/navigating the current form. Add a
+  render regression with a deferred save promise and attempted mode switch. A temporary executed harness
+  reproduces typed form input being saved as a draft, then that draft being cleared and navigation firing
+  when the older marks request resolves; see verification below.
+- [x] [Review][Patch] **R2 / P2 — prove the post-row-lock terminal re-read with two live connections**
+  [apps/api/src/modules/nominee/nominee.handlers.ts:450]. Source: auditor; MK2, Testing standards,
+  checklist families 1–2. The terminal test in `nominee-marks-save.spec.ts` transitions the member BEFORE
+  the request, so `guardDeclare` refuses before `checkMarksBasis` is reached. The domain `pg_locks` leg
+  establishes a relation lock mode, not the required waiting/commit interleaving. Hold the projection row
+  on one connection, let the marks route pass its first guard and wait for that row, then commit a
+  terminal lifecycle transition from the other connection. Assert the marks request refuses without
+  copying ciphertext, versions or links; removing the terminal re-read must make the test fail. This
+  proves the implemented guard; it does not request a fix to MK2's separately accepted erasure race.
+- [x] [Review][Patch] **R3 / P2 — add actor, tenant and keep-link ownership denials for the new route**
+  [apps/api/tests/integration/nominee/nominee-marks-save.spec.ts:458]. Source: auditor; checklist families
+  3 and 12. The new route's suite covers valid member tokens and missing elevation, but no another-declarer
+  or cross-Pariwar real `keep` link, tampered bearer, or wrong/non-member principal. The shared guard and
+  declarer-scoped live-link reads appear correct; no unauthorized write is demonstrated. Add runtime
+  denial legs through `/nominees/marks`, asserting the other declarer's link and both declarations remain
+  unchanged. Existing full-save/answer tests are not per-new-route proof.
+- [x] [Review][Defer] **R4 / P2 — OTP verification saves the earlier pending marks instead of later visible edits**
+  [apps/mobile/app/(life-events)/nominees.tsx:306] — deferred, pre-existing. Source: blind + edge.
+  Reproduced: request step-up for a removal, pick a replacement while the OTP is visible, then verify;
+  the UI shows the replacement but the API receives the original removal and announces success. The
+  existing deferred item **“The OTP retry re-submits the `pending` payload”** already has a 6.36f Task 0.4
+  annotation explicitly extending it to marks mode. Preserve that recorded scope decision; this review
+  confirms the behavior rather than reopening it as a new patch.
+- [x] [Review][Defer] **R5 / P2 — the shared OTP prompt has no iOS announcement**
+  [apps/mobile/app/(life-events)/nominees.tsx:362] — deferred, pre-existing. Source: auditor; checklist
+  family 13(d), REAL GAP. The prompt uses only `accessibilityLiveRegion`, with no iOS announcement or
+  focus movement. The same footer exists at `b3b1e8e9`; the new mode inherits it. The current render
+  suite always mocks `needsOtp: false` and cannot cover this phase. Use the existing announcement
+  pattern and test a real OTP-visible state when this shared accessibility debt is addressed. This is
+  source-level evidence; no VoiceOver/device observation is claimed.
+- [x] [Review][Defer] **R6 / P2 — audit can describe a save whose COMMIT subsequently fails**
+  [apps/api/src/modules/nominee/nominee.handlers.ts:615] — deferred, pre-existing. Source: edge.
+  `emitAudit()` precedes `closeScopeTx()`; the deferred-trigger failure test asserts rolled-back rows
+  but not audit absence. The existing deferred item **“Audit lines are emitted before the COMMIT that
+  can still fail”** explicitly covers `marks_saved` through its 6.36f Task 0.4 annotation and MK7.
+  Preserve that deferral; shared extraction does not repair the inherited ordering.
+
+#### Review verification and triage
+
+- **123 existing tests passed:** mobile marks-mode/form rendering, marks logic, hooks and draft pins
+  (75); contracts nominee-member-link (15); domain link planning (29); API read order and number fence (4).
+- **Temporary reproduction harness:** `/private/tmp/twt-6-36f-review-tests/marks-mode-review.test.ts`,
+  adapted from the existing render harness, with a stateful OTP mock and a deferred API promise:
+  **2 checks passed**. They verify the erroneous behavior, not desired fixed behavior. Run from `apps/mobile`:
+  `pnpm exec vitest run --config /private/tmp/twt-6-36f-review-tests/vitest.config.mts -t 'review repro'`.
+  Native layout, TalkBack/VoiceOver and live DB races were not rerun in this review. Prior CI results
+  remain the development session's attestation. AC7's device run stays owed under “Review now, device later”.
+- **Dismissed (3):** ordinary background-refresh stale-basis overwrite (global query defaults disable
+  focus/reconnect refetch; no independent reachable trigger established); missing-declaration re-entry
+  loop (no supported transition from a valid loaded basis established); hidden-mark removal after an
+  older-version correction (already expressly covered by MK11 and its deferred items, with no production
+  innocence-unlock caller). These are not claimed fixed. The broader erasure race remains recorded under MK2.
+- **Panel gate:** every new action item is an engineering correction or test obligation. No change to
+  disclosure, entitlement or legal basis is required; no Panel question is introduced.
+
+#### Load-bearing invariant verdicts
+
+| Touched family | Verdict and evidence |
+|---|---|
+| 1. State-machine totality and guards | Existing identity event and ordinary guards covered by the shared write path and AC2 test; **REAL GAP R2** for the new post-wait terminal check. |
+| 2. Concurrency and redelivery | Charge/main-tx interleaving covered by AC2/MK3 test; **REAL GAP R2** for the projection-lock wait. Lost-response retry behavior is explicitly recorded in MK5. |
+| 3. Tenant and actor boundaries | **REAL GAP R3**: per-new-route runtime negative tests missing. |
+| 4. Event completeness | Covered by AC5 event-shape test and the single shared `writeDeclaration`. |
+| 5. DB backstops | Covered by construction: no new persisted shape; existing scoped version/link constraints reused. |
+| 6. Projection and snapshots | Covered by AC3 COPY / READERS / EXPORT-ERASURE tests and AC4 timeline/snapshot deep equality. |
+| 8. Audit and attribution | Successful save/link attribution covered by AC2/AC5; inherited pre-COMMIT timing remains **R6**, explicitly deferred. |
+| 9. Deliberate bypasses | Covered by construction: retained DELIBERATE rationale for request-time elevation and eligibility-free carries. |
+| 10. Closure honesty | Covered by construction: CI reds, missing race leg and outstanding device work disclosed; none backfilled by this review. |
+| 12. Cross-member ownership | Declarer comes from session and links are declarer-scoped by construction; runtime denial proof remains **R3**. |
+| 13. Accessibility | Remove/pick/save announcements and handlers covered by render tests; shared iOS OTP phase is **REAL GAP R5**, pre-existing and deferred. |
+
+#### Applied patches and verification — completed 2026-10-27
+
+BigDev selected **1, apply every patch**, then **continue** after the interruption. R1–R3 are resolved;
+R4–R6 remain deferred as originally triaged. The findings and initial checklist verdicts above describe
+the pre-patch review; this dated record supplies their subsequent disposition.
+
+- **R1 fixed:** the marks-mode back-to-form button now has `disabled={busy}` and a matching
+  accessibility state. `busy` spans the API save and the awaited success/refusal refetch. Two render
+  regressions prove the form cannot be reopened during either the request or success refetch, no new
+  form draft is written, and the control becomes usable again after refusal. Removing the disabled
+  prop made both R1 regressions fail; restored before the final passing run.
+- **R2 covered by a live race test:** one scoped connection locks the member's actual projection row;
+  the request runs concurrently. The test queries `pg_stat_activity` / `pg_blocking_pids` and requires
+  that this test's own backend blocks the request's `member_nominees ... FOR UPDATE`, rather than
+  inferring a wait from elapsed time. Only then does the holder append the real
+  `member.rtbf_anonymized` lifecycle event and commit. The request returns 409 `nominee.member_terminal`
+  with unchanged declaration versions, projection, links and declaration events, no nominee audit, and
+  no KMS work. This fixture isolates terminal-state visibility; it does not perform or attest a full
+  erasure. Removing the post-row-lock terminal re-read changed the response to 200 and made this test
+  fail. The original guard was restored byte-for-byte; no API production code changed.
+- **R3 covered by runtime denials:** the new route refuses another declarer's real live keep-link both
+  within the same Pariwar and across Pariwars, preserving all three declarations and link sets. A
+  separate leg rejects missing/tampered tokens, signup-continuation/Pariwar-select/system token kinds,
+  a nonexistent member principal, and a real elevated member paired with the wrong Pariwar. The
+  declaration, projection, links, declaration events, nominee audit and KMS assertions remain unchanged.
+- **Final checks, run 2026-10-26:** 77 focused mobile tests and all 23 marks-save live API tests passed
+  against the existing `twt_6_36f` database on `:5433`. Both touched packages' TypeScript checks and
+  targeted ESLint checks passed; `git diff --check` passed. The broader `ci:local` was not rerun: its
+  earlier 35/36 record and known integration failures remain as recorded, not superseded by these
+  targeted checks. No device/TalkBack/VoiceOver run was performed.
+- **Fix-diff review:** Blind Hunter, Edge Case Hunter and Acceptance Auditor reviewed the three-file
+  code/test patch in parallel after the mutation guards were restored. All completed with no actionable
+  findings. The blind layer's possible double-close concern was dismissed after checking
+  `closeScopeTx`'s explicit `scopeTx.closed` idempotence guard.
+- **Updated checklist verdicts:** families 1–2 are now **covered-by-test** by the R2 live lock-wait
+  test; families 3 and 12 are now **covered-by-test** by the R3 denial legs. R5 remains a family 13(d)
+  REAL GAP with its P2 severity and pre-existing deferral preserved. R6's inherited audit timing and
+  MK2's separately recorded scrub/save race remain unaddressed. Nothing is backfilled or marked closed
+  by the absence of a device test.
+- **Records:** story and sprint row move `review` → `in-progress` under the review workflow's
+  unresolved-work rule. This records remaining AC7/deferral work, not an unfixed R1–R3 patch. No other
+  sprint row changes. Changes remain uncommitted in the story worktree.
+
 ## Dev Notes
 
 ### Current state of the code this story changes (traced at `0e9b261d`)
@@ -800,3 +937,4 @@ ledger line), this story file. ⛔ Migration; ⛔ `openapi/v1.yaml`.
 | 2026-10-24 | 1.0 | Created (`bmad-create-story 6.36f`, BigDev: *"6.36f on it's branch"*) on `story/6-36f-nominee-mark-only-save` in its own worktree; MK1–MK12 PROPOSED; ⛔ code. Ledger `2026-10-24w`. |
 | 2026-10-26 | 1.1 | Validated (`bmad-create-story validate 6.36f`, BigDev *"all"*) against `origin/main` `b3b1e8e9`: MK2 / MK3 / MK4 / MK5 / MK8 / MK9 / MK11 / MK12 revised, AC1–AC7 and Tasks 0–5 aligned, TR11–TR13 added; MK8 now a mode inside `nominees.tsx`. Row stays `ready-for-dev`; ⛔ code. Ledger `2026-10-26d`. |
 | 2026-10-26 | 1.2 | DEV (`bmad-dev-story 6.36f`): Tasks 1–5 — contracts + client (`6cc8e8c9`), domain (`ed40951f`), API — `declare`'s steps shared, the marks route, the links read's `ranks` (`2808b69f`), mobile — the marks-only mode, the extracted mark control, the MK9 copy (`dad02d44`), the friction disposition (`efe6246d`); ci:local 35 / 36 with both integration reds run down (⛔ 6.36f's); mutations RED. ⚠ The AC7 device run is OWED (BigDev: "Review now, device later"). Row `ready-for-dev` → `in-progress` → `review`. Ledger `2026-10-26g`. |
+| 2026-10-27 | 1.3 | Full code review: 0 decisions, 3 patches applied (R1 busy mode switch; R2 live post-row-lock terminal race; R3 actor/tenant/ownership denials), 3 inherited deferrals retained, 3 candidates dismissed. Final 77 mobile + 23 live API tests, touched-package typecheck/lint and whitespace checks passed; R1/R2 mutation checks failed as required and guards restored. Three parallel fix-diff review layers found no actionable issue. AC7 device work remains owed; story/sprint `review` → `in-progress` under the unresolved-work rule. Uncommitted, not pushed. Ledger `2026-10-27`. |

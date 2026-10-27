@@ -14,6 +14,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { Writable } from 'node:stream';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { NOMINEE_LINK_ERROR_CODES as CODES, ProfileSection } from '@twt/contracts';
 import { claim, dataExport, encryption, ids, member as memberDomain, nominee } from '@twt/domain';
@@ -21,7 +22,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { kmsEventToAuditInput } from '../../../src/audit/audit-log-sink.js';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
-import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { signAccessToken, signPariwarSelect, signSignupContinuation } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { decryptNomineeField } from '../../../src/modules/nominee/nominee-crypto.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
@@ -480,6 +481,117 @@ describe.skipIf(!hasDatabase)('Story 6.36f — the marks-only nominee save', { t
     expect(kmsLines).toEqual([]);
     expect(await counter(plain.d)).toEqual([]);
     expect((await versions(plain.d)).length).toBe(1);
+  });
+
+  it('R2 / MK2 — a terminal transition committed while the marks save waits on the projection row is re-read before copying', async () => {
+    const p = randomUUID();
+    const mobile = nextMobile();
+    await member(p, { mobile, name: 'One' });
+    const { d, tok } = await declared(p, mark(mobile));
+    const body = await marksFor(tok, {}); // an actual removal, not MK5's no-op
+    const before = { versions: await versions(d), projection: await projection(d), links: await links(d), events: await declaredEvents(d) };
+    const holder = await openScopeTx(t.deps, p);
+    let request: ReturnType<typeof call> | undefined;
+    let finished = false;
+    kmsLines.length = 0;
+    t.auditSink.events.length = 0;
+    try {
+      await nominee.getMemberNominees(holder.tx, ids.pariwarId(p), ids.memberId(d), { forUpdate: true });
+      const holderPid = (await holder.client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+      request = call('POST', MARKS, { tok, payload: body }).finally(() => { finished = true; });
+      let blocked = false;
+      const deadline = Date.now() + 5000;
+      while (!blocked && !finished && Date.now() < deadline) {
+        const r = await t.pool.query<{ blocked: boolean }>(
+          `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+             WHERE datname = current_database() AND $1::int = ANY(pg_blocking_pids(pid))
+               AND wait_event_type = 'Lock' AND query ILIKE '%member_nominees%' AND query ILIKE '%for update%') AS blocked`,
+          [holderPid],
+        );
+        blocked = r.rows[0]!.blocked;
+        if (!blocked) await delay(10);
+      }
+      expect(blocked, 'the marks request must pass guardDeclare and wait behind this test’s projection-row lock').toBe(true);
+      // The fixture isolates visibility of the real lifecycle event after the row wait. It does not
+      // perform a full RTBF or claim to resolve MK2's separately deferred scrub/save race.
+      await memberDomain.projectMemberState(holder.client, {
+        memberId: ids.memberId(d),
+        pariwarId: ids.pariwarId(p),
+        eventType: 'member.rtbf_anonymized',
+        payload: { from_state: 'active', to_state: 'anonymized', trigger: 'rtbf', actor: 'member' },
+        actorId: d,
+      });
+      await closeScopeTx(holder, true);
+      const r = await request;
+      expect([r.status, code(r)]).toEqual([409, 'nominee.member_terminal']);
+      expect(await versions(d)).toEqual(before.versions);
+      expect(await projection(d)).toEqual(before.projection);
+      expect(await links(d)).toEqual(before.links);
+      expect(await declaredEvents(d)).toEqual(before.events);
+      expect(nomineeAudit()).toEqual([]);
+      expect(kmsLines).toEqual([]);
+    } finally {
+      await closeScopeTx(holder, false);
+      await request;
+    }
+  });
+
+  it('R3 / families 3 + 12 — another declarer’s real keep-link is refused within the Pariwar and across Pariwars', async () => {
+    const p = randomUUID();
+    const q = randomUUID();
+    const mobile = nextMobile();
+    await member(p, { mobile, name: 'One' });
+    const owner = await declared(p, mark(mobile));
+    const same = await declared(p, null);
+    const cross = await declared(q, null);
+    const [theirs] = await live(owner.d);
+    const subjects = [owner, same, cross];
+    const before = await Promise.all(subjects.map(async ({ d }) => ({ versions: await versions(d), projection: await projection(d), links: await links(d) })));
+    t.auditSink.events.length = 0;
+    kmsLines.length = 0;
+    for (const other of [same, cross]) {
+      const r = await call('POST', MARKS, { tok: other.tok, payload: await marksFor(other.tok, { 1: keep(theirs!.link_id) }) });
+      expect([r.status, code(r)]).toEqual([409, CODES.linkStale]);
+    }
+    for (const [i, { d }] of subjects.entries()) {
+      expect({ versions: await versions(d), projection: await projection(d), links: await links(d) }).toEqual(before[i]);
+    }
+    expect(nomineeAudit()).toEqual([]);
+    expect(kmsLines).toEqual([]);
+  });
+
+  it('R3 / family 3 — missing, tampered, wrong-kind and non-member bearers cannot mutate marks', async () => {
+    const p = randomUUID();
+    const { d, tok } = await declared(p, null);
+    const body = await marksFor(tok, {});
+    const before = { versions: await versions(d), projection: await projection(d), links: await links(d), events: await declaredEvents(d) };
+    // Keep the signature unchanged while replacing a claim: this must fail JWT verification.
+    const [header, encoded, signature] = tok.split('.');
+    const payload = JSON.parse(Buffer.from(encoded!, 'base64url').toString('utf8')) as Json;
+    const tampered = `${header}.${Buffer.from(JSON.stringify({ ...payload, sub: randomUUID() })).toString('base64url')}.${signature}`;
+    const wrongKinds = [
+      signSignupContinuation(t.app, { mobileBlindIndex: `idx-${randomUUID()}`, jti: randomUUID() }, ACCESS_TTL_MS),
+      signPariwarSelect(t.app, { mobileBlindIndex: `idx-${randomUUID()}`, deviceId: 'test-device', jti: randomUUID() }, ACCESS_TTL_MS),
+      // Deliberately outside MemberJwtClaims: the guard must reject it at runtime too.
+      t.app.jwt.sign({ typ: 'system', sub: 'system', pariwar_id: p } as never, { expiresIn: 60 }),
+    ];
+    t.auditSink.events.length = 0;
+    kmsLines.length = 0;
+    const missing = await call('POST', MARKS, { payload: body });
+    expect([missing.status, code(missing)]).toEqual([401, 'auth.session_required']);
+    for (const bearer of [tampered, ...wrongKinds]) {
+      const r = await call('POST', MARKS, { tok: bearer, payload: body });
+      expect([r.status, code(r)]).toEqual([401, 'auth.session_required']);
+    }
+    // A nonexistent access-token principal has no server-side elevation and is refused before a scope tx.
+    const ghost = await call('POST', MARKS, { tok: token(randomUUID(), p), payload: body });
+    expect([ghost.status, code(ghost)]).toEqual([403, 'auth.step_up_required']);
+    // A real member's elevation does not give their token access to another Pariwar's declaration.
+    const wrongScope = await call('POST', MARKS, { tok: token(d, randomUUID()), payload: body });
+    expect([wrongScope.status, code(wrongScope)]).toEqual([409, CODES.marksNoDeclaration]);
+    expect({ versions: await versions(d), projection: await projection(d), links: await links(d), events: await declaredEvents(d) }).toEqual(before);
+    expect(nomineeAudit()).toEqual([]);
+    expect(kmsLines).toEqual([]);
   });
 
   it('AC2 — the 5th lookup in an IST day ⇒ 429 with ⛔ KMS call; a stale `keep` ⇒ 409 `link_stale`', async () => {

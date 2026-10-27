@@ -491,7 +491,7 @@ export default function LifeEventsNomineesScreen() {
               {busy ? <Spinner /> : lt('marks.save')}
             </Button>
             {changed ? null : <Paragraph accessibilityRole="text">{lt('marks.nothing_changed')}</Paragraph>}
-            <Button chromeless height={48} accessibilityRole="button" accessibilityLabel={lt('marks.back_to_form')} onPress={backToForm}>
+            <Button chromeless height={48} disabled={busy} accessibilityRole="button" accessibilityLabel={lt('marks.back_to_form')} accessibilityState={{ disabled: busy }} onPress={backToForm}>
               {lt('marks.back_to_form')}
             </Button>
           </YStack>

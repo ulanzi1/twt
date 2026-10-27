@@ -39,7 +39,7 @@ LETTERS: G = found facts (traced at the pin) · MK = build decisions (PROPOSED) 
 
 # Story 6.36f: A Member Changes or Removes a Nominee Mark Without Retyping the Nominees — the Server Keeps the Details `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **Current, 2026-10-27:** all three code-review patches are applied and verified. The code-review
 > workflow keeps this story `in-progress` while the required AC7 device run and the recorded P2
@@ -892,6 +892,59 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36f`, 2026-10-26, in the 
     *"Marks saved."*) — ⛔ run in this session; iOS / VoiceOver ⛔ covered. `deferred-work.md` *"No test reads the audit sink for a
     carried `new` mark"* is ⛔ closed (the swap leg asserts the carries, the counter and the HMAC line, ⛔ the `carried` audit lines).
     The erasure race (MK2) stays recorded, ⛔ fixed (MK10).
+- **AC7 DEVICE RUN — DONE 2026-10-27 (`bmad-dev-story 6.36f`; BigDev: *"Run device now"*).** Android emulator `Pixel_9` (Android 15),
+  the committed tip `b2fdb223`. A FRESH dev-client build from this worktree (`expo run:android`, Gradle 6 m 38 s; the APK installed
+  over the old one, then `pm clear`), Metro from this worktree, the real API (`apps/api`, `KMS_TEST_MODE=fake`, the integration
+  harness's pepper) against a DISPOSABLE `twt_6_36f_device` (`:5433`, created + migrated `0000`…`0185`). Seed (a temporary spec using
+  the marks-save spec's own helpers, run once, DELETED, ⛔ committed): the default Pariwar, a declarer walked to `active` with a login
+  identity (Rakesh Kumar, `9811100001`), three active members (Meena `9876500001`, Kiran `9876500002`, Sunil `9876500003`), and a
+  FULL save of two nominees with rank 1 marked (Meena, typed) — one `nominee_link_resolve` unit. Driven by `uiautomator` dumps +
+  `input` events + screenshots, plus TalkBack for the speech; ⛔ by a person. **Worked, end to end:**
+  - **Entry:** Life events → *Update nominees* shows the entry line (*"Only changing a member mark? …"*) and *Member marks* above the
+    EMPTY form; marks mode shows the intro, each rank as *"Primary nominee · Spouse"* / *"Second nominee · Son"* (⛔ a nominee's name,
+    number or share anywhere on the screen), the mark's status (*"Waiting for their answer"*), *Save marks* DISABLED with *"Change a
+    mark first."*, and *Change names or numbers instead*; that button discards an unsaved change (re-entry re-reads the server's marks).
+  - **Add (rank 2, Kiran, typed):** the finder note → *Don't read my contacts* → the typed number → *"Marked as a member"* and the
+    pre-save line *"When you save, they will see your name in the app and be asked to confirm it is them. …"* (the no-name form — a
+    typed pick); *Save marks* ⇒ 403 ⇒ the step-up prompt ⇒ the dev OTP ⇒ verify ⇒ 200 ⇒ back on Life events (*"On record"*).
+    DB: rank 1's link CARRIED to version 2 (the old row `redeclared`), Kiran's link `live` on rank 2; every version-2 ciphertext
+    byte-identical to version 1's (md5 of name + mobile, both ranks); counter 2; ONE `member_nominees.marks_saved` audit row.
+  - **Swap (two picks — Kiran on rank 1, Meena on rank 2):** saved with ⛔ prompt (the step-up from the add still inside its window).
+    DB: BOTH links carried across ranks to version 3 (each kept its `asked_at` — ⛔ a new request), the version-2 links `redeclared`;
+    ciphertexts unchanged; counter 4 (two units); two `marks_saved` rows.
+  - **Remove (rank 2) + save, under TalkBack:** *Remove mark* ⇒ TalkBack *"Mark removed."* (ONCE); *Save marks* ⇒ *"Mark removed."*,
+    *"Marks saved."*, then *"index"* (the Life events header) as the screen changed. DB: Meena's link `removed_by_declarer`, Kiran's
+    carried to version 4; version 4 AND the projection keep every ciphertext, the relationship and the 75 / 25 split; counter still
+    4 (a removal is ⛔ charged); three `marks_saved` rows; four `member.nominees_declared` events (the seed's + three).
+  - **TalkBack capture method:** the Google TTS engine DISABLED for the capture (`pm disable-user com.google.android.tts`, re-enabled
+    after), so every utterance TalkBack attempts is logged as *"TTS is not ready … Item: {text: …}"* — a fuller capture than 6.36e's
+    start-up window. `adb input` taps ACTIVATE controls even with TalkBack on (they bypass touch exploration), so focus utterances and
+    the swipe order were ⛔ exercised.
+  - **Hindi:** marks mode renders without clipping (*सदस्य-चिह्न*, the intro, *मुख्य नॉमिनी · जीवनसाथी*, *चिह्न सहेजें*, *पहले कोई चिह्न
+    बदलें।*, *इसके बजाय नाम या नंबर बदलें*).
+  - **Found (⛔ patched — BigDev decides):** (1) *"Mark removed."* is spoken a SECOND time at the *Save marks* press, just before
+    *"Marks saved."* — likely the notice's Android live region re-announcing on the re-render; harmless repetition, ⛔ traced. (2) The
+    pick notice (*"Marked as a member"*) renders ABOVE rank 1 whichever rank was picked (nominees.tsx places it under the intro, as
+    6.36e's form places it above the form) — after a rank-2 pick it reads as if it belongs to the Primary nominee. (3) The *Find…*
+    button's visible text is cut to one line (*"Is this nominee a TWT member? Find them i…"*, Hindi *"…संप…"*); its accessibility label
+    is whole. PRE-EXISTING: the extracted `NomineeMarkControl` button is the same markup as `main`'s `NomineeForm.tsx`. (4) The Life
+    events header reads *"index"* (visible and spoken) — pre-existing, ⛔ this story's.
+  - **NOT covered, ⛔ hidden:** iOS / VoiceOver (no simulator here); TalkBack focus order / swipe-through and TalkBack in Hindi; the
+    refusal paths on the device (`marks_stale`, `marks_no_declaration`, the 5th-lookup limit) — covered by the live API suite only;
+    a picked contact (only typed numbers — the contacts path is 6.36e's, unchanged); the marked members' own request screens; a real
+    phone in a real hand.
+  - **⚠ A slip during setup, recorded:** the login shell exports `DATABASE_URL` for `:5432/twt_dev`, and dotenv does ⛔ override it,
+    so the API's FIRST start ran against `:5432` (not the disposable database). Seen when the seeded declarer's login fell into signup:
+    the app's automatic `signup/create` wrote ONE `pending-kyc` member (mobile `9811100001`, Pariwar `aaaaaaaa-…`, 2026-10-27 03:10
+    UTC) and one signup continuation into `:5432`'s `twt_dev`. ⛔ deleted (event-sourced tables; BigDev's call). The API was restarted
+    with `DATABASE_URL` set on the command; every leg above ran on `twt_6_36f_device`. The long-lived `:5433` `twt_dev` was migrated
+    forward `0181`…`0185` (main's landed migrations) before the disposable database was chosen; ⛔ data written there.
+- **`ci:local` on the committed tip `b2fdb223` (2026-10-27), fresh `twt_6_36f_ci` (`:5433`, migrated), `DATABASE_URL` exported:**
+  35 / 36 jobs green (every static job, unit — mobile 2,045 — and every gate). `integration-tests`: domain 423 files / 6,444, channels
+  457, events 36, niyamavali-engine 144, validity-service 284, queue 4; jobs 79 / 80 files (1,781 passed) — the ONE red is the 10.23
+  gate refusing a database not named `twt_dev` (turbo strips `TWT_ALLOW_DESTRUCTIVE_LIVE_TESTS`; the same red as `efe6246d`'s run and
+  6.36e's); alone with the override: 3 / 3. turbo then stopped before `@twt/api`'s live run; run alone: 192 files / 2,313 passed, 1 skipped. ⛔ NOT a single
+  36 / 36 invocation.
 
 ### File List
 
@@ -930,6 +983,10 @@ Code + tests (Tasks 1–4):
 Records (Task 5): `friction-budget.md` (the disposition), `_bmad-output/implementation-artifacts/sprint-status.yaml` (the row + a
 ledger line), this story file. ⛔ Migration; ⛔ `openapi/v1.yaml`.
 
+AC7 device run (2026-10-27): this story file (Completion Notes, Change Log, Status) and `sprint-status.yaml` (the row + ledger
+`2026-10-27a`). ⛔ Code change — the seed spec was temporary and deleted; the worktree's gitignored `apps/api/.env` /
+`apps/mobile/.env` and `apps/mobile/android/` (prebuild output) are local only.
+
 ## Change Log
 
 | Date | Version | Change |
@@ -938,3 +995,4 @@ ledger line), this story file. ⛔ Migration; ⛔ `openapi/v1.yaml`.
 | 2026-10-26 | 1.1 | Validated (`bmad-create-story validate 6.36f`, BigDev *"all"*) against `origin/main` `b3b1e8e9`: MK2 / MK3 / MK4 / MK5 / MK8 / MK9 / MK11 / MK12 revised, AC1–AC7 and Tasks 0–5 aligned, TR11–TR13 added; MK8 now a mode inside `nominees.tsx`. Row stays `ready-for-dev`; ⛔ code. Ledger `2026-10-26d`. |
 | 2026-10-26 | 1.2 | DEV (`bmad-dev-story 6.36f`): Tasks 1–5 — contracts + client (`6cc8e8c9`), domain (`ed40951f`), API — `declare`'s steps shared, the marks route, the links read's `ranks` (`2808b69f`), mobile — the marks-only mode, the extracted mark control, the MK9 copy (`dad02d44`), the friction disposition (`efe6246d`); ci:local 35 / 36 with both integration reds run down (⛔ 6.36f's); mutations RED. ⚠ The AC7 device run is OWED (BigDev: "Review now, device later"). Row `ready-for-dev` → `in-progress` → `review`. Ledger `2026-10-26g`. |
 | 2026-10-27 | 1.3 | Full code review: 0 decisions, 3 patches applied (R1 busy mode switch; R2 live post-row-lock terminal race; R3 actor/tenant/ownership denials), 3 inherited deferrals retained, 3 candidates dismissed. Final 77 mobile + 23 live API tests, touched-package typecheck/lint and whitespace checks passed; R1/R2 mutation checks failed as required and guards restored. Three parallel fix-diff review layers found no actionable issue. AC7 device work remains owed; story/sprint `review` → `in-progress` under the unresolved-work rule. Uncommitted, not pushed. Ledger `2026-10-27`. |
+| 2026-10-27 | 1.4 | AC7 DEVICE RUN DONE (`bmad-dev-story 6.36f`; BigDev: *"Run device now"*): a fresh Android build of `b2fdb223` on `Pixel_9`, the real API on a disposable `twt_6_36f_device`; add (pre-save line, step-up), swap (two carries) and remove each saved and checked in the DB (ciphertexts byte-identical, counter 4, three `marks_saved`); TalkBack *"Mark removed."* / *"Marks saved."*; Hindi renders. Four findings recorded, ⛔ patched (a repeated *"Mark removed."* at save; the pick notice above rank 1; the pre-existing truncated *Find…* label; the pre-existing *"index"* header). A setup slip wrote one junk signup into `:5432` `twt_dev` (recorded, ⛔ deleted). `ci:local` on `b2fdb223` 35 / 36 + the 10.23 gate alone 3 / 3 + `@twt/api` live alone 2,313. Status `in-progress` → `review`; ledger `2026-10-27a`. |

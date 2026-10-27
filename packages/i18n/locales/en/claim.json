@@ -3,6 +3,8 @@
   "entry.question": "Are you family of {name}? We can guide you through filing a claim. We need to verify it's you.",
   "entry.yes": "Yes, I am family",
   "entry.no": "No — continue as {name}",
+  "entry.question_no_name": "Are you a family member of the person this phone belongs to? We can guide you through filing a claim. We need to verify it's you.",
+  "entry.no_no_name": "No — this is my own phone",
   "shell.banner": "Filing on behalf of {name}",
   "shell.save_resume": "Save & continue later",
   "shell.saved": "Saved. You can return anytime — there's no rush.",

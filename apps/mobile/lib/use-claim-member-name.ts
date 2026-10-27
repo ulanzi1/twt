@@ -13,8 +13,8 @@ import { useSession } from './session-context'
 /** The query's cache options, exported for the "⛔ persisted" pin. */
 export const CLAIM_MEMBER_NAME_QUERY_OPTIONS = { gcTime: 0, staleTime: 5 * 60 * 1000, retry: false } as const
 
-export function useClaimMemberName(): string {
-  const t = useClaimT()
+/** The registered name, or `null` (pending, ⛔ name, or a failed read) — for a screen with its OWN no-name wording (`-410`). */
+export function useClaimMemberRegisteredName(): string | null {
   const { session } = useSession()
   const memberId = session?.memberId ?? null
   const query = useQuery({
@@ -23,5 +23,11 @@ export function useClaimMemberName(): string {
     queryFn: () => claimApi.getMemberName(),
     enabled: memberId !== null,
   })
-  return query.data?.name ?? t('member_fallback')
+  return query.data?.name ?? null
+}
+
+/** The name for `{name}`: the registered name, else `member_fallback`. */
+export function useClaimMemberName(): string {
+  const t = useClaimT()
+  return useClaimMemberRegisteredName() ?? t('member_fallback')
 }

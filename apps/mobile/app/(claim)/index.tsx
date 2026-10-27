@@ -7,10 +7,10 @@
 // self-suppresses here).
 //
 // ── Deceased name ─────────────────────────────────────────────────────────────────────────────
-// The session stores memberId/pariwarId but no display name (session.ts) — and we deliberately do
-// NOT fetch the member's Tier-1 name here (PII, gated). Until a non-PII display-name seam exists,
-// the copy uses a dignified generic ("your family member"); a later story can thread the real name
-// via a param. Recorded in the Dev Agent Record.
+// (Story 6.2 used a dignified generic, "your family member", and did NOT fetch the name — SUPERSEDED IN PART by `2026-10-27-409`.)
+// The question and the "No" choice carry the member's REGISTERED name in the Pariwar's form (`useClaimMemberRegisteredName`);
+// with no name (pending, none, or a failed read) they use their OWN no-name wording (`2026-10-27-410`) — ⛔ the generic inside
+// the sentence, which read "Are you family of your family member?".
 
 import { useEffect, useState } from 'react'
 
@@ -20,7 +20,7 @@ import { Button, H2, Paragraph, Spinner, YStack } from 'tamagui'
 import { resolveClaimEntryDecision } from '../../lib/claim-entry-gate'
 import { loadClaimDraft } from '../../lib/claim-draft'
 import { useClaimT } from '../../lib/claim-i18n'
-import { useClaimMemberName } from '../../lib/use-claim-member-name'
+import { useClaimMemberRegisteredName } from '../../lib/use-claim-member-name'
 import { nextClaimStep } from '../../lib/claim-steps'
 import { fetchClaimEntryReadOutcome } from '../../lib/fetch-claim-entry-outcome'
 import { getFiledClaimCaseId } from '../../lib/filed-claim'
@@ -30,8 +30,10 @@ export default function ClaimEntryScreen(): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
   const { session, isLoading: sessionLoading } = useSession()
-  // `2026-10-27-409` — the member's registered name (Pariwar form); `member_fallback` until it answers, or with ⛔ name.
-  const name = useClaimMemberName()
+  // `2026-10-27-409` / `-410` — the registered name (Pariwar form), else the no-name wording.
+  const name = useClaimMemberRegisteredName()
+  const question = name === null ? t('entry.question_no_name') : t('entry.question', { name })
+  const notFamily = name === null ? t('entry.no_no_name') : t('entry.no', { name })
 
   // `-249` §2 (B2, narrowed) — a filed claim on record whose fresh D1 read says `claim_live: true`
   // skips straight to the shepherd screen; one CLOSED for no response that still needs a re-file confirmation goes to
@@ -124,7 +126,7 @@ export default function ClaimEntryScreen(): React.ReactElement {
 
   return (
     <YStack flex={1} justify="center" gap="$4" px="$6" bg="$background">
-      <H2>{t('entry.question', { name })}</H2>
+      <H2>{question}</H2>
       <Paragraph color="$colorPress">{t('shell.saved')}</Paragraph>
       <Button
         theme="accent"
@@ -137,11 +139,11 @@ export default function ClaimEntryScreen(): React.ReactElement {
       </Button>
       <Button
         chromeless
-        accessibilityLabel={t('entry.no', { name })}
+        accessibilityLabel={notFamily}
         onPress={() => router.replace('/(tabs)')}
         disabled={!session}
       >
-        {t('entry.no', { name })}
+        {notFamily}
       </Button>
     </YStack>
   )

@@ -3,7 +3,8 @@
 // (`lib/use-claim-member-name.ts`) under TanStack Query with the claim API mocked and the REAL `claim` translator (Hindi and
 // English): the name once it answers; `member_fallback` while pending, when the answer is `null`, and when the read fails;
 // `gcTime: 0` ⇒ the Provider's dehydrate filter ⛔ persists it. PINNED (source): all four claim screens take `{name}` from the
-// hook — ⛔ `t('member_fallback')` left as the name. The screens on a device: the TalkBack session's re-check.
+// hook — ⛔ `t('member_fallback')` left as the name; the entry uses its own no-name wording (`-410`, real t(), hi + en).
+// The screens on a device: the TalkBack session's re-check.
 import '@testing-library/jest-dom/vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -20,7 +21,7 @@ vi.mock('../../lib/session-context', () => ({ useSession: () => ({ session: mock
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 
 import { PEER_REQUEST_DEHYDRATE_OPTIONS } from '../../components/peer-request/peer-request-cache'
-import { CLAIM_MEMBER_NAME_QUERY_OPTIONS, useClaimMemberName } from '../../lib/use-claim-member-name'
+import { CLAIM_MEMBER_NAME_QUERY_OPTIONS, useClaimMemberName, useClaimMemberRegisteredName } from '../../lib/use-claim-member-name'
 
 function Probe() {
   return createElement('p', { 'data-testid': 'name' }, useClaimMemberName())
@@ -79,10 +80,44 @@ describe('useClaimMemberName (`2026-10-27-409`)', () => {
   })
 })
 
-describe('the four claim screens take `{name}` from the hook', () => {
-  it.each(['index', 'handover-otp', 'relationship', 'nominee-review'])('(claim)/%s.tsx', (file) => {
-    const source = readFileSync(resolve(__dirname, `../../app/(claim)/${file}.tsx`), 'utf8').replace(/\/\/.*$/gm, '')
-    expect(source).toMatch(/const name = useClaimMemberName\(\)/)
-    expect(source).not.toMatch(/t\('member_fallback'\)/)
+describe('the claim screens take the name from the hook (`-409`); the entry has its OWN no-name wording (`-410`)', () => {
+  const src = (file: string) => readFileSync(resolve(__dirname, `../../app/(claim)/${file}.tsx`), 'utf8').replace(/\/\/.*$/gm, '')
+
+  it.each(['handover-otp', 'relationship', 'nominee-review'])('(claim)/%s.tsx — `{name}` from useClaimMemberName', (file) => {
+    expect(src(file)).toMatch(/const name = useClaimMemberName\(\)/)
+    expect(src(file)).not.toMatch(/t\('member_fallback'\)/)
+  })
+
+  it('(claim)/index.tsx — the registered name, else entry.question_no_name / entry.no_no_name (⛔ member_fallback in the sentence)', () => {
+    const s = src('index')
+    expect(s).toMatch(/const name = useClaimMemberRegisteredName\(\)/)
+    expect(s).toMatch(/name === null \? t\('entry\.question_no_name'\) : t\('entry\.question', \{ name \}\)/)
+    expect(s).toMatch(/name === null \? t\('entry\.no_no_name'\) : t\('entry\.no', \{ name \}\)/)
+    expect(s).not.toMatch(/member_fallback/)
+  })
+})
+
+describe('`-410` — the no-name wording, through the REAL t() (hi + en, as decided)', () => {
+  it.each([
+    ['en', 'entry.question_no_name', "Are you a family member of the person this phone belongs to? We can guide you through filing a claim. We need to verify it's you."],
+    ['en', 'entry.no_no_name', 'No — this is my own phone'],
+    ['hi', 'entry.question_no_name', 'क्या आप उस व्यक्ति के परिजन हैं जिनका यह फ़ोन है? हम दावा दर्ज करने में आपका मार्गदर्शन कर सकते हैं। हमें यह सत्यापित करना होगा कि यह आप ही हैं।'],
+    ['hi', 'entry.no_no_name', 'नहीं — यह मेरा अपना फ़ोन है'],
+  ] as const)('%s %s', async (locale, key, text) => {
+    const { t } = await import('@twt/i18n')
+    expect(t(key, undefined, { locale, namespace: 'claim' })).toBe(text)
+  })
+
+  it('useClaimMemberRegisteredName: null while pending / for a null answer, the name once it answers', async () => {
+    function Probe() {
+      return createElement('p', { 'data-testid': 'raw' }, String(useClaimMemberRegisteredName()))
+    }
+    let answer!: (v: { name: string | null }) => void
+    mock.getMemberName.mockReturnValue(new Promise((r) => { answer = r }))
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(createElement(QueryClientProvider, { client }, createElement(LocaleProvider, { initialLocale: 'en' }, createElement(Probe))))
+    expect(screen.getByTestId('raw')).toHaveTextContent('null')
+    answer({ name: 'Shanti Devi' })
+    await waitFor(() => expect(screen.getByTestId('raw')).toHaveTextContent('Shanti Devi'))
   })
 })

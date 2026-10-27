@@ -975,6 +975,10 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 6.36f`, 2026-10-26, in the 
   - **Checks:** mobile 100 files / 2,049 passed; `tsc` and ESLint (`apps/mobile`) clean; `git diff --check`; `friction:check` passed
     on the committed fix (the 6.36f disposition). The full `ci:local` was ⛔ re-run (the delta is `apps/mobile` only; `b2fdb223`'s run
     stands for the rest). **Databases:** `twt_6_36f_ci` and `twt_6_36f_device` DROPPED; `twt_6_36f` (the dev session's) kept.
+- **Leftovers settled 2026-10-27 (BigDev: *"Drop twt_6_36f, leave signup"*):** `twt_6_36f` DROPPED (⛔ `twt_6_36f*` database remains on
+  `:5433`). The `:5432` junk signup (member `e7d20cb5…`) is LEFT INTACT by choice: its `events_log` row and nine `audit_log_entries`
+  rows are append-only (`no_delete` triggers; the audit table is hash-chained), so deleting only its six mutable rows would orphan the
+  signup event.
 
 ### File List
 

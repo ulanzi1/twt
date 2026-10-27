@@ -58,7 +58,10 @@ Load-bearing details:
   the take-down withdrew (`memorial_withdrawals.takedown_request_id` = the request). Each is told only of an approval they made.
 - **The outbox** `memorial_takedown_approver_emails` mirrors `claim_suspicion_staff_emails` (`0152`) — its states, grants and CHECKs
   unchanged, keyed on the take-down request: at most one row per (request, approver) and one request-level `no_target` row (MP11). A
-  request holding any outbox row is ⛔ never due again.
+  request holding the request-level `no_target` row is ⛔ never due again, and a (request, approver) pair that already holds a row is
+  ⛔ never due twice. *(Dated note, 2026-10-27 — the code review of Story 11b.4a, R2; `-412` amended: this sentence read "A request
+  holding any outbox row is never due again", which lost a sibling approver whenever a sweep stopped between two. The status stays
+  `drafted`.)*
 - **The text** (approved, `-412` §3.6): plain text; ⛔ no family name, ⛔ no deceased's name, ⛔ no words — *"A family memorial you
   approved was taken down"* / *"… has been taken down by the helpline at the nominee's request. You do not need to do anything. To see
   which, open Memorial reviews in the Trust console."*

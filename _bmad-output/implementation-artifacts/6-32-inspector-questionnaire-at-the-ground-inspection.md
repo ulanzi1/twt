@@ -12,11 +12,11 @@ code) and the load-bearing ones re-read by hand (`inspection-discrepancy.ts`, `q
 `0156` / `0160`, `ground-inspection-crypto.ts`, `-304`, `-310`, `-307`, `-330` SW25, PM23 / PM25, 6.28 OP14) — perishable, re-check at
 Task 0.1. Re-locate by FUNCTION, ⛔ by line number.
 
-STATUS: ready-for-dev (v1.1). IQ1–IQ13 are PROPOSED — BigDev answers them at Task 0.2 (FIVE need a real answer: IQ13 FIRST — whether the
-head's letter holds an approval, which may be the Panel's — then IQ2, IQ3, IQ7, IQ8; the rest are "as recommended unless you object"); ONE
-author-commit records them BEFORE any code (Task 0.3, [[feedback_governance_commits_precede_implementation]]). ⛔ No Panel question is NEEDED to
-build UNLESS IQ13 is answered (B) (§0 row 8); one NON-BLOCKING confirm is recommended (IQ7) and one go-live row is minted (Row 42 — counsel,
-Hindi review, the predecessor fence).
+STATUS: ready-for-dev (v1.2). **IQ13 ANSWERED (A)** — BigDev, 2026-10-28: *"IQ13 A — keep the letter optional"*. IQ1–IQ12 are PROPOSED — BigDev
+answers them at Task 0.2 (FOUR still need a real answer: IQ2, IQ3, IQ7, IQ8; the rest are "as recommended unless you object"); ONE author-commit
+records all thirteen BEFORE any code (Task 0.3, [[feedback_governance_commits_precede_implementation]]) — IQ13's answer is ⛔ a decision until that
+entry is committed. ⛔ No Panel question is NEEDED to build (§0 row 8 settled by (A)); one NON-BLOCKING confirm is recommended (IQ7) and one go-live
+row is minted (Row 42 — counsel, Hindi review, the predecessor fence).
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never") · ⭐ = action /
 emphasis · ⚠ = hazard.
@@ -52,8 +52,8 @@ builds: the engine's `ground_inspection` rule and its first version (reviewed CO
 a pinned, append-only, Tier-1 store for the family's answers; the **comparable form** 6.27a PM25 (a) says this row OWES — a keyed blind
 index per option code, on BOTH sides, so ③ cause and ④ illness are compared at completion **without a decrypt**; the inspector's panel on
 the existing admin page; and the staff read of the family's answers. **It gates nothing**: the completion predicate (6.26a's ONE
-definition of "complete") is ⛔ touched, ⛔ a question is ever a warning or a flag, and ⛔ a missing answer or letter holds any claim — ⚠ the letter
-half of that sentence is IQ13's to confirm (the record also calls the letter a "hard check" when nobody could be asked; answered FIRST, at Task 0.2).
+definition of "complete") is ⛔ touched, ⛔ a question is ever a warning or a flag, and ⛔ a missing answer or letter holds any claim — the letter
+half is IQ13 (A) (BigDev, 2026-10-28), which supersedes `-308` call 2's "hard check" in part at Task 0.3.
 
 ## Story
 
@@ -65,10 +65,10 @@ context — ⛔ never as a reason to hold, flag or refuse a family.**
 
 ## 📜 Policy meaning (AI-10-1)
 
-⚠ **This note holds under IQ13 (A) — the recommendation — and ONLY then.** If BigDev (or the Panel) answers IQ13 (B), the story DOES introduce a
-predicate: *"when nobody could be asked about the member's death, the family's claim cannot be approved until the inspector records that the head of
-the school or office gave a letter"* — and this note is REWRITTEN before Task 1 (member terms, checked against the Niyamavali, the 6.26a "ONE
-definition of complete" consequence stated).
+**IQ13 was answered (A)** (BigDev, 2026-10-28: *"IQ13 A — keep the letter optional"*): the letter is recorded, ⛔ a condition of approval. The
+option NOT taken would have introduced a predicate — *"when nobody could be asked about the member's death, the family's claim cannot be approved until
+the inspector records that the head of the school or office gave a letter"* — and that sentence is kept here so the choice reads as made, ⛔ missed.
+In the family's terms: *"If the head of the school or office cannot or will not give a letter, your claim is not held for it."*
 
 **This story introduces NO predicate that gates a member's or a family's access to a benefit, and changes none — and that sentence is the
 invariant, not boilerplate** ([[feedback_gate_scope_semantic_coverage]]: the shape that turned Story 10.10 into a permanent ban was a
@@ -133,7 +133,7 @@ The template's test: what does the Trust DISCLOSE, OWE, or need a BASIS for, and
 | 5. Who READS the family's cause / illness (IQ7) | `-304` Q3 A: *"the answer is shown to staff as context only"* (the NEIGHBOURS'); CF2 lists who sees the NEIGHBOURS' answers; ⛔ no ruling names who sees the FAMILY's | **UNRULED — MATCH IN AUDIENCE, NEW IN SOURCE.** The proposal gives the family's answers EXACTLY the neighbours' audience (no new viewer, one assembler, one hide). Under the template's first test (*"what the Trust DISCLOSES about a person, or to whom"*) this is the Panel's IF the audience widens; it does ⛔ widen. ⇒ built as the author's, with a **NON-BLOCKING confirm recommended** (IQ7) and the data held behind Row 42 until counsel's basis is recorded |
 | 6. A "has the family filed any other claim?" question | no ruling | **NOT BUILT here** (IQ2): the validator admits a question only on a Panel-ratified `approvedBy`; the Panel's own route for a new question is `-304` Q8's CHAIN (row 6-33). Shipping it in code would be the author adding a question outside the chain the Panel ruled |
 | 7. "Offline saving at the visit" | no ruling; architecture §4.5a: *"Mutations … requiring server-confirmed outcome … require network and fail with a retry prompt if offline"* | **the AUTHOR's / BigDev's scope** (IQ8) — ⛔ a Panel matter |
-| 8. Does a MISSING letter hold an approval when nobody could be asked? (IQ13) | CF4 A (3): *"otherwise nobody — the ground inspection carries the claim and the inspector collects a letter from the head of the school or office."* (Trustee-ratified; it says the inspector COLLECTS, and is ⛔ silent on approval); `-308` call 2 (author-commit): *"the head's letter when ⛔ no one can be asked"* listed among *"the hard checks"*; 6.36's record: *"approvable WITHOUT the letter until 6-32 is `done`"*; FR-40: *"school principal letter optional"* | **UNSETTLED — the record points both ways.** (A) optional ⇒ MATCHES FR-40 and CF4 A (3)'s words, but NARROWS `-308` call 2's "hard check" (an author-commit ⇒ superseded IN PART by the Task 0.3 entry, ⛔ re-read) and states plainly that 6.36's sentence is ⛔ carried out. (B) a gate ⇒ a NEW conjunct on the approval for a no-one-asked claim — it changes WHO IS PAID (a family whose head of school will not write is ⛔ paid) ⇒ **the Panel's** under the template's first test, and it touches 6.26a invariant 2 (*"ONE gate, ONE conjunct"*). ⇒ IQ13 is answered FIRST; (B) routes a Panel note from the template BEFORE any code |
+| 8. Does a MISSING letter hold an approval when nobody could be asked? (IQ13) | CF4 A (3): *"otherwise nobody — the ground inspection carries the claim and the inspector collects a letter from the head of the school or office."* (Trustee-ratified; it says the inspector COLLECTS, and is ⛔ silent on approval); `-308` call 2 (author-commit): *"the head's letter when ⛔ no one can be asked"* listed among *"the hard checks"*; 6.36's record: *"approvable WITHOUT the letter until 6-32 is `done`"*; FR-40: *"school principal letter optional"* | **UNSETTLED — the record points both ways.** (A) optional ⇒ MATCHES FR-40 and CF4 A (3)'s words, but NARROWS `-308` call 2's "hard check" (an author-commit ⇒ superseded IN PART by the Task 0.3 entry, ⛔ re-read) and states plainly that 6.36's sentence is ⛔ carried out. (B) a gate ⇒ a NEW conjunct on the approval for a no-one-asked claim — it changes WHO IS PAID (a family whose head of school will not write is ⛔ paid) ⇒ **the Panel's** under the template's first test, and it touches 6.26a invariant 2 (*"ONE gate, ONE conjunct"*). ⇒ IQ13 is answered FIRST; (B) routes a Panel note from the template BEFORE any code. **✅ ANSWERED (A)** (BigDev, 2026-10-28) ⇒ the AUTHOR's: ⛔ a Panel question; `-308` call 2 superseded in part by the Task 0.3 entry |
 
 ## FOUND FACTS (G) — traced at `4e57fa42`
 
@@ -242,10 +242,9 @@ The template's test: what does the Trust DISCLOSE, OWE, or need a BASIS for, and
   story reads NONE of the selection's columns**. `deferred-work.md` 6.36 **W1** (no DB backstop for the two workplace-id columns — *"Trigger: row 6-32
   (the columns' reader)"*) therefore stays **OPEN, its trigger ⛔ pulled** (Task 9.4 records that precisely; ⛔ "closed by 6-32").
 
-## ⚖️ Build decisions IQ1–IQ13 (PROPOSED — BigDev answers at Task 0.2)
+## ⚖️ Build decisions IQ1–IQ13 (IQ13 ANSWERED; IQ1–IQ12 PROPOSED — BigDev answers at Task 0.2)
 
-**Need a real answer: IQ13 FIRST (it may route to the Panel and would rewrite I1 / AC4 / AC10), then IQ2, IQ3, IQ7, IQ8.** The rest are the author's,
-recommended, and stand unless BigDev objects.
+**Need a real answer: IQ2, IQ3, IQ7, IQ8.** IQ13 is answered (A). The rest are the author's, recommended, and stand unless BigDev objects.
 
 - **IQ1 — v1 carries only the RULED questions: `death_cause`, `death_illness`, `head_letter`.** `ground_inspection.v1`, scope `all`, status `live`, in a NEW
   `questionnaires/ground-inspection.ts` (reviewed CODE until row 6-33, as `peer-mesh.ts` is). Pages: (1) `head_letter`; (2) `death_cause`; (3)
@@ -356,7 +355,9 @@ recommended, and stand unless BigDev objects.
   it returns `null` the screen shows NO questionnaire panel (today's behaviour, byte for byte); a later live version applies to NEW visits only (an old
   answer stays tied to its version and its words — the neighbours' rule). Row 6-33's database-backed versions replace the registry source WITHOUT a screen
   change: the served-definition shape and `resolveLiveVersion` are the seam (AC1).
-- **IQ13 — ⭐ BigDev FIRST (possibly the Panel's): when nobody could be asked about the death, does a MISSING head's letter hold the approval?** §0 row 8
+- **IQ13 — ✅ ANSWERED (A), BigDev 2026-10-28: *"IQ13 A — keep the letter optional"*. When nobody could be asked about the death, does a MISSING head's
+  letter hold the approval? — ⛔ No.** Recorded in the Task 0.3 entry, which supersedes `-308` call 2 IN PART and states that 6.36's sentence is ⛔ carried
+  out. The question as put (kept for the record): §0 row 8
   quotes the record, which points both ways. **THE ONE FACT THAT DECIDES IT:** CF4 A (3), the only Trustee-ratified text, says the inspector *"collects"*
   the letter and is ⛔ silent on approval; the "hard check" wording is an AUTHOR-COMMIT (`-308` call 2). (A, recommended) **Recorded, ⛔ a gate**: the letter
   is asked on every full visit (SW25), its answer is shown to approvers (AC10), and a missing letter holds ⛔ nothing; the Task 0.3 entry supersedes `-308`
@@ -374,8 +375,7 @@ recommended, and stand unless BigDev objects.
 
 - **I1 — nothing gates.** The questionnaire is ⛔ in `groundInspectionApprovalState`, ⛔ in `completeGroundInspection`'s required list, ⛔ a warning kind
   (`APPROVAL_WARNING_KINDS` does not move), ⛔ a flag, ⛔ read by any approval, refusal, routing or payment path. A completed inspection with ZERO answers is
-  `complete`; one with answers in total disagreement is `complete`. (Written for IQ13 (A). Under (B) the ONE exception — a missing letter on a no-one-asked
-  claim — enters `groundInspectionApprovalState` as its one new conjunct, and this invariant is rewritten at Task 0.3; ⛔ any other answer gates either way.)
+  `complete`; one with answers in total disagreement is `complete`; a no-one-asked claim with `head_letter` ⛔ collected (or ⛔ recorded) is `complete` (IQ13 (A)).
 - **I2 — the inspector sees nothing about the neighbours before completing their own record** (CF2). The questionnaire's questions are IDENTICAL whatever the
   neighbours answered, and whether any were asked (SW25: the letter is asked on every full visit). ⛔ A question's presence, order or wording depends on
   neighbour data; ⛔ the panel reads `claim_peer_mesh_*`.
@@ -388,8 +388,7 @@ recommended, and stand unless BigDev objects.
 ## Acceptance Criteria
 
 0. **AC0 — governance first.** ⛔ No code before Task 0.3's author-commit (IQ1–IQ13 as answered; it supersedes in part `-330` SW25's *"forward note"* only by
-   REFINING it into IQ1 / IQ3, supersedes `-319` OP14 (the (d) routing) per IQ2's answer, supersedes `-308` call 2 in part per IQ13 (A) — or, under IQ13 (B) / (C),
-   records the Panel note as sent and HOLDS until it is answered — and corrects the ledger's *"offline saving"* per IQ8 — each by a NEW dated entry, ⛔ an in-place
+   REFINING it into IQ1 / IQ3, supersedes `-319` OP14 (the (d) routing) per IQ2's answer, supersedes `-308` call 2 in part per IQ13 (A) (answered 2026-10-28), and corrects the ledger's *"offline saving"* per IQ8 — each by a NEW dated entry, ⛔ an in-place
    edit). Row 42 and the epics.md `### Story 6.32` entry follow it (Task 0.4).
 1. **AC1 — the engine's `ground_inspection` rule and v1.** `questionnaires/keys.ts` gains `GROUND_INSPECTION_RULED_QUESTION_KEYS = ['head_letter','death_cause',
    'death_illness']` and `2026-10-10-310` in `PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS`; `validator.ts` gains a `ground_inspection` block: all three ruled keys in EVERY
@@ -447,7 +446,8 @@ recommended, and stand unless BigDev objects.
    statements / 27 tables by exactly the statements and tables added (and the stale `:149` title is corrected); the erasure of the notes (already built) is exercised for a ③ / ④ note.
 10. **AC10 — the head's letter on every full visit.** `head_letter` is served on EVERY non-`certificate_check` assignment regardless of any neighbour selection (a test:
     the served definition is byte-identical with zero, three and five selected neighbours); the story READS none of `claim_peer_mesh_selections`' columns (a grep
-    pin); an approver sees the answer as `Letter: collected / not collected / not recorded`; ⛔ it gates under IQ13 (A) (I1); IQ3 (A) records only the answer.
+    pin); an approver sees the answer as `Letter: collected / not collected / not recorded`; ⛔ it gates (IQ13 (A), I1) — AC4 (a) gains the row "a no-one-asked claim, completed full visit, `head_letter` not collected ⇒ `complete`", and the I1
+    mutant (letter required) turns it red; IQ3 (A) records only the answer.
 11. **AC11 — nothing else moves.** ⛔ New permission key, ⛔ new claim event, ⛔ new member-facing string or SMS template, ⛔ edit of 6.27b's warning kinds, ⛔ edit of
     `has_died` / `death_date` comparison semantics. **THE lockstep list — the ONE place it is kept (TR4 / TR5 / TR12 point here).** Each item changes deliberately,
     is named in the commit, and is ⛔ "fixed" by weakening the assertion:
@@ -475,9 +475,7 @@ recommended, and stand unless BigDev objects.
 - [ ] **Task 0 — governance first (AC0).** Nothing below starts before 0.3 is committed.
   - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved; `git diff --name-only 4e57fa42..HEAD -- packages apps scripts infra docs` — re-read any cited file that
         moved; re-grep the highest decision, migration, roster row and ledger letter on EVERY branch (NUMBERS block).
-  - [ ] 0.2 Put IQ1–IQ13 to BigDev; IQ13 FIRST, then the other real asks (IQ2, IQ3, IQ7, IQ8), each with its honest cost (written above). If IQ13 is (B) or (C): draft
-        the Panel note FROM `trustee-panel-routing-note-TEMPLATE.md` (§0 first, the deciding fact first, an honest cost on every option, evidence last) — ⛔ send it
-        (BigDev sends) — and STOP before Task 1 until it is answered; then rewrite the Policy meaning, I1, AC4 and AC10 to the answer.
+  - [ ] 0.2 Put IQ1–IQ12 to BigDev; the four real asks (IQ2, IQ3, IQ7, IQ8) first, each with its honest cost (written above). IQ13 is answered (A) (2026-10-28).
   - [ ] 0.3 ONE author-commit decision entry (≥ `-413`), committed ALONE (`governance:` prefix): IQ1–IQ13 as answered; the supersessions by NEW dated entries (IQ2 →
         `-319` OP14 in part, IQ8, IQ13 (A) → `-308` call 2 in part); its §0 table (edges 1–8); "How much to trust this entry" naming what was traced vs inferred.
   - [ ] 0.4 Records commit: roster Row 42 (IQ11); epics.md `### Story 6.32` (title, `[SURFACE] [PRIMITIVE]`, the ACs in brief, the minted-by-ruling banner); a dated
@@ -609,3 +607,4 @@ No architecture variance: the surface is `apps/admin` (§4.1), ⛔ `apps/mobile`
 |---|---|---|
 | 2026-10-27 | 1.0 | `bmad-create-story 6.32` (BigDev: *"6.32 in its worktree"*) at `4e57fa42`. Two read-only research passes (governance; code) + hand re-checks. Row `backlog` → `ready-for-dev`. IQ1–IQ12 PROPOSED; four need BigDev (IQ2 the "other claim" question — the validator admits only Panel-ratified ids; IQ3 the letter's record; IQ7 who reads the family's answers; IQ8 "offline saving" — no substrate or ruling). The comparable form PM25 (a) says this row OWES is built (AC5 / AC6). Policy meaning: nothing gates — the completion predicate is untouched (I1). Row 42 to be minted at Task 0.4. ⛔ No Panel question needed to build; one non-blocking confirm recommended (IQ7). |
 | 2026-10-28 | 1.1 | Fresh-context validate (`bmad-create-story validate 6.32`, BigDev: *"all"*), facts re-traced on the branch (two read-only passes, domain/schema and API/admin). **IQ13 added** — `-308` call 2 lists *"the head's letter when ⛔ no one can be asked"* among *"the hard checks"*, and 6.36 recorded *"approvable WITHOUT the letter until 6-32 is `done`"*; the story's "optional, never gates" was unreconciled with both ⇒ §0 row 8, answered FIRST, (B) is the Panel's. **G7a / TR14** — the neighbours' answer guard names its erasure columns; AC2 now replaces it. **AC11** — the ONE lockstep list (adds `questionnaires.test.ts:82/:94`, `inspection-discrepancy.test.ts:45` rewritten ⛔ deleted, the fence's 54, the RTBF 30 / 27, the audit-sink union). **IQ1** — every question `optional`, the required `closingNoteCopyKey` / `thankYouCopyKey`. Facts corrected: G6 (constant locations), G7 (CHECK names), G9 (admin uses `@twt/i18n`; the `HelplinePeerRequests` precedent to REUSE), G11 (two handler patterns; override district-only), G12 (`ENROLMENT_OWED`), G13 (what erasure covers), OP14 (d) is committed by `-319`. Numbers re-checked on every branch: `-413` / `0188` / Row 42 hold. |
+| 2026-10-28 | 1.2 | **IQ13 answered (A)** — BigDev: *"IQ13 A — keep the letter optional"*. The letter is recorded and shown to approvers, ⛔ a condition of approval; ⛔ Panel question. Status, Policy meaning, §0 row 8, I1, AC0, AC10 (+ an AC4 (a) row) and Task 0.2 updated; the decision is recorded in the Task 0.3 entry with IQ1–IQ12 (superseding `-308` call 2 in part) — ⛔ a decision until committed. Four asks remain: IQ2, IQ3, IQ7, IQ8. |

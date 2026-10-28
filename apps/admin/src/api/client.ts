@@ -351,6 +351,9 @@ import {
   PeerRequestSubmitResponse,
   type PeerRequestAnswerValue,
   ClaimPeerAnswersResponse,
+  FamilyAnswersDisplay,
+  GroundInspectionQuestionnaireResponse,
+  GroundInspectionSaveAnswerResponse,
   NoteWithheldReason,
 } from '@twt/contracts';
 import { z } from 'zod';
@@ -1321,7 +1324,8 @@ const GroundInspectionWriteResponse = z.object({
  */
 // Story 6.27d code review round 3 (R3-12) — exported for the lockstep test against `@twt/contracts` (the
 // `GROUND_INSPECTION_OTHER_CLAIM_STAGES` precedent): a key the server adds must ⛔ break this parse after a committed completion.
-export const INSPECTION_DISCREPANCY_KEYS = ['has_died', 'death_date'] as const;
+// ⭐ Story 6.32 (AC6 / AC11): + ③ `death_cause` / ④ `death_illness` (the lockstep test pins this equal to the contracts list).
+export const INSPECTION_DISCREPANCY_KEYS = ['has_died', 'death_date', 'death_cause', 'death_illness'] as const;
 const InspectionDiscrepancyKey = z.enum(INSPECTION_DISCREPANCY_KEYS);
 const InspectionDiscrepancy = z.discriminatedUnion('state', [
   z.object({ state: z.literal('withheld'), reason: NoteWithheldReason }),
@@ -1334,6 +1338,8 @@ const InspectionDiscrepancy = z.discriminatedUnion('state', [
         z.object({ status: z.literal('unavailable') }),
       ])
       .nullable(),
+    /** ⭐ Story 6.32 (AC6 / AC7) — the family's ③ / ④ answers in English words, ONLY for a ③ / ④ key shown. */
+    familyAnswers: FamilyAnswersDisplay.nullable(),
   }),
 ]);
 /** ⚠ COMPLETE-ONLY: `GroundInspectionWriteResponse` is SHARED by schedule / findings / complete / refusal, so the new field
@@ -1474,6 +1480,34 @@ export function recordInspectionDiscrepancyNote(
     `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/discrepancy-notes`,
     InspectionDiscrepancyNoteWritten,
     { method: 'POST', body: JSON.stringify(body) },
+  );
+}
+
+export type GroundInspectionQuestionnaireT = z.infer<typeof GroundInspectionQuestionnaireResponse>;
+export type GroundInspectionSaveAnswerT = z.infer<typeof GroundInspectionSaveAnswerResponse>;
+
+/** ⭐ Story 6.32 (IQ9 / IQ12) — GET the visit's questionnaire: the served definition (en + hi words), whether the visit is
+ *  open, and the inspector's own live answers. A 404 `ground_inspection.questionnaire_unavailable` ⇔ ⛔ panel. */
+export function getGroundInspectionQuestionnaire(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+): Promise<GroundInspectionQuestionnaireT> {
+  return apiFetch(`${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/questionnaire`, GroundInspectionQuestionnaireResponse);
+}
+
+/** ⭐ Story 6.32 (IQ8 / IQ10) — PUT ONE answer. Last write wins (⛔ Idempotency-Key — a retry re-sends the same final value). */
+export function saveGroundInspectionAnswer(
+  pariwarId: string,
+  claimCaseId: string,
+  groundInspectionId: string,
+  questionKey: string,
+  codes: readonly string[],
+): Promise<GroundInspectionSaveAnswerT> {
+  return apiFetch(
+    `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/questionnaire/answers/${encodeURIComponent(questionKey)}`,
+    GroundInspectionSaveAnswerResponse,
+    { method: 'PUT', body: JSON.stringify({ codes }) },
   );
 }
 

@@ -38,6 +38,10 @@ vi.mock('../src/api/client.js', async () => {
     getInspectionDiscrepancy: vi.fn(),
     recordInspectionDiscrepancyNote: vi.fn(),
     refuseGroundInspection: vi.fn(),
+    // ⭐ Story 6.32 (IQ12) — ⛔ questionnaire for these visits (404) ⇒ ⛔ panel: the page this file pins, byte for byte.
+    getGroundInspectionQuestionnaire: vi.fn(() =>
+      Promise.reject(new actual.ApiError(404, 'ground_inspection.questionnaire_unavailable', 'There is no questionnaire for this visit')),
+    ),
   };
 });
 
@@ -132,7 +136,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
       discrepancy: {
         state: 'shown',
         questionKeys: ['has_died', 'death_date'],
-        familyDeathDate: { status: 'shown', date: '2026-06-15' },
+        familyDeathDate: { status: 'shown', date: '2026-06-15' }, familyAnswers: null,
         // ⛔ on the wire (the client strips them) — fed here so `expectNoNeighbourContent` can fail if the panel spread them.
         ...({ neighbourName: 'Asha', valueCodes: ['not_died'], neighbourDate: '2026-06-01', count: '2 neighbours' } as object),
       },
@@ -167,7 +171,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('⛔ difference ⇒ the "no further action" screen VERBATIM, ⛔ a note box', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null }, notes: [] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
     const none = await screen.findByTestId('gi-discrepancy-none');
@@ -180,7 +184,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
   it('the session id is compared under the domain\'s normalisation (whitespace + case) — the inspector\'s card still fetches', async () => {
     session(` ${INSPECTOR.toUpperCase()}\t`);
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null }, notes: [] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
     await screen.findByTestId('gi-discrepancy-none');
@@ -189,7 +193,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
   it('② an `unavailable` family date renders the page\'s `—`', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({
-      discrepancy: { state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'unavailable' } },
+      discrepancy: { state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'unavailable' }, familyAnswers: null },
       notes: [],
     });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
@@ -237,7 +241,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('notes — two boxes saved at once resolve EACH on its own (per-call `mutateAsync`); each then shows read-only "Recorded"', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' } };
+    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' }, familyAnswers: null };
     vi.mocked(api.getInspectionDiscrepancy).mockResolvedValueOnce({ discrepancy: shown, notes: [] });
     let resolveA!: (v: Awaited<ReturnType<typeof api.recordInspectionDiscrepancyNote>>) => void;
     let resolveB!: (v: Awaited<ReturnType<typeof api.recordInspectionDiscrepancyNote>>) => void;
@@ -277,7 +281,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('R2-4 — a confirmed save turns the box read-only AT ONCE (⛔ an empty editable box before the panel\'s refresh)', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null };
+    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null, familyAnswers: null };
     vi.mocked(api.getInspectionDiscrepancy).mockResolvedValueOnce({ discrepancy: shown, notes: [] }).mockImplementation(() => new Promise(() => undefined));
     vi.mocked(api.recordInspectionDiscrepancyNote).mockResolvedValue({ questionKey: 'has_died', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: INSPECTOR, authorDisplay: 'Inspector One' });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
@@ -300,7 +304,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
   it('R4a — another author\'s note renders read-only WITH that author; an `unavailable` note says so, ⛔ blank', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({
-      discrepancy: { state: 'shown', questionKeys: ['has_died', 'death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' } },
+      discrepancy: { state: 'shown', questionKeys: ['has_died', 'death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' }, familyAnswers: null },
       notes: [
         { questionKey: 'has_died', note: 'The family repeated: at home.', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: SUPERVISOR, authorDisplay: 'Supervisor Two' },
         { questionKey: 'death_date', note: { status: 'unavailable' }, notedAt: '2026-07-10T13:06:00.000Z', authorActorId: INSPECTOR, authorDisplay: 'Inspector One' },
@@ -320,7 +324,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('a 409 `discrepancy_note_exists` RE-READS and then shows the existing note with its author — ⛔ an empty box again', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null };
+    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null, familyAnswers: null };
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce({ discrepancy: shown, notes: [] })
       .mockResolvedValueOnce({
@@ -349,7 +353,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('the note write\'s window and hidden refusals have the page\'s own words', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     vi.mocked(api.recordInspectionDiscrepancyNote)
       .mockRejectedValueOnce(new api.ApiError(409, 'ground_inspection.not_allowed', 'server words'))
       .mockRejectedValueOnce(new api.ApiError(409, 'ground_inspection.own_ground_visit_pending', 'server words'));
@@ -385,7 +389,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     const qc = createQueryClient();
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({
-      discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null },
+      discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null },
       notes: [{ questionKey: 'has_died', note: 'Private family response', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: INSPECTOR, authorDisplay: 'Inspector One' }],
     });
     const first = render(<QueryClientProvider client={qc}><GroundInspectionPage pariwarId={PARIWAR} /></QueryClientProvider>);
@@ -417,7 +421,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
   it('CR1 — changing the active session also clears the result while the page is mounted', async () => {
     const qc = createQueryClient();
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     render(<QueryClientProvider client={qc}><GroundInspectionPage pariwarId={PARIWAR} /></QueryClientProvider>);
     await loadScope();
     await screen.findByTestId('gi-discrepancy-found');
@@ -432,7 +436,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce({ discrepancy: { state: 'withheld', reason }, notes: [] })
-      .mockResolvedValueOnce({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+      .mockResolvedValueOnce({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
     const withheld = await screen.findByTestId('gi-discrepancy-withheld');
@@ -448,7 +452,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce({ discrepancy: { state: 'withheld', reason: 'check_failed' }, notes: [] })
-      .mockResolvedValueOnce({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null }, notes: [] });
+      .mockResolvedValueOnce({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null }, notes: [] });
     const first = render(<QueryClientProvider client={qc}><GroundInspectionPage pariwarId={PARIWAR} /></QueryClientProvider>);
     await loadScope();
     await screen.findByTestId('gi-discrepancy-withheld');
@@ -462,7 +466,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('CR3 — a successful note remains read-only with its submitted text when refresh fails, with a retry', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null };
+    const shown = { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null, familyAnswers: null };
     const note = { questionKey: 'has_died' as const, notedAt: '2026-07-10T13:05:00.000Z', authorActorId: INSPECTOR, authorDisplay: 'Inspector One', note: 'Saved family response' };
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce({ discrepancy: shown, notes: [] })
@@ -494,7 +498,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     try {
       const qc = createQueryClient();
       vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-      vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null }, notes: [] });
+      vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null }, notes: [] });
       // The key is [root, pariwar, claim, assignment, readId] (round 3, R3-2 — ⛔ the viewer).
       const readIdOf = () => qc.getQueryCache().findAll({ queryKey: ['ground-inspection-discrepancy'] }).map((q) => q.queryKey[4]);
       const first = render(<QueryClientProvider client={qc}><GroundInspectionPage pariwarId={PARIWAR} /></QueryClientProvider>);
@@ -572,7 +576,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
       .mockResolvedValue({ assignments: [completed(), completed({ groundInspectionId: 'g-other' })] });
     vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
     vi.mocked(api.completeGroundInspection).mockResolvedValue({
-      groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null },
+      groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null },
     });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
@@ -612,7 +616,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
       .mockResolvedValue({ assignments: [completed(), completed({ groundInspectionId: 'g-other' })] });
     vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
     vi.mocked(api.completeGroundInspection).mockResolvedValue({
-      groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null },
+      groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null },
     });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
@@ -636,7 +640,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
   it('R2-12 / R2-13 — a save settling AFTER the panel is gone fetches ⛔ and re-creates ⛔; its note text leaves the MutationCache', async () => {
     const qc = createQueryClient();
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     let resolve!: (v: Awaited<ReturnType<typeof api.recordInspectionDiscrepancyNote>>) => void;
     vi.mocked(api.recordInspectionDiscrepancyNote).mockImplementation(() => new Promise((r) => (resolve = r)));
     const view = render(<QueryClientProvider client={qc}><GroundInspectionPage pariwarId={PARIWAR} /></QueryClientProvider>);
@@ -661,7 +665,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce({
-        discrepancy: { state: 'shown', questionKeys: ['has_died', 'death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' } },
+        discrepancy: { state: 'shown', questionKeys: ['has_died', 'death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' }, familyAnswers: null },
         notes: [{ questionKey: 'death_date', note: 'Another author\'s note.', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: SUPERVISOR, authorDisplay: 'Supervisor Two' }],
       })
       .mockResolvedValueOnce({ discrepancy: { state: 'withheld', reason: 'own_visit' }, notes: [] });
@@ -699,7 +703,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     vi.mocked(api.completeGroundInspection).mockResolvedValue({
       groundInspectionId: GID, status: 'completed', discrepancy: { state: 'withheld', reason: 'check_failed' },
     });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
     await completeThroughThePage();
@@ -718,7 +722,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('R3-3 — a 201 the follow-up re-read does ⛔ confirm (⛔ note for that key) returns the box to editable, with the text and a reason', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     vi.mocked(api.recordInspectionDiscrepancyNote).mockResolvedValue({
       questionKey: 'has_died', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: INSPECTOR, authorDisplay: 'Inspector One',
     });
@@ -737,7 +741,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('R3-3 (fix-diff review) — a FAILED first re-read keeps the note (CR3); a LATER successful read without it returns the box to editable', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const none = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null }, notes: [] };
+    const none = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const], familyDeathDate: null, familyAnswers: null }, notes: [] };
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce(none)
       .mockRejectedValueOnce(new api.ApiError(503, 'service.unavailable', 'Try later'))
@@ -761,7 +765,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('R3-3 (fix-diff review) — the "not confirmed" reason clears once a note for that question ARRIVES (another author\'s, via a refresh)', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const both = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' } }, notes: [] };
+    const both = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' }, familyAnswers: null }, notes: [] };
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce(both)
       .mockResolvedValueOnce(both)
@@ -794,7 +798,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce({
-        discrepancy: { state: 'shown', questionKeys: ['has_died', 'death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' } },
+        discrepancy: { state: 'shown', questionKeys: ['has_died', 'death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' }, familyAnswers: null },
         notes: [{ questionKey: 'death_date', note: 'Another author\'s note.', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: SUPERVISOR, authorDisplay: 'Supervisor Two' }],
       })
       .mockRejectedValueOnce(new api.ApiError(503, 'service.unavailable', 'Try later'));
@@ -814,7 +818,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('R3-5 — a 409 `discrepancy_note_exists` whose note is ALREADY on screen announces its author at once', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const first = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' } }, notes: [] };
+    const first = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' }, familyAnswers: null }, notes: [] };
     const withBoth = {
       ...first,
       notes: [
@@ -851,7 +855,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce({ discrepancy: { state: 'withheld', reason: 'check_failed' }, notes: [] })
       .mockRejectedValueOnce(new api.ApiError(503, 'service.unavailable', 'Try later'))
-      .mockResolvedValueOnce({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+      .mockResolvedValueOnce({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
     const withheld = await screen.findByTestId('gi-discrepancy-withheld');
@@ -870,7 +874,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('R3-9 (fix-diff review) — after a FAILED "Try again", a note SAVE does ⛔ re-announce the whole screen (a save is ⛔ a retry)', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    const both = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' } }, notes: [] };
+    const both = { discrepancy: { state: 'shown' as const, questionKeys: ['has_died' as const, 'death_date' as const], familyDeathDate: { status: 'shown' as const, date: '2026-06-15' }, familyAnswers: null }, notes: [] };
     vi.mocked(api.getInspectionDiscrepancy)
       .mockResolvedValueOnce(both)
       .mockRejectedValueOnce(new api.ApiError(503, 'service.unavailable', 'Try later'))
@@ -900,7 +904,7 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
 
   it('R3-10 — Save stays disabled for a note of ONLY invisible characters (zero-width, format, spaces)', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [completed()] });
-    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+    vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
     await loadScope();
     const box = await screen.findByTestId('gi-discrepancy-has_died');
@@ -918,11 +922,11 @@ describe('Story 6.27d — the inspector\'s discrepancy panel', () => {
       .mockResolvedValue({ assignments: [completed()] });
     vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
     vi.mocked(api.completeGroundInspection).mockResolvedValue({
-      groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null },
+      groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null },
     });
     vi.mocked(api.recordInspectionDiscrepancyNote).mockRejectedValue(new api.ApiError(409, 'ground_inspection.discrepancy_note_exists', 'exists'));
     vi.mocked(api.getInspectionDiscrepancy).mockResolvedValue({
-      discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null },
+      discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null },
       notes: [{ questionKey: 'has_died', note: 'The supervisor\'s note.', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: SUPERVISOR, authorDisplay: 'Supervisor Two' }],
     });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);

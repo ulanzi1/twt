@@ -88,6 +88,8 @@ const PRESENT_PACKET: VerifierConsolePacket = {
   },
   peerMesh: {
     status: 'present',
+    // ⭐ Story 6.32 (IQ7) — REQUIRED on the section, possibly empty.
+    familyAccount: [],
     transcript: {
       selectionId: 's1',
       distinctResponderCount: 1,
@@ -461,7 +463,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
   it('6.27a review S39 — a PENDING window whose 72 hours have passed reads "being counted", ⛔ "open until" a past time', () => {
     const transcript = (PRESENT_PACKET.peerMesh as { transcript: Record<string, unknown> }).transcript;
     const at = (outcome: string, windowExpiresAt: string) =>
-      ({ ...PRESENT_PACKET, peerMesh: { status: 'present', transcript: { ...transcript, outcome, windowExpiresAt } } }) as typeof PRESENT_PACKET;
+      ({ ...PRESENT_PACKET, peerMesh: { status: 'present', familyAccount: [], transcript: { ...transcript, outcome, windowExpiresAt } } }) as unknown as typeof PRESENT_PACKET;
     const { unmount } = render(<SignalsPanel packet={at('pending', '2000-01-01T00:00:00.000Z')} />);
     expect(screen.getByTestId('peer-mesh-window')).toHaveTextContent('The 72 hours have passed — the answers are being counted');
     unmount();
@@ -506,7 +508,7 @@ describe('<SignalsPanel> — six sections, four-state vocabulary, tri-state conc
     for (const line of [null, false]) {
       const legacy = {
         ...PRESENT_PACKET,
-        peerMesh: { status: 'present' as const, transcript: { ...transcript!, recentChangeBeforeFiling: line, pings: transcript!.pings.map((p) => ({ ...p, source: null })) } },
+        peerMesh: { status: 'present' as const, familyAccount: [], transcript: { ...transcript!, recentChangeBeforeFiling: line, pings: transcript!.pings.map((p) => ({ ...p, source: null })) } },
       };
       const r = render(<SignalsPanel packet={legacy} />);
       expect(screen.queryAllByTestId('peer-mesh-source')).toHaveLength(0);

@@ -128,6 +128,9 @@ const EN: Record<string, string> = {
     "Thank you, your response has been recorded. We found the family's answers don't match the neighbours' observations. Please ask the family again, in your own words, without mentioning anyone else's answer, and record their response in the note next to each question.",
   'gi.discrepancy.has_died': "The family reported that the member has died. A neighbour's answer differs.",
   'gi.discrepancy.death_date': "The family said: {familyDeathDate}. A neighbour's answer differs.",
+  // ⭐ Story 6.32 (AC7; story-minted, AC7's words) — ③ / ④: the FAMILY's answer in the option's English words; ⛔ who, ⛔ how many.
+  'gi.discrepancy.death_cause': "The family said: {familyAnswer}. A neighbour's answer differs.",
+  'gi.discrepancy.death_illness': "The family said: {familyAnswer}. A neighbour's answer differs.",
   'gi.discrepancy.region': 'Result of your visit',
   'gi.discrepancy.show': 'Show the result',
   'gi.discrepancy.loading': 'Loading the result…',
@@ -148,6 +151,25 @@ const EN: Record<string, string> = {
   'gi.discrepancy.error.not_allowed': 'This claim is no longer open for notes on the visit.',
   'gi.discrepancy.error.own_ground_visit_pending': 'Your own ground visit on this claim is not finished yet — finish it before recording a note.',
   'gi.discrepancy.error.discrepancy_note_exists': 'A note on this question is already recorded.',
+  // ⭐ Story 6.32 (AC7, IQ8 (A), IQ9; story-minted) — the inspector's questions for the family. The QUESTIONS' words come
+  // from the server (`inspector_questions.*`, en + hi); these are the panel's chrome.
+  'gi.questionnaire.region': 'Questions for the family',
+  'gi.questionnaire.optional':
+    'These questions are optional. If you cannot ask them, or the family cannot say, complete the visit anyway — the original-certificate checks are what hold an approval.',
+  'gi.questionnaire.hindi': 'Read aloud (Hindi):',
+  'gi.questionnaire.loading': 'Loading the questions…',
+  'gi.questionnaire.loadFailed': 'The questions could not be loaded.',
+  'gi.questionnaire.retryLoad': 'Try again',
+  'gi.questionnaire.state.saved': 'Saved',
+  'gi.questionnaire.state.saving': 'Saving…',
+  'gi.questionnaire.state.retrying': 'Not saved — retrying',
+  'gi.questionnaire.state.failed': 'Not saved',
+  'gi.questionnaire.retry': 'Try saving again',
+  'gi.questionnaire.unavailable': 'This answer could not be shown just now.',
+  'gi.questionnaire.unsaved': 'Some answers are not saved yet. Stay on this page until they are.',
+  'gi.questionnaire.error.answer_invalid': 'This answer cannot be saved.',
+  'gi.questionnaire.error.not_active': 'This visit is no longer open for answers.',
+  'gi.questionnaire.error.not_allowed': 'This claim is no longer open for answers on the visit.',
   // Result / errors (Story 6.27d removed `gi.result.completed` — it was never rendered; a completed FULL visit's
   // discrepancy screen carries the completion's words, and a certificate check shows its recorded card as before)
   'gi.result.scheduled': 'Assignment scheduled.',

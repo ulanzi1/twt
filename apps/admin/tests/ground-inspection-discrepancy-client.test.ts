@@ -31,7 +31,7 @@ describe('the admin client — Story 6.27d', () => {
     for (const discrepancy of [
       null,
       { state: 'withheld', reason: 'own_visit' },
-      { state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' } },
+      { state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: '2026-06-15' }, familyAnswers: null },
     ]) {
       stubJson({ groundInspectionId: GID, status: 'completed', photoCount: 2, discrepancy });
       expect((await completeGroundInspection(PARIWAR, CLAIM, GID, {})).discrepancy).toEqual(discrepancy);
@@ -56,7 +56,7 @@ describe('the admin client — Story 6.27d', () => {
 
   it('the re-read and the note write parse their responses (notes with their author; an `unavailable` note)', async () => {
     const read = {
-      discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null },
+      discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null },
       notes: [{ questionKey: 'has_died', note: { status: 'unavailable' }, notedAt: '2026-07-10T13:05:00.000Z', authorActorId: 'a', authorDisplay: 'A' }],
     };
     stubJson(read);
@@ -68,7 +68,7 @@ describe('the admin client — Story 6.27d', () => {
 
   it('⭐ code review round 2 (R2-14) — a neighbour\'s name / value / count on the wire is STRIPPED by the parse (completion, re-read, note write)', async () => {
     const neighbour = { neighbourName: 'Asha', valueCodes: ['not_died'], neighbourDate: '2026-06-01', count: 2 };
-    const shown = { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null };
+    const shown = { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null };
     const note = { questionKey: 'has_died', note: 'At home.', notedAt: '2026-07-10T13:05:00.000Z', authorActorId: 'a', authorDisplay: 'A' };
 
     stubJson({ groundInspectionId: GID, status: 'completed', ...neighbour, discrepancy: { ...shown, ...neighbour } });

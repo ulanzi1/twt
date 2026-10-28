@@ -20,7 +20,7 @@ import type { ApprovalWarningsSummary } from '@twt/contracts';
 
 import { ApiError } from '../../api/client.js';
 import { useClaimPeerAnswers, useForgetClaimPeerAnswers } from '../../api/hooks.js';
-import { NonPresent, PeerMeshView } from './PeerMeshView.js';
+import { NonPresent, PeerMeshSectionView } from './PeerMeshView.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 
 export interface NeighboursAnswersPanelProps {
@@ -173,6 +173,6 @@ function NeighboursAnswersRead({
     return <p className="text-sm opacity-70" data-testid="neighbours-answers-not-at-step">{t.neighboursPanel.notAtStep}</p>;
   }
   if (answers.isError) return <NonPresent status="unavailable" />;
-  if (peerMesh?.status === 'present') return <PeerMeshView transcript={peerMesh.transcript} />;
-  return peerMesh === undefined ? null : <NonPresent status={peerMesh.status} />;
+  // ⭐ Story 6.32 — the ONE section view (+ the family's account on `present` / `empty`), shared with the console.
+  return peerMesh === undefined ? null : <PeerMeshSectionView section={peerMesh} />;
 }

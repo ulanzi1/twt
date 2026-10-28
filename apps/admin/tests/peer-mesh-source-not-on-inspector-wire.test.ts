@@ -73,11 +73,11 @@ describe('Story 6.36 (AC11) — ⛔ `source` / `recentChangeBeforeFiling` on the
     expect(read.assignments).toHaveLength(1);
     for (const k of FORBIDDEN) expect(keysDeep(read).has(k)).toBe(false);
 
-    stubJson({ groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, ...LEAK }, ...LEAK });
+    stubJson({ groundInspectionId: GID, status: 'completed', discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null, ...LEAK }, ...LEAK });
     const done = await completeGroundInspection(PARIWAR, CLAIM, GID, {});
     for (const k of FORBIDDEN) expect(keysDeep(done).has(k)).toBe(false);
 
-    stubJson({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, ...LEAK }, notes: [], ...LEAK });
+    stubJson({ discrepancy: { state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null, ...LEAK }, notes: [], ...LEAK });
     const disc = await getInspectionDiscrepancy(PARIWAR, CLAIM, GID);
     for (const k of FORBIDDEN) expect(keysDeep(disc).has(k)).toBe(false);
   });

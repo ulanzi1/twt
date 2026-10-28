@@ -24,7 +24,7 @@ import {
 import { VerifierReviewPanel, type VerifierReviewData } from './VerifierReviewPanel.js';
 // Story 6.27b (BF8) — the neighbours' section and the non-present states live in `PeerMeshView.tsx`, shared with the
 // later approvers' `<NeighboursAnswersPanel>` (so the two can ⛔ never drift).
-import { NonPresent, PeerMeshView } from './PeerMeshView.js';
+import { NonPresent, PeerMeshSectionView } from './PeerMeshView.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 import { FinallyApprovedElsewhereBanner } from '../cycle-freeze/FinallyApprovedElsewhereBanner.js';
 
@@ -275,11 +275,8 @@ export function SignalsPanel({
           title with nothing under it. */}
       {packet.peerMesh !== undefined && (
         <Section title={t.sections.peerMesh} testId="section-peer-mesh">
-          {packet.peerMesh.status === 'present' ? (
-            <PeerMeshView transcript={packet.peerMesh.transcript} />
-          ) : (
-            <NonPresent status={packet.peerMesh.status} />
-          )}
+          {/* ⭐ Story 6.32 — the ONE section view (+ the family's account on `present` / `empty`). */}
+          <PeerMeshSectionView section={packet.peerMesh} />
         </Section>
       )}
 

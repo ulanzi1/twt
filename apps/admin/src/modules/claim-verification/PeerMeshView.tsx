@@ -12,11 +12,66 @@
 //     BESIDE the "How do you know [member]?" (`relationship`) answer when the reply has one, otherwise in the ping's header
 //     (an unanswered ping shows it too), nothing for `null` (a 6.6 selection); and the staff line once at the top.
 
-import type { PeerMeshTranscript } from '@twt/contracts';
+import type { GroundInspectionFamilyAccountVisit, PeerMeshSection, PeerMeshTranscript } from '@twt/contracts';
 import type { ReactElement } from 'react';
 
 import { formatIst } from './NomineeDeclarationPanel.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
+
+/**
+ * ⭐ Story 6.32 (IQ7; AC8, AC10) — the WHOLE neighbours' section as staff see it, ONE component for the console and the
+ * approvers' panel (they can ⛔ drift): `present` ⇒ the neighbours' view, `empty` / `unavailable` ⇒ the non-present state;
+ * and, on `present` AND `empty`, the family's account at the inspection (a no-one-asked claim has ⛔ selection — its
+ * head's letter is the answer that matters there).
+ */
+export function PeerMeshSectionView({ section }: { section: PeerMeshSection }): ReactElement {
+  return (
+    <div className="flex flex-col gap-3">
+      {section.status === 'present' ? <PeerMeshView transcript={section.transcript} /> : <NonPresent status={section.status} />}
+      {section.status !== 'unavailable' && section.familyAccount.length > 0 && <FamilyAccountView visits={section.familyAccount} />}
+    </div>
+  );
+}
+
+/** ⭐ Story 6.32 — the family's answers per completed full visit; the head's letter ALWAYS said (AC10 — "not recorded" too). */
+export function FamilyAccountView({ visits }: { visits: readonly GroundInspectionFamilyAccountVisit[] }): ReactElement {
+  const words = t.peerMesh.familyAccount;
+  return (
+    <section className="flex flex-col gap-2 rounded border p-2" data-testid="family-account" aria-label={words.heading}>
+      <p className="font-medium">{words.heading}</p>
+      <p className="text-xs opacity-70">{words.contextOnly}</p>
+      {visits.map((v) => {
+        const letter = v.answers.find((a) => a.questionKey === 'head_letter');
+        const letterCode = letter?.value.kind === 'codes' ? letter.value.codes[0] : undefined;
+        const letterWords =
+          letter === undefined
+            ? words.letterValue.not_recorded
+            : letterCode === 'collected' || letterCode === 'not_collected'
+              ? words.letterValue[letterCode]
+              : words.unavailable;
+        return (
+          <div key={v.groundInspectionId} className="flex flex-col gap-1" data-testid="family-account-visit">
+            <p className="text-xs opacity-70">{v.completedAt === null ? words.visitUndated : words.visit(formatIst(v.completedAt))}</p>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+              <div className="contents" data-testid="family-account-letter">
+                <dt className="opacity-80">{words.letter}</dt>
+                <dd>{letterWords}</dd>
+              </div>
+              {v.answers
+                .filter((a) => a.questionKey !== 'head_letter')
+                .map((a) => (
+                  <div key={a.questionKey} className="contents" data-testid={`family-account-${a.questionKey}`}>
+                    <dt className="opacity-80">{a.question}</dt>
+                    <dd>{a.value.kind === 'codes' ? a.value.labels.join(', ') : words.unavailable}</dd>
+                  </div>
+                ))}
+            </dl>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
 
 /** Render one of the three non-present states with its DISTINCT copy (never collapsed). */
 export function NonPresent({ status }: { status: 'empty' | 'unavailable' | 'not_available_yet' }): ReactElement {

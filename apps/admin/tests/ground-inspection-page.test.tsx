@@ -24,6 +24,10 @@ vi.mock('../src/api/client.js', async () => {
     getGroundInspectionCertificate: vi.fn(),
     completeGroundInspection: vi.fn(),
     uploadGroundInspectionPhoto: vi.fn(),
+    // ⭐ Story 6.32 (IQ12) — ⛔ questionnaire for these visits (404) ⇒ ⛔ panel: the page this file pins, byte for byte.
+    getGroundInspectionQuestionnaire: vi.fn(() =>
+      Promise.reject(new actual.ApiError(404, 'ground_inspection.questionnaire_unavailable', 'There is no questionnaire for this visit')),
+    ),
   };
 });
 

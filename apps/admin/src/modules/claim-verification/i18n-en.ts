@@ -148,11 +148,28 @@ export const verifierConsoleEn = {
       heading: "The ground inspector's re-check with the family",
       shown: (completedAt: string, shownAt: string) => `Visit completed ${completedAt} · result recorded ${shownAt}`,
       noDifference: 'No difference from the neighbours was shown to the inspector.',
-      question: { has_died: 'Whether the member has died', death_date: 'The date of death' },
+      // ⭐ Story 6.32 (AC6) — + ③ / ④ (a per-key TABLE — TR12: every compared key has a label, a test pins it).
+      question: {
+        has_died: 'Whether the member has died',
+        death_date: 'The date of death',
+        death_cause: 'How the member died',
+        death_illness: 'Which illness',
+      },
       label: 'Recorded after the difference was shown',
       by: (author: string, at: string) => `${author}, ${at}`,
       noNote: 'No note recorded',
       noteUnavailable: 'This note could not be shown',
+    },
+    // ⭐ Story 6.32 (`2026-10-28-413` IQ7 (A); AC8, AC10) — the FAMILY's answers at the ground inspection, beside the
+    // neighbours' (the SAME audience). Context only — the words say so (`-304` Q3 A: ⛔ a warning, ⛔ a flag).
+    familyAccount: {
+      heading: "The family's answers at the ground inspection",
+      contextOnly: 'Background only — never a reason to hold, flag or refuse the claim.',
+      visit: (completedAt: string) => `Visit completed ${completedAt}`,
+      visitUndated: 'Visit completed',
+      letter: "The head of the school or office's letter",
+      letterValue: { collected: 'Collected', not_collected: 'Not collected', not_recorded: 'Not recorded' },
+      unavailable: 'This answer could not be shown',
     },
   },
   // ⭐ Story 6.27b (BD4, `2026-10-13-327` decision 2) — ONE neutral block for an approver whose own ground visit on the claim

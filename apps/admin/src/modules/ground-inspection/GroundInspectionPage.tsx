@@ -16,6 +16,7 @@ import * as api from '../../api/client.js';
 import { useSession } from '../../api/hooks.js';
 import { WithheldNote, withheldNoteWords } from '../claim-verification/WithheldNote.js';
 import { resolveEn as t } from './i18n-en.js';
+import { QuestionnairePanel } from './QuestionnairePanel.js';
 
 // ⚠ The page's OWN copies of the domain tuples (it imports no domain package) — kept in step by hand.
 // Story 6.26a (GI12): `certificate_check` — the short visit or office check limited to the original certificate.
@@ -462,6 +463,11 @@ function AssignmentCard(props: {
           assignment={a}
         />
       )}
+      {/* ⭐ Story 6.32 (AC7) — the family's questions, BEFORE the completion; ⛔ on a certificate check (it asks the family
+          nothing); ⛔ panel at all when the server has ⛔ questionnaire (404 — IQ12). ⛔ It gates the completion (I1). */}
+      {isActive && a.inspectionStage !== 'certificate_check' && (
+        <QuestionnairePanel pariwarId={props.pariwarId} claimCaseId={props.claimCaseId} groundInspectionId={a.groundInspectionId} />
+      )}
       {isActive && (
         <div className="flex flex-wrap items-start gap-4">
           <PhotoUpload {...props} certificate={certificate} />
@@ -831,14 +837,7 @@ function DiscrepancyPanel(props: {
         <ul className="flex flex-col gap-3">
           {d.questionKeys.map((k) => (
             <li key={k} className="flex flex-col gap-1" data-testid={`gi-discrepancy-${k}`}>
-              <span>
-                {k === 'has_died'
-                  ? t('gi.discrepancy.has_died')
-                  : t('gi.discrepancy.death_date').replace(
-                      '{familyDeathDate}',
-                      d.familyDeathDate?.status === 'shown' ? d.familyDeathDate.date : '—',
-                    )}
-              </span>
+              <span>{DISCREPANCY_LINE[k](d)}</span>
               <DiscrepancyNoteBox
                 pariwarId={props.pariwarId}
                 claimCaseId={props.claimCaseId}
@@ -872,6 +871,26 @@ function DiscrepancyPanel(props: {
     </section>
   );
 }
+
+type ShownDiscrepancy = Extract<api.InspectionDiscrepancyT, { state: 'shown' }>;
+
+/** ③ / ④ — the family's answer in the option's English words (`—` when it could ⛔ be shown). */
+function familyAnswerLine(key: 'death_cause' | 'death_illness', d: ShownDiscrepancy): string {
+  const a = d.familyAnswers?.[key];
+  return t(`gi.discrepancy.${key}`).replace('{familyAnswer}', a?.status === 'shown' ? a.labels.join(', ') : '—');
+}
+
+/**
+ * ⭐ Story 6.32 (AC7, TR12) — the per-key line as a TABLE over EVERY compared key (⛔ a ternary, which rendered the date's
+ * sentence for any key that was ⛔ `has_died`). A test pins one entry per `INSPECTION_DISCREPANCY_KEYS` key.
+ */
+export const DISCREPANCY_LINE: Readonly<Record<api.InspectionDiscrepancyKeyT, (d: ShownDiscrepancy) => string>> = {
+  has_died: () => t('gi.discrepancy.has_died'),
+  death_date: (d) =>
+    t('gi.discrepancy.death_date').replace('{familyDeathDate}', d.familyDeathDate?.status === 'shown' ? d.familyDeathDate.date : '—'),
+  death_cause: (d) => familyAnswerLine('death_cause', d),
+  death_illness: (d) => familyAnswerLine('death_illness', d),
+};
 
 /** ONE note box per differing question: read-only once recorded (with its author when ⛔ the viewer's own — R4a). */
 function DiscrepancyNoteBox(props: {

@@ -17,6 +17,7 @@ import { useSession } from '../../api/hooks.js';
 import { WithheldNote, withheldNoteWords } from '../claim-verification/WithheldNote.js';
 import { resolveEn as t } from './i18n-en.js';
 import { QuestionnairePanel } from './QuestionnairePanel.js';
+import { UnsavedAnswersProvider, useUnsavedAnswers, type UnsavedAnswers } from './unsaved-answers.js';
 
 // ⚠ The page's OWN copies of the domain tuples (it imports no domain package) — kept in step by hand.
 // Story 6.26a (GI12): `certificate_check` — the short visit or office check limited to the original certificate.
@@ -130,121 +131,140 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
       queryKey: ['ground-inspection', pariwarId, scope?.claimCaseId, scope?.district, scope?.block],
     });
 
+  // ⭐ Story 6.32 (code review R1) — loading another claim unmounts every card, and with it any answer ⛔ saved yet: it
+  // waits until they are (the said reason, ⛔ a silent no-op).
+  const [loadBlocked, setLoadBlocked] = useState(false);
+  const loadScope = (unsavedAnswers: UnsavedAnswers): void => {
+    if (!claimCaseId || !exactlyOneLocator) return;
+    if (unsavedAnswers.unsaved.size > 0) {
+      setLoadBlocked(true);
+      return;
+    }
+    setLoadBlocked(false);
+    setScope(block.trim() !== '' ? { claimCaseId, block: block.trim() } : { claimCaseId, district: district.trim() });
+  };
+
   return (
-    <section className="flex flex-col gap-6" aria-label={t('gi.title')}>
-      <header>
-        <h1 className="text-xl font-semibold">{t('gi.title')}</h1>
-        <p className="text-sm text-gray-600">{t('gi.subtitle')}</p>
-      </header>
+    <UnsavedAnswersProvider>
+      {(unsavedAnswers) => (
+        <section className="flex flex-col gap-6" aria-label={t('gi.title')}>
+          <header>
+            <h1 className="text-xl font-semibold">{t('gi.title')}</h1>
+            <p className="text-sm text-gray-600">{t('gi.subtitle')}</p>
+          </header>
 
-      <form
-        className="flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!claimCaseId || !exactlyOneLocator) return;
-          setScope(
-            block.trim() !== '' ? { claimCaseId, block: block.trim() } : { claimCaseId, district: district.trim() },
-          );
-        }}
-      >
-        <label className="flex flex-col text-sm">
-          {t('gi.claim.label')}
-          <input
-            className="rounded border px-2 py-1"
-            value={claimCaseId}
-            onChange={(e) => setClaimCaseId(e.target.value)}
-            aria-label={t('gi.claim.label')}
-          />
-        </label>
-        <label className="flex flex-col text-sm">
-          {t('gi.district.label')}
-          <input
-            className="rounded border px-2 py-1"
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-            aria-label={t('gi.district.label')}
-          />
-        </label>
-        <label className="flex flex-col text-sm">
-          {t('gi.block.label')}
-          <input
-            className="rounded border px-2 py-1"
-            value={block}
-            onChange={(e) => setBlock(e.target.value)}
-            aria-label={t('gi.block.label')}
-          />
-        </label>
-        <button
-          className="rounded bg-blue-600 px-3 py-1 text-white"
-          type="submit"
-          disabled={!claimCaseId || !exactlyOneLocator}
-        >
-          {t('gi.load')}
-        </button>
-        {!exactlyOneLocator && (
-          <p role="status" className="w-full text-sm text-amber-700">
-            {t('gi.locator.exactlyOne')}
-          </p>
-        )}
-      </form>
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              loadScope(unsavedAnswers);
+            }}
+          >
+            <label className="flex flex-col text-sm">
+              {t('gi.claim.label')}
+              <input
+                className="rounded border px-2 py-1"
+                value={claimCaseId}
+                onChange={(e) => setClaimCaseId(e.target.value)}
+                aria-label={t('gi.claim.label')}
+              />
+            </label>
+            <label className="flex flex-col text-sm">
+              {t('gi.district.label')}
+              <input
+                className="rounded border px-2 py-1"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                aria-label={t('gi.district.label')}
+              />
+            </label>
+            <label className="flex flex-col text-sm">
+              {t('gi.block.label')}
+              <input
+                className="rounded border px-2 py-1"
+                value={block}
+                onChange={(e) => setBlock(e.target.value)}
+                aria-label={t('gi.block.label')}
+              />
+            </label>
+            <button
+              className="rounded bg-blue-600 px-3 py-1 text-white"
+              type="submit"
+              disabled={!claimCaseId || !exactlyOneLocator}
+            >
+              {t('gi.load')}
+            </button>
+            {!exactlyOneLocator && (
+              <p role="status" className="w-full text-sm text-amber-700">
+                {t('gi.locator.exactlyOne')}
+              </p>
+            )}
+            {loadBlocked && unsavedAnswers.unsaved.size > 0 && (
+              <p role="alert" className="w-full text-sm text-amber-700" data-testid="gi-load-blocked">
+                {t('gi.load.unsavedAnswers')}
+              </p>
+            )}
+          </form>
 
-      {scope && (
-        <ScheduleForm
-          pariwarId={pariwarId}
-          claimCaseId={scope.claimCaseId}
-          defaultDistrict={scope.district ?? ''}
-          defaultBlock={scope.block ?? ''}
-          onScheduled={invalidate}
-        />
-      )}
+          {scope && (
+            <ScheduleForm
+              pariwarId={pariwarId}
+              claimCaseId={scope.claimCaseId}
+              defaultDistrict={scope.district ?? ''}
+              defaultBlock={scope.block ?? ''}
+              onScheduled={invalidate}
+            />
+          )}
 
-      {assignmentsQuery.isLoading && <p role="status">Loading…</p>}
-      {/* ⭐ Story 6.28 (OP14 (d)) — the other claims of this death (by reference; ⛔ name, ⛔ date). Information only. */}
-      {assignmentsQuery.data?.otherClaimsForDeath && assignmentsQuery.data.otherClaimsForDeath.count > 0 && (
-        <section aria-label="Other claims for this death" data-testid="gi-other-claims" className="flex flex-col gap-1 rounded border p-3 text-sm">
-          <p>{t('gi.otherClaims.count').replace('{n}', String(assignmentsQuery.data.otherClaimsForDeath.count))}</p>
-          <ul className="list-disc pl-5">
-            {assignmentsQuery.data.otherClaimsForDeath.claims.map((c) => (
-              <li key={c.reference} data-testid={`gi-other-claim-${c.reference}`}>
-                {t('gi.otherClaims.claim').replace('{ref}', c.reference).replace('{stage}', t(`gi.otherClaims.stage.${c.stage}`))}
-              </li>
-            ))}
-          </ul>
-          {assignmentsQuery.data.otherClaimsForDeath.count > assignmentsQuery.data.otherClaimsForDeath.claims.length && (
-            <p data-testid="gi-other-claims-more">
-              {t('gi.otherClaims.more').replace('{n}', String(assignmentsQuery.data.otherClaimsForDeath.count - assignmentsQuery.data.otherClaimsForDeath.claims.length))}
+          {assignmentsQuery.isLoading && <p role="status">Loading…</p>}
+          {/* ⭐ Story 6.28 (OP14 (d)) — the other claims of this death (by reference; ⛔ name, ⛔ date). Information only. */}
+          {assignmentsQuery.data?.otherClaimsForDeath && assignmentsQuery.data.otherClaimsForDeath.count > 0 && (
+            <section aria-label="Other claims for this death" data-testid="gi-other-claims" className="flex flex-col gap-1 rounded border p-3 text-sm">
+              <p>{t('gi.otherClaims.count').replace('{n}', String(assignmentsQuery.data.otherClaimsForDeath.count))}</p>
+              <ul className="list-disc pl-5">
+                {assignmentsQuery.data.otherClaimsForDeath.claims.map((c) => (
+                  <li key={c.reference} data-testid={`gi-other-claim-${c.reference}`}>
+                    {t('gi.otherClaims.claim').replace('{ref}', c.reference).replace('{stage}', t(`gi.otherClaims.stage.${c.stage}`))}
+                  </li>
+                ))}
+              </ul>
+              {assignmentsQuery.data.otherClaimsForDeath.count > assignmentsQuery.data.otherClaimsForDeath.claims.length && (
+                <p data-testid="gi-other-claims-more">
+                  {t('gi.otherClaims.more').replace('{n}', String(assignmentsQuery.data.otherClaimsForDeath.count - assignmentsQuery.data.otherClaimsForDeath.claims.length))}
+                </p>
+              )}
+              {assignmentsQuery.data.otherClaimsForDeath.visitedElsewhere && (
+                <p data-testid="gi-visited-elsewhere">{t('gi.otherClaims.visitedElsewhere')}</p>
+              )}
+              {assignmentsQuery.data.otherClaimsForDeath.alreadyVisited && (
+                <p className="font-medium text-amber-800" data-testid="gi-already-visited">
+                  {t('gi.otherClaims.alreadyVisited')}
+                </p>
+              )}
+            </section>
+          )}
+          {assignmentsQuery.data && assignmentsQuery.data.assignments.length === 0 && (
+            <p role="status" className="text-sm text-amber-700">
+              {t('gi.empty')}
             </p>
           )}
-          {assignmentsQuery.data.otherClaimsForDeath.visitedElsewhere && (
-            <p data-testid="gi-visited-elsewhere">{t('gi.otherClaims.visitedElsewhere')}</p>
-          )}
-          {assignmentsQuery.data.otherClaimsForDeath.alreadyVisited && (
-            <p className="font-medium text-amber-800" data-testid="gi-already-visited">
-              {t('gi.otherClaims.alreadyVisited')}
-            </p>
+          {assignmentsQuery.data && assignmentsQuery.data.assignments.length > 0 && (
+            <ul className="flex flex-col gap-4">
+              {assignmentsQuery.data.assignments.map((a) => (
+                <AssignmentCard
+                  key={`${viewer.epoch}:${pariwarId}:${scope!.claimCaseId}:${scope!.district}:${scope!.block}:${a.groundInspectionId}`}
+                  viewerId={viewerId}
+                  pariwarId={pariwarId}
+                  claimCaseId={scope!.claimCaseId}
+                  assignment={a}
+                  onMutated={invalidate}
+                />
+              ))}
+            </ul>
           )}
         </section>
       )}
-      {assignmentsQuery.data && assignmentsQuery.data.assignments.length === 0 && (
-        <p role="status" className="text-sm text-amber-700">
-          {t('gi.empty')}
-        </p>
-      )}
-      {assignmentsQuery.data && assignmentsQuery.data.assignments.length > 0 && (
-        <ul className="flex flex-col gap-4">
-          {assignmentsQuery.data.assignments.map((a) => (
-            <AssignmentCard
-              key={`${viewer.epoch}:${pariwarId}:${scope!.claimCaseId}:${scope!.district}:${scope!.block}:${a.groundInspectionId}`}
-              viewerId={viewerId}
-              pariwarId={pariwarId}
-              claimCaseId={scope!.claimCaseId}
-              assignment={a}
-              onMutated={invalidate}
-            />
-          ))}
-        </ul>
-      )}
-    </section>
+    </UnsavedAnswersProvider>
   );
 }
 
@@ -657,6 +677,27 @@ function CompleteAction(props: {
   });
   const ready = props.photoCount >= 1 && originalPhotosForCompared >= 1 && certificate.data !== undefined && verdict !== null && deathDate !== '';
   const radioName = `verdict-${props.assignment.groundInspectionId}`;
+  // ⭐ Story 6.32 (code review R1) — answers ⛔ saved yet would be refused (`not_active`) once the visit closes, and the
+  // panel leaves with them: the completion WAITS for them and goes out the moment they are saved, or — the inspector's
+  // explicit choice — goes out without them. ⛔ `ready` reads this: completing never needs an answer (I1).
+  const gid = props.assignment.groundInspectionId;
+  const { unsaved, reportCompleting } = useUnsavedAnswers();
+  const answersUnsaved = unsaved.has(gid);
+  const [waitingForAnswers, setWaitingForAnswers] = useState(false);
+  const { mutate, isPending } = mutation;
+  useEffect(() => {
+    reportCompleting(gid, isPending);
+  }, [reportCompleting, gid, isPending]);
+  useEffect(() => () => reportCompleting(gid, false), [reportCompleting, gid]);
+  useEffect(() => {
+    if (!waitingForAnswers || answersUnsaved) return;
+    setWaitingForAnswers(false);
+    if (ready && !isPending) mutate();
+  }, [waitingForAnswers, answersUnsaved, ready, isPending, mutate]);
+  const onComplete = (): void => {
+    if (answersUnsaved) setWaitingForAnswers(true);
+    else mutate();
+  };
   return (
     <div className="flex flex-col gap-2">
       <button
@@ -697,9 +738,34 @@ function CompleteAction(props: {
           <input type="time" className="ml-2 rounded border px-2 py-1" value={deathTime} onChange={(e) => setDeathTime(e.target.value)} />
         </label>
       )}
-      <button className="self-start rounded bg-green-700 px-2 py-1 text-sm text-white disabled:opacity-50" type="button" disabled={mutation.isPending || !ready} onClick={() => mutation.mutate()}>
+      <button
+        className="self-start rounded bg-green-700 px-2 py-1 text-sm text-white disabled:opacity-50"
+        type="button"
+        disabled={mutation.isPending || !ready || waitingForAnswers}
+        onClick={onComplete}
+      >
         {mutation.isPending ? t('gi.action.completePending') : t('gi.action.complete')}
       </button>
+      {waitingForAnswers && (
+        <div className="flex flex-col gap-1 text-sm" data-testid="gi-complete-waiting">
+          <p role="status" className="text-amber-700">{t('gi.action.completeWaitingForAnswers')}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded border px-2 py-1"
+              type="button"
+              onClick={() => {
+                setWaitingForAnswers(false);
+                mutate();
+              }}
+            >
+              {t('gi.action.completeWithoutUnsaved')}
+            </button>
+            <button className="rounded border px-2 py-1" type="button" onClick={() => setWaitingForAnswers(false)}>
+              {t('gi.action.completeStopWaiting')}
+            </button>
+          </div>
+        </div>
+      )}
       {props.photoCount < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsPhoto')}</p>}
       {props.photoCount >= 1 && originalPhotos < 1 && <p className="text-xs text-amber-700">{t('gi.action.completeNeedsOriginalPhoto')}</p>}
       {certificate.data !== undefined && originalPhotos >= 1 && originalPhotosForCompared < 1 && (

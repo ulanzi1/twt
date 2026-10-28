@@ -8,7 +8,11 @@
 //     neighbours' `PeerAnswerEditor` (⛔ a fresh editor — FIFO, a later edit supersedes a queued one, dependants dropped when
 //     their condition stops holding). A save that fails on the NETWORK or a 5xx is retried IN MEMORY (backoff, and at once
 //     when the browser comes back `online`); a stale read is retried 3 times; anything else waits for "Try saving again".
-//     Each answer shows `Saved` / `Saving…` / `Not saved — retrying`; leaving the tab with anything unsaved is warned.
+//     Each answer shows `Saved` / `Saving…` / `Not saved — retrying`, and each CHANGE of that line is announced once in ONE
+//     stable live region (code review R5 — ⛔ an announcement on load). Leaving the tab with anything unsaved is warned;
+//     leaving the page in the app, or loading another claim, waits until it is saved (R1 — the helpline screen's
+//     `history.block`); the visit's completion waits for it too, or goes out without it on the inspector's say
+//     (`unsaved-answers.tsx`), and the inputs are locked while it is in flight.
 //   · ⛔ BROWSER STORAGE of any kind (TR13): the cause and the illness are health information — Tier-1 at rest on the server;
 //     a plaintext copy in `localStorage` / `sessionStorage` / IndexedDB on a staff laptop would defeat that. A grep pin
 //     (`tests/ground-inspection-questionnaire.test.tsx`) keeps this module free of all three.
@@ -17,12 +21,14 @@
 import { PeerAnswerEditor } from '@twt/api-client';
 import type { PeerRequestLiveAnswer, PeerRequestQuestion } from '@twt/contracts';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import * as api from '../../api/client.js';
 import { resolveEn as t } from './i18n-en.js';
+import { useUnsavedAnswers } from './unsaved-answers.js';
 
 const QUESTIONNAIRE_ROOT = 'ground-inspection-questionnaire';
 const UNAVAILABLE_CODE = 'ground_inspection.questionnaire_unavailable';
@@ -162,6 +168,36 @@ function QuestionnaireEditor(props: {
   }, [editor, data.answers]);
 
   const unsaved = state.pending > 0 || state.failed.size > 0;
+  // ⭐ Code review R1 — the page and the completion learn that this visit holds unsaved answers (⛔ on unmount), and the
+  // completion in flight locks the inputs (⛔ an answer sent after the visit closed — it would be refused `not_active`).
+  const { reportUnsaved, completing } = useUnsavedAnswers();
+  const locked = completing.has(groundInspectionId);
+  useEffect(() => {
+    reportUnsaved(groundInspectionId, unsaved);
+  }, [reportUnsaved, groundInspectionId, unsaved]);
+  useEffect(() => () => reportUnsaved(groundInspectionId, false), [reportUnsaved, groundInspectionId]);
+  // Leaving the page IN THE APP waits until the answers are saved (the helpline screen's block — an authentication
+  // redirect to `/login` still clears the screen). ⛔ A router (a panel rendered alone) ⇒ ⛔ block.
+  const router = useRouter({ warn: false });
+  const isUnsaved = useCallback(() => {
+    const now = editor.getSnapshot();
+    return now.pending > 0 || now.failed.size > 0;
+  }, [editor]);
+  const [leaveBlocked, setLeaveBlocked] = useState(false);
+  useEffect(() => {
+    if (!router) return;
+    return router.history.block({
+      blockerFn: ({ nextLocation }) => {
+        if (nextLocation.pathname === '/login' || !isUnsaved()) return false;
+        setLeaveBlocked(true);
+        return true;
+      },
+      enableBeforeUnload: false,
+    });
+  }, [router, isUnsaved]);
+  useEffect(() => {
+    if (!unsaved) setLeaveBlocked(false);
+  }, [unsaved]);
   useEffect(() => {
     if (!unsaved) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -196,6 +232,23 @@ function QuestionnaireEditor(props: {
     if (sameCodes(current, saved.current.get(key))) return t('gi.questionnaire.state.saved');
     return state.saveLine === 'retrying' ? t('gi.questionnaire.state.retrying') : t('gi.questionnaire.state.saving');
   };
+  // ⭐ Code review R5 — ONE stable live region says each CHANGE of an answer's line (`Saving…` → `Not saved — retrying` →
+  // `Saved`), once; the lines on load are ⛔ announced (they are what the inspector already sees).
+  const lines = shown.map((q) => ({ key: q.key, question: q.words.en, line: lineOf(q.key) }));
+  const signature = lines.map((l) => `${l.key}=${l.line ?? ''}`).join('|');
+  const lastLines = useRef<Map<string, string | null> | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  useEffect(() => {
+    const before = lastLines.current;
+    lastLines.current = new Map(lines.map((l) => [l.key, l.line]));
+    if (before === null) return;
+    const said = lines
+      .filter((l) => l.line !== null && before.get(l.key) !== l.line)
+      .map((l) => t('gi.questionnaire.announce').replace('{question}', l.question).replace('{state}', l.line!));
+    if (said.length > 0) setAnnouncement(said.join(' '));
+    // `signature` is the lines' identity — `lines` itself is a fresh array every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
 
   return (
     <section aria-label={t('gi.questionnaire.region')} className="flex flex-col gap-3 rounded border p-3 text-sm" data-testid="gi-questionnaire">
@@ -219,6 +272,7 @@ function QuestionnaireEditor(props: {
                 <input
                   type={q.kind === 'multi' ? 'checkbox' : 'radio'}
                   name={name}
+                  disabled={locked}
                   checked={codes.includes(o.code)}
                   onChange={(e) => choose(q, o.code, e.target.checked)}
                 />
@@ -238,11 +292,15 @@ function QuestionnaireEditor(props: {
         );
       })}
       {state.failed.size > 0 && (
-        <button type="button" className="self-start rounded border px-2 py-1" onClick={() => editor.retryFailed()}>
+        <button type="button" className="self-start rounded border px-2 py-1" disabled={locked} onClick={() => editor.retryFailed()}>
           {t('gi.questionnaire.retry')}
         </button>
       )}
-      {unsaved && <p role="status" className="text-xs text-amber-700" data-testid="gi-questionnaire-unsaved">{t('gi.questionnaire.unsaved')}</p>}
+      {unsaved && <p className="text-xs text-amber-700" data-testid="gi-questionnaire-unsaved">{t('gi.questionnaire.unsaved')}</p>}
+      {leaveBlocked && unsaved && (
+        <p role="alert" className="text-xs text-amber-700" data-testid="gi-questionnaire-leave-blocked">{t('gi.questionnaire.leave.blocked')}</p>
+      )}
+      <p role="status" aria-live="polite" className="sr-only" data-testid="gi-questionnaire-announce">{announcement}</p>
       <p className="text-xs opacity-80">
         {data.questionnaire.closingNote.en}
         <span lang="hi" className="block">{data.questionnaire.closingNote.hi}</span>

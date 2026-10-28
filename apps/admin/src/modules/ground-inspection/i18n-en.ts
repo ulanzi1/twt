@@ -170,6 +170,15 @@ const EN: Record<string, string> = {
   'gi.questionnaire.error.answer_invalid': 'This answer cannot be saved.',
   'gi.questionnaire.error.not_active': 'This visit is no longer open for answers.',
   'gi.questionnaire.error.not_allowed': 'This claim is no longer open for answers on the visit.',
+  // ⭐ Story 6.32 code review R1 / R5 (story-minted) — answers ⛔ saved yet are kept: leaving, loading another claim and
+  // completing wait for them; each save state is announced.
+  'gi.questionnaire.leave.blocked': 'Please wait until these answers are saved before leaving this page.',
+  'gi.questionnaire.announce': '{question}: {state}',
+  'gi.load.unsavedAnswers': 'Answers on an open visit are not saved yet. Wait until they are saved, then load another claim.',
+  'gi.action.completeWaitingForAnswers':
+    'Some answers to the family\'s questions are not saved yet. The visit will be completed as soon as they are saved — or complete it without them.',
+  'gi.action.completeWithoutUnsaved': 'Complete without the unsaved answers',
+  'gi.action.completeStopWaiting': 'Do not complete yet',
   // Result / errors (Story 6.27d removed `gi.result.completed` — it was never rendered; a completed FULL visit's
   // discrepancy screen carries the completion's words, and a certificate check shows its recorded card as before)
   'gi.result.scheduled': 'Assignment scheduled.',

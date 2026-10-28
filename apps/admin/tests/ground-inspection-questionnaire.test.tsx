@@ -8,14 +8,20 @@
 //   · TR12 — every compared key has a discrepancy line; ③ says the family's answer in English words;
 //   · TR13 — ⛔ browser storage anywhere in the module; I1 — the completion's readiness reads ⛔ of the questionnaire;
 //   · AC8 / AC10 — the staff view: the head's letter ALWAYS said (collected / not collected / not recorded), the cause's
-//     labels, "background only"; on `empty` too.
+//     labels, "background only"; on `empty` too;
+//   · code review R1 — an answer ⛔ saved yet is kept: loading another claim and leaving the page in the app wait for it;
+//     the completion waits for it (and goes out once it is saved) or goes out WITHOUT it on the inspector's say (I1); the
+//     inputs are locked while the completion is in flight;
+//   · code review R5 — each change of an answer's save line is announced once in ONE live region (⛔ on load).
 
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { GroundInspectionFamilyAccountVisit } from '@twt/contracts';
+import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as api from '../src/api/client.js';
@@ -31,6 +37,8 @@ vi.mock('../src/api/client.js', async () => {
     listGroundInspection: vi.fn(),
     getGroundInspectionQuestionnaire: vi.fn(),
     saveGroundInspectionAnswer: vi.fn(),
+    getGroundInspectionCertificate: vi.fn(),
+    completeGroundInspection: vi.fn(),
   };
 });
 
@@ -173,6 +181,69 @@ describe('<QuestionnairePanel> (AC7; IQ8 (A))', () => {
     const letter = await screen.findByTestId('gi-questionnaire-head_letter');
     expect(within(letter).getByLabelText(/No — no letter/)).toBeChecked();
     expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved');
+    // R5 — what is already on the screen at load is ⛔ announced
+    expect(screen.getByTestId('gi-questionnaire-announce')).toHaveTextContent(/^$/);
+  });
+
+  it('⭐ review R5 — ONE live region says each change of the save line: `Saving…`, then `Saved`', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    let release!: () => void;
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce((_p, _c, _g, key) => new Promise((resolve) => { release = () => resolve(ok(key)); }));
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    const region = screen.getByTestId('gi-questionnaire-announce');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toHaveAttribute('aria-live', 'polite');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(region).toHaveTextContent('Did you collect a letter?: Saving…'));
+    await act(async () => release());
+    await waitFor(() => expect(region).toHaveTextContent('Did you collect a letter?: Saved'));
+    // the SAME node throughout (a stable region — a remounted one is ⛔ announced by every screen reader)
+    expect(screen.getByTestId('gi-questionnaire-announce')).toBe(region);
+  });
+
+  it('⭐ review R5 — a NETWORK failure is announced `Not saved — retrying`, and the recovery `Saved`', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    const region = screen.getByTestId('gi-questionnaire-announce');
+    fireEvent.click(within(letter).getByLabelText(/No — no letter/));
+    await waitFor(() => expect(region).toHaveTextContent('Did you collect a letter?: Not saved — retrying'));
+    await act(async () => window.dispatchEvent(new Event('online')));
+    await waitFor(() => expect(region).toHaveTextContent('Did you collect a letter?: Saved'));
+  });
+
+  it('⭐ review R1 — leaving the page IN THE APP waits until the answers are saved; the sign-in redirect still goes', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    let release!: () => void;
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce((_p, _c, _g, key) => new Promise((resolve) => { release = () => resolve(ok(key)); }));
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    const root = createRootRoute({ component: Outlet });
+    const visit = createRoute({ getParentRoute: () => root, path: '/visit', component: () => <QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} /> });
+    const other = createRoute({ getParentRoute: () => root, path: '/other', component: () => <p>Other page</p> });
+    const login = createRoute({ getParentRoute: () => root, path: '/login', component: () => <p>Sign in</p> });
+    const history = createMemoryHistory({ initialEntries: ['/visit'] });
+    const router = createRouter({ routeTree: root.addChildren([visit, other, login]), history });
+    renderWithClient(<RouterProvider router={router} />);
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    await act(async () => { history.push('/other'); await new Promise((r) => setTimeout(r, 0)); });
+    expect(history.location.pathname).toBe('/visit');
+    expect(await screen.findByTestId('gi-questionnaire-leave-blocked')).toHaveTextContent('Please wait until these answers are saved');
+    await act(async () => release());
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+    expect(screen.queryByTestId('gi-questionnaire-leave-blocked')).toBeNull();
+    await act(async () => { history.push('/other'); await new Promise((r) => setTimeout(r, 0)); });
+    expect(history.location.pathname).toBe('/other');
+    // an UNSAVED answer never holds the sign-in redirect (the screen must clear)
+    await act(async () => { history.push('/visit'); await new Promise((r) => setTimeout(r, 0)); });
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce(() => new Promise(() => {}));
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/No — no letter/));
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-unsaved')).toBeInTheDocument());
+    await act(async () => { history.push('/login'); await new Promise((r) => setTimeout(r, 0)); });
+    expect(history.location.pathname).toBe('/login');
   });
 });
 
@@ -218,6 +289,113 @@ describe('the page mounts the panel (AC7)', () => {
     const complete = screen.getByRole('button', { name: /Complete/ });
     expect(panel.compareDocumentPosition(complete) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+  describe('⭐ code review R1 — an answer ⛔ saved yet is kept', () => {
+    const originalPhoto = {
+      photoId: 'p-orig', contentType: 'image/jpeg', byteSize: 1, caption: null, captionWithheld: null, signedUrl: 'https://x/p',
+      photoKind: 'original_certificate' as const, certificateToken: 'tok-current' as string | null,
+    };
+    const CERT = { certificateToken: 'tok-current', contentType: 'application/pdf', signedUrl: 'https://x/certificate', expiresInSeconds: 300 };
+    async function readyToComplete() {
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await screen.findByRole('link', { name: 'Open the uploaded certificate' });
+      await user.click(screen.getByLabelText('It matches'));
+      fireEvent.change(screen.getByLabelText(/Date of death/), { target: { value: '2026-06-01' } });
+      return user;
+    }
+    function pendingSave(): { release: () => void } {
+      const handle = { release: () => {} };
+      vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce(
+        (_p, _c, _g, key) => new Promise((resolve) => { handle.release = () => resolve(ok(key)); }),
+      );
+      return handle;
+    }
+
+    it('loading another claim WAITS until the answers are saved (the reason said), then loads', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment()] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      const save = pendingSave();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+      fireEvent.change(screen.getByLabelText('Claim case id'), { target: { value: '44444444-4444-4444-4444-444444444444' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Load assignments' }));
+      expect(await screen.findByTestId('gi-load-blocked')).toHaveTextContent('not saved yet');
+      expect(api.listGroundInspection).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('gi-questionnaire')).toBeInTheDocument();
+      await act(async () => save.release());
+      await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+      expect(screen.queryByTestId('gi-load-blocked')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Load assignments' }));
+      await waitFor(() => expect(api.listGroundInspection).toHaveBeenCalledTimes(2));
+    });
+
+    it('the completion WAITS for an outstanding save and goes out once it is saved; the inputs are locked while it is in flight', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      let finish!: () => void;
+      vi.mocked(api.completeGroundInspection).mockImplementation(
+        () => new Promise((resolve) => { finish = () => resolve({ groundInspectionId: GID, status: 'completed', discrepancy: null }); }),
+      );
+      const save = pendingSave();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+      const user = await readyToComplete();
+      fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      expect(await screen.findByTestId('gi-complete-waiting')).toHaveTextContent('not saved yet');
+      expect(api.completeGroundInspection).not.toHaveBeenCalled();
+      await act(async () => save.release());
+      await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalledTimes(1));
+      // the save went out FIRST, then the completion
+      expect(vi.mocked(api.saveGroundInspectionAnswer).mock.invocationCallOrder[0]!).toBeLessThan(vi.mocked(api.completeGroundInspection).mock.invocationCallOrder[0]!);
+      expect(screen.queryByTestId('gi-complete-waiting')).toBeNull();
+      // in flight ⇒ ⛔ a new answer can be chosen
+      await waitFor(() => expect(within(letter).getByLabelText(/No — no letter/)).toBeDisabled());
+      await act(async () => finish());
+    });
+
+    it('⭐ I1 — a save that will ⛔ succeed never holds the visit: "Complete without the unsaved answers" completes it', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: GID, status: 'completed', discrepancy: null });
+      vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValue(new api.ApiError(422, 'questionnaire.answer_invalid', 'no', { reason: 'invalid_value' }));
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+      const user = await readyToComplete();
+      fireEvent.click(within(letter).getByLabelText(/No — no letter/));
+      expect(await within(letter).findByRole('alert')).toHaveTextContent('This answer cannot be saved.');
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await screen.findByTestId('gi-complete-waiting');
+      expect(api.completeGroundInspection).not.toHaveBeenCalled();
+      // "Do not complete yet" closes it and sends nothing
+      await user.click(screen.getByRole('button', { name: 'Do not complete yet' }));
+      expect(screen.queryByTestId('gi-complete-waiting')).toBeNull();
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await user.click(await screen.findByRole('button', { name: 'Complete without the unsaved answers' }));
+      await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalledTimes(1));
+    });
+
+    it('with NOTHING unsaved the completion goes out at once (⛔ a wait, ⛔ a question asked — zero answers too)', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: GID, status: 'completed', discrepancy: null });
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      await screen.findByTestId('gi-questionnaire-head_letter');
+      const user = await readyToComplete();
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalledTimes(1));
+      expect(screen.queryByTestId('gi-complete-waiting')).toBeNull();
+      expect(api.saveGroundInspectionAnswer).not.toHaveBeenCalled();
+    });
+  });
+
   it('⛔ on a certificate check (⛔ request at all)', async () => {
     vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ inspectionStage: 'certificate_check' })] });
     renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);

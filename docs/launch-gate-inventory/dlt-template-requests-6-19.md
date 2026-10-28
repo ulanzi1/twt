@@ -328,7 +328,7 @@ Q2 A); a name that still does not fit is ⛔ texted (one alarm per job, ⛔ neve
 the exigency line is under "Shape rules". The copy is `sms.cycle_open_bridge` in `packages/i18n/locales/{en,hi}/contribution.json`; the
 registry is `apps/jobs/src/scheduler/contribution-sms-templates.ts` (beside 17–22), and `apps/jobs/tests/contribution-sms-templates.test.ts`
 proves the real `t()` renders EXACTLY the text below and that this sheet carries it (Story 5.8b Task 1 / 8). In MSG91 (setup step (3)):
-**Unicode for BOTH 23 and 24** (FS15 (a)). The language each member gets is their own choice, else the Pariwar's — so both ids are needed.
+**Unicode for BOTH 23 and 24** (FS15 (a); whether a Unicode value is delivered intact is roster Row 32 (d)'s open question — AC10). The language each member gets is their own choice, else the Pariwar's — so both ids are needed.
 
 | # | Registered text |
 |---|---|

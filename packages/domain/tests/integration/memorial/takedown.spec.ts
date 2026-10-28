@@ -265,6 +265,45 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the memorial take-down (domain, 
       expect((await readPublicMemorial(tx, d))?.submissionId).toBe(d.versions[1]);
     });
 
+    it('RT2 / MP8 (c): `kept` is refused once the shown version changed — a newer approval, or the Trust withdrawing it — and ⛔ writes an outcome', async () => {
+      const outcomes = async (requestId: string): Promise<number> => {
+        const { client } = getTx();
+        const res = await client.query<{ n: string }>(`SELECT count(*)::text AS n FROM memorial_takedown_outcomes WHERE request_id = $1`, [requestId]);
+        return Number(res.rows[0]!.n);
+      };
+      // A newer version is approved meanwhile.
+      const d = await seedDrive(['A-omit']);
+      const { client } = getTx();
+      await enterAppScope(client, d.pariwarId);
+      const r = await record(d);
+      if (!r.ok) throw new Error('record');
+      await client.query('RESET ROLE');
+      await appendVersion(d, 'A', { createdAt: new Date(Date.now() + 60_000) });
+      await enterAppScope(client, d.pariwarId);
+      expect(await decide(d, r.request.requestId, 'kept')).toEqual({ ok: false, refusal: 'shown_changed' });
+      expect(await outcomes(r.request.requestId)).toBe(0);
+      expect((await decide(d, r.request.requestId, 'superseded')).ok).toBe(true);
+      expect(await outcomes(r.request.requestId)).toBe(1); // RU6 — the count SEES a written row (its positive control)
+
+      // The Trust withdraws its approval meanwhile — nothing is shown. (Seeding runs as the superuser, ⛔ in the app scope.)
+      await client.query('RESET ROLE');
+      const e = await seedDrive(['A-omit']);
+      await enterAppScope(client, e.pariwarId);
+      const r2 = await record(e);
+      if (!r2.ok) throw new Error('record');
+      await client.query('RESET ROLE');
+      await client.query(
+        `INSERT INTO memorial_withdrawals (submission_id, pariwar_id, withdrawn_by, reason_code, actor_id, actor_display)
+         VALUES ($1, $2, 'trust', 'against_the_law', $3, 'Panel Member')`,
+        [e.versions[0], e.pariwarId, randomUUID()],
+      );
+      await enterAppScope(client, e.pariwarId);
+      expect(await decide(e, r2.request.requestId, 'kept')).toEqual({ ok: false, refusal: 'shown_changed' });
+      expect(await outcomes(r2.request.requestId)).toBe(0);
+      expect((await decide(e, r2.request.requestId, 'superseded')).ok).toBe(true);
+      expect(await outcomes(r2.request.requestId)).toBe(1);
+    });
+
     it('an unknown request is `not_found`; the open list is oldest first and carries the drive identifier', async () => {
       const d = await seedDrive(['A']);
       const e = await seedDrive(['A'], { pariwarId: d.pariwarId });

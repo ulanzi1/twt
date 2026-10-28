@@ -273,7 +273,8 @@ export type DecideMemorialTakedownResult =
  *   · `taken_down` — only while the shown version is still the request's (else `shown_changed`): one outcome row and a `helpline`
  *     withdrawal on EVERY version without one (MP8 (a), Trap 1);
  *   · `superseded` — only when the shown version CHANGED (else `shown_unchanged`): ⛔ no public change;
- *   · `kept` — always: ⛔ no public change.
+ *   · `kept` — only while the shown version is still the request's (else `shown_changed` — review RT2, `-412` note 6: a `kept` about a
+ *     version no longer shown would describe the wrong thing; the operator closes it as `superseded`): ⛔ no public change.
  * A second outcome is `already_decided` (the outcomes PK is the backstop). An outcome after `due_at` is still accepted (AC7).
  */
 export async function decideMemorialTakedown(
@@ -297,7 +298,7 @@ export async function decideMemorialTakedown(
   const chain = await readMemorialChain(db, { pariwarId, poolId });
   const shown = shownMemorialLink(chain);
   const changed = shown === null || shown.submission.submissionId !== current.request.submissionId;
-  if (input.outcome === 'taken_down' && changed) return { ok: false, refusal: 'shown_changed' };
+  if ((input.outcome === 'taken_down' || input.outcome === 'kept') && changed) return { ok: false, refusal: 'shown_changed' };
   if (input.outcome === 'superseded' && !changed) return { ok: false, refusal: 'shown_unchanged' };
 
   const [outcome] = await db

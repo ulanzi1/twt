@@ -448,4 +448,18 @@ describe('⭐ Story 11b.4a — fetchSahyogVivranMemorialPhoto (the photo proxy\'
     });
     expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 't', forwardedFor: null })).toEqual({ ok: false, reason: 'unavailable' });
   });
+
+  it('RT5 / RU1 — a token the route\'s own param refuses is the page\'s 404 with ⛔ no call; an upstream 400 on a valid token is `unavailable` (a misconfiguration, ⛔ "no such photo"); a 429 too', async () => {
+    const { calls } = stubFetch(() => new Response(null, { status: 500 }));
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 'x'.repeat(65), forwardedFor: null })).toEqual({ ok: false, reason: 'not_found' });
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: '   ', forwardedFor: null })).toEqual({ ok: false, reason: 'not_found' });
+    expect(calls).toHaveLength(0);
+    const ok = stubFetch(() => new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), { status: 200, headers: { 'content-type': 'image/jpeg' } }));
+    expect((await fetchSahyogVivranMemorialPhoto({ driveToken: ` ${'x'.repeat(64)} `, forwardedFor: null })).ok).toBe(true);
+    expect(ok.calls[0]!.url.pathname).toContain(`/sahyog-vivran/${'x'.repeat(64)}/memorial-photo`);
+    stubFetch(() => new Response('{}', { status: 400, headers: { 'content-type': 'application/json' } }));
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 't', forwardedFor: null })).toEqual({ ok: false, reason: 'unavailable' });
+    stubFetch(() => new Response('{}', { status: 429, headers: { 'content-type': 'application/json' } }));
+    expect(await fetchSahyogVivranMemorialPhoto({ driveToken: 't', forwardedFor: null })).toEqual({ ok: false, reason: 'unavailable' });
+  });
 });

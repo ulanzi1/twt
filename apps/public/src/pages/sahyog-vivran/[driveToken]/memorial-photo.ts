@@ -6,7 +6,8 @@
 // signed URL inside an edge-cached page). ⭐ It forwards ⛔ no query string and ⛔ no request header but `X-Forwarded-For` (the
 // page's `Astro.clientAddress` rule), and BUILDS ITS OWN response headers — ⛔ never the upstream ones (Trap 9).
 // ⭐ Every refusal is an EMPTY 404 with the page's cache posture — byte-identical whatever the reason (an unknown token, a
-// take-down, a photo left out). An upstream FAULT is ⛔ not a 404: 503 + `Retry-After` + `no-store`, the page's outage rule.
+// take-down, a photo left out, a blank or over-long token — reviews RT5, RU1, decided before any upstream call). An upstream FAULT —
+// an upstream 400 included — is ⛔ not a 404: 503 + `Retry-After` + `no-store`, the page's outage rule.
 // ⚠⛔ THIS ENDPOINT'S ONLY GUARDS ARE ITS OWN TESTS: `scripts/sahyog-vivran-financial-truth` scans it only because it is listed in
 // `SCAN_FILES` BY HAND (its directory scan is ⛔ not recursive), and the pii-scrape route coverage loads `.astro` files only
 // (`packages/contracts/scripts/check-pii-scrape.ts`) ⇒ the HEADER check is the AC4 leg of the DB-gated, built-server

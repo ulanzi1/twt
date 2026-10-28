@@ -26,7 +26,7 @@
 // attacker the rate-limit key. ⛔ A second copy of that logic here is exactly how the two drift, and
 // this one would drift silently — no render breaks when the ceiling disappears.
 
-import type { PublicSahyogVivranResponse } from '@twt/contracts';
+import { PublicSahyogVivranParams, type PublicSahyogVivranResponse } from '@twt/contracts';
 
 import { API_ORIGIN } from './directory.server.js';
 import { ACTIVE_PARIWAR_ID } from './pariwar.server.js';
@@ -420,7 +420,11 @@ const PHOTO_REQUEST_TIMEOUT_MS = 8000;
 
 export type SahyogVivranMemorialPhotoResult =
   | { readonly ok: true; readonly bytes: ArrayBuffer }
-  /** `not_found` — the API's empty 404 (every refusal); `unavailable` — anything else (a 5xx, a timeout, a wrong type). */
+  /**
+   * `not_found` — the API's empty 404 (every refusal), or a token the route's own param would refuse — blank, or over its length
+   * (⛔ never fetched; the page folds the same cases into its 404 — reviews RT5, RU1); `unavailable` — anything else, an upstream 400
+   * included (a 5xx, a 429, a 400, a timeout, a wrong type).
+   */
   | { readonly ok: false; readonly reason: 'not_found' | 'unavailable' };
 
 /**
@@ -433,8 +437,14 @@ export async function fetchSahyogVivranMemorialPhoto(opts: {
   readonly driveToken: string;
   readonly forwardedFor: string | null;
 }): Promise<SahyogVivranMemorialPhotoResult> {
+  // A token the route's OWN param refuses (blank after `trim()`, or too long) is the page's 404 — checked HERE against that schema,
+  // ⛔ inferred from an upstream 400 (review RU1): a 400 can also mean a misconfiguration (a bad `ACTIVE_PARIWAR_ID`), and that must
+  // surface as the 503 outage, ⛔ a "no such photo" cached for 5 minutes.
+  const parsed = PublicSahyogVivranParams.shape.driveToken.safeParse(opts.driveToken);
+  if (!parsed.success) return { ok: false, reason: 'not_found' };
+  const driveToken = parsed.data;
   const url = new URL(
-    `/api/v1/p/${ACTIVE_PARIWAR_ID}/public-pages/sahyog-vivran/${encodeURIComponent(opts.driveToken)}/memorial-photo`,
+    `/api/v1/p/${ACTIVE_PARIWAR_ID}/public-pages/sahyog-vivran/${encodeURIComponent(driveToken)}/memorial-photo`,
     API_ORIGIN,
   );
   const controller = new AbortController();

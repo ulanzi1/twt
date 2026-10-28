@@ -370,7 +370,7 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
     /**
      * POST …/memorial-takedowns/requests/:requestId/outcome — AC7. `taken_down` (step-up `memorial_takedown`, checked by the route)
      * withdraws EVERY un-withdrawn version under the pool lock (MP8 (a)); `kept` / `superseded` change nothing public. The chain
-     * is re-read under the lock (MP8 (c)).
+     * is re-read under the lock (MP8 (c)): `taken_down` and `kept` refuse a changed shown version, `superseded` an unchanged one.
      */
     async decide(request: FastifyRequest): Promise<MemorialTakedownOutcomeResponse> {
       const who = staffCtx(request);

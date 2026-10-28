@@ -51,7 +51,7 @@ function body(familyMemorial: unknown) {
 }
 
 let memorialState: unknown = null;
-let photoUpstream: 'ok' | '404' | '500' = 'ok';
+let photoUpstream: 'ok' | '400' | '404' | '500' = 'ok';
 const photoRequests: { url: string; headers: IncomingHttpHeaders }[] = [];
 
 describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT public page (real HTML)', { timeout: 120_000 }, () => {
@@ -68,6 +68,10 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
         if (photoUpstream === '404') {
           res.writeHead(404);
           return res.end();
+        }
+        if (photoUpstream === '400') {
+          res.writeHead(400, { 'content-type': 'application/json' });
+          return res.end('{}');
         }
         if (photoUpstream === '500') {
           res.writeHead(500, { 'content-type': 'application/json' });
@@ -231,6 +235,18 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     expect(nf.status).toBe(404);
     expect(await nf.text()).toBe('');
     expect(nf.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=300');
+    // RT5 / RU1 — a token the route's param refuses is the SAME empty 404, decided HERE (⛔ upstream call) …
+    photoRequests.length = 0;
+    const bad = await fetch(`${origin}/sahyog-vivran/${'x'.repeat(65)}/memorial-photo`);
+    expect(bad.status).toBe(404);
+    expect(await bad.text()).toBe('');
+    expect(bad.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=300');
+    expect(photoRequests).toHaveLength(0);
+    // … and an upstream 400 on a valid token is an OUTAGE (a misconfiguration), ⛔ a cached "no such photo".
+    photoUpstream = '400';
+    const misconfigured = await fetch(`${origin}/sahyog-vivran/tok-A/memorial-photo`);
+    expect(misconfigured.status).toBe(503);
+    expect(misconfigured.headers.get('cache-control')).toBe('no-store');
     photoUpstream = '500';
     const down = await fetch(`${origin}/sahyog-vivran/tok-A/memorial-photo`);
     expect(down.status).toBe(503);

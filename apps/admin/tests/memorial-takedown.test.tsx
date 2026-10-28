@@ -253,6 +253,65 @@ describe('the take-down asks for a fresh verification on `auth.step_up_required`
     fireEvent.click(await screen.findByRole('button', { name: 'The nominee chose to keep it' }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('no longer the one this nominee asked about'));
   });
+
+  it('RT4 — another operator decided first: the 409 `already_decided` refetch closes the decide section, and the reason STAYS on screen', async () => {
+    const server = serve(drive());
+    vi.mocked(api.decideMemorialTakedown).mockImplementation(async () => {
+      server.set(drive({ requests: [request({ outcome: decidedAs('kept') })] }));
+      throw new ApiError(409, 'memorial_takedown.already_decided', 'x');
+    });
+    renderWithClient(<MemorialTakedownDrivePage pariwarId={PARIWAR} poolId={POOL} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'The nominee chose to keep it' }));
+    // The section WAS there (RU5: ⛔ a vacuous "is gone") …
+    expect(screen.getByTestId('takedown-decide')).toBeInTheDocument();
+    // … the refetch shows the request decided ⇒ the decide section is gone, the request reads as decided …
+    await waitFor(() => expect(screen.queryByTestId('takedown-decide')).toBeNull());
+    expect(screen.getByTestId(`takedown-request-${REQ}`)).toHaveTextContent(requestStatus(request({ outcome: decidedAs('kept') })));
+    // … and the sentence that says why is still there, right AFTER where the section was (beside its buttons, ⛔ at the top of the page).
+    const why = screen.getByTestId('takedown-decide-error');
+    expect(why).toHaveTextContent('already been decided');
+    expect(follows(screen.getByTestId('takedown-call-back'), why)).toBe(true);
+    expect(follows(why, screen.getByTestId('takedown-requests'))).toBe(true);
+  });
+
+  it('RU2 — a REFUSED take-down disarms the confirm step: the next request\'s section mounts unarmed', async () => {
+    const server = serve(drive());
+    vi.mocked(api.decideMemorialTakedown).mockImplementation(async () => {
+      server.set(drive({ requests: [request({ outcome: decidedAs('kept') })] }));
+      throw new ApiError(409, 'memorial_takedown.already_decided', 'x');
+    });
+    renderWithClient(<MemorialTakedownDrivePage pariwarId={PARIWAR} poolId={POOL} />);
+    fireEvent.click(await screen.findByTestId('takedown-take-down'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm: take it down' }));
+    await waitFor(() => expect(screen.queryByTestId('takedown-decide')).toBeNull());
+    // The nominee calls again: the operator records a NEW request; the refetch shows it open.
+    vi.mocked(api.recordMemorialTakedownRequest).mockImplementation(async () => {
+      server.set(drive({ requests: [request({ outcome: decidedAs('kept') }), request({ requestId: '99999999-9999-4999-8999-999999999999' })] }));
+      return { requestId: '99999999-9999-4999-8999-999999999999', poolId: POOL, dueAt: '2026-11-02T10:00:00.000Z' };
+    });
+    const form = await screen.findByTestId('takedown-record');
+    fireEvent.click(within(form).getByRole('checkbox'));
+    fireEvent.click(within(form).getByRole('button', { name: 'Record the request' }));
+    await screen.findByTestId('takedown-decide');
+    expect(screen.queryByTestId('takedown-confirm')).toBeNull();
+    expect(screen.getByTestId('takedown-take-down')).toBeInTheDocument();
+  });
+
+  it('RU2 / RU3 — a take-down refused `shown_changed` whose refetch shows NOTHING: ⛔ the confirm step, ⛔ "kept"; "changed" is the way to close it', async () => {
+    const server = serve(drive());
+    vi.mocked(api.decideMemorialTakedown).mockImplementation(async () => {
+      server.set(drive({ shown: null, smallerFix: null, currentNominee: null }));
+      throw new ApiError(409, 'memorial_takedown.shown_changed', 'x');
+    });
+    renderWithClient(<MemorialTakedownDrivePage pariwarId={PARIWAR} poolId={POOL} />);
+    fireEvent.click(await screen.findByTestId('takedown-take-down'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm: take it down' }));
+    await waitFor(() => expect(screen.getByTestId('takedown-decide-error')).toHaveTextContent('If a version is shown now'));
+    await waitFor(() => expect(screen.queryByTestId('takedown-shown')).toBeNull());
+    expect(screen.queryByTestId('takedown-confirm')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'The nominee chose to keep it' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Close: the memorial on the page has changed' })).toBeInTheDocument();
+  });
 });
 
 describe('the open list (AC10)', () => {

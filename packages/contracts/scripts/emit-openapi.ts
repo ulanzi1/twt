@@ -4875,6 +4875,8 @@ const MemorialTakedownDriveComponent = MemorialTakedownDriveResponseSchema.opena
 const MemorialTakedownOpenRequestsComponent = MemorialTakedownOpenRequestsResponseSchema.openapi('MemorialTakedownOpenRequests');
 const MemorialTakedownRequestComponent = MemorialTakedownRequestResponseSchema.openapi('MemorialTakedownRequest');
 const MemorialTakedownOutcomeComponent = MemorialTakedownOutcomeResponseSchema.openapi('MemorialTakedownOutcome');
+// The route's OWN params schema (review RT6) — a hand-written copy said `max(128)` while the route enforces 64.
+const { PublicSahyogVivranParams } = await import('../src/public-pages/sahyog-vivran.js');
 registry.registerPath({
   method: 'get',
   path: '/api/v1/p/{pariwarId}/public-pages/sahyog-vivran/{driveToken}/memorial-photo',
@@ -4886,9 +4888,11 @@ registry.registerPath({
     'shown memorial, the photo left out, an erased member, a missing object, a storage fault, an image that cannot be re-encoded — ' +
     'is the same empty 404 as an unknown token. The route decrypts nothing, so it has no KMS-outage arm.',
   tags: ['public-pages'],
-  request: { params: z.object({ pariwarId: z.string().uuid(), driveToken: z.string().min(1).max(128) }) },
+  request: { params: PublicSahyogVivranParams },
   responses: {
     200: { description: 'The photo', content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } } } },
+    // RU9 — the params schema (a `driveToken` blank or over 64) and the empty-query rule both answer 400.
+    400: errorResponse('Invalid input — a `driveToken` blank or over 64 characters, or any query parameter'),
     404: { description: 'Not found (empty body)' },
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
@@ -4957,7 +4961,9 @@ registry.registerPath({
   summary: 'Decide a take-down request',
   description:
     '`memorial.takedown`; `Idempotency-Key`. `taken_down` (admin step-up `memorial_takedown`) withdraws every un-withdrawn ' +
-    'version — it leaves the page within about 5 minutes once an edge cache exists; `kept` and `superseded` change nothing public.',
+    'version — it leaves the page within about 5 minutes once an edge cache exists; `kept` and `superseded` change nothing public. ' +
+    'The chain is re-read: `taken_down` and `kept` answer 409 `shown_changed` when the shown version is no longer the request\'s; ' +
+    '`superseded` answers 409 `shown_unchanged` when it still is.',
   tags: ['memorial-takedown'],
   request: { params: takedownPariwar.extend({ requestId: z.string().uuid() }), body: { content: jsonOf(MemorialTakedownOutcomeInputSchema), required: true } },
   responses: {

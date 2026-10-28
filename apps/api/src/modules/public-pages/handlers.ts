@@ -1272,6 +1272,9 @@ export function createPublicPagesHandlers(deps: AppDeps): PublicPagesHandlers {
      * ⭐ EVERY REFUSAL IS THE PAGE'S OWN EMPTY 404 (Trap 9) — the switch off, the kill switch, an unknown token, ⛔ no shown memorial,
      * the photo left out, an erased member, a missing object, a storage fault, an image `sharp` refuses — byte-identical to an
      * unknown token. ⛔ Never the memorial module's JSON `memorialNotFound()`. (⛔ No decrypt here ⇒ ⛔ no KMS-outage 503 arm.)
+     * ⚠ DELIBERATELY ⛔ the page's bad-envelope arm (review RT1, `2026-10-27-412` note 5, AC16 (18)): while a version's words or description
+     * cannot be decrypted the PAGE omits the memorial, but this route still serves the photo the Trust kept — it would need a decrypt (and
+     * its KMS audit line per request) to know. Re-examine when the first `family memorial decrypt failed` log appears (deferred-work).
      */
     async sahyogVivranMemorialPhoto(request: FastifyRequest, reply: FastifyReply): Promise<void> {
       const { pariwarId: pariwarIdStr, driveToken } = request.params as PublicSahyogVivranParams;

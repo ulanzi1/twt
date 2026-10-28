@@ -81,7 +81,7 @@ const EN: Record<string, string> = {
   'error.memorial_takedown.request_open': 'This drive already has an open request.',
   'error.memorial_takedown.already_decided': 'This request has already been decided.',
   'error.memorial_takedown.shown_changed':
-    'The memorial on the page is no longer the one this nominee asked about. Close the request as changed, and ask the nominee of the version now shown to call.',
+    'The memorial on the page is no longer the one this nominee asked about. Close the request as changed. If a version is shown now, ask its nominee to call.',
   'error.memorial_takedown.shown_unchanged': 'The memorial on the page has not changed, so the request cannot be closed as changed.',
   'error.memorial_takedown.first_contact_out_of_range': 'The nominee’s first contact must be in the last 7 days, and not in the future.',
   'error.record.shown_changed':

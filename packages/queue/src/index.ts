@@ -528,8 +528,11 @@ export const QUEUE_NAMES = {
   CLAIM_SUSPICION_STAFF_EMAIL_SEND: 'claim.suspicion.staff_email.send',
   /**
    * The MEMORIAL TAKE-DOWN APPROVER EMAIL SWEEP (Story 11b.4a, `2026-10-27-412` MP10 / MP11; ADR-0043) — 6.25's shape: derives
-   * the due (request, approver) pairs of every `taken_down` request holding ⛔ no outbox row (or `(request, NULL)` when ⛔ no
-   * approver is eligible), plus every `attempting` row; one MEMORIAL_TAKEDOWN_APPROVER_EMAIL_SEND child per pair. Job class C.
+   * the due (request, approver) pairs of every `taken_down` request — each eligible approver whose OWN pair holds ⛔ no outbox row and
+   * whose request holds ⛔ no request-level `no_target` row (review R2: the gate is per (request, recipient); MP11: ⛔ no late email beside
+   * a `no_target`, so an approver who becomes eligible after one is ⛔ never due), or `(request, NULL)` when ⛔ no approver is eligible
+   * and the request holds ⛔ no row at all — plus every `attempting` row; one MEMORIAL_TAKEDOWN_APPROVER_EMAIL_SEND child per pair.
+   * Job class C.
    */
   MEMORIAL_TAKEDOWN_APPROVER_EMAIL_SWEEP: 'memorial.takedown.approver_email.sweep',
   /** ONE approver email for one (request, approver) pair — the claiming tx, then Q2 + decrypt + the provider call. Job class B. */

@@ -529,4 +529,66 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the helpline take-down (live DB)
       signed.mockRestore();
     }
   });
+
+  // ── RT3 — Trap 18's shapes, where a HEAD-ONLY rule gives the wrong answer, through the member GET and the review detail ──────────
+
+  /** v1 approved with a part left out, the elevated operator, and helpers to grow the chain through the REAL Send / review / withdraw. */
+  async function chainWorld() {
+    const { w, id: v1, panel } = await approved({ omit: true });
+    const op = await h.staff(w.pariwarId, 'helpline_operator', 'Helpline Operator');
+    await elevate(op);
+    const sendNext = async (body: string): Promise<string> => {
+      await handover(t, w);
+      const r = await send(t, w, sendFields({ body }));
+      expect(r.status, JSON.stringify(r.body)).toBe(201);
+      return r.body.submissionId as string;
+    };
+    const approve = async (id: string) =>
+      expect((await panel.inject({ method: 'POST', url: `/api/v1/p/${w.pariwarId}/memorial-reviews/${id}/decision`, payload: { action: 'approved' } })).statusCode).toBe(200);
+    const trustWithdraw = async (id: string) =>
+      expect(
+        (await panel.inject({ method: 'POST', url: `/api/v1/p/${w.pariwarId}/memorial-reviews/${id}/withdraw-approval`, payload: { reasonCode: 'against_the_law' } })).statusCode,
+      ).toBe(200);
+    const takeDown = async () => {
+      const rec = await record(op, w, v1);
+      expect(rec.statusCode, rec.body).toBe(201);
+      const out = await decide(op, w, (rec.json() as { requestId: string }).requestId, 'taken_down');
+      expect(out.statusCode, out.body).toBe(200);
+    };
+    const mine = async () => (await memberInject(t, 'GET', '/api/v1/member/memorial', { token: w.token })).body.memorial as Json;
+    return { w, v1, panel, sendNext, approve, trustWithdraw, takeDown, mine };
+  }
+
+  it('RT3 / Trap 18 — `[A-omit, A(T)]` → take-down → `[H, T]`: the family reads `taken_down` with ⛔ no Trust reason beside it (the head carries the Trust\'s withdrawal)', async () => {
+    const c = await chainWorld();
+    const v2 = await c.sendNext('दूसरा संस्करण।');
+    await c.approve(v2);
+    await c.trustWithdraw(v2);
+    await c.takeDown();
+    expect(await c.mine()).toMatchObject({ memorialState: 'taken_down', reasonCode: null, earlierApprovalWithdrawn: null, earlierApprovalStands: false });
+  });
+
+  it('RT3 / Trap 18 — `[A-omit, A(T), pending]` → take-down → `[H, T, H]`: ⛔ no "an earlier approval was withdrawn" with the Trust\'s reason', async () => {
+    const c = await chainWorld();
+    const v2 = await c.sendNext('दूसरा संस्करण।');
+    await c.approve(v2);
+    await c.trustWithdraw(v2);
+    await c.sendNext('तीसरा संस्करण।');
+    await c.takeDown();
+    expect(await c.mine()).toMatchObject({ memorialState: 'taken_down', reasonCode: null, earlierApprovalWithdrawn: null, earlierApprovalStands: false });
+  });
+
+  it('RT3 / Task 3.4 — `[A-omit, family-withdrawn]` → take-down → `[H, F]`: the review detail says `taken_down` (a head-only rule says `withdrawn`)', async () => {
+    const c = await chainWorld();
+    const v2 = await c.sendNext('दूसरा संस्करण।');
+    const wd = await memberInject(t, 'POST', `/api/v1/member/memorial/submissions/${v2}/withdraw`, { payload: {}, token: c.w.token });
+    expect(wd.status, JSON.stringify(wd.body)).toBe(200);
+    await c.takeDown();
+    for (const id of [c.v1, v2]) {
+      const detail = await c.panel.inject({ method: 'GET', url: `/api/v1/p/${c.w.pariwarId}/memorial-reviews/${id}` });
+      expect(detail.statusCode, detail.body).toBe(200);
+      expect((detail.json() as { memorialState: string }).memorialState).toBe('taken_down');
+    }
+    expect((await c.mine()).memorialState).toBe('taken_down');
+  });
 });

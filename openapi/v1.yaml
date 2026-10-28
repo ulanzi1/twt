@@ -17077,7 +17077,7 @@ paths:
         - schema:
             type: string
             minLength: 1
-            maxLength: 128
+            maxLength: 64
           required: true
           name: driveToken
           in: path
@@ -17089,6 +17089,12 @@ paths:
               schema:
                 type: string
                 format: binary
+        "400":
+          description: Invalid input — a `driveToken` blank or over 64 characters, or any query parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Not found (empty body)
   /api/v1/p/{pariwarId}/memorial-takedowns/members/{memberId}/drives:
@@ -17269,7 +17275,7 @@ paths:
   /api/v1/p/{pariwarId}/memorial-takedowns/requests/{requestId}/outcome:
     post:
       summary: Decide a take-down request
-      description: "`memorial.takedown`; `Idempotency-Key`. `taken_down` (admin step-up `memorial_takedown`) withdraws every un-withdrawn version — it leaves the page within about 5 minutes once an edge cache exists; `kept` and `superseded` change nothing public."
+      description: "`memorial.takedown`; `Idempotency-Key`. `taken_down` (admin step-up `memorial_takedown`) withdraws every un-withdrawn version — it leaves the page within about 5 minutes once an edge cache exists; `kept` and `superseded` change nothing public. The chain is re-read: `taken_down` and `kept` answer 409 `shown_changed` when the shown version is no longer the request's; `superseded` answers 409 `shown_unchanged` when it still is."
       tags:
         - memorial-takedown
       parameters:

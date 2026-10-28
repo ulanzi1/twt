@@ -214,7 +214,14 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
     if (decideKey.current === null || decideKey.current.outcome !== outcome) decideKey.current = { outcome, key: newIdempotencyKey() };
     decide.mutate(
       { requestId: open.requestId, body: { outcome }, idempotencyKey: decideKey.current.key },
-      { onSuccess: () => setConfirming(false) },
+      {
+        onSuccess: () => setConfirming(false),
+        // A REFUSAL disarms the confirm step too (review RU2) — else the next request's section mounts with it armed, or it is offered
+        // over a page that now shows nothing. ⛔ Not for the step-up: that retries this same take-down once the code is verified.
+        onError: (err) => {
+          if (codeOf(err) !== 'auth.step_up_required') setConfirming(false);
+        },
+      },
     );
   };
   const decideCode = codeOf(decide.error);
@@ -371,9 +378,14 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
             </div>
           )}
           <p className="mt-2">
-            <button type="button" className="underline" disabled={decide.isPending} onClick={() => decideWith('kept')}>
-              {t('takedown.action.kept')}
-            </button>{' '}
+            {/* RU3 — with nothing shown, `kept` can only be refused (`shown_changed`, RT2); the request closes as changed. */}
+            {d.shown !== null && (
+              <>
+                <button type="button" className="underline" disabled={decide.isPending} onClick={() => decideWith('kept')}>
+                  {t('takedown.action.kept')}
+                </button>{' '}
+              </>
+            )}
             <button type="button" className="underline" disabled={decide.isPending} onClick={() => decideWith('superseded')}>
               {t('takedown.action.superseded')}
             </button>
@@ -406,8 +418,15 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
           )}
           {needsStepUp && stepUp.isError && <p role="alert">{t('takedown.stepUp.sendError')}</p>}
           {needsStepUp && verify.isError && <p role="alert">{t('takedown.stepUp.verifyError')}</p>}
-          {decide.isError && !needsStepUp && <p role="alert">{errorSentence(decideCode)}</p>}
         </section>
+      )}
+      {/* A decision's REFUSAL sits right AFTER the decide section, ⛔ inside it (reviews RT4, RU5): an `already_decided` refetch shows the
+          request decided and unmounts that section, and the operator would be left with no reason their click did nothing; next to it,
+          the reason still reads beside the buttons that caused it. Cleared by the next attempt. */}
+      {decide.isError && !needsStepUp && (
+        <p role="alert" data-testid="takedown-decide-error">
+          {errorSentence(decideCode)}
+        </p>
       )}
 
       <section aria-label={t('takedown.requests.title')}>

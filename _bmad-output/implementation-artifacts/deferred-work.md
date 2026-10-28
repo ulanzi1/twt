@@ -4,6 +4,36 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-4a-family-memorial-public-render.md — fifth pass, the fourth-pass fix round (2026-10-28)
+
+Re-review of the fourth-pass fix round (12 code files, 364 lines). One item deferred; RU-numbers are the story's fifth-pass numbers. Not closed.
+
+- **RU11 — a step-up prompt vanishes with no message when another operator decides first** [`apps/admin/src/modules/memorial-takedown/MemorialTakedownPage.tsx` `needsStepUp`].
+  The 403's refetch shows the request decided, the decide section (and the prompt) unmounts, and the refusal line is suppressed for a step-up; the requests list shows the
+  decision. **Trigger: Story 11b.8's accessibility audit, together with RR17 / RR18 / RW1.**
+
+---
+
+## Deferred from: code review of 11b-4a-family-memorial-public-render.md — fourth pass, the whole branch (2026-10-28)
+
+Re-review of the committed branch `4e57fa42..d78d76f7` (117 code files). Three items deferred and one accepted cost recorded; RT-numbers are the story's fourth-pass numbers. Not closed.
+
+- **RT1 / AC16 (18) — ACCEPTED (BigDev 2026-10-28, `-412` note 5): the photo outlives a bad envelope** [`apps/api/src/modules/public-pages/handlers.ts` `sahyogVivranMemorialPhoto`].
+  When a version's words or description cannot be decrypted, the page omits the memorial, but the photo route (decrypt-free, Trap 19) still answers `200` with the
+  photo the Trust kept. **Trigger: the first `family memorial decrypt failed` error log in production — read the version, and if the photo must go too, take it
+  down (or add a decrypt to the route, with its KMS audit cost).**
+- **RT9 — the photo endpoint answers any query string with a cacheable `200`** [`apps/public/src/pages/sahyog-vivran/[driveToken]/memorial-photo.ts`]. It forwards no
+  query (AC4's letter), so the API's empty-query 400 never fires on the public path; behind an edge cache each `?x=n` would mint a cache entry and a `sharp` decode — the
+  page's 11b.3b cache-key problem, for the photo. **Trigger: Row 41 (p), the edge cache — decide the photo's cache key with the page's.**
+- **RT10 — operator copy says "on the page" while a switch is off** [`apps/admin/src/modules/memorial-takedown/i18n-en.ts` `takedown.drive.onPage`, `takedown.lookup.drives`,
+  `takedown.script.send_now`]. The take-down screens read neither `memorialAuthorshipEnabled` nor the publication kill switch (MP13), so while either is off these lines are
+  false. **Trigger: the AC14 tone review of the operator copy, or the first time either switch is turned off after go-live.**
+- **RT11 — the record form's default first-contact time is the browser's clock** [`apps/admin/src/modules/memorial-takedown/MemorialTakedownPage.tsx`, the window check in
+  `apps/api/src/modules/memorial-takedown/handlers.ts`]. A PC clock ahead of the server makes the prefilled minute "in the future" ⇒ `first_contact_out_of_range` on the
+  first try; it fails safe. **Trigger: the first operator report of the refusal, or Story 11b.8's operator-console pass.**
+
+---
+
 ## Deferred from: code review of 11b-4a-family-memorial-public-render.md — third pass, the second fix round (2026-10-27)
 
 Re-review of the second fix round (13 files, 527 lines). One item deferred; RW-numbers are the story's third-pass numbers. Not closed.

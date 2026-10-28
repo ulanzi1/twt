@@ -30,7 +30,7 @@ export function useUnsavedAnswers(): UnsavedAnswers {
   return useContext(UnsavedAnswersContext);
 }
 
-/** A set with `id` in or out — the SAME set when nothing changes (⛔ a re-render for a repeated report). */
+/** A set with `id` in or out — the SAME set when nothing changes (⛔ a re-render when the same state is said twice). */
 function toggled(set: ReadonlySet<string>, id: string, on: boolean): ReadonlySet<string> {
   if (set.has(id) === on) return set;
   const next = new Set(set);

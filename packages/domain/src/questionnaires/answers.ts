@@ -101,8 +101,11 @@ export function checkAnswer(
 
 /**
  * The keys whose live answers must be SUPERSEDED when `changedKey`'s live codes become `newCodes` (`null` for a date or
- * a superseded parent): every question whose condition stops holding — transitively (a dependant superseded drops its
- * own dependants). `live` holds the answers BEFORE the change; only keys with a live answer are returned.
+ * a superseded parent): every question whose condition stops holding BECAUSE OF THIS CHANGE — its `showIf` parent is the
+ * changed key, or a dependant superseded here (transitively). `live` holds the answers BEFORE the change; only keys with a
+ * live answer are returned. ⭐ Story 6.32 (review R2): a dependant whose parent did ⛔ change is ⛔ touched even when its
+ * condition cannot be evaluated — a live parent whose value is unknown (`null`: a saved answer that will ⛔ decrypt) must
+ * not let an UNRELATED save erase the answers beneath it.
  */
 export function dependantsToSupersede(
   def: QuestionnaireDefinition,
@@ -112,12 +115,14 @@ export function dependantsToSupersede(
 ): string[] {
   const after = new Map(live);
   after.set(changedKey, newCodes);
+  const changed = new Set([changedKey]);
   const out: string[] = [];
   for (const q of questionsOf(def)) {
-    if (q.key === changedKey || q.showIf === null || !after.has(q.key)) continue;
+    if (q.key === changedKey || q.showIf === null || !after.has(q.key) || !changed.has(q.showIf.key)) continue;
     if (!isShowIfMet(q, after)) {
       out.push(q.key);
       after.delete(q.key);
+      changed.add(q.key);
     }
   }
   return out;

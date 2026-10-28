@@ -11,7 +11,9 @@
 // ⛔ NO KMS under a lock (TR2): the HANDLER encrypts the cause / illness, computes their keyed code indexes, and decrypts the
 // live sensitive answers it needs (the illness's `showIf` parent is the cause — a ciphertext); this writer receives
 // ciphertext + indexes (+ the decrypted values keyed by `answer_id`, re-verified under the locks — a stale read is
-// `GroundInspectionQuestionnaireStaleError`, a 409 the client retries).
+// `GroundInspectionQuestionnaireStaleError`, a 409 the client retries). A row the handler READ but could ⛔ decrypt (erased,
+// malformed, undecryptable) is KNOWN UNREADABLE (`unreadableLive`) — ⛔ stale: its value is `null`, so an unrelated save or
+// its own replacement proceeds, and a question it is the `showIf` parent of stays refused (fail-closed, review R2).
 // ⭐ I1 — NOTHING HERE GATES: ⛔ a reader of these rows is an approval, refusal, warning, routing or payment path. The
 // completion predicate (6.26a's ONE definition of "complete") ⛔ reads them.
 // ⛔ No decrypt here; ⛔ no value in an error message, a log or an event (⛔ event at all — IQ10).
@@ -153,6 +155,12 @@ export interface SaveGroundInspectionAnswerInput {
   readonly prepared: PreparedGroundInspectionAnswer;
   /** The visit's live SENSITIVE answers, DECRYPTED by the handler before the locks, keyed by `answer_id`. */
   readonly decryptedLive: ReadonlyMap<string, readonly string[]>;
+  /**
+   * The `answer_id`s of live sensitive answers the handler READ before the locks but could ⛔ decrypt (erased, malformed,
+   * undecryptable) — their value is `null` (unknown), ⛔ a stale read (review R2). Rows are append-only, so an id read
+   * unreadable stays so; a live row in NEITHER map was written after the handler's read ⇒ stale.
+   */
+  readonly unreadableLive?: ReadonlySet<string>;
   /** Today in IST (`YYYY-MM-DD`) — the engine's date rule (v1 has ⛔ date question). */
   readonly todayIst: string;
   /** TEST seam — see `groundInspectionVersionFor`. */
@@ -195,7 +203,7 @@ export async function saveGroundInspectionAnswer(
   const liveRows = await readLiveGroundInspectionAnswers(db, input.pariwarId, input.groundInspectionId);
   const live = new Map<string, readonly string[] | null>();
   for (const row of liveRows) {
-    const codes = row.valueCodes ?? input.decryptedLive.get(row.answerId);
+    const codes = row.valueCodes ?? input.decryptedLive.get(row.answerId) ?? (input.unreadableLive?.has(row.answerId) ? null : undefined);
     if (codes === undefined) throw new GroundInspectionQuestionnaireStaleError();
     live.set(row.questionKey, codes);
   }
@@ -293,7 +301,8 @@ export async function readGroundInspectionQuestionnaireTarget(
 /** One visit's family account for the approvers' read (IQ7) — the LIVE answers AS STORED (the handler decrypts). */
 export interface ClaimFamilyAccountVisit {
   readonly groundInspectionId: GroundInspectionId;
-  readonly questionnaireVersionId: string;
+  /** The pinned version — `null` for a visit that saved ⛔ answer (⛔ header: the version is pinned at the first save). */
+  readonly questionnaireVersionId: string | null;
   readonly completedAt: Date | null;
   readonly answers: readonly Pick<ClaimGroundInspectionAnswerRow, 'answerId' | 'questionKey' | 'valueCodes' | 'valueCiphertext' | 'savedAt'>[];
 }
@@ -302,15 +311,16 @@ export interface ClaimFamilyAccountVisit {
 export const CLAIM_FAMILY_ACCOUNT_ROWS_CAP = 200;
 
 /**
- * ⭐ IQ7 (A) — the claim's FAMILY ACCOUNT: the live answers of every COMPLETED FULL visit (`death_date_source =
- * 'family_statement'` — a `certificate_check` asks the family ⛔ nothing) that recorded ANY, newest completion first. ONE
- * read for the ONE assembler (`assemblePeerSection`), which applies the PM25 (c) hide BEFORE calling it — ⛔ call it for a
- * hidden actor. Ciphertext AS STORED.
+ * ⭐ IQ7 (A) — the claim's FAMILY ACCOUNT: every COMPLETED FULL visit (`death_date_source = 'family_statement'` — a
+ * `certificate_check` asks the family ⛔ nothing) with its live answers, newest completion first — INCLUDING a visit that
+ * saved ⛔ answer (review R3: every question is optional, so a skipped letter must still read *"Letter: not recorded"* to the
+ * approver — AC10). ONE read for the ONE assembler (`assemblePeerSection`), which applies the PM25 (c) hide BEFORE calling
+ * it — ⛔ call it for a hidden actor. Ciphertext AS STORED.
  */
 export async function readClaimFamilyAccount(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<ClaimFamilyAccountVisit[]> {
   const rows = await db
     .select({
-      groundInspectionId: claimGroundInspectionQuestionnaires.groundInspectionId,
+      groundInspectionId: claimGroundInspections.groundInspectionId,
       questionnaireVersionId: claimGroundInspectionQuestionnaires.questionnaireVersionId,
       completedAt: claimGroundInspections.completedAt,
       answerId: claimGroundInspectionAnswers.answerId,
@@ -319,43 +329,48 @@ export async function readClaimFamilyAccount(db: Db, pariwarId: PariwarId, claim
       valueCiphertext: claimGroundInspectionAnswers.valueCiphertext,
       savedAt: claimGroundInspectionAnswers.savedAt,
     })
-    .from(claimGroundInspectionQuestionnaires)
-    .innerJoin(
-      claimGroundInspections,
+    .from(claimGroundInspections)
+    .leftJoin(
+      claimGroundInspectionQuestionnaires,
       and(
-        eq(claimGroundInspections.pariwarId, claimGroundInspectionQuestionnaires.pariwarId),
-        eq(claimGroundInspections.groundInspectionId, claimGroundInspectionQuestionnaires.groundInspectionId),
+        eq(claimGroundInspectionQuestionnaires.pariwarId, claimGroundInspections.pariwarId),
+        eq(claimGroundInspectionQuestionnaires.groundInspectionId, claimGroundInspections.groundInspectionId),
       ),
     )
-    .innerJoin(
+    .leftJoin(
       claimGroundInspectionAnswers,
       and(
-        eq(claimGroundInspectionAnswers.pariwarId, claimGroundInspectionQuestionnaires.pariwarId),
-        eq(claimGroundInspectionAnswers.groundInspectionId, claimGroundInspectionQuestionnaires.groundInspectionId),
+        eq(claimGroundInspectionAnswers.pariwarId, claimGroundInspections.pariwarId),
+        eq(claimGroundInspectionAnswers.groundInspectionId, claimGroundInspections.groundInspectionId),
         isNull(claimGroundInspectionAnswers.supersededAt),
       ),
     )
     .where(
       and(
-        eq(claimGroundInspectionQuestionnaires.pariwarId, pariwarId),
-        eq(claimGroundInspectionQuestionnaires.claimCaseId, claimCaseId),
+        eq(claimGroundInspections.pariwarId, pariwarId),
+        eq(claimGroundInspections.claimCaseId, claimCaseId),
         eq(claimGroundInspections.status, 'completed'),
         eq(claimGroundInspections.deathDateSource, 'family_statement'),
       ),
     )
-    .orderBy(sql`${claimGroundInspections.completedAt} DESC`, asc(claimGroundInspectionAnswers.savedAt))
+    .orderBy(
+      sql`${claimGroundInspections.completedAt} DESC`,
+      asc(claimGroundInspections.groundInspectionId),
+      asc(claimGroundInspectionAnswers.savedAt),
+    )
     .limit(clampLimit(CLAIM_FAMILY_ACCOUNT_ROWS_CAP, { default: CLAIM_FAMILY_ACCOUNT_ROWS_CAP, cap: CLAIM_FAMILY_ACCOUNT_ROWS_CAP }));
-  // Group by visit, keeping the query's order (newest completion first; answers by `saved_at`).
+  // Group by visit, keeping the query's order (newest completion first; answers by `saved_at`). A visit with ⛔ answer is
+  // ONE row with every answer column NULL (the left join) ⇒ an empty `answers`.
   const visits = new Map<string, ClaimFamilyAccountVisit>();
   for (const r of rows) {
-    const answer = { answerId: r.answerId, questionKey: r.questionKey, valueCodes: r.valueCodes, valueCiphertext: r.valueCiphertext, savedAt: r.savedAt };
-    const v = visits.get(r.groundInspectionId);
-    visits.set(
-      r.groundInspectionId,
-      v
-        ? { ...v, answers: [...v.answers, answer] }
-        : { groundInspectionId: r.groundInspectionId, questionnaireVersionId: r.questionnaireVersionId, completedAt: r.completedAt, answers: [answer] },
-    );
+    const v =
+      visits.get(r.groundInspectionId) ??
+      { groundInspectionId: r.groundInspectionId, questionnaireVersionId: r.questionnaireVersionId, completedAt: r.completedAt, answers: [] };
+    const answers =
+      r.answerId === null || r.questionKey === null || r.savedAt === null
+        ? v.answers
+        : [...v.answers, { answerId: r.answerId, questionKey: r.questionKey, valueCodes: r.valueCodes, valueCiphertext: r.valueCiphertext, savedAt: r.savedAt }];
+    visits.set(r.groundInspectionId, { ...v, answers });
   }
   return [...visits.values()];
 }

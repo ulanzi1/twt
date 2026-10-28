@@ -330,7 +330,7 @@ async function familyAccountViews(
 ): Promise<GroundInspectionFamilyAccountVisit[]> {
   const out: GroundInspectionFamilyAccountVisit[] = [];
   for (const visit of visits) {
-    const def = questionnaires.getQuestionnaireVersion(visit.questionnaireVersionId);
+    const def = visit.questionnaireVersionId === null ? null : questionnaires.getQuestionnaireVersion(visit.questionnaireVersionId);
     const answers: GroundInspectionFamilyAccountVisit['answers'] = [];
     for (const a of visit.answers) {
       const q = def === null ? undefined : questionnaires.questionsOf(def).find((x) => x.key === a.questionKey);

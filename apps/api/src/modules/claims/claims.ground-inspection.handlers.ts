@@ -324,6 +324,18 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
 
   /** The assignment the `resolveGroundInspectionAssignment` preHandler already loaded + stashed
    *  (for the district permission gate). Reused here so the handler does not re-read the row. */
+  /**
+   * ⭐ Story 6.32 (review R4) — the questionnaire routes BIND the assignment to the claim named in their path: the preHandler
+   * loads by (pariwar, id) only, so a path naming claim A with claim B's assignment would read or save B's answers. A
+   * mismatch is the SAME 404 as a missing assignment (⛔ a hint that the id exists elsewhere), before any read or write.
+   */
+  function requirePathClaim(request: FastifyRequest, assignment: schema.ClaimGroundInspectionRow): void {
+    const { claimCaseId } = request.params as { claimCaseId: string };
+    if (assignment.claimCaseId !== claimCaseId.toLowerCase()) {
+      throw new NotFoundError('Ground inspection not found', 'ground_inspection.not_found');
+    }
+  }
+
   function loadAssignment(
     request: FastifyRequest,
     _ctx: AdminCtx,
@@ -1139,6 +1151,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const ctx = adminCtx(request);
       const { ground_inspection_id } = request.params as { ground_inspection_id: string };
       const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      requirePathClaim(request, assignment);
       const override = resolveInspectorOverride(request, ctx, assignment);
       if (assignment.inspectionStage === 'certificate_check') {
         throw new NotFoundError('There is no questionnaire for this visit', GROUND_INSPECTION_QUESTIONNAIRE_UNAVAILABLE_CODE);
@@ -1205,6 +1218,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const { ground_inspection_id, questionKey } = request.params as { ground_inspection_id: string; questionKey: string };
       const body = request.body as QuestionnaireAnswerBody;
       const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      requirePathClaim(request, assignment);
       const override = resolveInspectorOverride(request, ctx, assignment);
       const pid = ids.pariwarId(ctx.pariwarId);
       const gid = ids.groundInspectionId(ground_inspection_id);
@@ -1226,22 +1240,24 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const def = claim.groundInspectionVersionFor(header?.questionnaireVersionId ?? null, pid);
       if (def === null) translateGroundInspectionError(new claim.GroundInspectionQuestionnaireUnavailableError());
 
-      // (2) the live sensitive answers, decrypted OUTSIDE any transaction (a failure is left OUT — the writer refuses STALE)
+      // (2) the live sensitive answers, decrypted OUTSIDE any transaction. One that will ⛔ decrypt (erased, malformed,
+      //     undecryptable) is KNOWN UNREADABLE — its value is `null`, ⛔ stale (review R2): the letter, or a replacement of
+      //     that very answer, still saves; a question it is the `showIf` parent of stays refused (fail-closed, below).
       const decryptedLive = new Map<string, string[]>();
+      const unreadableLive = new Set<string>();
       for (const row of rows) {
         if (row.valueCiphertext === null) continue;
+        let codes: string[] | null = null;
         try {
-          const codes = codesOfDecrypted(await decryptGroundInspectionField(row.valueCiphertext, ctx.pariwarId, deps.encryption));
-          if (codes !== null) decryptedLive.set(row.answerId, codes);
+          codes = codesOfDecrypted(await decryptGroundInspectionField(row.valueCiphertext, ctx.pariwarId, deps.encryption));
         } catch (err) {
           request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id }, 'questionnaire save: a live answer could not be decrypted');
         }
+        if (codes === null) unreadableLive.add(row.answerId);
+        else decryptedLive.set(row.answerId, codes);
       }
       const live = new Map<string, readonly string[] | null>();
-      for (const row of rows) {
-        const codes = row.valueCodes ?? decryptedLive.get(row.answerId);
-        if (codes !== undefined) live.set(row.questionKey, codes);
-      }
+      for (const row of rows) live.set(row.questionKey, row.valueCodes ?? decryptedLive.get(row.answerId) ?? null);
 
       // (3) the pre-check — to learn the storage form (the writer re-does it under its locks)
       const served = questionnaires.servedDefinition(def!);
@@ -1249,7 +1265,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       if (!check.ok) {
         const parentKey = questionnaires.questionsOf(served).find((q) => q.key === questionKey)?.showIf?.key ?? null;
         const parentRow = parentKey === null ? undefined : rows.find((r) => r.questionKey === parentKey);
-        const parentUnreadable = parentRow !== undefined && parentRow.valueCiphertext !== null && !decryptedLive.has(parentRow.answerId);
+        const parentUnreadable = parentRow !== undefined && unreadableLive.has(parentRow.answerId);
         translateGroundInspectionError(
           check.reason === 'condition_not_met' && parentUnreadable
             ? new claim.GroundInspectionQuestionnaireStaleError()
@@ -1282,6 +1298,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           codes: body.codes,
           prepared,
           decryptedLive,
+          unreadableLive,
           todayIst,
         });
         ok = true;

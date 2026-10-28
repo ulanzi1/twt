@@ -357,6 +357,14 @@ describe('the dependants a changed answer supersedes (PM7 (b))', () => {
     expect(dependantsToSupersede(PEER_MESH_QUESTIONNAIRE_V2, 'death_cause', ['illness_sudden'], live)).toEqual([]);
     expect(dependantsToSupersede(PEER_MESH_QUESTIONNAIRE_V2, 'has_died', ['not_died'], new Map([['has_died', ['died']]]))).toEqual([]);
   });
+  it('⭐ Story 6.32 review R2 — an UNRELATED change never supersedes a dependant whose parent is unknown (`null` — will ⛔ decrypt)', () => {
+    const unreadableCause = new Map<string, readonly string[] | null>([['has_died', ['died']], ['death_cause', null], ['death_illness', ['cancer']], ['how_known', ['family_told']]]);
+    expect(dependantsToSupersede(PEER_MESH_QUESTIONNAIRE_V2, 'how_known', ['heard_from_others'], unreadableCause)).toEqual([]);
+    // the unknown parent ITSELF replaced ⇒ its dependant is re-evaluated against the new value
+    expect(dependantsToSupersede(PEER_MESH_QUESTIONNAIRE_V2, 'death_cause', ['accident'], unreadableCause)).toEqual(['death_illness']);
+    // and a change ABOVE it still reaches it transitively
+    expect(dependantsToSupersede(PEER_MESH_QUESTIONNAIRE_V2, 'has_died', ['not_sure'], unreadableCause)).toEqual(['death_cause', 'death_illness']);
+  });
 });
 
 describe('the date window helper — month / year / leap boundaries (±1 inside, ±2 outside)', () => {

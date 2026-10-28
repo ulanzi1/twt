@@ -90,10 +90,24 @@ async function prepared(ctx: Ctx, key: string, codes: string[]): Promise<Prepare
 /** The handler's pre-lock decrypt, faked from the test ciphertext. */
 async function decryptedLiveOf(ctx: Ctx, gid: GroundInspectionId): Promise<Map<string, string[]>> {
   const rows = await readLiveGroundInspectionAnswers(bindScopedDb(ctx.client), ctx.pid, gid);
-  return new Map(rows.filter((r) => r.valueCiphertext !== null).map((r) => [r.answerId, JSON.parse(r.valueCiphertext!.slice('enc:test:'.length)) as string[]]));
+  return new Map(
+    rows.filter((r) => r.valueCiphertext?.startsWith('enc:test:') === true).map((r) => [r.answerId, JSON.parse(r.valueCiphertext!.slice('enc:test:'.length)) as string[]]),
+  );
 }
 
-async function save(ctx: Ctx, gid: GroundInspectionId, key: string, codes: string[], over: { actor?: string; registry?: readonly QuestionnaireDefinition[]; decrypted?: Map<string, string[]> } = {}) {
+/** The handler's KNOWN-UNREADABLE set, faked: every live ciphertext that is ⛔ a test ciphertext (erased — the sentinel). */
+async function unreadableLiveOf(ctx: Ctx, gid: GroundInspectionId): Promise<Set<string>> {
+  const rows = await readLiveGroundInspectionAnswers(bindScopedDb(ctx.client), ctx.pid, gid);
+  return new Set(rows.filter((r) => r.valueCiphertext !== null && !r.valueCiphertext.startsWith('enc:test:')).map((r) => r.answerId));
+}
+
+async function save(
+  ctx: Ctx,
+  gid: GroundInspectionId,
+  key: string,
+  codes: string[],
+  over: { actor?: string; registry?: readonly QuestionnaireDefinition[]; decrypted?: Map<string, string[]>; unreadable?: Set<string> } = {},
+) {
   return saveGroundInspectionAnswer(ctx.client, {
     pariwarId: ctx.pid,
     groundInspectionId: gid,
@@ -102,6 +116,7 @@ async function save(ctx: Ctx, gid: GroundInspectionId, key: string, codes: strin
     codes,
     prepared: await prepared(ctx, key, codes),
     decryptedLive: over.decrypted ?? (await decryptedLiveOf(ctx, gid)),
+    unreadableLive: over.unreadable ?? (await unreadableLiveOf(ctx, gid)),
     todayIst: TODAY,
     registry: over.registry ?? REGISTRY,
   });
@@ -220,6 +235,58 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the family\'s answers at the inspe
     });
   });
 
+  describe('review R2 — a KNOWN-UNREADABLE saved answer (erased, malformed, undecryptable) is ⛔ a stale read', () => {
+    /** As the superuser: the RTBF scrub's form (0188's erasure arm) — the sentinel, the indexes NULL. */
+    async function scrub(ctx: Ctx, gid: GroundInspectionId, key: string) {
+      await ctx.client.query('RESET ROLE');
+      await ctx.client.query(
+        `UPDATE claim_ground_inspection_answers SET value_ciphertext = '[anonymized]', value_code_indexes = NULL
+          WHERE pariwar_id = $1 AND ground_inspection_id = $2 AND question_key = $3 AND superseded_at IS NULL`,
+        [ctx.pid, gid, key],
+      );
+      await enterAppScope(ctx.client, ctx.pid);
+    }
+
+    it('an unreadable CAUSE: the letter saves, the cause is REPLACED (its illness superseded); the illness stays refused (fail-closed)', async () => {
+      const ctx = await claim();
+      const gid = await schedule(ctx);
+      await save(ctx, gid, 'death_cause', ['illness_long']);
+      await save(ctx, gid, 'death_illness', ['tb']);
+      await scrub(ctx, gid, 'death_cause');
+      expect((await save(ctx, gid, 'head_letter', ['collected'])).written).toBe(true);
+      // the dependency check stays FAIL-CLOSED: an unknown parent never meets a condition
+      await expect(underSavepoint(ctx.client, () => save(ctx, gid, 'death_illness', ['cancer']))).rejects.toMatchObject({
+        name: 'GroundInspectionQuestionnaireInvalidAnswerError',
+        reason: 'condition_not_met',
+      });
+      const replaced = await save(ctx, gid, 'death_cause', ['accident']);
+      expect(replaced).toMatchObject({ written: true, supersededDependants: ['death_illness'] });
+      const live = await readLiveGroundInspectionAnswers(bindScopedDb(ctx.client), ctx.pid, gid);
+      expect(live.map((r) => [r.questionKey, r.valueCiphertext])).toEqual([
+        ['head_letter', null],
+        ['death_cause', 'enc:test:["accident"]'],
+      ]);
+    });
+
+    it('an unreadable ILLNESS under a readable cause is REPLACED', async () => {
+      const ctx = await claim();
+      const gid = await schedule(ctx);
+      await save(ctx, gid, 'death_cause', ['illness_sudden']);
+      await save(ctx, gid, 'death_illness', ['tb']);
+      await scrub(ctx, gid, 'death_illness');
+      expect((await save(ctx, gid, 'death_illness', ['cancer'])).written).toBe(true);
+    });
+
+    it('a GENUINE stale read is still refused — a live row in NEITHER map was written after the handler read', async () => {
+      const ctx = await claim();
+      const gid = await schedule(ctx);
+      await save(ctx, gid, 'death_cause', ['old_age']);
+      await expect(
+        underSavepoint(ctx.client, () => save(ctx, gid, 'head_letter', ['collected'], { decrypted: new Map(), unreadable: new Set() })),
+      ).rejects.toBeInstanceOf(GroundInspectionQuestionnaireStaleError);
+    });
+  });
+
   describe('AC4 (b) — completion is unchanged (I1)', () => {
     it('`complete` succeeds with ZERO answers on a visit whose pinned version HAS a recorded basis', async () => {
       const ctx = await claim();
@@ -307,6 +374,15 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the family\'s answers at the inspe
       expect(account[0]!.answers.map((a) => [a.questionKey, a.valueCodes, a.valueCiphertext])).toEqual([
         ['head_letter', ['not_collected'], null],
         ['death_cause', null, 'enc:test:["accident"]'],
+      ]);
+    });
+
+    it('⭐ review R3 — a completed full visit that saved ⛔ answer is IN the account (empty answers — the approver reads "Letter: not recorded")', async () => {
+      const ctx = await claim();
+      const zero = await schedule(ctx);
+      await completeWithDate(ctx.client, ctx.pid, ctx.cid, zero, { actor: INSPECTOR });
+      expect(await readClaimFamilyAccount(bindScopedDb(ctx.client), ctx.pid, ctx.cid)).toEqual([
+        { groundInspectionId: zero, questionnaireVersionId: null, completedAt: expect.any(Date), answers: [] },
       ]);
     });
   });

@@ -9,7 +9,9 @@
 //     cause saved through the domain writer with an INJECTED registry — the shipped v1 keeps it `'pending'`, TR7);
 //   · AC8 — the family account rides the neighbours' section: present for the District Admin (labels in English, the cause
 //     decrypted), on an `empty` section (⛔ selection — the no-one-asked claim), ABSENT for a hidden reader; ⛔ on the
-//     claim-wide list read.
+//     claim-wide list read;
+//   · the code review's R2 (an erased cause ⛔ blocks the letter), R3 (a zero-answer visit is in the account), R4 (the path's
+//     claim is BOUND to the assignment) and R6 (a tampered session naming a non-human actor is refused, ⛔ a row written).
 
 import { randomUUID } from 'node:crypto';
 
@@ -139,6 +141,14 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     if (n === 0) await td.pool.query(`DELETE FROM claim_peer_mesh_selections WHERE pariwar_id = $1 AND claim_case_id = $2`, [p, String(cid)]);
     const uploadId = await inScope(p, async (tx) => (await insertDeathCertificate(tx, p, String(cid))).uploadId);
     return { p, cid: String(cid), uploadId, neighbours: n === 0 ? [] : neighbours, pingIds: n === 0 ? [] : pingIds, inspector };
+  }
+
+  /** A SECOND claim in `w`'s Pariwar (same inspector, same district) — for the path-binding refusal (R4). */
+  async function secondClaim(w: World): Promise<World> {
+    const neighbour = await fx.seedNeighbour(env, w.p, 'Neighbour Second', '+919876543399');
+    const { cid } = await fx.seedClaimWithPings(env, w.p, [neighbour], [true]);
+    const uploadId = await inScope(w.p, async (tx) => (await insertDeathCertificate(tx, w.p, String(cid))).uploadId);
+    return { ...w, cid: String(cid), uploadId, neighbours: [neighbour], pingIds: [] };
   }
 
   async function assign(w: World, opts: { inspector?: string; stage?: 'initial' | 'certificate_check' } = {}): Promise<string> {
@@ -337,6 +347,59 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     expect((await td.pool.query(`SELECT 1 FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1`, [gid])).rowCount).toBe(0);
   });
 
+  it('⭐ review R4 — a path naming ANOTHER claim than the assignment\'s ⇒ 404 on GET and PUT, before any read or write', async () => {
+    const a = await world();
+    const b = await secondClaim(a);
+    const gidB = await assign(b);
+    // the positive control: B's own path works
+    expect((await getQ(a.inspector.client, b, gidB)).statusCode).toBe(200);
+    // claim A in the path, B's assignment id ⇒ the SAME 404 as a missing assignment
+    const g = await getQ(a.inspector.client, a, gidB);
+    expect(g.statusCode).toBe(404);
+    expect(errOf(g).code).toBe('ground_inspection.not_found');
+    const p = await putA(a.inspector.client, a, gidB, 'head_letter', { codes: ['collected'] });
+    expect(p.statusCode).toBe(404);
+    expect(errOf(p).code).toBe('ground_inspection.not_found');
+    expect((await td.pool.query(`SELECT 1 FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1`, [gidB])).rowCount).toBe(0);
+    expect(audits('admin_ground_inspection.questionnaire_read', gidB)).toHaveLength(1);
+  });
+
+  it('⭐ review R6 (AC3) — a tampered session naming a nonexistent system/service actor is refused on GET and PUT; ⛔ an answer written', async () => {
+    const w = await world();
+    const gid = await assign(w);
+    // the positive control: the human inspector reads and saves
+    expect((await getQ(w.inspector.client, w, gid)).statusCode).toBe(200);
+    expect((await putA(w.inspector.client, w, gid, 'head_letter', { codes: ['collected'] })).statusCode).toBe(200);
+    // House runtime adversary (6.27d CR5): the cookie stays valid, its persisted principal has ⛔ human account / grants.
+    await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [randomUUID(), w.inspector.userId]);
+    try {
+      expect((await getQ(w.inspector.client, w, gid)).statusCode).toBe(404);
+      expect((await putA(w.inspector.client, w, gid, 'head_letter', { codes: ['not_collected'] })).statusCode).toBe(404);
+      const rows = await td.pool.query(`SELECT question_key, value_codes, saved_by_actor_id FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1`, [gid]);
+      expect(rows.rows).toEqual([{ question_key: 'head_letter', value_codes: ['collected'], saved_by_actor_id: w.inspector.userId }]);
+    } finally {
+      await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [w.inspector.userId, w.inspector.userId]);
+    }
+  });
+
+  it('⭐ review R2 — an ERASED cause (the RTBF sentinel) ⛔ blocks the letter: the save succeeds and the inspector reads the cause back as unavailable', async () => {
+    const w = await world();
+    const gid = await assign(w);
+    await familySaid(w, gid, 'death_cause', ['accident']);
+    await td.pool.query(
+      `UPDATE claim_ground_inspection_answers SET value_ciphertext = '[anonymized]', value_code_indexes = NULL WHERE ground_inspection_id = $1 AND question_key = 'death_cause'`,
+      [gid],
+    );
+    const r = await putA(w.inspector.client, w, gid, 'head_letter', { codes: ['collected'] });
+    expect(r.statusCode, r.body).toBe(200);
+    expect(r.json<Json>()).toMatchObject({ written: true, supersededDependants: [] });
+    const back = await getQ(w.inspector.client, w, gid);
+    expect(back.json<Json>()['answers']).toEqual([
+      { questionKey: 'death_cause', value: { kind: 'unavailable' } },
+      { questionKey: 'head_letter', value: { kind: 'codes', codes: ['collected'] } },
+    ]);
+  });
+
   // ── AC4 — completion is unchanged ───────────────────────────────────────────────────────────────────────────────────────
 
   it('⭐ AC4 / AC10 — `complete` succeeds with ZERO answers, and with the letter NOT collected; then the visit is read-only (409 `not_active`)', async () => {
@@ -417,6 +480,16 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     const reader = await authenticate('District Admin');
     const section = await consoleSection(w, reader.userId);
     expect(section).toMatchObject({ status: 'empty', familyAccount: [{ groundInspectionId: gid, answers: [{ questionKey: 'head_letter', value: { codes: ['not_collected'], labels: ['No — no letter was collected'] } }] }] });
+    expect(() => PeerMeshSection.parse(section)).not.toThrow();
+  });
+
+  it('⭐ review R3 (AC10) — a no-one-asked claim whose full visit saved ⛔ answer still carries the visit (empty answers ⇒ "Letter: not recorded")', async () => {
+    const w = await world(0);
+    const gid = await assign(w);
+    expect((await complete(w.inspector.client, w, gid)).statusCode).toBe(200);
+    const reader = await authenticate('District Admin');
+    const section = await consoleSection(w, reader.userId);
+    expect(section).toMatchObject({ status: 'empty', familyAccount: [{ groundInspectionId: gid, answers: [] }] });
     expect(() => PeerMeshSection.parse(section)).not.toThrow();
   });
 

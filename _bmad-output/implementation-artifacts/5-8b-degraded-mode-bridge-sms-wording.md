@@ -15,10 +15,11 @@ creation: HEAD equalled origin/main after `git fetch origin`. Re-run 2026-10-28 
 `roles.ts`, `emit-openapi.ts`). None of the bridge's own files moved; the cites that did are re-taken below (`server.ts:254`). The
 branch is NOT yet rebased — Task 0.1 does it.) Task 0.1 DONE 2026-10-28: rebased onto `64e01121` and re-pinned — Debug Log (d).
 
-STATUS: 2026-10-27 created (`bmad-create-story 5.8b`) → ready-for-dev; 2026-10-28 v1.2. Task 0.2 (the build decisions FS1–FS16) is
-BigDev's and is OPEN; ⛔ code before it. v1.2 CHANGED these proposals — read them fresh: FS3 (+ FS3.1), FS4 (new ⭐ (d)), FS6, FS8,
+STATUS: 2026-10-27 created (`bmad-create-story 5.8b`) → ready-for-dev; 2026-10-28 v1.2. Task 0.2 ANSWERED 2026-10-28 (v1.4): BigDev
+"FS1-FS16 as recommended" — every ⭐ option (FS4 (d), FS3.1 (a), FS11 with the FS4 (d) sentence) — Debug Log (a). ⛔ Still no code
+before Task 0.3 (the decision committed ALONE) and Task 0.4 (records). PQ2 / PQ1 are the Panel's and open. (Before v1.4: v1.2 CHANGED these proposals — read them fresh: FS3 (+ FS3.1), FS4 (new ⭐ (d)), FS6, FS8,
 FS9, FS10, FS11 (new sentence; the screen's two existing AR-20 sentences), FS12 (legs), FS13 (PQ2), and NEW FS15 (the English
-template's SMS type) and FS16 (PQ2's interim).
+template's SMS type) and FS16 (PQ2's interim).)
 
 START CONDITION — MET at the pin: 5.8 (the declaration, the primitive, the admin surface), 8.1 (`openCycleAlert` stamps
 `time_critical` from the declaration at the freeze instant), 8.8 (the live fan-out), 5.11 (the honest SMS rung), 5.11b (the real alert
@@ -406,7 +407,7 @@ was told before a missed cycle counts. (The Niyamavali is a rulebook, not a rati
   carve-out, not the per-member fallback (G6) — so these tests are REWRITTEN to say what is now true (the three per-member notices, plus
   ONE bridge message that exists only on a bridged alert), each rewrite stating what it replaced. The names are not changed to slip past them.
 
-## ⚖️ Build decisions (⭐ = recommended) — PROPOSED for BigDev at Task 0.2
+## ⚖️ Build decisions (⭐ = recommended) — PROPOSED for BigDev at Task 0.2; ANSWERED 2026-10-28: every ⭐ (Debug Log (a))
 
 Each is the author's (§0) unless it says PQ. Answer by letter; a bare letter means the option's outcome AND its cost line.
 
@@ -771,7 +772,7 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
         **S5** Row 30 (d) was answered with a per-variable limit other than 30 (the slot maxima and every count change); **S6** row `5-14` has
         started and fixed the pool-open channel words differently (one source for BigDev's words); **S7** ANSWERED 2026-10-28 (F7: a
         deceased member IS rostered) — re-confirm the cites and put it to BigDev WITH FS4 (it decides FS4 (a) vs (d)).
-  - [ ] 0.2 Put FS1–FS16, the words (en + hi), PQ2 and PQ1 to BigDev — the v1.2-changed FS first (header STATUS); record the answers
+  - [x] 0.2 (DONE 2026-10-28 — Debug Log (a): "FS1-FS16 as recommended"; PQ2 / PQ1 stay the Panel's; roster leg (b) NOT discharged) Put FS1–FS16, the words (en + hi), PQ2 and PQ1 to BigDev — the v1.2-changed FS first (header STATUS); record the answers
         VERBATIM in Debug Log (a), each with its option's conditions (footgun #45). If BigDev confirms the words in session, roster leg (b)
         still says *"whether that discharges this leg is recorded here, not assumed"*.
   - [ ] 0.3 Write the PQ2 + PQ1 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first; the "Corrected in this note" line;
@@ -991,7 +992,33 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 
 ### Debug Log References
 
-- (a) Task 0.2 — BigDev's answers to FS1–FS16, PQ2 and PQ1, verbatim: (open)
+- (a) Task 0.2 — BigDev's answers to FS1–FS16, PQ2 and PQ1, verbatim — 2026-10-28: **"FS1-FS16 as recommended"**. Read as every ⭐
+  option, each WITH its cost line (footgun #45) — nothing else was said, so nothing else is assumed:
+  - **FS1 (a)** the cycle-open notice in BigDev's reviewed words (en + hi, the table under "The words"), message `cycle_open_bridge`;
+    three variables; 2 en / 3 hi parts at the longest. **FS2 (a)** the manual declaration is the trigger; the WhatsApp-off conjunct is
+    the deferred detector's — recorded as the AUTHOR'S reading of `architecture.md` §3.4 and `prd.md:1074` in "How much to trust".
+  - **FS3 (a)** the text FIRST, the push → WhatsApp ladder as the fallback (rung `sms_bridge_already_tried`); the bridge's trail entry
+    first; the Telegram mirror runs on the `sent` path too; §3.4 `:2308` MATCH by scope. **FS3.1 (a)** give the `deferred` row up when the
+    ladder delivers — the seam gains one operation (the dev's shape, named in the decision).
+  - **FS4 (d)** every rostered member with an SMS target, MINUS the `account-frozen` overlay when the child runs (set-based
+    `NOT_DECEASED`, a new consumer — `overlay.ts:35-38` gains it; ⛔ not in the roster); I10. Suspended and grace members ARE texted.
+  - **FS5 (a)** bounded jobs of ≤ 8 members, languages read in the identity scope. **FS6 (a)** only the `full` name; `shortened` /
+    `too_long` ⇒ the block is omitted and ONE alarm `alert_sms.name_over_60_unruled` per job, until PQ1. **FS7 (a)** an optional `sms`
+    block on `alert_published`, the contract refined to `time_critical` only, SAME registry and enum; `openapi/v1.yaml` unchanged.
+  - **FS8 (a)** reuse `alert_sms_sends` (+ message `cycle_open_bridge`, + occasion `cycle_open`); six → seven texts per member per cycle —
+    SUPERSEDE IN PART of `-404` (headline, FS6 (a), FS8 (d)) and the §3.4 dated note. **FS9 (a)** remove the bridged arm of
+    `shouldRetryFanOut` — SUPERSEDE IN PART of `-394` item 1's bridged clause. **FS10 (a)** the sweep re-derives the signal through one
+    shared `(db, cycleId)` domain function.
+  - **FS11 (a)** replace the page header's and the banner's AR-20 sentences with the FS11 sentence, PLUS (FS4 (d)) *"Members whose death
+    has been reported are not texted."*; new RTL tests. **FS12 (a)** a NEW roster row (`degraded-bridge-sms-live`), legs (a)–(h).
+    **FS13 (a)** ONE Panel note, PQ2 + PQ1, blocking the go-live row and not the build. **FS14 (a)** framework documents untouched.
+    **FS15 (a)** the en template registered Unicode, like template 14. **FS16 (a)** build now; PQ2 gates go-live.
+  - ⛔ **NOT answered by this, and so still OPEN:** (1) **PQ2 and PQ1** — the Panel's; FS13 (a) says only that the note is written
+    (Task 0.3) and NOT sent until BigDev sends it. (2) **Roster leg (b)** — the Hindi string's review: BigDev chose the words (FS1 (a)) but
+    did not confirm the review in this session, so leg (b) is NOT discharged here. (3) **S4** — whether any deployed environment holds a
+    degraded-mode declaration (asked 2026-10-28; no answer yet; it does not block the build — nothing is texted before the templates are
+    approved — but it is re-asked before go-live). (4) **S2** — the sequencing after 6.32 (`-414`, Row 43, `0189`) — asked, no answer;
+    the plan stands unless BigDev says otherwise, and every number is re-found at the time of use anyway.
 - (b) Mutants proven RED: (open)
 - (c) `pnpm ci:local` evidence: (open)
 - (d) Task 0.1 preflight results (pin checks, F1–F16 re-run, S1–S7) — 2026-10-28:
@@ -1049,4 +1076,5 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 | 2026-10-27 | v1.1 | Fresh-context fact-check applied (about 75 cites confirmed): FS7 (a) gains a contract refinement (`alert_published` may carry a block only when `time_critical`) because THREE existing tests assert the contract refuses a block there (F16); the admin module has no tests (AC8, FS11 — new ones); templates 7–14 already carry three variables (F12); `-394` item 1 is the ruling behind the retry arm and is superseded in part (F8, FS9, AC0); the stale ledger letter, R10(B)'s source, README §5's "same template body" row, the closed list's omissions (`:858-870`, `:920-929`, Row 30 note (1)) and several quotes corrected. |
 | 2026-10-28 | v1.2 | `bmad-create-story validate 5.8b` — three read-only verifiers (the fan-out / contract / record; the producer / sweep / screen; governance / records) re-checked about 200 claims against `4e57fa42` and `origin/main` `64e01121` (11b.4a landed). Applied: S7 ANSWERED — a deceased member IS rostered (F7) ⇒ NEW ⭐ FS4 (d), I10, G10 (§3.4 lifecycle suppression), T22; G6 re-read as a WIDENING of what the Panel was told (pool openings "never texted") ⇒ NEW PQ2, FS16, `-389` headline / §1 item 1 added to the supersede list; F8 / FS9 corrected — the `-394` quote had dropped its ⛔, and the arm's removal changes only a bridged no-target member with a named WhatsApp refusal; F11 / FS11 / AC8 — the page header and banner already promise AR-20's SMS-only send; FS11's sentence rewritten truthfully; the `smsMemberName` EXACT caller fence added (F16, T11, closed list); the en cost with a Devanagari name ⇒ NEW FS15; FS3 gains the trail order, the Telegram mirror on bridge-`sent`, §3.4 `:2308`'s scope, FS3.1 (the `deferred` row); FS10's shape (`loadCycleFrozenPayload`, the sweep has no `committed_at`, the hourly re-fan); the legacy conversion is a test, not code; `-404` six → seven is a supersede in part; PQ1's October withdrawal; PRD `:1074`; `-181`; the sign-off's scope; helpdesk is `helpdesk_reply`; T4; the red-vs-extended test split; every number re-found (next: `-414`, Row 43, DLT 23 / 24, `0189`, ledger `-28l`). |
 | 2026-10-28 | v1.3 | Task 0.1 DONE: rebased onto `origin/main` `64e01121` (one ledger conflict, prepend-resolved; changed-line sets verified equal) and re-pinned; F1–F16 re-verified (only `boot.ts` cites moved: `:162`, `:788-800`); S1, S3, S5, S6 clear; S2 tripped by 6.32's known roster / migration overlap (sequenced: `-414`, Row 43, `0189`); S4 clear locally, deployed environments un-attested; S7 re-confirmed. Debug Log (d). |
+| 2026-10-28 | v1.4 | Task 0.2 ANSWERED: BigDev "FS1-FS16 as recommended" — every ⭐ option, each with its cost line, recorded in Debug Log (a) (FS4 (d), FS3.1 (a), FS11 plus the FS4 (d) sentence; the `-404` and `-394` supersedes-in-part go into the decision at Task 0.3). Still open: PQ2 / PQ1 (the Panel's), roster leg (b) (the Hindi review not confirmed in session), S4 (deployed environments) and S2 (the sequencing) — asked, unanswered. Ledger `2026-10-28n`. |
 

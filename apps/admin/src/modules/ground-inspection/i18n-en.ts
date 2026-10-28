@@ -170,15 +170,23 @@ const EN: Record<string, string> = {
   'gi.questionnaire.error.answer_invalid': 'This answer cannot be saved.',
   'gi.questionnaire.error.not_active': 'This visit is no longer open for answers.',
   'gi.questionnaire.error.not_allowed': 'This claim is no longer open for answers on the visit.',
+  // ⭐ Story 6.32 second code review (S1, S4, S12, S21; story-minted) — an answer that will ⛔ be saved can be given up by
+  // name; another viewer asks for the questions; a completion the record no longer allows is said.
+  'gi.questionnaire.error.stale':
+    'This answer could not be saved: an earlier answer changed or could not be read. Check that answer, or discard the unsaved answers.',
+  'gi.questionnaire.loadDenied': 'Only the inspector for this visit, or someone allowed to act for them, can see these questions.',
+  'gi.questionnaire.discard': 'Discard the unsaved answers',
+  'gi.questionnaire.show': 'Show the questions for the family',
   // ⭐ Story 6.32 code review R1 / R5 (story-minted) — answers ⛔ saved yet are kept: leaving, loading another claim and
   // completing wait for them; each save state is announced.
-  'gi.questionnaire.leave.blocked': 'Please wait until these answers are saved before leaving this page.',
+  'gi.questionnaire.leave.blocked': 'Please wait until these answers are saved before leaving this page — or discard them.',
   'gi.questionnaire.announce': '{question}: {state}',
-  'gi.load.unsavedAnswers': 'Answers on an open visit are not saved yet. Wait until they are saved, then load another claim.',
+  'gi.load.unsavedAnswers': 'Answers on an open visit are not saved yet. Wait until they are saved, or discard them, then load another claim.',
   'gi.action.completeWaitingForAnswers':
     'Some answers to the family\'s questions are not saved yet. The visit will be completed as soon as they are saved — or complete it without them.',
   'gi.action.completeWithoutUnsaved': 'Complete without the unsaved answers',
   'gi.action.completeStopWaiting': 'Do not complete yet',
+  'gi.action.completeNotSentAfterWait': 'The visit was not completed: the record above is no longer ready. Finish it, then complete the visit.',
   // Result / errors (Story 6.27d removed `gi.result.completed` — it was never rendered; a completed FULL visit's
   // discrepancy screen carries the completion's words, and a certificate check shows its recorded card as before)
   'gi.result.scheduled': 'Assignment scheduled.',

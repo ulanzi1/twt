@@ -82,6 +82,8 @@ export const claimGroundInspectionAnswers = pgTable(
     }).onDelete('cascade'),
     uniqueIndex('claim_gi_answers_live_uq').on(t.pariwarId, t.groundInspectionId, t.questionKey).where(sql`superseded_at IS NULL`),
     index('claim_gi_answers_claim_idx').on(t.pariwarId, t.claimCaseId),
+    // Second review S20 — the visit's rows, superseded included (the as-of recompute; `live_uq` is partial).
+    index('claim_gi_answers_visit_idx').on(t.pariwarId, t.groundInspectionId),
   ],
 );
 

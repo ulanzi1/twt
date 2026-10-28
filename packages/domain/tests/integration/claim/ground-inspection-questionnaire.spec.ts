@@ -22,6 +22,7 @@ import {
   readLiveGroundInspectionAnswers,
   readOrRecomputeInspectionDiscrepancy,
   saveGroundInspectionAnswer,
+  type DecryptedLiveAnswer,
   type PreparedGroundInspectionAnswer,
 } from '../../../src/claim/index.js';
 import { GroundInspectionClaimNotInVerificationError, GroundInspectionNotActiveError } from '../../../src/claim/errors.js';
@@ -87,18 +88,22 @@ async function prepared(ctx: Ctx, key: string, codes: string[]): Promise<Prepare
   };
 }
 
-/** The handler's pre-lock decrypt, faked from the test ciphertext. */
-async function decryptedLiveOf(ctx: Ctx, gid: GroundInspectionId): Promise<Map<string, string[]>> {
+/** The handler's pre-lock decrypt, faked from the test ciphertext (each WITH the ciphertext it came from — S10). */
+async function decryptedLiveOf(ctx: Ctx, gid: GroundInspectionId): Promise<Map<string, DecryptedLiveAnswer>> {
   const rows = await readLiveGroundInspectionAnswers(bindScopedDb(ctx.client), ctx.pid, gid);
   return new Map(
-    rows.filter((r) => r.valueCiphertext?.startsWith('enc:test:') === true).map((r) => [r.answerId, JSON.parse(r.valueCiphertext!.slice('enc:test:'.length)) as string[]]),
+    rows
+      .filter((r) => r.valueCiphertext?.startsWith('enc:test:') === true)
+      .map((r) => [r.answerId, { ciphertext: r.valueCiphertext!, codes: JSON.parse(r.valueCiphertext!.slice('enc:test:'.length)) as string[] }]),
   );
 }
 
-/** The handler's KNOWN-UNREADABLE set, faked: every live ciphertext that is ⛔ a test ciphertext (erased — the sentinel). */
-async function unreadableLiveOf(ctx: Ctx, gid: GroundInspectionId): Promise<Set<string>> {
+/** The handler's KNOWN-UNREADABLE map, faked: every live ciphertext that is ⛔ a test ciphertext (erased — the sentinel). */
+async function unreadableLiveOf(ctx: Ctx, gid: GroundInspectionId): Promise<Map<string, string>> {
   const rows = await readLiveGroundInspectionAnswers(bindScopedDb(ctx.client), ctx.pid, gid);
-  return new Set(rows.filter((r) => r.valueCiphertext !== null && !r.valueCiphertext.startsWith('enc:test:')).map((r) => r.answerId));
+  return new Map(
+    rows.filter((r) => r.valueCiphertext !== null && !r.valueCiphertext.startsWith('enc:test:')).map((r) => [r.answerId, r.valueCiphertext!]),
+  );
 }
 
 async function save(
@@ -106,7 +111,7 @@ async function save(
   gid: GroundInspectionId,
   key: string,
   codes: string[],
-  over: { actor?: string; registry?: readonly QuestionnaireDefinition[]; decrypted?: Map<string, string[]>; unreadable?: Set<string> } = {},
+  over: { actor?: string; registry?: readonly QuestionnaireDefinition[]; decrypted?: Map<string, DecryptedLiveAnswer>; unreadable?: Map<string, string> } = {},
 ) {
   return saveGroundInspectionAnswer(ctx.client, {
     pariwarId: ctx.pid,
@@ -282,13 +287,34 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the family\'s answers at the inspe
       const gid = await schedule(ctx);
       await save(ctx, gid, 'death_cause', ['old_age']);
       await expect(
-        underSavepoint(ctx.client, () => save(ctx, gid, 'head_letter', ['collected'], { decrypted: new Map(), unreadable: new Set() })),
+        underSavepoint(ctx.client, () => save(ctx, gid, 'head_letter', ['collected'], { decrypted: new Map(), unreadable: new Map() })),
       ).rejects.toBeInstanceOf(GroundInspectionQuestionnaireStaleError);
+    });
+
+    it('⭐ second review S10 — an ERASURE between the handler\'s read and the locks is STALE: the row keeps its id, ⛔ its ciphertext', async () => {
+      const ctx = await claim();
+      const gid = await schedule(ctx);
+      await save(ctx, gid, 'death_cause', ['illness_long']);
+      // the handler's pre-lock read: the cause decrypts (illness_long) …
+      const decrypted = await decryptedLiveOf(ctx, gid);
+      const unreadable = await unreadableLiveOf(ctx, gid);
+      expect([...decrypted.values()].map((d) => d.codes)).toEqual([['illness_long']]);
+      // … then the RTBF scrub rewrites that very row IN PLACE (the same answer_id) before the write takes its locks
+      await scrub(ctx, gid, 'death_cause');
+      await expect(underSavepoint(ctx.client, () => save(ctx, gid, 'death_illness', ['cancer'], { decrypted, unreadable }))).rejects.toBeInstanceOf(
+        GroundInspectionQuestionnaireStaleError,
+      );
+      // and ⛔ illness was written under the erased cause
+      const live = await readLiveGroundInspectionAnswers(bindScopedDb(ctx.client), ctx.pid, gid);
+      expect(live.map((r) => r.questionKey)).toEqual(['death_cause']);
     });
   });
 
   describe('AC4 (b) — completion is unchanged (I1)', () => {
-    it('`complete` succeeds with ZERO answers on a visit whose pinned version HAS a recorded basis', async () => {
+    // ⭐ Second review S20 — "pinned AND zero answers" is ⛔ constructible: the version is pinned BY the first save, and an answer
+    // is never deleted. So the legs are: (1) the version pinned by ONE answer (the letter) and ⛔ cause / illness answer;
+    // (2) ZERO answers on an UNPINNED visit.
+    it('`complete` succeeds with ⛔ cause / illness answer on a visit whose pinned version HAS a recorded basis (ONE answer — the letter — pins it), and with ZERO answers unpinned', async () => {
       const ctx = await claim();
       const gid = await schedule(ctx);
       // pin the recorded version through the letter, then supersede nothing — the visit has ⛔ cause / illness answers

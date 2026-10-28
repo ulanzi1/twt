@@ -27,8 +27,10 @@
 // of the three to `now()` (the transaction START) — a writer that began before the completion but took the lock after it
 // would then fall on the wrong side. The only answer writer without the claim lock is the anonymizer (it NULLs the window
 // and code indexes), which can only DROP a ② / ③ / ④ on a later recompute (accepted — the recorded showing is the normal
-// path). ⭐ Story 6.32: the FAMILY's answers are frozen once the visit completes (0188's guard: `scheduled` only), so their
-// live set at completion IS their set as of `completed_at`.
+// path). ⭐ Story 6.32: a NEW family answer, or a supersede, needs a `scheduled` visit (0188's guard), so their live set at
+// completion IS their set as of `completed_at` — EXCEPT the guard's erasure arm (RECORDED in 0188): it admits an in-place
+// rewrite of `value_ciphertext` and indexes → NULL in ANY state (it cannot tell the RTBF scrub from another writer), and
+// such a rewrite can only DROP a ③ / ④ on a later recompute, like the anonymizer above (second review S20).
 //
 // ⚠ A LEAF: drizzle and `questionnaires/keys.ts` ONLY (`approval-warnings.ts` imports it — its import discipline holds).
 // ⛔ No ciphertext, ⛔ no KMS, ⛔ no medical module (a fence pins all three).
@@ -165,7 +167,8 @@ export function inspectionDiscrepancyAnswersSql(pariwarRef: SQL, claimRef: SQL, 
 /**
  * ⭐ Story 6.32 (AC6) — the FAMILY side: a scalar subquery yielding a JSON object of the assignment's ③ / ④ code indexes
  * (`{ death_cause?: [...] | null, death_illness?: [...] | null }`, `{}` when ⛔ answered), live or AS OF `asOf` (the same
- * predicate as the neighbours'). Codes indexes ONLY — ⛔ the answer's value. Served by `claim_gi_answers_live_uq`.
+ * predicate as the neighbours'). Codes indexes ONLY — ⛔ the answer's value. Served by `claim_gi_answers_visit_idx`
+ * (⛔ `claim_gi_answers_live_uq`: it is partial on `superseded_at IS NULL`, so the as-of branch could ⛔ use it — second review S20).
  */
 export function familyCodeIndexesSql(pariwarRef: SQL, groundInspectionRef: SQL, asOf: SQL | null): SQL {
   const live =

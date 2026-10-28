@@ -62,7 +62,7 @@ export class GroundInspectionQuestionnaireCertificateCheckError extends Error {
   }
 }
 
-/** The engine refused the answer — 422 `questionnaire.answer_invalid:<reason>`. */
+/** The engine refused the answer — 422 `questionnaire.answer_invalid`, the reason in the envelope's `details.reason`. */
 export class GroundInspectionQuestionnaireInvalidAnswerError extends Error {
   public readonly name = 'GroundInspectionQuestionnaireInvalidAnswerError';
   constructor(readonly reason: AnswerRefusalReason) {
@@ -132,7 +132,8 @@ export async function readLiveGroundInspectionAnswers(
         isNull(claimGroundInspectionAnswers.supersededAt),
       ),
     )
-    .orderBy(asc(claimGroundInspectionAnswers.savedAt))
+    // `question_key` breaks a `saved_at` tie (one live row per key ⇒ a TOTAL order — patch review: two rows of one INSERT).
+    .orderBy(asc(claimGroundInspectionAnswers.savedAt), asc(claimGroundInspectionAnswers.questionKey))
     .limit(clampLimit(GROUND_INSPECTION_LIVE_ANSWERS_CAP, { default: GROUND_INSPECTION_LIVE_ANSWERS_CAP, cap: GROUND_INSPECTION_LIVE_ANSWERS_CAP }));
 }
 
@@ -153,18 +154,29 @@ export interface SaveGroundInspectionAnswerInput {
   /** The PLAINTEXT codes — validation only; ⛔ never stored for a sensitive question. */
   readonly codes: readonly string[];
   readonly prepared: PreparedGroundInspectionAnswer;
-  /** The visit's live SENSITIVE answers, DECRYPTED by the handler before the locks, keyed by `answer_id`. */
-  readonly decryptedLive: ReadonlyMap<string, readonly string[]>;
   /**
-   * The `answer_id`s of live sensitive answers the handler READ before the locks but could ⛔ decrypt (erased, malformed,
-   * undecryptable) — their value is `null` (unknown), ⛔ a stale read (review R2). Rows are append-only, so an id read
-   * unreadable stays so; a live row in NEITHER map was written after the handler's read ⇒ stale.
+   * The visit's live SENSITIVE answers, DECRYPTED by the handler before the locks, keyed by `answer_id` — each WITH the
+   * ciphertext it was decrypted from (second review S10: the erasure arm rewrites `value_ciphertext` IN PLACE, keeping the
+   * `answer_id`, so an id alone does ⛔ prove the row is the one decrypted).
    */
-  readonly unreadableLive?: ReadonlySet<string>;
+  readonly decryptedLive: ReadonlyMap<string, DecryptedLiveAnswer>;
+  /**
+   * The live sensitive answers the handler READ before the locks but could ⛔ decrypt (erased, malformed, undecryptable),
+   * `answer_id` → the ciphertext read — their value is `null` (unknown), ⛔ a stale read (review R2). A live row whose
+   * ciphertext under the locks is ⛔ the one in EITHER map (written, or rewritten by an erasure, after the handler's read)
+   * ⇒ stale.
+   */
+  readonly unreadableLive: ReadonlyMap<string, string>;
   /** Today in IST (`YYYY-MM-DD`) — the engine's date rule (v1 has ⛔ date question). */
   readonly todayIst: string;
   /** TEST seam — see `groundInspectionVersionFor`. */
   readonly registry?: readonly QuestionnaireDefinition[];
+}
+
+/** One live sensitive answer as the handler decrypted it (second review S10). */
+export interface DecryptedLiveAnswer {
+  readonly ciphertext: string;
+  readonly codes: readonly string[];
 }
 
 export interface SaveGroundInspectionAnswerResult {
@@ -203,7 +215,14 @@ export async function saveGroundInspectionAnswer(
   const liveRows = await readLiveGroundInspectionAnswers(db, input.pariwarId, input.groundInspectionId);
   const live = new Map<string, readonly string[] | null>();
   for (const row of liveRows) {
-    const codes = row.valueCodes ?? input.decryptedLive.get(row.answerId) ?? (input.unreadableLive?.has(row.answerId) ? null : undefined);
+    const decrypted = input.decryptedLive.get(row.answerId);
+    const codes =
+      row.valueCodes ??
+      (decrypted !== undefined && decrypted.ciphertext === row.valueCiphertext
+        ? decrypted.codes
+        : input.unreadableLive.get(row.answerId) === row.valueCiphertext
+          ? null
+          : undefined);
     if (codes === undefined) throw new GroundInspectionQuestionnaireStaleError();
     live.set(row.questionKey, codes);
   }
@@ -357,6 +376,7 @@ export async function readClaimFamilyAccount(db: Db, pariwarId: PariwarId, claim
       sql`${claimGroundInspections.completedAt} DESC`,
       asc(claimGroundInspections.groundInspectionId),
       asc(claimGroundInspectionAnswers.savedAt),
+      asc(claimGroundInspectionAnswers.questionKey),
     )
     .limit(clampLimit(CLAIM_FAMILY_ACCOUNT_ROWS_CAP, { default: CLAIM_FAMILY_ACCOUNT_ROWS_CAP, cap: CLAIM_FAMILY_ACCOUNT_ROWS_CAP }));
   // Group by visit, keeping the query's order (newest completion first; answers by `saved_at`). A visit with ⛔ answer is

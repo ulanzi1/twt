@@ -8,7 +8,7 @@
 // operator affordances + the read that surfaces the signal (present, refused, unavailable, absent).
 
 import type { ReactElement } from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { type QueryObserverResult, type UseMutationResult, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '../../api/client.js';
@@ -204,6 +204,7 @@ export function GroundInspectionPage({ pariwarId }: GroundInspectionPageProps): 
                 {t('gi.load.unsavedAnswers')}
               </p>
             )}
+            <ClearWhenSaved unsavedCount={unsavedAnswers.unsaved.size} setBlocked={setLoadBlocked} />
           </form>
 
           {scope && (
@@ -397,6 +398,16 @@ function ScheduleForm(props: {
  *  recorded against the certificate compared, `2026-10-07-287` J1) and the completion (which echoes the same token). */
 type CertificateCompare = UseMutationResult<Awaited<ReturnType<typeof api.getGroundInspectionCertificate>>, Error, void>;
 
+/** ⭐ Second review S14 — once no visit holds an unsaved answer, the "load blocked" alert is cleared (⛔ re-fired by a later
+ *  edit the inspector made without pressing Load again). */
+function ClearWhenSaved(props: { unsavedCount: number; setBlocked: (blocked: boolean) => void }): null {
+  const { unsavedCount, setBlocked } = props;
+  useEffect(() => {
+    if (unsavedCount === 0) setBlocked(false);
+  }, [unsavedCount, setBlocked]);
+  return null;
+}
+
 /** A 409 that means the compared certificate is no longer the claim's current one — the Compare must be re-run. */
 function isStaleCompare(err: unknown): boolean {
   return err instanceof ApiError && (err.code === 'ground_inspection.certificate_changed' || err.code === 'ground_inspection.no_current_certificate');
@@ -486,7 +497,13 @@ function AssignmentCard(props: {
       {/* ⭐ Story 6.32 (AC7) — the family's questions, BEFORE the completion; ⛔ on a certificate check (it asks the family
           nothing); ⛔ panel at all when the server has ⛔ questionnaire (404 — IQ12). ⛔ It gates the completion (I1). */}
       {isActive && a.inspectionStage !== 'certificate_check' && (
-        <QuestionnairePanel pariwarId={props.pariwarId} claimCaseId={props.claimCaseId} groundInspectionId={a.groundInspectionId} />
+        <QuestionnairePanel
+          pariwarId={props.pariwarId}
+          claimCaseId={props.claimCaseId}
+          groundInspectionId={a.groundInspectionId}
+          viewerId={props.viewerId}
+          isInspector={props.viewerId !== null && props.viewerId === normalizeActorId(a.inspectorActorId)}
+        />
       )}
       {isActive && (
         <div className="flex flex-wrap items-start gap-4">
@@ -681,23 +698,41 @@ function CompleteAction(props: {
   // panel leaves with them: the completion WAITS for them and goes out the moment they are saved, or — the inspector's
   // explicit choice — goes out without them. ⛔ `ready` reads this: completing never needs an answer (I1).
   const gid = props.assignment.groundInspectionId;
-  const { unsaved, reportCompleting } = useUnsavedAnswers();
+  const { unsaved, reportCompleting, discardUnsaved } = useUnsavedAnswers();
   const answersUnsaved = unsaved.has(gid);
   const [waitingForAnswers, setWaitingForAnswers] = useState(false);
-  const { mutate, isPending } = mutation;
+  // ⭐ Second review S12 — the waited-for answers were saved, but the record stopped being ready meanwhile: said, ⛔ a
+  // completion dropped in silence.
+  const [notSentAfterWait, setNotSentAfterWait] = useState(false);
+  const { mutate, isPending, isSuccess } = mutation;
+  // ⭐ Second review S5 — the visit stays LOCKED once its completion succeeded (the card is scheduled until the refetch
+  // lands; an answer sent then is refused `not_active`), and the lock is taken in the SAME handler that sends it (⛔ an
+  // effect a commit later).
   useEffect(() => {
-    reportCompleting(gid, isPending);
-  }, [reportCompleting, gid, isPending]);
+    reportCompleting(gid, isPending || isSuccess);
+  }, [reportCompleting, gid, isPending, isSuccess]);
   useEffect(() => () => reportCompleting(gid, false), [reportCompleting, gid]);
+  const send = useCallback((): void => {
+    reportCompleting(gid, true);
+    mutate();
+  }, [reportCompleting, gid, mutate]);
   useEffect(() => {
     if (!waitingForAnswers || answersUnsaved) return;
     setWaitingForAnswers(false);
-    if (ready && !isPending) mutate();
-  }, [waitingForAnswers, answersUnsaved, ready, isPending, mutate]);
+    if (isPending) return;
+    if (ready) send();
+    else setNotSentAfterWait(true);
+  }, [waitingForAnswers, answersUnsaved, ready, isPending, send]);
+  useEffect(() => {
+    if (ready) setNotSentAfterWait(false);
+  }, [ready]);
   const onComplete = (): void => {
+    setNotSentAfterWait(false);
     if (answersUnsaved) setWaitingForAnswers(true);
-    else mutate();
+    else send();
   };
+  // ⭐ Second review S14 — ONE stable region (⛔ inserted already filled — a new node is ⛔ announced reliably).
+  const completeStatus = waitingForAnswers ? t('gi.action.completeWaitingForAnswers') : notSentAfterWait ? t('gi.action.completeNotSentAfterWait') : '';
   return (
     <div className="flex flex-col gap-2">
       <button
@@ -741,21 +776,28 @@ function CompleteAction(props: {
       <button
         className="self-start rounded bg-green-700 px-2 py-1 text-sm text-white disabled:opacity-50"
         type="button"
-        disabled={mutation.isPending || !ready || waitingForAnswers}
+        disabled={mutation.isPending || mutation.isSuccess || !ready || waitingForAnswers}
         onClick={onComplete}
       >
         {mutation.isPending ? t('gi.action.completePending') : t('gi.action.complete')}
       </button>
+      <p role="status" aria-live="polite" className="text-sm text-amber-700" data-testid="gi-complete-status">
+        {completeStatus}
+      </p>
       {waitingForAnswers && (
         <div className="flex flex-col gap-1 text-sm" data-testid="gi-complete-waiting">
-          <p role="status" className="text-amber-700">{t('gi.action.completeWaitingForAnswers')}</p>
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded border px-2 py-1"
+              className="rounded border px-2 py-1 disabled:opacity-50"
               type="button"
+              // ⭐ Patch review — ⛔ discard the answers for a completion the record no longer allows (it would be refused).
+              disabled={!ready || isPending}
               onClick={() => {
                 setWaitingForAnswers(false);
-                mutate();
+                // ⭐ Second review S6 — the inspector's choice is FINAL: the visit's answers ⛔ saved yet are dropped
+                // first, so a queued or backing-off save ⛔ races the completion.
+                discardUnsaved(gid);
+                send();
               }}
             >
               {t('gi.action.completeWithoutUnsaved')}

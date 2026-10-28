@@ -60,6 +60,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import {
   assemblePeerMeshSection,
   assemblePeerSection,
+  familyAccountAuditCounts,
   stitchPeerAnswerFlags,
   type PeerCallbackBasis,
   type PeerCallbackViewer,
@@ -1366,6 +1367,8 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
           claim_case_id: claimCaseId,
           district,
           deceased_member_id: packet.deceasedMemberId,
+          // ⭐ Story 6.32 (second review S15) — the family's account the neighbours' section carried (counts only).
+          ...familyAccountAuditCounts(packet.peerMesh),
         },
       });
 

@@ -75,6 +75,9 @@ ALTER TABLE "claim_ground_inspection_answers" ADD CONSTRAINT "claim_gi_answers_s
 ALTER TABLE "claim_ground_inspection_answers" ADD CONSTRAINT "claim_gi_answers_code_indexes_check" CHECK ("value_code_indexes" IS NULL OR ("question_key" IN ('death_cause', 'death_illness') AND "value_ciphertext" IS NOT NULL AND cardinality("value_code_indexes") >= 1));--> statement-breakpoint
 ALTER TABLE "claim_ground_inspection_answers" ADD CONSTRAINT "claim_gi_answers_saved_by_check" CHECK (length(btrim("saved_by_actor_id")) > 0);--> statement-breakpoint
 ALTER TABLE "claim_ground_inspection_answers" ADD CONSTRAINT "claim_gi_answers_superseded_order_check" CHECK ("superseded_at" IS NULL OR "superseded_at" >= "saved_at");--> statement-breakpoint
+-- ⭐ Second review S18 — the head's letter is ONE of its two ruled codes (⚠ LOCKSTEP with `HEAD_LETTER_CODES`, `questionnaires/keys.ts`;
+-- a policy-spec leg pins the two equal). The app layer validates it too; this is the backstop.
+ALTER TABLE "claim_ground_inspection_answers" ADD CONSTRAINT "claim_gi_answers_head_letter_codes_check" CHECK ("question_key" <> 'head_letter' OR ("value_codes" IS NOT NULL AND cardinality("value_codes") = 1 AND "value_codes"[1] IN ('collected', 'not_collected')));--> statement-breakpoint
 GRANT SELECT, INSERT ON "claim_ground_inspection_answers" TO twt_app;--> statement-breakpoint
 GRANT UPDATE ("superseded_at", "value_ciphertext", "value_code_indexes") ON "claim_ground_inspection_answers" TO twt_app;--> statement-breakpoint
 ALTER TABLE "claim_ground_inspection_answers" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
@@ -86,6 +89,9 @@ CREATE POLICY "claim_gi_answers_tenant_isolation_update" ON "claim_ground_inspec
 -- ONE live answer per question per assignment (⛔ deferrable — the writer stamps the old row FIRST, then inserts).
 CREATE UNIQUE INDEX "claim_gi_answers_live_uq" ON "claim_ground_inspection_answers" USING btree ("pariwar_id", "ground_inspection_id", "question_key") WHERE "superseded_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "claim_gi_answers_claim_idx" ON "claim_ground_inspection_answers" USING btree ("pariwar_id", "claim_case_id");--> statement-breakpoint
+-- ⭐ Second review S20 — the visit's rows INCLUDING superseded ones (the as-of recompute; the header FK's referencing side):
+-- `claim_gi_answers_live_uq` is partial, so it serves only the live set.
+CREATE INDEX "claim_gi_answers_visit_idx" ON "claim_ground_inspection_answers" USING btree ("pariwar_id", "ground_inspection_id");--> statement-breakpoint
 
 -- ── (1) + (2) the guards — invoker functions (under FORCE RLS a trigger sees its parent only in scope — 0156's form) ──────
 -- The parent: `scheduled`, ⛔ a `certificate_check` (a certificate check asks the family ⛔ nothing — IQ10), and the claim in the
@@ -142,6 +148,20 @@ BEGIN
        AND (to_jsonb(NEW) - 'superseded_at') IS NOT DISTINCT FROM (to_jsonb(OLD) - 'superseded_at')) THEN
     RAISE EXCEPTION
       'claim_ground_inspection_answers: an answer row is append-only — only superseded_at NULL → set, or the erasure scrub (Story 6.32 IQ5)'
+      USING ERRCODE = 'integrity_constraint_violation';
+  END IF;
+
+  -- ⭐ Second review S18 — the as-of recompute (`saved_at <= completed_at < superseded_at`) is only EQUAL to the in-transaction
+  -- live set if the two stamps are the DB clock's, taken under the claim lock: ⛔ a row INSERTED already superseded, ⛔ a stamp
+  -- in the future (a writer's `clock_timestamp()` is never later than the trigger's).
+  IF TG_OP = 'INSERT' AND (NEW.superseded_at IS NOT NULL OR NEW.saved_at > clock_timestamp()) THEN
+    RAISE EXCEPTION
+      'claim_ground_inspection_answers: a new answer is live, saved now (Story 6.32 second review S18)'
+      USING ERRCODE = 'integrity_constraint_violation';
+  END IF;
+  IF TG_OP = 'UPDATE' AND NEW.superseded_at > clock_timestamp() THEN
+    RAISE EXCEPTION
+      'claim_ground_inspection_answers: an answer is superseded now, ⛔ in the future (Story 6.32 second review S18)'
       USING ERRCODE = 'integrity_constraint_violation';
   END IF;
 

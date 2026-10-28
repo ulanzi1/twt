@@ -420,6 +420,26 @@ export async function assemblePeerMeshSection(
 }
 
 /**
+ * ⭐ Story 6.32 (second review S15; AC8 "audited as the section's read already is") — what the read line records of the
+ * FAMILY's account the section carried: counts only (⛔ a key's value, ⛔ a code). `family_health_answer_count` = the cause /
+ * illness answers DECRYPTED for this reader (the Tier-1 read the line must show). ⛔ section (hidden / unavailable) ⇒ zeros.
+ */
+export function familyAccountAuditCounts(section: { readonly status: string; readonly familyAccount?: readonly GroundInspectionFamilyAccountVisit[] } | undefined): {
+  readonly family_visit_count: number;
+  readonly family_answer_count: number;
+  readonly family_health_answer_count: number;
+} {
+  const visits = section?.familyAccount ?? [];
+  const answers = visits.flatMap((v) => v.answers);
+  const health: readonly string[] = questionnaires.GROUND_INSPECTION_SENSITIVE_QUESTION_KEYS;
+  return {
+    family_visit_count: visits.length,
+    family_answer_count: answers.length,
+    family_health_answer_count: answers.filter((a) => health.includes(a.questionKey) && a.value.kind === 'codes').length,
+  };
+}
+
+/**
  * ⭐ Story 6.27b (PM13's flags; AC8; Invariant 8) — each answer's `warningFlag`, STITCHED from the warnings read (the
  * SAME keys the ONE rule uses — ⛔ never a second computation) and `answerId` dropped (⛔ on the wire). PURE:
  *   · a question that can ⛔ never warn (⛔ in `PEER_MESH_WARNING_QUESTION_KEYS` — CF3 (b)) ⇒ `false`;

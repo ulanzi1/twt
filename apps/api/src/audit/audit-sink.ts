@@ -446,7 +446,8 @@ export type AuthAuditEventType =
   | 'admin_ground_inspection.certificate_viewed'
   // ⭐ Story 6.27d (AC6) — the inspector (or an override holder) recorded the family's re-told answer to ONE question the
   // discrepancy screen showed. Codes only: claim_case_id + ground_inspection_id + question_key (+ override actor) — ⛔ never
-  // the note. The re-read emits ⛔ none (the showing row records when the result was first recorded).
+  // the note. The re-read emits ⛔ line for the result itself (the showing row records when it was first recorded) — ⭐ Story 6.32
+  // S3: a ③ / ④ family answer decrypted on it is `family_answers_shown` below.
   | 'admin_ground_inspection.discrepancy_note_recorded'
   // ⭐ Story 6.32 (IQ10) — the inspector's questionnaire for the family. `questionnaire_answer_saved`: ONE answer saved (⛔ an
   // unchanged value) — claim_case_id + ground_inspection_id + question_key + questionnaire_version_id + code_count +
@@ -454,6 +455,10 @@ export type AuthAuditEventType =
   // served definition and their own answers back (decrypted) — the version + answer counts only.
   | 'admin_ground_inspection.questionnaire_answer_saved'
   | 'admin_ground_inspection.questionnaire_read'
+  // ⭐ Story 6.32 (second review S3; AC8 — a decrypt of health answers is ⛔ unaudited) — the inspector's result SHOWED the
+  // family's own cause / illness (③ / ④), decrypted: claim_case_id + ground_inspection_id + path (`completion` / `re_read`) +
+  // question_keys + shown_count + unavailable_count (+ override actor) — ⛔ never a code or a value.
+  | 'admin_ground_inspection.family_answers_shown'
   // ── Claim-time nominee bank collection surface (Story 6.8, FR-37 / Epic 6) ────
   // The dual-account (#1/#2) disbursement-detail collection — member-app (Ravi-mode) + helpline
   // twin. Post-commit SINK lines (the durable record is the claim.nominee_bank_recorded event).

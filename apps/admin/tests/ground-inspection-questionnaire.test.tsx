@@ -13,6 +13,12 @@
 //     the completion waits for it (and goes out once it is saved) or goes out WITHOUT it on the inspector's say (I1); the
 //     inputs are locked while the completion is in flight;
 //   · code review R5 — each change of an answer's save line is announced once in ONE live region (⛔ on load).
+//   · second code review — S1 an answer the server refuses for good (or one still retrying) is DISCARDED by name, and the
+//     page lets go; S4 the questions are fetched by themselves only for the assigned inspector; S5 the visit stays locked
+//     once its completion succeeded; S6 "complete without" drops the queued saves first; S7 an `unavailable` saved answer
+//     is ⛔ "Saving…" and ⛔ an alert; S11 only the network / a 5xx / a 429 is retried by itself; S12 a completion the
+//     record no longer allows is said; S14 the completion's status is ONE stable region and the "load blocked" alert is
+//     ⛔ re-fired unprompted; S21 a stale refusal is named.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -34,6 +40,7 @@ vi.mock('../src/api/client.js', async () => {
   const actual = await vi.importActual<typeof import('../src/api/client.js')>('../src/api/client.js');
   return {
     ...actual,
+    getSession: vi.fn(),
     listGroundInspection: vi.fn(),
     getGroundInspectionQuestionnaire: vi.fn(),
     saveGroundInspectionAnswer: vi.fn(),
@@ -82,8 +89,9 @@ const ok = (questionKey: string, supersededDependants: string[] = []): api.Groun
   questionnaireVersionId: 'ground_inspection.v1',
 });
 
-function renderPanel() {
-  return renderWithClient(<QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} />);
+const INSPECTOR = 'inspector-1';
+function renderPanel(viewer: { viewerId: string | null; isInspector: boolean } = { viewerId: INSPECTOR, isInspector: true }) {
+  return renderWithClient(<QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} {...viewer} />);
 }
 
 describe('<QuestionnairePanel> (AC7; IQ8 (A))', () => {
@@ -221,7 +229,7 @@ describe('<QuestionnairePanel> (AC7; IQ8 (A))', () => {
     vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce((_p, _c, _g, key) => new Promise((resolve) => { release = () => resolve(ok(key)); }));
     vi.mocked(api.saveGroundInspectionAnswer).mockImplementation(async (_p, _c, _g, key) => ok(key));
     const root = createRootRoute({ component: Outlet });
-    const visit = createRoute({ getParentRoute: () => root, path: '/visit', component: () => <QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} /> });
+    const visit = createRoute({ getParentRoute: () => root, path: '/visit', component: () => <QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} viewerId={INSPECTOR} isInspector /> });
     const other = createRoute({ getParentRoute: () => root, path: '/other', component: () => <p>Other page</p> });
     const login = createRoute({ getParentRoute: () => root, path: '/login', component: () => <p>Sign in</p> });
     const history = createMemoryHistory({ initialEntries: ['/visit'] });
@@ -247,8 +255,142 @@ describe('<QuestionnairePanel> (AC7; IQ8 (A))', () => {
   });
 });
 
-describe('the page mounts the panel (AC7)', () => {
+describe('second code review — the panel', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => cleanup());
+  const NOT_ACTIVE = () => new api.ApiError(409, 'ground_inspection.not_active', 'closed');
+
+  it('⭐ S1 — an answer the server refuses FOR GOOD can be discarded by name: it falls back to its saved value, and leaving lets go', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue({ ...QUESTIONNAIRE, answers: [{ questionKey: 'head_letter', value: { kind: 'codes', codes: ['not_collected'] } }] });
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValue(NOT_ACTIVE());
+    const root = createRootRoute({ component: Outlet });
+    const visit = createRoute({ getParentRoute: () => root, path: '/visit', component: () => <QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} viewerId={INSPECTOR} isInspector /> });
+    const other = createRoute({ getParentRoute: () => root, path: '/other', component: () => <p>Other page</p> });
+    const history = createMemoryHistory({ initialEntries: ['/visit'] });
+    renderWithClient(<RouterProvider router={createRouter({ routeTree: root.addChildren([visit, other]), history })} />);
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    expect(await within(letter).findByRole('alert')).toHaveTextContent('This visit is no longer open for answers.');
+    // "Try saving again" only repeats the refusal …
+    fireEvent.click(screen.getByRole('button', { name: 'Try saving again' }));
+    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(2));
+    await act(async () => { history.push('/other'); await new Promise((r) => setTimeout(r, 0)); });
+    expect(history.location.pathname).toBe('/visit');
+    expect(await screen.findByTestId('gi-questionnaire-leave-blocked')).toHaveTextContent('or discard them');
+    // … "Discard the unsaved answers" lets go of it
+    fireEvent.click(await screen.findByRole('button', { name: 'Discard the unsaved answers' }));
+    await waitFor(() => expect(within(screen.getByTestId('gi-questionnaire-head_letter')).getByLabelText(/No — no letter/)).toBeChecked());
+    expect(screen.queryByTestId('gi-questionnaire-unsaved')).toBeNull();
+    const leave = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(leave);
+    expect(leave.defaultPrevented).toBe(false);
+    await act(async () => { history.push('/other'); await new Promise((r) => setTimeout(r, 0)); });
+    expect(history.location.pathname).toBe('/other');
+  });
+
+  it('⭐ S1 — an answer still RETRYING (the network is down) can be discarded too; ⛔ sent again when the network returns', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Not saved — retrying'));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard the unsaved answers' }));
+    await waitFor(() => expect(screen.queryByTestId('gi-questionnaire-unsaved')).toBeNull());
+    expect(within(letter).getByLabelText(/Yes — I collected/)).not.toBeChecked();
+    await act(async () => window.dispatchEvent(new Event('online')));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(1);
+  });
+
+  it('⭐ patch review — a save that HANGS (⛔ transport timeout) can be discarded too: the page is ⛔ held by it', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementation(() => new Promise(() => {}));
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saving…'));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard the unsaved answers' }));
+    await waitFor(() => expect(screen.queryByTestId('gi-questionnaire-unsaved')).toBeNull());
+  });
+
+  it('⭐ patch review — a viewer ⛔ allowed to act for the inspector is TOLD so after asking, ⛔ offered "Try again"', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockRejectedValue(new api.ApiError(403, 'authz.denied', 'denied'));
+    renderPanel({ viewerId: 'supervisor-1', isInspector: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Show the questions for the family' }));
+    expect(await screen.findByTestId('gi-questionnaire-load-denied')).toHaveTextContent('Only the inspector for this visit');
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    expect(screen.queryByTestId('gi-questionnaire-load-failed')).toBeNull();
+  });
+
+  it('⭐ S4 — another viewer asks for the questions (⛔ fetched by themselves); the button waits for the viewer to be known', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    const { unmount } = renderPanel({ viewerId: null, isInspector: false });
+    expect(screen.getByTestId('gi-questionnaire-show')).toBeDisabled();
+    unmount();
+    renderPanel({ viewerId: 'supervisor-1', isInspector: false });
+    const show = screen.getByRole('button', { name: 'Show the questions for the family' });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(api.getGroundInspectionQuestionnaire).not.toHaveBeenCalled();
+    fireEvent.click(show);
+    expect(await screen.findByTestId('gi-questionnaire-head_letter')).toBeInTheDocument();
+    expect(api.getGroundInspectionQuestionnaire).toHaveBeenCalledTimes(1);
+  });
+
+  it('⭐ S7 — an answer that could ⛔ be shown reads `Saved` (⛔ "Saving…"), and its notice is ⛔ an alert', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue({ ...QUESTIONNAIRE, answers: [{ questionKey: 'death_cause', value: { kind: 'unavailable' } }] });
+    renderPanel();
+    const cause = await screen.findByTestId('gi-questionnaire-death_cause');
+    expect(within(cause).getByText('This answer could not be shown just now.')).toBeInTheDocument();
+    expect(within(cause).queryByRole('alert')).toBeNull();
+    expect(screen.getByTestId('gi-questionnaire-death_cause-state')).toHaveTextContent('Saved');
+    expect(screen.queryByTestId('gi-questionnaire-unsaved')).toBeNull();
+  });
+
+  it('⭐ S11 — only the network, a 5xx and a 429 are retried by themselves; a response that fails its schema waits for "Try saving again"', async () => {
+    const { isRetryableSaveError } = await import('../src/modules/ground-inspection/QuestionnairePanel.js');
+    expect(isRetryableSaveError(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isRetryableSaveError(new api.ApiError(503, 'http.503', 'down'))).toBe(true);
+    expect(isRetryableSaveError(new api.ApiError(429, 'rate_limited', 'slow down'))).toBe(true);
+    expect(isRetryableSaveError(new api.ApiError(422, 'questionnaire.answer_invalid', 'no'))).toBe(false);
+    expect(isRetryableSaveError(new SyntaxError('Unexpected token <'))).toBe(false);
+    expect(isRetryableSaveError(new Error('ZodError: invalid response'))).toBe(false);
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(new Error('ZodError: invalid response'));
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    expect(await within(letter).findByRole('alert')).toHaveTextContent('Not saved');
+    await act(async () => window.dispatchEvent(new Event('online')));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(1);
+  });
+
+  it('⭐ S21 — a STALE refusal that does not clear (an unreadable earlier answer) is named after its retries', async () => {
+    const stale = () => new api.ApiError(409, 'ground_inspection.questionnaire_stale', 'stale');
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValue(stale());
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    // each automatic retry waits out a backoff — the network event ends each wait at once
+    for (let i = 0; i < 3; i += 1) {
+      await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(i + 1));
+      await act(async () => window.dispatchEvent(new Event('online')));
+    }
+    expect(await within(letter).findByRole('alert')).toHaveTextContent('an earlier answer changed or could not be read');
+    expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('the page mounts the panel (AC7)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // the session IS the assigned inspector (second review S4 — the questions are fetched by themselves only for them)
+    vi.mocked(api.getSession).mockResolvedValue({ userId: INSPECTOR, nationalGrants: [] });
+  });
   afterEach(() => cleanup());
   const assignment = (over: Partial<api.GroundInspectionAssignmentT> = {}): api.GroundInspectionAssignmentT => ({
     groundInspectionId: GID,
@@ -256,7 +398,7 @@ describe('the page mounts the panel (AC7)', () => {
     block: null,
     inspectionStage: 'initial',
     inspectionSiteType: 'family_residence',
-    inspectorActorId: 'inspector-1',
+    inspectorActorId: INSPECTOR,
     scheduledAt: '2026-07-10T12:00:00.000Z',
     status: 'scheduled',
     refusalReason: null,
@@ -345,7 +487,8 @@ describe('the page mounts the panel (AC7)', () => {
       const user = await readyToComplete();
       fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
       await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
-      expect(await screen.findByTestId('gi-complete-waiting')).toHaveTextContent('not saved yet');
+      await screen.findByTestId('gi-complete-waiting');
+      expect(screen.getByTestId('gi-complete-status')).toHaveTextContent('not saved yet');
       expect(api.completeGroundInspection).not.toHaveBeenCalled();
       await act(async () => save.release());
       await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalledTimes(1));
@@ -393,6 +536,153 @@ describe('the page mounts the panel (AC7)', () => {
       await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalledTimes(1));
       expect(screen.queryByTestId('gi-complete-waiting')).toBeNull();
       expect(api.saveGroundInspectionAnswer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('second code review — the page', () => {
+    const originalPhoto = {
+      photoId: 'p-orig', contentType: 'image/jpeg', byteSize: 1, caption: null, captionWithheld: null, signedUrl: 'https://x/p',
+      photoKind: 'original_certificate' as const, certificateToken: 'tok-current' as string | null,
+    };
+    const CERT = { certificateToken: 'tok-current', contentType: 'application/pdf', signedUrl: 'https://x/certificate', expiresInSeconds: 300 };
+    async function readyToComplete() {
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Compare with the certificate we hold' }));
+      await screen.findByRole('link', { name: 'Open the uploaded certificate' });
+      await user.click(screen.getByLabelText('It matches'));
+      fireEvent.change(screen.getByLabelText(/Date of death/), { target: { value: '2026-06-01' } });
+      return user;
+    }
+    function pendingSave(): { release: () => void } {
+      const handle = { release: () => {} };
+      vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce(
+        (_p, _c, _g, key) => new Promise((resolve) => { handle.release = () => resolve(ok(key)); }),
+      );
+      return handle;
+    }
+
+    it('⭐ S1 — a refused answer holds "Load" only until it is discarded', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment()] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValue(new api.ApiError(409, 'ground_inspection.not_active', 'closed'));
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+      fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+      await within(letter).findByRole('alert');
+      fireEvent.change(screen.getByLabelText('Claim case id'), { target: { value: '44444444-4444-4444-4444-444444444444' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Load assignments' }));
+      expect(await screen.findByTestId('gi-load-blocked')).toHaveTextContent('or discard them');
+      expect(api.listGroundInspection).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: 'Discard the unsaved answers' }));
+      await waitFor(() => expect(screen.queryByTestId('gi-load-blocked')).toBeNull());
+      fireEvent.click(screen.getByRole('button', { name: 'Load assignments' }));
+      await waitFor(() => expect(api.listGroundInspection).toHaveBeenCalledTimes(2));
+    });
+
+    it('⭐ S4 — on the page, a viewer who is ⛔ the inspector is ⛔ sent a request until they ask', async () => {
+      vi.mocked(api.getSession).mockResolvedValue({ userId: 'supervisor-1', nationalGrants: [] });
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment()] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const show = await screen.findByRole('button', { name: 'Show the questions for the family' });
+      await waitFor(() => expect(show).toBeEnabled());
+      expect(api.getGroundInspectionQuestionnaire).not.toHaveBeenCalled();
+      fireEvent.click(show);
+      await screen.findByTestId('gi-questionnaire-head_letter');
+    });
+
+    it('⭐ S5 — once the completion SUCCEEDED the inputs stay locked, until the refetched list takes the visit away', async () => {
+      // the refetch still says `scheduled` (it has ⛔ landed the new state yet) — the panel stays, LOCKED
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: GID, status: 'completed', discrepancy: null });
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+      const user = await readyToComplete();
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(api.listGroundInspection).toHaveBeenCalledTimes(2));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(within(letter).getByLabelText(/Yes — I collected/)).toBeDisabled();
+      expect(within(letter).getByLabelText(/No — no letter/)).toBeDisabled();
+      // patch review — and ⛔ a second completion (its 409 would release the lock)
+      expect(screen.getByRole('button', { name: 'Complete inspection' })).toBeDisabled();
+    });
+
+    it('⭐ S6 — "Complete without the unsaved answers" DROPS a save backing off on the network: ⛔ sent when the network returns', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: GID, status: 'completed', discrepancy: null });
+      vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      vi.mocked(api.saveGroundInspectionAnswer).mockImplementation(async (_p, _c, _g, key) => ok(key));
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+      const user = await readyToComplete();
+      fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+      await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Not saved — retrying'));
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await user.click(await screen.findByRole('button', { name: 'Complete without the unsaved answers' }));
+      await waitFor(() => expect(api.completeGroundInspection).toHaveBeenCalledTimes(1));
+      await act(async () => window.dispatchEvent(new Event('online')));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(1);
+    });
+
+    it('⭐ S12 — the answers saved but the record stopped being ready while waiting: SAID, and ⛔ completion sent', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      vi.mocked(api.completeGroundInspection).mockResolvedValue({ groundInspectionId: GID, status: 'completed', discrepancy: null });
+      const save = pendingSave();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+      const user = await readyToComplete();
+      fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await screen.findByTestId('gi-complete-waiting');
+      fireEvent.change(screen.getByLabelText(/Date of death/), { target: { value: '' } });
+      // patch review — "without" would DISCARD the answers for a completion the record no longer allows
+      expect(screen.getByRole('button', { name: 'Complete without the unsaved answers' })).toBeDisabled();
+      await act(async () => save.release());
+      await waitFor(() => expect(screen.getByTestId('gi-complete-status')).toHaveTextContent('visit was not completed'));
+      expect(api.completeGroundInspection).not.toHaveBeenCalled();
+    });
+
+    it('⭐ S14 — the completion\'s status is ONE stable region (empty at first); the "load blocked" alert is ⛔ re-fired by a later edit', async () => {
+      vi.mocked(api.listGroundInspection).mockResolvedValue({ assignments: [assignment({ photos: [originalPhoto] })] });
+      vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+      vi.mocked(api.getGroundInspectionCertificate).mockResolvedValue(CERT);
+      const first = pendingSave();
+      renderWithClient(<GroundInspectionPage pariwarId={PARIWAR} />);
+      await load();
+      const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+      const region = screen.getByTestId('gi-complete-status');
+      expect(region).toHaveAttribute('role', 'status');
+      expect(region).toHaveTextContent(/^$/);
+      const user = await readyToComplete();
+      fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+      await user.click(screen.getByRole('button', { name: 'Complete inspection' }));
+      await waitFor(() => expect(region).toHaveTextContent('not saved yet'));
+      expect(screen.getByTestId('gi-complete-status')).toBe(region);
+      await user.click(screen.getByRole('button', { name: 'Do not complete yet' }));
+      expect(region).toHaveTextContent(/^$/);
+      // Load is held, then the save lands …
+      fireEvent.click(screen.getByRole('button', { name: 'Load assignments' }));
+      await screen.findByTestId('gi-load-blocked');
+      await act(async () => first.release());
+      await waitFor(() => expect(screen.queryByTestId('gi-load-blocked')).toBeNull());
+      // … and a LATER edit (⛔ "Load" pressed again) does ⛔ bring the alert back
+      pendingSave();
+      fireEvent.click(within(letter).getByLabelText(/No — no letter/));
+      await waitFor(() => expect(screen.getByTestId('gi-questionnaire-unsaved')).toBeInTheDocument());
+      expect(screen.queryByTestId('gi-load-blocked')).toBeNull();
     });
   });
 

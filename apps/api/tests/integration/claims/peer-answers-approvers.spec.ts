@@ -52,8 +52,10 @@ vi.mock('@twt/domain', async (importActual) => {
 import { createAuditLogSink } from '../../../src/audit/audit-log-sink.js';
 import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
+import { encryptGroundInspectionField } from '../../../src/modules/claims/ground-inspection-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
+import { insertDeathCertificate } from '../_nominee-name-check-fixture.js';
 import * as peerFx from '../_peer-reply-fixture.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
@@ -278,7 +280,8 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
         const r = await read(pa, w);
         expect(r.status, JSON.stringify(r.body)).toBe(200);
         expect(r.body.peerMesh?.status).toBe('present');
-        expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'present', ping_count: 1, answer_count: 1 });
+        // Story 6.32 (second review S15) — the family's account counts ride the line (zeros: ⛔ completed full visit).
+        expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'present', ping_count: 1, answer_count: 1, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0 });
       });
     }
 
@@ -382,7 +385,15 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     expect((await read(pa, w)).status).toBe(200);
     const lines = readLines(w.claimCaseId);
     expect(lines).toHaveLength(1);
-    expect(Object.keys(lines[0]!.context ?? {}).sort()).toEqual(['answer_count', 'ping_count', 'section', 'step']);
+    expect(Object.keys(lines[0]!.context ?? {}).sort()).toEqual([
+      'answer_count',
+      'family_answer_count',
+      'family_health_answer_count',
+      'family_visit_count',
+      'ping_count',
+      'section',
+      'step',
+    ]);
     const all = JSON.stringify([...lines, ...shownLines(w.claimCaseId)]);
     for (const secret of ['Neighbour 0', '2026-10-01', '9876543210', 'Ram K.']) expect(all).not.toContain(secret);
     createAuditLogSink(td.pool).emit(lines[0]!);
@@ -613,7 +624,69 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     const r = await read(pa, w);
     expect(r.status).toBe(200);
     expect(r.body).toEqual({});
-    expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'hidden', ping_count: 0, answer_count: 0 });
+    expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'hidden', ping_count: 0, answer_count: 0, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0 });
+  });
+
+  it('⭐ Story 6.32 (second review S9 / S15; AC8) — the approvers\' route carries a POPULATED family account (the cause DECRYPTED), and its line counts it — ⛔ a value', async () => {
+    const w = await claimAt('verifier_approved');
+    const [n] = await neighbours(w, [true]);
+    await put(w, n!, 'has_died', { codes: ['died'] });
+    // a COMPLETED full visit by ANOTHER inspector (⛔ the reader's own — the PM25 (c) hide), its answers saved while it was
+    // open (0188's guard), as the superuser: the letter and a REAL ciphertext cause
+    const gid = randomUUID();
+    const s = await openScopeTx(deps, w.pariwarId);
+    let uploadId: string;
+    try {
+      ({ uploadId } = await insertDeathCertificate(s, w.pariwarId, w.claimCaseId));
+      await closeScopeTx(s, true);
+    } catch (err) {
+      await closeScopeTx(s, false);
+      throw err;
+    }
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspections (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+         inspector_actor_id, scheduled_at, status)
+       VALUES ($1, $2, $3, $4, 'initial', 'family_residence', $5, now(), 'scheduled')`,
+      [gid, w.claimCaseId, w.pariwarId, DISTRICT, randomUUID()],
+    );
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspection_questionnaires (pariwar_id, claim_case_id, ground_inspection_id, questionnaire_version_id) VALUES ($1, $2, $3, 'ground_inspection.v1')`,
+      [w.pariwarId, w.claimCaseId, gid],
+    );
+    const cause = await encryptGroundInspectionField(JSON.stringify(['old_age']), w.pariwarId, deps.encryption);
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspection_answers (pariwar_id, claim_case_id, ground_inspection_id, question_key, value_codes, value_ciphertext, saved_by_actor_id)
+       VALUES ($1, $2, $3, 'head_letter', ARRAY['collected'], NULL, 'inspector'), ($1, $2, $3, 'death_cause', NULL, $4, 'inspector')`,
+      [w.pariwarId, w.claimCaseId, gid, cause],
+    );
+    await td.pool.query(
+      `UPDATE claim_ground_inspections SET status = 'completed', completed_at = clock_timestamp(), original_certificate_verdict = 'matches',
+         compared_certificate_upload_id = $2, death_date_ciphertext = 'enc:v1:d', death_date_source = 'family_statement', death_date_index = 'idx:d'
+       WHERE ground_inspection_id = $1`,
+      [gid, uploadId!],
+    );
+    const pa = await staff(w.pariwarId, 'pariwar_admin');
+    const res = await pa.client.inject({ method: 'GET', url: url(w.pariwarId, w.claimCaseId) });
+    expect(res.statusCode, res.body).toBe(200);
+    const family = (res.json() as { peerMesh: { status: string; familyAccount: { groundInspectionId: string; answers: { questionKey: string; value: Json }[] }[] } }).peerMesh;
+    expect(family.status).toBe('present');
+    expect(family.familyAccount).toHaveLength(1);
+    expect(family.familyAccount[0]!.groundInspectionId).toBe(gid);
+    expect(family.familyAccount[0]!.answers.map((a) => [a.questionKey, a.value])).toEqual([
+      ['head_letter', { kind: 'codes', codes: ['collected'], labels: ['Yes — I collected the letter'] }],
+      ['death_cause', { kind: 'codes', codes: ['old_age'], labels: ['Old age'] }],
+    ]);
+    const line = readLines(w.claimCaseId).at(-1);
+    expect(line?.context).toEqual({
+      step: 'final_vote',
+      section: 'present',
+      ping_count: 1,
+      answer_count: 1,
+      family_visit_count: 1,
+      family_answer_count: 2,
+      family_health_answer_count: 1,
+    });
+    expect(JSON.stringify(line)).not.toMatch(/old_age|Old age|collected/);
   });
 
   it('a broken answer ciphertext ⇒ THAT answer `unavailable`, the rest shown', async () => {

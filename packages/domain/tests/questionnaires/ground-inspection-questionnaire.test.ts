@@ -139,6 +139,12 @@ describe('the validator — the ground_inspection rule (AC1; TR11: the rules liv
       expect(problems(withQuestion(V1, key, (q) => ({ ...q, warning: true }))), key).toContain(`question '${key}': 'warning' is refused`);
     }
   });
+  it('a chain-added key named after an Object.prototype member (`constructor`) is a QUESTION, ⛔ a crash (second review S17)', () => {
+    const extra: QuestionDefinition = { ...questionsOf(V1).find((q) => q.key === 'head_letter')!, key: 'constructor', showIf: null, approvedBy: ['2026-10-10-310'] };
+    const d: QuestionnaireDefinition = { ...V1, pages: [...V1.pages, { questions: [extra] }] };
+    expect(() => questionnaireDefinitionProblems(d)).not.toThrow();
+    expect(problems(d)).not.toContain(`'constructor' has the ruled codes`);
+  });
   it("the peer_mesh rules are ⛔ applied (no `has_died` first, no seven keys)", () => {
     expect(problems(V1)).not.toContain('has_died');
     expect(problems(V1)).not.toContain('how_known');

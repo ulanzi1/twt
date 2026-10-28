@@ -42,6 +42,7 @@ import { underSavepoint } from './later-approval-warnings.js';
 import {
   assemblePeerMeshSection,
   assemblePeerSection,
+  familyAccountAuditCounts,
   stitchPeerAnswerFlags,
   type PeerCallbackBasis,
 } from './peer-answers-assembler.js';
@@ -169,6 +170,8 @@ export function createPeerAnswersHandlers(deps: AppDeps) {
           ping_count: peer?.status === 'present' ? peer.transcript.pings.length : 0,
           answer_count:
             peer?.status === 'present' ? peer.transcript.pings.reduce((n, p) => n + (p.reply?.answers.length ?? 0), 0) : 0,
+          // ⭐ Story 6.32 (second review S15) — the family's account the section carried (counts only).
+          ...familyAccountAuditCounts(peer),
         },
       });
       // ⭐ Code review round 2 (S8) — only for a section the response ACTUALLY carries (`present`): the wire mapping runs

@@ -6,10 +6,12 @@
 //   · The PAGE refuses to load another claim while any visit is unsaved (the cards would unmount and drop the queue).
 //   · The completion WAITS for its visit's saves before it goes out, and offers to complete WITHOUT them — completing is
 //     always possible, with ZERO answers too (I1: ⛔ an answer is ever required, ⛔ the completion's readiness reads this).
+//     "Without" first DISCARDS the visit's answers ⛔ saved yet through the panel's registered action (second review S6 —
+//     ⛔ a queued or backing-off save left to race the completion); a request already on the wire cannot be recalled.
 // ⛔ Browser storage (TR13) — this is in-memory React state only.
 
 import type { ReactElement, ReactNode } from 'react';
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 export interface UnsavedAnswers {
   /** The visits (`groundInspectionId`) with answers ⛔ saved yet. */
@@ -18,11 +20,22 @@ export interface UnsavedAnswers {
   readonly completing: ReadonlySet<string>;
   readonly reportUnsaved: (groundInspectionId: string, unsaved: boolean) => void;
   readonly reportCompleting: (groundInspectionId: string, completing: boolean) => void;
+  /** The panel registers how to give up its visit's unsaved answers; the returned function unregisters it. */
+  readonly registerDiscard: (groundInspectionId: string, discard: () => void) => () => void;
+  /** Give up the visit's unsaved answers (a no-op when ⛔ panel registered one). */
+  readonly discardUnsaved: (groundInspectionId: string) => void;
 }
 
 const EMPTY: ReadonlySet<string> = new Set();
 /** Outside a provider (a panel rendered alone): nothing is tracked. */
-const NONE: UnsavedAnswers = { unsaved: EMPTY, completing: EMPTY, reportUnsaved: () => {}, reportCompleting: () => {} };
+const NONE: UnsavedAnswers = {
+  unsaved: EMPTY,
+  completing: EMPTY,
+  reportUnsaved: () => {},
+  reportCompleting: () => {},
+  registerDiscard: () => () => {},
+  discardUnsaved: () => {},
+};
 
 const UnsavedAnswersContext = createContext<UnsavedAnswers>(NONE);
 
@@ -44,6 +57,18 @@ export function UnsavedAnswersProvider({ children }: { children: (value: Unsaved
   const [completing, setCompleting] = useState<ReadonlySet<string>>(EMPTY);
   const reportUnsaved = useCallback((id: string, on: boolean) => setUnsaved((s) => toggled(s, id, on)), []);
   const reportCompleting = useCallback((id: string, on: boolean) => setCompleting((s) => toggled(s, id, on)), []);
-  const value = useMemo(() => ({ unsaved, completing, reportUnsaved, reportCompleting }), [unsaved, completing, reportUnsaved, reportCompleting]);
+  // A ref, ⛔ state: registering an action re-renders nothing.
+  const discards = useRef(new Map<string, () => void>());
+  const registerDiscard = useCallback((id: string, discard: () => void) => {
+    discards.current.set(id, discard);
+    return () => {
+      if (discards.current.get(id) === discard) discards.current.delete(id);
+    };
+  }, []);
+  const discardUnsaved = useCallback((id: string) => discards.current.get(id)?.(), []);
+  const value = useMemo(
+    () => ({ unsaved, completing, reportUnsaved, reportCompleting, registerDiscard, discardUnsaved }),
+    [unsaved, completing, reportUnsaved, reportCompleting, registerDiscard, discardUnsaved],
+  );
   return <UnsavedAnswersContext.Provider value={value}>{children(value)}</UnsavedAnswersContext.Provider>;
 }

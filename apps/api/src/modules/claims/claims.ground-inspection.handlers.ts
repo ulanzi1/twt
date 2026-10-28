@@ -322,12 +322,12 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
     return { byActorId: ctx.actorId };
   }
 
-  /** The assignment the `resolveGroundInspectionAssignment` preHandler already loaded + stashed
-   *  (for the district permission gate). Reused here so the handler does not re-read the row. */
   /**
    * ⭐ Story 6.32 (review R4) — the questionnaire routes BIND the assignment to the claim named in their path: the preHandler
    * loads by (pariwar, id) only, so a path naming claim A with claim B's assignment would read or save B's answers. A
    * mismatch is the SAME 404 as a missing assignment (⛔ a hint that the id exists elsewhere), before any read or write.
+   * ⭐ Second review S2 — the discrepancy re-read and the completion bind too: since 6.32 they carry the family's cause and
+   * illness.
    */
   function requirePathClaim(request: FastifyRequest, assignment: schema.ClaimGroundInspectionRow): void {
     const { claimCaseId } = request.params as { claimCaseId: string };
@@ -336,6 +336,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
     }
   }
 
+  /** The assignment the `resolveGroundInspectionAssignment` preHandler already loaded + stashed
+   *  (for the district permission gate). Reused here so the handler does not re-read the row. */
   function loadAssignment(
     request: FastifyRequest,
     _ctx: AdminCtx,
@@ -365,6 +367,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
     assignment: schema.ClaimGroundInspectionRow,
     questionKeys: readonly claim.InspectionDiscrepancyKey[],
     familyDate: string | null,
+    override: claim.GroundInspectionOverride | undefined,
   ): Promise<InspectionDiscrepancyDto> {
     const logFailure = (stage: string, err: unknown) =>
       request.log.warn(
@@ -416,7 +419,11 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       state: 'shown',
       questionKeys: [...questionKeys],
       familyDeathDate: questionKeys.includes('death_date') && familyDate !== null ? { status: 'shown', date: familyDate } : null,
-      familyAnswers: await displayFamilyAnswers(request, ctx, assignment.groundInspectionId, questionKeys),
+      familyAnswers: await displayFamilyAnswers(request, ctx, assignment.groundInspectionId, questionKeys, {
+        claimCaseId: assignment.claimCaseId,
+        path: 'completion',
+        override,
+      }),
     };
   }
 
@@ -424,13 +431,16 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
    * ⭐ Story 6.32 (AC6 / AC7; 6.27d R3's shape) — ③ / ④ on the inspector's result: the FAMILY's own answers in the options'
    * English words, read in their OWN transaction and decrypted AFTER it closed (⛔ KMS in a transaction); erased (the
    * sentinel), absent or undecryptable ⇒ `unavailable` (⛔ the sentinel text, ⛔ a 500). `null` unless a ③ / ④ key is SHOWN.
-   * ⛔ The neighbour's answer, ⛔ who, ⛔ a count (CF2).
+   * ⛔ The neighbour's answer, ⛔ who, ⛔ a count (CF2). ⭐ Second review S3 — a decrypt of the family's health answers is ⛔
+   * unaudited (AC8, the 6.27a S12 lesson): when at least one was decrypted, ONE post-read line
+   * `admin_ground_inspection.family_answers_shown` — the keys shown and counts, ⛔ a code, ⛔ a value.
    */
   async function displayFamilyAnswers(
     request: FastifyRequest,
     ctx: AdminCtx,
     groundInspectionId: string,
     questionKeys: readonly claim.InspectionDiscrepancyKey[],
+    audit: { readonly claimCaseId: string; readonly path: 'completion' | 're_read'; readonly override: claim.GroundInspectionOverride | undefined },
   ): Promise<FamilyAnswersDisplay | null> {
     const keys = FAMILY_ANSWER_KEYS.filter((k) => questionKeys.includes(k));
     if (keys.length === 0) return null;
@@ -472,6 +482,25 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       };
       const display: FamilyAnswerDisplay = codes === null ? { status: 'unavailable' } : { status: 'shown', codes, labels: codes.map(label) };
       out[key] = display;
+    }
+    const shownKeys = keys.filter((k) => out[k]?.status === 'shown');
+    if (shownKeys.length > 0) {
+      emitAuthAudit(deps, request, 'admin_ground_inspection.family_answers_shown', {
+        actorId: ctx.actorId,
+        pariwarId: ctx.pariwarId,
+        // ⭐ Patch review — the STORED row keeps only the locator (the context is hashed): it names the claim.
+        resourceLocator: `claim:${audit.claimCaseId.toLowerCase()}`,
+        context: {
+          ground_inspection_id: groundInspectionId,
+          claim_case_id: audit.claimCaseId,
+          path: audit.path,
+          // Keys and counts only — ⛔ a code, ⛔ a value.
+          question_keys: shownKeys,
+          shown_count: shownKeys.length,
+          unavailable_count: keys.length - shownKeys.length,
+          ...(audit.override ? { override_actor_id: audit.override.byActorId } : {}),
+        },
+      });
     }
     return out;
   }
@@ -907,6 +936,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const { ground_inspection_id } = request.params as { ground_inspection_id: string };
       const body = (request.body ?? {}) as CompleteBody;
       const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      requirePathClaim(request, assignment);
       const override = resolveInspectorOverride(request, ctx, assignment);
 
       const notesCiphertext =
@@ -985,7 +1015,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const discrepancy: InspectionDiscrepancyDto =
         result!.discrepancy === null
           ? null
-          : await deliverInspectionDiscrepancy(request, ctx, assignment, result!.discrepancy.questionKeys, body.deathDate ?? null);
+          : await deliverInspectionDiscrepancy(request, ctx, assignment, result!.discrepancy.questionKeys, body.deathDate ?? null, override);
 
       void reply.status(200);
       return {
@@ -1004,13 +1034,15 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
      * recompute) → the HIDDEN check (the ONE predicate; an error FAILS CLOSED) ⇒ the withheld shape with ⛔ notes → the
      * RECORDED showing, else recomputed as of `completed_at` and recorded, + ALL the assignment's notes with their author.
      * Its OWN transaction, closed BEFORE any decrypt (⛔ KMS while the showing's index entry is locked — Trap 9). ⛔ No
-     * audit line: the showing row is the record of when the result was first recorded.
+     * audit line for the result itself: the showing row is the record of when it was first recorded — but a decrypt of the
+     * family's cause / illness is audited (`displayFamilyAnswers`, second review S3).
      */
     async discrepancy(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
       const ctx = adminCtx(request);
       const { ground_inspection_id } = request.params as { ground_inspection_id: string };
       const assignment = loadAssignment(request, ctx, ground_inspection_id);
-      resolveInspectorOverride(request, ctx, assignment);
+      requirePathClaim(request, assignment);
+      const override = resolveInspectorOverride(request, ctx, assignment);
       const pid = ids.pariwarId(ctx.pariwarId);
       const gid = ids.groundInspectionId(ground_inspection_id);
 
@@ -1058,7 +1090,11 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         : null;
       const noteDtos: InspectionDiscrepancyNoteDto[] = [];
       for (const n of notes) noteDtos.push(await noteDtoOf(request, ctx, n));
-      const familyAnswers = await displayFamilyAnswers(request, ctx, ground_inspection_id, showing.questionKeys);
+      const familyAnswers = await displayFamilyAnswers(request, ctx, ground_inspection_id, showing.questionKeys, {
+        claimCaseId: assignment.claimCaseId,
+        path: 're_read',
+        override,
+      });
       void reply.status(200);
       return {
         discrepancy: { state: 'shown', questionKeys: showing.questionKeys, familyDeathDate, familyAnswers },
@@ -1080,6 +1116,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const { ground_inspection_id } = request.params as { ground_inspection_id: string };
       const body = request.body as DiscrepancyNoteBody;
       const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      // ⭐ Patch review (S2) — since 0188 a note may carry the family's re-told cause / illness (Tier-1): bound to the path's claim.
+      requirePathClaim(request, assignment);
       const override = resolveInspectorOverride(request, ctx, assignment);
       const authorDisplay = await getDisplayName(deps.pool, ctx.actorId);
       if (authorDisplay === null) throw new AdminDisplayNameMissingError(ctx.actorId);
@@ -1143,8 +1181,9 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
      * definition of the visit's PINNED version (else the LIVE one), its words in en AND hi (`toWireQuestionnaire` — the ONE
      * resolver), whether the visit is still open, and the inspector's own live answers. Order: the identity guard (the assigned
      * inspector, or an override holder — the denial audited) → 404 `ground_inspection.questionnaire_unavailable` for a
-     * certificate check, ⛔ version, or a closed visit with ⛔ answers (⇔ ⛔ panel) → ONE read transaction → the decrypt AFTER it
-     * closed. Audited post-read with counts only (⛔ a value). ⛔ It reads ⛔ neighbour data (I2: the questions are identical
+     * certificate check, ⛔ version, or a closed visit with ⛔ header (⇔ ⛔ panel) → ONE read transaction (it also resolves the
+     * member's name for `{member}` — the shared `resolvePeerRequestMemberName`, a decrypt INSIDE it; ⛔ a row lock is held) →
+     * the answers' decrypt AFTER it closed. Audited post-read with counts only (⛔ a value). ⛔ It reads ⛔ neighbour data (I2: the questions are identical
      * whatever the neighbours said, and whether any were asked).
      */
     async questionnaire(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
@@ -1184,6 +1223,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       emitAuthAudit(deps, request, 'admin_ground_inspection.questionnaire_read', {
         actorId: ctx.actorId,
         pariwarId: ctx.pariwarId,
+        resourceLocator: `claim:${assignment.claimCaseId.toLowerCase()}`,
         context: {
           ground_inspection_id,
           claim_case_id: assignment.claimCaseId,
@@ -1223,6 +1263,10 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const pid = ids.pariwarId(ctx.pariwarId);
       const gid = ids.groundInspectionId(ground_inspection_id);
       const todayIst = cycleCalendar.istDateOf(new Date());
+      // ⭐ Second review S13 — IQ10's order: a visit that is ⛔ open is refused (409) BEFORE the 422 pre-check and BEFORE any key
+      // work (an index is an audited HMAC per code). The stashed row is the preHandler's read — the writer re-checks under the lock.
+      if (assignment.inspectionStage === 'certificate_check') translateGroundInspectionError(new claim.GroundInspectionQuestionnaireCertificateCheckError(ground_inspection_id));
+      if (assignment.status !== 'scheduled') translateGroundInspectionError(new claim.GroundInspectionNotActiveError(ground_inspection_id, assignment.status));
 
       // (1) the pre-lock read
       const pre = await openScopeTx(deps, ctx.pariwarId);
@@ -1236,15 +1280,15 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       } finally {
         await closeScopeTx(pre, preOk);
       }
-      if (assignment.inspectionStage === 'certificate_check') translateGroundInspectionError(new claim.GroundInspectionQuestionnaireCertificateCheckError(ground_inspection_id));
       const def = claim.groundInspectionVersionFor(header?.questionnaireVersionId ?? null, pid);
       if (def === null) translateGroundInspectionError(new claim.GroundInspectionQuestionnaireUnavailableError());
 
       // (2) the live sensitive answers, decrypted OUTSIDE any transaction. One that will ⛔ decrypt (erased, malformed,
       //     undecryptable) is KNOWN UNREADABLE — its value is `null`, ⛔ stale (review R2): the letter, or a replacement of
       //     that very answer, still saves; a question it is the `showIf` parent of stays refused (fail-closed, below).
-      const decryptedLive = new Map<string, string[]>();
-      const unreadableLive = new Set<string>();
+      //     Each is kept WITH the ciphertext read (second review S10): the writer refuses as stale a row rewritten since.
+      const decryptedLive = new Map<string, claim.DecryptedLiveAnswer>();
+      const unreadableLive = new Map<string, string>();
       for (const row of rows) {
         if (row.valueCiphertext === null) continue;
         let codes: string[] | null = null;
@@ -1253,11 +1297,11 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         } catch (err) {
           request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id }, 'questionnaire save: a live answer could not be decrypted');
         }
-        if (codes === null) unreadableLive.add(row.answerId);
-        else decryptedLive.set(row.answerId, codes);
+        if (codes === null) unreadableLive.set(row.answerId, row.valueCiphertext);
+        else decryptedLive.set(row.answerId, { ciphertext: row.valueCiphertext, codes });
       }
       const live = new Map<string, readonly string[] | null>();
-      for (const row of rows) live.set(row.questionKey, row.valueCodes ?? decryptedLive.get(row.answerId) ?? null);
+      for (const row of rows) live.set(row.questionKey, row.valueCodes ?? decryptedLive.get(row.answerId)?.codes ?? null);
 
       // (3) the pre-check — to learn the storage form (the writer re-does it under its locks)
       const served = questionnaires.servedDefinition(def!);
@@ -1313,6 +1357,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         emitAuthAudit(deps, request, 'admin_ground_inspection.questionnaire_answer_saved', {
           actorId: ctx.actorId,
           pariwarId: ctx.pariwarId,
+          resourceLocator: `claim:${assignment.claimCaseId.toLowerCase()}`,
           context: {
             ground_inspection_id,
             claim_case_id: assignment.claimCaseId,

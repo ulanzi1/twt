@@ -2,6 +2,10 @@
 // "complete" (`groundInspectionApprovalState`) takes ⛔ answer as input — so the scenarios below differ ONLY in what the
 // family said, and every one is `complete`; and the INPUT SHAPE is pinned (a field added to feed it an answer — the shape
 // that made 6.26a's invariant 2 necessary — turns this red).
+// ⭐ Second review S20 — said plainly: the labelled rows below feed the predicate ONE identical `facts` (it cannot be given
+// the questionnaire), so they DOCUMENT the scenarios; what PROTECTS I1 here is the input-shape pin. A completion mutant
+// ("the letter is required to complete") cannot reach this pure call — it is caught by the live-DB AC4 (b) legs
+// (`tests/integration/claim/ground-inspection-questionnaire.spec.ts`) and the HTTP leg in apps/api.
 
 import { describe, expect, it } from 'vitest';
 
@@ -23,7 +27,7 @@ describe('AC4 (a) — `complete` whatever the questionnaire holds (I1)', () => {
     ['⭐ AC10 — a no-one-asked claim (⛔ selection), the head\'s letter NOT collected (IQ13 (A))'],
     ['a no-one-asked claim, the letter NOT RECORDED at all'],
     ['the family\'s account in total disagreement with every neighbour (③ / ④ shown)'],
-  ])('%s ⇒ complete', () => {
+  ])('%s ⇒ complete (the SAME `facts` — documentation; the shape pin below is the protection)', () => {
     // The inputs are the SAME in every row: the predicate cannot see the questionnaire, by construction.
     expect(groundInspectionApprovalState(facts)).toEqual({ complete: true, waitReason: null });
   });

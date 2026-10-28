@@ -130,4 +130,52 @@ describe.skipIf(!hasDatabase)('Story 6.26a — RTBF over the inspection\'s date 
     expect(notes[0]).toMatchObject({ author_display: 'Inspector One', question_key: 'has_died' });
     expect(await showing()).toEqual(before);
   });
+
+  it('⭐ Story 6.32 (AC9; second review S8): a ③ / ④ showing and its notes are ADMITTED (0188 widened 0160\'s CHECKs), and the erasure scrubs a ③ / ④ note', async () => {
+    const { client, tx } = getTx();
+    const mid = await seedMember(tx, PARIWAR_A, { state: 'active' });
+    await enterAppScope(client, PARIWAR_A);
+    const cid = toClaimId(randomUUID());
+    await driveClaimTo(client, PARIWAR_A, cid, mid, 'verification_in_progress');
+    const { uploadId } = await seedDeathCertificate(client, { pariwarId: PARIWAR_A, claimCaseId: cid });
+    const gid = (
+      await scheduleGroundInspection(client, {
+        claimCaseId: cid, pariwarId: PARIWAR_A, district: 'Patna', inspectionStage: 'initial', inspectionSiteType: 'family_residence',
+        inspectorActorId: INSPECTOR, scheduledAt: new Date(), scheduledByActor: INSPECTOR, idempotencyKey: randomUUID(),
+      })
+    ).groundInspection.groundInspectionId;
+    await addGroundInspectionPhoto(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR,
+      storageObjectKey: `k-${randomUUID()}`, contentType: 'image/jpeg', byteSize: 1, photoKind: 'original_certificate',
+      comparedCertificateUploadId: uploadId,
+    });
+    await completeGroundInspection(client, {
+      pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR, originalCertificateVerdict: 'matches',
+      comparedCertificateUploadId: uploadId,
+      deathDate: { plaintext: '2026-06-01', ciphertext: 'enc:v1:ZZ-DEATH-DATE', index: 'ZZ-DATE-INDEX', source: 'family_statement' },
+    });
+    await recordInspectionDiscrepancyShowing(bindScopedDb(client), {
+      pariwarId: PARIWAR_A,
+      groundInspectionId: gid,
+      questionKeys: ['death_cause', 'death_illness'],
+    });
+    for (const questionKey of ['death_cause', 'death_illness'] as const) {
+      await recordInspectionDiscrepancyNote(client, {
+        pariwarId: PARIWAR_A, groundInspectionId: gid, actingActorId: INSPECTOR, questionKey,
+        noteCiphertext: `enc:v1:ZZ-RETOLD-${questionKey}`, authorDisplay: 'Inspector One',
+      });
+    }
+
+    await anonymizeMember(tx, { kms, kekRef }, { memberId: toMemberId(mid), pariwarId: PARIWAR_A });
+
+    const notes = (await client.query<{ note_ciphertext: string; question_key: string }>(
+      'SELECT note_ciphertext, question_key FROM claim_ground_inspection_discrepancy_notes WHERE ground_inspection_id = $1 ORDER BY question_key',
+      [gid],
+    )).rows;
+    expect(notes.map((n) => n.question_key)).toEqual(['death_cause', 'death_illness']);
+    for (const n of notes) {
+      expect(n.note_ciphertext.includes('ZZ-RETOLD'), n.question_key).toBe(false);
+      expect(await dec(n.note_ciphertext)).toBe(ANONYMIZED_SENTINEL);
+    }
+  });
 });

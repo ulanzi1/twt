@@ -12,7 +12,11 @@
 //     stable live region (code review R5 — ⛔ an announcement on load). Leaving the tab with anything unsaved is warned;
 //     leaving the page in the app, or loading another claim, waits until it is saved (R1 — the helpline screen's
 //     `history.block`); the visit's completion waits for it too, or goes out without it on the inspector's say
-//     (`unsaved-answers.tsx`), and the inputs are locked while it is in flight.
+//     (`unsaved-answers.tsx`), and the inputs are locked while it is in flight — and once it succeeded. An answer the
+//     server refuses for good, or one still retrying, can be DISCARDED by name (second review S1 — ⛔ trapped on the page).
+//   · Fetched by itself only for the ASSIGNED INSPECTOR (second review S4 — the `DiscrepancyPanel`'s rule): any other
+//     viewer asks for the questions (an override holder's read decrypts the family's answers; a non-holder's is the
+//     server's 403 — one audited denial per click, ⛔ one per page load).
 //   · ⛔ BROWSER STORAGE of any kind (TR13): the cause and the illness are health information — Tier-1 at rest on the server;
 //     a plaintext copy in `localStorage` / `sessionStorage` / IndexedDB on a staff laptop would defeat that. A grep pin
 //     (`tests/ground-inspection-questionnaire.test.tsx`) keeps this module free of all three.
@@ -54,11 +58,13 @@ export function isQuestionShown(q: PeerRequestQuestion, answers: ReadonlyMap<str
   return parent !== undefined && 'codes' in parent && parent.codes.some((c) => q.showIf!.anyOf.includes(c));
 }
 
-/** A failure worth retrying by itself, without limit: ⛔ an answer from the server (the network), or a 5xx. (A STALE read
- *  is retried too, but only 3 times per edit — the editor's caller counts it.) */
+/** A failure worth retrying by itself, without limit: the NETWORK (`fetch` rejects with a `TypeError`), a 5xx, or a 429.
+ *  (A STALE read is retried too, but only 3 times per edit — the editor's caller counts it.) ⭐ Second review S11 — any
+ *  OTHER throw (a response that fails its schema, a body that is ⛔ JSON) is ⛔ retried: the same answer would fail the
+ *  same way every 30 s; it waits for "Try saving again". */
 export function isRetryableSaveError(err: unknown): boolean {
-  if (!(err instanceof ApiError)) return true;
-  return err.status >= 500;
+  if (err instanceof ApiError) return err.status >= 500 || err.status === 429;
+  return err instanceof TypeError;
 }
 
 /** Wait `attempt`'s backoff — or less: the browser coming back `online` ends the wait at once. */
@@ -76,6 +82,9 @@ function waitForRetry(attempt: number): Promise<void> {
 }
 
 function sameCodes(a: LiveValue | undefined, b: LiveValue | undefined): boolean {
+  // ⭐ Second review S7 — two `unavailable` values are the SAME saved answer (⛔ compared by reference: `toLive` builds
+  // a fresh object per call, so an answer that could ⛔ be shown read `Saving…` with nothing pending).
+  if (a !== undefined && b !== undefined && 'unavailable' in a && 'unavailable' in b) return true;
   if (a === undefined || b === undefined || !('codes' in a) || !('codes' in b)) return a === b;
   return a.codes.length === b.codes.length && [...a.codes].sort().join(',') === [...b.codes].sort().join(',');
 }
@@ -85,23 +94,55 @@ function saveErrorText(err: unknown): string {
     if (err.code === 'questionnaire.answer_invalid') return t('gi.questionnaire.error.answer_invalid');
     if (err.code === 'ground_inspection.not_active') return t('gi.questionnaire.error.not_active');
     if (err.code === 'ground_inspection.not_allowed') return t('gi.questionnaire.error.not_allowed');
+    // ⭐ Second review S21 — STALE: a saved answer changed (or could ⛔ be read) between the server's read and its write —
+    // the earlier answer this one depends on, most often.
+    if (err.code === STALE_CODE) return t('gi.questionnaire.error.stale');
   }
   return t('gi.questionnaire.state.failed');
 }
 
-export function QuestionnairePanel(props: { pariwarId: string; claimCaseId: string; groundInspectionId: string }): ReactElement | null {
-  const { pariwarId, claimCaseId, groundInspectionId } = props;
+export function QuestionnairePanel(props: {
+  pariwarId: string;
+  claimCaseId: string;
+  groundInspectionId: string;
+  /** The session's actor — `null` while it is ⛔ known yet (the "Show the questions" button waits for it). */
+  viewerId: string | null;
+  /** The viewer IS the assignment's inspector ⇒ the questions are fetched at once. */
+  isInspector: boolean;
+}): ReactElement | null {
+  const { pariwarId, claimCaseId, groundInspectionId, viewerId, isInspector } = props;
+  const [requested, setRequested] = useState(false);
+  const enabled = isInspector || requested;
   const query = useQuery({
     queryKey: [QUESTIONNAIRE_ROOT, pariwarId, claimCaseId, groundInspectionId] as const,
     queryFn: () => api.getGroundInspectionQuestionnaire(pariwarId, claimCaseId, groundInspectionId),
+    enabled,
     // The answers are the server's — ⛔ refetched behind an edit (the editor is the source while the panel is open).
     staleTime: Infinity,
     gcTime: 0,
     retry: false,
     refetchOnWindowFocus: false,
   });
+  if (!enabled) {
+    return (
+      <button
+        type="button"
+        className="self-start rounded border px-2 py-1 text-sm disabled:opacity-50"
+        data-testid="gi-questionnaire-show"
+        disabled={viewerId === null}
+        onClick={() => setRequested(true)}
+      >
+        {t('gi.questionnaire.show')}
+      </button>
+    );
+  }
   if (query.isError && query.error instanceof ApiError && query.error.status === 404 && query.error.code === UNAVAILABLE_CODE) return null;
   if (query.isPending) return <p className="text-sm opacity-70">{t('gi.questionnaire.loading')}</p>;
+  if (query.isError && query.error instanceof ApiError && query.error.status === 403) {
+    // ⭐ Patch review — a viewer ⛔ allowed to act for the inspector: said once, ⛔ a "Try again" (each one is another
+    // audited denial).
+    return <p className="text-sm text-amber-700" data-testid="gi-questionnaire-load-denied">{t('gi.questionnaire.loadDenied')}</p>;
+  }
   if (query.isError) {
     return (
       <div className="flex flex-col gap-1 text-sm" data-testid="gi-questionnaire-load-failed">
@@ -113,7 +154,7 @@ export function QuestionnairePanel(props: { pariwarId: string; claimCaseId: stri
     );
   }
   if (!query.data.open) return null;
-  return <QuestionnaireEditor {...props} data={query.data} />;
+  return <QuestionnaireEditor pariwarId={pariwarId} claimCaseId={claimCaseId} groundInspectionId={groundInspectionId} data={query.data} />;
 }
 
 function QuestionnaireEditor(props: {
@@ -170,12 +211,21 @@ function QuestionnaireEditor(props: {
   const unsaved = state.pending > 0 || state.failed.size > 0;
   // ⭐ Code review R1 — the page and the completion learn that this visit holds unsaved answers (⛔ on unmount), and the
   // completion in flight locks the inputs (⛔ an answer sent after the visit closed — it would be refused `not_active`).
-  const { reportUnsaved, completing } = useUnsavedAnswers();
+  const { reportUnsaved, completing, registerDiscard } = useUnsavedAnswers();
   const locked = completing.has(groundInspectionId);
   useEffect(() => {
     reportUnsaved(groundInspectionId, unsaved);
   }, [reportUnsaved, groundInspectionId, unsaved]);
   useEffect(() => () => reportUnsaved(groundInspectionId, false), [reportUnsaved, groundInspectionId]);
+  // ⭐ Second review S1 / S6 — give up every answer ⛔ saved yet: the queued and retrying edits are dropped, and each
+  // failed one falls back to its saved value. A request already ON THE WIRE cannot be recalled: ⛔ retried, but if the
+  // server SAVED it, it reads `Saved` (it is the server's record). The inspector's named action here, and the
+  // completion's "without the unsaved answers".
+  const discardUnsaved = useCallback(() => {
+    editor.abandonQueued();
+    editor.discardFailed();
+  }, [editor]);
+  useEffect(() => registerDiscard(groundInspectionId, discardUnsaved), [registerDiscard, groundInspectionId, discardUnsaved]);
   // Leaving the page IN THE APP waits until the answers are saved (the helpline screen's block — an authentication
   // redirect to `/login` still clears the screen). ⛔ A router (a panel rendered alone) ⇒ ⛔ block.
   const router = useRouter({ warn: false });
@@ -266,7 +316,8 @@ function QuestionnaireEditor(props: {
               <span className="sr-only">{t('gi.questionnaire.hindi')} </span>
               {q.words.hi}
             </p>
-            {current !== undefined && 'unavailable' in current && <p role="alert">{t('gi.questionnaire.unavailable')}</p>}
+            {/* Second review S7 — plain text, ⛔ an alert: it is what the inspector sees on load (R5 — ⛔ announced). */}
+            {current !== undefined && 'unavailable' in current && <p>{t('gi.questionnaire.unavailable')}</p>}
             {q.options.map((o) => (
               <label key={o.code} className="flex items-start gap-2">
                 <input
@@ -291,10 +342,20 @@ function QuestionnaireEditor(props: {
           </fieldset>
         );
       })}
-      {state.failed.size > 0 && (
-        <button type="button" className="self-start rounded border px-2 py-1" disabled={locked} onClick={() => editor.retryFailed()}>
-          {t('gi.questionnaire.retry')}
-        </button>
+      {/* ⭐ Patch review — Discard is offered WHENEVER anything is unsaved: a save that hangs (⛔ transport timeout) holds
+          the page exactly as a refused one did. */}
+      {unsaved && (
+        <div className="flex flex-wrap gap-2">
+          {state.failed.size > 0 && (
+            <button type="button" className="rounded border px-2 py-1" disabled={locked} onClick={() => editor.retryFailed()}>
+              {t('gi.questionnaire.retry')}
+            </button>
+          )}
+          {/* ⛔ disabled while the visit is completing: a refused answer must never hold the inspector on the page. */}
+          <button type="button" className="rounded border px-2 py-1" onClick={discardUnsaved}>
+            {t('gi.questionnaire.discard')}
+          </button>
+        </div>
       )}
       {unsaved && <p className="text-xs text-amber-700" data-testid="gi-questionnaire-unsaved">{t('gi.questionnaire.unsaved')}</p>}
       {leaveBlocked && unsaved && (

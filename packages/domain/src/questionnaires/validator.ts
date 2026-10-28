@@ -210,7 +210,8 @@ function groundInspectionProblems(questions: ReadonlyMap<string, QuestionDefinit
   for (const q of questions.values()) {
     // I1 — the questionnaire gates ⛔ nothing: a chain-added question (row 6-33) inherits this.
     if (!q.optional) problems.push(`question '${q.key}': every ground_inspection question is optional`);
-    const ruled = GROUND_INSPECTION_RULED_CODES[q.key];
+    // ⭐ Story 6.32 (second review S17) — an OWN key only: a plain index would answer `Object` for a key `constructor`.
+    const ruled = Object.hasOwn(GROUND_INSPECTION_RULED_CODES, q.key) ? GROUND_INSPECTION_RULED_CODES[q.key] : undefined;
     if (ruled !== undefined && q.options.map((o) => o.code).join(',') !== ruled.join(',')) {
       problems.push(q.key === 'head_letter' ? `'head_letter' is single with codes ${ruled.join(', ')}` : `'${q.key}' has the ruled codes (the neighbours')`);
     }

@@ -78,7 +78,7 @@ export const HEAD_LETTER_CODES = ['collected', 'not_collected'] as const;
 
 /**
  * The family's Tier-1 answers — ⚠ LOCKSTEP with the Story 6.32 migration's
- * `claim_ground_inspection_answers_sensitive_encrypted_check` (a policy-spec leg pins the two equal).
+ * `claim_gi_answers_sensitive_encrypted_check` (a policy-spec leg pins the two equal).
  */
 export const GROUND_INSPECTION_SENSITIVE_QUESTION_KEYS = PEER_MESH_HEALTH_QUESTION_KEYS;
 

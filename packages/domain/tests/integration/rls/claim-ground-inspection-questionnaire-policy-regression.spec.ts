@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { GROUND_INSPECTION_SENSITIVE_QUESTION_KEYS } from '../../../src/questionnaires/keys.js';
+import { GROUND_INSPECTION_SENSITIVE_QUESTION_KEYS, HEAD_LETTER_CODES } from '../../../src/questionnaires/keys.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppRoleNoScope, enterAppScope, PARIWAR_A, PARIWAR_B, seedClaim, seedDeathCertificate } from '../_helpers.js';
 
@@ -135,6 +135,8 @@ describe.skipIf(!hasDatabase)('0188 — the inspector\'s questionnaire for the f
       const def = (name: string) => rows.find((r) => r.indexname === name)?.indexdef ?? `<missing ${name}>`;
       expect(def('claim_gi_answers_live_uq')).toMatch(/UNIQUE INDEX .* USING btree \(pariwar_id, ground_inspection_id, question_key\) WHERE \(superseded_at IS NULL\)$/);
       expect(def('claim_gi_answers_claim_idx')).toMatch(/USING btree \(pariwar_id, claim_case_id\)$/);
+      // second review S20 — the visit's rows, superseded included (the as-of recompute; `live_uq` is partial)
+      expect(def('claim_gi_answers_visit_idx')).toMatch(/USING btree \(pariwar_id, ground_inspection_id\)$/);
       expect(def('claim_gi_questionnaires_claim_idx')).toMatch(/USING btree \(pariwar_id, claim_case_id\)$/);
     });
 
@@ -252,9 +254,54 @@ describe.skipIf(!hasDatabase)('0188 — the inspector\'s questionnaire for the f
       expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'head_letter', { cipher: 'enc:v1:x', indexes: ['i'] }))).message).toMatch(/code_indexes_check/);
       expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'death_cause', { codes: ['x'], indexes: ['i'] }))).message).toMatch(/check/);
       expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'death_cause', { cipher: 'enc:v1:x', indexes: [] }))).message).toMatch(/code_indexes_check/);
-      expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'head_letter', { codes: ['a'], cipher: 'enc:v1:x' }))).message).toMatch(/one_value_check/);
+      expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'head_letter', { codes: ['collected'], cipher: 'enc:v1:x' }))).message).toMatch(/one_value_check/);
       // "I don't know" ⇒ a ciphertext with NULL indexes is admitted
       expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'death_cause', { cipher: 'enc:v1:dk', indexes: null }))).code).toBeNull();
+    });
+
+    it('⭐ second review S18 — the letter is ONE of its ruled codes (LOCKSTEP with HEAD_LETTER_CODES)', async () => {
+      const { client } = getTx();
+      const s = await seedInspection(client, PARIWAR_A);
+      await seedHeader(client, s);
+      await enterAppScope(client, PARIWAR_A);
+      for (const codes of [['refused'], ['collected', 'not_collected'], ['collected', 'collected']]) {
+        expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'head_letter', { codes }))).message, codes.join(',')).toMatch(/head_letter_codes_check/);
+      }
+      expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'head_letter', { cipher: 'enc:v1:x' }))).message).toMatch(/head_letter_codes_check/);
+      expect((await attempt(client, INSERT_ANSWER, answerParams(s, 'head_letter', { codes: ['not_collected'] }))).code).toBeNull();
+      const { rows } = await client.query<{ def: string }>(
+        `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_gi_answers_head_letter_codes_check'`,
+      );
+      const named = [...rows[0]!.def.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1]).filter((c) => c !== 'head_letter');
+      expect(new Set(named)).toEqual(new Set(HEAD_LETTER_CODES));
+    });
+
+    it('⭐ second review S18 — a row is ⛔ INSERTED already superseded or saved in the future; ⛔ a supersede stamped in the future', async () => {
+      const { client } = getTx();
+      const s = await seedInspection(client, PARIWAR_A);
+      await seedHeader(client, s);
+      await enterAppScope(client, PARIWAR_A);
+      const NOW_LIVE = /a new answer is live, saved now/;
+      const insertWith = (col: 'superseded_at' | 'saved_at', at: string) =>
+        attempt(
+          client,
+          `INSERT INTO ${ANSWERS} (pariwar_id, claim_case_id, ground_inspection_id, question_key, value_codes, saved_by_actor_id, ${col})
+           VALUES ($1, $2, $3, 'head_letter', ARRAY['collected'], 'inspector', ${at})`,
+          [s.pariwarId, s.claimCaseId, s.groundInspectionId],
+        );
+      expect((await insertWith('superseded_at', 'clock_timestamp()')).message).toMatch(NOW_LIVE);
+      expect((await insertWith('saved_at', `clock_timestamp() + interval '1 hour'`)).message).toMatch(NOW_LIVE);
+      // a stamp in the PAST is the DB clock's earlier reading — admitted (the column's default is `clock_timestamp()`)
+      expect((await insertWith('saved_at', `clock_timestamp() - interval '1 minute'`)).rowCount).toBe(1);
+      // (superseded at once — the next leg saves the letter live again; ONE live row per key)
+      await client.query(`UPDATE ${ANSWERS} SET superseded_at = clock_timestamp() WHERE ground_inspection_id = $1 AND question_key = 'head_letter' AND superseded_at IS NULL`, [
+        s.groundInspectionId,
+      ]);
+      const letter = randomUUID();
+      await client.query(INSERT_ANSWER, answerParams(s, 'head_letter', LETTER, letter));
+      const future = await attempt(client, `UPDATE ${ANSWERS} SET superseded_at = clock_timestamp() + interval '1 hour' WHERE answer_id = $1`, [letter]);
+      expect(future.message).toMatch(/superseded now, ⛔ in the future/);
+      expect((await attempt(client, `UPDATE ${ANSWERS} SET superseded_at = clock_timestamp() WHERE answer_id = $1`, [letter])).rowCount).toBe(1);
     });
 
     it('ONE live answer per (assignment, key); a superseded one does not count', async () => {

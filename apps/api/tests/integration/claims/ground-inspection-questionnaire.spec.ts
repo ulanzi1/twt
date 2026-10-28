@@ -204,6 +204,7 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
         codes,
         prepared: { form: 'encrypted', ciphertext, codeIndexes },
         decryptedLive: new Map(),
+        unreadableLive: new Map(),
         todayIst: '2026-10-28',
         registry: [RECORDED],
       }),
@@ -364,6 +365,50 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     expect(audits('admin_ground_inspection.questionnaire_read', gidB)).toHaveLength(1);
   });
 
+  it('⭐ second review S2 — the discrepancy re-read and the completion BIND the path\'s claim too (they carry the family\'s cause) ⇒ 404, ⛔ a mutation', async () => {
+    const a = await world();
+    const b = await secondClaim(a);
+    const gidB = await assign(b);
+    const done = await assign(b);
+    expect((await complete(a.inspector.client, b, done)).statusCode).toBe(200);
+    // claim A in the path, B's assignment ⇒ the SAME 404 as a missing assignment — on BOTH routes
+    const c = await complete(a.inspector.client, a, gidB);
+    expect(c.statusCode).toBe(404);
+    expect(errOf(c).code).toBe('ground_inspection.not_found');
+    const d = await a.inspector.client.inject({ method: 'GET', url: url(a, done, '/discrepancy') });
+    expect(d.statusCode).toBe(404);
+    expect(errOf(d).code).toBe('ground_inspection.not_found');
+    // patch review — the note route too (since 0188 a note may carry the family's re-told cause)
+    const n = await a.inspector.client.inject({ method: 'POST', url: url(a, done, '/discrepancy-notes'), payload: { questionKey: 'death_cause', note: 'x' } });
+    expect(n.statusCode).toBe(404);
+    expect(errOf(n).code).toBe('ground_inspection.not_found');
+    expect((await td.pool.query(`SELECT 1 FROM claim_ground_inspection_discrepancy_notes WHERE ground_inspection_id = $1`, [done])).rowCount).toBe(0);
+    // ⛔ mutation: B's visit is still scheduled
+    const { rows } = await td.pool.query<{ status: string }>(`SELECT status FROM claim_ground_inspections WHERE ground_inspection_id = $1`, [gidB]);
+    expect(rows).toEqual([{ status: 'scheduled' }]);
+    // the positive control: B's own path re-reads
+    expect((await a.inspector.client.inject({ method: 'GET', url: url(b, done, '/discrepancy') })).statusCode).toBe(200);
+  });
+
+  it('⭐ second review S16 — a conduct-key holder of ANOTHER district, or of a block in another district, is refused on GET and PUT; ⛔ a row', async () => {
+    const w = await world();
+    const elsewhere = await authenticate('Elsewhere District');
+    await grant(elsewhere.userId, w.p, 'district_admin', 'district', 'Vaishali');
+    const block = await authenticate('Elsewhere Block');
+    await grant(block.userId, w.p, 'block_admin', 'block', 'Hajipur');
+    for (const who of [elsewhere, block]) {
+      // patch review — the out-of-scope holder IS the visit's assigned inspector, so ONLY the conduct gate (the row's
+      // district) can refuse — ⛔ the inspector guard standing in for it
+      const gid = await assign(w, { inspector: who.userId });
+      const g = await getQ(who.client, w, gid);
+      expect(g.statusCode, g.body).toBe(403);
+      const p = await putA(who.client, w, gid, 'head_letter', { codes: ['collected'] });
+      expect(p.statusCode, p.body).toBe(403);
+      expect((await td.pool.query(`SELECT 1 FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1`, [gid])).rowCount).toBe(0);
+      expect(audits('admin_ground_inspection.questionnaire_read', gid)).toEqual([]);
+    }
+  });
+
   it('⭐ review R6 (AC3) — a tampered session naming a nonexistent system/service actor is refused on GET and PUT; ⛔ an answer written', async () => {
     const w = await world();
     const gid = await assign(w);
@@ -413,6 +458,12 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     const late = await putA(w.inspector.client, w, notCollected, 'head_letter', { codes: ['collected'] });
     expect(late.statusCode).toBe(409);
     expect(errOf(late).code).toBe('ground_inspection.not_active');
+    // ⭐ second review S13 — IQ10's order: a closed visit is 409 BEFORE the 422 pre-check (an INVALID code, a pending cause)
+    for (const [key, codes] of [['head_letter', ['maybe']], ['death_cause', ['accident']]] as const) {
+      const r = await putA(w.inspector.client, w, notCollected, key, { codes: [...codes] });
+      expect(r.statusCode, `${key} ${r.body}`).toBe(409);
+      expect(errOf(r).code).toBe('ground_inspection.not_active');
+    }
     const back = await getQ(w.inspector.client, w, notCollected);
     expect(back.json<Json>()).toMatchObject({ open: false, answers: [{ questionKey: 'head_letter', value: { kind: 'codes', codes: ['not_collected'] } }] });
     // a completed visit with ⛔ answers has ⛔ questionnaire to show
@@ -438,6 +489,28 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     expect(JSON.stringify(res.json())).not.toMatch(/suicide/i);
     const rr = await w.inspector.client.inject({ method: 'GET', url: url(w, gid, '/discrepancy') });
     expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual(want);
+    // ⭐ second review S3 (AC8) — each decrypt of the family's health answer is AUDITED: ONE line per showing, keys and counts only
+    const shown = audits('admin_ground_inspection.family_answers_shown', gid);
+    expect(shown.map((l) => l.context)).toEqual([
+      { ground_inspection_id: gid, claim_case_id: w.cid, path: 'completion', question_keys: ['death_cause'], shown_count: 1, unavailable_count: 0 },
+      { ground_inspection_id: gid, claim_case_id: w.cid, path: 're_read', question_keys: ['death_cause'], shown_count: 1, unavailable_count: 0 },
+    ]);
+    expect(JSON.stringify(shown)).not.toMatch(/accident|Accident/);
+    // patch review — the STORED row keeps only the locator (its context is a hash): every line names the claim there
+    expect(shown.map((l) => l.resourceLocator)).toEqual([`claim:${w.cid.toLowerCase()}`, `claim:${w.cid.toLowerCase()}`]);
+    for (const type of ['admin_ground_inspection.questionnaire_read', 'admin_ground_inspection.questionnaire_answer_saved']) {
+      expect(audits(type, gid).map((l) => l.resourceLocator), type).toEqual(audits(type, gid).map(() => `claim:${w.cid.toLowerCase()}`));
+    }
+  });
+
+  it('⭐ second review S3 — ⛔ family answer shown (the SAME cause) ⇒ ⛔ `family_answers_shown` line', async () => {
+    const w = await world(1);
+    await neighbourSaid(w, 0, 'death_cause', ['accident']);
+    const gid = await assign(w);
+    await familySaid(w, gid, 'death_cause', ['accident']);
+    expect((await complete(w.inspector.client, w, gid)).statusCode).toBe(200);
+    expect((await w.inspector.client.inject({ method: 'GET', url: url(w, gid, '/discrepancy') })).statusCode).toBe(200);
+    expect(audits('admin_ground_inspection.family_answers_shown', gid)).toEqual([]);
   });
 
   it('the SAME cause on both sides ⇒ ⛔ difference (the ONE index helper on both writers — TR3)', async () => {

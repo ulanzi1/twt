@@ -4,6 +4,39 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-32-inspector-questionnaire-at-the-ground-inspection.md — second pass, the whole branch in two chunks (2026-10-29)
+
+Deferred by the second three-layer review (story → Review Findings → "Second code review"). Not closed.
+
+- **D1 — the panel opens on a `scheduled` visit whose claim has LEFT the answer window** [`apps/api/src/modules/claims/claims.ground-inspection.handlers.ts`
+  `questionnaire` — `open = assignment.status === 'scheduled'`] — every save is then refused `not_allowed`. Since S1 the inspector can discard and leave (⛔ trapped);
+  `open` could read the writer's window predicate. ⭐ Trigger: any report of an editable panel that refuses every save.
+- **D2 — a ruled answer can be CHANGED but ⛔ WITHDRAWN** [`packages/contracts/src/claims/ground-inspection-questionnaire.ts` `codes … .min(1)`; the answers table
+  is append-only, ⛔ DELETE] — a mis-tapped `head_letter = collected` can become `not_collected`, ⛔ "not recorded"; a multi list cannot be emptied. A withdraw
+  (a superseding "no answer" row) is a product change. ⭐ Trigger: an inspector or approver asks to clear an answer.
+- **D3 — recording counsel's basis on v1 IN PLACE reaches visits already pinned to v1** [`packages/domain/src/questionnaires/ground-inspection.ts` (*"Recording the
+  basis is a reviewed edit HERE"*); `servedDefinition` is computed at read time] — a visit pinned while the cause / illness were `pending` gains both questions
+  mid-visit. ⭐ Trigger: Row 42 (a) — the basis edit mints `ground_inspection.v2` (new visits only, IQ12) or records that in-flight visits gain the questions.
+- **D4 — the answer-code blind indexes carry ⛔ key version** [`packages/domain/src/claim/answer-code-index.ts`; `inspection-discrepancy.ts` `codeIndexesDiffer`] —
+  an HMAC key rotation makes every definite ③ / ④ pair "differ" (a false prompt to ask again). Same exposure as the death-date index. ⭐ Trigger: the first
+  `hmacKeyRef` rotation plan.
+- **D5 — a handler/writer version mismatch under a concurrent first pin is a bare `Error` (500)** [`packages/domain/src/claim/ground-inspection-questionnaire.ts`
+  — "prepared form does not match"] — unreachable for the three ruled keys (their `sensitive` / `health` are validator-pinned). ⭐ Trigger: row 6-33 adds a
+  chain-authored question to a `ground_inspection` version.
+- **D6 — `readClaimFamilyAccount`'s 200-row cap truncates silently** [`CLAIM_FAMILY_ACCOUNT_ROWS_CAP`] — ≈ 66 visits on one claim before it binds; a cut visit
+  would read "Letter: not recorded". ⭐ Trigger: any claim near 30 visits.
+- **D7 — the letter / illness question WORDS address the inspector** [`packages/i18n/locales/{en,hi}/claim.json` `inspector_questions.head_letter.question`,
+  `.death_illness.question`] — IQ9 serves the Hindi line *"for the inspector to read aloud"*. ⭐ Trigger: Row 42 (b)'s human review of the words.
+- **D8 — the neighbours' writer trusts a pre-lock decrypt the same way** [`packages/domain/src/claim/peer-mesh-reply.ts`] — S10's class (an erasure rewrite keeps
+  the row id), pre-existing (6.27c); fixed for the family's writer only. ⭐ Trigger: any change to `peer-mesh-reply.ts`'s pre-read.
+- **D10 — after "Discard the unsaved answers", the next edit can wait out the discarded task's backoff** [`packages/api-client/src/peer-answer-editor.ts`
+  `abandonQueued` — the head stays in the queue while its loop waits (up to 30 s), `retrying` stays true] — the new edit reads "Not saved — retrying" and holds
+  Load until the timer or an `online` event; before 6.32 a discard always left the screen. Shared with the helpline and mobile editors. ⭐ Trigger: any change to
+  the editor's queue, or a report of a stuck "retrying" after a discard.
+- **D9 — the questionnaire GET decrypts the member's name inside its read transaction** [`apps/api/src/modules/claims/peer-request-core.ts`
+  `resolvePeerRequestMemberName(tx, …)`] — the shared pattern of the neighbours' read; ⛔ a row lock held (I3 holds). ⭐ Trigger: a KMS latency incident, or any
+  change to the resolver.
+
 ## Deferred from: story 6-32-inspector-questionnaire-at-the-ground-inspection.md (2026-10-28)
 
 Deferred by the story's build decisions ([`-413`](../../.decision-log.md#decision-2026-10-28-413)) before any code. Not closed.

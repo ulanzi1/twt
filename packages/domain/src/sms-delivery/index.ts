@@ -45,6 +45,7 @@ export {
   giveUpDeferredAlertSmsSend,
   isAlertSmsSendDetail,
   lookupAlertSmsSend,
+  recordLadderDeliveredAlertSmsSend,
   type AlertSmsSendFinalOutcome,
   type AlertSmsSendKey,
   type AlertSmsSendLookup,

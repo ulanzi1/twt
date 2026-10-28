@@ -63,24 +63,30 @@ describe.skipIf(!hasDatabase)('the degraded-mode bridge switch — two-connectio
 
     const a = await pool.connect();
     let bResult: Awaited<ReturnType<typeof setDegradedBridgeSmsSwitch>> | undefined;
+    // Code review 2026-10-28 (second pass) — the restore wraps EVERYTHING, and B is always awaited: on a throw before A commits, A's
+    // ROLLBACK releases B, which then COMMITS its own flip; restoring before B lands would leave the shared DB switched.
     try {
-      await a.query('BEGIN');
-      // ── Writer A: locks the row, appends its history row, flips the state — and is HELD OPEN (uncommitted). ──
-      const aResult = await setDegradedBridgeSmsSwitchInTx(a, { enabled: target, actorId: actorA, actorDisplay: 'Race A', reason: 'race A', auditId: null });
-      expect(aResult.changed).toBe(true);
+      let bWrite: Promise<unknown> | undefined;
+      try {
+        await a.query('BEGIN');
+        // ── Writer A: locks the row, appends its history row, flips the state — and is HELD OPEN (uncommitted). ──
+        const aResult = await setDegradedBridgeSmsSwitchInTx(a, { enabled: target, actorId: actorA, actorDisplay: 'Race A', reason: 'race A', auditId: randomUUID() });
+        expect(aResult.changed).toBe(true);
 
-      // ── Writer B: the SAME change, through the real pooled entry point, while A is still uncommitted. ──
-      const bWrite = setDegradedBridgeSmsSwitch(poolB, { enabled: target, actorId: actorB, actorDisplay: 'Race B', reason: 'race B', auditId: null });
-      await untilWaitingOnLock(pool, pidB);
-      // Only NOW does A commit — releasing the lock B is waiting on.
-      await a.query('COMMIT');
-      bResult = await bWrite;
-    } finally {
-      await a.query('ROLLBACK').catch(() => undefined);
-      a.release();
-    }
+        // ── Writer B: the SAME change, through the real pooled entry point, while A is still uncommitted. ──
+        const b = setDegradedBridgeSmsSwitch(poolB, { enabled: target, actorId: actorB, actorDisplay: 'Race B', reason: 'race B', auditId: randomUUID() });
+        bWrite = b;
+        await untilWaitingOnLock(pool, pidB);
+        // Only NOW does A commit — releasing the lock B is waiting on.
+        await a.query('COMMIT');
+        bResult = await b;
+      } finally {
+        await a.query('ROLLBACK').catch(() => undefined);
+        a.release();
+        // A is gone (committed or rolled back), so B can finish; its outcome is asserted below, never dropped here.
+        await bWrite?.catch(() => undefined);
+      }
 
-    try {
       expect(bResult).toMatchObject({ changed: false, state: { enabled: target, changedByActor: actorA, changedByDisplay: 'Race A', reason: 'race A' } });
       const { rows } = await pool.query<{ changed_by_actor: string; enabled: boolean }>(
         `SELECT changed_by_actor, enabled FROM degraded_bridge_sms_switch_changes WHERE changed_by_actor = ANY($1::uuid[])`,
@@ -89,7 +95,7 @@ describe.skipIf(!hasDatabase)('the degraded-mode bridge switch — two-connectio
       expect(rows).toEqual([{ changed_by_actor: actorA, enabled: target }]);
       expect((await readDegradedBridgeSmsSwitch(pool)).enabled).toBe(target);
     } finally {
-      await setDegradedBridgeSmsSwitch(pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: null });
+      await setDegradedBridgeSmsSwitch(pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: randomUUID() });
     }
   });
 });

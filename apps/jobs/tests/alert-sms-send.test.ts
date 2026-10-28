@@ -393,7 +393,9 @@ describe('Story 5.8b review P2-1 — `giveUpDeferred` REPORTS what it did (⛔ a
     await expect(send.giveUpDeferred!({ alert: ALERT, call: { occasion: 'cycle_open' } })).resolves.toBe('failed');
     expect(connect).toHaveBeenCalledTimes(3); // the first try + one per pause
     expect(alarms).toHaveLength(1);
-    expect(alarms[0]).toContain('could not be given up after the ladder delivered');
+    // Code review 2026-10-28 (second pass) replaced "could not be given up after the ladder delivered": the closure may now WRITE the
+    // terminal row instead of giving one up.
+    expect(alarms[0]).toContain('could not be closed after the ladder delivered');
     expect(alarms[0]).toContain('the push is ⛔ repeated');
   });
 
@@ -403,6 +405,78 @@ describe('Story 5.8b review P2-1 — `giveUpDeferred` REPORTS what it did (⛔ a
     await expect(send.giveUpDeferred!({ alert: ALERT, call: { occasion: 'day_7' } })).resolves.toBe('none');
     await expect(send.giveUpDeferred!({ alert: ALERT })).resolves.toBe('none');
     expect(connect).not.toHaveBeenCalled();
+  });
+});
+
+describe('Story 5.8b code review 2026-10-28 (second pass) — `giveUpDeferred` with ⛔ row writes the TERMINAL row (was Decision 2 (a))', () => {
+  const BRIDGED = {
+    alert_id: '33333333-3333-3333-3333-333333333333',
+    pariwar_id: '11111111-1111-1111-1111-111111111111',
+    member_id: '22222222-2222-2222-2222-222222222222',
+    alert_category: 'alert_published',
+    time_critical: true,
+    payload_data: { title: 't', body: 'b', sms: { message: 'cycle_open_bridge', locale: 'en', values: { pool: 'A', member1: 'Rame', member2: 'sh K' } } },
+  } as unknown as Alert;
+  const CALL = { occasion: 'cycle_open', jobId: 'job-7', retryCount: 2, retryLimit: 4 };
+
+  /** A pool whose statements are answered by what they are (the lookup reads `found` in turn; the insert conflicts if told to). */
+  function sqlPool(o: { found: readonly (string | null)[]; insertConflicts?: boolean }) {
+    const statements: { sql: string; params: unknown[] }[] = [];
+    let lookups = 0;
+    const query = (sql: string, params: unknown[] = []) => {
+      statements.push({ sql, params });
+      if (sql.includes('SELECT send_id, outcome, detail')) {
+        const outcome = o.found[Math.min(lookups, o.found.length - 1)] ?? null;
+        lookups += 1;
+        const row = outcome === null ? [] : [{ send_id: 'row-1', outcome, detail: outcome === 'error' ? 'exhausted:ladder_delivered' : 'rate_limited:x', inside_lease: true, deferred_fresh: true }];
+        return Promise.resolve({ rows: row, rowCount: row.length });
+      }
+      if (sql.includes('INSERT INTO alert_sms_sends')) {
+        return Promise.resolve(o.insertConflicts ? { rows: [], rowCount: 0 } : { rows: [{ send_id: 'row-new' }], rowCount: 1 });
+      }
+      if (sql.includes('UPDATE alert_sms_sends')) return Promise.resolve({ rows: [], rowCount: 1 });
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    };
+    const pool = { connect: () => Promise.resolve({ query, release: () => undefined }), query } as never;
+    return { pool, statements, writes: () => statements.filter((x) => /^\s*(INSERT|UPDATE)/.test(x.sql)) };
+  }
+  const seam = (pool: never) => createAlertSmsSender({ pool, smsAppClient: gateway().client, resolveConfig: () => Promise.resolve(TEMPLATE_ID), finaliseBackoffMs: [0, 0] });
+
+  it('⭐ ⛔ row + the ladder delivered ⇒ ONE insert (`attempting`, THIS attempt\'s claim token, the block\'s message and language) then its CAS to `error / exhausted:ladder_delivered` ⇒ `closed`', async () => {
+    const db = sqlPool({ found: [null] });
+    await expect(seam(db.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL })).resolves.toBe('closed');
+    const [insert, update] = db.writes();
+    expect(insert!.sql).toContain("'attempting'");
+    expect(insert!.params).toEqual([BRIDGED.pariwar_id, BRIDGED.alert_id, BRIDGED.member_id, 'cycle_open', 'cycle_open_bridge', 'en', 'job-7:2']);
+    expect(update!.sql).toContain("outcome = 'error'");
+    expect(update!.params).toEqual([BRIDGED.pariwar_id, 'row-new', 'job-7:2', 'exhausted:ladder_delivered']);
+    expect(db.writes()).toHaveLength(2);
+  });
+
+  it('⛔ row but `in_app_only`, or an alert with ⛔ bridge block ⇒ `none`, ⛔ write (the member was not told / the residual)', async () => {
+    const a = sqlPool({ found: [null] });
+    await expect(seam(a.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL, ladder: 'in_app_only' })).resolves.toBe('none');
+    expect(a.writes()).toEqual([]);
+    const b = sqlPool({ found: [null] });
+    const noBlock = { ...BRIDGED, payload_data: { title: 't', body: 'b' } } as unknown as Alert;
+    await expect(seam(b.pool).giveUpDeferred!({ alert: noBlock, call: CALL })).resolves.toBe('none');
+    expect(b.writes()).toEqual([]);
+  });
+
+  it('the insert CONFLICTS (another attempt wrote it) ⇒ the row is re-read: FINAL ⇒ `none`; `deferred` ⇒ given up `ladder_delivered`', async () => {
+    const final = sqlPool({ found: [null, 'error'], insertConflicts: true });
+    await expect(seam(final.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL })).resolves.toBe('none');
+    expect(final.writes().map((w) => w.sql.trim().split(/\s+/)[0])).toEqual(['INSERT']);
+    const deferred = sqlPool({ found: [null, 'deferred'], insertConflicts: true });
+    await expect(seam(deferred.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL })).resolves.toBe('closed');
+    expect(deferred.writes().at(-1)!.params).toContain('exhausted:rate_limited:ladder_delivered');
+  });
+
+  it('a `deferred` row and `in_app_only` ⇒ given up `exhausted:rate_limited:in_app_only` (⛔ the ladder-delivered word)', async () => {
+    const db = sqlPool({ found: ['deferred'] });
+    await expect(seam(db.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL, ladder: 'in_app_only' })).resolves.toBe('closed');
+    expect(db.writes()).toHaveLength(1);
+    expect(db.writes()[0]!.params).toContain('exhausted:rate_limited:in_app_only');
   });
 });
 
@@ -482,7 +556,8 @@ describe('review 2026-10-25 — the occasion list has ONE source (C2-P5, C3-P18)
 });
 
 describe('review 2026-10-25 — AC4\'s recorded literals, pinned INDEPENDENTLY of the object that holds them (C3-P8)', () => {
-  it('⭐ the rung vocabulary is exactly these 21 words (19 from AC4 + `exhausted:rate_limited` (C2-P1) + `sms_not_attempted` (C2-P14))', () => {
+  // Story 5.8b, code review 2026-10-28 (second pass) — the 22nd: `exhausted:ladder_delivered` (the terminal bridge row, read back).
+  it('⭐ the rung vocabulary is exactly these 22 words (19 from AC4 + `exhausted:rate_limited` (C2-P1) + `sms_not_attempted` (C2-P14) + `exhausted:ladder_delivered` (5.8b))', () => {
     expect(Object.values(ALERT_SMS_RUNG_DETAIL).sort()).toEqual(
       [
         'config:dlt_template_id_missing:hi',
@@ -500,6 +575,7 @@ describe('review 2026-10-25 — AC4\'s recorded literals, pinned INDEPENDENTLY o
         'dlt_template_not_approved:gateway',
         'exhausted:outcome_unknown',
         'exhausted:rate_limited',
+        'exhausted:ladder_delivered',
         'sms_not_attempted',
         'sms_awaiting_wa_window',
         'rate_limited',

@@ -1600,11 +1600,94 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       expect(later.calls).toHaveLength(0);
     });
 
+    // ── Code review 2026-10-28 (second pass) — was Decision 2 (a): the ladder delivers with ⛔ row ⇒ a TERMINAL row ──
+    it('⭐ was Decision 2 (a) — switch OFF and the push DELIVERS with ⛔ row ⇒ a TERMINAL row `error / exhausted:ladder_delivered` (the block\'s message and language); F9\'s hourly RE-FAN with the switch ON (and push down) finds it FINAL ⇒ ⛔ text', async () => {
+      const k = await freshAlert();
+      const off = rig({ pushAccepts: true, readBridgeSwitch: () => Promise.resolve(false) });
+      const first = await fanOutAlert(off.deps, bridgedOpen(k, 'en'), ctx(), CALL);
+      expect(first).toMatchObject({ delivered: true, deliveredChannel: 'push' });
+      expect(first.bridgeRowOpen).toBeUndefined();
+      expect(off.calls).toHaveLength(0);
+      expect(await fullRow(k.alertId)).toMatchObject({
+        outcome: 'error',
+        detail: 'exhausted:ladder_delivered',
+        message: 'cycle_open_bridge',
+        locale: 'en',
+        attempt_count: 1,
+        claim_token: 'job-b:0',
+        provider_message_id: null,
+      });
+      expect((await rowsOf(k.alertId)).map((r) => r.occasion)).toEqual(['cycle_open']);
+      // The re-fan: a NEW job id (the key was vacuumed), the switch now ON, push DOWN — only the record can stop the text.
+      const on = rig();
+      const refan = await fanOutAlert(on.deps, bridgedOpen(k, 'en'), ctx(), { ...CALL, jobId: 'job-refan' });
+      expect(on.calls).toHaveLength(0);
+      expect(refan.trail[0]).toMatchObject({ channel: 'sms', outcome: 'rejected', detail: ALERT_SMS_RUNG_DETAIL.ladderDelivered });
+      expect(shouldRetryFanOut(refan, ctx(), { ...CALL, jobId: 'job-refan' })).toBe(false);
+      // A further delivery's closure finds the row FINAL: ⛔ a second row, ⛔ a write to it.
+      const before = await fullRow(k.alertId);
+      await fanOutAlert(rig({ pushAccepts: true, readBridgeSwitch: () => Promise.resolve(false) }).deps, bridgedOpen(k, 'en'), ctx(), { ...CALL, retryCount: 1 });
+      expect(await fullRow(k.alertId)).toEqual(before);
+      expect(await rowsOf(k.alertId)).toHaveLength(1);
+    });
+
+    it('⭐ …two closures RACING on ⛔ row (two workers whose ladders both delivered) ⇒ ONE terminal row, ⛔ a throw; an alert with ⛔ block (the death overlay) ⇒ ⛔ row (the residual)', async () => {
+      const k = await freshAlert();
+      const a = rig();
+      const b = rig();
+      const results = await Promise.all([
+        a.deps.alertSms!.giveUpDeferred!({ alert: bridgedOpen(k), call: CALL }),
+        b.deps.alertSms!.giveUpDeferred!({ alert: bridgedOpen(k), call: { ...CALL, jobId: 'job-c' } }),
+      ]);
+      expect([...results].sort()).toEqual(['closed', 'none']);
+      expect(await rowsOf(k.alertId)).toEqual([expect.objectContaining({ outcome: 'error', detail: 'exhausted:ladder_delivered' })]);
+      const k2 = await freshAlert();
+      const frozen = buildCycleOpenAlert({
+        alertId: k2.alertId,
+        pariwarId: k2.pariwarId,
+        memberId: k2.memberId,
+        poolId: randomUUID(),
+        identity: IDENTITY,
+        timeCritical: true,
+        locale: 'hi',
+        smsLocale: 'hi',
+        smsNameBoxes: ['Rame', 'sh K'],
+        deathReported: true,
+        now: NOW,
+      });
+      const r = rig({ pushAccepts: true });
+      expect((await fanOutAlert(r.deps, frozen, ctx(), CALL)).deliveredChannel).toBe('push');
+      expect(await rowsOf(k2.alertId)).toEqual([]);
+    });
+
+    it('⭐ a member recorded TERMINALLY without delivery (attempt 2: the switch OFF, push down) ⇒ the EARLIER `deferred` row is given up `exhausted:rate_limited:in_app_only` and a later re-fan sends NOTHING; with ⛔ row ⛔ row is written', async () => {
+      const k = await freshAlert();
+      const first = rig({ answer: () => Promise.reject(new SmsSendError('r', null, 429)) });
+      expect((await fanOutAlert(first.deps, bridgedOpen(k), ctx(), CALL)).delivered).toBe(false);
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'deferred' });
+      const off = rig({ readBridgeSwitch: () => Promise.resolve(false) });
+      const second = await fanOutAlert(off.deps, bridgedOpen(k), ctx(), { ...CALL, retryCount: 1 });
+      expect(second.delivered).toBe(false);
+      expect(second.bridgeRowOpen).toBeUndefined();
+      expect(shouldRetryFanOut(second, ctx(), { ...CALL, retryCount: 1 })).toBe(false);
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'error', detail: 'exhausted:rate_limited:in_app_only' });
+      const later = rig();
+      await fanOutAlert(later.deps, bridgedOpen(k), ctx(), { ...CALL, jobId: 'job-refan' });
+      expect(later.calls).toHaveLength(0);
+      // ⛔ row and ⛔ delivery: nothing is written (the member was never told — a later re-fan with the switch ON may text them).
+      const k2 = await freshAlert();
+      await fanOutAlert(rig({ readBridgeSwitch: () => Promise.resolve(false) }).deps, bridgedOpen(k2), ctx(), CALL);
+      expect(await rowsOf(k2.alertId)).toEqual([]);
+      const on = rig();
+      await fanOutAlert(on.deps, bridgedOpen(k2), ctx(), { ...CALL, jobId: 'job-refan' });
+      expect(on.calls).toHaveLength(1);
+    });
+
     it('⭐ AC12 — the REAL switch, read through the jobs pool (`twt_app`): OFF ⇒ ⛔ text, the ladder\'s trail names it; ON ⇒ the text goes (the state found is restored)', async () => {
       const read = async (): Promise<boolean> => (await degradedMode.readDegradedBridgeSmsSwitch(appPool)).enabled;
       const found = await read();
       const actor = randomUUID();
-      const set = (enabled: boolean, reason: string) => degradedMode.setDegradedBridgeSmsSwitch(ownerPool, { enabled, actorId: actor, actorDisplay: 'Live Spec', reason, auditId: null });
+      const set = (enabled: boolean, reason: string) => degradedMode.setDegradedBridgeSmsSwitch(ownerPool, { enabled, actorId: actor, actorDisplay: 'Live Spec', reason, auditId: randomUUID() });
       try {
         await set(false, 'live test 5.8b AC12 — OFF');
         const off = rig({ readBridgeSwitch: read });

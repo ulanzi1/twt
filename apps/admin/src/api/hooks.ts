@@ -475,12 +475,17 @@ export function useDegradedBridgeSmsSwitch() {
   return useQuery({ queryKey: degradedBridgeSmsSwitchKey, queryFn: api.getDegradedBridgeSmsSwitch });
 }
 
-/** Turn the bridge text on / off (Super Admin), then refresh the switch read. */
+/**
+ * Turn the bridge text on / off (Super Admin), then refresh the switch read. Code review 2026-10-28 (second pass): the server's answer
+ * goes into the cache at once, and the read is refreshed on SETTLE — a 409 ("already in this state") means the page was stale, so the
+ * error path refreshes too. ⛔ `reset()` here (it would wipe the error the page shows).
+ */
 export function useSetDegradedBridgeSmsSwitch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.setDegradedBridgeSmsSwitch>[0]) => api.setDegradedBridgeSmsSwitch(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: degradedBridgeSmsSwitchKey }),
+    onSuccess: (state) => qc.setQueryData(degradedBridgeSmsSwitchKey, state),
+    onSettled: () => qc.invalidateQueries({ queryKey: degradedBridgeSmsSwitchKey }),
   });
 }
 

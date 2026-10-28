@@ -10,7 +10,7 @@ import type { DegradedModeDeclareRequest } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { BRIDGE_TEXT_PARAGRAPH } from './bridge-copy.js';
+import { BRIDGE_TEXT_PARAGRAPH, BRIDGE_TEXTS_SWITCHED_OFF_SENTENCE } from './bridge-copy.js';
 
 interface DeclareFormValues {
   mode: 'cycle_open_sms_bridge';
@@ -23,9 +23,14 @@ export interface DeclareFormProps {
   onSubmit: (payload: DegradedModeDeclareRequest) => void;
   pending: boolean;
   submitError?: string;
+  /**
+   * Story 5.8b — the Trust-wide switch: `true` ON, `false` OFF, `null` not (yet) read. OFF ⇒ the banner's "switched off" words sit
+   * beside the paragraph (code review 2026-10-28 (second pass), Decision 1 (b)); ON or unknown ⇒ the paragraph alone.
+   */
+  bridgeTextsOn: boolean | null;
 }
 
-export function DeclareForm({ onSubmit, pending, submitError }: DeclareFormProps): ReactElement {
+export function DeclareForm({ onSubmit, pending, submitError, bridgeTextsOn }: DeclareFormProps): ReactElement {
   const {
     register,
     handleSubmit,
@@ -89,6 +94,11 @@ export function DeclareForm({ onSubmit, pending, submitError }: DeclareFormProps
       <p className="text-sm opacity-80" data-testid="degraded-mode-declare-copy">
         {BRIDGE_TEXT_PARAGRAPH}
       </p>
+      {bridgeTextsOn === false && (
+        <p className="text-sm font-semibold" data-testid="degraded-mode-declare-switched-off">
+          {BRIDGE_TEXTS_SWITCHED_OFF_SENTENCE}
+        </p>
+      )}
 
       <button
         type="submit"

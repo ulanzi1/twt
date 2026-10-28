@@ -441,6 +441,11 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     const pa = { pariwarId: '11111111-1111-1111-1111-111111111111', role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: '11111111-1111-1111-1111-111111111111' } as const;
     expect(hasPermission([sa], KEY, resource)).toBe(true);
     expect(hasPermission([pa], KEY, resource)).toBe(false);
+    // Code review 2026-10-28 (second pass), AC12 — CONTAINMENT: the ROLE is not enough. A super_admin grant at `pariwar` scope is
+    // narrower than the global target, so it FAILS the global check ([[project_rbac_geo_scope_containment]]).
+    const saNarrow = { ...sa, scopeDimension: 'pariwar', scopeValue: sa.pariwarId } as const;
+    expect(hasPermission([saNarrow], KEY, resource)).toBe(false);
+    expect(hasPermission([saNarrow, pa], KEY, resource)).toBe(false);
   });
 
   it('Story 11b.13 — pariwar.manage_drive_target_visibility is super_admin ONLY, and pariwar_admin does NOT hold it', () => {

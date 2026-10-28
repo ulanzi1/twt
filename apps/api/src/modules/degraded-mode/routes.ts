@@ -3,7 +3,8 @@
 // The scoped admin chain [requireAdminSession, scopeResolutionHook, requirePermissionHook(
 // pariwar.declare_degraded_mode)] (the channel-config precedent). Scope-resolution sets request.scopeTx +
 // request.scopeGrants; the permission hook fail-closes on deny (401 no session, 403 no permission — never a
-// silent declaration write; AI-4-3(b)). All three routes register in openapi/v1.yaml (the EXPECTED diff).
+// silent declaration write; AI-4-3(b)). All five routes — Story 5.8's three plus 5.8b's two bridge-switch routes (GET + POST,
+// global, below) — register in openapi/v1.yaml (code review 2026-10-28 (second pass): this said "three").
 
 import {
   DegradedBridgeSmsSwitchResponse,

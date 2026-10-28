@@ -86,9 +86,10 @@ describe.skipIf(!hasDatabase)('Story 5.8b — the bridge, end to end through the
   /**
    * A fresh Pariwar (passport `hi`); the deceased (a REAL KYC name envelope) and their claim through the projector; three rostered
    * members with REAL mobile envelopes — `en` (chose English), `hi` (never chose), `frozen` (their OWN death reported: a claim intake
-   * naming them); a committed `alerts` row for the cycle.
+   * naming them); a committed `alerts` row for the cycle. `shielded` — the Pariwar's presentation mode row says `shielded_name`
+   * (8.16; code review 2026-10-28, second pass — AC4 / T12 through the REAL resolver).
    */
-  async function world() {
+  async function world(o: { readonly shielded?: boolean } = {}) {
     const pid = randomUUID();
     pariwars.push(pid);
     await pool.query(
@@ -96,6 +97,9 @@ describe.skipIf(!hasDatabase)('Story 5.8b — the bridge, end to end through the
        VALUES ($1, 'Test Pariwar EN', 'परीक्षण परिवार', 'Test Welfare Trust', $2, 'hi')`,
       [pid, JSON.stringify({ logo_url: 'https://x/l.png', primary_color: '#0A3D62', secondary_color: '#FFFFFF' })],
     );
+    if (o.shielded) {
+      await pool.query(`INSERT INTO pariwar_public_name_presentation (pariwar_id, mode) VALUES ($1, 'shielded_name')`, [pid]);
+    }
     const deceased = randomUUID();
     const claimCaseId = randomUUID();
     const m = { en: randomUUID(), hi: randomUUID(), frozen: randomUUID() };
@@ -257,5 +261,31 @@ describe.skipIf(!hasDatabase)('Story 5.8b — the bridge, end to end through the
     );
     expect(again.alreadySent).toBe(3);
     expect(h.sent).toHaveLength(2);
+  });
+  // ⭐ Code review 2026-10-28 (second pass) — AC4 / T12: the unit legs fed the shielded string in; here the Pariwar's REAL
+  // presentation-mode row drives the REAL resolver (8.16), and the text carries the SHIELDED form — first name + last initial — never
+  // the full legal name.
+  it('⭐ AC4 / T12 — a `shielded_name` Pariwar: the bridge text names the family in the SHIELDED form from the real resolver (⛔ the full name anywhere on the wire)', async () => {
+    const w = await world({ shielded: true });
+    const h = harness();
+    await runContributionNotifyChild(
+      h.deps,
+      { requestId: 'req', pariwarId: w.pid, actorId: null, traceId: 'trace', payload: payload(w) },
+      { id: 'job-shielded', retryCount: 0, retryLimit: 4 },
+    );
+    const SHIELDED = 'Ramesh S.';
+    const boxes = smsMemberName(SHIELDED);
+    if (boxes.kind === 'too_long') throw new Error('fixture does not fit');
+    expect(h.sent).toHaveLength(2);
+    for (const msg of h.sent) {
+      expect(msg.values.slice(1)).toEqual([
+        { name: 'member1', value: boxes.boxes[0] },
+        { name: 'member2', value: boxes.boxes[1] },
+      ]);
+      expect(msg.body).toContain(SHIELDED);
+      expect(msg.body).not.toContain('Kumar');
+      expect(msg.body).not.toContain('Sharma');
+    }
+    expect(h.alarms.join('\n')).not.toContain('Ramesh');
   });
 });

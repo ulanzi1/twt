@@ -20,7 +20,8 @@ import { alerts } from './alerts.js';
  * pending match, and one per EMITTABLE mismatch reason — `matcher-worker.ts` `EMITTABLE_MISMATCH_REASONS`) — and, Story 5.8b
  * (FS8 (a), `2026-10-28-415`), `cycle_open`: the degraded-mode bridge's text (the cycle-open child's scope). SEVEN per member per
  * real cycle (was six — `-404`'s cap superseded in part). ⚠ LOCKSTEP with `alert_sms_sends_occasion_check` (0184, replaced by
- * 0188); the CHECK is the boundary (the producer builds the scope from a raw payload string).
+ * 0188); the CHECK is the boundary (the producer builds the scope from a raw payload string). `cycle_open` ⇔ the message
+ * `cycle_open_bridge` (`alert_sms_sends_bridge_pairing_check`, 0188).
  */
 export const ALERT_SMS_SEND_OCCASIONS = [
   'day_10',
@@ -67,12 +68,13 @@ export type AlertSmsSendOutcome = (typeof ALERT_SMS_SEND_OUTCOMES)[number];
 
 /**
  * ⭐ The GRAMMAR of `detail`: every value the alert SMS seam writes, ⛔ anything else (⛔ a space, ⛔ `+`, ⛔ a run of 7+ digits).
- * A gateway `<code>` is `[A-Za-z0-9_.-]{1,64}` (`sanitizeSmsGatewayCode`). ⚠ LOCKSTEP with 0184's
- * `alert_sms_sends_detail_vocabulary_check` (the policy spec pins the two equal) and asserted by the writers. ⛔ Backslashes —
- * the same string must read the same in a JS `RegExp` and a PG ARE.
+ * A gateway `<code>` is `[A-Za-z0-9_.-]{1,64}` (`sanitizeSmsGatewayCode`). `exhausted:ladder_delivered` (Story 5.8b, code review
+ * 2026-10-28 (second pass)) — the terminal bridge row written when the ladder delivered and no send row existed. ⚠ LOCKSTEP with
+ * `alert_sms_sends_detail_vocabulary_check` (0184, replaced by 0188; the policy spec pins the two equal) and asserted by the
+ * writers. ⛔ Backslashes — the same string must read the same in a JS `RegExp` and a PG ARE.
  */
 export const ALERT_SMS_SEND_DETAIL_PATTERN =
-  '^(?!.*[0-9]{7})(exhausted:outcome_unknown(:(api_unavailable|unknown):[A-Za-z0-9_.-]{1,64})?|(exhausted:)?rate_limited:[A-Za-z0-9_.-]{1,64}|exhausted:config_unavailable:secret_manager|config:sms_messaging_unavailable|(invalid_number|carrier_reject|auth|dlt_template_not_approved):[A-Za-z0-9_.-]{1,64})$';
+  '^(?!.*[0-9]{7})(exhausted:outcome_unknown(:(api_unavailable|unknown):[A-Za-z0-9_.-]{1,64})?|(exhausted:)?rate_limited:[A-Za-z0-9_.-]{1,64}|exhausted:config_unavailable:secret_manager|exhausted:ladder_delivered|config:sms_messaging_unavailable|(invalid_number|carrier_reject|auth|dlt_template_not_approved):[A-Za-z0-9_.-]{1,64})$';
 
 export const alertSmsSends = pgTable(
   'alert_sms_sends',
@@ -110,6 +112,8 @@ export const alertSmsSends = pgTable(
       'alert_sms_sends_message_check',
       sql`${t.message} IN ('deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed', 'cycle_open_bridge')`,
     ),
+    // 0188 (code review 2026-10-28 (second pass)) — the bridge occasion carries the bridge message, and only it does.
+    check('alert_sms_sends_bridge_pairing_check', sql`(${t.occasion} = 'cycle_open') = (${t.message} = 'cycle_open_bridge')`),
     check('alert_sms_sends_locale_check', sql`${t.locale} IN ('hi', 'en')`),
     check(
       'alert_sms_sends_outcome_check',

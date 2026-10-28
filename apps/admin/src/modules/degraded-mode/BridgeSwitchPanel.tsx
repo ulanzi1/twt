@@ -8,13 +8,19 @@ import type { DegradedBridgeSmsSwitchResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 
+import { formatIst } from '../correction-chase/ist.js';
+
 /** The permission key the control is shown for (catalog v55; `super_admin` only). */
 export const SWITCH_BRIDGE_SMS_KEY = 'degraded_mode.switch_bridge_sms';
 
 export interface BridgeSwitchPanelProps {
   readonly state: DegradedBridgeSmsSwitchResponse;
   readonly canChange: boolean;
-  readonly onChange: (body: { enabled: boolean; reason: string }) => void;
+  /**
+   * Send the change; call `onSaved` once the SERVER accepted it — the panel then clears its reason box, so the next change needs its
+   * own reason (code review 2026-10-28 (second pass): the box kept the last one, and the next change recorded it).
+   */
+  readonly onChange: (body: { enabled: boolean; reason: string }, onSaved: () => void) => void;
   readonly pending: boolean;
   readonly changeError?: string;
 }
@@ -23,6 +29,13 @@ export function BridgeSwitchPanel({ state, canChange, onChange, pending, changeE
   const [reason, setReason] = useState('');
   const [missingReason, setMissingReason] = useState(false);
   const next = !state.enabled;
+  // A reason is written for ONE direction: when the state moves under it (changed elsewhere, or a 409's refresh), the box empties,
+  // so a reason typed for "on" is never sent with "off" (code review 2026-10-28 (second pass)). Adjusted during render (⛔ an effect).
+  const [reasonFor, setReasonFor] = useState(next);
+  if (reasonFor !== next) {
+    setReasonFor(next);
+    setReason('');
+  }
 
   return (
     <div className="flex flex-col gap-2" data-testid="bridge-switch" data-enabled={String(state.enabled)}>
@@ -31,9 +44,12 @@ export function BridgeSwitchPanel({ state, canChange, onChange, pending, changeE
           ? 'Bridge texts are ON for every Pariwar.'
           : 'Bridge texts are OFF for every Pariwar — no bridge text is sent; the app and WhatsApp notifications still go.'}
       </p>
+      {/* Code review 2026-10-28 (second pass) — staff time in IST (the admin app's `formatIst`), ⛔ raw ISO UTC; ⛔ an empty `— “”`. */}
       {state.changedAt ? (
-        <p className="text-sm opacity-70">
-          Last changed {state.changedAt}{state.changedByDisplay ? ` by ${state.changedByDisplay}` : ''} — “{state.reason}”
+        <p className="text-sm opacity-70" data-testid="bridge-switch-last-changed">
+          Last changed {formatIst(state.changedAt)}
+          {state.changedByDisplay ? ` by ${state.changedByDisplay}` : ''}
+          {state.reason !== null ? ` — “${state.reason}”` : ''}
         </p>
       ) : (
         <p className="text-sm opacity-70">Never changed — the switch starts off.</p>
@@ -50,7 +66,7 @@ export function BridgeSwitchPanel({ state, canChange, onChange, pending, changeE
               return;
             }
             setMissingReason(false);
-            onChange({ enabled: next, reason: trimmed });
+            onChange({ enabled: next, reason: trimmed }, () => setReason(''));
           }}
         >
           <label htmlFor="bridge-switch-reason" className="text-sm font-medium">Reason (required)</label>

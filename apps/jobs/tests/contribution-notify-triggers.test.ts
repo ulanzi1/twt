@@ -22,6 +22,7 @@ const release = vi.fn();
 // Story 5.8b review (P2-1) — the child reads a recorded member's result back when it owes a bridge-row closure.
 const inspect = vi.fn();
 const withPariwarScope = vi.fn();
+const scopeClientQuery = vi.fn();
 // Story 5.11b (FS5 (a)) — the lit kinds' set-based TEXT-language read; every member defaults to `hi` here (the language legs are
 // LIVE — `alert-sms-send-live.test.ts`). A harness stub, ⛔ an assertion change.
 const readMemberTextLanguages = vi.fn(
@@ -85,6 +86,9 @@ const {
   LIT_KIND_JOB_MEMBER_LIMIT,
   DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS,
   PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS,
+  BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS,
+  BRIDGE_NAME_ALARM_WINDOW_MS,
+  resetBridgeNameAlarms,
 } = await import('../src/scheduler/contribution-notify-triggers.js');
 const { CONTRIBUTION_SMS_TEMPLATES, renderContributionSms } = await import('../src/scheduler/contribution-sms-templates.js');
 const { EMITTABLE_MISMATCH_REASONS } = await import('../src/matcher/matcher-worker.js');
@@ -166,10 +170,14 @@ function childPayload(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Code review 2026-10-28 (second pass) — the bridged child brackets its death-overlay read in a SAVEPOINT on the scope's client.
+  scopeClientQuery.mockReset();
+  scopeClientQuery.mockResolvedValue({ rows: [] });
   withPariwarScope.mockImplementation(
     (_pool: unknown, _pariwarId: string, fn: (db: unknown, client: unknown) => unknown) =>
-      Promise.resolve(fn({ marker: 'db' }, { marker: 'client' })),
+      Promise.resolve(fn({ marker: 'db' }, { marker: 'client', query: scopeClientQuery })),
   );
+  resetBridgeNameAlarms();
   resolvePoolIdentity.mockResolvedValue(IDENTITY);
   resolvePublicNamePresentationMode.mockResolvedValue('full_name');
   listActedMemberIdsForPool.mockResolvedValue({ confirmed: [], attested: [] });
@@ -2080,5 +2088,217 @@ describe('Story 5.8b review P2-1 — a bridge-row closure that FAILED is owed by
     inspect.mockResolvedValue({ status: 'completed', result: { delivered: true, bridgeRowOpen: true } });
     await runContributionNotifyChild(deps({ alertSms }), envelope(childPayload()) as never);
     expect(alertSms.giveUpDeferred).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Story 5.8b — code review 2026-10-28 (second pass): the overlay read, the key's life, the name alarms, the predicate ──────────
+
+describe('Story 5.8b code review 2026-10-28 (second pass) — the bridged child', () => {
+  const smsOf = (a: Alert) => (a.payload_data as { sms?: unknown }).sms;
+  const alertBuiltFor = (memberId: string, call = 0) => (fanOutAlertToMembers.mock.calls[call]![1] as (m: string) => Alert)(memberId);
+  const bridged = (overrides: Record<string, unknown> = {}) => childPayload({ timeCritical: true, ...overrides });
+  const alarmsOf = (onAlarm: ReturnType<typeof vi.fn>, word: string) => onAlarm.mock.calls.map(([m]) => String(m)).filter((m) => m.includes(word));
+
+  it('⭐ the death-overlay read FAILS ⇒ EVERY bridge block omitted (⛔ a guess), ONE name-free alarm, the push still goes, the scope rolled back to its SAVEPOINT, ⛔ throw', async () => {
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: 'Ramesh Kumar' });
+    listAccountFrozenMemberIds.mockRejectedValueOnce(Object.assign(new Error('relation "events_log" Ramesh'), { code: '57014' }));
+    const onAlarm = vi.fn();
+    const result = await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged()) as never);
+    expect(result.attempted).toBe(2);
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(1);
+    expect(smsOf(alertBuiltFor(M1))).toBeUndefined();
+    expect(smsOf(alertBuiltFor(M2))).toBeUndefined();
+    const alarms = alarmsOf(onAlarm, 'alert_sms.bridge_overlay_unavailable');
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('code:57014');
+    expect(alarms[0]).not.toContain('Ramesh');
+    // ⛔ a name-fit alarm on top (nobody would be texted).
+    expect(alarmsOf(onAlarm, 'bridge_name')).toHaveLength(0);
+    expect(scopeClientQuery.mock.calls.map(([q]) => q)).toEqual(['SAVEPOINT bridge_death_overlay', 'ROLLBACK TO SAVEPOINT bridge_death_overlay']);
+    // The identity reads after it still ran on the SAME scope.
+    expect(resolvePoolIdentity).toHaveBeenCalledTimes(1);
+    // Fix review (2026-10-28): the fan-out is TOLD the blocks are missing on a failed read (⛔ ineligible) — an un-reached member retries.
+    expect(fanOutAlertToMembers.mock.calls[0]![5]).toMatchObject({ occasion: 'cycle_open', bridgeBlockUnavailable: true });
+  });
+
+  it('fix review (2026-10-28) — an OWED closure on an attempt whose overlay read FAILS stays owed (⛔ tried without a block, ⛔ dropped): the job throws', async () => {
+    claim.mockResolvedValue('already_claimed');
+    inspect.mockResolvedValue({ status: 'completed', result: { delivered: true, bridgeRowOpen: true } });
+    listAccountFrozenMemberIds.mockRejectedValueOnce(Object.assign(new Error('blip'), { code: '57014' }));
+    const alertSms = seamWith('closed');
+    await expect(
+      runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 }),
+    ).rejects.toThrow('still to be given up');
+    expect(alertSms.giveUpDeferred).not.toHaveBeenCalled();
+  });
+
+  it('the read that succeeds RELEASES its savepoint; an un-bridged cycle-open takes none', async () => {
+    await runContributionNotifyChild(deps(), envelope(bridged()) as never);
+    expect(scopeClientQuery.mock.calls.map(([q]) => q)).toEqual(['SAVEPOINT bridge_death_overlay', 'RELEASE SAVEPOINT bridge_death_overlay']);
+    scopeClientQuery.mockClear();
+    await runContributionNotifyChild(deps(), envelope(childPayload()) as never);
+    expect(scopeClientQuery).not.toHaveBeenCalled();
+  });
+
+  it('⭐ AC6 — the builder asks the ONE predicate: `deathReported` ⇒ ⛔ block (the language and the boxes notwithstanding)', () => {
+    const base = { alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, locale: 'hi' as const, now: NOW };
+    const boxes = ['रामेश्वर', ' प्र.'] as const;
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: 'hi', smsNameBoxes: boxes, deathReported: true }))).toBeUndefined();
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: 'hi', smsNameBoxes: boxes, deathReported: false }))).toMatchObject({ message: 'cycle_open_bridge' });
+  });
+
+  it('⭐ the key\'s life — a BRIDGED member is claimed for the 30-minute deferred window + margin; every other kind keeps its own TTL', async () => {
+    expect(BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS).toBeGreaterThanOrEqual(30 * 60 + 400); // the window + one bounded job (~400 s)
+    await runContributionNotifyChild(deps(), envelope(bridged()) as never);
+    expect(claim.mock.calls.map((c) => c[1])).toEqual([BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS, BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS]);
+    claim.mockClear();
+    await runContributionNotifyChild(deps({ memberIdempotencyTtlSeconds: 60 }), envelope(bridged()) as never);
+    expect(claim.mock.calls[0]![1]).toBe(BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS); // an override never shortens it
+    claim.mockClear();
+    await runContributionNotifyChild(deps(), envelope(childPayload()) as never);
+    expect(claim.mock.calls[0]![1]).toBe(DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS);
+  });
+
+  /** A keyed store with a clock and a VACUUM (`purgeExpiredKeys`): `claim` / `recordResult` / `inspect` as Story 1.12 defines them. */
+  function clockedStore() {
+    let nowMs = Date.parse('2026-10-28T06:00:00.000Z');
+    const rows = new Map<string, { status: 'pending' | 'completed'; expiresAt: number; result: unknown }>();
+    claim.mockImplementation((key: string, ttl: number) => {
+      const row = rows.get(key);
+      if (row === undefined || (row.status === 'pending' && row.expiresAt < nowMs)) {
+        rows.set(key, { status: 'pending', expiresAt: nowMs + ttl * 1000, result: null });
+        return Promise.resolve('acquired');
+      }
+      return Promise.resolve('already_claimed');
+    });
+    recordResult.mockImplementation((key: string, result: unknown) => {
+      const row = rows.get(key);
+      if (row?.status !== 'pending') return Promise.reject(new Error('IdempotencyKeyNotClaimedError'));
+      row.status = 'completed';
+      row.result = result;
+      return Promise.resolve();
+    });
+    inspect.mockImplementation((key: string) => {
+      const row = rows.get(key);
+      return Promise.resolve(row ? { status: row.status, createdAt: new Date(0), expiresAt: new Date(row.expiresAt), result: row.result } : null);
+    });
+    release.mockImplementation((key: string) => {
+      if (rows.get(key)?.status === 'pending') rows.delete(key);
+      return Promise.resolve();
+    });
+    return {
+      advance: (ms: number) => (nowMs += ms),
+      vacuum: () => {
+        for (const [k, v] of rows) if (v.expiresAt < nowMs) rows.delete(k);
+      },
+    };
+  }
+  const delivered = (memberId: string, extra: Record<string, unknown> = {}) => ({
+    memberId,
+    delivered: true,
+    deliveredChannel: 'push',
+    trail: [{ channel: 'sms', attempt: 0, outcome: 'skipped_no_target', detail: 'rate_limited' }, { channel: 'push', attempt: 0, outcome: 'sent' }],
+    bridged: true,
+    costSuppressedChannels: [],
+    telegramMirrored: false,
+    ...extra,
+  });
+  const seamWith = (closure: 'closed' | 'none' | 'failed') =>
+    Object.assign(vi.fn(), { giveUpDeferred: vi.fn<(input: { alert: Alert; call?: unknown; ladder?: string }) => Promise<string>>(() => Promise.resolve(closure)) });
+
+  it('⭐ (a) the hourly VACUUM between attempts (backoff past 300 s) no longer drops an owed closure into a FULL re-fan: the record outlives it ⇒ the retry tries the closure ALONE', async () => {
+    const store = clockedStore();
+    fanOutAlertToMembers.mockResolvedValueOnce({ results: [delivered(M1, { bridgeRowOpen: true })], retry: [] });
+    await expect(
+      runContributionNotifyChild(deps({ alertSms: seamWith('failed') }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 0, retryLimit: 4 }),
+    ).rejects.toThrow('still to be given up');
+    store.advance(20 * 60_000); // attempt 4's backoff, well past the old 300 s key
+    store.vacuum();
+    const alertSms = seamWith('closed');
+    const retry = await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 3, retryLimit: 4 });
+    expect(retry).toMatchObject({ attempted: 0, alreadySent: 1 });
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(1); // ⛔ a second fan-out (⛔ push, ⛔ text-first from the fresh deferred row)
+    expect(alertSms.giveUpDeferred).toHaveBeenCalledTimes(1);
+  });
+
+  it('⭐ (b) a `recordResult` that FAILS leaves the key `pending` — it stays claimed past the deferred row\'s 30 minutes, so ⛔ fan-out re-claims the member (⛔ a text from it) until the row has aged out', async () => {
+    const store = clockedStore();
+    recordResult.mockImplementationOnce(() => Promise.reject(new Error('the server closed the connection')));
+    fanOutAlertToMembers.mockResolvedValueOnce({ results: [delivered(M1, { bridgeRowOpen: true })], retry: [] });
+    const onAlarm = vi.fn();
+    await expect(
+      runContributionNotifyChild(deps({ alertSms: seamWith('failed'), onAlarm }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 0, retryLimit: 4 }),
+    ).rejects.toThrow();
+    expect(alarmsOf(onAlarm, 'failed to record a member result')).toHaveLength(1);
+    // Retries (and a sweep re-run) at +6, +20 and +31 minutes — each past the old 300 s key.
+    for (const stepMinutes of [6, 14, 11]) {
+      store.advance(stepMinutes * 60_000);
+      store.vacuum();
+      await runContributionNotifyChild(deps({ alertSms: seamWith('closed') }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
+    }
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(1);
+    // Past the TTL (45 min) — the deferred row is ≥ 30 min old by now, so the seam gives it up `expired` instead of sending (live: C1-D1).
+    store.advance(15 * 60_000);
+    store.vacuum();
+    await runContributionNotifyChild(deps({ alertSms: seamWith('closed') }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j-sweep', retryCount: 0, retryLimit: 4 });
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('an owed closure on a member recorded `in_app_only` is retried as `in_app_only` (⛔ a terminal ladder-delivered row for a member never told)', async () => {
+    claim.mockResolvedValue('already_claimed');
+    inspect.mockResolvedValue({ status: 'completed', result: { delivered: false, bridgeRowOpen: true } });
+    const alertSms = seamWith('closed');
+    await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
+    expect(alertSms.giveUpDeferred.mock.calls[0]![0]).toMatchObject({ ladder: 'in_app_only' });
+    inspect.mockResolvedValue({ status: 'completed', result: { delivered: true, bridgeRowOpen: true } });
+    await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
+    expect(alertSms.giveUpDeferred.mock.calls[1]![0]).not.toHaveProperty('ladder');
+  });
+
+  const NAME_TOO_LONG = 'G'.repeat(61);
+
+  it('⭐ `bridge_name_too_long` — ONCE per (alert, pool) across the pool\'s jobs, retries and re-fans; another pool keeps its own; a new window alarms again', async () => {
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: NAME_TOO_LONG });
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ memberIds: [M1, M2] })) as never);
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ memberIds: [M3] })) as never); // the pool's 2nd job
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ memberIds: [M1, M2] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
+    const first = alarmsOf(onAlarm, 'alert_sms.bridge_name_too_long');
+    expect(first).toHaveLength(1);
+    expect(first[0]).toContain('2 member(s)');
+    expect(first[0]).not.toContain('GGGG');
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ poolId: POOL_B, memberIds: [M3] })) as never);
+    expect(alarmsOf(onAlarm, 'alert_sms.bridge_name_too_long')).toHaveLength(2);
+    const later = new Date(NOW.getTime() + BRIDGE_NAME_ALARM_WINDOW_MS);
+    await runContributionNotifyChild(deps({ onAlarm, now: () => later }), envelope(bridged({ memberIds: [M1] })) as never);
+    expect(alarmsOf(onAlarm, 'alert_sms.bridge_name_too_long')).toHaveLength(3);
+  });
+
+  it('⭐ its count is only the members who would otherwise be texted (⛔ under the overlay, ⛔ a text language); none ⇒ ⛔ alarm', async () => {
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: NAME_TOO_LONG });
+    listAccountFrozenMemberIds.mockResolvedValueOnce(new Set([M1.toLowerCase()]));
+    readMemberTextLanguages.mockResolvedValueOnce(new Map([[M2, 'hi' as const]]));
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ memberIds: [M1, M2, M3] })) as never);
+    const alarms = alarmsOf(onAlarm, 'alert_sms.bridge_name_too_long');
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('1 member(s)');
+    resetBridgeNameAlarms();
+    listAccountFrozenMemberIds.mockResolvedValueOnce(new Set([M1.toLowerCase(), M2.toLowerCase()]));
+    const none = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm: none }), envelope(bridged()) as never);
+    expect(alarmsOf(none, 'bridge_name')).toHaveLength(0);
+  });
+
+  it('⭐ an EMPTY family label (it disabled the bridge in silence) ⇒ ⛔ block and ONE deduped `alert_sms.bridge_name_empty` alarm; the push still goes', async () => {
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: '   ' });
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged()) as never);
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged()) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
+    expect(smsOf(alertBuiltFor(M1))).toBeUndefined();
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(2);
+    const alarms = alarmsOf(onAlarm, 'alert_sms.bridge_name_empty');
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('2 member(s)');
   });
 });

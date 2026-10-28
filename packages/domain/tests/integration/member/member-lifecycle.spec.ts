@@ -249,4 +249,25 @@ describe.skipIf(!hasDatabase)('member lifecycle (PARIWAR_A scope)', () => {
     expect([...set].sort()).toEqual([m[0]!, m[2]!, m[5]!].map((x) => x.toLowerCase()).sort());
     expect(await listAccountFrozenMemberIds(tx, [], AT)).toEqual(new Set());
   });
+
+  // Code review 2026-10-28 (second pass) — the bridge calls it on the jobs pool, which BYPASSES RLS: the tenant filter must be the
+  // query's own. Run as the superuser (BYPASSRLS here, like that pool) with only the scope GUC set, as `withPariwarScope` sets it.
+  it('5.8b — listAccountFrozenMemberIds filters the tenant ITSELF: bypassing RLS, scope B sees a B intake, scope A ⛔; unscoped ⇒ throws', async () => {
+    const { client, tx } = getTx();
+    const AT = new Date('2026-06-10T00:00:00Z');
+    const mid = randomUUID();
+    await tx.insert(schema.eventsLog).values({
+      streamId: randomUUID(), eventType: 'claim.intake_initiated', payload: { deceased_member_id: mid }, eventVersion: 1,
+      occurredAt: new Date('2026-06-01T00:00:00Z'), actorId: null, pariwarId: PARIWAR_B,
+    });
+    // ⛔ scope ⇒ LOUD (an empty set would read as "no one frozen" and text a bereaved member's own number).
+    await client.query(`SELECT set_config('app.pariwar_id', '', true)`);
+    await client.query('SAVEPOINT unscoped');
+    await expect(listAccountFrozenMemberIds(tx, [mid], AT)).rejects.toThrow();
+    await client.query('ROLLBACK TO SAVEPOINT unscoped');
+    await client.query(`SELECT set_config('app.pariwar_id', $1, true)`, [PARIWAR_B]);
+    expect(await listAccountFrozenMemberIds(tx, [mid], AT)).toEqual(new Set([mid.toLowerCase()]));
+    await client.query(`SELECT set_config('app.pariwar_id', $1, true)`, [PARIWAR_A]);
+    expect(await listAccountFrozenMemberIds(tx, [mid], AT)).toEqual(new Set());
+  });
 });

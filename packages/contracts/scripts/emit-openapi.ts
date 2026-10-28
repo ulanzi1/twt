@@ -2119,8 +2119,13 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/admin/degraded-mode/declarations',
   summary: 'Declare degraded mode (the AR-20 cycle-open SMS bridge; audited)',
   description:
-    'Declares degraded mode for the Pariwar so the cycle-open SMS bridge can force SMS for cycle-open ' +
-    '(alert_published) alerts, bypassing cost-optimization. Auto-revokes any currently-active declaration ' +
+    'Declares degraded mode for the Pariwar. While it is active, each cycle that opens texts every member assigned to a pool ' +
+    'in it, once, in their language (the cycle-open SMS bridge): the text goes first, with the app / WhatsApp notification as ' +
+    'the fallback; a member who cannot be texted still gets the app and WhatsApp notification. No text is sent until the ' +
+    'bridge text templates are approved, nor ' +
+    'while the Trust-wide bridge text switch is off (it starts off). Members whose death has been reported are not texted. ' +
+    'A cycle that opened before the declaration is not affected; revoking does not stop texts for a cycle that opened while ' +
+    'it was active. Auto-revokes any currently-active declaration ' +
     '(single-active-per-Pariwar). effectiveFrom cannot be backdated (NO BACKDATING). Audited. Requires ' +
     'pariwar.declare_degraded_mode at pariwar scope.',
   tags: degradedModeTags,
@@ -2190,8 +2195,10 @@ registry.registerPath({
   path: '/api/v1/admin/degraded-mode/bridge-switch',
   summary: 'Turn the degraded-mode bridge text on or off for every Pariwar (Super Admin; audited)',
   description:
-    'Sets the Trust-wide switch with a required reason; appends one history row per change (append-only). Setting the state it ' +
-    'already has changes nothing (idempotent, no audit line). Off: no bridge text is tried and the push → WhatsApp ladder runs. ' +
+    'Sets the Trust-wide switch with a required reason; appends one history row per change (append-only). Asking for the state ' +
+    'it already has changes nothing and is refused with 409 degraded_mode.bridge_switch.concurrent_change (no history row, no ' +
+    'audit line) — the same answer as losing a race to a concurrent change. Off: no bridge text is tried and the push → ' +
+    'WhatsApp ladder runs. ' +
     'Requires degraded_mode.switch_bridge_sms at global scope (super_admin only).',
   tags: degradedModeTags,
   request: { body: { content: jsonOf(degradedModeComponents.DegradedBridgeSmsSwitchSetRequest), required: true } },
@@ -2200,7 +2207,11 @@ registry.registerPath({
     400: errorResponse('Request validation failed (e.g. a blank reason)'),
     401: degradedModeAuth,
     403: errorResponse('Forbidden — requires degraded_mode.switch_bridge_sms at global scope (super_admin)'),
-    409: errorResponse('A concurrent change already set the switch to this state'),
+    409: errorResponse(
+      'The switch is already in the requested state — whether it already was, or a concurrent change got there first ' +
+        '(degraded_mode.bridge_switch.concurrent_change); OR the acting admin has no users.display_name ' +
+        '(admin.display_name_missing)',
+    ),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

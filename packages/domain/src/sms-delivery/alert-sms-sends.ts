@@ -250,6 +250,44 @@ export async function giveUpDeferredAlertSmsSend(
 }
 
 /**
+ * Story 5.8b — code review 2026-10-28 (second pass), was Decision 2 (a): the ladder DELIVERED a bridged alert and ⛔ row exists
+ * (the text was never tried: the switch OFF, a template id missing, …). Write a TERMINAL row so a later re-claim (F9's hourly
+ * re-fan, FS10) finds it FINAL and ⛔ texts a member the push already told. `INSERT … ON CONFLICT DO NOTHING` as `attempting`,
+ * then the claim-token compare-and-set to `error` / `detail` — both on the caller's scope transaction, so ⛔ reader ever sees the
+ * `attempting` step, and only the columns 0184 grants `twt_app` are written (its INSERT grant has ⛔ `detail`; the finished-row
+ * trigger guards UPDATE only). `false` ⇒ a row already exists (the caller reads what it is).
+ */
+export async function recordLadderDeliveredAlertSmsSend(
+  q: Queryable,
+  input: AlertSmsSendKey & {
+    readonly message: AlertSmsSendMessage;
+    readonly locale: AlertSmsSendLocale;
+    readonly claimToken: string;
+    readonly detail: string;
+  },
+): Promise<boolean> {
+  assertDetail(input.detail);
+  if (!input.detail.startsWith('exhausted:')) throw new Error('recordLadderDeliveredAlertSmsSend: the detail must be an exhausted:<…> one');
+  const inserted = await q.query<{ send_id: string }>(
+    `INSERT INTO alert_sms_sends (pariwar_id, alert_id, member_id, occasion, message, locale, outcome, claim_token)
+     VALUES ($1, $2, $3, $4, $5, $6, 'attempting', $7)
+     ON CONFLICT (alert_id, member_id, occasion) DO NOTHING
+     RETURNING send_id`,
+    [input.pariwarId, input.alertId, input.memberId, input.occasion, input.message, input.locale, input.claimToken],
+  );
+  const fresh = inserted.rows[0];
+  if (fresh === undefined) return false;
+  const { rowCount } = await q.query(
+    `UPDATE alert_sms_sends SET outcome = 'error', detail = $4, updated_at = clock_timestamp()
+      WHERE pariwar_id = $1 AND send_id = $2 AND outcome = 'attempting' AND claim_token = $3`,
+    [input.pariwarId, fresh.send_id, input.claimToken, input.detail],
+  );
+  // Unreachable (the row was inserted by THIS statement's transaction) — ⛔ leave an `attempting` row the lease would misread.
+  if ((rowCount ?? 0) === 0) throw new Error('recordLadderDeliveredAlertSmsSend: the inserted row could not be finalised');
+  return true;
+}
+
+/**
  * FS22 — the `attempting` rows ⛔ attempt will finalise: last touched MORE than 1 h before `now` (a crash on the FINAL attempt; the
  * correlator gives up at 72 h and the silence count sees only `accepted`). ⭐ NO upper bound (code-review decision C1-D2 (a),
  * 2026-10-25 — FS22 / AC1 say "older than 1 h"): a stuck row alarms on every daily run until a person clears it (roster Row 40's

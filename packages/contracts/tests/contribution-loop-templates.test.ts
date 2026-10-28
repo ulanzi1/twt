@@ -526,6 +526,33 @@ describe('Story 5.8b — an `alert_published` carries the bridge block ONLY when
     expect(Alert.safeParse({ ...ENV, time_critical: true, alert_category: 'helpdesk_reply', payload_data: { ...payload_data, sms: BRIDGE } }).success).toBe(false);
   });
 
+  // Code review 2026-10-28 (second pass) — the message is PAIRED with the category, both ways.
+  it('⭐ an `alert_published` block naming any message but `cycle_open_bridge` is refused, even when time-critical', () => {
+    for (const message of ['deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed'] as const) {
+      const refused = published(true, { title: 't', body: 'b', sms: { ...BRIDGE, message } });
+      expect(refused.success, message).toBe(false);
+      expect(refused.success ? [] : refused.error.issues.map((i) => i.path.join('.'))).toEqual(['payload_data.sms.message']);
+    }
+    // Not time-critical AND the wrong message ⇒ both issues.
+    const both = published(false, { title: 't', body: 'b', sms: { ...BRIDGE, message: 'payment_not_matched' } });
+    expect(both.success ? [] : both.error.issues.map((i) => i.path.join('.')).sort()).toEqual(['payload_data.sms', 'payload_data.sms.message']);
+  });
+
+  it('⭐ `cycle_open_bridge` on a `deadline_reminder` or a `contribution_mismatch` is refused, at either time_critical', () => {
+    const reminder = { subject: 's', deadline_at: '2026-08-05T00:00:00.000Z', deadline_display: 'd', sms: BRIDGE };
+    const mismatch = { pool_id: '44444444-4444-4444-4444-444444444444', sms: BRIDGE };
+    for (const timeCritical of [true, false]) {
+      for (const [alert_category, payload_data] of [['deadline_reminder', reminder], ['contribution_mismatch', mismatch]] as const) {
+        const refused = Alert.safeParse({ ...ENV, time_critical: timeCritical, alert_category, payload_data });
+        expect(refused.success, `${alert_category} ${String(timeCritical)}`).toBe(false);
+        expect(refused.success ? [] : refused.error.issues.map((i) => i.path.join('.'))).toEqual(['payload_data.sms.message']);
+        // …and the same variant with its own lit message parses (only the pairing refused it).
+        const lit = { ...BRIDGE, message: 'payment_not_matched', values: {} };
+        expect(Alert.safeParse({ ...ENV, time_critical: timeCritical, alert_category, payload_data: { ...payload_data, sms: lit } }).success).toBe(true);
+      }
+    }
+  });
+
   it('the refinement binds only `alert_published` — a lit deadline_reminder block parses at either time_critical', () => {
     const base = { subject: 's', deadline_at: '2026-08-05T00:00:00.000Z', deadline_display: 'd' };
     const sms = { message: 'deadline_not_recorded', locale: 'en', values: { pool: 'A', date: '05-08-2026' } };

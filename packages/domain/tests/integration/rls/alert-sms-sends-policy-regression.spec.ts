@@ -242,6 +242,7 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
         'alert_sms_sends_accepted_provider_id_check',
         'alert_sms_sends_alert_id_fk',
         'alert_sms_sends_attempt_count_check',
+        'alert_sms_sends_bridge_pairing_check',
         'alert_sms_sends_claim_token_check',
         'alert_sms_sends_detail_length_check',
         'alert_sms_sends_detail_vocabulary_check',
@@ -294,7 +295,24 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
     await expectPgError(client, ins({ outcome: 'delivered' }), CHECK('alert_sms_sends_outcome_check'));
     await expectPgError(client, ins({ claim_token: '' }), CHECK('alert_sms_sends_claim_token_check'));
     await expectPgError(client, ins({ outcome: 'accepted' }), CHECK('alert_sms_sends_accepted_provider_id_check'));
-    for (const occasion of ALERT_SMS_SEND_OCCASIONS.filter((o) => o !== 'day_10')) await expectAccepted(client, ins({ occasion }));
+    for (const occasion of ALERT_SMS_SEND_OCCASIONS.filter((o) => o !== 'day_10')) {
+      await expectAccepted(client, ins(occasion === 'cycle_open' ? { occasion, message: 'cycle_open_bridge' } : { occasion }));
+    }
+  });
+
+  // Code review 2026-10-28 (second pass) — the two vocabularies are PAIRED: the bridge occasion carries the bridge message, and no
+  // other occasion carries it. Both values below are in their own vocabularies, so only the pairing CHECK can refuse them.
+  it('⭐ 5.8b — `cycle_open` ⇔ `cycle_open_bridge`: a crossed pair is refused by the pairing CHECK', async () => {
+    const { client } = getTx();
+    const s = await seedSend(client, PARIWAR_A);
+    const ins = (over: Record<string, unknown>) => () => insertRow(client, { ...validRow(s), member_id: randomUUID(), ...over });
+    const PAIRING = CHECK('alert_sms_sends_bridge_pairing_check');
+    await expectPgError(client, ins({ occasion: 'day_10', message: 'cycle_open_bridge' }), PAIRING);
+    await expectPgError(client, ins({ occasion: 'mismatch:wrong_pool', message: 'cycle_open_bridge' }), PAIRING);
+    await expectPgError(client, ins({ occasion: 'cycle_open', message: 'deadline_not_recorded' }), PAIRING);
+    await expectPgError(client, ins({ occasion: 'cycle_open', message: 'payment_not_matched' }), PAIRING);
+    await expectAccepted(client, ins({ occasion: 'cycle_open', message: 'cycle_open_bridge' }));
+    await expectAccepted(client, ins({ occasion: 'day_10', message: 'deadline_not_recorded' }));
   });
 
   it('⭐ I1 — ONE row per (alert, member, occasion): a second day-10 row is refused; another member, another occasion land', async () => {
@@ -312,7 +330,9 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
     const s = await seedSend(client, PARIWAR_A);
     const upd = (detail: string) => () => client.query(`UPDATE ${TABLE} SET outcome = 'error', detail = $2 WHERE send_id = $1`, [s.sendId, detail]);
     await expectPgError(client, upd('x'.repeat(201)), CHECK('alert_sms_sends_detail_length_check'));
-    const bad = ['d', 'rate_limited:a b', 'invalid_number:9876543210', 'exhausted:outcome_unknown:auth:x', 'sms_send_in_flight', 'config:dlt_template_id_missing', 'exhausted:', `auth:${'A'.repeat(65)}`];
+    const bad = ['d', 'rate_limited:a b', 'invalid_number:9876543210', 'exhausted:outcome_unknown:auth:x', 'sms_send_in_flight', 'config:dlt_template_id_missing', 'exhausted:', `auth:${'A'.repeat(65)}`,
+      // Code review 2026-10-28 (second pass) — near-misses of the 5.8b terminal `exhausted:ladder_delivered` (⛔ a suffix, ⛔ bare).
+      'exhausted:ladder_delivered:x', 'ladder_delivered', 'exhausted:ladder_deliver', 'exhausted:ladder_delivered '];
     for (const detail of bad) {
       expect(isAlertSmsSendDetail(detail), detail).toBe(false);
       await expectPgError(client, upd(detail), CHECK('alert_sms_sends_detail_vocabulary_check'));
@@ -326,6 +346,7 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
       'exhausted:rate_limited:http_429',
       'exhausted:config_unavailable:secret_manager',
       'config:sms_messaging_unavailable',
+      'exhausted:ladder_delivered',
       'invalid_number:format',
       'carrier_reject:E003',
       'auth:401',

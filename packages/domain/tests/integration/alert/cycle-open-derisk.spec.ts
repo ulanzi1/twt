@@ -41,7 +41,7 @@ import {
   spawnChildPool,
 } from '../../../src/pool/index.js';
 import { deriveAlertId, openCycleAlert, resolveCycleOpenTimeCritical } from '../../../src/alert/index.js';
-import { declareDegradedMode, revokeDegradedMode } from '../../../src/degraded-mode/index.js';
+import { declareDegradedMode, getActiveDegradedMode, revokeDegradedMode } from '../../../src/degraded-mode/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
@@ -303,6 +303,60 @@ describe.skipIf(!hasDatabase)('AI-7-4 de-risk (a) — cycle.frozen fires the ale
     });
     await driveCycleToFrozen(tx, client, cycleId, claimId, randomUUID());
     expect((await resolveCycleOpenTimeCritical(tx, cycleId))?.timeCritical).toBe(false);
+  });
+
+  // Code review 2026-10-28 (second pass) — I9 against a BACKDATED write: the declare route admits an `effective_from` up to
+  // `NO_BACKDATE_GRACE_MS` in the past, so minutes after a freeze a declaration can be written that is "effective" before it. The
+  // window read at the freeze instant then answers bridged — but the first pass published the alert un-bridged, and the sweep must
+  // answer what the first pass answered (the persisted `alert.published.time_critical`).
+  it('5.8b — a declaration written AFTER the first pass, backdated before the freeze, does ⛔ bridge the recovered cycle', async () => {
+    const { client, tx } = getTx();
+    const committedAt = new Date('2026-07-15T06:00:00Z'); // seedCommit's committedAt
+    const cycleId = randomUUID();
+    const claimId = randomUUID();
+    await seedCommit(tx, PARIWAR_A, cycleId, [claimId]);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
+    await enterAppScope(client, PARIWAR_A);
+    await driveCycleToFrozen(tx, client, cycleId, claimId, randomUUID());
+    expect((await openCycleAlert(client, { cycleId })).timeCritical).toBe(false);
+
+    await declareDegradedMode(tx, {
+      pariwarId: toPariwarId(PARIWAR_A),
+      mode: 'cycle_open_sms_bridge',
+      effectiveFrom: new Date(committedAt.getTime() - 60_000),
+      expiresAt: null,
+      declaredByActor: null,
+      reason: 'test: 5.8b backdated after the freeze',
+    });
+    // The hazard is real: the window read alone now says the freeze instant was bridged.
+    expect((await getActiveDegradedMode(tx, toPariwarId(PARIWAR_A), committedAt))?.mode).toBe('cycle_open_sms_bridge');
+    expect((await resolveCycleOpenTimeCritical(tx, cycleId))?.timeCritical).toBe(false);
+    // …and a redelivered first pass answers the same.
+    expect((await openCycleAlert(client, { cycleId })).timeCritical).toBe(false);
+  });
+
+  it('5.8b — the reverse: a bridged first pass stays bridged for the sweep after a revoke backdated before the freeze', async () => {
+    const { client, tx } = getTx();
+    const committedAt = new Date('2026-07-15T06:00:00Z'); // seedCommit's committedAt
+    const cycleId = randomUUID();
+    const claimId = randomUUID();
+    await seedCommit(tx, PARIWAR_A, cycleId, [claimId]);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
+    await enterAppScope(client, PARIWAR_A);
+    const declared = await declareDegradedMode(tx, {
+      pariwarId: toPariwarId(PARIWAR_A),
+      mode: 'cycle_open_sms_bridge',
+      effectiveFrom: new Date(committedAt.getTime() - 120_000),
+      expiresAt: null,
+      declaredByActor: null,
+      reason: 'test: 5.8b bridged first pass',
+    });
+    await driveCycleToFrozen(tx, client, cycleId, claimId, randomUUID());
+    expect((await openCycleAlert(client, { cycleId })).timeCritical).toBe(true);
+
+    await revokeDegradedMode(tx, { declarationId: declared.id, revokedByActor: null, at: new Date(committedAt.getTime() - 60_000) });
+    expect(await getActiveDegradedMode(tx, toPariwarId(PARIWAR_A), committedAt)).toBeNull();
+    expect((await resolveCycleOpenTimeCritical(tx, cycleId))?.timeCritical).toBe(true);
   });
 });
 

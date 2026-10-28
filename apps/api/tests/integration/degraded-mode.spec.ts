@@ -269,7 +269,7 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
     expect([401, 403]).toContain((await makeClient(app).inject({ method: 'GET', url: SWITCH })).statusCode);
   });
 
-  it('⭐ 5.8b AC12 — a Super Admin: ⛔ reason ⇒ 400; ON → OFF → ON writes THREE audited history rows and the last state wins; the same state again writes NOTHING', async () => {
+  it('⭐ 5.8b AC12 — a Super Admin: ⛔ reason ⇒ 400; ON → OFF → ON writes THREE audited history rows and the last state wins; the same state again is a 409 and writes NOTHING', async () => {
     const found = await switchState();
     const { client, userId } = await authenticate();
     await grantSuperAdmin(userId);
@@ -277,7 +277,7 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
     try {
       // Start from OFF without counting toward this actor's history (a reset by another actor id, through the domain).
       const { degradedMode } = await import('@twt/domain');
-      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: false, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec reset', auditId: null });
+      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: false, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec reset', auditId: randomUUID() });
 
       for (const payload of [{ enabled: true }, { enabled: true, reason: '' }, { enabled: true, reason: '   ' }, { enabled: true, reason: 'x'.repeat(501) }]) {
         expect((await client.inject({ method: 'POST', url: SWITCH, payload })).statusCode).toBe(400);
@@ -287,23 +287,34 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
       for (const [enabled, reason] of [[true, 'templates approved'], [false, 'cost review'], [true, 'back on']] as const) {
         const res = await client.inject({ method: 'POST', url: SWITCH, payload: { enabled, reason } });
         expect(res.statusCode).toBe(200);
-        expect(res.json()).toMatchObject({ enabled, reason, changedByActor: userId, changedByDisplay: 'Asha Verma' });
+        expect(res.json()).toMatchObject({ enabled, reason, changedByDisplay: 'Asha Verma' });
+        // Code review 2026-10-28 (second pass), family 6 — ⛔ the actor's staff id in the DTO.
+        expect(res.json()).not.toHaveProperty('changedByActor');
       }
       const rows = await historyOf(userId);
       expect(rows.map((r) => [r.enabled, r.reason])).toEqual([[true, 'templates approved'], [false, 'cost review'], [true, 'back on']]);
       expect(rows.every((r) => r.changed_by_display === 'Asha Verma')).toBe(true);
       expect(rows.every((r) => r.audit_id !== null)).toBe(true);
-      expect((await client.inject({ method: 'GET', url: SWITCH })).json()).toMatchObject({ enabled: true, reason: 'back on' });
+      const read = (await client.inject({ method: 'GET', url: SWITCH })).json();
+      expect(read).toMatchObject({ enabled: true, reason: 'back on' });
+      expect(read).not.toHaveProperty('changedByActor');
       expect(await auditCount(userId, 'degraded_mode.bridge_switch.changed', '00000000-0000-0000-0000-000000000000')).toBe(3);
 
-      // Idempotent: ON again ⇒ 200, ⛔ row, ⛔ audit line.
+      // Code review 2026-10-28 (second pass) — ON again changes nothing ⇒ the SAME 409 the race path gives (⛔ a 200 the page would
+      // announce as "Saved"), ⛔ row, ⛔ audit line (⛔ intent, so ⛔ compensation either).
       const same = await client.inject({ method: 'POST', url: SWITCH, payload: { enabled: true, reason: 'again' } });
-      expect(same.statusCode).toBe(200);
+      expect(same.statusCode).toBe(409);
+      expect((same.json() as { error: { code: string; message: string } }).error).toMatchObject({
+        code: 'degraded_mode.bridge_switch.concurrent_change',
+        message: 'the switch is already in this state',
+      });
       expect(await historyOf(userId)).toHaveLength(3);
       expect(await auditCount(userId, 'degraded_mode.bridge_switch.changed', '00000000-0000-0000-0000-000000000000')).toBe(3);
+      expect(await auditCount(userId, 'degraded_mode.bridge_switch.changed_rolled_back', '00000000-0000-0000-0000-000000000000')).toBe(0);
+      expect(await switchState()).toBe(true);
     } finally {
       const { degradedMode } = await import('@twt/domain');
-      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: null });
+      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: randomUUID() });
     }
   });
   it('⭐ code review P2-2 — a Super Admin with ⛔ display name (NULL or blank) is REFUSED the change: 409 `admin.display_name_missing`, ⛔ history row, ⛔ audit line, the state unmoved', async () => {
@@ -330,11 +341,11 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
       const res = await client.inject({ method: 'POST', url: SWITCH, payload: { enabled: !found, reason: 'snapshot leg' } });
       expect(res.statusCode).toBe(200);
       await nameUser(userId, 'Ravi K. Sharma');
-      expect((await client.inject({ method: 'GET', url: SWITCH })).json()).toMatchObject({ changedByActor: userId, changedByDisplay: 'Ravi Kumar' });
+      expect((await client.inject({ method: 'GET', url: SWITCH })).json()).toMatchObject({ changedByDisplay: 'Ravi Kumar' });
       expect((await historyOf(userId)).map((r) => r.changed_by_display)).toEqual(['Ravi Kumar']);
     } finally {
       const { degradedMode } = await import('@twt/domain');
-      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: null });
+      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: randomUUID() });
     }
   });
   // Code review P2-4 (invariant family 2) — the handler's concurrent-change branch, LIVE. A row lock held by the spec forces two
@@ -372,7 +383,7 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
       expect(responses.map((r) => r.statusCode).sort()).toEqual([200, 409]);
       const loser = responses.find((r) => r.statusCode === 409)!;
       expect((loser.json() as { error: { code: string } }).error.code).toBe('degraded_mode.bridge_switch.concurrent_change');
-      expect(responses.find((r) => r.statusCode === 200)!.json()).toMatchObject({ enabled: !found, changedByActor: userId, reason: 'race leg' });
+      expect(responses.find((r) => r.statusCode === 200)!.json()).toMatchObject({ enabled: !found, changedByDisplay: 'Asha Verma', reason: 'race leg' });
       expect(await historyOf(userId)).toHaveLength(1);
       expect(await switchState()).toBe(!found);
       expect(await auditCount(userId, 'degraded_mode.bridge_switch.changed', NIL)).toBe(2);
@@ -381,7 +392,7 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
       await hold.query('ROLLBACK').catch(() => undefined);
       hold.release();
       const { degradedMode } = await import('@twt/domain');
-      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: null });
+      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: found, actorId: randomUUID(), actorDisplay: 'spec', reason: 'spec restore', auditId: randomUUID() });
     }
   });
 });

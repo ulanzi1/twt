@@ -257,8 +257,9 @@ export function templateBandFor(day: DeadlineReminderSendDay): ToneRangeKey {
 // alert.ts. Each parses through a `.strict()` schema so a wrong-shaped payload fails HERE, at the
 // producer, rather than deep inside `dispatch`'s `Alert.parse` with a whole batch already in flight.
 
-/** `alert_published` payload_data — the cycle-open announcement (alert.ts:112). `sms` (Story 5.8b) — the degraded-mode
- *  bridge's text, carried only by a TIME-CRITICAL cycle-open (the `Alert` refinement refuses it otherwise). */
+/** `alert_published` payload_data — the cycle-open announcement (alert.ts). `sms` (Story 5.8b) — the degraded-mode bridge's
+ *  text, carried only by a TIME-CRITICAL cycle-open and naming only `cycle_open_bridge`. ⚠ THIS schema checks neither: the
+ *  `Alert` refinement does, at the alert's parse (code review 2026-10-28 (second pass)). */
 export const CycleOpenPayloadData = z
   .object({ title: z.string().min(1), body: z.string().min(1), sms: AlertSmsBlock.optional() })
   .strict();

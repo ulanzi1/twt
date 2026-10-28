@@ -72,13 +72,14 @@ export interface SetDegradedBridgeSmsSwitchInput {
   readonly actorDisplay: string;
   /** REQUIRED, non-blank, ≤ {@link DEGRADED_BRIDGE_SMS_SWITCH_REASON_MAX} (the CHECK refuses otherwise). */
   readonly reason: string;
-  /** The audit intent line this change is written under, or null. */
-  readonly auditId: string | null;
+  /** The audit intent line this change is written under — REQUIRED (the history column is NOT NULL; code review 2026-10-28
+   *  (second pass)): the one writer runs inside `withCompensatingAudit`, which always has the intent line's id. */
+  readonly auditId: string;
 }
 
 /**
  * Change the switch — in ONE transaction on the passed (BYPASSRLS service) pool: lock the control row, and ONLY if the state
- * differs, append a history row and point the control row at it. `changed: false` ⇒ the switch already said this and NOTHING
+ * differs, append a history row and point the control row at it (0188's trigger refuses any other UPDATE of the control row). `changed: false` ⇒ the switch already said this and NOTHING
  * was written (idempotent; the caller writes no audit line for it).
  */
 export async function setDegradedBridgeSmsSwitch(

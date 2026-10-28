@@ -165,7 +165,9 @@ export async function getMemberAccountOverlay(
  * ⛔ A SECOND POLICY: it is `directory-read.ts`'s `NOT_DECEASED` fold — per (deceased member, claim stream) the LATEST overlay
  * event wins (`DISTINCT ON` led by its own expression, else 42P10), and a member is frozen iff ANY of their streams' latest event
  * is the freeze — observationally equivalent to {@link evaluateAccountOverlay} ("change one, check the other"). Returned ids are
- * lower-cased. Runs on the caller's scope (events_log is tenant-isolated).
+ * lower-cased. ⚠ TENANT PREDICATE IN THE SQL (code review 2026-10-28 (second pass)): the bridge's caller runs on the jobs pool,
+ * which BYPASSES RLS, so the read filters `pariwar_id` to the caller's `withPariwarScope` GUC (`app.pariwar_id`) itself — read
+ * WITHOUT `missing_ok`, so an unscoped call FAILS LOUD (⛔ an empty set, which would read as "no one frozen").
  */
 export async function listAccountFrozenMemberIds(
   db: Db,
@@ -180,8 +182,9 @@ export async function listAccountFrozenMemberIds(
                lower(e.payload ->> 'deceased_member_id') AS member_id,
                e.event_type AS latest_type
           FROM events_log e
-         WHERE e.event_type IN (${sql.join(OVERLAY_EVENT_TYPES.map((t) => sql`${t}`), sql`, `)})
-           AND lower(e.payload ->> 'deceased_member_id') = ANY(${`{${memberIds.map((m) => m.toLowerCase()).join(',')}}`}::text[])
+         WHERE e.pariwar_id = current_setting('app.pariwar_id')::uuid
+           AND e.event_type IN (${sql.join(OVERLAY_EVENT_TYPES.map((t) => sql`${t}`), sql`, `)})
+           AND lower(e.payload ->> 'deceased_member_id') = ANY(${sql.param(memberIds.map((m) => m.toLowerCase()))}::text[])
            AND e.occurred_at <= ${at}
          ORDER BY lower(e.payload ->> 'deceased_member_id'), e.stream_id, e.occurred_at DESC, e.event_version DESC
       ) latest_per_claim

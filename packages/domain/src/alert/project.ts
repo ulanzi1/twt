@@ -53,6 +53,7 @@ import { getActiveDegradedMode } from '../degraded-mode/index.js';
 import { DEGRADED_MODE_MODES } from '../schema/pariwar_degraded_mode_declarations.js';
 import {
   ALERT_EVENT_PAYLOAD_SCHEMAS,
+  AlertPublishedPayloadSchema,
   type AlertEventType,
   type AlertFrozenPayload,
 } from './events.js';
@@ -417,10 +418,16 @@ export interface OpenCycleAlertResult extends MintAndOpenAlertResult {
 /**
  * ⭐ Story 5.8b (FS10 (a), I9; `2026-10-28-415`) — THE freeze-instant degraded-mode read, ONE function for its two callers:
  * {@link openCycleAlert} (the primary path) and the cycle-open notify RECOVERY SWEEP (`apps/jobs`), so a recovered cycle is bridged
- * exactly as its first pass was. It loads the cycle's `cycle.frozen` payload and reads the Pariwar's degraded-mode state AT the
- * freeze `committed_at` (durable + deterministic — ⛔ a notify-time `now()` read, ⛔ `cycle_freeze_commits`, a different source).
- * A declaration revoked AFTER the freeze still bridges the cycle (the read predicate is `revoked_at IS NULL OR > at`). `null` ⇔ the
- * cycle has no `cycle.frozen` event. Runs on the caller's scoped `db` (both reads filter explicitly as well).
+ * exactly as its first pass was. It loads the cycle's `cycle.frozen` payload and then:
+ *   · once the cycle's alert is PUBLISHED, returns that `alert.published` event's own `time_critical` — the first pass's answer,
+ *     persisted (code review 2026-10-28 (second pass)). Re-deriving it could differ: a declaration written AFTER the freeze but
+ *     backdated within the declare route's grace (or its auto-revoke of the earlier one) changes what the window read answers, and
+ *     the sweep would then bridge members of an alert published un-bridged (or the reverse);
+ *   · before that (the first pass), reads the Pariwar's degraded-mode state AT the freeze `committed_at` (durable + deterministic —
+ *     ⛔ a notify-time `now()` read, ⛔ `cycle_freeze_commits`, a different source). A declaration revoked AFTER the freeze still
+ *     bridges the cycle (the read predicate is `revoked_at IS NULL OR > at`).
+ * `null` ⇔ the cycle has no `cycle.frozen` event. Runs on the caller's scoped `db`; the alert read filters `pariwar_id` itself (the
+ * sweep's pool bypasses RLS).
  */
 export async function resolveCycleOpenTimeCritical(
   db: ReturnType<typeof bindScopedDb>,
@@ -428,6 +435,21 @@ export async function resolveCycleOpenTimeCritical(
 ): Promise<{ readonly cycleFrozenPayload: CycleFrozenPayload; readonly timeCritical: boolean } | null> {
   const cf = await loadCycleFrozenPayload(db, cycleId);
   if (!cf) return null;
+  const published = await db
+    .select({ payload: eventsLog.payload })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.streamId, deriveAlertId(cycleId)),
+        eq(eventsLog.pariwarId, cf.pariwar_id),
+        eq(eventsLog.eventType, 'alert.published'),
+      ),
+    )
+    .orderBy(asc(eventsLog.eventVersion))
+    .limit(1);
+  if (published[0]) {
+    return { cycleFrozenPayload: cf, timeCritical: AlertPublishedPayloadSchema.parse(published[0].payload).time_critical };
+  }
   const committedAt = new Date(cf.attestation.committed_at);
   const active = await getActiveDegradedMode(db, toPariwarId(cf.pariwar_id), committedAt);
   return { cycleFrozenPayload: cf, timeCritical: active?.mode === CYCLE_OPEN_SMS_BRIDGE_MODE };

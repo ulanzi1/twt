@@ -8,7 +8,7 @@
 import type { DegradedModeDeclarationResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
 
-import { BRIDGE_TEXT_PARAGRAPH } from './bridge-copy.js';
+import { BRIDGE_TEXT_PARAGRAPH, BRIDGE_TEXT_TEMPLATE_CAVEAT, BRIDGE_TEXTS_SWITCHED_OFF } from './bridge-copy.js';
 
 function Field({ label, value }: { label: string; value: string | null }): ReactElement {
   return (
@@ -57,17 +57,20 @@ export function DegradedModeBanner({
       data-testid="degraded-mode-banner"
       data-status="active"
     >
-      {/* Story 5.8b — "armed" only while the Super Admin switch is ON (FS17 (a)); OFF says so. */}
+      {/* Story 5.8b — "armed" only while the Super Admin switch is ON (FS17 (a)); OFF says so. Code review 2026-10-28 (second pass),
+          Decision 1 (b): "armed" never stands alone — FS11 (a)'s own template caveat goes with it (⛔ new words). */}
       {bridgeTextsOn === true ? (
-        <p className="text-lg font-bold">⚠ Degraded mode ACTIVE — the cycle-open SMS bridge is armed.</p>
+        <p className="text-lg font-bold" data-testid="degraded-mode-banner-headline">
+          ⚠ Degraded mode ACTIVE — the cycle-open SMS bridge is armed — {BRIDGE_TEXT_TEMPLATE_CAVEAT}.
+        </p>
       ) : bridgeTextsOn === false ? (
-        <p className="text-lg font-bold">
-          ⚠ Degraded mode ACTIVE — the bridge&apos;s texts are switched off for every Pariwar; the app and WhatsApp notifications still go.
+        <p className="text-lg font-bold" data-testid="degraded-mode-banner-headline">
+          ⚠ Degraded mode ACTIVE — {BRIDGE_TEXTS_SWITCHED_OFF}.
         </p>
       ) : (
-        <p className="text-lg font-bold">⚠ Degraded mode ACTIVE.</p>
+        <p className="text-lg font-bold" data-testid="degraded-mode-banner-headline">⚠ Degraded mode ACTIVE.</p>
       )}
-      {/* Story 5.8b (FS11 (a)) replaced the AR-20 line ("will force SMS … bypassing cost-optimization") with what is built. */}
+      {/* Story 5.8b (FS11 (a)) replaced the AR-20 force-SMS sentence with what is built. */}
       <p className="mt-1 text-sm" data-testid="degraded-mode-banner-copy">
         {BRIDGE_TEXT_PARAGRAPH}
       </p>

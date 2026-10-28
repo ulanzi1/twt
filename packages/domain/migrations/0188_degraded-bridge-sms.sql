@@ -14,31 +14,46 @@
 -- six literals"*), recorded in `-415`. The at-most-once key (alert, member, occasion) and the finished-row trigger are
 -- unchanged. ⚠ LOCKSTEP with `ALERT_SMS_SEND_OCCASIONS` / `ALERT_SMS_SEND_MESSAGES` (schema/alert_sms_sends.ts) and the
 -- contract's `AlertSmsMessage`.
+-- Code review 2026-10-28 (second pass): (a) the occasion and the message are PAIRED — `cycle_open` ⇔ `cycle_open_bridge` (a new
+-- CHECK; before it, `('day_10', 'cycle_open_bridge')` was admitted). (b) 0184's `detail` grammar is REPLACED to admit
+-- `exhausted:ladder_delivered` — the terminal row the jobs seam writes when the ladder delivered a bridged alert and no send row
+-- exists, so a later re-fan finds it and ⛔ texts. ⚠ LOCKSTEP with `ALERT_SMS_SEND_DETAIL_PATTERN` (the policy spec pins them).
 --
 -- ── (2) The Super Admin switch (FS17 (a); `-414` Q1's condition) ────────────────────────────────────────────────────────────
 -- ONE Trust-wide switch for the bridge TEXT: `degraded_bridge_sms_switch` holds ONE row (id = 1), created OFF here — turning it
 -- ON is go-live Row 43's LAST leg (i). Every change is ALSO a row of `degraded_bridge_sms_switch_changes` (who, when, ON / OFF,
 -- a REQUIRED reason), APPEND-ONLY by trigger (⛔ UPDATE, ⛔ DELETE, ⛔ TRUNCATE — the 0011 posture, binding every role incl.
 -- the BYPASSRLS service role). The control row may be UPDATEd (its state) and ⛔ DELETEd or TRUNCATEd (trigger), so the
--- "absent ⇒ OFF" reading never has to be trusted. The fan-out reads the control row ONCE per bridged job at its bridge attempt
--- (`contribution-notify.ts`), so turning it OFF also stops texts already queued.
+-- "absent ⇒ OFF" reading never has to be trusted. Code review 2026-10-28 (second pass): every UPDATE of the control row must name a
+-- NEW history row whose `enabled` equals the row's (trigger) — ⛔ a state change with no history, ⛔ a change attributed to the
+-- wrong row; and the history's `audit_id` is NOT NULL (the one writer always runs under `withCompensatingAudit`). The fan-out
+-- reads the control row ONCE per bridged job at its bridge attempt (`contribution-notify.ts`), so turning it OFF also stops texts
+-- already queued.
 -- GLOBAL tables (⛔ `pariwar_id` — the switch is Trust-wide): ENABLE + FORCE RLS with an explicit `USING (true)` SELECT policy
--- for `twt_app` (the jobs read, the read endpoint) — the audit_integrity_acknowledgements (0011) posture. `twt_app` gets SELECT
--- ONLY: the change endpoint writes through the BYPASSRLS service pool behind `requireGlobalPermission` (the new key, held by
--- `super_admin` alone), so ⛔ write policy is needed for `twt_app`, and a `twt_app` write is refused by its missing grant.
--- PII: ⛔ none — an actor id and an operator-authored reason.
+-- for `twt_app` — the audit_integrity_acknowledgements (0011) posture. `twt_app` gets SELECT ONLY: the change endpoint writes
+-- through the BYPASSRLS service pool behind `requireGlobalPermission` (the new key, held by `super_admin` alone), so ⛔ write
+-- policy is needed for `twt_app`, and a `twt_app` write is refused by its missing grant. ⚠ The history's `twt_app` SELECT is
+-- kept (code review 2026-10-28 (second pass), family 6, re-examined): the read endpoint uses the service pool, but the jobs'
+-- send-point read (`readDegradedBridgeSmsSwitch`, which JOINs the history) is modelled as `twt_app` while the jobs login's
+-- posture is undecided (roster Row 26) — narrow that read to the control row before revoking it.
+-- PII: a staff member's NAME — `changed_by_display`, the Super Admin's display-name snapshot (R5 attribution) — plus a staff
+-- actor id and an operator-authored reason. ⛔ Member PII.
 
 ALTER TABLE "alert_sms_sends" DROP CONSTRAINT "alert_sms_sends_occasion_check";--> statement-breakpoint
 ALTER TABLE "alert_sms_sends" ADD CONSTRAINT "alert_sms_sends_occasion_check" CHECK ("occasion" IN ('day_10', 'pending_match_escalated', 'mismatch:wrong_pool', 'mismatch:amount_mismatch', 'mismatch:entry_already_claimed', 'mismatch:sender_vpa_mismatch', 'cycle_open'));--> statement-breakpoint
 ALTER TABLE "alert_sms_sends" DROP CONSTRAINT "alert_sms_sends_message_check";--> statement-breakpoint
 ALTER TABLE "alert_sms_sends" ADD CONSTRAINT "alert_sms_sends_message_check" CHECK ("message" IN ('deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed', 'cycle_open_bridge'));--> statement-breakpoint
+-- Code review 2026-10-28 (second pass) — the bridge occasion carries the bridge message, and ONLY it carries it.
+ALTER TABLE "alert_sms_sends" ADD CONSTRAINT "alert_sms_sends_bridge_pairing_check" CHECK (("occasion" = 'cycle_open') = ("message" = 'cycle_open_bridge'));--> statement-breakpoint
+ALTER TABLE "alert_sms_sends" DROP CONSTRAINT "alert_sms_sends_detail_vocabulary_check";--> statement-breakpoint
+ALTER TABLE "alert_sms_sends" ADD CONSTRAINT "alert_sms_sends_detail_vocabulary_check" CHECK ("detail" IS NULL OR "detail" ~ '^(?!.*[0-9]{7})(exhausted:outcome_unknown(:(api_unavailable|unknown):[A-Za-z0-9_.-]{1,64})?|(exhausted:)?rate_limited:[A-Za-z0-9_.-]{1,64}|exhausted:config_unavailable:secret_manager|exhausted:ladder_delivered|config:sms_messaging_unavailable|(invalid_number|carrier_reject|auth|dlt_template_not_approved):[A-Za-z0-9_.-]{1,64})$');--> statement-breakpoint
 CREATE TABLE "degraded_bridge_sms_switch_changes" (
 	"change_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"enabled" boolean NOT NULL,
 	"changed_by_actor" uuid NOT NULL,
 	"changed_by_display" text NOT NULL,
 	"reason" text NOT NULL,
-	"audit_id" uuid,
+	"audit_id" uuid NOT NULL,
 	"changed_at" timestamp with time zone DEFAULT clock_timestamp() NOT NULL
 );--> statement-breakpoint
 -- A REQUIRED reason: non-blank, bounded (the declaration's reason bound).
@@ -97,4 +112,27 @@ CREATE TRIGGER degraded_bridge_sms_switch_no_delete
   FOR EACH ROW EXECUTE FUNCTION degraded_bridge_sms_switch_reject_removal();--> statement-breakpoint
 CREATE TRIGGER degraded_bridge_sms_switch_no_truncate
   BEFORE TRUNCATE ON degraded_bridge_sms_switch
-  FOR EACH STATEMENT EXECUTE FUNCTION degraded_bridge_sms_switch_reject_removal();
+  FOR EACH STATEMENT EXECUTE FUNCTION degraded_bridge_sms_switch_reject_removal();--> statement-breakpoint
+-- Code review 2026-10-28 (second pass) — the control row moves ONLY with its history: each UPDATE names a NEW change, and that
+-- change set the state the row now says. A dangling id passes here and is refused by the FK (23503), so that refusal stays the FK's.
+CREATE FUNCTION degraded_bridge_sms_switch_guard_update()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+  change_enabled boolean;
+BEGIN
+  IF NEW.last_change_id IS NULL OR NEW.last_change_id IS NOT DISTINCT FROM OLD.last_change_id THEN
+    RAISE EXCEPTION 'degraded_bridge_sms_switch: an update must name a NEW history row (Story 5.8b, FS17 (a))'
+      USING ERRCODE = 'P0001';
+  END IF;
+  SELECT c.enabled INTO change_enabled FROM degraded_bridge_sms_switch_changes c WHERE c.change_id = NEW.last_change_id;
+  IF FOUND AND change_enabled IS DISTINCT FROM NEW.enabled THEN
+    RAISE EXCEPTION 'degraded_bridge_sms_switch: enabled = % but history row % set % (Story 5.8b, FS17 (a))',
+      NEW.enabled, NEW.last_change_id, change_enabled
+      USING ERRCODE = 'P0001';
+  END IF;
+  RETURN NEW;
+END;
+$$;--> statement-breakpoint
+CREATE TRIGGER degraded_bridge_sms_switch_guard_update
+  BEFORE UPDATE ON degraded_bridge_sms_switch
+  FOR EACH ROW EXECUTE FUNCTION degraded_bridge_sms_switch_guard_update();

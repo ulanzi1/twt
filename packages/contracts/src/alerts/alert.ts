@@ -26,8 +26,9 @@
 // payload for a given category at parse time. The refinement (Story 5.8b, FS7 (a), Decision `2026-10-28-415`) is
 // cross-field: an `alert_published` may carry an `sms` block ONLY when its envelope `time_critical` is true — the
 // degraded-mode cycle-open bridge — so news, surveys, moderation and the staff push (all `time_critical: false`)
-// stay refused exactly as before. The refinement leaves the output type unchanged; `Alert.options` is gone (no
-// consumer reads it).
+// stay refused exactly as before. It also PAIRS the message with the category (code review 2026-10-28 (second
+// pass)): an `alert_published` block's message is `cycle_open_bridge`, and `cycle_open_bridge` rides no other
+// category. The refinement leaves the output type unchanged; `Alert.options` is gone (no consumer reads it).
 
 import { z } from 'zod';
 
@@ -82,8 +83,10 @@ export type ProvenanceRefs = z.output<typeof ProvenanceRefs>;
  *    payment not matched, a payment still not confirmed.
  *  - ONE bridge message — Story 5.8b (FS1 (a), Decision `2026-10-28-415`; Panel `2026-10-28-414`): `cycle_open_bridge`,
  *    the cycle-open text of the degraded-mode SMS bridge (architecture §3.4's carve-out). It rides ONLY an
- *    `alert_published` whose `time_critical` is true (the refinement on `Alert`), and is texted ONLY when the
- *    fan-out bridges that alert.
+ *    `alert_published` whose `time_critical` is true, and an `alert_published` block carries ONLY it (both by the
+ *    refinement on `Alert`; the send record's own CHECK pairs it with the occasion `cycle_open`, migration 0188). It
+ *    is texted ONLY when the fan-out bridges that alert. ⚠ The three notices are NOT paired with their categories
+ *    here — which of them a `deadline_reminder` or `contribution_mismatch` carries is the producer's choice.
  * ⛔ A pool opening on an undeclared Pariwar and the last day — those are for the Trust's announcement channels — and
  * ⛔ any other broadcast.
  */
@@ -100,7 +103,8 @@ export type AlertSmsMessage = z.output<typeof AlertSmsMessage>;
  * the value of each slot by slot NAME, built from the SAME locals as the push params. Absent ⇒ the message is not
  * SMS-eligible (FS15 — the fan-out's SMS rung ends `sms_message_not_lit`). Carried by the two variants a lit
  * notice rides (`deadline_reminder`, `contribution_mismatch`) and — Story 5.8b — by `alert_published` ONLY when it is
- * `time_critical` (the bridged cycle-open; the refinement on `Alert` refuses it on every other broadcast). The values
+ * `time_critical` and names `cycle_open_bridge` (the bridged cycle-open; the refinement on `Alert` refuses it on every other
+ * broadcast, and refuses `cycle_open_bridge` on the two lit variants). The values
  * are checked against the registry's slots at send time (Story 5.11b — the alert SMS seam's prepare step), ⛔ here.
  *
  * `locale` is the language the VALUES were built for (review round 2, P2 — checklist family 4): `{pool}` is the curated
@@ -215,12 +219,32 @@ export const Alert = z
   ])
   // Story 5.8b (FS7 (a), I2): an `alert_published` carries an `sms` block ONLY when it is time-critical — the bridged
   // cycle-open. News, surveys, moderation and the staff push hard-code `time_critical: false`, so they stay refused.
+  // Code review 2026-10-28 (second pass) — and the message is PAIRED with the category: `cycle_open_bridge` is the
+  // only message an `alert_published` block may name, and no other category may name it.
   .superRefine((alert, ctx) => {
-    if (alert.alert_category === 'alert_published' && alert.payload_data.sms !== undefined && !alert.time_critical) {
+    if (alert.alert_category === 'alert_published' && alert.payload_data.sms !== undefined) {
+      if (!alert.time_critical) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['payload_data', 'sms'],
+          message: 'an alert_published may carry an sms block only when time_critical is true',
+        });
+      }
+      if (alert.payload_data.sms.message !== 'cycle_open_bridge') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['payload_data', 'sms', 'message'],
+          message: 'an alert_published sms block may name only cycle_open_bridge',
+        });
+      }
+      return;
+    }
+    const sms = 'sms' in alert.payload_data ? alert.payload_data.sms : undefined;
+    if (sms?.message === 'cycle_open_bridge') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['payload_data', 'sms'],
-        message: 'an alert_published may carry an sms block only when time_critical is true',
+        path: ['payload_data', 'sms', 'message'],
+        message: `cycle_open_bridge rides only a time-critical alert_published (not ${alert.alert_category})`,
       });
     }
   });

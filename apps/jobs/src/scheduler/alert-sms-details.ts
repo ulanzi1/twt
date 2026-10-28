@@ -34,6 +34,11 @@ export const ALERT_SMS_RUNG_DETAIL = {
    */
   rateLimitedFinal: 'exhausted:rate_limited',
   /**
+   * Story 5.8b, code review 2026-10-28 (second pass): a FOUND bridge row written when the ladder DELIVERED with ⛔ row (the text was
+   * never tried) — ⛔ sent, never will be (the push told the member). Terminal; ⛔ "the gateway MAY have taken it".
+   */
+  ladderDelivered: 'exhausted:ladder_delivered',
+  /**
    * Review 2026-10-25 (C2-P14): NOTHING was attempted — an occasion outside the six, a prepare refusal the seam has no word for, a
    * throw inside prepare that is not the render. A code or config fault, ALARMED, terminal. ⛔ `exhausted:outcome_unknown`, which
    * says "the gateway MAY have taken it" (a genuine render failure keeps that word — AC4 lists it there).
@@ -73,6 +78,11 @@ export interface FanOutCall {
   readonly retryLimit?: number;
   readonly jobId?: string;
   readonly occasion?: string;
+  /**
+   * Story 5.8b fix review (2026-10-28): this job's bridge blocks were OMITTED because the death-overlay read FAILED (⛔ because a member
+   * is ineligible) — a bridged member the ladder did not reach is RETRIED (⛔ recorded in-app-only), and one it reached OWES the closure.
+   */
+  readonly bridgeBlockUnavailable?: boolean;
 }
 
 /** Absent metadata ⇒ the final attempt (FS9: "missing metadata ⇒ treat as the final attempt (send)"). */

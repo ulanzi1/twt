@@ -272,15 +272,24 @@ export function requireGlobalPermission(deps: AppDeps, key: string): preHandlerH
  * WHY THAT IS ACCEPTABLE TODAY — and it is a fact about the repo, not an argument:
  * there is currently NO Pariwar deactivation or suspension concept anywhere in the codebase, and NO
  * `role_grants` revocation path at all. So "a stale grant in a dead tenant" is not a reachable state;
- * a grant exists iff someone deliberately created it. The data this gates is also the CROSS-TENANT
- * catalog only — pinned to `pariwar_id IS NULL`, identical for every reader, containing no tenant
- * data — and the corresponding WRITE stays strictly `super_admin` via `requireGlobalPermission`.
+ * a grant exists iff someone deliberately created it. The data this gates is Trust-wide, identical for
+ * every reader and contains no tenant data, and each WRITE stays strictly `super_admin` via
+ * `requireGlobalPermission`. There are TWO consumers:
+ *   (a) the feature-flag CROSS-TENANT catalog — pinned to `pariwar_id IS NULL`;
+ *   (b) the degraded-mode bridge-switch GET (Story 5.8b; code review 2026-10-28 (second pass)) — the
+ *       switch's state plus its last change: a Super Admin's display name (a staff name, snapshot)
+ *       and their free-text reason. Staff data, not tenant data, but it is personal data shown to
+ *       every holder of `pariwar.declare_degraded_mode` in any Pariwar.
  *
- * ⚠ RE-EXAMINE THIS GATE BEFORE SHIPPING EITHER OF THESE:
+ * ⚠ RE-EXAMINE THIS GATE BEFORE SHIPPING ANY OF THESE:
  *   1. Pariwar deactivation / suspension — a surviving grant in a dead tenant would then silently
  *      retain cross-tenant catalog access.
  *   2. A `role_grants` revocation path, or any flow that leaves grants behind on offboarding.
- * In either case this gate needs a liveness/membership predicate before the feature ships, not after.
+ *   3. A wider bridge-switch read — more of the history, an actor id, or anything beyond the state,
+ *      when, who (display name) and why — or a reason box that could come to hold tenant or member
+ *      data: every reader in every Pariwar would see it.
+ * In cases 1–2 this gate needs a liveness/membership predicate before the feature ships, not after;
+ * in case 3 the read needs its own narrower gate.
  */
 export function requireGlobalOrAnyPariwarPermission(deps: AppDeps, key: string): preHandlerHookHandler {
   return async function preHandler(request: FastifyRequest): Promise<void> {

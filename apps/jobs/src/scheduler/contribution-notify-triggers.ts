@@ -66,6 +66,7 @@ import {
   member as memberDomain,
   notifications,
   pool as poolDomain,
+  smsDelivery,
   withPariwarScope,
   type Db,
 } from '@twt/domain';
@@ -76,6 +77,7 @@ import { createHash } from 'node:crypto';
 import { isFinalFanOutAttempt, type FanOutCall } from './alert-sms-details.js';
 import {
   fanOutAlertToMembers,
+  isCycleOpenBridgeTextEligible,
   onceForJob,
   serializeFanOutResult,
   type ContributionNotifyDeps,
@@ -123,6 +125,38 @@ export const DEFAULT_POOL_BATCH_LOCAL_CONCURRENCY = 8;
  *  rungs + a Telegram mirror, each a provider round-trip) with generous headroom — a claim that expired
  *  mid-send could be reclaimed by a concurrent retry and double-send. */
 export const DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS = 300;
+
+/**
+ * Story 5.8b — code review 2026-10-28 (second pass): the claim TTL of a BRIDGED cycle-open member. A `deferred` bridge row is
+ * re-sendable for {@link smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS} (30 min) after its rate-limited try, then the seam gives it up;
+ * an owed closure (`bridgeRowOpen`) or a result that never recorded (the key left `pending`) is only dangerous inside that window. The
+ * 300 s key could be vacuumed — or reclaimed — before it closed, and a full re-fan would TEXT a member the push already told. The
+ * claim precedes the row's try by at most one bounded job (~400 s), so 30 min + 15 min keeps the key live until the row has aged
+ * out: ⛔ fan-out can re-claim the member meanwhile, and a recorded closure is retried. COST: a member whose attempt CRASHED stays
+ * claimed 45 min (⛔ 5) and is left to the recovery sweep; a lapse mid-job (F6) cannot happen on a bridged job.
+ */
+export const BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS = smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS / 1000 + 15 * 60;
+
+/** Code review 2026-10-28 (second pass) — a bridge-name alarm is raised ONCE per (alert, pool, kind) per this window, ⛔ per job. */
+export const BRIDGE_NAME_ALARM_WINDOW_MS = 24 * 60 * 60_000;
+const bridgeNameAlarmedAt = new Map<string, number>();
+
+/**
+ * The bridge-name alarms' memo (per process): a pool's ≤8-member jobs, their retries and F9's hourly re-fans share ONE alarm. The
+ * sink is called BEFORE the window is armed (a throwing sink must not swallow the next one — the seam's `alarmRefusalOnce` shape).
+ */
+function alarmBridgeNameOnce(alarm: (m: string) => void, key: string, atMs: number, message: string): void {
+  const at = bridgeNameAlarmedAt.get(key);
+  if (at !== undefined && atMs - at < BRIDGE_NAME_ALARM_WINDOW_MS) return;
+  alarm(message);
+  for (const [k, v] of bridgeNameAlarmedAt) if (atMs - v >= BRIDGE_NAME_ALARM_WINDOW_MS) bridgeNameAlarmedAt.delete(k);
+  bridgeNameAlarmedAt.set(key, atMs);
+}
+
+/** @internal `contribution-notify-triggers.test.ts` only — the memo is per process; each leg starts with none raised. */
+export function resetBridgeNameAlarms(): void {
+  bridgeNameAlarmedAt.clear();
+}
 
 /** pg-boss retry policy for the CHILD fan-out job — stated EXPLICITLY at the enqueue site rather than
  *  inheriting an unstated default (D9: this is the durable half of AR-19's retry-with-backoff). */
@@ -324,9 +358,10 @@ function envelope(input: {
  * ⭐ Story 5.8b (FS1 (a), FS6 / `-414` Q2 A, FS7 (a); `2026-10-28-415`) — a TIME-CRITICAL cycle-open (the Pariwar declared degraded at
  * the freeze) also carries the degraded-mode bridge's text block (`cycle_open_bridge`): the pool in the TEXT's language
  * (`smsPoolLabel`) and the family's name in the two boxes the child fitted ONCE per job (`smsMemberName` — `full` or `shortened`).
- * ⛔ block when `timeCritical` is false (the contract refuses one there), when `smsLocale` is absent or null (⛔ passport, or the
- * member is under the death overlay — FS4 (d)), or when `smsNameBoxes` is absent or null (the name does not fit even shortened,
- * or a box would be empty).
+ * ⛔ block when `timeCritical` is false (the contract refuses one there), when `smsLocale` is absent or null (⛔ passport), when the
+ * member is under the death overlay (`deathReported` — FS4 (d)), or when `smsNameBoxes` is absent or null (the name does not fit
+ * even shortened, or a box would be empty). Code review 2026-10-28 (second pass): those are asked of AC6's ONE predicate
+ * (`isCycleOpenBridgeTextEligible`); the send-time conjuncts (the target, the switch) are the fan-out's.
  */
 export function buildCycleOpenAlert(input: {
   readonly alertId: string;
@@ -340,11 +375,22 @@ export function buildCycleOpenAlert(input: {
   readonly smsLocale?: ContributionSmsLocale | null;
   /** Story 5.8b — the family's name in the two 30-letter boxes (fitted once per job). Absent or `null` ⇒ ⛔ text. */
   readonly smsNameBoxes?: readonly [string, string] | null;
+  /** Story 5.8b (FS4 (d)) — the member's own death has been reported (the `account-frozen` overlay). `true` ⇒ ⛔ text. */
+  readonly deathReported?: boolean;
   readonly now: Date;
 }): Alert {
   const { locale } = input;
   const smsLocale = input.smsLocale ?? null;
   const boxes = input.smsNameBoxes ?? null;
+  // AC6 — the ONE predicate. The target and the switch are decided at the send (the fan-out's (1b)); `true` here carries the block to it.
+  const bridgeText = isCycleOpenBridgeTextEligible({
+    bridged: input.timeCritical,
+    deathReported: input.deathReported ?? false,
+    textLanguage: smsLocale,
+    nameBoxes: boxes,
+    smsTarget: true,
+    switchOn: true,
+  });
   const params = {
     pool: poolLabel(input.identity),
     family: familyLabel(input.identity),
@@ -357,7 +403,7 @@ export function buildCycleOpenAlert(input: {
     payload_data: buildCycleOpenPayloadData({
       title: t(CYCLE_OPEN_TEMPLATE_KEYS.titleKey, params, { locale, ...NS }),
       body: t(CYCLE_OPEN_TEMPLATE_KEYS.bodyKey, params, { locale, ...NS }),
-      ...(input.timeCritical && smsLocale !== null && boxes !== null && boxes[0] !== '' && boxes[1] !== ''
+      ...(bridgeText && smsLocale !== null && boxes !== null
         ? {
             sms: {
               message: 'cycle_open_bridge',
@@ -819,10 +865,12 @@ export async function runContributionNotifyChild(
   // Per-kind TTL (Story 9.10 AC3 — "the once-ever nuance"): the two pending-match tiers durability-need a
   // weeks-scale claim, never the day-N reminders' 300s default (which would lapse — and get vacuumed —
   // well before the next HOURLY sweep tick, re-nudging the member every hour).
-  const ttl =
+  const baseTtl =
     p.kind === 'pending_match' || p.kind === 'pending_match_escalated'
       ? deps.pendingMatchIdempotencyTtlSeconds ?? PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS
       : deps.memberIdempotencyTtlSeconds ?? DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS;
+  // Story 5.8b — code review 2026-10-28 (second pass): a bridged member's key outlives its `deferred` row (see the constant).
+  const ttl = bridgeText ? Math.max(baseTtl, BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS) : baseTtl;
   const store = idempotency.createKeyedStore(deps.pool);
   const scope = idempotencyScope(p);
 
@@ -849,11 +897,25 @@ export async function runContributionNotifyChild(
   // Story 5.8b (FS4 (d), I10) — the members under the `account-frozen` (death-claim) overlay NOW: ⛔ bridge text for them (their push /
   // WhatsApp is unchanged). ONE set-based read per job, in THIS scope; ⛔ in the roster (AI-7-2).
   let deathFrozen: ReadonlySet<string> = new Set();
-  const identity = await withPariwarScope(deps.pool, pariwarId, async (db: Db) => {
+  // Code review 2026-10-28 (second pass): the overlay read FAILS SOFT — ⛔ a guess about who has died, so EVERY bridge text of this
+  // job is omitted (the push unchanged), ONE name-free alarm. It used to throw the whole job, the push included.
+  let deathReadFault: string | null = null;
+  const identity = await withPariwarScope(deps.pool, pariwarId, async (db: Db, client) => {
     if (litKind) {
       textLanguages = await memberDomain.readMemberTextLanguages(db, { pariwarId: ids.pariwarId(pariwarId), memberIds: p.memberIds });
     }
-    if (bridgeText) deathFrozen = await memberDomain.listAccountFrozenMemberIds(db, p.memberIds, now);
+    if (bridgeText) {
+      // A SAVEPOINT: a failed statement aborts the scope transaction, and the identity reads below share it.
+      await client.query('SAVEPOINT bridge_death_overlay');
+      try {
+        deathFrozen = await memberDomain.listAccountFrozenMemberIds(db, p.memberIds, now);
+        await client.query('RELEASE SAVEPOINT bridge_death_overlay');
+      } catch (err) {
+        await client.query('ROLLBACK TO SAVEPOINT bridge_death_overlay');
+        const code = (err as { code?: unknown } | null)?.code;
+        deathReadFault = typeof code === 'string' && /^[A-Z0-9_]{3,24}$/.test(code) ? `code:${code}` : err instanceof Error ? err.name : typeof err;
+      }
+    }
     // ⭐ REVIEW FIX (8.16) — this read must degrade the SAME way `resolvePoolIdentity` degrades every
     // OTHER unresolvable input on this path (decrypt, letter code, curated name): skip THIS pool's
     // notification, never let a transient read throw the whole child job. Without this, a DB blip on
@@ -903,6 +965,8 @@ export async function runContributionNotifyChild(
         `alert ${p.alertId} pool ${p.poolId} (the push still goes)`,
     );
   }
+  // Assigned inside the scope callback — read through a cast (TS keeps the `null` it was declared with).
+  const overlayFault = deathReadFault as string | null;
   const smsLocaleOf = (memberId: string): ContributionSmsLocale | null => {
     const languages = textLanguages as ReadonlyMap<string, ContributionSmsLocale> | null;
     if (languages === null) return null;
@@ -913,16 +977,36 @@ export async function runContributionNotifyChild(
   // the same string the push uses): `full` or `shortened` ⇒ the two boxes; `too_long` ⇒ ⛔ text for this job's members and ONE
   // name-free alarm carrying the COUNT (⛔ the name, a box or a shortened form — T11). A box that would be empty (a 1-letter label)
   // omits the text too, ⛔ throw.
+  // ⭐ Code review 2026-10-28 (second pass): each name alarm is raised ONCE per (alert, pool) per window — ⛔ per ≤8-member job, retry or
+  // re-fan — and counts only the members who would otherwise be texted (⛔ under the overlay, a known text language); none ⇒ ⛔ alarm.
+  // An EMPTY label (or one that leaves a box empty) alarms too: it used to disable the bridge in silence.
   let bridgeBoxes: readonly [string, string] | null = null;
   if (bridgeText) {
+    if (overlayFault !== null) {
+      alarm(
+        `[jobs] contribution-notify-child: alert_sms.bridge_overlay_unavailable — the death-overlay read failed [${overlayFault}]; ⛔ bridge ` +
+          `text for the ${String(p.memberIds.length)} member(s) of alert ${p.alertId} pool ${p.poolId} this attempt (the push still goes; ` +
+          `an un-reached member is retried)`,
+      );
+    }
     const label = familyLabel(identity);
     const fitted = label.trim() === '' ? null : smsMemberName(label);
-    if (fitted?.kind === 'too_long') {
-      alarm(
-        `[jobs] contribution-notify-child: alert_sms.bridge_name_too_long — ${String(p.memberIds.length)} member(s) of alert ` +
-          `${p.alertId} pool ${p.poolId} get ⛔ bridge text: the family's name does not fit two boxes even shortened (the push still goes)`,
+    const wouldText = overlayFault !== null ? 0 : p.memberIds.filter((m) => !deathFrozen.has(m.toLowerCase()) && smsLocaleOf(m) !== null).length;
+    const nameAlarm = (kind: string, why: string): void => {
+      if (wouldText === 0) return;
+      alarmBridgeNameOnce(
+        alarm,
+        `${p.alertId}:${p.poolId}:${kind}`,
+        now.getTime(),
+        `[jobs] contribution-notify-child: alert_sms.${kind} — ${String(wouldText)} member(s) of alert ${p.alertId} pool ${p.poolId} get ` +
+          `⛔ bridge text: ${why} (the push still goes; not repeated for this pool for ${String(BRIDGE_NAME_ALARM_WINDOW_MS / 3_600_000)} h)`,
       );
-    } else if (fitted !== null && fitted.boxes[0] !== '' && fitted.boxes[1] !== '') {
+    };
+    if (fitted?.kind === 'too_long') {
+      nameAlarm('bridge_name_too_long', "the family's name does not fit two boxes even shortened");
+    } else if (fitted === null || fitted.boxes[0] === '' || fitted.boxes[1] === '') {
+      nameAlarm('bridge_name_empty', "the family's name is empty or leaves a box empty");
+    } else {
       bridgeBoxes = fitted.boxes;
     }
     if (deathFrozen.size > 0) {
@@ -991,7 +1075,12 @@ export async function runContributionNotifyChild(
       timeCritical: p.timeCritical,
       locale,
       ...(bridgeText
-        ? { smsLocale: deathFrozen.has(memberId.toLowerCase()) ? null : smsLocaleOf(memberId), smsNameBoxes: bridgeBoxes }
+        ? {
+            // A failed overlay read omits every block (⛔ a guess) — read here as "reported" for each member.
+            deathReported: overlayFault !== null || deathFrozen.has(memberId.toLowerCase()),
+            smsLocale: smsLocaleOf(memberId),
+            smsNameBoxes: bridgeBoxes,
+          }
         : {}),
       now,
     });
@@ -1015,15 +1104,30 @@ export async function runContributionNotifyChild(
   const settleOwedClosure = async (memberId: string, key: string): Promise<void> => {
     if (!giveUpDeferred) return;
     let owed: boolean;
+    let ladderDelivered = true;
     try {
       const recorded = await store.inspect(key);
-      owed = recorded?.status === 'completed' && (recorded.result as { bridgeRowOpen?: unknown } | null)?.bridgeRowOpen === true;
+      const result = recorded?.result as { bridgeRowOpen?: unknown; delivered?: unknown } | null | undefined;
+      owed = recorded?.status === 'completed' && result?.bridgeRowOpen === true;
+      // Code review 2026-10-28 (second pass): a member recorded `in_app_only` owes the closure of a `deferred` row ONLY (⛔ a new row).
+      ladderDelivered = result?.delivered !== false;
     } catch (err) {
       alarm(`[jobs] contribution-notify-child: a recorded member's result could not be read for alert ${p.alertId} — ${String(err)} (retrying)`);
       closureOwed.push(memberId);
       return;
     }
-    if (owed && (await giveUpDeferred({ alert: alertFor(memberId), call: fanOutCall(job, scope) })) === 'failed') closureOwed.push(memberId);
+    if (!owed) return;
+    // Fix review (2026-10-28): the overlay read failed THIS attempt ⇒ ⛔ block to write the terminal row from — still OWED (⛔ dropped).
+    if (overlayFault !== null) {
+      closureOwed.push(memberId);
+      return;
+    }
+    const closure = await giveUpDeferred({
+      alert: alertFor(memberId),
+      call: fanOutCall(job, scope),
+      ...(ladderDelivered ? {} : { ladder: 'in_app_only' as const }),
+    });
+    if (closure === 'failed') closureOwed.push(memberId);
   };
 
   for (let i = 0; i < p.memberIds.length; i += chunkSize) {
@@ -1044,7 +1148,8 @@ export async function runContributionNotifyChild(
     if (claimed.length === 0) continue;
 
     attempted += claimed.length;
-    const { results, retry } = await fanOutAlertToMembers(jobDeps, alertFor, claimed, pariwarId, now, fanOutCall(job, scope));
+    const call: FanOutCall = bridgeText && overlayFault !== null ? { ...fanOutCall(job, scope), bridgeBlockUnavailable: true } : fanOutCall(job, scope);
+    const { results, retry } = await fanOutAlertToMembers(jobDeps, alertFor, claimed, pariwarId, now, call);
 
     const retrySet = new Set(retry);
     for (const memberId of claimed) {
@@ -1088,13 +1193,17 @@ export async function runContributionNotifyChild(
   console.info('[jobs] contribution-notify-child', JSON.stringify(result));
 
   // Story 5.8b review (P2-1) — an owed closure retries the job (⛔ a push: those members are recorded). On the FINAL attempt it is
-  // left to the row's own 30-minute expiry (a later lookup gives an expired `deferred` row up instead of sending it) — alarmed.
+  // left to the row's own 30-minute expiry (a later lookup gives an expired `deferred` row up instead of sending it) — alarmed. Code
+  // review 2026-10-28 (second pass): the member's key outlives that window (`BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS`), so ⛔ re-run
+  // can claim them before it — a durable bound, ⛔ the 300 s key's. The residual: a terminal row that could not be WRITTEN (⛔ row
+  // at all) through every attempt — once the claim lapses, F9's re-fan finds ⛔ row (named in the alarm).
   const closureRetry = closureOwed.length > 0 && !isFinalFanOutAttempt(fanOutCall(job, scope));
   if (closureOwed.length > 0 && !closureRetry) {
     alarm(
-      `[jobs] contribution-notify-child: ${String(closureOwed.length)} member(s)' deferred bridge text could not be given up (or ` +
-        `checked) on the FINAL attempt for alert ${p.alertId} pool ${p.poolId} — a re-run within 30 minutes of its rate-limited try ` +
-        `could text them`,
+      `[jobs] contribution-notify-child: ${String(closureOwed.length)} member(s)' bridge text record could not be closed (or ` +
+        `checked) on the FINAL attempt for alert ${p.alertId} pool ${p.poolId} — a deferred row is left to expire (30 minutes after ` +
+        `its rate-limited try; the claim outlives it); where ⛔ row could be written, a re-fan after the claim lapses may text a ` +
+        `member the push already told`,
     );
   }
   if (failed.length > 0 || closureRetry) {

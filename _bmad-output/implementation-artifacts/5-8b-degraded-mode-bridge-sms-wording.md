@@ -602,6 +602,10 @@ never a "Late …" ([[feedback_never_mangle_member_names]]).
 
 ### PQ2 and PQ1 — for the Trustee Panel (ONE short note; blocks the go-live row, not the build; FS13 (a))
 
+⭐ WRITTEN 2026-10-28 as `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md` (⛔ not sent). The note is the version put to the Panel; where this draft and the note differ, the
+NOTE governs — its cost line follows FS15 (a): about 2 SMS parts per member per cycle in EITHER language, up to 3 at the longest (this
+draft's *"2 en / 3 hi"* predates FS15). In the note PQ2 is "Question 1" and PQ1 "Question 2".
+
 Written from `trustee-panel-routing-note-TEMPLATE.md` (§0 first). It opens with **"Corrected in this note — something you were told
 earlier"**: in October the Panel was told a pool opening *"is never texted"* and goes to the Trust's channels (note `:71-72`; `-390` Q2).
 That stays true for every Pariwar the Trust has NOT declared degraded; this note asks about the one exception.
@@ -775,7 +779,7 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
   - [x] 0.2 (DONE 2026-10-28 — Debug Log (a): "FS1-FS16 as recommended"; PQ2 / PQ1 stay the Panel's; roster leg (b) NOT discharged) Put FS1–FS16, the words (en + hi), PQ2 and PQ1 to BigDev — the v1.2-changed FS first (header STATUS); record the answers
         VERBATIM in Debug Log (a), each with its option's conditions (footgun #45). If BigDev confirms the words in session, roster leg (b)
         still says *"whether that discharges this leg is recorded here, not assumed"*.
-  - [ ] 0.3 Write the PQ2 + PQ1 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first; the "Corrected in this note" line;
+  - [ ] 0.3 (NOTE WRITTEN 2026-10-28, ⛔ NOT SENT — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run, Debug Log (e); the decision NOT yet staged) Write the PQ2 + PQ1 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first; the "Corrected in this note" line;
         `trustee-panel-routing-note-YYYY-MM-DD-5-8b-…`), run its evidence commands, record it as NOT sent until BigDev sends it. Stage the
         author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the decision-log write first
         ([[project_decision_log_writes_user_inserted]]).
@@ -1060,6 +1064,19 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
   - **S7 — answered in v1.2 (F7: a deceased member IS rostered); re-confirmed** — `validity-service`, `assignable-roster.ts`,
     `member/overlay.ts` byte-identical at `64e01121`. Goes to BigDev WITH FS4 at Task 0.2.
 
+- (e) Task 0.3 (part) — the Panel note, 2026-10-28 (BigDev: "yes write the note to panel"): `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`, from the template (§0 first;
+  the ⏳ block; "Corrected in this note" naming the 2026-10-23 note's *"is never texted"* and *"No text now carries a name"*). Question 1
+  = PQ2 (A yes / B no / C only when WhatsApp is off; reading A), Question 2 = PQ1 (asked only if Q1 is A or C; A the `-379` rule / B not
+  named, not texted — the interim / C another rule; reading A). Stated, not asked: the cost (≈ 2 parts per member per cycle, up to 3;
+  price unknown); a member whose death has been reported is not texted (FS4 (d)); a texted member gets no push for that opening (FS3
+  (a)); who may declare; revoke does not stop an opened cycle; suspended / grace members texted. Split out: consent (counsel, Row 40
+  (f)); price; the engineering choices. E4 RUN on `6610b0a9`: every command returned what the note says EXCEPT two, both fixed before
+  this entry — the decision-heading grep for the bridge hits `-180` and `-389` (the comment had named `-313` / `-389` / `-394` / `-404`,
+  which mention it in bodies only), and the who-may-declare range is `roles.test.ts:551-557` (the `toEqual` line), not `:551-558`. The
+  Niyamavali grep is EMPTY (the finding). ⛔ NOT SENT — it counts as shown only once BigDev sends it ([[feedback_shown_to_panel_means_sent]]).
+  Still to do in 0.3: the author-commit decision (next free id at the time — `-414` if 6.32's `-413` stands) staged in the scratchpad
+  and committed ALONE.
+
 ### Completion Notes List
 
 (open)
@@ -1077,4 +1094,5 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 | 2026-10-28 | v1.2 | `bmad-create-story validate 5.8b` — three read-only verifiers (the fan-out / contract / record; the producer / sweep / screen; governance / records) re-checked about 200 claims against `4e57fa42` and `origin/main` `64e01121` (11b.4a landed). Applied: S7 ANSWERED — a deceased member IS rostered (F7) ⇒ NEW ⭐ FS4 (d), I10, G10 (§3.4 lifecycle suppression), T22; G6 re-read as a WIDENING of what the Panel was told (pool openings "never texted") ⇒ NEW PQ2, FS16, `-389` headline / §1 item 1 added to the supersede list; F8 / FS9 corrected — the `-394` quote had dropped its ⛔, and the arm's removal changes only a bridged no-target member with a named WhatsApp refusal; F11 / FS11 / AC8 — the page header and banner already promise AR-20's SMS-only send; FS11's sentence rewritten truthfully; the `smsMemberName` EXACT caller fence added (F16, T11, closed list); the en cost with a Devanagari name ⇒ NEW FS15; FS3 gains the trail order, the Telegram mirror on bridge-`sent`, §3.4 `:2308`'s scope, FS3.1 (the `deferred` row); FS10's shape (`loadCycleFrozenPayload`, the sweep has no `committed_at`, the hourly re-fan); the legacy conversion is a test, not code; `-404` six → seven is a supersede in part; PQ1's October withdrawal; PRD `:1074`; `-181`; the sign-off's scope; helpdesk is `helpdesk_reply`; T4; the red-vs-extended test split; every number re-found (next: `-414`, Row 43, DLT 23 / 24, `0189`, ledger `-28l`). |
 | 2026-10-28 | v1.3 | Task 0.1 DONE: rebased onto `origin/main` `64e01121` (one ledger conflict, prepend-resolved; changed-line sets verified equal) and re-pinned; F1–F16 re-verified (only `boot.ts` cites moved: `:162`, `:788-800`); S1, S3, S5, S6 clear; S2 tripped by 6.32's known roster / migration overlap (sequenced: `-414`, Row 43, `0189`); S4 clear locally, deployed environments un-attested; S7 re-confirmed. Debug Log (d). |
 | 2026-10-28 | v1.4 | Task 0.2 ANSWERED: BigDev "FS1-FS16 as recommended" — every ⭐ option, each with its cost line, recorded in Debug Log (a) (FS4 (d), FS3.1 (a), FS11 plus the FS4 (d) sentence; the `-404` and `-394` supersedes-in-part go into the decision at Task 0.3). Still open: PQ2 / PQ1 (the Panel's), roster leg (b) (the Hindi review not confirmed in session), S4 (deployed environments) and S2 (the sequencing) — asked, unanswered. Ledger `2026-10-28n`. |
+| 2026-10-28 | v1.5 | Task 0.3 (part): the Panel note WRITTEN, ⛔ not sent — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run (two mismatches found and fixed in the note); the PQ section points to the note, which governs (cost per FS15 (a): ≈ 2 parts, up to 3, either language). The author-commit decision is not yet staged. Debug Log (e). Ledger `2026-10-28o`. |
 

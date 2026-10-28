@@ -372,6 +372,40 @@ describe('review 2026-10-25 — the template-id memo AT THE SEAM (C3-P9; FS17 / 
   });
 });
 
+describe('Story 5.8b review P2-1 — `giveUpDeferred` REPORTS what it did (⛔ a swallowed failure)', () => {
+  const ALERT = {
+    alert_id: '33333333-3333-3333-3333-333333333333',
+    pariwar_id: '11111111-1111-1111-1111-111111111111',
+    member_id: '22222222-2222-2222-2222-222222222222',
+    alert_category: 'alert_published',
+  } as unknown as Alert;
+
+  it('⭐ a record that throws through EVERY try ⇒ `failed`, the read tried once per try, ONE alarm naming the fault class (⛔ an unhandled rejection)', async () => {
+    const connect = vi.fn(() => Promise.reject(Object.assign(new Error('the server closed the connection'), { code: '57P01' })));
+    const alarms: string[] = [];
+    const send = createAlertSmsSender({
+      pool: { connect, query: connect } as never,
+      smsAppClient: gateway().client,
+      resolveConfig: () => Promise.resolve(TEMPLATE_ID),
+      onAlarm: (m) => alarms.push(m),
+      finaliseBackoffMs: [0, 0],
+    });
+    await expect(send.giveUpDeferred!({ alert: ALERT, call: { occasion: 'cycle_open' } })).resolves.toBe('failed');
+    expect(connect).toHaveBeenCalledTimes(3); // the first try + one per pause
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('could not be given up after the ladder delivered');
+    expect(alarms[0]).toContain('the push is ⛔ repeated');
+  });
+
+  it('an occasion the record does not admit ⇒ `none`, the pool ⛔ touched', async () => {
+    const connect = vi.fn(() => Promise.reject(new Error('must not be used')));
+    const send = createAlertSmsSender({ pool: { connect, query: connect } as never, smsAppClient: gateway().client, resolveConfig: () => Promise.resolve(TEMPLATE_ID) });
+    await expect(send.giveUpDeferred!({ alert: ALERT, call: { occasion: 'day_7' } })).resolves.toBe('none');
+    await expect(send.giveUpDeferred!({ alert: ALERT })).resolves.toBe('none');
+    expect(connect).not.toHaveBeenCalled();
+  });
+});
+
 describe('review 2026-10-25 — the 2-minute LEASE is pinned to the in-flight bound it is derived from (C2-P4)', () => {
   it('⭐ lease > the send timeout + every finalise try at the pool\'s REAL connect timeout + the finalise pauses — with 2× margin (a longer timeout, one more try or a longer pause would otherwise let a STALE finalise freeze a row its live attempt still holds)', () => {
     const tries = ALERT_SMS_FINALISE_BACKOFF_MS.length + 1;

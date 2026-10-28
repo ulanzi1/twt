@@ -19,5 +19,13 @@ export const BRIDGE_TEXT_DEATH_EXCLUSION = 'Members whose death has been reporte
 /** FS17 (a) — the Trust-wide switch. */
 export const BRIDGE_TEXT_SWITCH_NOTE = 'A Super Admin can switch these texts off for every Pariwar.';
 
+/**
+ * Code review 2026-10-28 (P2-3; invariant family 13 (d)) — the confirmation a Super Admin's change is ANNOUNCED with (the page's
+ * persistent status region): the state the SERVER returned, so a screen-reader operator hears what a sighted one sees.
+ */
+export function bridgeSwitchSavedMessage(enabled: boolean): string {
+  return enabled ? 'Saved — bridge texts are now ON for every Pariwar.' : 'Saved — bridge texts are now OFF for every Pariwar.';
+}
+
 /** The three, in order — the one paragraph each surface shows. */
 export const BRIDGE_TEXT_PARAGRAPH = `${BRIDGE_TEXT_EXPLAINER} ${BRIDGE_TEXT_DEATH_EXCLUSION} ${BRIDGE_TEXT_SWITCH_NOTE}`;

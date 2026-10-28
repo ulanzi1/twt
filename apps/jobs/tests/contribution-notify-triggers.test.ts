@@ -19,6 +19,8 @@ const listPendingMatchMembersForPool = vi.fn();
 const claim = vi.fn();
 const recordResult = vi.fn();
 const release = vi.fn();
+// Story 5.8b review (P2-1) — the child reads a recorded member's result back when it owes a bridge-row closure.
+const inspect = vi.fn();
 const withPariwarScope = vi.fn();
 // Story 5.11b (FS5 (a)) — the lit kinds' set-based TEXT-language read; every member defaults to `hi` here (the language legs are
 // LIVE — `alert-sms-send-live.test.ts`). A harness stub, ⛔ an assertion change.
@@ -51,7 +53,7 @@ vi.mock('@twt/domain', async (importActual) => {
     contribution: { ...actual.contribution, listActedMemberIdsForPool, listPendingMatchMembersForPool },
     idempotency: {
       ...actual.idempotency,
-      createKeyedStore: () => ({ claim, recordResult, release, getResult: vi.fn() }),
+      createKeyedStore: () => ({ claim, recordResult, release, inspect, getResult: vi.fn() }),
     },
   };
 });
@@ -175,6 +177,7 @@ beforeEach(() => {
   claim.mockResolvedValue('acquired');
   recordResult.mockResolvedValue(undefined);
   release.mockResolvedValue(undefined);
+  inspect.mockResolvedValue(null);
   fanOutAlertToMembers.mockImplementation((_d: unknown, _a: unknown, memberIds: string[]) =>
     Promise.resolve({
       results: memberIds.map((memberId) => ({
@@ -2004,5 +2007,78 @@ describe('Story 5.8b AC4 — a TIME-CRITICAL cycle-open builds the `cycle_open_b
   it('the bridged child passes the occasion `cycle_open` (the keyed store\'s scope) to the fan-out', async () => {
     await runContributionNotifyChild(deps(), envelope(bridged({ memberIds: [M1] })) as never, { id: 'job-9', retryCount: 0, retryLimit: 4 });
     expect(fanOutAlertToMembers.mock.calls[0]![5]).toEqual({ occasion: 'cycle_open', jobId: 'job-9', retryCount: 0, retryLimit: 4 });
+  });
+});
+
+describe('Story 5.8b review P2-1 — a bridge-row closure that FAILED is owed by the job: retried for it ALONE (⛔ a second push)', () => {
+  const bridged = (overrides: Record<string, unknown> = {}) => childPayload({ timeCritical: true, ...overrides });
+  const delivered = (memberId: string, extra: Record<string, unknown> = {}) => ({
+    memberId,
+    delivered: true,
+    deliveredChannel: 'push',
+    trail: [{ channel: 'sms', attempt: 0, outcome: 'skipped_no_target', detail: 'rate_limited' }, { channel: 'push', attempt: 0, outcome: 'sent' }],
+    bridged: true,
+    costSuppressedChannels: [],
+    telegramMirrored: false,
+    ...extra,
+  });
+  const seamWith = (closure: 'closed' | 'none' | 'failed') =>
+    Object.assign(vi.fn(), { giveUpDeferred: vi.fn<(input: { alert: Alert; call?: unknown }) => Promise<string>>(() => Promise.resolve(closure)) });
+
+  it('⭐ attempt 1: the ladder delivered M1 but its closure failed ⇒ M1 is RECORDED (claim kept) with `bridgeRowOpen`, ⛔ released, and the job THROWS for the closure', async () => {
+    fanOutAlertToMembers.mockResolvedValueOnce({ results: [delivered(M1, { bridgeRowOpen: true }), delivered(M2)], retry: [] });
+    const onAlarm = vi.fn();
+    await expect(
+      runContributionNotifyChild(deps({ alertSms: seamWith('failed'), onAlarm }), envelope(bridged()) as never, { id: 'j', retryCount: 0, retryLimit: 4 }),
+    ).rejects.toThrow('0 member(s) failed and 1 deferred bridge text(s) are still to be given up');
+    expect(release).not.toHaveBeenCalled();
+    expect(recordResult).toHaveBeenCalledTimes(2);
+    expect(recordResult.mock.calls.find((c) => (c[0] as string).includes(M1))![1]).toMatchObject({ delivered: true, bridgeRowOpen: true });
+    expect(recordResult.mock.calls.find((c) => (c[0] as string).includes(M2))![1]).not.toHaveProperty('bridgeRowOpen');
+  });
+
+  it('⭐ the RETRY: M1 is `already_claimed`, its record owes the closure ⇒ ONLY the closure is tried (for M1, this attempt\'s call) — ⛔ fan-out, ⛔ throw once it closes', async () => {
+    claim.mockResolvedValue('already_claimed');
+    inspect.mockImplementation((key: string) =>
+      Promise.resolve(key.includes(M1) ? { status: 'completed', result: { delivered: true, bridgeRowOpen: true } } : { status: 'completed', result: { delivered: true } }),
+    );
+    const alertSms = seamWith('closed');
+    const result = await runContributionNotifyChild(deps({ alertSms }), envelope(bridged()) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
+    expect(result).toMatchObject({ attempted: 0, alreadySent: 2 });
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    expect(alertSms).not.toHaveBeenCalled();
+    expect(alertSms.giveUpDeferred).toHaveBeenCalledTimes(1);
+    const [arg] = alertSms.giveUpDeferred.mock.calls[0]!;
+    expect(arg.alert).toMatchObject({ alert_id: ALERT, member_id: M1, pariwar_id: PARIWAR });
+    expect(arg.call).toEqual({ occasion: 'cycle_open', jobId: 'j', retryCount: 1, retryLimit: 4 });
+  });
+
+  it('the retry\'s closure fails AGAIN ⇒ it throws again (not final); on the FINAL attempt ⛔ throw — ONE alarm naming the 30-minute window', async () => {
+    claim.mockResolvedValue('already_claimed');
+    inspect.mockResolvedValue({ status: 'completed', result: { delivered: true, bridgeRowOpen: true } });
+    await expect(
+      runContributionNotifyChild(deps({ alertSms: seamWith('failed') }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 2, retryLimit: 4 }),
+    ).rejects.toThrow('still to be given up');
+    const onAlarm = vi.fn();
+    const final = await runContributionNotifyChild(
+      deps({ alertSms: seamWith('failed'), onAlarm }),
+      envelope(bridged({ memberIds: [M1] })) as never,
+      { id: 'j', retryCount: 4, retryLimit: 4 },
+    );
+    expect(final.alreadySent).toBe(1);
+    expect(onAlarm).toHaveBeenCalledTimes(1);
+    expect(String(onAlarm.mock.calls[0]![0])).toContain('FINAL attempt');
+  });
+
+  it('⛔ owed: a recorded member WITHOUT the flag, an UN-bridged job, or a record that is still pending (another job holds it) ⇒ ⛔ closure tried', async () => {
+    claim.mockResolvedValue('already_claimed');
+    const alertSms = seamWith('closed');
+    inspect.mockResolvedValue({ status: 'completed', result: { delivered: true } });
+    await runContributionNotifyChild(deps({ alertSms }), envelope(bridged()) as never);
+    inspect.mockResolvedValue({ status: 'pending', result: null });
+    await runContributionNotifyChild(deps({ alertSms }), envelope(bridged()) as never);
+    inspect.mockResolvedValue({ status: 'completed', result: { delivered: true, bridgeRowOpen: true } });
+    await runContributionNotifyChild(deps({ alertSms }), envelope(childPayload()) as never);
+    expect(alertSms.giveUpDeferred).not.toHaveBeenCalled();
   });
 });

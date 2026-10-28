@@ -3489,6 +3489,10 @@ components:
             - string
             - "null"
           format: uuid
+        changedByDisplay:
+          type:
+            - string
+            - "null"
         reason:
           type:
             - string
@@ -3497,6 +3501,7 @@ components:
         - enabled
         - changedAt
         - changedByActor
+        - changedByDisplay
         - reason
       additionalProperties: false
     DegradedBridgeSmsSwitchSetRequest:

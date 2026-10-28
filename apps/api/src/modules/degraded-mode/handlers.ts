@@ -25,7 +25,8 @@ import type {
 import type { FastifyRequest } from 'fastify';
 
 import { ADMIN_GLOBAL_NAMESPACE, type AppDeps } from '../../context.js';
-import { ConflictError } from '../../http-errors.js';
+import { AdminDisplayNameMissingError, ConflictError } from '../../http-errors.js';
+import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 
 /** The `pariwar.declare_degraded_mode` key (Story 5.8, catalog v6) — the declare/revoke WRITE gate. */
 const PARIWAR_DECLARE_DEGRADED_MODE_KEY = 'pariwar.declare_degraded_mode';
@@ -46,6 +47,7 @@ function toSwitchDto(state: degradedMode.DegradedBridgeSmsSwitchState): Degraded
     enabled: state.enabled,
     changedAt: state.changedAt ? state.changedAt.toISOString() : null,
     changedByActor: state.changedByActor,
+    changedByDisplay: state.changedByDisplay,
     reason: state.reason,
   };
 }
@@ -93,6 +95,11 @@ export function createDegradedModeHandlers(deps: AppDeps) {
       const actorId = request.requestContext.actorId;
       if (!actorId) throw new Error('[degraded-mode] bridge-switch handler ran without an admin session');
       const body = request.body as DegradedBridgeSmsSwitchSetRequest;
+      // R5 attribution resolves FIRST, before any write — server-side from `users.display_name`, fail-closed (code review 2026-10-28,
+      // P2-2; the feature-flag flip's shape): a nameless account is refused, ⛔ an id or email in its place
+      // ([[project_admin_display_name_attribution]]). The name is SNAPSHOT on the history row, so a later rename never rewrites it.
+      const actorDisplay = await getDisplayName(deps.pool, actorId);
+      if (actorDisplay === null) throw new AdminDisplayNameMissingError(actorId);
       const current = await degradedMode.readDegradedBridgeSmsSwitch(deps.servicePool);
       if (current.enabled === body.enabled) return toSwitchDto(current);
 
@@ -113,6 +120,7 @@ export function createDegradedModeHandlers(deps: AppDeps) {
           const result = await degradedMode.setDegradedBridgeSmsSwitch(deps.servicePool, {
             enabled: body.enabled,
             actorId,
+            actorDisplay,
             reason: body.reason,
             auditId,
           });

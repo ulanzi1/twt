@@ -5,6 +5,7 @@
 // route) so the page is testable without a router (the ChannelConfigPage precedent).
 
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
@@ -15,7 +16,7 @@ import {
   useSession,
   useSetDegradedBridgeSmsSwitch,
 } from '../../api/hooks.js';
-import { BRIDGE_TEXT_PARAGRAPH } from './bridge-copy.js';
+import { BRIDGE_TEXT_PARAGRAPH, bridgeSwitchSavedMessage } from './bridge-copy.js';
 import { BridgeSwitchPanel, SWITCH_BRIDGE_SMS_KEY } from './BridgeSwitchPanel.js';
 import { DeclareForm } from './DeclareForm.js';
 import { DegradedModeBanner } from './DegradedModeBanner.js';
@@ -39,6 +40,9 @@ export function DegradedModePage({ pariwarId }: DegradedModePageProps): ReactEle
   const setBridgeSwitch = useSetDegradedBridgeSmsSwitch();
   const session = useSession();
   const canSwitch = session.data?.nationalGrants.includes(SWITCH_BRIDGE_SMS_KEY) ?? false;
+  // Code review 2026-10-28 (P2-3) — the change is ANNOUNCED: with no active declaration nothing else on the page moves, so a
+  // screen-reader operator heard nothing. Set ONCE from the server's answer; cleared when the next change is sent.
+  const [switchSaved, setSwitchSaved] = useState('');
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,11 +82,18 @@ export function DegradedModePage({ pariwarId }: DegradedModePageProps): ReactEle
           <BridgeSwitchPanel
             state={bridgeSwitch.data}
             canChange={canSwitch}
-            onChange={(body) => setBridgeSwitch.mutate(body)}
+            onChange={(body) => {
+              setSwitchSaved('');
+              setBridgeSwitch.mutate(body, { onSuccess: (state) => setSwitchSaved(bridgeSwitchSavedMessage(state.enabled)) });
+            }}
             pending={setBridgeSwitch.isPending}
             changeError={errorMessage(setBridgeSwitch.error)}
           />
         )}
+        {/* PERSISTENT (outside the branches above): a live region must already be in the page before its text changes. */}
+        <p role="status" aria-atomic="true" className="mt-2 text-sm" data-testid="bridge-switch-saved">
+          {switchSaved}
+        </p>
       </section>
 
       <section aria-label="Declare degraded mode" className="rounded border p-4">

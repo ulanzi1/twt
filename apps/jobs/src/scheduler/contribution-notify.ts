@@ -197,6 +197,9 @@ export interface MemberFanOutResult {
   readonly costSuppressedChannels: readonly Channel[];
   /** `true` when the Telegram mirror was category-eligible AND a chat id was on file. */
   readonly telegramMirrored: boolean;
+  /** Story 5.8b review (P2-1) — the ladder delivered but a `deferred` bridge row could NOT be given up (FS3.1 (a)): the caller records
+   *  the member (⛔ a second push) and keeps the closure owed. Absent ⇒ nothing owed. */
+  readonly bridgeRowOpen?: true;
 }
 
 const realSleep = (ms: number): Promise<void> =>
@@ -244,6 +247,8 @@ export function serializeFanOutResult(record: MemberFanOutResult): Record<string
     bridged: record.bridged,
     costSuppressedChannels: record.costSuppressedChannels,
     telegramMirrored: record.telegramMirrored,
+    // Story 5.8b review (P2-1) — read back by the cycle-open child on its retry, which owes the closure (⛔ the push).
+    ...(record.bridgeRowOpen ? { bridgeRowOpen: true } : {}),
     trail: record.trail.map(
       (entry) => `${entry.channel}:${String(entry.attempt)}:${entry.outcome}` +
         (entry.detail !== undefined && RECORDED_RUNG_DETAILS.has(entry.detail) ? `:${entry.detail}` : ''),
@@ -534,6 +539,7 @@ export async function fanOutAlert(
   let trail: CascadeTrailEntry[];
   let delivered: boolean;
   let deliveredChannel: Channel | null;
+  let bridgeRowOpen = false;
   if (bridgeEntry?.outcome === 'sent') {
     // Story 5.8b (FS3 (a)) — the text went: push and WhatsApp are ⛔ run for this alert (it is in the app; the mirror runs below).
     trail = [bridgeEntry];
@@ -549,11 +555,14 @@ export async function fanOutAlert(
     trail = bridgeEntry ? [bridgeEntry, ...cascade.trail] : [...cascade.trail];
     delivered = cascade.delivered;
     deliveredChannel = cascade.deliveredChannel;
-    // Story 5.8b (FS3.1 (a)) — a rate-limited bridge text left its row `deferred`; the ladder DELIVERED, so this member is ⛔ retried
-    // and nothing would ever end that row — a later sweep re-run would re-claim it and text a member the push already told. Give it
-    // up now (best-effort; the seam alarms a failure).
-    if (delivered && bridgeEntry?.detail === ALERT_SMS_RUNG_DETAIL.rateLimited && deps.alertSms?.giveUpDeferred) {
-      await deps.alertSms.giveUpDeferred({ alert, ...(call ? { call } : {}) });
+    // Story 5.8b (FS3.1 (a)) — a rate-limited bridge text leaves its row `deferred`; the ladder DELIVERED, so this member is ⛔
+    // retried and nothing would ever end that row — a later re-run that re-claims the member would text one the push already told.
+    // ⭐ Review P2-1: the row may come from an EARLIER attempt — this one's text may not have been tried at all (the switch now OFF or
+    // unreadable, a Secret Manager blip, the send state unavailable) — so ANY ladder delivery of a bridged alert closes it, whatever
+    // this attempt's bridge entry says (⛔ row ⇒ one read, `none`). A closure that fails through the seam's tries is REPORTED
+    // (`bridgeRowOpen`): the job keeps it and retries ONLY the closure (the push is ⛔ repeated — the claim stays recorded).
+    if (delivered && bridge.bridged && deps.alertSms?.giveUpDeferred) {
+      bridgeRowOpen = (await deps.alertSms.giveUpDeferred({ alert, ...(call ? { call } : {}) })) === 'failed';
     }
   }
 
@@ -593,6 +602,7 @@ export async function fanOutAlert(
     bridged: bridge.bridged,
     costSuppressedChannels,
     telegramMirrored,
+    ...(bridgeRowOpen ? { bridgeRowOpen: true as const } : {}),
   };
 }
 

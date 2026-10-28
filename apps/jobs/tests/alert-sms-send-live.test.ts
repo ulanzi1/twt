@@ -1583,11 +1583,28 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'accepted', attempt_count: 2 });
     });
 
+    it('⭐ review P2-1 — attempt 1 rate-limited with push DOWN (the row `deferred`, retried); attempt 2 with the switch now OFF and push UP ⇒ the EARLIER row is given up, and a later re-run with the switch ON sends NOTHING', async () => {
+      const k = await freshAlert();
+      const first = rig({ answer: () => Promise.reject(new SmsSendError('r', null, 429)) });
+      const r1 = await fanOutAlert(first.deps, bridgedOpen(k), ctx(), CALL);
+      expect(r1.delivered).toBe(false);
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'deferred' });
+      const switchedOff = rig({ pushAccepts: true, readBridgeSwitch: () => Promise.resolve(false) });
+      const r2 = await fanOutAlert(switchedOff.deps, bridgedOpen(k), ctx(), { ...CALL, retryCount: 1 });
+      expect(r2).toMatchObject({ delivered: true, deliveredChannel: 'push' });
+      expect(r2.bridgeRowOpen).toBeUndefined();
+      expect(switchedOff.calls).toHaveLength(0);
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'error', detail: 'exhausted:rate_limited:ladder_delivered' });
+      const later = rig({ pushAccepts: true });
+      await fanOutAlert(later.deps, bridgedOpen(k), ctx(), { ...CALL, retryCount: 2 });
+      expect(later.calls).toHaveLength(0);
+    });
+
     it('⭐ AC12 — the REAL switch, read through the jobs pool (`twt_app`): OFF ⇒ ⛔ text, the ladder\'s trail names it; ON ⇒ the text goes (the state found is restored)', async () => {
       const read = async (): Promise<boolean> => (await degradedMode.readDegradedBridgeSmsSwitch(appPool)).enabled;
       const found = await read();
       const actor = randomUUID();
-      const set = (enabled: boolean, reason: string) => degradedMode.setDegradedBridgeSmsSwitch(ownerPool, { enabled, actorId: actor, reason, auditId: null });
+      const set = (enabled: boolean, reason: string) => degradedMode.setDegradedBridgeSmsSwitch(ownerPool, { enabled, actorId: actor, actorDisplay: 'Live Spec', reason, auditId: null });
       try {
         await set(false, 'live test 5.8b AC12 — OFF');
         const off = rig({ readBridgeSwitch: read });

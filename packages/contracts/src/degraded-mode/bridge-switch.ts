@@ -12,12 +12,14 @@ import { Iso8601Datetime } from '../_common/primitives.js';
 /** The longest reason (the history CHECK's bound — migration 0188). */
 export const DEGRADED_BRIDGE_SMS_SWITCH_REASON_MAX = 500;
 
-/** What the switch says now, and the change that set it (all three null while it has never been changed — the migration's OFF). */
+/** What the switch says now, and the change that set it (all four null while it has never been changed — the migration's OFF). */
 export const DegradedBridgeSmsSwitchResponse = z
   .object({
     enabled: z.boolean(),
     changedAt: Iso8601Datetime.nullable(),
     changedByActor: z.string().uuid().nullable(),
+    /** The Super Admin's display name AS IT WAS when they changed it (a snapshot — code review 2026-10-28, P2-2). */
+    changedByDisplay: z.string().nullable(),
     reason: z.string().nullable(),
   })
   .strict();

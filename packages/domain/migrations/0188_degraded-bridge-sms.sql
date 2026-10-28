@@ -36,12 +36,16 @@ CREATE TABLE "degraded_bridge_sms_switch_changes" (
 	"change_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"enabled" boolean NOT NULL,
 	"changed_by_actor" uuid NOT NULL,
+	"changed_by_display" text NOT NULL,
 	"reason" text NOT NULL,
 	"audit_id" uuid,
 	"changed_at" timestamp with time zone DEFAULT clock_timestamp() NOT NULL
 );--> statement-breakpoint
 -- A REQUIRED reason: non-blank, bounded (the declaration's reason bound).
 ALTER TABLE "degraded_bridge_sms_switch_changes" ADD CONSTRAINT "degraded_bridge_sms_switch_changes_reason_check" CHECK (char_length(btrim("reason")) BETWEEN 1 AND 500);--> statement-breakpoint
+-- WHO, by name: the Super Admin's `users.display_name` SNAPSHOT at change time (code review 2026-10-28, P2-2 — R5 attribution; a
+-- later rename never rewrites history; ⛔ email-derived). Non-blank — the handler refuses a nameless account before any write.
+ALTER TABLE "degraded_bridge_sms_switch_changes" ADD CONSTRAINT "degraded_bridge_sms_switch_changes_display_check" CHECK (char_length(btrim("changed_by_display")) >= 1);--> statement-breakpoint
 CREATE INDEX "degraded_bridge_sms_switch_changes_changed_at_idx" ON "degraded_bridge_sms_switch_changes" USING btree ("changed_at");--> statement-breakpoint
 CREATE TABLE "degraded_bridge_sms_switch" (
 	"id" smallint PRIMARY KEY DEFAULT 1 NOT NULL,

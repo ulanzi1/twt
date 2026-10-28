@@ -886,7 +886,7 @@ describe('Story 5.8b AC5 — a bridged cycle-open is TEXTED FIRST; the ladder is
   const CALL = { occasion: 'cycle_open', jobId: 'job-1', retryCount: 0, retryLimit: 4 } as const;
   const seam = (answer: { outcome: string; detail?: string }) =>
     Object.assign(vi.fn<(input: Record<string, unknown>) => Promise<{ outcome: string; detail?: string }>>(() => Promise.resolve(answer)), {
-      giveUpDeferred: vi.fn<(input: unknown) => Promise<void>>(() => Promise.resolve()),
+      giveUpDeferred: vi.fn<(input: unknown) => Promise<'closed' | 'none' | 'failed'>>(() => Promise.resolve('none')),
     });
   const on = () => vi.fn(() => Promise.resolve(true));
   const depsWith = (h: Harness, alertSms: unknown, readBridgeSwitch: unknown = on()) =>
@@ -997,6 +997,56 @@ describe('Story 5.8b AC5 — a bridged cycle-open is TEXTED FIRST; the ladder is
     // AC6 — the retry classes still apply (read off the FIRST `sms` entry — the bridge's): retried, then `in_app_only` on the final.
     expect(shouldRetryFanOut(undelivered, ctx(), CALL)).toBe(true);
     expect(shouldRetryFanOut(undelivered, ctx(), { ...CALL, retryCount: 4 })).toBe(false);
+  });
+
+  // Review P2-1 (replaces nothing — the FS3.1 leg above stays): the `deferred` row may be an EARLIER attempt's. Each way THIS attempt's
+  // text is not tried (or not answered `rate_limited`) still closes it when the ladder delivers — the guard on this attempt's detail
+  // alone left it re-sendable.
+  it.each([
+    ['the switch now OFF', { readBridgeSwitch: () => Promise.resolve(false) }, undefined],
+    ['the switch unreadable', { readBridgeSwitch: () => Promise.reject(new Error('blip')) }, undefined],
+    ['a Secret Manager transient', {}, { outcome: 'skipped_no_target', detail: 'config_unavailable:secret_manager' }],
+    ['the send state unavailable', {}, { outcome: 'skipped_no_target', detail: 'sms_send_state_unavailable' }],
+    ['the text in flight elsewhere', {}, { outcome: 'skipped_no_target', detail: 'sms_send_in_flight' }],
+  ] as const)('⭐ review P2-1 — %s on a RETRY, then the push delivers ⇒ the earlier attempt\'s deferred row is given up (once)', async (_name, overrides, answer) => {
+    const h = harness();
+    const alertSms = seam(answer ?? { outcome: 'sent' });
+    const retry = { ...CALL, retryCount: 1 };
+    const result = await fanOutAlert({ ...depsWith(h, alertSms), onAlarm: () => undefined, ...overrides } as never, bridgedAlert(), ctx(), retry);
+    expect(result).toMatchObject({ delivered: true, deliveredChannel: 'push' });
+    expect(alertSms.giveUpDeferred).toHaveBeenCalledTimes(1);
+    expect(alertSms.giveUpDeferred.mock.calls[0]).toEqual([{ alert: expect.objectContaining({ alert_id: ALERT }), call: retry }]);
+    expect(result.bridgeRowOpen).toBeUndefined();
+  });
+
+  it('review P2-1 — ⛔ SMS target now, or ⛔ block now (the member since erased / frozen), the push delivers ⇒ still closed; a bridge text `sent` ⇒ ⛔ closure (the row is `accepted`)', async () => {
+    const noTarget = seam({ outcome: 'sent' });
+    await fanOutAlert(depsWith(harness(), noTarget), bridgedAlert(), ctx({ sms: null }), CALL);
+    expect(noTarget.giveUpDeferred).toHaveBeenCalledTimes(1);
+    const noBlock = seam({ outcome: 'sent' });
+    await fanOutAlert(depsWith(harness(), noBlock), cycleOpenAlert({ time_critical: true }), ctx(), CALL);
+    expect(noBlock.giveUpDeferred).toHaveBeenCalledTimes(1);
+    const sent = seam({ outcome: 'sent' });
+    await fanOutAlert(depsWith(harness(), sent), bridgedAlert(), ctx(), CALL);
+    expect(sent.giveUpDeferred).not.toHaveBeenCalled();
+    // An UN-bridged alert never owes one (I2).
+    const plain = seam({ outcome: 'sent' });
+    await fanOutAlert(depsWith(harness(), plain), litReminderAlert(), ctx(), { occasion: 'day_10' });
+    expect(plain.giveUpDeferred).not.toHaveBeenCalled();
+  });
+
+  it('⭐ review P2-1 — a closure that FAILS is reported: still delivered and ⛔ retried (no second push), `bridgeRowOpen` on the result AND in the recorded form', async () => {
+    const h = harness();
+    const alertSms = seam({ outcome: 'skipped_no_target', detail: 'rate_limited' });
+    alertSms.giveUpDeferred.mockResolvedValue('failed');
+    const result = await fanOutAlert(depsWith(h, alertSms), bridgedAlert(), ctx(), CALL);
+    expect(result).toMatchObject({ delivered: true, deliveredChannel: 'push', bridgeRowOpen: true });
+    expect(shouldRetryFanOut(result, ctx(), CALL)).toBe(false);
+    expect(serializeFanOutResult(result)).toMatchObject({ delivered: true, bridgeRowOpen: true });
+    alertSms.giveUpDeferred.mockResolvedValue('closed');
+    const closed = await fanOutAlert(depsWith(harness(), alertSms), bridgedAlert(), ctx(), CALL);
+    expect(closed.bridgeRowOpen).toBeUndefined();
+    expect(serializeFanOutResult(closed)).not.toHaveProperty('bridgeRowOpen');
   });
 
   it('⭐ AC9 / I2 — an UN-bridged alert never takes the bridge path: a lit day-10 reminder whose push accepts is ⛔ texted; a news alert with a planted block is ⛔ texted', async () => {

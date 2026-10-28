@@ -3,7 +3,8 @@
 //
 //   · `degraded_bridge_sms_switch`         — ONE row (id = 1), created OFF; its `enabled` is the switch. The fan-out reads it
 //                                            once per bridged job, at the bridge attempt. ⛔ DELETE / TRUNCATE (trigger).
-//   · `degraded_bridge_sms_switch_changes` — one row per change (who, when, ON / OFF, a REQUIRED reason). APPEND-ONLY (trigger).
+//   · `degraded_bridge_sms_switch_changes` — one row per change (who — id AND the name snapshot —, when, ON / OFF, a REQUIRED
+//                                            reason). APPEND-ONLY (trigger).
 //
 // GLOBAL (⛔ `pariwar_id` — the switch is Trust-wide); FORCE RLS with a `USING (true)` SELECT policy for `twt_app`
 // (policies/degraded-bridge-sms-switch-rls.ts); `twt_app` reads only — the change goes through the BYPASSRLS service pool behind
@@ -20,6 +21,8 @@ export const degradedBridgeSmsSwitchChanges = pgTable(
     enabled: boolean('enabled').notNull(),
     /** The Super Admin (session user id). ⛔ FK — the record outlives the account (the role_grants.created_by rationale). */
     changedByActor: uuid('changed_by_actor').notNull(),
+    /** The Super Admin's `users.display_name`, SNAPSHOT at change time (review P2-2; R5) — non-blank; a rename never rewrites it. */
+    changedByDisplay: text('changed_by_display').notNull(),
     /** Operator-authored, REQUIRED (non-blank, ≤ 500). */
     reason: text('reason').notNull(),
     /** The audit intent line the change was written under (`withCompensatingAudit`). */
@@ -29,6 +32,7 @@ export const degradedBridgeSmsSwitchChanges = pgTable(
   (t) => [
     index('degraded_bridge_sms_switch_changes_changed_at_idx').on(t.changedAt),
     check('degraded_bridge_sms_switch_changes_reason_check', sql`char_length(btrim(${t.reason})) BETWEEN 1 AND 500`),
+    check('degraded_bridge_sms_switch_changes_display_check', sql`char_length(btrim(${t.changedByDisplay})) >= 1`),
   ],
 );
 export type DegradedBridgeSmsSwitchChangeRow = typeof degradedBridgeSmsSwitchChanges.$inferSelect;

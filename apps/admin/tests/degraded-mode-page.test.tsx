@@ -19,7 +19,7 @@ import { renderWithClient } from './_helpers.js';
 const h = vi.hoisted(() => ({
   grants: [] as string[],
   active: null as unknown,
-  sw: { enabled: false, changedAt: null, changedByActor: null, reason: null } as Record<string, unknown>,
+  sw: { enabled: false, changedAt: null, changedByActor: null, changedByDisplay: null, reason: null } as Record<string, unknown>,
   setCalls: [] as unknown[],
 }));
 
@@ -32,7 +32,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     getDegradedBridgeSmsSwitch: vi.fn(async () => h.sw),
     setDegradedBridgeSmsSwitch: vi.fn(async (body: { enabled: boolean; reason: string }) => {
       h.setCalls.push(body);
-      h.sw = { enabled: body.enabled, changedAt: '2026-10-28T07:00:00.000Z', changedByActor: '11111111-1111-4111-8111-111111111111', reason: body.reason };
+      h.sw = { enabled: body.enabled, changedAt: '2026-10-28T07:00:00.000Z', changedByActor: '11111111-1111-4111-8111-111111111111', changedByDisplay: 'Asha Verma', reason: body.reason };
       return h.sw;
     }),
   };
@@ -61,7 +61,7 @@ const FS11 = [BRIDGE_TEXT_EXPLAINER, BRIDGE_TEXT_DEATH_EXCLUSION, BRIDGE_TEXT_SW
 beforeEach(() => {
   h.grants = [];
   h.active = null;
-  h.sw = { enabled: false, changedAt: null, changedByActor: null, reason: null };
+  h.sw = { enabled: false, changedAt: null, changedByActor: null, changedByDisplay: null, reason: null };
   h.setCalls = [];
 });
 
@@ -140,12 +140,46 @@ describe('Story 5.8b AC12 — the Trust-wide switch on the page', () => {
     expect(screen.getByTestId('bridge-switch-submit').textContent).toBe('Switch bridge texts off');
   });
 
+  it('⭐ code review P2-3 — with NO active declaration, a successful change is ANNOUNCED: the status region (in the page BEFORE the change, empty) says the state the server returned; the next change clears it first', async () => {
+    h.grants = ['degraded_mode.switch_bridge_sms'];
+    expect(h.active).toBeNull();
+    renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
+    await screen.findByTestId('bridge-switch-submit');
+    const region = screen.getByTestId('bridge-switch-saved');
+    expect(region.getAttribute('role')).toBe('status');
+    expect(screen.getAllByRole('status')).toContain(region);
+    expect(region.textContent).toBe('');
+    await userEvent.type(screen.getByTestId('bridge-switch-reason'), 'templates approved');
+    await userEvent.click(screen.getByTestId('bridge-switch-submit'));
+    await waitFor(() => expect(region.textContent).toBe('Saved — bridge texts are now ON for every Pariwar.'));
+    // The SAME node (a live region that is re-created is not re-read reliably) — and the declaration status did not move.
+    expect(screen.getByTestId('bridge-switch-saved')).toBe(region);
+    await waitFor(() => expect(screen.getByTestId('bridge-switch-submit').textContent).toBe('Switch bridge texts off'));
+    await userEvent.click(screen.getByTestId('bridge-switch-submit'));
+    await waitFor(() => expect(region.textContent).toBe('Saved — bridge texts are now OFF for every Pariwar.'));
+    expect(h.setCalls).toEqual([
+      { enabled: true, reason: 'templates approved' },
+      { enabled: false, reason: 'templates approved' },
+    ]);
+  });
+
+  it('code review P2-3 — a REFUSED change announces ⛔ success (the error is the alert)', async () => {
+    h.grants = ['degraded_mode.switch_bridge_sms'];
+    const client = await import('../src/api/client.js');
+    vi.mocked(client.setDegradedBridgeSmsSwitch).mockRejectedValueOnce(new Error('the switch was already changed to this state'));
+    renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
+    await userEvent.type(await screen.findByTestId('bridge-switch-reason'), 'race');
+    await userEvent.click(screen.getByTestId('bridge-switch-submit'));
+    expect(await screen.findByText('the switch was already changed to this state')).toBeTruthy();
+    expect(screen.getByTestId('bridge-switch-saved').textContent).toBe('');
+  });
+
   it('the banner on the page reflects the switch: OFF ⇒ "switched off", ON ⇒ "armed"', async () => {
     h.active = ACTIVE;
     const { unmount } = renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
     expect(await screen.findByText(/texts are switched off for every Pariwar/)).toBeTruthy();
     unmount();
-    h.sw = { enabled: true, changedAt: '2026-10-28T07:00:00.000Z', changedByActor: null, reason: 'on' } satisfies DegradedBridgeSmsSwitchResponse;
+    h.sw = { enabled: true, changedAt: '2026-10-28T07:00:00.000Z', changedByActor: null, changedByDisplay: null, reason: 'on' } satisfies DegradedBridgeSmsSwitchResponse;
     renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
     expect(await screen.findByText(/the cycle-open SMS bridge is armed/)).toBeTruthy();
   });

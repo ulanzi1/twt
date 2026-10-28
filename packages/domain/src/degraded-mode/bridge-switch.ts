@@ -17,6 +17,8 @@ export interface DegradedBridgeSmsSwitchState {
   readonly enabled: boolean;
   readonly changedAt: Date | null;
   readonly changedByActor: string | null;
+  /** The Super Admin's display name as it was when they changed it (review P2-2) — ⛔ re-read from `users`. */
+  readonly changedByDisplay: string | null;
   readonly reason: string | null;
 }
 
@@ -29,16 +31,23 @@ interface SwitchStateRow {
   enabled: boolean;
   changed_at: Date | null;
   changed_by_actor: string | null;
+  changed_by_display: string | null;
   reason: string | null;
 }
 
-const READ_SQL = `SELECT s.enabled, c.changed_at, c.changed_by_actor, c.reason
+const READ_SQL = `SELECT s.enabled, c.changed_at, c.changed_by_actor, c.changed_by_display, c.reason
                     FROM degraded_bridge_sms_switch s
                     LEFT JOIN degraded_bridge_sms_switch_changes c ON c.change_id = s.last_change_id
                    WHERE s.id = 1`;
 
 function toState(row: SwitchStateRow): DegradedBridgeSmsSwitchState {
-  return { enabled: row.enabled, changedAt: row.changed_at, changedByActor: row.changed_by_actor, reason: row.reason };
+  return {
+    enabled: row.enabled,
+    changedAt: row.changed_at,
+    changedByActor: row.changed_by_actor,
+    changedByDisplay: row.changed_by_display,
+    reason: row.reason,
+  };
 }
 
 /**
@@ -56,6 +65,11 @@ export interface SetDegradedBridgeSmsSwitchInput {
   readonly enabled: boolean;
   /** The Super Admin's session user id. */
   readonly actorId: string;
+  /**
+   * Their `users.display_name`, resolved SERVER-side by the caller before any write (review P2-2; R5 —
+   * [[project_admin_display_name_attribution]]); REQUIRED, non-blank — refused here before the lock, and by the CHECK.
+   */
+  readonly actorDisplay: string;
   /** REQUIRED, non-blank, ≤ {@link DEGRADED_BRIDGE_SMS_SWITCH_REASON_MAX} (the CHECK refuses otherwise). */
   readonly reason: string;
   /** The audit intent line this change is written under, or null. */
@@ -93,14 +107,17 @@ export async function setDegradedBridgeSmsSwitchInTx(
   client: Pick<pg.PoolClient, 'query'>,
   input: SetDegradedBridgeSmsSwitchInput,
 ): Promise<{ readonly changed: boolean; readonly state: DegradedBridgeSmsSwitchState }> {
+  if (input.actorDisplay.trim() === '') {
+    throw new Error("[degraded-mode] a bridge switch change needs the actor's display name (R5 attribution — ⛔ an id alone)");
+  }
   const locked = await client.query<{ enabled: boolean }>('SELECT enabled FROM degraded_bridge_sms_switch WHERE id = 1 FOR UPDATE');
   const current = locked.rows[0];
   if (!current) throw new Error('[degraded-mode] degraded_bridge_sms_switch has no control row (migration 0188 not applied?)');
   if (current.enabled === input.enabled) return { changed: false, state: await readDegradedBridgeSmsSwitch(client) };
   const inserted = await client.query<{ change_id: string }>(
-    `INSERT INTO degraded_bridge_sms_switch_changes (enabled, changed_by_actor, reason, audit_id)
-     VALUES ($1, $2, $3, $4) RETURNING change_id`,
-    [input.enabled, input.actorId, input.reason, input.auditId],
+    `INSERT INTO degraded_bridge_sms_switch_changes (enabled, changed_by_actor, changed_by_display, reason, audit_id)
+     VALUES ($1, $2, $3, $4, $5) RETURNING change_id`,
+    [input.enabled, input.actorId, input.actorDisplay, input.reason, input.auditId],
   );
   await client.query(
     `UPDATE degraded_bridge_sms_switch SET enabled = $1, last_change_id = $2, updated_at = clock_timestamp() WHERE id = 1`,

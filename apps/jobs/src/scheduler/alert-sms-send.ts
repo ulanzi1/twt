@@ -139,11 +139,19 @@ export interface AlertSmsRungInput {
  * ⭐ Story 5.8b (FS3.1 (a), `2026-10-28-415`) — ONE more operation, `giveUpDeferred`: the bridge text is tried BEFORE the ladder, so a
  * `rate_limited` answer leaves its row `deferred` while the ladder may then DELIVER (the member is ⛔ retried). The fan-out calls it
  * then, so the row ends instead of waiting for a later re-run to text a member the push already told. Optional on the type so a
- * test double (`vi.fn()`) still fits; `createAlertSmsSender` always provides it. NEVER rejects (a failure is alarmed).
+ * test double (`vi.fn()`) still fits; `createAlertSmsSender` always provides it. NEVER rejects (a failure is alarmed and REPORTED —
+ * review P2-1: a swallowed failure left the obligation with no owner while the member was recorded delivered).
  */
 export type AlertSmsSender = ((input: AlertSmsRungInput) => Promise<ChannelSendOutcome>) & {
-  readonly giveUpDeferred?: (input: { readonly alert: Alert; readonly call?: FanOutCall }) => Promise<void>;
+  readonly giveUpDeferred?: (input: { readonly alert: Alert; readonly call?: FanOutCall }) => Promise<DeferredBridgeClosure>;
 };
+
+/**
+ * Story 5.8b review (P2-1) — what {@link AlertSmsSender.giveUpDeferred} did: `closed` (a `deferred` row was given up), `none` (⛔ such
+ * row — none, or already final), `failed` (the record could not be read or written through every try — the row may still be
+ * re-sendable; the caller keeps the obligation, ⛔ by re-running the push).
+ */
+export type DeferredBridgeClosure = 'closed' | 'none' | 'failed';
 
 /** Story 5.8b (FS3.1 (a)) — the detail a bridge row given up because the ladder delivered carries (0184's grammar). */
 export const ALERT_SMS_GIVEN_UP_LADDER_DELIVERED = 'exhausted:rate_limited:ladder_delivered';
@@ -336,24 +344,37 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
     refusalAlarmedAt.set(key, nowMs());
   };
 
-  /** Story 5.8b (FS3.1 (a)) — give up THIS (alert, member, occasion)'s `deferred` row, if it is one; best-effort, alarmed. */
-  const giveUpDeferred = async ({ alert, call }: { readonly alert: Alert; readonly call?: FanOutCall }): Promise<void> => {
+  /**
+   * Story 5.8b (FS3.1 (a)) — give up THIS (alert, member, occasion)'s `deferred` row, if it is one. A throw is retried after each
+   * backoff pause (the `finalise` shape); through every try ⇒ alarmed and `failed` (review P2-1 — the caller keeps the obligation).
+   */
+  const giveUpDeferred = async ({ alert, call }: { readonly alert: Alert; readonly call?: FanOutCall }): Promise<DeferredBridgeClosure> => {
     const occasion = call?.occasion;
-    if (!isKnownOccasion(occasion)) return;
+    if (!isKnownOccasion(occasion)) return 'none';
     const pariwarId = alert.pariwar_id;
     const key = { pariwarId, alertId: alert.alert_id, memberId: alert.member_id, occasion };
-    try {
-      const found = await withPariwarScope(deps.pool, pariwarId, (_db, client) => smsDelivery.lookupAlertSmsSend(client, key));
-      if (found.kind !== 'deferred' && found.kind !== 'deferred_expired') return;
-      await withPariwarScope(deps.pool, pariwarId, (_db, client) =>
-        smsDelivery.giveUpDeferredAlertSmsSend(client, { pariwarId, sendId: found.sendId, detail: ALERT_SMS_GIVEN_UP_LADDER_DELIVERED }),
-      );
-    } catch (err) {
-      alarmSink(
-        `[jobs] alert-sms: a deferred bridge text could not be given up after the ladder delivered (${faultClass(err)}) — ` +
-          `pariwar ${pariwarId} alert ${alert.alert_id}`,
-      );
+    const pauses = deps.finaliseBackoffMs ?? ALERT_SMS_FINALISE_BACKOFF_MS;
+    let fault = 'none';
+    for (let i = 0; i <= pauses.length; i += 1) {
+      try {
+        const found = await withPariwarScope(deps.pool, pariwarId, (_db, client) => smsDelivery.lookupAlertSmsSend(client, key));
+        if (found.kind !== 'deferred' && found.kind !== 'deferred_expired') return 'none';
+        const wrote = await withPariwarScope(deps.pool, pariwarId, (_db, client) =>
+          smsDelivery.giveUpDeferredAlertSmsSend(client, { pariwarId, sendId: found.sendId, detail: ALERT_SMS_GIVEN_UP_LADDER_DELIVERED }),
+        );
+        // `false` — the row moved on between the two reads (another attempt took or ended it): ⛔ ours to close any more.
+        return wrote ? 'closed' : 'none';
+      } catch (err) {
+        fault = faultClass(err);
+        const pause = pauses[i];
+        if (pause !== undefined && pause > 0) await new Promise<void>((resolve) => setTimeout(resolve, pause));
+      }
     }
+    alarmSink(
+      `[jobs] alert-sms: a deferred bridge text could not be given up after the ladder delivered [${fault}] — the job keeps it ` +
+        `(the push is ⛔ repeated) — pariwar ${pariwarId} alert ${alert.alert_id}`,
+    );
+    return 'failed';
   };
 
   const send = async (input: AlertSmsRungInput): Promise<ChannelSendOutcome> => {

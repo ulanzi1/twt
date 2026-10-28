@@ -73,7 +73,7 @@ import { DEFAULT_LOCALE, formatCurrency, t, type Locale } from '@twt/i18n';
 import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/queue';
 import { createHash } from 'node:crypto';
 
-import type { FanOutCall } from './alert-sms-details.js';
+import { isFinalFanOutAttempt, type FanOutCall } from './alert-sms-details.js';
 import {
   fanOutAlertToMembers,
   onceForJob,
@@ -1007,6 +1007,25 @@ export async function runContributionNotifyChild(
   let alreadySent = 0;
   const failed: string[] = [];
 
+  // Story 5.8b review (P2-1; FS3.1 (a)) — a member the ladder DELIVERED whose `deferred` bridge row could not be given up is recorded
+  // (its claim kept: ⛔ a second push) and OWED: this job is retried for the closure alone. On that retry the member's claim is
+  // `already_claimed`; its recorded result says `bridgeRowOpen`, so the closure — and ONLY the closure — is tried again.
+  const closureOwed: string[] = [];
+  const giveUpDeferred = bridgeText ? deps.alertSms?.giveUpDeferred : undefined;
+  const settleOwedClosure = async (memberId: string, key: string): Promise<void> => {
+    if (!giveUpDeferred) return;
+    let owed: boolean;
+    try {
+      const recorded = await store.inspect(key);
+      owed = recorded?.status === 'completed' && (recorded.result as { bridgeRowOpen?: unknown } | null)?.bridgeRowOpen === true;
+    } catch (err) {
+      alarm(`[jobs] contribution-notify-child: a recorded member's result could not be read for alert ${p.alertId} — ${String(err)} (retrying)`);
+      closureOwed.push(memberId);
+      return;
+    }
+    if (owed && (await giveUpDeferred({ alert: alertFor(memberId), call: fanOutCall(job, scope) })) === 'failed') closureOwed.push(memberId);
+  };
+
   for (let i = 0; i < p.memberIds.length; i += chunkSize) {
     const chunk = p.memberIds.slice(i, i + chunkSize);
 
@@ -1017,7 +1036,10 @@ export async function runContributionNotifyChild(
       const key = memberKey(p.alertId, memberId, scope);
       const outcome = await store.claim(key, ttl);
       if (outcome === 'acquired') claimed.push(memberId);
-      else alreadySent += 1;
+      else {
+        alreadySent += 1;
+        await settleOwedClosure(memberId, key);
+      }
     }
     if (claimed.length === 0) continue;
 
@@ -1042,6 +1064,7 @@ export async function runContributionNotifyChild(
       } else {
         if (record.delivered) delivered += 1;
         else inAppOnly += 1; // FS14 (a) — recorded, the claim KEPT (a pending-match member is not nudged again)
+        if (record.bridgeRowOpen) closureOwed.push(memberId);
         await store
           .recordResult(key, serializeFanOutResult(record))
           .catch((err: unknown) => {
@@ -1064,12 +1087,23 @@ export async function runContributionNotifyChild(
   };
   console.info('[jobs] contribution-notify-child', JSON.stringify(result));
 
-  if (failed.length > 0) {
+  // Story 5.8b review (P2-1) — an owed closure retries the job (⛔ a push: those members are recorded). On the FINAL attempt it is
+  // left to the row's own 30-minute expiry (a later lookup gives an expired `deferred` row up instead of sending it) — alarmed.
+  const closureRetry = closureOwed.length > 0 && !isFinalFanOutAttempt(fanOutCall(job, scope));
+  if (closureOwed.length > 0 && !closureRetry) {
+    alarm(
+      `[jobs] contribution-notify-child: ${String(closureOwed.length)} member(s)' deferred bridge text could not be given up (or ` +
+        `checked) on the FINAL attempt for alert ${p.alertId} pool ${p.poolId} — a re-run within 30 minutes of its rate-limited try ` +
+        `could text them`,
+    );
+  }
+  if (failed.length > 0 || closureRetry) {
     // D9 — the durable half of AR-19. The members who DID deliver are recorded, so this retry re-sends
-    // nothing to them; only the failed members are re-attempted.
+    // nothing to them; only the failed members are re-attempted (and an owed bridge-row closure — Story 5.8b review P2-1).
     throw new Error(
-      `[jobs] contribution-notify-child: ${String(failed.length)} member(s) failed for alert ` +
-        `${p.alertId} pool ${p.poolId} — throwing so pg-boss retries with its own backoff`,
+      `[jobs] contribution-notify-child: ${String(failed.length)} member(s) failed` +
+        (closureRetry ? ` and ${String(closureOwed.length)} deferred bridge text(s) are still to be given up` : '') +
+        ` for alert ${p.alertId} pool ${p.poolId} — throwing so pg-boss retries with its own backoff`,
     );
   }
   return result;

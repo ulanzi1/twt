@@ -33,7 +33,7 @@ export function BridgeSwitchPanel({ state, canChange, onChange, pending, changeE
       </p>
       {state.changedAt ? (
         <p className="text-sm opacity-70">
-          Last changed {state.changedAt} — “{state.reason}”
+          Last changed {state.changedAt}{state.changedByDisplay ? ` by ${state.changedByDisplay}` : ''} — “{state.reason}”
         </p>
       ) : (
         <p className="text-sm opacity-70">Never changed — the switch starts off.</p>

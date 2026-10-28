@@ -515,7 +515,7 @@ export type PeerMeshEligibleSnapshotInput = PeerMeshSnapshotInput & { readonly n
 /** The workplace half of the snapshot. */
 export interface PeerMeshWorkplaceSnapshot {
   readonly currentWorkplaceId: WorkplaceId | null;
-  /** The previous workplace as of the cut (stored for row 6-32 whether or not it counted). */
+  /** The previous workplace as of the cut (stored whether or not it counted; ⚠ Story 6.32 reads ⛔ it — G16 / SW25). */
   readonly previousWorkplaceId: WorkplaceId | null;
   readonly previousWorkplaceCounted: boolean;
   /** The eligible colleagues — `workplace_previous` (only when it counts) and `workplace_current`. */

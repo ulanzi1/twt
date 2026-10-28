@@ -130,7 +130,8 @@ describe('Story 6.32 (IQ7; AC8) — the family account on the section', () => {
   it('REQUIRED on `present`; a value is codes + labels or `unavailable`; ⛔ a flag, ⛔ a warning, ⛔ an extra field (strict)', () => {
     expect(ClaimPeerAnswersResponse.safeParse(withF([visit([answer({ kind: 'codes', codes: ['collected'], labels: ['Yes'] })])])).success).toBe(true);
     expect(ClaimPeerAnswersResponse.safeParse(withF([visit([answer({ kind: 'unavailable' })])])).success).toBe(true);
-    const { familyAccount: _omit, ...without } = present.peerMesh;
+    const without: Record<string, unknown> = { ...present.peerMesh };
+    delete without['familyAccount'];
     expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: without }).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withF([visit([{ ...answer({ kind: 'unavailable' }), warningFlag: false }])])).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withF([{ ...visit([]), neighbourCount: 3 }])).success).toBe(false);

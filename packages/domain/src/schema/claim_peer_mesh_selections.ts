@@ -163,11 +163,12 @@ export const claimPeerMeshSelections = pgTable(
     previousWorkplaceCounted: boolean('previous_workplace_counted'),
     /** The staff line (SW20, `-331` SC1 A): the workplace or the named people changed in the 90 days before the filing. */
     recentChangeBeforeFiling: boolean('recent_change_before_filing'),
-    /** The deceased's current workplace as of the cut (row 6-32 reads it). */
+    /** The deceased's current workplace as of the cut. ⚠ Story 6.32 (G16) reads ⛔ it — under `-330` SW25 the head's letter is
+     *  asked on EVERY full visit, so ⛔ reader exists yet (6.36 W1's trigger was ⛔ pulled). */
     deceasedWorkplaceId: uuid('deceased_workplace_id').$type<WorkplaceId>(),
     /**
-     * The deceased's previous workplace as of the cut — stored whenever one exists, WHETHER OR NOT it counted (row 6-32
-     * reads it); `previous_workplace_counted` says whether its people were in the group.
+     * The deceased's previous workplace as of the cut — stored whenever one exists, WHETHER OR NOT it counted;
+     * `previous_workplace_counted` says whether its people were in the group. ⚠ Story 6.32 (G16) reads ⛔ it (SW25 — see above).
      */
     deceasedPreviousWorkplaceId: uuid('deceased_previous_workplace_id').$type<WorkplaceId>(),
     /** The winning group's ranking, truncated to {@link PEER_MESH_RANKED_MAX}; `selectedMemberIds` is its prefix (a trigger). */

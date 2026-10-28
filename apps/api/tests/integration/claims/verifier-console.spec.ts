@@ -1174,7 +1174,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
   });
 
-  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 29 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: 23 → 26; 6.27b: → 27; 6.27d: → 29), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
+  it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 30 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: 23 → 26; 6.27b: → 27; 6.27d: → 29; 6.32: → 30), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {
     // The ledger above the constant says +1 → 19. ⚠ The shipped tests catch over-reporting only (`reported <=
     // actual`) and a ceiling breach (`readCount <= MAX`); a forgotten `reads.bump()` stays green there. ⇒ the
     // section is measured on its OWN: its booked reads AND the statements Postgres receives, each exactly 1 — the
@@ -1186,7 +1186,7 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     // section (its own exact test below: "the authoritative finally-approved-elsewhere section books EXACTLY one read").
     // Story 6.27a (PM13, PM25 (c)) — moved 23 → 26 by the peer-mesh section's three new reads (its own exact test:
     // `peer-answers-console.spec.ts`).
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(29); // Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(30); // Story 6.32 (IQ7) FROM 29 — +1: the claim's family account; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3
     const pariwarId = randomUUID();
     const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
     const claimCaseId = await seedClaim(pariwarId, deceased);

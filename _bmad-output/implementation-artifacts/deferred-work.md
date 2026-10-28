@@ -19,6 +19,14 @@ Deferred by the story's build decisions ([`-413`](../../.decision-log.md#decisio
   `POST …/complete` has ⛔ Idempotency-Key (a replay is `409 not_active`). True offline needs an encrypted browser draft (WebCrypto, non-extractable key), a persisted
   query client or service worker, an Idempotency-Key on `complete` and replay ordering — a story of its own. ⭐ Trigger: the field-worker surface is placed (architecture
   §4.1: *"Scope deferred"*).
+- **⚠ UN-ATTESTED — the inspector's panel has ⛔ been seen in a real browser (Task 8.4)** [`apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx`; AC12] —
+  the panel's behaviour is proven in jsdom (RTL, the real `PeerAnswerEditor` and Query cache; 14 tests incl. the `online` retry) and the API end to end (13 HTTP
+  tests), but the real-browser pass AC12 asks for did ⛔ happen: on 2026-10-28 the Chrome reached by the dev agent's browser tool could ⛔ load the local admin
+  dev server (`http://localhost:5173` / `127.0.0.1:5173` — Chrome's error page, three attempts, while `curl` from the same machine got 200). The throwaway seeded
+  launcher used (the real `buildServer` with the suite's fake passkey provider; a claim with a ③ difference seeded) was ⛔ committed. ⛔ Faked, ⛔ back-filled
+  ([[feedback_record_unattested_no_backfill]]). ⭐ Trigger: before the story is `done` — a person (or an agent whose browser reaches the dev host) runs the
+  page against a seeded local API: the letter saved, a save with the API stopped and restarted (`Not saved — retrying` → `Saved`), a completion showing the ③
+  line with the family's words, the approver's family account.
 
 ---
 
@@ -12895,6 +12903,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 
 - **The inspector is ⛔ shown a cause / illness difference (③ / ④)** [`packages/domain/src/claim/inspection-discrepancy.ts` `INSPECTION_DISCREPANCY_RULES` — `death_cause` / `death_illness` are `'not_comparable'`] — 6.27a PM25 (a) ③ / ④ are ⛔ built: the family's cause / illness answers (row 6-32) and a keyed blind index per option code are owed before the inspector can be shown a cause / illness difference (the neighbours' cause / illness answers are Tier-1 ciphertext with ⛔ index, and the comparison ⛔ never decrypts). ⭐ Trigger: row 6-32 (the family side), which must also add the keyed comparable form; then flip the two rules to `'compare'` and widen 0160's two CHECKs.
   ⚠ **Dated note, 2026-10-28:** owned by row `6-32-inspector-questionnaire-at-the-ground-inspection` (`ready-for-dev`; AC5 / AC6; [`-413`](../../.decision-log.md#decision-2026-10-28-413) IQ4 / IQ6). ⛔ Discharged yet — it is "Closed by 6.32" only once that row is `done` on `main`.
+  ⚠ **Dated note, 2026-10-28 (Story 6.32 build — row at `review`):** BUILT on the story branch — the two rules flipped to `'compare'`, 0160's two CHECKs widened in `0188`, the keyed comparable form on both answer tables (`ANSWER_CODE_INDEX_FIELD_CLASS`, claim-scoped). ⛔ Discharged yet: "Closed by 6.32" only at `done` on `main`; and in production ③ / ④ fire only once Row 42 (a) records counsel's basis (until then ⛔ family cause / illness is served).
 
 
 ## Deferred from: code review of 6-27d-inspector-discrepancy-at-completion (2026-10-14)

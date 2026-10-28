@@ -150,9 +150,15 @@ function QuestionnaireEditor(props: {
       }),
   );
   const state = useSyncExternalStore(editor.subscribe, editor.getSnapshot);
+  // The helpline screen's pattern: activate ONCE (Strict Mode's cleanup / setup re-activates it), and take a later server
+  // read through `replaceFromServer` — ⛔ a dispose (it drops the editor's listeners and every unsent edit).
+  const initialAnswers = useRef(data.answers);
   useEffect(() => {
-    editor.activate(toLive(data.answers));
+    editor.activate(toLive(initialAnswers.current));
     return () => editor.dispose();
+  }, [editor]);
+  useEffect(() => {
+    editor.replaceFromServer(toLive(data.answers));
   }, [editor, data.answers]);
 
   const unsaved = state.pending > 0 || state.failed.size > 0;

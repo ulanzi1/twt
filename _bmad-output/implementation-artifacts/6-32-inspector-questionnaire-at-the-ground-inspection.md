@@ -483,23 +483,23 @@ as the question was put. `-413` supersedes `-308` call 2 in part (IQ13) and `-31
   - [x] 0.4 Records commit: roster Row 42 (IQ11); epics.md `### Story 6.32` (title, `[SURFACE] [PRIMITIVE]`, the ACs in brief, the minted-by-ruling banner); a dated
         pointer under 6.28 OP14 (d); `deferred-work.md` entries (IQ3 B, IQ8 B, W1 annotation); the ledger line. If IQ7 (A): draft the NON-BLOCKING confirm note FROM
         `trustee-panel-routing-note-TEMPLATE.md` (§0 first, the deciding fact first, an honest cost on every option) — ⛔ send it; BigDev sends.
-- [ ] **Task 1 — the engine (AC1).** `keys.ts` (rule keys, allow-list `-310`), `validator.ts` (`ground_inspection` block), `ground-inspection.ts` (v1), `registry.ts`
+- [x] **Task 1 — the engine (AC1).** `keys.ts` (rule keys, allow-list `-310`), `validator.ts` (`ground_inspection` block), `ground-inspection.ts` (v1), `registry.ts`
       (register), `index.ts` (export), the `inspector_questions.*` copy keys incl. `closing_note` / `thank_you` (en + hi — the module-load validation and the copy-key
       test need them), `questionnaires.test.ts` legs (validator refusals incl. a non-optional and a non-sensitive cause, lockstep codes with `peer_mesh`, served-skip,
       purity reachability, a mutant per rule; `:82` / `:94` updated per AC11).
-- [ ] **Task 2 — the store (AC2, AC9).** Schema files (`claim_ground_inspection_questionnaire.ts` NEW; `claim_peer_mesh_replies.ts` column; `claim_ground_inspection_discrepancies.ts` key
+- [x] **Task 2 — the store (AC2, AC9).** Schema files (`claim_ground_inspection_questionnaire.ts` NEW; `claim_peer_mesh_replies.ts` column; `claim_ground_inspection_discrepancies.ts` key
       list), the hand-authored migration (incl. `CREATE OR REPLACE FUNCTION` for `claim_peer_mesh_reply_answers_guard` — G7a / TR14), the journal entry,
       `anonymize.ts` arms, the RTBF pins, the policy-spec legs and live-DB specs (incl. the scrub of a neighbour row that carries indexes).
-- [ ] **Task 3 — the writer and the comparable form (AC3, AC5).** Domain writer `claim/ground-inspection-questionnaire.ts` (locks assignment → claim; `checkAnswer`; supersede then insert;
+- [x] **Task 3 — the writer and the comparable form (AC3, AC5).** Domain writer `claim/ground-inspection-questionnaire.ts` (locks assignment → claim; `checkAnswer`; supersede then insert;
       ⛔ KMS); the ONE index helper + the field class; the neighbour writer's index feed; unit + live-DB tests.
-- [ ] **Task 4 — the comparison (AC6).** `inspection-discrepancy.ts` rule flip + overlap branch + SQL fragment + family side; `ground-inspection-persist.ts` feed under the existing locks;
+- [x] **Task 4 — the comparison (AC6).** `inspection-discrepancy.ts` rule flip + overlap branch + SQL fragment + family side; `ground-inspection-persist.ts` feed under the existing locks;
       the as-of recompute; the display decrypt in the handler; widen 0160-bound TS lists; update the three lockstep tests deliberately.
-- [ ] **Task 5 — the API (AC3, AC8).** Routes + handlers (IQ10 — the GI transaction / audit pattern), `route-registry.ts`, the two audit actions in `audit-sink.ts`'s
+- [x] **Task 5 — the API (AC3, AC8).** Routes + handlers (IQ10 — the GI transaction / audit pattern), `route-registry.ts`, the two audit actions in `audit-sink.ts`'s
       union, the served words via `toWireQuestionnaire` (⛔ a second resolver), `peer-answers-assembler.ts` `familyAccount` (+ `assemblePeerMeshSection`,
       `stitchPeerAnswerFlags`), `claims.verifier-console.handlers.ts` read ledger line (the bounded-reads pin, if the console gains a read), contracts.
-- [ ] **Task 6 — contracts and client (AC7, AC8).** `packages/contracts/src/claims/ground-inspection-questionnaire.ts` (NEW — REUSE `peer-request.ts`'s question wire schemas where
+- [x] **Task 6 — contracts and client (AC7, AC8).** `packages/contracts/src/claims/ground-inspection-questionnaire.ts` (NEW — REUSE `peer-request.ts`'s question wire schemas where
       identical, ⛔ copy), `verifier-console.ts` widening, `apps/admin/src/api/client.ts` + `hooks.ts` (the per-key serialized save + the in-memory retry queue, IQ8 A).
-- [ ] **Task 7 — the screens (AC7).** `QuestionnairePanel.tsx` (built on `HelplinePeerRequests.tsx`'s `PeerAnswerEditor` + `isShownFor` — ⛔ a fresh editor; adds the
+- [x] **Task 7 — the screens (AC7).** `QuestionnairePanel.tsx` (built on `HelplinePeerRequests.tsx`'s `PeerAnswerEditor` + `isShownFor` — ⛔ a fresh editor; adds the
       `.hi` line), the table-driven `DiscrepancyPanel` copy, `i18n-en.ts`, `packages/i18n/locales/{en,hi}/claim.json` `inspector_questions.*`
       (parity gate), the approver's `familyAccount` rendering in `NeighboursAnswersPanel.tsx` / `PeerMeshView.tsx`.
 - [ ] **Task 8 — proof (AC4, AC10, AC12).** 8.1 unit + contracts + admin tests — incl. AC4 (a) the approval-state scenario table, AC5 the real-shape fake-KMS index test and the
@@ -510,7 +510,7 @@ as the question was put. `-413` supersedes `-308` call 2 in part (IQ13) and `-31
       AC12's list); 8.4 a real-browser pass (the admin dev server against a seeded local API
       on a throwaway database — claim with a full-visit assignment, answers saved with the network paused and restored, a completion with a ③ difference, the approver's read);
       8.5 `pnpm ci:local`; 8.6 fix-diff review.
-- [ ] **Task 9 — records (AC13).** 9.1 Row 42 evidence; 9.2 deferred-work discharge/annotation (exact language); 9.3 correct the two stale source comments (G16); 9.4 the W1 note
+- [x] **Task 9 — records (AC13).** 9.1 Row 42 evidence; 9.2 deferred-work discharge/annotation (exact language); 9.3 correct the two stale source comments (G16); 9.4 the W1 note
       ("trigger not pulled"); 9.5 Change Log + File List + the ledger entry (safe prepend — [[project_sprint_status_safe_prepend]]).
 
 ## Dev Notes
@@ -595,13 +595,151 @@ No architecture variance: the surface is `apps/admin` (§4.1), ⛔ `apps/mobile`
 
 ### Agent Model Used
 
-(story created by Claude Sonnet 5.5 — `bmad-create-story 6.32`; the dev agent fills this on implementation)
+(story created by Claude Sonnet 5.5 — `bmad-create-story 6.32`.) Implemented by Claude Opus 5.5 (`bmad-dev-story 6.32`, 2026-10-28) in the story's own
+worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
 
 ### Debug Log References
 
+- Live-DB specs on a dedicated container `twt-632-pg` (:5448, database `twt_dev`); `ci:local` on a FRESH container `twt-632-ci-pg` (:5449, `twt_dev`).
+- ⚠ **Found by the fresh container (fixed, `b23ccfcb`):** on a fresh database the migrator applies EVERY migration in ONE transaction; 0188's `LANGUAGE sql`
+  helper compared `inspection_stage` with `'certificate_check'` — a value ADDED to that enum by an earlier migration — and a `LANGUAGE sql` body is validated at
+  CREATE ⇒ `55P04 unsafe use of new value`. An already-migrated database never saw it. 0188 now compares both enums AS TEXT.
+- ⚠ **Task 8.4 (the real-browser pass) is ⛔ attested.** The Chrome reached by the agent's browser tool could ⛔ load the local dev host
+  (`localhost:5173` / `127.0.0.1:5173` — Chrome's error page; three attempts, inside and outside the shell sandbox) while `curl` from the same machine got 200.
+  Recorded as an un-attested item in `deferred-work.md` (6-32 section) and Row 42's evidence line (5) — ⛔ faked.
+
 ### Completion Notes List
 
+- **Task 1 — the engine (AC1).** `ground_inspection.v1` (LIVE, all Pariwars): `head_letter` (`-310` CF4 A (3) — added to the Panel-ratified allow-list),
+  `death_cause`, `death_illness`. The validator's `ground_inspection` block holds I4 (the three ruled keys in every version), I1 (every question optional — so
+  row 6-33 inherits it), the cause / illness `health` + `sensitive` with the neighbours' CODES (ONE `DEATH_CAUSE_CODES` / `DEATH_ILLNESS_CODES` list in
+  `keys.ts`, `peer-mesh.ts` now reads it), the letter ⛔ sensitive / health. Shipped state: cause / illness `'pending'` ⇒ the served definition is the letter ALONE
+  (TR7). 25 `inspector_questions.*` keys in en + hi (the Hindi agent-authored — Row 42 (b)). Six mutants killed.
+- **Task 2 — the store (AC2, AC9).** Migration `0188` (journal `when` 1795750800032 > every sibling): the header (version pinned at the first save) and the
+  append-only answers (Tier-1 cause / illness — the EXISTING `ground_inspection` class; `value_code_indexes`; the guard: `scheduled`, ⛔ `certificate_check`,
+  the ONE answer window; the 0143-form erasure arm); the neighbours' answers gain `value_code_indexes` (⛔ backfill — ⛔ such row exists, G4) + the erasure grant,
+  and their guard is REPLACED (TR14 — a live-DB leg scrubs a row carrying indexes; the OLD guard restored in the DB turns it red); 0160's two CHECKs widened.
+  `anonymize.ts`: the family's answers (sentinel + NULL indexes) and the neighbours' `value_code_indexes` in their SAME statement; RTBF pins 30 → 31 statements,
+  27 → 28 tables, the stale title corrected. ⚠ Deviation, narrower than written: the header's version CHECK is `^ground_inspection\.v[0-9]+$` (⛔ any kind).
+- **Task 3 — the writer and the comparable form (AC3, AC5).** `claim/ground-inspection-questionnaire.ts` (lock assignment → claim, the exported 6.26a helpers —
+  ⛔ copies; ⛔ KMS; stale / invalid / unavailable / certificate-check typed errors). ONE input rule `questionnaires.answerCodeIndexInputs`
+  (`${claim}|${key}|${code}`, `dont_know` ⇒ NULL) and ONE helper `claim.answerCodeBlindIndexes` (API wrapper `answerCodeIndexes`) for BOTH writers, under ONE
+  literal `'answer_code'` (a grep pin; ⛔ twin). ⚠ **Deviation from IQ4's "with `blindIndexMany`":** per-code `blindIndex` (≤ 10 audit lines) — the neighbours'
+  handler runs inside its request transaction, where `blindIndexMany` is forbidden (*"⛔ Never call it inside a transaction"*); the date window's precedent.
+- **Task 4 — the comparison (AC6).** `death_cause` / `death_illness` → `'compare'`; `peerAnswerDiffers` takes the family's code indexes as a further parameter
+  (6.27b ⛔ passes it ⇒ ⛔ a warning — a leg pins it); ONE rule (both definite, ⛔ shared index); the family's indexes read under the completion's locks and AS OF
+  `completed_at` in the recompute (equal — a live-DB leg). ① / ② unchanged. `inspection-discrepancy.test.ts:45` rewritten (warning keys ⊂ compared keys), ⛔ deleted.
+- **Task 5 — the API (AC3, AC8).** `GET …/questionnaire` (the served definition via `toWireQuestionnaire` — ⛔ a second resolver; 404 ⇔ ⛔ panel) and
+  `PUT …/questionnaire/answers/:questionKey` (the GI transaction / audit pattern; KMS before the write transaction; audited post-commit only for a write, counts
+  only). ⚠ The 422's code is `questionnaire.answer_invalid` with the engine's reason in `details.reason` (the neighbours' `peer_request.invalid_answer`
+  precedent), ⛔ appended to the code. ③ / ④ on the completion and the re-read carry `familyAnswers` (the family's answer in English words, decrypted after the
+  transaction). The family account rides `assemblePeerSection` AFTER the hide (one bounded read; console ceiling 29 → 30 with its ledger line) — ⚠ **on
+  `present` AND `empty`**, at the SECTION level (⛔ only inside `PeerMeshTranscript` as AC11 wrote): a no-one-asked claim has ⛔ selection, so a transcript-only
+  field would hide exactly the letter AC10 says the approver sees. The `ENROLMENT_OWED` entry is ⛔ touched (recorded, as AC3 says).
+- **Task 6 — contracts and client.** `packages/contracts/src/claims/ground-inspection-questionnaire.ts` (reuses `PeerRequestQuestionnaire`); the section's
+  `familyAccount` REQUIRED; the four keys in contracts, domain schema and the admin client (the lockstep test pins them).
+- **Task 7 — the screens (AC7).** `QuestionnairePanel.tsx` on the neighbours' `PeerAnswerEditor` (IQ8 (A): in-memory retry with backoff and at once on
+  `online`, a stale read 3 times, per-answer state, the leave warning; ⛔ browser storage — a grep pin); the discrepancy copy is a TABLE (TR12);
+  `PeerMeshSectionView` — ONE view for the console and the approvers' panel, + the family's account (the letter ALWAYS said, *"Not recorded"* included).
+- **Task 8 — proof.** Mutants KILLED: the six validator rules, registration; the overlap rule inverted, the empty-index guard, a rule flipped back; the claim
+  scope removed, the `dont_know` NULL dropped; I1's completion mutant (letter required — domain AND HTTP AC4 legs red); the hide bypassed; a comparison through
+  `value_ciphertext` (the fence); the Tier-1 CHECK dropped in the DB; the old neighbours' guard; the `online` wake (first SURVIVED — the leg was tightened, then
+  killed); the exclusive option; the ③ copy line. 8.4 ⛔ attested (above). 8.6 — the fix-diff review found and fixed: the panel's editor was disposed on every
+  `data.answers` identity change (listeners dropped) — now the helpline screen's activate-once + `replaceFromServer`; an unused contracts re-export removed.
+  8.5 — the FIRST full `ci:local` (fresh container) failed 2 jobs, both this story's: lint (an unused destructured binding in a contracts test) and a FOURTH
+  console read-ceiling pin (`verifier-console.spec.ts`, 29 → 30) the first pass missed; both fixed, `turbo lint` 20/20 and the affected suites re-run green; a
+  clean full re-run (a recreated fresh container) was **35 / 36 green** — the integration leg included; the ONE red was `test (unit)`: a 6.27d admin test
+  (`ground-inspection-discrepancy.test.tsx`, "R2-12 / R2-13") TIMED OUT at 5 s under the job's parallel load — the documented contention class
+  ([[project_ci_local_concurrency_oversubscription]]); it passes alone 3 / 3 (~1.3 s) and the whole admin package passes 81 / 81 (1,395 tests). ⛔ A clean
+  36 / 36 is ⛔ yet recorded — the pre-push hook's run is the next attestation.
+- **Task 9 — records.** Row 42 evidence lines (1)–(5); the ③ / ④ deferred item annotated BUILT on the branch (⛔ discharged until `done` on `main`); the
+  un-attested browser item; the two stale source comments (G16) corrected in place; 6.36 W1's "trigger ⛔ pulled" and the IQ3 B / IQ8 B deferrals and the OP14 (d)
+  pointer were recorded at Task 0.4 (unchanged).
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/6-32-inspector-questionnaire-at-the-ground-inspection.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/modules/claim-verification/NeighboursAnswersPanel.tsx`
+- `apps/admin/src/modules/claim-verification/PeerMeshView.tsx`
+- `apps/admin/src/modules/claim-verification/SignalsPanel.tsx`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`
+- `apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx` (new)
+- `apps/admin/src/modules/ground-inspection/i18n-en.ts`
+- `apps/admin/tests/ground-inspection-discrepancy-client.test.ts`
+- `apps/admin/tests/ground-inspection-discrepancy.test.tsx`
+- `apps/admin/tests/ground-inspection-page.test.tsx`
+- `apps/admin/tests/ground-inspection-questionnaire.test.tsx` (new)
+- `apps/admin/tests/neighbours-answers-panel.test.tsx`
+- `apps/admin/tests/peer-mesh-source-not-on-inspector-wire.test.ts`
+- `apps/admin/tests/verifier-console.test.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/modules/claims/claims.ground-inspection.handlers.ts`
+- `apps/api/src/modules/claims/claims.ground-inspection.routes.ts`
+- `apps/api/src/modules/claims/claims.verifier-console.handlers.ts`
+- `apps/api/src/modules/claims/ground-inspection-crypto.ts`
+- `apps/api/src/modules/claims/peer-answers-assembler.ts`
+- `apps/api/src/modules/claims/peer-request-core.ts`
+- `apps/api/tests/integration/claims/ground-inspection-discrepancy.spec.ts`
+- `apps/api/tests/integration/claims/ground-inspection-questionnaire.spec.ts` (new)
+- `apps/api/tests/integration/claims/peer-answers-approvers.spec.ts`
+- `apps/api/tests/integration/claims/peer-answers-console.spec.ts`
+- `apps/api/tests/integration/claims/suspicion-refusal-routes.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console-ground-inspection.spec.ts`
+- `apps/api/tests/integration/claims/verifier-console.spec.ts`
+- `apps/api/tests/unit/peer-answers-stitch.test.ts`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `packages/contracts/src/claims/ground-inspection-questionnaire.ts` (new)
+- `packages/contracts/src/claims/index.ts`
+- `packages/contracts/src/claims/verifier-console.ts`
+- `packages/contracts/tests/claims-peer-answers.test.ts`
+- `packages/contracts/tests/claims-verifier-console.test.ts`
+- `packages/domain/migrations/0188_ground-inspection-questionnaire.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/claim/answer-code-index.ts` (new)
+- `packages/domain/src/claim/ground-inspection-persist.ts`
+- `packages/domain/src/claim/ground-inspection-questionnaire.ts` (new)
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/claim/inspection-discrepancy.ts`
+- `packages/domain/src/claim/peer-mesh-read.ts`
+- `packages/domain/src/claim/peer-mesh-reply.ts`
+- `packages/domain/src/encryption/field-classes.ts`
+- `packages/domain/src/encryption/index.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/src/policies/claim-ground-inspection-questionnaire-rls.ts` (new)
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/questionnaires/answers.ts`
+- `packages/domain/src/questionnaires/ground-inspection.ts` (new)
+- `packages/domain/src/questionnaires/index.ts`
+- `packages/domain/src/questionnaires/keys.ts`
+- `packages/domain/src/questionnaires/peer-mesh.ts`
+- `packages/domain/src/questionnaires/registry.ts`
+- `packages/domain/src/questionnaires/validator.ts`
+- `packages/domain/src/schema/claim_ground_inspection_discrepancies.ts`
+- `packages/domain/src/schema/claim_ground_inspection_questionnaire.ts` (new)
+- `packages/domain/src/schema/claim_peer_mesh_replies.ts`
+- `packages/domain/src/schema/claim_peer_mesh_selections.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/tests/claim/answer-code-index.test.ts` (new)
+- `packages/domain/tests/claim/ground-inspection-questionnaire-approval.test.ts` (new)
+- `packages/domain/tests/claim/ground-inspection-questionnaire-fence.test.ts` (new)
+- `packages/domain/tests/claim/inspection-discrepancy.test.ts`
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`
+- `packages/domain/tests/integration/claim/_peer-reply-fixtures.ts`
+- `packages/domain/tests/integration/claim/ground-inspection-questionnaire.spec.ts` (new)
+- `packages/domain/tests/integration/claim/peer-mesh-reply-rtbf.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-reply.spec.ts`
+- `packages/domain/tests/integration/rls/claim-ground-inspection-discrepancy-policy-regression.spec.ts`
+- `packages/domain/tests/integration/rls/claim-ground-inspection-questionnaire-policy-regression.spec.ts` (new)
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/questionnaires/ground-inspection-questionnaire.test.ts` (new)
+- `packages/domain/tests/questionnaires/questionnaires.test.ts`
+- `packages/i18n/locales/en/claim.json`
+- `packages/i18n/locales/hi/claim.json`
 
 ## Change Log
 
@@ -610,4 +748,5 @@ No architecture variance: the surface is `apps/admin` (§4.1), ⛔ `apps/mobile`
 | 2026-10-27 | 1.0 | `bmad-create-story 6.32` (BigDev: *"6.32 in its worktree"*) at `4e57fa42`. Two read-only research passes (governance; code) + hand re-checks. Row `backlog` → `ready-for-dev`. IQ1–IQ12 PROPOSED; four need BigDev (IQ2 the "other claim" question — the validator admits only Panel-ratified ids; IQ3 the letter's record; IQ7 who reads the family's answers; IQ8 "offline saving" — no substrate or ruling). The comparable form PM25 (a) says this row OWES is built (AC5 / AC6). Policy meaning: nothing gates — the completion predicate is untouched (I1). Row 42 to be minted at Task 0.4. ⛔ No Panel question needed to build; one non-blocking confirm recommended (IQ7). |
 | 2026-10-28 | 1.1 | Fresh-context validate (`bmad-create-story validate 6.32`, BigDev: *"all"*), facts re-traced on the branch (two read-only passes, domain/schema and API/admin). **IQ13 added** — `-308` call 2 lists *"the head's letter when ⛔ no one can be asked"* among *"the hard checks"*, and 6.36 recorded *"approvable WITHOUT the letter until 6-32 is `done`"*; the story's "optional, never gates" was unreconciled with both ⇒ §0 row 8, answered FIRST, (B) is the Panel's. **G7a / TR14** — the neighbours' answer guard names its erasure columns; AC2 now replaces it. **AC11** — the ONE lockstep list (adds `questionnaires.test.ts:82/:94`, `inspection-discrepancy.test.ts:45` rewritten ⛔ deleted, the fence's 54, the RTBF 30 / 27, the audit-sink union). **IQ1** — every question `optional`, the required `closingNoteCopyKey` / `thankYouCopyKey`. Facts corrected: G6 (constant locations), G7 (CHECK names), G9 (admin uses `@twt/i18n`; the `HelplinePeerRequests` precedent to REUSE), G11 (two handler patterns; override district-only), G12 (`ENROLMENT_OWED`), G13 (what erasure covers), OP14 (d) is committed by `-319`. Numbers re-checked on every branch: `-413` / `0188` / Row 42 hold. |
 | 2026-10-28 | 1.2 | **IQ13 answered (A)** — BigDev: *"IQ13 A — keep the letter optional"*. The letter is recorded and shown to approvers, ⛔ a condition of approval; ⛔ Panel question. Status, Policy meaning, §0 row 8, I1, AC0, AC10 (+ an AC4 (a) row) and Task 0.2 updated; the decision is recorded in the Task 0.3 entry with IQ1–IQ12 (superseding `-308` call 2 in part) — ⛔ a decision until committed. Four asks remain: IQ2, IQ3, IQ7, IQ8. |
+| 2026-10-28 | 1.4 | `bmad-dev-story 6.32` (Claude Opus 5.5): Tasks 1–7 and 9 DONE; Task 8 done EXCEPT 8.4 — the real-browser pass could ⛔ be run (the agent's Chrome could ⛔ reach the local dev host) ⇒ recorded un-attested, ⛔ faked; the row stays `in-progress` (the workflow's completion gate). Built: `ground_inspection.v1`, migration `0188` (+ a fresh-database fix, 55P04), the writer, the comparable form on both answer tables, ③ / ④ compared without a decrypt, GET / PUT questionnaire routes, the family's account on the neighbours' section (present AND empty), the inspector's panel and the staff view. Deviations recorded in the Completion Notes: per-code `blindIndex` (⛔ `blindIndexMany`), the 422's reason in `details`, `familyAccount` at the section level, the header's narrower version CHECK. |
 | 2026-10-28 | 1.3 | **Task 0 DONE.** BigDev: *"recommendation accepted for IQ1-IQ12"*. 0.1 — rebased onto `origin/main` (11b.4a landed; the branch's lines verified identical before / after; journal idx / `when` unique); cited files that moved: `audit-sink.ts` (a memorial action appended after the GI actions) and the roster (Row 41 status) — neither shifts a claim here. 0.3 — [`-413`](../../.decision-log.md#decision-2026-10-28-413) committed alone (IQ1–IQ13 all as recommended; supersedes `-308` call 2 and `-319` OP14 in part). 0.4 — roster Row 42 `ground-inspection-family-answers-live` (+ a dated pointer on Row 27 note (5)); `epics.md` `### Story 6.32`; a dated note under 6.28 OP14 (d); `deferred-work.md` — a new section (the "any other claim?" question, the letter's photograph, true offline), 6.36 W1 annotated "trigger ⛔ pulled", the ③ / ④ item marked owned (⛔ discharged); the IQ7 confirm note drafted (BigDev sends); the ledger line. Implementation starts at Task 1. |

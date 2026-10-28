@@ -10,7 +10,6 @@
 
 import { z } from 'zod';
 
-import { INSPECTION_DISCREPANCY_QUESTION_KEYS } from './verifier-console.js';
 import { PeerRequestQuestionnaire } from './peer-request.js';
 
 const KEY = /^[a-z][a-z0-9_]*$/;
@@ -74,6 +73,3 @@ export const FamilyAnswersDisplay = z
   .object({ death_cause: FamilyAnswerDisplay.optional(), death_illness: FamilyAnswerDisplay.optional() })
   .strict();
 export type FamilyAnswersDisplay = z.infer<typeof FamilyAnswersDisplay>;
-
-/** Every key the inspector may be shown — re-exported for the admin's copy table (TR12). */
-export const INSPECTOR_DISCREPANCY_KEYS = INSPECTION_DISCREPANCY_QUESTION_KEYS;

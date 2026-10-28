@@ -61,7 +61,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — RTBF over the neighbours\' answer
       ...base,
       questionKey: 'death_date',
       value: { date: '2026-09-30' },
-      prepared: { form: 'encrypted', ciphertext: await enc('2026-09-30'), dateWindowIndexes: ['ZZ-IDX-1', 'ZZ-IDX-2', 'ZZ-IDX-3'] },
+      prepared: { form: 'encrypted', ciphertext: await enc('2026-09-30'), dateWindowIndexes: ['ZZ-IDX-1', 'ZZ-IDX-2', 'ZZ-IDX-3'], codeIndexes: null },
       decryptedLive: new Map(),
     });
     const firstDate = first.live.find((a) => a.questionKey === 'death_date')!;
@@ -69,7 +69,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — RTBF over the neighbours\' answer
       ...base,
       questionKey: 'death_date',
       value: { date: '2026-10-01' },
-      prepared: { form: 'encrypted', ciphertext: await enc('2026-10-01'), dateWindowIndexes: ['ZZ-IDX-4', 'ZZ-IDX-5', 'ZZ-IDX-6'] },
+      prepared: { form: 'encrypted', ciphertext: await enc('2026-10-01'), dateWindowIndexes: ['ZZ-IDX-4', 'ZZ-IDX-5', 'ZZ-IDX-6'], codeIndexes: null },
       decryptedLive: new Map([[firstDate.answerId, { date: '2026-09-30' }]]),
     });
     await submitPeerReply(client, { pariwarId: base.pariwarId, pingId: base.pingId, memberId: base.memberId });

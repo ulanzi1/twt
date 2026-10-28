@@ -290,7 +290,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
         await escalate(w);
         const r = await read(pa, w);
         expect(r.status, JSON.stringify(r.body)).toBe(200);
-        expect(r.body.peerMesh).toEqual({ status: 'empty' });
+        expect(r.body.peerMesh).toEqual({ status: 'empty', familyAccount: [] }); // Story 6.32 (IQ7) — REQUIRED on `empty` too
         expect(readLines(w.claimCaseId).at(-1)?.context).toMatchObject({ step: 'escalation_resolution', section: 'empty' });
       });
     }

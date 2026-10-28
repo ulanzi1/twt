@@ -269,7 +269,7 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     const r1 = await complete(same.inspector.client, same, g1);
     expect(r1.statusCode, r1.body).toBe(200);
     expect(Object.keys(r1.json<Json>()).sort()).toEqual(['discrepancy', 'groundInspectionId', 'photoCount', 'status']);
-    expect(r1.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: [], familyDeathDate: null });
+    expect(r1.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: [], familyDeathDate: null, familyAnswers: null });
     // An EMPTY showing is a ROW (AC5) — "absent" means only "never delivered".
     expect(await showingRow(g1)).toEqual({ question_keys: [] });
 
@@ -280,8 +280,8 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     await say(differ, 'death_date', { date: '2026-06-01' });
     const r2 = await complete(differ.inspector.client, differ, g2);
     const d2 = r2.json<{ discrepancy: Json }>().discrepancy;
-    expect(d2).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE } });
-    expect(Object.keys(d2).sort()).toEqual(['familyDeathDate', 'questionKeys', 'state']);
+    expect(d2).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE }, familyAnswers: null });
+    expect(Object.keys(d2).sort()).toEqual(['familyAnswers', 'familyDeathDate', 'questionKeys', 'state']); // Story 6.32 — + familyAnswers (null without ③ / ④)
     // ⛔ A neighbour's value (their date), name or count anywhere in the result (`photoCount` is the inspector's own).
     expect(JSON.stringify(d2)).not.toMatch(/valueCodes|Neighbour|count|2026-06-01/i);
     expect(JSON.stringify(r2.json())).not.toMatch(/valueCodes|Neighbour|2026-06-01/i);
@@ -296,7 +296,7 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
       const gid = await assign(w);
       bodies.push((await complete(w.inspector.client, w, gid)).json<Json>()['discrepancy']);
     }
-    expect(bodies[0]).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null });
+    expect(bodies[0]).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null });
     expect(bodies[1]).toEqual(bodies[0]);
   });
 
@@ -318,7 +318,7 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     const sup = await supervisor(w);
     const gid = await assign(w);
     const r = await complete(sup.client, w, gid);
-    expect(r.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null });
+    expect(r.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null });
 
     const h = await world();
     await say(h, 'has_died', { codes: ['not_died'] });
@@ -331,7 +331,7 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     expect(await showingRow(g)).toBeNull();
     // AC5 — the first UN-hidden re-read records it, with the keys the completion computed.
     const rr = await reread(h.inspector.client, h, g);
-    expect(rr.json<Json>()).toEqual({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null }, notes: [] });
+    expect(rr.json<Json>()).toEqual({ discrepancy: { state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null }, notes: [] });
     expect(await showingRow(g)).toEqual({ question_keys: ['has_died'] });
   });
 
@@ -453,7 +453,7 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
     const gid = await assign(w);
     const first = (await complete(w.inspector.client, w, gid)).json<Json>()['discrepancy'];
     // ⭐ R2-18 — the date is IN the result, so the re-read's decrypted family date is compared with the completion's echo.
-    expect(first).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE } });
+    expect(first).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE }, familyAnswers: null });
     const rr = await reread(w.inspector.client, w, gid);
     expect(rr.statusCode, rr.body).toBe(200);
     expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual(first);
@@ -472,12 +472,12 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
       fault.showingCommit = false;
     }
     expect(r.statusCode, r.body).toBe(200);
-    expect(r.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE } });
+    expect(r.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE }, familyAnswers: null });
     expect(await showingRow(gid)).toBeNull();
     // AFTER completion the neighbour changes their answers: `not_died` — never on the re-read (AC7).
     await say(w, 'has_died', { codes: ['not_died'] });
     const rr = await reread(w.inspector.client, w, gid);
-    expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE } });
+    expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual({ state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'shown', date: FAMILY_DATE }, familyAnswers: null });
     expect(await showingRow(gid)).toEqual({ question_keys: ['death_date'] });
 
     // AC7 — the District Admin's console carries the LATER answer (the live answers).
@@ -500,13 +500,13 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
       fault.deliveryCommit = false;
     }
     expect(r.statusCode, r.body).toBe(200);
-    expect(r.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null });
+    expect(r.json<Json>()['discrepancy']).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null });
     // The completion's own transaction committed; the delivery's showing did ⛔ (its COMMIT failed).
     const { rows } = await td.pool.query(`SELECT status FROM claim_ground_inspections WHERE ground_inspection_id = $1`, [gid]);
     expect(rows[0]).toEqual({ status: 'completed' });
     expect(await showingRow(gid)).toBeNull();
     const rr = await reread(w.inspector.client, w, gid);
-    expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null });
+    expect(rr.json<{ discrepancy: Json }>().discrepancy).toEqual({ state: 'shown', questionKeys: ['has_died'], familyDeathDate: null, familyAnswers: null });
     expect(await showingRow(gid)).toEqual({ question_keys: ['has_died'] });
   });
 
@@ -701,7 +701,7 @@ describe.skipIf(!hasDatabase)('Story 6.27d — the inspector\'s discrepancy thro
       const rr = await reread(w.inspector.client, w, gid);
       expect(rr.statusCode, rr.body).toBe(200);
       expect(rr.json()).toEqual({
-        discrepancy: { state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'unavailable' } },
+        discrepancy: { state: 'shown', questionKeys: ['death_date'], familyDeathDate: { status: 'unavailable' }, familyAnswers: null },
         notes: [{ questionKey: 'death_date', note: { status: 'unavailable' }, notedAt: expect.any(String), authorActorId: w.inspector.userId.toLowerCase(), authorDisplay: 'Inspector One' }],
       });
       expect(rr.body).not.toContain(member.ANONYMIZED_SENTINEL);

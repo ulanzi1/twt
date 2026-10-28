@@ -9,7 +9,7 @@
 //
 // NEVER log a decrypted value; NEVER put any of these in an event payload or an audit line.
 
-import { encryption } from '@twt/domain';
+import { claim, encryption } from '@twt/domain';
 
 import { CLAIM_GROUND_INSPECTION_FIELD_CLASS, type EncryptionDeps } from '../../context.js';
 
@@ -62,4 +62,21 @@ export async function decryptGroundInspectionField(
  */
 export async function deathDateBlindIndex(date: string, pariwarId: string, enc: EncryptionDeps): Promise<string> {
   return encryption.blindIndex(encryption.DEATH_DATE_INDEX_FIELD_CLASS, date, { pariwarId }, enc.kms, enc.hmacKeyRef);
+}
+
+/**
+ * ⭐ Story 6.32 (`2026-10-28-413` IQ4; AC5) — the keyed CODE indexes of a health answer (the cause, the illness): ONE per
+ * selected code, claim-scoped, under the ONE class `ANSWER_CODE_INDEX_FIELD_CLASS`; `null` when the answer includes
+ * *"I don't know"* (⛔ compared) or the key is ⛔ a health question. The ONE call site of `claim.answerCodeBlindIndexes` for
+ * BOTH writers' handlers — the neighbours' (`peer-request-core.ts`) and the family's at the inspection — so the two sides
+ * hash equal (TR3). ⛔ Never under a writer's lock (TR2).
+ */
+export async function answerCodeIndexes(
+  claimCaseId: string,
+  questionKey: string,
+  codes: readonly string[],
+  pariwarId: string,
+  enc: EncryptionDeps,
+): Promise<string[] | null> {
+  return claim.answerCodeBlindIndexes({ claimCaseId, questionKey, codes }, { pariwarId }, enc.kms, enc.hmacKeyRef);
 }

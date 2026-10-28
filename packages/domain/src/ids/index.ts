@@ -439,6 +439,11 @@ export type GroundInspectionPhotoId = Brand<'GroundInspectionPhotoId'>;
 /** Smart constructor: validates UUID shape, returns a branded `GroundInspectionPhotoId`. */
 export const groundInspectionPhotoId = uuidBrand('GroundInspectionPhotoId');
 
+/** Story 6.32 — per-row address of one of the family's answers at the inspection (`claim_ground_inspection_answers.answer_id`). */
+export type GroundInspectionAnswerId = Brand<'GroundInspectionAnswerId'>;
+/** Smart constructor: validates UUID shape, returns a branded `GroundInspectionAnswerId`. */
+export const groundInspectionAnswerId = uuidBrand('GroundInspectionAnswerId');
+
 // ── Verifier-decision id (Story 6.11, Task 1) ─────────────────────────────────
 // The per-row address of one verifier adjudication decision
 // (`claim_verifier_decisions.decision_id`) — the DECISION-METADATA authority row (AC0). A claim

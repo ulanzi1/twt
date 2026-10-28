@@ -55,6 +55,7 @@ import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
 import { claimGroundInspections } from '../schema/claim_ground_inspections.js';
 import { claimGroundInspectionDiscrepancyNotes } from '../schema/claim_ground_inspection_discrepancies.js';
+import { claimGroundInspectionAnswers } from '../schema/claim_ground_inspection_questionnaire.js';
 import { claimPeerMeshReplyAnswers } from '../schema/claim_peer_mesh_replies.js';
 import { claims } from '../schema/claims.js';
 import { memberWithdrawals } from '../schema/member_withdrawals.js';
@@ -360,11 +361,14 @@ export async function anonymizeMember(
     // row keeps its plaintext CODES, and 0156's exactly-one-value CHECK holds. 0156's answers trigger ADMITS this through
     // its 0143-form erasure arm (⚠ RECORDED: it cannot tell this scrub from another writer of those two columns). The
     // replies table holds ⛔ PII (ids only). ⚠ On erasure of a RESPONDER: whose data an answer is stays OPEN (deferred-work).
+    // ⭐ Story 6.32 (AC9, IQ4) — the cause's / illness's keyed CODE indexes → NULL in the SAME statement (0188 replaced the
+    // trigger so its erasure arm admits the third column — TR14).
     await client
       .update(claimPeerMeshReplyAnswers)
       .set({
         valueCiphertext: await encSentinel(pariwarId, FIELD_CLASS_PEER_MESH_ANSWER, enc),
         deathDateWindowIndexes: null,
+        valueCodeIndexes: null,
       })
       .where(
         and(
@@ -384,6 +388,22 @@ export async function anonymizeMember(
         and(
           inArray(claimGroundInspectionDiscrepancyNotes.claimCaseId, deceasedClaimIds),
           isNotNull(claimGroundInspectionDiscrepancyNotes.noteCiphertext),
+        ),
+      );
+
+    // ── ⭐ Story 6.32 (AC9, GI13's shape) — the FAMILY's answers at the inspection about the DECEASED member's death, on their
+    // claims: EVERY answer row — live AND superseded — whose value is a Tier-1 ciphertext (the cause, the illness; the SAME
+    // `ground_inspection` field class as `inspectionSentinel`) → sentinel, and the keyed code indexes → NULL (a keyed hash of
+    // a cause of death must ⛔ not outlive the erasure). ⚠ ONLY rows with a ciphertext (a `WHERE`): the head's-letter row keeps
+    // its plaintext codes (`collected` / `not_collected` — ⛔ PII), and 0188's exactly-one-value CHECK holds. 0188's answers
+    // trigger ADMITS this through its 0143-form erasure arm. The header holds ⛔ PII (ids, a version, a time) ⇒ untouched.
+    await client
+      .update(claimGroundInspectionAnswers)
+      .set({ valueCiphertext: inspectionSentinel, valueCodeIndexes: null })
+      .where(
+        and(
+          inArray(claimGroundInspectionAnswers.claimCaseId, deceasedClaimIds),
+          isNotNull(claimGroundInspectionAnswers.valueCiphertext),
         ),
       );
   }

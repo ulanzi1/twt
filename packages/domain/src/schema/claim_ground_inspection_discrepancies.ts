@@ -20,9 +20,9 @@ import type { ClaimId, GroundInspectionId, PariwarId } from '../ids/index.js';
 import { claimGroundInspections } from './claim_ground_inspections.js';
 import { claims } from './claims.js';
 
-/** The question keys a showing / note may carry. ⚠ LOCKSTEP with 0160's CHECKs and the compared keys of
- *  `claim/inspection-discrepancy.ts` (a policy-spec leg pins them equal). */
-export const INSPECTION_DISCREPANCY_QUESTION_KEYS = ['has_died', 'death_date'] as const;
+/** The question keys a showing / note may carry. ⚠ LOCKSTEP with 0160's CHECKs (widened by 0188 — Story 6.32 AC6) and the
+ *  compared keys of `claim/inspection-discrepancy.ts` (a policy-spec leg pins them equal). */
+export const INSPECTION_DISCREPANCY_QUESTION_KEYS = ['has_died', 'death_date', 'death_cause', 'death_illness'] as const;
 export type InspectionDiscrepancyQuestionKey = (typeof INSPECTION_DISCREPANCY_QUESTION_KEYS)[number];
 
 export const claimGroundInspectionDiscrepancyShowings = pgTable(

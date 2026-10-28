@@ -1,6 +1,7 @@
 // Ground-inspection admin routes — Story 6.7 (Task 5; AC1–AC6).
 //
-// Seven scope-gated admin routes under /api/v1/p/:pariwarId/admin/claims. Per-endpoint hook chains
+// Twelve scope-gated admin routes under /api/v1/p/:pariwarId/admin/claims (Story 6.32 corrected the count — it said
+// "Seven" while there were ten; +2 for the inspector's questionnaire). Per-endpoint hook chains
 // DIFFER (AC6 — NOT one uniform chain): all share [requireAdminSession, scopeResolutionHook,
 // requirePermissionHook('claim.conduct_ground_inspection', { resolveDimension, resolveValue })],
 // but the LOCATOR SOURCE differs — `schedule` reads it from the request BODY, `read` from the
@@ -27,6 +28,7 @@
 //   ⛔ The resolvers stay SYNCHRONOUS and do NO I/O — `rbac.hasPermission` is a pure predicate
 //      (ADR-0008 Decision 8), and the row is already stashed on `request.groundInspection`.
 
+import { GroundInspectionSaveAnswerRequest } from '@twt/contracts';
 import { claim, schema as domainSchema, ids, type rbac } from '@twt/domain';
 import type { FastifyInstance, FastifyRequest, preHandlerHookHandler } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -137,6 +139,15 @@ const RefusalBody = z
   .strict();
 
 const ClaimParam = z.object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid() }).strict();
+/** Story 6.32 — the questionnaire save addresses ONE question by its stable key. */
+const AnswerParam = z
+  .object({
+    pariwarId: z.string().uuid(),
+    claimCaseId: z.string().uuid(),
+    ground_inspection_id: z.string().uuid(),
+    questionKey: z.string().regex(/^[a-z][a-z0-9_]*$/),
+  })
+  .strict();
 /** Id-addressed verbs carry the pariwar + claim + assignment id in the path. */
 const InspectionParam = z
   .object({ pariwarId: z.string().uuid(), claimCaseId: z.string().uuid(), ground_inspection_id: z.string().uuid() })
@@ -301,6 +312,26 @@ export function registerGroundInspectionRoutes(app: FastifyInstance, deps: AppDe
       preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
     },
     h.recordDiscrepancyNote,
+  );
+
+  // ⭐ Story 6.32 (IQ10; AC3) — the inspector's questionnaire for the family: the served definition + the inspector's own
+  // answers, and the save of ONE answer. Gated as `complete` (the row's dimension) PLUS the D6 identity guard in the handler
+  // (the assigned inspector, or an override holder); the window, `scheduled` and ⛔ a certificate check are the writer's.
+  r.get(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/ground-inspection/:ground_inspection_id/questionnaire',
+    {
+      schema: { params: InspectionParam, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
+    },
+    h.questionnaire,
+  );
+  r.put(
+    '/api/v1/p/:pariwarId/admin/claims/:claimCaseId/ground-inspection/:ground_inspection_id/questionnaire/answers/:questionKey',
+    {
+      schema: { params: AnswerParam, body: GroundInspectionSaveAnswerRequest, tags: [TAG] },
+      preHandler: [adminSession, scope, resolveAssignment, conductFromRow],
+    },
+    h.saveQuestionnaireAnswer,
   );
 
   // AC4a — refusal disposition (district from row; + inspector guard in the handler).

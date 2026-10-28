@@ -118,6 +118,7 @@ function prep(key: string, value: QuestionnaireAnswerValue, live: Map<string, re
         form: 'encrypted',
         ciphertext: `enc:test:${c.storage.plaintext}`,
         dateWindowIndexes: c.storage.dateWindow === null ? null : (c.storage.dateWindow.map((d) => `idx:${d}`) as [string, string, string]),
+        codeIndexes: null, // Story 6.32 — v4 serves ⛔ health question (counsel pending), so ⛔ encrypted answer here carries codes
       };
 }
 

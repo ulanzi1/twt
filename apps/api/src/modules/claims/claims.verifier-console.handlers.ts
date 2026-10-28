@@ -243,7 +243,15 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * row lock). ⭐ Ledger line:
  *   + Story 6.27d (R5): the claim's discrepancy showings, the claim's discrepancy notes             +2  → 29
  */
-export const VERIFIER_CONSOLE_MAX_READS = 29;
+/*
+ * ⭐ STORY 6.32's ONE READ (`2026-10-28-413` IQ7 (A); AC8) — the FAMILY's account at the ground inspection rides the
+ * neighbours' section (the SAME audience, CF2; the SAME hide — read AFTER it, so a hidden reader reads ⛔ it), ONE bounded
+ * statement PER CLAIM (every completed full visit's live answers, joined — ⛔ per visit), BEFORE the selection read (a claim
+ * with nobody to ask has ⛔ selection, and its head's letter is the answer that matters — AC10). The cause / illness decrypt
+ * in the ASSEMBLER, as the neighbours' answers do. ⭐ Ledger line:
+ *   + Story 6.32 (IQ7): the claim's family account at the inspection                                +1  → 30
+ */
+export const VERIFIER_CONSOLE_MAX_READS = 30;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {

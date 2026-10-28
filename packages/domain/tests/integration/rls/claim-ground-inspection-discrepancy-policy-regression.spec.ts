@@ -116,13 +116,14 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
       }
       expect(def(`${SHOWINGS}_pkey`)).toBe('PRIMARY KEY (ground_inspection_id)');
       expect(def(`${NP}_question_uq`)).toBe('UNIQUE (ground_inspection_id, question_key)');
-      expect(def(`${NP}_question_key_check`)).toMatch(/question_key = ANY \(ARRAY\['has_died'::text, 'death_date'::text\]\)/);
-      expect(def(`${SP}_question_keys_check`)).toMatch(/question_keys <@ ARRAY\['has_died'::text, 'death_date'::text\]/);
+      // ⭐ Story 6.32 (AC6 / AC11 — RED BY DESIGN): 0188 widened both CHECKs to the four compared keys (③ cause, ④ illness).
+      expect(def(`${NP}_question_key_check`)).toMatch(/question_key = ANY \(ARRAY\['has_died'::text, 'death_date'::text, 'death_cause'::text, 'death_illness'::text\]\)/);
+      expect(def(`${SP}_question_keys_check`)).toMatch(/question_keys <@ ARRAY\['has_died'::text, 'death_date'::text, 'death_cause'::text, 'death_illness'::text\]/);
       expect(rows.filter((r) => (r.conname.startsWith('claim_gi_discrepancy') || r.conname.startsWith('claim_ground_inspection_discrepancy')) && r.deferrable)).toEqual([]);
     });
 
     it('the CHECKs\' keys are LOCKSTEP with the schema constant and the comparison\'s compared keys', () => {
-      expect([...INSPECTION_DISCREPANCY_QUESTION_KEYS]).toEqual(['has_died', 'death_date']);
+      expect([...INSPECTION_DISCREPANCY_QUESTION_KEYS]).toEqual(['has_died', 'death_date', 'death_cause', 'death_illness']); // Story 6.32 (AC6)
       expect([...INSPECTION_DISCREPANCY_COMPARED_KEYS]).toEqual([...INSPECTION_DISCREPANCY_QUESTION_KEYS]);
     });
 
@@ -256,7 +257,8 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
       const { client } = getTx();
       const s = await seedInspection(client, PARIWAR_A);
       await enterAppScope(client, PARIWAR_A);
-      expect((await attempt(client, INSERT_SHOWING, showingParams(s, ['death_cause']))).code).toBe('23514');
+      // ⭐ Story 6.32 (AC6): ③ / ④ are compared keys now (0188) — a key outside the FOUR is refused.
+      expect((await attempt(client, INSERT_SHOWING, showingParams(s, ['how_known']))).code).toBe('23514');
       expect((await attempt(client, INSERT_SHOWING, showingParams(s, ['has_died']))).code).toBeNull();
       // ONE showing per assignment — the idempotent writer's `ON CONFLICT DO NOTHING` resolves to 0 rows.
       expect((await attempt(client, INSERT_SHOWING, showingParams(s, ['has_died']))).code).toBe('23505');

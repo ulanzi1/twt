@@ -36,7 +36,9 @@ describe('VerifierConsolePacket — four-state section vocabulary (AC7)', () => 
     expect(PeerMeshSection.safeParse({ status: 'not_available_yet' }).success).toBe(false);
     expect(GroundInspectionSection.safeParse({ status: 'not_available_yet' }).success).toBe(false);
     // …but they DO admit empty + unavailable.
-    expect(PeerMeshSection.safeParse({ status: 'empty' }).success).toBe(true);
+    // ⭐ Story 6.32 (IQ7) — `empty` carries the REQUIRED family account (a no-one-asked claim's letter lives there).
+    expect(PeerMeshSection.safeParse({ status: 'empty', familyAccount: [] }).success).toBe(true);
+    expect(PeerMeshSection.safeParse({ status: 'empty' }).success).toBe(false);
     expect(GroundInspectionSection.safeParse({ status: 'unavailable' }).success).toBe(true);
   });
 
@@ -128,6 +130,17 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
           },
         ],
       },
+      // ⭐ Story 6.32 (IQ7) — REQUIRED on the section: the family's account at the inspection (the letter, the cause).
+      familyAccount: [
+        {
+          groundInspectionId: 'gi-1',
+          completedAt: '2026-10-12T00:00:00.000Z',
+          answers: [
+            { questionKey: 'head_letter', question: 'Did you collect a letter …?', value: { kind: 'codes' as const, codes: ['collected'], labels: ['Yes — I collected the letter'] }, savedAt: '2026-10-11T00:00:00.000Z' },
+            { questionKey: 'death_cause', question: 'How did Ram die?', value: { kind: 'unavailable' as const }, savedAt: '2026-10-11T00:00:01.000Z' },
+          ],
+        },
+      ],
     },
     groundInspection: { status: 'empty' as const },
     priorVerifierComments: { status: 'not_available_yet' as const },

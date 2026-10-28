@@ -215,8 +215,8 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     expect(after.gate).toEqual({ complete: true, waitReason: null });
   });
 
-  it('⭐ AC9 — the section books EXACTLY one read and sends EXACTLY one read statement (+ its SAVEPOINT / RELEASE); the ceiling is 29', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(29); // Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
+  it('⭐ AC9 — the section books EXACTLY one read and sends EXACTLY one read statement (+ its SAVEPOINT / RELEASE); the ceiling is 30', async () => {
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(30); // Story 6.32 (IQ7) FROM 29 — +1: the claim's family account at the inspection; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const claimCaseId = await seedClaim(pariwarId, await seedDeceased(pariwarId));
     await inScope(pariwarId, async (s) => {
@@ -345,8 +345,8 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     expect(barePacket.groundInspection.assignments[0]).toMatchObject({ dateComparison: 'not_compared', dateDiffersWarning: false });
   });
 
-  it('⭐⭐ Story 6.26b (invariant 5; Trap 11) — a FAILED warnings read: `null` on every completed row\'s comparison and on every flag the section does ⛔ rule out; `false` where it does; MAX_READS is pinned (29 since Story 6.27d)', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(29); // Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
+  it('⭐⭐ Story 6.26b (invariant 5; Trap 11) — a FAILED warnings read: `null` on every completed row\'s comparison and on every flag the section does ⛔ rule out; `false` where it does; MAX_READS is pinned (30 since Story 6.32)', async () => {
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(30); // Story 6.32 (IQ7) FROM 29 — +1: the claim's family account at the inspection; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const deceased = await seedDeceased(pariwarId);
     await refusedSource(pariwarId, deceased, { deathDate: daysAgo(3) });

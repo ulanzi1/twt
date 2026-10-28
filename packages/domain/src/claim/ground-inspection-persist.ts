@@ -102,9 +102,11 @@ import { projectClaimState } from './project.js';
 import { isClaimInAnswerWindow } from './answer-window.js';
 import { isActorOwnVisitPending, isSameActorId, normalizeActorId } from './approver-own-visit.js';
 import {
+  type FamilyCodeIndexes,
   type InspectionDiscrepancyKey,
   type PeerAnswerForComparison,
   deriveInspectionDiscrepancy,
+  familyCodeIndexesSql,
   inspectionDiscrepancyAnswersSql,
 } from './inspection-discrepancy.js';
 
@@ -245,8 +247,9 @@ export interface GroundInspectionOverride {
 // ── Internal helpers (all run on the caller's scoped `db`, inside the caller's scope-tx) ──
 
 /** Row-lock the target assignment (`SELECT … FOR UPDATE`) + assert it is still `scheduled`.
- *  The ONE concurrency primitive — serializes every terminal transition on one assignment. */
-async function lockActiveAssignment(
+ *  The ONE concurrency primitive — serializes every terminal transition on one assignment.
+ *  ⭐ Exported for the questionnaire writer (Story 6.32, `ground-inspection-questionnaire.ts`) — the SAME lock, ⛔ a copy. */
+export async function lockActiveAssignment(
   db: Db,
   pariwarId: PariwarId,
   groundInspectionId: GroundInspectionId,
@@ -299,10 +302,10 @@ async function assertClaimInVerification(db: Db, pariwarId: PariwarId, claimCase
 }
 
 /** Take the claim row `FOR UPDATE` + assert the window ON THE LOCKED ROW — the guard of the three EVENT-EMITTING
- *  writers (Story 6.26a Task 2.1). Without the lock an R9 finalize, a vote or an adjudication committing in between
+ *  writers (Story 6.26a Task 2.1) and Story 6.32's questionnaire writer (exported for it). Without the lock an R9 finalize, a vote or an adjudication committing in between
  *  would leave an assignment and an event with a stale `from_state` on a claim outside the window. ⚠ Lock order:
  *  an assignment lock (when the writer takes one) is taken FIRST, then this — never the reverse. */
-async function lockClaimInWindow(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<ClaimRow> {
+export async function lockClaimInWindow(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<ClaimRow> {
   const claimRow = await lockClaimCase(db, pariwarId, claimCaseId);
   if (!claimRow) throw new GroundInspectionNotFoundError(claimCaseId);
   return assertClaimRowInWindow(db, pariwarId, claimRow);
@@ -315,8 +318,8 @@ function noteAuthor(notesCiphertext: string | null, actingActorId: string): stri
 }
 
 /** Authorize an evidence-authoring verb: acting actor === assigned inspector, OR an explicit
- *  supervisor override (D6). The route already verified the override permission key. */
-function authorizeInspector(
+ *  supervisor override (D6). The route already verified the override permission key. (Exported for Story 6.32's writer.) */
+export function authorizeInspector(
   assignment: Pick<ClaimGroundInspectionRow, 'groundInspectionId' | 'inspectorActorId'>,
   actingActorId: string,
   override?: GroundInspectionOverride,
@@ -1077,13 +1080,15 @@ export async function completeGroundInspection(
 
   // ⭐ Story 6.27d (AC3; R1, R2) — the comparison, INSIDE this transaction after the UPDATE: the claim row lock is held, so
   // every answer write is ordered against `completed_at` ("saved by then" is exact). ⛔ No lock on answers (lock order
-  // assignment → claim here; answer writers go claim → ping → reply), ⛔ no KMS.
+  // assignment → claim here; answer writers go claim → ping → reply), ⛔ no KMS. ⭐ Story 6.32 (AC6): the FAMILY's ③ / ④
+  // code indexes are read under the SAME locks — their writer takes this assignment's lock first, so they are final here.
   const discrepancy =
     deathDate.source === 'family_statement'
       ? {
           questionKeys: deriveInspectionDiscrepancy({
             answers: await readLiveInspectionDiscrepancyAnswers(db, input.pariwarId, assignment.claimCaseId),
             familyDateIndex: deathDate.index,
+            familyCodeIndexes: await readFamilyCodeIndexes(db, input.pariwarId, input.groundInspectionId),
           }),
         }
       : null;
@@ -1099,6 +1104,14 @@ async function readLiveInspectionDiscrepancyAnswers(db: Db, pariwarId: PariwarId
     sql`SELECT ${inspectionDiscrepancyAnswersSql(sql`${pariwarId}::uuid`, sql`${claimCaseId}::uuid`, null)} AS answers`,
   );
   return rows[0]?.answers ?? [];
+}
+
+/** Story 6.32 — the family's LIVE ③ / ④ code indexes at this visit (`{}` when ⛔ answered) — indexes ONLY. */
+async function readFamilyCodeIndexes(db: Db, pariwarId: PariwarId, groundInspectionId: GroundInspectionId): Promise<FamilyCodeIndexes> {
+  const { rows } = await db.execute<{ family: FamilyCodeIndexes | null }>(
+    sql`SELECT ${familyCodeIndexesSql(sql`${pariwarId}::uuid`, sql`${groundInspectionId}::uuid`, null)} AS family`,
+  );
+  return rows[0]?.family ?? {};
 }
 
 /** A completed FULL visit (`family_statement` — R1) the discrepancy is about: what its readers need, ⛔ a value. */
@@ -1219,9 +1232,14 @@ export async function readOrRecomputeInspectionDiscrepancy(
 ): Promise<InspectionDiscrepancyShowing> {
   const recorded = await readRecordedShowing(db, pariwarId, groundInspectionId);
   if (recorded) return recorded;
-  const { rows } = await db.execute<{ death_date_index: string | null; answers: PeerAnswerForComparison[] | null }>(sql`
+  const { rows } = await db.execute<{
+    death_date_index: string | null;
+    answers: PeerAnswerForComparison[] | null;
+    family: FamilyCodeIndexes | null;
+  }>(sql`
     SELECT gi.death_date_index,
-           ${inspectionDiscrepancyAnswersSql(sql`gi.pariwar_id`, sql`gi.claim_case_id`, sql`gi.completed_at`)} AS answers
+           ${inspectionDiscrepancyAnswersSql(sql`gi.pariwar_id`, sql`gi.claim_case_id`, sql`gi.completed_at`)} AS answers,
+           ${familyCodeIndexesSql(sql`gi.pariwar_id`, sql`gi.ground_inspection_id`, sql`gi.completed_at`)} AS family
       FROM claim_ground_inspections gi
      WHERE gi.pariwar_id = ${pariwarId}::uuid
        AND gi.ground_inspection_id = ${groundInspectionId}::uuid
@@ -1229,7 +1247,11 @@ export async function readOrRecomputeInspectionDiscrepancy(
        AND gi.death_date_source = 'family_statement'`);
   const row = rows[0];
   if (!row) throw new GroundInspectionNotFoundError(groundInspectionId);
-  const questionKeys = deriveInspectionDiscrepancy({ answers: row.answers ?? [], familyDateIndex: row.death_date_index });
+  const questionKeys = deriveInspectionDiscrepancy({
+    answers: row.answers ?? [],
+    familyDateIndex: row.death_date_index,
+    familyCodeIndexes: row.family ?? {},
+  });
   await recordInspectionDiscrepancyShowing(db, { pariwarId, groundInspectionId, questionKeys });
   const winner = await readRecordedShowing(db, pariwarId, groundInspectionId);
   if (!winner) throw new GroundInspectionNotFoundError(groundInspectionId);

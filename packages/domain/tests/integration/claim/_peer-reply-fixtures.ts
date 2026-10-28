@@ -69,7 +69,7 @@ export function preparePeerAnswer(
 ): PreparedPeerAnswer {
   if ('date' in value) {
     const window = key === 'death_date' ? (deathDateWindow(value.date).map(indexOf) as [string, string, string]) : null;
-    return { form: 'encrypted', ciphertext: `enc:test:${value.date}`, dateWindowIndexes: window };
+    return { form: 'encrypted', ciphertext: `enc:test:${value.date}`, dateWindowIndexes: window, codeIndexes: null };
   }
   return { form: 'codes', codes: value.codes };
 }

@@ -20,13 +20,27 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { CLAIM_DOCUMENT_MAX_BYTES, type NoteWithheldReason } from '@twt/contracts';
-import { claim, ids, member as memberDomain, rbac, schema } from '@twt/domain';
+import {
+  CLAIM_DOCUMENT_MAX_BYTES,
+  GROUND_INSPECTION_ANSWER_INVALID_CODE,
+  GROUND_INSPECTION_QUESTIONNAIRE_CERTIFICATE_CHECK_CODE,
+  GROUND_INSPECTION_QUESTIONNAIRE_STALE_CODE,
+  GROUND_INSPECTION_QUESTIONNAIRE_UNAVAILABLE_CODE,
+  type FamilyAnswerDisplay,
+  type FamilyAnswersDisplay,
+  type GroundInspectionLiveAnswer,
+  type GroundInspectionQuestionnaireResponse,
+  type GroundInspectionSaveAnswerResponse,
+  type NoteWithheldReason,
+} from '@twt/contracts';
+import { claim, cycleCalendar, ids, member as memberDomain, questionnaires, rbac, schema } from '@twt/domain';
+import { t } from '@twt/i18n';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import {
   AdminDisplayNameMissingError,
+  ApiError,
   BadRequestError,
   ConflictError,
   ForbiddenError,
@@ -40,8 +54,10 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { auditAuthorizationDenied, geoTreeResolverForRequest } from '../rbac/index.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { underSavepoint } from './later-approval-warnings.js';
+import { resolvePeerRequestMemberName, toWireQuestionnaire } from './peer-request-core.js';
 import { readClaimsHiddenFromReader, withheldReasonOn, withheldUnlessAuthor } from './hidden-reader-notes.js';
 import {
+  answerCodeIndexes,
   deathDateBlindIndex,
   decryptGroundInspectionField,
   encryptGroundInspectionField,
@@ -185,6 +201,19 @@ function translateGroundInspectionError(err: unknown): never {
   if (err instanceof claim.InspectionDiscrepancyNoteExistsError) {
     throw new ConflictError('A note on this question is already recorded', 'ground_inspection.discrepancy_note_exists');
   }
+  // ── Story 6.32 (IQ10) — the inspector's questionnaire for the family. ──
+  if (err instanceof claim.GroundInspectionQuestionnaireUnavailableError) {
+    throw new NotFoundError('There is no questionnaire for this visit', GROUND_INSPECTION_QUESTIONNAIRE_UNAVAILABLE_CODE);
+  }
+  if (err instanceof claim.GroundInspectionQuestionnaireCertificateCheckError) {
+    throw new ConflictError('A certificate check asks the family no questions', GROUND_INSPECTION_QUESTIONNAIRE_CERTIFICATE_CHECK_CODE);
+  }
+  if (err instanceof claim.GroundInspectionQuestionnaireStaleError) {
+    throw new ConflictError('The answers changed while saving — please try again', GROUND_INSPECTION_QUESTIONNAIRE_STALE_CODE);
+  }
+  if (err instanceof claim.GroundInspectionQuestionnaireInvalidAnswerError) {
+    throw new ApiError(422, GROUND_INSPECTION_ANSWER_INVALID_CODE, 'This answer cannot be saved', { reason: err.reason });
+  }
   if (err instanceof claim.GroundInspectionInspectorMismatchError) {
     // Backstop for the inspector-identity guard (the route pre-checks the override for a clean 403;
     // this maps the writer's guard so a future divergence surfaces a 403, not an unclassified 500).
@@ -220,6 +249,8 @@ type InspectionDiscrepancyDto =
       readonly state: 'shown';
       readonly questionKeys: readonly claim.InspectionDiscrepancyKey[];
       readonly familyDeathDate: FamilyDeathDate | null;
+      /** ⭐ Story 6.32 (AC6 / AC7) — the family's ③ / ④ answers in English words, ONLY for a ③ / ④ key shown; else `null`. */
+      readonly familyAnswers: FamilyAnswersDisplay | null;
     };
 
 /** A re-ask note on the re-read (R4a) — ALL of the assignment's notes, with their author. */
@@ -233,6 +264,25 @@ interface InspectionDiscrepancyNoteDto {
 
 /** The note POST's body (the route validates it `.strict()`). */
 export type DiscrepancyNoteBody = { questionKey: claim.InspectionDiscrepancyKey; note: string };
+
+/** Story 6.32 — the questionnaire save's body (the route validates it `.strict()`). */
+export type QuestionnaireAnswerBody = { codes: string[] };
+
+/** The ③ / ④ keys — the family answers them at the inspection (Story 6.32). */
+const FAMILY_ANSWER_KEYS = ['death_cause', 'death_illness'] as const;
+
+const enWords = (key: string, member: string): string => t(key, { member }, { locale: 'en', namespace: 'claim' });
+
+/** A family answer's stored value as codes: plaintext codes, else the decrypted JSON code list; `null` ⇔ ⛔ shown. */
+function codesOfDecrypted(plain: string): string[] | null {
+  if (plain === memberDomain.ANONYMIZED_SENTINEL) return null;
+  try {
+    const parsed: unknown = JSON.parse(plain);
+    return Array.isArray(parsed) && parsed.every((c) => typeof c === 'string') ? (parsed as string[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function createGroundInspectionHandlers(deps: AppDeps) {
   /** The acting admin id + active pariwar (both set by requireAdminSession + scope-resolution). */
@@ -354,7 +404,87 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       state: 'shown',
       questionKeys: [...questionKeys],
       familyDeathDate: questionKeys.includes('death_date') && familyDate !== null ? { status: 'shown', date: familyDate } : null,
+      familyAnswers: await displayFamilyAnswers(request, ctx, assignment.groundInspectionId, questionKeys),
     };
+  }
+
+  /**
+   * ⭐ Story 6.32 (AC6 / AC7; 6.27d R3's shape) — ③ / ④ on the inspector's result: the FAMILY's own answers in the options'
+   * English words, read in their OWN transaction and decrypted AFTER it closed (⛔ KMS in a transaction); erased (the
+   * sentinel), absent or undecryptable ⇒ `unavailable` (⛔ the sentinel text, ⛔ a 500). `null` unless a ③ / ④ key is SHOWN.
+   * ⛔ The neighbour's answer, ⛔ who, ⛔ a count (CF2).
+   */
+  async function displayFamilyAnswers(
+    request: FastifyRequest,
+    ctx: AdminCtx,
+    groundInspectionId: string,
+    questionKeys: readonly claim.InspectionDiscrepancyKey[],
+  ): Promise<FamilyAnswersDisplay | null> {
+    const keys = FAMILY_ANSWER_KEYS.filter((k) => questionKeys.includes(k));
+    if (keys.length === 0) return null;
+    const warn = (what: string, err: unknown) =>
+      request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id: groundInspectionId, what }, 'discrepancy: a family answer could not be shown');
+    let rows: Awaited<ReturnType<typeof claim.readLiveGroundInspectionAnswers>> = [];
+    let def: ReturnType<typeof questionnaires.getQuestionnaireVersion> = null;
+    try {
+      const pid = ids.pariwarId(ctx.pariwarId);
+      const gid = ids.groundInspectionId(groundInspectionId);
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      try {
+        rows = await claim.readLiveGroundInspectionAnswers(scopeTx.tx, pid, gid);
+        const header = await claim.readGroundInspectionQuestionnaireHeader(scopeTx.tx, pid, gid);
+        def = header === null ? null : questionnaires.getQuestionnaireVersion(header.questionnaireVersionId);
+        ok = true;
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+    } catch (err) {
+      warn('read', err);
+    }
+    const out: { -readonly [K in keyof FamilyAnswersDisplay]: FamilyAnswersDisplay[K] } = {};
+    for (const key of keys) {
+      const row = rows.find((r) => r.questionKey === key);
+      let codes: string[] | null = null;
+      if (row?.valueCiphertext != null) {
+        try {
+          codes = codesOfDecrypted(await decryptGroundInspectionField(row.valueCiphertext, ctx.pariwarId, deps.encryption));
+        } catch (err) {
+          warn('decrypt', err);
+        }
+      }
+      const q = def === null ? undefined : questionnaires.questionsOf(def).find((x) => x.key === key);
+      const label = (code: string) => {
+        const o = q?.options.find((x) => x.code === code);
+        return o === undefined ? code : enWords(o.copyKey, '');
+      };
+      const display: FamilyAnswerDisplay = codes === null ? { status: 'unavailable' } : { status: 'shown', codes, labels: codes.map(label) };
+      out[key] = display;
+    }
+    return out;
+  }
+
+  /** Story 6.32 — the visit's live answers as the inspector reads them back (decrypted AFTER the transaction). */
+  async function liveAnswerDtos(
+    request: FastifyRequest,
+    ctx: AdminCtx,
+    rows: Awaited<ReturnType<typeof claim.readLiveGroundInspectionAnswers>>,
+  ): Promise<GroundInspectionLiveAnswer[]> {
+    const out: GroundInspectionLiveAnswer[] = [];
+    for (const row of rows) {
+      if (row.valueCodes !== null) {
+        out.push({ questionKey: row.questionKey, value: { kind: 'codes', codes: [...row.valueCodes] } });
+        continue;
+      }
+      let codes: string[] | null = null;
+      try {
+        codes = row.valueCiphertext === null ? null : codesOfDecrypted(await decryptGroundInspectionField(row.valueCiphertext, ctx.pariwarId, deps.encryption));
+      } catch (err) {
+        request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id: row.groundInspectionId }, 'questionnaire: an answer could not be decrypted');
+      }
+      out.push({ questionKey: row.questionKey, value: codes === null ? { kind: 'unavailable' } : { kind: 'codes', codes } });
+    }
+    return out;
   }
 
   /** R3 — the RE-READ's family date: decrypted AFTER the transaction; erased (the sentinel), absent, malformed or
@@ -916,9 +1046,10 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         : null;
       const noteDtos: InspectionDiscrepancyNoteDto[] = [];
       for (const n of notes) noteDtos.push(await noteDtoOf(request, ctx, n));
+      const familyAnswers = await displayFamilyAnswers(request, ctx, ground_inspection_id, showing.questionKeys);
       void reply.status(200);
       return {
-        discrepancy: { state: 'shown', questionKeys: showing.questionKeys, familyDeathDate },
+        discrepancy: { state: 'shown', questionKeys: showing.questionKeys, familyDeathDate, familyAnswers },
         notes: noteDtos,
       };
     },
@@ -995,6 +1126,198 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
      * against the copy anyway). ⛔ No current upload ⇒ 409 `ground_inspection.no_current_certificate` (⛔ never a
      * 500, ⛔ never a 404 hiding the assignment). Audited `admin_ground_inspection.certificate_viewed` — ids only.
      */
+    /**
+     * GET …/ground-inspection/:ground_inspection_id/questionnaire — ⭐ Story 6.32 (IQ9 / IQ10 / IQ12; AC3, AC7) — the served
+     * definition of the visit's PINNED version (else the LIVE one), its words in en AND hi (`toWireQuestionnaire` — the ONE
+     * resolver), whether the visit is still open, and the inspector's own live answers. Order: the identity guard (the assigned
+     * inspector, or an override holder — the denial audited) → 404 `ground_inspection.questionnaire_unavailable` for a
+     * certificate check, ⛔ version, or a closed visit with ⛔ answers (⇔ ⛔ panel) → ONE read transaction → the decrypt AFTER it
+     * closed. Audited post-read with counts only (⛔ a value). ⛔ It reads ⛔ neighbour data (I2: the questions are identical
+     * whatever the neighbours said, and whether any were asked).
+     */
+    async questionnaire(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
+      const ctx = adminCtx(request);
+      const { ground_inspection_id } = request.params as { ground_inspection_id: string };
+      const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      const override = resolveInspectorOverride(request, ctx, assignment);
+      if (assignment.inspectionStage === 'certificate_check') {
+        throw new NotFoundError('There is no questionnaire for this visit', GROUND_INSPECTION_QUESTIONNAIRE_UNAVAILABLE_CODE);
+      }
+      const pid = ids.pariwarId(ctx.pariwarId);
+      const gid = ids.groundInspectionId(ground_inspection_id);
+      const open = assignment.status === 'scheduled';
+
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      let read: { def: questionnaires.QuestionnaireDefinition; rows: Awaited<ReturnType<typeof claim.readLiveGroundInspectionAnswers>>; memberName: string };
+      try {
+        const header = await claim.readGroundInspectionQuestionnaireHeader(scopeTx.tx, pid, gid);
+        const def = claim.groundInspectionVersionFor(header?.questionnaireVersionId ?? null, pid);
+        if (def === null || (header === null && !open)) throw new claim.GroundInspectionQuestionnaireUnavailableError();
+        const rows = header === null ? [] : await claim.readLiveGroundInspectionAnswers(scopeTx.tx, pid, gid);
+        const claimRow = await claim.getClaimCase(scopeTx.tx, pid, assignment.claimCaseId);
+        const memberName = claimRow
+          ? await resolvePeerRequestMemberName(scopeTx.tx, ctx.pariwarId, claimRow.deceasedMemberId, deps.encryption, request.log)
+          : '';
+        read = { def, rows, memberName };
+        ok = true;
+      } catch (err) {
+        translateGroundInspectionError(err);
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      const answers = await liveAnswerDtos(request, ctx, read!.rows);
+      emitAuthAudit(deps, request, 'admin_ground_inspection.questionnaire_read', {
+        actorId: ctx.actorId,
+        pariwarId: ctx.pariwarId,
+        context: {
+          ground_inspection_id,
+          claim_case_id: assignment.claimCaseId,
+          questionnaire_version_id: read!.def.versionId,
+          // Counts only — ⛔ a code, ⛔ a value.
+          answer_count: answers.length,
+          sensitive_answer_count: read!.rows.filter((r) => r.valueCiphertext !== null).length,
+          ...(override ? { override_actor_id: override.byActorId } : {}),
+        },
+      });
+      const body: GroundInspectionQuestionnaireResponse = {
+        groundInspectionId: ground_inspection_id,
+        questionnaire: toWireQuestionnaire(read!.def, read!.memberName),
+        open,
+        answers,
+      };
+      void reply.status(200);
+      return body;
+    },
+
+    /**
+     * PUT …/ground-inspection/:ground_inspection_id/questionnaire/answers/:questionKey — ⭐ Story 6.32 (IQ4 / IQ10; AC3, AC5) —
+     * save ONE answer. Order: the identity guard → a PRE-LOCK read transaction (the pinned version, the live answers) → the
+     * decrypt of the live sensitive answers (the illness's `showIf` parent is the cause — a ciphertext) → the pre-check (the
+     * storage form; a condition we could ⛔ evaluate because THIS question's parent would ⛔ decrypt is STALE, ⛔ a 422) → the
+     * ciphertext and the keyed code indexes (`answerCodeIndexes` — the ONE helper the neighbours' writer uses) → the WRITE
+     * transaction (`saveGroundInspectionAnswer`: assignment → claim, re-validated under the locks) → the audit line, post-commit,
+     * ONLY when something was written (key, counts — ⛔ a value). Last write wins (⛔ Idempotency-Key). ⛔ Step-up (G11).
+     */
+    async saveQuestionnaireAnswer(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
+      const ctx = adminCtx(request);
+      const { ground_inspection_id, questionKey } = request.params as { ground_inspection_id: string; questionKey: string };
+      const body = request.body as QuestionnaireAnswerBody;
+      const assignment = loadAssignment(request, ctx, ground_inspection_id);
+      const override = resolveInspectorOverride(request, ctx, assignment);
+      const pid = ids.pariwarId(ctx.pariwarId);
+      const gid = ids.groundInspectionId(ground_inspection_id);
+      const todayIst = cycleCalendar.istDateOf(new Date());
+
+      // (1) the pre-lock read
+      const pre = await openScopeTx(deps, ctx.pariwarId);
+      let preOk = false;
+      let header: Awaited<ReturnType<typeof claim.readGroundInspectionQuestionnaireHeader>> = null;
+      let rows: Awaited<ReturnType<typeof claim.readLiveGroundInspectionAnswers>> = [];
+      try {
+        header = await claim.readGroundInspectionQuestionnaireHeader(pre.tx, pid, gid);
+        rows = await claim.readLiveGroundInspectionAnswers(pre.tx, pid, gid);
+        preOk = true;
+      } finally {
+        await closeScopeTx(pre, preOk);
+      }
+      if (assignment.inspectionStage === 'certificate_check') translateGroundInspectionError(new claim.GroundInspectionQuestionnaireCertificateCheckError(ground_inspection_id));
+      const def = claim.groundInspectionVersionFor(header?.questionnaireVersionId ?? null, pid);
+      if (def === null) translateGroundInspectionError(new claim.GroundInspectionQuestionnaireUnavailableError());
+
+      // (2) the live sensitive answers, decrypted OUTSIDE any transaction (a failure is left OUT — the writer refuses STALE)
+      const decryptedLive = new Map<string, string[]>();
+      for (const row of rows) {
+        if (row.valueCiphertext === null) continue;
+        try {
+          const codes = codesOfDecrypted(await decryptGroundInspectionField(row.valueCiphertext, ctx.pariwarId, deps.encryption));
+          if (codes !== null) decryptedLive.set(row.answerId, codes);
+        } catch (err) {
+          request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id }, 'questionnaire save: a live answer could not be decrypted');
+        }
+      }
+      const live = new Map<string, readonly string[] | null>();
+      for (const row of rows) {
+        const codes = row.valueCodes ?? decryptedLive.get(row.answerId);
+        if (codes !== undefined) live.set(row.questionKey, codes);
+      }
+
+      // (3) the pre-check — to learn the storage form (the writer re-does it under its locks)
+      const served = questionnaires.servedDefinition(def!);
+      const check = questionnaires.checkAnswer(served, questionKey, { codes: body.codes }, live, todayIst);
+      if (!check.ok) {
+        const parentKey = questionnaires.questionsOf(served).find((q) => q.key === questionKey)?.showIf?.key ?? null;
+        const parentRow = parentKey === null ? undefined : rows.find((r) => r.questionKey === parentKey);
+        const parentUnreadable = parentRow !== undefined && parentRow.valueCiphertext !== null && !decryptedLive.has(parentRow.answerId);
+        translateGroundInspectionError(
+          check.reason === 'condition_not_met' && parentUnreadable
+            ? new claim.GroundInspectionQuestionnaireStaleError()
+            : new claim.GroundInspectionQuestionnaireInvalidAnswerError(check.reason),
+        );
+      }
+      const normalized = check.codes ?? [];
+
+      // (4) the ciphertext and the keyed code indexes — BEFORE the write transaction (TR2)
+      const prepared: claim.PreparedGroundInspectionAnswer =
+        check.storage.form === 'codes'
+          ? { form: 'codes', codes: check.storage.codes }
+          : {
+              form: 'encrypted',
+              ciphertext: await encryptGroundInspectionField(check.storage.plaintext, ctx.pariwarId, deps.encryption),
+              codeIndexes: await answerCodeIndexes(assignment.claimCaseId, questionKey, normalized, ctx.pariwarId, deps.encryption),
+            };
+
+      // (5) the write
+      const scopeTx = await openScopeTx(deps, ctx.pariwarId);
+      let ok = false;
+      let result: claim.SaveGroundInspectionAnswerResult;
+      try {
+        result = await claim.saveGroundInspectionAnswer(scopeTx.client, {
+          pariwarId: pid,
+          groundInspectionId: gid,
+          actingActorId: ctx.actorId,
+          ...(override ? { override } : {}),
+          questionKey,
+          codes: body.codes,
+          prepared,
+          decryptedLive,
+          todayIst,
+        });
+        ok = true;
+      } catch (err) {
+        translateGroundInspectionError(err);
+      } finally {
+        await closeScopeTx(scopeTx, ok);
+      }
+
+      // (6) the audit line — post-commit, ONLY for a write (an unchanged value is a no-op — the neighbours' S20 precedent)
+      if (result!.written) {
+        emitAuthAudit(deps, request, 'admin_ground_inspection.questionnaire_answer_saved', {
+          actorId: ctx.actorId,
+          pariwarId: ctx.pariwarId,
+          context: {
+            ground_inspection_id,
+            claim_case_id: assignment.claimCaseId,
+            question_key: questionKey,
+            questionnaire_version_id: result!.questionnaireVersionId,
+            // Counts only — ⛔ a code, ⛔ a value.
+            code_count: normalized.length,
+            superseded_dependant_count: result!.supersededDependants.length,
+            ...(override ? { override_actor_id: override.byActorId } : {}),
+          },
+        });
+      }
+      const out: GroundInspectionSaveAnswerResponse = {
+        questionKey,
+        written: result!.written,
+        supersededDependants: [...result!.supersededDependants],
+        questionnaireVersionId: result!.questionnaireVersionId,
+      };
+      void reply.status(200);
+      return out;
+    },
+
     async certificate(request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
       const ctx = adminCtx(request);
       const { ground_inspection_id } = request.params as { ground_inspection_id: string };

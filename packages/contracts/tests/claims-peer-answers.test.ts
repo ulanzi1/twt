@@ -44,13 +44,16 @@ const present = {
       // Story 6.36 (SW20) — REQUIRED; `null` for `district_cohort_v1`.
       recentChangeBeforeFiling: true,
     },
+    // ⭐ Story 6.32 (IQ7) — REQUIRED on the section, possibly empty.
+    familyAccount: [] as unknown[],
   },
 };
 
 describe('ClaimPeerAnswersResponse (Story 6.27b, PM24)', () => {
   it('`peerMesh` ABSENT (hidden), `empty`, `unavailable` and `present` are all valid', () => {
     expect(ClaimPeerAnswersResponse.safeParse({}).success).toBe(true);
-    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty' } }).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty', familyAccount: [] } }).success).toBe(true); // Story 6.32
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty' } }).success).toBe(false); // ⛔ optional — REQUIRED
     expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'unavailable' } }).success).toBe(true);
     expect(ClaimPeerAnswersResponse.safeParse(present).success).toBe(true);
   });
@@ -75,7 +78,9 @@ describe('ClaimPeerAnswersResponse (Story 6.27b, PM24)', () => {
     for (const extra of [{ valueCodes: ['not_died'] }, { neighbourName: 'Asha' }, { neighbourCount: 2 }]) {
       expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, ...extra }])).success, JSON.stringify(extra)).toBe(false);
     }
-    expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, questionKeys: ['death_cause'] }])).success).toBe(false);
+    // ⭐ Story 6.32 (AC6 — RED BY DESIGN): ③ / ④ are compared keys now; a key outside the FOUR is still refused.
+    expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, questionKeys: ['death_cause', 'death_illness'] }])).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, questionKeys: ['how_known'] }])).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, notes: [{ ...item.notes[0], note: null }] }])).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withD([{ ...item, notes: [{ ...item.notes[0], authorActorId: 'x' }] }])).success).toBe(false);
   });
@@ -115,5 +120,19 @@ describe('ClaimPeerAnswersResponse (Story 6.27b, PM24)', () => {
     const noBasis: Record<string, unknown> = { ...ping };
     delete noBasis['callbackBasis'];
     expect(ClaimPeerAnswersResponse.safeParse(withPing(noBasis)).success).toBe(false);
+  });
+});
+
+describe('Story 6.32 (IQ7; AC8) — the family account on the section', () => {
+  const visit = (answers: unknown[]) => ({ groundInspectionId: 'g', completedAt: null, answers });
+  const answer = (value: unknown) => ({ questionKey: 'head_letter', question: 'q', value, savedAt: 'x' });
+  const withF = (f: unknown) => ({ peerMesh: { ...present.peerMesh, familyAccount: f } });
+  it('REQUIRED on `present`; a value is codes + labels or `unavailable`; ⛔ a flag, ⛔ a warning, ⛔ an extra field (strict)', () => {
+    expect(ClaimPeerAnswersResponse.safeParse(withF([visit([answer({ kind: 'codes', codes: ['collected'], labels: ['Yes'] })])])).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withF([visit([answer({ kind: 'unavailable' })])])).success).toBe(true);
+    const { familyAccount: _omit, ...without } = present.peerMesh;
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: without }).success).toBe(false);
+    expect(ClaimPeerAnswersResponse.safeParse(withF([visit([{ ...answer({ kind: 'unavailable' }), warningFlag: false }])])).success).toBe(false);
+    expect(ClaimPeerAnswersResponse.safeParse(withF([{ ...visit([]), neighbourCount: 3 }])).success).toBe(false);
   });
 });

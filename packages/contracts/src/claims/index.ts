@@ -102,3 +102,5 @@ export * from './one-payment-per-death.js';
 // Story 6.27a (PM11, PM12) — the neighbours' answer screens: the member's and the helpline's list / detail / save / submit
 // shapes, mirroring the domain questionnaire's WIRE shape (a test-only lockstep — ⛔ never a domain import here).
 export * from './peer-request.js';
+// Story 6.32 — the inspector's questionnaire for the family at the ground inspection (reuses the neighbours' served shape).
+export * from './ground-inspection-questionnaire.js';

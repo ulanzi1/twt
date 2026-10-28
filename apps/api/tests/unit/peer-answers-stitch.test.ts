@@ -54,6 +54,8 @@ const section = (...answers: UnstitchedPeerMeshAnswerView[]): UnstitchedPeerMesh
     // Story 6.36 (SW20) — passed through by spread.
     recentChangeBeforeFiling: false,
   },
+  // ⭐ Story 6.32 (IQ7) — REQUIRED on the SECTION, possibly empty; the stitch passes it through by spread.
+  familyAccount: [],
 });
 const flags = (s: ReturnType<typeof stitchPeerAnswerFlags>) =>
   s.status === 'present' ? s.transcript.pings.flatMap((p) => p.reply?.answers.map((a) => a.warningFlag) ?? []) : [];
@@ -83,6 +85,14 @@ describe('stitchPeerAnswerFlags (AC8)', () => {
     if (noReply.status === 'present') noReply.transcript.pings[0] = { ...noReply.transcript.pings[0]!, reply: null };
     const stitched = stitchPeerAnswerFlags(noReply, { peerAnswerFlags: null });
     expect(stitched.status === 'present' && stitched.transcript.pings[0]!.reply).toBeNull();
+  });
+
+  it('⭐ Story 6.32 — the family account passes through UNCHANGED (⛔ stitched: it carries ⛔ warning flag), on `present` and `empty`', () => {
+    const family = [{ groundInspectionId: 'g', completedAt: null, answers: [{ questionKey: 'head_letter', question: 'q', value: { kind: 'codes' as const, codes: ['collected'], labels: ['Yes'] }, savedAt: 'x' }] }];
+    const present = { ...section(answer('has_died', A)), familyAccount: family } as UnstitchedPeerMeshSection;
+    const out = stitchPeerAnswerFlags(present, { peerAnswerFlags: null });
+    expect(out.status === 'present' && out.familyAccount).toEqual(family);
+    expect(stitchPeerAnswerFlags({ status: 'empty', familyAccount: family }, { peerAnswerFlags: null })).toEqual({ status: 'empty', familyAccount: family });
   });
 });
 

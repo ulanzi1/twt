@@ -28,6 +28,7 @@ import { bindScopedDb, type Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId, PeerMeshPingId, PeerMeshReplyId, PeerMeshSelectionId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import {
+  answerCodeIndexInputs,
   checkAnswer,
   dependantsToSupersede,
   getQuestionnaireVersion,
@@ -284,10 +285,16 @@ export function pinnedVersionFor(reply: PeerRequestRow['reply'], pariwarId: Pari
 
 // ── save ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** How the HANDLER prepared the value BEFORE the locks — plaintext codes, or a ciphertext (+ the date's three indexes). */
+/** How the HANDLER prepared the value BEFORE the locks — plaintext codes, or a ciphertext (+ the date's three indexes, or —
+ *  Story 6.32 IQ4 — the cause's / illness's keyed CODE indexes, `null` for *"I don't know"*). */
 export type PreparedPeerAnswer =
   | { readonly form: 'codes'; readonly codes: readonly string[] }
-  | { readonly form: 'encrypted'; readonly ciphertext: string; readonly dateWindowIndexes: readonly [string, string, string] | null };
+  | {
+      readonly form: 'encrypted';
+      readonly ciphertext: string;
+      readonly dateWindowIndexes: readonly [string, string, string] | null;
+      readonly codeIndexes: readonly string[] | null;
+    };
 
 export interface SavePeerAnswerInput {
   readonly pariwarId: PariwarId;
@@ -386,6 +393,14 @@ export async function savePeerAnswer(client: pg.PoolClient, input: SavePeerAnswe
   if (s.form === 'encrypted' && p.form === 'encrypted' && (s.dateWindow === null) !== (p.dateWindowIndexes === null)) {
     throw new Error('[peer-request] prepared date indexes do not match the answer');
   }
+  // ⭐ Story 6.32 (AC5) — the code indexes follow the ONE input rule (`answerCodeIndexInputs`): present ⇔ a health answer
+  // without *"I don't know"*, one per code.
+  if (p.form === 'encrypted') {
+    const expected = check.codes === null ? null : answerCodeIndexInputs(pre.claimCaseId, input.questionKey, check.codes);
+    if ((expected === null) !== (p.codeIndexes === null) || (expected !== null && expected.length !== p.codeIndexes!.length)) {
+      throw new Error('[peer-request] prepared code indexes do not match the answer');
+    }
+  }
 
   const normalized: QuestionnaireAnswerValue = check.codes === null ? input.value : { codes: check.codes };
   const current = liveValues.get(input.questionKey);
@@ -450,6 +465,7 @@ export async function savePeerAnswer(client: pg.PoolClient, input: SavePeerAnswe
     valueCodes: p.form === 'codes' ? [...p.codes] : null,
     valueCiphertext: p.form === 'encrypted' ? p.ciphertext : null,
     deathDateWindowIndexes: p.form === 'encrypted' && p.dateWindowIndexes !== null ? [...p.dateWindowIndexes] : null,
+    valueCodeIndexes: p.form === 'encrypted' && p.codeIndexes !== null ? [...p.codeIndexes] : null,
     savedVia: input.savedVia,
     savedByActorId: input.savedByActorId,
   });

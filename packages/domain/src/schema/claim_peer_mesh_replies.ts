@@ -66,6 +66,9 @@ export const claimPeerMeshReplyAnswers = pgTable(
     valueCiphertext: piiColumn(1, PEER_MESH_ANSWER_FIELD_CLASS)('value_ciphertext'),
     /** The date question ONLY: the keyed indexes of D − 1, D, D + 1 (`DEATH_DATE_INDEX_FIELD_CLASS`). */
     deathDateWindowIndexes: text('death_date_window_indexes').array(),
+    /** Story 6.32 (0188, IQ4) — the cause / illness ONLY: one keyed index per selected code (`ANSWER_CODE_INDEX_FIELD_CLASS`,
+     *  claim-scoped); NULL when the answer includes *"I don't know"* (⛔ compared). Scrubbed to NULL on erasure. */
+    valueCodeIndexes: text('value_code_indexes').array(),
     savedVia: text('saved_via').notNull().$type<PeerMeshAnswerSavedVia>(),
     /** The neighbour (app) or the operator (helpline). */
     savedByActorId: text('saved_by_actor_id').notNull(),

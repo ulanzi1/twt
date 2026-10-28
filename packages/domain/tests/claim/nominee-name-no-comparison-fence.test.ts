@@ -149,6 +149,11 @@ const FENCED_FILES = [
   // returns the neighbour's mobile ciphertext AS STORED and ⛔ never decrypts (the jobs child does, AFTER the claiming commit); it
   // reads the deceased's NAME ⛔ at all (the child resolves it before the transaction and passes only a fault code).
   'packages/domain/src/claim/peer-mesh-wa-reminder.ts',
+  // ⭐ STORY 6.32 (`-304` Q3 / Q4 A; AC6, AC11) — the inspector's questionnaire for the family: v1's definition (PURE) and the
+  // save / reads module (it stores the ciphertext the HANDLER encrypted, ⛔ decrypts, and ⛔ touches the member's medical
+  // declaration — asserted below).
+  'packages/domain/src/questionnaires/ground-inspection.ts',
+  'packages/domain/src/claim/ground-inspection-questionnaire.ts',
 ] as const;
 
 /**
@@ -198,7 +203,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(54); // Story 6.31 FROM 53 (+1 — the WhatsApp reminder's module, T15); Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(56); // Story 6.32 FROM 54 (+2 — the inspector's questionnaire definition and its save / reads module); Story 6.31 FROM 53 (+1 — the WhatsApp reminder's module, T15); Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -397,6 +402,9 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       // ciphertext the HANDLER encrypted before the transaction.
       'packages/domain/src/claim/inspection-discrepancy.ts',
       'packages/domain/src/claim/ground-inspection-persist.ts',
+      // ⭐ Story 6.32 (TR2) — the family's answers' writer stores the ciphertext and the code indexes the HANDLER computed.
+      'packages/domain/src/claim/ground-inspection-questionnaire.ts',
+      'packages/domain/src/questionnaires/ground-inspection.ts',
     ]) {
       const code = stripComments(read(f));
       // `decryptedLive` (values the handler decrypted) is the one legitimate `decrypt…` token — every DECRYPT CALL is refused.
@@ -423,7 +431,14 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // *"context only, ⛔ never compared automatically with the member's medical declaration"* — ⛔ no table, ⛔ no column,
     // ⛔ no import from the medical module.
     const FORBIDDEN = [/member_medical_disclosures/, /memberMedicalDisclosures/, /medicalDisclosure/i, /from '\.\.\/medical/];
-    for (const f of ['packages/domain/src/claim/inspection-discrepancy.ts', 'packages/domain/src/claim/ground-inspection-persist.ts']) {
+    for (const f of [
+      'packages/domain/src/claim/inspection-discrepancy.ts',
+      'packages/domain/src/claim/ground-inspection-persist.ts',
+      // ⭐ Story 6.32 (`-304` Q4 A) — the family's cause / illness are ⛔ ever compared with the member's declaration either.
+      'packages/domain/src/claim/ground-inspection-questionnaire.ts',
+      'packages/domain/src/claim/answer-code-index.ts',
+      'packages/domain/src/questionnaires/ground-inspection.ts',
+    ]) {
       const code = stripComments(read(f));
       for (const re of FORBIDDEN) expect(re.test(code), `${f} reached for ${String(re)}`).toBe(false);
     }

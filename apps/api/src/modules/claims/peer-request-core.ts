@@ -27,7 +27,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { PEER_MESH_ANSWER_FIELD_CLASS, type EncryptionDeps } from '../../context.js';
 import { ApiError, ConflictError, NotFoundError } from '../../http-errors.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
-import { deathDateBlindIndex } from './ground-inspection-crypto.js';
+import { answerCodeIndexes, deathDateBlindIndex } from './ground-inspection-crypto.js';
 
 /** The ONE not-found code on every peer-request route (member and helpline) — indistinguishable by design. */
 export const PEER_REQUEST_NOT_FOUND_CODE = 'peer_request.not_found';
@@ -259,7 +259,9 @@ export async function prepareSave(
     s.dateWindow === null
       ? null
       : ((await Promise.all(s.dateWindow.map((d) => deathDateBlindIndex(d, input.pariwarId, enc)))) as [string, string, string]);
-  return { prepared: { form: 'encrypted', ciphertext, dateWindowIndexes }, decryptedLive, stored, unchanged };
+  // ⭐ Story 6.32 (AC5) — the cause's / illness's keyed code indexes, through the ONE helper the family's writer uses.
+  const codeIndexes = check.codes === null ? null : await answerCodeIndexes(view.claimCaseId, input.questionKey, check.codes, input.pariwarId, enc);
+  return { prepared: { form: 'encrypted', ciphertext, dateWindowIndexes, codeIndexes }, decryptedLive, stored, unchanged };
 }
 
 /** The audit intent's payload hash — the ping and the question KEY only (⛔ never the value). */

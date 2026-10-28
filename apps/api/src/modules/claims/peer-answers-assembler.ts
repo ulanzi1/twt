@@ -35,8 +35,14 @@
 // Reads (each counted by `bump`, each run through `ctx.run` — the console's SAVEPOINT): the hide check, the selection, the
 // pings, the responses, the answers (one bounded statement), the inspector's discrepancy showings and notes (Story 6.27d —
 // two, per claim), and — ONLY when there is a ping — the contacts (review S25).
+// ⭐ Story 6.32 (`2026-10-28-413` IQ7 (A); AC8) — the FAMILY's account at the inspection (`familyAccount`) rides THIS section,
+// read right AFTER the hide (so a hidden reader sees ⛔ it — the section stays ONE withholding rule) and BEFORE the selection
+// (a claim with nobody to ask has ⛔ selection, and its head's letter is the answer that matters there — AC10). The SAME
+// audience as the neighbours' answers (CF2); context only — ⛔ a warning, ⛔ a flag. The cause / illness are decrypted HERE
+// and the decrypt is covered by the caller's section-read audit line (6.27a S12).
 
 import {
+  type GroundInspectionFamilyAccountVisit,
   type InspectionDiscrepancyStaffView,
   PEER_MESH_SEND_STATUSES,
   type PeerMeshAnswerView,
@@ -102,9 +108,11 @@ export type PeerSection =
   /** `cause` (code review round 2, X2) — the reader's own visit is pending (`own_visit`) or the hide check FAILED
    *  (`check_failed`, the V11 fail-closed hide); the console words its withheld staff notes by it. */
   | { readonly kind: 'hidden'; readonly cause: 'own_visit' | 'check_failed' }
-  | { readonly kind: 'no_selection' }
+  | { readonly kind: 'no_selection'; readonly familyAccount: GroundInspectionFamilyAccountVisit[] }
   | {
       readonly kind: 'present';
+      /** ⭐ Story 6.32 (IQ7) — the family's account at the inspection (decrypted here). */
+      readonly familyAccount: GroundInspectionFamilyAccountVisit[];
       readonly selection: NonNullable<Awaited<ReturnType<typeof claim.getPeerMeshSelectionByClaim>>>;
       readonly pingMemberIds: readonly string[];
       readonly responses: Awaited<ReturnType<typeof claim.getPeerMeshResponses>>;
@@ -142,9 +150,14 @@ export async function assemblePeerSection(
     return { kind: 'hidden', cause: 'check_failed' };
   }
 
+  // ⭐ Story 6.32 (IQ7) — AFTER the hide, BEFORE the selection (see the header).
+  bump();
+  const familyVisits = await run('peer_section_family_account', () => claim.readClaimFamilyAccount(ctx.db, pariwarId, claimCaseId));
+  const familyAccount = await familyAccountViews(enc, ctx.pariwarId, familyVisits, memberName, warn);
+
   bump();
   const selection = await run('peer_section_selection', () => claim.getPeerMeshSelectionByClaim(ctx.db, pariwarId, claimCaseId));
-  if (!selection) return { kind: 'no_selection' };
+  if (!selection) return { kind: 'no_selection', familyAccount };
   bump();
   const pingRows = await run('peer_section_pings', () => claim.getPeerMeshPingIntentsBySelection(ctx.db, pariwarId, selection.selectionId));
   bump();
@@ -300,7 +313,52 @@ export async function assemblePeerSection(
 
   // The section is whole — only NOW is each shown mobile reported (review S17).
   for (const { pingId, basis } of shown) ctx.onCallbackMobileShown(pingId, basis);
-  return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings, inspectionDiscrepancies };
+  return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings, inspectionDiscrepancies, familyAccount };
+}
+
+/**
+ * ⭐ Story 6.32 (IQ7; AC8) — the family's account as staff see it: each answer with its question's and options' English
+ * words from the visit's PINNED version; a ciphertext decrypted HERE (the cause / illness — a JSON code list); erased (the
+ * sentinel), undecryptable or unparseable ⇒ `unavailable`, ⛔ never blank, ⛔ never the sentinel text.
+ */
+async function familyAccountViews(
+  enc: EncryptionDeps,
+  pariwarId: string,
+  visits: readonly claim.ClaimFamilyAccountVisit[],
+  memberName: string,
+  warn: (what: string, err: unknown) => void,
+): Promise<GroundInspectionFamilyAccountVisit[]> {
+  const out: GroundInspectionFamilyAccountVisit[] = [];
+  for (const visit of visits) {
+    const def = questionnaires.getQuestionnaireVersion(visit.questionnaireVersionId);
+    const answers: GroundInspectionFamilyAccountVisit['answers'] = [];
+    for (const a of visit.answers) {
+      const q = def === null ? undefined : questionnaires.questionsOf(def).find((x) => x.key === a.questionKey);
+      const labelOf = (code: string) => {
+        const o = q?.options.find((x) => x.code === code);
+        return o === undefined ? code : enWords(o.copyKey, memberName);
+      };
+      let codes: readonly string[] | null = a.valueCodes;
+      if (codes === null && a.valueCiphertext !== null) {
+        try {
+          const plain = await decryptGroundInspectionField(a.valueCiphertext, pariwarId, enc);
+          const parsed: unknown = plain === memberDomain.ANONYMIZED_SENTINEL ? null : JSON.parse(plain);
+          codes = Array.isArray(parsed) && parsed.every((c) => typeof c === 'string') ? (parsed as string[]) : null;
+        } catch (err) {
+          warn('family_answer', err);
+          codes = null;
+        }
+      }
+      answers.push({
+        questionKey: a.questionKey,
+        question: q === undefined ? a.questionKey : enWords(q.copyKey, memberName),
+        value: codes === null ? { kind: 'unavailable' } : { kind: 'codes', codes: [...codes], labels: codes.map(labelOf) },
+        savedAt: a.savedAt.toISOString(),
+      });
+    }
+    out.push({ groundInspectionId: visit.groundInspectionId, completedAt: visit.completedAt?.toISOString() ?? null, answers });
+  }
+  return out;
 }
 
 /**
@@ -332,7 +390,7 @@ export async function assemblePeerMeshSection(
   try {
     const section = await assemble();
     if (section.kind === 'hidden') return undefined;
-    if (section.kind === 'no_selection') return { status: 'empty' };
+    if (section.kind === 'no_selection') return { status: 'empty', familyAccount: section.familyAccount };
     const { selection, responses } = section;
     return {
       status: 'present',
@@ -352,6 +410,8 @@ export async function assemblePeerMeshSection(
         // Story 6.36 (SW20) — the staff line, from the selection row in hand; `null` for `district_cohort_v1`.
         recentChangeBeforeFiling: selection.recentChangeBeforeFiling ?? null,
       },
+      // ⭐ Story 6.32 (IQ7) — REQUIRED, possibly empty.
+      familyAccount: section.familyAccount,
     };
   } catch (err) {
     opts.log?.warn({ err, claimCaseId: opts.claimCaseId }, 'peer-answers: the peer-mesh section is unavailable');

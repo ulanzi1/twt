@@ -3,7 +3,7 @@
 // encryption are the HANDLER's (⛔ no KMS under a lock — Trap 9).
 
 import { addCalendarDays, isRealCalendarDate } from '../cycle-calendar/holiday-resolver.js';
-import { DATE_UNKNOWN_CODE, EARLIEST_ANSWER_DATE } from './keys.js';
+import { DATE_UNKNOWN_CODE, DONT_KNOW_CODE, EARLIEST_ANSWER_DATE, PEER_MESH_HEALTH_QUESTION_KEYS } from './keys.js';
 import { questionsOf } from './registry.js';
 import type { QuestionDefinition, QuestionnaireAnswerValue, QuestionnaireDefinition } from './types.js';
 
@@ -121,4 +121,18 @@ export function dependantsToSupersede(
     }
   }
   return out;
+}
+
+/**
+ * ⭐ Story 6.32 (`2026-10-28-413` IQ4) — the plaintexts of a health answer's keyed CODE indexes, ONE per selected code:
+ * `${claimCaseId}|${questionKey}|${code}` (claim-scoped — the same cause on two claims hashes differently). `null` — store
+ * ⛔ indexes — when the key is ⛔ a health question (`death_cause` / `death_illness`), or the answer includes *"I don't know"*
+ * (so it is ⛔ ever compared; decided HERE at write time, ⛔ by reading a ciphertext). Built from `checkAnswer`'s normalized
+ * top-level `codes` (⛔ its `plaintext` JSON). The ONE input rule for BOTH writers (the neighbours' and the family's); the
+ * HANDLER hashes each under `ANSWER_CODE_INDEX_FIELD_CLASS` before any lock.
+ */
+export function answerCodeIndexInputs(claimCaseId: string, questionKey: string, codes: readonly string[]): string[] | null {
+  if (!(PEER_MESH_HEALTH_QUESTION_KEYS as readonly string[]).includes(questionKey)) return null;
+  if (codes.length === 0 || codes.includes(DONT_KNOW_CODE)) return null;
+  return codes.map((code) => `${claimCaseId.toLowerCase()}|${questionKey}|${code}`);
 }

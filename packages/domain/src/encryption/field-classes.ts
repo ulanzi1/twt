@@ -91,6 +91,18 @@ export const CLAIM_CONTACT_MOBILE_FIELD_CLASS = 'claim_contact_mobile';
 export const DEATH_DATE_INDEX_FIELD_CLASS = 'death_date';
 
 /**
+ * ⭐ NEW (Story 6.32, `2026-10-28-413` IQ4) — the keyed-hash class of ONE option code of a health answer (the cause, the
+ * illness), bound to the claim's REAL `pariwarId`. The hashed value is `${claimCaseId}|${questionKey}|${code}`
+ * (`questionnaires.answerCodeIndexInputs`) — the claim case id and the key are IN it, so equal answers on two claims hash
+ * DIFFERENTLY (unlike the date index, which is deliberately cross-claim). It indexes BOTH the neighbours' answers
+ * (`claim_peer_mesh_reply_answers.value_code_indexes`) and the family's at the inspection
+ * (`claim_ground_inspection_answers.value_code_indexes`), so the inspector's discrepancy compares ③ / ④ without a decrypt.
+ * ⚠ ONE literal (TR3) — a second would make every overlap empty and prompt EVERY visit with a ③ difference. ⛔ Never
+ * re-declare it, and ⛔ no by-value twin (a grep pin, Story 6.32 AC5).
+ */
+export const ANSWER_CODE_INDEX_FIELD_CLASS = 'answer_code';
+
+/**
  * ⭐ NEW (Story 11b.4, MA5 / MA15) — the family memorial's Tier-1 field class: the family's words, the photo's alt text
  * (`memorial_submissions`) and the reviewer's internal notes (`memorial_review_decisions`, `memorial_withdrawals`). Keys
  * on the deceased member's REAL `pariwarId`; matches `piiColumn(1, MEMORIAL_FIELD_CLASS)`. Declared ONCE here — the

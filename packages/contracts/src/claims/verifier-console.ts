@@ -273,7 +273,8 @@ export type PeerMeshPingView = z.output<typeof PeerMeshPingView>;
  * display name, labelled "Recorded after the difference was shown". A note that could ⛔ be decrypted (or was erased) is
  * `{ status: 'unavailable' }`, ⛔ never blank.
  */
-export const INSPECTION_DISCREPANCY_QUESTION_KEYS = ['has_died', 'death_date'] as const;
+// ⭐ Story 6.32 (AC6 / AC11): + ③ `death_cause` / ④ `death_illness` — ⚠ LOCKSTEP with the domain's twin and 0160's CHECKs (0188).
+export const INSPECTION_DISCREPANCY_QUESTION_KEYS = ['has_died', 'death_date', 'death_cause', 'death_illness'] as const;
 export const InspectionDiscrepancyStaffNote = z
   .object({
     questionKey: z.enum(INSPECTION_DISCREPANCY_QUESTION_KEYS),
@@ -321,9 +322,40 @@ export const PeerMeshTranscript = z
   .strict();
 export type PeerMeshTranscript = z.output<typeof PeerMeshTranscript>;
 
+/**
+ * ⭐ Story 6.32 (`2026-10-28-413` IQ7 (A); AC8, AC10) — the FAMILY's account at the ground inspection, as staff see it: per
+ * COMPLETED FULL visit that recorded any, the live answers to the inspector's questionnaire (the head's letter; the cause
+ * and illness once counsel's basis is recorded), each with its question's and options' English words. A value that could
+ * ⛔ be decrypted (or was erased) is `unavailable`, ⛔ never blank. CONTEXT ONLY — ⛔ a warning, ⛔ a flag (`-304` Q3 A).
+ * It rides the neighbours' section — the SAME audience (CF2) and the SAME hide (a hidden reader gets the whole section
+ * absent) — on BOTH `present` and `empty` (a claim with nobody to ask has ⛔ selection, and its letter is the one that matters).
+ */
+export const GroundInspectionFamilyAnswerView = z
+  .object({
+    questionKey: z.string(),
+    /** The question's English words (the admin console is English-only). */
+    question: z.string(),
+    value: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('codes'), codes: z.array(z.string()), labels: z.array(z.string()) }).strict(),
+      z.object({ kind: z.literal('unavailable') }).strict(),
+    ]),
+    savedAt: z.string(),
+  })
+  .strict();
+export type GroundInspectionFamilyAnswerView = z.output<typeof GroundInspectionFamilyAnswerView>;
+export const GroundInspectionFamilyAccountVisit = z
+  .object({
+    groundInspectionId: z.string(),
+    completedAt: z.string().nullable(),
+    answers: z.array(GroundInspectionFamilyAnswerView),
+  })
+  .strict();
+export type GroundInspectionFamilyAccountVisit = z.output<typeof GroundInspectionFamilyAccountVisit>;
+
 export const PeerMeshSection = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('present'), transcript: PeerMeshTranscript }).strict(),
-  z.object({ status: z.literal('empty') }).strict(),
+  // ⭐ Story 6.32 — `familyAccount` REQUIRED (possibly empty) on `present` AND `empty` (⛔ optional — an absent key would hide a defect).
+  z.object({ status: z.literal('present'), transcript: PeerMeshTranscript, familyAccount: z.array(GroundInspectionFamilyAccountVisit) }).strict(),
+  z.object({ status: z.literal('empty'), familyAccount: z.array(GroundInspectionFamilyAccountVisit) }).strict(),
   z.object({ status: z.literal('unavailable') }).strict(),
 ]);
 export type PeerMeshSection = z.output<typeof PeerMeshSection>;

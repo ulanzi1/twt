@@ -40,6 +40,7 @@ import {
   claimGroundInspections,
   claimPeerMeshReplyAnswers,
   claimGroundInspectionDiscrepancyNotes,
+  claimGroundInspectionAnswers,
   claims,
   memberKnownPeople,
   memberNomineeLinks,
@@ -146,7 +147,8 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     return found.set;
   }
 
-  it('updates exactly the TWENTY-SIX member tables (twenty-nine statements), once each except the three documented doubles', async () => {
+  // ⭐ Story 6.32 (AC9): the title corrected — it named twenty-six / twenty-nine while the pins below said 27 / 30 (now 28 / 31).
+  it('updates exactly the TWENTY-EIGHT member tables (thirty-one statements), once each except the three documented doubles', async () => {
     // Seven since Story 10.10's review pass added `member_moderation_actions`; EIGHT since Story
     // 10.20 added `member_moderation_grounds`. This count is the completeness check for the RTBF
     // surface — a new Tier-1 column landing in a table absent from this list is exactly how the
@@ -244,8 +246,11 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // the member — `memorial_submissions` (the family's words + the photo's alt text, Tier-1), `memorial_review_decisions`
     // and `memorial_withdrawals` (the reviewer's internal notes, Tier-1) — keyed on `deceased_member_id`, ONE statement
     // each, read FIRST and run whatever the member's claims (⛔ inside the has-claims block). Raised, never weakened.
+    // ⭐ MOVED AGAIN by Story 6.32 (AC9): TWENTY-EIGHT tables, THIRTY-ONE statements. `claim_ground_inspection_answers` — the
+    // FAMILY's cause and illness at the inspection (Tier-1) + their keyed code indexes — ONE statement inside the has-claims
+    // block. The neighbours' new `value_code_indexes` rides THEIR existing statement (⛔ a new one).
     const { captured } = await run();
-    expect(captured).toHaveLength(30);
+    expect(captured).toHaveLength(31);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -269,6 +274,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       claimGroundInspections,
       claimPeerMeshReplyAnswers,
       claimGroundInspectionDiscrepancyNotes,
+      claimGroundInspectionAnswers,
       workplaceRequests,
       memberKnownPeople,
       memberNomineeLinks,
@@ -287,7 +293,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(27); // Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(28); // Story 6.32 (AC9) — 27 → 28: `claim_ground_inspection_answers`; Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -320,6 +326,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
+    expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionAnswers); // Story 6.32 — ⛔ claims, ⛔ family answers
     expect(captured).toHaveLength(27); // Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
   });
 
@@ -384,6 +391,24 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     const { sql: text, params } = new PgDialect().sqlToQuery(found.where as SQL);
     expect(text).toMatch(/"claim_ground_inspection_discrepancy_notes"\."claim_case_id" in \(/);
     expect(text).toMatch(/"claim_ground_inspection_discrepancy_notes"\."note_ciphertext" is not null/);
+    for (const id of claimIds) expect(params).toContain(id);
+  });
+
+  it('⭐ Story 6.32 (AC9): the family\'s cause / illness → the inspection block\'s sentinel, the code indexes → NULL — ONLY rows with a ciphertext, on the deceased\'s claims', async () => {
+    const claimIds = [randomUUID(), randomUUID()];
+    const { captured, pariwar } = await run(claimIds);
+    const found = captured.filter((c) => c.table === claimGroundInspectionAnswers);
+    expect(found).toHaveLength(1);
+    const { set, where } = found[0]!;
+    expect(Object.keys(set).sort()).toEqual(['valueCiphertext', 'valueCodeIndexes']);
+    // The SAME field class as the inspection block's sentinel (IQ5 — ⛔ a new class).
+    expect(await dec(set.valueCiphertext, pariwar, 'ground_inspection')).toBe(ANONYMIZED_SENTINEL);
+    expect(set.valueCiphertext).toBe(setFor(captured, claimGroundInspections).deathDateCiphertext);
+    expect(set.valueCodeIndexes).toBeNull();
+    const { sql: text, params } = new PgDialect().sqlToQuery(where as SQL);
+    expect(text).toMatch(/"claim_ground_inspection_answers"\."claim_case_id" in \(/);
+    // ⚠ ONLY rows with a ciphertext — the head's-letter row keeps its plaintext codes (0188's one-value CHECK).
+    expect(text).toMatch(/"claim_ground_inspection_answers"\."value_ciphertext" is not null/);
     for (const id of claimIds) expect(params).toContain(id);
   });
 
@@ -594,6 +619,9 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     const found = captured.find((c) => c.table === claimPeerMeshReplyAnswers)!;
     expect(await dec(found.set.valueCiphertext, pariwar, 'peer_mesh_answer')).toBe(ANONYMIZED_SENTINEL);
     expect(found.set.deathDateWindowIndexes).toBeNull();
+    // ⭐ Story 6.32 (AC9, TR14) — the cause's / illness's keyed code indexes → NULL in the SAME statement (0188's guard admits it).
+    expect(found.set.valueCodeIndexes).toBeNull();
+    expect(Object.keys(found.set).sort()).toEqual(['deathDateWindowIndexes', 'valueCiphertext', 'valueCodeIndexes']);
     // ⛔ The codes, the question, the provenance and the supersession are kept.
     expect(found.set).not.toHaveProperty('valueCodes');
     expect(found.set).not.toHaveProperty('supersededAt');

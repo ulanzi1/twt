@@ -13,5 +13,6 @@ export * from './types.js';
 export * from './keys.js';
 export * from './validator.js';
 export * from './peer-mesh.js';
+export * from './ground-inspection.js';
 export * from './registry.js';
 export * from './answers.js';

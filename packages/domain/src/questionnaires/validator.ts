@@ -9,14 +9,22 @@
 //   · ⛔ no alcohol question key, option or copy key (`-304` Q5 A);
 //   · a `health: true` question carries a `counselBasis` (`'pending'` or a decision id); a non-health one carries none;
 //   · `showIf` refers only to an EARLIER key and to its real codes; keys and codes unique; pages of 1–3 questions;
-//   · Story 6.27b (`-329`) — `callbackAudience` on `callback_consent` (one of `CALLBACK_AUDIENCES`), and ONLY there.
+//   · Story 6.27b (`-329`) — `callbackAudience` on `callback_consent` (one of `CALLBACK_AUDIENCES`), and ONLY there;
+//   · Story 6.32 (`2026-10-28-413` IQ1) — `ground_inspection`, EVERY version: the three ruled keys (I4); EVERY question
+//     optional (I1 — nothing gates an inspection); cause and illness `health` + `sensitive` with the neighbours' CODES
+//     (PM23 (a)); the head's letter ⛔ sensitive / health, codes `collected` / `not_collected`.
 // ⛔ PURE.
 
 import {
   DATE_UNKNOWN_CODE,
+  DEATH_CAUSE_CODES,
+  DEATH_ILLNESS_CODES,
   DECISION_ID_RE,
   FORBIDDEN_TOPIC_RE,
+  GROUND_INSPECTION_RULED_QUESTION_KEYS,
+  GROUND_INSPECTION_SENSITIVE_QUESTION_KEYS,
   HAS_DIED_CODES,
+  HEAD_LETTER_CODES,
   PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS,
   PEER_MESH_HEALTH_QUESTION_KEYS,
   PEER_MESH_RULED_QUESTION_KEYS,
@@ -182,7 +190,43 @@ export function questionnaireDefinitionProblems(def: QuestionnaireDefinition): s
       if (earlier.has(key) && earlier.get(key)?.sensitive !== true) problems.push(`the Tier-1 question '${key}' is sensitive`);
     }
   }
+  if (def.kind === 'ground_inspection') groundInspectionProblems(earlier, problems);
   return problems;
+}
+
+/** The ruled codes of each ruled `ground_inspection` question (the health ones shared with `peer_mesh`). */
+const GROUND_INSPECTION_RULED_CODES: Readonly<Record<string, readonly string[]>> = {
+  head_letter: HEAD_LETTER_CODES,
+  death_cause: DEATH_CAUSE_CODES,
+  death_illness: DEATH_ILLNESS_CODES,
+};
+
+/** Story 6.32 — the `ground_inspection` rule, applied to EVERY version (⛔ a v1 exemption: there is no history to keep). */
+function groundInspectionProblems(questions: ReadonlyMap<string, QuestionDefinition>, problems: string[]): void {
+  // CF3 (a) / I4 — every ruled key, in every version.
+  for (const key of GROUND_INSPECTION_RULED_QUESTION_KEYS) {
+    if (!questions.has(key)) problems.push(`the ruled question '${key}' is missing (CF3 (a))`);
+  }
+  for (const q of questions.values()) {
+    // I1 — the questionnaire gates ⛔ nothing: a chain-added question (row 6-33) inherits this.
+    if (!q.optional) problems.push(`question '${q.key}': every ground_inspection question is optional`);
+    const ruled = GROUND_INSPECTION_RULED_CODES[q.key];
+    if (ruled !== undefined && q.options.map((o) => o.code).join(',') !== ruled.join(',')) {
+      problems.push(q.key === 'head_letter' ? `'head_letter' is single with codes ${ruled.join(', ')}` : `'${q.key}' has the ruled codes (the neighbours')`);
+    }
+  }
+  const letter = questions.get('head_letter');
+  if (letter !== undefined) {
+    if (letter.kind !== 'single') problems.push(`'head_letter' is single with codes ${HEAD_LETTER_CODES.join(', ')}`);
+    if (letter.sensitive || letter.health) problems.push(`'head_letter' is ⛔ sensitive or health`);
+  }
+  // `!== true` (U12) — an OMITTED flag is refused too.
+  for (const key of GROUND_INSPECTION_SENSITIVE_QUESTION_KEYS) {
+    const q = questions.get(key);
+    if (q === undefined) continue;
+    if (q.health !== true) problems.push(`the ruled health question '${key}' is health: true`);
+    if (q.sensitive !== true) problems.push(`the Tier-1 question '${key}' is sensitive`);
+  }
 }
 
 /** Throw `QuestionnaireDefinitionInvalidError` unless `def` is valid. */

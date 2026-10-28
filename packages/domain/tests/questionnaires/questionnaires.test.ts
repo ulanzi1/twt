@@ -13,6 +13,7 @@ import { isRealCalendarDate as leafIsReal } from '../../src/cycle-calendar/holid
 import { isRealCalendarDate as persistIsReal } from '../../src/claim/nominee-determination-persist.js';
 import {
   COMPARABLE_QUESTION_KEYS,
+  GROUND_INSPECTION_QUESTIONNAIRE_V1,
   PEER_MESH_QUESTIONNAIRE_V1,
   PEER_MESH_QUESTIONNAIRE_V2,
   PEER_MESH_QUESTIONNAIRE_V3,
@@ -78,8 +79,10 @@ describe('the registry (PM23 (a) / (b))', () => {
   });
   // ⭐ Story 6.27b (Task 3c; `-328` read with `-329`) — v3 was LIVE; ⭐ Story 6.36 (AC16; `-331` SC4 A) — v4 is LIVE and v3
   // historical, exactly as v1 and v2 (RED BY DESIGN: this leg named v3 as live — amended by NAMING v4, ⛔ loosened).
+  // ⭐ Story 6.32 (AC1 / AC11 — RED BY DESIGN): the registry gains `ground_inspection.v1` (LIVE), so the exact list NAMES it
+  // and `resolveLiveVersion('ground_inspection')` returns it (it was `null`) — amended by naming, ⛔ loosened.
   it('v1, v2, v3 and v4 are registered and valid; v4 is LIVE; v1, v2 and v3 are historical and ⛔ never returned by resolveLiveVersion', () => {
-    expect(QUESTIONNAIRE_REGISTRY.map((d) => d.versionId)).toEqual(['peer_mesh.v1', 'peer_mesh.v2', 'peer_mesh.v3', 'peer_mesh.v4']);
+    expect(QUESTIONNAIRE_REGISTRY.map((d) => d.versionId)).toEqual(['peer_mesh.v1', 'peer_mesh.v2', 'peer_mesh.v3', 'peer_mesh.v4', 'ground_inspection.v1']);
     for (const d of QUESTIONNAIRE_REGISTRY) expect(questionnaireDefinitionProblems(d)).toEqual([]);
     expect(getQuestionnaireVersion('peer_mesh.v1')).toBe(PEER_MESH_QUESTIONNAIRE_V1);
     expect(getQuestionnaireVersion('peer_mesh.v2')).toBe(PEER_MESH_QUESTIONNAIRE_V2);
@@ -91,7 +94,7 @@ describe('the registry (PM23 (a) / (b))', () => {
     expect(PEER_MESH_QUESTIONNAIRE_V4.status).toBe('live');
     expect(resolveLiveVersion('peer_mesh', PARIWAR)).toBe(PEER_MESH_QUESTIONNAIRE_V4);
     expect(getQuestionnaireVersion('peer_mesh.v9')).toBeNull();
-    expect(resolveLiveVersion('ground_inspection', PARIWAR)).toBeNull();
+    expect(resolveLiveVersion('ground_inspection', PARIWAR)).toBe(GROUND_INSPECTION_QUESTIONNAIRE_V1);
   });
   it('v1 is EXEMPT from the seven-key rule (it lacks five of them and is still valid)', () => {
     const keys = questionsOf(PEER_MESH_QUESTIONNAIRE_V1).map((q) => q.key);

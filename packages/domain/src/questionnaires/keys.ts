@@ -43,6 +43,45 @@ export const PEER_MESH_SENSITIVE_QUESTION_KEYS = ['death_date', ...PEER_MESH_HEA
  */
 export const COMPARABLE_QUESTION_KEYS = ['has_died', 'death_date', 'death_cause', 'death_illness'] as const;
 
+/**
+ * The ruled CODES of the two health questions (`-304` Q3 A / Q4 A) — ONE list, read by BOTH kinds: the neighbours'
+ * definitions (`peer-mesh.ts`) and the inspector's (`ground-inspection.ts`), so the family's and a neighbour's answers
+ * share codes (PM23 (a): *"the SAME keys and codes wherever BOTH sides answer"*). The `ground_inspection` validator
+ * refuses a version whose options differ (Story 6.32 AC1).
+ */
+export const DEATH_CAUSE_CODES = ['illness_long', 'illness_sudden', 'old_age', 'accident', 'suicide', 'killed', 'other', 'dont_know'] as const;
+export const DEATH_ILLNESS_CODES = [
+  'cancer',
+  'heart_disease',
+  'diabetes',
+  'kidney_disease',
+  'liver_disease',
+  'tb',
+  'stroke_paralysis',
+  'lung_disease',
+  'other',
+  'dont_know',
+] as const;
+
+/** *"I don't know"* on a health question — an answer that includes it is ⛔ never compared (PM25; Story 6.32 IQ4). */
+export const DONT_KNOW_CODE = 'dont_know' as const;
+
+/**
+ * Story 6.32 (`2026-10-28-413` IQ1) — the questions EVERY `ground_inspection` version carries (I4; CF3 (a)): the head's
+ * letter (`-310` CF4 A (3), asked on every full visit — `-330` SW25) and the family's cause and illness (`-304` Q3 A /
+ * Q4 A, *"the inspector asks the family the same"*). Every one is OPTIONAL (I1 — nothing gates; the validator holds it).
+ */
+export const GROUND_INSPECTION_RULED_QUESTION_KEYS = ['head_letter', 'death_cause', 'death_illness'] as const;
+
+/** The head's-letter codes (IQ3 (A): ONLY the answer is recorded — ⛔ the letter's photograph). */
+export const HEAD_LETTER_CODES = ['collected', 'not_collected'] as const;
+
+/**
+ * The family's Tier-1 answers — ⚠ LOCKSTEP with the Story 6.32 migration's
+ * `claim_ground_inspection_answers_sensitive_encrypted_check` (a policy-spec leg pins the two equal).
+ */
+export const GROUND_INSPECTION_SENSITIVE_QUESTION_KEYS = PEER_MESH_HEALTH_QUESTION_KEYS;
+
 /** The `has_died` codes — the event mapping (`claim/peer-mesh-reply.ts`) reads exactly these four. */
 export const HAS_DIED_CODES = ['died', 'not_died', 'not_sure', 'did_not_know'] as const;
 export type HasDiedCode = (typeof HAS_DIED_CODES)[number];
@@ -58,13 +97,16 @@ export const EARLIEST_ANSWER_DATE = '1900-01-01' as const;
  * decision id — `2026-10-13-328` (the call-back question's new words), read with its erratum `-329` (⛔ itself not
  * Panel-ratified, so ⛔ listed). ⛔ No v4 before row 6-33 except from a Panel decision id — adding one here is a reviewed
  * code edit that cites it. ⭐ Story 6.36: `2026-10-14-331` (Trustee-ratified — SC4 A: *"school or office", in the next
- * version (answers already given keep their words)*) — v4's relationship option words.
+ * version (answers already given keep their words)*) — v4's relationship option words. ⭐ Story 6.32 (`2026-10-28-413`
+ * IQ1): `2026-10-10-310` (Trustee-ratified — CF4 A (3): *"the inspector collects a letter from the head of the school or
+ * office"*) — the inspector's `head_letter` question.
  */
 export const PANEL_RATIFIED_QUESTIONNAIRE_DECISIONS = [
   '2026-09-28-262',
   '2026-09-28-263',
   '2026-10-10-303',
   '2026-10-10-304',
+  '2026-10-10-310',
   '2026-10-13-328',
   '2026-10-14-331',
 ] as const;

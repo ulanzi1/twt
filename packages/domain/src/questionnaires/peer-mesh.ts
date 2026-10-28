@@ -27,6 +27,7 @@
 //   v2 / v3's words). Every other question keeps v3's provenance and `counselBasis` (6.27c AC2b's health hold unchanged).
 // ⛔ PURE.
 
+import { DEATH_CAUSE_CODES, DEATH_ILLNESS_CODES, DONT_KNOW_CODE } from './keys.js';
 import type { QuestionDefinition, QuestionnaireDefinition, QuestionOption } from './types.js';
 
 const NS = 'peer_request_questions';
@@ -133,16 +134,7 @@ export const PEER_MESH_QUESTIONNAIRE_V2: QuestionnaireDefinition = {
           key: 'death_cause',
           kind: 'single',
           copyKey: `${NS}.death_cause.question`,
-          options: opts('death_cause', [
-            'illness_long',
-            'illness_sudden',
-            'old_age',
-            'accident',
-            'suicide',
-            'killed',
-            'other',
-            'dont_know',
-          ]),
+          options: opts('death_cause', DEATH_CAUSE_CODES),
           optional: true,
           showIf: { key: 'has_died', anyOf: ['died'] },
           sensitive: true,
@@ -155,11 +147,7 @@ export const PEER_MESH_QUESTIONNAIRE_V2: QuestionnaireDefinition = {
           key: 'death_illness',
           kind: 'multi',
           copyKey: `${NS}.death_illness.question`,
-          options: opts(
-            'death_illness',
-            ['cancer', 'heart_disease', 'diabetes', 'kidney_disease', 'liver_disease', 'tb', 'stroke_paralysis', 'lung_disease', 'other', 'dont_know'],
-            ['dont_know'],
-          ),
+          options: opts('death_illness', DEATH_ILLNESS_CODES, [DONT_KNOW_CODE]),
           optional: true,
           showIf: { key: 'death_cause', anyOf: ['illness_long', 'illness_sudden'] },
           sensitive: true,

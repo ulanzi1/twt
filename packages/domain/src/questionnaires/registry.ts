@@ -7,6 +7,7 @@
 //   `pendingCounselBasisKeys(live)` is non-empty, so the skip ⛔ never reaches a texted neighbour.
 // Every registered definition is VALIDATED at module load — a broken version fails the boot, ⛔ never a member.
 
+import { GROUND_INSPECTION_QUESTIONNAIRE_V1 } from './ground-inspection.js';
 import {
   PEER_MESH_QUESTIONNAIRE_V1,
   PEER_MESH_QUESTIONNAIRE_V2,
@@ -22,6 +23,7 @@ export const QUESTIONNAIRE_REGISTRY: readonly QuestionnaireDefinition[] = [
   PEER_MESH_QUESTIONNAIRE_V2,
   PEER_MESH_QUESTIONNAIRE_V3,
   PEER_MESH_QUESTIONNAIRE_V4,
+  GROUND_INSPECTION_QUESTIONNAIRE_V1,
 ];
 
 for (const def of QUESTIONNAIRE_REGISTRY) assertValidQuestionnaireDefinition(def);
@@ -39,8 +41,8 @@ export function getQuestionnaireVersion(
 }
 
 /**
- * The LIVE version of `kind` for `pariwarId` — the Pariwar's own, else the all-Pariwar one; `null` when ⛔ none (e.g.
- * `ground_inspection` until row 6-32). Two live versions at the same level is a registry defect (throws).
+ * The LIVE version of `kind` for `pariwarId` — the Pariwar's own, else the all-Pariwar one; `null` when ⛔ none (Story
+ * 6.32 IQ12: the inspector's screen then shows ⛔ questionnaire panel). Two live versions at the same level is a registry defect (throws).
  */
 export function resolveLiveVersion(
   kind: QuestionnaireKind,

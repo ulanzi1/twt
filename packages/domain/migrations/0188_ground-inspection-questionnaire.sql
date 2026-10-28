@@ -89,7 +89,9 @@ CREATE INDEX "claim_gi_answers_claim_idx" ON "claim_ground_inspection_answers" U
 
 -- ── (1) + (2) the guards — invoker functions (under FORCE RLS a trigger sees its parent only in scope — 0156's form) ──────
 -- The parent: `scheduled`, ⛔ a `certificate_check` (a certificate check asks the family ⛔ nothing — IQ10), and the claim in the
--- answer window. ONE helper, read by both tables' guards.
+-- answer window. ONE helper, read by both tables' guards. ⚠ The enums are compared AS TEXT: a `LANGUAGE sql` body is validated
+-- at CREATE, and on a FRESH database the migrator applies every migration in ONE transaction — `certificate_check` was ADDED
+-- to its enum by an earlier migration, and a value added in the same transaction cannot be used (55P04).
 CREATE FUNCTION claim_gi_questionnaire_open(p_pariwar_id uuid, p_ground_inspection_id uuid, p_claim_case_id uuid)
 RETURNS boolean LANGUAGE sql STABLE AS $$
   SELECT EXISTS (
@@ -97,8 +99,8 @@ RETURNS boolean LANGUAGE sql STABLE AS $$
      WHERE gi.pariwar_id = p_pariwar_id
        AND gi.ground_inspection_id = p_ground_inspection_id
        AND gi.claim_case_id = p_claim_case_id
-       AND gi.status = 'scheduled'
-       AND gi.inspection_stage <> 'certificate_check'
+       AND gi.status::text = 'scheduled'
+       AND gi.inspection_stage::text <> 'certificate_check'
   ) AND claim_peer_mesh_answer_window_open(p_pariwar_id, p_claim_case_id);
 $$;
 --> statement-breakpoint

@@ -39,7 +39,7 @@ LETTERS: G = found facts (traced at the pin) · IQ = build decisions (PROPOSED) 
 
 # Story 6.32: The Inspector Asks the Family a Short Questionnaire — How the Member Died, Which Illness, and the Head's Letter — Saved as They Go, Compared Without Decrypting to What the Neighbours Said, and Shown to Staff as Context Only `[SURFACE]` `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -512,6 +512,81 @@ as the question was put. `-413` supersedes `-308` call 2 in part (IQ13) and `-31
       8.5 `pnpm ci:local`; 8.6 fix-diff review.
 - [x] **Task 9 — records (AC13).** 9.1 Row 42 evidence; 9.2 deferred-work discharge/annotation (exact language); 9.3 correct the two stale source comments (G16); 9.4 the W1 note
       ("trigger not pulled"); 9.5 Change Log + File List + the ledger entry (safe prepend — [[project_sprint_status_safe_prepend]]).
+
+### Review Findings
+
+Full three-layer code review, 2026-10-28, at `6bf6b5a3` against `main` (`64e01121`): Blind Hunter, Edge Case Hunter, Acceptance Auditor.
+After deduplication: **0 decision-needed, 7 patch, 0 defer; 1 candidate dismissed**. All retained items are **MEDIUM / P2**; R6 and R7
+are verification gaps, not demonstrated runtime bypasses. No Trustee Panel decision is needed. Product code was not changed by this review.
+
+**Disposition (BigDev, 2026-10-28): option 2 — leave all seven findings as action items.** R1–R7 remain unchecked; no patches were applied.
+The story status is `in-progress`, matching its sprint row; Task 8 and the real-browser evidence remain open.
+
+- [ ] [Review][Patch] **R1 — Warn before in-app transitions discard unsaved answers (MEDIUM; blind + edge).** The only leave guard is
+  `beforeunload`; loading another claim or navigating within the app does not fire it. Unmount calls `editor.dispose()`, which clears queued edits.
+  Completing the visit also removes the panel; completion can obtain the assignment lock before a queued/retrying save, after which the answer is
+  refused as `not_active` and its draft disappears. Coordinate pending edits with these transitions: preserve/drain them where possible, or obtain
+  explicit confirmation before discarding them. Keep completion possible with zero answers (I1); do not make any answer mandatory. Add regression
+  coverage for both a claim/route change and completion during an outstanding save. **AC7, IQ8 (A).**
+  [apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx:158; apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:468]
+- [ ] [Review][Patch] **R2 — Allow recovery from an unreadable saved answer (MEDIUM; blind + edge).** The writer requires decrypted codes for
+  every live ciphertext row and classifies every absent decrypted value as a stale read. Once a health answer is erased, malformed or persistently
+  undecryptable, even saving the unrelated head's letter or replacing that unreadable answer fails as `questionnaire_stale` on every attempt.
+  Distinguish a changed pre-read row from a known unreadable value, preserve the dependency fail-closed check, and permit unrelated/replacement saves.
+  Test unreadable cause/illness rows alongside a genuine concurrent stale read. Reachable when the health questions are enabled; the shipped v1
+  still serves only the letter. **AC3/AC7, IQ8 (A).** [packages/domain/src/claim/ground-inspection-questionnaire.ts:197]
+- [ ] [Review][Patch] **R3 — Include zero-answer completed visits in the family's account (MEDIUM; blind + edge + auditor).**
+  `readClaimFamilyAccount` starts from headers created on first save, then inner-joins answers. A completed full visit with zero answers therefore
+  yields no account, and the staff component hides the whole block. In the shipped letter-only questionnaire, skipping the optional letter question
+  never produces the required **Letter: not recorded** line. Include completed full visits without saved answers and exercise the actual reader plus
+  staff view for a no-neighbour, zero-save visit. The existing component test supplies another answer and misses that state. **AC10, I1/AC4.**
+  [packages/domain/src/claim/ground-inspection-questionnaire.ts:322; apps/admin/src/modules/claim-verification/PeerMeshView.tsx:31]
+- [ ] [Review][Patch] **R4 — Bind both new routes to the claim named in their path (MEDIUM; auditor).** Their shared resolver loads by
+  `(pariwarId, ground_inspection_id)` only; neither new handler checks `claimCaseId`. A request naming claim A with an inspection for claim B reads or
+  saves B's answers if the caller passes B's actual assignment/permission checks. This demonstrates a case-binding defect, not a permission bypass.
+  Reject a mismatched path claim before reading or writing; test GET and PUT with two different claims. The resolver predates this story, but these
+  two endpoints are new consumers and owe their own resource binding. **Load-bearing checklist family 12(a).**
+  [apps/api/src/modules/claims/claims.ground-inspection.routes.ts:320; resolver at :178]
+- [ ] [Review][Patch] **R5 — Announce the per-answer save-state transitions (MEDIUM; auditor).** `Saving…`, `Not saved — retrying`, and
+  `Saved` change inside an ordinary span without live-region semantics. The separate generic unsaved `role="status"` does not announce entry into
+  retry or successful saving when it disappears. Provide a stable announcement region for the actual question/save state, and verify retry and success
+  announcements as well as visible text. **AC7; load-bearing checklist family 13(d).**
+  [apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx:232]
+- [ ] [Review][Patch] **R6 — Add the expressly required tampered/non-human actor route proof (MEDIUM; auditor; verification gap).**
+  The new HTTP suite tests an absent session and ordinary permission/inspector denials, but never a populated session naming a nonexistent
+  system/service actor. AC3 explicitly requires this story's own non-human denial proof because the shared human-actor invariant excludes this
+  route file. Exercise GET and PUT with that tampered session, a positive human control, and no answer mutation on refusal. This review has not
+  established a runtime actor bypass. **AC3; load-bearing checklist family 3.**
+  [apps/api/tests/integration/claims/ground-inspection-questionnaire.spec.ts:313]
+- [ ] [Review][Patch] **R7 — Complete the required real-browser pass against the local API (MEDIUM; auditor; verification gap).**
+  Task 8.4 remains explicitly un-attested. Exercise a seeded full visit, interrupted saving and reconnection, completion with a cause/illness
+  discrepancy using an isolated recorded-basis fixture, and the approver's read. Record actual evidence; keep this item open if the environment
+  still cannot run it. The existing limitation record is honest and is not a false completion claim. **AC12 / Task 8.4.**
+  [_bmad-output/implementation-artifacts/6-32-inspector-questionnaire-at-the-ground-inspection.md, Dev Agent Record / Debug Log References]
+
+**Verification performed by this review:** 138 tests passed across nine focused files: admin questionnaire/discrepancy (51), domain
+answer-code indexes/questionnaire approval/fence/discrepancy/questionnaire definition (62), contracts peer answers/verifier console (25).
+No live-DB suite, full `ci:local`, or real-browser pass was rerun. Existing live-DB test coverage below was inspected in source, not re-attested.
+The recorded 35/36 CI run is qualified honestly and AC12 permits an honest CI record; it is not an additional finding.
+
+**Load-bearing-invariant verdicts (touched families only):**
+
+| Family | Verdict and evidence |
+|---|---|
+| 1 — State guards | Covered-by-test: questionnaire writer typed refusals and the questionnaire policy-regression suite's completed/superseded/certificate-check/window refusals. |
+| 2 — Concurrency/idempotency | Covered-by-construction: saves and completion take the same assignment → claim locks; first-save pinning is serialized, identical values return without insertion, and the editor serializes saves. No new worker/redelivery path. R1 covers the missing UI coordination. |
+| 3 — Tenant/actor boundaries | **REAL GAP: R6.** Tenant isolation is covered by the dedicated policy regression's cross-tenant/unscoped read and cross-tenant insert cases. |
+| 5 — DB backstops | Covered-by-test: `claim-ground-inspection-questionnaire-policy-regression.spec.ts` checks FKs, CHECKs, grants, FORCE RLS, partial uniqueness, append-only rules and erasure. |
+| 6 — Projection/snapshots | Covered-by-test/construction: first-save version pin/new-visit version test, explicit DTO field selection, and hidden-reader whole-section omission. R3 addresses the missing zero-answer projection. |
+| 8 — Audit/attribution | Covered-by-test/construction: HTTP saved/unchanged audit test and authenticated actor attribution. IQ10 expressly specifies the existing GI post-commit audit pattern; AC11 forbids a new claim event. |
+| 9 — Deliberate exceptions | Covered-by-construction: new routes retain conduct/geo/inspector-or-override checks and override attribution. R4 addresses case-resource binding. |
+| 10 — Closure honesty | Covered-by-construction: browser and CI limitations are disclosed and Task 8 remains unchecked. R7 keeps the outstanding browser evidence open. |
+| 11 — Benefit-gating policy | Covered-by-test: approval scenario table, zero-answer/not-collected completion cases, and source fences; the story states the member/family policy meaning. |
+| 12 — Cross-member ownership | **REAL GAP: R4.** |
+| 13 — Semantic accessibility | **REAL GAP: R5.** Native fieldsets/legends/labels/inputs and working buttons cover the other applicable surface semantics. |
+
+**Dismissed candidate:** additional restrictions on hypothetical future versions' question kind/conditions were not promoted: shipped v1 is correct,
+the questionnaire editing chain is not built here, and no explicit validator AC establishes the proposed additional restriction.
 
 ## Dev Notes
 

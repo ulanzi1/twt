@@ -1,19 +1,19 @@
 ---
-baseline_commit: 4e57fa42
+baseline_commit: 64e01121
 ---
 
 <!--
-PINNED: 4e57fa42 (HEAD of `main` and of this branch at creation, 2026-10-27 — "records: ledger landing entry relabelled
-2026-10-27i -> 2026-10-27j …"). Branch `story/5-8b-degraded-mode-bridge-sms-wording`, worktree
+PINNED: 64e01121 (`origin/main` at Task 0.1, 2026-10-28 — "records: launch-gate Row 41 (b) MET — Story 11b.4a landed on main
+(PR #307)"; the branch was rebased onto it — backup `backup/5-8b-pre-rebase-2026-10-28`). Created at 4e57fa42 (2026-10-27). Branch `story/5-8b-degraded-mode-bridge-sms-wording`, worktree
 `.claude/worktrees/5-8b-degraded-mode-bridge-sms-wording`.
 
-Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --is-ancestor 4e57fa42 HEAD`; (2) the FOUND FACTS are valid
-iff `git diff --name-only 4e57fa42..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory docs/degradation-policy` is
+Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --is-ancestor 64e01121 HEAD`; (2) the FOUND FACTS are valid
+iff `git diff --name-only 64e01121..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory docs/degradation-policy` is
 EMPTY or every changed path is re-checked against the F it touches. Re-run BOTH at Task 0.1 — never assume either. (Both held at
 creation: HEAD equalled origin/main after `git fetch origin`. Re-run 2026-10-28 (v1.2): the pin is an ancestor; `origin/main` =
 `64e01121`, 28 commits on — Story 11b.4a LANDED (PR #307: migrations `0186` / `0187`, roster Row 41, `server.ts`, `boot.ts`, `router.tsx`,
 `roles.ts`, `emit-openapi.ts`). None of the bridge's own files moved; the cites that did are re-taken below (`server.ts:254`). The
-branch is NOT yet rebased — Task 0.1 does it.)
+branch is NOT yet rebased — Task 0.1 does it.) Task 0.1 DONE 2026-10-28: rebased onto `64e01121` and re-pinned — Debug Log (d).
 
 STATUS: 2026-10-27 created (`bmad-create-story 5.8b`) → ready-for-dev; 2026-10-28 v1.2. Task 0.2 (the build decisions FS1–FS16) is
 BigDev's and is OPEN; ⛔ code before it. v1.2 CHANGED these proposals — read them fresh: FS3 (+ FS3.1), FS4 (new ⭐ (d)), FS6, FS8,
@@ -237,7 +237,7 @@ no clause names SMS, the bridge or a notification duty; R10(B) (in the PRD, `prd
 in-app surface as the official channel, so the text is CONSISTENT with the Niyamavali as written and R10(B) does not presume a member
 was told before a missed cycle counts. (The Niyamavali is a rulebook, not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
 
-## ⭐ FOUND FACTS (at `4e57fa42` — re-run each at Task 0.1; traced to code, not read from prose)
+## ⭐ FOUND FACTS (traced at `4e57fa42`; re-verified at `64e01121` at Task 0.1 — Debug Log (d); traced to code, not read from prose)
 
 **The bridge today**
 - **F1 — it is dark, and it does nothing else.** `fanOutAlert` calls `evaluateDegradedModeBridge({ category, degradedModeActive:
@@ -254,7 +254,7 @@ was told before a missed cycle counts. (The Niyamavali is a rulebook, not a rati
   (`packages/domain/src/degraded-mode/declarations.ts`) → `openCycleAlert` reads it at the cycle-freeze `committed_at` and sets
   `time_critical = active?.mode === CYCLE_OPEN_SMS_BRIDGE_MODE` (`packages/domain/src/alert/project.ts:437-449`; live-DB proof
   `cycle-open-derisk.spec.ts:228-258`) → `apps/jobs/src/cycle-spawn.ts:337-353` enqueues the cycle-open alert after the freeze →
-  `cycle-open-alert.ts:156` forwards `timeCritical` → the boot enqueue (`boot.ts:782-794` at the pin) → the parent copies it to each pool
+  `cycle-open-alert.ts:156` forwards `timeCritical` → the boot enqueue (`boot.ts:788-800`; `:782-794` at the creation pin) → the parent copies it to each pool
   child (`contribution-notify-triggers.ts:710`) → `buildCycleOpenAlert` → `envelope()` stamps `time_critical` (`:308`) on each member's
   alert → `fanOutAlert`. `registerDegradedModeModule(app, deps)` is CALLED (`apps/api/src/server.ts:254` on `origin/main`; `:251` at the
   pin); `pariwar.declare_degraded_mode` is held by `pariwar_admin` (`roles.ts:358`) + `super_admin` (the whole catalog) — holder-set test
@@ -344,7 +344,7 @@ was told before a missed cycle counts. (The Niyamavali is a rulebook, not a rati
   emptied the count — the latter **inferred, not run**; the same mechanism is proven live for pending-match, and deferred-work already
   records that the sweep's probe "assumes `idempotency_keys` rows are effectively permanent". The send row keeps any re-run at-most-once.
   ⚠ If the purge inference holds it is REPEATED: `recordResult` does not extend `expires_at` (`keyed-store.ts:205-206`) and the vacuum runs
-  hourly (`boot.ts:160`, `'0 * * * *'`), so every live cycle-open alert is re-fanned hourly for its live window — under FS10 (a) each bridged
+  hourly (`boot.ts:162`, `'0 * * * *'`), so every live cycle-open alert is re-fanned hourly for its live window — under FS10 (a) each bridged
   member re-hits the send-row lookup and `dispatch` each hour (no second text; reported `sent`; push NOT re-run only if the bridge path
   returns before the ladder). The sweep row carries only `alert_id, cycle_id, pariwar_id` (`contribution-notify-triggers.ts:1071-1085`) —
   no `committed_at`.
@@ -758,7 +758,7 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance (AC0)**
-  - [ ] 0.1 Preflight: `git fetch origin`; rebase onto `origin/main`; run the pin checks (header); re-run F1–F16. **STOP and tell BigDev if:**
+  - [x] 0.1 (DONE 2026-10-28 — Debug Log (d); S2 tripped as a KNOWN overlap, reported to BigDev; S4 local-only) Preflight: `git fetch origin`; rebase onto `origin/main`; run the pin checks (header); re-run F1–F16. **STOP and tell BigDev if:**
         **S1** a ruling on the bridge, its words or a pool-opening text exists (grep `^### Decision` newer than `-413` for *bridge*,
         *cycle-open*, *degraded*, *pool open*; through `-413` none does — checked 2026-10-28); **S2** another worktree or session edits any of `contribution-notify*.ts`, `alert-sms-*.ts`,
         `contribution-sms-templates.ts`, `packages/contracts/src/alerts/`, the `alert_sms_sends` schema or migrations,
@@ -994,7 +994,44 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 - (a) Task 0.2 — BigDev's answers to FS1–FS16, PQ2 and PQ1, verbatim: (open)
 - (b) Mutants proven RED: (open)
 - (c) `pnpm ci:local` evidence: (open)
-- (d) Task 0.1 preflight results (pin checks, F1–F16 re-run, S1–S7): (open)
+- (d) Task 0.1 preflight results (pin checks, F1–F16 re-run, S1–S7) — 2026-10-28:
+  - **Rebase.** `git fetch origin` (`origin/main` = `64e01121`); backup `backup/5-8b-pre-rebase-2026-10-28` (= `84e43c64`); `git rebase
+    origin/main` — ONE conflict, the `sprint-status.yaml` top-of-file ledger (a pure prepend both sides: the branch's `-27s` over main's
+    `-28e`…`-27k`), resolved branch-then-main; the second commit applied cleanly. New tips `e1211c6b` (created) / `5b39c9aa` (validated).
+    Verified: for both files the sorted `-U0` changed-line set vs `origin/main` EQUALS the backup's vs `4e57fa42`; `sprint-status.yaml`
+    parses (296 rows; this row `ready-for-dev`); `_journal.json` 187 entries, `idx` and `when` unique (last `0187_memorial-takedown`).
+    No decision entry on the branch (nothing to byte-compare).
+  - **Pin.** Re-pinned to `64e01121` (front matter + header); `git merge-base --is-ancestor 64e01121 HEAD` ✓.
+  - **F1–F16 re-run.** Of the files the Fs cite, the only ones that changed `4e57fa42..64e01121` are `apps/jobs/src/boot.ts`,
+    `apps/api/src/server.ts`, `apps/admin/src/router.tsx`, `packages/domain/src/rbac/roles.ts` (11b.4a's additions) and
+    `architecture.md` / `epics.md` (+5 / +4 lines elsewhere). Every other cited file — `contribution-notify*.ts`, `alert-sms-send.ts`,
+    `contribution-sms-templates.ts`, `sms-member-name.ts`, `contracts/src/alerts/`, `alert_sms_sends` schema + `0184`, `alert/project.ts`,
+    `degraded-mode/`, `member/overlay.ts`, `validity-service`, `assignable-roster.ts`, `cycle-spawn.ts`, the admin module, `packages/channels`,
+    the two catalogues, `scripts/dlt-typed-variables/`, every cited test, the DLT sheet, `docs/degradation-policy/` — is byte-identical, so
+    the v1.2 verifiers' line-level checks at `4e57fa42` stand (not re-executed one by one). Re-taken by content: `boot.ts:160` → `:162`
+    (vacuum cron), `:782-794` → `:788-800` (the cycle-open enqueue) — both corrected above; `server.ts:254`, `roles.ts:358`,
+    `roles.test.ts:551`, `router.tsx:129-131` confirmed; architecture §3.4 `:2115`, `:2133-2139`, `:2210`, `:2308`, the `:2363` *"six
+    occasions per cycle"* annotation, `prd.md:1074` and epics 5.8 `:2398` / 5.9 `:2416` confirmed by content. No F changes meaning.
+  - **S1 — clear.** `^### Decision` newer than `-410`: `-411`, `-412` on `main`, `-413` on 6.32's branch — none mentions bridge,
+    cycle-open, degraded or pool open (0 hits in each).
+  - **S2 — TRIPPED (known, already sequenced in v1.2).** 6.32's local branch (`d0d635cb`, 15 ahead) touches the roster
+    (Row 42), `0188_ground-inspection-questionnaire.sql` and `_journal.json` — plus the decision log, ledger, deferred-work and epics.
+    12-1 / 13-2: 0 commits. No other worktree or local branch touches a 5.8b code file. Remote `origin/story/*` refs with commits not on
+    `main` are LANDED stories' pre-landing refs (e.g. 6-34, 6-30), not in flight. ListAgents: one peer session (twt-7a, idle) — not in
+    this worktree. ⇒ sequencing per `-366` decision 6: 5.8b takes numbers AFTER 6.32's (decision `-414`, Row 43, migration `0189` with a
+    `when` > 1795750800032, ledger after `-28k`); if 6.32 lands first, expect roster / journal / ledger / deferred-work / epics rebase
+    conflicts.
+  - **S3 — numbers re-found, unchanged from v1.2:** decision max `-412` (`main`) / `-413` (6.32) ⇒ `-414`; roster Row 41 / Row 42 ⇒ Row
+    43; DLT template 22 everywhere ⇒ 23 / 24; migration `0187` / `0188` ⇒ `0189`; ledger `-28e` (`main`) / `-28k` (6.32) / `-28l` (this
+    branch) ⇒ next `-28m`.
+  - **S4 — clear LOCALLY; deployed environments un-attested.** `pariwar_degraded_mode_declarations` in every local DB: `twt-test-pg`
+    (:5433) `twt_dev` 12 rows / 0 unrevoked, `twt_dev_511b` 0; `twt-11b4a-pg` (:5447) 2 / 0; `twt-632-pg` (:5448) 0. No deployed
+    environment is known (project memory: "code is not in production", BigDev 2026-09-22) — NOT re-confirmed this session; asked of
+    BigDev.
+  - **S5 — clear.** Roster Row 30 `closure_evidence_link` (d) is `(empty)` — unanswered; the 30-letter slot maxima stand.
+  - **S6 — clear.** Row `5-14-trust-announcement-channels` is `backlog`; no story file, no branch.
+  - **S7 — answered in v1.2 (F7: a deceased member IS rostered); re-confirmed** — `validity-service`, `assignable-roster.ts`,
+    `member/overlay.ts` byte-identical at `64e01121`. Goes to BigDev WITH FS4 at Task 0.2.
 
 ### Completion Notes List
 
@@ -1011,4 +1048,5 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 | 2026-10-27 | v1.0 | Created via `bmad-create-story 5.8b` (pinned `4e57fa42`): two read-only code traces (the trigger chain and the cycle-open alert; the send machinery and the closed list of edit sites) plus the governance, framework and records reading. FOUND F1–F16 — incl. that the row's named draft is the degraded-POSTURE notice, not the bridge's words (F3); that the trigger chain is built end to end (F2); that the recovery sweep de-bridges by documented design (F9); that no ratified entry rules on the bridge's trigger, cost or words (F15); and that 5.11's "no pool-opening text" guards are in code and tests (F16). FS1–FS14 and PQ1 PROPOSED for BigDev at Task 0.2. Status `ready-for-dev`. |
 | 2026-10-27 | v1.1 | Fresh-context fact-check applied (about 75 cites confirmed): FS7 (a) gains a contract refinement (`alert_published` may carry a block only when `time_critical`) because THREE existing tests assert the contract refuses a block there (F16); the admin module has no tests (AC8, FS11 — new ones); templates 7–14 already carry three variables (F12); `-394` item 1 is the ruling behind the retry arm and is superseded in part (F8, FS9, AC0); the stale ledger letter, R10(B)'s source, README §5's "same template body" row, the closed list's omissions (`:858-870`, `:920-929`, Row 30 note (1)) and several quotes corrected. |
 | 2026-10-28 | v1.2 | `bmad-create-story validate 5.8b` — three read-only verifiers (the fan-out / contract / record; the producer / sweep / screen; governance / records) re-checked about 200 claims against `4e57fa42` and `origin/main` `64e01121` (11b.4a landed). Applied: S7 ANSWERED — a deceased member IS rostered (F7) ⇒ NEW ⭐ FS4 (d), I10, G10 (§3.4 lifecycle suppression), T22; G6 re-read as a WIDENING of what the Panel was told (pool openings "never texted") ⇒ NEW PQ2, FS16, `-389` headline / §1 item 1 added to the supersede list; F8 / FS9 corrected — the `-394` quote had dropped its ⛔, and the arm's removal changes only a bridged no-target member with a named WhatsApp refusal; F11 / FS11 / AC8 — the page header and banner already promise AR-20's SMS-only send; FS11's sentence rewritten truthfully; the `smsMemberName` EXACT caller fence added (F16, T11, closed list); the en cost with a Devanagari name ⇒ NEW FS15; FS3 gains the trail order, the Telegram mirror on bridge-`sent`, §3.4 `:2308`'s scope, FS3.1 (the `deferred` row); FS10's shape (`loadCycleFrozenPayload`, the sweep has no `committed_at`, the hourly re-fan); the legacy conversion is a test, not code; `-404` six → seven is a supersede in part; PQ1's October withdrawal; PRD `:1074`; `-181`; the sign-off's scope; helpdesk is `helpdesk_reply`; T4; the red-vs-extended test split; every number re-found (next: `-414`, Row 43, DLT 23 / 24, `0189`, ledger `-28l`). |
+| 2026-10-28 | v1.3 | Task 0.1 DONE: rebased onto `origin/main` `64e01121` (one ledger conflict, prepend-resolved; changed-line sets verified equal) and re-pinned; F1–F16 re-verified (only `boot.ts` cites moved: `:162`, `:788-800`); S1, S3, S5, S6 clear; S2 tripped by 6.32's known roster / migration overlap (sequenced: `-414`, Row 43, `0189`); S4 clear locally, deployed environments un-attested; S7 re-confirmed. Debug Log (d). |
 

@@ -13,16 +13,29 @@
 >   and recovered; who may declare) — the author's, decided by BigDev on 2026-10-28 and being built, not asked.
 > ⭐ **Nothing waits for your answer except going live.** The text is built now and stays switched off until you answer Question 1
 > and its template is approved by the telecom operator. A "B" to Question 1 means it is never switched on.
-> ⏳ **NOT YET SENT.** Written 2026-10-28 on BigDev's answers to Story 5.8b's build questions (Task 0.2, 2026-10-28: *"FS1-FS16 as
-> recommended"*). It counts as shown to the Panel only once BigDev sends it.
+> ✅ **ANSWERED 2026-10-28 — Decision `2026-10-28-414` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti): Question 1 A, with a
+> Super Admin on / off switch; Question 2 A.** The ruling is in the block below; everything after it is kept unedited, as put.
+> ✅ **SENT** — recorded by the answer itself (whether the full note or a shorter copy was shown is not recorded). Written 2026-10-28
+> on BigDev's answers to Story 5.8b's build questions (Task 0.2, 2026-10-28: *"FS1-FS16 as recommended"*).
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — 2026-10-28, Decision `2026-10-28-414` (Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put**
-> ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti. **Verbatim, as relayed by BigDev:** *"by DR and KB"* / *"Q1 A - but build a
+> switch that can be turned on/off by Superadmin, in case later we decide to turn it off."* / *"Q2 A"*.
+>
+> - **Question 1 — A, with a condition.** On a declared Pariwar, every member assigned to a pool is texted once when the cycle opens.
+>   Cost accepted as put (about 2 SMS parts per member per cycle, up to 3; price not yet known; one declaration texts a whole
+>   Pariwar; a change to what the Panel ruled in October). ⭐ The condition: the text is built with an on / off switch a Super Admin
+>   operates, so the Trust can turn it off later. B and C were not chosen — the trigger is the manual declaration whether or not the
+>   Pariwar's WhatsApp is on.
+> - **Question 2 — A.** The claim texts' rule (`-379`) reaches this text: the full name whenever it fits 60 letters; above that, titles
+>   dropped, then first words to initials, never the last word. Cost accepted as put.
+>
+> **Not covered:** the switch's shape (its starting position, Trust-wide or per Pariwar, where it lives, how a change is recorded and
+> shown) — the build's, BigDev's; the price per text; consent (counsel); the automatic trigger; every other notification and Pariwar.
+> ⭐ Everything below is kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

@@ -17,7 +17,9 @@ branch is NOT yet rebased — Task 0.1 does it.) Task 0.1 DONE 2026-10-28: rebas
 
 STATUS: 2026-10-27 created (`bmad-create-story 5.8b`) → ready-for-dev; 2026-10-28 v1.2. Task 0.2 ANSWERED 2026-10-28 (v1.4): BigDev
 "FS1-FS16 as recommended" — every ⭐ option (FS4 (d), FS3.1 (a), FS11 with the FS4 (d) sentence) — Debug Log (a). ⛔ Still no code
-before Task 0.3 (the decision committed ALONE) and Task 0.4 (records). PQ2 / PQ1 are the Panel's and open. (Before v1.4: v1.2 CHANGED these proposals — read them fresh: FS3 (+ FS3.1), FS4 (new ⭐ (d)), FS6, FS8,
+before Task 0.3 (the decision committed ALONE) and Task 0.4 (records). ⚖️ v1.6: THE PANEL RULED — `2026-10-28-414` (DR + KB): PQ2 A
+WITH A SUPER ADMIN ON / OFF SWITCH, PQ1 A — see "After the Panel's ruling" under the build decisions; FS17 (the switch) and FS18 (the
+migration under BigDev's merge order — 5.8b BEFORE 6.32) are PROPOSED for BigDev. (Before v1.4: v1.2 CHANGED these proposals — read them fresh: FS3 (+ FS3.1), FS4 (new ⭐ (d)), FS6, FS8,
 FS9, FS10, FS11 (new sentence; the screen's two existing AR-20 sentences), FS12 (legs), FS13 (PQ2), and NEW FS15 (the English
 template's SMS type) and FS16 (PQ2's interim).)
 
@@ -582,6 +584,55 @@ Each is the author's (§0) unless it says PQ. Answer by letter; a bare letter me
   that may never send. **(b) hold the build for the answer.** *Cost (b):* the story idles; the screen's untrue sentences (F11) stay
   untrue meanwhile unless FS11 is split out.
 
+### ⚖️ After the Panel's ruling — `2026-10-28-414` (Trustee-ratified, DR + KB, 2026-10-28)
+
+Verbatim: *"by DR and KB / Q1 A - but build a switch that can be turned on/off by Superadmin, in case later we decide to turn it off. /
+Q2 A"*. What it changes in the decisions above (BigDev's answers stand; the ruling moves these):
+
+- **PQ2 (note Question 1) — A, with a condition:** FS16's interim ENDS (go-live leg (g) MET by `-414`); FS2 (a) stands — B and C were
+  not chosen, so the manual declaration is the trigger whether or not the Pariwar's WhatsApp is on. ⭐ The condition becomes FS17.
+- **PQ1 (note Question 2) — A:** FS6 (a)'s interim is NOT built. The cycle-open producer sends what `smsMemberName` returns for `full`
+  AND `shortened` (the `-379` form, now reaching this fifth text); only `too_long` omits the block — `-379` step (4) *"If it still does
+  not fit … ⛔ text, as today — the family's text raises an alarm"* — with ONE name-free alarm per job carrying the count (the
+  `alert_sms.locale_unresolved` shape; the alarm's name is the dev's — ⛔ `name_over_60_unruled`, which no longer describes it).
+  The `smsMemberName` caller fence (F16, `sms-member-name.test.ts:321`) gains the cycle-open producer as a THIRD caller, and the
+  module header's *"each caller keeps TODAY's outcome"* list gains it. Go-live leg (f) MET by `-414`.
+- **FS13** done (the note was sent and answered); the §3.4 dated annotation (Task 0.4) names `-414` beside the author-commit.
+- The author-commit for FS1–FS16 (+ FS17, FS18) takes the NEXT id after `-414` — `-415` if still free at Task 0.3.
+
+- **FS17 — the Super Admin switch (`-414` Q1's condition).** PROPOSED for BigDev. The Panel fixed only that a Super Admin can turn the
+  text on and off; the rest is the build's (`-414` Not covered). ⭐ **(a) ONE Trust-wide switch, held by `super_admin` ONLY, starting
+  OFF; turning it ON is the go-live row's LAST leg.** A new permission key granted to `super_admin` alone (the name is the dev's); a
+  single control row with an append-only history (who, when, a required reason), changed from the degraded-mode admin page by a Super
+  Admin and shown READ-ONLY to everyone who can see that page; read at the SEND point (the fan-out's bridge attempt, once per job), so
+  turning it off also stops texts already queued — when off, no text is tried, the trail names it (`sms_bridge_switched_off`, the
+  dev's name) and the push → WhatsApp ladder runs exactly as today. FS11's sentence gains *"A Super Admin can switch these texts off
+  for every Pariwar."*, and the banner says when the switch is off. *Cost (a):* a table (rides the story's ONE migration — FS18), a
+  permission key (`ROLE_PERMISSIONS_VERSION` bump + the roles tests), an endpoint pair, admin UI and RTL tests, one read per bridged
+  job; starting OFF means go-live is a deliberate act by a named person, but it is one more step to forget. **(b) the same, starting
+  ON.** *Cost (b):* reads the Panel's "in case later we decide to turn it off" literally; harmless before the templates are approved
+  (nothing can send), but go-live then happens the moment an id is set, with no last deliberate act. **(c) the existing feature-flag
+  store's GLOBAL row** (`packages/domain/src/feature-flags/`; precedent: `apps/jobs/src/restoration-discipline.ts`, a global kill
+  switch). *Cost (c):* `feature_flag.flip` is held by `pariwar_admin` (`roles.ts:454`), not Super Admin only — the Panel's words need a
+  new flip rule or a carve-out; the five-state rollout ladder (off / canary / rollout / full / rolled_back) is not an on / off switch;
+  the flags console is Pariwar-scoped. **(d) per Pariwar.** *Cost (d):* the declaration is ALREADY per Pariwar; a second per-Pariwar
+  switch duplicates it and is not what *"in case later we decide to turn it off"* describes.
+- **FS18 — the migration number under BigDev's merge order (S2, answered 2026-10-28: *"5.8b will be merged befor 6.32."*).** PROPOSED
+  for BigDev. Two recorded rules meet here: `-366` decision 6 (*"the number belongs to the first COMMIT that takes it on any branch"* —
+  6.32 committed `0188`) and `-332` decision 2 (*"a migration that reaches a database after a higher-numbered one is SILENTLY SKIPPED
+  there. So the parts reach `main` strictly in number order … ⛔ Never renumber a migration that has reached any shared database"*).
+  With 5.8b landing FIRST, a 5.8b `0189` would reach `main` before 6.32's `0188`. FOUND 2026-10-28: 6.32's `0188` (`when`
+  1795750800032) is applied ONLY in 6.32's own container `twt-632-pg` (:5448); `:5432` `twt_dev` is at 180 migrations, `:5433`
+  `twt_dev` at 185, `twt-11b4a-pg` at 187 — it has reached no shared database. ⭐ **(a) 5.8b takes `0188`** (a `when` above `0187`'s and
+  above 6.32's 1795750800032), and 6.32 takes the next free number with a `when` above 5.8b's at ITS rebase — allowed by `-332` because
+  its `0188` has reached no shared database; recorded in 5.8b's author-commit as a departure from `-366` decision 6 for this pair only;
+  6.32 recreates its own container (it holds `0188` = the ground-inspection migration). Decision ids and roster rows have no ordering
+  hazard and stay as `-366` decision 6 assigns them (`-414` / `-415`, Row 43). *Cost (a):* rework on 6.32's branch at its rebase (a file
+  rename, the journal entry, its story / decision text naming `0188`); 6.32's session must be told. **(b) 5.8b keeps `0189`**, and 6.32
+  renumbers past it at its rebase. *Cost (b):* the same rework for 6.32, AND `main` keeps a permanent gap at `0188`. **(c) 5.8b keeps
+  `0189` and 6.32 keeps `0188` with a re-stamped higher `when`.** *Cost (c):* the journal's `when` stops rising with the number — the
+  convention `-332` states — and any database that applied 6.32's `0188` at its old `when` first skips 5.8b's.
+
 ### The words (FS1 (a)) — BigDev's, reviewed and corrected in session 2026-10-23 (Story 5.11 Debug Log (a))
 
 Key `sms.cycle_open_bridge` in `packages/i18n/locales/{en,hi}/contribution.json` (flat, beside `sms.deadline_not_recorded`); each
@@ -602,7 +653,8 @@ never a "Late …" ([[feedback_never_mangle_member_names]]).
 
 ### PQ2 and PQ1 — for the Trustee Panel (ONE short note; blocks the go-live row, not the build; FS13 (a))
 
-⭐ WRITTEN 2026-10-28 as `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md` (⛔ not sent). The note is the version put to the Panel; where this draft and the note differ, the
+⚖️ ANSWERED 2026-10-28 — `2026-10-28-414` (Trustee-ratified, DR + KB): PQ2 A with a Super Admin on / off switch, PQ1 A ("After the
+Panel's ruling", above). ⭐ WRITTEN 2026-10-28 as `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md` (SENT — recorded by the answer). The note is the version put to the Panel; where this draft and the note differ, the
 NOTE governs — its cost line follows FS15 (a): about 2 SMS parts per member per cycle in EITHER language, up to 3 at the longest (this
 draft's *"2 en / 3 hi"* predates FS15). In the note PQ2 is "Question 1" and PQ1 "Question 2".
 
@@ -779,7 +831,8 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
   - [x] 0.2 (DONE 2026-10-28 — Debug Log (a): "FS1-FS16 as recommended"; PQ2 / PQ1 stay the Panel's; roster leg (b) NOT discharged) Put FS1–FS16, the words (en + hi), PQ2 and PQ1 to BigDev — the v1.2-changed FS first (header STATUS); record the answers
         VERBATIM in Debug Log (a), each with its option's conditions (footgun #45). If BigDev confirms the words in session, roster leg (b)
         still says *"whether that discharges this leg is recorded here, not assumed"*.
-  - [ ] 0.3 (NOTE WRITTEN 2026-10-28, ⛔ NOT SENT — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run, Debug Log (e); the decision NOT yet staged) Write the PQ2 + PQ1 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first; the "Corrected in this note" line;
+  - [ ] 0.3 (NOTE WRITTEN 2026-10-28 — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run, Debug Log (e); SENT and ANSWERED — `2026-10-28-414` committed ALONE
+        `9ffd9466`, Debug Log (f); the author-commit (next id, `-415`) NOT yet staged — it waits for FS17 and FS18) Write the PQ2 + PQ1 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first; the "Corrected in this note" line;
         `trustee-panel-routing-note-YYYY-MM-DD-5-8b-…`), run its evidence commands, record it as NOT sent until BigDev sends it. Stage the
         author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the decision-log write first
         ([[project_decision_log_writes_user_inserted]]).
@@ -947,7 +1000,8 @@ On 2026-10-28: 11b.4a has LANDED on `main` (PR #307 — migrations `0186` / `018
 is rebased at Task 0.1. In flight: `6-32-…` (local `d0d635cb`, contains `main`) holds decision `-413`, roster Row 42, migration `0188` +
 the journal, ledger `-28f`…`-28k`, and edits `deferred-work.md` and `epics.md`; `12-1-…` and `13-2-…` have no commits. 5.8b's migration
 takes the next free number with a `when` above every sibling's (6.32's included); expect ledger, roster, deferred-work and epics rebase
-conflicts ([[project_rebase_ledger_conflict_separator]]). Row `5-14`
+conflicts ([[project_rebase_ledger_conflict_separator]]). ⭐ MERGE ORDER (BigDev, 2026-10-28): 5.8b lands BEFORE 6.32 — so the
+migration's NUMBER follows FS18, not "next free" alone (`-332` decision 2: migrations reach `main` in number order). Row `5-14`
 (`trust-announcement-channels`, backlog) is independent. The go-live row's legs gate the first real text, never a merge
 ([[project-not-in-production-merge-is-not-golive]]).
 
@@ -1018,11 +1072,12 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
     **FS13 (a)** ONE Panel note, PQ2 + PQ1, blocking the go-live row and not the build. **FS14 (a)** framework documents untouched.
     **FS15 (a)** the en template registered Unicode, like template 14. **FS16 (a)** build now; PQ2 gates go-live.
   - ⛔ **NOT answered by this, and so still OPEN:** (1) **PQ2 and PQ1** — the Panel's; FS13 (a) says only that the note is written
-    (Task 0.3) and NOT sent until BigDev sends it. (2) **Roster leg (b)** — the Hindi string's review: BigDev chose the words (FS1 (a)) but
+    (Task 0.3) and NOT sent until BigDev sends it. ⚖️ ANSWERED 2026-10-28 by the Panel — `-414`, Debug Log (f). (2) **Roster leg (b)** — the Hindi string's review: BigDev chose the words (FS1 (a)) but
     did not confirm the review in this session, so leg (b) is NOT discharged here. (3) **S4** — whether any deployed environment holds a
     degraded-mode declaration (asked 2026-10-28; no answer yet; it does not block the build — nothing is texted before the templates are
     approved — but it is re-asked before go-live). (4) **S2** — the sequencing after 6.32 (`-414`, Row 43, `0189`) — asked, no answer;
-    the plan stands unless BigDev says otherwise, and every number is re-found at the time of use anyway.
+    the plan stands unless BigDev says otherwise, and every number is re-found at the time of use anyway. ANSWERED 2026-10-28:
+    *"5.8b will be merged befor 6.32."* — the migration consequence is FS18 (Debug Log (f)).
 - (b) Mutants proven RED: (open)
 - (c) `pnpm ci:local` evidence: (open)
 - (d) Task 0.1 preflight results (pin checks, F1–F16 re-run, S1–S7) — 2026-10-28:
@@ -1077,6 +1132,14 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
   Still to do in 0.3: the author-commit decision (next free id at the time — `-414` if 6.32's `-413` stands) staged in the scratchpad
   and committed ALONE.
 
+- (f) The Panel's ruling and S2 — 2026-10-28. BigDev relayed, verbatim: *"by DR and KB / Q1 A - but build a switch that can be turned
+  on/off by Superadmin, in case later we decide to turn it off. / Q2 A"*. Recorded as `2026-10-28-414` (Trustee-ratified), committed
+  ALONE as `9ffd9466` (`-413` is 6.32's; next free checked on `origin/main`, every branch and every worktree: max `-413`). The note's
+  ruling block transcribed; SENT recorded by the answer. Consequences: "After the Panel's ruling" (FS6's interim not built — `full` and
+  `shortened` sent, `too_long` omitted with one alarm per `-379` step (4); FS16 ended; legs (f) / (g) MET); FS17 (the switch) PROPOSED.
+  Earlier the same turn BigDev answered S2: *"5.8b will be merged befor 6.32."* — FS18 PROPOSED (the migration number; `0188` reached
+  no shared database — per-container counts recorded in FS18). Both wait for BigDev; the author-commit (`-415`) waits for both.
+
 ### Completion Notes List
 
 (open)
@@ -1095,4 +1158,5 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 | 2026-10-28 | v1.3 | Task 0.1 DONE: rebased onto `origin/main` `64e01121` (one ledger conflict, prepend-resolved; changed-line sets verified equal) and re-pinned; F1–F16 re-verified (only `boot.ts` cites moved: `:162`, `:788-800`); S1, S3, S5, S6 clear; S2 tripped by 6.32's known roster / migration overlap (sequenced: `-414`, Row 43, `0189`); S4 clear locally, deployed environments un-attested; S7 re-confirmed. Debug Log (d). |
 | 2026-10-28 | v1.4 | Task 0.2 ANSWERED: BigDev "FS1-FS16 as recommended" — every ⭐ option, each with its cost line, recorded in Debug Log (a) (FS4 (d), FS3.1 (a), FS11 plus the FS4 (d) sentence; the `-404` and `-394` supersedes-in-part go into the decision at Task 0.3). Still open: PQ2 / PQ1 (the Panel's), roster leg (b) (the Hindi review not confirmed in session), S4 (deployed environments) and S2 (the sequencing) — asked, unanswered. Ledger `2026-10-28n`. |
 | 2026-10-28 | v1.5 | Task 0.3 (part): the Panel note WRITTEN, ⛔ not sent — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run (two mismatches found and fixed in the note); the PQ section points to the note, which governs (cost per FS15 (a): ≈ 2 parts, up to 3, either language). The author-commit decision is not yet staged. Debug Log (e). Ledger `2026-10-28o`. |
+| 2026-10-28 | v1.6 | ⚖️ THE PANEL RULED — `2026-10-28-414` (Trustee-ratified, DR + KB; committed ALONE `9ffd9466`): PQ2 A with a Super Admin on / off switch, PQ1 A. Note ruling block transcribed (SENT, by the answer). "After the Panel's ruling" added: FS6's interim not built (`-379` form sent; `too_long` omitted + one alarm), FS16 ended, go-live legs (f) / (g) MET. FS17 (the switch — ⭐ Trust-wide, `super_admin` only, starts OFF) and FS18 (the migration under BigDev's merge order 5.8b → 6.32 — ⭐ 5.8b takes `0188`) PROPOSED. S2 answered. Debug Log (f). Ledger `2026-10-28p`. |
 

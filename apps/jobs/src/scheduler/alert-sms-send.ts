@@ -147,31 +147,27 @@ export type AlertSmsSender = ((input: AlertSmsRungInput) => Promise<ChannelSendO
 };
 
 /**
- * What {@link AlertSmsSender.giveUpDeferred} closes, and why. Code review 2026-10-28 (second pass): `ladder` — `delivered` (absent ⇒
- * this) also writes a TERMINAL row when there is ⛔ row (was Decision 2 (a)); `in_app_only` (the member recorded terminally, ⛔ told)
- * only gives up an existing `deferred` row — ⛔ a new row, so a later re-fan may still text them.
+ * What {@link AlertSmsSender.giveUpDeferred} closes: THIS alert's row for the member the ladder DELIVERED — it also writes a TERMINAL
+ * row when there is ⛔ row (code review 2026-10-28, second pass, was Decision 2 (a)). Code review 2026-10-28 (third pass): the
+ * `in_app_only` mode is REMOVED — a member nothing reached keeps their `deferred` row (it ages out by itself after 30 min), so a later
+ * re-run may still text them.
  */
 export interface DeferredBridgeClosureInput {
   readonly alert: Alert;
   readonly call?: FanOutCall;
-  readonly ladder?: 'delivered' | 'in_app_only';
 }
 
 /**
  * Story 5.8b review (P2-1) — what {@link AlertSmsSender.giveUpDeferred} did: `closed` (a `deferred` row was given up — or, code review
- * 2026-10-28 (second pass), the terminal row written), `none` (⛔ such row — none to write, or already final), `failed` (the record could not be read or written through every try — the row may still be
- * re-sendable; the caller keeps the obligation, ⛔ by re-running the push).
+ * 2026-10-28 (second pass), the terminal row written), `none` (nothing to close: the row is final or in flight, or ⛔ known occasion),
+ * `no_block` (code review 2026-10-28, third pass: ⛔ row AND the alert carries ⛔ bridge block to write one from — owed only when the
+ * caller knows the block was omitted on a failed read), `failed` (the record could not be read or written through every try — the
+ * row may still be re-sendable; the caller keeps the obligation, ⛔ by re-running the push).
  */
-export type DeferredBridgeClosure = 'closed' | 'none' | 'failed';
+export type DeferredBridgeClosure = 'closed' | 'none' | 'no_block' | 'failed';
 
 /** Story 5.8b (FS3.1 (a)) — the detail a bridge row given up because the ladder delivered carries (0184's grammar). */
 export const ALERT_SMS_GIVEN_UP_LADDER_DELIVERED = 'exhausted:rate_limited:ladder_delivered';
-
-/**
- * Code review 2026-10-28 (second pass) — a `deferred` bridge row given up because the member was recorded `in_app_only` (a later attempt
- * did not try the text and the ladder did not deliver; ⛔ retried) — so ⛔ a stale re-send from it.
- */
-export const ALERT_SMS_GIVEN_UP_IN_APP_ONLY = 'exhausted:rate_limited:in_app_only';
 
 /**
  * Code review 2026-10-28 (second pass), was Decision 2 (a) — the detail of the TERMINAL bridge row written when the ladder DELIVERED a
@@ -387,16 +383,15 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
    * ⭐ Code review 2026-10-28 (second pass), was Decision 2 (a): the ladder DELIVERED and ⛔ row exists ⇒ a TERMINAL row
    * (`exhausted:ladder_delivered`, `closed`), so F9's hourly re-fan — bridged again under FS10 — finds it FINAL and ⛔ texts once the
    * cause clears (the switch turned ON, a template approved). Only for an alert that carries the bridge block (its language is the
-   * row's): ⛔ block ⇒ ⛔ row — the residual is a block that APPEARS later (the death overlay lifted, a passport row added), whose
+   * row's): ⛔ block ⇒ ⛔ row (`no_block` — code review 2026-10-28, third pass) — the residual is a block that APPEARS later (the death overlay lifted, a passport row added), whose
    * re-fan may then text a member the push already told. A conflict ⇒ a row exists ⇒ it is closed as one found. ONE scope per try.
    */
-  const giveUpDeferred = async ({ alert, call, ladder = 'delivered' }: DeferredBridgeClosureInput): Promise<DeferredBridgeClosure> => {
+  const giveUpDeferred = async ({ alert, call }: DeferredBridgeClosureInput): Promise<DeferredBridgeClosure> => {
     const occasion = call?.occasion;
     if (!isKnownOccasion(occasion)) return 'none';
     const pariwarId = alert.pariwar_id;
     const key = { pariwarId, alertId: alert.alert_id, memberId: alert.member_id, occasion };
-    const detail = ladder === 'delivered' ? ALERT_SMS_GIVEN_UP_LADDER_DELIVERED : ALERT_SMS_GIVEN_UP_IN_APP_ONLY;
-    const block = ladder === 'delivered' && occasion === 'cycle_open' ? bridgeBlockOf(alert) : undefined;
+    const block = occasion === 'cycle_open' ? bridgeBlockOf(alert) : undefined;
     const claimToken = claimTokenOf(call);
     const pauses = deps.finaliseBackoffMs ?? ALERT_SMS_FINALISE_BACKOFF_MS;
     let fault = 'none';
@@ -405,7 +400,7 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
         return await withPariwarScope(deps.pool, pariwarId, async (_db, client): Promise<DeferredBridgeClosure> => {
           let found = await smsDelivery.lookupAlertSmsSend(client, key);
           if (found.kind === 'none') {
-            if (block === undefined) return 'none';
+            if (block === undefined) return 'no_block';
             const wrote = await smsDelivery.recordLadderDeliveredAlertSmsSend(client, {
               ...key,
               message: block.message,
@@ -418,7 +413,7 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
             found = await smsDelivery.lookupAlertSmsSend(client, key);
           }
           if (found.kind !== 'deferred' && found.kind !== 'deferred_expired') return 'none';
-          const gaveUp = await smsDelivery.giveUpDeferredAlertSmsSend(client, { pariwarId, sendId: found.sendId, detail });
+          const gaveUp = await smsDelivery.giveUpDeferredAlertSmsSend(client, { pariwarId, sendId: found.sendId, detail: ALERT_SMS_GIVEN_UP_LADDER_DELIVERED });
           // `false` — the row moved on between the two reads (another attempt took or ended it): ⛔ ours to close any more.
           return gaveUp ? 'closed' : 'none';
         });
@@ -429,7 +424,7 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
       }
     }
     alarmSink(
-      `[jobs] alert-sms: a bridge text's record could not be closed after the ladder ${ladder === 'delivered' ? 'delivered' : 'ended in-app only'} ` +
+      `[jobs] alert-sms: a bridge text's record could not be closed after the ladder delivered ` +
         `[${fault}] — the job keeps it (the push is ⛔ repeated) — pariwar ${pariwarId} alert ${alert.alert_id}`,
     );
     return 'failed';

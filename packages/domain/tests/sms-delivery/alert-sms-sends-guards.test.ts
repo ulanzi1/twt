@@ -77,9 +77,22 @@ describe('recordLadderDeliveredAlertSmsSend — Story 5.8b code review 2026-10-2
   it.each([
     ['a live-answer word', 'rate_limited:http_429'],
     ['a word outside the grammar', 'ladder_delivered'],
+    // Code review 2026-10-28 (third pass): ONLY `exhausted:ladder_delivered` — another FINAL word in the grammar is refused too.
+    ['another exhausted word', 'exhausted:rate_limited:ladder_delivered'],
+    ['the outcome-unknown word', 'exhausted:outcome_unknown'],
   ])('refuses %s — before any statement', async (_name, detail) => {
     const { q, query } = untouchedQ();
     await expect(recordLadderDeliveredAlertSmsSend(q, { ...base, detail })).rejects.toThrow();
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['another occasion', { occasion: 'day_10' as const, message: 'deadline_not_recorded' as const }],
+    ['the bridge message on another occasion', { occasion: 'day_10' as const }],
+    ['another message on the bridge occasion', { message: 'deadline_not_recorded' as const }],
+  ])('code review 2026-10-28 (third pass) — refuses %s — before any statement (only the bridge row)', async (_name, change) => {
+    const { q, query } = untouchedQ();
+    await expect(recordLadderDeliveredAlertSmsSend(q, { ...base, ...change, detail: 'exhausted:ladder_delivered' })).rejects.toThrow(/bridge row/);
     expect(query).not.toHaveBeenCalled();
   });
 

@@ -233,35 +233,88 @@ describe('Story 5.8b AC12 — the Trust-wide switch on the page', () => {
   it('code review P2-3 — a REFUSED change announces ⛔ success (the error is the alert)', async () => {
     h.grants = ['degraded_mode.switch_bridge_sms'];
     const client = await import('../src/api/client.js');
-    vi.mocked(client.setDegradedBridgeSmsSwitch).mockRejectedValueOnce(new Error('the switch is already in this state'));
+    vi.mocked(client.setDegradedBridgeSmsSwitch).mockRejectedValueOnce(new Error('the switch was already changed to this state'));
     renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
     await userEvent.type(await screen.findByTestId('bridge-switch-reason'), 'race');
     await userEvent.click(screen.getByTestId('bridge-switch-submit'));
-    expect(await screen.findByText('the switch is already in this state')).toBeTruthy();
+    expect(await screen.findByText('the switch was already changed to this state')).toBeTruthy();
     expect(screen.getByTestId('bridge-switch-saved').textContent).toBe('');
   });
 
-  it('⭐ second pass — a 409 "already in this state" (the page was stale) REFRESHES the switch on settle; the error stays; ⛔ "Saved"', async () => {
+  it('⭐ second pass — a 409 `concurrent_change` (a race lost) REFRESHES the switch on settle; the error stays; ⛔ "Saved"', async () => {
     h.grants = ['degraded_mode.switch_bridge_sms'];
     const client = await import('../src/api/client.js');
     vi.mocked(client.setDegradedBridgeSmsSwitch).mockImplementationOnce(async () => {
-      // Another Super Admin already turned it ON; this page still shows OFF.
+      // Another Super Admin's identical change got the lock first; this page still shows OFF.
       h.sw = { enabled: true, changedAt: '2026-10-28T07:00:00.000Z', changedByDisplay: 'Ravi Kumar', reason: 'elsewhere' };
-      throw new ApiError(409, 'degraded_mode.bridge_switch.concurrent_change', 'the switch is already in this state');
+      throw new ApiError(409, 'degraded_mode.bridge_switch.concurrent_change', 'the switch was already changed to this state');
     });
     renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
     await userEvent.type(await screen.findByTestId('bridge-switch-reason'), 'turn it on');
     await userEvent.click(screen.getByTestId('bridge-switch-submit'));
     await waitFor(() => expect(screen.getByTestId('bridge-switch').getAttribute('data-enabled')).toBe('true'));
     expect(
-      screen.getByText('degraded_mode.bridge_switch.concurrent_change: the switch is already in this state').getAttribute('role'),
+      screen.getByText('degraded_mode.bridge_switch.concurrent_change: the switch was already changed to this state').getAttribute('role'),
     ).toBe('alert');
     expect(screen.getByTestId('bridge-switch-saved').textContent).toBe('');
     // The reason was typed for "on"; the switch now offers "off" — ⛔ that reason carried over.
     expect((screen.getByTestId('bridge-switch-reason') as HTMLTextAreaElement).value).toBe('');
   });
 
-  it('⭐ second pass — a failed BACKGROUND refetch keeps the panel (and a typed reason) from the last read, says so quietly; the banner keeps the state', async () => {
+  it('⭐ third pass — a 409 `already_in_state` (a stale page, or a retry after a lost response) is ⛔ a failure: the switch refreshes, ⛔ alert, ⛔ "Saved"', async () => {
+    h.grants = ['degraded_mode.switch_bridge_sms'];
+    const client = await import('../src/api/client.js');
+    vi.mocked(client.setDegradedBridgeSmsSwitch).mockImplementationOnce(async () => {
+      // The switch was turned ON before this page last read it OFF.
+      h.sw = { enabled: true, changedAt: '2026-10-28T07:00:00.000Z', changedByDisplay: 'Ravi Kumar', reason: 'elsewhere' };
+      throw new ApiError(409, 'degraded_mode.bridge_switch.already_in_state', 'the switch is already in this state');
+    });
+    renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
+    await userEvent.type(await screen.findByTestId('bridge-switch-reason'), 'turn it on');
+    await userEvent.click(screen.getByTestId('bridge-switch-submit'));
+    await waitFor(() => expect(screen.getByTestId('bridge-switch').getAttribute('data-enabled')).toBe('true'));
+    expect(screen.getByTestId('bridge-switch').textContent).toContain('Bridge texts are ON for every Pariwar.');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(/already in this state/)).toBeNull();
+    expect(screen.queryByText(/already_in_state/)).toBeNull();
+    expect(screen.getByTestId('bridge-switch-saved').textContent).toBe('');
+    expect(screen.getByTestId('bridge-switch-submit').textContent).toBe('Switch bridge texts off');
+  });
+
+  it('⭐ third pass — the refresh on settle is FIRED, ⛔ awaited: a GET that never answers holds ⛔ "Saving…"; "Saved" is announced', async () => {
+    h.grants = ['degraded_mode.switch_bridge_sms'];
+    const client = await import('../src/api/client.js');
+    renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
+    await userEvent.type(await screen.findByTestId('bridge-switch-reason'), 'templates approved');
+    // The first read is done; the refresh after the change hangs (no transport timeout).
+    vi.mocked(client.getDegradedBridgeSmsSwitch).mockImplementationOnce(() => new Promise(() => undefined));
+    await userEvent.click(screen.getByTestId('bridge-switch-submit'));
+    await waitFor(() => expect(screen.getByTestId('bridge-switch-saved').textContent).toBe('Saved — bridge texts are now ON for every Pariwar.'));
+    const submit = screen.getByTestId('bridge-switch-submit') as HTMLButtonElement;
+    expect(submit.textContent).toBe('Switch bridge texts off');
+    expect(submit.disabled).toBe(false);
+    expect(submit.getAttribute('aria-busy')).toBe('false');
+  });
+
+  it('⭐ third pass — a refused change under a GET that never answers: the error shows and ⛔ "Saving…"', async () => {
+    h.grants = ['degraded_mode.switch_bridge_sms'];
+    const client = await import('../src/api/client.js');
+    renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
+    await userEvent.type(await screen.findByTestId('bridge-switch-reason'), 'turn it on');
+    vi.mocked(client.getDegradedBridgeSmsSwitch).mockImplementationOnce(() => new Promise(() => undefined));
+    vi.mocked(client.setDegradedBridgeSmsSwitch).mockRejectedValueOnce(
+      new ApiError(409, 'degraded_mode.bridge_switch.concurrent_change', 'the switch was already changed to this state'),
+    );
+    await userEvent.click(screen.getByTestId('bridge-switch-submit'));
+    const alert = await screen.findByText('degraded_mode.bridge_switch.concurrent_change: the switch was already changed to this state');
+    expect(alert.getAttribute('role')).toBe('alert');
+    const submit = screen.getByTestId('bridge-switch-submit') as HTMLButtonElement;
+    expect(submit.textContent).toBe('Switch bridge texts on');
+    expect(submit.disabled).toBe(false);
+    expect(screen.getByTestId('bridge-switch-saved').textContent).toBe('');
+  });
+
+  it('⭐ second pass — a failed BACKGROUND refetch keeps the panel (and a typed reason) from the last read, says so; the banner keeps the state', async () => {
     h.grants = ['degraded_mode.switch_bridge_sms'];
     h.active = ACTIVE;
     const qc = createQueryClient();
@@ -271,15 +324,32 @@ describe('Story 5.8b AC12 — the Trust-wide switch on the page', () => {
       </QueryClientProvider>,
     );
     await userEvent.type(await screen.findByTestId('bridge-switch-reason'), 'half typed');
+    // Third pass — the line is a PERSISTENT status node: in the page, empty, BEFORE the refresh fails.
+    const line = screen.getByTestId('bridge-switch-refresh-failed');
+    expect(line.getAttribute('role')).toBe('status');
+    expect(line.textContent).toBe('');
     const client = await import('../src/api/client.js');
     vi.mocked(client.getDegradedBridgeSmsSwitch).mockRejectedValueOnce(new Error('network blip'));
     await qc.invalidateQueries({ queryKey: degradedBridgeSmsSwitchKey });
-    expect(await screen.findByTestId('bridge-switch-refresh-failed')).toBeTruthy();
+    await waitFor(() => expect(line.textContent).toBe('The switch could not be read.'));
+    expect(screen.getByTestId('bridge-switch-refresh-failed')).toBe(line);
     expect(screen.getByTestId('bridge-switch').getAttribute('data-enabled')).toBe('false');
     expect((screen.getByTestId('bridge-switch-reason') as HTMLTextAreaElement).value).toBe('half typed');
     expect(screen.queryByText('network blip')).toBeNull();
     expect(screen.getByTestId('degraded-mode-banner-headline').textContent).toContain('switched off');
     expect(screen.getByTestId('degraded-mode-header-switched-off')).toBeTruthy();
+    // A refresh that succeeds empties it — the SAME node.
+    await qc.invalidateQueries({ queryKey: degradedBridgeSmsSwitchKey });
+    await waitFor(() => expect(line.textContent).toBe(''));
+    expect(screen.getByTestId('bridge-switch-refresh-failed')).toBe(line);
+  });
+
+  it('third pass — a switch NEVER read: the alert says it once; the status line stays empty (⛔ said twice)', async () => {
+    const client = await import('../src/api/client.js');
+    vi.mocked(client.getDegradedBridgeSmsSwitch).mockRejectedValueOnce(new Error('down'));
+    renderWithClient(<DegradedModePage pariwarId={PARIWAR} />);
+    expect((await screen.findByText('down')).getAttribute('role')).toBe('alert');
+    expect(screen.getByTestId('bridge-switch-refresh-failed').textContent).toBe('');
   });
 
   it('⭐ second pass — the "Saved" line empties (silently, the SAME node) once the switch no longer reads the way it was saved', async () => {

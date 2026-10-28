@@ -479,13 +479,20 @@ export function useDegradedBridgeSmsSwitch() {
  * Turn the bridge text on / off (Super Admin), then refresh the switch read. Code review 2026-10-28 (second pass): the server's answer
  * goes into the cache at once, and the read is refreshed on SETTLE — a 409 ("already in this state") means the page was stale, so the
  * error path refreshes too. ⛔ `reset()` here (it would wipe the error the page shows).
+ *
+ * Third pass — the refresh is FIRED, ⛔ returned: v5 awaits a returned `onSettled` promise before it settles the mutation, so a slow
+ * or hung GET (no transport timeout) held "Saving…", the 409 alert and the "Saved" line. `setQueryData` already shows the answer.
  */
 export function useSetDegradedBridgeSmsSwitch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.setDegradedBridgeSmsSwitch>[0]) => api.setDegradedBridgeSmsSwitch(body),
-    onSuccess: (state) => qc.setQueryData(degradedBridgeSmsSwitchKey, state),
-    onSettled: () => qc.invalidateQueries({ queryKey: degradedBridgeSmsSwitchKey }),
+    onSuccess: (state) => {
+      qc.setQueryData(degradedBridgeSmsSwitchKey, state);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: degradedBridgeSmsSwitchKey });
+    },
   });
 }
 

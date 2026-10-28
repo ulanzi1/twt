@@ -59,8 +59,10 @@ export interface KeyedStore {
    * Persist `result` for a previously-claimed `key` (status → 'completed'). Throws
    * if the key is absent (never claimed, or expired + vacuumed mid-execution — a
    * signal the TTL was too short).
+   * `options.extendTtlSeconds` (Story 5.8b, code review 2026-10-28, third pass) — ALSO keep the completed row until at least
+   * `now + extendTtlSeconds` (⛔ ever shortened). Absent ⇒ the statement is the one every other caller has always run.
    */
-  recordResult(key: string, result: unknown): Promise<void>;
+  recordResult(key: string, result: unknown, options?: RecordResultOptions): Promise<void>;
   /**
    * Return the stored result for a completed, non-expired `key`, or `null` if there
    * is none / it expired (AC-2). The replay path the second caller uses (AC-4).
@@ -89,6 +91,11 @@ export interface KeyedStore {
    * review, F1 — two take-overs can never both win, and a COMPLETED row is never touched).
    */
   takeOver(key: string, ttlSeconds: number, staleBefore: Date): Promise<ClaimOutcome>;
+}
+
+/** `recordResult`'s optional behaviour (see its doc). */
+export interface RecordResultOptions {
+  readonly extendTtlSeconds?: number;
 }
 
 /** One key's row, as `inspect` reads it. */
@@ -192,8 +199,12 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
     }
   }
 
-  async function recordResult(key: string, result: unknown): Promise<void> {
+  async function recordResult(key: string, result: unknown, options: RecordResultOptions = {}): Promise<void> {
     assertKey(key);
+    const extend = options.extendTtlSeconds;
+    if (extend !== undefined && (!Number.isFinite(extend) || extend <= 0)) {
+      throw new RangeError('[idempotency] extendTtlSeconds must be a positive, finite number');
+    }
     const now = clock();
     // JSON.stringify so any JSON-serialisable value (object/array/string/number/
     // boolean/null) becomes a valid jsonb literal; `?? null` coerces undefined.
@@ -201,12 +212,20 @@ export function createKeyedStore(pool: pg.Pool, options: KeyedStoreOptions = {})
     const client = await pool.connect();
     let releaseErr: unknown;
     try {
-      const updated = await client.query(
-        `UPDATE idempotency_keys
+      const updated =
+        extend === undefined
+          ? await client.query(
+              `UPDATE idempotency_keys
            SET status = 'completed', result = $2::jsonb, completed_at = $3
          WHERE key = $1 AND status = 'pending'`,
-        [key, serialized, now],
-      );
+              [key, serialized, now],
+            )
+          : await client.query(
+              `UPDATE idempotency_keys
+           SET status = 'completed', result = $2::jsonb, completed_at = $3, expires_at = GREATEST(expires_at, $4)
+         WHERE key = $1 AND status = 'pending'`,
+              [key, serialized, now, new Date(now.getTime() + extend * 1000)],
+            );
       if (updated.rowCount === 0) {
         throw new IdempotencyKeyNotClaimedError(key);
       }

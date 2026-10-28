@@ -198,6 +198,24 @@ describe.skipIf(!hasDatabase)('idempotency keyed store (live DB, own-committing)
     expect(await store.inspect(key)).toMatchObject({ status: 'completed', createdAt: at, result: { delivered: true } });
   });
 
+  it('recordResult `extendTtlSeconds` — keeps the completed row until at least now + N (⛔ shortened); absent ⇒ the expiry is untouched (Story 5.8b, code review 2026-10-28, third pass)', async () => {
+    const at = new Date(Date.UTC(2026, 9, 28, 6, 0, 0));
+    const store = createKeyedStore(pool, { clock: () => at });
+    const extended = track(`test:extend:${randomUUID()}`);
+    expect(await store.claim(extended, 300)).toBe('acquired');
+    await store.recordResult(extended, { owed: true }, { extendTtlSeconds: 2700 });
+    expect(await store.inspect(extended)).toMatchObject({ status: 'completed', expiresAt: new Date(at.getTime() + 2_700_000), result: { owed: true } });
+    const longer = track(`test:extend-never-shortens:${randomUUID()}`);
+    expect(await store.claim(longer, 3600)).toBe('acquired');
+    await store.recordResult(longer, { v: 1 }, { extendTtlSeconds: 60 });
+    expect((await store.inspect(longer))?.expiresAt).toEqual(new Date(at.getTime() + 3_600_000));
+    const plain = track(`test:extend-absent:${randomUUID()}`);
+    expect(await store.claim(plain, 300)).toBe('acquired');
+    await store.recordResult(plain, { v: 2 });
+    expect((await store.inspect(plain))?.expiresAt).toEqual(new Date(at.getTime() + 300_000));
+    await expect(store.recordResult(track(`test:extend-bad:${randomUUID()}`), {}, { extendTtlSeconds: 0 })).rejects.toThrow(RangeError);
+  });
+
   it('takeOver — ONE winner of N concurrent take-overs of a stale pending row; ⛔ a fresh or completed row; a gone row re-claimed (F1)', async () => {
     const at = new Date(Date.UTC(2026, 9, 24, 10, 0, 0));
     const old = createKeyedStore(pool, { clock: () => new Date(at.getTime() - 20 * 60_000) });

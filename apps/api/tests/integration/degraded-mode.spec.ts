@@ -300,12 +300,12 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
       expect(read).not.toHaveProperty('changedByActor');
       expect(await auditCount(userId, 'degraded_mode.bridge_switch.changed', '00000000-0000-0000-0000-000000000000')).toBe(3);
 
-      // Code review 2026-10-28 (second pass) — ON again changes nothing ⇒ the SAME 409 the race path gives (⛔ a 200 the page would
-      // announce as "Saved"), ⛔ row, ⛔ audit line (⛔ intent, so ⛔ compensation either).
+      // Code review 2026-10-28 (second pass) — ON again changes nothing ⇒ a 409 (⛔ a 200 the page would announce as "Saved"),
+      // ⛔ row, ⛔ audit line (⛔ intent, so ⛔ compensation either). Its own code, ⛔ `concurrent_change` (third pass).
       const same = await client.inject({ method: 'POST', url: SWITCH, payload: { enabled: true, reason: 'again' } });
       expect(same.statusCode).toBe(409);
       expect((same.json() as { error: { code: string; message: string } }).error).toMatchObject({
-        code: 'degraded_mode.bridge_switch.concurrent_change',
+        code: 'degraded_mode.bridge_switch.already_in_state',
         message: 'the switch is already in this state',
       });
       expect(await historyOf(userId)).toHaveLength(3);
@@ -382,7 +382,11 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
       const responses = await both;
       expect(responses.map((r) => r.statusCode).sort()).toEqual([200, 409]);
       const loser = responses.find((r) => r.statusCode === 409)!;
-      expect((loser.json() as { error: { code: string } }).error.code).toBe('degraded_mode.bridge_switch.concurrent_change');
+      // The lock's answer keeps `concurrent_change` — ⛔ the pre-read's `already_in_state` (code review 2026-10-28 (third pass)).
+      expect((loser.json() as { error: { code: string; message: string } }).error).toMatchObject({
+        code: 'degraded_mode.bridge_switch.concurrent_change',
+        message: 'the switch was already changed to this state',
+      });
       expect(responses.find((r) => r.statusCode === 200)!.json()).toMatchObject({ enabled: !found, changedByDisplay: 'Asha Verma', reason: 'race leg' });
       expect(await historyOf(userId)).toHaveLength(1);
       expect(await switchState()).toBe(!found);

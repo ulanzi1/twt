@@ -86,7 +86,7 @@ const {
   LIT_KIND_JOB_MEMBER_LIMIT,
   DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS,
   PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS,
-  BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS,
+  OWED_CLOSURE_KEY_TTL_SECONDS,
   BRIDGE_NAME_ALARM_WINDOW_MS,
   resetBridgeNameAlarms,
 } = await import('../src/scheduler/contribution-notify-triggers.js');
@@ -2030,7 +2030,7 @@ describe('Story 5.8b review P2-1 — a bridge-row closure that FAILED is owed by
     telegramMirrored: false,
     ...extra,
   });
-  const seamWith = (closure: 'closed' | 'none' | 'failed') =>
+  const seamWith = (closure: 'closed' | 'none' | 'no_block' | 'failed') =>
     Object.assign(vi.fn(), { giveUpDeferred: vi.fn<(input: { alert: Alert; call?: unknown }) => Promise<string>>(() => Promise.resolve(closure)) });
 
   it('⭐ attempt 1: the ladder delivered M1 but its closure failed ⇒ M1 is RECORDED (claim kept) with `bridgeRowOpen`, ⛔ released, and the job THROWS for the closure', async () => {
@@ -2132,6 +2132,36 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — the bridged child'
     expect(alertSms.giveUpDeferred).not.toHaveBeenCalled();
   });
 
+  it('⭐ code review 2026-10-28 (third pass) — `bridge_overlay_unavailable` is raised ONCE per (alert, kind) per window across the alert\'s jobs, retries and pools; it reads "at least"', async () => {
+    const onAlarm = vi.fn();
+    for (const [poolId, retryCount] of [[POOL_A, 0], [POOL_A, 1], [POOL_B, 0]] as const) {
+      listAccountFrozenMemberIds.mockRejectedValueOnce(Object.assign(new Error('blip'), { code: '57014' }));
+      await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ poolId })) as never, { id: 'j', retryCount, retryLimit: 4 });
+    }
+    const alarms = alarmsOf(onAlarm, 'alert_sms.bridge_overlay_unavailable');
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('at least 2 member(s)');
+    // Another alert keeps its own.
+    listAccountFrozenMemberIds.mockRejectedValueOnce(Object.assign(new Error('blip'), { code: '57014' }));
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ alertId: '33333333-3333-3333-3333-333333333334' })) as never);
+    expect(alarmsOf(onAlarm, 'alert_sms.bridge_overlay_unavailable')).toHaveLength(2);
+  });
+
+  it('⭐ code review 2026-10-28 (third pass) — a failed `ROLLBACK TO SAVEPOINT` is alarmed with the ORIGINAL read fault AND the rollback\'s (name-free), then rethrown (the job retries)', async () => {
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: 'Ramesh Kumar' });
+    listAccountFrozenMemberIds.mockRejectedValueOnce(Object.assign(new Error('relation "events_log" Ramesh'), { code: '57014' }));
+    const broken = Object.assign(new Error('Connection terminated unexpectedly'), { code: '08006' });
+    scopeClientQuery.mockImplementation((q: string) => (q.startsWith('ROLLBACK') ? Promise.reject(broken) : Promise.resolve({ rows: [] })));
+    const onAlarm = vi.fn();
+    await expect(runContributionNotifyChild(deps({ onAlarm }), envelope(bridged()) as never)).rejects.toBe(broken);
+    const alarms = alarmsOf(onAlarm, 'alert_sms.bridge_overlay_rollback_failed');
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('[code:57014]');
+    expect(alarms[0]).toContain('[code:08006]');
+    expect(alarms[0]).not.toContain('Ramesh');
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+  });
+
   it('the read that succeeds RELEASES its savepoint; an un-bridged cycle-open takes none', async () => {
     await runContributionNotifyChild(deps(), envelope(bridged()) as never);
     expect(scopeClientQuery.mock.calls.map(([q]) => q)).toEqual(['SAVEPOINT bridge_death_overlay', 'RELEASE SAVEPOINT bridge_death_overlay']);
@@ -2147,16 +2177,17 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — the bridged child'
     expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: 'hi', smsNameBoxes: boxes, deathReported: false }))).toMatchObject({ message: 'cycle_open_bridge' });
   });
 
-  it('⭐ the key\'s life — a BRIDGED member is claimed for the 30-minute deferred window + margin; every other kind keeps its own TTL', async () => {
-    expect(BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS).toBeGreaterThanOrEqual(30 * 60 + 400); // the window + one bounded job (~400 s)
-    await runContributionNotifyChild(deps(), envelope(bridged()) as never);
-    expect(claim.mock.calls.map((c) => c[1])).toEqual([BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS, BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS]);
+  it('⭐ the key\'s life (code review 2026-10-28, third pass) — a BRIDGED member is CLAIMED at the base TTL; only an OWED closure\'s record is kept past the 30-minute deferred window', async () => {
+    expect(OWED_CLOSURE_KEY_TTL_SECONDS).toBeGreaterThanOrEqual(30 * 60 + 5 * 60); // the window + margin
+    fanOutAlertToMembers.mockResolvedValueOnce({ results: [delivered(M1, { bridgeRowOpen: true }), delivered(M2)], retry: [] });
+    await expect(runContributionNotifyChild(deps(), envelope(bridged()) as never, { id: 'j', retryCount: 0, retryLimit: 4 })).rejects.toThrow('still to be given up');
+    expect(claim.mock.calls.map((c) => c[1])).toEqual([DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS, DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS]);
+    const recordOf = (m: string) => recordResult.mock.calls.find((c) => (c[0] as string).includes(m))!;
+    expect(recordOf(M1)[2]).toEqual({ extendTtlSeconds: OWED_CLOSURE_KEY_TTL_SECONDS });
+    expect(recordOf(M2)).toHaveLength(2); // every other record: the call it always was
     claim.mockClear();
     await runContributionNotifyChild(deps({ memberIdempotencyTtlSeconds: 60 }), envelope(bridged()) as never);
-    expect(claim.mock.calls[0]![1]).toBe(BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS); // an override never shortens it
-    claim.mockClear();
-    await runContributionNotifyChild(deps(), envelope(childPayload()) as never);
-    expect(claim.mock.calls[0]![1]).toBe(DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS);
+    expect(claim.mock.calls[0]![1]).toBe(60); // an override applies to a bridged job as to any
   });
 
   /** A keyed store with a clock and a VACUUM (`purgeExpiredKeys`): `claim` / `recordResult` / `inspect` as Story 1.12 defines them. */
@@ -2171,11 +2202,12 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — the bridged child'
       }
       return Promise.resolve('already_claimed');
     });
-    recordResult.mockImplementation((key: string, result: unknown) => {
+    recordResult.mockImplementation((key: string, result: unknown, options?: { extendTtlSeconds?: number }) => {
       const row = rows.get(key);
       if (row?.status !== 'pending') return Promise.reject(new Error('IdempotencyKeyNotClaimedError'));
       row.status = 'completed';
       row.result = result;
+      if (options?.extendTtlSeconds !== undefined) row.expiresAt = Math.max(row.expiresAt, nowMs + options.extendTtlSeconds * 1000);
       return Promise.resolve();
     });
     inspect.mockImplementation((key: string) => {
@@ -2203,10 +2235,10 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — the bridged child'
     telegramMirrored: false,
     ...extra,
   });
-  const seamWith = (closure: 'closed' | 'none' | 'failed') =>
-    Object.assign(vi.fn(), { giveUpDeferred: vi.fn<(input: { alert: Alert; call?: unknown; ladder?: string }) => Promise<string>>(() => Promise.resolve(closure)) });
+  const seamWith = (closure: 'closed' | 'none' | 'no_block' | 'failed') =>
+    Object.assign(vi.fn(), { giveUpDeferred: vi.fn<(input: { alert: Alert; call?: unknown }) => Promise<string>>(() => Promise.resolve(closure)) });
 
-  it('⭐ (a) the hourly VACUUM between attempts (backoff past 300 s) no longer drops an owed closure into a FULL re-fan: the record outlives it ⇒ the retry tries the closure ALONE', async () => {
+  it('⭐ (a) the hourly VACUUM between attempts (backoff past 300 s) no longer drops an owed closure into a FULL re-fan: the OWED record outlives it (third pass: extended at `recordResult`) ⇒ the retry tries the closure ALONE', async () => {
     const store = clockedStore();
     fanOutAlertToMembers.mockResolvedValueOnce({ results: [delivered(M1, { bridgeRowOpen: true })], retry: [] });
     await expect(
@@ -2219,40 +2251,70 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — the bridged child'
     expect(retry).toMatchObject({ attempted: 0, alreadySent: 1 });
     expect(fanOutAlertToMembers).toHaveBeenCalledTimes(1); // ⛔ a second fan-out (⛔ push, ⛔ text-first from the fresh deferred row)
     expect(alertSms.giveUpDeferred).toHaveBeenCalledTimes(1);
+    // …and once the row has aged out, the record lapses too (⛔ held for ever).
+    store.advance(30 * 60_000);
+    store.vacuum();
+    await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j-sweep', retryCount: 0, retryLimit: 4 });
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(2);
   });
 
-  it('⭐ (b) a `recordResult` that FAILS leaves the key `pending` — it stays claimed past the deferred row\'s 30 minutes, so ⛔ fan-out re-claims the member (⛔ a text from it) until the row has aged out', async () => {
+  it('⭐ (b) code review 2026-10-28 (third pass) — a key left `pending` (a crash, a failed record) no longer holds a time-critical push 45 min: past the BASE TTL the member is re-claimed and pushed', async () => {
+    const store = clockedStore();
+    recordResult.mockImplementationOnce(() => Promise.reject(new Error('the server closed the connection')));
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 0, retryLimit: 4 });
+    expect(alarmsOf(onAlarm, 'failed to record a member result')).toHaveLength(1);
+    // A member with ⛔ owed closure: ⛔ the double-fault alarm.
+    expect(alarmsOf(onAlarm, 'bridge_closure_unrecorded')).toHaveLength(0);
+    store.advance(6 * 60_000); // the first pg-boss backoff — past the 300 s claim (the second pass held it 45 min)
+    await runContributionNotifyChild(deps(), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j-sweep', retryCount: 0, retryLimit: 4 });
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(2);
+  });
+
+  it('⭐ (b) the DOUBLE fault — an OWED closure whose `recordResult` FAILS is alarmed BY NAME (name-free): the closure may be lost, a later re-run may text a member the push told — the residual', async () => {
     const store = clockedStore();
     recordResult.mockImplementationOnce(() => Promise.reject(new Error('the server closed the connection')));
     fanOutAlertToMembers.mockResolvedValueOnce({ results: [delivered(M1, { bridgeRowOpen: true })], retry: [] });
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: 'Ramesh Kumar' });
     const onAlarm = vi.fn();
     await expect(
       runContributionNotifyChild(deps({ alertSms: seamWith('failed'), onAlarm }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 0, retryLimit: 4 }),
     ).rejects.toThrow();
-    expect(alarmsOf(onAlarm, 'failed to record a member result')).toHaveLength(1);
-    // Retries (and a sweep re-run) at +6, +20 and +31 minutes — each past the old 300 s key.
-    for (const stepMinutes of [6, 14, 11]) {
-      store.advance(stepMinutes * 60_000);
-      store.vacuum();
-      await runContributionNotifyChild(deps({ alertSms: seamWith('closed') }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
-    }
-    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(1);
-    // Past the TTL (45 min) — the deferred row is ≥ 30 min old by now, so the seam gives it up `expired` instead of sending (live: C1-D1).
-    store.advance(15 * 60_000);
-    store.vacuum();
-    await runContributionNotifyChild(deps({ alertSms: seamWith('closed') }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j-sweep', retryCount: 0, retryLimit: 4 });
+    const named = alarmsOf(onAlarm, 'alert_sms.bridge_closure_unrecorded');
+    expect(named).toHaveLength(1);
+    expect(named[0]).toContain('may be LOST');
+    expect(named[0]).toContain(ALERT);
+    expect(named[0]).not.toContain('Ramesh');
+    // The residual, as recorded: the key stays `pending` at the base TTL, so the retry within it reads ⛔ owed closure (it is dropped)…
+    const alertSms = seamWith('closed');
+    await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
+    expect(alertSms.giveUpDeferred).not.toHaveBeenCalled();
+    // …and past it, a re-run re-claims the member: a FULL fan-out (a second push; a text from a still-fresh deferred row).
+    store.advance(6 * 60_000);
+    await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 2, retryLimit: 4 });
     expect(fanOutAlertToMembers).toHaveBeenCalledTimes(2);
   });
 
-  it('an owed closure on a member recorded `in_app_only` is retried as `in_app_only` (⛔ a terminal ladder-delivered row for a member never told)', async () => {
+  it('code review 2026-10-28 (third pass) — a recorded result owing a closure but NOT delivered (the removed in-app-only closure) ⇒ ⛔ closure tried (⛔ a terminal ladder-delivered row for a member never told)', async () => {
     claim.mockResolvedValue('already_claimed');
     inspect.mockResolvedValue({ status: 'completed', result: { delivered: false, bridgeRowOpen: true } });
     const alertSms = seamWith('closed');
     await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
-    expect(alertSms.giveUpDeferred.mock.calls[0]![0]).toMatchObject({ ladder: 'in_app_only' });
+    expect(alertSms.giveUpDeferred).not.toHaveBeenCalled();
     inspect.mockResolvedValue({ status: 'completed', result: { delivered: true, bridgeRowOpen: true } });
     await runContributionNotifyChild(deps({ alertSms }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 1, retryLimit: 4 });
-    expect(alertSms.giveUpDeferred.mock.calls[1]![0]).not.toHaveProperty('ladder');
+    expect(alertSms.giveUpDeferred).toHaveBeenCalledTimes(1);
+    expect(alertSms.giveUpDeferred.mock.calls[0]![0]).toEqual({ alert: expect.objectContaining({ member_id: M1 }), call: expect.objectContaining({ occasion: 'cycle_open' }) });
+  });
+
+  it('code review 2026-10-28 (third pass) — on the closure-only retry the seam\'s `no_block` / `none` owe nothing (this attempt\'s overlay read succeeded): ⛔ throw, ⛔ final alarm', async () => {
+    claim.mockResolvedValue('already_claimed');
+    inspect.mockResolvedValue({ status: 'completed', result: { delivered: true, bridgeRowOpen: true } });
+    for (const answer of ['no_block', 'none'] as const) {
+      const onAlarm = vi.fn();
+      await runContributionNotifyChild(deps({ alertSms: seamWith(answer), onAlarm }), envelope(bridged({ memberIds: [M1] })) as never, { id: 'j', retryCount: 4, retryLimit: 4 });
+      expect(alarmsOf(onAlarm, 'could not be closed')).toHaveLength(0);
+    }
   });
 
   const NAME_TOO_LONG = 'G'.repeat(61);

@@ -42,9 +42,17 @@ const AUDIT_ACTION_REVOKED = 'pariwar.degraded_mode.revoked';
 const DEGRADED_MODE_SWITCH_BRIDGE_SMS_KEY = 'degraded_mode.switch_bridge_sms';
 const AUDIT_ACTION_BRIDGE_SWITCH = 'degraded_mode.bridge_switch.changed';
 
-/** The one answer to a change that changes nothing — the pre-read and the locked re-check alike (code review 2026-10-28 (second pass)). */
+/**
+ * A request for the state the switch already has — the pre-read finds it (a stale page, or a retry after a lost response). Its own
+ * code, ⛔ `concurrent_change`: nothing raced it (code review 2026-10-28 (third pass)).
+ */
 function alreadyInThisState(): ConflictError {
-  return new ConflictError('the switch is already in this state', 'degraded_mode.bridge_switch.concurrent_change');
+  return new ConflictError('the switch is already in this state', 'degraded_mode.bridge_switch.already_in_state');
+}
+
+/** The change's own lock finds another change got there first — the race loser (code review 2026-10-28 (third pass)). */
+function concurrentChange(): ConflictError {
+  return new ConflictError('the switch was already changed to this state', 'degraded_mode.bridge_switch.concurrent_change');
 }
 
 function toSwitchDto(state: degradedMode.DegradedBridgeSmsSwitchState): DegradedBridgeSmsSwitchResponse {
@@ -93,9 +101,8 @@ export function createDegradedModeHandlers(deps: AppDeps) {
     /**
      * POST turn the bridge text ON / OFF for every Pariwar (Story 5.8b, AC12) — a REQUIRED reason; one history row per change,
      * audited under the compensating-audit protocol (the intent line's id is stored on the row). The state it ALREADY has ⇒ nothing
-     * written, ⛔ audit line, and a 409 `degraded_mode.bridge_switch.concurrent_change` — the SAME answer whether the pre-read or
-     * the change's own lock finds it (code review 2026-10-28 (second pass): a request for the state it is already in changed nothing;
-     * the caller's page was stale, so ⛔ a 200 that the page would announce as "Saved" and that drops the reason).
+     * written, ⛔ audit line, and a 409 (code review 2026-10-28 (second pass): ⛔ a 200 the page would announce as "Saved" that drops
+     * the reason). The pre-read's 409 is `already_in_state`; the lock's is `concurrent_change` — a change raced it (third pass).
      */
     async setBridgeSwitch(request: FastifyRequest): Promise<DegradedBridgeSmsSwitchResponse> {
       const actorId = request.requestContext.actorId;
@@ -130,7 +137,7 @@ export function createDegradedModeHandlers(deps: AppDeps) {
             reason: body.reason,
             auditId,
           });
-          if (!result.changed) throw alreadyInThisState();
+          if (!result.changed) throw concurrentChange();
           return toSwitchDto(result.state);
         },
       });

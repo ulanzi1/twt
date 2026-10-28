@@ -21,10 +21,11 @@ import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { setPariwarScope } from '../../../src/db.js';
+import { bindScopedDb, setPariwarScope } from '../../../src/db.js';
 import { cycleFreezeCommitId as toCycleId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import { PoolStreamConcurrencyError } from '../../../src/pool/index.js';
-import { closeCycleAlert, deriveAlertId, projectAlertState } from '../../../src/alert/index.js';
+import { closeCycleAlert, deriveAlertId, openCycleAlert, projectAlertState } from '../../../src/alert/index.js';
+import { declareDegradedMode, getActiveDegradedMode } from '../../../src/degraded-mode/index.js';
 import { PARIWAR_A } from '../_helpers.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -310,5 +311,104 @@ describe.skipIf(!hasDatabase)('alert stream — two-connection concurrency (own-
       [alertId],
     );
     expect(proj[0]!.current_state).toBe('closed');
+  }, 20_000);
+
+  // ── Story 5.8b — code review 2026-10-28 (third pass); BigDev's decision (a) ───────────────────────
+  // Two FIRST passes of `openCycleAlert` race, and they derive DIFFERENT `time_critical`: B's own
+  // (uncommitted) bridge declaration covers the freeze instant, A cannot see it. A publishes
+  // un-bridged and commits while B is SEEN blocked on A's genesis slot (⛔ timed). B loses the mint
+  // and must return the PERSISTED `false`, ⛔ its own `true`. Discriminators: without the genesis
+  // SAVEPOINT, B throws 25P02 at its `raced` read; without the persisted re-read, B returns `true`.
+  it('5.8b — a concurrent first pass that LOSES the mint returns the PERSISTED time_critical, not its own derivation', async () => {
+    const cycleId = randomUUID();
+    const alertId = deriveAlertId(cycleId);
+    createdAlerts.push(alertId, cycleId);
+    // Far in the past: no COMMITTED declaration of a shared DB covers it (A's derivation is `false`).
+    const committedAt = new Date('2001-02-03T04:05:06Z');
+
+    const setup = await pool.connect();
+    try {
+      await setup.query('BEGIN');
+      await setPariwarScope(setup, PARIWAR_A);
+      await setup.query(
+        `INSERT INTO events_log (stream_id, event_type, payload, event_version, actor_id, pariwar_id)
+         VALUES ($1,'cycle.frozen',$2::jsonb,1,NULL,$3)`,
+        [
+          cycleId,
+          JSON.stringify({
+            cycle_id: cycleId,
+            pariwar_id: PARIWAR_A,
+            pool_count: 1,
+            pool_ids: [randomUUID()],
+            pool_canonical_identifiers: ['P-MINT-RACE'],
+            attestation: { actor_id: 'trustee-actor-1', actor_display: 'Trustee One', committed_at: committedAt.toISOString() },
+          }),
+          PARIWAR_A,
+        ],
+      );
+      await setup.query('COMMIT');
+    } catch (e) {
+      await setup.query('ROLLBACK').catch(() => undefined);
+      throw e;
+    } finally {
+      setup.release();
+    }
+
+    const poolB = new pg.Pool({ connectionString: DATABASE_URL, max: 1, ssl: false });
+    const a = await pool.connect();
+    const b = await poolB.connect();
+    let bOpen: Promise<Awaited<ReturnType<typeof openCycleAlert>>> | undefined;
+    try {
+      const pidB = (await b.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+      for (const c of [a, b]) {
+        await c.query('BEGIN');
+        await c.query('SET LOCAL ROLE twt_app');
+        await setPariwarScope(c, PARIWAR_A);
+      }
+      // ── A: the first pass, minted un-bridged and HELD OPEN. ──
+      const aResult = await openCycleAlert(a, { cycleId });
+      expect(aResult).toMatchObject({ minted: true, timeCritical: false });
+
+      // ── B: its own bridge declaration (done BEFORE the race — its advisory lock is ⛔ the wait observed below). ──
+      await declareDegradedMode(bindScopedDb(b), {
+        pariwarId: toPariwarId(PARIWAR_A),
+        mode: 'cycle_open_sms_bridge',
+        effectiveFrom: new Date(committedAt.getTime() - 60_000),
+        expiresAt: new Date(committedAt.getTime() + 60 * 60_000),
+        declaredByActor: null,
+        reason: 'test: 5.8b mint race loser',
+      });
+      bOpen = openCycleAlert(b, { cycleId });
+      // B reads before A commits (⇒ derives `true`), then blocks on A's uncommitted (stream, version 1) entry.
+      const deadline = Date.now() + 5000;
+      for (;;) {
+        const { rows } = await pool.query<{ t: string | null; e: string | null }>(
+          `SELECT wait_event_type AS t, wait_event AS e FROM pg_stat_activity WHERE pid = $1`,
+          [pidB],
+        );
+        if (rows[0]?.t === 'Lock' && rows[0].e === 'transactionid') break;
+        if (Date.now() > deadline) throw new Error(`backend ${String(pidB)} never waited on A's genesis`);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      await a.query('COMMIT');
+
+      const bResult = await bOpen;
+      expect(bResult).toMatchObject({ alertId, minted: false, state: 'live', timeCritical: false });
+      // The hazard is real: B's own derivation, in B's transaction, says bridged.
+      expect((await getActiveDegradedMode(bindScopedDb(b), toPariwarId(PARIWAR_A), committedAt))?.mode).toBe('cycle_open_sms_bridge');
+    } finally {
+      await a.query('ROLLBACK').catch(() => undefined);
+      a.release();
+      await bOpen?.catch(() => undefined);
+      // B's declaration is never committed.
+      await b.query('ROLLBACK').catch(() => undefined);
+      b.release();
+      await poolB.end();
+    }
+    const { rows } = await pool.query<{ type: string }>(
+      'SELECT event_type AS type FROM events_log WHERE stream_id = $1 ORDER BY event_version',
+      [alertId],
+    );
+    expect(rows.map((r) => r.type)).toEqual(['alert.frozen', 'alert.published', 'alert.live']);
   }, 20_000);
 });

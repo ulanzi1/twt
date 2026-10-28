@@ -13,5 +13,6 @@ export {
   type KeyInspection,
   type KeyedStore,
   type KeyedStoreOptions,
+  type RecordResultOptions,
   type ClaimOutcome,
 } from './keyed-store.js';

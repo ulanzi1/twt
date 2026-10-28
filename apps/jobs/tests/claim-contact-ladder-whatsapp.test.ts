@@ -187,7 +187,11 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // switch alarm once per job. The claimant's WhatsApp ladder imports none of it; the rest of the fence stands.
     // Its fix review (2026-10-28): re-taken (was `aa398d73…`) — a bridged alert whose blocks a FAILED overlay read omitted is retried
     // (`sms_bridge_block_unavailable`) and a delivered member owes the closure. The rest of the fence stands.
-    ['apps/jobs/src/scheduler/contribution-notify.ts', 'b6d4b354b6f413fb8d21eb457e1a6ad24d3f9df9fbc0be8879affab6c9d273f8'],
+    // 2026-10-28 Story 5.8b code review (third pass): re-taken (was `b6d4b354…`) — the `in_app_only` closure is reverted (only a delivery
+    // closes), a delivered member owes the closure only on `no_block`, AC6's predicate decides the text from the real target and switch,
+    // and the switch alarm is once per (alert, kind) per window (`alarmBridgeOnce`). The claimant's WhatsApp ladder imports none of it.
+    // (Third pass, records: the predicate's JSDoc sentence and the switch-fault doc aligned — doc only; was `1a59deb1…`.)
+    ['apps/jobs/src/scheduler/contribution-notify.ts', '6732609ae075bd8606d77555a83c2e5a7c3f9956cfa42037cfd0b17e2b64bac7'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
     ['packages/channels/src/sms-dlt-registry.ts', '3bf86f9b9350602d9d7484b6976a748de42bcd4a9424f9bd3842f7cda66daee5'],
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per

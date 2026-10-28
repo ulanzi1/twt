@@ -334,12 +334,21 @@ export async function mintAndOpenAlert(
   // below — which should be structurally unreachable once genesis has committed this caller as
   // the stream's sole writer — is never misdiagnosed as the same idempotent no-op and silently
   // masked; it propagates as a real error instead.
+  // Code review 2026-10-28 (third pass): under a SAVEPOINT — the lost slot is a 23505, which aborts
+  // the caller's transaction, so without it the `raced` read below failed (25P02) and this branch
+  // never returned ([[project_domain_limit_clamp_and_savepoint_retry]]).
+  await client.query('SAVEPOINT alert_genesis');
   try {
     await projectAlertState(client, { ...common, eventType: 'alert.frozen', payload: frozenPayload });
+    await client.query('RELEASE SAVEPOINT alert_genesis');
   } catch (err) {
     // A concurrent redelivery raced past the fast-path existence check: the genesis append lost
     // the (stream_id, event_version=1) slot → another delivery already minted this alert. No-op.
     if (isPoolStreamVersionConflict(err) || err instanceof PoolStreamConcurrencyError) {
+      // A failed rollback (a broken connection) must not replace the conflict as the cause.
+      await client.query('ROLLBACK TO SAVEPOINT alert_genesis').catch(() => {
+        throw err;
+      });
       const raced = await db
         .select({ currentState: alerts.currentState })
         .from(alerts)
@@ -416,18 +425,42 @@ export interface OpenCycleAlertResult extends MintAndOpenAlertResult {
 }
 
 /**
+ * The cycle's PERSISTED `alert.published.time_critical`, or `null` while the alert is unpublished. Filters `pariwar_id` itself (the
+ * sweep's pool bypasses RLS).
+ */
+async function readPublishedTimeCritical(
+  db: ReturnType<typeof bindScopedDb>,
+  cycleId: string,
+  pariwarId: string,
+): Promise<boolean | null> {
+  const published = await db
+    .select({ payload: eventsLog.payload })
+    .from(eventsLog)
+    .where(
+      and(
+        eq(eventsLog.streamId, deriveAlertId(cycleId)),
+        eq(eventsLog.pariwarId, pariwarId),
+        eq(eventsLog.eventType, 'alert.published'),
+      ),
+    )
+    .orderBy(asc(eventsLog.eventVersion))
+    .limit(1);
+  return published[0] ? AlertPublishedPayloadSchema.parse(published[0].payload).time_critical : null;
+}
+
+/**
  * ⭐ Story 5.8b (FS10 (a), I9; `2026-10-28-415`) — THE freeze-instant degraded-mode read, ONE function for its two callers:
  * {@link openCycleAlert} (the primary path) and the cycle-open notify RECOVERY SWEEP (`apps/jobs`), so a recovered cycle is bridged
  * exactly as its first pass was. It loads the cycle's `cycle.frozen` payload and then:
- *   · once the cycle's alert is PUBLISHED, returns that `alert.published` event's own `time_critical` — the first pass's answer,
- *     persisted (code review 2026-10-28 (second pass)). Re-deriving it could differ: a declaration written AFTER the freeze but
- *     backdated within the declare route's grace (or its auto-revoke of the earlier one) changes what the window read answers, and
- *     the sweep would then bridge members of an alert published un-bridged (or the reverse);
- *   · before that (the first pass), reads the Pariwar's degraded-mode state AT the freeze `committed_at` (durable + deterministic —
- *     ⛔ a notify-time `now()` read, ⛔ `cycle_freeze_commits`, a different source). A declaration revoked AFTER the freeze still
- *     bridges the cycle (the read predicate is `revoked_at IS NULL OR > at`).
- * `null` ⇔ the cycle has no `cycle.frozen` event. Runs on the caller's scoped `db`; the alert read filters `pariwar_id` itself (the
- * sweep's pool bypasses RLS).
+ *   · once the cycle's alert is PUBLISHED, returns that `alert.published` event's own `time_critical` — the persisted answer
+ *     (code review 2026-10-28 (second pass)). Re-deriving it could differ: a declaration written AFTER the freeze but backdated
+ *     within the declare route's grace (or its auto-revoke of the earlier one) changes what the window read answers, and the sweep
+ *     would then bridge members of an alert published un-bridged (or the reverse);
+ *   · ONLY before the first publish, re-derives it: the Pariwar's degraded-mode state AT the freeze `committed_at` (durable +
+ *     deterministic — ⛔ a notify-time `now()` read, ⛔ `cycle_freeze_commits`, a different source). A declaration revoked AFTER the
+ *     freeze still bridges the cycle (the read predicate is `revoked_at IS NULL OR > at`).
+ * BigDev's 2026-10-28 third-review decision (a) — supersedes FS10 (a) in part (FS10 re-derived on every call; it rejected
+ * persisting). `null` ⇔ the cycle has no `cycle.frozen` event. Runs on the caller's scoped `db`.
  */
 export async function resolveCycleOpenTimeCritical(
   db: ReturnType<typeof bindScopedDb>,
@@ -435,21 +468,8 @@ export async function resolveCycleOpenTimeCritical(
 ): Promise<{ readonly cycleFrozenPayload: CycleFrozenPayload; readonly timeCritical: boolean } | null> {
   const cf = await loadCycleFrozenPayload(db, cycleId);
   if (!cf) return null;
-  const published = await db
-    .select({ payload: eventsLog.payload })
-    .from(eventsLog)
-    .where(
-      and(
-        eq(eventsLog.streamId, deriveAlertId(cycleId)),
-        eq(eventsLog.pariwarId, cf.pariwar_id),
-        eq(eventsLog.eventType, 'alert.published'),
-      ),
-    )
-    .orderBy(asc(eventsLog.eventVersion))
-    .limit(1);
-  if (published[0]) {
-    return { cycleFrozenPayload: cf, timeCritical: AlertPublishedPayloadSchema.parse(published[0].payload).time_critical };
-  }
+  const persisted = await readPublishedTimeCritical(db, cycleId, cf.pariwar_id);
+  if (persisted !== null) return { cycleFrozenPayload: cf, timeCritical: persisted };
   const committedAt = new Date(cf.attestation.committed_at);
   const active = await getActiveDegradedMode(db, toPariwarId(cf.pariwar_id), committedAt);
   return { cycleFrozenPayload: cf, timeCritical: active?.mode === CYCLE_OPEN_SMS_BRIDGE_MODE };
@@ -461,10 +481,18 @@ export async function resolveCycleOpenTimeCritical(
  * both call sites" discipline). In the caller's scoped transaction it:
  *   1. loads the cycle's `cycle.frozen` payload (throws if absent — a cycle-open trigger
  *      only fires AFTER the freeze, so a missing payload is a real defect, not a no-op),
- *   2. resolves the AR-18 `time_critical` signal by reading the Pariwar's degraded-mode
- *      state AT the cycle-freeze `committed_at` (deterministic + replay-stable — the same
- *      durable instant the spawn saga uses; a `cycle_open_sms_bridge` declaration ⇒ true),
- *   3. mints + drives the alert to `live` via {@link mintAndOpenAlert} (idempotent).
+ *   2. resolves the AR-18 `time_critical` signal via {@link resolveCycleOpenTimeCritical}:
+ *      re-derived ONLY before the first publish (the Pariwar's degraded-mode state AT the
+ *      cycle-freeze `committed_at`; a `cycle_open_sms_bridge` declaration ⇒ true); after it, the
+ *      persisted `alert.published.time_critical` (BigDev's 2026-10-28 third-review decision (a),
+ *      superseding FS10 (a) in part),
+ *   3. mints + drives the alert to `live` via {@link mintAndOpenAlert} (idempotent). On
+ *      `minted: false` — a redelivery, or a concurrent first pass that lost the genesis slot — it
+ *      returns the persisted value, not its own derivation (code review 2026-10-28 (third pass)).
+ *      ⚠ One ordering is NOT covered: a first pass past the fast path whose stream read lands after
+ *      the winner commits throws `'alert.frozen' is a genesis-only event` (⛔ a conflict) — retried
+ *      by the job (the next attempt takes the fast path), a 500 on the api; ⛔ a wrong value
+ *      (`alert-stream-concurrency.spec.ts` documents the window).
  *
  * The caller opens BEGIN + setPariwarScope and passes the raw client; this does NOT open or
  * commit its own transaction.
@@ -475,10 +503,11 @@ export async function openCycleAlert(
 ): Promise<OpenCycleAlertResult> {
   const db = bindScopedDb(client);
 
-  // AC4 — the SMS-bridge signal. Read the Pariwar's degraded-mode state at the cycle-freeze
-  // committed_at (durable + deterministic; a live now()-read would break replay). A
-  // cycle_open_sms_bridge declaration active at that instant ⇒ time_critical: true.
-  // Story 5.8b (FS10 (a)) — the read is `resolveCycleOpenTimeCritical`, shared with the recovery sweep.
+  // AC4 — the SMS-bridge signal. Before the first publish: the Pariwar's degraded-mode state at
+  // the cycle-freeze committed_at (durable + deterministic; a live now()-read would break replay).
+  // A cycle_open_sms_bridge declaration active at that instant ⇒ time_critical: true. After it:
+  // the persisted answer. Story 5.8b — the read is `resolveCycleOpenTimeCritical`, shared with the
+  // recovery sweep (BigDev's 2026-10-28 third-review decision (a), superseding FS10 (a) in part).
   const resolved = await resolveCycleOpenTimeCritical(db, input.cycleId);
   if (!resolved) {
     throw new Error(
@@ -492,7 +521,15 @@ export async function openCycleAlert(
     timeCritical,
     ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
   });
-  return { ...result, timeCritical };
+  if (result.minted) return { ...result, timeCritical };
+  // Code review 2026-10-28 (third pass) — ⛔ this call's derivation once another delivery published: a first pass that read before
+  // the winner committed (then hit the fast path, or lost the genesis slot) may have derived differently. The mint is ONE
+  // transaction, so an existing alert has its `alert.published`; a missing one is a defect, ⛔ guessed.
+  const persisted = await readPublishedTimeCritical(db, input.cycleId, cf.pariwar_id);
+  if (persisted === null) {
+    throw new Error(`[openCycleAlert] alert ${result.alertId} exists but has no alert.published — refusing to guess time_critical`);
+  }
+  return { ...result, timeCritical: persisted };
 }
 
 // ── Story 8.14 — the close-of-cycle emitter (the `live → closed` producer) ────

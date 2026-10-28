@@ -28,6 +28,17 @@ export interface DegradedModePageProps {
 /** The switch read failed — the page's one sentence for it, both when never read and when a refresh fails over a last-read state. */
 const SWITCH_UNREAD = 'The switch could not be read.';
 
+/**
+ * The switch was already in the state asked for (a stale page, or a retry after a lost response) — ⛔ a failure: the refresh on
+ * settle shows the state as it is, and nothing else is said (code review 2026-10-28 (third pass); ⛔ a new sentence — D1 (b)).
+ */
+const SWITCH_ALREADY_IN_STATE = 'degraded_mode.bridge_switch.already_in_state';
+
+function switchChangeError(error: unknown): string | undefined {
+  if (error instanceof ApiError && error.code === SWITCH_ALREADY_IN_STATE) return undefined;
+  return errorMessage(error);
+}
+
 function errorMessage(error: unknown): string | undefined {
   if (!error) return undefined;
   if (error instanceof ApiError) return `${error.code}: ${error.message}`;
@@ -93,15 +104,19 @@ export function DegradedModePage({ pariwarId }: DegradedModePageProps): ReactEle
       <section aria-label="Bridge text switch" className="rounded border p-4">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">Bridge texts (all Pariwars)</h2>
         {/* Second pass — rendered from `data` whenever there is any: a failed background refetch keeps the panel (and a typed
-            reason) and says so quietly, in the page's existing words (⛔ a new sentence — decision D1 (b)); the blocking alert is only
-            for a switch never read. */}
+            reason) and says so, in the page's existing words (⛔ a new sentence — decision D1 (b)); the blocking alert is only for a
+            switch never read. Third pass — that line is ANNOUNCED: a PERSISTENT status node (in the page before its text changes,
+            empty unless a refresh over a last-read state failed), so it is read once, ⛔ re-read on re-render. */}
+        <p
+          role="status"
+          aria-atomic="true"
+          className={switchState && bridgeSwitch.isError ? 'mb-2 text-sm opacity-70' : 'text-sm opacity-70'}
+          data-testid="bridge-switch-refresh-failed"
+        >
+          {switchState && bridgeSwitch.isError ? SWITCH_UNREAD : ''}
+        </p>
         {switchState ? (
           <>
-            {bridgeSwitch.isError && (
-              <p className="mb-2 text-sm opacity-70" data-testid="bridge-switch-refresh-failed">
-                {SWITCH_UNREAD}
-              </p>
-            )}
             <BridgeSwitchPanel
               state={switchState}
               canChange={canSwitch}
@@ -115,7 +130,7 @@ export function DegradedModePage({ pariwarId }: DegradedModePageProps): ReactEle
                 });
               }}
               pending={setBridgeSwitch.isPending}
-              changeError={errorMessage(setBridgeSwitch.error)}
+              changeError={switchChangeError(setBridgeSwitch.error)}
             />
           </>
         ) : bridgeSwitch.isLoading ? (

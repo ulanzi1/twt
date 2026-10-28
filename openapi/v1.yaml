@@ -12542,7 +12542,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
     post:
       summary: Turn the degraded-mode bridge text on or off for every Pariwar (Super Admin; audited)
-      description: "Sets the Trust-wide switch with a required reason; appends one history row per change (append-only). Asking for the state it already has changes nothing and is refused with 409 degraded_mode.bridge_switch.concurrent_change (no history row, no audit line) — the same answer as losing a race to a concurrent change. Off: no bridge text is tried and the push → WhatsApp ladder runs. Requires degraded_mode.switch_bridge_sms at global scope (super_admin only)."
+      description: "Sets the Trust-wide switch with a required reason; appends one history row per change (append-only). Asking for the state it already has changes nothing and is refused with 409 degraded_mode.bridge_switch.already_in_state (no history row, no audit line); losing a race to a concurrent change is 409 degraded_mode.bridge_switch.concurrent_change. Off: no bridge text is tried and the push → WhatsApp ladder runs. Requires degraded_mode.switch_bridge_sms at global scope (super_admin only)."
       tags: *a73
       requestBody:
         required: true
@@ -12576,7 +12576,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: The switch is already in the requested state — whether it already was, or a concurrent change got there first (degraded_mode.bridge_switch.concurrent_change); OR the acting admin has no users.display_name (admin.display_name_missing)
+          description: The switch is already in the requested state (degraded_mode.bridge_switch.already_in_state); OR a concurrent change got there first (degraded_mode.bridge_switch.concurrent_change); OR the acting admin has no users.display_name (admin.display_name_missing)
           content:
             application/json:
               schema:

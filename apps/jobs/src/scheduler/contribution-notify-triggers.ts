@@ -76,9 +76,12 @@ import { createHash } from 'node:crypto';
 
 import { isFinalFanOutAttempt, type FanOutCall } from './alert-sms-details.js';
 import {
+  BRIDGE_ALARM_WINDOW_MS,
+  alarmBridgeOnce,
   fanOutAlertToMembers,
   isCycleOpenBridgeTextEligible,
   onceForJob,
+  resetBridgeAlarms,
   serializeFanOutResult,
   type ContributionNotifyDeps,
 } from './contribution-notify.js';
@@ -127,35 +130,27 @@ export const DEFAULT_POOL_BATCH_LOCAL_CONCURRENCY = 8;
 export const DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS = 300;
 
 /**
- * Story 5.8b — code review 2026-10-28 (second pass): the claim TTL of a BRIDGED cycle-open member. A `deferred` bridge row is
- * re-sendable for {@link smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS} (30 min) after its rate-limited try, then the seam gives it up;
- * an owed closure (`bridgeRowOpen`) or a result that never recorded (the key left `pending`) is only dangerous inside that window. The
- * 300 s key could be vacuumed — or reclaimed — before it closed, and a full re-fan would TEXT a member the push already told. The
- * claim precedes the row's try by at most one bounded job (~400 s), so 30 min + 15 min keeps the key live until the row has aged
- * out: ⛔ fan-out can re-claim the member meanwhile, and a recorded closure is retried. COST: a member whose attempt CRASHED stays
- * claimed 45 min (⛔ 5) and is left to the recovery sweep; a lapse mid-job (F6) cannot happen on a bridged job.
+ * Story 5.8b — code review 2026-10-28 (third pass): how long the key of a member recorded with an OWED closure (`bridgeRowOpen`) is
+ * kept — set at `recordResult` (`extendTtlSeconds`), ⛔ at the claim. A `deferred` bridge row is re-sendable for
+ * {@link smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS} (30 min) after its rate-limited try; the record is written after that try, so 30 min
+ * + 15 min keeps it until the row has aged out: a vacuum between attempts cannot turn the closure-only retry into a full re-fan (a
+ * second push, a text from the still-fresh row). The second pass claimed EVERY bridged member for 45 min instead: a key left `pending`
+ * (a crash, a failed release or record) then held a time-critical push 1–2¾ h. Every claim is the base TTL again. COST: an owed
+ * member's key lives 45 min. RESIDUAL: a `recordResult` that FAILS for such a member leaves the base-TTL `pending` key — the closure
+ * may be lost, and a re-run after it lapses may text a member the push told (alarmed by name: `alert_sms.bridge_closure_unrecorded`).
+ * The same holds — ⛔ alarmed — when the attempt CRASHES, or its 300 s claim lapses mid-job (F6), after the push delivered but before
+ * the closure or the record: a retry past the base TTL re-claims the member and, text first, sends from a still-fresh `deferred` row
+ * (deferred-work, F9 — the price of not holding every bridged push 45 min).
  */
-export const BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS = smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS / 1000 + 15 * 60;
+export const OWED_CLOSURE_KEY_TTL_SECONDS = smsDelivery.ALERT_SMS_DEFERRED_MAX_AGE_MS / 1000 + 15 * 60;
 
-/** Code review 2026-10-28 (second pass) — a bridge-name alarm is raised ONCE per (alert, pool, kind) per this window, ⛔ per job. */
-export const BRIDGE_NAME_ALARM_WINDOW_MS = 24 * 60 * 60_000;
-const bridgeNameAlarmedAt = new Map<string, number>();
-
-/**
- * The bridge-name alarms' memo (per process): a pool's ≤8-member jobs, their retries and F9's hourly re-fans share ONE alarm. The
- * sink is called BEFORE the window is armed (a throwing sink must not swallow the next one — the seam's `alarmRefusalOnce` shape).
- */
-function alarmBridgeNameOnce(alarm: (m: string) => void, key: string, atMs: number, message: string): void {
-  const at = bridgeNameAlarmedAt.get(key);
-  if (at !== undefined && atMs - at < BRIDGE_NAME_ALARM_WINDOW_MS) return;
-  alarm(message);
-  for (const [k, v] of bridgeNameAlarmedAt) if (atMs - v >= BRIDGE_NAME_ALARM_WINDOW_MS) bridgeNameAlarmedAt.delete(k);
-  bridgeNameAlarmedAt.set(key, atMs);
-}
+/** Code review 2026-10-28 (second pass) — a bridge-name alarm is raised ONCE per (alert, pool, kind) per this window, ⛔ per job.
+ *  Third pass: the memo is shared (`alarmBridgeOnce`) — the overlay and the switch alarms use it too, per (alert, kind). */
+export const BRIDGE_NAME_ALARM_WINDOW_MS = BRIDGE_ALARM_WINDOW_MS;
 
 /** @internal `contribution-notify-triggers.test.ts` only — the memo is per process; each leg starts with none raised. */
 export function resetBridgeNameAlarms(): void {
-  bridgeNameAlarmedAt.clear();
+  resetBridgeAlarms();
 }
 
 /** pg-boss retry policy for the CHILD fan-out job — stated EXPLICITLY at the enqueue site rather than
@@ -869,8 +864,9 @@ export async function runContributionNotifyChild(
     p.kind === 'pending_match' || p.kind === 'pending_match_escalated'
       ? deps.pendingMatchIdempotencyTtlSeconds ?? PENDING_MATCH_IDEMPOTENCY_TTL_SECONDS
       : deps.memberIdempotencyTtlSeconds ?? DEFAULT_MEMBER_IDEMPOTENCY_TTL_SECONDS;
-  // Story 5.8b — code review 2026-10-28 (second pass): a bridged member's key outlives its `deferred` row (see the constant).
-  const ttl = bridgeText ? Math.max(baseTtl, BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS) : baseTtl;
+  // Story 5.8b — code review 2026-10-28 (third pass): a bridged member is claimed at the base TTL again; only an OWED closure's record
+  // outlives its `deferred` row (`OWED_CLOSURE_KEY_TTL_SECONDS`, at `recordResult`).
+  const ttl = baseTtl;
   const store = idempotency.createKeyedStore(deps.pool);
   const scope = idempotencyScope(p);
 
@@ -900,6 +896,10 @@ export async function runContributionNotifyChild(
   // Code review 2026-10-28 (second pass): the overlay read FAILS SOFT — ⛔ a guess about who has died, so EVERY bridge text of this
   // job is omitted (the push unchanged), ONE name-free alarm. It used to throw the whole job, the push included.
   let deathReadFault: string | null = null;
+  const faultClassOf = (err: unknown): string => {
+    const code = (err as { code?: unknown } | null)?.code;
+    return typeof code === 'string' && /^[A-Z0-9_]{3,24}$/.test(code) ? `code:${code}` : err instanceof Error ? err.name : typeof err;
+  };
   const identity = await withPariwarScope(deps.pool, pariwarId, async (db: Db, client) => {
     if (litKind) {
       textLanguages = await memberDomain.readMemberTextLanguages(db, { pariwarId: ids.pariwarId(pariwarId), memberIds: p.memberIds });
@@ -911,9 +911,18 @@ export async function runContributionNotifyChild(
         deathFrozen = await memberDomain.listAccountFrozenMemberIds(db, p.memberIds, now);
         await client.query('RELEASE SAVEPOINT bridge_death_overlay');
       } catch (err) {
-        await client.query('ROLLBACK TO SAVEPOINT bridge_death_overlay');
-        const code = (err as { code?: unknown } | null)?.code;
-        deathReadFault = typeof code === 'string' && /^[A-Z0-9_]{3,24}$/.test(code) ? `code:${code}` : err instanceof Error ? err.name : typeof err;
+        const fault = faultClassOf(err);
+        try {
+          await client.query('ROLLBACK TO SAVEPOINT bridge_death_overlay');
+        } catch (rollbackErr) {
+          // Code review 2026-10-28 (third pass): a broken connection — the rollback's error must not REPLACE the read's (name-free).
+          alarm(
+            `[jobs] contribution-notify-child: alert_sms.bridge_overlay_rollback_failed — the death-overlay read failed [${fault}] and its ` +
+              `savepoint could not be rolled back [${faultClassOf(rollbackErr)}] for alert ${p.alertId} pool ${p.poolId} — the job is retried`,
+          );
+          throw rollbackErr;
+        }
+        deathReadFault = fault;
       }
     }
     // ⭐ REVIEW FIX (8.16) — this read must degrade the SAME way `resolvePoolIdentity` degrades every
@@ -979,14 +988,18 @@ export async function runContributionNotifyChild(
   // omits the text too, ⛔ throw.
   // ⭐ Code review 2026-10-28 (second pass): each name alarm is raised ONCE per (alert, pool) per window — ⛔ per ≤8-member job, retry or
   // re-fan — and counts only the members who would otherwise be texted (⛔ under the overlay, a known text language); none ⇒ ⛔ alarm.
-  // An EMPTY label (or one that leaves a box empty) alarms too: it used to disable the bridge in silence.
+  // An EMPTY label (or one that leaves a box empty) alarms too: it used to disable the bridge in silence. Third pass: the count is the
+  // FIRST job's, so it reads "at least"; the overlay alarm is deduped too, per (alert, kind).
   let bridgeBoxes: readonly [string, string] | null = null;
   if (bridgeText) {
     if (overlayFault !== null) {
-      alarm(
+      alarmBridgeOnce(
+        alarm,
+        `${p.alertId}:bridge_overlay_unavailable`,
+        now.getTime(),
         `[jobs] contribution-notify-child: alert_sms.bridge_overlay_unavailable — the death-overlay read failed [${overlayFault}]; ⛔ bridge ` +
-          `text for the ${String(p.memberIds.length)} member(s) of alert ${p.alertId} pool ${p.poolId} this attempt (the push still goes; ` +
-          `an un-reached member is retried)`,
+          `text for at least ${String(p.memberIds.length)} member(s) of alert ${p.alertId} (first seen: pool ${p.poolId}) this attempt (the ` +
+          `push still goes; an un-reached member is retried; not repeated for this alert for ${String(BRIDGE_ALARM_WINDOW_MS / 3_600_000)} h)`,
       );
     }
     const label = familyLabel(identity);
@@ -994,11 +1007,11 @@ export async function runContributionNotifyChild(
     const wouldText = overlayFault !== null ? 0 : p.memberIds.filter((m) => !deathFrozen.has(m.toLowerCase()) && smsLocaleOf(m) !== null).length;
     const nameAlarm = (kind: string, why: string): void => {
       if (wouldText === 0) return;
-      alarmBridgeNameOnce(
+      alarmBridgeOnce(
         alarm,
         `${p.alertId}:${p.poolId}:${kind}`,
         now.getTime(),
-        `[jobs] contribution-notify-child: alert_sms.${kind} — ${String(wouldText)} member(s) of alert ${p.alertId} pool ${p.poolId} get ` +
+        `[jobs] contribution-notify-child: alert_sms.${kind} — at least ${String(wouldText)} member(s) of alert ${p.alertId} pool ${p.poolId} get ` +
           `⛔ bridge text: ${why} (the push still goes; not repeated for this pool for ${String(BRIDGE_NAME_ALARM_WINDOW_MS / 3_600_000)} h)`,
       );
     };
@@ -1104,13 +1117,11 @@ export async function runContributionNotifyChild(
   const settleOwedClosure = async (memberId: string, key: string): Promise<void> => {
     if (!giveUpDeferred) return;
     let owed: boolean;
-    let ladderDelivered = true;
     try {
       const recorded = await store.inspect(key);
       const result = recorded?.result as { bridgeRowOpen?: unknown; delivered?: unknown } | null | undefined;
-      owed = recorded?.status === 'completed' && result?.bridgeRowOpen === true;
-      // Code review 2026-10-28 (second pass): a member recorded `in_app_only` owes the closure of a `deferred` row ONLY (⛔ a new row).
-      ladderDelivered = result?.delivered !== false;
+      // Code review 2026-10-28 (third pass): only a DELIVERED member owes one (⛔ a terminal row for a member nothing reached).
+      owed = recorded?.status === 'completed' && result?.bridgeRowOpen === true && result.delivered !== false;
     } catch (err) {
       alarm(`[jobs] contribution-notify-child: a recorded member's result could not be read for alert ${p.alertId} — ${String(err)} (retrying)`);
       closureOwed.push(memberId);
@@ -1122,11 +1133,8 @@ export async function runContributionNotifyChild(
       closureOwed.push(memberId);
       return;
     }
-    const closure = await giveUpDeferred({
-      alert: alertFor(memberId),
-      call: fanOutCall(job, scope),
-      ...(ladderDelivered ? {} : { ladder: 'in_app_only' as const }),
-    });
+    const closure = await giveUpDeferred({ alert: alertFor(memberId), call: fanOutCall(job, scope) });
+    // `no_block` here owes nothing: this attempt's overlay read succeeded, so the alert carries every block it can (third pass).
     if (closure === 'failed') closureOwed.push(memberId);
   };
 
@@ -1170,11 +1178,21 @@ export async function runContributionNotifyChild(
         if (record.delivered) delivered += 1;
         else inAppOnly += 1; // FS14 (a) — recorded, the claim KEPT (a pending-match member is not nudged again)
         if (record.bridgeRowOpen) closureOwed.push(memberId);
-        await store
-          .recordResult(key, serializeFanOutResult(record))
-          .catch((err: unknown) => {
-            alarm(`[jobs] contribution-notify-child: failed to record a member result — ${String(err)}`);
-          });
+        // Code review 2026-10-28 (third pass): an OWED closure's record outlives the `deferred` row (`OWED_CLOSURE_KEY_TTL_SECONDS`).
+        const recorded = record.bridgeRowOpen
+          ? store.recordResult(key, serializeFanOutResult(record), { extendTtlSeconds: OWED_CLOSURE_KEY_TTL_SECONDS })
+          : store.recordResult(key, serializeFanOutResult(record));
+        await recorded.catch((err: unknown) => {
+          alarm(`[jobs] contribution-notify-child: failed to record a member result — ${String(err)}`);
+          if (record.bridgeRowOpen) {
+            // The DOUBLE fault: the key stays `pending` (base TTL), so a retry reads ⛔ owed closure — it may be lost.
+            alarm(
+              `[jobs] contribution-notify-child: alert_sms.bridge_closure_unrecorded — a bridged member the push reached owes a bridge-row ` +
+                `closure, and its result could not be recorded, for alert ${p.alertId} pool ${p.poolId}: the closure may be LOST, and a re-run ` +
+                `once the claim lapses may TEXT a member the push already told`,
+            );
+          }
+        });
       }
     }
     failed.push(...retry);
@@ -1194,9 +1212,9 @@ export async function runContributionNotifyChild(
 
   // Story 5.8b review (P2-1) — an owed closure retries the job (⛔ a push: those members are recorded). On the FINAL attempt it is
   // left to the row's own 30-minute expiry (a later lookup gives an expired `deferred` row up instead of sending it) — alarmed. Code
-  // review 2026-10-28 (second pass): the member's key outlives that window (`BRIDGED_MEMBER_IDEMPOTENCY_TTL_SECONDS`), so ⛔ re-run
-  // can claim them before it — a durable bound, ⛔ the 300 s key's. The residual: a terminal row that could not be WRITTEN (⛔ row
-  // at all) through every attempt — once the claim lapses, F9's re-fan finds ⛔ row (named in the alarm).
+  // review 2026-10-28 (third pass): the owed member's RECORD outlives that window (`OWED_CLOSURE_KEY_TTL_SECONDS`), so ⛔ re-run can
+  // claim them before it. The residuals: a terminal row that could not be WRITTEN (⛔ row at all) through every attempt — once the key
+  // lapses, F9's re-fan finds ⛔ row (named in the alarm) — and a record that failed (`bridge_closure_unrecorded`).
   const closureRetry = closureOwed.length > 0 && !isFinalFanOutAttempt(fanOutCall(job, scope));
   if (closureOwed.length > 0 && !closureRetry) {
     alarm(

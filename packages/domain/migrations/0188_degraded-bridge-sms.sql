@@ -26,7 +26,8 @@
 -- the BYPASSRLS service role). The control row may be UPDATEd (its state) and ⛔ DELETEd or TRUNCATEd (trigger), so the
 -- "absent ⇒ OFF" reading never has to be trusted. Code review 2026-10-28 (second pass): every UPDATE of the control row must name a
 -- NEW history row whose `enabled` equals the row's (trigger) — ⛔ a state change with no history, ⛔ a change attributed to the
--- wrong row; and the history's `audit_id` is NOT NULL (the one writer always runs under `withCompensatingAudit`). The fan-out
+-- wrong row; and the history's `audit_id` is NOT NULL (the one writer always runs under `withCompensatingAudit`). Third pass: that
+-- row must also EXIST and be the NEWEST change (`changed_at`, DB-stamped). The fan-out
 -- reads the control row ONCE per bridged job at its bridge attempt (`contribution-notify.ts`), so turning it OFF also stops texts
 -- already queued.
 -- GLOBAL tables (⛔ `pariwar_id` — the switch is Trust-wide): ENABLE + FORCE RLS with an explicit `USING (true)` SELECT policy
@@ -99,6 +100,18 @@ CREATE TRIGGER degraded_bridge_sms_switch_changes_no_update_delete
 CREATE TRIGGER degraded_bridge_sms_switch_changes_no_truncate
   BEFORE TRUNCATE ON degraded_bridge_sms_switch_changes
   FOR EACH STATEMENT EXECUTE FUNCTION degraded_bridge_sms_switch_changes_reject_mutation();--> statement-breakpoint
+-- Code review 2026-10-28 (third pass) — `changed_at` is the DB's clock, ⛔ the writer's: the control row's guard reads "newest" from
+-- it, so a forged future `changed_at` would otherwise pin the switch (every later change "older").
+CREATE FUNCTION degraded_bridge_sms_switch_changes_stamp()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.changed_at := clock_timestamp();
+  RETURN NEW;
+END;
+$$;--> statement-breakpoint
+CREATE TRIGGER degraded_bridge_sms_switch_changes_stamp
+  BEFORE INSERT ON degraded_bridge_sms_switch_changes
+  FOR EACH ROW EXECUTE FUNCTION degraded_bridge_sms_switch_changes_stamp();--> statement-breakpoint
 -- The control row: ⛔ DELETE / TRUNCATE (an absent row must never be what "OFF" rests on).
 CREATE FUNCTION degraded_bridge_sms_switch_reject_removal()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -114,20 +127,34 @@ CREATE TRIGGER degraded_bridge_sms_switch_no_truncate
   BEFORE TRUNCATE ON degraded_bridge_sms_switch
   FOR EACH STATEMENT EXECUTE FUNCTION degraded_bridge_sms_switch_reject_removal();--> statement-breakpoint
 -- Code review 2026-10-28 (second pass) — the control row moves ONLY with its history: each UPDATE names a NEW change, and that
--- change set the state the row now says. A dangling id passes here and is refused by the FK (23503), so that refusal stays the FK's.
+-- change set the state the row now says. Code review 2026-10-28 (third pass): ⛔ re-pointing to an OLDER change that agrees (a flip
+-- with no new history, credited to the wrong row) — the named change must be the NEWEST (⛔ a change with a later `changed_at`;
+-- the history stamps `changed_at` itself, above, so the order cannot be forged); and an id the trigger cannot find is REFUSED
+-- (fail closed — it was `IF FOUND`), so a dangling id now stops here, before the FK. ⛔ SECURITY DEFINER: the two tables carry the
+-- SAME policy set, so a role that sees the control row (a policy, or BYPASSRLS) sees the history too; one that cannot is refused.
 CREATE FUNCTION degraded_bridge_sms_switch_guard_update()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
   change_enabled boolean;
+  change_at timestamptz;
 BEGIN
   IF NEW.last_change_id IS NULL OR NEW.last_change_id IS NOT DISTINCT FROM OLD.last_change_id THEN
     RAISE EXCEPTION 'degraded_bridge_sms_switch: an update must name a NEW history row (Story 5.8b, FS17 (a))'
       USING ERRCODE = 'P0001';
   END IF;
-  SELECT c.enabled INTO change_enabled FROM degraded_bridge_sms_switch_changes c WHERE c.change_id = NEW.last_change_id;
-  IF FOUND AND change_enabled IS DISTINCT FROM NEW.enabled THEN
+  SELECT c.enabled, c.changed_at INTO change_enabled, change_at
+    FROM degraded_bridge_sms_switch_changes c WHERE c.change_id = NEW.last_change_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'degraded_bridge_sms_switch: history row % not found (Story 5.8b, FS17 (a))', NEW.last_change_id
+      USING ERRCODE = 'P0001';
+  END IF;
+  IF change_enabled IS DISTINCT FROM NEW.enabled THEN
     RAISE EXCEPTION 'degraded_bridge_sms_switch: enabled = % but history row % set % (Story 5.8b, FS17 (a))',
       NEW.enabled, NEW.last_change_id, change_enabled
+      USING ERRCODE = 'P0001';
+  END IF;
+  IF EXISTS (SELECT 1 FROM degraded_bridge_sms_switch_changes c WHERE c.changed_at > change_at) THEN
+    RAISE EXCEPTION 'degraded_bridge_sms_switch: history row % is not the newest change (Story 5.8b, FS17 (a))', NEW.last_change_id
       USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;

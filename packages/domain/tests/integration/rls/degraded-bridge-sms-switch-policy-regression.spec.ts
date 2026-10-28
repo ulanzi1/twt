@@ -6,7 +6,8 @@
 // text into a fresh schema (code review 2026-10-28, P2-5: a shared database's row says what earlier runs left, not what the seed
 // wrote). Then the domain accessors' row life: ON → OFF → ON writes three history rows and the last state wins; a same-state change
 // writes nothing. Code review 2026-10-28 (second pass): the control row moves only with a NEW, agreeing history row (trigger), the
-// history's `audit_id` is NOT NULL, and the writer runs on a BYPASSRLS login inheriting `twt_service`. Every leg that reads the
+// history's `audit_id` is NOT NULL, and the writer runs on a BYPASSRLS login inheriting `twt_service`. Code review 2026-10-28 (third
+// pass): that history row must exist (fail closed) and be the NEWEST change, and `changed_at` is the DB's. Every leg that reads the
 // switch's state first takes the control row's lock — `bridge-switch-concurrency.spec.ts` COMMITS flips in a parallel fork.
 // Live DB only; per-test ROLLBACK (setupLiveDb).
 
@@ -42,6 +43,8 @@ const APPEND_ONLY = { code: 'P0001', message: expect.stringMatching(/append-only
 const UNREMOVABLE = { code: 'P0001', message: expect.stringMatching(/cannot be removed/) };
 const NEEDS_NEW_CHANGE = { code: 'P0001', message: expect.stringMatching(/must name a NEW history row/) };
 const DISAGREES = { code: 'P0001', message: expect.stringMatching(/but history row .* set/) };
+const NOT_FOUND = { code: 'P0001', message: expect.stringMatching(/history row .* not found/) };
+const NOT_NEWEST = { code: 'P0001', message: expect.stringMatching(/is not the newest change/) };
 
 /** Hold the control row for the rest of this test's transaction, then read the state — no parallel flip can land in between. */
 async function lockedState(client: Client): Promise<boolean> {
@@ -142,14 +145,17 @@ describe.skipIf(!hasDatabase)('the degraded-mode bridge switch — migration 018
     }
   });
 
-  it('⭐ code review P2-5 — `last_change_id` must name a REAL history row: a dangling id is refused by the FK (the superuser too)', async () => {
+  // Code review 2026-10-28 (third pass): the guard now refuses a dangling id itself (fail closed), BEFORE the FK — the FK stays as
+  // the backstop and is asserted by the catalog.
+  it('⭐ code review P2-5 — `last_change_id` must name a REAL history row: a dangling id is refused (the superuser too); the FK stands', async () => {
     const { client } = getTx();
     const enabled = await lockedState(client);
-    await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET last_change_id = $1 WHERE id = 1`, [randomUUID()]), {
-      code: '23503',
-      constraint: 'degraded_bridge_sms_switch_last_change_id_fk',
-    });
-    // …and a real one that AGREES with the state is admitted (the FK, not some other refusal, is what the dangling id hit).
+    await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET last_change_id = $1 WHERE id = 1`, [randomUUID()]), NOT_FOUND);
+    const fk = await client.query<{ confrelid: string }>(
+      `SELECT confrelid::regclass::text AS confrelid FROM pg_constraint WHERE conname = 'degraded_bridge_sms_switch_last_change_id_fk' AND contype = 'f'`,
+    );
+    expect(fk.rows).toEqual([{ confrelid: CHANGES }]);
+    // …and a real one that AGREES with the state is admitted (the missing row, not some other refusal, is what the dangling id hit).
     const id = await insertChange(client, enabled, 'fk leg');
     expect((await client.query(`UPDATE ${SWITCH} SET last_change_id = $1 WHERE id = 1`, [id])).rowCount).toBe(1);
   });
@@ -168,14 +174,44 @@ describe.skipIf(!hasDatabase)('the degraded-mode bridge switch — migration 018
     await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET last_change_id = $1 WHERE id = 1`, [other]), DISAGREES);
     const same = await insertChange(client, enabled, 'mismatch leg');
     await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [same, !enabled]), DISAGREES);
-    // ✓ the flip WITH its own agreeing change lands; repeating the same pointer is then refused (⛔ a NEW row).
-    expect((await client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [other, !enabled])).rowCount).toBe(1);
-    await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET last_change_id = $1 WHERE id = 1`, [other]), NEEDS_NEW_CHANGE);
+    // ⛔ `other` now agrees with the flip but is no longer the newest (`same` came after it — code review 2026-10-28 (third pass)).
+    await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [other, !enabled]), NOT_NEWEST);
+    // ✓ the flip WITH its own agreeing, newest change lands; repeating the same pointer is then refused (⛔ a NEW row).
+    const flip = await insertChange(client, !enabled, 'flip leg');
+    expect((await client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [flip, !enabled])).rowCount).toBe(1);
+    await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET last_change_id = $1 WHERE id = 1`, [flip]), NEEDS_NEW_CHANGE);
     const trg = await client.query<{ tgenabled: string }>(
       `SELECT tgenabled FROM pg_trigger WHERE tgname = 'degraded_bridge_sms_switch_guard_update' AND tgrelid = $1::regclass`,
       [SWITCH],
     );
     expect(trg.rows).toEqual([{ tgenabled: 'O' }]);
+  });
+
+  // Code review 2026-10-28 (third pass) — with history c1 (one state) then c2 (the other, current), re-pointing at c1 flipped the switch
+  // with NO new history row and credited it to c1; and the guard skipped its check (`IF FOUND`) for a row it could not find.
+  it('⭐ ⛔ re-pointing to an OLDER change that agrees, ⛔ an id not found, ⛔ a forged `changed_at`; the writer still flips ON → OFF → ON (the superuser too)', async () => {
+    const { client } = getTx();
+    const start = await lockedState(client);
+    const c1 = await insertChange(client, !start, 'c1');
+    expect((await client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [c1, !start])).rowCount).toBe(1);
+    const c2 = await insertChange(client, start, 'c2');
+    expect((await client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [c2, start])).rowCount).toBe(1);
+    await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [c1, !start]), NOT_NEWEST);
+    await expectPgError(client, () => client.query(`UPDATE ${SWITCH} SET enabled = $2, last_change_id = $1 WHERE id = 1`, [randomUUID(), !start]), NOT_FOUND);
+    // A written `changed_at` far in the future would make every later change "older" and pin the switch: the DB stamps its own clock.
+    const forged = await client.query<{ changed_at: Date }>(
+      `INSERT INTO ${CHANGES} (enabled, changed_by_actor, changed_by_display, reason, audit_id, changed_at)
+       VALUES ($1, $2, 'Spec Admin', 'forged', $3, '2999-01-01T00:00:00Z') RETURNING changed_at`,
+      [start, randomUUID(), randomUUID()],
+    );
+    expect(forged.rows[0]!.changed_at.getTime()).toBeLessThan(Date.parse('2100-01-01T00:00:00Z'));
+    expect((await readDegradedBridgeSmsSwitch(client)).reason).toBe('c2');
+    // ✓ the one writer: each of three flips appends its own (newest) change and lands.
+    const actor = randomUUID();
+    for (const enabled of [!start, start, !start]) {
+      const r = await setDegradedBridgeSmsSwitchInTx(client, { enabled, actorId: actor, actorDisplay: 'Asha Verma', reason: `flip to ${String(enabled)}`, auditId: randomUUID() });
+      expect(r).toMatchObject({ changed: true, state: { enabled, changedByActor: actor, reason: `flip to ${String(enabled)}` } });
+    }
   });
 
   it('⭐ twt_app reads the switch WITH and WITHOUT a Pariwar scope, and ⛔ writes it', async () => {

@@ -453,14 +453,19 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — `giveUpDeferred` w
     expect(db.writes()).toHaveLength(2);
   });
 
-  it('⛔ row but `in_app_only`, or an alert with ⛔ bridge block ⇒ `none`, ⛔ write (the member was not told / the residual)', async () => {
-    const a = sqlPool({ found: [null] });
-    await expect(seam(a.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL, ladder: 'in_app_only' })).resolves.toBe('none');
-    expect(a.writes()).toEqual([]);
+  it('code review 2026-10-28 (third pass) — ⛔ row and an alert with ⛔ bridge block ⇒ `no_block` (⛔ `none`), ⛔ write; a FINAL or in-flight row ⇒ `none`', async () => {
     const b = sqlPool({ found: [null] });
     const noBlock = { ...BRIDGED, payload_data: { title: 't', body: 'b' } } as unknown as Alert;
-    await expect(seam(b.pool).giveUpDeferred!({ alert: noBlock, call: CALL })).resolves.toBe('none');
+    await expect(seam(b.pool).giveUpDeferred!({ alert: noBlock, call: CALL })).resolves.toBe('no_block');
     expect(b.writes()).toEqual([]);
+    // A row that needs no closing is `none` — with a block or without (an F9 re-fan finds every such row final).
+    for (const outcome of ['error', 'accepted', 'attempting']) {
+      const withBlock = sqlPool({ found: [outcome] });
+      await expect(seam(withBlock.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL })).resolves.toBe('none');
+      const without = sqlPool({ found: [outcome] });
+      await expect(seam(without.pool).giveUpDeferred!({ alert: noBlock, call: CALL })).resolves.toBe('none');
+      expect([...withBlock.writes(), ...without.writes()]).toEqual([]);
+    }
   });
 
   it('the insert CONFLICTS (another attempt wrote it) ⇒ the row is re-read: FINAL ⇒ `none`; `deferred` ⇒ given up `ladder_delivered`', async () => {
@@ -472,11 +477,12 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — `giveUpDeferred` w
     expect(deferred.writes().at(-1)!.params).toContain('exhausted:rate_limited:ladder_delivered');
   });
 
-  it('a `deferred` row and `in_app_only` ⇒ given up `exhausted:rate_limited:in_app_only` (⛔ the ladder-delivered word)', async () => {
+  it('code review 2026-10-28 (third pass) — the `in_app_only` mode is gone: a `deferred` row is given up only as `ladder_delivered`', async () => {
     const db = sqlPool({ found: ['deferred'] });
-    await expect(seam(db.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL, ladder: 'in_app_only' })).resolves.toBe('closed');
+    await expect(seam(db.pool).giveUpDeferred!({ alert: BRIDGED, call: CALL })).resolves.toBe('closed');
     expect(db.writes()).toHaveLength(1);
-    expect(db.writes()[0]!.params).toContain('exhausted:rate_limited:in_app_only');
+    expect(db.writes()[0]!.params).toContain('exhausted:rate_limited:ladder_delivered');
+    expect(JSON.stringify(db.statements)).not.toContain('in_app_only');
   });
 });
 

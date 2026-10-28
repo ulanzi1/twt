@@ -200,7 +200,7 @@ export interface MemberFanOutResult {
   readonly telegramMirrored: boolean;
   /** Story 5.8b review (P2-1) — the ladder delivered but a `deferred` bridge row could NOT be given up (FS3.1 (a)): the caller records
    *  the member (⛔ a second push) and keeps the closure owed. Absent ⇒ nothing owed. Code review 2026-10-28 (second pass): also when
-   *  the terminal row could not be written, or a member recorded `in_app_only` left a `deferred` row open (`delivered` says which). */
+   *  the terminal row could not be written. Code review 2026-10-28 (third pass): only ever on a DELIVERED member. */
   readonly bridgeRowOpen?: true;
 }
 
@@ -283,10 +283,14 @@ export function isAlertSmsFallbackEligible(input: {
  * {@link isAlertSmsFallbackEligible} (code review 2026-10-28, second pass). In the member's terms: *"If the Trust has declared your
  * Pariwar's notifications unreliable and a Super Admin has the bridge texts switched on, you are texted once when a new cycle opens
  * for your pool — whether or not you use the app or WhatsApp — in the language you chose, naming the family you are supporting,
- * unless your own death has been reported to the Trust."* Push, WhatsApp and a WhatsApp yes are ⛔ inputs (the text goes FIRST).
+ * unless your own death has been reported to the Trust."* Its built exclusions also include ⛔ known text language (no passport row)
+ * and a family name that does not fit even shortened; once the app or WhatsApp has reached you for that cycle, a later re-run does ⛔
+ * text you when your alert carried the text then (the story's dated restatement — third code review 2026-10-28). Push, WhatsApp and a
+ * WhatsApp yes are ⛔ inputs (the text goes FIRST).
  * Two sites ask it, each with the conjuncts it holds: the producer (`buildCycleOpenAlert` — the declaration, the overlay, the
  * language, the name; the send-time two passed `true`, decided at the send) and the fan-out's (1b) — the block those decided, the
- * target, the switch.
+ * target, the switch. Code review 2026-10-28 (third pass): at (1b) its answer DECIDES the text, from the REAL target and the switch
+ * as read; the checks after it only name why not.
  */
 export function isCycleOpenBridgeTextEligible(input: {
   /** The Pariwar was declared degraded at the cycle's freeze — a TIME-CRITICAL cycle-open (`evaluateDegradedModeBridge`). */
@@ -325,7 +329,7 @@ function alertSmsBlock(alert: Alert): AlertSmsBlock | undefined {
   }
 }
 
-/** A switch read that failed, as {@link onceForJob} keeps it: ONE object per job, so the fan-out alarms it once per job. */
+/** A switch read that failed, as {@link onceForJob} keeps it: ONE object per job (the alarm itself is once per (alert, kind) per window). */
 class BridgeSwitchReadFault extends Error {
   readonly fault: unknown;
   constructor(fault: unknown) {
@@ -335,13 +339,33 @@ class BridgeSwitchReadFault extends Error {
   }
 }
 
-/** The switch-read faults already alarmed (code review 2026-10-28, second pass: ONE alarm per job, ⛔ one per member). */
-const alarmedSwitchFaults = new WeakSet<object>();
+/** Code review 2026-10-28 (second pass) — a bridge alarm is raised ONCE per key per this window, ⛔ per job (third pass: every one). */
+export const BRIDGE_ALARM_WINDOW_MS = 24 * 60 * 60_000;
+const bridgeAlarmedAt = new Map<string, number>();
+
+/**
+ * The bridge alarms' memo (per process), keyed (alert, kind) — or (alert, pool, kind) for the name alarms: a pool's ≤8-member jobs,
+ * their retries and F9's hourly re-fans share ONE alarm (code review 2026-10-28, third pass: the overlay and the switch alarms too —
+ * ~25k for a 40k pool otherwise). The sink is called BEFORE the window is armed (a throwing sink must not swallow the next one — the
+ * seam's `alarmRefusalOnce` shape).
+ */
+export function alarmBridgeOnce(alarm: (m: string) => void, key: string, atMs: number, message: string): void {
+  const at = bridgeAlarmedAt.get(key);
+  if (at !== undefined && atMs - at < BRIDGE_ALARM_WINDOW_MS) return;
+  alarm(message);
+  for (const [k, v] of bridgeAlarmedAt) if (atMs - v >= BRIDGE_ALARM_WINDOW_MS) bridgeAlarmedAt.delete(k);
+  bridgeAlarmedAt.set(key, atMs);
+}
+
+/** @internal tests only — the memo is per process; each leg starts with none raised. */
+export function resetBridgeAlarms(): void {
+  bridgeAlarmedAt.clear();
+}
 
 /**
  * Story 5.8b (AC12) — wrap the switch read so ONE job reads it ONCE (the first bridge attempt), however many members it fans out.
- * A throw is kept too: every member of the job sees the same `unavailable` (⛔ a second read), and — code review 2026-10-28 (second
- * pass) — the job's ONE fault object is alarmed ONCE (⛔ per member).
+ * A throw is kept too: every member of the job sees the same `unavailable` (⛔ a second read); its alarm is raised ONCE per alert per
+ * window (`alarmBridgeOnce` — code review 2026-10-28, third pass; the second pass's was once per job).
  */
 export function onceForJob(read: () => Promise<boolean>): () => Promise<boolean> {
   let memo: Promise<boolean> | undefined;
@@ -500,56 +524,59 @@ export async function fanOutAlert(
   let bridgeSkip: ChannelSendOutcome = { outcome: 'skipped_no_target' };
   if (bridge.bridged) {
     const block = alertSmsBlock(alert);
-    if (!block) {
-      bridgeSkip = {
-        outcome: 'skipped_no_target',
-        detail: call?.bridgeBlockUnavailable ? SMS_RUNG_DETAIL.bridgeBlockUnavailable : SMS_RUNG_DETAIL.notLit,
-      };
-    } else if (!ctx.targets.sms) bridgeSkip = { outcome: 'skipped_no_target' };
-    else if (!deps.alertSms) bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notWired };
-    else {
-      let switchOn: boolean | 'unavailable';
+    const target = ctx.targets.sms;
+    const seam = deps.alertSms;
+    // The switch is read only when the rest could text (⛔ a read for a member who never could).
+    let switchOn: boolean | 'unavailable' = false;
+    if (block && target && seam) {
       try {
         switchOn = deps.readBridgeSwitch ? await deps.readBridgeSwitch() : false;
       } catch (err) {
         switchOn = 'unavailable';
-        // Code review 2026-10-28 (second pass): ONE alarm per job — `onceForJob` hands every member the SAME fault object.
-        const seen = typeof err === 'object' && err !== null && alarmedSwitchFaults.has(err);
-        if (!seen) {
-          if (typeof err === 'object' && err !== null) alarmedSwitchFaults.add(err);
-          alarmOf(deps)(
-            `[jobs] contribution-notify: the degraded-mode bridge switch could not be read for alert ${alert.alert_id} — ⛔ bridge text ` +
-              `this attempt (the ladder runs; retried) — ${err instanceof BridgeSwitchReadFault ? String(err.fault) : String(err)}`,
-          );
-        }
-      }
-      if (switchOn === 'unavailable') bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeSwitchUnavailable };
-      else if (!switchOn) bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeSwitchedOff };
-      else if (
-        // AC6 — the ONE predicate; the producer decided its conjuncts when it put the block on (the block IS that answer).
-        !isCycleOpenBridgeTextEligible({
-          bridged: true,
-          deathReported: false,
-          textLanguage: block.locale,
-          nameBoxes: [block.values['member1'] ?? '', block.values['member2'] ?? ''],
-          smsTarget: true,
-          switchOn: true,
-        })
-      ) {
-        bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notLit };
-      } else {
-        const texted = await deps.alertSms({
-          alert,
-          block,
-          target: ctx.targets.sms,
-          ...(call ? { call } : {}),
-          whatsappTried: false,
-          dispatch: smsDispatchDeps,
-        });
-        bridgeEntry = { channel: 'sms', attempt: 0, outcome: texted.outcome, ...(texted.detail !== undefined ? { detail: texted.detail } : {}) };
-        bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeAlreadyTried };
+        // Code review 2026-10-28 (third pass): ONE alarm per (alert, kind) per window across jobs, retries and re-fans (was per job).
+        alarmBridgeOnce(
+          alarmOf(deps),
+          `${alert.alert_id}:bridge_switch_unavailable`,
+          now.getTime(),
+          `[jobs] contribution-notify: the degraded-mode bridge switch could not be read for alert ${alert.alert_id} — ⛔ bridge text ` +
+            `this attempt (the ladder runs; retried) — ${err instanceof BridgeSwitchReadFault ? String(err.fault) : String(err)} ` +
+            `(not repeated for this alert for ${String(BRIDGE_ALARM_WINDOW_MS / 3_600_000)} h)`,
+        );
       }
     }
+    // AC6 — the ONE predicate DECIDES (code review 2026-10-28, third pass): the REAL target and the switch as read; the producer decided
+    // the rest when it put the block on (the block IS that answer). The checks after it only NAME why not (the trail is unchanged).
+    const eligible =
+      block !== undefined &&
+      isCycleOpenBridgeTextEligible({
+        bridged: true,
+        deathReported: false,
+        textLanguage: block.locale,
+        nameBoxes: [block.values['member1'] ?? '', block.values['member2'] ?? ''],
+        smsTarget: target !== null,
+        switchOn: switchOn === true,
+      });
+    if (eligible && block && target && seam) {
+      const texted = await seam({
+        alert,
+        block,
+        target,
+        ...(call ? { call } : {}),
+        whatsappTried: false,
+        dispatch: smsDispatchDeps,
+      });
+      bridgeEntry = { channel: 'sms', attempt: 0, outcome: texted.outcome, ...(texted.detail !== undefined ? { detail: texted.detail } : {}) };
+      bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeAlreadyTried };
+    } else if (!block) {
+      bridgeSkip = {
+        outcome: 'skipped_no_target',
+        detail: call?.bridgeBlockUnavailable ? SMS_RUNG_DETAIL.bridgeBlockUnavailable : SMS_RUNG_DETAIL.notLit,
+      };
+    } else if (!target) bridgeSkip = { outcome: 'skipped_no_target' };
+    else if (!seam) bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notWired };
+    else if (switchOn === 'unavailable') bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeSwitchUnavailable };
+    else if (!switchOn) bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeSwitchedOff };
+    else bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notLit };
   }
 
   /**
@@ -639,20 +666,14 @@ export async function fanOutAlert(
     // this attempt's bridge entry says (⛔ row ⇒ the terminal row below). A closure that fails through the seam's tries is REPORTED
     // (`bridgeRowOpen`): the job keeps it and retries ONLY the closure (the push is ⛔ repeated — the claim stays recorded).
     // ⭐ Code review 2026-10-28 (second pass), was Decision 2 (a): with ⛔ row at all, the seam writes a TERMINAL one, so F9's re-fan
-    // (bridged again — FS10) ⛔ texts once the cause clears. And a member recorded TERMINALLY without delivery (⛔ retried — the switch
-    // now OFF, the final attempt) closes an earlier `deferred` row too — ⛔ a new row: they were ⛔ told, a later re-fan may text them.
-    if (bridge.bridged && deps.alertSms?.giveUpDeferred) {
-      if (delivered) {
-        const closure = await deps.alertSms.giveUpDeferred({ alert, ...(call ? { call } : {}) });
-        // Fix review (2026-10-28): ⛔ block on a FAILED overlay read ⇒ the terminal row could not be written (its language is the
-        // block's) — OWED, so the job's retry writes it once the read is back (⛔ a later re-fan texting a member the push told).
-        bridgeRowOpen = closure === 'failed' || (closure === 'none' && call?.bridgeBlockUnavailable === true);
-      } else {
-        const terminal = !shouldRetryFanOut({ memberId: alert.member_id, delivered, deliveredChannel, trail, bridged: true, costSuppressedChannels, telegramMirrored: false }, ctx, call);
-        if (terminal) {
-          bridgeRowOpen = (await deps.alertSms.giveUpDeferred({ alert, ...(call ? { call } : {}), ladder: 'in_app_only' })) === 'failed';
-        }
-      }
+    // (bridged again — FS10) ⛔ texts once the cause clears. Code review 2026-10-28 (third pass): ONLY a delivery closes — a member
+    // nothing reached keeps an earlier `deferred` row (it ages out by itself after 30 min), so a later re-run may still text them.
+    if (bridge.bridged && delivered && deps.alertSms?.giveUpDeferred) {
+      const closure = await deps.alertSms.giveUpDeferred({ alert, ...(call ? { call } : {}) });
+      // Fix review (2026-10-28): ⛔ block on a FAILED overlay read ⇒ the terminal row could not be written (its language is the
+      // block's) — OWED, so the job's retry writes it once the read is back. Third pass: only on `no_block` (⛔ row AND ⛔ block) — a
+      // final or in-flight row (`none`) owes nothing.
+      bridgeRowOpen = closure === 'failed' || (closure === 'no_block' && call?.bridgeBlockUnavailable === true);
     }
   }
 

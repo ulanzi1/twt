@@ -249,6 +249,9 @@ export async function giveUpDeferredAlertSmsSend(
   return (rowCount ?? 0) > 0;
 }
 
+/** The ONE detail {@link recordLadderDeliveredAlertSmsSend} writes (0188's grammar alternative). */
+const LADDER_DELIVERED_DETAIL = 'exhausted:ladder_delivered';
+
 /**
  * Story 5.8b — code review 2026-10-28 (second pass), was Decision 2 (a): the ladder DELIVERED a bridged alert and ⛔ row exists
  * (the text was never tried: the switch OFF, a template id missing, …). Write a TERMINAL row so a later re-claim (F9's hourly
@@ -256,6 +259,10 @@ export async function giveUpDeferredAlertSmsSend(
  * then the claim-token compare-and-set to `error` / `detail` — both on the caller's scope transaction, so ⛔ reader ever sees the
  * `attempting` step, and only the columns 0184 grants `twt_app` are written (its INSERT grant has ⛔ `detail`; the finished-row
  * trigger guards UPDATE only). `false` ⇒ a row already exists (the caller reads what it is).
+ * Code review 2026-10-28 (third pass): ONLY the bridge's row — `exhausted:ladder_delivered`, occasion `cycle_open`, message
+ * `cycle_open_bridge` — anything else is refused BEFORE any statement. `attempt_count` stays 1 (the column DEFAULT): 0184's CHECK
+ * (`attempt_count >= 1`) refuses 0, though ⛔ gateway was contacted. ⚠ So an error rate over `alert_sms_sends.outcome` (or a sum of
+ * `attempt_count`) MUST exclude detail `exhausted:ladder_delivered` — with the switch OFF there is one such row per pushed member.
  */
 export async function recordLadderDeliveredAlertSmsSend(
   q: Queryable,
@@ -266,8 +273,10 @@ export async function recordLadderDeliveredAlertSmsSend(
     readonly detail: string;
   },
 ): Promise<boolean> {
-  assertDetail(input.detail);
-  if (!input.detail.startsWith('exhausted:')) throw new Error('recordLadderDeliveredAlertSmsSend: the detail must be an exhausted:<…> one');
+  if (input.detail !== LADDER_DELIVERED_DETAIL) throw new Error(`recordLadderDeliveredAlertSmsSend: the detail must be ${LADDER_DELIVERED_DETAIL}`);
+  if (input.occasion !== 'cycle_open' || input.message !== 'cycle_open_bridge') {
+    throw new Error('recordLadderDeliveredAlertSmsSend: only the bridge row (cycle_open / cycle_open_bridge)');
+  }
   const inserted = await q.query<{ send_id: string }>(
     `INSERT INTO alert_sms_sends (pariwar_id, alert_id, member_id, occasion, message, locale, outcome, claim_token)
      VALUES ($1, $2, $3, $4, $5, $6, 'attempting', $7)

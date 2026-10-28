@@ -1660,27 +1660,33 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       expect(await rowsOf(k2.alertId)).toEqual([]);
     });
 
-    it('⭐ a member recorded TERMINALLY without delivery (attempt 2: the switch OFF, push down) ⇒ the EARLIER `deferred` row is given up `exhausted:rate_limited:in_app_only` and a later re-fan sends NOTHING; with ⛔ row ⛔ row is written', async () => {
+    // Code review 2026-10-28 (third pass) — REPLACES the second pass's in-app-only closure leg (that closure is reverted).
+    it('⭐ a member recorded TERMINALLY without delivery (attempt 2: the switch OFF, push down) ⇒ the EARLIER `deferred` row STAYS (⛔ given up), and a later in-window re-run with the switch ON TEXTS the un-reached member; with ⛔ row ⛔ row is written', async () => {
       const k = await freshAlert();
       const first = rig({ answer: () => Promise.reject(new SmsSendError('r', null, 429)) });
       expect((await fanOutAlert(first.deps, bridgedOpen(k), ctx(), CALL)).delivered).toBe(false);
-      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'deferred' });
+      const deferred = await fullRow(k.alertId);
+      expect(deferred).toMatchObject({ outcome: 'deferred', attempt_count: 1 });
       const off = rig({ readBridgeSwitch: () => Promise.resolve(false) });
       const second = await fanOutAlert(off.deps, bridgedOpen(k), ctx(), { ...CALL, retryCount: 1 });
       expect(second.delivered).toBe(false);
       expect(second.bridgeRowOpen).toBeUndefined();
       expect(shouldRetryFanOut(second, ctx(), { ...CALL, retryCount: 1 })).toBe(false);
-      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'error', detail: 'exhausted:rate_limited:in_app_only' });
-      const later = rig();
-      await fanOutAlert(later.deps, bridgedOpen(k), ctx(), { ...CALL, jobId: 'job-refan' });
-      expect(later.calls).toHaveLength(0);
+      expect(off.calls).toHaveLength(0);
+      expect(await fullRow(k.alertId)).toEqual(deferred); // ⛔ touched — it ages out by itself after 30 minutes
+      // A re-run INSIDE the row's 30 minutes (a sweep re-enqueue), the switch ON, push still down: the member nothing reached is texted.
+      const on = rig();
+      const third = await fanOutAlert(on.deps, bridgedOpen(k), ctx(), { ...CALL, jobId: 'job-rerun' });
+      expect(on.calls).toHaveLength(1);
+      expect(third).toMatchObject({ delivered: true, deliveredChannel: 'sms' });
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'accepted', attempt_count: 2 });
       // ⛔ row and ⛔ delivery: nothing is written (the member was never told — a later re-fan with the switch ON may text them).
       const k2 = await freshAlert();
       await fanOutAlert(rig({ readBridgeSwitch: () => Promise.resolve(false) }).deps, bridgedOpen(k2), ctx(), CALL);
       expect(await rowsOf(k2.alertId)).toEqual([]);
-      const on = rig();
-      await fanOutAlert(on.deps, bridgedOpen(k2), ctx(), { ...CALL, jobId: 'job-refan' });
-      expect(on.calls).toHaveLength(1);
+      const later = rig();
+      await fanOutAlert(later.deps, bridgedOpen(k2), ctx(), { ...CALL, jobId: 'job-refan' });
+      expect(later.calls).toHaveLength(1);
     });
 
     it('⭐ AC12 — the REAL switch, read through the jobs pool (`twt_app`): OFF ⇒ ⛔ text, the ladder\'s trail names it; ON ⇒ the text goes (the state found is restored)', async () => {

@@ -31,6 +31,15 @@ Deferred by the story's build decisions ([`-413`](../../.decision-log.md#decisio
   static file server): the agent's Chrome showed its error page again while `curl` from the same machine fetched the page — the environment, ⛔ the admin
   build. The pass now also owes the review's R1 legs in a real browser: leaving the page / loading another claim while a save is unsaved, and a completion
   during an outstanding save (waits, then goes out; or "Complete without the unsaved answers").
+  ⚠ **Dated note, 2026-10-28 (BigDev's manual pass — PARTIAL, then stopped by BigDev: *"I would rather stop here and move on"*):** in a real Chrome
+  against a seeded local API (a throwaway database, since removed), as read from the API's request log and BigDev's words: the page, the panel and
+  the letter's save worked; a FULL visit with the family's cause seeded completed (200) and its result was re-read; with the answer save BLOCKED
+  (DevTools request blocking) the completion WAITED and, once unblocked, the save went out first and the completion straight after (R1's drain —
+  observed). ⚠ That completion was REFUSED `409` (claim B's visit, still `scheduled`); the page's message was ⛔ captured, and an in-process replay
+  on another visit with a past date completed (200) — the cause is ⛔ known (a candidate, unconfirmed: a second "Compare" clearing the recorded
+  date). ⛔ Attested: the Load-blocked and Back-blocked messages, the waiting text, the ③ line's words, the approvers' family account on the console,
+  the R5 announcements. A side observation (pre-existing, ⛔ this story's): a district typed in a different case (`patna`) is a bare 403 — the
+  page shows the schedule form and ⛔ says why. ⭐ Trigger unchanged (before `done`), plus: reproduce the 409 and read its code.
 
 ---
 

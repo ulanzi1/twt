@@ -752,7 +752,9 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
     save line, ⛔ the lines shown at load; the generic unsaved line lost its duplicate `role="status"`. 3 admin legs.
   - ✅ Resolved review finding [MEDIUM]: **R6** — the tampered-session leg on GET and PUT (a nonexistent actor ⇒ 404; a positive human control
     first; the answer row unchanged and attributed to the inspector). Passes on the pre-fix code too — a proof, ⛔ a fix.
-  - ⛔ **R7 OPEN** — re-attempted with a static probe page: the agent's Chrome still shows its error page while `curl` fetches it.
+  - ⛔ **R7 OPEN** — re-attempted with a static probe page: the agent's Chrome still shows its error page while `curl` fetches it. Then BigDev
+    ran a PARTIAL manual pass against a seeded local API and stopped it (*"I would rather stop here and move on"*): R1's wait-then-complete order
+    was observed; one completion was refused `409` for a reason ⛔ captured; the rest ⛔ attested — recorded in `deferred-work.md` (6-32 section).
   - Proof: every new leg RED against the pre-fix code (except R6 and the "nothing unsaved" control). `ci:local` on a FRESH container (`twt-632-ci-pg`
     :5449): the first run at `b8f23db8` was 35 / 36 — `microcopy` refused the word "report" in a comment of the new `unsaved-answers.tsx`; reworded
     (`179d8b8f`); the re-run on a RECREATED container: **36 / 36 green at `179d8b8f`** (integration included).

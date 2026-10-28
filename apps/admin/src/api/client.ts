@@ -117,6 +117,7 @@ import {
   PublishClauseResponse,
   RecoveryConsumeResponse,
   SessionResponse,
+  DegradedBridgeSmsSwitchResponse,
   DegradedModeActiveResponse,
   DegradedModeDeclarationResponse,
   DirectoryPublicationStatusResponse,
@@ -127,6 +128,8 @@ import {
   WaTemplateDto,
   WaTemplatesResponse,
   TelegramConfigResponse,
+  type DegradedBridgeSmsSwitchResponse as DegradedBridgeSmsSwitch,
+  type DegradedBridgeSmsSwitchSetRequest,
   type DegradedModeActiveResponse as DegradedModeActive,
   type DegradedModeDeclarationResponse as DegradedModeDeclaration,
   type DegradedModeDeclareRequest,
@@ -992,6 +995,20 @@ export function revokeDegradedMode(pariwarId: string, id: string): Promise<Degra
     DegradedModeActiveResponse,
     { method: 'POST', body: JSON.stringify({}) },
   );
+}
+
+// Story 5.8b (AC12) — the bridge text's Trust-wide Super Admin switch. GLOBAL (⛔ `/p/:pariwarId`): the read for anyone holding
+// pariwar.declare_degraded_mode in any Pariwar; the change gated server-side by degraded_mode.switch_bridge_sms (super_admin).
+const BRIDGE_SWITCH_PATH = '/api/v1/admin/degraded-mode/bridge-switch';
+
+/** GET the bridge text switch (Trust-wide). */
+export function getDegradedBridgeSmsSwitch(): Promise<DegradedBridgeSmsSwitch> {
+  return apiFetch(BRIDGE_SWITCH_PATH, DegradedBridgeSmsSwitchResponse);
+}
+
+/** POST turn the bridge text on / off for every Pariwar (a required reason). */
+export function setDegradedBridgeSmsSwitch(body: DegradedBridgeSmsSwitchSetRequest): Promise<DegradedBridgeSmsSwitch> {
+  return apiFetch(BRIDGE_SWITCH_PATH, DegradedBridgeSmsSwitchResponse, { method: 'POST', body: JSON.stringify(body) });
 }
 
 // ── Directory-publication kill switch (Story 10.30) ───────────────────────────

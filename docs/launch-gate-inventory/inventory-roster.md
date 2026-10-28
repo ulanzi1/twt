@@ -783,4 +783,12 @@
 - **closure_evidence_link:** (empty)
 - **missed_target_escalation_log:** (empty)
 - **cross_story_discharge_path:** the row's closure is ENACTED by (i) — a Super Admin turning the switch on; until then a declared Pariwar's cycle opening is reached by the app and WhatsApp exactly as today. (a), (e) BigDev with the DLT portal / MSG91; (b) the Hindi reviewer; (d) staging after row 5-8b; (h) the story that builds the member-state read model + its `boot.ts` injection, or BigDev's acceptance.
-- **notes:** "5-8b `done`" ≠ "the bridge is live". Day-one output is none: no template id is set, the switch starts OFF (migration `0188`), and no Pariwar is declared degraded in any local database (Story 5.8b Task 0.1 — deployed environments were asked about and are ⛔ attested; re-asked at (d)). `sms-channel.md` (the degradation-policy framework) is the degraded-POSTURE notice, ⛔ this bridge's words (FS14). The automatic trigger (push delivery rate below a threshold) stays deferred to Category 5 Observability — ⛔ a criterion.
+- **notes:** "5-8b `done`" ≠ "the bridge is live". Day-one output is none: no template id is set, the switch starts OFF (migration `0188`), and no Pariwar is declared degraded in any local database (Story 5.8b Task 0.1 — deployed environments were asked about and are ⛔ attested; re-asked at (d)). `sms-channel.md` (the degradation-policy framework) is the degraded-POSTURE notice, ⛔ this bridge's words (FS14). The automatic trigger (push delivery rate below a threshold) stays deferred to Category 5 Observability — ⛔ a criterion. ⭐ *Dated note, 2026-10-28 (Story 5.8b Task 7 — the BUILT names, for (d) and (i); ⛔ a criterion changed):* the switch is changed at the
+degraded-mode page (`/p/$pariwarId/degraded-mode`, un-linked) or `POST /api/v1/admin/degraded-mode/bridge-switch` with a required reason, by
+the permission key `degraded_mode.switch_bridge_sms` (catalog v55 — `super_admin` ONLY); its state is `degraded_bridge_sms_switch` (one row,
+created OFF by migration `0188`) and its history `degraded_bridge_sms_switch_changes` (append-only). In a member's recorded trail: the
+bridge text is the FIRST `sms` entry; the ladder's SMS rung then ends `sms_bridge_already_tried`, or — when no text was tried —
+`sms_bridge_switched_off` (OFF), `sms_bridge_switch_unavailable` (the switch could not be read; retried), `sms_message_not_lit` (no block)
+or `sms_send_not_wired`. A family name that does not fit even shortened raises ONE name-free alarm `alert_sms.bridge_name_too_long` per
+job. A rate-limited bridge text whose push then delivered is closed `exhausted:rate_limited:ladder_delivered` (FS3.1). (d)'s rehearsal
+observes these.

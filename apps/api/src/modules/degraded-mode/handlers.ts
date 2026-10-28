@@ -16,13 +16,16 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { audit, canonicalJsonStringify, degradedMode, ids, schema, type Db } from '@twt/domain';
 import type {
+  DegradedBridgeSmsSwitchResponse,
+  DegradedBridgeSmsSwitchSetRequest,
   DegradedModeActiveResponse,
   DegradedModeDeclarationResponse,
   DegradedModeDeclareRequest,
 } from '@twt/contracts';
 import type { FastifyRequest } from 'fastify';
 
-import type { AppDeps } from '../../context.js';
+import { ADMIN_GLOBAL_NAMESPACE, type AppDeps } from '../../context.js';
+import { ConflictError } from '../../http-errors.js';
 
 /** The `pariwar.declare_degraded_mode` key (Story 5.8, catalog v6) — the declare/revoke WRITE gate. */
 const PARIWAR_DECLARE_DEGRADED_MODE_KEY = 'pariwar.declare_degraded_mode';
@@ -30,6 +33,22 @@ const PARIWAR_DECLARE_DEGRADED_MODE_KEY = 'pariwar.declare_degraded_mode';
 /** The Story 1.10 audit actions — dotted-lowercase MULTI-dot (the writer's regex permits multiple dots). */
 const AUDIT_ACTION_DECLARED = 'pariwar.degraded_mode.declared';
 const AUDIT_ACTION_REVOKED = 'pariwar.degraded_mode.revoked';
+
+/**
+ * Story 5.8b (FS17 (a); catalog v55) — the bridge text's Trust-wide switch key, `super_admin` ONLY (global dimension). The read is
+ * gated by {@link PARIWAR_DECLARE_DEGRADED_MODE_KEY} in any Pariwar (the degraded-mode page's own key) — the data is Trust-wide.
+ */
+const DEGRADED_MODE_SWITCH_BRIDGE_SMS_KEY = 'degraded_mode.switch_bridge_sms';
+const AUDIT_ACTION_BRIDGE_SWITCH = 'degraded_mode.bridge_switch.changed';
+
+function toSwitchDto(state: degradedMode.DegradedBridgeSmsSwitchState): DegradedBridgeSmsSwitchResponse {
+  return {
+    enabled: state.enabled,
+    changedAt: state.changedAt ? state.changedAt.toISOString() : null,
+    changedByActor: state.changedByActor,
+    reason: state.reason,
+  };
+}
 
 /** Serialize a declaration row → the transport DTO (Date → Iso8601 at the boundary). */
 function toDeclarationDto(row: schema.PariwarDegradedModeDeclarationRow): DegradedModeDeclarationResponse {
@@ -57,6 +76,53 @@ export function createDegradedModeHandlers(deps: AppDeps) {
 
   return {
     PARIWAR_DECLARE_DEGRADED_MODE_KEY,
+    DEGRADED_MODE_SWITCH_BRIDGE_SMS_KEY,
+
+    /** GET the bridge text's Trust-wide switch (Story 5.8b) — the BYPASSRLS service pool (a global table; ⛔ scope tx). */
+    async getBridgeSwitch(): Promise<DegradedBridgeSmsSwitchResponse> {
+      return toSwitchDto(await degradedMode.readDegradedBridgeSmsSwitch(deps.servicePool));
+    },
+
+    /**
+     * POST turn the bridge text ON / OFF for every Pariwar (Story 5.8b, AC12) — a REQUIRED reason; one history row per change,
+     * audited under the compensating-audit protocol (the intent line's id is stored on the row). The state it ALREADY has ⇒ nothing
+     * written, ⛔ audit line (idempotent — a pre-read decides; the change's own lock re-checks, and a concurrent change that got there
+     * first is a 409 rather than a second, false audit line).
+     */
+    async setBridgeSwitch(request: FastifyRequest): Promise<DegradedBridgeSmsSwitchResponse> {
+      const actorId = request.requestContext.actorId;
+      if (!actorId) throw new Error('[degraded-mode] bridge-switch handler ran without an admin session');
+      const body = request.body as DegradedBridgeSmsSwitchSetRequest;
+      const current = await degradedMode.readDegradedBridgeSmsSwitch(deps.servicePool);
+      if (current.enabled === body.enabled) return toSwitchDto(current);
+
+      return audit.withCompensatingAudit(deps.servicePool, {
+        auditIntent: {
+          // A Trust-wide act — the nil-UUID namespace (the global-gate denial audit's own `pariwarId`).
+          pariwarId: ADMIN_GLOBAL_NAMESPACE,
+          actorId,
+          actorRole: null,
+          action: AUDIT_ACTION_BRIDGE_SWITCH,
+          resourceLocator: `global/degraded-mode/bridge-switch;enabled=${String(body.enabled)}`,
+          requestPayloadHash: createHash('sha256')
+            .update(canonicalJsonStringify({ enabled: body.enabled, reason: body.reason }), 'utf8')
+            .digest('hex'),
+          traceId: request.requestContext.traceId ?? null,
+        },
+        mutate: async ({ auditId }) => {
+          const result = await degradedMode.setDegradedBridgeSmsSwitch(deps.servicePool, {
+            enabled: body.enabled,
+            actorId,
+            reason: body.reason,
+            auditId,
+          });
+          if (!result.changed) {
+            throw new ConflictError('the switch was already changed to this state', 'degraded_mode.bridge_switch.concurrent_change');
+          }
+          return toSwitchDto(result.state);
+        },
+      });
+    },
 
     /** POST declare degraded mode (auto-revoke-then-insert + audit, compensated on failure per ADR-0030). */
     async declare(request: FastifyRequest): Promise<DegradedModeDeclarationResponse> {

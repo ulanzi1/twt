@@ -40,8 +40,8 @@ import {
   resolveAssignedPoolForMember,
   spawnChildPool,
 } from '../../../src/pool/index.js';
-import { deriveAlertId, openCycleAlert } from '../../../src/alert/index.js';
-import { declareDegradedMode } from '../../../src/degraded-mode/index.js';
+import { deriveAlertId, openCycleAlert, resolveCycleOpenTimeCritical } from '../../../src/alert/index.js';
+import { declareDegradedMode, revokeDegradedMode } from '../../../src/degraded-mode/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
@@ -256,6 +256,53 @@ describe.skipIf(!hasDatabase)('AI-7-4 de-risk (a) — cycle.frozen fires the ale
     const alertId = deriveAlertId(cycleId);
     const events = await alertStreamEvents(tx, alertId);
     expect((events[1]!.payload as { time_critical: boolean }).time_critical).toBe(true);
+  });
+
+  // ⭐ Story 5.8b (FS10 (a), I9, AC7; T15) — the sweep's read IS `openCycleAlert`'s: the declaration at the freeze instant. A declaration
+  // REVOKED after the freeze still bridges the cycle; one DECLARED after the freeze does ⛔; an unfrozen cycle is `null`.
+  it('5.8b — resolveCycleOpenTimeCritical: revoked AFTER the freeze still bridges; declared after the freeze does not; it agrees with openCycleAlert', async () => {
+    const { client, tx } = getTx();
+    const committedAt = new Date('2026-07-15T06:00:00Z'); // seedCommit's committedAt
+    const revokedCycle = randomUUID();
+    const revokedClaim = randomUUID();
+    await seedCommit(tx, PARIWAR_A, revokedCycle, [revokedClaim]);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
+    await enterAppScope(client, PARIWAR_A);
+    expect(await resolveCycleOpenTimeCritical(tx, randomUUID())).toBeNull();
+
+    const declared = await declareDegradedMode(tx, {
+      pariwarId: toPariwarId(PARIWAR_A),
+      mode: 'cycle_open_sms_bridge',
+      effectiveFrom: new Date(committedAt.getTime() - 60_000),
+      expiresAt: null,
+      declaredByActor: null,
+      reason: 'test: 5.8b revoke-after-freeze',
+    });
+    await driveCycleToFrozen(tx, client, revokedCycle, revokedClaim, randomUUID());
+    await revokeDegradedMode(tx, { declarationId: declared.id, revokedByActor: null, at: new Date(committedAt.getTime() + 60_000) });
+    const swept = await resolveCycleOpenTimeCritical(tx, revokedCycle);
+    expect(swept?.timeCritical).toBe(true);
+    expect((await openCycleAlert(client, { cycleId: revokedCycle })).timeCritical).toBe(swept?.timeCritical);
+  });
+
+  it('5.8b — a declaration effective only AFTER the freeze does ⛔ bridge the cycle (⛔ a notify-time read)', async () => {
+    const { client, tx } = getTx();
+    const committedAt = new Date('2026-07-15T06:00:00Z');
+    const cycleId = randomUUID();
+    const claimId = randomUUID();
+    await seedCommit(tx, PARIWAR_A, cycleId, [claimId]);
+    await seedFixedAmount(tx, PARIWAR_A, FIXED_AMOUNT);
+    await enterAppScope(client, PARIWAR_A);
+    await declareDegradedMode(tx, {
+      pariwarId: toPariwarId(PARIWAR_A),
+      mode: 'cycle_open_sms_bridge',
+      effectiveFrom: new Date(committedAt.getTime() + 60_000),
+      expiresAt: null,
+      declaredByActor: null,
+      reason: 'test: 5.8b declared after the freeze',
+    });
+    await driveCycleToFrozen(tx, client, cycleId, claimId, randomUUID());
+    expect((await resolveCycleOpenTimeCritical(tx, cycleId))?.timeCritical).toBe(false);
   });
 });
 

@@ -425,6 +425,24 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     });
   });
 
+  it('Story 5.8b — degraded_mode.switch_bridge_sms is super_admin ONLY (derived), and pariwar_admin does NOT hold it', () => {
+    const KEY = 'degraded_mode.switch_bridge_sms';
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(KEY))
+      .map((b) => b.role)
+      .sort();
+    // `2026-10-28-414` Q1 A: the Panel named the Super Admin — ⛔ the declaring pariwar_admin (who holds
+    // pariwar.declare_degraded_mode, roles.test above) switches the Trust-wide text.
+    expect(holders).toEqual(['super_admin']);
+    expect((bundleForRole('pariwar_admin')?.permissions as readonly string[]).includes(KEY)).toBe(false);
+    // A global-scope grant satisfies the global check; a pariwar_admin grant never does.
+    const resource = { dimension: 'global', value: null, pariwarId: '00000000-0000-0000-0000-000000000000' } as const;
+    const sa = { pariwarId: '11111111-1111-1111-1111-111111111111', role: 'super_admin', scopeDimension: 'global', scopeValue: null } as const;
+    const pa = { pariwarId: '11111111-1111-1111-1111-111111111111', role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: '11111111-1111-1111-1111-111111111111' } as const;
+    expect(hasPermission([sa], KEY, resource)).toBe(true);
+    expect(hasPermission([pa], KEY, resource)).toBe(false);
+  });
+
   it('Story 11b.13 — pariwar.manage_drive_target_visibility is super_admin ONLY, and pariwar_admin does NOT hold it', () => {
     const VISIBILITY_KEY = 'pariwar.manage_drive_target_visibility';
     const holders = defaultRoleBundles

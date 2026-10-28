@@ -10,8 +10,13 @@ import { ApiError } from '../../api/client.js';
 import {
   useActiveDegradedMode,
   useDeclareDegradedMode,
+  useDegradedBridgeSmsSwitch,
   useRevokeDegradedMode,
+  useSession,
+  useSetDegradedBridgeSmsSwitch,
 } from '../../api/hooks.js';
+import { BRIDGE_TEXT_PARAGRAPH } from './bridge-copy.js';
+import { BridgeSwitchPanel, SWITCH_BRIDGE_SMS_KEY } from './BridgeSwitchPanel.js';
 import { DeclareForm } from './DeclareForm.js';
 import { DegradedModeBanner } from './DegradedModeBanner.js';
 
@@ -29,15 +34,20 @@ export function DegradedModePage({ pariwarId }: DegradedModePageProps): ReactEle
   const active = useActiveDegradedMode(pariwarId);
   const declare = useDeclareDegradedMode(pariwarId);
   const revoke = useRevokeDegradedMode(pariwarId);
+  // Story 5.8b (AC12) — the Trust-wide switch: the state for all, the control for a Super Admin (the session's national grants).
+  const bridgeSwitch = useDegradedBridgeSmsSwitch();
+  const setBridgeSwitch = useSetDegradedBridgeSmsSwitch();
+  const session = useSession();
+  const canSwitch = session.data?.nationalGrants.includes(SWITCH_BRIDGE_SMS_KEY) ?? false;
 
   return (
     <div className="flex flex-col gap-6">
       <header>
         <h1 className="text-lg font-semibold">Degraded mode — cycle-open SMS bridge</h1>
-        <p className="text-sm opacity-70">
-          Declare degraded mode when in-app push or WhatsApp is unavailable system-wide. While active,
-          cycle-open alerts force SMS to every eligible member, bypassing cost-optimization (the AR-20
-          carve-out). Declaring supersedes any currently-active declaration.
+        {/* Story 5.8b (FS11 (a)) replaced the AR-20 sentence ("force SMS … bypassing cost-optimization") with what is built. */}
+        <p className="text-sm opacity-70" data-testid="degraded-mode-header-copy">
+          Declare degraded mode when in-app push or WhatsApp is unavailable system-wide. {BRIDGE_TEXT_PARAGRAPH}{' '}
+          Declaring supersedes any currently-active declaration.
         </p>
       </header>
 
@@ -50,9 +60,27 @@ export function DegradedModePage({ pariwarId }: DegradedModePageProps): ReactEle
         ) : (
           <DegradedModeBanner
             active={active.data?.active ?? null}
+            bridgeTextsOn={bridgeSwitch.data ? bridgeSwitch.data.enabled : null}
             onRevoke={(id) => revoke.mutate(id)}
             revokePending={revoke.isPending}
             revokeError={errorMessage(revoke.error)}
+          />
+        )}
+      </section>
+
+      <section aria-label="Bridge text switch" className="rounded border p-4">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">Bridge texts (all Pariwars)</h2>
+        {bridgeSwitch.isLoading ? (
+          <p role="status">Loading the switch…</p>
+        ) : bridgeSwitch.isError || !bridgeSwitch.data ? (
+          <p role="alert" className="text-status-fail-fg">{errorMessage(bridgeSwitch.error) ?? 'The switch could not be read.'}</p>
+        ) : (
+          <BridgeSwitchPanel
+            state={bridgeSwitch.data}
+            canChange={canSwitch}
+            onChange={(body) => setBridgeSwitch.mutate(body)}
+            pending={setBridgeSwitch.isPending}
+            changeError={errorMessage(setBridgeSwitch.error)}
           />
         )}
       </section>

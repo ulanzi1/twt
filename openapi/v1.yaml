@@ -3474,6 +3474,44 @@ components:
       required:
         - active
       additionalProperties: false
+    DegradedBridgeSmsSwitchResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        changedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        changedByActor:
+          type:
+            - string
+            - "null"
+          format: uuid
+        reason:
+          type:
+            - string
+            - "null"
+      required:
+        - enabled
+        - changedAt
+        - changedByActor
+        - reason
+      additionalProperties: false
+    DegradedBridgeSmsSwitchSetRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - enabled
+        - reason
+      additionalProperties: false
     DirectoryPublicationStatusResponse:
       type: object
       properties:
@@ -12475,6 +12513,71 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden — requires pariwar.declare_degraded_mode at pariwar scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/admin/degraded-mode/bridge-switch:
+    get:
+      summary: Read the degraded-mode bridge text switch (Trust-wide)
+      description: Whether the degraded-mode cycle-open SMS bridge may text members (Trust-wide; created OFF), and the change that set it. Readable by anyone holding pariwar.declare_degraded_mode in any Pariwar, or globally.
+      tags: *a73
+      responses:
+        "200":
+          description: The switch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DegradedBridgeSmsSwitchResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — requires pariwar.declare_degraded_mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Turn the degraded-mode bridge text on or off for every Pariwar (Super Admin; audited)
+      description: "Sets the Trust-wide switch with a required reason; appends one history row per change (append-only). Setting the state it already has changes nothing (idempotent, no audit line). Off: no bridge text is tried and the push → WhatsApp ladder runs. Requires degraded_mode.switch_bridge_sms at global scope (super_admin only)."
+      tags: *a73
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DegradedBridgeSmsSwitchSetRequest"
+      responses:
+        "200":
+          description: The switch after the change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DegradedBridgeSmsSwitchResponse"
+        "400":
+          description: Request validation failed (e.g. a blank reason)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — requires degraded_mode.switch_bridge_sms at global scope (super_admin)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: A concurrent change already set the switch to this state
           content:
             application/json:
               schema:

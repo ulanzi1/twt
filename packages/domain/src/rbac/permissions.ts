@@ -785,7 +785,15 @@ export function permissionKey(value: string): PermissionKey {
 // the authority of `-392` item 4 (Trustee-ratified, kept by `-395`): *"removed within 7 days, by the helpline operator"*.
 // REUSE CHECK — ⛔ no existing key fits: `memorial.review` is the Trust's act (the Panel), `claim.manage_dpdpa_consent` revokes
 // a consent row, `helpdesk.respond` writes a ticket. `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 54 as const;
+//
+// ⭐ Story 5.8b (author-commit `2026-10-28-415` FS17 (a); Panel `2026-10-28-414` Q1 A: *"build a switch that can be turned on/off
+// by Superadmin"*) — 54 → 55, ONE key (70 → 71): `degraded_mode.switch_bridge_sms` — global-dimension; `super_admin` ONLY
+// (derived — ⛔ no `roles.ts` const: the `approval_warning_reason.manage` precedent, *"⛔ Do not 'complete the pair'"*). The Super
+// Admin turns the bridge's cycle-open TEXT on or off for every Pariwar, with a required reason; the declaration itself stays
+// `pariwar.declare_degraded_mode`'s. REUSE CHECK — ⛔ no existing key fits: `pariwar.declare_degraded_mode` is held by
+// `pariwar_admin` too (the Panel named the Super Admin), `feature_flag.flip` likewise (`-415` FS17 (c)). 54 / 70 READ LIVE at
+// `64e01121`. `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 55 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1371,6 +1379,10 @@ export const SEED_PERMISSION_KEYS = [
   // requests, record a request, decide it (`taken_down` step-up-gated). pariwar-dimension; `helpline_operator` (+ derived
   // super_admin).
   'memorial.takedown',
+  // Story 5.8b (`2026-10-28-415` FS17 (a); Panel `2026-10-28-414` Q1 A) — turn the degraded-mode cycle-open SMS bridge's TEXT on
+  // or off, Trust-wide, with a required reason. global-dimension (`requireGlobalPermission`); `super_admin` ONLY (derived —
+  // ⛔ `roles.ts` const).
+  'degraded_mode.switch_bridge_sms',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

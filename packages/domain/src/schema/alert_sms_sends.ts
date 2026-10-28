@@ -1,4 +1,5 @@
-// The ALERT SMS send record — Story 5.11b (Task 1; AC1, AC3), migration 0184 (`2026-10-25-404` FS6 (a), FS8 (d), FS22).
+// The ALERT SMS send record — Story 5.11b (Task 1; AC1, AC3), migration 0184 (`2026-10-25-404` FS6 (a), FS8 (d), FS22); widened
+// by Story 5.8b, migration 0188 (`2026-10-28-415` FS8 (a)) to the degraded-mode bridge's text (occasion `cycle_open`).
 //
 //   · `alert_sms_sends` — ONE row per (alert, member, OCCASION): the three contribution texts `-390` Q1 B owes a member the app
 //                         (and WhatsApp, where used) could not reach. AT MOST ONCE: the row is begun (committed) BEFORE the
@@ -16,8 +17,10 @@ import { alerts } from './alerts.js';
 
 /**
  * ⭐ FS6 / FS8 (d) — the OCCASIONS a text is owed on: the keyed store's own scope for the three lit kinds (day 10, the escalated
- * pending match, and one per EMITTABLE mismatch reason — `matcher-worker.ts` `EMITTABLE_MISMATCH_REASONS`). ⚠ LOCKSTEP with
- * 0184's `alert_sms_sends_occasion_check`; the CHECK is the boundary (the producer builds the scope from a raw payload string).
+ * pending match, and one per EMITTABLE mismatch reason — `matcher-worker.ts` `EMITTABLE_MISMATCH_REASONS`) — and, Story 5.8b
+ * (FS8 (a), `2026-10-28-415`), `cycle_open`: the degraded-mode bridge's text (the cycle-open child's scope). SEVEN per member per
+ * real cycle (was six — `-404`'s cap superseded in part). ⚠ LOCKSTEP with `alert_sms_sends_occasion_check` (0184, replaced by
+ * 0188); the CHECK is the boundary (the producer builds the scope from a raw payload string).
  */
 export const ALERT_SMS_SEND_OCCASIONS = [
   'day_10',
@@ -26,11 +29,20 @@ export const ALERT_SMS_SEND_OCCASIONS = [
   'mismatch:amount_mismatch',
   'mismatch:entry_already_claimed',
   'mismatch:sender_vpa_mismatch',
+  'cycle_open',
 ] as const;
 export type AlertSmsSendOccasion = (typeof ALERT_SMS_SEND_OCCASIONS)[number];
 
-/** The three lit messages (the contract's `AlertSmsMessage`). ⚠ LOCKSTEP with 0184's `alert_sms_sends_message_check`. */
-export const ALERT_SMS_SEND_MESSAGES = ['deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed'] as const;
+/**
+ * The lit messages (the contract's `AlertSmsMessage`) — the three per-member notices and, Story 5.8b, the bridge's
+ * `cycle_open_bridge`. ⚠ LOCKSTEP with `alert_sms_sends_message_check` (0184, replaced by 0188).
+ */
+export const ALERT_SMS_SEND_MESSAGES = [
+  'deadline_not_recorded',
+  'payment_not_matched',
+  'payment_not_confirmed',
+  'cycle_open_bridge',
+] as const;
 export type AlertSmsSendMessage = (typeof ALERT_SMS_SEND_MESSAGES)[number];
 
 /** ⚠ LOCKSTEP with 0184's `alert_sms_sends_locale_check`. */
@@ -92,9 +104,12 @@ export const alertSmsSends = pgTable(
     index('alert_sms_sends_pariwar_idx').on(t.pariwarId),
     check(
       'alert_sms_sends_occasion_check',
-      sql`${t.occasion} IN ('day_10', 'pending_match_escalated', 'mismatch:wrong_pool', 'mismatch:amount_mismatch', 'mismatch:entry_already_claimed', 'mismatch:sender_vpa_mismatch')`,
+      sql`${t.occasion} IN ('day_10', 'pending_match_escalated', 'mismatch:wrong_pool', 'mismatch:amount_mismatch', 'mismatch:entry_already_claimed', 'mismatch:sender_vpa_mismatch', 'cycle_open')`,
     ),
-    check('alert_sms_sends_message_check', sql`${t.message} IN ('deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed')`),
+    check(
+      'alert_sms_sends_message_check',
+      sql`${t.message} IN ('deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed', 'cycle_open_bridge')`,
+    ),
     check('alert_sms_sends_locale_check', sql`${t.locale} IN ('hi', 'en')`),
     check(
       'alert_sms_sends_outcome_check',

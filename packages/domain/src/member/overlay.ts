@@ -35,6 +35,9 @@
 // ⚠ CONSUMERS THAT MUST STAY OBSERVATIONALLY EQUIVALENT TO `evaluateAccountOverlay`:
 //   · `member/directory-read.ts` → `NOT_DECEASED` (the set-based form, for ONE query
 //     over a whole page — it cannot call this per-member evaluator without an N+1).
+//   · `listAccountFrozenMemberIds` below (Story 5.8b, FS4 (d)) — the SAME set-based fold as
+//     `NOT_DECEASED`, over an explicit member list: the degraded-mode bridge's cycle-open child
+//     omits the text for a member whose death has been reported (ONE read per job).
 // ⭐ "Change one, check the other."
 
 import { and, asc, inArray, lte, sql } from 'drizzle-orm';
@@ -153,4 +156,36 @@ export async function getMemberAccountOverlay(
     // (Story 6.4): the freeze survives until the LAST associated claim reaches a terminal state.
     rows.map((r) => ({ type: r.eventType, occurredAt: r.occurredAt, streamId: r.streamId })),
   );
+}
+
+/**
+ * ⭐ Story 5.8b (FS4 (d), `2026-10-28-415`; I10) — the SET-BASED form over an explicit member list: which of `memberIds` are under
+ * the `account-frozen` overlay at `at`. ONE query (the bridge's cycle-open child calls it once per job, ⛔ per member).
+ *
+ * ⛔ A SECOND POLICY: it is `directory-read.ts`'s `NOT_DECEASED` fold — per (deceased member, claim stream) the LATEST overlay
+ * event wins (`DISTINCT ON` led by its own expression, else 42P10), and a member is frozen iff ANY of their streams' latest event
+ * is the freeze — observationally equivalent to {@link evaluateAccountOverlay} ("change one, check the other"). Returned ids are
+ * lower-cased. Runs on the caller's scope (events_log is tenant-isolated).
+ */
+export async function listAccountFrozenMemberIds(
+  db: Db,
+  memberIds: readonly string[],
+  at: Date,
+): Promise<ReadonlySet<string>> {
+  if (memberIds.length === 0) return new Set();
+  const result = await db.execute<{ member_id: string }>(sql`
+    SELECT DISTINCT latest_per_claim.member_id
+      FROM (
+        SELECT DISTINCT ON (lower(e.payload ->> 'deceased_member_id'), e.stream_id)
+               lower(e.payload ->> 'deceased_member_id') AS member_id,
+               e.event_type AS latest_type
+          FROM events_log e
+         WHERE e.event_type IN (${sql.join(OVERLAY_EVENT_TYPES.map((t) => sql`${t}`), sql`, `)})
+           AND lower(e.payload ->> 'deceased_member_id') = ANY(${`{${memberIds.map((m) => m.toLowerCase()).join(',')}}`}::text[])
+           AND e.occurred_at <= ${at}
+         ORDER BY lower(e.payload ->> 'deceased_member_id'), e.stream_id, e.occurred_at DESC, e.event_version DESC
+      ) latest_per_claim
+     WHERE latest_per_claim.latest_type = ${ACCOUNT_FREEZE_EVENT_TYPE}
+  `);
+  return new Set((result.rows ?? []).map((r) => r.member_id));
 }

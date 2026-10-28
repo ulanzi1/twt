@@ -8,3 +8,10 @@ export {
   DegradedModeActiveResponse,
   NO_BACKDATE_GRACE_MS,
 } from './declarations.js';
+
+// Story 5.8b (AC12) — the bridge text's Trust-wide Super Admin switch (read + change).
+export {
+  DEGRADED_BRIDGE_SMS_SWITCH_REASON_MAX,
+  DegradedBridgeSmsSwitchResponse,
+  DegradedBridgeSmsSwitchSetRequest,
+} from './bridge-switch.js';

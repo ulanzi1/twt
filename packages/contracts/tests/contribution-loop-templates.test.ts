@@ -477,3 +477,63 @@ describe('Story 5.11 — the optional `sms` block rides only the two variants a 
     },
   );
 });
+
+// ─── Story 5.8b (FS7 (a), Decision `2026-10-28-415`) — the bridge block on a TIME-CRITICAL `alert_published` ─────────────
+
+describe('Story 5.8b — an `alert_published` carries the bridge block ONLY when it is time-critical (AC1, I2)', () => {
+  const ENV = {
+    alert_id: '33333333-3333-3333-3333-333333333333',
+    pariwar_id: '11111111-1111-1111-1111-111111111111',
+    member_id: '22222222-2222-2222-2222-222222222222',
+    provenance_refs: {},
+    created_at: '2026-07-23T00:00:00.000Z',
+    created_by_actor: 'system',
+  };
+  const BRIDGE = {
+    message: 'cycle_open_bridge',
+    locale: 'hi',
+    values: { pool: 'A', member1: 'Rajesh Kumar', member2: 'Sharma' },
+  } as const;
+  const published = (timeCritical: boolean, payload_data: Record<string, unknown>) =>
+    Alert.safeParse({ ...ENV, time_critical: timeCritical, alert_category: 'alert_published', payload_data });
+
+  it('the builder OMITS the key when no block is passed, and carries a passed block', () => {
+    expect(Object.keys(buildCycleOpenPayloadData({ title: 't', body: 'b' }))).not.toContain('sms');
+    expect(buildCycleOpenPayloadData({ title: 't', body: 'b', sms: BRIDGE }).sms).toEqual(BRIDGE);
+  });
+
+  it('⭐ time_critical true + a block ⇒ parses; time_critical false + the SAME block ⇒ refused (the refinement)', () => {
+    const payload_data = buildCycleOpenPayloadData({ title: 't', body: 'b', sms: BRIDGE });
+    expect(published(true, payload_data).success).toBe(true);
+    const refused = published(false, payload_data);
+    expect(refused.success).toBe(false);
+    expect(refused.success ? [] : refused.error.issues.map((i) => i.path.join('.'))).toEqual(['payload_data.sms']);
+  });
+
+  it('without a block, BOTH time_critical values parse (every existing broadcast is unchanged)', () => {
+    expect(published(true, { title: 't', body: 'b' }).success).toBe(true);
+    expect(published(false, { title: 't', body: 'b' }).success).toBe(true);
+  });
+
+  it('`.strict()` still refuses an unknown key on the time-critical variant, and a block for an unknown message', () => {
+    expect(published(true, { title: 't', body: 'b', extra: 1 }).success).toBe(false);
+    expect(published(true, { title: 't', body: 'b', sms: { ...BRIDGE, message: 'pool_open' } }).success).toBe(false);
+  });
+
+  it('AC9 — a helpdesk reply (`helpdesk_reply`, a strict variant with ⛔ `sms` key) refuses a block even when time-critical', () => {
+    const payload_data = { ticket_id: '44444444-4444-4444-4444-444444444444' };
+    expect(Alert.safeParse({ ...ENV, time_critical: true, alert_category: 'helpdesk_reply', payload_data }).success).toBe(true);
+    expect(Alert.safeParse({ ...ENV, time_critical: true, alert_category: 'helpdesk_reply', payload_data: { ...payload_data, sms: BRIDGE } }).success).toBe(false);
+  });
+
+  it('the refinement binds only `alert_published` — a lit deadline_reminder block parses at either time_critical', () => {
+    const base = { subject: 's', deadline_at: '2026-08-05T00:00:00.000Z', deadline_display: 'd' };
+    const sms = { message: 'deadline_not_recorded', locale: 'en', values: { pool: 'A', date: '05-08-2026' } };
+    for (const timeCritical of [true, false]) {
+      expect(
+        Alert.safeParse({ ...ENV, time_critical: timeCritical, alert_category: 'deadline_reminder', payload_data: { ...base, sms } })
+          .success,
+      ).toBe(true);
+    }
+  });
+});

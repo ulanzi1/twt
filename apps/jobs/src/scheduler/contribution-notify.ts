@@ -15,10 +15,14 @@
 // ── The composition, in the ratified order (AC6 / Decision 3 / D9) ──────────────────────────────────
 //   1. `evaluateDegradedModeBridge` FIRST. When it bridges (a cycle-open alert under an active
 //      declaration) 8.8 forced SMS only and BYPASSED BOTH cost-optimization AND the ladder — the AR-20
-//      carve-out to RA-29's no-bulk-SMS rule (degraded-mode.ts:15-23). ⭐ Story 5.11 (FS10 (a), `-389`):
-//      the bridge has ⛔ registered words, so that SMS-only send could only ever reach the log fixture
-//      (a fake `sent`). While the bridge stays dark a bridged member runs the NORMAL ladder below, and its
-//      SMS rung ends `sms_bridge_not_lit` (the bridge's words are row 5-8b).
+//      carve-out to RA-29's no-bulk-SMS rule (degraded-mode.ts:15-23). Story 5.11 (FS10 (a), `-389`) kept it
+//      dark (⛔ registered words). ⭐ Story 5.8b (FS3 (a), `2026-10-28-415`; Panel `2026-10-28-414` Q1 A) LIGHTS
+//      it as TEXT FIRST, THE LADDER AS THE FALLBACK: a bridged alert carrying the `cycle_open_bridge` block is
+//      texted through the injected `alertSms` seam BEFORE push (⛔ the WhatsApp window — `whatsappTried:
+//      false`), unless the Super Admin switch is OFF (read once per job). `sent` ⇒ delivered by SMS, push and
+//      WhatsApp ⛔ run (the Telegram mirror still does); anything else ⇒ the ladder below runs, the bridge's
+//      trail entry FIRST and the ladder's SMS rung ending `sms_bridge_already_tried`. The primitive and
+//      `DEGRADED_MODE_BRIDGE_CHANNELS` are unedited — the composition sequences them.
 //   2. `evaluateCostOptimization` decides suppression of the two PAID channels. The
 //      mechanism is the one 5.7 specifies: the resolver OMITS the suppressed channels' targets
 //      ("the future live fan-out drives it by omitting the suppressed cost-channels' targets",
@@ -150,6 +154,13 @@ export interface ContributionNotifyDeps {
    * ⛔ `sms` block and so never reach it (I6).
    */
   readonly alertSms?: AlertSmsSender;
+  /**
+   * Story 5.8b (FS17 (a), AC12) — the Super Admin switch for the degraded-mode bridge's TEXT (`degraded_bridge_sms_switch`), read at
+   * the bridge attempt. ⭐ The cycle-open child wraps it so it is read ONCE per job (`onceForJob`). Absent ⇒ OFF (⛔ text — the
+   * switch starts OFF; tests that drive the bridge pass it). A THROW ⇒ ⛔ text for that job, an alarm, and the member retried
+   * (`sms_bridge_switch_unavailable`).
+   */
+  readonly readBridgeSwitch?: () => Promise<boolean>;
 }
 
 /** The member's resolved delivery targets, one entry per channel. `push` is an ARRAY: a member may have
@@ -179,8 +190,8 @@ export interface MemberFanOutResult {
   readonly deliveredChannel: Channel | null;
   readonly trail: readonly CascadeTrailEntry[];
   /** `true` when the AR-20 degraded-mode SMS bridge was REQUESTED (a cycle-open under an active declaration).
-   *  Story 5.11 (FS10 (a)): while the bridge is dark the member runs the normal ladder; its SMS rung ends
-   *  `sms_bridge_not_lit`. */
+   *  Story 5.8b (FS3 (a)): the bridge text was tried first (its trail entry is the first `sms` entry) unless a
+   *  named reason kept it from being tried — then the ladder's SMS rung names it. */
   readonly bridged: boolean;
   /** The paid channels cost-optimization omitted for this member (never includes `push`). */
   readonly costSuppressedChannels: readonly Channel[];
@@ -202,8 +213,13 @@ export const SMS_RUNG_DETAIL = {
   notEligible: 'sms_fallback_not_eligible',
   /** Lit and eligible, but ⛔ `alertSms` seam is wired (Story 5.11b: tests, a jobs process without a gateway) — ⛔ text goes. */
   notWired: 'sms_send_not_wired',
-  /** The degraded-mode bridge was requested; it has ⛔ registered words (FS10 (a)). */
-  bridgeNotLit: 'sms_bridge_not_lit',
+  // Story 5.8b (FS3 (a)) retired 5.11's `sms_bridge_not_lit` (the bridge has its words now). A BRIDGED alert's ladder SMS rung ends:
+  /** The bridge text was tried FIRST (its own trail entry precedes this one) and did not end `sent` — ⛔ a second text. */
+  bridgeAlreadyTried: 'sms_bridge_already_tried',
+  /** The Super Admin switch is OFF (FS17 (a)) — ⛔ bridge text tried; the ladder ran as before 5.8b. */
+  bridgeSwitchedOff: 'sms_bridge_switched_off',
+  /** The switch could not be read — ⛔ text this attempt, alarmed; RETRIED until the final attempt (⛔ a silent drop). */
+  bridgeSwitchUnavailable: 'sms_bridge_switch_unavailable',
 } as const;
 
 /**
@@ -253,15 +269,31 @@ export function isAlertSmsFallbackEligible(input: {
   return !input.whatsappTarget || input.whatsappOutcome !== 'sent';
 }
 
-/** The `sms` block a lit producer put on the payload (FS7) — only the two variants a lit notice rides can carry one. */
+/**
+ * The `sms` block a lit producer put on the payload (FS7) — the two variants a lit notice rides, and (Story 5.8b, FS7 (a)) a
+ * TIME-CRITICAL `alert_published`: the bridged cycle-open. The contract already refuses a block on a non-time-critical one; the
+ * guard is repeated here so a block on any other broadcast is never read (I2 — the fan-out half).
+ */
 function alertSmsBlock(alert: Alert): AlertSmsBlock | undefined {
   switch (alert.alert_category) {
     case 'deadline_reminder':
     case 'contribution_mismatch':
       return alert.payload_data.sms;
+    case 'alert_published':
+      return alert.time_critical ? alert.payload_data.sms : undefined;
     default:
       return undefined;
   }
+}
+
+/**
+ * Story 5.8b (AC12) — wrap the switch read so ONE job reads it ONCE (the first bridge attempt), however many members it fans out.
+ * A throw is kept too: every member of the job sees the same `unavailable` (⛔ a second read), and each member's fan-out alarms it —
+ * at most 8 per bounded bridged job.
+ */
+export function onceForJob(read: () => Promise<boolean>): () => Promise<boolean> {
+  let memo: Promise<boolean> | undefined;
+  return () => (memo ??= read());
 }
 
 /**
@@ -367,8 +399,8 @@ export async function fanOutAlert(
     return outcomeForChannel(outcome.attempts, channel);
   };
 
-  // ── (1) The AR-20 degraded-mode bridge — evaluated FIRST. Story 5.11 (FS10 (a)): while it has ⛔ words, a
-  //        bridged member runs the normal ladder and only the SMS rung's reason records the request. ─────
+  // ── (1) The AR-20 degraded-mode bridge — evaluated FIRST. Story 5.8b (FS3 (a)): a bridged alert carrying the bridge block is
+  //        TEXTED FIRST (below, after cost); the ladder is the fallback. ────────────────────────────────────────────────────────
   const bridge = evaluateDegradedModeBridge({
     category,
     degradedModeActive: degradedModeActiveFor(alert),
@@ -398,6 +430,52 @@ export async function fanOutAlert(
   // Each rung's own outcome, for the SMS rung's predicate (I2).
   const rungOutcomes = new Map<Channel, ChannelSendOutcome['outcome']>();
 
+  const smsDispatchDeps = {
+    ...(providers ? { providers } : {}),
+    hashRendered: deps.hashRendered,
+    audit: deps.audit,
+    ...(deps.suppression ? { suppression: deps.suppression } : {}),
+  };
+
+  // ── (1b) Story 5.8b (FS3 (a), AC5) — THE BRIDGE TEXT, FIRST. Only a BRIDGED alert (I2) that carries the block, for a member with
+  //        an SMS target, through the injected seam (so THROUGH `dispatch`, carrying `deps.suppression`), with the switch ON. Its
+  //        trail entry is recorded FIRST: `shouldRetryFanOut` reads the first `sms` entry (F8 / T19). When it is not tried, the
+  //        ladder's SMS rung names why (`bridgeSkip`). ⛔ The WhatsApp window (`whatsappTried: false`) — the bridge does not wait. ──
+  let bridgeEntry: CascadeTrailEntry | undefined;
+  let bridgeSkip: ChannelSendOutcome = { outcome: 'skipped_no_target' };
+  if (bridge.bridged) {
+    const block = alertSmsBlock(alert);
+    if (!block) bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notLit };
+    else if (!ctx.targets.sms) bridgeSkip = { outcome: 'skipped_no_target' };
+    else if (!deps.alertSms) bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notWired };
+    else {
+      let switchOn: boolean | 'unavailable';
+      try {
+        switchOn = deps.readBridgeSwitch ? await deps.readBridgeSwitch() : false;
+      } catch (err) {
+        switchOn = 'unavailable';
+        alarmOf(deps)(
+          `[jobs] contribution-notify: the degraded-mode bridge switch could not be read for alert ${alert.alert_id} — ⛔ bridge text ` +
+            `this attempt (the ladder runs; retried) — ${String(err)}`,
+        );
+      }
+      if (switchOn === 'unavailable') bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeSwitchUnavailable };
+      else if (!switchOn) bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeSwitchedOff };
+      else {
+        const texted = await deps.alertSms({
+          alert,
+          block,
+          target: ctx.targets.sms,
+          ...(call ? { call } : {}),
+          whatsappTried: false,
+          dispatch: smsDispatchDeps,
+        });
+        bridgeEntry = { channel: 'sms', attempt: 0, outcome: texted.outcome, ...(texted.detail !== undefined ? { detail: texted.detail } : {}) };
+        bridgeSkip = { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeAlreadyTried };
+      }
+    }
+  }
+
   /**
    * Story 5.11 — the SMS rung decides lit / eligible itself and ⛔ dispatches through the category resolver's SMS provider (I3;
    * FS10, FS15).
@@ -411,7 +489,8 @@ export async function fanOutAlert(
    * the seam (bridge, lit, eligible, a target) are 5.11's, byte for byte.
    */
   const smsRung = async (): Promise<ChannelSendOutcome> => {
-    if (bridge.bridged) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.bridgeNotLit };
+    // Story 5.8b — a bridged alert's text was decided at (1b): ⛔ a second text from the ladder.
+    if (bridge.bridged) return bridgeSkip;
     const block = alertSmsBlock(alert);
     if (!block) return { outcome: 'skipped_no_target', detail: SMS_RUNG_DETAIL.notLit };
     const eligible = isAlertSmsFallbackEligible({
@@ -430,12 +509,7 @@ export async function fanOutAlert(
       ...(call ? { call } : {}),
       // FS9 (a) — the Pariwar uses WhatsApp for this member (FS3's refusal included) and that rung did not end `sent`.
       whatsappTried: ctx.targets.whatsapp !== null && rungOutcomes.get('whatsapp') !== 'sent',
-      dispatch: {
-        ...(providers ? { providers } : {}),
-        hashRendered: deps.hashRendered,
-        audit: deps.audit,
-        ...(deps.suppression ? { suppression: deps.suppression } : {}),
-      },
+      dispatch: smsDispatchDeps,
     });
   };
 
@@ -457,14 +531,31 @@ export async function fanOutAlert(
     return result;
   };
 
-  const cascade = await runChannelCascade(send, {
-    ladder: CANONICAL_CHANNEL_LADDER,
-    backoffMs: [], // D9 — pg-boss owns retry/backoff; no worker ever sleeps one in-process.
-    sleep,
-  });
-  const trail = [...cascade.trail];
-  const delivered = cascade.delivered;
-  const deliveredChannel = cascade.deliveredChannel;
+  let trail: CascadeTrailEntry[];
+  let delivered: boolean;
+  let deliveredChannel: Channel | null;
+  if (bridgeEntry?.outcome === 'sent') {
+    // Story 5.8b (FS3 (a)) — the text went: push and WhatsApp are ⛔ run for this alert (it is in the app; the mirror runs below).
+    trail = [bridgeEntry];
+    delivered = true;
+    deliveredChannel = 'sms';
+  } else {
+    const cascade = await runChannelCascade(send, {
+      ladder: CANONICAL_CHANNEL_LADDER,
+      backoffMs: [], // D9 — pg-boss owns retry/backoff; no worker ever sleeps one in-process.
+      sleep,
+    });
+    // The bridge entry FIRST (T19 — `shouldRetryFanOut` reads the first `sms` entry).
+    trail = bridgeEntry ? [bridgeEntry, ...cascade.trail] : [...cascade.trail];
+    delivered = cascade.delivered;
+    deliveredChannel = cascade.deliveredChannel;
+    // Story 5.8b (FS3.1 (a)) — a rate-limited bridge text left its row `deferred`; the ladder DELIVERED, so this member is ⛔ retried
+    // and nothing would ever end that row — a later sweep re-run would re-claim it and text a member the push already told. Give it
+    // up now (best-effort; the seam alarms a failure).
+    if (delivered && bridgeEntry?.detail === ALERT_SMS_RUNG_DETAIL.rateLimited && deps.alertSms?.giveUpDeferred) {
+      await deps.alertSms.giveUpDeferred({ alert, ...(call ? { call } : {}) });
+    }
+  }
 
   // ── (4) The Telegram mirror — INDEPENDENT of the ladder, fire-and-forget ─────────────────────────
   // Eligible for `alert_published` only among this story's three categories (dispatch.ts:44-52), so a
@@ -573,7 +664,7 @@ function alarmOf(deps: ContributionNotifyDeps): (message: string) => void {
  * Story 5.11 review R1, option 1 — preserve the previous retry set without driving either fixture.
  * An available, unsuppressed SMS target previously reached the accepting SMS fixture. FS3's named
  * WhatsApp refusals previously reached the accepting WA fixture instead; they are also terminal.
- * The old bridge bypassed WA and cost policy, so only its SMS target could complete that path.
+ * (The old bridge bypassed WA and cost policy, so only its SMS target could complete that path — Story 5.8b removed that arm.)
  * Everyone else whose ladder exhausted still retries, including a missing/decrypt-failed mobile or
  * cost-suppressed SMS. Broadcast callers release these claims and add NO job retry — a re-run of the job would try them.
  * ⭐ Story 5.11b (FS9 (a)) — a REAL send's retry classes (`ALERT_SMS_RETRYABLE_DETAILS`: §3.4's WhatsApp window, `rate_limited`,
@@ -585,7 +676,11 @@ export function shouldRetryFanOut(result: MemberFanOutResult, ctx: MemberFanOutC
   if (result.delivered) return false;
   const smsDetail = result.trail.find((entry) => entry.channel === 'sms')?.detail;
   if (smsDetail !== undefined && ALERT_SMS_RETRYABLE_DETAILS.has(smsDetail)) return !isFinalFanOutAttempt(call);
-  if (result.bridged) return ctx.targets.sms === null;
+  // Story 5.8b — the switch could not be read: ⛔ a silent drop of the bridge text — retried like a send state that is unavailable.
+  if (smsDetail === SMS_RUNG_DETAIL.bridgeSwitchUnavailable) return !isFinalFanOutAttempt(call);
+  // ⭐ Story 5.8b (FS9 (a), `2026-10-28-415` — `-394` item 1's bridged clause superseded in part): the bridged arm
+  // (`if (result.bridged) return ctx.targets.sms === null;`) is REMOVED. A bridged member's retry follows the retry classes above and
+  // the ordinary rule below; the one case it changes — a bridged member with ⛔ SMS target and a named WhatsApp refusal — is terminal.
   if (ctx.targets.sms !== null && !result.costSuppressedChannels.includes('sms')) return false;
   const refusedWhatsapp = result.trail.some(
     (entry) => entry.channel === 'whatsapp' && entry.outcome === 'rejected' &&

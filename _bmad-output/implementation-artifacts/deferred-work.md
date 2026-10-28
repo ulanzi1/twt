@@ -31,10 +31,29 @@ Found while writing `5-8b-degraded-mode-bridge-sms-wording.md` (F-numbers are th
   If the hourly vacuum purges the 300 s idempotency rows, the recovery sweep re-fans every live cycle-open alert each hour; under FS10 (a)
   a bridged one re-derives its signal each time (one read per swept alert); the send row keeps the TEXT at-most-once, but push may repeat.
   **Trigger: Story 5.8b Task 8's live-DB sweep legs — prove or disprove the purge, and record which.**
+  - *Appended 2026-10-28 (Story 5.8b Task 8):* ⭐ **PROVEN, live** — `apps/jobs/tests/cycle-open-sweep-purge-live.test.ts`: a cycle-open claim
+    claimed and RECORDED an hour ago (TTL 300 s) is deleted by the production `purgeExpiredKeys` (it deletes ANY expired row, `completed`
+    included — `recordResult` does not extend `expires_at`); the sweep's probe then counts the member as un-notified, and the child claims
+    the member AGAIN. ⇒ every LIVE cycle-open alert is re-fanned hourly for its live window. For a BRIDGED member the found `accepted`
+    send row returns `sent` before the ladder (FS3 (a)) — ⛔ second text, ⛔ push (`alert-sms-send-live.test.ts`, the AC3 re-run leg). ⚠ An
+    UN-BRIDGED member's PUSH goes again every hour — a defect of 8.8's sweep / 1.12's vacuum pairing, ⛔ 5.8b's, ⛔ fixed here (the code is
+    not in production). Options for its story: a cycle-open claim TTL spanning the alert's live window; `recordResult` extending
+    `expires_at`; or the sweep probing a permanent record instead of `idempotency_keys`. **Trigger: before the contribution-loop
+    notifications go live (Row 40 / Row 43 go-live) — a row of its own; BigDev to sequence.**
 - **The automatic degraded-mode trigger is not built** [architecture §3.4 "Power-saver awareness": *"when per-Pariwar push delivery rate
   falls below threshold AND the Pariwar WA admin-toggle is OFF"*; thresholds in Category 5 Observability]. The bridge fires only on a
   trustee's MANUAL declaration (`-414` — the WA-toggle condition was not chosen for the manual path). **Trigger: the Category 5
   Observability story that measures per-Pariwar push delivery.**
+- **The OpenAPI description of the declare endpoint still states AR-20's SMS-only promise** (found at Story 5.8b Task 6)
+  [`packages/contracts/scripts/emit-openapi.ts`, `POST /api/v1/p/{pariwarId}/admin/degraded-mode/declarations`: *"so the cycle-open SMS bridge
+  can force SMS for cycle-open (alert_published) alerts, bypassing cost-optimization"*]. FS11 replaced the same promise on the admin screen;
+  this API description was outside FS11's named sites and is left as written (a description change regenerates `openapi/v1.yaml`).
+  **Trigger: the next story that edits the degraded-mode OpenAPI registrations — reword it to FS11's.**
+- **The switch's live tests commit to the APPEND-ONLY history** (Story 5.8b Task 8) [`apps/api/tests/integration/degraded-mode.spec.ts`,
+  `apps/jobs/tests/alert-sms-send-live.test.ts`, the AC12 legs]. Each restores the switch state it found, but its history rows stay (0188's
+  trigger refuses DELETE, by design) — a shared test database accumulates `reason` rows like "spec reset" / "live test 5.8b AC12". Harmless
+  (nothing reads the history but the page's last change); recorded so a reader of a dev DB's history is not surprised. **Trigger: none —
+  a note.**
 - **No general lifecycle-suppression hook** [roster Row 40 (g); `apps/jobs/src/boot.ts`, the comment above `alertSms:`]. The bridge excludes
   the `account-frozen` overlay ON ITS OWN (FS4 (d)); every other notification to a frozen account still goes out. Row 43 (h) cross-references
   it. **Trigger: the story that builds the member-state read model and injects it in `boot.ts`.**

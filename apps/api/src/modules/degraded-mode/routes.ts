@@ -5,7 +5,13 @@
 // request.scopeGrants; the permission hook fail-closes on deny (401 no session, 403 no permission — never a
 // silent declaration write; AI-4-3(b)). All three routes register in openapi/v1.yaml (the EXPECTED diff).
 
-import { DegradedModeActiveResponse, DegradedModeDeclarationResponse, DegradedModeDeclareRequest } from '@twt/contracts';
+import {
+  DegradedBridgeSmsSwitchResponse,
+  DegradedBridgeSmsSwitchSetRequest,
+  DegradedModeActiveResponse,
+  DegradedModeDeclarationResponse,
+  DegradedModeDeclareRequest,
+} from '@twt/contracts';
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -13,7 +19,7 @@ import { z } from 'zod';
 import type { AppDeps } from '../../context.js';
 import { scopeResolutionHook } from '../../middleware/scope-resolution/index.js';
 import { requireAdminSession } from '../auth/shared/session-guard.js';
-import { requirePermissionHook } from '../rbac/index.js';
+import { requireGlobalOrAnyPariwarPermission, requireGlobalPermission, requirePermissionHook } from '../rbac/index.js';
 import { createDegradedModeHandlers } from './handlers.js';
 
 const DEGRADED_MODE_TAG = 'degraded-mode';
@@ -63,5 +69,30 @@ export function registerDegradedModeRoutes(app: FastifyInstance, deps: AppDeps):
       preHandler: chain,
     },
     h.getActive,
+  );
+
+  // ── Story 5.8b (AC12; `2026-10-28-415` FS17 (a)) — the bridge text's Trust-wide Super Admin switch. GLOBAL routes (⛔ `:pariwarId`):
+  // the read for anyone who holds the degraded-mode page's key in ANY Pariwar (the data is Trust-wide, identical for every reader —
+  // the feature-flag global-catalog precedent); the change for `degraded_mode.switch_bridge_sms` at GLOBAL scope (`super_admin`).
+  r.get(
+    '/api/v1/admin/degraded-mode/bridge-switch',
+    {
+      schema: { response: { 200: DegradedBridgeSmsSwitchResponse }, tags: [DEGRADED_MODE_TAG] },
+      preHandler: [adminSession, requireGlobalOrAnyPariwarPermission(deps, h.PARIWAR_DECLARE_DEGRADED_MODE_KEY)],
+    },
+    h.getBridgeSwitch,
+  );
+
+  r.post(
+    '/api/v1/admin/degraded-mode/bridge-switch',
+    {
+      schema: {
+        body: DegradedBridgeSmsSwitchSetRequest,
+        response: { 200: DegradedBridgeSmsSwitchResponse },
+        tags: [DEGRADED_MODE_TAG],
+      },
+      preHandler: [adminSession, requireGlobalPermission(deps, h.DEGRADED_MODE_SWITCH_BRIDGE_SMS_KEY)],
+    },
+    h.setBridgeSwitch,
   );
 }

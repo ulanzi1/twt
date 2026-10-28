@@ -31,6 +31,7 @@ import http from 'node:http';
 import {
   claim as claimDomain,
   createDb,
+  degradedMode as degradedModeDomain,
   idempotency,
   pool as poolDomain,
   resolveConnectionString,
@@ -667,6 +668,10 @@ async function main(): Promise<void> {
         resolveConfig: resolveSmsDltConfig,
         ...(smsPreflight !== undefined ? { smsPreflight } : {}),
       }),
+      // ⭐ Story 5.8b (FS17 (a), AC12) — the Super Admin switch for the degraded-mode bridge's TEXT (created OFF by migration 0188; go-live
+      // Row 43's last leg turns it ON). The cycle-open child reads it ONCE per job at its first bridge attempt (`onceForJob`), so
+      // turning it OFF stops texts already queued. News / survey / moderation share these deps and never reach it (⛔ bridge).
+      readBridgeSwitch: async (): Promise<boolean> => (await degradedModeDomain.readDegradedBridgeSmsSwitch(pool)).enabled,
     };
     await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
 

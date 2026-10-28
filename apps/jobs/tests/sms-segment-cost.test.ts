@@ -205,3 +205,45 @@ describe('Story 5.11 review R5 / round 2 D2 (b) — the pool value never lengthe
     expect(smsPoolLabel({ poolName: ` ${'a'.repeat(30)} `, poolLetterCode: 'C' }, 'en')).toBe('a'.repeat(30));
   });
 });
+
+// ⭐ Story 5.8b (Task 7; AC10; FS12 / FS15 (a), `2026-10-28-415`) — the degraded-mode bridge text, its OWN `it` (the `cases` above assert
+// 1 en / 2 hi parts — the bridge carries the family's name in two boxes and is longer). Templates 23 (hi) / 24 (en), BOTH provisioned
+// Unicode (a family name may be Devanagari — FS15 (a)), so the gateway counts UCS-2 for either language.
+describe('Story 5.8b — the bridge text at its LONGEST values is 3 Unicode parts in either language (the sheet\'s figures, pinned)', () => {
+  const sheetFigure = (ordinal: number, locale: 'en' | 'hi', units: number): RegExp =>
+    new RegExp(`\\b${String(ordinal)}\\s+\\(${locale}\\)\\s+(?:is\\s+)?${String(units)}\\b`);
+  const bridge = (locale: 'en' | 'hi', poolName: string, member1: string, member2: string): string =>
+    renderContributionSms('cycle_open_bridge', locale, { pool: smsPoolLabel({ poolName, poolLetterCode: 'C' }, locale), member1, member2 });
+  /** UCS-2 cost of a text sent on a Unicode template, whatever its characters. */
+  const asUnicode = (text: string): number => Math.ceil([...text].reduce((n, ch) => n + (ch.codePointAt(0)! > 0xffff ? 2 : 1), 0) / 67);
+
+  it('24 (en) — 174 at a 30-letter pool and a 60-letter LATIN name: 3 parts on its Unicode template (2 were it GSM-7)', () => {
+    const text = bridge('en', 'A'.repeat(30), 'R'.repeat(30), 'S'.repeat(30));
+    expect(measure(text)).toEqual({ encoding: 'GSM-7', units: 174, segments: 2 });
+    expect(asUnicode(text)).toBe(3);
+    expect(SHEET).toMatch(sheetFigure(24, 'en', 174));
+  });
+
+  it('24 (en) — a DEVANAGARI family name makes the text Unicode on its own: still 174, 3 parts (T21)', () => {
+    expect(measure(bridge('en', 'A'.repeat(30), 'क'.repeat(30), 'ख'.repeat(30)))).toEqual({ encoding: 'UCS-2', units: 174, segments: 3 });
+  });
+
+  it('23 (hi) — 176 at a 30-unit pool and a 60-letter name: 3 parts', () => {
+    expect(measure(bridge('hi', 'क'.repeat(30), 'R'.repeat(30), 'S'.repeat(30)))).toEqual({ encoding: 'UCS-2', units: 176, segments: 3 });
+    expect(SHEET).toMatch(sheetFigure(23, 'hi', 176));
+  });
+
+  it('typical values (a 12–15-character pool, an 18–25-letter name) are 114–126 — TWO parts in either language', () => {
+    for (const [pool, name] of [['A'.repeat(12), 'R'.repeat(18)], ['A'.repeat(15), 'R'.repeat(25)]] as const) {
+      const half = Math.ceil(name.length / 2);
+      for (const locale of ['en', 'hi'] as const) {
+        const text = bridge(locale, locale === 'hi' ? 'क'.repeat(pool.length) : pool, name.slice(0, half), name.slice(half));
+        expect(text.length).toBeGreaterThanOrEqual(114);
+        expect(text.length).toBeLessThanOrEqual(126);
+        expect(asUnicode(text)).toBe(2);
+      }
+    }
+    expect(SHEET).toMatch(/114–126 \(\*\*2 segments\*\*\)/);
+  });
+});
+

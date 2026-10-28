@@ -279,9 +279,12 @@ describe('AC8 — nothing else moves (I6) and the boot wiring (FS19)', () => {
   };
   // ⭐ Taken FROM `git show 0e9b261d:apps/jobs/src/scheduler/contribution-notify.ts` (the story's pin, = origin/main when written),
   // ⛔ from the edited HEAD — a pin, so the test needs ⛔ git history in CI.
+  // ⭐ Story 5.8b (FS7 (a), `2026-10-28-415`) re-pinned `alertSmsBlock` DELIBERATELY: it gains the `alert_published` case, guarded by
+  // `time_critical` (the bridged cycle-open). Replaced: 'ce346897b87bfa2af08a670a8be9063178cdcb24a9afb3895cf91e21337ec3aa' (5.11b's,
+  // the two lit variants only). The predicate's pin is unchanged — 5.8b does ⛔ touch it.
   const AT_PIN = {
     isAlertSmsFallbackEligible: '449aa8be5d39ffb399cfbc58902fdd43de3ad677991b16853be759de750c171c',
-    alertSmsBlock: 'ce346897b87bfa2af08a670a8be9063178cdcb24a9afb3895cf91e21337ec3aa',
+    alertSmsBlock: '0ec8271d5facc8d261d4c1cd528c559414fe49a0a740217f1f3b8be2d5138d31',
   } as const;
 
   it.each(Object.entries(AT_PIN))('⭐ `%s` is byte-unchanged (its AST text, hashed)', (name, sha) => {
@@ -430,8 +433,10 @@ describe('patch-diff review — the two seam branches no real client can reach, 
 });
 
 describe('review 2026-10-25 — the occasion list has ONE source (C2-P5, C3-P18)', () => {
-  it('⭐ the send record\'s OCCASIONS are EXACTLY `day_10`, `pending_match_escalated` and one `mismatch:<reason>` per reason the matcher EMITS', () => {
-    const expected = ['day_10', 'pending_match_escalated', ...[...EMITTABLE_MISMATCH_REASONS].map((r) => `mismatch:${r}`)].sort();
+  // Story 5.8b (FS8 (a), `2026-10-28-415`) replaced: the list WITHOUT `cycle_open` — the degraded-mode bridge's occasion (the
+  // cycle-open child's scope) is the seventh.
+  it('⭐ the send record\'s OCCASIONS are EXACTLY `day_10`, `pending_match_escalated`, one `mismatch:<reason>` per reason the matcher EMITS, and the bridge\'s `cycle_open`', () => {
+    const expected = ['day_10', 'pending_match_escalated', ...[...EMITTABLE_MISMATCH_REASONS].map((r) => `mismatch:${r}`), 'cycle_open'].sort();
     expect([...schema.ALERT_SMS_SEND_OCCASIONS].sort()).toEqual(expected);
   });
 

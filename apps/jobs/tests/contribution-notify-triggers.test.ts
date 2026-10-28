@@ -27,6 +27,15 @@ const readMemberTextLanguages = vi.fn(
     Promise.resolve(new Map(input.memberIds.map((id) => [id.toLowerCase(), 'hi' as const]))),
 );
 
+// Story 5.8b (FS10 (a)) — the sweep's freeze-instant signal (`openCycleAlert`'s read); un-bridged unless a test says so.
+const resolveCycleOpenTimeCritical = vi.fn<(db: unknown, cycleId: string) => Promise<{ cycleFrozenPayload: unknown; timeCritical: boolean } | null>>(
+  () => Promise.resolve({ cycleFrozenPayload: {}, timeCritical: false }),
+);
+// Story 5.8b (FS4 (d)) — the bridged child's set-based death-overlay read; nobody is frozen unless a test says so.
+const listAccountFrozenMemberIds = vi.fn<(db: unknown, memberIds: readonly string[], at: Date) => Promise<ReadonlySet<string>>>(
+  () => Promise.resolve(new Set<string>()),
+);
+
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   return {
@@ -34,10 +43,11 @@ vi.mock('@twt/domain', async (importActual) => {
     // Every read in these workers runs inside `withPariwarScope`; the fake just invokes the callback
     // with a marker handle so the workers' own logic is what is exercised.
     withPariwarScope,
+    alert: { ...actual.alert, resolveCycleOpenTimeCritical },
     pool: { ...actual.pool, listCycleBindingCandidates, getCycleFreezeCommittedAt },
     notifications: { ...actual.notifications, resolvePoolIdentity },
     kyc: { ...actual.kyc, resolvePublicNamePresentationMode },
-    member: { ...actual.member, readMemberTextLanguages },
+    member: { ...actual.member, readMemberTextLanguages, listAccountFrozenMemberIds },
     contribution: { ...actual.contribution, listActedMemberIdsForPool, listPendingMatchMembersForPool },
     idempotency: {
       ...actual.idempotency,
@@ -510,6 +520,32 @@ describe('the cycle-open notification RECOVERY sweep — per-pool coverage, not 
     const ctx = send.mock.calls[0]![1] as { requestId: string; traceId: string };
     expect(ctx.requestId).toBe(`contribution.notify.sweep:${ALERT}:${String(runAt.getTime())}`);
     expect(ctx.traceId).toBe(`contribution.notify.sweep:${ALERT}:${String(runAt.getTime())}`);
+  });
+
+  // ⭐ Story 5.8b (FS10 (a), AC7) — the sweep no longer passes 8.8's fail-safe `false` (no test pinned it before): it passes the
+  // signal `openCycleAlert`'s own read derives at the freeze instant, read only when it re-enqueues.
+  it.each([true, false])('⭐ AC7 — a swept cycle is re-enqueued with the freeze-instant signal (%s), read ONCE, for ITS cycle', async (bridged) => {
+    resolveCycleOpenTimeCritical.mockResolvedValueOnce({ cycleFrozenPayload: {}, timeCritical: bridged });
+    const send = vi.fn().mockResolvedValue(undefined);
+    await runContributionNotifyRecoverySweep(recoveryDeps(1), { send });
+    expect(resolveCycleOpenTimeCritical).toHaveBeenCalledTimes(1);
+    expect(resolveCycleOpenTimeCritical.mock.calls[0]![1]).toBe(CYCLE);
+    expect((send.mock.calls[0]![1] as { payload: { timeCritical: boolean } }).payload).toMatchObject({ alertId: ALERT, cycleId: CYCLE, timeCritical: bridged });
+  });
+
+  it('AC7 — a fully covered alert is ⛔ re-enqueued and its signal is ⛔ read (one more read only when it re-enqueues)', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    await runContributionNotifyRecoverySweep(recoveryDeps(3), { send });
+    expect(resolveCycleOpenTimeCritical).not.toHaveBeenCalled();
+  });
+
+  it('AC7 — a cycle with ⛔ `cycle.frozen` (unreachable for a live alert) ⇒ re-enqueued UN-bridged with ONE alarm (⛔ a guess)', async () => {
+    resolveCycleOpenTimeCritical.mockResolvedValueOnce(null as never);
+    const onAlarm = vi.fn();
+    const send = vi.fn().mockResolvedValue(undefined);
+    await runContributionNotifyRecoverySweep(recoveryDeps(0, { onAlarm }), { send });
+    expect((send.mock.calls[0]![1] as { payload: { timeCritical: boolean } }).payload.timeCritical).toBe(false);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('no cycle.frozen event'));
   });
 });
 
@@ -1793,4 +1829,180 @@ describe('FD-P1 — SMS pool jobs have bounded, independently retried payloads',
     expect(fanOutAlertToMembers).not.toHaveBeenCalled();
   });
 
+});
+
+// ─── Story 5.8b (AC4; FS4 (d), FS5, FS6 / `-414` Q2 A, FS7) — the bridged cycle-open carries the bridge text ─────────────
+
+describe('Story 5.8b AC4 — a TIME-CRITICAL cycle-open builds the `cycle_open_bridge` block (the producer)', () => {
+  const smsOf = (a: Alert) => (a.payload_data as { sms?: unknown }).sms;
+  const alertBuiltFor = (memberId: string, call = 0) =>
+    (fanOutAlertToMembers.mock.calls[call]![1] as (m: string) => Alert)(memberId);
+  const bridged = (overrides: Record<string, unknown> = {}) => childPayload({ timeCritical: true, ...overrides });
+
+  it('the builder: time-critical + a locale + boxes ⇒ the block (pool in the TEXT language, the boxes as given); else ⛔ block', () => {
+    const base = { alertId: ALERT, pariwarId: PARIWAR, memberId: M1, poolId: POOL_A, identity: IDENTITY, locale: 'hi' as const, now: NOW };
+    const boxes = ['रामेश्वर', ' प्र.'] as const;
+    const hi = buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: 'hi', smsNameBoxes: boxes });
+    expect(smsOf(hi)).toEqual({ message: 'cycle_open_bridge', locale: 'hi', values: { pool: 'युधिष्ठिर', member1: 'रामेश्वर', member2: ' प्र.' } });
+    // T10 — the en text names the pool by its LETTER (a Devanagari pool would turn it Unicode).
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: 'en', smsNameBoxes: boxes }))).toMatchObject({ locale: 'en', values: { pool: 'A' } });
+    expect(() => Alert.parse(hi)).not.toThrow();
+    // ⛔ block: not time-critical (I2), no locale, no boxes, an empty box.
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: false, smsLocale: 'hi', smsNameBoxes: boxes }))).toBeUndefined();
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: null, smsNameBoxes: boxes }))).toBeUndefined();
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsNameBoxes: boxes }))).toBeUndefined();
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: 'hi', smsNameBoxes: null }))).toBeUndefined();
+    expect(smsOf(buildCycleOpenAlert({ ...base, timeCritical: true, smsLocale: 'hi', smsNameBoxes: ['R', ''] }))).toBeUndefined();
+    // The PUSH copy is unchanged by the block.
+    expect((hi.payload_data as { body: string }).body).toBe(
+      (buildCycleOpenAlert({ ...base, timeCritical: false }).payload_data as { body: string }).body,
+    );
+  });
+
+  it.each([
+    ['shielded_name (the default fixture — "रामेश्वर प्र." is `full`, its full stop kept)', IDENTITY],
+    ['full_name', FULL_NAME_IDENTITY],
+  ])('⭐ T12 — %s: the child reads languages and the death overlay ONCE, fits the name ONCE, and every member gets the block in their language', async (_mode, identity) => {
+    resolvePoolIdentity.mockResolvedValue(identity);
+    readMemberTextLanguages.mockResolvedValueOnce(new Map([[M1, 'en' as const], [M2, 'hi' as const]]));
+    await runContributionNotifyChild(deps(), envelope(bridged()) as never);
+    expect(readMemberTextLanguages).toHaveBeenCalledTimes(1);
+    expect(listAccountFrozenMemberIds).toHaveBeenCalledTimes(1);
+    expect(listAccountFrozenMemberIds.mock.calls[0]![1]).toEqual([M1, M2]);
+    const en = smsOf(alertBuiltFor(M1)) as { locale: string; values: Record<string, string> };
+    const hi = smsOf(alertBuiltFor(M2)) as { locale: string; values: Record<string, string> };
+    expect(en).toMatchObject({ message: 'cycle_open_bridge', locale: 'en', values: { pool: 'A' } });
+    expect(hi).toMatchObject({ message: 'cycle_open_bridge', locale: 'hi', values: { pool: 'युधिष्ठिर' } });
+    // The boxes concatenate to the SAME label the push names (⛔ a second name rule).
+    expect(en.values['member1']! + en.values['member2']!).toBe(identity.deceasedDisplayName);
+    expect(hi.values['member1']! + hi.values['member2']!).toBe(identity.deceasedDisplayName);
+    expect((alertBuiltFor(M2).payload_data as { body: string }).body).toContain(identity.deceasedDisplayName);
+  });
+
+  const NAME_60 = `${'R'.repeat(29)} ${'S'.repeat(30)}`;
+  const NAME_61_TITLE = `Shri ${'B'.repeat(27)} ${'C'.repeat(28)}`;
+  const NAME_63_INITIALS = `${'D'.repeat(30)} ${'E'.repeat(30)} F`;
+  const NAME_TOO_LONG = 'G'.repeat(61);
+
+  it.each([
+    ['60 letters ⇒ `full`, sent WHOLE', NAME_60, NAME_60],
+    ['61 with a title ⇒ `shortened` (the title dropped), SENT (`-414` Q2 A)', NAME_61_TITLE, `${'B'.repeat(27)} ${'C'.repeat(28)}`],
+    ['63 without a title ⇒ `shortened` (the first word to its initial, ⛔ the last), SENT', NAME_63_INITIALS, `D ${'E'.repeat(30)} F`],
+  ])('⭐ the name — %s', async (_label, label, sent) => {
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: label });
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged()) as never);
+    const v = (smsOf(alertBuiltFor(M1)) as { values: Record<string, string> }).values;
+    expect(v['member1']! + v['member2']!).toBe(sent);
+    expect([...v['member1']!].length).toBeLessThanOrEqual(30);
+    expect([...v['member2']!].length).toBeLessThanOrEqual(30);
+    expect(onAlarm.mock.calls.filter(([m]) => String(m).includes('bridge_name_too_long'))).toHaveLength(0);
+  });
+
+  it('⭐ a name `too_long` even shortened ⇒ ⛔ block for EVERY member of the job and ONE name-free alarm carrying the count (the push still goes)', async () => {
+    resolvePoolIdentity.mockResolvedValue({ ...IDENTITY, deceasedDisplayName: NAME_TOO_LONG });
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged()) as never);
+    expect(smsOf(alertBuiltFor(M1))).toBeUndefined();
+    expect(smsOf(alertBuiltFor(M2))).toBeUndefined();
+    const alarms = onAlarm.mock.calls.map(([m]) => String(m)).filter((m) => m.includes('alert_sms.bridge_name_too_long'));
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toContain('2 member(s)');
+    expect(alarms[0]).not.toContain('GGGG'); // T11 — ⛔ the name (or a box) in an alarm
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(1); // the push is unchanged
+  });
+
+  it('⭐ FS4 (d) / I10 — a member under the account-frozen overlay gets ⛔ block while the neighbour does; their alert is otherwise identical', async () => {
+    listAccountFrozenMemberIds.mockResolvedValueOnce(new Set([M1.toLowerCase()]));
+    await runContributionNotifyChild(deps(), envelope(bridged()) as never);
+    expect(smsOf(alertBuiltFor(M1))).toBeUndefined();
+    expect(smsOf(alertBuiltFor(M2))).toMatchObject({ message: 'cycle_open_bridge' });
+    const rest: Record<string, unknown> = { ...(alertBuiltFor(M2).payload_data as Record<string, unknown>) };
+    delete rest['sms'];
+    expect(alertBuiltFor(M1).payload_data).toEqual(rest);
+  });
+
+  it('a Pariwar with ⛔ passport row ⇒ every bridge block OMITTED and ONE `alert_sms.locale_unresolved` alarm (the push unchanged)', async () => {
+    readMemberTextLanguages.mockResolvedValueOnce(null as never);
+    const onAlarm = vi.fn();
+    await runContributionNotifyChild(deps({ onAlarm }), envelope(bridged()) as never);
+    expect(smsOf(alertBuiltFor(M1))).toBeUndefined();
+    expect(smsOf(alertBuiltFor(M2))).toBeUndefined();
+    expect(onAlarm.mock.calls.filter(([m]) => String(m).includes('alert_sms.locale_unresolved'))).toHaveLength(1);
+  });
+
+  it('⛔ a NON-time-critical cycle-open — ⛔ block, ⛔ language read, ⛔ overlay read (today\'s cycle-open, unchanged)', async () => {
+    await runContributionNotifyChild(deps(), envelope(childPayload()) as never);
+    expect(smsOf(alertBuiltFor(M1))).toBeUndefined();
+    expect(readMemberTextLanguages).not.toHaveBeenCalled();
+    expect(listAccountFrozenMemberIds).not.toHaveBeenCalled();
+  });
+
+  it('⭐ FS5 / T6 — the parent splits a bridged pool at 9 (⛔ at 8) into bounded jobs in ONE insert; an un-bridged pool of 9 stays whole', async () => {
+    const nine = Array.from({ length: 9 }, (_, i) => `aaaaaaaa-0000-0000-0000-${String(i + 1).padStart(12, '0')}`);
+    const run = async (memberIds: string[], timeCritical: boolean) => {
+      listCycleBindingCandidates.mockResolvedValueOnce([candidate(POOL_A, 0, memberIds)]);
+      const send = vi.fn(async () => 'child');
+      const insert = vi.fn<(name: string, jobs: unknown[]) => Promise<string[] | null>>(async () => null);
+      await runContributionNotifyParent(deps(), { send, insert } as never, envelope({ alertId: ALERT, cycleId: CYCLE, timeCritical }));
+      return { send, insert };
+    };
+    const split = await run(nine, true);
+    expect(split.send).not.toHaveBeenCalled();
+    const jobs = split.insert.mock.calls[0]![1] as { data: { payload: { memberIds: string[]; timeCritical: boolean } } }[];
+    expect(jobs.map((j) => j.data.payload.memberIds.length)).toEqual([8, 1]);
+    expect(jobs.every((j) => j.data.payload.timeCritical)).toBe(true);
+    const eight = await run(nine.slice(0, 8), true);
+    expect(eight.insert).not.toHaveBeenCalled();
+    expect(eight.send).toHaveBeenCalledTimes(1);
+    const whole = await run(nine, false);
+    expect(whole.insert).not.toHaveBeenCalled();
+    expect(((whole.send.mock.calls[0] as unknown[])[1] as { payload: { memberIds: string[] } }).payload.memberIds).toHaveLength(9);
+  });
+
+  it('⭐ T6 — a WHOLE bridged cycle-open job of 9 queued before the deploy is SPLIT by the registered worker (the kind-agnostic legacy conversion), ⛔ sent whole', async () => {
+    const nine = Array.from({ length: 9 }, (_, i) => `aaaaaaaa-0000-0000-0000-${String(i + 1).padStart(12, '0')}`);
+    const handlers = new Map<string, (jobs: unknown[]) => Promise<unknown>>();
+    const boss = {
+      createQueue: vi.fn(async () => undefined), schedule: vi.fn(async () => undefined),
+      work: vi.fn(async (name: string, a: unknown, b?: unknown) => { handlers.set(name, (typeof a === 'function' ? a : b) as never); return 'w'; }),
+      send: vi.fn(async () => 'child'),
+      insert: vi.fn<(name: string, jobs: unknown[]) => Promise<string[] | null>>(async () => null),
+    };
+    await registerContributionNotifyWorkers(boss as never, deps({ alertSms: vi.fn() }));
+    const run = handlers.get(QUEUE_NAMES.CONTRIBUTION_NOTIFY_POOL_BATCH)!;
+    await run([{ id: 'pre-deploy-job', retryCount: 0, retryLimit: 4, data: envelope(bridged({ memberIds: nine })) }]);
+    expect(fanOutAlertToMembers).not.toHaveBeenCalled();
+    expect(boss.insert).toHaveBeenCalledTimes(1);
+    const jobs = boss.insert.mock.calls[0]![1] as { data: { payload: { memberIds: string[]; kind: string; timeCritical: boolean } } }[];
+    expect(jobs.map((j) => j.data.payload.memberIds.length)).toEqual([8, 1]);
+    expect(jobs.every((j) => j.data.payload.kind === 'cycle_open' && j.data.payload.timeCritical)).toBe(true);
+    // …and a DIRECT oversized bridged job is refused before any read or send (the guard applies to the widened kind).
+    const onAlarm = vi.fn();
+    await expect(runContributionNotifyChild(deps({ alertSms: vi.fn(), onAlarm }), envelope(bridged({ memberIds: nine })) as never)).rejects.toThrow(
+      'must be split before fan-out',
+    );
+    expect(listAccountFrozenMemberIds).not.toHaveBeenCalled();
+  });
+
+  it('⭐ AC12 — the bridged child hands EVERY chunk\'s fan-out the SAME switch read, wrapped to read ONCE per job; an un-bridged job passes it through', async () => {
+    const read = vi.fn(() => Promise.resolve(true));
+    await runContributionNotifyChild(deps({ readBridgeSwitch: read, memberChunkSize: 1 }), envelope(bridged()) as never);
+    expect(fanOutAlertToMembers).toHaveBeenCalledTimes(2); // two chunks of one member
+    const first = (fanOutAlertToMembers.mock.calls[0]![0] as { readBridgeSwitch: () => Promise<boolean> }).readBridgeSwitch;
+    const second = (fanOutAlertToMembers.mock.calls[1]![0] as { readBridgeSwitch: () => Promise<boolean> }).readBridgeSwitch;
+    expect(first).not.toBe(read);
+    expect(second).toBe(first);
+    await first();
+    await second();
+    expect(read).toHaveBeenCalledTimes(1);
+    fanOutAlertToMembers.mockClear();
+    await runContributionNotifyChild(deps({ readBridgeSwitch: read }), envelope(childPayload()) as never);
+    expect((fanOutAlertToMembers.mock.calls[0]![0] as { readBridgeSwitch: unknown }).readBridgeSwitch).toBe(read);
+  });
+
+  it('the bridged child passes the occasion `cycle_open` (the keyed store\'s scope) to the fan-out', async () => {
+    await runContributionNotifyChild(deps(), envelope(bridged({ memberIds: [M1] })) as never, { id: 'job-9', retryCount: 0, retryLimit: 4 });
+    expect(fanOutAlertToMembers.mock.calls[0]![5]).toEqual({ occasion: 'cycle_open', jobId: 'job-9', retryCount: 0, retryLimit: 4 });
+  });
 });

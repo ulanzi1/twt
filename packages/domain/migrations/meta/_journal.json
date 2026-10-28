@@ -1310,6 +1310,13 @@
       "when": 1795664400031,
       "tag": "0187_memorial-takedown",
       "breakpoints": true
+    },
+    {
+      "idx": 188,
+      "version": "7",
+      "when": 1795837200033,
+      "tag": "0188_degraded-bridge-sms",
+      "breakpoints": true
     }
   ]
 }

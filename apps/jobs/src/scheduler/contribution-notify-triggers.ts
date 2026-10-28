@@ -55,6 +55,7 @@ import {
   type PendingMatchRetryTier,
 } from '@twt/contracts';
 import {
+  alert as alertDomain,
   contribution as contributionDomain,
   idempotency,
   ids,
@@ -75,10 +76,12 @@ import { createHash } from 'node:crypto';
 import type { FanOutCall } from './alert-sms-details.js';
 import {
   fanOutAlertToMembers,
+  onceForJob,
   serializeFanOutResult,
   type ContributionNotifyDeps,
 } from './contribution-notify.js';
 import { smsPoolLabel, type ContributionSmsLocale } from './contribution-sms-templates.js';
+import { smsMemberName } from './sms-member-name.js';
 
 // ── Operational knobs (named config values, never inline magic numbers) ─────────────────────────────
 
@@ -317,6 +320,13 @@ function envelope(input: {
  * curated name, the deceased family's name in the Pariwar's chosen form, and the formatted fixed amount,
  * rendered into the `{title, body}` announcement shape — the producer resolves every locale-, clock-
  * and tone-dependent string so the Epic 5 renderers stay pure (AC5).
+ *
+ * ⭐ Story 5.8b (FS1 (a), FS6 / `-414` Q2 A, FS7 (a); `2026-10-28-415`) — a TIME-CRITICAL cycle-open (the Pariwar declared degraded at
+ * the freeze) also carries the degraded-mode bridge's text block (`cycle_open_bridge`): the pool in the TEXT's language
+ * (`smsPoolLabel`) and the family's name in the two boxes the child fitted ONCE per job (`smsMemberName` — `full` or `shortened`).
+ * ⛔ block when `timeCritical` is false (the contract refuses one there), when `smsLocale` is absent or null (⛔ passport, or the
+ * member is under the death overlay — FS4 (d)), or when `smsNameBoxes` is absent or null (the name does not fit even shortened,
+ * or a box would be empty).
  */
 export function buildCycleOpenAlert(input: {
   readonly alertId: string;
@@ -326,9 +336,15 @@ export function buildCycleOpenAlert(input: {
   readonly identity: notifications.ResolvedPoolIdentity;
   readonly timeCritical: boolean;
   readonly locale: Locale;
+  /** Story 5.8b — the bridge TEXT's language: the member's (`readMemberTextLanguages`). Absent or `null` ⇒ ⛔ text. */
+  readonly smsLocale?: ContributionSmsLocale | null;
+  /** Story 5.8b — the family's name in the two 30-letter boxes (fitted once per job). Absent or `null` ⇒ ⛔ text. */
+  readonly smsNameBoxes?: readonly [string, string] | null;
   readonly now: Date;
 }): Alert {
   const { locale } = input;
+  const smsLocale = input.smsLocale ?? null;
+  const boxes = input.smsNameBoxes ?? null;
   const params = {
     pool: poolLabel(input.identity),
     family: familyLabel(input.identity),
@@ -341,6 +357,15 @@ export function buildCycleOpenAlert(input: {
     payload_data: buildCycleOpenPayloadData({
       title: t(CYCLE_OPEN_TEMPLATE_KEYS.titleKey, params, { locale, ...NS }),
       body: t(CYCLE_OPEN_TEMPLATE_KEYS.bodyKey, params, { locale, ...NS }),
+      ...(input.timeCritical && smsLocale !== null && boxes !== null && boxes[0] !== '' && boxes[1] !== ''
+        ? {
+            sms: {
+              message: 'cycle_open_bridge',
+              locale: smsLocale,
+              values: { pool: smsPoolLabel(input.identity, smsLocale), member1: boxes[0], member2: boxes[1] },
+            },
+          }
+        : {}),
     }),
   });
 }
@@ -651,8 +676,17 @@ async function enqueuePoolBatch(
   return batches.length;
 }
 
+/**
+ * The LIT kinds of this worker — those whose alert may carry a text block, so their members' TEXT languages are read and their
+ * pool splits into bounded jobs: day 10, the escalated pending-match tier, and (Story 5.8b, FS5 (a)) a TIME-CRITICAL cycle-open —
+ * the degraded-mode bridge. A non-time-critical cycle-open is ⛔ lit (⛔ text, the whole-pool job as before).
+ */
 function isLitPoolPayload(payload: ContributionNotifyChildPayload): boolean {
-  return (payload.kind === 'deadline_reminder' && payload.cycleDay === 10) || payload.kind === 'pending_match_escalated';
+  return (
+    (payload.kind === 'deadline_reminder' && payload.cycleDay === 10) ||
+    payload.kind === 'pending_match_escalated' ||
+    (payload.kind === 'cycle_open' && payload.timeCritical)
+  );
 }
 
 // ── Task 5: the cycle-open parent ───────────────────────────────────────────────────────────────────
@@ -768,8 +802,11 @@ export async function runContributionNotifyChild(
 
   const now = deps.now?.() ?? new Date();
   const locale = deps.locale ?? DEFAULT_LOCALE;
-  // Story 5.11b (FS5) — the two LIT kinds of this worker (day 10, the escalated tier): their TEXT goes in each member's language.
+  // Story 5.11b (FS5) — the LIT kinds of this worker (day 10, the escalated tier and — Story 5.8b — the bridged cycle-open): their
+  // TEXT goes in each member's language.
   const litKind = isLitPoolPayload(p);
+  // Story 5.8b — the degraded-mode bridge's cycle-open (time-critical) builds the `cycle_open_bridge` block.
+  const bridgeText = p.kind === 'cycle_open' && p.timeCritical;
   if (litKind && deps.alertSms !== undefined && p.memberIds.length > LIT_KIND_JOB_MEMBER_LIMIT) {
     const message = `[jobs] contribution-notify-child: oversized SMS job for alert ${p.alertId} pool ${p.poolId} must be split before fan-out`;
     alarm(message);
@@ -809,10 +846,14 @@ export async function runContributionNotifyChild(
   let presentationModeFailed = false;
   // Story 5.11b (FS5 (a)) — the members' TEXT languages, read in THIS scope (⛔ extra connection); `null` ⇒ ⛔ passport.
   let textLanguages: ReadonlyMap<string, ContributionSmsLocale> | null = new Map();
+  // Story 5.8b (FS4 (d), I10) — the members under the `account-frozen` (death-claim) overlay NOW: ⛔ bridge text for them (their push /
+  // WhatsApp is unchanged). ONE set-based read per job, in THIS scope; ⛔ in the roster (AI-7-2).
+  let deathFrozen: ReadonlySet<string> = new Set();
   const identity = await withPariwarScope(deps.pool, pariwarId, async (db: Db) => {
     if (litKind) {
       textLanguages = await memberDomain.readMemberTextLanguages(db, { pariwarId: ids.pariwarId(pariwarId), memberIds: p.memberIds });
     }
+    if (bridgeText) deathFrozen = await memberDomain.listAccountFrozenMemberIds(db, p.memberIds, now);
     // ⭐ REVIEW FIX (8.16) — this read must degrade the SAME way `resolvePoolIdentity` degrades every
     // OTHER unresolvable input on this path (decrypt, letter code, curated name): skip THIS pool's
     // notification, never let a transient read throw the whole child job. Without this, a DB blip on
@@ -867,6 +908,30 @@ export async function runContributionNotifyChild(
     if (languages === null) return null;
     return languages.get(memberId.toLowerCase()) ?? null;
   };
+
+  // Story 5.8b (`-414` Q2 A; `-379` step (4)) — the family's name for the bridge text, fitted ONCE per job (the label is the pool's,
+  // the same string the push uses): `full` or `shortened` ⇒ the two boxes; `too_long` ⇒ ⛔ text for this job's members and ONE
+  // name-free alarm carrying the COUNT (⛔ the name, a box or a shortened form — T11). A box that would be empty (a 1-letter label)
+  // omits the text too, ⛔ throw.
+  let bridgeBoxes: readonly [string, string] | null = null;
+  if (bridgeText) {
+    const label = familyLabel(identity);
+    const fitted = label.trim() === '' ? null : smsMemberName(label);
+    if (fitted?.kind === 'too_long') {
+      alarm(
+        `[jobs] contribution-notify-child: alert_sms.bridge_name_too_long — ${String(p.memberIds.length)} member(s) of alert ` +
+          `${p.alertId} pool ${p.poolId} get ⛔ bridge text: the family's name does not fit two boxes even shortened (the push still goes)`,
+      );
+    } else if (fitted !== null && fitted.boxes[0] !== '' && fitted.boxes[1] !== '') {
+      bridgeBoxes = fitted.boxes;
+    }
+    if (deathFrozen.size > 0) {
+      console.info(
+        '[jobs] contribution-notify-child',
+        JSON.stringify({ alertId: p.alertId, poolId: p.poolId, bridgeTextOmittedAccountFrozen: deathFrozen.size }),
+      );
+    }
+  }
 
   // (AC2 / D3) Reminder suppression — a member who has already ACTED is not nudged. Resolved per JOB in
   // ONE batched read, never per member at 4L scale: a whole-pool job reads its pool, a bounded (lit) job
@@ -925,9 +990,16 @@ export async function runContributionNotifyChild(
       identity,
       timeCritical: p.timeCritical,
       locale,
+      ...(bridgeText
+        ? { smsLocale: deathFrozen.has(memberId.toLowerCase()) ? null : smsLocaleOf(memberId), smsNameBoxes: bridgeBoxes }
+        : {}),
       now,
     });
   };
+
+  // Story 5.8b (AC12) — the bridge's Super Admin switch is read ONCE per job, at its first bridge attempt (⛔ per member).
+  const jobDeps: ContributionNotifyTriggerDeps =
+    bridgeText && deps.readBridgeSwitch ? { ...deps, readBridgeSwitch: onceForJob(deps.readBridgeSwitch) } : deps;
 
   let attempted = 0;
   let delivered = 0;
@@ -950,7 +1022,7 @@ export async function runContributionNotifyChild(
     if (claimed.length === 0) continue;
 
     attempted += claimed.length;
-    const { results, retry } = await fanOutAlertToMembers(deps, alertFor, claimed, pariwarId, now, fanOutCall(job, scope));
+    const { results, retry } = await fanOutAlertToMembers(jobDeps, alertFor, claimed, pariwarId, now, fanOutCall(job, scope));
 
     const retrySet = new Set(retry);
     for (const memberId of claimed) {
@@ -1087,16 +1159,25 @@ export async function runContributionNotifyRecoverySweep(
   let reEnqueued = 0;
   for (const row of rows) {
     try {
-      const candidates = await withPariwarScope(deps.pool, row.pariwar_id, (db: Db) =>
-        poolDomain.listCycleBindingCandidates(
+      // ⭐ Story 5.8b (FS10 (a), I9) — in the SAME scope, and ONLY when the alert is re-enqueued: the AR-18 signal re-derived by the
+      // read `openCycleAlert` makes (the freeze `committed_at`), so a recovered cycle is bridged exactly as its first pass was.
+      const { expectedMembers, timeCritical } = await withPariwarScope(deps.pool, row.pariwar_id, async (db: Db) => {
+        const candidates = await poolDomain.listCycleBindingCandidates(
           db,
           ids.pariwarId(row.pariwar_id),
           ids.cycleFreezeCommitId(row.cycle_id),
-        ),
-      );
-      const expectedMembers = candidates.reduce((sum, c) => sum + c.memberIds.length, 0);
+        );
+        const expected = candidates.reduce((sum, c) => sum + c.memberIds.length, 0);
+        if (expected === 0 || Number(row.notified_members) >= expected) return { expectedMembers: expected, timeCritical: null };
+        const signal = await alertDomain.resolveCycleOpenTimeCritical(db, row.cycle_id);
+        return { expectedMembers: expected, timeCritical: signal?.timeCritical ?? null };
+      });
       const notifiedMembers = Number(row.notified_members);
       if (expectedMembers === 0 || notifiedMembers >= expectedMembers) continue;
+      if (timeCritical === null) {
+        // A `live` alert whose cycle has ⛔ `cycle.frozen` event — unreachable (the alert is minted from that event). ⛔ guess bridged.
+        alarm(`[jobs] contribution-notify-sweep: alert ${row.alert_id} cycle ${row.cycle_id} has no cycle.frozen event — re-enqueued un-bridged`);
+      }
 
       await enqueueContributionNotifyCycleOpen(
         boss,
@@ -1111,11 +1192,10 @@ export async function runContributionNotifyRecoverySweep(
         {
           alertId: row.alert_id,
           cycleId: row.cycle_id,
-          // The sweep does NOT know the AR-18 signal (it is on the alert.published payload, not the
-          // projection). `false` is the fail-safe: it can only cost the degraded-mode SMS BRIDGE on a
-          // recovered cycle, never cause an unwanted bulk-SMS send. The primary post-commit enqueue —
-          // which does carry the real signal — is the route that runs in practice.
-          timeCritical: false,
+          // Story 5.8b (FS10 (a)) replaced 8.8's documented fail-safe `false` (*"it can only cost the degraded-mode SMS BRIDGE on a
+          // recovered cycle"*): the signal is RE-DERIVED above from the freeze instant — the members a first pass lost while the
+          // infrastructure was down are exactly the ones the bridge exists for. The send row keeps it at most one text per member.
+          timeCritical: timeCritical ?? false,
         },
       );
       reEnqueued += 1;

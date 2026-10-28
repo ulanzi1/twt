@@ -14,6 +14,7 @@ import { memberId as toMemberId } from '../../../src/ids/index.js';
 import {
   getMemberAccountOverlay,
   getMemberStateAt,
+  listAccountFrozenMemberIds,
   isMemberStateDirectWriteError,
   projectMemberState,
 } from '../../../src/member/index.js';
@@ -215,5 +216,37 @@ describe.skipIf(!hasDatabase)('member lifecycle (PARIWAR_A scope)', () => {
     const overlay = await getMemberAccountOverlay(tx, mid, new Date('2026-06-10T00:00:00Z'));
     expect(overlay.accountFrozen).toBe(false);
     expect(overlay.frozenSince).toBeNull();
+  });
+
+  // Story 5.8b (FS4 (d), I10) — the bridge's set-based form ("change one, check the other"): for every case it answers EXACTLY what
+  // the per-member evaluator answers, in ONE query.
+  it('5.8b — listAccountFrozenMemberIds equals getMemberAccountOverlay member by member (one claim, settled, two claims, none, future, case)', async () => {
+    const { client, tx } = getTx();
+    const AT = new Date('2026-06-10T00:00:00Z');
+    const m = Array.from({ length: 6 }, () => randomUUID());
+    const ev = (memberIdText: string, stream: string, type: string, version: number, at: string) =>
+      tx.insert(schema.eventsLog).values({
+        streamId: stream, eventType: type, payload: { deceased_member_id: memberIdText }, eventVersion: version,
+        occurredAt: new Date(at), actorId: null, pariwarId: PARIWAR_A,
+      });
+    const [s0, s1, s2a, s2b, s4, s5] = Array.from({ length: 6 }, () => randomUUID());
+    await ev(m[0]!, s0!, 'claim.intake_initiated', 1, '2026-06-01T00:00:00Z'); //                 frozen
+    await ev(m[1]!, s1!, 'claim.intake_initiated', 1, '2026-06-01T00:00:00Z');
+    await ev(m[1]!, s1!, 'claim.settled', 2, '2026-06-05T00:00:00Z'); //                           resolved
+    await ev(m[2]!, s2a!, 'claim.intake_initiated', 1, '2026-06-01T00:00:00Z');
+    await ev(m[2]!, s2a!, 'claim.denied_no_appeal', 2, '2026-06-03T00:00:00Z');
+    await ev(m[2]!, s2b!, 'claim.intake_initiated', 1, '2026-06-04T00:00:00Z'); //                 another claim still open ⇒ frozen
+    // m[3]: no events ⇒ not frozen
+    await ev(m[4]!, s4!, 'claim.intake_initiated', 1, '2026-06-20T00:00:00Z'); //                  after `at` ⇒ not yet
+    await ev(m[5]!.toUpperCase(), s5!, 'claim.intake_initiated', 1, '2026-06-01T00:00:00Z'); //   upper-case id in the payload ⇒ frozen
+    await enterAppScope(client, PARIWAR_A);
+
+    const set = await listAccountFrozenMemberIds(tx, m.map((id, i) => (i === 0 ? id.toUpperCase() : id)), AT);
+    for (const id of m) {
+      const single = await getMemberAccountOverlay(tx, toMemberId(id), AT);
+      expect(set.has(id.toLowerCase()), id).toBe(single.accountFrozen);
+    }
+    expect([...set].sort()).toEqual([m[0]!, m[2]!, m[5]!].map((x) => x.toLowerCase()).sort());
+    expect(await listAccountFrozenMemberIds(tx, [], AT)).toEqual(new Set());
   });
 });

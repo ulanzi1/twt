@@ -138,7 +138,7 @@ STOP conditions · G = §0 readings · PQ = Panel question.
 
 # Story 5.8b: The Degraded-Mode Cycle-Open SMS Bridge Gets Its Own Registrable Words (en + hi) and Is Lit — a Time-Critical Cycle-Open Is Texted Once, in the Member's Language, Naming the Family `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A trustee can already declare a Pariwar's degraded mode (Story 5.8); a cycle that freezes
 > while the declaration is active already opens a time-critical alert (8.1), and every member's fan-out already knows it is bridged
@@ -860,34 +860,34 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
         ([[project_decision_log_writes_user_inserted]]).
   - [x] 0.4 (DONE 2026-10-28 — Debug Log (g)) Records commit (AC10's docs): `epics.md`, §3.4 annotation, the roster row + Row 40 annotation, the DLT-sheet section,
         deferred-work (the new items AND the four older reference sites), the ledger entry by SAFE prepend + row `ready-for-dev → in-progress`.
-- [ ] **Task 1 — Contract, words, registry, catalogue (AC1, AC2; FS1, FS7)**: the enum key; the `sms` field on the variant, the payload
+- [x] **Task 1 — Contract, words, registry, catalogue (AC1, AC2; FS1, FS7)**: the enum key; the `sms` field on the variant, the payload
       schema and the builder; the `Alert` refinement (a block on an `alert_published` only when `time_critical`; run
       `pnpm contracts:emit-openapi` and expect NO diff — `Alert` is not registered; never hand-edit `openapi/v1.yaml`); the `alert.ts:21-26`
       header; the registry entries and `SLOTS`; `sms.cycle_open_bridge` in en and hi; `$comment.sms` coverage; the doc-blocks.
-- [ ] **Task 2 — Migration and domain constants (AC3, AC12; FS8, FS17, FS18)**: the migration `0188` (FS18 — re-check it is free on
+- [x] **Task 2 — Migration and domain constants (AC3, AC12; FS8, FS17, FS18)**: the migration `0188` (FS18 — re-check it is free on
       `main`), incl. the switch's control and history tables (created OFF, FORCE RLS / grants as the project's pattern); `ALERT_SMS_SEND_MESSAGES`, `ALERT_SMS_SEND_OCCASIONS`, the
       drizzle `check()` copies; the journal entry; the header text (six → seven).
-- [ ] **Task 3 — Producer and child (AC4; FS4 (d), FS5, FS6, FS7)**: widen `isLitPoolPayload` to a time-critical cycle-open;
+- [x] **Task 3 — Producer and child (AC4; FS4 (d), FS5, FS6, FS7)**: widen `isLitPoolPayload` to a time-critical cycle-open;
       `buildCycleOpenAlert` takes `smsLocale` / the block; the child reads the languages, fits the name (only once `identity` is
       non-null), omits-and-alarms; under FS4 (d) one set-based `account-frozen` read per job (the `NOT_DECEASED` form) omits those members'
       blocks; the legacy conversion needs NO edit — add its `cycle_open` test.
-- [ ] **Task 4 — The bridge path and retry (AC5, AC6, AC9; FS3, FS3.1, FS4, FS9)**: `alertSmsBlock` gains the `alert_published` case,
+- [x] **Task 4 — The bridge path and retry (AC5, AC6, AC9; FS3, FS3.1, FS4, FS9)**: `alertSmsBlock` gains the `alert_published` case,
       guarded by `time_critical`; the bridge attempt before the ladder, its trail entry FIRST; the Telegram mirror on the bridge-`sent`
       path; `sms_bridge_already_tried`; under FS3.1 (a) give up a `deferred` bridge row when the ladder delivers; `shouldRetryFanOut`'s arm
       removed; the header comment; read the Super Admin switch once per job at the bridge attempt (AC12) — OFF ⇒ the switched-off
       detail and today's ladder.
-- [ ] **Task 5 — The sweep (AC7; FS10)**: extract `(db, cycleId)` → `loadCycleFrozenPayload` + `getActiveDegradedMode` from
+- [x] **Task 5 — The sweep (AC7; FS10)**: extract `(db, cycleId)` → `loadCycleFrozenPayload` + `getActiveDegradedMode` from
       `openCycleAlert` into one domain function; `openCycleAlert` and the sweep (inside its `withPariwarScope`, only when re-enqueueing)
       both call it; update the `@twt/domain` test mock.
-- [ ] **Task 6 — The trustee screen and the switch (AC8, AC12; FS11, FS17)**: replace the page header's and the banner's AR-20 sentences with the FS11 sentence, and
+- [x] **Task 6 — The trustee screen and the switch (AC8, AC12; FS11, FS17)**: replace the page header's and the banner's AR-20 sentences with the FS11 sentence, and
       put it on the declare form (+ the FS4 (d) and FS17 sentences); the switch's state for all and its control for a Super Admin;
       the permission key (`super_admin` only), the read / change endpoints and the history (AC12); their tests (the module has none
       today — new RTL tests, templates in AC8).
-- [ ] **Task 7 — Records (AC10; FS12–FS15)**: the DLT sheet (segment counts computed from the real registry with the longest values, en
+- [x] **Task 7 — Records (AC10; FS12–FS15)**: the DLT sheet (segment counts computed from the real registry with the longest values, en
       with a Latin and a Devanagari name; the en SMS type per FS15), the roster row text, deferred-work items.
-- [ ] **Task 8 — Tests (AC1–AC12)**: rewrite the tests in the Dev Notes' closed list (each states what it replaced); add the first live-DB
+- [x] **Task 8 — Tests (AC1–AC12)**: rewrite the tests in the Dev Notes' closed list (each states what it replaced); add the first live-DB
       bridged end-to-end test; every new gate proven RED (the mutants in Testing standards).
-- [ ] **Task 9 — Verify**: `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]; known failures —
+- [x] **Task 9 — Verify**: `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]; known failures —
       [[project-known-livedb-test-failures]]); review the diff before commit ([[feedback_review_the_fix_diff_before_commit]]); commit on the
       story branch ([[feedback_commit_on_story_branch]]; check the branch before every commit —
       [[feedback-concurrent-review-agents-mutate-tree]]); do not push without BigDev's go-ahead.
@@ -1075,7 +1075,7 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 
 ### Agent Model Used
 
-(filled by `bmad-dev-story`)
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story`, 2026-10-28 (Tasks 1–9).
 
 ### Debug Log References
 
@@ -1107,8 +1107,24 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
     approved — but it is re-asked before go-live). (4) **S2** — the sequencing after 6.32 (`-414`, Row 43, `0189`) — asked, no answer;
     the plan stands unless BigDev says otherwise, and every number is re-found at the time of use anyway. ANSWERED 2026-10-28:
     *"5.8b will be merged befor 6.32."* — the migration consequence is FS18 (Debug Log (f)).
-- (b) Mutants proven RED: (open)
-- (c) `pnpm ci:local` evidence: (open)
+- (b) Mutants proven RED (2026-10-28; each applied to the source, the named suite run, the source restored and byte-compared):
+  - the contract's `time_critical` refinement dropped (AC1, T3) ⇒ `contribution-loop-templates.test.ts` 2 RED (5.11's I5 `it.each` for
+    `alert_published` + the 5.8b refinement leg);
+  - `cycle_open` removed from `alert_sms_sends_occasion_check` IN THE DB (AC3) ⇒ `alert-sms-sends-policy-regression.spec.ts` 2 RED (the
+    lockstep + the seven-literal leg);
+  - the lit predicate left unwidened (AC4, T6) ⇒ `contribution-notify-triggers.test.ts` 9 RED;
+  - the `account-frozen` overlay read removed (AC4, FS4 (d)) ⇒ 3 RED;
+  - only `full` sent — `shortened` omitted (AC4, `-414` Q2 A; replaces the pre-ruling "the producer sends a shortened name" mutant) ⇒ 2 RED;
+  - the `bridge.bridged` condition dropped (AC9, T3) ⇒ `contribution-notify.test.ts` 1 RED (the un-bridged day-10 / news leg);
+  - the ladder's SMS entry placed before the bridge's (AC5, T19) ⇒ 3 RED;
+  - the Telegram mirror skipped on bridge-`sent` (AC5, T20) ⇒ 1 RED;
+  - the bridged retry arm restored (AC6, FS9 (a)) ⇒ 1 RED (THE changed case);
+  - the switch read skipped (always on) (AC12) ⇒ 3 RED;
+  - the sweep passes `false` (AC7, FS10 (a)) ⇒ `contribution-notify-triggers.test.ts` 1 RED.
+- (c) `pnpm ci:local` evidence (2026-10-28), `DATABASE_URL` on this story's own container `twt-58b-pg` (:5449, DB `twt_dev`, fresh, 188
+  migrations — the recorded recipe for a clean run; ⛔ the shared :5433): run 1 — 35 / 36, `lint` RED (7 unused-parameter errors in this
+  story's new test doubles — fixed with typed `vi.fn` generics); run 2 — **36 / 36 green, exit 0** (integration-tests included, on the tree
+  that also carries the `onceForJob` comment correction and its re-taken file pin). `origin/main` re-checked: still `64e01121`.
 - (d) Task 0.1 preflight results (pin checks, F1–F16 re-run, S1–S7) — 2026-10-28:
   - **Rebase.** `git fetch origin` (`origin/main` = `64e01121`); backup `backup/5-8b-pre-rebase-2026-10-28` (= `84e43c64`); `git rebase
     origin/main` — ONE conflict, the `sprint-status.yaml` top-of-file ledger (a pure prepend both sides: the branch's `-27s` over main's
@@ -1191,11 +1207,85 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 
 ### Completion Notes List
 
-(open)
+- **Task 1 (AC1, AC2):** `AlertSmsMessage` gains `cycle_open_bridge`; `alert_published` and `CycleOpenPayloadData` gain an optional `sms`
+  block; `Alert` is the union wrapped in ONE `.superRefine` — a block on an `alert_published` only when `time_critical` (the two existing
+  guards stay green unchanged; new legs for `time_critical: true`, helpdesk_reply, `.strict()`). `pnpm contracts:emit-openapi` — ⛔ diff
+  from the contract change. Registry entries (slots `pool` + the SAME `MEMBER_BOX_SLOTS` objects), `sms.cycle_open_bridge` en / hi
+  (BigDev's words, verbatim), `$comment.sms` covers it and says its Hindi-review leg is Row 43 (b)'s, ⛔ assumed. F16's guards rewritten
+  to a positive statement, each naming what it replaced. DLT gate, i18n parity, microcopy green.
+- **Task 2 (AC3, AC12):** migration `0188_degraded-bridge-sms` (FS18 (a): `0188`, `when` 1795837200033 — above `0187` and 6.32's): the two
+  CHECKs replaced (+ `cycle_open`, + `cycle_open_bridge`) and the switch — `degraded_bridge_sms_switch` (one row, created OFF; ⛔ DELETE /
+  TRUNCATE) + `degraded_bridge_sms_switch_changes` (append-only, required reason), GLOBAL `USING (true)` SELECT for `twt_app`, writes by the
+  service role only. Constants, drizzle copies, RLS policy file, domain read / change (`readDegradedBridgeSmsSwitch`,
+  `setDegradedBridgeSmsSwitch[InTx]`). Permission key `degraded_mode.switch_bridge_sms` — catalog 54 → 55, 70 → 71 keys, `super_admin` only
+  (derived; ⛔ `roles.ts` const). ⚠ The story says `ROLE_PERMISSIONS_VERSION`; the constant is `PERMISSION_CATALOG_VERSION`. Applied on a
+  FRESH database (188 migrations, switch OFF); a fresh run passes through `0187`'s state, which is `main`'s latest.
+- **Task 3 (AC4):** `isLitPoolPayload` widened to a time-critical cycle-open; the child reads text languages and (FS4 (d)) the death overlay
+  ONCE per job — `member.listAccountFrozenMemberIds`, a NEW set-based export in `overlay.ts` (the `NOT_DECEASED` fold; listed in the
+  overlay's "change one, check the other" register; live-DB-proven equal to `getMemberAccountOverlay` member by member); the name is fitted
+  ONCE per job with `smsMemberName` — `full` and `shortened` sent, `too_long` ⇒ ⛔ block + ONE name-free alarm
+  `alert_sms.bridge_name_too_long` with the count. The legacy conversion needed ⛔ code (test added). The caller fence names the third caller.
+- **Task 4 (AC5, AC6, AC9):** the bridge text FIRST through the injected seam (`whatsappTried: false`), its entry first on the trail; `sent`
+  ⇒ push / WhatsApp ⛔ run, the Telegram mirror still runs; else the ladder, SMS rung `sms_bridge_already_tried`; switch OFF ⇒
+  `sms_bridge_switched_off`; a switch read that throws ⇒ `sms_bridge_switch_unavailable`, alarmed and RETRIED until the final attempt (the
+  dev's choice — ⛔ a silent drop; not named in the story). `sms_bridge_not_lit` retired; `shouldRetryFanOut`'s bridged arm removed (the
+  ONE changed case rewritten). FS3.1 (a): the seam gains ONE optional operation `giveUpDeferred` (closes the row
+  `exhausted:rate_limited:ladder_delivered`); the fan-out calls it when a rate-limited bridge text is followed by a ladder delivery.
+  `boot.ts` wires `readBridgeSwitch` (the real read); the child wraps it `onceForJob`. 5.11b's AST pin of `alertSmsBlock` and 5.11's
+  file pin of `contribution-notify.ts` re-taken DELIBERATELY, each with a note naming what it replaced. AC9's enumeration test finds every
+  `alert_published` producer by scan.
+- **Task 5 (AC7):** `alert.resolveCycleOpenTimeCritical(db, cycleId)` extracted from `openCycleAlert` (both callers); the sweep calls it in
+  its existing scope, only when re-enqueueing, and passes the value (no test pinned the old `false`). Live: revoked-after-freeze still
+  bridges; declared-after-freeze does not.
+- **Task 6 (AC8, AC12):** the page header, the declare form and the banner carry FS11's sentence + the FS4 (d) and FS17 sentences (one copy
+  module); "armed" only while the switch is ON; the Trust-wide switch panel — state for all, control for a session whose national grants
+  carry the key. API: `GET` / `POST /api/v1/admin/degraded-mode/bridge-switch` (read: the declare key in ANY Pariwar; change:
+  `requireGlobalPermission`), audited under `withCompensatingAudit` (nil-UUID namespace), idempotent (same state ⇒ ⛔ row, ⛔ audit; a
+  concurrent change ⇒ 409). OpenAPI: +103 lines, the two new paths and components only. New RTL tests (the module had none).
+- **Task 7 (AC10):** the bridge's segment figures PINNED from the real registry (`sms-segment-cost.test.ts` — its own `describe`: 174 en
+  Latin or Devanagari / 176 hi ⇒ 3 Unicode parts; 114–126 ⇒ 2), the sheet's cost paragraph and a Record row; a dated Row 43 note naming the
+  BUILT names (key, endpoint, tables, trail words, alarm, give-up detail); deferred-work: F9 PROVEN (below), two new items.
+- **Task 8:** the closed list rewritten (each says what it replaced); the first live-DB bridged END-TO-END test
+  (`degraded-bridge-live.test.ts` — the REAL child, seam and record: two members texted in their own languages naming the family from a
+  real KYC envelope, the death-overlay member ⛔ texted, a re-run sends nothing); the live seam legs (seven occasions, FS3.1 on a real row,
+  the switch OFF / ON through the jobs pool's role). Mutants: Debug Log (b).
+- ⭐ **FOUND — F9 PROVEN (escalated, ⛔ fixed):** `cycle-open-sweep-purge-live.test.ts` proves the hourly vacuum deletes a RECORDED
+  cycle-open claim (`purgeExpiredKeys` deletes any expired row; `recordResult` does not extend `expires_at`), so every live cycle-open alert
+  is re-fanned hourly. A BRIDGED member gets ⛔ second text and ⛔ push (the found `accepted` row ends the bridge path first); an UN-bridged
+  member's PUSH repeats hourly — 8.8's / 1.12's pairing, recorded in deferred-work with options, for BigDev to sequence before go-live.
+- **Deviation, recorded:** `pnpm ci:local` ran with `DATABASE_URL` on THIS story's own container `twt-58b-pg` (:5449, DB `twt_dev`), not the
+  shared :5433 — the project's recorded recipe for a clean run ([[project-known-livedb-test-failures]]); `0188` reached ⛔ shared database.
 
 ### File List
 
-(open)
+- `packages/contracts/src/alerts/alert.ts`, `packages/contracts/src/alerts/contribution-loop-templates.ts`
+- `packages/contracts/src/degraded-mode/bridge-switch.ts` (new), `packages/contracts/src/degraded-mode/index.ts`
+- `packages/contracts/scripts/emit-openapi.ts`, `openapi/v1.yaml`
+- `packages/contracts/tests/contribution-loop-templates.test.ts`
+- `packages/i18n/locales/en/contribution.json`, `packages/i18n/locales/hi/contribution.json`
+- `packages/domain/migrations/0188_degraded-bridge-sms.sql` (new), `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/alert_sms_sends.ts`, `packages/domain/src/schema/degraded_bridge_sms_switch.ts` (new), `packages/domain/src/schema/index.ts`
+- `packages/domain/src/policies/degraded-bridge-sms-switch-rls.ts` (new), `packages/domain/src/policies/index.ts`
+- `packages/domain/src/degraded-mode/bridge-switch.ts` (new), `packages/domain/src/degraded-mode/index.ts`
+- `packages/domain/src/alert/project.ts`, `packages/domain/src/member/overlay.ts`, `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`, `packages/domain/tests/rbac/roles.test.ts`
+- `packages/domain/tests/integration/rls/alert-sms-sends-policy-regression.spec.ts`,
+  `packages/domain/tests/integration/rls/degraded-bridge-sms-switch-policy-regression.spec.ts` (new),
+  `packages/domain/tests/integration/alert/cycle-open-derisk.spec.ts`, `packages/domain/tests/integration/member/member-lifecycle.spec.ts`
+- `apps/jobs/src/boot.ts`, `apps/jobs/src/scheduler/contribution-notify.ts`, `apps/jobs/src/scheduler/contribution-notify-triggers.ts`,
+  `apps/jobs/src/scheduler/alert-sms-send.ts`, `apps/jobs/src/scheduler/contribution-sms-templates.ts`, `apps/jobs/src/scheduler/sms-member-name.ts`
+- `apps/jobs/tests/contribution-notify.test.ts`, `apps/jobs/tests/contribution-notify-triggers.test.ts`, `apps/jobs/tests/contribution-sms-templates.test.ts`,
+  `apps/jobs/tests/alert-sms-send.test.ts`, `apps/jobs/tests/alert-sms-send-live.test.ts`, `apps/jobs/tests/sms-member-name.test.ts`,
+  `apps/jobs/tests/sms-segment-cost.test.ts`, `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts`,
+  `apps/jobs/tests/alert-published-producers.test.ts` (new), `apps/jobs/tests/degraded-bridge-live.test.ts` (new),
+  `apps/jobs/tests/cycle-open-sweep-purge-live.test.ts` (new)
+- `apps/api/src/modules/degraded-mode/handlers.ts`, `apps/api/src/modules/degraded-mode/routes.ts`, `apps/api/tests/integration/degraded-mode.spec.ts`
+- `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts`, `apps/admin/src/modules/degraded-mode/{DegradedModePage,DeclareForm,DegradedModeBanner}.tsx`,
+  `apps/admin/src/modules/degraded-mode/BridgeSwitchPanel.tsx` (new), `apps/admin/src/modules/degraded-mode/bridge-copy.ts` (new),
+  `apps/admin/tests/degraded-mode-page.test.tsx` (new)
+- `docs/launch-gate-inventory/dlt-template-requests-6-19.md`, `docs/launch-gate-inventory/inventory-roster.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/5-8b-degraded-mode-bridge-sms-wording.md`,
+  `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
@@ -1209,5 +1299,6 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 | 2026-10-28 | v1.5 | Task 0.3 (part): the Panel note WRITTEN, ⛔ not sent — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run (two mismatches found and fixed in the note); the PQ section points to the note, which governs (cost per FS15 (a): ≈ 2 parts, up to 3, either language). The author-commit decision is not yet staged. Debug Log (e). Ledger `2026-10-28o`. |
 | 2026-10-28 | v1.6 | ⚖️ THE PANEL RULED — `2026-10-28-414` (Trustee-ratified, DR + KB; committed ALONE `9ffd9466`): PQ2 A with a Super Admin on / off switch, PQ1 A. Note ruling block transcribed (SENT, by the answer). "After the Panel's ruling" added: FS6's interim not built (`-379` form sent; `too_long` omitted + one alarm), FS16 ended, go-live legs (f) / (g) MET. FS17 (the switch — ⭐ Trust-wide, `super_admin` only, starts OFF) and FS18 (the migration under BigDev's merge order 5.8b → 6.32 — ⭐ 5.8b takes `0188`) PROPOSED. S2 answered. Debug Log (f). Ledger `2026-10-28p`. |
 | 2026-10-28 | v1.7 | BigDev "FS17 a, FS18 a". Author-commit `2026-10-28-415` (FS1–FS18) committed ALONE `34a0cb6d` ⇒ Task 0.3 DONE. Spec propagated to the ACs and Tasks ([[feedback_spec_edits_must_propagate_to_tasks]]): AC0 MET for the decisions; AC3 names migration `0188` (+ the switch table); AC4 sends `full` and `shortened`, omits only `too_long`; AC5 the switched-off branch; AC8 the two added sentences and the banner's off state; AC10 legs (a)–(i), the 6.32 note, the dated pointers; NEW AC12 (the switch); Tasks 2 / 4 / 6 / 8 updated. |
+| 2026-10-28 | v1.9 | `bmad-dev-story` — Tasks 1–9: the contract, words and registry; migration `0188` (send record + the Super Admin switch) and the key `degraded_mode.switch_bridge_sms` (catalog v55); the bridged producer (lit, languages, death overlay, name fit); the bridge path (text first, the ladder the fallback, the switch, FS3.1, FS9); the sweep's re-derived signal; the trustee screen and the switch UI / API; the records (segment figures pinned, Row 43 note, deferred-work — F9 PROVEN); the tests (the closed list rewritten, the first live end-to-end bridge test, eleven mutants RED). Status `review`. |
 | 2026-10-28 | v1.8 | Task 0.4 DONE — the records (epics, §3.4 annotation, roster Row 43 + Rows 30 / 40 notes, DLT sheet 23–24, deferred-work, dated pointers under `-379` / `-389` / `-390` / `-394` / `-404`); sheet tests and the DLT gate green. Task 0 DONE. Status `in-progress`. Debug Log (g). Ledger `2026-10-28q`. |
 

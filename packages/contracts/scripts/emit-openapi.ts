@@ -198,8 +198,13 @@ const {
   MemberDriveNomineeAccountView,
 } = await import('../src/contributions/index.js');
 // Story 5.8 — the trustee degraded-mode declare/revoke/read DTOs (admin-session + declare_degraded_mode).
-const { DegradedModeDeclareRequest, DegradedModeDeclarationResponse, DegradedModeActiveResponse } =
-  await import('../src/degraded-mode/index.js');
+const {
+  DegradedModeDeclareRequest,
+  DegradedModeDeclarationResponse,
+  DegradedModeActiveResponse,
+  DegradedBridgeSmsSwitchResponse,
+  DegradedBridgeSmsSwitchSetRequest,
+} = await import('../src/degraded-mode/index.js');
 // Story 10.30 — the directory-publication kill-switch admin DTOs (super_admin-only status read + flip).
 const { DirectoryPublicationStatusResponse, SetDirectoryPublicationRequest } = await import(
   '../src/directory-publication/index.js'
@@ -538,6 +543,9 @@ const degradedModeComponents = {
   DegradedModeDeclareRequest: DegradedModeDeclareRequest.openapi('DegradedModeDeclareRequest'),
   DegradedModeDeclarationResponse: DegradedModeDeclarationResponse.openapi('DegradedModeDeclarationResponse'),
   DegradedModeActiveResponse: DegradedModeActiveResponse.openapi('DegradedModeActiveResponse'),
+  // Story 5.8b (AC12) — the bridge text's Trust-wide Super Admin switch.
+  DegradedBridgeSmsSwitchResponse: DegradedBridgeSmsSwitchResponse.openapi('DegradedBridgeSmsSwitchResponse'),
+  DegradedBridgeSmsSwitchSetRequest: DegradedBridgeSmsSwitchSetRequest.openapi('DegradedBridgeSmsSwitchSetRequest'),
 } as const;
 for (const [name, schema] of Object.entries(degradedModeComponents)) {
   registry.register(name, schema);
@@ -2158,6 +2166,41 @@ registry.registerPath({
     200: { description: 'The active declaration or null', content: jsonOf(degradedModeComponents.DegradedModeActiveResponse) },
     401: degradedModeAuth,
     403: degradedModeForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 5.8b — the bridge text's Trust-wide Super Admin switch (`2026-10-28-415` FS17 (a); `-414` Q1 A) ──
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/degraded-mode/bridge-switch',
+  summary: 'Read the degraded-mode bridge text switch (Trust-wide)',
+  description:
+    'Whether the degraded-mode cycle-open SMS bridge may text members (Trust-wide; created OFF), and the change that set it. ' +
+    'Readable by anyone holding pariwar.declare_degraded_mode in any Pariwar, or globally.',
+  tags: degradedModeTags,
+  responses: {
+    200: { description: 'The switch', content: jsonOf(degradedModeComponents.DegradedBridgeSmsSwitchResponse) },
+    401: degradedModeAuth,
+    403: errorResponse('Forbidden — requires pariwar.declare_degraded_mode'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/degraded-mode/bridge-switch',
+  summary: 'Turn the degraded-mode bridge text on or off for every Pariwar (Super Admin; audited)',
+  description:
+    'Sets the Trust-wide switch with a required reason; appends one history row per change (append-only). Setting the state it ' +
+    'already has changes nothing (idempotent, no audit line). Off: no bridge text is tried and the push → WhatsApp ladder runs. ' +
+    'Requires degraded_mode.switch_bridge_sms at global scope (super_admin only).',
+  tags: degradedModeTags,
+  request: { body: { content: jsonOf(degradedModeComponents.DegradedBridgeSmsSwitchSetRequest), required: true } },
+  responses: {
+    200: { description: 'The switch after the change', content: jsonOf(degradedModeComponents.DegradedBridgeSmsSwitchResponse) },
+    400: errorResponse('Request validation failed (e.g. a blank reason)'),
+    401: degradedModeAuth,
+    403: errorResponse('Forbidden — requires degraded_mode.switch_bridge_sms at global scope (super_admin)'),
+    409: errorResponse('A concurrent change already set the switch to this state'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

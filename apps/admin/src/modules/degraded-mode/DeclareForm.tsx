@@ -10,6 +10,8 @@ import type { DegradedModeDeclareRequest } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { BRIDGE_TEXT_PARAGRAPH } from './bridge-copy.js';
+
 interface DeclareFormValues {
   mode: 'cycle_open_sms_bridge';
   /** A datetime-local string (e.g. "2026-07-08T14:30"), or '' for open-ended. */
@@ -82,6 +84,11 @@ export function DeclareForm({ onSubmit, pending, submitError }: DeclareFormProps
         />
         {errors.reason && <p role="alert" className="text-sm text-status-fail-fg">{errors.reason.message}</p>}
       </div>
+
+      {/* Story 5.8b (FS11 (a)) — what declaring does, said where the trustee declares. */}
+      <p className="text-sm opacity-80" data-testid="degraded-mode-declare-copy">
+        {BRIDGE_TEXT_PARAGRAPH}
+      </p>
 
       <button
         type="submit"

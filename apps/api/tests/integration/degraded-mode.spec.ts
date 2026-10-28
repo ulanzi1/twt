@@ -212,4 +212,89 @@ describe.skipIf(!hasDatabase)('Trustee degraded-mode declare/revoke/read (Story 
     });
     expect([401, 403]).toContain(res.statusCode);
   });
+
+  // ── Story 5.8b (AC12; `2026-10-28-415` FS17 (a); Panel `2026-10-28-414` Q1 A) — the bridge text's Trust-wide Super Admin switch ──
+  // ⚠ The switch is GLOBAL and its history APPEND-ONLY: these legs commit real changes, so each restores the state it found and
+  // asserts on THIS actor's history rows (membership, never a global count).
+
+  const SWITCH = '/api/v1/admin/degraded-mode/bridge-switch';
+
+  async function grantSuperAdmin(userId: string): Promise<void> {
+    const c = await td.pool.connect();
+    try {
+      await c.query(
+        `INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value)
+           VALUES ($1, $2, 'super_admin', 'global', NULL)`,
+        [userId, randomUUID()],
+      );
+    } finally {
+      c.release();
+    }
+  }
+
+  async function historyOf(actorId: string): Promise<{ enabled: boolean; reason: string; audit_id: string | null }[]> {
+    const res = await td.pool.query<{ enabled: boolean; reason: string; audit_id: string | null }>(
+      `SELECT enabled, reason, audit_id FROM degraded_bridge_sms_switch_changes WHERE changed_by_actor = $1 ORDER BY changed_at`,
+      [actorId],
+    );
+    return res.rows;
+  }
+
+  async function switchState(): Promise<boolean> {
+    return (await td.pool.query<{ enabled: boolean }>(`SELECT enabled FROM degraded_bridge_sms_switch WHERE id = 1`)).rows[0]!.enabled;
+  }
+
+  it('⭐ 5.8b AC12 — a pariwar_admin READS the switch but is REFUSED the change (403), and writes ⛔ history row', async () => {
+    const pariwarId = randomUUID();
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'pariwar_admin');
+    const read = await client.inject({ method: 'GET', url: SWITCH });
+    expect(read.statusCode).toBe(200);
+    expect(read.json()).toMatchObject({ enabled: expect.any(Boolean) });
+    const change = await client.inject({ method: 'POST', url: SWITCH, payload: { enabled: true, reason: 'not mine to flip' } });
+    expect(change.statusCode).toBe(403);
+    expect(await historyOf(userId)).toEqual([]);
+  });
+
+  it('5.8b AC12 — an admin with ⛔ degraded-mode key anywhere is refused the READ too; an unauthenticated caller → 401', async () => {
+    const { client } = await authenticate();
+    expect((await client.inject({ method: 'GET', url: SWITCH })).statusCode).toBe(403);
+    expect([401, 403]).toContain((await makeClient(app).inject({ method: 'GET', url: SWITCH })).statusCode);
+  });
+
+  it('⭐ 5.8b AC12 — a Super Admin: ⛔ reason ⇒ 400; ON → OFF → ON writes THREE audited history rows and the last state wins; the same state again writes NOTHING', async () => {
+    const found = await switchState();
+    const { client, userId } = await authenticate();
+    await grantSuperAdmin(userId);
+    try {
+      // Start from OFF without counting toward this actor's history (a reset by another actor id, through the domain).
+      const { degradedMode } = await import('@twt/domain');
+      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: false, actorId: randomUUID(), reason: 'spec reset', auditId: null });
+
+      for (const payload of [{ enabled: true }, { enabled: true, reason: '' }, { enabled: true, reason: '   ' }, { enabled: true, reason: 'x'.repeat(501) }]) {
+        expect((await client.inject({ method: 'POST', url: SWITCH, payload })).statusCode).toBe(400);
+      }
+      expect(await historyOf(userId)).toEqual([]);
+
+      for (const [enabled, reason] of [[true, 'templates approved'], [false, 'cost review'], [true, 'back on']] as const) {
+        const res = await client.inject({ method: 'POST', url: SWITCH, payload: { enabled, reason } });
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toMatchObject({ enabled, reason, changedByActor: userId });
+      }
+      const rows = await historyOf(userId);
+      expect(rows.map((r) => [r.enabled, r.reason])).toEqual([[true, 'templates approved'], [false, 'cost review'], [true, 'back on']]);
+      expect(rows.every((r) => r.audit_id !== null)).toBe(true);
+      expect((await client.inject({ method: 'GET', url: SWITCH })).json()).toMatchObject({ enabled: true, reason: 'back on' });
+      expect(await auditCount(userId, 'degraded_mode.bridge_switch.changed', '00000000-0000-0000-0000-000000000000')).toBe(3);
+
+      // Idempotent: ON again ⇒ 200, ⛔ row, ⛔ audit line.
+      const same = await client.inject({ method: 'POST', url: SWITCH, payload: { enabled: true, reason: 'again' } });
+      expect(same.statusCode).toBe(200);
+      expect(await historyOf(userId)).toHaveLength(3);
+      expect(await auditCount(userId, 'degraded_mode.bridge_switch.changed', '00000000-0000-0000-0000-000000000000')).toBe(3);
+    } finally {
+      const { degradedMode } = await import('@twt/domain');
+      await degradedMode.setDegradedBridgeSmsSwitch(td.pool, { enabled: found, actorId: randomUUID(), reason: 'spec restore', auditId: null });
+    }
+  });
 });

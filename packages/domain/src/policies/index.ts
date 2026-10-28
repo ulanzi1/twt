@@ -273,3 +273,5 @@ export * from './memorial-takedown-rls.js';
 // Story 5.11b (0184) — the alert SMS send record. Per command; ⛔ no DELETE leg and ⛔ no `FOR ALL`; INSERT and UPDATE narrowed by
 // its migration's column grants (the UPDATE leg is load-bearing — the compare-and-set `attempting` → final).
 export * from './alert-sms-send-rls.js';
+// Story 5.8b — the degraded-mode bridge's Super Admin switch (GLOBAL `USING (true)` SELECT).
+export * from './degraded-bridge-sms-switch-rls.js';

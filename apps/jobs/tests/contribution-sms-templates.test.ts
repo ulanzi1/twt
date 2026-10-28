@@ -3,12 +3,16 @@
 // REAL `t()` (⛔ never a stub) renders EXACTLY the registered text with each variable as `{#var#}`; each slot is named as the i18n
 // param, in order; the registration sheet carries the same text, key, types and MSG91 form; only the three notices FS1 (d) names
 // exist (⛔ a pool opening, ⛔ the last day, ⛔ a broadcast); `$comment.sms` sits in BOTH catalogues; and FS13's pool label.
+// ⭐ Story 5.8b (FS1 (a), FS7 (a), `2026-10-28-415`; Panel `2026-10-28-414`) REWROTE the "only the three" legs to what is now true:
+// the three per-member notices PLUS ONE bridge message, `cycle_open_bridge` (templates 23–24), which names the family in the two
+// shared name boxes. Each rewritten leg says what it replaced.
 
 import { AlertSmsMessage } from '@twt/contracts';
 import { DLT_VAR, checkDltTemplateShape, needsUnicode } from '@twt/channels';
 import { t } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
+import { MEMBER_BOX_SLOTS } from '../src/scheduler/sms-member-boxes.js';
 import {
   CONTRIBUTION_SMS_LOCALES,
   CONTRIBUTION_SMS_MESSAGES,
@@ -30,17 +34,21 @@ import {
   sheetRowByConfigKey,
 } from './_dlt-template-sheet.js';
 
-/** Every (message, locale) pair — the six templates. */
+/** Every (message, locale) pair — the eight templates (six notices + the two bridge texts). */
 const ENTRIES = CONTRIBUTION_SMS_MESSAGES.flatMap((message) =>
   CONTRIBUTION_SMS_LOCALES.map((locale) => [message, locale] as const),
 );
 
-/** The sheet ordinals 5.11 took (the next free at Task 5 — 17 to 22), Hindi first as 13 / 14. */
+/** The sheet ordinals 5.11 took (the next free at Task 5 — 17 to 22), Hindi first as 13 / 14; 5.8b took 23 / 24 (Task 0.4). */
 const ORDINAL: Readonly<Record<AlertSmsMessage, Readonly<Record<ContributionSmsLocale, number>>>> = {
   deadline_not_recorded: { hi: 17, en: 18 },
   payment_not_matched: { hi: 19, en: 20 },
   payment_not_confirmed: { hi: 21, en: 22 },
+  cycle_open_bridge: { hi: 23, en: 24 },
 };
+
+/** The three per-member notices (Story 5.11) — every message but the bridge's. */
+const NOTICES: readonly AlertSmsMessage[] = ['deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed'];
 
 /** I1 — a catalogue string as its registered text: each `{param}` becomes the variable marker. */
 const asRegistered = (value: string): string => value.replace(/\{\w+\}/g, DLT_VAR);
@@ -63,19 +71,27 @@ function lockstepMismatches(catalog: Readonly<Record<'hi' | 'en', Readonly<Recor
   }).map(([message, locale]) => `${message}/${locale}`);
 }
 
-describe('AC1 — the registry holds exactly the three notices of FS1 (d), × hi / en', () => {
-  it('⭐ the messages are the contract enum — day 10, payment not matched, payment not confirmed — and ⛔ nothing else', () => {
-    expect([...CONTRIBUTION_SMS_MESSAGES]).toEqual(['deadline_not_recorded', 'payment_not_matched', 'payment_not_confirmed']);
+describe('AC1 — the registry holds the three notices of FS1 (d) and the ONE bridge message (5.8b), × hi / en', () => {
+  // Story 5.8b replaced: "the messages are … day 10, payment not matched, payment not confirmed — and ⛔ nothing else" (three).
+  it('⭐ the messages are the contract enum — the three notices, then the bridge — and ⛔ nothing else', () => {
+    expect([...CONTRIBUTION_SMS_MESSAGES]).toEqual([...NOTICES, 'cycle_open_bridge']);
     expect(CONTRIBUTION_SMS_MESSAGES).toEqual(AlertSmsMessage.options);
     expect(Object.keys(CONTRIBUTION_SMS_TEMPLATES).sort()).toEqual([...CONTRIBUTION_SMS_MESSAGES].sort());
   });
 
-  it('⛔ I5 — no broadcast and no general notice has a key (a pool opening, the last day, news, survey, moderation)', () => {
-    const keys = Object.keys(CONTRIBUTION_SMS_TEMPLATES).join(' ');
+  // Story 5.8b replaced: "⛔ I5 — no broadcast and no general notice has a key" — a substring check over EVERY key that listed
+  // `cycle_open`. Now: the ONLY key naming a cycle opening is the bridge's, and ⛔ other key names a general notice or a broadcast.
+  it('⛔ no general notice or broadcast has a key — the ONLY cycle-open key is the bridge\'s (`cycle_open_bridge`)', () => {
+    const keys = Object.keys(CONTRIBUTION_SMS_TEMPLATES);
+    expect(keys.filter((k) => /cycle_open|pool_open/.test(k))).toEqual(['cycle_open_bridge']);
+    const others = keys.filter((k) => k !== 'cycle_open_bridge').join(' ');
     for (const word of ['pool_open', 'last_day', 'cycle_open', 'news', 'survey', 'moderation', 'alert_published']) {
-      expect(keys).not.toContain(word);
+      expect(others).not.toContain(word);
     }
-    // … and ⛔ catalogue `sms.*` key exists beyond the registry's (the two channel drafts stay in the story, ⛔ in the catalogue).
+    for (const word of ['last_day', 'news', 'survey', 'moderation', 'alert_published']) {
+      expect(keys.join(' ')).not.toContain(word);
+    }
+    // … and ⛔ catalogue `sms.*` key exists beyond the registry's (the last-day channel draft stays in 5.11's story, ⛔ in the catalogue).
     for (const locale of CONTRIBUTION_SMS_LOCALES) {
       const smsKeys = Object.keys(CONTRIBUTION_CATALOG[locale]).filter((k) => k.startsWith('sms.')).sort();
       expect(smsKeys).toEqual(CONTRIBUTION_SMS_MESSAGES.map((m) => `sms.${m}`).sort());
@@ -88,14 +104,23 @@ describe('AC1 — the registry holds exactly the three notices of FS1 (d), × hi
     expect(template.dltTemplateIdConfigKey).toBe(`sms.dlt.template_id.contribution.${message}.${locale}`);
     expect(template.dltTemplateIdConfigKey).toBe(contributionSmsDltConfigKey(message, locale));
     expect(template.copyKey).toBe(`sms.${message}`);
-    // ⛔ no name box — no 5.11 text carries a member's name (v1.2)
-    expect(template.slots.map((s) => s.name)).not.toContain('member1');
+    // Story 5.8b replaced: "⛔ no name box — no 5.11 text carries a member's name" (for every entry). Per message now: a notice
+    // carries ⛔ name box; the bridge carries the pool, then the SAME two box objects (`sms-member-boxes.ts` — the ONLY 30).
+    if (message === 'cycle_open_bridge') {
+      expect(template.slots).toHaveLength(3);
+      expect(template.slots[1]).toBe(MEMBER_BOX_SLOTS[0]);
+      expect(template.slots[2]).toBe(MEMBER_BOX_SLOTS[1]);
+    } else {
+      expect(template.slots.map((s) => s.name)).not.toContain('member1');
+    }
   });
 
-  it('the slots, per message — {pool}{date} on day 10, none on not-matched, {pool} on not-confirmed', () => {
+  it('the slots, per message — {pool}{date} on day 10, none on not-matched, {pool} on not-confirmed, {pool}{member1}{member2} on the bridge', () => {
     expect(CONTRIBUTION_SMS_TEMPLATES.deadline_not_recorded.en.slots).toEqual([POOL_SLOT, DATE_SLOT]);
     expect(CONTRIBUTION_SMS_TEMPLATES.payment_not_matched.en.slots).toEqual([]);
     expect(CONTRIBUTION_SMS_TEMPLATES.payment_not_confirmed.en.slots).toEqual([POOL_SLOT]);
+    expect(CONTRIBUTION_SMS_TEMPLATES.cycle_open_bridge.en.slots).toEqual([POOL_SLOT, ...MEMBER_BOX_SLOTS]);
+    expect(CONTRIBUTION_SMS_TEMPLATES.cycle_open_bridge.hi.slots).toEqual([POOL_SLOT, ...MEMBER_BOX_SLOTS]);
     expect(POOL_SLOT).toEqual({ name: 'pool', type: 'alphanumeric', maxLength: 30, label: 'pool name or letter code' });
     expect(DATE_SLOT).toEqual({ name: 'date', type: 'alphanumeric', maxLength: 10, label: 'cycle close date, DD-MM-YYYY' });
   });
@@ -142,7 +167,7 @@ describe('AC2 — registered text = catalogue text (I1): the REAL t() render, an
     }
   });
 
-  it('⭐ the lockstep holds for all six templates', () => {
+  it('⭐ the lockstep holds for all eight templates', () => {
     expect(lockstepMismatches(CONTRIBUTION_CATALOG)).toEqual([]);
   });
 
@@ -163,14 +188,28 @@ describe('AC2 — registered text = catalogue text (I1): the REAL t() render, an
       expect(comment).toMatch(/reviewed and corrected by BigDev on 2026-10-23/);
       expect(comment).toMatch(/re-opens it/);
       expect(comment).toMatch(/byte for byte/);
+      // Story 5.8b — the comment covers the bridge text, and does ⛔ claim its Hindi-review leg is discharged.
+      expect(comment).toMatch(/sms\.cycle_open_bridge/);
+      expect(comment).toMatch(/Row 43 \(b\), not assumed/);
     }
+  });
+
+  it('⭐ Story 5.8b — a filled bridge text in both locales: the name boxes sit side by side, ⛔ marker or brace left', () => {
+    for (const locale of CONTRIBUTION_SMS_LOCALES) {
+      const body = renderContributionSms('cycle_open_bridge', locale, { pool: 'C', member1: 'Rajesh Kumar Shar', member2: 'ma' });
+      expect(body).toContain('Rajesh Kumar Sharma');
+      expect(body).not.toMatch(/\{\w+\}|\{#var#\}/);
+    }
+    expect(renderContributionSms('cycle_open_bridge', 'en', { pool: 'C', member1: 'Rajesh S.', member2: '' })).toBe(
+      "TWT: your pool C is open, in support of Rajesh S.'s family. Please open the app to contribute.",
+    );
   });
 
   it('parity — every `sms.*` key in en is in hi and the reverse', () => {
     const en = Object.keys(CONTRIBUTION_CATALOG.en).filter((k) => k.startsWith('sms.')).sort();
     const hi = Object.keys(CONTRIBUTION_CATALOG.hi).filter((k) => k.startsWith('sms.')).sort();
     expect(hi).toEqual(en);
-    expect(en).toHaveLength(3);
+    expect(en).toHaveLength(4); // Story 5.8b replaced `3` — the three notices + `sms.cycle_open_bridge`
   });
 });
 
@@ -187,6 +226,11 @@ describe('AC2 — the registration sheet carries the same text, types and MSG91 
   it('the sheet names the registry file and the 5.11 section', () => {
     expect(SHEET).toContain('apps/jobs/src/scheduler/contribution-sms-templates.ts');
     expect(SHEET).toContain('## The wording of templates 17–22 (Story 5.11');
+    expect(SHEET).toContain('## The wording of templates 23–24 (Story 5.8b');
+  });
+
+  it('Story 5.8b (FS15 (a)) — the sheet provisions BOTH bridge templates Unicode (a family name may be Devanagari)', () => {
+    expect(SHEET).toContain('**Unicode for BOTH 23 and 24**');
   });
 
   it('a zero-slot template reads cleanly: its MSG91 form is its text', () => {

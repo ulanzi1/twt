@@ -134,8 +134,19 @@ export interface AlertSmsRungInput {
   readonly dispatch: AlertSmsDispatchDeps;
 }
 
-/** The seam as the fan-out holds it. NEVER rejects. */
-export type AlertSmsSender = (input: AlertSmsRungInput) => Promise<ChannelSendOutcome>;
+/**
+ * The seam as the fan-out holds it. NEVER rejects.
+ * ⭐ Story 5.8b (FS3.1 (a), `2026-10-28-415`) — ONE more operation, `giveUpDeferred`: the bridge text is tried BEFORE the ladder, so a
+ * `rate_limited` answer leaves its row `deferred` while the ladder may then DELIVER (the member is ⛔ retried). The fan-out calls it
+ * then, so the row ends instead of waiting for a later re-run to text a member the push already told. Optional on the type so a
+ * test double (`vi.fn()`) still fits; `createAlertSmsSender` always provides it. NEVER rejects (a failure is alarmed).
+ */
+export type AlertSmsSender = ((input: AlertSmsRungInput) => Promise<ChannelSendOutcome>) & {
+  readonly giveUpDeferred?: (input: { readonly alert: Alert; readonly call?: FanOutCall }) => Promise<void>;
+};
+
+/** Story 5.8b (FS3.1 (a)) — the detail a bridge row given up because the ladder delivered carries (0184's grammar). */
+export const ALERT_SMS_GIVEN_UP_LADDER_DELIVERED = 'exhausted:rate_limited:ladder_delivered';
 
 /** A memo of one async read, per key: a found value AND `null` (not provisioned) are kept for `ttlMs`; a throw is ⛔ kept. */
 export function createTtlMemo<T>(
@@ -325,7 +336,27 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
     refusalAlarmedAt.set(key, nowMs());
   };
 
-  return async (input) => {
+  /** Story 5.8b (FS3.1 (a)) — give up THIS (alert, member, occasion)'s `deferred` row, if it is one; best-effort, alarmed. */
+  const giveUpDeferred = async ({ alert, call }: { readonly alert: Alert; readonly call?: FanOutCall }): Promise<void> => {
+    const occasion = call?.occasion;
+    if (!isKnownOccasion(occasion)) return;
+    const pariwarId = alert.pariwar_id;
+    const key = { pariwarId, alertId: alert.alert_id, memberId: alert.member_id, occasion };
+    try {
+      const found = await withPariwarScope(deps.pool, pariwarId, (_db, client) => smsDelivery.lookupAlertSmsSend(client, key));
+      if (found.kind !== 'deferred' && found.kind !== 'deferred_expired') return;
+      await withPariwarScope(deps.pool, pariwarId, (_db, client) =>
+        smsDelivery.giveUpDeferredAlertSmsSend(client, { pariwarId, sendId: found.sendId, detail: ALERT_SMS_GIVEN_UP_LADDER_DELIVERED }),
+      );
+    } catch (err) {
+      alarmSink(
+        `[jobs] alert-sms: a deferred bridge text could not be given up after the ladder delivered (${faultClass(err)}) — ` +
+          `pariwar ${pariwarId} alert ${alert.alert_id}`,
+      );
+    }
+  };
+
+  const send = async (input: AlertSmsRungInput): Promise<ChannelSendOutcome> => {
     const { alert, block } = input;
     const final = isFinalFanOutAttempt(input.call);
     const pariwarId = alert.pariwar_id;
@@ -690,4 +721,5 @@ export function createAlertSmsSender(deps: AlertSmsSeamDeps): AlertSmsSender {
       alarm(`send ${sendId}: the send was answered but its record could not be finalised [${lastFault}] — it is left to its lease${requestId}`);
     }
   };
+  return Object.assign(send, { giveUpDeferred });
 }

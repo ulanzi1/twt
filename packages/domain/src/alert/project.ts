@@ -415,6 +415,25 @@ export interface OpenCycleAlertResult extends MintAndOpenAlertResult {
 }
 
 /**
+ * ⭐ Story 5.8b (FS10 (a), I9; `2026-10-28-415`) — THE freeze-instant degraded-mode read, ONE function for its two callers:
+ * {@link openCycleAlert} (the primary path) and the cycle-open notify RECOVERY SWEEP (`apps/jobs`), so a recovered cycle is bridged
+ * exactly as its first pass was. It loads the cycle's `cycle.frozen` payload and reads the Pariwar's degraded-mode state AT the
+ * freeze `committed_at` (durable + deterministic — ⛔ a notify-time `now()` read, ⛔ `cycle_freeze_commits`, a different source).
+ * A declaration revoked AFTER the freeze still bridges the cycle (the read predicate is `revoked_at IS NULL OR > at`). `null` ⇔ the
+ * cycle has no `cycle.frozen` event. Runs on the caller's scoped `db` (both reads filter explicitly as well).
+ */
+export async function resolveCycleOpenTimeCritical(
+  db: ReturnType<typeof bindScopedDb>,
+  cycleId: string,
+): Promise<{ readonly cycleFrozenPayload: CycleFrozenPayload; readonly timeCritical: boolean } | null> {
+  const cf = await loadCycleFrozenPayload(db, cycleId);
+  if (!cf) return null;
+  const committedAt = new Date(cf.attestation.committed_at);
+  const active = await getActiveDegradedMode(db, toPariwarId(cf.pariwar_id), committedAt);
+  return { cycleFrozenPayload: cf, timeCritical: active?.mode === CYCLE_OPEN_SMS_BRIDGE_MODE };
+}
+
+/**
  * The COMPOSED cycle-open orchestration (AC3/AC4) — the ONE definition the apps/jobs
  * cycle-open worker AND the apps/api alert.service call (the shepherd-hook "one definition,
  * both call sites" discipline). In the caller's scoped transaction it:
@@ -434,19 +453,17 @@ export async function openCycleAlert(
 ): Promise<OpenCycleAlertResult> {
   const db = bindScopedDb(client);
 
-  const cf = await loadCycleFrozenPayload(db, input.cycleId);
-  if (!cf) {
+  // AC4 — the SMS-bridge signal. Read the Pariwar's degraded-mode state at the cycle-freeze
+  // committed_at (durable + deterministic; a live now()-read would break replay). A
+  // cycle_open_sms_bridge declaration active at that instant ⇒ time_critical: true.
+  // Story 5.8b (FS10 (a)) — the read is `resolveCycleOpenTimeCritical`, shared with the recovery sweep.
+  const resolved = await resolveCycleOpenTimeCritical(db, input.cycleId);
+  if (!resolved) {
     throw new Error(
       `[openCycleAlert] no cycle.frozen event on cycle stream ${input.cycleId} — the cycle-open trigger fires only after the freeze; refusing to mint an alert for an unfrozen cycle`,
     );
   }
-
-  // AC4 — the SMS-bridge signal. Read the Pariwar's degraded-mode state at the cycle-freeze
-  // committed_at (durable + deterministic; a live now()-read would break replay). A
-  // cycle_open_sms_bridge declaration active at that instant ⇒ time_critical: true.
-  const committedAt = new Date(cf.attestation.committed_at);
-  const active = await getActiveDegradedMode(db, toPariwarId(cf.pariwar_id), committedAt);
-  const timeCritical = active?.mode === CYCLE_OPEN_SMS_BRIDGE_MODE;
+  const { cycleFrozenPayload: cf, timeCritical } = resolved;
 
   const result = await mintAndOpenAlert(client, {
     cycleFrozenPayload: cf,

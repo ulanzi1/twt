@@ -274,14 +274,22 @@ describe.skipIf(!hasDatabase)('the alert SMS send record — migration 0184 + RL
     expect(rows[0]!.def.match(/~ '(.*)'::text/)?.[1]).toBe(ALERT_SMS_SEND_DETAIL_PATTERN);
   });
 
-  it('⭐ FS8 (d) — an occasion outside the six literals is refused (a raw mismatch reason cannot mint occasions)', async () => {
+  // Story 5.8b (FS8 (a), `2026-10-28-415`; migration 0188) replaced: "an occasion outside the SIX literals is refused", whose
+  // refused list held `cycle_open`. The occasion `cycle_open` (the degraded-mode bridge's text) is now the SEVENTH literal —
+  // `-404`'s cap superseded in part; the message `cycle_open` stays refused (the bridge's message is `cycle_open_bridge`).
+  it('⭐ FS8 (d) / 5.8b FS8 (a) — an occasion outside the seven literals is refused (a raw mismatch reason cannot mint occasions)', async () => {
     const { client } = getTx();
     const s = await seedSend(client, PARIWAR_A);
     const ins = (over: Record<string, unknown>) => () => insertRow(client, { ...validRow(s), ...over });
-    for (const occasion of ['day_9', 'mismatch:anything', 'pending_match', 'cycle_open', 'confirmed', 'mismatch:']) {
+    expect(ALERT_SMS_SEND_OCCASIONS).toHaveLength(7);
+    for (const occasion of ['day_9', 'mismatch:anything', 'pending_match', 'cycle_open_bridge', 'cycle_opened', 'confirmed', 'mismatch:']) {
       await expectPgError(client, ins({ occasion }), CHECK('alert_sms_sends_occasion_check'));
     }
     await expectPgError(client, ins({ message: 'cycle_open' }), CHECK('alert_sms_sends_message_check'));
+    await expectPgError(client, ins({ message: 'pool_open' }), CHECK('alert_sms_sends_message_check'));
+    // ⭐ the bridge's row: occasion `cycle_open`, message `cycle_open_bridge` — lands (the `alerts` FK included: `seedSend`'s alert).
+    // (another member — the loop below lands `cycle_open` for this one).
+    await expectAccepted(client, ins({ occasion: 'cycle_open', message: 'cycle_open_bridge', member_id: randomUUID() }));
     await expectPgError(client, ins({ locale: 'mr' }), CHECK('alert_sms_sends_locale_check'));
     await expectPgError(client, ins({ outcome: 'delivered' }), CHECK('alert_sms_sends_outcome_check'));
     await expectPgError(client, ins({ claim_token: '' }), CHECK('alert_sms_sends_claim_token_check'));

@@ -467,6 +467,23 @@ export function useRevokeDegradedMode(pariwarId: string) {
   });
 }
 
+// Story 5.8b (AC12) — the bridge text's Trust-wide Super Admin switch (one key for every Pariwar's page — it is ONE switch).
+export const degradedBridgeSmsSwitchKey = ['degraded-bridge-sms-switch'] as const;
+
+/** The bridge text switch (Trust-wide). */
+export function useDegradedBridgeSmsSwitch() {
+  return useQuery({ queryKey: degradedBridgeSmsSwitchKey, queryFn: api.getDegradedBridgeSmsSwitch });
+}
+
+/** Turn the bridge text on / off (Super Admin), then refresh the switch read. */
+export function useSetDegradedBridgeSmsSwitch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.setDegradedBridgeSmsSwitch>[0]) => api.setDegradedBridgeSmsSwitch(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: degradedBridgeSmsSwitchKey }),
+  });
+}
+
 // ── Directory-publication kill switch (Story 10.30) — the super_admin read + governed flip. ──
 // The flip invalidates the status query so the page re-derives from fresh server state (the
 // degraded-mode precedent). ⚠ That refreshes what the OPERATOR sees, ⛔ not what the PUBLIC sees:

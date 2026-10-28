@@ -1,6 +1,8 @@
 // THE NAME IN A CLAIM TEXT — Story 6.37e rework (Task 1.2; AC1; `2026-10-22-379` Q1 A; `2026-10-22-380` decisions 2–5).
 // ONE pure function for the four texts that name the deceased member: the three suspicion texts (`claim-suspicion-notices.ts`) and
-// the text to the five neighbours (`claim-peer-mesh-requests.ts`). ⛔ IO, ⛔ clock, ⛔ a package import.
+// the text to the five neighbours (`claim-peer-mesh-requests.ts`) — and, Story 5.8b (`2026-10-28-414` Q2 A: the rule reaches a fifth
+// text), the degraded-mode bridge's cycle-open text, which names the family it supports (`contribution-notify-triggers.ts`).
+// ⛔ IO, ⛔ clock, ⛔ a package import.
 //
 // The Panel's rule (`-379` Q1 A, as put): *"(1) Send the full name whenever it fits 60 letters. (2) Only if it is longer: remove
 // titles and suffixes … (whole words only; Kumari, Devi, Kumar and Bai are parts of names and stay). (3) If still longer: turn words
@@ -10,7 +12,8 @@
 //   N2 — `shortened`: only above 60 — every listed title dropped at once, then initials from the FIRST word, one at a time, stopping
 //        the moment it fits; ⛔ the LAST word (after the titles are gone); ⛔ truncation, ⛔ a full stop on an initial;
 //   N3 — `too_long`: else — each caller keeps TODAY's outcome (the suspicion texts: the send core refuses `value_too_long` + alarm;
-//        the neighbours' text: claim-wide `no_target:name_too_long`).
+//        the neighbours' text: claim-wide `no_target:name_too_long`; the bridge text (5.8b): ⛔ block for the job's members and ONE
+//        name-free alarm with the count, `alert_sms.bridge_name_too_long` — the push still goes).
 // `full` and `shortened` carry the name split across the two boxes (`sms-member-boxes.ts`): the boxes CONCATENATE to the name, each
 // ≤ 30, ⛔ empty for any name of 2+ code points, cut near the middle and away from a space where a cut allows it (N5, `-380` decision 3).
 //

@@ -257,9 +257,10 @@ export function templateBandFor(day: DeadlineReminderSendDay): ToneRangeKey {
 // alert.ts. Each parses through a `.strict()` schema so a wrong-shaped payload fails HERE, at the
 // producer, rather than deep inside `dispatch`'s `Alert.parse` with a whole batch already in flight.
 
-/** `alert_published` payload_data — the cycle-open announcement (alert.ts:112). */
+/** `alert_published` payload_data — the cycle-open announcement (alert.ts:112). `sms` (Story 5.8b) — the degraded-mode
+ *  bridge's text, carried only by a TIME-CRITICAL cycle-open (the `Alert` refinement refuses it otherwise). */
 export const CycleOpenPayloadData = z
-  .object({ title: z.string().min(1), body: z.string().min(1) })
+  .object({ title: z.string().min(1), body: z.string().min(1), sms: AlertSmsBlock.optional() })
   .strict();
 export type CycleOpenPayloadData = z.output<typeof CycleOpenPayloadData>;
 
@@ -337,13 +338,19 @@ export type ContributionConfirmedPayloadData = z.output<typeof ContributionConfi
 /**
  * Build the cycle-open `payload_data` (AC1). `title`/`body` are the FULLY RESOLVED, locale-correct
  * announcement strings — the caller has already substituted the pool letter code, the curated pool
- * name, the deceased family's first-name + last-initial, and the formatted fixed amount.
+ * name, the deceased family's first-name + last-initial, and the formatted fixed amount. `sms` (Story 5.8b) is
+ * passed only for a time-critical cycle-open (the degraded-mode bridge); absent ⇒ the key is omitted.
  */
 export function buildCycleOpenPayloadData(input: {
   readonly title: string;
   readonly body: string;
+  readonly sms?: AlertSmsBlock;
 }): CycleOpenPayloadData {
-  return CycleOpenPayloadData.parse({ title: input.title, body: input.body });
+  return CycleOpenPayloadData.parse({
+    title: input.title,
+    body: input.body,
+    ...(input.sms ? { sms: input.sms } : {}),
+  });
 }
 
 /**

@@ -18,7 +18,7 @@ import {
   type SmsGatewayMessage,
 } from '@twt/channels';
 import type { Alert } from '@twt/contracts';
-import { schema } from '@twt/domain';
+import { degradedMode, schema } from '@twt/domain';
 import { t } from '@twt/i18n';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -35,6 +35,7 @@ import {
 } from '../src/scheduler/contribution-notify.js';
 import {
   buildContributionMismatchAlert,
+  buildCycleOpenAlert,
   buildDeadlineReminderAlert,
   buildPendingMatchRetryAlert,
 } from '../src/scheduler/contribution-notify-triggers.js';
@@ -55,6 +56,22 @@ const NOW = new Date('2026-10-25T04:00:00.000Z');
 const DEADLINE = new Date('2026-11-05T00:00:00.000Z');
 const SMS_TARGET: SendTarget = { channel: 'sms', address: '+919876543210' };
 const WA_TARGET: SendTarget = { channel: 'whatsapp', address: '+919876543210' };
+
+/** Story 5.8b — a provider that always ACCEPTS — counted (the ladder delivers on it). */
+function accepting(channel: Channel): ChannelProvider & { calls: number } {
+  const p = {
+    id: (channel === 'push' ? 'fcm' : channel) as never,
+    channel,
+    scope: 'global' as const,
+    calls: 0,
+    send() {
+      p.calls += 1;
+      return Promise.resolve({ channel, provider: p.id, status: 'accepted' as const, providerMessageId: `${channel}-ok` });
+    },
+    getStatus: (messageId: string) => Promise.resolve({ providerMessageId: messageId, state: 'unknown' as const }),
+  };
+  return p;
+}
 
 /** A provider that always answers `rejected` (so the ladder advances) — counted. */
 function rejecting(channel: Channel, detail = 'unavailable:x'): ChannelProvider & { calls: number } {
@@ -191,6 +208,21 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       now: NOW,
     });
 
+  /** Story 5.8b — the BRIDGED cycle-open as the producer builds it (time-critical, the family's name in the two boxes). */
+  const bridgedOpen = (k: { pariwarId: string; alertId: string; memberId: string }, smsLocale: ContributionSmsLocale = 'hi'): Alert =>
+    buildCycleOpenAlert({
+      alertId: k.alertId,
+      pariwarId: k.pariwarId,
+      memberId: k.memberId,
+      poolId: randomUUID(),
+      identity: IDENTITY,
+      timeCritical: true,
+      locale: 'hi',
+      smsLocale,
+      smsNameBoxes: ['Rame', 'sh K'],
+      now: NOW,
+    });
+
   interface Rig {
     readonly deps: ContributionNotifyDeps;
     readonly calls: SmsGatewayMessage[];
@@ -216,13 +248,17 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       smsPreflight?: ClaimDltSmsPreflight;
       /** Replaces the Secret Manager read (default: a map over `ids`, else `TEMPLATE_ID`). */
       resolveConfig?: (configKey: string) => Promise<string | null>;
+      /** Story 5.8b — the push rung ACCEPTS (default: rejecting, so the ladder advances). */
+      pushAccepts?: boolean;
+      /** Story 5.8b — the bridge's Super Admin switch read (default: ON — the tests that drive the bridge). */
+      readBridgeSwitch?: () => Promise<boolean>;
     } = {},
   ): Rig {
     const gw = gateway(o.answer);
     const audit: { action: string; resourceLocator: string }[] = [];
     const alarms: string[] = [];
     const hashed: string[] = [];
-    const push = rejecting('push');
+    const push = o.pushAccepts ? accepting('push') : rejecting('push');
     const resolveConfig =
       o.resolveConfig ?? ((key: string): Promise<string | null> => Promise.resolve(o.ids && key in o.ids ? (o.ids[key] ?? null) : TEMPLATE_ID));
     const deps: ContributionNotifyDeps = {
@@ -241,6 +277,7 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
         Promise.resolve({ push: [push, { ...push, id: 'apns' as never }], whatsapp: [o.whatsapp ?? rejecting('whatsapp')], sms: [rejecting('sms')], telegram: [] }),
       now: () => NOW,
       onAlarm: (m) => alarms.push(m),
+      readBridgeSwitch: o.readBridgeSwitch ?? (() => Promise.resolve(true)),
       ...(o.suppress ? { suppression: () => Promise.resolve({ suppressed: true as const, reason: 'frozen', channels: 'all' as const }) } : {}),
       alertSms: createAlertSmsSender({
         pool: o.pool ?? appPool,
@@ -1345,18 +1382,21 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       expect((await rowsOf(k.alertId))[0]).toMatchObject({ outcome: 'accepted', locale, occasion: m.occasion });
     });
 
-    it('⭐ C3-P18 — EVERY one of the six occasions reaches the REAL table through the seam (0184\'s CHECK and the seam\'s list agree; `entry_already_claimed` and `sender_vpa_mismatch` never did)', async () => {
+    // Story 5.8b (FS8 (a); migration 0188) replaced "EVERY one of the SIX occasions": the bridge's `cycle_open` is the seventh — the
+    // FIRST live proof that a cycle-open alert row satisfies the `alerts` FK of a send row (F5).
+    it('⭐ C3-P18 / 5.8b — EVERY one of the SEVEN occasions reaches the REAL table through the seam (the CHECK and the seam\'s list agree)', async () => {
       const k = await freshAlert();
       const r = rig();
       const alerts: [string, Alert][] = [
         ['day_10', day10(k)],
         ['pending_match_escalated', escalated(k, 'hi')],
         ...['wrong_pool', 'amount_mismatch', 'entry_already_claimed', 'sender_vpa_mismatch'].map((reason): [string, Alert] => [`mismatch:${reason}`, mismatch(k, reason, 'hi')]),
+        ['cycle_open', bridgedOpen(k, 'hi')],
       ];
       for (const [occasion, alert] of alerts) {
         expect((await fanOutAlert(r.deps, alert, ctx(), { occasion })).delivered).toBe(true);
       }
-      expect(r.calls).toHaveLength(6);
+      expect(r.calls).toHaveLength(7);
       expect((await rowsOf(k.alertId)).map((x) => x.occasion).sort()).toEqual([...schema.ALERT_SMS_SEND_OCCASIONS].sort());
       expect(r.alarms).toEqual([]);
     });
@@ -1457,6 +1497,114 @@ describe.skipIf(!hasDatabase)('Story 5.11b — the real alert SMS send (live DB,
       const result = await fanOutAlert(r.deps, day10(k), ctx(), { occasion: 'day_10', jobId: 'j', retryCount: 0, retryLimit: 4 });
       expect(sms(result)).toMatchObject({ outcome: 'sent' });
       expect(r.calls[0]!.templateId).toBe(TEMPLATE_ID);
+    });
+  });
+
+  // ─── Story 5.8b (AC3, AC5, AC12; FS3 (a), FS3.1 (a), FS8 (a), FS17 (a)) — the bridge text through the REAL seam and record ─────
+
+  describe('Story 5.8b — the degraded-mode bridge text, live (T18)', () => {
+    const CALL = { occasion: 'cycle_open', jobId: 'job-b', retryCount: 0, retryLimit: 4 } as const;
+
+    it.each<[ContributionSmsLocale]>([['hi'], ['en']])(
+      '⭐ %s — ONE gateway call FIRST (the bridge template id, the values in slot order, the real `t()` body); the row `cycle_open` / `cycle_open_bridge` `accepted`; push ⛔ run',
+      async (locale) => {
+        const k = await freshAlert();
+        const r = rig();
+        const result = await fanOutAlert(r.deps, bridgedOpen(k, locale), ctx(), CALL);
+        expect(result).toMatchObject({ delivered: true, deliveredChannel: 'sms', bridged: true });
+        expect(result.trail.map((e) => `${e.channel}:${e.outcome}`)).toEqual(['sms:sent']);
+        expect(r.push.calls).toBe(0);
+        expect(r.calls).toHaveLength(1);
+        const pool = locale === 'hi' ? 'अर्जुन' : 'C';
+        expect(r.calls[0]).toMatchObject({
+          to: SMS_TARGET.address,
+          templateId: TEMPLATE_ID,
+          values: [
+            { name: 'pool', value: pool },
+            { name: 'member1', value: 'Rame' },
+            { name: 'member2', value: 'sh K' },
+          ],
+          body: expectedBody('sms.cycle_open_bridge', locale, { pool, member1: 'Rame', member2: 'sh K' }),
+        });
+        expect(r.calls[0]!.body).toContain('Ramesh K');
+        const { rows } = await ownerPool.query<{ occasion: string; message: string; outcome: string; locale: string }>(
+          `SELECT occasion, message, outcome, locale FROM alert_sms_sends WHERE alert_id = $1`,
+          [k.alertId],
+        );
+        expect(rows).toEqual([{ occasion: 'cycle_open', message: 'cycle_open_bridge', outcome: 'accepted', locale }]);
+      },
+    );
+
+    it('⭐ AC3 / I3 — a re-run (a job retry, a sweep re-run, a second declaration) finds `accepted`: `sent`, ⛔ second text AND ⛔ push', async () => {
+      const k = await freshAlert();
+      const r = rig();
+      await fanOutAlert(r.deps, bridgedOpen(k), ctx(), CALL);
+      const again = await fanOutAlert(r.deps, bridgedOpen(k), ctx(), { ...CALL, retryCount: 1 });
+      expect(again).toMatchObject({ delivered: true, deliveredChannel: 'sms' });
+      expect(r.calls).toHaveLength(1);
+      expect(r.push.calls).toBe(0);
+    });
+
+    it('⭐ day one — ⛔ template id ⇒ the terminal named refusal (⛔ row, ⛔ the other language) and the ladder runs as before', async () => {
+      const k = await freshAlert();
+      const r = rig({ ids: { [contributionSmsDltConfigKey('cycle_open_bridge', 'hi')]: null } });
+      const result = await fanOutAlert(r.deps, bridgedOpen(k, 'hi'), ctx(), CALL);
+      expect(r.calls).toHaveLength(0);
+      expect(result.trail[0]).toMatchObject({ channel: 'sms', detail: ALERT_SMS_RUNG_DETAIL.templateIdMissingHi });
+      expect(result.trail.at(-1)).toMatchObject({ channel: 'sms', detail: 'sms_bridge_already_tried' });
+      expect(r.push.calls).toBe(1); // the ladder ran (the one device)
+      expect(await rowsOf(k.alertId)).toEqual([]);
+      expect(shouldRetryFanOut(result, ctx(), CALL)).toBe(false);
+    });
+
+    it('⭐ FS3.1 (a) — a RATE-LIMITED bridge text, then the ladder DELIVERS by push ⇒ the row is given up (⛔ `deferred`), and a later re-run sends NOTHING', async () => {
+      const k = await freshAlert();
+      const r = rig({ pushAccepts: true, answer: () => Promise.reject(new SmsSendError('r', null, 429)) });
+      const result = await fanOutAlert(r.deps, bridgedOpen(k), ctx(), CALL);
+      expect(result).toMatchObject({ delivered: true, deliveredChannel: 'push' });
+      expect(result.trail[0]).toMatchObject({ channel: 'sms', detail: ALERT_SMS_RUNG_DETAIL.rateLimited });
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'error', detail: 'exhausted:rate_limited:ladder_delivered' });
+      const later = rig({ pushAccepts: true });
+      const rerun = await fanOutAlert(later.deps, bridgedOpen(k), ctx(), { ...CALL, retryCount: 1 });
+      expect(later.calls).toHaveLength(0);
+      expect(rerun.trail[0]).toMatchObject({ channel: 'sms', detail: ALERT_SMS_RUNG_DETAIL.rateLimitedFinal });
+    });
+
+    it('FS3.1 — a rate-limited bridge text whose ladder does NOT deliver keeps its row `deferred` and the member is RETRIED (re-sent on the next attempt)', async () => {
+      const k = await freshAlert();
+      let n = 0;
+      const r = rig({ answer: () => (n++ === 0 ? Promise.reject(new SmsSendError('r', null, 429)) : Promise.resolve('req0002')) });
+      const first = await fanOutAlert(r.deps, bridgedOpen(k), ctx(), CALL);
+      expect(first.delivered).toBe(false);
+      expect(shouldRetryFanOut(first, ctx(), CALL)).toBe(true);
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'deferred' });
+      const second = await fanOutAlert(r.deps, bridgedOpen(k), ctx(), { ...CALL, retryCount: 1 });
+      expect(second).toMatchObject({ delivered: true, deliveredChannel: 'sms' });
+      expect(await fullRow(k.alertId)).toMatchObject({ outcome: 'accepted', attempt_count: 2 });
+    });
+
+    it('⭐ AC12 — the REAL switch, read through the jobs pool (`twt_app`): OFF ⇒ ⛔ text, the ladder\'s trail names it; ON ⇒ the text goes (the state found is restored)', async () => {
+      const read = async (): Promise<boolean> => (await degradedMode.readDegradedBridgeSmsSwitch(appPool)).enabled;
+      const found = await read();
+      const actor = randomUUID();
+      const set = (enabled: boolean, reason: string) => degradedMode.setDegradedBridgeSmsSwitch(ownerPool, { enabled, actorId: actor, reason, auditId: null });
+      try {
+        await set(false, 'live test 5.8b AC12 — OFF');
+        const off = rig({ readBridgeSwitch: read });
+        const k1 = await freshAlert();
+        const r1 = await fanOutAlert(off.deps, bridgedOpen(k1), ctx(), CALL);
+        expect(off.calls).toHaveLength(0);
+        expect(r1.trail.map((e) => `${e.channel}:${e.outcome}${e.detail ? `:${e.detail}` : ''}`).at(-1)).toBe('sms:skipped_no_target:sms_bridge_switched_off');
+        expect(await rowsOf(k1.alertId)).toEqual([]);
+        await set(true, 'live test 5.8b AC12 — ON');
+        const on = rig({ readBridgeSwitch: read });
+        const k2 = await freshAlert();
+        const r2 = await fanOutAlert(on.deps, bridgedOpen(k2), ctx(), CALL);
+        expect(on.calls).toHaveLength(1);
+        expect(r2.deliveredChannel).toBe('sms');
+      } finally {
+        await set(found, 'live test 5.8b AC12 — restore the state found');
+      }
     });
   });
 });

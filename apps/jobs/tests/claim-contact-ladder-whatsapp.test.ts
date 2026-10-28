@@ -174,7 +174,12 @@ describe('AC11 — nothing else moves (each fenced file PINNED)', () => {
     // 2026-10-25 Story 5.11b CODE REVIEW (patch-diff review, Auditor #1): COMMENT-ONLY edits to the file (the suppression hook is "WIRED, not
     // yet enforced — boot injects NO hook"; the matched code is byte-identical) — only this pin re-taken, again. The claimant's WhatsApp
     // ladder imports none of it.
-    ['apps/jobs/src/scheduler/contribution-notify.ts', '960a2cbc61a52de4410139b1a4c33205031c702b886037e3d14871fe7fe16346'],
+    // 2026-10-28 Story 5.8b (Decision 2026-10-28-415 FS3 (a), FS3.1 (a), FS7 (a), FS9 (a), FS17 (a)): the degraded-mode bridge is LIT —
+    // a bridged cycle-open is texted FIRST through the injected seam (the ladder as the fallback), the Super Admin switch is read
+    // at the bridge attempt, `alertSmsBlock` gains the time-critical `alert_published` case (re-pinned in `alert-sms-send.test.ts`),
+    // `sms_bridge_not_lit` is retired and `shouldRetryFanOut`'s bridged arm removed. The claimant's WhatsApp ladder imports none of
+    // it — only this pin re-taken; the rest of the fence stands.
+    ['apps/jobs/src/scheduler/contribution-notify.ts', '3e72bd5caef6649dad79ca70f48f5f51eb6f0773937bdc0f59e3211e8399effc'],
     ['apps/jobs/src/scheduler/claim-correction-sms-templates.ts', '0c9c9147554c3a4bebd7ce3e961be545940d7d8639b8ea973b3c5ac922e27030'],
     ['packages/channels/src/sms-dlt-registry.ts', '3bf86f9b9350602d9d7484b6976a748de42bcd4a9424f9bd3842f7cda66daee5'],
     // 2026-10-23 Story 6.35 (Decision 2026-10-23-387 LS9 / LS10 (b′); `-385`): the reminder's begin resolves the language per

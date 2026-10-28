@@ -185,6 +185,8 @@ export * from './telegram_inbound_webhook_events.js';
 // never a stored boolean; single-active-per-Pariwar is enforced by the app transaction (advisory lock +
 // auto-revoke-on-declare), NOT a DB constraint. Backs the AR-20 cycle-open SMS bridge.
 export * from './pariwar_degraded_mode_declarations.js';
+// Story 5.8b — the degraded-mode bridge's Super Admin switch (GLOBAL; one control row created OFF + an append-only history).
+export * from './degraded_bridge_sms_switch.js';
 // Story 6.1 — claim case lifecycle anchor (claims table + claim_lifecycle_state +
 // claim_intake_channel pgEnums). `claims.current_state` is a replay-derived cache,
 // not the source of truth — guarded by the DB trigger (migration) + the

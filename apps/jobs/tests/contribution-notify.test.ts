@@ -47,7 +47,7 @@ vi.mock('@twt/domain', async (importActual) => {
   };
 });
 
-const { fanOutAlert, fanOutAlertToMembers, isAlertSmsFallbackEligible, serializeFanOutResult, shouldRetryFanOut, SMS_RUNG_DETAIL } = await import(
+const { fanOutAlert, fanOutAlertToMembers, isAlertSmsFallbackEligible, onceForJob, serializeFanOutResult, shouldRetryFanOut, SMS_RUNG_DETAIL } = await import(
   '../src/scheduler/contribution-notify.js'
 );
 type ContributionNotifyDeps = import('../src/scheduler/contribution-notify.js').ContributionNotifyDeps;
@@ -407,13 +407,15 @@ describe('AC6 — degraded-mode bridge FIRST, then cost-optimization', () => {
     expect(result.costSuppressedChannels).toEqual([]); // AR-18 — a time-critical alert is never suppressed
   });
 
-  it('a BRIDGED member whom push and WhatsApp miss — the SMS rung ends `sms_bridge_not_lit`, ⛔ sent', async () => {
+  // Story 5.8b (FS3 (a)) replaced: "the SMS rung ends `sms_bridge_not_lit`, ⛔ sent" — that word is retired (the bridge has its words).
+  // A bridged alert that carries ⛔ bridge block (this fixture) runs the ladder and its SMS rung names WHY: `sms_message_not_lit`.
+  it('a BRIDGED member whom push and WhatsApp miss, on an alert with ⛔ bridge block — the SMS rung ends `sms_message_not_lit`, ⛔ sent', async () => {
     const h = harness({
       push: makeProvider('fcm', 'push', 'rejected'),
       whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected'),
     });
     const result = await fanOutAlert(h.deps, cycleOpenAlert({ time_critical: true }), ctx());
-    expect(trailOf(result)).toEqual(['push:rejected', 'whatsapp:rejected', 'sms:skipped_no_target:sms_bridge_not_lit']);
+    expect(trailOf(result)).toEqual(['push:rejected', 'whatsapp:rejected', 'sms:skipped_no_target:sms_message_not_lit']);
     expect(h.sms.sendCount()).toBe(0);
     expect(result.delivered).toBe(false);
   });
@@ -741,7 +743,10 @@ describe('Story 5.11 AC4 / FS14 — former fixture successes are final; previous
     expect(retry).toEqual([MEMBER]);
   });
 
-  it('R1 — a bridge without an SMS target still retries even if the normal ladder hits a WA refusal', async () => {
+  // ⭐ Story 5.8b (FS9 (a), `2026-10-28-415` — `-394` item 1's bridged clause superseded in part) replaced: "R1 — a bridge without an
+  // SMS target still RETRIES even if the normal ladder hits a WA refusal" (the bridged arm `ctx.targets.sms === null`). THE ONE
+  // CHANGED CASE: such a member now follows the ordinary rule — a named WhatsApp refusal is TERMINAL, like an un-bridged member's.
+  it('⭐ FS9 (a) — a bridged member with ⛔ SMS target whose WhatsApp rung ended `wa_template_not_approved` is TERMINAL (was: retried)', async () => {
     const h = harness({
       push: makeProvider('fcm', 'push', 'rejected'),
       whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected', 'wa_template_not_approved'),
@@ -749,7 +754,14 @@ describe('Story 5.11 AC4 / FS14 — former fixture successes are final; previous
     const context = ctx({ sms: null });
     const result = await fanOutAlert(h.deps, cycleOpenAlert({ time_critical: true }), context);
     expect(result.bridged).toBe(true);
-    expect(shouldRetryFanOut(result, context)).toBe(true);
+    expect(shouldRetryFanOut(result, context, { retryCount: 0, retryLimit: 4 })).toBe(false);
+    // …and a TRANSIENT WhatsApp failure still retries (the ordinary rule — the arm's removal changes only the named refusal).
+    const t = harness({
+      push: makeProvider('fcm', 'push', 'rejected'),
+      whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected', 'transient: unavailable'),
+    });
+    const transient = await fanOutAlert(t.deps, cycleOpenAlert({ time_critical: true }), context);
+    expect(shouldRetryFanOut(transient, context, { retryCount: 0, retryLimit: 4 })).toBe(true);
   });
 
   it('R1 — a bridge with an SMS target stays terminal without sending the SMS fixture', async () => {
@@ -861,5 +873,168 @@ describe('Story 5.11b review C3-P23 — ONE suppressing hook holds EVERY rung (D
     expect(h.push.sendCount() + h.whatsapp.sendCount() + h.telegram.sendCount()).toBe(0);
     expect(alertSms).toHaveBeenCalledTimes(1);
     expect(alertSms.mock.calls[0]![0].dispatch.suppression).toBe(hook);
+  });
+});
+
+// ─── Story 5.8b (AC5, AC6, AC9, AC12; FS3 (a), FS3.1 (a), FS9 (a), FS17 (a)) — the bridge text, FIRST ──────────────────────
+
+describe('Story 5.8b AC5 — a bridged cycle-open is TEXTED FIRST; the ladder is the fallback', () => {
+  const BLOCK = { message: 'cycle_open_bridge', locale: 'hi', values: { pool: 'A', member1: 'रामेश्वर', member2: ' प्र.' } } as const;
+  /** The bridged cycle-open as the producer builds it: time-critical, carrying the bridge block. */
+  const bridgedAlert = (): Alert =>
+    cycleOpenAlert({ time_critical: true, payload_data: { title: 'Your pool is open — Pool A', body: 'In support of the family.', sms: BLOCK } } as Partial<Alert>);
+  const CALL = { occasion: 'cycle_open', jobId: 'job-1', retryCount: 0, retryLimit: 4 } as const;
+  const seam = (answer: { outcome: string; detail?: string }) =>
+    Object.assign(vi.fn<(input: Record<string, unknown>) => Promise<{ outcome: string; detail?: string }>>(() => Promise.resolve(answer)), {
+      giveUpDeferred: vi.fn<(input: unknown) => Promise<void>>(() => Promise.resolve()),
+    });
+  const on = () => vi.fn(() => Promise.resolve(true));
+  const depsWith = (h: Harness, alertSms: unknown, readBridgeSwitch: unknown = on()) =>
+    ({ ...h.deps, alertSms, readBridgeSwitch }) as unknown as ContributionNotifyDeps;
+
+  it('⭐ switch ON, text `sent` ⇒ delivered by SMS; push and WhatsApp are ⛔ run; the seam got the block, the call and `whatsappTried: false`', async () => {
+    const h = harness();
+    const alertSms = seam({ outcome: 'sent' });
+    const hook = vi.fn(() => Promise.resolve({ suppressed: false as const }));
+    const result = await fanOutAlert({ ...depsWith(h, alertSms), suppression: hook } as never, bridgedAlert(), ctx(), CALL);
+    expect(result).toMatchObject({ delivered: true, deliveredChannel: 'sms', bridged: true });
+    expect(trailOf(result)).toEqual(['sms:sent']);
+    expect(h.push.sendCount()).toBe(0);
+    expect(h.whatsapp.sendCount()).toBe(0);
+    expect(h.sms.sendCount()).toBe(0); // ⛔ the category resolver's fixture — the seam texts (I4)
+    expect(alertSms).toHaveBeenCalledTimes(1);
+    expect(alertSms.mock.calls[0]![0]).toMatchObject({ block: BLOCK, target: TARGETS.sms, call: CALL, whatsappTried: false });
+    expect((alertSms.mock.calls[0]![0] as { dispatch: { suppression: unknown } }).dispatch.suppression).toBe(hook);
+  });
+
+  it('⭐ T20 — the Telegram mirror is dispatched on the bridge-`sent` path too', async () => {
+    const h = harness();
+    const result = await fanOutAlert(depsWith(h, seam({ outcome: 'sent' })), bridgedAlert(), ctx({ telegram: TARGETS.telegram }), CALL);
+    expect(result.deliveredChannel).toBe('sms');
+    expect(result.telegramMirrored).toBe(true);
+    expect(h.telegram.sendCount()).toBe(1);
+  });
+
+  it('⭐ a text that does not go (day one: ⛔ template id) ⇒ the ladder runs, push delivers; the bridge entry is FIRST', async () => {
+    const h = harness();
+    const result = await fanOutAlert(depsWith(h, seam({ outcome: 'skipped_no_target', detail: 'config:dlt_template_id_missing:hi' })), bridgedAlert(), ctx(), CALL);
+    expect(trailOf(result)).toEqual(['sms:skipped_no_target:config:dlt_template_id_missing:hi', 'push:sent']);
+    expect(result).toMatchObject({ delivered: true, deliveredChannel: 'push' });
+  });
+
+  it('⭐ T19 — push and WhatsApp also miss ⇒ the ladder\'s SMS rung ends `sms_bridge_already_tried` (⛔ a second text); the bridge entry precedes it in the SERIALISED trail', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const alertSms = seam({ outcome: 'rejected', detail: 'rejected_invalid_number' });
+    const result = await fanOutAlert(depsWith(h, alertSms), bridgedAlert(), ctx(), CALL);
+    expect(trailOf(result)).toEqual([
+      'sms:rejected:rejected_invalid_number',
+      'push:rejected',
+      'whatsapp:rejected',
+      'sms:skipped_no_target:sms_bridge_already_tried',
+    ]);
+    expect(alertSms).toHaveBeenCalledTimes(1);
+    const serialised = serializeFanOutResult(result).trail as string[];
+    expect(serialised[0]).toBe('sms:0:rejected:rejected_invalid_number');
+    expect(serialised.at(-1)).toBe('sms:0:skipped_no_target:sms_bridge_already_tried');
+    // AC6 — `rejected_invalid_number` (the erased-member race, T16) is TERMINAL.
+    expect(shouldRetryFanOut(result, ctx(), CALL)).toBe(false);
+  });
+
+  it('⭐ AC12 — switch OFF ⇒ ⛔ text tried, the switch is named, and the ladder runs EXACTLY as before (push delivers)', async () => {
+    const h = harness();
+    const alertSms = seam({ outcome: 'sent' });
+    const off = vi.fn(() => Promise.resolve(false));
+    const result = await fanOutAlert(depsWith(h, alertSms, off), bridgedAlert(), ctx(), CALL);
+    expect(alertSms).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ delivered: true, deliveredChannel: 'push' });
+    const miss = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const r2 = await fanOutAlert(depsWith(miss, alertSms, off), bridgedAlert(), ctx(), CALL);
+    expect(trailOf(r2)).toEqual(['push:rejected', 'whatsapp:rejected', 'sms:skipped_no_target:sms_bridge_switched_off']);
+    expect(alertSms).not.toHaveBeenCalled();
+    // ⛔ switch wired at all ⇒ OFF (the switch starts OFF).
+    const r3 = await fanOutAlert({ ...miss.deps, alertSms } as unknown as ContributionNotifyDeps, bridgedAlert(), ctx(), CALL);
+    expect(trailOf(r3).at(-1)).toBe('sms:skipped_no_target:sms_bridge_switched_off');
+    expect(alertSms).not.toHaveBeenCalled();
+  });
+
+  it('AC12 — a switch read that THROWS ⇒ ⛔ text, ONE alarm, `sms_bridge_switch_unavailable`, RETRIED until the final attempt', async () => {
+    const h = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const alertSms = seam({ outcome: 'sent' });
+    const onAlarm = vi.fn();
+    const broken = vi.fn(() => Promise.reject(new Error('relation does not exist')));
+    const result = await fanOutAlert({ ...depsWith(h, alertSms, broken), onAlarm } as never, bridgedAlert(), ctx(), CALL);
+    expect(alertSms).not.toHaveBeenCalled();
+    expect(trailOf(result).at(-1)).toBe('sms:skipped_no_target:sms_bridge_switch_unavailable');
+    expect(onAlarm).toHaveBeenCalledTimes(1);
+    expect(shouldRetryFanOut(result, ctx(), CALL)).toBe(true);
+    expect(shouldRetryFanOut(result, ctx(), { ...CALL, retryCount: 4 })).toBe(false);
+  });
+
+  it('⛔ text tried — no SMS target (the ladder, plain), no seam (`sms_send_not_wired`), no block (`sms_message_not_lit`); the switch is ⛔ read for any of them', async () => {
+    const miss = () => harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const read = on();
+    const alertSms = seam({ outcome: 'sent' });
+    expect(trailOf(await fanOutAlert(depsWith(miss(), alertSms, read), bridgedAlert(), ctx({ sms: null }), CALL)).at(-1)).toBe('sms:skipped_no_target');
+    expect(trailOf(await fanOutAlert(depsWith(miss(), undefined, read), bridgedAlert(), ctx(), CALL)).at(-1)).toBe('sms:skipped_no_target:sms_send_not_wired');
+    expect(trailOf(await fanOutAlert(depsWith(miss(), alertSms, read), cycleOpenAlert({ time_critical: true }), ctx(), CALL)).at(-1)).toBe(
+      'sms:skipped_no_target:sms_message_not_lit',
+    );
+    expect(read).not.toHaveBeenCalled();
+    expect(alertSms).not.toHaveBeenCalled();
+  });
+
+  it('⭐ FS3.1 (a) — a RATE-LIMITED bridge text then a ladder delivery ⇒ the deferred row is given up (once); ⛔ when the ladder does not deliver (the member is retried)', async () => {
+    const h = harness();
+    const alertSms = seam({ outcome: 'skipped_no_target', detail: 'rate_limited' });
+    const delivered = await fanOutAlert(depsWith(h, alertSms), bridgedAlert(), ctx(), CALL);
+    expect(delivered.deliveredChannel).toBe('push');
+    expect(alertSms.giveUpDeferred).toHaveBeenCalledTimes(1);
+    expect(alertSms.giveUpDeferred.mock.calls[0]).toEqual([{ alert: expect.objectContaining({ alert_id: ALERT }), call: CALL }]);
+    const miss = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const again = seam({ outcome: 'skipped_no_target', detail: 'rate_limited' });
+    const undelivered = await fanOutAlert(depsWith(miss, again), bridgedAlert(), ctx(), CALL);
+    expect(again.giveUpDeferred).not.toHaveBeenCalled();
+    // AC6 — the retry classes still apply (read off the FIRST `sms` entry — the bridge's): retried, then `in_app_only` on the final.
+    expect(shouldRetryFanOut(undelivered, ctx(), CALL)).toBe(true);
+    expect(shouldRetryFanOut(undelivered, ctx(), { ...CALL, retryCount: 4 })).toBe(false);
+  });
+
+  it('⭐ AC9 / I2 — an UN-bridged alert never takes the bridge path: a lit day-10 reminder whose push accepts is ⛔ texted; a news alert with a planted block is ⛔ texted', async () => {
+    const h = harness();
+    const alertSms = seam({ outcome: 'sent' });
+    const read = on();
+    const dayTen = { ...litReminderAlert(), time_critical: true } as Alert;
+    const r1 = await fanOutAlert(depsWith(h, alertSms, read), dayTen, ctx(), { occasion: 'day_10' });
+    expect(r1).toMatchObject({ bridged: false, deliveredChannel: 'push' });
+    // A news `alert_published` (time_critical false) with a block planted PAST the contract — the fan-out ignores it.
+    const miss = harness({ push: makeProvider('fcm', 'push', 'rejected'), whatsapp: makeProvider('whatsapp-business', 'whatsapp', 'rejected') });
+    const news = { ...bridgedAlert(), time_critical: false } as Alert;
+    const r2 = await fanOutAlert(depsWith(miss, alertSms, read), news, ctx(), CALL);
+    expect(r2.bridged).toBe(false);
+    expect(trailOf(r2).at(-1)).toBe('sms:skipped_no_target:sms_message_not_lit');
+    expect(alertSms).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('AC12 — `onceForJob`: a job of many members reads the switch ONCE (through `fanOutAlertToMembers`)', async () => {
+    withPariwarScope.mockReset();
+    withPariwarScope.mockImplementation((_pool: unknown, _pariwarId: string, fn: (db: unknown) => unknown) => Promise.resolve(fn({})));
+    resolvePushTargets.mockResolvedValue([TARGETS.push]);
+    resolveWaTarget.mockResolvedValue(null);
+    resolveSmsTarget.mockResolvedValue(TARGETS.sms);
+    resolveTelegramTarget.mockResolvedValue(null);
+    getMemberLastEngagementAt.mockResolvedValue(null);
+    const h = harness();
+    const read = on();
+    const alertSms = seam({ outcome: 'sent' });
+    const members = ['aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000003'];
+    const { results } = await fanOutAlertToMembers(
+      { ...depsWith(h, alertSms, onceForJob(read)) } as never,
+      (memberId) => ({ ...bridgedAlert(), member_id: memberId }) as Alert,
+      members, PARIWAR, new Date('2026-07-23T00:00:00.000Z'), CALL,
+    );
+    expect(results.map((r) => r.deliveredChannel)).toEqual(['sms', 'sms', 'sms']);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(alertSms).toHaveBeenCalledTimes(3);
   });
 });

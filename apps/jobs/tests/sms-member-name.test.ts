@@ -317,8 +317,15 @@ const SOURCE = /\.(?:ts|tsx|mts|cts|js|mjs)$/;
 const MODULE = 'apps/jobs/src/scheduler/sms-member-name.ts';
 const BOXES = 'apps/jobs/src/scheduler/sms-member-boxes.ts';
 
-/** The ONLY files whose code calls or imports the one function — the two text senders. */
-const CALLERS = ['apps/jobs/src/scheduler/claim-peer-mesh-requests.ts', 'apps/jobs/src/scheduler/claim-suspicion-notices.ts'];
+/**
+ * The ONLY files whose code calls or imports the one function — the two claim-text senders and (Story 5.8b, `-414` Q2 A) the
+ * cycle-open producer, for the degraded-mode bridge's text. Story 5.8b replaced: EXACTLY the two claim-text senders.
+ */
+const CALLERS = [
+  'apps/jobs/src/scheduler/claim-peer-mesh-requests.ts',
+  'apps/jobs/src/scheduler/claim-suspicion-notices.ts',
+  'apps/jobs/src/scheduler/contribution-notify-triggers.ts',
+];
 
 const MODULE_SPECIFIER = /\/sms-member-name(?:\.js)?$/;
 
@@ -390,11 +397,11 @@ const filesWhere = (files: ReadonlyMap<string, string>, pick: (facts: CodeFacts)
     .sort();
 const callersOf = (files: ReadonlyMap<string, string>) => filesWhere(files, (c) => c.importsModule || c.callsModule, MODULE);
 
-describe('N4 — ONE function for the four texts, called by exactly the two text senders (AC1 source leg)', () => {
+describe('N4 — ONE function for the texts that name the deceased, called by exactly the two claim-text senders and the bridge producer (AC1 source leg; 5.8b)', () => {
   const tree = new Map<string, string>();
   walk('apps/jobs/src', tree);
 
-  it('the module and the boxes file are in the walk (a rename fails) and the callers are EXACTLY the two senders', () => {
+  it('the module and the boxes file are in the walk (a rename fails) and the callers are EXACTLY the three (5.8b replaced "the two senders")', () => {
     expect(tree.has(MODULE)).toBe(true);
     expect(tree.has(BOXES)).toBe(true);
     expect(callersOf(tree)).toEqual(CALLERS);

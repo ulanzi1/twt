@@ -188,9 +188,10 @@ describe('AC2 — registered text = catalogue text (I1): the REAL t() render, an
       expect(comment).toMatch(/reviewed and corrected by BigDev on 2026-10-23/);
       expect(comment).toMatch(/re-opens it/);
       expect(comment).toMatch(/byte for byte/);
-      // Story 5.8b — the comment covers the bridge text, and does ⛔ claim its Hindi-review leg is discharged.
+      // Story 5.8b — the comment covers the bridge text. REPLACED 2026-10-28 (was: `/Row 43 \(b\), not assumed/` — the leg was open):
+      // BigDev reviewed the Hindi in session (Story 5.8b Debug Log (i)), so the comment now names that review, dated, and re-opens on change.
       expect(comment).toMatch(/sms\.cycle_open_bridge/);
-      expect(comment).toMatch(/Row 43 \(b\), not assumed/);
+      expect(comment).toMatch(/BigDev reviewed its Hindi on 2026-10-28 and go-live gate Row 43 \(b\) records that review/);
     }
   });
 

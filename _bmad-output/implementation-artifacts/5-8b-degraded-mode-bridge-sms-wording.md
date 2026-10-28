@@ -892,6 +892,28 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
       story branch ([[feedback_commit_on_story_branch]]; check the branch before every commit —
       [[feedback-concurrent-review-agents-mutate-tree]]); do not push without BigDev's go-ahead.
 
+### Review Findings
+
+Full code review, 2026-10-28: baseline `64e01121` → `88350ed1`; Blind Hunter, Edge Case Hunter and Acceptance Auditor completed. **0 decision-needed, 5 patch, 0 defer; 3 candidate findings dismissed.** These are engineering corrections; no Trustee Panel decision is required. No implementation changes were made during review.
+
+**Disposition — 2026-10-28:** BigDev selected option 2, "Leave as action items". All five patch findings remain unchecked; none was applied or waived. Story and sprint row return to `in-progress` until the findings are resolved.
+
+- [x] [Review][Patch][P2] **Close deferred bridge rows after every successful ladder fallback, and make closure recoverable.** [apps/jobs/src/scheduler/contribution-notify.ts:555] — AC3 / FS3.1(a). Attempt 1 can leave a `rate_limited` row `deferred` while push fails. On retry, switching the bridge OFF, a transient configuration refusal, or unavailable send state can prevent the current attempt from reporting `rate_limited`; if push now delivers, the guard skips `giveUpDeferred` and the earlier row stays resendable. A DB-free reproduction of the real `fanOutAlert` confirms all three paths: delivered by push, cleanup calls zero. A queued replay after notification-key removal/reacquisition and within the deferred row's 30-minute window can subsequently text that member. Do not describe the ordinary next hourly sweep as necessarily causing that send: vacuum and sweep schedules can put it outside the window. Also, `alert-sms-send.ts:351` swallows closure failures while the member is marked delivered; that leaves the same unresolved obligation. Close any existing deferred bridge row when the ladder delivers, including skipped/refused bridge attempts, and preserve durable recovery when that closure fails without repeating a successful push. Add retry/switch-change and closure-failure coverage.
+
+- [x] [Review][Patch][P2] **Snapshot the changing administrator's server-resolved display name.** [apps/api/src/modules/degraded-mode/handlers.ts:91] — invariant families 6 / 8. The switch action checks only `actorId`; `packages/domain/src/degraded-mode/bridge-switch.ts:100` stores the UUID without an administrator-name snapshot, and the shared audit writer supplies no name. A Super Admin with `users.display_name = NULL` can change the switch (the passing API test creates such an account); later renaming cannot preserve the original human attribution in history. Resolve `users.display_name` before writing, block missing names, and persist the snapshot with the change, following the existing feature-flag flip at `apps/api/src/modules/feature-flags/handlers.ts:425`. Cover missing-name refusal and stability after rename.
+
+- [x] [Review][Patch][P2] **Announce a successful Trust-wide switch change.** [apps/admin/src/modules/degraded-mode/BridgeSwitchPanel.tsx:28] — AC12 / invariant family 13(d). The resulting ON/OFF state is plain paragraph content without live-region semantics. With no active declaration, the separate status banner stays unchanged, so a sighted operator sees the resulting state while a screen-reader operator receives no explicit confirmation. Add a persistent status/live region for the resulting state and verify the announcement with no active declaration; existing tests only inspect visible text/data attributes.
+
+- [x] [Review][Patch][P2] **Prove the new switch's concurrent mutation and audit behavior with two live connections.** [packages/domain/src/degraded-mode/bridge-switch.ts:96] — invariant family 2. `FOR UPDATE` provides serialization by construction, but the new tests exercise only sequential changes and same-state no-ops. Neither the switch policy suite nor the API suite exercises concurrent writers or the handler's concurrent-change/compensating-audit branch. Add a deterministic live race proving one state/history change for competing identical requests, the losing no-op/conflict outcome, and audit compensation without a false successful change. This is missing required evidence, not an observed locking failure.
+
+- [x] [Review][Patch][P2] **Protect the migration's OFF seed and history foreign key in regression tests.** [packages/domain/tests/integration/rls/degraded-bridge-sms-switch-policy-regression.spec.ts:80] — AC12 / invariant family 5. The test named "created OFF" asserts the ID and column default, not the inserted row's state: changing only migration 0188's explicit seed to ON would leave it green. The new `last_change_id` foreign key also has no direct negative regression assertion. Add isolated fresh-migration evidence that the actual seed is OFF, and a direct invalid-reference write proving the FK rejects it. Shared-database state must not be mistaken for an untouched migration seed.
+
+**Verification:** 619 targeted tests passed: jobs unit/registry/producer/segment suites 368; contracts 84; admin UI 8; live jobs 103; live domain 48; live API 8. Live suites ran against the existing isolated `twt-58b-pg` database on port 5449, not the shared database. Full `ci:local` was not rerun during this review. The retry reproduction is `/private/tmp/twt-5-8b-edge-repro.ts` (temporary review artifact, not a committed test).
+
+**Invariant dispositions:** families 2 and 5 have the evidence gaps above; families 6 / 8 have the attribution gap; family 13 has the announcement gap. Families 3, 4, 9, 10, 11 and 12 are covered by the scoped/actor guards and tests, explicit payload fields, documented global access, disclosed go-live/deferred limitations, the story's policy-meaning statement, and member-keyed send records. Other families are untouched. Existing send-race and bridge replay tests cover SMS at-most-once; they do not substitute for the new switch's race proof.
+
+**Dismissed candidates:** placing a bridge message on another alert category without any constructible producer; replaying the ordinary ladder after the switch is OFF (the explicit OFF behavior); changing the agreed death-exclusion copy instead of the specified account-frozen predicate. The already-recorded hourly re-fan limitation is not a new finding.
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -1205,6 +1227,35 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story`, 2026-10-28 (Tasks 1–
   done here (by design): the registry, catalogue and code (Task 1+); 6.32's session is NOT yet told of FS18 — the deferred-work item and
   BigDev carry it.
 
+- (h) Review follow-ups (the five P2 action items), 2026-10-28 — each mutant applied to the source (or the DB), the named suite run, the
+  source restored and byte-compared (`cmp`); live legs on this story's own container `twt-58b-pg` (:5449), recreated FRESH after `0188`
+  changed (188 migrations; the shared :5433 never held `0188` — `to_regclass` empty there):
+  - P2-1 — the fan-out's old guard restored (`bridgeEntry?.detail === rateLimited`) ⇒ `contribution-notify.test.ts` 6 RED (the five
+    retry paths + the no-target / no-block leg) and the live `alert-sms-send-live.test.ts` switch-change leg RED; the child's owed-closure
+    re-try skipped ⇒ `contribution-notify-triggers.test.ts` 2 RED; the child not collecting `bridgeRowOpen` ⇒ 1 RED.
+  - P2-2 — the handler falling back to the actor id when the name is missing ⇒ `degraded-mode.spec.ts` 1 RED (the missing-name leg).
+  - P2-3 — the per-call announcement dropped ⇒ `degraded-mode-page.test.tsx` 1 RED; the region rendered only once it has text (⛔
+    persistent) ⇒ 2 RED.
+  - P2-4 — `FOR UPDATE` dropped from the switch's lock read ⇒ `bridge-switch-concurrency.spec.ts` RED (B reported `changed: true` and
+    wrote a second history row); the handler treating the loser's no-op as success ⇒ the API race leg RED.
+  - P2-5 — 0188's seed edited to `VALUES (1, true)` ⇒ the fresh-schema leg RED; the `last_change_id` FK dropped in the DB ⇒ the FK leg
+    RED (FK re-added after).
+
+- (i) Roster Row 43 leg (b) — the Hindi review, 2026-10-28. BigDev, verbatim: *"Also I have reviewed the hindi, it's fine. Add it to
+  record."* (closing Debug Log (a)'s open item (2), which had recorded the leg NOT discharged). Recorded: Row 43 (b) ✅ MET 2026-10-28 as a
+  dated line (⛔ a word of the leg rewritten), for the Hindi `sms.cycle_open_bridge` as it stands on that date — any later change to a
+  word re-opens it; `$comment.sms` (en + hi) now says so instead of "not assumed"; the `contribution-sms-templates.test.ts` I6 leg that
+  pinned "not assumed" rewritten, naming what it replaced. Only leg (b) moves — Row 43 stays `open` ((a), (c)–(e), (h), (i) open).
+- (j) `pnpm ci:local` evidence for the review follow-ups (2026-10-28), `DATABASE_URL` on `twt-58b-pg` (:5449, DB `twt_dev`, recreated
+  FRESH before each run — 188 migrations): run 1 — 34 / 36: `integration-tests` and `test (unit)` RED on the 5.11 file pin of
+  `contribution-notify.ts` (my P2-1 edit — re-taken DELIBERATELY in `claim-contact-ladder-whatsapp.test.ts`, naming what it replaced)
+  plus one mobile test (`known-people-screen-render` R5); run 2 — **35 / 36**: every job green incl. `integration-tests`, EXCEPT
+  `test (unit)` on a DIFFERENT mobile test (`known-people-find-render` round 6). This branch touches ⛔ file under `apps/mobile`
+  (`git diff 64e01121` empty there); both tests pass 3 / 3 alone; the failing test moving between runs is the recorded `--concurrency=4`
+  oversubscription flake ([[project_ci_local_concurrency_oversubscription]]). The `test (unit)` job then RE-RUN exactly as ci:local runs
+  it (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`): **37 / 37 tasks, exit 0** (mobile 2105 / 2105). ⇒ 36 / 36 jobs green
+  across run 2 + that re-run — ⚠ NOT one uninterrupted 36 / 36 run; said as it is.
+
 ### Completion Notes List
 
 - **Task 1 (AC1, AC2):** `AlertSmsMessage` gains `cycle_open_bridge`; `alert_published` and `CycleOpenPayloadData` gain an optional `sms`
@@ -1253,6 +1304,34 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story`, 2026-10-28 (Tasks 1–
   cycle-open claim (`purgeExpiredKeys` deletes any expired row; `recordResult` does not extend `expires_at`), so every live cycle-open alert
   is re-fanned hourly. A BRIDGED member gets ⛔ second text and ⛔ push (the found `accepted` row ends the bridge path first); an UN-bridged
   member's PUSH repeats hourly — 8.8's / 1.12's pairing, recorded in deferred-work with options, for BigDev to sequence before go-live.
+- ✅ **Resolved review finding [P2-1]: deferred bridge rows closed after every ladder delivery, closure recoverable.** `fanOutAlert`
+  now gives up a `deferred` bridge row on ANY ladder delivery of a bridged alert — whatever this attempt's bridge entry says (switch now
+  OFF or unreadable, a Secret Manager transient, the send state unavailable, a text in flight, ⛔ SMS target or ⛔ block now); a bridge
+  text `sent` and an un-bridged alert never call it. The seam's `giveUpDeferred` retries a throw after each finalise pause and REPORTS
+  `closed` / `none` / `failed` (it swallowed failures before). A `failed` closure sets `bridgeRowOpen` on the member's result and its
+  recorded form; the cycle-open child records that member (claim kept — ⛔ a second push) and THROWS so pg-boss retries the job; on the
+  retry the member is `already_claimed`, its record is read back (`inspect`) and ONLY the closure is tried. On the final attempt it is
+  left to the row's 30-minute expiry with ONE alarm. ⚠ Honest limit (recorded, not hidden): if the closure fails through EVERY attempt,
+  a re-run that re-claims the member within 30 minutes of the rate-limited try could still text them — alarmed; F9's hourly re-fan
+  (deferred-work) is the only such re-run path today.
+- ✅ **Resolved review finding [P2-2]: the changing Super Admin's display name is snapshot.** `0188` (unmerged; reached ⛔ shared DB)
+  gains `changed_by_display text NOT NULL` + a non-blank CHECK on the append-only history; the handler resolves `users.display_name`
+  server-side FIRST and refuses a nameless account with `AdminDisplayNameMissingError` (409, ⛔ row, ⛔ audit line — the feature-flag
+  flip's shape); the domain writer refuses a blank name before it locks; the read DTO carries `changedByDisplay` (OpenAPI +5 lines) and
+  the page shows "by <name>". Live legs: NULL / blank name refused; a rename afterwards leaves the change attributed to the old name.
+- ✅ **Resolved review finding [P2-3]: a successful switch change is announced.** A PERSISTENT `role="status"` region in the switch
+  section (outside the loading / error branches), set ONCE from the server's answer (`bridgeSwitchSavedMessage`) and cleared when the
+  next change is sent; a refused change announces nothing (its error is the alert). RTL: no active declaration, the same node announces
+  ON then OFF. ⚠ Verified in jsdom only — ⛔ a real screen reader run (un-attested; the admin web console has no device session yet).
+- ✅ **Resolved review finding [P2-4]: the switch's concurrent change proven with two live connections.** NEW
+  `bridge-switch-concurrency.spec.ts`: writer A held open until writer B's backend is SEEN waiting on a lock (`pg_stat_activity`, ⛔ a
+  sleep), then committed ⇒ B `changed: false`, ONE history row. API leg: a held row lock forces two identical POSTs past the pre-read and
+  the audit intent ⇒ one 200, one 409 `degraded_mode.bridge_switch.concurrent_change`, ONE history row, two intent lines and ONE
+  `…_rolled_back` compensating line.
+- ✅ **Resolved review finding [P2-5]: the OFF seed and the history FK are protected.** The policy-regression spec runs 0188's OWN
+  statements (minus the four `alert_sms_sends` CHECK swaps; the FK's `"public".` dropped) into a FRESH scratch schema inside its rolled-
+  back transaction and asserts exactly one row, OFF, `last_change_id` null, empty history — independent of the shared row's state; a
+  dangling `last_change_id` is refused `23503` on `degraded_bridge_sms_switch_last_change_id_fk` (and a real one admitted).
 - **Deviation, recorded:** `pnpm ci:local` ran with `DATABASE_URL` on THIS story's own container `twt-58b-pg` (:5449, DB `twt_dev`), not the
   shared :5433 — the project's recorded recipe for a clean run ([[project-known-livedb-test-failures]]); `0188` reached ⛔ shared database.
 
@@ -1280,6 +1359,8 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story`, 2026-10-28 (Tasks 1–
   `apps/jobs/tests/alert-published-producers.test.ts` (new), `apps/jobs/tests/degraded-bridge-live.test.ts` (new),
   `apps/jobs/tests/cycle-open-sweep-purge-live.test.ts` (new)
 - `apps/api/src/modules/degraded-mode/handlers.ts`, `apps/api/src/modules/degraded-mode/routes.ts`, `apps/api/tests/integration/degraded-mode.spec.ts`
+- `packages/domain/tests/integration/degraded-mode/bridge-switch-concurrency.spec.ts` (new — review P2-4)
+- (review follow-ups also touch, already listed above: `apps/jobs/tests/claim-contact-ladder-whatsapp.test.ts` — the `contribution-notify.ts` pin re-taken; `apps/jobs/tests/contribution-sms-templates.test.ts`; `docs/launch-gate-inventory/inventory-roster.md`; both `contribution.json`; `openapi/v1.yaml`)
 - `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts`, `apps/admin/src/modules/degraded-mode/{DegradedModePage,DeclareForm,DegradedModeBanner}.tsx`,
   `apps/admin/src/modules/degraded-mode/BridgeSwitchPanel.tsx` (new), `apps/admin/src/modules/degraded-mode/bridge-copy.ts` (new),
   `apps/admin/tests/degraded-mode-page.test.tsx` (new)
@@ -1300,5 +1381,6 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story`, 2026-10-28 (Tasks 1–
 | 2026-10-28 | v1.6 | ⚖️ THE PANEL RULED — `2026-10-28-414` (Trustee-ratified, DR + KB; committed ALONE `9ffd9466`): PQ2 A with a Super Admin on / off switch, PQ1 A. Note ruling block transcribed (SENT, by the answer). "After the Panel's ruling" added: FS6's interim not built (`-379` form sent; `too_long` omitted + one alarm), FS16 ended, go-live legs (f) / (g) MET. FS17 (the switch — ⭐ Trust-wide, `super_admin` only, starts OFF) and FS18 (the migration under BigDev's merge order 5.8b → 6.32 — ⭐ 5.8b takes `0188`) PROPOSED. S2 answered. Debug Log (f). Ledger `2026-10-28p`. |
 | 2026-10-28 | v1.7 | BigDev "FS17 a, FS18 a". Author-commit `2026-10-28-415` (FS1–FS18) committed ALONE `34a0cb6d` ⇒ Task 0.3 DONE. Spec propagated to the ACs and Tasks ([[feedback_spec_edits_must_propagate_to_tasks]]): AC0 MET for the decisions; AC3 names migration `0188` (+ the switch table); AC4 sends `full` and `shortened`, omits only `too_long`; AC5 the switched-off branch; AC8 the two added sentences and the banner's off state; AC10 legs (a)–(i), the 6.32 note, the dated pointers; NEW AC12 (the switch); Tasks 2 / 4 / 6 / 8 updated. |
 | 2026-10-28 | v1.9 | `bmad-dev-story` — Tasks 1–9: the contract, words and registry; migration `0188` (send record + the Super Admin switch) and the key `degraded_mode.switch_bridge_sms` (catalog v55); the bridged producer (lit, languages, death overlay, name fit); the bridge path (text first, the ladder the fallback, the switch, FS3.1, FS9); the sweep's re-derived signal; the trustee screen and the switch UI / API; the records (segment figures pinned, Row 43 note, deferred-work — F9 PROVEN); the tests (the closed list rewritten, the first live end-to-end bridge test, eleven mutants RED). Status `review`. |
+| 2026-10-28 | v1.10 | Addressed code review findings — 5 items resolved (Date: 2026-10-28): P2-1 deferred bridge rows closed on ANY ladder delivery, the closure reported and owed by the job (⛔ a second push); P2-2 the Super Admin's display name snapshot (`0188` `changed_by_display`, 409 when missing); P2-3 the switch change announced (persistent status region); P2-4 two-connection races (domain + API compensating audit); P2-5 0188's own seed proven OFF in a fresh schema + the history FK. Mutants RED (Debug Log (h)). Roster Row 43 (b) ✅ MET — BigDev reviewed the Hindi in session (Debug Log (i)); `$comment.sms` and its I6 test follow. Status `review`. |
 | 2026-10-28 | v1.8 | Task 0.4 DONE — the records (epics, §3.4 annotation, roster Row 43 + Rows 30 / 40 notes, DLT sheet 23–24, deferred-work, dated pointers under `-379` / `-389` / `-390` / `-394` / `-404`); sheet tests and the DLT gate green. Task 0 DONE. Status `in-progress`. Debug Log (g). Ledger `2026-10-28q`. |
 

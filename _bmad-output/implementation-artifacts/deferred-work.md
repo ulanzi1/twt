@@ -4,6 +4,24 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 6-32-inspector-questionnaire-at-the-ground-inspection.md (2026-10-28)
+
+Deferred by the story's build decisions ([`-413`](../../.decision-log.md#decision-2026-10-28-413)) before any code. Not closed.
+
+- **The family is ⛔ asked "Has the family filed any other claim for this death?"** [6.28 OP14 (d); `packages/domain/src/questionnaires/validator.ts` — a question needs a Panel-ratified `approvedBy`] —
+  BigDev said *"yes, fold it"* (2026-10-10); `-413` IQ2 (A) routes it to row 6-33's chain instead (the Super Admin *"can add question directly and make it live"*, `-304` Q8),
+  superseding `-319` OP14 in part. The inspector still SEES the other claims (6.28 OP14, built). ⭐ Trigger: row `6-33-questionnaire-editor-versions-and-approval` is `done`.
+- **The head's letter itself is ⛔ photographed or kept — only "collected / not collected" is recorded** [`packages/domain/src/schema/claim_ground_inspection_photos.ts` `GROUND_INSPECTION_PHOTO_KINDS`] —
+  `-413` IQ3 (A). A `head_letter` photo kind needs its own enum migration (6.26a Trap 6), the upload route, the console's photo list, and a Row 42 leg for a third-party
+  document about a member; ⛔ decision says where the original letter is kept. An approver sees "Letter: collected" but ⛔ the letter. ⭐ Trigger: BigDev says where the letter is kept.
+- **The inspector's questionnaire is ⛔ truly offline** [`apps/admin/src/modules/ground-inspection/`; `apps/admin/src/api/hooks.ts` (`retry: false`, `gcTime: 0`, ⛔ persister)] —
+  `-413` IQ8 (A): answers save as they are chosen and a failed save is retried IN MEMORY; closing the tab or losing power while offline loses the unsaved answers, and
+  `POST …/complete` has ⛔ Idempotency-Key (a replay is `409 not_active`). True offline needs an encrypted browser draft (WebCrypto, non-extractable key), a persisted
+  query client or service worker, an Idempotency-Key on `complete` and replay ordering — a story of its own. ⭐ Trigger: the field-worker surface is placed (architecture
+  §4.1: *"Scope deferred"*).
+
+---
+
 ## Deferred from: Story 5.8b — create-story, the Panel's ruling and the build decisions (2026-10-28)
 
 Found while writing `5-8b-degraded-mode-bridge-sms-wording.md` (F-numbers are the story's) and decided by [`-415`](../../.decision-log.md#decision-2026-10-28-415). Not closed.
@@ -12876,6 +12894,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 ## Deferred from: dev of 6-27d-inspector-discrepancy-at-completion (2026-10-14)
 
 - **The inspector is ⛔ shown a cause / illness difference (③ / ④)** [`packages/domain/src/claim/inspection-discrepancy.ts` `INSPECTION_DISCREPANCY_RULES` — `death_cause` / `death_illness` are `'not_comparable'`] — 6.27a PM25 (a) ③ / ④ are ⛔ built: the family's cause / illness answers (row 6-32) and a keyed blind index per option code are owed before the inspector can be shown a cause / illness difference (the neighbours' cause / illness answers are Tier-1 ciphertext with ⛔ index, and the comparison ⛔ never decrypts). ⭐ Trigger: row 6-32 (the family side), which must also add the keyed comparable form; then flip the two rules to `'compare'` and widen 0160's two CHECKs.
+  ⚠ **Dated note, 2026-10-28:** owned by row `6-32-inspector-questionnaire-at-the-ground-inspection` (`ready-for-dev`; AC5 / AC6; [`-413`](../../.decision-log.md#decision-2026-10-28-413) IQ4 / IQ6). ⛔ Discharged yet — it is "Closed by 6.32" only once that row is `done` on `main`.
 
 
 ## Deferred from: code review of 6-27d-inspector-discrepancy-at-completion (2026-10-14)
@@ -12982,6 +13001,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   :5432 / :5433. ⭐ Trigger: row 6-32 (the columns' reader) or any second writer.
   Widened by the fix-diff review: `anchor_claim_case_id` (`2026-10-16-340` call 1) likewise has ⛔ FK or check that it names
   a claim of this Pariwar and this death. Its one writer, the select job, sets it from `resolvePeerMeshFilingCut`.
+  ⚠ **Dated note, 2026-10-28 (Story 6.32, [`-413`](../../.decision-log.md#decision-2026-10-28-413)):** the trigger is ⛔ pulled — under `-330` SW25 the head's letter is asked on EVERY full visit, so row 6-32 reads ⛔ none of the selection's columns (it is ⛔ "the columns' reader"). The item stays OPEN; its live trigger is "any second writer, or a first reader". ⛔ Closed by 6-32.
 - **W2 — An anchor LATER than the claim being selected for** [`packages/domain/src/claim/peer-mesh-read.ts`
   `resolvePeerMeshFilingCut`] — when the claim being selected for is itself innocence-lifted while a later claim for the same
   death exists, it anchors at the later filing and reads past its own filing day. Unreachable: nothing writes

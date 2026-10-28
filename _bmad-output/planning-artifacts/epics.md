@@ -3591,6 +3591,29 @@ to the requested screen (incl. after an expired login); a dignified bilingual "n
 the hosting and edge rules wired (⛔ not applied); ONE shared https-origin validator. ⛔ Nothing here sends a text; its first consumer is
 6.27's `/peer-request` (6.27c builds the link).
 
+### Story 6.32: The Inspector Asks the Family a Short Questionnaire — How the Member Died, Which Illness, and the Head's Letter — Saved as They Go, Compared Without Decrypting to What the Neighbours Said, and Shown to Staff as Context Only `[SURFACE]` `[PRIMITIVE]`
+
+> ⚠ **Added 2026-10-28 (Story 6.32, Task 0.4)** — the row `6-32-inspector-questionnaire-at-the-ground-inspection` was minted by ruling: `-304`
+> Consequence 3 (*"Row `6-32-…` builds the inspector's questionnaire under Q8, incl. the family's cause and illness answers (Q3 A, Q4 A as put)"*),
+> with the head's letter from `-310` CF4 A (3) / `-307` §2 item 1 (D) and `-330` SW25 (asked on EVERY full visit). Its build decisions IQ1–IQ13
+> are [`-413`](../../.decision-log.md#decision-2026-10-28-413) (AUTHOR-COMMIT, BigDev: *"IQ13 A — keep the letter optional"*; *"recommendation
+> accepted for IQ1-IQ12"*). The story file is the record.
+
+As the ground inspector sitting with a member's family, I want to ask the family how the member died, which illness, and whether the head of the
+school or office gave a letter — saving each answer as I go — and, after I complete my own record, to be told only where the family and a
+neighbour differ, so that I can ask the family again in my own words, and the staff who decide the claim have the family's account beside the
+neighbours' as context — ⛔ never as a reason to hold, flag or refuse a family.
+
+**Acceptance Criteria (in brief):** the engine's `ground_inspection` rule and a first CODE version (`head_letter`, `death_cause`, `death_illness`
+— the neighbours' codes; every question optional; cause and illness `counselBasis: 'pending'`, so only the letter is served until Row 42 (a));
+a pinned, append-only, Tier-1 store for the family's answers; a keyed blind index per option code on BOTH sides (claim-scoped, `dont_know` ⇒
+none) so ③ cause and ④ illness are compared at completion ⛔ without a decrypt, and the inspector is told only THAT they differ; the inspector's
+panel on the admin ground-inspection page (English line + Hindi line to read aloud; saved per answer, retried in memory, ⛔ browser storage);
+the family's answers read by exactly the neighbours' audience (`-310` CF2) after the same hide; erasure of every new column. ⛔ The completion
+predicate is touched — an inspection completes, and an approval proceeds, with ZERO answers and the letter ⛔ collected (`-413` IQ13 A); ⛔ new
+permission key, claim event, member-facing string or SMS. The *"any other claim for this death?"* question waits for row 6-33's chain (IQ2 A).
+Go-live: roster Row 42.
+
 ### Story 6.34: Every SMS Template's Variables Are Typed for TRAI — One Vocabulary, a Gate, the Login OTP First `[GOVERNANCE]`
 
 > ⚠ **Added 2026-10-12 (Story 6.34, Task 0.4)** — the row `6-34-sms-templates-typed-variables` was added by

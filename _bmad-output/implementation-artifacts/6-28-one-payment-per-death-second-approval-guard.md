@@ -573,6 +573,11 @@ Each says what changes under a non-recommended answer.
     rule (6.26a's VISITED / ORIGINAL_SEEN stand). ⭐ Routed, ⛔ not built here: the inspector questionnaire (row
     `6-32-inspector-questionnaire-at-the-ground-inspection` — ⛔ no story file yet) asks the family *"Has the family filed any other claim for
     this death?"* — recorded on that row's comment (2026-10-10).
+    ⚠ **Dated note, 2026-10-28 ([`-413`](../../.decision-log.md#decision-2026-10-28-413) IQ2 A, superseding `-319` OP14 IN PART — this routing
+    only):** row 6-32 does ⛔ ask this question. The questionnaire's validator admits a question only on a Panel-ratified decision, and the
+    Panel's route for a question it has not ruled is row `6-33-questionnaire-editor-versions-and-approval`'s chain (`-304` Q8: the Super Admin
+    *"can add question directly and make it live"*) — the question waits for 6-33. ⛔ Folded, ⛔ closed: tracked in `deferred-work.md`. The
+    inspector still SEES the other claims (the text above, built). The text above is kept as written.
   · ⚠ Fixtures: a new packet / row field breaks `packages/contracts/tests/claims-verifier-console.test.ts` and the admin fixtures
     (`verifier-console*.test.tsx`, `cycle-freeze-page`, `pending-case-card-return`, `r9-case-panel`, `correction-closure`,
     `escalation-detail-claim-switch`, `later-approval-warnings`) — contracts tests are outside tsc ([[project_contracts_tests_outside_tsc]]).

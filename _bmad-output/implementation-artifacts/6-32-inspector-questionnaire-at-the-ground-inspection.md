@@ -12,11 +12,11 @@ code) and the load-bearing ones re-read by hand (`inspection-discrepancy.ts`, `q
 `0156` / `0160`, `ground-inspection-crypto.ts`, `-304`, `-310`, `-307`, `-330` SW25, PM23 / PM25, 6.28 OP14) — perishable, re-check at
 Task 0.1. Re-locate by FUNCTION, ⛔ by line number.
 
-STATUS: ready-for-dev (v1.2). **IQ13 ANSWERED (A)** — BigDev, 2026-10-28: *"IQ13 A — keep the letter optional"*. IQ1–IQ12 are PROPOSED — BigDev
-answers them at Task 0.2 (FOUR still need a real answer: IQ2, IQ3, IQ7, IQ8; the rest are "as recommended unless you object"); ONE author-commit
-records all thirteen BEFORE any code (Task 0.3, [[feedback_governance_commits_precede_implementation]]) — IQ13's answer is ⛔ a decision until that
-entry is committed. ⛔ No Panel question is NEEDED to build (§0 row 8 settled by (A)); one NON-BLOCKING confirm is recommended (IQ7) and one go-live
-row is minted (Row 42 — counsel, Hindi review, the predecessor fence).
+STATUS: ready-for-dev (v1.3). **IQ1–IQ13 DECIDED** by [`-413`](../../.decision-log.md#decision-2026-10-28-413) (AUTHOR-COMMIT, committed alone,
+2026-10-28; BigDev: *"IQ13 A — keep the letter optional"*, then *"recommendation accepted for IQ1-IQ12"*) — every IQ as recommended. Task 0 is DONE
+(0.1 rebased onto `origin/main`; 0.2 answered; 0.3 `-413`; 0.4 records). ⛔ No Panel question is NEEDED to build; the NON-BLOCKING IQ7 confirm is
+DRAFTED for BigDev to send (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-6-32-family-answers-audience.md`); roster Row 42
+is minted. Implementation starts at Task 1.
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never") · ⭐ = action /
 emphasis · ⚠ = hazard.
@@ -242,9 +242,10 @@ The template's test: what does the Trust DISCLOSE, OWE, or need a BASIS for, and
   story reads NONE of the selection's columns**. `deferred-work.md` 6.36 **W1** (no DB backstop for the two workplace-id columns — *"Trigger: row 6-32
   (the columns' reader)"*) therefore stays **OPEN, its trigger ⛔ pulled** (Task 9.4 records that precisely; ⛔ "closed by 6-32").
 
-## ⚖️ Build decisions IQ1–IQ13 (IQ13 ANSWERED; IQ1–IQ12 PROPOSED — BigDev answers at Task 0.2)
+## ⚖️ Build decisions IQ1–IQ13 (✅ DECIDED — all as recommended, [`-413`](../../.decision-log.md#decision-2026-10-28-413))
 
-**Need a real answer: IQ2, IQ3, IQ7, IQ8.** IQ13 is answered (A). The rest are the author's, recommended, and stand unless BigDev objects.
+Every IQ below is DECIDED as its recommended option: IQ2 (A), IQ3 (A), IQ7 (A), IQ8 (A), IQ13 (A); the rest as written. The options ⛔ taken are kept
+as the question was put. `-413` supersedes `-308` call 2 in part (IQ13) and `-319` OP14 in part (IQ2).
 
 - **IQ1 — v1 carries only the RULED questions: `death_cause`, `death_illness`, `head_letter`.** `ground_inspection.v1`, scope `all`, status `live`, in a NEW
   `questionnaires/ground-inspection.ts` (reviewed CODE until row 6-33, as `peer-mesh.ts` is). Pages: (1) `head_letter`; (2) `death_cause`; (3)
@@ -472,13 +473,14 @@ The template's test: what does the Trust DISCLOSE, OWE, or need a BASIS for, and
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance first (AC0).** Nothing below starts before 0.3 is committed.
-  - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved; `git diff --name-only 4e57fa42..HEAD -- packages apps scripts infra docs` — re-read any cited file that
+- [x] **Task 0 — governance first (AC0).** Nothing below starts before 0.3 is committed. ✅ DONE 2026-10-28 (0.3 = `-413`).
+  - [x] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved; `git diff --name-only 4e57fa42..HEAD -- packages apps scripts infra docs` — re-read any cited file that
         moved; re-grep the highest decision, migration, roster row and ledger letter on EVERY branch (NUMBERS block).
-  - [ ] 0.2 Put IQ1–IQ12 to BigDev; the four real asks (IQ2, IQ3, IQ7, IQ8) first, each with its honest cost (written above). IQ13 is answered (A) (2026-10-28).
-  - [ ] 0.3 ONE author-commit decision entry (≥ `-413`), committed ALONE (`governance:` prefix): IQ1–IQ13 as answered; the supersessions by NEW dated entries (IQ2 →
+  - [x] 0.2 Put IQ1–IQ12 to BigDev; the four real asks (IQ2, IQ3, IQ7, IQ8) first, each with its honest cost (written above). IQ13 is answered (A) (2026-10-28).
+        ✅ *"recommendation accepted for IQ1-IQ12"* (BigDev, 2026-10-28).
+  - [x] 0.3 ONE author-commit decision entry (≥ `-413`), committed ALONE (`governance:` prefix): IQ1–IQ13 as answered; the supersessions by NEW dated entries (IQ2 →
         `-319` OP14 in part, IQ8, IQ13 (A) → `-308` call 2 in part); its §0 table (edges 1–8); "How much to trust this entry" naming what was traced vs inferred.
-  - [ ] 0.4 Records commit: roster Row 42 (IQ11); epics.md `### Story 6.32` (title, `[SURFACE] [PRIMITIVE]`, the ACs in brief, the minted-by-ruling banner); a dated
+  - [x] 0.4 Records commit: roster Row 42 (IQ11); epics.md `### Story 6.32` (title, `[SURFACE] [PRIMITIVE]`, the ACs in brief, the minted-by-ruling banner); a dated
         pointer under 6.28 OP14 (d); `deferred-work.md` entries (IQ3 B, IQ8 B, W1 annotation); the ledger line. If IQ7 (A): draft the NON-BLOCKING confirm note FROM
         `trustee-panel-routing-note-TEMPLATE.md` (§0 first, the deciding fact first, an honest cost on every option) — ⛔ send it; BigDev sends.
 - [ ] **Task 1 — the engine (AC1).** `keys.ts` (rule keys, allow-list `-310`), `validator.ts` (`ground_inspection` block), `ground-inspection.ts` (v1), `registry.ts`
@@ -608,3 +610,4 @@ No architecture variance: the surface is `apps/admin` (§4.1), ⛔ `apps/mobile`
 | 2026-10-27 | 1.0 | `bmad-create-story 6.32` (BigDev: *"6.32 in its worktree"*) at `4e57fa42`. Two read-only research passes (governance; code) + hand re-checks. Row `backlog` → `ready-for-dev`. IQ1–IQ12 PROPOSED; four need BigDev (IQ2 the "other claim" question — the validator admits only Panel-ratified ids; IQ3 the letter's record; IQ7 who reads the family's answers; IQ8 "offline saving" — no substrate or ruling). The comparable form PM25 (a) says this row OWES is built (AC5 / AC6). Policy meaning: nothing gates — the completion predicate is untouched (I1). Row 42 to be minted at Task 0.4. ⛔ No Panel question needed to build; one non-blocking confirm recommended (IQ7). |
 | 2026-10-28 | 1.1 | Fresh-context validate (`bmad-create-story validate 6.32`, BigDev: *"all"*), facts re-traced on the branch (two read-only passes, domain/schema and API/admin). **IQ13 added** — `-308` call 2 lists *"the head's letter when ⛔ no one can be asked"* among *"the hard checks"*, and 6.36 recorded *"approvable WITHOUT the letter until 6-32 is `done`"*; the story's "optional, never gates" was unreconciled with both ⇒ §0 row 8, answered FIRST, (B) is the Panel's. **G7a / TR14** — the neighbours' answer guard names its erasure columns; AC2 now replaces it. **AC11** — the ONE lockstep list (adds `questionnaires.test.ts:82/:94`, `inspection-discrepancy.test.ts:45` rewritten ⛔ deleted, the fence's 54, the RTBF 30 / 27, the audit-sink union). **IQ1** — every question `optional`, the required `closingNoteCopyKey` / `thankYouCopyKey`. Facts corrected: G6 (constant locations), G7 (CHECK names), G9 (admin uses `@twt/i18n`; the `HelplinePeerRequests` precedent to REUSE), G11 (two handler patterns; override district-only), G12 (`ENROLMENT_OWED`), G13 (what erasure covers), OP14 (d) is committed by `-319`. Numbers re-checked on every branch: `-413` / `0188` / Row 42 hold. |
 | 2026-10-28 | 1.2 | **IQ13 answered (A)** — BigDev: *"IQ13 A — keep the letter optional"*. The letter is recorded and shown to approvers, ⛔ a condition of approval; ⛔ Panel question. Status, Policy meaning, §0 row 8, I1, AC0, AC10 (+ an AC4 (a) row) and Task 0.2 updated; the decision is recorded in the Task 0.3 entry with IQ1–IQ12 (superseding `-308` call 2 in part) — ⛔ a decision until committed. Four asks remain: IQ2, IQ3, IQ7, IQ8. |
+| 2026-10-28 | 1.3 | **Task 0 DONE.** BigDev: *"recommendation accepted for IQ1-IQ12"*. 0.1 — rebased onto `origin/main` (11b.4a landed; the branch's lines verified identical before / after; journal idx / `when` unique); cited files that moved: `audit-sink.ts` (a memorial action appended after the GI actions) and the roster (Row 41 status) — neither shifts a claim here. 0.3 — [`-413`](../../.decision-log.md#decision-2026-10-28-413) committed alone (IQ1–IQ13 all as recommended; supersedes `-308` call 2 and `-319` OP14 in part). 0.4 — roster Row 42 `ground-inspection-family-answers-live` (+ a dated pointer on Row 27 note (5)); `epics.md` `### Story 6.32`; a dated note under 6.28 OP14 (d); `deferred-work.md` — a new section (the "any other claim?" question, the letter's photograph, true offline), 6.36 W1 annotated "trigger ⛔ pulled", the ③ / ④ item marked owned (⛔ discharged); the IQ7 confirm note drafted (BigDev sends); the ledger line. Implementation starts at Task 1. |

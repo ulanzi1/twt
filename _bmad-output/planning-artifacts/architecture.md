@@ -2368,6 +2368,23 @@ fallback SMS.
 > reads *"3 retries × exponential backoff"*, i.e. FOUR attempts; the story follows THIS section's count and states both (G2). The
 > difference is one retry minutes apart, the author's call, ⛔ the Panel's.
 
+> ⚠ **ANNOTATION 2026-10-28 (Story `5-8b` Task 0.4, `2026-10-28-414` — Trustee-ratified, Q1 A / Q2 A — and `2026-10-28-415` —
+> author-commit) — the cycle-open SMS bridge is BUILT, with words. ⭐ Annotated, ⛔ not rewritten.** The "Power-saver awareness"
+> paragraph's bridge is lit: (1) **the trigger** — a trustee's MANUAL degraded-mode declaration (Story 5.8) read at the cycle's freeze
+> instant, whether or not the Pariwar's WhatsApp is on (`-414`: options requiring the WA toggle OFF were ⛔ chosen; the paragraph's
+> AUTOMATIC condition — push delivery rate below a threshold AND the WA toggle OFF — stays deferred to Category 5 Observability);
+> (2) **what it says** — one text per member per cycle opening, BigDev's pool-open words (en + hi), naming the family in the Pariwar's
+> presentation mode (`-180` Q1), shortened above 60 letters by `-379` Q1 A's rule (`-414` Q2 A); (3) **who** — every member assigned to a
+> pool in the cycle, ⛔ a member under the `account-frozen` overlay (AUTHOR READING: the "Lifecycle-driven dispatch suppression"
+> paragraph's `claim-filed-frozen` IS that overlay; the general suppression hook stays roster Row 40 (g)); (4) **how** — the text is tried
+> FIRST and the push → WhatsApp ladder is the fallback (AUTHOR READING: *"Time-critical templates always send through both channels
+> regardless of the optimization toggle"* forbids the cost toggle from dropping a channel, ⛔ a bridge sequence); (5) **the switch** —
+> every bridge text is behind ONE Trust-wide on / off switch only a Super Admin can change, starting OFF (`-414` Q1's condition;
+> `-415` FS17); (6) **the guard** — the same send record as the fallback above, at most one text per (alert, member, occasion), now
+> SEVEN occasions per cycle. ⭐ ⇒ the 2026-10-25 annotation's *"six occasions per cycle"* and its dated note (b) *"SIX is the CHECK's
+> cap"* are SUPERSEDED IN PART: the cap is seven (`-415` §2). ⛔ A bulk-alert channel (RA-29): per Pariwar, by declaration, behind the
+> switch. The per-member fallback's three notices and their reach are unchanged.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

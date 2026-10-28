@@ -4,6 +4,43 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 5.8b — create-story, the Panel's ruling and the build decisions (2026-10-28)
+
+Found while writing `5-8b-degraded-mode-bridge-sms-wording.md` (F-numbers are the story's) and decided by [`-415`](../../.decision-log.md#decision-2026-10-28-415). Not closed.
+
+- **⭐ FS18 — Story 6.32 renumbers its migration at its rebase** [`story/6-32-inspector-questionnaire-at-the-ground-inspection`,
+  `packages/domain/migrations/0188_ground-inspection-questionnaire.sql` + its journal entry]. BigDev's merge order is 5.8b → 6.32, so 5.8b
+  takes `0188` (`-415` item 18, §2 — a departure from `-366` decision 6 for this pair; `-332` decision 2: migrations reach `main` in number
+  order). 6.32 takes the next free number above 5.8b's with a journal `when` above 5.8b's, updates its story / decision text that names
+  `0188`, and recreates its own container `twt-632-pg` (:5448 — it holds the old `0188`). Its `0188` had reached no shared database
+  (2026-10-28: `:5432` 180, `:5433` 185, `twt-11b4a-pg` 187). Decision `-413` and Row 42 stay 6.32's. **Trigger: 6.32's rebase after 5.8b
+  lands.**
+- **`resolveDegradedModeActive` is a dead export** (F10) [`apps/api/src/modules/degraded-mode/composition.ts`; zero callers]. Its comments
+  and `server.ts` describe a "future live fan-out" composing it; the fan-out takes the signal from `alert.time_critical` by 8.8's design.
+  ⛔ Wire it. **Trigger: the next story that edits `degraded-mode/composition.ts` — delete it or reword its comments.**
+- **The degraded-mode admin page is not linked from the admin navigation** (F11) [`apps/admin/src/router.tsx:129-131` comment]. A trustee
+  reaches it only by URL. **Trigger: the admin-navigation story, or Row 43 (c) (the holders named) — whichever first.**
+- **`sms-channel.md` is the degraded-POSTURE notice, not the cycle-open bridge's words** (F3; FS14) [`docs/degradation-policy/comms-templates/sms-channel.md`].
+  The framework file is untouched (its PENDING LEGAL REVIEW marker preserved). Pointer recorded here and on Row 43. **Trigger: the
+  framework's next revision.**
+- **A Pariwar-wide burst is unpaced and unmeasured** (F13) [`apps/jobs/src/scheduler/alert-sms-send.ts`; the audit-chain advisory lock;
+  the jobs pool `max: 2`]. Per text: three short transactions, two audit lines under the deployment-wide audit lock, two KMS calls, one
+  MSG91 request; no per-Pariwar or global send limit, no pacing, no MSG91 batching. Row 43 (d) MEASURES it; a figure BigDev finds too slow
+  becomes a row. **Trigger: Row 43 (d).**
+- **Hourly re-fan of a live cycle-open alert — inferred, not run** (F9) [`apps/jobs/src/scheduler/keyed-store.ts:205-206`; `boot.ts:162`].
+  If the hourly vacuum purges the 300 s idempotency rows, the recovery sweep re-fans every live cycle-open alert each hour; under FS10 (a)
+  a bridged one re-derives its signal each time (one read per swept alert); the send row keeps the TEXT at-most-once, but push may repeat.
+  **Trigger: Story 5.8b Task 8's live-DB sweep legs — prove or disprove the purge, and record which.**
+- **The automatic degraded-mode trigger is not built** [architecture §3.4 "Power-saver awareness": *"when per-Pariwar push delivery rate
+  falls below threshold AND the Pariwar WA admin-toggle is OFF"*; thresholds in Category 5 Observability]. The bridge fires only on a
+  trustee's MANUAL declaration (`-414` — the WA-toggle condition was not chosen for the manual path). **Trigger: the Category 5
+  Observability story that measures per-Pariwar push delivery.**
+- **No general lifecycle-suppression hook** [roster Row 40 (g); `apps/jobs/src/boot.ts`, the comment above `alertSms:`]. The bridge excludes
+  the `account-frozen` overlay ON ITS OWN (FS4 (d)); every other notification to a frozen account still goes out. Row 43 (h) cross-references
+  it. **Trigger: the story that builds the member-state read model and injects it in `boot.ts`.**
+
+---
+
 ## Deferred from: code review of 11b-4a-family-memorial-public-render.md — fifth pass, the fourth-pass fix round (2026-10-28)
 
 Re-review of the fourth-pass fix round (12 code files, 364 lines). One item deferred; RU-numbers are the story's fifth-pass numbers. Not closed.
@@ -618,6 +655,9 @@ Recorded at Story 5.11's Task 0.4 under [`-389`](../../.decision-log.md#decision
   `docs/degradation-policy/comms-templates/sms-channel.md`] — the bridge stays DARK; while dark, a bridged send runs the normal ladder
   (push → WhatsApp → SMS). Homed: row `5-8b-degraded-mode-bridge-sms-wording` (backlog). ⭐ Trigger: that row's create-story, or a
   Pariwar declared degraded in production.
+  - *Appended 2026-10-28 (Story 5.8b Task 0.4; [`-415`](../../.decision-log.md#decision-2026-10-28-415)):* TRIGGER MET (create-story 2026-10-27) → **5.8b** — Closed by 5.8b
+    effective when `done` on `main`. ⚠ The *"draft"* named above is NOT the bridge's words: `sms-channel.md` is the degraded-POSTURE notice
+    (a different state — README §14); the bridge gets BigDev's pool-open words instead (FS1 (a); FS14 — the framework file untouched).
 
 ---
 
@@ -8402,7 +8442,15 @@ Blind Hunter + Edge Case Hunter + Acceptance Auditor, diff `1d62ed4`..HEAD. Thre
 ## Deferred from: 5-8-pariwar-degraded-mode-cycle-open-sms-bridge (2026-07-07)
 
 - **Live degraded-mode bridge application (the wrap-`dispatch(alert)` fan-out + "every eligible member" enumeration).** Story 5.8 builds the declaration substrate (`pariwar_degraded_mode_declarations` + `declareDegradedMode`/`revokeDegradedMode`/`getActiveDegradedMode`), the pure bypass-decision primitive (`packages/channels/src/degraded-mode.ts` `evaluateDegradedModeBridge`), the admin declare/revoke/read surface, and the composition read-seam (`apps/api/src/modules/degraded-mode/composition.ts` `resolveDegradedModeActive`) — but there is still **NO live `dispatch` call site** ([[project_channels_no_live_dispatch_yet]]). The live wrapper — for a cycle-open (`alert_published`) alert under active degraded mode, force-send SMS to every eligible member and skip `evaluateCostOptimization`'s suppression — belongs to the first live-fan-out story (the same one that lands 5.7's live suppression + the member-enumeration). **Re-trigger:** the first live-fan-out story — compose `evaluateDegradedModeBridge` (checked first, wins on `bridged`) with `evaluateCostOptimization`, driven by `resolveDegradedModeActive`; do NOT wire a producer-less live fan-out before then.
+  - *Appended 2026-10-28 (Story 5.8b Task 0.4; [`-415`](../../.decision-log.md#decision-2026-10-28-415)):* the live fan-out exists (8.8) and composes the primitive; the bridge is
+    lit by row **5.8b** — Closed by 5.8b effective when `done` on `main`. ⚠ It is DELIBERATELY NOT *"driven by `resolveDegradedModeActive`"*:
+    the signal is `alert.time_critical`, stamped from the declaration at the freeze instant (8.1 / 8.8 — a notify-time re-read would break
+    replay); `resolveDegradedModeActive` stays a dead export (new item below). And it is ⛔ an SMS-only force-send: the text is tried FIRST
+    with the push → WhatsApp ladder as the fallback (FS3 (a)), behind a Super Admin switch (FS17).
 - **Member-eligibility enumeration for the bridge.** "Every eligible member" of a Pariwar is enumerated by the live fan-out (member lifecycle + SMS-target resolution — Story 5.6's `resolveSmsTarget`), not here. **Re-trigger:** the live-fan-out story.
+  - *Appended 2026-10-28 (Story 5.8b Task 0.4; [`-415`](../../.decision-log.md#decision-2026-10-28-415) FS4 (d)):* the enumeration is the cycle-open roster (members assigned to a pool
+    at the freeze), minus a member under the `account-frozen` overlay, with an SMS target — **5.8b** — Closed by 5.8b effective when `done`
+    on `main`.
 - **Automatic push-delivery-rate-threshold auto-declare (AR-20's architecture-described automatic trigger).** v1 ships MANUAL-declare only (this story's admin UI); the metrics-driven auto-declare producer (per-Pariwar push-delivery rate below threshold + WA admin-toggle OFF ⇒ auto-`declareDegradedMode`) is not built here — there is no automatic push-rate-threshold detection anywhere in this story. **Re-trigger:** the Category 5 Observability story that defines the trigger thresholds and wires the producer into `declareDegradedMode`.
 - **Concurrent advisory-lock race regression test.** `declareDegradedMode`'s single-active-per-Pariwar enforcement uses a transaction-scoped `pg_advisory_xact_lock(hashtext(pariwarId))` + auto-revoke-then-insert. The shipped integration test (`packages/domain/tests/integration/degraded-mode/declarations.spec.ts`) is sequential/single-connection — it covers the auto-revoke LOGIC but NOT the lock's race protection (two independent transactions racing to declare for the same `pariwarId`). **Re-trigger:** when the integration harness supports multiple independent concurrent transactions — add a true concurrent-declare regression test.
 
@@ -8673,6 +8721,8 @@ runs._
 - **Claim-before-send is not strictly exactly-once.** A crash between a provider accepting a send and `store.recordResult` completing leaves that member's claim outstanding; once the TTL (300s) lapses, a retry or the recovery sweep can re-claim and re-send to a member who already received the notification. Inherent to the Story 1.12 keyed-store idempotency pattern already used elsewhere in the codebase; not introduced or fixable within this diff alone. [apps/jobs/src/scheduler/contribution-notify-triggers.ts]
 - **The recovery sweep's "no trace = never ran" probe assumes `idempotency_keys` rows are effectively permanent** for the lifetime a `live` alert could exist. Depends on the external Story 1.12 primitive's own retention/TTL/pruning policy, which is not shown in this diff — if that store prunes old rows, notified alerts could silently reappear as "un-notified." [apps/jobs/src/scheduler/contribution-notify-triggers.ts — `runContributionNotifyRecoverySweep`]
 - **AR-18 SMS-bridge signal is lost on the recovery-sweep-repaired path** (`timeCritical: false` fallback, since the sweep doesn't have access to the `alert.published` payload). Already explicitly documented and reasoned as an accepted trade-off in the code's own comments, and confirmed compliant with AC1/invariant 6 by the acceptance audit. Recorded here as a known limitation, not a defect. [apps/jobs/src/scheduler/contribution-notify-triggers.ts]
+  - *Appended 2026-10-28 (Story 5.8b Task 0.4; [`-415`](../../.decision-log.md#decision-2026-10-28-415) FS10 (a)):* the sweep RE-DERIVES the signal through the same freeze-instant read
+    `openCycleAlert` uses — **5.8b** — Closed by 5.8b effective when `done` on `main`.
 - **Job-payload `as JobEnvelope<...>` casts with no runtime validation at the pg-boss trust boundary.** Established pattern already used by the pre-existing `cycle-spawn.ts` and `cycle-open-alert.ts`, not something introduced by this story. [apps/jobs/src/scheduler/contribution-notify-triggers.ts]
 - **`boss.work` handlers iterate `jobs: Job[]` with no per-job try/catch** (one job's throw can stop siblings in the same batch invocation from running). Same pre-existing convention already used by `cycle-spawn.ts` and `cycle-open-alert.ts`'s `CYCLE_OPEN_ALERT` worker; not a regression introduced here. [apps/jobs/src/scheduler/contribution-notify-triggers.ts]
 

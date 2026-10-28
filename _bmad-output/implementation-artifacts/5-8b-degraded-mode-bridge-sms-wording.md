@@ -19,7 +19,9 @@ STATUS: 2026-10-27 created (`bmad-create-story 5.8b`) → ready-for-dev; 2026-10
 "FS1-FS16 as recommended" — every ⭐ option (FS4 (d), FS3.1 (a), FS11 with the FS4 (d) sentence) — Debug Log (a). ⛔ Still no code
 before Task 0.3 (the decision committed ALONE) and Task 0.4 (records). ⚖️ v1.6: THE PANEL RULED — `2026-10-28-414` (DR + KB): PQ2 A
 WITH A SUPER ADMIN ON / OFF SWITCH, PQ1 A — see "After the Panel's ruling" under the build decisions; FS17 (the switch) and FS18 (the
-migration under BigDev's merge order — 5.8b BEFORE 6.32) are PROPOSED for BigDev. (Before v1.4: v1.2 CHANGED these proposals — read them fresh: FS3 (+ FS3.1), FS4 (new ⭐ (d)), FS6, FS8,
+migration under BigDev's merge order — 5.8b BEFORE 6.32) are PROPOSED for BigDev. v1.7: BigDev "FS17 a, FS18 a"; the author-commit
+`2026-10-28-415` (FS1–FS18) committed ALONE `34a0cb6d` ⇒ Task 0.3 DONE; AC0 / AC3 / AC4 / AC5 / AC8 / AC10 updated and AC12 (the switch)
+added. v1.8: Task 0.4 DONE — the records committed; row `ready-for-dev → in-progress`; Task 1 is next. (Before v1.4: v1.2 CHANGED these proposals — read them fresh: FS3 (+ FS3.1), FS4 (new ⭐ (d)), FS6, FS8,
 FS9, FS10, FS11 (new sentence; the screen's two existing AR-20 sentences), FS12 (legs), FS13 (PQ2), and NEW FS15 (the English
 template's SMS type) and FS16 (PQ2's interim).)
 
@@ -136,7 +138,7 @@ STOP conditions · G = §0 readings · PQ = Panel question.
 
 # Story 5.8b: The Degraded-Mode Cycle-Open SMS Bridge Gets Its Own Registrable Words (en + hi) and Is Lit — a Time-Critical Cycle-Open Is Texted Once, in the Member's Language, Naming the Family `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** A trustee can already declare a Pariwar's degraded mode (Story 5.8); a cycle that freezes
 > while the declaration is active already opens a time-critical alert (8.1), and every member's fan-out already knows it is bridged
@@ -598,9 +600,9 @@ Q2 A"*. What it changes in the decisions above (BigDev's answers stand; the ruli
   The `smsMemberName` caller fence (F16, `sms-member-name.test.ts:321`) gains the cycle-open producer as a THIRD caller, and the
   module header's *"each caller keeps TODAY's outcome"* list gains it. Go-live leg (f) MET by `-414`.
 - **FS13** done (the note was sent and answered); the §3.4 dated annotation (Task 0.4) names `-414` beside the author-commit.
-- The author-commit for FS1–FS16 (+ FS17, FS18) takes the NEXT id after `-414` — `-415` if still free at Task 0.3.
+- The author-commit for FS1–FS18 is `2026-10-28-415` (committed ALONE `34a0cb6d`).
 
-- **FS17 — the Super Admin switch (`-414` Q1's condition).** PROPOSED for BigDev. The Panel fixed only that a Super Admin can turn the
+- **FS17 — the Super Admin switch (`-414` Q1's condition).** ANSWERED 2026-10-28: **(a)** (BigDev "FS17 a"; `-415` item 17). The Panel fixed only that a Super Admin can turn the
   text on and off; the rest is the build's (`-414` Not covered). ⭐ **(a) ONE Trust-wide switch, held by `super_admin` ONLY, starting
   OFF; turning it ON is the go-live row's LAST leg.** A new permission key granted to `super_admin` alone (the name is the dev's); a
   single control row with an append-only history (who, when, a required reason), changed from the degraded-mode admin page by a Super
@@ -617,8 +619,8 @@ Q2 A"*. What it changes in the decisions above (BigDev's answers stand; the ruli
   new flip rule or a carve-out; the five-state rollout ladder (off / canary / rollout / full / rolled_back) is not an on / off switch;
   the flags console is Pariwar-scoped. **(d) per Pariwar.** *Cost (d):* the declaration is ALREADY per Pariwar; a second per-Pariwar
   switch duplicates it and is not what *"in case later we decide to turn it off"* describes.
-- **FS18 — the migration number under BigDev's merge order (S2, answered 2026-10-28: *"5.8b will be merged befor 6.32."*).** PROPOSED
-  for BigDev. Two recorded rules meet here: `-366` decision 6 (*"the number belongs to the first COMMIT that takes it on any branch"* —
+- **FS18 — the migration number under BigDev's merge order (S2, answered 2026-10-28: *"5.8b will be merged befor 6.32."*).** ANSWERED
+  2026-10-28: **(a)** (BigDev "FS18 a"; `-415` item 18 and §2). Two recorded rules meet here: `-366` decision 6 (*"the number belongs to the first COMMIT that takes it on any branch"* —
   6.32 committed `0188`) and `-332` decision 2 (*"a migration that reaches a database after a higher-numbered one is SILENTLY SKIPPED
   there. So the parts reach `main` strictly in number order … ⛔ Never renumber a migration that has reached any shared database"*).
   With 5.8b landing FIRST, a 5.8b `0189` would reach `main` before 6.32's `0188`. FOUND 2026-10-28: 6.32's `0188` (`when`
@@ -688,7 +690,9 @@ nothing is provisioned before PQ2). "Shown to the Panel" only once SENT ([[feedb
 
 ## Acceptance Criteria
 
-**AC0 — Governance before code (Task 0).** The author-commit decision (FS1–FS16 as answered; the §0 readings G1–G10 with FS2's
+**AC0 — Governance before code (Task 0).** ⭐ MET 2026-10-28 for the decisions: the Panel's ruling `2026-10-28-414` (`9ffd9466`) and the
+author-commit `2026-10-28-415` (`34a0cb6d`, FS1–FS18, incl. FS18's departure from `-366` decision 6), each committed ALONE; the records
+commit (Task 0.4) follows. As written: the author-commit decision (FS1–FS16 as answered; the §0 readings G1–G10 with FS2's
 reading, G6's `-389` G4 scope reading, G10's "frozen" reading and FS3's §3.4 `:2308` scope reading named in its "How much to trust this
 entry"; its Supersedes-IN-PART list — `-389` §1 item 6 (FS10 (a), *"the bridge stays dark"*), `-389`'s headline clause *"A POOL OPENING
 AND THE LAST DAY ARE ⛔ TEXTED"* and §1 item 1 (*"⛔ Pool open"*) for a declared Pariwar's cycle-open only (BigDev's own direction, G6),
@@ -717,11 +721,12 @@ locale the registered text equals the catalogue string with each `{param}` as `{
 needs two boxes (`-379` Q1 A's shape)"*). *Legs:* one lockstep test per template; the planted-violation leg for each new gate, proven RED
 first.
 
-**AC3 — At most once, with a record that admits the occasion (I3; FS8).** ONE hand-authored migration (next free number at the time; a
-journal entry whose `when` is above every sibling's) replaces `alert_sms_sends_message_check` and `alert_sms_sends_occasion_check`;
+**AC3 — At most once, with a record that admits the occasion (I3; FS8).** ONE hand-authored migration — **`0188`** (FS18 (a): 5.8b
+merges before 6.32; a journal `when` above `0187`'s AND above 6.32's 1795750800032; re-check at Task 2 that `0188` is still not on
+`main`) — that also carries FS17's switch table (AC12) — replaces `alert_sms_sends_message_check` and `alert_sms_sends_occasion_check`;
 `ALERT_SMS_SEND_MESSAGES`, `ALERT_SMS_SEND_OCCASIONS` and the drizzle `check()` copies follow; the existing TS ↔ SQL lockstep tests pin the
-new lists together; it applies on a fresh database and on one at the latest migration on `main` at the time (`0187` on 2026-10-28;
-`0188` once 6.32 lands). *Legs (live-DB, :5433):* a `cycle_open` / `cycle_open_bridge` row inserts, `alerts` FK included (F5 — the proof
+new lists together; it applies on a fresh database and on one at the latest migration on `main` at the time (`0187` on 2026-10-28 —
+6.32 lands AFTER 5.8b and renumbers past `0188`). *Legs (live-DB, :5433):* a `cycle_open` / `cycle_open_bridge` row inserts, `alerts` FK included (F5 — the proof
 5.11b did not have for cycle-open); an unknown occasion and an unknown message are still refused; a second send for the same (alert,
 member) — a job retry, a sweep re-run, a second declaration — finds `accepted`, sends nothing and reports `sent` (an in-flight row ⇒
 `sms_send_in_flight`, retried; a final row ⇒ terminal — the seam's existing arms); under FS3.1 (a) a `rate_limited` bridge text followed
@@ -731,13 +736,14 @@ by a ladder delivery leaves the row given up, not `deferred`, and a later re-run
 (FS5): its members' text languages are read in the identity scope, it splits into jobs of ≤ 8 members in ONE atomic insert, its claim chunk
 is 8, and a job already queued whole at deploy time is converted by 5.11b's legacy split rather than failing (T6 — the conversion is
 kind-agnostic; no code, a test). Per member: `locale` = the recipient's; `{pool}` = `smsPoolLabel(identity, locale)`; the name =
-`smsMemberName(familyLabel)`, called only once `identity` is non-null — ONLY `full` becomes `member1` / `member2` (a box that would be
-empty omits the block, never throws); `shortened` / `too_long` omits that member's block and raises ONE alarm per job with the COUNT (the
-`alert_sms.locale_unresolved` shape). Under FS4 (d) a member under the `account-frozen` overlay when the child runs gets no block (one
+`smsMemberName(familyLabel)`, called only once `identity` is non-null — `full` AND `shortened` become `member1` / `member2` (`-414` Q2 A:
+the `-379` form reaches this text; a box that would be empty omits the block, never throws); ONLY `too_long` omits that member's block and
+raises ONE alarm per job with the COUNT (`-379` step (4); the `alert_sms.locale_unresolved` shape; ⛔ `name_over_60_unruled`). Under FS4 (d) a member under the `account-frozen` overlay when the child runs gets no block (one
 set-based read per job; no alarm per member; a count in the job's log line is allowed, never a name or id). A Pariwar with no passport row
 omits every block for the job with ONE alarm and the push unchanged. A non-time-critical cycle-open, the sweep without a signal, news,
 surveys, moderation and the staff push build no block. *Legs:* both presentation modes (`full_name`, `shielded_name` — *"Rajesh S."*
-passes as `full`) with a fixture that REACHES each; 60 / 61 letters; a missing passport; the hi and en `{pool}` rules; the job split at
+passes as `full`) with a fixture that REACHES each; 60 letters (`full`) / 61 (`shortened`, SENT, with titles dropped then initials) / a
+name `too_long` even shortened (omitted + the alarm); a missing passport; the hi and en `{pool}` rules; the job split at
 8 / 9 members (with `deps.alertSms` wired — the split is inert without it); a whole job of 9 queued before the deploy is split; a
 deceased (account-frozen) member on the roster gets no block while their neighbours do.
 
@@ -746,7 +752,8 @@ target and the seam is wired: the bridge text is attempted FIRST through the inj
 carrying `deps.suppression`), with `whatsappTried: false` (the bridge does not wait for §3.4's WhatsApp window); `sent` ⇒ the result is
 delivered, `deliveredChannel: 'sms'`, push and WhatsApp are not run; any other outcome ⇒ the ordinary ladder runs, the bridge attempt is
 on the trail FIRST (the first `sms` entry is the one `shouldRetryFanOut` reads — F8), and the ladder's SMS rung ends
-`sms_bridge_already_tried`. A bridged alert with no block ⇒ the ordinary ladder, SMS rung `sms_message_not_lit`; with no seam wired ⇒
+`sms_bridge_already_tried`. ⭐ With the Super Admin switch OFF (AC12) ⇒ no bridge text is tried, the trail names it (`sms_bridge_switched_off`, the dev's
+name) and the ordinary ladder runs exactly as today. A bridged alert with no block ⇒ the ordinary ladder, SMS rung `sms_message_not_lit`; with no seam wired ⇒
 `sms_send_not_wired`; with no SMS target ⇒ the ladder, as today. `SMS_RUNG_DETAIL.bridgeNotLit` is retired (and leaves
 `RECORDED_RUNG_DETAILS`; it appears in no migration, contract or admin code — only `contribution-notify.ts`, `contribution-notify.test.ts`
 and `alert-sms-send.test.ts:35,264`), `sms_bridge_already_tried` joins it. The Telegram mirror runs on EVERY path, the bridge-`sent` path
@@ -775,7 +782,9 @@ AND runs NO push for them (AC3); the sweep test asserts the value it passes (tod
 
 **AC8 — What the trustee is told (FS11).** The page header's second sentence (`DegradedModePage.tsx:37-41`) and the banner's second line
 (`DegradedModeBanner.tsx:56-58`) — the AR-20 *"force SMS … bypassing cost-optimization"* promises — are REPLACED by the FS11 sentence,
-which the declare form also carries; the banner's *"armed"* line stays. *Legs:* new RTL tests (the module has none) assert the sentence
+which the declare form also carries, plus *"Members whose death has been reported are not texted."* (FS4 (d)) and *"A Super Admin can
+switch these texts off for every Pariwar."* (FS17); the banner's *"armed"* line stays while the switch is ON, and says the texts are
+switched off while it is OFF. *Legs:* new RTL tests (the module has none) assert the sentence
 on the page header, the form and the banner, and assert *"bypassing cost-optimization"* appears nowhere in the module. Templates:
 `apps/admin/tests/telegram-config-form.test.tsx` (a presentational React Hook Form rendered standalone — DeclareForm's shape) and
 `apps/admin/tests/integrity-page.test.tsx` (`renderWithClient`, a mocked client — the page and the banner, which mirrors
@@ -795,7 +804,8 @@ from the real registry; en with a Latin AND a Devanagari name), a cost line (per
 a Record line, a bullet under "Shape rules" for the three-variable justification, and Row 30 note (1)'s *"(d)'s provider answers also
 cover 17–22"* extended to 23–24 by a dated note; `sms-segment-cost.test.ts` gains the bridge as its OWN `it` (the existing `cases`
 `:153-157` feed `it.each` blocks asserting 1 en / 2 hi parts — the bridge is 2 / 3 at its longest and needs `member1` / `member2`
-values). Roster: the NEW row (FS12 (a)) with its legs (a)–(h) and cross-references, and a dated one-line annotation on Row 40 pointing to
+values). Roster: the NEW row (FS12 (a)) with its legs (a)–(i) as `-415` Consequence 2 lists them ((f) and (g) MET by `-414`; (i) LAST — a Super
+Admin turns the switch ON) and cross-references, and a dated one-line annotation on Row 40 pointing to
 it. `epics.md` `### Story 5.8b` between 5.8 and 5.9 (the 5.10 format). Architecture §3.4: a dated annotation (what the bridge says; FS2's
 reading; FS4 (d) / G10; the cap seven, naming the 2026-10-25 annotation's *"six occasions per cycle"* and note (b) *"SIX is the CHECK's
 cap"* as superseded in part) — never a rewrite. deferred-work: 5.11's bridge item annotated *"→ 5.8b — Closed by 5.8b effective when
@@ -804,8 +814,20 @@ application …"* (its Re-trigger says *"driven by `resolveDegradedModeActive`"*
 *"Member-eligibility enumeration for the bridge"* (closed by FS4), and 8.8's *"AR-18 SMS-bridge signal is lost on the
 recovery-sweep-repaired path"* (closed by FS10 (a)); NEW items: the dead `resolveDegradedModeActive` (F10), the un-linked admin page
 (F11), the posture-notice pointer (F3), the throughput / audit-lock note (F13) with the hourly re-fan cost (F9), the idempotency-purge
-inference (F9), PQ1 / PQ2 if unruled at `done`. The header comment of `contribution-notify.ts` (`:14-21`) and the registry header are
+inference (F9), FS18's note to Story 6.32 (renumber its migration above `0188` at its rebase; recreate its container). Dated pointer
+lines under `-389`, `-394` and `-404` naming `-415` (⛔ an edit of their text). The header comment of `contribution-notify.ts` (`:14-21`) and the registry header are
 updated. Ledger by SAFE prepend ([[project_sprint_status_safe_prepend]]).
+
+**AC12 — The Super Admin switch (FS17 (a); `-414` Q1's condition).** ONE Trust-wide switch for the bridge text: a new permission key
+granted to `super_admin` ONLY (`ROLE_PERMISSIONS_VERSION` bumped; the roles tests pin the sole holder, as `roles.test.ts:551-557` does
+for the declare key); a single control row created OFF by the migration (`0188`), with an append-only history row per change (who,
+when, ON / OFF, a REQUIRED reason; ⛔ UPDATE / DELETE on the history — the project's append-only guard pattern); a read endpoint for
+everyone who can see the degraded-mode page and a change endpoint behind the new key (idempotent, audited); the degraded-mode page shows
+the state to all and the control to a Super Admin only. The fan-out reads it ONCE per job at the bridge attempt (so switching it off
+stops texts already queued) — OFF ⇒ AC5's switched-off branch. *Legs:* a non-`super_admin` (incl. `pariwar_admin`) is refused the
+change (403) and sees the state read-only; a change without a reason is refused; ON → OFF → ON writes three history rows and the last
+state wins; a live-DB leg: switch OFF ⇒ a bridged member gets no text and the ladder's trail is today's; switch ON ⇒ the text is tried;
+a mutant that skips the switch read turns the OFF leg RED; the migration leaves it OFF on a fresh database.
 
 **AC11 — Nothing else moves.** The primitive and `DEGRADED_MODE_BRIDGE_CHANNELS`, `dispatch` / `cascade` / the ladder
 (`channels-determinism` green), the per-member fallback's three texts and their reach (a regression leg: their trails are identical),
@@ -814,7 +836,7 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0)**
+- [x] **Task 0 — Governance (AC0)** (DONE 2026-10-28)
   - [x] 0.1 (DONE 2026-10-28 — Debug Log (d); S2 tripped as a KNOWN overlap, reported to BigDev; S4 local-only) Preflight: `git fetch origin`; rebase onto `origin/main`; run the pin checks (header); re-run F1–F16. **STOP and tell BigDev if:**
         **S1** a ruling on the bridge, its words or a pool-opening text exists (grep `^### Decision` newer than `-413` for *bridge*,
         *cycle-open*, *degraded*, *pool open*; through `-413` none does — checked 2026-10-28); **S2** another worktree or session edits any of `contribution-notify*.ts`, `alert-sms-*.ts`,
@@ -831,18 +853,19 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
   - [x] 0.2 (DONE 2026-10-28 — Debug Log (a): "FS1-FS16 as recommended"; PQ2 / PQ1 stay the Panel's; roster leg (b) NOT discharged) Put FS1–FS16, the words (en + hi), PQ2 and PQ1 to BigDev — the v1.2-changed FS first (header STATUS); record the answers
         VERBATIM in Debug Log (a), each with its option's conditions (footgun #45). If BigDev confirms the words in session, roster leg (b)
         still says *"whether that discharges this leg is recorded here, not assumed"*.
-  - [ ] 0.3 (NOTE WRITTEN 2026-10-28 — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run, Debug Log (e); SENT and ANSWERED — `2026-10-28-414` committed ALONE
-        `9ffd9466`, Debug Log (f); the author-commit (next id, `-415`) NOT yet staged — it waits for FS17 and FS18) Write the PQ2 + PQ1 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first; the "Corrected in this note" line;
+  - [x] 0.3 (NOTE WRITTEN 2026-10-28 — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run, Debug Log (e); SENT and ANSWERED — `2026-10-28-414` committed ALONE
+        `9ffd9466`, Debug Log (f); the author-commit `2026-10-28-415` committed ALONE `34a0cb6d` after BigDev's "FS17 a, FS18 a" — DONE 2026-10-28) Write the PQ2 + PQ1 note from `trustee-panel-routing-note-TEMPLATE.md` (§0 first; the "Corrected in this note" line;
         `trustee-panel-routing-note-YYYY-MM-DD-5-8b-…`), run its evidence commands, record it as NOT sent until BigDev sends it. Stage the
         author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the decision-log write first
         ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.4 Records commit (AC10's docs): `epics.md`, §3.4 annotation, the roster row + Row 40 annotation, the DLT-sheet section,
+  - [x] 0.4 (DONE 2026-10-28 — Debug Log (g)) Records commit (AC10's docs): `epics.md`, §3.4 annotation, the roster row + Row 40 annotation, the DLT-sheet section,
         deferred-work (the new items AND the four older reference sites), the ledger entry by SAFE prepend + row `ready-for-dev → in-progress`.
 - [ ] **Task 1 — Contract, words, registry, catalogue (AC1, AC2; FS1, FS7)**: the enum key; the `sms` field on the variant, the payload
       schema and the builder; the `Alert` refinement (a block on an `alert_published` only when `time_critical`; run
       `pnpm contracts:emit-openapi` and expect NO diff — `Alert` is not registered; never hand-edit `openapi/v1.yaml`); the `alert.ts:21-26`
       header; the registry entries and `SLOTS`; `sms.cycle_open_bridge` in en and hi; `$comment.sms` coverage; the doc-blocks.
-- [ ] **Task 2 — Migration and domain constants (AC3; FS8)**: the migration; `ALERT_SMS_SEND_MESSAGES`, `ALERT_SMS_SEND_OCCASIONS`, the
+- [ ] **Task 2 — Migration and domain constants (AC3, AC12; FS8, FS17, FS18)**: the migration `0188` (FS18 — re-check it is free on
+      `main`), incl. the switch's control and history tables (created OFF, FORCE RLS / grants as the project's pattern); `ALERT_SMS_SEND_MESSAGES`, `ALERT_SMS_SEND_OCCASIONS`, the
       drizzle `check()` copies; the journal entry; the header text (six → seven).
 - [ ] **Task 3 — Producer and child (AC4; FS4 (d), FS5, FS6, FS7)**: widen `isLitPoolPayload` to a time-critical cycle-open;
       `buildCycleOpenAlert` takes `smsLocale` / the block; the child reads the languages, fits the name (only once `identity` is
@@ -851,15 +874,18 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
 - [ ] **Task 4 — The bridge path and retry (AC5, AC6, AC9; FS3, FS3.1, FS4, FS9)**: `alertSmsBlock` gains the `alert_published` case,
       guarded by `time_critical`; the bridge attempt before the ladder, its trail entry FIRST; the Telegram mirror on the bridge-`sent`
       path; `sms_bridge_already_tried`; under FS3.1 (a) give up a `deferred` bridge row when the ladder delivers; `shouldRetryFanOut`'s arm
-      removed; the header comment.
+      removed; the header comment; read the Super Admin switch once per job at the bridge attempt (AC12) — OFF ⇒ the switched-off
+      detail and today's ladder.
 - [ ] **Task 5 — The sweep (AC7; FS10)**: extract `(db, cycleId)` → `loadCycleFrozenPayload` + `getActiveDegradedMode` from
       `openCycleAlert` into one domain function; `openCycleAlert` and the sweep (inside its `withPariwarScope`, only when re-enqueueing)
       both call it; update the `@twt/domain` test mock.
-- [ ] **Task 6 — The trustee screen (AC8; FS11)**: replace the page header's and the banner's AR-20 sentences with the FS11 sentence, and
-      put it on the declare form; their tests (the module has none today — new RTL tests, templates in AC8).
+- [ ] **Task 6 — The trustee screen and the switch (AC8, AC12; FS11, FS17)**: replace the page header's and the banner's AR-20 sentences with the FS11 sentence, and
+      put it on the declare form (+ the FS4 (d) and FS17 sentences); the switch's state for all and its control for a Super Admin;
+      the permission key (`super_admin` only), the read / change endpoints and the history (AC12); their tests (the module has none
+      today — new RTL tests, templates in AC8).
 - [ ] **Task 7 — Records (AC10; FS12–FS15)**: the DLT sheet (segment counts computed from the real registry with the longest values, en
       with a Latin and a Devanagari name; the en SMS type per FS15), the roster row text, deferred-work items.
-- [ ] **Task 8 — Tests (AC1–AC11)**: rewrite the tests in the Dev Notes' closed list (each states what it replaced); add the first live-DB
+- [ ] **Task 8 — Tests (AC1–AC12)**: rewrite the tests in the Dev Notes' closed list (each states what it replaced); add the first live-DB
       bridged end-to-end test; every new gate proven RED (the mutants in Testing standards).
 - [ ] **Task 9 — Verify**: `pnpm ci:local` with `DATABASE_URL` on :5433 ([[project_prepush_hook_inherits_5432]]; known failures —
       [[project-known-livedb-test-failures]]); review the diff before commit ([[feedback_review_the_fix_diff_before_commit]]); commit on the
@@ -940,6 +966,7 @@ degradation-policy framework documents; `pnpm ci:local` green with `DATABASE_URL
 | Domain | `packages/domain/src/alert/project.ts` (`:437-449`) — extract the freeze-instant read `(db, cycleId)`; `packages/domain/src/member/overlay.ts` — the `NOT_DECEASED` set form, a new consumer (FS4 (d); no edit unless a set-read export is needed — then "change one, check the other") | one function, two callers |
 | Admin | `apps/admin/src/modules/degraded-mode/{DegradedModePage,DeclareForm,DegradedModeBanner}.tsx` — the page header (`:37-41`) and banner line (`:56-58`) AR-20 sentences replaced | the FS11 sentence; NEW tests |
 | Gate | `scripts/dlt-typed-variables/lib.ts` `REGISTRY_FILES` | no edit (the file is listed) |
+| Switch (FS17, AC12 — added v1.7) | the permission key in `packages/domain/src/rbac/permissions.ts` + `roles.ts` (`super_admin` ONLY; `ROLE_PERMISSIONS_VERSION`) and `packages/domain/tests/rbac/roles.test.ts`; NEW schema + domain read / change functions (control row + append-only history) in migration `0188`; NEW contract shapes beside `contracts/src/degraded-mode/declarations.ts`; NEW api read / change routes beside the degraded-mode routes (`server.ts` wiring); the fan-out's read (`contribution-notify.ts`) and its injected dependency in `apps/jobs/src/boot.ts`; the admin page's state + control (`apps/admin/src/modules/degraded-mode/`, `api/client.ts`) | new — exact files the dev's, re-found at Task 6 |
 | Docs | DLT sheet (+ a "Shape rules" bullet); roster (+ Row 30 note (1), `:540`); `epics.md`; architecture §3.4; deferred-work; ledger | AC10 |
 | NOT edited | `sms-dlt-registry.ts` (category registry, all-dark), the CRQID kinds / grammar (`as` is per row), `degraded-mode.ts`, `dispatch.ts`, `cascade.ts`, `sms-channel.md`, README | — |
 
@@ -959,7 +986,9 @@ still never driven), R1 `:755-761`; `alert-sms-send.test.ts:35,264` (`sms_bridge
 extracted function); `sms-segment-cost.test.ts` (the bridge as its OWN `it` — the `cases` at `:153-157` assert 1 en / 2 hi parts).
 **Stay green UNCHANGED under FS7 (a) — and gain legs for `time_critical: true`:** `contribution-loop-templates.test.ts:464-478` and
 `contribution-notify-triggers.test.ts:1282-1288`.
-**New:** admin RTL tests for the form and the banner (none exist); the live-DB bridged end-to-end test (T18).
+**New:** admin RTL tests for the form and the banner (none exist); the live-DB bridged end-to-end test (T18); the switch's tests (AC12 —
+the sole-holder roles test, the 403 / reason legs, the history, the live-DB OFF / ON legs, the switch-read mutant); `sms-member-name.test.ts`
+legs for this caller's `shortened` (sent) and `too_long` (omitted) outcomes (`-414` Q2 A).
 `packages/channels/tests/degraded-mode.test.ts` and `sms.test.ts` stay valid.
 
 ### Reuse map
@@ -1139,6 +1168,26 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
   `shortened` sent, `too_long` omitted with one alarm per `-379` step (4); FS16 ended; legs (f) / (g) MET); FS17 (the switch) PROPOSED.
   Earlier the same turn BigDev answered S2: *"5.8b will be merged befor 6.32."* — FS18 PROPOSED (the migration number; `0188` reached
   no shared database — per-container counts recorded in FS18). Both wait for BigDev; the author-commit (`-415`) waits for both.
+  BigDev then answered, verbatim: *"FS17 a, FS18 a"*. The author-commit `2026-10-28-415` (FS1–FS18; supersedes in part `-389`
+  headline / §1 items 1 and 6, `-394` item 1's bridged clause, `-404`'s six → seven; departs from `-366` decision 6 for `0188` / 6.32)
+  committed ALONE as `34a0cb6d` (next free re-checked: `-414` is the ruling, nothing else took `-415`). The `-210` anchor date corrected
+  in the draft before commit (`2026-09-08-210`, not `08-31`).
+
+- (g) Task 0.4 — the records, 2026-10-28 (one commit): `epics.md` — `### Story 5.8b` between 5.8 and 5.9 (the 5.10 format) and a dated
+  note under Story 5.8's ACs (AR-20's SMS-only shape is built as FS3 / FS4 (d) / FS17); architecture §3.4 — ONE dated annotation after the
+  2026-10-25 one (trigger, words, who, how, the switch, the cap seven — naming the 2026-10-25 *"six occasions per cycle"* and note (b) as
+  superseded in part); roster — Row 43 `degraded-bridge-sms-live` appended (legs (a)–(i), (f) / (g) MET), Row 40's notes cross-referenced,
+  Row 30 note (1) extended to templates 23–24 (dated); DLT sheet — rows 23–24 in the main table, the setup step (3) dated note (24 Unicode),
+  the exigency line and fixed shares under "Shape rules", a wording section "templates 23–24 (Story 5.8b …)", a cost paragraph, a
+  rejection-table row and a Record row (segment figures computed from the words; ⚠ to be PINNED from the real registry at Task 7 — the
+  `sms-segment-cost.test.ts` leg); deferred-work — a new 5.8b section (FS18's 6.32 renumber, the dead `resolveDegradedModeActive`, the
+  unlinked admin page, the posture-notice pointer, the unpaced burst, the hourly re-fan inference, the automatic trigger, the suppression
+  hook) and the four older items annotated (5.11's bridge item, 5.8's two, 8.8's sweep item); `.decision-log.md` — dated pointers under
+  `-404`, `-394`, `-390`, `-389` and `-379` (⛔ a word of theirs edited). Checks run: `pnpm dlt-typed-variables:check` passed; the gate's
+  25 tests, and `apps/jobs` `contribution-sms-templates`, `suspicion-notice-sms-templates`, `peer-mesh-sms-templates`, `sms-segment-cost`
+  and `dlt-template-sheet` (207 tests) all pass with the new sheet rows. Ledger `2026-10-28q`; row `ready-for-dev → in-progress`. ⚠ Not
+  done here (by design): the registry, catalogue and code (Task 1+); 6.32's session is NOT yet told of FS18 — the deferred-work item and
+  BigDev carry it.
 
 ### Completion Notes List
 
@@ -1159,4 +1208,6 @@ are carried from Story 5.11's 2026-10-23 fetch and were not re-fetched; the cons
 | 2026-10-28 | v1.4 | Task 0.2 ANSWERED: BigDev "FS1-FS16 as recommended" — every ⭐ option, each with its cost line, recorded in Debug Log (a) (FS4 (d), FS3.1 (a), FS11 plus the FS4 (d) sentence; the `-404` and `-394` supersedes-in-part go into the decision at Task 0.3). Still open: PQ2 / PQ1 (the Panel's), roster leg (b) (the Hindi review not confirmed in session), S4 (deployed environments) and S2 (the sequencing) — asked, unanswered. Ledger `2026-10-28n`. |
 | 2026-10-28 | v1.5 | Task 0.3 (part): the Panel note WRITTEN, ⛔ not sent — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-28-5-8b-degraded-pariwar-cycle-open-text.md`; E4 run (two mismatches found and fixed in the note); the PQ section points to the note, which governs (cost per FS15 (a): ≈ 2 parts, up to 3, either language). The author-commit decision is not yet staged. Debug Log (e). Ledger `2026-10-28o`. |
 | 2026-10-28 | v1.6 | ⚖️ THE PANEL RULED — `2026-10-28-414` (Trustee-ratified, DR + KB; committed ALONE `9ffd9466`): PQ2 A with a Super Admin on / off switch, PQ1 A. Note ruling block transcribed (SENT, by the answer). "After the Panel's ruling" added: FS6's interim not built (`-379` form sent; `too_long` omitted + one alarm), FS16 ended, go-live legs (f) / (g) MET. FS17 (the switch — ⭐ Trust-wide, `super_admin` only, starts OFF) and FS18 (the migration under BigDev's merge order 5.8b → 6.32 — ⭐ 5.8b takes `0188`) PROPOSED. S2 answered. Debug Log (f). Ledger `2026-10-28p`. |
+| 2026-10-28 | v1.7 | BigDev "FS17 a, FS18 a". Author-commit `2026-10-28-415` (FS1–FS18) committed ALONE `34a0cb6d` ⇒ Task 0.3 DONE. Spec propagated to the ACs and Tasks ([[feedback_spec_edits_must_propagate_to_tasks]]): AC0 MET for the decisions; AC3 names migration `0188` (+ the switch table); AC4 sends `full` and `shortened`, omits only `too_long`; AC5 the switched-off branch; AC8 the two added sentences and the banner's off state; AC10 legs (a)–(i), the 6.32 note, the dated pointers; NEW AC12 (the switch); Tasks 2 / 4 / 6 / 8 updated. |
+| 2026-10-28 | v1.8 | Task 0.4 DONE — the records (epics, §3.4 annotation, roster Row 43 + Rows 30 / 40 notes, DLT sheet 23–24, deferred-work, dated pointers under `-379` / `-389` / `-390` / `-394` / `-404`); sheet tests and the DLT gate green. Task 0 DONE. Status `in-progress`. Debug Log (g). Ledger `2026-10-28q`. |
 

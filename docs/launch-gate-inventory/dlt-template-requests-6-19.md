@@ -49,7 +49,9 @@ shorter per-segment length.
   became a comma — `2026-10-22-379` Q2 A), but its NAME values may be Devanagari (a KYC name; row 3-3c is independent) and ⛔ written
   MSG91 rule or device proof shows a Unicode value delivered intact on a Normal template — so 14 stays Unicode (Story 6.37e code review
   R1; the pre-flight passes a GSM-7 text on a UNICODE template with the logged note `sms_type_unicode_for_gsm7`). Templates 8, 10 and 12
-  carry the same name variables and stay Normal as before — an OPEN question (roster Row 32 (d); `deferred-work.md`); (4) mark the version
+  carry the same name variables and stay Normal as before — an OPEN question (roster Row 32 (d); `deferred-work.md`). ⚠ *Dated note,
+  2026-10-28 (Story 5.8b, [`-415`](../../.decision-log.md#decision-2026-10-28-415) FS15 (a)):* **template 24 (en) is Unicode too**, like 14 — its family-name values may be
+  Devanagari — so 23 AND 24 are both Unicode; (4) mark the version
   **default**; (5) leave MSG91's URL shortener OFF and put the app-link domain on its *"Skip URL"* list (the adapter also sends
   `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key — ⚠ for the
   two OTP templates (15, 16) only, until row 6-37b (delivery reports) is `done`: ⛔ a claim-text id (1–14) is set before then, even
@@ -85,14 +87,17 @@ shorter per-segment length.
   member's family the text). **Templates 7–10**: *"the helpline number is the only action the text asks for — `2026-09-28-262` FQ7 B,
   `2026-10-07-291` Q2 B"*. **Templates 11–12**: *"the last date to appeal is the substance of the notice — `2026-10-07-293` item 1 B"*.
   **Templates 13–14**: *"the link IS the request — without it the neighbour cannot reach the questions — `2026-10-10-303` Q1 A"*. The
-  helpline number left 11–14 to make room for the second box (`-379` Q2 A).
+  helpline number left 11–14 to make room for the second box (`-379` Q2 A). **Templates 23–24** (Story 5.8b, dated 2026-10-28):
+  *"`-180` Q1: the family's full name on the cycle-open SMS; the name needs two boxes (`-379` Q1 A's shape, extended to this text by
+  `2026-10-28-414` Q2 A)"* — the pool name is the first variable, the two name boxes the second and third.
 - **⛔ Two variables side by side** — separated only by a space, a comma or other punctuation — unless both are alphanumeric. Templates
   7–14 put the two name boxes side by side with NOTHING between them — both alphanumeric, so allowed (`checkDltTemplateShape` agrees); whether
   the operator's scrubber and MSG91 accept it (and a value that begins or ends with a space) is roster Row 30 (d) — ⛔ insert a separator:
   it would change the Panel's words.
 - **≥ 30 % of the template fixed**, counted against every variable at its ceiling — formally a condition of the more-than-three-variables
   clause, applied here to EVERY template (the conservative reading). Every template 1–16 passes (lowest: 13–14 — 14 (en) at 34.7 %, 13 (hi) at 40.0 %; then 7–12 at 44–60 %; 1–6 and 15–16 at 87–91 % —
-  re-derived 2026-10-22 with the checker's own arithmetic for Story 6.37e's two 30-letter boxes).
+  re-derived 2026-10-22 with the checker's own arithmetic for Story 6.37e's two 30-letter boxes). Templates 23–24: 24 (en) at 48.3 %,
+  23 (hi) at 48.9 % (the real `checkDltTemplateShape` on Story 5.8b's words, 2026-10-27; re-run on the registry at Story 5.8b Task 7).
 - **⛔ Another type for `{member}` / `{date}`** — the claim texts' words are ratified; a type that needs a different text (a date type, a
   shorter name) is a text change and goes back through the §0 gate.
   ⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* the shorter name form for an over-long name (`-359` / `-362` B —
@@ -142,12 +147,16 @@ by the alert SMS rung; provisioning `sms.dlt.template_id.<category>` still does 
 | 20 | Payment not matched — every mismatch reason (`-389` FS1 (d)) | en | 5.11 | `sms.dlt.template_id.contribution.payment_not_matched.en` | — (no variable) | TWT: we could not match your payment yet. We will help you sort it out. Please see the app. |
 | 21 | Payment still not confirmed — pending match, escalated (`-389` FS1 (d)) | hi | 5.11 | `sms.dlt.template_id.contribution.payment_not_confirmed.hi` | 1 alphanumeric (pool name or letter code, ≤ 30) | TWT: पूल ##pool## के लिए आपके भुगतान की पुष्टि अब तक नहीं हो पाई है। कृपया ऐप में जाँचें या फिर से प्रयास करें। |
 | 22 | Payment still not confirmed — pending match, escalated (`-389` FS1 (d)) | en | 5.11 | `sms.dlt.template_id.contribution.payment_not_confirmed.en` | 1 alphanumeric (pool name or letter code, ≤ 30) | TWT: we still have not been able to confirm your payment for pool ##pool##. Please check or retry in the app. |
+| 23 | Degraded-mode cycle-open bridge — a cycle opens on a declared Pariwar (`-414` Q1 A, `-415` FS1 (a)) | hi | 5.8b | `sms.dlt.template_id.contribution.cycle_open_bridge.hi` | 1 alphanumeric (pool name or letter code, ≤ 30) · 2 alphanumeric (family name — first part, ≤ 30) · 3 alphanumeric (family name — second part, ≤ 30) | TWT: आपका पूल ##pool## खुल गया है, ##member1####member2## के परिवार के सहयोग हेतु। सुविधानुसार ऐप खोलकर योगदान करें। |
+| 24 | Degraded-mode cycle-open bridge — a cycle opens on a declared Pariwar (`-414` Q1 A, `-415` FS1 (a)) | en | 5.8b | `sms.dlt.template_id.contribution.cycle_open_bridge.en` | 1 alphanumeric (pool name or letter code, ≤ 30) · 2 alphanumeric (family name — first part, ≤ 30) · 3 alphanumeric (family name — second part, ≤ 30) | TWT: your pool ##pool## is open, in support of ##member1####member2##'s family. Please open the app to contribute. |
 
 ⚠ A template registered before the wording is final must be re-registered if a word changes: the send must match the registered text
 exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them;
 ⭐ **and 7–12's (Story 6.24b, 2026-10-08)** — below those; ⭐ **and 13–14's (Story 6.27c, 2026-10-16)** — below those.
 ⭐ *Dated note, 2026-10-23 (Story 5.11):* templates **17–22** (the three contribution notices, `-389` FS1 (d)) were added after 16 — their
 wording is the section after 15–16's. The heading above is kept as written.
+⭐ *Dated note, 2026-10-28 (Story 5.8b):* templates **23–24** (the degraded-mode cycle-open bridge, `-415` FS1 (a)) were added after 22 —
+their wording is the section after 17–22's.
 
 ## The wording of templates 1–4 (Story 6.19b — the text to register)
 
@@ -301,6 +310,31 @@ Pariwar's; never the other one — so each message needs BOTH its en and hi ids)
 | 21 | TWT: पूल {#var#} के लिए आपके भुगतान की पुष्टि अब तक नहीं हो पाई है। कृपया ऐप में जाँचें या फिर से प्रयास करें। |
 | 22 | TWT: we still have not been able to confirm your payment for pool {#var#}. Please check or retry in the app. |
 
+## The wording of templates 23–24 (Story 5.8b — the text to register)
+
+⛔ **Do not provision the ids of 23–24 until roster Row 43 (`degraded-bridge-sms-live`) says so** — set each id only after the operator
+confirms that template's approval (`-349` decision 1's shape). Even with an id set, nothing is sent until a Super Admin turns the bridge's
+switch ON (Row 43 (i); [`2026-10-28-414`](../../.decision-log.md#decision-2026-10-28-414) Q1's condition) and a trustee has declared the Pariwar degraded.
+
+ONE text per member assigned to a pool, once per cycle opening, ONLY on a Pariwar a trustee has declared degraded (Story 5.8) and only for a
+cycle that opens while the declaration stands (`-414` Q1 A; [`2026-10-28-415`](../../.decision-log.md#decision-2026-10-28-415)); ⛔ to a member whose own death has been reported
+(FS4 (d)). The words are BigDev's pool-open words — Story 5.11's *"CHANNEL DRAFT"*, reviewed and corrected by BigDev in session on
+2026-10-23 — verbatim; whether that review discharges the Hindi review is Row 43 (b), ⛔ assumed. *"TWT:"* is the only sender name. The
+variables, in order: **`{pool}`** — the same rule as 17–22 (`-394` item 2: the curated name, trimmed, ≤ 30 UTF-16 units, no control
+character, and in English basic GSM-7 only — else the letter code); **`{member1}{member2}`** — the family's name in the Pariwar's
+presentation mode (`-180` Q1, `-181`), across TWO alphanumeric boxes side by side, ≤ 30 each, whole whenever it fits 60 and shortened above
+60 by the Panel's rule (titles dropped, then initials from the front, ⛔ never the last word — `-379` Q1 A, extended to this text by `-414`
+Q2 A); a name that still does not fit is ⛔ texted (one alarm per job, ⛔ never truncated). ⛔ No amount, date or link. Three variables —
+the exigency line is under "Shape rules". The copy is `sms.cycle_open_bridge` in `packages/i18n/locales/{en,hi}/contribution.json`; the
+registry is `apps/jobs/src/scheduler/contribution-sms-templates.ts` (beside 17–22), and `apps/jobs/tests/contribution-sms-templates.test.ts`
+proves the real `t()` renders EXACTLY the text below and that this sheet carries it (Story 5.8b Task 1 / 8). In MSG91 (setup step (3)):
+**Unicode for BOTH 23 and 24** (FS15 (a)). The language each member gets is their own choice, else the Pariwar's — so both ids are needed.
+
+| # | Registered text |
+|---|---|
+| 23 | TWT: आपका पूल {#var#} खुल गया है, {#var#}{#var#} के परिवार के सहयोग हेतु। सुविधानुसार ऐप खोलकर योगदान करें। |
+| 24 | TWT: your pool {#var#} is open, in support of {#var#}{#var#}'s family. Please open the app to contribute. |
+
 ## The per-Pariwar helpline number (D33(b), `-269` §5)
 
 | Config key | Holds | Unset ⇒ |
@@ -375,6 +409,14 @@ value is the curated name only when trimmed, ≤ 30 UTF-16 units, with ⛔ contr
 only (⛔ extension table) — else the letter code. ⇒ The figures above ARE the longest values again: **1 en / 2 hi parts** per notice. The
 approved wording is unchanged. `apps/jobs/tests/sms-segment-cost.test.ts` renders the real strings and pins these figures.
 
+⭐ **The degraded-mode cycle-open bridge (templates 23–24, Story 5.8b — dated 2026-10-28):** ONE transactional DLT SMS per member
+assigned to a pool, per cycle opening, ONLY on a Pariwar a trustee has declared degraded and only while the Super Admin switch is ON
+(`2026-10-28-414` Q1 A). Both are Unicode (FS15). Rendered at the LONGEST values (a 30-character pool value, a 60-letter name): 24 (en)
+is 174 characters and 23 (hi) 176 (**3 Unicode segments** each); at typical values (a 12–15-character pool, an 18–25-letter name)
+114–126 (**2 segments**) — computed from the story's words on 2026-10-28, ⚠ to be pinned from the real registry by its OWN `it` in
+`sms-segment-cost.test.ts` (Story 5.8b Task 7). ⇒ per member per bridged cycle, **≈ 2 segments, 3 at most** — and ONE declaration texts
+a whole Pariwar each cycle while it stands. ⚠ The per-segment price is ⛔ recorded (Row 40 (d); Row 43 (e)).
+
 ## URL whitelisting (Story 6.30, -312 AL3)
 
 ⭐ Since 1 Oct 2024 (TRAI) an SMS carrying a URL that is ⛔ not whitelisted against the sender's header is REJECTED. Only the FIXED part of
@@ -409,6 +451,7 @@ When STPL / SmartPing rejects a template or asks for different words:
 | 1–6, 15–16, English | the author's | The author re-words it to DLT's requirement and re-registers it. |
 | every Hindi text | the author's, under a review row | The author re-words it; the new Hindi goes back through its review row (Rows 20, 21, 23, 28) before it is re-registered. |
 | 17–22, English and Hindi | the author's; en + hi reviewed by BigDev 2026-10-23 | A rejection goes back to the author, who re-words it to DLT's requirement; the new words go back through roster Row 40 (b) (a changed word re-opens the review) before it is re-registered. |
+| 23–24, English and Hindi | BigDev's words (the pool-open words reviewed 2026-10-23), ⛔ the Panel's — the Panel ruled that the text is sent (`-414`), ⛔ its words | A rejection goes back to BigDev, who re-words it to DLT's requirement; the new Hindi goes back through Row 43 (b) before it is re-registered. A change that drops or splits the family's name goes back through the §0 gate (`-180` Q1). |
 
 In every case: record the rejection, the new words and the approval in the Record below, update the wording section above and the
 copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id only after the operator confirms the approval.
@@ -428,3 +471,4 @@ copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id o
 | 2026-10-22 | 7–14 | ⭐ Story 6.37e rework (`2026-10-22-379` Q1 A / Q2 A; `2026-10-22-380`): the member's name in TWO alphanumeric variables side by side (`{#var#}{#var#}`, ≤ 30 each; MSG91 `##member1####member2##`); 11–14 lose the helpline variable (11–12 *"Please call the helpline."*, 13–14 *"…, or call us."*); 13–14 *"a few questions"* (BigDev's words — routed as `-380` PQ1, ratified by `-381` PQ1 A); 14 (en) is Normal (GSM-7). The three-variable justifications, the side-by-side, lowest-share and last-word lines, the MSG91 SMS-type step and the cost lines re-derived. ⛔ Still not submitted — nothing to re-register | Story 6.37e | `sms-member-boxes.ts`; `sms-member-name.ts`; the two registries |
 | 2026-10-22 | 14 (and 8, 10, 12) | ⭐ Story 6.37e code review R1 (BigDev: *"14 back to Unicode"*): the row above's *"14 (en) is Normal (GSM-7)"* is true of the fixed TEXT only — template 14 is PROVISIONED **Unicode** (MSG91 setup step (3)), because a name value may be Devanagari and ⛔ rule or proof shows a Unicode value delivered intact on a Normal template; the 13–14 cost lines qualified (en 2–5). 8, 10 and 12 stay Normal as before — an OPEN question, recorded in roster Row 32 (d) and `deferred-work.md`, ⛔ decided. No text, slot or code change | Story 6.37e | `sms-preflight.ts` (unchanged — a GSM-7 text on a UNICODE template passes with a note) |
 | 2026-10-23 | 17–22 | ⭐ Wording, typed `{#var#}` slots (alphanumeric `pool` ≤ 30 · alphanumeric `date` ≤ 10; none on 19–20), config keys `sms.dlt.template_id.contribution.<message>.<locale>` and the MSG91 form written (Story 5.11, `2026-10-23-389` FS1 (d), FS4 (a), FS13 (a), FS16 (b); reach `2026-10-23-390` Q1 B); their cost line, rejection line and the TV6 note added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 17–22 until roster Row 40 says so**; set each id only after the operator confirms that template's approval | Story 5.11 | `contribution-sms-templates.ts` |
+| 2026-10-28 | 23–24 | ⭐ Wording, typed `{#var#}` slots (alphanumeric `pool` ≤ 30 · alphanumeric `member1` / `member2` ≤ 30 each), config keys `sms.dlt.template_id.contribution.cycle_open_bridge.<locale>`, the MSG91 form, the exigency line, the fixed shares and a cost line written (Story 5.8b Task 0.4; `2026-10-28-414` Q1 A / Q2 A; `2026-10-28-415` FS1 (a), FS15 (a) — BOTH Unicode). ⛔ Not submitted — Row 43. Segment figures to be pinned from the real registry at Story 5.8b Task 7 | Story 5.8b | `contribution-sms-templates.ts` (Task 1) |

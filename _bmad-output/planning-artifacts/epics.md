@@ -2413,6 +2413,37 @@ So that no member misses a cycle-open alert during infrastructure degradation.
 **When** a cycle-open alert fires
 **Then** every eligible member receives the SMS regardless of channel-tier rules; cost impact is accepted as the trade-off for reach during degradation
 
+> **⭐ Dated note 2026-10-28 (Story 5.8b, Task 0.4 — by annotation, ⛔ the ACs above edited):** the bridge's last AC is BUILT by
+> Story 5.8b below, ⛔ as written: the text is tried FIRST and the push → WhatsApp ladder is the fallback (a member the text cannot
+> reach still gets the push) — ⛔ *"bypass the cost-optimization layer"* as an SMS-only send; ⛔ member whose own death has been reported
+> is texted; and every text is behind a Trust-wide Super Admin switch ([`-414`](../../.decision-log.md#decision-2026-10-28-414) Q1's
+> condition; [`-415`](../../.decision-log.md#decision-2026-10-28-415) FS3, FS4 (d), FS17). The admin screen's AR-20 sentences are reworded
+> to match (FS11).
+
+### Story 5.8b: The Degraded-Mode Cycle-Open SMS Bridge Gets Its Own Registrable Words (en + hi) and Is Lit `[SURFACE]`
+
+> **Added 2026-10-28 (Story 5.8b, Task 0.4)** — the row `5-8b-degraded-mode-bridge-sms-wording` (named by [`-389`](../../.decision-log.md#decision-2026-10-23-389)
+> §1 item 6: *"the bridge's words are a new backlog row"*) gives Story 5.8's bridge registered words — BigDev's pool-open words, en + hi,
+> verbatim — and lights it: on a Pariwar a trustee has declared degraded, a cycle that opens while the declaration stands texts each
+> member assigned to a pool ONCE, in their own language, naming the family as `-180` rules (the `-379` 60-letter form above 60 letters).
+> The text is tried first and the ordinary push → WhatsApp ladder is the fallback; a member whose own death has been reported is ⛔
+> texted; the recovery sweep re-derives the signal; the send record is `alert_sms_sends` (seven texts per member per cycle — supersedes in
+> part `-404`'s six); and every text is behind ONE Trust-wide switch only a Super Admin can change, starting OFF. RULED by the Panel —
+> [`-414`](../../.decision-log.md#decision-2026-10-28-414) (Q1 A with the switch; Q2 A); its build decisions FS1–FS18 are DECIDED by
+> [`-415`](../../.decision-log.md#decision-2026-10-28-415) (author-commit). Migration `0188` (5.8b merges before 6.32 — FS18). Go-live: a NEW
+> roster row `degraded-bridge-sms-live` (its last leg: a Super Admin turns the switch on). Full ACs:
+> `_bmad-output/implementation-artifacts/5-8b-degraded-mode-bridge-sms-wording.md`. ⛔ Never a merge fence. (Epic 5's two "9 stories" count
+> lines are left as they stand, as for 5.10.)
+
+As a member of a Pariwar the Trust has declared degraded, I want a short text message, in my language, when a new cycle opens for my
+pool, so that I do not miss a cycle opening — and the record of what I missed — only because the app's notification could not reach me.
+
+**Acceptance Criteria:** see the story file (AC0–AC12) — in short: the alert carries an `sms` block only when it is time-critical; the
+registered text equals the catalogue text byte for byte; at most one text per (alert, member); the member's language and the family's
+name in two 30-letter boxes; the text first and the ladder as the fallback; a bridged member's retry follows 5.11b's classes; the
+recovery sweep bridges as the first pass did; the admin screen says what is built; ⛔ news, survey, moderation or staff alert is ever
+texted; the Super Admin switch (OFF ⇒ ⛔ text, the ladder as today); nothing else moves.
+
 ### Story 5.9: Step-Up OTP Channel Delivery + Audit-Per-Send-Per-Consume `[SURFACE]`
 
 As any admin or member at a step-up-OTP-gated action (Story 1.9 admin auth, Story 3.2 member auth),

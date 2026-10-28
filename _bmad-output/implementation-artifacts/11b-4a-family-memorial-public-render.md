@@ -36,7 +36,7 @@ it does NOT). ⛔ Never copy text from those sites; quote the 11b.4 story file, 
 
 # Story 11b.4a: The Family Memorial on the Public Sahyog Vivran Page — Render, Photo, and the Helpline Take-Down `[SURFACE]`
 
-Status: review
+Status: done
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -882,6 +882,12 @@ export is added).
 **Given** the last commit **Then** `pnpm ci:local` passes **36 / 36** on a fresh database **named `twt_dev`** in its own container
 ([[project_known_livedb_test_failures]]; ⛔ never :5432 — [[project_prepush_hook_inherits_5432]]); the row moves to `done` only after
 that run.
+⭐ *MET 2026-10-28 (BigDev: "record AC18"):* the pre-push `pnpm ci:local` on the committed tip **`75e0a1ab`**, against a fresh `twt_dev` in its own
+container (:5455), **PASSED — 36 job(s) green** (integration-tests included); the branch was pushed and PR #307 opened. ⚠ Recorded, ⛔ not dropped:
+the FIRST pre-push run on the same SHA (fresh `twt_dev`, :5454) was **35 / 36** — `test (unit)` failed one test in
+`apps/mobile/tests/unit/wa-signup-step-render.test.ts:772` (an iOS announce assertion, a file this story does not touch), which then passed 3 / 3 alone
+with the mobile suite 2,105 / 2,105 — a load timeout under the unit job's `--concurrency=4`; the push was RE-RUN, ⛔ never `--no-verify`. The commit that
+records this is records-only (its push skips `ci:local` as docs-only). "done" ≠ live: Row 41 stays open.
 
 ### AC19 — Dark until Row 41 closes
 **Given** the merge **Then** ⛔ nothing becomes visible: the switch stays off (Row 41) **And** Row 41 (b) is marked met by this
@@ -1323,6 +1329,7 @@ file ownership (⛔ no commits of their own), reviewed and committed by the main
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-28 | v1.7 | **AC18 met; Status `review` → `done`.** Pre-push `ci:local` on `75e0a1ab` (fresh `twt_dev`, :5455): 36 / 36 green; the branch pushed, PR #307 opened. The first pre-push run on the same SHA was 35 / 36 (one load timeout in an untouched mobile test) and was re-run, ⛔ not skipped. ⛔ Not live — Row 41 stays open. |
 | 2026-10-28 | v1.6 | **Fifth code review pass** (`bmad-code-review 11b-4a`, on the fourth-pass fix round; three layers, none failed): 18 findings — RU1–RU10 applied (BigDev "1"), RU11 deferred, 7 dismissed. RU1: the photo proxy checks the token against the route's own param and an upstream 400 is an outage again (RT5 had mapped it to a cacheable 404); RU2/RU3: a refusal disarms the confirm step, `kept` hidden with nothing shown; RU4: the `shown_changed` sentence reworded (agent copy, un-attested); RU5: the refusal sits after the decide section; RU6–RU9: a positive control, MP4 and the handler's doc-block, the queue comment, the OpenAPI 400; RU10: the fourth pass's records corrected. ⛔ `ci:local` not run; ⛔ uncommitted; Status stays `review`. |
 | 2026-10-28 | v1.5 | **Fourth code review pass** (`bmad-code-review 11b-4a`, the whole committed branch `4e57fa42..d78d76f7` in one pass; three layers): 28 findings after merging — RT1 + RT2 DECIDED A by BigDev (`-412` notes 5, 6 first), RT3–RT8 applied, RT9–RT11 deferred, 17 dismissed. `kept` on a changed version ⇒ 409 `shown_changed`; Trap 18's shapes tested through the member GET and the review detail; the decide refusal survives the refetch; OpenAPI `driveToken` max 64. ⛔ `ci:local` not run; ⛔ uncommitted. |
 | 2026-10-27 | v1.4 | **Committed** on `story/11b-4a-family-memorial-public-render` (on `ea28cbe8`), in three commits, governance first (AC0): (1) `-412`'s dated notes and ADR-0043's note; (2) the code, tests and the regenerated `openapi/v1.yaml` — everything the three review passes changed; (3) these records (the story, `deferred-work.md`, `friction-budget.md`, the ledger). ⛔ Not pushed. AC18 is still open — a 36 / 36 `ci:local` on this committed tree — so the Status stays `review`. |

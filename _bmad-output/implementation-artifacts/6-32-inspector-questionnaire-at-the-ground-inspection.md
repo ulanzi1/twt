@@ -522,37 +522,37 @@ are verification gaps, not demonstrated runtime bypasses. No Trustee Panel decis
 **Disposition (BigDev, 2026-10-28): option 2 — leave all seven findings as action items.** R1–R7 remain unchecked; no patches were applied.
 The story status is `in-progress`, matching its sprint row; Task 8 and the real-browser evidence remain open.
 
-- [ ] [Review][Patch] **R1 — Warn before in-app transitions discard unsaved answers (MEDIUM; blind + edge).** The only leave guard is
+- [x] [Review][Patch] **R1 — Warn before in-app transitions discard unsaved answers (MEDIUM; blind + edge).** The only leave guard is
   `beforeunload`; loading another claim or navigating within the app does not fire it. Unmount calls `editor.dispose()`, which clears queued edits.
   Completing the visit also removes the panel; completion can obtain the assignment lock before a queued/retrying save, after which the answer is
   refused as `not_active` and its draft disappears. Coordinate pending edits with these transitions: preserve/drain them where possible, or obtain
   explicit confirmation before discarding them. Keep completion possible with zero answers (I1); do not make any answer mandatory. Add regression
   coverage for both a claim/route change and completion during an outstanding save. **AC7, IQ8 (A).**
   [apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx:158; apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx:468]
-- [ ] [Review][Patch] **R2 — Allow recovery from an unreadable saved answer (MEDIUM; blind + edge).** The writer requires decrypted codes for
+- [x] [Review][Patch] **R2 — Allow recovery from an unreadable saved answer (MEDIUM; blind + edge).** The writer requires decrypted codes for
   every live ciphertext row and classifies every absent decrypted value as a stale read. Once a health answer is erased, malformed or persistently
   undecryptable, even saving the unrelated head's letter or replacing that unreadable answer fails as `questionnaire_stale` on every attempt.
   Distinguish a changed pre-read row from a known unreadable value, preserve the dependency fail-closed check, and permit unrelated/replacement saves.
   Test unreadable cause/illness rows alongside a genuine concurrent stale read. Reachable when the health questions are enabled; the shipped v1
   still serves only the letter. **AC3/AC7, IQ8 (A).** [packages/domain/src/claim/ground-inspection-questionnaire.ts:197]
-- [ ] [Review][Patch] **R3 — Include zero-answer completed visits in the family's account (MEDIUM; blind + edge + auditor).**
+- [x] [Review][Patch] **R3 — Include zero-answer completed visits in the family's account (MEDIUM; blind + edge + auditor).**
   `readClaimFamilyAccount` starts from headers created on first save, then inner-joins answers. A completed full visit with zero answers therefore
   yields no account, and the staff component hides the whole block. In the shipped letter-only questionnaire, skipping the optional letter question
   never produces the required **Letter: not recorded** line. Include completed full visits without saved answers and exercise the actual reader plus
   staff view for a no-neighbour, zero-save visit. The existing component test supplies another answer and misses that state. **AC10, I1/AC4.**
   [packages/domain/src/claim/ground-inspection-questionnaire.ts:322; apps/admin/src/modules/claim-verification/PeerMeshView.tsx:31]
-- [ ] [Review][Patch] **R4 — Bind both new routes to the claim named in their path (MEDIUM; auditor).** Their shared resolver loads by
+- [x] [Review][Patch] **R4 — Bind both new routes to the claim named in their path (MEDIUM; auditor).** Their shared resolver loads by
   `(pariwarId, ground_inspection_id)` only; neither new handler checks `claimCaseId`. A request naming claim A with an inspection for claim B reads or
   saves B's answers if the caller passes B's actual assignment/permission checks. This demonstrates a case-binding defect, not a permission bypass.
   Reject a mismatched path claim before reading or writing; test GET and PUT with two different claims. The resolver predates this story, but these
   two endpoints are new consumers and owe their own resource binding. **Load-bearing checklist family 12(a).**
   [apps/api/src/modules/claims/claims.ground-inspection.routes.ts:320; resolver at :178]
-- [ ] [Review][Patch] **R5 — Announce the per-answer save-state transitions (MEDIUM; auditor).** `Saving…`, `Not saved — retrying`, and
+- [x] [Review][Patch] **R5 — Announce the per-answer save-state transitions (MEDIUM; auditor).** `Saving…`, `Not saved — retrying`, and
   `Saved` change inside an ordinary span without live-region semantics. The separate generic unsaved `role="status"` does not announce entry into
   retry or successful saving when it disappears. Provide a stable announcement region for the actual question/save state, and verify retry and success
   announcements as well as visible text. **AC7; load-bearing checklist family 13(d).**
   [apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx:232]
-- [ ] [Review][Patch] **R6 — Add the expressly required tampered/non-human actor route proof (MEDIUM; auditor; verification gap).**
+- [x] [Review][Patch] **R6 — Add the expressly required tampered/non-human actor route proof (MEDIUM; auditor; verification gap).**
   The new HTTP suite tests an absent session and ordinary permission/inspector denials, but never a populated session naming a nonexistent
   system/service actor. AC3 explicitly requires this story's own non-human denial proof because the shared human-actor invariant excludes this
   route file. Exercise GET and PUT with that tampered session, a positive human control, and no answer mutation on refusal. This review has not
@@ -563,6 +563,13 @@ The story status is `in-progress`, matching its sprint row; Task 8 and the real-
   discrepancy using an isolated recorded-basis fixture, and the approver's read. Record actual evidence; keep this item open if the environment
   still cannot run it. The existing limitation record is honest and is not a false completion claim. **AC12 / Task 8.4.**
   [_bmad-output/implementation-artifacts/6-32-inspector-questionnaire-at-the-ground-inspection.md, Dev Agent Record / Debug Log References]
+
+**Resolution (`bmad-dev-story 6.32`, 2026-10-28, review continuation):** R1–R6 FIXED — `c285bfcf` (R2, R3, R4, R6) and `b8f23db8`
+(R1, R5); every new leg was run RED against the pre-fix code (R6 is a proof, so it passes on both — as written, "not a demonstrated bypass").
+**R7 stays OPEN** — re-attempted: the agent's Chrome still shows its error page for a trivial local probe page (`127.0.0.1:5199`) that `curl`
+from the same machine fetches; ⛔ attested, ⛔ faked. One finding the R2 leg surfaced, fixed in the same commit: `dependantsToSupersede`
+superseded EVERY dependant whose condition did not hold after a change — so saving the unrelated letter beside an unreadable cause ERASED the
+illness beneath it; it now follows only a CHANGED parent (identical for every all-known answer set, the neighbours' writer included).
 
 **Verification performed by this review:** 138 tests passed across nine focused files: admin questionnaire/discrepancy (51), domain
 answer-code indexes/questionnaire approval/fence/discrepancy/questionnaire definition (62), contracts peer answers/verifier console (25).
@@ -727,6 +734,28 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
   (`ground-inspection-discrepancy.test.tsx`, "R2-12 / R2-13") TIMED OUT at 5 s under the job's parallel load — the documented contention class
   ([[project_ci_local_concurrency_oversubscription]]); it passes alone 3 / 3 (~1.3 s) and the whole admin package passes 81 / 81 (1,395 tests). ⛔ A clean
   36 / 36 is ⛔ yet recorded — the pre-push hook's run is the next attestation.
+- **Review continuation (2026-10-28, `bmad-dev-story 6.32`) — R1–R6 resolved, R7 open.**
+  - ✅ Resolved review finding [MEDIUM]: **R1** — `unsaved-answers.tsx` (in memory only) tracks the visits with unsaved answers; loading another
+    claim and leaving the page in the app wait until they are saved (the helpline screen's `history.block`; `/login` still goes); the completion
+    waits and goes out once they are saved, or without them on "Complete without the unsaved answers" (I1 — `ready` reads none of it; the I1 source
+    pin stays green); the inputs lock while the completion is in flight. 4 admin legs + a control.
+  - ✅ Resolved review finding [MEDIUM]: **R2** — the handler passes `unreadableLive` (read but ⛔ decryptable); the writer treats those as `null`,
+    so the letter or a replacement saves, and a dependant of an unknown parent stays refused. ⚠ The R2 leg found a second defect, fixed with it:
+    `dependantsToSupersede` dropped every dependant whose condition did not hold AFTER a change — so the letter's save ERASED the illness beneath
+    an unreadable cause; it now follows only a CHANGED parent (unchanged for any all-known answer set — the neighbours' suites green). 3 domain
+    legs, 1 engine leg, 1 HTTP leg.
+  - ✅ Resolved review finding [MEDIUM]: **R3** — `readClaimFamilyAccount` starts from the completed full visits (left joins);
+    `questionnaireVersionId` is `null` for a visit that saved nothing. A domain leg and an HTTP leg (the no-one-asked claim, zero saves).
+  - ✅ Resolved review finding [MEDIUM]: **R4** — `requirePathClaim` in both questionnaire handlers: a path claim ≠ the assignment's claim ⇒ the
+    same 404 `ground_inspection.not_found`, before any read or write. HTTP leg (two claims, a positive control, ⛔ row, ⛔ extra audit line).
+  - ✅ Resolved review finding [MEDIUM]: **R5** — ONE stable `role="status"` `aria-live="polite"` region announces each change of an answer's
+    save line, ⛔ the lines shown at load; the generic unsaved line lost its duplicate `role="status"`. 3 admin legs.
+  - ✅ Resolved review finding [MEDIUM]: **R6** — the tampered-session leg on GET and PUT (a nonexistent actor ⇒ 404; a positive human control
+    first; the answer row unchanged and attributed to the inspector). Passes on the pre-fix code too — a proof, ⛔ a fix.
+  - ⛔ **R7 OPEN** — re-attempted with a static probe page: the agent's Chrome still shows its error page while `curl` fetches it.
+  - Proof: every new leg RED against the pre-fix code (except R6 and the "nothing unsaved" control). `ci:local` on a FRESH container (`twt-632-ci-pg`
+    :5449): the first run at `b8f23db8` was 35 / 36 — `microcopy` refused the word "report" in a comment of the new `unsaved-answers.tsx`; reworded
+    (`179d8b8f`); the re-run on a RECREATED container: **36 / 36 green at `179d8b8f`** (integration included).
 - **Task 9 — records.** Row 42 evidence lines (1)–(5); the ③ / ④ deferred item annotated BUILT on the branch (⛔ discharged until `done` on `main`); the
   un-attested browser item; the two stale source comments (G16) corrected in place; 6.36 W1's "trigger ⛔ pulled" and the IQ3 B / IQ8 B deferrals and the OP14 (d)
   pointer were recorded at Task 0.4 (unchanged).
@@ -744,6 +773,7 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
 - `apps/admin/src/modules/ground-inspection/GroundInspectionPage.tsx`
 - `apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx` (new)
 - `apps/admin/src/modules/ground-inspection/i18n-en.ts`
+- `apps/admin/src/modules/ground-inspection/unsaved-answers.tsx` (new — code review R1)
 - `apps/admin/tests/ground-inspection-discrepancy-client.test.ts`
 - `apps/admin/tests/ground-inspection-discrepancy.test.tsx`
 - `apps/admin/tests/ground-inspection-page.test.tsx`
@@ -824,4 +854,5 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
 | 2026-10-28 | 1.1 | Fresh-context validate (`bmad-create-story validate 6.32`, BigDev: *"all"*), facts re-traced on the branch (two read-only passes, domain/schema and API/admin). **IQ13 added** — `-308` call 2 lists *"the head's letter when ⛔ no one can be asked"* among *"the hard checks"*, and 6.36 recorded *"approvable WITHOUT the letter until 6-32 is `done`"*; the story's "optional, never gates" was unreconciled with both ⇒ §0 row 8, answered FIRST, (B) is the Panel's. **G7a / TR14** — the neighbours' answer guard names its erasure columns; AC2 now replaces it. **AC11** — the ONE lockstep list (adds `questionnaires.test.ts:82/:94`, `inspection-discrepancy.test.ts:45` rewritten ⛔ deleted, the fence's 54, the RTBF 30 / 27, the audit-sink union). **IQ1** — every question `optional`, the required `closingNoteCopyKey` / `thankYouCopyKey`. Facts corrected: G6 (constant locations), G7 (CHECK names), G9 (admin uses `@twt/i18n`; the `HelplinePeerRequests` precedent to REUSE), G11 (two handler patterns; override district-only), G12 (`ENROLMENT_OWED`), G13 (what erasure covers), OP14 (d) is committed by `-319`. Numbers re-checked on every branch: `-413` / `0188` / Row 42 hold. |
 | 2026-10-28 | 1.2 | **IQ13 answered (A)** — BigDev: *"IQ13 A — keep the letter optional"*. The letter is recorded and shown to approvers, ⛔ a condition of approval; ⛔ Panel question. Status, Policy meaning, §0 row 8, I1, AC0, AC10 (+ an AC4 (a) row) and Task 0.2 updated; the decision is recorded in the Task 0.3 entry with IQ1–IQ12 (superseding `-308` call 2 in part) — ⛔ a decision until committed. Four asks remain: IQ2, IQ3, IQ7, IQ8. |
 | 2026-10-28 | 1.4 | `bmad-dev-story 6.32` (Claude Opus 5.5): Tasks 1–7 and 9 DONE; Task 8 done EXCEPT 8.4 — the real-browser pass could ⛔ be run (the agent's Chrome could ⛔ reach the local dev host) ⇒ recorded un-attested, ⛔ faked; the row stays `in-progress` (the workflow's completion gate). Built: `ground_inspection.v1`, migration `0188` (+ a fresh-database fix, 55P04), the writer, the comparable form on both answer tables, ③ / ④ compared without a decrypt, GET / PUT questionnaire routes, the family's account on the neighbours' section (present AND empty), the inspector's panel and the staff view. Deviations recorded in the Completion Notes: per-code `blindIndex` (⛔ `blindIndexMany`), the 422's reason in `details`, `familyAccount` at the section level, the header's narrower version CHECK. |
+| 2026-10-28 | 1.5 | Addressed code review findings — 6 items resolved (R1–R6; Date: 2026-10-28): `c285bfcf` (R2, R3, R4, R6 — incl. `dependantsToSupersede` following only a changed parent, found by the R2 leg), `b8f23db8` (R1, R5), `179d8b8f` (a microcopy word). R7 / Task 8.4 (the real-browser pass) stays OPEN — the agent's Chrome still cannot load a local page; ⛔ faked. `ci:local` **36 / 36** at `179d8b8f` on a fresh container. Row stays `in-progress` (Task 8 unchecked). |
 | 2026-10-28 | 1.3 | **Task 0 DONE.** BigDev: *"recommendation accepted for IQ1-IQ12"*. 0.1 — rebased onto `origin/main` (11b.4a landed; the branch's lines verified identical before / after; journal idx / `when` unique); cited files that moved: `audit-sink.ts` (a memorial action appended after the GI actions) and the roster (Row 41 status) — neither shifts a claim here. 0.3 — [`-413`](../../.decision-log.md#decision-2026-10-28-413) committed alone (IQ1–IQ13 all as recommended; supersedes `-308` call 2 and `-319` OP14 in part). 0.4 — roster Row 42 `ground-inspection-family-answers-live` (+ a dated pointer on Row 27 note (5)); `epics.md` `### Story 6.32`; a dated note under 6.28 OP14 (d); `deferred-work.md` — a new section (the "any other claim?" question, the letter's photograph, true offline), 6.36 W1 annotated "trigger ⛔ pulled", the ③ / ④ item marked owned (⛔ discharged); the IQ7 confirm note drafted (BigDev sends); the ledger line. Implementation starts at Task 1. |

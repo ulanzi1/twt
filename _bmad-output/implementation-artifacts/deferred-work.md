@@ -27,6 +27,10 @@ Deferred by the story's build decisions ([`-413`](../../.decision-log.md#decisio
   ([[feedback_record_unattested_no_backfill]]). ⭐ Trigger: before the story is `done` — a person (or an agent whose browser reaches the dev host) runs the
   page against a seeded local API: the letter saved, a save with the API stopped and restarted (`Not saved — retrying` → `Saved`), a completion showing the ③
   line with the family's words, the approver's family account.
+  ⚠ **Dated note, 2026-10-28 (code review R7, review continuation):** still ⛔ attested. Re-tried against a trivial probe page (`http://127.0.0.1:5199/`, a
+  static file server): the agent's Chrome showed its error page again while `curl` from the same machine fetched the page — the environment, ⛔ the admin
+  build. The pass now also owes the review's R1 legs in a real browser: leaving the page / loading another claim while a save is unsaved, and a completion
+  during an outstanding save (waits, then goes out; or "Complete without the unsaved answers").
 
 ---
 
